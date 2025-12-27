@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Unit tests for NumCosmo powwer-spectra."""
+"""Unit tests for NumCosmo power-spectra."""
 
 import itertools as it
 import pytest
@@ -65,34 +65,34 @@ Ncm.cfg_init()
 # Testing the NumCosmo tracers observables
 
 
-def test_cmb_lens_obs(nc_cmb_lens: Nc.XcorLimberKernelCMBLensing) -> None:
+def test_cmb_lens_obs(nc_cmb_lens: Nc.XcorKernelCMBLensing) -> None:
     """Check that CMB lensing tracer has the correct number of observables."""
     assert nc_cmb_lens is not None
-    assert isinstance(nc_cmb_lens, Nc.XcorLimberKernelCMBLensing)
+    assert isinstance(nc_cmb_lens, Nc.XcorKernelCMBLensing)
     assert nc_cmb_lens.obs_len() == 1
     assert nc_cmb_lens.obs_params_len() == 0
 
 
-def test_cmb_isw_obs(nc_cmb_isw: Nc.XcorLimberKernelCMBISW) -> None:
+def test_cmb_isw_obs(nc_cmb_isw: Nc.XcorKernelCMBISW) -> None:
     """Check that CMB ISW tracer has the correct number of observables."""
     assert nc_cmb_isw is not None
-    assert isinstance(nc_cmb_isw, Nc.XcorLimberKernelCMBISW)
+    assert isinstance(nc_cmb_isw, Nc.XcorKernelCMBISW)
     assert nc_cmb_isw.obs_len() == 1
     assert nc_cmb_isw.obs_params_len() == 0
 
 
-def test_tsz_obs(nc_tsz: Nc.XcorLimberKerneltSZ) -> None:
+def test_tsz_obs(nc_tsz: Nc.XcorKerneltSZ) -> None:
     """Check that tSZ tracer has the correct number of observables."""
     assert nc_tsz is not None
-    assert isinstance(nc_tsz, Nc.XcorLimberKerneltSZ)
+    assert isinstance(nc_tsz, Nc.XcorKerneltSZ)
     assert nc_tsz.obs_len() == 1
     assert nc_tsz.obs_params_len() == 0
 
 
-def test_gal_obs(nc_gal: Nc.XcorLimberKernelGal) -> None:
+def test_gal_obs(nc_gal: Nc.XcorKernelGal) -> None:
     """Check that galaxy tracer has the correct number of observables."""
     assert nc_gal is not None
-    assert isinstance(nc_gal, Nc.XcorLimberKernelGal)
+    assert isinstance(nc_gal, Nc.XcorKernelGal)
     assert nc_gal.obs_len() == 2
     assert nc_gal.obs_params_len() == 1
 
@@ -102,8 +102,8 @@ def test_gal_obs(nc_gal: Nc.XcorLimberKernelGal) -> None:
     nc_gal.set_fast_update(False)
     assert not nc_gal.get_fast_update()
 
-    if nc_gal.vparam_len(Nc.XcorLimberKernelGalVParams.BIAS) == 1:
-        nc_gal.orig_vparam_set(Nc.XcorLimberKernelGalVParams.BIAS, 0, 3.21)
+    if nc_gal.vparam_len(Nc.XcorKernelGalVParams.BIAS) == 1:
+        nc_gal.orig_vparam_set(Nc.XcorKernelGalVParams.BIAS, 0, 3.21)
         nc_gal.set_bias_old(1.2345, 0.9876)
 
         bias0, bias_old0, noise_bias_old0 = nc_gal.get_bias()
@@ -114,7 +114,7 @@ def test_gal_obs(nc_gal: Nc.XcorLimberKernelGal) -> None:
 
 
 def test_gal_obs_extrapolation(
-    nc_cosmo_eh_linear: ncpy.Cosmology, nc_gal: Nc.XcorLimberKernelGal
+    nc_cosmo_eh_linear: ncpy.Cosmology, nc_gal: Nc.XcorKernelGal
 ) -> None:
     """Check that galaxy tracer has the correct number of observables."""
     nc_gal.prepare(nc_cosmo_eh_linear.cosmo)
@@ -134,10 +134,10 @@ def test_gal_obs_extrapolation(
     assert np.isfinite(k_a).all()
 
 
-def test_weak_lensing_obs(nc_weak_lensing: Nc.XcorLimberKernelWeakLensing) -> None:
+def test_weak_lensing_obs(nc_weak_lensing: Nc.XcorKernelWeakLensing) -> None:
     """Check that weak lensing tracer has the correct number of observables."""
     assert nc_weak_lensing is not None
-    assert isinstance(nc_weak_lensing, Nc.XcorLimberKernelWeakLensing)
+    assert isinstance(nc_weak_lensing, Nc.XcorKernelWeakLensing)
     assert nc_weak_lensing.obs_len() == 2
     assert nc_weak_lensing.obs_params_len() == 1
 
@@ -146,14 +146,14 @@ def test_weak_lensing_obs(nc_weak_lensing: Nc.XcorLimberKernelWeakLensing) -> No
 
 
 def test_cmb_lens_serialization(
-    nc_cosmo_eh_linear: ncpy.Cosmology, nc_cmb_lens: Nc.XcorLimberKernelCMBLensing
+    nc_cosmo_eh_linear: ncpy.Cosmology, nc_cmb_lens: Nc.XcorKernelCMBLensing
 ) -> None:
     """Check that CMB lensing tracer can be serialized."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     nc_cmb_lens_dup = ser.dup_obj(nc_cmb_lens)
     assert nc_cmb_lens_dup is not None
     assert nc_cmb_lens_dup is not nc_cmb_lens
-    assert isinstance(nc_cmb_lens_dup, Nc.XcorLimberKernelCMBLensing)
+    assert isinstance(nc_cmb_lens_dup, Nc.XcorKernelCMBLensing)
 
     cosmo = nc_cosmo_eh_linear.cosmo
     dist = nc_cosmo_eh_linear.dist
@@ -174,14 +174,14 @@ def test_cmb_lens_serialization(
 
 
 def test_cmb_isw_serialization(
-    nc_cosmo_eh_linear: ncpy.Cosmology, nc_cmb_isw: Nc.XcorLimberKernelCMBISW
+    nc_cosmo_eh_linear: ncpy.Cosmology, nc_cmb_isw: Nc.XcorKernelCMBISW
 ) -> None:
     """Check that CMB ISW tracer can be serialized."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     nc_cmb_isw_dup = ser.dup_obj(nc_cmb_isw)
     assert nc_cmb_isw_dup is not None
     assert nc_cmb_isw_dup is not nc_cmb_isw
-    assert isinstance(nc_cmb_isw_dup, Nc.XcorLimberKernelCMBISW)
+    assert isinstance(nc_cmb_isw_dup, Nc.XcorKernelCMBISW)
 
     cosmo = nc_cosmo_eh_linear.cosmo
     dist = nc_cosmo_eh_linear.dist
@@ -202,14 +202,14 @@ def test_cmb_isw_serialization(
 
 
 def test_tsz_serialization(
-    nc_cosmo_eh_linear: ncpy.Cosmology, nc_tsz: Nc.XcorLimberKerneltSZ
+    nc_cosmo_eh_linear: ncpy.Cosmology, nc_tsz: Nc.XcorKerneltSZ
 ) -> None:
     """Check that tSZ tracer can be serialized."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     nc_tsz_dup = ser.dup_obj(nc_tsz)
     assert nc_tsz_dup is not None
     assert nc_tsz_dup is not nc_tsz
-    assert isinstance(nc_tsz_dup, Nc.XcorLimberKerneltSZ)
+    assert isinstance(nc_tsz_dup, Nc.XcorKerneltSZ)
 
     cosmo = nc_cosmo_eh_linear.cosmo
     dist = nc_cosmo_eh_linear.dist
@@ -230,14 +230,14 @@ def test_tsz_serialization(
 
 
 def test_gal_serialization(
-    nc_cosmo_eh_linear: ncpy.Cosmology, nc_gal: Nc.XcorLimberKernelGal
+    nc_cosmo_eh_linear: ncpy.Cosmology, nc_gal: Nc.XcorKernelGal
 ) -> None:
     """Check that galaxy tracer can be serialized."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     nc_gal_dup = ser.dup_obj(nc_gal)
     assert nc_gal_dup is not None
     assert nc_gal_dup is not nc_gal
-    assert isinstance(nc_gal_dup, Nc.XcorLimberKernelGal)
+    assert isinstance(nc_gal_dup, Nc.XcorKernelGal)
 
     cosmo = nc_cosmo_eh_linear.cosmo
     dist = nc_cosmo_eh_linear.dist
@@ -259,14 +259,14 @@ def test_gal_serialization(
 
 
 def test_weak_lensing_serialization(
-    nc_cosmo_eh_linear: ncpy.Cosmology, nc_weak_lensing: Nc.XcorLimberKernelWeakLensing
+    nc_cosmo_eh_linear: ncpy.Cosmology, nc_weak_lensing: Nc.XcorKernelWeakLensing
 ) -> None:
     """Check that weak lensing tracer can be serialized."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     nc_wl_dup = ser.dup_obj(nc_weak_lensing)
     assert nc_wl_dup is not None
     assert nc_wl_dup is not nc_weak_lensing
-    assert isinstance(nc_wl_dup, Nc.XcorLimberKernelWeakLensing)
+    assert isinstance(nc_wl_dup, Nc.XcorKernelWeakLensing)
 
     cosmo = nc_cosmo_eh_linear.cosmo
     dist = nc_cosmo_eh_linear.dist
@@ -289,7 +289,7 @@ def test_weak_lensing_serialization(
 # Testing the NumCosmo tracers noise
 
 
-def test_cmb_lens_noise(nc_cmb_lens: Nc.XcorLimberKernelCMBLensing) -> None:
+def test_cmb_lens_noise(nc_cmb_lens: Nc.XcorKernelCMBLensing) -> None:
     """Check that CMB lensing tracer has the correct noise."""
     vp1 = Ncm.Vector.new(10)
     vp2 = Ncm.Vector.new(10)
@@ -298,7 +298,7 @@ def test_cmb_lens_noise(nc_cmb_lens: Nc.XcorLimberKernelCMBLensing) -> None:
     assert_allclose(vp2.dup_array(), np.arange(6, 16), atol=0.0)
 
 
-def test_cmb_isw_noise(nc_cmb_isw: Nc.XcorLimberKernelCMBISW) -> None:
+def test_cmb_isw_noise(nc_cmb_isw: Nc.XcorKernelCMBISW) -> None:
     """Check that CMB ISW tracer has the correct noise."""
     vp1 = Ncm.Vector.new(10)
     vp2 = Ncm.Vector.new(10)
@@ -307,7 +307,7 @@ def test_cmb_isw_noise(nc_cmb_isw: Nc.XcorLimberKernelCMBISW) -> None:
     assert_allclose(vp2.dup_array(), np.arange(6, 16), atol=0.0)
 
 
-def test_tsz_noise(nc_tsz: Nc.XcorLimberKerneltSZ) -> None:
+def test_tsz_noise(nc_tsz: Nc.XcorKerneltSZ) -> None:
     """Check that tSZ tracer has the correct noise."""
     vp1 = Ncm.Vector.new(10)
     vp2 = Ncm.Vector.new(10)
@@ -316,7 +316,7 @@ def test_tsz_noise(nc_tsz: Nc.XcorLimberKerneltSZ) -> None:
     assert_allclose(vp2.dup_array(), np.ones(10) * 1.0, atol=0.0)
 
 
-def test_gal_noise(nc_gal: Nc.XcorLimberKernelGal) -> None:
+def test_gal_noise(nc_gal: Nc.XcorKernelGal) -> None:
     """Check that galaxy tracer has the correct noise."""
     vp1 = Ncm.Vector.new(10)
     vp2 = Ncm.Vector.new(10)
@@ -325,7 +325,7 @@ def test_gal_noise(nc_gal: Nc.XcorLimberKernelGal) -> None:
     assert_allclose(vp2.dup_array(), np.ones(10) * 2.234, atol=0.0)
 
 
-def test_weak_lensing_noise(nc_weak_lensing: Nc.XcorLimberKernelWeakLensing) -> None:
+def test_weak_lensing_noise(nc_weak_lensing: Nc.XcorKernelWeakLensing) -> None:
     """Check that weak lensing tracer has the correct noise."""
     vp1 = Ncm.Vector.new(10)
     vp2 = Ncm.Vector.new(10)
@@ -341,7 +341,7 @@ def test_cmb_lens_kernel(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
     nc_cosmo_eh_linear: ncpy.Cosmology,
     ccl_cmb_lens: pyccl.CMBLensingTracer,
-    nc_cmb_lens: Nc.XcorLimberKernelCMBLensing,
+    nc_cmb_lens: Nc.XcorKernelCMBLensing,
 ) -> None:
     """Compare NumCosmo and CCL correlation windows."""
     cosmo = nc_cosmo_eh_linear.cosmo
@@ -368,7 +368,7 @@ def test_cmb_lens_kernel(
 def test_xcor_set_get(nc_cosmo_default: ncpy.Cosmology) -> None:
     """Test get_reltol and set_reltol."""
     nc_xcor = Nc.Xcor.new(
-        nc_cosmo_default.dist, nc_cosmo_default.ps_ml, Nc.XcorLimberMethod.GSL
+        nc_cosmo_default.dist, nc_cosmo_default.ps_ml, Nc.XcorMethod.GSL
     )
 
     nc_xcor.set_reltol(1.0e-4)
@@ -382,11 +382,11 @@ def test_xcor_set_get(nc_cosmo_default: ncpy.Cosmology) -> None:
     nc_xcor.props.reltol = 1.0e-6
     assert nc_xcor.get_reltol() == 1.0e-6
 
-    nc_xcor.props.meth = Nc.XcorLimberMethod.GSL
-    assert nc_xcor.props.meth == Nc.XcorLimberMethod.GSL
+    nc_xcor.props.meth = Nc.XcorMethod.GSL
+    assert nc_xcor.props.meth == Nc.XcorMethod.GSL
 
-    nc_xcor.props.meth = Nc.XcorLimberMethod.CUBATURE
-    assert nc_xcor.props.meth == Nc.XcorLimberMethod.CUBATURE
+    nc_xcor.props.meth = Nc.XcorMethod.CUBATURE
+    assert nc_xcor.props.meth == Nc.XcorMethod.CUBATURE
 
     assert nc_xcor.props.power_spec is nc_cosmo_default.ps_ml
 
@@ -395,7 +395,7 @@ def test_cmb_lens_auto_integrand(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
     nc_cosmo_eh_linear: ncpy.Cosmology,
     ccl_cmb_lens: pyccl.CMBLensingTracer,
-    nc_cmb_lens: Nc.XcorLimberKernelCMBLensing,
+    nc_cmb_lens: Nc.XcorKernelCMBLensing,
 ) -> None:
     """Compare NumCosmo and CCL transfer functions."""
     cosmo = nc_cosmo_eh_linear.cosmo
@@ -414,7 +414,7 @@ def test_cmb_lens_auto_integrand(
 
     psp = ccl_cosmo_eh_linear.get_linear_power()
 
-    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorLimberMethod.CUBATURE)
+    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorMethod.CUBATURE)
     xcor.prepare(cosmo)
     nc_cmb_lens.prepare(cosmo)
 
@@ -446,7 +446,7 @@ def test_cmb_lens_auto(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
     nc_cosmo_eh_linear: ncpy.Cosmology,
     ccl_cmb_lens: pyccl.CMBLensingTracer,
-    nc_cmb_lens: Nc.XcorLimberKernelCMBLensing,
+    nc_cmb_lens: Nc.XcorKernelCMBLensing,
 ) -> None:
     """Compare NumCosmo and CCL transfer functions."""
     cosmo = nc_cosmo_eh_linear.cosmo
@@ -480,11 +480,11 @@ def test_cmb_lens_auto(
     assert all(np.isfinite(ccl_cmb_lens_auto))
     assert all(ccl_cmb_lens_auto >= 0.0)
 
-    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorLimberMethod.CUBATURE)
+    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorMethod.CUBATURE)
     nc_cmb_lens_auto_v = Ncm.Vector.new(lmax + 1 - 2)
     xcor.prepare(cosmo)
     nc_cmb_lens.prepare(cosmo)
-    xcor.limber(nc_cmb_lens, nc_cmb_lens, cosmo, 2, lmax, nc_cmb_lens_auto_v)
+    xcor.compute(nc_cmb_lens, nc_cmb_lens, cosmo, 2, lmax, nc_cmb_lens_auto_v)
     nc_cmb_lens_auto = np.array(nc_cmb_lens_auto_v.dup_array())
 
     assert_allclose(ccl_cmb_lens_auto, nc_cmb_lens_auto, rtol=reltol_target, atol=0.0)
@@ -494,7 +494,7 @@ def test_cmb_isw_kernel(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
     nc_cosmo_eh_linear: ncpy.Cosmology,
     ccl_cmb_isw: pyccl.ISWTracer,
-    nc_cmb_isw: Nc.XcorLimberKernelCMBISW,
+    nc_cmb_isw: Nc.XcorKernelCMBISW,
 ) -> None:
     """Compare NumCosmo and CCL correlation windows."""
     cosmo = nc_cosmo_eh_linear.cosmo
@@ -521,7 +521,7 @@ def test_tsz_kernel(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
     nc_cosmo_eh_linear: ncpy.Cosmology,
     ccl_tsz: pyccl.tSZTracer,
-    nc_tsz: Nc.XcorLimberKerneltSZ,
+    nc_tsz: Nc.XcorKerneltSZ,
 ) -> None:
     """Compare NumCosmo and CCL correlation windows."""
     cosmo = nc_cosmo_eh_linear.cosmo
@@ -545,7 +545,7 @@ def test_weak_lensing_kernel(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
     nc_cosmo_eh_linear: ncpy.Cosmology,
     ccl_weak_lensing: pyccl.WeakLensingTracer,
-    nc_weak_lensing: Nc.XcorLimberKernelWeakLensing,
+    nc_weak_lensing: Nc.XcorKernelWeakLensing,
 ) -> None:
     """Compare NumCosmo and CCL correlation windows."""
     cosmo = nc_cosmo_eh_linear.cosmo
@@ -570,7 +570,7 @@ def test_gal_kernel(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
     nc_cosmo_eh_linear: ncpy.Cosmology,
     ccl_gal: pyccl.NumberCountsTracer,
-    nc_gal: Nc.XcorLimberKernelGal,
+    nc_gal: Nc.XcorKernelGal,
 ) -> None:
     """Compare NumCosmo and CCL correlation windows."""
     cosmo = nc_cosmo_eh_linear.cosmo
@@ -681,15 +681,15 @@ def test_compare_autocorrelation(
     indirect=True,
 )
 def test_xcor_methods(
-    nc_cosmo_eh_linear: ncpy.Cosmology, k1: Nc.XcorLimberKernel, k2: Nc.XcorLimberKernel
+    nc_cosmo_eh_linear: ncpy.Cosmology, k1: Nc.XcorKernel, k2: Nc.XcorKernel
 ) -> None:
     """Compare NumCosmo Xcor integration methods."""
     xcor_gsl = Nc.Xcor.new(
-        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorLimberMethod.GSL
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.GSL
     )
 
     xcor_cub = Nc.Xcor.new(
-        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorLimberMethod.CUBATURE
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.CUBATURE
     )
 
     xcor_gsl.prepare(nc_cosmo_eh_linear.cosmo)
@@ -704,8 +704,8 @@ def test_xcor_methods(
     vp_cub = Ncm.Vector.new(lmax - lmin + 1)
 
     xcor_gsl.set_reltol(1.0e-7)
-    xcor_gsl.limber(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_gsl)
-    xcor_cub.limber(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_cub)
+    xcor_gsl.compute(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_gsl)
+    xcor_cub.compute(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_cub)
 
     vp_gsl_a = np.array(vp_gsl.dup_array())
     vp_cub_a = np.array(vp_cub.dup_array())

@@ -209,11 +209,11 @@
 /* Cross-correlations */
 #include <numcosmo/xcor/nc_xcor.h>
 #include <numcosmo/xcor/nc_xcor_AB.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel_gal.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel_CMB_lensing.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel_weak_lensing.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel_tSZ.h>
+#include <numcosmo/xcor/nc_xcor_kernel.h>
+#include <numcosmo/xcor/nc_xcor_kernel_gal.h>
+#include <numcosmo/xcor/nc_xcor_kernel_CMB_lensing.h>
+#include <numcosmo/xcor/nc_xcor_kernel_weak_lensing.h>
+#include <numcosmo/xcor/nc_xcor_kernel_tSZ.h>
 
 #endif /* _NUMCOSMO_H */
 

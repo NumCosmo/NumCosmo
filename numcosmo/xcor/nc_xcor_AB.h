@@ -62,11 +62,11 @@ NcXcorAB *nc_xcor_AB_ref (NcXcorAB *xcab);
 void nc_xcor_AB_free (NcXcorAB *xcab);
 void nc_xcor_AB_clear (NcXcorAB **xcab);
 
-/* gdouble nc_xcor_AB_limber_cross_cl (NcXcorAB* xc, NcXcorABLimberKernel* xclk1, NcXcorABLimberKernel* xclk2, NcHICosmo* cosmo, guint l); */
-/* void nc_xcor_AB_limber_cross_cl_range (NcXcorAB* xc, NcXcorABLimberKernel* xclk1, NcXcorABLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp); */
-/* gdouble nc_xcor_AB_limber_auto_cl (NcXcorAB* xc, NcXcorABLimberKernel* xclk, NcHICosmo* cosmo, guint l, gboolean withnoise); */
-/* void nc_xcor_AB_limber_auto_cl_range (NcXcorAB* xc, NcXcorABLimberKernel* xclk, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp, gboolean withnoise); */
-/* void nc_xcor_AB_limber_auto_cl_clnl (NcXcorAB* xc, NcXcorABLimberKernel* xclk, NcHICosmo* cosmo, guint lmax, NcmVector* vcl, NcmVector* vclnl); */
+/* gdouble nc_xcor_AB_cross_cl (NcXcorAB* xc, NcXcorABKernel* xclk1, NcXcorABKernel* xclk2, NcHICosmo* cosmo, guint l); */
+/* void nc_xcor_AB_cross_cl_range (NcXcorAB* xc, NcXcorABKernel* xclk1, NcXcorABKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp); */
+/* gdouble nc_xcor_AB_auto_cl (NcXcorAB* xc, NcXcorABKernel* xclk, NcHICosmo* cosmo, guint l, gboolean withnoise); */
+/* void nc_xcor_AB_auto_cl_range (NcXcorAB* xc, NcXcorABKernel* xclk, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp, gboolean withnoise); */
+/* void nc_xcor_AB_auto_cl_clnl (NcXcorAB* xc, NcXcorABKernel* xclk, NcHICosmo* cosmo, guint lmax, NcmVector* vcl, NcmVector* vclnl); */
 
 /* H0/c in h Mpc-1: */
 #define H0_c_3 (gsl_pow_3 (1e5 / ncm_c_c ()))

@@ -410,15 +410,15 @@ WINDOW_VOLUME_TOPHAT: int = 0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL: float = 0.0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PCC: float = 0.8
 WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF: float = 1.0
-XCOR_LIMBER_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL: float = 0.0
-XCOR_LIMBER_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
-XCOR_LIMBER_KERNEL_GAL_BIAS_DEFAULT_LEN: int = 1
-XCOR_LIMBER_KERNEL_GAL_DEFAULT_BIAS: float = 1.0
-XCOR_LIMBER_KERNEL_GAL_DEFAULT_MAG_BIAS: float = 0.4
-XCOR_LIMBER_KERNEL_GAL_DEFAULT_NOISE_BIAS: float = 0.0
-XCOR_LIMBER_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
-XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN: int = 200
-XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
+XCOR_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL: float = 0.0
+XCOR_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
+XCOR_KERNEL_GAL_BIAS_DEFAULT_LEN: int = 1
+XCOR_KERNEL_GAL_DEFAULT_BIAS: float = 1.0
+XCOR_KERNEL_GAL_DEFAULT_MAG_BIAS: float = 0.4
+XCOR_KERNEL_GAL_DEFAULT_NOISE_BIAS: float = 0.0
+XCOR_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
+XCOR_KERNEL_GAL_G_FUNC_LEN: int = 200
+XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_PRECISION: float = 1e-06
 _lock = ...  # FIXME Constant
 _namespace: str = r"NumCosmo"
@@ -14698,7 +14698,6 @@ class HaloCMDiemer15(HaloMassSummary):
     def new(
         cls, mdef: HaloMassSummaryMassDef, Delta: float, mfp: HaloMassFunction
     ) -> HaloCMDiemer15: ...
-    def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> HaloCMDiemer15: ...
 
 class HaloCMDiemer15Class(GObject.GPointer):
@@ -19898,7 +19897,7 @@ class Xcor(GObject.Object):
     ::
 
         Xcor(**properties)
-        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, meth:NumCosmo.XcorLimberMethod) -> NumCosmo.Xcor
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, meth:NumCosmo.XcorMethod) -> NumCosmo.Xcor
 
     Object NcXcor
 
@@ -19907,7 +19906,7 @@ class Xcor(GObject.Object):
         Distance.
       power-spec -> NcmPowspec: power-spec
         Matter power spectrum.
-      meth -> NcXcorLimberMethod: meth
+      meth -> NcXcorMethod: meth
         Method.
       reltol -> gdouble: reltol
         Relative tolerance.
@@ -19918,7 +19917,7 @@ class Xcor(GObject.Object):
 
     class Props:
         distance: Distance
-        meth: XcorLimberMethod
+        meth: XcorMethod
         power_spec: NumCosmoMath.Powspec
         reltol: float
 
@@ -19926,26 +19925,26 @@ class Xcor(GObject.Object):
     def __init__(
         self,
         distance: Distance = ...,
-        meth: XcorLimberMethod = ...,
+        meth: XcorMethod = ...,
         power_spec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
     ) -> None: ...
     @staticmethod
     def clear(xc: Xcor) -> None: ...
-    def free(self) -> None: ...
-    def get_reltol(self) -> float: ...
-    def limber(
+    def compute(
         self,
-        xclk1: XcorLimberKernel,
-        xclk2: XcorLimberKernel,
+        xclk1: XcorKernel,
+        xclk2: XcorKernel,
         cosmo: HICosmo,
         lmin: int,
         lmax: int,
         vp: NumCosmoMath.Vector,
     ) -> None: ...
+    def free(self) -> None: ...
+    def get_reltol(self) -> float: ...
     @classmethod
     def new(
-        cls, dist: Distance, ps: NumCosmoMath.Powspec, meth: XcorLimberMethod
+        cls, dist: Distance, ps: NumCosmoMath.Powspec, meth: XcorMethod
     ) -> Xcor: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> Xcor: ...
@@ -20055,31 +20054,17 @@ class XcorClass(GObject.GPointer):
 
     parent_class: GObject.ObjectClass = ...
 
-class XcorKinetic(GObject.GBoxed):
+class XcorKernel(NumCosmoMath.Model):
     r"""
     :Constructors:
 
     ::
 
-        XcorKinetic()
-    """
+        XcorKernel(**properties)
 
-    xi_z: float = ...
-    E_z: float = ...
-    def copy(self) -> XcorKinetic: ...
-    def free(self) -> None: ...
+    Object NcXcorKernel
 
-class XcorLimberKernel(NumCosmoMath.Model):
-    r"""
-    :Constructors:
-
-    ::
-
-        XcorLimberKernel(**properties)
-
-    Object NcXcorLimberKernel
-
-    Properties from NcXcorLimberKernel:
+    Properties from NcXcorKernel:
       zmin -> gdouble: zmin
         Minimum redshift
       zmax -> gdouble: zmax
@@ -20136,7 +20121,7 @@ class XcorLimberKernel(NumCosmoMath.Model):
         self, vp1: NumCosmoMath.Vector, vp2: NumCosmoMath.Vector, lmin: int
     ) -> None: ...
     @staticmethod
-    def clear(xclk: XcorLimberKernel) -> None: ...
+    def clear(xclk: XcorKernel) -> None: ...
     def do_add_noise(
         self, vp1: NumCosmoMath.Vector, vp2: NumCosmoMath.Vector, lmin: int
     ) -> None: ...
@@ -20156,22 +20141,22 @@ class XcorLimberKernel(NumCosmoMath.Model):
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
-    def ref(self) -> XcorLimberKernel: ...
+    def ref(self) -> XcorKernel: ...
     def set_const_factor(self, cf: float) -> None: ...
     def set_z_range(self, zmin: float, zmax: float, zmid: float) -> None: ...
 
-class XcorLimberKernelCMBISW(XcorLimberKernel):
+class XcorKernelCMBISW(XcorKernel):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelCMBISW(**properties)
-        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, recomb:NumCosmo.Recomb, Nl:NumCosmoMath.Vector) -> NumCosmo.XcorLimberKernelCMBISW
+        XcorKernelCMBISW(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, recomb:NumCosmo.Recomb, Nl:NumCosmoMath.Vector) -> NumCosmo.XcorKernelCMBISW
 
-    Object NcXcorLimberKernelCMBISW
+    Object NcXcorKernelCMBISW
 
-    Properties from NcXcorLimberKernelCMBISW:
+    Properties from NcXcorKernelCMBISW:
       dist -> NcDistance: dist
         Distance object
       ps -> NcmPowspec: ps
@@ -20181,7 +20166,7 @@ class XcorLimberKernelCMBISW(XcorLimberKernel):
       Nl -> NcmVector: Nl
         Noise spectrum
 
-    Properties from NcXcorLimberKernel:
+    Properties from NcXcorKernel:
       zmin -> gdouble: zmin
         Minimum redshift
       zmax -> gdouble: zmax
@@ -20248,31 +20233,31 @@ class XcorLimberKernelCMBISW(XcorLimberKernel):
         ps: NumCosmoMath.Powspec,
         recomb: Recomb,
         Nl: NumCosmoMath.Vector,
-    ) -> XcorLimberKernelCMBISW: ...
+    ) -> XcorKernelCMBISW: ...
 
-class XcorLimberKernelCMBISWClass(GObject.GPointer):
+class XcorKernelCMBISWClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelCMBISWClass()
+        XcorKernelCMBISWClass()
     """
 
-    parent_class: XcorLimberKernelClass = ...
+    parent_class: XcorKernelClass = ...
 
-class XcorLimberKernelCMBLensing(XcorLimberKernel):
+class XcorKernelCMBLensing(XcorKernel):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelCMBLensing(**properties)
-        new(dist:NumCosmo.Distance, recomb:NumCosmo.Recomb, Nl:NumCosmoMath.Vector) -> NumCosmo.XcorLimberKernelCMBLensing
+        XcorKernelCMBLensing(**properties)
+        new(dist:NumCosmo.Distance, recomb:NumCosmo.Recomb, Nl:NumCosmoMath.Vector) -> NumCosmo.XcorKernelCMBLensing
 
-    Object NcXcorLimberKernelCMBLensing
+    Object NcXcorKernelCMBLensing
 
-    Properties from NcXcorLimberKernelCMBLensing:
+    Properties from NcXcorKernelCMBLensing:
       dist -> NcDistance: dist
         Distance object
       recomb -> NcRecomb: recomb
@@ -20280,7 +20265,7 @@ class XcorLimberKernelCMBLensing(XcorLimberKernel):
       Nl -> NcmVector: Nl
         Noise spectrum
 
-    Properties from NcXcorLimberKernel:
+    Properties from NcXcorKernel:
       zmin -> gdouble: zmin
         Minimum redshift
       zmax -> gdouble: zmax
@@ -20341,51 +20326,49 @@ class XcorLimberKernelCMBLensing(XcorLimberKernel):
     @classmethod
     def new(
         cls, dist: Distance, recomb: Recomb, Nl: NumCosmoMath.Vector
-    ) -> XcorLimberKernelCMBLensing: ...
+    ) -> XcorKernelCMBLensing: ...
 
-class XcorLimberKernelCMBLensingClass(GObject.GPointer):
+class XcorKernelCMBLensingClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelCMBLensingClass()
+        XcorKernelCMBLensingClass()
     """
 
-    parent_class: XcorLimberKernelClass = ...
+    parent_class: XcorKernelClass = ...
 
-class XcorLimberKernelClass(GObject.GPointer):
+class XcorKernelClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelClass()
+        XcorKernelClass()
     """
 
     parent_class: NumCosmoMath.ModelClass = ...
-    eval: typing.Callable[
-        [XcorLimberKernel, HICosmo, float, XcorKinetic, int], float
-    ] = ...
-    prepare: typing.Callable[[XcorLimberKernel, HICosmo], None] = ...
+    eval: typing.Callable[[XcorKernel, HICosmo, float, XcorKinetic, int], float] = ...
+    prepare: typing.Callable[[XcorKernel, HICosmo], None] = ...
     add_noise: typing.Callable[
-        [XcorLimberKernel, NumCosmoMath.Vector, NumCosmoMath.Vector, int], None
+        [XcorKernel, NumCosmoMath.Vector, NumCosmoMath.Vector, int], None
     ] = ...
-    obs_len: typing.Callable[[XcorLimberKernel], int] = ...
-    obs_params_len: typing.Callable[[XcorLimberKernel], int] = ...
+    obs_len: typing.Callable[[XcorKernel], int] = ...
+    obs_params_len: typing.Callable[[XcorKernel], int] = ...
 
-class XcorLimberKernelGal(XcorLimberKernel):
+class XcorKernelGal(XcorKernel):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelGal(**properties)
-        new(zmin:float, zmax:float, np:int, nbarm1:float, dn_dz:NumCosmoMath.Spline, dist:NumCosmo.Distance, domagbias:bool) -> NumCosmo.XcorLimberKernelGal
+        XcorKernelGal(**properties)
+        new(zmin:float, zmax:float, np:int, nbarm1:float, dn_dz:NumCosmoMath.Spline, dist:NumCosmo.Distance, domagbias:bool) -> NumCosmo.XcorKernelGal
 
-    Object NcXcorLimberKernelGal
+    Object NcXcorKernelGal
 
-    Properties from NcXcorLimberKernelGal:
+    Properties from NcXcorKernelGal:
       dndz -> NcmSpline: dndz
         Galaxy redshift distribution
       bias -> NcmSpline: bias
@@ -20411,7 +20394,7 @@ class XcorLimberKernelGal(XcorLimberKernel):
       bparam-fit -> GVariant: bparam-fit
         bparam:fit
 
-    Properties from NcXcorLimberKernel:
+    Properties from NcXcorKernel:
       zmin -> gdouble: zmin
         Minimum redshift
       zmax -> gdouble: zmax
@@ -20499,33 +20482,33 @@ class XcorLimberKernelGal(XcorLimberKernel):
         dn_dz: NumCosmoMath.Spline,
         dist: Distance,
         domagbias: bool,
-    ) -> XcorLimberKernelGal: ...
+    ) -> XcorKernelGal: ...
     def set_bias_old(self, bias_old: float, noise_bias_old: float) -> None: ...
     def set_fast_update(self, fast_update: bool) -> None: ...
 
-class XcorLimberKernelGalClass(GObject.GPointer):
+class XcorKernelGalClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelGalClass()
+        XcorKernelGalClass()
     """
 
-    parent_class: XcorLimberKernelClass = ...
+    parent_class: XcorKernelClass = ...
 
-class XcorLimberKernelWeakLensing(XcorLimberKernel):
+class XcorKernelWeakLensing(XcorKernel):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelWeakLensing(**properties)
-        new(zmin:float, zmax:float, dn_dz:NumCosmoMath.Spline, nbar:float, intr_shear:float, dist:NumCosmo.Distance) -> NumCosmo.XcorLimberKernelWeakLensing
+        XcorKernelWeakLensing(**properties)
+        new(zmin:float, zmax:float, dn_dz:NumCosmoMath.Spline, nbar:float, intr_shear:float, dist:NumCosmo.Distance) -> NumCosmo.XcorKernelWeakLensing
 
-    Object NcXcorLimberKernelWeakLensing
+    Object NcXcorKernelWeakLensing
 
-    Properties from NcXcorLimberKernelWeakLensing:
+    Properties from NcXcorKernelWeakLensing:
       dndz -> NcmSpline: dndz
         Source redshift distribution
       nbar -> gdouble: nbar
@@ -20539,7 +20522,7 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
       abstol -> gdouble: abstol
         Absolute tolerance tolerance
 
-    Properties from NcXcorLimberKernel:
+    Properties from NcXcorKernel:
       zmin -> gdouble: zmin
         Minimum redshift
       zmax -> gdouble: zmax
@@ -20612,35 +20595,35 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
         nbar: float,
         intr_shear: float,
         dist: Distance,
-    ) -> XcorLimberKernelWeakLensing: ...
+    ) -> XcorKernelWeakLensing: ...
 
-class XcorLimberKernelWeakLensingClass(GObject.GPointer):
+class XcorKernelWeakLensingClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelWeakLensingClass()
+        XcorKernelWeakLensingClass()
     """
 
-    parent_class: XcorLimberKernelClass = ...
+    parent_class: XcorKernelClass = ...
 
-class XcorLimberKerneltSZ(XcorLimberKernel):
+class XcorKerneltSZ(XcorKernel):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKerneltSZ(**properties)
-        new(zmax:float) -> NumCosmo.XcorLimberKerneltSZ
+        XcorKerneltSZ(**properties)
+        new(zmax:float) -> NumCosmo.XcorKerneltSZ
 
-    Object NcXcorLimberKerneltSZ
+    Object NcXcorKerneltSZ
 
-    Properties from NcXcorLimberKerneltSZ:
+    Properties from NcXcorKerneltSZ:
       noise -> gdouble: noise
         Constant noise level
 
-    Properties from NcXcorLimberKernel:
+    Properties from NcXcorKernel:
       zmin -> gdouble: zmin
         Minimum redshift
       zmax -> gdouble: zmax
@@ -20695,18 +20678,32 @@ class XcorLimberKerneltSZ(XcorLimberKernel):
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
-    def new(cls, zmax: float) -> XcorLimberKerneltSZ: ...
+    def new(cls, zmax: float) -> XcorKerneltSZ: ...
 
-class XcorLimberKerneltSZClass(GObject.GPointer):
+class XcorKerneltSZClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKerneltSZClass()
+        XcorKerneltSZClass()
     """
 
-    parent_class: XcorLimberKernelClass = ...
+    parent_class: XcorKernelClass = ...
+
+class XcorKinetic(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKinetic()
+    """
+
+    xi_z: float = ...
+    E_z: float = ...
+    def copy(self) -> XcorKinetic: ...
+    def free(self) -> None: ...
 
 class _HaloPositionClass(GObject.GPointer):
     r"""
@@ -22550,8 +22547,8 @@ class WLSurfaceMassDensityParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelCMBLensingSParams(GObject.GEnum):
-    LEN: XcorLimberKernelCMBLensingSParams = ...
+class XcorKernelCMBLensingSParams(GObject.GEnum):
+    LEN: XcorKernelCMBLensingSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22564,9 +22561,9 @@ class XcorLimberKernelCMBLensingSParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelGalSParams(GObject.GEnum):
-    MAG_BIAS: XcorLimberKernelGalSParams = ...
-    NOISE_BIAS: XcorLimberKernelGalSParams = ...
+class XcorKernelGalSParams(GObject.GEnum):
+    MAG_BIAS: XcorKernelGalSParams = ...
+    NOISE_BIAS: XcorKernelGalSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22579,8 +22576,8 @@ class XcorLimberKernelGalSParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelGalVParams(GObject.GEnum):
-    BIAS: XcorLimberKernelGalVParams = ...
+class XcorKernelGalVParams(GObject.GEnum):
+    BIAS: XcorKernelGalVParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22593,10 +22590,10 @@ class XcorLimberKernelGalVParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelImpl(GObject.GEnum):
-    ADD_NOISE: XcorLimberKernelImpl = ...
-    EVAL: XcorLimberKernelImpl = ...
-    PREPARE: XcorLimberKernelImpl = ...
+class XcorKernelImpl(GObject.GEnum):
+    ADD_NOISE: XcorKernelImpl = ...
+    EVAL: XcorKernelImpl = ...
+    PREPARE: XcorKernelImpl = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22609,8 +22606,8 @@ class XcorLimberKernelImpl(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelWeakLensingSParams(GObject.GEnum):
-    LEN: XcorLimberKernelWeakLensingSParams = ...
+class XcorKernelWeakLensingSParams(GObject.GEnum):
+    LEN: XcorKernelWeakLensingSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22623,8 +22620,8 @@ class XcorLimberKernelWeakLensingSParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelWeakLensingVParams(GObject.GEnum):
-    LEN: XcorLimberKernelWeakLensingVParams = ...
+class XcorKernelWeakLensingVParams(GObject.GEnum):
+    LEN: XcorKernelWeakLensingVParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22637,8 +22634,8 @@ class XcorLimberKernelWeakLensingVParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKerneltSZSParams(GObject.GEnum):
-    LEN: XcorLimberKerneltSZSParams = ...
+class XcorKerneltSZSParams(GObject.GEnum):
+    LEN: XcorKerneltSZSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22651,9 +22648,9 @@ class XcorLimberKerneltSZSParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberMethod(GObject.GEnum):
-    CUBATURE: XcorLimberMethod = ...
-    GSL: XcorLimberMethod = ...
+class XcorMethod(GObject.GEnum):
+    CUBATURE: XcorMethod = ...
+    GSL: XcorMethod = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

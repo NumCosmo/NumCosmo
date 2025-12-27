@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_xcor_limber_kernel_cmb_isw.h
+ *            nc_xcor_kernel_cmb_isw.h
  *
  *  Tue Sept 28 17:17:26 2021
  *  Copyright  2021  Mariana Penna-Lima
@@ -23,28 +23,28 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_XCOR_LIMBER_KERNEL_CMB_ISW_H_
-#define _NC_XCOR_LIMBER_KERNEL_CMB_ISW_H_
+#ifndef _NC_XCOR_KERNEL_CMB_ISW_H_
+#define _NC_XCOR_KERNEL_CMB_ISW_H_
 
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_spline.h>
 #include <numcosmo/math/ncm_spline_cubic_notaknot.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel.h>
+#include <numcosmo/xcor/nc_xcor_kernel.h>
 #include <numcosmo/nc_recomb.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_XCOR_LIMBER_KERNEL_CMB_ISW (nc_xcor_limber_kernel_cmb_isw_get_type ())
+#define NC_TYPE_XCOR_KERNEL_CMB_ISW (nc_xcor_kernel_cmb_isw_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcXcorLimberKernelCMBISW, nc_xcor_limber_kernel_cmb_isw, NC, XCOR_LIMBER_KERNEL_CMB_ISW, NcXcorLimberKernel);
+G_DECLARE_FINAL_TYPE (NcXcorKernelCMBISW, nc_xcor_kernel_cmb_isw, NC, XCOR_KERNEL_CMB_ISW, NcXcorKernel);
 
-NcXcorLimberKernelCMBISW *nc_xcor_limber_kernel_cmb_isw_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *recomb, NcmVector *Nl);
+NcXcorKernelCMBISW *nc_xcor_kernel_cmb_isw_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *recomb, NcmVector *Nl);
 
-#define NC_XCOR_LIMBER_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL (0.0)
+#define NC_XCOR_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL (0.0)
 
 G_END_DECLS
 
-#endif /* _NC_XCOR_LIMBER_KERNEL_CMB_ISW_H_ */
+#endif /* _NC_XCOR_KERNEL_CMB_ISW_H_ */
 

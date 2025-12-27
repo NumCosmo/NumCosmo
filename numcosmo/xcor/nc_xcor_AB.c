@@ -28,7 +28,8 @@
  *
  * Cross-correlations data storage object.
  *
- * This object stores information for observables $A$ and $B$ for use with a #NcDataXcor likelihood object.
+ * This object stores information for observables $A$ and $B$ for use with a
+ * #NcDataXcor likelihood object.
  *
  */
 
