@@ -536,16 +536,12 @@ _nc_xcor_kernel_gal_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp
 guint
 _nc_xcor_kernel_gal_obs_len (NcXcorKernel *xclk)
 {
-  NCM_UNUSED (xclk);
-
   return 2;
 }
 
 guint
 _nc_xcor_kernel_gal_obs_params_len (NcXcorKernel *xclk)
 {
-  NCM_UNUSED (xclk);
-
   return 1;
 }
 

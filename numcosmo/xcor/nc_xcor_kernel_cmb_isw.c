@@ -324,16 +324,12 @@ _nc_xcor_kernel_cmb_isw_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector
 static guint
 _nc_xcor_kernel_cmb_isw_obs_len (NcXcorKernel *xclk)
 {
-  NCM_UNUSED (xclk);
-
   return 1;
 }
 
 static guint
 _nc_xcor_kernel_cmb_isw_obs_params_len (NcXcorKernel *xclk)
 {
-  NCM_UNUSED (xclk);
-
   return 0;
 }
 

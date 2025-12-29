@@ -613,16 +613,12 @@ _nc_xcor_kernel_weak_lensing_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmV
 guint
 _nc_xcor_kernel_weak_lensing_obs_len (NcXcorKernel *xclk)
 {
-  NCM_UNUSED (xclk);
-
   return 2;
 }
 
 guint
 _nc_xcor_kernel_weak_lensing_obs_params_len (NcXcorKernel *xclk)
 {
-  NCM_UNUSED (xclk);
-
   return 1;
 }
 
