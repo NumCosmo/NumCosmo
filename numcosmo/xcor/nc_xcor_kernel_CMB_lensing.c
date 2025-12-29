@@ -47,6 +47,7 @@
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_kernel_CMB_lensing.h"
 #include "xcor/nc_xcor.h"
+#include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
@@ -68,6 +69,7 @@ struct _NcXcorKernelCMBLensing
   gdouble xi_lss;
   gdouble dt_lss;
   gdouble dt;
+  NcXcorKernelIntegMethod integ_method;
 };
 
 enum
@@ -76,6 +78,7 @@ enum
   PROP_DIST,
   PROP_RECOMB,
   PROP_NL,
+  PROP_INTEG_METHOD,
   PROP_SIZE,
 };
 
@@ -92,10 +95,11 @@ nc_xcor_kernel_cmb_lensing_init (NcXcorKernelCMBLensing *xclkl)
   xclkl->Nl    = NULL;
   xclkl->Nlmax = 0;
 
-  xclkl->z_lss  = 0.0;
-  xclkl->xi_lss = 0.0;
-  xclkl->dt_lss = 0.0;
-  xclkl->dt     = 0.0;
+  xclkl->z_lss        = 0.0;
+  xclkl->xi_lss       = 0.0;
+  xclkl->dt_lss       = 0.0;
+  xclkl->dt           = 0.0;
+  xclkl->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
 }
 
 static void
@@ -116,6 +120,9 @@ _nc_xcor_kernel_cmb_lensing_set_property (GObject *object, guint prop_id, const 
     case PROP_NL:
       xclkl->Nl    = g_value_dup_object (value);
       xclkl->Nlmax = ncm_vector_len (xclkl->Nl) - 1;
+      break;
+    case PROP_INTEG_METHOD:
+      xclkl->integ_method = g_value_get_enum (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -140,6 +147,9 @@ _nc_xcor_kernel_cmb_lensing_get_property (GObject *object, guint prop_id, GValue
       break;
     case PROP_NL:
       g_value_set_object (value, xclkl->Nl);
+      break;
+    case PROP_INTEG_METHOD:
+      g_value_set_enum (value, xclkl->integ_method);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -226,6 +236,15 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
                                                         "Noise spectrum",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_INTEG_METHOD,
+                                   g_param_spec_enum ("integ-method",
+                                                      NULL,
+                                                      "Integration method",
+                                                      NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
+                                                      NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);

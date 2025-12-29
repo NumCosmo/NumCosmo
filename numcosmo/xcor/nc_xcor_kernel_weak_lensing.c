@@ -48,6 +48,7 @@
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor.h"
 #include "xcor/nc_xcor_kernel_weak_lensing.h"
+#include "nc_enum_types.h"
 
 #include "math/ncm_integrate.h"
 #include "math/ncm_spline_gsl.h"
@@ -106,6 +107,7 @@ struct _NcXcorKernelWeakLensing
   gdouble intr_shear;
 
   gdouble noise;
+  NcXcorKernelIntegMethod integ_method;
 };
 
 enum
@@ -117,6 +119,7 @@ enum
   PROP_DIST,
   PROP_RELTOL,
   PROP_ABSTOL,
+  PROP_INTEG_METHOD,
   PROP_SIZE,
 };
 
@@ -140,16 +143,17 @@ nc_xcor_kernel_weak_lensing_init (NcXcorKernelWeakLensing *xclkg)
   xclkg->abstol     = 0.0;
   xclkg->ctrl_cosmo = ncm_model_ctrl_new (NULL);
 
-  xclkg->dn_dz       = NULL;
-  xclkg->dn_dz_zmin  = 0.0;
-  xclkg->dn_dz_zmax  = 0.0;
-  xclkg->dn_dz_min   = 0.0;
-  xclkg->dn_dz_max   = 0.0;
-  xclkg->dist        = NULL;
-  xclkg->kernel_W_mz = NULL;
-  xclkg->nbar        = 0.0;
-  xclkg->intr_shear  = 0.0;
-  xclkg->noise       = 0.0;
+  xclkg->dn_dz        = NULL;
+  xclkg->dn_dz_zmin   = 0.0;
+  xclkg->dn_dz_zmax   = 0.0;
+  xclkg->dn_dz_min    = 0.0;
+  xclkg->dn_dz_max    = 0.0;
+  xclkg->dist         = NULL;
+  xclkg->kernel_W_mz  = NULL;
+  xclkg->nbar         = 0.0;
+  xclkg->intr_shear   = 0.0;
+  xclkg->noise        = 0.0;
+  xclkg->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
 
   NCM_CVODE_CHECK ((gpointer) xclkg->A, "SUNDenseMatrix", 0, );
   NCM_CVODE_CHECK ((gpointer) xclkg->LS, "SUNDenseLinearSolver", 0, );
@@ -193,6 +197,9 @@ _nc_xcor_kernel_weak_lensing_set_property (GObject *object, guint prop_id, const
     case PROP_ABSTOL:
       xclkg->abstol = g_value_get_double (value);
       break;
+    case PROP_INTEG_METHOD:
+      xclkg->integ_method = g_value_get_enum (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -225,6 +232,9 @@ _nc_xcor_kernel_weak_lensing_get_property (GObject *object, guint prop_id, GValu
       break;
     case PROP_ABSTOL:
       g_value_set_double (value, xclkg->abstol);
+      break;
+    case PROP_INTEG_METHOD:
+      g_value_set_enum (value, xclkg->integ_method);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -390,6 +400,15 @@ nc_xcor_kernel_weak_lensing_class_init (NcXcorKernelWeakLensingClass *klass)
                                                         "Absolute tolerance tolerance",
                                                         0.0, G_MAXDOUBLE, 1.0e-50,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_INTEG_METHOD,
+                                   g_param_spec_enum ("integ-method",
+                                                      NULL,
+                                                      "Integration method",
+                                                      NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
+                                                      NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);

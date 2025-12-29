@@ -55,6 +55,7 @@
 #include "xcor/nc_xcor_kernel_gal.h"
 #include "xcor/nc_xcor_kernel_weak_lensing.h"
 #include "xcor/nc_xcor.h"
+#include "nc_enum_types.h"
 
 #include "math/ncm_integrate.h"
 #include "math/ncm_spline_gsl.h"
@@ -90,6 +91,7 @@ struct _NcXcorKernelGal
   gdouble noise_bias_old;
 
   gdouble nbarm1;
+  NcXcorKernelIntegMethod integ_method;
 };
 
 enum
@@ -100,6 +102,7 @@ enum
   PROP_DOMAGBIAS,
   PROP_NBARM1,
   PROP_DIST,
+  PROP_INTEG_METHOD,
   PROP_SIZE,
 };
 
@@ -131,7 +134,8 @@ nc_xcor_kernel_gal_init (NcXcorKernelGal *xclkg)
   xclkg->bias_old       = 0.0;
   xclkg->noise_bias_old = 0.0;
 
-  xclkg->nbarm1 = 0.0;
+  xclkg->nbarm1       = 0.0;
+  xclkg->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
 }
 
 static void
@@ -169,6 +173,9 @@ _nc_xcor_kernel_gal_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_DIST:
       xclkg->dist = g_value_dup_object (value);
       break;
+    case PROP_INTEG_METHOD:
+      xclkg->integ_method = g_value_get_enum (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -198,6 +205,9 @@ _nc_xcor_kernel_gal_get_property (GObject *object, guint prop_id, GValue *value,
       break;
     case PROP_DIST:
       g_value_set_object (value, xclkg->dist);
+      break;
+    case PROP_INTEG_METHOD:
+      g_value_set_enum (value, xclkg->integ_method);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -376,6 +386,15 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
                                                         "One over nbar (galaxy angular density)",
                                                         0.0, 20.0, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_INTEG_METHOD,
+                                   g_param_spec_enum ("integ-method",
+                                                      NULL,
+                                                      "Integration method",
+                                                      NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
+                                                      NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /*
    * Distribution's magnification bias: mag_bias.

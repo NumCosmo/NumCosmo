@@ -50,6 +50,22 @@ G_DECLARE_DERIVABLE_TYPE (NcXcorKernel, nc_xcor_kernel, NC, XCOR_KERNEL, NcmMode
 
 typedef struct _NcXcorKinetic NcXcorKinetic;
 
+/**
+ * NcXcorKernelIntegMethod:
+ * @NC_XCOR_KERNEL_INTEG_METHOD_LIMBER: Use Limber approximation
+ * @NC_XCOR_KERNEL_INTEG_METHOD_GSL_QAG: Use GSL QAG integration
+ *
+ * Integration method for computing the kernel.
+ *
+ */
+typedef enum _NcXcorKernelIntegMethod
+{
+  NC_XCOR_KERNEL_INTEG_METHOD_LIMBER = 0,
+  NC_XCOR_KERNEL_INTEG_METHOD_GSL_QAG,
+  /* < private > */
+  NC_XCOR_KERNEL_INTEG_METHOD_LEN, /*< skip >*/
+} NcXcorKernelIntegMethod;
+
 struct _NcXcorKernelClass
 {
   /*< private >*/

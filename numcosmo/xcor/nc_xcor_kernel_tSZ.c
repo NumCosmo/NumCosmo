@@ -35,7 +35,7 @@
  * The thermal Sunyaev Zel'dovich (tSZ) effect is a modification in the observed
  * temperature of the cosmic microwave background (CMB) due to the inverse Compton
  * scattering of CMB photons with high-energy electrons along the line-of-sight. These
- * electrons are present in the intracluster medium (ICM) of galaxy clusters, for
+ * electrons are present in the intra-cluster medium (ICM) of galaxy clusters, for
  * example.
  *
  * ## Compton-y parameter
@@ -53,6 +53,7 @@
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_kernel_tSZ.h"
 #include "xcor/nc_xcor.h"
+#include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 
@@ -63,6 +64,7 @@ struct _NcXcorKerneltSZ
   /*< private >*/
   NcXcorKernel parent_instance;
   gdouble noise;
+  NcXcorKernelIntegMethod integ_method;
 };
 
 
@@ -74,13 +76,15 @@ enum
 {
   PROP_0,
   PROP_NOISE,
+  PROP_INTEG_METHOD,
   PROP_SIZE,
 };
 
 static void
 nc_xcor_kernel_tsz_init (NcXcorKerneltSZ *xclkl)
 {
-  xclkl->noise = 0.0;
+  xclkl->noise        = 0.0;
+  xclkl->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
 }
 
 static void
@@ -94,6 +98,9 @@ _nc_xcor_kernel_tsz_set_property (GObject *object, guint prop_id, const GValue *
   {
     case PROP_NOISE:
       xclkl->noise = g_value_get_double (value);
+      break;
+    case PROP_INTEG_METHOD:
+      xclkl->integ_method = g_value_get_enum (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -112,6 +119,9 @@ _nc_xcor_kernel_tsz_get_property (GObject *object, guint prop_id, GValue *value,
   {
     case PROP_NOISE:
       g_value_set_double (value, xclkl->noise);
+      break;
+    case PROP_INTEG_METHOD:
+      g_value_set_enum (value, xclkl->integ_method);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -166,6 +176,15 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
                                                         "Constant noise level",
                                                         -10.0, 10.0, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_INTEG_METHOD,
+                                   g_param_spec_enum ("integ-method",
+                                                      NULL,
+                                                      "Integration method",
+                                                      NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
+                                                      NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
