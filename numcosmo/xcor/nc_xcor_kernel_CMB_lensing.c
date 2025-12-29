@@ -230,8 +230,8 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval    = &_nc_xcor_kernel_cmb_lensing_eval;
-  parent_class->prepare = &_nc_xcor_kernel_cmb_lensing_prepare;
+  parent_class->eval_radial_weight = &_nc_xcor_kernel_cmb_lensing_eval;
+  parent_class->prepare            = &_nc_xcor_kernel_cmb_lensing_prepare;
   /*parent_class->noise_spec = &_nc_xcor_kernel_cmb_lensing_noise_spec;*/
   parent_class->add_noise = &_nc_xcor_kernel_cmb_lensing_add_noise;
 

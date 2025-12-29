@@ -170,9 +170,9 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval      = &_nc_xcor_kernel_tsz_eval;
-  parent_class->prepare   = &_nc_xcor_kernel_tsz_prepare;
-  parent_class->add_noise = &_nc_xcor_kernel_tsz_add_noise;
+  parent_class->eval_radial_weight = &_nc_xcor_kernel_tsz_eval;
+  parent_class->prepare            = &_nc_xcor_kernel_tsz_prepare;
+  parent_class->add_noise          = &_nc_xcor_kernel_tsz_add_noise;
 
   parent_class->obs_len        = &_nc_xcor_kernel_tsz_obs_len;
   parent_class->obs_params_len = &_nc_xcor_kernel_tsz_obs_params_len;

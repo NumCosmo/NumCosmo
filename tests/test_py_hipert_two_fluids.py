@@ -24,6 +24,7 @@
 
 """Tests on NcHIPertTwoFluids perturbations module."""
 
+from typing import cast
 import itertools as it
 import pytest
 from numpy.testing import assert_allclose
@@ -191,10 +192,10 @@ def test_evol_mode_and_state_interp(
             [Nc.HIPertITwoFluidsObsMode.ONE, Nc.HIPertITwoFluidsObsMode.TWO],
             list(Nc.HIPertITwoFluidsObs),
         ):
-            val = state.eval_mode(mode, obs)
-            assert isinstance(val, Ncm.Complex)
-            assert np.isfinite(val.Re())
-            assert np.isfinite(val.Im())
+            val_c = state.eval_mode(mode, obs)
+            assert isinstance(val_c, Ncm.Complex)
+            assert np.isfinite(val_c.Re())
+            assert np.isfinite(val_c.Im())
 
         for obs1, obs2 in it.combinations_with_replacement(
             list(Nc.HIPertITwoFluidsObs), 2
@@ -217,9 +218,10 @@ def test_wkb_eval(cosmo_qgrw: Nc.HICosmo):
     """Test NcHIPertITwoFluidsWKB evaluation."""
     k_a = np.geomspace(1.0e-3, 1.0e3, 5)
     alpha_a = np.linspace(-100.0, 1.0, 5)
+    qgrw: Nc.HICosmoQGRW = cast(Nc.HICosmoQGRW, cosmo_qgrw)
 
     for k, alpha in it.product(k_a, alpha_a):
-        wkb = Nc.HIPertITwoFluids.wkb_eval(cosmo_qgrw, alpha, k)
+        wkb = Nc.HIPertITwoFluids.wkb_eval(qgrw, alpha, k)
         assert isinstance(wkb, Nc.HIPertITwoFluidsWKB)
         wkb2 = wkb.dup()
         assert isinstance(wkb2, Nc.HIPertITwoFluidsWKB)
@@ -242,9 +244,10 @@ def test_eom_eval(cosmo_qgrw: Nc.HICosmo):
     """Test NcHIPertITwoFluidsOEM evaluation."""
     k_a = np.geomspace(1.0e-3, 1.0e3, 5)
     alpha_a = np.linspace(-100.0, 1.0, 5)
+    qgrw: Nc.HICosmoQGRW = cast(Nc.HICosmoQGRW, cosmo_qgrw)
 
     for k, alpha in it.product(k_a, alpha_a):
-        eom = Nc.HIPertITwoFluids.eom_eval(cosmo_qgrw, alpha, k)
+        eom = Nc.HIPertITwoFluids.eom_eval(qgrw, alpha, k)
         assert isinstance(eom, Nc.HIPertITwoFluidsEOM)
         eom2 = eom.dup()
         assert isinstance(eom2, Nc.HIPertITwoFluidsEOM)
@@ -260,9 +263,10 @@ def test_state(cosmo_qgrw: Nc.HICosmo):
     """Test NcHIPertITwoFluidsWKB evaluation."""
     k_a = np.geomspace(1.0e-3, 1.0e3, 5)
     alpha_a = np.linspace(-100.0, 1.0, 5)
+    qgrw: Nc.HICosmoQGRW = cast(Nc.HICosmoQGRW, cosmo_qgrw)
 
     for k, alpha in it.product(k_a, alpha_a):
-        wkb = Nc.HIPertITwoFluids.wkb_eval(cosmo_qgrw, alpha, k)
+        wkb = Nc.HIPertITwoFluids.wkb_eval(qgrw, alpha, k)
         state = wkb.peek_state()
 
         assert isinstance(state, Nc.HIPertITwoFluidsState)

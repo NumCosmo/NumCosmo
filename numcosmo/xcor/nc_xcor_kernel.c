@@ -356,7 +356,7 @@ nc_xcor_kernel_get_const_factor (NcXcorKernel *xclk)
 }
 
 /**
- * nc_xcor_kernel_eval: (virtual eval)
+ * nc_xcor_kernel_eval_radial_weight: (virtual eval_radial_weight)
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @z: a #gdouble
@@ -370,18 +370,18 @@ nc_xcor_kernel_get_const_factor (NcXcorKernel *xclk)
  * Returns: the kernel value $W(z,\ell)$
  */
 gdouble
-nc_xcor_kernel_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
+nc_xcor_kernel_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   if ((self->zmin <= z) && (self->zmax >= z))
-    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, xck, l);
+    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_radial_weight (xclk, cosmo, z, xck, l);
   else
     return 0.0;
 }
 
 /**
- * nc_xcor_kernel_eval_full:
+ * nc_xcor_kernel_eval_radial_weight_full:
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @z: a #gdouble
@@ -395,7 +395,7 @@ nc_xcor_kernel_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXc
  * Returns: the normalized kernel value $c \times W(z,\ell)$
  */
 gdouble
-nc_xcor_kernel_eval_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
+nc_xcor_kernel_eval_radial_weight_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
   const gdouble xi_z        = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
@@ -403,7 +403,7 @@ nc_xcor_kernel_eval_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDis
   const NcXcorKinetic xck   = { xi_z, E_z };
 
   if ((self->zmin <= z) && (self->zmax >= z))
-    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, &xck, l) * self->cons_factor;
+    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_radial_weight (xclk, cosmo, z, &xck, l) * self->cons_factor;
   else
     return 0.0;
 }

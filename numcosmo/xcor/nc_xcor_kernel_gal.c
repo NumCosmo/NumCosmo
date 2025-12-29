@@ -401,9 +401,9 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval      = &_nc_xcor_kernel_gal_eval;
-  parent_class->prepare   = &_nc_xcor_kernel_gal_prepare;
-  parent_class->add_noise = &_nc_xcor_kernel_gal_add_noise;
+  parent_class->eval_radial_weight = &_nc_xcor_kernel_gal_eval;
+  parent_class->prepare            = &_nc_xcor_kernel_gal_prepare;
+  parent_class->add_noise          = &_nc_xcor_kernel_gal_add_noise;
 
   parent_class->obs_len        = &_nc_xcor_kernel_gal_obs_len;
   parent_class->obs_params_len = &_nc_xcor_kernel_gal_obs_params_len;
@@ -514,7 +514,7 @@ _nc_xcor_kernel_gal_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const
   {
     const gdouble lfactor = sqrt ((l + 2.0) * (l + 1.0) * l * (l - 1.0));
     const gdouble llp1    = l * (l + 1.0);
-    const gdouble g_z     = nc_xcor_kernel_eval (NC_XCOR_KERNEL (xclkg->xclkw), cosmo, z, xck, l) *
+    const gdouble g_z     = nc_xcor_kernel_eval_radial_weight (NC_XCOR_KERNEL (xclkg->xclkw), cosmo, z, xck, l) *
                             nc_xcor_kernel_get_const_factor (NC_XCOR_KERNEL (xclkg->xclkw)) / lfactor;
 
     res += llp1 * (5.0 * MAG_BIAS - 2.0) * g_z;

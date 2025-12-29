@@ -743,7 +743,9 @@ def compare_cmb_lens_kernel(
 
     z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_cmb_lens, cosmology, ell)
     nc_Wchi_a = (
-        np.array([nc_cmb_lens.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
+        np.array(
+            [nc_cmb_lens.eval_radial_weight_full(cosmo, z, dist, int(ell)) for z in z_a]
+        )
         * H_Mpc_a
     )
 
@@ -836,7 +838,9 @@ def compare_cmb_isw_kernel(
 
     z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_cmb_isw, cosmology, ell)
     nc_Wchi_a = (
-        np.array([nc_cmb_isw.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
+        np.array(
+            [nc_cmb_isw.eval_radial_weight_full(cosmo, z, dist, int(ell)) for z in z_a]
+        )
         * H_Mpc_a
     )
 
@@ -925,7 +929,9 @@ def compare_tsz_kernel(
     nc_Wchi_a = (
         np.array(
             [
-                nc_tsz.eval_full(cosmology.cosmo, z, cosmology.dist, int(ell))
+                nc_tsz.eval_radial_weight_full(
+                    cosmology.cosmo, z, cosmology.dist, int(ell)
+                )
                 for z in z_a
             ]
         )
@@ -1035,7 +1041,12 @@ def compare_galaxy_weak_lensing_kernel(
 
     nc_Wchi_a = (
         np.array(
-            [nc_wl.eval_full(cosmology.cosmo, z, cosmology.dist, int(ell)) for z in z_a]
+            [
+                nc_wl.eval_radial_weight_full(
+                    cosmology.cosmo, z, cosmology.dist, int(ell)
+                )
+                for z in z_a
+            ]
         )
         * H_Mpc_a
     )
@@ -1139,7 +1150,9 @@ def compare_galaxy_number_count_kernel(
     nc_Wchi_a = (
         np.array(
             [
-                nc_gal.eval_full(cosmology.cosmo, z, cosmology.dist, int(ell))
+                nc_gal.eval_radial_weight_full(
+                    cosmology.cosmo, z, cosmology.dist, int(ell)
+                )
                 for z in z_a
             ]
         )

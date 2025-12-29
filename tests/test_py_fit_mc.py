@@ -24,6 +24,7 @@
 
 """Tests for NcmFitMC object."""
 
+from typing import cast
 from pathlib import Path
 import re
 import pytest
@@ -106,7 +107,7 @@ def test_serialize_deserialize(mc: Ncm.FitMC, tmp_path: Path):
 
     file = tmp_path / "fit_mc_test.nc"
     mc.set_data_file(file.as_posix())
-    mc2: Ncm.FitMC = ser.dup_obj(mc)
+    mc2: Ncm.FitMC = cast(Ncm.FitMC, ser.dup_obj(mc))
 
     assert mc.props.nthreads == mc2.props.nthreads
     assert mc.props.rtype == mc2.props.rtype
@@ -118,7 +119,7 @@ def test_threaded_vs_serial(capfd, mc: Ncm.FitMC):
     """Test NcmFitMC serial vs threaded."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
-    mc2: Ncm.FitMC = ser.dup_obj(mc)
+    mc2: Ncm.FitMC = cast(Ncm.FitMC, ser.dup_obj(mc))
 
     mc.set_mtype(Ncm.FitRunMsgs.NONE)
     mc.set_nthreads(1)
@@ -171,9 +172,7 @@ class MVNDMean(Ncm.MSetFunc1):
 
 @pytest.mark.parametrize("nthreads", [1, 4], ids=["threads=1", "threads=4"])
 @pytest.mark.parametrize("rtype", MC_RESAMPLE_TYPES, ids=MC_RESAMPLE_LABELS)
-def test_mc_funcs(
-    fit: Ncm.Fit, rtype: Ncm.FitMCResampleType, nthreads: int
-) -> Ncm.FitMC:
+def test_mc_funcs(fit: Ncm.Fit, rtype: Ncm.FitMCResampleType, nthreads: int) -> None:
     """Fixture for NcmFitMC object."""
     funcs_oa = Ncm.ObjArray.new()
 

@@ -295,7 +295,7 @@ nc_xcor_auto_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints
       const gint l             = xcor_int_arg->ells[j];
       const gdouble k          = (l + 0.5) / (xi_z_phys); /* in Mpc-1 */
       const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xcor_int_arg->ps), NCM_MODEL (xcor_int_arg->cosmo), z, k);
-      const gdouble k1z        = nc_xcor_kernel_eval (xcor_int_arg->xclk1, xcor_int_arg->cosmo, z, &xck, l);
+      const gdouble k1z        = nc_xcor_kernel_eval_radial_weight (xcor_int_arg->xclk1, xcor_int_arg->cosmo, z, &xck, l);
       const gdouble res        = E_z * gsl_pow_2 (k1z / xi_z) * power_spec;
 
       ncm_vector_fast_set (fval, i * fdim + j, res);
@@ -323,8 +323,8 @@ nc_xcor_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoint
       const gint l             = xcor_arg->ells[j];
       const gdouble k          = (l + 0.5) / (xi_z_phys); /* in Mpc-1 */
       const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xcor_arg->ps), NCM_MODEL (xcor_arg->cosmo), z, k);
-      const gdouble k1z        = nc_xcor_kernel_eval (xcor_arg->xclk1, xcor_arg->cosmo, z, &xck, l);
-      const gdouble k2z        = nc_xcor_kernel_eval (xcor_arg->xclk2, xcor_arg->cosmo, z, &xck, l);
+      const gdouble k1z        = nc_xcor_kernel_eval_radial_weight (xcor_arg->xclk1, xcor_arg->cosmo, z, &xck, l);
+      const gdouble k2z        = nc_xcor_kernel_eval_radial_weight (xcor_arg->xclk2, xcor_arg->cosmo, z, &xck, l);
       const gdouble res        = E_z * k1z * k2z * power_spec / (xi_z * xi_z);
 
       ncm_vector_fast_set (fval, i * fdim + j, res);
@@ -461,8 +461,8 @@ _xcor_gsl_cross_int (gdouble z, gpointer ptr)
   const gdouble k          = (xclki->l + 0.5) / (xi_z_phys); /* in Mpc-1 */
   const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
 
-  const gdouble k1z = nc_xcor_kernel_eval (xclki->xclk1, xclki->cosmo, z, &xck, xclki->l);
-  const gdouble k2z = nc_xcor_kernel_eval (xclki->xclk2, xclki->cosmo, z, &xck, xclki->l);
+  const gdouble k1z = nc_xcor_kernel_eval_radial_weight (xclki->xclk1, xclki->cosmo, z, &xck, xclki->l);
+  const gdouble k2z = nc_xcor_kernel_eval_radial_weight (xclki->xclk2, xclki->cosmo, z, &xck, xclki->l);
 
   return E_z * k1z * k2z * power_spec / (xi_z * xi_z);
 }
@@ -477,7 +477,7 @@ _xcor_gsl_auto_int (gdouble z, gpointer ptr)
   const NcXcorKinetic xck  = { xi_z, E_z };
   const gdouble k          = (xclki->l + 0.5) / (xi_z_phys); /* in Mpc-1 */
   const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
-  const gdouble k1z        = nc_xcor_kernel_eval (xclki->xclk1, xclki->cosmo, z, &xck, xclki->l);
+  const gdouble k1z        = nc_xcor_kernel_eval_radial_weight (xclki->xclk1, xclki->cosmo, z, &xck, xclki->l);
 
   return E_z * gsl_pow_2 (k1z / xi_z) * power_spec;
 }

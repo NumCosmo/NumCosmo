@@ -250,9 +250,9 @@ nc_xcor_kernel_cmb_isw_class_init (NcXcorKernelCMBISWClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval      = &_nc_xcor_kernel_cmb_isw_eval;
-  parent_class->prepare   = &_nc_xcor_kernel_cmb_isw_prepare;
-  parent_class->add_noise = &_nc_xcor_kernel_cmb_isw_add_noise;
+  parent_class->eval_radial_weight = &_nc_xcor_kernel_cmb_isw_eval;
+  parent_class->prepare            = &_nc_xcor_kernel_cmb_isw_prepare;
+  parent_class->add_noise          = &_nc_xcor_kernel_cmb_isw_add_noise;
 
   parent_class->obs_len        = &_nc_xcor_kernel_cmb_isw_obs_len;
   parent_class->obs_params_len = &_nc_xcor_kernel_cmb_isw_obs_params_len;
