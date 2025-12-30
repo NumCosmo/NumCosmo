@@ -324,7 +324,7 @@ _nc_xcor_kernel_gal_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_gal_parent_class)->finalize (object);
 }
 
-static gdouble _nc_xcor_kernel_gal_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_gal_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 static void _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_gal_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 guint _nc_xcor_kernel_gal_obs_len (NcXcorKernel *xclk);
@@ -420,7 +420,7 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval_radial_weight = &_nc_xcor_kernel_gal_eval;
+  parent_class->eval_radial_weight = &_nc_xcor_kernel_gal_eval_radial_weight;
   parent_class->prepare            = &_nc_xcor_kernel_gal_prepare;
   parent_class->add_noise          = &_nc_xcor_kernel_gal_add_noise;
 
@@ -522,7 +522,7 @@ _nc_xcor_kernel_gal_dndz (NcXcorKernelGal *xclkg, gdouble z)
 }
 
 static gdouble
-_nc_xcor_kernel_gal_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
+_nc_xcor_kernel_gal_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xclk);
   const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (xclkg, z);

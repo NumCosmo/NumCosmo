@@ -314,7 +314,7 @@ _nc_xcor_kernel_weak_lensing_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_weak_lensing_parent_class)->finalize (object);
 }
 
-static gdouble _nc_xcor_kernel_weak_lensing_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_weak_lensing_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 static void _nc_xcor_kernel_weak_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 
 /*static gdouble _nc_xcor_kernel_weak_lensing_noise_spec (NcXcorKernel* xclk, guint l);*/
@@ -413,7 +413,7 @@ nc_xcor_kernel_weak_lensing_class_init (NcXcorKernelWeakLensingClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval_radial_weight = &_nc_xcor_kernel_weak_lensing_eval;
+  parent_class->eval_radial_weight = &_nc_xcor_kernel_weak_lensing_eval_radial_weight;
   parent_class->prepare            = &_nc_xcor_kernel_weak_lensing_prepare;
   parent_class->add_noise          = &_nc_xcor_kernel_weak_lensing_add_noise;
 
@@ -610,7 +610,7 @@ _nc_xcor_kernel_weak_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 }
 
 static gdouble
-_nc_xcor_kernel_weak_lensing_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
+_nc_xcor_kernel_weak_lensing_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (xclk);
   const gdouble nu               = l + 0.5;

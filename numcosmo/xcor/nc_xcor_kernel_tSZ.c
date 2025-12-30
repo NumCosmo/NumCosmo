@@ -143,7 +143,7 @@ _nc_xcor_kernel_tsz_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_tsz_parent_class)->finalize (object);
 }
 
-static gdouble _nc_xcor_kernel_tsz_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_tsz_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 static void _nc_xcor_kernel_tsz_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_tsz_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 static guint _nc_xcor_kernel_tsz_obs_len (NcXcorKernel *xclk);
@@ -189,7 +189,7 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval_radial_weight = &_nc_xcor_kernel_tsz_eval;
+  parent_class->eval_radial_weight = &_nc_xcor_kernel_tsz_eval_radial_weight;
   parent_class->prepare            = &_nc_xcor_kernel_tsz_prepare;
   parent_class->add_noise          = &_nc_xcor_kernel_tsz_add_noise;
 
@@ -219,7 +219,7 @@ nc_xcor_kernel_tsz_new (gdouble zmax)
 }
 
 static gdouble
-_nc_xcor_kernel_tsz_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
+_nc_xcor_kernel_tsz_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   const gdouble nc_prefac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
   const gdouble units     = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);

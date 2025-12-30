@@ -183,7 +183,7 @@ _nc_xcor_kernel_cmb_isw_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_cmb_isw_parent_class)->finalize (object);
 }
 
-static gdouble _nc_xcor_kernel_cmb_isw_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_cmb_isw_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 static void _nc_xcor_kernel_cmb_isw_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_cmb_isw_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 static guint _nc_xcor_kernel_cmb_isw_obs_len (NcXcorKernel *xclk);
@@ -269,7 +269,7 @@ nc_xcor_kernel_cmb_isw_class_init (NcXcorKernelCMBISWClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval_radial_weight = &_nc_xcor_kernel_cmb_isw_eval;
+  parent_class->eval_radial_weight = &_nc_xcor_kernel_cmb_isw_eval_radial_weight;
   parent_class->prepare            = &_nc_xcor_kernel_cmb_isw_prepare;
   parent_class->add_noise          = &_nc_xcor_kernel_cmb_isw_add_noise;
 
@@ -280,7 +280,7 @@ nc_xcor_kernel_cmb_isw_class_init (NcXcorKernelCMBISWClass *klass)
 }
 
 static gdouble
-_nc_xcor_kernel_cmb_isw_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
+_nc_xcor_kernel_cmb_isw_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
   NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
