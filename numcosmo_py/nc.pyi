@@ -419,6 +419,8 @@ XCOR_KERNEL_GAL_DEFAULT_NOISE_BIAS: float = 0.0
 XCOR_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_GAL_G_FUNC_LEN: int = 200
 XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
+XCOR_LENSING_EFFICIENCY_DEFAULT_ABSTOL: float = 0.0
+XCOR_LENSING_EFFICIENCY_DEFAULT_RELTOL: float = 0.0
 XCOR_PRECISION: float = 1e-06
 _lock = ...  # FIXME Constant
 _namespace: str = r"NumCosmo"
@@ -20069,6 +20071,12 @@ class XcorKernel(NumCosmoMath.Model):
         Minimum redshift
       zmax -> gdouble: zmax
         Maximum redshift
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integ-method -> NcXcorKernelIntegMethod: integ-method
+        Integration method
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20095,6 +20103,9 @@ class XcorKernel(NumCosmoMath.Model):
     """
 
     class Props:
+        dist: Distance
+        integ_method: XcorKernelIntegMethod
+        powspec: NumCosmoMath.Powspec
         zmax: float
         zmin: float
         implementation: int
@@ -20111,6 +20122,9 @@ class XcorKernel(NumCosmoMath.Model):
     parent_instance: NumCosmoMath.Model = ...
     def __init__(
         self,
+        dist: Distance = ...,
+        integ_method: XcorKernelIntegMethod = ...,
+        powspec: NumCosmoMath.Powspec = ...,
         zmax: float = ...,
         zmin: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20128,9 +20142,13 @@ class XcorKernel(NumCosmoMath.Model):
     def do_eval_radial_weight(
         self, cosmo: HICosmo, z: float, xck: XcorKinetic, l: int
     ) -> float: ...
+    def do_get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
     def do_obs_len(self) -> int: ...
     def do_obs_params_len(self) -> int: ...
     def do_prepare(self, cosmo: HICosmo) -> None: ...
+    def eval_kernel(
+        self, cosmo: HICosmo, k: float, xck: XcorKinetic, l: int
+    ) -> float: ...
     def eval_radial_weight(
         self, cosmo: HICosmo, z: float, xck: XcorKinetic, l: int
     ) -> float: ...
@@ -20139,6 +20157,8 @@ class XcorKernel(NumCosmoMath.Model):
     ) -> float: ...
     def free(self) -> None: ...
     def get_const_factor(self) -> float: ...
+    def get_integ_method(self) -> XcorKernelIntegMethod: ...
+    def get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
     @staticmethod
     def id() -> int: ...
@@ -20146,6 +20166,8 @@ class XcorKernel(NumCosmoMath.Model):
     def log_all_models() -> None: ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
+    def peek_dist(self) -> Distance: ...
+    def peek_powspec(self) -> NumCosmoMath.Powspec: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> XcorKernel: ...
     def set_const_factor(self, cf: float) -> None: ...
@@ -20163,10 +20185,6 @@ class XcorKernelCMBISW(XcorKernel):
     Object NcXcorKernelCMBISW
 
     Properties from NcXcorKernelCMBISW:
-      dist -> NcDistance: dist
-        Distance object
-      ps -> NcmPowspec: ps
-        Power Spectrum object
       recomb -> NcRecomb: recomb
         Recombination object
       Nl -> NcmVector: Nl
@@ -20177,6 +20195,12 @@ class XcorKernelCMBISW(XcorKernel):
         Minimum redshift
       zmax -> gdouble: zmax
         Maximum redshift
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integ-method -> NcXcorKernelIntegMethod: integ-method
+        Integration method
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20204,9 +20228,10 @@ class XcorKernelCMBISW(XcorKernel):
 
     class Props:
         Nl: NumCosmoMath.Vector
-        dist: Distance
-        ps: NumCosmoMath.Powspec
         recomb: Recomb
+        dist: Distance
+        integ_method: XcorKernelIntegMethod
+        powspec: NumCosmoMath.Powspec
         zmax: float
         zmin: float
         implementation: int
@@ -20223,9 +20248,10 @@ class XcorKernelCMBISW(XcorKernel):
     def __init__(
         self,
         Nl: NumCosmoMath.Vector = ...,
-        dist: Distance = ...,
-        ps: NumCosmoMath.Powspec = ...,
         recomb: Recomb = ...,
+        dist: Distance = ...,
+        integ_method: XcorKernelIntegMethod = ...,
+        powspec: NumCosmoMath.Powspec = ...,
         zmax: float = ...,
         zmin: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20259,13 +20285,11 @@ class XcorKernelCMBLensing(XcorKernel):
     ::
 
         XcorKernelCMBLensing(**properties)
-        new(dist:NumCosmo.Distance, recomb:NumCosmo.Recomb, Nl:NumCosmoMath.Vector) -> NumCosmo.XcorKernelCMBLensing
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, recomb:NumCosmo.Recomb, Nl:NumCosmoMath.Vector) -> NumCosmo.XcorKernelCMBLensing
 
     Object NcXcorKernelCMBLensing
 
     Properties from NcXcorKernelCMBLensing:
-      dist -> NcDistance: dist
-        Distance object
       recomb -> NcRecomb: recomb
         Recombination object
       Nl -> NcmVector: Nl
@@ -20276,6 +20300,12 @@ class XcorKernelCMBLensing(XcorKernel):
         Minimum redshift
       zmax -> gdouble: zmax
         Maximum redshift
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integ-method -> NcXcorKernelIntegMethod: integ-method
+        Integration method
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20303,8 +20333,10 @@ class XcorKernelCMBLensing(XcorKernel):
 
     class Props:
         Nl: NumCosmoMath.Vector
-        dist: Distance
         recomb: Recomb
+        dist: Distance
+        integ_method: XcorKernelIntegMethod
+        powspec: NumCosmoMath.Powspec
         zmax: float
         zmin: float
         implementation: int
@@ -20321,8 +20353,10 @@ class XcorKernelCMBLensing(XcorKernel):
     def __init__(
         self,
         Nl: NumCosmoMath.Vector = ...,
-        dist: Distance = ...,
         recomb: Recomb = ...,
+        dist: Distance = ...,
+        integ_method: XcorKernelIntegMethod = ...,
+        powspec: NumCosmoMath.Powspec = ...,
         zmax: float = ...,
         zmin: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20331,7 +20365,11 @@ class XcorKernelCMBLensing(XcorKernel):
     ) -> None: ...
     @classmethod
     def new(
-        cls, dist: Distance, recomb: Recomb, Nl: NumCosmoMath.Vector
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        recomb: Recomb,
+        Nl: NumCosmoMath.Vector,
     ) -> XcorKernelCMBLensing: ...
 
 class XcorKernelCMBLensingClass(GObject.GPointer):
@@ -20364,6 +20402,9 @@ class XcorKernelClass(GObject.GPointer):
     ] = ...
     obs_len: typing.Callable[[XcorKernel], int] = ...
     obs_params_len: typing.Callable[[XcorKernel], int] = ...
+    get_k_range: typing.Callable[
+        [XcorKernel, HICosmo, int], typing.Tuple[float, float]
+    ] = ...
 
 class XcorKernelGal(XcorKernel):
     r"""
@@ -20372,7 +20413,7 @@ class XcorKernelGal(XcorKernel):
     ::
 
         XcorKernelGal(**properties)
-        new(zmin:float, zmax:float, np:int, nbarm1:float, dn_dz:NumCosmoMath.Spline, dist:NumCosmo.Distance, domagbias:bool) -> NumCosmo.XcorKernelGal
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, zmin:float, zmax:float, np:int, nbarm1:float, dn_dz:NumCosmoMath.Spline, domagbias:bool) -> NumCosmo.XcorKernelGal
 
     Object NcXcorKernelGal
 
@@ -20385,8 +20426,6 @@ class XcorKernelGal(XcorKernel):
         Do magnification bias
       nbarm1 -> gdouble: nbarm1
         One over nbar (galaxy angular density)
-      dist -> NcDistance: dist
-        Distance object
       mag-bias -> gdouble: mag-bias
         mag_bias
       noise-bias -> gdouble: noise-bias
@@ -20407,6 +20446,12 @@ class XcorKernelGal(XcorKernel):
         Minimum redshift
       zmax -> gdouble: zmax
         Maximum redshift
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integ-method -> NcXcorKernelIntegMethod: integ-method
+        Integration method
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20437,7 +20482,6 @@ class XcorKernelGal(XcorKernel):
         bparam: NumCosmoMath.Vector
         bparam_fit: GLib.Variant
         bparam_length: int
-        dist: Distance
         dndz: NumCosmoMath.Spline
         domagbias: bool
         mag_bias: float
@@ -20445,6 +20489,9 @@ class XcorKernelGal(XcorKernel):
         nbarm1: float
         noise_bias: float
         noise_bias_fit: bool
+        dist: Distance
+        integ_method: XcorKernelIntegMethod
+        powspec: NumCosmoMath.Powspec
         zmax: float
         zmin: float
         implementation: int
@@ -20464,7 +20511,6 @@ class XcorKernelGal(XcorKernel):
         bparam: NumCosmoMath.Vector = ...,
         bparam_fit: GLib.Variant = ...,
         bparam_length: int = ...,
-        dist: Distance = ...,
         dndz: NumCosmoMath.Spline = ...,
         domagbias: bool = ...,
         mag_bias: float = ...,
@@ -20472,6 +20518,9 @@ class XcorKernelGal(XcorKernel):
         nbarm1: float = ...,
         noise_bias: float = ...,
         noise_bias_fit: bool = ...,
+        dist: Distance = ...,
+        integ_method: XcorKernelIntegMethod = ...,
+        powspec: NumCosmoMath.Powspec = ...,
         zmax: float = ...,
         zmin: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20483,12 +20532,13 @@ class XcorKernelGal(XcorKernel):
     @classmethod
     def new(
         cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
         zmin: float,
         zmax: float,
         np: int,
         nbarm1: float,
         dn_dz: NumCosmoMath.Spline,
-        dist: Distance,
         domagbias: bool,
     ) -> XcorKernelGal: ...
     def set_bias_old(self, bias_old: float, noise_bias_old: float) -> None: ...
@@ -20512,7 +20562,7 @@ class XcorKernelWeakLensing(XcorKernel):
     ::
 
         XcorKernelWeakLensing(**properties)
-        new(zmin:float, zmax:float, dn_dz:NumCosmoMath.Spline, nbar:float, intr_shear:float, dist:NumCosmo.Distance) -> NumCosmo.XcorKernelWeakLensing
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, zmin:float, zmax:float, dn_dz:NumCosmoMath.Spline, nbar:float, intr_shear:float) -> NumCosmo.XcorKernelWeakLensing
 
     Object NcXcorKernelWeakLensing
 
@@ -20523,18 +20573,18 @@ class XcorKernelWeakLensing(XcorKernel):
         nbar (galaxy angular density)
       intr-shear -> gdouble: intr-shear
         Intrinsic galaxy shear
-      dist -> NcDistance: dist
-        Distance object
-      reltol -> gdouble: reltol
-        Relative tolerance
-      abstol -> gdouble: abstol
-        Absolute tolerance tolerance
 
     Properties from NcXcorKernel:
       zmin -> gdouble: zmin
         Minimum redshift
       zmax -> gdouble: zmax
         Maximum redshift
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integ-method -> NcXcorKernelIntegMethod: integ-method
+        Integration method
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20561,12 +20611,12 @@ class XcorKernelWeakLensing(XcorKernel):
     """
 
     class Props:
-        abstol: float
-        dist: Distance
         dndz: NumCosmoMath.Spline
         intr_shear: float
         nbar: float
-        reltol: float
+        dist: Distance
+        integ_method: XcorKernelIntegMethod
+        powspec: NumCosmoMath.Powspec
         zmax: float
         zmin: float
         implementation: int
@@ -20582,12 +20632,12 @@ class XcorKernelWeakLensing(XcorKernel):
     props: Props = ...
     def __init__(
         self,
-        abstol: float = ...,
-        dist: Distance = ...,
         dndz: NumCosmoMath.Spline = ...,
         intr_shear: float = ...,
         nbar: float = ...,
-        reltol: float = ...,
+        dist: Distance = ...,
+        integ_method: XcorKernelIntegMethod = ...,
+        powspec: NumCosmoMath.Powspec = ...,
         zmax: float = ...,
         zmin: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20597,12 +20647,13 @@ class XcorKernelWeakLensing(XcorKernel):
     @classmethod
     def new(
         cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
         zmin: float,
         zmax: float,
         dn_dz: NumCosmoMath.Spline,
         nbar: float,
         intr_shear: float,
-        dist: Distance,
     ) -> XcorKernelWeakLensing: ...
 
 class XcorKernelWeakLensingClass(GObject.GPointer):
@@ -20623,7 +20674,7 @@ class XcorKerneltSZ(XcorKernel):
     ::
 
         XcorKerneltSZ(**properties)
-        new(zmax:float) -> NumCosmo.XcorKerneltSZ
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, zmax:float) -> NumCosmo.XcorKerneltSZ
 
     Object NcXcorKerneltSZ
 
@@ -20636,6 +20687,12 @@ class XcorKerneltSZ(XcorKernel):
         Minimum redshift
       zmax -> gdouble: zmax
         Maximum redshift
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integ-method -> NcXcorKernelIntegMethod: integ-method
+        Integration method
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20663,6 +20720,9 @@ class XcorKerneltSZ(XcorKernel):
 
     class Props:
         noise: float
+        dist: Distance
+        integ_method: XcorKernelIntegMethod
+        powspec: NumCosmoMath.Powspec
         zmax: float
         zmin: float
         implementation: int
@@ -20679,6 +20739,9 @@ class XcorKerneltSZ(XcorKernel):
     def __init__(
         self,
         noise: float = ...,
+        dist: Distance = ...,
+        integ_method: XcorKernelIntegMethod = ...,
+        powspec: NumCosmoMath.Powspec = ...,
         zmax: float = ...,
         zmin: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20686,7 +20749,9 @@ class XcorKerneltSZ(XcorKernel):
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
-    def new(cls, zmax: float) -> XcorKerneltSZ: ...
+    def new(
+        cls, dist: Distance, ps: NumCosmoMath.Powspec, zmax: float
+    ) -> XcorKerneltSZ: ...
 
 class XcorKerneltSZClass(GObject.GPointer):
     r"""
@@ -20712,6 +20777,69 @@ class XcorKinetic(GObject.GBoxed):
     E_z: float = ...
     def copy(self) -> XcorKinetic: ...
     def free(self) -> None: ...
+
+class XcorLensingEfficiency(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorLensingEfficiency(**properties)
+
+    Object NcXcorLensingEfficiency
+
+    Properties from NcXcorLensingEfficiency:
+      distance -> NcDistance: distance
+        Distance object
+      reltol -> gdouble: reltol
+        Relative tolerance
+      abstol -> gdouble: abstol
+        Absolute tolerance
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        abstol: float
+        distance: Distance
+        reltol: float
+
+    props: Props = ...
+    parent_instance: GObject.Object = ...
+    def __init__(
+        self, abstol: float = ..., distance: Distance = ..., reltol: float = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(lens_eff: XcorLensingEfficiency) -> None: ...
+    def do_eval_source(self, z: float) -> float: ...
+    def do_get_z_range(self) -> typing.Tuple[float, float]: ...
+    def eval(self, z: float) -> float: ...
+    def free(self) -> None: ...
+    def get_abstol(self) -> float: ...
+    def get_reltol(self) -> float: ...
+    def peek_distance(self) -> Distance: ...
+    def prepare(self, cosmo: HICosmo) -> None: ...
+    def ref(self) -> XcorLensingEfficiency: ...
+    def set_abstol(self, abstol: float) -> None: ...
+    def set_distance(self, dist: Distance) -> None: ...
+    def set_reltol(self, reltol: float) -> None: ...
+
+class XcorLensingEfficiencyClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorLensingEfficiencyClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+    eval_source: typing.Callable[[XcorLensingEfficiency, float], float] = ...
+    get_z_range: typing.Callable[
+        [XcorLensingEfficiency], typing.Tuple[float, float]
+    ] = ...
+    padding: list[None] = ...
 
 class _HaloPositionClass(GObject.GPointer):
     r"""
@@ -22602,6 +22730,21 @@ class XcorKernelImpl(GObject.GEnum):
     ADD_NOISE: XcorKernelImpl = ...
     EVAL_RADIAL_WEIGHT: XcorKernelImpl = ...
     PREPARE: XcorKernelImpl = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class XcorKernelIntegMethod(GObject.GEnum):
+    GSL_QAG: XcorKernelIntegMethod = ...
+    LIMBER: XcorKernelIntegMethod = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
