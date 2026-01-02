@@ -80,7 +80,7 @@ typedef enum _NcXcorKernelGalVParams
 
 #define NC_XCOR_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL (0.0)
 
-NcXcorKernelGal *nc_xcor_kernel_gal_new (gdouble zmin, gdouble zmax, gsize np, gdouble nbarm1, NcmSpline *dn_dz, NcDistance *dist, gboolean domagbias);
+NcXcorKernelGal *nc_xcor_kernel_gal_new (NcDistance *dist, NcmPowspec *ps, gdouble zmin, gdouble zmax, gsize np, gdouble nbarm1, NcmSpline *dn_dz, gboolean domagbias);
 
 void nc_xcor_kernel_gal_set_fast_update (NcXcorKernelGal *xclk, gboolean fast_update);
 gboolean nc_xcor_kernel_gal_get_fast_update (NcXcorKernelGal *xclk);

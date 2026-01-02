@@ -57,7 +57,7 @@ typedef enum /*< enum,underscore_name=NC_XCOR_KERNEL_CMB_LENSING_SPARAMS >*/
 
 #define NC_XCOR_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
 
-NcXcorKernelCMBLensing *nc_xcor_kernel_cmb_lensing_new (NcDistance *dist, NcRecomb *recomb, NcmVector *Nl);
+NcXcorKernelCMBLensing *nc_xcor_kernel_cmb_lensing_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *recomb, NcmVector *Nl);
 
 G_END_DECLS
 

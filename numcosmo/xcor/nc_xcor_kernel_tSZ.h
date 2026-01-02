@@ -54,7 +54,7 @@ typedef enum /*< enum,underscore_name=NC_XCOR_KERNEL_TSZ_SPARAMS >*/
   NC_XCOR_KERNEL_TSZ_SPARAM_LEN
 } NcXcorKerneltSZSParams;
 
-NcXcorKerneltSZ *nc_xcor_kernel_tsz_new (gdouble zmax);
+NcXcorKerneltSZ *nc_xcor_kernel_tsz_new (NcDistance *dist, NcmPowspec *ps, gdouble zmax);
 
 G_END_DECLS
 

@@ -47,7 +47,7 @@
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_kernel_cmb_isw.h"
 #include "xcor/nc_xcor.h"
-#include "nc_enum_types.h"
+
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
@@ -61,24 +61,20 @@ struct _NcXcorKernelCMBISW
 
 typedef struct _NcXcorKernelCMBISWPrivate
 {
-  NcDistance *dist;
-  NcmPowspec *ps;
   NcRecomb *recomb;
   NcmVector *Nl;
   guint Nlmax;
   gdouble xi_lss;
   gdouble cons_factor;
-  NcXcorKernelIntegMethod integ_method;
+  NcDistance *dist;
+  NcmPowspec *ps;
 } NcXcorKernelCMBISWPrivate;
 
 enum
 {
   PROP_0,
-  PROP_DIST,
-  PROP_PS,
   PROP_RECOMB,
   PROP_NL,
-  PROP_INTEG_METHOD,
   PROP_SIZE,
 };
 
@@ -89,13 +85,11 @@ nc_xcor_kernel_cmb_isw_init (NcXcorKernelCMBISW *xcisw)
 {
   NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
 
-  self->dist         = NULL;
-  self->ps           = NULL;
-  self->recomb       = NULL;
-  self->Nl           = NULL;
-  self->Nlmax        = 0;
-  self->xi_lss       = 0.0;
-  self->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
+  self->recomb = NULL;
+  self->Nl     = NULL;
+  self->Nlmax  = 0;
+  self->xi_lss = 0.0;
+  self->dist   = NULL;
 }
 
 static void
@@ -108,21 +102,12 @@ _nc_xcor_kernel_cmb_isw_set_property (GObject *object, guint prop_id, const GVal
 
   switch (prop_id)
   {
-    case PROP_DIST:
-      self->dist = g_value_dup_object (value);
-      break;
-    case PROP_PS:
-      self->ps = g_value_dup_object (value);
-      break;
     case PROP_RECOMB:
       self->recomb = g_value_dup_object (value);
       break;
     case PROP_NL:
       self->Nl    = g_value_dup_object (value);
       self->Nlmax = ncm_vector_len (self->Nl) - 1;
-      break;
-    case PROP_INTEG_METHOD:
-      self->integ_method = g_value_get_enum (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -140,20 +125,11 @@ _nc_xcor_kernel_cmb_isw_get_property (GObject *object, guint prop_id, GValue *va
 
   switch (prop_id)
   {
-    case PROP_DIST:
-      g_value_set_object (value, self->dist);
-      break;
-    case PROP_PS:
-      g_value_set_object (value, self->ps);
-      break;
     case PROP_RECOMB:
       g_value_set_object (value, self->recomb);
       break;
     case PROP_NL:
       g_value_set_object (value, self->Nl);
-      break;
-    case PROP_INTEG_METHOD:
-      g_value_set_enum (value, self->integ_method);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -167,8 +143,6 @@ _nc_xcor_kernel_cmb_isw_dispose (GObject *object)
   NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (object);
   NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
 
-  nc_distance_clear (&self->dist);
-  ncm_powspec_clear (&self->ps);
   nc_recomb_clear (&self->recomb);
   ncm_vector_clear (&self->Nl);
 
@@ -184,10 +158,34 @@ _nc_xcor_kernel_cmb_isw_finalize (GObject *object)
 }
 
 static gdouble _nc_xcor_kernel_cmb_isw_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_cmb_isw_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+static void _nc_xcor_kernel_cmb_isw_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 static void _nc_xcor_kernel_cmb_isw_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_cmb_isw_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 static guint _nc_xcor_kernel_cmb_isw_obs_len (NcXcorKernel *xclk);
 static guint _nc_xcor_kernel_cmb_isw_obs_params_len (NcXcorKernel *xclk);
+
+static void
+_nc_xcor_kernel_cmb_isw_constructed (GObject *object)
+{
+  NcXcorKernelCMBISW *xcisw            = NC_XCOR_KERNEL_CMB_ISW (object);
+  NcXcorKernel *xclk                   = NC_XCOR_KERNEL (xcisw);
+  NcXcorKernelIntegMethod integ_method = nc_xcor_kernel_get_integ_method (xclk);
+
+  switch (integ_method)
+  {
+    case NC_XCOR_KERNEL_INTEG_METHOD_LIMBER:
+      nc_xcor_kernel_set_eval_kernel_func (xclk, _nc_xcor_kernel_cmb_isw_kernel_func_limber);
+      nc_xcor_kernel_set_get_k_range_func (xclk, _nc_xcor_kernel_cmb_isw_get_k_range_limber);
+      break;
+    default:
+      g_error ("Unknown integration method %d", integ_method);
+      break;
+  }
+
+  /* Chain up : middle */
+  G_OBJECT_CLASS (nc_xcor_kernel_cmb_isw_parent_class)->constructed (object);
+}
 
 static void
 nc_xcor_kernel_cmb_isw_class_init (NcXcorKernelCMBISWClass *klass)
@@ -198,38 +196,12 @@ nc_xcor_kernel_cmb_isw_class_init (NcXcorKernelCMBISWClass *klass)
 
   model_class->set_property = &_nc_xcor_kernel_cmb_isw_set_property;
   model_class->get_property = &_nc_xcor_kernel_cmb_isw_get_property;
+  object_class->constructed = &_nc_xcor_kernel_cmb_isw_constructed;
   object_class->finalize    = &_nc_xcor_kernel_cmb_isw_finalize;
   object_class->dispose     = &_nc_xcor_kernel_cmb_isw_dispose;
 
   ncm_model_class_set_name_nick (model_class, "Xcor ISW effect", "Xcor-ISW");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-
-  /**
-   * NcXcorKernelCMBISW:dist:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DIST,
-                                   g_param_spec_object ("dist",
-                                                        NULL,
-                                                        "Distance object",
-                                                        NC_TYPE_DISTANCE,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcXcorKernelCMBISW:ps:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_PS,
-                                   g_param_spec_object ("ps",
-                                                        NULL,
-                                                        "Power Spectrum object",
-                                                        NCM_TYPE_POWSPEC,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
 
   /**
    * NcXcorKernelCMBISW:recomb:
@@ -257,15 +229,6 @@ nc_xcor_kernel_cmb_isw_class_init (NcXcorKernelCMBISWClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  g_object_class_install_property (object_class,
-                                   PROP_INTEG_METHOD,
-                                   g_param_spec_enum ("integ-method",
-                                                      NULL,
-                                                      "Integration method",
-                                                      NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
-                                                      NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -282,16 +245,46 @@ nc_xcor_kernel_cmb_isw_class_init (NcXcorKernelCMBISWClass *klass)
 static gdouble
 _nc_xcor_kernel_cmb_isw_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
-  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
-  const gdouble k_pivot                  = 1.0;
-  const gdouble powspec                  = ncm_powspec_eval (NCM_POWSPEC (self->ps), NCM_MODEL (cosmo), z, k_pivot);
-  const gdouble dpowspec_dz              = ncm_powspec_deriv_z (NCM_POWSPEC (self->ps), NCM_MODEL (cosmo), z, k_pivot);
-  const gdouble d1pz_growth_dz           = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
-  const gdouble nu                       = l + 0.5;
-  const gdouble cor_factor               = 1.0 / (nu * nu);
+  NcmPowspec *ps               = nc_xcor_kernel_peek_powspec (xclk);
+  const gdouble k_pivot        = 1.0;
+  const gdouble powspec        = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k_pivot);
+  const gdouble dpowspec_dz    = ncm_powspec_deriv_z (ps, NCM_MODEL (cosmo), z, k_pivot);
+  const gdouble d1pz_growth_dz = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
+  const gdouble nu             = l + 0.5;
+  const gdouble cor_factor     = 1.0 / (nu * nu);
 
   return cor_factor * gsl_pow_2 (xck->xi_z) * d1pz_growth_dz;
+}
+
+static gdouble
+_nc_xcor_kernel_cmb_isw_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l)
+{
+  NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
+  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
+  const gdouble nu                       = l + 0.5;
+  const gdouble xi_nu                    = nu / k;
+  const gdouble z                        = nc_distance_inv_comoving (self->dist, cosmo, xi_nu);
+  const gdouble powspec                  = ncm_powspec_eval (self->ps, NCM_MODEL (cosmo), z, k);
+  const gdouble dpowspec_dz              = ncm_powspec_deriv_z (self->ps, NCM_MODEL (cosmo), z, k);
+  const gdouble d1pz_growth_dz           = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
+  const gdouble cor_factor               = 1.0 / (nu * nu);
+
+  return cor_factor * gsl_pow_2 (xi_nu) * d1pz_growth_dz * sqrt (powspec);
+}
+
+static void
+_nc_xcor_kernel_cmb_isw_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
+{
+  NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
+  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
+  NcmPowspec *ps                         = nc_xcor_kernel_peek_powspec (xclk);
+  const gdouble ps_kmin                  = ncm_powspec_get_kmin (ps);
+  const gdouble ps_kmax                  = ncm_powspec_get_kmax (ps);
+  const gdouble nu                       = l + 0.5;
+  const gdouble kmin_limber              = nu / self->xi_lss;
+
+  *kmin = GSL_MAX (ps_kmin, kmin_limber);
+  *kmax = ps_kmax;
 }
 
 static void
@@ -299,17 +292,22 @@ _nc_xcor_kernel_cmb_isw_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 {
   NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
   NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
+  NcDistance *dist                       = nc_xcor_kernel_peek_dist (xclk);
+  NcmPowspec *ps                         = nc_xcor_kernel_peek_powspec (xclk);
 
-  nc_distance_prepare_if_needed (self->dist, cosmo);
-  ncm_powspec_prepare_if_needed (self->ps, NCM_MODEL (cosmo));
+  self->dist = dist;
+  self->ps   = ps;
+
+  nc_distance_prepare_if_needed (dist, cosmo);
+  ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
   {
-    const gdouble z_lss    = nc_distance_decoupling_redshift (self->dist, cosmo);
+    const gdouble z_lss    = nc_distance_decoupling_redshift (dist, cosmo);
     const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (cosmo);
     const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
     const gdouble Omega_m0 = Omega_c0 + Omega_b0;
     const gdouble T_gamma0 = nc_hicosmo_T_gamma0 (cosmo);
 
-    self->xi_lss      = nc_distance_comoving_lss (self->dist, cosmo);
+    self->xi_lss      = nc_distance_comoving_lss (dist, cosmo);
     self->cons_factor = (3.0 * nc_hicosmo_Omega_m0 (cosmo));
 
     nc_xcor_kernel_set_const_factor (xclk, 3.0 * T_gamma0 * Omega_m0);
@@ -371,7 +369,7 @@ nc_xcor_kernel_cmb_isw_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *recomb, 
 {
   NcXcorKernelCMBISW *xcisw = g_object_new (NC_TYPE_XCOR_KERNEL_CMB_ISW,
                                             "dist", dist,
-                                            "ps", ps,
+                                            "powspec", ps,
                                             "recomb", recomb,
                                             "Nl", Nl,
                                             NULL);

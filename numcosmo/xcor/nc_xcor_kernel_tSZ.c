@@ -53,7 +53,6 @@
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_kernel_tSZ.h"
 #include "xcor/nc_xcor.h"
-#include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 
@@ -64,7 +63,6 @@ struct _NcXcorKerneltSZ
   /*< private >*/
   NcXcorKernel parent_instance;
   gdouble noise;
-  NcXcorKernelIntegMethod integ_method;
 };
 
 
@@ -76,15 +74,13 @@ enum
 {
   PROP_0,
   PROP_NOISE,
-  PROP_INTEG_METHOD,
   PROP_SIZE,
 };
 
 static void
 nc_xcor_kernel_tsz_init (NcXcorKerneltSZ *xclkl)
 {
-  xclkl->noise        = 0.0;
-  xclkl->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
+  xclkl->noise = 0.0;
 }
 
 static void
@@ -98,9 +94,6 @@ _nc_xcor_kernel_tsz_set_property (GObject *object, guint prop_id, const GValue *
   {
     case PROP_NOISE:
       xclkl->noise = g_value_get_double (value);
-      break;
-    case PROP_INTEG_METHOD:
-      xclkl->integ_method = g_value_get_enum (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -119,9 +112,6 @@ _nc_xcor_kernel_tsz_get_property (GObject *object, guint prop_id, GValue *value,
   {
     case PROP_NOISE:
       g_value_set_double (value, xclkl->noise);
-      break;
-    case PROP_INTEG_METHOD:
-      g_value_set_enum (value, xclkl->integ_method);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -144,10 +134,36 @@ _nc_xcor_kernel_tsz_finalize (GObject *object)
 }
 
 static gdouble _nc_xcor_kernel_tsz_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_tsz_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+static void _nc_xcor_kernel_tsz_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 static void _nc_xcor_kernel_tsz_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_tsz_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 static guint _nc_xcor_kernel_tsz_obs_len (NcXcorKernel *xclk);
 static guint _nc_xcor_kernel_tsz_obs_params_len (NcXcorKernel *xclk);
+
+static void
+_nc_xcor_kernel_tsz_constructed (GObject *object)
+{
+  NcXcorKerneltSZ *xclkl        = NC_XCOR_KERNEL_TSZ (object);
+  NcXcorKernel *xclk            = NC_XCOR_KERNEL (xclkl);
+  NcXcorKernelIntegMethod integ = nc_xcor_kernel_get_integ_method (xclk);
+
+  switch (integ)
+  {
+    case NC_XCOR_KERNEL_INTEG_METHOD_GSL_QAG:
+      g_error ("_nc_xcor_kernel_tsz_constructed: GSL_QAG integration not implemented yet");
+      break;
+    case NC_XCOR_KERNEL_INTEG_METHOD_LIMBER:
+      nc_xcor_kernel_set_eval_kernel_func (xclk, _nc_xcor_kernel_tsz_kernel_func_limber);
+      nc_xcor_kernel_set_get_k_range_func (xclk, _nc_xcor_kernel_tsz_get_k_range_limber);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  G_OBJECT_CLASS (nc_xcor_kernel_tsz_parent_class)->constructed (object);
+}
 
 static void
 nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
@@ -156,6 +172,7 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
   NcXcorKernelClass *parent_class = NC_XCOR_KERNEL_CLASS (klass);
   NcmModelClass *model_class      = NCM_MODEL_CLASS (klass);
 
+  object_class->constructed = &_nc_xcor_kernel_tsz_constructed;
   object_class->finalize    = &_nc_xcor_kernel_tsz_finalize;
   object_class->dispose     = &_nc_xcor_kernel_tsz_dispose;
   model_class->set_property = &_nc_xcor_kernel_tsz_set_property;
@@ -177,15 +194,6 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
                                                         -10.0, 10.0, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  g_object_class_install_property (object_class,
-                                   PROP_INTEG_METHOD,
-                                   g_param_spec_enum ("integ-method",
-                                                      NULL,
-                                                      "Integration method",
-                                                      NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
-                                                      NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -201,6 +209,8 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
 
 /**
  * nc_xcor_kernel_tsz_new:
+ * @dist: a #NcDistance
+ * @ps: a #NcmPowspec
  * @zmax: a gdouble
  *
  * Creates a new instance of the tSZ kernel.
@@ -208,9 +218,11 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
  * Returns: (transfer full): a new #NcXcorKerneltSZ
  */
 NcXcorKerneltSZ *
-nc_xcor_kernel_tsz_new (gdouble zmax)
+nc_xcor_kernel_tsz_new (NcDistance *dist, NcmPowspec *ps, gdouble zmax)
 {
   NcXcorKerneltSZ *xclkl = g_object_new (NC_TYPE_XCOR_KERNEL_TSZ,
+                                         "dist", dist,
+                                         "powspec", ps,
                                          "zmin", 0.0,
                                          "zmax", zmax,
                                          NULL);
@@ -221,12 +233,47 @@ nc_xcor_kernel_tsz_new (gdouble zmax)
 static gdouble
 _nc_xcor_kernel_tsz_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  const gdouble nc_prefac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
-  const gdouble units     = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);
+  const gdouble nc_pre_fac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
+  const gdouble units      = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);
 
   /* unit: eV / cm^3 */
 
-  return nc_prefac * units / (1.0 + z) / xck->E_z;
+  return nc_pre_fac * units / (1.0 + z) / xck->E_z;
+}
+
+static gdouble
+_nc_xcor_kernel_tsz_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l)
+{
+  NcDistance *dist         = nc_xcor_kernel_peek_dist (xclk);
+  NcmPowspec *ps           = nc_xcor_kernel_peek_powspec (xclk);
+  const gdouble nu         = l + 0.5;
+  const gdouble xi_nu      = nu / k;
+  const gdouble z          = nc_distance_inv_comoving (dist, cosmo, xi_nu);
+  const gdouble E_z        = nc_hicosmo_E (cosmo, z);
+  const gdouble powspec    = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
+  const gdouble nc_pre_fac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
+  const gdouble units      = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);
+
+  return nc_pre_fac * units / (1.0 + z) / E_z * sqrt (powspec);
+}
+
+static void
+_nc_xcor_kernel_tsz_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
+{
+  NcDistance *dist      = nc_xcor_kernel_peek_dist (xclk);
+  NcmPowspec *ps        = nc_xcor_kernel_peek_powspec (xclk);
+  const gdouble ps_kmin = ncm_powspec_get_kmin (ps);
+  const gdouble ps_kmax = ncm_powspec_get_kmax (ps);
+  gdouble zmin, zmax, zmid;
+
+  nc_xcor_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
+
+  const gdouble nu          = l + 0.5;
+  const gdouble xi_max      = nc_distance_comoving (dist, cosmo, zmax);
+  const gdouble kmin_limber = nu / xi_max;
+
+  *kmin = GSL_MAX (ps_kmin, kmin_limber);
+  *kmax = ps_kmax;
 }
 
 static void

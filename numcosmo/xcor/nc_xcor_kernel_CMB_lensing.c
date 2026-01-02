@@ -47,7 +47,6 @@
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_kernel_CMB_lensing.h"
 #include "xcor/nc_xcor.h"
-#include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
@@ -59,7 +58,6 @@ struct _NcXcorKernelCMBLensing
   /*< private >*/
   NcXcorKernel parent_instance;
 
-  NcDistance *dist;
   NcRecomb *recomb;
 
   NcmVector *Nl;
@@ -69,16 +67,16 @@ struct _NcXcorKernelCMBLensing
   gdouble xi_lss;
   gdouble dt_lss;
   gdouble dt;
-  NcXcorKernelIntegMethod integ_method;
+
+  NcDistance *dist;
+  NcmPowspec *ps;
 };
 
 enum
 {
   PROP_0,
-  PROP_DIST,
   PROP_RECOMB,
   PROP_NL,
-  PROP_INTEG_METHOD,
   PROP_SIZE,
 };
 
@@ -89,17 +87,17 @@ G_DEFINE_TYPE (NcXcorKernelCMBLensing, nc_xcor_kernel_cmb_lensing, NC_TYPE_XCOR_
 static void
 nc_xcor_kernel_cmb_lensing_init (NcXcorKernelCMBLensing *xclkl)
 {
-  xclkl->dist   = NULL;
   xclkl->recomb = NULL;
 
   xclkl->Nl    = NULL;
   xclkl->Nlmax = 0;
 
-  xclkl->z_lss        = 0.0;
-  xclkl->xi_lss       = 0.0;
-  xclkl->dt_lss       = 0.0;
-  xclkl->dt           = 0.0;
-  xclkl->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
+  xclkl->z_lss  = 0.0;
+  xclkl->xi_lss = 0.0;
+  xclkl->dt_lss = 0.0;
+  xclkl->dt     = 0.0;
+  xclkl->dist   = NULL;
+  xclkl->ps     = NULL;
 }
 
 static void
@@ -111,18 +109,12 @@ _nc_xcor_kernel_cmb_lensing_set_property (GObject *object, guint prop_id, const 
 
   switch (prop_id)
   {
-    case PROP_DIST:
-      xclkl->dist = g_value_dup_object (value);
-      break;
     case PROP_RECOMB:
       xclkl->recomb = g_value_dup_object (value);
       break;
     case PROP_NL:
       xclkl->Nl    = g_value_dup_object (value);
       xclkl->Nlmax = ncm_vector_len (xclkl->Nl) - 1;
-      break;
-    case PROP_INTEG_METHOD:
-      xclkl->integ_method = g_value_get_enum (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -139,17 +131,11 @@ _nc_xcor_kernel_cmb_lensing_get_property (GObject *object, guint prop_id, GValue
 
   switch (prop_id)
   {
-    case PROP_DIST:
-      g_value_set_object (value, xclkl->dist);
-      break;
     case PROP_RECOMB:
       g_value_set_object (value, xclkl->recomb);
       break;
     case PROP_NL:
       g_value_set_object (value, xclkl->Nl);
-      break;
-    case PROP_INTEG_METHOD:
-      g_value_set_enum (value, xclkl->integ_method);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -162,7 +148,6 @@ _nc_xcor_kernel_cmb_lensing_dispose (GObject *object)
 {
   NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (object);
 
-  nc_distance_clear (&xclkl->dist);
   nc_recomb_clear (&xclkl->recomb);
   ncm_vector_clear (&xclkl->Nl);
 
@@ -178,10 +163,38 @@ _nc_xcor_kernel_cmb_lensing_finalize (GObject *object)
 }
 
 static gdouble _nc_xcor_kernel_cmb_lensing_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_cmb_lensing_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+static void _nc_xcor_kernel_cmb_lensing_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 static void _nc_xcor_kernel_cmb_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_cmb_lensing_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 static guint _nc_xcor_kernel_cmb_lensing_obs_len (NcXcorKernel *xclk);
 static guint _nc_xcor_kernel_cmb_lensing_obs_params_len (NcXcorKernel *xclk);
+
+static void
+_nc_xcor_kernel_cmb_lensing_constructed (GObject *object)
+{
+  NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (object);
+  NcXcorKernel *xclk            = NC_XCOR_KERNEL (xclkl);
+  NcXcorKernelIntegMethod integ = nc_xcor_kernel_get_integ_method (xclk);
+
+  /* Set function pointers before chaining up */
+  switch (integ)
+  {
+    case NC_XCOR_KERNEL_INTEG_METHOD_GSL_QAG:
+      g_error ("_nc_xcor_kernel_cmb_lensing_constructed: GSL_QAG integration not implemented yet");
+      break;
+    case NC_XCOR_KERNEL_INTEG_METHOD_LIMBER:
+      nc_xcor_kernel_set_eval_kernel_func (xclk, _nc_xcor_kernel_cmb_lensing_kernel_func_limber);
+      nc_xcor_kernel_set_get_k_range_func (xclk, _nc_xcor_kernel_cmb_lensing_get_k_range_limber);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  /* Chain up to parent constructed */
+  G_OBJECT_CLASS (nc_xcor_kernel_cmb_lensing_parent_class)->constructed (object);
+}
 
 static void
 nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
@@ -190,6 +203,7 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
   NcXcorKernelClass *parent_class = NC_XCOR_KERNEL_CLASS (klass);
   NcmModelClass *model_class      = NCM_MODEL_CLASS (klass);
 
+  object_class->constructed = &_nc_xcor_kernel_cmb_lensing_constructed;
   object_class->finalize    = &_nc_xcor_kernel_cmb_lensing_finalize;
   object_class->dispose     = &_nc_xcor_kernel_cmb_lensing_dispose;
   model_class->set_property = &_nc_xcor_kernel_cmb_lensing_set_property;
@@ -197,19 +211,6 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
 
   ncm_model_class_set_name_nick (model_class, "Xcor lensing distribution", "Xcor-lensing");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-
-  /**
-   * NcXcorKernelCMBLensing:dist:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DIST,
-                                   g_param_spec_object ("dist",
-                                                        NULL,
-                                                        "Distance object",
-                                                        NC_TYPE_DISTANCE,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcXcorKernelCMBLensing:recomb:
@@ -237,15 +238,6 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  g_object_class_install_property (object_class,
-                                   PROP_INTEG_METHOD,
-                                   g_param_spec_enum ("integ-method",
-                                                      NULL,
-                                                      "Integration method",
-                                                      NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
-                                                      NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -263,6 +255,7 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
 /**
  * nc_xcor_kernel_cmb_lensing_new:
  * @dist: a #NcDistance
+ * @ps: a #NcmPowspec
  * @recomb: a #NcRecomb
  * @Nl: a #NcmVector
  *
@@ -274,10 +267,11 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
  *
  */
 NcXcorKernelCMBLensing *
-nc_xcor_kernel_cmb_lensing_new (NcDistance *dist, NcRecomb *recomb, NcmVector *Nl) /*, gdouble zl, gdouble zu) */
+nc_xcor_kernel_cmb_lensing_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *recomb, NcmVector *Nl) /*, gdouble zl, gdouble zu) */
 {
   NcXcorKernelCMBLensing *xclkl = g_object_new (NC_TYPE_XCOR_KERNEL_CMB_LENSING,
                                                 "dist", dist,
+                                                "powspec", ps,
                                                 "recomb", recomb,
                                                 "Nl", Nl,
                                                 NULL);
@@ -289,24 +283,63 @@ static gdouble
 _nc_xcor_kernel_cmb_lensing_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l) /*, gdouble geo_z[]) */
 {
   NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
+  NcDistance *dist              = nc_xcor_kernel_peek_dist (xclk);
   const gdouble nu              = l + 0.5;
   const gdouble cor_factor      = l * (l + 1.0) / (nu * nu);
-  const gdouble dt              = nc_distance_transverse (xclkl->dist, cosmo, z);
-  const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (xclkl->dist, cosmo, z, xclkl->z_lss);
+  const gdouble dt              = nc_distance_transverse (dist, cosmo, z);
+  const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
 
   return cor_factor * (1.0 + z) * xck->xi_z * xck->xi_z * dt_z_zlss / (xck->E_z * xclkl->dt_lss * dt);
+}
+
+static gdouble
+_nc_xcor_kernel_cmb_lensing_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l)
+{
+  NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
+  NcDistance *dist              = xclkl->dist;
+  NcmPowspec *ps                = xclkl->ps;
+  const gdouble nu              = l + 0.5;
+  const gdouble xi_nu           = nu / k;
+  const gdouble z               = nc_distance_inv_comoving (dist, cosmo, xi_nu);
+  const gdouble E_z             = nc_hicosmo_E (cosmo, z);
+  const gdouble powspec         = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
+  const gdouble cor_factor      = l * (l + 1.0) / (nu * nu);
+  const gdouble dt              = nc_distance_transverse (dist, cosmo, z);
+  const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
+
+  return cor_factor * (1.0 + z) * xi_nu * xi_nu * dt_z_zlss * sqrt (powspec) / (E_z * xclkl->dt_lss * dt);
+}
+
+static void
+_nc_xcor_kernel_cmb_lensing_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
+{
+  NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
+  NcmPowspec *ps                = nc_xcor_kernel_peek_powspec (xclk);
+  const gdouble ps_kmin         = ncm_powspec_get_kmin (ps);
+  const gdouble ps_kmax         = ncm_powspec_get_kmax (ps);
+  const gdouble nu              = l + 0.5;
+  const gdouble kmin_limber     = nu / xclkl->xi_lss;
+
+  *kmin = GSL_MAX (ps_kmin, kmin_limber);
+  *kmax = ps_kmax;
 }
 
 static void
 _nc_xcor_kernel_cmb_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 {
   NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
+  NcDistance *dist              = nc_xcor_kernel_peek_dist (xclk);
+  NcmPowspec *ps                = nc_xcor_kernel_peek_powspec (xclk);
 
-  nc_distance_prepare_if_needed (xclkl->dist, cosmo);
+  xclkl->dist = dist;
+  xclkl->ps   = ps;
 
-  xclkl->z_lss  = nc_distance_decoupling_redshift (xclkl->dist, cosmo);
-  xclkl->xi_lss = nc_distance_comoving_lss (xclkl->dist, cosmo);
-  xclkl->dt_lss = nc_distance_transverse (xclkl->dist, cosmo, xclkl->z_lss);
+  nc_distance_prepare_if_needed (dist, cosmo);
+  ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
+
+  xclkl->z_lss  = nc_distance_decoupling_redshift (dist, cosmo);
+  xclkl->xi_lss = nc_distance_comoving_lss (dist, cosmo);
+  xclkl->dt_lss = nc_distance_transverse (dist, cosmo, xclkl->z_lss);
 
   /* nc_recomb_prepare (xclkl->recomb, cosmo); */
   /* gdouble lamb = nc_recomb_tau_zstar (xclkl->recomb, cosmo); */

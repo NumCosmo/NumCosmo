@@ -32,25 +32,28 @@
  * \begin{equation}
  * g(z) = \int_z^{z_{\max}} dz' \left(1 - \frac{\chi(z)}{\chi(z')}\right) W_{\mathrm{src}}(z')
  * \end{equation}
- *
- * where $W_{\mathrm{src}}(z')$ is a source weight function that must be implemented by subclasses.
- *
- * The integration is performed using CVODE (BDF method) to solve the equivalent ODE system:
+ * where $W_{\mathrm{src}}(z')$ is a source weight function that must be implemented by
+ * subclasses.
+ * The integration is performed using CVODE (BDF method) to solve the equivalent ODE
+ * system:
  * \begin{align}
  * \frac{df}{d(-z)} &= -\frac{g}{E(z)} \\
  * \frac{dg}{d(-z)} &= -\frac{W_{\mathrm{src}}(z)}{d_t(z)} - \Omega_{k0} \frac{f}{E(z)}
  * \end{align}
- *
- * where $f(z) = g(z)$, $E(z) = H(z)/H_0$, $d_t(z)$ is the transverse comoving distance,
- * and the integration is performed backwards from $z_{\max}$ to $z \approx 0$.
+ * where $f(z) = g(z)$, $E(z) = H(z)/H_0$, $d_t(z)$ is the transverse comoving
+ * distance, and the integration is performed backwards from $z_{\max}$ to $z \approx
+ * 0$.
  *
  * Subclasses must implement two virtual methods:
+ *
  * - eval_source(): returns $W_{\mathrm{src}}(z)$
  * - get_z_range(): returns the source redshift range
  *
  * Example subclasses:
+ *
  * - Weak lensing: $W_{\mathrm{src}}(z) = \frac{dn}{dz}$ (source galaxy distribution)
- * - Galaxy magnification bias: $W_{\mathrm{src}}(z) = (5s-2) \frac{dn}{dz}$ (weighted by magnification bias parameter)
+ * - Galaxy magnification bias: $W_{\mathrm{src}}(z) = (5s-2) \frac{dn}{dz}$ (weighted
+ *   by magnification bias parameter)
  *
  */
 
@@ -240,7 +243,7 @@ nc_xcor_lensing_efficiency_class_init (NcXcorLensingEfficiencyClass *klass)
                                                         NULL,
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcXcorLensingEfficiency:reltol:
@@ -255,7 +258,7 @@ nc_xcor_lensing_efficiency_class_init (NcXcorLensingEfficiencyClass *klass)
                                                         NULL,
                                                         "Relative tolerance",
                                                         GSL_DBL_EPSILON, 1.0e-1, NC_XCOR_LENSING_EFFICIENCY_DEFAULT_RELTOL,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcXcorLensingEfficiency:abstol:
@@ -270,7 +273,7 @@ nc_xcor_lensing_efficiency_class_init (NcXcorLensingEfficiencyClass *klass)
                                                         NULL,
                                                         "Absolute tolerance",
                                                         0.0, G_MAXDOUBLE, NC_XCOR_LENSING_EFFICIENCY_DEFAULT_ABSTOL,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /* Virtual methods must be implemented by subclasses */
   klass->eval_source = NULL;
@@ -610,8 +613,6 @@ gdouble
 nc_xcor_lensing_efficiency_eval (NcXcorLensingEfficiency *lens_eff, gdouble z)
 {
   NcXcorLensingEfficiencyPrivate *self = nc_xcor_lensing_efficiency_get_instance_private (lens_eff);
-
-  g_assert (self->g_mz != NULL);
 
   return ncm_spline_eval (self->g_mz, -z);
 }

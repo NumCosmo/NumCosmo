@@ -53,9 +53,8 @@
 
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_kernel_gal.h"
-#include "xcor/nc_xcor_kernel_weak_lensing.h"
+#include "xcor/nc_xcor_lensing_efficiency.h"
 #include "xcor/nc_xcor.h"
-#include "nc_enum_types.h"
 
 #include "math/ncm_integrate.h"
 #include "math/ncm_spline_gsl.h"
@@ -81,9 +80,7 @@ struct _NcXcorKernelGal
   guint nknots;
   gdouble *bias;
 
-  NcDistance *dist;
-
-  NcXcorKernelWeakLensing *xclkw;
+  NcXcorLensingEfficiency *lens_eff;
   gboolean domagbias;
 
   gboolean fast_update;
@@ -91,7 +88,9 @@ struct _NcXcorKernelGal
   gdouble noise_bias_old;
 
   gdouble nbarm1;
-  NcXcorKernelIntegMethod integ_method;
+
+  NcDistance *dist;
+  NcmPowspec *ps;
 };
 
 enum
@@ -101,8 +100,6 @@ enum
   PROP_BIAS,
   PROP_DOMAGBIAS,
   PROP_NBARM1,
-  PROP_DIST,
-  PROP_INTEG_METHOD,
   PROP_SIZE,
 };
 
@@ -125,17 +122,16 @@ nc_xcor_kernel_gal_init (NcXcorKernelGal *xclkg)
   xclkg->nknots      = 0;
   xclkg->bias        = NULL;
 
-  xclkg->dist = NULL;
-
-  xclkg->xclkw     = NULL;
+  xclkg->lens_eff  = NULL;
   xclkg->domagbias = FALSE;
 
   xclkg->fast_update    = FALSE;
   xclkg->bias_old       = 0.0;
   xclkg->noise_bias_old = 0.0;
 
-  xclkg->nbarm1       = 0.0;
-  xclkg->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
+  xclkg->nbarm1 = 0.0;
+  xclkg->dist   = NULL;
+  xclkg->ps     = NULL;
 }
 
 static void
@@ -170,12 +166,6 @@ _nc_xcor_kernel_gal_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_DN_DZ:
       _nc_xcor_kernel_gal_take_dndz (xclkg, g_value_dup_object (value));
       break;
-    case PROP_DIST:
-      xclkg->dist = g_value_dup_object (value);
-      break;
-    case PROP_INTEG_METHOD:
-      xclkg->integ_method = g_value_get_enum (value);
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -203,39 +193,82 @@ _nc_xcor_kernel_gal_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_DN_DZ:
       g_value_set_object (value, xclkg->dn_dz);
       break;
-    case PROP_DIST:
-      g_value_set_object (value, xclkg->dist);
-      break;
-    case PROP_INTEG_METHOD:
-      g_value_set_enum (value, xclkg->integ_method);
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
+static gdouble _nc_xcor_kernel_gal_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_gal_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_gal_kernel_func_limber_magbias (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+static void _nc_xcor_kernel_gal_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
+static void _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
+static void _nc_xcor_kernel_gal_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
+static guint _nc_xcor_kernel_gal_obs_len (NcXcorKernel *xclk);
+static guint _nc_xcor_kernel_gal_obs_params_len (NcXcorKernel *xclk);
+static gdouble _nc_xcor_kernel_gal_dndz (NcXcorKernelGal *xclkg, gdouble z);
+
+static gdouble _nc_xcor_kernel_gal_lens_eff_eval_source (NcXcorLensingEfficiency *lens_eff, gdouble z);
+static void _nc_xcor_kernel_gal_lens_eff_get_z_range (NcXcorLensingEfficiency *lens_eff, gdouble *zmin, gdouble *zmax);
+
+NC_XCOR_LENSING_EFFICIENCY_DEFINE_TYPE (NC, XCOR_KERNEL_GAL_LENS_EFF,
+                                        NcXcorKernelGalLensEff,
+                                        nc_xcor_kernel_gal_lens_eff,
+                                        _nc_xcor_kernel_gal_lens_eff_eval_source,
+                                        _nc_xcor_kernel_gal_lens_eff_get_z_range,
+                                        NcXcorKernelGal *)
+
 static void
 _nc_xcor_kernel_gal_constructed (GObject *object)
 {
-  /* Chain up : start */
+  NcXcorKernelGal *xclkg        = NC_XCOR_KERNEL_GAL (object);
+  NcXcorKernel *xclk            = NC_XCOR_KERNEL (xclkg);
+  NcXcorKernelIntegMethod integ = nc_xcor_kernel_get_integ_method (xclk);
+
+  /* Set function pointers based on integration method and magnification bias */
+  switch (integ)
+  {
+    case NC_XCOR_KERNEL_INTEG_METHOD_GSL_QAG:
+      g_error ("_nc_xcor_kernel_gal_constructed: GSL_QAG integration not implemented yet");
+      break;
+    case NC_XCOR_KERNEL_INTEG_METHOD_LIMBER:
+
+      if (xclkg->domagbias)
+        nc_xcor_kernel_set_eval_kernel_func (xclk, _nc_xcor_kernel_gal_kernel_func_limber_magbias);
+      else
+        nc_xcor_kernel_set_eval_kernel_func (xclk, _nc_xcor_kernel_gal_kernel_func_limber);
+
+      nc_xcor_kernel_set_get_k_range_func (xclk, _nc_xcor_kernel_gal_get_k_range_limber);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  /* Chain up : middle */
   G_OBJECT_CLASS (nc_xcor_kernel_gal_parent_class)->constructed (object);
   {
-    NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (object);
-    NcXcorKernel *xclk     = NC_XCOR_KERNEL (xclkg);
-    NcmModel *model        = NCM_MODEL (xclkg);
+    NcmModel *model = NCM_MODEL (xclkg);
     gdouble zmin, zmax, zmid;
     guint i;
 
     nc_xcor_kernel_set_z_range (xclk, 0.0, xclkg->dn_dz_zmax, 0.5 * xclkg->dn_dz_zmax);
     nc_xcor_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
 
-    /* Initialize g function spline for magnification bias */
+    /* Initialize g function for magnification bias */
     if (xclkg->domagbias)
     {
-      g_clear_object (&xclkg->xclkw);
+      NcDistance *dist = nc_xcor_kernel_peek_dist (xclk);
+      NcXcorKernelGalLensEff *lens_eff_obj;
 
-      xclkg->xclkw = nc_xcor_kernel_weak_lensing_new (zmin, zmax, xclkg->dn_dz, 1.0, 1.0, xclkg->dist);
+      g_clear_object (&xclkg->lens_eff);
+
+      lens_eff_obj = g_object_new (nc_xcor_kernel_gal_lens_eff_get_type (),
+                                   "distance", dist,
+                                   NULL);
+      lens_eff_obj->data = xclkg;
+      xclkg->lens_eff    = NC_XCOR_LENSING_EFFICIENCY (lens_eff_obj);
     }
 
     /* Normalize the redshift distribution */
@@ -309,9 +342,7 @@ _nc_xcor_kernel_gal_dispose (GObject *object)
 
   ncm_spline_clear (&xclkg->bias_spline);
   ncm_spline_clear (&xclkg->dn_dz);
-  g_clear_object (&xclkg->xclkw);
-
-  nc_distance_clear (&xclkg->dist);
+  nc_xcor_lensing_efficiency_clear (&xclkg->lens_eff);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_gal_parent_class)->dispose (object);
@@ -323,12 +354,6 @@ _nc_xcor_kernel_gal_finalize (GObject *object)
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_gal_parent_class)->finalize (object);
 }
-
-static gdouble _nc_xcor_kernel_gal_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
-static void _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
-static void _nc_xcor_kernel_gal_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
-guint _nc_xcor_kernel_gal_obs_len (NcXcorKernel *xclk);
-guint _nc_xcor_kernel_gal_obs_params_len (NcXcorKernel *xclk);
 
 static void
 nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
@@ -353,16 +378,6 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
                                                         "Galaxy redshift distribution",
                                                         NCM_TYPE_SPLINE,
                                                         G_PARAM_CONSTRUCT | G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_DIST,
-                                   g_param_spec_object ("dist",
-                                                        NULL,
-                                                        "Distance object",
-                                                        NC_TYPE_DISTANCE,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-
   g_object_class_install_property (object_class,
                                    PROP_BIAS,
                                    g_param_spec_object ("bias",
@@ -386,15 +401,6 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
                                                         "One over nbar (galaxy angular density)",
                                                         0.0, 20.0, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_INTEG_METHOD,
-                                   g_param_spec_enum ("integ-method",
-                                                      NULL,
-                                                      "Integration method",
-                                                      NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
-                                                      NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /*
    * Distribution's magnification bias: mag_bias.
@@ -430,32 +436,68 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
 }
 
+static gdouble
+_nc_xcor_kernel_gal_lens_eff_eval_source (NcXcorLensingEfficiency *lens_eff, gdouble z)
+{
+  NcXcorKernelGalLensEff *data_obj = NC_XCOR_KERNEL_GAL_LENS_EFF (lens_eff);
+  NcXcorKernelGal *xclkg           = data_obj->data;
+  const gdouble mag_bias           = MAG_BIAS;
+
+  return (5.0 * mag_bias - 2.0) * _nc_xcor_kernel_gal_dndz (xclkg, z);
+}
+
+static void
+_nc_xcor_kernel_gal_lens_eff_get_z_range (NcXcorLensingEfficiency *lens_eff, gdouble *zmin, gdouble *zmax)
+{
+  NcXcorKernelGalLensEff *data_obj = NC_XCOR_KERNEL_GAL_LENS_EFF (lens_eff);
+  NcXcorKernelGal *xclkg           = data_obj->data;
+
+  *zmin = xclkg->dn_dz_zmin;
+  *zmax = xclkg->dn_dz_zmax;
+}
+
 /**
  * nc_xcor_kernel_gal_new:
+ * @dist: a #NcDistance
+ * @ps: a #NcmPowspec
  * @zmin: a gdouble
  * @zmax: a gdouble
  * @np: number of points in the interpolation
  * @nbarm1: a gdouble, noise spectrum
  * @dn_dz: a #NcmSpline
- * @dist: a #NcDistance
  * @domagbias: whether to do magnification bias
  *
  * Returns: a #NcXcorKernelGal
  */
 NcXcorKernelGal *
-nc_xcor_kernel_gal_new (gdouble zmin, gdouble zmax, gsize np, gdouble nbarm1, NcmSpline *dn_dz, NcDistance *dist, gboolean domagbias)
+nc_xcor_kernel_gal_new (NcDistance *dist, NcmPowspec *ps, gdouble zmin, gdouble zmax, gsize np, gdouble nbarm1, NcmSpline *dn_dz, gboolean domagbias)
 {
   NcXcorKernelGal *xclkg = g_object_new (NC_TYPE_XCOR_KERNEL_GAL,
+                                         "dist", dist,
+                                         "powspec", ps,
                                          "zmin", zmin,
                                          "zmax", zmax,
                                          "bparam-length", np,
                                          "nbarm1", nbarm1,
                                          "dndz", dn_dz,
-                                         "dist", dist,
                                          "domagbias", domagbias,
                                          NULL);
 
   return xclkg;
+}
+
+static gdouble
+_nc_xcor_kernel_gal_dndz (NcXcorKernelGal *xclkg, gdouble z)
+{
+  const gdouble alpha = 1.0e-2;
+
+  if (z < xclkg->dn_dz_zmin)
+    return xclkg->dn_dz_min * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmin) / alpha));
+
+  if (z > xclkg->dn_dz_zmax)
+    return xclkg->dn_dz_max * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmax) / alpha));
+
+  return ncm_spline_eval (xclkg->dn_dz, z);
 }
 
 static void
@@ -463,15 +505,21 @@ _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 {
   NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xclk);
   NcmModel *model        = NCM_MODEL (xclk);
+  NcDistance *dist       = nc_xcor_kernel_peek_dist (xclk);
+  NcmPowspec *ps         = nc_xcor_kernel_peek_powspec (xclk);
   gdouble zmin, zmax, zmid;
+
+  xclkg->dist = dist;
+  xclkg->ps   = ps;
+
+  nc_distance_prepare_if_needed (dist, cosmo);
+  ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
   nc_xcor_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
   nc_xcor_kernel_set_const_factor (xclk, 1.0);
 
   zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz)));
   nc_xcor_kernel_set_z_range (xclk, zmin, zmax, zmid);
-
-  nc_distance_prepare_if_needed (xclkg->dist, cosmo);
 
   if (xclkg->fast_update)
   {
@@ -488,7 +536,7 @@ _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   }
 
   if (xclkg->domagbias)
-    nc_xcor_kernel_prepare (NC_XCOR_KERNEL (xclkg->xclkw), cosmo);
+    nc_xcor_lensing_efficiency_prepare (xclkg->lens_eff, cosmo);
 }
 
 static gdouble
@@ -508,20 +556,6 @@ _nc_xcor_kernel_gal_bias (NcXcorKernelGal *xclkg, gdouble z)
 }
 
 static gdouble
-_nc_xcor_kernel_gal_dndz (NcXcorKernelGal *xclkg, gdouble z)
-{
-  const gdouble alpha = 1.0e-2;
-
-  if (z < xclkg->dn_dz_zmin)
-    return xclkg->dn_dz_min * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmin) / alpha));
-
-  if (z > xclkg->dn_dz_zmax)
-    return xclkg->dn_dz_max * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmax) / alpha));
-
-  return ncm_spline_eval (xclkg->dn_dz, z);
-}
-
-static gdouble
 _nc_xcor_kernel_gal_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xclk);
@@ -531,15 +565,64 @@ _nc_xcor_kernel_gal_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gd
 
   if (xclkg->domagbias)
   {
-    const gdouble lfactor = sqrt ((l + 2.0) * (l + 1.0) * l * (l - 1.0));
-    const gdouble llp1    = l * (l + 1.0);
-    const gdouble g_z     = nc_xcor_kernel_eval_radial_weight (NC_XCOR_KERNEL (xclkg->xclkw), cosmo, z, xck, l) *
-                            nc_xcor_kernel_get_const_factor (NC_XCOR_KERNEL (xclkg->xclkw)) / lfactor;
+    const gdouble llp1 = l * (l + 1.0);
+    const gdouble g_z  = nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z) * (1.0 + z) * xck->xi_z / xck->E_z;
 
-    res += llp1 * (5.0 * MAG_BIAS - 2.0) * g_z;
+    res += llp1 * g_z;
   }
 
   return res;
+}
+
+static gdouble
+_nc_xcor_kernel_gal_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l)
+{
+  NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xclk);
+  NcDistance *dist       = xclkg->dist;
+  NcmPowspec *ps         = xclkg->ps;
+  const gdouble nu       = l + 0.5;
+  const gdouble xi_nu    = nu / k;
+  const gdouble z        = nc_distance_inv_comoving (dist, cosmo, xi_nu);
+  const gdouble powspec  = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
+  const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (xclkg, z);
+  const gdouble bias_z   = _nc_xcor_kernel_gal_bias (xclkg, z);
+
+  return bias_z * dn_dz_z * sqrt (powspec);
+}
+
+static gdouble
+_nc_xcor_kernel_gal_kernel_func_limber_magbias (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l)
+{
+  NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xclk);
+  NcDistance *dist       = xclkg->dist;
+  NcmPowspec *ps         = xclkg->ps;
+  const gdouble nu       = l + 0.5;
+  const gdouble xi_nu    = nu / k;
+  const gdouble z        = nc_distance_inv_comoving (dist, cosmo, xi_nu);
+  const gdouble E_z      = nc_hicosmo_E (cosmo, z);
+  const gdouble powspec  = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
+  const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (xclkg, z);
+  const gdouble bias_z   = _nc_xcor_kernel_gal_bias (xclkg, z);
+  const gdouble llp1     = l * (l + 1.0);
+  const gdouble g_z      = nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z) * (1.0 + z) * xi_nu / E_z;
+
+  return (bias_z * dn_dz_z + llp1 * g_z) * sqrt (powspec);
+}
+
+static void
+_nc_xcor_kernel_gal_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
+{
+  NcXcorKernelGal *xclkg    = NC_XCOR_KERNEL_GAL (xclk);
+  NcDistance *dist          = nc_xcor_kernel_peek_dist (xclk);
+  NcmPowspec *ps            = nc_xcor_kernel_peek_powspec (xclk);
+  const gdouble ps_kmin     = ncm_powspec_get_kmin (ps);
+  const gdouble ps_kmax     = ncm_powspec_get_kmax (ps);
+  const gdouble nu          = l + 0.5;
+  const gdouble xi_max      = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
+  const gdouble kmin_limber = nu / xi_max;
+
+  *kmin = GSL_MAX (ps_kmin, kmin_limber);
+  *kmax = ps_kmax;
 }
 
 static void

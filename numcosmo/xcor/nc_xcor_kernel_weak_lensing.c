@@ -48,7 +48,7 @@
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor.h"
 #include "xcor/nc_xcor_kernel_weak_lensing.h"
-#include "nc_enum_types.h"
+#include "xcor/nc_xcor_lensing_efficiency.h"
 
 #include "math/ncm_integrate.h"
 #include "math/ncm_spline_gsl.h"
@@ -58,14 +58,6 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_randist.h>
-#include <cvode/cvode.h>
-
-#include <sundials/sundials_matrix.h>
-#include <sunmatrix/sunmatrix_dense.h>
-#include <sunlinsol/sunlinsol_dense.h>
-#define SUN_DENSE_ACCESS SM_ELEMENT_D
-
-#include <nvector/nvector_serial.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcXcorKernelWeakLensing
@@ -73,15 +65,8 @@ struct _NcXcorKernelWeakLensing
   /*< private >*/
   NcXcorKernel parent_instance;
 
-  /* Kernel integration */
-  gpointer cvode;
-  SUNContext sunctx;
-  N_Vector yv;
-  SUNMatrix A;
-  SUNLinearSolver LS;
-  gdouble reltol;
-  gdouble abstol;
-  NcmModelCtrl *ctrl_cosmo;
+  /* Lensing efficiency */
+  NcXcorLensingEfficiency *lens_eff;
 
   /* Redshift */
   NcmSpline *dn_dz;
@@ -89,19 +74,6 @@ struct _NcXcorKernelWeakLensing
   gdouble dn_dz_zmax;
   gdouble dn_dz_min;
   gdouble dn_dz_max;
-
-  /* NcmSpline* bias_spline; */
-  /* guint nknots; */
-  /* gdouble* bias; */
-
-  NcDistance *dist;
-
-  NcmSpline *kernel_W_mz;
-  /* gboolean domagbias; */
-
-  /* gboolean fast_update; */
-  /* gdouble bias_old; */
-  /* gdouble noise_bias_old; */
 
   gdouble nbar;
   gdouble intr_shear;
@@ -116,10 +88,6 @@ enum
   PROP_DN_DZ,
   PROP_NBAR,
   PROP_INTR_SHEAR,
-  PROP_DIST,
-  PROP_RELTOL,
-  PROP_ABSTOL,
-  PROP_INTEG_METHOD,
   PROP_SIZE,
 };
 
@@ -132,31 +100,16 @@ G_DEFINE_TYPE (NcXcorKernelWeakLensing, nc_xcor_kernel_weak_lensing, NC_TYPE_XCO
 static void
 nc_xcor_kernel_weak_lensing_init (NcXcorKernelWeakLensing *xclkg)
 {
-  if (SUNContext_Create (SUN_COMM_NULL, &xclkg->sunctx))
-    g_error ("ERROR: SUNContext_Create failed\n");
-
-  xclkg->cvode      = NULL;
-  xclkg->yv         = N_VNew_Serial (2, xclkg->sunctx);
-  xclkg->A          = SUNDenseMatrix (2, 2, xclkg->sunctx);
-  xclkg->LS         = SUNLinSol_Dense (xclkg->yv, xclkg->A, xclkg->sunctx);
-  xclkg->reltol     = 0.0;
-  xclkg->abstol     = 0.0;
-  xclkg->ctrl_cosmo = ncm_model_ctrl_new (NULL);
-
+  xclkg->lens_eff     = NULL;
   xclkg->dn_dz        = NULL;
   xclkg->dn_dz_zmin   = 0.0;
   xclkg->dn_dz_zmax   = 0.0;
   xclkg->dn_dz_min    = 0.0;
   xclkg->dn_dz_max    = 0.0;
-  xclkg->dist         = NULL;
-  xclkg->kernel_W_mz  = NULL;
   xclkg->nbar         = 0.0;
   xclkg->intr_shear   = 0.0;
   xclkg->noise        = 0.0;
   xclkg->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
-
-  NCM_CVODE_CHECK ((gpointer) xclkg->A, "SUNDenseMatrix", 0, );
-  NCM_CVODE_CHECK ((gpointer) xclkg->LS, "SUNDenseLinearSolver", 0, );
 }
 
 static void
@@ -188,18 +141,6 @@ _nc_xcor_kernel_weak_lensing_set_property (GObject *object, guint prop_id, const
     case PROP_INTR_SHEAR:
       xclkg->intr_shear = g_value_get_double (value);
       break;
-    case PROP_DIST:
-      xclkg->dist = g_value_dup_object (value);
-      break;
-    case PROP_RELTOL:
-      xclkg->reltol = g_value_get_double (value);
-      break;
-    case PROP_ABSTOL:
-      xclkg->abstol = g_value_get_double (value);
-      break;
-    case PROP_INTEG_METHOD:
-      xclkg->integ_method = g_value_get_enum (value);
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -224,23 +165,21 @@ _nc_xcor_kernel_weak_lensing_get_property (GObject *object, guint prop_id, GValu
     case PROP_INTR_SHEAR:
       g_value_set_double (value, xclkg->intr_shear);
       break;
-    case PROP_DIST:
-      g_value_set_object (value, xclkg->dist);
-      break;
-    case PROP_RELTOL:
-      g_value_set_double (value, xclkg->reltol);
-      break;
-    case PROP_ABSTOL:
-      g_value_set_double (value, xclkg->abstol);
-      break;
-    case PROP_INTEG_METHOD:
-      g_value_set_enum (value, xclkg->integ_method);
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
   }
 }
+
+static gdouble _nc_xcor_kernel_weak_lensing_lens_eff_eval_source (NcXcorLensingEfficiency *lens_eff, gdouble z);
+static void _nc_xcor_kernel_weak_lensing_lens_eff_get_z_range (NcXcorLensingEfficiency *lens_eff, gdouble *zmin, gdouble *zmax);
+
+NC_XCOR_LENSING_EFFICIENCY_DEFINE_TYPE (NC, XCOR_KERNEL_WEAK_LENSING_LENS_EFF,
+                                        NcXcorKernelWeakLensingLensEff,
+                                        nc_xcor_kernel_weak_lensing_lens_eff,
+                                        _nc_xcor_kernel_weak_lensing_lens_eff_eval_source,
+                                        _nc_xcor_kernel_weak_lensing_lens_eff_get_z_range,
+                                        NcXcorKernelWeakLensing *)
 
 static void
 _nc_xcor_kernel_weak_lensing_constructed (GObject *object)
@@ -268,6 +207,17 @@ _nc_xcor_kernel_weak_lensing_constructed (GObject *object)
       xclkg->dn_dz_max = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmax);
     }
 
+    {
+      NcDistance *dist                             = nc_xcor_kernel_peek_dist (xclk);
+      NcXcorKernelWeakLensingLensEff *lens_eff_obj = g_object_new (
+        nc_xcor_kernel_weak_lensing_lens_eff_get_type (),
+        "distance", dist,
+        NULL);
+
+      lens_eff_obj->data = xclkg;
+      xclkg->lens_eff    = NC_XCOR_LENSING_EFFICIENCY (lens_eff_obj);
+    }
+
     /* Noise level */
     xclkg->noise = gsl_pow_2 (xclkg->intr_shear) / xclkg->nbar;
   }
@@ -279,10 +229,7 @@ _nc_xcor_kernel_weak_lensing_dispose (GObject *object)
   NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (object);
 
   ncm_spline_clear (&xclkg->dn_dz);
-  ncm_spline_clear (&xclkg->kernel_W_mz);
-
-  nc_distance_clear (&xclkg->dist);
-  ncm_model_ctrl_clear (&xclkg->ctrl_cosmo);
+  nc_xcor_lensing_efficiency_clear (&xclkg->lens_eff);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_weak_lensing_parent_class)->dispose (object);
@@ -291,25 +238,6 @@ _nc_xcor_kernel_weak_lensing_dispose (GObject *object)
 static void
 _nc_xcor_kernel_weak_lensing_finalize (GObject *object)
 {
-  NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (object);
-
-  CVodeFree (&xclkg->cvode);
-  N_VDestroy (xclkg->yv);
-
-  if (xclkg->A != NULL)
-  {
-    SUNMatDestroy (xclkg->A);
-    xclkg->A = NULL;
-  }
-
-  if (xclkg->LS != NULL)
-  {
-    SUNLinSolFree (xclkg->LS);
-    xclkg->LS = NULL;
-  }
-
-  SUNContext_Free (&xclkg->sunctx);
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_weak_lensing_parent_class)->finalize (object);
 }
@@ -345,16 +273,6 @@ nc_xcor_kernel_weak_lensing_class_init (NcXcorKernelWeakLensingClass *klass)
                                                         "Source redshift distribution",
                                                         NCM_TYPE_SPLINE,
                                                         G_PARAM_CONSTRUCT | G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_DIST,
-                                   g_param_spec_object ("dist",
-                                                        NULL,
-                                                        "Distance object",
-                                                        NC_TYPE_DISTANCE,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-
   g_object_class_install_property (object_class,
                                    PROP_NBAR,
                                    g_param_spec_double ("nbar",
@@ -371,45 +289,6 @@ nc_xcor_kernel_weak_lensing_class_init (NcXcorKernelWeakLensingClass *klass)
                                                         0.0, 20.0, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  /**
-   * NcXcorKernelWeakLensingC:reltol:
-   *
-   * Relative tolerance used when integrating the ODE.
-   * Default value: $10^{-13}$.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_RELTOL,
-                                   g_param_spec_double ("reltol",
-                                                        NULL,
-                                                        "Relative tolerance",
-                                                        GSL_DBL_EPSILON, 1.0e-1, NC_XCOR_PRECISION,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcXcorKernelWeakLensingC:abstol:
-   *
-   * Absolute tolerance used when integrating the ODE.
-   * Default value: $10^{-50}$.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_ABSTOL,
-                                   g_param_spec_double ("abstol",
-                                                        NULL,
-                                                        "Absolute tolerance tolerance",
-                                                        0.0, G_MAXDOUBLE, 1.0e-50,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_INTEG_METHOD,
-                                   g_param_spec_enum ("integ-method",
-                                                      NULL,
-                                                      "Integration method",
-                                                      NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
-                                                      NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -423,17 +302,12 @@ nc_xcor_kernel_weak_lensing_class_init (NcXcorKernelWeakLensingClass *klass)
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
 }
 
-typedef struct _src_int_params
-{
-  NcXcorKernelWeakLensing *xclkg;
-  NcHICosmo *cosmo;
-  const gdouble Omega_k0;
-} src_int_params;
-
 static gdouble
-_kernel_wl_W_U_eval_dndz (NcXcorKernelWeakLensing *xclkg, gdouble z)
+_nc_xcor_kernel_weak_lensing_lens_eff_eval_source (NcXcorLensingEfficiency *lens_eff, gdouble z)
 {
-  const gdouble alpha = 1.0e-2;
+  NcXcorKernelWeakLensingLensEff *data_obj = NC_XCOR_KERNEL_WEAK_LENSING_LENS_EFF (lens_eff);
+  NcXcorKernelWeakLensing *xclkg           = data_obj->data;
+  const gdouble alpha                      = 1.0e-2;
 
   if (z < xclkg->dn_dz_zmin)
     return xclkg->dn_dz_min * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmin) / alpha));
@@ -444,38 +318,14 @@ _kernel_wl_W_U_eval_dndz (NcXcorKernelWeakLensing *xclkg, gdouble z)
   return ncm_spline_eval (xclkg->dn_dz, z);
 }
 
-static gint
-_kernel_wl_W_U_f (sunrealtype mz, N_Vector y, N_Vector ydot, gpointer f_data)
+static void
+_nc_xcor_kernel_weak_lensing_lens_eff_get_z_range (NcXcorLensingEfficiency *lens_eff, gdouble *zmin, gdouble *zmax)
 {
-  src_int_params *ts = (src_int_params *) f_data;
-  NcHICosmo *cosmo   = ts->cosmo;
-  NcDistance *dist   = ts->xclkg->dist;
-  const gdouble z    = -mz;
-  const gdouble E    = nc_hicosmo_E (cosmo, z);
-  const gdouble dndz = _kernel_wl_W_U_eval_dndz (ts->xclkg, z);
-  const gdouble dt   = nc_distance_transverse (dist, cosmo, z);
+  NcXcorKernelWeakLensingLensEff *data_obj = NC_XCOR_KERNEL_WEAK_LENSING_LENS_EFF (lens_eff);
+  NcXcorKernelWeakLensing *xclkg           = data_obj->data;
 
-  NV_Ith_S (ydot, 0) = -NV_Ith_S (y, 1) / E;
-  NV_Ith_S (ydot, 1) = -dndz / dt - ts->Omega_k0 * NV_Ith_S (y, 0) / E;
-
-  return 0;
-}
-
-static gint
-_kernel_wl_W_U_J (sunrealtype mz, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-{
-  src_int_params *ts = (src_int_params *) jac_data;
-  NcHICosmo *cosmo   = ts->cosmo;
-  const gdouble z    = -mz;
-  const gdouble E    = nc_hicosmo_E (cosmo, z);
-
-  SUN_DENSE_ACCESS (J, 0, 0) = 0.0;
-  SUN_DENSE_ACCESS (J, 0, 1) = -1.0 / E;
-
-  SUN_DENSE_ACCESS (J, 1, 0) = -ts->Omega_k0 / E;
-  SUN_DENSE_ACCESS (J, 1, 1) = 0.0;
-
-  return 0;
+  *zmin = xclkg->dn_dz_zmin;
+  *zmax = xclkg->dn_dz_zmax;
 }
 
 static void
@@ -487,126 +337,14 @@ _nc_xcor_kernel_weak_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   nc_xcor_kernel_set_const_factor (xclk, 1.5 * nc_hicosmo_Omega_m0 (cosmo));
   nc_xcor_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
 
-  /* zmin should always be zero for lensing, so just checking for consistency */
   g_assert_cmpfloat (zmin, ==, 0.0);
-
-  /* Check if the spline includes the boundaries to avoid running into errors when computing */
   g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, zmin)));
   g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, zmax)));
 
-  /* Assign zmid as middle redshift between 0 and max of dn/dz */
   zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz))) / 2.0;
   nc_xcor_kernel_set_z_range (xclk, zmin, zmax, zmid);
 
-  nc_distance_prepare_if_needed (xclkg->dist, cosmo);
-
-  {
-    src_int_params ts    = {xclkg, cosmo, nc_hicosmo_Omega_k0 (cosmo)};
-    gdouble mz_ini       = -zmax;
-    const gdouble mz_end = -1.0e-10;
-    GArray *x_array, *y_array;
-    gint flag;
-
-    if (xclkg->kernel_W_mz != NULL)
-    {
-      NcmVector *xv = ncm_spline_peek_xv (xclkg->kernel_W_mz);
-      NcmVector *yv = ncm_spline_peek_yv (xclkg->kernel_W_mz);
-
-      x_array = ncm_vector_get_array (xv);
-      y_array = ncm_vector_get_array (yv);
-
-      g_array_set_size (x_array, 0);
-      g_array_set_size (y_array, 0);
-    }
-    else
-    {
-      xclkg->kernel_W_mz = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-      x_array            = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-      y_array            = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-    }
-
-    {
-      /*
-       *  Setting up initial conditions based on second order approximation of the
-       *  original integral.
-       */
-      const gdouble dz = zmax * sqrt (GSL_DBL_EPSILON);
-      const gdouble f  = 0.5 * gsl_pow_2 (dz) * _kernel_wl_W_U_eval_dndz (xclkg, zmax) / nc_distance_transverse (xclkg->dist, cosmo, zmax) / nc_hicosmo_E (cosmo, zmax);
-      const gdouble g  = -dz *_kernel_wl_W_U_eval_dndz (xclkg, zmax) / nc_distance_transverse (xclkg->dist, cosmo, zmax);
-
-      NV_Ith_S (xclkg->yv, 0) = f;
-      NV_Ith_S (xclkg->yv, 1) = g;
-
-      mz_ini += dz;
-    }
-
-    if (xclkg->cvode == NULL)
-    {
-      xclkg->cvode = CVodeCreate (CV_BDF, xclkg->sunctx);
-
-      flag = CVodeInit (xclkg->cvode, &_kernel_wl_W_U_f, mz_ini, xclkg->yv);
-      NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
-
-      flag = CVodeSetLinearSolver (xclkg->cvode, xclkg->LS, xclkg->A);
-      NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
-
-      flag = CVodeSetJacFn (xclkg->cvode, &_kernel_wl_W_U_J);
-      NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
-    }
-    else
-    {
-      flag = CVodeReInit (xclkg->cvode, mz_ini, xclkg->yv);
-      NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
-
-      flag = CVodeSetLinearSolver (xclkg->cvode, xclkg->LS, xclkg->A);
-      NCM_CVODE_CHECK (&flag, "CVodeSetLinearSolver", 1, );
-
-      flag = CVodeSetJacFn (xclkg->cvode, &_kernel_wl_W_U_J);
-      NCM_CVODE_CHECK (&flag, "CVodeSetJacFn", 1, );
-    }
-
-    flag = CVodeSStolerances (xclkg->cvode, xclkg->reltol, xclkg->abstol);
-    NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
-
-    flag = CVodeSetMaxNumSteps (xclkg->cvode, 500000);
-    NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
-
-    flag = CVodeSetUserData (xclkg->cvode, &ts);
-    NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
-
-    flag = CVodeSetStopTime (xclkg->cvode, mz_end);
-    NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
-
-    flag = CVodeSetMaxStep (xclkg->cvode, 1.0e-1);
-
-    g_array_append_val (x_array, mz_ini);
-    g_array_append_val (y_array, NV_Ith_S (xclkg->yv, 0));
-
-    while (TRUE)
-    {
-      flag = CVode (xclkg->cvode, mz_end, xclkg->yv, &mz_ini, CV_ONE_STEP);
-
-      NCM_CVODE_CHECK (&flag, "CVode", 1, );
-
-      g_array_append_val (x_array, mz_ini);
-      g_array_append_val (y_array, NV_Ith_S (xclkg->yv, 0));
-
-      if (mz_ini == mz_end)
-        break;
-    }
-
-    {
-      NcmVector *xv = ncm_vector_new_array (x_array);
-      NcmVector *yv = ncm_vector_new_array (y_array);
-
-      ncm_spline_set (xclkg->kernel_W_mz, xv, yv, TRUE);
-      ncm_vector_free (xv);
-      ncm_vector_free (yv);
-
-      g_array_unref (x_array);
-      g_array_unref (y_array);
-    }
-  }
+  nc_xcor_lensing_efficiency_prepare (xclkg->lens_eff, cosmo);
 }
 
 static gdouble
@@ -616,7 +354,7 @@ _nc_xcor_kernel_weak_lensing_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *
   const gdouble nu               = l + 0.5;
   const gdouble lfactor          = sqrt ((l + 2.0) * (l + 1.0) * l * (l - 1.0)) / (nu * nu);
 
-  return lfactor * (1.0 + z) * xck->xi_z / xck->E_z * ncm_spline_eval (xclkg->kernel_W_mz, -z);
+  return lfactor * (1.0 + z) * xck->xi_z / xck->E_z * nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z);
 }
 
 static void
@@ -643,25 +381,27 @@ _nc_xcor_kernel_weak_lensing_obs_params_len (NcXcorKernel *xclk)
 
 /**
  * nc_xcor_kernel_weak_lensing_new:
+ * @dist: a #NcDistance
+ * @ps: a #NcmPowspec
  * @zmin: a gdouble
  * @zmax: a gdouble
  * @dn_dz: a #NcmSpline
  * @nbar: a gdouble, gal density
  * @intr_shear: a gdouble, intrinsic galaxy shear
- * @dist: a #NcDistance
  *
  * Returns: a #NcXcorKernelWeakLensing
  */
 NcXcorKernelWeakLensing *
-nc_xcor_kernel_weak_lensing_new (gdouble zmin, gdouble zmax, NcmSpline *dn_dz, gdouble nbar, gdouble intr_shear, NcDistance *dist)
+nc_xcor_kernel_weak_lensing_new (NcDistance *dist, NcmPowspec *ps, gdouble zmin, gdouble zmax, NcmSpline *dn_dz, gdouble nbar, gdouble intr_shear)
 {
   NcXcorKernelWeakLensing *xclkg = g_object_new (NC_TYPE_XCOR_KERNEL_WEAK_LENSING,
+                                                 "dist", dist,
+                                                 "powspec", ps,
                                                  "zmin", zmin,
                                                  "zmax", zmax,
                                                  "dndz", dn_dz,
                                                  "nbar", nbar,
                                                  "intr-shear", intr_shear,
-                                                 "dist", dist,
                                                  NULL);
 
   return xclkg;

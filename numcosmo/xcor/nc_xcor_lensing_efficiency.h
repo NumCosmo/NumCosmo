@@ -45,8 +45,8 @@ G_DECLARE_DERIVABLE_TYPE (NcXcorLensingEfficiency, nc_xcor_lensing_efficiency, N
  * @lens_eff: a #NcXcorLensingEfficiency
  * @z: redshift
  *
- * Evaluates the source weight function $W_{\mathrm{src}}(z)$ for the lensing efficiency computation.
- * This is used in the integral:
+ * Evaluates the source weight function $W_{\mathrm{src}}(z)$ for the lensing
+ * efficiency computation. This is used in the integral:
  * \begin{equation}
  * g(z) = \int_z^{z_{\max}} dz' \left(1 - \frac{\chi(z)}{\chi(z')}\right) W_{\mathrm{src}}(z')
  * \end{equation}
@@ -61,7 +61,8 @@ typedef gdouble (*NcXcorLensingEfficiencyEvalSource) (NcXcorLensingEfficiency *l
  * @zmin: (out): minimum source redshift
  * @zmax: (out): maximum source redshift
  *
- * Returns the redshift range for the source distribution used in lensing efficiency computation.
+ * Returns the redshift range for the source distribution used in lensing efficiency
+ * computation.
  *
  */
 typedef void (*NcXcorLensingEfficiencyGetZRange) (NcXcorLensingEfficiency *lens_eff, gdouble *zmin, gdouble *zmax);
@@ -107,8 +108,9 @@ gdouble nc_xcor_lensing_efficiency_eval (NcXcorLensingEfficiency *lens_eff, gdou
  * @method_get_z_range: the name of the method that returns the source redshift range
  * @user_data: the type of the user data
  *
- * A convenience macro to define a subclass of #NcXcorLensingEfficiency with a custom user data type.
- * This follows the same pattern as #NcmIntegralND for inline type definition.
+ * A convenience macro to define a subclass of #NcXcorLensingEfficiency with a custom
+ * user data type. This follows the same pattern as #NcmIntegralND for inline type
+ * definition.
  *
  * Example:
  * |[<!-- language="C" -->
