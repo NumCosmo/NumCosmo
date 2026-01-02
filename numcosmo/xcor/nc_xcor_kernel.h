@@ -38,6 +38,7 @@
 #include <numcosmo/lss/nc_transfer_func.h>
 #include <numcosmo/math/ncm_c.h>
 #include <numcosmo/math/ncm_model.h>
+#include <numcosmo/math/ncm_powspec.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_vector.h>
@@ -49,6 +50,32 @@ G_BEGIN_DECLS
 G_DECLARE_DERIVABLE_TYPE (NcXcorKernel, nc_xcor_kernel, NC, XCOR_KERNEL, NcmModel);
 
 typedef struct _NcXcorKinetic NcXcorKinetic;
+
+/**
+ * NcXcorKernelEvalFunc:
+ * @xclk: a #NcXcorKernel
+ * @cosmo: a #NcHICosmo
+ * @k: wavenumber
+ * @xck: kinetic quantities
+ * @l: multipole
+ *
+ * Function pointer type for kernel evaluation functions.
+ *
+ * Returns: the kernel evaluation result
+ */
+typedef gdouble (*NcXcorKernelEvalFunc) (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+
+/**
+ * NcXcorKernelGetKRangeFunc:
+ * @xclk: a #NcXcorKernel
+ * @cosmo: a #NcHICosmo
+ * @l: multipole
+ * @kmin: (out): minimum wavenumber
+ * @kmax: (out): maximum wavenumber
+ *
+ * Function pointer type for getting the wavenumber range.
+ */
+typedef void (*NcXcorKernelGetKRangeFunc) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 
 /**
  * NcXcorKernelIntegMethod:
@@ -76,6 +103,7 @@ struct _NcXcorKernelClass
   void (*add_noise) (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
   guint (*obs_len) (NcXcorKernel *xclk);
   guint (*obs_params_len) (NcXcorKernel *xclk);
+  void (*get_k_range) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 };
 
 
@@ -127,6 +155,17 @@ void nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zma
 
 void nc_xcor_kernel_set_const_factor (NcXcorKernel *xclk, gdouble cf);
 gdouble nc_xcor_kernel_get_const_factor (NcXcorKernel *xclk);
+
+NcDistance *nc_xcor_kernel_peek_dist (NcXcorKernel *xclk);
+NcmPowspec *nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk);
+
+void nc_xcor_kernel_set_eval_kernel_func (NcXcorKernel *xclk, NcXcorKernelEvalFunc eval_kernel_func);
+gdouble nc_xcor_kernel_eval_kernel (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+
+void nc_xcor_kernel_set_get_k_range_func (NcXcorKernel *xclk, NcXcorKernelGetKRangeFunc get_k_range_func);
+void nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
+
+NcXcorKernelIntegMethod nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk);
 
 gdouble nc_xcor_kernel_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 gdouble nc_xcor_kernel_eval_radial_weight_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l);

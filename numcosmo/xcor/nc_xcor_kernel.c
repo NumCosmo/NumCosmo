@@ -51,8 +51,11 @@
 #include "math/ncm_memory_pool.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_serialize.h"
+#include "math/ncm_powspec.h"
+#include "nc_distance.h"
 #include "xcor/nc_xcor_kernel.h"
 #include "xcor/nc_xcor.h"
+#include "nc_enum_types.h"
 
 typedef struct _NcXcorKernelPrivate
 {
@@ -60,6 +63,14 @@ typedef struct _NcXcorKernelPrivate
   NcmModel parent_instance;
   gdouble cons_factor;
   gdouble zmin, zmax, zmid;
+
+  NcDistance *dist;
+  NcmPowspec *ps;
+
+  gdouble (*eval_kernel_func) (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+  void (*get_k_range_func) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
+
+  NcXcorKernelIntegMethod integ_method;
 } NcXcorKernelPrivate;
 
 enum
@@ -67,6 +78,9 @@ enum
   PROP_0,
   PROP_ZMIN,
   PROP_ZMAX,
+  PROP_DIST,
+  PROP_POWSPEC,
+  PROP_INTEG_METHOD,
   PROP_SIZE,
 };
 
@@ -79,15 +93,26 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->cons_factor = 0.0;
-  self->zmin        = 0.0;
-  self->zmax        = 0.0;
-  self->zmid        = 0.0;
+  self->cons_factor      = 0.0;
+  self->zmin             = 0.0;
+  self->zmax             = 0.0;
+  self->zmid             = 0.0;
+  self->dist             = NULL;
+  self->ps               = NULL;
+  self->eval_kernel_func = NULL;
+  self->get_k_range_func = NULL;
+  self->integ_method     = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
 }
 
 static void
 _nc_xcor_kernel_dispose (GObject *object)
 {
+  NcXcorKernel *xclk        = NC_XCOR_KERNEL (object);
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  nc_distance_clear (&self->dist);
+  ncm_powspec_clear (&self->ps);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_parent_class)->dispose (object);
 }
@@ -97,6 +122,39 @@ _nc_xcor_kernel_finalize (GObject *object)
 {
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_parent_class)->finalize (object);
+}
+
+static void
+_nc_xcor_kernel_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (nc_xcor_kernel_parent_class)->constructed (object);
+  {
+    NcXcorKernel *xclk        = NC_XCOR_KERNEL (object);
+    NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+    if (self->eval_kernel_func == NULL)
+      g_error ("nc_xcor_kernel_constructed: eval_kernel_func was not set by subclass implementation. "
+               "Subclasses must call nc_xcor_kernel_set_eval_kernel_func() in their constructed method.");
+
+    if (self->get_k_range_func == NULL)
+      g_error ("nc_xcor_kernel_constructed: get_k_range_func was not set by subclass implementation. "
+               "Subclasses must call nc_xcor_kernel_set_get_k_range_func() in their constructed method.");
+
+    if (self->dist == NULL)
+      g_error ("nc_xcor_kernel_constructed: dist property was not set. "
+               "The 'dist' property must be provided at construction time.");
+
+    if (self->ps == NULL)
+      g_error ("nc_xcor_kernel_constructed: powspec property was not set. "
+               "The 'powspec' property must be provided at construction time.");
+
+    if (self->integ_method == NC_XCOR_KERNEL_INTEG_METHOD_LEN)
+      g_error ("nc_xcor_kernel_constructed: integ-method property was not set. "
+               "The 'integ-method' property must be provided at construction time.");
+
+    nc_distance_compute_inv_comoving (self->dist, TRUE);
+  }
 }
 
 static void
@@ -114,6 +172,17 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
       break;
     case PROP_ZMAX:
       self->zmax = g_value_get_double (value);
+      break;
+    case PROP_DIST:
+      nc_distance_clear (&self->dist);
+      self->dist = g_value_dup_object (value);
+      break;
+    case PROP_POWSPEC:
+      ncm_powspec_clear (&self->ps);
+      self->ps = g_value_dup_object (value);
+      break;
+    case PROP_INTEG_METHOD:
+      self->integ_method = g_value_get_enum (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -137,6 +206,15 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_ZMAX:
       g_value_set_double (value, self->zmax);
       break;
+    case PROP_DIST:
+      g_value_set_object (value, self->dist);
+      break;
+    case PROP_POWSPEC:
+      g_value_set_object (value, self->ps);
+      break;
+    case PROP_INTEG_METHOD:
+      g_value_set_enum (value, self->integ_method);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -153,6 +231,7 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
 
   model_class->set_property = &_nc_xcor_kernel_set_property;
   model_class->get_property = &_nc_xcor_kernel_get_property;
+  object_class->constructed = &_nc_xcor_kernel_constructed;
   object_class->dispose     = &_nc_xcor_kernel_dispose;
   object_class->finalize    = &_nc_xcor_kernel_finalize;
 
@@ -175,6 +254,31 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                         "Maximum redshift",
                                                         0.0, 1e5, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_DIST,
+                                   g_param_spec_object ("dist",
+                                                        NULL,
+                                                        "Distance object",
+                                                        NC_TYPE_DISTANCE,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_POWSPEC,
+                                   g_param_spec_object ("powspec",
+                                                        NULL,
+                                                        "Power spectrum object",
+                                                        NCM_TYPE_POWSPEC,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_INTEG_METHOD,
+                                   g_param_spec_enum ("integ-method",
+                                                      NULL,
+                                                      "Integration method",
+                                                      NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
+                                                      NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   ncm_mset_model_register_id (model_class, "NcXcorKernel", "Cross-correlation Kernels",
                               NULL, TRUE, NCM_MSET_MODEL_MAIN);
@@ -353,6 +457,141 @@ nc_xcor_kernel_get_const_factor (NcXcorKernel *xclk)
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   return self->cons_factor;
+}
+
+/**
+ * nc_xcor_kernel_peek_dist:
+ * @xclk: a #NcXcorKernel
+ *
+ * Peeks the distance object from the kernel. This method is intended
+ * for use by subclass implementations.
+ *
+ * Returns: (transfer none): the distance object.
+ */
+NcDistance *
+nc_xcor_kernel_peek_dist (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  return self->dist;
+}
+
+/**
+ * nc_xcor_kernel_peek_powspec:
+ * @xclk: a #NcXcorKernel
+ *
+ * Peeks the power spectrum object from the kernel. This method is intended
+ * for use by subclass implementations.
+ *
+ * Returns: (transfer none): the power spectrum object.
+ */
+NcmPowspec *
+nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  return self->ps;
+}
+
+/**
+ * nc_xcor_kernel_set_eval_kernel_func: (skip)
+ * @xclk: a #NcXcorKernel
+ * @eval_kernel_func: (scope notified): function pointer to evaluate the kernel
+ *
+ * Sets the function pointer that will be used to evaluate the kernel.
+ * This method should only be called by subclass implementations during
+ * the constructed phase to set the appropriate kernel evaluation function
+ * based on the integration method.
+ *
+ */
+void
+nc_xcor_kernel_set_eval_kernel_func (NcXcorKernel *xclk, NcXcorKernelEvalFunc eval_kernel_func)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  self->eval_kernel_func = eval_kernel_func;
+}
+
+/**
+ * nc_xcor_kernel_set_get_k_range_func: (skip)
+ * @xclk: a #NcXcorKernel
+ * @get_k_range_func: (scope notified): function pointer to get the k range
+ *
+ * Sets the function pointer that will be used to get the wavenumber range.
+ * This method should only be called by subclass implementations during
+ * the constructed phase to set the appropriate k range function
+ * based on the integration method.
+ *
+ */
+void
+nc_xcor_kernel_set_get_k_range_func (NcXcorKernel *xclk, NcXcorKernelGetKRangeFunc get_k_range_func)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  self->get_k_range_func = get_k_range_func;
+}
+
+/**
+ * nc_xcor_kernel_eval_kernel:
+ * @xclk: a #NcXcorKernel
+ * @cosmo: a #NcHICosmo
+ * @k: wavenumber
+ * @xck: a #NcXcorKinetic
+ * @l: multipole
+ *
+ * Evaluates the kernel at wavenumber @k and multipole @l by calling the
+ * function pointer set by subclasses. This method provides optimized
+ * dispatch without virtual method overhead.
+ *
+ * Returns: the kernel evaluation result
+ */
+gdouble
+nc_xcor_kernel_eval_kernel (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  g_assert (self->eval_kernel_func != NULL);
+
+  return self->eval_kernel_func (xclk, cosmo, k, xck, l);
+}
+
+/**
+ * nc_xcor_kernel_get_k_range:
+ * @xclk: a #NcXcorKernel
+ * @cosmo: a #NcHICosmo
+ * @l: multipole
+ * @kmin: (out): minimum wavenumber
+ * @kmax: (out): maximum wavenumber
+ *
+ * Gets the wavenumber range for the kernel by calling the
+ * function pointer set by subclasses. This method provides optimized
+ * dispatch without virtual method overhead.
+ *
+ */
+void
+nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  g_assert (self->get_k_range_func != NULL);
+
+  self->get_k_range_func (xclk, cosmo, l, kmin, kmax);
+}
+
+/**
+ * nc_xcor_kernel_get_integ_method:
+ * @xclk: a #NcXcorKernel
+ *
+ * Gets the integration method for the kernel.
+ *
+ * Returns: the #NcXcorKernelIntegMethod
+ */
+NcXcorKernelIntegMethod
+nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  return self->integ_method;
 }
 
 /**
