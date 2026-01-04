@@ -65,6 +65,7 @@ def fixture_nc_cmb_lens(
     lmax = 3000
     nc_cmb_lens = Nc.XcorKernelCMBLensing.new(
         nc_cosmo_eh_linear.dist,
+        nc_cosmo_eh_linear.ps_ml,
         Nc.RecombSeager(),
         Ncm.Vector.new_array(np.arange(lmax + 1)),
     )
@@ -107,9 +108,11 @@ def fixture_ccl_tsz(
 
 
 @pytest.fixture(name="nc_tsz")
-def fixture_nc_tsz() -> Nc.XcorKerneltSZ:
+def fixture_nc_tsz(nc_cosmo_eh_linear: ncpy.Cosmology) -> Nc.XcorKerneltSZ:
     """Fixture for NumCosmo tSZ tracer."""
-    nc_tsz = Nc.XcorKerneltSZ.new(6.0)
+    nc_tsz = Nc.XcorKerneltSZ.new(
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, 6.0
+    )
     return nc_tsz
 
 
@@ -155,7 +158,14 @@ def fixture_nc_gal(
 
     magbias = mbias != 0.0
     nc_gal = Nc.XcorKernelGal.new(
-        0.0, 2.0, bias_nknots, 1.234, dndz, nc_cosmo_eh_linear.dist, magbias
+        nc_cosmo_eh_linear.dist,
+        nc_cosmo_eh_linear.ps_ml,
+        0.0,
+        2.0,
+        bias_nknots,
+        1.234,
+        dndz,
+        magbias,
     )
     for i in range(bias_nknots):
         nc_gal.orig_vparam_set(Nc.XcorKernelGalVParams.BIAS, i, bias)
@@ -208,7 +218,7 @@ def fixture_nc_weak_lensing(
     dndz = Ncm.SplineCubicNotaknot.new_full(z_v, nz_v, True)
 
     nc_wl = Nc.XcorKernelWeakLensing.new(
-        0.0, 2.0, dndz, 3.0, 7.0, nc_cosmo_eh_linear.dist
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, 0.0, 2.0, dndz, 3.0, 7.0
     )
 
     return nc_wl

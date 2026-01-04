@@ -731,4 +731,4 @@ def test_xcor_methods(
     vp_gsl_a = np.array(vp_gsl.dup_array())
     vp_cub_a = np.array(vp_cub.dup_array())
 
-    assert_allclose(vp_gsl_a, vp_cub_a, rtol=1.0e-5)
+    assert_allclose(vp_gsl_a, vp_cub_a, rtol=1.0e-5, atol=1.0e-50)

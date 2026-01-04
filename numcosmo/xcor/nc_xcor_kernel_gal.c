@@ -565,8 +565,12 @@ _nc_xcor_kernel_gal_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gd
 
   if (xclkg->domagbias)
   {
-    const gdouble llp1 = l * (l + 1.0);
-    const gdouble g_z  = nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z) * (1.0 + z) * xck->xi_z / xck->E_z;
+    const gdouble nu   = l + 0.5;
+    const gdouble llp1 = l * (l + 1.0) / nu / nu;
+    const gdouble g_z  = nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z) *
+                         (1.0 + z) *
+                         xck->xi_z / xck->E_z *
+                         1.5 * nc_hicosmo_Omega_m0 (cosmo);
 
     res += llp1 * g_z;
   }
