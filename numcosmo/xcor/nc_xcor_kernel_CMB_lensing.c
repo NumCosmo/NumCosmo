@@ -162,8 +162,10 @@ _nc_xcor_kernel_cmb_lensing_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_cmb_lensing_parent_class)->finalize (object);
 }
 
-static gdouble _nc_xcor_kernel_cmb_lensing_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
-static gdouble _nc_xcor_kernel_cmb_lensing_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_cmb_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_cmb_lensing_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+static gdouble _nc_xcor_kernel_cmb_lensing_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l);
+static gdouble _nc_xcor_kernel_cmb_lensing_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 static void _nc_xcor_kernel_cmb_lensing_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 static void _nc_xcor_kernel_cmb_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_cmb_lensing_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
@@ -184,7 +186,10 @@ _nc_xcor_kernel_cmb_lensing_constructed (GObject *object)
       g_error ("_nc_xcor_kernel_cmb_lensing_constructed: GSL_QAG integration not implemented yet");
       break;
     case NC_XCOR_KERNEL_INTEG_METHOD_LIMBER:
-      nc_xcor_kernel_set_eval_kernel_func (xclk, _nc_xcor_kernel_cmb_lensing_kernel_func_limber);
+      nc_xcor_kernel_set_eval_kernel_func (xclk,
+                                           _nc_xcor_kernel_cmb_lensing_eval_kernel_limber,
+                                           _nc_xcor_kernel_cmb_lensing_eval_kernel_prefactor_limber
+                                          );
       nc_xcor_kernel_set_get_k_range_func (xclk, _nc_xcor_kernel_cmb_lensing_get_k_range_limber);
       break;
     default:
@@ -241,8 +246,9 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval_radial_weight = &_nc_xcor_kernel_cmb_lensing_eval_radial_weight;
-  parent_class->prepare            = &_nc_xcor_kernel_cmb_lensing_prepare;
+  parent_class->eval_limber_z           = &_nc_xcor_kernel_cmb_lensing_eval_limber_z;
+  parent_class->eval_limber_z_prefactor = &_nc_xcor_kernel_cmb_lensing_eval_limber_z_prefactor;
+  parent_class->prepare                 = &_nc_xcor_kernel_cmb_lensing_prepare;
   /*parent_class->noise_spec = &_nc_xcor_kernel_cmb_lensing_noise_spec;*/
   parent_class->add_noise = &_nc_xcor_kernel_cmb_lensing_add_noise;
 
@@ -280,7 +286,7 @@ nc_xcor_kernel_cmb_lensing_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *reco
 }
 
 static gdouble
-_nc_xcor_kernel_cmb_lensing_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l) /*, gdouble geo_z[]) */
+_nc_xcor_kernel_cmb_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l) /*, gdouble geo_z[]) */
 {
   NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
   NcDistance *dist              = nc_xcor_kernel_peek_dist (xclk);
@@ -289,11 +295,17 @@ _nc_xcor_kernel_cmb_lensing_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *c
   const gdouble dt              = nc_distance_transverse (dist, cosmo, z);
   const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
 
-  return cor_factor * (1.0 + z) * xck->xi_z * xck->xi_z * dt_z_zlss / (xck->E_z * xclkl->dt_lss * dt);
+  return cor_factor * (1.0 + z) * xck->xi_z * xck->xi_z * dt_z_zlss / (xclkl->dt_lss * dt);
 }
 
 static gdouble
-_nc_xcor_kernel_cmb_lensing_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l)
+_nc_xcor_kernel_cmb_lensing_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  return (3.0 * nc_hicosmo_Omega_m0 (cosmo)) / 2.0;
+}
+
+static gdouble
+_nc_xcor_kernel_cmb_lensing_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l)
 {
   NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
   NcDistance *dist              = xclkl->dist;
@@ -301,13 +313,20 @@ _nc_xcor_kernel_cmb_lensing_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *c
   const gdouble nu              = l + 0.5;
   const gdouble xi_nu           = nu / k;
   const gdouble z               = nc_distance_inv_comoving (dist, cosmo, xi_nu);
-  const gdouble E_z             = nc_hicosmo_E (cosmo, z);
   const gdouble powspec         = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
-  const gdouble cor_factor      = l * (l + 1.0) / (nu * nu);
   const gdouble dt              = nc_distance_transverse (dist, cosmo, z);
   const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
+  const gdouble operator        = 1.0 / (k * k);
 
-  return cor_factor * (1.0 + z) * xi_nu * xi_nu * dt_z_zlss * sqrt (powspec) / (E_z * xclkl->dt_lss * dt);
+  return sqrt (M_PI / 2.0 / nu) / k * (1.0 + z) * operator * dt_z_zlss * sqrt (powspec) / (xclkl->dt_lss * dt);
+}
+
+static gdouble
+_nc_xcor_kernel_cmb_lensing_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  const gdouble lfactor = l * (l + 1.0);
+
+  return 1.5 * nc_hicosmo_Omega_m0 (cosmo) * lfactor;
 }
 
 static void
@@ -344,7 +363,6 @@ _nc_xcor_kernel_cmb_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   /* nc_recomb_prepare (xclkl->recomb, cosmo); */
   /* gdouble lamb = nc_recomb_tau_zstar (xclkl->recomb, cosmo); */
 
-  nc_xcor_kernel_set_const_factor (xclk, (3.0 * nc_hicosmo_Omega_m0 (cosmo)) / 2.0);
   nc_xcor_kernel_set_z_range (xclk, 0.0, xclkl->z_lss, 2.0);
 }
 

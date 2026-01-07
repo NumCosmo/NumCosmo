@@ -121,7 +121,7 @@ def test_gal_obs_extrapolation(
     z_a = np.array(nc_gal.props.dndz.peek_xv().dup_array())
     nc_gal.set_z_range(z_a[0], z_a[-1] * 2.0, 0.5 * (z_a[-1] + z_a[0]))
     assert np.isfinite(
-        nc_gal.eval_radial_weight_full(
+        nc_gal.eval_limber_z_full(
             nc_cosmo_eh_linear.cosmo, z_a[-1], nc_cosmo_eh_linear.dist, 77
         )
     )
@@ -129,7 +129,7 @@ def test_gal_obs_extrapolation(
     extra_z_a = np.linspace(z_a[-1], 2.0 * z_a[-1], 10)
     k_a = np.array(
         [
-            nc_gal.eval_radial_weight_full(
+            nc_gal.eval_limber_z_full(
                 nc_cosmo_eh_linear.cosmo, z, nc_cosmo_eh_linear.dist, 77
             )
             for z in extra_z_a
@@ -165,15 +165,15 @@ def test_cmb_lens_serialization(
     nc_cmb_lens_dup.prepare(cosmo)
 
     assert_allclose(
-        nc_cmb_lens.eval_radial_weight_full(cosmo, 0.0, dist, 2),
-        nc_cmb_lens_dup.eval_radial_weight_full(cosmo, 0.0, dist, 2),
+        nc_cmb_lens.eval_limber_z_full(cosmo, 0.0, dist, 2),
+        nc_cmb_lens_dup.eval_limber_z_full(cosmo, 0.0, dist, 2),
     )
 
     # Prepare for a second time
     nc_cmb_lens.prepare(cosmo)
     assert_allclose(
-        nc_cmb_lens.eval_radial_weight_full(cosmo, 0.0, dist, 2),
-        nc_cmb_lens_dup.eval_radial_weight_full(cosmo, 0.0, dist, 2),
+        nc_cmb_lens.eval_limber_z_full(cosmo, 0.0, dist, 2),
+        nc_cmb_lens_dup.eval_limber_z_full(cosmo, 0.0, dist, 2),
     )
 
 
@@ -193,15 +193,15 @@ def test_cmb_isw_serialization(
     nc_cmb_isw_dup.prepare(cosmo)
 
     assert_allclose(
-        nc_cmb_isw.eval_radial_weight_full(cosmo, 0.0, dist, 2),
-        nc_cmb_isw_dup.eval_radial_weight_full(cosmo, 0.0, dist, 2),
+        nc_cmb_isw.eval_limber_z_full(cosmo, 0.0, dist, 2),
+        nc_cmb_isw_dup.eval_limber_z_full(cosmo, 0.0, dist, 2),
     )
 
     # Prepare for a second time
     nc_cmb_isw.prepare(cosmo)
     assert_allclose(
-        nc_cmb_isw.eval_radial_weight_full(cosmo, 0.0, dist, 2),
-        nc_cmb_isw_dup.eval_radial_weight_full(cosmo, 0.0, dist, 2),
+        nc_cmb_isw.eval_limber_z_full(cosmo, 0.0, dist, 2),
+        nc_cmb_isw_dup.eval_limber_z_full(cosmo, 0.0, dist, 2),
     )
 
 
@@ -221,15 +221,15 @@ def test_tsz_serialization(
     nc_tsz_dup.prepare(cosmo)
 
     assert_allclose(
-        nc_tsz.eval_radial_weight_full(cosmo, 0.0, dist, 2),
-        nc_tsz_dup.eval_radial_weight_full(cosmo, 0.0, dist, 2),
+        nc_tsz.eval_limber_z_full(cosmo, 0.0, dist, 2),
+        nc_tsz_dup.eval_limber_z_full(cosmo, 0.0, dist, 2),
     )
 
     # Prepare for a second time
     nc_tsz.prepare(cosmo)
     assert_allclose(
-        nc_tsz.eval_radial_weight_full(cosmo, 0.0, dist, 2),
-        nc_tsz_dup.eval_radial_weight_full(cosmo, 0.0, dist, 2),
+        nc_tsz.eval_limber_z_full(cosmo, 0.0, dist, 2),
+        nc_tsz_dup.eval_limber_z_full(cosmo, 0.0, dist, 2),
     )
 
 
@@ -250,15 +250,15 @@ def test_gal_serialization(
     nc_gal_dup.prepare(cosmo)
 
     assert_allclose(
-        nc_gal.eval_radial_weight_full(cosmo, 0.0, dist, 2),
-        nc_gal_dup.eval_radial_weight_full(cosmo, 0.0, dist, 2),
+        nc_gal.eval_limber_z_full(cosmo, 0.0, dist, 2),
+        nc_gal_dup.eval_limber_z_full(cosmo, 0.0, dist, 2),
     )
 
     # Prepare for a second time
     nc_gal.prepare(cosmo)
     assert_allclose(
-        nc_gal.eval_radial_weight_full(cosmo, 0.0, dist, 2),
-        nc_gal_dup.eval_radial_weight_full(cosmo, 0.0, dist, 2),
+        nc_gal.eval_limber_z_full(cosmo, 0.0, dist, 2),
+        nc_gal_dup.eval_limber_z_full(cosmo, 0.0, dist, 2),
     )
 
 
@@ -279,14 +279,14 @@ def test_weak_lensing_serialization(
     nc_wl_dup.prepare(cosmo)
 
     assert_allclose(
-        nc_weak_lensing.eval_radial_weight_full(cosmo, 0.0, dist, 2),
-        nc_wl_dup.eval_radial_weight_full(cosmo, 0.0, dist, 2),
+        nc_weak_lensing.eval_limber_z_full(cosmo, 0.0, dist, 2),
+        nc_wl_dup.eval_limber_z_full(cosmo, 0.0, dist, 2),
     )
     # Prepare for a second time
     nc_weak_lensing.prepare(cosmo)
     assert_allclose(
-        nc_weak_lensing.eval_radial_weight_full(cosmo, 0.0, dist, 2),
-        nc_wl_dup.eval_radial_weight_full(cosmo, 0.0, dist, 2),
+        nc_weak_lensing.eval_limber_z_full(cosmo, 0.0, dist, 2),
+        nc_wl_dup.eval_limber_z_full(cosmo, 0.0, dist, 2),
     )
 
 
@@ -359,14 +359,14 @@ def test_cmb_lens_kernel(
 
     ell = 79.0
 
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, nc_cosmo_eh_linear, ell)
+    z_a, _, Wchi_a = compute_kernel(ccl_cmb_lens, nc_cosmo_eh_linear, ell)
     nc_cmb_lens.prepare(cosmo)
 
     nc_Wchi_a = (
         np.array(
-            [nc_cmb_lens.eval_radial_weight_full(cosmo, z, dist, int(ell)) for z in z_a]
+            [nc_cmb_lens.eval_limber_z_full(cosmo, z, dist, int(ell)) for z in z_a]
         )
-        * H_Mpc_a
+        / cosmo.RH_Mpc()
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
 
@@ -425,7 +425,7 @@ def test_cmb_lens_auto_integrand(
     nc_cmb_lens.prepare(cosmo)
 
     ell = 77.0
-    z_a, chi_a, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_lens, nc_cosmo_eh_linear, ell)
+    z_a, chi_a, Wchi_a = compute_kernel(ccl_cmb_lens, nc_cosmo_eh_linear, ell)
 
     nu = ell + 0.5
     a_a = ccl_cosmo_eh_linear.scale_factor_of_chi(chi_a)
@@ -434,9 +434,9 @@ def test_cmb_lens_auto_integrand(
 
     nc_W = (
         np.array(
-            [nc_cmb_lens.eval_radial_weight_full(cosmo, z, dist, int(ell)) for z in z_a]
+            [nc_cmb_lens.eval_limber_z_full(cosmo, z, dist, int(ell)) for z in z_a]
         )
-        * H_Mpc_a
+        / cosmo.RH_Mpc()
     )
     nc_ps = np.array([ps_ml.eval(cosmo, z, k) for z, k in zip(z_a, k_a)])
     nc_f = k_a * nc_ps * nc_W**2 / nu
@@ -515,14 +515,12 @@ def test_cmb_isw_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_cmb_isw, nc_cosmo_eh_linear, ell)
+    z_a, _, Wchi_a = compute_kernel(ccl_cmb_isw, nc_cosmo_eh_linear, ell)
     nc_cmb_isw.prepare(cosmo)
 
     nc_Wchi_a = (
-        np.array(
-            [nc_cmb_isw.eval_radial_weight_full(cosmo, z, dist, int(ell)) for z in z_a]
-        )
-        * H_Mpc_a
+        np.array([nc_cmb_isw.eval_limber_z_full(cosmo, z, dist, int(ell)) for z in z_a])
+        / cosmo.RH_Mpc()
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
 
@@ -542,14 +540,12 @@ def test_tsz_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_tsz, nc_cosmo_eh_linear, ell)
+    z_a, _, Wchi_a = compute_kernel(ccl_tsz, nc_cosmo_eh_linear, ell)
     nc_tsz.prepare(cosmo)
 
     nc_Wchi_a = (
-        np.array(
-            [nc_tsz.eval_radial_weight_full(cosmo, z, dist, int(ell)) for z in z_a]
-        )
-        * H_Mpc_a
+        np.array([nc_tsz.eval_limber_z_full(cosmo, z, dist, int(ell)) for z in z_a])
+        / cosmo.RH_Mpc()
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=0.0)
 
@@ -569,17 +565,14 @@ def test_weak_lensing_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_weak_lensing, nc_cosmo_eh_linear, ell)
+    z_a, _, Wchi_a = compute_kernel(ccl_weak_lensing, nc_cosmo_eh_linear, ell)
     nc_weak_lensing.prepare(cosmo)
 
     nc_Wchi_a = (
         np.array(
-            [
-                nc_weak_lensing.eval_radial_weight_full(cosmo, z, dist, int(ell))
-                for z in z_a
-            ]
+            [nc_weak_lensing.eval_limber_z_full(cosmo, z, dist, int(ell)) for z in z_a]
         )
-        * H_Mpc_a
+        / cosmo.RH_Mpc()
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-20)
 
@@ -599,14 +592,12 @@ def test_gal_kernel(
         reltol_target = 1.0e-4
 
     ell = 77.0
-    z_a, _, H_Mpc_a, Wchi_a = compute_kernel(ccl_gal, nc_cosmo_eh_linear, ell)
+    z_a, _, Wchi_a = compute_kernel(ccl_gal, nc_cosmo_eh_linear, ell)
     nc_gal.prepare(cosmo)
 
     nc_Wchi_a = (
-        np.array(
-            [nc_gal.eval_radial_weight_full(cosmo, z, dist, int(ell)) for z in z_a]
-        )
-        * H_Mpc_a
+        np.array([nc_gal.eval_limber_z_full(cosmo, z, dist, int(ell)) for z in z_a])
+        / cosmo.RH_Mpc()
     )
     assert_allclose(nc_Wchi_a, Wchi_a, rtol=reltol_target, atol=1.0e-30)
 

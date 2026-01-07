@@ -133,8 +133,10 @@ _nc_xcor_kernel_tsz_finalize (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_tsz_parent_class)->finalize (object);
 }
 
-static gdouble _nc_xcor_kernel_tsz_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
-static gdouble _nc_xcor_kernel_tsz_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_tsz_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_tsz_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+static gdouble _nc_xcor_kernel_tsz_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l);
+static gdouble _nc_xcor_kernel_tsz_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 static void _nc_xcor_kernel_tsz_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 static void _nc_xcor_kernel_tsz_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_tsz_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
@@ -154,7 +156,10 @@ _nc_xcor_kernel_tsz_constructed (GObject *object)
       g_error ("_nc_xcor_kernel_tsz_constructed: GSL_QAG integration not implemented yet");
       break;
     case NC_XCOR_KERNEL_INTEG_METHOD_LIMBER:
-      nc_xcor_kernel_set_eval_kernel_func (xclk, _nc_xcor_kernel_tsz_kernel_func_limber);
+      nc_xcor_kernel_set_eval_kernel_func (xclk,
+                                           _nc_xcor_kernel_tsz_eval_kernel_limber,
+                                           _nc_xcor_kernel_tsz_eval_kernel_prefactor_limber
+                                          );
       nc_xcor_kernel_set_get_k_range_func (xclk, _nc_xcor_kernel_tsz_get_k_range_limber);
       break;
     default:
@@ -197,9 +202,10 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval_radial_weight = &_nc_xcor_kernel_tsz_eval_radial_weight;
-  parent_class->prepare            = &_nc_xcor_kernel_tsz_prepare;
-  parent_class->add_noise          = &_nc_xcor_kernel_tsz_add_noise;
+  parent_class->eval_limber_z           = &_nc_xcor_kernel_tsz_eval_limber_z;
+  parent_class->eval_limber_z_prefactor = &_nc_xcor_kernel_tsz_eval_limber_z_prefactor;
+  parent_class->prepare                 = &_nc_xcor_kernel_tsz_prepare;
+  parent_class->add_noise               = &_nc_xcor_kernel_tsz_add_noise;
 
   parent_class->obs_len        = &_nc_xcor_kernel_tsz_obs_len;
   parent_class->obs_params_len = &_nc_xcor_kernel_tsz_obs_params_len;
@@ -231,30 +237,50 @@ nc_xcor_kernel_tsz_new (NcDistance *dist, NcmPowspec *ps, gdouble zmax)
 }
 
 static gdouble
-_nc_xcor_kernel_tsz_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
+_nc_xcor_kernel_tsz_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, const gdouble z, const gdouble xi, const gdouble E)
 {
-  const gdouble nc_pre_fac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
-  const gdouble units      = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);
-
-  /* unit: eV / cm^3 */
-
-  return nc_pre_fac * units / (1.0 + z) / xck->E_z;
+  return 1.0 / (1.0 + z);
 }
 
 static gdouble
-_nc_xcor_kernel_tsz_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l)
+_nc_xcor_kernel_tsz_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  NcDistance *dist         = nc_xcor_kernel_peek_dist (xclk);
-  NcmPowspec *ps           = nc_xcor_kernel_peek_powspec (xclk);
-  const gdouble nu         = l + 0.5;
-  const gdouble xi_nu      = nu / k;
-  const gdouble z          = nc_distance_inv_comoving (dist, cosmo, xi_nu);
-  const gdouble E_z        = nc_hicosmo_E (cosmo, z);
-  const gdouble powspec    = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
+  const gdouble nc_pre_fac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
+  const gdouble units      = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);
+  const gdouble kernel     = _nc_xcor_kernel_tsz_eval_radial_weight (xclk, cosmo, z, xck->xi_z, xck->E_z);
+
+  /* unit: eV / cm^3 */
+  return nc_pre_fac * units * kernel;
+}
+
+static gdouble
+_nc_xcor_kernel_tsz_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  return 1.0;
+}
+
+static gdouble
+_nc_xcor_kernel_tsz_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l)
+{
+  NcDistance *dist      = nc_xcor_kernel_peek_dist (xclk);
+  NcmPowspec *ps        = nc_xcor_kernel_peek_powspec (xclk);
+  const gdouble nu      = l + 0.5;
+  const gdouble xi_nu   = nu / k;
+  const gdouble z       = nc_distance_inv_comoving (dist, cosmo, xi_nu);
+  const gdouble E_z     = nc_hicosmo_E (cosmo, z);
+  const gdouble powspec = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
+  const gdouble kernel  = _nc_xcor_kernel_tsz_eval_radial_weight (xclk, cosmo, z, xi_nu, E_z);
+
+  return sqrt (M_PI / 2.0 / nu) / k * kernel * sqrt (powspec);
+}
+
+static gdouble
+_nc_xcor_kernel_tsz_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
   const gdouble nc_pre_fac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
   const gdouble units      = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);
 
-  return nc_pre_fac * units / (1.0 + z) / E_z * sqrt (powspec);
+  return nc_pre_fac * units;
 }
 
 static void
@@ -282,7 +308,6 @@ _nc_xcor_kernel_tsz_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   NcXcorKerneltSZ *xclkl = NC_XCOR_KERNEL_TSZ (xclk);
 
   g_return_if_fail (NC_IS_XCOR_KERNEL_TSZ (xclkl));
-  nc_xcor_kernel_set_const_factor (xclk, 1.0);
 }
 
 static void

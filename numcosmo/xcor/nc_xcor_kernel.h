@@ -56,14 +56,25 @@ typedef struct _NcXcorKinetic NcXcorKinetic;
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @k: wavenumber
- * @xck: kinetic quantities
  * @l: multipole
  *
  * Function pointer type for kernel evaluation functions.
  *
  * Returns: the kernel evaluation result
  */
-typedef gdouble (*NcXcorKernelEvalFunc) (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+typedef gdouble (*NcXcorKernelEvalFunc) (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l);
+
+/**
+ * NcXcorKernelEvalPrefactorFunc:
+ * @xclk: a #NcXcorKernel
+ * @cosmo: a #NcHICosmo
+ * @l: multipole
+ *
+ * Function pointer type for prefactor evaluation functions.
+ *
+ * Returns: the prefactor evaluation result
+ */
+typedef gdouble (*NcXcorKernelEvalPrefactorFunc) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 
 /**
  * NcXcorKernelGetKRangeFunc:
@@ -98,7 +109,8 @@ struct _NcXcorKernelClass
   /*< private >*/
   NcmModelClass parent_class;
 
-  gdouble (*eval_radial_weight) (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+  gdouble (*eval_limber_z) (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+  gdouble (*eval_limber_z_prefactor) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
   void (*prepare) (NcXcorKernel *xclk, NcHICosmo *cosmo);
   void (*add_noise) (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
   guint (*obs_len) (NcXcorKernel *xclk);
@@ -153,22 +165,21 @@ guint nc_xcor_kernel_obs_params_len (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_z_range (NcXcorKernel *xclk, gdouble zmin, gdouble zmax, gdouble zmid);
 void nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 
-void nc_xcor_kernel_set_const_factor (NcXcorKernel *xclk, gdouble cf);
-gdouble nc_xcor_kernel_get_const_factor (NcXcorKernel *xclk);
-
 NcDistance *nc_xcor_kernel_peek_dist (NcXcorKernel *xclk);
 NcmPowspec *nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk);
 
-void nc_xcor_kernel_set_eval_kernel_func (NcXcorKernel *xclk, NcXcorKernelEvalFunc eval_kernel_func);
-gdouble nc_xcor_kernel_eval_kernel (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+void nc_xcor_kernel_set_eval_kernel_func (NcXcorKernel *xclk, NcXcorKernelEvalFunc eval_kernel_func, NcXcorKernelEvalPrefactorFunc eval_prefactor_func);
+gdouble nc_xcor_kernel_eval_kernel (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l);
 
 void nc_xcor_kernel_set_get_k_range_func (NcXcorKernel *xclk, NcXcorKernelGetKRangeFunc get_k_range_func);
 void nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 
 NcXcorKernelIntegMethod nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk);
 
-gdouble nc_xcor_kernel_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
-gdouble nc_xcor_kernel_eval_radial_weight_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l);
+gdouble nc_xcor_kernel_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+gdouble nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+gdouble nc_xcor_kernel_eval_limber_z_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l);
+
 void nc_xcor_kernel_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 void nc_xcor_kernel_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 

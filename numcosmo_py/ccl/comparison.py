@@ -742,12 +742,12 @@ def compare_cmb_lens_kernel(
     nc_cmb_lens = Nc.XcorKernelCMBLensing.new(dist, ps_ml, cosmology.recomb, noise)
     nc_cmb_lens.prepare(cosmo)
 
-    z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_cmb_lens, cosmology, ell)
+    z_a, _, ccl_Wchi_a = tp.compute_kernel(ccl_cmb_lens, cosmology, ell)
     nc_Wchi_a = (
         np.array(
-            [nc_cmb_lens.eval_radial_weight_full(cosmo, z, dist, int(ell)) for z in z_a]
+            [nc_cmb_lens.eval_limber_z_full(cosmo, z, dist, int(ell)) for z in z_a]
         )
-        * H_Mpc_a
+        / cosmo.RH_Mpc()
     )
 
     return CompareFunc1d(
@@ -839,12 +839,10 @@ def compare_cmb_isw_kernel(
     nc_cmb_isw = Nc.XcorKernelCMBISW.new(dist, ps_ml, cosmology.recomb, noise)
     nc_cmb_isw.prepare(cosmo)
 
-    z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_cmb_isw, cosmology, ell)
+    z_a, _, ccl_Wchi_a = tp.compute_kernel(ccl_cmb_isw, cosmology, ell)
     nc_Wchi_a = (
-        np.array(
-            [nc_cmb_isw.eval_radial_weight_full(cosmo, z, dist, int(ell)) for z in z_a]
-        )
-        * H_Mpc_a
+        np.array([nc_cmb_isw.eval_limber_z_full(cosmo, z, dist, int(ell)) for z in z_a])
+        / cosmo.RH_Mpc()
     )
 
     return CompareFunc1d(
@@ -919,12 +917,13 @@ def compare_tsz_kernel(
     n_chi: int | None = None,
 ):
     """Compare tSZ lensing kernel from CCL and NumCosmo."""
+    cosmo = cosmology.cosmo
     z_max = 6.0
     if n_chi is not None:
         ccl_tsz = pyccl.tSZTracer(ccl_cosmo, z_max=z_max, n_chi=n_chi)
     else:
         ccl_tsz = pyccl.tSZTracer(ccl_cosmo, z_max=z_max)
-    z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_tsz, cosmology, ell)
+    z_a, _, ccl_Wchi_a = tp.compute_kernel(ccl_tsz, cosmology, ell)
 
     nc_tsz = Nc.XcorKerneltSZ.new(cosmology.dist, cosmology.ps_ml, z_max)
     nc_tsz.prepare(cosmology.cosmo)
@@ -932,13 +931,11 @@ def compare_tsz_kernel(
     nc_Wchi_a = (
         np.array(
             [
-                nc_tsz.eval_radial_weight_full(
-                    cosmology.cosmo, z, cosmology.dist, int(ell)
-                )
+                nc_tsz.eval_limber_z_full(cosmology.cosmo, z, cosmology.dist, int(ell))
                 for z in z_a
             ]
         )
-        * H_Mpc_a
+        / cosmo.RH_Mpc()
     )
 
     return CompareFunc1d(
@@ -1027,6 +1024,7 @@ def compare_galaxy_weak_lensing_kernel(
     z_len: int = 1000,
 ):
     """Compare weak lensing kernel from CCL and NumCosmo."""
+    cosmo = cosmology.cosmo
     dndz = prepare_dndz(mu, sigma, z_len)
     nc_wl = Nc.XcorKernelWeakLensing.new(
         cosmology.dist, cosmology.ps_ml, 0.0, 2.0, dndz, 3.0, 7.0
@@ -1042,18 +1040,16 @@ def compare_galaxy_weak_lensing_kernel(
     else:
         ccl_wl = pyccl.WeakLensingTracer(ccl_cosmo, dndz=(z_a, nz_a))
 
-    z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_wl, cosmology, ell)
+    z_a, _, ccl_Wchi_a = tp.compute_kernel(ccl_wl, cosmology, ell)
 
     nc_Wchi_a = (
         np.array(
             [
-                nc_wl.eval_radial_weight_full(
-                    cosmology.cosmo, z, cosmology.dist, int(ell)
-                )
+                nc_wl.eval_limber_z_full(cosmology.cosmo, z, cosmology.dist, int(ell))
                 for z in z_a
             ]
         )
-        * H_Mpc_a
+        / cosmo.RH_Mpc()
     )
 
     return CompareFunc1d(
@@ -1136,6 +1132,7 @@ def compare_galaxy_number_count_kernel(
     mbias: float = 1.234,
 ):
     """Compare galaxy count kernel from CCL and NumCosmo."""
+    cosmo = cosmology.cosmo
     dndz = prepare_dndz(mu, sigma, z_len)
     nc_gal = Nc.XcorKernelGal.new(
         cosmology.dist, cosmology.ps_ml, 0.0, 2.0, 1, 3.0, dndz, True
@@ -1154,18 +1151,16 @@ def compare_galaxy_number_count_kernel(
         mag_bias=(z_a, np.ones_like(z_a) * mbias),
         n_samples=z_len,
     )
-    z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_gal, cosmology, ell)
+    z_a, _, ccl_Wchi_a = tp.compute_kernel(ccl_gal, cosmology, ell)
 
     nc_Wchi_a = (
         np.array(
             [
-                nc_gal.eval_radial_weight_full(
-                    cosmology.cosmo, z, cosmology.dist, int(ell)
-                )
+                nc_gal.eval_limber_z_full(cosmology.cosmo, z, cosmology.dist, int(ell))
                 for z in z_a
             ]
         )
-        * H_Mpc_a
+        / cosmo.RH_Mpc()
     )
 
     return CompareFunc1d(

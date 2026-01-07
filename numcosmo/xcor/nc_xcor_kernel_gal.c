@@ -199,9 +199,15 @@ _nc_xcor_kernel_gal_get_property (GObject *object, guint prop_id, GValue *value,
   }
 }
 
-static gdouble _nc_xcor_kernel_gal_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
-static gdouble _nc_xcor_kernel_gal_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
-static gdouble _nc_xcor_kernel_gal_kernel_func_limber_magbias (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_gal_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
+static gdouble _nc_xcor_kernel_gal_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+
+static gdouble _nc_xcor_kernel_gal_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l);
+static gdouble _nc_xcor_kernel_gal_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+
+static gdouble _nc_xcor_kernel_gal_eval_kernel_magbias_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l);
+static gdouble _nc_xcor_kernel_gal_eval_kernel_magbias_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+
 static void _nc_xcor_kernel_gal_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 static void _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_gal_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
@@ -235,9 +241,15 @@ _nc_xcor_kernel_gal_constructed (GObject *object)
     case NC_XCOR_KERNEL_INTEG_METHOD_LIMBER:
 
       if (xclkg->domagbias)
-        nc_xcor_kernel_set_eval_kernel_func (xclk, _nc_xcor_kernel_gal_kernel_func_limber_magbias);
+        nc_xcor_kernel_set_eval_kernel_func (xclk,
+                                             _nc_xcor_kernel_gal_eval_kernel_magbias_limber,
+                                             _nc_xcor_kernel_gal_eval_kernel_magbias_prefactor_limber
+                                            );
       else
-        nc_xcor_kernel_set_eval_kernel_func (xclk, _nc_xcor_kernel_gal_kernel_func_limber);
+        nc_xcor_kernel_set_eval_kernel_func (xclk,
+                                             _nc_xcor_kernel_gal_eval_kernel_limber,
+                                             _nc_xcor_kernel_gal_eval_kernel_prefactor_limber
+                                            );
 
       nc_xcor_kernel_set_get_k_range_func (xclk, _nc_xcor_kernel_gal_get_k_range_limber);
       break;
@@ -426,9 +438,10 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  parent_class->eval_radial_weight = &_nc_xcor_kernel_gal_eval_radial_weight;
-  parent_class->prepare            = &_nc_xcor_kernel_gal_prepare;
-  parent_class->add_noise          = &_nc_xcor_kernel_gal_add_noise;
+  parent_class->eval_limber_z           = &_nc_xcor_kernel_gal_eval_limber_z;
+  parent_class->eval_limber_z_prefactor = &_nc_xcor_kernel_gal_eval_limber_z_prefactor;
+  parent_class->prepare                 = &_nc_xcor_kernel_gal_prepare;
+  parent_class->add_noise               = &_nc_xcor_kernel_gal_add_noise;
 
   parent_class->obs_len        = &_nc_xcor_kernel_gal_obs_len;
   parent_class->obs_params_len = &_nc_xcor_kernel_gal_obs_params_len;
@@ -516,7 +529,6 @@ _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
   nc_xcor_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
-  nc_xcor_kernel_set_const_factor (xclk, 1.0);
 
   zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz)));
   nc_xcor_kernel_set_z_range (xclk, zmin, zmax, zmid);
@@ -556,12 +568,12 @@ _nc_xcor_kernel_gal_bias (NcXcorKernelGal *xclkg, gdouble z)
 }
 
 static gdouble
-_nc_xcor_kernel_gal_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
+_nc_xcor_kernel_gal_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xclk);
   const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (xclkg, z);
   const gdouble bias_z   = _nc_xcor_kernel_gal_bias (xclkg, z);
-  gdouble res            = bias_z * dn_dz_z;
+  gdouble res            = bias_z * dn_dz_z * xck->E_z;
 
   if (xclkg->domagbias)
   {
@@ -569,7 +581,7 @@ _nc_xcor_kernel_gal_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gd
     const gdouble llp1 = l * (l + 1.0) / nu / nu;
     const gdouble g_z  = nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z) *
                          (1.0 + z) *
-                         xck->xi_z / xck->E_z *
+                         xck->xi_z *
                          1.5 * nc_hicosmo_Omega_m0 (cosmo);
 
     res += llp1 * g_z;
@@ -579,7 +591,13 @@ _nc_xcor_kernel_gal_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gd
 }
 
 static gdouble
-_nc_xcor_kernel_gal_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l)
+_nc_xcor_kernel_gal_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  return 1.0;
+}
+
+static gdouble
+_nc_xcor_kernel_gal_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l)
 {
   NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xclk);
   NcDistance *dist       = xclkg->dist;
@@ -587,15 +605,22 @@ _nc_xcor_kernel_gal_kernel_func_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gd
   const gdouble nu       = l + 0.5;
   const gdouble xi_nu    = nu / k;
   const gdouble z        = nc_distance_inv_comoving (dist, cosmo, xi_nu);
+  const gdouble E_z      = nc_hicosmo_E (cosmo, z);
   const gdouble powspec  = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
   const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (xclkg, z);
   const gdouble bias_z   = _nc_xcor_kernel_gal_bias (xclkg, z);
 
-  return bias_z * dn_dz_z * sqrt (powspec);
+  return bias_z * dn_dz_z * E_z * sqrt (powspec);
 }
 
 static gdouble
-_nc_xcor_kernel_gal_kernel_func_limber_magbias (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l)
+_nc_xcor_kernel_gal_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  return 1.0;
+}
+
+static gdouble
+_nc_xcor_kernel_gal_eval_kernel_magbias_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l)
 {
   NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xclk);
   NcDistance *dist       = xclkg->dist;
@@ -608,9 +633,16 @@ _nc_xcor_kernel_gal_kernel_func_limber_magbias (NcXcorKernel *xclk, NcHICosmo *c
   const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (xclkg, z);
   const gdouble bias_z   = _nc_xcor_kernel_gal_bias (xclkg, z);
   const gdouble llp1     = l * (l + 1.0);
-  const gdouble g_z      = nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z) * (1.0 + z) * xi_nu / E_z;
+  const gdouble g_z      = nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z) * (1.0 + z) / xi_nu;
+  const gdouble operator = 1.0 / (k * k);
 
-  return (bias_z * dn_dz_z + llp1 * g_z) * sqrt (powspec);
+  return sqrt (M_PI / 2.0 / nu) / k * (bias_z * dn_dz_z * E_z + llp1 * operator * g_z) * sqrt (powspec);
+}
+
+static gdouble
+_nc_xcor_kernel_gal_eval_kernel_magbias_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  return 1.0;
 }
 
 static void

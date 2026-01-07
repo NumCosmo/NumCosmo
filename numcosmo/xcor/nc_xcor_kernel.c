@@ -61,15 +61,12 @@ typedef struct _NcXcorKernelPrivate
 {
   /*< private >*/
   NcmModel parent_instance;
-  gdouble cons_factor;
   gdouble zmin, zmax, zmid;
-
   NcDistance *dist;
   NcmPowspec *ps;
-
-  gdouble (*eval_kernel_func) (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l);
-  void (*get_k_range_func) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
-
+  NcXcorKernelEvalFunc eval_kernel_func;
+  NcXcorKernelEvalPrefactorFunc eval_prefactor_func;
+  NcXcorKernelGetKRangeFunc get_k_range_func;
   NcXcorKernelIntegMethod integ_method;
 } NcXcorKernelPrivate;
 
@@ -93,15 +90,15 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->cons_factor      = 0.0;
-  self->zmin             = 0.0;
-  self->zmax             = 0.0;
-  self->zmid             = 0.0;
-  self->dist             = NULL;
-  self->ps               = NULL;
-  self->eval_kernel_func = NULL;
-  self->get_k_range_func = NULL;
-  self->integ_method     = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
+  self->zmin                = 0.0;
+  self->zmax                = 0.0;
+  self->zmid                = 0.0;
+  self->dist                = NULL;
+  self->ps                  = NULL;
+  self->eval_kernel_func    = NULL;
+  self->eval_prefactor_func = NULL;
+  self->get_k_range_func    = NULL;
+  self->integ_method        = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
 }
 
 static void
@@ -135,6 +132,10 @@ _nc_xcor_kernel_constructed (GObject *object)
 
     if (self->eval_kernel_func == NULL)
       g_error ("nc_xcor_kernel_constructed: eval_kernel_func was not set by subclass implementation. "
+               "Subclasses must call nc_xcor_kernel_set_eval_kernel_func() in their constructed method.");
+
+    if (self->eval_prefactor_func == NULL)
+      g_error ("nc_xcor_kernel_constructed: eval_prefactor_func was not set by subclass implementation. "
                "Subclasses must call nc_xcor_kernel_set_eval_kernel_func() in their constructed method.");
 
     if (self->get_k_range_func == NULL)
@@ -428,38 +429,6 @@ nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gd
 }
 
 /**
- * nc_xcor_kernel_set_const_factor:
- * @xclk: a #NcXcorKernel
- * @cf: a #gdouble
- *
- * Set the constant factor of the kernel.
- *
- */
-void
-nc_xcor_kernel_set_const_factor (NcXcorKernel *xclk, gdouble cf)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  self->cons_factor = cf;
-}
-
-/**
- * nc_xcor_kernel_get_const_factor:
- * @xclk: a #NcXcorKernel
- *
- * Get the constant factor of the kernel.
- *
- * Returns: the constant factor.
- */
-gdouble
-nc_xcor_kernel_get_const_factor (NcXcorKernel *xclk)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  return self->cons_factor;
-}
-
-/**
  * nc_xcor_kernel_peek_dist:
  * @xclk: a #NcXcorKernel
  *
@@ -497,6 +466,7 @@ nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk)
  * nc_xcor_kernel_set_eval_kernel_func: (skip)
  * @xclk: a #NcXcorKernel
  * @eval_kernel_func: (scope notified): function pointer to evaluate the kernel
+ * @eval_prefactor_func: (scope notified): function pointer to evaluate the prefactor
  *
  * Sets the function pointer that will be used to evaluate the kernel.
  * This method should only be called by subclass implementations during
@@ -505,11 +475,12 @@ nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk)
  *
  */
 void
-nc_xcor_kernel_set_eval_kernel_func (NcXcorKernel *xclk, NcXcorKernelEvalFunc eval_kernel_func)
+nc_xcor_kernel_set_eval_kernel_func (NcXcorKernel *xclk, NcXcorKernelEvalFunc eval_kernel_func, NcXcorKernelEvalPrefactorFunc eval_prefactor_func)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->eval_kernel_func = eval_kernel_func;
+  self->eval_kernel_func    = eval_kernel_func;
+  self->eval_prefactor_func = eval_prefactor_func;
 }
 
 /**
@@ -536,7 +507,6 @@ nc_xcor_kernel_set_get_k_range_func (NcXcorKernel *xclk, NcXcorKernelGetKRangeFu
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @k: wavenumber
- * @xck: a #NcXcorKinetic
  * @l: multipole
  *
  * Evaluates the kernel at wavenumber @k and multipole @l by calling the
@@ -546,13 +516,11 @@ nc_xcor_kernel_set_get_k_range_func (NcXcorKernel *xclk, NcXcorKernelGetKRangeFu
  * Returns: the kernel evaluation result
  */
 gdouble
-nc_xcor_kernel_eval_kernel (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, const NcXcorKinetic *xck, gint l)
+nc_xcor_kernel_eval_kernel (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  g_assert (self->eval_kernel_func != NULL);
-
-  return self->eval_kernel_func (xclk, cosmo, k, xck, l);
+  return self->eval_kernel_func (xclk, cosmo, k, l);
 }
 
 /**
@@ -595,7 +563,7 @@ nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk)
 }
 
 /**
- * nc_xcor_kernel_eval_radial_weight: (virtual eval_radial_weight)
+ * nc_xcor_kernel_eval_limber_z: (virtual eval_limber_z)
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @z: a #gdouble
@@ -609,18 +577,34 @@ nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk)
  * Returns: the kernel value $W(z,\ell)$
  */
 gdouble
-nc_xcor_kernel_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
+nc_xcor_kernel_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   if ((self->zmin <= z) && (self->zmax >= z))
-    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_radial_weight (xclk, cosmo, z, xck, l);
+    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_limber_z (xclk, cosmo, z, xck, l);
   else
     return 0.0;
 }
 
 /**
- * nc_xcor_kernel_eval_radial_weight_full:
+ * nc_xcor_kernel_eval_limber_z_prefactor:
+ * @xclk: a #NcXcorKernel
+ * @cosmo: a #NcHICosmo
+ * @l: a #gint
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_limber_z_prefactor (xclk, cosmo, l);
+}
+
+/**
+ * nc_xcor_kernel_eval_limber_z_full:
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @z: a #gdouble
@@ -634,7 +618,7 @@ nc_xcor_kernel_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble
  * Returns: the normalized kernel value $c \times W(z,\ell)$
  */
 gdouble
-nc_xcor_kernel_eval_radial_weight_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
+nc_xcor_kernel_eval_limber_z_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
   const gdouble xi_z        = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
@@ -642,9 +626,15 @@ nc_xcor_kernel_eval_radial_weight_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gd
   const NcXcorKinetic xck   = { xi_z, E_z };
 
   if ((self->zmin <= z) && (self->zmax >= z))
-    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_radial_weight (xclk, cosmo, z, &xck, l) * self->cons_factor;
+  {
+    const gdouble prefactor = nc_xcor_kernel_eval_limber_z_prefactor (xclk, cosmo, l);
+
+    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_limber_z (xclk, cosmo, z, &xck, l) * prefactor;
+  }
   else
+  {
     return 0.0;
+  }
 }
 
 /**
