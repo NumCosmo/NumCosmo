@@ -111,7 +111,7 @@ nc_xcor_init (NcXcor *xc)
   xc->ps   = NULL;
   xc->dist = NULL;
   xc->RH   = 0.0;
-  xc->meth = NC_XCOR_METHOD_GSL;
+  xc->meth = NC_XCOR_METHOD_LIMBER_Z_GSL;
 }
 
 static void
@@ -238,7 +238,7 @@ nc_xcor_class_init (NcXcorClass *klass)
                                                       NULL,
                                                       "Method.",
                                                       NC_TYPE_XCOR_METHOD,
-                                                      NC_XCOR_METHOD_GSL,
+                                                      NC_XCOR_METHOD_LIMBER_Z_GSL,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -667,10 +667,10 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
   {
     switch (xc->meth)
     {
-      case NC_XCOR_METHOD_GSL:
+      case NC_XCOR_METHOD_LIMBER_Z_GSL:
         _nc_xcor_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
         break;
-      case NC_XCOR_METHOD_CUBATURE:
+      case NC_XCOR_METHOD_LIMBER_Z_CUBATURE:
         _nc_xcor_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
         break;
       default:                   /* LCOV_EXCL_LINE */

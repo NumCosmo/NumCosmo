@@ -374,7 +374,7 @@ def test_cmb_lens_kernel(
 def test_xcor_set_get(nc_cosmo_default: ncpy.Cosmology) -> None:
     """Test get_reltol and set_reltol."""
     nc_xcor = Nc.Xcor.new(
-        nc_cosmo_default.dist, nc_cosmo_default.ps_ml, Nc.XcorMethod.GSL
+        nc_cosmo_default.dist, nc_cosmo_default.ps_ml, Nc.XcorMethod.LIMBER_Z_GSL
     )
 
     nc_xcor.set_reltol(1.0e-4)
@@ -388,11 +388,11 @@ def test_xcor_set_get(nc_cosmo_default: ncpy.Cosmology) -> None:
     nc_xcor.props.reltol = 1.0e-6
     assert nc_xcor.get_reltol() == 1.0e-6
 
-    nc_xcor.props.meth = Nc.XcorMethod.GSL
-    assert nc_xcor.props.meth == Nc.XcorMethod.GSL
+    nc_xcor.props.meth = Nc.XcorMethod.LIMBER_Z_GSL
+    assert nc_xcor.props.meth == Nc.XcorMethod.LIMBER_Z_GSL
 
-    nc_xcor.props.meth = Nc.XcorMethod.CUBATURE
-    assert nc_xcor.props.meth == Nc.XcorMethod.CUBATURE
+    nc_xcor.props.meth = Nc.XcorMethod.LIMBER_Z_CUBATURE
+    assert nc_xcor.props.meth == Nc.XcorMethod.LIMBER_Z_CUBATURE
 
     assert nc_xcor.props.power_spec is nc_cosmo_default.ps_ml
 
@@ -420,7 +420,7 @@ def test_cmb_lens_auto_integrand(
 
     psp = ccl_cosmo_eh_linear.get_linear_power()
 
-    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorMethod.CUBATURE)
+    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     xcor.prepare(cosmo)
     nc_cmb_lens.prepare(cosmo)
 
@@ -488,7 +488,7 @@ def test_cmb_lens_auto(
     assert all(np.isfinite(ccl_cmb_lens_auto))
     assert all(ccl_cmb_lens_auto >= 0.0)
 
-    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorMethod.CUBATURE)
+    xcor = Nc.Xcor.new(dist, ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     nc_cmb_lens_auto_v = Ncm.Vector.new(lmax + 1 - 2)
     xcor.prepare(cosmo)
     nc_cmb_lens.prepare(cosmo)
@@ -697,11 +697,11 @@ def test_xcor_methods(
 ) -> None:
     """Compare NumCosmo Xcor integration methods."""
     xcor_gsl = Nc.Xcor.new(
-        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.GSL
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.LIMBER_Z_GSL
     )
 
     xcor_cub = Nc.Xcor.new(
-        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.CUBATURE
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE
     )
 
     xcor_gsl.prepare(nc_cosmo_eh_linear.cosmo)

@@ -48,16 +48,18 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
 
 /**
  * NcXcorMethod:
- * @NC_XCOR_METHOD_GSL: Use GSL numerical integration
- * @NC_XCOR_METHOD_CUBATURE: Use cubature numerical integration
+ * @NC_XCOR_METHOD_LIMBER_Z_GSL: Use GSL numerical integration
+ * @NC_XCOR_METHOD_LIMBER_Z_CUBATURE: Use cubature numerical integration
+ * @NC_XCOR_METHOD_KERNEL_GSL: Use GSL numerical integration over kernel variables
  *
  * Methods to compute integrals.
  *
  */
 typedef enum _NcXcorMethod
 {
-  NC_XCOR_METHOD_GSL = 0,
-  NC_XCOR_METHOD_CUBATURE,
+  NC_XCOR_METHOD_LIMBER_Z_GSL = 0,
+  NC_XCOR_METHOD_LIMBER_Z_CUBATURE,
+  NC_XCOR_METHOD_KERNEL_GSL,
 } NcXcorMethod;
 
 #define NC_XCOR_PRECISION (1.0e-6)

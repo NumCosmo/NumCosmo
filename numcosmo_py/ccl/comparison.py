@@ -792,7 +792,7 @@ def compare_cmb_len_auto(
         ccl_cosmo, ccl_cmb_lens, ccl_cmb_lens, ells, p_of_k_a_lin=psp, p_of_k_a=psp
     )
 
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.CUBATURE)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     nc_cmb_lens_auto_v = Ncm.Vector.new(lmax + 1 - 2)
     xcor.prepare(cosmology.cosmo)
     nc_cmb_lens.prepare(cosmology.cosmo)
@@ -886,7 +886,7 @@ def compare_cmb_isw_auto(
         ccl_cosmo, ccl_isw, ccl_isw, ells, p_of_k_a_lin=psp, p_of_k_a=psp
     )
 
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.CUBATURE)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     nc_isw_auto_v = Ncm.Vector.new(ells[-1] + 1 - 2)
     xcor.prepare(cosmology.cosmo)
     nc_isw.prepare(cosmology.cosmo)
@@ -973,7 +973,7 @@ def compare_tsz_auto(
         ccl_cosmo, ccl_tsz, ccl_tsz, ells, p_of_k_a_lin=psp, p_of_k_a=psp
     )
 
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.CUBATURE)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     nc_tsz_auto_v = Ncm.Vector.new(ells[-1] + 1 - 2)
     xcor.prepare(cosmology.cosmo)
     nc_tsz.prepare(cosmology.cosmo)
@@ -1097,7 +1097,7 @@ def compare_galaxy_weak_lensing_auto(
         ccl_cosmo, ccl_wl, ccl_wl, ells, p_of_k_a_lin=psp, p_of_k_a=psp
     )
 
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.CUBATURE)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     nc_wl_auto_v = Ncm.Vector.new(lmax + 1 - 2)
     xcor.prepare(cosmology.cosmo)
     nc_wl.prepare(cosmology.cosmo)
@@ -1214,7 +1214,7 @@ def compare_galaxy_number_count_auto(
     )
 
     nc_gal_auto_v = Ncm.Vector.new(lmax + 1 - 2)
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.CUBATURE)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     xcor.prepare(cosmology.cosmo)
     xcor.compute(nc_gal, nc_gal, cosmology.cosmo, 2, lmax, nc_gal_auto_v)
     nc_gal_auto = np.array(nc_gal_auto_v.dup_array())

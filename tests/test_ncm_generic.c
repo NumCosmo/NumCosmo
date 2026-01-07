@@ -1070,11 +1070,11 @@ test_nc_halo_cm_dutton14_basic (void)
 }
 
 void
-test_nc_xcor_basic (void) 
+test_nc_xcor_basic (void)
 {
   NcmPowspec *ps   = NCM_POWSPEC (nc_powspec_ml_cbe_new ());
   NcDistance *dist = nc_distance_new (1100.0);
-  NcXcor *xc       = nc_xcor_new (dist, ps, NC_XCOR_METHOD_GSL);
+  NcXcor *xc       = nc_xcor_new (dist, ps, NC_XCOR_METHOD_LIMBER_Z_GSL);
   NcXcor *xc2;
 
   g_assert_true (xc != NULL);
