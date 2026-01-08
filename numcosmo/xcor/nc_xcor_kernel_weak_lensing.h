@@ -73,7 +73,7 @@ typedef enum _NcXcorKernelWeakLensingVParams
 
 #define NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
 
-NcXcorKernelWeakLensing *nc_xcor_kernel_weak_lensing_new (NcDistance *dist, NcmPowspec *ps, gdouble zmin, gdouble zmax, NcmSpline *dn_dz, gdouble nbar, gdouble intr_shear);
+NcXcorKernelWeakLensing *nc_xcor_kernel_weak_lensing_new (NcDistance *dist, NcmPowspec *ps, NcmSpline *dn_dz, gdouble nbar, gdouble intr_shear);
 
 G_END_DECLS
 

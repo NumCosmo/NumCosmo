@@ -160,8 +160,6 @@ def fixture_nc_gal(
     nc_gal = Nc.XcorKernelGal.new(
         nc_cosmo_eh_linear.dist,
         nc_cosmo_eh_linear.ps_ml,
-        0.0,
-        2.0,
         bias_nknots,
         1.234,
         dndz,
@@ -218,7 +216,7 @@ def fixture_nc_weak_lensing(
     dndz = Ncm.SplineCubicNotaknot.new_full(z_v, nz_v, True)
 
     nc_wl = Nc.XcorKernelWeakLensing.new(
-        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, 0.0, 2.0, dndz, 3.0, 7.0
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, dndz, 3.0, 7.0
     )
 
     return nc_wl

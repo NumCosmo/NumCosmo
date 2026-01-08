@@ -63,6 +63,7 @@ struct _NcXcorKerneltSZ
   /*< private >*/
   NcXcorKernel parent_instance;
   gdouble noise;
+  gdouble zmax;
 };
 
 
@@ -81,6 +82,7 @@ static void
 nc_xcor_kernel_tsz_init (NcXcorKerneltSZ *xclkl)
 {
   xclkl->noise = 0.0;
+  xclkl->zmax  = 0.0;
 }
 
 static void
@@ -142,6 +144,7 @@ static void _nc_xcor_kernel_tsz_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_tsz_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 static guint _nc_xcor_kernel_tsz_obs_len (NcXcorKernel *xclk);
 static guint _nc_xcor_kernel_tsz_obs_params_len (NcXcorKernel *xclk);
+static void _nc_xcor_kernel_tsz_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 
 static void
 _nc_xcor_kernel_tsz_constructed (GObject *object)
@@ -209,6 +212,7 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
 
   parent_class->obs_len        = &_nc_xcor_kernel_tsz_obs_len;
   parent_class->obs_params_len = &_nc_xcor_kernel_tsz_obs_params_len;
+  parent_class->get_z_range    = &_nc_xcor_kernel_tsz_get_z_range;
 
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
 }
@@ -229,9 +233,9 @@ nc_xcor_kernel_tsz_new (NcDistance *dist, NcmPowspec *ps, gdouble zmax)
   NcXcorKerneltSZ *xclkl = g_object_new (NC_TYPE_XCOR_KERNEL_TSZ,
                                          "dist", dist,
                                          "powspec", ps,
-                                         "zmin", 0.0,
-                                         "zmax", zmax,
                                          NULL);
+
+  xclkl->zmax = zmax;
 
   return xclkl;
 }
@@ -332,5 +336,15 @@ static guint
 _nc_xcor_kernel_tsz_obs_params_len (NcXcorKernel *xclk)
 {
   return 0;
+}
+
+static void
+_nc_xcor_kernel_tsz_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
+{
+  NcXcorKerneltSZ *xclkl = NC_XCOR_KERNEL_TSZ (xclk);
+
+  *zmin = 0.0;
+  *zmax = xclkl->zmax;
+  *zmid = xclkl->zmax / 2.0;
 }
 

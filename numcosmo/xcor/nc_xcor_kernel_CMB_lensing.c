@@ -171,6 +171,7 @@ static void _nc_xcor_kernel_cmb_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *
 static void _nc_xcor_kernel_cmb_lensing_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 static guint _nc_xcor_kernel_cmb_lensing_obs_len (NcXcorKernel *xclk);
 static guint _nc_xcor_kernel_cmb_lensing_obs_params_len (NcXcorKernel *xclk);
+static void _nc_xcor_kernel_cmb_lensing_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 
 static void
 _nc_xcor_kernel_cmb_lensing_constructed (GObject *object)
@@ -254,6 +255,7 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
 
   parent_class->obs_len        = &_nc_xcor_kernel_cmb_lensing_obs_len;
   parent_class->obs_params_len = &_nc_xcor_kernel_cmb_lensing_obs_params_len;
+  parent_class->get_z_range    = &_nc_xcor_kernel_cmb_lensing_get_z_range;
 
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
 }
@@ -364,8 +366,6 @@ _nc_xcor_kernel_cmb_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 
   /* nc_recomb_prepare (xclkl->recomb, cosmo); */
   /* gdouble lamb = nc_recomb_tau_zstar (xclkl->recomb, cosmo); */
-
-  nc_xcor_kernel_set_z_range (xclk, 0.0, xclkl->z_lss, 2.0);
 }
 
 static void
@@ -400,5 +400,15 @@ static guint
 _nc_xcor_kernel_cmb_lensing_obs_params_len (NcXcorKernel *xclk)
 {
   return 0;
+}
+
+static void
+_nc_xcor_kernel_cmb_lensing_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
+{
+  NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
+
+  *zmin = 0.0;
+  *zmax = xclkl->z_lss;
+  *zmid = 2.0;
 }
 

@@ -61,7 +61,6 @@ typedef struct _NcXcorKernelPrivate
 {
   /*< private >*/
   NcmModel parent_instance;
-  gdouble zmin, zmax, zmid;
   NcDistance *dist;
   NcmPowspec *ps;
   NcXcorKernelEvalFunc eval_kernel_func;
@@ -73,8 +72,6 @@ typedef struct _NcXcorKernelPrivate
 enum
 {
   PROP_0,
-  PROP_ZMIN,
-  PROP_ZMAX,
   PROP_DIST,
   PROP_POWSPEC,
   PROP_INTEG_METHOD,
@@ -90,9 +87,6 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->zmin                = 0.0;
-  self->zmax                = 0.0;
-  self->zmid                = 0.0;
   self->dist                = NULL;
   self->ps                  = NULL;
   self->eval_kernel_func    = NULL;
@@ -169,12 +163,6 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
 
   switch (prop_id)
   {
-    case PROP_ZMIN:
-      self->zmin = g_value_get_double (value);
-      break;
-    case PROP_ZMAX:
-      self->zmax = g_value_get_double (value);
-      break;
     case PROP_DIST:
       nc_distance_clear (&self->dist);
       self->dist = g_value_dup_object (value);
@@ -202,12 +190,6 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
 
   switch (prop_id)
   {
-    case PROP_ZMIN:
-      g_value_set_double (value, self->zmin);
-      break;
-    case PROP_ZMAX:
-      g_value_set_double (value, self->zmax);
-      break;
     case PROP_DIST:
       g_value_set_object (value, self->dist);
       break;
@@ -226,6 +208,13 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
 NCM_MSET_MODEL_REGISTER_ID (nc_xcor_kernel, NC_TYPE_XCOR_KERNEL);
 
 static void
+_nc_xcor_kernel_get_z_range_not_implemented (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
+{
+  g_error ("nc_xcor_kernel_get_z_range: get_z_range virtual method not implemented for %s",
+           G_OBJECT_TYPE_NAME (xclk));
+}
+
+static void
 nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -241,21 +230,6 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
   ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
-
-  g_object_class_install_property (object_class,
-                                   PROP_ZMIN,
-                                   g_param_spec_double ("zmin",
-                                                        NULL,
-                                                        "Minimum redshift",
-                                                        0.0, 1e5, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_ZMAX,
-                                   g_param_spec_double ("zmax",
-                                                        NULL,
-                                                        "Maximum redshift",
-                                                        0.0, 1e5, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_DIST,
@@ -284,6 +258,8 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
 
   ncm_mset_model_register_id (model_class, "NcXcorKernel", "Cross-correlation Kernels",
                               NULL, TRUE, NCM_MSET_MODEL_MAIN);
+
+  klass->get_z_range = &_nc_xcor_kernel_get_z_range_not_implemented;
 }
 
 /**
@@ -390,43 +366,20 @@ nc_xcor_kernel_obs_params_len (NcXcorKernel *xclk)
 }
 
 /**
- * nc_xcor_kernel_set_z_range:
- * @xclk: a #NcXcorKernel
- * @zmin: minimum redshift
- * @zmax: maximum redshift
- * @zmid: mid redshift
- *
- * Set the redshift range of the kernel.
- *
- */
-void
-nc_xcor_kernel_set_z_range (NcXcorKernel *xclk, gdouble zmin, gdouble zmax, gdouble zmid)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  self->zmin = zmin;
-  self->zmax = zmax;
-  self->zmid = zmid;
-}
-
-/**
- * nc_xcor_kernel_get_z_range:
+ * nc_xcor_kernel_get_z_range: (virtual get_z_range)
  * @xclk: a #NcXcorKernel
  * @zmin: (out): minimum redshift
  * @zmax: (out): maximum redshift
  * @zmid: (out) (allow-none): mid redshift
  *
- * Get the redshift range of the kernel.
+ * Get the redshift range of the kernel. This is a virtual method that
+ * must be implemented by subclasses.
  *
  */
 void
 nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
 {
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  *zmin = self->zmin;
-  *zmax = self->zmax;
-  *zmid = self->zmid;
+  NC_XCOR_KERNEL_GET_CLASS (xclk)->get_z_range (xclk, zmin, zmax, zmid);
 }
 
 /**
@@ -600,12 +553,7 @@ nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk)
 gdouble
 nc_xcor_kernel_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  if ((self->zmin <= z) && (self->zmax >= z))
-    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_limber_z (xclk, cosmo, z, xck, l);
-  else
-    return 0.0;
+  return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_limber_z (xclk, cosmo, z, xck, l);
 }
 
 /**
@@ -641,21 +589,12 @@ nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 gdouble
 nc_xcor_kernel_eval_limber_z_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
 {
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-  const gdouble xi_z        = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
-  const gdouble E_z         = nc_hicosmo_E (cosmo, z);
-  const NcXcorKinetic xck   = { xi_z, E_z };
+  const gdouble xi_z      = nc_distance_comoving (dist, cosmo, z); /* in units of Hubble radius */
+  const gdouble E_z       = nc_hicosmo_E (cosmo, z);
+  const NcXcorKinetic xck = { xi_z, E_z };
+  const gdouble prefactor = nc_xcor_kernel_eval_limber_z_prefactor (xclk, cosmo, l);
 
-  if ((self->zmin <= z) && (self->zmax >= z))
-  {
-    const gdouble prefactor = nc_xcor_kernel_eval_limber_z_prefactor (xclk, cosmo, l);
-
-    return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_limber_z (xclk, cosmo, z, &xck, l) * prefactor;
-  }
-  else
-  {
-    return 0.0;
-  }
+  return NC_XCOR_KERNEL_GET_CLASS (xclk)->eval_limber_z (xclk, cosmo, z, &xck, l) * prefactor;
 }
 
 /**

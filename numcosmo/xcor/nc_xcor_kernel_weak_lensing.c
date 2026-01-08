@@ -218,11 +218,6 @@ _nc_xcor_kernel_weak_lensing_constructed (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_weak_lensing_parent_class)->constructed (object);
   {
     NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (object);
-    NcXcorKernel *xclk             = NC_XCOR_KERNEL (xclkg);
-    gdouble zmin, zmax, zmid;
-
-    nc_xcor_kernel_set_z_range (xclk, 0.0, xclkg->dn_dz_zmax, 0.5 * xclkg->dn_dz_zmax);
-    nc_xcor_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
 
     ncm_spline_prepare (xclkg->dn_dz);
     /* Normalize the redshift distribution */
@@ -280,6 +275,7 @@ static void _nc_xcor_kernel_weak_lensing_prepare (NcXcorKernel *xclk, NcHICosmo 
 static void _nc_xcor_kernel_weak_lensing_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 guint _nc_xcor_kernel_weak_lensing_obs_len (NcXcorKernel *xclk);
 guint _nc_xcor_kernel_weak_lensing_obs_params_len (NcXcorKernel *xclk);
+static void _nc_xcor_kernel_weak_lensing_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 
 static void
 nc_xcor_kernel_weak_lensing_class_init (NcXcorKernelWeakLensingClass *klass)
@@ -330,6 +326,7 @@ nc_xcor_kernel_weak_lensing_class_init (NcXcorKernelWeakLensingClass *klass)
 
   parent_class->obs_len        = &_nc_xcor_kernel_weak_lensing_obs_len;
   parent_class->obs_params_len = &_nc_xcor_kernel_weak_lensing_obs_params_len;
+  parent_class->get_z_range    = &_nc_xcor_kernel_weak_lensing_get_z_range;
 
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
 }
@@ -366,7 +363,6 @@ _nc_xcor_kernel_weak_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (xclk);
   NcDistance *dist               = nc_xcor_kernel_peek_dist (xclk);
   NcmPowspec *ps                 = nc_xcor_kernel_peek_powspec (xclk);
-  gdouble zmin, zmax, zmid;
 
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
@@ -374,14 +370,9 @@ _nc_xcor_kernel_weak_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   xclkg->dist = dist;
   xclkg->ps   = ps;
 
-  nc_xcor_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
-
-  g_assert_cmpfloat (zmin, ==, 0.0);
-  g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, zmin)));
-  g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, zmax)));
-
-  zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz))) / 2.0;
-  nc_xcor_kernel_set_z_range (xclk, zmin, zmax, zmid);
+  g_assert_cmpfloat (0.0, ==, 0.0);
+  g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, 0.0)));
+  g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmax)));
 
   nc_xcor_lensing_efficiency_prepare (xclkg->lens_eff, cosmo);
 }
@@ -472,12 +463,20 @@ _nc_xcor_kernel_weak_lensing_obs_params_len (NcXcorKernel *xclk)
   return 1;
 }
 
+static void
+_nc_xcor_kernel_weak_lensing_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
+{
+  NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (xclk);
+
+  *zmin = 0.0;
+  *zmax = xclkg->dn_dz_zmax;
+  *zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz))) / 2.0;
+}
+
 /**
  * nc_xcor_kernel_weak_lensing_new:
  * @dist: a #NcDistance
  * @ps: a #NcmPowspec
- * @zmin: a gdouble
- * @zmax: a gdouble
  * @dn_dz: a #NcmSpline
  * @nbar: a gdouble, gal density
  * @intr_shear: a gdouble, intrinsic galaxy shear
@@ -485,13 +484,11 @@ _nc_xcor_kernel_weak_lensing_obs_params_len (NcXcorKernel *xclk)
  * Returns: a #NcXcorKernelWeakLensing
  */
 NcXcorKernelWeakLensing *
-nc_xcor_kernel_weak_lensing_new (NcDistance *dist, NcmPowspec *ps, gdouble zmin, gdouble zmax, NcmSpline *dn_dz, gdouble nbar, gdouble intr_shear)
+nc_xcor_kernel_weak_lensing_new (NcDistance *dist, NcmPowspec *ps, NcmSpline *dn_dz, gdouble nbar, gdouble intr_shear)
 {
   NcXcorKernelWeakLensing *xclkg = g_object_new (NC_TYPE_XCOR_KERNEL_WEAK_LENSING,
                                                  "dist", dist,
                                                  "powspec", ps,
-                                                 "zmin", zmin,
-                                                 "zmax", zmax,
                                                  "dndz", dn_dz,
                                                  "nbar", nbar,
                                                  "intr-shear", intr_shear,

@@ -116,6 +116,7 @@ struct _NcXcorKernelClass
   guint (*obs_len) (NcXcorKernel *xclk);
   guint (*obs_params_len) (NcXcorKernel *xclk);
   void (*get_k_range) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
+  void (*get_z_range) (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 };
 
 
@@ -162,7 +163,6 @@ void nc_xcor_kinetic_free (NcXcorKinetic *xck);
 guint nc_xcor_kernel_obs_len (NcXcorKernel *xclk);
 guint nc_xcor_kernel_obs_params_len (NcXcorKernel *xclk);
 
-void nc_xcor_kernel_set_z_range (NcXcorKernel *xclk, gdouble zmin, gdouble zmax, gdouble zmid);
 void nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 
 NcDistance *nc_xcor_kernel_peek_dist (NcXcorKernel *xclk);

@@ -1027,7 +1027,7 @@ def compare_galaxy_weak_lensing_kernel(
     cosmo = cosmology.cosmo
     dndz = prepare_dndz(mu, sigma, z_len)
     nc_wl = Nc.XcorKernelWeakLensing.new(
-        cosmology.dist, cosmology.ps_ml, 0.0, 2.0, dndz, 3.0, 7.0
+        cosmology.dist, cosmology.ps_ml, dndz, 3.0, 7.0
     )
     nc_wl.prepare(cosmology.cosmo)
     z_a = np.array(dndz.peek_xv().dup_array())
@@ -1078,7 +1078,7 @@ def compare_galaxy_weak_lensing_auto(
     """Compare weak lensing auto from CCL and NumCosmo."""
     dndz = prepare_dndz(mu, sigma, z_len)
     nc_wl = Nc.XcorKernelWeakLensing.new(
-        cosmology.dist, cosmology.ps_ml, 0.0, 2.0, dndz, 3.0, 7.0
+        cosmology.dist, cosmology.ps_ml, dndz, 3.0, 7.0
     )
     nc_wl.prepare(cosmology.cosmo)
     z_a = np.array(dndz.peek_xv().dup_array())
@@ -1134,9 +1134,7 @@ def compare_galaxy_number_count_kernel(
     """Compare galaxy count kernel from CCL and NumCosmo."""
     cosmo = cosmology.cosmo
     dndz = prepare_dndz(mu, sigma, z_len)
-    nc_gal = Nc.XcorKernelGal.new(
-        cosmology.dist, cosmology.ps_ml, 0.0, 2.0, 1, 3.0, dndz, True
-    )
+    nc_gal = Nc.XcorKernelGal.new(cosmology.dist, cosmology.ps_ml, 1, 3.0, dndz, True)
     nc_gal["mag_bias"] = mbias
     nc_gal["bparam_0"] = bias
     nc_gal.prepare(cosmology.cosmo)
@@ -1189,9 +1187,7 @@ def compare_galaxy_number_count_auto(
 ):
     """Compare galaxy count kernel from CCL and NumCosmo."""
     dndz = prepare_dndz(mu, sigma, z_len)
-    nc_gal = Nc.XcorKernelGal.new(
-        cosmology.dist, cosmology.ps_ml, 0.0, 2.0, 1, 3.0, dndz, True
-    )
+    nc_gal = Nc.XcorKernelGal.new(cosmology.dist, cosmology.ps_ml, 1, 3.0, dndz, True)
     nc_gal["mag_bias"] = mbias
     nc_gal["bparam_0"] = bias
     nc_gal.prepare(cosmology.cosmo)

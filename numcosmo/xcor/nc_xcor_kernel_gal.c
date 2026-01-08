@@ -213,6 +213,7 @@ static void _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_gal_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 static guint _nc_xcor_kernel_gal_obs_len (NcXcorKernel *xclk);
 static guint _nc_xcor_kernel_gal_obs_params_len (NcXcorKernel *xclk);
+static void _nc_xcor_kernel_gal_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 static gdouble _nc_xcor_kernel_gal_dndz (NcXcorKernelGal *xclkg, gdouble z);
 
 static gdouble _nc_xcor_kernel_gal_lens_eff_eval_source (NcXcorLensingEfficiency *lens_eff, gdouble z);
@@ -262,11 +263,7 @@ _nc_xcor_kernel_gal_constructed (GObject *object)
   G_OBJECT_CLASS (nc_xcor_kernel_gal_parent_class)->constructed (object);
   {
     NcmModel *model = NCM_MODEL (xclkg);
-    gdouble zmin, zmax, zmid;
     guint i;
-
-    nc_xcor_kernel_set_z_range (xclk, 0.0, xclkg->dn_dz_zmax, 0.5 * xclkg->dn_dz_zmax);
-    nc_xcor_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
 
     /* Initialize g function for magnification bias */
     if (xclkg->domagbias)
@@ -312,30 +309,33 @@ _nc_xcor_kernel_gal_constructed (GObject *object)
       bv  = ncm_vector_get_subvector (orig_vec, bvi, bz_size);
     }
 
-    zmax = GSL_MAX (zmax, 4.0);
-
-    switch (bz_size)
     {
-      case 1:
-        xclkg->bias_spline = NULL;
-        xclkg->bias        = ncm_vector_ptr (bv, 0);
-        break;
-      case 2:
-        ncm_vector_set (zv, 0, zmin);
-        ncm_vector_set (zv, 1, zmax);
-        xclkg->bias_spline = NCM_SPLINE (ncm_spline_gsl_new_full (gsl_interp_linear, zv, bv, FALSE));
-        break;
-      default:
+      const gdouble zmin = 0.0;
+      const gdouble zmax = xclkg->dn_dz_zmax;
+
+      switch (bz_size)
       {
-        for (i = 0; i < bz_size; i++)
+        case 1:
+          xclkg->bias_spline = NULL;
+          xclkg->bias        = ncm_vector_ptr (bv, 0);
+          break;
+        case 2:
+          ncm_vector_set (zv, 0, zmin);
+          ncm_vector_set (zv, 1, zmax);
+          xclkg->bias_spline = NCM_SPLINE (ncm_spline_gsl_new_full (gsl_interp_linear, zv, bv, FALSE));
+          break;
+        default:
         {
-          gdouble zi = zmin + (zmax - zmin) / (bz_size - 1) * i;
+          for (i = 0; i < bz_size; i++)
+          {
+            gdouble zi = zmin + (zmax - zmin) / (bz_size - 1) * i;
 
-          ncm_vector_set (zv, i, zi);
+            ncm_vector_set (zv, i, zi);
+          }
+
+          xclkg->bias_spline = NCM_SPLINE (ncm_spline_gsl_new_full (gsl_interp_polynomial, zv, bv, FALSE));
+          break;
         }
-
-        xclkg->bias_spline = NCM_SPLINE (ncm_spline_gsl_new_full (gsl_interp_polynomial, zv, bv, FALSE));
-        break;
       }
     }
 
@@ -445,6 +445,7 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
 
   parent_class->obs_len        = &_nc_xcor_kernel_gal_obs_len;
   parent_class->obs_params_len = &_nc_xcor_kernel_gal_obs_params_len;
+  parent_class->get_z_range    = &_nc_xcor_kernel_gal_get_z_range;
 
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
 }
@@ -473,8 +474,6 @@ _nc_xcor_kernel_gal_lens_eff_get_z_range (NcXcorLensingEfficiency *lens_eff, gdo
  * nc_xcor_kernel_gal_new:
  * @dist: a #NcDistance
  * @ps: a #NcmPowspec
- * @zmin: a gdouble
- * @zmax: a gdouble
  * @np: number of points in the interpolation
  * @nbarm1: a gdouble, noise spectrum
  * @dn_dz: a #NcmSpline
@@ -483,13 +482,11 @@ _nc_xcor_kernel_gal_lens_eff_get_z_range (NcXcorLensingEfficiency *lens_eff, gdo
  * Returns: a #NcXcorKernelGal
  */
 NcXcorKernelGal *
-nc_xcor_kernel_gal_new (NcDistance *dist, NcmPowspec *ps, gdouble zmin, gdouble zmax, gsize np, gdouble nbarm1, NcmSpline *dn_dz, gboolean domagbias)
+nc_xcor_kernel_gal_new (NcDistance *dist, NcmPowspec *ps, gsize np, gdouble nbarm1, NcmSpline *dn_dz, gboolean domagbias)
 {
   NcXcorKernelGal *xclkg = g_object_new (NC_TYPE_XCOR_KERNEL_GAL,
                                          "dist", dist,
                                          "powspec", ps,
-                                         "zmin", zmin,
-                                         "zmax", zmax,
                                          "bparam-length", np,
                                          "nbarm1", nbarm1,
                                          "dndz", dn_dz,
@@ -520,18 +517,12 @@ _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   NcmModel *model        = NCM_MODEL (xclk);
   NcDistance *dist       = nc_xcor_kernel_peek_dist (xclk);
   NcmPowspec *ps         = nc_xcor_kernel_peek_powspec (xclk);
-  gdouble zmin, zmax, zmid;
 
   xclkg->dist = dist;
   xclkg->ps   = ps;
 
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
-
-  nc_xcor_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
-
-  zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz)));
-  nc_xcor_kernel_set_z_range (xclk, zmin, zmax, zmid);
 
   if (xclkg->fast_update)
   {
@@ -554,17 +545,19 @@ _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 static gdouble
 _nc_xcor_kernel_gal_bias (NcXcorKernelGal *xclkg, gdouble z)
 {
+  gdouble res;
+
   switch (xclkg->nknots)
   {
     case 1:
-      return *(xclkg->bias);
-
+      res = *(xclkg->bias);
       break;
     default:
-      return ncm_spline_eval (xclkg->bias_spline, z);
-
+      res = ncm_spline_eval (xclkg->bias_spline, z);
       break;
   }
+
+  return gsl_finite (res) ? res : 0.0;
 }
 
 static gdouble
@@ -688,6 +681,16 @@ guint
 _nc_xcor_kernel_gal_obs_params_len (NcXcorKernel *xclk)
 {
   return 1;
+}
+
+static void
+_nc_xcor_kernel_gal_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
+{
+  NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xclk);
+
+  *zmin = 0.0; /* xclkg->dn_dz_zmin; */
+  *zmax = xclkg->dn_dz_zmax;
+  *zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz)));
 }
 
 /**
