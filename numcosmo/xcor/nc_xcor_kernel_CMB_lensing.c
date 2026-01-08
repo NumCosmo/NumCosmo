@@ -290,43 +290,45 @@ _nc_xcor_kernel_cmb_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo,
 {
   NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
   NcDistance *dist              = nc_xcor_kernel_peek_dist (xclk);
-  const gdouble nu              = l + 0.5;
-  const gdouble cor_factor      = l * (l + 1.0) / (nu * nu);
   const gdouble dt              = nc_distance_transverse (dist, cosmo, z);
   const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
 
-  return cor_factor * (1.0 + z) * xck->xi_z * xck->xi_z * dt_z_zlss / (xclkl->dt_lss * dt);
+  return xck->xi_z * xck->xi_z * (1.0 + z) * dt_z_zlss / (xclkl->dt_lss * dt);
 }
 
 static gdouble
 _nc_xcor_kernel_cmb_lensing_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
-  return 1.5 * nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble nu      = l + 0.5;
+  const gdouble lfactor = l * (l + 1.0);
+
+  return 1.5 * nc_hicosmo_Omega_m0 (cosmo) * lfactor / (nu * nu);
 }
 
 static gdouble
 _nc_xcor_kernel_cmb_lensing_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l)
 {
-  NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
-  NcDistance *dist              = xclkl->dist;
-  NcmPowspec *ps                = xclkl->ps;
-  const gdouble nu              = l + 0.5;
-  const gdouble xi_nu           = nu / k;
-  const gdouble z               = nc_distance_inv_comoving (dist, cosmo, xi_nu);
-  const gdouble powspec         = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
-  const gdouble dt              = nc_distance_transverse (dist, cosmo, z);
-  const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
-  const gdouble operator        = 1.0 / (k * k);
+  NcXcorKernelCMBLensing *xclkl   = NC_XCOR_KERNEL_CMB_LENSING (xclk);
+  NcDistance *dist                = xclkl->dist;
+  NcmPowspec *ps                  = xclkl->ps;
+  const gdouble nu                = l + 0.5;
+  const gdouble xi_nu             = nu / k;
+  const gdouble z                 = nc_distance_inv_comoving (dist, cosmo, xi_nu);
+  const gdouble powspec           = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
+  const gdouble dt                = nc_distance_transverse (dist, cosmo, z);
+  const gdouble dt_z_zlss         = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
+  const gdouble operator_limber_k = 1.0 / gsl_pow_3 (k);
 
-  return sqrt (M_PI / 2.0 / nu) / k * (1.0 + z) * operator * dt_z_zlss * sqrt (powspec) / (xclkl->dt_lss * dt);
+  return operator_limber_k * (1.0 + z) * dt_z_zlss / (xclkl->dt_lss * dt) * sqrt (powspec);
 }
 
 static gdouble
 _nc_xcor_kernel_cmb_lensing_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
+  const gdouble nu      = l + 0.5;
   const gdouble lfactor = l * (l + 1.0);
 
-  return 1.5 * nc_hicosmo_Omega_m0 (cosmo) * lfactor;
+  return sqrt (M_PI / 2.0 / nu) * 1.5 * nc_hicosmo_Omega_m0 (cosmo) * lfactor;
 }
 
 static void

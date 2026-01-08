@@ -68,13 +68,13 @@ class CompareFunc1d:
         self.y_unit = y_unit
         self.xscale = xscale
         self.yscale = yscale
-        self.diff = np.zeros_like(y1)
+        self.diff: npt.NDArray[np.float64] = np.zeros_like(y1)
 
         non_zero_indices = y1 != 0.0
         zero_indices = ~non_zero_indices
         self.diff[non_zero_indices] = y2[non_zero_indices] / y1[non_zero_indices] - 1.0
         self.diff[zero_indices] = y2[zero_indices] - y1[zero_indices]
-        self.abs_diff = np.abs(self.diff)
+        self.abs_diff: npt.NDArray[np.float64] = np.abs(self.diff)
 
     @property
     def rel_diff_min(self) -> float:

@@ -609,14 +609,17 @@ _nc_xcor_kernel_gal_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gd
   const gdouble powspec  = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (xclkg, z);
   const gdouble bias_z   = _nc_xcor_kernel_gal_bias (xclkg, z);
+  const gdouble limber_k = 1.0 / k;
 
-  return sqrt (M_PI / 2.0 / nu) / k * bias_z * dn_dz_z * E_z * sqrt (powspec);
+  return limber_k * bias_z * dn_dz_z * E_z * sqrt (powspec);
 }
 
 static gdouble
 _nc_xcor_kernel_gal_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
-  return 1.0;
+  const gdouble nu = l + 0.5;
+
+  return sqrt (M_PI / 2.0 / nu);
 }
 
 static gdouble
@@ -636,14 +639,17 @@ _nc_xcor_kernel_gal_eval_kernel_magbias_limber (NcXcorKernel *xclk, NcHICosmo *c
   const gdouble g_z      = nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z) * (1.0 + z) / xi_nu;
   const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
   const gdouble operator = 1.0 / (k * k);
+  const gdouble limber_k = 1.0 / k;
 
-  return sqrt (M_PI / 2.0 / nu) / k * (bias_z * dn_dz_z * E_z + 1.5 * Omega_m0 * llp1 * operator * g_z) * sqrt (powspec);
+  return limber_k * (bias_z * dn_dz_z * E_z + 1.5 * Omega_m0 * llp1 * operator * g_z) * sqrt (powspec);
 }
 
 static gdouble
 _nc_xcor_kernel_gal_eval_kernel_magbias_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
-  return 1.0;
+  const gdouble nu = l + 0.5;
+
+  return sqrt (M_PI / 2.0 / nu);
 }
 
 static void

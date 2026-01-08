@@ -398,25 +398,25 @@ static gdouble
 _nc_xcor_kernel_weak_lensing_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l)
 {
   NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (xclk);
-  const gdouble k2               = gsl_pow_2 (k);
   const gdouble nu               = l + 0.5;
   const gdouble xi_nu            = nu / k;
   const gdouble z                = nc_distance_inv_comoving (xclkg->dist, cosmo, xi_nu);
   const gdouble E_z              = nc_hicosmo_E (cosmo, z);
   const gdouble powspec          = ncm_powspec_eval (xclkg->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble kernel           = _nc_xcor_kernel_weak_lensing_eval_radial_weight (xclk, cosmo, z, xi_nu, E_z);
-  const gdouble operator         = 1.0 / k2;
+  const gdouble operator_limber  = 1.0 / gsl_pow_3 (k);
 
-  return sqrt (M_PI / 2.0 / nu) / k * operator * kernel * sqrt (powspec);
+  return operator_limber * kernel * sqrt (powspec);
 }
 
 static gdouble
 _nc_xcor_kernel_weak_lensing_eval_kernel_limber_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
   const gdouble cosmo_factor = 1.5 * nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble nu           = l + 0.5;
   const gdouble lfactor      = sqrt ((l + 2.0) * (l + 1.0) * l * (l - 1.0));
 
-  return cosmo_factor * lfactor;
+  return sqrt (M_PI / 2.0 / nu) * cosmo_factor * lfactor;
 }
 
 static void
@@ -438,17 +438,16 @@ _nc_xcor_kernel_weak_lensing_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *
 static gdouble
 _nc_xcor_kernel_weak_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  const gdouble nu      = l + 0.5;
-  const gdouble k       = nu / xck->xi_z;
-  const gdouble lfactor = sqrt ((l + 2.0) * (l + 1.0) * l * (l - 1.0));
-
-  return lfactor / (k * k) * _nc_xcor_kernel_weak_lensing_eval_radial_weight (xclk, cosmo, z, xck->xi_z, xck->E_z);
+  return gsl_pow_2 (xck->xi_z) * _nc_xcor_kernel_weak_lensing_eval_radial_weight (xclk, cosmo, z, xck->xi_z, xck->E_z);
 }
 
 static gdouble
 _nc_xcor_kernel_weak_lensing_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
-  return 1.5 * nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble lfactor = sqrt ((l + 2.0) * (l + 1.0) * l * (l - 1.0));
+  const gdouble nu      = l + 0.5;
+
+  return 1.5 * nc_hicosmo_Omega_m0 (cosmo) * lfactor / (nu * nu);
 }
 
 static void

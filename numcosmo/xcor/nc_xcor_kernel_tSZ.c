@@ -245,42 +245,45 @@ _nc_xcor_kernel_tsz_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, co
 static gdouble
 _nc_xcor_kernel_tsz_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  const gdouble nc_pre_fac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
-  const gdouble units      = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);
-  const gdouble kernel     = _nc_xcor_kernel_tsz_eval_radial_weight (xclk, cosmo, z, xck->xi_z, xck->E_z);
+  const gdouble kernel = _nc_xcor_kernel_tsz_eval_radial_weight (xclk, cosmo, z, xck->xi_z, xck->E_z);
 
-  /* unit: eV / cm^3 */
-  return nc_pre_fac * units * kernel;
+  return kernel;
 }
 
 static gdouble
 _nc_xcor_kernel_tsz_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
-  return 1.0;
+  const gdouble nc_pre_fac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
+  const gdouble units      = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);
+
+  /* unit: eV / cm^3 */
+  return nc_pre_fac * units;
 }
 
 static gdouble
 _nc_xcor_kernel_tsz_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l)
 {
-  NcDistance *dist      = nc_xcor_kernel_peek_dist (xclk);
-  NcmPowspec *ps        = nc_xcor_kernel_peek_powspec (xclk);
-  const gdouble nu      = l + 0.5;
-  const gdouble xi_nu   = nu / k;
-  const gdouble z       = nc_distance_inv_comoving (dist, cosmo, xi_nu);
-  const gdouble E_z     = nc_hicosmo_E (cosmo, z);
-  const gdouble powspec = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
-  const gdouble kernel  = _nc_xcor_kernel_tsz_eval_radial_weight (xclk, cosmo, z, xi_nu, E_z);
+  NcDistance *dist       = nc_xcor_kernel_peek_dist (xclk);
+  NcmPowspec *ps         = nc_xcor_kernel_peek_powspec (xclk);
+  const gdouble nu       = l + 0.5;
+  const gdouble xi_nu    = nu / k;
+  const gdouble z        = nc_distance_inv_comoving (dist, cosmo, xi_nu);
+  const gdouble E_z      = nc_hicosmo_E (cosmo, z);
+  const gdouble powspec  = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
+  const gdouble kernel   = _nc_xcor_kernel_tsz_eval_radial_weight (xclk, cosmo, z, xi_nu, E_z);
+  const gdouble limber_k = 1.0 / k;
 
-  return sqrt (M_PI / 2.0 / nu) / k * kernel * sqrt (powspec);
+  return limber_k * kernel * sqrt (powspec);
 }
 
 static gdouble
 _nc_xcor_kernel_tsz_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
+  const gdouble nu         = l + 0.5;
   const gdouble nc_pre_fac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
   const gdouble units      = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);
 
-  return nc_pre_fac * units;
+  return sqrt (M_PI / 2.0 / nu) * nc_pre_fac * units;
 }
 
 static void

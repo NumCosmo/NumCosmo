@@ -255,21 +255,20 @@ _nc_xcor_kernel_cmb_isw_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdo
   const gdouble powspec        = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k_pivot);
   const gdouble dpowspec_dz    = ncm_powspec_deriv_z (ps, NCM_MODEL (cosmo), z, k_pivot);
   const gdouble d1pz_growth_dz = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
-  const gdouble nu             = l + 0.5;
-  const gdouble cor_factor     = 1.0 / (nu * nu);
 
-  return cor_factor * xck->E_z * gsl_pow_2 (xck->xi_z) * d1pz_growth_dz;
+  return xck->E_z * gsl_pow_2 (xck->xi_z) * d1pz_growth_dz;
 }
 
 static gdouble
 _nc_xcor_kernel_cmb_isw_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
+  const gdouble nu       = l + 0.5;
   const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (cosmo);
   const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
   const gdouble Omega_m0 = Omega_c0 + Omega_b0;
   const gdouble T_gamma0 = nc_hicosmo_T_gamma0 (cosmo);
 
-  return 3.0 * T_gamma0 * Omega_m0;
+  return 3.0 * T_gamma0 * Omega_m0 / (nu * nu);
 }
 
 static gdouble
@@ -284,20 +283,21 @@ _nc_xcor_kernel_cmb_isw_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo
   const gdouble powspec                  = ncm_powspec_eval (self->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble dpowspec_dz              = ncm_powspec_deriv_z (self->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble d1pz_growth_dz           = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
-  const gdouble operator                 = 1.0 / (k * k);
+  const gdouble operator_limber_k        = 1.0 / gsl_pow_3 (k);
 
-  return sqrt (M_PI / 2.0 / nu) / k * operator * E_z * d1pz_growth_dz * sqrt (powspec);
+  return operator_limber_k * E_z * d1pz_growth_dz * sqrt (powspec);
 }
 
 static gdouble
 _nc_xcor_kernel_cmb_isw_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
+  const gdouble nu       = l + 0.5;
   const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (cosmo);
   const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
   const gdouble Omega_m0 = Omega_c0 + Omega_b0;
   const gdouble T_gamma0 = nc_hicosmo_T_gamma0 (cosmo);
 
-  return 3.0 * T_gamma0 * Omega_m0;
+  return sqrt (M_PI / 2.0 / nu) * 3.0 * T_gamma0 * Omega_m0;
 }
 
 static void
