@@ -155,6 +155,7 @@ _nc_xcor_kernel_constructed (GObject *object)
                "The 'integ-method' property must be provided at construction time.");
 
     nc_distance_compute_inv_comoving (self->dist, TRUE);
+    nc_distance_require_zf (self->dist, 1.0e10);
   }
 }
 
@@ -521,6 +522,26 @@ nc_xcor_kernel_eval_kernel (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gin
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   return self->eval_kernel_func (xclk, cosmo, k, l);
+}
+
+/**
+ * nc_xcor_kernel_eval_kernel_prefactor:
+ * @xclk: a #NcXcorKernel
+ * @cosmo: a #NcHICosmo
+ * @l: multipole
+ *
+ * Evaluates the kernel prefactor at multipole @l by calling the function pointer set
+ * by subclasses. This method provides optimized dispatch without virtual method
+ * overhead.
+ *
+ * Returns: the kernel prefactor evaluation result
+ */
+gdouble
+nc_xcor_kernel_eval_kernel_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  return self->eval_prefactor_func (xclk, cosmo, l);
 }
 
 /**

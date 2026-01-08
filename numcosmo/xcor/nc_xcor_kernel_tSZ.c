@@ -268,7 +268,7 @@ _nc_xcor_kernel_tsz_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gd
   const gdouble xi_nu   = nu / k;
   const gdouble z       = nc_distance_inv_comoving (dist, cosmo, xi_nu);
   const gdouble E_z     = nc_hicosmo_E (cosmo, z);
-  const gdouble powspec = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
+  const gdouble powspec = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble kernel  = _nc_xcor_kernel_tsz_eval_radial_weight (xclk, cosmo, z, xi_nu, E_z);
 
   return sqrt (M_PI / 2.0 / nu) / k * kernel * sqrt (powspec);
@@ -288,8 +288,8 @@ _nc_xcor_kernel_tsz_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 {
   NcDistance *dist      = nc_xcor_kernel_peek_dist (xclk);
   NcmPowspec *ps        = nc_xcor_kernel_peek_powspec (xclk);
-  const gdouble ps_kmin = ncm_powspec_get_kmin (ps);
-  const gdouble ps_kmax = ncm_powspec_get_kmax (ps);
+  const gdouble ps_kmin = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble ps_kmax = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
   gdouble zmin, zmax, zmid;
 
   nc_xcor_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);

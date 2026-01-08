@@ -170,6 +170,7 @@ NcmPowspec *nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk);
 
 void nc_xcor_kernel_set_eval_kernel_func (NcXcorKernel *xclk, NcXcorKernelEvalFunc eval_kernel_func, NcXcorKernelEvalPrefactorFunc eval_prefactor_func);
 gdouble nc_xcor_kernel_eval_kernel (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l);
+gdouble nc_xcor_kernel_eval_kernel_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 
 void nc_xcor_kernel_set_get_k_range_func (NcXcorKernel *xclk, NcXcorKernelGetKRangeFunc get_k_range_func);
 void nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);

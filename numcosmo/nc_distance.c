@@ -1517,9 +1517,23 @@ nc_distance_inv_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble xi)
 
   if (xi > dist->max_comoving)
     g_error ("nc_distance_inv_comoving: maximum comoving distance exceeded. "
-             "Increase the maximum redshift in the cosmology object.");
+             "Increase the maximum redshift in the cosmology object.\n"
+             "Requested xi = % 22.15g, maximum xi = % 22.15g\n",
+             xi, dist->max_comoving);
 
   return ncm_spline_eval (dist->inv_comoving_dist, xi);
+}
+
+/**
+ * nc_distance_max_comoving_distance:
+ * @dist: a #NcDistance
+ *
+ * Returns: the maximum comoving distance.
+ */
+gdouble
+nc_distance_max_comoving_distance (NcDistance *dist)
+{
+  return dist->max_comoving;
 }
 
 /***************************************************************************

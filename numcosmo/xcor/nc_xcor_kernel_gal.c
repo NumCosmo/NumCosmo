@@ -404,7 +404,7 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
                                                          NULL,
                                                          "Do magnification bias",
                                                          FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_NBARM1,
@@ -606,11 +606,11 @@ _nc_xcor_kernel_gal_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gd
   const gdouble xi_nu    = nu / k;
   const gdouble z        = nc_distance_inv_comoving (dist, cosmo, xi_nu);
   const gdouble E_z      = nc_hicosmo_E (cosmo, z);
-  const gdouble powspec  = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
+  const gdouble powspec  = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (xclkg, z);
   const gdouble bias_z   = _nc_xcor_kernel_gal_bias (xclkg, z);
 
-  return bias_z * dn_dz_z * E_z * sqrt (powspec);
+  return sqrt (M_PI / 2.0 / nu) / k * bias_z * dn_dz_z * E_z * sqrt (powspec);
 }
 
 static gdouble
@@ -629,14 +629,15 @@ _nc_xcor_kernel_gal_eval_kernel_magbias_limber (NcXcorKernel *xclk, NcHICosmo *c
   const gdouble xi_nu    = nu / k;
   const gdouble z        = nc_distance_inv_comoving (dist, cosmo, xi_nu);
   const gdouble E_z      = nc_hicosmo_E (cosmo, z);
-  const gdouble powspec  = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
+  const gdouble powspec  = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble dn_dz_z  = _nc_xcor_kernel_gal_dndz (xclkg, z);
   const gdouble bias_z   = _nc_xcor_kernel_gal_bias (xclkg, z);
   const gdouble llp1     = l * (l + 1.0);
   const gdouble g_z      = nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z) * (1.0 + z) / xi_nu;
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
   const gdouble operator = 1.0 / (k * k);
 
-  return sqrt (M_PI / 2.0 / nu) / k * (bias_z * dn_dz_z * E_z + llp1 * operator * g_z) * sqrt (powspec);
+  return sqrt (M_PI / 2.0 / nu) / k * (bias_z * dn_dz_z * E_z + 1.5 * Omega_m0 * llp1 * operator * g_z) * sqrt (powspec);
 }
 
 static gdouble
@@ -651,8 +652,8 @@ _nc_xcor_kernel_gal_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
   NcXcorKernelGal *xclkg    = NC_XCOR_KERNEL_GAL (xclk);
   NcDistance *dist          = nc_xcor_kernel_peek_dist (xclk);
   NcmPowspec *ps            = nc_xcor_kernel_peek_powspec (xclk);
-  const gdouble ps_kmin     = ncm_powspec_get_kmin (ps);
-  const gdouble ps_kmax     = ncm_powspec_get_kmax (ps);
+  const gdouble ps_kmin     = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble ps_kmax     = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
   const gdouble nu          = l + 0.5;
   const gdouble xi_max      = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
   const gdouble kmin_limber = nu / xi_max;

@@ -192,6 +192,7 @@ void nc_distance_dmodulus_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector 
  * Inverse 'distances'
  ****************************************************************************/
 gdouble nc_distance_inv_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble xi);
+gdouble nc_distance_max_comoving_distance (NcDistance *dist);
 
 /***************************************************************************
  *            cosmic_time.h

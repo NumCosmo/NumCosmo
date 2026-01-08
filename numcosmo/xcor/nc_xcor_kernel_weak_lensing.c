@@ -403,7 +403,7 @@ _nc_xcor_kernel_weak_lensing_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *
   const gdouble xi_nu            = nu / k;
   const gdouble z                = nc_distance_inv_comoving (xclkg->dist, cosmo, xi_nu);
   const gdouble E_z              = nc_hicosmo_E (cosmo, z);
-  const gdouble powspec          = ncm_powspec_eval (xclkg->ps, NCM_MODEL (cosmo), z, k);
+  const gdouble powspec          = ncm_powspec_eval (xclkg->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble kernel           = _nc_xcor_kernel_weak_lensing_eval_radial_weight (xclk, cosmo, z, xi_nu, E_z);
   const gdouble operator         = 1.0 / k2;
 
@@ -425,8 +425,8 @@ _nc_xcor_kernel_weak_lensing_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *
   NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (xclk);
   NcDistance *dist               = nc_xcor_kernel_peek_dist (xclk);
   NcmPowspec *ps                 = nc_xcor_kernel_peek_powspec (xclk);
-  const gdouble ps_kmin          = ncm_powspec_get_kmin (ps);
-  const gdouble ps_kmax          = ncm_powspec_get_kmax (ps);
+  const gdouble ps_kmin          = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble ps_kmax          = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
   const gdouble nu               = l + 0.5;
   const gdouble xi_max           = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
   const gdouble kmin_limber      = nu / xi_max;

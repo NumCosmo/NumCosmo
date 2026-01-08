@@ -701,11 +701,18 @@ def test_xcor_methods(
     )
 
     xcor_cub = Nc.Xcor.new(
-        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE
+        nc_cosmo_eh_linear.dist,
+        nc_cosmo_eh_linear.ps_ml,
+        Nc.XcorMethod.LIMBER_Z_CUBATURE,
+    )
+
+    xcor_ker = Nc.Xcor.new(
+        nc_cosmo_eh_linear.dist, nc_cosmo_eh_linear.ps_ml, Nc.XcorMethod.KERNEL_GSL
     )
 
     xcor_gsl.prepare(nc_cosmo_eh_linear.cosmo)
     xcor_cub.prepare(nc_cosmo_eh_linear.cosmo)
+    xcor_ker.prepare(nc_cosmo_eh_linear.cosmo)
 
     k1.prepare(nc_cosmo_eh_linear.cosmo)
     k2.prepare(nc_cosmo_eh_linear.cosmo)
@@ -714,12 +721,16 @@ def test_xcor_methods(
     lmax = 1000
     vp_gsl = Ncm.Vector.new(lmax - lmin + 1)
     vp_cub = Ncm.Vector.new(lmax - lmin + 1)
+    vp_ker = Ncm.Vector.new(lmax - lmin + 1)
 
     xcor_gsl.set_reltol(1.0e-7)
     xcor_gsl.compute(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_gsl)
     xcor_cub.compute(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_cub)
+    xcor_ker.compute(k1, k2, nc_cosmo_eh_linear.cosmo, lmin, lmax, vp_ker)
 
     vp_gsl_a = np.array(vp_gsl.dup_array())
     vp_cub_a = np.array(vp_cub.dup_array())
+    vp_ker_a = np.array(vp_ker.dup_array())
 
+    assert_allclose(vp_gsl_a, vp_ker_a, rtol=1.0e-5, atol=1.0e-50)
     assert_allclose(vp_gsl_a, vp_cub_a, rtol=1.0e-5, atol=1.0e-50)

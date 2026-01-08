@@ -280,12 +280,13 @@ _nc_xcor_kernel_cmb_isw_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo
   const gdouble nu                       = l + 0.5;
   const gdouble xi_nu                    = nu / k;
   const gdouble z                        = nc_distance_inv_comoving (self->dist, cosmo, xi_nu);
-  const gdouble powspec                  = ncm_powspec_eval (self->ps, NCM_MODEL (cosmo), z, k);
-  const gdouble dpowspec_dz              = ncm_powspec_deriv_z (self->ps, NCM_MODEL (cosmo), z, k);
+  const gdouble E_z                      = nc_hicosmo_E (cosmo, z);
+  const gdouble powspec                  = ncm_powspec_eval (self->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
+  const gdouble dpowspec_dz              = ncm_powspec_deriv_z (self->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble d1pz_growth_dz           = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
   const gdouble operator                 = 1.0 / (k * k);
 
-  return sqrt (M_PI / 2.0 / nu) / k * operator * d1pz_growth_dz * sqrt (powspec);
+  return sqrt (M_PI / 2.0 / nu) / k * operator * E_z * d1pz_growth_dz * sqrt (powspec);
 }
 
 static gdouble
@@ -305,8 +306,8 @@ _nc_xcor_kernel_cmb_isw_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo
   NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
   NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
   NcmPowspec *ps                         = nc_xcor_kernel_peek_powspec (xclk);
-  const gdouble ps_kmin                  = ncm_powspec_get_kmin (ps);
-  const gdouble ps_kmax                  = ncm_powspec_get_kmax (ps);
+  const gdouble ps_kmin                  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble ps_kmax                  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
   const gdouble nu                       = l + 0.5;
   const gdouble kmin_limber              = nu / self->xi_lss;
 

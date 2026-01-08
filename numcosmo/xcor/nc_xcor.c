@@ -451,7 +451,7 @@ typedef struct _xcor_gsl
 } xcor_gsl;
 
 static gdouble
-_xcor_gsl_cross_int (gdouble z, gpointer ptr)
+_xcor_limber_z_gsl_cross_int (gdouble z, gpointer ptr)
 {
   xcor_gsl *xclki          = (xcor_gsl *) ptr;
   const gdouble xi_z       = nc_distance_comoving (xclki->dist, xclki->cosmo, z); /* in units of Hubble radius */
@@ -468,7 +468,7 @@ _xcor_gsl_cross_int (gdouble z, gpointer ptr)
 }
 
 static gdouble
-_xcor_gsl_auto_int (gdouble z, gpointer ptr)
+_xcor_limber_z_gsl_auto_int (gdouble z, gpointer ptr)
 {
   xcor_gsl *xclki          = (xcor_gsl *) ptr;
   const gdouble xi_z       = nc_distance_comoving (xclki->dist, xclki->cosmo, z); /* in units of Hubble radius */
@@ -483,7 +483,7 @@ _xcor_gsl_auto_int (gdouble z, gpointer ptr)
 }
 
 static void
-_nc_xcor_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector *vp)
+_nc_xcor_limber_z_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector *vp)
 {
   xcor_gsl xclki;
   gdouble r, err;
@@ -501,9 +501,9 @@ _nc_xcor_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *c
   zmin = zmin ? zmin != 0.0 : 1.0e-6;
 
   if (isauto)
-    F.function = &_xcor_gsl_auto_int;
+    F.function = &_xcor_limber_z_gsl_auto_int;
   else
-    F.function = &_xcor_gsl_cross_int;
+    F.function = &_xcor_limber_z_gsl_cross_int;
 
   F.params = &xclki;
 
@@ -516,7 +516,7 @@ _nc_xcor_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *c
     ret = gsl_integration_qag (&F, zmin, zmax, 0.0, xc->reltol * 1.0e-2, NCM_INTEGRAL_PARTITION, 6, *w, &r, &err);
 
     if (ret != GSL_SUCCESS)
-      g_error ("_nc_xcor_gsl: %s.", gsl_strerror (ret));
+      g_error ("_nc_xcor_limber_z_gsl: %s.", gsl_strerror (ret));
 
     ncm_vector_set (vp, i, r);
   }
@@ -580,7 +580,7 @@ _nc_xcor_cubature_worker (NcmIntegralND *xcor_int_nd, NcXcorArg *xcor_arg, gdoub
 }
 
 static void
-_nc_xcor_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector *vp)
+_nc_xcor_limber_z_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector *vp)
 {
   if (isauto)
   {
@@ -618,6 +618,84 @@ _nc_xcor_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICos
 
     g_object_unref (xcor_cross);
   }
+}
+
+static gdouble
+_xcor_kernel_gsl_cross_int (gdouble lnk, gpointer ptr)
+{
+  xcor_gsl *xclki       = (xcor_gsl *) ptr;
+  const gdouble k       = exp (lnk);
+  const gdouble kernel1 = nc_xcor_kernel_eval_kernel (xclki->xclk1, xclki->cosmo, k, xclki->l);
+  const gdouble kernel2 = nc_xcor_kernel_eval_kernel (xclki->xclk2, xclki->cosmo, k, xclki->l);
+
+  return gsl_pow_3 (k) * kernel1 * kernel2;
+}
+
+static gdouble
+_xcor_kernel_gsl_auto_int (gdouble lnk, gpointer ptr)
+{
+  xcor_gsl *xclki       = (xcor_gsl *) ptr;
+  const gdouble k       = exp (lnk);
+  const gdouble kernel1 = nc_xcor_kernel_eval_kernel (xclki->xclk1, xclki->cosmo, k, xclki->l);
+
+  return gsl_pow_3 (k) * kernel1 * kernel1;
+}
+
+void
+_nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
+{
+  const guint nell              = ncm_vector_len (vp);
+  const gdouble const_factor    = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  xcor_gsl xclki;
+  gsl_function F;
+  guint i;
+  gint ret;
+
+  if (nell != lmax - lmin + 1)
+    g_error ("_nc_xcor_kernel_gsl: vector size does not match multipole limits");
+
+  if (lmax < lmin)
+    g_error ("_nc_xcor_kernel_gsl: lmax < lmin");
+
+  xclki.xclk1 = xclk1;
+  xclki.xclk2 = xclk2;
+  xclki.cosmo = cosmo;
+  xclki.dist  = xc->dist;
+  xclki.ps    = xc->ps;
+  xclki.RH    = xc->RH;
+
+  if (isauto)
+    F.function = &_xcor_kernel_gsl_auto_int;
+  else
+    F.function = &_xcor_kernel_gsl_cross_int;
+
+  F.params = &xclki;
+
+  for (i = 0; i < nell; i++)
+  {
+    const guint ell                 = lmin + i;
+    const gdouble const_factor_ell1 = nc_xcor_kernel_eval_kernel_prefactor (xclk1, cosmo, ell);
+    const gdouble const_factor_ell2 = isauto ? const_factor_ell1 : nc_xcor_kernel_eval_kernel_prefactor (xclk2, cosmo, ell);
+    gdouble k_min, k_max;
+    gdouble k2_min, k2_max, result, err;
+
+    nc_xcor_kernel_get_k_range (xclk1, cosmo, ell, &k_min, &k_max);
+    nc_xcor_kernel_get_k_range (xclk2, cosmo, ell, &k2_min, &k2_max);
+
+    k_min = GSL_MAX (k_min, k2_min);
+    k_max = GSL_MIN (k_max, k2_max);
+
+    xclki.l = ell;
+    ret     = gsl_integration_qag (&F, log (k_min), log (k_max), 0.0, xc->reltol * 1.0e-2, NCM_INTEGRAL_PARTITION, 6, *w, &result, &err);
+
+    if (ret != GSL_SUCCESS)
+      g_error ("_nc_xcor_kernel_gsl: %s.", gsl_strerror (ret));
+
+    ncm_vector_set (vp, i, const_factor * const_factor_ell1 * const_factor_ell2 * result);
+  }
+
+  ncm_memory_pool_return (w);
 }
 
 /**
@@ -668,10 +746,16 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
     switch (xc->meth)
     {
       case NC_XCOR_METHOD_LIMBER_Z_GSL:
-        _nc_xcor_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
+        _nc_xcor_limber_z_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
         break;
       case NC_XCOR_METHOD_LIMBER_Z_CUBATURE:
-        _nc_xcor_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
+        _nc_xcor_limber_z_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
+        break;
+      case NC_XCOR_METHOD_KERNEL_GSL:
+        _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+
+        return;
+
         break;
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */
