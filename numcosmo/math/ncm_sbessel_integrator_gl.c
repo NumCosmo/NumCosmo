@@ -308,7 +308,7 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
   const gdouble x_scale = 1000.0;
 
   /* Early-termination threshold */
-  const gdouble eps_tail = 1e-12;
+  const gdouble eps_tail = 1.0e-8;
 
   gdouble x = a2;
 
@@ -334,7 +334,7 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
     /* ----------------------------
      * dx that grows smoothly w.r.t x
      * ---------------------------- */
-    gdouble dx   = dx0 * (1.0 + x / x_scale);
+    gdouble dx   = GSL_MIN (dx0 * (1.0 + x / x_scale), 4.0 * M_PI);
     gdouble x_hi = x + dx;
 
     if (x_hi > b2)

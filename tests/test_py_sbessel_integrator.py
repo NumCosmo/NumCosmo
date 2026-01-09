@@ -282,7 +282,7 @@ class TestSBesselIntegratorGL:
         assert np.isfinite(result2)
 
     def test_numerical_accuracy(self, integrator):
-        """Test numerical accuracy with a known analytical result."""
+        """Test numerical accuracy with known analytical result."""
         # For j_0(x) = sin(x)/x, integral from 0 to infinity is pi/2
         # We can test a finite range and compare qualitatively
 
@@ -376,7 +376,7 @@ class TestSBesselIntegratorGL:
     def test_turning_point_behavior(self, integrator):
         """Test behavior near turning point.
 
-        For ell=5, x_tp = sqrt(ell(ell+1)) ≈ 5.48.
+        For ell=5, x_tp = sqrt(ell(ell+1)) ~= 5.48.
         """
         # Test integration ranges that cross this point
 
@@ -521,7 +521,7 @@ class TestSBesselIntegratorGLAnalytical:
         a, b = 0.0, np.pi
         result = integrator.integrate_ell(constant_one, None, a, b, 0)
 
-        # Reference: Si(pi) - Si(0) = Si(pi) ≈ 1.85194
+        # Reference: Si(pi) - Si(0) = Si(pi) ~= 1.85194
         # Using scipy to compute
         reference = self._compute_reference(constant_one, a, b, 0)
 
@@ -620,7 +620,7 @@ class TestSBesselIntegratorGLAnalytical:
             assert_allclose(result, reference, rtol=1e-6, atol=1e-10)
 
     def test_multiple_ells_consistency(self, integrator):
-        """Test that results are consistent with scipy for range of ells."""
+        """Test results consistent with scipy for range of ells."""
 
         def test_func(_user_data, x):
             return x * np.exp(-x / 5.0)
@@ -717,7 +717,7 @@ class TestSBesselIntegratorGLLargeIntervals:
             assert abs(result) > 1e-10, f"Result for ell={ell} is too small"
 
     def test_large_interval_with_slow_decay(self, integrator):
-        """Test with slowly decaying function over large interval."""
+        """Test slowly decaying function over large interval."""
 
         def slow_decay(_user_data, x):
             # Decay as 1/sqrt(1 + x/L) with large L
@@ -764,7 +764,7 @@ class TestSBesselIntegratorGLLargeIntervals:
         assert_allclose(result_full, result_split, rtol=1e-4)
 
     def test_large_interval_gaussian_envelope(self, integrator):
-        """Test with Gaussian envelope centered away from origin."""
+        """Test Gaussian envelope centered away from origin."""
 
         def gaussian_far(_user_data, x):
             # Gaussian centered at x0 = 5*10^3, width sigma = 10^3
@@ -837,17 +837,20 @@ class TestSBesselIntegratorGLLargeIntervals:
 
 
 class TestSBesselIntegratorGLAnalyticalLargeIntervals:
-    """Tests for large intervals using known analytical formulas and consistency checks."""
+    """Tests for large intervals using analytical formulas.
+
+    Uses known analytical formulas and consistency checks.
+    """
 
     @pytest.fixture
     def integrator(self):
-        """Create a GL integrator with parameters suitable for large intervals."""
+        """Create GL integrator with parameters for large intervals."""
         return Ncm.SBesselIntegratorGL(lmin=0, lmax=10, npts=20, nosc=8.0)
 
     def test_interval_additivity_large(self, integrator):
         """Test interval additivity for large intervals.
 
-        Verify that ∫ᵃᶜ = ∫ᵃᵇ + ∫ᵇᶜ.
+        Verify that integral_a^c = integral_a^b + integral_b^c.
         """
 
         def exp_decay(_user_data, x):
@@ -936,7 +939,7 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
     def test_linearity_large_interval(self, integrator):
         """Test linearity for large intervals.
 
-        Verify that ∫(af + bg) = a∫f + b∫g.
+        Verify that integral(af + bg) = a*integral(f) + b*integral(g).
         """
 
         def func1(_user_data, x):
@@ -1038,20 +1041,21 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
 
         ell = 2
 
-        # Base integral ∫₀^b f(x) j_ℓ(x) dx
+        # Base integral from 0 to b: f(x) j_ell(x) dx
         b = 1e4
         result_base = integrator.integrate_ell(func, None, 0.0, b, ell)
 
-        # Scaled integral with α=2: ∫₀^(b/2) f(x/2) j_ℓ(x) dx should ≈ 2*result
-        # Actually for ∫f(αx)j_ℓ(αx)dx with substitution y=αx:
-        # = (1/α)∫f(y)j_ℓ(y)dy
+        # Scaled integral with alpha=2: integral_0^(b/2) f(x/2) j_ell(x) dx should ~=
+        # 2*result Actually for integral f(alpha*x)j_ell(alpha*x)dx with substitution
+        # y=alpha*x: = (1/alpha)*integral f(y)j_ell(y)dy
 
-        # Let's test a simpler consistency: different intervals maintain relative ordering
+        # Let's test a simpler consistency: different intervals maintain relative
+        # ordering
         result_half = integrator.integrate_ell(func, None, 0.0, b / 2, ell)
         result_quarter = integrator.integrate_ell(func, None, 0.0, b / 4, ell)
 
-        # Larger intervals should have contributions from more of the function
-        # (not strictly monotonic due to oscillations, but generally true)
+        # Larger intervals should have contributions from more of the function (not
+        # strictly monotonic due to oscillations, but generally true)
         assert np.isfinite(result_base)
         assert np.isfinite(result_half)
         assert np.isfinite(result_quarter)
@@ -1105,7 +1109,7 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
     def test_integrate_plain_bessel_asymptotic(self, integrator):
         """Test integration using asymptotic formula.
 
-        For f(x) = x^(ℓ+2), compare against analytical result using
+        For f(x) = x^(ell+2), compare against analytical result using
         spherical Bessel recurrence relations.
         """
 
@@ -1121,6 +1125,26 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
             ref = b ** (ell + 2) * sp.spherical_jn(ell + 1, b) - a ** (
                 ell + 2
             ) * sp.spherical_jn(ell + 1, a)
+
+            assert_allclose(num, ref, rtol=1e-4, err_msg=f"ell={ell}")
+
+    def test_integrate_plain_bessel_asymptotic_constant(self, integrator):
+        """Test integration using asymptotic formula.
+
+        For f(x) = 1, compare against analytical result using spherical Bessel
+        recurrence relations.
+        """
+
+        integrator.prepare()
+
+        def f(_ud, _x):
+            return 1
+
+        for ell in [0, 1, 3, 5, 50]:
+
+            a, b = 1.0e6, 1.0e7
+            num = integrator.integrate_ell(f, None, a, b, ell)
+            ref = sp.spherical_jn(ell + 1, b) - sp.spherical_jn(ell + 1, a)
 
             assert_allclose(num, ref, rtol=1e-4, err_msg=f"ell={ell}")
 
