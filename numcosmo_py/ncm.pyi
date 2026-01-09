@@ -9022,6 +9022,150 @@ class ReparamLinearClass(GObject.GPointer):
 
     parent_class: ReparamClass = ...
 
+class SBesselIntegrator(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SBesselIntegrator(**properties)
+
+    Object NcmSBesselIntegrator
+
+    Properties from NcmSBesselIntegrator:
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        lmax: int
+        lmin: int
+
+    props: Props = ...
+    parent_instance: GObject.Object = ...
+    def __init__(self, lmax: int = ..., lmin: int = ...) -> None: ...
+    @staticmethod
+    def clear(sbi: SBesselIntegrator) -> None: ...
+    def do_integrate(
+        self, F: typing.Callable[..., float], a: float, b: float, *user_data: typing.Any
+    ) -> list[float]: ...
+    def do_integrate_ell(
+        self,
+        F: typing.Callable[..., float],
+        a: float,
+        b: float,
+        ell: int,
+        *user_data: typing.Any,
+    ) -> float: ...
+    def do_prepare(self) -> None: ...
+    def free(self) -> None: ...
+    def get_lmax(self) -> int: ...
+    def get_lmin(self) -> int: ...
+    def integrate(
+        self, F: typing.Callable[..., float], a: float, b: float, *user_data: typing.Any
+    ) -> list[float]: ...
+    def integrate_ell(
+        self,
+        F: typing.Callable[..., float],
+        a: float,
+        b: float,
+        ell: int,
+        *user_data: typing.Any,
+    ) -> float: ...
+    def prepare(self) -> None: ...
+    def ref(self) -> SBesselIntegrator: ...
+    def set_lmax(self, lmax: int) -> None: ...
+    def set_lmin(self, lmin: int) -> None: ...
+
+class SBesselIntegratorClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SBesselIntegratorClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+    prepare: typing.Callable[[SBesselIntegrator], None] = ...
+    integrate_ell: typing.Callable[..., float] = ...
+    integrate: typing.Callable[..., list[float]] = ...
+    padding: list[None] = ...
+
+class SBesselIntegratorGL(SBesselIntegrator):
+    r"""
+    :Constructors:
+
+    ::
+
+        SBesselIntegratorGL(**properties)
+        new(lmin:int, lmax:int) -> NumCosmoMath.SBesselIntegratorGL
+
+    Object NcmSBesselIntegratorGL
+
+    Properties from NcmSBesselIntegratorGL:
+      npts -> guint: npts
+        Number of GL quadrature points
+      margin -> gdouble: margin
+        Safety margin beyond turning point
+      nosc -> gdouble: nosc
+        Number of oscillations per panel
+
+    Properties from NcmSBesselIntegrator:
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        margin: float
+        nosc: float
+        npts: int
+        lmax: int
+        lmin: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        margin: float = ...,
+        nosc: float = ...,
+        npts: int = ...,
+        lmax: int = ...,
+        lmin: int = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(sbigl: SBesselIntegratorGL) -> None: ...
+    def free(self) -> None: ...
+    def get_margin(self) -> float: ...
+    def get_nosc(self) -> float: ...
+    def get_npts(self) -> int: ...
+    @classmethod
+    def new(cls, lmin: int, lmax: int) -> SBesselIntegratorGL: ...
+    def ref(self) -> SBesselIntegratorGL: ...
+    def set_margin(self, margin: float) -> None: ...
+    def set_nosc(self, nosc: float) -> None: ...
+    def set_npts(self, npts: int) -> None: ...
+
+class SBesselIntegratorGLClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SBesselIntegratorGLClass()
+    """
+
+    parent_class: SBesselIntegratorClass = ...
+
 class SFSphericalHarmonics(GObject.Object):
     r"""
     :Constructors:

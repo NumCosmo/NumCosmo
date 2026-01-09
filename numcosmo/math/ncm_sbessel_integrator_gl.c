@@ -121,7 +121,7 @@ _ncm_sbessel_integrator_gl_finalize (GObject *object)
 }
 
 static void _ncm_sbessel_integrator_gl_prepare (NcmSBesselIntegrator *sbi);
-static gdouble _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gpointer user_data, gdouble a, gdouble b, gint ell);
+static gdouble _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
 
 static void
 _ncm_sbessel_integrator_gl_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -245,9 +245,9 @@ _ncm_sbessel_integrator_gl_prepare (NcmSBesselIntegrator *sbi)
 static gdouble
 _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
                                           NcmSBesselIntegratorF F,
-                                          gpointer user_data,
                                           gdouble a, gdouble b,
-                                          gint ell)
+                                          gint ell,
+                                          gpointer user_data)
 {
   NcmSBesselIntegratorGL *sbigl = NCM_SBESSEL_INTEGRATOR_GL (sbi);
   gdouble result                = 0.0;

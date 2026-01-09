@@ -124,8 +124,8 @@ _ncm_sbessel_integrator_finalize (GObject *object)
 }
 
 static void _ncm_sbessel_integrator_prepare_not_implemented (NcmSBesselIntegrator *sbi);
-static gdouble _ncm_sbessel_integrator_integrate_ell_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gpointer user_data, gdouble a, gdouble b, gint ell);
-static void _ncm_sbessel_integrator_integrate_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gpointer user_data, gdouble a, gdouble b, gdouble *result);
+static gdouble _ncm_sbessel_integrator_integrate_ell_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
+static void _ncm_sbessel_integrator_integrate_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data, gdouble *result);
 
 static void
 ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
@@ -176,7 +176,7 @@ _ncm_sbessel_integrator_prepare_not_implemented (NcmSBesselIntegrator *sbi)
 }
 
 static gdouble
-_ncm_sbessel_integrator_integrate_ell_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gpointer user_data, gdouble a, gdouble b, gint ell)
+_ncm_sbessel_integrator_integrate_ell_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data)
 {
   g_error ("ncm_sbessel_integrator_integrate_ell: method not implemented for `%s'",
            G_OBJECT_TYPE_NAME (sbi));
@@ -185,14 +185,14 @@ _ncm_sbessel_integrator_integrate_ell_not_implemented (NcmSBesselIntegrator *sbi
 }
 
 static void
-_ncm_sbessel_integrator_integrate_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gpointer user_data, gdouble a, gdouble b, gdouble *result)
+_ncm_sbessel_integrator_integrate_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data, gdouble *result)
 {
   NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
   gint ell;
 
   for (ell = self->lmin; ell <= (gint) self->lmax; ell++)
   {
-    result[ell - self->lmin] = NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate_ell (sbi, F, user_data, a, b, ell);
+    result[ell - self->lmin] = NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate_ell (sbi, F, a, b, ell, user_data);
   }
 }
 
@@ -317,11 +317,11 @@ ncm_sbessel_integrator_prepare (NcmSBesselIntegrator *sbi)
 /**
  * ncm_sbessel_integrator_integrate_ell: (virtual integrate_ell)
  * @sbi: a #NcmSBesselIntegrator
- * @F: (scope call): function to integrate
- * @user_data: user data passed to @F
+ * @F: (scope call) (closure user_data): function to integrate
  * @a: lower integration limit
  * @b: upper integration limit
  * @ell: multipole
+ * @user_data: (nullable): user data passed to @F
  *
  * Integrates the function @F multiplied by the spherical Bessel function
  * $j_\ell(x)$ from @a to @b for a single multipole.
@@ -329,18 +329,18 @@ ncm_sbessel_integrator_prepare (NcmSBesselIntegrator *sbi)
  * Returns: the integral value
  */
 gdouble
-ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gpointer user_data, gdouble a, gdouble b, gint ell)
+ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data)
 {
-  return NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate_ell (sbi, F, user_data, a, b, ell);
+  return NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate_ell (sbi, F, a, b, ell, user_data);
 }
 
 /**
  * ncm_sbessel_integrator_integrate: (virtual integrate)
  * @sbi: a #NcmSBesselIntegrator
- * @F: (scope call): function to integrate
- * @user_data: user data passed to @F
+ * @F: (scope call) (closure user_data): function to integrate
  * @a: lower integration limit
  * @b: upper integration limit
+ * @user_data: (nullable): user data passed to @F
  * @result: (array) (out caller-allocates): array to store results
  *
  * Integrates the function @F multiplied by the spherical Bessel function
@@ -350,8 +350,8 @@ ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselInteg
  *
  */
 void
-ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gpointer user_data, gdouble a, gdouble b, gdouble *result)
+ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data, gdouble *result)
 {
-  NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, user_data, a, b, result);
+  NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, user_data, result);
 }
 

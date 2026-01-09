@@ -20074,6 +20074,8 @@ class XcorKernel(NumCosmoMath.Model):
         Power spectrum object
       integ-method -> NcXcorKernelIntegMethod: integ-method
         Integration method
+      lmax -> guint: lmax
+        Maximum multipole
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20102,6 +20104,7 @@ class XcorKernel(NumCosmoMath.Model):
     class Props:
         dist: Distance
         integ_method: XcorKernelIntegMethod
+        lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
         name: str
@@ -20119,6 +20122,7 @@ class XcorKernel(NumCosmoMath.Model):
         self,
         dist: Distance = ...,
         integ_method: XcorKernelIntegMethod = ...,
+        lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -20153,6 +20157,7 @@ class XcorKernel(NumCosmoMath.Model):
     def free(self) -> None: ...
     def get_integ_method(self) -> XcorKernelIntegMethod: ...
     def get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
+    def get_lmax(self) -> int: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
     @staticmethod
     def id() -> int: ...
@@ -20164,6 +20169,7 @@ class XcorKernel(NumCosmoMath.Model):
     def peek_powspec(self) -> NumCosmoMath.Powspec: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> XcorKernel: ...
+    def set_lmax(self, lmax: int) -> None: ...
 
 class XcorKernelCMBISW(XcorKernel):
     r"""
@@ -20189,6 +20195,8 @@ class XcorKernelCMBISW(XcorKernel):
         Power spectrum object
       integ-method -> NcXcorKernelIntegMethod: integ-method
         Integration method
+      lmax -> guint: lmax
+        Maximum multipole
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20219,6 +20227,7 @@ class XcorKernelCMBISW(XcorKernel):
         recomb: Recomb
         dist: Distance
         integ_method: XcorKernelIntegMethod
+        lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
         name: str
@@ -20237,6 +20246,7 @@ class XcorKernelCMBISW(XcorKernel):
         recomb: Recomb = ...,
         dist: Distance = ...,
         integ_method: XcorKernelIntegMethod = ...,
+        lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -20286,6 +20296,8 @@ class XcorKernelCMBLensing(XcorKernel):
         Power spectrum object
       integ-method -> NcXcorKernelIntegMethod: integ-method
         Integration method
+      lmax -> guint: lmax
+        Maximum multipole
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20316,6 +20328,7 @@ class XcorKernelCMBLensing(XcorKernel):
         recomb: Recomb
         dist: Distance
         integ_method: XcorKernelIntegMethod
+        lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
         name: str
@@ -20334,6 +20347,7 @@ class XcorKernelCMBLensing(XcorKernel):
         recomb: Recomb = ...,
         dist: Distance = ...,
         integ_method: XcorKernelIntegMethod = ...,
+        lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -20426,6 +20440,8 @@ class XcorKernelGal(XcorKernel):
         Power spectrum object
       integ-method -> NcXcorKernelIntegMethod: integ-method
         Integration method
+      lmax -> guint: lmax
+        Maximum multipole
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20465,6 +20481,7 @@ class XcorKernelGal(XcorKernel):
         noise_bias_fit: bool
         dist: Distance
         integ_method: XcorKernelIntegMethod
+        lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
         name: str
@@ -20492,6 +20509,7 @@ class XcorKernelGal(XcorKernel):
         noise_bias_fit: bool = ...,
         dist: Distance = ...,
         integ_method: XcorKernelIntegMethod = ...,
+        lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -20549,6 +20567,8 @@ class XcorKernelWeakLensing(XcorKernel):
         Power spectrum object
       integ-method -> NcXcorKernelIntegMethod: integ-method
         Integration method
+      lmax -> guint: lmax
+        Maximum multipole
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20580,6 +20600,7 @@ class XcorKernelWeakLensing(XcorKernel):
         nbar: float
         dist: Distance
         integ_method: XcorKernelIntegMethod
+        lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
         name: str
@@ -20599,6 +20620,7 @@ class XcorKernelWeakLensing(XcorKernel):
         nbar: float = ...,
         dist: Distance = ...,
         integ_method: XcorKernelIntegMethod = ...,
+        lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -20647,6 +20669,8 @@ class XcorKerneltSZ(XcorKernel):
         Power spectrum object
       integ-method -> NcXcorKernelIntegMethod: integ-method
         Integration method
+      lmax -> guint: lmax
+        Maximum multipole
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20676,6 +20700,7 @@ class XcorKerneltSZ(XcorKernel):
         noise: float
         dist: Distance
         integ_method: XcorKernelIntegMethod
+        lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
         name: str
@@ -20693,6 +20718,7 @@ class XcorKerneltSZ(XcorKernel):
         noise: float = ...,
         dist: Distance = ...,
         integ_method: XcorKernelIntegMethod = ...,
+        lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,

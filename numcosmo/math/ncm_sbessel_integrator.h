@@ -34,7 +34,7 @@ G_BEGIN_DECLS
 
 /**
  * NcmSBesselIntegratorF:
- * @user_data: user data
+ * @user_data: (closure): user data
  * @x: the value at which to evaluate the function
  *
  * Function to be integrated with spherical Bessel functions.
@@ -53,8 +53,8 @@ struct _NcmSBesselIntegratorClass
   GObjectClass parent_class;
 
   void (*prepare) (NcmSBesselIntegrator *sbi);
-  gdouble (*integrate_ell) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gpointer user_data, gdouble a, gdouble b, gint ell);
-  void (*integrate) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gpointer user_data, gdouble a, gdouble b, gdouble *result);
+  gdouble (*integrate_ell) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
+  void (*integrate) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data, gdouble *result);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[15];
@@ -70,8 +70,8 @@ void ncm_sbessel_integrator_set_lmin (NcmSBesselIntegrator *sbi, guint lmin);
 void ncm_sbessel_integrator_set_lmax (NcmSBesselIntegrator *sbi, guint lmax);
 
 void ncm_sbessel_integrator_prepare (NcmSBesselIntegrator *sbi);
-gdouble ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gpointer user_data, gdouble a, gdouble b, gint ell);
-void ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gpointer user_data, gdouble a, gdouble b, gdouble *result);
+gdouble ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
+void ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data, gdouble *result);
 
 G_END_DECLS
 
