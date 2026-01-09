@@ -1148,6 +1148,59 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
 
             assert_allclose(num, ref, rtol=1e-4, err_msg=f"ell={ell}")
 
+    def test_integrate_plain_bessel_limber(self, integrator):
+        """Test integration using Limber approximation.
+
+        For f(x) = np.exp(-x / 2000.0), compare against Limber approximation:
+        integral_0^infty f(x) j_ell(x) dx ~ sqrt(pi/(2ell+1)) f(ell+0.5)
+        """
+
+        integrator.prepare()
+
+        for ell, rtol in zip(
+            [20, 50, 100, 200, 500], [1.0e-3, 1.0e-4, 2.0e-5, 7.0e-6, 4.0e-6]
+        ):
+
+            def f(_ud, x):
+                return np.exp(-x / 200.0)
+
+            a, b = 0.0, 1.0e5
+            num = integrator.integrate_ell(f, None, a, b, ell)
+            ref = np.sqrt(np.pi / (2.0 * ell + 1.0)) * f(None, ell + 0.5)
+
+            assert_allclose(num, ref, rtol=rtol, err_msg=f"ell={ell}")
+
+    @pytest.mark.parametrize("L,p", [(2000.0, 3.0), (200.0, 3.0)])
+    def test_integrate_plain_bessel_limber_polynomial(self, integrator, L, p):
+        """Limber test with a polynomial decay function.
+
+        f(x) = (1 + x/L)^(-p) with slow variation,
+        much closer to cosmological kernels.
+
+        Integral_0^∞ f(x) j_ell(x) dx ≈ sqrt(pi/(2ell+1)) f(ell + 0.5)
+        """
+
+        integrator.prepare()
+
+        def f(_ud, x, L=L, p=p):
+            return (1.0 + x / L) ** (-p)
+
+        # Choose multipoles and tolerances consistent with slow decay
+        ells = [20, 50, 100, 200, 500]
+        match L:
+            case 2000.0:
+                rtols = [2.0e-4, 3.0e-5, 9.0e-6, 3.0e-4, 8.0e-7]
+            case 200.0:
+                rtols = [3.0e-4, 7.0e-5, 2.0e-5, 7.0e-6, 8.0e-6]
+
+        for ell, rtol in zip(ells, rtols):
+            a, b = 0.0, 2.0e5  # wide range due to slow decay tail
+            num = integrator.integrate_ell(f, None, a, b, ell)
+
+            ref = np.sqrt(np.pi / (2.0 * ell + 1.0)) * f(None, ell + 0.5)
+
+            assert_allclose(num, ref, rtol=rtol, err_msg=f"ell={ell}")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
