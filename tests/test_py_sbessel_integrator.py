@@ -60,7 +60,7 @@ class TestSBesselIntegratorGL:
 
         # Test setting via constructor
         integrator2 = Ncm.SBesselIntegratorGL(lmin=0, lmax=10, npts=20)
-        assert integrator2.props.npts == 20
+        assert integrator2.props.npts == 20  # pylint: disable=no-member
 
         # Test setter
         integrator.props.npts = 15
@@ -74,7 +74,7 @@ class TestSBesselIntegratorGL:
 
         # Test setting via constructor
         integrator2 = Ncm.SBesselIntegratorGL(lmin=0, lmax=10, margin=10.0)
-        assert integrator2.props.margin == 10.0
+        assert integrator2.props.margin == 10.0  # pylint: disable=no-member
 
         # Test setter
         integrator.props.margin = 7.5
@@ -88,7 +88,7 @@ class TestSBesselIntegratorGL:
 
         # Test setting via constructor
         integrator2 = Ncm.SBesselIntegratorGL(lmin=0, lmax=10, nosc=8.0)
-        assert integrator2.props.nosc == 8.0
+        assert integrator2.props.nosc == 8.0  # pylint: disable=no-member
 
         # Test setter
         integrator.props.nosc = 4.0
@@ -277,6 +277,7 @@ class TestSBesselIntegratorGL:
                 self.scale = scale
 
         def scaled_exponential(user_data, x) -> float:
+            assert isinstance(user_data, DataContainer)
             return np.exp(-x / user_data.scale)
 
         integrator.prepare()
