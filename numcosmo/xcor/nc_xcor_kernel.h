@@ -176,6 +176,8 @@ void nc_xcor_kernel_set_get_k_range_func (NcXcorKernel *xclk, NcXcorKernelGetKRa
 void nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 
 NcXcorKernelIntegMethod nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk);
+guint nc_xcor_kernel_get_lmax (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_lmax (NcXcorKernel *xclk, guint lmax);
 
 gdouble nc_xcor_kernel_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 gdouble nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);

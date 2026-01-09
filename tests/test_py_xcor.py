@@ -204,6 +204,41 @@ def test_cmb_isw_serialization(
     )
 
 
+def test_cmb_isw_integ_methods(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
+    """Test CMB ISW kernel with different integration methods."""
+    lmax = 30
+
+    # Create ISW kernel with Limber approximation
+    nc_cmb_isw_limber = Nc.XcorKernelCMBISW.new(
+        nc_cosmo_eh_linear.dist,
+        nc_cosmo_eh_linear.ps_ml,
+        nc_cosmo_eh_linear.recomb,
+        Ncm.Vector.new_array(np.arange(lmax + 1)),
+    )
+    nc_cmb_isw_limber.set_lmax(lmax)
+
+    # Create ISW kernel with GSL QAG integration
+    nc_cmb_isw_gsl = Nc.XcorKernelCMBISW(
+        dist=nc_cosmo_eh_linear.dist,
+        powspec=nc_cosmo_eh_linear.ps_ml,
+        recomb=nc_cosmo_eh_linear.recomb,
+        Nl=Ncm.Vector.new_array(np.arange(lmax + 1)),
+        integ_method=Nc.XcorKernelIntegMethod.GSL_QAG,
+        lmax=lmax,
+    )
+
+    # Prepare both kernels
+    cosmo = nc_cosmo_eh_linear.cosmo
+    nc_cmb_isw_limber.prepare(cosmo)
+    nc_cmb_isw_gsl.prepare(cosmo)
+
+    # Verify both are properly initialized
+    assert nc_cmb_isw_limber.get_integ_method() == Nc.XcorKernelIntegMethod.LIMBER
+    assert nc_cmb_isw_gsl.get_integ_method() == Nc.XcorKernelIntegMethod.GSL_QAG
+    assert nc_cmb_isw_limber.get_lmax() == lmax
+    assert nc_cmb_isw_gsl.get_lmax() == lmax
+
+
 def test_tsz_serialization(
     nc_cosmo_eh_linear: ncpy.Cosmology, nc_tsz: Nc.XcorKerneltSZ
 ) -> None:

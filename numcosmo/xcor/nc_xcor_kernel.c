@@ -67,6 +67,7 @@ typedef struct _NcXcorKernelPrivate
   NcXcorKernelEvalPrefactorFunc eval_prefactor_func;
   NcXcorKernelGetKRangeFunc get_k_range_func;
   NcXcorKernelIntegMethod integ_method;
+  guint lmax;
 } NcXcorKernelPrivate;
 
 enum
@@ -75,6 +76,7 @@ enum
   PROP_DIST,
   PROP_POWSPEC,
   PROP_INTEG_METHOD,
+  PROP_LMAX,
   PROP_SIZE,
 };
 
@@ -93,6 +95,7 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
   self->eval_prefactor_func = NULL;
   self->get_k_range_func    = NULL;
   self->integ_method        = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
+  self->lmax                = 0;
 }
 
 static void
@@ -174,6 +177,9 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_INTEG_METHOD:
       self->integ_method = g_value_get_enum (value);
       break;
+    case PROP_LMAX:
+      nc_xcor_kernel_set_lmax (xclk, g_value_get_uint (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -198,6 +204,9 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_INTEG_METHOD:
       g_value_set_enum (value, self->integ_method);
+      break;
+    case PROP_LMAX:
+      g_value_set_uint (value, nc_xcor_kernel_get_lmax (xclk));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -255,6 +264,14 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                       NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
                                                       NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_LMAX,
+                                   g_param_spec_uint ("lmax",
+                                                      NULL,
+                                                      "Maximum multipole",
+                                                      0, G_MAXUINT, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   ncm_mset_model_register_id (model_class, "NcXcorKernel", "Cross-correlation Kernels",
                               NULL, TRUE, NCM_MSET_MODEL_MAIN);
@@ -534,6 +551,38 @@ nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk)
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   return self->integ_method;
+}
+
+/**
+ * nc_xcor_kernel_get_lmax:
+ * @xclk: a #NcXcorKernel
+ *
+ * Gets the maximum multipole for the kernel.
+ *
+ * Returns: the maximum multipole
+ */
+guint
+nc_xcor_kernel_get_lmax (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  return self->lmax;
+}
+
+/**
+ * nc_xcor_kernel_set_lmax:
+ * @xclk: a #NcXcorKernel
+ * @lmax: the maximum multipole
+ *
+ * Sets the maximum multipole for the kernel.
+ *
+ */
+void
+nc_xcor_kernel_set_lmax (NcXcorKernel *xclk, guint lmax)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  self->lmax = lmax;
 }
 
 /**
