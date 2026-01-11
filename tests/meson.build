@@ -455,6 +455,14 @@ python_tests = [
         'source': 'test_py_integralnd.py',
     },
     {
+        'name': 'py_sbessel_integrator_fftl',
+        'source': 'test_py_sbessel_integrator_fftl.py',
+    },
+    {
+        'name': 'py_sbessel_integrator_gl',
+        'source': 'test_py_sbessel_integrator_gl.py',
+    },
+    {
         'name': 'py_spline_cubic_d2',
         'source': 'test_py_spline_cubic_d2.py',
     },
@@ -598,6 +606,10 @@ if python_astropy_scipy.found()
         {
             'name': 'py_constants',
             'source': 'test_py_constants.py',
+        },
+        {
+            'name': 'py_sbessel_integrator_gl',
+            'source': 'test_py_sbessel_integrator_gl.py',
         },
         {
             'name': 'py_csq1d',

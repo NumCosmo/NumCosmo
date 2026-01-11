@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# test_py_sbessel_integrator.py
+# test_py_sbessel_integrator_gl.py
 #
 # Thu Jan 09 2026
 # Copyright  2026  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# test_py_sbessel_integrator.py
+# test_py_sbessel_integrator_gl.py
 # Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
