@@ -29,6 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_vector.h>
 
 G_BEGIN_DECLS
 
@@ -54,7 +55,7 @@ struct _NcmSBesselIntegratorClass
 
   void (*prepare) (NcmSBesselIntegrator *sbi);
   gdouble (*integrate_ell) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
-  void (*integrate) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data, gdouble *result);
+  void (*integrate) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[15];
@@ -71,7 +72,7 @@ void ncm_sbessel_integrator_set_lmax (NcmSBesselIntegrator *sbi, guint lmax);
 
 void ncm_sbessel_integrator_prepare (NcmSBesselIntegrator *sbi);
 gdouble ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
-void ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data, gdouble *result);
+void ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
 
 G_END_DECLS
 

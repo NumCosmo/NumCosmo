@@ -125,7 +125,7 @@ _ncm_sbessel_integrator_finalize (GObject *object)
 
 static void _ncm_sbessel_integrator_prepare_not_implemented (NcmSBesselIntegrator *sbi);
 static gdouble _ncm_sbessel_integrator_integrate_ell_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
-static void _ncm_sbessel_integrator_integrate_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data, gdouble *result);
+static void _ncm_sbessel_integrator_integrate_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
 
 static void
 ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
@@ -160,7 +160,7 @@ ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
                                    g_param_spec_uint ("lmax",
                                                       NULL,
                                                       "Maximum multipole",
-                                                      0, G_MAXUINT, 0,
+                                                      0, G_MAXUINT, 100,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   klass->prepare       = &_ncm_sbessel_integrator_prepare_not_implemented;
@@ -185,14 +185,17 @@ _ncm_sbessel_integrator_integrate_ell_not_implemented (NcmSBesselIntegrator *sbi
 }
 
 static void
-_ncm_sbessel_integrator_integrate_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data, gdouble *result)
+_ncm_sbessel_integrator_integrate_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data)
 {
   NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
+  const guint n_ell                 = self->lmax - self->lmin + 1;
   gint ell;
+
+  g_assert_cmpuint (ncm_vector_len (result), ==, n_ell);
 
   for (ell = self->lmin; ell <= (gint) self->lmax; ell++)
   {
-    result[ell - self->lmin] = NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate_ell (sbi, F, a, b, ell, user_data);
+    ncm_vector_set (result, ell - self->lmin, NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate_ell (sbi, F, a, b, ell, user_data));
   }
 }
 
@@ -340,18 +343,17 @@ ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselInteg
  * @F: (scope call) (closure user_data): function to integrate
  * @a: lower integration limit
  * @b: upper integration limit
+ * @result: a #NcmVector to store results
  * @user_data: (nullable): user data passed to @F
- * @result: (array) (out caller-allocates): array to store results
  *
  * Integrates the function @F multiplied by the spherical Bessel function
  * $j_\ell(x)$ from @a to @b for all multipoles from lmin to lmax.
- * The results are stored in @result, which must be pre-allocated with
- * size at least (lmax - lmin + 1).
+ * The results are stored in @result, which must have length (lmax - lmin + 1).
  *
  */
 void
-ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data, gdouble *result)
+ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data)
 {
-  NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, user_data, result);
+  NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, result, user_data);
 }
 

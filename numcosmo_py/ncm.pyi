@@ -9097,6 +9097,58 @@ class SBesselIntegratorClass(GObject.GPointer):
     integrate: typing.Callable[..., list[float]] = ...
     padding: list[None] = ...
 
+class SBesselIntegratorFFTL(SBesselIntegrator):
+    r"""
+    :Constructors:
+
+    ::
+
+        SBesselIntegratorFFTL(**properties)
+        new(lmin:int, lmax:int) -> NumCosmoMath.SBesselIntegratorFFTL
+
+    Object NcmSBesselIntegratorFFTL
+
+    Properties from NcmSBesselIntegratorFFTL:
+      oversample -> gdouble: oversample
+        Oversampling factor
+
+    Properties from NcmSBesselIntegrator:
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        oversample: float
+        lmax: int
+        lmin: int
+
+    props: Props = ...
+    def __init__(
+        self, oversample: float = ..., lmax: int = ..., lmin: int = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(sbilf: SBesselIntegratorFFTL) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls, lmin: int, lmax: int) -> SBesselIntegratorFFTL: ...
+    def ref(self) -> SBesselIntegratorFFTL: ...
+
+class SBesselIntegratorFFTLClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SBesselIntegratorFFTLClass()
+    """
+
+    parent_class: SBesselIntegratorClass = ...
+
 class SBesselIntegratorGL(SBesselIntegrator):
     r"""
     :Constructors:

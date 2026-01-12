@@ -54,9 +54,12 @@ struct _NcmSBesselIntegratorFFTL
   NcmSBesselIntegrator parent_instance;
   gdouble oversample;
   guint Ny;
+  guint lmax_alloc;
   gdouble *f_samp;
   fftw_complex *f_fft;
   fftw_plan plan_forward;
+  gdouble *jl_arr;
+  gdouble *Pl_arr;
 };
 
 enum
@@ -72,9 +75,12 @@ ncm_sbessel_integrator_fftl_init (NcmSBesselIntegratorFFTL *sbilf)
 {
   sbilf->oversample   = 2.0;
   sbilf->Ny           = 0;
+  sbilf->lmax_alloc   = 0;
   sbilf->f_samp       = NULL;
   sbilf->f_fft        = NULL;
   sbilf->plan_forward = NULL;
+  sbilf->jl_arr       = NULL;
+  sbilf->Pl_arr       = NULL;
 }
 
 static void
@@ -82,23 +88,11 @@ _ncm_sbessel_integrator_fftl_dispose (GObject *object)
 {
   NcmSBesselIntegratorFFTL *sbilf = NCM_SBESSEL_INTEGRATOR_FFTL (object);
 
-  if (sbilf->plan_forward != NULL)
-  {
-    fftw_destroy_plan (sbilf->plan_forward);
-    sbilf->plan_forward = NULL;
-  }
-
-  if (sbilf->f_samp != NULL)
-  {
-    fftw_free (sbilf->f_samp);
-    sbilf->f_samp = NULL;
-  }
-
-  if (sbilf->f_fft != NULL)
-  {
-    fftw_free (sbilf->f_fft);
-    sbilf->f_fft = NULL;
-  }
+  g_clear_pointer (&sbilf->plan_forward, fftw_destroy_plan);
+  g_clear_pointer (&sbilf->f_samp, fftw_free);
+  g_clear_pointer (&sbilf->f_fft, fftw_free);
+  g_clear_pointer (&sbilf->jl_arr, g_free);
+  g_clear_pointer (&sbilf->Pl_arr, g_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_sbessel_integrator_fftl_parent_class)->dispose (object);
@@ -113,6 +107,206 @@ _ncm_sbessel_integrator_fftl_finalize (GObject *object)
 
 static void _ncm_sbessel_integrator_fftl_prepare (NcmSBesselIntegrator *sbi);
 static gdouble _ncm_sbessel_integrator_fftl_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
+static void _ncm_sbessel_integrator_fftl_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
+
+typedef struct _NcmSBesselIntegratorFFTLParams
+{
+  gdouble L;
+  gdouble dx;
+  guint Ny;
+  guint J;
+} NcmSBesselIntegratorFFTLParams;
+
+static gdouble
+_ncm_sbessel_integrator_fftl_simpson_direct (NcmSBesselIntegratorF F, const gdouble a, const gdouble b, const gint ell, gpointer user_data)
+{
+  const guint N    = 2 * GSL_MAX (256, 4 * ell);
+  const gdouble dx = (b - a) / N;
+  gdouble result   = 0.0;
+  guint i;
+
+  /* First term */
+  result = F (user_data, a) * gsl_sf_bessel_jl (ell, a);
+
+  /* Interior terms with alternating weights 4 and 2 */
+  for (i = 1; i < N; i++)
+  {
+    const gdouble x      = a + i * dx;
+    const gdouble weight = (i % 2 == 1) ? 4.0 : 2.0;
+
+    result += weight * F (user_data, x) * gsl_sf_bessel_jl (ell, x);
+  }
+
+  /* Last term */
+  result += F (user_data, b) * gsl_sf_bessel_jl (ell, b);
+
+  return result * dx / 3.0;
+}
+
+static void
+_ncm_sbessel_integrator_fftl_compute_params (const gdouble L_phys, NcmSBesselIntegratorFFTLParams *params)
+{
+  const gdouble L_phys_2pi = L_phys / (2.0 * M_PI);
+  gint alpha_epsilon       = 10; /* controls accuracy epsilon = 2^(-alpha_epsilon)/kappa */
+  gint alpha_J             = 10; /* controls accuracy the mu term */
+  const gint min_alpha     = 13;
+  gint alpha_L;
+
+  frexp (0.5 * L_phys_2pi, &alpha_L); /* This is kappa/2 */
+  alpha_epsilon = GSL_MAX (alpha_epsilon, alpha_L + 1);
+
+  /* FFT of at least Ny = 2^min_alpha */
+  if (alpha_epsilon + alpha_J - alpha_L < min_alpha)
+  {
+    gint delta = min_alpha - (alpha_epsilon + alpha_J - alpha_L);
+
+    alpha_J += delta / 2;
+    alpha_L += delta / 2 + (delta % 2);
+  }
+
+  params->J  = 1 << alpha_J;
+  params->L  = 2.0 * M_PI * params->J;
+  params->Ny = 1 << (alpha_epsilon + alpha_J - alpha_L);
+  params->dx = params->L / params->Ny;
+/*#define DEBUG */
+#ifdef DEBUG
+  g_print ("[FFTL] Computed params: L = %.3e, J = %u, Ny = %u, dx = %.3e\n",
+           params->L, params->J, params->Ny, params->dx);
+#endif /* DEBUG */
+}
+
+static void
+_ncm_sbessel_integrator_fftl_sample (NcmSBesselIntegratorFFTL *sbilf, NcmSBesselIntegratorF F, const gdouble a, const gdouble b, const NcmSBesselIntegratorFFTLParams *params, gpointer user_data)
+{
+  guint i;
+
+  memset (sbilf->f_samp, 0, sizeof (gdouble) * params->Ny);
+
+  for (i = 0; i < params->Ny; i++)
+  {
+    const gdouble x = a + (i + 0.5) * params->dx;
+
+    if (x > b)
+      sbilf->f_samp[i] = 0.0;
+    else
+      sbilf->f_samp[i] = F (user_data, x);
+  }
+}
+
+static gdouble
+_ncm_sbessel_integrator_fftl_sum_even_ell (NcmSBesselIntegratorFFTL *sbilf, const gint ell, const gdouble a, const NcmSBesselIntegratorFFTLParams *params)
+{
+  gdouble sum                = 0.0;
+  const complex double phase = cexp (I * (a + 0.5 * params->dx) * (-2.0 * M_PI / params->L));
+  complex double phase_n     = phase;
+  const gdouble mu_over_n    = -2.0 * M_PI / params->L;
+  guint n;
+
+  /* n = 0 term */
+  sum = gsl_sf_legendre_Pl (ell, 0.0) * creal (sbilf->f_fft[0]);
+
+  /* Loop over pairs of indices with Simpson weights (4,2) */
+  /* Stop before the last two terms which need special weights (4,1) */
+  for (n = 1; n + 1 < params->J; n += 2)
+  {
+    /* n = odd (weight 4.0) */
+    {
+      const gdouble mu       = mu_over_n * n;
+      const gdouble P_ell    = gsl_sf_legendre_Pl (ell, mu);
+      const gdouble fft_real = creal (phase_n * sbilf->f_fft[n]);
+
+      sum     += 4.0 * P_ell * fft_real;
+      phase_n *= phase;
+    }
+
+    /* n+1 = even (weight 2.0) */
+    {
+      const gdouble mu       = mu_over_n * (n + 1);
+      const gdouble P_ell    = gsl_sf_legendre_Pl (ell, mu);
+      const gdouble fft_real = creal (phase_n * sbilf->f_fft[n + 1]);
+
+      sum     += 2.0 * P_ell * fft_real;
+      phase_n *= phase;
+    }
+  }
+
+  /* Second to last term n = J-1 (weight 4.0) */
+  {
+    const gdouble mu       = mu_over_n * (params->J - 1);
+    const gdouble P_ell    = gsl_sf_legendre_Pl (ell, mu);
+    const gdouble fft_real = creal (phase_n * sbilf->f_fft[params->J - 1]);
+
+    sum     += 4.0 * P_ell * fft_real;
+    phase_n *= phase;
+  }
+
+  /* Last term n = J (weight 1.0) */
+  {
+    const gdouble mu       = mu_over_n * params->J;
+    const gdouble P_ell    = gsl_sf_legendre_Pl (ell, mu);
+    const gdouble fft_real = creal (phase_n * sbilf->f_fft[params->J]);
+
+    sum += 1.0 * P_ell * fft_real;
+  }
+
+  return sum;
+}
+
+static gdouble
+_ncm_sbessel_integrator_fftl_sum_odd_ell (NcmSBesselIntegratorFFTL *sbilf, const gint ell, const gdouble a, const NcmSBesselIntegratorFFTLParams *params)
+{
+  gdouble sum                = 0.0;
+  const complex double phase = cexp (I * (a + 0.5 * params->dx) * (-2.0 * M_PI / params->L));
+  complex double phase_n     = phase;
+  const gdouble mu_over_n    = -2.0 * M_PI / params->L;
+  guint n;
+
+  /* Loop over pairs of indices with Simpson weights (4,2) */
+  /* Stop before the last two terms which need special weights (4,1) */
+  for (n = 1; n + 1 < params->J; n += 2)
+  {
+    /* n = odd (weight 4.0) */
+    {
+      const gdouble mu       = mu_over_n * n;
+      const gdouble P_ell    = gsl_sf_legendre_Pl (ell, mu);
+      const gdouble fft_imag = cimag (phase_n * sbilf->f_fft[n]);
+
+      sum     += 4.0 * P_ell * fft_imag;
+      phase_n *= phase;
+    }
+
+    /* n+1 = even (weight 2.0) */
+    {
+      const gdouble mu       = mu_over_n * (n + 1);
+      const gdouble P_ell    = gsl_sf_legendre_Pl (ell, mu);
+      const gdouble fft_imag = cimag (phase_n * sbilf->f_fft[n + 1]);
+
+      sum     += 2.0 * P_ell * fft_imag;
+      phase_n *= phase;
+    }
+  }
+
+  /* Second to last term n = J-1 (weight 4.0) */
+  {
+    const gdouble mu       = mu_over_n * (params->J - 1);
+    const gdouble P_ell    = gsl_sf_legendre_Pl (ell, mu);
+    const gdouble fft_imag = cimag (phase_n * sbilf->f_fft[params->J - 1]);
+
+    sum     += 4.0 * P_ell * fft_imag;
+    phase_n *= phase;
+  }
+
+  /* Last term n = J (weight 1.0) */
+  {
+    const gdouble mu       = mu_over_n * params->J;
+    const gdouble P_ell    = gsl_sf_legendre_Pl (ell, mu);
+    const gdouble fft_imag = cimag (phase_n * sbilf->f_fft[params->J]);
+
+    sum += 1.0 * P_ell * fft_imag;
+  }
+
+  return sum;
+}
 
 static void
 _ncm_sbessel_integrator_fftl_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -176,14 +370,25 @@ ncm_sbessel_integrator_fftl_class_init (NcmSBesselIntegratorFFTLClass *klass)
 
   parent_class->prepare       = &_ncm_sbessel_integrator_fftl_prepare;
   parent_class->integrate_ell = &_ncm_sbessel_integrator_fftl_integrate_ell;
+  parent_class->integrate     = &_ncm_sbessel_integrator_fftl_integrate;
 }
 
 static void
 _ncm_sbessel_integrator_fftl_prepare (NcmSBesselIntegrator *sbi)
 {
-  /* NcmSBesselIntegratorFFTL *sbilf = NCM_SBESSEL_INTEGRATOR_FFTL (sbi); */
+  NcmSBesselIntegratorFFTL *sbilf = NCM_SBESSEL_INTEGRATOR_FFTL (sbi);
+  const guint lmax                = ncm_sbessel_integrator_get_lmax (sbi);
 
-  /* Preparation logic */
+  /* Reallocate arrays if lmax changed */
+  if (lmax != sbilf->lmax_alloc)
+  {
+    g_clear_pointer (&sbilf->jl_arr, g_free);
+    g_clear_pointer (&sbilf->Pl_arr, g_free);
+
+    sbilf->lmax_alloc = lmax;
+    sbilf->jl_arr     = g_new (gdouble, lmax + 1);
+    sbilf->Pl_arr     = g_new (gdouble, lmax + 1);
+  }
 }
 
 static gdouble
@@ -194,22 +399,26 @@ _ncm_sbessel_integrator_fftl_integrate_ell (NcmSBesselIntegrator *sbi,
                                             gpointer user_data)
 {
   NcmSBesselIntegratorFFTL *sbilf = NCM_SBESSEL_INTEGRATOR_FFTL (sbi);
-  const gdouble L_phys            = b - a;
-  const gdouble L_phys_2pi        = L_phys / (2.0 * M_PI);
-  gint alpha_epsilon              = 5; /* controls accuracy epsilon = 2^(-alpha_epsilon)/kappa */
-  const gint alpha_J              = 5; /* controls accuracy the mu term */
-  const gint J                    = 1 << alpha_J;
-  gdouble L;
-  gint alpha_L;
-  guint i, n, Ny;
+  NcmSBesselIntegratorFFTLParams params;
+  const gdouble L_phys = b - a;
+  gdouble sum;
+  guint m;
+  gboolean ell_is_even;
+  gboolean m_is_even;
 
-  frexp (0.5 * L_phys_2pi, &alpha_L); /* This is kappa/2 */
-  alpha_epsilon = GSL_MAX (alpha_epsilon, alpha_L + 1);
-  L             = 2.0 * M_PI * J;
-  Ny            = 1 << (alpha_epsilon + alpha_J - alpha_L);
+  /* For small intervals (b < ell), use direct Simpson's rule */
+  if (b < ell)
+  {
+    printf ("# DIRECT SIMPSON METHOD FOR ELL %d\n", ell);
+
+    return _ncm_sbessel_integrator_fftl_simpson_direct (F, a, b, ell, user_data);
+  }
+
+  /* Compute integration parameters */
+  _ncm_sbessel_integrator_fftl_compute_params (L_phys, &params);
 
   /* Reallocate arrays if needed */
-  if (Ny != sbilf->Ny)
+  if (params.Ny != sbilf->Ny)
   {
     if (sbilf->plan_forward != NULL)
       fftw_destroy_plan (sbilf->plan_forward);
@@ -220,72 +429,272 @@ _ncm_sbessel_integrator_fftl_integrate_ell (NcmSBesselIntegrator *sbi,
     if (sbilf->f_fft != NULL)
       fftw_free (sbilf->f_fft);
 
-    sbilf->Ny     = Ny;
-    sbilf->f_samp = fftw_malloc (sizeof (gdouble) * Ny);
-    sbilf->f_fft  = fftw_malloc (sizeof (fftw_complex) * (Ny / 2 + 1));
+    sbilf->Ny     = params.Ny;
+    sbilf->f_samp = fftw_malloc (sizeof (gdouble) * params.Ny);
+    sbilf->f_fft  = fftw_malloc (sizeof (fftw_complex) * (params.Ny / 2 + 1));
 
-    sbilf->plan_forward = fftw_plan_dft_r2c_1d (Ny, sbilf->f_samp, sbilf->f_fft, FFTW_ESTIMATE);
+    sbilf->plan_forward = fftw_plan_dft_r2c_1d (params.Ny, sbilf->f_samp, sbilf->f_fft, FFTW_ESTIMATE);
   }
 
-  /* Step 3: Sample f(x) on grid */
-  const gdouble dx = L / Ny;
+  /* Sample function on grid */
+  _ncm_sbessel_integrator_fftl_sample (sbilf, F, a, b, &params, user_data);
 
-  memset (sbilf->f_samp, 0, sizeof (gdouble) * Ny);
-
-  for (i = 0; i < Ny; i++)
-  {
-    const gdouble x = a + (i + 0.5) * dx;
-
-    if (x > b)
-      sbilf->f_samp[i] = 0.0;
-    else
-      sbilf->f_samp[i] = F (user_data, x);
-  }
-
-  /* Step 5: Compute FFT */
+  /* Compute FFT */
   fftw_execute (sbilf->plan_forward);
 
-  /* Steps 6-9: Build mu-grid, compute Legendre polynomials, and sum */
-  gdouble sum            = 0.0;
-  guint m                = ell / 2;
-  gboolean ell_is_even   = (ell % 2 == 0);
-  gboolean m_is_even     = (m % 2 == 0);
-  complex double phase   = cexp (I * (a + 0.5 * dx) * (-2.0 * M_PI / L));
-  complex double phase_n = phase;
+  /* Compute Legendre sum (different for even/odd ell) */
+  ell_is_even = (ell % 2 == 0);
 
   if (ell_is_even)
-  {
-    sum = gsl_sf_legendre_Pl (ell, 0.0) * creal (sbilf->f_fft[0]);
-
-    for (n = 1; n <= J; n++)
-    {
-      const gdouble mu       = -2.0 * M_PI * n / L; /* positive  frequency */
-      const gdouble P_ell    = gsl_sf_legendre_Pl (ell, mu);
-      const gdouble fft_real = creal (phase_n * sbilf->f_fft[n]);
-      const gdouble w        = (n == J) ? 1.0 : ((n % 2 == 1) ? 4.0 : 2.0); /* Simpson's rule weight */
-
-      sum     += w * P_ell * fft_real;
-      phase_n *= phase;
-    }
-  }
+    sum = _ncm_sbessel_integrator_fftl_sum_even_ell (sbilf, ell, a, &params);
   else
-  {
-    for (n = 1; n <= J; n++)
-    {
-      double mu              = -2.0 * M_PI * n / L; /* positive  frequency */
-      gdouble P_ell          = gsl_sf_legendre_Pl (ell, mu);
-      const gdouble fft_imag = cimag (phase_n * sbilf->f_fft[n]);
-      const gdouble w        = (n == J) ? 1.0 : ((n % 2 == 1) ? 4.0 : 2.0); /* Simpson's rule weight */
+    sum = _ncm_sbessel_integrator_fftl_sum_odd_ell (sbilf, ell, a, &params);
 
-      sum     += w * P_ell * fft_imag;
-      phase_n *= phase;
-    }
-  }
-
-  sum = sum / 3.0;
-  sum = (m_is_even ? sum : -sum) * (2.0 * M_PI / Ny);
+  /* Apply Simpson's rule factor and final scaling */
+  m         = ell / 2;
+  m_is_even = (m % 2 == 0);
+  sum       = sum / 3.0;
+  sum       = (m_is_even ? sum : -sum) * (2.0 * M_PI / params.Ny);
 
   return sum;
+}
+
+static void
+_ncm_sbessel_integrator_fftl_integrate_direct (NcmSBesselIntegratorFFTL *sbilf, const guint lmin, const guint ell_direct_min, const guint ell_direct_max,
+                                               NcmSBesselIntegratorF F, const gdouble a, const gdouble b,
+                                               NcmVector *result, gpointer user_data)
+{
+  const guint N    = 2 * GSL_MAX (256, 4 * ell_direct_max);
+  const gdouble dx = (b - a) / N;
+  guint i, ell;
+
+  /* Initialize direct results to zero */
+  for (ell = ell_direct_min; ell <= ell_direct_max; ell++)
+    ncm_vector_set (result, ell - lmin, 0.0);
+
+  /* First term */
+  {
+    const gdouble fa = F (user_data, a);
+
+    gsl_sf_bessel_jl_steed_array (ell_direct_max, a, sbilf->jl_arr);
+
+    for (ell = ell_direct_min; ell <= ell_direct_max; ell++)
+      ncm_vector_set (result, ell - lmin, fa * sbilf->jl_arr[ell]);
+  }
+
+  /* Interior terms with alternating weights 4 and 2 */
+  for (i = 1; i < N; i++)
+  {
+    const gdouble x      = a + i * dx;
+    const gdouble weight = (i % 2 == 1) ? 4.0 : 2.0;
+    const gdouble fx     = F (user_data, x);
+
+    gsl_sf_bessel_jl_steed_array (ell_direct_max, x, sbilf->jl_arr);
+
+    for (ell = ell_direct_min; ell <= ell_direct_max; ell++)
+      ncm_vector_addto (result, ell - lmin, weight * fx * sbilf->jl_arr[ell]);
+  }
+
+  /* Last term */
+  {
+    const gdouble fb = F (user_data, b);
+
+    gsl_sf_bessel_jl_steed_array (ell_direct_max, b, sbilf->jl_arr);
+
+    for (ell = ell_direct_min; ell <= ell_direct_max; ell++)
+      ncm_vector_addto (result, ell - lmin, fb * sbilf->jl_arr[ell]);
+  }
+
+  /* Apply Simpson's rule factor */
+  for (ell = ell_direct_min; ell <= ell_direct_max; ell++)
+    ncm_vector_set (result, ell - lmin, ncm_vector_get (result, ell - lmin) * dx / 3.0);
+}
+
+static void
+_ncm_sbessel_integrator_fftl_integrate_fft (NcmSBesselIntegratorFFTL *sbilf, const guint lmin, const guint ell_fft_min, const guint ell_fft_max,
+                                            NcmSBesselIntegratorF F, const gdouble a, const gdouble b, const gdouble L_phys,
+                                            NcmVector *result, gpointer user_data)
+{
+  NcmSBesselIntegratorFFTLParams params;
+  guint ell, n;
+
+  /* Compute integration parameters */
+  _ncm_sbessel_integrator_fftl_compute_params (L_phys, &params);
+
+  /* Reallocate arrays if needed */
+  if (params.Ny != sbilf->Ny)
+  {
+    if (sbilf->plan_forward != NULL)
+      fftw_destroy_plan (sbilf->plan_forward);
+
+    if (sbilf->f_samp != NULL)
+      fftw_free (sbilf->f_samp);
+
+    if (sbilf->f_fft != NULL)
+      fftw_free (sbilf->f_fft);
+
+    sbilf->Ny     = params.Ny;
+    sbilf->f_samp = fftw_malloc (sizeof (gdouble) * params.Ny);
+    sbilf->f_fft  = fftw_malloc (sizeof (fftw_complex) * (params.Ny / 2 + 1));
+
+    sbilf->plan_forward = fftw_plan_dft_r2c_1d (params.Ny, sbilf->f_samp, sbilf->f_fft, FFTW_ESTIMATE);
+  }
+
+  /* Sample function on grid */
+  _ncm_sbessel_integrator_fftl_sample (sbilf, F, a, b, &params, user_data);
+
+  /* Compute FFT */
+  fftw_execute (sbilf->plan_forward);
+
+  /* Initialize FFT results to zero */
+  for (ell = ell_fft_min; ell <= ell_fft_max; ell++)
+    ncm_vector_set (result, ell - lmin, 0.0);
+
+  /* Compute phase factor */
+  const complex double phase = cexp (I * (a + 0.5 * params.dx) * (-2.0 * M_PI / params.L));
+  const gdouble mu_over_n    = -2.0 * M_PI / params.L;
+
+  /* n = 0 term */
+  {
+    gsl_sf_legendre_Pl_array (ell_fft_max, 0.0, sbilf->Pl_arr);
+
+    const gdouble fft_real = creal (sbilf->f_fft[0]);
+
+    for (ell = ell_fft_min; ell <= ell_fft_max; ell++)
+    {
+      if (ell % 2 == 0) /* even ell uses real part */
+        ncm_vector_set (result, ell - lmin, sbilf->Pl_arr[ell] * fft_real);
+    }
+  }
+
+  /* Loop over pairs with Simpson weights */
+  complex double phase_n = phase;
+
+  for (n = 1; n + 1 < params.J; n += 2)
+  {
+    /* n = odd (weight 4.0) */
+    {
+      const gdouble mu = mu_over_n * n;
+
+      gsl_sf_legendre_Pl_array (ell_fft_max, mu, sbilf->Pl_arr);
+
+      for (ell = ell_fft_min; ell <= ell_fft_max; ell++)
+      {
+        const gdouble P_ell = sbilf->Pl_arr[ell];
+
+        if (ell % 2 == 0)
+          ncm_vector_addto (result, ell - lmin, 4.0 * P_ell * creal (phase_n * sbilf->f_fft[n]));
+        else
+          ncm_vector_addto (result, ell - lmin, 4.0 * P_ell * cimag (phase_n * sbilf->f_fft[n]));
+      }
+
+      phase_n *= phase;
+    }
+
+    /* n+1 = even (weight 2.0) */
+    {
+      const gdouble mu = mu_over_n * (n + 1);
+
+      gsl_sf_legendre_Pl_array (ell_fft_max, mu, sbilf->Pl_arr);
+
+      for (ell = ell_fft_min; ell <= ell_fft_max; ell++)
+      {
+        const gdouble P_ell = sbilf->Pl_arr[ell];
+
+        if (ell % 2 == 0)
+          ncm_vector_addto (result, ell - lmin, 2.0 * P_ell * creal (phase_n * sbilf->f_fft[n + 1]));
+        else
+          ncm_vector_addto (result, ell - lmin, 2.0 * P_ell * cimag (phase_n * sbilf->f_fft[n + 1]));
+      }
+
+      phase_n *= phase;
+    }
+  }
+
+  /* Second to last term n = J-1 (weight 4.0) */
+  {
+    const gdouble mu = mu_over_n * (params.J - 1);
+
+    gsl_sf_legendre_Pl_array (ell_fft_max, mu, sbilf->Pl_arr);
+
+    for (ell = ell_fft_min; ell <= ell_fft_max; ell++)
+    {
+      const gdouble P_ell = sbilf->Pl_arr[ell];
+
+      if (ell % 2 == 0)
+        ncm_vector_addto (result, ell - lmin, 4.0 * P_ell * creal (phase_n * sbilf->f_fft[params.J - 1]));
+      else
+        ncm_vector_addto (result, ell - lmin, 4.0 * P_ell * cimag (phase_n * sbilf->f_fft[params.J - 1]));
+    }
+
+    phase_n *= phase;
+  }
+
+  /* Last term n = J (weight 1.0) */
+  {
+    const gdouble mu = mu_over_n * params.J;
+
+    gsl_sf_legendre_Pl_array (ell_fft_max, mu, sbilf->Pl_arr);
+
+    for (ell = ell_fft_min; ell <= ell_fft_max; ell++)
+    {
+      const gdouble P_ell = sbilf->Pl_arr[ell];
+
+      if (ell % 2 == 0)
+        ncm_vector_addto (result, ell - lmin, 1.0 * P_ell * creal (phase_n * sbilf->f_fft[params.J]));
+      else
+        ncm_vector_addto (result, ell - lmin, 1.0 * P_ell * cimag (phase_n * sbilf->f_fft[params.J]));
+    }
+  }
+
+  /* Apply Simpson's rule factor and final scaling */
+  for (ell = ell_fft_min; ell <= ell_fft_max; ell++)
+  {
+    const guint m         = ell / 2;
+    const gboolean m_even = (m % 2 == 0);
+    const gdouble val     = ncm_vector_get (result, ell - lmin);
+
+    ncm_vector_set (result, ell - lmin, (m_even ? val : -val) * (2.0 * M_PI / params.Ny) / 3.0);
+  }
+}
+
+static void
+_ncm_sbessel_integrator_fftl_integrate (NcmSBesselIntegrator *sbi,
+                                        NcmSBesselIntegratorF F,
+                                        gdouble a, gdouble b,
+                                        NcmVector *result,
+                                        gpointer user_data)
+{
+  NcmSBesselIntegratorFFTL *sbilf = NCM_SBESSEL_INTEGRATOR_FFTL (sbi);
+  const guint lmin                = ncm_sbessel_integrator_get_lmin (sbi);
+  const guint lmax                = ncm_sbessel_integrator_get_lmax (sbi);
+  const gdouble L_phys            = b - a;
+  const guint n_ell               = lmax - lmin + 1;
+
+  g_assert_cmpuint (ncm_vector_len (result), ==, n_ell);
+
+  /* Find the threshold ell where b < ell (use direct Simpson's for ell > b) */
+  const guint ell_b = (guint) ceil (b);
+
+  /* Compute ells that need direct Simpson's rule (where b < ell) */
+  if (ell_b <= lmax)
+  {
+    const guint ell_direct_min = GSL_MAX (ell_b, lmin);
+    const guint ell_direct_max = lmax;
+
+    if (ell_direct_min <= ell_direct_max)
+      _ncm_sbessel_integrator_fftl_integrate_direct (sbilf, lmin, ell_direct_min, ell_direct_max, F, a, b, result, user_data);
+  }
+
+  /* Compute ells that need FFT-Legendre (where b >= ell) */
+  if (ell_b > lmin)
+  {
+    const guint ell_fft_min = lmin;
+    const guint ell_fft_max = GSL_MIN (ell_b - 1, lmax);
+
+    if (ell_fft_min <= ell_fft_max)
+      _ncm_sbessel_integrator_fftl_integrate_fft (sbilf, lmin, ell_fft_min, ell_fft_max, F, a, b, L_phys, result, user_data);
+  }
 }
 
 /**
