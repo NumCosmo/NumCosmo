@@ -357,3 +357,146 @@ ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegrato
   NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, result, user_data);
 }
 
+typedef struct _NcmSBesselIntegratorGaussianData
+{
+  gdouble center;
+  gdouble std;
+  gdouble k;
+} NcmSBesselIntegratorGaussianData;
+
+static gdouble
+_ncm_sbessel_integrator_gaussian_func (gpointer user_data, gdouble y)
+{
+  NcmSBesselIntegratorGaussianData *data = (NcmSBesselIntegratorGaussianData *) user_data;
+  const gdouble x                        = y / data->k;
+  const gdouble z                        = (x - data->center) / data->std;
+
+  return exp (-0.5 * z * z);
+}
+
+/**
+ * ncm_sbessel_integrator_integrate_gaussian_ell:
+ * @sbi: a #NcmSBesselIntegrator
+ * @center: center of the Gaussian
+ * @std: standard deviation of the Gaussian
+ * @k: scale factor
+ * @a: lower integration limit
+ * @b: upper integration limit
+ * @ell: multipole
+ *
+ * Integrates a Gaussian function $\exp(-\frac{1}{2}(\frac{y/k - center}{std})^2)$
+ * multiplied by the spherical Bessel function $j_\ell(y)$ from @a to @b
+ * for a single multipole.
+ *
+ * This is a convenience function optimized for testing against truth tables,
+ * avoiding the overhead of Python callbacks.
+ *
+ * Returns: the integral value
+ */
+gdouble
+ncm_sbessel_integrator_integrate_gaussian_ell (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, gint ell)
+{
+  NcmSBesselIntegratorGaussianData data = {center, std, k};
+
+  return ncm_sbessel_integrator_integrate_ell (sbi, &_ncm_sbessel_integrator_gaussian_func, a, b, ell, &data);
+}
+
+/**
+ * ncm_sbessel_integrator_integrate_gaussian:
+ * @sbi: a #NcmSBesselIntegrator
+ * @center: center of the Gaussian
+ * @std: standard deviation of the Gaussian
+ * @k: scale factor
+ * @a: lower integration limit
+ * @b: upper integration limit
+ * @result: a #NcmVector to store results
+ *
+ * Integrates a Gaussian function $\exp(-\frac{1}{2}(\frac{y/k - center}{std})^2)$
+ * multiplied by the spherical Bessel function $j_\ell(y)$ from @a to @b
+ * for all multipoles from lmin to lmax.
+ * The results are stored in @result, which must have length (lmax - lmin + 1).
+ *
+ * This is a convenience function optimized for testing against truth tables,
+ * avoiding the overhead of Python callbacks.
+ *
+ */
+void
+ncm_sbessel_integrator_integrate_gaussian (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, NcmVector *result)
+{
+  NcmSBesselIntegratorGaussianData data = {center, std, k};
+
+  ncm_sbessel_integrator_integrate (sbi, &_ncm_sbessel_integrator_gaussian_func, a, b, result, &data);
+}
+
+typedef struct _NcmSBesselIntegratorRationalData
+{
+  gdouble center;
+  gdouble std;
+  gdouble k;
+} NcmSBesselIntegratorRationalData;
+
+static gdouble
+_ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble y)
+{
+  NcmSBesselIntegratorRationalData *data = (NcmSBesselIntegratorRationalData *) user_data;
+  const gdouble x                        = y / data->k;
+  const gdouble z                        = (x - data->center) / data->std;
+  const gdouble denom                    = 1.0 + z * z;
+
+  return x * x / (denom * denom);
+}
+
+/**
+ * ncm_sbessel_integrator_integrate_rational_ell:
+ * @sbi: a #NcmSBesselIntegrator
+ * @center: center of the rational function
+ * @std: standard deviation parameter
+ * @k: scale factor
+ * @a: lower integration limit
+ * @b: upper integration limit
+ * @ell: multipole
+ *
+ * Integrates a rational function $\frac{(y/k)^2}{(1+((y/k - center)/std)^2)^2}$
+ * multiplied by the spherical Bessel function $j_\ell(y)$ from @a to @b for a single
+ * multipole.
+ *
+ * This is a convenience function optimized for testing against truth tables, avoiding
+ * the overhead of Python callbacks.
+ *
+ * Returns: the integral value
+ */
+gdouble
+ncm_sbessel_integrator_integrate_rational_ell (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, gint ell)
+{
+  NcmSBesselIntegratorRationalData data = {center, std, k};
+
+  return ncm_sbessel_integrator_integrate_ell (sbi, &_ncm_sbessel_integrator_rational_func, a, b, ell, &data);
+}
+
+/**
+ * ncm_sbessel_integrator_integrate_rational:
+ * @sbi: a #NcmSBesselIntegrator
+ * @center: center of the rational function
+ * @std: standard deviation parameter
+ * @k: scale factor
+ * @a: lower integration limit
+ * @b: upper integration limit
+ * @result: a #NcmVector to store results
+ *
+ * Integrates a rational function $\frac{(y/k)^2}{(1+((y/k - center)/std)^2)^2}$
+ * multiplied by the spherical Bessel function $j_\ell(y)$ from @a to @b for all
+ * multipoles from lmin to lmax. The results are stored in @result, which must have
+ * length (lmax - lmin + 1).
+ *
+ * This is a convenience function optimized for testing against truth tables, avoiding
+ * the overhead of Python callbacks.
+ *
+ */
+void
+ncm_sbessel_integrator_integrate_rational (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, NcmVector *result)
+{
+  NcmSBesselIntegratorRationalData data = {center, std, k};
+
+  ncm_sbessel_integrator_integrate (sbi, &_ncm_sbessel_integrator_rational_func, a, b, result, &data);
+}
+

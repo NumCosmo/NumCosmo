@@ -74,6 +74,12 @@ void ncm_sbessel_integrator_prepare (NcmSBesselIntegrator *sbi);
 gdouble ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
 void ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
 
+gdouble ncm_sbessel_integrator_integrate_gaussian_ell (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, gint ell);
+void ncm_sbessel_integrator_integrate_gaussian (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, NcmVector *result);
+
+gdouble ncm_sbessel_integrator_integrate_rational_ell (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, gint ell);
+void ncm_sbessel_integrator_integrate_rational (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, NcmVector *result);
+
 G_END_DECLS
 
 #endif /* _NCM_SBESSEL_INTEGRATOR_H_ */
