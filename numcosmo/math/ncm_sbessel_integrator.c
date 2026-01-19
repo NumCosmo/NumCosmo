@@ -442,8 +442,9 @@ _ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble y)
   const gdouble x                        = y / data->k;
   const gdouble z                        = (x - data->center) / data->std;
   const gdouble denom                    = 1.0 + z * z;
+  const gdouble denom_cubed              = denom * denom * denom;
 
-  return x * x / (denom * denom);
+  return x * x / denom_cubed;
 }
 
 /**

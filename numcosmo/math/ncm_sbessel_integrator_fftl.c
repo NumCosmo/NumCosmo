@@ -148,11 +148,6 @@ _ncm_sbessel_integrator_fftl_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_sbessel_integrator_fftl_parent_class)->finalize (object);
 }
 
-static void _ncm_sbessel_integrator_fftl_prepare (NcmSBesselIntegrator *sbi);
-static guint _ncm_sbessel_integrator_fftl_get_ell_threshold (NcmSBesselIntegratorFFTL *sbilf, gdouble a, gdouble b);
-static gdouble _ncm_sbessel_integrator_fftl_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
-static void _ncm_sbessel_integrator_fftl_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
-
 typedef struct _NcmSBesselIntegratorFFTLParams
 {
   gdouble L;
@@ -161,6 +156,79 @@ typedef struct _NcmSBesselIntegratorFFTLParams
   guint J;
   guint alpha_J;
 } NcmSBesselIntegratorFFTLParams;
+
+typedef struct _NcmSBesselIntegratorFFTLFuncInfo
+{
+  NcmSBesselIntegratorF F;
+  gpointer user_data;
+  gdouble a;
+  gdouble b;
+  gdouble peak_x;   /* Location of peak */
+  gdouble peak_val; /* |f(peak_x)| */
+  gboolean peak_found;
+} NcmSBesselIntegratorFFTLFuncInfo;
+
+static void _ncm_sbessel_integrator_fftl_prepare (NcmSBesselIntegrator *sbi);
+static guint _ncm_sbessel_integrator_fftl_get_ell_threshold (NcmSBesselIntegratorFFTL *sbilf, NcmSBesselIntegratorFFTLFuncInfo *func_info);
+static void _ncm_sbessel_integrator_fftl_find_peak (NcmSBesselIntegratorFFTLFuncInfo *info);
+static gdouble _ncm_sbessel_integrator_fftl_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
+static void _ncm_sbessel_integrator_fftl_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
+
+/* Wrapper for GSL minimization - we minimize -|f(x)| to find max|f(x)| */
+static gdouble
+_ncm_sbessel_integrator_fftl_func_neg_abs (gdouble x, gpointer params)
+{
+  NcmSBesselIntegratorFFTLFuncInfo *info = (NcmSBesselIntegratorFFTLFuncInfo *) params;
+  const gdouble fx                       = info->F (info->user_data, x);
+
+  return -fabs (fx);
+}
+
+/* Find the peak (maximum of |f|) in [a, b] using GSL's Brent method */
+static void
+_ncm_sbessel_integrator_fftl_find_peak (NcmSBesselIntegratorFFTLFuncInfo *info)
+{
+  gsl_function F;
+  gsl_min_fminimizer *minimizer;
+  const gint max_iter = 100;
+  gint iter           = 0;
+  gint status;
+  gdouble x_lower, x_upper, x_minimum;
+
+  if (info->peak_found)
+    return;
+
+  F.function = &_ncm_sbessel_integrator_fftl_func_neg_abs;
+  F.params   = info;
+
+  minimizer = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
+
+  /* Initial guess: midpoint */
+  x_minimum = 0.5 * (info->a + info->b);
+  x_lower   = info->a;
+  x_upper   = info->b;
+
+  /* Set up the minimizer */
+  gsl_min_fminimizer_set (minimizer, &F, x_minimum, x_lower, x_upper);
+
+  /* Iterate to find minimum */
+  do {
+    iter++;
+    status = gsl_min_fminimizer_iterate (minimizer);
+
+    x_minimum = gsl_min_fminimizer_x_minimum (minimizer);
+    x_lower   = gsl_min_fminimizer_x_lower (minimizer);
+    x_upper   = gsl_min_fminimizer_x_upper (minimizer);
+
+    status = gsl_min_test_interval (x_lower, x_upper, 0.0, 1.0e-3);
+  } while (status == GSL_CONTINUE && iter < max_iter);
+
+  info->peak_x     = x_minimum;
+  info->peak_val   = fabs (info->F (info->user_data, x_minimum));
+  info->peak_found = TRUE;
+
+  gsl_min_fminimizer_free (minimizer);
+}
 
 static gdouble
 _ncm_sbessel_integrator_fftl_simpson_direct (NcmSBesselIntegratorFFTL *sbilf, NcmSBesselIntegratorF F, const gdouble a, const gdouble b, const guint ell, gpointer user_data)
@@ -497,14 +565,20 @@ _ncm_sbessel_integrator_fftl_prepare (NcmSBesselIntegrator *sbi)
 }
 
 static guint
-_ncm_sbessel_integrator_fftl_get_ell_threshold (NcmSBesselIntegratorFFTL *sbilf, gdouble a, gdouble b)
+_ncm_sbessel_integrator_fftl_get_ell_threshold (NcmSBesselIntegratorFFTL *sbilf, NcmSBesselIntegratorFFTLFuncInfo *func_info)
 {
   /* Return the ell value where we switch from FFT to direct Simpson's */
   /* Use FFT for ell < ell_threshold, direct Simpson's for ell >= ell_threshold */
-  if ((b - a) < 1.0e2)
+  const gdouble L_phys = func_info->b - func_info->a;
+
+  if (L_phys < 1.0e2)
     return 0;
 
-  return (guint) floor (b + cbrt (b));
+  /* Find the peak if not already found */
+  _ncm_sbessel_integrator_fftl_find_peak (func_info);
+
+  /* Use the peak location to determine threshold */
+  return (guint) floor (func_info->peak_x + cbrt (func_info->peak_x));
 }
 
 static gdouble
@@ -516,8 +590,9 @@ _ncm_sbessel_integrator_fftl_integrate_ell (NcmSBesselIntegrator *sbi,
 {
   NcmSBesselIntegratorFFTL *sbilf = NCM_SBESSEL_INTEGRATOR_FFTL (sbi);
   NcmSBesselIntegratorFFTLParams params;
-  const gdouble L_phys      = b - a;
-  const guint ell_threshold = _ncm_sbessel_integrator_fftl_get_ell_threshold (sbilf, a, b);
+  NcmSBesselIntegratorFFTLFuncInfo func_info = {F, user_data, a, b, 0.0, 0.0, FALSE};
+  const gdouble L_phys                       = b - a;
+  const guint ell_threshold                  = _ncm_sbessel_integrator_fftl_get_ell_threshold (sbilf, &func_info);
   gboolean ell_is_even;
   gboolean m_is_even;
   gdouble sum;
@@ -935,21 +1010,24 @@ _ncm_sbessel_integrator_fftl_integrate (NcmSBesselIntegrator *sbi,
                                         NcmVector *result,
                                         gpointer user_data)
 {
-  NcmSBesselIntegratorFFTL *sbilf = NCM_SBESSEL_INTEGRATOR_FFTL (sbi);
-  const guint lmin                = ncm_sbessel_integrator_get_lmin (sbi);
-  const guint lmax                = ncm_sbessel_integrator_get_lmax (sbi);
-  const gdouble L_phys            = b - a;
-  const guint n_ell               = lmax - lmin + 1;
-  const guint ell_threshold       = _ncm_sbessel_integrator_fftl_get_ell_threshold (sbilf, a, b); /* Find the threshold ell where we switch methods */
+  NcmSBesselIntegratorFFTL *sbilf            = NCM_SBESSEL_INTEGRATOR_FFTL (sbi);
+  const guint lmin                           = ncm_sbessel_integrator_get_lmin (sbi);
+  const guint lmax                           = ncm_sbessel_integrator_get_lmax (sbi);
+  const gdouble L_phys                       = b - a;
+  const guint n_ell                          = lmax - lmin + 1;
+  NcmSBesselIntegratorFFTLFuncInfo func_info = {F, user_data, a, b, 0.0, 0.0, FALSE};
+  const guint ell_threshold                  = _ncm_sbessel_integrator_fftl_get_ell_threshold (sbilf, &func_info); /* Find the threshold ell where we switch methods */
 
   g_assert_cmpuint (ncm_vector_len (result), ==, n_ell);
 
-  /* printf ("[FFTL] Integrating from ell = %u to ell = %u with threshold at ell = %u\n", lmin, lmax, ell_threshold); */
+  printf ("[FFTL] Integrating from ell = %u to ell = %u with threshold at ell = %u (peak at x=%.3e)\n", lmin, lmax, ell_threshold, func_info.peak_x);
 
   if (lmax >= ell_threshold)
   {
     const guint ell_direct_max = lmax;
     const guint ell_direct_min = GSL_MAX (lmin, ell_threshold);
+
+    printf ("[FFTL]  Direct integration for ell = %u to ell = %u\n", ell_direct_min, ell_direct_max);
 
     if (ell_direct_min <= ell_direct_max)
       _ncm_sbessel_integrator_fftl_integrate_direct (sbilf, lmin, ell_direct_min, ell_direct_max, F, a, b, result, user_data);
@@ -959,6 +1037,8 @@ _ncm_sbessel_integrator_fftl_integrate (NcmSBesselIntegrator *sbi,
   {
     const guint ell_fft_min = lmin;
     const guint ell_fft_max = GSL_MIN (ell_threshold - 1, lmax);
+
+    printf ("[FFTL]  FFT integration for ell = %u to ell = %u\n", ell_fft_min, ell_fft_max);
 
     if (ell_fft_min <= ell_fft_max)
       _ncm_sbessel_integrator_fftl_integrate_fft (sbilf, lmin, ell_fft_min, ell_fft_max, F, a, b, L_phys, result, user_data);
