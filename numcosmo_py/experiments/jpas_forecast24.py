@@ -305,7 +305,7 @@ def create_cosmo() -> Nc.HICosmo:
         "Omegac",
         {
             "lower-bound": 0.1,
-            "upper-bound": 1.0,
+            "upper-bound": 0.9,
             "scale": 1.0e-2,
             "abstol": 1.0e-50,
             "fit": True,
