@@ -520,7 +520,7 @@ def create_cluster_redshift(
         # Gaussian photoz error distribution
         cluster_z = Nc.ClusterPhotozGaussGlobal(pz_min=0.0, pz_max=1.0)
         cluster_z["z-bias"] = 0  # Photoz bias $langle z_{obs} - z_{true} rangle$
-        cluster_z["sigma0"] = 0.1  # Photoz scatter $sigma_z$
+        cluster_z["sigma0"] = 0.03  # Photoz scatter $sigma_z$
     else:
         raise ValueError(f"Invalid cluster redshift type: {cluster_redshift_type}")
 
