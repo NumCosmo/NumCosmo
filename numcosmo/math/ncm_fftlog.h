@@ -87,7 +87,7 @@ gboolean ncm_fftlog_get_noring (NcmFftlog *fftlog);
 
 void ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk);
 
-void ncm_fftlog_use_eval_interval (NcmFftlog *fftlog, gboolean use_eval_interal);
+void ncm_fftlog_use_eval_interval (NcmFftlog *fftlog, gboolean use_eval_interval);
 void ncm_fftlog_use_smooth_padding (NcmFftlog *fftlog, gboolean use_smooth_padding);
 void ncm_fftlog_set_smooth_padding_scale (NcmFftlog *fftlog, gdouble log10sc);
 gdouble ncm_fftlog_get_smooth_padding_scale (NcmFftlog *fftlog);

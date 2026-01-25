@@ -84,7 +84,7 @@
  * $ \left(\ln k_0 + \frac{L}{2}, \ln k_0 + \frac{L_T}{2}\right]$, where the total period $L_T$ is defined by the final
  * number of knots, i.e., $N_f = N (1 + \mathrm{padding})$.
  * - $N$ knots are equally distributed in the fundamental interval and $N \times \mathrm{padding}$ knots are distributed
- * in the two simetric intervals as mentioned above.
+ * in the two symmetric intervals as mentioned above.
  * - For the sake of optimization, the final number of points $N_f$ is substituted by the smallest number $N_f^\prime$ (bigger than $N_f$)
  * which can be decomposed as $N_f \leq N_f^\prime = N^\prime (1 + \mathrm{padding}) = 2^a 3^b 5^c 7^d$, where $a$,
  * $b$, $c$ and $d$ are positive integers.
@@ -911,7 +911,7 @@ ncm_fftlog_get_max_size (NcmFftlog *fftlog)
  * @fftlog: a #NcmFftlog
  * @pad_p: padding percentage
  *
- * Sets the size of the padding in percetange of the interval.
+ * Sets the size of the padding in percentage of the interval.
  *
  */
 void
@@ -1005,18 +1005,18 @@ ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk)
 /**
  * ncm_fftlog_use_eval_interval:
  * @fftlog: a #NcmFftlog
- * @use_eval_interal: a gboolean
+ * @use_eval_interval: a gboolean
  *
  * Sets whether to use a restricted evaluation interval $[r_\mathrm{min}, r_\mathrm{max}]$.
  * See ncm_fftlog_set_eval_r_min() and ncm_fftlog_set_eval_r_max().
  *
  */
 void
-ncm_fftlog_use_eval_interval (NcmFftlog *fftlog, gboolean use_eval_interal)
+ncm_fftlog_use_eval_interval (NcmFftlog *fftlog, gboolean use_eval_interval)
 {
   NcmFftlogPrivate * const self = ncm_fftlog_get_instance_private (fftlog);
 
-  if (use_eval_interal)
+  if (use_eval_interval)
   {
     self->use_eval_int = TRUE;
   }
