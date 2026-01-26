@@ -801,6 +801,7 @@ if have_lapack
     'dgeqlf_',
     'dgeqrf_',
     'dgerqf_',
+    'dgesv_',
     'dggglm_',
     'dposv_',
     'dpotrf_',

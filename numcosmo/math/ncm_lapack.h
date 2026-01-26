@@ -54,6 +54,7 @@ gint ncm_lapack_dpotrf (gchar uplo, gint n, gdouble *a, gint lda);
 gint ncm_lapack_dpotri (gchar uplo, gint n, gdouble *a, gint lda);
 gint ncm_lapack_dpotrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *b, gint ldb);
 gint ncm_lapack_dposv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *b, gint ldb);
+gint ncm_lapack_dgesv (gint n, gint nrhs, gdouble *a, gint lda, gint *ipiv, gdouble *b, gint ldb);
 
 gint ncm_lapack_dsytrf (gchar uplo, gint n, gdouble *a, gint lda, gint *ipiv, NcmLapackWS *ws);
 gint ncm_lapack_dsytrs (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gint *ipiv, gdouble *b, gint ldb);

@@ -360,6 +360,46 @@ ncm_lapack_dposv (gchar uplo, gint n, gint nrhs, gdouble *a, gint lda, gdouble *
 }
 
 /**
+ * ncm_lapack_dgesv:
+ * @n: The number of equations, @n >= 0
+ * @nrhs: Number of right-hand-side vectors to solve
+ * @a: array of doubles with dimension (@n, @lda)
+ * @lda: The leading dimension of the array @a, @lda >= max (1, @n)
+ * @ipiv: array of integers with dimension @n for pivot indices
+ * @b: array of doubles with dimension (@n, @ldb)
+ * @ldb: The leading dimension of the array @b, @ldb >= max (1, @n)
+ *
+ * This function computes the solution of $A X = B$ for a general @n by @n matrix @a = A
+ * using the LU factorization with partial pivoting and row interchanges.
+ * On entry @b contain the vectors $B$ and on exit @b contain the solutions if the return
+ * is 0. The array @ipiv records the pivot indices from the factorization.
+ *
+ * Warning: this function expects @a to be a square matrix and in column-major format as in Fortran.
+ *
+ * Returns: i = 0:  successful exit
+ *
+ *          < 0:  -i, the i-th argument had an illegal value
+ *
+ *          > 0: the (i,i) element of the factor U is exactly zero,
+ *               so the matrix is singular and the solution could not be computed.
+ */
+gint
+ncm_lapack_dgesv (gint n, gint nrhs, gdouble *a, gint lda, gint *ipiv, gdouble *b, gint ldb)
+{
+#if defined (HAVE_LAPACK) && defined (HAVE_DGESV_)
+  gint info = 0;
+
+  dgesv_ (&n, &nrhs, a, &lda, ipiv, b, &ldb, &info);
+
+  return info;
+
+#else /* No fall back */
+  g_error ("ncm_lapack_dgesv: lapack not present, no fallback implemented.");
+
+#endif
+}
+
+/**
  * ncm_lapack_dsytrf:
  * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored
  * @n: The order of the matrix @a, @n >= 0
