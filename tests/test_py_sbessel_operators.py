@@ -403,3 +403,477 @@ class TestSBesselOperators:
             atol=1.0e-13,
             err_msg="x^2*d^2 operator on x^4 doesn't give 12x^4",
         )
+
+    def test_d_operator_evaluation(self) -> None:
+        """Test d/dx operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^3
+        cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
+
+        # Apply d operator: d/dx(x^3) = 3x^2
+        d_mat = Ncm.SBesselOdeSolver.get_d_matrix(N)
+        d_np = self.matrix_to_numpy(d_mat)
+        gegen_result = d_np @ cheb_x3
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with 3*x^2
+        test_points = np.array([0.0, 0.3, 0.5, 0.7, 0.9])
+        for x in test_points:
+            eval_result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(
+                gegen_result_vec, x
+            )
+            expected = 3.0 * x**2
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-12,
+                atol=1.0e-14,
+                err_msg=f"d/dx(x^3) evaluation at x={x} doesn't match 3x^2",
+            )
+
+    def test_d2_operator_evaluation(self) -> None:
+        """Test d^2/dx^2 operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^4
+        cheb_x4 = self.get_analytical_chebyshev_coeffs(4, N)
+
+        # Apply d^2 operator: d^2/dx^2(x^4) = 12x^2
+        d2_mat = Ncm.SBesselOdeSolver.get_d2_matrix(N)
+        d2_np = self.matrix_to_numpy(d2_mat)
+        gegen_result = d2_np @ cheb_x4
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with 12*x^2
+        test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        for x in test_points:
+            eval_result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(
+                gegen_result_vec, x
+            )
+            expected = 12.0 * x**2
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-12,
+                atol=1.0e-14,
+                err_msg=f"d^2/dx^2(x^4) evaluation at x={x} doesn't match 12x^2",
+            )
+
+    def test_x_d_operator_evaluation(self) -> None:
+        """Test x*d/dx operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^4
+        cheb_x4 = self.get_analytical_chebyshev_coeffs(4, N)
+
+        # Apply x*d operator: x*d/dx(x^4) = x*4x^3 = 4x^4
+        x_d_mat = Ncm.SBesselOdeSolver.get_x_d_matrix(N)
+        x_d_np = self.matrix_to_numpy(x_d_mat)
+        gegen_result = x_d_np @ cheb_x4
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with 4*x^4
+        test_points = np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+        for x in test_points:
+            eval_result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(
+                gegen_result_vec, x
+            )
+            expected = 4.0 * x**4
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-11,
+                atol=1.0e-13,
+                err_msg=f"x*d/dx(x^4) evaluation at x={x} doesn't match 4x^4",
+            )
+
+    def test_x2_d2_operator_evaluation(self) -> None:
+        """Test x^2*d^2/dx^2 operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^5
+        cheb_x5 = self.get_analytical_chebyshev_coeffs(5, N)
+
+        # Apply x^2*d^2 operator: x^2*d^2/dx^2(x^5) = x^2*20x^3 = 20x^5
+        x2_d2_mat = Ncm.SBesselOdeSolver.get_x2_d2_matrix(N)
+        x2_d2_np = self.matrix_to_numpy(x2_d2_mat)
+        gegen_result = x2_d2_np @ cheb_x5
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with 20*x^5
+        test_points = np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+        for x in test_points:
+            eval_result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(
+                gegen_result_vec, x
+            )
+            expected = 20.0 * x**5
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-11,
+                atol=1.0e-13,
+                err_msg=f"x^2*d^2/dx^2(x^5) evaluation at x={x} doesn't match 20x^5",
+            )
+
+    def test_x_operator_evaluation(self) -> None:
+        """Test x operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^3
+        cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
+
+        # Apply x operator: x*x^3 = x^4
+        x_mat = Ncm.SBesselOdeSolver.get_x_matrix(N)
+        x_np = self.matrix_to_numpy(x_mat)
+        gegen_result = x_np @ cheb_x3
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with x^4
+        test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        for x in test_points:
+            eval_result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(
+                gegen_result_vec, x
+            )
+            expected = x**4
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-12,
+                atol=1.0e-14,
+                err_msg=f"x*x^3 evaluation at x={x} doesn't match x^4",
+            )
+
+    def test_x2_operator_evaluation(self) -> None:
+        """Test x^2 operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^3
+        cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
+
+        # Apply x^2 operator: x^2*x^3 = x^5
+        x2_mat = Ncm.SBesselOdeSolver.get_x2_matrix(N)
+        x2_np = self.matrix_to_numpy(x2_mat)
+        gegen_result = x2_np @ cheb_x3
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with x^5
+        test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        for x in test_points:
+            eval_result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(
+                gegen_result_vec, x
+            )
+            expected = x**5
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-12,
+                atol=1.0e-14,
+                err_msg=f"x^2*x^3 evaluation at x={x} doesn't match x^5",
+            )
+
+    def test_gaussian_operators(self) -> None:
+        """Test operators on exp(-x^2), a non-polynomial function."""
+        N = 64
+
+        # Define f(x) = exp(-x^2)
+        def f_gaussian(_user_data: None, x: float) -> float:
+            return np.exp(-(x**2))
+
+        # Compute Chebyshev coefficients for exp(-x^2)
+        cheb_vec = Ncm.SBesselOdeSolver.compute_chebyshev_coeffs(
+            f_gaussian, -1.0, 1.0, N, None
+        )
+        cheb_coeffs = self.vector_to_numpy(cheb_vec)
+
+        # Get operator matrices
+        proj_mat = Ncm.SBesselOdeSolver.get_proj_matrix(N)
+        x_mat = Ncm.SBesselOdeSolver.get_x_matrix(N)
+        x2_mat = Ncm.SBesselOdeSolver.get_x2_matrix(N)
+        d_mat = Ncm.SBesselOdeSolver.get_d_matrix(N)
+        x_d_mat = Ncm.SBesselOdeSolver.get_x_d_matrix(N)
+        d2_mat = Ncm.SBesselOdeSolver.get_d2_matrix(N)
+        x_d2_mat = Ncm.SBesselOdeSolver.get_x_d2_matrix(N)
+        x2_d2_mat = Ncm.SBesselOdeSolver.get_x2_d2_matrix(N)
+
+        # Convert to numpy
+        proj_np = self.matrix_to_numpy(proj_mat)
+        x_np = self.matrix_to_numpy(x_mat)
+        x2_np = self.matrix_to_numpy(x2_mat)
+        d_np = self.matrix_to_numpy(d_mat)
+        x_d_np = self.matrix_to_numpy(x_d_mat)
+        d2_np = self.matrix_to_numpy(d2_mat)
+        x_d2_np = self.matrix_to_numpy(x_d2_mat)
+        x2_d2_np = self.matrix_to_numpy(x2_d2_mat)
+
+        # Test points for evaluation
+        test_points = np.array([0.0, 0.3, 0.5, 0.7, 0.9])
+
+        # Test 1: Projection gives same function
+        gegen_proj = proj_np @ cheb_coeffs
+        gegen_proj_vec = Ncm.Vector.new_array(gegen_proj.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_proj_vec, x)
+            expected = np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=0.0,
+                err_msg=f"Projection of exp(-x^2) at x={x} failed",
+            )
+
+        # Test 2: x operator: x*exp(-x^2)
+        gegen_x = x_np @ cheb_coeffs
+        gegen_x_vec = Ncm.Vector.new_array(gegen_x.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_x_vec, x)
+            expected = x * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=1.0e-15,
+                err_msg=f"x*exp(-x^2) at x={x} failed",
+            )
+
+        # Test 3: x^2 operator: x^2*exp(-x^2)
+        gegen_x2 = x2_np @ cheb_coeffs
+        gegen_x2_vec = Ncm.Vector.new_array(gegen_x2.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_x2_vec, x)
+            expected = x**2 * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=1.0e-15,
+                err_msg=f"x^2*exp(-x^2) at x={x} failed",
+            )
+
+        # Test 4: d operator: d/dx(exp(-x^2)) = -2x*exp(-x^2)
+        gegen_d = d_np @ cheb_coeffs
+        gegen_d_vec = Ncm.Vector.new_array(gegen_d.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_d_vec, x)
+            expected = -2.0 * x * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-7,
+                atol=1.0e-15,
+                err_msg=f"d/dx(exp(-x^2)) at x={x} failed",
+            )
+
+        # Test 5: d^2 operator: d^2/dx^2(exp(-x^2)) = (4x^2 - 2)*exp(-x^2)
+        gegen_d2 = d2_np @ cheb_coeffs
+        gegen_d2_vec = Ncm.Vector.new_array(gegen_d2.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_d2_vec, x)
+            expected = (4.0 * x**2 - 2.0) * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-6,
+                atol=1.0e-15,
+                err_msg=f"d^2/dx^2(exp(-x^2)) at x={x} failed",
+            )
+
+        # Test 6: x*d operator: x*d/dx(exp(-x^2)) = x*(-2x*exp(-x^2)) = -2x^2*exp(-x^2)
+        gegen_x_d = x_d_np @ cheb_coeffs
+        gegen_x_d_vec = Ncm.Vector.new_array(gegen_x_d.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_x_d_vec, x)
+            expected = -2.0 * x**2 * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-7,
+                atol=1.0e-9,
+                err_msg=f"x*d/dx(exp(-x^2)) at x={x} failed",
+            )
+
+        # Test 7: x*d^2 operator: x*d^2/dx^2(exp(-x^2)) = x*(4x^2 - 2)*exp(-x^2)
+        gegen_x_d2 = x_d2_np @ cheb_coeffs
+        gegen_x_d2_vec = Ncm.Vector.new_array(gegen_x_d2.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_x_d2_vec, x)
+            expected = x * (4.0 * x**2 - 2.0) * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-6,
+                atol=1.0e-8,
+                err_msg=f"x*d^2/dx^2(exp(-x^2)) at x={x} failed",
+            )
+
+        # Test 8: x^2*d^2 operator: x^2*d^2/dx^2(exp(-x^2)) = x^2*(4x^2 - 2)*exp(-x^2)
+        gegen_x2_d2 = x2_d2_np @ cheb_coeffs
+        gegen_x2_d2_vec = Ncm.Vector.new_array(gegen_x2_d2.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_x2_d2_vec, x)
+            expected = x**2 * (4.0 * x**2 - 2.0) * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-6,
+                atol=1.0e-8,
+                err_msg=f"x^2*d^2/dx^2(exp(-x^2)) at x={x} failed",
+            )
+
+    def test_rational_operators(self) -> None:
+        """Test operators on x^2/(1+x^2)^4, a rational function."""
+        N = 64
+
+        # Define f(x) = x^2/(1+x^2)^4
+        def f_rational(_user_data: None, x: float) -> float:
+            return x**2 / (1.0 + x**2) ** 4
+
+        # Analytical derivative: f'(x) = 2x(1-3x^2)/(1+x^2)^5
+        def f_prime(x: float) -> float:
+            return 2.0 * x * (1.0 - 3.0 * x**2) / (1.0 + x**2) ** 5
+
+        # Analytical second derivative: f''(x) = (2 - 36x^2 + 42x^4)/(1+x^2)^6
+        def f_double_prime(x: float) -> float:
+            return (2.0 - 36.0 * x**2 + 42.0 * x**4) / (1.0 + x**2) ** 6
+
+        # Compute Chebyshev coefficients
+        cheb_vec = Ncm.SBesselOdeSolver.compute_chebyshev_coeffs(
+            f_rational, -1.0, 1.0, N, None
+        )
+        cheb_coeffs = self.vector_to_numpy(cheb_vec)
+
+        # Get operator matrices
+        proj_mat = Ncm.SBesselOdeSolver.get_proj_matrix(N)
+        x_mat = Ncm.SBesselOdeSolver.get_x_matrix(N)
+        x2_mat = Ncm.SBesselOdeSolver.get_x2_matrix(N)
+        d_mat = Ncm.SBesselOdeSolver.get_d_matrix(N)
+        x_d_mat = Ncm.SBesselOdeSolver.get_x_d_matrix(N)
+        d2_mat = Ncm.SBesselOdeSolver.get_d2_matrix(N)
+        x_d2_mat = Ncm.SBesselOdeSolver.get_x_d2_matrix(N)
+        x2_d2_mat = Ncm.SBesselOdeSolver.get_x2_d2_matrix(N)
+
+        # Convert to numpy
+        proj_np = self.matrix_to_numpy(proj_mat)
+        x_np = self.matrix_to_numpy(x_mat)
+        x2_np = self.matrix_to_numpy(x2_mat)
+        d_np = self.matrix_to_numpy(d_mat)
+        x_d_np = self.matrix_to_numpy(x_d_mat)
+        d2_np = self.matrix_to_numpy(d2_mat)
+        x_d2_np = self.matrix_to_numpy(x_d2_mat)
+        x2_d2_np = self.matrix_to_numpy(x2_d2_mat)
+
+        # Test points for evaluation
+        test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+
+        # Test 1: Projection gives same function
+        gegen_proj = proj_np @ cheb_coeffs
+        gegen_proj_vec = Ncm.Vector.new_array(gegen_proj.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_proj_vec, x)
+            expected = x**2 / (1.0 + x**2) ** 4
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=1.0e-10,
+                err_msg=f"Projection of x^2/(1+x^2)^4 at x={x} failed",
+            )
+
+        # Test 2: x operator: x * x^2/(1+x^2)^4 = x^3/(1+x^2)^4
+        gegen_x = x_np @ cheb_coeffs
+        gegen_x_vec = Ncm.Vector.new_array(gegen_x.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_x_vec, x)
+            expected = x**3 / (1.0 + x**2) ** 4
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=1.0e-10,
+                err_msg=f"x*f(x) at x={x} failed",
+            )
+
+        # Test 3: x^2 operator: x^2 * x^2/(1+x^2)^4 = x^4/(1+x^2)^4
+        gegen_x2 = x2_np @ cheb_coeffs
+        gegen_x2_vec = Ncm.Vector.new_array(gegen_x2.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_x2_vec, x)
+            expected = x**4 / (1.0 + x**2) ** 4
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=1.0e-10,
+                err_msg=f"x^2*f(x) at x={x} failed",
+            )
+
+        # Test 4: d operator: d/dx of f(x)
+        gegen_d = d_np @ cheb_coeffs
+        gegen_d_vec = Ncm.Vector.new_array(gegen_d.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_d_vec, x)
+            expected = f_prime(x)
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-7,
+                atol=1.0e-9,
+                err_msg=f"d/dx(f(x)) at x={x} failed",
+            )
+
+        # Test 5: d^2 operator: d^2/dx^2 of f(x)
+        gegen_d2 = d2_np @ cheb_coeffs
+        gegen_d2_vec = Ncm.Vector.new_array(gegen_d2.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_d2_vec, x)
+            expected = f_double_prime(x)
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-6,
+                atol=1.0e-8,
+                err_msg=f"d^2/dx^2(f(x)) at x={x} failed",
+            )
+
+        # Test 6: x*d operator: x*f'(x)
+        gegen_x_d = x_d_np @ cheb_coeffs
+        gegen_x_d_vec = Ncm.Vector.new_array(gegen_x_d.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_x_d_vec, x)
+            expected = x * f_prime(x)
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-7,
+                atol=1.0e-9,
+                err_msg=f"x*d/dx(f(x)) at x={x} failed",
+            )
+
+        # Test 7: x*d^2 operator: x*f''(x)
+        gegen_x_d2 = x_d2_np @ cheb_coeffs
+        gegen_x_d2_vec = Ncm.Vector.new_array(gegen_x_d2.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_x_d2_vec, x)
+            expected = x * f_double_prime(x)
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-6,
+                atol=1.0e-8,
+                err_msg=f"x*d^2/dx^2(f(x)) at x={x} failed",
+            )
+
+        # Test 8: x^2*d^2 operator: x^2*f''(x)
+        gegen_x2_d2 = x2_d2_np @ cheb_coeffs
+        gegen_x2_d2_vec = Ncm.Vector.new_array(gegen_x2_d2.tolist())
+        for x in test_points:
+            result = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_x2_d2_vec, x)
+            expected = x**2 * f_double_prime(x)
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-6,
+                atol=1.0e-8,
+                err_msg=f"x^2*d^2/dx^2(f(x)) at x={x} failed",
+            )

@@ -561,3 +561,113 @@ class TestSBesselOdeSolver:
                 atol=1.0e-10,
                 err_msg=f"Gegenbauer lambda=2 roundtrip failed for exp(x) at x={x}",
             )
+
+    @pytest.mark.parametrize("power", [0, 1, 2, 3, 4, 5])
+    @pytest.mark.parametrize("N", [32])
+    def test_chebyshev_eval_boundary(self, power: int, N: int) -> None:
+        """
+        Test Chebyshev evaluation at boundary points x=±1.
+
+        Verifies that x^power evaluates correctly at the endpoints.
+        """
+        # Get Chebyshev coefficients for x^power
+        cheb_coeffs = self.get_analytical_chebyshev_coeffs(power, N)
+        cheb_vec = Ncm.Vector.new_array(cheb_coeffs.tolist())
+
+        # Test at x = 1
+        result_p1 = Ncm.SBesselOdeSolver.chebyshev_eval(cheb_vec, 1.0)
+        expected_p1 = 1.0**power
+        assert_allclose(
+            result_p1,
+            expected_p1,
+            rtol=1.0e-12,
+            atol=1.0e-14,
+            err_msg=f"Chebyshev eval of x^{power} at x=1 failed",
+        )
+
+        # Test at x = -1
+        result_m1 = Ncm.SBesselOdeSolver.chebyshev_eval(cheb_vec, -1.0)
+        expected_m1 = (-1.0) ** power
+        assert_allclose(
+            result_m1,
+            expected_m1,
+            rtol=1.0e-12,
+            atol=1.0e-14,
+            err_msg=f"Chebyshev eval of x^{power} at x=-1 failed",
+        )
+
+    @pytest.mark.parametrize("power", [0, 1, 2, 3, 4, 5])
+    @pytest.mark.parametrize("N", [32])
+    def test_gegenbauer_lambda1_eval_boundary(self, power: int, N: int) -> None:
+        """
+        Test Gegenbauer lambda=1 evaluation at boundary points x=±1.
+
+        Verifies that x^power evaluates correctly at the endpoints.
+        """
+        # Get Chebyshev coefficients for x^power
+        cheb_coeffs = self.get_analytical_chebyshev_coeffs(power, N)
+        cheb_vec = Ncm.Vector.new_array(cheb_coeffs.tolist())
+        gegen_vec = Ncm.Vector.new(N)
+
+        # Convert to Gegenbauer lambda=1
+        Ncm.SBesselOdeSolver.chebT_to_gegenbauer_lambda1(cheb_vec, gegen_vec)
+
+        # Test at x = 1
+        result_p1 = Ncm.SBesselOdeSolver.gegenbauer_lambda1_eval(gegen_vec, 1.0)
+        expected_p1 = 1.0**power
+        assert_allclose(
+            result_p1,
+            expected_p1,
+            rtol=1.0e-12,
+            atol=1.0e-14,
+            err_msg=f"Gegenbauer lambda=1 eval of x^{power} at x=1 failed",
+        )
+
+        # Test at x = -1
+        result_m1 = Ncm.SBesselOdeSolver.gegenbauer_lambda1_eval(gegen_vec, -1.0)
+        expected_m1 = (-1.0) ** power
+        assert_allclose(
+            result_m1,
+            expected_m1,
+            rtol=1.0e-12,
+            atol=1.0e-14,
+            err_msg=f"Gegenbauer lambda=1 eval of x^{power} at x=-1 failed",
+        )
+
+    @pytest.mark.parametrize("power", [0, 1, 2, 3, 4, 5])
+    @pytest.mark.parametrize("N", [32])
+    def test_gegenbauer_lambda2_eval_boundary(self, power: int, N: int) -> None:
+        """
+        Test Gegenbauer lambda=2 evaluation at boundary points x=±1.
+
+        Verifies that x^power evaluates correctly at the endpoints.
+        """
+        # Get Chebyshev coefficients for x^power
+        cheb_coeffs = self.get_analytical_chebyshev_coeffs(power, N)
+        cheb_vec = Ncm.Vector.new_array(cheb_coeffs.tolist())
+        gegen_vec = Ncm.Vector.new(N)
+
+        # Convert to Gegenbauer lambda=2
+        Ncm.SBesselOdeSolver.chebT_to_gegenbauer_lambda2(cheb_vec, gegen_vec)
+
+        # Test at x = 1
+        result_p1 = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_vec, 1.0)
+        expected_p1 = 1.0**power
+        assert_allclose(
+            result_p1,
+            expected_p1,
+            rtol=1.0e-12,
+            atol=1.0e-14,
+            err_msg=f"Gegenbauer lambda=2 eval of x^{power} at x=1 failed",
+        )
+
+        # Test at x = -1
+        result_m1 = Ncm.SBesselOdeSolver.gegenbauer_lambda2_eval(gegen_vec, -1.0)
+        expected_m1 = (-1.0) ** power
+        assert_allclose(
+            result_m1,
+            expected_m1,
+            rtol=1.0e-12,
+            atol=1.0e-14,
+            err_msg=f"Gegenbauer lambda=2 eval of x^{power} at x=-1 failed",
+        )
