@@ -1453,25 +1453,26 @@ ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, NcmVector *rhs,
 /**
  * ncm_sbessel_ode_solver_compute_chebyshev_coeffs:
  * @F: (scope call): function to evaluate
- * @user_data: user data for @F
  * @a: left endpoint
  * @b: right endpoint
  * @N: number of Chebyshev nodes
- * @coeffs: (out caller-allocates) (array length=N): array to store Chebyshev coefficients
+ * @user_data: user data for @F
  *
  * Computes Chebyshev coefficients of f(x) on [a,b] using FFTW DCT-I.
  * The function is sampled at Chebyshev nodes $x_k = (a+b)/2 - (b-a)/2\cos(k\pi/(N-1))$
  * and transformed using a Type-I discrete cosine transform.
+ *
+ * Returns: (transfer full): vector of Chebyshev coefficients
  */
-void
+NcmVector *
 ncm_sbessel_ode_solver_compute_chebyshev_coeffs (NcmSBesselOdeSolverF F,
-                                                 gpointer user_data,
                                                  gdouble a, gdouble b,
                                                  guint N,
-                                                 gdouble *coeffs)
+                                                 gpointer user_data)
 {
   guint i;
-  gdouble *f_vals = fftw_malloc (sizeof (gdouble) * N);
+  NcmVector *coeffs = ncm_vector_new (N);
+  gdouble *f_vals   = fftw_malloc (sizeof (gdouble) * N);
   fftw_plan plan_r2r;
   const gdouble mid    = 0.5 * (a + b);
   const gdouble half_h = 0.5 * (b - a);
@@ -1488,65 +1489,69 @@ ncm_sbessel_ode_solver_compute_chebyshev_coeffs (NcmSBesselOdeSolverF F,
   /* Create DCT-I plan and execute */
   ncm_cfg_load_fftw_wisdom ("ncm_sbessel_ode_solver");
   ncm_cfg_lock_plan_fftw ();
-  plan_r2r = fftw_plan_r2r_1d (N, f_vals, coeffs, FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
+  plan_r2r = fftw_plan_r2r_1d (N, f_vals, ncm_vector_data (coeffs), FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
   ncm_cfg_unlock_plan_fftw ();
   ncm_cfg_save_fftw_wisdom ("ncm_sbessel_ode_solver");
 
   fftw_execute (plan_r2r);
 
   /* Normalize coefficients */
-  coeffs[0]     /= (N - 1.0) * 2.0;
-  coeffs[N - 1] /= (N - 1.0) * 2.0;
+  ncm_vector_set (coeffs, 0, ncm_vector_get (coeffs, 0) / ((N - 1.0) * 2.0));
+  ncm_vector_set (coeffs, N - 1, ncm_vector_get (coeffs, N - 1) / ((N - 1.0) * 2.0));
 
   for (i = 1; i < N - 1; i++)
-    coeffs[i] /= N - 1.0;
+    ncm_vector_set (coeffs, i, ncm_vector_get (coeffs, i) / (N - 1.0));
 
   fftw_destroy_plan (plan_r2r);
   fftw_free (f_vals);
+
+  return coeffs;
 }
 
 /**
  * ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda1:
- * @c: (array length=N): Chebyshev coefficients
- * @g: (out caller-allocates) (array length=N): Gegenbauer $C^{(1)}_n$ coefficients
- * @N: number of coefficients
+ * @c: Chebyshev coefficients vector
+ * @g: Gegenbauer $C^{(1)}_n$ coefficients vector (must have same length as @c, pre-allocated by caller)
  *
  * Converts Chebyshev $T_n$ coefficients to Gegenbauer $C^{(1)}_n$ coefficients ($\lambda=1$).
  * Uses the relationship: $T_n = \frac{1}{2}(C^{(1)}_n + C^{(1)}_{n-2})$ for $n \geq 2$.
  */
 void
-ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda1 (const gdouble *c, gdouble *g, guint N)
+ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda1 (NcmVector *c, NcmVector *g)
 {
+  const guint N = ncm_vector_len (c);
   guint i;
+
+  g_assert_cmpuint (ncm_vector_len (g), ==, N);
 
   if (N == 0)
     return;
 
-  for (i = 0; i < N; i++)
-    g[i] = 0.0;
+  ncm_vector_set_zero (g);
 
   /* n = 0 case */
-  g[0] += c[0];
+  ncm_vector_set (g, 0, ncm_vector_get (g, 0) + ncm_vector_get (c, 0));
 
   if (N == 1)
     return;
 
   /* n = 1 case */
-  g[1] += c[1] * 0.5;
+  ncm_vector_set (g, 1, ncm_vector_get (g, 1) + ncm_vector_get (c, 1) * 0.5);
 
-  /* n ≥ 2 */
+  /* n >= 2 */
   for (i = 2; i < N; i++)
   {
-    g[i]     += 0.5 * c[i];
-    g[i - 2] -= 0.5 * c[i];
+    const gdouble ci = ncm_vector_get (c, i);
+
+    ncm_vector_set (g, i, ncm_vector_get (g, i) + 0.5 * ci);
+    ncm_vector_set (g, i - 2, ncm_vector_get (g, i - 2) - 0.5 * ci);
   }
 }
 
 /**
  * ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2:
- * @c: (array length=N): Chebyshev coefficients
- * @g: (out caller-allocates) (array length=N): Gegenbauer $C^{(2)}_k$ coefficients
- * @N: number of coefficients
+ * @c: Chebyshev coefficients vector
+ * @g: Gegenbauer $C^{(2)}_k$ coefficients vector (must have same length as @c, pre-allocated by caller)
  *
  * Converts Chebyshev $T_n$ coefficients to Gegenbauer $C^{(2)}_k$ coefficients ($\lambda=2$).
  * Uses the projection operator implemented in _ncm_sbessel_compute_proj_row.
@@ -1556,21 +1561,24 @@ ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda1 (const gdouble *c, gdouble *g
  * where $f(x) = \sum_n c_n T_n(x)$.
  */
 void
-ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (const gdouble *c, gdouble *g, guint N)
+ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (NcmVector *c, NcmVector *g)
 {
+  const guint N = ncm_vector_len (c);
   guint k;
+
+  g_assert_cmpuint (ncm_vector_len (g), ==, N);
 
   if (N == 0)
     return;
 
-  /* Zero output array */
-  for (k = 0; k < N; k++)
-    g[k] = 0.0;
+  /* Zero output vector */
+  ncm_vector_set_zero (g);
 
   /* Apply projection operator for each k */
   for (k = 0; k < N; k++)
   {
     NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, k);
+    gdouble gk                  = 0.0;
 
     /* Build projection row for this k */
     _ncm_sbessel_compute_proj_row (row, k, 1.0);
@@ -1581,21 +1589,17 @@ ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (const gdouble *c, gdouble *g
       const glong col = row->col_index + j;
 
       if ((col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
-        g[k] += row->data[j] * c[col];
+        gk += row->data[j] * ncm_vector_get (c, col);
     }
 
-    /* Handle k=0 special case contribution */
-    if (k == 0)
-      g[0] += 0.5 * c[0];
-
+    ncm_vector_set (g, k, gk);
     _row_free (row);
   }
 }
 
 /**
  * ncm_sbessel_ode_solver_gegenbauer_lambda1_eval:
- * @c: (array length=N): Gegenbauer $C^{(1)}_n$ coefficients
- * @N: number of coefficients
+ * @c: Gegenbauer $C^{(1)}_n$ coefficients vector
  * @x: point to evaluate
  *
  * Evaluates a Gegenbauer $C^{(1)}_n$ expansion at x using Clenshaw recurrence.
@@ -1604,8 +1608,10 @@ ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (const gdouble *c, gdouble *g
  * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(1)}_n(x)$
  */
 gdouble
-ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (const gdouble *c, guint N, gdouble x)
+ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (NcmVector *c, gdouble x)
 {
+  const guint N = ncm_vector_len (c);
+
   if (N == 0)
     return 0.0;
 
@@ -1616,7 +1622,7 @@ ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (const gdouble *c, guint N, gdoub
     guint n;
 
     for (n = 0; n < N; n++)
-      sum += c[n] * (gdouble) (n + 1);
+      sum += ncm_vector_get (c, n) * (gdouble) (n + 1);
 
     return sum;
   }
@@ -1627,7 +1633,7 @@ ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (const gdouble *c, guint N, gdoub
     guint n;
 
     for (n = 0; n < N; n++)
-      sum += c[n] * ((n & 1) ? -(gdouble) (n + 1) : (gdouble) (n + 1));
+      sum += ncm_vector_get (c, n) * ((n & 1) ? -(gdouble) (n + 1) : (gdouble) (n + 1));
 
     return sum;
   }
@@ -1635,20 +1641,20 @@ ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (const gdouble *c, guint N, gdoub
   {
     /* Stable recurrence for interior x */
     gdouble Cnm1 = 1.0; /* U_0 */
-    gdouble sum  = c[0] * Cnm1;
+    gdouble sum  = ncm_vector_get (c, 0) * Cnm1;
 
     if (N == 1)
       return sum;
 
     gdouble Cn = 2.0 * x; /* U_1 */
 
-    sum += c[1] * Cn;
+    sum += ncm_vector_get (c, 1) * Cn;
 
     for (guint n = 1; n < N - 1; n++)
     {
       gdouble Cnp1 = 2.0 * x * Cn - Cnm1; /* U_{n+1} */
 
-      sum += c[n + 1] * Cnp1;
+      sum += ncm_vector_get (c, n + 1) * Cnp1;
       Cnm1 = Cn;
       Cn   = Cnp1;
     }
@@ -1659,8 +1665,7 @@ ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (const gdouble *c, guint N, gdoub
 
 /**
  * ncm_sbessel_ode_solver_gegenbauer_lambda2_eval:
- * @c: (array length=N): Gegenbauer $C^{(2)}_n$ coefficients
- * @N: number of coefficients
+ * @c: Gegenbauer $C^{(2)}_n$ coefficients vector
  * @x: point to evaluate
  *
  * Evaluates a Gegenbauer $C^{(2)}_n$ expansion at x using Clenshaw recurrence.
@@ -1670,8 +1675,10 @@ ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (const gdouble *c, guint N, gdoub
  * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(2)}_n(x)$
  */
 gdouble
-ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (const gdouble *c, guint N, gdouble x)
+ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (NcmVector *c, gdouble x)
 {
+  const guint N = ncm_vector_len (c);
+
   if (N == 0)
     return 0.0;
 
@@ -1682,7 +1689,7 @@ ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (const gdouble *c, guint N, gdoub
     guint n;
 
     for (n = 0; n < N; n++)
-      sum += c[n] * (gdouble) ((n + 1) * (n + 2)) / 2.0;
+      sum += ncm_vector_get (c, n) * (gdouble) ((n + 1) * (n + 2)) / 2.0;
 
     return sum;
   }
@@ -1696,7 +1703,7 @@ ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (const gdouble *c, guint N, gdoub
     {
       const gdouble val = (gdouble) ((n + 1) * (n + 2)) / 2.0;
 
-      sum += c[n] * ((n & 1) ? -val : val);
+      sum += ncm_vector_get (c, n) * ((n & 1) ? -val : val);
     }
 
     return sum;
@@ -1705,21 +1712,21 @@ ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (const gdouble *c, guint N, gdoub
   {
     /* Stable recurrence for interior x */
     gdouble Cnm1 = 1.0; /* C_0^{(2)} = 1 */
-    gdouble sum  = c[0] * Cnm1;
+    gdouble sum  = ncm_vector_get (c, 0) * Cnm1;
 
     if (N == 1)
       return sum;
 
     gdouble Cn = 4.0 * x; /* C_1^{(2)} = 4x */
 
-    sum += c[1] * Cn;
+    sum += ncm_vector_get (c, 1) * Cn;
 
     for (guint n = 1; n < N - 1; n++)
     {
       /* (n+1) C_{n+1}^{(2)} = 2(n+2)x C_n^{(2)} - (n+3) C_{n-1}^{(2)} */
       gdouble Cnp1 = (2.0 * (gdouble) (n + 2) * x * Cn - (gdouble) (n + 3) * Cnm1) / (gdouble) (n + 1);
 
-      sum += c[n + 1] * Cnp1;
+      sum += ncm_vector_get (c, n + 1) * Cnp1;
       Cnm1 = Cn;
       Cn   = Cnp1;
     }
@@ -1730,8 +1737,7 @@ ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (const gdouble *c, guint N, gdoub
 
 /**
  * ncm_sbessel_ode_solver_chebyshev_eval:
- * @a: (array length=N): Chebyshev coefficients
- * @N: number of coefficients
+ * @a: Chebyshev coefficients vector
  * @t: point to evaluate in [-1,1]
  *
  * Evaluates a Chebyshev expansion $f(t) = \sum_{k=0}^{N-1} a_k T_k(t)$
@@ -1740,13 +1746,15 @@ ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (const gdouble *c, guint N, gdoub
  * Returns: the value of the Chebyshev expansion at t
  */
 gdouble
-ncm_sbessel_ode_solver_chebyshev_eval (const gdouble *a, guint N, gdouble t)
+ncm_sbessel_ode_solver_chebyshev_eval (NcmVector *a, gdouble t)
 {
+  const guint N = ncm_vector_len (a);
+
   if (N == 0)
     return 0.0;
 
   if (N == 1)
-    return a[0];
+    return ncm_vector_get (a, 0);
 
   {
     gdouble b_kplus1 = 0.0;
@@ -1756,13 +1764,13 @@ ncm_sbessel_ode_solver_chebyshev_eval (const gdouble *a, guint N, gdouble t)
 
     for (k = (gint) N - 1; k >= 1; k--)
     {
-      gdouble b_k = two_t * b_kplus1 - b_kplus2 + a[k];
+      gdouble b_k = two_t * b_kplus1 - b_kplus2 + ncm_vector_get (a, k);
 
       b_kplus2 = b_kplus1;
       b_kplus1 = b_k;
     }
 
-    return t * b_kplus1 - b_kplus2 + a[0];
+    return t * b_kplus1 - b_kplus2 + ncm_vector_get (a, 0);
   }
 }
 

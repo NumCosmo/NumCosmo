@@ -63,6 +63,8 @@ ODE_SPLINE_MIN_STEP: float = 0.0
 POWSPEC_CORR3D_DEFAULT_SIZE: int = 200
 POWSPEC_FILTER_DEFAULT_SIZE: int = 200
 POWSPEC_SPHERE_PROJ_DEFAULT_SIZE: int = 200
+SBESSEL_ODE_SOLVER_DEFAULT_MAX_SIZE: int = 10000
+SBESSEL_ODE_SOLVER_DEFAULT_TOLERANCE: float = 0.0
 SERIALIZE_AUTOSAVE_NAME: str = r"S"
 SERIALIZE_AUTOSAVE_NFORMAT: str = r"%u"
 SERIALIZE_MATRIX_TYPE: str = r"aad"
@@ -354,6 +356,9 @@ def lapack_dgeqrf(
 ) -> int: ...
 def lapack_dgerqf(
     m: int, n: int, a: float, lda: int, tau: float, ws: LapackWS
+) -> int: ...
+def lapack_dgesv(
+    n: int, nrhs: int, a: float, lda: int, ipiv: int, b: float, ldb: int
 ) -> int: ...
 def lapack_dggglm_alloc(
     L: Matrix, X: Matrix, p: Vector, d: Vector, y: Vector
@@ -2564,7 +2569,7 @@ class Fftlog(GObject.Object):
     def set_padding(self, pad_p: float) -> None: ...
     def set_size(self, n: int) -> None: ...
     def set_smooth_padding_scale(self, log10sc: float) -> None: ...
-    def use_eval_interval(self, use_eval_interal: bool) -> None: ...
+    def use_eval_interval(self, use_eval_interval: bool) -> None: ...
     def use_smooth_padding(self, use_smooth_padding: bool) -> None: ...
 
 class FftlogClass(GObject.GPointer):
@@ -9239,6 +9244,169 @@ class SBesselIntegratorGLClass(GObject.GPointer):
     """
 
     parent_class: SBesselIntegratorClass = ...
+
+class SBesselIntegratorLevin(SBesselIntegrator):
+    r"""
+    :Constructors:
+
+    ::
+
+        SBesselIntegratorLevin(**properties)
+        new(lmin:int, lmax:int) -> NumCosmoMath.SBesselIntegratorLevin
+
+    Object NcmSBesselIntegratorLevin
+
+    Properties from NcmSBesselIntegratorLevin:
+      n-panels -> guint: n-panels
+        Number of panels
+      min-order -> guint: min-order
+        Minimum Clenshaw-Curtis order
+      max-order -> guint: max-order
+        Maximum Clenshaw-Curtis order
+      reltol -> gdouble: reltol
+        Relative tolerance
+
+    Properties from NcmSBesselIntegrator:
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        max_order: int
+        min_order: int
+        n_panels: int
+        reltol: float
+        lmax: int
+        lmin: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        max_order: int = ...,
+        min_order: int = ...,
+        n_panels: int = ...,
+        reltol: float = ...,
+        lmax: int = ...,
+        lmin: int = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(sbilv: SBesselIntegratorLevin) -> None: ...
+    def free(self) -> None: ...
+    def get_max_order(self) -> int: ...
+    def get_min_order(self) -> int: ...
+    def get_n_panels(self) -> int: ...
+    def get_reltol(self) -> float: ...
+    @classmethod
+    def new(cls, lmin: int, lmax: int) -> SBesselIntegratorLevin: ...
+    def ref(self) -> SBesselIntegratorLevin: ...
+    def set_max_order(self, max_order: int) -> None: ...
+    def set_min_order(self, min_order: int) -> None: ...
+    def set_n_panels(self, n_panels: int) -> None: ...
+    def set_reltol(self, reltol: float) -> None: ...
+
+class SBesselIntegratorLevinClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SBesselIntegratorLevinClass()
+    """
+
+    parent_class: SBesselIntegratorClass = ...
+
+class SBesselOdeSolver(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SBesselOdeSolver(**properties)
+        new(l:int, a:float, b:float) -> NumCosmoMath.SBesselOdeSolver
+
+    Object NcmSBesselOdeSolver
+
+    Properties from NcmSBesselOdeSolver:
+      l -> gint: l
+        Angular momentum parameter
+      tolerance -> gdouble: tolerance
+        Convergence tolerance
+      max-size -> gint: max-size
+        Maximum matrix size
+      interval -> NcmDTuple2: interval
+        Interval where the ODE is solved
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        interval: DTuple2
+        l: int
+        max_size: int
+        tolerance: float
+
+    props: Props = ...
+    def __init__(
+        self,
+        interval: DTuple2 = ...,
+        l: int = ...,
+        max_size: int = ...,
+        tolerance: float = ...,
+    ) -> None: ...
+    @staticmethod
+    def chebT_to_gegenbauer_lambda1(c: Vector, g: Vector) -> None: ...
+    @staticmethod
+    def chebT_to_gegenbauer_lambda2(c: Vector, g: Vector) -> None: ...
+    @staticmethod
+    def chebyshev_eval(a: Vector, t: float) -> float: ...
+    @staticmethod
+    def clear(solver: SBesselOdeSolver) -> None: ...
+    @staticmethod
+    def compute_chebyshev_coeffs(
+        F: typing.Callable[..., float],
+        a: float,
+        b: float,
+        N: int,
+        *user_data: typing.Any,
+    ) -> Vector: ...
+    def free(self) -> None: ...
+    @staticmethod
+    def gegenbauer_lambda1_eval(c: Vector, x: float) -> float: ...
+    @staticmethod
+    def gegenbauer_lambda2_eval(c: Vector, x: float) -> float: ...
+    def get_interval(self) -> typing.Tuple[float, float]: ...
+    def get_l(self) -> int: ...
+    def get_max_size(self) -> int: ...
+    def get_operator_matrix(self, nrows: int) -> Matrix: ...
+    def get_solution_size(self) -> int: ...
+    def get_tolerance(self) -> float: ...
+    @classmethod
+    def new(cls, l: int, a: float, b: float) -> SBesselOdeSolver: ...
+    def peek_solution(self) -> typing.Optional[Vector]: ...
+    def ref(self) -> SBesselOdeSolver: ...
+    def set_interval(self, a: float, b: float) -> None: ...
+    def set_l(self, l: int) -> None: ...
+    def set_max_size(self, max_size: int) -> None: ...
+    def set_tolerance(self, tol: float) -> None: ...
+    def solve(self, rhs: Vector) -> Vector: ...
+    def solve_dense(self, rhs: Vector, nrows: int) -> Vector: ...
+
+class SBesselOdeSolverClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SBesselOdeSolverClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
 
 class SFSphericalHarmonics(GObject.Object):
     r"""

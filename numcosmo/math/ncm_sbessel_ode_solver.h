@@ -75,12 +75,12 @@ NcmVector *ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, NcmV
 NcmVector *ncm_sbessel_ode_solver_peek_solution (NcmSBesselOdeSolver *solver);
 gint ncm_sbessel_ode_solver_get_solution_size (NcmSBesselOdeSolver *solver);
 
-void ncm_sbessel_ode_solver_compute_chebyshev_coeffs (NcmSBesselOdeSolverF F, gpointer user_data, gdouble a, gdouble b, guint N, gdouble *coeffs);
-void ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda1 (const gdouble *c, gdouble *g, guint N);
-void ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (const gdouble *c, gdouble *g, guint N);
-gdouble ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (const gdouble *c, guint N, gdouble x);
-gdouble ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (const gdouble *c, guint N, gdouble x);
-gdouble ncm_sbessel_ode_solver_chebyshev_eval (const gdouble *a, guint N, gdouble t);
+NcmVector *ncm_sbessel_ode_solver_compute_chebyshev_coeffs (NcmSBesselOdeSolverF F, gdouble a, gdouble b, guint N, gpointer user_data);
+void ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda1 (NcmVector *c, NcmVector *g);
+void ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (NcmVector *c, NcmVector *g);
+gdouble ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (NcmVector *c, gdouble x);
+gdouble ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (NcmVector *c, gdouble x);
+gdouble ncm_sbessel_ode_solver_chebyshev_eval (NcmVector *a, gdouble t);
 
 #define NCM_SBESSEL_ODE_SOLVER_DEFAULT_TOLERANCE (1.0e-20)
 #define NCM_SBESSEL_ODE_SOLVER_DEFAULT_MAX_SIZE (10000)
