@@ -92,6 +92,7 @@
 #include "math/ncm_sbessel_integrator_fftl.h"
 #include "math/ncm_sbessel_integrator_gl.h"
 #include "math/ncm_sbessel_integrator_levin.h"
+#include "math/ncm_sbessel_ode_solver.h"
 #include "math/ncm_fftlog_sbessel_j.h"
 #include "math/ncm_fftlog_sbessel_jljm.h"
 #include "nc_hicosmo.h"
@@ -644,6 +645,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_GL);
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_FFTL);
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN);
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_ODE_SOLVER);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPLINE2D);

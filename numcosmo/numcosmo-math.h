@@ -90,6 +90,7 @@
 #include <numcosmo/math/ncm_sbessel_integrator_fftl.h>
 #include <numcosmo/math/ncm_sbessel_integrator_gl.h>
 #include <numcosmo/math/ncm_sbessel_integrator_levin.h>
+#include <numcosmo/math/ncm_sbessel_ode_solver.h>
 #include <numcosmo/math/ncm_sf_spherical_harmonics.h>
 #include <numcosmo/math/ncm_mpsf_0F1.h>
 #include <numcosmo/math/ncm_fftlog.h>
