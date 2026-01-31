@@ -1419,12 +1419,13 @@ ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, NcmVector *rhs,
   NcmMatrix *mat   = ncm_sbessel_ode_solver_get_operator_matrix (solver, nrows);
   const gint ncols = ncm_matrix_ncols (mat);
 
-  g_assert_cmpint (nrows, ==, ncols);
+  /* For LAPACK dgesv, we need a square matrix, so use minimum dimension */
+  const gint n = GSL_MIN (nrows, ncols);
 
   /* Prepare RHS vector (truncate/pad if needed) */
-  NcmVector *b = ncm_vector_new (nrows);
+  NcmVector *b = ncm_vector_new (n);
 
-  for (gint i = 0; i < nrows; i++)
+  for (gint i = 0; i < n; i++)
   {
     if (i < (gint) ncm_vector_len (rhs))
       ncm_vector_set (b, i, ncm_vector_get (rhs, i));
@@ -1433,11 +1434,11 @@ ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, NcmVector *rhs,
   }
 
   /* Solve the system using LU decomposition */
-  gint *ipiv = g_new (gint, nrows);
-  gint ret   = ncm_lapack_dgesv (nrows, 1,
-                                 ncm_matrix_data (mat), nrows,
+  gint *ipiv = g_new (gint, n);
+  gint ret   = ncm_lapack_dgesv (n, 1,
+                                 ncm_matrix_data (mat), n,
                                  ipiv,
-                                 ncm_vector_data (b), nrows);
+                                 ncm_vector_data (b), n);
 
   if (ret != 0)
     g_warning ("ncm_sbessel_ode_solver_solve_dense: LAPACK dgesv failed with code %d", ret);
