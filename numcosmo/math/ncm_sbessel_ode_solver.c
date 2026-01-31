@@ -1683,14 +1683,14 @@ ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (NcmVector *c, gdouble x)
   if (N == 0)
     return 0.0;
 
-  /* Endpoint handling: C_n^{(2)}(±1) = ((n+1)*(n+2)/2)*(±1)^n */
+  /* Endpoint handling: C_n^{(2)}(±1) = binom(n+3,3)*(±1)^n = ((n+1)*(n+2)*(n+3)/6)*(±1)^n */
   if (fabs (x - 1.0) < 1e-15)
   {
     gdouble sum = 0.0;
     guint n;
 
     for (n = 0; n < N; n++)
-      sum += ncm_vector_get (c, n) * (gdouble) ((n + 1) * (n + 2)) / 2.0;
+      sum += ncm_vector_get (c, n) * (gdouble) ((n + 1) * (n + 2) * (n + 3)) / 6.0;
 
     return sum;
   }
@@ -1702,7 +1702,7 @@ ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (NcmVector *c, gdouble x)
 
     for (n = 0; n < N; n++)
     {
-      const gdouble val = (gdouble) ((n + 1) * (n + 2)) / 2.0;
+      const gdouble val = (gdouble) ((n + 1) * (n + 2) * (n + 3)) / 6.0;
 
       sum += ncm_vector_get (c, n) * ((n & 1) ? -val : val);
     }
