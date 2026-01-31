@@ -1657,6 +1657,77 @@ ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (const gdouble *c, guint N, gdoub
 }
 
 /**
+ * ncm_sbessel_ode_solver_gegenbauer_lambda2_eval:
+ * @c: (array length=N): Gegenbauer $C^{(2)}_n$ coefficients
+ * @N: number of coefficients
+ * @x: point to evaluate
+ *
+ * Evaluates a Gegenbauer $C^{(2)}_n$ expansion at x using Clenshaw recurrence.
+ * For $\lambda=2$, the recurrence relation is:
+ * $(n+1) C^{(2)}_{n+1}(x) = 2(n+2)x C^{(2)}_n(x) - (n+3) C^{(2)}_{n-1}(x)$
+ *
+ * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(2)}_n(x)$
+ */
+gdouble
+ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (const gdouble *c, guint N, gdouble x)
+{
+  if (N == 0)
+    return 0.0;
+
+  /* Endpoint handling: C_n^{(2)}(±1) = ((n+1)*(n+2)/2)*(±1)^n */
+  if (fabs (x - 1.0) < 1e-15)
+  {
+    gdouble sum = 0.0;
+    guint n;
+
+    for (n = 0; n < N; n++)
+      sum += c[n] * (gdouble) ((n + 1) * (n + 2)) / 2.0;
+
+    return sum;
+  }
+
+  if (fabs (x + 1.0) < 1e-15)
+  {
+    gdouble sum = 0.0;
+    guint n;
+
+    for (n = 0; n < N; n++)
+    {
+      const gdouble val = (gdouble) ((n + 1) * (n + 2)) / 2.0;
+
+      sum += c[n] * ((n & 1) ? -val : val);
+    }
+
+    return sum;
+  }
+
+  {
+    /* Stable recurrence for interior x */
+    gdouble Cnm1 = 1.0; /* C_0^{(2)} = 1 */
+    gdouble sum  = c[0] * Cnm1;
+
+    if (N == 1)
+      return sum;
+
+    gdouble Cn = 4.0 * x; /* C_1^{(2)} = 4x */
+
+    sum += c[1] * Cn;
+
+    for (guint n = 1; n < N - 1; n++)
+    {
+      /* (n+1) C_{n+1}^{(2)} = 2(n+2)x C_n^{(2)} - (n+3) C_{n-1}^{(2)} */
+      gdouble Cnp1 = (2.0 * (gdouble) (n + 2) * x * Cn - (gdouble) (n + 3) * Cnm1) / (gdouble) (n + 1);
+
+      sum += c[n + 1] * Cnp1;
+      Cnm1 = Cn;
+      Cn   = Cnp1;
+    }
+
+    return sum;
+  }
+}
+
+/**
  * ncm_sbessel_ode_solver_chebyshev_eval:
  * @a: (array length=N): Chebyshev coefficients
  * @N: number of coefficients

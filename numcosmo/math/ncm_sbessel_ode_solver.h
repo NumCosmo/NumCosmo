@@ -79,6 +79,7 @@ void ncm_sbessel_ode_solver_compute_chebyshev_coeffs (NcmSBesselOdeSolverF F, gp
 void ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda1 (const gdouble *c, gdouble *g, guint N);
 void ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (const gdouble *c, gdouble *g, guint N);
 gdouble ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (const gdouble *c, guint N, gdouble x);
+gdouble ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (const gdouble *c, guint N, gdouble x);
 gdouble ncm_sbessel_ode_solver_chebyshev_eval (const gdouble *a, guint N, gdouble t);
 
 #define NCM_SBESSEL_ODE_SOLVER_DEFAULT_TOLERANCE (1.0e-20)
