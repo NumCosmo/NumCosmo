@@ -82,6 +82,15 @@ gdouble ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (NcmVector *c, gdouble x)
 gdouble ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (NcmVector *c, gdouble x);
 gdouble ncm_sbessel_ode_solver_chebyshev_eval (NcmVector *a, gdouble t);
 
+NcmMatrix *ncm_sbessel_ode_solver_get_proj_matrix (guint N);
+NcmMatrix *ncm_sbessel_ode_solver_get_x_matrix (guint N);
+NcmMatrix *ncm_sbessel_ode_solver_get_x2_matrix (guint N);
+NcmMatrix *ncm_sbessel_ode_solver_get_d_matrix (guint N);
+NcmMatrix *ncm_sbessel_ode_solver_get_x_d_matrix (guint N);
+NcmMatrix *ncm_sbessel_ode_solver_get_d2_matrix (guint N);
+NcmMatrix *ncm_sbessel_ode_solver_get_x_d2_matrix (guint N);
+NcmMatrix *ncm_sbessel_ode_solver_get_x2_d2_matrix (guint N);
+
 #define NCM_SBESSEL_ODE_SOLVER_DEFAULT_TOLERANCE (1.0e-20)
 #define NCM_SBESSEL_ODE_SOLVER_DEFAULT_MAX_SIZE (10000)
 

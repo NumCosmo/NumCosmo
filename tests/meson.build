@@ -467,6 +467,10 @@ python_tests = [
         'source': 'test_py_sbessel_ode_solver.py',
     },
     {
+        'name': 'py_sbessel_operators',
+        'source': 'test_py_sbessel_operators.py',
+    },
+    {
         'name': 'py_spline_cubic_d2',
         'source': 'test_py_spline_cubic_d2.py',
     },

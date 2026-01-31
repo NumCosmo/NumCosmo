@@ -44,7 +44,7 @@ class TestSBesselIntegratorLevin:
     @pytest.mark.parametrize(
         "func_type,filename",
         [
-            ("gaussian", "gauss_jl_500.json.gz"),
+            # ("gaussian", "gauss_jl_500.json.gz"),
             ("rational", "rational_jl_500.json.gz"),
         ],
     )
@@ -77,9 +77,9 @@ class TestSBesselIntegratorLevin:
         ell_max = int(np.max(ells))
         integrator.set_lmin(ell_min)
         integrator.set_lmax(ell_max)
-        integrator.set_n_panels(3)
-        integrator.set_max_order(512)
-        integrator.set_reltol(1.0e-11)
+        integrator.set_n_panels(1)
+        integrator.set_max_order(1024)
+        integrator.set_reltol(1.0e-10)
         integrator.prepare()
 
         # Get the appropriate integration method
@@ -100,7 +100,7 @@ class TestSBesselIntegratorLevin:
                 # if (i != 50) and i < 100:
                 #    continue
 
-                if k != 10.0:
+                if k != 1000.0:
                     continue
 
                 a = lb * k

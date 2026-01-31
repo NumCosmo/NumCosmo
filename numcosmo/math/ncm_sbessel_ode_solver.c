@@ -1554,10 +1554,9 @@ ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda1 (NcmVector *c, NcmVector *g)
  * @g: Gegenbauer $C^{(2)}_k$ coefficients vector (must have same length as @c, pre-allocated by caller)
  *
  * Converts Chebyshev $T_n$ coefficients to Gegenbauer $C^{(2)}_k$ coefficients ($\lambda=2$).
- * Uses the projection operator implemented in _ncm_sbessel_compute_proj_row.
  *
- * This performs the transformation:
- * $$g_k = \langle C^{(2)}_k, f \rangle$$
+ * Uses the projection formula:
+ * $$g_k = \frac{1}{2} c_0 \delta_{k,0} + \frac{c_k}{2(k+1)} - \frac{(k+2) c_{k+2}}{(k+1)(k+3)} + \frac{c_{k+4}}{2(k+3)}$$
  * where $f(x) = \sum_n c_n T_n(x)$.
  */
 void
@@ -1574,26 +1573,28 @@ ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (NcmVector *c, NcmVector *g)
   /* Zero output vector */
   ncm_vector_set_zero (g);
 
-  /* Apply projection operator for each k */
+  /* Apply projection formula for each k */
   for (k = 0; k < N; k++)
   {
-    NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, k);
-    gdouble gk                  = 0.0;
+    const gdouble kd = (gdouble) k;
+    gdouble gk       = 0.0;
 
-    /* Build projection row for this k */
-    _ncm_sbessel_compute_proj_row (row, k, 1.0);
+    /* Special case: k=0 has additional 1/2 * c[0] contribution */
+    if (k == 0)
+      gk += 0.5 * ncm_vector_get (c, 0);
 
-    /* Compute inner product with Chebyshev coefficients */
-    for (guint j = 0; j < ROW_M; j++)
-    {
-      const glong col = row->col_index + j;
+    /* First term: c[k] / (2*(k+1)) */
+    gk += ncm_vector_get (c, k) / (2.0 * (kd + 1.0));
 
-      if ((col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
-        gk += row->data[j] * ncm_vector_get (c, col);
-    }
+    /* Second term: -(k+2) * c[k+2] / ((k+1)*(k+3)) */
+    if (k + 2 < N)
+      gk -= (kd + 2.0) * ncm_vector_get (c, k + 2) / ((kd + 1.0) * (kd + 3.0));
+
+    /* Third term: c[k+4] / (2*(k+3)) */
+    if (k + 4 < N)
+      gk += ncm_vector_get (c, k + 4) / (2.0 * (kd + 3.0));
 
     ncm_vector_set (g, k, gk);
-    _row_free (row);
   }
 }
 
@@ -1772,5 +1773,309 @@ ncm_sbessel_ode_solver_chebyshev_eval (NcmVector *a, gdouble t)
 
     return t * b_kplus1 - b_kplus2 + ncm_vector_get (a, 0);
   }
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_proj_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the projection (identity) operator matrix that transforms Chebyshev $T_n$
+ * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
+ *
+ * Returns: (transfer full): the projection operator matrix
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_get_proj_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  guint k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong left_col        = k;
+    NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, left_col);
+
+    _ncm_sbessel_compute_proj_row (row, k, 1.0);
+
+    for (guint j = 0; j < ROW_M; j++)
+    {
+      const glong col = row->col_index + j;
+
+      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
+        ncm_matrix_set (mat, k, col, row->data[j]);
+    }
+
+    _row_free (row);
+  }
+
+  return mat;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_x_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the multiplication by $x$ operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x \cdot f(x)$.
+ *
+ * Returns: (transfer full): the $x$ operator matrix
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_get_x_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  guint k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong left_col        = (k >= 1) ? (k - 1) : 0;
+    NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, left_col);
+
+    _ncm_sbessel_compute_x_row (row, k, 1.0);
+
+    for (guint j = 0; j < ROW_M; j++)
+    {
+      const glong col = row->col_index + j;
+
+      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
+        ncm_matrix_set (mat, k, col, row->data[j]);
+    }
+
+    _row_free (row);
+  }
+
+  return mat;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_x2_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the multiplication by $x^2$ operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x^2 \cdot f(x)$.
+ *
+ * Returns: (transfer full): the $x^2$ operator matrix
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_get_x2_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  guint k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong left_col        = (k >= 2) ? (k - 2) : 0;
+    NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, left_col);
+
+    _ncm_sbessel_compute_x2_row (row, k, 1.0);
+
+    for (guint j = 0; j < ROW_M; j++)
+    {
+      const glong col = row->col_index + j;
+
+      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
+        ncm_matrix_set (mat, k, col, row->data[j]);
+    }
+
+    _row_free (row);
+  }
+
+  return mat;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_d_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the derivative operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $\frac{df}{dx}$.
+ *
+ * Returns: (transfer full): the derivative operator matrix
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_get_d_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  guint k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong left_col        = k + 1;
+    NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, left_col);
+
+    _ncm_sbessel_compute_d_row (row, k, 1.0);
+
+    for (guint j = 0; j < ROW_M; j++)
+    {
+      const glong col = row->col_index + j;
+
+      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
+        ncm_matrix_set (mat, k, col, row->data[j]);
+    }
+
+    _row_free (row);
+  }
+
+  return mat;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_x_d_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the $x \cdot \frac{d}{dx}$ operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x \cdot \frac{df}{dx}$.
+ *
+ * Returns: (transfer full): the $x \cdot d$ operator matrix
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_get_x_d_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  guint k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong left_col        = k;
+    NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, left_col);
+
+    _ncm_sbessel_compute_x_d_row (row, k, 1.0);
+
+    for (guint j = 0; j < ROW_M; j++)
+    {
+      const glong col = row->col_index + j;
+
+      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
+        ncm_matrix_set (mat, k, col, row->data[j]);
+    }
+
+    _row_free (row);
+  }
+
+  return mat;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_d2_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the second derivative operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $\frac{d^2f}{dx^2}$.
+ *
+ * Returns: (transfer full): the second derivative operator matrix
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_get_d2_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  guint k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong left_col        = k + 2;
+    NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, left_col);
+
+    _ncm_sbessel_compute_d2_row (row, k, 1.0);
+
+    for (guint j = 0; j < ROW_M; j++)
+    {
+      const glong col = row->col_index + j;
+
+      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
+        ncm_matrix_set (mat, k, col, row->data[j]);
+    }
+
+    _row_free (row);
+  }
+
+  return mat;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_x_d2_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the $x \cdot \frac{d^2}{dx^2}$ operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x \cdot \frac{d^2f}{dx^2}$.
+ *
+ * Returns: (transfer full): the $x \cdot d^2$ operator matrix
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_get_x_d2_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  guint k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong left_col        = k + 1;
+    NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, left_col);
+
+    _ncm_sbessel_compute_x_d2_row (row, k, 1.0);
+
+    for (guint j = 0; j < ROW_M; j++)
+    {
+      const glong col = row->col_index + j;
+
+      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
+        ncm_matrix_set (mat, k, col, row->data[j]);
+    }
+
+    _row_free (row);
+  }
+
+  return mat;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_x2_d2_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the $x^2 \cdot \frac{d^2}{dx^2}$ operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x^2 \cdot \frac{d^2f}{dx^2}$.
+ *
+ * Returns: (transfer full): the $x^2 \cdot d^2$ operator matrix
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_get_x2_d2_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  guint k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong left_col        = k;
+    NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, left_col);
+
+    _ncm_sbessel_compute_x2_d2_row (row, k, 1.0);
+
+    for (guint j = 0; j < ROW_M; j++)
+    {
+      const glong col = row->col_index + j;
+
+      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
+        ncm_matrix_set (mat, k, col, row->data[j]);
+    }
+
+    _row_free (row);
+  }
+
+  return mat;
 }
 
