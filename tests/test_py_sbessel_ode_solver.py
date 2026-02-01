@@ -541,7 +541,7 @@ class TestSBesselOdeSolver:
     @pytest.mark.parametrize("N", [32])
     def test_chebyshev_deriv_boundary(self, power: int, N: int) -> None:
         """
-        Test Chebyshev derivative at boundary points x=±1.
+        Test Chebyshev derivative at boundary points x=+/-1.
 
         Verifies that derivatives evaluate correctly at the endpoints.
         For f(x) = x^power, f'(x) = power * x^(power-1).
@@ -885,7 +885,7 @@ class TestSBesselOdeSolver:
     @pytest.mark.parametrize("N", [32])
     def test_chebyshev_eval_boundary(self, power: int, N: int) -> None:
         """
-        Test Chebyshev evaluation at boundary points x=±1.
+        Test Chebyshev evaluation at boundary points x=+/-1.
 
         Verifies that x^power evaluates correctly at the endpoints.
         """
@@ -919,7 +919,7 @@ class TestSBesselOdeSolver:
     @pytest.mark.parametrize("N", [32])
     def test_gegenbauer_lambda1_eval_boundary(self, power: int, N: int) -> None:
         """
-        Test Gegenbauer lambda=1 evaluation at boundary points x=±1.
+        Test Gegenbauer lambda=1 evaluation at boundary points x=+/-1.
 
         Verifies that x^power evaluates correctly at the endpoints.
         """
@@ -957,7 +957,7 @@ class TestSBesselOdeSolver:
     @pytest.mark.parametrize("N", [32])
     def test_gegenbauer_lambda2_eval_boundary(self, power: int, N: int) -> None:
         """
-        Test Gegenbauer lambda=2 evaluation at boundary points x=±1.
+        Test Gegenbauer lambda=2 evaluation at boundary points x=+/-1.
 
         Verifies that x^power evaluates correctly at the endpoints.
         """

@@ -908,7 +908,7 @@ class TestSBesselOperators:
         """Test solving spherical Bessel ODE with non-zero Dirichlet BCs.
 
         The spherical Bessel function j_l(x) satisfies:
-        x²y'' + 2xy' + [x² - l(l+1)]y = 0
+        x^2*y'' + 2xy' + [x^2 - l(l+1)]y = 0
 
         We solve this on interval [1,20] with BCs y(1) = j_l(1), y(20) = j_l(20)
         and verify the solution matches j_l everywhere.
@@ -919,7 +919,7 @@ class TestSBesselOperators:
         # Create solver with interval [a, b]
         solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
 
-        # Get the operator matrix (should now be square N×N)
+        # Get the operator matrix (should now be square NxN)
         mat = solver.get_operator_matrix(N)
         mat_np = self.matrix_to_numpy(mat)
 
@@ -980,7 +980,7 @@ class TestSBesselOperators:
         """Test integration of spherical Bessel function via Green's identity.
 
         Solve the ODE with homogeneous BCs (y(a)=0, y(b)=0) and RHS = 1.
-        By Green's identity: j_l(b)*y'(b) - j_l(a)*y'(a) = int_a^b j_l(x)dx
+        By Green's identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b j_l(x)dx
         where y is the solution with RHS=1.
         """
         N = 128
@@ -1022,7 +1022,7 @@ class TestSBesselOperators:
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
-        # Compute left-hand side: j_l(b)*y'(b) - j_l(a)*y'(a)
+        # Compute left-hand side: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
         lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
 
         # Compute right-hand side: integral of j_l(x) from a to b
@@ -1041,7 +1041,7 @@ class TestSBesselOperators:
             atol=1.0e-20,
             err_msg=(
                 f"Green's identity failed for l={l_val}: "
-                f"j_l(b)*y'(b) - j_l(a)*y'(a) != int_a^b j_l(x)dx"
+                f"x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) != int_a^b j_l(x)dx"
             ),
         )
 
@@ -1050,7 +1050,7 @@ class TestSBesselOperators:
         """Test integration of x*j_l(x) via Green's identity.
 
         Solve the ODE with homogeneous BCs (y(a)=0, y(b)=0) and RHS = x.
-        By Green's identity: x²j_l(b)*y'(b) - x²j_l(a)*y'(a) = int_a^b x*j_l(x)dx
+        By Green's identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b x*j_l(x)dx
         where y is the solution with RHS=x.
         """
         N = 128
@@ -1099,7 +1099,7 @@ class TestSBesselOperators:
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
-        # Compute left-hand side: x²j_l(b)*y'(b) - x²j_l(a)*y'(a)
+        # Compute left-hand side: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
         lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
 
         # Compute right-hand side: integral of x*j_l(x) from a to b
@@ -1116,6 +1116,6 @@ class TestSBesselOperators:
             atol=1.0e-20,
             err_msg=(
                 f"Green's identity failed for l={l_val}: "
-                f"x²j_l(b)*y'(b) - x²j_l(a)*y'(a) != int_a^b x*j_l(x)dx"
+                f"x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) != int_a^b x*j_l(x)dx"
             ),
         )

@@ -97,9 +97,9 @@ typedef struct _NcmSBesselOdeSolverPrivate
   gdouble mid_point; /* (a+b)/2 - midpoint of interval */
 
   /* Pre-computed coefficient arrays (Chebyshev expansions) */
-  GArray *c_coeffs; /* x² = [0, 0, 1] */
+  GArray *c_coeffs; /* x^2 = [0, 0, 1] */
   GArray *a_coeffs; /* 2x = [0, 2] */
-  GArray *b_coeffs; /* x² - l(l+1) = [-l(l+1), 0, 1] */
+  GArray *b_coeffs; /* x^2 - l(l+1) = [-l(l+1), 0, 1] */
 
   /* Band structure */
   gint bandwidth;         /* Total bandwidth */
@@ -415,7 +415,7 @@ ncm_sbessel_ode_solver_set_l (NcmSBesselOdeSolver *solver, gint l)
     g_clear_pointer (&self->a_coeffs, g_array_unref);
     g_clear_pointer (&self->b_coeffs, g_array_unref);
 
-    /* x² = [0, 0, 1] in Chebyshev basis */
+    /* x^2 = [0, 0, 1] in Chebyshev basis */
     self->c_coeffs = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), 3);
     g_array_set_size (self->c_coeffs, 3);
     g_array_index (self->c_coeffs, gdouble, 0) = 0.0;
@@ -428,7 +428,7 @@ ncm_sbessel_ode_solver_set_l (NcmSBesselOdeSolver *solver, gint l)
     g_array_index (self->a_coeffs, gdouble, 0) = 0.0;
     g_array_index (self->a_coeffs, gdouble, 1) = 2.0;
 
-    /* x² - l(l+1) = [-l(l+1), 0, 1] in Chebyshev basis */
+    /* x^2 - l(l+1) = [-l(l+1), 0, 1] in Chebyshev basis */
     self->b_coeffs = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), 3);
     g_array_set_size (self->b_coeffs, 3);
     g_array_index (self->b_coeffs, gdouble, 0) = -(gdouble) (l * (l + 1));
@@ -1617,7 +1617,7 @@ ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (NcmVector *c, gdouble x)
   if (N == 0)
     return 0.0;
 
-  /* Endpoint handling: C_n^{(1)}(±1) = (n+1)*(±1)^n */
+  /* Endpoint handling: C_n^{(1)}(+/-1) = (n+1)*(+/-1)^n */
   if (fabs (x - 1.0) < 1e-15)
   {
     gdouble sum = 0.0;
@@ -1684,7 +1684,7 @@ ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (NcmVector *c, gdouble x)
   if (N == 0)
     return 0.0;
 
-  /* Endpoint handling: C_n^{(2)}(±1) = binom(n+3,3)*(±1)^n = ((n+1)*(n+2)*(n+3)/6)*(±1)^n */
+  /* Endpoint handling: C_n^{(2)}(+/-1) = binom(n+3,3)*(+/-1)^n = ((n+1)*(n+2)*(n+3)/6)*(+/-1)^n */
   if (fabs (x - 1.0) < 1e-15)
   {
     gdouble sum = 0.0;
