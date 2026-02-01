@@ -1022,19 +1022,19 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeSolver *solver, glong row_index)
 
   NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, left_col);
 
-  /* Second derivative term: (m^2/h^2) d^2 + (2m/h^2) x d^2 + (1/h^2) x^2 d^2 */
+  /* Second derivative term: (m^2/h^2) d^2 + (2m/h) x d^2 + x^2 d^2 */
   _ncm_sbessel_compute_d2_row (row, k, m2 / h2);
-  _ncm_sbessel_compute_x_d2_row (row, k, 2.0 * m / h2);
-  _ncm_sbessel_compute_x2_d2_row (row, k, 1.0 / h2);
+  _ncm_sbessel_compute_x_d2_row (row, k, 2.0 * m / h);
+  _ncm_sbessel_compute_x2_d2_row (row, k, 1.0);
 
-  /* First derivative term: (2m/h) d + (2/h) x d */
+  /* First derivative term: (2m/h) d + 2 x d */
   _ncm_sbessel_compute_d_row (row, k, 2.0 * m / h);
-  _ncm_sbessel_compute_x_d_row (row, k, 2.0 / h);
+  _ncm_sbessel_compute_x_d_row (row, k, 2.0);
 
-  /* Identity term: (m^2 - l(l+1)) I + 2m x + x^2 */
+  /* Identity term: (m^2 - l(l+1)) I + 2m h x + h^2 x^2 */
   _ncm_sbessel_compute_proj_row (row, k, m2 - (gdouble) (l * (l + 1)));
-  _ncm_sbessel_compute_x_row (row, k, 2.0 * m);
-  _ncm_sbessel_compute_x2_row (row, k, 1.0);
+  _ncm_sbessel_compute_x_row (row, k, 2.0 * m * h);
+  _ncm_sbessel_compute_x2_row (row, k, h2);
 
   return row;
 }
@@ -1352,7 +1352,8 @@ ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, gint nr
     _row_free (row);
   }
 
-  const glong ncols = max_col + 1;
+  /* Force square matrix by truncating columns to nrows */
+  const glong ncols = nrows;
 
   /* Create matrix */
   NcmMatrix *mat = ncm_matrix_new (nrows, ncols);

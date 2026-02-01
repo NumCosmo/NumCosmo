@@ -3,7 +3,10 @@
 
 
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
+from scipy.special import spherical_jn
+from scipy.linalg import solve
 from numcosmo_py import Ncm
 
 
@@ -877,3 +880,75 @@ class TestSBesselOperators:
                 atol=1.0e-8,
                 err_msg=f"x^2*d^2/dx^2(f(x)) at x={x} failed",
             )
+
+    @pytest.mark.parametrize("l_val", list(range(21)))
+    def test_spherical_bessel_ode(self, l_val: int) -> None:
+        """Test solving spherical Bessel ODE with non-zero Dirichlet BCs.
+
+        The spherical Bessel function j_l(x) satisfies:
+        x²y'' + 2xy' + [x² - l(l+1)]y = 0
+
+        We solve this on interval [1,20] with BCs y(1) = j_l(1), y(20) = j_l(20)
+        and verify the solution matches j_l everywhere.
+        """
+        N = 128
+        a, b = 1.0, 20.0  # Use interval [1, 20] as requested
+
+        # Create solver with interval [a, b]
+        solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
+
+        # Get the operator matrix (should now be square N×N)
+        mat = solver.get_operator_matrix(N)
+        mat_np = self.matrix_to_numpy(mat)
+
+        # Get boundary values using scipy
+        y_a = spherical_jn(l_val, a)
+        y_b = spherical_jn(l_val, b)
+
+        # Debug: print matrix shape
+        # Row 1 enforces u(+1) = y_b (i.e., u(b) in physical coords)
+        # Rows 2 to N-1 are the differential operator (homogeneous: RHS = 0)
+        rhs_np = np.zeros(N)
+        rhs_np[0] = y_a
+        rhs_np[1] = y_b
+
+        # Assert matrix is square
+        assert (
+            mat_np.shape[0] == mat_np.shape[1]
+        ), f"Matrix must be square, got shape {mat_np.shape}"
+
+        # Solve the linear system using LU decomposition
+        solution_coeffs_np = solve(mat_np, rhs_np)
+        solution_coeffs = Ncm.Vector.new_array(solution_coeffs_np.tolist())
+
+        # Test at several interior points mapped to [-1, 1]
+        # Mapping: x_physical = (a+b)/2 + (b-a)/2 * t, where t in [-1, 1]
+        t_test = np.array([-0.8, -0.5, -0.2, 0.0, 0.2, 0.5, 0.8])
+
+        for t in t_test:
+            # Evaluate solution at t (coefficients are in Chebyshev basis)
+            y_computed = Ncm.SBesselOdeSolver.chebyshev_eval(solution_coeffs, t)
+
+            # Map t to physical x
+            x_physical = (a + b) / 2.0 + (b - a) / 2.0 * t
+
+            # Get exact value
+            y_exact = spherical_jn(l_val, x_physical)
+
+            assert_allclose(
+                y_computed,
+                y_exact,
+                rtol=1.0e-10,
+                atol=1.0e-16,
+                err_msg=f"Spherical Bessel solution mismatch at x={x_physical}",
+            )
+
+        # Verify boundary conditions are satisfied (use Chebyshev eval)
+        y_at_a = Ncm.SBesselOdeSolver.chebyshev_eval(solution_coeffs, -1.0)
+        y_at_b = Ncm.SBesselOdeSolver.chebyshev_eval(solution_coeffs, 1.0)
+        assert_allclose(
+            y_at_a, y_a, rtol=1.0e-15, atol=1.0e-15, err_msg="BC at x=a not satisfied"
+        )
+        assert_allclose(
+            y_at_b, y_b, rtol=1.0e-15, atol=1.0e-15, err_msg="BC at x=b not satisfied"
+        )
