@@ -68,8 +68,10 @@
 #include <fftw3.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-#define ROW_M 100
-#define ROW_PAD 10
+/* Operator bandwidth */
+#define LOWER_BANDWIDTH 2
+#define UPPER_BANDWIDTH 6
+#define TOTAL_BANDWIDTH (LOWER_BANDWIDTH + UPPER_BANDWIDTH + 1)
 
 /**
  * NcmSBesselOdeSolverRow:
@@ -79,11 +81,10 @@
  */
 typedef struct _NcmSBesselOdeSolverRow
 {
-  gdouble *data;      /* Pointer to row data */
-  gdouble *data_base; /* Base pointer for freeing */
-  gdouble bc_at_m1;   /* Boundary condition row 1 coefficient */
-  gdouble bc_at_p1;   /* Boundary condition row 2 coefficient */
-  glong col_index;    /* Column index of leftmost element in data */
+  gdouble *data;    /* Pointer to row data */
+  gdouble bc_at_m1; /* Boundary condition row 1 coefficient */
+  gdouble bc_at_p1; /* Boundary condition row 2 coefficient */
+  glong col_index;  /* Column index of leftmost element in data */
 } NcmSBesselOdeSolverRow;
 
 typedef struct _NcmSBesselOdeSolverPrivate
@@ -95,15 +96,6 @@ typedef struct _NcmSBesselOdeSolverPrivate
   gdouble b;         /* Right endpoint of interval */
   gdouble half_len;  /* (b-a)/2 - half length of interval */
   gdouble mid_point; /* (a+b)/2 - midpoint of interval */
-
-  /* Pre-computed coefficient arrays (Chebyshev expansions) */
-  GArray *c_coeffs; /* x^2 = [0, 0, 1] */
-  GArray *a_coeffs; /* 2x = [0, 2] */
-  GArray *b_coeffs; /* x^2 - l(l+1) = [-l(l+1), 0, 1] */
-
-  /* Band structure */
-  gint bandwidth;         /* Total bandwidth */
-  gint lower_band_offset; /* Lower band offset */
 
   /* Matrix storage (adaptive) */
   GPtrArray *matrix_rows; /* Array of NcmSBesselOdeSolverRow* */
@@ -134,8 +126,7 @@ _row_new (gdouble bc_at_m1, gdouble bc_at_p1, glong col_index)
 {
   NcmSBesselOdeSolverRow *row = g_new (NcmSBesselOdeSolverRow, 1);
 
-  row->data_base = g_new0 (gdouble, ROW_M + ROW_PAD);
-  row->data      = row->data_base;
+  row->data      = g_new0 (gdouble, TOTAL_BANDWIDTH);
   row->bc_at_m1  = bc_at_m1;
   row->bc_at_p1  = bc_at_p1;
   row->col_index = col_index;
@@ -146,7 +137,7 @@ _row_new (gdouble bc_at_m1, gdouble bc_at_p1, glong col_index)
 static void
 _row_free (NcmSBesselOdeSolverRow *row)
 {
-  g_free (row->data_base);
+  g_free (row->data);
   g_free (row);
 }
 
@@ -165,20 +156,15 @@ ncm_sbessel_ode_solver_init (NcmSBesselOdeSolver *solver)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
-  self->l                 = 0;
-  self->tolerance         = NCM_SBESSEL_ODE_SOLVER_DEFAULT_TOLERANCE;
-  self->max_size          = NCM_SBESSEL_ODE_SOLVER_DEFAULT_MAX_SIZE;
-  self->a                 = -1.0;
-  self->b                 = 1.0;
-  self->half_len          = 1.0;
-  self->mid_point         = 0.0;
-  self->c_coeffs          = NULL;
-  self->a_coeffs          = NULL;
-  self->b_coeffs          = NULL;
-  self->bandwidth         = 0;
-  self->lower_band_offset = 0;
-  self->matrix_rows       = g_ptr_array_new_with_free_func ((GDestroyNotify) _row_free);
-  self->solution          = NULL;
+  self->l           = 0;
+  self->tolerance   = NCM_SBESSEL_ODE_SOLVER_DEFAULT_TOLERANCE;
+  self->max_size    = NCM_SBESSEL_ODE_SOLVER_DEFAULT_MAX_SIZE;
+  self->a           = -1.0;
+  self->b           = 1.0;
+  self->half_len    = 1.0;
+  self->mid_point   = 0.0;
+  self->matrix_rows = g_ptr_array_new_with_free_func ((GDestroyNotify) _row_free);
+  self->solution    = NULL;
 }
 
 static void
@@ -251,10 +237,6 @@ _ncm_sbessel_ode_solver_dispose (GObject *object)
   NcmSBesselOdeSolver *solver             = NCM_SBESSEL_ODE_SOLVER (object);
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
-  g_clear_pointer (&self->c_coeffs, g_array_unref);
-  g_clear_pointer (&self->a_coeffs, g_array_unref);
-  g_clear_pointer (&self->b_coeffs, g_array_unref);
-  g_clear_pointer (&self->matrix_rows, g_ptr_array_unref);
   ncm_vector_clear (&self->solution);
 
   /* Chain up */
@@ -407,38 +389,7 @@ ncm_sbessel_ode_solver_set_l (NcmSBesselOdeSolver *solver, gint l)
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
   if (self->l != l)
-  {
     self->l = l;
-
-    /* Pre-compute coefficient arrays */
-    g_clear_pointer (&self->c_coeffs, g_array_unref);
-    g_clear_pointer (&self->a_coeffs, g_array_unref);
-    g_clear_pointer (&self->b_coeffs, g_array_unref);
-
-    /* x^2 = [0, 0, 1] in Chebyshev basis */
-    self->c_coeffs = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), 3);
-    g_array_set_size (self->c_coeffs, 3);
-    g_array_index (self->c_coeffs, gdouble, 0) = 0.0;
-    g_array_index (self->c_coeffs, gdouble, 1) = 0.0;
-    g_array_index (self->c_coeffs, gdouble, 2) = 1.0;
-
-    /* 2x = [0, 2] in Chebyshev basis */
-    self->a_coeffs = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), 2);
-    g_array_set_size (self->a_coeffs, 2);
-    g_array_index (self->a_coeffs, gdouble, 0) = 0.0;
-    g_array_index (self->a_coeffs, gdouble, 1) = 2.0;
-
-    /* x^2 - l(l+1) = [-l(l+1), 0, 1] in Chebyshev basis */
-    self->b_coeffs = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), 3);
-    g_array_set_size (self->b_coeffs, 3);
-    g_array_index (self->b_coeffs, gdouble, 0) = -(gdouble) (l * (l + 1));
-    g_array_index (self->b_coeffs, gdouble, 1) = 0.0;
-    g_array_index (self->b_coeffs, gdouble, 2) = 1.0;
-
-    /* Compute bandwidth (estimated) */
-    self->bandwidth         = 10; /* TODO: Compute exact bandwidth from coefficients */
-    self->lower_band_offset = -1 - (gint) self->b_coeffs->len;
-  }
 }
 
 /**
@@ -612,10 +563,10 @@ _ncm_sbessel_ode_solver_row_add (NcmSBesselOdeSolverRow *row, glong col, gdouble
   /* Column must be at or to the right of col_index */
   g_assert_cmpint (offset, >=, 0);
 
-  if (offset < ROW_M)
+  if (offset < TOTAL_BANDWIDTH)
     row->data[offset] += value;  /* Accumulate (supports += pattern) */
   else
-    g_error ("_ncm_sbessel_ode_solver_row_add: offset %ld exceeds ROW_M %d", offset, ROW_M);
+    g_error ("_ncm_sbessel_ode_solver_row_add: offset %ld exceeds TOTAL_BANDWIDTH %d", offset, TOTAL_BANDWIDTH);
 }
 
 /**
@@ -1016,11 +967,8 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeSolver *solver, glong row_index)
   const gdouble m2                        = m * m;
   const gint l                            = self->l;
   const glong k                           = row_index;
-
-  /* Determine leftmost column that will have non-zero entries */
-  const glong left_col = (k >= 2) ? (k - 2) : 0;
-
-  NcmSBesselOdeSolverRow *row = _row_new (0.0, 0.0, left_col);
+  const glong left_col                    = GSL_MAX (0, k - 2); /* Leftmost column index */
+  NcmSBesselOdeSolverRow *row             = _row_new (0.0, 0.0, left_col);
 
   /* Second derivative term: (m^2/h^2) d^2 + (2m/h) x d^2 + x^2 d^2 */
   _ncm_sbessel_compute_d2_row (row, k, m2 / h2);
@@ -1087,7 +1035,7 @@ _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong row1, glong row2, 
   /* Get pivot element from row1 at column=row1 */
   gdouble a_val = 0.0;
 
-  if ((pivot_col >= r1->col_index) && (pivot_col < r1->col_index + ROW_M))
+  if ((pivot_col >= r1->col_index) && (pivot_col < r1->col_index + TOTAL_BANDWIDTH))
   {
     const glong offset = pivot_col - r1->col_index;
 
@@ -1097,7 +1045,7 @@ _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong row1, glong row2, 
   /* Get element to eliminate from row2 at column=row1 */
   gdouble b_val = 0.0;
 
-  if ((pivot_col >= r2->col_index) && (pivot_col < r2->col_index + ROW_M))
+  if ((pivot_col >= r2->col_index) && (pivot_col < r2->col_index + TOTAL_BANDWIDTH))
   {
     const glong offset = pivot_col - r2->col_index;
 
@@ -1133,7 +1081,7 @@ _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong row1, glong row2, 
 
   /* Determine range of columns to process */
   const glong left_col  = GSL_MIN (r1->col_index, r2->col_index);
-  const glong right_col = GSL_MAX (r1->col_index + ROW_M - 1, r2->col_index + ROW_M - 1);
+  const glong right_col = GSL_MAX (r1->col_index + TOTAL_BANDWIDTH - 1, r2->col_index + TOTAL_BANDWIDTH - 1);
 
   /* Apply rotation to all matrix entries */
   for (glong col = left_col; col <= right_col; col++)
@@ -1142,10 +1090,10 @@ _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong row1, glong row2, 
     gdouble e2 = 0.0;
 
     /* Read values */
-    if ((col >= r1->col_index) && (col < r1->col_index + ROW_M))
+    if ((col >= r1->col_index) && (col < r1->col_index + TOTAL_BANDWIDTH))
       e1 = r1->data[col - r1->col_index];
 
-    if ((col >= r2->col_index) && (col < r2->col_index + ROW_M))
+    if ((col >= r2->col_index) && (col < r2->col_index + TOTAL_BANDWIDTH))
       e2 = r2->data[col - r2->col_index];
 
     /* Skip if both are zero */
@@ -1157,22 +1105,22 @@ _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong row1, glong row2, 
     const gdouble new_e2 = -sin_theta * e1 + cos_theta * e2;
 
     /* Write back */
-    if ((col >= r1->col_index) && (col < r1->col_index + ROW_M))
+    if ((col >= r1->col_index) && (col < r1->col_index + TOTAL_BANDWIDTH))
       r1->data[col - r1->col_index] = new_e1;
 
-    if ((col >= r2->col_index) && (col < r2->col_index + ROW_M))
+    if ((col >= r2->col_index) && (col < r2->col_index + TOTAL_BANDWIDTH))
       r2->data[col - r2->col_index] = new_e2;
   }
 
   /* After rotation, entry at (row2, pivot_col) should be zero.
    * Update row2's col_index to skip leading zeros if beneficial. */
-  if ((pivot_col >= r2->col_index) && (pivot_col < r2->col_index + ROW_M))
+  if ((pivot_col >= r2->col_index) && (pivot_col < r2->col_index + TOTAL_BANDWIDTH))
   {
     const glong new_col_index = pivot_col + 1;
     const glong shift         = new_col_index - r2->col_index;
 
     /* Only shift if we're not at the edge of allocated space */
-    if ((shift > 0) && (shift < ROW_M))
+    if ((shift > 0) && (shift < TOTAL_BANDWIDTH))
     {
       r2->col_index = new_col_index;
       r2->data     += shift;
@@ -1230,9 +1178,9 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
     while ((guint) row1 >= self->matrix_rows->len)
       g_ptr_array_add (self->matrix_rows, _ncm_sbessel_create_row (solver, self->matrix_rows->len));
 
-    const glong column_size = row1 + self->bandwidth;
+    const glong column_size = row1 + TOTAL_BANDWIDTH;
 
-    /* Eliminate subdiagonal entries using Givens rotations */
+    /* Eliminate sub-diagonal entries using Givens rotations */
     for (glong row2 = row1 + 1; (row2 < column_size) && (row2 < (glong) self->matrix_rows->len); row2++)
     {
       /* Grow c to include row2 */
@@ -1255,7 +1203,7 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
         NcmSBesselOdeSolverRow *r1 = g_ptr_array_index (self->matrix_rows, row1);
         gdouble diag               = 0.0;
 
-        if ((row1 >= r1->col_index) && (row1 < r1->col_index + ROW_M))
+        if ((row1 >= r1->col_index) && (row1 < r1->col_index + TOTAL_BANDWIDTH))
           diag = r1->data[row1 - r1->col_index];
 
         if (fabs (diag) > 1.0e-100)
@@ -1282,7 +1230,7 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
     {
       gdouble a_ij = 0.0;
 
-      if ((j >= r->col_index) && (j < r->col_index + ROW_M))
+      if ((j >= r->col_index) && (j < r->col_index + TOTAL_BANDWIDTH))
         a_ij = r->data[j - r->col_index];
 
       sum -= a_ij * ncm_vector_get (self->solution, j);
@@ -1291,7 +1239,7 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
     /* Get diagonal element */
     gdouble diag = 0.0;
 
-    if ((row >= r->col_index) && (row < r->col_index + ROW_M))
+    if ((row >= r->col_index) && (row < r->col_index + TOTAL_BANDWIDTH))
       diag = r->data[row - r->col_index];
 
     /* Solve for x[row] */
@@ -1355,7 +1303,7 @@ _ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
     }
 
     /* Copy data entries from the operator part */
-    for (glong j = 0; j < ROW_M; j++)
+    for (glong j = 0; j < TOTAL_BANDWIDTH; j++)
     {
       const glong col = row->col_index + j;
 
@@ -1970,7 +1918,7 @@ ncm_sbessel_ode_solver_get_proj_matrix (guint N)
 
     _ncm_sbessel_compute_proj_row (row, k, 1.0);
 
-    for (guint j = 0; j < ROW_M; j++)
+    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
       const glong col = row->col_index + j;
 
@@ -2008,7 +1956,7 @@ ncm_sbessel_ode_solver_get_x_matrix (guint N)
 
     _ncm_sbessel_compute_x_row (row, k, 1.0);
 
-    for (guint j = 0; j < ROW_M; j++)
+    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
       const glong col = row->col_index + j;
 
@@ -2046,7 +1994,7 @@ ncm_sbessel_ode_solver_get_x2_matrix (guint N)
 
     _ncm_sbessel_compute_x2_row (row, k, 1.0);
 
-    for (guint j = 0; j < ROW_M; j++)
+    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
       const glong col = row->col_index + j;
 
@@ -2084,7 +2032,7 @@ ncm_sbessel_ode_solver_get_d_matrix (guint N)
 
     _ncm_sbessel_compute_d_row (row, k, 1.0);
 
-    for (guint j = 0; j < ROW_M; j++)
+    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
       const glong col = row->col_index + j;
 
@@ -2122,7 +2070,7 @@ ncm_sbessel_ode_solver_get_x_d_matrix (guint N)
 
     _ncm_sbessel_compute_x_d_row (row, k, 1.0);
 
-    for (guint j = 0; j < ROW_M; j++)
+    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
       const glong col = row->col_index + j;
 
@@ -2160,7 +2108,7 @@ ncm_sbessel_ode_solver_get_d2_matrix (guint N)
 
     _ncm_sbessel_compute_d2_row (row, k, 1.0);
 
-    for (guint j = 0; j < ROW_M; j++)
+    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
       const glong col = row->col_index + j;
 
@@ -2198,7 +2146,7 @@ ncm_sbessel_ode_solver_get_x_d2_matrix (guint N)
 
     _ncm_sbessel_compute_x_d2_row (row, k, 1.0);
 
-    for (guint j = 0; j < ROW_M; j++)
+    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
       const glong col = row->col_index + j;
 
@@ -2236,7 +2184,7 @@ ncm_sbessel_ode_solver_get_x2_d2_matrix (guint N)
 
     _ncm_sbessel_compute_x2_d2_row (row, k, 1.0);
 
-    for (guint j = 0; j < ROW_M; j++)
+    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
       const glong col = row->col_index + j;
 
