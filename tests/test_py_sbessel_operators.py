@@ -1,12 +1,34 @@
-#!/usr/bin/env python
-# Test for NcmSBesselOdeSolver operator matrices
+#
+# test_py_sbessel_operators.py
+#
+# Fri Jan 31 00:00:00 2026
+# Copyright  2026  Sandro Dias Pinto Vitenti
+# <vitenti@uel.br>
+#
+# test_py_sbessel_operators.py
+# Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Tests for NcmSBesselOdeSolver operator matrices."""
 
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from scipy.special import spherical_jn
 from scipy.linalg import solve
+from scipy.integrate import quad
 from numcosmo_py import Ncm
 
 
@@ -951,4 +973,149 @@ class TestSBesselOperators:
         )
         assert_allclose(
             y_at_b, y_b, rtol=1.0e-15, atol=1.0e-15, err_msg="BC at x=b not satisfied"
+        )
+
+    @pytest.mark.parametrize("l_val", list(range(21)))
+    def test_spherical_bessel_integration(self, l_val: int) -> None:
+        """Test integration of spherical Bessel function via Green's identity.
+
+        Solve the ODE with homogeneous BCs (y(a)=0, y(b)=0) and RHS = 1.
+        By Green's identity: j_l(b)*y'(b) - j_l(a)*y'(a) = int_a^b j_l(x)dx
+        where y is the solution with RHS=1.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+
+        # Create solver with interval [a, b]
+        solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
+
+        # Get the operator matrix
+        mat = solver.get_operator_matrix(N)
+        mat_np = self.matrix_to_numpy(mat)
+
+        # Set up RHS: homogeneous BCs (y(a)=0, y(b)=0) with RHS=1
+        rhs_np = np.zeros(N)
+        rhs_np[0] = 0.0  # BC at x=a (t=-1)
+        rhs_np[1] = 0.0  # BC at x=b (t=+1)
+        rhs_np[2] = 1.0
+        # Rows 3 to N-1 have RHS = 0
+
+        # Solve the linear system
+        solution_coeffs_np = solve(mat_np, rhs_np)
+        solution_coeffs = Ncm.Vector.new_array(solution_coeffs_np.tolist())
+
+        # Compute derivatives at endpoints using the derivative function
+        # Need to account for the coordinate transformation: x = m + h*t
+        # where m = (a+b)/2, h = (b-a)/2
+        # dy/dx = (dy/dt) * (dt/dx) = (dy/dt) / h
+        h = (b - a) / 2.0
+
+        # Evaluate y'(t) at t=-1 (corresponds to x=a) and t=+1 (corresponds to x=b)
+        y_prime_at_minus1 = Ncm.SBesselOdeSolver.chebyshev_deriv(solution_coeffs, -1.0)
+        y_prime_at_plus1 = Ncm.SBesselOdeSolver.chebyshev_deriv(solution_coeffs, 1.0)
+
+        # Convert from dy/dt to dy/dx
+        y_prime_a = y_prime_at_minus1 / h
+        y_prime_b = y_prime_at_plus1 / h
+
+        # Get j_l values at endpoints
+        j_l_a = spherical_jn(l_val, a)
+        j_l_b = spherical_jn(l_val, b)
+
+        # Compute left-hand side: j_l(b)*y'(b) - j_l(a)*y'(a)
+        lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
+
+        # Compute right-hand side: integral of j_l(x) from a to b
+        # Use high-accuracy numerical integration
+
+        def integrand(x: float) -> float:
+            return spherical_jn(l_val, x)
+
+        rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
+
+        # Compare
+        assert_allclose(
+            lhs,
+            rhs,
+            rtol=1.0e-8,
+            atol=1.0e-20,
+            err_msg=(
+                f"Green's identity failed for l={l_val}: "
+                f"j_l(b)*y'(b) - j_l(a)*y'(a) != int_a^b j_l(x)dx"
+            ),
+        )
+
+    @pytest.mark.parametrize("l_val", list(range(21)))
+    def test_spherical_bessel_integration_x(self, l_val: int) -> None:
+        """Test integration of x*j_l(x) via Green's identity.
+
+        Solve the ODE with homogeneous BCs (y(a)=0, y(b)=0) and RHS = x.
+        By Green's identity: x²j_l(b)*y'(b) - x²j_l(a)*y'(a) = int_a^b x*j_l(x)dx
+        where y is the solution with RHS=x.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+
+        # Create solver with interval [a, b]
+        solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
+
+        # Get the operator matrix
+        mat = solver.get_operator_matrix(N)
+        mat_np = self.matrix_to_numpy(mat)
+
+        # Set up RHS: homogeneous BCs (y(a)=0, y(b)=0) with RHS=x
+        # In the mapped coordinates, x = m + h*t where m=(a+b)/2, h=(b-a)/2
+        # So we need RHS = m + h*t in Chebyshev basis
+        # T_0(t) = 1, T_1(t) = t
+        # Therefore: m*T_0 + h*T_1
+        rhs_np = np.zeros(N)
+        rhs_np[0] = 0.0  # BC at x=a (t=-1)
+        rhs_np[1] = 0.0  # BC at x=b (t=+1)
+
+        m = (a + b) / 2.0
+        h = (b - a) / 2.0
+
+        # RHS coefficients in Chebyshev basis for x = m + h*t
+        rhs_np[2] = m  # Constant term (T_0 coefficient)
+        rhs_np[3] = (
+            0.25 * h
+        )  # Linear term (T_1 coefficient), which equals 0.25 for this case
+        # Rows 4 to N-1 have RHS = 0
+
+        # Solve the linear system
+        solution_coeffs_np = solve(mat_np, rhs_np)
+        solution_coeffs = Ncm.Vector.new_array(solution_coeffs_np.tolist())
+
+        # Compute derivatives at endpoints
+        # dy/dx = (dy/dt) / h
+        y_prime_at_minus1 = Ncm.SBesselOdeSolver.chebyshev_deriv(solution_coeffs, -1.0)
+        y_prime_at_plus1 = Ncm.SBesselOdeSolver.chebyshev_deriv(solution_coeffs, 1.0)
+
+        # Convert from dy/dt to dy/dx
+        y_prime_a = y_prime_at_minus1 / h
+        y_prime_b = y_prime_at_plus1 / h
+
+        # Get j_l values at endpoints
+        j_l_a = spherical_jn(l_val, a)
+        j_l_b = spherical_jn(l_val, b)
+
+        # Compute left-hand side: x²j_l(b)*y'(b) - x²j_l(a)*y'(a)
+        lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
+
+        # Compute right-hand side: integral of x*j_l(x) from a to b
+        def integrand(x: float) -> float:
+            return x * spherical_jn(l_val, x)
+
+        rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
+
+        # Compare
+        assert_allclose(
+            lhs,
+            rhs,
+            rtol=1.0e-8,
+            atol=1.0e-20,
+            err_msg=(
+                f"Green's identity failed for l={l_val}: "
+                f"x²j_l(b)*y'(b) - x²j_l(a)*y'(a) != int_a^b x*j_l(x)dx"
+            ),
         )
