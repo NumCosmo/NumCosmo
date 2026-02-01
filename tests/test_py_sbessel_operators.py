@@ -1410,3 +1410,139 @@ class TestSBesselOperators:
             atol=1.0e-20,
             err_msg=(f"Green's identity failed with QR solve for l={l_val}, RHS=x"),
         )
+
+    @pytest.mark.parametrize("l_val", [0, 1, 5, 10, 20])
+    def test_integrate_constant(self, l_val: int) -> None:
+        """Test integrate method with f(x) = 1.
+
+        Compares the result of the integrate method against scipy numerical integration.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+
+        # Create solver
+        solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
+
+        # Define f(x) = 1
+        def f_constant(_user_data: None, _x: float) -> float:
+            return 1.0
+
+        # Compute integral using the new integrate method
+        result = solver.integrate(f_constant, None, N)
+
+        # Compute expected value using scipy
+        def integrand(x: float) -> float:
+            return spherical_jn(l_val, x)
+
+        expected, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
+
+        # Compare
+        assert_allclose(
+            result,
+            expected,
+            rtol=1.0e-8,
+            atol=1.0e-20,
+            err_msg=(f"integrate method failed for l={l_val}, f(x)=1"),
+        )
+
+    @pytest.mark.parametrize("l_val", [0, 1, 5, 10, 20])
+    def test_integrate_linear(self, l_val: int) -> None:
+        """Test integrate method with f(x) = x.
+
+        Compares the result of the integrate method against scipy numerical integration.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+
+        # Create solver
+        solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
+
+        # Define f(x) = x
+        def f_linear(_user_data: None, x: float) -> float:
+            return x
+
+        # Compute integral using the new integrate method
+        result = solver.integrate(f_linear, None, N)
+
+        # Compute expected value using scipy
+        def integrand(x: float) -> float:
+            return x * spherical_jn(l_val, x)
+
+        expected, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
+
+        # Compare
+        assert_allclose(
+            result,
+            expected,
+            rtol=1.0e-8,
+            atol=1.0e-20,
+            err_msg=(f"integrate method failed for l={l_val}, f(x)=x"),
+        )
+
+    @pytest.mark.parametrize("l_val", [0, 1, 5, 10])
+    def test_integrate_quadratic(self, l_val: int) -> None:
+        """Test integrate method with f(x) = x^2.
+
+        Compares the result of the integrate method against scipy numerical integration.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+
+        # Create solver
+        solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
+
+        # Define f(x) = x^2
+        def f_quadratic(_user_data: None, x: float) -> float:
+            return x * x
+
+        # Compute integral using the new integrate method
+        result = solver.integrate(f_quadratic, None, N)
+
+        # Compute expected value using scipy
+        def integrand(x: float) -> float:
+            return x * x * spherical_jn(l_val, x)
+
+        expected, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
+
+        # Compare
+        assert_allclose(
+            result,
+            expected,
+            rtol=1.0e-8,
+            atol=1.0e-20,
+            err_msg=(f"integrate method failed for l={l_val}, f(x)=x^2"),
+        )
+
+    @pytest.mark.parametrize("l_val", [0, 1, 5])
+    def test_integrate_rational(self, l_val: int) -> None:
+        """Test integrate method with f(x) = x^2/(1+x^2)^4.
+
+        Compares the result of the integrate method against scipy numerical integration.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+
+        # Create solver
+        solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
+
+        # Define f(x) = x^2/(1+x^2)^4
+        def f_rational(_user_data: None, x: float) -> float:
+            return x**2 / (1.0 + x**2) ** 4
+
+        # Compute integral using the new integrate method
+        result = solver.integrate(f_rational, None, N)
+
+        # Compute expected value using scipy
+        def integrand(x: float) -> float:
+            return (x**2 / (1.0 + x**2) ** 4) * spherical_jn(l_val, x)
+
+        expected, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
+
+        # Compare
+        assert_allclose(
+            result,
+            expected,
+            rtol=1.0e-7,
+            atol=1.0e-18,
+            err_msg=(f"integrate method failed for l={l_val}, f(x)=x^2/(1+x^2)^4"),
+        )

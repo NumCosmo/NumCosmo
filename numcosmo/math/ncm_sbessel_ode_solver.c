@@ -65,6 +65,7 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_math.h>
+#include <gsl/gsl_sf_bessel.h>
 #include <fftw3.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -1401,6 +1402,82 @@ ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, NcmVector *rhs,
 
   /* Solution is stored in b */
   return b;
+}
+
+/**
+ * ncm_sbessel_ode_solver_integrate:
+ * @solver: a #NcmSBesselOdeSolver
+ * @F: (scope call): function to integrate against spherical Bessel function
+ * @user_data: user data for @F
+ * @N: number of Chebyshev nodes for the approximation
+ *
+ * Computes the integral $\int_a^b f(x) j_l(x) dx$ using Green's identity
+ * with the spherical Bessel ODE. The method:
+ *
+ * 1. Computes Chebyshev coefficients of f(x) on [a,b]
+ * 2. Converts to Gegenbauer $C^{(2)}$ basis
+ * 3. Solves the ODE with homogeneous Dirichlet boundary conditions
+ * 4. Evaluates derivatives at the endpoints
+ * 5. Returns $b^2 j_l(b) y'(b) - a^2 j_l(a) y'(a)$
+ *
+ * By Green's identity, this equals $\int_a^b f(x) j_l(x) dx$ when y(x)
+ * is the solution to the spherical Bessel ODE with right-hand side f(x).
+ *
+ * Returns: the value of the integral $\int_a^b f(x) j_l(x) dx$
+ */
+gdouble
+ncm_sbessel_ode_solver_integrate (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolverF F, gpointer user_data, guint N)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  const gdouble a                         = self->a;
+  const gdouble b                         = self->b;
+  const gdouble h                         = self->half_len;
+  const gint l                            = self->l;
+
+  /* Step 1: Compute Chebyshev coefficients for f(x) */
+  NcmVector *cheb_coeffs = ncm_sbessel_ode_solver_compute_chebyshev_coeffs (F, a, b, N, user_data);
+
+  /* Step 2: Convert to Gegenbauer C^(2) basis */
+  NcmVector *gegen_coeffs = ncm_vector_new (N);
+
+  ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (cheb_coeffs, gegen_coeffs);
+
+  /* Step 3: Set up RHS with homogeneous boundary conditions */
+  NcmVector *rhs = ncm_vector_new (N);
+
+  ncm_vector_set (rhs, 0, 0.0); /* BC at x=a (t=-1) */
+  ncm_vector_set (rhs, 1, 0.0); /* BC at x=b (t=+1) */
+
+  /* Copy Gegenbauer coefficients to RHS starting from index 2 */
+  for (guint i = 0; i < N - 2; i++)
+  {
+    ncm_vector_set (rhs, i + 2, ncm_vector_get (gegen_coeffs, i));
+  }
+
+  /* Step 4: Solve the ODE */
+  NcmVector *solution = ncm_sbessel_ode_solver_solve (solver, rhs);
+
+  /* Step 5: Compute derivatives at endpoints */
+  /* dy/dx = (dy/dt) / h, where h = (b-a)/2 */
+  const gdouble y_prime_at_minus1 = ncm_sbessel_ode_solver_chebyshev_deriv (solution, -1.0);
+  const gdouble y_prime_at_plus1  = ncm_sbessel_ode_solver_chebyshev_deriv (solution, 1.0);
+  const gdouble y_prime_a         = y_prime_at_minus1 / h;
+  const gdouble y_prime_b         = y_prime_at_plus1 / h;
+
+  /* Step 6: Evaluate j_l at endpoints */
+  const gdouble j_l_a = gsl_sf_bessel_jl (l, a);
+  const gdouble j_l_b = gsl_sf_bessel_jl (l, b);
+
+  /* Step 7: Compute integral via Green's identity */
+  const gdouble integral = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
+
+  /* Clean up */
+  ncm_vector_free (cheb_coeffs);
+  ncm_vector_free (gegen_coeffs);
+  ncm_vector_free (rhs);
+  ncm_vector_free (solution);
+
+  return integral;
 }
 
 /**
