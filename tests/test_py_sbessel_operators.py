@@ -1122,6 +1122,43 @@ class TestSBesselOperators:
 
     @pytest.mark.parametrize("l_val", list(range(21)))
     @pytest.mark.parametrize("N", [32, 64, 128])
+    def test_solve_qr_vs_scipy(self, l_val: int, N: int) -> None:
+        """Test that QR solve produces the same result as scipy solver."""
+        a, b = 1.0, 20.0
+
+        # Create solver with interval [a, b]
+        solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
+
+        # Set up simple RHS vector with just a few coefficients
+        rhs_np = np.zeros(N)
+        rhs_np[2] = 1.0
+        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
+
+        # Call solve (QR method) - just check it doesn't crash
+        solution = solver.solve(rhs_vec)
+        solution_np = self.vector_to_numpy(solution)
+
+        op_mat = self.matrix_to_numpy(solver.get_operator_matrix(N))
+
+        # Solve the system using scipy for comparison
+        rhs_np_full = np.zeros(N)
+        rhs_np_full[2] = 1.0
+        solution_scipy = solve(op_mat, rhs_np_full)
+
+        assert_allclose(
+            solution_np,
+            solution_scipy,
+            rtol=1.0e-10,
+            atol=0.0,
+            err_msg="QR solve doesn't match scipy solution",
+        )
+
+        # Basic sanity check - solution should exist and be non-trivial
+        assert solution is not None
+        assert len(solution_np) > 0
+
+    @pytest.mark.parametrize("l_val", list(range(21)))
+    @pytest.mark.parametrize("N", [32, 64, 128])
     def test_solve_dense_vs_scipy(self, l_val: int, N: int) -> None:
         """Test that solve_dense produces the same result as scipy solver.
 

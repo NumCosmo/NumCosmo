@@ -69,9 +69,11 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /* Operator bandwidth */
+/* Number of rows to rotate lower bandwidth plus number of boundary conditions */
 #define LOWER_BANDWIDTH 2
 #define UPPER_BANDWIDTH 6
 #define TOTAL_BANDWIDTH (LOWER_BANDWIDTH + UPPER_BANDWIDTH + 1)
+#define ROWS_TO_ROTATE (LOWER_BANDWIDTH + 2)
 
 /**
  * NcmSBesselOdeSolverRow:
@@ -150,6 +152,7 @@ static void _ncm_sbessel_compute_x_d_row (NcmSBesselOdeSolverRow *row, glong k, 
 static void _ncm_sbessel_compute_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff);
 static void _ncm_sbessel_compute_x_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff);
 static void _ncm_sbessel_compute_x2_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff);
+static gdouble _ncm_sbessel_bc_row (NcmSBesselOdeSolverRow *row, glong col_index);
 
 static void
 ncm_sbessel_ode_solver_init (NcmSBesselOdeSolver *solver)
@@ -909,6 +912,15 @@ _ncm_sbessel_compute_x2_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble co
   _ncm_sbessel_ode_solver_row_add (row, k + 4, value_2);
 }
 
+static gdouble
+_ncm_sbessel_bc_row (NcmSBesselOdeSolverRow *row, glong col_index)
+{
+  const gdouble bc_at_m1 = (col_index % 2) == 0 ? row->bc_at_m1 : -row->bc_at_m1;
+  const gdouble bc_at_p1 = row->bc_at_p1;
+
+  return (bc_at_m1 + bc_at_p1);
+}
+
 /**
  * _ncm_sbessel_create_row_bc_at_m1:
  * @solver: a #NcmSBesselOdeSolver
@@ -1020,111 +1032,73 @@ _ncm_sbessel_create_row (NcmSBesselOdeSolver *solver, glong row_index)
  * where c and s are chosen to zero out element (row2, row1).
  */
 static void
-_ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong row1, glong row2, GArray *c)
+_ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong pivot_col, glong row1, glong row2, GArray *c)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  NcmSBesselOdeSolverRow *r1              = g_ptr_array_index (self->matrix_rows, row1);
+  NcmSBesselOdeSolverRow *r2              = g_ptr_array_index (self->matrix_rows, row2);
+  gdouble a_val                           = 0.0;
+  gdouble b_val                           = 0.0;
+  gdouble norm;
 
-  g_assert_cmpuint (row1, <, self->matrix_rows->len);
-  g_assert_cmpuint (row2, <, self->matrix_rows->len);
+  g_assert_cmpuint (r1->col_index, ==, pivot_col); /* Pivot row aligned with its index */
+  g_assert_cmpuint (r2->col_index, ==, pivot_col); /* Row to eliminate aligned with its index */
 
-  NcmSBesselOdeSolverRow *r1 = g_ptr_array_index (self->matrix_rows, row1);
-  NcmSBesselOdeSolverRow *r2 = g_ptr_array_index (self->matrix_rows, row2);
+  a_val = r1->data[0] + _ncm_sbessel_bc_row (r1, pivot_col);
+  b_val = r2->data[0] + _ncm_sbessel_bc_row (r2, pivot_col);
 
-  const glong pivot_col = row1; /* Column to eliminate */
-
-  /* Get pivot element from row1 at column=row1 */
-  gdouble a_val = 0.0;
-
-  if ((pivot_col >= r1->col_index) && (pivot_col < r1->col_index + TOTAL_BANDWIDTH))
-  {
-    const glong offset = pivot_col - r1->col_index;
-
-    a_val = r1->data[offset];
-  }
-
-  /* Get element to eliminate from row2 at column=row1 */
-  gdouble b_val = 0.0;
-
-  if ((pivot_col >= r2->col_index) && (pivot_col < r2->col_index + TOTAL_BANDWIDTH))
-  {
-    const glong offset = pivot_col - r2->col_index;
-
-    b_val = r2->data[offset];
-  }
-
-  /* Compute Givens rotation coefficients */
-  const gdouble norm = hypot (a_val, b_val);
+  norm = hypot (a_val, b_val);
 
   if (norm < 1.0e-100)
-    return;  /* Already zero or too small to rotate */
-
-  const gdouble cos_theta = a_val / norm;
-  const gdouble sin_theta = b_val / norm;
-
-  /* Apply rotation to RHS vector */
-  const gdouble rhs1 = g_array_index (c, gdouble, row1);
-  const gdouble rhs2 = g_array_index (c, gdouble, row2);
-
-  g_array_index (c, gdouble, row1) = cos_theta * rhs1 + sin_theta * rhs2;
-  g_array_index (c, gdouble, row2) = -sin_theta * rhs1 + cos_theta * rhs2;
-
-  /* Apply rotation to boundary condition coefficients */
-  const gdouble bc1_m1 = r1->bc_at_m1;
-  const gdouble bc2_m1 = r2->bc_at_m1;
-  const gdouble bc1_p1 = r1->bc_at_p1;
-  const gdouble bc2_p1 = r2->bc_at_p1;
-
-  r1->bc_at_m1 = cos_theta * bc1_m1 + sin_theta * bc2_m1;
-  r2->bc_at_m1 = -sin_theta * bc1_m1 + cos_theta * bc2_m1;
-  r1->bc_at_p1 = cos_theta * bc1_p1 + sin_theta * bc2_p1;
-  r2->bc_at_p1 = -sin_theta * bc1_p1 + cos_theta * bc2_p1;
-
-  /* Determine range of columns to process */
-  const glong left_col  = GSL_MIN (r1->col_index, r2->col_index);
-  const glong right_col = GSL_MAX (r1->col_index + TOTAL_BANDWIDTH - 1, r2->col_index + TOTAL_BANDWIDTH - 1);
-
-  /* Apply rotation to all matrix entries */
-  for (glong col = left_col; col <= right_col; col++)
   {
-    gdouble e1 = 0.0;
-    gdouble e2 = 0.0;
+    /* Entry already zero - just shift r2 without rotation */
+    for (glong i = 1; i < TOTAL_BANDWIDTH; i++)
+    {
+      r2->data[i - 1] = r2->data[i];
+    }
 
-    /* Read values */
-    if ((col >= r1->col_index) && (col < r1->col_index + TOTAL_BANDWIDTH))
-      e1 = r1->data[col - r1->col_index];
+    r2->data[TOTAL_BANDWIDTH - 1] = 0.0; /* Last entry shifted out is now zero */
+    r2->col_index++;
 
-    if ((col >= r2->col_index) && (col < r2->col_index + TOTAL_BANDWIDTH))
-      e2 = r2->data[col - r2->col_index];
-
-    /* Skip if both are zero */
-    if ((fabs (e1) < 1.0e-100) && (fabs (e2) < 1.0e-100))
-      continue;
-
-    /* Apply rotation */
-    const gdouble new_e1 = cos_theta * e1 + sin_theta * e2;
-    const gdouble new_e2 = -sin_theta * e1 + cos_theta * e2;
-
-    /* Write back */
-    if ((col >= r1->col_index) && (col < r1->col_index + TOTAL_BANDWIDTH))
-      r1->data[col - r1->col_index] = new_e1;
-
-    if ((col >= r2->col_index) && (col < r2->col_index + TOTAL_BANDWIDTH))
-      r2->data[col - r2->col_index] = new_e2;
+    return;
   }
 
-  /* After rotation, entry at (row2, pivot_col) should be zero.
-   * Update row2's col_index to skip leading zeros if beneficial. */
-  if ((pivot_col >= r2->col_index) && (pivot_col < r2->col_index + TOTAL_BANDWIDTH))
   {
-    const glong new_col_index = pivot_col + 1;
-    const glong shift         = new_col_index - r2->col_index;
+    /* Compute Givens rotation coefficients */
+    const gdouble cos_theta = a_val / norm;
+    const gdouble sin_theta = b_val / norm;
+    const gdouble rhs1      = g_array_index (c, gdouble, row1);
+    const gdouble rhs2      = g_array_index (c, gdouble, row2);
+    const gdouble bc1_m1    = r1->bc_at_m1;
+    const gdouble bc2_m1    = r2->bc_at_m1;
+    const gdouble bc1_p1    = r1->bc_at_p1;
+    const gdouble bc2_p1    = r2->bc_at_p1;
+    glong i;
 
-    /* Only shift if we're not at the edge of allocated space */
-    if ((shift > 0) && (shift < TOTAL_BANDWIDTH))
+    g_array_index (c, gdouble, row1) = cos_theta * rhs1 + sin_theta * rhs2;
+    g_array_index (c, gdouble, row2) = -sin_theta * rhs1 + cos_theta * rhs2;
+    r1->bc_at_m1                     = cos_theta * bc1_m1 + sin_theta * bc2_m1;
+    r2->bc_at_m1                     = -sin_theta * bc1_m1 + cos_theta * bc2_m1;
+    r1->bc_at_p1                     = cos_theta * bc1_p1 + sin_theta * bc2_p1;
+    r2->bc_at_p1                     = -sin_theta * bc1_p1 + cos_theta * bc2_p1;
+
+    /* Updated leading entry in row1 */
+    r1->data[0] = cos_theta * r1->data[0] + sin_theta * r2->data[0];
+
+    /* Apply rotation to all matrix entries */
+    for (i = 1; i < TOTAL_BANDWIDTH; i++)
     {
-      r2->col_index = new_col_index;
-      r2->data     += shift;
+      const gdouble e1     = r1->data[i];
+      const gdouble e2     = r2->data[i];
+      const gdouble new_e1 = cos_theta * e1 + sin_theta * e2;
+      const gdouble new_e2 = -sin_theta * e1 + cos_theta * e2;
+
+      r1->data[i]     = new_e1;
+      r2->data[i - 1] = new_e2;
     }
+
+    r2->data[TOTAL_BANDWIDTH - 1] = 0.0; /* Last entry shifted out is now zero */
+    r2->col_index++;                     /* Shift row2's column index right by 1 */
   }
 }
 
@@ -1143,110 +1117,90 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
   const guint rhs_len                     = ncm_vector_len (rhs);
+  GArray *c                               = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), rhs_len);
+  glong col                               = 0;
+  glong i, last_row_index;
 
   /* Clear previous solution */
   g_ptr_array_set_size (self->matrix_rows, 0);
   ncm_vector_clear (&self->solution);
 
   /* Add boundary condition rows */
-  g_ptr_array_add (self->matrix_rows, _ncm_sbessel_create_row (solver, 0));
-  g_ptr_array_add (self->matrix_rows, _ncm_sbessel_create_row (solver, 1));
+  for (i = 0; i < ROWS_TO_ROTATE + 1; i++)
+    g_ptr_array_add (self->matrix_rows, _ncm_sbessel_create_row (solver, i));
+
+  last_row_index = ROWS_TO_ROTATE;
 
   /* Copy RHS to working array */
-  GArray *c = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), rhs_len);
-
-  for (guint i = 0; i < rhs_len; i++)
+  for (i = 0; i < rhs_len; i++)
   {
     const gdouble rhs_i = ncm_vector_get (rhs, i);
 
     g_array_append_val (c, rhs_i);
   }
 
-  /* Adaptive QR loop */
-  gdouble error = 1.0;
-  glong col     = -1;
-  glong row1    = 0;
-
-  while (((error > self->tolerance) || (row1 < (glong) c->len)) &&
-         ((glong) self->matrix_rows->len < self->max_size))
+  for (i = 0; i < ROWS_TO_ROTATE; i++)
   {
-    col++;
-    row1  = col;
-    error = 0.0;
+    const gdouble zero = 0.0;
 
-    /* Grow matrix to include row1 */
-    while ((guint) row1 >= self->matrix_rows->len)
-      g_ptr_array_add (self->matrix_rows, _ncm_sbessel_create_row (solver, self->matrix_rows->len));
+    g_array_append_val (c, zero);
+  }
 
-    const glong column_size = row1 + TOTAL_BANDWIDTH;
+  for (col = 0; col < rhs_len; col++)
+  {
+    const glong last_row_for_col = GSL_MIN (ROWS_TO_ROTATE, rhs_len - col - 1);
 
-    /* Eliminate sub-diagonal entries using Givens rotations */
-    for (glong row2 = row1 + 1; (row2 < column_size) && (row2 < (glong) self->matrix_rows->len); row2++)
+    for (i = last_row_for_col; i > 0; i--)
     {
-      /* Grow c to include row2 */
-      while ((guint) row2 >= c->len)
-      {
-        const gdouble zero = 0.0;
+      const glong r1_index = col + i - 1;
+      const glong r2_index = col + i;
 
-        g_array_append_val (c, zero);
-      }
+      if (r2_index > last_row_index)
+        g_ptr_array_add (self->matrix_rows, _ncm_sbessel_create_row (solver, ++last_row_index));
 
-      /* Grow matrix to include row2 */
-      while ((guint) row2 >= self->matrix_rows->len)
-        g_ptr_array_add (self->matrix_rows, _ncm_sbessel_create_row (solver, self->matrix_rows->len));
-
-      /* Apply Givens rotation to eliminate (row2, col) */
-      _ncm_sbessel_apply_givens (solver, row1, row2, c);
-
-      /* Update error estimate using diagonal element */
-      {
-        NcmSBesselOdeSolverRow *r1 = g_ptr_array_index (self->matrix_rows, row1);
-        gdouble diag               = 0.0;
-
-        if ((row1 >= r1->col_index) && (row1 < r1->col_index + TOTAL_BANDWIDTH))
-          diag = r1->data[row1 - r1->col_index];
-
-        if (fabs (diag) > 1.0e-100)
-        {
-          error = GSL_MAX (error, fabs (g_array_index (c, gdouble, row1) / diag));
-          error = GSL_MAX (error, fabs (g_array_index (c, gdouble, row2) / diag));
-        }
-      }
+      _ncm_sbessel_apply_givens (solver, col, r1_index, r2_index, c);
     }
   }
 
-  /* Back substitution to solve R x = c */
-  const glong n = col + 1;
-
-  self->solution = ncm_vector_new (n);
-
-  for (glong row = n - 1; row >= 0; row--)
   {
-    NcmSBesselOdeSolverRow *r = g_ptr_array_index (self->matrix_rows, row);
-    gdouble sum               = g_array_index (c, gdouble, row);
+    /* Back substitution to solve R x = c */
+    const glong n        = col; /* since col == rhs_len */
+    gdouble acc_bc_at_m1 = 0.0;
+    gdouble acc_bc_at_p1 = 0.0;
+    gdouble *sol_ptr;
+    glong row;
 
-    /* Subtract contributions from already-computed solution values */
-    for (glong j = row + 1; j < n; j++)
+    self->solution = ncm_vector_new (n);
+    sol_ptr        = ncm_vector_data (self->solution);
+
+    for (row = n - 1; row >= 0; row--)
     {
-      gdouble a_ij = 0.0;
+      NcmSBesselOdeSolverRow *r = g_ptr_array_index (self->matrix_rows, row);
+      gdouble sum               = g_array_index (c, gdouble, row);
+      glong width               = GSL_MIN (TOTAL_BANDWIDTH, n - row);
+      const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
+      gdouble sol;
+      glong j;
 
-      if ((j >= r->col_index) && (j < r->col_index + TOTAL_BANDWIDTH))
-        a_ij = r->data[j - r->col_index];
+      g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
 
-      sum -= a_ij * ncm_vector_get (self->solution, j);
+      for (j = 1; j < width; j++)
+      {
+        const glong col    = r->col_index + j;
+        const gdouble a_ij = r->data[j];
+
+        sum -= a_ij * sol_ptr[col];
+      }
+
+      sum -= acc_bc_at_m1 * r->bc_at_m1;
+      sum -= acc_bc_at_p1 * r->bc_at_p1;
+
+      sol          = sum / diag;
+      sol_ptr[row] = sol;
+
+      acc_bc_at_m1 += (row % 2 == 0 ? 1.0 : -1.0) * sol;
+      acc_bc_at_p1 += sol;
     }
-
-    /* Get diagonal element */
-    gdouble diag = 0.0;
-
-    if ((row >= r->col_index) && (row < r->col_index + TOTAL_BANDWIDTH))
-      diag = r->data[row - r->col_index];
-
-    /* Solve for x[row] */
-    if (fabs (diag) > 1.0e-100)
-      ncm_vector_set (self->solution, row, sum / diag);
-    else
-      ncm_vector_set (self->solution, row, 0.0);
   }
 
   g_array_unref (c);
