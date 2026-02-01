@@ -81,6 +81,7 @@ void ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (NcmVector *c, NcmVector
 gdouble ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (NcmVector *c, gdouble x);
 gdouble ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (NcmVector *c, gdouble x);
 gdouble ncm_sbessel_ode_solver_chebyshev_eval (NcmVector *a, gdouble t);
+gdouble ncm_sbessel_ode_solver_chebyshev_deriv (NcmVector *a, gdouble t);
 
 NcmMatrix *ncm_sbessel_ode_solver_get_proj_matrix (guint N);
 NcmMatrix *ncm_sbessel_ode_solver_get_x_matrix (guint N);

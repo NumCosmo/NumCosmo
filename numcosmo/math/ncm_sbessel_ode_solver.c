@@ -1777,6 +1777,126 @@ ncm_sbessel_ode_solver_chebyshev_eval (NcmVector *a, gdouble t)
 }
 
 /**
+ * ncm_sbessel_ode_solver_chebyshev_deriv:
+ * @a: Chebyshev coefficients vector (a_j multiplies T_j)
+ * @t: point to evaluate in [-1,1]
+ *
+ * Evaluates the first derivative of a Chebyshev expansion at $t$.
+ *
+ * The Chebyshev series is
+ * $$ f(t) = \sum_{j=0}^{N-1} a_j T_j(t) , $$
+ * and its derivative can be written as
+ * $$ f'(t) = \sum_{k=0}^{N-2} b_k T_k(t) . $$
+ *
+ * The derivative coefficients $b_k$ satisfy
+ * $$ b_k = \sum_{j=k+1,k+3,\dots}^{N-1} 2 j a_j , \quad k \ge 1, $$
+ * and
+ * $$ b_0 = \sum_{j=1,3,5,\dots}^{N-1} j a_j . $$
+ *
+ * The derivative is evaluated using a fused backward recurrence and
+ * the Clenshaw algorithm, without explicitly forming the coefficients $b_k$.
+ *
+ * Returns: the value of the derivative at $t$
+ */
+gdouble
+ncm_sbessel_ode_solver_chebyshev_deriv (NcmVector *a, gdouble t)
+{
+  const gint N = ncm_vector_len (a);
+
+  if (N <= 1)
+    return 0.0;
+
+  if (N == 2)
+    return ncm_vector_get (a, 1);
+
+
+  if (fabs (t - 1.0) < 1.0e-15)
+  {
+    /* ---- x = +1 ---- */
+    gdouble d1  = 0.0;
+    gdouble d2  = 0.0;
+    gdouble sum = 0.0;
+
+    for (gint k = N - 2; k >= 1; k--)
+    {
+      gdouble bk = d2 + 2.0 * (k + 1) * ncm_vector_get (a, k + 1);
+
+      d2   = d1;
+      d1   = bk;
+      sum += bk;
+    }
+
+    /* b0 has the 1/2 factor */
+    gdouble b0 = 0.5 * (d2 + 2.0 * ncm_vector_get (a, 1));
+
+    sum += b0;
+
+    return sum;
+  }
+
+  if (fabs (t + 1.0) < 1.0e-15)
+  {
+    /* ---- x = -1 ---- */
+    gdouble d1  = 0.0;
+    gdouble d2  = 0.0;
+    gdouble sum = 0.0;
+
+    /* start with (-1)^(N-2) */
+    gdouble sign = ((N - 2) & 1) ? -1.0 : 1.0;
+
+    for (gint k = N - 2; k >= 1; k--)
+    {
+      gdouble bk = d2 + 2.0 * (k + 1) * ncm_vector_get (a, k + 1);
+
+      d2 = d1;
+      d1 = bk;
+
+      sum += sign * bk;
+      sign = -sign;
+    }
+
+    /* b0 has sign +1 */
+    gdouble b0 = 0.5 * (d2 + 2.0 * ncm_vector_get (a, 1));
+
+    sum += b0;
+
+    return sum;
+  }
+
+  {
+    gdouble c1          = 0.0; /* Clenshaw state k+1 */
+    gdouble c2          = 0.0; /* Clenshaw state k+2 */
+    gdouble d1          = 0.0; /* recurrence helper */
+    gdouble d2          = 0.0;
+    const gdouble two_t = 2.0 * t;
+
+    /* k = N-2 ... 1 */
+    for (gint k = N - 2; k >= 1; k--)
+    {
+      /* build b[k] on the fly */
+      gdouble bk = d2 + 2.0 * (k + 1) * ncm_vector_get (a, k + 1);
+
+      /* update derivative recurrence */
+      d2 = d1;
+      d1 = bk;
+
+      /* Clenshaw step */
+      gdouble c0 = two_t * c1 - c2 + bk;
+
+      c2 = c1;
+      c1 = c0;
+    }
+
+    {
+      /* k = 0 needs the 1/2 factor */
+      gdouble b0 = 0.5 * (d2 + 2.0 * ncm_vector_get (a, 1));
+
+      return t * c1 - c2 + b0;
+    }
+  }
+}
+
+/**
  * ncm_sbessel_ode_solver_get_proj_matrix:
  * @N: size of the matrix
  *
