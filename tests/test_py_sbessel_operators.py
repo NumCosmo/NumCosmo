@@ -1119,3 +1119,149 @@ class TestSBesselOperators:
                 f"x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) != int_a^b x*j_l(x)dx"
             ),
         )
+
+    @pytest.mark.parametrize("l_val", list(range(21)))
+    @pytest.mark.parametrize("N", [32, 64, 128])
+    def test_solve_dense_vs_scipy(self, l_val: int, N: int) -> None:
+        """Test that solve_dense produces the same result as scipy solver.
+
+        This tests the LAPACK dgesv-based solve_dense method against scipy's
+        solve to verify the column-major matrix format is correct.
+        """
+        a, b = 1.0, 20.0
+
+        # Create solver with interval [a, b]
+        solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
+
+        # Set up RHS: homogeneous BCs with RHS=1
+        rhs_np = np.zeros(N)
+        rhs_np[0] = 0.0  # BC at x=a
+        rhs_np[1] = 0.0  # BC at x=b
+        rhs_np[2] = 1.0
+        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
+
+        # Solve using scipy
+        mat = solver.get_operator_matrix(N)
+        mat_np = self.matrix_to_numpy(mat)
+        solution_scipy = solve(mat_np, rhs_np)
+
+        # Solve using solve_dense (LAPACK dgesv)
+        solution_dense = solver.solve_dense(rhs_vec, N)
+        solution_dense_np = self.vector_to_numpy(solution_dense)
+
+        # Compare solutions
+        assert_allclose(
+            solution_dense_np,
+            solution_scipy,
+            rtol=1.0e-10,
+            atol=1.0e-12,
+            err_msg=(f"solve_dense doesn't match scipy for l={l_val}, N={N}"),
+        )
+
+    @pytest.mark.parametrize("l_val", [0, 1, 5, 10, 20])
+    def test_solve_dense_integration_rhs1(self, l_val: int) -> None:
+        """Test solve_dense with Green's identity for RHS=1.
+
+        Verifies that solve_dense produces solutions that satisfy Green's
+        identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b j_l(x)dx
+        """
+        N = 128
+        a, b = 1.0, 20.0
+
+        # Create solver
+        solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
+
+        # Set up RHS: homogeneous BCs with RHS=1
+        rhs_np = np.zeros(N)
+        rhs_np[0] = 0.0  # BC at x=a
+        rhs_np[1] = 0.0  # BC at x=b
+        rhs_np[2] = 1.0
+        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
+
+        # Solve using solve_dense
+        solution_coeffs = solver.solve_dense(rhs_vec, N)
+
+        # Compute derivatives at endpoints
+        h = (b - a) / 2.0
+        y_prime_at_minus1 = Ncm.SBesselOdeSolver.chebyshev_deriv(solution_coeffs, -1.0)
+        y_prime_at_plus1 = Ncm.SBesselOdeSolver.chebyshev_deriv(solution_coeffs, 1.0)
+        y_prime_a = y_prime_at_minus1 / h
+        y_prime_b = y_prime_at_plus1 / h
+
+        # Get j_l values
+        j_l_a = spherical_jn(l_val, a)
+        j_l_b = spherical_jn(l_val, b)
+
+        # Compute LHS: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
+        lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
+
+        # Compute RHS: integral
+        def integrand(x: float) -> float:
+            return spherical_jn(l_val, x)
+
+        rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
+
+        # Compare
+        assert_allclose(
+            lhs,
+            rhs,
+            rtol=1.0e-8,
+            atol=1.0e-20,
+            err_msg=(f"Green's identity failed with solve_dense for l={l_val}"),
+        )
+
+    @pytest.mark.parametrize("l_val", [0, 1, 5, 10, 20])
+    def test_solve_dense_integration_rhs_x(self, l_val: int) -> None:
+        """Test solve_dense with Green's identity for RHS=x.
+
+        Verifies that solve_dense produces solutions that satisfy Green's
+        identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b x*j_l(x)dx
+        """
+        N = 128
+        a, b = 1.0, 20.0
+
+        # Create solver
+        solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
+
+        # Set up RHS: homogeneous BCs with RHS=x
+        # x = m + h*t where m=(a+b)/2, h=(b-a)/2
+        # Need to express x in Gegenbauer C^(2) basis
+        m = (a + b) / 2.0
+        h = (b - a) / 2.0
+        rhs_np = np.zeros(N)
+        rhs_np[0] = 0.0  # BC at x=a
+        rhs_np[1] = 0.0  # BC at x=b
+        rhs_np[2] = m  # Constant term
+        rhs_np[3] = 0.25 * h  # Linear term scaled for C^(2) basis
+        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
+
+        # Solve using solve_dense
+        solution_coeffs = solver.solve_dense(rhs_vec, N)
+
+        # Compute derivatives at endpoints
+        y_prime_at_minus1 = Ncm.SBesselOdeSolver.chebyshev_deriv(solution_coeffs, -1.0)
+        y_prime_at_plus1 = Ncm.SBesselOdeSolver.chebyshev_deriv(solution_coeffs, 1.0)
+        y_prime_a = y_prime_at_minus1 / h
+        y_prime_b = y_prime_at_plus1 / h
+
+        # Get j_l values
+        j_l_a = spherical_jn(l_val, a)
+        j_l_b = spherical_jn(l_val, b)
+
+        # Compute LHS: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
+        lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
+
+        # Compute RHS: integral of x*j_l(x)
+        def integrand(x: float) -> float:
+            return x * spherical_jn(l_val, x)
+
+        rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
+
+        # Compare
+        assert_allclose(
+            lhs,
+            rhs,
+            rtol=1.0e-8,
+            atol=1.0e-20,
+            err_msg=(f"Green's identity failed with solve_dense for l={l_val}, RHS=x"),
+        )

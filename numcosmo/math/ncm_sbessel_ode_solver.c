@@ -1307,59 +1307,21 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
 }
 
 /**
- * ncm_sbessel_ode_solver_get_operator_matrix:
+ * _ncm_sbessel_ode_solver_fill_operator_matrix:
  * @solver: a #NcmSBesselOdeSolver
- * @nrows: number of rows to extract (including 2 boundary condition rows)
+ * @nrows: number of rows
+ * @ncols: number of columns
+ * @data: pointer to matrix data
+ * @colmajor: TRUE for column-major layout, FALSE for row-major
  *
- * Builds and returns a dense matrix representation of the differential operator
- * truncated to @nrows rows. This is useful for validation, testing against truth
- * tables, and comparison with standard dense solvers.
- *
- * The matrix includes:
- * - Row 0: boundary condition u(-1) = 0
- * - Row 1: boundary condition u(+1) = 0
- * - Rows 2 to nrows-1: differential operator rows
- *
- * The number of columns is determined by the rightmost non-zero entry across
- * all rows, ensuring all operator entries are captured.
- *
- * Returns: (transfer full): dense matrix representation of the operator
+ * Helper function to fill operator matrix data in either row-major or column-major format.
+ * Extracts matrix entries from operator rows and fills them into the provided data array.
  */
-NcmMatrix *
-ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, gint nrows)
+static void
+_ncm_sbessel_ode_solver_fill_operator_matrix (NcmSBesselOdeSolver *solver,
+                                              gint nrows, gint ncols,
+                                              gdouble *data, gboolean colmajor)
 {
-  g_assert_cmpint (nrows, >, 2);
-
-  /* Determine number of columns needed */
-  glong max_col = 0;
-
-  for (gint i = 0; i < nrows; i++)
-  {
-    NcmSBesselOdeSolverRow *row = _ncm_sbessel_create_row (solver, i);
-
-    /* Find rightmost non-zero entry */
-    for (glong j = ROW_M - 1; j >= 0; j--)
-    {
-      if (fabs (row->data[j]) > 1.0e-100)
-      {
-        const glong col = row->col_index + j;
-
-        max_col = GSL_MAX (max_col, col);
-        break;
-      }
-    }
-
-    _row_free (row);
-  }
-
-  /* Force square matrix by truncating columns to nrows */
-  const glong ncols = nrows;
-
-  /* Create matrix */
-  NcmMatrix *mat = ncm_matrix_new (nrows, ncols);
-
-  ncm_matrix_set_zero (mat);
-
   /* Fill matrix rows */
   for (gint i = 0; i < nrows; i++)
   {
@@ -1372,17 +1334,25 @@ ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, gint nr
       /* bc_at_m1 contributes (-1)^k at every column k */
       for (k = row->col_index; k < ncols; k++)
       {
-        const gdouble sign = (k % 2 == 0) ? 1.0 : -1.0;
+        const gdouble sign  = (k % 2 == 0) ? 1.0 : -1.0;
+        const gdouble value = row->bc_at_m1 * sign;
+        const gint idx      = colmajor ? (k * nrows + i) : (i * ncols + k);
 
-        ncm_matrix_addto (mat, i, k, row->bc_at_m1 * sign);
+        data[idx] += value;
       }
     }
 
     if (fabs (row->bc_at_p1) > 1.0e-100)
+    {
       /* bc_at_p1 contributes 1.0 at every column k */
       for (k = row->col_index; k < ncols; k++)
-        ncm_matrix_addto (mat, i, k, row->bc_at_p1);
+      {
+        const gdouble value = row->bc_at_p1;
+        const gint idx      = colmajor ? (k * nrows + i) : (i * ncols + k);
 
+        data[idx] += value;
+      }
+    }
 
     /* Copy data entries from the operator part */
     for (glong j = 0; j < ROW_M; j++)
@@ -1390,11 +1360,90 @@ ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, gint nr
       const glong col = row->col_index + j;
 
       if ((col < ncols) && (fabs (row->data[j]) > 1.0e-100))
-        ncm_matrix_addto (mat, i, col, row->data[j]);
+      {
+        const gint idx = colmajor ? (col * nrows + i) : (i * ncols + col);
+
+        data[idx] += row->data[j];
+      }
     }
 
     _row_free (row);
   }
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_operator_matrix:
+ * @solver: a #NcmSBesselOdeSolver
+ * @nrows: number of rows to extract (including 2 boundary condition rows)
+ *
+ * Builds and returns a dense matrix representation of the differential operator
+ * truncated to @nrows rows in row-major format. This is useful for validation,
+ * testing against truth tables, and comparison with standard dense solvers.
+ *
+ * The matrix includes:
+ * - Row 0: boundary condition u(-1) = 0
+ * - Row 1: boundary condition u(+1) = 0
+ * - Rows 2 to nrows-1: differential operator rows
+ *
+ * The matrix is square (nrows x nrows) for compatibility with standard solvers.
+ *
+ * Returns: (transfer full): dense matrix representation of the operator (row-major)
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, gint nrows)
+{
+  g_assert_cmpint (nrows, >, 2);
+
+  /* Force square matrix */
+  const gint ncols = nrows;
+
+  /* Create matrix (row-major by default in NcmMatrix) */
+  NcmMatrix *mat = ncm_matrix_new (nrows, ncols);
+
+  ncm_matrix_set_zero (mat);
+
+  /* Fill matrix data */
+  _ncm_sbessel_ode_solver_fill_operator_matrix (solver, nrows, ncols,
+                                                ncm_matrix_data (mat), FALSE);
+
+  return mat;
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_operator_matrix_colmajor:
+ * @solver: a #NcmSBesselOdeSolver
+ * @nrows: number of rows to extract (including 2 boundary condition rows)
+ *
+ * Builds and returns a dense matrix representation of the differential operator
+ * truncated to @nrows rows in column-major format (suitable for LAPACK/BLAS routines).
+ *
+ * The matrix includes:
+ * - Row 0: boundary condition u(-1) = 0
+ * - Row 1: boundary condition u(+1) = 0
+ * - Rows 2 to nrows-1: differential operator rows
+ *
+ * The matrix is square (nrows x nrows) and stored in column-major order as expected
+ * by LAPACK routines like dgesv.
+ *
+ * Returns: (transfer full): dense matrix representation of the operator (column-major)
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver, gint nrows)
+{
+  g_assert_cmpint (nrows, >, 2);
+
+  /* Force square matrix */
+  const gint ncols = nrows;
+
+  /* Allocate column-major data */
+  gdouble *data_colmajor = g_new0 (gdouble, nrows * ncols);
+
+  /* Fill matrix data in column-major format */
+  _ncm_sbessel_ode_solver_fill_operator_matrix (solver, nrows, ncols,
+                                                data_colmajor, TRUE);
+
+  /* Create matrix with column-major data (tda = nrows for column-major) */
+  NcmMatrix *mat = ncm_matrix_new_data_malloc (data_colmajor, nrows, ncols);
 
   return mat;
 }
@@ -1417,7 +1466,8 @@ ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, gint nr
 NcmVector *
 ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint nrows)
 {
-  NcmMatrix *mat   = ncm_sbessel_ode_solver_get_operator_matrix (solver, nrows);
+  /* Use column-major matrix for LAPACK */
+  NcmMatrix *mat   = ncm_sbessel_ode_solver_get_operator_matrix_colmajor (solver, nrows);
   const gint ncols = ncm_matrix_ncols (mat);
 
   /* For LAPACK dgesv, we need a square matrix, so use minimum dimension */
