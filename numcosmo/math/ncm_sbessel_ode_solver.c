@@ -565,30 +565,6 @@ ncm_sbessel_ode_solver_get_solution_size (NcmSBesselOdeSolver *solver)
 }
 
 /**
- * _ncm_sbessel_ode_solver_row_add:
- * @row: row structure to update
- * @col: target column index in the global matrix
- * @value: value to add to the entry
- *
- * Helper function to add a value to a row entry at the specified column.
- * Handles offset calculation and bounds checking.
- *
- * The function computes the offset from row->col_index (leftmost column stored)
- * to the target column, validates it's within allocated space, and accumulates
- * the value. This allows building rows via linear combinations of operators.
- */
-static void
-_ncm_sbessel_ode_solver_row_add (NcmSBesselOdeSolverRow *row, glong col, gdouble value)
-{
-  const glong offset = col - row->col_index;
-
-  if ((offset < TOTAL_BANDWIDTH) && (offset >= 0))
-    row->data[offset] += value;  /* Accumulate (supports += pattern) */
-  else
-    g_error ("_ncm_sbessel_ode_solver_row_add: offset %ld out of bounds", offset);
-}
-
-/**
  * _ncm_sbessel_compute_proj_row:
  * @row: row structure to fill/update
  * @k: row index (0-based)
@@ -619,20 +595,21 @@ _ncm_sbessel_ode_solver_row_add (NcmSBesselOdeSolverRow *row, glong col, gdouble
 static void
 _ncm_sbessel_compute_proj_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
 {
-  const gdouble kd = (gdouble) k;
+  const gdouble kd   = (gdouble) k;
+  const glong offset = k - row->col_index;
 
   /* General formula: three entries with rational function coefficients */
   const gdouble value_0 = coeff / (2.0 * (kd + 1.0));
   const gdouble value_1 = -coeff * (kd + 2.0) / ((kd + 1.0) * (kd + 3.0));
   const gdouble value_2 = coeff / (2.0 * (kd + 3.0));
 
-  _ncm_sbessel_ode_solver_row_add (row, k, value_0);
-  _ncm_sbessel_ode_solver_row_add (row, k + 2, value_1);
-  _ncm_sbessel_ode_solver_row_add (row, k + 4, value_2);
+  row->data[offset]     += value_0;
+  row->data[offset + 2] += value_1;
+  row->data[offset + 4] += value_2;
 
   /* Special case: k=0 has an additional contribution */
   if (k == 0)
-    _ncm_sbessel_ode_solver_row_add (row, 0, coeff * 0.5);
+    row->data[0] += coeff * 0.5;
 }
 
 /**
@@ -668,21 +645,22 @@ _ncm_sbessel_compute_proj_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coe
 static void
 _ncm_sbessel_compute_x_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
 {
-  const gdouble kd = (gdouble) k;
+  const gdouble kd   = (gdouble) k;
+  const glong offset = k - row->col_index;
 
   /* General formula: up to four entries */
   if (k >= 1)
-    _ncm_sbessel_ode_solver_row_add (row, k - 1, coeff / (4.0 * (kd + 1.0)));
+    row->data[offset - 1] += coeff / (4.0 * (kd + 1.0));
 
-  _ncm_sbessel_ode_solver_row_add (row, k + 1, -coeff / (4.0 * (kd + 3.0)));
-  _ncm_sbessel_ode_solver_row_add (row, k + 3, -coeff / (4.0 * (kd + 1.0)));
-  _ncm_sbessel_ode_solver_row_add (row, k + 5, coeff / (4.0 * (kd + 3.0)));
+  row->data[offset + 1] += -coeff / (4.0 * (kd + 3.0));
+  row->data[offset + 3] += -coeff / (4.0 * (kd + 1.0));
+  row->data[offset + 5] += coeff / (4.0 * (kd + 3.0));
 
   /* Special cases */
   if (k == 0)
-    _ncm_sbessel_ode_solver_row_add (row, 1, coeff * 0.25);  /* Additional 1/4 at column 1 */
+    row->data[1 - row->col_index] += coeff * 0.25;  /* Additional 1/4 at column 1 */
   else if (k == 1)
-    _ncm_sbessel_ode_solver_row_add (row, 0, coeff * 0.125);  /* Additional 1/8 at column 0 */
+    row->data[0 - row->col_index] += coeff * 0.125;  /* Additional 1/8 at column 0 */
 }
 
 /**
@@ -720,31 +698,32 @@ _ncm_sbessel_compute_x_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
 static void
 _ncm_sbessel_compute_x2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
 {
-  const gdouble kd  = (gdouble) k;
-  const gdouble kp2 = kd + 2.0;
+  const gdouble kd   = (gdouble) k;
+  const gdouble kp2  = kd + 2.0;
+  const glong offset = k - row->col_index;
 
   /* General formula: up to five entries */
   if (k >= 2)
-    _ncm_sbessel_ode_solver_row_add (row, k - 2, coeff / (8.0 * (kd + 1.0)));
+    row->data[offset - 2] += coeff / (8.0 * (kd + 1.0));
 
-  _ncm_sbessel_ode_solver_row_add (row, k, coeff / (4.0 * (kd + 1.0) * (kd + 3.0)));
-  _ncm_sbessel_ode_solver_row_add (row, k + 2, -coeff * kp2 / (4.0 * (kd + 1.0) * (kd + 3.0)));
-  _ncm_sbessel_ode_solver_row_add (row, k + 4, -coeff / (4.0 * (kd + 1.0) * (kd + 3.0)));
-  _ncm_sbessel_ode_solver_row_add (row, k + 6, coeff / (8.0 * (kd + 3.0)));
+  row->data[offset]     += coeff / (4.0 * (kd + 1.0) * (kd + 3.0));
+  row->data[offset + 2] += -coeff * kp2 / (4.0 * (kd + 1.0) * (kd + 3.0));
+  row->data[offset + 4] += -coeff / (4.0 * (kd + 1.0) * (kd + 3.0));
+  row->data[offset + 6] += coeff / (8.0 * (kd + 3.0));
 
   /* Special cases */
   if (k == 0)
   {
-    _ncm_sbessel_ode_solver_row_add (row, 0, coeff / 12.0); /* Additional 1/12 at column 0 */
-    _ncm_sbessel_ode_solver_row_add (row, 2, coeff / 8.0);  /* Additional 1/8 at column 2 */
+    row->data[0 - row->col_index] += coeff / 12.0; /* Additional 1/12 at column 0 */
+    row->data[2 - row->col_index] += coeff / 8.0;  /* Additional 1/8 at column 2 */
   }
   else if (k == 1)
   {
-    _ncm_sbessel_ode_solver_row_add (row, 1, coeff / 16.0); /* Additional 1/16 at column 1 */
+    row->data[1 - row->col_index] += coeff / 16.0; /* Additional 1/16 at column 1 */
   }
   else if (k == 2)
   {
-    _ncm_sbessel_ode_solver_row_add (row, 0, coeff / 24.0); /* Additional 1/24 at column 0 */
+    row->data[0 - row->col_index] += coeff / 24.0; /* Additional 1/24 at column 0 */
   }
 }
 
@@ -775,9 +754,11 @@ _ncm_sbessel_compute_x2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff
 static void
 _ncm_sbessel_compute_d_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
 {
+  const glong offset = k - row->col_index;
+
   /* Two non-zero entries with opposite signs */
-  _ncm_sbessel_ode_solver_row_add (row, k + 1, coeff);
-  _ncm_sbessel_ode_solver_row_add (row, k + 3, -coeff);
+  row->data[offset + 1] += coeff;
+  row->data[offset + 3] += -coeff;
 }
 
 /**
@@ -809,16 +790,17 @@ _ncm_sbessel_compute_d_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
 static void
 _ncm_sbessel_compute_x_d_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
 {
-  const gdouble kd = (gdouble) k;
+  const gdouble kd   = (gdouble) k;
+  const glong offset = k - row->col_index;
 
   /* Three non-zero entries with rational function coefficients */
   const gdouble value_0 = coeff * kd / (2.0 * (kd + 1.0));
   const gdouble value_1 = coeff * (kd + 2.0) / ((kd + 1.0) * (kd + 3.0));
   const gdouble value_2 = -coeff * (kd + 4.0) / (2.0 * (kd + 3.0));
 
-  _ncm_sbessel_ode_solver_row_add (row, k, value_0);
-  _ncm_sbessel_ode_solver_row_add (row, k + 2, value_1);
-  _ncm_sbessel_ode_solver_row_add (row, k + 4, value_2);
+  row->data[offset]     += value_0;
+  row->data[offset + 2] += value_1;
+  row->data[offset + 4] += value_2;
 }
 
 /**
@@ -847,9 +829,10 @@ _ncm_sbessel_compute_x_d_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coef
 static void
 _ncm_sbessel_compute_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
 {
-  const gdouble kd = (gdouble) k;
+  const gdouble kd   = (gdouble) k;
+  const glong offset = k - row->col_index;
 
-  _ncm_sbessel_ode_solver_row_add (row, k + 2, coeff * 2.0 * (kd + 2.0));
+  row->data[offset + 2] += coeff * 2.0 * (kd + 2.0);
 }
 
 /**
@@ -879,11 +862,12 @@ _ncm_sbessel_compute_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff
 static void
 _ncm_sbessel_compute_x_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
 {
-  const gdouble kd = (gdouble) k;
+  const gdouble kd   = (gdouble) k;
+  const glong offset = k - row->col_index;
 
   /* Two non-zero entries in this row */
-  _ncm_sbessel_ode_solver_row_add (row, k + 1, coeff * kd);
-  _ncm_sbessel_ode_solver_row_add (row, k + 3, coeff * (kd + 4.0));
+  row->data[offset + 1] += coeff * kd;
+  row->data[offset + 3] += coeff * (kd + 4.0);
 }
 
 /**
@@ -915,17 +899,18 @@ _ncm_sbessel_compute_x_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coe
 static void
 _ncm_sbessel_compute_x2_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
 {
-  const gdouble kd  = (gdouble) k;
-  const gdouble kp2 = kd + 2.0;
+  const gdouble kd   = (gdouble) k;
+  const gdouble kp2  = kd + 2.0;
+  const glong offset = k - row->col_index;
 
   /* Three non-zero entries with rational function coefficients */
   const gdouble value_0 = coeff * kd * (kd - 1.0) / (2.0 * (kd + 1.0));
   const gdouble value_1 = coeff * kp2 * (kp2 * kp2 - 3.0) / ((kd + 1.0) * (kd + 3.0));
   const gdouble value_2 = coeff * (kd + 4.0) * (kd + 5.0) / (2.0 * (kd + 3.0));
 
-  _ncm_sbessel_ode_solver_row_add (row, k, value_0);
-  _ncm_sbessel_ode_solver_row_add (row, k + 2, value_1);
-  _ncm_sbessel_ode_solver_row_add (row, k + 4, value_2);
+  row->data[offset]     += value_0;
+  row->data[offset + 2] += value_1;
+  row->data[offset + 4] += value_2;
 }
 
 static gdouble
@@ -987,6 +972,7 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolv
   const gdouble m2                        = m * m;
   const gint l                            = self->l;
   const glong k                           = row_index;
+  const gdouble llp1                      = (gdouble) l * (l + 1);
   const glong left_col                    = GSL_MAX (0, k - 2); /* Leftmost column index */
 
   _row_reset (row, 0.0, 0.0, left_col);
@@ -1001,7 +987,7 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolv
   _ncm_sbessel_compute_x_d_row (row, k, 2.0);
 
   /* Identity term: (m^2 - l(l+1)) I + 2m h x + h^2 x^2 */
-  _ncm_sbessel_compute_proj_row (row, k, m2 - (gdouble) (l * (l + 1)));
+  _ncm_sbessel_compute_proj_row (row, k, m2 - llp1);
   _ncm_sbessel_compute_x_row (row, k, 2.0 * m * h);
   _ncm_sbessel_compute_x2_row (row, k, h2);
 }

@@ -1592,7 +1592,7 @@ class TestSBesselOperators:
         print_ell: list[int] | None = None  # [10, 50, 450]
         solver = Ncm.SBesselOdeSolver.new(0, lb, ub)
 
-        for i in range(10):
+        for i in range(50):
             print(f"Starting iteration {i}\r", end="", flush=True)
             for i, k in enumerate(truth_table["kvals"]):
                 # if (i != 50) and i < 100:
