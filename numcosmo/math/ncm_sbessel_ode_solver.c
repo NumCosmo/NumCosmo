@@ -1134,10 +1134,14 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
   const guint rhs_len                     = ncm_vector_len (rhs);
   GArray *c                               = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), rhs_len);
   glong col                               = 0;
+  gdouble max_c_A                         = 0.0;
+  guint quiet_cols                        = 0;
   glong i, last_row_index;
 
   if (rhs_len > self->matrix_rows->len)
     g_array_set_size (self->matrix_rows, rhs_len);
+
+  g_array_set_size (c, rhs_len + ROWS_TO_ROTATE);
 
   ncm_vector_clear (&self->solution);
 
@@ -1152,18 +1156,21 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
   last_row_index = ROWS_TO_ROTATE;
 
   /* Copy RHS to working array */
-  for (i = 0; i < rhs_len; i++)
+  g_assert_cmpuint (ncm_vector_stride (rhs), ==, 1);
   {
-    const gdouble rhs_i = ncm_vector_get (rhs, i);
+    const gdouble *rhs_data = ncm_vector_data (rhs);
 
-    g_array_append_val (c, rhs_i);
+    for (i = 0; i < rhs_len; i++)
+    {
+      g_array_index (c, gdouble, i) = rhs_data[i];
+    }
   }
 
   for (i = 0; i < ROWS_TO_ROTATE; i++)
   {
     const gdouble zero = 0.0;
 
-    g_array_append_val (c, zero);
+    g_array_index (c, gdouble, rhs_len + i) = zero;
   }
 
   for (col = 0; col < rhs_len; col++)
@@ -1184,11 +1191,37 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
 
       _ncm_sbessel_apply_givens (solver, col, r1_index, r2_index, c);
     }
+
+    {
+      NcmSBesselOdeSolverRow *row =
+        &g_array_index (self->matrix_rows, NcmSBesselOdeSolverRow, col);
+
+      const double diag  = row->data[0] + _ncm_sbessel_bc_row (row, col);
+      const double c_col = g_array_index (c, gdouble, col);
+      const double Acol  = fabs (c_col / diag);
+
+      if (Acol > max_c_A)
+      {
+        max_c_A    = Acol;
+        quiet_cols = 0;
+      }
+      else
+      {
+        /* Acol is small relative to established scale */
+        if (Acol < max_c_A * 50.0 * DBL_EPSILON)
+          quiet_cols++;
+        else
+          quiet_cols = 0;
+      }
+
+      if (quiet_cols >= ROWS_TO_ROTATE + 1)
+        break;  /* SAFE early stop */
+    }
   }
 
   {
     /* Back substitution to solve R x = c */
-    const glong n        = col; /* since col == rhs_len */
+    const glong n        = col; /* since col <= rhs_len */
     gdouble acc_bc_at_m1 = 0.0;
     gdouble acc_bc_at_p1 = 0.0;
     gdouble *sol_ptr;
@@ -1404,12 +1437,20 @@ ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, NcmVector *rhs,
   /* Prepare RHS vector (truncate/pad if needed) */
   NcmVector *b = ncm_vector_new (n);
 
-  for (gint i = 0; i < n; i++)
+  g_assert_cmpuint (ncm_vector_stride (rhs), ==, 1);
+  g_assert_cmpuint (ncm_vector_stride (b), ==, 1);
   {
-    if (i < (gint) ncm_vector_len (rhs))
-      ncm_vector_set (b, i, ncm_vector_get (rhs, i));
-    else
-      ncm_vector_set (b, i, 0.0);
+    const gdouble *rhs_data = ncm_vector_data (rhs);
+    gdouble *b_data         = ncm_vector_data (b);
+    const gint rhs_len      = (gint) ncm_vector_len (rhs);
+    const gint copy_len     = GSL_MIN (n, rhs_len);
+
+    memcpy (b_data, rhs_data, copy_len * sizeof (gdouble));
+
+    for (gint i = copy_len; i < n; i++)
+    {
+      b_data[i] = 0.0;
+    }
   }
 
   /* Solve the system using LU decomposition */
@@ -1468,15 +1509,19 @@ ncm_sbessel_ode_solver_integrate (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolv
   ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (cheb_coeffs, gegen_coeffs);
 
   /* Step 3: Set up RHS with homogeneous boundary conditions */
-  NcmVector *rhs = ncm_vector_new (N);
+  NcmVector *rhs = ncm_vector_new (N + 2);
 
-  ncm_vector_set (rhs, 0, 0.0); /* BC at x=a (t=-1) */
-  ncm_vector_set (rhs, 1, 0.0); /* BC at x=b (t=+1) */
-
-  /* Copy Gegenbauer coefficients to RHS starting from index 2 */
-  for (guint i = 0; i < N - 2; i++)
+  g_assert_cmpuint (ncm_vector_stride (rhs), ==, 1);
+  g_assert_cmpuint (ncm_vector_stride (gegen_coeffs), ==, 1);
   {
-    ncm_vector_set (rhs, i + 2, ncm_vector_get (gegen_coeffs, i));
+    gdouble *rhs_data                = ncm_vector_data (rhs);
+    const gdouble *gegen_coeffs_data = ncm_vector_data (gegen_coeffs);
+
+    rhs_data[0] = 0.0; /* BC at x=a (t=-1) */
+    rhs_data[1] = 0.0; /* BC at x=b (t=+1) */
+
+    /* Copy Gegenbauer coefficients to RHS starting from index 2 */
+    memcpy (&rhs_data[2], gegen_coeffs_data, N * sizeof (gdouble));
   }
 
   /* Step 4: Solve the ODE */
@@ -1611,6 +1656,182 @@ ncm_sbessel_ode_solver_integrate_rational (NcmSBesselOdeSolver *solver, gdouble 
 }
 
 /**
+ * ncm_sbessel_ode_solver_integrate_l_range:
+ * @solver: a #NcmSBesselOdeSolver
+ * @F: (scope call): function to integrate against spherical Bessel function
+ * @N: number of Chebyshev nodes for the approximation
+ * @user_data: user data for @F
+ * @lmin: minimum l value
+ * @lmax: maximum l value
+ *
+ * Computes the integrals $\int_a^b f(x) j_l(x) dx$ for each l from @lmin to @lmax.
+ * This is more efficient than calling ncm_sbessel_ode_solver_integrate() multiple times
+ * because the RHS (Chebyshev coefficients and Gegenbauer conversion) is computed only once.
+ *
+ * Returns: (transfer full): a #NcmVector with the integral values for each l from @lmin to @lmax
+ */
+NcmVector *
+ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolverF F, guint N, gpointer user_data, gint lmin, gint lmax)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  const gdouble a                         = self->a;
+  const gdouble b                         = self->b;
+  const gdouble h                         = self->half_len;
+  const gint l_orig                       = self->l;
+  const gint n_l                          = lmax - lmin + 1;
+
+  g_return_val_if_fail (lmin <= lmax, NULL);
+  g_return_val_if_fail (lmin >= 0, NULL);
+
+  /* Allocate result vector */
+  NcmVector *result = ncm_vector_new (n_l);
+
+  /* Step 1: Compute Chebyshev coefficients for f(x) - done once */
+  NcmVector *cheb_coeffs = ncm_sbessel_ode_solver_compute_chebyshev_coeffs (solver, F, a, b, N, user_data);
+
+  /* Step 2: Convert to Gegenbauer C^(2) basis - done once */
+  NcmVector *gegen_coeffs = ncm_vector_new (N);
+
+  ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (cheb_coeffs, gegen_coeffs);
+
+  /* Step 3: Set up RHS with homogeneous boundary conditions - done once */
+  NcmVector *rhs = ncm_vector_new (N);
+
+  g_assert_cmpuint (ncm_vector_stride (rhs), ==, 1);
+  g_assert_cmpuint (ncm_vector_stride (gegen_coeffs), ==, 1);
+  g_assert_cmpuint (ncm_vector_stride (result), ==, 1);
+  {
+    gdouble *rhs_data                = ncm_vector_data (rhs);
+    const gdouble *gegen_coeffs_data = ncm_vector_data (gegen_coeffs);
+
+    rhs_data[0] = 0.0; /* BC at x=a (t=-1) */
+    rhs_data[1] = 0.0; /* BC at x=b (t=+1) */
+
+    /* Copy Gegenbauer coefficients to RHS starting from index 2 */
+    memcpy (&rhs_data[2], gegen_coeffs_data, (N - 2) * sizeof (gdouble));
+  }
+
+  /* Step 4-7: Loop over l values */
+  for (gint l = lmin; l <= lmax; l++)
+  {
+    /* Set l for this iteration */
+    ncm_sbessel_ode_solver_set_l (solver, l);
+
+    /* Solve the ODE */
+    NcmVector *solution = ncm_sbessel_ode_solver_solve (solver, rhs);
+
+    /* Compute derivatives at endpoints */
+    const gdouble y_prime_at_minus1 = ncm_sbessel_ode_solver_chebyshev_deriv (solution, -1.0);
+    const gdouble y_prime_at_plus1  = ncm_sbessel_ode_solver_chebyshev_deriv (solution, 1.0);
+    const gdouble y_prime_a         = y_prime_at_minus1 / h;
+    const gdouble y_prime_b         = y_prime_at_plus1 / h;
+
+    /* Evaluate j_l at endpoints */
+    const gdouble j_l_a = gsl_sf_bessel_jl (l, a);
+    const gdouble j_l_b = gsl_sf_bessel_jl (l, b);
+
+    /* Compute integral via Green's identity */
+    const gdouble integral = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
+
+    /* Store result */
+    {
+      gdouble *result_data = ncm_vector_data (result);
+
+      result_data[l - lmin] = integral;
+    }
+
+    /* Clean up solution for this l */
+    ncm_vector_free (solution);
+  }
+
+  /* Restore original l value */
+  ncm_sbessel_ode_solver_set_l (solver, l_orig);
+
+  /* Clean up shared resources */
+  ncm_vector_free (cheb_coeffs);
+  ncm_vector_free (gegen_coeffs);
+  ncm_vector_free (rhs);
+
+  return result;
+}
+
+/**
+ * ncm_sbessel_ode_solver_integrate_gaussian_l_range:
+ * @solver: a #NcmSBesselOdeSolver
+ * @center: center of the Gaussian
+ * @std: standard deviation of the Gaussian
+ * @k: scale factor
+ * @N: number of Chebyshev nodes
+ * @lmin: minimum l value
+ * @lmax: maximum l value
+ *
+ * Computes the integrals $\int_a^b \exp(-(x - \text{center})^2/(2\text{std}^2)) j_l(kx) dx$
+ * for each l from @lmin to @lmax. This is more efficient than calling
+ * ncm_sbessel_ode_solver_integrate_gaussian() multiple times because the RHS
+ * is computed only once.
+ *
+ * Returns: (transfer full): a #NcmVector with the integral values for each l from @lmin to @lmax
+ */
+NcmVector *
+ncm_sbessel_ode_solver_integrate_gaussian_l_range (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N, gint lmin, gint lmax)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  const gdouble a_orig                    = self->a;
+  const gdouble b_orig                    = self->b;
+  const gdouble inv_std2                  = 1.0 / (std * std);
+  GaussianData data                       = { center, inv_std2, k };
+
+  /* Temporarily scale the interval by k for this integration */
+  ncm_sbessel_ode_solver_set_interval (solver, a_orig * k, b_orig * k);
+
+  /* Integrate over l range */
+  NcmVector *result = ncm_sbessel_ode_solver_integrate_l_range (solver, gaussian_func, N, &data, lmin, lmax);
+
+  /* Restore original interval */
+  ncm_sbessel_ode_solver_set_interval (solver, a_orig, b_orig);
+
+  return result;
+}
+
+/**
+ * ncm_sbessel_ode_solver_integrate_rational_l_range:
+ * @solver: a #NcmSBesselOdeSolver
+ * @center: center of the rational function
+ * @std: width parameter
+ * @k: scale factor
+ * @N: number of Chebyshev nodes
+ * @lmin: minimum l value
+ * @lmax: maximum l value
+ *
+ * Computes the integrals $\int_a^b \frac{x^2}{(1 + ((x-\text{center})/\text{std})^2)^4} j_l(kx) dx$
+ * for each l from @lmin to @lmax. This is more efficient than calling
+ * ncm_sbessel_ode_solver_integrate_rational() multiple times because the RHS
+ * is computed only once.
+ *
+ * Returns: (transfer full): a #NcmVector with the integral values for each l from @lmin to @lmax
+ */
+NcmVector *
+ncm_sbessel_ode_solver_integrate_rational_l_range (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N, gint lmin, gint lmax)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  const gdouble a_orig                    = self->a;
+  const gdouble b_orig                    = self->b;
+  const gdouble inv_std                   = 1.0 / std;
+  RationalData data                       = { center, inv_std, k };
+
+  /* Temporarily scale the interval by k for this integration */
+  ncm_sbessel_ode_solver_set_interval (solver, a_orig * k, b_orig * k);
+
+  /* Integrate over l range */
+  NcmVector *result = ncm_sbessel_ode_solver_integrate_l_range (solver, rational_func, N, &data, lmin, lmax);
+
+  /* Restore original interval */
+  ncm_sbessel_ode_solver_set_interval (solver, a_orig, b_orig);
+
+  return result;
+}
+
+/**
  * ncm_sbessel_ode_solver_compute_chebyshev_coeffs:
  * @solver: a #NcmSBesselOdeSolver
  * @F: (scope call): function to evaluate
@@ -1684,11 +1905,16 @@ ncm_sbessel_ode_solver_compute_chebyshev_coeffs (NcmSBesselOdeSolver *solver,
   fftw_execute_r2r (self->cheb_plan_r2r, self->cheb_f_vals, ncm_vector_data (coeffs));
 
   /* Normalize coefficients */
-  ncm_vector_set (coeffs, 0, ncm_vector_get (coeffs, 0) / ((N - 1.0) * 2.0));
-  ncm_vector_set (coeffs, N - 1, ncm_vector_get (coeffs, N - 1) / ((N - 1.0) * 2.0));
+  g_assert_cmpuint (ncm_vector_stride (coeffs), ==, 1);
+  {
+    gdouble *coeffs_data = ncm_vector_data (coeffs);
 
-  for (i = 1; i < N - 1; i++)
-    ncm_vector_set (coeffs, i, ncm_vector_get (coeffs, i) / (N - 1.0));
+    coeffs_data[0]     = coeffs_data[0] / ((N - 1.0) * 2.0);
+    coeffs_data[N - 1] = coeffs_data[N - 1] / ((N - 1.0) * 2.0);
+
+    for (i = 1; i < N - 1; i++)
+      coeffs_data[i] = coeffs_data[i] / (N - 1.0);
+  }
 
   return coeffs;
 }
@@ -1708,28 +1934,35 @@ ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda1 (NcmVector *c, NcmVector *g)
   guint i;
 
   g_assert_cmpuint (ncm_vector_len (g), ==, N);
+  g_assert_cmpuint (ncm_vector_stride (c), ==, 1);
+  g_assert_cmpuint (ncm_vector_stride (g), ==, 1);
 
   if (N == 0)
     return;
 
-  ncm_vector_set_zero (g);
-
-  /* n = 0 case */
-  ncm_vector_set (g, 0, ncm_vector_get (g, 0) + ncm_vector_get (c, 0));
-
-  if (N == 1)
-    return;
-
-  /* n = 1 case */
-  ncm_vector_set (g, 1, ncm_vector_get (g, 1) + ncm_vector_get (c, 1) * 0.5);
-
-  /* n >= 2 */
-  for (i = 2; i < N; i++)
   {
-    const gdouble ci = ncm_vector_get (c, i);
+    const gdouble *c_data = ncm_vector_data (c);
+    gdouble *g_data       = ncm_vector_data (g);
 
-    ncm_vector_set (g, i, ncm_vector_get (g, i) + 0.5 * ci);
-    ncm_vector_set (g, i - 2, ncm_vector_get (g, i - 2) - 0.5 * ci);
+    memset (g_data, 0, N * sizeof (gdouble));
+
+    /* n = 0 case */
+    g_data[0] = c_data[0];
+
+    if (N == 1)
+      return;
+
+    /* n = 1 case */
+    g_data[1] = c_data[1] * 0.5;
+
+    /* n >= 2 */
+    for (i = 2; i < N; i++)
+    {
+      const gdouble ci = c_data[i];
+
+      g_data[i]     += 0.5 * ci;
+      g_data[i - 2] -= 0.5 * ci;
+    }
   }
 }
 
@@ -1751,35 +1984,42 @@ ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (NcmVector *c, NcmVector *g)
   guint k;
 
   g_assert_cmpuint (ncm_vector_len (g), ==, N);
+  g_assert_cmpuint (ncm_vector_stride (c), ==, 1);
+  g_assert_cmpuint (ncm_vector_stride (g), ==, 1);
 
   if (N == 0)
     return;
 
-  /* Zero output vector */
-  ncm_vector_set_zero (g);
-
-  /* Apply projection formula for each k */
-  for (k = 0; k < N; k++)
   {
-    const gdouble kd = (gdouble) k;
-    gdouble gk       = 0.0;
+    const gdouble *c_data = ncm_vector_data (c);
+    gdouble *g_data       = ncm_vector_data (g);
 
-    /* Special case: k=0 has additional 1/2 * c[0] contribution */
-    if (k == 0)
-      gk += 0.5 * ncm_vector_get (c, 0);
+    /* Zero output vector */
+    memset (g_data, 0, N * sizeof (gdouble));
 
-    /* First term: c[k] / (2*(k+1)) */
-    gk += ncm_vector_get (c, k) / (2.0 * (kd + 1.0));
+    /* Apply projection formula for each k */
+    for (k = 0; k < N; k++)
+    {
+      const gdouble kd = (gdouble) k;
+      gdouble gk       = 0.0;
 
-    /* Second term: -(k+2) * c[k+2] / ((k+1)*(k+3)) */
-    if (k + 2 < N)
-      gk -= (kd + 2.0) * ncm_vector_get (c, k + 2) / ((kd + 1.0) * (kd + 3.0));
+      /* Special case: k=0 has additional 1/2 * c[0] contribution */
+      if (k == 0)
+        gk += 0.5 * c_data[0];
 
-    /* Third term: c[k+4] / (2*(k+3)) */
-    if (k + 4 < N)
-      gk += ncm_vector_get (c, k + 4) / (2.0 * (kd + 3.0));
+      /* First term: c[k] / (2*(k+1)) */
+      gk += c_data[k] / (2.0 * (kd + 1.0));
 
-    ncm_vector_set (g, k, gk);
+      /* Second term: -(k+2) * c[k+2] / ((k+1)*(k+3)) */
+      if (k + 2 < N)
+        gk -= (kd + 2.0) * c_data[k + 2] / ((kd + 1.0) * (kd + 3.0));
+
+      /* Third term: c[k+4] / (2*(k+3)) */
+      if (k + 4 < N)
+        gk += c_data[k + 4] / (2.0 * (kd + 3.0));
+
+      g_data[k] = gk;
+    }
   }
 }
 
@@ -1801,51 +2041,57 @@ ncm_sbessel_ode_solver_gegenbauer_lambda1_eval (NcmVector *c, gdouble x)
   if (N == 0)
     return 0.0;
 
-  /* Endpoint handling: C_n^{(1)}(+/-1) = (n+1)*(+/-1)^n */
-  if (fabs (x - 1.0) < 1e-15)
-  {
-    gdouble sum = 0.0;
-    guint n;
-
-    for (n = 0; n < N; n++)
-      sum += ncm_vector_get (c, n) * (gdouble) (n + 1);
-
-    return sum;
-  }
-
-  if (fabs (x + 1.0) < 1e-15)
-  {
-    gdouble sum = 0.0;
-    guint n;
-
-    for (n = 0; n < N; n++)
-      sum += ncm_vector_get (c, n) * ((n & 1) ? -(gdouble) (n + 1) : (gdouble) (n + 1));
-
-    return sum;
-  }
+  g_assert_cmpuint (ncm_vector_stride (c), ==, 1);
 
   {
-    /* Stable recurrence for interior x */
-    gdouble Cnm1 = 1.0; /* U_0 */
-    gdouble sum  = ncm_vector_get (c, 0) * Cnm1;
+    const gdouble *c_data = ncm_vector_data (c);
 
-    if (N == 1)
-      return sum;
-
-    gdouble Cn = 2.0 * x; /* U_1 */
-
-    sum += ncm_vector_get (c, 1) * Cn;
-
-    for (guint n = 1; n < N - 1; n++)
+    /* Endpoint handling: C_n^{(1)}(+/-1) = (n+1)*(+/-1)^n */
+    if (fabs (x - 1.0) < 1e-15)
     {
-      gdouble Cnp1 = 2.0 * x * Cn - Cnm1; /* U_{n+1} */
+      gdouble sum = 0.0;
+      guint n;
 
-      sum += ncm_vector_get (c, n + 1) * Cnp1;
-      Cnm1 = Cn;
-      Cn   = Cnp1;
+      for (n = 0; n < N; n++)
+        sum += c_data[n] * (gdouble) (n + 1);
+
+      return sum;
     }
 
-    return sum;
+    if (fabs (x + 1.0) < 1e-15)
+    {
+      gdouble sum = 0.0;
+      guint n;
+
+      for (n = 0; n < N; n++)
+        sum += c_data[n] * ((n & 1) ? -(gdouble) (n + 1) : (gdouble) (n + 1));
+
+      return sum;
+    }
+
+    {
+      /* Stable recurrence for interior x */
+      gdouble Cnm1 = 1.0; /* U_0 */
+      gdouble sum  = c_data[0] * Cnm1;
+
+      if (N == 1)
+        return sum;
+
+      gdouble Cn = 2.0 * x; /* U_1 */
+
+      sum += c_data[1] * Cn;
+
+      for (guint n = 1; n < N - 1; n++)
+      {
+        gdouble Cnp1 = 2.0 * x * Cn - Cnm1; /* U_{n+1} */
+
+        sum += c_data[n + 1] * Cnp1;
+        Cnm1 = Cn;
+        Cn   = Cnp1;
+      }
+
+      return sum;
+    }
   }
 }
 
@@ -1868,56 +2114,62 @@ ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (NcmVector *c, gdouble x)
   if (N == 0)
     return 0.0;
 
-  /* Endpoint handling: C_n^{(2)}(+/-1) = binom(n+3,3)*(+/-1)^n = ((n+1)*(n+2)*(n+3)/6)*(+/-1)^n */
-  if (fabs (x - 1.0) < 1e-15)
+  g_assert_cmpuint (ncm_vector_stride (c), ==, 1);
+
   {
-    gdouble sum = 0.0;
-    guint n;
+    const gdouble *c_data = ncm_vector_data (c);
 
-    for (n = 0; n < N; n++)
-      sum += ncm_vector_get (c, n) * (gdouble) ((n + 1) * (n + 2) * (n + 3)) / 6.0;
-
-    return sum;
-  }
-
-  if (fabs (x + 1.0) < 1e-15)
-  {
-    gdouble sum = 0.0;
-    guint n;
-
-    for (n = 0; n < N; n++)
+    /* Endpoint handling: C_n^{(2)}(+/-1) = binom(n+3,3)*(+/-1)^n = ((n+1)*(n+2)*(n+3)/6)*(+/-1)^n */
+    if (fabs (x - 1.0) < 1e-15)
     {
-      const gdouble val = (gdouble) ((n + 1) * (n + 2) * (n + 3)) / 6.0;
+      gdouble sum = 0.0;
+      guint n;
 
-      sum += ncm_vector_get (c, n) * ((n & 1) ? -val : val);
-    }
+      for (n = 0; n < N; n++)
+        sum += c_data[n] * (gdouble) ((n + 1) * (n + 2) * (n + 3)) / 6.0;
 
-    return sum;
-  }
-
-  {
-    /* Stable recurrence for interior x */
-    gdouble Cnm1 = 1.0; /* C_0^{(2)} = 1 */
-    gdouble sum  = ncm_vector_get (c, 0) * Cnm1;
-
-    if (N == 1)
       return sum;
-
-    gdouble Cn = 4.0 * x; /* C_1^{(2)} = 4x */
-
-    sum += ncm_vector_get (c, 1) * Cn;
-
-    for (guint n = 1; n < N - 1; n++)
-    {
-      /* (n+1) C_{n+1}^{(2)} = 2(n+2)x C_n^{(2)} - (n+3) C_{n-1}^{(2)} */
-      gdouble Cnp1 = (2.0 * (gdouble) (n + 2) * x * Cn - (gdouble) (n + 3) * Cnm1) / (gdouble) (n + 1);
-
-      sum += ncm_vector_get (c, n + 1) * Cnp1;
-      Cnm1 = Cn;
-      Cn   = Cnp1;
     }
 
-    return sum;
+    if (fabs (x + 1.0) < 1e-15)
+    {
+      gdouble sum = 0.0;
+      guint n;
+
+      for (n = 0; n < N; n++)
+      {
+        const gdouble val = (gdouble) ((n + 1) * (n + 2) * (n + 3)) / 6.0;
+
+        sum += c_data[n] * ((n & 1) ? -val : val);
+      }
+
+      return sum;
+    }
+
+    {
+      /* Stable recurrence for interior x */
+      gdouble Cnm1 = 1.0; /* C_0^{(2)} = 1 */
+      gdouble sum  = c_data[0] * Cnm1;
+
+      if (N == 1)
+        return sum;
+
+      gdouble Cn = 4.0 * x; /* C_1^{(2)} = 4x */
+
+      sum += c_data[1] * Cn;
+
+      for (guint n = 1; n < N - 1; n++)
+      {
+        /* (n+1) C_{n+1}^{(2)} = 2(n+2)x C_n^{(2)} - (n+3) C_{n-1}^{(2)} */
+        gdouble Cnp1 = (2.0 * (gdouble) (n + 2) * x * Cn - (gdouble) (n + 3) * Cnm1) / (gdouble) (n + 1);
+
+        sum += c_data[n + 1] * Cnp1;
+        Cnm1 = Cn;
+        Cn   = Cnp1;
+      }
+
+      return sum;
+    }
   }
 }
 
@@ -1939,24 +2191,30 @@ ncm_sbessel_ode_solver_chebyshev_eval (NcmVector *a, gdouble t)
   if (N == 0)
     return 0.0;
 
-  if (N == 1)
-    return ncm_vector_get (a, 0);
+  g_assert_cmpuint (ncm_vector_stride (a), ==, 1);
 
   {
-    gdouble b_kplus1 = 0.0;
-    gdouble b_kplus2 = 0.0;
-    gdouble two_t    = 2.0 * t;
-    gint k;
+    const gdouble *a_data = ncm_vector_data (a);
 
-    for (k = (gint) N - 1; k >= 1; k--)
+    if (N == 1)
+      return a_data[0];
+
     {
-      gdouble b_k = two_t * b_kplus1 - b_kplus2 + ncm_vector_get (a, k);
+      gdouble b_kplus1 = 0.0;
+      gdouble b_kplus2 = 0.0;
+      gdouble two_t    = 2.0 * t;
+      gint k;
 
-      b_kplus2 = b_kplus1;
-      b_kplus1 = b_k;
+      for (k = (gint) N - 1; k >= 1; k--)
+      {
+        gdouble b_k = two_t * b_kplus1 - b_kplus2 + a_data[k];
+
+        b_kplus2 = b_kplus1;
+        b_kplus1 = b_k;
+      }
+
+      return t * b_kplus1 - b_kplus2 + a_data[0];
     }
-
-    return t * b_kplus1 - b_kplus2 + ncm_vector_get (a, 0);
   }
 }
 
@@ -1990,92 +2248,98 @@ ncm_sbessel_ode_solver_chebyshev_deriv (NcmVector *a, gdouble t)
   if (N <= 1)
     return 0.0;
 
-  if (N == 2)
-    return ncm_vector_get (a, 1);
+  g_assert_cmpuint (ncm_vector_stride (a), ==, 1);
 
-
-  if (fabs (t - 1.0) < 1.0e-15)
   {
-    /* ---- x = +1 ---- */
-    gdouble d1  = 0.0;
-    gdouble d2  = 0.0;
-    gdouble sum = 0.0;
+    const gdouble *a_data = ncm_vector_data (a);
 
-    for (gint k = N - 2; k >= 1; k--)
+    if (N == 2)
+      return a_data[1];
+
+
+    if (fabs (t - 1.0) < 1.0e-15)
     {
-      gdouble bk = d2 + 2.0 * (k + 1) * ncm_vector_get (a, k + 1);
+      /* ---- x = +1 ---- */
+      gdouble d1  = 0.0;
+      gdouble d2  = 0.0;
+      gdouble sum = 0.0;
 
-      d2   = d1;
-      d1   = bk;
-      sum += bk;
+      for (gint k = N - 2; k >= 1; k--)
+      {
+        gdouble bk = d2 + 2.0 * (k + 1) * a_data[k + 1];
+
+        d2   = d1;
+        d1   = bk;
+        sum += bk;
+      }
+
+      /* b0 has the 1/2 factor */
+      gdouble b0 = 0.5 * (d2 + 2.0 * a_data[1]);
+
+      sum += b0;
+
+      return sum;
     }
 
-    /* b0 has the 1/2 factor */
-    gdouble b0 = 0.5 * (d2 + 2.0 * ncm_vector_get (a, 1));
-
-    sum += b0;
-
-    return sum;
-  }
-
-  if (fabs (t + 1.0) < 1.0e-15)
-  {
-    /* ---- x = -1 ---- */
-    gdouble d1  = 0.0;
-    gdouble d2  = 0.0;
-    gdouble sum = 0.0;
-
-    /* start with (-1)^(N-2) */
-    gdouble sign = ((N - 2) & 1) ? -1.0 : 1.0;
-
-    for (gint k = N - 2; k >= 1; k--)
+    if (fabs (t + 1.0) < 1.0e-15)
     {
-      gdouble bk = d2 + 2.0 * (k + 1) * ncm_vector_get (a, k + 1);
+      /* ---- x = -1 ---- */
+      gdouble d1  = 0.0;
+      gdouble d2  = 0.0;
+      gdouble sum = 0.0;
 
-      d2 = d1;
-      d1 = bk;
+      /* start with (-1)^(N-2) */
+      gdouble sign = ((N - 2) & 1) ? -1.0 : 1.0;
 
-      sum += sign * bk;
-      sign = -sign;
-    }
+      for (gint k = N - 2; k >= 1; k--)
+      {
+        gdouble bk = d2 + 2.0 * (k + 1) * a_data[k + 1];
 
-    /* b0 has sign +1 */
-    gdouble b0 = 0.5 * (d2 + 2.0 * ncm_vector_get (a, 1));
+        d2 = d1;
+        d1 = bk;
 
-    sum += b0;
+        sum += sign * bk;
+        sign = -sign;
+      }
 
-    return sum;
-  }
+      /* b0 has sign +1 */
+      gdouble b0 = 0.5 * (d2 + 2.0 * a_data[1]);
 
-  {
-    gdouble c1          = 0.0; /* Clenshaw state k+1 */
-    gdouble c2          = 0.0; /* Clenshaw state k+2 */
-    gdouble d1          = 0.0; /* recurrence helper */
-    gdouble d2          = 0.0;
-    const gdouble two_t = 2.0 * t;
+      sum += b0;
 
-    /* k = N-2 ... 1 */
-    for (gint k = N - 2; k >= 1; k--)
-    {
-      /* build b[k] on the fly */
-      gdouble bk = d2 + 2.0 * (k + 1) * ncm_vector_get (a, k + 1);
-
-      /* update derivative recurrence */
-      d2 = d1;
-      d1 = bk;
-
-      /* Clenshaw step */
-      gdouble c0 = two_t * c1 - c2 + bk;
-
-      c2 = c1;
-      c1 = c0;
+      return sum;
     }
 
     {
-      /* k = 0 needs the 1/2 factor */
-      gdouble b0 = 0.5 * (d2 + 2.0 * ncm_vector_get (a, 1));
+      gdouble c1          = 0.0; /* Clenshaw state k+1 */
+      gdouble c2          = 0.0; /* Clenshaw state k+2 */
+      gdouble d1          = 0.0; /* recurrence helper */
+      gdouble d2          = 0.0;
+      const gdouble two_t = 2.0 * t;
 
-      return t * c1 - c2 + b0;
+      /* k = N-2 ... 1 */
+      for (gint k = N - 2; k >= 1; k--)
+      {
+        /* build b[k] on the fly */
+        gdouble bk = d2 + 2.0 * (k + 1) * a_data[k + 1];
+
+        /* update derivative recurrence */
+        d2 = d1;
+        d1 = bk;
+
+        /* Clenshaw step */
+        gdouble c0 = two_t * c1 - c2 + bk;
+
+        c2 = c1;
+        c1 = c0;
+      }
+
+      {
+        /* k = 0 needs the 1/2 factor */
+        gdouble b0 = 0.5 * (d2 + 2.0 * a_data[1]);
+
+        return t * c1 - c2 + b0;
+      }
     }
   }
 }

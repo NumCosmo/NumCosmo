@@ -1531,14 +1531,14 @@ class TestSBesselOperators:
 
         # Define f(x) = x^2/(1+x^2)^4
         def f_rational(_user_data: None, x: float) -> float:
-            return x**2 / (1.0 + x**2) ** 4
+            return 1.0e20 * x**2 / (1.0 + x**2) ** 4
 
         # Compute integral using the new integrate method
         result = solver.integrate(f_rational, N, None)
 
         # Compute expected value using scipy
         def integrand(x: float) -> float:
-            return (x**2 / (1.0 + x**2) ** 4) * spherical_jn(l_val, x)
+            return f_rational(None, x) * spherical_jn(l_val, x)
 
         expected, _ = quad(integrand, a, b, epsabs=1e-11, epsrel=1e-24)
 
@@ -1588,29 +1588,31 @@ class TestSBesselOperators:
         N = 2**14  # Number of Chebyshev nodes
         print(f"Using N = {N} Chebyshev nodes")
 
-        results_vec = Ncm.Vector.new(ell_max - ell_min + 1)
         print_rank = False
-        print_ell: list[int] | None = [10, 50, 450]
-        for i in range(1):
+        print_ell: list[int] | None = None  # [10, 50, 450]
+        solver = Ncm.SBesselOdeSolver.new(0, lb, ub)
+
+        for i in range(50):
             print(f"Starting iteration {i}\r", end="", flush=True)
             for i, k in enumerate(truth_table["kvals"]):
                 # if (i != 50) and i < 100:
                 #    continue
 
+                # if k != 100.0:
+                #    continue
+
                 # Create solver for this ell
-                solver = Ncm.SBesselOdeSolver.new(0, lb, ub)
+                solver.set_interval(lb, ub)
 
                 # Get the appropriate integration method
                 if func_type == "gaussian":
-                    for ell in range(ell_min, ell_max + 1):
-                        solver.set_l(ell)
-                        r0 = solver.integrate_gaussian(center, std, k, N)
-                        results_vec.set(ell - ell_min, r0)
+                    results_vec = solver.integrate_gaussian_l_range(
+                        center, std, k, N, ell_min, ell_max
+                    )
                 elif func_type == "rational":
-                    for ell in range(ell_min, ell_max + 1):
-                        solver.set_l(ell)
-                        r0 = solver.integrate_rational(center, std, k, N)
-                        results_vec.set(ell - ell_min, r0)
+                    results_vec = solver.integrate_rational_l_range(
+                        center, std, k, N, ell_min, ell_max
+                    )
                 else:
                     raise ValueError(f"Unknown function type: {func_type}")
 
