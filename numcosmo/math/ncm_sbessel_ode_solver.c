@@ -143,14 +143,14 @@ _row_reset (NcmSBesselOdeSolverRow *row, gdouble bc_at_m1, gdouble bc_at_p1, glo
 }
 
 /* Operator row computation */
-static void _ncm_sbessel_compute_proj_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff);
-static void _ncm_sbessel_compute_x_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff);
-static void _ncm_sbessel_compute_x2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff);
-static void _ncm_sbessel_compute_d_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff);
-static void _ncm_sbessel_compute_x_d_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff);
-static void _ncm_sbessel_compute_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff);
-static void _ncm_sbessel_compute_x_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff);
-static void _ncm_sbessel_compute_x2_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff);
+static void _ncm_sbessel_compute_proj_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
+static void _ncm_sbessel_compute_x_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
+static void _ncm_sbessel_compute_x2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
+static void _ncm_sbessel_compute_d_row (NcmSBesselOdeSolverRow *row, glong offset, gdouble coeff);
+static void _ncm_sbessel_compute_x_d_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
+static void _ncm_sbessel_compute_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
+static void _ncm_sbessel_compute_x_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
+static void _ncm_sbessel_compute_x2_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
 static gdouble _ncm_sbessel_bc_row (NcmSBesselOdeSolverRow *row, glong col_index);
 
 static void
@@ -593,10 +593,9 @@ ncm_sbessel_ode_solver_get_solution_size (NcmSBesselOdeSolver *solver)
  * - For k=0 only: additional value coeff * 1/2 at column 0
  */
 static void
-_ncm_sbessel_compute_proj_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
+_ncm_sbessel_compute_proj_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
 {
-  const gdouble kd   = (gdouble) k;
-  const glong offset = k - row->col_index;
+  const gdouble kd = (gdouble) k;
 
   /* General formula: three entries with rational function coefficients */
   const gdouble value_0 = coeff / (2.0 * (kd + 1.0));
@@ -643,10 +642,9 @@ _ncm_sbessel_compute_proj_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coe
  * - For k=1 only: additional value coeff * 1/8 at column 0
  */
 static void
-_ncm_sbessel_compute_x_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
+_ncm_sbessel_compute_x_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
 {
-  const gdouble kd   = (gdouble) k;
-  const glong offset = k - row->col_index;
+  const gdouble kd = (gdouble) k;
 
   /* General formula: up to four entries */
   if (k >= 1)
@@ -696,11 +694,10 @@ _ncm_sbessel_compute_x_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
  * - For k=2 only: additional value coeff * 1/24 at column 0
  */
 static void
-_ncm_sbessel_compute_x2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
+_ncm_sbessel_compute_x2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
 {
-  const gdouble kd   = (gdouble) k;
-  const gdouble kp2  = kd + 2.0;
-  const glong offset = k - row->col_index;
+  const gdouble kd  = (gdouble) k;
+  const gdouble kp2 = kd + 2.0;
 
   /* General formula: up to five entries */
   if (k >= 2)
@@ -752,10 +749,8 @@ _ncm_sbessel_compute_x2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff
  * - column k+3: coeff * (-1.0)
  */
 static void
-_ncm_sbessel_compute_d_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
+_ncm_sbessel_compute_d_row (NcmSBesselOdeSolverRow *row, glong offset, gdouble coeff)
 {
-  const glong offset = k - row->col_index;
-
   /* Two non-zero entries with opposite signs */
   row->data[offset + 1] += coeff;
   row->data[offset + 3] += -coeff;
@@ -788,10 +783,9 @@ _ncm_sbessel_compute_d_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
  * - column k+4: coeff * -(k+4)/(2*(k+3))
  */
 static void
-_ncm_sbessel_compute_x_d_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
+_ncm_sbessel_compute_x_d_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
 {
-  const gdouble kd   = (gdouble) k;
-  const glong offset = k - row->col_index;
+  const gdouble kd = (gdouble) k;
 
   /* Three non-zero entries with rational function coefficients */
   const gdouble value_0 = coeff * kd / (2.0 * (kd + 1.0));
@@ -827,10 +821,9 @@ _ncm_sbessel_compute_x_d_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coef
  * - column k+2: coeff * 2*(k+2) (single non-zero entry)
  */
 static void
-_ncm_sbessel_compute_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
+_ncm_sbessel_compute_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
 {
-  const gdouble kd   = (gdouble) k;
-  const glong offset = k - row->col_index;
+  const gdouble kd = (gdouble) k;
 
   row->data[offset + 2] += coeff * 2.0 * (kd + 2.0);
 }
@@ -860,10 +853,9 @@ _ncm_sbessel_compute_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff
  * - column k+3: coeff * (k+4)
  */
 static void
-_ncm_sbessel_compute_x_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
+_ncm_sbessel_compute_x_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
 {
-  const gdouble kd   = (gdouble) k;
-  const glong offset = k - row->col_index;
+  const gdouble kd = (gdouble) k;
 
   /* Two non-zero entries in this row */
   row->data[offset + 1] += coeff * kd;
@@ -897,11 +889,10 @@ _ncm_sbessel_compute_x_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coe
  * - column k+4: coeff * (k+4)*(k+5)/(2*(k+3))
  */
 static void
-_ncm_sbessel_compute_x2_d2_row (NcmSBesselOdeSolverRow *row, glong k, gdouble coeff)
+_ncm_sbessel_compute_x2_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
 {
-  const gdouble kd   = (gdouble) k;
-  const gdouble kp2  = kd + 2.0;
-  const glong offset = k - row->col_index;
+  const gdouble kd  = (gdouble) k;
+  const gdouble kp2 = kd + 2.0;
 
   /* Three non-zero entries with rational function coefficients */
   const gdouble value_0 = coeff * kd * (kd - 1.0) / (2.0 * (kd + 1.0));
@@ -977,19 +968,22 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolv
 
   _row_reset (row, 0.0, 0.0, left_col);
 
+  /* Compute offset once for all operators */
+  const glong offset = k - row->col_index;
+
   /* Second derivative term: (m^2/h^2) d^2 + (2m/h) x d^2 + x^2 d^2 */
-  _ncm_sbessel_compute_d2_row (row, k, m2 / h2);
-  _ncm_sbessel_compute_x_d2_row (row, k, 2.0 * m / h);
-  _ncm_sbessel_compute_x2_d2_row (row, k, 1.0);
+  _ncm_sbessel_compute_d2_row (row, k, offset, m2 / h2);
+  _ncm_sbessel_compute_x_d2_row (row, k, offset, 2.0 * m / h);
+  _ncm_sbessel_compute_x2_d2_row (row, k, offset, 1.0);
 
   /* First derivative term: (2m/h) d + 2 x d */
-  _ncm_sbessel_compute_d_row (row, k, 2.0 * m / h);
-  _ncm_sbessel_compute_x_d_row (row, k, 2.0);
+  _ncm_sbessel_compute_d_row (row, offset, 2.0 * m / h);
+  _ncm_sbessel_compute_x_d_row (row, k, offset, 2.0);
 
   /* Identity term: (m^2 - l(l+1)) I + 2m h x + h^2 x^2 */
-  _ncm_sbessel_compute_proj_row (row, k, m2 - llp1);
-  _ncm_sbessel_compute_x_row (row, k, 2.0 * m * h);
-  _ncm_sbessel_compute_x2_row (row, k, h2);
+  _ncm_sbessel_compute_proj_row (row, k, offset, m2 - llp1);
+  _ncm_sbessel_compute_x_row (row, k, offset, 2.0 * m * h);
+  _ncm_sbessel_compute_x2_row (row, k, offset, h2);
 }
 
 /**
@@ -2371,7 +2365,7 @@ ncm_sbessel_ode_solver_get_proj_matrix (guint N)
 
     _row_reset (row, 0.0, 0.0, left_col);
 
-    _ncm_sbessel_compute_proj_row (row, k, 1.0);
+    _ncm_sbessel_compute_proj_row (row, k, k - left_col, 1.0);
 
     for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
@@ -2411,7 +2405,7 @@ ncm_sbessel_ode_solver_get_x_matrix (guint N)
 
     _row_reset (row, 0.0, 0.0, left_col);
 
-    _ncm_sbessel_compute_x_row (row, k, 1.0);
+    _ncm_sbessel_compute_x_row (row, k, k - left_col, 1.0);
 
     for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
@@ -2451,7 +2445,7 @@ ncm_sbessel_ode_solver_get_x2_matrix (guint N)
 
     _row_reset (row, 0.0, 0.0, left_col);
 
-    _ncm_sbessel_compute_x2_row (row, k, 1.0);
+    _ncm_sbessel_compute_x2_row (row, k, k - left_col, 1.0);
 
     for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
@@ -2491,7 +2485,7 @@ ncm_sbessel_ode_solver_get_d_matrix (guint N)
 
     _row_reset (row, 0.0, 0.0, left_col);
 
-    _ncm_sbessel_compute_d_row (row, k, 1.0);
+    _ncm_sbessel_compute_d_row (row, k - left_col, 1.0);
 
     for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
@@ -2531,7 +2525,7 @@ ncm_sbessel_ode_solver_get_x_d_matrix (guint N)
 
     _row_reset (row, 0.0, 0.0, left_col);
 
-    _ncm_sbessel_compute_x_d_row (row, k, 1.0);
+    _ncm_sbessel_compute_x_d_row (row, k, k - left_col, 1.0);
 
     for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
@@ -2571,7 +2565,7 @@ ncm_sbessel_ode_solver_get_d2_matrix (guint N)
 
     _row_reset (row, 0.0, 0.0, left_col);
 
-    _ncm_sbessel_compute_d2_row (row, k, 1.0);
+    _ncm_sbessel_compute_d2_row (row, k, k - left_col, 1.0);
 
     for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
@@ -2611,7 +2605,7 @@ ncm_sbessel_ode_solver_get_x_d2_matrix (guint N)
 
     _row_reset (row, 0.0, 0.0, left_col);
 
-    _ncm_sbessel_compute_x_d2_row (row, k, 1.0);
+    _ncm_sbessel_compute_x_d2_row (row, k, k - left_col, 1.0);
 
     for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
@@ -2651,7 +2645,7 @@ ncm_sbessel_ode_solver_get_x2_d2_matrix (guint N)
 
     _row_reset (row, 0.0, 0.0, left_col);
 
-    _ncm_sbessel_compute_x2_d2_row (row, k, 1.0);
+    _ncm_sbessel_compute_x2_d2_row (row, k, k - left_col, 1.0);
 
     for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
     {
