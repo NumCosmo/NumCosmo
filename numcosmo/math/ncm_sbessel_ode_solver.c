@@ -1033,6 +1033,26 @@ _ncm_sbessel_create_row (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolverRow *ro
   }
 }
 
+__attribute__ ((optimize ("no-math-errno", "no-trapping-math")))
+
+static inline gdouble
+_compute_hypot (gdouble a, gdouble b)
+{
+  const gdouble abs_a = fabs (a);
+  const gdouble abs_b = fabs (b);
+
+  if (abs_a == 0.0)
+    return abs_b;
+
+  if (abs_b == 0.0)
+    return abs_a;
+
+  if (abs_a > abs_b)
+    return abs_a * sqrt (1.0 + (abs_b / abs_a) * (abs_b / abs_a));
+  else
+    return abs_b * sqrt (1.0 + (abs_a / abs_b) * (abs_a / abs_b));
+}
+
 /**
  * _ncm_sbessel_apply_givens:
  * @solver: a #NcmSBesselOdeSolver
@@ -1062,7 +1082,7 @@ _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong pivot_col, glong r
   a_val = r1->data[0] + _ncm_sbessel_bc_row (r1, pivot_col);
   b_val = r2->data[0] + _ncm_sbessel_bc_row (r2, pivot_col);
 
-  norm = hypot (a_val, b_val);
+  norm = _compute_hypot (a_val, b_val);
 
   if (norm < 1.0e-100)
   {
@@ -1160,10 +1180,7 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
   {
     const gdouble *rhs_data = ncm_vector_data (rhs);
 
-    for (i = 0; i < rhs_len; i++)
-    {
-      g_array_index (c, gdouble, i) = rhs_data[i];
-    }
+    memcpy (c->data, rhs_data, sizeof (gdouble) * rhs_len);
   }
 
   for (i = 0; i < ROWS_TO_ROTATE; i++)
