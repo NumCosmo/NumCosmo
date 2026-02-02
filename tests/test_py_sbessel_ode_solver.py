@@ -182,9 +182,8 @@ class TestSBesselOdeSolver:
             return x**power
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.SBesselOdeSolver.compute_chebyshev_coeffs(
-            f_power, -1.0, 1.0, N, None
-        )
+        solver = Ncm.SBesselOdeSolver.new(0, -1.0, 1.0)
+        coeffs_vec = solver.compute_chebyshev_coeffs(f_power, -1.0, 1.0, N, None)
         coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
 
         # Get analytical coefficients
@@ -281,9 +280,8 @@ class TestSBesselOdeSolver:
             return np.exp(x)
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.SBesselOdeSolver.compute_chebyshev_coeffs(
-            f_exp, -1.0, 1.0, N, None
-        )
+        solver = Ncm.SBesselOdeSolver.new(0, -1.0, 1.0)
+        coeffs_vec = solver.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, N, None)
         coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
 
         # Get analytical coefficients
@@ -313,9 +311,8 @@ class TestSBesselOdeSolver:
             return np.cos(x)
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.SBesselOdeSolver.compute_chebyshev_coeffs(
-            f_cos, -1.0, 1.0, N, None
-        )
+        solver = Ncm.SBesselOdeSolver.new(0, -1.0, 1.0)
+        coeffs_vec = solver.compute_chebyshev_coeffs(f_cos, -1.0, 1.0, N, None)
         coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
 
         # Get analytical coefficients
@@ -344,9 +341,8 @@ class TestSBesselOdeSolver:
             return 1.0 / (2.0 - x)
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.SBesselOdeSolver.compute_chebyshev_coeffs(
-            f_rational, -1.0, 1.0, N, None
-        )
+        solver = Ncm.SBesselOdeSolver.new(0, -1.0, 1.0)
+        coeffs_vec = solver.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, N, None)
         coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
 
         # Get analytical coefficients (computed numerically with high precision)
@@ -436,9 +432,8 @@ class TestSBesselOdeSolver:
             return np.exp(x)
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.SBesselOdeSolver.compute_chebyshev_coeffs(
-            f_exp, -1.0, 1.0, N, None
-        )
+        solver = Ncm.SBesselOdeSolver.new(0, -1.0, 1.0)
+        coeffs_vec = solver.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, N, None)
 
         # Test derivative at multiple points
         x_points = np.linspace(-0.95, 0.95, 19)
@@ -471,9 +466,8 @@ class TestSBesselOdeSolver:
             return np.sin(x)
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.SBesselOdeSolver.compute_chebyshev_coeffs(
-            f_sin, -1.0, 1.0, N, None
-        )
+        solver = Ncm.SBesselOdeSolver.new(0, -1.0, 1.0)
+        coeffs_vec = solver.compute_chebyshev_coeffs(f_sin, -1.0, 1.0, N, None)
 
         # Test derivative at multiple points
         x_points = np.linspace(-0.95, 0.95, 19)
@@ -829,9 +823,8 @@ class TestSBesselOdeSolver:
             return np.exp(x)
 
         # Compute Chebyshev coefficients
-        cheb_vec = Ncm.SBesselOdeSolver.compute_chebyshev_coeffs(
-            f_exp, -1.0, 1.0, N, None
-        )
+        solver = Ncm.SBesselOdeSolver.new(0, -1.0, 1.0)
+        cheb_vec = solver.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, N, None)
 
         # Convert to Gegenbauer lambda=1
         gegen1_vec = Ncm.Vector.new(N)
