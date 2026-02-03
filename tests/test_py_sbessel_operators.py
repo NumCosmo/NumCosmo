@@ -1551,6 +1551,95 @@ class TestSBesselOperators:
             err_msg=(f"integrate method failed for l={l_val}, f(x)=x^2/(1+x^2)^4"),
         )
 
+    def test_solve_batched_vs_non_batched(self) -> None:
+        """Test that batched and non-batched solvers give identical results.
+
+        This test verifies that solve_batched produces the same solution as
+        multiple calls to solve for individual l values.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+        lmin, lmax = 5, 25
+        n_l = lmax - lmin + 1
+
+        # Create a test RHS vector (Gegenbauer coefficients)
+        rhs = Ncm.Vector.new(N)
+        rhs_data = np.zeros(N)
+        rhs_data[0] = 0.0  # BC at -1
+        rhs_data[1] = 0.0  # BC at +1
+        # Set some non-trivial coefficients
+        for k in range(2, N):
+            rhs_data[k] = 1.0 / (1.0 + k * k)
+        rhs.set_array(rhs_data.tolist())
+
+        # Create solver
+        solver = Ncm.SBesselOdeSolver.new(lmin, a, b)
+
+        # Solve using batched method
+        solutions_batched = solver.solve_batched(rhs, lmin, n_l)
+        solutions_batched_np = self.matrix_to_numpy(solutions_batched)
+
+        # Solve individually for each l
+        solutions_individual = []
+        for ell in range(lmin, lmax + 1):
+            solver.set_l(ell)
+            sol = solver.solve(rhs)
+            solutions_individual.append(self.vector_to_numpy(sol))
+
+        solutions_individual_np = np.array(solutions_individual)
+
+        # Compare each solution
+        for i, ell in enumerate(range(lmin, lmax + 1)):
+            batched_sol = solutions_batched_np[i, :]
+            individual_sol = solutions_individual_np[i, :]
+
+            assert_allclose(
+                batched_sol,
+                individual_sol,
+                rtol=1.0e-12,
+                atol=1.0e-14,
+                err_msg=f"Batched solution for l={ell} doesn't match individual solve",
+            )
+
+    def test_integrate_l_range_consistency(self) -> None:
+        """Test that integrate_l_range gives consistent results.
+
+        Compares integrate_l_range (which uses batched solver internally)
+        against individual integrate calls for each l.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+        lmin, lmax = 5, 15
+
+        # Create solver
+        solver = Ncm.SBesselOdeSolver.new(lmin, a, b)
+
+        # Define a test function
+        def f_test(_user_data: None, x: float) -> float:
+            return x * x / (1.0 + x * x)
+
+        # Use integrate_l_range (batched internally)
+        results_range = solver.integrate_l_range(f_test, N, None, lmin, lmax)
+        results_range_np = self.vector_to_numpy(results_range)
+
+        # Compute individually for each l
+        results_individual = []
+        for ell in range(lmin, lmax + 1):
+            solver.set_l(ell)
+            result = solver.integrate(f_test, N, None)
+            results_individual.append(result)
+
+        results_individual_np = np.array(results_individual)
+
+        # Compare
+        assert_allclose(
+            results_range_np,
+            results_individual_np,
+            rtol=1.0e-10,
+            atol=1.0e-14,
+            err_msg="integrate_l_range doesn't match individual integrate calls",
+        )
+
     @pytest.mark.parametrize(
         "func_type,filename",
         [
