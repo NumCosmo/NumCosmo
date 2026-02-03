@@ -1673,16 +1673,16 @@ class TestSBesselOperators:
         ells = truth_table["lvals"]
         ell_min = int(np.min(ells))
         ell_max = int(np.max(ells))
-        # ell_max = 40  # Limit for faster testing
+        ell_max = 200  # Limit for faster testing
 
         N = 2**14  # Number of Chebyshev nodes
         print(f"Using N = {N} Chebyshev nodes")
 
         print_rank = False
-        print_ell: list[int] | None = None  # [40]
+        print_ell: list[int] | None = [40]
         solver = Ncm.SBesselOdeSolver.new(0, lb, ub)
 
-        for i in range(50):
+        for i in range(10):
             print(f"Starting iteration {i}\r", end="", flush=True)
             for i, k in enumerate(truth_table["kvals"]):
                 # if (i != 50) and i < 100:

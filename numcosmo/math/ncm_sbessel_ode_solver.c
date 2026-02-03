@@ -1164,9 +1164,17 @@ _compute_hypot (gdouble a, gdouble b)
     return abs_a;
 
   if (abs_a > abs_b)
-    return abs_a * sqrt (1.0 + (abs_b / abs_a) * (abs_b / abs_a));
+  {
+    const gdouble ratio = abs_b / abs_a;
+
+    return abs_a * sqrt (1.0 + ratio * ratio);
+  }
   else
-    return abs_b * sqrt (1.0 + (abs_a / abs_b) * (abs_a / abs_b));
+  {
+    const gdouble ratio = abs_a / abs_b;
+
+    return abs_b * sqrt (1.0 + ratio * ratio);
+  }
 }
 
 /**
@@ -1392,19 +1400,19 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
 }
 
 /**
- * ncm_sbessel_ode_solver_solve_batched:
+ * _ncm_sbessel_ode_solver_solve_batched_internal:
  * @solver: a #NcmSBesselOdeSolver
  * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
  * @lmin: minimum l value
  * @n_l: number of l values to solve for (l = lmin, lmin+1, ..., lmin+n_l-1)
  *
- * Solves the ODE for multiple l values simultaneously using batched operations.
- * Allocates rhs_len*n_l matrix rows and processes them in batches for efficiency.
+ * Internal batched solver implementation. Can be specialized at compile time
+ * when n_l is known at compile time for better optimization.
  *
- * Returns: (transfer full): solution matrix where each column is the solution for one l value
+ * Returns: (transfer full): solution matrix where each row is the solution for one l value
  */
-NcmMatrix *
-ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l)
+static NcmMatrix *
+_ncm_sbessel_ode_solver_solve_batched_internal (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
   const guint rhs_len                     = ncm_vector_len (rhs);
@@ -1434,6 +1442,8 @@ ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rh
 
     _ncm_sbessel_create_row_batched (solver, row, i, lmin, n_l);
 
+    #pragma omp simd
+
     for (l_idx = 0; l_idx < n_l; l_idx++)
     {
       const glong row_idx = i * n_l + l_idx;
@@ -1460,6 +1470,8 @@ ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rh
 
         _ncm_sbessel_create_row_batched (solver, row, r2_index, lmin, n_l);
 
+        #pragma omp simd
+
         for (l_idx = 0; l_idx < n_l; l_idx++)
         {
           const glong row_idx = r2_index * n_l + l_idx;
@@ -1471,6 +1483,8 @@ ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rh
       }
 
       /* Apply Givens rotations for all l values */
+      #pragma omp simd
+
       for (l_idx = 0; l_idx < n_l; l_idx++)
       {
         const glong r1_idx_batch   = r1_index * n_l + l_idx;
@@ -1487,6 +1501,8 @@ ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rh
     /* Check convergence across all l values */
     {
       gdouble max_Acol = 0.0;
+
+      #pragma omp simd
 
       for (l_idx = 0; l_idx < n_l; l_idx++)
       {
@@ -1529,6 +1545,8 @@ ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rh
     g_array_set_size (self->acc_bc_at_p1, n_l);
 
     /* Zero out accumulators */
+    #pragma omp simd
+
     for (l_idx = 0; l_idx < n_l; l_idx++)
     {
       g_array_index (self->acc_bc_at_m1, gdouble, l_idx) = 0.0;
@@ -1542,6 +1560,8 @@ ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rh
     {
       const glong row_base_idx = row * n_l;
       const gdouble row_sign   = (row % 2) == 0 ? 1.0 : -1.0;
+
+      #pragma omp simd
 
       for (l_idx = 0; l_idx < n_l; l_idx++)
       {
@@ -1576,6 +1596,83 @@ ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rh
   }
 
   return solution;
+}
+
+/* Specialized batched solvers for common sizes - enables better compiler optimizations */
+
+static inline __attribute__ ((always_inline)) NcmMatrix *
+
+_ncm_sbessel_ode_solver_solve_batched_2 (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin)
+{
+  return _ncm_sbessel_ode_solver_solve_batched_internal (solver, rhs, lmin, 2);
+}
+
+static inline __attribute__ ((always_inline)) NcmMatrix *
+
+_ncm_sbessel_ode_solver_solve_batched_4 (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin)
+{
+  return _ncm_sbessel_ode_solver_solve_batched_internal (solver, rhs, lmin, 4);
+}
+
+static inline __attribute__ ((always_inline)) NcmMatrix *
+
+_ncm_sbessel_ode_solver_solve_batched_8 (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin)
+{
+  return _ncm_sbessel_ode_solver_solve_batched_internal (solver, rhs, lmin, 8);
+}
+
+static inline __attribute__ ((always_inline)) NcmMatrix *
+
+_ncm_sbessel_ode_solver_solve_batched_16 (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin)
+{
+  return _ncm_sbessel_ode_solver_solve_batched_internal (solver, rhs, lmin, 16);
+}
+
+static inline __attribute__ ((always_inline)) NcmMatrix *
+
+_ncm_sbessel_ode_solver_solve_batched_32 (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin)
+{
+  return _ncm_sbessel_ode_solver_solve_batched_internal (solver, rhs, lmin, 32);
+}
+
+/**
+ * ncm_sbessel_ode_solver_solve_batched:
+ * @solver: a #NcmSBesselOdeSolver
+ * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @lmin: minimum l value
+ * @n_l: number of l values to solve for (l = lmin, lmin+1, ..., lmin+n_l-1)
+ *
+ * Solves the ODE for multiple l values simultaneously using batched operations.
+ * Allocates rhs_len*n_l matrix rows and processes them in batches for efficiency.
+ * Dispatches to specialized implementations for common sizes (8, 16, 32) for better
+ * compiler optimizations including loop unrolling and vectorization.
+ *
+ * Returns: (transfer full): solution matrix where each row is the solution for one l value
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l)
+{
+  /* Dispatch to specialized versions for common sizes */
+  switch (n_l)
+  {
+    case 2:
+      return _ncm_sbessel_ode_solver_solve_batched_2 (solver, rhs, lmin);
+
+    case 4:
+      return _ncm_sbessel_ode_solver_solve_batched_4 (solver, rhs, lmin);
+
+    case 8:
+      return _ncm_sbessel_ode_solver_solve_batched_8 (solver, rhs, lmin);
+
+    case 16:
+      return _ncm_sbessel_ode_solver_solve_batched_16 (solver, rhs, lmin);
+
+    case 32:
+      return _ncm_sbessel_ode_solver_solve_batched_32 (solver, rhs, lmin);
+
+    default:
+      return _ncm_sbessel_ode_solver_solve_batched_internal (solver, rhs, lmin, n_l);
+  }
 }
 
 /**
@@ -2034,7 +2131,7 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
 
   /* Step 4-7: Process l values in blocks for better cache locality */
   {
-    const gint block_size = 32; /* Process this many l values at once - tune based on cache size */
+    const gint block_size = 8; /* Process this many l values at once - tune based on cache size */
 
     for (gint l_block_start = lmin; l_block_start <= my_lmax; l_block_start += block_size)
     {
