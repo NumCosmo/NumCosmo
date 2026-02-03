@@ -1590,10 +1590,10 @@ class TestSBesselOperators:
         print(f"Using N = {N} Chebyshev nodes")
 
         print_rank = False
-        print_ell: list[int] | None = [40]
+        print_ell: list[int] | None = None  # [40]
         solver = Ncm.SBesselOdeSolver.new(0, lb, ub)
 
-        for i in range(1):
+        for i in range(50):
             print(f"Starting iteration {i}\r", end="", flush=True)
             for i, k in enumerate(truth_table["kvals"]):
                 # if (i != 50) and i < 100:

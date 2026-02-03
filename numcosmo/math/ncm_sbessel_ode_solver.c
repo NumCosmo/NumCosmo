@@ -994,6 +994,75 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolv
 }
 
 /**
+ * _ncm_sbessel_create_row_operator_batched:
+ * @solver: a #NcmSBesselOdeSolver
+ * @row: array of rows, one for each l value
+ * @row_index: row index (0-based, corresponding to k in the Gegenbauer basis)
+ * @lmin: minimum l value
+ * @n_l: number of l values to process
+ *
+ * Creates differential operator rows for multiple l values at once using an optimized
+ * incremental algorithm. The key insight is that operator rows for consecutive l values
+ * differ only in the l(l+1) term:
+ *
+ * - All derivative operators (d², x d², x² d², d, x d) are l-independent
+ * - Identity terms (x, x²) are l-independent
+ * - Only the projection term m² - l(l+1) depends on l
+ *
+ * The optimization uses the recurrence: (l+1)(l+2) - l(l+1) = 2(l+1), allowing
+ * incremental updates by adding -2l for each successive l value. This reduces
+ * O(n_l × operations) to O(operations + n_l) complexity.
+ *
+ * Algorithm:
+ * 1. Compute all l-independent terms once into row[0]
+ * 2. Add l-dependent term (m² - lmin(lmin+1)) to row[0]
+ * 3. For each subsequent row: memcpy row[0] and add incremental correction -2l
+ */
+static void
+_ncm_sbessel_create_row_operator_batched (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolverRow *row, glong row_index, gint lmin, guint n_l)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  const gdouble m                         = self->mid_point;
+  const gdouble h                         = self->half_len;
+  const gdouble h2                        = h * h;
+  const gdouble m2                        = m * m;
+  const gdouble lmin_lmin_p_1             = (gdouble) lmin * (lmin + 1);
+  const glong k                           = row_index;
+  const glong left_col                    = GSL_MAX (0, k - 2); /* Leftmost column index */
+  gdouble llp1                            = lmin_lmin_p_1;      /* Initial l(l+1) value */
+  gdouble l                               = lmin;
+  guint i;
+
+  /* Initialize first row with all l-independent terms */
+  _row_reset (&row[0], 0.0, 0.0, left_col);
+
+  /* Compute offset once */
+  const glong offset = k - row[0].col_index;
+
+  /* Second derivative term: (m^2/h^2) d^2 + (2m/h) x d^2 + x^2 d^2 - l-independent */
+  _ncm_sbessel_compute_d2_row (&row[0], k, offset, m2 / h2);
+  _ncm_sbessel_compute_x_d2_row (&row[0], k, offset, 2.0 * m / h);
+  _ncm_sbessel_compute_x2_d2_row (&row[0], k, offset, 1.0);
+
+  /* First derivative term: (2m/h) d + 2 x d - l-independent */
+  _ncm_sbessel_compute_d_row (&row[0], offset, 2.0 * m / h);
+  _ncm_sbessel_compute_x_d_row (&row[0], k, offset, 2.0);
+
+  /* Identity term: 2m h x + h^2 x^2 - l-independent part */
+  _ncm_sbessel_compute_proj_row (&row[0], k, offset, m2 - llp1);
+  _ncm_sbessel_compute_x_row (&row[0], k, offset, 2.0 * m * h);
+  _ncm_sbessel_compute_x2_row (&row[0], k, offset, h2);
+
+  /* Copy template to remaining rows and add incremental l-dependent correction */
+  for (i = 1; i < n_l; i++)
+  {
+    l++;
+    memcpy (&row[i], &row[0], sizeof (NcmSBesselOdeSolverRow));
+    _ncm_sbessel_compute_proj_row (&row[i], k, offset, -2.0 * l);
+  }
+}
+
+/**
  * _ncm_sbessel_create_row:
  * @solver: a #NcmSBesselOdeSolver
  * @row_index: row index (first two rows are boundary conditions, rest are operators)
@@ -1016,6 +1085,48 @@ _ncm_sbessel_create_row (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolverRow *ro
 
     default:
       _ncm_sbessel_create_row_operator (solver, row, row_index - 2);
+      break;
+  }
+}
+
+/**
+ * _ncm_sbessel_create_row_batched:
+ * @solver: a #NcmSBesselOdeSolver
+ * @row: array of rows, one for each l value
+ * @row_index: row index (first two rows are boundary conditions, rest are operators)
+ * @lmin: minimum l value
+ * @n_l: number of l values to process
+ *
+ * Creates the appropriate rows for multiple l values at once.
+ * The i-th element row[i] will contain the row for l = lmin + i.
+ * Rows 0-1 are boundary conditions (same for all l), rows >= 2 are differential operators.
+ */
+static void
+_ncm_sbessel_create_row_batched (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolverRow *row, glong row_index, gint lmin, guint n_l)
+{
+  guint i;
+
+  switch (row_index)
+  {
+    case 0:
+
+      /* Boundary condition at -1: same for all l values */
+      for (i = 0; i < n_l; i++)
+        _ncm_sbessel_create_row_bc_at_m1 (solver, &row[i]);
+
+      break;
+
+    case 1:
+
+      /* Boundary condition at +1: same for all l values */
+      for (i = 0; i < n_l; i++)
+        _ncm_sbessel_create_row_bc_at_p1 (solver, &row[i]);
+
+      break;
+
+    default:
+      /* Differential operator: optimized batch computation */
+      _ncm_sbessel_create_row_operator_batched (solver, row, row_index - 2, lmin, n_l);
       break;
   }
 }
@@ -1043,24 +1154,23 @@ _compute_hypot (gdouble a, gdouble b)
 /**
  * _ncm_sbessel_apply_givens:
  * @solver: a #NcmSBesselOdeSolver
- * @row1: first row index (pivot row)
- * @row2: second row index (row to eliminate)
- * @c: right-hand side vector
+ * @pivot_col: column index of the pivot
+ * @r1: pointer to first row (pivot row)
+ * @r2: pointer to second row (row to eliminate)
+ * @c1: pointer to right-hand side element for row1
+ * @c2: pointer to right-hand side element for row2
  *
- * Applies Givens rotation to eliminate the entry at (row2, col=row1).
+ * Applies Givens rotation to eliminate the entry at (row2, col=pivot_col).
  * The rotation transforms the rows as:
  *   new_row1 = c*row1 + s*row2
  *   new_row2 = -s*row1 + c*row2
- * where c and s are chosen to zero out element (row2, row1).
+ * where c and s are chosen to zero out element (row2, pivot_col).
  */
 static void
-_ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong pivot_col, glong row1, glong row2, GArray *c)
+_ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong pivot_col, NcmSBesselOdeSolverRow *r1, NcmSBesselOdeSolverRow *r2, gdouble *c1, gdouble *c2)
 {
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-  NcmSBesselOdeSolverRow *r1              = &g_array_index (self->matrix_rows, NcmSBesselOdeSolverRow, row1);
-  NcmSBesselOdeSolverRow *r2              = &g_array_index (self->matrix_rows, NcmSBesselOdeSolverRow, row2);
-  gdouble a_val                           = 0.0;
-  gdouble b_val                           = 0.0;
+  gdouble a_val = 0.0;
+  gdouble b_val = 0.0;
   gdouble norm;
 
   g_assert_cmpuint (r1->col_index, ==, pivot_col); /* Pivot row aligned with its index */
@@ -1089,20 +1199,20 @@ _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong pivot_col, glong r
     /* Compute Givens rotation coefficients */
     const gdouble cos_theta = a_val / norm;
     const gdouble sin_theta = b_val / norm;
-    const gdouble rhs1      = g_array_index (c, gdouble, row1);
-    const gdouble rhs2      = g_array_index (c, gdouble, row2);
+    const gdouble rhs1      = *c1;
+    const gdouble rhs2      = *c2;
     const gdouble bc1_m1    = r1->bc_at_m1;
     const gdouble bc2_m1    = r2->bc_at_m1;
     const gdouble bc1_p1    = r1->bc_at_p1;
     const gdouble bc2_p1    = r2->bc_at_p1;
     glong i;
 
-    g_array_index (c, gdouble, row1) = cos_theta * rhs1 + sin_theta * rhs2;
-    g_array_index (c, gdouble, row2) = -sin_theta * rhs1 + cos_theta * rhs2;
-    r1->bc_at_m1                     = cos_theta * bc1_m1 + sin_theta * bc2_m1;
-    r2->bc_at_m1                     = -sin_theta * bc1_m1 + cos_theta * bc2_m1;
-    r1->bc_at_p1                     = cos_theta * bc1_p1 + sin_theta * bc2_p1;
-    r2->bc_at_p1                     = -sin_theta * bc1_p1 + cos_theta * bc2_p1;
+    *c1          = cos_theta * rhs1 + sin_theta * rhs2;
+    *c2          = -sin_theta * rhs1 + cos_theta * rhs2;
+    r1->bc_at_m1 = cos_theta * bc1_m1 + sin_theta * bc2_m1;
+    r2->bc_at_m1 = -sin_theta * bc1_m1 + cos_theta * bc2_m1;
+    r1->bc_at_p1 = cos_theta * bc1_p1 + sin_theta * bc2_p1;
+    r2->bc_at_p1 = -sin_theta * bc1_p1 + cos_theta * bc2_p1;
 
     /* Updated leading entry in row1 */
     r1->data[0] = cos_theta * r1->data[0] + sin_theta * r2->data[0];
@@ -1183,7 +1293,14 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
         g_array_index (c, gdouble, last_row_index) = rhs_data[last_row_index];
       }
 
-      _ncm_sbessel_apply_givens (solver, col, r1_index, r2_index, c);
+      {
+        NcmSBesselOdeSolverRow *r1 = &g_array_index (self->matrix_rows, NcmSBesselOdeSolverRow, r1_index);
+        NcmSBesselOdeSolverRow *r2 = &g_array_index (self->matrix_rows, NcmSBesselOdeSolverRow, r2_index);
+        gdouble *c1                = &g_array_index (c, gdouble, r1_index);
+        gdouble *c2                = &g_array_index (c, gdouble, r2_index);
+
+        _ncm_sbessel_apply_givens (solver, col, r1, r2, c1, c2);
+      }
     }
 
     {
@@ -1257,6 +1374,188 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
   g_array_unref (c);
 
   return ncm_vector_ref (self->solution);
+}
+
+/**
+ * ncm_sbessel_ode_solver_solve_batched:
+ * @solver: a #NcmSBesselOdeSolver
+ * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @lmin: minimum l value
+ * @n_l: number of l values to solve for (l = lmin, lmin+1, ..., lmin+n_l-1)
+ *
+ * Solves the ODE for multiple l values simultaneously using batched operations.
+ * Allocates rhs_len*n_l matrix rows and processes them in batches for efficiency.
+ *
+ * Returns: (transfer full): solution matrix where each column is the solution for one l value
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l)
+{
+  /* NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver); */
+  const guint rhs_len         = ncm_vector_len (rhs);
+  const guint total_rows      = rhs_len * n_l;
+  GArray *c                   = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_rows);
+  GArray *matrix_rows_batched = g_array_sized_new (FALSE, FALSE, sizeof (NcmSBesselOdeSolverRow), total_rows);
+  const gdouble *rhs_data     = ncm_vector_data (rhs);
+  NcmMatrix *solution         = NULL;
+  glong col                   = 0;
+  gdouble max_c_A             = 0.0;
+  guint quiet_cols            = 0;
+  glong i, last_row_index;
+  guint l_idx;
+
+  g_assert_cmpuint (ncm_vector_stride (rhs), ==, 1);
+  g_assert_cmpuint (n_l, >, 0);
+
+  g_array_set_size (matrix_rows_batched, total_rows);
+  g_array_set_size (c, total_rows + ROWS_TO_ROTATE * n_l);
+
+  /* Add boundary condition rows for all l values */
+  for (i = 0; i < ROWS_TO_ROTATE + 1; i++)
+  {
+    NcmSBesselOdeSolverRow *row = &g_array_index (matrix_rows_batched, NcmSBesselOdeSolverRow, i * n_l);
+
+    _ncm_sbessel_create_row_batched (solver, row, i, lmin, n_l);
+
+    for (l_idx = 0; l_idx < n_l; l_idx++)
+    {
+      const glong row_idx = i * n_l + l_idx;
+
+      g_array_index (c, gdouble, row_idx) = rhs_data[i];
+    }
+  }
+
+  last_row_index = ROWS_TO_ROTATE;
+
+  for (col = 0; col < rhs_len; col++)
+  {
+    const glong last_row_for_col = GSL_MIN (ROWS_TO_ROTATE, rhs_len - col - 1);
+
+    for (i = last_row_for_col; i > 0; i--)
+    {
+      const glong r1_index = col + i - 1;
+      const glong r2_index = col + i;
+
+      /* Create new rows if needed */
+      if (r2_index > last_row_index)
+      {
+        NcmSBesselOdeSolverRow *row = &g_array_index (matrix_rows_batched, NcmSBesselOdeSolverRow, r2_index * n_l);
+
+        _ncm_sbessel_create_row_batched (solver, row, r2_index, lmin, n_l);
+
+        for (l_idx = 0; l_idx < n_l; l_idx++)
+        {
+          const glong row_idx = r2_index * n_l + l_idx;
+
+          g_array_index (c, gdouble, row_idx) = rhs_data[r2_index];
+        }
+
+        last_row_index = r2_index;
+      }
+
+      /* Apply Givens rotations for all l values */
+      for (l_idx = 0; l_idx < n_l; l_idx++)
+      {
+        const glong r1_idx_batch   = r1_index * n_l + l_idx;
+        const glong r2_idx_batch   = r2_index * n_l + l_idx;
+        NcmSBesselOdeSolverRow *r1 = &g_array_index (matrix_rows_batched, NcmSBesselOdeSolverRow, r1_idx_batch);
+        NcmSBesselOdeSolverRow *r2 = &g_array_index (matrix_rows_batched, NcmSBesselOdeSolverRow, r2_idx_batch);
+        gdouble *c1                = &g_array_index (c, gdouble, r1_idx_batch);
+        gdouble *c2                = &g_array_index (c, gdouble, r2_idx_batch);
+
+        _ncm_sbessel_apply_givens (solver, col, r1, r2, c1, c2);
+      }
+    }
+
+    /* Check convergence across all l values */
+    {
+      gdouble max_Acol = 0.0;
+
+      for (l_idx = 0; l_idx < n_l; l_idx++)
+      {
+        const glong row_idx         = col * n_l + l_idx;
+        NcmSBesselOdeSolverRow *row = &g_array_index (matrix_rows_batched, NcmSBesselOdeSolverRow, row_idx);
+        const double diag           = row->data[0] + _ncm_sbessel_bc_row (row, col);
+        const double c_col          = g_array_index (c, gdouble, row_idx);
+        const double Acol           = fabs (c_col / diag);
+
+        if (Acol > max_Acol)
+          max_Acol = Acol;
+      }
+
+      if (max_Acol > max_c_A)
+      {
+        max_c_A    = max_Acol;
+        quiet_cols = 0;
+      }
+      else
+      {
+        /* max_Acol is small relative to established scale */
+        if (max_Acol < max_c_A * DBL_EPSILON * 1.0e-1)
+          quiet_cols++;
+        else
+          quiet_cols = 0;
+      }
+
+      if (quiet_cols >= ROWS_TO_ROTATE + 1)
+        break;  /* SAFE early stop */
+    }
+  }
+
+  /* Back substitution to solve R x = c for all l values */
+  {
+    const glong n         = col; /* since col <= rhs_len */
+    gdouble *acc_bc_at_m1 = g_new0 (gdouble, n_l);
+    gdouble *acc_bc_at_p1 = g_new0 (gdouble, n_l);
+    glong row;
+
+    solution = ncm_matrix_new (n_l, n);
+
+    /* Flipped loop order for better cache locality - process all l values for each row */
+    for (row = n - 1; row >= 0; row--)
+    {
+      const glong row_base_idx = row * n_l;
+      const gdouble row_sign   = (row % 2) == 0 ? 1.0 : -1.0;
+
+      for (l_idx = 0; l_idx < n_l; l_idx++)
+      {
+        const glong row_idx       = row_base_idx + l_idx;
+        NcmSBesselOdeSolverRow *r = &g_array_index (matrix_rows_batched, NcmSBesselOdeSolverRow, row_idx);
+        gdouble sum               = g_array_index (c, gdouble, row_idx);
+        glong width               = GSL_MIN (TOTAL_BANDWIDTH, n - row);
+        const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
+        gdouble sol;
+        glong j;
+
+        g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
+
+        for (j = 1; j < width; j++)
+        {
+          const glong col_idx = r->col_index + j;
+          const gdouble a_ij  = r->data[j];
+
+          sum -= a_ij * ncm_matrix_get (solution, l_idx, col_idx);
+        }
+
+        sum -= acc_bc_at_m1[l_idx] * r->bc_at_m1;
+        sum -= acc_bc_at_p1[l_idx] * r->bc_at_p1;
+
+        sol = sum / diag;
+        ncm_matrix_set (solution, l_idx, row, sol);
+
+        acc_bc_at_m1[l_idx] += row_sign * sol;
+        acc_bc_at_p1[l_idx] += sol;
+      }
+    }
+
+    g_free (acc_bc_at_m1);
+    g_free (acc_bc_at_p1);
+  }
+
+  g_array_unref (c);
+  g_array_unref (matrix_rows_batched);
+
+  return solution;
 }
 
 /**

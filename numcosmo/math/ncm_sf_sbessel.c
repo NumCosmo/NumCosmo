@@ -448,7 +448,7 @@ ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble
 
     return;
   }
-  else if (x > (gdouble) (lmax + 1.0))
+  else if ((x > (gdouble) (lmax + 1.0)) && FALSE)
   {
     /* Use asymptotic expansion for large x */
     _ncm_sf_sbessel_array_eval_asymptotic (lmax, x, jl_x);
