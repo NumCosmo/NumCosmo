@@ -1140,10 +1140,13 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
   const guint rhs_len                     = ncm_vector_len (rhs);
   GArray *c                               = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), rhs_len);
+  const gdouble *rhs_data                 = ncm_vector_data (rhs);
   glong col                               = 0;
   gdouble max_c_A                         = 0.0;
   guint quiet_cols                        = 0;
   glong i, last_row_index;
+
+  g_assert_cmpuint (ncm_vector_stride (rhs), ==, 1);
 
   if (rhs_len > self->matrix_rows->len)
     g_array_set_size (self->matrix_rows, rhs_len);
@@ -1157,25 +1160,11 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
   {
     NcmSBesselOdeSolverRow *row = &g_array_index (self->matrix_rows, NcmSBesselOdeSolverRow, i);
 
+    g_array_index (c, gdouble, i) = rhs_data[i];
     _ncm_sbessel_create_row (solver, row, i);
   }
 
   last_row_index = ROWS_TO_ROTATE;
-
-  /* Copy RHS to working array */
-  g_assert_cmpuint (ncm_vector_stride (rhs), ==, 1);
-  {
-    const gdouble *rhs_data = ncm_vector_data (rhs);
-
-    memcpy (c->data, rhs_data, sizeof (gdouble) * rhs_len);
-  }
-
-  for (i = 0; i < ROWS_TO_ROTATE; i++)
-  {
-    const gdouble zero = 0.0;
-
-    g_array_index (c, gdouble, rhs_len + i) = zero;
-  }
 
   for (col = 0; col < rhs_len; col++)
   {
@@ -1191,6 +1180,7 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
         NcmSBesselOdeSolverRow *row = &g_array_index (self->matrix_rows, NcmSBesselOdeSolverRow, ++last_row_index);
 
         _ncm_sbessel_create_row (solver, row, last_row_index);
+        g_array_index (c, gdouble, last_row_index) = rhs_data[last_row_index];
       }
 
       _ncm_sbessel_apply_givens (solver, col, r1_index, r2_index, c);
@@ -1726,7 +1716,7 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
   /* Step 4-7: Loop over l values */
   for (gint l = lmin; l <= my_lmax; l++)
   {
-    const gdouble nu = l + 0.5;
+    /*const gdouble nu = l + 0.5; */
 
     /* printf ("Solving for l=%d in range [% 22.15g, % 22.15g]\n", l, a, b); */
 
@@ -1751,8 +1741,8 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
     const gdouble y_prime_b         = y_prime_at_plus1 / h;
 
     /* Evaluate j_l at endpoints */
-    const gdouble j_l_a = ncm_sf_sbessel (l, a); /*j_array_a[l]; */
-    const gdouble j_l_b = ncm_sf_sbessel (l, b); /*j_array_b[l]; */
+    const gdouble j_l_a = j_array_a[l];
+    const gdouble j_l_b = j_array_b[l];
 
     /* Compute integral via Green's identity */
     const gdouble integral = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;

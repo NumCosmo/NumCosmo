@@ -1584,7 +1584,7 @@ class TestSBesselOperators:
         ells = truth_table["lvals"]
         ell_min = int(np.min(ells))
         ell_max = int(np.max(ells))
-        ell_max = 40  # Limit for faster testing
+        # ell_max = 40  # Limit for faster testing
 
         N = 2**14  # Number of Chebyshev nodes
         print(f"Using N = {N} Chebyshev nodes")
@@ -1606,27 +1606,13 @@ class TestSBesselOperators:
 
                 # Get the appropriate integration method
                 if func_type == "gaussian":
-                    mid = 0.5 * (lb + ub)
-                    solver.set_interval(lb, mid)
                     results_vec = solver.integrate_gaussian_l_range(
                         center, std, k, N, ell_min, ell_max
                     )
-                    solver.set_interval(mid, ub)
-                    results_vec2 = solver.integrate_gaussian_l_range(
-                        center, std, k, N, ell_min, ell_max
-                    )
-                    results_vec.add(results_vec2)
                 elif func_type == "rational":
-                    mid = 0.5 * (lb + ub)
-                    solver.set_interval(lb, mid)
                     results_vec = solver.integrate_rational_l_range(
                         center, std, k, N, ell_min, ell_max
                     )
-                    solver.set_interval(mid, ub)
-                    results_vec2 = solver.integrate_rational_l_range(
-                        center, std, k, N, ell_min, ell_max
-                    )
-                    results_vec.add(results_vec2)
                 else:
                     raise ValueError(f"Unknown function type: {func_type}")
 
