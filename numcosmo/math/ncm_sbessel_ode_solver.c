@@ -1192,14 +1192,15 @@ _compute_hypot (gdouble a, gdouble b)
  *   new_row2 = -s*row1 + c*row2
  * where c and s are chosen to zero out element (row2, pivot_col).
  */
-static void
+static inline __attribute__ ((hot)) void
+
 _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong pivot_col, NcmSBesselOdeSolverRow * restrict r1, NcmSBesselOdeSolverRow * restrict r2, gdouble * restrict c1, gdouble * restrict c2)
 {
   const gdouble a_val = r1->data[0] + _ncm_sbessel_bc_row (r1, pivot_col);
   const gdouble b_val = r2->data[0] + _ncm_sbessel_bc_row (r2, pivot_col);
   const gdouble norm  = _compute_hypot (a_val, b_val);
 
-  if (norm < 1.0e-100)
+  if (__builtin_expect ((norm < 1.0e-100), 0))
   {
     /* Entry already zero - just shift r2 without rotation */
     /* Manually unrolled for TOTAL_BANDWIDTH = 9 */
@@ -1232,70 +1233,57 @@ _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong pivot_col, NcmSBes
     const gdouble bc2_p1       = r2->bc_at_p1;
     gdouble * restrict r1_data = r1->data;
     gdouble * restrict r2_data = r2->data;
-
-    *c1          = FMA (cos_theta, rhs1, sin_theta * rhs2);
-    *c2          = FMA (-sin_theta, rhs1, cos_theta * rhs2);
-    r1->bc_at_m1 = FMA (cos_theta, bc1_m1, sin_theta * bc2_m1);
-    r2->bc_at_m1 = FMA (-sin_theta, bc1_m1, cos_theta * bc2_m1);
-    r1->bc_at_p1 = FMA (cos_theta, bc1_p1, sin_theta * bc2_p1);
-    r2->bc_at_p1 = FMA (-sin_theta, bc1_p1, cos_theta * bc2_p1);
-
-    /* Updated leading entry in row1 */
-    r1_data[0] = FMA (cos_theta, r1_data[0], sin_theta * r2_data[0]);
+    const gdouble e1_0         = r1_data[0];
+    const gdouble e1_1         = r1_data[1];
+    const gdouble e1_2         = r1_data[2];
+    const gdouble e1_3         = r1_data[3];
+    const gdouble e1_4         = r1_data[4];
+    const gdouble e1_5         = r1_data[5];
+    const gdouble e1_6         = r1_data[6];
+    const gdouble e1_7         = r1_data[7];
+    const gdouble e1_8         = r1_data[8];
+    const gdouble e2_0         = r2_data[0];
+    const gdouble e2_1         = r2_data[1];
+    const gdouble e2_2         = r2_data[2];
+    const gdouble e2_3         = r2_data[3];
+    const gdouble e2_4         = r2_data[4];
+    const gdouble e2_5         = r2_data[5];
+    const gdouble e2_6         = r2_data[6];
+    const gdouble e2_7         = r2_data[7];
+    const gdouble e2_8         = r2_data[8];
 
     /* Apply rotation to all matrix entries - manually unrolled for TOTAL_BANDWIDTH = 9 */
-    {
-      const gdouble e1_1 = r1_data[1];
-      const gdouble e2_1 = r2_data[1];
 
-      r1_data[1] = FMA (cos_theta, e1_1, sin_theta * e2_1);
-      r2_data[0] = FMA (-sin_theta, e1_1, cos_theta * e2_1);
+    *c1          = FMA (cos_theta, rhs1, sin_theta * rhs2);
+    r1->bc_at_m1 = FMA (cos_theta, bc1_m1, sin_theta * bc2_m1);
+    r1->bc_at_p1 = FMA (cos_theta, bc1_p1, sin_theta * bc2_p1);
 
-      const gdouble e1_2 = r1_data[2];
-      const gdouble e2_2 = r2_data[2];
+    r1_data[0] = FMA (cos_theta, e1_0, sin_theta * e2_0);
+    r1_data[1] = FMA (cos_theta, e1_1, sin_theta * e2_1);
+    r1_data[2] = FMA (cos_theta, e1_2, sin_theta * e2_2);
+    r1_data[3] = FMA (cos_theta, e1_3, sin_theta * e2_3);
+    r1_data[4] = FMA (cos_theta, e1_4, sin_theta * e2_4);
+    r1_data[5] = FMA (cos_theta, e1_5, sin_theta * e2_5);
+    r1_data[6] = FMA (cos_theta, e1_6, sin_theta * e2_6);
+    r1_data[7] = FMA (cos_theta, e1_7, sin_theta * e2_7);
+    r1_data[8] = FMA (cos_theta, e1_8, sin_theta * e2_8);
 
-      r1_data[2] = FMA (cos_theta, e1_2, sin_theta * e2_2);
-      r2_data[1] = FMA (-sin_theta, e1_2, cos_theta * e2_2);
+    *c2          = FMA (-sin_theta, rhs1, cos_theta * rhs2);
+    r2->bc_at_m1 = FMA (-sin_theta, bc1_m1, cos_theta * bc2_m1);
+    r2->bc_at_p1 = FMA (-sin_theta, bc1_p1, cos_theta * bc2_p1);
 
-      const gdouble e1_3 = r1_data[3];
-      const gdouble e2_3 = r2_data[3];
-
-      r1_data[3] = FMA (cos_theta, e1_3, sin_theta * e2_3);
-      r2_data[2] = FMA (-sin_theta, e1_3, cos_theta * e2_3);
-
-      const gdouble e1_4 = r1_data[4];
-      const gdouble e2_4 = r2_data[4];
-
-      r1_data[4] = FMA (cos_theta, e1_4, sin_theta * e2_4);
-      r2_data[3] = FMA (-sin_theta, e1_4, cos_theta * e2_4);
-
-      const gdouble e1_5 = r1_data[5];
-      const gdouble e2_5 = r2_data[5];
-
-      r1_data[5] = FMA (cos_theta, e1_5, sin_theta * e2_5);
-      r2_data[4] = FMA (-sin_theta, e1_5, cos_theta * e2_5);
-
-      const gdouble e1_6 = r1_data[6];
-      const gdouble e2_6 = r2_data[6];
-
-      r1_data[6] = FMA (cos_theta, e1_6, sin_theta * e2_6);
-      r2_data[5] = FMA (-sin_theta, e1_6, cos_theta * e2_6);
-
-      const gdouble e1_7 = r1_data[7];
-      const gdouble e2_7 = r2_data[7];
-
-      r1_data[7] = FMA (cos_theta, e1_7, sin_theta * e2_7);
-      r2_data[6] = FMA (-sin_theta, e1_7, cos_theta * e2_7);
-
-      const gdouble e1_8 = r1_data[8];
-      const gdouble e2_8 = r2_data[8];
-
-      r1_data[8] = FMA (cos_theta, e1_8, sin_theta * e2_8);
-      r2_data[7] = FMA (-sin_theta, e1_8, cos_theta * e2_8);
-    }
-
+    r2_data[0] = FMA (-sin_theta, e1_1, cos_theta * e2_1);
+    r2_data[1] = FMA (-sin_theta, e1_2, cos_theta * e2_2);
+    r2_data[2] = FMA (-sin_theta, e1_3, cos_theta * e2_3);
+    r2_data[3] = FMA (-sin_theta, e1_4, cos_theta * e2_4);
+    r2_data[4] = FMA (-sin_theta, e1_5, cos_theta * e2_5);
+    r2_data[5] = FMA (-sin_theta, e1_6, cos_theta * e2_6);
+    r2_data[6] = FMA (-sin_theta, e1_7, cos_theta * e2_7);
+    r2_data[7] = FMA (-sin_theta, e1_8, cos_theta * e2_8);
     r2_data[8] = 0.0; /* Last entry shifted out is now zero */
-    r2->col_index++;  /* Shift row2's column index right by 1 */
+
+
+    r2->col_index++; /* Shift row2's column index right by 1 */
   }
 }
 
