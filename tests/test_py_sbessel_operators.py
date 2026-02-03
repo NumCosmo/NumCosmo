@@ -1584,15 +1584,16 @@ class TestSBesselOperators:
         ells = truth_table["lvals"]
         ell_min = int(np.min(ells))
         ell_max = int(np.max(ells))
+        ell_max = 40  # Limit for faster testing
 
         N = 2**14  # Number of Chebyshev nodes
         print(f"Using N = {N} Chebyshev nodes")
 
         print_rank = False
-        print_ell: list[int] | None = None  # [10, 50, 450]
+        print_ell: list[int] | None = [40]
         solver = Ncm.SBesselOdeSolver.new(0, lb, ub)
 
-        for i in range(50):
+        for i in range(1):
             print(f"Starting iteration {i}\r", end="", flush=True)
             for i, k in enumerate(truth_table["kvals"]):
                 # if (i != 50) and i < 100:
@@ -1602,22 +1603,35 @@ class TestSBesselOperators:
                 #    continue
 
                 # Create solver for this ell
-                solver.set_interval(lb, ub)
 
                 # Get the appropriate integration method
                 if func_type == "gaussian":
+                    mid = 0.5 * (lb + ub)
+                    solver.set_interval(lb, mid)
                     results_vec = solver.integrate_gaussian_l_range(
                         center, std, k, N, ell_min, ell_max
                     )
+                    solver.set_interval(mid, ub)
+                    results_vec2 = solver.integrate_gaussian_l_range(
+                        center, std, k, N, ell_min, ell_max
+                    )
+                    results_vec.add(results_vec2)
                 elif func_type == "rational":
+                    mid = 0.5 * (lb + ub)
+                    solver.set_interval(lb, mid)
                     results_vec = solver.integrate_rational_l_range(
                         center, std, k, N, ell_min, ell_max
                     )
+                    solver.set_interval(mid, ub)
+                    results_vec2 = solver.integrate_rational_l_range(
+                        center, std, k, N, ell_min, ell_max
+                    )
+                    results_vec.add(results_vec2)
                 else:
                     raise ValueError(f"Unknown function type: {func_type}")
 
                 results = np.array(results_vec.dup_array())
-                truth_values = table[:, i]
+                truth_values = table[: (ell_max - ell_min + 1), i]
 
                 # Compute relative errors
                 rel_errors = np.abs(

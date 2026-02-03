@@ -32,6 +32,23 @@
 
 G_BEGIN_DECLS
 
+#define NCM_TYPE_SF_SBESSEL_ARRAY (ncm_sf_sbessel_array_get_type ())
+
+G_DECLARE_FINAL_TYPE (NcmSFSBesselArray, ncm_sf_sbessel_array, NCM, SF_SBESSEL_ARRAY, GObject)
+
+NcmSFSBesselArray *ncm_sf_sbessel_array_new (void);
+NcmSFSBesselArray *ncm_sf_sbessel_array_new_full (guint lmax, gdouble threshold);
+NcmSFSBesselArray *ncm_sf_sbessel_array_ref (NcmSFSBesselArray *sba);
+void ncm_sf_sbessel_array_free (NcmSFSBesselArray *sba);
+void ncm_sf_sbessel_array_clear (NcmSFSBesselArray **sba);
+
+void ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble *jl_x);
+guint ncm_sf_sbessel_array_eval_ell_cutoff (NcmSFSBesselArray *sba, gdouble x);
+guint ncm_sf_sbessel_array_get_lmax (NcmSFSBesselArray *sba);
+gdouble ncm_sf_sbessel_array_get_threshold (NcmSFSBesselArray *sba);
+
+/* Stand alone functions */
+
 gdouble ncm_sf_sbessel (gulong l, gdouble x);
 
 void ncm_sf_sbessel_taylor (gulong l, gdouble x, gdouble *djl);

@@ -44,7 +44,7 @@ class TestSBesselIntegratorLevin:
     @pytest.mark.parametrize(
         "func_type,filename",
         [
-            # ("gaussian", "gauss_jl_500.json.gz"),
+            ("gaussian", "gauss_jl_500.json.gz"),
             ("rational", "rational_jl_500.json.gz"),
         ],
     )
@@ -92,7 +92,7 @@ class TestSBesselIntegratorLevin:
 
         results_vec = Ncm.Vector.new(ell_max - ell_min + 1)
         print_rank = False
-        print_ell: list[int] | None = [50]
+        print_ell: list[int] | None = [10]
 
         for i in range(10):
             print(f"Starting iteration {i}\r", end="", flush=True)

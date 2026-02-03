@@ -47,6 +47,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_sbessel_integrator_levin.h"
+#include "math/ncm_sbessel_ode_solver.h"
 #include "math/ncm_sf_sbessel.h"
 #include "math/ncm_lapack.h"
 #include "math/ncm_c.h"
@@ -85,6 +86,7 @@ struct _NcmSBesselIntegratorLevin
   gdouble *x_cc;  /* Clenshaw-Curtis knots */
   gint *ipiv;     /* Pivot indices for LAPACK */
   guint alloc_order;
+  NcmSBesselOdeSolver *ode_solver; /* Spherical Bessel ODE solver */
 };
 
 enum
@@ -112,6 +114,7 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
   sbilv->x_cc        = NULL;
   sbilv->ipiv        = NULL;
   sbilv->alloc_order = 0;
+  sbilv->ode_solver  = ncm_sbessel_ode_solver_new (0, -1.0, 1.0);
 }
 
 static void
@@ -126,6 +129,8 @@ _ncm_sbessel_integrator_levin_dispose (GObject *object)
   g_clear_pointer (&sbilv->y_sol, g_free);
   g_clear_pointer (&sbilv->x_cc, g_free);
   g_clear_pointer (&sbilv->ipiv, g_free);
+
+  ncm_sbessel_ode_solver_clear (&sbilv->ode_solver);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_sbessel_integrator_levin_parent_class)->dispose (object);
@@ -390,199 +395,6 @@ _ncm_sbessel_integrator_levin_chebyshev_diff_matrix (NcmSBesselIntegratorLevin *
 }
 
 /*
- * _ncm_sbessel_integrator_levin_compute_chebyshev_coeffs:
- * @sbilv: a #NcmSBesselIntegratorLevin
- * @F: function to evaluate
- * @user_data: user data for @F
- * @a: left endpoint
- * @b: right endpoint
- * @N: number of Chebyshev nodes
- * @coeffs: (out): array to store Chebyshev coefficients (size N)
- *
- * Computes Chebyshev coefficients of f(x) on [a,b] using FFTW DCT-I.
- * The function is sampled at Chebyshev nodes x_k = (a+b)/2 - (b-a)/2*cos(k*pi/(N-1))
- * and transformed using a Type-I discrete cosine transform.
- */
-static void
-_ncm_sbessel_integrator_levin_compute_chebyshev_coeffs (NcmSBesselIntegratorLevin *sbilv,
-                                                        NcmSBesselIntegratorF F,
-                                                        gpointer user_data,
-                                                        gdouble a, gdouble b,
-                                                        guint N,
-                                                        gdouble *coeffs)
-{
-  guint i;
-  gdouble *f_vals = fftw_malloc (sizeof (gdouble) * N);
-  fftw_plan plan_r2r;
-  const gdouble mid    = 0.5 * (a + b);
-  const gdouble half_h = 0.5 * (b - a);
-
-  /* Sample function at Chebyshev nodes */
-  for (i = 0; i < N; i++)
-  {
-    const gdouble theta = M_PI * i / (N - 1);
-    const gdouble x     = mid + half_h * cos (theta);
-
-    f_vals[i] = F (user_data, x);
-  }
-
-  /* Create DCT-I plan and execute */
-  ncm_cfg_load_fftw_wisdom ("ncm_sbessel_integrator_levin");
-  ncm_cfg_lock_plan_fftw ();
-  plan_r2r = fftw_plan_r2r_1d (N, f_vals, coeffs, FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
-  ncm_cfg_unlock_plan_fftw ();
-  ncm_cfg_save_fftw_wisdom ("ncm_sbessel_integrator_levin");
-
-  fftw_execute (plan_r2r);
-
-  coeffs[0]     /= (N - 1.0) * 2.0;
-  coeffs[N - 1] /= (N - 1.0) * 2.0;
-
-  printf ("  coeffs[0]     = %.15e\n", coeffs[0]);
-
-  for (i = 1; i < N - 1; i++)
-  {
-    coeffs[i] /= N - 1.0;
-    printf ("  coeffs[%u] = %.15e\n", i, coeffs[i]);
-  }
-
-  printf ("  coeffs[%u] = %.15e\n", N - 1, coeffs[N - 1]);
-
-  fftw_destroy_plan (plan_r2r);
-  fftw_free (f_vals);
-}
-
-static void
-chebT_to_ultra_lambda1 (const double *c, double *g, unsigned N)
-{
-  if (N == 0)
-    return;
-
-  for (unsigned i = 0; i < N; i++)
-    g[i] = 0.0;
-
-  /* n = 0 case */
-  g[0] += c[0];
-
-  if (N == 1)
-    return;
-
-  /* n = 1 case */
-  g[1] += c[1] * 0.5;
-
-  /* n ≥ 2 */
-  for (unsigned n = 2; n < N; n++)
-  {
-    g[n]     += 0.5 * c[n];
-    g[n - 2] -= 0.5 * c[n];
-  }
-}
-
-double
-gegenbauer_lambda1_eval (const double *c, unsigned N, double x)
-{
-  if (N == 0)
-    return 0.0;
-
-  /* Endpoint handling: C_n^{(1)}(±1) = (n+1)*(±1)^n */
-  if (fabs (x - 1.0) < 1e-15)
-  {
-    double sum = 0.0;
-
-    for (unsigned n = 0; n < N; n++)
-      sum += c[n] * (double) (n + 1);
-
-    return sum;
-  }
-
-  if (fabs (x + 1.0) < 1e-15)
-  {
-    double sum = 0.0;
-
-    for (unsigned n = 0; n < N; n++)
-      sum += c[n] * ((n & 1) ? -(double) (n + 1) : (double) (n + 1));
-
-    return sum;
-  }
-
-  /* Stable recurrence for interior x */
-  double Cnm1 = 1.0; /* U_0 */
-  double sum  = c[0] * Cnm1;
-
-  if (N == 1)
-    return sum;
-
-  double Cn = 2.0 * x; /* U_1 */
-
-  sum += c[1] * Cn;
-
-  for (unsigned n = 1; n < N - 1; n++)
-  {
-    double Cnp1 = 2.0 * x * Cn - Cnm1; /* U_{n+1} */
-
-    sum += c[n + 1] * Cnp1;
-    Cnm1 = Cn;
-    Cn   = Cnp1;
-  }
-
-  return sum;
-}
-
-/*
- * Evaluate a Chebyshev expansion:
- *
- *   f(t) = sum_{k=0}^{N-1} a[k] * T_k(t)
- *
- * using Clenshaw recurrence.
- *
- * t must be in [-1,1].
- */
-double
-chebyshev_eval (const double *a, unsigned N, double t)
-{
-  if (N == 0)
-    return 0.0;
-
-  if (N == 1)
-    return a[0];
-
-  double b_kplus1 = 0.0;
-  double b_kplus2 = 0.0;
-  double two_t    = 2.0 * t;
-
-  for (int k = (int) N - 1; k >= 1; k--)
-  {
-    double b_k = two_t * b_kplus1 - b_kplus2 + a[k];
-
-    b_kplus2 = b_kplus1;
-    b_kplus1 = b_k;
-  }
-
-  return t * b_kplus1 - b_kplus2 + a[0];
-}
-
-double
-test_cheb_eval ()
-{
-  double a[3];
-
-  a[0] = 0.0; /* T0 */
-  a[1] = 1.0; /* T1 */
-  a[2] = 0.0; /* others zero */
-
-  for (int i = 0; i <= 10; i++)
-  {
-    double t = -1.0 + 0.2 * i; /* in [-1,1] */
-    double f = chebyshev_eval (a, 3, t);
-
-    printf ("t=% .15f   eval=% .15f   expected=% .15f\n",
-            t, f, t); /* T1(t) = t */
-  }
-
-  return 0;
-}
-
-/*
  * _ncm_sbessel_integrator_levin_solve_ode:
  * @sbilv: a #NcmSBesselIntegratorLevin
  * @F: function to integrate
@@ -620,33 +432,6 @@ _ncm_sbessel_integrator_levin_solve_ode (NcmSBesselIntegratorLevin *sbilv,
   gdouble *D               = NULL;
   gdouble *D2              = NULL;
   gdouble *up              = NULL;
-
-  test_cheb_eval ();
-
-  /* Testing Gengenbauer */
-  {
-    guint myN             = 200;
-    guint ntests          = 10000;
-    gdouble *cheb_coeffs  = g_new (gdouble, myN);
-    gdouble *ultra_coeffs = g_new (gdouble, myN);
-
-    _ncm_sbessel_integrator_levin_compute_chebyshev_coeffs (sbilv, F, user_data, a, b, myN, cheb_coeffs);
-    chebT_to_ultra_lambda1 (cheb_coeffs, ultra_coeffs, myN);
-
-    for (i = 0; i < ntests; i++)
-    {
-      const gdouble t = -1.0 + 2.0 * ((gdouble) i) / ((gdouble) (ntests - 1));
-      const gdouble x = a + (b - a) * (t + 1.0) / 2.0;
-      gdouble fval1   = F (user_data, x);
-      gdouble fval2   = gegenbauer_lambda1_eval (ultra_coeffs, myN, t);
-      gdouble fval3   = chebyshev_eval (cheb_coeffs, myN, t);
-
-      printf ("x = % 22.15g, fval1 = % 22.15g, fval2 = % 22.15g, fval3 = % 22.15g, fval2/fval1 = % 22.15g, relerr = % 22.15g\n",
-              x, fval1, fval2, fval3, fval2 / fval1, (fval1 - fval2) / fval1);
-    }
-  }
-
-
 
   _ncm_sbessel_integrator_levin_alloc_workspace (sbilv, N);
   _ncm_sbessel_integrator_levin_chebyshev_nodes (sbilv, a, b, N, sbilv->x_cc);
@@ -746,69 +531,70 @@ _ncm_sbessel_integrator_levin_panel_integral (NcmSBesselIntegratorLevin *sbilv,
                                               gdouble a, gdouble b,
                                               gint ell, gdouble *integral)
 {
-  guint order    = sbilv->min_order * 4;
-  gdouble result = 0.0;
-  gdouble prev_result;
-  gboolean converged = FALSE;
-
-  printf ("Starting panel integral: [% 22.15g, % 22.15g], ell: %d\n", a, b, ell);
-
-  while (order <= sbilv->max_order && !converged)
   {
-    gdouble *u = g_new (gdouble, order);
-    gdouble up_a, up_b;
-    gboolean success;
+    ncm_sbessel_ode_solver_set_interval (sbilv->ode_solver, a, b);
+    ncm_sbessel_ode_solver_set_l (sbilv->ode_solver, ell);
+    *integral = ncm_sbessel_ode_solver_integrate (sbilv->ode_solver, F, 4096 * 16, user_data);
 
-    success = _ncm_sbessel_integrator_levin_solve_ode (sbilv, F, user_data, a, b, ell, order, 0.0, 0.0, u, &up_a, &up_b);
-
-    if (!success)
-    {
-      g_free (u);
-      order *= 2;
-      continue;
-    }
-
-    /* Compute integral: I = j_l(b) * u'(b) * b^2 - j_l(a) * u'(a) * a^2 */
-    const gdouble jl_a   = gsl_sf_bessel_jl (ell, a);
-    const gdouble jlp1_a = gsl_sf_bessel_jl (ell + 1, a);
-    const gdouble jl_b   = gsl_sf_bessel_jl (ell, b);
-    const gdouble jlp1_b = gsl_sf_bessel_jl (ell + 1, b);
-    const gdouble djl_a  = (ell * jl_a) / a - jlp1_a;
-    const gdouble djl_b  = (ell * jl_b) / b - jlp1_b;
-    const gdouble u_a    = u[0];
-    const gdouble u_b    = u[order - 1];
-    const gdouble w_a    = (jl_a * up_a - djl_a * u_a) * a * a;
-    const gdouble w_b    = (jl_b * up_b - djl_b * u_b) * b * b;
-
-    prev_result = result;
-    result      = w_b - w_a;
-
-    printf ("Order: %4u, Integral: % 22.15g, prev: % 22.15g [% 22.15g, % 22.15g] [% 22.15g, % 22.15g]\n", order, result, prev_result, a, b,
-            w_b, -w_a);
-
-    g_free (u);
-
-    /* Check convergence */
-    if (order > sbilv->min_order)
-    {
-      const gdouble abs_diff = fabs (result - prev_result);
-      const gdouble abs_val  = fabs (result);
-
-      if (abs_diff < sbilv->reltol * abs_val)
-      {
-        printf ("CONV: Order: %u, Integral: % 22.15g, Difference: % 22.15g, ell: %d, a: % 22.15g, b: % 22.15g\n",
-                order, result, abs_diff, ell, a, b);
-
-        converged = TRUE;
-      }
-    }
-
-    order *= 2;
+    return TRUE;
   }
 
-  *integral = result;
 
-  return converged;
+  {
+    guint order    = sbilv->min_order * 4;
+    gdouble result = 0.0;
+    gdouble prev_result;
+    gboolean converged = FALSE;
+
+    while (order <= sbilv->max_order && !converged)
+    {
+      gdouble *u = g_new (gdouble, order);
+      gdouble up_a, up_b;
+      gboolean success;
+
+      success = _ncm_sbessel_integrator_levin_solve_ode (sbilv, F, user_data, a, b, ell, order, 0.0, 0.0, u, &up_a, &up_b);
+
+      if (!success)
+      {
+        g_free (u);
+        order *= 2;
+        continue;
+      }
+
+      /* Compute integral: I = j_l(b) * u'(b) * b^2 - j_l(a) * u'(a) * a^2 */
+      const gdouble jl_a   = gsl_sf_bessel_jl (ell, a);
+      const gdouble jlp1_a = gsl_sf_bessel_jl (ell + 1, a);
+      const gdouble jl_b   = gsl_sf_bessel_jl (ell, b);
+      const gdouble jlp1_b = gsl_sf_bessel_jl (ell + 1, b);
+      const gdouble djl_a  = (ell * jl_a) / a - jlp1_a;
+      const gdouble djl_b  = (ell * jl_b) / b - jlp1_b;
+      const gdouble u_a    = u[0];
+      const gdouble u_b    = u[order - 1];
+      const gdouble w_a    = (jl_a * up_a - djl_a * u_a) * a * a;
+      const gdouble w_b    = (jl_b * up_b - djl_b * u_b) * b * b;
+
+      prev_result = result;
+      result      = w_b - w_a;
+
+      g_free (u);
+
+      /* Check convergence */
+      if (order > sbilv->min_order)
+      {
+        const gdouble abs_diff = fabs (result - prev_result);
+        const gdouble abs_val  = fabs (result);
+
+        if (abs_diff < sbilv->reltol * abs_val)
+          converged = TRUE;
+      }
+
+      order *= 2;
+    }
+
+    *integral = result;
+
+    return converged;
+  }
 }
 
 /*
@@ -840,8 +626,6 @@ _ncm_sbessel_integrator_levin_integrate_panel_recursive (NcmSBesselIntegratorLev
   const guint max_depth = 10000000;
 
   success = _ncm_sbessel_integrator_levin_panel_integral (sbilv, F, user_data, a, b, ell, &result);
-  printf ("Panel [% 22.15g, % 22.15g], ell: %d, depth: %u, success: %d, result: % 22.15g\n",
-          a, b, ell, depth, success, result);
 
   if (!success && (depth < max_depth))
   {
@@ -852,9 +636,6 @@ _ncm_sbessel_integrator_levin_integrate_panel_recursive (NcmSBesselIntegratorLev
 
     left_result  = _ncm_sbessel_integrator_levin_integrate_panel_recursive (sbilv, F, user_data, a, a + width, ell, depth + 1);
     right_result = _ncm_sbessel_integrator_levin_integrate_panel_recursive (sbilv, F, user_data, a + width, b, ell, depth + 1);
-
-    printf ("(% 22.15g,  % 22.15g, % 22.15g) Left: % 22.15g, right: % 22.15g\n",
-            a, a + width, b, left_result, right_result);
 
     result = left_result + right_result;
   }
@@ -877,7 +658,8 @@ _ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi,
 {
   NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
   const gdouble L                  = b - a;
-  const guint n_pi                 = floor (L / (4.0 * M_PI));
+  const gdouble lll                = 230;
+  const guint n_pi                 = floor (L / (lll * M_PI));
   gdouble result                   = 0.0;
   gdouble x0                       = a;
   gdouble x1                       = a;
@@ -886,10 +668,12 @@ _ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi,
 
   for (i = 0; i < n_pi; i++)
   {
-    x1      = x0 + 4.0 * M_PI;
+    x1      = x0 + lll * M_PI;
     r0      = _ncm_sbessel_integrator_levin_integrate_panel_recursive (sbilv, F, user_data, x0, x1, ell, 0);
     result += r0;
-    x0      = x1;
+
+    printf ("Intermediate result for ell %d (% 22.15g, % 22.15g): % 22.15g | % 22.15g\n", ell, x0, x1, result, r0);
+    x0 = x1;
   }
 
   /* Left over panel */
@@ -898,6 +682,8 @@ _ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi,
     {
       r0      = _ncm_sbessel_integrator_levin_integrate_panel_recursive (sbilv, F, user_data, x0, b, ell, 0);
       result += r0;
+
+      printf ("Intermediate result for ell %d (% 22.15g, % 22.15g): % 22.15g | % 22.15g\n", ell, x0, b, result, r0);
     }
   }
 

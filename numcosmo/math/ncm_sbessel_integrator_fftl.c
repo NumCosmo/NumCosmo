@@ -75,9 +75,7 @@ struct _NcmSBesselIntegratorFFTL
   guint N_direct;
   guint alpha_J;
   NcmSBesselIntegratorFFTLCache *cache[NCM_SBESSEL_INTEGRATOR_FFTL_MAX_ALPHA_J]; /* Cache indexed by alpha_J */
-  gdouble *ell_cutoff_x;                                                         /* Array of x values where ell cutoff changes */
-  guint *ell_cutoff_ell;                                                         /* Array of corresponding ell cutoff values */
-  guint ell_cutoff_size;                                                         /* Size of ell cutoff arrays */
+  NcmSFSBesselArray *sba;                                                        /* Spherical Bessel array with cutoff */
   NcmSpline *wrap_f;
 };
 
@@ -104,9 +102,7 @@ ncm_sbessel_integrator_fftl_init (NcmSBesselIntegratorFFTL *sbilf)
   sbilf->Pl_arr       = NULL;
   sbilf->N_direct     = 0;
   sbilf->alpha_J      = 0;
-
-  sbilf->ell_cutoff_x    = NULL;
-  sbilf->ell_cutoff_size = 0;
+  sbilf->sba          = ncm_sf_sbessel_array_new ();
 
   for (i = 0; i < NCM_SBESSEL_INTEGRATOR_FFTL_MAX_ALPHA_J; i++)
     sbilf->cache[i] = NULL;
@@ -132,7 +128,7 @@ _ncm_sbessel_integrator_fftl_dispose (GObject *object)
   g_clear_pointer (&sbilf->jl_arr, g_free);
   g_clear_pointer (&sbilf->Pl_arr, g_free);
 
-  g_clear_pointer (&sbilf->ell_cutoff_x, g_free);
+  ncm_sf_sbessel_array_clear (&sbilf->sba);
 
   for (i = 0; i < NCM_SBESSEL_INTEGRATOR_FFTL_MAX_ALPHA_J; i++)
   {
@@ -656,8 +652,6 @@ ncm_sbessel_integrator_fftl_class_init (NcmSBesselIntegratorFFTLClass *klass)
   parent_class->integrate     = &_ncm_sbessel_integrator_fftl_integrate;
 }
 
-static void _ncm_sbessel_integrator_fftl_build_ell_cutoff_cache (NcmSBesselIntegratorFFTL *sbilf);
-
 static void
 _ncm_sbessel_integrator_fftl_prepare (NcmSBesselIntegrator *sbi)
 {
@@ -666,10 +660,6 @@ _ncm_sbessel_integrator_fftl_prepare (NcmSBesselIntegrator *sbi)
 
   /* Load FFTW wisdom */
   ncm_cfg_load_fftw_wisdom ("ncm_sbessel_integrator_fftl");
-
-  /* Build ell cutoff cache if not already built */
-  if (sbilf->ell_cutoff_size == 0)
-    _ncm_sbessel_integrator_fftl_build_ell_cutoff_cache (sbilf);
 
   /* Reallocate arrays if lmax changed */
   if (lmax != sbilf->lmax_alloc)
@@ -794,161 +784,6 @@ _ncm_sbessel_integrator_fftl_integrate_ell (NcmSBesselIntegrator *sbi,
   return sum;
 }
 
-/* Build cache for fast ell cutoff lookup */
-static void
-_ncm_sbessel_integrator_fftl_build_ell_cutoff_cache (NcmSBesselIntegratorFFTL *sbilf)
-{
-  const gdouble threshold     = 1.0e-100;
-  const gdouble log_threshold = log (threshold);
-  const guint max_ell         = 5000;
-  guint ell;
-
-  /* Allocate cache array indexed by ell */
-  g_clear_pointer (&sbilf->ell_cutoff_x, g_free);
-
-  sbilf->ell_cutoff_size = max_ell + 1;
-  sbilf->ell_cutoff_x    = g_new (gdouble, sbilf->ell_cutoff_size);
-
-  /* Compute x value where j_ell(x) = threshold for each ell */
-  sbilf->ell_cutoff_x[0] = 0.0; /* ell=0 case */
-
-  for (ell = 1; ell <= max_ell; ell++)
-  {
-    const gdouble ell_d       = (gdouble) ell;
-    const gdouble ln_j_l_peak = log (fabs (0.447 / pow (ell_d, 2.0 / 3.0))); /* Approximate peak value of j_ell */
-    const gdouble x_ell       = exp (((1.0 + ell_d) * M_LN2 + lgamma (1.5 + ell_d) + log_threshold - 0.5 * M_PI - ln_j_l_peak) / ell_d);
-
-    sbilf->ell_cutoff_x[ell] = x_ell;
-  }
-}
-
-/* Fast ell cutoff lookup using binary search on cached values */
-static int
-_ncm_sbessel_integrator_fftl_get_ell_cutoff (NcmSBesselIntegratorFFTL *sbilf, double x)
-{
-  guint lo = 0;
-  guint hi = sbilf->ell_cutoff_size - 1;
-
-  /* If x is beyond our cache, return max ell */
-  if (x >= sbilf->ell_cutoff_x[hi])
-    return hi;
-
-  /* Binary search for position where x fits in array */
-  /* Find largest index where ell_cutoff_x[index] <= x */
-  while (lo < hi)
-  {
-    guint mid = (lo + hi + 1) / 2;
-
-    if (sbilf->ell_cutoff_x[mid] <= x)
-      lo = mid;
-    else
-      hi = mid - 1;
-  }
-
-  /* Return index + 1 as the ell threshold */
-  return lo + 1;
-}
-
-static int
-ncm_sf_bessel_jl_steed_array (NcmSBesselIntegratorFFTL *sbilf, int lmax, const double x, double * restrict jl_x)
-{
-  memset (jl_x, 0, sizeof (double) * (lmax + 1));
-  lmax = GSL_MIN (lmax, _ncm_sbessel_integrator_fftl_get_ell_cutoff (sbilf, x));
-
-  if (G_UNLIKELY (x == 0.0))
-  {
-    jl_x[0] = 1.0;
-
-    return GSL_SUCCESS;
-  }
-  else if (x < 2.0 * GSL_ROOT4_DBL_EPSILON)
-  {
-    /* first two terms of Taylor series */
-    double inv_fact = 1.0; /* 1/(1 3 5 ... (2l+1)) */
-    double x_l      = 1.0; /* x^l */
-    int l;
-
-    for (l = 0; l <= lmax; l++)
-    {
-      jl_x[l]   = x_l * inv_fact;
-      jl_x[l]  *= 1.0 - 0.5 * x * x / (2.0 * l + 3.0);
-      inv_fact /= 2.0 * l + 3.0;
-      x_l      *= x;
-    }
-
-    return GSL_SUCCESS;
-  }
-  else
-  {
-    /* Steed/Barnett algorithm [Comp. Phys. Comm. 21, 297 (1981)] */
-    double x_inv = 1.0 / x;
-    double W     = 2.0 * x_inv;
-    double F     = 1.0;
-    double FP    = (lmax + 1.0) * x_inv;
-    double B     = 2.0 * FP + x_inv;
-    double end   = B + 20000.0 * W;
-    double D     = 1.0 / B;
-    double del   = -D;
-
-    FP += del;
-
-    /* continued fraction */
-    do {
-      B   += W;
-      D    = 1.0 / (B - D);
-      del *= (B * D - 1.);
-      FP  += del;
-
-      if (D < 0.0)
-        F = -F;
-
-      if (B > end)
-        GSL_ERROR ("error", GSL_EMAXITER);
-    } while (fabs (del) >= fabs (FP) * GSL_DBL_EPSILON);
-
-    FP *= F;
-
-    if (lmax > 0)
-    {
-      /* downward recursion */
-      double XP2 = FP;
-      double PL  = lmax * x_inv;
-      int L      = lmax;
-      int LP;
-
-      jl_x[lmax] = F;
-#pragma GCC unroll 4
-
-      for (LP = 1; LP <= lmax; LP++)
-      {
-        jl_x[L - 1] = PL * jl_x[L] + XP2;
-        FP          = PL * jl_x[L - 1] - jl_x[L];
-        XP2         = FP;
-        PL         -= x_inv;
-        --L;
-      }
-
-      F = jl_x[0];
-    }
-
-    /* normalization */
-    W       = x_inv / hypot (FP, F);
-    jl_x[0] = W * F;
-
-    if (lmax > 0)
-    {
-      int L;
-
-      for (L = 1; L <= lmax; L++)
-      {
-        jl_x[L] *= W;
-      }
-    }
-
-    return GSL_SUCCESS;
-  }
-}
-
 static void
 _ncm_sbessel_integrator_fftl_integrate_direct (NcmSBesselIntegratorFFTL *sbilf, const guint lmin, const guint ell_direct_min, guint ell_direct_max,
                                                NcmSBesselIntegratorF F, const gdouble a, const gdouble b,
@@ -962,13 +797,13 @@ _ncm_sbessel_integrator_fftl_integrate_direct (NcmSBesselIntegratorFFTL *sbilf, 
   g_assert_cmpuint (ncm_vector_stride (result), ==, 1);
   /* Initialize direct results to zero */
   memset (result_ptr, 0, sizeof (gdouble) * (ell_direct_max - ell_direct_min + 1));
-  ell_direct_max = GSL_MIN (ell_direct_max, _ncm_sbessel_integrator_fftl_get_ell_cutoff (sbilf, b));
+  ell_direct_max = GSL_MIN (ell_direct_max, ncm_sf_sbessel_array_eval_ell_cutoff (sbilf->sba, b));
 
   /* First term */
   {
     const gdouble fa = F (user_data, a);
 
-    ncm_sf_bessel_jl_steed_array (sbilf, ell_direct_max, a, sbilf->jl_arr);
+    ncm_sf_sbessel_array_eval (sbilf->sba, ell_direct_max, a, sbilf->jl_arr);
 
     for (ell = ell_direct_min; ell <= ell_direct_max; ell++)
     {
@@ -983,7 +818,7 @@ _ncm_sbessel_integrator_fftl_integrate_direct (NcmSBesselIntegratorFFTL *sbilf, 
     const gdouble weight = (i % 2 == 1) ? 4.0 : 2.0;
     const gdouble fx     = F (user_data, x);
 
-    ncm_sf_bessel_jl_steed_array (sbilf, ell_direct_max, x, sbilf->jl_arr);
+    ncm_sf_sbessel_array_eval (sbilf->sba, ell_direct_max, x, sbilf->jl_arr);
 
     for (ell = ell_direct_min; ell <= ell_direct_max; ell++)
     {
@@ -995,7 +830,7 @@ _ncm_sbessel_integrator_fftl_integrate_direct (NcmSBesselIntegratorFFTL *sbilf, 
   {
     const gdouble fb = F (user_data, b);
 
-    ncm_sf_bessel_jl_steed_array (sbilf, ell_direct_max, b, sbilf->jl_arr);
+    ncm_sf_sbessel_array_eval (sbilf->sba, ell_direct_max, b, sbilf->jl_arr);
 
     for (ell = ell_direct_min; ell <= ell_direct_max; ell++)
     {

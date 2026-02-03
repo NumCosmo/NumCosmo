@@ -56,6 +56,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_sbessel_ode_solver.h"
+#include "math/ncm_sf_sbessel.h"
 #include "math/ncm_dtuple.h"
 #include "math/ncm_lapack.h"
 #include "ncm_enum_types.h"
@@ -110,6 +111,9 @@ typedef struct _NcmSBesselOdeSolverPrivate
   guint cheb_N_cached;     /* Cached N value */
   gdouble *cheb_f_vals;    /* Cached function values array */
   fftw_plan cheb_plan_r2r; /* Cached FFTW plan */
+
+  /* Spherical Bessel array with cutoff */
+  NcmSFSBesselArray *sba;
 } NcmSBesselOdeSolverPrivate;
 
 enum
@@ -172,6 +176,7 @@ ncm_sbessel_ode_solver_init (NcmSBesselOdeSolver *solver)
   self->cheb_N_cached = 0;
   self->cheb_f_vals   = NULL;
   self->cheb_plan_r2r = NULL;
+  self->sba           = ncm_sf_sbessel_array_new ();
 }
 
 static void
@@ -260,6 +265,8 @@ _ncm_sbessel_ode_solver_dispose (GObject *object)
   }
 
   self->cheb_N_cached = 0;
+
+  ncm_sf_sbessel_array_clear (&self->sba);
 
   /* Chain up */
   G_OBJECT_CLASS (ncm_sbessel_ode_solver_parent_class)->dispose (object);
@@ -1205,7 +1212,7 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
       else
       {
         /* Acol is small relative to established scale */
-        if (Acol < max_c_A * 50.0 * DBL_EPSILON)
+        if (Acol < max_c_A * DBL_EPSILON * 1.0e-1)
           quiet_cols++;
         else
           quiet_cols = 0;
@@ -1675,13 +1682,21 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
   const gdouble b                         = self->b;
   const gdouble h                         = self->half_len;
   const gint l_orig                       = self->l;
+  const gint my_lmax                      = GSL_MIN (lmax, ncm_sf_sbessel_array_eval_ell_cutoff (self->sba, b));
   const gint n_l                          = lmax - lmin + 1;
+  gdouble *j_array_a, *j_array_b;
 
-  g_return_val_if_fail (lmin <= lmax, NULL);
-  g_return_val_if_fail (lmin >= 0, NULL);
+  j_array_a = g_new0 (gdouble, my_lmax + 1);
+  j_array_b = g_new0 (gdouble, my_lmax + 1);
+
+  ncm_sf_sbessel_array_eval (self->sba, my_lmax, a, j_array_a);
+  ncm_sf_sbessel_array_eval (self->sba, my_lmax, b, j_array_b);
 
   /* Allocate result vector */
-  NcmVector *result = ncm_vector_new (n_l);
+  NcmVector *result    = ncm_vector_new (n_l);
+  gdouble *result_data = ncm_vector_data (result);
+
+  ncm_vector_set_zero (result);
 
   /* Step 1: Compute Chebyshev coefficients for f(x) - done once */
   NcmVector *cheb_coeffs = ncm_sbessel_ode_solver_compute_chebyshev_coeffs (solver, F, a, b, N, user_data);
@@ -1709,12 +1724,24 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
   }
 
   /* Step 4-7: Loop over l values */
-  for (gint l = lmin; l <= lmax; l++)
+  for (gint l = lmin; l <= my_lmax; l++)
   {
+    const gdouble nu = l + 0.5;
+
+    /* printf ("Solving for l=%d in range [% 22.15g, % 22.15g]\n", l, a, b); */
+
+    /*if (nu < a) */
+    /* { */
+    /*  result_data[l - lmin] = F (user_data, nu) * sqrt (M_PI / 2.0 / nu); */
+    /* continue; */
+    /* } */
+
     /* Set l for this iteration */
     ncm_sbessel_ode_solver_set_l (solver, l);
 
     /* Solve the ODE */
+    /* printf ("Solving for l=%d in range [% 22.15g, % 22.15g]\n", l, a, b); */
+
     NcmVector *solution = ncm_sbessel_ode_solver_solve (solver, rhs);
 
     /* Compute derivatives at endpoints */
@@ -1724,18 +1751,14 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
     const gdouble y_prime_b         = y_prime_at_plus1 / h;
 
     /* Evaluate j_l at endpoints */
-    const gdouble j_l_a = gsl_sf_bessel_jl (l, a);
-    const gdouble j_l_b = gsl_sf_bessel_jl (l, b);
+    const gdouble j_l_a = ncm_sf_sbessel (l, a); /*j_array_a[l]; */
+    const gdouble j_l_b = ncm_sf_sbessel (l, b); /*j_array_b[l]; */
 
     /* Compute integral via Green's identity */
     const gdouble integral = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
 
     /* Store result */
-    {
-      gdouble *result_data = ncm_vector_data (result);
-
-      result_data[l - lmin] = integral;
-    }
+    result_data[l - lmin] = integral;
 
     /* Clean up solution for this l */
     ncm_vector_free (solution);
