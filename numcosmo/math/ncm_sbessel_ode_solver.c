@@ -2143,7 +2143,7 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
   ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda2 (cheb_coeffs, gegen_coeffs);
 
   /* Step 3: Set up RHS with homogeneous boundary conditions - done once */
-  NcmVector *rhs = ncm_vector_new (N);
+  NcmVector *rhs = ncm_vector_new (N + 2);
 
   g_assert_cmpuint (ncm_vector_stride (rhs), ==, 1);
   g_assert_cmpuint (ncm_vector_stride (gegen_coeffs), ==, 1);
@@ -2156,7 +2156,7 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
     rhs_data[1] = 0.0; /* BC at x=b (t=+1) */
 
     /* Copy Gegenbauer coefficients to RHS starting from index 2 */
-    memcpy (&rhs_data[2], gegen_coeffs_data, (N - 2) * sizeof (gdouble));
+    memcpy (&rhs_data[2], gegen_coeffs_data, N * sizeof (gdouble));
   }
 
   /* Step 4-7: Process l values in blocks for better cache locality */
