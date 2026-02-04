@@ -2657,35 +2657,98 @@ ncm_sbessel_ode_solver_gegenbauer_lambda2_eval (NcmVector *c, gdouble x)
 gdouble
 ncm_sbessel_ode_solver_chebyshev_eval (NcmVector *a, gdouble t)
 {
-  const guint N = ncm_vector_len (a);
+  const guint N           = ncm_vector_len (a);
+  const gdouble *a_data   = ncm_vector_data (a);
+  const gdouble threshold = 0.9;
+  const gdouble eps       = 1e-15;
 
   if (N == 0)
     return 0.0;
 
   g_assert_cmpuint (ncm_vector_stride (a), ==, 1);
 
+  if (N == 1)
+    return a_data[0];
+
+  /* Endpoint handling: T_k(+1) = 1, T_k(-1) = (-1)^k */
+  if (fabs (t - 1.0) < eps)
   {
-    const gdouble *a_data = ncm_vector_data (a);
+    gdouble sum = 0.0;
+    guint k;
 
-    if (N == 1)
-      return a_data[0];
+    for (k = 0; k < N; k++)
+      sum += a_data[k];
 
+    return sum;
+  }
+
+  if (fabs (t + 1.0) < eps)
+  {
+    gdouble sum = 0.0;
+    guint k;
+
+    for (k = 0; k < N; k++)
+      sum += ((k & 1) ? -a_data[k] : a_data[k]);
+
+    return sum;
+  }
+
+  if (fabs (t) < threshold)
+  {
+    /* Clenshaw recurrence for interior points */
+    gdouble b_kplus1 = 0.0;
+    gdouble b_kplus2 = 0.0;
+    gdouble two_t    = t + t;
+    gint k;
+
+    for (k = (gint) N - 1; k >= 1; k--)
     {
-      gdouble b_kplus1 = 0.0;
-      gdouble b_kplus2 = 0.0;
-      gdouble two_t    = 2.0 * t;
-      gint k;
+      gdouble b_k = two_t * b_kplus1 - b_kplus2 + a_data[k];
 
-      for (k = (gint) N - 1; k >= 1; k--)
-      {
-        gdouble b_k = two_t * b_kplus1 - b_kplus2 + a_data[k];
-
-        b_kplus2 = b_kplus1;
-        b_kplus1 = b_k;
-      }
-
-      return t * b_kplus1 - b_kplus2 + a_data[0];
+      b_kplus2 = b_kplus1;
+      b_kplus1 = b_k;
     }
+
+    return t * b_kplus1 - b_kplus2 + a_data[0];
+  }
+
+  /* Near +1 : Reinsch modification */
+  if (t > 0.0)
+  {
+    gdouble d_kplus1      = 0.0;
+    gdouble e_kplus1      = 0.0;
+    const gdouble tm1     = (t - 0.5) - 0.5;
+    const gdouble two_tm1 = tm1 + tm1;
+
+    for (gint k = (gint) N - 1; k >= 1; k--)
+    {
+      gdouble d_k = two_tm1 * e_kplus1 + d_kplus1 + a_data[k];
+      gdouble e_k = d_k + e_kplus1;
+
+      d_kplus1 = d_k;
+      e_kplus1 = e_k;
+    }
+
+    return tm1 * e_kplus1 + d_kplus1 + a_data[0];
+  }
+
+  /* Near -1 : Reinsch modification */
+  {
+    gdouble d_kplus1      = 0.0;
+    gdouble e_kplus1      = 0.0;
+    const gdouble tp1     = (t + 0.5) + 0.5;
+    const gdouble two_tp1 = tp1 + tp1;
+
+    for (gint k = (gint) N - 1; k >= 1; k--)
+    {
+      gdouble d_k = two_tp1 * e_kplus1 - d_kplus1 + a_data[k];
+      gdouble e_k = d_k - e_kplus1;
+
+      d_kplus1 = d_k;
+      e_kplus1 = e_k;
+    }
+
+    return tp1 * e_kplus1 - d_kplus1 + a_data[0];
   }
 }
 
