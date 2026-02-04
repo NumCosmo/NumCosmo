@@ -2391,6 +2391,58 @@ ncm_sbessel_ode_solver_compute_chebyshev_coeffs (NcmSBesselOdeSolver *solver,
 }
 
 /**
+ * ncm_sbessel_ode_solver_get_gaussian_rhs:
+ * @solver: a #NcmSBesselOdeSolver
+ * @center: center of the Gaussian
+ * @std: standard deviation of the Gaussian
+ * @k: scale factor
+ * @N: number of Chebyshev nodes
+ *
+ * Computes the RHS (Chebyshev coefficients) for the Gaussian function
+ * $f(x) = \exp(-(x - \text{center})^2/(2\text{std}^2))$ on the scaled
+ * interval $[ka, kb]$. This can be passed to ncm_sbessel_ode_solver_solve().
+ *
+ * Returns: (transfer full): vector of Chebyshev coefficients (RHS)
+ */
+NcmVector *
+ncm_sbessel_ode_solver_get_gaussian_rhs (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  const gdouble a_scaled                  = self->a * k;
+  const gdouble b_scaled                  = self->b * k;
+  const gdouble inv_std2                  = 1.0 / (std * std);
+  GaussianData data                       = { center, inv_std2, k };
+
+  return ncm_sbessel_ode_solver_compute_chebyshev_coeffs (solver, gaussian_func, a_scaled, b_scaled, N, &data);
+}
+
+/**
+ * ncm_sbessel_ode_solver_get_rational_rhs:
+ * @solver: a #NcmSBesselOdeSolver
+ * @center: center of the rational function
+ * @std: width parameter
+ * @k: scale factor
+ * @N: number of Chebyshev nodes
+ *
+ * Computes the RHS (Chebyshev coefficients) for the rational function
+ * $f(x) = \frac{x^2}{(1 + ((x-\text{center})/\text{std})^2)^4}$ on the scaled
+ * interval $[ka, kb]$. This can be passed to ncm_sbessel_ode_solver_solve().
+ *
+ * Returns: (transfer full): vector of Chebyshev coefficients (RHS)
+ */
+NcmVector *
+ncm_sbessel_ode_solver_get_rational_rhs (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  const gdouble a_scaled                  = self->a * k;
+  const gdouble b_scaled                  = self->b * k;
+  const gdouble inv_std                   = 1.0 / std;
+  RationalData data                       = { center, inv_std, k };
+
+  return ncm_sbessel_ode_solver_compute_chebyshev_coeffs (solver, rational_func, a_scaled, b_scaled, N, &data);
+}
+
+/**
  * ncm_sbessel_ode_solver_chebT_to_gegenbauer_lambda1:
  * @c: Chebyshev coefficients vector
  * @g: Gegenbauer $C^{(1)}_n$ coefficients vector (must have same length as @c, pre-allocated by caller)
