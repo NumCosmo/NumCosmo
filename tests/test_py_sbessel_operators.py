@@ -1620,14 +1620,14 @@ class TestSBesselOperators:
             return x * x / (1.0 + x * x)
 
         # Use integrate_l_range (batched internally)
-        results_range = solver.integrate_l_range(f_test, N, None, lmin, lmax)
+        results_range = solver.integrate_l_range(f_test, N, lmin, lmax)
         results_range_np = self.vector_to_numpy(results_range)
 
         # Compute individually for each l
         results_individual = []
         for ell in range(lmin, lmax + 1):
             solver.set_l(ell)
-            result = solver.integrate(f_test, N, None)
+            result = solver.integrate(f_test, N)
             results_individual.append(result)
 
         results_individual_np = np.array(results_individual)

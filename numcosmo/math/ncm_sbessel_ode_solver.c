@@ -1222,6 +1222,7 @@ _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong pivot_col, NcmSBes
   {
     /* Compute Givens rotation coefficients */
     #define FMA(a, b, c) ((a) * (b) + (c))
+    /* #define FMA(a, b, c) fma (a, b, c) */
     const gdouble inv_norm     = 1.0 / norm;
     const gdouble cos_theta    = a_val * inv_norm;
     const gdouble sin_theta    = b_val * inv_norm;
@@ -2099,9 +2100,9 @@ ncm_sbessel_ode_solver_integrate_rational (NcmSBesselOdeSolver *solver, gdouble 
  * @solver: a #NcmSBesselOdeSolver
  * @F: (scope call): function to integrate against spherical Bessel function
  * @N: number of Chebyshev nodes for the approximation
- * @user_data: user data for @F
  * @lmin: minimum l value
  * @lmax: maximum l value
+ * @user_data: user data for @F
  *
  * Computes the integrals $\int_a^b f(x) j_l(x) dx$ for each l from @lmin to @lmax.
  * This is more efficient than calling ncm_sbessel_ode_solver_integrate() multiple times
@@ -2110,7 +2111,7 @@ ncm_sbessel_ode_solver_integrate_rational (NcmSBesselOdeSolver *solver, gdouble 
  * Returns: (transfer full): a #NcmVector with the integral values for each l from @lmin to @lmax
  */
 NcmVector *
-ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolverF F, guint N, gpointer user_data, gint lmin, gint lmax)
+ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolverF F, guint N, gint lmin, gint lmax, gpointer user_data)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
   const gdouble a                         = self->a;
@@ -2255,7 +2256,7 @@ ncm_sbessel_ode_solver_integrate_gaussian_l_range (NcmSBesselOdeSolver *solver, 
   ncm_sbessel_ode_solver_set_interval (solver, a_orig * k, b_orig * k);
 
   /* Integrate over l range */
-  NcmVector *result = ncm_sbessel_ode_solver_integrate_l_range (solver, gaussian_func, N, &data, lmin, lmax);
+  NcmVector *result = ncm_sbessel_ode_solver_integrate_l_range (solver, gaussian_func, N, lmin, lmax, &data);
 
   /* Restore original interval */
   ncm_sbessel_ode_solver_set_interval (solver, a_orig, b_orig);
@@ -2293,7 +2294,7 @@ ncm_sbessel_ode_solver_integrate_rational_l_range (NcmSBesselOdeSolver *solver, 
   ncm_sbessel_ode_solver_set_interval (solver, a_orig * k, b_orig * k);
 
   /* Integrate over l range */
-  NcmVector *result = ncm_sbessel_ode_solver_integrate_l_range (solver, rational_func, N, &data, lmin, lmax);
+  NcmVector *result = ncm_sbessel_ode_solver_integrate_l_range (solver, rational_func, N, lmin, lmax, &data);
 
   /* Restore original interval */
   ncm_sbessel_ode_solver_set_interval (solver, a_orig, b_orig);

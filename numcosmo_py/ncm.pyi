@@ -9411,9 +9411,23 @@ class SBesselOdeSolver(GObject.Object):
     def integrate_gaussian(
         self, center: float, std: float, k: float, N: int
     ) -> float: ...
+    def integrate_gaussian_l_range(
+        self, center: float, std: float, k: float, N: int, lmin: int, lmax: int
+    ) -> Vector: ...
+    def integrate_l_range(
+        self,
+        F: typing.Callable[..., float],
+        N: int,
+        lmin: int,
+        lmax: int,
+        *user_data: typing.Any,
+    ) -> Vector: ...
     def integrate_rational(
         self, center: float, std: float, k: float, N: int
     ) -> float: ...
+    def integrate_rational_l_range(
+        self, center: float, std: float, k: float, N: int, lmin: int, lmax: int
+    ) -> Vector: ...
     @classmethod
     def new(cls, l: int, a: float, b: float) -> SBesselOdeSolver: ...
     def peek_solution(self) -> typing.Optional[Vector]: ...
@@ -9423,6 +9437,7 @@ class SBesselOdeSolver(GObject.Object):
     def set_max_size(self, max_size: int) -> None: ...
     def set_tolerance(self, tol: float) -> None: ...
     def solve(self, rhs: Vector) -> Vector: ...
+    def solve_batched(self, rhs: Vector, lmin: int, n_l: int) -> Matrix: ...
     def solve_dense(self, rhs: Vector, nrows: int) -> Vector: ...
 
 class SBesselOdeSolverClass(GObject.GPointer):
@@ -9432,6 +9447,58 @@ class SBesselOdeSolverClass(GObject.GPointer):
     ::
 
         SBesselOdeSolverClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class SFSBesselArray(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SFSBesselArray(**properties)
+        new() -> NumCosmoMath.SFSBesselArray
+        new_full(lmax:int, threshold:float) -> NumCosmoMath.SFSBesselArray
+
+    Object NcmSFSBesselArray
+
+    Properties from NcmSFSBesselArray:
+      lmax -> guint: lmax
+        Maximum l value
+      threshold -> gdouble: threshold
+        Threshold value
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        lmax: int
+        threshold: float
+
+    props: Props = ...
+    def __init__(self, lmax: int = ..., threshold: float = ...) -> None: ...
+    @staticmethod
+    def clear(sba: SFSBesselArray) -> None: ...
+    def eval(self, ell: int, x: float) -> list[float]: ...
+    def eval_ell_cutoff(self, x: float) -> int: ...
+    def free(self) -> None: ...
+    def get_lmax(self) -> int: ...
+    def get_threshold(self) -> float: ...
+    @classmethod
+    def new(cls) -> SFSBesselArray: ...
+    @classmethod
+    def new_full(cls, lmax: int, threshold: float) -> SFSBesselArray: ...
+    def ref(self) -> SFSBesselArray: ...
+
+class SFSBesselArrayClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SFSBesselArrayClass()
     """
 
     parent_class: GObject.ObjectClass = ...
