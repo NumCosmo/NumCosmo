@@ -371,7 +371,7 @@ class TestSBesselOdeSolver:
         coeffs_vec = Ncm.Vector.new_array(coeffs.tolist())
 
         # Test at multiple points
-        x_points = np.linspace(-1.0, 1.0, 21)
+        x_points = np.linspace(-1.0, 1.0, 1024)
 
         for x in x_points:
             # Evaluate using our implementation

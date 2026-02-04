@@ -1616,7 +1616,7 @@ class TestSBesselOperators:
         solver = Ncm.SBesselOdeSolver.new(lmin, a, b)
 
         # Define a test function
-        def f_test(_user_data: None, x: float) -> float:
+        def f_test(x: float) -> float:
             return x * x / (1.0 + x * x)
 
         # Use integrate_l_range (batched internally)
@@ -1680,10 +1680,10 @@ class TestSBesselOperators:
         print(f"Using N = {N} Chebyshev nodes")
 
         print_rank = False
-        print_ell: list[int] | None = [40]
+        print_ell: list[int] | None = [50]
         solver = Ncm.SBesselOdeSolver.new(0, lb, ub)
 
-        for i in range(10):
+        for i in range(1):
             print(f"Starting iteration {i}\r", end="", flush=True)
             for i, k in enumerate(truth_table["kvals"]):
                 # if (i != 50) and i < 100:
