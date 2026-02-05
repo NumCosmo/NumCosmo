@@ -1680,7 +1680,7 @@ class TestSBesselOperators:
         print(f"Using N = {N} Chebyshev nodes")
 
         print_rank = False
-        print_ell: list[int] | None = [50]
+        print_ell: list[int] | None = list(range(201))
         solver = Ncm.SBesselOdeSolver.new(0, lb, ub)
 
         for i in range(1):
@@ -1689,8 +1689,8 @@ class TestSBesselOperators:
                 # if (i != 50) and i < 100:
                 #    continue
 
-                # if k != 100.0:
-                #    continue
+                if i != 80:
+                    continue
 
                 # Create solver for this ell
 

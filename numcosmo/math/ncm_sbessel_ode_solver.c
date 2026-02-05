@@ -2182,29 +2182,50 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
         /* Compute derivatives at endpoints using solution row i */
         gdouble y_prime_at_minus1 = 0.0;
         gdouble y_prime_at_plus1  = 0.0;
+        gdouble error_estimate    = 0.0;
+        gdouble c_k               = 0.0;
+        gdouble integral_error    = 0.0;
 
         /* Compute Chebyshev derivative at t=-1 and t=+1 */
         for (guint k = 0; k < sol_len; k++)
         {
-          const gdouble c_k = ncm_matrix_get (solutions, i, k);
-          const gdouble kd  = (gdouble) k;
+          const gdouble kd = (gdouble) k;
+
+          c_k = ncm_matrix_get (solutions, i, k);
 
           /* Derivative at t=-1: sum_k k^2 * (-1)^(k+1) * c_k */
           y_prime_at_minus1 += kd * kd * ((k % 2 == 0) ? -1.0 : 1.0) * c_k;
 
           /* Derivative at t=+1: sum_k k^2 * c_k */
           y_prime_at_plus1 += kd * kd * c_k;
+
+          error_estimate += kd * kd * fabs (c_k);
         }
+
+        error_estimate = (error_estimate * GSL_DBL_EPSILON + fabs (c_k)) / h;
 
         const gdouble y_prime_a = y_prime_at_minus1 / h;
         const gdouble y_prime_b = y_prime_at_plus1 / h;
 
         /* Evaluate j_l at endpoints */
-        const gdouble j_l_a = j_array_a[l];
-        const gdouble j_l_b = j_array_b[l];
+        const gdouble j_l_a = gsl_sf_bessel_jl (l, a); /*j_array_a[l]; */
+        const gdouble j_l_b = gsl_sf_bessel_jl (l, b); /*j_array_b[l]; */
 
         /* Compute integral via Green's identity */
         const gdouble integral = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
+
+        integral_error = fabs (b * b * j_l_b) * error_estimate + fabs (a * a * j_l_a) * error_estimate;
+
+        printf ("l = %4d, [%.2f, %.2f] (%6u), % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
+                l,
+                a, b,
+                sol_len,
+                y_prime_b, y_prime_a,
+                error_estimate,
+                b * b * j_l_b * y_prime_b, a * a * j_l_a * y_prime_a,
+                b * b * j_l_b * error_estimate, a * a * j_l_a * error_estimate,
+                integral, integral_error);
+
 
         /* Store result */
         result_data[l - lmin] = integral;
