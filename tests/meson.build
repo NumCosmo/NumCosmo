@@ -620,6 +620,10 @@ if python_astropy_scipy.found()
             'source': 'test_py_sbessel_integrator_gl.py',
         },
         {
+            'name': 'py_spectral',
+            'source': 'test_py_spectral.py',
+        },
+        {
             'name': 'py_csq1d',
             'source': 'test_py_csq1d.py',
         },

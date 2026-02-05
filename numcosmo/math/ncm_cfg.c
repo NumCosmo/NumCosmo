@@ -95,6 +95,7 @@
 #include "math/ncm_sbessel_ode_solver.h"
 #include "math/ncm_fftlog_sbessel_j.h"
 #include "math/ncm_fftlog_sbessel_jljm.h"
+#include "math/ncm_spectral.h"
 #include "nc_hicosmo.h"
 #include "nc_cbe_precision.h"
 #include "model/nc_hicosmo_qconst.h"
@@ -641,6 +642,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D);
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D_PTR);
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
+
+  ncm_cfg_register_obj (NCM_TYPE_SPECTRAL);
 
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_GL);
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_FFTL);

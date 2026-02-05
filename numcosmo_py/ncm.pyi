@@ -9360,28 +9360,8 @@ class SBesselOdeSolver(GObject.Object):
         tolerance: float = ...,
     ) -> None: ...
     @staticmethod
-    def chebT_to_gegenbauer_lambda1(c: Vector, g: Vector) -> None: ...
-    @staticmethod
-    def chebT_to_gegenbauer_lambda2(c: Vector, g: Vector) -> None: ...
-    @staticmethod
-    def chebyshev_deriv(a: Vector, t: float) -> float: ...
-    @staticmethod
-    def chebyshev_eval(a: Vector, t: float) -> float: ...
-    @staticmethod
     def clear(solver: SBesselOdeSolver) -> None: ...
-    def compute_chebyshev_coeffs(
-        self,
-        F: typing.Callable[..., float],
-        a: float,
-        b: float,
-        N: int,
-        *user_data: typing.Any,
-    ) -> Vector: ...
     def free(self) -> None: ...
-    @staticmethod
-    def gegenbauer_lambda1_eval(c: Vector, x: float) -> float: ...
-    @staticmethod
-    def gegenbauer_lambda2_eval(c: Vector, x: float) -> float: ...
     @staticmethod
     def get_d2_matrix(N: int) -> Matrix: ...
     @staticmethod
@@ -9950,6 +9930,59 @@ class SerializeClass(GObject.GPointer):
     ::
 
         SerializeClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class Spectral(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        Spectral(**properties)
+        new() -> NumCosmoMath.Spectral
+
+    Object NcmSpectral
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    @staticmethod
+    def chebT_to_gegenbauer_alpha1(c: Vector, g: Vector) -> None: ...
+    @staticmethod
+    def chebT_to_gegenbauer_alpha2(c: Vector, g: Vector) -> None: ...
+    @staticmethod
+    def chebyshev_deriv(a: Vector, t: float) -> float: ...
+    @staticmethod
+    def chebyshev_eval(a: Vector, t: float) -> float: ...
+    @staticmethod
+    def clear(spectral: Spectral) -> None: ...
+    def compute_chebyshev_coeffs(
+        self,
+        F: typing.Callable[..., float],
+        a: float,
+        b: float,
+        coeffs: Vector,
+        *user_data: typing.Any,
+    ) -> None: ...
+    def free(self) -> None: ...
+    @staticmethod
+    def gegenbauer_alpha1_eval(c: Vector, x: float) -> float: ...
+    @staticmethod
+    def gegenbauer_alpha2_eval(c: Vector, x: float) -> float: ...
+    @classmethod
+    def new(cls) -> Spectral: ...
+    def ref(self) -> Spectral: ...
+
+class SpectralClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralClass()
     """
 
     parent_class: GObject.ObjectClass = ...

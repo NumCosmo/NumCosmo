@@ -98,6 +98,7 @@
 #include <numcosmo/math/ncm_fftlog_sbessel_jljm.h>
 #include <numcosmo/math/ncm_fftlog_tophatwin2.h>
 #include <numcosmo/math/ncm_fftlog_gausswin2.h>
+#include <numcosmo/math/ncm_spectral.h>
 #include <numcosmo/math/ncm_sparam.h>
 #include <numcosmo/math/ncm_vparam.h>
 #include <numcosmo/math/ncm_reparam.h>
