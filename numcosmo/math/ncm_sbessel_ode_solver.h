@@ -88,15 +88,6 @@ NcmVector *ncm_sbessel_ode_solver_integrate_rational_l_range (NcmSBesselOdeSolve
 NcmVector *ncm_sbessel_ode_solver_get_gaussian_rhs (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N);
 NcmVector *ncm_sbessel_ode_solver_get_rational_rhs (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N);
 
-NcmMatrix *ncm_sbessel_ode_solver_get_proj_matrix (guint N);
-NcmMatrix *ncm_sbessel_ode_solver_get_x_matrix (guint N);
-NcmMatrix *ncm_sbessel_ode_solver_get_x2_matrix (guint N);
-NcmMatrix *ncm_sbessel_ode_solver_get_d_matrix (guint N);
-NcmMatrix *ncm_sbessel_ode_solver_get_x_d_matrix (guint N);
-NcmMatrix *ncm_sbessel_ode_solver_get_d2_matrix (guint N);
-NcmMatrix *ncm_sbessel_ode_solver_get_x_d2_matrix (guint N);
-NcmMatrix *ncm_sbessel_ode_solver_get_x2_d2_matrix (guint N);
-
 #define NCM_SBESSEL_ODE_SOLVER_DEFAULT_TOLERANCE (1.0e-20)
 #define NCM_SBESSEL_ODE_SOLVER_DEFAULT_MAX_SIZE (10000)
 

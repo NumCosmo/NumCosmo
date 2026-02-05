@@ -194,12 +194,12 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
     spectral->cheb_f_vals = fftw_malloc (sizeof (gdouble) * N);
 
     /* Create new FFTW plan */
-    ncm_cfg_load_fftw_wisdom ("ncm_sbessel_ode_solver");
+    ncm_cfg_load_fftw_wisdom ("ncm_spectral");
     ncm_cfg_lock_plan_fftw ();
     spectral->cheb_plan_r2r = fftw_plan_r2r_1d (N, spectral->cheb_f_vals, ncm_vector_data (coeffs),
                                                 FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
     ncm_cfg_unlock_plan_fftw ();
-    ncm_cfg_save_fftw_wisdom ("ncm_sbessel_ode_solver");
+    ncm_cfg_save_fftw_wisdom ("ncm_spectral");
 
     spectral->cheb_N_cached = N;
   }
@@ -716,4 +716,548 @@ ncm_spectral_chebyshev_deriv (NcmVector *a, gdouble t)
     }
   }
 }
+
+/**
+ * ncm_spectral_get_proj_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the projection (identity) operator matrix that transforms Chebyshev $T_n$
+ * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
+ *
+ * Returns: (transfer full): the projection operator matrix
+ */
+NcmMatrix *
+ncm_spectral_get_proj_matrix (guint N)
+{
+  NcmMatrix *mat              = ncm_matrix_new (N, N);
+  const glong bandwidth       = 9;
+  gdouble * restrict row_data = g_new0 (gdouble, bandwidth);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong cols_to_write = GSL_MIN (bandwidth, N - k);
+
+    /* First entry is k, offset = 0 */
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_proj_row (row_data, k, 0, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      ncm_matrix_set (mat, k, k + j, row_data[j]);
+    }
+  }
+
+  g_free (row_data);
+
+  return mat;
+}
+
+/**
+ * ncm_spectral_get_x_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the multiplication by $x$ operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x \cdot f(x)$.
+ *
+ * Returns: (transfer full): the $x$ operator matrix
+ */
+NcmMatrix *
+ncm_spectral_get_x_matrix (guint N)
+{
+  NcmMatrix *mat              = ncm_matrix_new (N, N);
+  const glong bandwidth       = 9;
+  gdouble * restrict row_data = g_new0 (gdouble, bandwidth);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong offset        = (k >= 1) ? 1 : 0;
+    const glong cols_to_write = GSL_MIN (bandwidth, (glong) N + offset - k);
+
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_x_row (row_data, k, offset, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      ncm_matrix_set (mat, k, k - offset + j, row_data[j]);
+    }
+  }
+
+  g_free (row_data);
+
+  return mat;
+}
+
+/**
+ * ncm_spectral_get_x2_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the multiplication by $x^2$ operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x^2 \cdot f(x)$.
+ *
+ * Returns: (transfer full): the $x^2$ operator matrix
+ */
+NcmMatrix *
+ncm_spectral_get_x2_matrix (guint N)
+{
+  NcmMatrix *mat              = ncm_matrix_new (N, N);
+  const glong bandwidth       = 9;
+  gdouble * restrict row_data = g_new0 (gdouble, bandwidth);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong offset        = (k >= 2) ? 2 : k;
+    const glong cols_to_write = GSL_MIN (bandwidth, (glong) N + offset - k);
+
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_x2_row (row_data, k, offset, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      const glong col = k - offset + j;
+
+      ncm_matrix_set (mat, k, col, row_data[j]);
+    }
+  }
+
+  g_free (row_data);
+
+  return mat;
+}
+
+/**
+ * ncm_spectral_get_d_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the derivative operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $\frac{df}{dx}$.
+ *
+ * Returns: (transfer full): the derivative operator matrix
+ */
+NcmMatrix *
+ncm_spectral_get_d_matrix (guint N)
+{
+  NcmMatrix *mat              = ncm_matrix_new (N, N);
+  const glong bandwidth       = 9;
+  gdouble * restrict row_data = g_new0 (gdouble, bandwidth);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong offset        = (k >= 1) ? 1 : k;
+    const glong cols_to_write = GSL_MIN (bandwidth, (glong) N + offset - k);
+
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_d_row (row_data, offset, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      const glong col = k - offset + j;
+
+      ncm_matrix_set (mat, k, col, row_data[j]);
+    }
+  }
+
+  g_free (row_data);
+
+  return mat;
+}
+
+/**
+ * ncm_spectral_get_x_d_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the $x \cdot \frac{d}{dx}$ operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x \cdot \frac{df}{dx}$.
+ *
+ * Returns: (transfer full): the $x \cdot d$ operator matrix
+ */
+NcmMatrix *
+ncm_spectral_get_x_d_matrix (guint N)
+{
+  NcmMatrix *mat              = ncm_matrix_new (N, N);
+  const glong bandwidth       = 9;
+  gdouble * restrict row_data = g_new0 (gdouble, bandwidth);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong offset        = (k >= 1) ? 1 : k;
+    const glong cols_to_write = GSL_MIN (bandwidth, (glong) N + offset - k);
+
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_x_d_row (row_data, k, offset, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      const glong col = k - offset + j;
+
+      ncm_matrix_set (mat, k, col, row_data[j]);
+    }
+  }
+
+  g_free (row_data);
+
+  return mat;
+}
+
+/**
+ * ncm_spectral_get_d2_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the second derivative operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $\frac{d^2f}{dx^2}$.
+ *
+ * Returns: (transfer full): the second derivative operator matrix
+ */
+NcmMatrix *
+ncm_spectral_get_d2_matrix (guint N)
+{
+  NcmMatrix *mat              = ncm_matrix_new (N, N);
+  const glong bandwidth       = 9;
+  gdouble * restrict row_data = g_new0 (gdouble, bandwidth);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong offset        = (k >= 2) ? 2 : k;
+    const glong cols_to_write = GSL_MIN (bandwidth, (glong) N + offset - k);
+
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_d2_row (row_data, k, offset, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      const glong col = k - offset + j;
+
+      ncm_matrix_set (mat, k, col, row_data[j]);
+    }
+  }
+
+  g_free (row_data);
+
+  return mat;
+}
+
+/**
+ * ncm_spectral_get_x_d2_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the $x \cdot \frac{d^2}{dx^2}$ operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x \cdot \frac{d^2f}{dx^2}$.
+ *
+ * Returns: (transfer full): the $x \cdot d^2$ operator matrix
+ */
+NcmMatrix *
+ncm_spectral_get_x_d2_matrix (guint N)
+{
+  NcmMatrix *mat              = ncm_matrix_new (N, N);
+  const glong bandwidth       = 9;
+  gdouble * restrict row_data = g_new0 (gdouble, bandwidth);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong offset        = (k >= 1) ? 1 : k;
+    const glong cols_to_write = GSL_MIN (bandwidth, (glong) N + offset - k);
+
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_x_d2_row (row_data, k, offset, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      const glong col = k - offset + j;
+
+      ncm_matrix_set (mat, k, col, row_data[j]);
+    }
+  }
+
+  g_free (row_data);
+
+  return mat;
+}
+
+/**
+ * ncm_spectral_get_x2_d2_matrix:
+ * @N: size of the matrix
+ *
+ * Returns the $x^2 \cdot \frac{d^2}{dx^2}$ operator matrix that transforms Chebyshev $T_n$
+ * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x^2 \cdot \frac{d^2f}{dx^2}$.
+ *
+ * Returns: (transfer full): the $x^2 \cdot d^2$ operator matrix
+ */
+NcmMatrix *
+ncm_spectral_get_x2_d2_matrix (guint N)
+{
+  NcmMatrix *mat              = ncm_matrix_new (N, N);
+  const glong bandwidth       = 9;
+  gdouble * restrict row_data = g_new0 (gdouble, bandwidth);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong offset        = (k >= 2) ? 2 : k;
+    const glong cols_to_write = GSL_MIN (bandwidth, (glong) N + offset - k);
+
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_x2_d2_row (row_data, k, offset, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      const glong col = k - offset + j;
+
+      ncm_matrix_set (mat, k, col, row_data[j]);
+    }
+  }
+
+  g_free (row_data);
+
+  return mat;
+}
+
+/**
+ * ncm_spectral_compute_proj_row:
+ * @row_data: row structure to update
+ * @k: row index (0-based)
+ * @offset: row offset
+ * @coeff: coefficient to multiply all elements
+ *
+ * Computes row k of the projection operator that maps Chebyshev coefficients
+ * to Gegenbauer $C^{(2)}_k$ coefficients (ultraspherical basis with $\lambda=2$).
+ * This is the identity operator expressed in different bases.
+ *
+ * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
+ * Output: Gegenbauer $C^{(2)}_k(x)$ basis coefficient (row k)
+ *
+ * Mathematical formula:
+ * $$
+ * C^{(2)}_k = \frac{1}{2} c_0 \delta_{k,0} +
+ * \frac{c_k}{2(k+1)} - \frac{(k+2) c_{k+2}}{(k+1)(k+3)} + \frac{c_{k+4}}{2(k+3)}
+ * $$
+ * where $c_n$ are the input Chebyshev coefficients.
+ *
+ * Adds to existing row data (for linear combinations of operators).
+ *
+ * Matrix entries for row k:
+ * - column k: coeff * 1/(2*(k+1))
+ * - column k+2: coeff * -(k+2)/((k+1)*(k+3))
+ * - column k+4: coeff * 1/(2*(k+3))
+ * - For k=0 only: additional value coeff * 1/2 at column 0
+ */
+
+/**
+ * ncm_spectral_compute_x_row:
+ * @row_data: row structure to update
+ * @k: row index (0-based)
+ * @offset: row offset
+ * @coeff: coefficient to multiply all elements
+ *
+ * Computes row k of the multiplication by x operator that maps Chebyshev
+ * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
+ *
+ * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
+ * Output: Gegenbauer $C^{(2)}_k(x)$ basis coefficient for $x \cdot f(x)$ (row k)
+ *
+ * Mathematical formula:
+ * $$
+ * (x \cdot f)^{(2)}_k = \frac{\theta(k-1) c_{k-1}}{4(k+1)} - \frac{c_{k+1}}{4(k+3)} -
+ * \frac{c_{k+3}}{4(k+1)} + \frac{c_{k+5}}{4(k+3)}
+ * $$
+ * plus special contributions: $\frac{c_1}{4}\delta_{k,0}$ and $\frac{c_0}{8}\delta_{k,1}$,
+ * where $c_n$ are the input Chebyshev coefficients and $\theta$ is the Heaviside function.
+ *
+ * Adds to existing row data (for linear combinations of operators).
+ *
+ * Matrix entries for row k:
+ * - If k >= 1: column k-1: coeff * 1/(4*(k+1))
+ * - column k+1: coeff * -1/(4*(k+3))
+ * - column k+3: coeff * -1/(4*(k+1))
+ * - column k+5: coeff * 1/(4*(k+3))
+ * - For k=0 only: additional value coeff * 1/4 at column 1
+ * - For k=1 only: additional value coeff * 1/8 at column 0
+ */
+
+/**
+ * ncm_spectral_compute_x2_row:
+ * @row_data: row structure to update
+ * @k: row index (0-based)
+ * @offset: row offset
+ * @coeff: coefficient to multiply all elements
+ *
+ * Computes row k of the multiplication by $x^2$ operator that maps Chebyshev
+ * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
+ *
+ * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
+ * Output: Gegenbauer $C^{(2)}_k(x)$ basis coefficient for $x^2 \cdot f(x)$ (row k)
+ *
+ * Mathematical formula:
+ * $$
+ * (x^2 \cdot f)^{(2)}_k = \frac{\theta(k-2) c_{k-2}}{8(k+1)} + \frac{c_k}{4(k+1)(k+3)} -
+ * \frac{(k+2) c_{k+2}}{4(k+1)(k+3)} - \frac{c_{k+4}}{4(k+1)(k+3)} + \frac{c_{k+6}}{8(k+3)}
+ * $$
+ * plus special contributions at k=0,1,2, where $c_n$ are the input Chebyshev
+ * coefficients and $\theta$ is the Heaviside function.
+ *
+ * Adds to existing row data (for linear combinations of operators).
+ *
+ * Matrix entries for row k:
+ * - If k >= 2: column k-2: coeff * 1/(8*(k+1))
+ * - column k: coeff * 1/(4*(k+1)*(k+3))
+ * - column k+2: coeff * -(k+2)/(4*(k+1)*(k+3))
+ * - column k+4: coeff * -1/(4*(k+1)*(k+3))
+ * - column k+6: coeff * 1/(8*(k+3))
+ * - For k=0 only: additional values coeff * 1/12 at column 0 and coeff * 1/8 at column 2
+ * - For k=1 only: additional value coeff * 1/16 at column 1
+ * - For k=2 only: additional value coeff * 1/24 at column 0
+ */
+
+/**
+ * ncm_spectral_compute_d_row:
+ * @row_data: row structure to update
+ * @offset: row offset
+ * @coeff: coefficient to multiply all elements
+ *
+ * Computes row k of the first derivative operator $\frac{d}{dx}$ that maps Chebyshev
+ * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
+ *
+ * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
+ * Output: $\langle C^{(2)}_k, f' \rangle$ - projection of $f'$ (row k)
+ *
+ * Mathematical formula:
+ * $$
+ * \langle C^{(2)}_k, f' \rangle = c_{k+1} - c_{k+3}
+ * $$
+ * where $c_n$ are the input Chebyshev coefficients.
+ *
+ * Adds to existing row data (for linear combinations of operators).
+ *
+ * Matrix entries for row k:
+ * - column k+1: coeff * 1.0
+ * - column k+3: coeff * (-1.0)
+ */
+
+/**
+ * ncm_spectral_compute_x_d_row:
+ * @row_data: row structure to update
+ * @k: row index (0-based)
+ * @offset: row offset
+ * @coeff: coefficient to multiply all elements
+ *
+ * Computes row k of the $x \cdot \frac{d}{dx}$ operator that maps Chebyshev coefficients
+ * to Gegenbauer $C^{(2)}_k$ coefficients.
+ *
+ * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
+ * Output: $\langle C^{(2)}_k, x \cdot f' \rangle$ - projection of $x \cdot f'$ (row k)
+ *
+ * Mathematical formula:
+ * $$
+ * \langle C^{(2)}_k, x \cdot f' \rangle = \frac{k c_k}{2(k+1)} + \frac{(k+2) c_{k+2}}{(k+1)(k+3)} -
+ * \frac{(k+4) c_{k+4}}{2(k+3)}
+ * $$
+ * where $c_n$ are the input Chebyshev coefficients.
+ *
+ * Adds to existing row data (for linear combinations of operators).
+ *
+ * Matrix entries for row k:
+ * - column k: coeff * k/(2*(k+1))
+ * - column k+2: coeff * (k+2)/((k+1)*(k+3))
+ * - column k+4: coeff * -(k+4)/(2*(k+3))
+ */
+
+/**
+ * ncm_spectral_compute_d2_row:
+ * @row_data: row structure to update
+ * @k: row index (0-based)
+ * @offset: row offset
+ * @coeff: coefficient to multiply all elements
+ *
+ * Computes row k of the second derivative operator $\frac{d^2}{dx^2}$ that maps Chebyshev
+ * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
+ *
+ * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
+ * Output: $\langle C^{(2)}_k, f'' \rangle$ - projection of $f''$ (row k)
+ *
+ * Mathematical formula:
+ * $$
+ * \langle C^{(2)}_k, f'' \rangle = 2(k+2) c_{k+2}
+ * $$
+ * where $c_n$ are the input Chebyshev coefficients.
+ *
+ * Adds to existing row data (for linear combinations of operators).
+ *
+ * Matrix entries for row k:
+ * - column k+2: coeff * 2*(k+2) (single non-zero entry)
+ */
+
+/**
+ * ncm_spectral_compute_x_d2_row:
+ * @row_data: row structure to update
+ * @k: row index (0-based)
+ * @offset: row offset
+ * @coeff: coefficient to multiply all elements
+ *
+ * Computes row k of the $x \cdot \frac{d^2}{dx^2}$ operator that maps Chebyshev coefficients
+ * to Gegenbauer $C^{(2)}_k$ coefficients.
+ *
+ * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
+ * Output: $\langle C^{(2)}_k, x \cdot f'' \rangle$ - projection of $x \cdot f''$ (row k)
+ *
+ * Mathematical formula:
+ * $$
+ * \langle C^{(2)}_k, x \cdot f'' \rangle = k c_{k+1} + (k+4) c_{k+3}
+ * $$
+ * where $c_n$ are the input Chebyshev coefficients.
+ *
+ * Adds to existing row data (for linear combinations of operators).
+ *
+ * Matrix entries for row k:
+ * - column k+1: coeff * k
+ * - column k+3: coeff * (k+4)
+ */
+
+/**
+ * ncm_spectral_compute_x2_d2_row:
+ * @row_data: row structure to update
+ * @k: row index (0-based)
+ * @offset: row offset
+ * @coeff: coefficient to multiply all elements
+ *
+ * Computes row k of the $x^2 \cdot \frac{d^2}{dx^2}$ operator that maps Chebyshev
+ * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
+ *
+ * Input: Chebyshev $T_n(x)$ basis coefficients (columns) Output: $\langle C^{(2)}_k,
+ * x^2 \cdot f'' \rangle$ - projection of $x^2 \cdot f''$ (row k)
+ *
+ * Mathematical formula:
+ * $$
+ * \langle C^{(2)}_k, x^2 \cdot f'' \rangle = \frac{k(k-1) c_k}{2(k+1)} +
+ * \frac{(k+2)((k+2)^2-3) c_{k+2}}{(k+1)(k+3)} + \frac{(k+4)(k+5) c_{k+4}}{2(k+3)}
+ * $$
+ * where $c_n$ are the input Chebyshev coefficients.
+ *
+ * Adds to existing row data (for linear combinations of operators).
+ *
+ * Matrix entries for row k:
+ * - column k: coeff * k*(k-1)/(2*(k+1))
+ * - column k+2: coeff * (k+2)*((k+2)^2 - 3)/((k+1)*(k+3))
+ * - column k+4: coeff * (k+4)*(k+5)/(2*(k+3))
+ */
 

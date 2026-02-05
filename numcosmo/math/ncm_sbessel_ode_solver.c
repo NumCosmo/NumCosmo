@@ -153,14 +153,6 @@ _row_reset (NcmSBesselOdeSolverRow *row, gdouble bc_at_m1, gdouble bc_at_p1, glo
 }
 
 /* Operator row computation */
-static void _ncm_sbessel_compute_proj_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
-static void _ncm_sbessel_compute_x_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
-static void _ncm_sbessel_compute_x2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
-static void _ncm_sbessel_compute_d_row (NcmSBesselOdeSolverRow *row, glong offset, gdouble coeff);
-static void _ncm_sbessel_compute_x_d_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
-static void _ncm_sbessel_compute_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
-static void _ncm_sbessel_compute_x_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
-static void _ncm_sbessel_compute_x2_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff);
 static gdouble _ncm_sbessel_bc_row (NcmSBesselOdeSolverRow *row, glong col_index);
 
 static void
@@ -569,346 +561,6 @@ ncm_sbessel_ode_solver_get_solution_size (NcmSBesselOdeSolver *solver)
   return (self->solution != NULL) ? (gint) ncm_vector_len (self->solution) : 0;
 }
 
-/**
- * _ncm_sbessel_compute_proj_row:
- * @row: row structure to fill/update
- * @k: row index (0-based)
- * @coeff: coefficient to multiply all elements
- *
- * Computes row k of the projection operator that maps Chebyshev coefficients
- * to Gegenbauer $C^{(2)}_k$ coefficients (ultraspherical basis with $\lambda=2$).
- * This is the identity operator expressed in different bases.
- *
- * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
- * Output: Gegenbauer $C^{(2)}_k(x)$ basis coefficient (row k)
- *
- * Mathematical formula:
- * $$
- * C^{(2)}_k = \frac{1}{2} c_0 \delta_{k,0} +
- * \frac{c_k}{2(k+1)} - \frac{(k+2) c_{k+2}}{(k+1)(k+3)} + \frac{c_{k+4}}{2(k+3)}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
- *
- * Adds to existing row data (for linear combinations of operators).
- *
- * Matrix entries for row k:
- * - column k: coeff * 1/(2*(k+1))
- * - column k+2: coeff * -(k+2)/((k+1)*(k+3))
- * - column k+4: coeff * 1/(2*(k+3))
- * - For k=0 only: additional value coeff * 1/2 at column 0
- */
-static void
-_ncm_sbessel_compute_proj_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
-{
-  const gdouble kd = (gdouble) k;
-
-  /* General formula: three entries with rational function coefficients */
-  const gdouble value_0 = coeff / (2.0 * (kd + 1.0));
-  const gdouble value_1 = -coeff * (kd + 2.0) / ((kd + 1.0) * (kd + 3.0));
-  const gdouble value_2 = coeff / (2.0 * (kd + 3.0));
-
-  row->data[offset]     += value_0;
-  row->data[offset + 2] += value_1;
-  row->data[offset + 4] += value_2;
-
-  /* Special case: k=0 has an additional contribution */
-  if (k == 0)
-    row->data[0] += coeff * 0.5;
-}
-
-/**
- * _ncm_sbessel_compute_x_row:
- * @row: row structure to fill/update
- * @k: row index (0-based)
- * @coeff: coefficient to multiply all elements
- *
- * Computes row k of the multiplication by x operator that maps Chebyshev
- * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
- *
- * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
- * Output: Gegenbauer $C^{(2)}_k(x)$ basis coefficient for $x \cdot f(x)$ (row k)
- *
- * Mathematical formula:
- * $$
- * (x \cdot f)^{(2)}_k = \frac{\theta(k-1) c_{k-1}}{4(k+1)} - \frac{c_{k+1}}{4(k+3)} -
- * \frac{c_{k+3}}{4(k+1)} + \frac{c_{k+5}}{4(k+3)}
- * $$
- * plus special contributions: $\frac{c_1}{4}\delta_{k,0}$ and $\frac{c_0}{8}\delta_{k,1}$,
- * where $c_n$ are the input Chebyshev coefficients and $\theta$ is the Heaviside function.
- *
- * Adds to existing row data (for linear combinations of operators).
- *
- * Matrix entries for row k:
- * - If k >= 1: column k-1: coeff * 1/(4*(k+1))
- * - column k+1: coeff * -1/(4*(k+3))
- * - column k+3: coeff * -1/(4*(k+1))
- * - column k+5: coeff * 1/(4*(k+3))
- * - For k=0 only: additional value coeff * 1/4 at column 1
- * - For k=1 only: additional value coeff * 1/8 at column 0
- */
-static void
-_ncm_sbessel_compute_x_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
-{
-  const gdouble kd = (gdouble) k;
-
-  /* General formula: up to four entries */
-  if (k >= 1)
-    row->data[offset - 1] += coeff / (4.0 * (kd + 1.0));
-
-  row->data[offset + 1] += -coeff / (4.0 * (kd + 3.0));
-  row->data[offset + 3] += -coeff / (4.0 * (kd + 1.0));
-  row->data[offset + 5] += coeff / (4.0 * (kd + 3.0));
-
-  /* Special cases */
-  if (k == 0)
-    row->data[1 - row->col_index] += coeff * 0.25;  /* Additional 1/4 at column 1 */
-  else if (k == 1)
-    row->data[0 - row->col_index] += coeff * 0.125;  /* Additional 1/8 at column 0 */
-}
-
-/**
- * _ncm_sbessel_compute_x2_row:
- * @row: row structure to fill/update
- * @k: row index (0-based)
- * @coeff: coefficient to multiply all elements
- *
- * Computes row k of the multiplication by $x^2$ operator that maps Chebyshev
- * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
- *
- * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
- * Output: Gegenbauer $C^{(2)}_k(x)$ basis coefficient for $x^2 \cdot f(x)$ (row k)
- *
- * Mathematical formula:
- * $$
- * (x^2 \cdot f)^{(2)}_k = \frac{\theta(k-2) c_{k-2}}{8(k+1)} + \frac{c_k}{4(k+1)(k+3)} -
- * \frac{(k+2) c_{k+2}}{4(k+1)(k+3)} - \frac{c_{k+4}}{4(k+1)(k+3)} + \frac{c_{k+6}}{8(k+3)}
- * $$
- * plus special contributions at k=0,1,2, where $c_n$ are the input Chebyshev
- * coefficients and $\theta$ is the Heaviside function.
- *
- * Adds to existing row data (for linear combinations of operators).
- *
- * Matrix entries for row k:
- * - If k >= 2: column k-2: coeff * 1/(8*(k+1))
- * - column k: coeff * 1/(4*(k+1)*(k+3))
- * - column k+2: coeff * -(k+2)/(4*(k+1)*(k+3))
- * - column k+4: coeff * -1/(4*(k+1)*(k+3))
- * - column k+6: coeff * 1/(8*(k+3))
- * - For k=0 only: additional values coeff * 1/12 at column 0 and coeff * 1/8 at column 2
- * - For k=1 only: additional value coeff * 1/16 at column 1
- * - For k=2 only: additional value coeff * 1/24 at column 0
- */
-static void
-_ncm_sbessel_compute_x2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
-{
-  const gdouble kd  = (gdouble) k;
-  const gdouble kp2 = kd + 2.0;
-
-  /* General formula: up to five entries */
-  if (k >= 2)
-    row->data[offset - 2] += coeff / (8.0 * (kd + 1.0));
-
-  row->data[offset]     += coeff / (4.0 * (kd + 1.0) * (kd + 3.0));
-  row->data[offset + 2] += -coeff * kp2 / (4.0 * (kd + 1.0) * (kd + 3.0));
-  row->data[offset + 4] += -coeff / (4.0 * (kd + 1.0) * (kd + 3.0));
-  row->data[offset + 6] += coeff / (8.0 * (kd + 3.0));
-
-  /* Special cases */
-  if (k == 0)
-  {
-    row->data[0 - row->col_index] += coeff / 12.0; /* Additional 1/12 at column 0 */
-    row->data[2 - row->col_index] += coeff / 8.0;  /* Additional 1/8 at column 2 */
-  }
-  else if (k == 1)
-  {
-    row->data[1 - row->col_index] += coeff / 16.0; /* Additional 1/16 at column 1 */
-  }
-  else if (k == 2)
-  {
-    row->data[0 - row->col_index] += coeff / 24.0; /* Additional 1/24 at column 0 */
-  }
-}
-
-/**
- * _ncm_sbessel_compute_d_row:
- * @row: row structure to fill/update
- * @k: row index (0-based)
- * @coeff: coefficient to multiply all elements
- *
- * Computes row k of the first derivative operator $\frac{d}{dx}$ that maps Chebyshev
- * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
- *
- * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
- * Output: $\langle C^{(2)}_k, f' \rangle$ - projection of $f'$ (row k)
- *
- * Mathematical formula:
- * $$
- * \langle C^{(2)}_k, f' \rangle = c_{k+1} - c_{k+3}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
- *
- * Adds to existing row data (for linear combinations of operators).
- *
- * Matrix entries for row k:
- * - column k+1: coeff * 1.0
- * - column k+3: coeff * (-1.0)
- */
-static void
-_ncm_sbessel_compute_d_row (NcmSBesselOdeSolverRow *row, glong offset, gdouble coeff)
-{
-  /* Two non-zero entries with opposite signs */
-  row->data[offset + 1] += coeff;
-  row->data[offset + 3] += -coeff;
-}
-
-/**
- * _ncm_sbessel_compute_x_d_row:
- * @row: row structure to fill/update
- * @k: row index (0-based)
- * @coeff: coefficient to multiply all elements
- *
- * Computes row k of the $x \cdot \frac{d}{dx}$ operator that maps Chebyshev coefficients
- * to Gegenbauer $C^{(2)}_k$ coefficients.
- *
- * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
- * Output: $\langle C^{(2)}_k, x \cdot f' \rangle$ - projection of $x \cdot f'$ (row k)
- *
- * Mathematical formula:
- * $$
- * \langle C^{(2)}_k, x \cdot f' \rangle = \frac{k c_k}{2(k+1)} + \frac{(k+2) c_{k+2}}{(k+1)(k+3)} -
- * \frac{(k+4) c_{k+4}}{2(k+3)}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
- *
- * Adds to existing row data (for linear combinations of operators).
- *
- * Matrix entries for row k:
- * - column k: coeff * k/(2*(k+1))
- * - column k+2: coeff * (k+2)/((k+1)*(k+3))
- * - column k+4: coeff * -(k+4)/(2*(k+3))
- */
-static void
-_ncm_sbessel_compute_x_d_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
-{
-  const gdouble kd = (gdouble) k;
-
-  /* Three non-zero entries with rational function coefficients */
-  const gdouble value_0 = coeff * kd / (2.0 * (kd + 1.0));
-  const gdouble value_1 = coeff * (kd + 2.0) / ((kd + 1.0) * (kd + 3.0));
-  const gdouble value_2 = -coeff * (kd + 4.0) / (2.0 * (kd + 3.0));
-
-  row->data[offset]     += value_0;
-  row->data[offset + 2] += value_1;
-  row->data[offset + 4] += value_2;
-}
-
-/**
- * _ncm_sbessel_compute_d2_row:
- * @row: row structure to fill/update
- * @k: row index (0-based)
- * @coeff: coefficient to multiply all elements
- *
- * Computes row k of the second derivative operator $\frac{d^2}{dx^2}$ that maps Chebyshev
- * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
- *
- * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
- * Output: $\langle C^{(2)}_k, f'' \rangle$ - projection of $f''$ (row k)
- *
- * Mathematical formula:
- * $$
- * \langle C^{(2)}_k, f'' \rangle = 2(k+2) c_{k+2}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
- *
- * Adds to existing row data (for linear combinations of operators).
- *
- * Matrix entries for row k:
- * - column k+2: coeff * 2*(k+2) (single non-zero entry)
- */
-static void
-_ncm_sbessel_compute_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
-{
-  const gdouble kd = (gdouble) k;
-
-  row->data[offset + 2] += coeff * 2.0 * (kd + 2.0);
-}
-
-/**
- * _ncm_sbessel_compute_x_d2_row:
- * @row: row structure to fill/update
- * @k: row index (0-based)
- * @coeff: coefficient to multiply all elements
- *
- * Computes row k of the $x \cdot \frac{d^2}{dx^2}$ operator that maps Chebyshev coefficients
- * to Gegenbauer $C^{(2)}_k$ coefficients.
- *
- * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
- * Output: $\langle C^{(2)}_k, x \cdot f'' \rangle$ - projection of $x \cdot f''$ (row k)
- *
- * Mathematical formula:
- * $$
- * \langle C^{(2)}_k, x \cdot f'' \rangle = k c_{k+1} + (k+4) c_{k+3}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
- *
- * Adds to existing row data (for linear combinations of operators).
- *
- * Matrix entries for row k:
- * - column k+1: coeff * k
- * - column k+3: coeff * (k+4)
- */
-static void
-_ncm_sbessel_compute_x_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
-{
-  const gdouble kd = (gdouble) k;
-
-  /* Two non-zero entries in this row */
-  row->data[offset + 1] += coeff * kd;
-  row->data[offset + 3] += coeff * (kd + 4.0);
-}
-
-/**
- * _ncm_sbessel_compute_x2_d2_row:
- * @row: row structure to fill/update
- * @k: row index (0-based)
- * @coeff: coefficient to multiply all elements
- *
- * Computes row k of the $x^2 \cdot \frac{d^2}{dx^2}$ operator that maps Chebyshev coefficients
- * to Gegenbauer $C^{(2)}_k$ coefficients.
- *
- * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
- * Output: $\langle C^{(2)}_k, x^2 \cdot f'' \rangle$ - projection of $x^2 \cdot f''$ (row k)
- *
- * Mathematical formula:
- * $$
- * \langle C^{(2)}_k, x^2 \cdot f'' \rangle = \frac{k(k-1) c_k}{2(k+1)} +
- * \frac{(k+2)((k+2)^2-3) c_{k+2}}{(k+1)(k+3)} + \frac{(k+4)(k+5) c_{k+4}}{2(k+3)}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
- *
- * Adds to existing row data (for linear combinations of operators).
- *
- * Matrix entries for row k:
- * - column k: coeff * k*(k-1)/(2*(k+1))
- * - column k+2: coeff * (k+2)*((k+2)^2 - 3)/((k+1)*(k+3))
- * - column k+4: coeff * (k+4)*(k+5)/(2*(k+3))
- */
-static void
-_ncm_sbessel_compute_x2_d2_row (NcmSBesselOdeSolverRow *row, glong k, glong offset, gdouble coeff)
-{
-  const gdouble kd  = (gdouble) k;
-  const gdouble kp2 = kd + 2.0;
-
-  /* Three non-zero entries with rational function coefficients */
-  const gdouble value_0 = coeff * kd * (kd - 1.0) / (2.0 * (kd + 1.0));
-  const gdouble value_1 = coeff * kp2 * (kp2 * kp2 - 3.0) / ((kd + 1.0) * (kd + 3.0));
-  const gdouble value_2 = coeff * (kd + 4.0) * (kd + 5.0) / (2.0 * (kd + 3.0));
-
-  row->data[offset]     += value_0;
-  row->data[offset + 2] += value_1;
-  row->data[offset + 4] += value_2;
-}
-
 static gdouble
 _ncm_sbessel_bc_row (NcmSBesselOdeSolverRow *row, glong col_index)
 {
@@ -970,6 +622,7 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolv
   const glong k                           = row_index;
   const gdouble llp1                      = (gdouble) l * (l + 1);
   const glong left_col                    = GSL_MAX (0, k - 2); /* Leftmost column index */
+  gdouble * restrict row_data             = row->data;
 
   _row_reset (row, 0.0, 0.0, left_col);
 
@@ -977,18 +630,18 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolv
   const glong offset = k - row->col_index;
 
   /* Second derivative term: (m^2/h^2) d^2 + (2m/h) x d^2 + x^2 d^2 */
-  _ncm_sbessel_compute_d2_row (row, k, offset, m2 / h2);
-  _ncm_sbessel_compute_x_d2_row (row, k, offset, 2.0 * m / h);
-  _ncm_sbessel_compute_x2_d2_row (row, k, offset, 1.0);
+  ncm_spectral_compute_d2_row (row_data, k, offset, m2 / h2);
+  ncm_spectral_compute_x_d2_row (row_data, k, offset, 2.0 * m / h);
+  ncm_spectral_compute_x2_d2_row (row_data, k, offset, 1.0);
 
   /* First derivative term: (2m/h) d + 2 x d */
-  _ncm_sbessel_compute_d_row (row, offset, 2.0 * m / h);
-  _ncm_sbessel_compute_x_d_row (row, k, offset, 2.0);
+  ncm_spectral_compute_d_row (row_data, offset, 2.0 * m / h);
+  ncm_spectral_compute_x_d_row (row_data, k, offset, 2.0);
 
   /* Identity term: (m^2 - l(l+1)) I + 2m h x + h^2 x^2 */
-  _ncm_sbessel_compute_proj_row (row, k, offset, m2 - llp1);
-  _ncm_sbessel_compute_x_row (row, k, offset, 2.0 * m * h);
-  _ncm_sbessel_compute_x2_row (row, k, offset, h2);
+  ncm_spectral_compute_proj_row (row_data, k, offset, m2 - llp1);
+  ncm_spectral_compute_x_row (row_data, k, offset, 2.0 * m * h);
+  ncm_spectral_compute_x2_row (row_data, k, offset, h2);
 }
 
 /**
@@ -1038,25 +691,25 @@ _ncm_sbessel_create_row_operator_batched (NcmSBesselOdeSolver *solver, NcmSBesse
   const glong offset = k - row[0].col_index;
 
   /* Second derivative term: (m^2/h^2) d^2 + (2m/h) x d^2 + x^2 d^2 - l-independent */
-  _ncm_sbessel_compute_d2_row (&row[0], k, offset, m2 / h2);
-  _ncm_sbessel_compute_x_d2_row (&row[0], k, offset, 2.0 * m / h);
-  _ncm_sbessel_compute_x2_d2_row (&row[0], k, offset, 1.0);
+  ncm_spectral_compute_d2_row (row[0].data, k, offset, m2 / h2);
+  ncm_spectral_compute_x_d2_row (row[0].data, k, offset, 2.0 * m / h);
+  ncm_spectral_compute_x2_d2_row (row[0].data, k, offset, 1.0);
 
   /* First derivative term: (2m/h) d + 2 x d - l-independent */
-  _ncm_sbessel_compute_d_row (&row[0], offset, 2.0 * m / h);
-  _ncm_sbessel_compute_x_d_row (&row[0], k, offset, 2.0);
+  ncm_spectral_compute_d_row (row[0].data, offset, 2.0 * m / h);
+  ncm_spectral_compute_x_d_row (row[0].data, k, offset, 2.0);
 
   /* Identity term: 2m h x + h^2 x^2 - l-independent part */
-  _ncm_sbessel_compute_proj_row (&row[0], k, offset, m2 - llp1);
-  _ncm_sbessel_compute_x_row (&row[0], k, offset, 2.0 * m * h);
-  _ncm_sbessel_compute_x2_row (&row[0], k, offset, h2);
+  ncm_spectral_compute_proj_row (row[0].data, k, offset, m2 - llp1);
+  ncm_spectral_compute_x_row (row[0].data, k, offset, 2.0 * m * h);
+  ncm_spectral_compute_x2_row (row[0].data, k, offset, h2);
 
   /* Copy template to remaining rows and add incremental l-dependent correction */
   for (i = 1; i < n_l; i++)
   {
     l += 1.0;
     memcpy (&row[i], &row[i - 1], sizeof (NcmSBesselOdeSolverRow));
-    _ncm_sbessel_compute_proj_row (&row[i], k, offset, -2.0 * l);
+    ncm_spectral_compute_proj_row (row[i].data, k, offset, -2.0 * l);
   }
 }
 
@@ -2192,24 +1845,25 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
         const gdouble y_prime_b = y_prime_at_plus1 / h;
 
         /* Evaluate j_l at endpoints */
-        const gdouble j_l_a = gsl_sf_bessel_jl (l, a); /*j_array_a[l]; */
-        const gdouble j_l_b = gsl_sf_bessel_jl (l, b); /*j_array_b[l]; */
+        const gdouble j_l_a = j_array_a[l];
+        const gdouble j_l_b = j_array_b[l];
 
         /* Compute integral via Green's identity */
         const gdouble integral = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
 
         integral_error = fabs (b * b * j_l_b) * error_estimate + fabs (a * a * j_l_a) * error_estimate;
 
-        printf ("l = %4d, [%.2f, %.2f] (%6u), % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
-                l,
-                a, b,
-                sol_len,
-                y_prime_b, y_prime_a,
-                error_estimate,
-                b * b * j_l_b * y_prime_b, a * a * j_l_a * y_prime_a,
-                b * b * j_l_b * error_estimate, a * a * j_l_a * error_estimate,
-                integral, integral_error);
-
+/*
+ *       printf ("l = %4d, [%.2f, %.2f] (%6u), % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
+ *               l,
+ *               a, b,
+ *               sol_len,
+ *               y_prime_b, y_prime_a,
+ *               error_estimate,
+ *               b * b * j_l_b * y_prime_b, a * a * j_l_a * y_prime_a,
+ *               b * b * j_l_b * error_estimate, a * a * j_l_a * error_estimate,
+ *               integral, integral_error);
+ */
 
         /* Store result */
         result_data[l - lmin] = integral;
@@ -2363,325 +2017,5 @@ ncm_sbessel_ode_solver_get_rational_rhs (NcmSBesselOdeSolver *solver, gdouble ce
   ncm_spectral_compute_chebyshev_coeffs (self->spectral, rational_func, a_scaled, b_scaled, cheb_coeffs, &data);
 
   return cheb_coeffs;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_proj_matrix:
- * @N: size of the matrix
- *
- * Returns the projection (identity) operator matrix that transforms Chebyshev $T_n$
- * coefficients to Gegenbauer $C^{(2)}_k$ coefficients.
- *
- * Returns: (transfer full): the projection operator matrix
- */
-NcmMatrix *
-ncm_sbessel_ode_solver_get_proj_matrix (guint N)
-{
-  NcmSBesselOdeSolverRow *row = g_new0 (NcmSBesselOdeSolverRow, 1);
-  NcmMatrix *mat              = ncm_matrix_new (N, N);
-  guint k;
-
-  ncm_matrix_set_zero (mat);
-
-  for (k = 0; k < N; k++)
-  {
-    const glong left_col = k;
-
-    _row_reset (row, 0.0, 0.0, left_col);
-
-    _ncm_sbessel_compute_proj_row (row, k, k - left_col, 1.0);
-
-    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
-    {
-      const glong col = row->col_index + j;
-
-      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
-        ncm_matrix_set (mat, k, col, row->data[j]);
-    }
-  }
-
-  g_free (row);
-
-  return mat;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_x_matrix:
- * @N: size of the matrix
- *
- * Returns the multiplication by $x$ operator matrix that transforms Chebyshev $T_n$
- * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x \cdot f(x)$.
- *
- * Returns: (transfer full): the $x$ operator matrix
- */
-NcmMatrix *
-ncm_sbessel_ode_solver_get_x_matrix (guint N)
-{
-  NcmSBesselOdeSolverRow *row = g_new0 (NcmSBesselOdeSolverRow, 1);
-  NcmMatrix *mat              = ncm_matrix_new (N, N);
-  guint k;
-
-  ncm_matrix_set_zero (mat);
-
-  for (k = 0; k < N; k++)
-  {
-    const glong left_col = (k >= 1) ? (k - 1) : 0;
-
-    _row_reset (row, 0.0, 0.0, left_col);
-
-    _ncm_sbessel_compute_x_row (row, k, k - left_col, 1.0);
-
-    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
-    {
-      const glong col = row->col_index + j;
-
-      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
-        ncm_matrix_set (mat, k, col, row->data[j]);
-    }
-  }
-
-  g_free (row);
-
-  return mat;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_x2_matrix:
- * @N: size of the matrix
- *
- * Returns the multiplication by $x^2$ operator matrix that transforms Chebyshev $T_n$
- * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x^2 \cdot f(x)$.
- *
- * Returns: (transfer full): the $x^2$ operator matrix
- */
-NcmMatrix *
-ncm_sbessel_ode_solver_get_x2_matrix (guint N)
-{
-  NcmSBesselOdeSolverRow *row = g_new0 (NcmSBesselOdeSolverRow, 1);
-  NcmMatrix *mat              = ncm_matrix_new (N, N);
-  guint k;
-
-  ncm_matrix_set_zero (mat);
-
-  for (k = 0; k < N; k++)
-  {
-    const glong left_col = (k >= 2) ? (k - 2) : 0;
-
-    _row_reset (row, 0.0, 0.0, left_col);
-
-    _ncm_sbessel_compute_x2_row (row, k, k - left_col, 1.0);
-
-    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
-    {
-      const glong col = row->col_index + j;
-
-      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
-        ncm_matrix_set (mat, k, col, row->data[j]);
-    }
-  }
-
-  g_free (row);
-
-  return mat;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_d_matrix:
- * @N: size of the matrix
- *
- * Returns the derivative operator matrix that transforms Chebyshev $T_n$
- * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $\frac{df}{dx}$.
- *
- * Returns: (transfer full): the derivative operator matrix
- */
-NcmMatrix *
-ncm_sbessel_ode_solver_get_d_matrix (guint N)
-{
-  NcmSBesselOdeSolverRow *row = g_new0 (NcmSBesselOdeSolverRow, 1);
-  NcmMatrix *mat              = ncm_matrix_new (N, N);
-  guint k;
-
-  ncm_matrix_set_zero (mat);
-
-  for (k = 0; k < N; k++)
-  {
-    const glong left_col = k + 1;
-
-    _row_reset (row, 0.0, 0.0, left_col);
-
-    _ncm_sbessel_compute_d_row (row, k - left_col, 1.0);
-
-    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
-    {
-      const glong col = row->col_index + j;
-
-      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
-        ncm_matrix_set (mat, k, col, row->data[j]);
-    }
-  }
-
-  g_free (row);
-
-  return mat;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_x_d_matrix:
- * @N: size of the matrix
- *
- * Returns the $x \cdot \frac{d}{dx}$ operator matrix that transforms Chebyshev $T_n$
- * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x \cdot \frac{df}{dx}$.
- *
- * Returns: (transfer full): the $x \cdot d$ operator matrix
- */
-NcmMatrix *
-ncm_sbessel_ode_solver_get_x_d_matrix (guint N)
-{
-  NcmSBesselOdeSolverRow *row = g_new0 (NcmSBesselOdeSolverRow, 1);
-  NcmMatrix *mat              = ncm_matrix_new (N, N);
-  guint k;
-
-  ncm_matrix_set_zero (mat);
-
-  for (k = 0; k < N; k++)
-  {
-    const glong left_col = k;
-
-    _row_reset (row, 0.0, 0.0, left_col);
-
-    _ncm_sbessel_compute_x_d_row (row, k, k - left_col, 1.0);
-
-    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
-    {
-      const glong col = row->col_index + j;
-
-      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
-        ncm_matrix_set (mat, k, col, row->data[j]);
-    }
-  }
-
-  g_free (row);
-
-  return mat;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_d2_matrix:
- * @N: size of the matrix
- *
- * Returns the second derivative operator matrix that transforms Chebyshev $T_n$
- * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $\frac{d^2f}{dx^2}$.
- *
- * Returns: (transfer full): the second derivative operator matrix
- */
-NcmMatrix *
-ncm_sbessel_ode_solver_get_d2_matrix (guint N)
-{
-  NcmSBesselOdeSolverRow *row = g_new0 (NcmSBesselOdeSolverRow, 1);
-  NcmMatrix *mat              = ncm_matrix_new (N, N);
-  guint k;
-
-  ncm_matrix_set_zero (mat);
-
-  for (k = 0; k < N; k++)
-  {
-    const glong left_col = k + 2;
-
-    _row_reset (row, 0.0, 0.0, left_col);
-
-    _ncm_sbessel_compute_d2_row (row, k, k - left_col, 1.0);
-
-    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
-    {
-      const glong col = row->col_index + j;
-
-      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
-        ncm_matrix_set (mat, k, col, row->data[j]);
-    }
-  }
-
-  g_free (row);
-
-  return mat;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_x_d2_matrix:
- * @N: size of the matrix
- *
- * Returns the $x \cdot \frac{d^2}{dx^2}$ operator matrix that transforms Chebyshev $T_n$
- * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x \cdot \frac{d^2f}{dx^2}$.
- *
- * Returns: (transfer full): the $x \cdot d^2$ operator matrix
- */
-NcmMatrix *
-ncm_sbessel_ode_solver_get_x_d2_matrix (guint N)
-{
-  NcmSBesselOdeSolverRow *row = g_new0 (NcmSBesselOdeSolverRow, 1);
-  NcmMatrix *mat              = ncm_matrix_new (N, N);
-  guint k;
-
-  ncm_matrix_set_zero (mat);
-
-  for (k = 0; k < N; k++)
-  {
-    const glong left_col = k + 1;
-
-    _row_reset (row, 0.0, 0.0, left_col);
-
-    _ncm_sbessel_compute_x_d2_row (row, k, k - left_col, 1.0);
-
-    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
-    {
-      const glong col = row->col_index + j;
-
-      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
-        ncm_matrix_set (mat, k, col, row->data[j]);
-    }
-  }
-
-  g_free (row);
-
-  return mat;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_x2_d2_matrix:
- * @N: size of the matrix
- *
- * Returns the $x^2 \cdot \frac{d^2}{dx^2}$ operator matrix that transforms Chebyshev $T_n$
- * coefficients of $f(x)$ to Gegenbauer $C^{(2)}_k$ coefficients of $x^2 \cdot \frac{d^2f}{dx^2}$.
- *
- * Returns: (transfer full): the $x^2 \cdot d^2$ operator matrix
- */
-NcmMatrix *
-ncm_sbessel_ode_solver_get_x2_d2_matrix (guint N)
-{
-  NcmSBesselOdeSolverRow *row = g_new0 (NcmSBesselOdeSolverRow, 1);
-  NcmMatrix *mat              = ncm_matrix_new (N, N);
-  guint k;
-
-  ncm_matrix_set_zero (mat);
-
-  for (k = 0; k < N; k++)
-  {
-    const glong left_col = k;
-
-    _row_reset (row, 0.0, 0.0, left_col);
-
-    _ncm_sbessel_compute_x2_d2_row (row, k, k - left_col, 1.0);
-
-    for (guint j = 0; j < TOTAL_BANDWIDTH; j++)
-    {
-      const glong col = row->col_index + j;
-
-      if ((col >= 0) && (col < (glong) N) && (fabs (row->data[j]) > 1.0e-100))
-        ncm_matrix_set (mat, k, col, row->data[j]);
-    }
-  }
-
-  g_free (row);
-
-  return mat;
 }
 
