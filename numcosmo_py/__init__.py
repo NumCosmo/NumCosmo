@@ -27,6 +27,7 @@ from enum import Enum, StrEnum, auto
 import re
 from typing import Dict, Union, Sequence, Iterator, cast
 import gi
+import numpy as np
 
 gi.require_version("NumCosmo", "1.0")
 gi.require_version("NumCosmoMath", "1.0")
@@ -56,6 +57,22 @@ __all__ = [
 
 Ncm.cfg_register_objects()
 Ncm.cfg_register_functions()
+
+
+def matrix_to_numpy(ncm_mat: Ncm.Matrix) -> np.ndarray:
+    """Convert NcmMatrix to numpy array."""
+    nrows = ncm_mat.nrows()
+    ncols = ncm_mat.ncols()
+    return np.array(ncm_mat.dup_array()).reshape(nrows, ncols)
+
+
+def vector_to_numpy(ncm_vec: Ncm.Vector) -> np.ndarray:
+    """Convert NcmVector to numpy array."""
+    return np.array(ncm_vec.dup_array())
+
+
+Ncm.Vector.to_numpy = vector_to_numpy  # type: ignore
+Ncm.Matrix.to_numpy = matrix_to_numpy  # type: ignore
 
 
 class GEnum(StrEnum):
