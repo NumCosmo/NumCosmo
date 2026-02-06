@@ -331,80 +331,32 @@ ncm_sf_sbessel_array_clear (NcmSFSBesselArray **sba)
   g_clear_object (sba);
 }
 
-static inline gdouble
-_ncm_sf_sbessel_asymptotic_3 (gint ell, gdouble x)
-{
-  const gdouble x_inv  = 1.0 / x;
-  const gdouble x_inv2 = x_inv * x_inv;
-  const gdouble x_inv3 = x_inv2 * x_inv;
-
-  const gdouble llp1 = (gdouble) ell * (ell + 1);
-
-  const gdouble a1 = 0.5 * llp1;
-  const gdouble a2 = 0.125 * llp1 * (llp1 - 2.0);
-  const gdouble a3 = (1.0 / 48.0) * llp1 * (llp1 - 2.0) * (llp1 - 6.0);
-
-  const gdouble phi = x - 0.5 * G_PI * ell;
-  const gdouble s   = sin (phi);
-  const gdouble c   = cos (phi);
-
-  return x_inv * (s
-                  - a1 * x_inv  * c
-                  - a2 * x_inv2 * s
-                  + a3 * x_inv3 * c);
-}
-
 static void
-_ncm_sf_sbessel_array_eval_asymptotic (gint lmax, gdouble x, gdouble *jl_x)
+sbessel_upward (gint lmax, gdouble x, gdouble *jl)
 {
   const gdouble x_inv = 1.0 / x;
-  gint L;
+  const gdouble s     = sin (x);
+  const gdouble c     = cos (x);
+  gint l;
 
-  /* seed top two values */
-  jl_x[lmax] = ncm_sf_sbessel (lmax, x);
+  jl[0] = s * x_inv;
 
-  if (lmax > 0)
-    jl_x[lmax - 1] = ncm_sf_sbessel (lmax - 1, x);
+  if (lmax == 0)
+    return;
 
-  /* downward recurrence */
-  if (lmax > 1)
-  {
-    gdouble PL  = lmax * x_inv;
-    gdouble XP2 = jl_x[lmax];
-    gdouble FP;
-    gint LL = lmax;
+  jl[1] = jl[0] * x_inv - c * x_inv;
 
-#pragma GCC unroll 4
-
-    for ( ; LL > 1; --LL)
-    {
-      jl_x[LL - 1] = PL * jl_x[LL] + XP2;
-      FP           = PL * jl_x[LL - 1] - jl_x[LL];
-      XP2          = FP;
-      PL          -= x_inv;
-    }
-  }
-
-  /* normalization using j0 */
-  {
-    const gdouble norm = fabs (jl_x[0]);
-
-    if (norm > 0.0)
-    {
-      const gdouble W = x_inv / norm;
-
-      for (L = 0; L <= lmax; ++L)
-        jl_x[L] *= W;
-    }
-  }
+  for (l = 1; l < lmax; ++l)
+    jl[l + 1] = ((2.0 * l + 1.0) * x_inv) * jl[l] - jl[l - 1];
 }
 
 /**
- * ncm_sf_sbessel_array_eval:
+ * ncm_sf_sbessel_array_eval: (skip)
  * @sba: a #NcmSFSBesselArray
  * @ell: maximum l value to compute (must be <= lmax)
  * @x: argument value
- * @jl_x: (out) (array) (transfer none): output array of size (ell+1) for j_l(x) values
+ * @jl_x: output array of size (ell+1) for j_l(x) values
+ *
  *
  * Computes spherical Bessel functions j_l(x) for l = 0 to min(ell, lmax, cutoff(x))
  * using the Steed/Barnett algorithm with automatic cutoff for numerical stability.
@@ -418,7 +370,6 @@ ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble
   g_return_if_fail (NCM_IS_SF_SBESSEL_ARRAY (sba));
   g_return_if_fail (ell <= sba->lmax);
   g_return_if_fail (jl_x != NULL);
-
   /* Initialize output array to zero */
   memset (jl_x, 0, sizeof (gdouble) * (ell + 1));
 
@@ -448,22 +399,21 @@ ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble
 
     return;
   }
-  else if ((x > (gdouble) (lmax + 1.0)) && FALSE)
+  else if (x > (gdouble) (lmax + 1.0))
   {
-    /* Use asymptotic expansion for large x */
-    _ncm_sf_sbessel_array_eval_asymptotic (lmax, x, jl_x);
+    sbessel_upward (lmax, x, jl_x);
   }
   else
   {
     /* Steed/Barnett algorithm [Comp. Phys. Comm. 21, 297 (1981)] */
-    gdouble x_inv = 1.0 / x;
-    gdouble W     = 2.0 * x_inv;
-    gdouble F     = 1.0;
-    gdouble FP    = (lmax + 1.0) * x_inv;
-    gdouble B     = 2.0 * FP + x_inv;
-    gdouble end   = B + 20000.0 * W;
-    gdouble D     = 1.0 / B;
-    gdouble del   = -D;
+    const gdouble x_inv = 1.0 / x;
+    gdouble W           = 2.0 * x_inv;
+    gdouble F           = 1.0;
+    gdouble FP          = (lmax + 1.0) * x_inv;
+    gdouble B           = 2.0 * FP + x_inv;
+    gdouble end         = B + 20000.0 * W;
+    gdouble D           = 1.0 / B;
+    gdouble del         = -D;
 
     FP += del;
 
@@ -526,6 +476,31 @@ ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble
 
     return;
   }
+}
+
+/**
+ * ncm_sf_sbessel_array_eval1:
+ * @sba: a #NcmSFSBesselArray
+ * @ell: maximum l value to compute (must be <= lmax)
+ * @x: argument value
+ *
+ * Convenience wrapper around ncm_sf_sbessel_array_eval that returns results in a new
+ * GArray. The GArray is allocated with the appropriate size and contains the j_l(x)
+ * values for l = 0 to min(ell, lmax, cutoff(x)). Values beyond the cutoff are set to
+ * zero.
+ *
+ * Returns: (transfer full) (element-type gdouble): a new GArray containing j_l(x) values for l = 0 to min(ell, lmax, cutoff(x)).
+ */
+GArray *
+ncm_sf_sbessel_array_eval1 (NcmSFSBesselArray *sba, guint ell, gdouble x)
+{
+  GArray *ret = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  g_array_set_size (ret, ell + 1);
+
+  ncm_sf_sbessel_array_eval (sba, ell, x, &g_array_index (ret, gdouble, 0));
+
+  return ret;
 }
 
 /**

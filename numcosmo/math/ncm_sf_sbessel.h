@@ -43,6 +43,7 @@ void ncm_sf_sbessel_array_free (NcmSFSBesselArray *sba);
 void ncm_sf_sbessel_array_clear (NcmSFSBesselArray **sba);
 
 void ncm_sf_sbessel_array_eval (NcmSFSBesselArray *sba, guint ell, gdouble x, gdouble *jl_x);
+GArray *ncm_sf_sbessel_array_eval1 (NcmSFSBesselArray *sba, guint ell, gdouble x);
 guint ncm_sf_sbessel_array_eval_ell_cutoff (NcmSFSBesselArray *sba, gdouble x);
 guint ncm_sf_sbessel_array_get_lmax (NcmSFSBesselArray *sba);
 gdouble ncm_sf_sbessel_array_get_threshold (NcmSFSBesselArray *sba);
