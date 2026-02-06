@@ -41,9 +41,9 @@ class TestSpectral:
         """Convert NcmVector to numpy array."""
         return np.array(ncm_vec.dup_array())
 
-    @pytest.fixture
-    def solver(self) -> Ncm.Spectral:
-        """Create an ODE solver with l=1."""
+    @pytest.fixture(name="spectral")
+    def fixture_spectral(self) -> Ncm.Spectral:
+        """Create an ODE spectral with l=1."""
         return Ncm.Spectral.new()
 
     def test_chebT_to_gegenbauer_alpha1_basic(self) -> None:
@@ -203,10 +203,9 @@ class TestSpectral:
             expected = 4.0 * x
             assert_allclose(result, expected, rtol=1.0e-14)
 
-    def test_compute_chebyshev_coeffs_constant(self) -> None:
+    def test_compute_chebyshev_coeffs_constant(self, spectral: Ncm.Spectral) -> None:
         """Test computing Chebyshev coefficients for constant function."""
         N = 16
-        spectral = Ncm.Spectral.new()
 
         def f_constant(_user_data, _x):
             return 1.0
@@ -219,10 +218,9 @@ class TestSpectral:
         assert_allclose(coeffs_np[0], 1.0, rtol=1.0e-12)
         assert_allclose(coeffs_np[1:], 0.0, rtol=1.0e-12, atol=1.0e-12)
 
-    def test_compute_chebyshev_coeffs_linear(self) -> None:
+    def test_compute_chebyshev_coeffs_linear(self, spectral: Ncm.Spectral) -> None:
         """Test computing Chebyshev coefficients for linear function."""
         N = 16
-        spectral = Ncm.Spectral.new()
 
         def f_linear(_user_data, x):
             return x
@@ -236,10 +234,9 @@ class TestSpectral:
         assert_allclose(coeffs_np[1], 1.0, rtol=1.0e-12)
         assert_allclose(coeffs_np[2:], 0.0, rtol=1.0e-12, atol=1.0e-12)
 
-    def test_compute_chebyshev_coeffs_quadratic(self) -> None:
+    def test_compute_chebyshev_coeffs_quadratic(self, spectral: Ncm.Spectral) -> None:
         """Test computing Chebyshev coefficients for quadratic function."""
         N = 16
-        spectral = Ncm.Spectral.new()
 
         def f_quadratic(_user_data, x):
             return x * x
@@ -254,10 +251,9 @@ class TestSpectral:
         assert_allclose(coeffs_np[2], 0.5, rtol=1.0e-11)
         assert_allclose(coeffs_np[3:], 0.0, rtol=1.0e-12, atol=1.0e-12)
 
-    def test_compute_chebyshev_coeffs_gaussian(self) -> None:
+    def test_compute_chebyshev_coeffs_gaussian(self, spectral: Ncm.Spectral) -> None:
         """Test computing Chebyshev coefficients for Gaussian function."""
         N = 64
-        spectral = Ncm.Spectral.new()
 
         def f_gaussian(_user_data, x):
             return np.exp(-x * x)
@@ -277,10 +273,9 @@ class TestSpectral:
                 err_msg=f"Gaussian evaluation at x={x} doesn't match",
             )
 
-    def test_gaussian_derivative(self) -> None:
+    def test_gaussian_derivative(self, spectral: Ncm.Spectral) -> None:
         """Test derivative of Gaussian function."""
         N = 64
-        spectral = Ncm.Spectral.new()
 
         def f_gaussian(_user_data, x):
             return np.exp(-x * x)
@@ -301,10 +296,9 @@ class TestSpectral:
                 err_msg=f"Gaussian derivative at x={x} doesn't match",
             )
 
-    def test_rational_function(self) -> None:
+    def test_rational_function(self, spectral: Ncm.Spectral) -> None:
         """Test with rational function x^2/(1+x^2)^4."""
         N = 64
-        spectral = Ncm.Spectral.new()
 
         def f_rational(_user_data, x):
             return (x * x) / ((1.0 + x * x) ** 4)
@@ -325,10 +319,9 @@ class TestSpectral:
                 err_msg=f"Rational function evaluation at x={x} doesn't match",
             )
 
-    def test_rational_derivative(self) -> None:
+    def test_rational_derivative(self, spectral: Ncm.Spectral) -> None:
         """Test derivative of rational function."""
         N = 64
-        spectral = Ncm.Spectral.new()
 
         def f_rational(_user_data, x):
             return (x * x) / ((1.0 + x * x) ** 4)
@@ -352,10 +345,9 @@ class TestSpectral:
                 err_msg=f"Rational derivative at x={x} doesn't match",
             )
 
-    def test_chebyshev_eval_endpoints(self) -> None:
+    def test_chebyshev_eval_endpoints(self, spectral: Ncm.Spectral) -> None:
         """Test that Chebyshev evaluation handles endpoints correctly."""
         N = 32
-        spectral = Ncm.Spectral.new()
 
         # Use a simple smooth function
         def f_test(_user_data, x):
@@ -373,10 +365,9 @@ class TestSpectral:
         expected_p1 = 1.0 + 1.0 + 1.0
         assert_allclose(result_p1, expected_p1, rtol=1.0e-12)
 
-    def test_chebyshev_deriv_endpoints(self) -> None:
+    def test_chebyshev_deriv_endpoints(self, spectral: Ncm.Spectral) -> None:
         """Test that Chebyshev derivative handles endpoints correctly."""
         N = 32
-        spectral = Ncm.Spectral.new()
 
         # Use f(x) = x^3, f'(x) = 3x^2
         def f_cubic(_user_data, x):
@@ -394,10 +385,9 @@ class TestSpectral:
         expected_p1 = 3.0 * 1.0
         assert_allclose(result_p1, expected_p1, rtol=1.0e-11)
 
-    def test_different_intervals(self) -> None:
+    def test_different_intervals(self, spectral: Ncm.Spectral) -> None:
         """Test computing Chebyshev coefficients on different intervals."""
         N = 32
-        spectral = Ncm.Spectral.new()
 
         def f_test(_user_data, x):
             return x * x
@@ -414,9 +404,8 @@ class TestSpectral:
             expected = x * x
             assert_allclose(eval_result, expected, rtol=1.0e-11)
 
-    def test_spectral_cache(self) -> None:
+    def test_spectral_cache(self, spectral: Ncm.Spectral) -> None:
         """Test that spectral caching works correctly."""
-        spectral = Ncm.Spectral.new()
 
         def f_test(_user_data, x):
             return np.sin(x)
@@ -545,7 +534,7 @@ class TestSpectral:
     @pytest.mark.parametrize("power", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     @pytest.mark.parametrize("N", [16, 32, 64, 128])
     def test_chebyshev_coeffs_polynomials(
-        self, solver: Ncm.Spectral, power: int, N: int
+        self, spectral: Ncm.Spectral, power: int, N: int
     ) -> None:
         """
         Test Chebyshev coefficient computation for x^power.
@@ -560,7 +549,7 @@ class TestSpectral:
 
         # Compute Chebyshev coefficients
         coeffs_vec = Ncm.Vector.new(N)
-        solver.compute_chebyshev_coeffs(f_power, -1.0, 1.0, coeffs_vec, None)
+        spectral.compute_chebyshev_coeffs(f_power, -1.0, 1.0, coeffs_vec, None)
         coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
 
         # Get analytical coefficients
@@ -644,7 +633,7 @@ class TestSpectral:
         return coeffs_full[:N]
 
     @pytest.mark.parametrize("N", [32, 64, 128])
-    def test_chebyshev_coeffs_exp(self, solver: Ncm.Spectral, N: int) -> None:
+    def test_chebyshev_coeffs_exp(self, spectral: Ncm.Spectral, N: int) -> None:
         """
         Test Chebyshev coefficient computation for exp(x).
 
@@ -658,7 +647,7 @@ class TestSpectral:
 
         # Compute Chebyshev coefficients
         coeffs_vec = Ncm.Vector.new(N)
-        solver.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, coeffs_vec, None)
+        spectral.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, coeffs_vec, None)
         coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
 
         # Get analytical coefficients
@@ -670,12 +659,12 @@ class TestSpectral:
                 coeffs[i],
                 analytical[i],
                 rtol=1.0e-10,
-                atol=1.0e-14,
+                atol=1.0e-15,
                 err_msg=f"Mismatch at coefficient {i} for exp(x) with N={N}",
             )
 
     @pytest.mark.parametrize("N", [32, 64, 128])
-    def test_chebyshev_coeffs_cos(self, solver: Ncm.Spectral, N: int) -> None:
+    def test_chebyshev_coeffs_cos(self, spectral: Ncm.Spectral, N: int) -> None:
         """
         Test Chebyshev coefficient computation for cos(x).
 
@@ -689,7 +678,7 @@ class TestSpectral:
 
         # Compute Chebyshev coefficients
         coeffs_vec = Ncm.Vector.new(N)
-        solver.compute_chebyshev_coeffs(f_cos, -1.0, 1.0, coeffs_vec, None)
+        spectral.compute_chebyshev_coeffs(f_cos, -1.0, 1.0, coeffs_vec, None)
         coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
 
         # Get analytical coefficients
@@ -701,12 +690,12 @@ class TestSpectral:
                 coeffs[i],
                 analytical[i],
                 rtol=1.0e-10,
-                atol=1.0e-14,
+                atol=1.0e-15,
                 err_msg=f"Mismatch at coefficient {i} for cos(x) with N={N}",
             )
 
     @pytest.mark.parametrize("N", [32, 64, 128])
-    def test_chebyshev_coeffs_rational(self, solver: Ncm.Spectral, N: int) -> None:
+    def test_chebyshev_coeffs_rational(self, spectral: Ncm.Spectral, N: int) -> None:
         """
         Test Chebyshev coefficient computation for 1/(2-x).
 
@@ -719,7 +708,7 @@ class TestSpectral:
 
         # Compute Chebyshev coefficients
         coeffs_vec = Ncm.Vector.new(N)
-        solver.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, coeffs_vec, None)
+        spectral.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, coeffs_vec, None)
         coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
 
         # Get analytical coefficients (computed numerically with high precision)
@@ -731,7 +720,7 @@ class TestSpectral:
                 coeffs[i],
                 analytical[i],
                 rtol=1.0e-9,
-                atol=1.0e-14,
+                atol=1.0e-15,
                 err_msg=f"Mismatch at coefficient {i} for 1/(2-x) with N={N}",
             )
 
@@ -761,7 +750,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-12,
-                atol=1.0e-14,
+                atol=1.0e-15,
                 err_msg=f"Chebyshev eval mismatch at x={x} with N={N}",
             )
 
@@ -792,12 +781,12 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-12,
+                atol=1.0e-15,
                 err_msg=f"Chebyshev deriv mismatch for x^{power} at x={x} with N={N}",
             )
 
     @pytest.mark.parametrize("N", [32, 64])
-    def test_chebyshev_deriv_exp(self, solver: Ncm.Spectral, N: int) -> None:
+    def test_chebyshev_deriv_exp(self, spectral: Ncm.Spectral, N: int) -> None:
         """
         Test Chebyshev derivative for exp(x).
 
@@ -810,7 +799,7 @@ class TestSpectral:
 
         # Compute Chebyshev coefficients
         coeffs_vec = Ncm.Vector.new(N)
-        solver.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, coeffs_vec, None)
+        spectral.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, coeffs_vec, None)
 
         # Test derivative at multiple points
         x_points = np.linspace(-0.95, 0.95, 19)
@@ -826,12 +815,12 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-9,
-                atol=1.0e-12,
+                atol=1.0e-15,
                 err_msg=f"Chebyshev deriv mismatch for exp(x) at x={x} with N={N}",
             )
 
     @pytest.mark.parametrize("N", [32, 64])
-    def test_chebyshev_deriv_sin(self, solver: Ncm.Spectral, N: int) -> None:
+    def test_chebyshev_deriv_sin(self, spectral: Ncm.Spectral, N: int) -> None:
         """
         Test Chebyshev derivative for sin(x).
 
@@ -844,7 +833,7 @@ class TestSpectral:
 
         # Compute Chebyshev coefficients
         coeffs_vec = Ncm.Vector.new(N)
-        solver.compute_chebyshev_coeffs(f_sin, -1.0, 1.0, coeffs_vec, None)
+        spectral.compute_chebyshev_coeffs(f_sin, -1.0, 1.0, coeffs_vec, None)
 
         # Test derivative at multiple points
         x_points = np.linspace(-0.95, 0.95, 19)
@@ -860,7 +849,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-9,
-                atol=1.0e-12,
+                atol=1.0e-15,
                 err_msg=f"Chebyshev deriv mismatch for sin(x) at x={x} with N={N}",
             )
 
@@ -894,19 +883,19 @@ class TestSpectral:
 
         x_test = 0.5
         result = Ncm.Spectral.chebyshev_deriv(linear_vec, x_test)
-        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-14)
+        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
 
         # Test at x=0
         result = Ncm.Spectral.chebyshev_deriv(linear_vec, 0.0)
-        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-14)
+        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
 
         # Test at x=1
         result = Ncm.Spectral.chebyshev_deriv(linear_vec, 1.0)
-        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-14)
+        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
 
         # Test at x=-1
         result = Ncm.Spectral.chebyshev_deriv(linear_vec, -1.0)
-        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-14)
+        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
 
     @pytest.mark.parametrize("power", [0, 1, 2, 3, 4, 5])
     @pytest.mark.parametrize("N", [32])
@@ -928,7 +917,7 @@ class TestSpectral:
             result_p1,
             expected_p1,
             rtol=1.0e-10,
-            atol=1.0e-12,
+            atol=1.0e-15,
             err_msg=f"Derivative of x^{power} at x=1 failed",
         )
 
@@ -939,7 +928,7 @@ class TestSpectral:
             result_m1,
             expected_m1,
             rtol=1.0e-10,
-            atol=1.0e-12,
+            atol=1.0e-15,
             err_msg=f"Derivative of x^{power} at x=-1 failed",
         )
 
@@ -968,7 +957,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-12,
+                atol=1.0e-13,
                 err_msg=f"Derivative of T_{n} failed at x={x}",
             )
 
@@ -995,7 +984,7 @@ class TestSpectral:
                 d_cheb,
                 d_numeric,
                 rtol=1.0e-6,
-                atol=1.0e-8,
+                atol=1.0e-15,
                 err_msg=f"Alternating coeff derivative mismatch at x={x}",
             )
 
@@ -1022,7 +1011,7 @@ class TestSpectral:
                 d_cheb,
                 d_numeric,
                 rtol=1.0e-6,
-                atol=1.0e-8,
+                atol=1.0e-15,
                 err_msg=f"Random coeff derivative mismatch at x={x}",
             )
 
@@ -1045,7 +1034,7 @@ class TestSpectral:
             result_p1,
             n * n,
             rtol=0.0,
-            atol=1.0e-12,
+            atol=1.0e-15,
             err_msg=f"T_{n}'(1) failed",
         )
 
@@ -1056,7 +1045,7 @@ class TestSpectral:
             result_m1,
             expected_m1,
             rtol=0.0,
-            atol=1.0e-12,
+            atol=1.0e-15,
             err_msg=f"T_{n}'(-1) failed",
         )
 
@@ -1094,7 +1083,7 @@ class TestSpectral:
                 cheb_val,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-12,
+                atol=1.0e-15,
                 err_msg=f"Chebyshev eval failed for x^{power} at x={x}",
             )
 
@@ -1102,7 +1091,7 @@ class TestSpectral:
                 gegen_val,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-12,
+                atol=1.0e-15,
                 err_msg=f"Gegenbauer alpha=1 eval failed for x^{power} at x={x}",
             )
 
@@ -1140,7 +1129,7 @@ class TestSpectral:
                 cheb_val,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-12,
+                atol=1.0e-15,
                 err_msg=f"Chebyshev eval failed for x^{power} at x={x}",
             )
 
@@ -1148,7 +1137,7 @@ class TestSpectral:
                 gegen_val,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-12,
+                atol=1.0e-15,
                 err_msg=f"Gegenbauer alpha=2 eval failed for x^{power} at x={x}",
             )
 
@@ -1184,12 +1173,12 @@ class TestSpectral:
                     result,
                     expected,
                     rtol=1.0e-10,
-                    atol=1.0e-12,
+                    atol=1.0e-15,
                     err_msg=f"Gegenbauer C_{n}^({alpha_val}) mismatch at x={x}",
                 )
 
     @pytest.mark.parametrize("N", [32, 64])
-    def test_gegenbauer_roundtrip(self, solver: Ncm.Spectral, N: int) -> None:
+    def test_gegenbauer_roundtrip(self, spectral: Ncm.Spectral, N: int) -> None:
         """
         Test round-trip conversion: function -> Chebyshev -> Gegenbauer -> evaluation.
 
@@ -1201,7 +1190,7 @@ class TestSpectral:
 
         # Compute Chebyshev coefficients
         coeffs_vec = Ncm.Vector.new(N)
-        solver.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, coeffs_vec, None)
+        spectral.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, coeffs_vec, None)
 
         # Convert to Gegenbauer alpha=1
         gegen1_vec = Ncm.Vector.new(N)
@@ -1231,7 +1220,7 @@ class TestSpectral:
                 cheb_val,
                 expected,
                 rtol=1.0e-8,
-                atol=1.0e-10,
+                atol=1.0e-15,
                 err_msg=f"Chebyshev roundtrip failed for exp(x) at x={x}",
             )
 
@@ -1239,7 +1228,7 @@ class TestSpectral:
                 gegen1_val,
                 expected,
                 rtol=1.0e-8,
-                atol=1.0e-10,
+                atol=1.0e-15,
                 err_msg=f"Gegenbauer alpha=1 roundtrip failed for exp(x) at x={x}",
             )
 
@@ -1247,7 +1236,7 @@ class TestSpectral:
                 gegen2_val,
                 expected,
                 rtol=1.0e-8,
-                atol=1.0e-10,
+                atol=1.0e-15,
                 err_msg=f"Gegenbauer alpha=2 roundtrip failed for exp(x) at x={x}",
             )
 
@@ -1270,7 +1259,7 @@ class TestSpectral:
             result_p1,
             expected_p1,
             rtol=1.0e-12,
-            atol=1.0e-14,
+            atol=1.0e-15,
             err_msg=f"Chebyshev eval of x^{power} at x=1 failed",
         )
 
@@ -1281,7 +1270,7 @@ class TestSpectral:
             result_m1,
             expected_m1,
             rtol=1.0e-12,
-            atol=1.0e-14,
+            atol=1.0e-15,
             err_msg=f"Chebyshev eval of x^{power} at x=-1 failed",
         )
 
@@ -1308,7 +1297,7 @@ class TestSpectral:
             result_p1,
             expected_p1,
             rtol=1.0e-12,
-            atol=1.0e-14,
+            atol=1.0e-15,
             err_msg=f"Gegenbauer alpha=1 eval of x^{power} at x=1 failed",
         )
 
@@ -1319,7 +1308,7 @@ class TestSpectral:
             result_m1,
             expected_m1,
             rtol=1.0e-12,
-            atol=1.0e-14,
+            atol=1.0e-15,
             err_msg=f"Gegenbauer alpha=1 eval of x^{power} at x=-1 failed",
         )
 
@@ -1346,7 +1335,7 @@ class TestSpectral:
             result_p1,
             expected_p1,
             rtol=1.0e-12,
-            atol=1.0e-14,
+            atol=1.0e-15,
             err_msg=f"Gegenbauer alpha=2 eval of x^{power} at x=1 failed",
         )
 
@@ -1357,6 +1346,813 @@ class TestSpectral:
             result_m1,
             expected_m1,
             rtol=1.0e-12,
-            atol=1.0e-14,
+            atol=1.0e-15,
             err_msg=f"Gegenbauer alpha=2 eval of x^{power} at x=-1 failed",
         )
+
+    def test_proj_matrix_identity(self) -> None:
+        """Test that projection matrix correctly converts x^2 to Gegenbauer."""
+        N = 32
+
+        # Get Chebyshev coefficients for x^2
+        cheb_coeffs = self.get_analytical_chebyshev_coeffs(2, N)
+        cheb_vec = Ncm.Vector.new_array(cheb_coeffs.tolist())
+
+        # Get projection matrix
+        proj_mat = Ncm.Spectral.get_proj_matrix(N)
+        proj_np = proj_mat.to_numpy()
+
+        # Apply matrix: result should be Gegenbauer coeffs of x^2
+        gegen_coeffs = proj_np @ cheb_coeffs
+
+        # Verify by converting using the function
+        gegen_vec_expected = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_vec, gegen_vec_expected)
+        gegen_expected = gegen_vec_expected.to_numpy()
+
+        assert_allclose(
+            gegen_coeffs,
+            gegen_expected,
+            rtol=1.0e-12,
+            atol=1.0e-15,
+            err_msg="Projection matrix doesn't match conversion function",
+        )
+
+    def test_x_operator_on_x(self) -> None:
+        """Test that x operator applied to x gives x^2."""
+        N = 32
+
+        # Get Chebyshev coefficients for x (input)
+        cheb_x = self.get_analytical_chebyshev_coeffs(1, N)
+
+        # Get x operator matrix
+        x_mat = Ncm.Spectral.get_x_matrix(N)
+        x_np = x_mat.to_numpy()
+
+        # Apply: x * x = x^2
+        gegen_result = x_np @ cheb_x
+
+        # Expected: Gegenbauer coefficients of x^2
+        cheb_x2 = self.get_analytical_chebyshev_coeffs(2, N)
+        cheb_x2_vec = Ncm.Vector.new_array(cheb_x2.tolist())
+        gegen_x2_vec = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x2_vec, gegen_x2_vec)
+        gegen_expected = gegen_x2_vec.to_numpy()
+
+        assert_allclose(
+            gegen_result,
+            gegen_expected,
+            rtol=1.0e-12,
+            atol=1.0e-15,
+            err_msg="x operator on x doesn't give x^2",
+        )
+
+    def test_x_operator_on_x2(self) -> None:
+        """Test that x operator applied to x^2 gives x^3."""
+        N = 32
+
+        # Get Chebyshev coefficients for x^2 (input)
+        cheb_x2 = self.get_analytical_chebyshev_coeffs(2, N)
+
+        # Get x operator matrix
+        x_mat = Ncm.Spectral.get_x_matrix(N)
+        x_np = x_mat.to_numpy()
+
+        # Apply: x * x^2 = x^3
+        gegen_result = x_np @ cheb_x2
+
+        # Expected: Gegenbauer coefficients of x^3
+        cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
+        cheb_x3_vec = Ncm.Vector.new_array(cheb_x3.tolist())
+        gegen_x3_vec = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x3_vec, gegen_x3_vec)
+        gegen_expected = self.vector_to_numpy(gegen_x3_vec)
+
+        assert_allclose(
+            gegen_result,
+            gegen_expected,
+            rtol=1.0e-12,
+            atol=1.0e-15,
+            err_msg="x operator on x^2 doesn't give x^3",
+        )
+
+    def test_x2_operator_on_x(self) -> None:
+        """Test that x^2 operator applied to x gives x^3."""
+        N = 32
+
+        # Get Chebyshev coefficients for x (input)
+        cheb_x = self.get_analytical_chebyshev_coeffs(1, N)
+
+        # Get x^2 operator matrix
+        x2_mat = Ncm.Spectral.get_x2_matrix(N)
+        x2_np = x2_mat.to_numpy()
+
+        # Apply: x^2 * x = x^3
+        gegen_result = x2_np @ cheb_x
+
+        # Expected: Gegenbauer coefficients of x^3
+        cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
+        cheb_x3_vec = Ncm.Vector.new_array(cheb_x3.tolist())
+        gegen_x3_vec = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x3_vec, gegen_x3_vec)
+        gegen_expected = self.vector_to_numpy(gegen_x3_vec)
+
+        assert_allclose(
+            gegen_result,
+            gegen_expected,
+            rtol=1.0e-12,
+            atol=1.0e-15,
+            err_msg="x^2 operator on x doesn't give x^3",
+        )
+
+    def test_x2_operator_on_x2(self) -> None:
+        """Test that x^2 operator applied to x^2 gives x^4."""
+        N = 32
+
+        # Get Chebyshev coefficients for x^2 (input)
+        cheb_x2 = self.get_analytical_chebyshev_coeffs(2, N)
+
+        # Get x^2 operator matrix
+        x2_mat = Ncm.Spectral.get_x2_matrix(N)
+        x2_np = x2_mat.to_numpy()
+
+        # Apply: x^2 * x^2 = x^4
+        gegen_result = x2_np @ cheb_x2
+
+        # Expected: Gegenbauer coefficients of x^4
+        cheb_x4 = self.get_analytical_chebyshev_coeffs(4, N)
+        cheb_x4_vec = Ncm.Vector.new_array(cheb_x4.tolist())
+        gegen_x4_vec = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x4_vec, gegen_x4_vec)
+        gegen_expected = self.vector_to_numpy(gegen_x4_vec)
+
+        assert_allclose(
+            gegen_result,
+            gegen_expected,
+            rtol=1.0e-12,
+            atol=1.0e-15,
+            err_msg="x^2 operator on x^2 doesn't give x^4",
+        )
+
+    def test_d_operator_on_x2(self) -> None:
+        """Test that derivative operator applied to x^2 gives 2x."""
+        N = 32
+
+        # Get Chebyshev coefficients for x^2
+        cheb_x2 = self.get_analytical_chebyshev_coeffs(2, N)
+
+        # Get derivative operator matrix
+        d_mat = Ncm.Spectral.get_d_matrix(N)
+        d_np = d_mat.to_numpy()
+
+        # Apply: d/dx(x^2) = 2x
+        gegen_result = d_np @ cheb_x2
+
+        # Expected: Gegenbauer coefficients of 2x
+        cheb_2x = 2.0 * self.get_analytical_chebyshev_coeffs(1, N)
+        cheb_2x_vec = Ncm.Vector.new_array(cheb_2x.tolist())
+        gegen_2x_vec = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_2x_vec, gegen_2x_vec)
+        gegen_expected = self.vector_to_numpy(gegen_2x_vec)
+
+        assert_allclose(
+            gegen_result,
+            gegen_expected,
+            rtol=1.0e-12,
+            atol=1.0e-15,
+            err_msg="Derivative of x^2 doesn't give 2x",
+        )
+
+    def test_d_operator_on_x3(self) -> None:
+        """Test that derivative operator applied to x^3 gives 3x^2."""
+        N = 32
+
+        # Get Chebyshev coefficients for x^3
+        cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
+
+        # Get derivative operator matrix
+        d_mat = Ncm.Spectral.get_d_matrix(N)
+        d_np = d_mat.to_numpy()
+
+        # Apply: d/dx(x^3) = 3x^2
+        gegen_result = d_np @ cheb_x3
+
+        # Expected: Gegenbauer coefficients of 3x^2
+        cheb_3x2 = 3.0 * self.get_analytical_chebyshev_coeffs(2, N)
+        cheb_3x2_vec = Ncm.Vector.new_array(cheb_3x2.tolist())
+        gegen_3x2_vec = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_3x2_vec, gegen_3x2_vec)
+        gegen_expected = self.vector_to_numpy(gegen_3x2_vec)
+
+        assert_allclose(
+            gegen_result,
+            gegen_expected,
+            rtol=1.0e-12,
+            atol=1.0e-15,
+            err_msg="Derivative of x^3 doesn't give 3x^2",
+        )
+
+    def test_d2_operator_on_x3(self) -> None:
+        """Test that second derivative operator applied to x^3 gives 6x."""
+        N = 32
+
+        # Get Chebyshev coefficients for x^3
+        cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
+
+        # Get second derivative operator matrix
+        d2_mat = Ncm.Spectral.get_d2_matrix(N)
+        d2_np = d2_mat.to_numpy()
+
+        # Apply: d^2/dx^2(x^3) = 6x
+        gegen_result = d2_np @ cheb_x3
+
+        # Expected: Gegenbauer coefficients of 6x
+        cheb_6x = 6.0 * self.get_analytical_chebyshev_coeffs(1, N)
+        cheb_6x_vec = Ncm.Vector.new_array(cheb_6x.tolist())
+        gegen_6x_vec = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_6x_vec, gegen_6x_vec)
+        gegen_expected = self.vector_to_numpy(gegen_6x_vec)
+
+        assert_allclose(
+            gegen_result,
+            gegen_expected,
+            rtol=1.0e-12,
+            atol=1.0e-15,
+            err_msg="Second derivative of x^3 doesn't give 6x",
+        )
+
+    def test_d2_operator_on_x4(self) -> None:
+        """Test that second derivative operator applied to x^4 gives 12x^2."""
+        N = 32
+
+        # Get Chebyshev coefficients for x^4
+        cheb_x4 = self.get_analytical_chebyshev_coeffs(4, N)
+
+        # Get second derivative operator matrix
+        d2_mat = Ncm.Spectral.get_d2_matrix(N)
+        d2_np = d2_mat.to_numpy()
+
+        # Apply: d^2/dx^2(x^4) = 12x^2
+        gegen_result = d2_np @ cheb_x4
+
+        # Expected: Gegenbauer coefficients of 12x^2
+        cheb_12x2 = 12.0 * self.get_analytical_chebyshev_coeffs(2, N)
+        cheb_12x2_vec = Ncm.Vector.new_array(cheb_12x2.tolist())
+        gegen_12x2_vec = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x2_vec, gegen_12x2_vec)
+        gegen_expected = self.vector_to_numpy(gegen_12x2_vec)
+
+        assert_allclose(
+            gegen_result,
+            gegen_expected,
+            rtol=1.0e-12,
+            atol=1.0e-15,
+            err_msg="Second derivative of x^4 doesn't give 12x^2",
+        )
+
+    def test_x_d_operator_on_x3(self) -> None:
+        """Test that x*d/dx operator applied to x^3 gives 3x^3."""
+        N = 32
+
+        # Get Chebyshev coefficients for x^3
+        cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
+
+        # Get x*d operator matrix
+        x_d_mat = Ncm.Spectral.get_x_d_matrix(N)
+        x_d_np = x_d_mat.to_numpy()
+
+        # Apply: x * d/dx(x^3) = x * 3x^2 = 3x^3
+        gegen_result = x_d_np @ cheb_x3
+
+        # Expected: Gegenbauer coefficients of 3x^3
+        cheb_3x3 = 3.0 * self.get_analytical_chebyshev_coeffs(3, N)
+        cheb_3x3_vec = Ncm.Vector.new_array(cheb_3x3.tolist())
+        gegen_3x3_vec = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_3x3_vec, gegen_3x3_vec)
+        gegen_expected = self.vector_to_numpy(gegen_3x3_vec)
+
+        assert_allclose(
+            gegen_result,
+            gegen_expected,
+            rtol=1.0e-11,
+            atol=1.0e-15,
+            err_msg="x*d operator on x^3 doesn't give 3x^3",
+        )
+
+    def test_x_d2_operator_on_x4(self) -> None:
+        """Test that x*d^2/dx^2 operator applied to x^4 gives 12x^3."""
+        N = 32
+
+        # Get Chebyshev coefficients for x^4
+        cheb_x4 = self.get_analytical_chebyshev_coeffs(4, N)
+
+        # Get x*d^2 operator matrix
+        x_d2_mat = Ncm.Spectral.get_x_d2_matrix(N)
+        x_d2_np = x_d2_mat.to_numpy()
+
+        # Apply: x * d^2/dx^2(x^4) = x * 12x^2 = 12x^3
+        gegen_result = x_d2_np @ cheb_x4
+
+        # Expected: Gegenbauer coefficients of 12x^3
+        cheb_12x3 = 12.0 * self.get_analytical_chebyshev_coeffs(3, N)
+        cheb_12x3_vec = Ncm.Vector.new_array(cheb_12x3.tolist())
+        gegen_12x3_vec = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x3_vec, gegen_12x3_vec)
+        gegen_expected = self.vector_to_numpy(gegen_12x3_vec)
+
+        assert_allclose(
+            gegen_result,
+            gegen_expected,
+            rtol=1.0e-11,
+            atol=1.0e-15,
+            err_msg="x*d^2 operator on x^4 doesn't give 12x^3",
+        )
+
+    def test_x2_d2_operator_on_x4(self) -> None:
+        """Test that x^2*d^2/dx^2 operator applied to x^4 gives 12x^4."""
+        N = 32
+
+        # Get Chebyshev coefficients for x^4
+        cheb_x4 = self.get_analytical_chebyshev_coeffs(4, N)
+
+        # Get x^2*d^2 operator matrix
+        x2_d2_mat = Ncm.Spectral.get_x2_d2_matrix(N)
+        x2_d2_np = x2_d2_mat.to_numpy()
+
+        # Apply: x^2 * d^2/dx^2(x^4) = x^2 * 12x^2 = 12x^4
+        gegen_result = x2_d2_np @ cheb_x4
+
+        # Expected: Gegenbauer coefficients of 12x^4
+        cheb_12x4 = 12.0 * self.get_analytical_chebyshev_coeffs(4, N)
+        cheb_12x4_vec = Ncm.Vector.new_array(cheb_12x4.tolist())
+        gegen_12x4_vec = Ncm.Vector.new(N)
+        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x4_vec, gegen_12x4_vec)
+        gegen_expected = self.vector_to_numpy(gegen_12x4_vec)
+
+        assert_allclose(
+            gegen_result,
+            gegen_expected,
+            rtol=1.0e-11,
+            atol=1.0e-15,
+            err_msg="x^2*d^2 operator on x^4 doesn't give 12x^4",
+        )
+
+    def test_d_operator_evaluation(self) -> None:
+        """Test d/dx operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^3
+        cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
+
+        # Apply d operator: d/dx(x^3) = 3x^2
+        d_mat = Ncm.Spectral.get_d_matrix(N)
+        d_np = d_mat.to_numpy()
+        gegen_result = d_np @ cheb_x3
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with 3*x^2
+        test_points = np.array([0.0, 0.3, 0.5, 0.7, 0.9])
+        for x in test_points:
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            expected = 3.0 * x**2
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-12,
+                atol=1.0e-15,
+                err_msg=f"d/dx(x^3) evaluation at x={x} doesn't match 3x^2",
+            )
+
+    def test_d2_operator_evaluation(self) -> None:
+        """Test d^2/dx^2 operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^4
+        cheb_x4 = self.get_analytical_chebyshev_coeffs(4, N)
+
+        # Apply d^2 operator: d^2/dx^2(x^4) = 12x^2
+        d2_mat = Ncm.Spectral.get_d2_matrix(N)
+        d2_np = d2_mat.to_numpy()
+        gegen_result = d2_np @ cheb_x4
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with 12*x^2
+        test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        for x in test_points:
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            expected = 12.0 * x**2
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-12,
+                atol=1.0e-15,
+                err_msg=f"d^2/dx^2(x^4) evaluation at x={x} doesn't match 12x^2",
+            )
+
+    def test_x_d_operator_evaluation(self) -> None:
+        """Test x*d/dx operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^4
+        cheb_x4 = self.get_analytical_chebyshev_coeffs(4, N)
+
+        # Apply x*d operator: x*d/dx(x^4) = x*4x^3 = 4x^4
+        x_d_mat = Ncm.Spectral.get_x_d_matrix(N)
+        x_d_np = x_d_mat.to_numpy()
+        gegen_result = x_d_np @ cheb_x4
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with 4*x^4
+        test_points = np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+        for x in test_points:
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            expected = 4.0 * x**4
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-11,
+                atol=1.0e-15,
+                err_msg=f"x*d/dx(x^4) evaluation at x={x} doesn't match 4x^4",
+            )
+
+    def test_x2_d2_operator_evaluation(self) -> None:
+        """Test x^2*d^2/dx^2 operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^5
+        cheb_x5 = self.get_analytical_chebyshev_coeffs(5, N)
+
+        # Apply x^2*d^2 operator: x^2*d^2/dx^2(x^5) = x^2*20x^3 = 20x^5
+        x2_d2_mat = Ncm.Spectral.get_x2_d2_matrix(N)
+        x2_d2_np = x2_d2_mat.to_numpy()
+        gegen_result = x2_d2_np @ cheb_x5
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with 20*x^5
+        test_points = np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+        for x in test_points:
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            expected = 20.0 * x**5
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-11,
+                atol=1.0e-15,
+                err_msg=f"x^2*d^2/dx^2(x^5) evaluation at x={x} doesn't match 20x^5",
+            )
+
+    def test_x_operator_evaluation(self) -> None:
+        """Test x operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^3
+        cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
+
+        # Apply x operator: x*x^3 = x^4
+        x_mat = Ncm.Spectral.get_x_matrix(N)
+        x_np = x_mat.to_numpy()
+        gegen_result = x_np @ cheb_x3
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with x^4
+        test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        for x in test_points:
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            expected = x**4
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-12,
+                atol=1.0e-15,
+                err_msg=f"x*x^3 evaluation at x={x} doesn't match x^4",
+            )
+
+    def test_x2_operator_evaluation(self) -> None:
+        """Test x^2 operator by evaluating result at points."""
+        N = 32
+
+        # Start with x^3
+        cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
+
+        # Apply x^2 operator: x^2*x^3 = x^5
+        x2_mat = Ncm.Spectral.get_x2_matrix(N)
+        x2_np = x2_mat.to_numpy()
+        gegen_result = x2_np @ cheb_x3
+        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
+
+        # Evaluate at test points and compare with x^5
+        test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        for x in test_points:
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            expected = x**5
+            assert_allclose(
+                eval_result,
+                expected,
+                rtol=1.0e-12,
+                atol=1.0e-15,
+                err_msg=f"x^2*x^3 evaluation at x={x} doesn't match x^5",
+            )
+
+    def test_gaussian_operators(self, spectral: Ncm.Spectral) -> None:
+        """Test operators on exp(-x^2), a non-polynomial function."""
+        N = 64
+
+        # Define f(x) = exp(-x^2)
+        def f_gaussian(_user_data: None, x: float) -> float:
+            return np.exp(-(x**2))
+
+        # Compute Chebyshev coefficients for exp(-x^2)
+        cheb_vec = Ncm.Vector.new(N)
+        spectral.compute_chebyshev_coeffs(f_gaussian, -1.0, 1.0, cheb_vec, None)
+        cheb_coeffs = self.vector_to_numpy(cheb_vec)
+
+        # Get operator matrices
+        proj_mat = Ncm.Spectral.get_proj_matrix(N)
+        x_mat = Ncm.Spectral.get_x_matrix(N)
+        x2_mat = Ncm.Spectral.get_x2_matrix(N)
+        d_mat = Ncm.Spectral.get_d_matrix(N)
+        x_d_mat = Ncm.Spectral.get_x_d_matrix(N)
+        d2_mat = Ncm.Spectral.get_d2_matrix(N)
+        x_d2_mat = Ncm.Spectral.get_x_d2_matrix(N)
+        x2_d2_mat = Ncm.Spectral.get_x2_d2_matrix(N)
+
+        # Convert to numpy
+        proj_np = proj_mat.to_numpy()
+        x_np = x_mat.to_numpy()
+        x2_np = x2_mat.to_numpy()
+        d_np = d_mat.to_numpy()
+        x_d_np = x_d_mat.to_numpy()
+        d2_np = d2_mat.to_numpy()
+        x_d2_np = x_d2_mat.to_numpy()
+        x2_d2_np = x2_d2_mat.to_numpy()
+
+        # Test points for evaluation
+        test_points = np.array([0.0, 0.3, 0.5, 0.7, 0.9])
+
+        # Test 1: Projection gives same function
+        gegen_proj = proj_np @ cheb_coeffs
+        gegen_proj_vec = Ncm.Vector.new_array(gegen_proj.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_proj_vec, x)
+            expected = np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=0.0,
+                err_msg=f"Projection of exp(-x^2) at x={x} failed",
+            )
+
+        # Test 2: x operator: x*exp(-x^2)
+        gegen_x = x_np @ cheb_coeffs
+        gegen_x_vec = Ncm.Vector.new_array(gegen_x.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_vec, x)
+            expected = x * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=1.0e-15,
+                err_msg=f"x*exp(-x^2) at x={x} failed",
+            )
+
+        # Test 3: x^2 operator: x^2*exp(-x^2)
+        gegen_x2 = x2_np @ cheb_coeffs
+        gegen_x2_vec = Ncm.Vector.new_array(gegen_x2.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2_vec, x)
+            expected = x**2 * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=1.0e-15,
+                err_msg=f"x^2*exp(-x^2) at x={x} failed",
+            )
+
+        # Test 4: d operator: d/dx(exp(-x^2)) = -2x*exp(-x^2)
+        gegen_d = d_np @ cheb_coeffs
+        gegen_d_vec = Ncm.Vector.new_array(gegen_d.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d_vec, x)
+            expected = -2.0 * x * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-7,
+                atol=1.0e-15,
+                err_msg=f"d/dx(exp(-x^2)) at x={x} failed",
+            )
+
+        # Test 5: d^2 operator: d^2/dx^2(exp(-x^2)) = (4x^2 - 2)*exp(-x^2)
+        gegen_d2 = d2_np @ cheb_coeffs
+        gegen_d2_vec = Ncm.Vector.new_array(gegen_d2.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d2_vec, x)
+            expected = (4.0 * x**2 - 2.0) * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-6,
+                atol=1.0e-15,
+                err_msg=f"d^2/dx^2(exp(-x^2)) at x={x} failed",
+            )
+
+        # Test 6: x*d operator: x*d/dx(exp(-x^2)) = x*(-2x*exp(-x^2)) = -2x^2*exp(-x^2)
+        gegen_x_d = x_d_np @ cheb_coeffs
+        gegen_x_d_vec = Ncm.Vector.new_array(gegen_x_d.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d_vec, x)
+            expected = -2.0 * x**2 * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-7,
+                atol=1.0e-15,
+                err_msg=f"x*d/dx(exp(-x^2)) at x={x} failed",
+            )
+
+        # Test 7: x*d^2 operator: x*d^2/dx^2(exp(-x^2)) = x*(4x^2 - 2)*exp(-x^2)
+        gegen_x_d2 = x_d2_np @ cheb_coeffs
+        gegen_x_d2_vec = Ncm.Vector.new_array(gegen_x_d2.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d2_vec, x)
+            expected = x * (4.0 * x**2 - 2.0) * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-6,
+                atol=1.0e-15,
+                err_msg=f"x*d^2/dx^2(exp(-x^2)) at x={x} failed",
+            )
+
+        # Test 8: x^2*d^2 operator: x^2*d^2/dx^2(exp(-x^2)) = x^2*(4x^2 - 2)*exp(-x^2)
+        gegen_x2_d2 = x2_d2_np @ cheb_coeffs
+        gegen_x2_d2_vec = Ncm.Vector.new_array(gegen_x2_d2.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2_d2_vec, x)
+            expected = x**2 * (4.0 * x**2 - 2.0) * np.exp(-(x**2))
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-10,
+                atol=1.0e-15,
+                err_msg=f"x^2*d^2/dx^2(exp(-x^2)) at x={x} failed",
+            )
+
+    def test_rational_operators(self, spectral: Ncm.Spectral) -> None:
+        """Test operators on x^2/(1+x^2)^4, a rational function."""
+        N = 64
+
+        # Define f(x) = x^2/(1+x^2)^4
+        def f_rational(_user_data: None, x: float) -> float:
+            return x**2 / (1.0 + x**2) ** 4
+
+        # Analytical derivative: f'(x) = 2x(1-3x^2)/(1+x^2)^5
+        def f_prime(x: float) -> float:
+            return 2.0 * x * (1.0 - 3.0 * x**2) / (1.0 + x**2) ** 5
+
+        # Analytical second derivative: f''(x) = (2 - 36x^2 + 42x^4)/(1+x^2)^6
+        def f_double_prime(x: float) -> float:
+            return (2.0 - 36.0 * x**2 + 42.0 * x**4) / (1.0 + x**2) ** 6
+
+        # Compute Chebyshev coefficients
+        cheb_vec = Ncm.Vector.new(N)
+        spectral.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, cheb_vec, None)
+        cheb_coeffs = self.vector_to_numpy(cheb_vec)
+
+        # Get operator matrices
+        proj_mat = Ncm.Spectral.get_proj_matrix(N)
+        x_mat = Ncm.Spectral.get_x_matrix(N)
+        x2_mat = Ncm.Spectral.get_x2_matrix(N)
+        d_mat = Ncm.Spectral.get_d_matrix(N)
+        x_d_mat = Ncm.Spectral.get_x_d_matrix(N)
+        d2_mat = Ncm.Spectral.get_d2_matrix(N)
+        x_d2_mat = Ncm.Spectral.get_x_d2_matrix(N)
+        x2_d2_mat = Ncm.Spectral.get_x2_d2_matrix(N)
+
+        # Convert to numpy
+        proj_np = proj_mat.to_numpy()
+        x_np = x_mat.to_numpy()
+        x2_np = x2_mat.to_numpy()
+        d_np = d_mat.to_numpy()
+        x_d_np = x_d_mat.to_numpy()
+        d2_np = d2_mat.to_numpy()
+        x_d2_np = x_d2_mat.to_numpy()
+        x2_d2_np = x2_d2_mat.to_numpy()
+
+        # Test points for evaluation
+        test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+
+        # Test 1: Projection gives same function
+        gegen_proj = proj_np @ cheb_coeffs
+        gegen_proj_vec = Ncm.Vector.new_array(gegen_proj.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_proj_vec, x)
+            expected = x**2 / (1.0 + x**2) ** 4
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=1.0e-10,
+                err_msg=f"Projection of x^2/(1+x^2)^4 at x={x} failed",
+            )
+
+        # Test 2: x operator: x * x^2/(1+x^2)^4 = x^3/(1+x^2)^4
+        gegen_x = x_np @ cheb_coeffs
+        gegen_x_vec = Ncm.Vector.new_array(gegen_x.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_vec, x)
+            expected = x**3 / (1.0 + x**2) ** 4
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=1.0e-10,
+                err_msg=f"x*f(x) at x={x} failed",
+            )
+
+        # Test 3: x^2 operator: x^2 * x^2/(1+x^2)^4 = x^4/(1+x^2)^4
+        gegen_x2 = x2_np @ cheb_coeffs
+        gegen_x2_vec = Ncm.Vector.new_array(gegen_x2.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2_vec, x)
+            expected = x**4 / (1.0 + x**2) ** 4
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-8,
+                atol=1.0e-10,
+                err_msg=f"x^2*f(x) at x={x} failed",
+            )
+
+        # Test 4: d operator: d/dx of f(x)
+        gegen_d = d_np @ cheb_coeffs
+        gegen_d_vec = Ncm.Vector.new_array(gegen_d.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d_vec, x)
+            expected = f_prime(x)
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-7,
+                atol=1.0e-9,
+                err_msg=f"d/dx(f(x)) at x={x} failed",
+            )
+
+        # Test 5: d^2 operator: d^2/dx^2 of f(x)
+        gegen_d2 = d2_np @ cheb_coeffs
+        gegen_d2_vec = Ncm.Vector.new_array(gegen_d2.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d2_vec, x)
+            expected = f_double_prime(x)
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-6,
+                atol=1.0e-8,
+                err_msg=f"d^2/dx^2(f(x)) at x={x} failed",
+            )
+
+        # Test 6: x*d operator: x*f'(x)
+        gegen_x_d = x_d_np @ cheb_coeffs
+        gegen_x_d_vec = Ncm.Vector.new_array(gegen_x_d.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d_vec, x)
+            expected = x * f_prime(x)
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-7,
+                atol=1.0e-9,
+                err_msg=f"x*d/dx(f(x)) at x={x} failed",
+            )
+
+        # Test 7: x*d^2 operator: x*f''(x)
+        gegen_x_d2 = x_d2_np @ cheb_coeffs
+        gegen_x_d2_vec = Ncm.Vector.new_array(gegen_x_d2.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d2_vec, x)
+            expected = x * f_double_prime(x)
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-6,
+                atol=1.0e-8,
+                err_msg=f"x*d^2/dx^2(f(x)) at x={x} failed",
+            )
+
+        # Test 8: x^2*d^2 operator: x^2*f''(x)
+        gegen_x2_d2 = x2_d2_np @ cheb_coeffs
+        gegen_x2_d2_vec = Ncm.Vector.new_array(gegen_x2_d2.tolist())
+        for x in test_points:
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2_d2_vec, x)
+            expected = x**2 * f_double_prime(x)
+            assert_allclose(
+                result,
+                expected,
+                rtol=1.0e-6,
+                atol=1.0e-8,
+                err_msg=f"x^2*d^2/dx^2(f(x)) at x={x} failed",
+            )
