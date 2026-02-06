@@ -1,6 +1,7 @@
 import typing
 
 import numpy.typing as npt
+import numpy
 
 from gi.repository import GLib
 from gi.repository import GObject

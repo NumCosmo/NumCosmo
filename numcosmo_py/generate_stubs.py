@@ -396,7 +396,8 @@ def _build(
     return (
         "import typing"
         + "\n\n"
-        + "import numpy.typing as npt"
+        + "import numpy.typing as npt\n"
+        + "import numpy"
         + "\n\n"
         + "\n".join(imports)
         + "\n"
@@ -550,7 +551,22 @@ def _build_function(
             current_namespace, name, function.__func__, in_class, needed_namespaces
         )
 
-    signature = str(inspect.signature(function))
+    sig = inspect.signature(function)
+
+    if in_class is not None and inspect.isfunction(function):
+        params = list(sig.parameters.values())
+
+        if params:
+            # Replace first parameter with "self" and drop its annotation
+            first = params[0].replace(
+                name="self",
+                # pylint: disable-next=protected-access
+                annotation=inspect._empty,  # type: ignore
+            )
+            params[0] = first
+            sig = sig.replace(parameters=params)
+
+    signature = str(sig)
     definition = f"def {name}{signature}: ... # FIXME Function\n"
 
     return definition

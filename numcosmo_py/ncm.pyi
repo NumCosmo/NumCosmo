@@ -1,6 +1,7 @@
 import typing
 
 import numpy.typing as npt
+import numpy
 
 from gi.repository import GLib
 from gi.repository import GObject
@@ -6711,8 +6712,10 @@ class Matrix(GObject.Object):
     ) -> None: ...
     def tda(self) -> int: ...
     def to_numpy(
-        ncm_mat: gi.repository.NumCosmoMath.Matrix,
-    ) -> numpy.ndarray: ...  # FIXME Function
+        self,
+    ) -> numpy.ndarray[
+        tuple[int, int], numpy.dtype[numpy.float64]
+    ]: ...  # FIXME Function
     def transpose(self) -> None: ...
     def transpose_memcpy(self, src: Matrix) -> None: ...
     def triang_to_sym(self, UL: int, zero: bool, sym: Matrix) -> None: ...
@@ -12486,8 +12489,8 @@ class Vector(GObject.Object):
     def substitute(cv1: Vector, cv2: Vector, check_size: bool) -> None: ...
     def sum_cpts(self) -> float: ...
     def to_numpy(
-        ncm_vec: gi.repository.NumCosmoMath.Vector,
-    ) -> numpy.ndarray: ...  # FIXME Function
+        self,
+    ) -> numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]]: ...  # FIXME Function
 
 class VectorClass(GObject.GPointer):
     r"""
