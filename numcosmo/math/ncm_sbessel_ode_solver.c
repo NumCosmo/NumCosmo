@@ -1407,8 +1407,11 @@ _ncm_sbessel_ode_solver_build_solution_batched (NcmSBesselOdeSolver *solver, glo
     self->acc_bc_at_p1[l_idx] = 0.0;
   }
 
-  solution = ncm_matrix_new (n_l, n_cols);
-  sol_data = ncm_matrix_data (solution);
+  if (posix_memalign ((void **) &sol_data, 32, (n_cols + TOTAL_BANDWIDTH) * n_l * sizeof (gdouble)) != 0)
+    g_error ("Failed to allocate aligned memory for solution");
+
+  memset (sol_data, 0, (n_cols + TOTAL_BANDWIDTH) * n_l * sizeof (gdouble));
+  solution = ncm_matrix_new_full (sol_data, n_l, n_cols, n_cols, sol_data, g_free);
 
   /* Flipped loop order for better cache locality - process all l values for each row */
   for (row = n_cols - 1; row >= 0; row--)
@@ -1420,29 +1423,32 @@ _ncm_sbessel_ode_solver_build_solution_batched (NcmSBesselOdeSolver *solver, glo
 
     for (l_idx = 0; l_idx < n_l; l_idx++)
     {
-      const glong row_idx       = row_base_idx + l_idx;
-      NcmSBesselOdeSolverRow *r = &self->matrix_rows_batched[row_idx];
-      gdouble sum               = g_array_index (self->c_batched, gdouble, row_idx);
-      glong width               = GSL_MIN (TOTAL_BANDWIDTH, n_cols - row);
-      const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
+      const glong row_idx                       = row_base_idx + l_idx;
+      const NcmSBesselOdeSolverRow * restrict r = &self->matrix_rows_batched[row_idx];
+      const gdouble * restrict r_data           = r->data;
+      const glong base_sol_idx                  = l_idx * n_cols;
+      const gdouble * restrict sol_row          = &sol_data[base_sol_idx];
+      gdouble sum                               = g_array_index (self->c_batched, gdouble, row_idx);
+      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row ((NcmSBesselOdeSolverRow *) r, row);
       gdouble sol;
-      glong j;
 
       g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
 
-      for (j = 1; j < width; j++)
-      {
-        const glong col_idx = r->col_index + j;
-        const gdouble a_ij  = r->data[j];
-
-        sum -= a_ij * sol_data[l_idx * n_cols + col_idx];
-      }
+      /* Manually unrolled loop for better performance */
+      sum -= r_data[1] * sol_row[row + 1];
+      sum -= r_data[2] * sol_row[row + 2];
+      sum -= r_data[3] * sol_row[row + 3];
+      sum -= r_data[4] * sol_row[row + 4];
+      sum -= r_data[5] * sol_row[row + 5];
+      sum -= r_data[6] * sol_row[row + 6];
+      sum -= r_data[7] * sol_row[row + 7];
+      sum -= r_data[8] * sol_row[row + 8];
 
       sum -= self->acc_bc_at_m1[l_idx] * r->bc_at_m1;
       sum -= self->acc_bc_at_p1[l_idx] * r->bc_at_p1;
 
-      sol                            = sum / diag;
-      sol_data[l_idx * n_cols + row] = sol;
+      sol                          = sum / diag;
+      sol_data[base_sol_idx + row] = sol;
 
       self->acc_bc_at_m1[l_idx] += row_sign * sol;
       self->acc_bc_at_p1[l_idx] += sol;
