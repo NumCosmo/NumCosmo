@@ -69,6 +69,7 @@ void ncm_sbessel_ode_solver_get_interval (NcmSBesselOdeSolver *solver, gdouble *
 
 NcmVector *ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs);
 NcmMatrix *ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l);
+NcmMatrix *ncm_sbessel_ode_solver_solve_endpoints_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l);
 
 NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, gint nrows);
 NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver, gint nrows);

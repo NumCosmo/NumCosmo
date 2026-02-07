@@ -113,8 +113,14 @@ typedef struct _NcmSBesselOdeSolverPrivate
   gsize matrix_rows_batched_size;              /* Current size of matrix_rows_batched */
   gsize matrix_rows_batched_capacity;          /* Allocated capacity of matrix_rows_batched */
   GArray *c_batched;                           /* Array of gdouble for batched right-hand side */
-  GArray *acc_bc_at_m1;                        /* Array of gdouble for batched boundary condition accumulators at -1 */
-  GArray *acc_bc_at_p1;                        /* Array of gdouble for batched boundary condition accumulators at +1 */
+
+  /* Aligned arrays for batched operations */
+  gdouble *solution_batched;       /* Aligned array of gdouble for temporary solution storage in endpoint computation */
+  gsize solution_batched_capacity; /* Allocated capacity of solution_batched */
+  gdouble *acc_bc_at_m1;           /* Aligned array of gdouble for batched boundary condition accumulators at -1 */
+  gsize acc_bc_at_m1_capacity;     /* Allocated capacity of acc_bc_at_m1 */
+  gdouble *acc_bc_at_p1;           /* Aligned array of gdouble for batched boundary condition accumulators at +1 */
+  gsize acc_bc_at_p1_capacity;     /* Allocated capacity of acc_bc_at_p1 */
 
   /* Solution */
   NcmVector *solution; /* Result vector */
@@ -179,8 +185,12 @@ ncm_sbessel_ode_solver_init (NcmSBesselOdeSolver *solver)
   self->matrix_rows_batched_size     = 0;
   self->matrix_rows_batched_capacity = 0;
   self->c_batched                    = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  self->acc_bc_at_m1                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  self->acc_bc_at_p1                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->solution_batched             = NULL;
+  self->solution_batched_capacity    = 0;
+  self->acc_bc_at_m1                 = NULL;
+  self->acc_bc_at_m1_capacity        = 0;
+  self->acc_bc_at_p1                 = NULL;
+  self->acc_bc_at_p1_capacity        = 0;
   self->solution                     = NULL;
   self->sba                          = ncm_sf_sbessel_array_new ();
   self->spectral                     = ncm_spectral_new ();
@@ -275,8 +285,28 @@ _ncm_sbessel_ode_solver_dispose (GObject *object)
   }
 
   g_clear_pointer (&self->c_batched, g_array_unref);
-  g_clear_pointer (&self->acc_bc_at_m1, g_array_unref);
-  g_clear_pointer (&self->acc_bc_at_p1, g_array_unref);
+
+  if (self->solution_batched != NULL)
+  {
+    free (self->solution_batched);
+    self->solution_batched          = NULL;
+    self->solution_batched_capacity = 0;
+  }
+
+  if (self->acc_bc_at_m1 != NULL)
+  {
+    free (self->acc_bc_at_m1);
+    self->acc_bc_at_m1          = NULL;
+    self->acc_bc_at_m1_capacity = 0;
+  }
+
+  if (self->acc_bc_at_p1 != NULL)
+  {
+    free (self->acc_bc_at_p1);
+    self->acc_bc_at_p1          = NULL;
+    self->acc_bc_at_p1_capacity = 0;
+  }
+
   ncm_vector_clear (&self->solution);
 
   ncm_sf_sbessel_array_clear (&self->sba);
@@ -347,6 +377,72 @@ _ensure_matrix_rows_batched_capacity (NcmSBesselOdeSolverPrivate *self, gsize re
   }
 
   self->matrix_rows_batched_size = required_size;
+}
+
+static void
+_ensure_solution_batched_capacity (NcmSBesselOdeSolverPrivate *self, gsize required_size)
+{
+  if (required_size > self->solution_batched_capacity)
+  {
+    gdouble *new_array = NULL;
+    gsize new_capacity = required_size;
+
+    if (new_capacity < 16)
+      new_capacity = 16;
+
+    if (posix_memalign ((void **) &new_array, 32, new_capacity * sizeof (gdouble)) != 0)
+      g_error ("_ensure_solution_batched_capacity: failed to allocate aligned memory");
+
+    if (self->solution_batched != NULL)
+      free (self->solution_batched);
+
+    self->solution_batched          = new_array;
+    self->solution_batched_capacity = new_capacity;
+  }
+}
+
+static void
+_ensure_acc_bc_at_m1_capacity (NcmSBesselOdeSolverPrivate *self, gsize required_size)
+{
+  if (required_size > self->acc_bc_at_m1_capacity)
+  {
+    gdouble *new_array = NULL;
+    gsize new_capacity = required_size;
+
+    if (new_capacity < 16)
+      new_capacity = 16;
+
+    if (posix_memalign ((void **) &new_array, 32, new_capacity * sizeof (gdouble)) != 0)
+      g_error ("_ensure_acc_bc_at_m1_capacity: failed to allocate aligned memory");
+
+    if (self->acc_bc_at_m1 != NULL)
+      free (self->acc_bc_at_m1);
+
+    self->acc_bc_at_m1          = new_array;
+    self->acc_bc_at_m1_capacity = new_capacity;
+  }
+}
+
+static void
+_ensure_acc_bc_at_p1_capacity (NcmSBesselOdeSolverPrivate *self, gsize required_size)
+{
+  if (required_size > self->acc_bc_at_p1_capacity)
+  {
+    gdouble *new_array = NULL;
+    gsize new_capacity = required_size;
+
+    if (new_capacity < 16)
+      new_capacity = 16;
+
+    if (posix_memalign ((void **) &new_array, 32, new_capacity * sizeof (gdouble)) != 0)
+      g_error ("_ensure_acc_bc_at_p1_capacity: failed to allocate aligned memory");
+
+    if (self->acc_bc_at_p1 != NULL)
+      free (self->acc_bc_at_p1);
+
+    self->acc_bc_at_p1          = new_array;
+    self->acc_bc_at_p1_capacity = new_capacity;
+  }
 }
 
 static void
@@ -1139,25 +1235,26 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
 }
 
 /**
- * _ncm_sbessel_ode_solver_solve_batched_internal:
+ * _ncm_sbessel_ode_solver_diagonalize_batched:
  * @solver: a #NcmSBesselOdeSolver
  * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
  * @lmin: minimum l value
  * @n_l: number of l values to solve for (l = lmin, lmin+1, ..., lmin+n_l-1)
  *
- * Internal batched solver implementation. Can be specialized at compile time
- * when n_l is known at compile time for better optimization.
+ * Diagonalizes the operator using adaptive QR decomposition for multiple l values.
+ * This function applies Givens rotations to transform the system into upper triangular form
+ * and applies the same rotations to the RHS vectors. The transformed RHS is stored in
+ * self->c_batched and the upper triangular matrix is stored in self->matrix_rows_batched.
  *
- * Returns: (transfer full): solution matrix where each row is the solution for one l value
+ * Returns: the effective number of columns used (may be less than rhs_len due to convergence)
  */
-static NcmMatrix *
-_ncm_sbessel_ode_solver_solve_batched_internal (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l)
+static glong
+_ncm_sbessel_ode_solver_diagonalize_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
   const guint rhs_len                     = ncm_vector_len (rhs);
   const guint total_rows                  = rhs_len * n_l;
   const gdouble *rhs_data                 = ncm_vector_data (rhs);
-  NcmMatrix *solution                     = NULL;
   glong col                               = 0;
   gdouble max_c_A                         = 0.0;
   guint quiet_cols                        = 0;
@@ -1273,69 +1370,245 @@ _ncm_sbessel_ode_solver_solve_batched_internal (NcmSBesselOdeSolver *solver, Ncm
     }
   }
 
-  /* Back substitution to solve R x = c for all l values */
+  return col;
+}
+
+/**
+ * _ncm_sbessel_ode_solver_build_solution_batched:
+ * @solver: a #NcmSBesselOdeSolver
+ * @n_cols: number of columns in the solution (from diagonalization)
+ * @n_l: number of l values
+ *
+ * Builds the full Chebyshev coefficient solution by back-substitution on the
+ * upper triangular system. Assumes _ncm_sbessel_ode_solver_diagonalize_batched
+ * has been called first.
+ *
+ * Returns: (transfer full): solution matrix where each row is the solution for one l value
+ */
+static NcmMatrix *
+_ncm_sbessel_ode_solver_build_solution_batched (NcmSBesselOdeSolver *solver, glong n_cols, guint n_l)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  NcmMatrix *solution;
+  gdouble * restrict sol_data;
+  glong row;
+  guint l_idx;
+
+  /* Ensure accumulator arrays have sufficient capacity */
+  _ensure_acc_bc_at_m1_capacity (self, n_l);
+  _ensure_acc_bc_at_p1_capacity (self, n_l);
+
+  /* Zero out accumulators */
+  #pragma omp simd
+
+  for (l_idx = 0; l_idx < n_l; l_idx++)
   {
-    const glong n = col; /* since col <= rhs_len */
-    gdouble * restrict sol_data;
-    glong row;
+    self->acc_bc_at_m1[l_idx] = 0.0;
+    self->acc_bc_at_p1[l_idx] = 0.0;
+  }
 
-    /* Resize accumulator arrays if necessary */
-    g_array_set_size (self->acc_bc_at_m1, n_l);
-    g_array_set_size (self->acc_bc_at_p1, n_l);
+  solution = ncm_matrix_new (n_l, n_cols);
+  sol_data = ncm_matrix_data (solution);
 
-    /* Zero out accumulators */
+  /* Flipped loop order for better cache locality - process all l values for each row */
+  for (row = n_cols - 1; row >= 0; row--)
+  {
+    const glong row_base_idx = row * n_l;
+    const gdouble row_sign   = (row % 2) == 0 ? 1.0 : -1.0;
+
     #pragma omp simd
 
     for (l_idx = 0; l_idx < n_l; l_idx++)
     {
-      g_array_index (self->acc_bc_at_m1, gdouble, l_idx) = 0.0;
-      g_array_index (self->acc_bc_at_p1, gdouble, l_idx) = 0.0;
-    }
+      const glong row_idx       = row_base_idx + l_idx;
+      NcmSBesselOdeSolverRow *r = &self->matrix_rows_batched[row_idx];
+      gdouble sum               = g_array_index (self->c_batched, gdouble, row_idx);
+      glong width               = GSL_MIN (TOTAL_BANDWIDTH, n_cols - row);
+      const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
+      gdouble sol;
+      glong j;
 
-    solution = ncm_matrix_new (n_l, n);
-    sol_data = ncm_matrix_data (solution);
+      g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
 
-    /* Flipped loop order for better cache locality - process all l values for each row */
-    for (row = n - 1; row >= 0; row--)
-    {
-      const glong row_base_idx = row * n_l;
-      const gdouble row_sign   = (row % 2) == 0 ? 1.0 : -1.0;
-
-      #pragma omp simd
-
-      for (l_idx = 0; l_idx < n_l; l_idx++)
+      for (j = 1; j < width; j++)
       {
-        const glong row_idx       = row_base_idx + l_idx;
-        NcmSBesselOdeSolverRow *r = &self->matrix_rows_batched[row_idx];
-        gdouble sum               = g_array_index (self->c_batched, gdouble, row_idx);
-        glong width               = GSL_MIN (TOTAL_BANDWIDTH, n - row);
-        const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
-        gdouble sol;
-        glong j;
+        const glong col_idx = r->col_index + j;
+        const gdouble a_ij  = r->data[j];
 
-        g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
-
-        for (j = 1; j < width; j++)
-        {
-          const glong col_idx = r->col_index + j;
-          const gdouble a_ij  = r->data[j];
-
-          sum -= a_ij * sol_data[l_idx * n + col_idx];
-        }
-
-        sum -= g_array_index (self->acc_bc_at_m1, gdouble, l_idx) * r->bc_at_m1;
-        sum -= g_array_index (self->acc_bc_at_p1, gdouble, l_idx) * r->bc_at_p1;
-
-        sol                       = sum / diag;
-        sol_data[l_idx * n + row] = sol;
-
-        g_array_index (self->acc_bc_at_m1, gdouble, l_idx) += row_sign * sol;
-        g_array_index (self->acc_bc_at_p1, gdouble, l_idx) += sol;
+        sum -= a_ij * sol_data[l_idx * n_cols + col_idx];
       }
+
+      sum -= self->acc_bc_at_m1[l_idx] * r->bc_at_m1;
+      sum -= self->acc_bc_at_p1[l_idx] * r->bc_at_p1;
+
+      sol                            = sum / diag;
+      sol_data[l_idx * n_cols + row] = sol;
+
+      self->acc_bc_at_m1[l_idx] += row_sign * sol;
+      self->acc_bc_at_p1[l_idx] += sol;
     }
   }
 
   return solution;
+}
+
+/**
+ * _ncm_sbessel_ode_solver_compute_endpoints_batched:
+ * @solver: a #NcmSBesselOdeSolver
+ * @n_cols: number of columns in the solution (from diagonalization)
+ * @n_l: number of l values
+ *
+ * Computes endpoint derivatives y'(a) and y'(b) and error estimates directly from
+ * the diagonalized system without building the full solution matrix. This is much more
+ * efficient when only endpoint information is needed, as it computes coefficients
+ * on-the-fly during back-substitution and accumulates their contributions to the
+ * derivatives without storing the full coefficient array.
+ *
+ * Assumes _ncm_sbessel_ode_solver_diagonalize_batched has been called first.
+ *
+ * Returns: (transfer full): matrix with 3 columns per l: [y'(a), y'(b), error]
+ */
+static NcmMatrix *
+_ncm_sbessel_ode_solver_compute_endpoints_batched (NcmSBesselOdeSolver *solver, glong n_cols, guint n_l)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  const gdouble h                         = self->half_len;
+  NcmMatrix *endpoints;
+  gdouble * restrict endp_data;
+  glong row;
+  guint l_idx;
+
+  /* Circular buffer for last TOTAL_BANDWIDTH coefficients - much smaller than full solution */
+  _ensure_solution_batched_capacity (self, TOTAL_BANDWIDTH * n_l);
+  memset (self->solution_batched, 0, sizeof (gdouble) * TOTAL_BANDWIDTH * n_l);
+
+  /* Result matrix: n_l rows x 3 columns [y'(a), y'(b), error] */
+  endpoints = ncm_matrix_new (n_l, 3);
+  endp_data = ncm_matrix_data (endpoints);
+
+  /* Initialize endpoint derivative accumulators and error */
+  #pragma omp simd
+
+  for (l_idx = 0; l_idx < n_l; l_idx++)
+  {
+    endp_data[l_idx * 3 + 0] = 0.0; /* y'(-1) accumulator */
+    endp_data[l_idx * 3 + 1] = 0.0; /* y'(+1) accumulator */
+    endp_data[l_idx * 3 + 2] = 0.0; /* error accumulator */
+  }
+
+  /* Ensure accumulator arrays have sufficient capacity */
+  _ensure_acc_bc_at_m1_capacity (self, n_l);
+  _ensure_acc_bc_at_p1_capacity (self, n_l);
+
+  /* Zero out boundary condition accumulators */
+  #pragma omp simd
+
+  for (l_idx = 0; l_idx < n_l; l_idx++)
+  {
+    self->acc_bc_at_m1[l_idx] = 0.0;
+    self->acc_bc_at_p1[l_idx] = 0.0;
+  }
+
+  /* Back-substitution: compute coefficients and accumulate derivative contributions */
+  for (row = n_cols - 1; row >= 0; row--)
+  {
+    const glong row_base_idx = row * n_l;
+    const gdouble row_sign   = (row % 2) == 0 ? 1.0 : -1.0;
+    const gdouble kd         = (gdouble) row;
+    const gdouble k_squared  = kd * kd;
+    const glong buffer_pos   = row % TOTAL_BANDWIDTH; /* Circular buffer position */
+    /* Precompute circular buffer positions for all coefficients we'll need */
+    const glong buf_pos_1 = (row + 1) % TOTAL_BANDWIDTH;
+    const glong buf_pos_2 = (row + 2) % TOTAL_BANDWIDTH;
+    const glong buf_pos_3 = (row + 3) % TOTAL_BANDWIDTH;
+    const glong buf_pos_4 = (row + 4) % TOTAL_BANDWIDTH;
+    const glong buf_pos_5 = (row + 5) % TOTAL_BANDWIDTH;
+    const glong buf_pos_6 = (row + 6) % TOTAL_BANDWIDTH;
+    const glong buf_pos_7 = (row + 7) % TOTAL_BANDWIDTH;
+    const glong buf_pos_8 = (row + 8) % TOTAL_BANDWIDTH;
+
+    #pragma omp simd
+
+    for (l_idx = 0; l_idx < n_l; l_idx++)
+    {
+      const glong row_idx                       = row_base_idx + l_idx;
+      const NcmSBesselOdeSolverRow * restrict r = &self->matrix_rows_batched[row_idx];
+      const gdouble * restrict r_data           = r->data;
+      const glong base_buffer_idx               = l_idx * TOTAL_BANDWIDTH;
+      const gdouble * restrict sol_buf          = &self->solution_batched[base_buffer_idx];
+      gdouble sum                               = g_array_index (self->c_batched, gdouble, row_idx);
+      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row ((NcmSBesselOdeSolverRow *) r, row);
+      gdouble c_k;
+
+      g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
+
+      /* Manually unrolled loop with precomputed buffer positions */
+      sum -= r_data[1] * sol_buf[buf_pos_1];
+      sum -= r_data[2] * sol_buf[buf_pos_2];
+      sum -= r_data[3] * sol_buf[buf_pos_3];
+      sum -= r_data[4] * sol_buf[buf_pos_4];
+      sum -= r_data[5] * sol_buf[buf_pos_5];
+      sum -= r_data[6] * sol_buf[buf_pos_6];
+      sum -= r_data[7] * sol_buf[buf_pos_7];
+      sum -= r_data[8] * sol_buf[buf_pos_8];
+      sum -= self->acc_bc_at_m1[l_idx] * r->bc_at_m1;
+      sum -= self->acc_bc_at_p1[l_idx] * r->bc_at_p1;
+
+      c_k = sum / diag;
+
+      /* Store coefficient in circular buffer for future back-substitution steps */
+      self->solution_batched[base_buffer_idx + buffer_pos] = c_k;
+
+      /* Update boundary condition accumulators for next iteration */
+      self->acc_bc_at_m1[l_idx] += row_sign * c_k;
+      self->acc_bc_at_p1[l_idx] += c_k;
+
+      /* Accumulate derivative contributions:
+       * dy/dt|_{t=-1} = sum_k k^2 * (-1)^(k+1) * c_k
+       * dy/dt|_{t=+1} = sum_k k^2 * c_k
+       */
+      endp_data[l_idx * 3 + 0] += k_squared * (-row_sign) * c_k; /* y'(-1) */
+      endp_data[l_idx * 3 + 1] += k_squared * c_k;               /* y'(+1) */
+      endp_data[l_idx * 3 + 2] += k_squared * fabs (c_k);        /* error estimate */
+    }
+  }
+
+  /* Convert from t-derivatives to x-derivatives and finalize error */
+  #pragma omp simd
+
+  for (l_idx = 0; l_idx < n_l; l_idx++)
+  {
+    endp_data[l_idx * 3 + 0] /= h; /* y'(a) = y'(-1) / h */
+    endp_data[l_idx * 3 + 1] /= h; /* y'(b) = y'(+1) / h */
+    endp_data[l_idx * 3 + 2] /= h; /* error estimate */
+  }
+
+  return endpoints;
+}
+
+/**
+ * _ncm_sbessel_ode_solver_solve_batched_internal:
+ * @solver: a #NcmSBesselOdeSolver
+ * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @lmin: minimum l value
+ * @n_l: number of l values to solve for (l = lmin, lmin+1, ..., lmin+n_l-1)
+ *
+ * Internal batched solver implementation. Can be specialized at compile time
+ * when n_l is known at compile time for better optimization.
+ *
+ * This function uses the factored implementation: first diagonalizes the operator,
+ * then builds the full solution.
+ *
+ * Returns: (transfer full): solution matrix where each row is the solution for one l value
+ */
+static NcmMatrix *
+_ncm_sbessel_ode_solver_solve_batched_internal (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l)
+{
+  /* Step 1: Diagonalize the operator using QR decomposition */
+  const glong n_cols = _ncm_sbessel_ode_solver_diagonalize_batched (solver, rhs, lmin, n_l);
+
+  /* Step 2: Build the full solution by back-substitution */
+  return _ncm_sbessel_ode_solver_build_solution_batched (solver, n_cols, n_l);
 }
 
 /* Specialized batched solvers for common sizes - enables better compiler optimizations */
@@ -1412,6 +1685,46 @@ ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rh
 
     default:
       return _ncm_sbessel_ode_solver_solve_batched_internal (solver, rhs, lmin, n_l);
+  }
+}
+
+NcmMatrix *
+_ncm_sbessel_ode_solver_compute_endpoints_batched_8 (NcmSBesselOdeSolver *solver, glong n_cols)
+{
+  return _ncm_sbessel_ode_solver_compute_endpoints_batched (solver, n_cols, 8);
+}
+
+/**
+ * ncm_sbessel_ode_solver_solve_endpoints_batched:
+ * @solver: a #NcmSBesselOdeSolver
+ * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @lmin: minimum l value
+ * @n_l: number of l values to solve for (l = lmin, lmin+1, ..., lmin+n_l-1)
+ *
+ * Efficiently computes only the endpoint derivatives y'(a) and y'(b) for multiple l values
+ * without building the full solution matrix. This is much more efficient when only endpoint
+ * information is needed (e.g., for integral computations via Green's identity).
+ *
+ * The function first diagonalizes the operator using adaptive QR decomposition, then
+ * performs back-substitution while accumulating the contributions to the endpoint derivatives
+ * on-the-fly, avoiding the memory allocation and computation cost of the full solution.
+ *
+ * Returns: (transfer full): matrix with n_l rows and 3 columns, where each row contains
+ *   [y'(a), y'(b), error_estimate] for one l value
+ */
+NcmMatrix *
+ncm_sbessel_ode_solver_solve_endpoints_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l)
+{
+  const glong n_cols = _ncm_sbessel_ode_solver_diagonalize_batched (solver, rhs, lmin, n_l);
+
+
+  switch (n_l)
+  {
+    case 8:
+      return _ncm_sbessel_ode_solver_compute_endpoints_batched_8 (solver, n_cols);
+
+    default:
+      return _ncm_sbessel_ode_solver_compute_endpoints_batched (solver, n_cols, n_l);
   }
 }
 
@@ -1828,7 +2141,6 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
   const gdouble a                         = self->a;
   const gdouble b                         = self->b;
-  const gdouble h                         = self->half_len;
   const gint l_orig                       = self->l;
   const gint my_lmax                      = GSL_MIN (lmax, ncm_sf_sbessel_array_eval_ell_cutoff (self->sba, b));
   const gint n_l                          = lmax - lmin + 1;
@@ -1881,72 +2193,20 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
     {
       const gint l_block_end = GSL_MIN (l_block_start + block_size - 1, my_lmax);
       const guint n_l_block  = l_block_end - l_block_start + 1;
+      NcmMatrix *solutions   = ncm_sbessel_ode_solver_solve_endpoints_batched (solver, rhs, l_block_start, n_l_block);
 
-      /* Solve for all l values in this block simultaneously */
-      NcmMatrix *solutions = ncm_sbessel_ode_solver_solve_batched (solver, rhs, l_block_start, n_l_block);
-
-      /* Process each l in the block */
       for (guint i = 0; i < n_l_block; i++)
       {
-        const gint l = l_block_start + i;
+        const gint l            = l_block_start + i;
+        const gdouble y_prime_a = ncm_matrix_get (solutions, i, 0);
+        const gdouble y_prime_b = ncm_matrix_get (solutions, i, 1);
+        const gdouble j_l_a     = j_array_a[l];
+        const gdouble j_l_b     = j_array_b[l];
+        const gdouble integral  = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
 
-        /* Get solution row for this l (each row is one solution) */
-        const guint sol_len = ncm_matrix_ncols (solutions);
-
-        /* Compute derivatives at endpoints using solution row i */
-        gdouble y_prime_at_minus1 = 0.0;
-        gdouble y_prime_at_plus1  = 0.0;
-        gdouble error_estimate    = 0.0;
-        gdouble c_k               = 0.0;
-        gdouble integral_error    = 0.0;
-
-        /* Compute Chebyshev derivative at t=-1 and t=+1 */
-        for (guint k = 0; k < sol_len; k++)
-        {
-          const gdouble kd = (gdouble) k;
-
-          c_k = ncm_matrix_get (solutions, i, k);
-
-          /* Derivative at t=-1: sum_k k^2 * (-1)^(k+1) * c_k */
-          y_prime_at_minus1 += kd * kd * ((k % 2 == 0) ? -1.0 : 1.0) * c_k;
-
-          /* Derivative at t=+1: sum_k k^2 * c_k */
-          y_prime_at_plus1 += kd * kd * c_k;
-
-          error_estimate += kd * kd * fabs (c_k);
-        }
-
-        error_estimate = (error_estimate * GSL_DBL_EPSILON + fabs (c_k)) / h;
-
-        const gdouble y_prime_a = y_prime_at_minus1 / h;
-        const gdouble y_prime_b = y_prime_at_plus1 / h;
-
-        /* Evaluate j_l at endpoints */
-        const gdouble j_l_a = j_array_a[l];
-        const gdouble j_l_b = j_array_b[l];
-
-        /* Compute integral via Green's identity */
-        const gdouble integral = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
-
-        integral_error = fabs (b * b * j_l_b) * error_estimate + fabs (a * a * j_l_a) * error_estimate;
-
-/*
- *       printf ("l = %4d, [%.2f, %.2f] (%6u), % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e\n",
- *               l,
- *               a, b,
- *               sol_len,
- *               y_prime_b, y_prime_a,
- *               error_estimate,
- *               b * b * j_l_b * y_prime_b, a * a * j_l_a * y_prime_a,
- *               b * b * j_l_b * error_estimate, a * a * j_l_a * error_estimate,
- *               integral, integral_error);
- */
-
-        /* Store result */
         result_data[l - lmin] = integral;
       }
 
-      /* Clean up solutions for this block */
       ncm_matrix_free (solutions);
     }
   }
