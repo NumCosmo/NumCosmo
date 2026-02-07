@@ -798,14 +798,19 @@ libnumcosmo = library(
     c_args: numcosmo_c_args,
 )
 
+libnumcosmo_dep_sources = [
+    ncm_enum_types[1],
+    nc_enum_types[1],
+]
+
+if nlopt_dep.found()
+    libnumcosmo_dep_sources += ncm_fit_nlopt_enum_types[1]
+endif
+
 libnumcosmo_dep = declare_dependency(
     link_with: libnumcosmo,
     dependencies: libnumcosmo_dep_list,
-    sources: [
-        ncm_enum_types[1],
-        nc_enum_types[1],
-        ncm_fit_nlopt_enum_types[1],
-    ],
+    sources: libnumcosmo_dep_sources,
 )
 
 # Generate pkg-config files
