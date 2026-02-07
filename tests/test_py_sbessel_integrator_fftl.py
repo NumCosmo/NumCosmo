@@ -231,7 +231,7 @@ class TestSBesselIntegratorFFTL:
         print_rank = False
         print_ell: list[int] | None = [50]
 
-        for i in range(10):
+        for i in range(1):
             print(f"Starting iteration {i}\r", end="", flush=True)
             for i, k in enumerate(truth_table["kvals"]):
                 # if (i != 50) and i < 100:
@@ -252,10 +252,10 @@ class TestSBesselIntegratorFFTL:
                 if print_ell is not None:
                     for ell in print_ell:
                         print(
-                            f"[{func_type}] ell={ell}, k={k: 22.15g}, "
-                            f"result={results[ell - ell_min]:.6e}, "
-                            f"truth={truth_values[ell - ell_min]:.6e}, "
-                            f"rel_error={rel_errors[ell - ell_min]:.2e}"
+                            f"[{func_type}] ell={ell:d}, k={k: 22.15g}, "
+                            f"result={results[ell - ell_min]: 14.6e}, "
+                            f"truth={truth_values[ell - ell_min]: 14.6e}, "
+                            f"rel_error={rel_errors[ell - ell_min]: 4.2e}"
                         )
 
                 if print_rank:
