@@ -78,6 +78,14 @@
 #define TOTAL_BANDWIDTH (LOWER_BANDWIDTH + UPPER_BANDWIDTH + 1)
 #define ROWS_TO_ROTATE (LOWER_BANDWIDTH + 2)
 
+#define ALIGNMENT 64 /* 64-byte alignment for cache lines */
+
+#define ROW_CORE_SIZE \
+        (sizeof (gdouble) * (TOTAL_BANDWIDTH + 2) + sizeof (glong))
+
+#define PADDED_BANDWIDTH \
+        ((TOTAL_BANDWIDTH + 7) & ~7) /* round up to multiple of 8 */
+
 /**
  * NcmSBesselOdeSolverRow:
  *
@@ -86,11 +94,11 @@
  */
 typedef struct _NcmSBesselOdeSolverRow
 {
-  gdouble data[TOTAL_BANDWIDTH]; /* Pointer to row data */
-  gdouble bc_at_m1;              /* Boundary condition row 1 coefficient */
-  gdouble bc_at_p1;              /* Boundary condition row 2 coefficient */
-  glong col_index;               /* Column index of leftmost element in data */
-} NcmSBesselOdeSolverRow __attribute__ ((aligned (32)));
+  gdouble data[PADDED_BANDWIDTH] __attribute__ ((aligned (ALIGNMENT))); /* Pointer to row data */
+  gdouble bc_at_m1;                                                     /* Boundary condition row 1 coefficient */
+  gdouble bc_at_p1;                                                     /* Boundary condition row 2 coefficient */
+  glong col_index;                                                      /* Column index of leftmost element in data */
+} NcmSBesselOdeSolverRow __attribute__ ((aligned (ALIGNMENT)));
 
 typedef struct _NcmSBesselOdeSolverPrivate
 {
@@ -335,7 +343,7 @@ _ensure_matrix_rows_capacity (NcmSBesselOdeSolverPrivate *self, gsize required_s
       new_capacity = 16;
 
 
-    if (posix_memalign ((void **) &new_rows, 32, new_capacity * sizeof (NcmSBesselOdeSolverRow)) != 0)
+    if (posix_memalign ((void **) &new_rows, ALIGNMENT, new_capacity * sizeof (NcmSBesselOdeSolverRow)) != 0)
       g_error ("_ensure_matrix_rows_capacity: failed to allocate aligned memory");
 
     if (self->matrix_rows != NULL)
@@ -363,7 +371,7 @@ _ensure_matrix_rows_batched_capacity (NcmSBesselOdeSolverPrivate *self, gsize re
       new_capacity = 16;
 
 
-    if (posix_memalign ((void **) &new_rows, 32, new_capacity * sizeof (NcmSBesselOdeSolverRow)) != 0)
+    if (posix_memalign ((void **) &new_rows, ALIGNMENT, new_capacity * sizeof (NcmSBesselOdeSolverRow)) != 0)
       g_error ("_ensure_matrix_rows_batched_capacity: failed to allocate aligned memory");
 
     if (self->matrix_rows_batched != NULL)
@@ -390,7 +398,7 @@ _ensure_solution_batched_capacity (NcmSBesselOdeSolverPrivate *self, gsize requi
     if (new_capacity < 16)
       new_capacity = 16;
 
-    if (posix_memalign ((void **) &new_array, 32, new_capacity * sizeof (gdouble)) != 0)
+    if (posix_memalign ((void **) &new_array, ALIGNMENT, new_capacity * sizeof (gdouble)) != 0)
       g_error ("_ensure_solution_batched_capacity: failed to allocate aligned memory");
 
     if (self->solution_batched != NULL)
@@ -412,7 +420,7 @@ _ensure_acc_bc_at_m1_capacity (NcmSBesselOdeSolverPrivate *self, gsize required_
     if (new_capacity < 16)
       new_capacity = 16;
 
-    if (posix_memalign ((void **) &new_array, 32, new_capacity * sizeof (gdouble)) != 0)
+    if (posix_memalign ((void **) &new_array, ALIGNMENT, new_capacity * sizeof (gdouble)) != 0)
       g_error ("_ensure_acc_bc_at_m1_capacity: failed to allocate aligned memory");
 
     if (self->acc_bc_at_m1 != NULL)
@@ -434,7 +442,7 @@ _ensure_acc_bc_at_p1_capacity (NcmSBesselOdeSolverPrivate *self, gsize required_
     if (new_capacity < 16)
       new_capacity = 16;
 
-    if (posix_memalign ((void **) &new_array, 32, new_capacity * sizeof (gdouble)) != 0)
+    if (posix_memalign ((void **) &new_array, ALIGNMENT, new_capacity * sizeof (gdouble)) != 0)
       g_error ("_ensure_acc_bc_at_p1_capacity: failed to allocate aligned memory");
 
     if (self->acc_bc_at_p1 != NULL)
@@ -853,10 +861,8 @@ _ncm_sbessel_create_row_operator_batched (NcmSBesselOdeSolver *solver, NcmSBesse
   const gdouble h                         = self->half_len;
   const gdouble h2                        = h * h;
   const gdouble m2                        = m * m;
-  const gdouble lmin_lmin_p_1             = (gdouble) lmin * (lmin + 1);
   const glong k                           = row_index;
   const glong left_col                    = GSL_MAX (0, k - 2); /* Leftmost column index */
-  gdouble llp1                            = lmin_lmin_p_1;
   gdouble l                               = (gdouble) lmin;
   guint i;
 
@@ -876,16 +882,39 @@ _ncm_sbessel_create_row_operator_batched (NcmSBesselOdeSolver *solver, NcmSBesse
   ncm_spectral_compute_x_d_row (row[0].data, k, offset, 2.0);
 
   /* Identity term: 2m h x + h^2 x^2 - l-independent part */
-  ncm_spectral_compute_proj_row (row[0].data, k, offset, m2 - llp1);
   ncm_spectral_compute_x_row (row[0].data, k, offset, 2.0 * m * h);
   ncm_spectral_compute_x2_row (row[0].data, k, offset, h2);
 
-  /* Copy template to remaining rows and add incremental l-dependent correction */
+  /* Copy template from row[0] to all other rows, then add l-dependent corrections in one pass */
   for (i = 1; i < n_l; i++)
   {
-    l += 1.0;
-    memcpy (&row[i], &row[i - 1], sizeof (NcmSBesselOdeSolverRow));
-    ncm_spectral_compute_proj_row (row[i].data, k, offset, -2.0 * l);
+    row[i] = row[0]; /* Struct copy is faster than memcpy for small structs and better for cache */
+  }
+
+  {
+    const gdouble kd = (gdouble) k;
+
+    /* General formula: three entries with rational function coefficients */
+    const gdouble value_0 = 1.0 / (2.0 * (kd + 1.0));
+    const gdouble value_1 = -1.0 * (kd + 2.0) / ((kd + 1.0) * (kd + 3.0));
+    const gdouble value_2 = 1.0 / (2.0 * (kd + 3.0));
+    gdouble coeff         = m2 - l * (l + 1.0);
+
+    for (i = 0; i < n_l; i++)
+    {
+      gdouble * restrict row_data = row[i].data;
+
+      row_data[offset]     += coeff * value_0;
+      row_data[offset + 2] += coeff * value_1;
+      row_data[offset + 4] += coeff * value_2;
+
+      /* Special case: k=0 has an additional contribution */
+      if (k == 0)
+        row_data[offset] += coeff * 0.5;
+
+      l     += 1.0;
+      coeff -= 2.0 * l; /* Incremental update for next l value */
+    }
   }
 }
 
@@ -960,30 +989,10 @@ _ncm_sbessel_create_row_batched (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolve
 
 __attribute__ ((optimize ("no-math-errno", "no-trapping-math")))
 
-static inline gdouble
-_compute_hypot (gdouble a, gdouble b)
+static inline double
+_compute_inv_hypot (double a, double b)
 {
-  const gdouble abs_a = fabs (a);
-  const gdouble abs_b = fabs (b);
-
-  if (abs_a == 0.0)
-    return abs_b;
-
-  if (abs_b == 0.0)
-    return abs_a;
-
-  if (abs_a > abs_b)
-  {
-    const gdouble ratio = abs_b / abs_a;
-
-    return abs_a * sqrt (1.0 + ratio * ratio);
-  }
-  else
-  {
-    const gdouble ratio = abs_a / abs_b;
-
-    return abs_b * sqrt (1.0 + ratio * ratio);
-  }
+  return 1.0 / sqrt (a * a + b * b);
 }
 
 /**
@@ -1005,11 +1014,11 @@ static inline __attribute__ ((hot)) void
 
 _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong pivot_col, NcmSBesselOdeSolverRow * restrict r1, NcmSBesselOdeSolverRow * restrict r2, gdouble * restrict c1, gdouble * restrict c2)
 {
-  const gdouble a_val = r1->data[0] + _ncm_sbessel_bc_row (r1, pivot_col);
-  const gdouble b_val = r2->data[0] + _ncm_sbessel_bc_row (r2, pivot_col);
-  const gdouble norm  = _compute_hypot (a_val, b_val);
+  const gdouble a_val    = r1->data[0] + _ncm_sbessel_bc_row (r1, pivot_col);
+  const gdouble b_val    = r2->data[0] + _ncm_sbessel_bc_row (r2, pivot_col);
+  const gdouble inv_norm = _compute_inv_hypot (a_val, b_val);
 
-  if (__builtin_expect ((norm < 1.0e-100), 0))
+  if (__builtin_expect ((inv_norm > 1.0e100), 0))
   {
     /* Entry already zero - just shift r2 without rotation */
     /* Manually unrolled for TOTAL_BANDWIDTH = 9 */
@@ -1032,7 +1041,6 @@ _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong pivot_col, NcmSBes
     /* Compute Givens rotation coefficients */
     #define FMA(a, b, c) ((a) * (b) + (c))
     /* #define FMA(a, b, c) fma (a, b, c) */
-    const gdouble inv_norm     = 1.0 / norm;
     const gdouble cos_theta    = a_val * inv_norm;
     const gdouble sin_theta    = b_val * inv_norm;
     const gdouble rhs1         = *c1;
@@ -1407,7 +1415,7 @@ _ncm_sbessel_ode_solver_build_solution_batched (NcmSBesselOdeSolver *solver, glo
     self->acc_bc_at_p1[l_idx] = 0.0;
   }
 
-  if (posix_memalign ((void **) &sol_data, 32, (n_cols + TOTAL_BANDWIDTH) * n_l * sizeof (gdouble)) != 0)
+  if (posix_memalign ((void **) &sol_data, ALIGNMENT, (n_cols + TOTAL_BANDWIDTH) * n_l * sizeof (gdouble)) != 0)
     g_error ("Failed to allocate aligned memory for solution");
 
   memset (sol_data, 0, (n_cols + TOTAL_BANDWIDTH) * n_l * sizeof (gdouble));
