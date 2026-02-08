@@ -822,8 +822,9 @@ class TestSBesselOperators:
     def test_solve_endpoints_rhs_x(self, l_val: int) -> None:
         """Test solve_endpoints with Green's identity for RHS=x.
 
-        Verifies that solve_endpoints correctly computes endpoint derivatives
-        that satisfy Green's identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b x*j_l(x)dx
+        Verifies that solve_endpoints correctly computes endpoint derivatives that
+        satisfy Green's identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b
+        x*j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -871,7 +872,7 @@ class TestSBesselOperators:
 
     @pytest.mark.parametrize("l_val", [0, 1, 5, 10, 20])
     def test_solve_endpoints_vs_full_solution(self, l_val: int) -> None:
-        """Test that solve_endpoints gives same result as computing derivatives from full solution.
+        """Test that solve_endpoints.
 
         This verifies that the optimized endpoint computation matches
         the derivatives computed from the full solution.
@@ -1118,7 +1119,7 @@ class TestSBesselOperators:
             )
 
     def test_solve_endpoints_batched_vs_full_solution(self) -> None:
-        """Test that solve_endpoints_batched matches derivatives from full batched solution.
+        """Test that solve_endpoints_batched.
 
         Verifies that the optimized batched endpoint computation matches
         the derivatives computed from the full batched solution.
