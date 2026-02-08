@@ -42,12 +42,6 @@ NcmSBesselIntegratorLevin *ncm_sbessel_integrator_levin_ref (NcmSBesselIntegrato
 void ncm_sbessel_integrator_levin_free (NcmSBesselIntegratorLevin *sbilv);
 void ncm_sbessel_integrator_levin_clear (NcmSBesselIntegratorLevin **sbilv);
 
-void ncm_sbessel_integrator_levin_set_n_panels (NcmSBesselIntegratorLevin *sbilv, guint n_panels);
-guint ncm_sbessel_integrator_levin_get_n_panels (NcmSBesselIntegratorLevin *sbilv);
-
-void ncm_sbessel_integrator_levin_set_min_order (NcmSBesselIntegratorLevin *sbilv, guint min_order);
-guint ncm_sbessel_integrator_levin_get_min_order (NcmSBesselIntegratorLevin *sbilv);
-
 void ncm_sbessel_integrator_levin_set_max_order (NcmSBesselIntegratorLevin *sbilv, guint max_order);
 guint ncm_sbessel_integrator_levin_get_max_order (NcmSBesselIntegratorLevin *sbilv);
 
