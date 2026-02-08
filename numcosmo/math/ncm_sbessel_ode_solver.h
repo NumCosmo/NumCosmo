@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_spectral.h>
 
 G_BEGIN_DECLS
 
@@ -75,6 +76,8 @@ NcmMatrix *ncm_sbessel_ode_solver_solve_endpoints_batched (NcmSBesselOdeSolver *
 NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, gint nrows);
 NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver, gint nrows);
 NcmVector *ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint nrows);
+
+NcmSpectral *ncm_sbessel_ode_solver_peek_spectral (NcmSBesselOdeSolver *solver);
 
 NcmVector *ncm_sbessel_ode_solver_peek_solution (NcmSBesselOdeSolver *solver);
 gint ncm_sbessel_ode_solver_get_solution_size (NcmSBesselOdeSolver *solver);

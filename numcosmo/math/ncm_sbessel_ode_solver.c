@@ -56,7 +56,6 @@
 #include "build_cfg.h"
 
 #include "math/ncm_sbessel_ode_solver.h"
-#include "math/ncm_spectral.h"
 #include "math/ncm_sf_sbessel.h"
 #include "math/ncm_dtuple.h"
 #include "math/ncm_lapack.h"
@@ -2102,6 +2101,24 @@ ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, NcmVector *rhs,
 
   /* Solution is stored in b */
   return b;
+}
+
+/**
+ * ncm_sbessel_ode_solver_peek_spectral:
+ * @solver: a #NcmSBesselOdeSolver
+ *
+ * Returns a pointer to the internal spectral object used by the solver. This allows
+ * the user to inspect the internal state of the solver. The spectral object contains
+ * information about the Chebyshev nodes, weights, and Chebyshev polynomials.
+ *
+ * Returns: (transfer full): spectral object
+ */
+NcmSpectral *
+ncm_sbessel_ode_solver_peek_spectral (NcmSBesselOdeSolver *solver)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+
+  return self->spectral;
 }
 
 /**
