@@ -24,7 +24,6 @@
 
 """Example of using the Class backend to object oriented interface."""
 
-
 from numcosmo_py import Nc, Ncm
 
 #

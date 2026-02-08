@@ -307,7 +307,7 @@ def _type_to_python(
     if tag == tags.INTERFACE:
         interface = ltype.get_interface()
         if isinstance(interface, GI.CallbackInfo):
-            (names, args, return_args) = _callable_get_arguments(
+            names, args, return_args = _callable_get_arguments(
                 interface, current_namespace, needed_namespaces
             )
 
@@ -367,8 +367,7 @@ def _build(
     ]
 
     if namespace == "Gtk":
-        typevars.append(
-            """CellRendererT = typing.TypeVar(
+        typevars.append("""CellRendererT = typing.TypeVar(
     "CellRendererT",
     CellRendererCombo,
     CellRendererPixbuf,
@@ -377,8 +376,7 @@ def _build(
     CellRendererSpinner,
     CellRendererText,
     CellRendererToggle,
-)"""
-        )
+)""")
 
     imports: list[str] = []
     if "cairo" in ns:
@@ -440,7 +438,7 @@ def _build_function_info(
         static = True
 
     # Arguments
-    (names, args, return_args) = _callable_get_arguments(
+    names, args, return_args = _callable_get_arguments(
         function, current_namespace, needed_namespaces, True
     )
     args_types = [f"{name}: {args[i]}" for (i, name) in enumerate(names)]
@@ -490,7 +488,7 @@ def _wrapped_strip_boolean_result(
     real_function = function.__wrapped__
     fail_ret = inspect.getclosurevars(function).nonlocals.get("fail_ret")
 
-    (_, _, return_args) = _callable_get_arguments(
+    _, _, return_args = _callable_get_arguments(
         real_function, current_namespace, needed_namespaces
     )
     return_args = return_args[1:]  # Strip first return value
@@ -744,7 +742,7 @@ def _gi_build_stub(
                             fields.append(f"{n}: {t}")
 
                 # Properties
-                (rp, wp) = _object_get_props(repo, object_info)
+                rp, wp = _object_get_props(repo, object_info)
                 readable_props.extend(rp)
                 writable_props.extend(wp)
 

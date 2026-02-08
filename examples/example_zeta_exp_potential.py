@@ -30,7 +30,6 @@ import matplotlib.pyplot as plt
 
 from numcosmo_py import Nc, Ncm
 
-
 #
 #  Initializing the library objects, this must be called before
 #  any other library function.
@@ -104,8 +103,8 @@ def test_zeta_exp_potential(new_config: bool = True) -> None:
     print(f"# BACKG (t0, t1) = ({Vexp.tau_min(): 21.15e}, {Vexp.tau_max(): 21.15e})")
     print(f"# ADIAB (t0, t1) = ({t0: 21.15e}, {t1: 21.15e})")
 
-    (Delta_zeta_c, _Delta_Pzeta_c) = adiab.eval_powspec_at(Vexp, tc)
-    (Delta_h_c, _Delta_Ph_c) = gw.eval_powspec_at(Vexp, tc)
+    Delta_zeta_c, _Delta_Pzeta_c = adiab.eval_powspec_at(Vexp, tc)
+    Delta_h_c, _Delta_Ph_c = gw.eval_powspec_at(Vexp, tc)
 
     print(f"# Time of x_e = 10^15:     tau_c     = {tc: 21.15f}")
     print(f"# Power spectrum at tau_c: PS_ADIAB  = {Delta_zeta_c: 21.15e}")
@@ -113,15 +112,14 @@ def test_zeta_exp_potential(new_config: bool = True) -> None:
     print(
         f"# Power spectrum at tau_c: r         = {2.0 * Delta_h_c / Delta_zeta_c: 21.15e}"
     )
-    
+
     tau_a = np.linspace(-5.0, t1, 100000)
     Delta_zeta = np.array([adiab.eval_powspec_at(Vexp, t) for t in tau_a])
     Delta_h = np.array([gw.eval_powspec_at(Vexp, t) for t in tau_a])
     mylw = 1.0
 
-    
-    plt.plot(tau_a, np.abs(Delta_zeta[:,0]), lw=mylw, label=r"$\Delta_{\zeta}a$")
-    plt.plot(tau_a, Delta_h[:,0], lw=mylw, label=r"$\Delta_h$")
+    plt.plot(tau_a, np.abs(Delta_zeta[:, 0]), lw=mylw, label=r"$\Delta_{\zeta}a$")
+    plt.plot(tau_a, Delta_h[:, 0], lw=mylw, label=r"$\Delta_h$")
 
     plt.grid(which="both", linestyle=":", color="0.75", linewidth=0.5)
     plt.legend(loc="upper left")
@@ -135,4 +133,4 @@ def test_zeta_exp_potential(new_config: bool = True) -> None:
 
 
 if __name__ == "__main__":
-    test_zeta_exp_potential(new_config = False)
+    test_zeta_exp_potential(new_config=False)

@@ -23,7 +23,6 @@
 
 """NumCosmo APP subcommand to compute the Fisher matrix and related quantities."""
 
-
 import dataclasses
 from pathlib import Path
 from typing import Optional, Annotated, cast
