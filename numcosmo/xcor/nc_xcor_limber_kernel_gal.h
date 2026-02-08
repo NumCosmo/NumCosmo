@@ -41,8 +41,8 @@ G_DECLARE_FINAL_TYPE (NcXcorLimberKernelGal, nc_xcor_limber_kernel_gal, NC, XCOR
 
 /**
  * NcXcorLimberKernelGalSParams:
- * @NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS: FIXME
- * @NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS: FIXME
+ * @NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS: magnification bias parameter $s$
+ * @NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS: noise bias parameter
  *
  */
 typedef enum _NcXcorLimberKernelGalSParams
@@ -55,7 +55,7 @@ typedef enum _NcXcorLimberKernelGalSParams
 
 /**
  * NcXcorLimberKernelGalVParams:
- * @NC_XCOR_LIMBER_KERNEL_GAL_BIAS: FIXME
+ * @NC_XCOR_LIMBER_KERNEL_GAL_BIAS: large-scale clustering bias $b(z)$
  *
  */
 typedef enum _NcXcorLimberKernelGalVParams
