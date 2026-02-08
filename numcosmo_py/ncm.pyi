@@ -9263,12 +9263,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     Object NcmSBesselIntegratorLevin
 
     Properties from NcmSBesselIntegratorLevin:
-      n-panels -> guint: n-panels
-        Number of panels
-      min-order -> guint: min-order
-        Minimum Clenshaw-Curtis order
       max-order -> guint: max-order
-        Maximum Clenshaw-Curtis order
+        Maximum Chebyshev order
       reltol -> gdouble: reltol
         Relative tolerance
 
@@ -9284,8 +9280,6 @@ class SBesselIntegratorLevin(SBesselIntegrator):
 
     class Props:
         max_order: int
-        min_order: int
-        n_panels: int
         reltol: float
         lmax: int
         lmin: int
@@ -9294,8 +9288,6 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     def __init__(
         self,
         max_order: int = ...,
-        min_order: int = ...,
-        n_panels: int = ...,
         reltol: float = ...,
         lmax: int = ...,
         lmin: int = ...,
@@ -9304,15 +9296,11 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     def clear(sbilv: SBesselIntegratorLevin) -> None: ...
     def free(self) -> None: ...
     def get_max_order(self) -> int: ...
-    def get_min_order(self) -> int: ...
-    def get_n_panels(self) -> int: ...
     def get_reltol(self) -> float: ...
     @classmethod
     def new(cls, lmin: int, lmax: int) -> SBesselIntegratorLevin: ...
     def ref(self) -> SBesselIntegratorLevin: ...
     def set_max_order(self, max_order: int) -> None: ...
-    def set_min_order(self, min_order: int) -> None: ...
-    def set_n_panels(self, n_panels: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
 
 class SBesselIntegratorLevinClass(GObject.GPointer):
@@ -9415,6 +9403,8 @@ class SBesselOdeSolver(GObject.Object):
     def solve(self, rhs: Vector) -> Vector: ...
     def solve_batched(self, rhs: Vector, lmin: int, n_l: int) -> Matrix: ...
     def solve_dense(self, rhs: Vector, nrows: int) -> Vector: ...
+    def solve_endpoints(self, rhs: Vector) -> typing.Tuple[float, float, float]: ...
+    def solve_endpoints_batched(self, rhs: Vector, lmin: int, n_l: int) -> Matrix: ...
 
 class SBesselOdeSolverClass(GObject.GPointer):
     r"""

@@ -1279,6 +1279,127 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
 }
 
 /**
+ * _ncm_sbessel_ode_solver_compute_endpoints:
+ * @solver: a #NcmSBesselOdeSolver
+ * @n_cols: number of columns in the solution (from diagonalization)
+ * @deriv_a: (out): derivative at point a, y'(a)
+ * @deriv_b: (out): derivative at point b, y'(b)
+ * @error: (out): error estimate
+ *
+ * Computes endpoint derivatives y'(a) and y'(b) and error estimate directly from the
+ * diagonalized system without building the full solution vector. This is much more
+ * efficient when only endpoint information is needed, as it computes coefficients
+ * on-the-fly during back-substitution and accumulates their contributions to the
+ * derivatives without storing the full coefficient array.
+ *
+ * Assumes _ncm_sbessel_ode_solver_diagonalize has been called first.
+ */
+static void
+_ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeSolver *solver, glong n_cols, gdouble *deriv_a, gdouble *deriv_b, gdouble *error)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  const gdouble h                         = self->half_len;
+  gdouble acc_bc_at_m1                    = 0.0;
+  gdouble acc_bc_at_p1                    = 0.0;
+  gdouble deriv_at_m1                     = 0.0; /* y'(-1) accumulator */
+  gdouble deriv_at_p1                     = 0.0; /* y'(+1) accumulator */
+  gdouble error_estimate                  = 0.0; /* error accumulator */
+  gdouble *sol_buf;
+  glong row;
+
+  /* Circular buffer for last TOTAL_BANDWIDTH coefficients - much smaller than full solution */
+  sol_buf = g_new0 (gdouble, TOTAL_BANDWIDTH);
+
+  /* Back-substitution: compute coefficients and accumulate derivative contributions */
+  for (row = n_cols - 1; row >= 0; row--)
+  {
+    NcmSBesselOdeSolverRow *r = &self->matrix_rows[row];
+    gdouble sum               = g_array_index (self->c, gdouble, row);
+    const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
+    const gdouble row_sign    = (row % 2) == 0 ? 1.0 : -1.0;
+    const gdouble kd          = (gdouble) row;
+    const gdouble k_squared   = kd * kd;
+    const glong buffer_pos    = row % TOTAL_BANDWIDTH; /* Circular buffer position */
+    gdouble c_k;
+
+    /* Precompute circular buffer positions for all coefficients we'll need */
+    const glong buf_pos_1 = (row + 1) % TOTAL_BANDWIDTH;
+    const glong buf_pos_2 = (row + 2) % TOTAL_BANDWIDTH;
+    const glong buf_pos_3 = (row + 3) % TOTAL_BANDWIDTH;
+    const glong buf_pos_4 = (row + 4) % TOTAL_BANDWIDTH;
+    const glong buf_pos_5 = (row + 5) % TOTAL_BANDWIDTH;
+    const glong buf_pos_6 = (row + 6) % TOTAL_BANDWIDTH;
+    const glong buf_pos_7 = (row + 7) % TOTAL_BANDWIDTH;
+    const glong buf_pos_8 = (row + 8) % TOTAL_BANDWIDTH;
+
+    g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
+
+    /* Manually unrolled loop with precomputed buffer positions */
+    sum -= r->data[1] * sol_buf[buf_pos_1];
+    sum -= r->data[2] * sol_buf[buf_pos_2];
+    sum -= r->data[3] * sol_buf[buf_pos_3];
+    sum -= r->data[4] * sol_buf[buf_pos_4];
+    sum -= r->data[5] * sol_buf[buf_pos_5];
+    sum -= r->data[6] * sol_buf[buf_pos_6];
+    sum -= r->data[7] * sol_buf[buf_pos_7];
+    sum -= r->data[8] * sol_buf[buf_pos_8];
+    sum -= acc_bc_at_m1 * r->bc_at_m1;
+    sum -= acc_bc_at_p1 * r->bc_at_p1;
+
+    c_k = sum / diag;
+
+    /* Store coefficient in circular buffer for future back-substitution steps */
+    sol_buf[buffer_pos] = c_k;
+
+    /* Update boundary condition accumulators for next iteration */
+    acc_bc_at_m1 += row_sign * c_k;
+    acc_bc_at_p1 += c_k;
+
+    /* Accumulate derivative contributions:
+     * dy/dt|_{t=-1} = sum_k k^2 * (-1)^(k+1) * c_k
+     * dy/dt|_{t=+1} = sum_k k^2 * c_k
+     */
+    deriv_at_m1    += k_squared * (-row_sign) * c_k; /* y'(-1) */
+    deriv_at_p1    += k_squared * c_k;               /* y'(+1) */
+    error_estimate += k_squared * fabs (c_k);        /* error estimate */
+  }
+
+  /* Convert from t-derivatives to x-derivatives and set output values */
+  *deriv_a = deriv_at_m1 / h;    /* y'(a) = y'(-1) / h */
+  *deriv_b = deriv_at_p1 / h;    /* y'(b) = y'(+1) / h */
+  *error   = error_estimate / h; /* error estimate */
+
+  g_free (sol_buf);
+}
+
+/**
+ * ncm_sbessel_ode_solver_solve_endpoints:
+ * @solver: a #NcmSBesselOdeSolver
+ * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @deriv_a: (out): derivative at point a, y'(a)
+ * @deriv_b: (out): derivative at point b, y'(b)
+ * @error: (out): error estimate
+ *
+ * Efficiently computes only the endpoint derivatives y'(a) and y'(b)
+ * without building the full solution vector. This is much more efficient when only endpoint
+ * information is needed (e.g., for integral computations via Green's identity).
+ *
+ * The function first diagonalizes the operator using adaptive QR decomposition, then
+ * performs back-substitution while accumulating the contributions to the endpoint
+ * derivatives on-the-fly, avoiding the memory allocation and computation cost of the
+ * full solution.
+ *
+ * The computed values are returned via the output parameters.
+ */
+void
+ncm_sbessel_ode_solver_solve_endpoints (NcmSBesselOdeSolver *solver, NcmVector *rhs, gdouble *deriv_a, gdouble *deriv_b, gdouble *error)
+{
+  const glong n_cols = _ncm_sbessel_ode_solver_diagonalize (solver, rhs);
+
+  _ncm_sbessel_ode_solver_compute_endpoints (solver, n_cols, deriv_a, deriv_b, error);
+}
+
+/**
  * _ncm_sbessel_ode_solver_diagonalize_batched:
  * @solver: a #NcmSBesselOdeSolver
  * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
