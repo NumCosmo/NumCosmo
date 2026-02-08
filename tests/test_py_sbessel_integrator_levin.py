@@ -277,7 +277,7 @@ class TestSBesselIntegratorLevin:
 
         results_vec = Ncm.Vector.new(ell_max - ell_min + 1)
         print_rank = False
-        print_ell: list[int] | None = [50]
+        print_ell: list[int] | None = list(range(501))
 
         for i in range(1):
             print(f"Starting iteration {i}\r", end="", flush=True)
