@@ -48,10 +48,9 @@ class TestSBesselIntegratorLevin:
             ("rational", "rational_jl_500.json.gz"),
         ],
     )
-    def test_truth_table(
-        self, integrator: Ncm.SBesselIntegratorLevin, func_type: str, filename: str
-    ):
+    def test_truth_table(self, func_type: str, filename: str) -> None:
         """Test against truth tables for spherical Bessel integrals."""
+
         truth_table_path = Path(
             Ncm.cfg_get_data_filename(f"truth_tables/{filename}", True)
         )
@@ -66,7 +65,7 @@ class TestSBesselIntegratorLevin:
         ub = truth_table["upper-bound"]
         table = np.array(truth_table["table"])
 
-        print(f"Preparing integrator for {func_type} truth table...")
+        print(f"Preparing solver for {func_type} truth table...")
         print(f"  center = {center}")
         print(f"  std    = {std}")
         print(f"  lb     = {lb}")
@@ -75,40 +74,32 @@ class TestSBesselIntegratorLevin:
         ells = truth_table["lvals"]
         ell_min = int(np.min(ells))
         ell_max = int(np.max(ells))
-        integrator.set_lmin(ell_min)
-        integrator.set_lmax(ell_max)
-        integrator.set_n_panels(1)
-        integrator.set_max_order(1024)
-        integrator.set_reltol(1.0e-10)
-        integrator.prepare()
+        # ell_max = 200  # Limit for faster testing
 
-        # Get the appropriate integration method
-        if func_type == "gaussian":
-            integrate_func = integrator.integrate_gaussian
-        elif func_type == "rational":
-            integrate_func = integrator.integrate_rational
-        else:
-            raise ValueError(f"Unknown function type: {func_type}")
+        N = 2**16  # Number of Chebyshev nodes
+        print(f"Using N = {N} Chebyshev nodes")
 
-        results_vec = Ncm.Vector.new(ell_max - ell_min + 1)
         print_rank = False
-        print_ell: list[int] | None = [10]
+        print_ell: list[int] | None = [50]
+        solver = Ncm.SBesselOdeSolver.new(0, lb, ub)
 
-        for i in range(10):
+        for i in range(1):
             print(f"Starting iteration {i}\r", end="", flush=True)
             for i, k in enumerate(truth_table["kvals"]):
-                # if (i != 50) and i < 100:
-                #    continue
-
-                if k != 1000.0:
-                    continue
-
-                a = lb * k
-                b = ub * k
-                integrate_func(center, std, k, a, b, results_vec)
+                # Get the appropriate integration method
+                if func_type == "gaussian":
+                    results_vec = solver.integrate_gaussian_l_range(
+                        center, std, k, N, ell_min, ell_max
+                    )
+                elif func_type == "rational":
+                    results_vec = solver.integrate_rational_l_range(
+                        center, std, k, N, ell_min, ell_max
+                    )
+                else:
+                    raise ValueError(f"Unknown function type: {func_type}")
 
                 results = np.array(results_vec.dup_array())
-                truth_values = table[:, i]
+                truth_values = table[: (ell_max - ell_min + 1), i]
 
                 # Compute relative errors
                 rel_errors = np.abs(
@@ -118,10 +109,10 @@ class TestSBesselIntegratorLevin:
                 if print_ell is not None:
                     for ell in print_ell:
                         print(
-                            f"[{func_type}] ell={ell}, k={k: 22.15g}, "
-                            f"result={results[ell - ell_min]:.6e}, "
-                            f"truth={truth_values[ell - ell_min]:.6e}, "
-                            f"rel_error={rel_errors[ell - ell_min]:.2e}"
+                            f"[{func_type}] ell={ell:d}, k={k: 22.15g}, "
+                            f"result={results[ell - ell_min]: 14.6e}, "
+                            f"truth={truth_values[ell - ell_min]: 14.6e}, "
+                            f"rel_error={rel_errors[ell - ell_min]: 4.2e}"
                         )
 
                 if print_rank:
