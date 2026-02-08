@@ -103,7 +103,6 @@ typedef struct _NcmSBesselOdeSolverPrivate
 {
   gint l;            /* Angular momentum parameter */
   gdouble tolerance; /* Convergence tolerance for adaptive QR */
-  gint max_size;     /* Maximum matrix size */
   gdouble a;         /* Left endpoint of interval */
   gdouble b;         /* Right endpoint of interval */
   gdouble half_len;  /* (b-a)/2 - half length of interval */
@@ -144,7 +143,6 @@ enum
   PROP_0,
   PROP_L,
   PROP_TOLERANCE,
-  PROP_MAX_SIZE,
   PROP_INTERVAL,
 };
 
@@ -178,8 +176,7 @@ ncm_sbessel_ode_solver_init (NcmSBesselOdeSolver *solver)
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
   self->l                            = 0;
-  self->tolerance                    = NCM_SBESSEL_ODE_SOLVER_DEFAULT_TOLERANCE;
-  self->max_size                     = NCM_SBESSEL_ODE_SOLVER_DEFAULT_MAX_SIZE;
+  self->tolerance                    = 0.0;
   self->a                            = -1.0;
   self->b                            = 1.0;
   self->half_len                     = 1.0;
@@ -218,9 +215,6 @@ _ncm_sbessel_ode_solver_set_property (GObject *object, guint prop_id, const GVal
     case PROP_TOLERANCE:
       ncm_sbessel_ode_solver_set_tolerance (solver, g_value_get_double (value));
       break;
-    case PROP_MAX_SIZE:
-      ncm_sbessel_ode_solver_set_max_size (solver, g_value_get_int (value));
-      break;
     case PROP_INTERVAL:
     {
       NcmDTuple2 *interval = g_value_get_boxed (value);
@@ -252,9 +246,6 @@ _ncm_sbessel_ode_solver_get_property (GObject *object, guint prop_id, GValue *va
       break;
     case PROP_TOLERANCE:
       g_value_set_double (value, self->tolerance);
-      break;
-    case PROP_MAX_SIZE:
-      g_value_set_int (value, self->max_size);
       break;
     case PROP_INTERVAL:
     {
@@ -485,21 +476,8 @@ ncm_sbessel_ode_solver_class_init (NcmSBesselOdeSolverClass *klass)
                                    g_param_spec_double ("tolerance",
                                                         NULL,
                                                         "Convergence tolerance",
-                                                        0.0, 1.0, NCM_SBESSEL_ODE_SOLVER_DEFAULT_TOLERANCE,
+                                                        0.0, 1.0, DBL_EPSILON * 1.0e-1,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmSBesselOdeSolver:max-size:
-   *
-   * Maximum matrix size for adaptive algorithm.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_MAX_SIZE,
-                                   g_param_spec_int ("max-size",
-                                                     NULL,
-                                                     "Maximum matrix size",
-                                                     1, G_MAXINT, NCM_SBESSEL_ODE_SOLVER_DEFAULT_MAX_SIZE,
-                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmSBesselOdeSolver:interval:
@@ -642,37 +620,6 @@ ncm_sbessel_ode_solver_get_tolerance (NcmSBesselOdeSolver *solver)
 }
 
 /**
- * ncm_sbessel_ode_solver_set_max_size:
- * @solver: a #NcmSBesselOdeSolver
- * @max_size: maximum matrix size
- *
- * Sets the maximum matrix size for adaptive algorithm.
- */
-void
-ncm_sbessel_ode_solver_set_max_size (NcmSBesselOdeSolver *solver, gint max_size)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-
-  self->max_size = max_size;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_max_size:
- * @solver: a #NcmSBesselOdeSolver
- *
- * Gets the maximum matrix size.
- *
- * Returns: the maximum matrix size
- */
-gint
-ncm_sbessel_ode_solver_get_max_size (NcmSBesselOdeSolver *solver)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-
-  return self->max_size;
-}
-
-/**
  * ncm_sbessel_ode_solver_set_interval:
  * @solver: a #NcmSBesselOdeSolver
  * @a: left endpoint
@@ -709,39 +656,6 @@ ncm_sbessel_ode_solver_get_interval (NcmSBesselOdeSolver *solver, gdouble *a, gd
 
   *a = self->a;
   *b = self->b;
-}
-
-/**
- * ncm_sbessel_ode_solver_peek_solution:
- * @solver: a #NcmSBesselOdeSolver
- *
- * Gets the solution vector (Chebyshev coefficients) from the last solve.
- * The returned vector is owned by @solver and should not be freed.
- *
- * Returns: (transfer none) (nullable): the solution vector or NULL if no solution computed
- */
-NcmVector *
-ncm_sbessel_ode_solver_peek_solution (NcmSBesselOdeSolver *solver)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-
-  return self->solution;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_solution_size:
- * @solver: a #NcmSBesselOdeSolver
- *
- * Gets the size of the solution vector from the last solve.
- *
- * Returns: the solution size or 0 if no solution computed
- */
-gint
-ncm_sbessel_ode_solver_get_solution_size (NcmSBesselOdeSolver *solver)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-
-  return (self->solution != NULL) ? (gint) ncm_vector_len (self->solution) : 0;
 }
 
 static gdouble
@@ -1186,7 +1100,7 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeSolver *solver, NcmVector *rhs
       else
       {
         /* Acol is small relative to established scale */
-        if (Acol < max_c_A * DBL_EPSILON * 1.0e-1)
+        if (Acol < max_c_A * self->tolerance)
           quiet_cols++;
         else
           quiet_cols = 0;
@@ -1627,12 +1541,17 @@ _ncm_sbessel_ode_solver_build_solution_batched (NcmSBesselOdeSolver *solver, glo
  * @solver: a #NcmSBesselOdeSolver
  * @n_cols: number of columns in the solution (from diagonalization)
  * @n_l: number of l values
+ * @endpoints: (out): matrix with 3 columns per l: [y'(a), y'(b), error]
  *
  * Computes endpoint derivatives y'(a) and y'(b) and error estimates directly from
  * the diagonalized system without building the full solution matrix. This is much more
  * efficient when only endpoint information is needed, as it computes coefficients
  * on-the-fly during back-substitution and accumulates their contributions to the
  * derivatives without storing the full coefficient array.
+ *
+ * This function writes the results into the provided @endpoints matrix, which should
+ * have at least n_l rows and exactly 3 columns. Each row corresponds to one l value,
+ * with columns for y'(a), y'(b), and error estimate.
  *
  * Assumes _ncm_sbessel_ode_solver_diagonalize_batched has been called first.
  *
@@ -1652,7 +1571,7 @@ _ncm_sbessel_ode_solver_compute_endpoints_batched (NcmSBesselOdeSolver *solver, 
   memset (self->solution_batched, 0, sizeof (gdouble) * TOTAL_BANDWIDTH * n_l);
 
   g_assert_cmpuint (ncm_matrix_ncols (endpoints), ==, 3);
-  g_assert_cmpuint (ncm_matrix_nrows (endpoints), ==, n_l);
+  g_assert_cmpuint (ncm_matrix_nrows (endpoints), >=, n_l);
   g_assert_cmpuint (ncm_matrix_tda (endpoints), ==, 3);
 
   /* Result matrix: n_l rows x 3 columns [y'(a), y'(b), error] */
@@ -1894,10 +1813,14 @@ _ncm_sbessel_ode_solver_compute_endpoints_batched_32 (NcmSBesselOdeSolver *solve
  * without building the full solution matrix. This is much more efficient when only endpoint
  * information is needed (e.g., for integral computations via Green's identity).
  *
- * The result matrix must be pre-allocated with n_l rows and 3 columns.
+ * The result matrix must be pre-allocated with at least n_l rows and exactly 3
+ * columns. Each row corresponds to one l value, with the first column storing y'(a),
+ * the second column storing y'(b), and the third column storing the error estimate.
+ *
  * The function first diagonalizes the operator using adaptive QR decomposition, then
- * performs back-substitution while accumulating the contributions to the endpoint derivatives
- * on-the-fly, avoiding the memory allocation and computation cost of the full solution.
+ * performs back-substitution while accumulating the contributions to the endpoint
+ * derivatives on-the-fly, avoiding the memory allocation and computation cost of the
+ * full solution.
  */
 void
 ncm_sbessel_ode_solver_solve_endpoints_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l, NcmMatrix *endpoints)
@@ -2145,430 +2068,5 @@ ncm_sbessel_ode_solver_peek_spectral (NcmSBesselOdeSolver *solver)
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
   return self->spectral;
-}
-
-/**
- * ncm_sbessel_ode_solver_integrate:
- * @solver: a #NcmSBesselOdeSolver
- * @F: (scope call): function to integrate against spherical Bessel function
- * @N: number of Chebyshev nodes for the approximation
- * @user_data: user data for @F
- *
- * Computes the integral $\int_a^b f(x) j_l(x) dx$ using Green's identity
- * with the spherical Bessel ODE. The method:
- *
- * 1. Computes Chebyshev coefficients of f(x) on [a,b]
- * 2. Converts to Gegenbauer $C^{(2)}$ basis
- * 3. Solves the ODE with homogeneous Dirichlet boundary conditions
- * 4. Evaluates derivatives at the endpoints
- * 5. Returns $b^2 j_l(b) y'(b) - a^2 j_l(a) y'(a)$
- *
- * By Green's identity, this equals $\int_a^b f(x) j_l(x) dx$ when y(x)
- * is the solution to the spherical Bessel ODE with right-hand side f(x).
- *
- * Returns: the value of the integral $\int_a^b f(x) j_l(x) dx$
- */
-gdouble
-ncm_sbessel_ode_solver_integrate (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolverF F, guint N, gpointer user_data)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-  const gdouble a                         = self->a;
-  const gdouble b                         = self->b;
-  const gdouble h                         = self->half_len;
-  const gint l                            = self->l;
-
-  /* Step 1: Compute Chebyshev coefficients for f(x) */
-  NcmVector *cheb_coeffs = ncm_vector_new (N);
-
-  ncm_spectral_compute_chebyshev_coeffs (self->spectral, F, a, b, cheb_coeffs, user_data);
-
-  /* Step 2: Convert to Gegenbauer C^(2) basis */
-  NcmVector *gegen_coeffs = ncm_vector_new (N);
-
-  ncm_spectral_chebT_to_gegenbauer_alpha2 (cheb_coeffs, gegen_coeffs);
-
-  /* Step 3: Set up RHS with homogeneous boundary conditions */
-  NcmVector *rhs = ncm_vector_new (N + 2);
-
-  g_assert_cmpuint (ncm_vector_stride (rhs), ==, 1);
-  g_assert_cmpuint (ncm_vector_stride (gegen_coeffs), ==, 1);
-  {
-    gdouble *rhs_data                = ncm_vector_data (rhs);
-    const gdouble *gegen_coeffs_data = ncm_vector_data (gegen_coeffs);
-
-    rhs_data[0] = 0.0; /* BC at x=a (t=-1) */
-    rhs_data[1] = 0.0; /* BC at x=b (t=+1) */
-
-    /* Copy Gegenbauer coefficients to RHS starting from index 2 */
-    memcpy (&rhs_data[2], gegen_coeffs_data, N * sizeof (gdouble));
-  }
-
-  /* Step 4: Solve the ODE */
-  NcmVector *solution = ncm_sbessel_ode_solver_solve (solver, rhs);
-
-  /* Step 5: Compute derivatives at endpoints */
-  /* dy/dx = (dy/dt) / h, where h = (b-a)/2 */
-  const gdouble y_prime_at_minus1 = ncm_spectral_chebyshev_deriv (solution, -1.0);
-  const gdouble y_prime_at_plus1  = ncm_spectral_chebyshev_deriv (solution, 1.0);
-  const gdouble y_prime_a         = y_prime_at_minus1 / h;
-  const gdouble y_prime_b         = y_prime_at_plus1 / h;
-
-  /* Step 6: Evaluate j_l at endpoints */
-  const gdouble j_l_a = gsl_sf_bessel_jl (l, a);
-  const gdouble j_l_b = gsl_sf_bessel_jl (l, b);
-
-  /* Step 7: Compute integral via Green's identity */
-  const gdouble integral = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
-
-  /* Clean up */
-  ncm_vector_free (cheb_coeffs);
-  ncm_vector_free (gegen_coeffs);
-  ncm_vector_free (rhs);
-  ncm_vector_free (solution);
-
-  return integral;
-}
-
-/* Define Gaussian function */
-typedef struct
-{
-  gdouble center;
-  gdouble inv_std2;
-  gdouble k;
-} GaussianData;
-
-gdouble
-gaussian_func (gpointer user_data, gdouble x)
-{
-  GaussianData *gdata = (GaussianData *) user_data;
-  const gdouble y     = x / gdata->k;
-  const gdouble dx    = y - gdata->center;
-
-  return exp (-dx * dx * gdata->inv_std2 * 0.5);
-}
-
-/**
- * ncm_sbessel_ode_solver_integrate_gaussian:
- * @solver: a #NcmSBesselOdeSolver
- * @center: center of the Gaussian
- * @std: standard deviation of the Gaussian
- * @k: scale factor
- * @N: number of Chebyshev nodes
- *
- * Computes the integral $\int_a^b \exp(-(x - \text{center})^2/(2\text{std}^2)) j_l(kx) dx$
- * using the spectral method.
- *
- * Returns: the value of the integral
- */
-gdouble
-ncm_sbessel_ode_solver_integrate_gaussian (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-  const gdouble a_orig                    = self->a;
-  const gdouble b_orig                    = self->b;
-  const gdouble inv_std2                  = 1.0 / (std * std);
-  GaussianData data                       = { center, inv_std2, k };
-
-  /* Temporarily scale the interval by k for this integration */
-  ncm_sbessel_ode_solver_set_interval (solver, a_orig * k, b_orig * k);
-
-  /* Integrate */
-  const gdouble result = ncm_sbessel_ode_solver_integrate (solver, gaussian_func, N, &data);
-
-  /* Restore original interval */
-  ncm_sbessel_ode_solver_set_interval (solver, a_orig, b_orig);
-
-  return result;
-}
-
-/* Define rational function */
-typedef struct
-{
-  gdouble center;
-  gdouble inv_std;
-  gdouble k;
-} RationalData;
-
-gdouble
-rational_func (gpointer user_data, gdouble x)
-{
-  RationalData *rdata = (RationalData *) user_data;
-  const gdouble y     = x / rdata->k;
-  const gdouble dx    = (y - rdata->center) * rdata->inv_std;
-  const gdouble denom = 1.0 + dx * dx;
-
-  return (y * y) / (denom * denom * denom);
-}
-
-/**
- * ncm_sbessel_ode_solver_integrate_rational:
- * @solver: a #NcmSBesselOdeSolver
- * @center: center of the rational function
- * @std: width parameter
- * @k: scale factor
- * @N: number of Chebyshev nodes
- *
- * Computes the integral $\int_a^b \frac{x^2}{(1 + ((x-\text{center})/\text{std})^2)^4} j_l(kx) dx$
- * using the spectral method.
- *
- * Returns: the value of the integral
- */
-gdouble
-ncm_sbessel_ode_solver_integrate_rational (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-  const gdouble a_orig                    = self->a;
-  const gdouble b_orig                    = self->b;
-  const gdouble inv_std                   = 1.0 / std;
-  RationalData data                       = { center, inv_std, k };
-
-  /* Temporarily scale the interval by k for this integration */
-  ncm_sbessel_ode_solver_set_interval (solver, a_orig * k, b_orig * k);
-
-  /* Integrate */
-  const gdouble result = ncm_sbessel_ode_solver_integrate (solver, rational_func, N, &data);
-
-  /* Restore original interval */
-  ncm_sbessel_ode_solver_set_interval (solver, a_orig, b_orig);
-
-  return result;
-}
-
-/**
- * ncm_sbessel_ode_solver_integrate_l_range:
- * @solver: a #NcmSBesselOdeSolver
- * @F: (scope call): function to integrate against spherical Bessel function
- * @N: number of Chebyshev nodes for the approximation
- * @lmin: minimum l value
- * @lmax: maximum l value
- * @user_data: user data for @F
- *
- * Computes the integrals $\int_a^b f(x) j_l(x) dx$ for each l from @lmin to @lmax.
- * This is more efficient than calling ncm_sbessel_ode_solver_integrate() multiple times
- * because the RHS (Chebyshev coefficients and Gegenbauer conversion) is computed only once.
- *
- * Returns: (transfer full): a #NcmVector with the integral values for each l from @lmin to @lmax
- */
-NcmVector *
-ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolverF F, guint N, gint lmin, gint lmax, gpointer user_data)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-  const gdouble a                         = self->a;
-  const gdouble b                         = self->b;
-  const gint l_orig                       = self->l;
-  const gint my_lmax                      = GSL_MIN (lmax, ncm_sf_sbessel_array_eval_ell_cutoff (self->sba, b));
-  const gint n_l                          = lmax - lmin + 1;
-  gdouble *j_array_a, *j_array_b;
-
-  j_array_a = g_new0 (gdouble, my_lmax + 1);
-  j_array_b = g_new0 (gdouble, my_lmax + 1);
-
-  ncm_sf_sbessel_array_eval (self->sba, my_lmax, a, j_array_a);
-  ncm_sf_sbessel_array_eval (self->sba, my_lmax, b, j_array_b);
-
-  /* Allocate result vector */
-  NcmVector *result    = ncm_vector_new (n_l);
-  gdouble *result_data = ncm_vector_data (result);
-
-  ncm_vector_set_zero (result);
-
-  NcmVector *cheb_coeffs = ncm_vector_new (N);
-
-  /* Step 1: Compute Chebyshev coefficients for f(x) - done once */
-  ncm_spectral_compute_chebyshev_coeffs (self->spectral, F, a, b, cheb_coeffs, user_data);
-
-  /* Step 2: Convert to Gegenbauer C^(2) basis - done once */
-  NcmVector *gegen_coeffs = ncm_vector_new (N);
-
-  ncm_spectral_chebT_to_gegenbauer_alpha2 (cheb_coeffs, gegen_coeffs);
-
-  /* Step 3: Set up RHS with homogeneous boundary conditions - done once */
-  NcmVector *rhs = ncm_vector_new (N + 2);
-
-  g_assert_cmpuint (ncm_vector_stride (rhs), ==, 1);
-  g_assert_cmpuint (ncm_vector_stride (gegen_coeffs), ==, 1);
-  g_assert_cmpuint (ncm_vector_stride (result), ==, 1);
-  {
-    gdouble *rhs_data                = ncm_vector_data (rhs);
-    const gdouble *gegen_coeffs_data = ncm_vector_data (gegen_coeffs);
-
-    rhs_data[0] = 0.0; /* BC at x=a (t=-1) */
-    rhs_data[1] = 0.0; /* BC at x=b (t=+1) */
-
-    /* Copy Gegenbauer coefficients to RHS starting from index 2 */
-    memcpy (&rhs_data[2], gegen_coeffs_data, N * sizeof (gdouble));
-  }
-
-  /* Step 4-7: Process l values in blocks for better cache locality */
-  {
-    const gint block_size = 8; /* Process this many l values at once - tune based on cache size */
-
-    for (gint l_block_start = lmin; l_block_start <= my_lmax; l_block_start += block_size)
-    {
-      const gint l_block_end = GSL_MIN (l_block_start + block_size - 1, my_lmax);
-      const guint n_l_block  = l_block_end - l_block_start + 1;
-      NcmMatrix *solutions   = ncm_matrix_new (n_l_block, 3);
-
-      ncm_sbessel_ode_solver_solve_endpoints_batched (solver, rhs, l_block_start, n_l_block, solutions);
-
-      for (guint i = 0; i < n_l_block; i++)
-      {
-        const gint l            = l_block_start + i;
-        const gdouble y_prime_a = ncm_matrix_get (solutions, i, 0);
-        const gdouble y_prime_b = ncm_matrix_get (solutions, i, 1);
-        const gdouble j_l_a     = j_array_a[l];
-        const gdouble j_l_b     = j_array_b[l];
-        const gdouble integral  = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
-
-        result_data[l - lmin] = integral;
-      }
-
-      ncm_matrix_free (solutions);
-    }
-  }
-
-  /* Restore original l value */
-  ncm_sbessel_ode_solver_set_l (solver, l_orig);
-
-  /* Clean up shared resources */
-  ncm_vector_free (cheb_coeffs);
-  ncm_vector_free (gegen_coeffs);
-  ncm_vector_free (rhs);
-
-  return result;
-}
-
-/**
- * ncm_sbessel_ode_solver_integrate_gaussian_l_range:
- * @solver: a #NcmSBesselOdeSolver
- * @center: center of the Gaussian
- * @std: standard deviation of the Gaussian
- * @k: scale factor
- * @N: number of Chebyshev nodes
- * @lmin: minimum l value
- * @lmax: maximum l value
- *
- * Computes the integrals $\int_a^b \exp(-(x - \text{center})^2/(2\text{std}^2)) j_l(kx) dx$
- * for each l from @lmin to @lmax. This is more efficient than calling
- * ncm_sbessel_ode_solver_integrate_gaussian() multiple times because the RHS
- * is computed only once.
- *
- * Returns: (transfer full): a #NcmVector with the integral values for each l from @lmin to @lmax
- */
-NcmVector *
-ncm_sbessel_ode_solver_integrate_gaussian_l_range (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N, gint lmin, gint lmax)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-  const gdouble a_orig                    = self->a;
-  const gdouble b_orig                    = self->b;
-  const gdouble inv_std2                  = 1.0 / (std * std);
-  GaussianData data                       = { center, inv_std2, k };
-
-  /* Temporarily scale the interval by k for this integration */
-  ncm_sbessel_ode_solver_set_interval (solver, a_orig * k, b_orig * k);
-
-  /* Integrate over l range */
-  NcmVector *result = ncm_sbessel_ode_solver_integrate_l_range (solver, gaussian_func, N, lmin, lmax, &data);
-
-  /* Restore original interval */
-  ncm_sbessel_ode_solver_set_interval (solver, a_orig, b_orig);
-
-  return result;
-}
-
-/**
- * ncm_sbessel_ode_solver_integrate_rational_l_range:
- * @solver: a #NcmSBesselOdeSolver
- * @center: center of the rational function
- * @std: width parameter
- * @k: scale factor
- * @N: number of Chebyshev nodes
- * @lmin: minimum l value
- * @lmax: maximum l value
- *
- * Computes the integrals $\int_a^b \frac{x^2}{(1 + ((x-\text{center})/\text{std})^2)^4} j_l(kx) dx$
- * for each l from @lmin to @lmax. This is more efficient than calling
- * ncm_sbessel_ode_solver_integrate_rational() multiple times because the RHS
- * is computed only once.
- *
- * Returns: (transfer full): a #NcmVector with the integral values for each l from @lmin to @lmax
- */
-NcmVector *
-ncm_sbessel_ode_solver_integrate_rational_l_range (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N, gint lmin, gint lmax)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-  const gdouble a_orig                    = self->a;
-  const gdouble b_orig                    = self->b;
-  const gdouble inv_std                   = 1.0 / std;
-  RationalData data                       = { center, inv_std, k };
-
-  /* Temporarily scale the interval by k for this integration */
-  ncm_sbessel_ode_solver_set_interval (solver, a_orig * k, b_orig * k);
-
-  /* Integrate over l range */
-  NcmVector *result = ncm_sbessel_ode_solver_integrate_l_range (solver, rational_func, N, lmin, lmax, &data);
-
-  /* Restore original interval */
-  ncm_sbessel_ode_solver_set_interval (solver, a_orig, b_orig);
-
-  return result;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_gaussian_rhs:
- * @solver: a #NcmSBesselOdeSolver
- * @center: center of the Gaussian
- * @std: standard deviation of the Gaussian
- * @k: scale factor
- * @N: number of Chebyshev nodes
- *
- * Computes the RHS (Chebyshev coefficients) for the Gaussian function
- * $f(x) = \exp(-(x - \text{center})^2/(2\text{std}^2))$ on the scaled
- * interval $[ka, kb]$. This can be passed to ncm_sbessel_ode_solver_solve().
- *
- * Returns: (transfer full): vector of Chebyshev coefficients (RHS)
- */
-NcmVector *
-ncm_sbessel_ode_solver_get_gaussian_rhs (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-  const gdouble a_scaled                  = self->a * k;
-  const gdouble b_scaled                  = self->b * k;
-  const gdouble inv_std2                  = 1.0 / (std * std);
-  GaussianData data                       = { center, inv_std2, k };
-  NcmVector *cheb_coeffs                  = ncm_vector_new (N);
-
-  ncm_spectral_compute_chebyshev_coeffs (self->spectral, gaussian_func, a_scaled, b_scaled, cheb_coeffs, &data);
-
-  return cheb_coeffs;
-}
-
-/**
- * ncm_sbessel_ode_solver_get_rational_rhs:
- * @solver: a #NcmSBesselOdeSolver
- * @center: center of the rational function
- * @std: width parameter
- * @k: scale factor
- * @N: number of Chebyshev nodes
- *
- * Computes the RHS (Chebyshev coefficients) for the rational function
- * $f(x) = \frac{x^2}{(1 + ((x-\text{center})/\text{std})^2)^4}$ on the scaled
- * interval $[ka, kb]$. This can be passed to ncm_sbessel_ode_solver_solve().
- *
- * Returns: (transfer full): vector of Chebyshev coefficients (RHS)
- */
-NcmVector *
-ncm_sbessel_ode_solver_get_rational_rhs (NcmSBesselOdeSolver *solver, gdouble center, gdouble std, gdouble k, guint N)
-{
-  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
-  const gdouble a_scaled                  = self->a * k;
-  const gdouble b_scaled                  = self->b * k;
-  const gdouble inv_std                   = 1.0 / std;
-  RationalData data                       = { center, inv_std, k };
-  NcmVector *cheb_coeffs                  = ncm_vector_new (N);
-
-  ncm_spectral_compute_chebyshev_coeffs (self->spectral, rational_func, a_scaled, b_scaled, cheb_coeffs, &data);
-
-  return cheb_coeffs;
 }
 
