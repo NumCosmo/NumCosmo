@@ -1783,9 +1783,9 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the derivative of the Hubble parameter with respect to redshift.
  *
- * Returns: FIXME
+ * Returns: $\frac{dH}{dz}$.
  */
 /**
  * nc_hicosmo_E:
@@ -1819,18 +1819,18 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * First derivative with respect to the redshift of the normalized Hubble function squared.
  *
- * Returns: FIXME
+ * Returns: $\frac{dE^2(z)}{dz}$.
  */
 /**
  * nc_hicosmo_d2E2_dz2: (virtual d2E2_dz2)
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Second derivative with respect to the redshift of the normalized Hubble function squared.
  *
- * Returns: FIXME
+ * Returns: $\frac{d^2E^2(z)}{dz^2}$.
  */
 
 /**
@@ -1848,45 +1848,46 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the comoving distance to redshift $z$.
  *
- * Returns: FIXME
+ * Returns: the comoving distance $D_c(z)$.
  */
 /**
  * nc_hicosmo_NMassNu: (virtual NMassNu)
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Gets the number of massive neutrino species.
  *
- * Returns: FIXME
+ * Returns: the number of massive neutrino species.
  */
 /**
  * nc_hicosmo_MassNuInfo: (virtual MassNuInfo)
  * @cosmo: a #NcHICosmo
- * @nu_i: FIXME
- * @mass_eV: (out): FIXME
- * @T_0: (out): FIXME
- * @xi: (out): FIXME
- * @g: (out): FIXME
+ * @nu_i: the massive neutrino index
+ * @mass_eV: (out): the neutrino mass in eV
+ * @T_0: (out): the neutrino temperature today
+ * @xi: (out): the chemical potential
+ * @g: (out): the degeneracy factor
  *
- * FIXME
+ * Gets the physical properties of the @nu_i-th massive neutrino species.
  *
  */
 /**
  * nc_hicosmo_get_bg_var: (virtual get_bg_var)
  * @cosmo: a #NcHICosmo
- * @t: FIXME
+ * @t: conformal time
  * @bg_var: a #NcHIPertBGVar
  *
+ * Gets the background variables at conformal time @t and stores them in @bg_var.
  *
  */
 /**
  * nc_hicosmo_Neff:
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Computes the effective number of relativistic species.
  *
- * Returns: FIXME
+ * Returns: $N_\mathrm{eff}$.
  */
 
 /**
@@ -1894,72 +1895,72 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the curvature density parameter $E^2\Omega_k(z) = \Omega_{k0}(1+z)^2$.
  *
- * Returns: FIXME
+ * Returns: $E^2\Omega_k(z)$.
  */
 /**
  * nc_hicosmo_q:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the deceleration parameter $q(z)$.
  *
- * Returns: FIXME
+ * Returns: $q(z)$.
  */
 /**
  * nc_hicosmo_nec:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the null energy condition.
  *
- * Returns: FIXME
+ * Returns: the null energy condition value.
  */
 /**
  * nc_hicosmo_dec:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the dominant energy condition.
  *
- * Returns: FIXME
+ * Returns: the dominant energy condition value.
  */
 /**
  * nc_hicosmo_wec:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the weak energy condition.
  *
- * Returns: FIXME
+ * Returns: the weak energy condition value.
  */
 /**
  * nc_hicosmo_qp:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the derivative of the deceleration parameter with respect to redshift.
  *
- * Returns: FIXME
+ * Returns: $\frac{dq}{dz}$.
  */
 /**
  * nc_hicosmo_j:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the jerk parameter $j(z)$.
  *
- * Returns: FIXME
+ * Returns: $j(z)$.
  */
 /**
  * nc_hicosmo_kinetic_w:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the kinetic equation of state parameter.
  *
- * Returns: FIXME
+ * Returns: $w_k(z)$.
  */
 /**
  * nc_hicosmo_mqE2:
@@ -1976,25 +1977,25 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * @cosmo: a #NcHICosmo
  * @x: redshift variable $x = 1 + z$
  *
- * FIXME
+ * Computes the log-scale factor ratio $\alpha = \ln(x_b/x)$ where $x_b$ is the maximum scale factor.
  *
- * Returns: FIXME
+ * Returns: $|\alpha|$.
  */
 /**
  * nc_hicosmo_x_alpha:
  * @cosmo: a #NcHICosmo
  * @alpha: redshift $\alpha$
  *
- * FIXME
+ * Computes the inverse of abs_alpha, recovering the scale factor from $\alpha$.
  *
- * Returns: FIXME
+ * Returns: $x = x_b \exp(-|\alpha|)$.
  */
 
 /**
  * nc_hicosmo_peek_prim:
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Gets the primordial model associated with @cosmo.
  *
  * Returns: (transfer none): the #NcHIPrim submodel.
  */
@@ -2002,7 +2003,7 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * nc_hicosmo_peek_reion:
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Gets the reionization model associated with @cosmo.
  *
  * Returns: (transfer none): the #NcHIReion submodel.
  */
