@@ -74,6 +74,7 @@ struct _NcmSBesselIntegratorLevin
   NcmVector *rhs;
   gdouble *j_array_a;
   gdouble *j_array_b;
+  NcmMatrix *endpoints_result;
 };
 
 enum
@@ -88,18 +89,19 @@ G_DEFINE_TYPE (NcmSBesselIntegratorLevin, ncm_sbessel_integrator_levin, NCM_TYPE
 static void
 ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
 {
-  sbilv->max_order       = 0;
-  sbilv->reltol          = 0.0;
-  sbilv->ode_solver      = ncm_sbessel_ode_solver_new (0, -1.0, 1.0);
-  sbilv->sba             = ncm_sf_sbessel_array_new ();
-  sbilv->alloc_max_order = 0;
-  sbilv->alloc_lmin      = -1;
-  sbilv->alloc_lmax      = -1;
-  sbilv->cheb_coeffs     = NULL;
-  sbilv->gegen_coeffs    = NULL;
-  sbilv->rhs             = NULL;
-  sbilv->j_array_a       = NULL;
-  sbilv->j_array_b       = NULL;
+  sbilv->max_order        = 0;
+  sbilv->reltol           = 0.0;
+  sbilv->ode_solver       = ncm_sbessel_ode_solver_new (0, -1.0, 1.0);
+  sbilv->sba              = ncm_sf_sbessel_array_new ();
+  sbilv->alloc_max_order  = 0;
+  sbilv->alloc_lmin       = -1;
+  sbilv->alloc_lmax       = -1;
+  sbilv->cheb_coeffs      = NULL;
+  sbilv->gegen_coeffs     = NULL;
+  sbilv->rhs              = NULL;
+  sbilv->j_array_a        = NULL;
+  sbilv->j_array_b        = NULL;
+  sbilv->endpoints_result = NULL;
 }
 
 static void
@@ -112,6 +114,7 @@ _ncm_sbessel_integrator_levin_dispose (GObject *object)
   ncm_vector_clear (&sbilv->cheb_coeffs);
   ncm_vector_clear (&sbilv->gegen_coeffs);
   ncm_vector_clear (&sbilv->rhs);
+  ncm_matrix_clear (&sbilv->endpoints_result);
 
   if (sbilv->j_array_a != NULL)
   {
@@ -244,6 +247,7 @@ _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv,
   ncm_vector_clear (&sbilv->cheb_coeffs);
   ncm_vector_clear (&sbilv->gegen_coeffs);
   ncm_vector_clear (&sbilv->rhs);
+  ncm_matrix_clear (&sbilv->endpoints_result);
 
   if (sbilv->j_array_a != NULL)
   {
@@ -268,6 +272,9 @@ _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv,
     sbilv->j_array_a = g_new0 (gdouble, lmax + 1);
     sbilv->j_array_b = g_new0 (gdouble, lmax + 1);
   }
+
+  /* Allocate result matrix for batched endpoint computation (max block size is 8) */
+  sbilv->endpoints_result = ncm_matrix_new (8, 3);
 
   /* Update allocation tracking */
   sbilv->alloc_max_order = max_order;
@@ -395,19 +402,18 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
     {
       const gint l_end    = GSL_MIN (l_start + block_size - 1, lmax);
       const guint n_block = l_end - l_start + 1;
-      NcmMatrix *endpoints;
       gint l;
 
       /* Solve for all l values in this block using batched solver */
-      endpoints = ncm_sbessel_ode_solver_solve_endpoints_batched (solver, sbilv->rhs, l_start, n_block);
+      ncm_sbessel_ode_solver_solve_endpoints_batched (solver, sbilv->rhs, l_start, n_block, sbilv->endpoints_result);
 
       /* Extract derivatives and compute integrals */
       for (l = l_start; l <= l_end; l++)
       {
         const gint l_idx        = l - lmin;
         const gint block_idx    = l - l_start;
-        const gdouble y_prime_a = ncm_matrix_get (endpoints, block_idx, 0);
-        const gdouble y_prime_b = ncm_matrix_get (endpoints, block_idx, 1);
+        const gdouble y_prime_a = ncm_matrix_get (sbilv->endpoints_result, block_idx, 0);
+        const gdouble y_prime_b = ncm_matrix_get (sbilv->endpoints_result, block_idx, 1);
 
         if (l <= my_lmax)
         {
@@ -417,8 +423,6 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
           result_data[l_idx] = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
         }
       }
-
-      ncm_matrix_free (endpoints);
     }
   }
 }

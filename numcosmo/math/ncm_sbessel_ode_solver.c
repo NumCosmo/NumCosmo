@@ -1859,9 +1859,27 @@ ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rh
 }
 
 static void
+_ncm_sbessel_ode_solver_compute_endpoints_batched_4 (NcmSBesselOdeSolver *solver, glong n_cols, NcmMatrix *endpoints)
+{
+  _ncm_sbessel_ode_solver_compute_endpoints_batched (solver, n_cols, 4, endpoints);
+}
+
+static void
 _ncm_sbessel_ode_solver_compute_endpoints_batched_8 (NcmSBesselOdeSolver *solver, glong n_cols, NcmMatrix *endpoints)
 {
   _ncm_sbessel_ode_solver_compute_endpoints_batched (solver, n_cols, 8, endpoints);
+}
+
+static void
+_ncm_sbessel_ode_solver_compute_endpoints_batched_16 (NcmSBesselOdeSolver *solver, glong n_cols, NcmMatrix *endpoints)
+{
+  _ncm_sbessel_ode_solver_compute_endpoints_batched (solver, n_cols, 16, endpoints);
+}
+
+static void
+_ncm_sbessel_ode_solver_compute_endpoints_batched_32 (NcmSBesselOdeSolver *solver, glong n_cols, NcmMatrix *endpoints)
+{
+  _ncm_sbessel_ode_solver_compute_endpoints_batched (solver, n_cols, 32, endpoints);
 }
 
 /**
@@ -1888,10 +1906,18 @@ ncm_sbessel_ode_solver_solve_endpoints_batched (NcmSBesselOdeSolver *solver, Ncm
 
   switch (n_l)
   {
+    case 4:
+      _ncm_sbessel_ode_solver_compute_endpoints_batched_4 (solver, n_cols, endpoints);
+      break;
     case 8:
       _ncm_sbessel_ode_solver_compute_endpoints_batched_8 (solver, n_cols, endpoints);
       break;
-
+    case 16:
+      _ncm_sbessel_ode_solver_compute_endpoints_batched_16 (solver, n_cols, endpoints);
+      break;
+    case 32:
+      _ncm_sbessel_ode_solver_compute_endpoints_batched_32 (solver, n_cols, endpoints);
+      break;
     default:
       _ncm_sbessel_ode_solver_compute_endpoints_batched (solver, n_cols, n_l, endpoints);
       break;

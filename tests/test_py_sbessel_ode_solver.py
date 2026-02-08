@@ -981,7 +981,8 @@ class TestSBesselOperators:
         rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints using solve_endpoints_batched
-        endpoints_mat = solver.solve_endpoints_batched(rhs_vec, lmin, n_l)
+        endpoints_mat = Ncm.Matrix.new(n_l, 3)
+        solver.solve_endpoints_batched(rhs_vec, lmin, n_l, endpoints_mat)
         endpoints_np = endpoints_mat.to_numpy()
 
         # Verify each l value satisfies Green's identity
@@ -1038,7 +1039,8 @@ class TestSBesselOperators:
         rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints using solve_endpoints_batched
-        endpoints_mat = solver.solve_endpoints_batched(rhs_vec, lmin, n_l)
+        endpoints_mat = Ncm.Matrix.new(n_l, 3)
+        solver.solve_endpoints_batched(rhs_vec, lmin, n_l, endpoints_mat)
         endpoints_np = endpoints_mat.to_numpy()
 
         # Verify each l value satisfies Green's identity
@@ -1093,8 +1095,9 @@ class TestSBesselOperators:
         rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints using solve_endpoints_batched
-        endpoints_batched = solver.solve_endpoints_batched(rhs_vec, lmin, n_l)
-        endpoints_batched_np = endpoints_batched.to_numpy()
+        endpoints_mat = Ncm.Matrix.new(n_l, 3)
+        solver.solve_endpoints_batched(rhs_vec, lmin, n_l, endpoints_mat)
+        endpoints_batched_np = endpoints_mat.to_numpy()
 
         # Compute endpoints individually for each l
         endpoints_individual = []
@@ -1141,8 +1144,9 @@ class TestSBesselOperators:
         rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints using solve_endpoints_batched
-        endpoints_fast = solver.solve_endpoints_batched(rhs_vec, lmin, n_l)
-        endpoints_fast_np = endpoints_fast.to_numpy()
+        endpoints_mat = Ncm.Matrix.new(n_l, 3)
+        solver.solve_endpoints_batched(rhs_vec, lmin, n_l, endpoints_mat)
+        endpoints_fast_np = endpoints_mat.to_numpy()
 
         # Compute full batched solution
         solutions_batched = solver.solve_batched(rhs_vec, lmin, n_l)
@@ -1203,7 +1207,8 @@ class TestSBesselOperators:
         rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints
-        endpoints_mat = solver.solve_endpoints_batched(rhs_vec, lmin, n_l)
+        endpoints_mat = Ncm.Matrix.new(n_l, 3)
+        solver.solve_endpoints_batched(rhs_vec, lmin, n_l, endpoints_mat)
         endpoints_np = endpoints_mat.to_numpy()
 
         # Verify all values are finite and errors are non-negative
