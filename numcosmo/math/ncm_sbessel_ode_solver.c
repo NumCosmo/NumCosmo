@@ -1638,12 +1638,11 @@ _ncm_sbessel_ode_solver_build_solution_batched (NcmSBesselOdeSolver *solver, glo
  *
  * Returns: (transfer full): matrix with 3 columns per l: [y'(a), y'(b), error]
  */
-static NcmMatrix *
-_ncm_sbessel_ode_solver_compute_endpoints_batched (NcmSBesselOdeSolver *solver, glong n_cols, guint n_l)
+static void
+_ncm_sbessel_ode_solver_compute_endpoints_batched (NcmSBesselOdeSolver *solver, glong n_cols, guint n_l, NcmMatrix *endpoints)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
   const gdouble h                         = self->half_len;
-  NcmMatrix *endpoints;
   gdouble * restrict endp_data;
   glong row;
   guint l_idx;
@@ -1652,8 +1651,11 @@ _ncm_sbessel_ode_solver_compute_endpoints_batched (NcmSBesselOdeSolver *solver, 
   _ensure_solution_batched_capacity (self, TOTAL_BANDWIDTH * n_l);
   memset (self->solution_batched, 0, sizeof (gdouble) * TOTAL_BANDWIDTH * n_l);
 
+  g_assert_cmpuint (ncm_matrix_ncols (endpoints), ==, 3);
+  g_assert_cmpuint (ncm_matrix_nrows (endpoints), ==, n_l);
+  g_assert_cmpuint (ncm_matrix_tda (endpoints), ==, 3);
+
   /* Result matrix: n_l rows x 3 columns [y'(a), y'(b), error] */
-  endpoints = ncm_matrix_new (n_l, 3);
   endp_data = ncm_matrix_data (endpoints);
 
   /* Initialize endpoint derivative accumulators and error */
@@ -1752,8 +1754,6 @@ _ncm_sbessel_ode_solver_compute_endpoints_batched (NcmSBesselOdeSolver *solver, 
     endp_data[l_idx * 3 + 1] /= h; /* y'(b) = y'(+1) / h */
     endp_data[l_idx * 3 + 2] /= h; /* error estimate */
   }
-
-  return endpoints;
 }
 
 /**
@@ -1858,10 +1858,10 @@ ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rh
   }
 }
 
-NcmMatrix *
-_ncm_sbessel_ode_solver_compute_endpoints_batched_8 (NcmSBesselOdeSolver *solver, glong n_cols)
+static void
+_ncm_sbessel_ode_solver_compute_endpoints_batched_8 (NcmSBesselOdeSolver *solver, glong n_cols, NcmMatrix *endpoints)
 {
-  return _ncm_sbessel_ode_solver_compute_endpoints_batched (solver, n_cols, 8);
+  _ncm_sbessel_ode_solver_compute_endpoints_batched (solver, n_cols, 8, endpoints);
 }
 
 /**
@@ -1870,31 +1870,31 @@ _ncm_sbessel_ode_solver_compute_endpoints_batched_8 (NcmSBesselOdeSolver *solver
  * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
  * @lmin: minimum l value
  * @n_l: number of l values to solve for (l = lmin, lmin+1, ..., lmin+n_l-1)
+ * @endpoints: pre-allocated matrix (n_l x 3) to store [y'(a), y'(b), error] for each l
  *
  * Efficiently computes only the endpoint derivatives y'(a) and y'(b) for multiple l values
  * without building the full solution matrix. This is much more efficient when only endpoint
  * information is needed (e.g., for integral computations via Green's identity).
  *
+ * The result matrix must be pre-allocated with n_l rows and 3 columns.
  * The function first diagonalizes the operator using adaptive QR decomposition, then
  * performs back-substitution while accumulating the contributions to the endpoint derivatives
  * on-the-fly, avoiding the memory allocation and computation cost of the full solution.
- *
- * Returns: (transfer full): matrix with n_l rows and 3 columns, where each row contains
- *   [y'(a), y'(b), error_estimate] for one l value
  */
-NcmMatrix *
-ncm_sbessel_ode_solver_solve_endpoints_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l)
+void
+ncm_sbessel_ode_solver_solve_endpoints_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l, NcmMatrix *endpoints)
 {
   const glong n_cols = _ncm_sbessel_ode_solver_diagonalize_batched (solver, rhs, lmin, n_l);
-
 
   switch (n_l)
   {
     case 8:
-      return _ncm_sbessel_ode_solver_compute_endpoints_batched_8 (solver, n_cols);
+      _ncm_sbessel_ode_solver_compute_endpoints_batched_8 (solver, n_cols, endpoints);
+      break;
 
     default:
-      return _ncm_sbessel_ode_solver_compute_endpoints_batched (solver, n_cols, n_l);
+      _ncm_sbessel_ode_solver_compute_endpoints_batched (solver, n_cols, n_l, endpoints);
+      break;
   }
 }
 
@@ -2381,7 +2381,9 @@ ncm_sbessel_ode_solver_integrate_l_range (NcmSBesselOdeSolver *solver, NcmSBesse
     {
       const gint l_block_end = GSL_MIN (l_block_start + block_size - 1, my_lmax);
       const guint n_l_block  = l_block_end - l_block_start + 1;
-      NcmMatrix *solutions   = ncm_sbessel_ode_solver_solve_endpoints_batched (solver, rhs, l_block_start, n_l_block);
+      NcmMatrix *solutions   = ncm_matrix_new (n_l_block, 3);
+
+      ncm_sbessel_ode_solver_solve_endpoints_batched (solver, rhs, l_block_start, n_l_block, solutions);
 
       for (guint i = 0; i < n_l_block; i++)
       {
