@@ -41,7 +41,7 @@ G_DECLARE_FINAL_TYPE (NcXcorLimberKernelWeakLensing, nc_xcor_limber_kernel_weak_
 
 /**
  * NcXcorLimberKernelWeakLensingSParams:
- * @NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_SPARAM_LEN: FIXME
+ * @NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_SPARAM_LEN: number of scalar parameters
  *
  */
 typedef enum _NcXcorLimberKernelWeakLensingSParams
@@ -51,7 +51,7 @@ typedef enum _NcXcorLimberKernelWeakLensingSParams
 
 /**
  * NcXcorLimberKernelWeakLensingVParams:
- * @NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_VPARAM_LEN: FIXME
+ * @NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_VPARAM_LEN: number of vector parameters
  *
  */
 typedef enum _NcXcorLimberKernelWeakLensingVParams
