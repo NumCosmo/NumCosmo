@@ -538,9 +538,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, H0)
 /**
  * nc_hicosmo_set_Omega_b0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_b0.
  *
- * FIXME
+ * Sets the implementation of Omega_b0 to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_b0)
@@ -548,9 +548,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_c0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_c0.
  *
- * FIXME
+ * Sets the implementation of Omega_c0 to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_c0)
@@ -558,9 +558,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_g0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_g0.
  *
- * FIXME
+ * Sets the implementation of Omega_g0 to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_g0)
@@ -568,9 +568,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_nu0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_nu0.
  *
- * FIXME
+ * Sets the implementation of Omega_nu0 to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_nu0)
@@ -578,9 +578,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_mnu0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_mnu0.
  *
- * FIXME
+ * Sets the implementation of Omega_mnu0 to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_mnu0)
@@ -588,9 +588,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Press_mnu0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Press_mnu0.
  *
- * FIXME
+ * Sets the implementation of Press_mnu0 to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Press_mnu0)
@@ -598,9 +598,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Pres
 /**
  * nc_hicosmo_set_Omega_mnu0_n_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_mnu0_n.
  *
- * FIXME
+ * Sets the implementation of Omega_mnu0_n to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc0, Omega_mnu0_n)
@@ -608,9 +608,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc0, Ome
 /**
  * nc_hicosmo_set_Press_mnu0_n_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Press_mnu0_n.
  *
- * FIXME
+ * Sets the implementation of Press_mnu0_n to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc0, Press_mnu0_n)
@@ -618,9 +618,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc0, Pre
 /**
  * nc_hicosmo_set_Omega_m0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_m0.
  *
- * FIXME
+ * Sets the implementation of Omega_m0 to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_m0)
@@ -628,9 +628,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_r0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_r0.
  *
- * FIXME
+ * Sets the implementation of Omega_r0 to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_r0)
@@ -638,9 +638,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_t0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_t0.
  *
- * FIXME
+ * Sets the implementation of Omega_t0 to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_t0)
@@ -648,9 +648,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_T_gamma0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of T_gamma0.
  *
- * FIXME
+ * Sets the implementation of T_gamma0 to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, T_gamma0)
@@ -658,9 +658,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, T_ga
 /**
  * nc_hicosmo_set_Yp_4He_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Yp_4He.
  *
- * FIXME
+ * Sets the implementation of Yp_4He to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Yp_4He)
@@ -668,9 +668,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Yp_4
 /**
  * nc_hicosmo_set_z_lss_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of z_lss.
  *
- * FIXME
+ * Sets the implementation of z_lss to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, z_lss)
@@ -678,9 +678,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, z_ls
 /**
  * nc_hicosmo_set_as_drag_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of as_drag.
  *
- * FIXME
+ * Sets the implementation of as_drag to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, as_drag)
@@ -688,9 +688,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, as_d
 /**
  * nc_hicosmo_set_xb_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of xb.
  *
- * FIXME
+ * Sets the implementation of xb to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, xb)
@@ -698,7 +698,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, xb)
 /**
  * nc_hicosmo_set_E2Omega_b_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_b.
  *
  * Baryonic density $E^2\Omega_{b} = \rho_b(z) / \rho_{\mathrm{crit}0}$.
  *
@@ -708,7 +708,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_c_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_c.
  *
  * Cold dark matter density $E^2\Omega_{c} = \rho_c(z) / \rho_{\mathrm{crit}0}$.
  *
@@ -718,7 +718,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_g_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_g.
  *
  * Photons density $E^2\Omega_{\gamma} = \rho_\gamma(z) / \rho_{\mathrm{crit}0}$.
  *
@@ -728,7 +728,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_nu_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_nu.
  *
  * Ultra-relativistic neutrinos density $E^2\Omega_{\nu} = \rho_\nu(z) / \rho_{\mathrm{crit}0}$.
  *
@@ -738,7 +738,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_mnu_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_mnu.
  *
  * Massive neutrinos density $E^2\Omega_{m\nu} = \rho_{m\nu}(z) / \rho_{\mathrm{crit}0}$.
  *
@@ -748,7 +748,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Press_mnu_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Press_mnu.
  *
  * Massive neutrinos density $E^2P_{m\nu} = p_{m\nu}(z) / \rho_{\mathrm{crit}0}$.
  *
@@ -758,7 +758,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2P
 /**
  * nc_hicosmo_set_E2Omega_mnu_n_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_mnu_n.
  *
  * Massive neutrinos density $E^2\Omega_{m\nu,n} = \rho_{m\nu,n}(z) / \rho_{\mathrm{crit}0}$.
  *
@@ -768,7 +768,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc1Z, E2
 /**
  * nc_hicosmo_set_E2Press_mnu_n_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Press_mnu_n.
  *
  * Massive neutrinos density $E^2P_{m\nu,n} = p_{m\nu,n}(z) / \rho_{\mathrm{crit}0}$.
  *
@@ -778,7 +778,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc1Z, E2
 /**
  * nc_hicosmo_set_E2Omega_m_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_m.
  *
  * Total matter density $E^2\Omega_{m} = \rho_m(z) / \rho_{\mathrm{crit}0}$.
  *
@@ -788,7 +788,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_r_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_r.
  *
  * Total radiation density $\Omega_{r} = \rho_r(z) / \rho_{\mathrm{crit}0}$.
  *
@@ -798,7 +798,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_t_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_t.
  *
  * Total density $E2\Omega_{t0} = \rho_t(z) / \rho_{\mathrm{crit}0}$.
  *
@@ -808,7 +808,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2.
  *
  * Normalized Hubble function squared, $E^2(z)$.
  *
@@ -818,7 +818,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2)
 /**
  * nc_hicosmo_set_dE2_dz_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of dE2_dz.
  *
  * First derivative with respect to the redshift of the normalized Hubble function squared, $\frac{dE^2(z)}{dz}$.
  *
@@ -828,7 +828,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, dE2
 /**
  * nc_hicosmo_set_d2E2_dz2_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of d2E2_dz2.
  *
  * Second derivative with respect to the redshift of the normalized Hubble function squared, $\frac{d^2E^2(z)}{dz^2}$.
  *
@@ -838,9 +838,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, d2E
 /**
  * nc_hicosmo_set_bgp_cs2_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of bgp_cs2.
  *
- * FIXME
+ * Sets the implementation of bgp_cs2 (baryon-photon plasma speed of sound squared) to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, bgp_cs2)
@@ -848,9 +848,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, bgp
 /**
  * nc_hicosmo_set_Dc_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Dc.
  *
- * FIXME
+ * Sets the implementation of Dc (comoving distance) to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, Dc)
@@ -858,9 +858,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, Dc)
 /**
  * nc_hicosmo_set_NMassNu_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of NMassNu.
  *
- * FIXME
+ * Sets the implementation of NMassNu (number of massive neutrinos) to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFuncNMassNu, NMassNu)
@@ -868,9 +868,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFuncNMassNu
 /**
  * nc_hicosmo_set_MassNuInfo_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of MassNuInfo.
  *
- * FIXME
+ * Sets the implementation of MassNuInfo (massive neutrino information) to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFuncMassNuInfo, MassNuInfo)
@@ -878,9 +878,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFuncMassNuI
 /**
  * nc_hicosmo_set_get_bg_var_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of get_bg_var.
  *
- * FIXME
+ * Sets the implementation of get_bg_var (background variables interface for perturbations) to @f.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoGetBGVar, get_bg_var)
@@ -1645,25 +1645,25 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * nc_hicosmo_z_lss: (virtual z_lss)
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Gets the redshift of the last scattering surface.
  *
- * Returns: FIXME
+ * Returns: the redshift of the last scattering surface $z_\mathrm{lss}$.
  */
 /**
  * nc_hicosmo_as_drag: (virtual as_drag)
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Gets the acoustic scale at drag redshift.
  *
- * Returns: FIXME
+ * Returns: the acoustic scale at drag redshift.
  */
 /**
  * nc_hicosmo_xb: (virtual xb)
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Gets the maximum redshift.
  *
- * Returns: FIXME
+ * Returns: the maximum redshift $x_b$.
  */
 
 /**
