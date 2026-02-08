@@ -1106,17 +1106,19 @@ _ncm_sbessel_apply_givens (NcmSBesselOdeSolver *solver, glong pivot_col, NcmSBes
 }
 
 /**
- * ncm_sbessel_ode_solver_solve:
+ * _ncm_sbessel_ode_solver_diagonalize:
  * @solver: a #NcmSBesselOdeSolver
  * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
  *
- * Solves the ODE using adaptive QR decomposition with ultraspherical spectral methods.
- * The algorithm grows the matrix size until convergence is achieved (error < tolerance).
+ * Diagonalizes the operator using adaptive QR decomposition.
+ * This function applies Givens rotations to transform the system into upper triangular form
+ * and applies the same rotations to the RHS vector. The transformed RHS is stored in
+ * self->c and the upper triangular matrix is stored in self->matrix_rows.
  *
- * Returns: (transfer full): solution vector (Chebyshev coefficients)
+ * Returns: the effective number of columns used (may be less than rhs_len due to convergence)
  */
-NcmVector *
-ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
+static glong
+_ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeSolver *solver, NcmVector *rhs)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
   const guint rhs_len                     = ncm_vector_len (rhs);
@@ -1131,8 +1133,6 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
   _ensure_matrix_rows_capacity (self, rhs_len);
 
   g_array_set_size (self->c, rhs_len + ROWS_TO_ROTATE);
-
-  ncm_vector_clear (&self->solution);
 
   /* Add boundary condition rows */
   for (i = 0; i < ROWS_TO_ROTATE + 1; i++)
@@ -1198,46 +1198,82 @@ ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
     }
   }
 
+  return col;
+}
+
+/**
+ * _ncm_sbessel_ode_solver_build_solution:
+ * @solver: a #NcmSBesselOdeSolver
+ * @n_cols: number of columns in the solution (from diagonalization)
+ *
+ * Builds the full Chebyshev coefficient solution by back-substitution on the
+ * upper triangular system. Assumes _ncm_sbessel_ode_solver_diagonalize
+ * has been called first.
+ *
+ * Returns: (transfer full): solution vector (Chebyshev coefficients)
+ */
+static NcmVector *
+_ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeSolver *solver, glong n_cols)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  gdouble acc_bc_at_m1                    = 0.0;
+  gdouble acc_bc_at_p1                    = 0.0;
+  gdouble *sol_ptr                        = g_new (gdouble, n_cols + TOTAL_BANDWIDTH);
+  NcmVector *solution;
+  glong row;
+
+  memset (sol_ptr, 0, sizeof (gdouble) * (n_cols + TOTAL_BANDWIDTH));
+  solution = ncm_vector_new_full (sol_ptr, n_cols, 1, sol_ptr, g_free);
+
+  for (row = n_cols - 1; row >= 0; row--)
   {
-    /* Back substitution to solve R x = c */
-    const glong n        = col; /* since col <= rhs_len */
-    gdouble acc_bc_at_m1 = 0.0;
-    gdouble acc_bc_at_p1 = 0.0;
-    gdouble *sol_ptr;
-    glong row;
+    NcmSBesselOdeSolverRow *r = &self->matrix_rows[row];
+    gdouble sum               = g_array_index (self->c, gdouble, row);
+    const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
+    gdouble sol;
+    glong j;
 
-    self->solution = ncm_vector_new (n);
-    sol_ptr        = ncm_vector_data (self->solution);
+    g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
 
-    for (row = n - 1; row >= 0; row--)
+    for (j = 1; j < TOTAL_BANDWIDTH; j++)
     {
-      NcmSBesselOdeSolverRow *r = &self->matrix_rows[row];
-      gdouble sum               = g_array_index (self->c, gdouble, row);
-      glong width               = GSL_MIN (TOTAL_BANDWIDTH, n - row);
-      const gdouble diag        = r->data[0] + _ncm_sbessel_bc_row (r, row);
-      gdouble sol;
-      glong j;
+      const glong col    = r->col_index + j;
+      const gdouble a_ij = r->data[j];
 
-      g_assert_cmpuint (r->col_index, ==, row); /* Banded matrix */
-
-      for (j = 1; j < width; j++)
-      {
-        const glong col    = r->col_index + j;
-        const gdouble a_ij = r->data[j];
-
-        sum -= a_ij * sol_ptr[col];
-      }
-
-      sum -= acc_bc_at_m1 * r->bc_at_m1;
-      sum -= acc_bc_at_p1 * r->bc_at_p1;
-
-      sol          = sum / diag;
-      sol_ptr[row] = sol;
-
-      acc_bc_at_m1 += (row % 2 == 0 ? 1.0 : -1.0) * sol;
-      acc_bc_at_p1 += sol;
+      sum -= a_ij * sol_ptr[col];
     }
+
+    sum -= acc_bc_at_m1 * r->bc_at_m1;
+    sum -= acc_bc_at_p1 * r->bc_at_p1;
+
+    sol          = sum / diag;
+    sol_ptr[row] = sol;
+
+    acc_bc_at_m1 += (row % 2 == 0 ? 1.0 : -1.0) * sol;
+    acc_bc_at_p1 += sol;
   }
+
+  return solution;
+}
+
+/**
+ * ncm_sbessel_ode_solver_solve:
+ * @solver: a #NcmSBesselOdeSolver
+ * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ *
+ * Solves the ODE using adaptive QR decomposition with ultraspherical spectral methods.
+ * The algorithm grows the matrix size until convergence is achieved (error < tolerance).
+ *
+ * Returns: (transfer full): solution vector (Chebyshev coefficients)
+ */
+NcmVector *
+ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs)
+{
+  NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
+  const glong n_cols                      = _ncm_sbessel_ode_solver_diagonalize (solver, rhs);
+
+  ncm_vector_clear (&self->solution);
+  self->solution = _ncm_sbessel_ode_solver_build_solution (solver, n_cols);
 
   return ncm_vector_ref (self->solution);
 }
