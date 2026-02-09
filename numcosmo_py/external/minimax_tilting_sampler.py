@@ -10,7 +10,6 @@ import numpy as np
 
 from scipy import special, optimize
 
-
 EPS = 10e-15
 
 

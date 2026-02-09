@@ -36,7 +36,6 @@ import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams
 
-
 Ncm.cfg_init()
 
 

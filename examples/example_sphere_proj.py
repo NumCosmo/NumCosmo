@@ -198,6 +198,5 @@ def compute_spherical_projection():
     # plt.show ()
 
 
-
 if __name__ == "__main__":
     compute_spherical_projection()

@@ -24,7 +24,6 @@
 
 """Tests on NcmModelBuilder class."""
 
-
 from typing import cast
 
 from numpy.testing import assert_allclose

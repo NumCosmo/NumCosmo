@@ -8,7 +8,6 @@
 
 """Module to compute the Sij matrix for a given set of redshifts and kernels."""
 
-
 import math
 import copy
 

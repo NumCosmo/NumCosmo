@@ -34,7 +34,6 @@ import matplotlib.pyplot as plt
 
 from numcosmo_py import Nc, Ncm
 
-
 #
 #  Initializing the library objects, this must be called before
 #  any other library function.
@@ -44,7 +43,7 @@ Ncm.cfg_init()
 
 def test_two_fluids_wkb_spec() -> None:
     """Compute WKB approximation for the two-fluids model spectrum."""
-    
+
     #
     #  New homogeneous and isotropic cosmological model NcHICosmoQGRW
     #
@@ -95,14 +94,13 @@ def test_two_fluids_wkb_spec() -> None:
 
         alphaf = cosmo.abs_alpha(1.0e10)
 
-
         alphai = -cosmo.abs_alpha(start_alpha1 * k**2)
         pert.get_init_cond_zetaS(cosmo, alphai, 1, 0.25 * math.pi, ci)
         pert.set_init_cond(cosmo, alphai, 1, False, ci)
         print(f"# Mode 1 k {k: 21.15e}, state module {pert.get_state_mod():f}")
-        pert.evolve(cosmo, alphaf)  
+        pert.evolve(cosmo, alphaf)
         v, _alphac = pert.peek_state(cosmo)
-        print ("# Evolving mode %e from %f to %f" % (k, alphai, alphaf))
+        print("# Evolving mode %e from %f to %f" % (k, alphai, alphaf))
 
         Delta_zeta1 = (
             k**3
@@ -214,11 +212,12 @@ def test_two_fluids_wkb_spec() -> None:
 
     plt.show()
     plt.clf()
-    
+
+
 test_two_fluids_wkb_spec()
 
 
-'''
+"""
 import pandas as pd
 
 data = pd.read_csv('twofluids_spectrum_{w}.dat', header=None, delim_whitespace= True)
@@ -237,4 +236,4 @@ print(ns1zeta)
 print(ns1S)
 print(ns2zeta)
 print(ns2S)
-'''
+"""

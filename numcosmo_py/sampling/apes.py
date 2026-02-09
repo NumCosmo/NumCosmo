@@ -23,7 +23,6 @@
 
 """A simplified interface for the ensemble sampler NcmFitESMCMC using APES."""
 
-
 from typing import Optional, Callable, Union, Tuple, List
 import numpy as np
 

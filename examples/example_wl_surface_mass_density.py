@@ -30,7 +30,6 @@ import matplotlib.pyplot as plt
 
 from numcosmo_py import Nc, Ncm
 
-
 #
 #  Initializing the library objects, this must be called before
 #  any other library function.

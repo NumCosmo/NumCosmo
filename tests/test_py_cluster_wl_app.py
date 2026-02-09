@@ -43,7 +43,6 @@ from numcosmo_py.experiments.cluster_wl import (
     HaloProfileType,
 )
 
-
 runner = CliRunner()
 
 Ncm.cfg_init()

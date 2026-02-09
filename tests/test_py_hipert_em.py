@@ -23,6 +23,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Tests on NcHIPertEM class."""
+
 import math
 import pytest
 

@@ -42,9 +42,9 @@ G_DECLARE_FINAL_TYPE (NcXcorLimberKernelCMBLensing, nc_xcor_limber_kernel_cmb_le
 
 /**
  * NcXcorLimberKernelCMBLensingSParams:
- * @NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAM_LEN: FIXME
+ * @NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAM_LEN: number of scalar parameters
  *
- * FIXME
+ * Scalar parameters for CMB lensing kernel (currently none defined).
  */
 typedef enum /*< enum,underscore_name=NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAMS >*/
 {
