@@ -249,7 +249,7 @@ ncm_trivec_set_0 (NcmTriVec *v)
 /**
  * ncm_trivec_scale:
  * @v: a #NcmTriVec
- * @scale: FIXME
+ * @scale: scaling factor
  *
  * Scale a #NcmTriVec.
  *

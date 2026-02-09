@@ -562,7 +562,9 @@ nc_data_cluster_pseudo_counts_set_true_data (NcDataClusterPseudoCounts *dcpc, co
  * @rng: a #NcmRNG
  * @np: number of clusters
  *
- * FIXME
+ * Initializes cluster pseudo-counts data from Monte Carlo sampling.
+ * Generates @np mock cluster observations based on the model parameters in @mset
+ * using the random number generator @rng.
  *
  */
 void

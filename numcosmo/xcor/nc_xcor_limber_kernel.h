@@ -61,10 +61,12 @@ struct _NcXcorLimberKernelClass
 
 /**
  * NcXcorLimberKernelImpl:
- * @NC_XCOR_LIMBER_KERNEL_IMPL_EVAL: FIXME
- * @NC_XCOR_LIMBER_KERNEL_IMPL_PREPARE: FIXME
- * @NC_XCOR_LIMBER_KERNEL_IMPL_ADD_NOISE: FIXME
+ * @NC_XCOR_LIMBER_KERNEL_IMPL_EVAL: implementation flag for kernel evaluation method
+ * @NC_XCOR_LIMBER_KERNEL_IMPL_PREPARE: implementation flag for kernel preparation method
+ * @NC_XCOR_LIMBER_KERNEL_IMPL_ADD_NOISE: implementation flag for noise addition method
  *
+ * Limber kernel implementation flags.
+ * These flags indicate which virtual methods are implemented by a specific kernel subclass.
  */
 typedef enum _NcXcorLimberKernelImpl
 {
@@ -78,8 +80,8 @@ typedef enum _NcXcorLimberKernelImpl
 
 /**
  * NcXcorKinetic:
- * @xi_z: FIXME
- * @E_z: FIXME
+ * @xi_z: comoving distance $\xi(z)$ at redshift $z$
+ * @E_z: normalized Hubble function $E(z) = H(z)/H_0$ at redshift $z$
  *
  * A boxed type for the kinetic quantities necessary to compute the kernels.
  *

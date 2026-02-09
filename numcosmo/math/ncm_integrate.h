@@ -46,7 +46,8 @@ typedef void (*NcmIntegralPeakfinder) (const gint *ndim, const gdouble b[], gint
 /**
  * NcmIntegrand2dim:
  *
- * FIXME
+ * Two-dimensional integrand structure.
+ * Holds a function pointer and user data for 2D numerical integration routines.
  */
 struct _NcmIntegrand2dim
 {
@@ -61,7 +62,8 @@ typedef gdouble (*_NcmIntegrand3dimFunc) (gdouble x, gdouble y, gdouble z, gpoin
 /**
  * NcmIntegrand3dim:
  *
- * FIXME
+ * Three-dimensional integrand structure.
+ * Holds a function pointer and user data for 3D numerical integration routines.
  */
 struct _NcmIntegrand3dim
 {
@@ -75,7 +77,9 @@ typedef struct _NcmIntegralFixed NcmIntegralFixed;
 /**
  * NcmIntegralFixed:
  *
- * FIXME
+ * Fixed-point numerical integration structure.
+ * Contains integration bounds and nodes for fixed Gauss-Legendre
+ * or other quadrature schemes.
  */
 struct _NcmIntegralFixed
 {

@@ -210,11 +210,12 @@ _nc_data_dist_mu_set_size (NcmDataGaussDiag *diag, guint np)
 
 /**
  * nc_data_dist_mu_new_empty:
- * @dist: FIXME
+ * @dist: a #NcDistance object
  *
- * FIXME
+ * Creates a new empty #NcDataDistMu object for distance modulus data.
+ * The distance object @dist is used to compute theoretical predictions.
  *
- * Returns: FIXME
+ * Returns: a newly created #NcDataDistMu
  */
 NcDataDistMu *
 nc_data_dist_mu_new_empty (NcDistance *dist)
@@ -250,9 +251,10 @@ nc_data_dist_mu_new_from_file (const gchar *filename)
  * @dist: a #NcDistance
  * @id: a #NcDataSNIAId
  *
- * FIXME
+ * Creates a new #NcDataDistMu object from a predefined Type Ia supernova dataset.
+ * This loads distance modulus data from the survey/compilation specified by @id.
  *
- * Returns: FIXME
+ * Returns: the newly created #NcDataDistMu
  */
 NcDataDistMu *
 nc_data_dist_mu_new_from_id (NcDistance *dist, NcDataSNIAId id)

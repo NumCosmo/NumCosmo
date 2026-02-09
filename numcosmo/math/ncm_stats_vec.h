@@ -49,7 +49,9 @@ G_DECLARE_FINAL_TYPE (NcmStatsVec, ncm_stats_vec, NCM, STATS_VEC, GObject)
  * @NCM_STATS_VEC_VAR: Calculates mean and variance.
  * @NCM_STATS_VEC_COV: Calculates mean, variance and covariance.
  *
- * FIXME
+ * Statistical types for vector statistics computation.
+ * These determine which statistical quantities are computed and stored
+ * during data accumulation.
  *
  */
 typedef enum
@@ -70,7 +72,9 @@ typedef void (*NcmStatsVecUpdateFunc) (NcmStatsVec *svec, const gdouble w, NcmVe
  * @NCM_STATS_VEC_AR_AIC: Uses the AIC criterium to choose the ar order.
  * @NCM_STATS_VEC_AR_AICC: Uses the AICc criterium to choose the ar order.
  *
- * FIXME
+ * Autoregressive model selection criteria.
+ * These criteria are used to automatically select the optimal order
+ * for autoregressive models in time series analysis.
  *
  */
 typedef enum

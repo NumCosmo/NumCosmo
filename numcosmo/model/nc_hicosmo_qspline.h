@@ -54,8 +54,10 @@ typedef struct _NcHICosmoQSplineContPrior NcHICosmoQSplineContPrior;
  * NcHICosmoQSplineSParams:
  * @NC_HICOSMO_QSPLINE_H0: Hubble constant
  * @NC_HICOSMO_QSPLINE_OMEGA_T: Total energy density of the universe
- * @NC_HICOSMO_QSPLINE_AS_DRAG: FIXME
+ * @NC_HICOSMO_QSPLINE_AS_DRAG: Sound horizon at baryon drag epoch $r_s(z_d)$
  *
+ * Scalar parameters for Q-spline cosmological model.
+ * This parametrization uses splines for the deceleration parameter q(z).
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_SPARAMS >*/
 {
@@ -68,8 +70,10 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_SPARAMS >*/
 
 /**
  * NcHICosmoQSplineVParams:
- * @NC_HICOSMO_QSPLINE_Q: FIXME
+ * @NC_HICOSMO_QSPLINE_Q: Deceleration parameter $q$ as a function of redshift (spline knots)
  *
+ * Vector parameters for Q-spline cosmological model.
+ * The deceleration parameter spline knots define the evolution of $q(z)$.
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_VPARAMS >*/
 {

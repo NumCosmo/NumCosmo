@@ -260,9 +260,11 @@ nc_xcor_AB_class_init (NcXcorABClass *klass)
  * @mixing_filename: (allow-none): a #gchar, the name of the file containing the mixing matrix
  * @mixing_filelength: a #guint, the size of the matrix in @mixing_filename (in case it is larger than @ell_th_cut_off)
  *
- * FIXME
+ * Creates a new #NcXcorAB object for cross-correlation between observables A and B.
+ * This initializes the angular power spectrum data structures, including the observed
+ * pseudo-spectrum and mixing matrix for handling survey masks and incomplete sky coverage.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcXcorAB
  */
 NcXcorAB *
 nc_xcor_AB_new (guint a, guint b, guint ell_th_cut_off, guint ell_lik_min, guint ell_lik_max, const gchar *clobs_filename, const gchar *mixing_filename, const guint mixing_filelength)
@@ -339,7 +341,8 @@ nc_xcor_AB_ref (NcXcorAB *xcab)
  * nc_xcor_AB_free:
  * @xcab: a #NcXcorAB
  *
- * FIXME
+ * Decreases the reference count of @xcab by one. If the reference count
+ * reaches zero, frees all memory associated with @xcab.
  *
  */
 void
@@ -352,7 +355,9 @@ nc_xcor_AB_free (NcXcorAB *xcab)
  * nc_xcor_AB_clear:
  * @xcab: a #NcXcorAB
  *
- * FIXME
+ * Atomically decrements the reference count of @xcab by one.
+ * If the reference count drops to zero, all memory is freed and
+ * @xcab is set to NULL.
  *
  */
 void

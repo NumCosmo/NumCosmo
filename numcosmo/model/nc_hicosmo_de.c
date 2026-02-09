@@ -1062,7 +1062,9 @@ nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de, GError **error)
  * nc_hicosmo_de_new_add_bbn:
  * @lh: a #NcmLikelihood
  *
- * FIXME
+ * Adds a Gaussian prior for the primordial helium abundance from Big Bang
+ * Nucleosynthesis (BBN) to the likelihood. This constrains the helium-4
+ * mass fraction $Y_p$ to its BBN predicted value.
  *
  */
 void
@@ -1132,30 +1134,33 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
 
 /**
  * nc_hicosmo_de_set_dE2Omega_de_dz_impl: (skip)
- * @cosmo_de_class: FIXME
- * @f: FIXME
+ * @cosmo_de_class: a #NcHICosmoDEClass
+ * @f: implementation function for $\mathrm{d}E^2\Omega_{\mathrm{de}}/\mathrm{d}z$
  *
- * FIXME
+ * Sets the implementation for computing the redshift derivative of the
+ * dark energy contribution to $E^2(z)$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEFunc1, dE2Omega_de_dz)
 
 /**
  * nc_hicosmo_de_set_d2E2Omega_de_dz2_impl: (skip)
- * @cosmo_de_class: FIXME
- * @f: FIXME
+ * @cosmo_de_class: a #NcHICosmoDEClass
+ * @f: implementation function for $\mathrm{d}^2E^2\Omega_{\mathrm{de}}/\mathrm{d}z^2$
  *
- * FIXME
+ * Sets the implementation for computing the second redshift derivative of
+ * the dark energy contribution to $E^2(z)$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEFunc1, d2E2Omega_de_dz2)
 
 /**
  * nc_hicosmo_de_set_w_de_impl: (skip)
- * @cosmo_de_class: FIXME
- * @f: FIXME
+ * @cosmo_de_class: a #NcHICosmoDEClass
+ * @f: implementation function for $w_{\mathrm{de}}(z)$
  *
- * FIXME
+ * Sets the implementation for computing the dark energy equation of state
+ * parameter $w(z) = p_{\mathrm{de}}/\rho_{\mathrm{de}}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEFunc1, w_de)
@@ -1165,36 +1170,40 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the dark energy contribution to the normalized Hubble function
+ * squared: $E^2\Omega_{\mathrm{de}}(z)$.
  *
- * Returns: FIXME
+ * Returns: $E^2(z)\Omega_{\mathrm{de}}(z)$
  */
 /**
  * nc_hicosmo_dE2Omega_de_dz:
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the first redshift derivative of the dark energy contribution
+ * to $E^2(z)$: $\mathrm{d}[E^2\Omega_{\mathrm{de}}]/\mathrm{d}z$.
  *
- * Returns: FIXME
+ * Returns: $\mathrm{d}[E^2(z)\Omega_{\mathrm{de}}(z)]/\mathrm{d}z$
  */
 /**
  * nc_hicosmo_d2E2Omega_de_dz2:
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the second redshift derivative of the dark energy contribution
+ * to $E^2(z)$: $\mathrm{d}^2[E^2\Omega_{\mathrm{de}}]/\mathrm{d}z^2$.
  *
- * Returns: FIXME
+ * Returns: $\mathrm{d}^2[E^2(z)\Omega_{\mathrm{de}}(z)]/\mathrm{d}z^2$
  */
 /**
  * nc_hicosmo_w_de:
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the dark energy equation of state parameter $w(z)$ defined as
+ * the ratio of pressure to density: $w = p_{\mathrm{de}}/\rho_{\mathrm{de}}$.
  *
- * Returns: FIXME
+ * Returns: $w_{\mathrm{de}}(z)$
  */
 /**
  * nc_hicosmo_de_E2Omega_de_onepw:
@@ -1203,7 +1212,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
  *
  * $E^2\Omega_\mathrm{de}(1+w)$.
  *
- * Returns: FIXME
+ * Returns: $E^2(z)\Omega_{\mathrm{de}}(z)[1+w(z)]$
  */
 
 static void

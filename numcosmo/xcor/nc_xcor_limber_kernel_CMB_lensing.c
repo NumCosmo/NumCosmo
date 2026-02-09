@@ -243,9 +243,11 @@ nc_xcor_limber_kernel_cmb_lensing_class_init (NcXcorLimberKernelCMBLensingClass 
  * @recomb: a #NcRecomb
  * @Nl: a #NcmVector
  *
- * FIXME
+ * Creates a new #NcXcorLimberKernelCMBLensing for computing the CMB lensing
+ * convergence kernel. This kernel describes the lensing of CMB photons by
+ * intervening large-scale structure.
  *
- * Returns: FIXME
+ * Returns: a new #NcXcorLimberKernelCMBLensing
  *
  */
 NcXcorLimberKernelCMBLensing *
