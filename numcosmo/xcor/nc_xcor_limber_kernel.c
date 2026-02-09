@@ -180,7 +180,7 @@ nc_xcor_limber_kernel_class_init (NcXcorLimberKernelClass *klass)
  * nc_xcor_limber_kernel_ref:
  * @xclk: a #NcXcorLimberKernel
  *
- * FIXME
+ * Increases the reference count of @xclk by one.
  *
  * Returns: (transfer full): @xclk.
  */
@@ -194,7 +194,8 @@ nc_xcor_limber_kernel_ref (NcXcorLimberKernel *xclk)
  * nc_xcor_limber_kernel_free:
  * @xclk: a #NcXcorLimberKernel
  *
- * FIXME
+ * Decreases the reference count of @xclk by one. If the reference count
+ * reaches zero, the object is freed.
  *
  */
 void
@@ -207,7 +208,9 @@ nc_xcor_limber_kernel_free (NcXcorLimberKernel *xclk)
  * nc_xcor_limber_kernel_clear:
  * @xclk: a #NcXcorLimberKernel
  *
- * FIXME
+ * Atomically decrements the reference count of @xclk by one.
+ * If the reference count drops to zero, all memory allocated by @xclk is
+ * released. @xclk is set to NULL after being freed.
  *
  */
 void
@@ -251,9 +254,9 @@ nc_xcor_kinetic_free (NcXcorKinetic *xck)
  * nc_xcor_limber_kernel_obs_len: (virtual obs_len)
  * @xclk: a #NcXcorLimberKernel
  *
- * FIXME
+ * Gets the number of observables required by this kernel.
  *
- * Returns: FIXME
+ * Returns: the number of observables
  */
 guint
 nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel *xclk)
@@ -265,9 +268,10 @@ nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel *xclk)
  * nc_xcor_limber_kernel_obs_params_len: (virtual obs_params_len)
  * @xclk: a #NcXcorLimberKernel
  *
- * FIXME
+ * Gets the number of parameters needed to describe the observables
+ * for this kernel (e.g., measurement uncertainties, systematic parameters).
  *
- * Returns: FIXME
+ * Returns: the number of observable parameters
  */
 guint
 nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel *xclk)
@@ -355,9 +359,11 @@ nc_xcor_limber_kernel_get_const_factor (NcXcorLimberKernel *xclk)
  * @xck: a #NcXcorKinetic
  * @l: a #gint
  *
- * FIXME
+ * Evaluates the Limber kernel at redshift @z for multipole @l.
+ * The kinetic quantities (comoving distance and Hubble parameter) are
+ * provided in @xck. Returns zero if @z is outside the kernel's redshift range.
  *
- * Returns: FIXME
+ * Returns: the kernel value $W(z,\ell)$
  */
 gdouble
 nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
@@ -378,9 +384,11 @@ nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble 
  * @dist: a #NcDistance
  * @l: a #gint
  *
- * FIXME
+ * Evaluates the Limber kernel at redshift @z for multipole @l, including
+ * the normalization factor. This function computes the kinetic quantities
+ * internally using @dist and applies the kernel's constant factor.
  *
- * Returns: FIXME
+ * Returns: the normalized kernel value $c \times W(z,\ell)$
  */
 gdouble
 nc_xcor_limber_kernel_eval_full (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, NcDistance *dist, gint l)
@@ -417,7 +425,9 @@ nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVe
  * @xclk: a #NcXcorLimberKernel
  * @cosmo: a NcHICosmo
  *
- * FIXME
+ * Prepares the kernel for evaluation with the given cosmological model.
+ * This may involve precomputing quantities that depend on @cosmo but not
+ * on redshift or multipole.
  *
  */
 void
@@ -456,7 +466,8 @@ _nc_xcor_limber_kernel_log_all_models_go (GType model_type, guint n)
 /**
  * nc_xcor_limber_kernel_log_all_models:
  *
- * FIXME
+ * Logs all registered #NcXcorLimberKernel subclasses to the message log.
+ * This is useful for debugging and discovering available kernel implementations.
  *
  */
 void

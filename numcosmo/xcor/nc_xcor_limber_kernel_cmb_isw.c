@@ -340,9 +340,11 @@ _nc_xcor_limber_kernel_cmb_isw_obs_params_len (NcXcorLimberKernel *xclk)
  * @recomb: a #NcRecomb
  * @Nl: a #NcmVector
  *
- * FIXME
+ * Creates a new #NcXcorLimberKernelCMBISW for computing the CMB integrated
+ * Sachs-Wolfe (ISW) effect kernel. This kernel describes the correlation between
+ * the CMB temperature anisotropies from the ISW effect and large-scale structure.
  *
- * Returns: FIXME
+ * Returns: a new #NcXcorLimberKernelCMBISW
  *
  */
 NcXcorLimberKernelCMBISW *
