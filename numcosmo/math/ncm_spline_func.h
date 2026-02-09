@@ -39,7 +39,7 @@ G_BEGIN_DECLS
 
 /**
  * NcmSplineFuncType:
- * @NCM_SPLINE_FUNCTION_4POINTS: FIXME
+ * @NCM_SPLINE_FUNCTION_4POINTS: Four-point interpolation method for adaptive knot placement
  * @NCM_SPLINE_FUNCTION_SPLINE: The knots are evenly distributed on a linear base at each step. The test points are place at $\overline{\mathbf{x}} = \frac{\mathbf{x}^{i+1} + \mathbf{x}^{i}}{2}$.
  * @NCM_SPLINE_FUNCTION_SPLINE_LNKNOT: The knots are evenly distributed on a logarithm base at each step. The test points are place at $\overline{\mathbf{x}} = \mathrm{exp}\left( \frac{\ln \mathbf{x}^{i+1} + \ln \mathbf{x}^{i}}{2}  \right)$. This method is only applied for positive intervals and is indicated for functions that changes orders of magnitude across the interval.
  * @NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT: The knots are evenly distributed on a hyperbolic sine base at each step. The test points are place at $\overline{\mathbf{x}} = \sinh \left[ \frac{\sinh^{-1} \left( \mathbf{x}^{i+1} \right) + \sinh^{-1} \left( \mathbf{x}^{i} \right)}{2} \right]$. This method is indicated for functions that changes orders of magnitude across the interval.
