@@ -46,9 +46,11 @@ typedef struct _NcDataHubbleBao NcDataHubbleBao;
 
 /**
  * NcDataHubbleBaoId:
- * @NC_DATA_HUBBLE_BAO_BUSCA2013: FIXME
+ * @NC_DATA_HUBBLE_BAO_BUSCA2013: BAO measurement of $H(z)r_s(z_d)/(1+z)$ from Busca et al. (2013)
  *
- * FIXME
+ * Available BAO samples for Hubble function measurements.
+ * These identifiers select specific datasets for the Hubble parameter
+ * derived from Baryon Acoustic Oscillation observations.
  */
 typedef enum _NcDataHubbleBaoId
 {

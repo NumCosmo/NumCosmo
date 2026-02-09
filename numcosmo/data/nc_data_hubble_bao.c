@@ -213,7 +213,8 @@ _nc_data_hubble_bao_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector 
  * @dist: a #NcDistance
  * @id: a #NcDataHubbleBaoId
  *
- * FIXME
+ * Creates a new #NcDataHubbleBao object initialized with the specified BAO dataset.
+ * This object holds Hubble function measurements from Baryon Acoustic Oscillations.
  *
  * Returns: a #NcmData
  */
@@ -253,7 +254,9 @@ _nc_data_hubble_bao_set_size (NcmDataGaussDiag *diag, guint np)
  * @hubble_bao: a #NcDataHubbleBao.
  * @id: a #NcDataHubbleBaoId
  *
- * FIXME
+ * Sets the BAO sample data according to the specified dataset identifier.
+ * This configures the measurement data, uncertainties, and redshift values
+ * for the selected BAO observation.
  *
  */
 void

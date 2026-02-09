@@ -51,9 +51,12 @@ typedef struct _NcDataClusterNCountPrivate NcDataClusterNCountPrivate;
 
 /**
  * NcDataClusterAbundanceId:
- * @NC_DATA_CLUSTER_ABUNDANCE_FIT: FIXME
- * @NC_DATA_CLUSTER_ABUNDANCE_TXT: FIXME
- * @NC_DATA_CLUSTER_ABUNDANCE_SAMPLING: FIXME
+ * @NC_DATA_CLUSTER_ABUNDANCE_FIT: fit mode - data from catalog for parameter estimation
+ * @NC_DATA_CLUSTER_ABUNDANCE_TXT: text file mode - load catalog data from text file
+ * @NC_DATA_CLUSTER_ABUNDANCE_SAMPLING: sampling mode - generate mock catalog from model
+ *
+ * Cluster abundance data input modes.
+ * These specify how the cluster number count data is initialized or used.
  */
 typedef enum _NcDataClusterAbundanceId
 {

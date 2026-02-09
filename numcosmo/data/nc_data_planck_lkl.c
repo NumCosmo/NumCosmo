@@ -780,7 +780,8 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
  * nc_data_planck_lkl_new:
  * @filename: a Planck likelihood file
  *
- * FIXME
+ * Creates a new #NcDataPlanckLKL object from a Planck likelihood data file.
+ * This loads the likelihood data using the Planck likelihood code library.
  *
  * Returns: a new #NcDataPlanckLKL
  */
@@ -799,7 +800,9 @@ nc_data_planck_lkl_new (const gchar *filename)
  * @filename: a Planck likelihood file
  * @pb: a #NcHIPertBoltzmann
  *
- * FIXME
+ * Creates a new #NcDataPlanckLKL object with a specified Boltzmann code.
+ * This initializes the likelihood using the provided perturbation/Boltzmann solver @pb
+ * for computing the theoretical power spectra.
  *
  * Returns: a new #NcDataPlanckLKL
  */
@@ -851,7 +854,7 @@ nc_data_planck_lkl_full_new_id (NcDataPlanckLKLType id, NcHIPertBoltzmann *pb)
  * @plik: a #NcDataPlanckLKL
  * @i: param index
  *
- * FIXME
+ * Gets the name of the nuisance parameter at index @i.
  *
  * Returns: (transfer none): a string containing the param name
  */
@@ -867,7 +870,7 @@ nc_data_planck_lkl_get_param_name (NcDataPlanckLKL *plik, guint i)
  * nc_data_planck_lkl_get_param_names:
  * @plik: a #NcDataPlanckLKL
  *
- * FIXME
+ * Gets an array containing all nuisance parameter names used by the likelihood.
  *
  * Returns: (array zero-terminated=1) (element-type utf8) (transfer full): an array of strings containing the param names
  */

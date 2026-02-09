@@ -207,9 +207,10 @@ _nc_data_hubble_set_size (NcmDataGaussDiag *diag, guint np)
 /**
  * nc_data_hubble_new_empty:
  *
- * FIXME
+ * Creates a new empty #NcDataHubble object with no data points.
+ * The data points should be set using appropriate setter methods.
  *
- * Returns: FIXME
+ * Returns: a newly created #NcDataHubble
  */
 NcDataHubble *
 nc_data_hubble_new_empty (void)
@@ -242,9 +243,11 @@ nc_data_hubble_new_from_file (const gchar *filename)
  * nc_data_hubble_new_from_id:
  * @id: a #NcDataHubbleId
  *
- * FIXME
+ * Creates a new #NcDataHubble object from a predefined dataset identifier.
+ * This loads the Hubble parameter measurements from the data files corresponding
+ * to the specified survey/publication.
  *
- * Returns: FIXME
+ * Returns: the newly created #NcDataHubble
  */
 NcDataHubble *
 nc_data_hubble_new_from_id (NcDataHubbleId id)

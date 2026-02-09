@@ -65,7 +65,10 @@ G_BEGIN_DECLS
  * @NC_DATA_BAO_DVR_DTDH_DESI_DR1_2024: Adame at el., arXiv:2404.03000, table 18
  * @NC_DATA_BAO_DVR_DTDH_DESI_DR2_2025: Abdul Karim et al., arXiv:2503.14738, table IV
  *
- * FIXME
+ * Available BAO datasets identifiers.
+ * These enumerate different Baryon Acoustic Oscillation observations from various
+ * surveys and releases. Each identifier corresponds to a specific measurement type
+ * and publication referenced in the parameter documentation above.
  *
  */
 typedef enum _NcDataBaoId
