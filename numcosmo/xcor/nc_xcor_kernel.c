@@ -63,9 +63,6 @@ typedef struct _NcXcorKernelPrivate
   NcmModel parent_instance;
   NcDistance *dist;
   NcmPowspec *ps;
-  NcXcorKernelEvalFunc eval_kernel_func;
-  NcXcorKernelEvalPrefactorFunc eval_prefactor_func;
-  NcXcorKernelGetKRangeFunc get_k_range_func;
   NcXcorKernelIntegMethod integ_method;
   guint lmax;
 } NcXcorKernelPrivate;
@@ -83,19 +80,22 @@ enum
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcXcorKernel, nc_xcor_kernel, NCM_TYPE_MODEL)
 G_DEFINE_BOXED_TYPE (NcXcorKinetic, nc_xcor_kinetic, nc_xcor_kinetic_copy, nc_xcor_kinetic_free)
+NCM_UTIL_DEFINE_CALLBACK (NcXcorKernelIntegrand,
+                          NC_XCOR_KERNEL_INTEGRAND,
+                          nc_xcor_kernel_integrand,
+                          gdouble,
+                          NCM_UTIL_CALLBACK_ARGS (const gdouble z),
+                          NCM_UTIL_CALLBACK_ARGS (z))
 
 static void
 nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->dist                = NULL;
-  self->ps                  = NULL;
-  self->eval_kernel_func    = NULL;
-  self->eval_prefactor_func = NULL;
-  self->get_k_range_func    = NULL;
-  self->integ_method        = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
-  self->lmax                = 0;
+  self->dist         = NULL;
+  self->ps           = NULL;
+  self->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
+  self->lmax         = 0;
 }
 
 static void
@@ -126,18 +126,6 @@ _nc_xcor_kernel_constructed (GObject *object)
   {
     NcXcorKernel *xclk        = NC_XCOR_KERNEL (object);
     NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-    if (self->eval_kernel_func == NULL)
-      g_error ("nc_xcor_kernel_constructed: eval_kernel_func was not set by subclass implementation. "
-               "Subclasses must call nc_xcor_kernel_set_eval_kernel_func() in their constructed method.");
-
-    if (self->eval_prefactor_func == NULL)
-      g_error ("nc_xcor_kernel_constructed: eval_prefactor_func was not set by subclass implementation. "
-               "Subclasses must call nc_xcor_kernel_set_eval_kernel_func() in their constructed method.");
-
-    if (self->get_k_range_func == NULL)
-      g_error ("nc_xcor_kernel_constructed: get_k_range_func was not set by subclass implementation. "
-               "Subclasses must call nc_xcor_kernel_set_get_k_range_func() in their constructed method.");
 
     if (self->dist == NULL)
       g_error ("nc_xcor_kernel_constructed: dist property was not set. "
@@ -224,6 +212,22 @@ _nc_xcor_kernel_get_z_range_not_implemented (NcXcorKernel *xclk, gdouble *zmin, 
 }
 
 static void
+_nc_xcor_kernel_get_k_range_not_implemented (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
+{
+  g_error ("nc_xcor_kernel_get_k_range: get_k_range virtual method not implemented for %s",
+           G_OBJECT_TYPE_NAME (xclk));
+}
+
+static NcXcorKernelIntegrand *
+_nc_xcor_kernel_get_eval_not_implemented (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  g_error ("nc_xcor_kernel_get_eval: get_eval virtual method not implemented for %s",
+           G_OBJECT_TYPE_NAME (xclk));
+
+  return NULL; /* silence compiler warning */
+}
+
+static void
 nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -277,6 +281,8 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                               NULL, TRUE, NCM_MSET_MODEL_MAIN);
 
   klass->get_z_range = &_nc_xcor_kernel_get_z_range_not_implemented;
+  klass->get_k_range = &_nc_xcor_kernel_get_k_range_not_implemented;
+  klass->get_eval    = &_nc_xcor_kernel_get_eval_not_implemented;
 }
 
 /**
@@ -352,6 +358,42 @@ nc_xcor_kinetic_free (NcXcorKinetic *xck)
 {
   g_free (xck);
 }
+
+/**
+ * nc_xcor_kernel_integrand_new:
+ * @func: (scope async) (closure callback_data): a #NcXcorKernelIntegrandFunc
+ * @callback_data_free: (scope async) (closure callback_data): a #NcXcorKernelIntegrandFreeData
+ * @callback_data_copy: (scope async) (closure callback_data): a #NcXcorKernelIntegrandCopyData
+ * @callback_data_prepare: (scope async) (closure callback_data): a #NcXcorKernelIntegrandPrepareData
+ * @callback_data: a gpointer
+ *
+ * Creates a new galaxy shape integrand.
+ *
+ * Returns: (transfer full): a new NcGalaxySDShapeIntegrand object.
+ */
+/**
+ * nc_xcor_kernel_integrand_copy:
+ * @callback_obj: a NcXcorKernelIntegrand
+ *
+ * Copies the integrand for the galaxy shape data.
+ *
+ * Returns: (transfer full): a copy of @callback_obj
+ */
+/**
+ * nc_xcor_kernel_integrand_free:
+ * @callback_obj: a NcXcorKernelIntegrand
+ *
+ * Frees the integrand for the galaxy shape data.
+ *
+ */
+/**
+ * nc_xcor_kernel_integrand_prepare:
+ * @callback_obj: a NcXcorKernelIntegrand
+ * @mset: a #NcmMSet
+ *
+ * Prepares the integrand for the galaxy shape data.
+ *
+ */
 
 /**
  * nc_xcor_kernel_obs_len: (virtual obs_len)
@@ -434,67 +476,7 @@ nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk)
 }
 
 /**
- * nc_xcor_kernel_set_get_k_range_func: (skip)
- * @xclk: a #NcXcorKernel
- * @get_k_range_func: (scope notified): function pointer to get the k range
- *
- * Sets the function pointer that will be used to get the wavenumber range.
- * This method should only be called by subclass implementations during
- * the constructed phase to set the appropriate k range function
- * based on the integration method.
- *
- */
-void
-nc_xcor_kernel_set_get_k_range_func (NcXcorKernel *xclk, NcXcorKernelGetKRangeFunc get_k_range_func)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  self->get_k_range_func = get_k_range_func;
-}
-
-/**
- * nc_xcor_kernel_eval_kernel:
- * @xclk: a #NcXcorKernel
- * @cosmo: a #NcHICosmo
- * @k: wavenumber
- * @l: multipole
- *
- * Evaluates the kernel at wavenumber @k and multipole @l by calling the
- * function pointer set by subclasses. This method provides optimized
- * dispatch without virtual method overhead.
- *
- * Returns: the kernel evaluation result
- */
-gdouble
-nc_xcor_kernel_eval_kernel (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  return self->eval_kernel_func (xclk, cosmo, k, l);
-}
-
-/**
- * nc_xcor_kernel_eval_kernel_prefactor:
- * @xclk: a #NcXcorKernel
- * @cosmo: a #NcHICosmo
- * @l: multipole
- *
- * Evaluates the kernel prefactor at multipole @l by calling the function pointer set
- * by subclasses. This method provides optimized dispatch without virtual method
- * overhead.
- *
- * Returns: the kernel prefactor evaluation result
- */
-gdouble
-nc_xcor_kernel_eval_kernel_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  return self->eval_prefactor_func (xclk, cosmo, l);
-}
-
-/**
- * nc_xcor_kernel_get_k_range:
+ * nc_xcor_kernel_get_k_range: (virtual get_k_range)
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @l: multipole
@@ -509,11 +491,25 @@ nc_xcor_kernel_eval_kernel_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
 void
 nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
 {
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+  NC_XCOR_KERNEL_GET_CLASS (xclk)->get_k_range (xclk, cosmo, l, kmin, kmax);
+}
 
-  g_assert (self->get_k_range_func != NULL);
-
-  self->get_k_range_func (xclk, cosmo, l, kmin, kmax);
+/**
+ * nc_xcor_kernel_get_eval: (virtual get_eval)
+ * @xclk: a #NcXcorKernel
+ * @cosmo: a #NcHICosmo
+ * @l: multipole
+ *
+ * Gets the evaluation function for the kernel by calling the
+ * function pointer set by subclasses. This method provides optimized
+ * dispatch without virtual method overhead.
+ *
+ * Returns: (transfer full): the evaluation function for the kernel.
+ */
+NcXcorKernelIntegrand *
+nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  return NC_XCOR_KERNEL_GET_CLASS (xclk)->get_eval (xclk, cosmo, l);
 }
 
 /**

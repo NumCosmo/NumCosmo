@@ -164,7 +164,6 @@ _nc_xcor_kernel_cmb_lensing_finalize (GObject *object)
 
 static gdouble _nc_xcor_kernel_cmb_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 static gdouble _nc_xcor_kernel_cmb_lensing_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
-static gdouble _nc_xcor_kernel_cmb_lensing_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l);
 static gdouble _nc_xcor_kernel_cmb_lensing_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 static void _nc_xcor_kernel_cmb_lensing_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 static void _nc_xcor_kernel_cmb_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
@@ -172,32 +171,11 @@ static void _nc_xcor_kernel_cmb_lensing_add_noise (NcXcorKernel *xclk, NcmVector
 static guint _nc_xcor_kernel_cmb_lensing_obs_len (NcXcorKernel *xclk);
 static guint _nc_xcor_kernel_cmb_lensing_obs_params_len (NcXcorKernel *xclk);
 static void _nc_xcor_kernel_cmb_lensing_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
+static NcXcorKernelIntegrand *_nc_xcor_kernel_cmb_lensing_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 
 static void
 _nc_xcor_kernel_cmb_lensing_constructed (GObject *object)
 {
-  NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (object);
-  NcXcorKernel *xclk            = NC_XCOR_KERNEL (xclkl);
-  NcXcorKernelIntegMethod integ = nc_xcor_kernel_get_integ_method (xclk);
-
-  /* Set function pointers before chaining up */
-  switch (integ)
-  {
-    case NC_XCOR_KERNEL_INTEG_METHOD_GSL_QAG:
-      g_error ("_nc_xcor_kernel_cmb_lensing_constructed: GSL_QAG integration not implemented yet");
-      break;
-    case NC_XCOR_KERNEL_INTEG_METHOD_LIMBER:
-      nc_xcor_kernel_set_eval_kernel_func (xclk,
-                                           _nc_xcor_kernel_cmb_lensing_eval_kernel_limber,
-                                           _nc_xcor_kernel_cmb_lensing_eval_kernel_prefactor_limber
-                                          );
-      nc_xcor_kernel_set_get_k_range_func (xclk, _nc_xcor_kernel_cmb_lensing_get_k_range_limber);
-      break;
-    default:
-      g_assert_not_reached ();
-      break;
-  }
-
   /* Chain up to parent constructed */
   G_OBJECT_CLASS (nc_xcor_kernel_cmb_lensing_parent_class)->constructed (object);
 }
@@ -256,6 +234,8 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
   parent_class->obs_len        = &_nc_xcor_kernel_cmb_lensing_obs_len;
   parent_class->obs_params_len = &_nc_xcor_kernel_cmb_lensing_obs_params_len;
   parent_class->get_z_range    = &_nc_xcor_kernel_cmb_lensing_get_z_range;
+  parent_class->get_k_range    = &_nc_xcor_kernel_cmb_lensing_get_k_range_limber;
+  parent_class->get_eval       = &_nc_xcor_kernel_cmb_lensing_get_eval;
 
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
 }
@@ -307,22 +287,21 @@ _nc_xcor_kernel_cmb_lensing_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICos
   return 1.5 * nc_hicosmo_Omega_m0 (cosmo) * lfactor / (nu * nu);
 }
 
-static gdouble
-_nc_xcor_kernel_cmb_lensing_eval_kernel_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l)
-{
-  NcXcorKernelCMBLensing *xclkl   = NC_XCOR_KERNEL_CMB_LENSING (xclk);
-  NcDistance *dist                = xclkl->dist;
-  NcmPowspec *ps                  = xclkl->ps;
-  const gdouble nu                = l + 0.5;
-  const gdouble xi_nu             = nu / k;
-  const gdouble z                 = nc_distance_inv_comoving (dist, cosmo, xi_nu);
-  const gdouble powspec           = ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
-  const gdouble dt                = nc_distance_transverse (dist, cosmo, z);
-  const gdouble dt_z_zlss         = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
-  const gdouble operator_limber_k = 1.0 / gsl_pow_3 (k);
+/*
+ * Limber integrand callback.
+ */
 
-  return operator_limber_k * (1.0 + z) * dt_z_zlss / (xclkl->dt_lss * dt) * sqrt (powspec);
-}
+typedef struct _IntegData
+{
+  NcXcorKernelCMBLensing *xclkl;
+  NcHICosmo *cosmo;
+  gdouble RH_Mpc;
+  gdouble l;
+  gdouble nu;
+  gdouble prefactor;
+  gdouble z_lss;
+  gdouble dt_lss;
+} IntegData;
 
 static gdouble
 _nc_xcor_kernel_cmb_lensing_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
@@ -331,6 +310,88 @@ _nc_xcor_kernel_cmb_lensing_eval_kernel_prefactor_limber (NcXcorKernel *xclk, Nc
   const gdouble lfactor = l * (l + 1.0);
 
   return sqrt (M_PI / 2.0 / nu) * 1.5 * nc_hicosmo_Omega_m0 (cosmo) * lfactor;
+}
+
+static void
+_integ_data_free (gpointer data)
+{
+  IntegData *int_data = (IntegData *) data;
+
+  nc_hicosmo_clear (&int_data->cosmo);
+  g_free (data);
+}
+
+static gpointer
+_integ_data_copy (gpointer data)
+{
+  IntegData *src = (IntegData *) data;
+  IntegData *dst = g_new0 (IntegData, 1);
+
+  dst->xclkl     = src->xclkl;
+  dst->cosmo     = nc_hicosmo_ref (src->cosmo);
+  dst->l         = src->l;
+  dst->nu        = src->nu;
+  dst->RH_Mpc    = src->RH_Mpc;
+  dst->prefactor = src->prefactor;
+  dst->z_lss     = src->z_lss;
+  dst->dt_lss    = src->dt_lss;
+
+  return dst;
+}
+
+static void
+_integ_data_prepare (gpointer data, NcmMSet *mset)
+{
+  /* Nothing to prepare */
+}
+
+static gdouble
+_nc_xcor_kernel_cmb_lensing_eval_limber (gpointer callback_data, const gdouble k)
+{
+  IntegData *int_data             = (IntegData *) callback_data;
+  NcXcorKernelCMBLensing *xclkl   = int_data->xclkl;
+  const gdouble xi_nu             = int_data->nu / k;
+  const gdouble k_Mpc             = k / int_data->RH_Mpc;
+  const gdouble z                 = nc_distance_inv_comoving (xclkl->dist, int_data->cosmo, xi_nu);
+  const gdouble powspec           = ncm_powspec_eval (xclkl->ps, NCM_MODEL (int_data->cosmo), z, k_Mpc);
+  const gdouble dt                = nc_distance_transverse (xclkl->dist, int_data->cosmo, z);
+  const gdouble dt_z_zlss         = nc_distance_transverse_z1_z2 (xclkl->dist, int_data->cosmo, z, int_data->z_lss);
+  const gdouble operator_limber_k = 1.0 / gsl_pow_3 (k);
+
+  return int_data->prefactor * operator_limber_k * (1.0 + z) * dt_z_zlss / (int_data->dt_lss * dt) * sqrt (powspec);
+}
+
+static NcXcorKernelIntegrand *
+_nc_xcor_kernel_cmb_lensing_get_eval_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
+  IntegData *int_data           = g_new0 (IntegData, 1);
+  NcXcorKernelIntegrand *integ  = nc_xcor_kernel_integrand_new (_nc_xcor_kernel_cmb_lensing_eval_limber,
+                                                                _integ_data_free,
+                                                                _integ_data_copy,
+                                                                _integ_data_prepare,
+                                                                int_data);
+
+  int_data->xclkl     = xclkl;
+  int_data->cosmo     = cosmo;
+  int_data->l         = l;
+  int_data->nu        = l + 0.5;
+  int_data->RH_Mpc    = nc_hicosmo_RH_Mpc (cosmo);
+  int_data->prefactor = _nc_xcor_kernel_cmb_lensing_eval_kernel_prefactor_limber (xclk, cosmo, l);
+  int_data->z_lss     = xclkl->z_lss;
+  int_data->dt_lss    = xclkl->dt_lss;
+
+  return integ;
+}
+
+/*
+ * End Limber integrand callback.
+ */
+
+static NcXcorKernelIntegrand *
+_nc_xcor_kernel_cmb_lensing_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+{
+  return _nc_xcor_kernel_cmb_lensing_get_eval_limber (xclk, cosmo, l);
 }
 
 static void

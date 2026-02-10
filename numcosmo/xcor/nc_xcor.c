@@ -623,10 +623,10 @@ _nc_xcor_limber_z_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2
 static gdouble
 _xcor_kernel_gsl_cross_int (gdouble lnk, gpointer ptr)
 {
-  xcor_gsl *xclki       = (xcor_gsl *) ptr;
-  const gdouble k       = exp (lnk);
-  const gdouble kernel1 = nc_xcor_kernel_eval_kernel (xclki->xclk1, xclki->cosmo, k, xclki->l);
-  const gdouble kernel2 = nc_xcor_kernel_eval_kernel (xclki->xclk2, xclki->cosmo, k, xclki->l);
+  NcXcorKernelIntegrand **xclki = (NcXcorKernelIntegrand **) ptr;
+  const gdouble k               = exp (lnk);
+  const gdouble kernel1         = nc_xcor_kernel_integrand_eval (xclki[0], k);
+  const gdouble kernel2         = nc_xcor_kernel_integrand_eval (xclki[1], k);
 
   return gsl_pow_3 (k) * kernel1 * kernel2;
 }
@@ -634,9 +634,9 @@ _xcor_kernel_gsl_cross_int (gdouble lnk, gpointer ptr)
 static gdouble
 _xcor_kernel_gsl_auto_int (gdouble lnk, gpointer ptr)
 {
-  xcor_gsl *xclki       = (xcor_gsl *) ptr;
-  const gdouble k       = exp (lnk);
-  const gdouble kernel1 = nc_xcor_kernel_eval_kernel (xclki->xclk1, xclki->cosmo, k, xclki->l);
+  NcXcorKernelIntegrand **xclki = (NcXcorKernelIntegrand **) ptr;
+  const gdouble k               = exp (lnk);
+  const gdouble kernel1         = nc_xcor_kernel_integrand_eval (xclki[0], k);
 
   return gsl_pow_3 (k) * kernel1 * kernel1;
 }
@@ -647,7 +647,7 @@ _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHIC
   const guint nell              = ncm_vector_len (vp);
   const gdouble const_factor    = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
-  xcor_gsl xclki;
+  NcXcorKernelIntegrand *xclki_array[2];
   gsl_function F;
   guint i;
   gint ret;
@@ -658,25 +658,16 @@ _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHIC
   if (lmax < lmin)
     g_error ("_nc_xcor_kernel_gsl: lmax < lmin");
 
-  xclki.xclk1 = xclk1;
-  xclki.xclk2 = xclk2;
-  xclki.cosmo = cosmo;
-  xclki.dist  = xc->dist;
-  xclki.ps    = xc->ps;
-  xclki.RH    = xc->RH;
-
   if (isauto)
     F.function = &_xcor_kernel_gsl_auto_int;
   else
     F.function = &_xcor_kernel_gsl_cross_int;
 
-  F.params = &xclki;
+  F.params = xclki_array;
 
   for (i = 0; i < nell; i++)
   {
-    const guint ell                 = lmin + i;
-    const gdouble const_factor_ell1 = nc_xcor_kernel_eval_kernel_prefactor (xclk1, cosmo, ell);
-    const gdouble const_factor_ell2 = isauto ? const_factor_ell1 : nc_xcor_kernel_eval_kernel_prefactor (xclk2, cosmo, ell);
+    const guint ell = lmin + i;
     gdouble k_min, k_max;
     gdouble k2_min, k2_max, result, err;
 
@@ -686,13 +677,22 @@ _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHIC
     k_min = GSL_MAX (k_min, k2_min);
     k_max = GSL_MIN (k_max, k2_max);
 
-    xclki.l = ell;
-    ret     = gsl_integration_qag (&F, log (k_min), log (k_max), 0.0, xc->reltol * 1.0e-2, NCM_INTEGRAL_PARTITION, 6, *w, &result, &err);
+    if (isauto)
+    {
+      xclki_array[0] = nc_xcor_kernel_get_eval (xclk1, cosmo, ell);
+    }
+    else
+    {
+      xclki_array[0] = nc_xcor_kernel_get_eval (xclk1, cosmo, ell);
+      xclki_array[1] = nc_xcor_kernel_get_eval (xclk2, cosmo, ell);
+    }
+
+    ret = gsl_integration_qag (&F, log (k_min), log (k_max), 0.0, xc->reltol * 1.0e-2, NCM_INTEGRAL_PARTITION, 6, *w, &result, &err);
 
     if (ret != GSL_SUCCESS)
       g_error ("_nc_xcor_kernel_gsl: %s.", gsl_strerror (ret));
 
-    ncm_vector_set (vp, i, const_factor * const_factor_ell1 * const_factor_ell2 * result);
+    ncm_vector_set (vp, i, const_factor * result);
   }
 
   ncm_memory_pool_return (w);

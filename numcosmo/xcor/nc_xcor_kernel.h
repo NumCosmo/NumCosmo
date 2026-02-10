@@ -47,29 +47,17 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_KERNEL (nc_xcor_kernel_get_type ())
-#define NC_TYPE_XCOR_KERNEL_EVAL (nc_xcor_kernel_eval_get_type ())
+#define NC_TYPE_XCOR_KERNEL_EVAL (nc_xcor_kernel_integrand_get_type ())
 
 G_DECLARE_DERIVABLE_TYPE (NcXcorKernel, nc_xcor_kernel, NC, XCOR_KERNEL, NcmModel);
 
 typedef struct _NcXcorKinetic NcXcorKinetic;
 
-NCM_UTIL_DECLARE_CALLBACK (NcXcorKernelEval,
+NCM_UTIL_DECLARE_CALLBACK (NcXcorKernelIntegrand,
                            NC_XCOR_KERNEL_EVAL,
-                           nc_xcor_kernel_eval,
+                           nc_xcor_kernel_integrand,
                            gdouble,
                            NCM_UTIL_CALLBACK_ARGS (const gdouble k))
-
-/**
- * NcXcorKernelGetKRangeFunc:
- * @xclk: a #NcXcorKernel
- * @cosmo: a #NcHICosmo
- * @l: multipole
- * @kmin: (out): minimum wavenumber
- * @kmax: (out): maximum wavenumber
- *
- * Function pointer type for getting the wavenumber range.
- */
-typedef void (*NcXcorKernelGetKRangeFunc) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 
 /**
  * NcXcorKernelIntegMethod:
@@ -100,7 +88,7 @@ struct _NcXcorKernelClass
   guint (*obs_params_len) (NcXcorKernel *xclk);
   void (*get_k_range) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
   void (*get_z_range) (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
-  NcXcorKernelEval *(*get_eval) (NcXcorKernel *xclk, NcHICosmo *cosmo);
+  NcXcorKernelIntegrand *(*get_eval) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 };
 
 
@@ -147,19 +135,16 @@ void nc_xcor_kinetic_free (NcXcorKinetic *xck);
 guint nc_xcor_kernel_obs_len (NcXcorKernel *xclk);
 guint nc_xcor_kernel_obs_params_len (NcXcorKernel *xclk);
 
-void nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
+NcXcorKernelIntegMethod nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk);
+guint nc_xcor_kernel_get_lmax (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_lmax (NcXcorKernel *xclk, guint lmax);
 
 NcDistance *nc_xcor_kernel_peek_dist (NcXcorKernel *xclk);
 NcmPowspec *nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk);
 
-NcXcorKernelEval *nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
-
-void nc_xcor_kernel_set_get_k_range_func (NcXcorKernel *xclk, NcXcorKernelGetKRangeFunc get_k_range_func);
+void nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 void nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
-
-NcXcorKernelIntegMethod nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk);
-guint nc_xcor_kernel_get_lmax (NcXcorKernel *xclk);
-void nc_xcor_kernel_set_lmax (NcXcorKernel *xclk, guint lmax);
+NcXcorKernelIntegrand *nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 
 gdouble nc_xcor_kernel_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 gdouble nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);

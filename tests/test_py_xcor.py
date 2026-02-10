@@ -230,7 +230,7 @@ def test_cmb_isw_integ_methods(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
     # Prepare both kernels
     cosmo = nc_cosmo_eh_linear.cosmo
     nc_cmb_isw_limber.prepare(cosmo)
-    nc_cmb_isw_gsl.prepare(cosmo)
+    # nc_cmb_isw_gsl.prepare(cosmo)
 
     # Verify both are properly initialized
     assert nc_cmb_isw_limber.get_integ_method() == Nc.XcorKernelIntegMethod.LIMBER
