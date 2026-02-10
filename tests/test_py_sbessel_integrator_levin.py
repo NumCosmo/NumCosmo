@@ -48,7 +48,8 @@ class TestSBesselIntegratorLevin:
     def test_integrate_constant(self, l_val: int) -> None:
         """Test integrate_ell method with f(x) = 1.
 
-        Compares the result of the integrate_ell method against scipy numerical integration.
+        Compares the result of the integrate_ell method against scipy numerical
+        integration.
         """
         N = 128
         a, b = 1.0, 20.0
@@ -83,7 +84,8 @@ class TestSBesselIntegratorLevin:
     def test_integrate_linear(self, l_val: int) -> None:
         """Test integrate_ell method with f(x) = x.
 
-        Compares the result of the integrate_ell method against scipy numerical integration.
+        Compares the result of the integrate_ell method against scipy numerical
+        integration.
         """
         N = 128
         a, b = 1.0, 20.0
@@ -118,7 +120,8 @@ class TestSBesselIntegratorLevin:
     def test_integrate_quadratic(self, l_val: int) -> None:
         """Test integrate_ell method with f(x) = x^2.
 
-        Compares the result of the integrate_ell method against scipy numerical integration.
+        Compares the result of the integrate_ell method against scipy numerical
+        integration.
         """
         N = 128
         a, b = 1.0, 20.0
@@ -153,7 +156,8 @@ class TestSBesselIntegratorLevin:
     def test_integrate_rational(self, l_val: int) -> None:
         """Test integrate_ell method with rational function.
 
-        Compares the result of the integrate_ell method against scipy numerical integration.
+        Compares the result of the integrate_ell method against scipy numerical
+        integration.
         """
         N = 256
         a, b = 1.0, 20.0
@@ -277,7 +281,7 @@ class TestSBesselIntegratorLevin:
 
         results_vec = Ncm.Vector.new(ell_max - ell_min + 1)
         print_rank = False
-        print_ell: list[int] | None = list(range(501))
+        print_ell: list[int] | None = [500]
 
         for i in range(1):
             print(f"Starting iteration {i}\r", end="", flush=True)
