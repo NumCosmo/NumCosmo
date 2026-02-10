@@ -29,11 +29,15 @@
  * Levin-Bessel method for spherical Bessel function integration.
  *
  * This class implements integration of functions multiplied by spherical Bessel
- * functions using a Levin-type method.
+ * functions using a Levin-type method for low multipoles and vector cubature
+ * integration for high multipoles.
  *
- * The method solves the differential equation $x^2 y''(x) + 2x y'(x) + (x^2 -
+ * For low ell values, the method solves the differential equation $x^2 y''(x) + 2x y'(x) + (x^2 -
  * \ell(\ell+1)) y(x) = f(x)$ with boundary conditions $y(x_n) = 0 = y(x_{n+1})$. The
  * integral is then given by $I_n = j_\ell(x_{n+1}) y'(x_{n+1}) - j_\ell(x_n) y'(x_n)$.
+ *
+ * For high ell values, it uses vector cubature integration where the integrand evaluates
+ * $f(x)$ and all $j_\ell(x)$ values simultaneously for efficiency.
  *
  */
 
@@ -48,14 +52,26 @@
 #include "math/ncm_sf_sbessel.h"
 #include "math/ncm_lapack.h"
 #include "math/ncm_c.h"
+#include "math/ncm_integral_nd.h"
 #include "ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_cblas.h>
+#include <gsl/gsl_integration.h>
 #include <fftw3.h>
 #endif /* NUMCOSMO_GIR_SCAN */
+
+typedef struct _NcmSBesselIntegratorLevinArg
+{
+  NcmSBesselIntegratorLevin *sbilv;
+  NcmSBesselIntegratorF F;
+  gpointer user_data;
+  guint lmin;
+  guint lmax;
+  gdouble *jl_arr;
+} NcmSBesselIntegratorLevinArg;
 
 struct _NcmSBesselIntegratorLevin
 {
@@ -75,6 +91,7 @@ struct _NcmSBesselIntegratorLevin
   gdouble *j_array_a;
   gdouble *j_array_b;
   NcmMatrix *endpoints_result;
+  gdouble *jl_arr;
 };
 
 enum
@@ -83,6 +100,11 @@ enum
   PROP_MAX_ORDER,
   PROP_RELTOL,
 };
+
+static void ncm_sbessel_integrator_levin_direct_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
+static void ncm_sbessel_integrator_levin_direct_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+
+NCM_INTEGRAL_ND_DEFINE_TYPE (NCM, SBESSEL_INTEGRATOR_LEVIN_DIRECT, NcmSBesselIntegratorLevinDirect, ncm_sbessel_integrator_levin_direct, ncm_sbessel_integrator_levin_direct_dim, ncm_sbessel_integrator_levin_direct_integ, NcmSBesselIntegratorLevinArg);
 
 G_DEFINE_TYPE (NcmSBesselIntegratorLevin, ncm_sbessel_integrator_levin, NCM_TYPE_SBESSEL_INTEGRATOR)
 
@@ -102,6 +124,7 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
   sbilv->j_array_a        = NULL;
   sbilv->j_array_b        = NULL;
   sbilv->endpoints_result = NULL;
+  sbilv->jl_arr           = NULL;
 }
 
 static void
@@ -126,6 +149,12 @@ _ncm_sbessel_integrator_levin_dispose (GObject *object)
   {
     g_free (sbilv->j_array_b);
     sbilv->j_array_b = NULL;
+  }
+
+  if (sbilv->jl_arr != NULL)
+  {
+    g_free (sbilv->jl_arr);
+    sbilv->jl_arr = NULL;
   }
 
   /* Chain up : end */
@@ -290,6 +319,10 @@ _ncm_sbessel_integrator_levin_prepare (NcmSBesselIntegrator *sbi)
   const guint lmax                 = ncm_sbessel_integrator_get_lmax (sbi);
 
   _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, lmin, lmax);
+
+  /* Reallocate jl_arr if needed */
+  if (sbilv->jl_arr == NULL)
+    sbilv->jl_arr = g_new (gdouble, lmax + 1);
 }
 
 static gdouble
@@ -340,35 +373,109 @@ _ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi,
 }
 
 static void
-_ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
-                                         NcmSBesselIntegratorF F,
-                                         gdouble a, gdouble b,
-                                         NcmVector *result,
-                                         gpointer user_data)
+ncm_sbessel_integrator_levin_direct_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 {
-  NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
-  NcmSBesselOdeSolver *solver      = sbilv->ode_solver;
-  const guint N                    = sbilv->max_order;
-  const gdouble lmin               = ncm_sbessel_integrator_get_lmin (sbi);
-  const gdouble lmax               = ncm_sbessel_integrator_get_lmax (sbi);
-  NcmSpectral *spectral            = ncm_sbessel_ode_solver_peek_spectral (solver);
-  const gint my_lmax               = GSL_MIN (lmax, ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b));
-  const gint n_l                   = lmax - lmin + 1;
-  gdouble *result_data;
+  NcmSBesselIntegratorLevinDirect *direct = NCM_SBESSEL_INTEGRATOR_LEVIN_DIRECT (intnd);
+  NcmSBesselIntegratorLevinArg *arg       = &direct->data;
+
+  *dim  = 1;
+  *fdim = arg->lmax - arg->lmin + 1;
+}
+
+static void
+ncm_sbessel_integrator_levin_direct_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
+{
+  NcmSBesselIntegratorLevinDirect *direct = NCM_SBESSEL_INTEGRATOR_LEVIN_DIRECT (intnd);
+  NcmSBesselIntegratorLevinArg *arg       = &direct->data;
+  NcmSBesselIntegratorLevin *sbilv        = arg->sbilv;
+  guint i, j;
+
+  for (i = 0; i < npoints; i++)
+  {
+    const gdouble xi   = ncm_vector_fast_get (x, i);
+    const gdouble f_xi = arg->F (arg->user_data, xi);
+
+    /* Evaluate all spherical Bessel functions at once */
+    ncm_sf_sbessel_array_eval (sbilv->sba, arg->lmax, xi, arg->jl_arr);
+
+    /* Compute integrand for all ells */
+    for (j = 0; j < fdim; j++)
+    {
+      const guint ell   = arg->lmin + j;
+      const gdouble res = f_xi * arg->jl_arr[ell];
+
+      ncm_vector_fast_set (fval, i * fdim + j, res);
+      /* printf ("% 22.15g % 22.15g %u\n", xi, f_xi * arg->jl_arr[ell], arg->lmax); */
+    }
+  }
+}
+
+static guint
+_ncm_sbessel_integrator_levin_get_ell_threshold (NcmSBesselIntegratorLevin *sbilv, gdouble a, gdouble b)
+{
+  /* The threshold is based on the upper bound */
+  return (guint) floor (b);
+}
+
+static void
+_ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv,
+                                                const guint lmin, const guint ell_direct_min, guint ell_direct_max,
+                                                NcmSBesselIntegratorF F, const gdouble a, const gdouble b,
+                                                NcmVector *result, gpointer user_data)
+{
+  NcmSBesselIntegratorLevinDirect *direct = g_object_new (ncm_sbessel_integrator_levin_direct_get_type (), NULL);
+  NcmSBesselIntegratorLevinArg *arg       = &direct->data;
+  NcmIntegralND *intnd                    = NCM_INTEGRAL_ND (direct);
+  gdouble x_min_val                       = a;
+  gdouble x_max_val                       = b;
+  NcmVector *x_min                        = ncm_vector_new_data_static (&x_min_val, 1, 1);
+  NcmVector *x_max                        = ncm_vector_new_data_static (&x_max_val, 1, 1);
+  const guint size                        = ell_direct_max - ell_direct_min + 1;
+  NcmVector *result_sub                   = ncm_vector_get_subvector (result, ell_direct_min - lmin, size);
+  NcmVector *err                          = ncm_vector_new (size);
+
+  /* Setup argument structure */
+  arg->sbilv     = sbilv;
+  arg->F         = F;
+  arg->user_data = user_data;
+  arg->lmin      = ell_direct_min;
+  arg->lmax      = ell_direct_max;
+  arg->jl_arr    = sbilv->jl_arr;
+
+  /* Configure integrator */
+  ncm_integral_nd_set_reltol (intnd, sbilv->reltol);
+  ncm_integral_nd_set_abstol (intnd, 1.0e-50);
+  ncm_integral_nd_set_method (intnd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P);
+
+  ncm_integral_nd_eval (intnd, x_min, x_max, result_sub, err);
+
+  /* Cleanup */
+  ncm_vector_free (x_min);
+  ncm_vector_free (x_max);
+  ncm_vector_free (result_sub);
+  ncm_vector_free (err);
+  g_object_unref (direct);
+}
+
+static void
+_ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
+                                               const guint lmin, const guint ell_levin_min, const guint ell_levin_max,
+                                               NcmSBesselIntegratorF F, const gdouble a, const gdouble b,
+                                               NcmVector *result, gpointer user_data)
+{
+  NcmSBesselOdeSolver *solver = sbilv->ode_solver;
+  const guint N               = sbilv->max_order;
+  NcmSpectral *spectral       = ncm_sbessel_ode_solver_peek_spectral (solver);
+  const gint my_lmax          = GSL_MIN (ell_levin_max, ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b));
+  gdouble *result_data        = ncm_vector_data (result);
 
   g_assert_cmpuint (ncm_vector_stride (result), ==, 1);
-  g_assert_cmpuint (ncm_vector_len (result), ==, n_l);
-
-  /* Ensure resources are allocated */
-  _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, N, lmin, lmax);
 
   ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, a, sbilv->j_array_a);
   ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, b, sbilv->j_array_b);
 
-  /* Allocate result vector */
-  result_data = ncm_vector_data (result);
-
-  ncm_vector_set_zero (result);
+  /* Initialize Levin results to zero */
+  memset (&result_data[ell_levin_min - lmin], 0, sizeof (gdouble) * (ell_levin_max - ell_levin_min + 1));
 
   /* Step 1: Compute Chebyshev coefficients for f(x) - done once */
   ncm_spectral_compute_chebyshev_coeffs (spectral, F, a, b, sbilv->cheb_coeffs, user_data);
@@ -379,7 +486,6 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
   /* Step 3: Set up RHS with homogeneous boundary conditions - done once */
   g_assert_cmpuint (ncm_vector_stride (sbilv->rhs), ==, 1);
   g_assert_cmpuint (ncm_vector_stride (sbilv->gegen_coeffs), ==, 1);
-  g_assert_cmpuint (ncm_vector_stride (result), ==, 1);
   {
     gdouble *rhs_data                = ncm_vector_data (sbilv->rhs);
     const gdouble *gegen_coeffs_data = ncm_vector_data (sbilv->gegen_coeffs);
@@ -398,9 +504,9 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
 
     ncm_sbessel_ode_solver_set_interval (solver, a, b);
 
-    for (l_start = lmin; l_start <= lmax; l_start += block_size)
+    for (l_start = ell_levin_min; l_start <= (gint) ell_levin_max; l_start += block_size)
     {
-      const gint l_end    = GSL_MIN (l_start + block_size - 1, lmax);
+      const gint l_end    = GSL_MIN (l_start + block_size - 1, ell_levin_max);
       const guint n_block = l_end - l_start + 1;
       gint l;
 
@@ -424,6 +530,45 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
         }
       }
     }
+  }
+}
+
+static void
+_ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
+                                         NcmSBesselIntegratorF F,
+                                         gdouble a, gdouble b,
+                                         NcmVector *result,
+                                         gpointer user_data)
+{
+  NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
+  const guint lmin                 = ncm_sbessel_integrator_get_lmin (sbi);
+  const guint lmax                 = ncm_sbessel_integrator_get_lmax (sbi);
+  const guint n_ell                = lmax - lmin + 1;
+  const guint ell_threshold        = _ncm_sbessel_integrator_levin_get_ell_threshold (sbilv, a, b);
+
+  g_assert_cmpuint (ncm_vector_len (result), ==, n_ell);
+
+  /* Ensure resources are allocated */
+  _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, lmin, lmax);
+
+  /* Use direct cubature integration for high ell values */
+  if (lmax >= ell_threshold)
+  {
+    const guint ell_direct_max = lmax;
+    const guint ell_direct_min = GSL_MAX (lmin, ell_threshold);
+
+    if (ell_direct_min <= ell_direct_max)
+      _ncm_sbessel_integrator_levin_integrate_direct (sbilv, lmin, ell_direct_min, ell_direct_max, F, a, b, result, user_data);
+  }
+
+  /* Use Levin method for low ell values */
+  if (lmin < ell_threshold)
+  {
+    const guint ell_levin_min = lmin;
+    const guint ell_levin_max = GSL_MIN (ell_threshold - 1, lmax);
+
+    if (ell_levin_min <= ell_levin_max)
+      _ncm_sbessel_integrator_levin_integrate_levin (sbilv, lmin, ell_levin_min, ell_levin_max, F, a, b, result, user_data);
   }
 }
 
