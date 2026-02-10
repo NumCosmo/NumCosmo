@@ -39,42 +39,25 @@
 #include <numcosmo/math/ncm_c.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_powspec.h>
+#include <numcosmo/math/ncm_util.h>
+#include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/math/ncm_vector.h>
 
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_KERNEL (nc_xcor_kernel_get_type ())
+#define NC_TYPE_XCOR_KERNEL_EVAL (nc_xcor_kernel_eval_get_type ())
 
 G_DECLARE_DERIVABLE_TYPE (NcXcorKernel, nc_xcor_kernel, NC, XCOR_KERNEL, NcmModel);
 
 typedef struct _NcXcorKinetic NcXcorKinetic;
 
-/**
- * NcXcorKernelEvalFunc:
- * @xclk: a #NcXcorKernel
- * @cosmo: a #NcHICosmo
- * @k: wavenumber
- * @l: multipole
- *
- * Function pointer type for kernel evaluation functions.
- *
- * Returns: the kernel evaluation result
- */
-typedef gdouble (*NcXcorKernelEvalFunc) (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l);
-
-/**
- * NcXcorKernelEvalPrefactorFunc:
- * @xclk: a #NcXcorKernel
- * @cosmo: a #NcHICosmo
- * @l: multipole
- *
- * Function pointer type for prefactor evaluation functions.
- *
- * Returns: the prefactor evaluation result
- */
-typedef gdouble (*NcXcorKernelEvalPrefactorFunc) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+NCM_UTIL_DECLARE_CALLBACK (NcXcorKernelEval,
+                           NC_XCOR_KERNEL_EVAL,
+                           nc_xcor_kernel_eval,
+                           gdouble,
+                           NCM_UTIL_CALLBACK_ARGS (const gdouble k))
 
 /**
  * NcXcorKernelGetKRangeFunc:
@@ -117,6 +100,7 @@ struct _NcXcorKernelClass
   guint (*obs_params_len) (NcXcorKernel *xclk);
   void (*get_k_range) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
   void (*get_z_range) (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
+  NcXcorKernelEval *(*get_eval) (NcXcorKernel *xclk, NcHICosmo *cosmo);
 };
 
 
@@ -168,9 +152,7 @@ void nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zma
 NcDistance *nc_xcor_kernel_peek_dist (NcXcorKernel *xclk);
 NcmPowspec *nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk);
 
-void nc_xcor_kernel_set_eval_kernel_func (NcXcorKernel *xclk, NcXcorKernelEvalFunc eval_kernel_func, NcXcorKernelEvalPrefactorFunc eval_prefactor_func);
-gdouble nc_xcor_kernel_eval_kernel (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l);
-gdouble nc_xcor_kernel_eval_kernel_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+NcXcorKernelEval *nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 
 void nc_xcor_kernel_set_get_k_range_func (NcXcorKernel *xclk, NcXcorKernelGetKRangeFunc get_k_range_func);
 void nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);

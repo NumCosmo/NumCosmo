@@ -434,27 +434,6 @@ nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk)
 }
 
 /**
- * nc_xcor_kernel_set_eval_kernel_func: (skip)
- * @xclk: a #NcXcorKernel
- * @eval_kernel_func: (scope notified): function pointer to evaluate the kernel
- * @eval_prefactor_func: (scope notified): function pointer to evaluate the prefactor
- *
- * Sets the function pointer that will be used to evaluate the kernel.
- * This method should only be called by subclass implementations during
- * the constructed phase to set the appropriate kernel evaluation function
- * based on the integration method.
- *
- */
-void
-nc_xcor_kernel_set_eval_kernel_func (NcXcorKernel *xclk, NcXcorKernelEvalFunc eval_kernel_func, NcXcorKernelEvalPrefactorFunc eval_prefactor_func)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  self->eval_kernel_func    = eval_kernel_func;
-  self->eval_prefactor_func = eval_prefactor_func;
-}
-
-/**
  * nc_xcor_kernel_set_get_k_range_func: (skip)
  * @xclk: a #NcXcorKernel
  * @get_k_range_func: (scope notified): function pointer to get the k range
