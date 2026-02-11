@@ -82,7 +82,6 @@ struct _NcXcorKernelWeakLensing
   NcmPowspec *ps;
 
   gdouble noise;
-  NcXcorKernelIntegMethod integ_method;
 };
 
 enum
@@ -103,18 +102,17 @@ G_DEFINE_TYPE (NcXcorKernelWeakLensing, nc_xcor_kernel_weak_lensing, NC_TYPE_XCO
 static void
 nc_xcor_kernel_weak_lensing_init (NcXcorKernelWeakLensing *xclkg)
 {
-  xclkg->lens_eff     = NULL;
-  xclkg->dn_dz        = NULL;
-  xclkg->dn_dz_zmin   = 0.0;
-  xclkg->dn_dz_zmax   = 0.0;
-  xclkg->dn_dz_min    = 0.0;
-  xclkg->dn_dz_max    = 0.0;
-  xclkg->nbar         = 0.0;
-  xclkg->intr_shear   = 0.0;
-  xclkg->dist         = NULL;
-  xclkg->ps           = NULL;
-  xclkg->noise        = 0.0;
-  xclkg->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
+  xclkg->lens_eff   = NULL;
+  xclkg->dn_dz      = NULL;
+  xclkg->dn_dz_zmin = 0.0;
+  xclkg->dn_dz_zmax = 0.0;
+  xclkg->dn_dz_min  = 0.0;
+  xclkg->dn_dz_max  = 0.0;
+  xclkg->nbar       = 0.0;
+  xclkg->intr_shear = 0.0;
+  xclkg->dist       = NULL;
+  xclkg->ps         = NULL;
+  xclkg->noise      = 0.0;
 }
 
 static void

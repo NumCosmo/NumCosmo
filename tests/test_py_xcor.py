@@ -223,18 +223,17 @@ def test_cmb_isw_integ_methods(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
         powspec=nc_cosmo_eh_linear.ps_ml,
         recomb=nc_cosmo_eh_linear.recomb,
         Nl=Ncm.Vector.new_array(np.arange(lmax + 1)),
-        integ_method=Nc.XcorKernelIntegMethod.GSL_QAG,
         lmax=lmax,
     )
 
     # Prepare both kernels
     cosmo = nc_cosmo_eh_linear.cosmo
     nc_cmb_isw_limber.prepare(cosmo)
-    # nc_cmb_isw_gsl.prepare(cosmo)
+    nc_cmb_isw_gsl.prepare(cosmo)
+
+    # FIXME: We still need to define the new interface for integrators
 
     # Verify both are properly initialized
-    assert nc_cmb_isw_limber.get_integ_method() == Nc.XcorKernelIntegMethod.LIMBER
-    assert nc_cmb_isw_gsl.get_integ_method() == Nc.XcorKernelIntegMethod.GSL_QAG
     assert nc_cmb_isw_limber.get_lmax() == lmax
     assert nc_cmb_isw_gsl.get_lmax() == lmax
 

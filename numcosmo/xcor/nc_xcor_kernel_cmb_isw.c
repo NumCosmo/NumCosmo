@@ -429,7 +429,6 @@ _nc_xcor_kernel_cmb_isw_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   NcDistance *dist                       = nc_xcor_kernel_peek_dist (xclk);
   NcmPowspec *ps                         = nc_xcor_kernel_peek_powspec (xclk);
   const gdouble z_lss                    = nc_distance_decoupling_redshift (dist, cosmo);
-  NcXcorKernelIntegMethod method         = nc_xcor_kernel_get_integ_method (xclk);
 
   self->dist = dist;
   self->ps   = ps;
@@ -439,18 +438,6 @@ _nc_xcor_kernel_cmb_isw_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 
   self->xi_lss = nc_distance_comoving_lss (dist, cosmo);
   self->z_lss  = z_lss;
-
-  switch (method)
-  {
-    case NC_XCOR_KERNEL_INTEG_METHOD_LIMBER:
-      break;
-    case NC_XCOR_KERNEL_INTEG_METHOD_GSL_QAG:
-      _nc_xcor_kernel_cmb_isw_prepare_gsl_qag (xcisw, cosmo);
-      break;
-    default:
-      g_error ("Unknown integration method %d", method);
-      break;
-  }
 }
 
 typedef struct _NcXcorKernelCMBISWData

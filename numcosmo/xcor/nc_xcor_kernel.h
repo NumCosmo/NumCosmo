@@ -59,22 +59,6 @@ NCM_UTIL_DECLARE_CALLBACK (NcXcorKernelIntegrand,
                            gdouble,
                            NCM_UTIL_CALLBACK_ARGS (const gdouble k))
 
-/**
- * NcXcorKernelIntegMethod:
- * @NC_XCOR_KERNEL_INTEG_METHOD_LIMBER: Use Limber approximation
- * @NC_XCOR_KERNEL_INTEG_METHOD_GSL_QAG: Use GSL QAG integration
- *
- * Integration method for computing the kernel.
- *
- */
-typedef enum _NcXcorKernelIntegMethod
-{
-  NC_XCOR_KERNEL_INTEG_METHOD_LIMBER = 0,
-  NC_XCOR_KERNEL_INTEG_METHOD_GSL_QAG,
-  /* < private > */
-  NC_XCOR_KERNEL_INTEG_METHOD_LEN, /*< skip >*/
-} NcXcorKernelIntegMethod;
-
 struct _NcXcorKernelClass
 {
   /*< private >*/
@@ -135,7 +119,6 @@ void nc_xcor_kinetic_free (NcXcorKinetic *xck);
 guint nc_xcor_kernel_obs_len (NcXcorKernel *xclk);
 guint nc_xcor_kernel_obs_params_len (NcXcorKernel *xclk);
 
-NcXcorKernelIntegMethod nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk);
 guint nc_xcor_kernel_get_lmax (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_lmax (NcXcorKernel *xclk, guint lmax);
 

@@ -63,7 +63,6 @@ typedef struct _NcXcorKernelPrivate
   NcmModel parent_instance;
   NcDistance *dist;
   NcmPowspec *ps;
-  NcXcorKernelIntegMethod integ_method;
   guint lmax;
 } NcXcorKernelPrivate;
 
@@ -72,7 +71,6 @@ enum
   PROP_0,
   PROP_DIST,
   PROP_POWSPEC,
-  PROP_INTEG_METHOD,
   PROP_LMAX,
   PROP_SIZE,
 };
@@ -92,10 +90,9 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->dist         = NULL;
-  self->ps           = NULL;
-  self->integ_method = NC_XCOR_KERNEL_INTEG_METHOD_LEN;
-  self->lmax         = 0;
+  self->dist = NULL;
+  self->ps   = NULL;
+  self->lmax = 0;
 }
 
 static void
@@ -135,10 +132,6 @@ _nc_xcor_kernel_constructed (GObject *object)
       g_error ("nc_xcor_kernel_constructed: powspec property was not set. "
                "The 'powspec' property must be provided at construction time.");
 
-    if (self->integ_method == NC_XCOR_KERNEL_INTEG_METHOD_LEN)
-      g_error ("nc_xcor_kernel_constructed: integ-method property was not set. "
-               "The 'integ-method' property must be provided at construction time.");
-
     nc_distance_compute_inv_comoving (self->dist, TRUE);
     nc_distance_require_zf (self->dist, 1.0e10);
   }
@@ -161,9 +154,6 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_POWSPEC:
       ncm_powspec_clear (&self->ps);
       self->ps = g_value_dup_object (value);
-      break;
-    case PROP_INTEG_METHOD:
-      self->integ_method = g_value_get_enum (value);
       break;
     case PROP_LMAX:
       nc_xcor_kernel_set_lmax (xclk, g_value_get_uint (value));
@@ -189,9 +179,6 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_POWSPEC:
       g_value_set_object (value, self->ps);
-      break;
-    case PROP_INTEG_METHOD:
-      g_value_set_enum (value, self->integ_method);
       break;
     case PROP_LMAX:
       g_value_set_uint (value, nc_xcor_kernel_get_lmax (xclk));
@@ -260,14 +247,6 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                         NCM_TYPE_POWSPEC,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  g_object_class_install_property (object_class,
-                                   PROP_INTEG_METHOD,
-                                   g_param_spec_enum ("integ-method",
-                                                      NULL,
-                                                      "Integration method",
-                                                      NC_TYPE_XCOR_KERNEL_INTEG_METHOD,
-                                                      NC_XCOR_KERNEL_INTEG_METHOD_LIMBER,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_LMAX,
@@ -510,22 +489,6 @@ NcXcorKernelIntegrand *
 nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
   return NC_XCOR_KERNEL_GET_CLASS (xclk)->get_eval (xclk, cosmo, l);
-}
-
-/**
- * nc_xcor_kernel_get_integ_method:
- * @xclk: a #NcXcorKernel
- *
- * Gets the integration method for the kernel.
- *
- * Returns: the #NcXcorKernelIntegMethod
- */
-NcXcorKernelIntegMethod
-nc_xcor_kernel_get_integ_method (NcXcorKernel *xclk)
-{
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  return self->integ_method;
 }
 
 /**

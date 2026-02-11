@@ -20073,8 +20073,6 @@ class XcorKernel(NumCosmoMath.Model):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
-      integ-method -> NcXcorKernelIntegMethod: integ-method
-        Integration method
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20104,7 +20102,6 @@ class XcorKernel(NumCosmoMath.Model):
 
     class Props:
         dist: Distance
-        integ_method: XcorKernelIntegMethod
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20122,7 +20119,6 @@ class XcorKernel(NumCosmoMath.Model):
     def __init__(
         self,
         dist: Distance = ...,
-        integ_method: XcorKernelIntegMethod = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20141,13 +20137,12 @@ class XcorKernel(NumCosmoMath.Model):
         self, cosmo: HICosmo, z: float, xck: XcorKinetic, l: int
     ) -> float: ...
     def do_eval_limber_z_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
+    def do_get_eval(self, cosmo: HICosmo, l: int) -> XcorKernelIntegrand: ...
     def do_get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
     def do_get_z_range(self) -> typing.Tuple[float, float, float]: ...
     def do_obs_len(self) -> int: ...
     def do_obs_params_len(self) -> int: ...
     def do_prepare(self, cosmo: HICosmo) -> None: ...
-    def eval_kernel(self, cosmo: HICosmo, k: float, l: int) -> float: ...
-    def eval_kernel_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
     def eval_limber_z(
         self, cosmo: HICosmo, z: float, xck: XcorKinetic, l: int
     ) -> float: ...
@@ -20156,7 +20151,7 @@ class XcorKernel(NumCosmoMath.Model):
     ) -> float: ...
     def eval_limber_z_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
     def free(self) -> None: ...
-    def get_integ_method(self) -> XcorKernelIntegMethod: ...
+    def get_eval(self, cosmo: HICosmo, l: int) -> XcorKernelIntegrand: ...
     def get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
     def get_lmax(self) -> int: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
@@ -20194,8 +20189,6 @@ class XcorKernelCMBISW(XcorKernel):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
-      integ-method -> NcXcorKernelIntegMethod: integ-method
-        Integration method
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20227,7 +20220,6 @@ class XcorKernelCMBISW(XcorKernel):
         Nl: NumCosmoMath.Vector
         recomb: Recomb
         dist: Distance
-        integ_method: XcorKernelIntegMethod
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20246,7 +20238,6 @@ class XcorKernelCMBISW(XcorKernel):
         Nl: NumCosmoMath.Vector = ...,
         recomb: Recomb = ...,
         dist: Distance = ...,
-        integ_method: XcorKernelIntegMethod = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20295,8 +20286,6 @@ class XcorKernelCMBLensing(XcorKernel):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
-      integ-method -> NcXcorKernelIntegMethod: integ-method
-        Integration method
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20328,7 +20317,6 @@ class XcorKernelCMBLensing(XcorKernel):
         Nl: NumCosmoMath.Vector
         recomb: Recomb
         dist: Distance
-        integ_method: XcorKernelIntegMethod
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20347,7 +20335,6 @@ class XcorKernelCMBLensing(XcorKernel):
         Nl: NumCosmoMath.Vector = ...,
         recomb: Recomb = ...,
         dist: Distance = ...,
-        integ_method: XcorKernelIntegMethod = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20398,6 +20385,7 @@ class XcorKernelClass(GObject.GPointer):
         [XcorKernel, HICosmo, int], typing.Tuple[float, float]
     ] = ...
     get_z_range: typing.Callable[[XcorKernel], typing.Tuple[float, float, float]] = ...
+    get_eval: typing.Callable[[XcorKernel, HICosmo, int], XcorKernelIntegrand] = ...
 
 class XcorKernelGal(XcorKernel):
     r"""
@@ -20439,8 +20427,6 @@ class XcorKernelGal(XcorKernel):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
-      integ-method -> NcXcorKernelIntegMethod: integ-method
-        Integration method
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20481,7 +20467,6 @@ class XcorKernelGal(XcorKernel):
         noise_bias: float
         noise_bias_fit: bool
         dist: Distance
-        integ_method: XcorKernelIntegMethod
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20509,7 +20494,6 @@ class XcorKernelGal(XcorKernel):
         noise_bias: float = ...,
         noise_bias_fit: bool = ...,
         dist: Distance = ...,
-        integ_method: XcorKernelIntegMethod = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20542,6 +20526,35 @@ class XcorKernelGalClass(GObject.GPointer):
 
     parent_class: XcorKernelClass = ...
 
+class XcorKernelIntegrand(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelIntegrand()
+        new(func:NumCosmo.XcorKernelIntegrandFunc, callback_data_free:NumCosmo.XcorKernelIntegrandFreeData, callback_data_copy:NumCosmo.XcorKernelIntegrandCopyData, callback_data_prepare:NumCosmo.XcorKernelIntegrandPrepareData, callback_data=None) -> NumCosmo.XcorKernelIntegrand
+    """
+
+    func: typing.Callable[[None, float], float] = ...
+    callback_data_free: typing.Callable[[None], None] = ...
+    callback_data_copy: typing.Callable[[None], None] = ...
+    callback_data_prepare: typing.Callable[[None, NumCosmoMath.MSet], None] = ...
+    callback_data: None = ...
+    def copy(self) -> XcorKernelIntegrand: ...
+    def eval(self, k: float) -> float: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        func: typing.Callable[..., float],
+        callback_data_free: typing.Callable[..., None],
+        callback_data_copy: typing.Callable[..., None],
+        callback_data_prepare: typing.Callable[..., None],
+        *callback_data: typing.Any,
+    ) -> XcorKernelIntegrand: ...
+    def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
+
 class XcorKernelWeakLensing(XcorKernel):
     r"""
     :Constructors:
@@ -20566,8 +20579,6 @@ class XcorKernelWeakLensing(XcorKernel):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
-      integ-method -> NcXcorKernelIntegMethod: integ-method
-        Integration method
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20600,7 +20611,6 @@ class XcorKernelWeakLensing(XcorKernel):
         intr_shear: float
         nbar: float
         dist: Distance
-        integ_method: XcorKernelIntegMethod
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20620,7 +20630,6 @@ class XcorKernelWeakLensing(XcorKernel):
         intr_shear: float = ...,
         nbar: float = ...,
         dist: Distance = ...,
-        integ_method: XcorKernelIntegMethod = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20668,8 +20677,6 @@ class XcorKerneltSZ(XcorKernel):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
-      integ-method -> NcXcorKernelIntegMethod: integ-method
-        Integration method
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20700,7 +20707,6 @@ class XcorKerneltSZ(XcorKernel):
     class Props:
         noise: float
         dist: Distance
-        integ_method: XcorKernelIntegMethod
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20718,7 +20724,6 @@ class XcorKerneltSZ(XcorKernel):
         self,
         noise: float = ...,
         dist: Distance = ...,
-        integ_method: XcorKernelIntegMethod = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -22707,21 +22712,6 @@ class XcorKernelImpl(GObject.GEnum):
     ADD_NOISE: XcorKernelImpl = ...
     EVAL_RADIAL_WEIGHT: XcorKernelImpl = ...
     PREPARE: XcorKernelImpl = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class XcorKernelIntegMethod(GObject.GEnum):
-    GSL_QAG: XcorKernelIntegMethod = ...
-    LIMBER: XcorKernelIntegMethod = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
