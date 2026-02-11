@@ -16,6 +16,10 @@ from astropy.table import Table
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.helper import npa_to_seq
 
+import pandas as pd
+import networkx as nx
+import random
+
 Ncm.cfg_init()
 
 
@@ -34,6 +38,20 @@ class Coordinates(TypedDict, total=False):
     DEC: str
     z: str
 
+class Ids(TypedDict, total=False):
+    """ID mapping.
+
+    Dictionary to map the IDs to the names of the columns in the
+    astropy.table.Table.
+
+    :param ID: Object ID.
+    :param MemberID: Member ID.
+    """
+
+    ID: str
+    MemberID: str
+    pmem: str
+    
 
 class SelectionCriteria(str, Enum):
     """Selection criteria for the best candidate."""
@@ -45,6 +63,31 @@ class SelectionCriteria(str, Enum):
     DISTANCES = auto()
     REDSHIFT_PROXIMITY = auto()
     MORE_MASSIVE = auto()
+
+class SharedFractionMethod(str, Enum):
+    """Method to evaluate shared fraction in the matching.
+
+    :param NO_PMEM: Shared fraction computed as the number of shared members
+        divided by the number of members of the object.
+    :param QUERY_PMEM: Shared fraction computed as the sum of probability membership of the shared members
+        divided by the probability of membership of the query object.
+    :param MATCH_PMEM: Shared fraction computed as the sum of probability membership of the shared members
+        divided by the probability of membership of the match object.
+    :param PMEM: Shared fraction computed as the sum of probability membership of the shared members
+        divided by the sum of probability membership of the query and match objects.
+    """
+
+
+    @staticmethod
+    def _generate_next_value_(name, _start, _count, _last_values):
+        return name.lower()
+
+    NO_PMEM = auto()
+    MATCH_PMEM = auto()
+    QUERY_PMEM = auto()
+    PMEM = auto()
+    
+    
 
 
 class DistanceMethod(str, Enum):
@@ -68,6 +111,7 @@ class DistanceMethod(str, Enum):
     MATCH_RADIUS = auto()
     MIN_RADIUS = auto()
     MAX_RADIUS = auto()
+
 
 
 @dataclasses.dataclass(frozen=True)
@@ -183,6 +227,167 @@ def _load_fits_data(catalog: Path) -> Table:
     """
     return Table.read(catalog.as_posix(), format="fits")
 
+class SkyMatchIDResult:
+    """Class to store the results of the sky match by ID."""
+
+    def __init__(
+        self,
+        sky_match: SkyMatch,
+        nearest_neighbours_indices: np.ndarray[tuple[int, int], np.dtype[np.int64]],
+        nearest_neighbours_linking_coeficient: np.ndarray[tuple[int, int], np.dtype[np.float64]],
+    ):
+        """Initialize the SkyMatchResult class.
+
+        :param sky_match: SkyMatch object used to perform the match.
+        :param nearest_neighbours: Array of indices of the nearest neighbours.
+        """
+        self.sky_match = sky_match
+        self.nearest_neighbours_indices = nearest_neighbours_indices
+        self.nearest_neighbours_linking_coeficient = nearest_neighbours_linking_coeficient
+
+        assert (
+            self.nearest_neighbours_indices.shape
+            == self.nearest_neighbours_linking_coeficient.shape
+        )
+
+
+    def select_best(
+        self,
+    ) -> BestCandidates:
+        """Select the best matched objects.
+
+        :param selection_criteria: Selection criteria to use.
+        :param mask: Mask to use to select the best matched objects.
+        """
+        
+        tuples = list(all_combinations[[, , self.nearest_neighbours_linking_coeficient]].itertuples(index=False, name=None))
+       
+        G = nx.Graph()
+        for id1, id2, w in tuples:
+            G.add_edge(("cat1_id",id1), ("cat2_id",id2), weight=w)
+        
+        random.seed(42)
+        total_weight = 0.0
+        global_matching = set()
+        
+        for i, nodes in enumerate(nx.connected_components(G)):
+            
+            subG = G.subgraph(nodes)
+            m = nx.max_weight_matching(subG, maxcardinality=False) 
+            w = sum(subG[u][v]['weight'] for u, v in m)
+
+            total_weight += w
+            global_matching |= m 
+
+            
+        unique_combinations = []
+        for row_data in global_matching:
+            row_dict = dict(row_data) 
+            unique_combinations.append(tuple(row_dict.values()))
+        
+        
+        return BestCandidates(
+            query_filter=None,
+            indices=np.array(unique_combinations, dtype=np.int64),
+        )
+    
+    def _get_by_indices(
+        self,
+        x: npt.NDArray,
+        indices: np.ndarray[tuple[int, int], np.dtype[np.int64]],
+        mask: Mask,
+    ) -> list[npt.NDArray]:
+        assert len(x.shape) == 1
+        assert mask.shape == indices.shape
+        return [x[i[m]] for i, m in zip(indices, mask.array)]
+
+    def to_table_complete(
+        self,
+        mask: Mask | None = None,
+        *,
+        query_properties: dict[str, str] | None = None,
+        match_properties: dict[str, str] | None = None,
+    ) -> Table:
+        """Convert the match result to a complete table.
+
+        The function returns a table with all the properties of the query catalog
+        and the properties of the match catalog for the best matched objects.
+        """
+        table = Table()
+        table["ID"] = np.arange(len(self.sky_match.query_ra))
+        table["RA"] = self.sky_match.query_ra
+        table["DEC"] = self.sky_match.query_dec
+        table["z"] = self.sky_match.query_z
+
+        if mask is None:
+            mask = self.full_mask()
+
+        if query_properties is not None:
+            assert isinstance(query_properties, dict)
+            for key, value in query_properties.items():
+                table[value] = self.sky_match.query_data[key]
+
+        if match_properties is not None:
+            assert isinstance(match_properties, dict)
+            for key, value in match_properties.items():
+                table[value] = self._get_by_indices(
+                    self.sky_match.match_data[key],
+                    self.nearest_neighbours_indices,
+                    mask,
+                )
+
+        table["ID_matched"] = self._get_by_indices(
+            np.arange(len(self.sky_match.match_ra)),
+            self.nearest_neighbours_indices,
+            mask,
+        )
+        table["distances"] = [
+            d[m] for d, m in zip(self.nearest_neighbours_distances, mask.array)
+        ]
+        table["RA_matched"] = self._get_by_indices(
+            self.sky_match.match_ra, self.nearest_neighbours_indices, mask
+        )
+        table["DEC_matched"] = self._get_by_indices(
+            self.sky_match.match_dec, self.nearest_neighbours_indices, mask
+        )
+        table["z_matched"] = self._get_by_indices(
+            self.sky_match.match_z, self.nearest_neighbours_indices, mask
+        )
+        return table
+
+    def to_table_best(
+        self,
+        best: BestCandidates,
+        *,
+        query_properties: dict[str, str] | None = None,
+        match_properties: dict[str, str] | None = None,
+    ) -> Table:
+        """Convert the match result to a table with only the best matched objects."""
+        table = Table()
+
+        assert len(best.query_filter) == len(self.sky_match.query_ra)
+        query_filter = best.query_filter
+
+        table["ID"] = np.arange(len(self.sky_match.query_ra))[query_filter]
+        table["RA"] = self.sky_match.query_ra[query_filter]
+        table["DEC"] = self.sky_match.query_dec[query_filter]
+        table["z"] = self.sky_match.query_z[query_filter]
+
+        table["ID_matched"] = best.indices
+        table["RA_matched"] = self.sky_match.match_ra[best.indices]
+        table["DEC_matched"] = self.sky_match.match_dec[best.indices]
+        table["z_matched"] = self.sky_match.match_z[best.indices]
+
+        if query_properties is not None:
+            for key, value in query_properties.items():
+                table[value] = self.sky_match.query_data[key][query_filter]
+
+        if match_properties is not None:
+            for key, value in match_properties.items():
+                table[value] = self.sky_match.match_data[key][best.indices]
+
+        return table
+    
 
 class SkyMatchResult:
     """Class to store the results of the sky match."""
@@ -690,3 +895,106 @@ class SkyMatch:
                 assert_never(unreachable)
 
         return SkyMatchResult(self, indices, distances)
+    
+
+    def match_id(
+        self,
+        shared_fraction_method: SharedFractionMethod = SharedFractionMethod.NO_PMEM,
+    ) -> SkyMatchResult:
+        """Match objects in the sky.
+
+        The function matches objects in the sky using the provided ids.
+
+        :param shared_fraction_method: Method to compute the shared fraction of members.
+        :return: astropy_table: matched: table with all candidates of matched objects,
+        :best_matched: table with the best candidate of matched objects
+        """
+        if ("ID" not in self.match_coordinates) or ("ID" not in self.query_coordinates):
+            raise ValueError(
+                "To perform a matching, "
+                "the ID column must be provided for both catalogs."
+            )
+        
+        if ("MemberID" not in self.match_coordinates) or ("MemberID" not in self.query_coordinates):
+            raise ValueError(
+                "To perform a matching, "
+                "the MemberID column must be provided for both catalogs."
+            )
+        
+        
+             
+        # Preparing the catalogs for the matching
+
+        query_df = self.query_data.to_pandas()    
+        match_df = self.match_data.to_pandas()
+
+        # Member numbers:
+        nmem_query = pd.DataFrame(query_df['ID'].value_counts())
+        nmem_match = pd.DataFrame(match_df['ID'].value_counts())
+        
+        # It adds the 'members number' column to the catalogs:
+        query_df_prepared = pd.merge(nmem_query, query_df, how='inner', on=['ID']).rename(columns={'count': 'nmem_query', 'ID': 'query_id'})
+        match_df_prepared = pd.merge(nmem_match, match_df, how='inner', on=['ID']).rename(columns={'count': 'nmem_match', 'ID': 'match_id'})
+                
+        # Matching the catalogs by MemberID:
+        matched_catalog = pd.merge(query_df_prepared, match_df_prepared, how='inner', on=['MemberID'])
+        
+        # Evaluating the shared fraction of members between the matched objects:
+        shared_count = matched_catalog.groupby(['query_id', 'match_id'])['match_id'].transform('count')
+
+        match shared_fraction_method:
+            case SharedFractionMethod.NO_PMEM:
+                fraction_query = shared_count / matched_catalog['nmem_query']
+                fraction_match = shared_count / matched_catalog['nmem_match']
+
+            case SharedFractionMethod.QUERY_PMEM:
+                
+                if ("pmem" not in self.query_coordinates):
+                    raise ValueError(
+                        "To perform a matching, "
+                        "the pmem column must be provided for the query catalog."
+                    )
+                
+                fraction_query = matched_catalog.groupby(['query_id', 'match_id'])['pmem'].transform('sum') / matched_catalog.groupby(['query_id'])['pmem'].transform('sum') 
+                fraction_match = shared_count / matched_catalog['nmem_match']
+                
+            case SharedFractionMethod.MATCH_PMEM:
+
+                if ("pmem" not in self.match_coordinates):
+                    raise ValueError(
+                        "To perform a matching, "
+                        "the pmem column must be provided for the match catalog."
+                    )
+                
+                fraction_query = shared_count / matched_catalog['nmem_query']
+                fraction_match = matched_catalog.groupby(['query_id', 'match_id'])['pmem'].transform('sum') / matched_catalog.groupby(['match_id'])['pmem'].transform('sum')
+    
+                
+            case SharedFractionMethod.PMEM:
+                
+                if ("pmem" not in self.query_coordinates) or ("pmem" not in self.match_coordinates):
+                    raise ValueError(
+                        "To perform a matching, "
+                        "the pmem column must be provided for both catalogs."
+                    )
+                
+                fraction_query = matched_catalog.groupby(['query_id', 'match_id'])['pmem'].transform('sum') / matched_catalog.groupby(['query_id'])['pmem'].transform('sum') 
+                fraction_match = matched_catalog.groupby(['query_id', 'match_id'])['pmem'].transform('sum') / matched_catalog.groupby(['match_id'])['pmem'].transform('sum')
+                
+            case _ as unreachable:  # pragma: no cover
+                assert_never(unreachable)
+
+        
+        matched_catalog['shared_num'] = shared_count
+        matched_catalog['fraction_query'] = fraction_query
+        matched_catalog['fraction_match'] = fraction_match
+
+        all_combinations = matched_catalog.copy().drop_duplicates(subset=['query_id', 'match_id']) 
+        
+        # Evaluating the linking coefficient of members between the matched objects:
+        
+        linking_coeficient = fraction_query * ( fraction_query + fraction_match ) / 2 
+        
+        indices = np.array(all_combinations['match_id'].values, dtype=int)
+        
+        return SkyMatchResult(self, indices, linking_coeficient)
