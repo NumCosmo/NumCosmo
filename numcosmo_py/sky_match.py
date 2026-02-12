@@ -229,7 +229,7 @@ class SkyMatchIDResult:
     def __init__(
         self,
         sky_match: SkyMatch,
-        matched_pairs: tuple[int, int, float],
+        matched_pairs: list[tuple[int, int, float]],
     ):
         """Initialize the SkyMatchResult class.
 
@@ -238,12 +238,10 @@ class SkyMatchIDResult:
         self.sky_match = sky_match
         self.matched_pairs = matched_pairs
 
-        assert len(self.matched_pairs) == 3
-
-
+        
     def select_best(
         self,
-    ) 
+    ): 
         """Select the best matched objects.
 
         :param selection_criteria: Selection criteria to use.
@@ -899,7 +897,7 @@ class SkyMatch:
     def match_id(
         self,
         shared_fraction_method: SharedFractionMethod = SharedFractionMethod.NO_PMEM,
-    ) -> SkyMatchResult:
+    ) -> SkyMatchIDResult:
         """Match objects in the sky.
 
         The function matches objects in the sky using the provided ids.
@@ -919,9 +917,8 @@ class SkyMatch:
                 "To perform a matching, "
                 "the MemberID column must be provided for both catalogs."
             )
-        
-        
              
+
         # Preparing the catalogs for the matching
 
         query_df = self.query_data.to_pandas()    
@@ -990,10 +987,13 @@ class SkyMatch:
 
         all_combinations = matched_catalog.copy().drop_duplicates(subset=['query_id', 'match_id']) 
         
-        # Evaluating the linking coefficient of members between the matched objects:
+        # LINKING COEFFICIENT:
+        all_combinations['linking_coefficient'] = fraction_query * ( fraction_query + fraction_match ) / 2
         
-        linking_coeficient = fraction_query * ( fraction_query + fraction_match ) / 2 
+        matched_pairs = list(zip(
+            all_combinations['query_id'], 
+            all_combinations['match_id'], 
+            all_combinations['linking_coefficient']
+        ))
         
-        indices = np.array(all_combinations['match_id'].values, dtype=int)
-        
-        return SkyMatchIDResult(self, indices, linking_coeficient)
+        return SkyMatchIDResult(self, matched_pairs)
