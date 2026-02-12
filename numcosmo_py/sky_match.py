@@ -296,11 +296,10 @@ class SkyMatchIDResult:
     def _get_by_indices(
         self,
         x: npt.NDArray,
-        indices: np.ndarray[tuple[int, int], np.dtype[np.int64]],
+        indices: 
     ) -> list[npt.NDArray]:
         assert len(x.shape) == 1
-        assert mask.shape == indices.shape
-        return [x[i] for i in zip(indices)]
+        return [x[i] for i in indices]
 
     def to_table_complete(
         self,
@@ -313,16 +312,25 @@ class SkyMatchIDResult:
         The function returns a table with all the properties of the query catalog
         and the properties of the match catalog for the best matched objects.
         """
+        
+        matched_query_id, matched_match_id, linking_coef = zip(*self.matched_pairs)
+              
+        boolean_mask = np.isin(self.match_data[self.match_coordinates["ID"]], matched_match_id)
+        
+        indices = np.where(boolean_mask)[0]
+
+
+
         table = Table()
-        table["ID"] = self.sky_match.query_coordinates["ID"]
-        table["RA"] = self.sky_match.query_ra
-        table["DEC"] = self.sky_match.query_dec
-        table["z"] = self.sky_match.query_z
+        table["ID"] = matched_query_id
+        table["RA"] = self.sky_match.query_ra[]
+        table["DEC"] = self.sky_match.query_dec[]
+        table["z"] = self.sky_match.query_z[]
 
         if query_properties is not None:
             assert isinstance(query_properties, dict)
             for key, value in query_properties.items():
-                table[value] = self.sky_match.query_data[key]
+                table[value] = self.sky_match.query_data[key][table["ID"]]
 
         if match_properties is not None:
             assert isinstance(match_properties, dict)
@@ -338,17 +346,14 @@ class SkyMatchIDResult:
             self.nearest_neighbours_indices,
             mask,
         )
-        table["linking_coeficient"] = [
-            d[m] for d, m in zip(self.nearest_neighbours_linking_coeficient, mask.array)
-        ]
         table["RA_matched"] = self._get_by_indices(
-            self.sky_match.match_ra, self.nearest_neighbours_indices
+            self.sky_match.match_ra, indices
         )
         table["DEC_matched"] = self._get_by_indices(
-            self.sky_match.match_dec, self.nearest_neighbours_indices
+            self.sky_match.match_dec, indices
         )
         table["z_matched"] = self._get_by_indices(
-            self.sky_match.match_z, self.nearest_neighbours_indices
+            self.sky_match.match_z, indices
         )
         return table
 
