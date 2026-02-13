@@ -218,24 +218,29 @@ def test_cmb_isw_integ_methods(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
     nc_cmb_isw_limber.set_lmax(lmax)
 
     # Create ISW kernel with GSL QAG integration
-    nc_cmb_isw_gsl = Nc.XcorKernelCMBISW(
+    nc_cmb_isw_levin = Nc.XcorKernelCMBISW(
         dist=nc_cosmo_eh_linear.dist,
         powspec=nc_cosmo_eh_linear.ps_ml,
         recomb=nc_cosmo_eh_linear.recomb,
         Nl=Ncm.Vector.new_array(np.arange(lmax + 1)),
         lmax=lmax,
+        integrator=Ncm.SBesselIntegratorLevin.new(0, 1000),
     )
 
     # Prepare both kernels
     cosmo = nc_cosmo_eh_linear.cosmo
     nc_cmb_isw_limber.prepare(cosmo)
-    nc_cmb_isw_gsl.prepare(cosmo)
+    nc_cmb_isw_levin.prepare(cosmo)
 
-    # FIXME: We still need to define the new interface for integrators
+    eval_limber = nc_cmb_isw_limber.get_eval(cosmo, 200)
+    eval_levin = nc_cmb_isw_levin.get_eval(cosmo, 200)
+
+    print(eval_limber.eval(1.0e2))
+    print(eval_levin.eval(1.0e2))
 
     # Verify both are properly initialized
     assert nc_cmb_isw_limber.get_lmax() == lmax
-    assert nc_cmb_isw_gsl.get_lmax() == lmax
+    assert nc_cmb_isw_levin.get_lmax() == lmax
 
 
 def test_tsz_serialization(

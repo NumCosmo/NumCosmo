@@ -35,6 +35,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_spline.h>
 #include <numcosmo/math/ncm_spline_cubic_notaknot.h>
+#include <numcosmo/math/ncm_spline2d.h>
 #include <numcosmo/xcor/nc_xcor_kernel.h>
 #include <numcosmo/nc_recomb.h>
 
@@ -45,6 +46,12 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcXcorKernelCMBISW, nc_xcor_kernel_cmb_isw, NC, XCOR_KERNEL_CMB_ISW, NcXcorKernel);
 
 NcXcorKernelCMBISW *nc_xcor_kernel_cmb_isw_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *recomb, NcmVector *Nl);
+
+gdouble nc_xcor_kernel_cmb_isw_eval_k_max (NcXcorKernelCMBISW *xcisw, gdouble y);
+gdouble nc_xcor_kernel_cmb_isw_eval_K_max (NcXcorKernelCMBISW *xcisw, gdouble y);
+gdouble nc_xcor_kernel_cmb_isw_eval_k_epsilon (NcXcorKernelCMBISW *xcisw, gdouble y);
+void nc_xcor_kernel_cmb_isw_set_epsilon (NcXcorKernelCMBISW *xcisw, gdouble epsilon);
+gdouble nc_xcor_kernel_cmb_isw_get_epsilon (NcXcorKernelCMBISW *xcisw);
 
 #define NC_XCOR_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL (0.0)
 
