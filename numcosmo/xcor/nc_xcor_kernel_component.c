@@ -28,14 +28,14 @@
  *
  * Abstract base class for kernel components in cross-correlation calculations.
  *
- * This class provides a framework for defining physical components of cross-correlation
- * kernels. Each component represents a distinct physical contribution, such as galaxy
- * number counts, magnification bias, or ISW effect. Components can be combined to form
- * multi-component kernels.
+ * This class provides a framework for defining physical components of
+ * cross-correlation kernels. Each component represents a distinct physical
+ * contribution, such as galaxy number counts, magnification bias, or ISW effect.
+ * Components can be combined to form multi-component kernels.
  *
  * Subclasses must implement:
  * - `eval_kernel`: evaluates K(k, xi) for the component
- * - `eval_prefactor`: evaluates any k and ℓ-dependent prefactor
+ * - `eval_prefactor`: evaluates any k and $\ell$-dependent prefactor
  *
  * Optionally, subclasses can implement:
  * - `get_limits`: returns valid integration ranges for xi and k
@@ -545,10 +545,6 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
   if ((k_init < k_lower) || (k_init > k_upper))
     k_init = sqrt (k_lower * k_upper);
 
-  printf ("Finding k_max for y = % 22.15g: valid k range [% 22.15g, % 22.15g], initial guess k = % 22.15g\n",
-          data->y, k_valid_min, k_valid_max, k_init);
-  printf ("Considering xi in [% 22.15g, % 22.15g]\n", data->y / k_upper, data->y / k_lower);
-
   gsl_min_fminimizer_set (self->minimizer, &F_min, k_init, k_lower, k_upper);
 
   do {
@@ -665,8 +661,6 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
 
   klass->get_limits (comp, cosmo, &xi_min, &xi_max, &k_min, &k_max);
 
-  printf ("# Preparing kernel component with limits: xi in [% 22.15g, % 22.15g], k in [% 22.15g, % 22.15g]\n", xi_min, xi_max, k_min, k_max);
-
   {
     NcmVector *yv                 = ncm_vector_new (self->ny);
     NcmVector *k_max_v            = ncm_vector_new (self->ny);
@@ -707,14 +701,6 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
         continue;
       }
 
-      printf ("# xi_min = % 22.15g, xi_max = % 22.15g\n", xi_min, xi_max);
-      printf ("# k_min = % 22.15g, k_max = % 22.15g\n", k_valid_min, k_valid_max);
-      printf ("# y = % 22.15g: k_min from xi_max = % 22.15g, k_max from xi_min = % 22.15g\n",
-              y, k_from_xi_max, k_from_xi_min);
-      printf ("# Analyzing y = % 22.15g: valid k range [% 22.15g, % 22.15g], initial guess k = % 22.15g\n",
-              y, k_valid_min, k_valid_max, k_guess);
-      fflush (stdout);
-
       _nc_xcor_kernel_component_find_k_max (comp, &data, k_valid_min, k_valid_max,
                                             k_guess, &k_at_max, &K_max);
       k_guess          = k_at_max;
@@ -724,8 +710,6 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
         const gdouble k_eps_high = _nc_xcor_kernel_component_find_k_epsilon_high (comp, &data, k_at_max, k_valid_max);
         const gdouble k_eps_low  = _nc_xcor_kernel_component_find_k_epsilon_low (comp, &data, k_at_max, k_valid_min);
         const gdouble k_epsilon  = GSL_MIN (k_eps_high, k_eps_low);
-
-        printf ("# y = % 22.15g: k_max = % 22.15g, K_max = % 22.15g, k_epsilon = % 22.15g\n", y, k_at_max, K_max, k_epsilon);
 
         ncm_vector_set (k_max_v, i, k_at_max);
         ncm_vector_set (K_max_v, i, K_max);
