@@ -232,6 +232,7 @@
 #include "xcor/nc_xcor.h"
 #include "xcor/nc_xcor_AB.h"
 #include "xcor/nc_xcor_kernel.h"
+#include "xcor/nc_xcor_kernel_component.h"
 #include "xcor/nc_xcor_kernel_gal.h"
 #include "xcor/nc_xcor_kernel_CMB_lensing.h"
 #include "xcor/nc_xcor_kernel_weak_lensing.h"
@@ -883,6 +884,7 @@ ncm_cfg_register_objects (void)
 
   ncm_cfg_register_obj (NC_TYPE_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_COMPONENT);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_GAL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_TSZ);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CMB_LENSING);

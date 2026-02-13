@@ -20073,6 +20073,8 @@ class XcorKernel(NumCosmoMath.Model):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20102,6 +20104,7 @@ class XcorKernel(NumCosmoMath.Model):
 
     class Props:
         dist: Distance
+        integrator: NumCosmoMath.SBesselIntegrator
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20119,6 +20122,7 @@ class XcorKernel(NumCosmoMath.Model):
     def __init__(
         self,
         dist: Distance = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20162,6 +20166,7 @@ class XcorKernel(NumCosmoMath.Model):
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
     def peek_dist(self) -> Distance: ...
+    def peek_integrator(self) -> typing.Optional[NumCosmoMath.SBesselIntegrator]: ...
     def peek_powspec(self) -> NumCosmoMath.Powspec: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> XcorKernel: ...
@@ -20189,6 +20194,8 @@ class XcorKernelCMBISW(XcorKernel):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20220,6 +20227,7 @@ class XcorKernelCMBISW(XcorKernel):
         Nl: NumCosmoMath.Vector
         recomb: Recomb
         dist: Distance
+        integrator: NumCosmoMath.SBesselIntegrator
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20238,6 +20246,7 @@ class XcorKernelCMBISW(XcorKernel):
         Nl: NumCosmoMath.Vector = ...,
         recomb: Recomb = ...,
         dist: Distance = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20286,6 +20295,8 @@ class XcorKernelCMBLensing(XcorKernel):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20317,6 +20328,7 @@ class XcorKernelCMBLensing(XcorKernel):
         Nl: NumCosmoMath.Vector
         recomb: Recomb
         dist: Distance
+        integrator: NumCosmoMath.SBesselIntegrator
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20335,6 +20347,7 @@ class XcorKernelCMBLensing(XcorKernel):
         Nl: NumCosmoMath.Vector = ...,
         recomb: Recomb = ...,
         dist: Distance = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20427,6 +20440,8 @@ class XcorKernelGal(XcorKernel):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20467,6 +20482,7 @@ class XcorKernelGal(XcorKernel):
         noise_bias: float
         noise_bias_fit: bool
         dist: Distance
+        integrator: NumCosmoMath.SBesselIntegrator
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20494,6 +20510,7 @@ class XcorKernelGal(XcorKernel):
         noise_bias: float = ...,
         noise_bias_fit: bool = ...,
         dist: Distance = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20579,6 +20596,8 @@ class XcorKernelWeakLensing(XcorKernel):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20611,6 +20630,7 @@ class XcorKernelWeakLensing(XcorKernel):
         intr_shear: float
         nbar: float
         dist: Distance
+        integrator: NumCosmoMath.SBesselIntegrator
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20630,6 +20650,7 @@ class XcorKernelWeakLensing(XcorKernel):
         intr_shear: float = ...,
         nbar: float = ...,
         dist: Distance = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20677,6 +20698,8 @@ class XcorKerneltSZ(XcorKernel):
         Distance object
       powspec -> NcmPowspec: powspec
         Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
 
@@ -20707,6 +20730,7 @@ class XcorKerneltSZ(XcorKernel):
     class Props:
         noise: float
         dist: Distance
+        integrator: NumCosmoMath.SBesselIntegrator
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20724,6 +20748,7 @@ class XcorKerneltSZ(XcorKernel):
         self,
         noise: float = ...,
         dist: Distance = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
