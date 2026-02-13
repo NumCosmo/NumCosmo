@@ -39,6 +39,7 @@
 #include <numcosmo/math/ncm_c.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_powspec.h>
+#include <numcosmo/math/ncm_sbessel_integrator.h>
 #include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/nc_distance.h>
@@ -124,6 +125,7 @@ void nc_xcor_kernel_set_lmax (NcXcorKernel *xclk, guint lmax);
 
 NcDistance *nc_xcor_kernel_peek_dist (NcXcorKernel *xclk);
 NcmPowspec *nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk);
+NcmSBesselIntegrator *nc_xcor_kernel_peek_integrator (NcXcorKernel *xclk);
 
 void nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 void nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);

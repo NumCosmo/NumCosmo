@@ -63,6 +63,7 @@ typedef struct _NcXcorKernelPrivate
   NcmModel parent_instance;
   NcDistance *dist;
   NcmPowspec *ps;
+  NcmSBesselIntegrator *sbi;
   guint lmax;
 } NcXcorKernelPrivate;
 
@@ -71,6 +72,7 @@ enum
   PROP_0,
   PROP_DIST,
   PROP_POWSPEC,
+  PROP_INTEGRATOR,
   PROP_LMAX,
   PROP_SIZE,
 };
@@ -92,6 +94,7 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
 
   self->dist = NULL;
   self->ps   = NULL;
+  self->sbi  = NULL;
   self->lmax = 0;
 }
 
@@ -103,6 +106,7 @@ _nc_xcor_kernel_dispose (GObject *object)
 
   nc_distance_clear (&self->dist);
   ncm_powspec_clear (&self->ps);
+  ncm_sbessel_integrator_clear (&self->sbi);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_parent_class)->dispose (object);
@@ -155,6 +159,10 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
       ncm_powspec_clear (&self->ps);
       self->ps = g_value_dup_object (value);
       break;
+    case PROP_INTEGRATOR:
+      ncm_sbessel_integrator_clear (&self->sbi);
+      self->sbi = g_value_dup_object (value);
+      break;
     case PROP_LMAX:
       nc_xcor_kernel_set_lmax (xclk, g_value_get_uint (value));
       break;
@@ -179,6 +187,9 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_POWSPEC:
       g_value_set_object (value, self->ps);
+      break;
+    case PROP_INTEGRATOR:
+      g_value_set_object (value, self->sbi);
       break;
     case PROP_LMAX:
       g_value_set_uint (value, nc_xcor_kernel_get_lmax (xclk));
@@ -247,6 +258,13 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                         NCM_TYPE_POWSPEC,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  g_object_class_install_property (object_class,
+                                   PROP_INTEGRATOR,
+                                   g_param_spec_object ("integrator",
+                                                        NULL,
+                                                        "Spherical Bessel integrator object",
+                                                        NCM_TYPE_SBESSEL_INTEGRATOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_LMAX,
@@ -452,6 +470,23 @@ nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk)
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   return self->ps;
+}
+
+/**
+ * nc_xcor_kernel_peek_integrator:
+ * @xclk: a #NcXcorKernel
+ *
+ * Peeks the spherical Bessel integrator object from the kernel. This method is
+ * intended for use by subclass implementations. Returns NULL if no integrator is set.
+ *
+ * Returns: (transfer none) (nullable): the spherical Bessel integrator object or NULL.
+ */
+NcmSBesselIntegrator *
+nc_xcor_kernel_peek_integrator (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  return self->sbi;
 }
 
 /**
