@@ -321,32 +321,8 @@ _integ_data_free (gpointer data)
   g_free (data);
 }
 
-static gpointer
-_integ_data_copy (gpointer data)
-{
-  IntegData *src = (IntegData *) data;
-  IntegData *dst = g_new0 (IntegData, 1);
-
-  dst->xclkl     = src->xclkl;
-  dst->cosmo     = nc_hicosmo_ref (src->cosmo);
-  dst->l         = src->l;
-  dst->nu        = src->nu;
-  dst->RH_Mpc    = src->RH_Mpc;
-  dst->prefactor = src->prefactor;
-  dst->z_lss     = src->z_lss;
-  dst->dt_lss    = src->dt_lss;
-
-  return dst;
-}
-
 static void
-_integ_data_prepare (gpointer data, NcmMSet *mset)
-{
-  /* Nothing to prepare */
-}
-
-static gdouble
-_nc_xcor_kernel_cmb_lensing_eval_limber (gpointer callback_data, const gdouble k)
+_nc_xcor_kernel_cmb_lensing_eval_limber (gpointer callback_data, const gdouble k, gdouble *W)
 {
   IntegData *int_data             = (IntegData *) callback_data;
   NcXcorKernelCMBLensing *xclkl   = int_data->xclkl;
@@ -358,7 +334,20 @@ _nc_xcor_kernel_cmb_lensing_eval_limber (gpointer callback_data, const gdouble k
   const gdouble dt_z_zlss         = nc_distance_transverse_z1_z2 (xclkl->dist, int_data->cosmo, z, int_data->z_lss);
   const gdouble operator_limber_k = 1.0 / gsl_pow_3 (k);
 
-  return int_data->prefactor * operator_limber_k * (1.0 + z) * dt_z_zlss / (int_data->dt_lss * dt) * sqrt (powspec);
+  W[0] = int_data->prefactor * operator_limber_k * (1.0 + z) * dt_z_zlss / (int_data->dt_lss * dt) * sqrt (powspec);
+}
+
+static void
+_integ_data_get_range_limber (gpointer callback_data, gdouble *kmin, gdouble *kmax)
+{
+  IntegData *int_data           = (IntegData *) callback_data;
+  NcXcorKernelCMBLensing *xclkl = int_data->xclkl;
+  const gdouble ps_kmin         = ncm_powspec_get_kmin (xclkl->ps) * int_data->RH_Mpc;
+  const gdouble ps_kmax         = ncm_powspec_get_kmax (xclkl->ps) * int_data->RH_Mpc;
+  const gdouble kmin_limber     = int_data->nu / xclkl->xi_lss;
+
+  *kmin = GSL_MAX (ps_kmin, kmin_limber);
+  *kmax = ps_kmax;
 }
 
 static NcXcorKernelIntegrand *
@@ -366,14 +355,9 @@ _nc_xcor_kernel_cmb_lensing_get_eval_limber (NcXcorKernel *xclk, NcHICosmo *cosm
 {
   NcXcorKernelCMBLensing *xclkl = NC_XCOR_KERNEL_CMB_LENSING (xclk);
   IntegData *int_data           = g_new0 (IntegData, 1);
-  NcXcorKernelIntegrand *integ  = nc_xcor_kernel_integrand_new (_nc_xcor_kernel_cmb_lensing_eval_limber,
-                                                                _integ_data_free,
-                                                                _integ_data_copy,
-                                                                _integ_data_prepare,
-                                                                int_data);
 
   int_data->xclkl     = xclkl;
-  int_data->cosmo     = cosmo;
+  int_data->cosmo     = nc_hicosmo_ref (cosmo);
   int_data->l         = l;
   int_data->nu        = l + 0.5;
   int_data->RH_Mpc    = nc_hicosmo_RH_Mpc (cosmo);
@@ -381,7 +365,9 @@ _nc_xcor_kernel_cmb_lensing_get_eval_limber (NcXcorKernel *xclk, NcHICosmo *cosm
   int_data->z_lss     = xclkl->z_lss;
   int_data->dt_lss    = xclkl->dt_lss;
 
-  return integ;
+  return nc_xcor_kernel_integrand_new (1, _nc_xcor_kernel_cmb_lensing_eval_limber,
+                                       _integ_data_get_range_limber,
+                                       int_data, _integ_data_free);
 }
 
 /*

@@ -48,34 +48,77 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_KERNEL (nc_xcor_kernel_get_type ())
-#define NC_TYPE_XCOR_KERNEL_EVAL (nc_xcor_kernel_integrand_get_type ())
+#define NC_TYPE_XCOR_KERNEL_INTEGRAND (nc_xcor_kernel_integrand_get_type ())
 
 G_DECLARE_DERIVABLE_TYPE (NcXcorKernel, nc_xcor_kernel, NC, XCOR_KERNEL, NcmModel);
 
 typedef struct _NcXcorKinetic NcXcorKinetic;
+typedef struct _NcXcorKernelIntegrand NcXcorKernelIntegrand;
 
-NCM_UTIL_DECLARE_CALLBACK (NcXcorKernelIntegrand,
-                           NC_XCOR_KERNEL_EVAL,
-                           nc_xcor_kernel_integrand,
-                           gdouble,
-                           NCM_UTIL_CALLBACK_ARGS (const gdouble k))
+/**
+ * NcXcorKernelIntegrandEval:
+ * @data: user data
+ * @k: wavenumber
+ * @W: (array) (out): output array to fill with integrand values
+ *
+ * Function type for evaluating kernel integrands.
+ */
+typedef void (*NcXcorKernelIntegrandEval) (gpointer data, gdouble k, gdouble *W);
+
+/**
+ * NcXcorKernelIntegrandGetRange:
+ * @data: user data
+ * @k_min: (out): minimum wavenumber
+ * @k_max: (out): maximum wavenumber
+ *
+ * Function type for getting the valid k range.
+ */
+typedef void (*NcXcorKernelIntegrandGetRange) (gpointer data, gdouble *k_min, gdouble *k_max);
+
+/**
+ * NcXcorKernelIntegrand:
+ * @refcount: atomic reference count
+ * @len: number of components in the integrand
+ * @eval_func: function to evaluate the integrand at @k, filling @W[@len]
+ * @get_range_func: function to get the valid k range for this integrand
+ * @data: user data passed to @eval_func and @get_range_func
+ * @data_free: function to free @data, or %NULL if no cleanup needed
+ *
+ * A reference-counted closure for computing kernel integrands.
+ * The @eval_func function should fill @len values in the @W array
+ * for the given wavenumber @k.
+ */
+struct _NcXcorKernelIntegrand
+{
+  /*< private >*/
+  gint refcount;
+  /*< public >*/
+  guint len;
+  NcXcorKernelIntegrandEval eval_func;
+  NcXcorKernelIntegrandGetRange get_range_func;
+  gpointer data;
+  GDestroyNotify data_free;
+};
 
 struct _NcXcorKernelClass
 {
   /*< private >*/
   NcmModelClass parent_class;
-
+  /* Original XcorKernel interface */
+  void (*get_z_range) (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
   gdouble (*eval_limber_z) (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
   gdouble (*eval_limber_z_prefactor) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
   void (*prepare) (NcXcorKernel *xclk, NcHICosmo *cosmo);
   void (*add_noise) (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
   guint (*obs_len) (NcXcorKernel *xclk);
   guint (*obs_params_len) (NcXcorKernel *xclk);
+  /* End of original XcorKernel interface */
+  /* New XcorKernel interface - build closure and closure interval*/
   void (*get_k_range) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
-  void (*get_z_range) (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
   NcXcorKernelIntegrand *(*get_eval) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+  /* Proposed new interface for Components*/
+  GPtrArray *(*get_component_list) (NcXcorKernel *xclk);
 };
-
 
 /**
  * NcXcorKernelImpl:
@@ -140,7 +183,64 @@ void nc_xcor_kernel_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp
 
 void nc_xcor_kernel_log_all_models (void);
 
+GType nc_xcor_kernel_integrand_get_type (void) G_GNUC_CONST;
+
+NcXcorKernelIntegrand *nc_xcor_kernel_integrand_new (guint len, NcXcorKernelIntegrandEval eval, NcXcorKernelIntegrandGetRange get_range, gpointer data, GDestroyNotify data_free);
+NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);
+void nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand);
+void nc_xcor_kernel_integrand_clear (NcXcorKernelIntegrand **integrand);
+
+NCM_INLINE guint nc_xcor_kernel_integrand_get_len (NcXcorKernelIntegrand *integrand);
+NCM_INLINE void nc_xcor_kernel_integrand_eval (NcXcorKernelIntegrand *integrand, gdouble k, gdouble *W);
+NCM_INLINE void nc_xcor_kernel_integrand_get_range (NcXcorKernelIntegrand *integrand, gdouble *k_min, gdouble *k_max);
+NCM_INLINE GArray *nc_xcor_kernel_integrand_eval_array (NcXcorKernelIntegrand *integrand, gdouble k);
+
 G_END_DECLS
 
 #endif /* _NC_XCOR_KERNEL_H_ */
+
+
+#ifndef _NC_XCOR_KERNEL_INLINE_H_
+#define _NC_XCOR_KERNEL_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
+#ifndef NUMCOSMO_GIR_SCAN
+
+G_BEGIN_DECLS
+
+NCM_INLINE guint
+nc_xcor_kernel_integrand_get_len (NcXcorKernelIntegrand *integrand)
+{
+  return integrand->len;
+}
+
+NCM_INLINE void
+nc_xcor_kernel_integrand_eval (NcXcorKernelIntegrand *integrand, gdouble k, gdouble *W)
+{
+  integrand->eval_func (integrand->data, k, W);
+}
+
+NCM_INLINE void
+nc_xcor_kernel_integrand_get_range (NcXcorKernelIntegrand *integrand, gdouble *k_min, gdouble *k_max)
+{
+  integrand->get_range_func (integrand->data, k_min, k_max);
+}
+
+NCM_INLINE GArray *
+nc_xcor_kernel_integrand_eval_array (NcXcorKernelIntegrand *integrand, gdouble k)
+{
+  GArray *arr = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), integrand->len);
+
+  g_array_set_size (arr, integrand->len);
+  integrand->eval_func (integrand->data, k, (gdouble *) arr->data);
+
+  return arr;
+}
+
+G_END_DECLS
+
+#endif /* NUMCOSMO_GIR_SCAN */
+#endif /* __GTK_DOC_IGNORE__ */
+#endif /* NUMCOSMO_HAVE_INLINE */
+#endif /* _NC_XCOR_KERNEL_INLINE_H_ */
 

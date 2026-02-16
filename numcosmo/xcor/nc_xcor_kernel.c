@@ -80,12 +80,7 @@ enum
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcXcorKernel, nc_xcor_kernel, NCM_TYPE_MODEL)
 G_DEFINE_BOXED_TYPE (NcXcorKinetic, nc_xcor_kinetic, nc_xcor_kinetic_copy, nc_xcor_kinetic_free)
-NCM_UTIL_DEFINE_CALLBACK (NcXcorKernelIntegrand,
-                          NC_XCOR_KERNEL_INTEGRAND,
-                          nc_xcor_kernel_integrand,
-                          gdouble,
-                          NCM_UTIL_CALLBACK_ARGS (const gdouble z),
-                          NCM_UTIL_CALLBACK_ARGS (z))
+G_DEFINE_BOXED_TYPE (NcXcorKernelIntegrand, nc_xcor_kernel_integrand, nc_xcor_kernel_integrand_ref, nc_xcor_kernel_integrand_unref)
 
 static void
 nc_xcor_kernel_init (NcXcorKernel *xclk)
@@ -358,39 +353,84 @@ nc_xcor_kinetic_free (NcXcorKinetic *xck)
 
 /**
  * nc_xcor_kernel_integrand_new:
- * @func: (scope async) (closure callback_data): a #NcXcorKernelIntegrandFunc
- * @callback_data_free: (scope async) (closure callback_data): a #NcXcorKernelIntegrandFreeData
- * @callback_data_copy: (scope async) (closure callback_data): a #NcXcorKernelIntegrandCopyData
- * @callback_data_prepare: (scope async) (closure callback_data): a #NcXcorKernelIntegrandPrepareData
- * @callback_data: a gpointer
+ * @len: number of components in the integrand
+ * @eval: (scope async): function to evaluate the integrand
+ * @get_range: (scope async): function to get the k range
+ * @data: (nullable): user data to pass to @eval and @get_range
+ * @data_free: (nullable): function to free @data
  *
- * Creates a new galaxy shape integrand.
+ * Creates a new #NcXcorKernelIntegrand with reference count of 1.
  *
- * Returns: (transfer full): a new NcGalaxySDShapeIntegrand object.
+ * Returns: (transfer full): a new #NcXcorKernelIntegrand
  */
+NcXcorKernelIntegrand *
+nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdouble *), void (*get_range) (gpointer, gdouble *, gdouble *), gpointer data, GDestroyNotify data_free)
+{
+  NcXcorKernelIntegrand *integrand = g_new (NcXcorKernelIntegrand, 1);
+
+  integrand->refcount       = 1;
+  integrand->len            = len;
+  integrand->eval_func      = eval;
+  integrand->get_range_func = get_range;
+  integrand->data           = data;
+  integrand->data_free      = data_free;
+
+  return integrand;
+}
+
 /**
- * nc_xcor_kernel_integrand_copy:
- * @callback_obj: a NcXcorKernelIntegrand
+ * nc_xcor_kernel_integrand_ref:
+ * @integrand: a #NcXcorKernelIntegrand
  *
- * Copies the integrand for the galaxy shape data.
+ * Increases the reference count of @integrand by one atomically.
  *
- * Returns: (transfer full): a copy of @callback_obj
+ * Returns: (transfer full): @integrand
  */
+NcXcorKernelIntegrand *
+nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand)
+{
+  g_atomic_int_inc (&integrand->refcount);
+
+  return integrand;
+}
+
 /**
- * nc_xcor_kernel_integrand_free:
- * @callback_obj: a NcXcorKernelIntegrand
+ * nc_xcor_kernel_integrand_unref:
+ * @integrand: a #NcXcorKernelIntegrand
  *
- * Frees the integrand for the galaxy shape data.
- *
+ * Decreases the reference count of @integrand by one atomically.
+ * When the reference count reaches zero, frees @integrand and its
+ * associated data using the free function provided at creation time
+ * (if any).
  */
+void
+nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand)
+{
+  if (g_atomic_int_dec_and_test (&integrand->refcount))
+  {
+    if (integrand->data_free != NULL)
+      integrand->data_free (integrand->data);
+
+    g_free (integrand);
+  }
+}
+
 /**
- * nc_xcor_kernel_integrand_prepare:
- * @callback_obj: a NcXcorKernelIntegrand
- * @mset: a #NcmMSet
+ * nc_xcor_kernel_integrand_clear:
+ * @integrand: a #NcXcorKernelIntegrand
  *
- * Prepares the integrand for the galaxy shape data.
- *
+ * If *@integrand is not %NULL, decreases its reference count and
+ * sets the pointer to %NULL.
  */
+void
+nc_xcor_kernel_integrand_clear (NcXcorKernelIntegrand **integrand)
+{
+  if (*integrand != NULL)
+  {
+    nc_xcor_kernel_integrand_unref (*integrand);
+    *integrand = NULL;
+  }
+}
 
 /**
  * nc_xcor_kernel_obs_len: (virtual obs_len)
@@ -692,4 +732,40 @@ nc_xcor_kernel_log_all_models (void)
              g_type_name (NC_TYPE_XCOR_KERNEL));
   _nc_xcor_kernel_log_all_models_go (NC_TYPE_XCOR_KERNEL, 0);
 }
+
+/**
+ * nc_xcor_kernel_integrand_get_range:
+ * @integrand: a #NcXcorKernelIntegrand
+ * @k_min: (out): minimum k value
+ * @k_max: (out): maximum k value
+ *
+ * Gets the valid k range for this integrand.
+ */
+/**
+ * nc_xcor_kernel_integrand_eval: (skip)
+ * @integrand: a #NcXcorKernelIntegrand
+ * @k: wavenumber
+ * @W: (array) (out caller-allocates): array of length @len to store results
+ *
+ * Evaluates the integrand at wavenumber @k, storing @len results in @W.
+ */
+/**
+ * nc_xcor_kernel_integrand_get_len:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * Gets the number of components in the integrand.
+ *
+ * Returns: the number of components
+ */
+/**
+ * nc_xcor_kernel_integrand_eval_array:
+ * @integrand: a #NcXcorKernelIntegrand
+ * @k: wavenumber
+ *
+ * Evaluates the integrand at wavenumber @k and returns the results
+ * in a newly allocated #GArray. This is a convenience wrapper around
+ * nc_xcor_kernel_integrand_eval() that handles array allocation.
+ *
+ * Returns: (transfer full) (element-type gdouble): a #GArray containing @len #gdouble values
+ */
 

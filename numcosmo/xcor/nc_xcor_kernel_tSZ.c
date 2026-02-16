@@ -278,32 +278,29 @@ _integ_data_free (gpointer data)
   g_free (data);
 }
 
-static gpointer
-_integ_data_copy (gpointer data)
+static void
+_integ_data_get_range_limber (gpointer data, gdouble *kmin, gdouble *kmax)
 {
-  IntegData *src = (IntegData *) data;
-  IntegData *dst = g_new0 (IntegData, 1);
+  IntegData *int_data   = (IntegData *) data;
+  NcDistance *dist      = nc_xcor_kernel_peek_dist (int_data->xclk);
+  NcmPowspec *ps        = nc_xcor_kernel_peek_powspec (int_data->xclk);
+  const gdouble ps_kmin = ncm_powspec_get_kmin (ps) * int_data->RH_Mpc;
+  const gdouble ps_kmax = ncm_powspec_get_kmax (ps) * int_data->RH_Mpc;
+  gdouble zmin, zmax, zmid;
 
-  dst->xclk      = src->xclk;
-  dst->cosmo     = nc_hicosmo_ref (src->cosmo);
-  dst->l         = src->l;
-  dst->nu        = src->nu;
-  dst->RH_Mpc    = src->RH_Mpc;
-  dst->prefactor = src->prefactor;
+  nc_xcor_kernel_get_z_range (int_data->xclk, &zmin, &zmax, &zmid);
 
-  return dst;
+  const gdouble xi_max      = nc_distance_comoving (dist, int_data->cosmo, zmax);
+  const gdouble kmin_limber = int_data->nu / xi_max;
+
+  *kmin = GSL_MAX (ps_kmin, kmin_limber);
+  *kmax = ps_kmax;
 }
 
 static void
-_integ_data_prepare (gpointer data, NcmMSet *mset)
+_nc_xcor_kernel_tsz_eval_limber (gpointer data, gdouble k, gdouble *W)
 {
-  /* Nothing to prepare */
-}
-
-static gdouble
-_nc_xcor_kernel_tsz_eval_limber (gpointer callback_data, const gdouble k)
-{
-  IntegData *int_data    = (IntegData *) callback_data;
+  IntegData *int_data    = (IntegData *) data;
   NcDistance *dist       = nc_xcor_kernel_peek_dist (int_data->xclk);
   NcmPowspec *ps         = nc_xcor_kernel_peek_powspec (int_data->xclk);
   const gdouble xi_nu    = int_data->nu / k;
@@ -314,27 +311,26 @@ _nc_xcor_kernel_tsz_eval_limber (gpointer callback_data, const gdouble k)
   const gdouble kernel   = _nc_xcor_kernel_tsz_eval_radial_weight (int_data->xclk, int_data->cosmo, z, xi_nu, E_z);
   const gdouble limber_k = 1.0 / k;
 
-  return int_data->prefactor * limber_k * kernel * sqrt (powspec);
+  W[0] = int_data->prefactor * limber_k * kernel * sqrt (powspec);
 }
 
 static NcXcorKernelIntegrand *
 _nc_xcor_kernel_tsz_get_eval_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
-  IntegData *int_data          = g_new0 (IntegData, 1);
-  NcXcorKernelIntegrand *integ = nc_xcor_kernel_integrand_new (_nc_xcor_kernel_tsz_eval_limber,
-                                                               _integ_data_free,
-                                                               _integ_data_copy,
-                                                               _integ_data_prepare,
-                                                               int_data);
+  IntegData *int_data = g_new0 (IntegData, 1);
 
   int_data->xclk      = xclk;
-  int_data->cosmo     = cosmo;
+  int_data->cosmo     = nc_hicosmo_ref (cosmo);
   int_data->l         = l;
   int_data->nu        = l + 0.5;
   int_data->RH_Mpc    = nc_hicosmo_RH_Mpc (cosmo);
   int_data->prefactor = _nc_xcor_kernel_tsz_eval_kernel_prefactor_limber (xclk, cosmo, l);
 
-  return integ;
+  return nc_xcor_kernel_integrand_new (1,
+                                       _nc_xcor_kernel_tsz_eval_limber,
+                                       _integ_data_get_range_limber,
+                                       int_data,
+                                       _integ_data_free);
 }
 
 /*

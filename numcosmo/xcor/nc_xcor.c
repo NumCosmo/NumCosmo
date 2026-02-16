@@ -625,10 +625,12 @@ _xcor_kernel_gsl_cross_int (gdouble lnk, gpointer ptr)
 {
   NcXcorKernelIntegrand **xclki = (NcXcorKernelIntegrand **) ptr;
   const gdouble k               = exp (lnk);
-  const gdouble kernel1         = nc_xcor_kernel_integrand_eval (xclki[0], k);
-  const gdouble kernel2         = nc_xcor_kernel_integrand_eval (xclki[1], k);
+  gdouble W1[1], W2[1];
 
-  return gsl_pow_3 (k) * kernel1 * kernel2;
+  nc_xcor_kernel_integrand_eval (xclki[0], k, W1);
+  nc_xcor_kernel_integrand_eval (xclki[1], k, W2);
+
+  return gsl_pow_3 (k) * W1[0] * W2[0];
 }
 
 static gdouble
@@ -636,9 +638,11 @@ _xcor_kernel_gsl_auto_int (gdouble lnk, gpointer ptr)
 {
   NcXcorKernelIntegrand **xclki = (NcXcorKernelIntegrand **) ptr;
   const gdouble k               = exp (lnk);
-  const gdouble kernel1         = nc_xcor_kernel_integrand_eval (xclki[0], k);
+  gdouble W[1];
 
-  return gsl_pow_3 (k) * kernel1 * kernel1;
+  nc_xcor_kernel_integrand_eval (xclki[0], k, W);
+
+  return gsl_pow_3 (k) * W[0] * W[0];
 }
 
 void
