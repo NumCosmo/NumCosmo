@@ -53,6 +53,7 @@
 
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_kernel_gal.h"
+#include "xcor/nc_xcor_kernel_component.h"
 #include "xcor/nc_xcor_lensing_efficiency.h"
 #include "xcor/nc_xcor.h"
 
@@ -91,6 +92,8 @@ struct _NcXcorKernelGal
 
   NcDistance *dist;
   NcmPowspec *ps;
+  NcXcorKernelComponent *clustering_comp;
+  NcXcorKernelComponent *magbias_comp;
 };
 
 enum
@@ -102,6 +105,169 @@ enum
   PROP_NBARM1,
   PROP_SIZE,
 };
+
+/*
+ * Clustering Component Definition
+ * Handles the galaxy density/bias term: bias(z) * dn_dz(z) * E(z)
+ */
+
+typedef struct _ClusteringComponentData
+{
+  NcXcorKernelGal *xclkg;
+  NcDistance *dist;
+  NcmPowspec *ps;
+} ClusteringComponentData;
+
+#define _NC_XCOR_KERNEL_COMPONENT_CLUSTERING_GET_DATA(comp) \
+        ((ClusteringComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
+
+static void
+_clustering_component_data_clear (ClusteringComponentData *data)
+{
+  /* No need to clear, these are weak references from parent kernel */
+}
+
+static gdouble _nc_xcor_kernel_gal_dndz (NcXcorKernelGal *xclkg, gdouble z);
+static gdouble _nc_xcor_kernel_gal_bias (NcXcorKernelGal *xclkg, gdouble z);
+
+static gdouble
+_clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+{
+  ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTERING_GET_DATA (comp);
+  const gdouble z               = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble E_z             = nc_hicosmo_E (cosmo, z);
+  const gdouble powspec         = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
+  const gdouble dn_dz_z         = _nc_xcor_kernel_gal_dndz (data->xclkg, z);
+  const gdouble bias_z          = _nc_xcor_kernel_gal_bias (data->xclkg, z);
+
+  return bias_z * dn_dz_z * E_z * sqrt (powspec);
+}
+
+static gdouble
+_clustering_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l)
+{
+  return 1.0;
+}
+
+static void
+_clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+{
+  ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTERING_GET_DATA (comp);
+  NcDistance *dist              = data->dist;
+  NcmPowspec *ps                = data->ps;
+  NcXcorKernelGal *xclkg        = data->xclkg;
+
+  nc_distance_prepare_if_needed (dist, cosmo);
+  ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
+
+  *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-2);
+  *xi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
+  *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+}
+
+NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_CLUSTERING,
+                                      NcXcorKernelComponentClustering,
+                                      nc_xcor_kernel_component_clustering,
+                                      _clustering_component_eval_kernel,
+                                      _clustering_component_eval_prefactor,
+                                      _clustering_component_get_limits,
+                                      ClusteringComponentData,
+                                      _clustering_component_data_clear)
+
+static NcXcorKernelComponent *
+_nc_xcor_kernel_component_clustering_new (NcXcorKernelGal * xclkg, NcDistance * dist, NcmPowspec * ps)
+{
+  NcXcorKernelComponent *comp   = g_object_new (nc_xcor_kernel_component_clustering_get_type (), NULL);
+  ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTERING_GET_DATA (comp);
+
+  data->xclkg = xclkg;
+  data->dist  = dist;
+  data->ps    = ps;
+
+  return comp;
+}
+
+/*
+ * Magnification Bias Component Definition
+ * Handles the lensing/magnification term involving lensing efficiency
+ */
+
+typedef struct _MagBiasComponentData
+{
+  NcXcorKernelGal *xclkg;
+  NcDistance *dist;
+  NcmPowspec *ps;
+} MagBiasComponentData;
+
+#define _NC_XCOR_KERNEL_COMPONENT_MAGBIAS_GET_DATA(comp) \
+        ((MagBiasComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
+
+static void
+_magbias_component_data_clear (MagBiasComponentData *data)
+{
+  /* No need to clear, these are weak references from parent kernel */
+}
+
+static gdouble
+_magbias_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
+{
+  MagBiasComponentData *data = _NC_XCOR_KERNEL_COMPONENT_MAGBIAS_GET_DATA (comp);
+  const gdouble z            = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble powspec      = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
+  const gdouble g_z          = nc_xcor_lensing_efficiency_eval (data->xclkg->lens_eff, z) * (1.0 + z) * xi;
+  const gdouble operator_k   = 1.0 / gsl_pow_2 (k);
+
+  return operator_k * g_z * sqrt (powspec);
+}
+
+static gdouble
+_magbias_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l)
+{
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble llp1     = l * (l + 1.0);
+
+  return 1.5 * Omega_m0 * llp1;
+}
+
+static void
+_magbias_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
+{
+  MagBiasComponentData *data = _NC_XCOR_KERNEL_COMPONENT_MAGBIAS_GET_DATA (comp);
+  NcDistance *dist           = data->dist;
+  NcmPowspec *ps             = data->ps;
+  NcXcorKernelGal *xclkg     = data->xclkg;
+
+  nc_distance_prepare_if_needed (dist, cosmo);
+  ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
+
+  *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-2);
+  *xi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
+  *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+}
+
+NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_MAGBIAS,
+                                      NcXcorKernelComponentMagBias,
+                                      nc_xcor_kernel_component_magbias,
+                                      _magbias_component_eval_kernel,
+                                      _magbias_component_eval_prefactor,
+                                      _magbias_component_get_limits,
+                                      MagBiasComponentData,
+                                      _magbias_component_data_clear)
+
+static NcXcorKernelComponent *
+_nc_xcor_kernel_component_magbias_new (NcXcorKernelGal * xclkg, NcDistance * dist, NcmPowspec * ps)
+{
+  NcXcorKernelComponent *comp = g_object_new (nc_xcor_kernel_component_magbias_get_type (), NULL);
+  MagBiasComponentData *data  = _NC_XCOR_KERNEL_COMPONENT_MAGBIAS_GET_DATA (comp);
+
+  data->xclkg = xclkg;
+  data->dist  = dist;
+  data->ps    = ps;
+
+  return comp;
+}
 
 G_DEFINE_TYPE (NcXcorKernelGal, nc_xcor_kernel_gal, NC_TYPE_XCOR_KERNEL)
 
@@ -129,9 +295,11 @@ nc_xcor_kernel_gal_init (NcXcorKernelGal *xclkg)
   xclkg->bias_old       = 0.0;
   xclkg->noise_bias_old = 0.0;
 
-  xclkg->nbarm1 = 0.0;
-  xclkg->dist   = NULL;
-  xclkg->ps     = NULL;
+  xclkg->nbarm1          = 0.0;
+  xclkg->dist            = NULL;
+  xclkg->ps              = NULL;
+  xclkg->clustering_comp = NULL;
+  xclkg->magbias_comp    = NULL;
 }
 
 static void
@@ -211,6 +379,7 @@ static guint _nc_xcor_kernel_gal_obs_params_len (NcXcorKernel *xclk);
 static void _nc_xcor_kernel_gal_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 static gdouble _nc_xcor_kernel_gal_dndz (NcXcorKernelGal *xclkg, gdouble z);
 static NcXcorKernelIntegrand *_nc_xcor_kernel_gal_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+static GPtrArray *_nc_xcor_kernel_gal_get_component_list (NcXcorKernel *xclk);
 
 static gdouble _nc_xcor_kernel_gal_lens_eff_eval_source (NcXcorLensingEfficiency *lens_eff, gdouble z);
 static void _nc_xcor_kernel_gal_lens_eff_get_z_range (NcXcorLensingEfficiency *lens_eff, gdouble *zmin, gdouble *zmax);
@@ -324,6 +493,8 @@ _nc_xcor_kernel_gal_dispose (GObject *object)
   ncm_spline_clear (&xclkg->bias_spline);
   ncm_spline_clear (&xclkg->dn_dz);
   nc_xcor_lensing_efficiency_clear (&xclkg->lens_eff);
+  nc_xcor_kernel_component_clear (&xclkg->clustering_comp);
+  nc_xcor_kernel_component_clear (&xclkg->magbias_comp);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_gal_parent_class)->dispose (object);
@@ -418,6 +589,8 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
   parent_class->get_k_range    = &_nc_xcor_kernel_gal_get_k_range_limber;
   parent_class->get_eval       = &_nc_xcor_kernel_gal_get_eval;
 
+  parent_class->get_component_list = &_nc_xcor_kernel_gal_get_component_list;
+
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
 }
 
@@ -511,6 +684,20 @@ _nc_xcor_kernel_gal_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 
   if (xclkg->domagbias)
     nc_xcor_lensing_efficiency_prepare (xclkg->lens_eff, cosmo);
+
+  /* Create and prepare components */
+  if (xclkg->clustering_comp == NULL)
+    xclkg->clustering_comp = _nc_xcor_kernel_component_clustering_new (xclkg, dist, ps);
+
+  nc_xcor_kernel_component_prepare (xclkg->clustering_comp, cosmo);
+
+  if (xclkg->domagbias)
+  {
+    if (xclkg->magbias_comp == NULL)
+      xclkg->magbias_comp = _nc_xcor_kernel_component_magbias_new (xclkg, dist, ps);
+
+    nc_xcor_kernel_component_prepare (xclkg->magbias_comp, cosmo);
+  }
 }
 
 static gdouble
@@ -726,6 +913,21 @@ _nc_xcor_kernel_gal_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zma
   *zmin = 0.0; /* xclkg->dn_dz_zmin; */
   *zmax = xclkg->dn_dz_zmax;
   *zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz)));
+}
+
+static GPtrArray *
+_nc_xcor_kernel_gal_get_component_list (NcXcorKernel *xclk)
+{
+  NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xclk);
+  GPtrArray *comp_list   = g_ptr_array_new_with_free_func (g_object_unref);
+
+  if (xclkg->clustering_comp != NULL)
+    g_ptr_array_add (comp_list, g_object_ref (xclkg->clustering_comp));
+
+  if (xclkg->domagbias && (xclkg->magbias_comp != NULL))
+    g_ptr_array_add (comp_list, g_object_ref (xclkg->magbias_comp));
+
+  return comp_list;
 }
 
 /**

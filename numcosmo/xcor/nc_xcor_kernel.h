@@ -116,6 +116,7 @@ struct _NcXcorKernelClass
   /* New XcorKernel interface - build closure and closure interval*/
   void (*get_k_range) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
   NcXcorKernelIntegrand *(*get_eval) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+  NcXcorKernelIntegrand *(*get_eval_vectorized) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax);
   /* Proposed new interface for Components*/
   GPtrArray *(*get_component_list) (NcXcorKernel *xclk);
 };
@@ -166,6 +167,9 @@ guint nc_xcor_kernel_obs_params_len (NcXcorKernel *xclk);
 guint nc_xcor_kernel_get_lmax (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_lmax (NcXcorKernel *xclk, guint lmax);
 
+gint nc_xcor_kernel_get_l_limber (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_l_limber (NcXcorKernel *xclk, gint l_limber);
+
 NcDistance *nc_xcor_kernel_peek_dist (NcXcorKernel *xclk);
 NcmPowspec *nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk);
 NcmSBesselIntegrator *nc_xcor_kernel_peek_integrator (NcXcorKernel *xclk);
@@ -173,6 +177,7 @@ NcmSBesselIntegrator *nc_xcor_kernel_peek_integrator (NcXcorKernel *xclk);
 void nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 void nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 NcXcorKernelIntegrand *nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+NcXcorKernelIntegrand *nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax);
 
 gdouble nc_xcor_kernel_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 gdouble nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);

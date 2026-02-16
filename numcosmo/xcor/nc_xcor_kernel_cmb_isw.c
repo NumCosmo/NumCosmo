@@ -130,7 +130,7 @@ _isw_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gd
   const gdouble Omega_m0 = Omega_c0 + Omega_b0;
   const gdouble T_gamma0 = nc_hicosmo_T_gamma0 (cosmo);
 
-  return 3.0 * T_gamma0 * Omega_m0 / k;
+  return 3.0 * T_gamma0 * Omega_m0;
 }
 
 static void
@@ -268,6 +268,7 @@ static guint _nc_xcor_kernel_cmb_isw_obs_len (NcXcorKernel *xclk);
 static guint _nc_xcor_kernel_cmb_isw_obs_params_len (NcXcorKernel *xclk);
 static void _nc_xcor_kernel_cmb_isw_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 static NcXcorKernelIntegrand *_nc_xcor_kernel_cmb_isw_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+static GPtrArray *_nc_xcor_kernel_cmb_isw_get_component_list (NcXcorKernel *xclk);
 
 static void
 _nc_xcor_kernel_cmb_isw_constructed (GObject *object)
@@ -333,6 +334,7 @@ nc_xcor_kernel_cmb_isw_class_init (NcXcorKernelCMBISWClass *klass)
   parent_class->get_k_range    = &_nc_xcor_kernel_cmb_isw_get_k_range;
   parent_class->get_eval       = &_nc_xcor_kernel_cmb_isw_get_eval;
 
+  parent_class->get_component_list = &_nc_xcor_kernel_cmb_isw_get_component_list;
 
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
 }
@@ -507,7 +509,7 @@ _nc_xcor_kernel_cmb_isw_eval_full (gpointer data, gdouble k, gdouble *W)
   W[0] = ncm_spline_eval (int_data->spline, k);
 }
 
-static NcmSpline *_nc_xcor_kernel_cmb_isw_prepare_gsl_qag (NcXcorKernelCMBISW *xcisw, NcHICosmo *cosmo, gint ell);
+static NcmSpline *_nc_xcor_kernel_cmb_isw_prepare_non_limber (NcXcorKernelCMBISW *xcisw, NcHICosmo *cosmo, gint ell);
 
 static NcXcorKernelIntegrand *
 _nc_xcor_kernel_cmb_isw_get_eval_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
@@ -519,7 +521,7 @@ _nc_xcor_kernel_cmb_isw_get_eval_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gin
   int_data->cosmo  = nc_hicosmo_ref (cosmo);
   int_data->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
   int_data->l      = l;
-  int_data->spline = _nc_xcor_kernel_cmb_isw_prepare_gsl_qag (xcisw, cosmo, l);
+  int_data->spline = _nc_xcor_kernel_cmb_isw_prepare_non_limber (xcisw, cosmo, l);
 
   return nc_xcor_kernel_integrand_new (1,
                                        _nc_xcor_kernel_cmb_isw_eval_full,
@@ -638,12 +640,12 @@ _nc_xcor_kernel_cmb_isw_kernel_eval (gdouble k, gpointer params)
     const gdouble prefactor = _nc_xcor_kernel_cmb_isw_eval_kernel_prefactor (
       NC_XCOR_KERNEL (data->xcisw), data->cosmo, k, data->l);
 
-    return result * prefactor;
+    return result * prefactor / k;
   }
 }
 
 static NcmSpline *
-_nc_xcor_kernel_cmb_isw_prepare_gsl_qag (NcXcorKernelCMBISW *xcisw, NcHICosmo *cosmo, gint ell)
+_nc_xcor_kernel_cmb_isw_prepare_non_limber (NcXcorKernelCMBISW *xcisw, NcHICosmo *cosmo, gint ell)
 {
   NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
   NcXcorKernelCMBISWData data            = {
@@ -667,6 +669,8 @@ _nc_xcor_kernel_cmb_isw_prepare_gsl_qag (NcXcorKernelCMBISW *xcisw, NcHICosmo *c
 
   F.function = _nc_xcor_kernel_cmb_isw_kernel_eval;
   F.params   = &data;
+
+  printf ("kmin = % 22.15e, kmax = % 22.15e\n", kmin, kmax);
 
   ncm_spline_set_func_scale (NCM_SPLINE (spline), NCM_SPLINE_FUNCTION_SPLINE, &F, kmin, kmax, 0, 1.0e-4, 1.0e-6, 1, 1.0);
 
@@ -717,6 +721,19 @@ _nc_xcor_kernel_cmb_isw_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble 
   *zmin = 0.0;
   *zmax = self->z_lss;
   *zmid = 2.0;
+}
+
+static GPtrArray *
+_nc_xcor_kernel_cmb_isw_get_component_list (NcXcorKernel *xclk)
+{
+  NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
+  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
+  GPtrArray *comp_list                   = g_ptr_array_new_with_free_func (g_object_unref);
+
+  if (self->isw_comp != NULL)
+    g_ptr_array_add (comp_list, g_object_ref (self->isw_comp));
+
+  return comp_list;
 }
 
 /**

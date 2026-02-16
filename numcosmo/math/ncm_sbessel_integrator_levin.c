@@ -290,6 +290,12 @@ _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv,
     sbilv->j_array_b = NULL;
   }
 
+  if (sbilv->jl_arr != NULL)
+  {
+    g_free (sbilv->jl_arr);
+    sbilv->jl_arr = NULL;
+  }
+
   /* Allocate vectors for spectral coefficients */
   sbilv->cheb_coeffs  = ncm_vector_new (max_order);
   sbilv->gegen_coeffs = ncm_vector_new (max_order);
@@ -300,6 +306,7 @@ _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv,
   {
     sbilv->j_array_a = g_new0 (gdouble, lmax + 1);
     sbilv->j_array_b = g_new0 (gdouble, lmax + 1);
+    sbilv->jl_arr    = g_new (gdouble, lmax + 1);
   }
 
   /* Allocate result matrix for batched endpoint computation (max block size is 8) */
@@ -319,10 +326,6 @@ _ncm_sbessel_integrator_levin_prepare (NcmSBesselIntegrator *sbi)
   const guint lmax                 = ncm_sbessel_integrator_get_lmax (sbi);
 
   _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, lmin, lmax);
-
-  /* Reallocate jl_arr if needed */
-  if (sbilv->jl_arr == NULL)
-    sbilv->jl_arr = g_new (gdouble, lmax + 1);
 }
 
 static gdouble
