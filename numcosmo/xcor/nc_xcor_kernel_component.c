@@ -709,11 +709,14 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
       {
         const gdouble k_eps_high = _nc_xcor_kernel_component_find_k_epsilon_high (comp, &data, k_at_max, k_valid_max);
         const gdouble k_eps_low  = _nc_xcor_kernel_component_find_k_epsilon_low (comp, &data, k_at_max, k_valid_min);
-        const gdouble k_epsilon  = GSL_MIN (k_eps_high, k_eps_low);
+        const gdouble k_epsilon  = GSL_MAX (k_eps_high, k_eps_low);
 
         ncm_vector_set (k_max_v, i, k_at_max);
         ncm_vector_set (K_max_v, i, K_max);
         ncm_vector_set (k_epsilon_v, i, k_epsilon);
+
+        printf ("y = % 22.15g: k_max = % 22.15g, K_max = % 22.15g, k_epsilon = % 22.15g, k_eps_high = % 22.15g, k_eps_low = % 22.15g\n",
+                y, k_at_max, K_max, k_epsilon, k_eps_high, k_eps_low);
       }
     }
 

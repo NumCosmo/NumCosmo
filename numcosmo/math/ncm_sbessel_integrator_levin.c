@@ -530,6 +530,7 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
           const gdouble j_l_b = sbilv->j_array_b[l];
 
           result_data[l_idx] = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
+          printf ("Integral for ell=%d: % 22.15g (error estimate: % 22.15g)\n", l, result_data[l_idx], 0.0);
         }
       }
     }
