@@ -404,8 +404,8 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
   }
 
   {
-    gdouble global_kmin = G_MAXDOUBLE;
-    gdouble global_kmax = 0.0;
+    gdouble global_kmin = 0.0;
+    gdouble global_kmax = G_MAXDOUBLE;
 
     for (i = 0; i < lid->comp_list->len; i++)
     {

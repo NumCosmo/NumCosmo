@@ -670,8 +670,6 @@ _nc_xcor_kernel_cmb_isw_prepare_non_limber (NcXcorKernelCMBISW *xcisw, NcHICosmo
   F.function = _nc_xcor_kernel_cmb_isw_kernel_eval;
   F.params   = &data;
 
-  printf ("kmin = % 22.15e, kmax = % 22.15e\n", kmin, kmax);
-
   ncm_spline_set_func_scale (NCM_SPLINE (spline), NCM_SPLINE_FUNCTION_SPLINE, &F, kmin, kmax, 0, 1.0e-4, 1.0e-6, 1, 1.0);
 
   return NCM_SPLINE (spline);
