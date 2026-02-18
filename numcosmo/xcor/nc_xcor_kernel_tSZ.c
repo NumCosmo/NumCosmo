@@ -52,6 +52,7 @@
 #include "build_cfg.h"
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_kernel_tSZ.h"
+#include "xcor/nc_xcor_kernel_component.h"
 #include "xcor/nc_xcor.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -64,12 +65,40 @@ struct _NcXcorKerneltSZ
   NcXcorKernel parent_instance;
   gdouble noise;
   gdouble zmax;
+  NcXcorKernelComponent *tsz_comp;
 };
-
 
 G_DEFINE_TYPE (NcXcorKerneltSZ, nc_xcor_kernel_tsz, NC_TYPE_XCOR_KERNEL);
 
-#define VECTOR (NCM_MODEL (xclkl)->params)
+/*
+ * tSZ Component Definition
+ * Handles the thermal Sunyaev Zel'dovich effect kernel
+ */
+
+typedef struct _tSZComponentData
+{
+  NcDistance *dist;
+  NcmPowspec *ps;
+  gdouble zmax;
+} tSZComponentData;
+
+#define _NC_XCOR_KERNEL_COMPONENT_TSZ_GET_DATA(comp) \
+        ((tSZComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
+
+static gdouble _tsz_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+static gdouble _tsz_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
+static void _tsz_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+static void _tsz_component_data_clear (tSZComponentData *data);
+static NcXcorKernelComponent *_nc_xcor_kernel_component_tsz_new (NcDistance *dist, NcmPowspec *ps, gdouble zmax);
+
+NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_TSZ,
+                                      NcXcorKernelComponenttSZ,
+                                      nc_xcor_kernel_component_tsz,
+                                      _tsz_component_eval_kernel,
+                                      _tsz_component_eval_prefactor,
+                                      _tsz_component_get_limits,
+                                      tSZComponentData,
+                                      _tsz_component_data_clear)
 
 enum
 {
@@ -81,8 +110,9 @@ enum
 static void
 nc_xcor_kernel_tsz_init (NcXcorKerneltSZ *xclkl)
 {
-  xclkl->noise = 0.0;
-  xclkl->zmax  = 0.0;
+  xclkl->noise    = 0.0;
+  xclkl->zmax     = 0.0;
+  xclkl->tsz_comp = NULL;
 }
 
 static void
@@ -124,6 +154,10 @@ _nc_xcor_kernel_tsz_get_property (GObject *object, guint prop_id, GValue *value,
 static void
 _nc_xcor_kernel_tsz_dispose (GObject *object)
 {
+  NcXcorKerneltSZ *xclkl = NC_XCOR_KERNEL_TSZ (object);
+
+  nc_xcor_kernel_component_clear (&xclkl->tsz_comp);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_tsz_parent_class)->dispose (object);
 }
@@ -137,19 +171,25 @@ _nc_xcor_kernel_tsz_finalize (GObject *object)
 
 static gdouble _nc_xcor_kernel_tsz_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 static gdouble _nc_xcor_kernel_tsz_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
-static gdouble _nc_xcor_kernel_tsz_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
-static void _nc_xcor_kernel_tsz_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 static void _nc_xcor_kernel_tsz_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_tsz_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 static guint _nc_xcor_kernel_tsz_obs_len (NcXcorKernel *xclk);
 static guint _nc_xcor_kernel_tsz_obs_params_len (NcXcorKernel *xclk);
 static void _nc_xcor_kernel_tsz_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
-static NcXcorKernelIntegrand *_nc_xcor_kernel_tsz_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
+static GPtrArray *_nc_xcor_kernel_tsz_get_component_list (NcXcorKernel *xclk);
 
 static void
 _nc_xcor_kernel_tsz_constructed (GObject *object)
 {
   G_OBJECT_CLASS (nc_xcor_kernel_tsz_parent_class)->constructed (object);
+  {
+    NcXcorKerneltSZ *xclkl = NC_XCOR_KERNEL_TSZ (object);
+    NcDistance *dist       = nc_xcor_kernel_peek_dist (NC_XCOR_KERNEL (object));
+    NcmPowspec *ps         = nc_xcor_kernel_peek_powspec (NC_XCOR_KERNEL (object));
+
+    g_assert_null (xclkl->tsz_comp);
+    xclkl->tsz_comp = _nc_xcor_kernel_component_tsz_new (dist, ps, xclkl->zmax);
+  }
 }
 
 static void
@@ -189,36 +229,12 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
   parent_class->prepare                 = &_nc_xcor_kernel_tsz_prepare;
   parent_class->add_noise               = &_nc_xcor_kernel_tsz_add_noise;
 
-  parent_class->obs_len        = &_nc_xcor_kernel_tsz_obs_len;
-  parent_class->obs_params_len = &_nc_xcor_kernel_tsz_obs_params_len;
-  parent_class->get_z_range    = &_nc_xcor_kernel_tsz_get_z_range;
-  parent_class->get_k_range    = &_nc_xcor_kernel_tsz_get_k_range_limber;
-  parent_class->get_eval       = &_nc_xcor_kernel_tsz_get_eval;
+  parent_class->obs_len            = &_nc_xcor_kernel_tsz_obs_len;
+  parent_class->obs_params_len     = &_nc_xcor_kernel_tsz_obs_params_len;
+  parent_class->get_z_range        = &_nc_xcor_kernel_tsz_get_z_range;
+  parent_class->get_component_list = &_nc_xcor_kernel_tsz_get_component_list;
 
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
-}
-
-/**
- * nc_xcor_kernel_tsz_new:
- * @dist: a #NcDistance
- * @ps: a #NcmPowspec
- * @zmax: a gdouble
- *
- * Creates a new instance of the tSZ kernel.
- *
- * Returns: (transfer full): a new #NcXcorKerneltSZ
- */
-NcXcorKerneltSZ *
-nc_xcor_kernel_tsz_new (NcDistance *dist, NcmPowspec *ps, gdouble zmax)
-{
-  NcXcorKerneltSZ *xclkl = g_object_new (NC_TYPE_XCOR_KERNEL_TSZ,
-                                         "dist", dist,
-                                         "powspec", ps,
-                                         NULL);
-
-  xclkl->zmax = zmax;
-
-  return xclkl;
 }
 
 static gdouble
@@ -246,128 +262,88 @@ _nc_xcor_kernel_tsz_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosm
 }
 
 /*
- * Limber integrand callback.
+ * Implementation of the new Component interface.
  */
 
-typedef struct _IntegData
+static void
+_tsz_component_data_clear (tSZComponentData *data)
 {
-  NcXcorKernel *xclk;
-  NcHICosmo *cosmo;
-  gdouble RH_Mpc;
-  gdouble l;
-  gdouble nu;
-  gdouble prefactor;
-} IntegData;
+  /* No need to clear, these are weak references from parent kernel */
+}
 
 static gdouble
-_nc_xcor_kernel_tsz_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+_tsz_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
 {
-  const gdouble nu         = l + 0.5;
+  tSZComponentData *data   = _NC_XCOR_KERNEL_COMPONENT_TSZ_GET_DATA (comp);
+  const gdouble z          = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble powspec    = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
+  const gdouble kernel     = 1.0 / (1.0 + z);
+  const gdouble operator_k = 1.0 / k;
+
+  return operator_k * kernel * sqrt (powspec);
+}
+
+static gdouble
+_tsz_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l)
+{
   const gdouble nc_pre_fac = ncm_c_thomson_cs () / (ncm_c_mass_e () * ncm_c_c () * ncm_c_c ());
   const gdouble units      = nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () * ncm_c_eV () / (1.0e-6);
 
-  return sqrt (M_PI / 2.0 / nu) * nc_pre_fac * units;
+  return nc_pre_fac * units;
 }
 
 static void
-_integ_data_free (gpointer data)
+_tsz_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
 {
-  IntegData *int_data = (IntegData *) data;
+  tSZComponentData *data = _NC_XCOR_KERNEL_COMPONENT_TSZ_GET_DATA (comp);
+  NcDistance *dist       = data->dist;
+  NcmPowspec *ps         = data->ps;
 
-  nc_hicosmo_clear (&int_data->cosmo);
-  g_free (data);
+  nc_distance_prepare_if_needed (dist, cosmo);
+  ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
+
+  *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-2);
+  *xi_max = nc_distance_comoving (dist, cosmo, data->zmax);
+  *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
 }
 
-static void
-_integ_data_get_range_limber (gpointer data, gdouble *kmin, gdouble *kmax)
+static NcXcorKernelComponent *
+_nc_xcor_kernel_component_tsz_new (NcDistance *dist, NcmPowspec *ps, gdouble zmax)
 {
-  IntegData *int_data   = (IntegData *) data;
-  NcDistance *dist      = nc_xcor_kernel_peek_dist (int_data->xclk);
-  NcmPowspec *ps        = nc_xcor_kernel_peek_powspec (int_data->xclk);
-  const gdouble ps_kmin = ncm_powspec_get_kmin (ps) * int_data->RH_Mpc;
-  const gdouble ps_kmax = ncm_powspec_get_kmax (ps) * int_data->RH_Mpc;
-  gdouble zmin, zmax, zmid;
+  NcXcorKernelComponent *comp = g_object_new (nc_xcor_kernel_component_tsz_get_type (), NULL);
+  tSZComponentData *data      = _NC_XCOR_KERNEL_COMPONENT_TSZ_GET_DATA (comp);
 
-  nc_xcor_kernel_get_z_range (int_data->xclk, &zmin, &zmax, &zmid);
+  data->dist = dist;
+  data->ps   = ps;
+  data->zmax = zmax;
 
-  const gdouble xi_max      = nc_distance_comoving (dist, int_data->cosmo, zmax);
-  const gdouble kmin_limber = int_data->nu / xi_max;
-
-  *kmin = GSL_MAX (ps_kmin, kmin_limber);
-  *kmax = ps_kmax;
-}
-
-static void
-_nc_xcor_kernel_tsz_eval_limber (gpointer data, gdouble k, gdouble *W)
-{
-  IntegData *int_data    = (IntegData *) data;
-  NcDistance *dist       = nc_xcor_kernel_peek_dist (int_data->xclk);
-  NcmPowspec *ps         = nc_xcor_kernel_peek_powspec (int_data->xclk);
-  const gdouble xi_nu    = int_data->nu / k;
-  const gdouble k_Mpc    = k / int_data->RH_Mpc;
-  const gdouble z        = nc_distance_inv_comoving (dist, int_data->cosmo, xi_nu);
-  const gdouble E_z      = nc_hicosmo_E (int_data->cosmo, z);
-  const gdouble powspec  = ncm_powspec_eval (ps, NCM_MODEL (int_data->cosmo), z, k_Mpc);
-  const gdouble kernel   = _nc_xcor_kernel_tsz_eval_radial_weight (int_data->xclk, int_data->cosmo, z, xi_nu, E_z);
-  const gdouble limber_k = 1.0 / k;
-
-  W[0] = int_data->prefactor * limber_k * kernel * sqrt (powspec);
-}
-
-static NcXcorKernelIntegrand *
-_nc_xcor_kernel_tsz_get_eval_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
-{
-  IntegData *int_data = g_new0 (IntegData, 1);
-
-  int_data->xclk      = xclk;
-  int_data->cosmo     = nc_hicosmo_ref (cosmo);
-  int_data->l         = l;
-  int_data->nu        = l + 0.5;
-  int_data->RH_Mpc    = nc_hicosmo_RH_Mpc (cosmo);
-  int_data->prefactor = _nc_xcor_kernel_tsz_eval_kernel_prefactor_limber (xclk, cosmo, l);
-
-  return nc_xcor_kernel_integrand_new (1,
-                                       _nc_xcor_kernel_tsz_eval_limber,
-                                       _integ_data_get_range_limber,
-                                       int_data,
-                                       _integ_data_free);
+  return comp;
 }
 
 /*
- * End Limber integrand callback.
+ * Kernel implementation.
  */
-
-static NcXcorKernelIntegrand *
-_nc_xcor_kernel_tsz_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
-{
-  return _nc_xcor_kernel_tsz_get_eval_limber (xclk, cosmo, l);
-}
-
-static void
-_nc_xcor_kernel_tsz_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
-{
-  NcDistance *dist      = nc_xcor_kernel_peek_dist (xclk);
-  NcmPowspec *ps        = nc_xcor_kernel_peek_powspec (xclk);
-  const gdouble ps_kmin = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  const gdouble ps_kmax = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  gdouble zmin, zmax, zmid;
-
-  nc_xcor_kernel_get_z_range (xclk, &zmin, &zmax, &zmid);
-
-  const gdouble nu          = l + 0.5;
-  const gdouble xi_max      = nc_distance_comoving (dist, cosmo, zmax);
-  const gdouble kmin_limber = nu / xi_max;
-
-  *kmin = GSL_MAX (ps_kmin, kmin_limber);
-  *kmax = ps_kmax;
-}
 
 static void
 _nc_xcor_kernel_tsz_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 {
   NcXcorKerneltSZ *xclkl = NC_XCOR_KERNEL_TSZ (xclk);
+  NcDistance *dist       = nc_xcor_kernel_peek_dist (xclk);
+  NcmPowspec *ps         = nc_xcor_kernel_peek_powspec (xclk);
 
-  g_return_if_fail (NC_IS_XCOR_KERNEL_TSZ (xclkl));
+  nc_distance_prepare_if_needed (dist, cosmo);
+  ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
+
+  /* Update component data with zmax if it changed */
+  {
+    tSZComponentData *data = _NC_XCOR_KERNEL_COMPONENT_TSZ_GET_DATA (xclkl->tsz_comp);
+
+    data->zmax = xclkl->zmax;
+  }
+
+  g_assert_nonnull (xclkl->tsz_comp);
+  nc_xcor_kernel_component_prepare (xclkl->tsz_comp, cosmo);
 }
 
 static void
@@ -399,5 +375,40 @@ _nc_xcor_kernel_tsz_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zma
   *zmin = 0.0;
   *zmax = xclkl->zmax;
   *zmid = xclkl->zmax / 2.0;
+}
+
+static GPtrArray *
+_nc_xcor_kernel_tsz_get_component_list (NcXcorKernel *xclk)
+{
+  NcXcorKerneltSZ *xclkl = NC_XCOR_KERNEL_TSZ (xclk);
+  GPtrArray *comp_list   = g_ptr_array_new_with_free_func (g_object_unref);
+
+  if (xclkl->tsz_comp != NULL)
+    g_ptr_array_add (comp_list, g_object_ref (xclkl->tsz_comp));
+
+  return comp_list;
+}
+
+/**
+ * nc_xcor_kernel_tsz_new:
+ * @dist: a #NcDistance
+ * @ps: a #NcmPowspec
+ * @zmax: a gdouble
+ *
+ * Creates a new instance of the tSZ kernel.
+ *
+ * Returns: (transfer full): a new #NcXcorKerneltSZ
+ */
+NcXcorKerneltSZ *
+nc_xcor_kernel_tsz_new (NcDistance *dist, NcmPowspec *ps, gdouble zmax)
+{
+  NcXcorKerneltSZ *xclkl = g_object_new (NC_TYPE_XCOR_KERNEL_TSZ,
+                                         "dist", dist,
+                                         "powspec", ps,
+                                         NULL);
+
+  xclkl->zmax = zmax;
+
+  return xclkl;
 }
 

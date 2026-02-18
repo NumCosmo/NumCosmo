@@ -113,11 +113,6 @@ struct _NcXcorKernelClass
   guint (*obs_len) (NcXcorKernel *xclk);
   guint (*obs_params_len) (NcXcorKernel *xclk);
   /* End of original XcorKernel interface */
-  /* New XcorKernel interface - build closure and closure interval*/
-  void (*get_k_range) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
-  NcXcorKernelIntegrand *(*get_eval) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
-  NcXcorKernelIntegrand *(*get_eval_vectorized) (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax);
-  /* Proposed new interface for Components*/
   GPtrArray *(*get_component_list) (NcXcorKernel *xclk);
 };
 

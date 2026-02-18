@@ -71,8 +71,6 @@ typedef struct _NcXcorKernelCMBISWPrivate
   guint Nlmax;
   gdouble xi_lss;
   gdouble z_lss;
-  NcDistance *dist;
-  NcmPowspec *ps;
   NcXcorKernelComponent *isw_comp;
 } NcXcorKernelCMBISWPrivate;
 
@@ -83,6 +81,9 @@ enum
   PROP_NL,
   PROP_SIZE,
 };
+
+
+G_DEFINE_TYPE_WITH_PRIVATE (NcXcorKernelCMBISW, nc_xcor_kernel_cmb_isw, NC_TYPE_XCOR_KERNEL);
 
 /*
  * ISW Component Definition
@@ -101,57 +102,12 @@ typedef struct _ISWComponentData
 #define _NC_XCOR_KERNEL_COMPONENT_ISW_GET_DATA(comp) \
         ((ISWComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
-static void
-_isw_component_data_clear (ISWComponentData *data)
-{
-  /* No need to clear, these are weak references from parent kernel */
-}
 
-static gdouble
-_isw_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
-{
-  /* Access data using offset from base class */
-  ISWComponentData *data       = _NC_XCOR_KERNEL_COMPONENT_ISW_GET_DATA (comp);
-  const gdouble z              = nc_distance_inv_comoving (data->dist, cosmo, xi);
-  const gdouble E_z            = nc_hicosmo_E (cosmo, z);
-  const gdouble powspec        = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
-  const gdouble dpowspec_dz    = ncm_powspec_deriv_z (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
-  const gdouble d1pz_growth_dz = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
-  const gdouble operator       = 1.0 / gsl_pow_2 (k);
-
-  return operator * E_z * d1pz_growth_dz * sqrt (powspec);
-}
-
-static gdouble
-_isw_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l)
-{
-  const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (cosmo);
-  const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
-  const gdouble Omega_m0 = Omega_c0 + Omega_b0;
-  const gdouble T_gamma0 = nc_hicosmo_T_gamma0 (cosmo);
-
-  return 3.0 * T_gamma0 * Omega_m0;
-}
-
-static void
-_isw_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
-{
-  ISWComponentData *data = _NC_XCOR_KERNEL_COMPONENT_ISW_GET_DATA (comp);
-  NcDistance *dist       = data->dist;
-  NcmPowspec *ps         = data->ps;
-
-  nc_distance_prepare_if_needed (dist, cosmo);
-  ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
-
-  {
-    const gdouble xi_lss = nc_distance_comoving_lss (dist, cosmo);
-
-    *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-2);
-    *xi_max = xi_lss;
-    *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
-    *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  }
-}
+static gdouble _isw_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
+static gdouble _isw_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
+static void _isw_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
+static void _isw_component_data_clear (ISWComponentData *data);
+static NcXcorKernelComponent *_nc_xcor_kernel_component_isw_new (NcDistance *dist, NcmPowspec *ps);
 
 NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_ISW,
                                       NcXcorKernelComponentISW,
@@ -161,21 +117,6 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_ISW,
                                       _isw_component_get_limits,
                                       ISWComponentData,
                                       _isw_component_data_clear)
-
-/* Factory function - now the type is fully defined by the macro above */
-static NcXcorKernelComponent *
-_nc_xcor_kernel_component_isw_new (NcDistance * dist, NcmPowspec * ps)
-{
-  NcXcorKernelComponent *comp = g_object_new (nc_xcor_kernel_component_isw_get_type (), NULL);
-  ISWComponentData *data      = _NC_XCOR_KERNEL_COMPONENT_ISW_GET_DATA (comp);
-
-  data->dist = dist;
-  data->ps   = ps;
-
-  return comp;
-}
-
-G_DEFINE_TYPE_WITH_PRIVATE (NcXcorKernelCMBISW, nc_xcor_kernel_cmb_isw, NC_TYPE_XCOR_KERNEL);
 
 static void
 nc_xcor_kernel_cmb_isw_init (NcXcorKernelCMBISW *xcisw)
@@ -187,8 +128,6 @@ nc_xcor_kernel_cmb_isw_init (NcXcorKernelCMBISW *xcisw)
   self->Nlmax    = 0;
   self->xi_lss   = 0.0;
   self->z_lss    = 0.0;
-  self->dist     = NULL;
-  self->ps       = NULL;
   self->isw_comp = NULL;
 }
 
@@ -260,14 +199,11 @@ _nc_xcor_kernel_cmb_isw_finalize (GObject *object)
 
 static gdouble _nc_xcor_kernel_cmb_isw_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 static gdouble _nc_xcor_kernel_cmb_isw_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
-static gdouble _nc_xcor_kernel_cmb_isw_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
-static void _nc_xcor_kernel_cmb_isw_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 static void _nc_xcor_kernel_cmb_isw_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_kernel_cmb_isw_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 static guint _nc_xcor_kernel_cmb_isw_obs_len (NcXcorKernel *xclk);
 static guint _nc_xcor_kernel_cmb_isw_obs_params_len (NcXcorKernel *xclk);
 static void _nc_xcor_kernel_cmb_isw_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
-static NcXcorKernelIntegrand *_nc_xcor_kernel_cmb_isw_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 static GPtrArray *_nc_xcor_kernel_cmb_isw_get_component_list (NcXcorKernel *xclk);
 
 static void
@@ -275,6 +211,15 @@ _nc_xcor_kernel_cmb_isw_constructed (GObject *object)
 {
   /* Chain up : start */
   G_OBJECT_CLASS (nc_xcor_kernel_cmb_isw_parent_class)->constructed (object);
+  {
+    NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (object);
+    NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
+    NcDistance *dist                       = nc_xcor_kernel_peek_dist (NC_XCOR_KERNEL (object));
+    NcmPowspec *ps                         = nc_xcor_kernel_peek_powspec (NC_XCOR_KERNEL (object));
+
+    g_assert_null (self->isw_comp);
+    self->isw_comp = NC_XCOR_KERNEL_COMPONENT (_nc_xcor_kernel_component_isw_new (dist, ps));
+  }
 }
 
 static void
@@ -325,18 +270,28 @@ nc_xcor_kernel_cmb_isw_class_init (NcXcorKernelCMBISWClass *klass)
   parent_class->get_z_range             = &_nc_xcor_kernel_cmb_isw_get_z_range;
   parent_class->eval_limber_z           = &_nc_xcor_kernel_cmb_isw_eval_limber_z;
   parent_class->eval_limber_z_prefactor = &_nc_xcor_kernel_cmb_isw_eval_limber_z_prefactor;
-
-  parent_class->prepare   = &_nc_xcor_kernel_cmb_isw_prepare;
-  parent_class->add_noise = &_nc_xcor_kernel_cmb_isw_add_noise;
-
-  parent_class->obs_len        = &_nc_xcor_kernel_cmb_isw_obs_len;
-  parent_class->obs_params_len = &_nc_xcor_kernel_cmb_isw_obs_params_len;
-  parent_class->get_k_range    = &_nc_xcor_kernel_cmb_isw_get_k_range;
-  parent_class->get_eval       = &_nc_xcor_kernel_cmb_isw_get_eval;
-
-  parent_class->get_component_list = &_nc_xcor_kernel_cmb_isw_get_component_list;
+  parent_class->prepare                 = &_nc_xcor_kernel_cmb_isw_prepare;
+  parent_class->add_noise               = &_nc_xcor_kernel_cmb_isw_add_noise;
+  parent_class->obs_len                 = &_nc_xcor_kernel_cmb_isw_obs_len;
+  parent_class->obs_params_len          = &_nc_xcor_kernel_cmb_isw_obs_params_len;
+  parent_class->get_component_list      = &_nc_xcor_kernel_cmb_isw_get_component_list;
 
   ncm_model_class_add_impl_flag (model_class, NC_XCOR_KERNEL_IMPL_ALL);
+}
+
+/*
+ * Implementation of the old limber_z interface.
+ */
+
+static void
+_nc_xcor_kernel_cmb_isw_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
+{
+  NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
+  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
+
+  *zmin = 0.0;
+  *zmax = self->z_lss;
+  *zmid = 2.0;
 }
 
 static gdouble
@@ -364,220 +319,78 @@ _nc_xcor_kernel_cmb_isw_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *
 }
 
 /*
- * Limber integrand callback.
+ * Implementation of the new Component interface.
+ *
+ * The ISW component corresponds to the full kernel in this case, since there are no separate contributions.
  */
 
-typedef struct _IntegData
+static void
+_isw_component_data_clear (ISWComponentData *data)
 {
-  NcXcorKernelCMBISW *xcisw;
-  NcHICosmo *cosmo;
-  gdouble RH_Mpc;
-  gdouble l;
-  gdouble nu;
-  gdouble prefactor;
-} IntegData;
+  /* No need to clear, these are weak references from parent kernel */
+}
 
 static gdouble
-_nc_xcor_kernel_cmb_isw_eval_kernel_prefactor_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+_isw_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
 {
-  const gdouble nu       = l + 0.5;
+  /* Access data using offset from base class */
+  ISWComponentData *data       = _NC_XCOR_KERNEL_COMPONENT_ISW_GET_DATA (comp);
+  const gdouble z              = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble E_z            = nc_hicosmo_E (cosmo, z);
+  const gdouble powspec        = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
+  const gdouble dpowspec_dz    = ncm_powspec_deriv_z (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
+  const gdouble d1pz_growth_dz = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
+  const gdouble operator       = 1.0 / gsl_pow_2 (k);
+
+  return operator * E_z * d1pz_growth_dz * sqrt (powspec);
+}
+
+static gdouble
+_isw_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l)
+{
   const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (cosmo);
   const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
   const gdouble Omega_m0 = Omega_c0 + Omega_b0;
   const gdouble T_gamma0 = nc_hicosmo_T_gamma0 (cosmo);
 
-  return sqrt (M_PI / 2.0 / nu) * 3.0 * T_gamma0 * Omega_m0;
+  return 3.0 * T_gamma0 * Omega_m0;
 }
 
 static void
-_nc_xcor_kernel_cmb_isw_get_k_range_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
+_isw_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max)
 {
-  NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
-  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
-  NcmPowspec *ps                         = nc_xcor_kernel_peek_powspec (xclk);
-  const gdouble ps_kmin                  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  const gdouble ps_kmax                  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  const gdouble nu                       = l + 0.5;
-  const gdouble kmin_limber              = nu / self->xi_lss;
+  ISWComponentData *data = _NC_XCOR_KERNEL_COMPONENT_ISW_GET_DATA (comp);
+  NcDistance *dist       = data->dist;
+  NcmPowspec *ps         = data->ps;
 
-  *kmin = GSL_MAX (ps_kmin, kmin_limber);
-  *kmax = ps_kmax;
+  nc_distance_prepare_if_needed (dist, cosmo);
+  ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
+
+  {
+    const gdouble xi_lss = nc_distance_comoving_lss (dist, cosmo);
+
+    *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-2);
+    *xi_max = xi_lss;
+    *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+    *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  }
 }
 
-static void
-_integ_data_free (gpointer data)
+static NcXcorKernelComponent *
+_nc_xcor_kernel_component_isw_new (NcDistance *dist, NcmPowspec *ps)
 {
-  IntegData *int_data = (IntegData *) data;
+  NcXcorKernelComponent *comp = g_object_new (nc_xcor_kernel_component_isw_get_type (), NULL);
+  ISWComponentData *data      = _NC_XCOR_KERNEL_COMPONENT_ISW_GET_DATA (comp);
 
-  nc_hicosmo_clear (&int_data->cosmo);
-  g_free (data);
-}
+  data->dist = dist;
+  data->ps   = ps;
 
-static void
-_integ_data_get_range_limber (gpointer data, gdouble *kmin, gdouble *kmax)
-{
-  IntegData *int_data                    = (IntegData *) data;
-  NcXcorKernelCMBISW *xcisw              = int_data->xcisw;
-  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
-  NcmPowspec *ps                         = self->ps;
-  const gdouble ps_kmin                  = ncm_powspec_get_kmin (ps) * int_data->RH_Mpc;
-  const gdouble ps_kmax                  = ncm_powspec_get_kmax (ps) * int_data->RH_Mpc;
-  const gdouble kmin_limber              = int_data->nu / self->xi_lss;
-
-  *kmin = GSL_MAX (ps_kmin, kmin_limber);
-  *kmax = ps_kmax;
-}
-
-static void
-_nc_xcor_kernel_cmb_isw_eval_limber (gpointer data, gdouble k, gdouble *W)
-{
-  IntegData *int_data                    = (IntegData *) data;
-  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (int_data->xcisw);
-  const gdouble xi_nu                    = int_data->nu / k;
-  const gdouble k_Mpc                    = k / int_data->RH_Mpc;
-  const gdouble z                        = nc_distance_inv_comoving (self->dist, int_data->cosmo, xi_nu);
-  const gdouble E_z                      = nc_hicosmo_E (int_data->cosmo, z);
-  const gdouble powspec                  = ncm_powspec_eval (self->ps, NCM_MODEL (int_data->cosmo), z, k_Mpc);
-  const gdouble dpowspec_dz              = ncm_powspec_deriv_z (self->ps, NCM_MODEL (int_data->cosmo), z, k_Mpc);
-  const gdouble d1pz_growth_dz           = 1.0 + (1.0 + z) * dpowspec_dz / (2.0 * powspec);
-  const gdouble operator_limber_k        = 1.0 / gsl_pow_3 (k);
-
-  W[0] = int_data->prefactor * operator_limber_k * E_z * d1pz_growth_dz * sqrt (powspec);
-}
-
-static NcXcorKernelIntegrand *
-_nc_xcor_kernel_cmb_isw_get_eval_limber (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
-{
-  NcXcorKernelCMBISW *xcisw = NC_XCOR_KERNEL_CMB_ISW (xclk);
-  IntegData *int_data       = g_new0 (IntegData, 1);
-
-  int_data->xcisw     = xcisw;
-  int_data->cosmo     = nc_hicosmo_ref (cosmo);
-  int_data->l         = l;
-  int_data->nu        = l + 0.5;
-  int_data->RH_Mpc    = nc_hicosmo_RH_Mpc (cosmo);
-  int_data->prefactor = _nc_xcor_kernel_cmb_isw_eval_kernel_prefactor_limber (xclk, cosmo, l);
-
-  return nc_xcor_kernel_integrand_new (1,
-                                       _nc_xcor_kernel_cmb_isw_eval_limber,
-                                       _integ_data_get_range_limber,
-                                       int_data,
-                                       _integ_data_free);
+  return comp;
 }
 
 /*
- * End Limber integrand callback.
+ * Kernel implementation.
  */
-
-/*
- * Full kernel integrand callback (using spline).
- */
-
-typedef struct _IntegDataFull
-{
-  NcXcorKernelCMBISW *xcisw;
-  NcHICosmo *cosmo;
-  gdouble RH_Mpc;
-  gint l;
-  NcmSpline *spline;
-} IntegDataFull;
-
-static void
-_integ_data_full_free (gpointer data)
-{
-  IntegDataFull *int_data = (IntegDataFull *) data;
-
-  nc_hicosmo_clear (&int_data->cosmo);
-  ncm_spline_clear (&int_data->spline);
-  g_free (data);
-}
-
-static void
-_integ_data_full_get_range (gpointer data, gdouble *kmin, gdouble *kmax)
-{
-  IntegDataFull *int_data = (IntegDataFull *) data;
-
-  ncm_spline_get_bounds (int_data->spline, kmin, kmax);
-}
-
-static void
-_nc_xcor_kernel_cmb_isw_eval_full (gpointer data, gdouble k, gdouble *W)
-{
-  IntegDataFull *int_data = (IntegDataFull *) data;
-
-  /* Evaluate the pre-computed spline */
-  W[0] = ncm_spline_eval (int_data->spline, k);
-}
-
-static NcmSpline *_nc_xcor_kernel_cmb_isw_prepare_non_limber (NcXcorKernelCMBISW *xcisw, NcHICosmo *cosmo, gint ell);
-
-static NcXcorKernelIntegrand *
-_nc_xcor_kernel_cmb_isw_get_eval_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
-{
-  NcXcorKernelCMBISW *xcisw = NC_XCOR_KERNEL_CMB_ISW (xclk);
-  IntegDataFull *int_data   = g_new0 (IntegDataFull, 1);
-
-  int_data->xcisw  = xcisw;
-  int_data->cosmo  = nc_hicosmo_ref (cosmo);
-  int_data->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-  int_data->l      = l;
-  int_data->spline = _nc_xcor_kernel_cmb_isw_prepare_non_limber (xcisw, cosmo, l);
-
-  return nc_xcor_kernel_integrand_new (1,
-                                       _nc_xcor_kernel_cmb_isw_eval_full,
-                                       _integ_data_full_get_range,
-                                       int_data,
-                                       _integ_data_full_free);
-}
-
-/*
- * End full kernel integrand callback.
- */
-
-static NcXcorKernelIntegrand *
-_nc_xcor_kernel_cmb_isw_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
-{
-  NcmSBesselIntegrator *sbi = nc_xcor_kernel_peek_integrator (xclk);
-
-  /* If no integrator is available, fall back to Limber approximation */
-  if (sbi == NULL)
-    return _nc_xcor_kernel_cmb_isw_get_eval_limber (xclk, cosmo, l);
-  else
-    /* Use full integration with spherical Bessel functions via spline */
-    return _nc_xcor_kernel_cmb_isw_get_eval_full (xclk, cosmo, l);
-}
-
-static void
-_nc_xcor_kernel_cmb_isw_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
-{
-  _nc_xcor_kernel_cmb_isw_get_k_range_limber (xclk, cosmo, l, kmin, kmax);
-}
-
-/*
- * Full kernel evaluation using ISW component.
- */
-
-static gdouble
-_nc_xcor_kernel_cmb_isw_eval_kernel (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble xi, gdouble k)
-{
-  NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
-  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
-
-  g_assert (self->isw_comp != NULL);
-
-  return nc_xcor_kernel_component_eval_kernel (self->isw_comp, cosmo, xi, k);
-}
-
-static gdouble
-_nc_xcor_kernel_cmb_isw_eval_kernel_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble k, gint l)
-{
-  NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
-  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
-
-  g_assert (self->isw_comp != NULL);
-
-  return nc_xcor_kernel_component_eval_prefactor (self->isw_comp, cosmo, k, l);
-}
 
 static void
 _nc_xcor_kernel_cmb_isw_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
@@ -588,91 +401,14 @@ _nc_xcor_kernel_cmb_isw_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   NcmPowspec *ps                         = nc_xcor_kernel_peek_powspec (xclk);
   const gdouble z_lss                    = nc_distance_decoupling_redshift (dist, cosmo);
 
-  self->dist = dist;
-  self->ps   = ps;
-
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
   self->xi_lss = nc_distance_comoving_lss (dist, cosmo);
   self->z_lss  = z_lss;
 
-  /* Create and prepare ISW component */
-  if (self->isw_comp == NULL)
-    self->isw_comp = NC_XCOR_KERNEL_COMPONENT (_nc_xcor_kernel_component_isw_new (dist, ps));
-
+  g_assert_nonnull (self->isw_comp);
   nc_xcor_kernel_component_prepare (self->isw_comp, cosmo);
-}
-
-typedef struct _NcXcorKernelCMBISWData
-{
-  NcXcorKernelCMBISW *xcisw;
-  NcHICosmo *cosmo;
-  gint l;
-  gdouble k;
-  gdouble xi_min;
-  gdouble xi_max;
-} NcXcorKernelCMBISWData;
-
-gdouble
-_nc_xcor_kernel_cmb_isw_kernel_integ (gpointer params, gdouble y)
-{
-  NcXcorKernelCMBISWData *data = (NcXcorKernelCMBISWData *) params;
-  const gdouble xi             = y / data->k;
-  const gdouble kernel         = _nc_xcor_kernel_cmb_isw_eval_kernel (NC_XCOR_KERNEL (data->xcisw), data->cosmo, xi, data->k);
-
-  return kernel;
-}
-
-gdouble
-_nc_xcor_kernel_cmb_isw_kernel_eval (gdouble k, gpointer params)
-{
-  NcXcorKernelCMBISWData *data = (NcXcorKernelCMBISWData *) params;
-  NcmSBesselIntegrator *sbi    = nc_xcor_kernel_peek_integrator (NC_XCOR_KERNEL (data->xcisw));
-
-  data->k = k;
-
-  {
-    const gdouble y_min  = k * data->xi_min;
-    const gdouble y_max  = k * data->xi_max;
-    const gdouble result = ncm_sbessel_integrator_integrate_ell (
-      sbi, _nc_xcor_kernel_cmb_isw_kernel_integ, y_min, y_max, data->l, params);
-    const gdouble prefactor = _nc_xcor_kernel_cmb_isw_eval_kernel_prefactor (
-      NC_XCOR_KERNEL (data->xcisw), data->cosmo, k, data->l);
-
-    return result * prefactor / k;
-  }
-}
-
-static NcmSpline *
-_nc_xcor_kernel_cmb_isw_prepare_non_limber (NcXcorKernelCMBISW *xcisw, NcHICosmo *cosmo, gint ell)
-{
-  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
-  NcXcorKernelCMBISWData data            = {
-    .xcisw = xcisw,
-    .cosmo = cosmo,
-  };
-  NcmSplineCubicNotaknot *spline = ncm_spline_cubic_notaknot_new ();
-  gdouble zmin, zmax, zmid;
-  gdouble kmin, kmax;
-  gsl_function F;
-
-  nc_xcor_kernel_get_k_range (NC_XCOR_KERNEL (xcisw), cosmo, ell, &kmin, &kmax);
-  nc_xcor_kernel_get_z_range (NC_XCOR_KERNEL (xcisw), &zmin, &zmax, &zmid);
-
-  kmax = nc_xcor_kernel_component_eval_k_epsilon (self->isw_comp, ell + 0.5);
-
-  zmin        = GSL_MAX (zmin, 1.0e-2); /* Avoid zero redshift for numerical stability */
-  data.xi_min = nc_distance_comoving (self->dist, cosmo, zmin);
-  data.xi_max = nc_distance_comoving (self->dist, cosmo, zmax);
-  data.l      = ell;
-
-  F.function = _nc_xcor_kernel_cmb_isw_kernel_eval;
-  F.params   = &data;
-
-  ncm_spline_set_func_scale (NCM_SPLINE (spline), NCM_SPLINE_FUNCTION_SPLINE, &F, kmin, kmax, 0, 1.0e-4, 1.0e-6, 1, 1.0);
-
-  return NCM_SPLINE (spline);
 }
 
 static void
@@ -708,17 +444,6 @@ static guint
 _nc_xcor_kernel_cmb_isw_obs_params_len (NcXcorKernel *xclk)
 {
   return 0;
-}
-
-static void
-_nc_xcor_kernel_cmb_isw_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
-{
-  NcXcorKernelCMBISW *xcisw              = NC_XCOR_KERNEL_CMB_ISW (xclk);
-  NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
-
-  *zmin = 0.0;
-  *zmax = self->z_lss;
-  *zmid = 2.0;
 }
 
 static GPtrArray *

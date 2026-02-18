@@ -216,22 +216,6 @@ _nc_xcor_kernel_get_z_range_not_implemented (NcXcorKernel *xclk, gdouble *zmin, 
 }
 
 static void
-_nc_xcor_kernel_get_k_range_not_implemented (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
-{
-  g_error ("nc_xcor_kernel_get_k_range: get_k_range virtual method not implemented for %s",
-           G_OBJECT_TYPE_NAME (xclk));
-}
-
-static NcXcorKernelIntegrand *
-_nc_xcor_kernel_get_eval_not_implemented (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
-{
-  g_error ("nc_xcor_kernel_get_eval: get_eval virtual method not implemented for %s",
-           G_OBJECT_TYPE_NAME (xclk));
-
-  return NULL; /* silence compiler warning */
-}
-
-static void
 nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -291,10 +275,7 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
   ncm_mset_model_register_id (model_class, "NcXcorKernel", "Cross-correlation Kernels",
                               NULL, TRUE, NCM_MSET_MODEL_MAIN);
 
-  klass->get_z_range         = &_nc_xcor_kernel_get_z_range_not_implemented;
-  klass->get_k_range         = &_nc_xcor_kernel_get_k_range_not_implemented;
-  klass->get_eval            = &_nc_xcor_kernel_get_eval_not_implemented;
-  klass->get_eval_vectorized = NULL; /* Optional, base class can handle */
+  klass->get_z_range = &_nc_xcor_kernel_get_z_range_not_implemented;
 }
 
 /*
@@ -875,44 +856,81 @@ nc_xcor_kernel_peek_integrator (NcXcorKernel *xclk)
 }
 
 /**
- * nc_xcor_kernel_get_k_range: (virtual get_k_range)
+ * nc_xcor_kernel_get_k_range:
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @l: multipole
  * @kmin: (out): minimum wavenumber
  * @kmax: (out): maximum wavenumber
  *
- * Gets the wavenumber range for the kernel by calling the
- * function pointer set by subclasses. This method provides optimized
- * dispatch without virtual method overhead.
- *
+ * Gets the valid k range for the kernel at multipole @l.
+ * Uses the component-based implementation.
  */
 void
 nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax)
 {
-  NC_XCOR_KERNEL_GET_CLASS (xclk)->get_k_range (xclk, cosmo, l, kmin, kmax);
+  NcXcorKernelClass *klass = NC_XCOR_KERNEL_GET_CLASS (xclk);
+  GPtrArray *comp_list     = klass->get_component_list (xclk);
+  gdouble global_kmin      = 0.0;
+  gdouble global_kmax      = G_MAXDOUBLE;
+  const gdouble nu         = l + 0.5;
+  guint i;
+
+  if ((comp_list == NULL) || (comp_list->len == 0))
+  {
+    if (comp_list != NULL)
+      g_ptr_array_unref (comp_list);
+
+    g_error ("nc_xcor_kernel_get_k_range: kernel %s returned empty component list",
+             G_OBJECT_TYPE_NAME (xclk));
+
+    return;
+  }
+
+  for (i = 0; i < comp_list->len; i++)
+  {
+    NcXcorKernelComponent *comp = g_ptr_array_index (comp_list, i);
+    gdouble xi_min, xi_max, k_min, k_max;
+
+    nc_xcor_kernel_component_get_limits (comp, cosmo, &xi_min, &xi_max, &k_min, &k_max);
+
+    {
+      const gdouble k_min_limb = nu / xi_max;
+      const gdouble k_max_limb = nu / xi_min;
+
+      k_min = GSL_MAX (k_min, k_min_limb);
+      k_max = GSL_MIN (k_max, k_max_limb);
+    }
+
+    global_kmin = GSL_MAX (global_kmin, k_min);
+    global_kmax = GSL_MIN (global_kmax, k_max);
+  }
+
+  g_ptr_array_unref (comp_list);
+
+  *kmin = global_kmin;
+  *kmax = global_kmax;
 }
 
 /**
- * nc_xcor_kernel_get_eval: (virtual get_eval)
+ * nc_xcor_kernel_get_eval:
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @l: multipole
  *
- * Gets the evaluation function for the kernel by calling the
- * function pointer set by subclasses. This method provides optimized
- * dispatch without virtual method overhead.
+ * Gets an evaluation function for the kernel at multipole @l.
+ * Convenience wrapper around nc_xcor_kernel_get_eval_vectorized() for a single multipole.
  *
  * Returns: (transfer full): the evaluation function for the kernel.
  */
 NcXcorKernelIntegrand *
 nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
-  return NC_XCOR_KERNEL_GET_CLASS (xclk)->get_eval (xclk, cosmo, l);
+  return nc_xcor_kernel_get_eval_vectorized (xclk, cosmo, l, l);
 }
 
 /**
- * nc_xcor_kernel_get_eval_vectorized: (virtual get_eval_vectorized)
+ * nc_xcor_kernel_get_eval_vectorized:
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @lmin: minimum multipole
@@ -922,8 +940,7 @@ nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
  * The returned integrand will have len = lmax - lmin + 1, and will evaluate all
  * multipoles in the range [lmin, lmax] simultaneously.
  *
- * If the kernel implements the get_eval_vectorized virtual method, it will be called.
- * Otherwise, uses the base class implementation which checks the l-limber property:
+ * Uses the base class implementation which checks the l-limber property:
  * - If lmin >= l_limber (or l_limber == 0), uses component-based Limber approximation
  * - If l_limber < 0, use the non-Limber method
  * - Otherwise falls back to single-l get_eval for lmin
@@ -933,11 +950,7 @@ nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 NcXcorKernelIntegrand *
 nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
 {
-  NcXcorKernelClass *klass  = NC_XCOR_KERNEL_GET_CLASS (xclk);
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
-
-  if (klass->get_eval_vectorized != NULL)
-    return klass->get_eval_vectorized (xclk, cosmo, lmin, lmax);
 
   if ((self->l_limber == 0) || ((self->l_limber > 0) && (lmin >= self->l_limber)))
     return _nc_xcor_kernel_build_limber_integrand (xclk, cosmo, lmin, lmax);
