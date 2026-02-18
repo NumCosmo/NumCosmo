@@ -116,7 +116,7 @@ gdouble nc_xcor_kernel_component_eval_kernel (NcXcorKernelComponent *comp, NcHIC
 gdouble nc_xcor_kernel_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 void nc_xcor_kernel_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
 
-#define NC_XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON 1.0e-6
+#define NC_XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON 1.0e-12
 
 /**
  * NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE:

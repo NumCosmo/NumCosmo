@@ -413,7 +413,7 @@ WL_SURFACE_MASS_DENSITY_DEFAULT_PCC: float = 0.8
 WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF: float = 1.0
 XCOR_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
-XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON: float = 1e-06
+XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON: float = 0.0
 XCOR_KERNEL_GAL_BIAS_DEFAULT_LEN: int = 1
 XCOR_KERNEL_GAL_DEFAULT_BIAS: float = 1.0
 XCOR_KERNEL_GAL_DEFAULT_MAG_BIAS: float = 0.4
@@ -20079,6 +20079,8 @@ class XcorKernel(NumCosmoMath.Model):
         Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20107,6 +20109,7 @@ class XcorKernel(NumCosmoMath.Model):
     class Props:
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20125,6 +20128,7 @@ class XcorKernel(NumCosmoMath.Model):
         self,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20144,6 +20148,9 @@ class XcorKernel(NumCosmoMath.Model):
     ) -> float: ...
     def do_eval_limber_z_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
     def do_get_eval(self, cosmo: HICosmo, l: int) -> XcorKernelIntegrand: ...
+    def do_get_eval_vectorized(
+        self, cosmo: HICosmo, lmin: int, lmax: int
+    ) -> XcorKernelIntegrand: ...
     def do_get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
     def do_get_z_range(self) -> typing.Tuple[float, float, float]: ...
     def do_obs_len(self) -> int: ...
@@ -20158,7 +20165,11 @@ class XcorKernel(NumCosmoMath.Model):
     def eval_limber_z_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
     def free(self) -> None: ...
     def get_eval(self, cosmo: HICosmo, l: int) -> XcorKernelIntegrand: ...
+    def get_eval_vectorized(
+        self, cosmo: HICosmo, lmin: int, lmax: int
+    ) -> XcorKernelIntegrand: ...
     def get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
+    def get_l_limber(self) -> int: ...
     def get_lmax(self) -> int: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
     @staticmethod
@@ -20172,6 +20183,7 @@ class XcorKernel(NumCosmoMath.Model):
     def peek_powspec(self) -> NumCosmoMath.Powspec: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> XcorKernel: ...
+    def set_l_limber(self, l_limber: int) -> None: ...
     def set_lmax(self, lmax: int) -> None: ...
 
 class XcorKernelCMBISW(XcorKernel):
@@ -20200,6 +20212,8 @@ class XcorKernelCMBISW(XcorKernel):
         Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20230,6 +20244,7 @@ class XcorKernelCMBISW(XcorKernel):
         recomb: Recomb
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20249,6 +20264,7 @@ class XcorKernelCMBISW(XcorKernel):
         recomb: Recomb = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20306,6 +20322,8 @@ class XcorKernelCMBLensing(XcorKernel):
         Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20336,6 +20354,7 @@ class XcorKernelCMBLensing(XcorKernel):
         recomb: Recomb
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20355,6 +20374,7 @@ class XcorKernelCMBLensing(XcorKernel):
         recomb: Recomb = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20406,6 +20426,9 @@ class XcorKernelClass(GObject.GPointer):
         [XcorKernel, HICosmo, int], typing.Tuple[float, float]
     ] = ...
     get_eval: typing.Callable[[XcorKernel, HICosmo, int], XcorKernelIntegrand] = ...
+    get_eval_vectorized: typing.Callable[
+        [XcorKernel, HICosmo, int, int], XcorKernelIntegrand
+    ] = ...
     get_component_list: None = ...
 
 class XcorKernelComponent(GObject.Object):
@@ -20535,6 +20558,8 @@ class XcorKernelGal(XcorKernel):
         Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20574,6 +20599,7 @@ class XcorKernelGal(XcorKernel):
         noise_bias_fit: bool
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20602,6 +20628,7 @@ class XcorKernelGal(XcorKernel):
         noise_bias_fit: bool = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20694,6 +20721,8 @@ class XcorKernelWeakLensing(XcorKernel):
         Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20725,6 +20754,7 @@ class XcorKernelWeakLensing(XcorKernel):
         nbar: float
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20745,6 +20775,7 @@ class XcorKernelWeakLensing(XcorKernel):
         nbar: float = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,
@@ -20796,6 +20827,8 @@ class XcorKerneltSZ(XcorKernel):
         Spherical Bessel integrator object
       lmax -> guint: lmax
         Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20825,6 +20858,7 @@ class XcorKerneltSZ(XcorKernel):
         noise: float
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
         lmax: int
         powspec: NumCosmoMath.Powspec
         implementation: int
@@ -20843,6 +20877,7 @@ class XcorKerneltSZ(XcorKernel):
         noise: float = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
         lmax: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reparam: NumCosmoMath.Reparam = ...,

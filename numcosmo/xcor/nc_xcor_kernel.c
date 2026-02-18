@@ -506,7 +506,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
   NonLimberIntegrandData *nlid = g_new0 (NonLimberIntegrandData, 1);
   guint n_l                    = lmax - lmin + 1;
   NcmVector *integ_result      = ncm_vector_new (n_l);
-  const guint n_k              = 2000;
+  const guint n_k              = 200;
   NcmVector *k_vec             = ncm_vector_new (n_k);
   GPtrArray *comp_list         = klass->get_component_list (xclk);
 
@@ -560,13 +560,10 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
 
         nc_xcor_kernel_component_get_limits (comp, cosmo, &xi_min[i], &xi_max[i], &k_min, &k_max);
 
-        printf ("Component %u: xi_min = % 22.15g, xi_max = % 22.15g, k_min = % 22.15g, k_max = % 22.15g\n",
-                i, xi_min[i], xi_max[i], k_min, k_max);
         k_max = GSL_MIN (k_max, nc_xcor_kernel_component_eval_k_epsilon (comp, nu));
 
         global_kmin = GSL_MAX (global_kmin, k_min);
         global_kmax = GSL_MIN (global_kmax, k_max);
-        printf ("Component %u: global_kmin = % 22.15g, global_kmax = % 22.15g\n", i, global_kmin, global_kmax);
       }
 
       nlid->k_min = global_kmin;
@@ -591,8 +588,6 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
 
           ncm_sbessel_integrator_integrate (
             self->sbi, _nc_xcor_kernel_component_kernel_integ, y_min, y_max, integ_result, &params);
-
-          printf ("k = % 22.15g, y_min = % 22.15g, y_max = % 22.15g\n", k, y_min, y_max);
 
           for (n = 0; n < n_l; n++)
           {
