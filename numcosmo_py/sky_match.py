@@ -12,11 +12,10 @@ from typing_extensions import assert_never
 import numpy as np
 import numpy.typing as npt
 
-from astropy.table import Table
+from astropy.table import Table, join
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.helper import npa_to_seq
 
-import pandas as pd
 import networkx as nx
 import random
 
@@ -86,7 +85,7 @@ class SharedFractionMethod(str, Enum):
     QUERY_PMEM = auto()
     PMEM = auto()
 
- class DistanceMethod(str, Enum):
+class DistanceMethod(str, Enum):
     """Distance method to use in the matching.
 
     :param ANGULAR_SEPARATION: Angular separation between the objects.
@@ -296,7 +295,7 @@ class SkyMatchIDResult:
     def _get_by_indices(
         self,
         x: npt.NDArray,
-        indices: 
+        indices: list[int] | npt.NDArray
     ) -> list[npt.NDArray]:
         assert len(x.shape) == 1
         return [x[i] for i in indices]
@@ -315,17 +314,15 @@ class SkyMatchIDResult:
         
         matched_query_id, matched_match_id, linking_coef = zip(*self.matched_pairs)
               
-        boolean_mask = np.isin(self.match_data[self.match_coordinates["ID"]], matched_match_id)
+        mask = np.isin(self.match_data[self.match_coordinates["ID"]], matched_match_id)
         
-        indices = np.where(boolean_mask)[0]
-
-
+        indices = np.where(mask)[0]
 
         table = Table()
         table["ID"] = matched_query_id
-        table["RA"] = self.sky_match.query_ra[]
-        table["DEC"] = self.sky_match.query_dec[]
-        table["z"] = self.sky_match.query_z[]
+        table["RA"] = self.sky_match.query_ra[indices]
+        table["DEC"] = self.sky_match.query_dec[indices]
+        table["z"] = self.sky_match.query_z[indices]
 
         if query_properties is not None:
             assert isinstance(query_properties, dict)
@@ -356,7 +353,8 @@ class SkyMatchIDResult:
             self.sky_match.match_z, indices
         )
         return table
-
+ 
+    
     def to_table_best(
         self,
         *,
@@ -460,7 +458,6 @@ class SkyMatchResult:
 
         if mask is None:
             mask = self.full_mask()
-
         if query_sigma_z_column is None:
             query_delta_z = n_sigma * sigma_z * (1.0 + self.sky_match.query_z)
         else:
@@ -711,6 +708,19 @@ class SkyMatch:
 
         return theta, phi
 
+    def object_count(self, id_column: np.ndarray) -> Table:
+        """Return the number of occurrences for each unique object ID.
+
+        :param id_column: The array or column containing the object IDs to be counted.
+        :return: A table containing two columns:
+        - ``id``: The unique object IDs found in the input.
+        - ``nmem``: The count of occurrences for each ID.
+        """
+
+        ids, counts = np.unique(id_column, return_counts=True)
+
+        return Table({'id': ids, 'nmem': counts})
+
     @property
     def query_ra(self) -> np.ndarray:
         """Return the RA coordinates of the query catalog."""
@@ -926,79 +936,115 @@ class SkyMatch:
 
         # Preparing the catalogs for the matching
 
-        query_df = self.query_data.to_pandas()    
-        match_df = self.match_data.to_pandas()
+        query_table = self.query_data.copy()
+        query_table.rename_column('ID', 'query_id')
+        
+        match_table = self.match_data.copy()
+        match_table.rename_column('ID', 'match_id')
 
-        # Member numbers:
-        nmem_query = pd.DataFrame(query_df['ID'].value_counts())
-        nmem_match = pd.DataFrame(match_df['ID'].value_counts())
+        if 'pmem' in query_table.colnames:
+            query_table.rename_column('pmem', 'pmem_query')
+        if 'pmem' in match_table.colnames:
+            match_table.rename_column('pmem', 'pmem_match')
+
+       
+        # Matching the catalogs by MemberID
+
+        matched_catalog = join(query_table, match_table, keys='MemberID', join_type='inner')
         
-        # It adds the 'members number' column to the catalogs:
-        query_df_prepared = pd.merge(nmem_query, query_df, how='inner', on=['ID']).rename(columns={'count': 'nmem_query', 'ID': 'query_id'})
-        match_df_prepared = pd.merge(nmem_match, match_df, how='inner', on=['ID']).rename(columns={'count': 'nmem_match', 'ID': 'match_id'})
-                
-        # Matching the catalogs by MemberID:
-        matched_catalog = pd.merge(query_df_prepared, match_df_prepared, how='inner', on=['MemberID'])
+        matched_catalog_grouped = matched_catalog.group_by(['query_id', 'match_id'])
         
-        # Evaluating the shared fraction of members between the matched objects:
-        shared_count = matched_catalog.groupby(['query_id', 'match_id'])['match_id'].transform('count')
+        all_combinations = matched_catalog_grouped.groups.keys # Table with the multiple matched query_id-match_id pairs
+
+        
+        # Evaluating 'number of members' for each object in the catalogs
+        
+        nmem_query = self.object_count(query_table['query_id'])
+        nmem_query.rename_columns(['id', 'nmem'], ['query_id', 'nmem_query'])
+
+        nmem_match = self.object_count(match_table['match_id'])
+        nmem_match.rename_columns(['id', 'nmem'], ['match_id', 'nmem_match'])          
+        
+        
+        # Adding the nmem_query and nmem_match columns to all_combinations table 
+
+        all_combinations = join(all_combinations, nmem_query, keys='query_id', join_type='left')
+        all_combinations = join(all_combinations, nmem_match, keys='match_id', join_type='left')
+
+        # Evaluating the shared fraction of members between the matched objects
+
+        all_combinations['shared_count'] = matched_catalog_grouped.groups.aggregate(np.size)['MemberID']
+
+        fraction_query = None
+        fraction_match = None
 
         match shared_fraction_method:
             case SharedFractionMethod.NO_PMEM:
-                fraction_query = shared_count / matched_catalog['nmem_query']
-                fraction_match = shared_count / matched_catalog['nmem_match']
+                fraction_query = all_combinations['shared_count'] / all_combinations['nmem_query']
+                fraction_match = all_combinations['shared_count'] / all_combinations['nmem_match']
 
             case SharedFractionMethod.QUERY_PMEM:
+                if "pmem_query" not in matched_catalog.colnames:
+                    raise ValueError("To perform a matching, pmem column must be provided for the query catalog.")
                 
-                if ("pmem" not in self.query_coordinates):
-                    raise ValueError(
-                        "To perform a matching, "
-                        "the pmem column must be provided for the query catalog."
-                    )
+                all_combinations['sum_shared_pmem'] = matched_catalog_grouped.groups.aggregate(np.sum)['pmem_query']
+
+                query_group = query_table.group_by(['query_id'])
+
+                total_pmem = query_group.groups.aggregate(np.sum)['query_id', 'pmem_query']
+                total_pmem.rename_column('pmem_query', 'sum_total_pmem')
                 
-                fraction_query = matched_catalog.groupby(['query_id', 'match_id'])['pmem'].transform('sum') / matched_catalog.groupby(['query_id'])['pmem'].transform('sum') 
-                fraction_match = shared_count / matched_catalog['nmem_match']
+                all_combinations = join(all_combinations, total_pmem, keys='query_id')
+                
+                fraction_query = all_combinations['sum_shared_pmem'] / all_combinations['sum_total_pmem']
+                fraction_match = all_combinations['shared_count'] / all_combinations['nmem_match']
                 
             case SharedFractionMethod.MATCH_PMEM:
+                if "pmem_match" not in matched_catalog.colnames:
+                    raise ValueError("To perform a matching, pmem column must be provided for the match catalog.")
 
-                if ("pmem" not in self.match_coordinates):
-                    raise ValueError(
-                        "To perform a matching, "
-                        "the pmem column must be provided for the match catalog."
-                    )
+                all_combinations['sum_shared_pmem'] = matched_catalog_grouped.groups.aggregate(np.sum)['pmem_match']
+
+                match_group = match_table.group_by(['match_id'])
+                total_pmem = match_group.groups.aggregate(np.sum)['match_id', 'pmem_match']
+                total_pmem.rename_column('pmem_match', 'sum_total_pmem')
                 
-                fraction_query = shared_count / matched_catalog['nmem_query']
-                fraction_match = matched_catalog.groupby(['query_id', 'match_id'])['pmem'].transform('sum') / matched_catalog.groupby(['match_id'])['pmem'].transform('sum')
-    
-                
+                all_combinations = join(all_combinations, total_pmem, keys='match_id')
+
+                fraction_query = all_combinations['shared_count'] / all_combinations['nmem_query']
+                fraction_match = all_combinations['sum_shared_pmem'] / all_combinations['sum_total_pmem']
+
             case SharedFractionMethod.PMEM:
+                if "pmem_query" not in matched_catalog.colnames or "pmem_match" not in matched_catalog.colnames:
+                    raise ValueError("To perform a matching, pmem column must be provided for both catalogs.")
                 
-                if ("pmem" not in self.query_coordinates) or ("pmem" not in self.match_coordinates):
-                    raise ValueError(
-                        "To perform a matching, "
-                        "the pmem column must be provided for both catalogs."
-                    )
+                all_combinations['sum_shared_pmem_query'] = matched_catalog_grouped.groups.aggregate(np.sum)['pmem_query']
+                all_combinations['sum_shared_pmem_match'] = matched_catalog_grouped.groups.aggregate(np.sum)['pmem_match']
                 
-                fraction_query = matched_catalog.groupby(['query_id', 'match_id'])['pmem'].transform('sum') / matched_catalog.groupby(['query_id'])['pmem'].transform('sum') 
-                fraction_match = matched_catalog.groupby(['query_id', 'match_id'])['pmem'].transform('sum') / matched_catalog.groupby(['match_id'])['pmem'].transform('sum')
+                query_group = query_table.group_by(['query_id'])
+                sum_total_pmem_query = query_group.groups.aggregate(np.sum)['query_id', 'pmem_query']
+                sum_total_pmem_query.rename_column('pmem_query', 'sum_total_pmem_query')
                 
-            case _ as unreachable:  # pragma: no cover
+                match_group = match_table.group_by(['match_id'])
+                sum_total_pmem_match = match_group.groups.aggregate(np.sum)['match_id', 'pmem_match']
+                sum_total_pmem_match.rename_column('pmem_match', 'sum_total_pmem_match')
+                
+                all_combinations = join(all_combinations, sum_total_pmem_query, keys='query_id')
+                all_combinations = join(all_combinations, sum_total_pmem_match, keys='match_id')
+                
+                fraction_query = all_combinations['sum_shared_pmem_query'] / all_combinations['sum_total_pmem_query']
+                fraction_match = all_combinations['sum_shared_pmem_match'] / all_combinations['sum_total_pmem_match']
+
+            case _ as unreachable:
                 assert_never(unreachable)
 
-        
-        matched_catalog['shared_num'] = shared_count
-        matched_catalog['fraction_query'] = fraction_query
-        matched_catalog['fraction_match'] = fraction_match
-
-        all_combinations = matched_catalog.copy().drop_duplicates(subset=['query_id', 'match_id']) 
-        
-        # LINKING COEFFICIENT:
-        all_combinations['linking_coefficient'] = fraction_query * ( fraction_query + fraction_match ) / 2
+        linking_coefficient = fraction_query * (fraction_query + fraction_match) / 2
         
         matched_pairs = list(zip(
             all_combinations['query_id'], 
             all_combinations['match_id'], 
-            all_combinations['linking_coefficient']
+            linking_coefficient
         ))
-        
+
         return SkyMatchIDResult(self, matched_pairs)
+                
