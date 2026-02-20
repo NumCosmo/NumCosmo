@@ -211,6 +211,25 @@ def _check_coordinates(table: Table, coordinates: Coordinates) -> None:
             f"not found in the provided catalog {table.columns}."
         )
 
+def _check_ID(table: Table, ids: IDs) -> None:
+    """Check if the IDs are provided.
+
+    :param table: fits table to be used with the IDs.
+    :param ids: IDs we need to check to do the matching.
+
+    The function checks if the IDs are provided in the table.
+    """
+    if ("ID" not in ids) or ("MemberID" not in ids):
+        raise ValueError("ID and MemberID must be provided.")
+
+    if (ids["ID"] not in table.columns) or (
+        ids["MemberID"] not in table.columns
+    ):
+        raise ValueError(
+            f"ID and MemberID coordinates mapped by {ids} "
+            f"not found in the provided catalog {table.columns}."
+        )
+
 
 def _load_fits_data(catalog: Path) -> Table:
     """Load FITS data from the provided catalog path.
@@ -911,8 +930,10 @@ class SkyMatch:
 
     def match_id(
         self,
+        query_id: IDs,
+        match_id: IDs,
         shared_fraction_method: SharedFractionMethod = SharedFractionMethod.NO_PMEM,
-    ) -> SkyMatchIDResult:
+    ) : #-> SkyMatchIDResult:
         """Match objects in the sky.
 
         The function matches objects in the sky using the provided ids.
@@ -921,23 +942,15 @@ class SkyMatch:
         :return: astropy_table: matched: table with all candidates of matched objects,
         :best_matched: table with the best candidate of matched objects
         """
-        if ("ID" not in self.match_data) or ("ID" not in self.query_data):
-            raise ValueError(
-                "To perform a matching, "
-                "the ID column must be provided for both catalogs."
-            )
+
+        _check_ID(self.query_data, query_id)
+        _check_ID(self.match_data, match_id)
         
-        if ("MemberID" not in self.match_data) or ("MemberID" not in self.query_data):
-            raise ValueError(
-                "To perform a matching, "
-                "the MemberID column must be provided for both catalogs."
-            )
-             
 
         # Preparing the catalogs for the matching
 
-        query_table = self.query_data.copy()
-        query_table.rename_column('ID', 'query_id')
+        query_table = self.query_data.copy()        
+        query_table.rename_column(query_id['ID'], 'query_id')
         
         match_table = self.match_data.copy()
         match_table.rename_column('ID', 'match_id')
