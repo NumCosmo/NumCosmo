@@ -1130,6 +1130,20 @@ nc_xcor_kernel_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   return NC_XCOR_KERNEL_GET_CLASS (xclk)->prepare (xclk, cosmo);
 }
 
+/**
+ * nc_xcor_kernel_get_component_list: (virtual get_component_list)
+ * @xclk: a #NcXcorKernel
+ *
+ * Gets the list of components that make up this kernel.
+ *
+ * Returns: (transfer container) (element-type NcXcorKernelComponent): a #GPtrArray of #NcXcorKernelComponent
+ */
+GPtrArray *
+nc_xcor_kernel_get_component_list (NcXcorKernel *xclk)
+{
+  return NC_XCOR_KERNEL_GET_CLASS (xclk)->get_component_list (xclk);
+}
+
 static void
 _nc_xcor_kernel_log_all_models_go (GType model_type, guint n)
 {

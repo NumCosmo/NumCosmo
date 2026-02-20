@@ -181,6 +181,8 @@ gdouble nc_xcor_kernel_eval_limber_z_full (NcXcorKernel *xclk, NcHICosmo *cosmo,
 void nc_xcor_kernel_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo);
 void nc_xcor_kernel_add_noise (NcXcorKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 
+GPtrArray *nc_xcor_kernel_get_component_list (NcXcorKernel *xclk);
+
 void nc_xcor_kernel_log_all_models (void);
 
 GType nc_xcor_kernel_integrand_get_type (void) G_GNUC_CONST;

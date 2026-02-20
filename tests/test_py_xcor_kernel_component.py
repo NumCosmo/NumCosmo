@@ -22,8 +22,21 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Unit tests for NcXcorKernelComponent."""
+"""Unit tests for NcXcorKernelComponent.
 
+This test file has two main purposes:
+1. Test the NcXcorKernelComponent interface through NcTestXcorKernelComponent
+2. Test that real kernels properly create and return components via
+   get_component_list(), and that those components satisfy the component
+   interface requirements
+
+Test organization:
+- Group 1: NcTestXcorKernelComponent tests (direct component interface)
+- Group 2: Real kernel components tests (via get_component_list)
+- Group 3: Kernel-specific tests (kernel interface, not components)
+"""
+
+from typing import Callable
 import pytest
 from numpy.testing import assert_allclose
 import numpy as np
@@ -136,18 +149,58 @@ def fixture_test_component() -> NcTestXcorKernelComponent:
     return comp
 
 
-@pytest.fixture(name="integrator")
+@pytest.fixture(name="integrator", scope="module")
 def fixture_integrator() -> Ncm.SBesselIntegrator:
     """Create a simple spherical Bessel integrator."""
     integrator = Ncm.SBesselIntegratorLevin.new(0, 2000)
     return integrator
 
 
-@pytest.fixture(name="gal_component")
-def fixture_gal_component(
+@pytest.fixture(name="gal_kernel")
+def fixture_gal_kernel(
     cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
 ) -> Nc.XcorKernelGal:
     """Create a galaxy kernel with clustering component."""
+    return _create_galaxy_kernel(cosmology, integrator)
+
+
+@pytest.fixture(name="cmb_lensing_kernel")
+def fixture_cmb_lensing_kernel(
+    cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
+) -> Nc.XcorKernelCMBLensing:
+    """Create a CMB lensing kernel."""
+    return _create_cmb_lensing_kernel(cosmology, integrator)
+
+
+@pytest.fixture(name="cmb_isw_kernel")
+def fixture_cmb_isw_kernel(
+    cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
+) -> Nc.XcorKernelCMBISW:
+    """Create a CMB ISW kernel."""
+    return _create_cmb_isw_kernel(cosmology, integrator)
+
+
+@pytest.fixture(name="tsz_kernel")
+def fixture_tsz_kernel(
+    cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
+) -> Nc.XcorKerneltSZ:
+    """Create a tSZ kernel."""
+    return _create_tsz_kernel(cosmology, integrator)
+
+
+@pytest.fixture(name="weak_lensing_kernel")
+def fixture_weak_lensing_kernel(
+    cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
+) -> Nc.XcorKernelWeakLensing:
+    """Create a weak lensing kernel."""
+    return _create_weak_lensing_kernel(cosmology, integrator)
+
+
+# Helper functions to create kernel instances
+def _create_galaxy_kernel(
+    cosmology: Cosmology, integrator: Ncm.SBesselIntegrator, domagbias: bool = False
+) -> Nc.XcorKernelGal:
+    """Helper to create a galaxy kernel."""
     dn_dz = Ncm.SplineCubicNotaknot()
     z_array = np.linspace(0.1, 2.0, 50)
     dndz_array = np.exp(-((z_array - 0.8) ** 2) / (2.0 * 0.3**2))
@@ -158,62 +211,62 @@ def fixture_gal_component(
     dn_dz.set(xv, yv, True)
 
     gal = Nc.XcorKernelGal(
-        dndz=dn_dz, dist=cosmology.dist, powspec=cosmology.ps_ml, integrator=integrator
+        dndz=dn_dz,
+        dist=cosmology.dist,
+        powspec=cosmology.ps_ml,
+        integrator=integrator,
+        domagbias=domagbias,
     )
     gal["bparam_0"] = 1.5
     return gal
 
 
-@pytest.fixture(name="cmb_lensing_component")
-def fixture_cmb_lensing_component(
+def _create_cmb_lensing_kernel(
     cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
 ) -> Nc.XcorKernelCMBLensing:
-    """Create a CMB lensing kernel component."""
+    """Helper to create a CMB lensing kernel."""
     lmax = 1000
     ell_vec = Ncm.Vector.new_array(np.arange(lmax + 1).tolist())
-    cmb_lens = Nc.XcorKernelCMBLensing(
+    return Nc.XcorKernelCMBLensing(
         dist=cosmology.dist,
         powspec=cosmology.ps_ml,
         recomb=cosmology.recomb,
         Nl=ell_vec,
         integrator=integrator,
     )
-    return cmb_lens
 
 
-@pytest.fixture(name="cmb_isw_component")
-def fixture_cmb_isw_component(
+def _create_cmb_isw_kernel(
     cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
 ) -> Nc.XcorKernelCMBISW:
-    """Create a CMB ISW kernel component."""
+    """Helper to create a CMB ISW kernel."""
     lmax = 1000
     ell_vec = Ncm.Vector.new_array(np.arange(lmax + 1).tolist())
-    cmb_isw = Nc.XcorKernelCMBISW(
+    return Nc.XcorKernelCMBISW(
         dist=cosmology.dist,
         powspec=cosmology.ps_ml,
         recomb=cosmology.recomb,
         Nl=ell_vec,
         integrator=integrator,
     )
-    return cmb_isw
 
 
-@pytest.fixture(name="tsz_component")
-def fixture_tsz_component(
+def _create_tsz_kernel(
     cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
 ) -> Nc.XcorKerneltSZ:
-    """Create a tSZ kernel component."""
-    tsz = Nc.XcorKerneltSZ(
-        dist=cosmology.dist, powspec=cosmology.ps_ml, zmax=6.0, integrator=integrator
+    """Helper to create a tSZ kernel."""
+    return Nc.XcorKerneltSZ(
+        dist=cosmology.dist,
+        powspec=cosmology.ps_ml,
+        zmax=6.0,
+        integrator=integrator,
     )
-    return tsz
 
 
-@pytest.fixture(name="weak_lensing_component")
-def fixture_weak_lensing_component(
+def _create_weak_lensing_kernel(
     cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
 ) -> Nc.XcorKernelWeakLensing:
-    """Create a weak lensing kernel component."""
+    """Helper to create a weak lensing kernel."""
     dn_dz = Ncm.SplineCubicNotaknot()
     z_array = np.linspace(0.1, 3.0, 50)
     dndz_array = (z_array / 1.0) ** 2 * np.exp(-((z_array / 1.0) ** 1.5))
@@ -223,13 +276,115 @@ def fixture_weak_lensing_component(
     yv = Ncm.Vector.new_array(dndz_array.tolist())
     dn_dz.set(xv, yv, True)
 
-    wl = Nc.XcorKernelWeakLensing(
+    return Nc.XcorKernelWeakLensing(
         dndz=dn_dz,
         dist=cosmology.dist,
         powspec=cosmology.ps_ml,
         integrator=integrator,
     )
-    return wl
+
+
+def _collect_all_components(
+    cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
+) -> list[tuple[str, Nc.XcorKernelComponent, Nc.XcorKernel | None]]:
+    """Collect all components from all kernel types.
+
+    Returns a list of tuples: (component_id, component, kernel)
+    This function discovers all components dynamically.
+    """
+    cosmo = cosmology.cosmo
+    all_components: list[tuple[str, Nc.XcorKernelComponent, Nc.XcorKernel | None]] = []
+
+    # Test component (doesn't come from a kernel)
+    test_comp = NcTestXcorKernelComponent()
+    test_comp.prepare(cosmo)
+    all_components.append((test_comp.__class__.__name__, test_comp, None))
+
+    # Define all kernel types to test
+    kernels_to_create: list[Callable[[], Nc.XcorKernel]] = [
+        lambda: _create_galaxy_kernel(cosmology, integrator, domagbias=True),
+        lambda: _create_cmb_lensing_kernel(cosmology, integrator),
+        lambda: _create_cmb_isw_kernel(cosmology, integrator),
+        lambda: _create_tsz_kernel(cosmology, integrator),
+        lambda: _create_weak_lensing_kernel(cosmology, integrator),
+    ]
+
+    # Create each kernel and extract its components
+    for kernel_factory in kernels_to_create:
+        kernel = kernel_factory()
+        kernel_name = kernel.__class__.__name__.replace("XcorKernel", "")
+        comp_list = kernel.get_component_list()
+        kernel.prepare(cosmo)  # Ensure kernel is prepared before testing components
+
+        # Add each component with a unique ID
+        for comp in comp_list:
+            comp_name = comp.__class__.__name__.replace("NcXcorKernelComponent", "")
+            all_components.append((f"{kernel_name}:{comp_name}", comp, kernel))
+
+    return all_components
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    """Dynamically generate tests for all component types."""
+    if "component_case" in metafunc.fixturenames:
+        # build minimal objects manually or from config
+        cosmology = Cosmology.default()
+        integrator = Ncm.SBesselIntegratorLevin.new(0, 2000)
+
+        cases = _collect_all_components(cosmology, integrator)
+        ids = [comp_id for comp_id, _, _ in cases]
+        metafunc.parametrize("component_case", cases, ids=ids)
+
+
+# =============================================================================
+# Group 1: NcTestXcorKernelComponent Tests (Direct Component Interface)
+# =============================================================================
+
+
+def test_any_component_interface(
+    component_case: tuple[str, Nc.XcorKernelComponent, Nc.XcorKernel | None],
+    cosmology: Cosmology,
+) -> None:
+    """Test that any component satisfies the basic interface.
+
+    This test uses the parametrized any_component fixture to test all
+    component types with the same interface requirements.
+    """
+    _, any_component, _ = component_case
+    cosmo = cosmology.cosmo
+
+    # All components should be instances of NcXcorKernelComponent
+    assert isinstance(any_component, Nc.XcorKernelComponent)
+
+    # Test get_limits
+    xi_min, xi_max, k_min, k_max = any_component.get_limits(cosmo)
+    assert np.isfinite(xi_min) and xi_min > 0.0
+    assert np.isfinite(xi_max) and xi_max > xi_min
+    assert np.isfinite(k_min) and k_min > 0.0
+    assert np.isfinite(k_max) and k_max > k_min
+
+    # Test eval_kernel at a sample point
+    xi_test = (xi_min + xi_max) / 2.0
+    k_test = np.sqrt(k_min * k_max)  # Geometric mean
+    result = any_component.eval_kernel(cosmo, xi_test, k_test)
+    assert np.isfinite(result)
+
+    # Test eval_prefactor
+    prefactor = any_component.eval_prefactor(cosmo, k_test, 100)
+    assert np.isfinite(prefactor)
+
+    # Test property getters
+    epsilon = any_component.get_epsilon()
+    assert np.isfinite(epsilon) and epsilon > 0.0
+
+    ny = any_component.get_ny()
+    assert isinstance(ny, int) and ny > 0
+
+    max_iter = any_component.get_max_iter()
+    assert isinstance(max_iter, int) and max_iter > 0
+
+    tol = any_component.get_tol()
+    assert np.isfinite(tol) and tol > 0.0
 
 
 def test_component_creation(test_component: NcTestXcorKernelComponent) -> None:
@@ -339,174 +494,6 @@ def test_component_prepare(
         assert np.isfinite(k_epsilon) and k_epsilon > 0.0
 
 
-# Tests for real components (Galaxy, CMB, etc.)
-
-
-def test_gal_clustering_component(
-    gal_component: Nc.XcorKernelGal, cosmology: Cosmology
-) -> None:
-    """Test that galaxy kernel creates components correctly."""
-    cosmo = cosmology.cosmo
-    dist = cosmology.dist
-    assert gal_component is not None
-
-    # Prepare the kernel
-    gal_component.prepare(cosmo)
-
-    # The galaxy kernel should create a clustering component
-    # We can't directly access components, but we can test the kernel works
-    z_array = np.linspace(0.1, 1.5, 10)
-    ell = 100
-
-    for z in z_array:
-        result = gal_component.eval_limber_z_full(cosmo, z, dist, ell)
-        assert np.isfinite(result)
-
-
-def test_cmb_lensing_component(
-    cmb_lensing_component: Nc.XcorKernelCMBLensing, cosmology: Cosmology
-) -> None:
-    """Test CMB lensing kernel component."""
-    cosmo = cosmology.cosmo
-    dist = cosmology.dist
-    cmb_lens = cmb_lensing_component
-    cmb_lens.prepare(cosmo)
-
-    # Test basic kernel evaluation
-    z_array = np.linspace(0.1, 2.0, 10)
-    ell = 100
-
-    for z in z_array:
-        result = cmb_lens.eval_limber_z_full(cosmo, z, dist, ell)
-        assert np.isfinite(result)
-
-
-def test_cmb_isw_component(
-    cmb_isw_component: Nc.XcorKernelCMBISW, cosmology: Cosmology
-) -> None:
-    """Test CMB ISW kernel component."""
-    cosmo = cosmology.cosmo
-    dist = cosmology.dist
-    cmb_isw = cmb_isw_component
-    cmb_isw.prepare(cosmo)
-
-    # Test basic kernel evaluation
-    z_array = np.linspace(0.1, 2.0, 10)
-    ell = 100
-
-    for z in z_array:
-        result = cmb_isw.eval_limber_z_full(cosmo, z, dist, ell)
-        assert np.isfinite(result)
-
-
-def test_tsz_component(tsz_component: Nc.XcorKerneltSZ, cosmology: Cosmology) -> None:
-    """Test tSZ kernel component."""
-    cosmo = cosmology.cosmo
-    dist = cosmology.dist
-    tsz = tsz_component
-    tsz.prepare(cosmo)
-
-    # Test basic kernel evaluation
-    z_array = np.linspace(0.1, 2.0, 10)
-    ell = 100
-
-    for z in z_array:
-        result = tsz.eval_limber_z_full(cosmo, z, dist, ell)
-        assert np.isfinite(result)
-
-
-def test_weak_lensing_component(
-    weak_lensing_component: Nc.XcorKernelWeakLensing, cosmology: Cosmology
-) -> None:
-    """Test weak lensing kernel component."""
-    cosmo = cosmology.cosmo
-    dist = cosmology.dist
-    wl = weak_lensing_component
-    wl.prepare(cosmo)
-
-    # Test basic kernel evaluation
-    z_test = np.linspace(0.1, 2.5, 10)
-    ell = 100
-
-    for z in z_test:
-        result = wl.eval_limber_z_full(cosmo, z, dist, ell)
-        assert np.isfinite(result)
-
-
-def test_component_comparison(
-    cmb_lensing_component: Nc.XcorKernelCMBLensing,
-    cmb_isw_component: Nc.XcorKernelCMBISW,
-    tsz_component: Nc.XcorKerneltSZ,
-    cosmology: Cosmology,
-) -> None:
-    """Test that different components produce different results."""
-    cosmo = cosmology.cosmo
-    dist = cosmology.dist
-
-    cmb_lens = cmb_lensing_component
-    cmb_isw = cmb_isw_component
-    tsz = tsz_component
-
-    cmb_lens.prepare(cosmo)
-    cmb_isw.prepare(cosmo)
-    tsz.prepare(cosmo)
-
-    z: float = 0.5
-    ell: int = 100
-
-    result_lens = cmb_lens.eval_limber_z_full(cosmo, z, dist, ell)
-    result_isw = cmb_isw.eval_limber_z_full(cosmo, z, dist, ell)
-    result_tsz = tsz.eval_limber_z_full(cosmo, z, dist, ell)
-
-    # All should be finite but different
-    assert np.isfinite(result_lens)
-    assert np.isfinite(result_isw)
-    assert np.isfinite(result_tsz)
-
-    # They should not all be equal (different physics)
-    values = [result_lens, result_isw, result_tsz]
-    assert len(set(values)) > 1, "All components returned same value"
-
-
-def test_component_with_different_cosmologies(
-    cosmology: Cosmology, cosmology_alt: Cosmology, integrator: Ncm.SBesselIntegrator
-) -> None:
-    """Test that components respond to cosmology changes."""
-    cosmo1 = cosmology.cosmo
-    ps_ml1 = cosmology.ps_ml
-    dist1 = cosmology.dist
-    recomb1 = cosmology.recomb
-    cosmo2 = cosmology_alt.cosmo
-    ps_ml2 = cosmology_alt.ps_ml
-    dist2 = cosmology_alt.dist
-    recomb2 = cosmology_alt.recomb
-
-    lmax = 1000
-    ell_vec = Ncm.Vector.new_array(np.arange(lmax + 1).tolist())
-
-    cmb_lens = Nc.XcorKernelCMBLensing(
-        dist=dist1, powspec=ps_ml1, recomb=recomb1, Nl=ell_vec, integrator=integrator
-    )
-    cmb_lens.prepare(cosmo1)
-    result1 = cmb_lens.eval_limber_z_full(cosmo1, 0.5, dist1, 100)
-
-    # Create new kernel for second cosmology
-    cmb_lens2 = Nc.XcorKernelCMBLensing(
-        dist=dist2, powspec=ps_ml2, recomb=recomb2, Nl=ell_vec, integrator=integrator
-    )
-    cmb_lens2.prepare(cosmo2)
-    result2 = cmb_lens2.eval_limber_z_full(cosmo2, 0.5, dist2, 100)
-
-    # Results should be different with different cosmologies
-    assert np.isfinite(result1)
-    assert np.isfinite(result2)
-    # Relaxed comparison since results might be close
-    if result1 != 0.0 or result2 != 0.0:
-        assert not np.isclose(
-            result1, result2, rtol=1e-3
-        ), "Results should differ with different cosmologies"
-
-
 def test_component_kernel_analysis_properties(
     test_component: NcTestXcorKernelComponent, cosmology: Cosmology
 ) -> None:
@@ -567,113 +554,211 @@ def test_component_edge_cases(
         assert np.isfinite(result)
 
 
-@pytest.mark.parametrize(
-    "kernel_type",
-    [
-        "cmb_lensing",
-        "cmb_isw",
-        "tsz",
-    ],
-)
-def test_kernel_get_k_range(
-    kernel_type: str, cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
+# =============================================================================
+# Group 2: Real Kernel Components Tests (via get_component_list)
+# =============================================================================
+
+
+def test_gal_kernel_component_list(
+    gal_kernel: Nc.XcorKernelGal, cosmology: Cosmology
 ) -> None:
-    """Test that all kernels implement get_k_range correctly."""
+    """Test that galaxy kernel returns components via get_component_list."""
     cosmo = cosmology.cosmo
-    dist = cosmology.dist
-    ps_ml = cosmology.ps_ml
+    gal_kernel.prepare(cosmo)
 
-    kernel: Nc.XcorKernelCMBLensing | Nc.XcorKernelCMBISW | Nc.XcorKerneltSZ
-    if kernel_type == "cmb_lensing":
-        recomb = Nc.RecombSeager()
-        lmax = 1000
-        ell_vec = Ncm.Vector.new_array(np.arange(lmax + 1).tolist())
-        kernel = Nc.XcorKernelCMBLensing(
-            dist=dist, powspec=ps_ml, recomb=recomb, Nl=ell_vec, integrator=integrator
-        )
-    elif kernel_type == "cmb_isw":
-        recomb = Nc.RecombSeager()
-        lmax = 1000
-        ell_vec = Ncm.Vector.new_array(np.arange(lmax + 1).tolist())
-        kernel = Nc.XcorKernelCMBISW(
-            dist=dist, powspec=ps_ml, recomb=recomb, Nl=ell_vec, integrator=integrator
-        )
-    else:  # tsz
-        kernel = Nc.XcorKerneltSZ(
-            dist=dist, powspec=ps_ml, zmax=6.0, integrator=integrator
-        )
+    # Get components from kernel
+    comp_list = gal_kernel.get_component_list()
+    assert comp_list is not None
+    assert len(comp_list) > 0  # Should have at least clustering component
 
-    kernel.prepare(cosmo)
+    # Test each component satisfies the interface
+    for comp in comp_list:
+        assert isinstance(comp, Nc.XcorKernelComponent)
 
-    for ell in [10, 50, 100, 500]:
-        k_min, k_max = kernel.get_k_range(cosmo, ell)
+        # Test get_limits
+        xi_min, xi_max, k_min, k_max = comp.get_limits(cosmo)
+        assert np.isfinite(xi_min) and xi_min > 0.0
+        assert np.isfinite(xi_max) and xi_max > xi_min
+        assert np.isfinite(k_min) and k_min > 0.0
+        assert np.isfinite(k_max) and k_max > k_min
+
+        # Test eval_kernel at a sample point
+        xi_test = (xi_min + xi_max) / 2.0
+        k_test = (k_min + k_max) / 2.0
+        result = comp.eval_kernel(cosmo, xi_test, k_test)
+        assert np.isfinite(result)
+
+        # Test eval_prefactor
+        prefactor = comp.eval_prefactor(cosmo, k_test, 100)
+        assert np.isfinite(prefactor)
+
+
+def test_cmb_lensing_kernel_component_list(
+    cmb_lensing_kernel: Nc.XcorKernelCMBLensing, cosmology: Cosmology
+) -> None:
+    """Test that CMB lensing kernel returns components via get_component_list."""
+    cosmo = cosmology.cosmo
+    cmb_lensing_kernel.prepare(cosmo)
+
+    comp_list = cmb_lensing_kernel.get_component_list()
+    assert comp_list is not None
+    assert len(comp_list) > 0
+
+    for comp in comp_list:
+        assert isinstance(comp, Nc.XcorKernelComponent)
+
+        xi_min, xi_max, k_min, k_max = comp.get_limits(cosmo)
+        assert np.isfinite(xi_min) and xi_min > 0.0
+        assert np.isfinite(xi_max) and xi_max > xi_min
         assert np.isfinite(k_min) and k_min > 0.0
         assert np.isfinite(k_max) and k_max > k_min
 
 
-@pytest.mark.parametrize(
-    "kernel_type",
-    [
-        "cmb_lensing",
-        "cmb_isw",
-        "tsz",
-    ],
-)
-def test_kernel_get_eval(
-    kernel_type: str, cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
+def test_cmb_isw_kernel_component_list(
+    cmb_isw_kernel: Nc.XcorKernelCMBISW, cosmology: Cosmology
 ) -> None:
-    """Test that all kernels implement get_eval correctly."""
+    """Test that CMB ISW kernel returns components via get_component_list."""
     cosmo = cosmology.cosmo
-    dist = cosmology.dist
-    ps_ml = cosmology.ps_ml
+    cmb_isw_kernel.prepare(cosmo)
 
-    kernel: Nc.XcorKernelCMBLensing | Nc.XcorKernelCMBISW | Nc.XcorKerneltSZ
-    if kernel_type == "cmb_lensing":
-        recomb = Nc.RecombSeager()
-        lmax = 1000
-        ell_vec = Ncm.Vector.new_array(np.arange(lmax + 1).tolist())
-        kernel = Nc.XcorKernelCMBLensing(
-            dist=dist,
-            powspec=ps_ml,
-            recomb=recomb,
-            Nl=ell_vec,
-            integrator=integrator,
-        )
-    elif kernel_type == "cmb_isw":
-        recomb = Nc.RecombSeager()
-        lmax = 1000
-        ell_vec = Ncm.Vector.new_array(np.arange(lmax + 1).tolist())
-        kernel = Nc.XcorKernelCMBISW(
-            dist=dist,
-            powspec=ps_ml,
-            recomb=recomb,
-            Nl=ell_vec,
-            integrator=integrator,
-        )
-    else:  # tsz
-        kernel = Nc.XcorKerneltSZ(
-            dist=dist, powspec=ps_ml, zmax=6.0, integrator=integrator
-        )
+    comp_list = cmb_isw_kernel.get_component_list()
+    assert comp_list is not None
+    assert len(comp_list) > 0
 
-    kernel.prepare(cosmo)
+    for comp in comp_list:
+        assert isinstance(comp, Nc.XcorKernelComponent)
 
-    for ell in [10, 50, 100]:
-        integrand = kernel.get_eval(cosmo, ell)
-        assert integrand is not None
-        assert integrand.len == 1  # Single multipole
+        xi_min, xi_max, k_min, k_max = comp.get_limits(cosmo)
+        assert np.isfinite(xi_min) and xi_min > 0.0
+        assert np.isfinite(xi_max) and xi_max > xi_min
+        assert np.isfinite(k_min) and k_min > 0.0
+        assert np.isfinite(k_max) and k_max > k_min
 
 
-def test_kernel_get_eval_vectorized(
-    cmb_lensing_component: Nc.XcorKernelCMBLensing, cosmology: Cosmology
+def test_tsz_kernel_component_list(
+    tsz_kernel: Nc.XcorKerneltSZ, cosmology: Cosmology
 ) -> None:
-    """Test vectorized evaluation."""
+    """Test that tSZ kernel returns components via get_component_list."""
     cosmo = cosmology.cosmo
-    kernel = cmb_lensing_component
-    kernel.prepare(cosmo)
+    tsz_kernel.prepare(cosmo)
 
-    lmin = 10
-    lmax = 20
-    integrand = kernel.get_eval_vectorized(cosmo, lmin, lmax)
+    comp_list = tsz_kernel.get_component_list()
+    assert comp_list is not None
+    assert len(comp_list) > 0
 
-    assert integrand is not None
-    assert integrand.len == lmax - lmin + 1  # Multiple multipoles
+    for comp in comp_list:
+        assert isinstance(comp, Nc.XcorKernelComponent)
+
+        xi_min, xi_max, k_min, k_max = comp.get_limits(cosmo)
+        assert np.isfinite(xi_min) and xi_min > 0.0
+        assert np.isfinite(xi_max) and xi_max > xi_min
+        assert np.isfinite(k_min) and k_min > 0.0
+        assert np.isfinite(k_max) and k_max > k_min
+
+
+def test_weak_lensing_kernel_component_list(
+    weak_lensing_kernel: Nc.XcorKernelWeakLensing, cosmology: Cosmology
+) -> None:
+    """Test that weak lensing kernel returns components via get_component_list."""
+    cosmo = cosmology.cosmo
+    weak_lensing_kernel.prepare(cosmo)
+
+    comp_list = weak_lensing_kernel.get_component_list()
+    assert comp_list is not None
+    assert len(comp_list) > 0
+
+    for comp in comp_list:
+        assert isinstance(comp, Nc.XcorKernelComponent)
+
+        xi_min, xi_max, k_min, k_max = comp.get_limits(cosmo)
+        assert np.isfinite(xi_min) and xi_min > 0.0
+        assert np.isfinite(xi_max) and xi_max > xi_min
+        assert np.isfinite(k_min) and k_min > 0.0
+        assert np.isfinite(k_max) and k_max > k_min
+
+
+def test_kernel_component_analysis(
+    tsz_kernel: Nc.XcorKerneltSZ, cosmology: Cosmology
+) -> None:
+    """Test component kernel analysis.
+
+    Test (k_max, K_max, k_epsilon) via get_component_list.
+    """
+    cosmo = cosmology.cosmo
+    tsz_kernel.prepare(cosmo)
+
+    comp_list = tsz_kernel.get_component_list()
+    assert comp_list is not None
+    assert len(comp_list) > 0
+
+    # After prepare, components should have kernel analysis done
+    comp = comp_list[0]
+
+    # Test at several y values
+    y_array = np.linspace(10.0, 100.0, 5)
+
+    for y in y_array:
+        k_max = comp.eval_k_max(y)
+        K_max = comp.eval_K_max(y)
+        k_epsilon = comp.eval_k_epsilon(y)
+
+        assert np.isfinite(k_max) and k_max > 0.0
+        assert np.isfinite(K_max)
+        assert np.isfinite(k_epsilon) and k_epsilon > 0.0
+        # k_epsilon should be at or beyond k_max
+        assert k_epsilon >= k_max * 0.1
+
+
+def test_multiple_components_galaxy_kernel(
+    cosmology: Cosmology, integrator: Ncm.SBesselIntegrator
+) -> None:
+    """Test that galaxy kernel with magnification bias returns two components."""
+    # Create galaxy kernel with magnification bias enabled
+    gal = _create_galaxy_kernel(cosmology, integrator, domagbias=True)
+
+    cosmo = cosmology.cosmo
+    gal.prepare(cosmo)
+
+    comp_list = gal.get_component_list()
+    assert comp_list is not None
+    # Should have 2 components: clustering and magnification bias
+    assert len(comp_list) == 2
+
+    # Both should be valid components
+    for comp in comp_list:
+        assert isinstance(comp, Nc.XcorKernelComponent)
+        xi_min, xi_max, k_min, k_max = comp.get_limits(cosmo)
+        assert np.isfinite(xi_min) and xi_min > 0.0
+        assert np.isfinite(xi_max) and xi_max > xi_min
+        assert np.isfinite(k_min) and k_min > 0.0
+        assert np.isfinite(k_max) and k_max > k_min
+
+
+def test_component_properties_via_get_component_list(
+    tsz_kernel: Nc.XcorKerneltSZ, cosmology: Cosmology
+) -> None:
+    """Test component property getters and setters via get_component_list."""
+    cosmo = cosmology.cosmo
+    tsz_kernel.prepare(cosmo)
+
+    comp_list = tsz_kernel.get_component_list()
+    assert comp_list is not None
+    assert len(comp_list) > 0
+
+    comp = comp_list[0]
+
+    # Test epsilon property
+    comp.set_epsilon(1.0e-7)
+    assert_allclose(comp.get_epsilon(), 1.0e-7, rtol=1e-10)
+
+    # Test ny property
+    comp.set_ny(150)
+    assert comp.get_ny() == 150
+
+    # Test max_iter property
+    comp.set_max_iter(2000)
+    assert comp.get_max_iter() == 2000
+
+    # Test tol property
+    comp.set_tol(1.0e-5)
+    assert_allclose(comp.get_tol(), 1.0e-5, rtol=1e-10)
