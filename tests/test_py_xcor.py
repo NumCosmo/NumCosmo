@@ -396,6 +396,7 @@ def test_cmb_lens_kernel(
         reltol_target = 1.0e-4
 
     ell = 79.0
+    nc_cmb_lens.set_l_limber(0)
 
     z_a, _, Wchi_a = compute_kernel(ccl_cmb_lens, nc_cosmo_eh_linear, ell)
     nc_cmb_lens.prepare(cosmo)

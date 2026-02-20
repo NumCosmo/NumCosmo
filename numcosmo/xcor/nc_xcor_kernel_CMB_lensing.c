@@ -315,7 +315,7 @@ _cmb_lensing_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosm
   const gdouble powspec         = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble dt              = nc_distance_transverse (data->dist, cosmo, z);
   const gdouble dt_z_zlss       = nc_distance_transverse_z1_z2 (data->dist, cosmo, z, data->z_lss);
-  const gdouble operator_k      = 1.0 / gsl_pow_3 (k);
+  const gdouble operator_k      = 1.0 / gsl_pow_2 (k);
 
   return operator_k * (1.0 + z) * dt_z_zlss / (data->dt_lss * dt) * sqrt (powspec);
 }

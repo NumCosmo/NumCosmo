@@ -220,7 +220,7 @@ nc_xcor_kernel_component_class_init (NcXcorKernelComponentClass *klass)
                                    g_param_spec_uint ("ny",
                                                       NULL,
                                                       "Number of y points",
-                                                      1, G_MAXUINT, 50,
+                                                      1, G_MAXUINT, 600,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -579,14 +579,17 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
 
     if (best_idx == 0)
     {
-      k_lower = pow (10.0, k_log_min);
-      k_upper = pow (10.0, k_log_min + k_log_step);
-      k_init  = sqrt (k_lower * k_upper);
+      *k_at_max = k_lower;
+      *K_max    = K_best;
+
+      return;
     }
     else if (best_idx == nsteps - 1)
     {
-      g_warning ("k_max found at edge of search range: k = %g. "
-                 "Consider expanding the valid k range.", k_init);
+      *k_at_max = k_upper;
+      *K_max    = K_best;
+
+      return;
     }
     else
     {
