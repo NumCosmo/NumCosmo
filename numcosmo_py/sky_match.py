@@ -51,6 +51,21 @@ class IDs(TypedDict, total=False):
     MemberID: str
     pmem: str
     
+class MatchingType(str,Enum):
+    """Matching type.
+
+    :param DISTANCE: Match by distance.
+    :param ID: Match by ID.
+    """
+
+    @staticmethod
+    def _generate_next_value_(name, _start, _count, _last_values):
+        return name.lower()
+
+    DISTANCE = auto()
+    ID = auto()
+    
+
 
 class SelectionCriteria(str, Enum):
     """Selection criteria for the best candidate."""
@@ -414,15 +429,18 @@ class SkyMatchResult:
     def __init__(
         self,
         sky_match: SkyMatch,
+        matching_type: MatchingType,
         nearest_neighbours_indices: np.ndarray[tuple[int, int], np.dtype[np.int64]],
         nearest_neighbours_distances: np.ndarray[tuple[int, int], np.dtype[np.float64]],
     ):
         """Initialize the SkyMatchResult class.
 
         :param sky_match: SkyMatch object used to perform the match.
+        :param matching_type: Type of matching performed.
         :param nearest_neighbours: Array of indices of the nearest neighbours.
         """
         self.sky_match = sky_match
+        self.matching_type = matching_type
         self.nearest_neighbours_indices = nearest_neighbours_indices
         self.nearest_neighbours_distances = nearest_neighbours_distances
 
@@ -813,7 +831,7 @@ class SkyMatch:
         distances = (np.sqrt(distances_list) * RH_Mpc).reshape(-1, n_nearest_neighbours)
         indices = np.array(indices_list, dtype=int).reshape(-1, n_nearest_neighbours)
 
-        return SkyMatchResult(self, indices, distances)
+        return SkyMatchResult(self, MatchingType.DISTANCE, indices, distances)
 
     def match_2d(
         self,
@@ -925,7 +943,7 @@ class SkyMatch:
             case _ as unreachable:  # pragma: no cover
                 assert_never(unreachable)
 
-        return SkyMatchResult(self, indices, distances)
+        return SkyMatchResult(self, MatchingType.DISTANCE,indices, distances)
     
 
     def match_id(
@@ -1064,5 +1082,5 @@ class SkyMatch:
         match_list = np.array(list(group['match_id']) for group in grouped_comb.groups)
         coeficientes = np.array(list(group['linking_coefficient']) for group in grouped_comb.groups)
 
-        return SkyMatchResult(self, match_list, coeficientes)
+        return SkyMatchResult(self, MatchingType.ID, match_list, coeficientes)
                 
