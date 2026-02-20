@@ -104,6 +104,7 @@ enum
 {
   PROP_0,
   PROP_NOISE,
+  PROP_ZMAX,
   PROP_SIZE,
 };
 
@@ -127,6 +128,9 @@ _nc_xcor_kernel_tsz_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_NOISE:
       xclkl->noise = g_value_get_double (value);
       break;
+    case PROP_ZMAX:
+      xclkl->zmax = g_value_get_double (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -144,6 +148,9 @@ _nc_xcor_kernel_tsz_get_property (GObject *object, guint prop_id, GValue *value,
   {
     case PROP_NOISE:
       g_value_set_double (value, xclkl->noise);
+      break;
+    case PROP_ZMAX:
+      g_value_set_double (value, xclkl->zmax);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -209,9 +216,9 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
   /**
-   * NcXcorKerneltSZ:zmax:
+   * NcXcorKerneltSZ:noise:
    *
-   * FIXME Set correct values (limits)
+   * Constant noise level.
    */
   g_object_class_install_property (object_class,
                                    PROP_NOISE,
@@ -220,6 +227,19 @@ nc_xcor_kernel_tsz_class_init (NcXcorKerneltSZClass *klass)
                                                         "Constant noise level",
                                                         -10.0, 10.0, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcXcorKerneltSZ:zmax:
+   *
+   * Maximum redshift for the kernel.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ZMAX,
+                                   g_param_spec_double ("zmax",
+                                                        NULL,
+                                                        "Maximum redshift",
+                                                        0.0, 10.0, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
@@ -405,9 +425,8 @@ nc_xcor_kernel_tsz_new (NcDistance *dist, NcmPowspec *ps, gdouble zmax)
   NcXcorKerneltSZ *xclkl = g_object_new (NC_TYPE_XCOR_KERNEL_TSZ,
                                          "dist", dist,
                                          "powspec", ps,
+                                         "zmax", zmax,
                                          NULL);
-
-  xclkl->zmax = zmax;
 
   return xclkl;
 }

@@ -491,7 +491,7 @@ _nc_xcor_kernel_component_minus_K_over_k (gdouble k, void *params)
   const gdouble K_val            = nc_xcor_kernel_component_eval_kernel (data->comp, data->cosmo, xi, k);
   const gdouble K_over_k         = K_val / k;
 
-  return -K_over_k;
+  return -fabs (K_over_k);
 }
 
 static gdouble
@@ -519,6 +519,9 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
   gdouble k_upper                    = k_valid_max;
   gdouble k_init                     = k_guess;
   guint iter                         = 0;
+  gdouble lk                         = 0.0;
+  gdouble lk_lower                   = 0.0;
+  gdouble lk_upper                   = 0.0;
   gsl_function F_min;
   gint status;
 
@@ -545,6 +548,53 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
   if ((k_init < k_lower) || (k_init > k_upper))
     k_init = sqrt (k_lower * k_upper);
 
+  /*
+   * First we go through k with 50 steps in log space to find a good starting point for
+   * the minimizer.
+   */
+  {
+    const gdouble k_log_min  = log10 (k_lower);
+    const gdouble k_log_max  = log10 (k_upper);
+    const guint nsteps       = 50;
+    const gdouble k_log_step = (k_log_max - k_log_min) / (nsteps - 1.0);
+    gdouble k_best           = 0.0;
+    gdouble K_best           = -G_MAXDOUBLE;
+    guint best_idx           = 0;
+
+    for (guint i = 0; i < nsteps; i++)
+    {
+      const gdouble k_test        = pow (10.0, k_log_min + i * k_log_step);
+      const gdouble K_over_k_test = -_nc_xcor_kernel_component_minus_K_over_k (k_test, data);
+
+      if (K_over_k_test > K_best)
+      {
+        K_best   = K_over_k_test;
+        k_best   = k_test;
+        best_idx = i;
+      }
+    }
+
+    if (k_best > 0.0)
+      k_init = k_best;
+
+    if (best_idx == 0)
+    {
+      k_lower = pow (10.0, k_log_min);
+      k_upper = pow (10.0, k_log_min + k_log_step);
+      k_init  = sqrt (k_lower * k_upper);
+    }
+    else if (best_idx == nsteps - 1)
+    {
+      g_warning ("k_max found at edge of search range: k = %g. "
+                 "Consider expanding the valid k range.", k_init);
+    }
+    else
+    {
+      k_lower = pow (10.0, k_log_min + (best_idx - 1) * k_log_step);
+      k_upper = pow (10.0, k_log_min + (best_idx + 1) * k_log_step);
+    }
+  }
+
   gsl_min_fminimizer_set (self->minimizer, &F_min, k_init, k_lower, k_upper);
 
   do {
@@ -554,7 +604,28 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
     k_lower   = gsl_min_fminimizer_x_lower (self->minimizer);
     k_upper   = gsl_min_fminimizer_x_upper (self->minimizer);
     status    = gsl_min_test_interval (k_lower, k_upper, 0.0, self->tol);
-  } while (status == GSL_CONTINUE && iter < self->max_iter);
+
+    if ((*k_at_max == lk) && (k_lower == lk_lower) && (k_upper == lk_upper))
+    {
+      const gdouble f_lower = gsl_min_fminimizer_f_lower (self->minimizer);
+      const gdouble f_upper = gsl_min_fminimizer_f_upper (self->minimizer);
+
+      if (fabs (2.0 * (f_upper - f_lower) / (f_upper + f_lower)) < self->tol)
+      {
+        status = GSL_SUCCESS;
+      }
+      else
+      {
+        g_error ("_nc_xcor_kernel_component_find_k_max: minimizer stuck at k = % 22.15g, y = % 22.15g",
+                 *k_at_max, data->y);
+        break;
+      }
+    }
+
+    lk       = *k_at_max;
+    lk_lower = k_lower;
+    lk_upper = k_upper;
+  } while ((status == GSL_CONTINUE) && (iter < self->max_iter));
 
   *K_max = -gsl_min_fminimizer_f_minimum (self->minimizer);
 }
@@ -601,47 +672,6 @@ _nc_xcor_kernel_component_find_k_epsilon_high (NcXcorKernelComponent    *comp,
   }
 }
 
-static gdouble
-_nc_xcor_kernel_component_find_k_epsilon_low (NcXcorKernelComponent    *comp,
-                                              NcXcorKernelAnalysisData *data,
-                                              gdouble                  k_at_max,
-                                              gdouble                  k_valid_min)
-{
-  NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
-  gdouble k_low                      = k_valid_min;
-  gdouble k_high                     = k_at_max;
-  const gdouble f_low                = _nc_xcor_kernel_component_K_over_k_minus_threshold (k_low, data);
-  const gdouble f_high               = _nc_xcor_kernel_component_K_over_k_minus_threshold (k_high, data);
-  gsl_function F_root;
-
-  F_root.function = &_nc_xcor_kernel_component_K_over_k_minus_threshold;
-  F_root.params   = data;
-
-  if ((f_low < 0.0) && (f_high > 0.0))
-  {
-    gsl_root_fsolver_set (self->root_solver, &F_root, k_low, k_high);
-
-    gint status;
-    guint iter = 0;
-    gdouble k_epsilon;
-
-    do {
-      iter++;
-      status    = gsl_root_fsolver_iterate (self->root_solver);
-      k_epsilon = gsl_root_fsolver_root (self->root_solver);
-      k_low     = gsl_root_fsolver_x_lower (self->root_solver);
-      k_high    = gsl_root_fsolver_x_upper (self->root_solver);
-      status    = gsl_root_test_interval (k_low, k_high, 0.0, self->tol);
-    } while (status == GSL_CONTINUE && iter < self->max_iter);
-
-    return k_epsilon;
-  }
-  else
-  {
-    return G_MAXDOUBLE;
-  }
-}
-
 /**
  * nc_xcor_kernel_component_prepare:
  * @comp: a #NcXcorKernelComponent
@@ -677,8 +707,9 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
       .K_threshold = 0.0
     };
     gdouble k_guess = 0.0;
+    guint i;
 
-    for (guint i = 0; i < self->ny; i++)
+    for (i = 0; i < self->ny; i++)
     {
       const gdouble log_y         = log (y_min) + (log (y_max) - log (y_min)) * i / (self->ny - 1.0);
       const gdouble y             = exp (log_y);
@@ -707,9 +738,7 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
       data.K_threshold = self->epsilon * K_max;
 
       {
-        const gdouble k_eps_high = _nc_xcor_kernel_component_find_k_epsilon_high (comp, &data, k_at_max, k_valid_max);
-        const gdouble k_eps_low  = _nc_xcor_kernel_component_find_k_epsilon_low (comp, &data, k_at_max, k_valid_min);
-        const gdouble k_epsilon  = GSL_MAX (k_eps_high, k_eps_low);
+        const gdouble k_epsilon = _nc_xcor_kernel_component_find_k_epsilon_high (comp, &data, k_at_max, k_valid_max);
 
         ncm_vector_set (k_max_v, i, k_at_max);
         ncm_vector_set (K_max_v, i, K_max);
@@ -729,7 +758,7 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
 }
 
 /**
- * nc_xcor_kernel_component_eval_kernel:
+ * nc_xcor_kernel_component_eval_kernel: (virtual eval_kernel)
  * @comp: a #NcXcorKernelComponent
  * @cosmo: a #NcHICosmo
  * @xi: comoving distance
@@ -748,13 +777,13 @@ nc_xcor_kernel_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *co
 }
 
 /**
- * nc_xcor_kernel_component_eval_prefactor:
+ * nc_xcor_kernel_component_eval_prefactor: (virtual eval_prefactor)
  * @comp: a #NcXcorKernelComponent
  * @cosmo: a #NcHICosmo
  * @k: wave number
  * @l: multipole
  *
- * Evaluates the prefactor that may depend on k and ℓ.
+ * Evaluates the prefactor that may depend on k and ell.
  *
  * Returns: the prefactor value
  */
@@ -769,7 +798,7 @@ nc_xcor_kernel_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo 
 }
 
 /**
- * nc_xcor_kernel_component_get_limits:
+ * nc_xcor_kernel_component_get_limits: (virtual get_limits)
  * @comp: a #NcXcorKernelComponent
  * @cosmo: a #NcHICosmo
  * @xi_min: (out): minimum comoving distance

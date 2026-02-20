@@ -136,6 +136,10 @@ _nc_xcor_kernel_constructed (GObject *object)
       g_error ("nc_xcor_kernel_constructed: powspec property was not set. "
                "The 'powspec' property must be provided at construction time.");
 
+    if ((self->l_limber >= 0) && (self->sbi == NULL))
+      g_error ("nc_xcor_kernel_constructed: integrator property was not set. "
+               "The 'integrator' property must be provided at construction time.");
+
     nc_distance_compute_inv_comoving (self->dist, TRUE);
     nc_distance_require_zf (self->dist, 1.0e10);
   }
@@ -254,7 +258,7 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                         NULL,
                                                         "Spherical Bessel integrator object",
                                                         NCM_TYPE_SBESSEL_INTEGRATOR,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_LMAX,
@@ -491,6 +495,16 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
   NcmVector *k_vec             = ncm_vector_new (n_k);
   GPtrArray *comp_list         = klass->get_component_list (xclk);
 
+  if (self->sbi == NULL)
+  {
+    g_free (nlid);
+    g_error ("_nc_xcor_kernel_build_non_limber_integrand: integrator property was not set for kernel %s. "
+             "The 'integrator' property must be provided to build the non-Limber integrand.",
+             G_OBJECT_TYPE_NAME (xclk));
+
+    return NULL;
+  }
+
   if ((comp_list == NULL) || (comp_list->len == 0))
   {
     if (comp_list != NULL)
@@ -507,24 +521,23 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
   ncm_sbessel_integrator_set_lmax (self->sbi, lmax);
 
   {
-    NcmVector **comp_vecs = g_new (NcmVector *, comp_list->len);
-    gdouble *xi_min       = g_new (gdouble, comp_list->len);
-    gdouble *xi_max       = g_new (gdouble, comp_list->len);
+    gdouble *xi_min              = g_new (gdouble, comp_list->len);
+    gdouble *xi_max              = g_new (gdouble, comp_list->len);
+    NcmVector **total_kernel_ell = g_new (NcmVector *, n_l);
     guint i, j;
 
     nlid->cosmo  = nc_hicosmo_ref (cosmo);
     nlid->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
     nlid->lmin   = lmin;
-    nlid->len    = lmax - lmin + 1;
+    nlid->len    = n_l;
 
-    /* Pre-compute nu values for all l in block */
-    nlid->spline_ell = g_new (NcmSpline *, nlid->len);
+    nlid->spline_ell = g_new (NcmSpline *, n_l);
 
-    for (i = 0; i < nlid->len; i++)
+    for (i = 0; i < n_l; i++)
     {
       nlid->spline_ell[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-      comp_vecs[i]        = ncm_vector_new (n_k);
-      ncm_vector_set_zero (comp_vecs[i]);
+      total_kernel_ell[i] = ncm_vector_new (n_k);
+      ncm_vector_set_zero (total_kernel_ell[i]);
     }
 
     {
@@ -575,19 +588,19 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
             const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (comp, cosmo, k, nlid->lmin + n);
             const gdouble val       = ncm_vector_get (integ_result, n) * prefactor / k;
 
-            ncm_vector_addto (comp_vecs[n], j, val);
+            ncm_vector_addto (total_kernel_ell[n], j, val);
           }
         }
       }
 
       for (i = 0; i < n_l; i++)
       {
-        ncm_spline_set (nlid->spline_ell[i], k_vec, comp_vecs[i], TRUE);
-        ncm_vector_free (comp_vecs[i]);
+        ncm_spline_set (nlid->spline_ell[i], k_vec, total_kernel_ell[i], TRUE);
+        ncm_vector_free (total_kernel_ell[i]);
       }
 
       ncm_vector_free (k_vec);
-      g_free (comp_vecs);
+      g_free (total_kernel_ell);
       g_free (xi_min);
       g_free (xi_max);
     }
@@ -595,7 +608,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
     ncm_vector_free (integ_result);
 
 
-    return nc_xcor_kernel_integrand_new (nlid->len,
+    return nc_xcor_kernel_integrand_new (n_l,
                                          _non_limber_integrand_eval,
                                          _non_limber_integrand_get_range,
                                          nlid,

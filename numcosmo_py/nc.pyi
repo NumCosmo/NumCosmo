@@ -20147,11 +20147,6 @@ class XcorKernel(NumCosmoMath.Model):
         self, cosmo: HICosmo, z: float, xck: XcorKinetic, l: int
     ) -> float: ...
     def do_eval_limber_z_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
-    def do_get_eval(self, cosmo: HICosmo, l: int) -> XcorKernelIntegrand: ...
-    def do_get_eval_vectorized(
-        self, cosmo: HICosmo, lmin: int, lmax: int
-    ) -> XcorKernelIntegrand: ...
-    def do_get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
     def do_get_z_range(self) -> typing.Tuple[float, float, float]: ...
     def do_obs_len(self) -> int: ...
     def do_obs_params_len(self) -> int: ...
@@ -20422,13 +20417,6 @@ class XcorKernelClass(GObject.GPointer):
     ] = ...
     obs_len: typing.Callable[[XcorKernel], int] = ...
     obs_params_len: typing.Callable[[XcorKernel], int] = ...
-    get_k_range: typing.Callable[
-        [XcorKernel, HICosmo, int], typing.Tuple[float, float]
-    ] = ...
-    get_eval: typing.Callable[[XcorKernel, HICosmo, int], XcorKernelIntegrand] = ...
-    get_eval_vectorized: typing.Callable[
-        [XcorKernel, HICosmo, int, int], XcorKernelIntegrand
-    ] = ...
     get_component_list: None = ...
 
 class XcorKernelComponent(GObject.Object):
@@ -20817,6 +20805,8 @@ class XcorKerneltSZ(XcorKernel):
     Properties from NcXcorKerneltSZ:
       noise -> gdouble: noise
         Constant noise level
+      zmax -> gdouble: zmax
+        Maximum redshift
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -20856,6 +20846,7 @@ class XcorKerneltSZ(XcorKernel):
 
     class Props:
         noise: float
+        zmax: float
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
@@ -20875,6 +20866,7 @@ class XcorKerneltSZ(XcorKernel):
     def __init__(
         self,
         noise: float = ...,
+        zmax: float = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,

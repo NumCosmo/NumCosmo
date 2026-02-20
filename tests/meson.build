@@ -707,6 +707,12 @@ if python_pyccl.found()
             'timeout': 0,
             'suite': ['py-xcor'],
         },
+        {
+            'name': 'py_xcor_kernel_component',
+            'source': 'test_py_xcor_kernel_component.py',
+            'timeout': 0,
+            'suite': ['py-xcor', 'py-component'],
+        },
     ]
 endif
 

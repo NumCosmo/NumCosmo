@@ -101,7 +101,7 @@
 /* #undef SUNDIALS_BUILD_WITH_MONITORING */
 
 /* BUILD SUNDIALS with profiling functionalities */
-#define SUNDIALS_BUILD_WITH_PROFILING
+/* #define SUNDIALS_BUILD_WITH_PROFILING */
 
 /* Enable error checking within SUNDIALS */
 /* #undef SUNDIALS_ENABLE_ERROR_CHECKS */
