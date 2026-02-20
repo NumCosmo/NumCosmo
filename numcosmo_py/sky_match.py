@@ -933,7 +933,7 @@ class SkyMatch:
         query_id: IDs,
         match_id: IDs,
         shared_fraction_method: SharedFractionMethod = SharedFractionMethod.NO_PMEM,
-    ) : #-> SkyMatchIDResult:
+    ) -> SkyMatchResult:
         """Match objects in the sky.
 
         The function matches objects in the sky using the provided ids.
@@ -951,9 +951,13 @@ class SkyMatch:
 
         query_table = self.query_data.copy()        
         query_table.rename_column(query_id['ID'], 'query_id')
+        query_table.rename_column(query_id['MemberID'], 'MemberID')
         
         match_table = self.match_data.copy()
-        match_table.rename_column('ID', 'match_id')
+        match_table.rename_column(match_id['ID'], 'match_id')
+        match_table.rename_column(match_id['MemberID'], 'MemberID')
+
+
 
         if 'pmem' in query_table.colnames:
             query_table.rename_column('pmem', 'pmem_query')
@@ -1051,14 +1055,14 @@ class SkyMatch:
             case _ as unreachable:
                 assert_never(unreachable)
 
-        linking_coefficient = fraction_query * (fraction_query + fraction_match) / 2
+        all_combinations["linking_coefficient"] = fraction_query * (fraction_query + fraction_match) / 2
+
         
-        matched_pairs = list(zip(
-            all_combinations['query_id'], 
-            all_combinations['match_id'], 
-            linking_coefficient
-        ))
-        
-        #return matched_pairs
-        #return SkyMatchIDResult(self, matched_pairs)
+        grouped_comb = all_combinations.group_by('query_id')
+      
+        query_list = np.array(grouped_comb.groups.keys['query_id'])
+        match_list = np.array(list(group['match_id']) for group in grouped_comb.groups)
+        coeficientes = np.array(list(group['linking_coefficient']) for group in grouped_comb.groups)
+
+        return SkyMatchResult(self, match_list, coeficientes)
                 
