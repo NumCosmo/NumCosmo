@@ -306,7 +306,7 @@ _ncm_sbessel_ode_solver_dispose (GObject *object)
   }
 
   ncm_vector_clear (&self->solution);
-
+  ncm_spectral_clear (&self->spectral);
   ncm_sf_sbessel_array_clear (&self->sba);
 
   /* Chain up */
