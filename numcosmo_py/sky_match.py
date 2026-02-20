@@ -33,7 +33,6 @@ class Coordinates(TypedDict, total=False):
     DEC: str
     z: str
 
-
 class SelectionCriteria(StrEnum):
     """Selection criteria for the best candidate."""
 
