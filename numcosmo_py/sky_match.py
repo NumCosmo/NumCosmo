@@ -37,7 +37,7 @@ class Coordinates(TypedDict, total=False):
     DEC: str
     z: str
 
-class Ids(TypedDict, total=False):
+class IDs(TypedDict, total=False):
     """ID mapping.
 
     Dictionary to map the IDs to the names of the columns in the
@@ -921,13 +921,13 @@ class SkyMatch:
         :return: astropy_table: matched: table with all candidates of matched objects,
         :best_matched: table with the best candidate of matched objects
         """
-        if ("ID" not in self.match_coordinates) or ("ID" not in self.query_coordinates):
+        if ("ID" not in self.match_data) or ("ID" not in self.query_data):
             raise ValueError(
                 "To perform a matching, "
                 "the ID column must be provided for both catalogs."
             )
         
-        if ("MemberID" not in self.match_coordinates) or ("MemberID" not in self.query_coordinates):
+        if ("MemberID" not in self.match_data) or ("MemberID" not in self.query_data):
             raise ValueError(
                 "To perform a matching, "
                 "the MemberID column must be provided for both catalogs."
@@ -1045,6 +1045,7 @@ class SkyMatch:
             all_combinations['match_id'], 
             linking_coefficient
         ))
-
-        return SkyMatchIDResult(self, matched_pairs)
+        
+        #return matched_pairs
+        #return SkyMatchIDResult(self, matched_pairs)
                 
