@@ -294,13 +294,12 @@ _tsz_component_data_clear (tSZComponentData *data)
 static gdouble
 _tsz_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k)
 {
-  tSZComponentData *data   = _NC_XCOR_KERNEL_COMPONENT_TSZ_GET_DATA (comp);
-  const gdouble z          = nc_distance_inv_comoving (data->dist, cosmo, xi);
-  const gdouble powspec    = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
-  const gdouble kernel     = 1.0 / (1.0 + z);
-  const gdouble operator_k = 1.0 / k;
+  tSZComponentData *data = _NC_XCOR_KERNEL_COMPONENT_TSZ_GET_DATA (comp);
+  const gdouble z        = nc_distance_inv_comoving (data->dist, cosmo, xi);
+  const gdouble powspec  = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
+  const gdouble kernel   = 1.0 / (1.0 + z);
 
-  return operator_k * kernel * sqrt (powspec);
+  return kernel * sqrt (powspec);
 }
 
 static gdouble

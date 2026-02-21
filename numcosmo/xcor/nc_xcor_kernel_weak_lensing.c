@@ -407,7 +407,7 @@ _wl_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdoubl
   const gdouble powspec          = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble lens_eff_z       = nc_xcor_lensing_efficiency_eval (data->lens_eff, z);
   const gdouble kernel           = (1.0 + z) / xi * lens_eff_z;
-  const gdouble operator_k       = 1.0 / gsl_pow_3 (k);
+  const gdouble operator_k       = 1.0 / gsl_pow_2 (k);
 
   return operator_k * kernel * sqrt (powspec);
 }
