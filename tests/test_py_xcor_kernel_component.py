@@ -23,16 +23,13 @@
 
 """Unit tests for NcXcorKernelComponent.
 
-This test file has two main purposes:
-1. Test the NcXcorKernelComponent interface through NcTestXcorKernelComponent
-2. Test that real kernels properly create and return components via
-   get_component_list(), and that those components satisfy the component
-   interface requirements
+Tests all component types using parametrized component_case fixture.
+Components are collected from NcTestXcorKernelComponent and real kernels
+via get_component_list().
 
 Test organization:
-- Group 1: NcTestXcorKernelComponent tests (direct component interface)
-- Group 2: Real kernel components tests (via get_component_list)
-- Group 3: Kernel-specific tests (kernel interface, not components)
+- Group 1: Component interface tests (parametrized for all components)
+- Group 2: Kernel-specific tests (using kernel fixtures directly)
 """
 
 from typing import Callable
@@ -352,7 +349,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
 
 # =============================================================================
-# Group 1: NcTestXcorKernelComponent Tests (Direct Component Interface)
+# Group 1: Component Interface Tests (Parametrized for All Components)
 # =============================================================================
 
 
@@ -360,11 +357,7 @@ def test_any_component_interface(
     component_case: tuple[str, Nc.XcorKernelComponent, Nc.XcorKernel | None],
     cosmology: Cosmology,
 ) -> None:
-    """Test that any component satisfies the basic interface.
-
-    This test uses the parametrized any_component fixture to test all
-    component types with the same interface requirements.
-    """
+    """Test that any component satisfies the basic interface."""
     _, any_component, _ = component_case
     cosmo = cosmology.cosmo
 
@@ -573,7 +566,7 @@ def test_component_k_max_is_maximum(
     component_case: tuple[str, Nc.XcorKernelComponent, Nc.XcorKernel | None],
     cosmology: Cosmology,
 ) -> None:
-    """Test that k_max(y) gives the maximum of K(y/k, k)/k for a real kernel."""
+    """Test that k_max(y) gives the maximum of K(y/k, k)/k."""
     _, comp, _ = component_case
     cosmo = cosmology.cosmo
 
@@ -607,7 +600,7 @@ def test_component_K_max_value(
     component_case: tuple[str, Nc.XcorKernelComponent, Nc.XcorKernel | None],
     cosmology: Cosmology,
 ) -> None:
-    """Test that K_max(y) equals K(y/k_max, k_max)/k_max for real kernel."""
+    """Test that K_max(y) equals K(y/k_max, k_max)/k_max."""
     _, comp, _ = component_case
     cosmo = cosmology.cosmo
 
@@ -645,7 +638,7 @@ def test_component_k_epsilon_drop(
     component_case: tuple[str, Nc.XcorKernelComponent, Nc.XcorKernel | None],
     cosmology: Cosmology,
 ) -> None:
-    """Test that k_epsilon is where K/k drops by epsilon from K_max for real kernel.
+    """Test that k_epsilon is where K/k drops by epsilon from K_max.
 
     At k_epsilon: K(y/k_epsilon, k_epsilon)/k_epsilon ≈ epsilon * K_max
     """
@@ -745,7 +738,7 @@ def test_component_k_max_is_maximum1(
     y_min = k_min * xi_min
     y_max = k_max * xi_max
 
-    # Test at several y values in regions where kernel should be well-behaved
+    # Test at several y values
     y_test_values = np.geomspace(max(y_min * 1.1, 0.5), min(y_max * 0.9, 1000.0), 5)
 
     for y in y_test_values:
@@ -755,7 +748,7 @@ def test_component_k_max_is_maximum1(
 
         # Verify K_max is approximately the actual value at k_max
         K_at_k_max = comp.eval_kernel(cosmo, xi, k_max_val) / k_max_val
-        # Allow generous tolerance due to spline interpolation and oscillating kernels
+        # Allow tolerance due to spline interpolation and oscillating kernels
         assert_allclose(
             abs(K_max_val),
             abs(K_at_k_max),
@@ -825,9 +818,7 @@ def test_component_K_max_value1(
         # Compute K directly from eval_kernel
         K_direct = comp.eval_kernel(cosmo, xi, k_max_val) / k_max_val
 
-        # They should match within ~2% (accounting for spline interpolation and search
-        # errors) The K_max stored might be slightly larger if the search didn't find
-        # exact maximum
+        # Allow tolerance for spline interpolation and search errors
         assert_allclose(
             abs(K_max_val),
             abs(K_direct),
@@ -857,7 +848,7 @@ def test_component_k_epsilon_drop1(
     y_min = k_min * xi_min
     y_max = k_max * xi_max
 
-    # Test at several y values in regions where kernel should be well-behaved
+    # Test at several y values
     y_test_values = np.geomspace(max(y_min * 1.1, 0.5), min(y_max * 0.9, 1000.0), 5)
 
     for y in y_test_values:
@@ -865,7 +856,7 @@ def test_component_k_epsilon_drop1(
         K_max_val = comp.eval_K_max(y)
         k_epsilon_val = comp.eval_k_epsilon(y)
 
-        # k_epsilon should be >= k_max (after the maximum)
+        # k_epsilon should be >= k_max
         assert (
             k_epsilon_val >= k_max_val * 0.99
         ), f"k_epsilon={k_epsilon_val} should be >= k_max={k_max_val} at y={y}"
@@ -876,14 +867,10 @@ def test_component_k_epsilon_drop1(
             comp.eval_kernel(cosmo, xi_epsilon, k_epsilon_val) / k_epsilon_val
         )
 
-        # Should be approximately epsilon * K_max (allow factor of 10 tolerance due to
-        # spline/search)
+        # Should be approximately epsilon * K_max
         expected_K = epsilon * K_max_val
-        # Use loose tolerance since finding exact drop point is approximate
 
-        # If k_epsilon is close to the upper bound or xi_epsilon is near the lower
-        # bound, K might not drop as expected, in this case it is OK if K_at_epsilon is
-        # larger than expected.
+        # Skip if k_epsilon is at boundary
         if np.isclose(k_epsilon_val, k_max, atol=1e-3) or np.isclose(
             xi_epsilon, xi_min, atol=1e-3
         ):
@@ -985,9 +972,7 @@ def test_component_spline_smoothness(
     K_max_diff = rel_diff(K_max_array)
     k_epsilon_diff = rel_diff(k_epsilon_array)
 
-    # No jump should be more than 100% for k_max and k_epsilon
-    # K_max can have larger jumps due to kernel structure (e.g., zeros, oscillations)
-
+    # Check for smoothness
     assert (
         np.max(k_max_diff) < 1.0
     ), f"k_max has discontinuous jumps: max={np.max(k_max_diff)}"
@@ -1004,10 +989,7 @@ def test_kernel_analysis_with_different_epsilon(
     component_case: tuple[str, Nc.XcorKernelComponent, Nc.XcorKernel | None],
     cosmology: Cosmology,
 ) -> None:
-    """Test that different epsilon values give different k_epsilon results.
-
-    Smaller epsilon should give larger k_epsilon (need to go further for bigger drop).
-    """
+    """Test that smaller epsilon gives larger k_epsilon."""
     _, comp, _ = component_case
     cosmo = cosmology.cosmo
 
@@ -1026,8 +1008,7 @@ def test_kernel_analysis_with_different_epsilon(
     comp.set_epsilon(original_epsilon)
     comp.prepare(cosmo)
 
-    # Smaller epsilon should generally give larger k_epsilon
-    # (need to go further out for the kernel to drop more)
+    # Smaller epsilon should give larger k_epsilon
     assert (
         k_epsilon_results[0] <= k_epsilon_results[1] <= k_epsilon_results[2]
     ), f"k_epsilon should increase as epsilon decreases: {k_epsilon_results}"
@@ -1037,10 +1018,7 @@ def test_component_correctness(
     component_case: tuple[str, Nc.XcorKernelComponent, Nc.XcorKernel | None],
     cosmology: Cosmology,
 ) -> None:
-    """Test kernel analysis correctness for a real component.
-
-    Verify that k_max is actually a maximum and k_epsilon is correct.
-    """
+    """Test kernel analysis correctness."""
     _, comp, _ = component_case
     cosmo = cosmology.cosmo
 
@@ -1071,7 +1049,7 @@ def test_component_correctness(
 
 
 # =============================================================================
-# Group 2: Real Kernel Components Tests (via get_component_list)
+# Group 2: Kernel-Specific Tests (Using Kernel Fixtures)
 # =============================================================================
 
 
@@ -1196,10 +1174,7 @@ def test_weak_lensing_kernel_component_list(
 def test_kernel_component_analysis(
     tsz_kernel: Nc.XcorKerneltSZ, cosmology: Cosmology
 ) -> None:
-    """Test component kernel analysis.
-
-    Test (k_max, K_max, k_epsilon) via get_component_list.
-    """
+    """Test that tSZ kernel components have valid kernel analysis."""
     cosmo = cosmology.cosmo
     tsz_kernel.prepare(cosmo)
 
