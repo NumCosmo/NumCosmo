@@ -23,8 +23,8 @@
 
 """Unit tests for NcXcorKernel.
 
-Tests all kernel types using parametrized kernel_case fixture.
-Kernels are collected with all relevant configurations (e.g., galaxy with/without magbias).
+Tests all kernel types using parametrized kernel_case fixture. Kernels are collected
+with all relevant configurations (e.g., galaxy with/without magbias).
 """
 
 from typing import Callable
@@ -234,5 +234,55 @@ def test_limber_vs_limber_z(
                 atol=0.0,
                 err_msg=(
                     f"Limber and limber_z differ at ell={ell}, k={k:.3e}, z={z:.3f}"
+                ),
+            )
+
+
+def test_limber_vs_limber_z_vectorized(
+    kernel_case: tuple[str, Nc.XcorKernel], cosmology: Cosmology
+) -> None:
+    """Test that limber and limber_z give consistent results using vectorized evaluation."""
+    _, kernel = kernel_case
+    cosmo = cosmology.cosmo
+    dist = cosmology.dist
+    ps_ml = cosmology.ps_ml
+    kernel.set_l_limber(0)  # Treat all ells as limber
+    kernel.prepare(cosmo)
+
+    # Test ell range
+    ell_start = 100
+    ell_end = ell_start + 8  # 9 elements total
+
+    # Get vectorized evaluation function for ell range
+    limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+    kmin, kmax = limber_func.get_range()
+
+    # Test at multiple k values
+    k_array = np.geomspace(kmin, kmax, 50)
+    for k in k_array:
+        # Get all 9 results at once
+        results = limber_func.eval_array(k)
+
+        # Compare each ell individually
+        for i, ell in enumerate(range(ell_start, ell_end + 1)):
+            nu = ell + 0.5
+            xi = nu / k
+            k_Mpc = k / cosmo.RH_Mpc()
+            z = dist.inv_comoving(cosmo, xi)
+            pk = ps_ml.eval(cosmo, z, k_Mpc)
+            result_z = (
+                kernel.eval_limber_z_full(cosmo, z, dist, ell)
+                * np.sqrt(pk)
+                * np.sqrt(np.pi / 2.0 / nu)
+                / k
+            )
+            assert_allclose(
+                results[i],
+                result_z,
+                rtol=1e-13,
+                atol=0.0,
+                err_msg=(
+                    f"Vectorized limber and limber_z differ at "
+                    f"ell={ell}, k={k:.3e}, z={z:.3f}"
                 ),
             )
