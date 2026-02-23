@@ -256,173 +256,6 @@ def _load_fits_data(catalog: Path) -> Table:
     """
     return Table.read(catalog.as_posix(), format="fits")
 
-class SkyMatchIDResult:
-    """Class to store the results of the sky match by ID."""
-
-    def __init__(
-        self,
-        sky_match: SkyMatch,
-        matched_pairs: list[tuple[int, int, float]],
-    ):
-        """Initialize the SkyMatchResult class.
-
-        :param matched_pairs: Tuple of matched pairs (id1, id2, weight).
-        """
-        self.sky_match = sky_match
-        self.matched_pairs = matched_pairs
-
-        
-    def select_best(
-        self,
-    ): 
-        """Select the best matched objects.
-
-        :param selection_criteria: Selection criteria to use.
-        :param mask: Mask to use to select the best matched objects.
-        """
-        
-        G = nx.Graph()
-        for id1, id2, w in self.matched_pairs:
-            G.add_edge(("query_id",id1), ("match_id",id2), weight=w)
-        
-        random.seed(42)
-        total_weight = 0.0
-        global_matching = set()
-        
-        for i, nodes in enumerate(nx.connected_components(G)):
-            
-            subG = G.subgraph(nodes)
-            m = nx.max_weight_matching(subG, maxcardinality=False) 
-            w = sum(subG[u][v]['weight'] for u, v in m)
-
-            total_weight += w
-            global_matching |= m 
-
-            
-       # unique_combinations = []
-       # for row_data in global_matching:
-        #    row_dict = dict(row_data) 
-         #   unique_combinations.append(tuple(row_dict.values()))
-        
-        query_id_unique = []
-        match_id_unique = []
-        linking_coef = []
-        
-        for u, v in global_matching:
-            
-            # garantir lado correto
-            if u[0] == "query_id":
-                node1, node2 = u, v
-            else:
-                node1, node2 = v, u
-        
-            id1 = node1[1]
-            id2 = node2[1]
-            weight = G[node1][node2]['weight']
-        
-            query_id_unique.append(id1)
-            match_id_unique.append(id2)
-            linking_coef.append(weight)
-        
-        return query_id_unique, match_id_unique, linking_coef
-    
-    def _get_by_indices(
-        self,
-        x: npt.NDArray,
-        indices: list[int] | npt.NDArray
-    ) -> list[npt.NDArray]:
-        assert len(x.shape) == 1
-        return [x[i] for i in indices]
-
-    def to_table_complete(
-        self,
-        *,
-        query_properties: dict[str, str] | None = None,
-        match_properties: dict[str, str] | None = None,
-    ) -> Table:
-        """Convert the match result to a complete table.
-
-        The function returns a table with all the properties of the query catalog
-        and the properties of the match catalog for the best matched objects.
-        """
-        
-        matched_query_id, matched_match_id, linking_coef = zip(*self.matched_pairs)
-              
-        mask = np.isin(self.match_data[self.match_coordinates["ID"]], matched_match_id)
-        
-        indices = np.where(mask)[0]
-
-        table = Table()
-        table["ID"] = matched_query_id
-        table["RA"] = self.sky_match.query_ra[indices]
-        table["DEC"] = self.sky_match.query_dec[indices]
-        table["z"] = self.sky_match.query_z[indices]
-
-        if query_properties is not None:
-            assert isinstance(query_properties, dict)
-            for key, value in query_properties.items():
-                table[value] = self.sky_match.query_data[key][table["ID"]]
-
-        if match_properties is not None:
-            assert isinstance(match_properties, dict)
-            for key, value in match_properties.items():
-                table[value] = self._get_by_indices(
-                    self.sky_match.match_data[key],
-                    self.nearest_neighbours_indices,
-                    mask,
-                )
-
-        table["ID_matched"] = self._get_by_indices(
-            np.arange(len(self.sky_match.match_ra)),
-            self.nearest_neighbours_indices,
-            mask,
-        )
-        table["RA_matched"] = self._get_by_indices(
-            self.sky_match.match_ra, indices
-        )
-        table["DEC_matched"] = self._get_by_indices(
-            self.sky_match.match_dec, indices
-        )
-        table["z_matched"] = self._get_by_indices(
-            self.sky_match.match_z, indices
-        )
-        return table
- 
-    
-    def to_table_best(
-        self,
-        *,
-        query_properties: dict[str, str] | None = None,
-        match_properties: dict[str, str] | None = None,
-    ) -> Table:
-        """Convert the match result to a table with only the best matched objects."""
-        table = Table()
-
-        query_id_unique, match_id_unique, linking_coef = self.select_best()
-
-        table["ID"] = query_id_unique
-        table["RA"] = self.sky_match.query_ra[query_id_unique]
-        table["DEC"] = self.sky_match.query_dec[query_id_unique]
-        table["z"] = self.sky_match.query_z[query_id_unique]
-
-        table["ID_matched"] = match_id_unique
-        table["RA_matched"] = self.sky_match.match_ra[match_id_unique]
-        table["DEC_matched"] = self.sky_match.match_dec[match_id_unique]
-        table["z_matched"] = self.sky_match.match_z[match_id_unique]
-        
-        table["linking_coeficient"] = linking_coef
-
-        if query_properties is not None:
-            for key, value in query_properties.items():
-                table[value] = self.sky_match.query_data[key][query_id_unique]
-
-        if match_properties is not None:
-            for key, value in match_properties.items():
-                table[value] = self.sky_match.match_data[key][match_id_unique]
-
-        return table
-    
-
 class SkyMatchResult:
     """Class to store the results of the sky match."""
 
@@ -432,6 +265,7 @@ class SkyMatchResult:
         matching_type: MatchingType,
         nearest_neighbours_indices: np.ndarray[tuple[int, int], np.dtype[np.int64]],
         nearest_neighbours_distances: np.ndarray[tuple[int, int], np.dtype[np.float64]],
+        query_indices: np.array | None = None,
     ):
         """Initialize the SkyMatchResult class.
 
@@ -443,16 +277,22 @@ class SkyMatchResult:
         self.matching_type = matching_type
         self.nearest_neighbours_indices = nearest_neighbours_indices
         self.nearest_neighbours_distances = nearest_neighbours_distances
+        self.query_indices = query_indices
 
         assert (
             self.nearest_neighbours_indices.shape
             == self.nearest_neighbours_distances.shape
         )
 
-        assert self.nearest_neighbours_indices.shape[0] == len(self.sky_match.query_ra)
+        if self.matching_type == MatchingType.DISTANCE:
+            assert self.nearest_neighbours_indices.shape[0] == len(self.sky_match.query_ra)
 
     def full_mask(self) -> Mask:
         """Return a mask with all the elements set to True."""
+        
+        if self.matching_type == MatchingType.ID:
+            raise ValueError("Full mask is not available for ID matching.")
+        
         return Mask(
             np.ones_like(self.nearest_neighbours_distances, dtype=bool),
         )
@@ -466,6 +306,9 @@ class SkyMatchResult:
 
         :param max_distance: Maximum distance to consider a match.
         """
+        if self.matching_type == MatchingType.ID:
+            raise ValueError("Filtering by distance is not available for ID matching.")
+        
         if mask is None:
             mask = self.full_mask()
         return mask & Mask(self.nearest_neighbours_distances < max_distance)
@@ -483,6 +326,9 @@ class SkyMatchResult:
 
         :param delta_z: Maximum delta_z to consider a match.
         """
+        if self.matching_type == MatchingType.ID:
+            raise ValueError("Filtering by redshift proximity is not available for ID matching.")
+
         if query_sigma_z_column is not None and (
             query_sigma_z_column not in self.sky_match.query_data.columns
         ):
@@ -523,7 +369,8 @@ class SkyMatchResult:
 
         return mask & Mask(z_mask_array)
 
-    def select_best(
+    
+    def _select_best_distance(
         self,
         selection_criteria: SelectionCriteria = SelectionCriteria.DISTANCES,
         more_massive_column: str | None = None,
@@ -585,6 +432,76 @@ class SkyMatchResult:
             query_filter=query_filter,
             indices=np.array(best_candidates_indices, dtype=np.int64),
         )
+    
+    
+    def _select_best_id(
+        self,
+        ) -> BestCandidates:
+        
+        pairs = [
+    (id1, id2, w) 
+    for q_id, matches, coeff in zip(self.query_indices, self.nearest_neighbours_indices, self.nearest_neighbours_distances) 
+    for m_id, w in zip(matches, coeff)
+]
+        G = nx.Graph()
+        for id1, id2, w in pairs:
+            G.add_edge(("query_id",id1), ("match_id",id2), weight=w)
+        
+        random.seed(42)
+        total_weight = 0.0
+        global_matching = set()
+        
+        for i, nodes in enumerate(nx.connected_components(G)):
+            
+            subG = G.subgraph(nodes)
+            m = nx.max_weight_matching(subG, maxcardinality=False) 
+            w = sum(subG[u][v]['weight'] for u, v in m)
+
+            total_weight += w
+            global_matching |= m 
+
+            
+        # unique_combinations = []
+        # for row_data in global_matching:
+        #    row_dict = dict(row_data) 
+            #   unique_combinations.append(tuple(row_dict.values()))
+        
+        query_id_unique = []
+        match_id_unique = []
+        linking_coef = []
+        
+        for u, v in global_matching:
+            
+            # garantir lado correto
+            if u[0] == "query_id":
+                node1, node2 = u, v
+            else:
+                node1, node2 = v, u
+        
+            id1 = node1[1]
+            id2 = node2[1]
+            weight = G[node1][node2]['weight']
+        
+            query_id_unique.append(id1)
+            match_id_unique.append(id2)
+            linking_coef.append(weight)
+        
+        return query_id_unique, match_id_unique, linking_coef
+    
+
+    def select_best(
+        self,
+        selection_criteria: SelectionCriteria | None = None,
+        more_massive_column: str | None = None,
+        mask: Mask | None = None,
+    ) -> BestCandidates:
+        
+        if self.matching_type == MatchingType.ID:
+            return self._select_best_id()
+        
+        if self.matching_type == MatchingType.DISTANCE:
+            return self._select_best_distance(selection_criteria, more_massive_column, mask)
+
 
     def _get_by_indices(
         self,
@@ -1082,5 +999,5 @@ class SkyMatch:
         match_list = np.array(list(group['match_id']) for group in grouped_comb.groups)
         coeficientes = np.array(list(group['linking_coefficient']) for group in grouped_comb.groups)
 
-        return SkyMatchResult(self, MatchingType.ID, match_list, coeficientes)
+        return SkyMatchResult(self, MatchingType.ID, match_list, coeficientes, query_list)
                 
