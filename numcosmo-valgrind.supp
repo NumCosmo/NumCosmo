@@ -95,23 +95,19 @@
    ...
 }
 {
-   <GILeak>
+   <GILeakFlags>
    Memcheck:Leak
    match-leak-kinds: definite
    ...
-   fun:g_type_create_instance
-   fun:gi_info_new_full
    fun:pyg_flags_add_full
    fun:_wrap_pyg_flags_add
    ...
 }
 {
-   <GILeak>
+   <GILeakEnums>
    Memcheck:Leak
    match-leak-kinds: definite
    ...
-   fun:g_type_create_instance
-   fun:gi_info_new_full
    fun:pyg_enum_add_full
    fun:_wrap_pyg_enum_add
    ...
