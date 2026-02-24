@@ -55,17 +55,17 @@ NcmSpectral *ncm_spectral_ref (NcmSpectral *spectral);
 void ncm_spectral_free (NcmSpectral *spectral);
 void ncm_spectral_clear (NcmSpectral **spectral);
 
-void ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, NcmVector *coeffs, gpointer user_data);
-NcmVector *ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, gpointer user_data);
+void ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint order, GArray **coeffs, gpointer user_data);
+void ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, GArray **coeffs, gpointer user_data);
 
-void ncm_spectral_chebT_to_gegenbauer_alpha1 (NcmVector *c, NcmVector *g);
-void ncm_spectral_chebT_to_gegenbauer_alpha2 (NcmVector *c, NcmVector *g);
+void ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g);
+void ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g);
 
-gdouble ncm_spectral_gegenbauer_alpha1_eval (NcmVector *c, gdouble x);
-gdouble ncm_spectral_gegenbauer_alpha2_eval (NcmVector *c, gdouble x);
+gdouble ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble x);
+gdouble ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble x);
 
-gdouble ncm_spectral_chebyshev_eval (NcmVector *a, gdouble t);
-gdouble ncm_spectral_chebyshev_deriv (NcmVector *a, gdouble t);
+gdouble ncm_spectral_chebyshev_eval (GArray *a, gdouble t);
+gdouble ncm_spectral_chebyshev_deriv (GArray *a, gdouble t);
 
 NcmMatrix *ncm_spectral_get_proj_matrix (guint N);
 NcmMatrix *ncm_spectral_get_x_matrix (guint N);

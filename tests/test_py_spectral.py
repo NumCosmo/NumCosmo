@@ -46,59 +46,46 @@ class TestSpectral:
         N = 16
 
         # T_0 = C_0^(1)
-        c = Ncm.Vector.new(N)
-        c.set_zero()
-        c.set(0, 1.0)
-        g = Ncm.Vector.new(N)
-        g.set_zero()
+        c = np.zeros(N)
+        c[0] = 1.0
 
-        Ncm.Spectral.chebT_to_gegenbauer_alpha1(c, g)
-        g_np = g.to_numpy()
+        g = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha1(c))
 
         expected = np.zeros(N)
         expected[0] = 1.0
-        assert_allclose(g_np, expected, rtol=1.0e-14, atol=1.0e-14)
+        assert_allclose(g, expected, rtol=1.0e-14, atol=1.0e-14)
 
         # T_1 = (1/2) C_1^(1)
-        c = Ncm.Vector.new(N)
-        c.set_zero()
-        c.set(1, 1.0)
-        g = Ncm.Vector.new(N)
-        g.set_zero()
+        c = np.zeros(N)
+        c[1] = 1.0
 
-        Ncm.Spectral.chebT_to_gegenbauer_alpha1(c, g)
-        g_np = g.to_numpy()
+        g = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha1(c))
 
         expected = np.zeros(N)
         expected[1] = 0.5
-        assert_allclose(g_np, expected, rtol=1.0e-14, atol=1.0e-14)
+        assert_allclose(g, expected, rtol=1.0e-14, atol=1.0e-14)
 
     def test_chebT_to_gegenbauer_alpha2_basic(self) -> None:
         """Test Chebyshev to Gegenbauer alpha=2 conversion."""
         N = 16
 
         # Test T_0 conversion
-        c = Ncm.Vector.new(N)
-        c.set_zero()
-        c.set(0, 1.0)
-        g = Ncm.Vector.new(N)
-        g.set_zero()
+        c = np.zeros(N)
+        c[0] = 1.0
 
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(c, g)
-        g_np = g.to_numpy()
+        g = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(c))
 
         # For T_0, g_0 should have contribution 1/2 * c_0 + c_0/(2*1) = 1.0
-        assert g_np[0] > 0.9
+        assert g[0] > 0.9
 
     def test_gegenbauer_alpha1_eval(self) -> None:
         """Test Gegenbauer alpha=1 evaluation."""
         N = 8
 
         # C_0^(1)(x) = 1, C_1^(1)(x) = 2x
-        c = Ncm.Vector.new(N)
-        c.set_zero()
-        c.set(0, 1.0)
-        c.set(1, 1.0)
+        c = np.zeros(N)
+        c[0] = 1.0
+        c[1] = 1.0
 
         # At x=0: result should be 1 + 1*0 = 1
         result = Ncm.Spectral.gegenbauer_alpha1_eval(c, 0.0)
@@ -121,10 +108,9 @@ class TestSpectral:
         N = 8
 
         # C_0^(2)(x) = 1, C_1^(2)(x) = 4x
-        c = Ncm.Vector.new(N)
-        c.set_zero()
-        c.set(0, 1.0)
-        c.set(1, 1.0)
+        c = np.zeros(N)
+        c[0] = 1.0
+        c[1] = 1.0
 
         # At x=0: result should be 1 + 1*0 = 1
         result = Ncm.Spectral.gegenbauer_alpha2_eval(c, 0.0)
@@ -139,27 +125,24 @@ class TestSpectral:
         N = 8
 
         # T_0(x) = 1
-        a = Ncm.Vector.new(N)
-        a.set_zero()
-        a.set(0, 1.0)
+        a = np.zeros(N)
+        a[0] = 1.0
 
         for x in [0.0, 0.5, 1.0, -1.0]:
             result = Ncm.Spectral.chebyshev_eval(a, x)
             assert_allclose(result, 1.0, rtol=1.0e-14)
 
         # T_1(x) = x
-        a = Ncm.Vector.new(N)
-        a.set_zero()
-        a.set(1, 1.0)
+        a = np.zeros(N)
+        a[1] = 1.0
 
         for x in [0.0, 0.5, 1.0, -1.0]:
             result = Ncm.Spectral.chebyshev_eval(a, x)
             assert_allclose(result, x, rtol=1.0e-14)
 
         # T_2(x) = 2x^2 - 1
-        a = Ncm.Vector.new(N)
-        a.set_zero()
-        a.set(2, 1.0)
+        a = np.zeros(N)
+        a[2] = 1.0
 
         for x in [0.0, 0.5, 1.0, -1.0]:
             result = Ncm.Spectral.chebyshev_eval(a, x)
@@ -171,27 +154,24 @@ class TestSpectral:
         N = 8
 
         # Derivative of constant is 0
-        a = Ncm.Vector.new(N)
-        a.set_zero()
-        a.set(0, 1.0)
+        a = np.zeros(N)
+        a[0] = 1.0
 
         for x in [0.0, 0.5, 1.0, -1.0]:
             result = Ncm.Spectral.chebyshev_deriv(a, x)
             assert_allclose(result, 0.0, rtol=1.0e-14, atol=1.0e-14)
 
         # Derivative of T_1(x) = x is 1
-        a = Ncm.Vector.new(N)
-        a.set_zero()
-        a.set(1, 1.0)
+        a = np.zeros(N)
+        a[1] = 1.0
 
         for x in [0.0, 0.5, 1.0, -1.0]:
             result = Ncm.Spectral.chebyshev_deriv(a, x)
             assert_allclose(result, 1.0, rtol=1.0e-14)
 
         # Derivative of T_2(x) = 2x^2 - 1 is 4x
-        a = Ncm.Vector.new(N)
-        a.set_zero()
-        a.set(2, 1.0)
+        a = np.zeros(N)
+        a[2] = 1.0
 
         for x in [0.0, 0.5, 1.0, -1.0]:
             result = Ncm.Spectral.chebyshev_deriv(a, x)
@@ -205,13 +185,13 @@ class TestSpectral:
         def f_constant(_user_data, _x):
             return 1.0
 
-        coeffs = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_constant, -1.0, 1.0, coeffs, None)
-        coeffs_np = coeffs.to_numpy()
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_constant, -1.0, 1.0, N, None)
+        )
 
         # f(x) = 1 = T_0(x), so c_0 = 1, rest = 0
-        assert_allclose(coeffs_np[0], 1.0, rtol=1.0e-12)
-        assert_allclose(coeffs_np[1:], 0.0, rtol=1.0e-12, atol=1.0e-12)
+        assert_allclose(coeffs[0], 1.0, rtol=1.0e-12)
+        assert_allclose(coeffs[1:], 0.0, rtol=1.0e-12, atol=1.0e-12)
 
     def test_compute_chebyshev_coeffs_linear(self, spectral: Ncm.Spectral) -> None:
         """Test computing Chebyshev coefficients for linear function."""
@@ -220,14 +200,14 @@ class TestSpectral:
         def f_linear(_user_data, x):
             return x
 
-        coeffs = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_linear, -1.0, 1.0, coeffs, None)
-        coeffs_np = coeffs.to_numpy()
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_linear, -1.0, 1.0, N, None)
+        )
 
         # f(x) = x = T_1(x), so c_1 = 1, rest = 0
-        assert_allclose(coeffs_np[0], 0.0, rtol=1.0e-12, atol=1.0e-12)
-        assert_allclose(coeffs_np[1], 1.0, rtol=1.0e-12)
-        assert_allclose(coeffs_np[2:], 0.0, rtol=1.0e-12, atol=1.0e-12)
+        assert_allclose(coeffs[0], 0.0, rtol=1.0e-12, atol=1.0e-12)
+        assert_allclose(coeffs[1], 1.0, rtol=1.0e-12)
+        assert_allclose(coeffs[2:], 0.0, rtol=1.0e-12, atol=1.0e-12)
 
     def test_compute_chebyshev_coeffs_quadratic(self, spectral: Ncm.Spectral) -> None:
         """Test computing Chebyshev coefficients for quadratic function."""
@@ -236,15 +216,15 @@ class TestSpectral:
         def f_quadratic(_user_data, x):
             return x * x
 
-        coeffs = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_quadratic, -1.0, 1.0, coeffs, None)
-        coeffs_np = coeffs.to_numpy()
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_quadratic, -1.0, 1.0, N, None)
+        )
 
         # f(x) = x^2 = (T_0 + T_2)/2, so c_0 = 1/2, c_2 = 1/2
-        assert_allclose(coeffs_np[0], 0.5, rtol=1.0e-11)
-        assert_allclose(coeffs_np[1], 0.0, rtol=1.0e-12, atol=1.0e-12)
-        assert_allclose(coeffs_np[2], 0.5, rtol=1.0e-11)
-        assert_allclose(coeffs_np[3:], 0.0, rtol=1.0e-12, atol=1.0e-12)
+        assert_allclose(coeffs[0], 0.5, rtol=1.0e-11)
+        assert_allclose(coeffs[1], 0.0, rtol=1.0e-12, atol=1.0e-12)
+        assert_allclose(coeffs[2], 0.5, rtol=1.0e-11)
+        assert_allclose(coeffs[3:], 0.0, rtol=1.0e-12, atol=1.0e-12)
 
     def test_compute_chebyshev_coeffs_gaussian(self, spectral: Ncm.Spectral) -> None:
         """Test computing Chebyshev coefficients for Gaussian function."""
@@ -253,8 +233,9 @@ class TestSpectral:
         def f_gaussian(_user_data, x):
             return np.exp(-x * x)
 
-        coeffs = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_gaussian, -1.0, 1.0, coeffs, None)
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_gaussian, -1.0, 1.0, N, None)
+        )
 
         # Verify by evaluating at test points
         test_points = np.array([0.0, 0.3, 0.5, 0.7, 0.9])
@@ -278,16 +259,17 @@ class TestSpectral:
         coeffs_adaptive = spectral.compute_chebyshev_coeffs_adaptive(
             f_constant, -1.0, 1.0, 2, 1e-12, None
         )
-        N_adaptive = coeffs_adaptive.len()
+        N_adaptive = len(coeffs_adaptive)
 
         # Fixed order
-        coeffs_fixed = Ncm.Vector.new(N_adaptive)
-        spectral.compute_chebyshev_coeffs(f_constant, -1.0, 1.0, coeffs_fixed, None)
+        coeffs_fixed = np.array(
+            spectral.compute_chebyshev_coeffs(f_constant, -1.0, 1.0, N_adaptive, None)
+        )
 
         # Should match
         assert_allclose(
-            coeffs_adaptive.to_numpy(),
-            coeffs_fixed.to_numpy(),
+            np.array(coeffs_adaptive),
+            coeffs_fixed,
             rtol=1e-12,
         )
 
@@ -300,14 +282,15 @@ class TestSpectral:
         coeffs_adaptive = spectral.compute_chebyshev_coeffs_adaptive(
             f_poly, -1.0, 1.0, 3, 1e-12, None
         )
-        N_adaptive = coeffs_adaptive.len()
+        N_adaptive = len(coeffs_adaptive)
 
-        coeffs_fixed = Ncm.Vector.new(N_adaptive)
-        spectral.compute_chebyshev_coeffs(f_poly, -1.0, 1.0, coeffs_fixed, None)
+        coeffs_fixed = np.array(
+            spectral.compute_chebyshev_coeffs(f_poly, -1.0, 1.0, N_adaptive, None)
+        )
 
         assert_allclose(
-            coeffs_adaptive.to_numpy(),
-            coeffs_fixed.to_numpy(),
+            np.array(coeffs_adaptive),
+            coeffs_fixed,
             rtol=1e-11,
         )
 
@@ -352,24 +335,26 @@ class TestSpectral:
         def f_const(_user_data, _x):
             return 2.5
 
-        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
-            f_const, -1.0, 1.0, 2, 1e-12, None
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                f_const, -1.0, 1.0, 2, 1e-12, None
+            )
         )
-        coeffs_np = coeffs.to_numpy()
-        assert_allclose(coeffs_np[0], 2.5, rtol=1e-12)
-        assert_allclose(coeffs_np[1:], 0.0, rtol=1e-12, atol=1e-12)
+        assert_allclose(coeffs[0], 2.5, rtol=1e-12)
+        assert_allclose(coeffs[1:], 0.0, rtol=1e-12, atol=1e-12)
 
         # Test 2: Linear function f(x) = 3x
         def f_linear(_user_data, x):
             return 3.0 * x
 
-        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
-            f_linear, -1.0, 1.0, 2, 1e-12, None
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                f_linear, -1.0, 1.0, 2, 1e-12, None
+            )
         )
-        coeffs_np = coeffs.to_numpy()
-        assert_allclose(coeffs_np[0], 0.0, rtol=1e-12, atol=1e-12)
-        assert_allclose(coeffs_np[1], 3.0, rtol=1e-12)
-        assert_allclose(coeffs_np[2:], 0.0, rtol=1e-12, atol=1e-12)
+        assert_allclose(coeffs[0], 0.0, rtol=1e-12, atol=1e-12)
+        assert_allclose(coeffs[1], 3.0, rtol=1e-12)
+        assert_allclose(coeffs[2:], 0.0, rtol=1e-12, atol=1e-12)
 
     def test_adaptive_nested_nodes(self, spectral: Ncm.Spectral) -> None:
         """Test that adaptive refinement properly reuses nested nodes."""
@@ -382,11 +367,13 @@ class TestSpectral:
 
         # Start at k=2 (N=5), refine to k=3 (N=9)
         # Should evaluate 5 nodes initially, then 4 new odd nodes
-        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
-            f_counted, -1.0, 1.0, 2, 1e-6, None
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                f_counted, -1.0, 1.0, 2, 1e-6, None
+            )
         )
 
-        N_final = coeffs.len()
+        N_final = coeffs.size
         # Should be less than 2*N_final due to node reuse
         assert call_count[0] < 2 * N_final
 
@@ -418,12 +405,14 @@ class TestSpectral:
             # Very oscillatory function that won't converge easily
             return np.sin(20.0 * x)
 
-        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
-            f_hard, -1.0, 1.0, 2, 1e-12, None
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                f_hard, -1.0, 1.0, 2, 1e-12, None
+            )
         )
 
         # Should stop at max_order
-        assert coeffs.len() <= 33
+        assert coeffs.size <= 33
 
     def test_adaptive_max_order_limit_higher(self) -> None:
         """Test that adaptive refinement respects max_order."""
@@ -437,18 +426,22 @@ class TestSpectral:
             # Very oscillatory function that won't converge easily
             return np.exp(-x * x) * np.sin(600.0 * x)
 
-        coeffs40 = spectral.compute_chebyshev_coeffs_adaptive(
-            f_hard, -1.0, 1.0, 2, 1e-12, None
+        coeffs40 = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                f_hard, -1.0, 1.0, 2, 1e-12, None
+            )
         )
-        coeffs600 = spectral.compute_chebyshev_coeffs_adaptive(
-            f_harder, -1.0, 1.0, 2, 1e-12, None
+        coeffs600 = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                f_harder, -1.0, 1.0, 2, 1e-12, None
+            )
         )
 
         # Should stop at max_order
-        assert coeffs40.len() <= 2**16 + 1
-        assert coeffs600.len() <= 2**16 + 1
+        assert coeffs40.size <= 2**16 + 1
+        assert coeffs600.size <= 2**16 + 1
         # Should require more points for higher frequency
-        assert coeffs40.len() < coeffs600.len()
+        assert coeffs40.size < coeffs600.size
 
     def test_adaptive_performance_simple(self) -> None:
         """Performance test for adaptive refinement with simple function."""
@@ -458,10 +451,12 @@ class TestSpectral:
             return np.exp(-x * x)
 
         for _ in range(100):
-            coeffs = spectral.compute_chebyshev_coeffs_adaptive(
-                f_simple, -1.0, 1.0, 3, 1e-16, None
+            coeffs = np.array(
+                spectral.compute_chebyshev_coeffs_adaptive(
+                    f_simple, -1.0, 1.0, 3, 1e-16, None
+                )
             )
-            assert coeffs.len() > 0
+            assert coeffs.size > 0
 
     def test_adaptive_performance_complex(self) -> None:
         """Performance test for adaptive refinement with complex function."""
@@ -471,10 +466,12 @@ class TestSpectral:
             return np.exp(-x * x) * np.sin(10.0 * x) * np.cos(5.0 * x)
 
         for _ in range(100):
-            coeffs = spectral.compute_chebyshev_coeffs_adaptive(
-                f_complex, -1.0, 1.0, 3, 1e-16, None
+            coeffs = np.array(
+                spectral.compute_chebyshev_coeffs_adaptive(
+                    f_complex, -1.0, 1.0, 3, 1e-16, None
+                )
             )
-            assert coeffs.len() > 0
+            assert coeffs.size > 0
 
     def test_adaptive_spectral_decay(self, spectral: Ncm.Spectral) -> None:
         """Test that converged adaptive solution shows spectral decay."""
@@ -482,16 +479,17 @@ class TestSpectral:
         def f_smooth(_user_data, x):
             return 1.0 / (1.0 + 25.0 * x * x)  # Runge function
 
-        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
-            f_smooth, -1.0, 1.0, 4, 1e-8, None
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                f_smooth, -1.0, 1.0, 4, 1e-8, None
+            )
         )
-        coeffs_np = coeffs.to_numpy()
 
         # Check that tail coefficients are small
-        N = len(coeffs_np)
+        N = len(coeffs)
         tail_size = min(5, N // 10)
-        max_tail = np.max(np.abs(coeffs_np[-tail_size:]))
-        max_head = np.max(np.abs(coeffs_np[:tail_size]))
+        max_tail = np.max(np.abs(coeffs[-tail_size:]))
+        max_head = np.max(np.abs(coeffs[:tail_size]))
 
         # Tail should be much smaller than head
         assert max_tail < 1e-6 * max_head
@@ -503,14 +501,17 @@ class TestSpectral:
             return np.tanh(3.0 * x)
 
         # Adaptive with tolerance
-        coeffs_adaptive = spectral.compute_chebyshev_coeffs_adaptive(
-            f_test, -1.0, 1.0, 3, 1e-10, None
+        coeffs_adaptive = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                f_test, -1.0, 1.0, 3, 1e-10, None
+            )
         )
-        N_adaptive = coeffs_adaptive.len()
+        N_adaptive = len(coeffs_adaptive)
 
         # Fixed with same N
-        coeffs_fixed = Ncm.Vector.new(N_adaptive)
-        spectral.compute_chebyshev_coeffs(f_test, -1.0, 1.0, coeffs_fixed, None)
+        coeffs_fixed = np.array(
+            spectral.compute_chebyshev_coeffs(f_test, -1.0, 1.0, N_adaptive, None)
+        )
 
         # Both should give similar accuracy
         test_points = np.linspace(-0.9, 0.9, 15)
@@ -531,8 +532,9 @@ class TestSpectral:
         def f_gaussian(_user_data, x):
             return np.exp(-x * x)
 
-        coeffs = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_gaussian, -1.0, 1.0, coeffs, None)
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_gaussian, -1.0, 1.0, N, None)
+        )
 
         # Derivative of exp(-x^2) is -2x*exp(-x^2)
         test_points = np.array([0.0, 0.3, 0.5, 0.7, 0.9])
@@ -554,8 +556,9 @@ class TestSpectral:
         def f_rational(_user_data, x):
             return (x * x) / ((1.0 + x * x) ** 4)
 
-        coeffs = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, coeffs, None)
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, N, None)
+        )
 
         # Verify by evaluating at test points
         test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
@@ -581,9 +584,9 @@ class TestSpectral:
         def f_prime(x):
             return 2.0 * x * (1.0 - 3.0 * x * x) / ((1.0 + x * x) ** 5)
 
-        coeffs = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, coeffs, None)
-
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, N, None)
+        )
         test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
         for x in test_points:
             deriv_result = Ncm.Spectral.chebyshev_deriv(coeffs, x)
@@ -604,8 +607,7 @@ class TestSpectral:
         def f_test(_user_data, x):
             return 1.0 + x + x * x
 
-        coeffs = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_test, -1.0, 1.0, coeffs, None)
+        coeffs = np.array(spectral.compute_chebyshev_coeffs(f_test, -1.0, 1.0, N, None))
 
         # Test at endpoints
         result_m1 = Ncm.Spectral.chebyshev_eval(coeffs, -1.0)
@@ -624,8 +626,9 @@ class TestSpectral:
         def f_cubic(_user_data, x):
             return x * x * x
 
-        coeffs = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_cubic, -1.0, 1.0, coeffs, None)
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_cubic, -1.0, 1.0, N, None)
+        )
 
         # Test derivative at endpoints
         result_m1 = Ncm.Spectral.chebyshev_deriv(coeffs, -1.0)
@@ -644,8 +647,7 @@ class TestSpectral:
             return x * x
 
         # Test on [0, 1]
-        coeffs = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_test, 0.0, 1.0, coeffs, None)
+        coeffs = np.array(spectral.compute_chebyshev_coeffs(f_test, 0.0, 1.0, N, None))
 
         # Map test points from [-1, 1] to [0, 1]
         for xi in [-0.5, 0.0, 0.5]:
@@ -662,20 +664,23 @@ class TestSpectral:
             return np.sin(x)
 
         # Compute with N=32
-        coeffs1 = Ncm.Vector.new(32)
-        spectral.compute_chebyshev_coeffs(f_test, -1.0, 1.0, coeffs1, None)
+        coeffs1 = np.array(
+            spectral.compute_chebyshev_coeffs(f_test, -1.0, 1.0, 32, None)
+        )
 
         # Compute again with N=32 (should use cache)
-        coeffs2 = Ncm.Vector.new(32)
-        spectral.compute_chebyshev_coeffs(f_test, -1.0, 1.0, coeffs2, None)
+        coeffs2 = np.array(
+            spectral.compute_chebyshev_coeffs(f_test, -1.0, 1.0, 32, None)
+        )
 
         # Compute with different N=64 (should reallocate)
-        coeffs3 = Ncm.Vector.new(64)
-        spectral.compute_chebyshev_coeffs(f_test, -1.0, 1.0, coeffs3, None)
+        coeffs3 = np.array(
+            spectral.compute_chebyshev_coeffs(f_test, -1.0, 1.0, 64, None)
+        )
 
         # Verify results are correct
         for coeffs, N in [(coeffs1, 32), (coeffs2, 32), (coeffs3, 64)]:
-            assert coeffs.len() == N
+            assert coeffs.shape[0] == N
             # Test evaluation
             result = Ncm.Spectral.chebyshev_eval(coeffs, 0.5)
             expected = np.sin(0.5 * 0.5 * 2.0)  # Map to [-1,1]
@@ -799,9 +804,9 @@ class TestSpectral:
             return x**power
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_power, -1.0, 1.0, coeffs_vec, None)
-        coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_power, -1.0, 1.0, N, None)
+        )
 
         # Get analytical coefficients
         analytical = self.get_analytical_chebyshev_coeffs(power, N)
@@ -897,9 +902,7 @@ class TestSpectral:
             return np.exp(x)
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, coeffs_vec, None)
-        coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
+        coeffs = np.array(spectral.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, N, None))
 
         # Get analytical coefficients
         analytical = self.get_analytical_exp_coeffs(N)
@@ -928,9 +931,7 @@ class TestSpectral:
             return np.cos(x)
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_cos, -1.0, 1.0, coeffs_vec, None)
-        coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
+        coeffs = np.array(spectral.compute_chebyshev_coeffs(f_cos, -1.0, 1.0, N, None))
 
         # Get analytical coefficients
         analytical = self.get_analytical_cos_coeffs(N)
@@ -958,9 +959,9 @@ class TestSpectral:
             return 1.0 / (2.0 - x)
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, coeffs_vec, None)
-        coeffs = np.array([coeffs_vec.get(i) for i in range(N)])
+        coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, N, None)
+        )
 
         # Get analytical coefficients (computed numerically with high precision)
         analytical = self.get_analytical_rational_coeffs(N)
@@ -985,14 +986,13 @@ class TestSpectral:
         # Generate random Chebyshev coefficients
         rng = np.random.default_rng(42)
         coeffs = rng.uniform(-1.0, 1.0, N)
-        coeffs_vec = Ncm.Vector.new_array(coeffs.tolist())
 
         # Test at multiple points
         x_points = np.linspace(-1.0, 1.0, 1024)
 
         for x in x_points:
             # Evaluate using our implementation
-            result = Ncm.Spectral.chebyshev_eval(coeffs_vec, x)
+            result = Ncm.Spectral.chebyshev_eval(coeffs, x)
 
             # Evaluate using numpy
             expected = chebval(x, coeffs)
@@ -1016,14 +1016,13 @@ class TestSpectral:
         """
         # Get Chebyshev coefficients for x^power
         coeffs = self.get_analytical_chebyshev_coeffs(power, N)
-        coeffs_vec = Ncm.Vector.new_array(coeffs.tolist())
 
         # Test derivative at multiple points
         x_points = np.linspace(-0.95, 0.95, 19)
 
         for x in x_points:
             # Evaluate derivative using our implementation
-            result = Ncm.Spectral.chebyshev_deriv(coeffs_vec, x)
+            result = Ncm.Spectral.chebyshev_deriv(coeffs, x)
 
             # Expected derivative: d/dx(x^power) = power * x^(power-1)
             expected = power * x ** (power - 1) if power > 0 else 0.0
@@ -1049,15 +1048,14 @@ class TestSpectral:
             return np.exp(x)
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, coeffs_vec, None)
+        coeffs = np.array(spectral.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, N, None))
 
         # Test derivative at multiple points
         x_points = np.linspace(-0.95, 0.95, 19)
 
         for x in x_points:
             # Evaluate derivative
-            result = Ncm.Spectral.chebyshev_deriv(coeffs_vec, x)
+            result = Ncm.Spectral.chebyshev_deriv(coeffs, x)
 
             # Expected: d/dx(exp(x)) = exp(x)
             expected = np.exp(x)
@@ -1083,15 +1081,14 @@ class TestSpectral:
             return np.sin(x)
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_sin, -1.0, 1.0, coeffs_vec, None)
+        coeffs = np.array(spectral.compute_chebyshev_coeffs(f_sin, -1.0, 1.0, N, None))
 
         # Test derivative at multiple points
         x_points = np.linspace(-0.95, 0.95, 19)
 
         for x in x_points:
             # Evaluate derivative
-            result = Ncm.Spectral.chebyshev_deriv(coeffs_vec, x)
+            result = Ncm.Spectral.chebyshev_deriv(coeffs, x)
 
             # Expected: d/dx(sin(x)) = cos(x)
             expected = np.cos(x)
@@ -1112,40 +1109,38 @@ class TestSpectral:
         """
         # Test single coefficient (constant function)
         # f(x) = 5.0, so f'(x) = 0
-        const_vec = Ncm.Vector.new(1)
-        const_vec.set(0, 5.0)
-        result = Ncm.Spectral.chebyshev_deriv(const_vec, 0.5)
+        const = np.array([5.0])
+
+        result = Ncm.Spectral.chebyshev_deriv(const, 0.5)
         assert result == 0.0, "Derivative of constant should be 0"
 
-        result = Ncm.Spectral.chebyshev_deriv(const_vec, 0.0)
+        result = Ncm.Spectral.chebyshev_deriv(const, 0.0)
         assert result == 0.0, "Derivative of constant should be 0 at x=0"
 
-        result = Ncm.Spectral.chebyshev_deriv(const_vec, 1.0)
+        result = Ncm.Spectral.chebyshev_deriv(const, 1.0)
         assert result == 0.0, "Derivative of constant should be 0 at x=1"
 
-        result = Ncm.Spectral.chebyshev_deriv(const_vec, -1.0)
+        result = Ncm.Spectral.chebyshev_deriv(const, -1.0)
         assert result == 0.0, "Derivative of constant should be 0 at x=-1"
 
         # Test two coefficients (linear function: a0 + a1*x)
         # f(x) = 2.0 + 3.0*x, so f'(x) = 3.0
-        linear_vec = Ncm.Vector.new(2)
-        linear_vec.set(0, 2.0)
-        linear_vec.set(1, 3.0)
+        linear = np.array([2.0, 3.0])
 
         x_test = 0.5
-        result = Ncm.Spectral.chebyshev_deriv(linear_vec, x_test)
+        result = Ncm.Spectral.chebyshev_deriv(linear, x_test)
         assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
 
         # Test at x=0
-        result = Ncm.Spectral.chebyshev_deriv(linear_vec, 0.0)
+        result = Ncm.Spectral.chebyshev_deriv(linear, 0.0)
         assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
 
         # Test at x=1
-        result = Ncm.Spectral.chebyshev_deriv(linear_vec, 1.0)
+        result = Ncm.Spectral.chebyshev_deriv(linear, 1.0)
         assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
 
         # Test at x=-1
-        result = Ncm.Spectral.chebyshev_deriv(linear_vec, -1.0)
+        result = Ncm.Spectral.chebyshev_deriv(linear, -1.0)
         assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
 
     @pytest.mark.parametrize("power", [0, 1, 2, 3, 4, 5])
@@ -1159,10 +1154,10 @@ class TestSpectral:
         """
         # Get Chebyshev coefficients for x^power
         coeffs = self.get_analytical_chebyshev_coeffs(power, N)
-        coeffs_vec = Ncm.Vector.new_array(coeffs.tolist())
+        coeffs = np.array(coeffs)
 
         # Test at x = 1: f'(1) = power * 1^(power-1) = power
-        result_p1 = Ncm.Spectral.chebyshev_deriv(coeffs_vec, 1.0)
+        result_p1 = Ncm.Spectral.chebyshev_deriv(coeffs, 1.0)
         expected_p1 = power if power > 0 else 0.0
         assert_allclose(
             result_p1,
@@ -1173,7 +1168,7 @@ class TestSpectral:
         )
 
         # Test at x = -1: f'(-1) = power * (-1)^(power-1)
-        result_m1 = Ncm.Spectral.chebyshev_deriv(coeffs_vec, -1.0)
+        result_m1 = Ncm.Spectral.chebyshev_deriv(coeffs, -1.0)
         expected_m1 = power * ((-1.0) ** (power - 1)) if power > 0 else 0.0
         assert_allclose(
             result_m1,
@@ -1194,12 +1189,11 @@ class TestSpectral:
         """
         coeffs = np.zeros(N)
         coeffs[n] = 1.0
-        coeffs_vec = Ncm.Vector.new_array(coeffs.tolist())
 
         x_points = np.linspace(-0.9, 0.9, 17)
 
         for x in x_points:
-            result = Ncm.Spectral.chebyshev_deriv(coeffs_vec, x)
+            result = Ncm.Spectral.chebyshev_deriv(coeffs, x)
 
             theta = np.arccos(x)
             expected = n * np.sin(n * theta) / np.sin(theta)
@@ -1218,18 +1212,17 @@ class TestSpectral:
         Test derivative with alternating high-frequency coefficients.
         """
         coeffs = np.array([(-1.0) ** k for k in range(N)], dtype=float)
-        coeffs_vec = Ncm.Vector.new_array(coeffs.tolist())
 
         x_points = np.linspace(-0.8, 0.8, 11)
         h = 1.0e-7
 
         for x in x_points:
             d_numeric = (
-                Ncm.Spectral.chebyshev_eval(coeffs_vec, x + h)
-                - Ncm.Spectral.chebyshev_eval(coeffs_vec, x - h)
+                Ncm.Spectral.chebyshev_eval(coeffs, x + h)
+                - Ncm.Spectral.chebyshev_eval(coeffs, x - h)
             ) / (2.0 * h)
 
-            d_cheb = Ncm.Spectral.chebyshev_deriv(coeffs_vec, x)
+            d_cheb = Ncm.Spectral.chebyshev_deriv(coeffs, x)
 
             assert_allclose(
                 d_cheb,
@@ -1246,17 +1239,16 @@ class TestSpectral:
         """
         rng = np.random.default_rng(1234)
         coeffs = rng.normal(size=N)
-        coeffs_vec = Ncm.Vector.new_array(coeffs.tolist())
 
         x_points = np.linspace(-0.7, 0.7, 9)
         h = 1.0e-7
 
         for x in x_points:
-            f_plus = Ncm.Spectral.chebyshev_eval(coeffs_vec, x + h)
-            f_minus = Ncm.Spectral.chebyshev_eval(coeffs_vec, x - h)
+            f_plus = Ncm.Spectral.chebyshev_eval(coeffs, x + h)
+            f_minus = Ncm.Spectral.chebyshev_eval(coeffs, x - h)
             d_numeric = (f_plus - f_minus) / (2.0 * h)
 
-            d_cheb = Ncm.Spectral.chebyshev_deriv(coeffs_vec, x)
+            d_cheb = Ncm.Spectral.chebyshev_deriv(coeffs, x)
 
             assert_allclose(
                 d_cheb,
@@ -1277,10 +1269,9 @@ class TestSpectral:
         """
         coeffs = np.zeros(N)
         coeffs[n] = 1.0
-        coeffs_vec = Ncm.Vector.new_array(coeffs.tolist())
 
         # x = 1
-        result_p1 = Ncm.Spectral.chebyshev_deriv(coeffs_vec, 1.0)
+        result_p1 = Ncm.Spectral.chebyshev_deriv(coeffs, 1.0)
         assert_allclose(
             result_p1,
             n * n,
@@ -1290,7 +1281,7 @@ class TestSpectral:
         )
 
         # x = -1
-        result_m1 = Ncm.Spectral.chebyshev_deriv(coeffs_vec, -1.0)
+        result_m1 = Ncm.Spectral.chebyshev_deriv(coeffs, -1.0)
         expected_m1 = ((-1.0) ** (n - 1)) * n * n
         assert_allclose(
             result_m1,
@@ -1311,21 +1302,19 @@ class TestSpectral:
         """
         # Get Chebyshev coefficients for x^power
         cheb_coeffs = self.get_analytical_chebyshev_coeffs(power, N)
-        cheb_vec = Ncm.Vector.new_array(cheb_coeffs.tolist())
-        gegen_vec = Ncm.Vector.new(N)
 
         # Convert to Gegenbauer alpha=1 (U_n Chebyshev of second kind)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha1(cheb_vec, gegen_vec)
+        gegen = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha1(cheb_coeffs))
 
         # Test evaluation at multiple points
         x_points = np.linspace(-0.9, 0.9, 11)
 
         for x in x_points:
             # Evaluate using Chebyshev basis
-            cheb_val = Ncm.Spectral.chebyshev_eval(cheb_vec, x)
+            cheb_val = Ncm.Spectral.chebyshev_eval(cheb_coeffs, x)
 
             # Evaluate using Gegenbauer alpha=1 basis
-            gegen_val = Ncm.Spectral.gegenbauer_alpha1_eval(gegen_vec, x)
+            gegen_val = Ncm.Spectral.gegenbauer_alpha1_eval(gegen, x)
 
             # Both should give x^power
             expected = x**power
@@ -1357,21 +1346,19 @@ class TestSpectral:
         """
         # Get Chebyshev coefficients for x^power
         cheb_coeffs = self.get_analytical_chebyshev_coeffs(power, N)
-        cheb_vec = Ncm.Vector.new_array(cheb_coeffs.tolist())
-        gegen_vec = Ncm.Vector.new(N)
 
         # Convert to Gegenbauer alpha=2
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_vec, gegen_vec)
+        gegen_coeffs = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_coeffs))
 
         # Test evaluation at multiple points
         x_points = np.linspace(-0.9, 0.9, 11)
 
         for x in x_points:
             # Evaluate using Chebyshev basis
-            cheb_val = Ncm.Spectral.chebyshev_eval(cheb_vec, x)
+            cheb_val = Ncm.Spectral.chebyshev_eval(cheb_coeffs, x)
 
             # Evaluate using Gegenbauer alpha=2 basis
-            gegen_val = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_vec, x)
+            gegen_val = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_coeffs, x)
 
             # Both should give x^power
             expected = x**power
@@ -1408,14 +1395,13 @@ class TestSpectral:
             # Create coefficients for pure C_n^(alpha) polynomial
             coeffs = np.zeros(N)
             coeffs[n] = 1.0
-            coeffs_vec = Ncm.Vector.new_array(coeffs.tolist())
 
             for x in x_points:
                 # Evaluate using our implementation
                 if alpha_val == 1:
-                    result = Ncm.Spectral.gegenbauer_alpha1_eval(coeffs_vec, x)
+                    result = Ncm.Spectral.gegenbauer_alpha1_eval(coeffs, x)
                 else:
-                    result = Ncm.Spectral.gegenbauer_alpha2_eval(coeffs_vec, x)
+                    result = Ncm.Spectral.gegenbauer_alpha2_eval(coeffs, x)
 
                 # Evaluate using scipy
                 expected = eval_gegenbauer(n, alpha_val, x)
@@ -1440,17 +1426,14 @@ class TestSpectral:
             return np.exp(x)
 
         # Compute Chebyshev coefficients
-        coeffs_vec = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, coeffs_vec, None)
+        coeffs = np.array(spectral.compute_chebyshev_coeffs(f_exp, -1.0, 1.0, N, None))
 
         # Convert to Gegenbauer alpha=1
-        gegen1_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha1(coeffs_vec, gegen1_vec)
+
+        gegen1_coeffs = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha1(coeffs))
 
         # Convert to Gegenbauer alpha=2
-        gegen2_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(coeffs_vec, gegen2_vec)
-
+        gegen2_coeffs = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(coeffs))
         # Test evaluation at multiple points
         x_points = np.linspace(-0.8, 0.8, 17)
 
@@ -1458,13 +1441,13 @@ class TestSpectral:
             expected = np.exp(x)
 
             # Evaluate with Chebyshev
-            cheb_val = Ncm.Spectral.chebyshev_eval(coeffs_vec, x)
+            cheb_val = Ncm.Spectral.chebyshev_eval(coeffs, x)
 
             # Evaluate with Gegenbauer alpha=1
-            gegen1_val = Ncm.Spectral.gegenbauer_alpha1_eval(gegen1_vec, x)
+            gegen1_val = Ncm.Spectral.gegenbauer_alpha1_eval(gegen1_coeffs, x)
 
             # Evaluate with Gegenbauer alpha=2
-            gegen2_val = Ncm.Spectral.gegenbauer_alpha2_eval(gegen2_vec, x)
+            gegen2_val = Ncm.Spectral.gegenbauer_alpha2_eval(gegen2_coeffs, x)
 
             # All should match exp(x)
             assert_allclose(
@@ -1501,10 +1484,9 @@ class TestSpectral:
         """
         # Get Chebyshev coefficients for x^power
         cheb_coeffs = self.get_analytical_chebyshev_coeffs(power, N)
-        cheb_vec = Ncm.Vector.new_array(cheb_coeffs.tolist())
 
         # Test at x = 1
-        result_p1 = Ncm.Spectral.chebyshev_eval(cheb_vec, 1.0)
+        result_p1 = Ncm.Spectral.chebyshev_eval(cheb_coeffs, 1.0)
         expected_p1 = 1.0**power
         assert_allclose(
             result_p1,
@@ -1515,7 +1497,7 @@ class TestSpectral:
         )
 
         # Test at x = -1
-        result_m1 = Ncm.Spectral.chebyshev_eval(cheb_vec, -1.0)
+        result_m1 = Ncm.Spectral.chebyshev_eval(cheb_coeffs, -1.0)
         expected_m1 = (-1.0) ** power
         assert_allclose(
             result_m1,
@@ -1535,14 +1517,12 @@ class TestSpectral:
         """
         # Get Chebyshev coefficients for x^power
         cheb_coeffs = self.get_analytical_chebyshev_coeffs(power, N)
-        cheb_vec = Ncm.Vector.new_array(cheb_coeffs.tolist())
-        gegen_vec = Ncm.Vector.new(N)
 
         # Convert to Gegenbauer alpha=1
-        Ncm.Spectral.chebT_to_gegenbauer_alpha1(cheb_vec, gegen_vec)
+        gegen_coeffs = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha1(cheb_coeffs))
 
         # Test at x = 1
-        result_p1 = Ncm.Spectral.gegenbauer_alpha1_eval(gegen_vec, 1.0)
+        result_p1 = Ncm.Spectral.gegenbauer_alpha1_eval(gegen_coeffs, 1.0)
         expected_p1 = 1.0**power
         assert_allclose(
             result_p1,
@@ -1553,7 +1533,7 @@ class TestSpectral:
         )
 
         # Test at x = -1
-        result_m1 = Ncm.Spectral.gegenbauer_alpha1_eval(gegen_vec, -1.0)
+        result_m1 = Ncm.Spectral.gegenbauer_alpha1_eval(gegen_coeffs, -1.0)
         expected_m1 = (-1.0) ** power
         assert_allclose(
             result_m1,
@@ -1573,14 +1553,12 @@ class TestSpectral:
         """
         # Get Chebyshev coefficients for x^power
         cheb_coeffs = self.get_analytical_chebyshev_coeffs(power, N)
-        cheb_vec = Ncm.Vector.new_array(cheb_coeffs.tolist())
-        gegen_vec = Ncm.Vector.new(N)
 
         # Convert to Gegenbauer alpha=2
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_vec, gegen_vec)
+        gegen_coeffs = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_coeffs))
 
         # Test at x = 1
-        result_p1 = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_vec, 1.0)
+        result_p1 = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_coeffs, 1.0)
         expected_p1 = 1.0**power
         assert_allclose(
             result_p1,
@@ -1591,7 +1569,7 @@ class TestSpectral:
         )
 
         # Test at x = -1
-        result_m1 = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_vec, -1.0)
+        result_m1 = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_coeffs, -1.0)
         expected_m1 = (-1.0) ** power
         assert_allclose(
             result_m1,
@@ -1607,7 +1585,6 @@ class TestSpectral:
 
         # Get Chebyshev coefficients for x^2
         cheb_coeffs = self.get_analytical_chebyshev_coeffs(2, N)
-        cheb_vec = Ncm.Vector.new_array(cheb_coeffs.tolist())
 
         # Get projection matrix
         proj_mat = Ncm.Spectral.get_proj_matrix(N)
@@ -1617,13 +1594,13 @@ class TestSpectral:
         gegen_coeffs = proj_np @ cheb_coeffs
 
         # Verify by converting using the function
-        gegen_vec_expected = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_vec, gegen_vec_expected)
-        gegen_expected = gegen_vec_expected.to_numpy()
+        gegen_coeffs_expected = np.array(
+            Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_coeffs)
+        )
 
         assert_allclose(
             gegen_coeffs,
-            gegen_expected,
+            gegen_coeffs_expected,
             rtol=1.0e-12,
             atol=1.0e-15,
             err_msg="Projection matrix doesn't match conversion function",
@@ -1645,10 +1622,7 @@ class TestSpectral:
 
         # Expected: Gegenbauer coefficients of x^2
         cheb_x2 = self.get_analytical_chebyshev_coeffs(2, N)
-        cheb_x2_vec = Ncm.Vector.new_array(cheb_x2.tolist())
-        gegen_x2_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x2_vec, gegen_x2_vec)
-        gegen_expected = gegen_x2_vec.to_numpy()
+        gegen_expected = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x2))
 
         assert_allclose(
             gegen_result,
@@ -1674,10 +1648,7 @@ class TestSpectral:
 
         # Expected: Gegenbauer coefficients of x^3
         cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
-        cheb_x3_vec = Ncm.Vector.new_array(cheb_x3.tolist())
-        gegen_x3_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x3_vec, gegen_x3_vec)
-        gegen_expected = gegen_x3_vec.to_numpy()
+        gegen_expected = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x3))
 
         assert_allclose(
             gegen_result,
@@ -1703,10 +1674,7 @@ class TestSpectral:
 
         # Expected: Gegenbauer coefficients of x^3
         cheb_x3 = self.get_analytical_chebyshev_coeffs(3, N)
-        cheb_x3_vec = Ncm.Vector.new_array(cheb_x3.tolist())
-        gegen_x3_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x3_vec, gegen_x3_vec)
-        gegen_expected = gegen_x3_vec.to_numpy()
+        gegen_expected = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x3))
 
         assert_allclose(
             gegen_result,
@@ -1732,10 +1700,7 @@ class TestSpectral:
 
         # Expected: Gegenbauer coefficients of x^4
         cheb_x4 = self.get_analytical_chebyshev_coeffs(4, N)
-        cheb_x4_vec = Ncm.Vector.new_array(cheb_x4.tolist())
-        gegen_x4_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x4_vec, gegen_x4_vec)
-        gegen_expected = gegen_x4_vec.to_numpy()
+        gegen_expected = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x4))
 
         assert_allclose(
             gegen_result,
@@ -1761,10 +1726,7 @@ class TestSpectral:
 
         # Expected: Gegenbauer coefficients of 2x
         cheb_2x = 2.0 * self.get_analytical_chebyshev_coeffs(1, N)
-        cheb_2x_vec = Ncm.Vector.new_array(cheb_2x.tolist())
-        gegen_2x_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_2x_vec, gegen_2x_vec)
-        gegen_expected = gegen_2x_vec.to_numpy()
+        gegen_expected = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_2x))
 
         assert_allclose(
             gegen_result,
@@ -1790,10 +1752,7 @@ class TestSpectral:
 
         # Expected: Gegenbauer coefficients of 3x^2
         cheb_3x2 = 3.0 * self.get_analytical_chebyshev_coeffs(2, N)
-        cheb_3x2_vec = Ncm.Vector.new_array(cheb_3x2.tolist())
-        gegen_3x2_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_3x2_vec, gegen_3x2_vec)
-        gegen_expected = gegen_3x2_vec.to_numpy()
+        gegen_expected = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_3x2))
 
         assert_allclose(
             gegen_result,
@@ -1819,10 +1778,7 @@ class TestSpectral:
 
         # Expected: Gegenbauer coefficients of 6x
         cheb_6x = 6.0 * self.get_analytical_chebyshev_coeffs(1, N)
-        cheb_6x_vec = Ncm.Vector.new_array(cheb_6x.tolist())
-        gegen_6x_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_6x_vec, gegen_6x_vec)
-        gegen_expected = gegen_6x_vec.to_numpy()
+        gegen_expected = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_6x))
 
         assert_allclose(
             gegen_result,
@@ -1848,10 +1804,7 @@ class TestSpectral:
 
         # Expected: Gegenbauer coefficients of 12x^2
         cheb_12x2 = 12.0 * self.get_analytical_chebyshev_coeffs(2, N)
-        cheb_12x2_vec = Ncm.Vector.new_array(cheb_12x2.tolist())
-        gegen_12x2_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x2_vec, gegen_12x2_vec)
-        gegen_expected = gegen_12x2_vec.to_numpy()
+        gegen_expected = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x2))
 
         assert_allclose(
             gegen_result,
@@ -1877,10 +1830,7 @@ class TestSpectral:
 
         # Expected: Gegenbauer coefficients of 3x^3
         cheb_3x3 = 3.0 * self.get_analytical_chebyshev_coeffs(3, N)
-        cheb_3x3_vec = Ncm.Vector.new_array(cheb_3x3.tolist())
-        gegen_3x3_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_3x3_vec, gegen_3x3_vec)
-        gegen_expected = gegen_3x3_vec.to_numpy()
+        gegen_expected = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_3x3))
 
         assert_allclose(
             gegen_result,
@@ -1906,10 +1856,7 @@ class TestSpectral:
 
         # Expected: Gegenbauer coefficients of 12x^3
         cheb_12x3 = 12.0 * self.get_analytical_chebyshev_coeffs(3, N)
-        cheb_12x3_vec = Ncm.Vector.new_array(cheb_12x3.tolist())
-        gegen_12x3_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x3_vec, gegen_12x3_vec)
-        gegen_expected = gegen_12x3_vec.to_numpy()
+        gegen_expected = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x3))
 
         assert_allclose(
             gegen_result,
@@ -1935,10 +1882,7 @@ class TestSpectral:
 
         # Expected: Gegenbauer coefficients of 12x^4
         cheb_12x4 = 12.0 * self.get_analytical_chebyshev_coeffs(4, N)
-        cheb_12x4_vec = Ncm.Vector.new_array(cheb_12x4.tolist())
-        gegen_12x4_vec = Ncm.Vector.new(N)
-        Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x4_vec, gegen_12x4_vec)
-        gegen_expected = gegen_12x4_vec.to_numpy()
+        gegen_expected = np.array(Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x4))
 
         assert_allclose(
             gegen_result,
@@ -1959,12 +1903,11 @@ class TestSpectral:
         d_mat = Ncm.Spectral.get_d_matrix(N)
         d_np = d_mat.to_numpy()
         gegen_result = d_np @ cheb_x3
-        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
 
         # Evaluate at test points and compare with 3*x^2
         test_points = np.array([0.0, 0.3, 0.5, 0.7, 0.9])
         for x in test_points:
-            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result, x)
             expected = 3.0 * x**2
             assert_allclose(
                 eval_result,
@@ -1985,12 +1928,11 @@ class TestSpectral:
         d2_mat = Ncm.Spectral.get_d2_matrix(N)
         d2_np = d2_mat.to_numpy()
         gegen_result = d2_np @ cheb_x4
-        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
 
         # Evaluate at test points and compare with 12*x^2
         test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
         for x in test_points:
-            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result, x)
             expected = 12.0 * x**2
             assert_allclose(
                 eval_result,
@@ -2011,12 +1953,11 @@ class TestSpectral:
         x_d_mat = Ncm.Spectral.get_x_d_matrix(N)
         x_d_np = x_d_mat.to_numpy()
         gegen_result = x_d_np @ cheb_x4
-        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
 
         # Evaluate at test points and compare with 4*x^4
         test_points = np.array([0.1, 0.3, 0.5, 0.7, 0.9])
         for x in test_points:
-            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result, x)
             expected = 4.0 * x**4
             assert_allclose(
                 eval_result,
@@ -2037,12 +1978,11 @@ class TestSpectral:
         x2_d2_mat = Ncm.Spectral.get_x2_d2_matrix(N)
         x2_d2_np = x2_d2_mat.to_numpy()
         gegen_result = x2_d2_np @ cheb_x5
-        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
 
         # Evaluate at test points and compare with 20*x^5
         test_points = np.array([0.1, 0.3, 0.5, 0.7, 0.9])
         for x in test_points:
-            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result, x)
             expected = 20.0 * x**5
             assert_allclose(
                 eval_result,
@@ -2063,12 +2003,11 @@ class TestSpectral:
         x_mat = Ncm.Spectral.get_x_matrix(N)
         x_np = x_mat.to_numpy()
         gegen_result = x_np @ cheb_x3
-        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
 
         # Evaluate at test points and compare with x^4
         test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
         for x in test_points:
-            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result, x)
             expected = x**4
             assert_allclose(
                 eval_result,
@@ -2089,12 +2028,11 @@ class TestSpectral:
         x2_mat = Ncm.Spectral.get_x2_matrix(N)
         x2_np = x2_mat.to_numpy()
         gegen_result = x2_np @ cheb_x3
-        gegen_result_vec = Ncm.Vector.new_array(gegen_result.tolist())
 
         # Evaluate at test points and compare with x^5
         test_points = np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
         for x in test_points:
-            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result_vec, x)
+            eval_result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_result, x)
             expected = x**5
             assert_allclose(
                 eval_result,
@@ -2113,9 +2051,9 @@ class TestSpectral:
             return np.exp(-(x**2))
 
         # Compute Chebyshev coefficients for exp(-x^2)
-        cheb_vec = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_gaussian, -1.0, 1.0, cheb_vec, None)
-        cheb_coeffs = cheb_vec.to_numpy()
+        cheb_coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_gaussian, -1.0, 1.0, N, None)
+        )
 
         # Get operator matrices
         proj_mat = Ncm.Spectral.get_proj_matrix(N)
@@ -2142,9 +2080,8 @@ class TestSpectral:
 
         # Test 1: Projection gives same function
         gegen_proj = proj_np @ cheb_coeffs
-        gegen_proj_vec = Ncm.Vector.new_array(gegen_proj.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_proj_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_proj, x)
             expected = np.exp(-(x**2))
             assert_allclose(
                 result,
@@ -2156,9 +2093,8 @@ class TestSpectral:
 
         # Test 2: x operator: x*exp(-x^2)
         gegen_x = x_np @ cheb_coeffs
-        gegen_x_vec = Ncm.Vector.new_array(gegen_x.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x, x)
             expected = x * np.exp(-(x**2))
             assert_allclose(
                 result,
@@ -2170,9 +2106,8 @@ class TestSpectral:
 
         # Test 3: x^2 operator: x^2*exp(-x^2)
         gegen_x2 = x2_np @ cheb_coeffs
-        gegen_x2_vec = Ncm.Vector.new_array(gegen_x2.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2, x)
             expected = x**2 * np.exp(-(x**2))
             assert_allclose(
                 result,
@@ -2184,9 +2119,8 @@ class TestSpectral:
 
         # Test 4: d operator: d/dx(exp(-x^2)) = -2x*exp(-x^2)
         gegen_d = d_np @ cheb_coeffs
-        gegen_d_vec = Ncm.Vector.new_array(gegen_d.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d, x)
             expected = -2.0 * x * np.exp(-(x**2))
             assert_allclose(
                 result,
@@ -2198,9 +2132,8 @@ class TestSpectral:
 
         # Test 5: d^2 operator: d^2/dx^2(exp(-x^2)) = (4x^2 - 2)*exp(-x^2)
         gegen_d2 = d2_np @ cheb_coeffs
-        gegen_d2_vec = Ncm.Vector.new_array(gegen_d2.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d2_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d2, x)
             expected = (4.0 * x**2 - 2.0) * np.exp(-(x**2))
             assert_allclose(
                 result,
@@ -2212,9 +2145,8 @@ class TestSpectral:
 
         # Test 6: x*d operator: x*d/dx(exp(-x^2)) = x*(-2x*exp(-x^2)) = -2x^2*exp(-x^2)
         gegen_x_d = x_d_np @ cheb_coeffs
-        gegen_x_d_vec = Ncm.Vector.new_array(gegen_x_d.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d, x)
             expected = -2.0 * x**2 * np.exp(-(x**2))
             assert_allclose(
                 result,
@@ -2226,9 +2158,8 @@ class TestSpectral:
 
         # Test 7: x*d^2 operator: x*d^2/dx^2(exp(-x^2)) = x*(4x^2 - 2)*exp(-x^2)
         gegen_x_d2 = x_d2_np @ cheb_coeffs
-        gegen_x_d2_vec = Ncm.Vector.new_array(gegen_x_d2.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d2_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d2, x)
             expected = x * (4.0 * x**2 - 2.0) * np.exp(-(x**2))
             assert_allclose(
                 result,
@@ -2240,9 +2171,8 @@ class TestSpectral:
 
         # Test 8: x^2*d^2 operator: x^2*d^2/dx^2(exp(-x^2)) = x^2*(4x^2 - 2)*exp(-x^2)
         gegen_x2_d2 = x2_d2_np @ cheb_coeffs
-        gegen_x2_d2_vec = Ncm.Vector.new_array(gegen_x2_d2.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2_d2_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2_d2, x)
             expected = x**2 * (4.0 * x**2 - 2.0) * np.exp(-(x**2))
             assert_allclose(
                 result,
@@ -2269,9 +2199,9 @@ class TestSpectral:
             return (2.0 - 36.0 * x**2 + 42.0 * x**4) / (1.0 + x**2) ** 6
 
         # Compute Chebyshev coefficients
-        cheb_vec = Ncm.Vector.new(N)
-        spectral.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, cheb_vec, None)
-        cheb_coeffs = cheb_vec.to_numpy()
+        cheb_coeffs = np.array(
+            spectral.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, N, None)
+        )
 
         # Get operator matrices
         proj_mat = Ncm.Spectral.get_proj_matrix(N)
@@ -2298,9 +2228,8 @@ class TestSpectral:
 
         # Test 1: Projection gives same function
         gegen_proj = proj_np @ cheb_coeffs
-        gegen_proj_vec = Ncm.Vector.new_array(gegen_proj.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_proj_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_proj, x)
             expected = x**2 / (1.0 + x**2) ** 4
             assert_allclose(
                 result,
@@ -2312,9 +2241,8 @@ class TestSpectral:
 
         # Test 2: x operator: x * x^2/(1+x^2)^4 = x^3/(1+x^2)^4
         gegen_x = x_np @ cheb_coeffs
-        gegen_x_vec = Ncm.Vector.new_array(gegen_x.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x, x)
             expected = x**3 / (1.0 + x**2) ** 4
             assert_allclose(
                 result,
@@ -2326,9 +2254,8 @@ class TestSpectral:
 
         # Test 3: x^2 operator: x^2 * x^2/(1+x^2)^4 = x^4/(1+x^2)^4
         gegen_x2 = x2_np @ cheb_coeffs
-        gegen_x2_vec = Ncm.Vector.new_array(gegen_x2.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2, x)
             expected = x**4 / (1.0 + x**2) ** 4
             assert_allclose(
                 result,
@@ -2340,9 +2267,8 @@ class TestSpectral:
 
         # Test 4: d operator: d/dx of f(x)
         gegen_d = d_np @ cheb_coeffs
-        gegen_d_vec = Ncm.Vector.new_array(gegen_d.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d, x)
             expected = f_prime(x)
             assert_allclose(
                 result,
@@ -2354,9 +2280,8 @@ class TestSpectral:
 
         # Test 5: d^2 operator: d^2/dx^2 of f(x)
         gegen_d2 = d2_np @ cheb_coeffs
-        gegen_d2_vec = Ncm.Vector.new_array(gegen_d2.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d2_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_d2, x)
             expected = f_double_prime(x)
             assert_allclose(
                 result,
@@ -2368,9 +2293,8 @@ class TestSpectral:
 
         # Test 6: x*d operator: x*f'(x)
         gegen_x_d = x_d_np @ cheb_coeffs
-        gegen_x_d_vec = Ncm.Vector.new_array(gegen_x_d.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d, x)
             expected = x * f_prime(x)
             assert_allclose(
                 result,
@@ -2382,9 +2306,8 @@ class TestSpectral:
 
         # Test 7: x*d^2 operator: x*f''(x)
         gegen_x_d2 = x_d2_np @ cheb_coeffs
-        gegen_x_d2_vec = Ncm.Vector.new_array(gegen_x_d2.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d2_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x_d2, x)
             expected = x * f_double_prime(x)
             assert_allclose(
                 result,
@@ -2396,9 +2319,8 @@ class TestSpectral:
 
         # Test 8: x^2*d^2 operator: x^2*f''(x)
         gegen_x2_d2 = x2_d2_np @ cheb_coeffs
-        gegen_x2_d2_vec = Ncm.Vector.new_array(gegen_x2_d2.tolist())
         for x in test_points:
-            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2_d2_vec, x)
+            result = Ncm.Spectral.gegenbauer_alpha2_eval(gegen_x2_d2, x)
             expected = x**2 * f_double_prime(x)
             assert_allclose(
                 result,

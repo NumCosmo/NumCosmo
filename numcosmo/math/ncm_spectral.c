@@ -218,27 +218,29 @@ ncm_spectral_clear (NcmSpectral **spectral)
  * @F: (scope call): function to evaluate
  * @a: left endpoint
  * @b: right endpoint
- * @coeffs: output vector
+ * @order: number of Chebyshev coefficients to compute
+ * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
  * @user_data: user data for @F
  *
  * Computes Chebyshev coefficients of f(x) on [a,b] using FFTW DCT-I. The function is
  * sampled at Chebyshev nodes $x_k = (a+b)/2 - (b-a)/2\cos(k\pi/(N-1))$ and transformed
  * using a Type-I discrete cosine transform.
  *
- * The user must provide a pre-allocated #NcmVector @coeffs with length N, where N is
- * the number of Chebyshev coefficients to compute. The coefficients are stored in
- * @coeffs in increasing order, i.e., coeffs[0] corresponds to T_0, coeffs[1] to T_1,
- * ..., coeffs[N-1] to T_{N-1}. This method caches the FFTW plan and working arrays for
- * efficiency. They are only reallocated if N changes.
- *
+ * If @coeffs points to NULL, allocates a new GArray of size @order. If @coeffs points
+ * to an existing GArray, resizes it to @order. Through bindings, @coeffs always receives NULL.
  */
 void
-ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, NcmVector *coeffs, gpointer user_data)
+ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint order, GArray **coeffs, gpointer user_data)
 {
   const gdouble mid    = 0.5 * (a + b);
   const gdouble half_h = 0.5 * (b - a);
-  const guint N        = ncm_vector_len (coeffs);
+  const guint N        = order;
   guint i;
+
+  if (*coeffs == NULL)
+    *coeffs = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), N);
+
+  g_array_set_size (*coeffs, N);
 
   /* Reallocate and replan if N has changed */
   if (spectral->cheb_N_cached != N)
@@ -278,7 +280,7 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
     /* Create new FFTW plan */
     ncm_cfg_load_fftw_wisdom ("ncm_spectral");
     ncm_cfg_lock_plan_fftw ();
-    spectral->cheb_plan_r2r = fftw_plan_r2r_1d (N, spectral->cheb_f_vals, ncm_vector_data (coeffs),
+    spectral->cheb_plan_r2r = fftw_plan_r2r_1d (N, spectral->cheb_f_vals, (gdouble *) (*coeffs)->data,
                                                 FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
     ncm_cfg_unlock_plan_fftw ();
     ncm_cfg_save_fftw_wisdom ("ncm_spectral");
@@ -299,13 +301,12 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
     }
   }
 
-  /* Execute FFTW plan (need to update output pointer for this execution) */
-  fftw_execute_r2r (spectral->cheb_plan_r2r, spectral->cheb_f_vals, ncm_vector_data (coeffs));
+  /* Execute FFTW plan */
+  fftw_execute_r2r (spectral->cheb_plan_r2r, spectral->cheb_f_vals, (gdouble *) (*coeffs)->data);
 
-  /* Normalize coefficients using precomputed multipliers */
-  g_assert_cmpuint (ncm_vector_stride (coeffs), ==, 1);
+  /* Normalize coefficients */
   {
-    gdouble * restrict coeffs_data = ncm_vector_data (coeffs);
+    gdouble * restrict coeffs_data = (gdouble *) (*coeffs)->data;
     const gdouble inv_2Nm1         = 1.0 / (2.0 * (N - 1.0));
     const gdouble inv_Nm1          = 2.0 * inv_2Nm1;
 
@@ -471,6 +472,7 @@ _ncm_spectral_check_convergence (GArray *coeffs, gdouble tol)
  * @b: right endpoint
  * @k_min: minimum refinement level (N_min = 2^@k_min + 1)
  * @tol: spectral convergence tolerance
+ * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
  * @user_data: user data for @F
  *
  * Computes Chebyshev coefficients adaptively using nested Chebyshev-Lobatto nodes.
@@ -478,17 +480,20 @@ _ncm_spectral_check_convergence (GArray *coeffs, gdouble tol)
  * or max_order is reached. Uses nested nodes: only new odd nodes are computed at each
  * refinement level.
  *
- * Returns: (transfer full): vector of Chebyshev coefficients
+ * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
+ * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
  */
-NcmVector *
+void
 ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F,
                                                 gdouble a, gdouble b, guint k_min,
-                                                gdouble tol, gpointer user_data)
+                                                gdouble tol, GArray **coeffs, gpointer user_data)
 {
-  guint k        = k_min;
-  GArray *coeffs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  guint k = k_min;
 
   g_assert (k_min <= spectral->max_order);
+
+  if (*coeffs == NULL)
+    *coeffs = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
   /* Initial evaluation at k_min */
   _ncm_spectral_prepare_plan_for_k (spectral, k);
@@ -503,11 +508,11 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
     fftw_execute (plan);
 
     /* Resize and normalize */
-    g_array_set_size (coeffs, N);
-    _ncm_spectral_normalize_coeffs (spectral->coeffs_work, coeffs, N);
+    g_array_set_size (*coeffs, N);
+    _ncm_spectral_normalize_coeffs (spectral->coeffs_work, *coeffs, N);
 
     /* Check convergence */
-    if (_ncm_spectral_check_convergence (coeffs, tol))
+    if (_ncm_spectral_check_convergence (*coeffs, tol))
       break;
 
     /* Refine to next level */
@@ -522,40 +527,36 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
       break;
     }
   }
-
-  {
-    NcmVector *result = ncm_vector_new_array (coeffs);
-
-    g_array_unref (coeffs);
-
-    return result;
-  }
 }
 
 /**
  * ncm_spectral_chebT_to_gegenbauer_alpha1:
- * @c: Chebyshev coefficients vector
- * @g: Gegenbauer $C^{(1)}_n$ coefficients vector (must have same length as @c, pre-allocated by caller)
+ * @c: (element-type gdouble): Chebyshev coefficients array
+ * @g: (out callee-allocates) (transfer full) (element-type gdouble): Gegenbauer $C^{(1)}_n$ coefficients array
  *
  * Converts Chebyshev $T_n$ coefficients to Gegenbauer $C^{(1)}_n$ coefficients ($\alpha=1$).
  * Uses the relationship: $T_n = \frac{1}{2}(C^{(1)}_n + C^{(1)}_{n-2})$ for $n \geq 2$.
+ *
+ * If @g points to NULL, allocates a new GArray with same size as @c. If @g points to an
+ * existing GArray, resizes it to match @c. Through bindings, @g always receives NULL.
  */
 void
-ncm_spectral_chebT_to_gegenbauer_alpha1 (NcmVector *c, NcmVector *g)
+ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g)
 {
-  const guint N = ncm_vector_len (c);
+  const guint N = c->len;
   guint i;
 
-  g_assert_cmpuint (ncm_vector_len (g), ==, N);
-  g_assert_cmpuint (ncm_vector_stride (c), ==, 1);
-  g_assert_cmpuint (ncm_vector_stride (g), ==, 1);
+  if (*g == NULL)
+    *g = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), N);
+
+  g_array_set_size (*g, N);
 
   if (N == 0)
     return;
 
   {
-    const gdouble *c_data = ncm_vector_data (c);
-    gdouble *g_data       = ncm_vector_data (g);
+    const gdouble *c_data = (gdouble *) c->data;
+    gdouble *g_data       = (gdouble *) (*g)->data;
 
     memset (g_data, 0, N * sizeof (gdouble));
 
@@ -581,31 +582,35 @@ ncm_spectral_chebT_to_gegenbauer_alpha1 (NcmVector *c, NcmVector *g)
 
 /**
  * ncm_spectral_chebT_to_gegenbauer_alpha2:
- * @c: Chebyshev coefficients vector
- * @g: Gegenbauer $C^{(2)}_k$ coefficients vector (must have same length as @c, pre-allocated by caller)
+ * @c: (element-type gdouble): Chebyshev coefficients array
+ * @g: (out callee-allocates) (transfer full) (element-type gdouble): Gegenbauer $C^{(2)}_k$ coefficients array
  *
  * Converts Chebyshev $T_n$ coefficients to Gegenbauer $C^{(2)}_k$ coefficients ($\alpha=2$).
  *
  * Uses the projection formula:
  * $$g_k = \frac{1}{2} c_0 \delta_{k,0} + \frac{c_k}{2(k+1)} - \frac{(k+2) c_{k+2}}{(k+1)(k+3)} + \frac{c_{k+4}}{2(k+3)}$$
  * where $f(x) = \sum_n c_n T_n(x)$.
+ *
+ * If @g points to NULL, allocates a new GArray with same size as @c. If @g points to an
+ * existing GArray, resizes it to match @c. Through bindings, @g always receives NULL.
  */
 void
-ncm_spectral_chebT_to_gegenbauer_alpha2 (NcmVector *c, NcmVector *g)
+ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g)
 {
-  const guint N = ncm_vector_len (c);
+  const guint N = c->len;
   guint k;
 
-  g_assert_cmpuint (ncm_vector_len (g), ==, N);
-  g_assert_cmpuint (ncm_vector_stride (c), ==, 1);
-  g_assert_cmpuint (ncm_vector_stride (g), ==, 1);
+  if (*g == NULL)
+    *g = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), N);
+
+  g_array_set_size (*g, N);
 
   if (N == 0)
     return;
 
   {
-    const gdouble *c_data = ncm_vector_data (c);
-    gdouble *g_data       = ncm_vector_data (g);
+    const gdouble *c_data = (gdouble *) c->data;
+    gdouble *g_data       = (gdouble *) (*g)->data;
 
     /* Zero output vector */
     memset (g_data, 0, N * sizeof (gdouble));
@@ -638,7 +643,7 @@ ncm_spectral_chebT_to_gegenbauer_alpha2 (NcmVector *c, NcmVector *g)
 
 /**
  * ncm_spectral_gegenbauer_alpha1_eval:
- * @c: Gegenbauer $C^{(1)}_n$ coefficients vector
+ * @c: (element-type gdouble): Gegenbauer $C^{(1)}_n$ coefficients array
  * @x: point to evaluate
  *
  * Evaluates a Gegenbauer $C^{(1)}_n$ expansion at x using Clenshaw recurrence.
@@ -647,17 +652,15 @@ ncm_spectral_chebT_to_gegenbauer_alpha2 (NcmVector *c, NcmVector *g)
  * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(1)}_n(x)$
  */
 gdouble
-ncm_spectral_gegenbauer_alpha1_eval (NcmVector *c, gdouble x)
+ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble x)
 {
-  const guint N = ncm_vector_len (c);
+  const guint N = c->len;
 
   if (N == 0)
     return 0.0;
 
-  g_assert_cmpuint (ncm_vector_stride (c), ==, 1);
-
   {
-    const gdouble *c_data = ncm_vector_data (c);
+    const gdouble *c_data = (gdouble *) c->data;
 
     /* Endpoint handling: C_n^{(1)}(+/-1) = (n+1)*(+/-1)^n */
     if (fabs (x - 1.0) < 1e-15)
@@ -710,7 +713,7 @@ ncm_spectral_gegenbauer_alpha1_eval (NcmVector *c, gdouble x)
 
 /**
  * ncm_spectral_gegenbauer_alpha2_eval:
- * @c: Gegenbauer $C^{(2)}_n$ coefficients vector
+ * @c: (element-type gdouble): Gegenbauer $C^{(2)}_n$ coefficients array
  * @x: point to evaluate
  *
  * Evaluates a Gegenbauer $C^{(2)}_n$ expansion at x using Clenshaw recurrence.
@@ -720,17 +723,15 @@ ncm_spectral_gegenbauer_alpha1_eval (NcmVector *c, gdouble x)
  * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(2)}_n(x)$
  */
 gdouble
-ncm_spectral_gegenbauer_alpha2_eval (NcmVector *c, gdouble x)
+ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble x)
 {
-  const guint N = ncm_vector_len (c);
+  const guint N = c->len;
 
   if (N == 0)
     return 0.0;
 
-  g_assert_cmpuint (ncm_vector_stride (c), ==, 1);
-
   {
-    const gdouble *c_data = ncm_vector_data (c);
+    const gdouble *c_data = (gdouble *) c->data;
 
     /* Endpoint handling: C_n^{(2)}(+/-1) = binom(n+3,3)*(+/-1)^n = ((n+1)*(n+2)*(n+3)/6)*(+/-1)^n */
     if (fabs (x - 1.0) < 1e-15)
@@ -788,7 +789,7 @@ ncm_spectral_gegenbauer_alpha2_eval (NcmVector *c, gdouble x)
 
 /**
  * ncm_spectral_chebyshev_eval:
- * @a: Chebyshev coefficients vector
+ * @a: (element-type gdouble): Chebyshev coefficients array
  * @t: point to evaluate in [-1,1]
  *
  * Evaluates a Chebyshev expansion $f(t) = \sum_{k=0}^{N-1} a_k T_k(t)$
@@ -797,17 +798,15 @@ ncm_spectral_gegenbauer_alpha2_eval (NcmVector *c, gdouble x)
  * Returns: the value of the Chebyshev expansion at t
  */
 gdouble
-ncm_spectral_chebyshev_eval (NcmVector *a, gdouble t)
+ncm_spectral_chebyshev_eval (GArray *a, gdouble t)
 {
-  const guint N           = ncm_vector_len (a);
-  const gdouble *a_data   = ncm_vector_data (a);
+  const guint N           = a->len;
+  const gdouble *a_data   = (gdouble *) a->data;
   const gdouble threshold = 0.9;
   const gdouble eps       = 1e-15;
 
   if (N == 0)
     return 0.0;
-
-  g_assert_cmpuint (ncm_vector_stride (a), ==, 1);
 
   if (N == 1)
     return a_data[0];
@@ -896,7 +895,7 @@ ncm_spectral_chebyshev_eval (NcmVector *a, gdouble t)
 
 /**
  * ncm_spectral_chebyshev_deriv:
- * @a: Chebyshev coefficients vector (a_j multiplies T_j)
+ * @a: (element-type gdouble): Chebyshev coefficients array (a_j multiplies T_j)
  * @t: point to evaluate in [-1,1]
  *
  * Evaluates the first derivative of a Chebyshev expansion at $t$.
@@ -917,17 +916,15 @@ ncm_spectral_chebyshev_eval (NcmVector *a, gdouble t)
  * Returns: the value of the derivative at $t$
  */
 gdouble
-ncm_spectral_chebyshev_deriv (NcmVector *a, gdouble t)
+ncm_spectral_chebyshev_deriv (GArray *a, gdouble t)
 {
-  const gint N = ncm_vector_len (a);
+  const gint N = a->len;
 
   if (N <= 1)
     return 0.0;
 
-  g_assert_cmpuint (ncm_vector_stride (a), ==, 1);
-
   {
-    const gdouble *a_data = ncm_vector_data (a);
+    const gdouble *a_data = (gdouble *) a->data;
 
     if (N == 2)
       return a_data[1];
