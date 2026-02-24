@@ -49,12 +49,14 @@ typedef gdouble (*NcmSpectralF) (gpointer user_data, gdouble x);
 G_DECLARE_FINAL_TYPE (NcmSpectral, ncm_spectral, NCM, SPECTRAL, GObject)
 
 NcmSpectral *ncm_spectral_new (void);
+NcmSpectral *ncm_spectral_new_with_max_order (guint max_order);
 NcmSpectral *ncm_spectral_ref (NcmSpectral *spectral);
 
 void ncm_spectral_free (NcmSpectral *spectral);
 void ncm_spectral_clear (NcmSpectral **spectral);
 
 void ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, NcmVector *coeffs, gpointer user_data);
+NcmVector *ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, gpointer user_data);
 
 void ncm_spectral_chebT_to_gegenbauer_alpha1 (NcmVector *c, NcmVector *g);
 void ncm_spectral_chebT_to_gegenbauer_alpha2 (NcmVector *c, NcmVector *g);

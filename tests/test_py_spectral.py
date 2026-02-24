@@ -36,11 +36,6 @@ from numcosmo_py import Ncm
 class TestSpectral:
     """Tests for NcmSpectral spectral methods."""
 
-    @staticmethod
-    def vector_to_numpy(ncm_vec: Ncm.Vector) -> np.ndarray:
-        """Convert NcmVector to numpy array."""
-        return np.array(ncm_vec.dup_array())
-
     @pytest.fixture(name="spectral")
     def fixture_spectral(self) -> Ncm.Spectral:
         """Create an ODE spectral with l=1."""
@@ -58,7 +53,7 @@ class TestSpectral:
         g.set_zero()
 
         Ncm.Spectral.chebT_to_gegenbauer_alpha1(c, g)
-        g_np = self.vector_to_numpy(g)
+        g_np = g.to_numpy()
 
         expected = np.zeros(N)
         expected[0] = 1.0
@@ -72,7 +67,7 @@ class TestSpectral:
         g.set_zero()
 
         Ncm.Spectral.chebT_to_gegenbauer_alpha1(c, g)
-        g_np = self.vector_to_numpy(g)
+        g_np = g.to_numpy()
 
         expected = np.zeros(N)
         expected[1] = 0.5
@@ -90,7 +85,7 @@ class TestSpectral:
         g.set_zero()
 
         Ncm.Spectral.chebT_to_gegenbauer_alpha2(c, g)
-        g_np = self.vector_to_numpy(g)
+        g_np = g.to_numpy()
 
         # For T_0, g_0 should have contribution 1/2 * c_0 + c_0/(2*1) = 1.0
         assert g_np[0] > 0.9
@@ -212,7 +207,7 @@ class TestSpectral:
 
         coeffs = Ncm.Vector.new(N)
         spectral.compute_chebyshev_coeffs(f_constant, -1.0, 1.0, coeffs, None)
-        coeffs_np = self.vector_to_numpy(coeffs)
+        coeffs_np = coeffs.to_numpy()
 
         # f(x) = 1 = T_0(x), so c_0 = 1, rest = 0
         assert_allclose(coeffs_np[0], 1.0, rtol=1.0e-12)
@@ -227,7 +222,7 @@ class TestSpectral:
 
         coeffs = Ncm.Vector.new(N)
         spectral.compute_chebyshev_coeffs(f_linear, -1.0, 1.0, coeffs, None)
-        coeffs_np = self.vector_to_numpy(coeffs)
+        coeffs_np = coeffs.to_numpy()
 
         # f(x) = x = T_1(x), so c_1 = 1, rest = 0
         assert_allclose(coeffs_np[0], 0.0, rtol=1.0e-12, atol=1.0e-12)
@@ -243,7 +238,7 @@ class TestSpectral:
 
         coeffs = Ncm.Vector.new(N)
         spectral.compute_chebyshev_coeffs(f_quadratic, -1.0, 1.0, coeffs, None)
-        coeffs_np = self.vector_to_numpy(coeffs)
+        coeffs_np = coeffs.to_numpy()
 
         # f(x) = x^2 = (T_0 + T_2)/2, so c_0 = 1/2, c_2 = 1/2
         assert_allclose(coeffs_np[0], 0.5, rtol=1.0e-11)
@@ -270,8 +265,264 @@ class TestSpectral:
                 eval_result,
                 expected,
                 rtol=1.0e-10,
-                err_msg=f"Gaussian evaluation at x={x} doesn't match",
+                err_msg=f"Gaussian evaluation failed at x={x}",
             )
+
+    def test_adaptive_vs_fixed_constant(self, spectral: Ncm.Spectral) -> None:
+        """Test adaptive refinement vs fixed order for constant function."""
+
+        def f_constant(_user_data, _x):
+            return 1.0
+
+        # Adaptive should converge quickly
+        coeffs_adaptive = spectral.compute_chebyshev_coeffs_adaptive(
+            f_constant, -1.0, 1.0, 2, 1e-12, None
+        )
+        N_adaptive = coeffs_adaptive.len()
+
+        # Fixed order
+        coeffs_fixed = Ncm.Vector.new(N_adaptive)
+        spectral.compute_chebyshev_coeffs(f_constant, -1.0, 1.0, coeffs_fixed, None)
+
+        # Should match
+        assert_allclose(
+            coeffs_adaptive.to_numpy(),
+            coeffs_fixed.to_numpy(),
+            rtol=1e-12,
+        )
+
+    def test_adaptive_vs_fixed_polynomial(self, spectral: Ncm.Spectral) -> None:
+        """Test adaptive refinement vs fixed order for polynomial."""
+
+        def f_poly(_user_data, x):
+            return 1.0 + 2.0 * x + 3.0 * x * x
+
+        coeffs_adaptive = spectral.compute_chebyshev_coeffs_adaptive(
+            f_poly, -1.0, 1.0, 3, 1e-12, None
+        )
+        N_adaptive = coeffs_adaptive.len()
+
+        coeffs_fixed = Ncm.Vector.new(N_adaptive)
+        spectral.compute_chebyshev_coeffs(f_poly, -1.0, 1.0, coeffs_fixed, None)
+
+        assert_allclose(
+            coeffs_adaptive.to_numpy(),
+            coeffs_fixed.to_numpy(),
+            rtol=1e-11,
+        )
+
+    def test_adaptive_gaussian_convergence(self, spectral: Ncm.Spectral) -> None:
+        """Test adaptive refinement converges for Gaussian."""
+
+        def f_gaussian(_user_data, x):
+            return np.exp(-x * x)
+
+        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+            f_gaussian, -1.0, 1.0, 3, 1e-10, None
+        )
+
+        # Verify accuracy at test points
+        test_points = np.linspace(-1.0, 1.0, 20)
+        for x in test_points:
+            eval_result = Ncm.Spectral.chebyshev_eval(coeffs, x)
+            expected = np.exp(-x * x)
+            assert_allclose(eval_result, expected, rtol=1e-9, atol=1e-10)
+
+    def test_adaptive_oscillatory_function(self, spectral: Ncm.Spectral) -> None:
+        """Test adaptive refinement on oscillatory function."""
+
+        def f_osc(_user_data, x):
+            return np.sin(5.0 * x) * np.exp(-x * x)
+
+        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+            f_osc, -1.0, 1.0, 4, 1e-8, None
+        )
+
+        # Verify accuracy
+        test_points = np.linspace(-1.0, 1.0, 30)
+        for x in test_points:
+            eval_result = Ncm.Spectral.chebyshev_eval(coeffs, x)
+            expected = np.sin(5.0 * x) * np.exp(-x * x)
+            assert_allclose(eval_result, expected, rtol=1e-7, atol=1e-8)
+
+    def test_adaptive_analytical_comparison(self, spectral: Ncm.Spectral) -> None:
+        """Test adaptive coefficients match analytical solution for simple functions."""
+
+        # Test 1: Constant function
+        def f_const(_user_data, _x):
+            return 2.5
+
+        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+            f_const, -1.0, 1.0, 2, 1e-12, None
+        )
+        coeffs_np = coeffs.to_numpy()
+        assert_allclose(coeffs_np[0], 2.5, rtol=1e-12)
+        assert_allclose(coeffs_np[1:], 0.0, rtol=1e-12, atol=1e-12)
+
+        # Test 2: Linear function f(x) = 3x
+        def f_linear(_user_data, x):
+            return 3.0 * x
+
+        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+            f_linear, -1.0, 1.0, 2, 1e-12, None
+        )
+        coeffs_np = coeffs.to_numpy()
+        assert_allclose(coeffs_np[0], 0.0, rtol=1e-12, atol=1e-12)
+        assert_allclose(coeffs_np[1], 3.0, rtol=1e-12)
+        assert_allclose(coeffs_np[2:], 0.0, rtol=1e-12, atol=1e-12)
+
+    def test_adaptive_nested_nodes(self, spectral: Ncm.Spectral) -> None:
+        """Test that adaptive refinement properly reuses nested nodes."""
+
+        call_count = [0]
+
+        def f_counted(_user_data, x):
+            call_count[0] += 1
+            return np.exp(-x * x)
+
+        # Start at k=2 (N=5), refine to k=3 (N=9)
+        # Should evaluate 5 nodes initially, then 4 new odd nodes
+        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+            f_counted, -1.0, 1.0, 2, 1e-6, None
+        )
+
+        N_final = coeffs.len()
+        # Should be less than 2*N_final due to node reuse
+        assert call_count[0] < 2 * N_final
+
+    def test_adaptive_interval_scaling(self, spectral: Ncm.Spectral) -> None:
+        """Test adaptive refinement on different intervals."""
+
+        def f_test(_user_data, x):
+            return np.exp(-((x - 2.0) ** 2))
+
+        # Test on [0, 4] instead of [-1, 1]
+        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+            f_test, 0.0, 4.0, 3, 1e-8, None
+        )
+
+        # Map test points from [0, 4] to [-1, 1] for Chebyshev evaluation
+        test_points_orig = np.linspace(0.0, 4.0, 20)
+        for x_orig in test_points_orig:
+            # Map to [-1, 1]
+            x_cheb = 2.0 * (x_orig - 0.0) / (4.0 - 0.0) - 1.0
+            eval_result = Ncm.Spectral.chebyshev_eval(coeffs, x_cheb)
+            expected = np.exp(-((x_orig - 2.0) ** 2))
+            assert_allclose(eval_result, expected, rtol=1e-7, atol=1e-8)
+
+    def test_adaptive_max_order_limit(self) -> None:
+        """Test that adaptive refinement respects max_order."""
+        spectral = Ncm.Spectral.new_with_max_order(5)  # max N = 2^5+1 = 33
+
+        def f_hard(_user_data, x):
+            # Very oscillatory function that won't converge easily
+            return np.sin(20.0 * x)
+
+        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+            f_hard, -1.0, 1.0, 2, 1e-12, None
+        )
+
+        # Should stop at max_order
+        assert coeffs.len() <= 33
+
+    def test_adaptive_max_order_limit_higher(self) -> None:
+        """Test that adaptive refinement respects max_order."""
+        spectral = Ncm.Spectral.new_with_max_order(16)
+
+        def f_hard(_user_data, x):
+            # Very oscillatory function that won't converge easily
+            return np.exp(-x * x) * np.sin(40.0 * x)
+
+        def f_harder(_user_data, x):
+            # Very oscillatory function that won't converge easily
+            return np.exp(-x * x) * np.sin(600.0 * x)
+
+        coeffs40 = spectral.compute_chebyshev_coeffs_adaptive(
+            f_hard, -1.0, 1.0, 2, 1e-12, None
+        )
+        coeffs600 = spectral.compute_chebyshev_coeffs_adaptive(
+            f_harder, -1.0, 1.0, 2, 1e-12, None
+        )
+
+        # Should stop at max_order
+        assert coeffs40.len() <= 2**16 + 1
+        assert coeffs600.len() <= 2**16 + 1
+        # Should require more points for higher frequency
+        assert coeffs40.len() < coeffs600.len()
+
+    def test_adaptive_performance_simple(self) -> None:
+        """Performance test for adaptive refinement with simple function."""
+        spectral = Ncm.Spectral.new_with_max_order(16)
+
+        def f_simple(_user_data, x):
+            return np.exp(-x * x)
+
+        for _ in range(100):
+            coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+                f_simple, -1.0, 1.0, 3, 1e-16, None
+            )
+            assert coeffs.len() > 0
+
+    def test_adaptive_performance_complex(self) -> None:
+        """Performance test for adaptive refinement with complex function."""
+        spectral = Ncm.Spectral.new_with_max_order(16)
+
+        def f_complex(_user_data, x):
+            return np.exp(-x * x) * np.sin(10.0 * x) * np.cos(5.0 * x)
+
+        for _ in range(100):
+            coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+                f_complex, -1.0, 1.0, 3, 1e-16, None
+            )
+            assert coeffs.len() > 0
+
+    def test_adaptive_spectral_decay(self, spectral: Ncm.Spectral) -> None:
+        """Test that converged adaptive solution shows spectral decay."""
+
+        def f_smooth(_user_data, x):
+            return 1.0 / (1.0 + 25.0 * x * x)  # Runge function
+
+        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+            f_smooth, -1.0, 1.0, 4, 1e-8, None
+        )
+        coeffs_np = coeffs.to_numpy()
+
+        # Check that tail coefficients are small
+        N = len(coeffs_np)
+        tail_size = min(5, N // 10)
+        max_tail = np.max(np.abs(coeffs_np[-tail_size:]))
+        max_head = np.max(np.abs(coeffs_np[:tail_size]))
+
+        # Tail should be much smaller than head
+        assert max_tail < 1e-6 * max_head
+
+    def test_adaptive_vs_fixed_accuracy(self, spectral: Ncm.Spectral) -> None:
+        """Test adaptive achieves same accuracy as fixed with fewer/equal points."""
+
+        def f_test(_user_data, x):
+            return np.tanh(3.0 * x)
+
+        # Adaptive with tolerance
+        coeffs_adaptive = spectral.compute_chebyshev_coeffs_adaptive(
+            f_test, -1.0, 1.0, 3, 1e-10, None
+        )
+        N_adaptive = coeffs_adaptive.len()
+
+        # Fixed with same N
+        coeffs_fixed = Ncm.Vector.new(N_adaptive)
+        spectral.compute_chebyshev_coeffs(f_test, -1.0, 1.0, coeffs_fixed, None)
+
+        # Both should give similar accuracy
+        test_points = np.linspace(-0.9, 0.9, 15)
+        for x in test_points:
+            result_adaptive = Ncm.Spectral.chebyshev_eval(coeffs_adaptive, x)
+            result_fixed = Ncm.Spectral.chebyshev_eval(coeffs_fixed, x)
+            expected = np.tanh(3.0 * x)
+
+            assert_allclose(result_adaptive, expected, rtol=1e-9, atol=1e-14)
+            assert_allclose(result_fixed, expected, rtol=1e-9, atol=1e-14)
+            # Results should be very close to each other
+            assert_allclose(result_adaptive, result_fixed, rtol=1e-11, atol=1e-14)
 
     def test_gaussian_derivative(self, spectral: Ncm.Spectral) -> None:
         """Test derivative of Gaussian function."""
@@ -1426,7 +1677,7 @@ class TestSpectral:
         cheb_x3_vec = Ncm.Vector.new_array(cheb_x3.tolist())
         gegen_x3_vec = Ncm.Vector.new(N)
         Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x3_vec, gegen_x3_vec)
-        gegen_expected = self.vector_to_numpy(gegen_x3_vec)
+        gegen_expected = gegen_x3_vec.to_numpy()
 
         assert_allclose(
             gegen_result,
@@ -1455,7 +1706,7 @@ class TestSpectral:
         cheb_x3_vec = Ncm.Vector.new_array(cheb_x3.tolist())
         gegen_x3_vec = Ncm.Vector.new(N)
         Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x3_vec, gegen_x3_vec)
-        gegen_expected = self.vector_to_numpy(gegen_x3_vec)
+        gegen_expected = gegen_x3_vec.to_numpy()
 
         assert_allclose(
             gegen_result,
@@ -1484,7 +1735,7 @@ class TestSpectral:
         cheb_x4_vec = Ncm.Vector.new_array(cheb_x4.tolist())
         gegen_x4_vec = Ncm.Vector.new(N)
         Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_x4_vec, gegen_x4_vec)
-        gegen_expected = self.vector_to_numpy(gegen_x4_vec)
+        gegen_expected = gegen_x4_vec.to_numpy()
 
         assert_allclose(
             gegen_result,
@@ -1513,7 +1764,7 @@ class TestSpectral:
         cheb_2x_vec = Ncm.Vector.new_array(cheb_2x.tolist())
         gegen_2x_vec = Ncm.Vector.new(N)
         Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_2x_vec, gegen_2x_vec)
-        gegen_expected = self.vector_to_numpy(gegen_2x_vec)
+        gegen_expected = gegen_2x_vec.to_numpy()
 
         assert_allclose(
             gegen_result,
@@ -1542,7 +1793,7 @@ class TestSpectral:
         cheb_3x2_vec = Ncm.Vector.new_array(cheb_3x2.tolist())
         gegen_3x2_vec = Ncm.Vector.new(N)
         Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_3x2_vec, gegen_3x2_vec)
-        gegen_expected = self.vector_to_numpy(gegen_3x2_vec)
+        gegen_expected = gegen_3x2_vec.to_numpy()
 
         assert_allclose(
             gegen_result,
@@ -1571,7 +1822,7 @@ class TestSpectral:
         cheb_6x_vec = Ncm.Vector.new_array(cheb_6x.tolist())
         gegen_6x_vec = Ncm.Vector.new(N)
         Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_6x_vec, gegen_6x_vec)
-        gegen_expected = self.vector_to_numpy(gegen_6x_vec)
+        gegen_expected = gegen_6x_vec.to_numpy()
 
         assert_allclose(
             gegen_result,
@@ -1600,7 +1851,7 @@ class TestSpectral:
         cheb_12x2_vec = Ncm.Vector.new_array(cheb_12x2.tolist())
         gegen_12x2_vec = Ncm.Vector.new(N)
         Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x2_vec, gegen_12x2_vec)
-        gegen_expected = self.vector_to_numpy(gegen_12x2_vec)
+        gegen_expected = gegen_12x2_vec.to_numpy()
 
         assert_allclose(
             gegen_result,
@@ -1629,7 +1880,7 @@ class TestSpectral:
         cheb_3x3_vec = Ncm.Vector.new_array(cheb_3x3.tolist())
         gegen_3x3_vec = Ncm.Vector.new(N)
         Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_3x3_vec, gegen_3x3_vec)
-        gegen_expected = self.vector_to_numpy(gegen_3x3_vec)
+        gegen_expected = gegen_3x3_vec.to_numpy()
 
         assert_allclose(
             gegen_result,
@@ -1658,7 +1909,7 @@ class TestSpectral:
         cheb_12x3_vec = Ncm.Vector.new_array(cheb_12x3.tolist())
         gegen_12x3_vec = Ncm.Vector.new(N)
         Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x3_vec, gegen_12x3_vec)
-        gegen_expected = self.vector_to_numpy(gegen_12x3_vec)
+        gegen_expected = gegen_12x3_vec.to_numpy()
 
         assert_allclose(
             gegen_result,
@@ -1687,7 +1938,7 @@ class TestSpectral:
         cheb_12x4_vec = Ncm.Vector.new_array(cheb_12x4.tolist())
         gegen_12x4_vec = Ncm.Vector.new(N)
         Ncm.Spectral.chebT_to_gegenbauer_alpha2(cheb_12x4_vec, gegen_12x4_vec)
-        gegen_expected = self.vector_to_numpy(gegen_12x4_vec)
+        gegen_expected = gegen_12x4_vec.to_numpy()
 
         assert_allclose(
             gegen_result,
@@ -1864,7 +2115,7 @@ class TestSpectral:
         # Compute Chebyshev coefficients for exp(-x^2)
         cheb_vec = Ncm.Vector.new(N)
         spectral.compute_chebyshev_coeffs(f_gaussian, -1.0, 1.0, cheb_vec, None)
-        cheb_coeffs = self.vector_to_numpy(cheb_vec)
+        cheb_coeffs = cheb_vec.to_numpy()
 
         # Get operator matrices
         proj_mat = Ncm.Spectral.get_proj_matrix(N)
@@ -2020,7 +2271,7 @@ class TestSpectral:
         # Compute Chebyshev coefficients
         cheb_vec = Ncm.Vector.new(N)
         spectral.compute_chebyshev_coeffs(f_rational, -1.0, 1.0, cheb_vec, None)
-        cheb_coeffs = self.vector_to_numpy(cheb_vec)
+        cheb_coeffs = cheb_vec.to_numpy()
 
         # Get operator matrices
         proj_mat = Ncm.Spectral.get_proj_matrix(N)

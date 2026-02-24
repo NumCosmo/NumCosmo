@@ -9883,6 +9883,7 @@ class Spectral(GObject.Object):
 
         Spectral(**properties)
         new() -> NumCosmoMath.Spectral
+        new_with_max_order(max_order:int) -> NumCosmoMath.Spectral
 
     Object NcmSpectral
 
@@ -9908,6 +9909,15 @@ class Spectral(GObject.Object):
         coeffs: Vector,
         *user_data: typing.Any,
     ) -> None: ...
+    def compute_chebyshev_coeffs_adaptive(
+        self,
+        F: typing.Callable[..., float],
+        a: float,
+        b: float,
+        k_min: int,
+        tol: float,
+        *user_data: typing.Any,
+    ) -> Vector: ...
     @staticmethod
     def compute_d2_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     @staticmethod
@@ -9953,6 +9963,8 @@ class Spectral(GObject.Object):
     def get_x_matrix(N: int) -> Matrix: ...
     @classmethod
     def new(cls) -> Spectral: ...
+    @classmethod
+    def new_with_max_order(cls, max_order: int) -> Spectral: ...
     def ref(self) -> Spectral: ...
 
 class SpectralClass(GObject.GPointer):

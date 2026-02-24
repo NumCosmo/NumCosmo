@@ -49,7 +49,15 @@ struct _NcmSpectral
 {
   /*< private >*/
   GObject parent_instance;
-  /* Chebyshev coefficients computation cache */
+
+  /* Adaptive refinement fields */
+  guint max_order;       /* Maximum k: N_max = 2^max_order + 1 */
+  gdouble *f_vals;       /* Function values array, size: 2^max_order + 1 */
+  gdouble *coeffs_work;  /* Coefficients work array, size: 2^max_order + 1 */
+  GPtrArray *cos_arrays; /* Precomputed cosines for each k level */
+  GPtrArray *fftw_plans; /* FFTW plans for each k level */
+
+  /* Legacy fields (backward compatibility) */
   guint cheb_N_cached;     /* Cached N value */
   gdouble *cheb_f_vals;    /* Cached function values array */
   gdouble *cheb_cos_vals;  /* Cached cosine values at Chebyshev nodes */
@@ -61,6 +69,12 @@ G_DEFINE_TYPE (NcmSpectral, ncm_spectral, G_TYPE_OBJECT)
 static void
 ncm_spectral_init (NcmSpectral *spectral)
 {
+  spectral->max_order   = 10; /* Default: N_max = 1025 */
+  spectral->f_vals      = NULL;
+  spectral->coeffs_work = NULL;
+  spectral->cos_arrays  = NULL;
+  spectral->fftw_plans  = NULL;
+
   spectral->cheb_N_cached = 0;
   spectral->cheb_f_vals   = NULL;
   spectral->cheb_cos_vals = NULL;
@@ -72,6 +86,32 @@ ncm_spectral_finalize (GObject *object)
 {
   NcmSpectral *spectral = NCM_SPECTRAL (object);
 
+  /* Clean up adaptive refinement resources */
+  if (spectral->fftw_plans != NULL)
+  {
+    g_ptr_array_unref (spectral->fftw_plans);
+    spectral->fftw_plans = NULL;
+  }
+
+  if (spectral->cos_arrays != NULL)
+  {
+    g_ptr_array_unref (spectral->cos_arrays);
+    spectral->cos_arrays = NULL;
+  }
+
+  if (spectral->f_vals != NULL)
+  {
+    fftw_free (spectral->f_vals);
+    spectral->f_vals = NULL;
+  }
+
+  if (spectral->coeffs_work != NULL)
+  {
+    fftw_free (spectral->coeffs_work);
+    spectral->coeffs_work = NULL;
+  }
+
+  /* Clean up legacy resources */
   if (spectral->cheb_plan_r2r != NULL)
   {
     fftw_destroy_plan (spectral->cheb_plan_r2r);
@@ -104,7 +144,7 @@ ncm_spectral_class_init (NcmSpectralClass *klass)
 /**
  * ncm_spectral_new:
  *
- * Creates a new #NcmSpectral object.
+ * Creates a new #NcmSpectral object with default maximum order (10).
  *
  * Returns: (transfer full): a new #NcmSpectral
  */
@@ -112,6 +152,24 @@ NcmSpectral *
 ncm_spectral_new (void)
 {
   return g_object_new (NCM_TYPE_SPECTRAL, NULL);
+}
+
+/**
+ * ncm_spectral_new_with_max_order:
+ * @max_order: maximum refinement level k (N_max = 2^@max_order + 1)
+ *
+ * Creates a new #NcmSpectral object with specified maximum order.
+ *
+ * Returns: (transfer full): a new #NcmSpectral
+ */
+NcmSpectral *
+ncm_spectral_new_with_max_order (guint max_order)
+{
+  NcmSpectral *spectral = g_object_new (NCM_TYPE_SPECTRAL, NULL);
+
+  spectral->max_order = max_order;
+
+  return spectral;
 }
 
 /**
@@ -256,6 +314,221 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
 
     for (i = 1; i < N - 1; i++)
       coeffs_data[i] *= inv_Nm1;
+  }
+}
+
+/* Helper functions for adaptive refinement */
+
+static void
+_ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k)
+{
+  const guint N = (1 << k) + 1;
+  guint j;
+
+  /* Check if already prepared */
+  if ((spectral->fftw_plans != NULL) && (k < spectral->fftw_plans->len) &&
+      (g_ptr_array_index (spectral->fftw_plans, k) != NULL))
+    return;
+
+  /* Initialize arrays if needed */
+  if (spectral->fftw_plans == NULL)
+  {
+    spectral->fftw_plans = g_ptr_array_new_with_free_func ((GDestroyNotify) fftw_destroy_plan);
+    spectral->cos_arrays = g_ptr_array_new_with_free_func (g_free);
+  }
+
+  /* Ensure arrays are large enough */
+  while (spectral->fftw_plans->len <= k)
+  {
+    g_ptr_array_add (spectral->fftw_plans, NULL);
+    g_ptr_array_add (spectral->cos_arrays, NULL);
+  }
+
+  /* Allocate working arrays if needed */
+  if (spectral->f_vals == NULL)
+  {
+    const guint N_max = (1 << spectral->max_order) + 1;
+
+    spectral->f_vals      = fftw_malloc (sizeof (gdouble) * N_max);
+    spectral->coeffs_work = fftw_malloc (sizeof (gdouble) * N_max);
+  }
+
+  /* Precompute Chebyshev-Lobatto cosines: cos(j*pi/2^k) */
+  gdouble *cos_vals        = g_new (gdouble, N);
+  const gdouble pi_over_2k = M_PI / (1 << k);
+
+  for (j = 0; j < N; j++)
+    cos_vals[j] = cos (j * pi_over_2k);
+
+  g_ptr_array_index (spectral->cos_arrays, k) = cos_vals;
+
+  /* Create out-of-place FFTW plan */
+  ncm_cfg_load_fftw_wisdom ("ncm_spectral");
+  ncm_cfg_lock_plan_fftw ();
+
+  fftw_plan plan = fftw_plan_r2r_1d (N,
+                                     spectral->f_vals,
+                                     spectral->coeffs_work,
+                                     FFTW_REDFT00,
+                                     ncm_cfg_get_fftw_default_flag ());
+
+  ncm_cfg_unlock_plan_fftw ();
+  ncm_cfg_save_fftw_wisdom ("ncm_spectral");
+
+  g_ptr_array_index (spectral->fftw_plans, k) = plan;
+}
+
+static void
+_ncm_spectral_evaluate_all_nodes (NcmSpectral *spectral, NcmSpectralF F,
+                                  gdouble a, gdouble b, guint k, gpointer user_data)
+{
+  const guint N           = (1 << k) + 1;
+  const gdouble mid       = 0.5 * (a + b);
+  const gdouble half_h    = 0.5 * (b - a);
+  const gdouble *cos_vals = g_ptr_array_index (spectral->cos_arrays, k);
+  guint j;
+
+  for (j = 0; j < N; j++)
+  {
+    const gdouble x = mid + half_h * cos_vals[j];
+
+    spectral->f_vals[j] = F (user_data, x);
+  }
+}
+
+static void
+_ncm_spectral_refine_to_k (NcmSpectral *spectral, NcmSpectralF F,
+                           gdouble a, gdouble b, guint k_old, guint k_new,
+                           gpointer user_data)
+{
+  const guint N_old       = (1 << k_old) + 1;
+  const guint N_new       = (1 << k_new) + 1;
+  const gdouble mid       = 0.5 * (a + b);
+  const gdouble half_h    = 0.5 * (b - a);
+  const gdouble *cos_vals = g_ptr_array_index (spectral->cos_arrays, k_new);
+  gint j;
+  guint jj;
+
+  g_assert (k_new == k_old + 1);
+
+  /* Move existing values to even positions (BACKWARD to avoid overwriting) */
+  for (j = (gint) N_old - 1; j >= 0; j--)
+    spectral->f_vals[2 * j] = spectral->f_vals[j];
+
+  /* Compute new odd positions */
+  for (jj = 1; jj < N_new; jj += 2)
+  {
+    const gdouble x = mid + half_h * cos_vals[jj];
+
+    spectral->f_vals[jj] = F (user_data, x);
+  }
+}
+
+static void
+_ncm_spectral_normalize_coeffs (gdouble *coeffs_work, GArray *coeffs, guint N)
+{
+  const gdouble inv_2Nm1 = 1.0 / (2.0 * (N - 1.0));
+  const gdouble inv_Nm1  = 2.0 * inv_2Nm1;
+  gdouble *coeffs_data   = (gdouble *) coeffs->data;
+  guint i;
+
+  coeffs_data[0]     = coeffs_work[0] * inv_2Nm1;
+  coeffs_data[N - 1] = coeffs_work[N - 1] * inv_2Nm1;
+
+  for (i = 1; i < N - 1; i++)
+    coeffs_data[i] = coeffs_work[i] * inv_Nm1;
+}
+
+static gboolean
+_ncm_spectral_check_convergence (GArray *coeffs, gdouble tol)
+{
+  const guint N              = coeffs->len;
+  const guint n_tail         = GSL_MIN (5, N / 10);
+  const gdouble *coeffs_data = (gdouble *) coeffs->data;
+  gdouble max_head           = 0.0;
+  gdouble max_tail           = 0.0;
+  guint i;
+
+  if (N < 10)
+    return FALSE;
+
+  /* Max of first few coefficients */
+  for (i = 0; i < n_tail; i++)
+    max_head = GSL_MAX (max_head, fabs (coeffs_data[i]));
+
+  /* Max of last few coefficients */
+  for (i = N - n_tail; i < N; i++)
+    max_tail = GSL_MAX (max_tail, fabs (coeffs_data[i]));
+
+  return (max_tail < tol * max_head);
+}
+
+/**
+ * ncm_spectral_compute_chebyshev_coeffs_adaptive:
+ * @spectral: a #NcmSpectral
+ * @F: (scope call): function to evaluate
+ * @a: left endpoint
+ * @b: right endpoint
+ * @k_min: minimum refinement level (N_min = 2^@k_min + 1)
+ * @tol: spectral convergence tolerance
+ * @user_data: user data for @F
+ *
+ * Computes Chebyshev coefficients adaptively using nested Chebyshev-Lobatto nodes.
+ * Starts at level @k_min and refines by doubling until spectral convergence is achieved
+ * or max_order is reached. Uses nested nodes: only new odd nodes are computed at each
+ * refinement level.
+ *
+ * Returns: (transfer full): vector of Chebyshev coefficients
+ */
+NcmVector *
+ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F,
+                                                gdouble a, gdouble b, guint k_min,
+                                                gdouble tol, gpointer user_data)
+{
+  guint k        = k_min;
+  GArray *coeffs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  g_assert (k_min <= spectral->max_order);
+
+  /* Initial evaluation at k_min */
+  _ncm_spectral_prepare_plan_for_k (spectral, k);
+  _ncm_spectral_evaluate_all_nodes (spectral, F, a, b, k, user_data);
+
+  while (k <= spectral->max_order)
+  {
+    const guint N  = (1 << k) + 1;
+    fftw_plan plan = g_ptr_array_index (spectral->fftw_plans, k);
+
+    /* Transform f_vals -> coeffs_work */
+    fftw_execute (plan);
+
+    /* Resize and normalize */
+    g_array_set_size (coeffs, N);
+    _ncm_spectral_normalize_coeffs (spectral->coeffs_work, coeffs, N);
+
+    /* Check convergence */
+    if (_ncm_spectral_check_convergence (coeffs, tol))
+      break;
+
+    /* Refine to next level */
+    if (k < spectral->max_order)
+    {
+      _ncm_spectral_prepare_plan_for_k (spectral, k + 1);
+      _ncm_spectral_refine_to_k (spectral, F, a, b, k, k + 1, user_data);
+      k++;
+    }
+    else
+    {
+      break;
+    }
+  }
+
+  {
+    NcmVector *result = ncm_vector_new_array (coeffs);
+
+    g_array_unref (coeffs);
+
+    return result;
   }
 }
 
