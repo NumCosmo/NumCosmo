@@ -52,6 +52,7 @@ struct _NcmSpectral
   /* Chebyshev coefficients computation cache */
   guint cheb_N_cached;     /* Cached N value */
   gdouble *cheb_f_vals;    /* Cached function values array */
+  gdouble *cheb_cos_vals;  /* Cached cosine values at Chebyshev nodes */
   fftw_plan cheb_plan_r2r; /* Cached FFTW plan */
 };
 
@@ -62,6 +63,7 @@ ncm_spectral_init (NcmSpectral *spectral)
 {
   spectral->cheb_N_cached = 0;
   spectral->cheb_f_vals   = NULL;
+  spectral->cheb_cos_vals = NULL;
   spectral->cheb_plan_r2r = NULL;
 }
 
@@ -80,6 +82,12 @@ ncm_spectral_finalize (GObject *object)
   {
     fftw_free (spectral->cheb_f_vals);
     spectral->cheb_f_vals = NULL;
+  }
+
+  if (spectral->cheb_cos_vals != NULL)
+  {
+    g_free (spectral->cheb_cos_vals);
+    spectral->cheb_cos_vals = NULL;
   }
 
   G_OBJECT_CLASS (ncm_spectral_parent_class)->finalize (object);
@@ -190,8 +198,24 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
       spectral->cheb_f_vals = NULL;
     }
 
+    if (spectral->cheb_cos_vals != NULL)
+    {
+      g_free (spectral->cheb_cos_vals);
+      spectral->cheb_cos_vals = NULL;
+    }
+
     /* Allocate new resources */
-    spectral->cheb_f_vals = fftw_malloc (sizeof (gdouble) * N);
+    spectral->cheb_f_vals   = fftw_malloc (sizeof (gdouble) * N);
+    spectral->cheb_cos_vals = g_new (gdouble, N);
+
+    /* Precompute cosine values at Chebyshev nodes */
+    {
+      const gdouble inv_Nm1 = 1.0 / (N - 1.0);
+      const gdouble pi_Nm1  = M_PI * inv_Nm1;
+
+      for (i = 0; i < N; i++)
+        spectral->cheb_cos_vals[i] = cos (pi_Nm1 * i);
+    }
 
     /* Create new FFTW plan */
     ncm_cfg_load_fftw_wisdom ("ncm_spectral");
@@ -204,28 +228,34 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
     spectral->cheb_N_cached = N;
   }
 
-  /* Sample function at Chebyshev nodes */
-  for (i = 0; i < N; i++)
+  /* Sample function at Chebyshev nodes using precomputed cosines */
   {
-    const gdouble theta = M_PI * i / (N - 1);
-    const gdouble x     = mid + half_h * cos (theta);
+    gdouble * restrict f_vals       = spectral->cheb_f_vals;
+    const gdouble * restrict c_vals = spectral->cheb_cos_vals;
 
-    spectral->cheb_f_vals[i] = F (user_data, x);
+    for (i = 0; i < N; i++)
+    {
+      const gdouble x = mid + half_h * c_vals[i];
+
+      f_vals[i] = F (user_data, x);
+    }
   }
 
   /* Execute FFTW plan (need to update output pointer for this execution) */
   fftw_execute_r2r (spectral->cheb_plan_r2r, spectral->cheb_f_vals, ncm_vector_data (coeffs));
 
-  /* Normalize coefficients */
+  /* Normalize coefficients using precomputed multipliers */
   g_assert_cmpuint (ncm_vector_stride (coeffs), ==, 1);
   {
-    gdouble *coeffs_data = ncm_vector_data (coeffs);
+    gdouble * restrict coeffs_data = ncm_vector_data (coeffs);
+    const gdouble inv_2Nm1         = 1.0 / (2.0 * (N - 1.0));
+    const gdouble inv_Nm1          = 2.0 * inv_2Nm1;
 
-    coeffs_data[0]     = coeffs_data[0] / ((N - 1.0) * 2.0);
-    coeffs_data[N - 1] = coeffs_data[N - 1] / ((N - 1.0) * 2.0);
+    coeffs_data[0]     *= inv_2Nm1;
+    coeffs_data[N - 1] *= inv_2Nm1;
 
     for (i = 1; i < N - 1; i++)
-      coeffs_data[i] = coeffs_data[i] / (N - 1.0);
+      coeffs_data[i] *= inv_Nm1;
   }
 }
 

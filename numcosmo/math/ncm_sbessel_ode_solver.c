@@ -1107,6 +1107,7 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeSolver *solver, NcmVector *rhs
       }
 
       if (quiet_cols >= ROWS_TO_ROTATE + 1)
+        /* Now we print how many rows we actually used from the max available */
         break;  /* SAFE early stop */
     }
   }
@@ -1444,7 +1445,10 @@ _ncm_sbessel_ode_solver_diagonalize_batched (NcmSBesselOdeSolver *solver, NcmVec
       }
 
       if (quiet_cols >= ROWS_TO_ROTATE + 1)
-        break;  /* SAFE early stop */
+      {
+        printf ("Early stop: %ld rows used, %u total\n", col + 1, rhs_len);
+        break; /* SAFE early stop */
+      }
     }
   }
 

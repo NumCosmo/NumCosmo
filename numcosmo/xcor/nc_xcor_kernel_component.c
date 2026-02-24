@@ -67,6 +67,7 @@ typedef struct _NcXcorKernelComponentPrivate
   gsl_min_fminimizer *minimizer; /* GSL minimizer for finding k_max */
   gsl_root_fsolver *root_solver; /* GSL root solver for finding k_epsilon */
   gdouble epsilon;
+  gdouble sqrt_epsilon;
   guint ny;       /* Number of y points for analysis */
   guint max_iter; /* Maximum iterations for GSL solvers */
   gdouble tol;    /* Tolerance for GSL solvers */
@@ -94,6 +95,7 @@ nc_xcor_kernel_component_init (NcXcorKernelComponent *comp)
   self->minimizer        = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
   self->root_solver      = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
   self->epsilon          = 0.0;
+  self->sqrt_epsilon     = 0.0;
   self->ny               = 0.0;
   self->max_iter         = 0.0;
   self->tol              = 0.0;
@@ -133,22 +135,21 @@ nc_xcor_kernel_component_finalize (GObject *object)
 static void
 nc_xcor_kernel_component_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcXcorKernelComponent *comp        = NC_XCOR_KERNEL_COMPONENT (object);
-  NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
+  NcXcorKernelComponent *comp = NC_XCOR_KERNEL_COMPONENT (object);
 
   switch (prop_id)
   {
     case PROP_EPSILON:
-      self->epsilon = g_value_get_double (value);
+      nc_xcor_kernel_component_set_epsilon (comp, g_value_get_double (value));
       break;
     case PROP_NY:
-      self->ny = g_value_get_uint (value);
+      nc_xcor_kernel_component_set_ny (comp, g_value_get_uint (value));
       break;
     case PROP_MAX_ITER:
-      self->max_iter = g_value_get_uint (value);
+      nc_xcor_kernel_component_set_max_iter (comp, g_value_get_uint (value));
       break;
     case PROP_TOL:
-      self->tol = g_value_get_double (value);
+      nc_xcor_kernel_component_set_tol (comp, g_value_get_double (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -159,22 +160,21 @@ nc_xcor_kernel_component_set_property (GObject *object, guint prop_id, const GVa
 static void
 nc_xcor_kernel_component_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcXcorKernelComponent *comp        = NC_XCOR_KERNEL_COMPONENT (object);
-  NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
+  NcXcorKernelComponent *comp = NC_XCOR_KERNEL_COMPONENT (object);
 
   switch (prop_id)
   {
     case PROP_EPSILON:
-      g_value_set_double (value, self->epsilon);
+      g_value_set_double (value, nc_xcor_kernel_component_get_epsilon (comp));
       break;
     case PROP_NY:
-      g_value_set_uint (value, self->ny);
+      g_value_set_uint (value, nc_xcor_kernel_component_get_ny (comp));
       break;
     case PROP_MAX_ITER:
-      g_value_set_uint (value, self->max_iter);
+      g_value_set_uint (value, nc_xcor_kernel_component_get_max_iter (comp));
       break;
     case PROP_TOL:
-      g_value_set_double (value, self->tol);
+      g_value_set_double (value, nc_xcor_kernel_component_get_tol (comp));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -302,7 +302,8 @@ nc_xcor_kernel_component_set_epsilon (NcXcorKernelComponent *comp, gdouble epsil
 {
   NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
 
-  self->epsilon = epsilon;
+  self->epsilon      = epsilon;
+  self->sqrt_epsilon = sqrt (epsilon);
 }
 
 /**
@@ -738,7 +739,7 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
       _nc_xcor_kernel_component_find_k_max (comp, &data, k_valid_min, k_valid_max,
                                             k_guess, &k_at_max, &K_max);
       k_guess          = k_at_max;
-      data.K_threshold = self->epsilon * K_max;
+      data.K_threshold = self->sqrt_epsilon * K_max;
 
       {
         const gdouble k_epsilon = _nc_xcor_kernel_component_find_k_epsilon_high (comp, &data, k_at_max, k_valid_max);

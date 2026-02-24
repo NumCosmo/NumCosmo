@@ -578,17 +578,30 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
           NonLimberCompParams params  = { comp, cosmo, k };
           const gdouble y_min         = k * xi_min[i];
           const gdouble y_max         = k * xi_max[i];
-          guint n;
+          const gdouble lny_min       = log (y_min);
+          const gdouble lny_max       = log (y_max);
+          const gdouble L             = lny_max - lny_min;
+          const gdouble nn            = 100;
+          const gdouble dlny          = L / nn;
+          guint n, r;
 
-          ncm_sbessel_integrator_integrate (
-            self->sbi, _nc_xcor_kernel_component_kernel_integ, y_min, y_max, integ_result, &params);
-
-          for (n = 0; n < n_l; n++)
+          for (r = 0; r < nn; r++)
           {
-            const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (comp, cosmo, k, nlid->lmin + n);
-            const gdouble val       = ncm_vector_get (integ_result, n) * prefactor / k;
+            const gdouble lny_min_r = lny_min + r * dlny;
+            const gdouble lny_max_r = lny_min + (r + 1) * dlny;
+            const gdouble y_min_r   = exp (lny_min_r);
+            const gdouble y_max_r   = exp (lny_max_r);
 
-            ncm_vector_addto (total_kernel_ell[n], j, val);
+            ncm_sbessel_integrator_integrate (
+              self->sbi, _nc_xcor_kernel_component_kernel_integ, y_min_r, y_max_r, integ_result, &params);
+
+            for (n = 0; n < n_l; n++)
+            {
+              const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (comp, cosmo, k, nlid->lmin + n);
+              const gdouble val       = ncm_vector_get (integ_result, n) * prefactor / k;
+
+              ncm_vector_addto (total_kernel_ell[n], j, val);
+            }
           }
         }
       }

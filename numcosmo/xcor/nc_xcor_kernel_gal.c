@@ -645,7 +645,7 @@ _clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo,
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
-  *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-2);
+  *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
   *xi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
   *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
   *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
