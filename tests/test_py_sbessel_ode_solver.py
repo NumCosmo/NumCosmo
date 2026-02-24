@@ -75,8 +75,7 @@ class TestSBesselOperators:
         ), f"Matrix must be square, got shape {mat_np.shape}"
 
         # Solve the linear system using LU decomposition
-        solution_coeffs_np = solve(mat_np, rhs_np)
-        solution_coeffs = Ncm.Vector.new_array(solution_coeffs_np.tolist())
+        solution_coeffs = solve(mat_np, rhs_np)
 
         # Test at several interior points mapped to [-1, 1]
         # Mapping: x_physical = (a+b)/2 + (b-a)/2 * t, where t in [-1, 1]
@@ -136,8 +135,7 @@ class TestSBesselOperators:
         # Rows 3 to N-1 have RHS = 0
 
         # Solve the linear system
-        solution_coeffs_np = solve(mat_np, rhs_np)
-        solution_coeffs = Ncm.Vector.new_array(solution_coeffs_np.tolist())
+        solution_coeffs = solve(mat_np, rhs_np)
 
         # Compute derivatives at endpoints using the derivative function
         # Need to account for the coordinate transformation: x = m + h*t
@@ -218,8 +216,7 @@ class TestSBesselOperators:
         # Rows 4 to N-1 have RHS = 0
 
         # Solve the linear system
-        solution_coeffs_np = solve(mat_np, rhs_np)
-        solution_coeffs = Ncm.Vector.new_array(solution_coeffs_np.tolist())
+        solution_coeffs = solve(mat_np, rhs_np)
 
         # Compute derivatives at endpoints
         # dy/dx = (dy/dt) / h
@@ -265,24 +262,22 @@ class TestSBesselOperators:
         solver = Ncm.SBesselOdeSolver.new(l_val, a, b)
 
         # Set up simple RHS vector with just a few coefficients
-        rhs_np = np.zeros(N)
-        rhs_np[2] = 1.0
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
+        rhs = np.zeros(N)
+        rhs[2] = 1.0
 
         # Call solve (QR method) - just check it doesn't crash
-        solution = solver.solve(rhs_vec)
-        solution_np = solution.to_numpy()
+        solution = solver.solve(rhs)
 
-        op_mat = solver.get_operator_matrix(N).to_numpy()
+        op_mat = solver.get_operator_matrix(2 * N).to_numpy()
 
         # Solve the system using scipy for comparison
-        rhs_np_full = np.zeros(N)
+        rhs_np_full = np.zeros(2 * N)
         rhs_np_full[2] = 1.0
         solution_scipy = solve(op_mat, rhs_np_full)
         safe_part = 20
 
         assert_allclose(
-            solution_np[:safe_part],
+            solution[:safe_part],
             solution_scipy[:safe_part],
             rtol=1.0e-10,
             atol=0.0,
@@ -291,7 +286,7 @@ class TestSBesselOperators:
 
         # Basic sanity check - solution should exist and be non-trivial
         assert solution is not None
-        assert len(solution_np) > 0
+        assert len(solution) > 0
 
     @pytest.mark.parametrize("l_val", list(range(21)))
     @pytest.mark.parametrize("N", [32, 64, 128])
@@ -352,7 +347,8 @@ class TestSBesselOperators:
         rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Solve using solve_dense
-        solution_coeffs = solver.solve_dense(rhs_vec, N)
+        solution_vec = solver.solve_dense(rhs_vec, N)
+        solution_coeffs = solution_vec.to_numpy()
 
         # Compute derivatives at endpoints
         h = (b - a) / 2.0
@@ -409,7 +405,8 @@ class TestSBesselOperators:
         rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Solve using solve_dense
-        solution_coeffs = solver.solve_dense(rhs_vec, N)
+        solution_vec = solver.solve_dense(rhs_vec, N)
+        solution_coeffs = solution_vec.to_numpy()
 
         # Compute derivatives at endpoints
         y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
@@ -457,10 +454,9 @@ class TestSBesselOperators:
         rhs_np[0] = 0.0  # BC at x=a
         rhs_np[1] = 0.0  # BC at x=b
         rhs_np[2] = 1.0
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Solve using QR method
-        solution_coeffs = solver.solve(rhs_vec)
+        solution_coeffs = solver.solve(rhs_np)
 
         # Compute derivatives at endpoints
         h = (b - a) / 2.0
@@ -514,10 +510,9 @@ class TestSBesselOperators:
         rhs_np[1] = 0.0  # BC at x=b
         rhs_np[2] = m  # Constant term
         rhs_np[3] = 0.25 * h  # Linear term scaled for C^(2) basis
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Solve using QR method
-        solution_coeffs = solver.solve(rhs_vec)
+        solution_coeffs = solver.solve(rhs_np)
 
         # Compute derivatives at endpoints
         y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
@@ -559,39 +554,39 @@ class TestSBesselOperators:
         n_l = lmax - lmin + 1
 
         # Create a test RHS vector (Gegenbauer coefficients)
-        rhs = Ncm.Vector.new(N)
         rhs_data = np.zeros(N)
         rhs_data[0] = 0.0  # BC at -1
         rhs_data[1] = 0.0  # BC at +1
         # Set some non-trivial coefficients
         for k in range(2, N):
             rhs_data[k] = 1.0 / (1.0 + k * k)
-        rhs.set_array(rhs_data.tolist())
 
         # Create solver
         solver = Ncm.SBesselOdeSolver.new(lmin, a, b)
 
         # Solve using batched method
-        solutions_batched = solver.solve_batched(rhs, lmin, n_l)
-        solutions_batched_np = solutions_batched.to_numpy()
+        solutions_batched = np.array(solver.solve_batched(rhs_data, lmin, n_l)).reshape(
+            n_l, -1
+        )
 
         # Solve individually for each l
         solutions_individual = []
+        min_len = 10000
         for ell in range(lmin, lmax + 1):
             solver.set_l(ell)
-            sol = solver.solve(rhs)
-            solutions_individual.append(sol.to_numpy())
-
-        solutions_individual_np = np.array(solutions_individual)
+            sol = solver.solve(rhs_data)
+            solutions_individual.append(sol)
+            min_len = min(min_len, len(sol))
 
         # Compare each solution
         for i, ell in enumerate(range(lmin, lmax + 1)):
-            batched_sol = solutions_batched_np[i, :]
-            individual_sol = solutions_individual_np[i, :]
+            individual_sol = np.array(solutions_individual[i])
+            solution_len = min(len(individual_sol), len(solutions_batched[i, :]))
+            batched_sol = solutions_batched[i, :solution_len]
 
             assert_allclose(
                 batched_sol,
-                individual_sol,
+                individual_sol[:solution_len],
                 rtol=1.0e-12,
                 atol=1.0e-14,
                 err_msg=f"Batched solution for l={ell} doesn't match individual solve",
@@ -616,10 +611,9 @@ class TestSBesselOperators:
         rhs_np[0] = 0.0  # BC at x=a
         rhs_np[1] = 0.0  # BC at x=b
         rhs_np[2] = 1.0
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints using solve_endpoints
-        deriv_a, deriv_b, _error = solver.solve_endpoints(rhs_vec)
+        deriv_a, deriv_b, _error = solver.solve_endpoints(rhs_np)
 
         # Get j_l values at endpoints
         j_l_a = spherical_jn(l_val, a)
@@ -666,10 +660,9 @@ class TestSBesselOperators:
         rhs_np[1] = 0.0  # BC at x=b
         rhs_np[2] = m  # Constant term
         rhs_np[3] = 0.25 * h  # Linear term scaled for C^(2) basis
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints using solve_endpoints
-        deriv_a, deriv_b, _error = solver.solve_endpoints(rhs_vec)
+        deriv_a, deriv_b, _error = solver.solve_endpoints(rhs_np)
 
         # Get j_l values at endpoints
         j_l_a = spherical_jn(l_val, a)
@@ -713,13 +706,12 @@ class TestSBesselOperators:
         rhs_np[0] = 0.0  # BC at x=a
         rhs_np[1] = 0.0  # BC at x=b
         rhs_np[2] = 1.0
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints using solve_endpoints
-        deriv_a_fast, deriv_b_fast, _error_fast = solver.solve_endpoints(rhs_vec)
+        deriv_a_fast, deriv_b_fast, _error_fast = solver.solve_endpoints(rhs_np)
 
         # Compute full solution
-        solution_coeffs = solver.solve(rhs_vec)
+        solution_coeffs = solver.solve(rhs_np)
 
         # Compute derivatives at endpoints from full solution
         h = (b - a) / 2.0
@@ -774,10 +766,9 @@ class TestSBesselOperators:
         # T_2 term (quadratic): h^2 * (something)
         rhs_np[2] = m * m + h * h / 2.0  # Approximate constant term
         rhs_np[3] = 0.25 * 2.0 * m * h  # Linear term
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Just verify it doesn't crash and returns reasonable values
-        deriv_a, deriv_b, error = solver.solve_endpoints(rhs_vec)
+        deriv_a, deriv_b, error = solver.solve_endpoints(rhs_np)
 
         assert np.isfinite(deriv_a), "deriv_a should be finite"
         assert np.isfinite(deriv_b), "deriv_b should be finite"
@@ -803,12 +794,11 @@ class TestSBesselOperators:
         rhs_np[0] = 0.0  # BC at x=a
         rhs_np[1] = 0.0  # BC at x=b
         rhs_np[2] = 1.0
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints using solve_endpoints_batched
-        endpoints_mat = Ncm.Matrix.new(n_l, 3)
-        solver.solve_endpoints_batched(rhs_vec, lmin, n_l, endpoints_mat)
-        endpoints_np = endpoints_mat.to_numpy()
+        endpoints_np = np.array(
+            solver.solve_endpoints_batched(rhs_np, lmin, n_l)
+        ).reshape(n_l, 3)
 
         # Verify each l value satisfies Green's identity
         for i, ell in enumerate(range(lmin, lmax + 1)):
@@ -861,12 +851,11 @@ class TestSBesselOperators:
         rhs_np[1] = 0.0  # BC at x=b
         rhs_np[2] = m  # Constant term
         rhs_np[3] = 0.25 * h  # Linear term scaled for C^(2) basis
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints using solve_endpoints_batched
-        endpoints_mat = Ncm.Matrix.new(n_l, 3)
-        solver.solve_endpoints_batched(rhs_vec, lmin, n_l, endpoints_mat)
-        endpoints_np = endpoints_mat.to_numpy()
+        endpoints_np = np.array(
+            solver.solve_endpoints_batched(rhs_np, lmin, n_l)
+        ).reshape(n_l, 3)
 
         # Verify each l value satisfies Green's identity
         for i, ell in enumerate(range(lmin, lmax + 1)):
@@ -917,18 +906,17 @@ class TestSBesselOperators:
         rhs_np[0] = 0.0  # BC at x=a
         rhs_np[1] = 0.0  # BC at x=b
         rhs_np[2] = 1.0
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints using solve_endpoints_batched
-        endpoints_mat = Ncm.Matrix.new(n_l, 3)
-        solver.solve_endpoints_batched(rhs_vec, lmin, n_l, endpoints_mat)
-        endpoints_batched_np = endpoints_mat.to_numpy()
+        endpoints_batched_np = np.array(
+            solver.solve_endpoints_batched(rhs_np, lmin, n_l)
+        ).reshape(n_l, 3)
 
         # Compute endpoints individually for each l
         endpoints_individual = []
         for ell in range(lmin, lmax + 1):
             solver.set_l(ell)
-            deriv_a, deriv_b, error = solver.solve_endpoints(rhs_vec)
+            deriv_a, deriv_b, error = solver.solve_endpoints(rhs_np)
             endpoints_individual.append([deriv_a, deriv_b, error])
 
         endpoints_individual_np = np.array(endpoints_individual)
@@ -966,20 +954,20 @@ class TestSBesselOperators:
         rhs_np[0] = 0.0  # BC at x=a
         rhs_np[1] = 0.0  # BC at x=b
         rhs_np[2] = 1.0
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints using solve_endpoints_batched
-        endpoints_mat = Ncm.Matrix.new(n_l, 3)
-        solver.solve_endpoints_batched(rhs_vec, lmin, n_l, endpoints_mat)
-        endpoints_fast_np = endpoints_mat.to_numpy()
+        endpoints_fast_np = np.array(
+            solver.solve_endpoints_batched(rhs_np, lmin, n_l)
+        ).reshape(n_l, 3)
 
         # Compute full batched solution
-        solutions_batched = solver.solve_batched(rhs_vec, lmin, n_l)
-        solutions_batched_np = solutions_batched.to_numpy()
+        solutions_batched_np = np.array(
+            solver.solve_batched(rhs_np, lmin, n_l)
+        ).reshape(n_l, -1)
 
         # Compute derivatives at endpoints from full solution for each l
         for i, ell in enumerate(range(lmin, lmax + 1)):
-            solution_coeffs = Ncm.Vector.new_array(solutions_batched_np[i, :].tolist())
+            solution_coeffs = solutions_batched_np[i, :]
 
             # Compute derivatives at endpoints from full solution
             y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
@@ -1029,12 +1017,11 @@ class TestSBesselOperators:
         rhs_np[1] = 0.0  # BC at x=b
         for k in range(2, N):
             rhs_np[k] = 1.0 / (1.0 + k * k)
-        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
 
         # Compute endpoints
-        endpoints_mat = Ncm.Matrix.new(n_l, 3)
-        solver.solve_endpoints_batched(rhs_vec, lmin, n_l, endpoints_mat)
-        endpoints_np = endpoints_mat.to_numpy()
+        endpoints_np = np.array(
+            solver.solve_endpoints_batched(rhs_np, lmin, n_l)
+        ).reshape(n_l, 3)
 
         # Verify all values are finite and errors are non-negative
         assert endpoints_np.shape == (n_l, 3), "Wrong output shape"

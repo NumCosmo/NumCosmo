@@ -65,10 +65,10 @@ gdouble ncm_sbessel_ode_solver_get_tolerance (NcmSBesselOdeSolver *solver);
 void ncm_sbessel_ode_solver_set_interval (NcmSBesselOdeSolver *solver, gdouble a, gdouble b);
 void ncm_sbessel_ode_solver_get_interval (NcmSBesselOdeSolver *solver, gdouble *a, gdouble *b);
 
-NcmVector *ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, NcmVector *rhs);
-void ncm_sbessel_ode_solver_solve_endpoints (NcmSBesselOdeSolver *solver, NcmVector *rhs, gdouble *deriv_a, gdouble *deriv_b, gdouble *error);
-NcmMatrix *ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l);
-void ncm_sbessel_ode_solver_solve_endpoints_batched (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint lmin, guint n_l, NcmMatrix *endpoints);
+void ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, GArray *rhs, GArray **solution);
+void ncm_sbessel_ode_solver_solve_endpoints (NcmSBesselOdeSolver *solver, GArray *rhs, gdouble *deriv_a, gdouble *deriv_b, gdouble *error);
+void ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, GArray *rhs, gint lmin, guint n_l, GArray **solutions);
+void ncm_sbessel_ode_solver_solve_endpoints_batched (NcmSBesselOdeSolver *solver, GArray *rhs, gint lmin, guint n_l, GArray **endpoints);
 
 NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, gint nrows);
 NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver, gint nrows);

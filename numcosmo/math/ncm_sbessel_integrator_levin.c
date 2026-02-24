@@ -85,12 +85,12 @@ struct _NcmSBesselIntegratorLevin
   gint alloc_lmin;
   gint alloc_lmax;
   /* Pre-allocated working arrays */
-  NcmVector *cheb_coeffs;
-  NcmVector *gegen_coeffs;
-  NcmVector *rhs;
+  GArray *cheb_coeffs;
+  GArray *gegen_coeffs;
+  GArray *rhs;
   gdouble *j_array_a;
   gdouble *j_array_b;
-  NcmMatrix *endpoints_result;
+  GArray *endpoints_result;
   gdouble *jl_arr;
 };
 
@@ -134,10 +134,10 @@ _ncm_sbessel_integrator_levin_dispose (GObject *object)
 
   ncm_sbessel_ode_solver_clear (&sbilv->ode_solver);
   ncm_sf_sbessel_array_clear (&sbilv->sba);
-  ncm_vector_clear (&sbilv->cheb_coeffs);
-  ncm_vector_clear (&sbilv->gegen_coeffs);
-  ncm_vector_clear (&sbilv->rhs);
-  ncm_matrix_clear (&sbilv->endpoints_result);
+  g_clear_pointer (&sbilv->cheb_coeffs, g_array_unref);
+  g_clear_pointer (&sbilv->gegen_coeffs, g_array_unref);
+  g_clear_pointer (&sbilv->rhs, g_array_unref);
+  g_clear_pointer (&sbilv->endpoints_result, g_array_unref);
 
   if (sbilv->j_array_a != NULL)
   {
@@ -273,10 +273,10 @@ _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv,
     return;
 
   /* Free existing allocations */
-  ncm_vector_clear (&sbilv->cheb_coeffs);
-  ncm_vector_clear (&sbilv->gegen_coeffs);
-  ncm_vector_clear (&sbilv->rhs);
-  ncm_matrix_clear (&sbilv->endpoints_result);
+  g_clear_pointer (&sbilv->cheb_coeffs, g_array_unref);
+  g_clear_pointer (&sbilv->gegen_coeffs, g_array_unref);
+  g_clear_pointer (&sbilv->rhs, g_array_unref);
+  g_clear_pointer (&sbilv->endpoints_result, g_array_unref);
 
   if (sbilv->j_array_a != NULL)
   {
@@ -296,10 +296,10 @@ _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv,
     sbilv->jl_arr = NULL;
   }
 
-  /* Allocate vectors for spectral coefficients */
-  sbilv->cheb_coeffs  = ncm_vector_new (max_order);
-  sbilv->gegen_coeffs = ncm_vector_new (max_order);
-  sbilv->rhs          = ncm_vector_new (max_order + 2);
+  /* Allocate arrays for spectral coefficients */
+  sbilv->cheb_coeffs  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), max_order);
+  sbilv->gegen_coeffs = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), max_order);
+  sbilv->rhs          = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), max_order + 2);
 
   /* Allocate arrays for spherical Bessel functions */
   if (lmax >= 0)
@@ -310,7 +310,7 @@ _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv,
   }
 
   /* Allocate result matrix for batched endpoint computation (max block size is 8) */
-  sbilv->endpoints_result = ncm_matrix_new (8, 3);
+  sbilv->endpoints_result = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 8 * 3);
 
   /* Update allocation tracking */
   sbilv->alloc_max_order = max_order;
@@ -348,14 +348,13 @@ _ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi,
   ncm_sbessel_ode_solver_set_l (solver, ell);
   ncm_sbessel_ode_solver_set_interval (solver, a, b);
 
-  ncm_spectral_compute_chebyshev_coeffs (spectral, F, a, b, sbilv->cheb_coeffs, user_data);
-  ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, sbilv->gegen_coeffs);
+  ncm_spectral_compute_chebyshev_coeffs (spectral, F, a, b, N, &sbilv->cheb_coeffs, user_data);
+  ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
 
-  g_assert_cmpuint (ncm_vector_stride (sbilv->rhs), ==, 1);
-  g_assert_cmpuint (ncm_vector_stride (sbilv->gegen_coeffs), ==, 1);
+  g_array_set_size (sbilv->rhs, N + 2);
   {
-    gdouble *rhs_data                = ncm_vector_data (sbilv->rhs);
-    const gdouble *gegen_coeffs_data = ncm_vector_data (sbilv->gegen_coeffs);
+    gdouble *rhs_data                = (gdouble *) sbilv->rhs->data;
+    const gdouble *gegen_coeffs_data = (gdouble *) sbilv->gegen_coeffs->data;
 
     rhs_data[0] = 0.0; /* BC at x=a (t=-1) */
     rhs_data[1] = 0.0; /* BC at x=b (t=+1) */
@@ -480,17 +479,16 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
   memset (&result_data[ell_levin_min - lmin], 0, sizeof (gdouble) * (ell_levin_max - ell_levin_min + 1));
 
   /* Step 1: Compute Chebyshev coefficients for f(x) - done once */
-  ncm_spectral_compute_chebyshev_coeffs (spectral, F, a, b, sbilv->cheb_coeffs, user_data);
+  ncm_spectral_compute_chebyshev_coeffs (spectral, F, a, b, N, &sbilv->cheb_coeffs, user_data);
 
   /* Step 2: Convert to Gegenbauer C^(2) basis - done once */
-  ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, sbilv->gegen_coeffs);
+  ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
 
   /* Step 3: Set up RHS with homogeneous boundary conditions - done once */
-  g_assert_cmpuint (ncm_vector_stride (sbilv->rhs), ==, 1);
-  g_assert_cmpuint (ncm_vector_stride (sbilv->gegen_coeffs), ==, 1);
+  g_array_set_size (sbilv->rhs, N + 2);
   {
-    gdouble *rhs_data                = ncm_vector_data (sbilv->rhs);
-    const gdouble *gegen_coeffs_data = ncm_vector_data (sbilv->gegen_coeffs);
+    gdouble *rhs_data                = (gdouble *) sbilv->rhs->data;
+    const gdouble *gegen_coeffs_data = (gdouble *) sbilv->gegen_coeffs->data;
 
     rhs_data[0] = 0.0; /* BC at x=a (t=-1) */
     rhs_data[1] = 0.0; /* BC at x=b (t=+1) */
@@ -513,15 +511,15 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
       gint l;
 
       /* Solve for all l values in this block using batched solver */
-      ncm_sbessel_ode_solver_solve_endpoints_batched (solver, sbilv->rhs, l_start, n_block, sbilv->endpoints_result);
+      ncm_sbessel_ode_solver_solve_endpoints_batched (solver, sbilv->rhs, l_start, n_block, &sbilv->endpoints_result);
 
       /* Extract derivatives and compute integrals */
       for (l = l_start; l <= l_end; l++)
       {
         const gint l_idx        = l - lmin;
         const gint block_idx    = l - l_start;
-        const gdouble y_prime_a = ncm_matrix_get (sbilv->endpoints_result, block_idx, 0);
-        const gdouble y_prime_b = ncm_matrix_get (sbilv->endpoints_result, block_idx, 1);
+        const gdouble y_prime_a = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 0);
+        const gdouble y_prime_b = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 1);
 
         if (l <= my_lmax)
         {
