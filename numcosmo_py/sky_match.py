@@ -265,7 +265,7 @@ class SkyMatchResult:
         matching_type: MatchingType,
         nearest_neighbours_indices: np.ndarray[tuple[int, int], np.dtype[np.int64]],
         nearest_neighbours_distances: np.ndarray[tuple[int, int], np.dtype[np.float64]],
-        query_indices: np.array | None = None,
+        query_indices: np.ndarray[tuple[int], np.dtype[np.int64]] | None = None,
     ):
         """Initialize the SkyMatchResult class.
 
@@ -278,6 +278,7 @@ class SkyMatchResult:
         self.nearest_neighbours_indices = nearest_neighbours_indices
         self.nearest_neighbours_distances = nearest_neighbours_distances
         self.query_indices = query_indices
+
 
         assert (
             self.nearest_neighbours_indices.shape
@@ -437,12 +438,13 @@ class SkyMatchResult:
     def _select_best_id(
         self,
         ) -> BestCandidates:
+
+        pairs = [(id1, id2, w) 
+                for id1, matches, coeff in zip(self.query_indices, self.nearest_neighbours_indices, self.nearest_neighbours_distances) 
+                for id2, w in zip(matches, coeff)
+        ]
+
         
-        pairs = [
-    (id1, id2, w) 
-    for q_id, matches, coeff in zip(self.query_indices, self.nearest_neighbours_indices, self.nearest_neighbours_distances) 
-    for m_id, w in zip(matches, coeff)
-]
         G = nx.Graph()
         for id1, id2, w in pairs:
             G.add_edge(("query_id",id1), ("match_id",id2), weight=w)
@@ -860,7 +862,7 @@ class SkyMatch:
             case _ as unreachable:  # pragma: no cover
                 assert_never(unreachable)
 
-        return SkyMatchResult(self, MatchingType.DISTANCE,indices, distances)
+        return SkyMatchResult(self, MatchingType.DISTANCE, indices, distances)
     
 
     def match_id(
@@ -992,12 +994,42 @@ class SkyMatch:
 
         all_combinations["linking_coefficient"] = fraction_query * (fraction_query + fraction_match) / 2
 
-        
-        grouped_comb = all_combinations.group_by('query_id')
-      
-        query_list = np.array(grouped_comb.groups.keys['query_id'])
-        match_list = np.array(list(group['match_id']) for group in grouped_comb.groups)
-        coeficientes = np.array(list(group['linking_coefficient']) for group in grouped_comb.groups)
 
-        return SkyMatchResult(self, MatchingType.ID, match_list, coeficientes, query_list)
+        original_order = list(dict.fromkeys(self.query_data[query_id['ID']]))
+
+        grouped_comb = all_combinations.group_by('query_id')
+        
+        group_lookup = {}
+        for group in grouped_comb.groups:
+            qid = group['query_id'][0]
+            group_lookup[qid] = (list(group['match_id']), list(group['linking_coefficient']))
+
+        query_list = []
+        match_list = []
+        coeficientes = []
+
+        for qid in original_order:
+            if qid in group_lookup:
+                query_list.append(qid)
+                match_list.append(group_lookup[qid][0])
+                coeficientes.append(group_lookup[qid][1])
+            else:
+                match_list.append([-1])
+                coeficientes.append([0])
+                query_list.append(qid)
+
+        query_list = np.array(query_list)
+        match_list = np.array(match_list, dtype=object)
+        coeficientes = np.array(coeficientes, dtype=object)
+
+        
+        # grouped_comb = all_combinations.group_by('query_id')
+      
+        # query_list = np.array(grouped_comb.groups.keys['query_id'])
+        
+        # match_list = np.array([list(group['match_id']) for group in grouped_comb.groups], dtype=object)
+        # coeficientes = np.array([list(group['linking_coefficient']) for group in grouped_comb.groups], dtype=object)
+      
+        return coeficientes, match_list
+        # return SkyMatchResult(self, MatchingType.ID, match_list, coeficientes, query_list)
                 
