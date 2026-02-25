@@ -613,15 +613,22 @@ class SkyMatch:
         query_coordinates: Coordinates,
         match_data: Table,
         match_coordinates: Coordinates,
+        query_member_data: Table | None = None,
+        match_member_data: Table | None = None,
         query_id: IDs | None = None,
         match_id: IDs | None = None,
     ) -> None:
         """Create a new SkyMatch object from an astropy.table.Table."""
         self.query_data = query_data
         self.match_data = match_data
+        self.query_member_data = query_member_data
+        self.match_member_data = match_member_data
         if query_id or match_id is not None:
             _check_ID(self.query_data, query_id)
             _check_ID(self.match_data, match_id)
+        if query_member_data is not None and match_member_data is not None:
+            _check_ID(self.query_member_data, query_id)
+            _check_ID(self.match_member_data, match_id)
         self.query_id = query_id
         self.match_id = match_id
         _check_coordinates(self.query_data, query_coordinates)
@@ -909,17 +916,15 @@ class SkyMatch:
         :best_matched: table with the best candidate of matched objects
         """
          
-        
-        # Preparing the catalogs for the matching
+        # Preparing the member catalogs for the matching
 
-        query_table = self.query_data.copy()        
+        query_table = self.query_member_data.copy()        
         query_table.rename_column(self.query_id['ID'], 'query_id')
         query_table.rename_column(self.query_id['MemberID'], 'MemberID')
         
-        match_table = self.match_data.copy()
+        match_table = self.match_member_data.copy()
         match_table.rename_column(self.match_id['ID'], 'match_id')
         match_table.rename_column(self.match_id['MemberID'], 'MemberID')
-
 
 
         if 'pmem' in query_table.colnames:
@@ -953,7 +958,7 @@ class SkyMatch:
 
         # Evaluating the shared fraction of members between the matched objects
 
-        all_combinations['shared_count'] = matched_catalog_grouped.groups.aggregate(np.size)['MemberID']
+        all_combinations['shared_count'] = matched_catalog_grouped.groups.aggregate(np.size)['MemberID'] #Number of shared members between the matched objects
 
         fraction_query = None
         fraction_match = None
