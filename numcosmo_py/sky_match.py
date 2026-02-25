@@ -436,18 +436,16 @@ class SkyMatchResult:
         self,
         ) -> BestCandidates:
        
-        counts = [len(x) for x in self.nearest_neighbours_indices]
-
-        # _, idx = np.unique(self.sky_match.query_id, return_index=True)
-        # q_id = self.sky_match.query_id[np.sort(idx)]
-        
-        id1_flat = np.repeat(self.sky_match.query_id, counts)
-        id2_flat = np.concatenate(self.nearest_neighbours_indices)
-        w_flat = np.concatenate(self.nearest_neighbours_distances)
+        matched_query = np.repeat(self.sky_match.query_id, [len(i) for i in self.nearest_neighbours_indices])
+        matched_match = np.concatenate(self.nearest_neighbours_indices)
+        coefficients = np.concatenate(self.nearest_neighbours_distances)
                 
-        matches = Table([id1_flat, id2_flat, w_flat], names=('query_id', 'match_id', 'linking_coeff'))
+        matches = Table(
+            [matched_query, matched_match, coefficients],
+            names=('query_id', 'match_id', 'linking_coeff')
+        )
+        
         matches = matches[matches['match_id'] != -1]
-
        
         G = nx.Graph()
         for id1, id2, w in matches:
@@ -466,11 +464,7 @@ class SkyMatchResult:
             total_weight += w
             global_matching |= m 
 
-        # unique_combinations = []
-        # for row_data in global_matching:
-        #    row_dict = dict(row_data) 
-            #   unique_combinations.append(tuple(row_dict.values()))
-        
+              
         query_id_unique = []
         match_id_unique = []
         linking_coef = []
@@ -496,17 +490,25 @@ class SkyMatchResult:
         best['match_id'] = match_id_unique
         best['linking_coeff'] = linking_coef   
 
-       
+
         mapping = dict(zip(best['query_id'], best['match_id']))
 
-        combinations = Table([self.sky_match.query_id, self.nearest_neighbours_indices], names=('query_id', 'matches'))
+        combinations = Table(
+            [self.sky_match.query_id, self.nearest_neighbours_indices],
+            names=('query_id', 'matches')
+        )
 
-        combinations['matches'] = [
-    mapping.get(id_val, False) for id_val in combinations['query_id']
-]
+        combinations['matches'] = [ mapping.get(id_val, False) for id_val in combinations['query_id'] ]
 
         query_filter = (combinations['matches'] != False)
-        best_candidates_indices = combinations['matches'][query_filter]
+
+        valid_matches = list(combinations['matches'][query_filter])
+
+        match_to_index = {val: i for i, val in enumerate(self.sky_match.match_id)}
+
+        best_candidates_indices = np.array([
+            match_to_index[m] for m in valid_matches if m in match_to_index
+        ], dtype=np.int64)
         
             
         return BestCandidates(
@@ -605,7 +607,8 @@ class SkyMatchResult:
 
         assert len(best.query_filter) == len(self.sky_match.query_ra)
         query_filter = best.query_filter
-
+        
+        
         table["ID"] = np.arange(len(self.sky_match.query_ra))[query_filter]
         table["RA"] = self.sky_match.query_ra[query_filter]
         table["DEC"] = self.sky_match.query_dec[query_filter]
