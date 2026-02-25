@@ -436,13 +436,20 @@ class SkyMatchResult:
         self,
         ) -> BestCandidates:
 
-        pairs = [(id1, id2, w) 
-                for id1, matches, coeff in zip(self.sky_match.query_id, self.nearest_neighbours_indices, self.nearest_neighbours_distances) 
-                for id2, w in zip(matches, coeff)
-        ]
+        counts = [len(x) for x in self.nearest_neighbours_indices]
+
+        _, idx = np.unique(self.sky_match.query_id, return_index=True)
+        q_id = self.sky_match.query_id[np.sort(idx)]
         
+        id1_flat = np.repeat(q_id, counts)
+        id2_flat = np.concatenate(self.nearest_neighbours_indices)
+        w_flat = np.concatenate(self.nearest_neighbours_distances)
+        
+        matches = Table([id1_flat, id2_flat, w_flat], names=('query_id', 'match_id', 'linking_coeff'))
+        matches = matches[matches['match_id'] != -1]
+       
         G = nx.Graph()
-        for id1, id2, w in pairs:
+        for id1, id2, w in matches:
             G.add_edge(("query_id",id1), ("match_id",id2), weight=w)
         
         random.seed(42)
@@ -484,12 +491,12 @@ class SkyMatchResult:
             match_id_unique.append(id2)
             linking_coef.append(weight)
         
-        return query_id_unique, match_id_unique, linking_coef
-    
-        return BestCandidates(
-            query_filter=query_filter,
-            indices=np.array(best_candidates_indices, dtype=np.int64),
-        )
+        best = Table()
+        best['query_id'] = query_id_unique
+        best['match_id'] = match_id_unique
+        best['linking_coeff'] = linking_coef     
+            
+        return best
     
 
     def select_best(
@@ -592,6 +599,52 @@ class SkyMatchResult:
         table["RA_matched"] = self.sky_match.match_ra[best.indices]
         table["DEC_matched"] = self.sky_match.match_dec[best.indices]
         table["z_matched"] = self.sky_match.match_z[best.indices]
+
+        if query_properties is not None:
+            for key, value in query_properties.items():
+                table[value] = self.sky_match.query_data[key][query_filter]
+
+        if match_properties is not None:
+            for key, value in match_properties.items():
+                table[value] = self.sky_match.match_data[key][best.indices]
+
+        return table
+
+    def to_table_best_id(
+        self,
+        query_properties: dict[str, str] | None = None,
+        match_properties: dict[str, str] | None = None,
+        ) -> Table:
+        """Convert the match result to a table with only the best matched objects."""
+
+        best = self.select_best()     
+        
+        query_table = Table()
+        
+        query_table["ID"] = self.sky_match.query_id
+        query_table["RA"] =  self.sky_match.query_ra
+        query_table["DEC"] = self.sky_match.query_dec
+        query_table["z"] = self.sky_match.query_z
+
+        match_table = Table()
+
+        query_table["ID_matched"] = self.sky_match.query_id
+        query_table["RA_matched"] =  self.sky_match.query_ra
+        query_table["DEC_matched"] = self.sky_match.query_dec
+        query_table["z_matched"] = self.sky_match.query_z
+
+        
+        table = Table()
+
+        table["ID"] = self.sky_match.query_id
+        table["RA"] =  self.sky_match.query_ra
+        table["DEC"] = self.sky_match.query_dec
+        table["z"] = self.sky_match.query_z
+
+        table["ID_matched"] = best['match_id']
+        table["RA_matched"] = best["query_id"]
+        table["DEC_matched"] = best["query_id"]
+        table["z_matched"] = best["query_id"]
 
         if query_properties is not None:
             for key, value in query_properties.items():
@@ -725,22 +778,22 @@ class SkyMatch:
     @property
     def match_id(self) -> np.ndarray:
         """Return the ID coordinates of the match catalog."""
-        return self.match_data[self.match_id["ID"]]
+        return self.match_data[self.match_ids["ID"]]
 
     @property
     def query_id(self) -> np.ndarray:
         """Return the ID coordinates of the query catalog."""
-        return self.query_data[self.query_id["ID"]]
+        return self.query_data[self.query_ids["ID"]]
     
     @property
     def query_pmem(self) -> np.ndarray:
         """Return the PMEM values of the query catalog."""
-        return self.query_data[self.query_id["PMEM"]]
+        return self.query_data[self.query_ids["PMEM"]]
     
     @property
     def match_pmem(self) -> np.ndarray:
         """Return the PMEM values of the match catalog."""
-        return self.match_data[self.match_id["PMEM"]]
+        return self.match_data[self.match_ids["PMEM"]]
     
 
 
@@ -1026,7 +1079,7 @@ class SkyMatch:
         all_combinations["linking_coefficient"] = fraction_query * (fraction_query + fraction_match) / 2
 
 
-        original_order = list(dict.fromkeys(self.query_data[self.query_id['ID']]))
+        original_order = list(dict.fromkeys(self.query_data[self.query_ids['ID']]))
 
         grouped_comb = all_combinations.group_by('query_id')
         
