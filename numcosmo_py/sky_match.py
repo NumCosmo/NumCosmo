@@ -435,18 +435,19 @@ class SkyMatchResult:
     def _select_best_id(
         self,
         ) -> BestCandidates:
-
+       
         counts = [len(x) for x in self.nearest_neighbours_indices]
 
-        _, idx = np.unique(self.sky_match.query_id, return_index=True)
-        q_id = self.sky_match.query_id[np.sort(idx)]
+        # _, idx = np.unique(self.sky_match.query_id, return_index=True)
+        # q_id = self.sky_match.query_id[np.sort(idx)]
         
-        id1_flat = np.repeat(q_id, counts)
+        id1_flat = np.repeat(self.sky_match.query_id, counts)
         id2_flat = np.concatenate(self.nearest_neighbours_indices)
         w_flat = np.concatenate(self.nearest_neighbours_distances)
-        
+                
         matches = Table([id1_flat, id2_flat, w_flat], names=('query_id', 'match_id', 'linking_coeff'))
         matches = matches[matches['match_id'] != -1]
+
        
         G = nx.Graph()
         for id1, id2, w in matches:
@@ -465,7 +466,6 @@ class SkyMatchResult:
             total_weight += w
             global_matching |= m 
 
-            
         # unique_combinations = []
         # for row_data in global_matching:
         #    row_dict = dict(row_data) 
@@ -494,9 +494,25 @@ class SkyMatchResult:
         best = Table()
         best['query_id'] = query_id_unique
         best['match_id'] = match_id_unique
-        best['linking_coeff'] = linking_coef     
+        best['linking_coeff'] = linking_coef   
+
+       
+        mapping = dict(zip(best['query_id'], best['match_id']))
+
+        combinations = Table([self.sky_match.query_id, self.nearest_neighbours_indices], names=('query_id', 'matches'))
+
+        combinations['matches'] = [
+    mapping.get(id_val, False) for id_val in combinations['query_id']
+]
+
+        query_filter = (combinations['matches'] != False)
+        best_candidates_indices = combinations['matches'][query_filter]
+        
             
-        return best
+        return BestCandidates(
+            query_filter=query_filter,
+            indices=np.array(best_candidates_indices, dtype=np.int64),
+        )
     
 
     def select_best(
@@ -668,22 +684,22 @@ class SkyMatch:
         match_coordinates: Coordinates,
         query_member_data: Table | None = None,
         match_member_data: Table | None = None,
-        query_id: IDs | None = None,
-        match_id: IDs | None = None,
+        query_ids: IDs | None = None,
+        match_ids: IDs | None = None,
     ) -> None:
         """Create a new SkyMatch object from an astropy.table.Table."""
         self.query_data = query_data
         self.match_data = match_data
         self.query_member_data = query_member_data
         self.match_member_data = match_member_data
-        if query_id or match_id is not None:
-            _check_ID(self.query_data, query_id)
-            _check_ID(self.match_data, match_id)
+        # if query_ids or match_id is not None:
+        #     _check_ID(self.query_data, query_ids)
+        #     _check_ID(self.match_data, match_ids)
         if query_member_data is not None and match_member_data is not None:
-            _check_ID(self.query_member_data, query_id)
-            _check_ID(self.match_member_data, match_id)
-        self.query_id = query_id
-        self.match_id = match_id
+            _check_ID(self.query_member_data, query_ids)
+            _check_ID(self.match_member_data, match_ids)
+        self.query_ids = query_ids
+        self.match_ids = match_ids
         _check_coordinates(self.query_data, query_coordinates)
         _check_coordinates(self.match_data, match_coordinates)
         self.query_coordinates = query_coordinates
@@ -972,13 +988,12 @@ class SkyMatch:
         # Preparing the member catalogs for the matching
 
         query_table = self.query_member_data.copy()        
-        query_table.rename_column(self.query_id['ID'], 'query_id')
-        query_table.rename_column(self.query_id['MemberID'], 'MemberID')
+        query_table.rename_column(self.query_ids['ID'], 'query_id')
+        query_table.rename_column(self.query_ids['MemberID'], 'MemberID')
         
         match_table = self.match_member_data.copy()
-        match_table.rename_column(self.match_id['ID'], 'match_id')
-        match_table.rename_column(self.match_id['MemberID'], 'MemberID')
-
+        match_table.rename_column(self.match_ids['ID'], 'match_id')
+        match_table.rename_column(self.match_ids['MemberID'], 'MemberID')
 
         if 'pmem' in query_table.colnames:
             query_table.rename_column('pmem', 'pmem_query')
@@ -1009,10 +1024,18 @@ class SkyMatch:
         all_combinations = join(all_combinations, nmem_query, keys='query_id', join_type='left')
         all_combinations = join(all_combinations, nmem_match, keys='match_id', join_type='left')
 
-        # Evaluating the shared fraction of members between the matched objects
+        
+        # Evaluating number of shared members
+        
+        matched_pairs = np.column_stack((matched_catalog['query_id'], matched_catalog['match_id']))
+        
+        unique_pairs, counts = np.unique(matched_pairs, axis=0, return_counts=True)
+        
+        all_combinations['shared_count'] = counts
 
-        all_combinations['shared_count'] = matched_catalog_grouped.groups.aggregate(np.size)['MemberID'] #Number of shared members between the matched objects
-
+        
+        # Shared fraction
+        
         fraction_query = None
         fraction_match = None
 
@@ -1076,43 +1099,27 @@ class SkyMatch:
             case _ as unreachable:
                 assert_never(unreachable)
 
+        
+        # Linking coefficient
         all_combinations["linking_coefficient"] = fraction_query * (fraction_query + fraction_match) / 2
 
-
-        original_order = list(dict.fromkeys(self.query_data[self.query_ids['ID']]))
-
+        
+        # Making a dictionary with the struture: 
+        # {query_id: list(matched objects), list(linking coefficients)}
+        
         grouped_comb = all_combinations.group_by('query_id')
         
-        group_lookup = {}
+        comb_dict = {}
         for group in grouped_comb.groups:
             qid = group['query_id'][0]
-            group_lookup[qid] = (list(group['match_id']), list(group['linking_coefficient']))
+            comb_dict[qid] = (list(group['match_id']), list(group['linking_coefficient']))
 
-        query_list = []
-        match_list = []
-        coeficientes = []
+        ids = self.query_data[self.query_ids['ID']]
 
-        for qid in original_order:
-            if qid in group_lookup:
-                query_list.append(qid)
-                match_list.append(group_lookup[qid][0])
-                coeficientes.append(group_lookup[qid][1])
-            else:
-                match_list.append([-1])
-                coeficientes.append([0])
-                query_list.append(qid)
-
-        query_list = np.array(query_list)
+        match_list, coeff_list = zip(*[comb_dict.get(qid, ([-1], [0])) for qid in ids])
+        
         match_list = np.array(match_list, dtype=object)
-        coeficientes = np.array(coeficientes, dtype=object)
-
-        
-        # grouped_comb = all_combinations.group_by('query_id')
+        coeff_list = np.array(coeff_list, dtype=object)
       
-        # query_list = np.array(grouped_comb.groups.keys['query_id'])
-        
-        # match_list = np.array([list(group['match_id']) for group in grouped_comb.groups], dtype=object)
-        # coeficientes = np.array([list(group['linking_coefficient']) for group in grouped_comb.groups], dtype=object)
-      
-        return SkyMatchResult(self, MatchingType.ID, match_list, coeficientes)
+        return SkyMatchResult(self, MatchingType.ID, match_list, coeff_list)
                 
