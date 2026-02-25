@@ -337,21 +337,20 @@ _ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi,
 {
   NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
   NcmSBesselOdeSolver *solver      = sbilv->ode_solver;
-  const guint N                    = sbilv->max_order;
   NcmSpectral *spectral            = ncm_sbessel_ode_solver_peek_spectral (solver);
   gdouble y_prime_a, y_prime_b, error;
 
   /* Ensure resources are allocated */
-  _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, N, ell, ell);
+  _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, ell, ell);
 
   /* Set the interval and l value for this integration */
   ncm_sbessel_ode_solver_set_l (solver, ell);
   ncm_sbessel_ode_solver_set_interval (solver, a, b);
 
-  ncm_spectral_compute_chebyshev_coeffs (spectral, F, a, b, N, &sbilv->cheb_coeffs, user_data);
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 7, 1.0e-15, &sbilv->cheb_coeffs, user_data);
   ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
 
-  g_array_set_size (sbilv->rhs, N + 2);
+  g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
   {
     gdouble *rhs_data                = (gdouble *) sbilv->rhs->data;
     const gdouble *gegen_coeffs_data = (gdouble *) sbilv->gegen_coeffs->data;
@@ -360,7 +359,7 @@ _ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi,
     rhs_data[1] = 0.0; /* BC at x=b (t=+1) */
 
     /* Copy Gegenbauer coefficients to RHS starting from index 2 */
-    memcpy (&rhs_data[2], gegen_coeffs_data, N * sizeof (gdouble));
+    memcpy (&rhs_data[2], gegen_coeffs_data, sbilv->gegen_coeffs->len * sizeof (gdouble));
   }
 
   ncm_sbessel_ode_solver_solve_endpoints (solver, sbilv->rhs, &y_prime_a, &y_prime_b, &error);
@@ -465,7 +464,6 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
                                                NcmVector *result, gpointer user_data)
 {
   NcmSBesselOdeSolver *solver = sbilv->ode_solver;
-  const guint N               = sbilv->max_order;
   NcmSpectral *spectral       = ncm_sbessel_ode_solver_peek_spectral (solver);
   const gint my_lmax          = GSL_MIN (ell_levin_max, ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b));
   gdouble *result_data        = ncm_vector_data (result);
@@ -479,13 +477,13 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
   memset (&result_data[ell_levin_min - lmin], 0, sizeof (gdouble) * (ell_levin_max - ell_levin_min + 1));
 
   /* Step 1: Compute Chebyshev coefficients for f(x) - done once */
-  ncm_spectral_compute_chebyshev_coeffs (spectral, F, a, b, N, &sbilv->cheb_coeffs, user_data);
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 7, 1.0e-15, &sbilv->cheb_coeffs, user_data);
 
   /* Step 2: Convert to Gegenbauer C^(2) basis - done once */
   ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
 
   /* Step 3: Set up RHS with homogeneous boundary conditions - done once */
-  g_array_set_size (sbilv->rhs, N + 2);
+  g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
   {
     gdouble *rhs_data                = (gdouble *) sbilv->rhs->data;
     const gdouble *gegen_coeffs_data = (gdouble *) sbilv->gegen_coeffs->data;
@@ -494,7 +492,7 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
     rhs_data[1] = 0.0; /* BC at x=b (t=+1) */
 
     /* Copy Gegenbauer coefficients to RHS starting from index 2 */
-    memcpy (&rhs_data[2], gegen_coeffs_data, N * sizeof (gdouble));
+    memcpy (&rhs_data[2], gegen_coeffs_data, sbilv->gegen_coeffs->len * sizeof (gdouble));
   }
 
   /* Step 4-6: Process l values in blocks for better cache locality */

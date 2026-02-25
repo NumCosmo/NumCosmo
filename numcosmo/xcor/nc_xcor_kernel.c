@@ -581,7 +581,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
           const gdouble lny_min       = log (y_min);
           const gdouble lny_max       = log (y_max);
           const gdouble L             = lny_max - lny_min;
-          const gdouble nn            = 100;
+          const gdouble nn            = 5;
           const gdouble dlny          = L / nn;
           guint n, r;
 

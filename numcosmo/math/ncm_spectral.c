@@ -69,7 +69,7 @@ G_DEFINE_TYPE (NcmSpectral, ncm_spectral, G_TYPE_OBJECT)
 static void
 ncm_spectral_init (NcmSpectral *spectral)
 {
-  spectral->max_order   = 10; /* Default: N_max = 1025 */
+  spectral->max_order   = 16; /* Default: N_max = 1025 */
   spectral->f_vals      = NULL;
   spectral->coeffs_work = NULL;
   spectral->cos_arrays  = NULL;
@@ -425,43 +425,48 @@ _ncm_spectral_refine_to_k (NcmSpectral *spectral, NcmSpectralF F,
   }
 }
 
-static void
+static gdouble
 _ncm_spectral_normalize_coeffs (gdouble *coeffs_work, GArray *coeffs, guint N)
 {
   const gdouble inv_2Nm1 = 1.0 / (2.0 * (N - 1.0));
   const gdouble inv_Nm1  = 2.0 * inv_2Nm1;
   gdouble *coeffs_data   = (gdouble *) coeffs->data;
+  gdouble e_total        = 0.0;
   guint i;
 
   coeffs_data[0]     = coeffs_work[0] * inv_2Nm1;
   coeffs_data[N - 1] = coeffs_work[N - 1] * inv_2Nm1;
+  e_total            = coeffs_data[0] * coeffs_data[0] + coeffs_data[N - 1] * coeffs_data[N - 1];
 
   for (i = 1; i < N - 1; i++)
+  {
     coeffs_data[i] = coeffs_work[i] * inv_Nm1;
+    e_total       += coeffs_data[i] * coeffs_data[i];
+  }
+
+  return e_total;
 }
 
 static gboolean
-_ncm_spectral_check_convergence (GArray *coeffs, gdouble tol)
+_ncm_spectral_check_convergence (GArray *coeffs, gdouble e_total, gdouble tol)
 {
-  const guint N              = coeffs->len;
-  const guint n_tail         = GSL_MIN (5, N / 10);
-  const gdouble *coeffs_data = (gdouble *) coeffs->data;
-  gdouble max_head           = 0.0;
-  gdouble max_tail           = 0.0;
+  const guint N    = coeffs->len;
+  const guint m    = GSL_MIN (5, N / 10);
+  const gdouble *a = (gdouble *) coeffs->data;
+  gdouble e_tail   = 0.0;
   guint i;
 
   if (N < 10)
     return FALSE;
 
-  /* Max of first few coefficients */
-  for (i = 0; i < n_tail; i++)
-    max_head = GSL_MAX (max_head, fabs (coeffs_data[i]));
+  /* Compute tail energy only (total energy passed from normalization) */
+  for (i = N - m; i < N; i++)
+    e_tail += a[i] * a[i];
 
-  /* Max of last few coefficients */
-  for (i = N - n_tail; i < N; i++)
-    max_tail = GSL_MAX (max_tail, fabs (coeffs_data[i]));
+  if (e_total == 0.0)
+    return TRUE;
 
-  return (max_tail < tol * max_head);
+  return (e_tail / e_total < tol * tol);
 }
 
 /**
@@ -503,16 +508,17 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
   {
     const guint N  = (1 << k) + 1;
     fftw_plan plan = g_ptr_array_index (spectral->fftw_plans, k);
+    gdouble e_total;
 
     /* Transform f_vals -> coeffs_work */
     fftw_execute (plan);
 
-    /* Resize and normalize */
+    /* Resize and normalize (computes e_total as a by-product) */
     g_array_set_size (*coeffs, N);
-    _ncm_spectral_normalize_coeffs (spectral->coeffs_work, *coeffs, N);
+    e_total = _ncm_spectral_normalize_coeffs (spectral->coeffs_work, *coeffs, N);
 
-    /* Check convergence */
-    if (_ncm_spectral_check_convergence (*coeffs, tol))
+    /* Check convergence using pre-computed e_total */
+    if (_ncm_spectral_check_convergence (*coeffs, e_total, tol))
       break;
 
     /* Refine to next level */

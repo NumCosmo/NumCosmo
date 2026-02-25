@@ -1333,8 +1333,9 @@ _ncm_sbessel_ode_solver_diagonalize_batched (NcmSBesselOdeSolver *solver, GArray
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
   const guint rhs_len                     = rhs->len;
-  const guint solution_order              = rhs_len * 2;
-  const guint total_rows                  = solution_order * n_l;
+  guint solution_order                    = rhs_len * 2;
+  const guint max_solution_order          = rhs_len * (1 << 16);
+  guint total_rows                        = solution_order * n_l;
   const gdouble *rhs_data                 = (gdouble *) rhs->data;
   glong col                               = 0;
   gdouble max_c_A                         = 0.0;
@@ -1461,8 +1462,27 @@ _ncm_sbessel_ode_solver_diagonalize_batched (NcmSBesselOdeSolver *solver, GArray
 
       if (quiet_cols >= ROWS_TO_ROTATE + 1)
         break;  /* SAFE early stop */
+
+      /* If we've reached the end without convergence, increase solution_order and continue */
+      if ((col == solution_order - ROWS_TO_ROTATE - 1) && (solution_order < max_solution_order))
+      {
+        solution_order *= 2;
+        total_rows      = solution_order * n_l;
+        _ensure_matrix_rows_batched_capacity (self, total_rows);
+
+        if (total_rows + ROWS_TO_ROTATE * n_l > self->c_batched->len)
+          g_array_set_size (self->c_batched, total_rows + ROWS_TO_ROTATE * n_l);
+      }
     }
   }
+
+  /* Warn if we exhausted max_solution_order without convergence */
+  if ((solution_order >= max_solution_order) && (quiet_cols < ROWS_TO_ROTATE + 1))
+    g_warning ("_ncm_sbessel_ode_solver_diagonalize_batched: "
+               "reached max_solution_order=%u without convergence (quiet_cols=%u, needed %d). "
+               "Results may be inaccurate.",
+               max_solution_order, quiet_cols, ROWS_TO_ROTATE + 1);
+
 
   return col;
 }
