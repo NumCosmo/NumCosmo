@@ -559,6 +559,7 @@ class SkyMatchResult:
         table["DEC"] = self.sky_match.query_dec
         table["z"] = self.sky_match.query_z
 
+        
         if mask is None:
             mask = self.full_mask()
 
@@ -629,52 +630,7 @@ class SkyMatchResult:
 
         return table
 
-    def to_table_best_id(
-        self,
-        query_properties: dict[str, str] | None = None,
-        match_properties: dict[str, str] | None = None,
-        ) -> Table:
-        """Convert the match result to a table with only the best matched objects."""
-
-        best = self.select_best()     
-        
-        query_table = Table()
-        
-        query_table["ID"] = self.sky_match.query_id
-        query_table["RA"] =  self.sky_match.query_ra
-        query_table["DEC"] = self.sky_match.query_dec
-        query_table["z"] = self.sky_match.query_z
-
-        match_table = Table()
-
-        query_table["ID_matched"] = self.sky_match.query_id
-        query_table["RA_matched"] =  self.sky_match.query_ra
-        query_table["DEC_matched"] = self.sky_match.query_dec
-        query_table["z_matched"] = self.sky_match.query_z
-
-        
-        table = Table()
-
-        table["ID"] = self.sky_match.query_id
-        table["RA"] =  self.sky_match.query_ra
-        table["DEC"] = self.sky_match.query_dec
-        table["z"] = self.sky_match.query_z
-
-        table["ID_matched"] = best['match_id']
-        table["RA_matched"] = best["query_id"]
-        table["DEC_matched"] = best["query_id"]
-        table["z_matched"] = best["query_id"]
-
-        if query_properties is not None:
-            for key, value in query_properties.items():
-                table[value] = self.sky_match.query_data[key][query_filter]
-
-        if match_properties is not None:
-            for key, value in match_properties.items():
-                table[value] = self.sky_match.match_data[key][best.indices]
-
-        return table
-
+   
 
 class SkyMatch:
     """Class to match objects in the sky halo-halo, cluster-halo, cluster-cluster."""
@@ -1013,7 +969,7 @@ class SkyMatch:
         all_combinations = matched_catalog_grouped.groups.keys # Table with the multiple matched query_id-match_id pairs
 
         
-        # Evaluating 'number of members' for each object in the catalogs
+        # Counting 'number of members' for each object in the catalogs
         
         nmem_query = self.object_count(query_table['query_id'])
         nmem_query.rename_columns(['id', 'nmem'], ['query_id', 'nmem_query'])
@@ -1028,7 +984,7 @@ class SkyMatch:
         all_combinations = join(all_combinations, nmem_match, keys='match_id', join_type='left')
 
         
-        # Evaluating number of shared members
+        # Counting number of shared members
         
         matched_pairs = np.column_stack((matched_catalog['query_id'], matched_catalog['match_id']))
         
@@ -1104,11 +1060,11 @@ class SkyMatch:
 
         
         # Linking coefficient
+        
         all_combinations["linking_coefficient"] = fraction_query * (fraction_query + fraction_match) / 2
 
         
-        # Making a dictionary with the struture: 
-        # {query_id: list(matched objects), list(linking coefficients)}
+        # Structured result
         
         grouped_comb = all_combinations.group_by('query_id')
         
@@ -1117,9 +1073,8 @@ class SkyMatch:
             qid = group['query_id'][0]
             comb_dict[qid] = (list(group['match_id']), list(group['linking_coefficient']))
 
-        ids = self.query_data[self.query_ids['ID']]
 
-        match_list, coeff_list = zip(*[comb_dict.get(qid, ([-1], [0])) for qid in ids])
+        match_list, coeff_list = zip(*[comb_dict.get(qid, ([-1], [0])) for qid in self.query_data[self.query_ids['ID']]])
         
         match_list = np.array(match_list, dtype=object)
         coeff_list = np.array(coeff_list, dtype=object)
