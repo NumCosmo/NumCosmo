@@ -608,13 +608,14 @@ class SkyMatchResult:
         assert len(best.query_filter) == len(self.sky_match.query_ra)
         query_filter = best.query_filter
         
-        
-        table["ID"] = np.arange(len(self.sky_match.query_ra))[query_filter]
+        table["Index"] = np.arange(len(self.sky_match.query_ra))[query_filter]
+        table["ID"] = self.sky_match.query_id[query_filter]   
         table["RA"] = self.sky_match.query_ra[query_filter]
         table["DEC"] = self.sky_match.query_dec[query_filter]
         table["z"] = self.sky_match.query_z[query_filter]
 
-        table["ID_matched"] = best.indices
+        table["Index_matched"] = best.indices
+        table["ID_matched"] = self.sky_match.match_id[best.indices]
         table["RA_matched"] = self.sky_match.match_ra[best.indices]
         table["DEC_matched"] = self.sky_match.match_dec[best.indices]
         table["z_matched"] = self.sky_match.match_z[best.indices]
