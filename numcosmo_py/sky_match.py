@@ -288,12 +288,19 @@ class SkyMatchResult:
     def full_mask(self) -> Mask:
         """Return a mask with all the elements set to True."""
         
-        if self.matching_type == MatchingType.ID:
-            raise ValueError("Full mask is not available for ID matching.")
+        # if self.matching_type == MatchingType.ID:
+        #     raise ValueError("Full mask is not available for ID matching.")
         
         return Mask(
             np.ones_like(self.nearest_neighbours_distances, dtype=bool),
         )
+
+    def filter_mask_id_matched(self) -> Mask:
+        
+        return Mask(
+            self.nearest_neighbours_distances != 0
+        )
+        
 
     def filter_mask_by_distance(
         self,
@@ -489,7 +496,6 @@ class SkyMatchResult:
         best['match_id'] = match_id_unique
         best['linking_coeff'] = linking_coef   
 
-
         mapping = dict(zip(best['query_id'], best['match_id']))
 
         combinations = Table(
@@ -508,7 +514,7 @@ class SkyMatchResult:
         best_candidates_indices = np.array([
             match_to_index[m] for m in valid_matches if m in match_to_index
         ], dtype=np.int64)
-        
+
             
         return BestCandidates(
             query_filter=query_filter,
@@ -537,8 +543,35 @@ class SkyMatchResult:
         mask: Mask,
     ) -> list[npt.NDArray]:
         assert len(x.shape) == 1
-        assert mask.shape == indices.shape
-        return [x[i[m]] for i, m in zip(indices, mask.array)]
+        
+        if self.matching_type == MatchingType.DISTANCE:  
+            assert mask.shape == indices.shape
+        
+            return [x[i[m]] for i, m in zip(indices, mask.array)]
+        
+        if self.matching_type == MatchingType.ID:          
+                       
+            id_index_map = {mid: i for i, mid in enumerate(self.sky_match.match_id)}
+            
+            index = []
+            new_mask = []
+
+            mask_to_use = mask.array if hasattr(mask, 'array') else mask
+
+            for obj_ids, obj_mask in zip(indices, mask_to_use):
+                
+                filtrados = [(id_index_map[i], m) for i, m in zip(obj_ids, obj_mask) if i != -1 and i in id_index_map]
+                
+                if filtrados:
+                    idx_f, m_f = zip(*filtrados)
+                    index.append(np.array(idx_f))
+                    new_mask.append(np.array(m_f))
+                else:
+                    index.append(np.array([], dtype=np.int64))
+                    new_mask.append(np.array([], dtype=bool))
+            
+            return [x[i[m]] for i, m in zip(index, new_mask)]
+
 
     def to_table_complete(
         self,
@@ -553,13 +586,16 @@ class SkyMatchResult:
         and the properties of the match catalog for the best matched objects.
         """
         table = Table()
-        table["ID"] = np.arange(len(self.sky_match.query_ra))
+        table["Index"] = np.arange(len(self.sky_match.query_ra))
         table["RA"] = self.sky_match.query_ra
         table["DEC"] = self.sky_match.query_dec
         table["z"] = self.sky_match.query_z
 
         
-        if mask is None:
+        if mask is None and self.matching_type == MatchingType.ID:            
+            mask =  [[bool(i) for i in query_object] for query_object in self.nearest_neighbours_distances]
+     
+        if mask is None and self.matching_type == MatchingType.DISTANCE:
             mask = self.full_mask()
 
         if query_properties is not None:
@@ -576,14 +612,19 @@ class SkyMatchResult:
                     mask,
                 )
 
-        table["ID_matched"] = self._get_by_indices(
+        table["Index_matched"] = self._get_by_indices(
             np.arange(len(self.sky_match.match_ra)),
             self.nearest_neighbours_indices,
             mask,
         )
-        table["distances"] = [
-            d[m] for d, m in zip(self.nearest_neighbours_distances, mask.array)
-        ]
+        if self.matching_type == MatchingType.DISTANCE:
+            table["distances"] = [
+                d[m] for d, m in zip(self.nearest_neighbours_distances, mask.array)
+            ]
+        if self.matching_type == MatchingType.ID:
+            table["linking coefficient"] = [
+               np.array(d)[np.array(m)] for d, m in zip(self.nearest_neighbours_distances, mask)
+            ]
         table["RA_matched"] = self._get_by_indices(
             self.sky_match.match_ra, self.nearest_neighbours_indices, mask
         )
@@ -645,8 +686,8 @@ class SkyMatch:
         match_data: Table,
         match_coordinates: Coordinates,
         query_member_data: Table | None = None,
-        match_member_data: Table | None = None,
         query_ids: IDs | None = None,
+        match_member_data: Table | None = None,
         match_ids: IDs | None = None,
     ) -> None:
         """Create a new SkyMatch object from an astropy.table.Table."""
@@ -693,7 +734,12 @@ class SkyMatch:
             self.match_coordinates,
             self.query_data,
             self.query_coordinates,
+            self.match_member_data,
+            self.match_ids,
+            self.query_member_data,
+            self.query_ids,
         )
+
 
     def ra_dec_to_theta_phi(self, ra, dec):
         """Convert RA and DEC to theta and phi.
