@@ -41,7 +41,7 @@
  * - `get_limits`: returns valid integration ranges for xi and k
  *
  * The class provides automatic kernel analysis functionality that studies the behavior
- * of K(k, y/k)/k to optimize integration strategies.
+ * of K*xi(k, y/k) to optimize integration strategies.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -61,9 +61,9 @@
 
 typedef struct _NcXcorKernelComponentPrivate
 {
-  NcmSpline *k_max_spline;       /* k_max(y) */
-  NcmSpline *K_max_spline;       /* K_max(y) */
-  NcmSpline *k_epsilon_spline;   /* k_epsilon(y) */
+  NcmSpline *k_max_spline;       /* k_max(y) - k value that maximizes K*xi(k, y/k) */
+  NcmSpline *K_max_spline;       /* K*xi_max(y) - maximum value of K*xi(k, y/k) */
+  NcmSpline *k_epsilon_spline;   /* k_epsilon(y) - k where K*xi drops to epsilon*K*xi_max */
   gsl_min_fminimizer *minimizer; /* GSL minimizer for finding k_max */
   gsl_root_fsolver *root_solver; /* GSL root solver for finding k_epsilon */
   gdouble epsilon;
@@ -199,8 +199,8 @@ nc_xcor_kernel_component_class_init (NcXcorKernelComponentClass *klass)
   /**
    * NcXcorKernelComponent:epsilon:
    *
-   * The epsilon value for kernel analysis, determining where the kernel
-   * drops to epsilon * K_max.
+   * The epsilon value for kernel analysis, determining where K*xi(k, y/k)
+   * drops to epsilon * K*xi_max.
    */
   g_object_class_install_property (object_class,
                                    PROP_EPSILON,
@@ -294,8 +294,8 @@ nc_xcor_kernel_component_clear (NcXcorKernelComponent **comp)
  * @comp: a #NcXcorKernelComponent
  * @epsilon: the epsilon value for kernel analysis
  *
- * Sets the epsilon value used in kernel analysis to determine where the kernel drops
- * to epsilon * K_max.
+ * Sets the epsilon value used in kernel analysis to determine where K*xi(k, y/k) drops
+ * to epsilon * K*xi_max.
  */
 void
 nc_xcor_kernel_component_set_epsilon (NcXcorKernelComponent *comp, gdouble epsilon)
@@ -420,7 +420,8 @@ nc_xcor_kernel_component_get_tol (NcXcorKernelComponent *comp)
  * @comp: a #NcXcorKernelComponent
  * @y: the y value (y = k * xi)
  *
- * Evaluates k_max at the given y value from kernel analysis.
+ * Evaluates k_max at the given y value from kernel analysis, where k_max
+ * is the value of k that maximizes K*xi(k, y/k) for this y.
  *
  * Returns: the k_max value at y
  */
@@ -439,9 +440,10 @@ nc_xcor_kernel_component_eval_k_max (NcXcorKernelComponent *comp, gdouble y)
  * @comp: a #NcXcorKernelComponent
  * @y: the y value (y = k * xi)
  *
- * Evaluates K_max at the given y value from kernel analysis.
+ * Evaluates the maximum value of K*xi(k, y/k) at the given y value from kernel analysis.
+ * This is the value of K*xi at k = k_max(y).
  *
- * Returns: the K_max value at y
+ * Returns: the K*xi_max value at y
  */
 gdouble
 nc_xcor_kernel_component_eval_K_max (NcXcorKernelComponent *comp, gdouble y)
@@ -458,7 +460,8 @@ nc_xcor_kernel_component_eval_K_max (NcXcorKernelComponent *comp, gdouble y)
  * @comp: a #NcXcorKernelComponent
  * @y: the y value (y = k * xi)
  *
- * Evaluates k_epsilon at the given y value from kernel analysis.
+ * Evaluates k_epsilon at the given y value from kernel analysis, where k_epsilon
+ * is the value of k (beyond k_max) where K*xi(k, y/k) drops to epsilon times K*xi_max.
  *
  * Returns: the k_epsilon value at y
  */
@@ -480,30 +483,30 @@ typedef struct _NcXcorKernelAnalysisData
   gdouble y;
   gdouble xi_min;
   gdouble xi_max;
-  gdouble K_threshold;
+  gdouble Kxi_threshold;
 } NcXcorKernelAnalysisData;
 
-/* GSL function: Returns -K(k, y/k)/k for minimization (we want maximum, so negate) */
+/* GSL function: Returns -K*xi(k, y/k) for minimization (we want maximum, so negate) */
 static gdouble
-_nc_xcor_kernel_component_minus_K_over_k (gdouble k, void *params)
+_nc_xcor_kernel_component_minus_Kxi (gdouble k, void *params)
 {
   NcXcorKernelAnalysisData *data = (NcXcorKernelAnalysisData *) params;
   const gdouble xi               = data->y / k;
   const gdouble K_val            = nc_xcor_kernel_component_eval_kernel (data->comp, data->cosmo, xi, k);
-  const gdouble K_over_k         = K_val / k;
+  const gdouble Kxi              = xi * K_val;
 
-  return -fabs (K_over_k);
+  return -fabs (Kxi);
 }
 
 static gdouble
-_nc_xcor_kernel_component_K_over_k_minus_threshold (gdouble k, void *params)
+_nc_xcor_kernel_component_Kxi_minus_threshold (gdouble k, void *params)
 {
   NcXcorKernelAnalysisData *data = (NcXcorKernelAnalysisData *) params;
   const gdouble xi               = data->y / k;
   const gdouble K_val            = nc_xcor_kernel_component_eval_kernel (data->comp, data->cosmo, xi, k);
-  const gdouble K_over_k         = K_val / k;
+  const gdouble Kxi              = xi * K_val;
 
-  return log (fabs (K_over_k / data->K_threshold));
+  return log (fabs (Kxi / data->Kxi_threshold));
 }
 
 static void
@@ -526,7 +529,7 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
   gsl_function F_min;
   gint status;
 
-  F_min.function = &_nc_xcor_kernel_component_minus_K_over_k;
+  F_min.function = &_nc_xcor_kernel_component_minus_Kxi;
   F_min.params   = data;
 
   if (k_lower >= k_upper)
@@ -534,7 +537,7 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
     if (fabs (k_lower / k_upper - 1.0) < GSL_DBL_EPSILON)
     {
       *k_at_max = k_lower;
-      *K_max    = -_nc_xcor_kernel_component_minus_K_over_k (*k_at_max, data);
+      *K_max    = -_nc_xcor_kernel_component_minus_Kxi (*k_at_max, data);
 
       return;
     }
@@ -564,12 +567,12 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
 
     for (guint i = 0; i < nsteps; i++)
     {
-      const gdouble k_test        = pow (10.0, k_log_min + i * k_log_step);
-      const gdouble K_over_k_test = -_nc_xcor_kernel_component_minus_K_over_k (k_test, data);
+      const gdouble k_test   = pow (10.0, k_log_min + i * k_log_step);
+      const gdouble Kxi_test = -_nc_xcor_kernel_component_minus_Kxi (k_test, data);
 
-      if (K_over_k_test > K_best)
+      if (Kxi_test > K_best)
       {
-        K_best   = K_over_k_test;
+        K_best   = Kxi_test;
         k_best   = k_test;
         best_idx = i;
       }
@@ -643,12 +646,12 @@ _nc_xcor_kernel_component_find_k_epsilon_high (NcXcorKernelComponent    *comp,
   NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
   gdouble k_low                      = k_at_max;
   gdouble k_high                     = k_valid_max;
-  const gdouble f_low                = _nc_xcor_kernel_component_K_over_k_minus_threshold (k_low, data);
-  const gdouble f_high               = _nc_xcor_kernel_component_K_over_k_minus_threshold (k_high, data);
+  const gdouble f_low                = _nc_xcor_kernel_component_Kxi_minus_threshold (k_low, data);
+  const gdouble f_high               = _nc_xcor_kernel_component_Kxi_minus_threshold (k_high, data);
   gsl_function F_root;
 
 
-  F_root.function = &_nc_xcor_kernel_component_K_over_k_minus_threshold;
+  F_root.function = &_nc_xcor_kernel_component_Kxi_minus_threshold;
   F_root.params   = data;
 
   if ((f_low > 0.0) && (f_high < 0.0))
@@ -682,7 +685,7 @@ _nc_xcor_kernel_component_find_k_epsilon_high (NcXcorKernelComponent    *comp,
  * @cosmo: a #NcHICosmo
  *
  * Prepares the kernel component by analyzing its behavior over the valid ranges. This
- * method calls get_limits to obtain the integration ranges, then studies K(k, y/k)/k
+ * method calls get_limits to obtain the integration ranges, then studies K*xi(k, y/k)
  * to compute k_max(y), K_max(y), and k_epsilon(y) using GSL Brent minimizer and root
  * finder with warm starts.
  */
@@ -703,12 +706,12 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
     const gdouble y_min           = GSL_MAX (k_min * xi_min, 0.5);
     const gdouble y_max           = GSL_MIN (k_max * xi_max, 1000.0);
     NcXcorKernelAnalysisData data = {
-      .comp        = comp,
-      .cosmo       = cosmo,
-      .y           = 0.0,
-      .xi_min      = xi_min,
-      .xi_max      = xi_max,
-      .K_threshold = 0.0
+      .comp          = comp,
+      .cosmo         = cosmo,
+      .y             = 0.0,
+      .xi_min        = xi_min,
+      .xi_max        = xi_max,
+      .Kxi_threshold = 0.0
     };
     gdouble k_guess = 0.0;
     guint i;
@@ -738,8 +741,8 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
 
       _nc_xcor_kernel_component_find_k_max (comp, &data, k_valid_min, k_valid_max,
                                             k_guess, &k_at_max, &K_max);
-      k_guess          = k_at_max;
-      data.K_threshold = self->sqrt_epsilon * K_max;
+      k_guess            = k_at_max;
+      data.Kxi_threshold = self->sqrt_epsilon * K_max;
 
       {
         const gdouble k_epsilon = _nc_xcor_kernel_component_find_k_epsilon_high (comp, &data, k_at_max, k_valid_max);
