@@ -445,7 +445,7 @@ class SkyMatchResult:
             names=('query_id', 'match_id', 'linking_coeff')
         )
         
-        matches = matches[matches['match_id'] != -1]
+        matches = matches[matches['match_id'] != -1] #Remove the unmatched objects (with match_id = -1)
        
         G = nx.Graph()
         for id1, id2, w in matches:
@@ -471,7 +471,6 @@ class SkyMatchResult:
         
         for u, v in global_matching:
             
-            # garantir lado correto
             if u[0] == "query_id":
                 node1, node2 = u, v
             else:
@@ -498,13 +497,13 @@ class SkyMatchResult:
             names=('query_id', 'matches')
         )
 
-        combinations['matches'] = [ mapping.get(id_val, False) for id_val in combinations['query_id'] ]
+        combinations['matches'] = [ mapping.get(qid, False) for qid in combinations['query_id'] ]
 
         query_filter = (combinations['matches'] != False)
 
         valid_matches = list(combinations['matches'][query_filter])
 
-        match_to_index = {val: i for i, val in enumerate(self.sky_match.match_id)}
+        match_to_index = {mid: i for i, mid in enumerate(self.sky_match.match_id)}
 
         best_candidates_indices = np.array([
             match_to_index[m] for m in valid_matches if m in match_to_index
