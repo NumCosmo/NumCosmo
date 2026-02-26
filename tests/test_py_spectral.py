@@ -233,6 +233,90 @@ class TestSpectral:
             assert_allclose(val_orig, val_dup, rtol=1.0e-14, atol=ATOL)
             assert_allclose(val_orig, expected, rtol=1.0e-9, atol=1.0e-9)
 
+    def test_adaptive_vs_nonadaptive_comparison(self, spectral: Ncm.Spectral) -> None:
+        """Test that adaptive and non-adaptive methods give identical results.
+
+        This test computes coefficients using the adaptive method, extracts the
+        order from the result, then computes non-adaptive at that same order
+        and verifies both the coefficients and evaluation results match.
+        """
+
+        def test_func(_user_data, x):
+            """Test function: Gaussian with oscillation."""
+            return np.exp(-2.0 * x * x) * np.cos(3.0 * x)
+
+        a, b = -2.0, 2.0
+        k_min = 3
+        tol = 1.0e-12
+
+        # Compute adaptive coefficients
+        coeffs_adaptive = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                test_func, a, b, k_min, tol, None
+            )
+        )
+        # Extract the order from adaptive result
+        N_adaptive = len(coeffs_adaptive)
+        # Compute non-adaptive at the same order
+        coeffs_nonadaptive = np.array(
+            spectral.compute_chebyshev_coeffs(test_func, a, b, N_adaptive, None)
+        )
+
+        # Coefficients should match exactly (same nodes, same function evaluations)
+        assert len(coeffs_nonadaptive) == N_adaptive
+        assert_allclose(coeffs_adaptive, coeffs_nonadaptive, rtol=1.0e-13, atol=1.0e-14)
+
+        # Verify evaluation results match at multiple test points
+        test_points = np.linspace(a, b, 100)
+        for x in test_points:
+            val_adaptive = Ncm.Spectral.chebyshev_eval_x(coeffs_adaptive, a, b, x)
+            val_nonadaptive = Ncm.Spectral.chebyshev_eval_x(coeffs_nonadaptive, a, b, x)
+            expected = test_func(None, x)
+
+            # Both approximations should give identical results
+            assert_allclose(val_adaptive, val_nonadaptive, rtol=1.0e-13, atol=1.0e-14)
+
+            # Both should approximate the function well
+            assert_allclose(val_adaptive, expected, rtol=1.0e-10, atol=1.0e-11)
+
+        # Test with another function - sharp peak
+        def peak_func(_user_data, x):
+            """Test function: Sharp Gaussian peak."""
+            return np.exp(-10.0 * (x - 0.5) ** 2)
+
+        a2, b2 = -1.0, 2.0
+        k_min2 = 4
+        tol2 = 1.0e-10
+
+        coeffs_adaptive2 = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                peak_func, a2, b2, k_min2, tol2, None
+            )
+        )
+
+        N_adaptive2 = len(coeffs_adaptive2)
+        coeffs_nonadaptive2 = np.array(
+            spectral.compute_chebyshev_coeffs(peak_func, a2, b2, N_adaptive2, None)
+        )
+        assert_allclose(
+            coeffs_adaptive2, coeffs_nonadaptive2, rtol=1.0e-13, atol=1.0e-14
+        )
+
+        # Verify at the peak location
+        x_peak = 0.5
+        val_adaptive_peak = Ncm.Spectral.chebyshev_eval_x(
+            coeffs_adaptive2, a2, b2, x_peak
+        )
+        val_nonadaptive_peak = Ncm.Spectral.chebyshev_eval_x(
+            coeffs_nonadaptive2, a2, b2, x_peak
+        )
+        expected_peak = peak_func(None, x_peak)
+
+        assert_allclose(
+            val_adaptive_peak, val_nonadaptive_peak, rtol=1.0e-13, atol=1.0e-14
+        )
+        assert_allclose(val_adaptive_peak, expected_peak, rtol=1.0e-8, atol=1.0e-9)
+
     def test_compute_chebyshev_coeffs_constant(self, spectral: Ncm.Spectral) -> None:
         """Test computing Chebyshev coefficients for constant function."""
         N = 16

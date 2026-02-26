@@ -672,9 +672,9 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
 
   if (c_final != *coeffs)
   {
-    /* If final coefficients are in c_tmp, copy to output */
-    g_array_set_size (*coeffs, c_tmp->len);
-    memcpy ((*coeffs)->data, c_tmp->data, sizeof (gdouble) * c_tmp->len);
+    /* If final coefficients are not in *coeffs, copy them */
+    g_array_set_size (*coeffs, c_final->len);
+    memcpy ((*coeffs)->data, c_final->data, sizeof (gdouble) * c_final->len);
   }
 }
 

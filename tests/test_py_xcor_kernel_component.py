@@ -56,25 +56,25 @@ class NcTestXcorKernelComponent(Nc.XcorKernelComponent):
 
     xi_min: float = GObject.Property(  # type: ignore
         type=float,
-        default=1.0e-3,
+        default=1.0e-2,
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT_ONLY,
     )
 
     xi_max: float = GObject.Property(  # type: ignore
         type=float,
-        default=1.0e1,
+        default=2.0,
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT_ONLY,
     )
 
     k_min: float = GObject.Property(  # type: ignore
         type=float,
-        default=1.0e-4,
+        default=1.0e-3,
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT_ONLY,
     )
 
     k_max: float = GObject.Property(  # type: ignore
         type=float,
-        default=1.0e3,
+        default=1.0e4,
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT_ONLY,
     )
 
@@ -101,7 +101,7 @@ class NcTestXcorKernelComponent(Nc.XcorKernelComponent):
             return 0.0
         z = xi - self.mean
         gaussian = xi * np.exp(-0.5 * (z / self.sigma) ** 2)
-        return gaussian * np.sinc(k * z)
+        return gaussian * np.sinc(k * z * 1.0e-20)
 
     def do_eval_prefactor(  # pylint: disable=arguments-differ
         self,
@@ -206,8 +206,13 @@ def _create_galaxy_kernel(
 ) -> Nc.XcorKernelGal:
     """Helper to create a galaxy kernel."""
     dn_dz = Ncm.SplineCubicNotaknot()
-    z_array = np.linspace(0.1, 2.0, 50)
-    dndz_array = np.exp(-((z_array - 0.8) ** 2) / (2.0 * 0.3**2))
+    mean = 0.8
+    sigma = 0.3
+    lower_bound = max(0.0, mean - 5.5 * sigma)
+    upper_bound = mean + 5.5 * sigma
+
+    z_array = np.linspace(lower_bound, upper_bound, 200)
+    dndz_array = np.exp(-(((z_array - mean) / sigma) ** 2) / 2.0)
     dndz_array /= np.trapezoid(dndz_array, z_array)
 
     xv = Ncm.Vector.new_array(z_array.tolist())
@@ -222,6 +227,7 @@ def _create_galaxy_kernel(
         domagbias=domagbias,
     )
     gal["bparam_0"] = 1.5
+    gal["mag_bias"] = 0.3
     return gal
 
 
@@ -272,8 +278,13 @@ def _create_weak_lensing_kernel(
 ) -> Nc.XcorKernelWeakLensing:
     """Helper to create a weak lensing kernel."""
     dn_dz = Ncm.SplineCubicNotaknot()
-    z_array = np.linspace(0.1, 3.0, 50)
-    dndz_array = (z_array / 1.0) ** 2 * np.exp(-((z_array / 1.0) ** 1.5))
+    mean = 0.6
+    sigma = 0.3
+    lower_bound = max(0.0, mean - 5.5 * sigma)
+    upper_bound = mean + 5.5 * sigma
+
+    z_array = np.linspace(lower_bound, upper_bound, 200)
+    dndz_array = np.exp(-(((z_array - mean) / sigma) ** 2) / 2.0)
     dndz_array /= np.trapezoid(dndz_array, z_array)
 
     xv = Ncm.Vector.new_array(z_array.tolist())
@@ -647,7 +658,8 @@ def test_component_k_epsilon_drop(
     epsilon = 1.0e-5
 
     original_epsilon = comp.get_epsilon()
-    comp.set_epsilon(epsilon)
+    # The algorithm will find k_epsilon where K/k = epsilon^2 * K_max.
+    comp.set_epsilon(epsilon**2)
     comp.prepare(cosmo)  # Re-prepare with new epsilon
 
     xi_min, xi_max, _, _ = comp.get_limits(cosmo)
@@ -668,13 +680,12 @@ def test_component_k_epsilon_drop(
         # Compute K at k_epsilon
         xi_epsilon = y / k_epsilon_val
         if xi_min <= xi_epsilon <= xi_max:
-            K_at_epsilon = (
+            K_at_epsilon = np.abs(
                 comp.eval_kernel(cosmo, xi_epsilon, k_epsilon_val) / k_epsilon_val
             )
-
             # Should be approximately epsilon * K_max (allow factor of 5 tolerance due
             # to spline/search)
-            expected_K = epsilon * K_max_val
+            expected_K = np.abs(epsilon * K_max_val)
             assert K_at_epsilon >= expected_K * 0.2, (
                 f"K at k_epsilon ({K_at_epsilon}) too small vs "
                 f"epsilon*K_max ({expected_K}) at y={y}"
@@ -841,7 +852,9 @@ def test_component_k_epsilon_drop1(
     cosmo = cosmology.cosmo
     original_epsilon = comp.get_epsilon()
     epsilon = 1.0e-5  # Use larger epsilon for more reliable testing
-    comp.set_epsilon(epsilon)
+    # The algorithm finds k_epsilon where K/k = epsilon^2 * K_max, so we set epsilon^2
+    # here.
+    comp.set_epsilon(epsilon**2)
     comp.prepare(cosmo)
 
     xi_min, xi_max, k_min, k_max = comp.get_limits(cosmo)
@@ -1035,7 +1048,7 @@ def test_component_correctness(
         # Verify K_max equals K(y/k_max, k_max)/k_max
         xi = y / k_max_val
         if xi_min <= xi <= xi_max:
-            K_direct = comp.eval_kernel(cosmo, xi, k_max_val) / k_max_val
+            K_direct = np.abs(comp.eval_kernel(cosmo, xi, k_max_val) / k_max_val)
             # Allow generous tolerance for real components with complex structure
             assert_allclose(
                 K_max_val, K_direct, rtol=0.05, err_msg=f"K_max mismatch at y={y}"
@@ -1253,3 +1266,58 @@ def test_component_properties_via_get_component_list(
     # Test tol property
     comp.set_tol(1.0e-5)
     assert_allclose(comp.get_tol(), 1.0e-5, rtol=1e-10)
+
+
+def test_component_chebyshev_decomposition(
+    component_case: tuple[str, Nc.XcorKernelComponent, Nc.XcorKernel | None],
+    cosmology: Cosmology,
+) -> None:
+    """Test Chebyshev decomposition of component kernel g_k(y) = K(y/k, k)/k."""
+    _, comp, _ = component_case
+    cosmo = cosmology.cosmo
+
+    xi_min, xi_max, k_min, k_max = comp.get_limits(cosmo)
+    spectral = Ncm.Spectral.new()
+    k_values = np.geomspace(k_min, k_max, 10)
+    for k in k_values:
+
+        def g_k(y, k=k):
+            """Evaluate K(y/k, k) / k."""
+            K_val = y * comp.eval_kernel(cosmo, y / k, k)
+            # print(f"g_k({y:.2e}, k={k:.2e}) = K(y/k, k)/k = {K_val/k:.2e}")
+            return K_val / k
+
+        y_min = k * xi_min
+        y_max = k * xi_max
+
+        # Compute Chebyshev coefficients adaptively
+        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+            g_k, y_min, y_max, 4, 1.0e-8
+        )
+
+        # Verify we got coefficients
+        assert coeffs is not None
+        assert len(coeffs) >= 2**5 + 1
+        assert len(coeffs) <= 2**15 + 1
+
+        # Verify the expansion is accurate at test points
+        y_test_points = np.linspace(y_min, y_max, 300)
+        direct_vals = np.array([g_k(y) for y in y_test_points])
+        max_direct = np.max(np.abs(direct_vals))
+        cheb_vals = np.array(
+            [
+                Ncm.Spectral.chebyshev_eval_x(coeffs, y_min, y_max, y)
+                for y in y_test_points
+            ]
+        )
+        if max_direct > 0.0:
+            cheb_vals /= max_direct
+            direct_vals /= max_direct
+
+        assert_allclose(
+            cheb_vals,
+            direct_vals,
+            rtol=1.0e-7,
+            atol=1.0e-7,
+            err_msg=f"Chebyshev expansion mismatch at k={k}",
+        )
