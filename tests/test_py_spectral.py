@@ -32,6 +32,8 @@ from scipy.fft import dct
 
 from numcosmo_py import Ncm
 
+ATOL = 1.0e-14
+
 
 class TestSpectral:
     """Tests for NcmSpectral spectral methods."""
@@ -53,7 +55,7 @@ class TestSpectral:
 
         expected = np.zeros(N)
         expected[0] = 1.0
-        assert_allclose(g, expected, rtol=1.0e-14, atol=1.0e-14)
+        assert_allclose(g, expected, rtol=1.0e-14, atol=ATOL)
 
         # T_1 = (1/2) C_1^(1)
         c = np.zeros(N)
@@ -63,7 +65,7 @@ class TestSpectral:
 
         expected = np.zeros(N)
         expected[1] = 0.5
-        assert_allclose(g, expected, rtol=1.0e-14, atol=1.0e-14)
+        assert_allclose(g, expected, rtol=1.0e-14, atol=ATOL)
 
     def test_chebT_to_gegenbauer_alpha2_basic(self) -> None:
         """Test Chebyshev to Gegenbauer alpha=2 conversion."""
@@ -159,7 +161,7 @@ class TestSpectral:
 
         for x in [0.0, 0.5, 1.0, -1.0]:
             result = Ncm.Spectral.chebyshev_deriv(a, x)
-            assert_allclose(result, 0.0, rtol=1.0e-14, atol=1.0e-14)
+            assert_allclose(result, 0.0, rtol=1.0e-14, atol=ATOL)
 
         # Derivative of T_1(x) = x is 1
         a = np.zeros(N)
@@ -219,7 +221,7 @@ class TestSpectral:
 
         # Both should produce identical results
         assert len(coeffs_orig) == len(coeffs_dup)
-        assert_allclose(coeffs_orig, coeffs_dup, rtol=1.0e-14, atol=1.0e-14)
+        assert_allclose(coeffs_orig, coeffs_dup, rtol=1.0e-14, atol=ATOL)
 
         # Verify the approximation works for both
         test_points = np.linspace(a, b, 50)
@@ -228,7 +230,7 @@ class TestSpectral:
             val_dup = Ncm.Spectral.chebyshev_eval_x(coeffs_dup, a, b, x)
             expected = test_func(None, x)
 
-            assert_allclose(val_orig, val_dup, rtol=1.0e-14, atol=1.0e-14)
+            assert_allclose(val_orig, val_dup, rtol=1.0e-14, atol=ATOL)
             assert_allclose(val_orig, expected, rtol=1.0e-9, atol=1.0e-9)
 
     def test_compute_chebyshev_coeffs_constant(self, spectral: Ncm.Spectral) -> None:
@@ -598,7 +600,7 @@ class TestSpectral:
                 deriv_result,
                 expected,
                 rtol=1.0e-9,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Gaussian derivative at x={x} doesn't match",
             )
 
@@ -622,7 +624,7 @@ class TestSpectral:
                 eval_result,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Rational function evaluation at x={x} doesn't match",
             )
 
@@ -648,7 +650,7 @@ class TestSpectral:
                 deriv_result,
                 expected,
                 rtol=1.0e-9,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Rational derivative at x={x} doesn't match",
             )
 
@@ -966,7 +968,7 @@ class TestSpectral:
                 coeffs[i],
                 analytical[i],
                 rtol=1.0e-10,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Mismatch at coefficient {i} for exp(x) with N={N}",
             )
 
@@ -995,7 +997,7 @@ class TestSpectral:
                 coeffs[i],
                 analytical[i],
                 rtol=1.0e-10,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Mismatch at coefficient {i} for cos(x) with N={N}",
             )
 
@@ -1025,7 +1027,7 @@ class TestSpectral:
                 coeffs[i],
                 analytical[i],
                 rtol=1.0e-9,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Mismatch at coefficient {i} for 1/(2-x) with N={N}",
             )
 
@@ -1054,7 +1056,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-12,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Chebyshev eval mismatch at x={x} with N={N}",
             )
 
@@ -1084,7 +1086,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Chebyshev deriv mismatch for x^{power} at x={x} with N={N}",
             )
 
@@ -1117,7 +1119,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-9,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Chebyshev deriv mismatch for exp(x) at x={x} with N={N}",
             )
 
@@ -1150,7 +1152,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-9,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Chebyshev deriv mismatch for sin(x) at x={x} with N={N}",
             )
 
@@ -1182,19 +1184,19 @@ class TestSpectral:
 
         x_test = 0.5
         result = Ncm.Spectral.chebyshev_deriv(linear, x_test)
-        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
+        assert_allclose(result, 3.0, rtol=1.0e-14, atol=ATOL)
 
         # Test at x=0
         result = Ncm.Spectral.chebyshev_deriv(linear, 0.0)
-        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
+        assert_allclose(result, 3.0, rtol=1.0e-14, atol=ATOL)
 
         # Test at x=1
         result = Ncm.Spectral.chebyshev_deriv(linear, 1.0)
-        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
+        assert_allclose(result, 3.0, rtol=1.0e-14, atol=ATOL)
 
         # Test at x=-1
         result = Ncm.Spectral.chebyshev_deriv(linear, -1.0)
-        assert_allclose(result, 3.0, rtol=1.0e-14, atol=1.0e-15)
+        assert_allclose(result, 3.0, rtol=1.0e-14, atol=ATOL)
 
     @pytest.mark.parametrize("power", [0, 1, 2, 3, 4, 5])
     @pytest.mark.parametrize("N", [32])
@@ -1216,7 +1218,7 @@ class TestSpectral:
             result_p1,
             expected_p1,
             rtol=1.0e-10,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg=f"Derivative of x^{power} at x=1 failed",
         )
 
@@ -1227,7 +1229,7 @@ class TestSpectral:
             result_m1,
             expected_m1,
             rtol=1.0e-10,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg=f"Derivative of x^{power} at x=-1 failed",
         )
 
@@ -1281,7 +1283,7 @@ class TestSpectral:
                 d_cheb,
                 d_numeric,
                 rtol=1.0e-6,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Alternating coeff derivative mismatch at x={x}",
             )
 
@@ -1307,7 +1309,7 @@ class TestSpectral:
                 d_cheb,
                 d_numeric,
                 rtol=1.0e-6,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Random coeff derivative mismatch at x={x}",
             )
 
@@ -1329,7 +1331,7 @@ class TestSpectral:
             result_p1,
             n * n,
             rtol=0.0,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg=f"T_{n}'(1) failed",
         )
 
@@ -1340,7 +1342,7 @@ class TestSpectral:
             result_m1,
             expected_m1,
             rtol=0.0,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg=f"T_{n}'(-1) failed",
         )
 
@@ -1376,7 +1378,7 @@ class TestSpectral:
                 cheb_val,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Chebyshev eval failed for x^{power} at x={x}",
             )
 
@@ -1384,7 +1386,7 @@ class TestSpectral:
                 gegen_val,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Gegenbauer alpha=1 eval failed for x^{power} at x={x}",
             )
 
@@ -1420,7 +1422,7 @@ class TestSpectral:
                 cheb_val,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Chebyshev eval failed for x^{power} at x={x}",
             )
 
@@ -1428,7 +1430,7 @@ class TestSpectral:
                 gegen_val,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Gegenbauer alpha=2 eval failed for x^{power} at x={x}",
             )
 
@@ -1463,7 +1465,7 @@ class TestSpectral:
                     result,
                     expected,
                     rtol=1.0e-10,
-                    atol=1.0e-15,
+                    atol=ATOL,
                     err_msg=f"Gegenbauer C_{n}^({alpha_val}) mismatch at x={x}",
                 )
 
@@ -1507,7 +1509,7 @@ class TestSpectral:
                 cheb_val,
                 expected,
                 rtol=1.0e-8,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Chebyshev roundtrip failed for exp(x) at x={x}",
             )
 
@@ -1515,7 +1517,7 @@ class TestSpectral:
                 gegen1_val,
                 expected,
                 rtol=1.0e-8,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Gegenbauer alpha=1 roundtrip failed for exp(x) at x={x}",
             )
 
@@ -1523,7 +1525,7 @@ class TestSpectral:
                 gegen2_val,
                 expected,
                 rtol=1.0e-8,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"Gegenbauer alpha=2 roundtrip failed for exp(x) at x={x}",
             )
 
@@ -1545,7 +1547,7 @@ class TestSpectral:
             result_p1,
             expected_p1,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg=f"Chebyshev eval of x^{power} at x=1 failed",
         )
 
@@ -1556,7 +1558,7 @@ class TestSpectral:
             result_m1,
             expected_m1,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg=f"Chebyshev eval of x^{power} at x=-1 failed",
         )
 
@@ -1581,7 +1583,7 @@ class TestSpectral:
             result_p1,
             expected_p1,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg=f"Gegenbauer alpha=1 eval of x^{power} at x=1 failed",
         )
 
@@ -1592,7 +1594,7 @@ class TestSpectral:
             result_m1,
             expected_m1,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg=f"Gegenbauer alpha=1 eval of x^{power} at x=-1 failed",
         )
 
@@ -1617,7 +1619,7 @@ class TestSpectral:
             result_p1,
             expected_p1,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg=f"Gegenbauer alpha=2 eval of x^{power} at x=1 failed",
         )
 
@@ -1628,7 +1630,7 @@ class TestSpectral:
             result_m1,
             expected_m1,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg=f"Gegenbauer alpha=2 eval of x^{power} at x=-1 failed",
         )
 
@@ -1655,7 +1657,7 @@ class TestSpectral:
             gegen_coeffs,
             gegen_coeffs_expected,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="Projection matrix doesn't match conversion function",
         )
 
@@ -1681,7 +1683,7 @@ class TestSpectral:
             gegen_result,
             gegen_expected,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="x operator on x doesn't give x^2",
         )
 
@@ -1707,7 +1709,7 @@ class TestSpectral:
             gegen_result,
             gegen_expected,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="x operator on x^2 doesn't give x^3",
         )
 
@@ -1733,7 +1735,7 @@ class TestSpectral:
             gegen_result,
             gegen_expected,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="x^2 operator on x doesn't give x^3",
         )
 
@@ -1759,7 +1761,7 @@ class TestSpectral:
             gegen_result,
             gegen_expected,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="x^2 operator on x^2 doesn't give x^4",
         )
 
@@ -1785,7 +1787,7 @@ class TestSpectral:
             gegen_result,
             gegen_expected,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="Derivative of x^2 doesn't give 2x",
         )
 
@@ -1811,7 +1813,7 @@ class TestSpectral:
             gegen_result,
             gegen_expected,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="Derivative of x^3 doesn't give 3x^2",
         )
 
@@ -1837,7 +1839,7 @@ class TestSpectral:
             gegen_result,
             gegen_expected,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="Second derivative of x^3 doesn't give 6x",
         )
 
@@ -1863,7 +1865,7 @@ class TestSpectral:
             gegen_result,
             gegen_expected,
             rtol=1.0e-12,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="Second derivative of x^4 doesn't give 12x^2",
         )
 
@@ -1889,7 +1891,7 @@ class TestSpectral:
             gegen_result,
             gegen_expected,
             rtol=1.0e-11,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="x*d operator on x^3 doesn't give 3x^3",
         )
 
@@ -1915,7 +1917,7 @@ class TestSpectral:
             gegen_result,
             gegen_expected,
             rtol=1.0e-11,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="x*d^2 operator on x^4 doesn't give 12x^3",
         )
 
@@ -1941,7 +1943,7 @@ class TestSpectral:
             gegen_result,
             gegen_expected,
             rtol=1.0e-11,
-            atol=1.0e-15,
+            atol=ATOL,
             err_msg="x^2*d^2 operator on x^4 doesn't give 12x^4",
         )
 
@@ -1966,7 +1968,7 @@ class TestSpectral:
                 eval_result,
                 expected,
                 rtol=1.0e-12,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"d/dx(x^3) evaluation at x={x} doesn't match 3x^2",
             )
 
@@ -1991,7 +1993,7 @@ class TestSpectral:
                 eval_result,
                 expected,
                 rtol=1.0e-12,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"d^2/dx^2(x^4) evaluation at x={x} doesn't match 12x^2",
             )
 
@@ -2016,7 +2018,7 @@ class TestSpectral:
                 eval_result,
                 expected,
                 rtol=1.0e-11,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"x*d/dx(x^4) evaluation at x={x} doesn't match 4x^4",
             )
 
@@ -2041,7 +2043,7 @@ class TestSpectral:
                 eval_result,
                 expected,
                 rtol=1.0e-11,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"x^2*d^2/dx^2(x^5) evaluation at x={x} doesn't match 20x^5",
             )
 
@@ -2066,7 +2068,7 @@ class TestSpectral:
                 eval_result,
                 expected,
                 rtol=1.0e-12,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"x*x^3 evaluation at x={x} doesn't match x^4",
             )
 
@@ -2091,7 +2093,7 @@ class TestSpectral:
                 eval_result,
                 expected,
                 rtol=1.0e-12,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"x^2*x^3 evaluation at x={x} doesn't match x^5",
             )
 
@@ -2153,7 +2155,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-8,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"x*exp(-x^2) at x={x} failed",
             )
 
@@ -2166,7 +2168,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-8,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"x^2*exp(-x^2) at x={x} failed",
             )
 
@@ -2179,7 +2181,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-7,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"d/dx(exp(-x^2)) at x={x} failed",
             )
 
@@ -2192,7 +2194,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-6,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"d^2/dx^2(exp(-x^2)) at x={x} failed",
             )
 
@@ -2205,7 +2207,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-7,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"x*d/dx(exp(-x^2)) at x={x} failed",
             )
 
@@ -2218,7 +2220,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-6,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"x*d^2/dx^2(exp(-x^2)) at x={x} failed",
             )
 
@@ -2231,7 +2233,7 @@ class TestSpectral:
                 result,
                 expected,
                 rtol=1.0e-10,
-                atol=1.0e-15,
+                atol=ATOL,
                 err_msg=f"x^2*d^2/dx^2(exp(-x^2)) at x={x} failed",
             )
 
