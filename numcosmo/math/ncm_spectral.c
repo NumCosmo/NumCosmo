@@ -45,6 +45,12 @@
 #include <fftw3.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+enum
+{
+  PROP_0,
+  PROP_MAX_ORDER,
+};
+
 struct _NcmSpectral
 {
   /*< private >*/
@@ -54,6 +60,7 @@ struct _NcmSpectral
   guint max_order;       /* Maximum k: N_max = 2^max_order + 1 */
   gdouble *f_vals;       /* Function values array, size: 2^max_order + 1 */
   gdouble *coeffs_work;  /* Coefficients work array, size: 2^max_order + 1 */
+  GArray *coeffs;        /* Coefficients array, size: 2^max_order + 1 */
   GPtrArray *cos_arrays; /* Precomputed cosines for each k level */
   GPtrArray *fftw_plans; /* FFTW plans for each k level */
 
@@ -72,6 +79,7 @@ ncm_spectral_init (NcmSpectral *spectral)
   spectral->max_order   = 16; /* Default: N_max = 1025 */
   spectral->f_vals      = NULL;
   spectral->coeffs_work = NULL;
+  spectral->coeffs      = g_array_new (FALSE, FALSE, sizeof (gdouble));
   spectral->cos_arrays  = NULL;
   spectral->fftw_plans  = NULL;
 
@@ -111,6 +119,8 @@ ncm_spectral_finalize (GObject *object)
     spectral->coeffs_work = NULL;
   }
 
+  g_clear_pointer (&spectral->coeffs, g_array_unref);
+
   /* Clean up legacy resources */
   if (spectral->cheb_plan_r2r != NULL)
   {
@@ -134,11 +144,63 @@ ncm_spectral_finalize (GObject *object)
 }
 
 static void
+ncm_spectral_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmSpectral *spectral = NCM_SPECTRAL (object);
+
+  g_return_if_fail (NCM_IS_SPECTRAL (object));
+
+  switch (prop_id)
+  {
+    case PROP_MAX_ORDER:
+      ncm_spectral_set_max_order (spectral, g_value_get_uint (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_spectral_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmSpectral *spectral = NCM_SPECTRAL (object);
+
+  g_return_if_fail (NCM_IS_SPECTRAL (object));
+
+  switch (prop_id)
+  {
+    case PROP_MAX_ORDER:
+      g_value_set_uint (value, ncm_spectral_get_max_order (spectral));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
 ncm_spectral_class_init (NcmSpectralClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class->finalize = ncm_spectral_finalize;
+  object_class->finalize     = ncm_spectral_finalize;
+  object_class->set_property = ncm_spectral_set_property;
+  object_class->get_property = ncm_spectral_get_property;
+
+  /**
+   * NcmSpectral:max-order:
+   *
+   * Maximum refinement level k for adaptive computations. The maximum
+   * number of nodes is N_max = 2^max_order + 1.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MAX_ORDER,
+                                   g_param_spec_uint ("max-order",
+                                                      NULL,
+                                                      "Maximum refinement order",
+                                                      1, G_MAXUINT, 16,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -165,11 +227,9 @@ ncm_spectral_new (void)
 NcmSpectral *
 ncm_spectral_new_with_max_order (guint max_order)
 {
-  NcmSpectral *spectral = g_object_new (NCM_TYPE_SPECTRAL, NULL);
-
-  spectral->max_order = max_order;
-
-  return spectral;
+  return g_object_new (NCM_TYPE_SPECTRAL,
+                       "max-order", max_order,
+                       NULL);
 }
 
 /**
@@ -213,18 +273,79 @@ ncm_spectral_clear (NcmSpectral **spectral)
 }
 
 /**
+ * ncm_spectral_set_max_order:
+ * @spectral: a #NcmSpectral
+ * @max_order: maximum refinement level k (N_max = 2^@max_order + 1)
+ *
+ * Sets the maximum refinement order for adaptive computations.
+ */
+void
+ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order)
+{
+  g_return_if_fail (NCM_IS_SPECTRAL (spectral));
+
+  if (spectral->max_order != max_order)
+  {
+    spectral->max_order = max_order;
+
+    /* Clear cached plans and arrays as they depend on max_order */
+    if (spectral->fftw_plans != NULL)
+    {
+      g_ptr_array_unref (spectral->fftw_plans);
+      spectral->fftw_plans = NULL;
+    }
+
+    if (spectral->cos_arrays != NULL)
+    {
+      g_ptr_array_unref (spectral->cos_arrays);
+      spectral->cos_arrays = NULL;
+    }
+
+    if (spectral->f_vals != NULL)
+    {
+      fftw_free (spectral->f_vals);
+      spectral->f_vals = NULL;
+    }
+
+    if (spectral->coeffs_work != NULL)
+    {
+      fftw_free (spectral->coeffs_work);
+      spectral->coeffs_work = NULL;
+    }
+  }
+}
+
+/**
+ * ncm_spectral_get_max_order:
+ * @spectral: a #NcmSpectral
+ *
+ * Gets the maximum refinement order for adaptive computations.
+ *
+ * Returns: the maximum refinement order k
+ */
+guint
+ncm_spectral_get_max_order (NcmSpectral *spectral)
+{
+  g_return_val_if_fail (NCM_IS_SPECTRAL (spectral), 0);
+
+  return spectral->max_order;
+}
+
+/**
  * ncm_spectral_compute_chebyshev_coeffs:
  * @spectral: a #NcmSpectral
- * @F: (scope call): function to evaluate
- * @a: left endpoint
- * @b: right endpoint
+ * @F: (scope call): function to evaluate, receives x in [a,b]
+ * @a: left endpoint of the interval
+ * @b: right endpoint of the interval
  * @order: number of Chebyshev coefficients to compute
  * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
  * @user_data: user data for @F
  *
- * Computes Chebyshev coefficients of f(x) on [a,b] using FFTW DCT-I. The function is
- * sampled at Chebyshev nodes $x_k = (a+b)/2 - (b-a)/2\cos(k\pi/(N-1))$ and transformed
- * using a Type-I discrete cosine transform.
+ * Computes Chebyshev coefficients of f(x) on [a,b] using FFTW DCT-I. The function @F
+ * is sampled at Chebyshev nodes $x_k = (a+b)/2 - (b-a)/2\cos(k\pi/(N-1))$ which correspond
+ * to the Chebyshev points $t_k = \cos(k\pi/(N-1))$ in $[-1,1]$ transformed to $[a,b]$.
+ * The Chebyshev expansion is $f(x) = f(t) = \sum_{k=0}^{N-1} a_k T_k(t)$ where
+ * $t = (2x - (a+b))/(b-a)$.
  *
  * If @coeffs points to NULL, allocates a new GArray of size @order. If @coeffs points
  * to an existing GArray, resizes it to @order. Through bindings, @coeffs always receives NULL.
@@ -425,65 +546,64 @@ _ncm_spectral_refine_to_k (NcmSpectral *spectral, NcmSpectralF F,
   }
 }
 
-static gdouble
+static void
 _ncm_spectral_normalize_coeffs (gdouble *coeffs_work, GArray *coeffs, guint N)
 {
   const gdouble inv_2Nm1 = 1.0 / (2.0 * (N - 1.0));
   const gdouble inv_Nm1  = 2.0 * inv_2Nm1;
   gdouble *coeffs_data   = (gdouble *) coeffs->data;
-  gdouble e_total        = 0.0;
   guint i;
 
   coeffs_data[0]     = coeffs_work[0] * inv_2Nm1;
   coeffs_data[N - 1] = coeffs_work[N - 1] * inv_2Nm1;
-  e_total            = coeffs_data[0] * coeffs_data[0] + coeffs_data[N - 1] * coeffs_data[N - 1];
 
   for (i = 1; i < N - 1; i++)
   {
     coeffs_data[i] = coeffs_work[i] * inv_Nm1;
-    e_total       += coeffs_data[i] * coeffs_data[i];
   }
-
-  return e_total;
 }
 
 static gboolean
-_ncm_spectral_check_convergence (GArray *coeffs, gdouble e_total, gdouble tol)
+_ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble tol)
 {
-  const guint N    = coeffs->len;
-  const guint m    = GSL_MIN (5, N / 10);
-  const gdouble *a = (gdouble *) coeffs->data;
-  gdouble e_tail   = 0.0;
+  const gdouble *coeffs_2N_data = (gdouble *) coeffs_2N->data;
+  const gdouble *coeffs_N_data  = (gdouble *) coeffs_N->data;
+  gdouble norm2_diff            = 0.0;
+  gdouble norm2_2N              = 0.0;
   guint i;
 
-  if (N < 10)
-    return FALSE;
+  for (i = 0; i < coeffs_N->len; i++)
+  {
+    const gdouble diff  = (coeffs_2N_data[i] - coeffs_N_data[i]);
+    const gdouble diff2 = diff * diff;
 
-  /* Compute tail energy only (total energy passed from normalization) */
-  for (i = N - m; i < N; i++)
-    e_tail += a[i] * a[i];
+    norm2_diff += diff2;
+    norm2_2N   += coeffs_2N_data[i] * coeffs_2N_data[i];
+  }
 
-  if (e_total == 0.0)
+  if (norm2_diff < tol * tol * norm2_2N + 1.0e-100)
     return TRUE;
 
-  return (e_tail / e_total < tol * tol);
+  return FALSE;
 }
 
 /**
  * ncm_spectral_compute_chebyshev_coeffs_adaptive:
  * @spectral: a #NcmSpectral
- * @F: (scope call): function to evaluate
- * @a: left endpoint
- * @b: right endpoint
+ * @F: (scope call): function to evaluate, receives x in [a,b]
+ * @a: left endpoint of the interval
+ * @b: right endpoint of the interval
  * @k_min: minimum refinement level (N_min = 2^@k_min + 1)
  * @tol: spectral convergence tolerance
  * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
  * @user_data: user data for @F
  *
  * Computes Chebyshev coefficients adaptively using nested Chebyshev-Lobatto nodes.
- * Starts at level @k_min and refines by doubling until spectral convergence is achieved
- * or max_order is reached. Uses nested nodes: only new odd nodes are computed at each
- * refinement level.
+ * The function @F is evaluated at points x in [a,b]. Starts at level @k_min and refines
+ * by doubling until spectral convergence is achieved or max_order is reached. Uses nested
+ * nodes: only new odd nodes are computed at each refinement level.
+ * The Chebyshev expansion is $f(x) = f(t) = \sum_{k=0}^{N-1} a_k T_k(t)$ where
+ * $t = (2x - (a+b))/(b-a)$.
  *
  * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
  * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
@@ -494,6 +614,7 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
                                                 gdouble tol, GArray **coeffs, gpointer user_data)
 {
   guint k = k_min;
+  GArray *c_tmp, *c_final;
 
   g_assert (k_min <= spectral->max_order);
 
@@ -504,34 +625,56 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
   _ncm_spectral_prepare_plan_for_k (spectral, k);
   _ncm_spectral_evaluate_all_nodes (spectral, F, a, b, k, user_data);
 
-  while (k <= spectral->max_order)
+  c_tmp   = spectral->coeffs;
+  c_final = *coeffs;
+
+  /* Transform using N and store in coeffs_work */
   {
     const guint N  = (1 << k) + 1;
     fftw_plan plan = g_ptr_array_index (spectral->fftw_plans, k);
-    gdouble e_total;
 
     /* Transform f_vals -> coeffs_work */
     fftw_execute (plan);
 
-    /* Resize and normalize (computes e_total as a by-product) */
-    g_array_set_size (*coeffs, N);
-    e_total = _ncm_spectral_normalize_coeffs (spectral->coeffs_work, *coeffs, N);
+    g_array_set_size (c_tmp, N);
+    _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_tmp, N);
+  }
+
+  while (k < spectral->max_order)
+  {
+    /* Transform using 2N and store in coeffs */
+    _ncm_spectral_prepare_plan_for_k (spectral, k + 1);
+    _ncm_spectral_refine_to_k (spectral, F, a, b, k, k + 1, user_data);
+    k++;
+    {
+      const guint N  = (1 << k) + 1;
+      fftw_plan plan = g_ptr_array_index (spectral->fftw_plans, k);
+
+      /* Transform f_vals -> coeffs_work */
+      fftw_execute (plan);
+
+      g_array_set_size (c_final, N);
+      _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_final, N);
+    }
 
     /* Check convergence using pre-computed e_total */
-    if (_ncm_spectral_check_convergence (*coeffs, e_total, tol))
+    if (_ncm_spectral_check_convergence (c_final, c_tmp, tol))
       break;
 
-    /* Refine to next level */
-    if (k < spectral->max_order)
+    /* Swap c_tmp and c_final */
     {
-      _ncm_spectral_prepare_plan_for_k (spectral, k + 1);
-      _ncm_spectral_refine_to_k (spectral, F, a, b, k, k + 1, user_data);
-      k++;
+      GArray *tmp = c_tmp;
+
+      c_tmp   = c_final;
+      c_final = tmp;
     }
-    else
-    {
-      break;
-    }
+  }
+
+  if (c_final != *coeffs)
+  {
+    /* If final coefficients are in c_tmp, copy to output */
+    g_array_set_size (*coeffs, c_tmp->len);
+    memcpy ((*coeffs)->data, c_tmp->data, sizeof (gdouble) * c_tmp->len);
   }
 }
 
@@ -650,15 +793,18 @@ ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g)
 /**
  * ncm_spectral_gegenbauer_alpha1_eval:
  * @c: (element-type gdouble): Gegenbauer $C^{(1)}_n$ coefficients array
- * @x: point to evaluate
+ * @t: point to evaluate in [-1, 1]
  *
- * Evaluates a Gegenbauer $C^{(1)}_n$ expansion at x using Clenshaw recurrence.
- * For $\alpha=1$, $C^{(1)}_n(x) = U_n(x)$ (Chebyshev polynomials of the second kind).
+ * Evaluates a Gegenbauer $C^{(1)}_n$ expansion at t using Clenshaw recurrence.
+ * For $\alpha=1$, $C^{(1)}_n(t) = U_n(t)$ (Chebyshev polynomials of the second kind).
+ * The variable t should be in the interval [-1, 1]. To evaluate at a point x in [a, b],
+ * use ncm_spectral_gegenbauer_alpha1_eval_x() or first convert x to t using
+ * ncm_spectral_x_to_t().
  *
- * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(1)}_n(x)$
+ * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(1)}_n(t)$
  */
 gdouble
-ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble x)
+ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble t)
 {
   const guint N = c->len;
 
@@ -669,7 +815,7 @@ ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble x)
     const gdouble *c_data = (gdouble *) c->data;
 
     /* Endpoint handling: C_n^{(1)}(+/-1) = (n+1)*(+/-1)^n */
-    if (fabs (x - 1.0) < 1e-15)
+    if (fabs (t - 1.0) < 1e-15)
     {
       gdouble sum = 0.0;
       guint n;
@@ -680,7 +826,7 @@ ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble x)
       return sum;
     }
 
-    if (fabs (x + 1.0) < 1e-15)
+    if (fabs (t + 1.0) < 1e-15)
     {
       gdouble sum = 0.0;
       guint n;
@@ -692,20 +838,20 @@ ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble x)
     }
 
     {
-      /* Stable recurrence for interior x */
+      /* Stable recurrence for interior t */
       gdouble Cnm1 = 1.0; /* U_0 */
       gdouble sum  = c_data[0] * Cnm1;
 
       if (N == 1)
         return sum;
 
-      gdouble Cn = 2.0 * x; /* U_1 */
+      gdouble Cn = 2.0 * t; /* U_1 */
 
       sum += c_data[1] * Cn;
 
       for (guint n = 1; n < N - 1; n++)
       {
-        gdouble Cnp1 = 2.0 * x * Cn - Cnm1; /* U_{n+1} */
+        gdouble Cnp1 = 2.0 * t * Cn - Cnm1; /* U_{n+1} */
 
         sum += c_data[n + 1] * Cnp1;
         Cnm1 = Cn;
@@ -720,16 +866,19 @@ ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble x)
 /**
  * ncm_spectral_gegenbauer_alpha2_eval:
  * @c: (element-type gdouble): Gegenbauer $C^{(2)}_n$ coefficients array
- * @x: point to evaluate
+ * @t: point to evaluate in [-1, 1]
  *
- * Evaluates a Gegenbauer $C^{(2)}_n$ expansion at x using Clenshaw recurrence.
+ * Evaluates a Gegenbauer $C^{(2)}_n$ expansion at t using Clenshaw recurrence.
  * For $\alpha=2$, the recurrence relation is:
- * $(n+1) C^{(2)}_{n+1}(x) = 2(n+2)x C^{(2)}_n(x) - (n+3) C^{(2)}_{n-1}(x)$
+ * $(n+1) C^{(2)}_{n+1}(t) = 2(n+2)t C^{(2)}_n(t) - (n+3) C^{(2)}_{n-1}(t)$
+ * The variable t should be in the interval [-1, 1]. To evaluate at a point x in [a, b],
+ * use ncm_spectral_gegenbauer_alpha2_eval_x() or first convert x to t using
+ * ncm_spectral_x_to_t().
  *
- * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(2)}_n(x)$
+ * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(2)}_n(t)$
  */
 gdouble
-ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble x)
+ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble t)
 {
   const guint N = c->len;
 
@@ -740,7 +889,7 @@ ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble x)
     const gdouble *c_data = (gdouble *) c->data;
 
     /* Endpoint handling: C_n^{(2)}(+/-1) = binom(n+3,3)*(+/-1)^n = ((n+1)*(n+2)*(n+3)/6)*(+/-1)^n */
-    if (fabs (x - 1.0) < 1e-15)
+    if (fabs (t - 1.0) < 1e-15)
     {
       gdouble sum = 0.0;
       guint n;
@@ -751,7 +900,7 @@ ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble x)
       return sum;
     }
 
-    if (fabs (x + 1.0) < 1e-15)
+    if (fabs (t + 1.0) < 1e-15)
     {
       gdouble sum = 0.0;
       guint n;
@@ -767,21 +916,21 @@ ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble x)
     }
 
     {
-      /* Stable recurrence for interior x */
+      /* Stable recurrence for interior t */
       gdouble Cnm1 = 1.0; /* C_0^{(2)} = 1 */
       gdouble sum  = c_data[0] * Cnm1;
 
       if (N == 1)
         return sum;
 
-      gdouble Cn = 4.0 * x; /* C_1^{(2)} = 4x */
+      gdouble Cn = 4.0 * t; /* C_1^{(2)} = 4t */
 
       sum += c_data[1] * Cn;
 
       for (guint n = 1; n < N - 1; n++)
       {
-        /* (n+1) C_{n+1}^{(2)} = 2(n+2)x C_n^{(2)} - (n+3) C_{n-1}^{(2)} */
-        gdouble Cnp1 = (2.0 * (gdouble) (n + 2) * x * Cn - (gdouble) (n + 3) * Cnm1) / (gdouble) (n + 1);
+        /* (n+1) C_{n+1}^{(2)} = 2(n+2)t C_n^{(2)} - (n+3) C_{n-1}^{(2)} */
+        gdouble Cnp1 = (2.0 * (gdouble) (n + 2) * t * Cn - (gdouble) (n + 3) * Cnm1) / (gdouble) (n + 1);
 
         sum += c_data[n + 1] * Cnp1;
         Cnm1 = Cn;
@@ -796,10 +945,12 @@ ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble x)
 /**
  * ncm_spectral_chebyshev_eval:
  * @a: (element-type gdouble): Chebyshev coefficients array
- * @t: point to evaluate in [-1,1]
+ * @t: point to evaluate in [-1, 1]
  *
- * Evaluates a Chebyshev expansion $f(t) = \sum_{k=0}^{N-1} a_k T_k(t)$
+ * Evaluates a Chebyshev expansion $f(t) = \sum_{k=0}^{N-1} a_k T_k(t)$ at t
  * using Clenshaw recurrence with Reinsch modification near endpoints.
+ * The variable t should be in the interval [-1, 1]. To evaluate at a point x in [a, b],
+ * use ncm_spectral_chebyshev_eval_x() or first convert x to t using ncm_spectral_x_to_t().
  *
  * Returns: the value of the Chebyshev expansion at t
  */
@@ -1021,6 +1172,93 @@ ncm_spectral_chebyshev_deriv (GArray *a, gdouble t)
       }
     }
   }
+}
+
+/**
+ * ncm_spectral_gegenbauer_alpha1_eval_x:
+ * @c: (element-type gdouble): Gegenbauer $C^{(1)}_n$ coefficients array
+ * @a: left endpoint of the interval
+ * @b: right endpoint of the interval
+ * @x: point to evaluate in [a, b]
+ *
+ * Evaluates a Gegenbauer $C^{(1)}_n$ expansion at a point x in [a, b].
+ * This function converts x to t using $t = (2x - (a+b))/(b-a)$ and then
+ * calls ncm_spectral_gegenbauer_alpha1_eval().
+ *
+ * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(1)}_n(t)$ where $t = (2x - (a+b))/(b-a)$
+ */
+gdouble
+ncm_spectral_gegenbauer_alpha1_eval_x (GArray *c, gdouble a, gdouble b, gdouble x)
+{
+  const gdouble t = ncm_spectral_x_to_t (a, b, x);
+
+  return ncm_spectral_gegenbauer_alpha1_eval (c, t);
+}
+
+/**
+ * ncm_spectral_gegenbauer_alpha2_eval_x:
+ * @c: (element-type gdouble): Gegenbauer $C^{(2)}_n$ coefficients array
+ * @a: left endpoint of the interval
+ * @b: right endpoint of the interval
+ * @x: point to evaluate in [a, b]
+ *
+ * Evaluates a Gegenbauer $C^{(2)}_n$ expansion at a point x in [a, b].
+ * This function converts x to t using $t = (2x - (a+b))/(b-a)$ and then
+ * calls ncm_spectral_gegenbauer_alpha2_eval().
+ *
+ * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(2)}_n(t)$ where $t = (2x - (a+b))/(b-a)$
+ */
+gdouble
+ncm_spectral_gegenbauer_alpha2_eval_x (GArray *c, gdouble a, gdouble b, gdouble x)
+{
+  const gdouble t = ncm_spectral_x_to_t (a, b, x);
+
+  return ncm_spectral_gegenbauer_alpha2_eval (c, t);
+}
+
+/**
+ * ncm_spectral_chebyshev_eval_x:
+ * @a: (element-type gdouble): Chebyshev coefficients array
+ * @a_v: left endpoint of the interval
+ * @b: right endpoint of the interval
+ * @x: point to evaluate in [a_v, b]
+ *
+ * Evaluates a Chebyshev expansion at a point x in [a_v, b].
+ * This function converts x to t using $t = (2x - (a_v+b))/(b-a_v)$ and then
+ * calls ncm_spectral_chebyshev_eval().
+ *
+ * Returns: the value of $\sum_{k=0}^{N-1} a_k T_k(t)$ where $t = (2x - (a_v+b))/(b-a_v)$
+ */
+gdouble
+ncm_spectral_chebyshev_eval_x (GArray *a, gdouble a_v, gdouble b, gdouble x)
+{
+  const gdouble t = ncm_spectral_x_to_t (a_v, b, x);
+
+  return ncm_spectral_chebyshev_eval (a, t);
+}
+
+/**
+ * ncm_spectral_chebyshev_deriv_x:
+ * @a: (element-type gdouble): Chebyshev coefficients array
+ * @a_v: left endpoint of the interval
+ * @b: right endpoint of the interval
+ * @x: point to evaluate in [a_v, b]
+ *
+ * Evaluates the first derivative of a Chebyshev expansion at a point x in [a_v, b].
+ * This function converts x to t using $t = (2x - (a_v+b))/(b-a_v)$, evaluates
+ * the derivative with respect to t using ncm_spectral_chebyshev_deriv(), and then
+ * applies the chain rule: $df/dx = (df/dt) \cdot (dt/dx) = (df/dt) \cdot 2/(b-a_v)$.
+ *
+ * Returns: the value of $df/dx$ at x
+ */
+gdouble
+ncm_spectral_chebyshev_deriv_x (GArray *a, gdouble a_v, gdouble b, gdouble x)
+{
+  const gdouble t     = ncm_spectral_x_to_t (a_v, b, x);
+  const gdouble df_dt = ncm_spectral_chebyshev_deriv (a, t);
+
+  /* Chain rule: df/dx = (df/dt) * (dt/dx) = (df/dt) * 2/(b-a) */
+  return df_dt * 2.0 / (b - a_v);
 }
 
 /**

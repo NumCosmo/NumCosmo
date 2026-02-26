@@ -36,9 +36,12 @@ G_BEGIN_DECLS
 /**
  * NcmSpectralF:
  * @user_data: user data
- * @x: point to evaluate
+ * @x: point to evaluate in the interval [a, b]
  *
- * Function to be used in spectral computations.
+ * Function to be used in spectral computations. The function is defined over
+ * an interval [a, b] and receives @x in that interval. Internally, Chebyshev
+ * polynomials work with the transformed variable $t \in [-1, 1]$ where
+ * $t = (2x - (a + b))/(b - a)$ and $x = ((b - a)t + (a + b))/2$.
  *
  * Returns: the value of the function at @x
  */
@@ -55,17 +58,27 @@ NcmSpectral *ncm_spectral_ref (NcmSpectral *spectral);
 void ncm_spectral_free (NcmSpectral *spectral);
 void ncm_spectral_clear (NcmSpectral **spectral);
 
+void ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order);
+guint ncm_spectral_get_max_order (NcmSpectral *spectral);
+
 void ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint order, GArray **coeffs, gpointer user_data);
 void ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, GArray **coeffs, gpointer user_data);
 
 void ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g);
 void ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g);
 
-gdouble ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble x);
-gdouble ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble x);
+gdouble ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble t);
+gdouble ncm_spectral_gegenbauer_alpha1_eval_x (GArray *c, gdouble a, gdouble b, gdouble x);
+gdouble ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble t);
+gdouble ncm_spectral_gegenbauer_alpha2_eval_x (GArray *c, gdouble a, gdouble b, gdouble x);
 
 gdouble ncm_spectral_chebyshev_eval (GArray *a, gdouble t);
+gdouble ncm_spectral_chebyshev_eval_x (GArray *a, gdouble a_v, gdouble b, gdouble x);
 gdouble ncm_spectral_chebyshev_deriv (GArray *a, gdouble t);
+gdouble ncm_spectral_chebyshev_deriv_x (GArray *a, gdouble a_v, gdouble b, gdouble x);
+
+NCM_INLINE gdouble ncm_spectral_x_to_t (gdouble a, gdouble b, gdouble x);
+NCM_INLINE gdouble ncm_spectral_t_to_x (gdouble a, gdouble b, gdouble t);
 
 NcmMatrix *ncm_spectral_get_proj_matrix (guint N);
 NcmMatrix *ncm_spectral_get_x_matrix (guint N);
@@ -97,6 +110,18 @@ G_END_DECLS
 #ifndef NUMCOSMO_GIR_SCAN
 
 G_BEGIN_DECLS
+
+NCM_INLINE gdouble
+ncm_spectral_x_to_t (gdouble a, gdouble b, gdouble x)
+{
+  return (2.0 * x - (a + b)) / (b - a);
+}
+
+NCM_INLINE gdouble
+ncm_spectral_t_to_x (gdouble a, gdouble b, gdouble t)
+{
+  return 0.5 * ((b - a) * t + (a + b));
+}
 
 NCM_INLINE void
 ncm_spectral_compute_proj_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)

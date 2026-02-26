@@ -9893,10 +9893,19 @@ class Spectral(GObject.Object):
 
     Object NcmSpectral
 
+    Properties from NcmSpectral:
+      max-order -> guint: max-order
+        Maximum refinement order
+
     Signals from GObject:
       notify (GParam)
     """
 
+    class Props:
+        max_order: int
+
+    props: Props = ...
+    def __init__(self, max_order: int = ...) -> None: ...
     @staticmethod
     def chebT_to_gegenbauer_alpha1(
         c: typing.Sequence[float] | npt.NDArray[np.float64],
@@ -9910,8 +9919,22 @@ class Spectral(GObject.Object):
         a: typing.Sequence[float] | npt.NDArray[np.float64], t: float
     ) -> float: ...
     @staticmethod
+    def chebyshev_deriv_x(
+        a: typing.Sequence[float] | npt.NDArray[np.float64],
+        a_v: float,
+        b: float,
+        x: float,
+    ) -> float: ...
+    @staticmethod
     def chebyshev_eval(
         a: typing.Sequence[float] | npt.NDArray[np.float64], t: float
+    ) -> float: ...
+    @staticmethod
+    def chebyshev_eval_x(
+        a: typing.Sequence[float] | npt.NDArray[np.float64],
+        a_v: float,
+        b: float,
+        x: float,
     ) -> float: ...
     @staticmethod
     def clear(spectral: Spectral) -> None: ...
@@ -9957,16 +9980,31 @@ class Spectral(GObject.Object):
     def free(self) -> None: ...
     @staticmethod
     def gegenbauer_alpha1_eval(
-        c: typing.Sequence[float] | npt.NDArray[np.float64], x: float
+        c: typing.Sequence[float] | npt.NDArray[np.float64], t: float
+    ) -> float: ...
+    @staticmethod
+    def gegenbauer_alpha1_eval_x(
+        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        a: float,
+        b: float,
+        x: float,
     ) -> float: ...
     @staticmethod
     def gegenbauer_alpha2_eval(
-        c: typing.Sequence[float] | npt.NDArray[np.float64], x: float
+        c: typing.Sequence[float] | npt.NDArray[np.float64], t: float
+    ) -> float: ...
+    @staticmethod
+    def gegenbauer_alpha2_eval_x(
+        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        a: float,
+        b: float,
+        x: float,
     ) -> float: ...
     @staticmethod
     def get_d2_matrix(N: int) -> Matrix: ...
     @staticmethod
     def get_d_matrix(N: int) -> Matrix: ...
+    def get_max_order(self) -> int: ...
     @staticmethod
     def get_proj_matrix(N: int) -> Matrix: ...
     @staticmethod
@@ -9984,6 +10022,11 @@ class Spectral(GObject.Object):
     @classmethod
     def new_with_max_order(cls, max_order: int) -> Spectral: ...
     def ref(self) -> Spectral: ...
+    def set_max_order(self, max_order: int) -> None: ...
+    @staticmethod
+    def t_to_x(a: float, b: float, t: float) -> float: ...
+    @staticmethod
+    def x_to_t(a: float, b: float, x: float) -> float: ...
 
 class SpectralClass(GObject.GPointer):
     r"""

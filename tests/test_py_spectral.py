@@ -178,6 +178,59 @@ class TestSpectral:
             expected = 4.0 * x
             assert_allclose(result, expected, rtol=1.0e-14)
 
+    def test_spectral_serialization(self) -> None:
+        """Test that NcmSpectral can be serialized and deserialized."""
+        # Create a spectral with custom max_order
+        max_order = 12
+        spectral = Ncm.Spectral.new_with_max_order(max_order)
+
+        # Serialize and deserialize
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        spectral_dup = ser.dup_obj(spectral)
+
+        # Check that it's a different object
+        assert spectral_dup is not None
+        assert spectral_dup is not spectral
+        assert isinstance(spectral_dup, Ncm.Spectral)
+
+        # Check that max_order is preserved
+        assert spectral.get_max_order() == max_order
+        assert spectral_dup.get_max_order() == max_order
+
+        # Test that both produce the same results with adaptive computation
+        def test_func(_user_data, x):
+            """Test function: Gaussian-like."""
+            return np.exp(-x * x)
+
+        a, b = -3.0, 3.0
+        k_min = 2
+        tol = 1.0e-10
+
+        coeffs_orig = np.array(
+            spectral.compute_chebyshev_coeffs_adaptive(
+                test_func, a, b, k_min, tol, None
+            )
+        )
+        coeffs_dup = np.array(
+            spectral_dup.compute_chebyshev_coeffs_adaptive(
+                test_func, a, b, k_min, tol, None
+            )
+        )
+
+        # Both should produce identical results
+        assert len(coeffs_orig) == len(coeffs_dup)
+        assert_allclose(coeffs_orig, coeffs_dup, rtol=1.0e-14, atol=1.0e-14)
+
+        # Verify the approximation works for both
+        test_points = np.linspace(a, b, 50)
+        for x in test_points:
+            val_orig = Ncm.Spectral.chebyshev_eval_x(coeffs_orig, a, b, x)
+            val_dup = Ncm.Spectral.chebyshev_eval_x(coeffs_dup, a, b, x)
+            expected = test_func(None, x)
+
+            assert_allclose(val_orig, val_dup, rtol=1.0e-14, atol=1.0e-14)
+            assert_allclose(val_orig, expected, rtol=1.0e-9, atol=1.0e-9)
+
     def test_compute_chebyshev_coeffs_constant(self, spectral: Ncm.Spectral) -> None:
         """Test computing Chebyshev coefficients for constant function."""
         N = 16
@@ -453,7 +506,7 @@ class TestSpectral:
         for _ in range(100):
             coeffs = np.array(
                 spectral.compute_chebyshev_coeffs_adaptive(
-                    f_simple, -1.0, 1.0, 3, 1e-16, None
+                    f_simple, -1.0, 1.0, 3, 1e-15, None
                 )
             )
             assert coeffs.size > 0
@@ -468,7 +521,7 @@ class TestSpectral:
         for _ in range(100):
             coeffs = np.array(
                 spectral.compute_chebyshev_coeffs_adaptive(
-                    f_complex, -1.0, 1.0, 3, 1e-16, None
+                    f_complex, -1.0, 1.0, 3, 1e-15, None
                 )
             )
             assert coeffs.size > 0
@@ -2329,3 +2382,189 @@ class TestSpectral:
                 atol=1.0e-8,
                 err_msg=f"x^2*d^2/dx^2(f(x)) at x={x} failed",
             )
+
+    def test_x_to_t_conversion(self) -> None:
+        """Test x to t conversion function."""
+        a = -2.0
+        b = 5.0
+
+        # Test endpoints
+        t_at_a = Ncm.Spectral.x_to_t(a, b, a)
+        assert_allclose(t_at_a, -1.0, rtol=1e-14)
+
+        t_at_b = Ncm.Spectral.x_to_t(a, b, b)
+        assert_allclose(t_at_b, 1.0, rtol=1e-14)
+
+        # Test midpoint
+        x_mid = (a + b) / 2.0
+        t_at_mid = Ncm.Spectral.x_to_t(a, b, x_mid)
+        assert_allclose(t_at_mid, 0.0, rtol=1e-14)
+
+        # Test several intermediate points
+        x_values = np.linspace(a, b, 10)
+        for x in x_values:
+            t = Ncm.Spectral.x_to_t(a, b, x)
+            assert -1.0 <= t <= 1.0
+
+    def test_t_to_x_conversion(self) -> None:
+        """Test t to x conversion function."""
+        a = -2.0
+        b = 5.0
+
+        # Test endpoints
+        x_at_minus1 = Ncm.Spectral.t_to_x(a, b, -1.0)
+        assert_allclose(x_at_minus1, a, rtol=1e-14)
+
+        x_at_plus1 = Ncm.Spectral.t_to_x(a, b, 1.0)
+        assert_allclose(x_at_plus1, b, rtol=1e-14)
+
+        # Test midpoint
+        x_at_0 = Ncm.Spectral.t_to_x(a, b, 0.0)
+        assert_allclose(x_at_0, (a + b) / 2.0, rtol=1e-14)
+
+        # Test several intermediate points
+        t_values = np.linspace(-1.0, 1.0, 10)
+        for t in t_values:
+            x = Ncm.Spectral.t_to_x(a, b, t)
+            assert a <= x <= b
+
+    def test_conversion_round_trip(self) -> None:
+        """Test that x -> t -> x conversion is identity."""
+        a = -3.5
+        b = 7.2
+
+        x_values = np.linspace(a, b, 20)
+        for x in x_values:
+            t = Ncm.Spectral.x_to_t(a, b, x)
+            x_back = Ncm.Spectral.t_to_x(a, b, t)
+            assert_allclose(x_back, x, rtol=1e-14)
+
+        # Also test t -> x -> t
+        t_values = np.linspace(-1.0, 1.0, 20)
+        for t in t_values:
+            x = Ncm.Spectral.t_to_x(a, b, t)
+            t_back = Ncm.Spectral.x_to_t(a, b, x)
+            assert_allclose(t_back, t, rtol=1e-14)
+
+    def test_gegenbauer_alpha1_eval_x(self) -> None:
+        """Test Gegenbauer alpha=1 evaluation with x in [a, b]."""
+        a = 2.0
+        b = 8.0
+
+        # Set up coefficients for C_0^(1) + C_1^(1)
+        c = np.zeros(8)
+        c[0] = 1.0
+        c[1] = 1.0
+
+        # Test at several points in [a, b]
+        x_values = np.linspace(a, b, 10)
+        for x in x_values:
+            # Convert x to t
+            t = Ncm.Spectral.x_to_t(a, b, x)
+
+            # Evaluate using both methods
+            result_t = Ncm.Spectral.gegenbauer_alpha1_eval(c, t)
+            result_x = Ncm.Spectral.gegenbauer_alpha1_eval_x(c, a, b, x)
+
+            # They should match
+            assert_allclose(result_x, result_t, rtol=1e-14)
+
+    def test_gegenbauer_alpha2_eval_x(self) -> None:
+        """Test Gegenbauer alpha=2 evaluation with x in [a, b]."""
+        a = -1.0
+        b = 3.0
+
+        # Set up coefficients for C_0^(2) + C_1^(2)
+        c = np.zeros(8)
+        c[0] = 1.0
+        c[1] = 1.0
+
+        # Test at several points in [a, b]
+        x_values = np.linspace(a, b, 10)
+        for x in x_values:
+            # Convert x to t
+            t = Ncm.Spectral.x_to_t(a, b, x)
+
+            # Evaluate using both methods
+            result_t = Ncm.Spectral.gegenbauer_alpha2_eval(c, t)
+            result_x = Ncm.Spectral.gegenbauer_alpha2_eval_x(c, a, b, x)
+
+            # They should match
+            assert_allclose(result_x, result_t, rtol=1e-14)
+
+    def test_chebyshev_eval_x(self) -> None:
+        """Test Chebyshev evaluation with x in [a, b]."""
+        a = 0.5
+        b = 4.5
+
+        # Set up Chebyshev coefficients for a simple function
+        coeffs = np.array([1.0, 2.0, 1.5, 0.5, 0.2])
+
+        # Test at several points in [a, b]
+        x_values = np.linspace(a, b, 15)
+        for x in x_values:
+            # Convert x to t
+            t = Ncm.Spectral.x_to_t(a, b, x)
+
+            # Evaluate using both methods
+            result_t = Ncm.Spectral.chebyshev_eval(coeffs, t)
+            result_x = Ncm.Spectral.chebyshev_eval_x(coeffs, a, b, x)
+
+            # They should match
+            assert_allclose(result_x, result_t, rtol=1e-14)
+
+    def test_chebyshev_deriv_x(self, spectral: Ncm.Spectral) -> None:
+        """Test Chebyshev derivative evaluation with x in [a, b]."""
+        a = 1.0
+        b = 5.0
+
+        # Define a function f(x) = x^3 - 2*x^2 + x + 3
+        def f(_user_data, x):
+            return x**3 - 2.0 * x**2 + x + 3.0
+
+        # Its derivative is f'(x) = 3*x^2 - 4*x + 1
+        def f_prime(x):
+            return 3.0 * x**2 - 4.0 * x + 1.0
+
+        # Compute Chebyshev coefficients on [a, b]
+        coeffs = spectral.compute_chebyshev_coeffs_adaptive(f, a, b, 3, 1e-12, None)
+
+        # Test derivative at several points
+        x_values = np.linspace(a + 0.1, b - 0.1, 10)
+        for x in x_values:
+            # Compute derivative using the _x function
+            df_dx = Ncm.Spectral.chebyshev_deriv_x(coeffs, a, b, x)
+
+            # Compare with analytical derivative
+            expected = f_prime(x)
+            assert_allclose(
+                df_dx, expected, rtol=1e-10, err_msg=f"Derivative mismatch at x={x}"
+            )
+
+    def test_chebyshev_coeffs_on_interval(self, spectral: Ncm.Spectral) -> None:
+        """Test computing Chebyshev coefficients and evaluating on a custom interval."""
+        a = -5.0
+        b = 3.0
+
+        # Define f(x) = sin(x) on [a, b]
+        def f(_user_data, x):
+            return np.sin(x)
+
+        # Compute coefficients
+        coeffs = spectral.compute_chebyshev_coeffs_adaptive(f, a, b, 4, 1e-10, None)
+
+        # Evaluate at several points using both t and x methods
+        x_test = np.linspace(a, b, 20)
+        for x in x_test:
+            # Using _x method
+            result_x = Ncm.Spectral.chebyshev_eval_x(coeffs, a, b, x)
+
+            # Using manual conversion
+            t = Ncm.Spectral.x_to_t(a, b, x)
+            result_t = Ncm.Spectral.chebyshev_eval(coeffs, t)
+
+            # Direct evaluation
+            expected = f(None, x)
+
+            assert_allclose(result_x, result_t, rtol=1e-14)
+            assert_allclose(result_x, expected, rtol=1e-8, atol=1e-10)
