@@ -607,8 +607,10 @@ _ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble to
  *
  * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
  * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
+ *
+ * Returns: the final refinement level k used (N = 2^k + 1)
  */
-void
+guint
 ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F,
                                                 gdouble a, gdouble b, guint k_min,
                                                 gdouble tol, GArray **coeffs, gpointer user_data)
@@ -676,6 +678,8 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
     g_array_set_size (*coeffs, c_final->len);
     memcpy ((*coeffs)->data, c_final->data, sizeof (gdouble) * c_final->len);
   }
+
+  return k;
 }
 
 /**

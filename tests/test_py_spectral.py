@@ -208,18 +208,18 @@ class TestSpectral:
         k_min = 2
         tol = 1.0e-10
 
-        coeffs_orig = np.array(
-            spectral.compute_chebyshev_coeffs_adaptive(
-                test_func, a, b, k_min, tol, None
-            )
+        k_orig, coeffs_orig_list = spectral.compute_chebyshev_coeffs_adaptive(
+            test_func, a, b, k_min, tol, None
         )
-        coeffs_dup = np.array(
-            spectral_dup.compute_chebyshev_coeffs_adaptive(
-                test_func, a, b, k_min, tol, None
-            )
+        coeffs_orig = np.array(coeffs_orig_list)
+
+        k_dup, coeffs_dup_list = spectral_dup.compute_chebyshev_coeffs_adaptive(
+            test_func, a, b, k_min, tol, None
         )
+        coeffs_dup = np.array(coeffs_dup_list)
 
         # Both should produce identical results
+        assert k_orig == k_dup
         assert len(coeffs_orig) == len(coeffs_dup)
         assert_allclose(coeffs_orig, coeffs_dup, rtol=1.0e-14, atol=ATOL)
 
@@ -250,13 +250,15 @@ class TestSpectral:
         tol = 1.0e-12
 
         # Compute adaptive coefficients
-        coeffs_adaptive = np.array(
-            spectral.compute_chebyshev_coeffs_adaptive(
-                test_func, a, b, k_min, tol, None
-            )
+        k_adaptive, coeffs_adaptive_list = spectral.compute_chebyshev_coeffs_adaptive(
+            test_func, a, b, k_min, tol, None
         )
+        coeffs_adaptive = np.array(coeffs_adaptive_list)
+
         # Extract the order from adaptive result
         N_adaptive = len(coeffs_adaptive)
+        # Verify N = 2^k + 1
+        assert N_adaptive == (1 << k_adaptive) + 1
         # Compute non-adaptive at the same order
         coeffs_nonadaptive = np.array(
             spectral.compute_chebyshev_coeffs(test_func, a, b, N_adaptive, None)
@@ -288,13 +290,14 @@ class TestSpectral:
         k_min2 = 4
         tol2 = 1.0e-10
 
-        coeffs_adaptive2 = np.array(
-            spectral.compute_chebyshev_coeffs_adaptive(
-                peak_func, a2, b2, k_min2, tol2, None
-            )
+        k_adaptive2, coeffs_adaptive2_list = spectral.compute_chebyshev_coeffs_adaptive(
+            peak_func, a2, b2, k_min2, tol2, None
         )
+        coeffs_adaptive2 = np.array(coeffs_adaptive2_list)
 
         N_adaptive2 = len(coeffs_adaptive2)
+        # Verify N = 2^k + 1
+        assert N_adaptive2 == (1 << k_adaptive2) + 1
         coeffs_nonadaptive2 = np.array(
             spectral.compute_chebyshev_coeffs(peak_func, a2, b2, N_adaptive2, None)
         )
@@ -316,6 +319,80 @@ class TestSpectral:
             val_adaptive_peak, val_nonadaptive_peak, rtol=1.0e-13, atol=1.0e-14
         )
         assert_allclose(val_adaptive_peak, expected_peak, rtol=1.0e-8, atol=1.0e-9)
+
+    def test_adaptive_returns_final_k(self, spectral: Ncm.Spectral) -> None:
+        """Test that adaptive method returns the correct final k value.
+
+        This test verifies that the returned k value corresponds to the actual
+        number of coefficients: N = 2^k + 1. This helps catch bugs where the
+        function might return coefficients from k-1 instead of the final k.
+        """
+
+        def test_func(_user_data, x):
+            """Test function: smooth Gaussian."""
+            return np.exp(-x * x)
+
+        a, b = -2.0, 2.0
+        k_min = 2
+        tol = 1.0e-10
+
+        # Compute adaptive coefficients - now returns (k, coeffs) tuple
+        result = spectral.compute_chebyshev_coeffs_adaptive(
+            test_func, a, b, k_min, tol, None
+        )
+
+        # Check if result is a tuple (k, coeffs) or just coeffs
+        if isinstance(result, tuple):
+            k_final, coeffs_adaptive_list = result
+            coeffs_adaptive = np.array(coeffs_adaptive_list)
+        else:
+            # Fallback for older binding behavior
+            coeffs_adaptive = np.array(result)
+            # Compute k from length
+            N = len(coeffs_adaptive)
+            k_final = int(np.log2(N - 1))
+
+        N_adaptive = len(coeffs_adaptive)
+
+        # Verify N = 2^k + 1
+        expected_N = (1 << k_final) + 1
+        assert (
+            N_adaptive == expected_N
+        ), f"Length mismatch: N={N_adaptive}, expected 2^{k_final}+1={expected_N}"
+        # Verify k is reasonable
+        assert k_min <= k_final <= spectral.get_max_order()
+
+        # Now compute non-adaptive at the same N and verify they match
+        coeffs_nonadaptive = np.array(
+            spectral.compute_chebyshev_coeffs(test_func, a, b, N_adaptive, None)
+        )
+
+        assert_allclose(coeffs_adaptive, coeffs_nonadaptive, rtol=1.0e-13, atol=1.0e-14)
+
+        # Test with a more challenging function that needs higher order
+        def oscillatory_func(_user_data, x):
+            """Test function: oscillatory."""
+            return np.sin(8.0 * x) * np.exp(-0.5 * x * x)
+
+        k_min2 = 3
+        tol2 = 1.0e-12
+
+        result2 = spectral.compute_chebyshev_coeffs_adaptive(
+            oscillatory_func, a, b, k_min2, tol2, None
+        )
+        assert isinstance(result2, tuple), "Result should be a tuple (k, coeffs)"
+
+        k_final2, coeffs_adaptive2_list = result2
+        coeffs_adaptive2 = np.array(coeffs_adaptive2_list)
+
+        N_adaptive2 = len(coeffs_adaptive2)
+        expected_N2 = (1 << k_final2) + 1
+
+        assert (
+            N_adaptive2 == expected_N2
+        ), f"Length mismatch: N={N_adaptive2}, expected 2^{k_final2}+1={expected_N2}"
+        # Should need higher order for oscillatory function
+        assert k_final2 >= k_final, "Oscillatory function should need higher order"
 
     def test_compute_chebyshev_coeffs_constant(self, spectral: Ncm.Spectral) -> None:
         """Test computing Chebyshev coefficients for constant function."""
@@ -395,9 +472,10 @@ class TestSpectral:
             return 1.0
 
         # Adaptive should converge quickly
-        coeffs_adaptive = spectral.compute_chebyshev_coeffs_adaptive(
+        _k_adaptive, coeffs_adaptive_list = spectral.compute_chebyshev_coeffs_adaptive(
             f_constant, -1.0, 1.0, 2, 1e-12, None
         )
+        coeffs_adaptive = np.array(coeffs_adaptive_list)
         N_adaptive = len(coeffs_adaptive)
 
         # Fixed order
@@ -418,9 +496,10 @@ class TestSpectral:
         def f_poly(_user_data, x):
             return 1.0 + 2.0 * x + 3.0 * x * x
 
-        coeffs_adaptive = spectral.compute_chebyshev_coeffs_adaptive(
+        _k_adaptive, coeffs_adaptive_list = spectral.compute_chebyshev_coeffs_adaptive(
             f_poly, -1.0, 1.0, 3, 1e-12, None
         )
+        coeffs_adaptive = np.array(coeffs_adaptive_list)
         N_adaptive = len(coeffs_adaptive)
 
         coeffs_fixed = np.array(
@@ -428,7 +507,7 @@ class TestSpectral:
         )
 
         assert_allclose(
-            np.array(coeffs_adaptive),
+            coeffs_adaptive,
             coeffs_fixed,
             rtol=1e-11,
         )
@@ -439,9 +518,10 @@ class TestSpectral:
         def f_gaussian(_user_data, x):
             return np.exp(-x * x)
 
-        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
             f_gaussian, -1.0, 1.0, 3, 1e-10, None
         )
+        coeffs = np.array(coeffs_list)
 
         # Verify accuracy at test points
         test_points = np.linspace(-1.0, 1.0, 20)
@@ -456,9 +536,10 @@ class TestSpectral:
         def f_osc(_user_data, x):
             return np.sin(5.0 * x) * np.exp(-x * x)
 
-        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
             f_osc, -1.0, 1.0, 4, 1e-8, None
         )
+        coeffs = np.array(coeffs_list)
 
         # Verify accuracy
         test_points = np.linspace(-1.0, 1.0, 30)
@@ -474,11 +555,10 @@ class TestSpectral:
         def f_const(_user_data, _x):
             return 2.5
 
-        coeffs = np.array(
-            spectral.compute_chebyshev_coeffs_adaptive(
-                f_const, -1.0, 1.0, 2, 1e-12, None
-            )
+        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
+            f_const, -1.0, 1.0, 2, 1e-12, None
         )
+        coeffs = np.array(coeffs_list)
         assert_allclose(coeffs[0], 2.5, rtol=1e-12)
         assert_allclose(coeffs[1:], 0.0, rtol=1e-12, atol=1e-12)
 
@@ -486,11 +566,10 @@ class TestSpectral:
         def f_linear(_user_data, x):
             return 3.0 * x
 
-        coeffs = np.array(
-            spectral.compute_chebyshev_coeffs_adaptive(
-                f_linear, -1.0, 1.0, 2, 1e-12, None
-            )
+        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
+            f_linear, -1.0, 1.0, 2, 1e-12, None
         )
+        coeffs = np.array(coeffs_list)
         assert_allclose(coeffs[0], 0.0, rtol=1e-12, atol=1e-12)
         assert_allclose(coeffs[1], 3.0, rtol=1e-12)
         assert_allclose(coeffs[2:], 0.0, rtol=1e-12, atol=1e-12)
@@ -506,11 +585,10 @@ class TestSpectral:
 
         # Start at k=2 (N=5), refine to k=3 (N=9)
         # Should evaluate 5 nodes initially, then 4 new odd nodes
-        coeffs = np.array(
-            spectral.compute_chebyshev_coeffs_adaptive(
-                f_counted, -1.0, 1.0, 2, 1e-6, None
-            )
+        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
+            f_counted, -1.0, 1.0, 2, 1e-6, None
         )
+        coeffs = np.array(coeffs_list)
 
         N_final = coeffs.size
         # Should be less than 2*N_final due to node reuse
@@ -523,9 +601,10 @@ class TestSpectral:
             return np.exp(-((x - 2.0) ** 2))
 
         # Test on [0, 4] instead of [-1, 1]
-        coeffs = spectral.compute_chebyshev_coeffs_adaptive(
+        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
             f_test, 0.0, 4.0, 3, 1e-8, None
         )
+        coeffs = np.array(coeffs_list)
 
         # Map test points from [0, 4] to [-1, 1] for Chebyshev evaluation
         test_points_orig = np.linspace(0.0, 4.0, 20)
@@ -544,11 +623,10 @@ class TestSpectral:
             # Very oscillatory function that won't converge easily
             return np.sin(20.0 * x)
 
-        coeffs = np.array(
-            spectral.compute_chebyshev_coeffs_adaptive(
-                f_hard, -1.0, 1.0, 2, 1e-12, None
-            )
+        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
+            f_hard, -1.0, 1.0, 2, 1e-12, None
         )
+        coeffs = np.array(coeffs_list)
 
         # Should stop at max_order
         assert coeffs.size <= 33
@@ -565,16 +643,15 @@ class TestSpectral:
             # Very oscillatory function that won't converge easily
             return np.exp(-x * x) * np.sin(600.0 * x)
 
-        coeffs40 = np.array(
-            spectral.compute_chebyshev_coeffs_adaptive(
-                f_hard, -1.0, 1.0, 2, 1e-12, None
-            )
+        _k_adaptive40, coeffs40_list = spectral.compute_chebyshev_coeffs_adaptive(
+            f_hard, -1.0, 1.0, 2, 1e-12, None
         )
-        coeffs600 = np.array(
-            spectral.compute_chebyshev_coeffs_adaptive(
-                f_harder, -1.0, 1.0, 2, 1e-12, None
-            )
+        coeffs40 = np.array(coeffs40_list)
+
+        _k_adaptive600, coeffs600_list = spectral.compute_chebyshev_coeffs_adaptive(
+            f_harder, -1.0, 1.0, 2, 1e-12, None
         )
+        coeffs600 = np.array(coeffs600_list)
 
         # Should stop at max_order
         assert coeffs40.size <= 2**16 + 1
@@ -590,11 +667,10 @@ class TestSpectral:
             return np.exp(-x * x)
 
         for _ in range(100):
-            coeffs = np.array(
-                spectral.compute_chebyshev_coeffs_adaptive(
-                    f_simple, -1.0, 1.0, 3, 1e-15, None
-                )
+            _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
+                f_simple, -1.0, 1.0, 3, 1e-15, None
             )
+            coeffs = np.array(coeffs_list)
             assert coeffs.size > 0
 
     def test_adaptive_performance_complex(self) -> None:
@@ -605,11 +681,10 @@ class TestSpectral:
             return np.exp(-x * x) * np.sin(10.0 * x) * np.cos(5.0 * x)
 
         for _ in range(100):
-            coeffs = np.array(
-                spectral.compute_chebyshev_coeffs_adaptive(
-                    f_complex, -1.0, 1.0, 3, 1e-15, None
-                )
+            _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
+                f_complex, -1.0, 1.0, 3, 1e-15, None
             )
+            coeffs = np.array(coeffs_list)
             assert coeffs.size > 0
 
     def test_adaptive_spectral_decay(self, spectral: Ncm.Spectral) -> None:
@@ -618,11 +693,10 @@ class TestSpectral:
         def f_smooth(_user_data, x):
             return 1.0 / (1.0 + 25.0 * x * x)  # Runge function
 
-        coeffs = np.array(
-            spectral.compute_chebyshev_coeffs_adaptive(
-                f_smooth, -1.0, 1.0, 4, 1e-8, None
-            )
+        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
+            f_smooth, -1.0, 1.0, 4, 1e-8, None
         )
+        coeffs = np.array(coeffs_list)
 
         # Check that tail coefficients are small
         N = len(coeffs)
@@ -640,11 +714,10 @@ class TestSpectral:
             return np.tanh(3.0 * x)
 
         # Adaptive with tolerance
-        coeffs_adaptive = np.array(
-            spectral.compute_chebyshev_coeffs_adaptive(
-                f_test, -1.0, 1.0, 3, 1e-10, None
-            )
+        _k_adaptive, coeffs_adaptive_list = spectral.compute_chebyshev_coeffs_adaptive(
+            f_test, -1.0, 1.0, 3, 1e-10, None
         )
+        coeffs_adaptive = np.array(coeffs_adaptive_list)
         N_adaptive = len(coeffs_adaptive)
 
         # Fixed with same N
@@ -2613,7 +2686,10 @@ class TestSpectral:
             return 3.0 * x**2 - 4.0 * x + 1.0
 
         # Compute Chebyshev coefficients on [a, b]
-        coeffs = spectral.compute_chebyshev_coeffs_adaptive(f, a, b, 3, 1e-12, None)
+        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
+            f, a, b, 3, 1e-12, None
+        )
+        coeffs = np.array(coeffs_list)
 
         # Test derivative at several points
         x_values = np.linspace(a + 0.1, b - 0.1, 10)
@@ -2637,7 +2713,10 @@ class TestSpectral:
             return np.sin(x)
 
         # Compute coefficients
-        coeffs = spectral.compute_chebyshev_coeffs_adaptive(f, a, b, 4, 1e-10, None)
+        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
+            f, a, b, 4, 1e-10, None
+        )
+        coeffs = np.array(coeffs_list)
 
         # Evaluate at several points using both t and x methods
         x_test = np.linspace(a, b, 20)

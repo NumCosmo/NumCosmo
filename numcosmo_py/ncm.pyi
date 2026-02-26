@@ -64,6 +64,7 @@ ODE_SPLINE_MIN_STEP: float = 0.0
 POWSPEC_CORR3D_DEFAULT_SIZE: int = 200
 POWSPEC_FILTER_DEFAULT_SIZE: int = 200
 POWSPEC_SPHERE_PROJ_DEFAULT_SIZE: int = 200
+SBESSEL_ODE_SOLVER_OPERATOR_EXPONENT: int = 0
 SERIALIZE_AUTOSAVE_NAME: str = r"S"
 SERIALIZE_AUTOSAVE_NFORMAT: str = r"%u"
 SERIALIZE_MATRIX_TYPE: str = r"aad"
@@ -9954,7 +9955,7 @@ class Spectral(GObject.Object):
         k_min: int,
         tol: float,
         *user_data: typing.Any,
-    ) -> list[float]: ...
+    ) -> typing.Tuple[int, list[float]]: ...
     @staticmethod
     def compute_d2_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     @staticmethod
