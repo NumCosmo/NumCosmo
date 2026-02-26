@@ -609,17 +609,20 @@ class SkyMatchResult:
         query_filter = best.query_filter
         
         table["Index"] = np.arange(len(self.sky_match.query_ra))[query_filter]
-        table["ID"] = self.sky_match.query_id[query_filter]   
+        if self.matching_type == MatchingType.ID:
+            table["ID"] = self.sky_match.query_id[query_filter]   
         table["RA"] = self.sky_match.query_ra[query_filter]
         table["DEC"] = self.sky_match.query_dec[query_filter]
         table["z"] = self.sky_match.query_z[query_filter]
 
         table["Index_matched"] = best.indices
-        table["ID_matched"] = self.sky_match.match_id[best.indices]
+        if self.matching_type == MatchingType.ID:
+            table["ID_matched"] = self.sky_match.match_id[best.indices]   
         table["RA_matched"] = self.sky_match.match_ra[best.indices]
         table["DEC_matched"] = self.sky_match.match_dec[best.indices]
         table["z_matched"] = self.sky_match.match_z[best.indices]
-
+     
+        
         if query_properties is not None:
             for key, value in query_properties.items():
                 table[value] = self.sky_match.query_data[key][query_filter]
