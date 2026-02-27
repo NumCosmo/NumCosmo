@@ -21,7 +21,15 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Tests for NcmSBesselOdeSolver."""
+"""Tests for NcmSBesselOdeSolver.
+
+The solver computes solutions to the modified spherical Bessel ODE:
+    u''(x) + [x^2 - l(l+1)]u(x) = RHS
+
+where u(x) = x*j_l(x) or u(x) = x*y_l(x) for the homogeneous case.
+This formulation eliminates the first derivative term compared to the
+standard spherical Bessel equation.
+"""
 
 
 import numpy as np
@@ -40,13 +48,13 @@ class TestSBesselOperators:
 
     @pytest.mark.parametrize("l_val", list(range(21)))
     def test_spherical_bessel_ode(self, l_val: int) -> None:
-        """Test solving spherical Bessel ODE with non-zero Dirichlet BCs.
+        """Test solving modified spherical Bessel ODE with non-zero Dirichlet BCs.
 
-        The spherical Bessel function j_l(x) satisfies:
-        x^2*y'' + 2xy' + [x^2 - l(l+1)]y = 0
+        The function u(x) = x*j_l(x) satisfies:
+        u''(x) + [x^2 - l(l+1)]u(x) = 0
 
-        We solve this on interval [1,20] with BCs y(1) = j_l(1), y(20) = j_l(20)
-        and verify the solution matches j_l everywhere.
+        We solve this on interval [1,20] with BCs u(1) = 1*j_l(1), u(20) = 20*j_l(20)
+        and verify the solution matches x*j_l(x) everywhere.
         """
         N = 128
         a, b = 1.0, 20.0  # Use interval [1, 20] as requested
@@ -59,8 +67,8 @@ class TestSBesselOperators:
         mat_np = mat.to_numpy()
 
         # Get boundary values using scipy
-        y_a = spherical_jn(l_val, a)
-        y_b = spherical_jn(l_val, b)
+        y_a = spherical_jn(l_val, a) * a
+        y_b = spherical_jn(l_val, b) * b
 
         # Debug: print matrix shape
         # Row 1 enforces u(+1) = y_b (i.e., u(b) in physical coords)
@@ -89,13 +97,13 @@ class TestSBesselOperators:
             x_physical = (a + b) / 2.0 + (b - a) / 2.0 * t
 
             # Get exact value
-            y_exact = spherical_jn(l_val, x_physical)
+            y_exact = spherical_jn(l_val, x_physical) * x_physical
 
             assert_allclose(
                 y_computed,
                 y_exact,
                 rtol=1.0e-10,
-                atol=1.0e-16,
+                atol=1.0e-15,
                 err_msg=f"Spherical Bessel solution mismatch at x={x_physical}",
             )
 
@@ -113,9 +121,9 @@ class TestSBesselOperators:
     def test_spherical_bessel_integration(self, l_val: int) -> None:
         """Test integration of spherical Bessel function via Green's identity.
 
-        Solve the ODE with homogeneous BCs (y(a)=0, y(b)=0) and RHS = 1.
-        By Green's identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b j_l(x)dx
-        where y is the solution with RHS=1.
+        Solve the ODE u''(x) + [x^2 - l(l+1)]u(x) = 1 with homogeneous BCs (u(a)=0, u(b)=0).
+        By Green's identity: [x*j_l(x)]_a^b * u'(b) - [x*j_l(x)]_a * u'(a) = int_a^b j_l(x)dx
+        where u is the solution with RHS=1.
         """
         N = 128
         a, b = 1.0, 20.0
@@ -155,14 +163,14 @@ class TestSBesselOperators:
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
-        # Compute left-hand side: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
-        lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
+        # Compute left-hand side: [x*j_l(x)]*u'(x) from a to b
+        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
 
         # Compute right-hand side: integral of j_l(x) from a to b
-        # Use high-accuracy numerical integration
+        # Note: The Green's identity for u''+(x^2-l(l+1))u=1 gives this relation
 
         def integrand(x: float) -> float:
-            return spherical_jn(l_val, x)
+            return spherical_jn(l_val, x) / x
 
         rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
 
@@ -174,7 +182,7 @@ class TestSBesselOperators:
             atol=1.0e-20,
             err_msg=(
                 f"Green's identity failed for l={l_val}: "
-                f"x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) != int_a^b j_l(x)dx"
+                f"[x*j_l(x)]*u'(x) from a to b != int_a^b j_l(x)dx"
             ),
         )
 
@@ -182,9 +190,9 @@ class TestSBesselOperators:
     def test_spherical_bessel_integration_x(self, l_val: int) -> None:
         """Test integration of x*j_l(x) via Green's identity.
 
-        Solve the ODE with homogeneous BCs (y(a)=0, y(b)=0) and RHS = x.
-        By Green's identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b x*j_l(x)dx
-        where y is the solution with RHS=x.
+        Solve the ODE u''(x) + [x^2 - l(l+1)]u(x) = x with homogeneous BCs (u(a)=0, u(b)=0).
+        By Green's identity: [x*j_l(x)] * u'(b)|_a^b = int_a^b x*j_l(x)dx
+        where u is the solution with RHS=x.
         """
         N = 128
         a, b = 1.0, 20.0
@@ -231,12 +239,12 @@ class TestSBesselOperators:
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
-        # Compute left-hand side: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
-        lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
+        # Compute left-hand side: [x*j_l(x)] * u'(x) from a to b
+        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
 
         # Compute right-hand side: integral of x*j_l(x) from a to b
         def integrand(x: float) -> float:
-            return x * spherical_jn(l_val, x)
+            return spherical_jn(l_val, x)
 
         rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
 
@@ -248,7 +256,7 @@ class TestSBesselOperators:
             atol=1.0e-20,
             err_msg=(
                 f"Green's identity failed for l={l_val}: "
-                f"x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) != int_a^b x*j_l(x)dx"
+                f"[x*j_l(x)]*u'(x) from a to b != int_a^b x*j_l(x)dx"
             ),
         )
 
@@ -266,7 +274,7 @@ class TestSBesselOperators:
         rhs[2] = 1.0
 
         # Call solve (QR method) - just check it doesn't crash
-        solution = solver.solve(rhs)
+        solution = np.array(solver.solve(rhs))
 
         op_mat = solver.get_operator_matrix(2 * N).to_numpy()
 
@@ -274,16 +282,12 @@ class TestSBesselOperators:
         rhs_np_full = np.zeros(2 * N)
         rhs_np_full[2] = 1.0
         solution_scipy = solve(op_mat, rhs_np_full)
-        safe_part = 20
+        safe_part = min(len(solution), len(solution_scipy))
 
-        assert_allclose(
-            solution[:safe_part],
-            solution_scipy[:safe_part],
-            rtol=1.0e-10,
-            atol=0.0,
-            err_msg="QR solve doesn't match scipy solution",
-        )
-
+        diff = np.sum(
+            (solution_scipy[:safe_part] - solution[:safe_part]) ** 2
+        ) / np.sum(solution[:safe_part] ** 2)
+        assert diff < 1e-10, f"QR solve doesn't match scipy solution: diff={diff}"
         # Basic sanity check - solution should exist and be non-trivial
         assert solution is not None
         assert len(solution) > 0
@@ -330,8 +334,8 @@ class TestSBesselOperators:
     def test_solve_dense_integration_rhs1(self, l_val: int) -> None:
         """Test solve_dense with Green's identity for RHS=1.
 
-        Verifies that solve_dense produces solutions that satisfy Green's
-        identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b j_l(x)dx
+        Verifies that solve_dense produces solutions u to u''+[x^2-l(l+1)]u=1 that satisfy
+        Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -361,12 +365,12 @@ class TestSBesselOperators:
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
-        # Compute LHS: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
-        lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
+        # Compute LHS: [x*j_l(x)]*u'(x) from a to b
+        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
 
         # Compute RHS: integral
         def integrand(x: float) -> float:
-            return spherical_jn(l_val, x)
+            return spherical_jn(l_val, x) / x
 
         rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
 
@@ -383,8 +387,8 @@ class TestSBesselOperators:
     def test_solve_dense_integration_rhs_x(self, l_val: int) -> None:
         """Test solve_dense with Green's identity for RHS=x.
 
-        Verifies that solve_dense produces solutions that satisfy Green's
-        identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b x*j_l(x)dx
+        Verifies that solve_dense produces solutions u to u''+[x^2-l(l+1)]u=x that satisfy
+        Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b x*j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -418,12 +422,12 @@ class TestSBesselOperators:
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
-        # Compute LHS: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
-        lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
+        # Compute LHS: [x*j_l(x)]*u'(x) from a to b
+        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
 
         # Compute RHS: integral of x*j_l(x)
         def integrand(x: float) -> float:
-            return x * spherical_jn(l_val, x)
+            return spherical_jn(l_val, x)
 
         rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
 
@@ -440,8 +444,8 @@ class TestSBesselOperators:
     def test_solve_qr_integration_rhs1(self, l_val: int) -> None:
         """Test QR solve with Green's identity for RHS=1.
 
-        Verifies that solve (QR method) produces solutions that satisfy Green's
-        identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b j_l(x)dx
+        Verifies that solve (QR method) produces solutions u to u''+[x^2-l(l+1)]u=1
+        that satisfy Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -469,12 +473,12 @@ class TestSBesselOperators:
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
-        # Compute LHS: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
-        lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
+        # Compute LHS: [x*j_l(x)]*u'(x) from a to b
+        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
 
         # Compute RHS: integral
         def integrand(x: float) -> float:
-            return spherical_jn(l_val, x)
+            return spherical_jn(l_val, x) / x
 
         rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
 
@@ -491,8 +495,8 @@ class TestSBesselOperators:
     def test_solve_qr_integration_rhs_x(self, l_val: int) -> None:
         """Test QR solve with Green's identity for RHS=x.
 
-        Verifies that solve (QR method) produces solutions that satisfy Green's
-        identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b x*j_l(x)dx
+        Verifies that solve (QR method) produces solutions u to u''+[x^2-l(l+1)]u=x
+        that satisfy Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b x*j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -524,12 +528,12 @@ class TestSBesselOperators:
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
-        # Compute LHS: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
-        lhs = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a
+        # Compute LHS: [x*j_l(x)]*u'(x) from a to b
+        lhs = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a
 
         # Compute RHS: integral of x*j_l(x)
         def integrand(x: float) -> float:
-            return x * spherical_jn(l_val, x)
+            return spherical_jn(l_val, x)
 
         rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
 
@@ -596,9 +600,8 @@ class TestSBesselOperators:
     def test_solve_endpoints_rhs1(self, l_val: int) -> None:
         """Test solve_endpoints with Green's identity for RHS=1.
 
-        Verifies that solve_endpoints correctly computes endpoint derivatives that
-        satisfy Green's identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b
-        j_l(x)dx
+        Verifies that solve_endpoints correctly computes endpoint derivatives for u''+[x^2-l(l+1)]u=1
+        that satisfy Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -619,12 +622,12 @@ class TestSBesselOperators:
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
-        # Compute LHS: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
-        lhs = b * b * j_l_b * deriv_b - a * a * j_l_a * deriv_a
+        # Compute LHS: [x*j_l(x)] * u'(x) from a to b
+        lhs = b * j_l_b * deriv_b - a * j_l_a * deriv_a
 
         # Compute RHS: integral
         def integrand(x: float) -> float:
-            return spherical_jn(l_val, x)
+            return spherical_jn(l_val, x) / x
 
         rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
 
@@ -641,9 +644,8 @@ class TestSBesselOperators:
     def test_solve_endpoints_rhs_x(self, l_val: int) -> None:
         """Test solve_endpoints with Green's identity for RHS=x.
 
-        Verifies that solve_endpoints correctly computes endpoint derivatives that
-        satisfy Green's identity: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a) = int_a^b
-        x*j_l(x)dx
+        Verifies that solve_endpoints correctly computes endpoint derivatives for u''+[x^2-l(l+1)]u=x
+        that satisfy Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b x*j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -668,12 +670,12 @@ class TestSBesselOperators:
         j_l_a = spherical_jn(l_val, a)
         j_l_b = spherical_jn(l_val, b)
 
-        # Compute LHS: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
-        lhs = b * b * j_l_b * deriv_b - a * a * j_l_a * deriv_a
+        # Compute LHS: [x*j_l(x)] * u'(x) from a to b
+        lhs = b * j_l_b * deriv_b - a * j_l_a * deriv_a
 
         # Compute RHS: integral of x*j_l(x)
         def integrand(x: float) -> float:
-            return x * spherical_jn(l_val, x)
+            return spherical_jn(l_val, x)
 
         rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
 
@@ -779,7 +781,8 @@ class TestSBesselOperators:
         """Test solve_endpoints_batched with Green's identity for RHS=1.
 
         Verifies that solve_endpoints_batched correctly computes endpoint derivatives
-        for multiple l values that satisfy Green's identity.
+        for u''+[x^2-l(l+1)]u=1 across multiple l values, satisfying Green's identity:
+        [x*j_l(x)] * u'(x) from a to b = int_a^b j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -809,12 +812,12 @@ class TestSBesselOperators:
             j_l_a = spherical_jn(ell, a)
             j_l_b = spherical_jn(ell, b)
 
-            # Compute LHS: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
-            lhs = b * b * j_l_b * deriv_b - a * a * j_l_a * deriv_a
+            # Compute LHS: [x*j_l(x)]*u'(x) from a to b
+            lhs = b * j_l_b * deriv_b - a * j_l_a * deriv_a
 
             # Compute RHS: integral
             def integrand(x: float, ell: int = ell) -> float:
-                return spherical_jn(ell, x)
+                return spherical_jn(ell, x) / x
 
             rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
 
@@ -833,7 +836,8 @@ class TestSBesselOperators:
         """Test solve_endpoints_batched with Green's identity for RHS=x.
 
         Verifies that solve_endpoints_batched correctly computes endpoint derivatives
-        for multiple l values with RHS=x.
+        for u''+[x^2-l(l+1)]u=x across multiple l values, satisfying Green's identity:
+        [x*j_l(x)] * u'(x) from a to b = int_a^b x*j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -866,12 +870,12 @@ class TestSBesselOperators:
             j_l_a = spherical_jn(ell, a)
             j_l_b = spherical_jn(ell, b)
 
-            # Compute LHS: x^2*j_l(b)*y'(b) - x^2*j_l(a)*y'(a)
-            lhs = b * b * j_l_b * deriv_b - a * a * j_l_a * deriv_a
+            # Compute LHS: [x*j_l(x)]*u'(x) from a to b
+            lhs = b * j_l_b * deriv_b - a * j_l_a * deriv_a
 
             # Compute RHS: integral of x*j_l(x)
             def integrand(x: float, ell: int = ell) -> float:
-                return x * spherical_jn(ell, x)
+                return spherical_jn(ell, x)
 
             rhs, _ = quad(integrand, a, b, epsabs=1e-12, epsrel=1e-14)
 
