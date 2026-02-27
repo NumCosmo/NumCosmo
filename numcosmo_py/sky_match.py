@@ -539,20 +539,20 @@ class SkyMatchResult:
             return [x[i[m]] for i, m in zip(indices, mask.array)]
         
         if self.matching_type == MatchingType.ID:          
-                       
-            id_index_map = {mid: i for i, mid in enumerate(self.sky_match.match_id)}
+
+            index_map = {mid: i for i, mid in enumerate(self.sky_match.match_id)}
             
             index = []
             new_mask = []
 
-            for obj_ids, obj_mask in zip(indices, mask):
+            for ind, obj_mask in zip(indices, mask):
                 
-                filtrados = [(id_index_map[i], m) for i, m in zip(obj_ids, obj_mask) if i != None and i in id_index_map]
+                mask_i = [(index_map[i], m) for i, m in zip(ind, obj_mask) if i != None]
                 
-                if filtrados:
-                    idx_f, m_f = zip(*filtrados)
-                    index.append(np.array(idx_f))
-                    new_mask.append(np.array(m_f))
+                if mask_i:
+                    idx, m_i = zip(*mask_i)
+                    index.append(np.array(idx))
+                    new_mask.append(np.array(m_i))
                 else:
                     index.append(np.array([], dtype=np.int64))
                     new_mask.append(np.array([], dtype=bool))
