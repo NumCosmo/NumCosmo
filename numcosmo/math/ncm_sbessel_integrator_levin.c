@@ -125,6 +125,8 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
   sbilv->j_array_b        = NULL;
   sbilv->endpoints_result = NULL;
   sbilv->jl_arr           = NULL;
+
+  ncm_sbessel_ode_solver_set_tolerance (sbilv->ode_solver, 1.0e-14);
 }
 
 static void
@@ -347,7 +349,7 @@ _ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi,
   ncm_sbessel_ode_solver_set_l (solver, ell);
   ncm_sbessel_ode_solver_set_interval (solver, a, b);
 
-  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 7, 1.0e-15, &sbilv->cheb_coeffs, user_data);
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 2, 1.0e-15, &sbilv->cheb_coeffs, user_data);
   ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
 
   g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
@@ -394,7 +396,7 @@ ncm_sbessel_integrator_levin_direct_integ (NcmIntegralND *intnd, NcmVector *x, g
   for (i = 0; i < npoints; i++)
   {
     const gdouble xi   = ncm_vector_fast_get (x, i);
-    const gdouble f_xi = arg->F (arg->user_data, xi);
+    const gdouble f_xi = arg->F (arg->user_data, xi) / xi;
 
     /* Evaluate all spherical Bessel functions at once */
     ncm_sf_sbessel_array_eval (sbilv->sba, arg->lmax, xi, arg->jl_arr);
@@ -477,7 +479,7 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
   memset (&result_data[ell_levin_min - lmin], 0, sizeof (gdouble) * (ell_levin_max - ell_levin_min + 1));
 
   /* Step 1: Compute Chebyshev coefficients for f(x) - done once */
-  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 7, 1.0e-15, &sbilv->cheb_coeffs, user_data);
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 3, 1.0e-11, &sbilv->cheb_coeffs, user_data);
 
   /* Step 2: Convert to Gegenbauer C^(2) basis - done once */
   ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
@@ -524,7 +526,7 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
           const gdouble j_l_a = sbilv->j_array_a[l];
           const gdouble j_l_b = sbilv->j_array_b[l];
 
-          result_data[l_idx] = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
+          result_data[l_idx] = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a;
         }
       }
     }

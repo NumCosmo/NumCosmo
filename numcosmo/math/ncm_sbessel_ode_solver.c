@@ -84,6 +84,7 @@
 
 #define PADDED_BANDWIDTH \
         ((TOTAL_BANDWIDTH + 7) & ~7) /* round up to multiple of 8 */
+#define OPERATOR_EXPONENT 1
 
 /**
  * NcmSBesselOdeSolverRow:
@@ -731,12 +732,14 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeSolver *solver, NcmSBesselOdeSolv
   ncm_spectral_compute_x_d2_row (row_data, k, offset, 2.0 * m / h);
   ncm_spectral_compute_x2_d2_row (row_data, k, offset, 1.0);
 
-  /* First derivative term: (2m/h) d + 2 x d */
-  ncm_spectral_compute_d_row (row_data, offset, 2.0 * m / h);
-  ncm_spectral_compute_x_d_row (row_data, k, offset, 2.0);
+  /* First derivative term: (1.0 - o_e) * ((2m/h) d + 2 x d) */
+#if OPERATOR_EXPONENT != 1
+  ncm_spectral_compute_d_row (row_data, offset, 2.0 * (1.0 - OPERATOR_EXPONENT) * m / h);
+  ncm_spectral_compute_x_d_row (row_data, k, offset, 2.0 * (1.0 - OPERATOR_EXPONENT));
+#endif /* OPERATOR_EXPONENT != 1 */
 
-  /* Identity term: (m^2 - l(l+1)) I + 2m h x + h^2 x^2 */
-  ncm_spectral_compute_proj_row (row_data, k, offset, m2 - llp1);
+  /* Identity term: (m^2 - l(l+1)) I + 2m h x + h^2 x^2 + o_e * (o_e - 1) */
+  ncm_spectral_compute_proj_row (row_data, k, offset, m2 - llp1 + (OPERATOR_EXPONENT - 1.0) * OPERATOR_EXPONENT);
   ncm_spectral_compute_x_row (row_data, k, offset, 2.0 * m * h);
   ncm_spectral_compute_x2_row (row_data, k, offset, h2);
 }
@@ -791,8 +794,10 @@ _ncm_sbessel_create_row_operator_batched (NcmSBesselOdeSolver *solver, NcmSBesse
   ncm_spectral_compute_x2_d2_row (row[0].data, k, offset, 1.0);
 
   /* First derivative term: (2m/h) d + 2 x d - l-independent */
-  ncm_spectral_compute_d_row (row[0].data, offset, 2.0 * m / h);
-  ncm_spectral_compute_x_d_row (row[0].data, k, offset, 2.0);
+#if OPERATOR_EXPONENT != 1
+  ncm_spectral_compute_d_row (row[0].data, offset, 2.0 * (1.0 - OPERATOR_EXPONENT) * m / h);
+  ncm_spectral_compute_x_d_row (row[0].data, k, offset, 2.0 * (1.0 - OPERATOR_EXPONENT));
+#endif /* OPERATOR_EXPONENT != 1 */
 
   /* Identity term: 2m h x + h^2 x^2 - l-independent part */
   ncm_spectral_compute_x_row (row[0].data, k, offset, 2.0 * m * h);
@@ -811,7 +816,7 @@ _ncm_sbessel_create_row_operator_batched (NcmSBesselOdeSolver *solver, NcmSBesse
     const gdouble value_0 = 1.0 / (2.0 * (kd + 1.0));
     const gdouble value_1 = -1.0 * (kd + 2.0) / ((kd + 1.0) * (kd + 3.0));
     const gdouble value_2 = 1.0 / (2.0 * (kd + 3.0));
-    gdouble coeff         = m2 - l * (l + 1.0);
+    gdouble coeff         = m2 - l * (l + 1.0) + (OPERATOR_EXPONENT - 1.0) * OPERATOR_EXPONENT;
 
     for (i = 0; i < n_l; i++)
     {
@@ -1035,7 +1040,8 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeSolver *solver, GArray *rhs)
 {
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
   const guint rhs_len                     = rhs->len;
-  const guint solution_order              = rhs_len * 2;
+  guint solution_order                    = rhs_len * 2;
+  const guint max_solution_order          = 1 << 24;
   const gdouble *rhs_data                 = (gdouble *) rhs->data;
   glong col                               = 0;
   gdouble max_c_A                         = 0.0;
@@ -1111,8 +1117,25 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeSolver *solver, GArray *rhs)
 
       if (quiet_cols >= ROWS_TO_ROTATE + 1)
         break;  /* SAFE early stop */
+
+      /* If we've reached the end without convergence, increase solution_order and continue */
+      if ((col == solution_order - ROWS_TO_ROTATE - 1) && (solution_order < max_solution_order))
+      {
+        solution_order *= 2;
+        _ensure_matrix_rows_capacity (self, solution_order);
+
+        if (solution_order + ROWS_TO_ROTATE > self->c->len)
+          g_array_set_size (self->c, solution_order + ROWS_TO_ROTATE);
+      }
     }
   }
+
+  /* Warn if we exhausted max_solution_order without convergence */
+  if ((solution_order >= max_solution_order) && (quiet_cols < ROWS_TO_ROTATE + 1))
+    g_warning ("_ncm_sbessel_ode_solver_diagonalize: "
+               "reached max_solution_order=%u without convergence (quiet_cols=%u, needed %d). "
+               "Results may be inaccurate.",
+               max_solution_order, quiet_cols, ROWS_TO_ROTATE + 1);
 
   return col;
 }
@@ -1334,7 +1357,7 @@ _ncm_sbessel_ode_solver_diagonalize_batched (NcmSBesselOdeSolver *solver, GArray
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
   const guint rhs_len                     = rhs->len;
   guint solution_order                    = rhs_len * 2;
-  const guint max_solution_order          = rhs_len * (1 << 16);
+  const guint max_solution_order          = 1 << 24;
   guint total_rows                        = solution_order * n_l;
   const gdouble *rhs_data                 = (gdouble *) rhs->data;
   glong col                               = 0;

@@ -53,6 +53,7 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_powspec.h"
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_sbessel_ode_solver.h"
 #include "nc_distance.h"
 #include "xcor/nc_xcor_kernel.h"
 #include "xcor/nc_xcor_kernel_component.h"
@@ -480,7 +481,7 @@ _nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble y)
   const gdouble xi                = y / k;
   const gdouble kernel            = nc_xcor_kernel_component_eval_kernel (nlcp->comp, nlcp->cosmo, xi, k);
 
-  return kernel;
+  return xi * kernel;
 }
 
 static NcXcorKernelIntegrand *
@@ -491,7 +492,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
   NonLimberIntegrandData *nlid = g_new0 (NonLimberIntegrandData, 1);
   guint n_l                    = lmax - lmin + 1;
   NcmVector *integ_result      = ncm_vector_new (n_l);
-  const guint n_k              = 200;
+  const guint n_k              = 2000;
   NcmVector *k_vec             = ncm_vector_new (n_k);
   GPtrArray *comp_list         = klass->get_component_list (xclk);
 
@@ -598,7 +599,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
             for (n = 0; n < n_l; n++)
             {
               const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (comp, cosmo, k, nlid->lmin + n);
-              const gdouble val       = ncm_vector_get (integ_result, n) * prefactor / k;
+              const gdouble val       = ncm_vector_get (integ_result, n) * prefactor;
 
               ncm_vector_addto (total_kernel_ell[n], j, val);
             }
