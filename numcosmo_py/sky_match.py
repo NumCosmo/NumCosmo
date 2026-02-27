@@ -257,6 +257,8 @@ def _check_ID(table: Table, ids: IDs) -> None:
             f"not found in the provided catalog {table.columns}."
         )
 
+    
+
 
 
 def _load_fits_data(catalog: Path) -> Table:
@@ -695,6 +697,13 @@ class SkyMatch:
         _check_coordinates(self.match_data, match_coordinates)
         self.query_coordinates = query_coordinates
         self.match_coordinates = match_coordinates
+
+        if query_member_data is not None and match_member_data is not None:   
+            if len(np.unique(self.query_member_data[self.query_ids['ID']])) != len(self.query_data[self.query_ids['ID']]) and (
+                len(np.unique(self.match_member_data[self.match_ids['ID']])) != len(self.match_data[self.match_ids['ID']])
+            ):
+                raise ValueError("The number of unique 'ID' in object and member catalogs must be the same." )
+                
 
     @classmethod
     def new_from_fits(
