@@ -132,7 +132,7 @@ typedef struct _NcmSBesselOdeSolverRow
 struct _NcmSBesselOdeOperator
 {
   /* Reference count */
-  guint ref_count;
+  gint ref_count;
 
   /* Structural parameters */
   gdouble a;         /* Left endpoint of interval */
