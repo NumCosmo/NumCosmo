@@ -80,6 +80,7 @@ struct _NcmSBesselIntegratorLevin
   guint max_order;
   gdouble reltol;
   NcmSBesselOdeSolver *ode_solver;
+  NcmSBesselOdeOperator *ode_operator;
   NcmSFSBesselArray *sba; /* Allocation tracking */
   guint alloc_max_order;
   gint alloc_lmin;
@@ -113,7 +114,8 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
 {
   sbilv->max_order        = 0;
   sbilv->reltol           = 0.0;
-  sbilv->ode_solver       = ncm_sbessel_ode_solver_new (0, -1.0, 1.0);
+  sbilv->ode_solver       = ncm_sbessel_ode_solver_new ();
+  sbilv->ode_operator     = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, 2, 2);
   sbilv->sba              = ncm_sf_sbessel_array_new ();
   sbilv->alloc_max_order  = 0;
   sbilv->alloc_lmin       = -1;
@@ -135,6 +137,7 @@ _ncm_sbessel_integrator_levin_dispose (GObject *object)
   NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (object);
 
   ncm_sbessel_ode_solver_clear (&sbilv->ode_solver);
+  ncm_sbessel_ode_operator_clear (&sbilv->ode_operator);
   ncm_sf_sbessel_array_clear (&sbilv->sba);
   g_clear_pointer (&sbilv->cheb_coeffs, g_array_unref);
   g_clear_pointer (&sbilv->gegen_coeffs, g_array_unref);
@@ -340,14 +343,12 @@ _ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi,
   NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
   NcmSBesselOdeSolver *solver      = sbilv->ode_solver;
   NcmSpectral *spectral            = ncm_sbessel_ode_solver_peek_spectral (solver);
-  gdouble y_prime_a, y_prime_b, error;
 
   /* Ensure resources are allocated */
   _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, ell, ell);
 
   /* Set the interval and l value for this integration */
-  ncm_sbessel_ode_solver_set_l (solver, ell);
-  ncm_sbessel_ode_solver_set_interval (solver, a, b);
+  ncm_sbessel_ode_operator_reset (sbilv->ode_operator, a, b, ell, ell);
 
   ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 2, 1.0e-15, &sbilv->cheb_coeffs, user_data);
   ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
@@ -364,12 +365,14 @@ _ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi,
     memcpy (&rhs_data[2], gegen_coeffs_data, sbilv->gegen_coeffs->len * sizeof (gdouble));
   }
 
-  ncm_sbessel_ode_solver_solve_endpoints (solver, sbilv->rhs, &y_prime_a, &y_prime_b, &error);
+  ncm_sbessel_ode_operator_solve_endpoints (sbilv->ode_operator, sbilv->rhs, &sbilv->endpoints_result);
 
   {
-    const gdouble j_l_a    = gsl_sf_bessel_jl (ell, a);
-    const gdouble j_l_b    = gsl_sf_bessel_jl (ell, b);
-    const gdouble integral = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
+    const gdouble y_prime_a = g_array_index (sbilv->endpoints_result, gdouble, 0);
+    const gdouble y_prime_b = g_array_index (sbilv->endpoints_result, gdouble, 1);
+    const gdouble j_l_a     = gsl_sf_bessel_jl (ell, a);
+    const gdouble j_l_b     = gsl_sf_bessel_jl (ell, b);
+    const gdouble integral  = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
 
     return integral;
   }
@@ -502,16 +505,14 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
     const guint block_size = 8;
     gint l_start;
 
-    ncm_sbessel_ode_solver_set_interval (solver, a, b);
-
     for (l_start = ell_levin_min; l_start <= (gint) ell_levin_max; l_start += block_size)
     {
-      const gint l_end    = GSL_MIN (l_start + block_size - 1, ell_levin_max);
-      const guint n_block = l_end - l_start + 1;
+      const gint l_end = GSL_MIN (l_start + block_size - 1, ell_levin_max);
       gint l;
 
+      ncm_sbessel_ode_operator_reset (sbilv->ode_operator, a, b, ell_levin_min, ell_levin_max);
       /* Solve for all l values in this block using batched solver */
-      ncm_sbessel_ode_solver_solve_endpoints_batched (solver, sbilv->rhs, l_start, n_block, &sbilv->endpoints_result);
+      ncm_sbessel_ode_operator_solve_endpoints (sbilv->ode_operator, sbilv->rhs, &sbilv->endpoints_result);
 
       /* Extract derivatives and compute integrals */
       for (l = l_start; l <= l_end; l++)

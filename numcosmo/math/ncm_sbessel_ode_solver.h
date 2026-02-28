@@ -46,35 +46,58 @@ G_BEGIN_DECLS
  */
 typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
 
+/**
+ * NcmSBesselOdeOperator:
+ *
+ * Opaque boxed type representing a spherical Bessel ODE operator.
+ *
+ * This structure encapsulates all problem-specific data for solving a spherical
+ * Bessel ODE, including:
+ * - Structural parameters: interval endpoints [a, b] and angular momentum range [ell_min, ell_max]
+ * - Matrix storage: banded matrix rows and right-hand side vectors
+ * - Diagonalization state: QR factorization and convergence information
+ * - Tolerance: convergence criterion copied from the parent solver
+ *
+ * Operators are created from a #NcmSBesselOdeSolver via ncm_sbessel_ode_solver_create_operator()
+ * and use reference counting for memory management. They can be reused for multiple solves
+ * with the same parameters, or reset with different parameters using ncm_sbessel_ode_operator_reset().
+ *
+ * The operator supports both single and batched (multiple ell) solving modes, automatically
+ * dispatching to optimized implementations based on the number of ell values.
+ */
+typedef struct _NcmSBesselOdeOperator NcmSBesselOdeOperator;
+
 #define NCM_TYPE_SBESSEL_ODE_SOLVER (ncm_sbessel_ode_solver_get_type ())
+#define NCM_TYPE_SBESSEL_OPERATOR (ncm_sbessel_ode_operator_get_type ())
 
 G_DECLARE_FINAL_TYPE (NcmSBesselOdeSolver, ncm_sbessel_ode_solver, NCM, SBESSEL_ODE_SOLVER, GObject)
+GType ncm_sbessel_ode_operator_get_type (void) G_GNUC_CONST;
 
-NcmSBesselOdeSolver *ncm_sbessel_ode_solver_new (gint l, gdouble a, gdouble b);
+NcmSBesselOdeSolver *ncm_sbessel_ode_solver_new (void);
 NcmSBesselOdeSolver *ncm_sbessel_ode_solver_ref (NcmSBesselOdeSolver *solver);
 
 void ncm_sbessel_ode_solver_free (NcmSBesselOdeSolver *solver);
 void ncm_sbessel_ode_solver_clear (NcmSBesselOdeSolver **solver);
 
-void ncm_sbessel_ode_solver_set_l (NcmSBesselOdeSolver *solver, gint l);
-gint ncm_sbessel_ode_solver_get_l (NcmSBesselOdeSolver *solver);
-
 void ncm_sbessel_ode_solver_set_tolerance (NcmSBesselOdeSolver *solver, gdouble tol);
 gdouble ncm_sbessel_ode_solver_get_tolerance (NcmSBesselOdeSolver *solver);
 
-void ncm_sbessel_ode_solver_set_interval (NcmSBesselOdeSolver *solver, gdouble a, gdouble b);
-void ncm_sbessel_ode_solver_get_interval (NcmSBesselOdeSolver *solver, gdouble *a, gdouble *b);
-
-void ncm_sbessel_ode_solver_solve (NcmSBesselOdeSolver *solver, GArray *rhs, GArray **solution);
-void ncm_sbessel_ode_solver_solve_endpoints (NcmSBesselOdeSolver *solver, GArray *rhs, gdouble *deriv_a, gdouble *deriv_b, gdouble *error);
-void ncm_sbessel_ode_solver_solve_batched (NcmSBesselOdeSolver *solver, GArray *rhs, gint lmin, guint n_l, GArray **solutions);
-void ncm_sbessel_ode_solver_solve_endpoints_batched (NcmSBesselOdeSolver *solver, GArray *rhs, gint lmin, guint n_l, GArray **endpoints);
-
-NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, gint nrows);
-NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver, gint nrows);
-NcmVector *ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, NcmVector *rhs, gint nrows);
+NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix (NcmSBesselOdeSolver *solver, const gdouble a, const gdouble b, guint ell, gint nrows);
+NcmMatrix *ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver, const gdouble a, const gdouble b, guint ell, gint nrows);
+NcmVector *ncm_sbessel_ode_solver_solve_dense (NcmSBesselOdeSolver *solver, const gdouble a, const gdouble b, guint ell, NcmVector *rhs, gint nrows);
 
 NcmSpectral *ncm_sbessel_ode_solver_peek_spectral (NcmSBesselOdeSolver *solver);
+
+NcmSBesselOdeOperator *ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, gdouble b, gint ell_min, gint ell_max);
+NcmSBesselOdeOperator *ncm_sbessel_ode_operator_ref (NcmSBesselOdeOperator *op);
+void ncm_sbessel_ode_operator_unref (NcmSBesselOdeOperator *op);
+void ncm_sbessel_ode_operator_clear (NcmSBesselOdeOperator **op);
+
+void ncm_sbessel_ode_operator_reset (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max);
+
+void ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray **solution);
+void ncm_sbessel_ode_operator_solve_endpoints (NcmSBesselOdeOperator *op, GArray *rhs, GArray **endpoints);
+
 
 G_END_DECLS
 
