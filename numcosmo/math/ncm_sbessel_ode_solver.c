@@ -1935,13 +1935,70 @@ _ncm_sbessel_ode_operator_solve_endpoints_batched_32 (NcmSBesselOdeOperator *op,
 }
 
 /**
+ * ncm_sbessel_ode_operator_get_interval:
+ * @op: a #NcmSBesselOdeOperator
+ * @a: (out): left endpoint of the interval
+ * @b: (out): right endpoint of the interval
+ *
+ * Gets the interval [a, b] on which the operator is defined.
+ */
+void
+ncm_sbessel_ode_operator_get_interval (NcmSBesselOdeOperator *op, gdouble *a, gdouble *b)
+{
+  g_assert_nonnull (a);
+  g_assert_nonnull (b);
+
+  *a = op->mid_point - op->half_len;
+  *b = op->mid_point + op->half_len;
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_ell_range:
+ * @op: a #NcmSBesselOdeOperator
+ * @ell_min: (out): minimum angular momentum value
+ * @ell_max: (out): maximum angular momentum value
+ *
+ * Gets the range of angular momentum values [ell_min, ell_max] for which
+ * the operator solves. For single-ell operators, ell_min == ell_max.
+ */
+void
+ncm_sbessel_ode_operator_get_ell_range (NcmSBesselOdeOperator *op, gint *ell_min, gint *ell_max)
+{
+  g_assert_nonnull (ell_min);
+  g_assert_nonnull (ell_max);
+
+  *ell_min = op->ell_min;
+  *ell_max = op->ell_max;
+}
+
+/**
+ * ncm_sbessel_ode_operator_get_tolerance:
+ * @op: a #NcmSBesselOdeOperator
+ *
+ * Gets the convergence tolerance used by the operator for adaptive QR decomposition.
+ *
+ * Returns: the convergence tolerance
+ */
+gdouble
+ncm_sbessel_ode_operator_get_tolerance (NcmSBesselOdeOperator *op)
+{
+  return op->tolerance;
+}
+
+/**
  * ncm_sbessel_ode_operator_solve:
  * @op: a #NcmSBesselOdeOperator
  * @rhs: (element-type gdouble): right-hand side vector (Chebyshev coefficients of f(x))
  * @solution: (out callee-allocates) (transfer full) (element-type gdouble): solution vector (Chebyshev coefficients)
+ * @solution_len: (out): length of solution per ell value
  *
  * Solves the ODE using adaptive QR decomposition with ultraspherical spectral methods.
  * The algorithm grows the matrix size until convergence is achieved (error < tolerance).
+ *
+ * For operators with a single ell value, the @solution array has length @solution_len.
+ * For operators with multiple ell values (n_ell), the @solution array has length @solution_len * n_ell,
+ * with solutions stored contiguously: first solution at indices [0, solution_len), second at
+ * [solution_len, 2*solution_len), etc.
  *
  * The @solution parameter supports two usage patterns:
  *
@@ -1955,46 +2012,53 @@ _ncm_sbessel_ode_operator_solve_endpoints_batched_32 (NcmSBesselOdeOperator *op,
  *
  */
 void
-ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray **solution)
+ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray **solution, gsize *solution_len)
 {
+  glong n_cols;
+
   if (*solution == NULL)
     *solution = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
   if (op->n_ell == 1)
   {
-    const glong n_cols = _ncm_sbessel_ode_solver_diagonalize (op, rhs);
+    n_cols = _ncm_sbessel_ode_solver_diagonalize (op, rhs);
 
     _ncm_sbessel_ode_solver_build_solution (op, n_cols, *solution);
-
-    return;
   }
-
-  switch (op->n_ell)
+  else
   {
-    case 2:
-      _ncm_sbessel_ode_operator_solve_batched_2 (op, rhs, *solution);
-      break;
+    switch (op->n_ell)
+    {
+      case 2:
+        _ncm_sbessel_ode_operator_solve_batched_2 (op, rhs, *solution);
+        break;
 
-    case 4:
-      _ncm_sbessel_ode_operator_solve_batched_4 (op, rhs, *solution);
-      break;
+      case 4:
+        _ncm_sbessel_ode_operator_solve_batched_4 (op, rhs, *solution);
+        break;
 
-    case 8:
-      _ncm_sbessel_ode_operator_solve_batched_8 (op, rhs, *solution);
-      break;
+      case 8:
+        _ncm_sbessel_ode_operator_solve_batched_8 (op, rhs, *solution);
+        break;
 
-    case 16:
-      _ncm_sbessel_ode_operator_solve_batched_16 (op, rhs, *solution);
-      break;
+      case 16:
+        _ncm_sbessel_ode_operator_solve_batched_16 (op, rhs, *solution);
+        break;
 
-    case 32:
-      _ncm_sbessel_ode_operator_solve_batched_32 (op, rhs, *solution);
-      break;
+      case 32:
+        _ncm_sbessel_ode_operator_solve_batched_32 (op, rhs, *solution);
+        break;
 
-    default:
-      _ncm_sbessel_ode_operator_solve_batched_internal (op, rhs, op->n_ell, *solution);
-      break;
+      default:
+        _ncm_sbessel_ode_operator_solve_batched_internal (op, rhs, op->n_ell, *solution);
+        break;
+    }
+
+    n_cols = (*solution)->len / op->n_ell;
   }
+
+  if (solution_len != NULL)
+    *solution_len = n_cols;
 }
 
 /**

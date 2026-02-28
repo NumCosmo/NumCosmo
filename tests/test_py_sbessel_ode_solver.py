@@ -121,9 +121,9 @@ class TestSBesselOperators:
     def test_spherical_bessel_integration(self, l_val: int) -> None:
         """Test integration of spherical Bessel function via Green's identity.
 
-        Solve the ODE u''(x) + [x^2 - l(l+1)]u(x) = 1 with homogeneous BCs (u(a)=0, u(b)=0).
-        By Green's identity: [x*j_l(x)]_a^b * u'(b) - [x*j_l(x)]_a * u'(a) = int_a^b j_l(x)dx
-        where u is the solution with RHS=1.
+        Solve the ODE u''(x) + [x^2 - l(l+1)]u(x) = 1 with homogeneous BCs (u(a)=0,
+        u(b)=0). By Green's identity: [x*j_l(x)]_a^b * u'(b) - [x*j_l(x)]_a * u'(a) =
+        int_a^b j_l(x)dx where u is the solution with RHS=1.
         """
         N = 128
         a, b = 1.0, 20.0
@@ -190,8 +190,8 @@ class TestSBesselOperators:
     def test_spherical_bessel_integration_x(self, l_val: int) -> None:
         """Test integration of x*j_l(x) via Green's identity.
 
-        Solve the ODE u''(x) + [x^2 - l(l+1)]u(x) = x with homogeneous BCs (u(a)=0, u(b)=0).
-        By Green's identity: [x*j_l(x)] * u'(b)|_a^b = int_a^b x*j_l(x)dx
+        Solve the ODE u''(x) + [x^2 - l(l+1)]u(x) = x with homogeneous BCs (u(a)=0,
+        u(b)=0). By Green's identity: [x*j_l(x)] * u'(b)|_a^b = int_a^b x*j_l(x)dx
         where u is the solution with RHS=x.
         """
         N = 128
@@ -274,8 +274,9 @@ class TestSBesselOperators:
         rhs = np.zeros(N)
         rhs[2] = 1.0
 
-        # Call solve (QR method) - just check it doesn't crash
-        solution = np.array(op.solve(rhs))
+        # Call solve (QR method) - returns (solution, solution_len)
+        solution_list, _solution_len = op.solve(rhs)
+        solution = np.array(solution_list)
 
         op_mat = solver.get_operator_matrix(a, b, l_val, 2 * N).to_numpy()
 
@@ -335,8 +336,8 @@ class TestSBesselOperators:
     def test_solve_dense_integration_rhs1(self, l_val: int) -> None:
         """Test solve_dense with Green's identity for RHS=1.
 
-        Verifies that solve_dense produces solutions u to u''+[x^2-l(l+1)]u=1 that satisfy
-        Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b j_l(x)dx
+        Verifies that solve_dense produces solutions u to u''+[x^2-l(l+1)]u=1 that
+        satisfy Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -388,8 +389,8 @@ class TestSBesselOperators:
     def test_solve_dense_integration_rhs_x(self, l_val: int) -> None:
         """Test solve_dense with Green's identity for RHS=x.
 
-        Verifies that solve_dense produces solutions u to u''+[x^2-l(l+1)]u=x that satisfy
-        Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b x*j_l(x)dx
+        Verifies that solve_dense produces solutions u to u''+[x^2-l(l+1)]u=x that
+        satisfy Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b x*j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -462,7 +463,7 @@ class TestSBesselOperators:
         rhs_np[2] = 1.0
 
         # Solve using QR method
-        solution_coeffs = op.solve(rhs_np)
+        solution_coeffs, _solution_len = op.solve(rhs_np)
 
         # Compute derivatives at endpoints
         h = (b - a) / 2.0
@@ -498,7 +499,8 @@ class TestSBesselOperators:
         """Test QR solve with Green's identity for RHS=x.
 
         Verifies that solve (QR method) produces solutions u to u''+[x^2-l(l+1)]u=x
-        that satisfy Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b x*j_l(x)dx
+        that satisfy Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b
+        x*j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -519,7 +521,7 @@ class TestSBesselOperators:
         rhs_np[3] = 0.25 * h  # Linear term scaled for C^(2) basis
 
         # Solve using QR method
-        solution_coeffs = op.solve(rhs_np)
+        solution_coeffs, _solution_len = op.solve(rhs_np)
 
         # Compute derivatives at endpoints
         y_prime_at_minus1 = Ncm.Spectral.chebyshev_deriv(solution_coeffs, -1.0)
@@ -573,26 +575,29 @@ class TestSBesselOperators:
 
         # Solve using batched operator
         op_batched = solver.create_operator(a, b, lmin, lmax)
-        solutions_batched = np.array(op_batched.solve(rhs_data)).reshape(n_l, -1)
+        solutions_batched_list, solution_len = op_batched.solve(rhs_data)
+        solutions_batched = np.array(solutions_batched_list).reshape(n_l, solution_len)
 
         # Solve individually for each l
         solutions_individual = []
-        min_len = 10000
         for ell in range(lmin, lmax + 1):
             op_single = solver.create_operator(a, b, ell, ell)
-            sol = op_single.solve(rhs_data)
+            sol, _sol_len = op_single.solve(rhs_data)
             solutions_individual.append(sol)
-            min_len = min(min_len, len(sol))
 
         # Compare each solution
+        # Note: batched solver uses a common solution_len across all ell values,
+        # but individual solvers may converge at different lengths
         for i, ell in enumerate(range(lmin, lmax + 1)):
             individual_sol = np.array(solutions_individual[i])
-            solution_len = min(len(individual_sol), len(solutions_batched[i, :]))
-            batched_sol = solutions_batched[i, :solution_len]
+            batched_sol = solutions_batched[i, :]
+
+            # Compare only the overlapping part
+            min_len = min(len(individual_sol), len(batched_sol))
 
             assert_allclose(
-                batched_sol,
-                individual_sol[:solution_len],
+                batched_sol[:min_len],
+                individual_sol[:min_len],
                 rtol=1.0e-12,
                 atol=1.0e-14,
                 err_msg=f"Batched solution for l={ell} doesn't match individual solve",
@@ -602,8 +607,9 @@ class TestSBesselOperators:
     def test_solve_endpoints_rhs1(self, l_val: int) -> None:
         """Test solve_endpoints with Green's identity for RHS=1.
 
-        Verifies that solve_endpoints correctly computes endpoint derivatives for u''+[x^2-l(l+1)]u=1
-        that satisfy Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b j_l(x)dx
+        Verifies that solve_endpoints correctly computes endpoint derivatives for
+        u''+[x^2-l(l+1)]u=1 that satisfy Green's identity: [x*j_l(x)] * u'(x) from a to
+        b = int_a^b j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -647,8 +653,9 @@ class TestSBesselOperators:
     def test_solve_endpoints_rhs_x(self, l_val: int) -> None:
         """Test solve_endpoints with Green's identity for RHS=x.
 
-        Verifies that solve_endpoints correctly computes endpoint derivatives for u''+[x^2-l(l+1)]u=x
-        that satisfy Green's identity: [x*j_l(x)] * u'(x) from a to b = int_a^b x*j_l(x)dx
+        Verifies that solve_endpoints correctly computes endpoint derivatives for
+        u''+[x^2-l(l+1)]u=x that satisfy Green's identity: [x*j_l(x)] * u'(x) from a to
+        b = int_a^b x*j_l(x)dx
         """
         N = 128
         a, b = 1.0, 20.0
@@ -718,7 +725,7 @@ class TestSBesselOperators:
         deriv_a_fast, deriv_b_fast, _error_fast = op.solve_endpoints(rhs_np)
 
         # Compute full solution
-        solution_coeffs = op.solve(rhs_np)
+        solution_coeffs, _solution_len = op.solve(rhs_np)
 
         # Compute derivatives at endpoints from full solution
         h = (b - a) / 2.0
@@ -969,7 +976,8 @@ class TestSBesselOperators:
         endpoints_fast_np = np.array(op.solve_endpoints(rhs_np)).reshape(n_l, 3)
 
         # Compute full batched solution
-        solutions_batched_np = np.array(op.solve(rhs_np)).reshape(n_l, -1)
+        solutions_batched, solution_len = op.solve(rhs_np)
+        solutions_batched_np = np.array(solutions_batched).reshape(n_l, solution_len)
 
         # Compute derivatives at endpoints from full solution for each l
         for i, ell in enumerate(range(lmin, lmax + 1)):
@@ -1032,3 +1040,111 @@ class TestSBesselOperators:
         assert endpoints_np.shape == (n_l, 3), "Wrong output shape"
         assert np.all(np.isfinite(endpoints_np)), "All values should be finite"
         assert np.all(endpoints_np[:, 2] >= 0.0), "All errors should be non-negative"
+
+    def test_operator_get_interval(self) -> None:
+        """Test that operator correctly returns its interval."""
+        a_in, b_in = 1.0, 20.0
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(a_in, b_in, 5, 5)
+
+        a_out, b_out = op.get_interval()
+
+        assert_allclose(
+            a_out,
+            a_in,
+            rtol=1.0e-15,
+            atol=1.0e-15,
+            err_msg="Interval left endpoint mismatch",
+        )
+        assert_allclose(
+            b_out,
+            b_in,
+            rtol=1.0e-15,
+            atol=1.0e-15,
+            err_msg="Interval right endpoint mismatch",
+        )
+
+    def test_operator_get_ell_range(self) -> None:
+        """Test that operator correctly returns its ell range."""
+        solver = Ncm.SBesselOdeSolver.new()
+
+        # Test single ell
+        op_single = solver.create_operator(1.0, 20.0, 7, 7)
+        ell_min_out, ell_max_out = op_single.get_ell_range()
+        assert ell_min_out == 7, "Single ell: ell_min mismatch"
+        assert ell_max_out == 7, "Single ell: ell_max mismatch"
+
+        # Test ell range
+        op_range = solver.create_operator(1.0, 20.0, 5, 15)
+        ell_min_out, ell_max_out = op_range.get_ell_range()
+        assert ell_min_out == 5, "Ell range: ell_min mismatch"
+        assert ell_max_out == 15, "Ell range: ell_max mismatch"
+
+    def test_operator_get_tolerance(self) -> None:
+        """Test that operator returns the correct tolerance."""
+        solver = Ncm.SBesselOdeSolver.new()
+
+        # Test with default tolerance
+        tol_default = solver.get_tolerance()
+        op = solver.create_operator(1.0, 20.0, 5, 5)
+        op_tol = op.get_tolerance()
+        assert_allclose(
+            op_tol,
+            tol_default,
+            rtol=1.0e-15,
+            atol=1.0e-15,
+            err_msg="Default tolerance mismatch",
+        )
+
+        # Test with custom tolerance
+        custom_tol = 1.0e-10
+        solver.set_tolerance(custom_tol)
+        op2 = solver.create_operator(1.0, 20.0, 10, 10)
+        op2_tol = op2.get_tolerance()
+        assert_allclose(
+            op2_tol,
+            custom_tol,
+            rtol=1.0e-15,
+            atol=1.0e-15,
+            err_msg="Custom tolerance mismatch",
+        )
+
+    def test_operator_accessors_consistency(self) -> None:
+        """Test that operator accessors remain consistent across operations."""
+        a, b = 2.5, 18.3
+        ell_min, ell_max = 3, 12
+        tol = 1.0e-9
+
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(tol)
+        op = solver.create_operator(a, b, ell_min, ell_max)
+
+        # Check initial values
+        a_out, b_out = op.get_interval()
+        ell_min_out, ell_max_out = op.get_ell_range()
+        tol_out = op.get_tolerance()
+
+        assert_allclose(a_out, a, rtol=1.0e-15, atol=1.0e-15)
+        assert_allclose(b_out, b, rtol=1.0e-15, atol=1.0e-15)
+        assert ell_min_out == ell_min
+        assert ell_max_out == ell_max
+        assert_allclose(tol_out, tol, rtol=1.0e-15, atol=1.0e-15)
+
+        # Perform a solve operation
+        N = 64
+        rhs_np = np.zeros(N)
+        rhs_np[0] = 0.0
+        rhs_np[1] = 0.0
+        rhs_np[2] = 1.0
+        _solution, _sol_len = op.solve(rhs_np)
+
+        # Check values remain unchanged after solve
+        a_out2, b_out2 = op.get_interval()
+        ell_min_out2, ell_max_out2 = op.get_ell_range()
+        tol_out2 = op.get_tolerance()
+
+        assert_allclose(a_out2, a, rtol=1.0e-15, atol=1.0e-15)
+        assert_allclose(b_out2, b, rtol=1.0e-15, atol=1.0e-15)
+        assert ell_min_out2 == ell_min
+        assert ell_max_out2 == ell_max
+        assert_allclose(tol_out2, tol, rtol=1.0e-15, atol=1.0e-15)
