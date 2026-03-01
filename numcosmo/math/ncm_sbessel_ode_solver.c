@@ -2312,6 +2312,23 @@ ncm_sbessel_ode_operator_get_tolerance (NcmSBesselOdeOperator *op)
 }
 
 /**
+ * ncm_sbessel_ode_operator_get_n_cols:
+ * @op: a #NcmSBesselOdeOperator
+ *
+ * Gets the number of columns in the currently stored diagonalization.
+ * Returns 0 if no diagonalization has been performed yet, or if the operator
+ * has been reset. This is useful for understanding the convergence behavior
+ * and for testing that diagonalization reuse is working correctly.
+ *
+ * Returns: the number of columns in the stored diagonalization (0 if none)
+ */
+glong
+ncm_sbessel_ode_operator_get_n_cols (NcmSBesselOdeOperator *op)
+{
+  return op->last_n_cols;
+}
+
+/**
  * ncm_sbessel_ode_operator_solve:
  * @op: a #NcmSBesselOdeOperator
  * @rhs: (element-type gdouble): right-hand side vector (Chebyshev coefficients of f(x))

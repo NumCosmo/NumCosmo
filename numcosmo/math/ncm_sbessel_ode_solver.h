@@ -98,6 +98,7 @@ void ncm_sbessel_ode_operator_reset (NcmSBesselOdeOperator *op, gdouble a, gdoub
 void ncm_sbessel_ode_operator_get_interval (NcmSBesselOdeOperator *op, gdouble *a, gdouble *b);
 void ncm_sbessel_ode_operator_get_ell_range (NcmSBesselOdeOperator *op, gint *ell_min, gint *ell_max);
 gdouble ncm_sbessel_ode_operator_get_tolerance (NcmSBesselOdeOperator *op);
+glong ncm_sbessel_ode_operator_get_n_cols (NcmSBesselOdeOperator *op);
 
 void ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray **solution, gsize *solution_len);
 void ncm_sbessel_ode_operator_solve_endpoints (NcmSBesselOdeOperator *op, GArray *rhs, GArray **endpoints);
