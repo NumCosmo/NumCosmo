@@ -1131,6 +1131,7 @@ _ncm_sbessel_check_storage (NcmSBesselOdeOperator *op, glong col,
   {
     *solution_order *= 2;
     _ensure_matrix_rows_capacity (op, *solution_order);
+    _ensure_rotation_capacity (op, *solution_order * ROWS_TO_ROTATE);
 
     if (*solution_order + ROWS_TO_ROTATE > op->c->len)
       g_array_set_size (op->c, *solution_order + ROWS_TO_ROTATE);
@@ -1207,6 +1208,7 @@ _ncm_sbessel_check_storage_batched (NcmSBesselOdeOperator *op, glong col, guint 
     *solution_order *= 2;
     total_rows       = *solution_order * n_ell;
     _ensure_matrix_rows_capacity (op, total_rows);
+    _ensure_rotation_capacity (op, *solution_order * ROWS_TO_ROTATE * n_ell);
 
     if (total_rows + ROWS_TO_ROTATE * n_ell > op->c->len)
       g_array_set_size (op->c, total_rows + ROWS_TO_ROTATE * n_ell);
@@ -1419,6 +1421,7 @@ _ncm_sbessel_ode_solver_setup_initial_rows (NcmSBesselOdeOperator *op, GArray *r
   glong i;
 
   _ensure_matrix_rows_capacity (op, solution_order);
+  _ensure_rotation_capacity (op, solution_order * ROWS_TO_ROTATE);
   g_array_set_size (op->c, solution_order + ROWS_TO_ROTATE);
 
   /* Add the first ROWS_TO_ROTATE rows (boundary conditions) */
@@ -1485,9 +1488,6 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
     glong new_row               = col + ROWS_TO_ROTATE;
     NcmSBesselOdeSolverRow *row = &op->matrix_rows[new_row];
 
-    /* Ensure rotation storage capacity */
-    _ensure_rotation_capacity (op, (col + 1) * ROWS_TO_ROTATE);
-
     _ncm_sbessel_create_row (op, row, new_row);
     g_array_index (op->c, gdouble, new_row) = rhs_data[new_row];
 
@@ -1523,9 +1523,6 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
     {
       glong new_row               = col + ROWS_TO_ROTATE;
       NcmSBesselOdeSolverRow *row = &op->matrix_rows[new_row];
-
-      /* Ensure rotation storage capacity */
-      _ensure_rotation_capacity (op, (col + 1) * ROWS_TO_ROTATE);
 
       _ncm_sbessel_create_row (op, row, new_row);
       g_array_index (op->c, gdouble, new_row) = 0.0;
@@ -1775,6 +1772,7 @@ _ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op,
   glong i;
 
   _ensure_matrix_rows_capacity (op, total_rows);
+  _ensure_rotation_capacity (op, solution_order * ROWS_TO_ROTATE * n_ell);
 
   if (total_rows + ROWS_TO_ROTATE * n_ell > op->c->len)
     g_array_set_size (op->c, total_rows + ROWS_TO_ROTATE * n_ell);
@@ -1854,9 +1852,6 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
     glong new_row               = col + ROWS_TO_ROTATE;
     NcmSBesselOdeSolverRow *row = &op->matrix_rows[new_row * n_ell];
 
-    /* Ensure rotation storage capacity */
-    _ensure_rotation_capacity (op, (col + 1) * ROWS_TO_ROTATE * n_ell);
-
     _ncm_sbessel_create_row_batched (op, row, new_row, ell_min, n_ell);
 
     #pragma omp simd
@@ -1888,9 +1883,6 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
     {
       glong new_row               = col + ROWS_TO_ROTATE;
       NcmSBesselOdeSolverRow *row = &op->matrix_rows[new_row * n_ell];
-
-      /* Ensure rotation storage capacity */
-      _ensure_rotation_capacity (op, (col + 1) * ROWS_TO_ROTATE * n_ell);
 
       _ncm_sbessel_create_row_batched (op, row, new_row, ell_min, n_ell);
 
