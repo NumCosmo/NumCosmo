@@ -401,7 +401,10 @@ _ensure_rotation_capacity (NcmSBesselOdeOperator *op, gsize required_size)
       g_error ("_ensure_rotation_capacity: failed to allocate aligned memory for rotation_params");
 
     if (op->rotation_params != NULL)
+    {
+      memcpy (new_params, op->rotation_params, op->rotation_capacity * 2 * sizeof (gdouble));
       free (op->rotation_params);
+    }
 
     op->rotation_params   = new_params;
     op->rotation_capacity = new_capacity;
@@ -951,8 +954,8 @@ _ncm_sbessel_create_row_batched (NcmSBesselOdeOperator *op, NcmSBesselOdeSolverR
 
 __attribute__ ((optimize ("no-math-errno", "no-trapping-math")))
 
-static inline double
-_compute_inv_hypot (double a, double b)
+static inline gdouble
+_compute_inv_hypot (gdouble a, gdouble b)
 {
   return 1.0 / sqrt (a * a + b * b);
 }
@@ -1077,37 +1080,23 @@ _ncm_sbessel_apply_givens (glong pivot_col, NcmSBesselOdeSolverRow * restrict r1
 
 /**
  * _ncm_sbessel_check_convergence:
- * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
+ * @op: a #NcmSBesselOdeOperator
  * @col: current column being processed
  * @max_c_A: (inout): maximum coefficient-to-diagonal ratio
  * @quiet_cols: (inout): count of consecutive columns with small coefficients
- * @solution_order: (inout): current solution order
- * @max_solution_order: maximum allowed solution order
  *
- * Checks convergence and handles adaptive solution order increase.
+ * Checks convergence based on coefficient-to-diagonal ratio.
  *
- * Returns: TRUE if converged (early stop condition met), FALSE otherwise
+ * Returns: TRUE if converged, FALSE otherwise
  */
 static inline gboolean
 _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
-                                gdouble *max_c_A, guint *quiet_cols,
-                                guint *solution_order, guint max_solution_order);
-
-static inline gboolean
-_ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, guint n_ell,
-                                        gdouble *max_c_A, guint *quiet_cols,
-                                        guint *solution_order,
-                                        guint max_solution_order);
-
-static inline gboolean
-_ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
-                                gdouble *max_c_A, guint *quiet_cols,
-                                guint *solution_order, guint max_solution_order)
+                                gdouble *max_c_A, guint *quiet_cols)
 {
   NcmSBesselOdeSolverRow *row = &op->matrix_rows[col];
-  const double diag           = row->data[0] + _ncm_sbessel_bc_row (row, col);
-  const double c_col          = g_array_index (op->c, gdouble, col);
-  const double Acol           = fabs (c_col / diag);
+  const gdouble diag          = row->data[0] + _ncm_sbessel_bc_row (row, col);
+  const gdouble c_col         = g_array_index (op->c, gdouble, col);
+  const gdouble Acol          = fabs (c_col / diag);
 
   if (Acol > *max_c_A)
   {
@@ -1116,17 +1105,28 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
   }
   else
   {
-    /* Acol is small relative to established scale */
     if (Acol < *max_c_A * op->tolerance)
       (*quiet_cols)++;
     else
       *quiet_cols = 0;
   }
 
-  if (*quiet_cols >= ROWS_TO_ROTATE + 1)
-    return TRUE;  /* SAFE early stop */
+  return (*quiet_cols >= ROWS_TO_ROTATE + 1);
+}
 
-  /* If we've reached the end without convergence, increase solution_order and continue */
+/**
+ * _ncm_sbessel_check_storage:
+ * @op: a #NcmSBesselOdeOperator
+ * @col: current column being processed
+ * @solution_order: (inout): current solution order
+ * @max_solution_order: maximum allowed solution order
+ *
+ * Checks if storage needs to be extended and extends if necessary.
+ */
+static inline void
+_ncm_sbessel_check_storage (NcmSBesselOdeOperator *op, glong col,
+                            guint *solution_order, guint max_solution_order)
+{
   if ((col == *solution_order - ROWS_TO_ROTATE - 1) && (*solution_order < max_solution_order))
   {
     *solution_order *= 2;
@@ -1135,8 +1135,82 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
     if (*solution_order + ROWS_TO_ROTATE > op->c->len)
       g_array_set_size (op->c, *solution_order + ROWS_TO_ROTATE);
   }
+}
 
-  return FALSE;
+/**
+ * _ncm_sbessel_check_convergence_batched:
+ * @op: a #NcmSBesselOdeOperator
+ * @col: current column being processed
+ * @n_ell: number of ell values
+ * @max_c_A: (inout): maximum coefficient-to-diagonal ratio
+ * @quiet_cols: (inout): count of consecutive columns with small coefficients
+ *
+ * Checks convergence across all ell values.
+ *
+ * Returns: TRUE if converged, FALSE otherwise
+ */
+static inline gboolean
+_ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, guint n_ell,
+                                        gdouble *max_c_A, guint *quiet_cols)
+{
+  gdouble max_Acol = 0.0;
+  guint l_idx;
+
+  #pragma omp simd
+
+  for (l_idx = 0; l_idx < n_ell; l_idx++)
+  {
+    const glong row_idx         = col * n_ell + l_idx;
+    NcmSBesselOdeSolverRow *row = &op->matrix_rows[row_idx];
+    const gdouble diag          = row->data[0] + _ncm_sbessel_bc_row (row, col);
+    const gdouble c_col         = g_array_index (op->c, gdouble, row_idx);
+    const gdouble Acol          = fabs (c_col / diag);
+
+    if (Acol > max_Acol)
+      max_Acol = Acol;
+  }
+
+  if (max_Acol > *max_c_A)
+  {
+    *max_c_A    = max_Acol;
+    *quiet_cols = 0;
+  }
+  else
+  {
+    if (max_Acol < *max_c_A * op->tolerance)
+      (*quiet_cols)++;
+    else
+      *quiet_cols = 0;
+  }
+
+  return (*quiet_cols >= ROWS_TO_ROTATE + 1);
+}
+
+/**
+ * _ncm_sbessel_check_storage_batched:
+ * @op: a #NcmSBesselOdeOperator
+ * @col: current column being processed
+ * @n_ell: number of ell values
+ * @solution_order: (inout): current solution order
+ * @max_solution_order: maximum allowed solution order
+ *
+ * Checks if storage needs to be extended for batched mode.
+ */
+static inline void
+_ncm_sbessel_check_storage_batched (NcmSBesselOdeOperator *op, glong col, guint n_ell,
+                                    guint *solution_order, guint max_solution_order)
+{
+  if ((col == *solution_order - ROWS_TO_ROTATE - 1) && (*solution_order < max_solution_order))
+  {
+    guint total_rows;
+
+    *solution_order *= 2;
+    total_rows       = *solution_order * n_ell;
+    _ensure_matrix_rows_capacity (op, total_rows);
+
+    if (total_rows + ROWS_TO_ROTATE * n_ell > op->c->len)
+      g_array_set_size (op->c, total_rows + ROWS_TO_ROTATE * n_ell);
+  }
 }
 
 /**
@@ -1187,7 +1261,9 @@ _ncm_sbessel_apply_all_stored_rotations (NcmSBesselOdeOperator *op, GArray *rhs,
   g_array_set_size (op->c, max_col + ROWS_TO_ROTATE);
 
   for (col = 0; col < ROWS_TO_ROTATE; col++)
+  {
     g_array_index (op->c, gdouble, col) = rhs_data[col];
+  }
 
   for (col = 0; col < first_limit; col++)
   {
@@ -1206,8 +1282,8 @@ _ncm_sbessel_apply_all_stored_rotations (NcmSBesselOdeOperator *op, GArray *rhs,
       _ncm_sbessel_apply_stored_rotation_to_rhs (rot_ptr, c1, c2);
     }
 
-    if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols, NULL, 0))
-      return col;
+    if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols))
+      return col + 1;
   }
 
   for (col = first_limit; col < max_col; col++)
@@ -1227,8 +1303,8 @@ _ncm_sbessel_apply_all_stored_rotations (NcmSBesselOdeOperator *op, GArray *rhs,
       _ncm_sbessel_apply_stored_rotation_to_rhs (rot_ptr, c1, c2);
     }
 
-    if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols, NULL, 0))
-      return col;
+    if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols))
+      return col + 1;
   }
 
   return -1;
@@ -1261,6 +1337,7 @@ _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArr
   for (col = 0; col < ROWS_TO_ROTATE; col++)
   {
     #pragma omp simd
+
     for (l_idx = 0; l_idx < n_ell; l_idx++)
       g_array_index (op->c, gdouble, col * n_ell + l_idx) = rhs_data[col];
   }
@@ -1271,12 +1348,14 @@ _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArr
     glong i;
 
     #pragma omp simd
+
     for (l_idx = 0; l_idx < n_ell; l_idx++)
       g_array_index (op->c, gdouble, new_row * n_ell + l_idx) = rhs_data[new_row];
 
     for (i = ROWS_TO_ROTATE; i > 0; i--)
     {
       #pragma omp simd
+
       for (l_idx = 0; l_idx < n_ell; l_idx++)
       {
         const glong rot_idx = col * ROWS_TO_ROTATE * n_ell + (ROWS_TO_ROTATE - i) * n_ell + l_idx;
@@ -1288,8 +1367,8 @@ _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArr
       }
     }
 
-    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols, NULL, 0))
-      return col;
+    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols))
+      return col + 1;
   }
 
   for (col = first_limit; col < max_col; col++)
@@ -1298,12 +1377,14 @@ _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArr
     glong i;
 
     #pragma omp simd
+
     for (l_idx = 0; l_idx < n_ell; l_idx++)
       g_array_index (op->c, gdouble, new_row * n_ell + l_idx) = 0.0;
 
     for (i = ROWS_TO_ROTATE; i > 0; i--)
     {
       #pragma omp simd
+
       for (l_idx = 0; l_idx < n_ell; l_idx++)
       {
         const glong rot_idx = col * ROWS_TO_ROTATE * n_ell + (ROWS_TO_ROTATE - i) * n_ell + l_idx;
@@ -1315,8 +1396,8 @@ _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArr
       }
     }
 
-    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols, NULL, 0))
-      return col;
+    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols))
+      return col + 1;
   }
 
   return -1;
@@ -1425,12 +1506,15 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
     }
 
     /* Check convergence */
-    if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols,
-                                        &solution_order, max_solution_order))
+    if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols))
     {
       converged = TRUE;
+      col++;
       break; /* SAFE early stop */
     }
+
+    /* Check storage */
+    _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
   }
 
   if (!converged)
@@ -1461,9 +1545,14 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
       }
 
       /* Check convergence */
-      if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols,
-                                          &solution_order, max_solution_order))
-        break;  /* SAFE early stop */
+      if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols))
+      {
+        col++;
+        break; /* SAFE early stop */
+      }
+
+      /* Check storage */
+      _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
     }
   }
 
@@ -1666,77 +1755,6 @@ _ncm_sbessel_apply_rotations_batched (NcmSBesselOdeOperator *op, glong col, guin
 }
 
 /**
- * _ncm_sbessel_check_convergence_batched:
- * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @col: current column being processed
- * @n_ell: number of ell values
- * @max_c_A: (inout): maximum coefficient-to-diagonal ratio
- * @quiet_cols: (inout): count of consecutive columns with small coefficients
- * @solution_order: (inout): current solution order
- * @total_rows: (inout): total number of rows
- * @max_solution_order: maximum allowed solution order
- *
- * Checks convergence across all ell values and handles adaptive solution order increase.
- *
- * Returns: TRUE if converged (early stop condition met), FALSE otherwise
- */
-static inline gboolean
-_ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, guint n_ell,
-                                        gdouble *max_c_A, guint *quiet_cols,
-                                        guint *solution_order,
-                                        guint max_solution_order)
-{
-  gdouble max_Acol = 0.0;
-  guint l_idx;
-
-  #pragma omp simd
-
-  for (l_idx = 0; l_idx < n_ell; l_idx++)
-  {
-    const glong row_idx         = col * n_ell + l_idx;
-    NcmSBesselOdeSolverRow *row = &op->matrix_rows[row_idx];
-    const double diag           = row->data[0] + _ncm_sbessel_bc_row (row, col);
-    const double c_col          = g_array_index (op->c, gdouble, row_idx);
-    const double Acol           = fabs (c_col / diag);
-
-    if (Acol > max_Acol)
-      max_Acol = Acol;
-  }
-
-  if (max_Acol > *max_c_A)
-  {
-    *max_c_A    = max_Acol;
-    *quiet_cols = 0;
-  }
-  else
-  {
-    /* max_Acol is small relative to established scale */
-    if (max_Acol < *max_c_A * op->tolerance)
-      (*quiet_cols)++;
-    else
-      *quiet_cols = 0;
-  }
-
-  if (*quiet_cols >= ROWS_TO_ROTATE + 1)
-    return TRUE;  /* SAFE early stop */
-
-  /* If we've reached the end without convergence, increase solution_order and continue */
-  if ((col == *solution_order - ROWS_TO_ROTATE - 1) && (*solution_order < max_solution_order))
-  {
-    guint total_rows;
-
-    *solution_order *= 2;
-    total_rows       = *solution_order * n_ell;
-    _ensure_matrix_rows_capacity (op, total_rows);
-
-    if (total_rows + ROWS_TO_ROTATE * n_ell > op->c->len)
-      g_array_set_size (op->c, total_rows + ROWS_TO_ROTATE * n_ell);
-  }
-
-  return FALSE;
-}
-
-/**
  * _ncm_sbessel_ode_operator_setup_initial_rows_batched:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @n_ell: number of ell values to process
@@ -1779,19 +1797,6 @@ _ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op,
   }
 }
 
-/**
- * _ncm_sbessel_ode_operator_diagonalize_batched:
- * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @n_ell: number of ell values to process
- * @rhs: (element-type gdouble): right-hand side vector (Chebyshev coefficients of f(x))
- *
- * Diagonalizes the operator using adaptive QR decomposition for multiple ell values.
- * This function applies Givens rotations to transform the system into upper triangular form
- * and applies the same rotations to the RHS vectors. The transformed RHS is stored in
- * op->c and the upper triangular matrix is stored in op->matrix_rows.
- *
- * Returns: the effective number of columns used (may be less than rhs_len due to convergence)
- */
 /**
  * _ncm_sbessel_ode_operator_diagonalize_batched:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
@@ -1866,12 +1871,15 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
     _ncm_sbessel_apply_rotations_batched (op, col, n_ell);
 
     /* Check convergence across all ell values */
-    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols,
-                                                &solution_order, max_solution_order))
+    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols))
     {
       converged = TRUE;
+      col++;
       break; /* SAFE early stop */
     }
+
+    /* Check storage */
+    _ncm_sbessel_check_storage_batched (op, col, n_ell, &solution_order, max_solution_order);
   }
 
   if (!converged)
@@ -1898,9 +1906,14 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
       _ncm_sbessel_apply_rotations_batched (op, col, n_ell);
 
       /* Check convergence across all ell values */
-      if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols,
-                                                  &solution_order, max_solution_order))
-        break;  /* SAFE early stop */
+      if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols))
+      {
+        col++;
+        break; /* SAFE early stop */
+      }
+
+      /* Check storage */
+      _ncm_sbessel_check_storage_batched (op, col, n_ell, &solution_order, max_solution_order);
     }
   }
 
