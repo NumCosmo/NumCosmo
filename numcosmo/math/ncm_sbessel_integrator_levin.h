@@ -42,11 +42,25 @@ NcmSBesselIntegratorLevin *ncm_sbessel_integrator_levin_ref (NcmSBesselIntegrato
 void ncm_sbessel_integrator_levin_free (NcmSBesselIntegratorLevin *sbilv);
 void ncm_sbessel_integrator_levin_clear (NcmSBesselIntegratorLevin **sbilv);
 
+void ncm_sbessel_integrator_levin_prepare_for_ell_range (NcmSBesselIntegratorLevin *sbilv, gint lmin, gint lmax);
+
 void ncm_sbessel_integrator_levin_set_max_order (NcmSBesselIntegratorLevin *sbilv, guint max_order);
 guint ncm_sbessel_integrator_levin_get_max_order (NcmSBesselIntegratorLevin *sbilv);
 
 void ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble reltol);
 gdouble ncm_sbessel_integrator_levin_get_reltol (NcmSBesselIntegratorLevin *sbilv);
+
+void ncm_sbessel_integrator_levin_set_n_panels (NcmSBesselIntegratorLevin *sbilv, guint n_panels);
+guint ncm_sbessel_integrator_levin_get_n_panels (NcmSBesselIntegratorLevin *sbilv);
+
+void ncm_sbessel_integrator_levin_set_y_knots_min (NcmSBesselIntegratorLevin *sbilv, gdouble y_knots_min);
+gdouble ncm_sbessel_integrator_levin_get_y_knots_min (NcmSBesselIntegratorLevin *sbilv);
+
+void ncm_sbessel_integrator_levin_set_y_knots_max (NcmSBesselIntegratorLevin *sbilv, gdouble y_knots_max);
+gdouble ncm_sbessel_integrator_levin_get_y_knots_max (NcmSBesselIntegratorLevin *sbilv);
+
+void ncm_sbessel_integrator_levin_set_n_knots (NcmSBesselIntegratorLevin *sbilv, guint n_knots);
+guint ncm_sbessel_integrator_levin_get_n_knots (NcmSBesselIntegratorLevin *sbilv);
 
 G_END_DECLS
 
