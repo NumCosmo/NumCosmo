@@ -150,6 +150,9 @@ struct _NcmSBesselOdeOperator
   gsize matrix_rows_capacity;          /* Allocated capacity of matrix_rows */
   GArray *c;                           /* Array of gdouble for right-hand side */
 
+  /* Factorization state */
+  glong last_n_cols; /* Number of columns from last diagonalization (0 = no factorization) */
+
   /* Aligned arrays for temporary storage */
   gdouble *solution_batched;       /* Aligned array of gdouble for temporary solution storage in endpoint computation */
   gsize solution_batched_capacity; /* Allocated capacity of solution_batched */
@@ -480,6 +483,9 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
   op->matrix_rows_capacity = 0;
   op->c                    = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
+  /* Initialize factorization state */
+  op->last_n_cols = 0;
+
   /* Initialize aligned arrays for temporary storage */
   op->solution_batched          = NULL;
   op->solution_batched_capacity = 0;
@@ -594,6 +600,7 @@ ncm_sbessel_ode_operator_reset (NcmSBesselOdeOperator *op, gdouble a, gdouble b,
 
   /* Clear factorization state (preserve capacity) */
   op->matrix_rows_size = 0;
+  op->last_n_cols      = 0;
 
   /* Clear RHS storage */
   if (op->c != NULL)
@@ -1057,6 +1064,34 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
 }
 
 /**
+ * _ncm_sbessel_ode_solver_setup_initial_rows:
+ * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
+ * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @solution_order: initial solution order
+ *
+ * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) and initializes
+ * the RHS vector. This function is called only when starting a fresh diagonalization.
+ */
+static void
+_ncm_sbessel_ode_solver_setup_initial_rows (NcmSBesselOdeOperator *op, GArray *rhs, guint solution_order)
+{
+  const gdouble *rhs_data = (gdouble *) rhs->data;
+  glong i;
+
+  _ensure_matrix_rows_capacity (op, solution_order);
+  g_array_set_size (op->c, solution_order + ROWS_TO_ROTATE);
+
+  /* Add the first ROWS_TO_ROTATE rows (boundary conditions) */
+  for (i = 0; i < ROWS_TO_ROTATE; i++)
+  {
+    NcmSBesselOdeSolverRow *row = &op->matrix_rows[i];
+
+    g_array_index (op->c, gdouble, i) = rhs_data[i];
+    _ncm_sbessel_create_row (op, row, i);
+  }
+}
+
+/**
  * _ncm_sbessel_ode_solver_diagonalize:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
@@ -1083,18 +1118,9 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
   glong i;
 
   g_assert_cmpuint (rhs_len, >, ROWS_TO_ROTATE);
-  _ensure_matrix_rows_capacity (op, solution_order);
 
-  g_array_set_size (op->c, solution_order + ROWS_TO_ROTATE);
-
-  /* Add boundary condition rows */
-  for (i = 0; i < ROWS_TO_ROTATE; i++)
-  {
-    NcmSBesselOdeSolverRow *row = &op->matrix_rows[i];
-
-    g_array_index (op->c, gdouble, i) = rhs_data[i];
-    _ncm_sbessel_create_row (op, row, i);
-  }
+  /* Setup initial rows and RHS */
+  _ncm_sbessel_ode_solver_setup_initial_rows (op, rhs, solution_order);
 
   for (col = 0; col < first_loop_len; col++)
   {
@@ -1366,7 +1392,7 @@ _ncm_sbessel_apply_rotations_batched (NcmSBesselOdeOperator *op, glong col, guin
 static inline gboolean
 _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, guint n_ell,
                                         gdouble *max_c_A, guint *quiet_cols,
-                                        guint *solution_order, guint *total_rows,
+                                        guint *solution_order,
                                         guint max_solution_order)
 {
   gdouble max_Acol = 0.0;
@@ -1406,15 +1432,60 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
   /* If we've reached the end without convergence, increase solution_order and continue */
   if ((col == *solution_order - ROWS_TO_ROTATE - 1) && (*solution_order < max_solution_order))
   {
-    *solution_order *= 2;
-    *total_rows      = *solution_order * n_ell;
-    _ensure_matrix_rows_capacity (op, *total_rows);
+    guint total_rows;
 
-    if (*total_rows + ROWS_TO_ROTATE * n_ell > op->c->len)
-      g_array_set_size (op->c, *total_rows + ROWS_TO_ROTATE * n_ell);
+    *solution_order *= 2;
+    total_rows       = *solution_order * n_ell;
+    _ensure_matrix_rows_capacity (op, total_rows);
+
+    if (total_rows + ROWS_TO_ROTATE * n_ell > op->c->len)
+      g_array_set_size (op->c, total_rows + ROWS_TO_ROTATE * n_ell);
   }
 
   return FALSE;
+}
+
+/**
+ * _ncm_sbessel_ode_operator_setup_initial_rows_batched:
+ * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
+ * @n_ell: number of ell values to process
+ * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @solution_order: initial solution order
+ *
+ * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) for all ell values
+ * and initializes the RHS vectors. This function is called only when starting a
+ * fresh diagonalization in batched mode.
+ */
+static void
+_ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op, const guint n_ell, GArray *rhs, guint solution_order)
+{
+  const gint ell_min      = op->ell_min;
+  const guint total_rows  = solution_order * n_ell;
+  const gdouble *rhs_data = (gdouble *) rhs->data;
+  guint l_idx;
+  glong i;
+
+  _ensure_matrix_rows_capacity (op, total_rows);
+
+  if (total_rows + ROWS_TO_ROTATE * n_ell > op->c->len)
+    g_array_set_size (op->c, total_rows + ROWS_TO_ROTATE * n_ell);
+
+  /* Add boundary condition rows for all ell values */
+  for (i = 0; i < ROWS_TO_ROTATE; i++)
+  {
+    NcmSBesselOdeSolverRow *row = &op->matrix_rows[i * n_ell];
+
+    _ncm_sbessel_create_row_batched (op, row, i, ell_min, n_ell);
+
+    #pragma omp simd
+
+    for (l_idx = 0; l_idx < n_ell; l_idx++)
+    {
+      const glong row_idx = i * n_ell + l_idx;
+
+      g_array_index (op->c, gdouble, row_idx) = rhs_data[i];
+    }
+  }
 }
 
 /**
@@ -1437,7 +1508,6 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
   guint solution_order           = rhs_len * 2;
   const guint max_solution_order = 1 << 24;
   const gint ell_min             = op->ell_min;
-  guint total_rows               = solution_order * n_ell;
   const gdouble *rhs_data        = (gdouble *) rhs->data;
   glong col                      = 0;
   gdouble max_c_A                = 0.0;
@@ -1445,33 +1515,12 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
   const guint first_loop_len     = rhs_len - ROWS_TO_ROTATE;
   gboolean converged             = FALSE;
   guint l_idx;
-  glong i;
 
   g_assert_cmpuint (n_ell, >, 0);
   g_assert_cmpuint (rhs_len, >, ROWS_TO_ROTATE);
 
-  /* Resize arrays only if necessary */
-  _ensure_matrix_rows_capacity (op, total_rows);
-
-  if (total_rows + ROWS_TO_ROTATE * n_ell > op->c->len)
-    g_array_set_size (op->c, total_rows + ROWS_TO_ROTATE * n_ell);
-
-  /* Add boundary condition rows for all ell values */
-  for (i = 0; i < ROWS_TO_ROTATE; i++)
-  {
-    NcmSBesselOdeSolverRow *row = &op->matrix_rows[i * n_ell];
-
-    _ncm_sbessel_create_row_batched (op, row, i, ell_min, n_ell);
-
-    #pragma omp simd
-
-    for (l_idx = 0; l_idx < n_ell; l_idx++)
-    {
-      const glong row_idx = i * n_ell + l_idx;
-
-      g_array_index (op->c, gdouble, row_idx) = rhs_data[i];
-    }
-  }
+  /* Setup initial rows and RHS */
+  _ncm_sbessel_ode_operator_setup_initial_rows_batched (op, n_ell, rhs, solution_order);
 
   for (col = 0; col < first_loop_len; col++)
   {
@@ -1493,7 +1542,7 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
 
     /* Check convergence across all ell values */
     if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols,
-                                                &solution_order, &total_rows, max_solution_order))
+                                                &solution_order, max_solution_order))
     {
       converged = TRUE;
       break; /* SAFE early stop */
@@ -1522,7 +1571,7 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
 
       /* Check convergence across all ell values */
       if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols,
-                                                  &solution_order, &total_rows, max_solution_order))
+                                                  &solution_order, max_solution_order))
         break;  /* SAFE early stop */
     }
   }
