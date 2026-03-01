@@ -1378,10 +1378,28 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
 
   g_assert_cmpuint (rhs_len, >, ROWS_TO_ROTATE);
 
-  /* Setup initial rows and RHS */
-  _ncm_sbessel_ode_solver_setup_initial_rows (op, rhs, solution_order);
+  /* Try stored rotations if available */
+  if (op->last_n_cols > 0)
+  {
+    col = _ncm_sbessel_apply_all_stored_rotations (op, rhs, op->last_n_cols);
 
-  for (col = 0; col < first_loop_len; col++)
+    if (col >= 0)
+    {
+      op->last_n_cols = col;
+
+      return col;
+    }
+
+    /* Extension needed - continue from last_n_cols */
+    col = op->last_n_cols;
+  }
+  else
+  {
+    /* Setup initial rows and RHS */
+    _ncm_sbessel_ode_solver_setup_initial_rows (op, rhs, solution_order);
+  }
+
+  for ( ; col < first_loop_len; col++)
   {
     glong new_row               = col + ROWS_TO_ROTATE;
     NcmSBesselOdeSolverRow *row = &op->matrix_rows[new_row];
@@ -1455,6 +1473,8 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
                "reached max_solution_order=%u without convergence (quiet_cols=%u, needed %d). "
                "Results may be inaccurate.",
                max_solution_order, quiet_cols, ROWS_TO_ROTATE + 1);
+
+  op->last_n_cols = col;
 
   return col;
 }
@@ -1772,6 +1792,19 @@ _ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op,
  *
  * Returns: the effective number of columns used (may be less than rhs_len due to convergence)
  */
+/**
+ * _ncm_sbessel_ode_operator_diagonalize_batched:
+ * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
+ * @n_ell: number of ell values to process
+ * @rhs: (element-type gdouble): right-hand side vector (Chebyshev coefficients of f(x))
+ *
+ * Diagonalizes the operator using adaptive QR decomposition for multiple ell values.
+ * This function applies Givens rotations to transform the system into upper triangular form
+ * and applies the same rotations to the RHS vectors. The transformed RHS is stored in
+ * op->c and the upper triangular matrix is stored in op->matrix_rows.
+ *
+ * Returns: the effective number of columns used (may be less than rhs_len due to convergence)
+ */
 static glong
 _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const guint n_ell, GArray *rhs)
 {
@@ -1790,10 +1823,28 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
   g_assert_cmpuint (n_ell, >, 0);
   g_assert_cmpuint (rhs_len, >, ROWS_TO_ROTATE);
 
-  /* Setup initial rows and RHS */
-  _ncm_sbessel_ode_operator_setup_initial_rows_batched (op, n_ell, rhs, solution_order);
+  /* Try stored rotations if available */
+  if (op->last_n_cols > 0)
+  {
+    col = _ncm_sbessel_apply_all_stored_rotations_batched (op, rhs, op->last_n_cols, n_ell);
 
-  for (col = 0; col < first_loop_len; col++)
+    if (col >= 0)
+    {
+      op->last_n_cols = col;
+
+      return col;
+    }
+
+    /* Extension needed - continue from last_n_cols */
+    col = op->last_n_cols;
+  }
+  else
+  {
+    /* Setup initial rows and RHS */
+    _ncm_sbessel_ode_operator_setup_initial_rows_batched (op, n_ell, rhs, solution_order);
+  }
+
+  for ( ; col < first_loop_len; col++)
   {
     glong new_row               = col + ROWS_TO_ROTATE;
     NcmSBesselOdeSolverRow *row = &op->matrix_rows[new_row * n_ell];
@@ -1860,6 +1911,7 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
                "Results may be inaccurate.",
                max_solution_order, quiet_cols, ROWS_TO_ROTATE + 1);
 
+  op->last_n_cols = col;
 
   return col;
 }
