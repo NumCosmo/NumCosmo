@@ -1091,6 +1091,17 @@ _ncm_sbessel_apply_givens (glong pivot_col, NcmSBesselOdeSolverRow * restrict r1
 static inline gboolean
 _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
                                 gdouble *max_c_A, guint *quiet_cols,
+                                guint *solution_order, guint max_solution_order);
+
+static inline gboolean
+_ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, guint n_ell,
+                                        gdouble *max_c_A, guint *quiet_cols,
+                                        guint *solution_order,
+                                        guint max_solution_order);
+
+static inline gboolean
+_ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
+                                gdouble *max_c_A, guint *quiet_cols,
                                 guint *solution_order, guint max_solution_order)
 {
   NcmSBesselOdeSolverRow *row = &op->matrix_rows[col];
@@ -1126,6 +1137,189 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
   }
 
   return FALSE;
+}
+
+/**
+ * _ncm_sbessel_apply_stored_rotation_to_rhs:
+ * @rot_ptr: pointer to rotation parameter pair [cos, sin]
+ * @c1: pointer to RHS element for row1
+ * @c2: pointer to RHS element for row2
+ *
+ * Applies a stored Givens rotation to RHS elements only (no matrix operations).
+ * This is much faster than the full Givens rotation as it only performs 4 FLOPs.
+ * The rotation transforms:
+ *   new_c1 = cos*c1 + sin*c2
+ *   new_c2 = -sin*c1 + cos*c2
+ */
+static inline void
+_ncm_sbessel_apply_stored_rotation_to_rhs (gdouble * restrict rot_ptr, gdouble * restrict c1, gdouble * restrict c2)
+{
+  const gdouble cos_theta = ROTATION_COS (rot_ptr);
+  const gdouble sin_theta = ROTATION_SIN (rot_ptr);
+  const gdouble rhs1      = *c1;
+  const gdouble rhs2      = *c2;
+
+  *c1 = cos_theta * rhs1 + sin_theta * rhs2;
+  *c2 = -sin_theta * rhs1 + cos_theta * rhs2;
+}
+
+/**
+ * _ncm_sbessel_apply_all_stored_rotations:
+ * @op: a #NcmSBesselOdeOperator
+ * @rhs: right-hand side vector
+ * @max_col: maximum column to process (from last_n_cols)
+ *
+ * Applies all stored rotations to a new RHS, checking convergence after each column.
+ * Returns the column where convergence occurred, or -1 if extension is needed.
+ *
+ * Returns: column where converged, or -1 if needs extension
+ */
+static glong
+_ncm_sbessel_apply_all_stored_rotations (NcmSBesselOdeOperator *op, GArray *rhs, glong max_col)
+{
+  const gdouble *rhs_data = (gdouble *) rhs->data;
+  const glong rhs_limit   = rhs->len - ROWS_TO_ROTATE;
+  const glong first_limit = (max_col < rhs_limit) ? max_col : rhs_limit;
+  gdouble max_c_A         = 0.0;
+  guint quiet_cols        = 0;
+  glong col;
+
+  g_array_set_size (op->c, max_col + ROWS_TO_ROTATE);
+
+  for (col = 0; col < ROWS_TO_ROTATE; col++)
+    g_array_index (op->c, gdouble, col) = rhs_data[col];
+
+  for (col = 0; col < first_limit; col++)
+  {
+    const glong new_row = col + ROWS_TO_ROTATE;
+    glong i;
+
+    g_array_index (op->c, gdouble, new_row) = rhs_data[new_row];
+
+    for (i = ROWS_TO_ROTATE; i > 0; i--)
+    {
+      const glong rot_idx = col * ROWS_TO_ROTATE + (ROWS_TO_ROTATE - i);
+      gdouble *rot_ptr    = &op->rotation_params[2 * rot_idx];
+      gdouble *c1         = &g_array_index (op->c, gdouble, col + i - 1);
+      gdouble *c2         = &g_array_index (op->c, gdouble, col + i);
+
+      _ncm_sbessel_apply_stored_rotation_to_rhs (rot_ptr, c1, c2);
+    }
+
+    if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols, NULL, 0))
+      return col;
+  }
+
+  for (col = first_limit; col < max_col; col++)
+  {
+    const glong new_row = col + ROWS_TO_ROTATE;
+    glong i;
+
+    g_array_index (op->c, gdouble, new_row) = 0.0;
+
+    for (i = ROWS_TO_ROTATE; i > 0; i--)
+    {
+      const glong rot_idx = col * ROWS_TO_ROTATE + (ROWS_TO_ROTATE - i);
+      gdouble *rot_ptr    = &op->rotation_params[2 * rot_idx];
+      gdouble *c1         = &g_array_index (op->c, gdouble, col + i - 1);
+      gdouble *c2         = &g_array_index (op->c, gdouble, col + i);
+
+      _ncm_sbessel_apply_stored_rotation_to_rhs (rot_ptr, c1, c2);
+    }
+
+    if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols, NULL, 0))
+      return col;
+  }
+
+  return -1;
+}
+
+/**
+ * _ncm_sbessel_apply_all_stored_rotations_batched:
+ * @op: a #NcmSBesselOdeOperator
+ * @rhs: right-hand side vector
+ * @max_col: maximum column to process (from last_n_cols)
+ * @n_ell: number of ell values
+ *
+ * Batched version: applies all stored rotations to new RHS for all ell values.
+ *
+ * Returns: column where converged, or -1 if needs extension
+ */
+static glong
+_ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArray *rhs, glong max_col, guint n_ell)
+{
+  const gdouble *rhs_data = (gdouble *) rhs->data;
+  const glong rhs_limit   = rhs->len - ROWS_TO_ROTATE;
+  const glong first_limit = (max_col < rhs_limit) ? max_col : rhs_limit;
+  gdouble max_c_A         = 0.0;
+  guint quiet_cols        = 0;
+  glong col;
+  guint l_idx;
+
+  g_array_set_size (op->c, (max_col + ROWS_TO_ROTATE) * n_ell);
+
+  for (col = 0; col < ROWS_TO_ROTATE; col++)
+  {
+    #pragma omp simd
+    for (l_idx = 0; l_idx < n_ell; l_idx++)
+      g_array_index (op->c, gdouble, col * n_ell + l_idx) = rhs_data[col];
+  }
+
+  for (col = 0; col < first_limit; col++)
+  {
+    const glong new_row = col + ROWS_TO_ROTATE;
+    glong i;
+
+    #pragma omp simd
+    for (l_idx = 0; l_idx < n_ell; l_idx++)
+      g_array_index (op->c, gdouble, new_row * n_ell + l_idx) = rhs_data[new_row];
+
+    for (i = ROWS_TO_ROTATE; i > 0; i--)
+    {
+      #pragma omp simd
+      for (l_idx = 0; l_idx < n_ell; l_idx++)
+      {
+        const glong rot_idx = col * ROWS_TO_ROTATE * n_ell + (ROWS_TO_ROTATE - i) * n_ell + l_idx;
+        gdouble *rot_ptr    = &op->rotation_params[2 * rot_idx];
+        gdouble *c1         = &g_array_index (op->c, gdouble, (col + i - 1) * n_ell + l_idx);
+        gdouble *c2         = &g_array_index (op->c, gdouble, (col + i) * n_ell + l_idx);
+
+        _ncm_sbessel_apply_stored_rotation_to_rhs (rot_ptr, c1, c2);
+      }
+    }
+
+    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols, NULL, 0))
+      return col;
+  }
+
+  for (col = first_limit; col < max_col; col++)
+  {
+    const glong new_row = col + ROWS_TO_ROTATE;
+    glong i;
+
+    #pragma omp simd
+    for (l_idx = 0; l_idx < n_ell; l_idx++)
+      g_array_index (op->c, gdouble, new_row * n_ell + l_idx) = 0.0;
+
+    for (i = ROWS_TO_ROTATE; i > 0; i--)
+    {
+      #pragma omp simd
+      for (l_idx = 0; l_idx < n_ell; l_idx++)
+      {
+        const glong rot_idx = col * ROWS_TO_ROTATE * n_ell + (ROWS_TO_ROTATE - i) * n_ell + l_idx;
+        gdouble *rot_ptr    = &op->rotation_params[2 * rot_idx];
+        gdouble *c1         = &g_array_index (op->c, gdouble, (col + i - 1) * n_ell + l_idx);
+        gdouble *c2         = &g_array_index (op->c, gdouble, (col + i) * n_ell + l_idx);
+
+        _ncm_sbessel_apply_stored_rotation_to_rhs (rot_ptr, c1, c2);
+      }
+    }
+
+    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols, NULL, 0))
+      return col;
+  }
+
+  return -1;
 }
 
 /**
