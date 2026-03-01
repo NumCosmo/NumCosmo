@@ -108,6 +108,10 @@
         ((TOTAL_BANDWIDTH + 7) & ~7) /* round up to multiple of 8 */
 #define OPERATOR_EXPONENT 1
 
+/* Rotation parameter accessors for interleaved cos/sin storage */
+#define ROTATION_COS(ptr) (ptr)[0]
+#define ROTATION_SIN(ptr) (ptr)[1]
+
 /**
  * NcmSBesselOdeSolverRow:
  *
@@ -152,6 +156,28 @@ struct _NcmSBesselOdeOperator
 
   /* Factorization state */
   glong last_n_cols; /* Number of columns from last diagonalization (0 = no factorization) */
+
+  /* Rotation storage - interleaved cos/sin pairs for cache efficiency
+   *
+   * For each column col, ROWS_TO_ROTATE Givens rotations are applied to eliminate
+   * subdiagonal elements. The rotations are stored in application order:
+   *   - rotation 0: eliminates row (col+ROWS_TO_ROTATE) using row (col+ROWS_TO_ROTATE-1)
+   *   - rotation 1: eliminates row (col+ROWS_TO_ROTATE-1) using row (col+ROWS_TO_ROTATE-2)
+   *   - ...
+   *   - rotation (ROWS_TO_ROTATE-1): eliminates row (col+1) using row col
+   *
+   * Layout for single-ell (n_ell=1):
+   *   rotation_params[2*i]   = cos for rotation i
+   *   rotation_params[2*i+1] = sin for rotation i
+   *   where i = col * ROWS_TO_ROTATE + rotation_within_col
+   *
+   * Layout for batched (n_ell>1):
+   *   rotation_params[2*i]   = cos for rotation i
+   *   rotation_params[2*i+1] = sin for rotation i
+   *   where i = col * ROWS_TO_ROTATE * n_ell + rotation_within_col * n_ell + ell_idx
+   */
+  gdouble *rotation_params; /* Interleaved [cos0, sin0, cos1, sin1, ...] */
+  gsize rotation_capacity;  /* Allocated capacity for rotation_params */
 
   /* Aligned arrays for temporary storage */
   gdouble *solution_batched;       /* Aligned array of gdouble for temporary solution storage in endpoint computation */
@@ -360,6 +386,29 @@ _ensure_acc_bc_capacity (NcmSBesselOdeOperator *op, gsize required_size)
 }
 
 static void
+_ensure_rotation_capacity (NcmSBesselOdeOperator *op, gsize required_size)
+{
+  if (required_size > op->rotation_capacity)
+  {
+    gdouble *new_params = NULL;
+    gsize new_capacity  = required_size;
+
+    if (new_capacity < 16)
+      new_capacity = 16;
+
+    /* Allocate interleaved cos/sin pairs: need 2x space */
+    if (posix_memalign ((void **) &new_params, ALIGNMENT, new_capacity * 2 * sizeof (gdouble)) != 0)
+      g_error ("_ensure_rotation_capacity: failed to allocate aligned memory for rotation_params");
+
+    if (op->rotation_params != NULL)
+      free (op->rotation_params);
+
+    op->rotation_params   = new_params;
+    op->rotation_capacity = new_capacity;
+  }
+}
+
+static void
 ncm_sbessel_ode_solver_class_init (NcmSBesselOdeSolverClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -486,6 +535,10 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
   /* Initialize factorization state */
   op->last_n_cols = 0;
 
+  /* Initialize rotation storage */
+  op->rotation_params   = NULL;
+  op->rotation_capacity = 0;
+
   /* Initialize aligned arrays for temporary storage */
   op->solution_batched          = NULL;
   op->solution_batched_capacity = 0;
@@ -535,6 +588,10 @@ ncm_sbessel_ode_operator_unref (NcmSBesselOdeOperator *op)
       free (op->matrix_rows);
 
     g_clear_pointer (&op->c, g_array_unref);
+
+    /* Free rotation storage */
+    if (op->rotation_params != NULL)
+      free (op->rotation_params);
 
     /* Free aligned arrays */
     if (op->solution_batched != NULL)
@@ -902,22 +959,23 @@ _compute_inv_hypot (double a, double b)
 
 /**
  * _ncm_sbessel_apply_givens:
- * @solver: a #NcmSBesselOdeSolver
  * @pivot_col: column index of the pivot
  * @r1: pointer to first row (pivot row)
  * @r2: pointer to second row (row to eliminate)
  * @c1: pointer to right-hand side element for row1
  * @c2: pointer to right-hand side element for row2
+ * @rot_ptr: pointer to rotation parameter pair [cos, sin]
  *
  * Applies Givens rotation to eliminate the entry at (row2, col=pivot_col).
  * The rotation transforms the rows as:
  *   new_row1 = c*row1 + s*row2
  *   new_row2 = -s*row1 + c*row2
  * where c and s are chosen to zero out element (row2, pivot_col).
+ * The rotation parameters are stored at rot_ptr[0] (cos) and rot_ptr[1] (sin).
  */
 static inline __attribute__ ((hot)) void
 
-_ncm_sbessel_apply_givens (glong pivot_col, NcmSBesselOdeSolverRow * restrict r1, NcmSBesselOdeSolverRow * restrict r2, gdouble * restrict c1, gdouble * restrict c2)
+_ncm_sbessel_apply_givens (glong pivot_col, NcmSBesselOdeSolverRow * restrict r1, NcmSBesselOdeSolverRow * restrict r2, gdouble * restrict c1, gdouble * restrict c2, gdouble * restrict rot_ptr)
 {
   const gdouble a_val    = r1->data[0] + _ncm_sbessel_bc_row (r1, pivot_col);
   const gdouble b_val    = r2->data[0] + _ncm_sbessel_bc_row (r2, pivot_col);
@@ -926,6 +984,10 @@ _ncm_sbessel_apply_givens (glong pivot_col, NcmSBesselOdeSolverRow * restrict r1
   if (__builtin_expect ((inv_norm > 1.0e100), 0))
   {
     /* Entry already zero - just shift r2 without rotation */
+    /* Store identity rotation */
+    ROTATION_COS (rot_ptr) = 1.0;
+    ROTATION_SIN (rot_ptr) = 0.0;
+
     /* Manually unrolled for TOTAL_BANDWIDTH = 9 */
     r2->data[0] = r2->data[1];
     r2->data[1] = r2->data[2];
@@ -1005,6 +1067,9 @@ _ncm_sbessel_apply_givens (glong pivot_col, NcmSBesselOdeSolverRow * restrict r1
     r2_data[7] = FMA (-sin_theta, e1_8, cos_theta * e2_8);
     r2_data[8] = 0.0; /* Last entry shifted out is now zero */
 
+    /* Store rotation parameters */
+    ROTATION_COS (rot_ptr) = cos_theta;
+    ROTATION_SIN (rot_ptr) = sin_theta;
 
     r2->col_index++; /* Shift row2's column index right by 1 */
   }
@@ -1127,6 +1192,9 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
     glong new_row               = col + ROWS_TO_ROTATE;
     NcmSBesselOdeSolverRow *row = &op->matrix_rows[new_row];
 
+    /* Ensure rotation storage capacity */
+    _ensure_rotation_capacity (op, (col + 1) * ROWS_TO_ROTATE);
+
     _ncm_sbessel_create_row (op, row, new_row);
     g_array_index (op->c, gdouble, new_row) = rhs_data[new_row];
 
@@ -1134,12 +1202,14 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
     {
       const glong r1_index       = col + i - 1;
       const glong r2_index       = col + i;
+      const glong rot_idx        = col * ROWS_TO_ROTATE + (ROWS_TO_ROTATE - i);
       NcmSBesselOdeSolverRow *r1 = &op->matrix_rows[r1_index];
       NcmSBesselOdeSolverRow *r2 = &op->matrix_rows[r2_index];
       gdouble *c1                = &g_array_index (op->c, gdouble, r1_index);
       gdouble *c2                = &g_array_index (op->c, gdouble, r2_index);
+      gdouble *rot_ptr           = &op->rotation_params[2 * rot_idx];
 
-      _ncm_sbessel_apply_givens (col, r1, r2, c1, c2);
+      _ncm_sbessel_apply_givens (col, r1, r2, c1, c2, rot_ptr);
     }
 
     /* Check convergence */
@@ -1158,6 +1228,9 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
       glong new_row               = col + ROWS_TO_ROTATE;
       NcmSBesselOdeSolverRow *row = &op->matrix_rows[new_row];
 
+      /* Ensure rotation storage capacity */
+      _ensure_rotation_capacity (op, (col + 1) * ROWS_TO_ROTATE);
+
       _ncm_sbessel_create_row (op, row, new_row);
       g_array_index (op->c, gdouble, new_row) = 0.0;
 
@@ -1165,12 +1238,14 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
       {
         const glong r1_index       = col + i - 1;
         const glong r2_index       = col + i;
+        const glong rot_idx        = col * ROWS_TO_ROTATE + (ROWS_TO_ROTATE - i);
         NcmSBesselOdeSolverRow *r1 = &op->matrix_rows[r1_index];
         NcmSBesselOdeSolverRow *r2 = &op->matrix_rows[r2_index];
         gdouble *c1                = &g_array_index (op->c, gdouble, r1_index);
         gdouble *c2                = &g_array_index (op->c, gdouble, r2_index);
+        gdouble *rot_ptr           = &op->rotation_params[2 * rot_idx];
 
-        _ncm_sbessel_apply_givens (col, r1, r2, c1, c2);
+        _ncm_sbessel_apply_givens (col, r1, r2, c1, c2, rot_ptr);
       }
 
       /* Check convergence */
@@ -1364,12 +1439,14 @@ _ncm_sbessel_apply_rotations_batched (NcmSBesselOdeOperator *op, glong col, guin
     {
       const glong r1_idx_batch   = r1_index * n_ell + l_idx;
       const glong r2_idx_batch   = r2_index * n_ell + l_idx;
+      const glong rot_idx        = col * ROWS_TO_ROTATE * n_ell + (ROWS_TO_ROTATE - i) * n_ell + l_idx;
       NcmSBesselOdeSolverRow *r1 = &op->matrix_rows[r1_idx_batch];
       NcmSBesselOdeSolverRow *r2 = &op->matrix_rows[r2_idx_batch];
       gdouble *c1                = &g_array_index (op->c, gdouble, r1_idx_batch);
       gdouble *c2                = &g_array_index (op->c, gdouble, r2_idx_batch);
+      gdouble *rot_ptr           = &op->rotation_params[2 * rot_idx];
 
-      _ncm_sbessel_apply_givens (col, r1, r2, c1, c2);
+      _ncm_sbessel_apply_givens (col, r1, r2, c1, c2, rot_ptr);
     }
   }
 }
@@ -1527,6 +1604,9 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
     glong new_row               = col + ROWS_TO_ROTATE;
     NcmSBesselOdeSolverRow *row = &op->matrix_rows[new_row * n_ell];
 
+    /* Ensure rotation storage capacity */
+    _ensure_rotation_capacity (op, (col + 1) * ROWS_TO_ROTATE * n_ell);
+
     _ncm_sbessel_create_row_batched (op, row, new_row, ell_min, n_ell);
 
     #pragma omp simd
@@ -1555,6 +1635,9 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
     {
       glong new_row               = col + ROWS_TO_ROTATE;
       NcmSBesselOdeSolverRow *row = &op->matrix_rows[new_row * n_ell];
+
+      /* Ensure rotation storage capacity */
+      _ensure_rotation_capacity (op, (col + 1) * ROWS_TO_ROTATE * n_ell);
 
       _ncm_sbessel_create_row_batched (op, row, new_row, ell_min, n_ell);
 
