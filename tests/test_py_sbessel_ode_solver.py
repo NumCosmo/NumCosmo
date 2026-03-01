@@ -2329,7 +2329,7 @@ class TestSBesselOperators:
             f"Time with reuse: {time_reuse:.4f}s, with reset: {time_reset:.4f}s"
         )
 
-    @pytest.mark.parametrize("n_ell", [8, 16, 32])
+    @pytest.mark.parametrize("n_ell", [2, 4, 8, 16, 32, 64])
     def test_diagonalization_reuse_performance_batched(self, n_ell: int) -> None:
         """Test that diagonalization reuse is faster for batched operations.
 
@@ -2395,4 +2395,145 @@ class TestSBesselOperators:
             f"Diagonalization reuse should be significantly faster than reset "
             f"for n_ell={n_ell}. Expected speedup > 1.5x, got {speedup:.2f}x. "
             f"Time with reuse: {time_reuse:.4f}s, with reset: {time_reset:.4f}s"
+        )
+
+    @pytest.mark.parametrize("n_ell", [2, 4, 8, 16, 32, 64])
+    def test_batched_vs_single_ell_performance(self, n_ell: int) -> None:
+        """Test that batched operations are faster than individual single-ell solves.
+
+        Compares the performance of:
+        1. Batched solve for n_ell values at once
+        2. n_ell individual single-ell solves
+
+        The batched case should be faster, especially for larger n_ell.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+        lmin = 5
+        lmax = lmin + n_ell - 1
+        n_iterations = 50
+
+        solver = Ncm.SBesselOdeSolver.new()
+
+        # Prepare RHS arrays for testing
+        rhs_list = []
+        for i in range(n_iterations):
+            rhs = np.zeros(N)
+            rhs[0] = 0.0
+            rhs[1] = 0.0
+            rhs[2] = 1.0 + i * 0.1
+            rhs_list.append(rhs)
+
+        # Test 1: Batched solves (fast path)
+        op_batched = solver.create_operator(a, b, lmin, lmax)
+        start_batched = time.perf_counter()
+        for rhs in rhs_list:
+            _solution, _sol_len = op_batched.solve(rhs)
+        end_batched = time.perf_counter()
+        time_batched = end_batched - start_batched
+
+        # Test 2: Individual single-ell solves (slow path)
+        ops_single = [
+            solver.create_operator(a, b, ell, ell) for ell in range(lmin, lmax + 1)
+        ]
+        start_single = time.perf_counter()
+        for rhs in rhs_list:
+            for op_single in ops_single:
+                _solution, _sol_len = op_single.solve(rhs)
+        end_single = time.perf_counter()
+        time_single = end_single - start_single
+
+        # Calculate speedup
+        speedup = time_single / time_batched
+
+        # Print timing results
+        print(f"\n{'='*60}")
+        print("Batched vs Single-ell Performance Test")
+        print(f"{'='*60}")
+        print(f"Number of iterations: {n_iterations}")
+        print(f"Matrix size: {N}")
+        print(f"Batch size (n_ell): {n_ell}")
+        print(f"ell range: [{lmin}, {lmax}]")
+        print(f"\nBatched:       {time_batched:.4f} seconds")
+        print(f"Single-ell:    {time_single:.4f} seconds")
+        print(f"Speedup:       {speedup:.2f}x")
+        print(f"{'='*60}")
+
+        # Verify that batched is faster
+        # Expect at least some speedup from batched operations
+        assert speedup > 1.0, (
+            f"Batched operations should be faster than individual single-ell solves "
+            f"for n_ell={n_ell}. Expected speedup > 1.0x, got {speedup:.2f}x. "
+            f"Time batched: {time_batched:.4f}s, single-ell: {time_single:.4f}s"
+        )
+
+    @pytest.mark.parametrize("n_ell", [2, 4, 8, 16, 32, 64])
+    def test_batched_vs_single_ell_solve_endpoints_performance(
+        self, n_ell: int
+    ) -> None:
+        """Test that batched solve_endpoints is faster than individual calls.
+
+        Compares the performance of:
+        1. Batched solve_endpoints for multiple ell values at once
+        2. Individual solve_endpoints calls for each ell value
+
+        The batched case should be faster.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+        lmin = 5
+        lmax = lmin + n_ell - 1
+        n_iterations = 50
+
+        solver = Ncm.SBesselOdeSolver.new()
+
+        # Prepare RHS arrays for testing
+        rhs_list = []
+        for i in range(n_iterations):
+            rhs = np.zeros(N)
+            rhs[0] = 0.0
+            rhs[1] = 0.0
+            rhs[2] = 1.0 + i * 0.1
+            rhs_list.append(rhs)
+
+        # Test 1: Batched solve_endpoints (fast path)
+        op_batched = solver.create_operator(a, b, lmin, lmax)
+        start_batched = time.perf_counter()
+        for rhs in rhs_list:
+            _ = op_batched.solve_endpoints(rhs)
+        end_batched = time.perf_counter()
+        time_batched = end_batched - start_batched
+
+        # Test 2: Individual single-ell solve_endpoints (slow path)
+        ops_single = [
+            solver.create_operator(a, b, ell, ell) for ell in range(lmin, lmax + 1)
+        ]
+        start_single = time.perf_counter()
+        for rhs in rhs_list:
+            for op_single in ops_single:
+                _deriv_a, _deriv_b, _error = op_single.solve_endpoints(rhs)
+        end_single = time.perf_counter()
+        time_single = end_single - start_single
+
+        # Calculate speedup
+        speedup = time_single / time_batched
+
+        # Print timing results
+        print(f"\n{'='*60}")
+        print("Batched vs Single-ell solve_endpoints Performance Test")
+        print(f"{'='*60}")
+        print(f"Number of iterations: {n_iterations}")
+        print(f"Matrix size: {N}")
+        print(f"Batch size (n_ell): {n_ell}")
+        print(f"ell range: [{lmin}, {lmax}]")
+        print(f"\nBatched:       {time_batched:.4f} seconds")
+        print(f"Single-ell:    {time_single:.4f} seconds")
+        print(f"Speedup:       {speedup:.2f}x")
+        print(f"{'='*60}")
+
+        # Verify that batched is faster
+        assert speedup > 1.0, (
+            f"Batched solve_endpoints should be faster than individual calls. "
+            f"Expected speedup > 1.0x, got {speedup:.2f}x. "
+            f"Time batched: {time_batched:.4f}s, single-ell: {time_single:.4f}s"
         )
