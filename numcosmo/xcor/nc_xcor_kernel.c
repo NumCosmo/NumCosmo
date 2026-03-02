@@ -493,7 +493,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
   NonLimberIntegrandData *nlid = g_new0 (NonLimberIntegrandData, 1);
   guint n_l                    = lmax - lmin + 1;
   NcmVector *integ_result      = ncm_vector_new (n_l);
-  const guint n_k              = 2000;
+  const guint n_k              = 200;
   NcmVector *k_vec             = ncm_vector_new (n_k);
   GPtrArray *comp_list         = klass->get_component_list (xclk);
 
@@ -519,15 +519,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
     return NULL;
   }
 
-  ncm_sbessel_integrator_set_lmin (self->sbi, lmin);
-  ncm_sbessel_integrator_set_lmax (self->sbi, lmax);
-
-  ncm_sbessel_integrator_levin_set_n_knots (NCM_SBESSEL_INTEGRATOR_LEVIN (self->sbi), 10);
-  ncm_sbessel_integrator_levin_set_n_panels (NCM_SBESSEL_INTEGRATOR_LEVIN (self->sbi), 10);
-  ncm_sbessel_integrator_levin_set_y_knots_min (NCM_SBESSEL_INTEGRATOR_LEVIN (self->sbi), 1.0);
-  ncm_sbessel_integrator_levin_set_y_knots_max (NCM_SBESSEL_INTEGRATOR_LEVIN (self->sbi), 1.0e6);
-
-  ncm_sbessel_integrator_levin_prepare_for_ell_range (NCM_SBESSEL_INTEGRATOR_LEVIN (self->sbi), lmin, lmax);
+  ncm_sbessel_integrator_set_ell_range (self->sbi, lmin, lmax);
 
   {
     gdouble *xi_min              = g_new (gdouble, comp_list->len);
@@ -589,7 +581,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
           const gdouble y_max         = k * xi_max[i];
           guint n;
 
-          printf ("Integrating component %u/%u, k = %e, y = [%e, %e]\n", i + 1, comp_list->len, k, y_min, y_max);
+          /* printf ("Integrating component %u/%u, k = %e, y = [%e, %e]\n", i + 1, comp_list->len, k, y_min, y_max); */
           ncm_sbessel_integrator_integrate (
             self->sbi, _nc_xcor_kernel_component_kernel_integ, y_min, y_max, integ_result, &params);
 
