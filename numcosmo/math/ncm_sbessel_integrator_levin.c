@@ -68,8 +68,8 @@ typedef struct _NcmSBesselIntegratorLevinArg
   NcmSBesselIntegratorLevin *sbilv;
   NcmSBesselIntegratorF F;
   gpointer user_data;
-  guint lmin;
-  guint lmax;
+  guint ell_min;
+  guint ell_max;
   gdouble *jl_arr;
 } NcmSBesselIntegratorLevinArg;
 
@@ -79,13 +79,12 @@ struct _NcmSBesselIntegratorLevin
   NcmSBesselIntegrator parent_instance;
   guint max_order;
   gdouble reltol;
-  guint n_panels;
   NcmSBesselOdeSolver *ode_solver;
   NcmSBesselOdeOperator *ode_operator;
   NcmSFSBesselArray *sba; /* Allocation tracking */
   guint alloc_max_order;
-  gint alloc_lmin;
-  gint alloc_lmax;
+  guint alloc_ell_min;
+  guint alloc_ell_max;
   /* Pre-allocated working arrays */
   GArray *cheb_coeffs;
   GArray *gegen_coeffs;
@@ -98,7 +97,9 @@ struct _NcmSBesselIntegratorLevin
   gdouble y_knots_min;
   gdouble y_knots_max;
   guint n_knots;
+  guint ell_cache_max;                        /* Maximum ell for precomputed j_l at knots */
   GArray *knots;                              /* Log-spaced knots array */
+  gdouble *jl_knots;                          /* Precomputed j_l at knots: [n_knots * (ell_cache_max + 1)] */
   GPtrArray *operators;                       /* Operators for each panel between consecutive knots */
   NcmSBesselOdeOperator *ode_operator_temp_a; /* Temporary operator for [a, smallest_knot > a] */
   NcmSBesselOdeOperator *ode_operator_temp_b; /* Temporary operator for [largest_knot < b, b] */
@@ -109,11 +110,17 @@ enum
   PROP_0,
   PROP_MAX_ORDER,
   PROP_RELTOL,
-  PROP_N_PANELS,
   PROP_Y_KNOTS_MIN,
   PROP_Y_KNOTS_MAX,
   PROP_N_KNOTS,
+  PROP_ELL_CACHE_MAX,
 };
+
+static void _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sbilv);
+static void _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data);
+static void _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselOdeOperator *operator, NcmSBesselIntegratorF F, gdouble a_p, gdouble b_p, const gdouble *j_a_p, const gdouble *j_b_p, guint ell_min, guint ell_max, gdouble *result_data, gpointer user_data);
+static void _ncm_sbessel_integrator_levin_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
+static void _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
 
 static void ncm_sbessel_integrator_levin_direct_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
 static void ncm_sbessel_integrator_levin_direct_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
@@ -127,13 +134,12 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
 {
   sbilv->max_order        = 0;
   sbilv->reltol           = 0.0;
-  sbilv->n_panels         = 1;
   sbilv->ode_solver       = ncm_sbessel_ode_solver_new ();
   sbilv->ode_operator     = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, 2, 2);
   sbilv->sba              = ncm_sf_sbessel_array_new ();
   sbilv->alloc_max_order  = 0;
-  sbilv->alloc_lmin       = -1;
-  sbilv->alloc_lmax       = -1;
+  sbilv->alloc_ell_min    = -1;
+  sbilv->alloc_ell_max    = -1;
   sbilv->cheb_coeffs      = NULL;
   sbilv->gegen_coeffs     = NULL;
   sbilv->rhs              = NULL;
@@ -145,7 +151,9 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
   sbilv->y_knots_min         = 0.0;
   sbilv->y_knots_max         = 0.0;
   sbilv->n_knots             = 0;
+  sbilv->ell_cache_max       = 0;
   sbilv->knots               = NULL;
+  sbilv->jl_knots            = NULL;
   sbilv->operators           = NULL;
   sbilv->ode_operator_temp_a = NULL;
   sbilv->ode_operator_temp_b = NULL;
@@ -168,6 +176,12 @@ _ncm_sbessel_integrator_levin_dispose (GObject *object)
 
   /* Clear knots-based paneling resources */
   g_clear_pointer (&sbilv->knots, g_array_unref);
+
+  if (sbilv->jl_knots != NULL)
+  {
+    g_free (sbilv->jl_knots);
+    sbilv->jl_knots = NULL;
+  }
 
   if (sbilv->operators != NULL)
   {
@@ -207,9 +221,18 @@ _ncm_sbessel_integrator_levin_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_sbessel_integrator_levin_parent_class)->finalize (object);
 }
 
-static void _ncm_sbessel_integrator_levin_prepare (NcmSBesselIntegrator *sbi);
-static gdouble _ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
-static void _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
+static void
+_ncm_sbessel_integrator_levin_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_sbessel_integrator_levin_parent_class)->constructed (object);
+
+  NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (object);
+
+  /* Prepare knots array and precompute spherical Bessel functions at construction time
+   * since knots parameters and ell_cache_max are CONSTRUCT_ONLY */
+  _ncm_sbessel_integrator_levin_prepare_knots_array (sbilv);
+}
 
 static void
 _ncm_sbessel_integrator_levin_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -226,17 +249,17 @@ _ncm_sbessel_integrator_levin_set_property (GObject *object, guint prop_id, cons
     case PROP_RELTOL:
       ncm_sbessel_integrator_levin_set_reltol (sbilv, g_value_get_double (value));
       break;
-    case PROP_N_PANELS:
-      ncm_sbessel_integrator_levin_set_n_panels (sbilv, g_value_get_uint (value));
-      break;
     case PROP_Y_KNOTS_MIN:
-      ncm_sbessel_integrator_levin_set_y_knots_min (sbilv, g_value_get_double (value));
+      sbilv->y_knots_min = g_value_get_double (value);
       break;
     case PROP_Y_KNOTS_MAX:
-      ncm_sbessel_integrator_levin_set_y_knots_max (sbilv, g_value_get_double (value));
+      sbilv->y_knots_max = g_value_get_double (value);
       break;
     case PROP_N_KNOTS:
-      ncm_sbessel_integrator_levin_set_n_knots (sbilv, g_value_get_uint (value));
+      sbilv->n_knots = g_value_get_uint (value);
+      break;
+    case PROP_ELL_CACHE_MAX:
+      sbilv->ell_cache_max = g_value_get_uint (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -259,9 +282,6 @@ _ncm_sbessel_integrator_levin_get_property (GObject *object, guint prop_id, GVal
     case PROP_RELTOL:
       g_value_set_double (value, ncm_sbessel_integrator_levin_get_reltol (sbilv));
       break;
-    case PROP_N_PANELS:
-      g_value_set_uint (value, ncm_sbessel_integrator_levin_get_n_panels (sbilv));
-      break;
     case PROP_Y_KNOTS_MIN:
       g_value_set_double (value, ncm_sbessel_integrator_levin_get_y_knots_min (sbilv));
       break;
@@ -270,6 +290,9 @@ _ncm_sbessel_integrator_levin_get_property (GObject *object, guint prop_id, GVal
       break;
     case PROP_N_KNOTS:
       g_value_set_uint (value, ncm_sbessel_integrator_levin_get_n_knots (sbilv));
+      break;
+    case PROP_ELL_CACHE_MAX:
+      g_value_set_uint (value, ncm_sbessel_integrator_levin_get_ell_cache_max (sbilv));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -285,6 +308,7 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
 
   object_class->set_property = &_ncm_sbessel_integrator_levin_set_property;
   object_class->get_property = &_ncm_sbessel_integrator_levin_get_property;
+  object_class->constructed  = &_ncm_sbessel_integrator_levin_constructed;
   object_class->dispose      = &_ncm_sbessel_integrator_levin_dispose;
   object_class->finalize     = &_ncm_sbessel_integrator_levin_finalize;
 
@@ -316,24 +340,10 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcmSBesselIntegratorLevin:n-panels:
-   *
-   * Number of panels to divide the integration range in log space. Use 1 to disable
-   * paneling (default). Values greater than 1 will divide the integration range [a, b]
-   * into n_panels in logarithmic space, integrating each panel separately and summing the results.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_N_PANELS,
-                                   g_param_spec_uint ("n-panels",
-                                                      NULL,
-                                                      "Number of integration panels",
-                                                      1, G_MAXUINT, 1,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
    * NcmSBesselIntegratorLevin:y-knots-min:
    *
-   * Minimum value for knots in log-spaced grid. Set to 0 to disable knots-based paneling.
+   * Minimum value for knots in log-spaced grid. Set to 0 to disable knots-based
+   * paneling. This property can only be set during construction.
    */
   g_object_class_install_property (object_class,
                                    PROP_Y_KNOTS_MIN,
@@ -341,12 +351,13 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
                                                         NULL,
                                                         "Minimum knot value",
                                                         0.0, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmSBesselIntegratorLevin:y-knots-max:
    *
-   * Maximum value for knots in log-spaced grid. Set to 0 to disable knots-based paneling.
+   * Maximum value for knots in log-spaced grid. Set to 0 to disable knots-based
+   * paneling. This property can only be set during construction.
    */
   g_object_class_install_property (object_class,
                                    PROP_Y_KNOTS_MAX,
@@ -354,13 +365,14 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
                                                         NULL,
                                                         "Maximum knot value",
                                                         0.0, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmSBesselIntegratorLevin:n-knots:
    *
-   * Number of knots in the log-spaced grid. The knots will be equally spaced in
-   * log space between y-knots-min and y-knots-max. Set to 0 to disable knots-based paneling.
+   * Number of knots in the log-spaced grid. The knots will be equally spaced in log
+   * space between y-knots-min and y-knots-max. Set to 0 to disable knots-based
+   * paneling. This property can only be set during construction.
    */
   g_object_class_install_property (object_class,
                                    PROP_N_KNOTS,
@@ -368,15 +380,32 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
                                                       NULL,
                                                       "Number of knots",
                                                       0, G_MAXUINT, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  parent_class->prepare       = &_ncm_sbessel_integrator_levin_prepare;
-  parent_class->integrate_ell = &_ncm_sbessel_integrator_levin_integrate_ell;
+  /**
+   * NcmSBesselIntegratorLevin:ell-cache-max:
+   *
+   * Maximum ell value for precomputed spherical Bessel functions at knots. The
+   * integrator will precompute j_ell(knot) for all knots and all ell from 0 to
+   * ell-cache-max. This enables fast lookup during integration when the requested
+   * ell values are within the cached range. For ell values beyond ell-cache-max,
+   * the integrator will compute spherical Bessel functions on-the-fly. This property
+   * can only be set during construction.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ELL_CACHE_MAX,
+                                   g_param_spec_uint ("ell-cache-max",
+                                                      NULL,
+                                                      "Maximum ell for cache",
+                                                      0, G_MAXUINT, 500,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  parent_class->set_ell_range = &_ncm_sbessel_integrator_levin_set_ell_range;
   parent_class->integrate     = &_ncm_sbessel_integrator_levin_integrate;
 }
 
 static void
-_ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv, guint max_order, gint lmin, gint lmax)
+_ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv, guint max_order, guint ell_min, guint ell_max)
 {
   gboolean need_realloc = FALSE;
 
@@ -384,7 +413,7 @@ _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv,
   if (sbilv->alloc_max_order != max_order)
     need_realloc = TRUE;
 
-  if ((sbilv->alloc_lmin != lmin) || (sbilv->alloc_lmax != lmax))
+  if ((sbilv->alloc_ell_min != ell_min) || (sbilv->alloc_ell_max != ell_max))
     need_realloc = TRUE;
 
   if (!need_realloc)
@@ -420,20 +449,17 @@ _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv,
   sbilv->rhs          = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), max_order + 2);
 
   /* Allocate arrays for spherical Bessel functions */
-  if (lmax >= 0)
-  {
-    sbilv->j_array_a = g_new0 (gdouble, lmax + 1);
-    sbilv->j_array_b = g_new0 (gdouble, lmax + 1);
-    sbilv->jl_arr    = g_new (gdouble, lmax + 1);
-  }
+  sbilv->j_array_a = g_new0 (gdouble, ell_max + 1);
+  sbilv->j_array_b = g_new0 (gdouble, ell_max + 1);
+  sbilv->jl_arr    = g_new (gdouble, ell_max + 1);
 
   /* Allocate result matrix for batched endpoint computation (max block size is 8) */
   sbilv->endpoints_result = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 8 * 3);
 
   /* Update allocation tracking */
   sbilv->alloc_max_order = max_order;
-  sbilv->alloc_lmin      = lmin;
-  sbilv->alloc_lmax      = lmax;
+  sbilv->alloc_ell_min   = ell_min;
+  sbilv->alloc_ell_max   = ell_max;
 }
 
 /**
@@ -456,6 +482,7 @@ _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sb
   /* Create log-spaced knots array */
   sbilv->knots = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), sbilv->n_knots);
 
+  /* Create log-spaced knots array */
   {
     const gdouble ln_y_min = log (sbilv->y_knots_min);
     const gdouble ln_y_max = log (sbilv->y_knots_max);
@@ -469,16 +496,33 @@ _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sb
 
       g_array_append_val (sbilv->knots, y);
     }
+  }
 
-    printf ("Prepared %u knots from %e to %e\n", sbilv->n_knots, sbilv->y_knots_min, sbilv->y_knots_max);
+  /* Precompute j_ell at all knots for ell from 0 to ell_cache_max */
+  if (sbilv->ell_cache_max > 0)
+  {
+    const guint n_ell = sbilv->ell_cache_max + 1;
+    guint i;
+
+    /* Allocate flat array: jl_knots[knot_idx * n_ell + ell] */
+    sbilv->jl_knots = g_new (gdouble, sbilv->n_knots * n_ell);
+
+    for (i = 0; i < sbilv->n_knots; i++)
+    {
+      const gdouble y     = g_array_index (sbilv->knots, gdouble, i);
+      gdouble *jl_at_knot = &sbilv->jl_knots[i * n_ell];
+
+      /* Compute all j_ell(y) for ell = 0, 1, ..., ell_cache_max */
+      ncm_sf_sbessel_array_eval (sbilv->sba, sbilv->ell_cache_max, y, jl_at_knot);
+    }
   }
 }
 
 /**
  * _ncm_sbessel_integrator_levin_prepare_knots_operators:
  * @sbilv: a #NcmSBesselIntegratorLevin
- * @lmin: minimum multipole
- * @lmax: maximum multipole
+ * @ell_min: minimum multipole
+ * @ell_max: maximum multipole
  *
  * Prepares ODE operators for the knots-based paneling system:
  * - Pre-allocated ODE operators for each panel between consecutive knots
@@ -487,118 +531,152 @@ _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sb
  * Uses ncm_sbessel_ode_operator_reset() to efficiently update operators when ell range changes.
  */
 static void
-_ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin *sbilv, gint lmin, gint lmax)
+_ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin *sbilv, guint ell_min, guint ell_max)
 {
   guint i;
 
   /* Only prepare if knots array exists */
   if (sbilv->knots == NULL)
+  {
     return;
-
-  /* Check if operators need to be created or reset */
-  const gboolean need_create = (sbilv->operators == NULL);
-  const gboolean need_reset  = !need_create && ((sbilv->alloc_lmin != lmin) || (sbilv->alloc_lmax != lmax));
-
-  if (!need_create && !need_reset)
-    return;  /* Operators already prepared for this ell range */
-
-  if (need_create)
-  {
-    /* First time: create all operators */
-    sbilv->operators = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_sbessel_ode_operator_unref);
-
-    for (i = 0; i < sbilv->n_knots - 1; i++)
-    {
-      const gdouble y_a = g_array_index (sbilv->knots, gdouble, i);
-      const gdouble y_b = g_array_index (sbilv->knots, gdouble, i + 1);
-      NcmSBesselOdeOperator *op;
-
-      op = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, y_a, y_b, lmin, lmax);
-      g_ptr_array_add (sbilv->operators, op);
-    }
-
-    /* Create temporary operators for edge panels */
-    sbilv->ode_operator_temp_a = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, lmin, lmax);
-    sbilv->ode_operator_temp_b = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, lmin, lmax);
-
-    printf ("Created %u knots-based operators for ell=[%d, %d]\n", sbilv->n_knots - 1, lmin, lmax);
   }
-  else if (need_reset)
+  else
   {
-    /* Operators exist but ell range changed: reset them efficiently */
-    for (i = 0; i < sbilv->operators->len; i++)
+    const gboolean need_create = (sbilv->operators == NULL);
+    const gboolean need_reset  = !need_create && ((sbilv->alloc_ell_min != ell_min) || (sbilv->alloc_ell_max != ell_max));
+
+    if (!need_create && !need_reset)
+      return;
+
+    if (need_create)
     {
-      NcmSBesselOdeOperator *op = g_ptr_array_index (sbilv->operators, i);
-      const gdouble y_a         = g_array_index (sbilv->knots, gdouble, i);
-      const gdouble y_b         = g_array_index (sbilv->knots, gdouble, i + 1);
+      sbilv->operators = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_sbessel_ode_operator_unref);
 
-      ncm_sbessel_ode_operator_reset (op, y_a, y_b, lmin, lmax);
+      for (i = 0; i < sbilv->n_knots - 1; i++)
+      {
+        const gdouble y_a = g_array_index (sbilv->knots, gdouble, i);
+        const gdouble y_b = g_array_index (sbilv->knots, gdouble, i + 1);
+        NcmSBesselOdeOperator *op;
+
+        op = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, y_a, y_b, ell_min, ell_max);
+        g_ptr_array_add (sbilv->operators, op);
+      }
+
+      sbilv->ode_operator_temp_a = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, ell_min, ell_max);
+      sbilv->ode_operator_temp_b = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, ell_min, ell_max);
     }
+    else if (need_reset)
+    {
+      for (i = 0; i < sbilv->operators->len; i++)
+      {
+        NcmSBesselOdeOperator *op = g_ptr_array_index (sbilv->operators, i);
+        const gdouble y_a         = g_array_index (sbilv->knots, gdouble, i);
+        const gdouble y_b         = g_array_index (sbilv->knots, gdouble, i + 1);
 
-    /* Reset temporary operators */
-    ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_a, 0.0, 1.0, lmin, lmax);
-    ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_b, 0.0, 1.0, lmin, lmax);
+        ncm_sbessel_ode_operator_reset (op, y_a, y_b, ell_min, ell_max);
+      }
 
-    printf ("Reset %u knots-based operators for ell=[%d, %d]\n", sbilv->n_knots - 1, lmin, lmax);
+      /* Reset temporary operators */
+      ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_a, 0.0, 1.0, ell_min, ell_max);
+      ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_b, 0.0, 1.0, ell_min, ell_max);
+    }
   }
 }
 
+/**
+ * _ncm_sbessel_integrator_levin_compute_rhs:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @spectral: spectral methods object
+ * @F: integrand function
+ * @a: lower integration bound
+ * @b: upper integration bound
+ * @user_data: user data for integrand
+ *
+ * Computes the RHS for the Levin ODE by:
+ * 1. Computing Chebyshev coefficients for f(x)
+ * 2. Converting to Gegenbauer C^(2) basis
+ * 3. Setting up RHS with homogeneous boundary conditions
+ */
 static void
-_ncm_sbessel_integrator_levin_prepare (NcmSBesselIntegrator *sbi)
+_ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv,
+                                           NcmSpectral *spectral,
+                                           NcmSBesselIntegratorF F,
+                                           gdouble a, gdouble b,
+                                           gpointer user_data)
 {
-  NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
-  const guint lmin                 = ncm_sbessel_integrator_get_lmin (sbi);
-  const guint lmax                 = ncm_sbessel_integrator_get_lmax (sbi);
-
-  _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, lmin, lmax);
-  _ncm_sbessel_integrator_levin_prepare_knots_array (sbilv);
-  _ncm_sbessel_integrator_levin_prepare_knots_operators (sbilv, lmin, lmax);
-}
-
-static gdouble
-_ncm_sbessel_integrator_levin_integrate_ell (NcmSBesselIntegrator *sbi,
-                                             NcmSBesselIntegratorF F,
-                                             gdouble a, gdouble b,
-                                             gint ell,
-                                             gpointer user_data)
-{
-  NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
-  NcmSBesselOdeSolver *solver      = sbilv->ode_solver;
-  NcmSpectral *spectral            = ncm_sbessel_ode_solver_peek_spectral (solver);
-
-  printf ("Integrating ell = %u single panel\n", ell);
-
-  /* Ensure resources are allocated */
-  _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, ell, ell);
-
-  /* Set the interval and l value for this integration */
-  ncm_sbessel_ode_operator_reset (sbilv->ode_operator, a, b, ell, ell);
-
-  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 2, 1.0e-15, &sbilv->cheb_coeffs, user_data);
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 3, 1.0e-11, &sbilv->cheb_coeffs, user_data);
   ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
-
   g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
   {
     gdouble *rhs_data                = (gdouble *) sbilv->rhs->data;
     const gdouble *gegen_coeffs_data = (gdouble *) sbilv->gegen_coeffs->data;
 
-    rhs_data[0] = 0.0; /* BC at x=a (t=-1) */
-    rhs_data[1] = 0.0; /* BC at x=b (t=+1) */
-
-    /* Copy Gegenbauer coefficients to RHS starting from index 2 */
+    rhs_data[0] = 0.0;
+    rhs_data[1] = 0.0;
     memcpy (&rhs_data[2], gegen_coeffs_data, sbilv->gegen_coeffs->len * sizeof (gdouble));
   }
+}
 
-  ncm_sbessel_ode_operator_solve_endpoints (sbilv->ode_operator, sbilv->rhs, &sbilv->endpoints_result);
+/**
+ * _ncm_sbessel_integrator_levin_solve_and_accumulate:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @spectral: spectral methods object
+ * @operator: ODE operator for the panel
+ * @F: integrand function
+ * @a_p: lower bound of panel
+ * @b_p: upper bound of panel
+ * @j_a_p: array of j_ell(a_p) values
+ * @j_b_p: array of j_ell(b_p) values
+ * @ell_min: minimum multipole
+ * @ell_max: maximum multipole
+ * @result_data: array to accumulate results
+ * @user_data: user data for integrand
+ *
+ * Solves the Levin ODE for a panel [a_p, b_p] and accumulates (or assigns)
+ * the contribution to the result array.
+ */
+static void
+_ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *sbilv,
+                                                    NcmSpectral *spectral,
+                                                    NcmSBesselOdeOperator *operator,
+                                                    NcmSBesselIntegratorF F,
+                                                    gdouble a_p, gdouble b_p,
+                                                    const gdouble *j_a_p,
+                                                    const gdouble *j_b_p,
+                                                    guint ell_min, guint ell_max,
+                                                    gdouble *result_data,
+                                                    gpointer user_data)
+{
+  guint ell;
 
+  _ncm_sbessel_integrator_levin_compute_rhs (sbilv, spectral, F, a_p, b_p, user_data);
+  ncm_sbessel_ode_operator_solve_endpoints (operator, sbilv->rhs, &sbilv->endpoints_result);
+
+  for (ell = ell_min; ell <= ell_max; ell++)
   {
-    const gdouble y_prime_a = g_array_index (sbilv->endpoints_result, gdouble, 0);
-    const gdouble y_prime_b = g_array_index (sbilv->endpoints_result, gdouble, 1);
-    const gdouble j_l_a     = gsl_sf_bessel_jl (ell, a);
-    const gdouble j_l_b     = gsl_sf_bessel_jl (ell, b);
-    const gdouble integral  = b * b * j_l_b * y_prime_b - a * a * j_l_a * y_prime_a;
+    const gint ell_idx      = ell - ell_min;
+    const gdouble y_prime_a = g_array_index (sbilv->endpoints_result, gdouble, ell_idx * 3 + 0);
+    const gdouble y_prime_b = g_array_index (sbilv->endpoints_result, gdouble, ell_idx * 3 + 1);
+    const gdouble j_l_a     = j_a_p[ell];
+    const gdouble j_l_b     = j_b_p[ell];
+    const gdouble contrib   = b_p * j_l_b * y_prime_b - a_p * j_l_a * y_prime_a;
 
-    return integral;
+    result_data[ell_idx] += contrib;
+  }
+}
+
+static void
+_ncm_sbessel_integrator_levin_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max)
+{
+  NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
+
+  /* Chain up : start */
+  NCM_SBESSEL_INTEGRATOR_CLASS (ncm_sbessel_integrator_levin_parent_class)->set_ell_range (sbi, ell_min, ell_max);
+
+  if ((ell_min != sbilv->alloc_ell_min) || (ell_max != sbilv->alloc_ell_max))
+  {
+    _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, ell_min, ell_max);
+    _ncm_sbessel_integrator_levin_prepare_knots_operators (sbilv, ell_min, ell_max);
   }
 }
 
@@ -609,7 +687,7 @@ ncm_sbessel_integrator_levin_direct_dim (NcmIntegralND *intnd, guint *dim, guint
   NcmSBesselIntegratorLevinArg *arg       = &direct->data;
 
   *dim  = 1;
-  *fdim = arg->lmax - arg->lmin + 1;
+  *fdim = arg->ell_max - arg->ell_min + 1;
 }
 
 static void
@@ -626,12 +704,12 @@ ncm_sbessel_integrator_levin_direct_integ (NcmIntegralND *intnd, NcmVector *x, g
     const gdouble f_xi = arg->F (arg->user_data, xi) / xi;
 
     /* Evaluate all spherical Bessel functions at once */
-    ncm_sf_sbessel_array_eval (sbilv->sba, arg->lmax, xi, arg->jl_arr);
+    ncm_sf_sbessel_array_eval (sbilv->sba, arg->ell_max, xi, arg->jl_arr);
 
     /* Compute integrand for all ells */
     for (j = 0; j < fdim; j++)
     {
-      const guint ell   = arg->lmin + j;
+      const guint ell   = arg->ell_min + j;
       const gdouble res = f_xi * arg->jl_arr[ell];
 
       ncm_vector_fast_set (fval, i * fdim + j, res);
@@ -648,7 +726,7 @@ _ncm_sbessel_integrator_levin_get_ell_threshold (NcmSBesselIntegratorLevin *sbil
 
 static void
 _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv,
-                                                const guint lmin, const guint ell_direct_min, guint ell_direct_max,
+                                                const guint ell_min, const guint ell_max,
                                                 NcmSBesselIntegratorF F, const gdouble a, const gdouble b,
                                                 NcmVector *result, gpointer user_data)
 {
@@ -659,16 +737,16 @@ _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv
   gdouble x_max_val                       = b;
   NcmVector *x_min                        = ncm_vector_new_data_static (&x_min_val, 1, 1);
   NcmVector *x_max                        = ncm_vector_new_data_static (&x_max_val, 1, 1);
-  const guint size                        = ell_direct_max - ell_direct_min + 1;
-  NcmVector *result_sub                   = ncm_vector_get_subvector (result, ell_direct_min - lmin, size);
+  const guint size                        = ell_max - ell_min + 1;
+  NcmVector *result_sub                   = ncm_vector_get_subvector (result, 0, size);
   NcmVector *err                          = ncm_vector_new (size);
 
   /* Setup argument structure */
   arg->sbilv     = sbilv;
   arg->F         = F;
   arg->user_data = user_data;
-  arg->lmin      = ell_direct_min;
-  arg->lmax      = ell_direct_max;
+  arg->ell_min   = ell_min;
+  arg->ell_max   = ell_max;
   arg->jl_arr    = sbilv->jl_arr;
 
   /* Configure integrator */
@@ -688,432 +766,107 @@ _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv
 
 static void
 _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
-                                               const guint lmin, const guint ell_levin_min, const guint ell_levin_max,
+                                               const guint ell_min, const guint ell_max,
                                                NcmSBesselIntegratorF F, const gdouble a, const gdouble b,
                                                NcmVector *result, gpointer user_data)
 {
   NcmSBesselOdeSolver *solver = sbilv->ode_solver;
   NcmSpectral *spectral       = ncm_sbessel_ode_solver_peek_spectral (solver);
   gdouble *result_data        = ncm_vector_data (result);
+  const guint n_ell           = sbilv->ell_cache_max + 1;
+  gint first_knot_idx         = -1;
+  gint last_knot_idx          = -1;
+  gdouble first_knot, last_knot;
+  guint i;
 
   g_assert_cmpuint (ncm_vector_stride (result), ==, 1);
 
   /* Initialize Levin results to zero */
-  memset (&result_data[ell_levin_min - lmin], 0, sizeof (gdouble) * (ell_levin_max - ell_levin_min + 1));
+  memset (result_data, 0, sizeof (gdouble) * (ell_max - ell_min + 1));
 
-  /* Panel dynamics: divide integration range if n_panels > 1 */
-  if (sbilv->n_panels == 1)
+  /* Find knots within [a, b] */
+  for (i = 0; i < sbilv->knots->len; i++)
   {
-    /* No paneling: integrate over full range [a, b] */
-    const gint my_lmax = GSL_MIN (ell_levin_max, ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b));
+    const gdouble knot = g_array_index (sbilv->knots, gdouble, i);
 
-    ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, a, sbilv->j_array_a);
-    ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, b, sbilv->j_array_b);
-
-    /* Step 1: Compute Chebyshev coefficients for f(x) */
-    ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 3, 1.0e-11, &sbilv->cheb_coeffs, user_data);
-
-    /* Step 2: Convert to Gegenbauer C^(2) basis */
-    ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
-
-    printf ("Computed Gegenbauer with len %u\n", sbilv->gegen_coeffs->len);
-    fflush (stdout);
-
-    /* Step 3: Set up RHS with homogeneous boundary conditions */
-    g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
+    if ((knot >= a) && (knot <= b))
     {
-      gdouble *rhs_data                = (gdouble *) sbilv->rhs->data;
-      const gdouble *gegen_coeffs_data = (gdouble *) sbilv->gegen_coeffs->data;
-
-      rhs_data[0] = 0.0; /* BC at x=a (t=-1) */
-      rhs_data[1] = 0.0; /* BC at x=b (t=+1) */
-
-      /* Copy Gegenbauer coefficients to RHS starting from index 2 */
-      memcpy (&rhs_data[2], gegen_coeffs_data, sbilv->gegen_coeffs->len * sizeof (gdouble));
-    }
-
-    /* Step 4-6: Process l values in blocks for better cache locality */
-    {
-      const guint block_size = 8;
-      gint l_start;
-
-      for (l_start = ell_levin_min; l_start <= (gint) ell_levin_max; l_start += block_size)
-      {
-        const gint l_end = GSL_MIN (l_start + block_size - 1, ell_levin_max);
-        gint l;
-
-        ncm_sbessel_ode_operator_reset (sbilv->ode_operator, a, b, ell_levin_min, ell_levin_max);
-
-        /* Solve for all l values in this block using batched solver */
-        printf ("Solving ODE for l = %d to %d\n", l_start, l_end);
-        fflush (stdout);
-        ncm_sbessel_ode_operator_solve_endpoints (sbilv->ode_operator, sbilv->rhs, &sbilv->endpoints_result);
-        fflush (stderr);
-        fflush (stdout);
-        printf ("Done solving ODE for l = %d to %d\n", l_start, l_end);
-        fflush (stdout);
-
-        /* Extract derivatives and compute integrals */
-        for (l = l_start; l <= l_end; l++)
-        {
-          const gint l_idx        = l - lmin;
-          const gint block_idx    = l - l_start;
-          const gdouble y_prime_a = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 0);
-          const gdouble y_prime_b = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 1);
-
-          if (l <= my_lmax)
-          {
-            const gdouble j_l_a = sbilv->j_array_a[l];
-            const gdouble j_l_b = sbilv->j_array_b[l];
-
-            result_data[l_idx] = b * j_l_b * y_prime_b - a * j_l_a * y_prime_a;
-          }
-        }
-      }
-    }
-  }
-  else if ((sbilv->knots != NULL) && (sbilv->knots->len > 0))
-  {
-    /* Knots-based panel mode: use pre-computed knots and operators */
-    guint i;
-    gint first_knot_idx = -1;
-    gint last_knot_idx  = -1;
-
-    /* Find knots within [a, b] */
-    for (i = 0; i < sbilv->knots->len; i++)
-    {
-      const gdouble knot = g_array_index (sbilv->knots, gdouble, i);
-
-      if ((knot > a) && (first_knot_idx == -1))
+      if (first_knot_idx == -1)
         first_knot_idx = i;
 
-      if (knot < b)
-        last_knot_idx = i;
+      last_knot_idx = i;
     }
+  }
 
-    printf ("Knots-based panel mode: range [%e, %e], found knots from %d to %d\n",
-            a, b, first_knot_idx, last_knot_idx);
-    fflush (stdout);
+  /* Use knots-based paneling if configured, otherwise single panel mode */
+  if ((sbilv->knots != NULL) && (sbilv->knots->len > 0) && (first_knot_idx != -1) && (last_knot_idx != -1))
+  {
+    first_knot = g_array_index (sbilv->knots, gdouble, first_knot_idx);
+    last_knot  = g_array_index (sbilv->knots, gdouble, last_knot_idx);
 
     /* Handle edge panel at the start [a, first_knot > a] if needed */
-    if (first_knot_idx > 0)
+    if (a < first_knot)
     {
-      const gdouble a_p  = a;
-      const gdouble b_p  = g_array_index (sbilv->knots, gdouble, first_knot_idx);
-      const gint my_lmax = GSL_MIN (ell_levin_max, ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p));
+      const gdouble a_p    = a;
+      const gdouble b_p    = g_array_index (sbilv->knots, gdouble, first_knot_idx);
+      const gdouble *j_a_p = sbilv->j_array_a;
+      const gdouble *j_b_p = &sbilv->jl_knots[first_knot_idx * n_ell];
 
-      printf ("Edge panel (start): integrating [%e, %e]\n", a_p, b_p);
-      fflush (stdout);
+      ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, a_p, sbilv->j_array_a);
+      ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_a, a_p, b_p, ell_min, ell_max);
 
-      ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, a_p, sbilv->j_array_a);
-      ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, b_p, sbilv->j_array_b);
-
-      /* Compute Chebyshev coefficients */
-      ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a_p, b_p, 3, 1.0e-11, &sbilv->cheb_coeffs, user_data);
-
-      /* Convert to Gegenbauer C^(2) basis */
-      ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
-
-      printf ("Edge panel (start): Computed Gegenbauer with len %u\n", sbilv->gegen_coeffs->len);
-      fflush (stdout);
-
-      /* Set up RHS */
-      g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
-      {
-        gdouble *rhs_data                = (gdouble *) sbilv->rhs->data;
-        const gdouble *gegen_coeffs_data = (gdouble *) sbilv->gegen_coeffs->data;
-
-        rhs_data[0] = 0.0;
-        rhs_data[1] = 0.0;
-        memcpy (&rhs_data[2], gegen_coeffs_data, sbilv->gegen_coeffs->len * sizeof (gdouble));
-      }
-
-      /* Process l values in blocks using temp operator */
-      {
-        const guint block_size = 8;
-        gint l_start;
-
-        for (l_start = ell_levin_min; l_start <= (gint) ell_levin_max; l_start += block_size)
-        {
-          const gint l_end = GSL_MIN (l_start + block_size - 1, ell_levin_max);
-          gint l;
-
-          ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_a, a_p, b_p, ell_levin_min, ell_levin_max);
-          ncm_sbessel_ode_operator_solve_endpoints (sbilv->ode_operator_temp_a, sbilv->rhs, &sbilv->endpoints_result);
-          printf ("Edge panel (start): Solved ODE for l = %d to %d, solution order %ld\n", l_start, l_end,
-                  ncm_sbessel_ode_operator_get_n_cols (sbilv->ode_operator_temp_a));
-
-          for (l = l_start; l <= l_end; l++)
-          {
-            const gint l_idx        = l - lmin;
-            const gint block_idx    = l - l_start;
-            const gdouble y_prime_a = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 0);
-            const gdouble y_prime_b = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 1);
-
-            if (l <= my_lmax)
-            {
-              const gdouble j_l_a = sbilv->j_array_a[l];
-              const gdouble j_l_b = sbilv->j_array_b[l];
-
-              result_data[l_idx] += b_p * j_l_b * y_prime_b - a_p * j_l_a * y_prime_a;
-            }
-          }
-        }
-      }
-
-      printf ("Edge panel (start): Complete\n");
-      fflush (stdout);
+      _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, sbilv->ode_operator_temp_a,
+                                                          F, a_p, b_p, j_a_p, j_b_p,
+                                                          ell_min, ell_max, result_data, user_data);
     }
 
-    /* Process full panels between consecutive knots */
-    if ((first_knot_idx >= 0) && (last_knot_idx >= 0))
+    for (i = first_knot_idx; i < (guint) last_knot_idx; i++)
     {
-      for (i = first_knot_idx; i <= (guint) last_knot_idx; i++)
-      {
-        const gdouble a_p        = g_array_index (sbilv->knots, gdouble, i);
-        const gdouble b_p        = (i + 1 < sbilv->knots->len) ? g_array_index (sbilv->knots, gdouble, i + 1) : b;
-        const gint my_lmax       = GSL_MIN (ell_levin_max, ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p));
-        const guint operator_idx = i - first_knot_idx;
+      const gdouble a_p         = g_array_index (sbilv->knots, gdouble, i);
+      const gdouble b_p         = g_array_index (sbilv->knots, gdouble, i + 1);
+      NcmSBesselOdeOperator *op = g_ptr_array_index (sbilv->operators, i);
+      const gdouble *j_a_p;
+      const gdouble *j_b_p;
 
-        /* Skip if this panel is beyond our integration range */
-        if (a_p >= b)
-          break;
+      j_a_p = &sbilv->jl_knots[i * n_ell];
+      j_b_p = &sbilv->jl_knots[(i + 1) * n_ell];
 
-        /* Clip to integration range */
-        const gdouble a_panel = GSL_MAX (a_p, a);
-        const gdouble b_panel = GSL_MIN (b_p, b);
-
-        printf ("Full panel %u: integrating [%e, %e] using operator %u\n", i, a_panel, b_panel, operator_idx);
-        fflush (stdout);
-
-        ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, a_panel, sbilv->j_array_a);
-        ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, b_panel, sbilv->j_array_b);
-
-        /* Compute Chebyshev coefficients */
-        ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a_panel, b_panel, 3, 1.0e-11, &sbilv->cheb_coeffs, user_data);
-
-        /* Convert to Gegenbauer C^(2) basis */
-        ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
-
-        printf ("Full panel %u: Computed Gegenbauer with len %u\n", i, sbilv->gegen_coeffs->len);
-        fflush (stdout);
-
-        /* Set up RHS */
-        g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
-        {
-          gdouble *rhs_data                = (gdouble *) sbilv->rhs->data;
-          const gdouble *gegen_coeffs_data = (gdouble *) sbilv->gegen_coeffs->data;
-
-          rhs_data[0] = 0.0;
-          rhs_data[1] = 0.0;
-          memcpy (&rhs_data[2], gegen_coeffs_data, sbilv->gegen_coeffs->len * sizeof (gdouble));
-        }
-
-        /* Process l values in blocks using pre-allocated operator */
-        {
-          const guint block_size    = 8;
-          NcmSBesselOdeOperator *op = g_ptr_array_index (sbilv->operators, operator_idx);
-          gint l_start;
-
-          for (l_start = ell_levin_min; l_start <= (gint) ell_levin_max; l_start += block_size)
-          {
-            const gint l_end = GSL_MIN (l_start + block_size - 1, ell_levin_max);
-            gint l;
-
-            ncm_sbessel_ode_operator_reset (op, a_panel, b_panel, ell_levin_min, ell_levin_max);
-            ncm_sbessel_ode_operator_solve_endpoints (op, sbilv->rhs, &sbilv->endpoints_result);
-            printf ("Full panel %u: Solved ODE for l = %d to %d, solution order %ld\n", i, l_start, l_end,
-                    ncm_sbessel_ode_operator_get_n_cols (op));
-
-            for (l = l_start; l <= l_end; l++)
-            {
-              const gint l_idx        = l - lmin;
-              const gint block_idx    = l - l_start;
-              const gdouble y_prime_a = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 0);
-              const gdouble y_prime_b = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 1);
-
-              if (l <= my_lmax)
-              {
-                const gdouble j_l_a = sbilv->j_array_a[l];
-                const gdouble j_l_b = sbilv->j_array_b[l];
-
-                result_data[l_idx] += b_panel * j_l_b * y_prime_b - a_panel * j_l_a * y_prime_a;
-              }
-            }
-          }
-        }
-
-        printf ("Full panel %u: Complete\n", i);
-        fflush (stdout);
-      }
+      _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, op,
+                                                          F, a_p, b_p, j_a_p, j_b_p,
+                                                          ell_min, ell_max, result_data, user_data);
     }
 
-    /* Handle edge panel at the end [last_knot < b, b] if needed */
-    if ((last_knot_idx >= 0) && (last_knot_idx < (gint) (sbilv->knots->len - 1)))
+    if (b > last_knot)
     {
-      const gdouble a_p  = g_array_index (sbilv->knots, gdouble, last_knot_idx + 1);
-      const gdouble b_p  = b;
-      const gint my_lmax = GSL_MIN (ell_levin_max, ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p));
+      const gdouble a_p    = g_array_index (sbilv->knots, gdouble, last_knot_idx);
+      const gdouble b_p    = b;
+      const gdouble *j_a_p = &sbilv->jl_knots[last_knot_idx * n_ell];
+      const gdouble *j_b_p = sbilv->j_array_b;
 
-      /* Only process if there's an interval beyond the last full knot */
-      if (a_p < b_p)
-      {
-        printf ("Edge panel (end): integrating [%e, %e]\n", a_p, b_p);
-        fflush (stdout);
+      ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, b_p, sbilv->j_array_b);
+      ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_b, a_p, b_p, ell_min, ell_max);
 
-        ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, a_p, sbilv->j_array_a);
-        ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, b_p, sbilv->j_array_b);
-
-        /* Compute Chebyshev coefficients */
-        ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a_p, b_p, 3, 1.0e-11, &sbilv->cheb_coeffs, user_data);
-
-        /* Convert to Gegenbauer C^(2) basis */
-        ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
-
-        printf ("Edge panel (end): Computed Gegenbauer with len %u\n", sbilv->gegen_coeffs->len);
-        fflush (stdout);
-
-        /* Set up RHS */
-        g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
-        {
-          gdouble *rhs_data                = (gdouble *) sbilv->rhs->data;
-          const gdouble *gegen_coeffs_data = (gdouble *) sbilv->gegen_coeffs->data;
-
-          rhs_data[0] = 0.0;
-          rhs_data[1] = 0.0;
-          memcpy (&rhs_data[2], gegen_coeffs_data, sbilv->gegen_coeffs->len * sizeof (gdouble));
-        }
-
-        /* Process l values in blocks using temp operator */
-        {
-          const guint block_size = 8;
-          gint l_start;
-
-          for (l_start = ell_levin_min; l_start <= (gint) ell_levin_max; l_start += block_size)
-          {
-            const gint l_end = GSL_MIN (l_start + block_size - 1, ell_levin_max);
-            gint l;
-
-            ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_b, a_p, b_p, ell_levin_min, ell_levin_max);
-            ncm_sbessel_ode_operator_solve_endpoints (sbilv->ode_operator_temp_b, sbilv->rhs, &sbilv->endpoints_result);
-            printf ("Edge panel (end): Solved ODE for l = %d to %d, solution order %ld\n", l_start, l_end,
-                    ncm_sbessel_ode_operator_get_n_cols (sbilv->ode_operator_temp_b));
-
-            for (l = l_start; l <= l_end; l++)
-            {
-              const gint l_idx        = l - lmin;
-              const gint block_idx    = l - l_start;
-              const gdouble y_prime_a = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 0);
-              const gdouble y_prime_b = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 1);
-
-              if (l <= my_lmax)
-              {
-                const gdouble j_l_a = sbilv->j_array_a[l];
-                const gdouble j_l_b = sbilv->j_array_b[l];
-
-                result_data[l_idx] += b_p * j_l_b * y_prime_b - a_p * j_l_a * y_prime_a;
-              }
-            }
-          }
-        }
-
-        printf ("Edge panel (end): Complete\n");
-        fflush (stdout);
-      }
+      _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, sbilv->ode_operator_temp_b,
+                                                          F, a_p, b_p, j_a_p, j_b_p,
+                                                          ell_min, ell_max, result_data, user_data);
     }
   }
   else
   {
-    /* Panel mode: divide [a, b] into n_panels in logarithmic space */
-    const gdouble ln_a = log (a);
-    const gdouble ln_b = log (b);
-    const gdouble L    = ln_b - ln_a;
-    const gdouble dln  = L / sbilv->n_panels;
-    guint panel_idx;
+    /* No paneling: integrate over full range [a, b] */
+    const gdouble *j_a_p;
+    const gdouble *j_b_p;
 
-    printf ("Panel mode: dividing range [%e, %e] into %u panels in log space\n", a, b, sbilv->n_panels);
-    fflush (stdout);
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, a, sbilv->j_array_a);
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, b, sbilv->j_array_b);
+    j_a_p = sbilv->j_array_a;
+    j_b_p = sbilv->j_array_b;
 
-    for (panel_idx = 0; panel_idx < sbilv->n_panels; panel_idx++)
-    {
-      const gdouble ln_a_p = ln_a + panel_idx * dln;
-      const gdouble ln_b_p = ln_a + (panel_idx + 1) * dln;
-      const gdouble a_p    = exp (ln_a_p);
-      const gdouble b_p    = exp (ln_b_p);
-      const gint my_lmax   = GSL_MIN (ell_levin_max, ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p));
+    ncm_sbessel_ode_operator_reset (sbilv->ode_operator, a, b, ell_min, ell_max);
 
-      printf ("Panel %u/%u: integrating [%e, %e]\n", panel_idx + 1, sbilv->n_panels, a_p, b_p);
-      fflush (stdout);
-
-      ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, a_p, sbilv->j_array_a);
-      ncm_sf_sbessel_array_eval (sbilv->sba, my_lmax, b_p, sbilv->j_array_b);
-
-      /* Step 1: Compute Chebyshev coefficients for f(x) for this panel */
-      ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a_p, b_p, 3, 1.0e-11, &sbilv->cheb_coeffs, user_data);
-
-      /* Step 2: Convert to Gegenbauer C^(2) basis */
-      ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
-
-      printf ("Panel %u/%u: Computed Gegenbauer with len %u\n", panel_idx + 1, sbilv->n_panels, sbilv->gegen_coeffs->len);
-      fflush (stdout);
-
-      /* Step 3: Set up RHS with homogeneous boundary conditions */
-      g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
-      {
-        gdouble *rhs_data                = (gdouble *) sbilv->rhs->data;
-        const gdouble *gegen_coeffs_data = (gdouble *) sbilv->gegen_coeffs->data;
-
-        rhs_data[0] = 0.0; /* BC at x=a_p (t=-1) */
-        rhs_data[1] = 0.0; /* BC at x=b_p (t=+1) */
-
-        /* Copy Gegenbauer coefficients to RHS starting from index 2 */
-        memcpy (&rhs_data[2], gegen_coeffs_data, sbilv->gegen_coeffs->len * sizeof (gdouble));
-      }
-
-      /* Step 4-6: Process l values in blocks for better cache locality */
-      {
-        const guint block_size = 8;
-        gint l_start;
-
-        for (l_start = ell_levin_min; l_start <= (gint) ell_levin_max; l_start += block_size)
-        {
-          const gint l_end = GSL_MIN (l_start + block_size - 1, ell_levin_max);
-          gint l;
-
-          ncm_sbessel_ode_operator_reset (sbilv->ode_operator, a_p, b_p, ell_levin_min, ell_levin_max);
-
-          /* Solve for all l values in this block using batched solver */
-          printf ("Panel %u/%u: Solving ODE for l = %d to %d\n", panel_idx + 1, sbilv->n_panels, l_start, l_end);
-          fflush (stdout);
-          ncm_sbessel_ode_operator_solve_endpoints (sbilv->ode_operator, sbilv->rhs, &sbilv->endpoints_result);
-          fflush (stderr);
-          fflush (stdout);
-          printf ("Panel %u/%u: Done solving ODE for l = %d to %d\n", panel_idx + 1, sbilv->n_panels, l_start, l_end);
-          fflush (stdout);
-
-          /* Extract derivatives and accumulate integrals */
-          for (l = l_start; l <= l_end; l++)
-          {
-            const gint l_idx        = l - lmin;
-            const gint block_idx    = l - l_start;
-            const gdouble y_prime_a = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 0);
-            const gdouble y_prime_b = g_array_index (sbilv->endpoints_result, gdouble, block_idx * 3 + 1);
-
-            if (l <= my_lmax)
-            {
-              const gdouble j_l_a = sbilv->j_array_a[l];
-              const gdouble j_l_b = sbilv->j_array_b[l];
-
-              /* Accumulate contribution from this panel */
-              result_data[l_idx] += b_p * j_l_b * y_prime_b - a_p * j_l_a * y_prime_a;
-            }
-          }
-        }
-      }
-
-      printf ("Panel %u/%u: Complete\n", panel_idx + 1, sbilv->n_panels);
-      fflush (stdout);
-    }
+    _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, sbilv->ode_operator,
+                                                        F, a, b, j_a_p, j_b_p,
+                                                        ell_min, ell_max, result_data, user_data);
   }
 }
 
@@ -1125,52 +878,54 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
                                          gpointer user_data)
 {
   NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
-  const guint lmin                 = ncm_sbessel_integrator_get_lmin (sbi);
-  const guint lmax                 = ncm_sbessel_integrator_get_lmax (sbi);
-  const guint n_ell                = lmax - lmin + 1;
-  const guint ell_threshold        = _ncm_sbessel_integrator_levin_get_ell_threshold (sbilv, a, b);
+  guint ell_min, ell_max;
+  guint n_ell, ell_threshold;
+
+  ncm_sbessel_integrator_get_ell_range (sbi, &ell_min, &ell_max);
+  n_ell         = ell_max - ell_min + 1;
+  ell_threshold = _ncm_sbessel_integrator_levin_get_ell_threshold (sbilv, a, b);
 
   g_assert_cmpuint (ncm_vector_len (result), ==, n_ell);
 
   /* Ensure resources are allocated */
-  _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, lmin, lmax);
+  _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, ell_min, ell_max);
 
   /* Use direct cubature integration for high ell values */
-  if (lmax >= ell_threshold)
-  {
-    const guint ell_direct_max = lmax;
-    const guint ell_direct_min = GSL_MAX (lmin, ell_threshold);
-
-    if (ell_direct_min <= ell_direct_max)
-      _ncm_sbessel_integrator_levin_integrate_direct (sbilv, lmin, ell_direct_min, ell_direct_max, F, a, b, result, user_data);
-  }
-
-  /* Use Levin method for low ell values */
-  if (lmin < ell_threshold)
-  {
-    const guint ell_levin_min = lmin;
-    const guint ell_levin_max = GSL_MIN (ell_threshold - 1, lmax);
-
-    if (ell_levin_min <= ell_levin_max)
-      _ncm_sbessel_integrator_levin_integrate_levin (sbilv, lmin, ell_levin_min, ell_levin_max, F, a, b, result, user_data);
-  }
+  if (ell_threshold <= ell_max)
+    _ncm_sbessel_integrator_levin_integrate_direct (sbilv, ell_min, ell_max, F, a, b, result, user_data);
+  else
+    _ncm_sbessel_integrator_levin_integrate_levin (sbilv, ell_min, ell_max, F, a, b, result, user_data);
 }
 
 /**
  * ncm_sbessel_integrator_levin_new:
- * @lmin: minimum multipole
- * @lmax: maximum multipole
+ * @ell_min: minimum multipole
+ * @ell_max: maximum multipole
+ * @y_knots_min: minimum value for knots in log-spaced grid (set to 0 to disable knots-based paneling)
+ * @y_knots_max: maximum value for knots in log-spaced grid (set to 0 to disable knots-based paneling)
+ * @n_knots: number of knots in the log-spaced grid (set to 0 to disable knots-based paneling)
+ * @ell_cache_max: maximum ell value for precomputed spherical Bessel functions at knots
  *
- * Creates a new #NcmSBesselIntegratorLevin.
+ * Creates a new #NcmSBesselIntegratorLevin with optional knots-based paneling.
+ * To disable knots-based paneling and use single panel mode, set @y_knots_min,
+ * @y_knots_max, or @n_knots to 0.
+ *
+ * The @ell_cache_max parameter controls the maximum ell value for which spherical
+ * Bessel functions will be precomputed at all knots. For ell values beyond this,
+ * spherical Bessel functions will be computed on-the-fly during integration.
  *
  * Returns: (transfer full): a new #NcmSBesselIntegratorLevin
  */
 NcmSBesselIntegratorLevin *
-ncm_sbessel_integrator_levin_new (guint lmin, guint lmax)
+ncm_sbessel_integrator_levin_new (guint ell_min, guint ell_max, gdouble y_knots_min, gdouble y_knots_max, guint n_knots, guint ell_cache_max)
 {
   NcmSBesselIntegratorLevin *sbilv = g_object_new (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN,
-                                                   "lmin", lmin,
-                                                   "lmax", lmax,
+                                                   "ell_min", ell_min,
+                                                   "ell_max", ell_max,
+                                                   "y-knots-min", y_knots_min,
+                                                   "y-knots-max", y_knots_max,
+                                                   "n-knots", n_knots,
+                                                   "ell-cache-max", ell_cache_max,
                                                    NULL);
 
   return sbilv;
@@ -1213,33 +968,6 @@ void
 ncm_sbessel_integrator_levin_clear (NcmSBesselIntegratorLevin **sbilv)
 {
   g_clear_object (sbilv);
-}
-
-/**
- * ncm_sbessel_integrator_levin_prepare_for_ell_range:
- * @sbilv: a #NcmSBesselIntegratorLevin
- * @lmin: minimum multipole
- * @lmax: maximum multipole
- *
- * Prepares the integrator for a specific ell range [lmin, lmax].
- * This should be called before integrating for a block of ells.
- *
- * The typical usage pattern is:
- * - Prepare for ell_min=2, ell_max=9
- * - Integrate all kernels for those ells
- * - Prepare for ell_min=10, ell_max=17
- * - Integrate for those ells
- * - And so on...
- *
- * If knots-based paneling is configured (y_knots_min, y_knots_max, n_knots set),
- * this will create or update the ODE operators for the knot panels.
- */
-void
-ncm_sbessel_integrator_levin_prepare_for_ell_range (NcmSBesselIntegratorLevin *sbilv, gint lmin, gint lmax)
-{
-  _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, lmin, lmax);
-  _ncm_sbessel_integrator_levin_prepare_knots_array (sbilv);
-  _ncm_sbessel_integrator_levin_prepare_knots_operators (sbilv, lmin, lmax);
 }
 
 /**
@@ -1297,50 +1025,6 @@ ncm_sbessel_integrator_levin_get_reltol (NcmSBesselIntegratorLevin *sbilv)
 }
 
 /**
- * ncm_sbessel_integrator_levin_set_n_panels:
- * @sbilv: a #NcmSBesselIntegratorLevin
- * @n_panels: number of panels
- *
- * Sets the number of panels for logarithmic division of the integration range.
- * Use 1 to disable paneling (integrate full range at once). Values greater
- * than 1 will divide the range [a, b] into n_panels in logarithmic space.
- */
-void
-ncm_sbessel_integrator_levin_set_n_panels (NcmSBesselIntegratorLevin *sbilv, guint n_panels)
-{
-  g_assert_cmpuint (n_panels, >, 0);
-  sbilv->n_panels = n_panels;
-}
-
-/**
- * ncm_sbessel_integrator_levin_get_n_panels:
- * @sbilv: a #NcmSBesselIntegratorLevin
- *
- * Gets the number of panels.
- *
- * Returns: the number of panels
- */
-guint
-ncm_sbessel_integrator_levin_get_n_panels (NcmSBesselIntegratorLevin *sbilv)
-{
-  return sbilv->n_panels;
-}
-
-/**
- * ncm_sbessel_integrator_levin_set_y_knots_min:
- * @sbilv: a #NcmSBesselIntegratorLevin
- * @y_knots_min: minimum knot value
- *
- * Sets the minimum value for the knots grid. Use with y_knots_max and n_knots
- * to define a pre-computed log-spaced knots grid for paneling.
- */
-void
-ncm_sbessel_integrator_levin_set_y_knots_min (NcmSBesselIntegratorLevin *sbilv, gdouble y_knots_min)
-{
-  sbilv->y_knots_min = y_knots_min;
-}
-
-/**
  * ncm_sbessel_integrator_levin_get_y_knots_min:
  * @sbilv: a #NcmSBesselIntegratorLevin
  *
@@ -1352,20 +1036,6 @@ gdouble
 ncm_sbessel_integrator_levin_get_y_knots_min (NcmSBesselIntegratorLevin *sbilv)
 {
   return sbilv->y_knots_min;
-}
-
-/**
- * ncm_sbessel_integrator_levin_set_y_knots_max:
- * @sbilv: a #NcmSBesselIntegratorLevin
- * @y_knots_max: maximum knot value
- *
- * Sets the maximum value for the knots grid. Use with y_knots_min and n_knots
- * to define a pre-computed log-spaced knots grid for paneling.
- */
-void
-ncm_sbessel_integrator_levin_set_y_knots_max (NcmSBesselIntegratorLevin *sbilv, gdouble y_knots_max)
-{
-  sbilv->y_knots_max = y_knots_max;
 }
 
 /**
@@ -1383,21 +1053,6 @@ ncm_sbessel_integrator_levin_get_y_knots_max (NcmSBesselIntegratorLevin *sbilv)
 }
 
 /**
- * ncm_sbessel_integrator_levin_set_n_knots:
- * @sbilv: a #NcmSBesselIntegratorLevin
- * @n_knots: number of knots
- *
- * Sets the number of knots in the log-spaced grid. The knots will be
- * equally spaced in log space between y_knots_min and y_knots_max.
- * An ODE operator will be pre-allocated for each panel between consecutive knots.
- */
-void
-ncm_sbessel_integrator_levin_set_n_knots (NcmSBesselIntegratorLevin *sbilv, guint n_knots)
-{
-  sbilv->n_knots = n_knots;
-}
-
-/**
  * ncm_sbessel_integrator_levin_get_n_knots:
  * @sbilv: a #NcmSBesselIntegratorLevin
  *
@@ -1409,5 +1064,19 @@ guint
 ncm_sbessel_integrator_levin_get_n_knots (NcmSBesselIntegratorLevin *sbilv)
 {
   return sbilv->n_knots;
+}
+
+/**
+ * ncm_sbessel_integrator_levin_get_ell_cache_max:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ *
+ * Gets the maximum ell value for the precomputed spherical Bessel cache.
+ *
+ * Returns: the maximum ell value for cache
+ */
+guint
+ncm_sbessel_integrator_levin_get_ell_cache_max (NcmSBesselIntegratorLevin *sbilv)
+{
+  return sbilv->ell_cache_max;
 }
 
