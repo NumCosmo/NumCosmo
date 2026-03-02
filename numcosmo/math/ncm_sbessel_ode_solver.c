@@ -26,48 +26,139 @@
 /**
  * NcmSBesselOdeSolver:
  *
- * Modified spherical Bessel ODE solver using ultraspherical spectral methods.
+ * Spectral ODE solver for the spherical Bessel equation in polynomial form using
+ * ultraspherical methods.
  *
- * This object acts as a factory and configuration manager for solving modified spherical
- * Bessel ODEs. The actual solving is performed by #NcmSBesselOdeOperator instances created
- * from this solver, which encapsulate the problem-specific parameters (interval [a,b] and
- * angular momentum range [ell_min, ell_max]).
+ * This class provides a pure spectral engine for solving two-point boundary value
+ * problems arising from modified spherical Bessel ordinary differential equations. It
+ * acts as a factory and configuration manager that creates #NcmSBesselOdeOperator
+ * instances, each encapsulating a specific problem configuration defined by an
+ * interval $[a,b]$ and an angular momentum range $[\ell_{\min}, \ell_{\max}]$.
+ *
+ * The equation is assumed to be written in the polynomial form
+ * $$
+ * x^2 y'' + 2x y' + (x^2 - \ell(\ell+1)) y = f(x),
+ * $$
+ * which avoids rational coefficients and preserves banded structure under spectral
+ * discretization.
+ *
+ * # Scope and Abstraction Boundary
+ *
+ * This solver is a low-level spectral discretization engine. It:
+ * - Constructs banded linear systems from the ODE using ultraspherical spectral collocation
+ * - Performs adaptive QR factorization to determine spectral truncation order
+ * - Solves the resulting banded triangular systems via back-substitution
+ * - Supports batched solution of multiple angular momentum values for efficiency
+ *
+ * This solver does NOT:
+ * - Perform regime switching (e.g., asymptotic expansions, direct quadrature)
+ * - Subdivide the $\ell$-range or interval $[a,b]$ based on convergence heuristics
+ * - Make policy decisions about when to apply spectral vs. other methods
+ * - Handle interval selection, domain decomposition, or integration strategies
+ *
+ * Such higher-level integration logic is the responsibility of the caller.
  *
  * # Problem Formulation
  *
- * Solves the modified spherical Bessel ODE for $u(x) = x \cdot j_\ell(x)$ (or $u(x) = x \cdot y_\ell(x)$)
- * mapped to the Chebyshev domain $[-1,1]$. For an interval $[a,b]$, the mapping is
- * $x = m + h\xi$ where $m = (a+b)/2$ and $h = (b-a)/2$.
- *
- * The ODE in the mapped coordinates is:
+ * The solver addresses the spherical Bessel ODE written in polynomial form for the
+ * auxiliary function $u(x) = x \cdot j_\ell(x)$ (or equivalently $u(x) = x \cdot
+ * y_\ell(x)$), mapped to the canonical Chebyshev domain $[-1,1]$. Given a physical
+ * interval $[a,b]$, the affine coordinate transformation is
  * $$
- * \frac{1}{h^2} \frac{d^2 u}{d\xi^2} + \left[(m+h\xi)^2 - \ell(\ell+1)\right] u = f(\xi)
+ * x = m + h\xi, \quad m = \frac{a+b}{2}, \quad h = \frac{b-a}{2}, \quad \xi \in [-1,1].
  * $$
- * with Dirichlet boundary conditions $u(-1) = 0$ and $u(1) = 0$.
  *
- * This formulation eliminates the first derivative term compared to the standard
- * spherical Bessel equation for $j_\ell(x)$. By solving for $u = x \cdot j_\ell(x)$ instead
- * of $j_\ell(x)$ directly, the equation becomes simpler and more numerically stable.
+ * The transformed ODE is
+ * $$
+ * \frac{(m + h\xi)^2}{h^2} \frac{d^2 u}{d\xi^2} + \left[(m+h\xi)^2 - \ell(\ell+1)\right] u =
+ * (m + h\xi)f(\xi).
+ * $$
  *
- * # Numerical Method
+ * The problem is posed with Dirichlet boundary conditions at the endpoints
+ * $\xi = \pm 1$. The endpoint values are not fixed a priori: they are
+ * specified by the caller through the first two entries of the right-hand
+ * side (RHS) vector passed to ncm_sbessel_ode_operator_solve().
  *
- * The solver uses adaptive QR decomposition with the ultraspherical spectral method:
- * - The solution is expanded in Chebyshev polynomials $T_n(\xi)$
- * - Differential operators are represented in Gegenbauer $C^{(2)}_k$ basis ($\lambda=2$)
- * - Multiplication operators use exact polynomial multiplication formulas
- * - Adaptive QR determines the required series truncation automatically
- * - The matrix is built using specialized operator functions for maximum efficiency
+ * In particular:
+ * - RHS[0] sets $u(-1)$,
+ * - RHS[1] sets $u(+1)$.
  *
- * The method provides exponential convergence for smooth solutions and naturally
- * handles the coordinate transformation from the physical domain $[a,b]$ to $[-1,1]$.
+ * From RHS[2] onward, the entries correspond to the Gegenbauer-basis coefficients of
+ * the weighted forcing term $(m + h\xi) f(\xi)$.
  *
- * # Usage Pattern
+ * Homogeneous Dirichlet conditions are obtained by setting RHS[0] = RHS[1] = 0.
  *
- * 1. Create a solver with ncm_sbessel_ode_solver_new()
- * 2. Set desired tolerance with ncm_sbessel_ode_solver_set_tolerance()
- * 3. Create one or more operators with ncm_sbessel_ode_solver_create_operator()
- * 4. Use operators to solve problems via ncm_sbessel_ode_operator_solve() or ncm_sbessel_ode_operator_solve_endpoints()
- * 5. Operators can be reused with ncm_sbessel_ode_operator_reset() or destroyed with ncm_sbessel_ode_operator_unref()
+ * By solving for $u = x \cdot j_\ell(x)$ rather than $j_\ell(x)$ directly, the first-order
+ * derivative term is eliminated, yielding a more symmetric and numerically stable formulation.
+ * The physical solution $j_\ell(x)$ is recovered by dividing: $j_\ell(x) = u(x)/x$.
+ *
+ * # Spectral Discretization Method
+ *
+ * The numerical approach employs an adaptive ultraspherical spectral collocation scheme:
+ *
+ * - The solution $u(\xi)$ is expanded in Chebyshev polynomials of the first kind:
+ *   $u(\xi) = \sum_{n=0}^N c_n T_n(\xi)$
+ * - The second derivative operator is represented in the ultraspherical (Gegenbauer)
+ *   basis $C_k^{(2)}$ with parameter $\lambda=2$
+ * - Multiplication operators corresponding to $(m+h\xi)^2$ and $\ell(\ell+1)$ are
+ *   constructed via exact polynomial recurrence relations
+ * - Boundary conditions are enforced by replacing the first two rows of the discrete
+ *   system with endpoint evaluation constraints, fixing $u(-1) =$ RHS[0] and $u(+1) =$
+ *   RHS[1]
+ * - Adaptive QR decomposition determines the truncation order $N$ required to satisfy
+ *   the specified tolerance
+ *
+ * The resulting discrete system is a banded linear system with bandwidth independent
+ * of $N$, enabling linear complexity in $N$ per angular momentum value once factored.
+ * The method achieves exponential (spectral) convergence provided the weighted forcing
+ * term $(m + h\xi) f(\xi)$ is smooth on $[-1,1]$. The additional factor of $x$
+ * improves regularity near $x=0$ in applications where $f(x)$ has mild singular
+ * behavior.
+ *
+ * # Performance and Memory Scaling
+ *
+ * Computational and memory costs are determined by two factors:
+ *
+ * **Batched Operators ($n_\ell$ angular momentum values):**
+ *
+ * The operator may solve simultaneously for
+ * $$
+ * n_\ell = \ell_{\max} - \ell_{\min} + 1
+ * $$
+ * angular momentum values. Both memory usage and factorization cost scale
+ * approximately linearly with $n_\ell$.
+ *
+ * The implementation provides specialized optimized kernels for batch sizes
+ * $$
+ *   n_\ell = 2, 4, 8, 16, 32, 64.
+ * $$
+ * These sizes typically provide the best performance due to improved vectorization and
+ * cache utilization. Other batch sizes are supported through a generic internal
+ * implementation, which may be less efficient.
+ *
+ * Larger batches increase memory footprint and may reduce cache efficiency depending
+ * on the architecture.
+ *
+ * **Spectral Truncation Order ($N$):**
+ * The required truncation order $N$ depends on:
+ * - Interval length $b-a$: larger intervals generally require higher $N$ for fixed tolerance
+ * - Angular momentum $\ell$: higher $\ell$ increases oscillatory behavior, requiring larger $N$
+ * - Smoothness of $f(\xi)$: singular or highly oscillatory forcing may require substantially higher $N$
+ *
+ * Both memory ($O(N n_\ell)$) and factorization cost ($O(N n_\ell)$) scale linearly
+ * with $N$ and $n_\ell$. Back-substitution for a single solve costs $O(N n_\ell)$. For
+ * repeated solves with the same operator parameters, the factorization is reused,
+ * making additional solves inexpensive.
+ *
+ * # Typical Usage
+ *
+ * 1. Create a solver instance: ncm_sbessel_ode_solver_new()
+ * 2. Configure tolerance: ncm_sbessel_ode_solver_set_tolerance()
+ * 3. Allocate an operator for given $[a,b]$ and $[\ell_{\min}, \ell_{\max}]$: ncm_sbessel_ode_solver_create_operator()
+ * 4. Solve one or more problems: ncm_sbessel_ode_operator_solve() or ncm_sbessel_ode_operator_solve_endpoints()
+ * 5. Reuse or reconfigure: ncm_sbessel_ode_operator_reset(), or deallocate: ncm_sbessel_ode_operator_unref()
+ *
+ * Multiple operators can coexist, each configured for a different interval or $\ell$-range.
  *
  */
 
@@ -129,24 +220,29 @@ typedef struct _NcmSBesselOdeSolverRow
 /**
  * _NcmSBesselOdeOperator:
  *
- * Opaque structure encapsulating operator-specific data for the spherical Bessel ODE.
- * Contains structural parameters, matrix storage, and diagonalization state.
- * Uses reference counting for memory management.
+ * Opaque structure representing a configured spectral operator for modified spherical Bessel ODEs.
+ *
+ * Encapsulates all problem-specific parameters, matrix storage, and factorization state required
+ * to solve the boundary value problem over a fixed interval $[a,b]$ and angular momentum range
+ * $[\ell_{\min}, \ell_{\max}]$. Supports both single and batched (multiple $\ell$) solution modes.
+ *
+ * Memory is managed via reference counting. The operator can be reused for multiple right-hand sides
+ * with the same structural parameters, or reconfigured via ncm_sbessel_ode_operator_reset().
  */
 struct _NcmSBesselOdeOperator
 {
   /* Reference count */
   gint ref_count;
 
-  /* Structural parameters */
-  gdouble a;         /* Left endpoint of interval */
-  gdouble b;         /* Right endpoint of interval */
-  gdouble half_len;  /* (b-a)/2 - half length of interval */
-  gdouble mid_point; /* (a+b)/2 - midpoint of interval */
-  gint ell_min;      /* Minimum angular momentum */
-  gint ell_max;      /* Maximum angular momentum */
-  guint n_ell;       /* Number of ell values (ell_max - ell_min + 1) */
-  gdouble tolerance; /* Convergence tolerance for adaptive QR */
+  /* Structural parameters defining the problem configuration */
+  gdouble a;         /* Left endpoint of interval [a,b] */
+  gdouble b;         /* Right endpoint of interval [a,b] */
+  gdouble half_len;  /* Half-length h = (b-a)/2 for coordinate transformation */
+  gdouble mid_point; /* Midpoint m = (a+b)/2 for coordinate transformation */
+  gint ell_min;      /* Minimum angular momentum in batch */
+  gint ell_max;      /* Maximum angular momentum in batch */
+  guint n_ell;       /* Number of angular momentum values: n_ell = ell_max - ell_min + 1 */
+  gdouble tolerance; /* Convergence tolerance for adaptive QR factorization */
 
   /* Matrix storage */
   NcmSBesselOdeSolverRow *matrix_rows; /* Aligned array of NcmSBesselOdeSolverRow */

@@ -37,33 +37,37 @@ G_BEGIN_DECLS
 
 /**
  * NcmSBesselOdeSolverF:
- * @user_data: user data
- * @x: point to evaluate
+ * @user_data: user-provided data pointer passed through from the caller
+ * @x: evaluation point in the physical domain (not the mapped Chebyshev domain)
  *
- * Function to be used as right-hand side of the ODE.
+ * Callback function type for the right-hand side forcing term $f(x)$ in the
+ * modified spherical Bessel ODE. The function is evaluated at physical coordinates
+ * $x \in [a,b]$ and should return $f(x)$ corresponding to the inhomogeneous term.
  *
- * Returns: the value of the function at @x
+ * Returns: the value $f(x)$ at the given point @x
  */
 typedef gdouble (*NcmSBesselOdeSolverF) (gpointer user_data, gdouble x);
 
 /**
  * NcmSBesselOdeOperator:
  *
- * Opaque boxed type representing a spherical Bessel ODE operator.
+ * Opaque boxed type for a configured spectral operator.
  *
- * This structure encapsulates all problem-specific data for solving a spherical
- * Bessel ODE, including:
- * - Structural parameters: interval endpoints [a, b] and angular momentum range [ell_min, ell_max]
- * - Matrix storage: banded matrix rows and right-hand side vectors
- * - Diagonalization state: QR factorization and convergence information
- * - Tolerance: convergence criterion copied from the parent solver
+ * Represents a fully configured two-point boundary value problem for the modified
+ * spherical Bessel ODE over a specific interval $[a, b]$ and angular momentum range
+ * $[\ell_{\min}, \ell_{\max}]$. Encapsulates:
+ * - Problem parameters: interval endpoints, angular momentum range, and tolerance
+ * - Discretized system: banded matrix representation and right-hand side storage
+ * - Factorization state: adaptive QR decomposition and spectral truncation order
  *
  * Operators are created from a #NcmSBesselOdeSolver via ncm_sbessel_ode_solver_create_operator()
- * and use reference counting for memory management. They can be reused for multiple solves
- * with the same parameters, or reset with different parameters using ncm_sbessel_ode_operator_reset().
+ * and managed via reference counting. Once created, an operator can be:
+ * - Reused for multiple right-hand sides with the same $[a,b]$ and $[\ell_{\min}, \ell_{\max}]$
+ * - Reconfigured for different parameters via ncm_sbessel_ode_operator_reset()
+ * - Deallocated via ncm_sbessel_ode_operator_unref()
  *
- * The operator supports both single and batched (multiple ell) solving modes, automatically
- * dispatching to optimized implementations based on the number of ell values.
+ * Batched mode (multiple $\ell$ values) is automatically selected and optimized based on
+ * $n_\ell = \ell_{\max} - \ell_{\min} + 1$.
  */
 typedef struct _NcmSBesselOdeOperator NcmSBesselOdeOperator;
 
