@@ -156,7 +156,7 @@ def fixture_test_component() -> NcTestXcorKernelComponent:
 @pytest.fixture(name="integrator", scope="module")
 def fixture_integrator() -> Ncm.SBesselIntegrator:
     """Create a simple spherical Bessel integrator."""
-    integrator = Ncm.SBesselIntegratorLevin.new(0, 2000)
+    integrator = Ncm.SBesselIntegratorLevin.new(0, 2000, 1.0, 1.0e4, 10, 500)
     return integrator
 
 
@@ -345,7 +345,7 @@ def _collect_all_components(
 def get_cases():
     """Get all component cases for parametrization."""
     cosmology = get_cosmology()
-    integrator = Ncm.SBesselIntegratorLevin.new(0, 2000)
+    integrator = Ncm.SBesselIntegratorLevin.new(0, 2000, 1.0, 1.0e4, 10, 500)
     return _collect_all_components(cosmology, integrator)
 
 
@@ -876,7 +876,9 @@ def test_component_k_epsilon_drop1(
 
         # Compute |K*xi| at k_epsilon
         xi_epsilon = y / k_epsilon_val
-        K_at_epsilon = np.abs(xi_epsilon * comp.eval_kernel(cosmo, xi_epsilon, k_epsilon_val))
+        K_at_epsilon = np.abs(
+            xi_epsilon * comp.eval_kernel(cosmo, xi_epsilon, k_epsilon_val)
+        )
 
         # Should be approximately epsilon * K_max
         expected_K = epsilon * K_max_val
