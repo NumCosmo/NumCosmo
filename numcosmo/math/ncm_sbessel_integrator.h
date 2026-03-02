@@ -53,7 +53,7 @@ struct _NcmSBesselIntegratorClass
   /*< private >*/
   GObjectClass parent_class;
 
-  void (*prepare) (NcmSBesselIntegrator *sbi);
+  void (*set_ell_range) (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
   gdouble (*integrate_ell) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
   void (*integrate) (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
 
@@ -65,12 +65,9 @@ NcmSBesselIntegrator *ncm_sbessel_integrator_ref (NcmSBesselIntegrator *sbi);
 void ncm_sbessel_integrator_free (NcmSBesselIntegrator *sbi);
 void ncm_sbessel_integrator_clear (NcmSBesselIntegrator **sbi);
 
-guint ncm_sbessel_integrator_get_lmin (NcmSBesselIntegrator *sbi);
-guint ncm_sbessel_integrator_get_lmax (NcmSBesselIntegrator *sbi);
-void ncm_sbessel_integrator_set_lmin (NcmSBesselIntegrator *sbi, guint lmin);
-void ncm_sbessel_integrator_set_lmax (NcmSBesselIntegrator *sbi, guint lmax);
+void ncm_sbessel_integrator_get_ell_range (NcmSBesselIntegrator *sbi, guint *ell_min, guint *ell_max);
+void ncm_sbessel_integrator_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
 
-void ncm_sbessel_integrator_prepare (NcmSBesselIntegrator *sbi);
 gdouble ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
 void ncm_sbessel_integrator_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
 

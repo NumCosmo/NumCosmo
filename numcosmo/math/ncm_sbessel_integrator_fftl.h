@@ -37,7 +37,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmSBesselIntegratorFFTL, ncm_sbessel_integrator_fftl, NCM, SBESSEL_INTEGRATOR_FFTL, NcmSBesselIntegrator)
 
-NcmSBesselIntegratorFFTL *ncm_sbessel_integrator_fftl_new (guint lmin, guint lmax);
+NcmSBesselIntegratorFFTL *ncm_sbessel_integrator_fftl_new (guint ell_min, guint ell_max);
 NcmSBesselIntegratorFFTL *ncm_sbessel_integrator_fftl_ref (NcmSBesselIntegratorFFTL *sbilf);
 void ncm_sbessel_integrator_fftl_free (NcmSBesselIntegratorFFTL *sbilf);
 void ncm_sbessel_integrator_fftl_clear (NcmSBesselIntegratorFFTL **sbilf);
@@ -45,3 +45,4 @@ void ncm_sbessel_integrator_fftl_clear (NcmSBesselIntegratorFFTL **sbilf);
 G_END_DECLS
 
 #endif /* _NCM_SBESSEL_INTEGRATOR_FFTL_H_ */
+

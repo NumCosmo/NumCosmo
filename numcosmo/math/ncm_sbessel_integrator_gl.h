@@ -37,7 +37,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmSBesselIntegratorGL, ncm_sbessel_integrator_gl, NCM, SBESSEL_INTEGRATOR_GL, NcmSBesselIntegrator)
 
-NcmSBesselIntegratorGL *ncm_sbessel_integrator_gl_new (guint lmin, guint lmax);
+NcmSBesselIntegratorGL *ncm_sbessel_integrator_gl_new (guint ell_min, guint ell_max);
 NcmSBesselIntegratorGL *ncm_sbessel_integrator_gl_ref (NcmSBesselIntegratorGL *sbigl);
 void ncm_sbessel_integrator_gl_free (NcmSBesselIntegratorGL *sbigl);
 void ncm_sbessel_integrator_gl_clear (NcmSBesselIntegratorGL **sbigl);

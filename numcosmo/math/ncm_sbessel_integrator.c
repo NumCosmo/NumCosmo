@@ -42,15 +42,15 @@
 
 typedef struct _NcmSBesselIntegratorPrivate
 {
-  guint lmin;
-  guint lmax;
+  guint ell_min;
+  guint ell_max;
 } NcmSBesselIntegratorPrivate;
 
 enum
 {
   PROP_0,
-  PROP_LMIN,
-  PROP_LMAX,
+  PROP_ELL_MIN,
+  PROP_ELL_MAX,
   PROP_SIZE,
 };
 
@@ -61,8 +61,8 @@ ncm_sbessel_integrator_init (NcmSBesselIntegrator *sbi)
 {
   NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
 
-  self->lmin = 0;
-  self->lmax = 0;
+  self->ell_min = 0;
+  self->ell_max = 0;
 }
 
 static void
@@ -75,11 +75,11 @@ _ncm_sbessel_integrator_set_property (GObject *object, guint prop_id, const GVal
 
   switch (prop_id)
   {
-    case PROP_LMIN:
-      self->lmin = g_value_get_uint (value);
+    case PROP_ELL_MIN:
+      self->ell_min = g_value_get_uint (value);
       break;
-    case PROP_LMAX:
-      self->lmax = g_value_get_uint (value);
+    case PROP_ELL_MAX:
+      self->ell_max = g_value_get_uint (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -97,11 +97,11 @@ _ncm_sbessel_integrator_get_property (GObject *object, guint prop_id, GValue *va
 
   switch (prop_id)
   {
-    case PROP_LMIN:
-      g_value_set_uint (value, self->lmin);
+    case PROP_ELL_MIN:
+      g_value_set_uint (value, self->ell_min);
       break;
-    case PROP_LMAX:
-      g_value_set_uint (value, self->lmax);
+    case PROP_ELL_MAX:
+      g_value_set_uint (value, self->ell_max);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -123,9 +123,9 @@ _ncm_sbessel_integrator_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_sbessel_integrator_parent_class)->finalize (object);
 }
 
-static void _ncm_sbessel_integrator_prepare_not_implemented (NcmSBesselIntegrator *sbi);
-static gdouble _ncm_sbessel_integrator_integrate_ell_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
-static void _ncm_sbessel_integrator_integrate_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
+static void _ncm_sbessel_integrator_set_ell_range_default (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
+static gdouble _ncm_sbessel_integrator_integrate_ell_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
+static void _ncm_sbessel_integrator_integrate_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
 
 static void
 ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
@@ -138,65 +138,75 @@ ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
   object_class->finalize     = &_ncm_sbessel_integrator_finalize;
 
   /**
-   * NcmSBesselIntegrator:lmin:
+   * NcmSBesselIntegrator:ell_min:
    *
    * Minimum multipole.
    */
   g_object_class_install_property (object_class,
-                                   PROP_LMIN,
-                                   g_param_spec_uint ("lmin",
+                                   PROP_ELL_MIN,
+                                   g_param_spec_uint ("ell-min",
                                                       NULL,
                                                       "Minimum multipole",
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcmSBesselIntegrator:lmax:
+   * NcmSBesselIntegrator:ell_max:
    *
    * Maximum multipole.
    */
   g_object_class_install_property (object_class,
-                                   PROP_LMAX,
-                                   g_param_spec_uint ("lmax",
+                                   PROP_ELL_MAX,
+                                   g_param_spec_uint ("ell-max",
                                                       NULL,
                                                       "Maximum multipole",
                                                       0, G_MAXUINT, 100,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->prepare       = &_ncm_sbessel_integrator_prepare_not_implemented;
-  klass->integrate_ell = &_ncm_sbessel_integrator_integrate_ell_not_implemented;
-  klass->integrate     = &_ncm_sbessel_integrator_integrate_default;
+  klass->set_ell_range = &_ncm_sbessel_integrator_set_ell_range_default;
+  klass->integrate_ell = &_ncm_sbessel_integrator_integrate_ell_default;
+  klass->integrate     = &_ncm_sbessel_integrator_integrate_not_implemented;
 }
 
 static void
-_ncm_sbessel_integrator_prepare_not_implemented (NcmSBesselIntegrator *sbi)
+_ncm_sbessel_integrator_set_ell_range_default (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max)
 {
-  g_error ("ncm_sbessel_integrator_prepare: method not implemented for `%s'",
-           G_OBJECT_TYPE_NAME (sbi));
+  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
+
+  /* Default implementation simply updates ell_min and ell_max */
+  self->ell_min = ell_min;
+  self->ell_max = ell_max;
 }
 
 static gdouble
-_ncm_sbessel_integrator_integrate_ell_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data)
+_ncm_sbessel_integrator_integrate_ell_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data)
 {
-  g_error ("ncm_sbessel_integrator_integrate_ell: method not implemented for `%s'",
-           G_OBJECT_TYPE_NAME (sbi));
+  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
+  const guint old_ell_min           = self->ell_min;
+  const guint old_ell_max           = self->ell_max;
+  NcmVector *result                 = ncm_vector_new (1);
+  gdouble val;
 
-  return 0.0;
+  /* Temporarily set range to single ell */
+  ncm_sbessel_integrator_set_ell_range (sbi, ell, ell);
+
+  /* Call vectorized integrate */
+  NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate (sbi, F, a, b, result, user_data);
+  val = ncm_vector_get (result, 0);
+
+  /* Restore original range */
+  ncm_sbessel_integrator_set_ell_range (sbi, old_ell_min, old_ell_max);
+
+  ncm_vector_free (result);
+
+  return val;
 }
 
 static void
-_ncm_sbessel_integrator_integrate_default (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data)
+_ncm_sbessel_integrator_integrate_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data)
 {
-  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
-  const guint n_ell                 = self->lmax - self->lmin + 1;
-  gint ell;
-
-  g_assert_cmpuint (ncm_vector_len (result), ==, n_ell);
-
-  for (ell = self->lmin; ell <= (gint) self->lmax; ell++)
-  {
-    ncm_vector_set (result, ell - self->lmin, NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->integrate_ell (sbi, F, a, b, ell, user_data));
-  }
+  g_error ("ncm_sbessel_integrator_integrate: method not implemented for `%s'",
+           G_OBJECT_TYPE_NAME (sbi));
 }
 
 /**
@@ -241,80 +251,39 @@ ncm_sbessel_integrator_clear (NcmSBesselIntegrator **sbi)
 }
 
 /**
- * ncm_sbessel_integrator_get_lmin:
+ * ncm_sbessel_integrator_get_ell_range:
  * @sbi: a #NcmSBesselIntegrator
+ * @ell_min: (out): location to store minimum multipole
+ * @ell_max: (out): location to store maximum multipole
  *
- * Gets the minimum multipole.
- *
- * Returns: the minimum multipole
- */
-guint
-ncm_sbessel_integrator_get_lmin (NcmSBesselIntegrator *sbi)
-{
-  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
-
-  return self->lmin;
-}
-
-/**
- * ncm_sbessel_integrator_get_lmax:
- * @sbi: a #NcmSBesselIntegrator
- *
- * Gets the maximum multipole.
- *
- * Returns: the maximum multipole
- */
-guint
-ncm_sbessel_integrator_get_lmax (NcmSBesselIntegrator *sbi)
-{
-  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
-
-  return self->lmax;
-}
-
-/**
- * ncm_sbessel_integrator_set_lmin:
- * @sbi: a #NcmSBesselIntegrator
- * @lmin: minimum multipole
- *
- * Sets the minimum multipole.
+ * Gets the multipole range.
  *
  */
 void
-ncm_sbessel_integrator_set_lmin (NcmSBesselIntegrator *sbi, guint lmin)
+ncm_sbessel_integrator_get_ell_range (NcmSBesselIntegrator *sbi, guint *ell_min, guint *ell_max)
 {
   NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
 
-  self->lmin = lmin;
+  *ell_min = self->ell_min;
+  *ell_max = self->ell_max;
 }
 
 /**
- * ncm_sbessel_integrator_set_lmax:
+ * ncm_sbessel_integrator_set_ell_range: (virtual set_ell_range)
  * @sbi: a #NcmSBesselIntegrator
- * @lmax: maximum multipole
+ * @ell_min: minimum multipole
+ * @ell_max: maximum multipole
  *
- * Sets the maximum multipole.
+ * Sets the multipole range for integration. If the range has changed from
+ * the previous call, subclasses may perform preparation work (e.g., allocating
+ * operators for the new range). The default implementation simply updates
+ * ell_min and ell_max properties.
  *
  */
 void
-ncm_sbessel_integrator_set_lmax (NcmSBesselIntegrator *sbi, guint lmax)
+ncm_sbessel_integrator_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max)
 {
-  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
-
-  self->lmax = lmax;
-}
-
-/**
- * ncm_sbessel_integrator_prepare: (virtual prepare)
- * @sbi: a #NcmSBesselIntegrator
- *
- * Prepares the integrator for integration.
- *
- */
-void
-ncm_sbessel_integrator_prepare (NcmSBesselIntegrator *sbi)
-{
-  NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->prepare (sbi);
+  NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->set_ell_range (sbi, ell_min, ell_max);
 }
 
 /**
@@ -347,8 +316,8 @@ ncm_sbessel_integrator_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselInteg
  * @user_data: (nullable): user data passed to @F
  *
  * Integrates the function @F multiplied by the spherical Bessel function
- * $j_\ell(x)$ from @a to @b for all multipoles from lmin to lmax.
- * The results are stored in @result, which must have length (lmax - lmin + 1).
+ * $j_\ell(x)$ from @a to @b for all multipoles from ell_min to ell_max.
+ * The results are stored in @result, which must have length (ell_max - ell_min + 1).
  *
  */
 void
@@ -413,8 +382,8 @@ ncm_sbessel_integrator_integrate_gaussian_ell (NcmSBesselIntegrator *sbi, gdoubl
  *
  * Integrates a Gaussian function $\exp(-\frac{1}{2}(\frac{y/k - center}{std})^2)$
  * multiplied by the spherical Bessel function $j_\ell(y)$ from @a to @b
- * for all multipoles from lmin to lmax.
- * The results are stored in @result, which must have length (lmax - lmin + 1).
+ * for all multipoles from ell_min to ell_max.
+ * The results are stored in @result, which must have length (ell_max - ell_min + 1).
  *
  * This is a convenience function optimized for testing against truth tables,
  * avoiding the overhead of Python callbacks.
@@ -486,8 +455,8 @@ ncm_sbessel_integrator_integrate_rational_ell (NcmSBesselIntegrator *sbi, gdoubl
  *
  * Integrates a rational function $\frac{(y/k)^2}{(1+((y/k - center)/std)^2)^2}$
  * multiplied by the spherical Bessel function $j_\ell(y)$ from @a to @b for all
- * multipoles from lmin to lmax. The results are stored in @result, which must have
- * length (lmax - lmin + 1).
+ * multipoles from ell_min to ell_max. The results are stored in @result, which must have
+ * length (ell_max - ell_min + 1).
  *
  * This is a convenience function optimized for testing against truth tables, avoiding
  * the overhead of Python callbacks.
