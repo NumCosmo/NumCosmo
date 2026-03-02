@@ -9043,9 +9043,9 @@ class SBesselIntegrator(GObject.Object):
     Object NcmSBesselIntegrator
 
     Properties from NcmSBesselIntegrator:
-      lmin -> guint: lmin
+      ell-min -> guint: ell-min
         Minimum multipole
-      lmax -> guint: lmax
+      ell-max -> guint: ell-max
         Maximum multipole
 
     Signals from GObject:
@@ -9053,12 +9053,12 @@ class SBesselIntegrator(GObject.Object):
     """
 
     class Props:
-        lmax: int
-        lmin: int
+        ell_max: int
+        ell_min: int
 
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, lmax: int = ..., lmin: int = ...) -> None: ...
+    def __init__(self, ell_max: int = ..., ell_min: int = ...) -> None: ...
     @staticmethod
     def clear(sbi: SBesselIntegrator) -> None: ...
     def do_integrate(
@@ -9077,10 +9077,9 @@ class SBesselIntegrator(GObject.Object):
         ell: int,
         *user_data: typing.Any,
     ) -> float: ...
-    def do_prepare(self) -> None: ...
+    def do_set_ell_range(self, ell_min: int, ell_max: int) -> None: ...
     def free(self) -> None: ...
-    def get_lmax(self) -> int: ...
-    def get_lmin(self) -> int: ...
+    def get_ell_range(self) -> typing.Tuple[int, int]: ...
     def integrate(
         self,
         F: typing.Callable[..., float],
@@ -9109,10 +9108,8 @@ class SBesselIntegrator(GObject.Object):
     def integrate_rational_ell(
         self, center: float, std: float, k: float, a: float, b: float, ell: int
     ) -> float: ...
-    def prepare(self) -> None: ...
     def ref(self) -> SBesselIntegrator: ...
-    def set_lmax(self, lmax: int) -> None: ...
-    def set_lmin(self, lmin: int) -> None: ...
+    def set_ell_range(self, ell_min: int, ell_max: int) -> None: ...
 
 class SBesselIntegratorClass(GObject.GPointer):
     r"""
@@ -9124,7 +9121,7 @@ class SBesselIntegratorClass(GObject.GPointer):
     """
 
     parent_class: GObject.ObjectClass = ...
-    prepare: typing.Callable[[SBesselIntegrator], None] = ...
+    set_ell_range: typing.Callable[[SBesselIntegrator, int, int], None] = ...
     integrate_ell: typing.Callable[..., float] = ...
     integrate: typing.Callable[..., None] = ...
     padding: list[None] = ...
@@ -9136,7 +9133,7 @@ class SBesselIntegratorFFTL(SBesselIntegrator):
     ::
 
         SBesselIntegratorFFTL(**properties)
-        new(lmin:int, lmax:int) -> NumCosmoMath.SBesselIntegratorFFTL
+        new(ell_min:int, ell_max:int) -> NumCosmoMath.SBesselIntegratorFFTL
 
     Object NcmSBesselIntegratorFFTL
 
@@ -9145,9 +9142,9 @@ class SBesselIntegratorFFTL(SBesselIntegrator):
         Oversampling factor
 
     Properties from NcmSBesselIntegrator:
-      lmin -> guint: lmin
+      ell-min -> guint: ell-min
         Minimum multipole
-      lmax -> guint: lmax
+      ell-max -> guint: ell-max
         Maximum multipole
 
     Signals from GObject:
@@ -9156,18 +9153,18 @@ class SBesselIntegratorFFTL(SBesselIntegrator):
 
     class Props:
         oversample: float
-        lmax: int
-        lmin: int
+        ell_max: int
+        ell_min: int
 
     props: Props = ...
     def __init__(
-        self, oversample: float = ..., lmax: int = ..., lmin: int = ...
+        self, oversample: float = ..., ell_max: int = ..., ell_min: int = ...
     ) -> None: ...
     @staticmethod
     def clear(sbilf: SBesselIntegratorFFTL) -> None: ...
     def free(self) -> None: ...
     @classmethod
-    def new(cls, lmin: int, lmax: int) -> SBesselIntegratorFFTL: ...
+    def new(cls, ell_min: int, ell_max: int) -> SBesselIntegratorFFTL: ...
     def ref(self) -> SBesselIntegratorFFTL: ...
 
 class SBesselIntegratorFFTLClass(GObject.GPointer):
@@ -9188,7 +9185,7 @@ class SBesselIntegratorGL(SBesselIntegrator):
     ::
 
         SBesselIntegratorGL(**properties)
-        new(lmin:int, lmax:int) -> NumCosmoMath.SBesselIntegratorGL
+        new(ell_min:int, ell_max:int) -> NumCosmoMath.SBesselIntegratorGL
 
     Object NcmSBesselIntegratorGL
 
@@ -9201,9 +9198,9 @@ class SBesselIntegratorGL(SBesselIntegrator):
         Number of oscillations per panel
 
     Properties from NcmSBesselIntegrator:
-      lmin -> guint: lmin
+      ell-min -> guint: ell-min
         Minimum multipole
-      lmax -> guint: lmax
+      ell-max -> guint: ell-max
         Maximum multipole
 
     Signals from GObject:
@@ -9214,8 +9211,8 @@ class SBesselIntegratorGL(SBesselIntegrator):
         margin: float
         nosc: float
         npts: int
-        lmax: int
-        lmin: int
+        ell_max: int
+        ell_min: int
 
     props: Props = ...
     def __init__(
@@ -9223,8 +9220,8 @@ class SBesselIntegratorGL(SBesselIntegrator):
         margin: float = ...,
         nosc: float = ...,
         npts: int = ...,
-        lmax: int = ...,
-        lmin: int = ...,
+        ell_max: int = ...,
+        ell_min: int = ...,
     ) -> None: ...
     @staticmethod
     def clear(sbigl: SBesselIntegratorGL) -> None: ...
@@ -9233,7 +9230,7 @@ class SBesselIntegratorGL(SBesselIntegrator):
     def get_nosc(self) -> float: ...
     def get_npts(self) -> int: ...
     @classmethod
-    def new(cls, lmin: int, lmax: int) -> SBesselIntegratorGL: ...
+    def new(cls, ell_min: int, ell_max: int) -> SBesselIntegratorGL: ...
     def ref(self) -> SBesselIntegratorGL: ...
     def set_margin(self, margin: float) -> None: ...
     def set_nosc(self, nosc: float) -> None: ...
@@ -9257,7 +9254,7 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     ::
 
         SBesselIntegratorLevin(**properties)
-        new(lmin:int, lmax:int) -> NumCosmoMath.SBesselIntegratorLevin
+        new(ell_min:int, ell_max:int, y_knots_min:float, y_knots_max:float, n_knots:int, ell_cache_max:int) -> NumCosmoMath.SBesselIntegratorLevin
 
     Object NcmSBesselIntegratorLevin
 
@@ -9266,11 +9263,19 @@ class SBesselIntegratorLevin(SBesselIntegrator):
         Maximum Chebyshev order
       reltol -> gdouble: reltol
         Relative tolerance
+      y-knots-min -> gdouble: y-knots-min
+        Minimum knot value
+      y-knots-max -> gdouble: y-knots-max
+        Maximum knot value
+      n-knots -> guint: n-knots
+        Number of knots
+      ell-cache-max -> guint: ell-cache-max
+        Maximum ell for cache
 
     Properties from NcmSBesselIntegrator:
-      lmin -> guint: lmin
+      ell-min -> guint: ell-min
         Minimum multipole
-      lmax -> guint: lmax
+      ell-max -> guint: ell-max
         Maximum multipole
 
     Signals from GObject:
@@ -9278,26 +9283,46 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     """
 
     class Props:
+        ell_cache_max: int
         max_order: int
+        n_knots: int
         reltol: float
-        lmax: int
-        lmin: int
+        y_knots_max: float
+        y_knots_min: float
+        ell_max: int
+        ell_min: int
 
     props: Props = ...
     def __init__(
         self,
+        ell_cache_max: int = ...,
         max_order: int = ...,
+        n_knots: int = ...,
         reltol: float = ...,
-        lmax: int = ...,
-        lmin: int = ...,
+        y_knots_max: float = ...,
+        y_knots_min: float = ...,
+        ell_max: int = ...,
+        ell_min: int = ...,
     ) -> None: ...
     @staticmethod
     def clear(sbilv: SBesselIntegratorLevin) -> None: ...
     def free(self) -> None: ...
+    def get_ell_cache_max(self) -> int: ...
     def get_max_order(self) -> int: ...
+    def get_n_knots(self) -> int: ...
     def get_reltol(self) -> float: ...
+    def get_y_knots_max(self) -> float: ...
+    def get_y_knots_min(self) -> float: ...
     @classmethod
-    def new(cls, lmin: int, lmax: int) -> SBesselIntegratorLevin: ...
+    def new(
+        cls,
+        ell_min: int,
+        ell_max: int,
+        y_knots_min: float,
+        y_knots_max: float,
+        n_knots: int,
+        ell_cache_max: int,
+    ) -> SBesselIntegratorLevin: ...
     def ref(self) -> SBesselIntegratorLevin: ...
     def set_max_order(self, max_order: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
@@ -9319,6 +9344,7 @@ class SBesselOdeOperator(GObject.GBoxed):
     def get_ell_range(self) -> typing.Tuple[int, int]: ...
     def get_interval(self) -> typing.Tuple[float, float]: ...
     def get_n_cols(self) -> int: ...
+    def get_operator_capacity(self) -> int: ...
     def get_tolerance(self) -> float: ...
     def ref(self) -> SBesselOdeOperator: ...
     def reset(self, a: float, b: float, ell_min: int, ell_max: int) -> None: ...
