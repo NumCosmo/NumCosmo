@@ -1226,6 +1226,13 @@ _ncm_sbessel_check_storage (NcmSBesselOdeOperator *op, glong col,
 {
   g_assert_cmpint (col + ROWS_TO_ROTATE + 1, <=, *solution_order);
 
+  if (*solution_order > max_solution_order)
+  {
+    g_critical ("Exceeded maximum solution order: %u", max_solution_order);
+
+    return;
+  }
+
   if ((col == *solution_order - ROWS_TO_ROTATE - 1) && (*solution_order < max_solution_order))
   {
     *solution_order *= 2;
@@ -1496,7 +1503,7 @@ _ncm_sbessel_ode_solver_setup_initial_rows (NcmSBesselOdeOperator *op, GArray *r
 }
 
 /**
- * _ncm_sbessel_ode_solver_diagonalize:
+ * _ncm_sbessel_ode_operator_diagonalize:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
  *
@@ -1508,7 +1515,7 @@ _ncm_sbessel_ode_solver_setup_initial_rows (NcmSBesselOdeOperator *op, GArray *r
  * Returns: the effective number of columns used (may be less than rhs_len due to convergence)
  */
 static glong
-_ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
+_ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
 {
   const guint rhs_len            = rhs->len;
   guint solution_order           = rhs_len * 2;
@@ -1564,6 +1571,9 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
       _ncm_sbessel_apply_givens (col, r1, r2, c1, c2, rot_ptr);
     }
 
+    /* Check storage */
+    _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
+
     /* Check convergence */
     if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols))
     {
@@ -1571,13 +1581,16 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
       col++;
       break; /* SAFE early stop */
     }
-
-    /* Check storage */
-    _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
   }
+
+  /* Zero RHS: zero solution */
+  if (max_c_A == 0.0)
+    return col;
 
   if (!converged)
   {
+    _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
+
     for ( ; col < solution_order; col++)
     {
       glong new_row               = col + ROWS_TO_ROTATE;
@@ -1600,21 +1613,21 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
         _ncm_sbessel_apply_givens (col, r1, r2, c1, c2, rot_ptr);
       }
 
+      /* Check storage */
+      _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
+
       /* Check convergence */
       if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols))
       {
         col++;
         break; /* SAFE early stop */
       }
-
-      /* Check storage */
-      _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
     }
   }
 
   /* Warn if we exhausted max_solution_order without convergence */
   if ((solution_order >= max_solution_order) && (quiet_cols < ROWS_TO_ROTATE + 1))
-    g_warning ("_ncm_sbessel_ode_solver_diagonalize: "
+    g_warning ("_ncm_sbessel_ode_operator_diagonalize: "
                "reached max_solution_order=%u without convergence (quiet_cols=%u, needed %d). "
                "Results may be inaccurate.",
                max_solution_order, quiet_cols, ROWS_TO_ROTATE + 1);
@@ -1631,7 +1644,7 @@ _ncm_sbessel_ode_solver_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
  * @solution: (out): output array for solution coefficients
  *
  * Builds the full Chebyshev coefficient solution by back-substitution on the
- * upper triangular system. Assumes _ncm_sbessel_ode_solver_diagonalize
+ * upper triangular system. Assumes _ncm_sbessel_ode_operator_diagonalize
  * has been called first.
  */
 static void
@@ -1690,7 +1703,7 @@ _ncm_sbessel_ode_solver_build_solution (NcmSBesselOdeOperator *op, glong n_cols,
  * on-the-fly during back-substitution and accumulates their contributions to the
  * derivatives without storing the full coefficient array.
  *
- * Assumes _ncm_sbessel_ode_solver_diagonalize has been called first.
+ * Assumes _ncm_sbessel_ode_operator_diagonalize has been called first.
  */
 static void
 _ncm_sbessel_ode_solver_compute_endpoints (NcmSBesselOdeOperator *op, glong n_cols, GArray *endpoints)
@@ -1917,6 +1930,9 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
 
     _ncm_sbessel_apply_rotations_batched (op, col, n_ell);
 
+    /* Check storage */
+    _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
+
     /* Check convergence across all ell values */
     if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols))
     {
@@ -1924,10 +1940,11 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
       col++;
       break; /* SAFE early stop */
     }
-
-    /* Check storage */
-    _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
   }
+
+  /* Zero RHS: zero solution */
+  if (max_c_A == 0.0)
+    return col;
 
   if (!converged)
   {
@@ -1949,21 +1966,21 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
 
       _ncm_sbessel_apply_rotations_batched (op, col, n_ell);
 
+      /* Check storage */
+      _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
+
       /* Check convergence across all ell values */
       if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols))
       {
         col++;
         break; /* SAFE early stop */
       }
-
-      /* Check storage */
-      _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
     }
   }
 
   /* Warn if we exhausted max_solution_order without convergence */
   if ((solution_order >= max_solution_order) && (quiet_cols < ROWS_TO_ROTATE + 1))
-    g_warning ("_ncm_sbessel_ode_solver_diagonalize_batched: "
+    g_warning ("_ncm_sbessel_ode_operator_diagonalize_batched: "
                "reached max_solution_order=%u without convergence (quiet_cols=%u, needed %d). "
                "Results may be inaccurate.",
                max_solution_order, quiet_cols, ROWS_TO_ROTATE + 1);
@@ -1981,7 +1998,7 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
  * @solutions: output array of solution matrices
  *
  * Builds the full Chebyshev coefficient solution by back-substitution on the
- * upper triangular system. Assumes _ncm_sbessel_ode_solver_diagonalize_batched
+ * upper triangular system. Assumes _ncm_sbessel_ode_operator_diagonalize_batched
  * has been called first.
  *
  * Returns: (transfer full): solution matrix where each row is the solution for one ell value
@@ -2071,7 +2088,7 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
  * have at least n_ell rows and exactly 3 columns. Each row corresponds to one ell value,
  * with columns for u'(a), u'(b), and error estimate.
  *
- * Assumes _ncm_sbessel_ode_solver_diagonalize_batched has been called first.
+ * Assumes _ncm_sbessel_ode_operator_diagonalize_batched has been called first.
  *
  * Returns: (transfer full): matrix with 3 columns per ell: [u'(a), u'(b), error]
  */
@@ -2430,7 +2447,7 @@ ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray *
 
   if (op->n_ell == 1)
   {
-    n_cols = _ncm_sbessel_ode_solver_diagonalize (op, rhs);
+    n_cols = _ncm_sbessel_ode_operator_diagonalize (op, rhs);
 
     _ncm_sbessel_ode_solver_build_solution (op, n_cols, *solution);
   }
@@ -2511,7 +2528,7 @@ ncm_sbessel_ode_operator_solve_endpoints (NcmSBesselOdeOperator *op, GArray *rhs
 
   if (op->n_ell == 1)
   {
-    const glong n_cols = _ncm_sbessel_ode_solver_diagonalize (op, rhs);
+    const glong n_cols = _ncm_sbessel_ode_operator_diagonalize (op, rhs);
 
     _ncm_sbessel_ode_solver_compute_endpoints (op, n_cols, *endpoints);
 
