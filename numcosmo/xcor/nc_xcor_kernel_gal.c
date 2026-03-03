@@ -680,7 +680,7 @@ _magbias_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, g
   MagBiasComponentData *data = _NC_XCOR_KERNEL_COMPONENT_MAGBIAS_GET_DATA (comp);
   const gdouble z            = nc_distance_inv_comoving (data->dist, cosmo, xi);
   const gdouble powspec      = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
-  const gdouble g_z          = nc_xcor_lensing_efficiency_eval (data->xclkg->lens_eff, z) * (1.0 + z) * xi;
+  const gdouble g_z          = nc_xcor_lensing_efficiency_eval (data->xclkg->lens_eff, z) * (1.0 + z) / xi;
   const gdouble operator_k   = 1.0 / gsl_pow_2 (k);
 
   return operator_k * g_z * sqrt (powspec);
