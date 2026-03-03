@@ -120,6 +120,7 @@ static void _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegra
 static void _ncm_sbessel_integrator_levin_prepare_ell_cache (NcmSBesselIntegratorLevin *sbilv);
 static void _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data);
 static void _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselOdeOperator *operator, NcmSBesselIntegratorF F, gdouble a_p, gdouble b_p, const gdouble *j_a_p, const gdouble *j_b_p, guint ell_min, guint ell_max, gdouble *result_data, gpointer user_data);
+static void _ncm_sbessel_integrator_levin_integrate_panel (NcmSBesselIntegratorLevin *sbilv, gint a_p_idx, gint b_p_idx, gdouble a_p, gdouble b_p, NcmSpectral *spectral, NcmSBesselIntegratorF F, guint ell_min, guint ell_max, gdouble *result_data, gpointer user_data);
 static void _ncm_sbessel_integrator_levin_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
 static void _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
 
@@ -596,6 +597,77 @@ _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv,
 }
 
 /**
+ * _ncm_sbessel_integrator_levin_get_panel_resources:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @a_p_idx: knot index for left endpoint (-1 if not on a knot)
+ * @b_p_idx: knot index for right endpoint (-1 if not on a knot)
+ * @a_p: lower bound of panel
+ * @b_p: upper bound of panel
+ * @ell_min: minimum multipole
+ * @ell_max: maximum multipole
+ * @j_a_p_out: (out): pointer to j_ell array at a_p
+ * @j_b_p_out: (out): pointer to j_ell array at b_p
+ *
+ * Gets panel resources: j_ell arrays and appropriate ODE operator.
+ * If a_p_idx == -1, computes j_a_p and uses temp_a operator with reset.
+ * If b_p_idx == -1, computes j_b_p and uses temp_b operator with reset.
+ * Otherwise, uses cached j_ell values and operators[a_p_idx] without reset.
+ *
+ * Returns: (transfer none): the appropriate ODE operator for this panel
+ */
+static NcmSBesselOdeOperator *
+_ncm_sbessel_integrator_levin_get_panel_resources (NcmSBesselIntegratorLevin *sbilv,
+                                                   gint a_p_idx, gint b_p_idx,
+                                                   gdouble a_p, gdouble b_p,
+                                                   guint ell_min, guint ell_max,
+                                                   const gdouble **j_a_p_out,
+                                                   const gdouble **j_b_p_out)
+{
+  const guint n_ell = sbilv->ell_cache_max + 1;
+  NcmSBesselOdeOperator *op;
+
+  /* Get j_a_p: compute if a_p_idx == -1, else use cache */
+  if (a_p_idx < 0)
+  {
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, a_p, sbilv->j_array_a);
+    *j_a_p_out = sbilv->j_array_a;
+  }
+  else
+  {
+    *j_a_p_out = &sbilv->jl_knots[a_p_idx * n_ell];
+  }
+
+  /* Get j_b_p: compute if b_p_idx == -1, else use cache */
+  if (b_p_idx < 0)
+  {
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, b_p, sbilv->j_array_b);
+    *j_b_p_out = sbilv->j_array_b;
+  }
+  else
+  {
+    *j_b_p_out = &sbilv->jl_knots[b_p_idx * n_ell];
+  }
+
+  /* Select operator and reset if needed */
+  if (a_p_idx < 0)
+  {
+    op = sbilv->ode_operator_temp_a;
+    ncm_sbessel_ode_operator_reset (op, a_p, b_p, ell_min, ell_max);
+  }
+  else if (b_p_idx < 0)
+  {
+    op = sbilv->ode_operator_temp_b;
+    ncm_sbessel_ode_operator_reset (op, a_p, b_p, ell_min, ell_max);
+  }
+  else
+  {
+    op = g_ptr_array_index (sbilv->operators, a_p_idx);
+  }
+
+  return op;
+}
+
+/**
  * _ncm_sbessel_integrator_levin_solve_and_accumulate:
  * @sbilv: a #NcmSBesselIntegratorLevin
  * @spectral: spectral methods object
@@ -641,6 +713,49 @@ _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *s
 
     result_data[ell_idx] += contrib;
   }
+}
+
+/**
+ * _ncm_sbessel_integrator_levin_integrate_panel:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @a_p_idx: knot index for left endpoint (-1 if not on a knot)
+ * @b_p_idx: knot index for right endpoint (-1 if not on a knot)
+ * @a_p: lower bound of panel
+ * @b_p: upper bound of panel
+ * @spectral: spectral methods object
+ * @F: integrand function
+ * @ell_min: minimum multipole
+ * @ell_max: maximum multipole
+ * @result_data: array to accumulate results
+ * @user_data: user data for integrand
+ *
+ * High-level wrapper that integrates a single panel by:
+ * 1. Acquiring panel resources (j_ell arrays and operator)
+ * 2. Solving the Levin ODE and accumulating results
+ *
+ * This orchestrator function provides a clean interface for panel integration
+ * while keeping the underlying implementation modular for testing and reuse.
+ */
+static void
+_ncm_sbessel_integrator_levin_integrate_panel (NcmSBesselIntegratorLevin *sbilv,
+                                               gint a_p_idx, gint b_p_idx,
+                                               gdouble a_p, gdouble b_p,
+                                               NcmSpectral *spectral,
+                                               NcmSBesselIntegratorF F,
+                                               guint ell_min, guint ell_max,
+                                               gdouble *result_data,
+                                               gpointer user_data)
+{
+  const gdouble *j_a_p, *j_b_p;
+  NcmSBesselOdeOperator *op;
+
+  op = _ncm_sbessel_integrator_levin_get_panel_resources (sbilv, a_p_idx, b_p_idx,
+                                                          a_p, b_p, ell_min, ell_max,
+                                                          &j_a_p, &j_b_p);
+
+  _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, op,
+                                                      F, a_p, b_p, j_a_p, j_b_p,
+                                                      ell_min, ell_max, result_data, user_data);
 }
 
 static void
@@ -756,7 +871,6 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
   NcmSBesselOdeSolver *solver = sbilv->ode_solver;
   NcmSpectral *spectral       = ncm_sbessel_ode_solver_peek_spectral (solver);
   gdouble *result_data        = ncm_vector_data (result);
-  const guint n_ell           = sbilv->ell_cache_max + 1;
   gint first_knot_idx         = -1;
   gint last_knot_idx          = -1;
   gdouble first_knot, last_knot;
@@ -790,64 +904,55 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
     /* Handle edge panel at the start [a, first_knot > a] if needed */
     if (a < first_knot)
     {
-      const gdouble a_p    = a;
-      const gdouble b_p    = g_array_index (sbilv->knots, gdouble, first_knot_idx);
-      const gdouble *j_a_p = sbilv->j_array_a;
-      const gdouble *j_b_p = &sbilv->jl_knots[first_knot_idx * n_ell];
+      const gdouble a_p = a;
+      const gdouble b_p = g_array_index (sbilv->knots, gdouble, first_knot_idx);
 
-      ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, a_p, sbilv->j_array_a);
-      ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_a, a_p, b_p, ell_min, ell_max);
-
-      _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, sbilv->ode_operator_temp_a,
-                                                          F, a_p, b_p, j_a_p, j_b_p,
-                                                          ell_min, ell_max, result_data, user_data);
+      if (ell_min <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
+        _ncm_sbessel_integrator_levin_integrate_panel (sbilv, -1, first_knot_idx,
+                                                       a_p, b_p, spectral, F,
+                                                       ell_min, ell_max, result_data, user_data);
     }
 
     for (i = first_knot_idx; i < (guint) last_knot_idx; i++)
     {
-      const gdouble a_p         = g_array_index (sbilv->knots, gdouble, i);
-      const gdouble b_p         = g_array_index (sbilv->knots, gdouble, i + 1);
-      NcmSBesselOdeOperator *op = g_ptr_array_index (sbilv->operators, i);
-      const gdouble *j_a_p;
-      const gdouble *j_b_p;
+      const gdouble a_p = g_array_index (sbilv->knots, gdouble, i);
+      const gdouble b_p = g_array_index (sbilv->knots, gdouble, i + 1);
 
-      j_a_p = &sbilv->jl_knots[i * n_ell];
-      j_b_p = &sbilv->jl_knots[(i + 1) * n_ell];
-
-      _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, op,
-                                                          F, a_p, b_p, j_a_p, j_b_p,
-                                                          ell_min, ell_max, result_data, user_data);
+      if (ell_min <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
+        _ncm_sbessel_integrator_levin_integrate_panel (sbilv, i, i + 1,
+                                                       a_p, b_p, spectral, F,
+                                                       ell_min, ell_max, result_data, user_data);
     }
 
     if (b > last_knot)
     {
-      const gdouble a_p    = g_array_index (sbilv->knots, gdouble, last_knot_idx);
-      const gdouble b_p    = b;
-      const gdouble *j_a_p = &sbilv->jl_knots[last_knot_idx * n_ell];
-      const gdouble *j_b_p = sbilv->j_array_b;
+      const gdouble a_p = g_array_index (sbilv->knots, gdouble, last_knot_idx);
+      const gdouble b_p = b;
 
-      ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, b_p, sbilv->j_array_b);
-      ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_b, a_p, b_p, ell_min, ell_max);
-
-      _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, sbilv->ode_operator_temp_b,
-                                                          F, a_p, b_p, j_a_p, j_b_p,
-                                                          ell_min, ell_max, result_data, user_data);
+      if (ell_min <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
+        _ncm_sbessel_integrator_levin_integrate_panel (sbilv, last_knot_idx, -1,
+                                                       a_p, b_p, spectral, F,
+                                                       ell_min, ell_max, result_data, user_data);
     }
   }
   else
   {
-    /* No paneling: integrate over full range [a, b] */
-    const gdouble *j_a_p;
-    const gdouble *j_b_p;
+    /* No paneling: integrate over full range [a, b]
+     * Note: For single panel mode without knots, we use ode_operator directly
+     * rather than temp operators. This is handled by passing -1 for both indices
+     * but requires special handling in get_panel_resources. */
+    const gdouble *j_a_p, *j_b_p;
+    NcmSBesselOdeOperator *op;
 
     ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, a, sbilv->j_array_a);
     ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, b, sbilv->j_array_b);
     j_a_p = sbilv->j_array_a;
     j_b_p = sbilv->j_array_b;
 
-    ncm_sbessel_ode_operator_reset (sbilv->ode_operator, a, b, ell_min, ell_max);
+    op = sbilv->ode_operator;
+    ncm_sbessel_ode_operator_reset (op, a, b, ell_min, ell_max);
 
-    _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, sbilv->ode_operator,
+    _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, op,
                                                         F, a, b, j_a_p, j_b_p,
                                                         ell_min, ell_max, result_data, user_data);
   }
