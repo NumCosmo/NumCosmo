@@ -117,6 +117,7 @@ enum
 };
 
 static void _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sbilv);
+static void _ncm_sbessel_integrator_levin_prepare_ell_cache (NcmSBesselIntegratorLevin *sbilv);
 static void _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data);
 static void _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselOdeOperator *operator, NcmSBesselIntegratorF F, gdouble a_p, gdouble b_p, const gdouble *j_a_p, const gdouble *j_b_p, guint ell_min, guint ell_max, gdouble *result_data, gpointer user_data);
 static void _ncm_sbessel_integrator_levin_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
@@ -152,7 +153,7 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
   sbilv->y_knots_max         = 0.0;
   sbilv->n_knots             = 0;
   sbilv->ell_cache_max       = 0;
-  sbilv->knots               = NULL;
+  sbilv->knots               = g_array_new (FALSE, FALSE, sizeof (gdouble));
   sbilv->jl_knots            = NULL;
   sbilv->operators           = NULL;
   sbilv->ode_operator_temp_a = NULL;
@@ -232,6 +233,7 @@ _ncm_sbessel_integrator_levin_constructed (GObject *object)
   /* Prepare knots array and precompute spherical Bessel functions at construction time
    * since knots parameters and ell_cache_max are CONSTRUCT_ONLY */
   _ncm_sbessel_integrator_levin_prepare_knots_array (sbilv);
+  _ncm_sbessel_integrator_levin_prepare_ell_cache (sbilv);
 }
 
 static void
@@ -407,16 +409,7 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
 static void
 _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv, guint max_order, guint ell_min, guint ell_max)
 {
-  gboolean need_realloc = FALSE;
-
-  /* Check if reallocation is needed */
-  if (sbilv->alloc_max_order != max_order)
-    need_realloc = TRUE;
-
-  if ((sbilv->alloc_ell_min != ell_min) || (sbilv->alloc_ell_max != ell_max))
-    need_realloc = TRUE;
-
-  if (!need_realloc)
+  if (sbilv->alloc_max_order == max_order)
     return;
 
   /* Free existing allocations */
@@ -425,41 +418,15 @@ _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv,
   g_clear_pointer (&sbilv->rhs, g_array_unref);
   g_clear_pointer (&sbilv->endpoints_result, g_array_unref);
 
-  if (sbilv->j_array_a != NULL)
-  {
-    g_free (sbilv->j_array_a);
-    sbilv->j_array_a = NULL;
-  }
-
-  if (sbilv->j_array_b != NULL)
-  {
-    g_free (sbilv->j_array_b);
-    sbilv->j_array_b = NULL;
-  }
-
-  if (sbilv->jl_arr != NULL)
-  {
-    g_free (sbilv->jl_arr);
-    sbilv->jl_arr = NULL;
-  }
-
   /* Allocate arrays for spectral coefficients */
   sbilv->cheb_coeffs  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), max_order);
   sbilv->gegen_coeffs = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), max_order);
   sbilv->rhs          = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), max_order + 2);
 
-  /* Allocate arrays for spherical Bessel functions */
-  sbilv->j_array_a = g_new0 (gdouble, ell_max + 1);
-  sbilv->j_array_b = g_new0 (gdouble, ell_max + 1);
-  sbilv->jl_arr    = g_new (gdouble, ell_max + 1);
-
   /* Allocate result matrix for batched endpoint computation (max block size is 8) */
   sbilv->endpoints_result = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 8 * 3);
 
-  /* Update allocation tracking */
   sbilv->alloc_max_order = max_order;
-  sbilv->alloc_ell_min   = ell_min;
-  sbilv->alloc_ell_max   = ell_max;
 }
 
 /**
@@ -472,17 +439,14 @@ _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv,
 static void
 _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sbilv)
 {
-  /* Only prepare if knots are properly configured and not already prepared */
-  if ((sbilv->n_knots < 2) || (sbilv->y_knots_min <= 0.0) || (sbilv->y_knots_max <= sbilv->y_knots_min))
+  if (sbilv->n_knots < 2)
     return;
 
-  if (sbilv->knots != NULL)
-    return;  /* Already prepared */
+  g_assert_cmpfloat (sbilv->y_knots_min, >, 0.0);
+  g_assert_cmpfloat (sbilv->y_knots_max, >, sbilv->y_knots_min);
+  g_assert_cmpuint (sbilv->n_knots, <, G_MAXUINT / 2); /* Prevent overflow in log spacing calculation */
+  g_array_set_size (sbilv->knots, sbilv->n_knots);
 
-  /* Create log-spaced knots array */
-  sbilv->knots = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), sbilv->n_knots);
-
-  /* Create log-spaced knots array */
   {
     const gdouble ln_y_min = log (sbilv->y_knots_min);
     const gdouble ln_y_max = log (sbilv->y_knots_max);
@@ -494,28 +458,41 @@ _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sb
       const gdouble ln_y = ln_y_min + L * i / (sbilv->n_knots - 1);
       const gdouble y    = exp (ln_y);
 
-      g_array_append_val (sbilv->knots, y);
+      g_array_index (sbilv->knots, gdouble, i) = y;
     }
   }
+}
 
-  /* Precompute j_ell at all knots for ell from 0 to ell_cache_max */
-  if (sbilv->ell_cache_max > 0)
+/**
+ * _ncm_sbessel_integrator_levin_prepare_ell_cache:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * Precomputes spherical Bessel functions j_ell at all knots for ell from 0 to ell_cache_max.
+ * This is only needed when ell_cache_max or knot parameters change, not when ell range changes.
+ */
+static void
+_ncm_sbessel_integrator_levin_prepare_ell_cache (NcmSBesselIntegratorLevin *sbilv)
+{
+  const guint n_ell = sbilv->ell_cache_max + 1;
+  guint i;
+
+  g_assert_cmpuint (sbilv->ell_cache_max, <, G_MAXUINT / 2);
+
+  /* Allocate flat array: jl_knots[knot_idx * n_ell + ell] */
+  sbilv->jl_knots = g_new (gdouble, sbilv->n_knots * n_ell);
+
+  for (i = 0; i < sbilv->n_knots; i++)
   {
-    const guint n_ell = sbilv->ell_cache_max + 1;
-    guint i;
+    const gdouble y     = g_array_index (sbilv->knots, gdouble, i);
+    gdouble *jl_at_knot = &sbilv->jl_knots[i * n_ell];
 
-    /* Allocate flat array: jl_knots[knot_idx * n_ell + ell] */
-    sbilv->jl_knots = g_new (gdouble, sbilv->n_knots * n_ell);
-
-    for (i = 0; i < sbilv->n_knots; i++)
-    {
-      const gdouble y     = g_array_index (sbilv->knots, gdouble, i);
-      gdouble *jl_at_knot = &sbilv->jl_knots[i * n_ell];
-
-      /* Compute all j_ell(y) for ell = 0, 1, ..., ell_cache_max */
-      ncm_sf_sbessel_array_eval (sbilv->sba, sbilv->ell_cache_max, y, jl_at_knot);
-    }
+    /* Compute all j_ell(y) for ell = 0, 1, ..., ell_cache_max */
+    ncm_sf_sbessel_array_eval (sbilv->sba, sbilv->ell_cache_max, y, jl_at_knot);
   }
+
+  /* Allocate arrays for spherical Bessel functions */
+  sbilv->j_array_a = g_new0 (gdouble, n_ell);
+  sbilv->j_array_b = g_new0 (gdouble, n_ell);
+  sbilv->jl_arr    = g_new (gdouble, n_ell);
 }
 
 /**
@@ -533,10 +510,7 @@ _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sb
 static void
 _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin *sbilv, guint ell_min, guint ell_max)
 {
-  guint i;
-
-  /* Only prepare if knots array exists */
-  if (sbilv->knots == NULL)
+  if (sbilv->n_knots < 2)
   {
     return;
   }
@@ -544,6 +518,7 @@ _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin
   {
     const gboolean need_create = (sbilv->operators == NULL);
     const gboolean need_reset  = !need_create && ((sbilv->alloc_ell_min != ell_min) || (sbilv->alloc_ell_max != ell_max));
+    guint i;
 
     if (!need_create && !need_reset)
       return;
@@ -580,6 +555,9 @@ _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin
       ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_a, 0.0, 1.0, ell_min, ell_max);
       ncm_sbessel_ode_operator_reset (sbilv->ode_operator_temp_b, 0.0, 1.0, ell_min, ell_max);
     }
+
+    sbilv->alloc_ell_min = ell_min;
+    sbilv->alloc_ell_max = ell_max;
   }
 }
 
@@ -675,6 +653,11 @@ _ncm_sbessel_integrator_levin_set_ell_range (NcmSBesselIntegrator *sbi, guint el
 
   if ((ell_min != sbilv->alloc_ell_min) || (ell_max != sbilv->alloc_ell_max))
   {
+    if (ell_max > sbilv->ell_cache_max)
+      g_error ("Requested ell_max (%u) exceeds ell_cache_max (%u). "
+               "Increase ell_cache_max to enable caching for the requested range.",
+               ell_max, sbilv->ell_cache_max);
+
     _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, ell_min, ell_max);
     _ncm_sbessel_integrator_levin_prepare_knots_operators (sbilv, ell_min, ell_max);
   }
@@ -799,7 +782,7 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
   }
 
   /* Use knots-based paneling if configured, otherwise single panel mode */
-  if ((sbilv->knots != NULL) && (sbilv->knots->len > 0) && (first_knot_idx != -1) && (last_knot_idx != -1))
+  if ((sbilv->knots->len > 1) && (first_knot_idx != -1) && (last_knot_idx != -1))
   {
     first_knot = g_array_index (sbilv->knots, gdouble, first_knot_idx);
     last_knot  = g_array_index (sbilv->knots, gdouble, last_knot_idx);
