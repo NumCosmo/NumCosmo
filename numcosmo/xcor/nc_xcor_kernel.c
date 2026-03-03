@@ -493,7 +493,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
   NonLimberIntegrandData *nlid = g_new0 (NonLimberIntegrandData, 1);
   guint n_l                    = lmax - lmin + 1;
   NcmVector *integ_result      = ncm_vector_new (n_l);
-  const guint n_k              = 200;
+  const guint n_k              = 800;
   NcmVector *k_vec             = ncm_vector_new (n_k);
   GPtrArray *comp_list         = klass->get_component_list (xclk);
 
