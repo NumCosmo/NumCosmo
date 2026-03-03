@@ -648,6 +648,200 @@ class TestSBesselOperators:
             err_msg=(f"Green's identity failed with QR solve for l={l_val}, RHS=x"),
         )
 
+    @pytest.mark.parametrize("l_val", [0, 1, 5, 10, 20])
+    @pytest.mark.parametrize("N", [32, 64, 128])
+    def test_zero_rhs_solve(self, l_val: int, N: int) -> None:
+        """Test that solve returns zero solution for zero RHS.
+
+        When the RHS is completely zero (including boundary conditions), the
+        solver should return a zero solution. The QR method may compress the
+        solution representation, so the length may be less than N.
+        """
+        a, b = 1.0, 20.0
+
+        # Create solver and operator
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(a, b, l_val, l_val)
+
+        # Set up zero RHS
+        rhs_np = np.zeros(N)
+
+        # Solve using QR method
+        solution_coeffs, solution_len = op.solve(rhs_np)
+        solution = np.array(solution_coeffs)
+
+        # Verify solution is zero
+        assert_allclose(
+            solution,
+            np.zeros(solution_len),
+            rtol=0.0,
+            atol=1.0e-15,
+            err_msg=f"Zero RHS should produce zero solution for l={l_val}, N={N}",
+        )
+
+        # Verify solution length is reasonable (QR may compress)
+        assert (
+            solution_len <= N
+        ), f"Solution length {solution_len} should not exceed RHS length {N}"
+
+    @pytest.mark.parametrize("l_val", [0, 1, 5, 10, 20])
+    @pytest.mark.parametrize("N", [32, 64, 128])
+    def test_zero_rhs_solve_dense(self, l_val: int, N: int) -> None:
+        """Test that solve_dense returns zero solution for zero RHS.
+
+        When the RHS is completely zero (including boundary conditions), the
+        solve_dense method should return a zero solution with the same length as the
+        RHS.
+        """
+        a, b = 1.0, 20.0
+
+        # Create solver
+        solver = Ncm.SBesselOdeSolver.new()
+
+        # Set up zero RHS
+        rhs_np = np.zeros(N)
+        rhs_vec = Ncm.Vector.new_array(rhs_np.tolist())
+
+        # Solve using solve_dense
+        solution_vec = solver.solve_dense(a, b, l_val, rhs_vec, N)
+        solution = solution_vec.to_numpy()
+
+        # Verify solution is zero
+        assert_allclose(
+            solution,
+            np.zeros(N),
+            rtol=0.0,
+            atol=1.0e-15,
+            err_msg=(
+                f"Zero RHS should produce zero solution "
+                f"with solve_dense for l={l_val}, N={N}"
+            ),
+        )
+
+        # Verify solution has same length as RHS
+        assert len(solution) == N, f"Solution length should match RHS length {N}"
+
+    @pytest.mark.parametrize("l_val", [0, 1, 5, 10, 20])
+    @pytest.mark.parametrize("N", [32, 64, 128])
+    def test_zero_rhs_solve_endpoints(self, l_val: int, N: int) -> None:
+        """Test that solve_endpoints returns zero derivatives for zero RHS.
+
+        When the RHS is completely zero (including boundary conditions), the
+        solve_endpoints method should return zero derivatives at both endpoints.
+        """
+        a, b = 1.0, 20.0
+
+        # Create solver and operator
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(a, b, l_val, l_val)
+
+        # Set up zero RHS
+        rhs_np = np.zeros(N)
+
+        # Get endpoint derivatives
+        deriv_a, deriv_b, _error = op.solve_endpoints(rhs_np)
+
+        # Verify derivatives are zero
+        assert_allclose(
+            deriv_a,
+            0.0,
+            rtol=0.0,
+            atol=1.0e-15,
+            err_msg=(
+                f"Zero RHS should produce zero derivative at a for l={l_val}, N={N}"
+            ),
+        )
+        assert_allclose(
+            deriv_b,
+            0.0,
+            rtol=0.0,
+            atol=1.0e-15,
+            err_msg=(
+                f"Zero RHS should produce zero derivative at b for l={l_val}, N={N}"
+            ),
+        )
+
+    def test_zero_rhs_batched(self) -> None:
+        """Test that batched solve returns zero solutions for zero RHS.
+
+        When the RHS is completely zero (including boundary conditions), the batched
+        solver should return zero solutions for all ell values. The QR method may
+        compress the solution representation.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+        lmin, lmax = 5, 15
+        n_ell = lmax - lmin + 1
+
+        # Create solver
+        solver = Ncm.SBesselOdeSolver.new()
+
+        # Set up zero RHS
+        rhs_np = np.zeros(N)
+
+        # Solve using batched operator
+        op_batched = solver.create_operator(a, b, lmin, lmax)
+        solutions_batched_list, solution_len = op_batched.solve(rhs_np)
+        solutions_batched = np.array(solutions_batched_list).reshape(
+            n_ell, solution_len
+        )
+
+        # Verify all solutions are zero
+        assert_allclose(
+            solutions_batched,
+            np.zeros((n_ell, solution_len)),
+            rtol=0.0,
+            atol=1.0e-15,
+            err_msg=(
+                "Zero RHS should produce zero solutions for all ell in batched solve"
+            ),
+        )
+
+        # Verify solution length is reasonable (QR may compress)
+        assert (
+            solution_len <= N
+        ), f"Solution length {solution_len} should not exceed RHS length {N}"
+
+    def test_zero_rhs_batched_endpoints(self) -> None:
+        """Test that batched solve_endpoints returns zero derivatives for zero RHS.
+
+        When the RHS is completely zero (including boundary conditions), the
+        batched solve_endpoints should return zero derivatives at both endpoints
+        for all ell values.
+        """
+        N = 128
+        a, b = 1.0, 20.0
+        lmin, lmax = 5, 15
+        n_ell = lmax - lmin + 1
+
+        # Create solver
+        solver = Ncm.SBesselOdeSolver.new()
+
+        # Set up zero RHS
+        rhs_np = np.zeros(N)
+
+        # Solve using batched solve_endpoints
+        op_batched = solver.create_operator(a, b, lmin, lmax)
+        endpoints_batched = np.array(op_batched.solve_endpoints(rhs_np)).reshape(
+            n_ell, 3
+        )
+
+        # Verify all derivatives are zero (first two columns: deriv_a and deriv_b)
+        assert_allclose(
+            endpoints_batched[:, 0],  # derivatives at a
+            np.zeros(n_ell),
+            rtol=0.0,
+            atol=1.0e-15,
+            err_msg="Zero RHS should produce zero derivatives at a for all ell",
+        )
+        assert_allclose(
+            endpoints_batched[:, 1],  # derivatives at b
+            np.zeros(n_ell),
+            rtol=0.0,
+            atol=1.0e-15,
+            err_msg="Zero RHS should produce zero derivatives at b for all ell",
+        )
+
     def test_solve_batched_vs_non_batched(self) -> None:
         """Test that batched and non-batched solvers give identical results.
 
