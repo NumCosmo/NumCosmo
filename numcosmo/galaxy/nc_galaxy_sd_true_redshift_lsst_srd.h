@@ -8,7 +8,7 @@
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
- * nc_galaxy_sd_true_redshift_lssttroscopic.h
+ * nc_galaxy_sd_true_redshift_lsst_srd.h
  * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *

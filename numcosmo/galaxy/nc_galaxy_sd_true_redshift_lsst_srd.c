@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_galaxy_sd_true_redshift_lsst_srd.c
  *
@@ -33,8 +31,8 @@
  *
  * Class describing galaxy sample redshift distributions as in LSST-SRD.
  *
- * Class defining a galaxy sample redshift distribution as described in the LSST Science
- * Roadmap Document,
+ * Class defining a galaxy sample redshift distribution as described in the LSST
+ * Science Roadmap Document,
  *
  */
 
