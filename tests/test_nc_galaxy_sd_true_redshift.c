@@ -142,7 +142,7 @@ test_nc_galaxy_sd_true_redshift_lsst_srd_new (TestNcGalaxySDTrueRedshift *test, 
 static void
 test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata)
 {
-  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlssty10 = nc_galaxy_sd_true_redshift_lsst_srd_new_y10 ();
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlssty10 = nc_galaxy_sd_true_redshift_lsst_srd_new_y10_source ();
 
   test->gsdtr = NC_GALAXY_SD_TRUE_REDSHIFT (gsdtrlssty10);
 
@@ -386,7 +386,7 @@ test_nc_galaxy_sd_true_redshift_norma (TestNcGalaxySDTrueRedshift *test, gconstp
   NcmIntegral1dPtr *lnint      = ncm_integral1d_ptr_new (_ln_integ, NULL);
   gsl_integration_workspace *w = gsl_integration_workspace_alloc (1000);
   IntegData data               = { test->gsdtr, 1.0e-10 };
-  IntegData lndata             = { test->gsdtr, 1.0e-10 };
+  IntegData ln_data            = { test->gsdtr, 1.0e-10 };
   gsl_function F;
   gdouble z_min, z_max;
 
@@ -394,20 +394,23 @@ test_nc_galaxy_sd_true_redshift_norma (TestNcGalaxySDTrueRedshift *test, gconstp
   F.params   = &data;
 
   ncm_integral1d_set_abstol (NCM_INTEGRAL1D (lnint), data.abstol);
-  ncm_integral1d_ptr_set_userdata (lnint, &lndata);
+  ncm_integral1d_ptr_set_userdata (lnint, &ln_data);
   nc_galaxy_sd_true_redshift_get_lim (test->gsdtr, &z_min, &z_max);
 
   {
-    gdouble result, abserr, lnresult, lnabserr;
+    gdouble result, abserr, ln_result, ln_abserr;
     gint status;
 
     status = gsl_integration_qag (&F, z_min, z_max, 1.0e-10, 1.0e-10, 1000, GSL_INTEG_GAUSS61, w, &result, &abserr);
 
-    lnresult = ncm_integral1d_eval_lnint (NCM_INTEGRAL1D (lnint), z_min, z_max, &lnabserr);
+    ln_result = ncm_integral1d_eval_lnint (NCM_INTEGRAL1D (lnint), z_min, z_max, &ln_abserr);
 
     g_assert_cmpint (status, ==, GSL_SUCCESS);
     ncm_assert_cmpdouble_e (result, ==, 1.0, 1.0e-9, 0.0);
-    ncm_assert_cmpdouble_e (lnresult, ==, 0.0, 1.0e-9, 0.0);
+    ncm_assert_cmpdouble_e (ln_result, ==, 0.0, 1.0e-9, 0.0);
   }
+
+  gsl_integration_workspace_free (w);
+  ncm_integral1d_ptr_free (lnint);
 }
 
