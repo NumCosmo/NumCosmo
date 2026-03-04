@@ -59,20 +59,54 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_PARAMS
   NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_SPARAM_LEN, /*< skip >*/
 } NcGalaxySDTrueRedshiftLSSTSRDSParams;
 
-#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_ALPHA  (0.78)
-#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_BETA   (2.00)
-#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z0     (0.13)
+/**
+ * NcGalaxySDTrueRedshiftLSSTSRDType:
+ * @NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE: Year 1 source parametrization
+ * @NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS: Year 1 lens parametrization
+ * @NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE: Year 10 source parametrization
+ * @NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS: Year 10 lens parametrization
+ *
+ * LSST SRD galaxy redshift distribution types.
+ *
+ */
+typedef enum /*< enum,underscore_name=NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_TYPE >*/
+{
+  NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE = 0,
+  NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS,
+  NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE,
+  NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS,
+} NcGalaxySDTrueRedshiftLSSTSRDType;
 
-#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_ALPHA  (0.68)
-#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_BETA   (2.00)
-#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_Z0     (0.11)
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_ALPHA  (0.78)
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_BETA   (2.00)
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_Z0     (0.13)
+
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_ALPHA  (0.94)
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_BETA   (2.00)
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_Z0     (0.26)
+
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_ALPHA  (0.68)
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_BETA   (2.00)
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_Z0     (0.11)
+
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_ALPHA  (0.90)
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_BETA   (2.00)
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_Z0     (0.28)
+
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_ALPHA  NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_ALPHA
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_BETA   NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_BETA
+#define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z0     NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_Z0
 
 #define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_PARAMS_ABSTOL (0.0)
 #define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW         (0.0)
 #define NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_HIGH        (20.0)
 
 NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new (void);
-NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new_y10 (void);
+NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new_y1_source (void);
+NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new_y1_lens (void);
+NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new_y10_source (void);
+NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new_y10_lens (void);
+NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_new_from_type (NcGalaxySDTrueRedshiftLSSTSRDType type);
 NcGalaxySDTrueRedshiftLSSTSRD *nc_galaxy_sd_true_redshift_lsst_srd_ref (NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst);
 
 void nc_galaxy_sd_true_redshift_lsst_srd_free (NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst);
