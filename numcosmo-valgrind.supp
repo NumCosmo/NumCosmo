@@ -112,3 +112,11 @@
    fun:_wrap_pyg_enum_add
    ...
 }
+{
+   libfabric_monitor_env_init
+   Memcheck:Cond
+   fun:monitor_env_init
+   fun:fi_hook_monitor_ini
+   fun:fi_ini
+   fun:fi_getinfo*
+}
