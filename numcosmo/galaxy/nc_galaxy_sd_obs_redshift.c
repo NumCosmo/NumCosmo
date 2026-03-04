@@ -150,6 +150,14 @@ _nc_galaxy_sd_obs_redshift_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDOb
   g_error ("_nc_galaxy_sd_obs_redshift_data_new: method not implemented");
 }
 
+static NcmSpline *
+_nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, gdouble sigma0, NcmVector *z_array, gdouble rel_error)
+{
+  g_error ("_nc_galaxy_sd_obs_redshift_compute_binned_dndz: method not implemented");
+
+  return NULL;
+}
+
 /*  LCOV_EXCL_STOP */
 
 static void
@@ -167,12 +175,13 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   ncm_mset_model_register_id (model_class, "NcGalaxySDObsRedshift", "Galaxy sample observed redshift distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
-  klass->gen           = &_nc_galaxy_sd_obs_redshift_gen;
-  klass->gen1          = &_nc_galaxy_sd_obs_redshift_gen1;
-  klass->prepare       = &_nc_galaxy_sd_obs_redshift_prepare;
-  klass->get_integ_lim = &_nc_galaxy_sd_obs_redshift_get_integ_lim;
-  klass->integ         = &_nc_galaxy_sd_obs_redshift_integ;
-  klass->data_init     = &_nc_galaxy_sd_obs_redshift_data_init;
+  klass->gen                 = &_nc_galaxy_sd_obs_redshift_gen;
+  klass->gen1                = &_nc_galaxy_sd_obs_redshift_gen1;
+  klass->prepare             = &_nc_galaxy_sd_obs_redshift_prepare;
+  klass->get_integ_lim       = &_nc_galaxy_sd_obs_redshift_get_integ_lim;
+  klass->integ               = &_nc_galaxy_sd_obs_redshift_integ;
+  klass->data_init           = &_nc_galaxy_sd_obs_redshift_data_init;
+  klass->compute_binned_dndz = &_nc_galaxy_sd_obs_redshift_compute_binned_dndz;
 }
 
 /**
@@ -423,6 +432,36 @@ NcGalaxySDObsRedshiftIntegrand *
 nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp)
 {
   return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->integ (gsdor, use_lnp);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_compute_binned_dndz:
+ * @gsdor: a #NcGalaxySDObsRedshift
+ * @sigma0: base photometric redshift scatter parameter
+ * @z_array: (array) (element-type gdouble) (nullable): true redshift evaluation points
+ * @rel_error: relative error tolerance for integration
+ *
+ * Computes the binned true redshift distribution dndz(z) for the photometric redshift
+ * bin defined by the observation model. The photo-z bin edges are specified when
+ * creating the observation model (e.g., via nc_galaxy_sd_obs_redshift_gauss_new()).
+ *
+ * The returned distribution is normalized such that $\int \mathrm{d}n/\mathrm{d}z \,
+ * \mathrm{d}z = 1$.
+ *
+ * This method works for both lens-type bins (fixed photo-z edges) and
+ * source-type bins (equal-area photo-z edges). The distinction is only in
+ * how the photo-z bin edges were initially determined.
+ *
+ * If @z_array is provided, the binned dndz will be evaluated at those redshift points.
+ * If @z_array is NULL, the method will determine an appropriate set of redshift points
+ * based on the integration limits and the desired resolution.
+ *
+ * Returns: (transfer full): a #NcmSpline containing the binned dndz(z)
+ */
+NcmSpline *
+nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, gdouble sigma0, NcmVector *z_array, gdouble rel_error)
+{
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->compute_binned_dndz (gsdor, sigma0, z_array, rel_error);
 }
 
 /**
