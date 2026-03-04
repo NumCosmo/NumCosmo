@@ -34,6 +34,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_true_redshift.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h>
 
 G_BEGIN_DECLS
 
@@ -42,6 +43,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcGalaxySDObsRedshiftGauss, nc_galaxy_sd_obs_redshift_gauss, NC, GALAXY_SD_OBS_REDSHIFT_GAUSS, NcGalaxySDObsRedshift)
 
 NcGalaxySDObsRedshiftGauss *nc_galaxy_sd_obs_redshift_gauss_new (NcGalaxySDTrueRedshift * sdz, const gdouble zp_min, const gdouble zp_max);
+GPtrArray *nc_galaxy_sd_obs_redshift_gauss_new_lsst_srd_bins (NcGalaxySDTrueRedshiftLSSTSRDType type, NcGalaxySDTrueRedshiftLSSTSRD **gsdtr_new);
 NcGalaxySDObsRedshiftGauss *nc_galaxy_sd_obs_redshift_gauss_ref (NcGalaxySDObsRedshiftGauss *gsdorgauss);
 
 void nc_galaxy_sd_obs_redshift_gauss_free (NcGalaxySDObsRedshiftGauss *gsdorgauss);
@@ -58,6 +60,8 @@ gboolean nc_galaxy_sd_obs_redshift_gauss_gen1 (NcGalaxySDObsRedshiftGauss *gsdor
 
 void nc_galaxy_sd_obs_redshift_gauss_data_set (NcGalaxySDObsRedshiftGauss *gsdorgauss, NcGalaxySDObsRedshiftData *data, const gdouble zp, const gdouble sigma0, const gdouble sigma_z);
 void nc_galaxy_sd_obs_redshift_gauss_data_get (NcGalaxySDObsRedshiftGauss *gsdorgauss, NcGalaxySDObsRedshiftData *data, gdouble *zp, gdouble *sigma0, gdouble *sigma_z);
+
+NcmVector *nc_galaxy_sd_obs_redshift_gauss_compute_equal_area_photoz_bins (NcGalaxySDTrueRedshift *gsdtr, guint n_bins, gdouble sigma0, gdouble zp_max, gdouble rel_error);
 
 #define NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_COL_ZP "zp"
 #define NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_COL_SIGMA "sigma_z"
