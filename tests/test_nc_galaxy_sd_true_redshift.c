@@ -46,16 +46,55 @@ typedef struct _TestNcGalaxySDTrueRedshift
 } TestNcGalaxySDTrueRedshift;
 
 static void test_nc_galaxy_sd_true_redshift_lsst_srd_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
-static void test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_true_redshift_lsst_srd_y1_source_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_true_redshift_lsst_srd_y1_lens_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_true_redshift_lsst_srd_y10_source_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_true_redshift_lsst_srd_y10_lens_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_true_redshift_free (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
 
 static void test_nc_galaxy_sd_true_redshift_lim (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_true_redshift_serialize (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_true_redshift_model_id (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_true_redshift_params (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
 
 static void test_nc_galaxy_sd_true_redshift_gen (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_true_redshift_integ (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_true_redshift_norma (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
+
+typedef struct _NcGalaxySDTrueRedshiftTest
+{
+  const gchar *name;
+
+  void (*func) (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata);
+} NcGalaxySDTrueRedshiftTest;
+
+static NcGalaxySDTrueRedshiftTest _test_nc_galaxy_sd_true_redshift_tests[] =
+{
+  { "/lim",       &test_nc_galaxy_sd_true_redshift_lim       },
+  { "/serialize", &test_nc_galaxy_sd_true_redshift_serialize },
+  { "/model_id",  &test_nc_galaxy_sd_true_redshift_model_id  },
+  { "/params",    &test_nc_galaxy_sd_true_redshift_params    },
+  { "/gen",       &test_nc_galaxy_sd_true_redshift_gen       },
+  { "/integ",     &test_nc_galaxy_sd_true_redshift_integ     },
+  { "/norma",     &test_nc_galaxy_sd_true_redshift_norma     },
+  { NULL,         NULL                                        }
+};
+
+static void
+_test_nc_galaxy_sd_true_redshift_add_tests (void ( *tnew ) (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata),
+                                            void (*tfree) (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata),
+                                            const gchar *name)
+{
+  guint i;
+
+  for (i = 0; _test_nc_galaxy_sd_true_redshift_tests[i].func != NULL; i++)
+  {
+    gchar *tname = g_strdup_printf ("/nc/%s%s", name, _test_nc_galaxy_sd_true_redshift_tests[i].name);
+
+    g_test_add (tname, TestNcGalaxySDTrueRedshift, NULL, tnew, _test_nc_galaxy_sd_true_redshift_tests[i].func, tfree);
+    g_free (tname);
+  }
+}
 
 gint
 main (gint argc, gchar *argv[])
@@ -64,65 +103,21 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/lim", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
-              &test_nc_galaxy_sd_true_redshift_lim,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/serialize", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
-              &test_nc_galaxy_sd_true_redshift_serialize,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/model_id", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
-              &test_nc_galaxy_sd_true_redshift_model_id,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/gen", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
-              &test_nc_galaxy_sd_true_redshift_gen,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/integ", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
-              &test_nc_galaxy_sd_true_redshift_integ,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd/norma", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_new,
-              &test_nc_galaxy_sd_true_redshift_norma,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/lim", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
-              &test_nc_galaxy_sd_true_redshift_lim,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/serialize", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
-              &test_nc_galaxy_sd_true_redshift_serialize,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/model_id", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
-              &test_nc_galaxy_sd_true_redshift_model_id,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/gen", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
-              &test_nc_galaxy_sd_true_redshift_gen,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/integ", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
-              &test_nc_galaxy_sd_true_redshift_integ,
-              &test_nc_galaxy_sd_true_redshift_free);
-
-  g_test_add ("/nc/galaxy_sd_true_redshift_lsst_srd_y10/norma", TestNcGalaxySDTrueRedshift, NULL,
-              &test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new,
-              &test_nc_galaxy_sd_true_redshift_norma,
-              &test_nc_galaxy_sd_true_redshift_free);
+  _test_nc_galaxy_sd_true_redshift_add_tests (&test_nc_galaxy_sd_true_redshift_lsst_srd_new,
+                                              &test_nc_galaxy_sd_true_redshift_free,
+                                              "galaxy_sd_true_redshift_lsst_srd");
+  _test_nc_galaxy_sd_true_redshift_add_tests (&test_nc_galaxy_sd_true_redshift_lsst_srd_y1_source_new,
+                                              &test_nc_galaxy_sd_true_redshift_free,
+                                              "galaxy_sd_true_redshift_lsst_srd_y1_source");
+  _test_nc_galaxy_sd_true_redshift_add_tests (&test_nc_galaxy_sd_true_redshift_lsst_srd_y1_lens_new,
+                                              &test_nc_galaxy_sd_true_redshift_free,
+                                              "galaxy_sd_true_redshift_lsst_srd_y1_lens");
+  _test_nc_galaxy_sd_true_redshift_add_tests (&test_nc_galaxy_sd_true_redshift_lsst_srd_y10_source_new,
+                                              &test_nc_galaxy_sd_true_redshift_free,
+                                              "galaxy_sd_true_redshift_lsst_srd_y10_source");
+  _test_nc_galaxy_sd_true_redshift_add_tests (&test_nc_galaxy_sd_true_redshift_lsst_srd_y10_lens_new,
+                                              &test_nc_galaxy_sd_true_redshift_free,
+                                              "galaxy_sd_true_redshift_lsst_srd_y10_lens");
 
   g_test_run ();
 
@@ -140,13 +135,43 @@ test_nc_galaxy_sd_true_redshift_lsst_srd_new (TestNcGalaxySDTrueRedshift *test, 
 }
 
 static void
-test_nc_galaxy_sd_true_redshift_lsst_srd_y10_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata)
+test_nc_galaxy_sd_true_redshift_lsst_srd_y1_source_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata)
 {
-  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlssty10 = nc_galaxy_sd_true_redshift_lsst_srd_new_y10_source ();
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtr = nc_galaxy_sd_true_redshift_lsst_srd_new_y1_source ();
 
-  test->gsdtr = NC_GALAXY_SD_TRUE_REDSHIFT (gsdtrlssty10);
+  test->gsdtr = NC_GALAXY_SD_TRUE_REDSHIFT (gsdtr);
 
-  g_assert_true (NC_IS_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtrlssty10));
+  g_assert_true (NC_IS_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr));
+}
+
+static void
+test_nc_galaxy_sd_true_redshift_lsst_srd_y1_lens_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata)
+{
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtr = nc_galaxy_sd_true_redshift_lsst_srd_new_y1_lens ();
+
+  test->gsdtr = NC_GALAXY_SD_TRUE_REDSHIFT (gsdtr);
+
+  g_assert_true (NC_IS_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr));
+}
+
+static void
+test_nc_galaxy_sd_true_redshift_lsst_srd_y10_source_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata)
+{
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtr = nc_galaxy_sd_true_redshift_lsst_srd_new_y10_source ();
+
+  test->gsdtr = NC_GALAXY_SD_TRUE_REDSHIFT (gsdtr);
+
+  g_assert_true (NC_IS_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr));
+}
+
+static void
+test_nc_galaxy_sd_true_redshift_lsst_srd_y10_lens_new (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata)
+{
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtr = nc_galaxy_sd_true_redshift_lsst_srd_new_y10_lens ();
+
+  test->gsdtr = NC_GALAXY_SD_TRUE_REDSHIFT (gsdtr);
+
+  g_assert_true (NC_IS_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (gsdtr));
 }
 
 static void
@@ -215,6 +240,64 @@ test_nc_galaxy_sd_true_redshift_model_id (TestNcGalaxySDTrueRedshift *test, gcon
   ncm_mset_clear (&model_set);
   ncm_serialize_clear (&ser);
   nc_galaxy_sd_obs_redshift_spec_free (gsdors);
+}
+
+static void
+test_nc_galaxy_sd_true_redshift_params (TestNcGalaxySDTrueRedshift *test, gconstpointer pdata)
+{
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtr = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD (test->gsdtr);
+  gdouble alpha, beta, z0;
+  gdouble expected_alpha = 0.0, expected_beta = 0.0, expected_z0 = 0.0;
+  const gchar *model_nick;
+
+  alpha = ncm_model_param_get (NCM_MODEL (gsdtr), NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_ALPHA);
+  beta  = ncm_model_param_get (NCM_MODEL (gsdtr), NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_BETA);
+  z0    = ncm_model_param_get (NCM_MODEL (gsdtr), NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Z0);
+
+  model_nick = ncm_model_nick (NCM_MODEL (gsdtr));
+
+  /* Determine expected parameters based on constructor used */
+  if (g_strcmp0 (model_nick, "LSST_SRD") == 0)
+  {
+    /* Default or Y1 source */
+    expected_alpha = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_ALPHA;
+    expected_beta  = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_BETA;
+    expected_z0    = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_Z0;
+  }
+
+  /* Check if parameters match Y1 source */
+  if (fabs (alpha - NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_ALPHA) < 1.0e-10)
+  {
+    expected_alpha = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_ALPHA;
+    expected_beta  = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_BETA;
+    expected_z0    = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_Z0;
+  }
+  /* Check if parameters match Y1 lens */
+  else if (fabs (alpha - NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_ALPHA) < 1.0e-10)
+  {
+    expected_alpha = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_ALPHA;
+    expected_beta  = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_BETA;
+    expected_z0    = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_Z0;
+  }
+  /* Check if parameters match Y10 source */
+  else if (fabs (alpha - NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_ALPHA) < 1.0e-10)
+  {
+    expected_alpha = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_ALPHA;
+    expected_beta  = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_BETA;
+    expected_z0    = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_Z0;
+  }
+  /* Check if parameters match Y10 lens */
+  else if (fabs (alpha - NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_ALPHA) < 1.0e-10)
+  {
+    expected_alpha = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_ALPHA;
+    expected_beta  = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_BETA;
+    expected_z0    = NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_Z0;
+  }
+
+  /* Verify the parameters are set correctly */
+  ncm_assert_cmpdouble_e (alpha, ==, expected_alpha, 1.0e-10, 0.0);
+  ncm_assert_cmpdouble_e (beta, ==, expected_beta, 1.0e-10, 0.0);
+  ncm_assert_cmpdouble_e (z0, ==, expected_z0, 1.0e-10, 0.0);
 }
 
 static gdouble
