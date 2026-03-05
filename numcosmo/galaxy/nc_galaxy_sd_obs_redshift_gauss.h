@@ -61,6 +61,9 @@ gboolean nc_galaxy_sd_obs_redshift_gauss_gen1 (NcGalaxySDObsRedshiftGauss *gsdor
 void nc_galaxy_sd_obs_redshift_gauss_data_set (NcGalaxySDObsRedshiftGauss *gsdorgauss, NcGalaxySDObsRedshiftData *data, const gdouble zp, const gdouble sigma0, const gdouble sigma_z);
 void nc_galaxy_sd_obs_redshift_gauss_data_get (NcGalaxySDObsRedshiftGauss *gsdorgauss, NcGalaxySDObsRedshiftData *data, gdouble *zp, gdouble *sigma0, gdouble *sigma_z);
 
+gdouble nc_galaxy_sd_obs_redshift_gauss_eval_pzp (NcGalaxySDObsRedshiftGauss *gsdorgauss, gdouble zp, gdouble sigma0, gdouble zp_max, gdouble rel_error);
+gdouble nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (NcGalaxySDObsRedshiftGauss *gsdorgauss, gdouble z, gdouble zp_min, gdouble zp_max, gdouble sigma0, gdouble rel_error);
+
 NcmVector *nc_galaxy_sd_obs_redshift_gauss_compute_equal_area_photoz_bins (NcGalaxySDTrueRedshift *gsdtr, guint n_bins, gdouble sigma0, gdouble zp_max, gdouble rel_error);
 
 #define NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_COL_ZP "zp"

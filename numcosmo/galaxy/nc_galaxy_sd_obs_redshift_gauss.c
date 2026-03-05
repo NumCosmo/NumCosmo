@@ -59,6 +59,15 @@ typedef struct _NcGalaxySDObsRedshiftGaussPrivate
   gdouble zp_min;
   gdouble zp_max;
   gboolean use_true_z;
+  /* Cache for p(zp) distribution */
+  NcmSpline *pzp_spline;
+  gdouble pzp_sigma0;
+  gdouble pzp_zp_max;
+  /* Cache for p(z|zp_min,zp_max) distribution */
+  NcmSpline *pz_given_zp_spline;
+  gdouble pz_given_zp_sigma0;
+  gdouble pz_given_zp_zp_min;
+  gdouble pz_given_zp_zp_max;
 } NcGalaxySDObsRedshiftGaussPrivate;
 
 struct _NcGalaxySDObsRedshiftGauss
@@ -81,6 +90,12 @@ enum
   PROP_LEN,
 };
 
+enum
+{
+  NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_LSTATE_PZP = 0,
+  NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_LSTATE_PZ_GIVEN_ZP,
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDObsRedshiftGauss, nc_galaxy_sd_obs_redshift_gauss, NC_TYPE_GALAXY_SD_OBS_REDSHIFT);
 
 static void
@@ -88,7 +103,14 @@ nc_galaxy_sd_obs_redshift_gauss_init (NcGalaxySDObsRedshiftGauss *gsdorgauss)
 {
   NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
 
-  self->sdz = NULL;
+  self->sdz                = NULL;
+  self->pzp_spline         = NULL;
+  self->pzp_sigma0         = -1.0;
+  self->pzp_zp_max         = -1.0;
+  self->pz_given_zp_spline = NULL;
+  self->pz_given_zp_sigma0 = -1.0;
+  self->pz_given_zp_zp_min = -1.0;
+  self->pz_given_zp_zp_max = -1.0;
 }
 
 static void
@@ -149,6 +171,12 @@ _nc_galaxy_sd_obs_redshift_gauss_get_property (GObject *object, guint prop_id, G
 static void
 _nc_galaxy_sd_obs_redshift_gauss_dispose (GObject *object)
 {
+  NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (object);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
+
+  ncm_spline_clear (&self->pzp_spline);
+  ncm_spline_clear (&self->pz_given_zp_spline);
+
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_sd_obs_redshift_gauss_parent_class)->dispose (object);
 }
@@ -436,6 +464,76 @@ _nc_galaxy_sd_obs_redshift_gauss_data_init (NcGalaxySDObsRedshift *gsdor, NcGala
   data->ldata_required_columns = &_nc_galaxy_sd_obs_redshift_gauss_ldata_required_columns;
 }
 
+typedef struct _BinnedDndzIntegData
+{
+  NcGalaxySDTrueRedshift *gsdtr;
+  gdouble zpl;
+  gdouble zpu;
+  gdouble sigma0;
+} BinnedDndzIntegData;
+
+static gdouble
+_binned_dndz_integrand (gpointer user_data, const gdouble z, const gdouble w)
+{
+  BinnedDndzIntegData *data  = (BinnedDndzIntegData *) user_data;
+  const gdouble Pz           = nc_galaxy_sd_true_redshift_integ (data->gsdtr, z);
+  const gdouble sigmaz       = data->sigma0 * (1.0 + z);
+  const gdouble sqrt2_sigmaz = M_SQRT2 * sigmaz;
+  const gdouble W            = ncm_util_gaussian_integral (data->zpl, data->zpu, z, sigmaz);
+  const gdouble N            = 0.5 * erfc (-z / sqrt2_sigmaz);
+
+  /* The normalization N is due to the zp>0 constraint. */
+
+  return Pz * W / N;
+}
+
+static gdouble
+_binned_dndz_integrand_for_gsl (const gdouble z, gpointer user_data)
+{
+  return _binned_dndz_integrand (user_data, z, 1.0);
+}
+
+typedef struct _PhotozDistIntegData
+{
+  NcGalaxySDTrueRedshift *gsdtr;
+  NcmIntegral1dPtr *integrator;
+  gdouble zp;
+  gdouble sigma0;
+  gdouble z_min;
+  gdouble z_max;
+} PhotozDistIntegData;
+
+static gdouble
+_photoz_distribution_integrand (gpointer user_data, const gdouble z, const gdouble w)
+{
+  PhotozDistIntegData *data    = (PhotozDistIntegData *) user_data;
+  const gdouble Pz             = nc_galaxy_sd_true_redshift_integ (data->gsdtr, z);
+  const gdouble sigmaz         = data->sigma0 * (1.0 + z);
+  const gdouble sqrt2pi_sigmaz = M_SQRT2 * M_SQRTPI * sigmaz;
+  const gdouble gauss          = exp (-0.5 * gsl_pow_2 ((data->zp - z) / sigmaz));
+  const gdouble norm           = 0.5 * erfc (-z / (M_SQRT2 * sigmaz));
+
+  return Pz * gauss / (sqrt2pi_sigmaz * norm);
+}
+
+static gdouble
+_photoz_distribution_gsl (gdouble zp, gpointer user_data)
+{
+  PhotozDistIntegData *data = (PhotozDistIntegData *) user_data;
+  gdouble error             = 0.0;
+  gdouble result;
+
+  data->zp = zp;
+  ncm_integral1d_ptr_set_userdata (data->integrator, data);
+  result = ncm_integral1d_eval (
+    NCM_INTEGRAL1D (data->integrator),
+    data->z_min,
+    data->z_max,
+    &error);
+
+  return result;
+}
+
 static void
 _nc_galaxy_sd_obs_redshift_gauss_add_submodel (NcmModel *model, NcmModel *submodel)
 {
@@ -449,6 +547,183 @@ _nc_galaxy_sd_obs_redshift_gauss_add_submodel (NcmModel *model, NcmModel *submod
     g_assert (NC_IS_GALAXY_SD_TRUE_REDSHIFT (submodel));
 
     self->sdz = NC_GALAXY_SD_TRUE_REDSHIFT (submodel);
+  }
+}
+
+/**
+ * _nc_galaxy_sd_obs_redshift_gauss_prepare_pzp:
+ * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
+ * @sigma0: base photometric redshift scatter parameter
+ * @zp_max: maximum photometric redshift
+ * @rel_error: relative error tolerance for integration
+ *
+ * Prepares and caches the marginal photometric redshift distribution.
+ *
+ * This distribution is computed as:
+ *
+ * $$P(z_p) = \int_0^\infty P(z) \, \mathrm{Gauss}(z_p|z,\sigma_z) \, \mathrm{d}z$$
+ *
+ * where $\sigma_z = \sigma_0 (1 + z)$ and the normalization ensures $z_p > 0$.
+ *
+ * The result is cached as a spline and will be reused if called again with the same
+ * parameters, unless the model state has been invalidated.
+ */
+static void
+_nc_galaxy_sd_obs_redshift_gauss_prepare_pzp (NcGalaxySDObsRedshiftGauss *gsdorgauss, gdouble sigma0, gdouble zp_max, gdouble rel_error)
+{
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
+  gboolean need_update                           = FALSE;
+
+  g_assert_cmpfloat (sigma0, >, 0.0);
+  g_assert_cmpfloat (zp_max, >, 0.0);
+  g_assert_cmpfloat (rel_error, >, 0.0);
+  g_assert_nonnull (self->sdz);
+
+  /* Check if we need to recompute */
+  if ((self->pzp_spline == NULL) ||
+      !ncm_model_lstate_is_update (NCM_MODEL (gsdorgauss), NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_LSTATE_PZP) ||
+      (self->pzp_sigma0 != sigma0) ||
+      (self->pzp_zp_max != zp_max))
+    need_update = TRUE;
+
+  if (need_update)
+  {
+    gdouble z_min, z_max;
+    PhotozDistIntegData integ_data;
+    gsl_function F;
+
+    nc_galaxy_sd_true_redshift_get_lim (self->sdz, &z_min, &z_max);
+
+    integ_data.gsdtr      = self->sdz;
+    integ_data.integrator = ncm_integral1d_ptr_new (&_photoz_distribution_integrand, NULL);
+    integ_data.zp         = 0.0;
+    integ_data.sigma0     = sigma0;
+    integ_data.z_min      = z_min;
+    integ_data.z_max      = z_max;
+
+    F.function = &_photoz_distribution_gsl;
+    F.params   = &integ_data;
+
+    /* Clear old spline if it exists */
+    ncm_spline_clear (&self->pzp_spline);
+
+    /* Create and populate new spline */
+    self->pzp_spline = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+    ncm_spline_set_func (self->pzp_spline, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, zp_max, 0, rel_error);
+
+    /* Cache parameters */
+    self->pzp_sigma0 = sigma0;
+    self->pzp_zp_max = zp_max;
+
+    /* Clean up */
+    ncm_integral1d_ptr_free (integ_data.integrator);
+
+    /* Mark model local state as updated */
+    ncm_model_lstate_set_update (NCM_MODEL (gsdorgauss), NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_LSTATE_PZP);
+  }
+}
+
+/**
+ * _nc_galaxy_sd_obs_redshift_gauss_prepare_pz_given_zp:
+ * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
+ * @zp_min: minimum photometric redshift of the bin
+ * @zp_max: maximum photometric redshift of the bin
+ * @sigma0: base photometric redshift scatter parameter
+ * @rel_error: relative error tolerance for integration
+ *
+ * Prepares and caches the conditional true redshift distribution.
+ *
+ * This distribution gives the probability of true redshift z for galaxies observed
+ * in the photometric redshift bin [zp_min, zp_max]:
+ *
+ * $$P(z|z_{p,\mathrm{min}}, z_{p,\mathrm{max}}) = \frac{P(z) \, W(z_{p,\mathrm{min}}, z_{p,\mathrm{max}}|z)}{N}$$
+ *
+ * where $W$ is the Gaussian integral over the bin and $N$ is a normalization factor.
+ *
+ * The result is cached as a spline and will be reused if called again with the same
+ * parameters, unless the model state has been invalidated.
+ */
+static void
+_nc_galaxy_sd_obs_redshift_gauss_prepare_pz_given_zp (NcGalaxySDObsRedshiftGauss *gsdorgauss, gdouble zp_min, gdouble zp_max, gdouble sigma0, gdouble rel_error)
+{
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
+  gboolean need_update                           = FALSE;
+
+  g_assert_cmpfloat (zp_min, >=, 0.0);
+  g_assert_cmpfloat (zp_max, >, zp_min);
+  g_assert_cmpfloat (sigma0, >, 0.0);
+  g_assert_cmpfloat (rel_error, >, 0.0);
+  g_assert_nonnull (self->sdz);
+
+  /* Check if we need to recompute */
+  if ((self->pz_given_zp_spline == NULL) ||
+      !ncm_model_lstate_is_update (NCM_MODEL (gsdorgauss), NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_LSTATE_PZ_GIVEN_ZP) ||
+      (self->pz_given_zp_sigma0 != sigma0) ||
+      (self->pz_given_zp_zp_min != zp_min) ||
+      (self->pz_given_zp_zp_max != zp_max))
+    need_update = TRUE;
+
+  if (need_update)
+  {
+    gdouble z_min, z_max;
+    BinnedDndzIntegData integ_data;
+    gsl_function F;
+
+    nc_galaxy_sd_true_redshift_get_lim (self->sdz, &z_min, &z_max);
+
+    integ_data.gsdtr  = self->sdz;
+    integ_data.zpl    = zp_min;
+    integ_data.zpu    = zp_max;
+    integ_data.sigma0 = sigma0;
+
+    F.function = &_binned_dndz_integrand_for_gsl;
+    F.params   = &integ_data;
+
+    /* Clear old spline if it exists */
+    ncm_spline_clear (&self->pz_given_zp_spline);
+
+    /* Create and populate new spline */
+    self->pz_given_zp_spline = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+    ncm_spline_set_func (self->pz_given_zp_spline, NCM_SPLINE_FUNCTION_SPLINE, &F, z_min, z_max, 0, rel_error);
+
+    /* Normalize the spline */
+    {
+      NcmIntegral1dPtr *integrator = ncm_integral1d_ptr_new (&_binned_dndz_integrand, NULL);
+      gdouble norm_error           = 0.0;
+      gdouble norm;
+
+      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (integrator), rel_error);
+      ncm_integral1d_ptr_set_userdata (integrator, &integ_data);
+
+      norm = ncm_integral1d_eval (NCM_INTEGRAL1D (integrator), z_min, z_max, &norm_error);
+
+      g_assert_cmpfloat (norm, >, 0.0);
+
+      /* Scale the spline by 1/norm */
+      {
+        NcmVector *y_vec = ncm_spline_peek_yv (self->pz_given_zp_spline);
+        const guint len  = ncm_vector_len (y_vec);
+
+        for (guint i = 0; i < len; i++)
+        {
+          const gdouble y = ncm_vector_get (y_vec, i);
+
+          ncm_vector_set (y_vec, i, y / norm);
+        }
+
+        ncm_spline_prepare (self->pz_given_zp_spline);
+      }
+
+      ncm_integral1d_ptr_free (integrator);
+    }
+
+    /* Cache parameters */
+    self->pz_given_zp_sigma0 = sigma0;
+    self->pz_given_zp_zp_min = zp_min;
+    self->pz_given_zp_zp_max = zp_max;
+
+    /* Mark model local state as updated */
+    ncm_model_lstate_set_update (NCM_MODEL (gsdorgauss), NC_GALAXY_SD_OBS_REDSHIFT_GAUSS_LSTATE_PZ_GIVEN_ZP);
   }
 }
 
@@ -478,7 +753,9 @@ nc_galaxy_sd_obs_redshift_gauss_new (NcGalaxySDTrueRedshift *sdz, const gdouble 
 /**
  * nc_galaxy_sd_obs_redshift_gauss_new_lsst_srd_bins:
  * @type: a #NcGalaxySDTrueRedshiftLSSTSRDType
- * @gsdtr_new: (out) (transfer full): a pointer to a #NcGalaxySDTrueRedshiftLSSTSRD object that will be set to the true redshift distribution submodel used by all bins.
+ * @gsdtr_new: (out) (transfer full) (optional) (nullable): the true redshift distribution submodel
+ *
+ * Creates LSST SRD photometric redshift bins.
  *
  * Creates a #GPtrArray of #NcGalaxySDObsRedshiftGauss objects, one for each
  * LSST SRD bin of the specified type. All objects share the same true redshift
@@ -490,7 +767,7 @@ nc_galaxy_sd_obs_redshift_gauss_new (NcGalaxySDTrueRedshift *sdz, const gdouble 
  * - For source types (Y1 and Y10): Uses equal-area bins up to photo-z = 3.5
  *   - Both Y1 and Y10: 5 bins with sigma_z = 0.05
  *
- * Returns: (transfer full) (element-type NcGalaxySDObsRedshiftGauss): a #GPtrArray
+ * Returns: (transfer container) (element-type NcGalaxySDObsRedshiftGauss): a #GPtrArray
  * containing all bin objects.
  */
 GPtrArray *
@@ -758,8 +1035,7 @@ nc_galaxy_sd_obs_redshift_gauss_gen1 (NcGalaxySDObsRedshiftGauss *gsdorgauss, Nc
  * @sigma0: the base standard deviation of the redshift errors
  * @sigma_z: the standard deviation of the redshift errors
  *
- * Sets the observed redshift and the standard deviation of the redshift errors.
- *
+ * Sets the observed redshift and redshift error parameters.
  */
 void
 nc_galaxy_sd_obs_redshift_gauss_data_set (NcGalaxySDObsRedshiftGauss *gsdorgauss, NcGalaxySDObsRedshiftData *data, const gdouble zp, const gdouble sigma0, const gdouble sigma_z)
@@ -778,12 +1054,11 @@ nc_galaxy_sd_obs_redshift_gauss_data_set (NcGalaxySDObsRedshiftGauss *gsdorgauss
  * nc_galaxy_sd_obs_redshift_gauss_data_get:
  * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
  * @data: a #NcGalaxySDObsRedshiftData
- * @zp: the observed redshift
- * @sigma0: the base standard deviation of the redshift errors
- * @sigma_z: the standard deviation of the redshift errors
+ * @zp: (out): the observed redshift
+ * @sigma0: (out): the base standard deviation of the redshift errors
+ * @sigma_z: (out): the standard deviation of the redshift errors
  *
- * Gets the observed redshift and the standard deviation of the redshift errors.
- *
+ * Gets the observed redshift and redshift error parameters.
  */
 void
 nc_galaxy_sd_obs_redshift_gauss_data_get (NcGalaxySDObsRedshiftGauss *gsdorgauss, NcGalaxySDObsRedshiftData *data, gdouble *zp, gdouble *sigma0, gdouble *sigma_z)
@@ -795,33 +1070,90 @@ nc_galaxy_sd_obs_redshift_gauss_data_get (NcGalaxySDObsRedshiftGauss *gsdorgauss
   *sigma_z = ldata->sigma;
 }
 
-typedef struct _BinnedDndzIntegData
+/**
+ * nc_galaxy_sd_obs_redshift_gauss_eval_pzp:
+ * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
+ * @zp: photometric redshift value
+ * @sigma0: base photometric redshift scatter parameter
+ * @zp_max: maximum photometric redshift for the distribution
+ * @rel_error: relative error tolerance for integration (typical value: 1e-4)
+ *
+ * Evaluates the marginal photometric redshift distribution.
+ *
+ * This distribution represents the probability of observing a galaxy at
+ * photometric redshift @zp, integrating over all possible true redshifts:
+ *
+ * $$P(z_p) = \int_0^\infty P(z) \, \mathrm{Gauss}(z_p|z,\sigma_z(z)) \, \mathrm{d}z$$
+ *
+ * where $\sigma_z(z) = \sigma_0 (1 + z)$ and the normalization enforces $z_p > 0$.
+ *
+ * The distribution is computed once and cached, so subsequent calls with the same
+ * parameters will be very fast. The cache is invalidated when the model state changes.
+ *
+ * Returns: the probability density at photometric redshift @zp
+ */
+gdouble
+nc_galaxy_sd_obs_redshift_gauss_eval_pzp (NcGalaxySDObsRedshiftGauss *gsdorgauss, gdouble zp, gdouble sigma0, gdouble zp_max, gdouble rel_error)
 {
-  NcGalaxySDTrueRedshift *gsdtr;
-  gdouble zpl;
-  gdouble zpu;
-  gdouble sigma0;
-} BinnedDndzIntegData;
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
 
-static gdouble
-_binned_dndz_integrand (gpointer user_data, const gdouble z, const gdouble w)
-{
-  BinnedDndzIntegData *data  = (BinnedDndzIntegData *) user_data;
-  const gdouble Pz           = nc_galaxy_sd_true_redshift_integ (data->gsdtr, z);
-  const gdouble sigmaz       = data->sigma0 * (1.0 + z);
-  const gdouble sqrt2_sigmaz = M_SQRT2 * sigmaz;
-  const gdouble W            = ncm_util_gaussian_integral (data->zpl, data->zpu, z, sigmaz);
-  const gdouble N            = 0.5 * erfc (-z / sqrt2_sigmaz);
+  g_assert_cmpfloat (zp, >=, 0.0);
+  g_assert (zp <= zp_max * (1.0 + 1.0e-10));
 
-  /* The normalization N is due to the zp>0 constraint. */
+  /* Prepare the distribution (uses cache if possible) */
+  _nc_galaxy_sd_obs_redshift_gauss_prepare_pzp (gsdorgauss, sigma0, zp_max, rel_error);
 
-  return Pz * W / N;
+  /* Evaluate the spline at zp */
+  return ncm_spline_eval (self->pzp_spline, zp);
 }
 
-static gdouble
-_binned_dndz_integrand_for_gsl (const gdouble z, gpointer user_data)
+/**
+ * nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp:
+ * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
+ * @z: true redshift value
+ * @zp_min: minimum photometric redshift of the bin
+ * @zp_max: maximum photometric redshift of the bin
+ * @sigma0: base photometric redshift scatter parameter
+ * @rel_error: relative error tolerance for integration (typical value: 1e-4)
+ *
+ * Evaluates the conditional true redshift distribution for a photometric bin.
+ *
+ * This distribution gives the probability that a galaxy observed in the
+ * photometric redshift bin $[z_{p,\mathrm{min}}, z_{p,\mathrm{max}}]$ has
+ * true redshift @z:
+ *
+ * $$P(z|z_{p,\mathrm{min}}, z_{p,\mathrm{max}}) = \frac{P(z) \, W(z_{p,\mathrm{min}}, z_{p,\mathrm{max}}|z)}{N}$$
+ *
+ * where $W$ is the Gaussian integral over the photometric redshift bin:
+ *
+ * $$W = \int_{z_{p,\mathrm{min}}}^{z_{p,\mathrm{max}}} \mathrm{Gauss}(z_p|z,\sigma_z(z)) \, \mathrm{d}z_p$$
+ *
+ * with $\sigma_z(z) = \sigma_0 (1 + z)$, and $N$ is the normalization constant.
+ *
+ * The distribution is computed once and cached, so subsequent calls with the same
+ * parameters will be very fast. The cache is invalidated when the model state changes.
+ *
+ * This is particularly useful for computing the redshift distribution of galaxies in
+ * weak lensing tomographic bins defined by photometric redshift cuts.
+ *
+ * Returns: the probability density at true redshift @z for the given photo-z bin
+ */
+gdouble
+nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (NcGalaxySDObsRedshiftGauss *gsdorgauss, gdouble z, gdouble zp_min, gdouble zp_max, gdouble sigma0, gdouble rel_error)
 {
-  return _binned_dndz_integrand (user_data, z, 1.0);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
+  gdouble z_min, z_max;
+
+  nc_galaxy_sd_true_redshift_get_lim (self->sdz, &z_min, &z_max);
+
+  g_assert_cmpfloat (z, >=, z_min);
+  g_assert_cmpfloat (z, <=, z_max);
+
+  /* Prepare the distribution (uses cache if possible) */
+  _nc_galaxy_sd_obs_redshift_gauss_prepare_pz_given_zp (gsdorgauss, zp_min, zp_max, sigma0, rel_error);
+
+  /* Evaluate the spline at z */
+  return ncm_spline_eval (self->pz_given_zp_spline, z);
 }
 
 static NcmSpline *
@@ -888,47 +1220,6 @@ _nc_galaxy_sd_obs_redshift_gauss_compute_binned_dndz (NcGalaxySDObsRedshift *gsd
   }
 }
 
-typedef struct _PhotozDistIntegData
-{
-  NcGalaxySDTrueRedshift *gsdtr;
-  NcmIntegral1dPtr *integrator;
-  gdouble zp;
-  gdouble sigma0;
-  gdouble z_min;
-  gdouble z_max;
-} PhotozDistIntegData;
-
-static gdouble
-_photoz_distribution_integrand (gpointer user_data, const gdouble z, const gdouble w)
-{
-  PhotozDistIntegData *data    = (PhotozDistIntegData *) user_data;
-  const gdouble Pz             = nc_galaxy_sd_true_redshift_integ (data->gsdtr, z);
-  const gdouble sigmaz         = data->sigma0 * (1.0 + z);
-  const gdouble sqrt2pi_sigmaz = M_SQRT2 * M_SQRTPI * sigmaz;
-  const gdouble gauss          = exp (-0.5 * gsl_pow_2 ((data->zp - z) / sigmaz));
-  const gdouble norm           = 0.5 * erfc (-z / (M_SQRT2 * sigmaz));
-
-  return Pz * gauss / (sqrt2pi_sigmaz * norm);
-}
-
-static gdouble
-_photoz_distribution_gsl (gdouble zp, gpointer user_data)
-{
-  PhotozDistIntegData *data = (PhotozDistIntegData *) user_data;
-  gdouble error             = 0.0;
-  gdouble result;
-
-  data->zp = zp;
-  ncm_integral1d_ptr_set_userdata (data->integrator, data);
-  result = ncm_integral1d_eval (
-    NCM_INTEGRAL1D (data->integrator),
-    data->z_min,
-    data->z_max,
-    &error);
-
-  return result;
-}
-
 /**
  * nc_galaxy_sd_obs_redshift_gauss_compute_equal_area_photoz_bins:
  * @gsdtr: a #NcGalaxySDTrueRedshift
@@ -937,11 +1228,13 @@ _photoz_distribution_gsl (gdouble zp, gpointer user_data)
  * @zp_max: maximum photometric redshift to consider
  * @rel_error: relative error tolerance for integration
  *
- * Computes photometric redshift bin edges with equal areas under the convolved photo-z
- * distribution. This is suitable for weak lensing source samples where equal-area
+ * Computes equal-area photometric redshift bin edges.
+ *
+ * This function computes bin edges with equal areas under the convolved photo-z
+ * distribution, suitable for weak lensing source samples where equal-area
  * binning in photo-z space is desired.
  *
- * The function:
+ * The algorithm:
  *
  * 1. Computes the convolved photo-z distribution $P(z_p) = \int P(z) \times
  *    \mathrm{Gauss}(z_p|z,\sigma_z) \, \mathrm{d}z$
@@ -978,9 +1271,29 @@ nc_galaxy_sd_obs_redshift_gauss_compute_equal_area_photoz_bins (NcGalaxySDTrueRe
     ncm_spline_set_func (NCM_SPLINE (spline), NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, zp_max, 0, rel_error);
 
     {
-      NcmStatsDist1dSpline *stats = ncm_stats_dist1d_spline_new (NCM_SPLINE (spline));
-      NcmVector *bin_edges        = ncm_vector_new (n_bins + 1);
+      /* Transform P(zp) spline to -2*ln(P(zp)) for NcmStatsDist1dSpline */
+      NcmVector *xv        = ncm_spline_peek_xv (NCM_SPLINE (spline));
+      NcmVector *yv        = ncm_spline_peek_yv (NCM_SPLINE (spline));
+      NcmVector *m2lnP_vec = ncm_vector_new (ncm_vector_len (yv));
+      NcmSpline *m2lnP_spline;
+      NcmStatsDist1dSpline *stats;
+      NcmVector *bin_edges;
+      const guint len = ncm_vector_len (yv);
       gdouble total_area;
+
+      for (guint i = 0; i < len; i++)
+      {
+        const gdouble P = ncm_vector_get (yv, i);
+
+        g_assert_cmpfloat (P, >, 0.0);
+        ncm_vector_set (m2lnP_vec, i, -2.0 * log (P));
+      }
+
+      m2lnP_spline = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+      ncm_spline_set (m2lnP_spline, xv, m2lnP_vec, TRUE);
+
+      stats     = ncm_stats_dist1d_spline_new (m2lnP_spline);
+      bin_edges = ncm_vector_new (n_bins + 1);
 
       g_object_set (stats, "abstol", 1.0e-50, NULL);
       ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (stats));
@@ -995,6 +1308,8 @@ nc_galaxy_sd_obs_redshift_gauss_compute_equal_area_photoz_bins (NcGalaxySDTrueRe
       }
 
       ncm_stats_dist1d_free (NCM_STATS_DIST1D (stats));
+      ncm_spline_free (m2lnP_spline);
+      ncm_vector_free (m2lnP_vec);
       ncm_spline_free (NCM_SPLINE (spline));
       ncm_integral1d_ptr_free (integ_data.integrator);
 

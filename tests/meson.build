@@ -389,6 +389,10 @@ python_tests = [
         'source': 'test_py_cluster_abundance_sampling.py',
     },
     {
+        'name': 'py_galaxy_sd_redshift_lsst',
+        'source': 'test_py_galaxy_sd_redshift_lsst.py',
+    },
+    {
         'name': 'py_hicosmo',
         'source': 'test_py_hicosmo.py',
     },
