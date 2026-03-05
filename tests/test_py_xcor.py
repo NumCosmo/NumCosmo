@@ -235,8 +235,8 @@ def test_cmb_isw_integ_methods(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
     eval_limber = nc_cmb_isw_limber.get_eval(cosmo, 200)
     eval_levin = nc_cmb_isw_levin.get_eval(cosmo, 200)
 
-    print(eval_limber.eval(1.0e2))
-    print(eval_levin.eval(1.0e2))
+    print(eval_limber.eval_array(1.0e2))
+    print(eval_levin.eval_array(1.0e2))
 
     # Verify both are properly initialized
     assert nc_cmb_isw_limber.get_lmax() == lmax
