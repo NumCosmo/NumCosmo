@@ -565,7 +565,8 @@ _nc_galaxy_sd_obs_redshift_gauss_add_submodel (NcmModel *model, NcmModel *submod
  *
  * where $\sigma_z = \sigma_0 (1 + z)$ and the normalization ensures $z_p > 0$.
  *
- * The result is cached as a spline and will be reused if called again with the same
+ * The spline is stored as $-2\ln P(z_p)$ to enable reuse by equal-area binning.
+ * The result is cached and will be reused if called again with the same
  * parameters, unless the model state has been invalidated.
  */
 static void
@@ -607,9 +608,36 @@ _nc_galaxy_sd_obs_redshift_gauss_prepare_pzp (NcGalaxySDObsRedshiftGauss *gsdorg
     /* Clear old spline if it exists */
     ncm_spline_clear (&self->pzp_spline);
 
-    /* Create and populate new spline */
-    self->pzp_spline = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-    ncm_spline_set_func (self->pzp_spline, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, zp_max, 0, rel_error);
+    /* Create and populate P(zp) spline */
+    {
+      NcmSpline *P_spline = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+
+      ncm_spline_set_func (P_spline, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, zp_max, 0, rel_error);
+
+      /* Transform P(zp) to -2*ln(P(zp)) for storage */
+      {
+        NcmVector *xv        = ncm_spline_peek_xv (P_spline);
+        NcmVector *yv        = ncm_spline_peek_yv (P_spline);
+        NcmVector *m2lnP_vec = ncm_vector_new (ncm_vector_len (yv));
+        const guint len      = ncm_vector_len (yv);
+
+        for (guint i = 0; i < len; i++)
+        {
+          const gdouble P = ncm_vector_get (yv, i);
+
+          g_assert_cmpfloat (P, >, 0.0);
+          ncm_vector_set (m2lnP_vec, i, -2.0 * log (P));
+        }
+
+        /* Store as -2*ln(P) */
+        self->pzp_spline = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+        ncm_spline_set (self->pzp_spline, xv, m2lnP_vec, TRUE);
+
+        ncm_vector_free (m2lnP_vec);
+      }
+
+      ncm_spline_free (P_spline);
+    }
 
     /* Cache parameters */
     self->pzp_sigma0 = sigma0;
@@ -1103,8 +1131,12 @@ nc_galaxy_sd_obs_redshift_gauss_eval_pzp (NcGalaxySDObsRedshiftGauss *gsdorgauss
   /* Prepare the distribution (uses cache if possible) */
   _nc_galaxy_sd_obs_redshift_gauss_prepare_pzp (gsdorgauss, sigma0, zp_max, rel_error);
 
-  /* Evaluate the spline at zp */
-  return ncm_spline_eval (self->pzp_spline, zp);
+  /* Evaluate the spline to get -2*ln(P), then transform back to P */
+  {
+    const gdouble m2lnP = ncm_spline_eval (self->pzp_spline, zp);
+
+    return exp (-0.5 * m2lnP);
+  }
 }
 
 /**
@@ -1246,75 +1278,46 @@ _nc_galaxy_sd_obs_redshift_gauss_compute_binned_dndz (NcGalaxySDObsRedshift *gsd
 NcmVector *
 nc_galaxy_sd_obs_redshift_gauss_compute_equal_area_photoz_bins (NcGalaxySDTrueRedshift *gsdtr, guint n_bins, gdouble sigma0, gdouble zp_max, gdouble rel_error)
 {
-  gdouble z_min, z_max;
+  NcmDTuple2 lim = NCM_DTUPLE2_STATIC_INIT (0.0, zp_max);
+  NcGalaxySDObsRedshiftGauss *gsdorgauss;
+  NcGalaxySDObsRedshiftGaussPrivate *self;
+  NcmStatsDist1dSpline *stats;
+  NcmVector *bin_edges;
+  gdouble total_area;
 
   g_assert_cmpuint (n_bins, >, 0);
   g_assert_cmpfloat (sigma0, >, 0.0);
   g_assert_cmpfloat (zp_max, >, 0.0);
 
-  nc_galaxy_sd_true_redshift_get_lim (gsdtr, &z_min, &z_max);
+  /* Create temporary object to leverage caching */
+  gsdorgauss = g_object_new (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS,
+                             "zp-lim", &lim,
+                             NULL);
+  ncm_model_add_submodel (NCM_MODEL (gsdorgauss), NCM_MODEL (gsdtr));
+  self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
+
+  /* Prepare the cached spline */
+  _nc_galaxy_sd_obs_redshift_gauss_prepare_pzp (gsdorgauss, sigma0, zp_max, rel_error);
+
+  /* The cached spline is already in -2*ln(P) format - use it directly */
+  stats     = ncm_stats_dist1d_spline_new (self->pzp_spline);
+  bin_edges = ncm_vector_new (n_bins + 1);
+
+  g_object_set (stats, "abstol", 1.0e-50, NULL);
+  ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (stats));
+  total_area = ncm_stats_dist1d_eval_pdf (NCM_STATS_DIST1D (stats), zp_max);
+
+  for (guint i = 0; i <= n_bins; i++)
   {
-    NcmSplineCubicNotaknot *spline = ncm_spline_cubic_notaknot_new ();
-    PhotozDistIntegData integ_data = {
-      .gsdtr      = gsdtr,
-      .integrator = ncm_integral1d_ptr_new (&_photoz_distribution_integrand, NULL),
-      .zp         = 0.0,
-      .sigma0     = sigma0,
-      .z_min      = z_min,
-      .z_max      = z_max
-    };
-    gsl_function F;
+    const gdouble target_area = (i * total_area) / n_bins;
+    const gdouble zp_edge     = ncm_stats_dist1d_eval_inv_pdf (NCM_STATS_DIST1D (stats), target_area);
 
-    F.function = &_photoz_distribution_gsl;
-    F.params   = &integ_data;
-
-    ncm_spline_set_func (NCM_SPLINE (spline), NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, zp_max, 0, rel_error);
-
-    {
-      /* Transform P(zp) spline to -2*ln(P(zp)) for NcmStatsDist1dSpline */
-      NcmVector *xv        = ncm_spline_peek_xv (NCM_SPLINE (spline));
-      NcmVector *yv        = ncm_spline_peek_yv (NCM_SPLINE (spline));
-      NcmVector *m2lnP_vec = ncm_vector_new (ncm_vector_len (yv));
-      NcmSpline *m2lnP_spline;
-      NcmStatsDist1dSpline *stats;
-      NcmVector *bin_edges;
-      const guint len = ncm_vector_len (yv);
-      gdouble total_area;
-
-      for (guint i = 0; i < len; i++)
-      {
-        const gdouble P = ncm_vector_get (yv, i);
-
-        g_assert_cmpfloat (P, >, 0.0);
-        ncm_vector_set (m2lnP_vec, i, -2.0 * log (P));
-      }
-
-      m2lnP_spline = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-      ncm_spline_set (m2lnP_spline, xv, m2lnP_vec, TRUE);
-
-      stats     = ncm_stats_dist1d_spline_new (m2lnP_spline);
-      bin_edges = ncm_vector_new (n_bins + 1);
-
-      g_object_set (stats, "abstol", 1.0e-50, NULL);
-      ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (stats));
-      total_area = ncm_stats_dist1d_eval_pdf (NCM_STATS_DIST1D (stats), zp_max);
-
-      for (guint i = 0; i <= n_bins; i++)
-      {
-        const gdouble target_area = (i * total_area) / n_bins;
-        const gdouble zp_edge     = ncm_stats_dist1d_eval_inv_pdf (NCM_STATS_DIST1D (stats), target_area);
-
-        ncm_vector_set (bin_edges, i, zp_edge);
-      }
-
-      ncm_stats_dist1d_free (NCM_STATS_DIST1D (stats));
-      ncm_spline_free (m2lnP_spline);
-      ncm_vector_free (m2lnP_vec);
-      ncm_spline_free (NCM_SPLINE (spline));
-      ncm_integral1d_ptr_free (integ_data.integrator);
-
-      return bin_edges;
-    }
+    ncm_vector_set (bin_edges, i, zp_edge);
   }
+
+  ncm_stats_dist1d_free (NCM_STATS_DIST1D (stats));
+  nc_galaxy_sd_obs_redshift_gauss_free (gsdorgauss);
+
+  return bin_edges;
 }
 
