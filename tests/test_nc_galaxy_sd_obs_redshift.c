@@ -954,6 +954,9 @@ test_nc_galaxy_sd_obs_redshift_gauss_eval_pzp (TestNcGalaxySDObsRedshift *test, 
   gdouble zp_min, zp_ignore;
 
   nc_galaxy_sd_obs_redshift_gauss_get_zp_lim (gsdorgauss, &zp_min, &zp_ignore);
+  nc_galaxy_sd_obs_redshift_gauss_set_bin_sigma0 (gsdorgauss, sigma0);
+  nc_galaxy_sd_obs_redshift_gauss_set_zp_support_max (gsdorgauss, zp_max);
+  nc_galaxy_sd_obs_redshift_gauss_set_reltol (gsdorgauss, rel_error);
 
   /* Test that eval_pzp returns valid probabilities and that caching works */
   for (guint i = 0; i < nsamples; i++)
@@ -962,10 +965,10 @@ test_nc_galaxy_sd_obs_redshift_gauss_eval_pzp (TestNcGalaxySDObsRedshift *test, 
     gdouble p1, p2;
 
     /* First evaluation (should compute and cache) */
-    p1 = nc_galaxy_sd_obs_redshift_gauss_eval_pzp (gsdorgauss, zp, sigma0, zp_max, rel_error);
+    p1 = nc_galaxy_sd_obs_redshift_gauss_eval_pzp (gsdorgauss, zp);
 
     /* Second evaluation (should use cache) */
-    p2 = nc_galaxy_sd_obs_redshift_gauss_eval_pzp (gsdorgauss, zp, sigma0, zp_max, rel_error);
+    p2 = nc_galaxy_sd_obs_redshift_gauss_eval_pzp (gsdorgauss, zp);
 
     /* Check that probability is non-negative */
     g_assert_cmpfloat (p1, >=, 0.0);
@@ -980,8 +983,9 @@ test_nc_galaxy_sd_obs_redshift_gauss_eval_pzp (TestNcGalaxySDObsRedshift *test, 
     const gdouble new_sigma0 = sigma0 * 1.5;
     gdouble p1, p2;
 
-    p1 = nc_galaxy_sd_obs_redshift_gauss_eval_pzp (gsdorgauss, zp, sigma0, zp_max, rel_error);
-    p2 = nc_galaxy_sd_obs_redshift_gauss_eval_pzp (gsdorgauss, zp, new_sigma0, zp_max, rel_error);
+    p1 = nc_galaxy_sd_obs_redshift_gauss_eval_pzp (gsdorgauss, zp);
+    nc_galaxy_sd_obs_redshift_gauss_set_bin_sigma0 (gsdorgauss, new_sigma0);
+    p2 = nc_galaxy_sd_obs_redshift_gauss_eval_pzp (gsdorgauss, zp);
 
     /* Values should differ when sigma0 changes */
     g_assert_cmpfloat (fabs (p1 - p2), >, 1.0e-10);
@@ -999,6 +1003,9 @@ test_nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (TestNcGalaxySDObsRedshift
 
   nc_galaxy_sd_obs_redshift_gauss_get_zp_lim (gsdorgauss, &zp_min, &zp_max);
   nc_galaxy_sd_obs_redshift_get_integ_lim (test->gsdor, NULL, &z_min, &z_max);
+  nc_galaxy_sd_obs_redshift_gauss_set_bin_sigma0 (gsdorgauss, sigma0);
+  nc_galaxy_sd_obs_redshift_gauss_set_zp_support_max (gsdorgauss, zp_max);
+  nc_galaxy_sd_obs_redshift_gauss_set_reltol (gsdorgauss, rel_error);
 
   /* Test that eval_pz_given_zp returns valid probabilities and integrates to ~1 */
   {
@@ -1009,7 +1016,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (TestNcGalaxySDObsRedshift
     for (guint i = 0; i < n_integ_points; i++)
     {
       const gdouble z = z_min + (z_max - z_min) * i / (gdouble) (n_integ_points - 1);
-      const gdouble p = nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (gsdorgauss, z, zp_min, zp_max, sigma0, rel_error);
+      const gdouble p = nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (gsdorgauss, z);
 
       /* Check that probability is non-negative */
       g_assert_cmpfloat (p, >=, 0.0);
@@ -1030,8 +1037,8 @@ test_nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (TestNcGalaxySDObsRedshift
     const gdouble z = 0.5;
     gdouble p1, p2;
 
-    p1 = nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (gsdorgauss, z, zp_min, zp_max, sigma0, rel_error);
-    p2 = nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (gsdorgauss, z, zp_min, zp_max, sigma0, rel_error);
+    p1 = nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (gsdorgauss, z);
+    p2 = nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (gsdorgauss, z);
 
     ncm_assert_cmpdouble_e (p1, ==, p2, 1.0e-15, 0.0);
   }
@@ -1042,8 +1049,9 @@ test_nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (TestNcGalaxySDObsRedshift
     const gdouble new_zp_max = zp_max * 0.8;
     gdouble p1, p2;
 
-    p1 = nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (gsdorgauss, z, zp_min, zp_max, sigma0, rel_error);
-    p2 = nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (gsdorgauss, z, zp_min, new_zp_max, sigma0, rel_error);
+    p1 = nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (gsdorgauss, z);
+    nc_galaxy_sd_obs_redshift_gauss_set_zp_lim (gsdorgauss, zp_min, new_zp_max);
+    p2 = nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (gsdorgauss, z);
 
     /* Values should differ when bin changes */
     g_assert_cmpfloat (fabs (p1 - p2), >, 1.0e-10);

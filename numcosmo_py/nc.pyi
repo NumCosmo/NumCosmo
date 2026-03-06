@@ -6276,13 +6276,11 @@ class GalaxySDObsRedshift(NumCosmoMath.Model):
     def clear(gsdor: GalaxySDObsRedshift) -> None: ...
     def compute_binned_dndz(
         self,
-        sigma0: float,
         z_array: typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
         rel_error: float,
     ) -> NumCosmoMath.Spline: ...
     def do_compute_binned_dndz(
         self,
-        sigma0: float,
         z_array: typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
         rel_error: float,
     ) -> NumCosmoMath.Spline: ...
@@ -6335,7 +6333,6 @@ class GalaxySDObsRedshiftClass(GObject.GPointer):
     compute_binned_dndz: typing.Callable[
         [
             GalaxySDObsRedshift,
-            float,
             typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
             float,
         ],
@@ -6388,6 +6385,12 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
         Galaxy sample photometric redshift limits
       use-true-z -> gboolean: use-true-z
         Use the true redshift distribution
+      bin-sigma0 -> gdouble: bin-sigma0
+        Base photometric redshift scatter for binned analyses
+      reltol -> gdouble: reltol
+        Relative tolerance for numerical integration
+      zp-support-max -> gdouble: zp-support-max
+        Maximum photometric redshift for support
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -6414,8 +6417,11 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
     """
 
     class Props:
+        bin_sigma0: float
+        reltol: float
         use_true_z: bool
         zp_lim: NumCosmoMath.DTuple2
+        zp_support_max: float
         implementation: int
         name: str
         nick: str
@@ -6429,34 +6435,28 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
     props: Props = ...
     def __init__(
         self,
+        bin_sigma0: float = ...,
+        reltol: float = ...,
         use_true_z: bool = ...,
         zp_lim: NumCosmoMath.DTuple2 = ...,
+        zp_support_max: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @staticmethod
     def clear(gsdorgauss: GalaxySDObsRedshiftGauss) -> None: ...
-    @staticmethod
     def compute_equal_area_photoz_bins(
-        gsdtr: GalaxySDTrueRedshift,
-        n_bins: int,
-        sigma0: float,
-        zp_max: float,
-        rel_error: float,
+        self, n_bins: int, zp_max: float
     ) -> NumCosmoMath.Vector: ...
     def data_get(
-        self, data: GalaxySDObsRedshiftData, zp: float, sigma0: float, sigma_z: float
-    ) -> None: ...
+        self, data: GalaxySDObsRedshiftData
+    ) -> typing.Tuple[float, float, float]: ...
     def data_set(
         self, data: GalaxySDObsRedshiftData, zp: float, sigma0: float, sigma_z: float
     ) -> None: ...
-    def eval_pz_given_zp(
-        self, z: float, zp_min: float, zp_max: float, sigma0: float, rel_error: float
-    ) -> float: ...
-    def eval_pzp(
-        self, zp: float, sigma0: float, zp_max: float, rel_error: float
-    ) -> float: ...
+    def eval_pz_given_zp(self, z: float) -> float: ...
+    def eval_pzp(self, zp: float) -> float: ...
     def free(self) -> None: ...
     def gen(
         self,
@@ -6472,8 +6472,11 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
         sigma0: float,
         rng: NumCosmoMath.RNG,
     ) -> bool: ...
+    def get_bin_sigma0(self) -> float: ...
+    def get_reltol(self) -> float: ...
     def get_use_true_z(self) -> bool: ...
     def get_zp_lim(self) -> typing.Tuple[float, float]: ...
+    def get_zp_support_max(self) -> float: ...
     @classmethod
     def new(
         cls, sdz: GalaxySDTrueRedshift, zp_min: float, zp_max: float
@@ -6483,8 +6486,11 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
         type: GalaxySDTrueRedshiftLSSTSRDType,
     ) -> typing.Tuple[list[GalaxySDObsRedshiftGauss], GalaxySDTrueRedshiftLSSTSRD]: ...
     def ref(self) -> GalaxySDObsRedshiftGauss: ...
+    def set_bin_sigma0(self, bin_sigma0: float) -> None: ...
+    def set_reltol(self, reltol: float) -> None: ...
     def set_use_true_z(self, use_true_z: bool) -> None: ...
     def set_zp_lim(self, zp_min: float, zp_max: float) -> None: ...
+    def set_zp_support_max(self, zp_support_max: float) -> None: ...
 
 class GalaxySDObsRedshiftGaussClass(GObject.GPointer):
     r"""

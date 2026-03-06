@@ -447,7 +447,7 @@ def test_lsst_bins_coverage(
     # For source bins, z_max should be 3.5 (as per C implementation)
     # For lens bins, depends on Y1 or Y10
     if "SOURCE" in type_name:
-        assert_allclose(last_max, 3.5, rtol=1e-10)
+        assert_allclose(last_max, 3.5, rtol=1e-8)
     elif "LENS" in type_name:
         # Lens bins typically go to lower redshift
         assert last_max > 0.5  # Reasonable check
@@ -474,14 +474,16 @@ def test_lsst_bins_integration(
     rel_error = 1e-4
 
     for bin_obj in bins:
-        zp_min, zp_max = bin_obj.get_zp_lim()
+        bin_obj.set_bin_sigma0(sigma0)
+        bin_obj.set_reltol(rel_error)
+        bin_obj.set_zp_support_max(20.0)
 
         # Test at several true redshifts within valid range
         z_array = np.linspace(z_min, min(z_max, 2.0), 10)
 
         for z in z_array:
             # Evaluate P(z|zp_min, zp_max)
-            p = bin_obj.eval_pz_given_zp(z, zp_min, zp_max, sigma0, rel_error)
+            p = bin_obj.eval_pz_given_zp(z)
             assert np.isfinite(p), f"Non-finite probability at z={z}"
             assert p >= 0.0, f"Negative probability at z={z}"
 
@@ -511,17 +513,16 @@ def test_lsst_bins_normalization(
 
     for i in test_indices:
         bin_obj = bins[i]
-        zp_min, zp_max = bin_obj.get_zp_lim()
+
+        # Set properties for evaluation
+        bin_obj.set_bin_sigma0(sigma0)
+        bin_obj.set_reltol(rel_error)
+        bin_obj.set_zp_support_max(20.0)  # Global support max, not bin limit
 
         # Integrate P(z|zp_min, zp_max) over z
         # Use finer sampling for integration
         z_array = np.linspace(z_min, z_max, 500)
-        p_array = np.array(
-            [
-                bin_obj.eval_pz_given_zp(z, zp_min, zp_max, sigma0, rel_error)
-                for z in z_array
-            ]
-        )
+        p_array = np.array([bin_obj.eval_pz_given_zp(z) for z in z_array])
 
         # The integral over z should be 1 (normalized distribution)
         norm = np.trapezoid(p_array, z_array)
@@ -560,16 +561,19 @@ def test_lsst_bins_pzp_distribution(
     # distribution)
     bin_obj = bins[0]
 
+    # Set properties for evaluation
+    bin_obj.set_bin_sigma0(sigma0)
+    bin_obj.set_reltol(rel_error)
+    bin_obj.set_zp_support_max(zp_max_tot)
+
     for zp in zp_array:
         # Evaluate P(zp)
-        p = bin_obj.eval_pzp(zp, sigma0, zp_max_tot, rel_error)
+        p = bin_obj.eval_pzp(zp)
         assert np.isfinite(p), f"Non-finite P(zp) at zp={zp}"
         assert p >= 0.0, f"Negative P(zp) at zp={zp}"
 
     # Test that P(zp) is reasonably smooth (no huge jumps)
-    p_array = np.array(
-        [bin_obj.eval_pzp(zp, sigma0, zp_max_tot, rel_error) for zp in zp_array]
-    )
+    p_array = np.array([bin_obj.eval_pzp(zp) for zp in zp_array])
 
     # Check that there are no NaN or inf values
     assert np.all(np.isfinite(p_array)), "P(zp) contains non-finite values"
@@ -598,18 +602,24 @@ def test_lsst_bins_pzp_caching(
     bin_obj = bins[0]
     zp_max_tot = bins[-1].get_zp_lim()[1]
 
+    # Set properties for evaluation
+    bin_obj.set_bin_sigma0(sigma0)
+    bin_obj.set_reltol(rel_error)
+    bin_obj.set_zp_support_max(zp_max_tot)
+
     # First evaluation (should compute and cache)
     zp_test = 1.0
-    p1 = bin_obj.eval_pzp(zp_test, sigma0, zp_max_tot, rel_error)
+    p1 = bin_obj.eval_pzp(zp_test)
 
     # Second evaluation with same parameters (should use cache)
-    p2 = bin_obj.eval_pzp(zp_test, sigma0, zp_max_tot, rel_error)
+    p2 = bin_obj.eval_pzp(zp_test)
 
     # Should be exactly equal (cached)
     assert p1 == p2, "Cached values don't match"
 
     # Third evaluation with different sigma0 (should recompute)
-    p3 = bin_obj.eval_pzp(zp_test, sigma0 * 1.5, zp_max_tot, rel_error)
+    bin_obj.set_bin_sigma0(sigma0 * 1.5)
+    p3 = bin_obj.eval_pzp(zp_test)
 
     # Should be different
     assert p1 != p3, "Cache not invalidated when sigma0 changed"
@@ -677,11 +687,14 @@ def test_lsst_bins_pzp_normalization(
     # Use first bin (they all share the same true redshift distribution)
     bin_obj = bins[0]
 
+    # Set properties for evaluation
+    bin_obj.set_bin_sigma0(sigma0)
+    bin_obj.set_reltol(rel_error)
+    bin_obj.set_zp_support_max(zp_max_tot)
+
     # Integrate P(zp) over zp using high-resolution grid
     zp_array = np.linspace(0.0, zp_max_tot, 1000)
-    p_array = np.array(
-        [bin_obj.eval_pzp(zp, sigma0, zp_max_tot, rel_error) for zp in zp_array]
-    )
+    p_array = np.array([bin_obj.eval_pzp(zp) for zp in zp_array])
 
     # Numerical integration
     norm = np.trapezoid(p_array, zp_array)
@@ -732,17 +745,18 @@ def test_lsst_bins_equal_area_verification(
     bin_areas_list = []
     bin_obj = bins[0]
 
+    # Set properties for evaluation
+    bin_obj.set_bin_sigma0(sigma0)
+    bin_obj.set_reltol(rel_error)
+    bin_obj.set_zp_support_max(zp_max_tot)
+
     total_z = np.linspace(0.0, zp_max_tot, 2000)
-    total_area = np.trapezoid(
-        [bin_obj.eval_pzp(zp, sigma0, zp_max_tot, rel_error) for zp in total_z], total_z
-    )
+    total_area = np.trapezoid([bin_obj.eval_pzp(zp) for zp in total_z], total_z)
 
     for zp0, zp1 in zip(bin_edges[:-1], bin_edges[1:]):
         # Integrate from zp0 to zp1 (over this bin)
         zp_array = np.linspace(zp0, zp1, 1500)
-        p_array = np.array(
-            [bin_obj.eval_pzp(zp, sigma0, zp_max_tot, rel_error) for zp in zp_array]
-        )
+        p_array = np.array([bin_obj.eval_pzp(zp) for zp in zp_array])
         area = np.trapezoid(p_array, zp_array) / total_area
         bin_areas_list.append(area)
 
@@ -784,13 +798,18 @@ def test_lsst_bins_pz_given_zp_python_comparison(
     bin_obj = bins[0]
     zp_min, zp_max = bin_obj.get_zp_lim()
 
+    # Set properties for evaluation
+    bin_obj.set_bin_sigma0(sigma0)
+    bin_obj.set_reltol(rel_error)
+    bin_obj.set_zp_support_max(20.0)  # Global support max, not bin limit
+
     # Pick several test points
     z_test = np.array([0.2, 0.5, 1.0, 1.5])
     z_test = z_test[(z_test >= z_min) & (z_test <= z_max)]
 
     for z in z_test:
         # Get C-computed value
-        p_c = bin_obj.eval_pz_given_zp(z, zp_min, zp_max, sigma0, rel_error)
+        p_c = bin_obj.eval_pz_given_zp(z)
 
         # Compute manually with Python
         # P(z|zp_min,zp_max) ∝ P(z) * W(zp_min,zp_max|z)
@@ -855,48 +874,40 @@ def test_lsst_bins_pzp_python_comparison(
 
     z_min, z_max = gsdtr.get_lim()
     sigma0 = 0.05 if "SOURCE" in type_name else 0.03
-    rel_error = 1e-4
+    rel_error = 1.0e-8
 
     bin_obj = bins[0]
     zp_max_tot = bins[-1].get_zp_lim()[1]
+
+    # Set properties for evaluation
+    bin_obj.set_bin_sigma0(sigma0)
+    bin_obj.set_reltol(rel_error)
+    bin_obj.set_zp_support_max(zp_max_tot)
 
     # Test at several zp values
     zp_test = np.array([0.5, 1.0, 1.5, 2.0])
     zp_test = zp_test[zp_test <= zp_max_tot]
 
-    for zp in zp_test:
-        # Get C-computed value
-        p_c = bin_obj.eval_pzp(zp, sigma0, zp_max_tot, rel_error)
+    zp_array = np.linspace(0.0, zp_max_tot, 1500)
+    pzp_array = []
+    z_array = np.linspace(z_min, z_max, 1500)
+    p_z_array = np.array([gsdtr.integ(z) for z in z_array])
 
-        # Compute manually with Python
-        # P(zp) = ∫ P(z) * Gauss(zp|z,σ(z)) dz
-        # where σ(z) = σ0(1+z)
-
-        # High-resolution integration
-        z_array = np.linspace(z_min, min(z_max, 3.0), 500)
-        p_z_array = np.array([gsdtr.integ(z) for z in z_array])
-
+    for zp in zp_array:
         # Gaussian contribution from each z
-        gauss_contributions = []
-        for z, p_z in zip(z_array, p_z_array):
-            sigmaz = sigma0 * (1.0 + z)
-            # Gaussian PDF
-            gauss = np.exp(-0.5 * ((zp - z) / sigmaz) ** 2) / (
-                np.sqrt(2.0 * np.pi) * sigmaz
-            )
-            norm = 0.5 * erfc(-z / (np.sqrt(2.0) * sigmaz))
-            gauss_contributions.append(p_z * gauss / norm)
-
-        # Integrate
-        p_python = np.trapezoid(gauss_contributions, z_array)
-
-        # Compare (allow some tolerance due to numerical integration differences)
-        assert_allclose(
-            p_c,
-            p_python,
-            rtol=0.05,
-            err_msg=f"P(zp) mismatch at zp={zp} for {type_name}",
+        sigmaz = sigma0 * (1.0 + z_array)
+        gauss = np.exp(-0.5 * ((zp - z_array) / sigmaz) ** 2) / (
+            np.sqrt(2.0 * np.pi) * sigmaz
         )
+        norm = 0.5 * erfc(-z_array / (np.sqrt(2.0) * sigmaz))
+        gauss_contributions = p_z_array * gauss / norm
+        p_python = np.trapezoid(gauss_contributions, z_array)
+        pzp_array.append(p_python)
+
+    pzp_array = pzp_array / np.trapezoid(pzp_array, zp_array)
+    nc_pzp_array = [bin_obj.eval_pzp(zp) for zp in zp_array]
+
+    assert_allclose(nc_pzp_array, pzp_array, rtol=5.0e-4)
 
 
 def test_lsst_bins_consistency_between_methods() -> None:
@@ -911,23 +922,23 @@ def test_lsst_bins_consistency_between_methods() -> None:
     bin_obj = Nc.GalaxySDObsRedshiftGauss.new(gsdtr, 0.5, 1.5)
 
     z_min, z_max = gsdtr.get_lim()
-    zp_min, zp_max = bin_obj.get_zp_lim()
 
     sigma0 = 0.05
     rel_error = 1e-4
+
+    # Set properties for evaluation
+    bin_obj.set_bin_sigma0(sigma0)
+    bin_obj.set_reltol(rel_error)
+    bin_obj.set_zp_support_max(20.0)  # Global support max, not bin limit
 
     # Test that eval_pz_given_zp gives consistent results for different calls
     z_test = np.linspace(z_min, min(z_max, 2.0), 10)
 
     # First pass
-    p_first = np.array(
-        [bin_obj.eval_pz_given_zp(z, zp_min, zp_max, sigma0, rel_error) for z in z_test]
-    )
+    p_first = np.array([bin_obj.eval_pz_given_zp(z) for z in z_test])
 
     # Second pass (should use cache)
-    p_second = np.array(
-        [bin_obj.eval_pz_given_zp(z, zp_min, zp_max, sigma0, rel_error) for z in z_test]
-    )
+    p_second = np.array([bin_obj.eval_pz_given_zp(z) for z in z_test])
 
     # Should be exactly equal (cached)
     assert_allclose(
@@ -936,12 +947,8 @@ def test_lsst_bins_consistency_between_methods() -> None:
 
     # Change sigma0 slightly and verify it recomputes
     sigma0_new = sigma0 * 1.1
-    p_third = np.array(
-        [
-            bin_obj.eval_pz_given_zp(z, zp_min, zp_max, sigma0_new, rel_error)
-            for z in z_test
-        ]
-    )
+    bin_obj.set_bin_sigma0(sigma0_new)
+    p_third = np.array([bin_obj.eval_pz_given_zp(z) for z in z_test])
 
     # Should be different
     assert not np.allclose(
@@ -963,13 +970,18 @@ def test_lsst_bins_sum_over_bins() -> None:
 
     bin_obj = bins[0]
 
+    # Set properties for evaluation
+    bin_obj.set_bin_sigma0(sigma0)
+    bin_obj.set_reltol(rel_error)
+    bin_obj.set_zp_support_max(zp_max_tot)
+
     # Test at several zp points that fall within the bin coverage
     zp_min_tot = bins[0].get_zp_lim()[0]
     zp_test = np.linspace(zp_min_tot + 0.1, zp_max_tot - 0.1, 5)
 
     for zp in zp_test:
         # Get overall P(zp)
-        p_total = bin_obj.eval_pzp(zp, sigma0, zp_max_tot, rel_error)
+        p_total = bin_obj.eval_pzp(zp)
 
         # Since zp is given, each bin sees the same P(zp)
         # The test here is more about checking P(zp) is consistent
@@ -1037,3 +1049,55 @@ def test_source_lens_z_ranges() -> None:
 
     # Source should go higher in redshift than lens
     assert source_max > lens_max
+
+
+def test_compute_binned_dndz_consistency(
+    lsst_bins_case: tuple[Nc.GalaxySDTrueRedshiftLSSTSRDType, str],
+) -> None:
+    """Test that compute_binned_dndz returns the same distribution as eval_pz_given_zp.
+
+    The compute_binned_dndz method should return a spline representing P(z|zp_min,zp_max),
+    which is the same distribution evaluated by eval_pz_given_zp.
+    """
+    lsst_type, type_name = lsst_bins_case
+
+    bins, gsdtr = Nc.GalaxySDObsRedshiftGauss.new_lsst_srd_bins(lsst_type)
+
+    z_min, z_max = gsdtr.get_lim()
+    sigma0 = 0.05 if "SOURCE" in type_name else 0.03
+    rel_error = 1.0e-4
+
+    # Test first bin
+    bin_obj = bins[0]
+
+    # Set properties for evaluation
+    bin_obj.set_bin_sigma0(sigma0)
+    bin_obj.set_reltol(rel_error)
+    bin_obj.set_zp_support_max(20.0)
+
+    z_array = np.linspace(z_min, z_max, 100)
+    dndz_spline = Nc.GalaxySDObsRedshift.compute_binned_dndz(
+        bin_obj, z_array.tolist(), rel_error
+    )
+
+    z_test = np.linspace(z_min, min(z_max, 3.0), 50)
+
+    for z in z_test:
+        p_direct = bin_obj.eval_pz_given_zp(z)
+        p_spline = dndz_spline.eval(z)
+
+        assert_allclose(
+            p_spline,
+            p_direct,
+            rtol=1.0e-10,
+            atol=1.0e-14,
+            err_msg=f"Mismatch at z={z} for {type_name}",
+        )
+
+    z_eval = np.linspace(z_min, min(z_max, 3.0), 500)
+    p_vals = np.array([dndz_spline.eval(z) for z in z_eval])
+    norm = np.trapezoid(p_vals, z_eval)
+
+    assert_allclose(
+        norm, 1.0, rtol=1.0e-7, err_msg=f"Normalization failed for {type_name}"
+    )

@@ -68,7 +68,7 @@ struct _NcGalaxySDObsRedshiftClass
   void (*prepare) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
   void (*get_integ_lim) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
   void (*data_init) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
-  NcmSpline *(*compute_binned_dndz) (NcGalaxySDObsRedshift *gsdor, gdouble sigma0, NcmVector *z_array, gdouble rel_error);
+  NcmSpline *(*compute_binned_dndz) (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array, gdouble rel_error);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
   gpointer padding[11];
@@ -107,7 +107,7 @@ void nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGa
 NcGalaxySDObsRedshiftIntegrand *nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp);
 NcGalaxySDObsRedshiftData *nc_galaxy_sd_obs_redshift_data_new (NcGalaxySDObsRedshift *gsdor);
 
-NcmSpline *nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, gdouble sigma0, NcmVector *z_array, gdouble rel_error);
+NcmSpline *nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array, gdouble rel_error);
 
 #define NC_GALAXY_SD_OBS_REDSHIFT_COL_Z "z"
 
