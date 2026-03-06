@@ -30,12 +30,16 @@ from pytest_lazy_fixtures import lf
 import numpy as np
 from numpy.testing import assert_allclose
 
+pytest.importorskip("pyccl")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
 import pyccl
 
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams
 
+pytestmark = pytest.mark.ccl
 Ncm.cfg_init()
 
 

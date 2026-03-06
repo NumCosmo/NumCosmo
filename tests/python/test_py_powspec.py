@@ -29,7 +29,13 @@ import pytest
 import numpy as np
 from numpy.testing import assert_allclose
 
+pytest.importorskip("pyccl")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 import pyccl
+
+pytestmark = [pytest.mark.ccl, pytest.mark.powspec]
 
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc

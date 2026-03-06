@@ -28,7 +28,13 @@ from typing import cast
 from filecmp import cmp
 from pathlib import Path
 import pytest
+
+pytest.importorskip("typer")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 from typer.testing import CliRunner
+
 from numpy import sin, cos, pi, log10, deg2rad
 from numpy.random import uniform, choice
 
@@ -42,6 +48,8 @@ from numcosmo_py.experiments.cluster_wl import (
     GalaxyShapeGen,
     HaloProfileType,
 )
+
+pytestmark = pytest.mark.app
 
 runner = CliRunner()
 

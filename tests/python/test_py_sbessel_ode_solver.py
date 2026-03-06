@@ -37,6 +37,11 @@ import pytest
 import time
 
 from numpy.testing import assert_allclose
+
+pytest.importorskip("scipy")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 from scipy.special import spherical_jn
 from scipy.linalg import solve
 from scipy.integrate import quad

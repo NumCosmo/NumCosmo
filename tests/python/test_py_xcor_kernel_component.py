@@ -41,6 +41,8 @@ import numpy as np
 from numcosmo_py import Ncm, Nc, GObject
 from numcosmo_py.cosmology import Cosmology
 
+pytestmark = pytest.mark.xcor
+
 Ncm.cfg_init()
 
 

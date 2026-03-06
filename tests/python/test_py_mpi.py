@@ -25,12 +25,27 @@
 """Unit tests for NumCosmo MPI objects."""
 
 import sys
+import pytest
 from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm
 
 sys.argv = Ncm.cfg_init_full(sys.argv)
+
+pytestmark = pytest.mark.mpi
+
+
+def test_mpi_detected_ranks() -> None:
+    """Test that MPI ranks are detected.
+
+    NumCosmo will automatically detect being run in an MPI environment. When that's the
+    case the rank 0 process will execute normally, while the other ranks will wait for
+    instructions from the master process. This test checks that the number of slave
+    ranks is detected correctly.
+    """
+    nslaves = Ncm.cfg_mpi_nslaves()
+    assert nslaves > 0
 
 
 def test_mpi_job_fit_run_array() -> None:

@@ -28,6 +28,11 @@ from typing import Tuple
 from pathlib import Path
 
 import pytest
+
+pytest.importorskip("typer")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 from typer.testing import CliRunner
 
 from numcosmo_py import Ncm
@@ -41,6 +46,7 @@ from numcosmo_py.interpolation.stats_dist import (
     InterpolationKernel,
 )
 
+pytestmark = pytest.mark.app
 runner = CliRunner()
 
 Ncm.cfg_init()

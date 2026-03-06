@@ -29,6 +29,11 @@ import re
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
+
+pytest.importorskip("getdist")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 from getdist import MCSamples
 
 from numcosmo_py import Ncm

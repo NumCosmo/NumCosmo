@@ -30,6 +30,11 @@ import re
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
+
+pytest.importorskip("astropy")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 from astropy.table import Table
 from astropy.io import fits
 

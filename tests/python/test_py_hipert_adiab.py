@@ -28,8 +28,13 @@ import math
 import pytest
 
 from numpy.testing import assert_allclose
-from scipy.special import hankel1e  # pylint: disable=no-name-in-module
 import numpy as np
+
+pytest.importorskip("scipy")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
+from scipy.special import hankel1e  # pylint: disable=no-name-in-module
 
 from numcosmo_py import Ncm, Nc
 

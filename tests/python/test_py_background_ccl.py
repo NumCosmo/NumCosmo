@@ -27,9 +27,14 @@
 import pytest
 from numpy.testing import assert_allclose
 import numpy as np
+
+pytest.importorskip("pyccl")
+pytest.importorskip("matplotlib.pyplot")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 import matplotlib.pyplot as plt
 import pyccl
-
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.ccl.comparison import (
@@ -65,6 +70,7 @@ from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
     fixture_nc_cosmo_eh_halofit,
 )
 
+pytestmark = pytest.mark.ccl
 Ncm.cfg_init()
 
 

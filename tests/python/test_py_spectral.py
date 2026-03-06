@@ -27,6 +27,11 @@ import pytest
 import numpy as np
 from numpy.testing import assert_allclose
 from numpy.polynomial.chebyshev import chebval
+
+pytest.importorskip("scipy")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 from scipy.special import iv, eval_gegenbauer  # pylint: disable=no-name-in-module
 from scipy.fft import dct
 

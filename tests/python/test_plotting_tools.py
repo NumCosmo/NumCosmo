@@ -32,6 +32,12 @@ and create figure/axes objects explicitly.
 """
 
 import numpy as np
+import pytest
+
+pytest.importorskip("matplotlib")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
