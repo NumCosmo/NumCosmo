@@ -24,7 +24,9 @@ if enable_gir
 
     pytest_base_args = ['-ra', '--tb=short']
     pytest_protocol = 'exitcode'
-    pytest_is_parallel = true
+    # We are using xdist for parallel test execution, so we set this to false to avoid
+    # conflicts with pytest's internal parallelization mechanisms.
+    pytest_is_parallel = false
 
     if get_option('b_coverage')
         python_module.find_installation(
@@ -35,7 +37,6 @@ if enable_gir
         pytest_base_args += ['--cov', 'numcosmo_py']
         pytest_base_args += ['--cov-report', 'xml']
         pytest_base_args += ['--cov-append']
-        pytest_is_parallel = false
     endif
 
     py_tap = python_module.find_installation(
@@ -46,8 +47,7 @@ if enable_gir
     if py_tap.found() and get_option('pytest_tap')
         r = run_command(
             python,
-            '-c',
-            'import importlib.metadata; import sys; sys.stdout.write(importlib.metadata.version("pytest-tap"))',
+            '-c', 'import importlib.metadata; import sys; sys.stdout.write(importlib.metadata.version("pytest-tap"))',
             check: true,
         )
         message('pytest-tap version: @0@'.format(r.stdout().strip()))
@@ -58,6 +58,16 @@ if enable_gir
             pytest_base_args += ['--tap-stream']
         endif
         pytest_protocol = 'tap'
+    endif
+
+    # If xdist is available, use it for parallel test execution
+    py_xdist = python_module.find_installation(
+        'python3',
+        modules: ['pytest_xdist'],
+        required: false,
+    )
+    if py_xdist.found()
+        pytest_base_args += ['-n', 'auto']
     endif
 
     # Full Python test suite

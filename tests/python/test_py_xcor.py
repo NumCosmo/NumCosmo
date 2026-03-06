@@ -721,15 +721,17 @@ def test_compare_autocorrelation(
 
 @pytest.mark.parametrize(
     "k1, k2",
-    it.combinations_with_replacement(
-        [
-            lf("nc_cmb_lens"),
-            lf("nc_cmb_isw"),
-            lf("nc_gal"),
-            lf("nc_tsz"),
-            lf("nc_weak_lensing"),
-        ],
-        r=2,
+    sorted(
+        it.combinations_with_replacement(
+            [
+                lf("nc_cmb_lens"),
+                lf("nc_cmb_isw"),
+                lf("nc_gal"),
+                lf("nc_tsz"),
+                lf("nc_weak_lensing"),
+            ],
+            r=2,
+        )
     ),
 )
 @pytest.mark.parametrize(
