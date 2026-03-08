@@ -34,7 +34,8 @@ pytest.importorskip("pyccl")
 # pylint: disable=wrong-import-position
 import pyccl
 
-from numcosmo_py.cosmology import Cosmology
+from numcosmo_py import Ncm, Nc
+import numcosmo_py.cosmology as ncpy
 from numcosmo_py.ccl.nc_ccl import CCLParams, create_nc_obj
 
 
@@ -151,18 +152,91 @@ def fixture_ccl_cosmo_eh_halofit(request) -> pyccl.Cosmology:
 
 
 @pytest.fixture(name="nc_cosmo_eh_linear", scope="module")
-def fixture_nc_cosmo_eh_linear(ccl_cosmo_eh_linear) -> Cosmology:
+def fixture_nc_cosmo_eh_linear(ccl_cosmo_eh_linear) -> ncpy.Cosmology:
     """Fixture for CCL and NumCosmo Cosmology."""
     return create_nc_obj(ccl_cosmo_eh_linear, dist_z_max=2000.0)
 
 
 @pytest.fixture(name="nc_cosmo_eh_halofit", scope="module")
-def fixture_nc_cosmo_eh_halofit(ccl_cosmo_eh_halofit) -> Cosmology:
+def fixture_nc_cosmo_eh_halofit(ccl_cosmo_eh_halofit) -> ncpy.Cosmology:
     """Fixture for CCL and NumCosmo Cosmology."""
     return create_nc_obj(ccl_cosmo_eh_halofit, dist_z_max=2000.0)
 
 
-@pytest.fixture(name="nc_cosmo_default", scope="module")
-def fixture_nc_cosmo_default() -> Cosmology:
-    """Fixture for default NumCosmo Cosmology."""
-    return Cosmology.default()
+@pytest.fixture(name="ccl_cmb_lens")
+def fixture_ccl_cmb_lens(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: ncpy.Cosmology,
+) -> pyccl.CMBLensingTracer:
+    """Fixture for CCL CMB lensing tracer."""
+    z_lss = nc_cosmo_eh_linear.dist.decoupling_redshift(nc_cosmo_eh_linear.cosmo)
+
+    ccl_cmb_lens = pyccl.CMBLensingTracer(
+        ccl_cosmo_eh_linear, z_source=z_lss, n_samples=10_000
+    )
+
+    return ccl_cmb_lens
+
+
+@pytest.fixture(name="ccl_cmb_isw")
+def fixture_ccl_cmb_isw(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+) -> pyccl.CMBLensingTracer:
+    """Fixture for CCL CMB ISW tracer."""
+    ccl_cmb_isw = pyccl.ISWTracer(ccl_cosmo_eh_linear, n_chi=10_000)
+    return ccl_cmb_isw
+
+
+@pytest.fixture(name="ccl_tsz")
+def fixture_ccl_tsz(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+) -> pyccl.tSZTracer:
+    """Fixture for CCL tSZ tracer."""
+    ccl_tsz = pyccl.tSZTracer(ccl_cosmo_eh_linear, z_max=6.0, n_chi=10_000)
+    return ccl_tsz
+
+
+@pytest.fixture(name="ccl_gal")
+def fixture_ccl_gal(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_gal: Nc.XcorKernelGal,
+) -> pyccl.NumberCountsTracer:
+    """Fixture for CCL galaxy tracer."""
+    dndz: Ncm.Spline = nc_gal.props.dndz
+    assert isinstance(dndz, Ncm.Spline)
+
+    bias = nc_gal.orig_vparam_get(Nc.XcorKernelGalVParams.BIAS, 0)
+    magbias = nc_gal.orig_param_get(Nc.XcorKernelGalSParams.MAG_BIAS)
+    z_array = np.array(dndz.peek_xv().dup_array())
+    ccl_gal = pyccl.NumberCountsTracer(
+        ccl_cosmo_eh_linear,
+        has_rsd=False,
+        dndz=(
+            z_array,
+            np.array(dndz.peek_yv().dup_array()),
+        ),
+        bias=(z_array, np.ones_like(z_array) * bias) if bias != 0.0 else None,
+        mag_bias=(z_array, np.ones_like(z_array) * magbias) if magbias != 0.0 else None,
+        n_samples=len(z_array),
+    )
+    return ccl_gal
+
+
+@pytest.fixture(name="ccl_weak_lensing")
+def fixture_ccl_weak_lensing(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_weak_lensing: Nc.XcorKernelWeakLensing,
+) -> pyccl.WeakLensingTracer:
+    """Fixture for CCL weak lensing tracer."""
+    dndz: Ncm.Spline = nc_weak_lensing.props.dndz
+    assert isinstance(dndz, Ncm.Spline)
+
+    ccl_wl = pyccl.WeakLensingTracer(
+        ccl_cosmo_eh_linear,
+        dndz=(
+            np.array(dndz.peek_xv().dup_array()),
+            np.array(dndz.peek_yv().dup_array()),
+        ),
+        n_samples=10_000,
+    )
+    return ccl_wl

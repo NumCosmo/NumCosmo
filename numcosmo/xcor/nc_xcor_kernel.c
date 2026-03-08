@@ -70,6 +70,7 @@ typedef struct _NcXcorKernelPrivate
   NcmSBesselIntegrator *sbi;
   guint lmax;
   gint l_limber;
+  gboolean constructed;
 } NcXcorKernelPrivate;
 
 enum
@@ -93,11 +94,12 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->dist     = NULL;
-  self->ps       = NULL;
-  self->sbi      = NULL;
-  self->lmax     = 0;
-  self->l_limber = 0;
+  self->dist        = NULL;
+  self->ps          = NULL;
+  self->sbi         = NULL;
+  self->lmax        = 0;
+  self->l_limber    = 0;
+  self->constructed = FALSE;
 }
 
 static void
@@ -138,12 +140,17 @@ _nc_xcor_kernel_constructed (GObject *object)
       g_error ("nc_xcor_kernel_constructed: powspec property was not set. "
                "The 'powspec' property must be provided at construction time.");
 
-    if ((self->l_limber >= 0) && (self->sbi == NULL))
-      g_error ("nc_xcor_kernel_constructed: integrator property was not set. "
-               "The 'integrator' property must be provided at construction time.");
+    if ((self->l_limber != 0) && (self->sbi == NULL))
+      g_error ("nc_xcor_kernel_constructed: l_limber property is set to %d but "
+               "integrator property was not set. "
+               "The 'integrator' property must be provided at construction time "
+               "to use the non-Limber method.",
+               self->l_limber);
 
     nc_distance_compute_inv_comoving (self->dist, TRUE);
     nc_distance_require_zf (self->dist, 1.0e10);
+
+    self->constructed = TRUE;
   }
 }
 
@@ -1034,6 +1041,12 @@ void
 nc_xcor_kernel_set_l_limber (NcXcorKernel *xclk, gint l_limber)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  if ((self->constructed) && (l_limber != 0) && (self->sbi == NULL))
+    g_error ("nc_xcor_kernel_set_l_limber: cannot set l_limber to %d "
+             "for kernel %s because no integrator is set. "
+             "The 'integrator' property must be provided to use the non-Limber method.",
+             l_limber, G_OBJECT_TYPE_NAME (xclk));
 
   self->l_limber = l_limber;
 }

@@ -342,7 +342,7 @@ _cmb_lensing_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo
     const gdouble xi_lss = nc_distance_comoving_lss (dist, cosmo);
 
     *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
-    *xi_max = xi_lss;
+    *xi_max = xi_lss * (1.0 - 1.0e-6);
     *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
     *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
   }

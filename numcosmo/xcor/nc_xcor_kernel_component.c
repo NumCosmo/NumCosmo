@@ -504,9 +504,9 @@ _nc_xcor_kernel_component_Kxi_minus_threshold (gdouble k, void *params)
   NcXcorKernelAnalysisData *data = (NcXcorKernelAnalysisData *) params;
   const gdouble xi               = data->y / k;
   const gdouble K_val            = nc_xcor_kernel_component_eval_kernel (data->comp, data->cosmo, xi, k);
-  const gdouble Kxi              = xi * K_val;
+  const gdouble Kxi              = fabs (xi * K_val);
 
-  return log (fabs (Kxi / data->Kxi_threshold));
+  return (Kxi - data->Kxi_threshold) / (data->Kxi_threshold + Kxi);
 }
 
 static void
@@ -650,7 +650,6 @@ _nc_xcor_kernel_component_find_k_epsilon_high (NcXcorKernelComponent    *comp,
   const gdouble f_high               = _nc_xcor_kernel_component_Kxi_minus_threshold (k_high, data);
   gsl_function F_root;
 
-
   F_root.function = &_nc_xcor_kernel_component_Kxi_minus_threshold;
   F_root.params   = data;
 
@@ -742,7 +741,7 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
       _nc_xcor_kernel_component_find_k_max (comp, &data, k_valid_min, k_valid_max,
                                             k_guess, &k_at_max, &K_max);
       k_guess            = k_at_max;
-      data.Kxi_threshold = self->sqrt_epsilon * K_max;
+      data.Kxi_threshold = K_max > 0.0 ? self->sqrt_epsilon * K_max : self->sqrt_epsilon;
 
       {
         const gdouble k_epsilon = _nc_xcor_kernel_component_find_k_epsilon_high (comp, &data, k_at_max, k_valid_max);

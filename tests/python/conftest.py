@@ -3,6 +3,7 @@
 import pytest
 import numpy as np
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.cosmology import Cosmology
 
 Ncm.cfg_init()
 
@@ -67,3 +68,22 @@ def fixture_psf(cosmo: Nc.HICosmo, prim: Nc.HIPrim) -> Ncm.PowspecFilter:
     prim["ln10e10ASA"] = np.log((0.8 / cosmo.sigma8(psf)) ** 2 * old_amplitude)
 
     return psf
+
+
+@pytest.fixture(name="nc_cosmo_default", scope="module")
+def fixture_nc_cosmo_default() -> Cosmology:
+    """Fixture for default NumCosmo Cosmology."""
+    return Cosmology.default()
+
+
+@pytest.fixture(name="nc_cosmo_alt", scope="module")
+def fixture_cosmology_alt() -> Cosmology:
+    """Create a simple cosmology alternative for testing."""
+    cosmology = Cosmology.default()
+    cosmology.cosmo["H0"] = 75.0
+    cosmology.cosmo["Omegab"] = 0.03
+    cosmology.cosmo["Omegac"] = 0.22
+
+    cosmology.prepare()
+
+    return cosmology

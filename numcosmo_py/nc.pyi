@@ -6276,13 +6276,15 @@ class GalaxySDObsRedshift(NumCosmoMath.Model):
     def clear(gsdor: GalaxySDObsRedshift) -> None: ...
     def compute_binned_dndz(
         self,
-        z_array: typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
-        rel_error: float,
+        z_array: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> NumCosmoMath.Spline: ...
     def do_compute_binned_dndz(
         self,
-        z_array: typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
-        rel_error: float,
+        z_array: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
     ) -> NumCosmoMath.Spline: ...
     def do_data_init(self, data: GalaxySDObsRedshiftData) -> None: ...
     def do_gen(self, data: GalaxySDObsRedshiftData, rng: NumCosmoMath.RNG) -> None: ...
@@ -6334,7 +6336,6 @@ class GalaxySDObsRedshiftClass(GObject.GPointer):
         [
             GalaxySDObsRedshift,
             typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
-            float,
         ],
         NumCosmoMath.Spline,
     ] = ...
