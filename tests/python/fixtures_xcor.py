@@ -478,11 +478,20 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
 
 @pytest.fixture(
-    name="kernel",
-    params=[lf(kernel_name) for kernel_name, _, _ in KERNEL_FIXTURES],
+    name="kernel_case",
+    params=[(kernel_name, lf(kernel_name)) for kernel_name, _, _ in KERNEL_FIXTURES],
+    ids=lambda x: x[0],
 )
-def fixture_kernel(request: pytest.FixtureRequest) -> Nc.XcorKernel:
+def fixture_kernel_case(request: pytest.FixtureRequest) -> tuple[str, Nc.XcorKernel]:
     """Fixture for parametrized kernels."""
-    kernel = request.param
+    kernel_name, kernel = request.param
+    assert isinstance(kernel, Nc.XcorKernel)
+    return kernel_name, kernel
+
+
+@pytest.fixture(name="kernel")
+def fixture_kernel(kernel_case: tuple[str, Nc.XcorKernel]) -> Nc.XcorKernel:
+    """Fixture for kernels."""
+    _, kernel = kernel_case
     assert isinstance(kernel, Nc.XcorKernel)
     return kernel

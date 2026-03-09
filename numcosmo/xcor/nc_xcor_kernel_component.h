@@ -109,14 +109,14 @@ gdouble nc_xcor_kernel_component_get_tol (NcXcorKernelComponent *comp);
 void nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo);
 
 gdouble nc_xcor_kernel_component_eval_k_max (NcXcorKernelComponent *comp, gdouble y);
-gdouble nc_xcor_kernel_component_eval_K_max (NcXcorKernelComponent *comp, gdouble y);
+gdouble nc_xcor_kernel_component_eval_KL_max (NcXcorKernelComponent *comp, gdouble y);
 gdouble nc_xcor_kernel_component_eval_k_epsilon (NcXcorKernelComponent *comp, gdouble y);
 
 gdouble nc_xcor_kernel_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble xi, gdouble k);
 gdouble nc_xcor_kernel_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 void nc_xcor_kernel_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *xi_min, gdouble *xi_max, gdouble *k_min, gdouble *k_max);
 
-#define NC_XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON 1.0e-14
+#define NC_XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON 1.0e-10
 
 /**
  * NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE:

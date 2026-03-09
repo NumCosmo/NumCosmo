@@ -124,11 +124,6 @@ static void _ncm_sbessel_integrator_levin_integrate_panel (NcmSBesselIntegratorL
 static void _ncm_sbessel_integrator_levin_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
 static void _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
 
-static void ncm_sbessel_integrator_levin_direct_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
-static void ncm_sbessel_integrator_levin_direct_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
-
-NCM_INTEGRAL_ND_DEFINE_TYPE (NCM, SBESSEL_INTEGRATOR_LEVIN_DIRECT, NcmSBesselIntegratorLevinDirect, ncm_sbessel_integrator_levin_direct, ncm_sbessel_integrator_levin_direct_dim, ncm_sbessel_integrator_levin_direct_integ, NcmSBesselIntegratorLevinArg);
-
 G_DEFINE_TYPE (NcmSBesselIntegratorLevin, ncm_sbessel_integrator_levin, NCM_TYPE_SBESSEL_INTEGRATOR)
 
 static void
@@ -778,43 +773,6 @@ _ncm_sbessel_integrator_levin_set_ell_range (NcmSBesselIntegrator *sbi, guint el
   }
 }
 
-static void
-ncm_sbessel_integrator_levin_direct_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
-{
-  NcmSBesselIntegratorLevinDirect *direct = NCM_SBESSEL_INTEGRATOR_LEVIN_DIRECT (intnd);
-  NcmSBesselIntegratorLevinArg *arg       = &direct->data;
-
-  *dim  = 1;
-  *fdim = arg->ell_max - arg->ell_min + 1;
-}
-
-static void
-ncm_sbessel_integrator_levin_direct_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
-{
-  NcmSBesselIntegratorLevinDirect *direct = NCM_SBESSEL_INTEGRATOR_LEVIN_DIRECT (intnd);
-  NcmSBesselIntegratorLevinArg *arg       = &direct->data;
-  NcmSBesselIntegratorLevin *sbilv        = arg->sbilv;
-  guint i, j;
-
-  for (i = 0; i < npoints; i++)
-  {
-    const gdouble xi   = ncm_vector_fast_get (x, i);
-    const gdouble f_xi = arg->F (arg->user_data, xi) / xi;
-
-    /* Evaluate all spherical Bessel functions at once */
-    ncm_sf_sbessel_array_eval (sbilv->sba, arg->ell_max, xi, arg->jl_arr);
-
-    /* Compute integrand for all ells */
-    for (j = 0; j < fdim; j++)
-    {
-      const guint ell   = arg->ell_min + j;
-      const gdouble res = f_xi * arg->jl_arr[ell];
-
-      ncm_vector_fast_set (fval, i * fdim + j, res);
-    }
-  }
-}
-
 static guint
 _ncm_sbessel_integrator_levin_get_ell_threshold (NcmSBesselIntegratorLevin *sbilv, gdouble a, gdouble b)
 {
@@ -824,42 +782,62 @@ _ncm_sbessel_integrator_levin_get_ell_threshold (NcmSBesselIntegratorLevin *sbil
 
 static void
 _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv,
-                                                const guint ell_min, const guint ell_max,
+                                                const guint ell_min, guint ell_max,
                                                 NcmSBesselIntegratorF F, const gdouble a, const gdouble b,
                                                 NcmVector *result, gpointer user_data)
 {
-  NcmSBesselIntegratorLevinDirect *direct = g_object_new (ncm_sbessel_integrator_levin_direct_get_type (), NULL);
-  NcmSBesselIntegratorLevinArg *arg       = &direct->data;
-  NcmIntegralND *intnd                    = NCM_INTEGRAL_ND (direct);
-  gdouble x_min_val                       = a;
-  gdouble x_max_val                       = b;
-  NcmVector *x_min                        = ncm_vector_new_data_static (&x_min_val, 1, 1);
-  NcmVector *x_max                        = ncm_vector_new_data_static (&x_max_val, 1, 1);
-  const guint size                        = ell_max - ell_min + 1;
-  NcmVector *result_sub                   = ncm_vector_get_subvector (result, 0, size);
-  NcmVector *err                          = ncm_vector_new (size);
+  const guint N                 = GSL_MAX (256, 4 * ell_max);
+  const gdouble dx              = (b - a) / N;
+  gdouble * restrict result_ptr = ncm_vector_data (result);
+  guint i, ell;
 
-  /* Setup argument structure */
-  arg->sbilv     = sbilv;
-  arg->F         = F;
-  arg->user_data = user_data;
-  arg->ell_min   = ell_min;
-  arg->ell_max   = ell_max;
-  arg->jl_arr    = sbilv->jl_arr;
+  g_assert_cmpuint (ncm_vector_stride (result), ==, 1);
+  /* Initialize direct results to zero */
+  memset (result_ptr, 0, sizeof (gdouble) * (ell_max - ell_min + 1));
+  ell_max = GSL_MIN (ell_max, ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b));
 
-  /* Configure integrator */
-  ncm_integral_nd_set_reltol (intnd, sbilv->reltol);
-  ncm_integral_nd_set_abstol (intnd, 1.0e-50);
-  ncm_integral_nd_set_method (intnd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P);
+  /* First term */
+  {
+    const gdouble fa = F (user_data, a) / a;
 
-  ncm_integral_nd_eval (intnd, x_min, x_max, result_sub, err);
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, a, sbilv->jl_arr);
 
-  /* Cleanup */
-  ncm_vector_free (x_min);
-  ncm_vector_free (x_max);
-  ncm_vector_free (result_sub);
-  ncm_vector_free (err);
-  g_object_unref (direct);
+    for (ell = ell_min; ell <= ell_max; ell++)
+    {
+      result_ptr[ell - ell_min] = fa * sbilv->jl_arr[ell];
+    }
+  }
+
+  /* Interior terms with alternating weights 4 and 2 */
+  for (i = 1; i < N; i++)
+  {
+    const gdouble x      = a + i * dx;
+    const gdouble weight = (i % 2 == 1) ? 4.0 : 2.0;
+    const gdouble fx     = F (user_data, x) / x;
+
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, x, sbilv->jl_arr);
+
+    for (ell = ell_min; ell <= ell_max; ell++)
+    {
+      result_ptr[ell - ell_min] += weight * fx * sbilv->jl_arr[ell];
+    }
+  }
+
+  /* Last term */
+  {
+    const gdouble fb = F (user_data, b) / b;
+
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, b, sbilv->jl_arr);
+
+    for (ell = ell_min; ell <= ell_max; ell++)
+    {
+      result_ptr[ell - ell_min] += fb * sbilv->jl_arr[ell];
+    }
+  }
+
+  /* Apply Simpson's rule factor */
+  for (ell = ell_min; ell <= ell_max; ell++)
+    result_ptr[ell - ell_min] *= dx / 3.0;
 }
 
 static void

@@ -41,7 +41,7 @@
  * - `get_limits`: returns valid integration ranges for xi and k
  *
  * The class provides automatic kernel analysis functionality that studies the behavior
- * of K*xi(k, y/k) to optimize integration strategies.
+ * of KL(k, y/k) using the Limber approximation to optimize integration strategies.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -61,9 +61,9 @@
 
 typedef struct _NcXcorKernelComponentPrivate
 {
-  NcmSpline *k_max_spline;       /* k_max(y) - k value that maximizes K*xi(k, y/k) */
-  NcmSpline *K_max_spline;       /* K*xi_max(y) - maximum value of K*xi(k, y/k) */
-  NcmSpline *k_epsilon_spline;   /* k_epsilon(y) - k where K*xi drops to epsilon*K*xi_max */
+  NcmSpline *k_max_spline;       /* k_max(y) - k value that maximizes KL(k, y/k) */
+  NcmSpline *KL_max_spline;      /* KL_max(y) - maximum value of KL(k, y/k) using Limber approximation */
+  NcmSpline *k_epsilon_spline;   /* k_epsilon(y) - k where KL drops to epsilon*KL_max */
   gsl_min_fminimizer *minimizer; /* GSL minimizer for finding k_max */
   gsl_root_fsolver *root_solver; /* GSL root solver for finding k_epsilon */
   gdouble epsilon;
@@ -90,7 +90,7 @@ nc_xcor_kernel_component_init (NcXcorKernelComponent *comp)
   NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
 
   self->k_max_spline     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-  self->K_max_spline     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  self->KL_max_spline    = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   self->k_epsilon_spline = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   self->minimizer        = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
   self->root_solver      = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
@@ -108,7 +108,7 @@ nc_xcor_kernel_component_dispose (GObject *object)
   NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
 
   ncm_spline_clear (&self->k_max_spline);
-  ncm_spline_clear (&self->K_max_spline);
+  ncm_spline_clear (&self->KL_max_spline);
   ncm_spline_clear (&self->k_epsilon_spline);
 
   /* Chain up */
@@ -199,8 +199,8 @@ nc_xcor_kernel_component_class_init (NcXcorKernelComponentClass *klass)
   /**
    * NcXcorKernelComponent:epsilon:
    *
-   * The epsilon value for kernel analysis, determining where K*xi(k, y/k)
-   * drops to epsilon * K*xi_max.
+   * The epsilon value for kernel analysis, determining where KL(k, y/k)
+   * drops to epsilon * KL_max.
    */
   g_object_class_install_property (object_class,
                                    PROP_EPSILON,
@@ -294,8 +294,8 @@ nc_xcor_kernel_component_clear (NcXcorKernelComponent **comp)
  * @comp: a #NcXcorKernelComponent
  * @epsilon: the epsilon value for kernel analysis
  *
- * Sets the epsilon value used in kernel analysis to determine where K*xi(k, y/k) drops
- * to epsilon * K*xi_max.
+ * Sets the epsilon value used in kernel analysis to determine where KL(k, y/k) drops
+ * to epsilon * KL_max.
  */
 void
 nc_xcor_kernel_component_set_epsilon (NcXcorKernelComponent *comp, gdouble epsilon)
@@ -421,7 +421,7 @@ nc_xcor_kernel_component_get_tol (NcXcorKernelComponent *comp)
  * @y: the y value (y = k * xi)
  *
  * Evaluates k_max at the given y value from kernel analysis, where k_max
- * is the value of k that maximizes K*xi(k, y/k) for this y.
+ * is the value of k that maximizes KL(k, y/k) for this y.
  *
  * Returns: the k_max value at y
  */
@@ -436,23 +436,24 @@ nc_xcor_kernel_component_eval_k_max (NcXcorKernelComponent *comp, gdouble y)
 }
 
 /**
- * nc_xcor_kernel_component_eval_K_max:
+ * nc_xcor_kernel_component_eval_KL_max:
  * @comp: a #NcXcorKernelComponent
  * @y: the y value (y = k * xi)
  *
- * Evaluates the maximum value of K*xi(k, y/k) at the given y value from kernel analysis.
- * This is the value of K*xi at k = k_max(y).
+ * Evaluates the maximum value of KL(k, y/k) at the given y value from kernel analysis
+ * using the Limber approximation KL = sqrt(π/(2*y)) * K(y/k, k) / k.
+ * This is the value of KL at k = k_max(y).
  *
- * Returns: the K*xi_max value at y
+ * Returns: the KL_max value at y
  */
 gdouble
-nc_xcor_kernel_component_eval_K_max (NcXcorKernelComponent *comp, gdouble y)
+nc_xcor_kernel_component_eval_KL_max (NcXcorKernelComponent *comp, gdouble y)
 {
   NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
 
-  g_assert (self->K_max_spline != NULL);
+  g_assert (self->KL_max_spline != NULL);
 
-  return ncm_spline_eval (self->K_max_spline, y);
+  return ncm_spline_eval (self->KL_max_spline, y);
 }
 
 /**
@@ -461,7 +462,7 @@ nc_xcor_kernel_component_eval_K_max (NcXcorKernelComponent *comp, gdouble y)
  * @y: the y value (y = k * xi)
  *
  * Evaluates k_epsilon at the given y value from kernel analysis, where k_epsilon
- * is the value of k (beyond k_max) where K*xi(k, y/k) drops to epsilon times K*xi_max.
+ * is the value of k (beyond k_max) where KL(k, y/k) drops to epsilon times KL_max.
  *
  * Returns: the k_epsilon value at y
  */
@@ -483,30 +484,30 @@ typedef struct _NcXcorKernelAnalysisData
   gdouble y;
   gdouble xi_min;
   gdouble xi_max;
-  gdouble Kxi_threshold;
+  gdouble KL_threshold;
 } NcXcorKernelAnalysisData;
 
-/* GSL function: Returns -K*xi(k, y/k) for minimization (we want maximum, so negate) */
+/* GSL function: Returns -KL(k, y/k) for minimization (we want maximum, so negate) */
 static gdouble
-_nc_xcor_kernel_component_minus_Kxi (gdouble k, void *params)
+_nc_xcor_kernel_component_minus_KL (gdouble k, void *params)
 {
   NcXcorKernelAnalysisData *data = (NcXcorKernelAnalysisData *) params;
   const gdouble xi               = data->y / k;
   const gdouble K_val            = nc_xcor_kernel_component_eval_kernel (data->comp, data->cosmo, xi, k);
-  const gdouble Kxi              = xi * K_val;
+  const gdouble KL               = sqrt (M_PI / (2.0 * data->y)) * K_val / k;
 
-  return -fabs (Kxi);
+  return -fabs (KL);
 }
 
 static gdouble
-_nc_xcor_kernel_component_Kxi_minus_threshold (gdouble k, void *params)
+_nc_xcor_kernel_component_KL_minus_threshold (gdouble k, void *params)
 {
   NcXcorKernelAnalysisData *data = (NcXcorKernelAnalysisData *) params;
   const gdouble xi               = data->y / k;
   const gdouble K_val            = nc_xcor_kernel_component_eval_kernel (data->comp, data->cosmo, xi, k);
-  const gdouble Kxi              = fabs (xi * K_val);
+  const gdouble KL               = fabs (sqrt (M_PI / (2.0 * data->y)) * K_val / k);
 
-  return (Kxi - data->Kxi_threshold) / (data->Kxi_threshold + Kxi);
+  return (KL - data->KL_threshold) / (data->KL_threshold + KL);
 }
 
 static void
@@ -516,7 +517,7 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
                                       gdouble                  k_valid_max,
                                       gdouble                  k_guess,
                                       gdouble                  *k_at_max,
-                                      gdouble                  *K_max)
+                                      gdouble                  *KL_max)
 {
   NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
   gdouble k_lower                    = k_valid_min;
@@ -529,7 +530,7 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
   gsl_function F_min;
   gint status;
 
-  F_min.function = &_nc_xcor_kernel_component_minus_Kxi;
+  F_min.function = &_nc_xcor_kernel_component_minus_KL;
   F_min.params   = data;
 
   if (k_lower >= k_upper)
@@ -537,7 +538,7 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
     if (fabs (k_lower / k_upper - 1.0) < GSL_DBL_EPSILON)
     {
       *k_at_max = k_lower;
-      *K_max    = -_nc_xcor_kernel_component_minus_Kxi (*k_at_max, data);
+      *KL_max   = -_nc_xcor_kernel_component_minus_KL (*k_at_max, data);
 
       return;
     }
@@ -562,17 +563,17 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
     const guint nsteps       = 50;
     const gdouble k_log_step = (k_log_max - k_log_min) / (nsteps - 1.0);
     gdouble k_best           = 0.0;
-    gdouble K_best           = -G_MAXDOUBLE;
+    gdouble KL_best          = -G_MAXDOUBLE;
     guint best_idx           = 0;
 
     for (guint i = 0; i < nsteps; i++)
     {
-      const gdouble k_test   = pow (10.0, k_log_min + i * k_log_step);
-      const gdouble Kxi_test = -_nc_xcor_kernel_component_minus_Kxi (k_test, data);
+      const gdouble k_test  = pow (10.0, k_log_min + i * k_log_step);
+      const gdouble KL_test = -_nc_xcor_kernel_component_minus_KL (k_test, data);
 
-      if (Kxi_test > K_best)
+      if (KL_test > KL_best)
       {
-        K_best   = Kxi_test;
+        KL_best  = KL_test;
         k_best   = k_test;
         best_idx = i;
       }
@@ -584,14 +585,14 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
     if (best_idx == 0)
     {
       *k_at_max = k_lower;
-      *K_max    = K_best;
+      *KL_max   = KL_best;
 
       return;
     }
     else if (best_idx == nsteps - 1)
     {
       *k_at_max = k_upper;
-      *K_max    = K_best;
+      *KL_max   = KL_best;
 
       return;
     }
@@ -634,7 +635,7 @@ _nc_xcor_kernel_component_find_k_max (NcXcorKernelComponent    *comp,
     lk_upper = k_upper;
   } while ((status == GSL_CONTINUE) && (iter < self->max_iter));
 
-  *K_max = -gsl_min_fminimizer_f_minimum (self->minimizer);
+  *KL_max = -gsl_min_fminimizer_f_minimum (self->minimizer);
 }
 
 static gdouble
@@ -646,11 +647,11 @@ _nc_xcor_kernel_component_find_k_epsilon_high (NcXcorKernelComponent    *comp,
   NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
   gdouble k_low                      = k_at_max;
   gdouble k_high                     = k_valid_max;
-  const gdouble f_low                = _nc_xcor_kernel_component_Kxi_minus_threshold (k_low, data);
-  const gdouble f_high               = _nc_xcor_kernel_component_Kxi_minus_threshold (k_high, data);
+  const gdouble f_low                = _nc_xcor_kernel_component_KL_minus_threshold (k_low, data);
+  const gdouble f_high               = _nc_xcor_kernel_component_KL_minus_threshold (k_high, data);
   gsl_function F_root;
 
-  F_root.function = &_nc_xcor_kernel_component_Kxi_minus_threshold;
+  F_root.function = &_nc_xcor_kernel_component_KL_minus_threshold;
   F_root.params   = data;
 
   if ((f_low > 0.0) && (f_high < 0.0))
@@ -684,9 +685,9 @@ _nc_xcor_kernel_component_find_k_epsilon_high (NcXcorKernelComponent    *comp,
  * @cosmo: a #NcHICosmo
  *
  * Prepares the kernel component by analyzing its behavior over the valid ranges. This
- * method calls get_limits to obtain the integration ranges, then studies K*xi(k, y/k)
- * to compute k_max(y), K_max(y), and k_epsilon(y) using GSL Brent minimizer and root
- * finder with warm starts.
+ * method calls get_limits to obtain the integration ranges, then studies KL(k, y/k)
+ * using the Limber approximation to compute k_max(y), KL_max(y), and k_epsilon(y)
+ * using GSL Brent minimizer and root finder with warm starts.
  */
 void
 nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
@@ -700,17 +701,17 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
   {
     NcmVector *yv                 = ncm_vector_new (self->ny);
     NcmVector *k_max_v            = ncm_vector_new (self->ny);
-    NcmVector *K_max_v            = ncm_vector_new (self->ny);
+    NcmVector *KL_max_v           = ncm_vector_new (self->ny);
     NcmVector *k_epsilon_v        = ncm_vector_new (self->ny);
     const gdouble y_min           = GSL_MAX (k_min * xi_min, 0.5);
     const gdouble y_max           = GSL_MIN (k_max * xi_max, 1000.0);
     NcXcorKernelAnalysisData data = {
-      .comp          = comp,
-      .cosmo         = cosmo,
-      .y             = 0.0,
-      .xi_min        = xi_min,
-      .xi_max        = xi_max,
-      .Kxi_threshold = 0.0
+      .comp         = comp,
+      .cosmo        = cosmo,
+      .y            = 0.0,
+      .xi_min       = xi_min,
+      .xi_max       = xi_max,
+      .KL_threshold = 0.0
     };
     gdouble k_guess = 0.0;
     guint i;
@@ -723,7 +724,7 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
       const gdouble k_from_xi_max = y / xi_min;
       const gdouble k_valid_min   = GSL_MAX (k_min, k_from_xi_min);
       const gdouble k_valid_max   = GSL_MIN (k_max, k_from_xi_max);
-      gdouble k_at_max, K_max;
+      gdouble k_at_max, KL_max;
 
       data.y = y;
       ncm_vector_set (yv, i, y);
@@ -732,33 +733,33 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
       {
         g_warning ("# Skipping y = % 22.15g: no valid k range [% 22.15g, % 22.15g]\n", y, k_valid_min, k_valid_max);
         ncm_vector_set (k_max_v, i, 0.5 * (k_valid_min + k_valid_max));
-        ncm_vector_set (K_max_v, i, 0.0);
+        ncm_vector_set (KL_max_v, i, 0.0);
         ncm_vector_set (k_epsilon_v, i, 0.5 * (k_valid_min + k_valid_max));
 
         continue;
       }
 
       _nc_xcor_kernel_component_find_k_max (comp, &data, k_valid_min, k_valid_max,
-                                            k_guess, &k_at_max, &K_max);
-      k_guess            = k_at_max;
-      data.Kxi_threshold = K_max > 0.0 ? self->sqrt_epsilon * K_max : self->sqrt_epsilon;
+                                            k_guess, &k_at_max, &KL_max);
+      k_guess           = k_at_max;
+      data.KL_threshold = KL_max > 0.0 ? self->sqrt_epsilon * KL_max : self->sqrt_epsilon;
 
       {
         const gdouble k_epsilon = _nc_xcor_kernel_component_find_k_epsilon_high (comp, &data, k_at_max, k_valid_max);
 
         ncm_vector_set (k_max_v, i, k_at_max);
-        ncm_vector_set (K_max_v, i, K_max);
+        ncm_vector_set (KL_max_v, i, KL_max);
         ncm_vector_set (k_epsilon_v, i, k_epsilon);
       }
     }
 
     ncm_spline_set (self->k_max_spline, yv, k_max_v, TRUE);
-    ncm_spline_set (self->K_max_spline, yv, K_max_v, TRUE);
+    ncm_spline_set (self->KL_max_spline, yv, KL_max_v, TRUE);
     ncm_spline_set (self->k_epsilon_spline, yv, k_epsilon_v, TRUE);
 
     ncm_vector_free (yv);
     ncm_vector_free (k_max_v);
-    ncm_vector_free (K_max_v);
+    ncm_vector_free (KL_max_v);
     ncm_vector_free (k_epsilon_v);
   }
 }

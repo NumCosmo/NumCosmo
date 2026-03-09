@@ -333,7 +333,7 @@ static void
 _limber_integrand_eval (gpointer data, gdouble k, gdouble *W)
 {
   LimberIntegrandData *lid = (LimberIntegrandData *) data;
-  const gdouble operator_k = 1.0 / k;
+  const gdouble limber_k   = 1.0 / k;
   const guint n_comp       = lid->comp_list->len;
   guint i, j;
 
@@ -353,7 +353,7 @@ _limber_integrand_eval (gpointer data, gdouble k, gdouble *W)
       const gdouble prefactor        = nc_xcor_kernel_component_eval_prefactor (comp, lid->cosmo, k, l);
       const gdouble prefactor_limber = lid->prefactor[i];
 
-      W[i] += prefactor_limber * prefactor * operator_k * kernel_val;
+      W[i] += prefactor_limber * prefactor * limber_k * kernel_val;
     }
   }
 }

@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcXcorKernelCMBISW, nc_xcor_kernel_cmb_isw, NC, XCOR_KERNE
 NcXcorKernelCMBISW *nc_xcor_kernel_cmb_isw_new (NcDistance *dist, NcmPowspec *ps, NcRecomb *recomb, NcmVector *Nl);
 
 gdouble nc_xcor_kernel_cmb_isw_eval_k_max (NcXcorKernelCMBISW *xcisw, gdouble y);
-gdouble nc_xcor_kernel_cmb_isw_eval_K_max (NcXcorKernelCMBISW *xcisw, gdouble y);
+gdouble nc_xcor_kernel_cmb_isw_eval_KL_max (NcXcorKernelCMBISW *xcisw, gdouble y);
 gdouble nc_xcor_kernel_cmb_isw_eval_k_epsilon (NcXcorKernelCMBISW *xcisw, gdouble y);
 void nc_xcor_kernel_cmb_isw_set_epsilon (NcXcorKernelCMBISW *xcisw, gdouble epsilon);
 gdouble nc_xcor_kernel_cmb_isw_get_epsilon (NcXcorKernelCMBISW *xcisw);

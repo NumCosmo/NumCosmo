@@ -506,22 +506,22 @@ nc_xcor_kernel_cmb_isw_eval_k_max (NcXcorKernelCMBISW *xcisw, gdouble y)
 }
 
 /**
- * nc_xcor_kernel_cmb_isw_eval_K_max:
+ * nc_xcor_kernel_cmb_isw_eval_KL_max:
  * @xcisw: a #NcXcorKernelCMBISW
  * @y: the y value (y = k * xi)
  *
- * Evaluates K_max at the given y value from kernel analysis.
+ * Evaluates KL_max at the given y value from kernel analysis using the Limber approximation.
  *
- * Returns: the K_max value at y
+ * Returns: the KL_max value at y
  */
 gdouble
-nc_xcor_kernel_cmb_isw_eval_K_max (NcXcorKernelCMBISW *xcisw, gdouble y)
+nc_xcor_kernel_cmb_isw_eval_KL_max (NcXcorKernelCMBISW *xcisw, gdouble y)
 {
   NcXcorKernelCMBISWPrivate * const self = nc_xcor_kernel_cmb_isw_get_instance_private (xcisw);
 
   g_assert (self->isw_comp != NULL);
 
-  return nc_xcor_kernel_component_eval_K_max (self->isw_comp, y);
+  return nc_xcor_kernel_component_eval_KL_max (self->isw_comp, y);
 }
 
 /**
