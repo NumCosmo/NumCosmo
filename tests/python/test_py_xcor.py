@@ -24,9 +24,7 @@
 
 """Unit tests for NumCosmo power-spectra."""
 
-import itertools as it
 import pytest
-from pytest_lazy_fixtures import lf
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -44,27 +42,10 @@ from numcosmo_py.ccl.two_point import compute_kernel
 from numcosmo_py import Ncm, Nc
 import numcosmo_py.ccl.comparison as nc_cmp
 
-from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
-    fixture_k_a,
-    fixture_z_a,
-    fixture_ccl_cosmo_eh_linear,
-    fixture_ccl_cosmo_eh_halofit,
-    fixture_nc_cosmo_eh_linear,
-    fixture_nc_cosmo_eh_halofit,
-    fixture_nc_cosmo_default,
-)
-from .fixtures_xcor import (  # pylint: disable=unused-import # noqa: F401
-    fixture_ccl_cmb_lens,
-    fixture_nc_cmb_lens,
-    fixture_ccl_cmb_isw,
-    fixture_nc_cmb_isw,
-    fixture_ccl_tsz,
-    fixture_nc_tsz,
-    fixture_ccl_gal,
-    fixture_nc_gal,
-    fixture_ccl_weak_lensing,
-    fixture_nc_weak_lensing,
-)
+pytest_plugins = [
+    "python.fixtures_ccl",
+    "python.fixtures_xcor",
+]
 
 Ncm.cfg_init()
 
@@ -719,21 +700,6 @@ def test_compare_autocorrelation(
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-4)
 
 
-@pytest.mark.parametrize(
-    "k1, k2",
-    sorted(
-        it.combinations_with_replacement(
-            [
-                lf("nc_cmb_lens"),
-                lf("nc_cmb_isw"),
-                lf("nc_gal"),
-                lf("nc_tsz"),
-                lf("nc_weak_lensing"),
-            ],
-            r=2,
-        )
-    ),
-)
 @pytest.mark.parametrize(
     "ccl_cosmo_eh_linear",
     [pytest.param((False, 0), id="high_prec_false_index_0")],

@@ -223,9 +223,9 @@ def _get_integrator() -> Ncm.SBesselIntegrator:
     integrator = Ncm.SBesselIntegratorLevin(
         ell_min=0,
         ell_max=8,
-        y_knots_min=1.0,
-        y_knots_max=1.0e4,
-        n_knots=10,
+        y_knots_min=1.0e-4,
+        y_knots_max=1.0e6,
+        n_knots=20,
         ell_cache_max=1200,
         reltol=1.0e-13,
     )

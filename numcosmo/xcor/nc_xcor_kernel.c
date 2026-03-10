@@ -588,7 +588,6 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
           const gdouble y_max         = k * xi_max[i];
           guint n;
 
-          /* printf ("Integrating component %u/%u, k = %e, y = [%e, %e]\n", i + 1, comp_list->len, k, y_min, y_max); */
           ncm_sbessel_integrator_integrate (
             self->sbi, _nc_xcor_kernel_component_kernel_integ, y_min, y_max, integ_result, &params);
 

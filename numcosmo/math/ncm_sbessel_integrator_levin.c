@@ -578,7 +578,7 @@ _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv,
                                            gdouble a, gdouble b,
                                            gpointer user_data)
 {
-  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 3, 1.0e-11, &sbilv->cheb_coeffs, user_data);
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 2, 1.0e-5, &sbilv->cheb_coeffs, user_data);
   ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
   g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
   {
@@ -776,6 +776,8 @@ _ncm_sbessel_integrator_levin_set_ell_range (NcmSBesselIntegrator *sbi, guint el
 static guint
 _ncm_sbessel_integrator_levin_get_ell_threshold (NcmSBesselIntegratorLevin *sbilv, gdouble a, gdouble b)
 {
+  return 1000000.0;
+
   /* The threshold is based on the upper bound */
   return (guint) floor (b);
 }
