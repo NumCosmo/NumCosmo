@@ -1040,7 +1040,7 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
   n_ell         = ell_max - ell_min + 1;
   ell_threshold = _ncm_sbessel_integrator_levin_get_ell_threshold (sbilv, y_min, y_max);
 
-  g_assert_cmpuint (ncm_vector_len (result), ==, n_ell);
+  g_assert_cmpuint (ncm_vector_len (result), >=, n_ell);
 
   /* Ensure resources are allocated */
   _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, ell_min, ell_max);

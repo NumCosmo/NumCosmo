@@ -354,7 +354,7 @@ _ncm_sbessel_integrator_gaussian_func (gpointer user_data, gdouble x, gdouble k)
   NcmSBesselIntegratorGaussianData *data = (NcmSBesselIntegratorGaussianData *) user_data;
   const gdouble z                        = (x - data->center) / data->std;
 
-  return exp (-0.5 * z * z);
+  return k * exp (-0.5 * z * z);
 }
 
 /**
@@ -362,9 +362,9 @@ _ncm_sbessel_integrator_gaussian_func (gpointer user_data, gdouble x, gdouble k)
  * @sbi: a #NcmSBesselIntegrator
  * @center: center of the Gaussian
  * @std: standard deviation of the Gaussian
- * @k: wave number parameter
  * @a: lower integration limit
  * @b: upper integration limit
+ * @k: wave number parameter
  * @ell: multipole
  *
  * Integrates a Gaussian function $\exp(-\frac{1}{2}(\frac{x - center}{std})^2)$
@@ -377,7 +377,7 @@ _ncm_sbessel_integrator_gaussian_func (gpointer user_data, gdouble x, gdouble k)
  * Returns: the integral value
  */
 gdouble
-ncm_sbessel_integrator_integrate_gaussian_ell (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, gint ell)
+ncm_sbessel_integrator_integrate_gaussian_ell (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble a, gdouble b, gdouble k, gint ell)
 {
   NcmSBesselIntegratorGaussianData data = {center, std, k};
 
@@ -389,9 +389,9 @@ ncm_sbessel_integrator_integrate_gaussian_ell (NcmSBesselIntegrator *sbi, gdoubl
  * @sbi: a #NcmSBesselIntegrator
  * @center: center of the Gaussian
  * @std: standard deviation of the Gaussian
- * @k: wave number parameter
  * @a: lower integration limit
  * @b: upper integration limit
+ * @k: wave number parameter
  * @result: a #NcmVector to store results
  *
  * Integrates a Gaussian function $\exp(-\frac{1}{2}(\frac{x - center}{std})^2)$
@@ -404,7 +404,7 @@ ncm_sbessel_integrator_integrate_gaussian_ell (NcmSBesselIntegrator *sbi, gdoubl
  *
  */
 void
-ncm_sbessel_integrator_integrate_gaussian (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, NcmVector *result)
+ncm_sbessel_integrator_integrate_gaussian (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble a, gdouble b, gdouble k, NcmVector *result)
 {
   NcmSBesselIntegratorGaussianData data = {center, std, k};
 
@@ -426,7 +426,7 @@ _ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble x, gdouble k)
   const gdouble denom                    = 1.0 + z * z;
   const gdouble denom_cubed              = denom * denom * denom;
 
-  return x * x / denom_cubed;
+  return x * x * k / denom_cubed;
 }
 
 /**
@@ -434,9 +434,9 @@ _ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble x, gdouble k)
  * @sbi: a #NcmSBesselIntegrator
  * @center: center of the rational function
  * @std: standard deviation parameter
- * @k: wave number parameter
  * @a: lower integration limit
  * @b: upper integration limit
+ * @k: wave number parameter
  * @ell: multipole
  *
  * Integrates a rational function $\frac{x^2}{(1+((x - center)/std)^2)^3}$
@@ -449,7 +449,7 @@ _ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble x, gdouble k)
  * Returns: the integral value
  */
 gdouble
-ncm_sbessel_integrator_integrate_rational_ell (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, gint ell)
+ncm_sbessel_integrator_integrate_rational_ell (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble a, gdouble b, gdouble k, gint ell)
 {
   NcmSBesselIntegratorRationalData data = {center, std, k};
 
@@ -461,9 +461,9 @@ ncm_sbessel_integrator_integrate_rational_ell (NcmSBesselIntegrator *sbi, gdoubl
  * @sbi: a #NcmSBesselIntegrator
  * @center: center of the rational function
  * @std: standard deviation parameter
- * @k: wave number parameter
  * @a: lower integration limit
  * @b: upper integration limit
+ * @k: wave number parameter
  * @result: a #NcmVector to store results
  *
  * Integrates a rational function $\frac{x^2}{(1+((x - center)/std)^2)^3}$
@@ -476,7 +476,7 @@ ncm_sbessel_integrator_integrate_rational_ell (NcmSBesselIntegrator *sbi, gdoubl
  *
  */
 void
-ncm_sbessel_integrator_integrate_rational (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble k, gdouble a, gdouble b, NcmVector *result)
+ncm_sbessel_integrator_integrate_rational (NcmSBesselIntegrator *sbi, gdouble center, gdouble std, gdouble a, gdouble b, gdouble k, NcmVector *result)
 {
   NcmSBesselIntegratorRationalData data = {center, std, k};
 

@@ -9050,22 +9050,19 @@ class SBesselIntegrator(GObject.Object):
     Object NcmSBesselIntegrator
 
     Properties from NcmSBesselIntegrator:
-      ell-min -> guint: ell-min
-        Minimum multipole
-      ell-max -> guint: ell-max
-        Maximum multipole
+      ell-range -> NcmDTuple2: ell-range
+        Multipole range [ell_min, ell_max]
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        ell_max: int
-        ell_min: int
+        ell_range: DTuple2
 
     props: Props = ...
     parent_instance: GObject.Object = ...
-    def __init__(self, ell_max: int = ..., ell_min: int = ...) -> None: ...
+    def __init__(self, ell_range: DTuple2 = ...) -> None: ...
     @staticmethod
     def clear(sbi: SBesselIntegrator) -> None: ...
     def do_integrate(
@@ -9108,16 +9105,16 @@ class SBesselIntegrator(GObject.Object):
         *user_data: typing.Any,
     ) -> float: ...
     def integrate_gaussian(
-        self, center: float, std: float, k: float, a: float, b: float, result: Vector
+        self, center: float, std: float, a: float, b: float, k: float, result: Vector
     ) -> None: ...
     def integrate_gaussian_ell(
-        self, center: float, std: float, k: float, a: float, b: float, ell: int
+        self, center: float, std: float, a: float, b: float, k: float, ell: int
     ) -> float: ...
     def integrate_rational(
-        self, center: float, std: float, k: float, a: float, b: float, result: Vector
+        self, center: float, std: float, a: float, b: float, k: float, result: Vector
     ) -> None: ...
     def integrate_rational_ell(
-        self, center: float, std: float, k: float, a: float, b: float, ell: int
+        self, center: float, std: float, a: float, b: float, k: float, ell: int
     ) -> float: ...
     def ref(self) -> SBesselIntegrator: ...
     def set_ell_range(self, ell_min: int, ell_max: int) -> None: ...
@@ -9153,10 +9150,8 @@ class SBesselIntegratorFFTL(SBesselIntegrator):
         Oversampling factor
 
     Properties from NcmSBesselIntegrator:
-      ell-min -> guint: ell-min
-        Minimum multipole
-      ell-max -> guint: ell-max
-        Maximum multipole
+      ell-range -> NcmDTuple2: ell-range
+        Multipole range [ell_min, ell_max]
 
     Signals from GObject:
       notify (GParam)
@@ -9164,13 +9159,10 @@ class SBesselIntegratorFFTL(SBesselIntegrator):
 
     class Props:
         oversample: float
-        ell_max: int
-        ell_min: int
+        ell_range: DTuple2
 
     props: Props = ...
-    def __init__(
-        self, oversample: float = ..., ell_max: int = ..., ell_min: int = ...
-    ) -> None: ...
+    def __init__(self, oversample: float = ..., ell_range: DTuple2 = ...) -> None: ...
     @staticmethod
     def clear(sbilf: SBesselIntegratorFFTL) -> None: ...
     def free(self) -> None: ...
@@ -9209,10 +9201,8 @@ class SBesselIntegratorGL(SBesselIntegrator):
         Number of oscillations per panel
 
     Properties from NcmSBesselIntegrator:
-      ell-min -> guint: ell-min
-        Minimum multipole
-      ell-max -> guint: ell-max
-        Maximum multipole
+      ell-range -> NcmDTuple2: ell-range
+        Multipole range [ell_min, ell_max]
 
     Signals from GObject:
       notify (GParam)
@@ -9222,8 +9212,7 @@ class SBesselIntegratorGL(SBesselIntegrator):
         margin: float
         nosc: float
         npts: int
-        ell_max: int
-        ell_min: int
+        ell_range: DTuple2
 
     props: Props = ...
     def __init__(
@@ -9231,8 +9220,7 @@ class SBesselIntegratorGL(SBesselIntegrator):
         margin: float = ...,
         nosc: float = ...,
         npts: int = ...,
-        ell_max: int = ...,
-        ell_min: int = ...,
+        ell_range: DTuple2 = ...,
     ) -> None: ...
     @staticmethod
     def clear(sbigl: SBesselIntegratorGL) -> None: ...
@@ -9289,10 +9277,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
         Maximum ell for cache
 
     Properties from NcmSBesselIntegrator:
-      ell-min -> guint: ell-min
-        Minimum multipole
-      ell-max -> guint: ell-max
-        Maximum multipole
+      ell-range -> NcmDTuple2: ell-range
+        Multipole range [ell_min, ell_max]
 
     Signals from GObject:
       notify (GParam)
@@ -9307,8 +9293,7 @@ class SBesselIntegratorLevin(SBesselIntegrator):
         reltol: float
         y_knots_max: float
         y_knots_min: float
-        ell_max: int
-        ell_min: int
+        ell_range: DTuple2
 
     props: Props = ...
     def __init__(
@@ -9321,8 +9306,7 @@ class SBesselIntegratorLevin(SBesselIntegrator):
         reltol: float = ...,
         y_knots_max: float = ...,
         y_knots_min: float = ...,
-        ell_max: int = ...,
-        ell_min: int = ...,
+        ell_range: DTuple2 = ...,
     ) -> None: ...
     @staticmethod
     def clear(sbilv: SBesselIntegratorLevin) -> None: ...
