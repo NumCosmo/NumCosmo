@@ -63,16 +63,6 @@
 #include <fftw3.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-typedef struct _NcmSBesselIntegratorLevinArg
-{
-  NcmSBesselIntegratorLevin *sbilv;
-  NcmSBesselIntegratorF F;
-  gpointer user_data;
-  guint ell_min;
-  guint ell_max;
-  gdouble *jl_arr;
-} NcmSBesselIntegratorLevinArg;
-
 struct _NcmSBesselIntegratorLevin
 {
   /*< private >*/
@@ -118,11 +108,11 @@ enum
 
 static void _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sbilv);
 static void _ncm_sbessel_integrator_levin_prepare_ell_cache (NcmSBesselIntegratorLevin *sbilv);
-static void _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselIntegratorF F, gdouble a, gdouble b, gpointer user_data);
-static void _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselOdeOperator *operator, NcmSBesselIntegratorF F, gdouble a_p, gdouble b_p, const gdouble *j_a_p, const gdouble *j_b_p, guint ell_min, guint ell_max, gdouble *result_data, gpointer user_data);
-static void _ncm_sbessel_integrator_levin_integrate_panel (NcmSBesselIntegratorLevin *sbilv, gint a_p_idx, gint b_p_idx, gdouble a_p, gdouble b_p, NcmSpectral *spectral, NcmSBesselIntegratorF F, guint ell_min, guint ell_max, gdouble *result_data, gpointer user_data);
+static void _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, gpointer user_data);
+static void _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselOdeOperator *operator, NcmSBesselIntegratorF F, gdouble a_p, gdouble b_p, const gdouble *j_a_p, const gdouble *j_b_p, gdouble k, guint ell_min, guint ell_max, gdouble *result_data, gpointer user_data);
+static void _ncm_sbessel_integrator_levin_integrate_panel (NcmSBesselIntegratorLevin *sbilv, gint a_p_idx, gint b_p_idx, gdouble a_p, gdouble b_p, NcmSpectral *spectral, NcmSBesselIntegratorF F, gdouble k, guint ell_min, guint ell_max, gdouble *result_data, gpointer user_data);
 static void _ncm_sbessel_integrator_levin_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max);
-static void _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
+static void _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data);
 
 G_DEFINE_TYPE (NcmSBesselIntegratorLevin, ncm_sbessel_integrator_levin, NCM_TYPE_SBESSEL_INTEGRATOR)
 
@@ -557,17 +547,36 @@ _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin
   }
 }
 
+/* Wrapper function that transforms K(x, k) -> f(y) = K(y/k, k)/k */
+typedef struct _NcmSBesselIntegratorLevinWrapper
+{
+  NcmSBesselIntegratorF K;
+  gdouble k;
+  gpointer user_data;
+} NcmSBesselIntegratorLevinWrapper;
+
+static gdouble
+_ncm_sbessel_integrator_levin_wrapper_func (gpointer data, gdouble y)
+{
+  NcmSBesselIntegratorLevinWrapper *wrapper = (NcmSBesselIntegratorLevinWrapper *) data;
+  const gdouble x                           = y / wrapper->k;
+  const gdouble K_val                       = wrapper->K (wrapper->user_data, x, wrapper->k);
+
+  return x * K_val;
+}
+
 /**
  * _ncm_sbessel_integrator_levin_compute_rhs:
  * @sbilv: a #NcmSBesselIntegratorLevin
  * @spectral: spectral methods object
- * @F: integrand function
- * @a: lower integration bound
- * @b: upper integration bound
+ * @F: integrand function K(x, k)
+ * @a: lower integration bound in y-space
+ * @b: upper integration bound in y-space
+ * @k: wave number parameter
  * @user_data: user data for integrand
  *
  * Computes the RHS for the Levin ODE by:
- * 1. Computing Chebyshev coefficients for f(x)
+ * 1. Computing Chebyshev coefficients for f(y) = K(y/k, k)/k
  * 2. Converting to Gegenbauer C^(2) basis
  * 3. Setting up RHS with homogeneous boundary conditions
  */
@@ -576,9 +585,12 @@ _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv,
                                            NcmSpectral *spectral,
                                            NcmSBesselIntegratorF F,
                                            gdouble a, gdouble b,
+                                           gdouble k,
                                            gpointer user_data)
 {
-  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, F, a, b, 2, 1.0e-5, &sbilv->cheb_coeffs, user_data);
+  NcmSBesselIntegratorLevinWrapper wrapper = {F, k, user_data};
+
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, &_ncm_sbessel_integrator_levin_wrapper_func, a, b, 2, 1.0e-8, &sbilv->cheb_coeffs, &wrapper);
   ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
   g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
   {
@@ -688,13 +700,14 @@ _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *s
                                                     gdouble a_p, gdouble b_p,
                                                     const gdouble *j_a_p,
                                                     const gdouble *j_b_p,
+                                                    gdouble k,
                                                     guint ell_min, guint ell_max,
                                                     gdouble *result_data,
                                                     gpointer user_data)
 {
   guint ell;
 
-  _ncm_sbessel_integrator_levin_compute_rhs (sbilv, spectral, F, a_p, b_p, user_data);
+  _ncm_sbessel_integrator_levin_compute_rhs (sbilv, spectral, F, a_p, b_p, k, user_data);
   ncm_sbessel_ode_operator_solve_endpoints (operator, sbilv->rhs, &sbilv->endpoints_result);
 
   for (ell = ell_min; ell <= ell_max; ell++)
@@ -737,6 +750,7 @@ _ncm_sbessel_integrator_levin_integrate_panel (NcmSBesselIntegratorLevin *sbilv,
                                                gdouble a_p, gdouble b_p,
                                                NcmSpectral *spectral,
                                                NcmSBesselIntegratorF F,
+                                               gdouble k,
                                                guint ell_min, guint ell_max,
                                                gdouble *result_data,
                                                gpointer user_data)
@@ -749,7 +763,7 @@ _ncm_sbessel_integrator_levin_integrate_panel (NcmSBesselIntegratorLevin *sbilv,
                                                           &j_a_p, &j_b_p);
 
   _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, op,
-                                                      F, a_p, b_p, j_a_p, j_b_p,
+                                                      F, a_p, b_p, j_a_p, j_b_p, k,
                                                       ell_min, ell_max, result_data, user_data);
 }
 
@@ -785,24 +799,27 @@ _ncm_sbessel_integrator_levin_get_ell_threshold (NcmSBesselIntegratorLevin *sbil
 static void
 _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv,
                                                 const guint ell_min, guint ell_max,
-                                                NcmSBesselIntegratorF F, const gdouble a, const gdouble b,
+                                                NcmSBesselIntegratorF F, const gdouble a, const gdouble b, gdouble k,
                                                 NcmVector *result, gpointer user_data)
 {
-  const guint N                 = GSL_MAX (256, 4 * ell_max);
-  const gdouble dx              = (b - a) / N;
-  gdouble * restrict result_ptr = ncm_vector_data (result);
+  const gdouble y_min                      = k * a; /* Transform to y-space */
+  const gdouble y_max                      = k * b;
+  const guint N                            = GSL_MAX (256, 4 * ell_max);
+  const gdouble dy                         = (y_max - y_min) / N;
+  gdouble * restrict result_ptr            = ncm_vector_data (result);
+  NcmSBesselIntegratorLevinWrapper wrapper = {F, k, user_data};
   guint i, ell;
 
   g_assert_cmpuint (ncm_vector_stride (result), ==, 1);
   /* Initialize direct results to zero */
   memset (result_ptr, 0, sizeof (gdouble) * (ell_max - ell_min + 1));
-  ell_max = GSL_MIN (ell_max, ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b));
+  ell_max = GSL_MIN (ell_max, ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, y_max));
 
   /* First term */
   {
-    const gdouble fa = F (user_data, a) / a;
+    const gdouble fa = _ncm_sbessel_integrator_levin_wrapper_func (&wrapper, y_min) / y_min;
 
-    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, a, sbilv->jl_arr);
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, y_min, sbilv->jl_arr);
 
     for (ell = ell_min; ell <= ell_max; ell++)
     {
@@ -813,23 +830,23 @@ _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv
   /* Interior terms with alternating weights 4 and 2 */
   for (i = 1; i < N; i++)
   {
-    const gdouble x      = a + i * dx;
+    const gdouble y      = y_min + i * dy;
     const gdouble weight = (i % 2 == 1) ? 4.0 : 2.0;
-    const gdouble fx     = F (user_data, x) / x;
+    const gdouble fy     = _ncm_sbessel_integrator_levin_wrapper_func (&wrapper, y) / y;
 
-    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, x, sbilv->jl_arr);
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, y, sbilv->jl_arr);
 
     for (ell = ell_min; ell <= ell_max; ell++)
     {
-      result_ptr[ell - ell_min] += weight * fx * sbilv->jl_arr[ell];
+      result_ptr[ell - ell_min] += weight * fy * sbilv->jl_arr[ell];
     }
   }
 
   /* Last term */
   {
-    const gdouble fb = F (user_data, b) / b;
+    const gdouble fb = _ncm_sbessel_integrator_levin_wrapper_func (&wrapper, y_max) / y_max;
 
-    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, b, sbilv->jl_arr);
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, y_max, sbilv->jl_arr);
 
     for (ell = ell_min; ell <= ell_max; ell++)
     {
@@ -839,18 +856,20 @@ _ncm_sbessel_integrator_levin_integrate_direct (NcmSBesselIntegratorLevin *sbilv
 
   /* Apply Simpson's rule factor */
   for (ell = ell_min; ell <= ell_max; ell++)
-    result_ptr[ell - ell_min] *= dx / 3.0;
+    result_ptr[ell - ell_min] *= dy / 3.0;
 }
 
 static void
 _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
                                                const guint ell_min, const guint ell_max,
-                                               NcmSBesselIntegratorF F, const gdouble a, const gdouble b,
+                                               NcmSBesselIntegratorF F, const gdouble a, const gdouble b, gdouble k,
                                                NcmVector *result, gpointer user_data)
 {
   NcmSBesselOdeSolver *solver = sbilv->ode_solver;
   NcmSpectral *spectral       = ncm_sbessel_ode_solver_peek_spectral (solver);
   gdouble *result_data        = ncm_vector_data (result);
+  const gdouble y_min         = k * a; /* Transform to y-space */
+  const gdouble y_max         = k * b;
   gint first_knot_idx         = -1;
   gint last_knot_idx          = -1;
   gdouble first_knot, last_knot;
@@ -861,12 +880,12 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
   /* Initialize Levin results to zero */
   memset (result_data, 0, sizeof (gdouble) * (ell_max - ell_min + 1));
 
-  /* Find knots within [a, b] */
+  /* Find knots within [y_min, y_max] in y-space */
   for (i = 0; i < sbilv->knots->len; i++)
   {
     const gdouble knot = g_array_index (sbilv->knots, gdouble, i);
 
-    if ((knot >= a) && (knot <= b))
+    if ((knot >= y_min) && (knot <= y_max))
     {
       if (first_knot_idx == -1)
         first_knot_idx = i;
@@ -881,15 +900,15 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
     first_knot = g_array_index (sbilv->knots, gdouble, first_knot_idx);
     last_knot  = g_array_index (sbilv->knots, gdouble, last_knot_idx);
 
-    /* Handle edge panel at the start [a, first_knot > a] if needed */
-    if (a < first_knot)
+    /* Handle edge panel at the start [y_min, first_knot > y_min] if needed */
+    if (y_min < first_knot)
     {
-      const gdouble a_p = a;
+      const gdouble a_p = y_min;
       const gdouble b_p = g_array_index (sbilv->knots, gdouble, first_knot_idx);
 
       if (ell_min <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
         _ncm_sbessel_integrator_levin_integrate_panel (sbilv, -1, first_knot_idx,
-                                                       a_p, b_p, spectral, F,
+                                                       a_p, b_p, spectral, F, k,
                                                        ell_min, ell_max, result_data, user_data);
     }
 
@@ -900,40 +919,40 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
 
       if (ell_min <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
         _ncm_sbessel_integrator_levin_integrate_panel (sbilv, i, i + 1,
-                                                       a_p, b_p, spectral, F,
+                                                       a_p, b_p, spectral, F, k,
                                                        ell_min, ell_max, result_data, user_data);
     }
 
-    if (b > last_knot)
+    if (y_max > last_knot)
     {
       const gdouble a_p = g_array_index (sbilv->knots, gdouble, last_knot_idx);
-      const gdouble b_p = b;
+      const gdouble b_p = y_max;
 
       if (ell_min <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
         _ncm_sbessel_integrator_levin_integrate_panel (sbilv, last_knot_idx, -1,
-                                                       a_p, b_p, spectral, F,
+                                                       a_p, b_p, spectral, F, k,
                                                        ell_min, ell_max, result_data, user_data);
     }
   }
   else
   {
-    /* No paneling: integrate over full range [a, b]
+    /* No paneling: integrate over full range [y_min, y_max]
      * Note: For single panel mode without knots, we use ode_operator directly
      * rather than temp operators. This is handled by passing -1 for both indices
      * but requires special handling in get_panel_resources. */
     const gdouble *j_a_p, *j_b_p;
     NcmSBesselOdeOperator *op;
 
-    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, a, sbilv->j_array_a);
-    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, b, sbilv->j_array_b);
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, y_min, sbilv->j_array_a);
+    ncm_sf_sbessel_array_eval (sbilv->sba, ell_max, y_max, sbilv->j_array_b);
     j_a_p = sbilv->j_array_a;
     j_b_p = sbilv->j_array_b;
 
     op = sbilv->ode_operator;
-    ncm_sbessel_ode_operator_reset (op, a, b, ell_min, ell_max);
+    ncm_sbessel_ode_operator_reset (op, y_min, y_max, ell_min, ell_max);
 
     _ncm_sbessel_integrator_levin_solve_and_accumulate (sbilv, spectral, op,
-                                                        F, a, b, j_a_p, j_b_p,
+                                                        F, y_min, y_max, j_a_p, j_b_p, k,
                                                         ell_min, ell_max, result_data, user_data);
   }
 }
@@ -942,16 +961,19 @@ static void
 _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
                                          NcmSBesselIntegratorF F,
                                          gdouble a, gdouble b,
+                                         gdouble k,
                                          NcmVector *result,
                                          gpointer user_data)
 {
   NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
+  const gdouble y_min              = k * a; /* Transform to y-space */
+  const gdouble y_max              = k * b;
   guint ell_min, ell_max;
   guint n_ell, ell_threshold;
 
   ncm_sbessel_integrator_get_ell_range (sbi, &ell_min, &ell_max);
   n_ell         = ell_max - ell_min + 1;
-  ell_threshold = _ncm_sbessel_integrator_levin_get_ell_threshold (sbilv, a, b);
+  ell_threshold = _ncm_sbessel_integrator_levin_get_ell_threshold (sbilv, y_min, y_max);
 
   g_assert_cmpuint (ncm_vector_len (result), ==, n_ell);
 
@@ -960,9 +982,9 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
 
   /* Use direct cubature integration for high ell values */
   if (ell_threshold <= ell_max)
-    _ncm_sbessel_integrator_levin_integrate_direct (sbilv, ell_min, ell_max, F, a, b, result, user_data);
+    _ncm_sbessel_integrator_levin_integrate_direct (sbilv, ell_min, ell_max, F, a, b, k, result, user_data);
   else
-    _ncm_sbessel_integrator_levin_integrate_levin (sbilv, ell_min, ell_max, F, a, b, result, user_data);
+    _ncm_sbessel_integrator_levin_integrate_levin (sbilv, ell_min, ell_max, F, a, b, k, result, user_data);
 }
 
 /**

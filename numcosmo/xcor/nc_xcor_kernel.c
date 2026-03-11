@@ -478,18 +478,15 @@ typedef struct _NonLimberCompParams
 {
   NcXcorKernelComponent *comp;
   NcHICosmo *cosmo;
-  gdouble k;
 } NonLimberCompParams;
 
 gdouble
-_nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble y)
+_nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble x, gdouble k)
 {
   const NonLimberCompParams *nlcp = (const NonLimberCompParams *) params;
-  const gdouble k                 = nlcp->k;
-  const gdouble xi                = y / k;
-  const gdouble kernel            = nc_xcor_kernel_component_eval_kernel (nlcp->comp, nlcp->cosmo, xi, k);
+  const gdouble kernel            = nc_xcor_kernel_component_eval_kernel (nlcp->comp, nlcp->cosmo, x, k);
 
-  return xi * kernel;
+  return kernel;
 }
 
 static NcXcorKernelIntegrand *
@@ -583,13 +580,11 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
         for (i = 0; i < comp_list->len; i++)
         {
           NcXcorKernelComponent *comp = g_ptr_array_index (comp_list, i);
-          NonLimberCompParams params  = { comp, cosmo, k };
-          const gdouble y_min         = k * xi_min[i];
-          const gdouble y_max         = k * xi_max[i];
+          NonLimberCompParams params  = { comp, cosmo};
           guint n;
 
           ncm_sbessel_integrator_integrate (
-            self->sbi, _nc_xcor_kernel_component_kernel_integ, y_min, y_max, integ_result, &params);
+            self->sbi, _nc_xcor_kernel_component_kernel_integ, xi_min[i], xi_max[i], k, integ_result, &params);
 
           for (n = 0; n < n_l; n++)
           {

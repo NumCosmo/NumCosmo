@@ -51,6 +51,7 @@ typedef struct _NcmSBesselIntegratorGLParams
 {
   NcmSBesselIntegratorGL *sbigl;
   NcmSBesselIntegratorF F;
+  gdouble k;
   gpointer user_data;
   gint ell;
 } NcmSBesselIntegratorGLParams;
@@ -120,8 +121,8 @@ _ncm_sbessel_integrator_gl_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_sbessel_integrator_gl_parent_class)->finalize (object);
 }
 
-static gdouble _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gint ell, gpointer user_data);
-static void _ncm_sbessel_integrator_gl_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, NcmVector *result, gpointer user_data);
+static gdouble _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, gint ell, gpointer user_data);
+static void _ncm_sbessel_integrator_gl_integrate (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data);
 
 static void
 _ncm_sbessel_integrator_gl_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -225,49 +226,55 @@ ncm_sbessel_integrator_gl_class_init (NcmSBesselIntegratorGLClass *klass)
   parent_class->integrate     = &_ncm_sbessel_integrator_gl_integrate;
 }
 
-/* Integrand: f(x) * j_ell(x) */
+/* Integrand: f(y) * j_ell(y) where f(y) = K(y/k, k)/k */
 static gdouble
-_ncm_sbessel_integrator_gl_integrand (gdouble x, gpointer user_data)
+_ncm_sbessel_integrator_gl_integrand (gdouble y, gpointer user_data)
 {
   NcmSBesselIntegratorGLParams *params = (NcmSBesselIntegratorGLParams *) user_data;
-  gdouble fx                           = params->F (params->user_data, x);
-  gdouble jl                           = gsl_sf_bessel_jl (params->ell, x);
+  const gdouble x                      = y / params->k;
+  const gdouble K_val                  = params->F (params->user_data, x, params->k);
+  const gdouble f_val                  = K_val / params->k;
+  const gdouble jl                     = gsl_sf_bessel_jl (params->ell, y);
 
-  return fx * jl;
+  return f_val * jl;
 }
 
 static gdouble
 _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
                                           NcmSBesselIntegratorF F,
                                           gdouble a, gdouble b,
+                                          gdouble k,
                                           gint ell,
                                           gpointer user_data)
 {
   NcmSBesselIntegratorGL *sbigl = NCM_SBESSEL_INTEGRATOR_GL (sbi);
   gdouble result                = 0.0;
   gdouble abserr;
+  const gdouble y_min           = k * a; /* Transform to y-space */
+  const gdouble y_max           = k * b;
 
   /* Update integrand params */
   sbigl->params.F         = F;
+  sbigl->params.k         = k;
   sbigl->params.user_data = user_data;
   sbigl->params.ell       = ell;
 
-  /* Turning point and split */
+  /* Turning point and split in y-space */
   const gdouble x_tp  = sqrt (ell * (ell + 1.0));
-  const gdouble x_mid = x_tp + sbigl->margin;
+  const gdouble y_mid = k * (x_tp + sbigl->margin);
 
   /* ----------------------------
    * Region 1: non-oscillatory
    * ---------------------------- */
-  if (a < x_mid)
+  if (y_min < y_mid)
   {
     gsl_function G;
 
     G.function = &_ncm_sbessel_integrator_gl_integrand;
     G.params   = &sbigl->params;
 
-    const gdouble a1 = a;
-    const gdouble b1 = GSL_MIN (x_mid, b);
+    const gdouble a1 = y_min;
+    const gdouble b1 = GSL_MIN (y_mid, y_max);
 
     gdouble I1 = 0.0;
 
@@ -279,7 +286,7 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
 
     result += I1;
 
-    if (b1 == b)
+    if (b1 == y_max)
       return result;
   }
 
@@ -287,8 +294,8 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
    * Region 2: oscillatory
    * ---------------------------- */
 
-  const gdouble a2 = GSL_MAX (x_mid, a);
-  const gdouble b2 = b;
+  const gdouble a2 = GSL_MAX (y_mid, y_min);
+  const gdouble b2 = y_max;
 
   gsl_function G;
 
@@ -304,42 +311,46 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
   /* Early-termination threshold */
   const gdouble eps_tail = 1.0e-8;
 
-  gdouble x = a2;
+  gdouble y = a2;
 
-  while (x < b2)
+  while (y < b2)
   {
     /* ----------------------------
      * Amplitude-based early exit
      * ---------------------------- */
-    /* Amplitude-based early termination */
-    gdouble fx = F (user_data, x);
+    /* Amplitude-based early termination in x-space */
+    gdouble x  = y / k;
+    gdouble Kx = F (user_data, x, k);
+    gdouble fx = Kx / k;
 
-    if (fabs (fx) / x < eps_tail)
+    if (fabs (fx) / y < eps_tail)
     {
-      gdouble jl1_x = ncm_sf_sbessel (ell + 1, x);
-      gdouble fb    = F (user_data, b);
-      gdouble jl1_b = ncm_sf_sbessel (ell + 1, b);
-      gdouble tail  = fb * jl1_b - fx * jl1_x;
+      gdouble jl1_y = ncm_sf_sbessel (ell + 1, y);
+      gdouble x_max = y_max / k;
+      gdouble Kb    = F (user_data, x_max, k);
+      gdouble fb    = Kb / k;
+      gdouble jl1_b = ncm_sf_sbessel (ell + 1, y_max);
+      gdouble tail  = fb * jl1_b - fx * jl1_y;
 
       result += tail;
       break;
     }
 
     /* ----------------------------
-     * dx that grows smoothly w.r.t x
+     * dy that grows smoothly w.r.t y
      * ---------------------------- */
-    gdouble dx   = GSL_MIN (dx0 * (1.0 + x / x_scale), 4.0 * M_PI);
-    gdouble x_hi = x + dx;
+    gdouble dy   = GSL_MIN (dx0 * (1.0 + y / x_scale), 4.0 * M_PI);
+    gdouble y_hi = y + dy;
 
-    if (x_hi > b2)
-      x_hi = b2;
+    if (y_hi > b2)
+      y_hi = b2;
 
     /* One GL fixed panel */
     gdouble panel_result =
-      gsl_integration_glfixed (&G, x, x_hi, sbigl->gl_table);
+      gsl_integration_glfixed (&G, y, y_hi, sbigl->gl_table);
 
     result += panel_result;
-    x       = x_hi;
+    y       = y_hi;
   }
 
   return result;
@@ -349,6 +360,7 @@ static void
 _ncm_sbessel_integrator_gl_integrate (NcmSBesselIntegrator *sbi,
                                       NcmSBesselIntegratorF F,
                                       gdouble a, gdouble b,
+                                      gdouble k,
                                       NcmVector *result,
                                       gpointer user_data)
 {
@@ -362,7 +374,7 @@ _ncm_sbessel_integrator_gl_integrate (NcmSBesselIntegrator *sbi,
   /* Loop over all ell values */
   for (ell = ell_min; ell <= ell_max; ell++)
   {
-    const gdouble integral = _ncm_sbessel_integrator_gl_integrate_ell (sbi, F, a, b, ell, user_data);
+    const gdouble integral = _ncm_sbessel_integrator_gl_integrate_ell (sbi, F, a, b, k, ell, user_data);
 
     ncm_vector_set (result, ell - ell_min, integral);
   }
