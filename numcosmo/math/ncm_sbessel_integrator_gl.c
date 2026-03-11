@@ -39,6 +39,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_sbessel_integrator_gl.h"
+#include "math/ncm_dtuple.h"
 #include "math/ncm_sf_sbessel.h"
 #include "math/ncm_c.h"
 
@@ -250,8 +251,8 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
   NcmSBesselIntegratorGL *sbigl = NCM_SBESSEL_INTEGRATOR_GL (sbi);
   gdouble result                = 0.0;
   gdouble abserr;
-  const gdouble y_min           = k * a; /* Transform to y-space */
-  const gdouble y_max           = k * b;
+  const gdouble y_min = k * a; /* Transform to y-space */
+  const gdouble y_max = k * b;
 
   /* Update integrand params */
   sbigl->params.F         = F;
@@ -392,9 +393,9 @@ _ncm_sbessel_integrator_gl_integrate (NcmSBesselIntegrator *sbi,
 NcmSBesselIntegratorGL *
 ncm_sbessel_integrator_gl_new (guint ell_min, guint ell_max)
 {
+  NcmDTuple2 ell_range          = NCM_DTUPLE2_STATIC_INIT ((gdouble) ell_min, (gdouble) ell_max);
   NcmSBesselIntegratorGL *sbigl = g_object_new (NCM_TYPE_SBESSEL_INTEGRATOR_GL,
-                                                "ell_min", ell_min,
-                                                "ell_max", ell_max,
+                                                "ell-range", &ell_range,
                                                 NULL);
 
   return sbigl;

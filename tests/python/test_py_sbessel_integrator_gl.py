@@ -50,12 +50,9 @@ class TestSBesselIntegratorGL:
     def test_create(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test integrator creation."""
         assert integrator is not None
-        assert integrator.get_lmin() == 0
-        assert integrator.get_lmax() == 10
-
-    def test_prepare(self, integrator: Ncm.SBesselIntegratorGL) -> None:
-        """Test prepare method."""
-        integrator.prepare()  # Should not raise
+        ell_min, ell_max = integrator.get_ell_range()
+        assert ell_min == 0
+        assert ell_max == 10
 
     def test_npts_property(self) -> None:
         """Test npts property getter/setter."""
@@ -64,7 +61,7 @@ class TestSBesselIntegratorGL:
         assert integrator.props.npts == 10
 
         # Test setting via constructor
-        integrator2 = Ncm.SBesselIntegratorGL(lmin=0, lmax=10, npts=20)
+        integrator2 = Ncm.SBesselIntegratorGL(ell_range=Ncm.DTuple2.new(0, 10), npts=20)
         assert integrator2.props.npts == 20  # pylint: disable=no-member
 
         # Test setter
@@ -78,7 +75,9 @@ class TestSBesselIntegratorGL:
         assert integrator.props.margin == 5.0
 
         # Test setting via constructor
-        integrator2 = Ncm.SBesselIntegratorGL(lmin=0, lmax=10, margin=10.0)
+        integrator2 = Ncm.SBesselIntegratorGL(
+            ell_range=Ncm.DTuple2.new(0, 10), margin=10.0
+        )
         assert integrator2.props.margin == 10.0  # pylint: disable=no-member
 
         # Test setter
@@ -92,7 +91,9 @@ class TestSBesselIntegratorGL:
         assert integrator.props.nosc == 6.0
 
         # Test setting via constructor
-        integrator2 = Ncm.SBesselIntegratorGL(lmin=0, lmax=10, nosc=8.0)
+        integrator2 = Ncm.SBesselIntegratorGL(
+            ell_range=Ncm.DTuple2.new(0, 10), nosc=8.0
+        )
         assert integrator2.props.nosc == 8.0  # pylint: disable=no-member
 
         # Test setter
@@ -102,18 +103,15 @@ class TestSBesselIntegratorGL:
     def test_properties_affect_integration(self) -> None:
         """Test that changing properties affects integration results."""
 
-        def test_func(x) -> float:
+        def test_func(x: float, _k: float) -> float:
             return np.exp(-x / 10.0)
 
         # Create integrators with different npts
-        integrator1 = Ncm.SBesselIntegratorGL(lmin=0, lmax=10, npts=5)
-        integrator2 = Ncm.SBesselIntegratorGL(lmin=0, lmax=10, npts=20)
+        integrator1 = Ncm.SBesselIntegratorGL(ell_range=Ncm.DTuple2.new(0, 10), npts=5)
+        integrator2 = Ncm.SBesselIntegratorGL(ell_range=Ncm.DTuple2.new(0, 10), npts=20)
 
-        integrator1.prepare()
-        integrator2.prepare()
-
-        result1 = integrator1.integrate_ell(test_func, 0.0, 20.0, 5)
-        result2 = integrator2.integrate_ell(test_func, 0.0, 20.0, 5)
+        result1 = integrator1.integrate_ell(test_func, 0.0, 20.0, 1.0, 5)
+        result2 = integrator2.integrate_ell(test_func, 0.0, 20.0, 1.0, 5)
 
         # Both should be finite and reasonably close
         assert np.isfinite(result1)
@@ -124,29 +122,29 @@ class TestSBesselIntegratorGL:
     def test_different_margins(self) -> None:
         """Test integration with different margin values."""
 
-        def test_func(x) -> float:
+        def test_func(x: float, _k: float) -> float:
             return np.exp(-x / 10.0)
 
         # Test with different margins
         for margin in [2.0, 5.0, 10.0]:
-            integrator = Ncm.SBesselIntegratorGL(lmin=0, lmax=10, margin=margin)
-            integrator.prepare()
-
-            result = integrator.integrate_ell(test_func, 0.0, 20.0, 5)
+            integrator = Ncm.SBesselIntegratorGL(
+                ell_range=Ncm.DTuple2.new(0, 10), margin=margin
+            )
+            result = integrator.integrate_ell(test_func, 0.0, 20.0, 1.0, 5)
             assert np.isfinite(result)
 
     def test_different_nosc(self) -> None:
         """Test integration with different nosc values."""
 
-        def test_func(x) -> float:
+        def test_func(x: float, _k: float) -> float:
             return np.exp(-x / 10.0)
 
         # Test with different nosc values
         for nosc in [4.0, 6.0, 8.0]:
-            integrator = Ncm.SBesselIntegratorGL(lmin=0, lmax=10, nosc=nosc)
-            integrator.prepare()
-
-            result = integrator.integrate_ell(test_func, 0.0, 20.0, 5)
+            integrator = Ncm.SBesselIntegratorGL(
+                ell_range=Ncm.DTuple2.new(0, 10), nosc=nosc
+            )
+            result = integrator.integrate_ell(test_func, 0.0, 20.0, 1.0, 5)
             assert np.isfinite(result)
 
     def test_integrate_constant_function(
@@ -154,14 +152,12 @@ class TestSBesselIntegratorGL:
     ) -> None:
         """Test integration of f(x) = 1."""
 
-        def constant_one(_x) -> float:
+        def constant_one(_x: float, _k: float) -> float:
             return 1.0
-
-        integrator.prepare()
 
         # Test for different multipoles
         for ell in [0, 1, 2, 5, 10]:
-            result = integrator.integrate_ell(constant_one, 0.0, 20.0, ell)
+            result = integrator.integrate_ell(constant_one, 0.0, 20.0, 1.0, ell)
             assert np.isfinite(result)
             # Result should be non-zero for integration of j_ell from 0 to 20
             assert abs(result) > 1e-10
@@ -174,15 +170,13 @@ class TestSBesselIntegratorGL:
         Using f(x) = exp(-x/10).
         """
 
-        def exponential_decay(x) -> float:
+        def exponential_decay(x: float, _k: float) -> float:
             return np.exp(-x / 10.0)
-
-        integrator.prepare()
 
         # Test for different multipoles
         results = []
         for ell in [0, 1, 2, 5]:
-            result = integrator.integrate_ell(exponential_decay, 0.0, 20.0, ell)
+            result = integrator.integrate_ell(exponential_decay, 0.0, 20.0, 1.0, ell)
             results.append(result)
             assert np.isfinite(result)
 
@@ -193,13 +187,11 @@ class TestSBesselIntegratorGL:
     def test_integrate_power_law(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test integration with power law f(x) = x^2."""
 
-        def power_law(x) -> float:
+        def power_law(x: float, _k: float) -> float:
             return x**2
 
-        integrator.prepare()
-
         for ell in [0, 2, 5]:
-            result = integrator.integrate_ell(power_law, 0.0, 20.0, ell)
+            result = integrator.integrate_ell(power_law, 0.0, 20.0, 1.0, ell)
             assert np.isfinite(result)
 
     def test_integrate_oscillatory_function(
@@ -207,24 +199,20 @@ class TestSBesselIntegratorGL:
     ) -> None:
         """Test with oscillatory function f(x) = sin(x)."""
 
-        def sine_function(x) -> float:
+        def sine_function(x: float, _k: float) -> float:
             return np.sin(x)
 
-        integrator.prepare()
-
         for ell in [0, 2, 5]:
-            result = integrator.integrate_ell(sine_function, 0.0, 20.0, ell)
+            result = integrator.integrate_ell(sine_function, 0.0, 20.0, 1.0, ell)
             assert np.isfinite(result)
 
     def test_integrate_zero_function(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test with f(x) = 0."""
 
-        def zero_function(_x) -> float:
+        def zero_function(_x: float, _k: float) -> float:
             return 0.0
 
-        integrator.prepare()
-
-        result = integrator.integrate_ell(zero_function, 0.0, 20.0, 5)
+        result = integrator.integrate_ell(zero_function, 0.0, 20.0, 1.0, 5)
         assert_allclose(result, 0.0, atol=1e-10)
 
     def test_integrate_different_ranges(
@@ -232,42 +220,36 @@ class TestSBesselIntegratorGL:
     ) -> None:
         """Test integration over different ranges."""
 
-        def constant_one(_x) -> float:
+        def constant_one(_x: float, _k: float) -> float:
             return 1.0
-
-        integrator.prepare()
 
         # Test different integration ranges
         ranges = [(0.0, 10.0), (0.0, 20.0), (5.0, 15.0), (1.0, 30.0)]
 
         for a, b in ranges:
-            result = integrator.integrate_ell(constant_one, a, b, 2)
+            result = integrator.integrate_ell(constant_one, a, b, 1.0, 2)
             assert np.isfinite(result)
 
     def test_integrate_small_ell(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test integration for small multipoles."""
 
-        def constant_one(_x) -> float:
+        def constant_one(_x: float, _k: float) -> float:
             return 1.0
 
-        integrator.prepare()
-
         for ell in [0, 1, 2]:
-            result = integrator.integrate_ell(constant_one, 0.0, 10.0, ell)
+            result = integrator.integrate_ell(constant_one, 0.0, 10.0, 1.0, ell)
             assert np.isfinite(result)
             assert abs(result) > 0.0
 
     def test_integrate_large_ell(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test integration for larger multipoles."""
 
-        def constant_one(_x) -> float:
+        def constant_one(_x: float, _k: float) -> float:
             return 1.0
-
-        integrator.prepare()
 
         # Test with larger multipoles
         for ell in [20, 50, 100]:
-            result = integrator.integrate_ell(constant_one, 0.0, 50.0, ell)
+            result = integrator.integrate_ell(constant_one, 0.0, 50.0, 1.0, ell)
             assert np.isfinite(result)
 
     def test_integrate_with_user_data(
@@ -281,17 +263,15 @@ class TestSBesselIntegratorGL:
             def __init__(self, scale):
                 self.scale = scale
 
-        def scaled_exponential(user_data, x) -> float:
+        def scaled_exponential(user_data: DataContainer, x: float, _k: float) -> float:
             assert isinstance(user_data, DataContainer)
             return np.exp(-x / user_data.scale)
 
-        integrator.prepare()
-
         data = DataContainer(scale=5.0)
-        result1 = integrator.integrate_ell(scaled_exponential, 0.0, 20.0, 2, data)
+        result1 = integrator.integrate_ell(scaled_exponential, 0.0, 20.0, 1.0, 2, data)
 
         data.scale = 10.0
-        result2 = integrator.integrate_ell(scaled_exponential, 0.0, 20.0, 2, data)
+        result2 = integrator.integrate_ell(scaled_exponential, 0.0, 20.0, 1.0, 2, data)
 
         # Results should be different for different scales
         assert result1 != result2
@@ -303,15 +283,13 @@ class TestSBesselIntegratorGL:
         # For j_0(x) = sin(x)/x, integral from 0 to infinity is pi/2
         # We can test a finite range and compare qualitatively
 
-        def sinc_like(_) -> float:
+        def sinc_like(_x: float, _k: float) -> float:
             # Test f(x) = 1 for x in range, which gives us the integral of j_ell
             return 1.0
 
-        integrator.prepare()
-
         # For ell=0, j_0(x) = sin(x)/x
         # Integral from 0 to large value should approach a known value
-        result = integrator.integrate_ell(sinc_like, 0.0, 100.0, 0)
+        result = integrator.integrate_ell(sinc_like, 0.0, 100.0, 1.0, 0)
         assert np.isfinite(result)
         # The integral of sin(x)/x from 0 to 100 is close to pi/2
         # Our result is integral of 1 * sin(x)/x
@@ -322,42 +300,40 @@ class TestSBesselIntegratorGL:
     ) -> None:
         """Test that repeated calls give consistent results."""
 
-        def test_func(x) -> float:
+        def test_func(x: float, _k: float) -> float:
             return np.exp(-x / 10.0)
 
-        integrator.prepare()
-
         # Call multiple times with same parameters
-        results = [integrator.integrate_ell(test_func, 0.0, 20.0, 5) for _ in range(5)]
+        results = [
+            integrator.integrate_ell(test_func, 0.0, 20.0, 1.0, 5) for _ in range(5)
+        ]
 
         # All results should be identical
         assert_allclose(results, results[0], rtol=1e-14)
 
     def test_lmin_lmax_properties(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test lmin and lmax getter/setter."""
-        assert integrator.get_lmin() == 0
-        assert integrator.get_lmax() == 10
+        ell_min, ell_max = integrator.get_ell_range()
+        assert ell_min == 0
+        assert ell_max == 10
 
-        integrator.set_lmin(2)
-        integrator.set_lmax(20)
+        integrator.set_ell_range(2, 20)
 
-        assert integrator.get_lmin() == 2
-        assert integrator.get_lmax() == 20
+        ell_min, ell_max = integrator.get_ell_range()
+        assert ell_min == 2
+        assert ell_max == 20
 
     def test_different_integrator_instances(self) -> None:
         """Test that different integrator instances are independent."""
 
-        def test_func(x) -> float:
+        def test_func(x: float, _k: float) -> float:
             return np.exp(-x)
 
         integrator1 = Ncm.SBesselIntegratorGL.new(0, 5)
         integrator2 = Ncm.SBesselIntegratorGL.new(5, 10)
 
-        integrator1.prepare()
-        integrator2.prepare()
-
-        result1 = integrator1.integrate_ell(test_func, 0.0, 10.0, 2)
-        result2 = integrator2.integrate_ell(test_func, 0.0, 10.0, 7)
+        result1 = integrator1.integrate_ell(test_func, 0.0, 10.0, 1.0, 2)
+        result2 = integrator2.integrate_ell(test_func, 0.0, 10.0, 1.0, 7)
 
         # Results should be different (different ell values)
         assert result1 != result2
@@ -367,27 +343,23 @@ class TestSBesselIntegratorGL:
     def test_gaussian_function(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test integration with Gaussian function."""
 
-        def gaussian(x) -> float:
+        def gaussian(x: float, _k: float) -> float:
             return np.exp(-((x - 10.0) ** 2) / (2.0 * 2.0**2))
 
-        integrator.prepare()
-
         for ell in [0, 2, 5]:
-            result = integrator.integrate_ell(gaussian, 0.0, 20.0, ell)
+            result = integrator.integrate_ell(gaussian, 0.0, 20.0, 1.0, ell)
             assert np.isfinite(result)
 
     def test_piecewise_function(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test with piecewise function."""
 
-        def piecewise(x) -> float:
+        def piecewise(x: float, _k: float) -> float:
             if x < 10.0:
                 return 1.0
             else:
                 return 0.5
 
-        integrator.prepare()
-
-        result = integrator.integrate_ell(piecewise, 0.0, 20.0, 3)
+        result = integrator.integrate_ell(piecewise, 0.0, 20.0, 1.0, 3)
         assert np.isfinite(result)
 
     def test_turning_point_behavior(self, integrator: Ncm.SBesselIntegratorGL) -> None:
@@ -397,22 +369,20 @@ class TestSBesselIntegratorGL:
         """
         # Test integration ranges that cross this point
 
-        def constant_one(_x):
+        def constant_one(_x: float, _k: float) -> float:
             return 1.0
-
-        integrator.prepare()
 
         ell = 5
         x_tp = np.sqrt(ell * (ell + 1))
 
         # Integrate before turning point
-        result_before = integrator.integrate_ell(constant_one, 0.0, x_tp - 1, ell)
+        result_before = integrator.integrate_ell(constant_one, 0.0, x_tp - 1, 1.0, ell)
 
         # Integrate after turning point
-        result_after = integrator.integrate_ell(constant_one, x_tp + 2, 20.0, ell)
+        result_after = integrator.integrate_ell(constant_one, x_tp + 2, 20.0, 1.0, ell)
 
         # Integrate across turning point
-        result_across = integrator.integrate_ell(constant_one, 0.0, 20.0, ell)
+        result_across = integrator.integrate_ell(constant_one, 0.0, 20.0, 1.0, ell)
 
         assert np.isfinite(result_before)
         assert np.isfinite(result_after)
@@ -421,28 +391,23 @@ class TestSBesselIntegratorGL:
     def test_very_small_range(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test integration over very small range."""
 
-        def test_func(x) -> float:
+        def test_func(x: float, _k: float) -> float:
             return x
 
-        integrator.prepare()
-
-        result = integrator.integrate_ell(test_func, 5.0, 5.1, 2)
+        result = integrator.integrate_ell(test_func, 5.0, 5.1, 1.0, 2)
         assert np.isfinite(result)
         # Result should be small for small range
         assert abs(result) < 1.0
 
     def test_polynomial_function(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test with polynomial functions of different orders."""
-
-        integrator.prepare()
-
         for power in [0, 1, 2, 3]:
 
-            def polynomial(x, p=power):
+            def polynomial(x: float, _k: float, p=power):
                 return x**p
 
             for ell in [0, 2, 5]:
-                result = integrator.integrate_ell(polynomial, 0.0, 10.0, ell)
+                result = integrator.integrate_ell(polynomial, 0.0, 10.0, 1.0, ell)
                 assert np.isfinite(result)
 
 
@@ -454,13 +419,17 @@ class TestSBesselIntegratorGLAnalytical:
         """Create a GL integrator."""
         return Ncm.SBesselIntegratorGL.new(0, 10)
 
-    def _compute_reference(self, f: Callable, a: float, b: float, ell: int) -> float:
+    def _compute_reference(
+        self, f: Callable[[float, float], float], a: float, b: float, k: float, ell: int
+    ) -> float:
         """Compute high-precision reference value using scipy."""
 
-        def integrand(x: float) -> float:
-            return f(x) * sp.spherical_jn(ell, x)
+        def integrand(x: float, k: float) -> float:
+            return f(x, k) * sp.spherical_jn(ell, k * x)
 
-        result, _ = integrate.quad(integrand, a, b, epsabs=1e-12, epsrel=1e-12)
+        result, _ = integrate.quad(
+            integrand, a, b, epsabs=1e-12, epsrel=1e-12, args=(k,)
+        )
         return result
 
     def test_constant_function_vs_scipy(
@@ -468,10 +437,8 @@ class TestSBesselIntegratorGLAnalytical:
     ) -> None:
         """Test f(x)=1 against scipy high-precision integration."""
 
-        def constant_one(_x):
+        def constant_one(_x: float, _k: float) -> float:
             return 1.0
-
-        integrator.prepare()
 
         # Test several cases
         test_cases = [
@@ -483,17 +450,15 @@ class TestSBesselIntegratorGLAnalytical:
         ]
 
         for a, b, ell in test_cases:
-            result = integrator.integrate_ell(constant_one, a, b, ell)
-            reference = self._compute_reference(constant_one, a, b, ell)
+            result = integrator.integrate_ell(constant_one, a, b, 1.0, ell)
+            reference = self._compute_reference(constant_one, a, b, 1.0, ell)
             assert_allclose(result, reference, rtol=1e-6, atol=1e-10)
 
     def test_exponential_vs_scipy(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test exponential function against scipy."""
 
-        def exponential(x) -> float:
+        def exponential(x: float, _k: float) -> float:
             return np.exp(-x / 10.0)
-
-        integrator.prepare()
 
         test_cases = [
             (0.0, 10.0, 0),
@@ -503,25 +468,22 @@ class TestSBesselIntegratorGLAnalytical:
         ]
 
         for a, b, ell in test_cases:
-            result = integrator.integrate_ell(exponential, a, b, ell)
-            reference = self._compute_reference(exponential, a, b, ell)
+            result = integrator.integrate_ell(exponential, a, b, 1.0, ell)
+            reference = self._compute_reference(exponential, a, b, 1.0, ell)
             assert_allclose(result, reference, rtol=1e-6, atol=1e-10)
 
     def test_polynomial_vs_scipy(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test polynomial functions against scipy."""
-
-        integrator.prepare()
-
         for power in [1, 2, 3]:
 
-            def polynomial(x, p=power):
+            def polynomial(x: float, _k: float, p=power):
                 return x**p
 
             test_cases = [(0.0, 10.0, 0), (0.0, 10.0, 2), (1.0, 8.0, 3)]
 
             for a, b, ell in test_cases:
-                result = integrator.integrate_ell(polynomial, a, b, ell)
-                reference = self._compute_reference(polynomial, a, b, ell)
+                result = integrator.integrate_ell(polynomial, a, b, 1.0, ell)
+                reference = self._compute_reference(polynomial, a, b, 1.0, ell)
                 assert_allclose(result, reference, rtol=1e-6, atol=1e-10)
 
     def test_sine_integral_special_case(
@@ -533,28 +495,24 @@ class TestSBesselIntegratorGLAnalytical:
         is the sine integral.
         """
 
-        def constant_one(_x):
+        def constant_one(_x: float, _k: float) -> float:
             return 1.0
-
-        integrator.prepare()
 
         # Test from 0 to pi
         a, b = 0.0, np.pi
-        result = integrator.integrate_ell(constant_one, a, b, 0)
+        result = integrator.integrate_ell(constant_one, a, b, 1.0, 0)
 
         # Reference: Si(pi) - Si(0) = Si(pi) ~= 1.85194
         # Using scipy to compute
-        reference = self._compute_reference(constant_one, a, b, 0)
+        reference = self._compute_reference(constant_one, a, b, 1.0, 0)
 
         assert_allclose(result, reference, rtol=1e-6)
 
     def test_gaussian_vs_scipy(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test Gaussian function against scipy."""
 
-        def gaussian(x) -> float:
+        def gaussian(x: float, _k: float) -> float:
             return np.exp(-((x - 5.0) ** 2) / (2.0 * 2.0**2))
-
-        integrator.prepare()
 
         test_cases = [
             (0.0, 10.0, 0),
@@ -563,49 +521,44 @@ class TestSBesselIntegratorGLAnalytical:
         ]
 
         for a, b, ell in test_cases:
-            result = integrator.integrate_ell(gaussian, a, b, ell)
-            reference = self._compute_reference(gaussian, a, b, ell)
+            result = integrator.integrate_ell(gaussian, a, b, 1.0, ell)
+            reference = self._compute_reference(gaussian, a, b, 1.0, ell)
             assert_allclose(result, reference, rtol=1e-6, atol=1e-10)
 
     def test_trigonometric_vs_scipy(self, integrator: Ncm.SBesselIntegratorGL) -> None:
         """Test trigonometric functions against scipy."""
 
-        def sine_func(x) -> float:
+        def sine_func(x: float, _k: float) -> float:
             return np.sin(x)
 
-        def cosine_func(x) -> float:
+        def cosine_func(x: float, _k: float) -> float:
             return np.cos(x)
-
-        integrator.prepare()
 
         # Test sine
         for ell in [0, 2, 5]:
-            result = integrator.integrate_ell(sine_func, 0.0, np.pi, ell)
-            reference = self._compute_reference(sine_func, 0.0, np.pi, ell)
+            result = integrator.integrate_ell(sine_func, 0.0, np.pi, 1.0, ell)
+            reference = self._compute_reference(sine_func, 0.0, np.pi, 1.0, ell)
             assert_allclose(result, reference, rtol=1e-6, atol=1e-10)
 
         # Test cosine
         for ell in [0, 2, 5]:
-            result = integrator.integrate_ell(cosine_func, 0.0, np.pi, ell)
-            reference = self._compute_reference(cosine_func, 0.0, np.pi, ell)
+            result = integrator.integrate_ell(cosine_func, 0.0, np.pi, 1.0, ell)
+            reference = self._compute_reference(cosine_func, 0.0, np.pi, 1.0, ell)
             assert_allclose(result, reference, rtol=1e-6, atol=1e-10)
 
     def test_product_of_powers_vs_scipy(
         self, integrator: Ncm.SBesselIntegratorGL
     ) -> None:
         """Test x^n * exp(-x/L) against scipy."""
-
-        integrator.prepare()
-
         for n in [0, 1, 2]:
             for L in [5.0, 10.0]:
 
-                def power_exp(x, n=n, L=L):
+                def power_exp(x: float, _k: float, n: int = n, L: float = L) -> float:
                     return x**n * np.exp(-x / L)
 
                 for ell in [0, 2, 5]:
-                    result = integrator.integrate_ell(power_exp, 0.0, 20.0, ell)
-                    reference = self._compute_reference(power_exp, 0.0, 20.0, ell)
+                    result = integrator.integrate_ell(power_exp, 0.0, 20.0, 1.0, ell)
+                    reference = self._compute_reference(power_exp, 0.0, 20.0, 1.0, ell)
                     assert_allclose(result, reference, rtol=1e-5, atol=1e-10)
 
     def test_oscillatory_product_vs_scipy(
@@ -613,10 +566,8 @@ class TestSBesselIntegratorGLAnalytical:
     ) -> None:
         """Test oscillatory function times smooth envelope."""
 
-        def osc_func(x) -> float:
+        def osc_func(x: float, _k: float) -> float:
             return np.sin(2 * x) * np.exp(-x / 10.0)
-
-        integrator.prepare()
 
         test_cases = [
             (0.0, 10.0, 0),
@@ -625,8 +576,8 @@ class TestSBesselIntegratorGLAnalytical:
         ]
 
         for a, b, ell in test_cases:
-            result = integrator.integrate_ell(osc_func, a, b, ell)
-            reference = self._compute_reference(osc_func, a, b, ell)
+            result = integrator.integrate_ell(osc_func, a, b, 1.0, ell)
+            reference = self._compute_reference(osc_func, a, b, 1.0, ell)
             assert_allclose(result, reference, rtol=1e-5, atol=1e-10)
 
     def test_rational_function_vs_scipy(
@@ -634,16 +585,14 @@ class TestSBesselIntegratorGLAnalytical:
     ) -> None:
         """Test rational function against scipy."""
 
-        def rational(x) -> float:
+        def rational(x: float, _k: float) -> float:
             return 1.0 / (1.0 + x**2)
-
-        integrator.prepare()
 
         test_cases = [(0.0, 5.0, 0), (0.0, 10.0, 2), (1.0, 8.0, 4)]
 
         for a, b, ell in test_cases:
-            result = integrator.integrate_ell(rational, a, b, ell)
-            reference = self._compute_reference(rational, a, b, ell)
+            result = integrator.integrate_ell(rational, a, b, 1.0, ell)
+            reference = self._compute_reference(rational, a, b, 1.0, ell)
             assert_allclose(result, reference, rtol=1e-6, atol=1e-10)
 
     def test_multiple_ells_consistency(
@@ -651,16 +600,14 @@ class TestSBesselIntegratorGLAnalytical:
     ) -> None:
         """Test results consistent with scipy for range of ells."""
 
-        def test_func(x) -> float:
+        def test_func(x: float, _k: float) -> float:
             return x * np.exp(-x / 5.0)
-
-        integrator.prepare()
 
         a, b = 0.0, 15.0
 
         for ell in range(0, 11):
-            result = integrator.integrate_ell(test_func, a, b, ell)
-            reference = self._compute_reference(test_func, a, b, ell)
+            result = integrator.integrate_ell(test_func, a, b, 1.0, ell)
+            reference = self._compute_reference(test_func, a, b, 1.0, ell)
             assert_allclose(result, reference, rtol=1e-5, atol=1e-10)
 
 
@@ -671,21 +618,21 @@ class TestSBesselIntegratorGLLargeIntervals:
     def integrator(self) -> Ncm.SBesselIntegratorGL:
         """Create a GL integrator with parameters suitable for large intervals."""
         # Use more quadrature points for better accuracy with many oscillations
-        return Ncm.SBesselIntegratorGL(lmin=0, lmax=10, npts=20, nosc=8.0)
+        return Ncm.SBesselIntegratorGL(
+            ell_range=Ncm.DTuple2.new(0, 10), npts=20, nosc=8.0
+        )
 
     def test_large_interval_constant_function(
         self, integrator: Ncm.SBesselIntegratorGL
     ) -> None:
         """Test f(x)=1 over [0, 10^4] for ell=5."""
 
-        def constant_one(_x):
+        def constant_one(_x: float, _k: float) -> float:
             return 1.0
-
-        integrator.prepare()
 
         # For large x, j_ell oscillates rapidly and decays as 1/x
         # The integral should converge
-        result = integrator.integrate_ell(constant_one, 0.0, 1e4, 5)
+        result = integrator.integrate_ell(constant_one, 0.0, 1e4, 1.0, 5)
         assert np.isfinite(result)
         # The integral should be relatively small due to rapid oscillations
         assert abs(result) < 100.0
@@ -695,12 +642,10 @@ class TestSBesselIntegratorGLLargeIntervals:
     ) -> None:
         """Test exponential decay over [0, 10^4]."""
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)
 
-        integrator.prepare()
-
-        result = integrator.integrate_ell(exp_decay, 0.0, 1e4, 5)
+        result = integrator.integrate_ell(exp_decay, 0.0, 1e4, 1.0, 5)
         assert np.isfinite(result)
         # With exponential decay, the integral should be well-behaved
         assert abs(result) < 1e4
@@ -710,12 +655,10 @@ class TestSBesselIntegratorGLLargeIntervals:
     ) -> None:
         """Test power law decay over [0, 10^4]."""
 
-        def power_decay(x) -> float:
+        def power_decay(x: float, _k: float) -> float:
             return 1.0 / (1.0 + x / 1e3)
 
-        integrator.prepare()
-
-        result = integrator.integrate_ell(power_decay, 0.0, 1e4, 5)
+        result = integrator.integrate_ell(power_decay, 0.0, 1e4, 1.0, 5)
         assert np.isfinite(result)
         assert abs(result) < 1e4
 
@@ -724,13 +667,11 @@ class TestSBesselIntegratorGLLargeIntervals:
     ) -> None:
         """Test integration from [10^3, 10^4] for ell=5."""
 
-        def constant_one(_x):
+        def constant_one(_x: float, _k: float) -> float:
             return 1.0
 
-        integrator.prepare()
-
         # Integration starting far from origin where j_ell is highly oscillatory
-        result = integrator.integrate_ell(constant_one, 1e3, 1e4, 5)
+        result = integrator.integrate_ell(constant_one, 1e3, 1e4, 1.0, 5)
         assert np.isfinite(result)
         # Due to rapid oscillations and 1/x decay, this should be small
         assert abs(result) < 10.0
@@ -740,14 +681,12 @@ class TestSBesselIntegratorGLLargeIntervals:
     ) -> None:
         """Test large intervals for different multipoles."""
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)
-
-        integrator.prepare()
 
         results = {}
         for ell in [0, 2, 5, 10]:
-            result = integrator.integrate_ell(exp_decay, 0.0, 1e4, ell)
+            result = integrator.integrate_ell(exp_decay, 0.0, 1e4, 1.0, ell)
             results[ell] = result
             assert np.isfinite(result)
 
@@ -760,13 +699,11 @@ class TestSBesselIntegratorGLLargeIntervals:
     ) -> None:
         """Test slowly decaying function over large interval."""
 
-        def slow_decay(x) -> float:
+        def slow_decay(x: float, _k: float) -> float:
             # Decay as 1/sqrt(1 + x/L) with large L
             return 1.0 / np.sqrt(1.0 + x / 1e4)
 
-        integrator.prepare()
-
-        result = integrator.integrate_ell(slow_decay, 0.0, 1e4, 5)
+        result = integrator.integrate_ell(slow_decay, 0.0, 1e4, 1.0, 5)
         assert np.isfinite(result)
         # Slower decay means potentially larger integral
         assert abs(result) < 1e4
@@ -776,13 +713,11 @@ class TestSBesselIntegratorGLLargeIntervals:
     ) -> None:
         """Test integration starting at very large x value."""
 
-        def constant_one(_x):
+        def constant_one(_x: float, _k: float) -> float:
             return 1.0
 
-        integrator.prepare()
-
         # Start at 5*10^3, go to 6*10^3
-        result = integrator.integrate_ell(constant_one, 5e3, 6e3, 5)
+        result = integrator.integrate_ell(constant_one, 5e3, 6e3, 1.0, 5)
         assert np.isfinite(result)
         # In highly oscillatory regime with 1/x envelope
         assert abs(result) < 1.0
@@ -792,17 +727,15 @@ class TestSBesselIntegratorGLLargeIntervals:
     ) -> None:
         """Test that splitting large interval gives consistent results."""
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)
 
-        integrator.prepare()
-
         # Full interval
-        result_full = integrator.integrate_ell(exp_decay, 0.0, 1e4, 5)
+        result_full = integrator.integrate_ell(exp_decay, 0.0, 1e4, 1.0, 5)
 
         # Split into two parts
-        result_part1 = integrator.integrate_ell(exp_decay, 0.0, 5e3, 5)
-        result_part2 = integrator.integrate_ell(exp_decay, 5e3, 1e4, 5)
+        result_part1 = integrator.integrate_ell(exp_decay, 0.0, 5e3, 1.0, 5)
+        result_part2 = integrator.integrate_ell(exp_decay, 5e3, 1e4, 1.0, 5)
         result_split = result_part1 + result_part2
 
         # Should be approximately equal
@@ -813,16 +746,14 @@ class TestSBesselIntegratorGLLargeIntervals:
     ) -> None:
         """Test Gaussian envelope centered away from origin."""
 
-        def gaussian_far(x) -> float:
+        def gaussian_far(x: float, _k: float) -> float:
             # Gaussian centered at x0 = 5*10^3, width sigma = 10^3
             x0 = 5e3
             sigma = 1e3
             return np.exp(-((x - x0) ** 2) / (2 * sigma**2))
 
-        integrator.prepare()
-
         # Integrate over range covering the Gaussian
-        result = integrator.integrate_ell(gaussian_far, 0.0, 1e4, 5)
+        result = integrator.integrate_ell(gaussian_far, 0.0, 1e4, 1.0, 5)
         assert np.isfinite(result)
         # Gaussian centered far from origin, width ~10^3
         assert abs(result) < 1e4
@@ -830,7 +761,7 @@ class TestSBesselIntegratorGLLargeIntervals:
     def test_large_interval_different_parameter_settings(self) -> None:
         """Test large intervals with different algorithm parameters."""
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)
 
         # Test with different npts and nosc values
@@ -843,10 +774,11 @@ class TestSBesselIntegratorGLLargeIntervals:
         results = []
         for params in param_sets:
             integrator = Ncm.SBesselIntegratorGL(
-                lmin=0, lmax=10, npts=int(params["npts"]), nosc=params["nosc"]
+                ell_range=Ncm.DTuple2.new(0, 10),
+                npts=int(params["npts"]),
+                nosc=params["nosc"],
             )
-            integrator.prepare()
-            result = integrator.integrate_ell(exp_decay, 0.0, 1e4, 5)
+            result = integrator.integrate_ell(exp_decay, 0.0, 1e4, 1.0, 5)
             results.append(result)
             assert np.isfinite(result)
 
@@ -859,12 +791,10 @@ class TestSBesselIntegratorGLLargeIntervals:
     ) -> None:
         """Test with extremely large interval [0, 10^5]."""
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 1e4)
 
-        integrator.prepare()
-
-        result = integrator.integrate_ell(exp_decay, 0.0, 1e7, 5)
+        result = integrator.integrate_ell(exp_decay, 0.0, 1e7, 1.0, 5)
         assert np.isfinite(result)
         # Should converge despite large range
         assert abs(result) < 1e5
@@ -874,14 +804,12 @@ class TestSBesselIntegratorGLLargeIntervals:
     ) -> None:
         """Test large intervals with high multipole values."""
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)
-
-        integrator.prepare()
 
         # Test with higher multipoles
         for ell in [20, 50]:
-            result = integrator.integrate_ell(exp_decay, 0.0, 1e6, ell)
+            result = integrator.integrate_ell(exp_decay, 0.0, 1e6, 1.0, ell)
             assert np.isfinite(result)
             # Higher ell means turning point at sqrt(ell*(ell+1))
             # Most of the range is in highly oscillatory regime
@@ -896,7 +824,9 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
     @pytest.fixture
     def integrator(self) -> Ncm.SBesselIntegratorGL:
         """Create GL integrator with parameters for large intervals."""
-        return Ncm.SBesselIntegratorGL(lmin=0, lmax=10, npts=20, nosc=8.0)
+        return Ncm.SBesselIntegratorGL(
+            ell_range=Ncm.DTuple2.new(0, 10), npts=20, nosc=8.0
+        )
 
     def test_interval_additivity_large(
         self, integrator: Ncm.SBesselIntegratorGL
@@ -906,20 +836,18 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         Verify that integral_a^c = integral_a^b + integral_b^c.
         """
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)
-
-        integrator.prepare()
 
         # Test for multiple ell values
         for ell in [0, 2, 5]:
             # Full interval [0, 10^4]
-            result_full = integrator.integrate_ell(exp_decay, 0.0, 1e4, ell)
+            result_full = integrator.integrate_ell(exp_decay, 0.0, 1e4, 1.0, ell)
 
             # Split into three parts
-            result_1 = integrator.integrate_ell(exp_decay, 0.0, 3e3, ell)
-            result_2 = integrator.integrate_ell(exp_decay, 3e3, 7e3, ell)
-            result_3 = integrator.integrate_ell(exp_decay, 7e3, 1e4, ell)
+            result_1 = integrator.integrate_ell(exp_decay, 0.0, 3e3, 1.0, ell)
+            result_2 = integrator.integrate_ell(exp_decay, 3e3, 7e3, 1.0, ell)
+            result_3 = integrator.integrate_ell(exp_decay, 7e3, 1e4, 1.0, ell)
             result_sum = result_1 + result_2 + result_3
 
             # Should satisfy additivity to high precision
@@ -935,14 +863,12 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
     ) -> None:
         """Test additivity with many small intervals."""
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)
-
-        integrator.prepare()
 
         ell = 3
         # Full interval
-        result_full = integrator.integrate_ell(exp_decay, 0.0, 1e4, ell)
+        result_full = integrator.integrate_ell(exp_decay, 0.0, 1e4, 1.0, ell)
 
         # Split into 20 pieces
         n_splits = 20
@@ -950,7 +876,7 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         for i in range(n_splits):
             a = i * 500
             b = (i + 1) * 500
-            result_sum += integrator.integrate_ell(exp_decay, a, b, ell)
+            result_sum += integrator.integrate_ell(exp_decay, a, b, 1.0, ell)
 
         assert_allclose(result_full, result_sum, rtol=1e-10)
 
@@ -959,18 +885,16 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
     ) -> None:
         """Test that tail contribution from large x decays properly."""
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 5e3)
-
-        integrator.prepare()
 
         ell = 2
         # Main integral
-        result_main = integrator.integrate_ell(exp_decay, 0.0, 1e4, ell)
+        result_main = integrator.integrate_ell(exp_decay, 0.0, 1e4, 1.0, ell)
 
         # Tail integrals - should decrease
-        tail1 = integrator.integrate_ell(exp_decay, 1e4, 1.5e4, ell)
-        tail2 = integrator.integrate_ell(exp_decay, 1.5e4, 2e4, ell)
+        tail1 = integrator.integrate_ell(exp_decay, 1e4, 1.5e4, 1.0, ell)
+        tail2 = integrator.integrate_ell(exp_decay, 1.5e4, 2e4, 1.0, ell)
 
         # Tail contributions should be decreasing
         assert abs(tail1) < 0.1 * abs(result_main)
@@ -981,13 +905,11 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
     ) -> None:
         """Test that zero function gives zero over large interval."""
 
-        def zero_func(_x):
+        def zero_func(_x: float, _k: float) -> float:
             return 0.0
 
-        integrator.prepare()
-
         for ell in [0, 2, 5, 10]:
-            result = integrator.integrate_ell(zero_func, 0.0, 1e4, ell)
+            result = integrator.integrate_ell(zero_func, 0.0, 1e4, 1.0, ell)
             assert_allclose(
                 result,
                 0.0,
@@ -1003,34 +925,32 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         Verify that integral(af + bg) = a*integral(f) + b*integral(g).
         """
 
-        def func1(x) -> float:
+        def func1(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)
 
-        def func2(x) -> float:
+        def func2(x: float, _k: float) -> float:
             return np.exp(-x / 2e3)
-
-        integrator.prepare()
 
         a, b = 2.5, -1.3
         ell = 3
 
         # Compute separately
-        result_f = integrator.integrate_ell(func1, 0.0, 1e4, ell)
-        result_g = integrator.integrate_ell(func2, 0.0, 1e4, ell)
+        result_f = integrator.integrate_ell(func1, 0.0, 1e4, 1.0, ell)
+        result_g = integrator.integrate_ell(func2, 0.0, 1e4, 1.0, ell)
         result_linear = a * result_f + b * result_g
 
         # Compute combined
-        def func_combined(x) -> float:
-            return a * func1(x) + b * func2(x)
+        def func_combined(x: float, _k: float) -> float:
+            return a * func1(x, _k) + b * func2(x, _k)
 
-        result_combined = integrator.integrate_ell(func_combined, 0.0, 1e4, ell)
+        result_combined = integrator.integrate_ell(func_combined, 0.0, 1e4, 1.0, ell)
 
         assert_allclose(result_combined, result_linear, rtol=1e-10)
 
     def test_convergence_sequence_large_intervals(self) -> None:
         """Test convergence as integration parameters are refined."""
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)
 
         ell = 5
@@ -1038,9 +958,10 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         # Test with increasing npts
         results_npts = []
         for npts in [10, 20, 30, 40]:
-            integ = Ncm.SBesselIntegratorGL(lmin=0, lmax=10, npts=npts, nosc=8.0)
-            integ.prepare()
-            result = integ.integrate_ell(exp_decay, 0.0, 1e4, ell)
+            integ = Ncm.SBesselIntegratorGL(
+                ell_range=Ncm.DTuple2.new(0, 10), npts=npts, nosc=8.0
+            )
+            result = integ.integrate_ell(exp_decay, 0.0, 1e4, 1.0, ell)
             results_npts.append(result)
 
         # Results should converge - differences should decrease
@@ -1057,14 +978,12 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         """Test symmetric functions around interval midpoint."""
 
         # Even function around x=5000
-        def symmetric_func(x) -> float:
+        def symmetric_func(x: float, _k: float) -> float:
             return np.exp(-((x - 5e3) ** 2) / (2 * 1e6))
-
-        integrator.prepare()
 
         ell = 2
         # Integrate symmetric function - check consistency with mirrored interval
-        result = integrator.integrate_ell(symmetric_func, 0.0, 1e4, ell)
+        result = integrator.integrate_ell(symmetric_func, 0.0, 1e4, 1.0, ell)
 
         assert np.isfinite(result)
         assert abs(result) > 1e-10  # Should be non-zero
@@ -1073,19 +992,16 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         self, integrator: Ncm.SBesselIntegratorGL
     ) -> None:
         """Test that faster decay gives smaller integral magnitude."""
-
-        integrator.prepare()
-
         ell = 3
         alphas = [1e-3, 5e-3, 1e-2, 5e-2]  # Increasing decay rates
         results = []
 
         for alpha in alphas:
 
-            def exp_decay(x, alpha=alpha):
+            def exp_decay(x: float, _k: float, alpha=alpha):
                 return np.exp(-alpha * x)
 
-            result = integrator.integrate_ell(exp_decay, 0.0, 1e4, ell)
+            result = integrator.integrate_ell(exp_decay, 0.0, 1e4, 1.0, ell)
             results.append(abs(result))
 
         # Faster decay (larger alpha) should give smaller integral
@@ -1101,16 +1017,14 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         Different interval lengths maintain relative ordering.
         """
 
-        def func(x) -> float:
+        def func(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)
-
-        integrator.prepare()
 
         ell = 2
 
         # Base integral from 0 to b: f(x) j_ell(x) dx
         b = 1e4
-        result_base = integrator.integrate_ell(func, 0.0, b, ell)
+        result_base = integrator.integrate_ell(func, 0.0, b, 1.0, ell)
 
         # Scaled integral with alpha=2: integral_0^(b/2) f(x/2) j_ell(x) dx should ~=
         # 2*result Actually for integral f(alpha*x)j_ell(alpha*x)dx with substitution
@@ -1118,8 +1032,8 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
 
         # Let's test a simpler consistency: different intervals maintain relative
         # ordering
-        result_half = integrator.integrate_ell(func, 0.0, b / 2, ell)
-        result_quarter = integrator.integrate_ell(func, 0.0, b / 4, ell)
+        result_half = integrator.integrate_ell(func, 0.0, b / 2, 1.0, ell)
+        result_quarter = integrator.integrate_ell(func, 0.0, b / 4, 1.0, ell)
         # Larger intervals should have contributions from more of the function (not
         # strictly monotonic due to oscillations, but generally true)
         assert np.isfinite(result_base)
@@ -1129,7 +1043,7 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
     def test_different_parameter_consistency(self) -> None:
         """Test that different algorithm parameters give consistent results."""
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)
 
         ell = 4
@@ -1144,10 +1058,11 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         results = []
         for config in configs:
             integ = Ncm.SBesselIntegratorGL(
-                lmin=0, lmax=10, npts=int(config["npts"]), nosc=config["nosc"]
+                ell_range=Ncm.DTuple2.new(0, 10),
+                npts=int(config["npts"]),
+                nosc=config["nosc"],
             )
-            integ.prepare()
-            result = integ.integrate_ell(exp_decay, 0.0, 1e4, ell)
+            result = integ.integrate_ell(exp_decay, 0.0, 1e4, 1.0, ell)
             results.append(result)
 
         # All should agree within 1%
@@ -1162,15 +1077,13 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         Extending interval beyond decay scale shouldn't change result much.
         """
 
-        def exp_decay(x) -> float:
+        def exp_decay(x: float, _k: float) -> float:
             return np.exp(-x / 1e3)  # Decay scale ~1e3
-
-        integrator.prepare()
 
         ell = 2
         # Beyond 5*decay_scale, contribution should be tiny
-        result_1e4 = integrator.integrate_ell(exp_decay, 0.0, 1e4, ell)
-        result_2e4 = integrator.integrate_ell(exp_decay, 0.0, 2e4, ell)
+        result_1e4 = integrator.integrate_ell(exp_decay, 0.0, 1e4, 1.0, ell)
+        result_2e4 = integrator.integrate_ell(exp_decay, 0.0, 2e4, 1.0, ell)
 
         # Difference should be very small
         diff = abs(result_2e4 - result_1e4)
@@ -1184,16 +1097,13 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         For f(x) = x^(ell+2), compare against analytical result using
         spherical Bessel recurrence relations.
         """
-
-        integrator.prepare()
-
         for ell in [0, 1, 3, 5, 50]:
 
-            def f(x, ell=ell):
+            def f(x: float, _k: float, ell: int = ell):
                 return x ** (ell + 2)
 
             a, b = 1.0e3, 1.0e5
-            num = integrator.integrate_ell(f, a, b, ell)
+            num = integrator.integrate_ell(f, a, b, 1.0, ell)
             ref = b ** (ell + 2) * sp.spherical_jn(ell + 1, b) - a ** (
                 ell + 2
             ) * sp.spherical_jn(ell + 1, a)
@@ -1209,15 +1119,13 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         recurrence relations.
         """
 
-        integrator.prepare()
-
-        def f(_x):
+        def f(_x: float, _k: float) -> float:
             return 1
 
         for ell in [0, 1, 3, 5, 50]:
 
             a, b = 1.0e6, 1.0e7
-            num = integrator.integrate_ell(f, a, b, ell)
+            num = integrator.integrate_ell(f, a, b, 1.0, ell)
             ref = sp.spherical_jn(ell + 1, b) - sp.spherical_jn(ell + 1, a)
 
             assert_allclose(num, ref, rtol=1e-4, err_msg=f"ell={ell}")
@@ -1230,19 +1138,16 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         For f(x) = np.exp(-x / 2000.0), compare against Limber approximation:
         integral_0^infty f(x) j_ell(x) dx ~ sqrt(pi/(2ell+1)) f(ell+0.5)
         """
-
-        integrator.prepare()
-
         for ell, rtol in zip(
             [20, 50, 100, 200, 500], [1.0e-3, 1.0e-4, 2.0e-5, 7.0e-6, 4.0e-6]
         ):
 
-            def f(x) -> float:
+            def f(x: float, _k: float) -> float:
                 return np.exp(-x / 200.0)
 
             a, b = 0.0, 1.0e5
-            num = integrator.integrate_ell(f, a, b, ell)
-            ref = np.sqrt(np.pi / (2.0 * ell + 1.0)) * f(ell + 0.5)
+            num = integrator.integrate_ell(f, a, b, 1.0, ell)
+            ref = np.sqrt(np.pi / (2.0 * ell + 1.0)) * f(ell + 0.5, 1.0)
 
             assert_allclose(num, ref, rtol=rtol, err_msg=f"ell={ell}")
 
@@ -1258,9 +1163,7 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
         Integral_0^infty f(x) j_ell(x) dx ~= sqrt(pi/(2ell+1)) f(ell + 0.5)
         """
 
-        integrator.prepare()
-
-        def f(x, L=L, p=p):
+        def f(x: float, _k: float, L: float = L, p: float = p) -> float:
             return (1.0 + x / L) ** (-p)
 
         # Choose multipoles and tolerances consistent with slow decay
@@ -1273,12 +1176,8 @@ class TestSBesselIntegratorGLAnalyticalLargeIntervals:
 
         for ell, rtol in zip(ells, rtols):
             a, b = 0.0, 2.0e5  # wide range due to slow decay tail
-            num = integrator.integrate_ell(f, a, b, ell)
+            num = integrator.integrate_ell(f, a, b, 1.0, ell)
 
-            ref = np.sqrt(np.pi / (2.0 * ell + 1.0)) * f(ell + 0.5)
+            ref = np.sqrt(np.pi / (2.0 * ell + 1.0)) * f(ell + 0.5, 1.0)
 
             assert_allclose(num, ref, rtol=rtol, err_msg=f"ell={ell}")
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
