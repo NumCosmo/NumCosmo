@@ -882,9 +882,9 @@ _ncm_sbessel_integrator_fftl_integrate (NcmSBesselIntegrator *sbi,
 NcmSBesselIntegratorFFTL *
 ncm_sbessel_integrator_fftl_new (guint ell_min, guint ell_max)
 {
+  NcmDTuple2 ell_range            = NCM_DTUPLE2_STATIC_INIT ((gdouble) ell_min, (gdouble) ell_max);
   NcmSBesselIntegratorFFTL *sbilf = g_object_new (NCM_TYPE_SBESSEL_INTEGRATOR_FFTL,
-                                                  "ell_min", ell_min,
-                                                  "ell_max", ell_max,
+                                                  "ell-range", &ell_range,
                                                   NULL);
 
   return sbilf;
