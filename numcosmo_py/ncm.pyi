@@ -9066,6 +9066,7 @@ class SBesselIntegrator(GObject.Object):
         F: typing.Callable[..., float],
         a: float,
         b: float,
+        k: float,
         result: Vector,
         *user_data: typing.Any,
     ) -> None: ...
@@ -9074,6 +9075,7 @@ class SBesselIntegrator(GObject.Object):
         F: typing.Callable[..., float],
         a: float,
         b: float,
+        k: float,
         ell: int,
         *user_data: typing.Any,
     ) -> float: ...
@@ -9085,6 +9087,7 @@ class SBesselIntegrator(GObject.Object):
         F: typing.Callable[..., float],
         a: float,
         b: float,
+        k: float,
         result: Vector,
         *user_data: typing.Any,
     ) -> None: ...
@@ -9093,6 +9096,7 @@ class SBesselIntegrator(GObject.Object):
         F: typing.Callable[..., float],
         a: float,
         b: float,
+        k: float,
         ell: int,
         *user_data: typing.Any,
     ) -> float: ...
