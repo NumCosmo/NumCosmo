@@ -59,11 +59,11 @@ class TestSBesselIntegratorLevin:
         integrator.set_max_order(N)
 
         # Define f(x) = 1
-        def f_constant(_user_data: None, _x: float) -> float:
+        def f_constant(_x: float, _k: float) -> float:
             return 1.0
 
         # Compute integral using the integrate_ell method
-        result = integrator.integrate_ell(f_constant, a, b, l_val, None)
+        result = integrator.integrate_ell(f_constant, a, b, 1.0, l_val)
 
         # Compute expected value using scipy
         def integrand(x: float) -> float:
@@ -95,11 +95,11 @@ class TestSBesselIntegratorLevin:
         integrator.set_max_order(N)
 
         # Define f(x) = x
-        def f_linear(_user_data: None, x: float) -> float:
+        def f_linear(x: float, _k: float) -> float:
             return x
 
         # Compute integral using the integrate_ell method
-        result = integrator.integrate_ell(f_linear, a, b, l_val, None)
+        result = integrator.integrate_ell(f_linear, a, b, 1.0, l_val)
 
         # Compute expected value using scipy
         def integrand(x: float) -> float:
@@ -131,11 +131,11 @@ class TestSBesselIntegratorLevin:
         integrator.set_max_order(N)
 
         # Define f(x) = x^2
-        def f_quadratic(_user_data: None, x: float) -> float:
+        def f_quadratic(x: float, _k: float) -> float:
             return x * x
 
         # Compute integral using the integrate_ell method
-        result = integrator.integrate_ell(f_quadratic, a, b, l_val, None)
+        result = integrator.integrate_ell(f_quadratic, a, b, 1.0, l_val)
 
         # Compute expected value using scipy
         def integrand(x: float) -> float:
@@ -169,12 +169,12 @@ class TestSBesselIntegratorLevin:
         integrator.set_max_order(N)
 
         # Define rational function f(x) = x^2 / (1 + ((x-center)/std)^2)^3
-        def f_rational(_user_data: None, x: float) -> float:
+        def f_rational(x: float, _k: float) -> float:
             dx = (x - center) / std
             return x * x / ((1.0 + dx * dx) ** 3)
 
         # Compute integral using the integrate_ell method
-        result = integrator.integrate_ell(f_rational, a, b, l_val, None)
+        result = integrator.integrate_ell(f_rational, a, b, 1.0, l_val)
 
         # Compute expected value using scipy
         def integrand(x: float) -> float:
@@ -205,21 +205,20 @@ class TestSBesselIntegratorLevin:
         # Create integrator
         integrator = Ncm.SBesselIntegratorLevin.new(lmin, lmax)
         integrator.set_max_order(N)
-        integrator.prepare()
 
         # Define a test function
-        def f_test(_user_data: None, x: float) -> float:
+        def f_test(x: float, _k: float) -> float:
             return np.exp(-0.1 * x)
 
         # Use integrate (batched internally)
         results_vec = Ncm.Vector.new(lmax - lmin + 1)
-        integrator.integrate(f_test, a, b, results_vec, None)
+        integrator.integrate(f_test, a, b, 1.0, results_vec)
         results_range_np = results_vec.to_numpy()
 
         # Compute individually for each l
         results_individual = []
         for ell in range(lmin, lmax + 1):
-            results_individual.append(integrator.integrate_ell(f_test, a, b, ell, None))
+            results_individual.append(integrator.integrate_ell(f_test, a, b, 1.0, ell))
 
         results_individual_np = np.array(results_individual)
 
@@ -266,7 +265,6 @@ class TestSBesselIntegratorLevin:
         ell_min = int(np.min(ells))
         ell_max = int(np.max(ells))
         integrator = Ncm.SBesselIntegratorLevin.new(ell_min, ell_max)
-        integrator.prepare()
 
         # Get the appropriate integration method
         if func_type == "gaussian":

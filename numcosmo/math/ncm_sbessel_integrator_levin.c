@@ -53,6 +53,7 @@
 #include "math/ncm_lapack.h"
 #include "math/ncm_c.h"
 #include "math/ncm_integral_nd.h"
+#include "math/ncm_dtuple.h"
 #include "ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -77,6 +78,7 @@ struct _NcmSBesselIntegratorLevin
   guint alloc_max_order;
   guint alloc_ell_min;
   guint alloc_ell_max;
+  gboolean constructed;
   /* Pre-allocated working arrays */
   GArray *cheb_coeffs;
   GArray *gegen_coeffs;
@@ -112,6 +114,8 @@ enum
 
 static void _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sbilv);
 static void _ncm_sbessel_integrator_levin_prepare_ell_cache (NcmSBesselIntegratorLevin *sbilv);
+static void _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv, guint max_order, guint ell_min, guint ell_max);
+static void _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin *sbilv, guint ell_min, guint ell_max);
 static void _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, gpointer user_data);
 static void _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *sbilv, NcmSpectral *spectral, NcmSBesselOdeOperator *operator, NcmSBesselIntegratorF F, gdouble a_p, gdouble b_p, const gdouble *j_a_p, const gdouble *j_b_p, gdouble k, guint ell_min, guint ell_max, gdouble *result_data, gpointer user_data);
 static void _ncm_sbessel_integrator_levin_integrate_panel (NcmSBesselIntegratorLevin *sbilv, gint a_p_idx, gint b_p_idx, gdouble a_p, gdouble b_p, NcmSpectral *spectral, NcmSBesselIntegratorF F, gdouble k, guint ell_min, guint ell_max, gdouble *result_data, gpointer user_data);
@@ -140,6 +144,7 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
   sbilv->j_array_b        = NULL;
   sbilv->endpoints_result = NULL;
   sbilv->jl_arr           = NULL;
+  sbilv->constructed      = FALSE;
   /* Knots-based paneling */
   sbilv->y_knots_min         = 0.0;
   sbilv->y_knots_max         = 0.0;
@@ -218,12 +223,21 @@ _ncm_sbessel_integrator_levin_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_sbessel_integrator_levin_parent_class)->constructed (object);
 
-  NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (object);
+  {
+    NcmSBesselIntegrator *sbi        = NCM_SBESSEL_INTEGRATOR (object);
+    NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (object);
+    guint ell_min, ell_max;
 
-  /* Prepare knots array and precompute spherical Bessel functions at construction time
-   * since knots parameters and ell_cache_max are CONSTRUCT_ONLY */
-  _ncm_sbessel_integrator_levin_prepare_knots_array (sbilv);
-  _ncm_sbessel_integrator_levin_prepare_ell_cache (sbilv);
+    /* Prepare knots array and precompute spherical Bessel functions at construction time
+     * since knots parameters and ell_cache_max are CONSTRUCT_ONLY */
+    _ncm_sbessel_integrator_levin_prepare_knots_array (sbilv);
+    _ncm_sbessel_integrator_levin_prepare_ell_cache (sbilv);
+
+    /* Mark as constructed and trigger set_ell_range to initialize operators */
+    sbilv->constructed = TRUE;
+    ncm_sbessel_integrator_get_ell_range (sbi, &ell_min, &ell_max);
+    ncm_sbessel_integrator_set_ell_range (sbi, ell_min, ell_max);
+  }
 }
 
 static void
@@ -822,6 +836,10 @@ _ncm_sbessel_integrator_levin_set_ell_range (NcmSBesselIntegrator *sbi, guint el
   /* Chain up : start */
   NCM_SBESSEL_INTEGRATOR_CLASS (ncm_sbessel_integrator_levin_parent_class)->set_ell_range (sbi, ell_min, ell_max);
 
+  /* Skip operator preparation during construction - resources aren't ready yet */
+  if (!sbilv->constructed)
+    return;
+
   if ((ell_min != sbilv->alloc_ell_min) || (ell_max != sbilv->alloc_ell_max))
   {
     if (ell_max > sbilv->ell_cache_max)
@@ -1088,9 +1106,9 @@ ncm_sbessel_integrator_levin_new (guint ell_min, guint ell_max)
 NcmSBesselIntegratorLevin *
 ncm_sbessel_integrator_levin_new_full (guint ell_min, guint ell_max, gdouble y_knots_min, gdouble y_knots_max, guint n_knots, guint ell_cache_max, gdouble reltol, guint cheb_min_order, gdouble cheb_reltol)
 {
+  NcmDTuple2 ell_range             = NCM_DTUPLE2_STATIC_INIT ((gdouble) ell_min, (gdouble) ell_max);
   NcmSBesselIntegratorLevin *sbilv = g_object_new (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN,
-                                                   "ell_min", ell_min,
-                                                   "ell_max", ell_max,
+                                                   "ell-range", &ell_range,
                                                    "y-knots-min", y_knots_min,
                                                    "y-knots-max", y_knots_max,
                                                    "n-knots", n_knots,

@@ -39,6 +39,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_sbessel_integrator.h"
+#include "math/ncm_dtuple.h"
 
 typedef struct _NcmSBesselIntegratorPrivate
 {
@@ -49,8 +50,7 @@ typedef struct _NcmSBesselIntegratorPrivate
 enum
 {
   PROP_0,
-  PROP_ELL_MIN,
-  PROP_ELL_MAX,
+  PROP_ELL_RANGE,
   PROP_SIZE,
 };
 
@@ -68,19 +68,43 @@ ncm_sbessel_integrator_init (NcmSBesselIntegrator *sbi)
 static void
 _ncm_sbessel_integrator_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcmSBesselIntegrator *sbi         = NCM_SBESSEL_INTEGRATOR (object);
-  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
+  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (object);
 
   g_return_if_fail (NCM_IS_SBESSEL_INTEGRATOR (object));
 
   switch (prop_id)
   {
-    case PROP_ELL_MIN:
-      self->ell_min = g_value_get_uint (value);
+    case PROP_ELL_RANGE:
+    {
+      NcmDTuple2 *ell_range = g_value_get_boxed (value);
+
+      if (ell_range == NULL)
+        g_error ("_ncm_sbessel_integrator_set_property: ell_range is NULL.");
+
+      /* Convert from double to uint with validation */
+      if ((ell_range->elements[0] < 0.0) || (ell_range->elements[1] < 0.0))
+        g_error ("_ncm_sbessel_integrator_set_property: ell values must be non-negative.");
+
+      if ((ell_range->elements[0] != floor (ell_range->elements[0])) ||
+          (ell_range->elements[1] != floor (ell_range->elements[1])))
+        g_error ("_ncm_sbessel_integrator_set_property: ell values must be integers.");
+
+      if ((ell_range->elements[0] > (gdouble) G_MAXUINT) ||
+          (ell_range->elements[1] > (gdouble) G_MAXUINT))
+        g_error ("_ncm_sbessel_integrator_set_property: ell values out of range.");
+
+      {
+        const guint ell_min = (guint) ell_range->elements[0];
+        const guint ell_max = (guint) ell_range->elements[1];
+
+        if (ell_min > ell_max)
+          g_error ("_ncm_sbessel_integrator_set_property: ell_min (%u) must be <= ell_max (%u).",
+                   ell_min, ell_max);
+
+        ncm_sbessel_integrator_set_ell_range (sbi, ell_min, ell_max);
+      }
       break;
-    case PROP_ELL_MAX:
-      self->ell_max = g_value_get_uint (value);
-      break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -97,12 +121,11 @@ _ncm_sbessel_integrator_get_property (GObject *object, guint prop_id, GValue *va
 
   switch (prop_id)
   {
-    case PROP_ELL_MIN:
-      g_value_set_uint (value, self->ell_min);
+    case PROP_ELL_RANGE:
+    {
+      g_value_take_boxed (value, ncm_dtuple2_new ((gdouble) self->ell_min, (gdouble) self->ell_max));
       break;
-    case PROP_ELL_MAX:
-      g_value_set_uint (value, self->ell_max);
-      break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -138,30 +161,18 @@ ncm_sbessel_integrator_class_init (NcmSBesselIntegratorClass *klass)
   object_class->finalize     = &_ncm_sbessel_integrator_finalize;
 
   /**
-   * NcmSBesselIntegrator:ell_min:
+   * NcmSBesselIntegrator:ell-range:
    *
-   * Minimum multipole.
+   * Multipole range [ell_min, ell_max]. Both values must be non-negative integers
+   * with ell_min <= ell_max.
    */
   g_object_class_install_property (object_class,
-                                   PROP_ELL_MIN,
-                                   g_param_spec_uint ("ell-min",
-                                                      NULL,
-                                                      "Minimum multipole",
-                                                      0, G_MAXUINT, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmSBesselIntegrator:ell_max:
-   *
-   * Maximum multipole.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_ELL_MAX,
-                                   g_param_spec_uint ("ell-max",
-                                                      NULL,
-                                                      "Maximum multipole",
-                                                      0, G_MAXUINT, 100,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_ELL_RANGE,
+                                   g_param_spec_boxed ("ell-range",
+                                                       NULL,
+                                                       "Multipole range [ell_min, ell_max]",
+                                                       NCM_TYPE_DTUPLE2,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   klass->set_ell_range = &_ncm_sbessel_integrator_set_ell_range_default;
   klass->integrate_ell = &_ncm_sbessel_integrator_integrate_ell_default;
