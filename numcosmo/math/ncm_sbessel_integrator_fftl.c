@@ -665,7 +665,7 @@ _ncm_sbessel_integrator_fftl_integrate_fft (NcmSBesselIntegratorFFTL *sbilf, con
     .user_data     = user_data,
     .a             = y_min,
     .b             = y_max,
-    .L_phys        = L_phys * k,
+    .L_phys        = L_phys,
     .x_peak        = 0.0,
     .peak_val      = 0.0,
     .support_eps   = 1.0e-3,

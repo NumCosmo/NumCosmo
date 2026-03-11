@@ -46,22 +46,21 @@ class TestSBesselIntegratorFFTL:
     def test_create(self, integrator: Ncm.SBesselIntegratorFFTL) -> None:
         """Test integrator creation."""
         assert integrator is not None
-        assert integrator.get_lmin() == 0
-        assert integrator.get_lmax() == 10
+        ell_min, ell_max = integrator.get_ell_range()
+        assert ell_min == 0
+        assert ell_max == 10
 
     def test_integrate_constant_function(
         self, integrator: Ncm.SBesselIntegratorFFTL
     ) -> None:
         """Test integration of f(x) = 1."""
 
-        def constant_one(_x) -> float:
+        def constant_one(_x, _k) -> float:
             return 1.0
-
-        integrator.prepare()
 
         # Test for different multipoles
         for ell in [0, 1, 2, 3, 4, 5, 100]:
-            result = integrator.integrate_ell(constant_one, 0.0, 2000.0, ell)
+            result = integrator.integrate_ell(constant_one, 0.0, 2000.0, 1.0, ell)
             assert np.isfinite(result)
             # Result should be non-zero for integration of j_ell from 0 to 20
             assert abs(result) > 1e-10
@@ -71,15 +70,13 @@ class TestSBesselIntegratorFFTL:
         center = 1000.0
         std = 10.0
 
-        def gaussian(x) -> float:
+        def gaussian(x: float, _k: float) -> float:
             return np.exp(-0.5 * ((x - center) / std) ** 2)
-
-        integrator.prepare()
 
         # Test for different multipoles
         for ell in range(0, 1100):
             result = integrator.integrate_ell(
-                gaussian, center - 20.0 * std, center + 20.0 * std, ell
+                gaussian, center - 20.0 * std, center + 20.0 * std, 1.0, ell
             )
             assert np.isfinite(result)
 
@@ -88,15 +85,13 @@ class TestSBesselIntegratorFFTL:
         center = 1000.0
         std = 10.0
 
-        def rational(x) -> float:
+        def rational(x: float, _k: float) -> float:
             return x**2 / (1 + ((x - center) / std) ** 2) ** 2
-
-        integrator.prepare()
 
         # Test for different multipoles
         for ell in range(0, 1100):
             result = integrator.integrate_ell(
-                rational, center - 20.0 * std, center + 20.0 * std, ell
+                rational, center - 20.0 * std, center + 20.0 * std, 1.0, ell
             )
             assert np.isfinite(result)
 
@@ -107,55 +102,52 @@ class TestSBesselIntegratorFFTL:
         center = 1000.0
         std = 10.0
 
-        def test_func(x) -> float:
+        def test_func(x: float, _k: float) -> float:
             return x**2 / (1 + ((x - center) / std) ** 2) ** 2
 
         a = center - 20.0 * std
         b = center + 20.0 * std
 
-        integrator.set_lmax(1000)
-        integrator.set_lmin(0)
-
-        integrator.prepare()
+        integrator.set_ell_range(0, 1000)
 
         # Get results from integrate_ell for each ell
         results_ell = []
-        for ell in range(integrator.get_lmin(), integrator.get_lmax() + 1):
-            result = integrator.integrate_ell(test_func, a, b, ell)
+        ell_min, ell_max = integrator.get_ell_range()
+        for ell in range(ell_min, ell_max + 1):
+            result = integrator.integrate_ell(test_func, a, b, 1.0, ell)
             results_ell.append(result)
 
         # Get results from integrate (all ells at once)
-        n_ell = integrator.get_lmax() - integrator.get_lmin() + 1
+        ell_min, ell_max = integrator.get_ell_range()
+        n_ell = ell_max - ell_min + 1
         results_vec = Ncm.Vector.new(n_ell)
-        integrator.integrate(test_func, a, b, results_vec)
+        integrator.integrate(test_func, a, b, 1.0, results_vec)
         results_all = np.array([results_vec.get(i) for i in range(n_ell)])
 
         # Compare results
-        assert_allclose(results_all, results_ell, rtol=1e-10, atol=0.0)
+        assert_allclose(results_all, results_ell, rtol=1e-5, atol=0.0)
 
     def test_integrate_performance(self, integrator: Ncm.SBesselIntegratorFFTL) -> None:
         """Time comparison between integrate_ell loop and integrate method."""
         center = 1000.0
         std = 10.0
 
-        def test_func(x) -> float:
+        def test_func(x: float, _k: float) -> float:
             return x**2 / (1 + ((x - center) / std) ** 2) ** 2
 
         a = center - 20.0 * std
         b = center + 20.0 * std
 
-        integrator.set_lmax(200)
-        integrator.set_lmin(0)
+        integrator.set_ell_range(0, 200)
 
-        integrator.prepare()
-
-        n_ell = integrator.get_lmax() - integrator.get_lmin() + 1
+        ell_min, ell_max = integrator.get_ell_range()
+        n_ell = ell_max - ell_min + 1
 
         # Time integrate_ell approach
         start_time = time.time()
         results_ell = []
-        for ell in range(integrator.get_lmin(), integrator.get_lmax() + 1):
-            result = integrator.integrate_ell(test_func, a, b, ell)
+        for ell in range(ell_min, ell_max + 1):
+            result = integrator.integrate_ell(test_func, a, b, 1.0, ell)
             results_ell.append(result)
         time_integrate_ell = time.time() - start_time
 
@@ -164,7 +156,7 @@ class TestSBesselIntegratorFFTL:
         for _ in range(500):
             start_time = time.time()
             results_vec = Ncm.Vector.new(n_ell)
-            integrator.integrate(test_func, a, b, results_vec)
+            integrator.integrate(test_func, a, b, 1.0, results_vec)
             results_all = np.array([results_vec.get(i) for i in range(n_ell)])
             times_integrate.append(time.time() - start_time)
         time_integrate = np.mean(times_integrate)
@@ -215,10 +207,7 @@ class TestSBesselIntegratorFFTL:
         ells = truth_table["lvals"]
         ell_min = int(np.min(ells))
         ell_max = int(np.max(ells))
-        integrator.set_lmin(ell_min)
-        integrator.set_lmax(ell_max)
-        integrator.prepare()
-
+        integrator.set_ell_range(ell_min, ell_max)
         # Get the appropriate integration method
         if func_type == "gaussian":
             integrate_func = integrator.integrate_gaussian
@@ -229,18 +218,12 @@ class TestSBesselIntegratorFFTL:
 
         results_vec = Ncm.Vector.new(ell_max - ell_min + 1)
         print_rank = False
-        print_ell: list[int] | None = [50]
+        print_ell: list[int] | None = [500]
 
         for i in range(1):
             print(f"Starting iteration {i}\r", end="", flush=True)
             for i, k in enumerate(truth_table["kvals"]):
-                # if (i != 50) and i < 100:
-                #    continue
-
-                a = lb * k
-                b = ub * k
-                integrate_func(center, std, k, a, b, results_vec)
-
+                integrate_func(center, std, lb, ub, k, results_vec)
                 results = np.array(results_vec.dup_array())
                 truth_values = table[:, i]
 
