@@ -64,6 +64,13 @@ ODE_SPLINE_MIN_STEP: float = 0.0
 POWSPEC_CORR3D_DEFAULT_SIZE: int = 200
 POWSPEC_FILTER_DEFAULT_SIZE: int = 200
 POWSPEC_SPHERE_PROJ_DEFAULT_SIZE: int = 200
+SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER: int = 2
+SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_RELTOL: float = 0.0
+SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX: int = 1200
+SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS: int = 21
+SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL: float = 0.0
+SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MAX: float = 1000000.0
+SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MIN: float = 0.0001
 SERIALIZE_AUTOSAVE_NAME: str = r"S"
 SERIALIZE_AUTOSAVE_NFORMAT: str = r"%u"
 SERIALIZE_MATRIX_TYPE: str = r"aad"
@@ -9258,7 +9265,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     ::
 
         SBesselIntegratorLevin(**properties)
-        new(ell_min:int, ell_max:int, y_knots_min:float, y_knots_max:float, n_knots:int, ell_cache_max:int) -> NumCosmoMath.SBesselIntegratorLevin
+        new(ell_min:int, ell_max:int) -> NumCosmoMath.SBesselIntegratorLevin
+        new_full(ell_min:int, ell_max:int, y_knots_min:float, y_knots_max:float, n_knots:int, ell_cache_max:int, reltol:float, cheb_min_order:int, cheb_reltol:float) -> NumCosmoMath.SBesselIntegratorLevin
 
     Object NcmSBesselIntegratorLevin
 
@@ -9267,6 +9275,10 @@ class SBesselIntegratorLevin(SBesselIntegrator):
         Maximum Chebyshev order
       reltol -> gdouble: reltol
         Relative tolerance
+      cheb-min-order -> guint: cheb-min-order
+        Minimum Chebyshev order for RHS
+      cheb-reltol -> gdouble: cheb-reltol
+        Chebyshev decomposition relative tolerance
       y-knots-min -> gdouble: y-knots-min
         Minimum knot value
       y-knots-max -> gdouble: y-knots-max
@@ -9287,6 +9299,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     """
 
     class Props:
+        cheb_min_order: int
+        cheb_reltol: float
         ell_cache_max: int
         max_order: int
         n_knots: int
@@ -9299,6 +9313,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     props: Props = ...
     def __init__(
         self,
+        cheb_min_order: int = ...,
+        cheb_reltol: float = ...,
         ell_cache_max: int = ...,
         max_order: int = ...,
         n_knots: int = ...,
@@ -9311,6 +9327,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     @staticmethod
     def clear(sbilv: SBesselIntegratorLevin) -> None: ...
     def free(self) -> None: ...
+    def get_cheb_min_order(self) -> int: ...
+    def get_cheb_reltol(self) -> float: ...
     def get_ell_cache_max(self) -> int: ...
     def get_max_order(self) -> int: ...
     def get_n_knots(self) -> int: ...
@@ -9318,7 +9336,9 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     def get_y_knots_max(self) -> float: ...
     def get_y_knots_min(self) -> float: ...
     @classmethod
-    def new(
+    def new(cls, ell_min: int, ell_max: int) -> SBesselIntegratorLevin: ...
+    @classmethod
+    def new_full(
         cls,
         ell_min: int,
         ell_max: int,
@@ -9326,8 +9346,13 @@ class SBesselIntegratorLevin(SBesselIntegrator):
         y_knots_max: float,
         n_knots: int,
         ell_cache_max: int,
+        reltol: float,
+        cheb_min_order: int,
+        cheb_reltol: float,
     ) -> SBesselIntegratorLevin: ...
     def ref(self) -> SBesselIntegratorLevin: ...
+    def set_cheb_min_order(self, cheb_min_order: int) -> None: ...
+    def set_cheb_reltol(self, cheb_reltol: float) -> None: ...
     def set_max_order(self, max_order: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
 

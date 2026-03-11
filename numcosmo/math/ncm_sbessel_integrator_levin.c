@@ -69,6 +69,8 @@ struct _NcmSBesselIntegratorLevin
   NcmSBesselIntegrator parent_instance;
   guint max_order;
   gdouble reltol;
+  guint cheb_min_order;
+  gdouble cheb_reltol;
   NcmSBesselOdeSolver *ode_solver;
   NcmSBesselOdeOperator *ode_operator;
   NcmSFSBesselArray *sba; /* Allocation tracking */
@@ -100,6 +102,8 @@ enum
   PROP_0,
   PROP_MAX_ORDER,
   PROP_RELTOL,
+  PROP_CHEB_MIN_ORDER,
+  PROP_CHEB_RELTOL,
   PROP_Y_KNOTS_MIN,
   PROP_Y_KNOTS_MAX,
   PROP_N_KNOTS,
@@ -121,6 +125,8 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
 {
   sbilv->max_order        = 0;
   sbilv->reltol           = 0.0;
+  sbilv->cheb_min_order   = 0;
+  sbilv->cheb_reltol      = 0.0;
   sbilv->ode_solver       = ncm_sbessel_ode_solver_new ();
   sbilv->ode_operator     = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, 2, 2);
   sbilv->sba              = ncm_sf_sbessel_array_new ();
@@ -144,8 +150,6 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
   sbilv->operators           = NULL;
   sbilv->ode_operator_temp_a = NULL;
   sbilv->ode_operator_temp_b = NULL;
-
-  ncm_sbessel_ode_solver_set_tolerance (sbilv->ode_solver, 1.0e-14);
 }
 
 static void
@@ -237,6 +241,12 @@ _ncm_sbessel_integrator_levin_set_property (GObject *object, guint prop_id, cons
     case PROP_RELTOL:
       ncm_sbessel_integrator_levin_set_reltol (sbilv, g_value_get_double (value));
       break;
+    case PROP_CHEB_MIN_ORDER:
+      ncm_sbessel_integrator_levin_set_cheb_min_order (sbilv, g_value_get_uint (value));
+      break;
+    case PROP_CHEB_RELTOL:
+      ncm_sbessel_integrator_levin_set_cheb_reltol (sbilv, g_value_get_double (value));
+      break;
     case PROP_Y_KNOTS_MIN:
       sbilv->y_knots_min = g_value_get_double (value);
       break;
@@ -269,6 +279,12 @@ _ncm_sbessel_integrator_levin_get_property (GObject *object, guint prop_id, GVal
       break;
     case PROP_RELTOL:
       g_value_set_double (value, ncm_sbessel_integrator_levin_get_reltol (sbilv));
+      break;
+    case PROP_CHEB_MIN_ORDER:
+      g_value_set_uint (value, ncm_sbessel_integrator_levin_get_cheb_min_order (sbilv));
+      break;
+    case PROP_CHEB_RELTOL:
+      g_value_set_double (value, ncm_sbessel_integrator_levin_get_cheb_reltol (sbilv));
       break;
     case PROP_Y_KNOTS_MIN:
       g_value_set_double (value, ncm_sbessel_integrator_levin_get_y_knots_min (sbilv));
@@ -325,6 +341,34 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
                                                         NULL,
                                                         "Relative tolerance",
                                                         0.0, 1.0, 1.0e-7,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmSBesselIntegratorLevin:cheb-min-order:
+   *
+   * Minimum order of Chebyshev decomposition used when computing the RHS for the
+   * Levin method.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_CHEB_MIN_ORDER,
+                                   g_param_spec_uint ("cheb-min-order",
+                                                      NULL,
+                                                      "Minimum Chebyshev order for RHS",
+                                                      1, G_MAXUINT, 2,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmSBesselIntegratorLevin:cheb-reltol:
+   *
+   * Relative tolerance for Chebyshev decomposition of the integrand when computing
+   * the RHS for the Levin method.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_CHEB_RELTOL,
+                                   g_param_spec_double ("cheb-reltol",
+                                                        NULL,
+                                                        "Chebyshev decomposition relative tolerance",
+                                                        0.0, 1.0, 1.0e-8,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -590,7 +634,10 @@ _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv,
 {
   NcmSBesselIntegratorLevinWrapper wrapper = {F, k, user_data};
 
-  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, &_ncm_sbessel_integrator_levin_wrapper_func, a, b, 2, 1.0e-8, &sbilv->cheb_coeffs, &wrapper);
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (
+    spectral,
+    &_ncm_sbessel_integrator_levin_wrapper_func,
+    a, b, sbilv->cheb_min_order, sbilv->cheb_reltol, &sbilv->cheb_coeffs, &wrapper);
   ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
   g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
   {
@@ -991,13 +1038,45 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
  * ncm_sbessel_integrator_levin_new:
  * @ell_min: minimum multipole
  * @ell_max: maximum multipole
+ *
+ * Creates a new #NcmSBesselIntegratorLevin with default parameters:
+ * - y_knots_min = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MIN
+ * - y_knots_max = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MAX
+ * - n_knots = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS
+ * - ell_cache_max = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX
+ * - reltol = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL
+ * - cheb_min_order = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER
+ * - cheb_reltol = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_RELTOL
+ *
+ * Returns: (transfer full): a new #NcmSBesselIntegratorLevin
+ */
+NcmSBesselIntegratorLevin *
+ncm_sbessel_integrator_levin_new (guint ell_min, guint ell_max)
+{
+  return ncm_sbessel_integrator_levin_new_full (ell_min, ell_max,
+                                                NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MIN,
+                                                NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_Y_KNOTS_MAX,
+                                                NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS,
+                                                NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX,
+                                                NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL,
+                                                NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER,
+                                                NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_RELTOL);
+}
+
+/**
+ * ncm_sbessel_integrator_levin_new_full:
+ * @ell_min: minimum multipole
+ * @ell_max: maximum multipole
  * @y_knots_min: minimum value for knots in log-spaced grid (set to 0 to disable knots-based paneling)
  * @y_knots_max: maximum value for knots in log-spaced grid (set to 0 to disable knots-based paneling)
  * @n_knots: number of knots in the log-spaced grid (set to 0 to disable knots-based paneling)
  * @ell_cache_max: maximum ell value for precomputed spherical Bessel functions at knots
+ * @reltol: relative tolerance for integration
+ * @cheb_min_order: minimum order of Chebyshev decomposition for RHS computation
+ * @cheb_reltol: relative tolerance for Chebyshev decomposition of integrand
  *
- * Creates a new #NcmSBesselIntegratorLevin with optional knots-based paneling.
- * To disable knots-based paneling and use single panel mode, set @y_knots_min,
+ * Creates a new #NcmSBesselIntegratorLevin with optional knots-based paneling. To
+ * disable knots-based paneling and use single panel mode, set @y_knots_min,
  * @y_knots_max, or @n_knots to 0.
  *
  * The @ell_cache_max parameter controls the maximum ell value for which spherical
@@ -1007,7 +1086,7 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
  * Returns: (transfer full): a new #NcmSBesselIntegratorLevin
  */
 NcmSBesselIntegratorLevin *
-ncm_sbessel_integrator_levin_new (guint ell_min, guint ell_max, gdouble y_knots_min, gdouble y_knots_max, guint n_knots, guint ell_cache_max)
+ncm_sbessel_integrator_levin_new_full (guint ell_min, guint ell_max, gdouble y_knots_min, gdouble y_knots_max, guint n_knots, guint ell_cache_max, gdouble reltol, guint cheb_min_order, gdouble cheb_reltol)
 {
   NcmSBesselIntegratorLevin *sbilv = g_object_new (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN,
                                                    "ell_min", ell_min,
@@ -1016,6 +1095,9 @@ ncm_sbessel_integrator_levin_new (guint ell_min, guint ell_max, gdouble y_knots_
                                                    "y-knots-max", y_knots_max,
                                                    "n-knots", n_knots,
                                                    "ell-cache-max", ell_cache_max,
+                                                   "reltol", reltol,
+                                                   "cheb-min-order", cheb_min_order,
+                                                   "cheb-reltol", cheb_reltol,
                                                    NULL);
 
   return sbilv;
@@ -1097,7 +1179,13 @@ ncm_sbessel_integrator_levin_get_max_order (NcmSBesselIntegratorLevin *sbilv)
 void
 ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble reltol)
 {
+  if (sbilv->reltol == reltol)
+    return;
+
+  g_assert_cmpfloat (reltol, >, 0.0);
+
   sbilv->reltol = reltol;
+  ncm_sbessel_ode_solver_set_tolerance (sbilv->ode_solver, reltol);
 }
 
 /**
@@ -1112,6 +1200,60 @@ gdouble
 ncm_sbessel_integrator_levin_get_reltol (NcmSBesselIntegratorLevin *sbilv)
 {
   return sbilv->reltol;
+}
+
+/**
+ * ncm_sbessel_integrator_levin_set_cheb_min_order:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @cheb_min_order: minimum Chebyshev order
+ *
+ * Sets the minimum order of Chebyshev decomposition for RHS computation.
+ */
+void
+ncm_sbessel_integrator_levin_set_cheb_min_order (NcmSBesselIntegratorLevin *sbilv, guint cheb_min_order)
+{
+  sbilv->cheb_min_order = cheb_min_order;
+}
+
+/**
+ * ncm_sbessel_integrator_levin_get_cheb_min_order:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ *
+ * Gets the minimum Chebyshev order for RHS computation.
+ *
+ * Returns: the minimum Chebyshev order
+ */
+guint
+ncm_sbessel_integrator_levin_get_cheb_min_order (NcmSBesselIntegratorLevin *sbilv)
+{
+  return sbilv->cheb_min_order;
+}
+
+/**
+ * ncm_sbessel_integrator_levin_set_cheb_reltol:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @cheb_reltol: Chebyshev decomposition relative tolerance
+ *
+ * Sets the relative tolerance for Chebyshev decomposition of the integrand.
+ */
+void
+ncm_sbessel_integrator_levin_set_cheb_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble cheb_reltol)
+{
+  sbilv->cheb_reltol = cheb_reltol;
+}
+
+/**
+ * ncm_sbessel_integrator_levin_get_cheb_reltol:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ *
+ * Gets the relative tolerance for Chebyshev decomposition.
+ *
+ * Returns: the Chebyshev decomposition relative tolerance
+ */
+gdouble
+ncm_sbessel_integrator_levin_get_cheb_reltol (NcmSBesselIntegratorLevin *sbilv)
+{
+  return sbilv->cheb_reltol;
 }
 
 /**

@@ -220,15 +220,7 @@ def fixture_lsst_y1_source_bins() -> tuple[list, Nc.GalaxySDTrueRedshiftLSSTSRD]
 @functools.cache
 def _get_integrator() -> Ncm.SBesselIntegrator:
     """Create and cache a spherical Bessel integrator."""
-    integrator = Ncm.SBesselIntegratorLevin(
-        ell_min=0,
-        ell_max=8,
-        y_knots_min=1.0e-4,
-        y_knots_max=1.0e6,
-        n_knots=20,
-        ell_cache_max=1200,
-        reltol=1.0e-13,
-    )
+    integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
     return integrator
 
 
