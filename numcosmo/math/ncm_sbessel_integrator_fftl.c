@@ -41,6 +41,7 @@
 #include "math/ncm_sbessel_integrator_fftl.h"
 #include "math/ncm_sf_sbessel.h"
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_dtuple.h"
 #include "math/ncm_c.h"
 #include "ncm_cfg.h"
 
@@ -247,9 +248,11 @@ _ncm_sbessel_integrator_fftl_find_peak (NcmSBesselIntegratorFFTLIntegrationData 
     status = gsl_min_test_interval (x_lower, x_upper, 0.0, 1.0e-3);
   } while (status == GSL_CONTINUE && iter < max_iter);
 
-  data->x_peak     = x_minimum;
+  data->x_peak = x_minimum;
+
   const gdouble x  = x_minimum / data->k;
   const gdouble Kx = data->F (data->user_data, x, data->k);
+
   data->peak_val   = fabs (Kx / data->k);
   data->peak_found = TRUE;
 
@@ -432,11 +435,11 @@ _ncm_sbessel_integrator_fftl_sample (NcmSBesselIntegratorFFTL *sbilf, const NcmS
 
   for (i = 0; i < 5; i++)
   {
-    const gdouble y      = data->a + i * data->dx;
-    const gdouble y_L    = y + data->L;
-    const gdouble x      = y / data->k;
-    const gdouble Kx     = data->F (data->user_data, x, data->k);
-    const gdouble fy     = Kx / data->k;
+    const gdouble y   = data->a + i * data->dx;
+    const gdouble y_L = y + data->L;
+    const gdouble x   = y / data->k;
+    const gdouble Kx  = data->F (data->user_data, x, data->k);
+    const gdouble fy  = Kx / data->k;
 
     /* printf ("[FFTL] Post-sample %u: y=% 22.15e, f=% 22.15e\n", i + 5, y_L, fy); */
 
@@ -453,11 +456,14 @@ _ncm_sbessel_integrator_fftl_sample (NcmSBesselIntegratorFFTL *sbilf, const NcmS
     const gdouble y = data->a + (i + 0.5) * data->dx;
 
     if (y > data->b)
+    {
       sbilf->f_samp[i] = ncm_spline_eval (sbilf->wrap_f, y);
+    }
     else
     {
       const gdouble x  = y / data->k;
       const gdouble Kx = data->F (data->user_data, x, data->k);
+
       sbilf->f_samp[i] = Kx / data->k;
     }
   }
@@ -552,7 +558,7 @@ _ncm_sbessel_integrator_fftl_set_ell_range (NcmSBesselIntegrator *sbi, guint ell
     sbilf->Pl_arr        = g_new (gdouble, ell_max + 1);
   }
 
-  sbilf->N_direct = GSL_MAX (256, 4 * ell_max);
+  sbilf->N_direct = GSL_MAX (1024, 4 * ell_max);
 }
 
 static guint
@@ -641,7 +647,9 @@ _ncm_sbessel_integrator_fftl_integrate_direct (NcmSBesselIntegratorFFTL *sbilf, 
 
   /* Apply Simpson's rule factor */
   for (ell = ell_direct_min; ell <= ell_direct_max; ell++)
+  {
     result_ptr[ell - ell_min] *= dy / 3.0;
+  }
 }
 
 static void
@@ -649,8 +657,8 @@ _ncm_sbessel_integrator_fftl_integrate_fft (NcmSBesselIntegratorFFTL *sbilf, con
                                             NcmSBesselIntegratorF F, const gdouble a, const gdouble b, gdouble k, const gdouble L_phys,
                                             NcmVector *result, gpointer user_data)
 {
-  const gdouble y_min = k * a; /* Transform to y-space */
-  const gdouble y_max = k * b;
+  const gdouble y_min                          = k * a; /* Transform to y-space */
+  const gdouble y_max                          = k * b;
   NcmSBesselIntegratorFFTLIntegrationData data = {
     .F             = F,
     .k             = k,
