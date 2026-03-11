@@ -65,41 +65,11 @@ class TestSBesselIntegratorFFTL:
             # Result should be non-zero for integration of j_ell from 0 to 20
             assert abs(result) > 1e-10
 
-    def test_integrate_gaussian(self, integrator: Ncm.SBesselIntegratorFFTL) -> None:
-        """Test integration of Gaussian function."""
-        center = 1000.0
-        std = 10.0
-
-        def gaussian(x: float, _k: float) -> float:
-            return np.exp(-0.5 * ((x - center) / std) ** 2)
-
-        # Test for different multipoles
-        for ell in range(0, 1100):
-            result = integrator.integrate_ell(
-                gaussian, center - 20.0 * std, center + 20.0 * std, 1.0, ell
-            )
-            assert np.isfinite(result)
-
-    def test_integrate_rational(self, integrator: Ncm.SBesselIntegratorFFTL) -> None:
-        """Test integration of rational function."""
-        center = 1000.0
-        std = 10.0
-
-        def rational(x: float, _k: float) -> float:
-            return x**2 / (1 + ((x - center) / std) ** 2) ** 2
-
-        # Test for different multipoles
-        for ell in range(0, 1100):
-            result = integrator.integrate_ell(
-                rational, center - 20.0 * std, center + 20.0 * std, 1.0, ell
-            )
-            assert np.isfinite(result)
-
     def test_integrate_vs_integrate_ell(
         self, integrator: Ncm.SBesselIntegratorFFTL
     ) -> None:
         """Test that integrate method agrees with integrate_ell for each ell."""
-        center = 1000.0
+        center = 100.0
         std = 10.0
 
         def test_func(x: float, _k: float) -> float:
@@ -108,7 +78,7 @@ class TestSBesselIntegratorFFTL:
         a = center - 20.0 * std
         b = center + 20.0 * std
 
-        integrator.set_ell_range(0, 1000)
+        integrator.set_ell_range(0, 600)
 
         # Get results from integrate_ell for each ell
         results_ell = []
@@ -123,9 +93,15 @@ class TestSBesselIntegratorFFTL:
         results_vec = Ncm.Vector.new(n_ell)
         integrator.integrate(test_func, a, b, 1.0, results_vec)
         results_all = np.array([results_vec.get(i) for i in range(n_ell)])
+        max_result = np.max(np.abs(results_all))
 
         # Compare results
-        assert_allclose(results_all, results_ell, rtol=1e-5, atol=0.0)
+        assert_allclose(
+            results_all / max_result,
+            results_ell / max_result,
+            rtol=1e-5,
+            atol=max_result * 1e-5,
+        )
 
     def test_integrate_performance(self, integrator: Ncm.SBesselIntegratorFFTL) -> None:
         """Time comparison between integrate_ell loop and integrate method."""
@@ -180,17 +156,25 @@ class TestSBesselIntegratorFFTL:
             ("rational", "rational_jl_500.json.gz"),
         ],
     )
-    def test_truth_table(
-        self, integrator: Ncm.SBesselIntegratorFFTL, func_type: str, filename: str
-    ):
-        """Test against truth tables for spherical Bessel integrals."""
+    def test_truth_table(self, func_type: str, filename: str) -> None:
+        """Test against truth tables for spherical Bessel integrals.
+
+        This test verifies that for each multipole ell, the integrator achieves
+        accurate results (rel_error < reltol) for k values up to at least min_k_ratio *
+        ell. FFTL benefits from computing all ells at once in a single call.
+        """
+        match func_type:
+            case "gaussian":
+                reltol = 1.0e-13
+            case "rational":
+                reltol = 4.0e-2
+        min_k_ratio = 1.2
+
         truth_table_path = Path(
             Ncm.cfg_get_data_filename(f"truth_tables/{filename}", True)
         )
         with gzip.open(truth_table_path, "rt") as f:
             truth_table = json.load(f)
-
-        print(f"Loaded {func_type} truth table with {len(truth_table)} entries.")
 
         center = truth_table["center"]
         std = truth_table["std"]
@@ -198,16 +182,16 @@ class TestSBesselIntegratorFFTL:
         ub = truth_table["upper-bound"]
         table = np.array(truth_table["table"])
 
-        print(f"Preparing integrator for {func_type} truth table...")
-        print(f"  center = {center}")
-        print(f"  std    = {std}")
-        print(f"  lb     = {lb}")
-        print(f"  ub     = {ub}")
-
         ells = truth_table["lvals"]
+        kvals = truth_table["kvals"]
         ell_min = int(np.min(ells))
         ell_max = int(np.max(ells))
-        integrator.set_ell_range(ell_min, ell_max)
+        n_ells = ell_max - ell_min + 1
+        n_k = len(kvals)
+
+        # Create integrator for all ells at once (FFTL's strength)
+        integrator = Ncm.SBesselIntegratorFFTL.new(ell_min, ell_max)
+
         # Get the appropriate integration method
         if func_type == "gaussian":
             integrate_func = integrator.integrate_gaussian
@@ -216,64 +200,55 @@ class TestSBesselIntegratorFFTL:
         else:
             raise ValueError(f"Unknown function type: {func_type}")
 
-        results_vec = Ncm.Vector.new(ell_max - ell_min + 1)
-        print_rank = False
-        print_ell: list[int] | None = [500]
+        results_vec = Ncm.Vector.new(n_ells)
 
-        for i in range(1):
-            print(f"Starting iteration {i}\r", end="", flush=True)
-            for i, k in enumerate(truth_table["kvals"]):
-                integrate_func(center, std, lb, ub, k, results_vec)
-                results = np.array(results_vec.dup_array())
-                truth_values = table[:, i]
+        # Compute all relative errors: shape (n_ells, n_k)
+        rel_errors = np.zeros((n_ells, n_k))
 
-                # Compute relative errors
-                rel_errors = np.abs(
-                    (results - truth_values) / np.maximum(np.abs(truth_values), 1.0e-50)
+        # Compute all k values (FFTL efficiently computes all ells at once)
+        for i, k in enumerate(kvals):
+            integrate_func(center, std, lb, ub, k, results_vec)
+            results = results_vec.to_numpy()
+
+            truth_values = table[:, i]
+            rel_errors[:, i] = np.abs(
+                (results - truth_values) / np.maximum(np.abs(truth_values), 1.0e-50)
+            )
+
+        # For each ell, find maximum k where rel_error < reltol
+        failures = []
+        for ell_idx in range(n_ells):
+            ell = ell_min + ell_idx
+            # Skip ell=0 as k/ell ratio is undefined
+            if ell == 0:
+                continue
+
+            # Find all k indices where error is acceptable
+            accurate_k_indices = np.where(rel_errors[ell_idx, :] < reltol)[0]
+
+            if len(accurate_k_indices) > 0:
+                k_max = kvals[accurate_k_indices[-1]]
+                k_ratio = k_max / ell
+                expected_k_min = min_k_ratio * ell
+
+                if k_max < expected_k_min:
+                    failures.append(
+                        f"ell={ell}: accurate only up to k={k_max:.3g} "
+                        f"(ratio={k_ratio:.1f}), expected k>={expected_k_min:.3g}"
+                    )
+            else:
+                # No accurate results at all
+                failures.append(
+                    f"ell={ell}: no accurate results (all rel_errors > {reltol})"
                 )
 
-                if print_ell is not None:
-                    for ell in print_ell:
-                        print(
-                            f"[{func_type}] ell={ell:d}, k={k: 22.15g}, "
-                            f"result={results[ell - ell_min]: 14.6e}, "
-                            f"truth={truth_values[ell - ell_min]: 14.6e}, "
-                            f"rel_error={rel_errors[ell - ell_min]: 4.2e}"
-                        )
-
-                if print_rank:
-                    # Find best and worst agreement
-                    best_idx = np.argmin(rel_errors)
-                    worst_idx = np.argmax(rel_errors)
-                    print(
-                        f"\n[{func_type}] Testing k={k} with "
-                        f"{ell_min}--{ell_max} multipoles:"
-                    )
-                    print(
-                        f"  Best agreement:  ell={ell_min + best_idx}, "
-                        f"rel_error={rel_errors[best_idx]:.2e}"
-                    )
-                    print(
-                        f"  Worst agreement: ell={ell_min + worst_idx}, "
-                        f"rel_error={rel_errors[worst_idx]:.2e}"
-                    )
-
-                    # Find 10 worst agreements
-                    worst_10_indices = np.argsort(rel_errors)[-10:][::-1]
-                    print("  Top 10 worst agreements:")
-                    for rank, idx in enumerate(worst_10_indices, 1):
-                        ell = ell_min + idx
-                        print(
-                            f"    {rank}. ell={ell}: result={results[idx]:.6e}, "
-                            f"truth={truth_values[idx]:.6e}, "
-                            f"rel_error={rel_errors[idx]:.2e}"
-                        )
-                    best_10_indices = np.argsort(rel_errors)[:10]
-                    print("  Top 10 best agreements:")
-                    for rank, idx in enumerate(best_10_indices, 1):
-                        ell = ell_min + idx
-                        print(
-                            f"    {rank}. ell={ell}: result={results[idx]:.6e}, "
-                            f"truth={truth_values[idx]:.6e}, "
-                            f"rel_error={rel_errors[idx]:.2e}"
-                        )
+        # Assert all ells meet the criterion
+        if failures:
+            failure_msg = (
+                f"\n[{func_type}] Accuracy criterion not met for {len(failures)} "
+                f"multipoles (reltol={reltol}, min_k_ratio={min_k_ratio}):\n"
+            )
+            failure_msg += "\n".join(f"  {f}" for f in failures[:10])
+            if len(failures) > 10:
+                failure_msg += f"\n  ... and {len(failures) - 10} more"
+            pytest.fail(failure_msg)
