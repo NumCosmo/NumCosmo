@@ -28,6 +28,7 @@ from typing import Annotated, Optional
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import numpy as np
 import typer
 
@@ -50,7 +51,14 @@ Ncm.cfg_init()
 
 @dataclasses.dataclass(kw_only=True)
 class KernelEvaluation:
-    """Result of evaluating a kernel on a k-grid."""
+    """Result of evaluating a kernel on a k-grid.
+
+    :ivar name: Kernel name.
+    :ivar method: Evaluation method (Limber or Non-Limber).
+    :ivar kernel: NumCosmo XcorKernel object.
+    :ivar evaluator: NumCosmo XcorKernelIntegrand evaluator.
+    :ivar RH_Mpc: Hubble radius in Mpc.
+    """
 
     name: str
     method: str
@@ -59,17 +67,29 @@ class KernelEvaluation:
     RH_Mpc: float
 
     def range(self) -> tuple[float, float]:
-        """Return k range in Mpc^-1."""
+        """Return k range in Mpc^-1.
+
+        :return: Tuple of (k_min, k_max) in Mpc^-1.
+        """
         kmin, kmax = self.evaluator.get_range()
         return kmin / self.RH_Mpc, kmax / self.RH_Mpc
 
     def evaluate(self, k_Mpc: np.ndarray) -> np.ndarray:
-        """Evaluate kernel on a k grid."""
+        """Evaluate kernel on a k grid.
+
+        :param k_Mpc: Wave number array in Mpc^-1.
+        :return: Kernel values evaluated at k_Mpc.
+        """
         k = k_Mpc * self.RH_Mpc
         return np.array([self.evaluator.eval_array(ki)[0] for ki in k])
 
     def range_intersection(self, *others: "KernelEvaluation") -> tuple[float, float]:
-        """Get common k range intersection with another kernel."""
+        """Get common k range intersection with other kernels.
+
+        :param others: Other KernelEvaluation objects to intersect with.
+        :return: Tuple of (k_min, k_max) representing the common range.
+        :raises ValueError: If there is no overlapping k range between kernels.
+        """
         kmin, kmax = self.range()
         for other in others:
             other_kmin, other_kmax = other.range()
@@ -86,7 +106,13 @@ class KernelEvaluation:
         color: str = "blue",
         linestyle: str = "-",
     ) -> None:
-        """Plot kernel on given axes."""
+        """Plot kernel on given axes.
+
+        :param ax: Matplotlib axes object.
+        :param k_range: Optional k range (k_min, k_max) in Mpc^-1 for plotting.
+        :param color: Line color.
+        :param linestyle: Line style.
+        """
         kmin, kmax = self.range()
         if k_range is not None:
             kmin = max(kmin, k_range[0])
@@ -106,7 +132,14 @@ class KernelEvaluation:
         color: str = "red",
         linestyle: str = "--",
     ) -> None:
-        """Plot comparison of this kernel with another."""
+        """Plot comparison of this kernel with another.
+
+        :param other: Another KernelEvaluation object to compare with.
+        :param ax: Matplotlib axes object.
+        :param k_range: Optional k range (k_min, k_max) in Mpc^-1 for plotting.
+        :param color: Line color.
+        :param linestyle: Line style.
+        """
         kmin, kmax = self.range_intersection(other)
         if k_range is not None:
             kmin = max(kmin, k_range[0])
@@ -121,7 +154,12 @@ class KernelEvaluation:
 
 @dataclasses.dataclass(kw_only=True)
 class KernelVariants:
-    """Container for kernel evaluation results.""" ""
+    """Container for kernel evaluation results.
+
+    :ivar main: Main kernel evaluation result.
+    :ivar alternative: Alternative kernel evaluation result (e.g., Limber
+        approximation).
+    """
 
     main: KernelEvaluation
     alternative: KernelEvaluation | None = None
@@ -152,12 +190,12 @@ class ViewKernel:
 
         # View Galaxy clustering kernel (Y1 lens bin 0)
         numcosmo xcor kernel view \\
-            --kernel "galaxy_lsst bin_type=y1-lens bin_idx=0 bias=1.5" \\
+            --kernel "galaxy_lsst survey=y1 bin_idx=0 bias=1.5" \
             --ell 100
 
         # Compare Limber vs non-Limber for weak lensing
-        numcosmo xcor kernel view \\
-            --kernel "weak_lensing_lsst bin_type=y10-source bin_idx=2" \\
+        numcosmo xcor kernel view \
+            --kernel "weak_lensing_lsst survey=y10 bin_idx=2" \
             --ell 50 \\
             --compare-limber \\
             --output wl_comparison.png
@@ -233,9 +271,8 @@ class ViewKernel:
         This method parses the kernel specification, creates the kernel
         objects, evaluates them, and generates visualization plots.
 
-        Raises:
-            ValueError: If the kernel specification is invalid.
-            RuntimeError: If kernel evaluation fails.
+        :raises ValueError: If the kernel specification is invalid.
+        :raises RuntimeError: If kernel evaluation fails.
         """
         if self.k_range is not None:
             if self.k_range[0] <= 0 or self.k_range[1] <= 0:
@@ -285,7 +322,11 @@ class ViewKernel:
     def _create_kernels(
         self, kernel_config: KernelConfigTypes
     ) -> tuple[str, Nc.XcorKernel]:
-        """Create kernel objects based on configuration."""
+        """Create kernel objects based on configuration.
+
+        :param kernel_config: Kernel configuration object.
+        :return: Tuple of (kernel_label, kernel_object).
+        """
         print("Creating kernel(s)...")
 
         match kernel_config:
@@ -308,7 +349,11 @@ class ViewKernel:
     def _create_cmb_lensing_kernels(
         self, config: KernelCMBLensingConfig
     ) -> tuple[str, Nc.XcorKernelCMBLensing]:
-        """Create CMB lensing kernel(s)."""
+        """Create CMB lensing kernel.
+
+        :param config: CMB lensing configuration.
+        :return: Tuple of (kernel_label, kernel_object).
+        """
         assert isinstance(config, KernelCMBLensingConfig)
 
         lmax = config.lmax
@@ -334,7 +379,11 @@ class ViewKernel:
     def _create_cmb_isw_kernels(
         self, config: KernelCMBISWConfig
     ) -> tuple[str, Nc.XcorKernelCMBISW]:
-        """Create CMB ISW kernel(s)."""
+        """Create CMB ISW kernel.
+
+        :param config: CMB ISW configuration.
+        :return: Tuple of (kernel_label, kernel_object).
+        """
         assert isinstance(config, KernelCMBISWConfig)
 
         lmax = config.lmax
@@ -360,7 +409,11 @@ class ViewKernel:
     def _create_tsz_kernels(
         self, config: KernelTSZConfig
     ) -> tuple[str, Nc.XcorKerneltSZ]:
-        """Create tSZ kernel(s)."""
+        """Create tSZ kernel.
+
+        :param config: tSZ configuration.
+        :return: Tuple of (kernel_label, kernel_object).
+        """
         assert isinstance(config, KernelTSZConfig)
 
         # Create primary kernel
@@ -378,7 +431,11 @@ class ViewKernel:
     def _create_galaxy_lsst_kernels(
         self, config: KernelGalaxyLSSTConfig
     ) -> tuple[str, Nc.XcorKernelGal]:
-        """Create Galaxy LSST kernel(s)."""
+        """Create Galaxy LSST kernel.
+
+        :param config: Galaxy LSST configuration.
+        :return: Tuple of (kernel_label, kernel_object).
+        """
         assert isinstance(config, KernelGalaxyLSSTConfig)
 
         # Get LSST bins
@@ -397,14 +454,20 @@ class ViewKernel:
         kernel_obj.orig_param_set(Nc.XcorKernelGalSParams.MAG_BIAS, config.mag_bias)
         kernel_obj.prepare(self.cosmo)
 
-        kernel_label = f"Galaxy LSST ({config.bin_type.name} bin {config.bin_idx})"
+        kernel_label = (
+            f"Galaxy LSST ({config.survey.value.upper()} bin {config.bin_idx})"
+        )
 
         return kernel_label, kernel_obj
 
     def _create_weak_lensing_lsst_kernels(
         self, config: KernelWeakLensingLSSTConfig
     ) -> tuple[str, Nc.XcorKernelWeakLensing]:
-        """Create Weak Lensing LSST kernel(s)."""
+        """Create Weak Lensing LSST kernel.
+
+        :param config: Weak lensing LSST configuration.
+        :return: Tuple of (kernel_label, kernel_object).
+        """
         assert isinstance(config, KernelWeakLensingLSSTConfig)
 
         # Get LSST bins
@@ -423,7 +486,7 @@ class ViewKernel:
         kernel_obj.prepare(self.cosmo)
 
         kernel_label = (
-            f"Weak Lensing LSST ({config.bin_type.name} bin {config.bin_idx})"
+            f"Weak Lensing LSST ({config.survey.value.upper()} bin {config.bin_idx})"
         )
 
         return kernel_label, kernel_obj
@@ -431,7 +494,12 @@ class ViewKernel:
     def _evaluate_kernels(
         self, kernel_label: str, kernel_obj: Nc.XcorKernel
     ) -> list[KernelVariants]:
-        """Evaluate kernel(s) at specified multipole."""
+        """Evaluate kernel(s) at specified multipole.
+
+        :param kernel_label: Label for the kernel.
+        :param kernel_obj: NumCosmo XcorKernel object.
+        :return: List of KernelVariants containing evaluation results.
+        """
         print(f"Evaluating kernels at ell = {self.ell}...")
 
         RH_Mpc = self.cosmo.RH_Mpc()
@@ -475,49 +543,66 @@ class ViewKernel:
         return [KernelVariants(main=kernel_eval, alternative=kernel_eval_limber)]
 
     def _plot_results(self, kernel_vars: list[KernelVariants]) -> None:
-        """Plot kernel evaluation results."""
+        """Plot kernel evaluation results.
+
+        :param kernel_vars: List of KernelVariants to plot.
+        """
         print("Plotting results...")
 
+        # Define color palette for different kernels
+        colors = plt.cm.tab10.colors  # type: ignore # pylint: disable=no-member
         ax1: plt.Axes
         ax2: plt.Axes
 
         if self.compare_limber:
-            # Create figure with three subplots for comparison
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12))
+            # Create figure with two subplots for comparison
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), sharex=True)
             fig.suptitle(
-                f"Kernel Comparison at $\\ell = {self.ell}$",
+                f"Kernel Comparison at $\\ell = {self.ell}$ "
+                "(dashed = Non-Limber, solid = Limber)",
                 fontsize=14,
                 fontweight="bold",
             )
-            for kernel_var in kernel_vars:
+
+            legend_handles = []
+            legend_labels = []
+
+            for idx, kernel_var in enumerate(kernel_vars):
                 main_kernel = kernel_var.main
                 alt_kernel = kernel_var.alternative
 
                 assert alt_kernel is not None
 
-                # Plot 1: Both kernels on their own ranges
-                main_kernel.plot(ax1, color="red", linestyle="--", k_range=self.k_range)
-                alt_kernel.plot(ax1, color="blue", linestyle="-", k_range=self.k_range)
+                color = colors[idx % len(colors)]
 
-                ax1.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
-                ax1.set_ylabel("$k^{3/2} |K(k)|$", fontsize=12)
-                ax1.set_title("Kernel vs Wave Number", fontsize=11)
-                ax1.legend([main_kernel.method, alt_kernel.method], fontsize=10)
-                ax1.grid(True, alpha=0.3)
+                # Plot both kernels with same color, different line styles
+                main_kernel.plot(ax1, color=color, linestyle="--", k_range=self.k_range)
+                alt_kernel.plot(ax1, color=color, linestyle="-", k_range=self.k_range)
 
+                # Plot comparison
                 main_kernel.plot_comparison(
-                    alt_kernel, ax2, color="purple", linestyle=":", k_range=self.k_range
+                    alt_kernel, ax2, color=color, linestyle="-", k_range=self.k_range
                 )
 
-                ax2.axhline(y=1.0, color="k", linestyle="--", alpha=0.5)
-                ax2.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
-                ax2.set_ylabel(
-                    f"Ratio ({alt_kernel.method} / {main_kernel.method})", fontsize=12
+                # Add single legend entry per kernel (with both line styles shown)
+                legend_handles.append(
+                    Line2D([0], [0], color=color, linewidth=2, linestyle="-")
                 )
-                ax2.set_title(
-                    f"Ratio of {alt_kernel.method} to {main_kernel.method}", fontsize=11
-                )
-                ax2.grid(True, alpha=0.3)
+                legend_labels.append(main_kernel.name)
+
+            # Configure first subplot
+            ax1.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
+            ax1.set_ylabel("$k^{3/2} |K(k)|$", fontsize=12)
+            ax1.set_title("Kernel vs Wave Number", fontsize=11)
+            ax1.legend(legend_handles, legend_labels, fontsize=10)
+            ax1.grid(True, alpha=0.3)
+
+            # Configure second subplot
+            ax2.axhline(y=1.0, color="k", linestyle="--", alpha=0.5)
+            ax2.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
+            ax2.set_ylabel("Relative Difference", fontsize=12)
+            ax2.set_title("Limber vs Non-Limber Comparison", fontsize=11)
+            ax2.grid(True, alpha=0.3)
         else:
             # Create single plot
             fig, ax = plt.subplots(figsize=(10, 6))
@@ -526,14 +611,19 @@ class ViewKernel:
                 fontsize=14,
                 fontweight="bold",
             )
-            for kernel_var in kernel_vars:
+
+            legend_entries = []
+            for idx, kernel_var in enumerate(kernel_vars):
                 main_kernel = kernel_var.main
+                color = colors[idx % len(colors)]
 
-                main_kernel.plot(ax, color="blue", linestyle="-", k_range=self.k_range)
+                main_kernel.plot(ax, color=color, linestyle="-", k_range=self.k_range)
+                legend_entries.append(f"{main_kernel.name} ({main_kernel.method})")
 
-                ax.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
-                ax.set_ylabel("$k^{3/2} |K(k)|$", fontsize=12)
+            ax.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
+            ax.set_ylabel("$k^{3/2} |K(k)|$", fontsize=12)
             ax.set_title("Kernel vs Wave Number", fontsize=11)
+            ax.legend(legend_entries, fontsize=10)
             ax.grid(True, alpha=0.3)
 
         plt.tight_layout()

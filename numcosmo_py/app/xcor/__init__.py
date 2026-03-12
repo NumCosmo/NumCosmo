@@ -24,6 +24,7 @@
 """Cross-correlation kernel visualization and analysis tools."""
 
 from .kernels import (
+    LSSTSurvey,
     LSSTBinType,
     KernelCMBLensingConfig,
     KernelCMBISWConfig,
@@ -36,6 +37,7 @@ from .kernels import (
 from .view import ViewKernel
 
 __all__ = [
+    "LSSTSurvey",
     "LSSTBinType",
     "KernelCMBLensingConfig",
     "KernelCMBISWConfig",

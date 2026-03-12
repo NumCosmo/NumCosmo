@@ -38,6 +38,7 @@ command-line strings.
 
 import shlex
 from typing import Annotated, Any, Union, Type, cast
+from enum import Enum
 
 from pydantic import BaseModel, Field, ConfigDict
 from pydantic_core import core_schema
@@ -45,14 +46,24 @@ from pydantic_core import core_schema
 from numcosmo_py import Nc, parse_options_strict, GEnum
 
 
+class LSSTSurvey(str, Enum):
+    """LSST survey year.
+
+    :cvar Y1: Year 1 survey (5 bins) - CLI value: 'y1'
+    :cvar Y10: Year 10 survey - CLI value: 'y10'
+    """
+
+    Y1 = "y1"
+    Y10 = "y10"
+
+
 class LSSTBinType(GEnum):
     """LSST survey year and redshift bin type.
 
-    Attributes:
-        Y1_LENS: Year 1 lens sample (5 bins) - CLI value: 'y1-lens'
-        Y1_SOURCE: Year 1 source sample (5 bins) - CLI value: 'y1-source'
-        Y10_LENS: Year 10 lens sample - CLI value: 'y10-lens'
-        Y10_SOURCE: Year 10 source sample - CLI value: 'y10-source'
+    :cvar Y1_LENS: Year 1 lens sample (5 bins) - CLI value: 'y1-lens'
+    :cvar Y1_SOURCE: Year 1 source sample (5 bins) - CLI value: 'y1-source'
+    :cvar Y10_LENS: Year 10 lens sample - CLI value: 'y10-lens'
+    :cvar Y10_SOURCE: Year 10 source sample - CLI value: 'y10-source'
     """
 
     # pylint: disable=no-member
@@ -81,8 +92,7 @@ class KernelCMBLensingConfig(BaseModel):
     This kernel represents the CMB lensing convergence field, which traces
     the integrated matter distribution along the line of sight.
 
-    Attributes:
-        lmax: Maximum multipole for noise power spectrum.
+    :ivar lmax: Maximum multipole for noise power spectrum.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -93,14 +103,9 @@ class KernelCMBLensingConfig(BaseModel):
     def from_args(cls, args: list[str]) -> "KernelCMBLensingConfig":
         """Create a KernelCMBLensingConfig from command line arguments.
 
-        Args:
-            args: List of key=value strings.
-
-        Returns:
-            Validated configuration object.
-
-        Raises:
-            ValidationError: If arguments are invalid.
+        :param args: List of key=value strings.
+        :return: Validated configuration object.
+        :raises ValidationError: If arguments are invalid.
         """
         opts = parse_options_strict(args)
         return cls.model_validate(opts)
@@ -109,8 +114,7 @@ class KernelCMBLensingConfig(BaseModel):
     def help_text() -> list[str]:
         """Return help text for CMB lensing kernel.
 
-        Returns:
-            List containing [model name, parameter description].
+        :return: List containing [model name, parameter description].
         """
         return ["KernelCMBLensing", "lmax=3000"]
 
@@ -121,8 +125,7 @@ class KernelCMBISWConfig(BaseModel):
     The ISW effect is caused by the time-varying gravitational potential
     as photons traverse large-scale structures.
 
-    Attributes:
-        lmax: Maximum multipole for noise power spectrum.
+    :ivar lmax: Maximum multipole for noise power spectrum.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -133,14 +136,9 @@ class KernelCMBISWConfig(BaseModel):
     def from_args(cls, args: list[str]) -> "KernelCMBISWConfig":
         """Create a KernelCMBISWConfig from command line arguments.
 
-        Args:
-            args: List of key=value strings.
-
-        Returns:
-            Validated configuration object.
-
-        Raises:
-            ValidationError: If arguments are invalid.
+        :param args: List of key=value strings.
+        :return: Validated configuration object.
+        :raises ValidationError: If arguments are invalid.
         """
         opts = parse_options_strict(args)
         return cls.model_validate(opts)
@@ -149,8 +147,7 @@ class KernelCMBISWConfig(BaseModel):
     def help_text() -> list[str]:
         """Return help text for CMB ISW kernel.
 
-        Returns:
-            List containing [model name, parameter description].
+        :return: List containing [model name, parameter description].
         """
         return ["KernelCMBISW", "lmax=3000"]
 
@@ -161,8 +158,7 @@ class KernelTSZConfig(BaseModel):
     The tSZ effect is caused by inverse Compton scattering of CMB photons
     off hot electrons in galaxy clusters and large-scale structure.
 
-    Attributes:
-        zmax: Maximum redshift for integration.
+    :ivar zmax: Maximum redshift for integration.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -173,14 +169,9 @@ class KernelTSZConfig(BaseModel):
     def from_args(cls, args: list[str]) -> "KernelTSZConfig":
         """Create a KernelTSZConfig from command line arguments.
 
-        Args:
-            args: List of key=value strings.
-
-        Returns:
-            Validated configuration object.
-
-        Raises:
-            ValidationError: If arguments are invalid.
+        :param args: List of key=value strings.
+        :return: Validated configuration object.
+        :raises ValidationError: If arguments are invalid.
         """
         opts = parse_options_strict(args)
         return cls.model_validate(opts)
@@ -189,8 +180,7 @@ class KernelTSZConfig(BaseModel):
     def help_text() -> list[str]:
         """Return help text for tSZ kernel.
 
-        Returns:
-            List containing [model name, parameter description].
+        :return: List containing [model name, parameter description].
         """
         return ["KernelTSZ", "zmax=6.0"]
 
@@ -200,35 +190,39 @@ class KernelGalaxyLSSTConfig(BaseModel):
 
     This kernel represents the galaxy number density field for a specific
     redshift bin from the LSST Science Requirements Document (SRD).
+    Galaxy clustering always uses lens bins.
 
-    Attributes:
-        bin_type: LSST bin type (Y1_LENS, Y1_SOURCE, Y10_LENS, Y10_SOURCE).
-        bin_idx: Bin index within the selected bin type.
-        bias: Galaxy bias parameter.
-        mag_bias: Magnification bias parameter.
-        domagbias: Whether to include magnification bias.
+    :ivar survey: LSST survey year (y1 or y10).
+    :ivar bin_idx: Bin index within the selected survey.
+    :ivar bias: Galaxy bias parameter.
+    :ivar mag_bias: Magnification bias parameter.
+    :ivar domagbias: Whether to include magnification bias.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    bin_type: Annotated[LSSTBinType, Field()] = LSSTBinType.Y1_LENS
+    survey: Annotated[LSSTSurvey, Field()] = LSSTSurvey.Y1
     bin_idx: Annotated[int, Field(ge=0)] = 0
     bias: Annotated[float, Field(gt=0.0)] = 1.5
     mag_bias: Annotated[float, Field()] = 0.0
     domagbias: Annotated[bool, Field()] = True
 
+    @property
+    def bin_type(self) -> LSSTBinType:
+        """Get the appropriate lens bin type based on survey year."""
+        return (
+            LSSTBinType.Y1_LENS
+            if self.survey == LSSTSurvey.Y1
+            else LSSTBinType.Y10_LENS
+        )
+
     @classmethod
     def from_args(cls, args: list[str]) -> "KernelGalaxyLSSTConfig":
         """Create a KernelGalaxyLSSTConfig from command line arguments.
 
-        Args:
-            args: List of key=value strings.
-
-        Returns:
-            Validated configuration object.
-
-        Raises:
-            ValidationError: If arguments are invalid.
+        :param args: List of key=value strings.
+        :return: Validated configuration object.
+        :raises ValidationError: If arguments are invalid.
         """
         opts = parse_options_strict(args)
         return cls.model_validate(opts)
@@ -237,12 +231,11 @@ class KernelGalaxyLSSTConfig(BaseModel):
     def help_text() -> list[str]:
         """Return help text for Galaxy LSST kernel.
 
-        Returns:
-            List containing [model name, parameter description].
+        :return: List containing [model name, parameter description].
         """
         return [
             "KernelGalaxyLSST",
-            "bin_type=y1-lens, bin_idx=0, bias=1.5, mag_bias=0.0, domagbias=True",
+            "survey=y1, bin_idx=0, bias=1.5, mag_bias=0.0, domagbias=True",
         ]
 
 
@@ -251,33 +244,37 @@ class KernelWeakLensingLSSTConfig(BaseModel):
 
     This kernel represents the weak gravitational lensing shear field for
     a specific source redshift bin from the LSST SRD.
+    Weak lensing always uses source bins.
 
-    Attributes:
-        bin_type: LSST bin type (Y1_LENS, Y1_SOURCE, Y10_LENS, Y10_SOURCE).
-        bin_idx: Bin index within the selected bin type.
-        nbar: Galaxy number density per square arcminute.
-        intr_shear: Intrinsic shear dispersion.
+    :ivar survey: LSST survey year (y1 or y10).
+    :ivar bin_idx: Bin index within the selected survey.
+    :ivar nbar: Galaxy number density per square arcminute.
+    :ivar intr_shear: Intrinsic shear dispersion.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    bin_type: Annotated[LSSTBinType, Field()] = LSSTBinType.Y1_SOURCE
+    survey: Annotated[LSSTSurvey, Field()] = LSSTSurvey.Y1
     bin_idx: Annotated[int, Field(ge=0)] = 0
     nbar: Annotated[float, Field(gt=0.0)] = 3.0
     intr_shear: Annotated[float, Field(gt=0.0)] = 7.0
+
+    @property
+    def bin_type(self) -> LSSTBinType:
+        """Get the appropriate source bin type based on survey year."""
+        return (
+            LSSTBinType.Y1_SOURCE
+            if self.survey == LSSTSurvey.Y1
+            else LSSTBinType.Y10_SOURCE
+        )
 
     @classmethod
     def from_args(cls, args: list[str]) -> "KernelWeakLensingLSSTConfig":
         """Create a KernelWeakLensingLSSTConfig from command line arguments.
 
-        Args:
-            args: List of key=value strings.
-
-        Returns:
-            Validated configuration object.
-
-        Raises:
-            ValidationError: If arguments are invalid.
+        :param args: List of key=value strings.
+        :return: Validated configuration object.
+        :raises ValidationError: If arguments are invalid.
         """
         opts = parse_options_strict(args)
         return cls.model_validate(opts)
@@ -286,12 +283,11 @@ class KernelWeakLensingLSSTConfig(BaseModel):
     def help_text() -> list[str]:
         """Return help text for Weak Lensing LSST kernel.
 
-        Returns:
-            List containing [model name, parameter description].
+        :return: List containing [model name, parameter description].
         """
         return [
             "KernelWeakLensingLSST",
-            "bin_type=y1-source, bin_idx=0, nbar=3.0, intr_shear=7.0",
+            "survey=y1, bin_idx=0, nbar=3.0, intr_shear=7.0",
         ]
 
 
@@ -326,22 +322,18 @@ def parse_kernel_spec(spec: str) -> tuple[str, KernelConfigTypes]:
     KERNEL_CONFIG_REGISTRY. Remaining tokens are key=value pairs
     parsed and validated by the corresponding configuration class.
 
-    Args:
-        spec: Kernel specification string.
+    :param spec: Kernel specification string.
+    :return: A tuple of (kernel_name, config_object).
+    :raises ValueError: If the kernel name is not recognized or if the
+        specification is malformed.
+    :raises ValidationError: If the configuration parameters are invalid.
 
-    Returns:
-        A tuple of (kernel_name, config_object).
+    Examples::
 
-    Raises:
-        ValueError: If the kernel name is not recognized or if the
-            specification is malformed.
-        ValidationError: If the configuration parameters are invalid.
-
-    Examples:
         >>> parse_kernel_spec("cmb_lensing lmax=3000")
         ('cmb_lensing', KernelCMBLensingConfig(lmax=3000))
 
-        >>> parse_kernel_spec("galaxy_lsst bin_type=y1-lens bin_idx=0 bias=1.5")
+        >>> parse_kernel_spec("galaxy_lsst survey=y1 bin_idx=0 bias=1.5")
         ('galaxy_lsst', KernelGalaxyLSSTConfig(...))
     """
     # Split the specification using shell-like syntax
