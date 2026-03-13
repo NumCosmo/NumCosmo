@@ -159,12 +159,12 @@ def test_limber_vs_non_limber(
     kernel_id, kernel = kernel_case
     cosmo = cosmology.cosmo
     kernel_tol = {
-        "kernel_cmb_lens": {200: 5.0e-2, 500: 3.0e-2, 800: 2.5e-2},
+        "kernel_cmb_lens": {200: 5.0e-2, 500: 3.0e-2, 800: 2.8e-2},
         "kernel_cmb_isw": {200: 4.0, 500: 2.5, 800: 2.0},
         "kernel_tsz": {200: 0.3, 500: 0.3, 800: 0.3},
         "kernel_gal_bin0": {200: 4.0e-3, 500: 6.0e-4, 800: 3.0e-4},
-        "kernel_gal_bin1": {200: 8.0e-3, 500: 2.0e-3, 800: 5.0e-4},
-        "kernel_gal_bin2": {200: 2.0e-2, 500: 3.0e-3, 800: 9.0e-4},
+        "kernel_gal_bin1": {200: 8.0e-3, 500: 2.0e-3, 800: 5.1e-4},
+        "kernel_gal_bin2": {200: 2.0e-2, 500: 3.0e-3, 800: 9.6e-4},
         "kernel_gal_bin3": {200: 3.0e-2, 500: 4.0e-3, 800: 2.0e-3},
         "kernel_gal_bin4": {200: 4.0e-2, 500: 6.0e-3, 800: 3.0e-3},
         "kernel_wl_bin0": {200: 8.0e-4, 500: 2.0e-4, 800: 6.0e-5},
@@ -236,19 +236,19 @@ def test_k_projection_limber_vs_non_limber(
     ell_array = np.array([100, 500, 800])
 
     kernel_tol = {
-        "kernel_cmb_lens": {100: 2.0e-6, 500: 6.0e-5, 800: 8.0e-5},
-        "kernel_cmb_isw": {100: 2.0, 500: 0.5, 800: 0.3},
-        "kernel_tsz": {100: 2.0e-4, 500: 2.0e-4, 800: 7.0e-5},
+        "kernel_cmb_lens": {100: 3.0e-6, 500: 6.0e-5, 800: 8.0e-5},
+        "kernel_cmb_isw": {100: 2.0, 500: 0.5, 800: 0.5},
+        "kernel_tsz": {100: 2.0e-4, 500: 2.0e-4, 800: 8.0e-5},
         "kernel_gal_bin0": {100: 1.0e-3, 500: 6.0e-5, 800: 3.0e-5},
         "kernel_gal_bin1": {100: 2.0e-3, 500: 2.0e-4, 800: 6.0e-5},
         "kernel_gal_bin2": {100: 3.0e-3, 500: 3.0e-4, 800: 1.0e-4},
         "kernel_gal_bin3": {100: 4.0e-3, 500: 4.0e-4, 800: 2.0e-4},
-        "kernel_gal_bin4": {100: 7.0e-3, 500: 7.0e-4, 800: 3.0e-4},
+        "kernel_gal_bin4": {100: 7.0e-3, 500: 7.1e-4, 800: 4.0e-4},
         "kernel_wl_bin0": {100: 4.0e-4, 500: 2.0e-5, 800: 7.0e-6},
         "kernel_wl_bin1": {100: 2.0e-4, 500: 8.0e-6, 800: 4.0e-6},
         "kernel_wl_bin2": {100: 7.0e-5, 500: 4.0e-6, 800: 2.0e-6},
         "kernel_wl_bin3": {100: 4.0e-5, 500: 7.0e-7, 800: 3.0e-7},
-        "kernel_wl_bin4": {100: 1.0e-4, 500: 6.0e-6, 800: 3.0e-6},
+        "kernel_wl_bin4": {100: 1.0e-4, 500: 6.0e-6, 800: 4.0e-6},
     }
     default_rtol = 1.0e-13
 

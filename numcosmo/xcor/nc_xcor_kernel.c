@@ -546,8 +546,10 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
     }
 
     {
-      gdouble global_kmin = 0.0;
-      gdouble global_kmax = G_MAXDOUBLE;
+      gdouble global_kmin    = 0.0;
+      gdouble min_k_max_hard = G_MAXDOUBLE;
+      gdouble max_k_epsilon  = 0.0;
+      gdouble min_k_epsilon  = G_MAXDOUBLE;
       gdouble lnk_min;
       gdouble lnk_max;
 
@@ -559,17 +561,19 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
 
         nc_xcor_kernel_component_get_limits (comp, cosmo, &xi_min[i], &xi_max[i], &k_min, &k_max);
 
-        k_max = GSL_MIN (k_max, nc_xcor_kernel_component_eval_k_epsilon (comp, nu));
+        const gdouble k_epsilon = nc_xcor_kernel_component_eval_k_epsilon (comp, nu);
 
-        global_kmin = GSL_MAX (global_kmin, k_min);
-        global_kmax = GSL_MIN (global_kmax, k_max);
+        global_kmin    = GSL_MAX (global_kmin, k_min);
+        min_k_max_hard = GSL_MIN (min_k_max_hard, k_max);
+        max_k_epsilon  = GSL_MAX (max_k_epsilon, k_epsilon);
+        min_k_epsilon  = GSL_MIN (min_k_epsilon, k_epsilon);
       }
 
       nlid->k_min = global_kmin;
-      nlid->k_max = global_kmax;
+      nlid->k_max = GSL_MIN (max_k_epsilon, min_k_max_hard);
 
-      lnk_min = log (global_kmin);
-      lnk_max = log (global_kmax);
+      lnk_min = log (nlid->k_min);
+      lnk_max = log (nlid->k_max);
 
       for (j = 0; j < n_k; j++)
       {
