@@ -61,6 +61,10 @@ c_tests = [
         'sources': ['test_ncm_spline2d.c'],
     },
     {
+        'name': 'ncm_spline_vec',
+        'sources': ['test_ncm_spline_vec.c'],
+    },
+    {
         'name': 'ncm_integral1d',
         'sources': ['test_ncm_integral1d.c'],
     },

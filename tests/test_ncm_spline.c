@@ -144,9 +144,12 @@ void test_ncm_spline_set_type (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_set_type_serialize (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_serialize (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_eval_idx (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_eval_deriv_idx (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval_deriv2 (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval_int (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_eval_integ_idx (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_get_index (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_get_index_stride2 (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_get_index_stride5 (TestNcmSpline *test, gconstpointer pdata);
@@ -200,9 +203,12 @@ TestNcmSplineFunc _test_ncm_spline_tests[] = {
   {&test_ncm_spline_set_type_serialize,    "/set_type/serialize"},
   {&test_ncm_spline_serialize,             "/serialize"},
   {&test_ncm_spline_eval,                  "/eval"},
+  {&test_ncm_spline_eval_idx,              "/eval_idx"},
   {&test_ncm_spline_eval_deriv,            "/eval/deriv"},
+  {&test_ncm_spline_eval_deriv_idx,        "/eval/deriv_idx"},
   {&test_ncm_spline_eval_deriv2,           "/eval/deriv2"},
   {&test_ncm_spline_eval_int,              "/int"},
+  {&test_ncm_spline_eval_integ_idx,        "/int_idx"},
   {&test_ncm_spline_get_index,             "/get_index"},
   {&test_ncm_spline_get_index_stride2,     "/get_index/stride2"},
   {&test_ncm_spline_get_index_stride5,     "/get_index/stride5"},
@@ -214,7 +220,7 @@ TestNcmSplineFunc _test_ncm_spline_tests[] = {
 };
 
 void
-_test_ncm_spline_add_tests (void ( *tnew ) (TestNcmSpline *test, gconstpointer pdata), void (*tfree)(TestNcmSpline *test, gconstpointer pdata), const gchar *name)
+_test_ncm_spline_add_tests (void ( *tnew ) (TestNcmSpline *test, gconstpointer pdata), void (*tfree) (TestNcmSpline *test, gconstpointer pdata), const gchar *name)
 {
   guint i;
 
@@ -762,6 +768,93 @@ test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata)
 }
 
 void
+test_ncm_spline_eval_idx (TestNcmSpline *test, gconstpointer pdata)
+{
+  gsl_function F;
+  guint i;
+  gdouble d[4];
+
+  d[0] = g_test_rand_double ();
+  d[1] = g_test_rand_double ();
+  d[2] = g_test_rand_double ();
+  d[3] = g_test_rand_double ();
+
+  /* Only test for cubic splines which have eval_idx implemented */
+  if (!NCM_IS_SPLINE_CUBIC (test->s_base))
+  {
+    g_test_skip ("eval_idx only implemented for cubic splines");
+
+    return;
+  }
+
+  {
+    NcmSpline *s = ncm_spline_copy (test->s_base);
+
+    F.function = &F_linear;
+    F.params   = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
+
+    for (i = 0; i < 2 * test->nknots; i++)
+    {
+      gdouble x    = test->xi + test->dx * (test->nknots - 1.0) / (2.0 * test->nknots - 1.0) * i;
+      guint idx    = ncm_spline_get_index (s, x);
+      gdouble f    = GSL_FN_EVAL (&F, x);
+      gdouble fs   = ncm_spline_eval (s, x);
+      gdouble fsid = ncm_spline_eval_idx (s, x, idx);
+
+      ncm_assert_cmpdouble_e (fs, ==, f, test->error, 0.0);
+      ncm_assert_cmpdouble_e (fsid, ==, fs, 1.0e-15, 0.0);
+    }
+
+    ncm_spline_free (s);
+  }
+
+  {
+    NcmSpline *s = ncm_spline_copy (test->s_base);
+
+    F.function = &F_cubic;
+    F.params   = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
+
+    for (i = 0; i < 2 * test->nknots; i++)
+    {
+      gdouble x    = test->xi + test->dx * (test->nknots - 1.0) / (2.0 * test->nknots - 1.0) * i;
+      guint idx    = ncm_spline_get_index (s, x);
+      gdouble f    = GSL_FN_EVAL (&F, x);
+      gdouble fs   = ncm_spline_eval (s, x);
+      gdouble fsid = ncm_spline_eval_idx (s, x, idx);
+
+      ncm_assert_cmpdouble_e (fs, ==, f, test->error, 0.0);
+      ncm_assert_cmpdouble_e (fsid, ==, fs, 1.0e-15, 0.0);
+    }
+
+    ncm_spline_free (s);
+  }
+
+  {
+    NcmSpline *s = ncm_spline_copy (test->s_base);
+
+    F.function = &F_sin_poly;
+    F.params   = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * ((test->nknots) / 100.0 - 1)) * _TEST_EPSILON, 0, test->prec);
+
+    for (i = 0; i < 2 * test->nknots; i++)
+    {
+      gdouble x    = test->xi + test->dx * (test->nknots / 100.0 - 1.0) / (2.0 * test->nknots - 1.0) * i;
+      guint idx    = ncm_spline_get_index (s, x);
+      gdouble f    = GSL_FN_EVAL (&F, x);
+      gdouble fs   = ncm_spline_eval (s, x);
+      gdouble fsid = ncm_spline_eval_idx (s, x, idx);
+
+      ncm_assert_cmpdouble_e (fs, ==, f, test->error, 0.0);
+      ncm_assert_cmpdouble_e (fsid, ==, fs, 1.0e-15, 0.0);
+    }
+
+    ncm_spline_free (s);
+  }
+}
+
+void
 test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata)
 {
   gsl_function F;
@@ -834,6 +927,102 @@ test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata)
       gdouble dfs = ncm_spline_eval_deriv (s, x);
 
       ncm_assert_cmpdouble_e (dfs, ==, df, test->error_d1, 0.0);
+    }
+
+    ncm_spline_free (s);
+  }
+}
+
+void
+test_ncm_spline_eval_deriv_idx (TestNcmSpline *test, gconstpointer pdata)
+{
+  gsl_function F;
+  gsl_function F_deriv;
+  guint i;
+  gdouble d[4];
+
+  d[0] = g_test_rand_double ();
+  d[1] = g_test_rand_double ();
+  d[2] = g_test_rand_double ();
+  d[3] = g_test_rand_double ();
+
+  /* Only test for cubic splines which have deriv_idx implemented */
+  if (!NCM_IS_SPLINE_CUBIC (test->s_base))
+  {
+    g_test_skip ("eval_deriv_idx only implemented for cubic splines");
+
+    return;
+  }
+
+  {
+    NcmSpline *s = ncm_spline_copy (test->s_base);
+
+    F.function       = &F_linear;
+    F.params         = d;
+    F_deriv.function = &F_linear_deriv;
+    F_deriv.params   = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
+
+    for (i = 0; i < 2 * test->nknots; i++)
+    {
+      gdouble x     = test->xi + test->dx * (test->nknots - 1.0) / (2.0 * test->nknots - 1.0) * i;
+      guint idx     = ncm_spline_get_index (s, x);
+      gdouble df    = GSL_FN_EVAL (&F_deriv, x);
+      gdouble dfs   = ncm_spline_eval_deriv (s, x);
+      gdouble dfsid = ncm_spline_eval_deriv_idx (s, x, idx);
+
+      ncm_assert_cmpdouble_e (dfs, ==, df, test->error, 0.0);
+      ncm_assert_cmpdouble_e (dfsid, ==, dfs, 1.0e-15, 0.0);
+    }
+
+    ncm_spline_free (s);
+  }
+
+  if (test->deriv1)
+  {
+    NcmSpline *s = ncm_spline_copy (test->s_base);
+
+    F.function       = &F_cubic;
+    F.params         = d;
+    F_deriv.function = &F_cubic_deriv;
+    F_deriv.params   = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
+
+    for (i = 0; i < 2 * test->nknots; i++)
+    {
+      gdouble x     = test->xi + test->dx * (test->nknots - 1.0) / (2.0 * test->nknots - 1.0) * i;
+      guint idx     = ncm_spline_get_index (s, x);
+      gdouble df    = GSL_FN_EVAL (&F_deriv, x);
+      gdouble dfs   = ncm_spline_eval_deriv (s, x);
+      gdouble dfsid = ncm_spline_eval_deriv_idx (s, x, idx);
+
+      ncm_assert_cmpdouble_e (dfs, ==, df, test->error_d1, 0.0);
+      ncm_assert_cmpdouble_e (dfsid, ==, dfs, 1.0e-15, 0.0);
+    }
+
+    ncm_spline_free (s);
+  }
+
+  if (test->deriv1)
+  {
+    NcmSpline *s = ncm_spline_copy (test->s_base);
+
+    F.function       = &F_sin_poly;
+    F.params         = d;
+    F_deriv.function = &F_sin_poly_deriv;
+    F_deriv.params   = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots / 100.0 - 1)) * _TEST_EPSILON, 0, test->prec);
+
+    for (i = 0; i < 2 * test->nknots; i++)
+    {
+      gdouble x     = test->xi + test->dx * (test->nknots / 100.0 - 1.0) / (2.0 * test->nknots - 1.0) * i;
+      guint idx     = ncm_spline_get_index (s, x);
+      gdouble df    = GSL_FN_EVAL (&F_deriv, x);
+      gdouble dfs   = ncm_spline_eval_deriv (s, x);
+      gdouble dfsid = ncm_spline_eval_deriv_idx (s, x, idx);
+
+      ncm_assert_cmpdouble_e (dfs, ==, df, test->error_d1, 0.0);
+      ncm_assert_cmpdouble_e (dfsid, ==, dfs, 1.0e-15, 0.0);
     }
 
     ncm_spline_free (s);
@@ -972,6 +1161,80 @@ test_ncm_spline_eval_int (TestNcmSpline *test, gconstpointer pdata)
       gdouble Ifs = ncm_spline_eval_integ (s, xi, x);
 
       ncm_assert_cmpdouble_e (Ifs, ==, If, test->error, 0.0);
+    }
+
+    ncm_spline_free (s);
+  }
+}
+
+void
+test_ncm_spline_eval_integ_idx (TestNcmSpline *test, gconstpointer pdata)
+{
+  gsl_function F;
+  gsl_function F_int;
+  guint i;
+  gdouble d[4];
+
+  d[0] = g_test_rand_double ();
+  d[1] = g_test_rand_double ();
+  d[2] = g_test_rand_double ();
+  d[3] = g_test_rand_double ();
+
+  /* Only test for cubic splines which have integ_idx implemented */
+  if (!NCM_IS_SPLINE_CUBIC (test->s_base))
+  {
+    g_test_skip ("eval_integ_idx only implemented for cubic splines");
+
+    return;
+  }
+
+  {
+    NcmSpline *s = ncm_spline_copy (test->s_base);
+
+    F.function     = &F_linear;
+    F.params       = d;
+    F_int.function = &F_linear_int_0x;
+    F_int.params   = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
+
+    for (i = 0; i < 2 * test->nknots; i++)
+    {
+      gdouble x     = test->xi + test->dx * (test->nknots - 1.0) / (2.0 * test->nknots - 1.0) * i;
+      gdouble xi    = test->xi;
+      guint idx_i   = ncm_spline_get_index (s, xi);
+      guint idx_f   = ncm_spline_get_index (s, x);
+      gdouble If    = GSL_FN_EVAL (&F_int, x) - GSL_FN_EVAL (&F_int, xi);
+      gdouble Ifs   = ncm_spline_eval_integ (s, xi, x);
+      gdouble Ifsid = ncm_spline_eval_integ_idx (s, xi, idx_i, x, idx_f);
+
+      ncm_assert_cmpdouble_e (Ifs, ==, If, test->error, 0.0);
+      ncm_assert_cmpdouble_e (Ifsid, ==, Ifs, 1.0e-15, 0.0);
+    }
+
+    ncm_spline_free (s);
+  }
+
+  {
+    NcmSpline *s = ncm_spline_copy (test->s_base);
+
+    F.function     = &F_cubic;
+    F.params       = d;
+    F_int.function = &F_cubic_int_0x;
+    F_int.params   = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, test->xi, test->xi + (test->dx * (test->nknots - 1)) * _TEST_EPSILON, 0, test->prec);
+
+    for (i = 0; i < 2 * test->nknots; i++)
+    {
+      gdouble x     = test->xi + test->dx * (test->nknots - 1.0) / (2.0 * test->nknots - 1.0) * i;
+      gdouble xi    = test->xi;
+      guint idx_i   = ncm_spline_get_index (s, xi);
+      guint idx_f   = ncm_spline_get_index (s, x);
+      gdouble If    = GSL_FN_EVAL (&F_int, x) - GSL_FN_EVAL (&F_int, xi);
+      gdouble Ifs   = ncm_spline_eval_integ (s, xi, x);
+      gdouble Ifsid = ncm_spline_eval_integ_idx (s, xi, idx_i, x, idx_f);
+
+      ncm_assert_cmpdouble_e (Ifs, ==, If, test->error, 0.0);
+      ncm_assert_cmpdouble_e (Ifsid, ==, Ifs, 1.0e-15, 0.0);
     }
 
     ncm_spline_free (s);

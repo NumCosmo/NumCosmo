@@ -489,6 +489,82 @@ _nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble x, gdouble k)
   return kernel;
 }
 
+#define MAX_ELL_BLOCK 64
+#define MAX_COMP_BLOCK 6
+
+typedef struct _NonLimberKernelData
+{
+  NcXcorKernel *xclk;
+  NcHICosmo *cosmo;
+  GPtrArray *comp_list;
+  gdouble xi_min[MAX_COMP_BLOCK];
+  gdouble xi_max[MAX_COMP_BLOCK];
+  gdouble k_epsilon[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
+  gdouble k_epsilon_val[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
+  guint n_comp;
+  guint n_l;
+  gint lmin;
+  NcmVector *integ_result;
+} NonLimberKernelData;
+
+static void
+_nc_xcor_kernel_eval_kernel_at_k (NonLimberKernelData *data, gdouble k, gdouble *kernel_ell)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (data->xclk);
+  guint i, n;
+
+  /* Initialize output array */
+  for (n = 0; n < data->n_l; n++)
+    kernel_ell[n] = 0.0;
+
+  /* Loop over components */
+  for (i = 0; i < data->n_comp; i++)
+  {
+    NcXcorKernelComponent *comp = g_ptr_array_index (data->comp_list, i);
+    NonLimberCompParams params  = { comp, data->cosmo };
+    gboolean need_integration   = FALSE;
+
+    /* Check if we need to compute for any ell (k <= k_epsilon) */
+    for (n = 0; n < data->n_l; n++)
+    {
+      if (k <= data->k_epsilon[i][n])
+      {
+        need_integration = TRUE;
+        break;
+      }
+    }
+
+    /* Only integrate if needed for at least one ell */
+    if (need_integration)
+      ncm_sbessel_integrator_integrate (
+        self->sbi, _nc_xcor_kernel_component_kernel_integ,
+        data->xi_min[i], data->xi_max[i], k, data->integ_result, &params);
+
+    /* Accumulate contribution from this component with cutoff */
+    for (n = 0; n < data->n_l; n++)
+    {
+      /* Apply exponential cutoff for k > k_epsilon */
+      /* Cutoff drops by factor of 10 for 1% increase in k */
+      if (k > data->k_epsilon[i][n])
+      {
+        const gdouble dk_ratio      = (k - data->k_epsilon[i][n]) / data->k_epsilon[i][n];
+        const gdouble cutoff_factor = exp (-log (10.0) * 100.0 * dk_ratio);
+
+        /* Use exponential tail based on value at k_epsilon */
+        kernel_ell[n] += data->k_epsilon_val[i][n] * cutoff_factor;
+      }
+      else
+      {
+        /* Compute full kernel for k <= k_epsilon */
+        const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (comp, data->cosmo, k, data->lmin + n);
+        const gdouble val       = ncm_vector_get (data->integ_result, n) * prefactor;
+
+        kernel_ell[n] += val;
+      }
+    }
+  }
+}
+
 static NcXcorKernelIntegrand *
 _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
 {
@@ -500,6 +576,9 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
   const guint n_k              = 800;
   NcmVector *k_vec             = ncm_vector_new (n_k);
   GPtrArray *comp_list         = klass->get_component_list (xclk);
+
+  g_assert_cmpuint (n_l, <=, MAX_ELL_BLOCK);
+  g_assert_cmpuint (comp_list->len, <=, MAX_COMP_BLOCK);
 
   if (self->sbi == NULL)
   {
@@ -526,8 +605,6 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
   ncm_sbessel_integrator_set_ell_range (self->sbi, lmin, lmax);
 
   {
-    gdouble *xi_min              = g_new (gdouble, comp_list->len);
-    gdouble *xi_max              = g_new (gdouble, comp_list->len);
     NcmVector **total_kernel_ell = g_new (NcmVector *, n_l);
     guint i, j;
 
@@ -546,58 +623,77 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
     }
 
     {
-      gdouble global_kmin    = 0.0;
-      gdouble min_k_max_hard = G_MAXDOUBLE;
-      gdouble max_k_epsilon  = 0.0;
-      gdouble min_k_epsilon  = G_MAXDOUBLE;
+      gdouble k_min_hard    = 0.0;
+      gdouble k_max_hard    = G_MAXDOUBLE;
+      gdouble k_epsilon_max = 0.0;
+      NonLimberKernelData kernel_data;
       gdouble lnk_min;
       gdouble lnk_max;
 
+      /* Allocate and compute k_epsilon for each (component, ell) pair */
       for (i = 0; i < comp_list->len; i++)
       {
         NcXcorKernelComponent *comp = g_ptr_array_index (comp_list, i);
-        const gdouble nu            = nlid->lmin + i + 0.5;
+        NonLimberCompParams params  = { comp, cosmo };
         gdouble k_min, k_max;
 
-        nc_xcor_kernel_component_get_limits (comp, cosmo, &xi_min[i], &xi_max[i], &k_min, &k_max);
+        nc_xcor_kernel_component_get_limits (
+          comp, cosmo, &kernel_data.xi_min[i], &kernel_data.xi_max[i], &k_min, &k_max);
 
-        const gdouble k_epsilon = nc_xcor_kernel_component_eval_k_epsilon (comp, nu);
+        for (j = 0; j < n_l; j++)
+        {
+          const gdouble nu        = nlid->lmin + j + 0.5;
+          const gdouble k_eps_val = nc_xcor_kernel_component_eval_k_epsilon (comp, nu) * 100.0;
 
-        global_kmin    = GSL_MAX (global_kmin, k_min);
-        min_k_max_hard = GSL_MIN (min_k_max_hard, k_max);
-        max_k_epsilon  = GSL_MAX (max_k_epsilon, k_epsilon);
-        min_k_epsilon  = GSL_MIN (min_k_epsilon, k_epsilon);
+          kernel_data.k_epsilon[i][j] = k_eps_val;
+          k_epsilon_max               = GSL_MAX (k_epsilon_max, k_eps_val);
+
+          /* Compute and store the kernel value at k_epsilon */
+          ncm_sbessel_integrator_integrate (
+            self->sbi, _nc_xcor_kernel_component_kernel_integ,
+            kernel_data.xi_min[i], kernel_data.xi_max[i], k_eps_val, integ_result, &params);
+
+          {
+            const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (comp, cosmo, k_eps_val, nlid->lmin + j);
+            const gdouble val       = ncm_vector_get (integ_result, j) * prefactor;
+
+            kernel_data.k_epsilon_val[i][j] = val;
+          }
+        }
+
+        k_min_hard = GSL_MAX (k_min_hard, k_min);
+        k_max_hard = GSL_MIN (k_max_hard, k_max);
       }
 
-      nlid->k_min = global_kmin;
-      nlid->k_max = GSL_MIN (max_k_epsilon, min_k_max_hard);
+      nlid->k_min = k_min_hard;
+      nlid->k_max = GSL_MIN (k_epsilon_max, k_max_hard);
 
       lnk_min = log (nlid->k_min);
       lnk_max = log (nlid->k_max);
 
+      /* Setup kernel data structure */
+      kernel_data.xclk         = xclk;
+      kernel_data.cosmo        = cosmo;
+      kernel_data.comp_list    = comp_list;
+      kernel_data.n_comp       = comp_list->len;
+      kernel_data.n_l          = n_l;
+      kernel_data.lmin         = nlid->lmin;
+      kernel_data.integ_result = integ_result;
+
+      /* Loop over k values and compute kernel using new function */
       for (j = 0; j < n_k; j++)
       {
         const gdouble k = exp (lnk_min + (lnk_max - lnk_min) * j / (n_k - 1));
+        gdouble kernel_ell_vals[MAX_ELL_BLOCK];
 
         ncm_vector_set (k_vec, j, k);
 
-        for (i = 0; i < comp_list->len; i++)
-        {
-          NcXcorKernelComponent *comp = g_ptr_array_index (comp_list, i);
-          NonLimberCompParams params  = { comp, cosmo};
-          guint n;
+        /* Compute kernel for all ells at this k with cutoff */
+        _nc_xcor_kernel_eval_kernel_at_k (&kernel_data, k, kernel_ell_vals);
 
-          ncm_sbessel_integrator_integrate (
-            self->sbi, _nc_xcor_kernel_component_kernel_integ, xi_min[i], xi_max[i], k, integ_result, &params);
-
-          for (n = 0; n < n_l; n++)
-          {
-            const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (comp, cosmo, k, nlid->lmin + n);
-            const gdouble val       = ncm_vector_get (integ_result, n) * prefactor;
-
-            ncm_vector_addto (total_kernel_ell[n], j, val);
-          }
-        }
+        /* Store results in total_kernel_ell arrays */
+        for (i = 0; i < n_l; i++)
+          ncm_vector_set (total_kernel_ell[i], j, kernel_ell_vals[i]);
       }
 
       for (i = 0; i < n_l; i++)
@@ -608,8 +704,6 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
 
       ncm_vector_free (k_vec);
       g_free (total_kernel_ell);
-      g_free (xi_min);
-      g_free (xi_max);
     }
 
     ncm_vector_free (integ_result);
