@@ -150,6 +150,27 @@ def test_spline_vec_new_gpa(spline_vec_gpa: Ncm.SplineVec) -> None:
     assert spline_vec_gpa.is_init()
 
 
+def test_spline_vec_get_nknots(spline_vec: Ncm.SplineVec) -> None:
+    """Test get_nknots method."""
+    # The fixture creates a spline with 100 knots
+    assert spline_vec.get_nknots() == 100
+
+    # Verify it matches the underlying spline length
+    s0 = spline_vec.peek_spline(0)
+    assert spline_vec.get_nknots() == s0.get_len()
+
+
+def test_spline_vec_get_nknots_gpa(spline_vec_gpa: Ncm.SplineVec) -> None:
+    """Test get_nknots method with GPtrArray constructor."""
+    # The fixture creates a spline with 100 knots
+    assert spline_vec_gpa.get_nknots() == 100
+
+    # All component splines should have the same number of knots
+    for i in range(spline_vec_gpa.get_len()):
+        s_i = spline_vec_gpa.peek_spline(i)
+        assert spline_vec_gpa.get_nknots() == s_i.get_len()
+
+
 def test_spline_vec_eval(spline_vec: Ncm.SplineVec) -> None:
     """Test evaluation of NcmSplineVec."""
     x = 5.0

@@ -395,6 +395,24 @@ ncm_spline_vec_get_len (NcmSplineVec *sv)
 }
 
 /**
+ * ncm_spline_vec_get_nknots:
+ * @sv: a #NcmSplineVec
+ *
+ * Gets the number of knot points (x-values) in the spline. All component
+ * splines share the same x-vector, so this returns the length of that vector.
+ *
+ * Returns: the number of knot points
+ */
+guint
+ncm_spline_vec_get_nknots (NcmSplineVec *sv)
+{
+  g_assert (sv->len > 0);
+  g_assert (sv->init);
+
+  return ncm_spline_get_len (g_ptr_array_index (sv->spline_array, 0));
+}
+
+/**
  * ncm_spline_vec_peek_spline:
  * @sv: a #NcmSplineVec
  * @i: component index

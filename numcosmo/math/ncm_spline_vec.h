@@ -54,6 +54,7 @@ void ncm_spline_vec_prepare (NcmSplineVec *sv);
 gboolean ncm_spline_vec_is_init (NcmSplineVec *sv);
 
 guint ncm_spline_vec_get_len (NcmSplineVec *sv);
+guint ncm_spline_vec_get_nknots (NcmSplineVec *sv);
 NcmSpline *ncm_spline_vec_peek_spline (NcmSplineVec *sv, guint i);
 
 void ncm_spline_vec_eval (NcmSplineVec *sv, const gdouble x, NcmVector *res);

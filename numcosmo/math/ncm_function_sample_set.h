@@ -38,6 +38,18 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmFunctionSampleSet, ncm_function_sample_set, NCM, FUNCTION_SAMPLE_SET, GObject)
 
+/**
+ * NcmFunctionSampleSetFunc:
+ * @x: input value
+ * @y: output vector to be filled
+ * @user_data: user data
+ *
+ * Vector-valued function type $\vec{F}: \mathbb{R} \to \mathbb{R}^n$.
+ * The function should evaluate at @x and write the result into @y.
+ *
+ */
+typedef void (*NcmFunctionSampleSetFunc) (const gdouble x, NcmVector *y, gpointer user_data);
+
 NcmFunctionSampleSet *ncm_function_sample_set_new (const guint len);
 NcmFunctionSampleSet *ncm_function_sample_set_ref (NcmFunctionSampleSet *fss);
 
@@ -45,22 +57,31 @@ void ncm_function_sample_set_free (NcmFunctionSampleSet *fss);
 void ncm_function_sample_set_clear (NcmFunctionSampleSet **fss);
 
 void ncm_function_sample_set_add (NcmFunctionSampleSet *fss, const gdouble x, NcmVector *y);
+void ncm_function_sample_set_add_func (NcmFunctionSampleSet *fss, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data);
 void ncm_function_sample_set_insert_before (NcmFunctionSampleSet *fss, const guint index, const gdouble x, NcmVector *y);
+void ncm_function_sample_set_insert_before_func (NcmFunctionSampleSet *fss, const guint index, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data);
 void ncm_function_sample_set_insert_after (NcmFunctionSampleSet *fss, const guint index, const gdouble x, NcmVector *y);
+void ncm_function_sample_set_insert_after_func (NcmFunctionSampleSet *fss, const guint index, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data);
 
 guint ncm_function_sample_set_get_len (NcmFunctionSampleSet *fss);
 guint ncm_function_sample_set_get_nsamples (NcmFunctionSampleSet *fss);
 
 gdouble ncm_function_sample_set_peek_x (NcmFunctionSampleSet *fss, const guint index);
 NcmVector *ncm_function_sample_set_peek_y (NcmFunctionSampleSet *fss, const guint index);
-void ncm_function_sample_set_get_sample (NcmFunctionSampleSet *fss, const guint index, gdouble *x, NcmVector **y, gint *ok);
+void ncm_function_sample_set_get_sample (NcmFunctionSampleSet *fss, const guint index, gdouble *x, NcmVector **y, gint *interval_ok);
 
-gint ncm_function_sample_set_get_ok (NcmFunctionSampleSet *fss, const guint index);
-void ncm_function_sample_set_set_ok (NcmFunctionSampleSet *fss, const guint index, const gint ok);
-void ncm_function_sample_set_inc_ok (NcmFunctionSampleSet *fss, const guint index);
-void ncm_function_sample_set_reset_ok (NcmFunctionSampleSet *fss);
+gint ncm_function_sample_set_get_interval_ok (NcmFunctionSampleSet *fss, const guint index);
+void ncm_function_sample_set_set_interval_ok (NcmFunctionSampleSet *fss, const guint index, const gint interval_ok);
+void ncm_function_sample_set_inc_interval_ok (NcmFunctionSampleSet *fss, const guint index);
+void ncm_function_sample_set_reset_interval_ok (NcmFunctionSampleSet *fss);
+gboolean ncm_function_sample_set_all_intervals_ok (NcmFunctionSampleSet *fss, const gint threshold);
+
+void ncm_function_sample_set_mark_all_old (NcmFunctionSampleSet *fss);
 
 NcmSplineVec *ncm_function_sample_set_to_spline_vec (NcmFunctionSampleSet *fss, NcmSpline *base_spline);
+NcmSplineVec *ncm_function_sample_set_to_spline_vec_old (NcmFunctionSampleSet *fss, NcmSpline *base_spline);
+
+void ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol, const gdouble abstol, NcmSpline *base_spline);
 
 void ncm_function_sample_set_log_vals (NcmFunctionSampleSet *fss);
 

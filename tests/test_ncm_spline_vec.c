@@ -83,6 +83,26 @@ test_ncm_spline_vec_new_gpa (TestNcmSplineVec *test, gconstpointer pdata)
 }
 
 static void
+test_ncm_spline_vec_get_nknots (TestNcmSplineVec *test, gconstpointer pdata)
+{
+  NcmSplineVec *sv = ncm_spline_vec_new (test->s_base, test->xv, test->ym, TRUE);
+  guint i;
+
+  /* Check that get_nknots returns the correct value */
+  g_assert_cmpuint (ncm_spline_vec_get_nknots (sv), ==, test->nknots);
+
+  /* Verify it matches the underlying spline length */
+  for (i = 0; i < test->nvec; i++)
+  {
+    NcmSpline *s_i = ncm_spline_vec_peek_spline (sv, i);
+
+    g_assert_cmpuint (ncm_spline_vec_get_nknots (sv), ==, ncm_spline_get_len (s_i));
+  }
+
+  ncm_spline_vec_free (sv);
+}
+
+static void
 test_ncm_spline_vec_eval (TestNcmSplineVec *test, gconstpointer pdata)
 {
   NcmSplineVec *sv = ncm_spline_vec_new (test->s_base, test->xv, test->ym, TRUE);
@@ -238,6 +258,11 @@ main (int argc, char *argv[])
   g_test_add ("/ncm/spline_vec/new_gpa", TestNcmSplineVec, NULL,
               &test_ncm_spline_vec_setup,
               &test_ncm_spline_vec_new_gpa,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add ("/ncm/spline_vec/get_nknots", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_get_nknots,
               &test_ncm_spline_vec_teardown);
 
   g_test_add ("/ncm/spline_vec/eval", TestNcmSplineVec, NULL,
