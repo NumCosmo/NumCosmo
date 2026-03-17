@@ -81,10 +81,15 @@ void ncm_function_sample_set_clear (NcmFunctionSampleSet **fss);
 /* Append operations (kept for initial population) */
 void ncm_function_sample_set_add (NcmFunctionSampleSet *fss, const gdouble x, NcmVector *y);
 void ncm_function_sample_set_add_func (NcmFunctionSampleSet *fss, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data);
+void ncm_function_sample_set_add_old (NcmFunctionSampleSet *fss, const gdouble x, NcmVector *y);
+void ncm_function_sample_set_add_old_func (NcmFunctionSampleSet *fss, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data);
 
 /* Container-level properties */
 guint ncm_function_sample_set_get_len (NcmFunctionSampleSet *fss);
 guint ncm_function_sample_set_get_nsamples (NcmFunctionSampleSet *fss);
+gdouble ncm_function_sample_set_get_x_min (NcmFunctionSampleSet *fss);
+gdouble ncm_function_sample_set_get_x_max (NcmFunctionSampleSet *fss);
+gdouble ncm_function_sample_set_get_absmaxF (NcmFunctionSampleSet *fss, const guint i);
 
 /* Container-level operations */
 void ncm_function_sample_set_reset_interval_ok (NcmFunctionSampleSet *fss);

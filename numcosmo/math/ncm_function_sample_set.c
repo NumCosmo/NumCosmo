@@ -127,6 +127,9 @@ struct _NcmFunctionSampleSet
   GList *samples;
   GArray *x_array_cache;
   GPtrArray *y_arrays_cache;
+  GArray *absmaxF; /* Maximum absolute value for each component */
+  gdouble x_min;
+  gdouble x_max;
 };
 
 G_DEFINE_TYPE (NcmFunctionSampleSet, ncm_function_sample_set, G_TYPE_OBJECT)
@@ -153,6 +156,19 @@ _ncm_function_sample_point_new (const gdouble x, NcmVector *y)
   return sp;
 }
 
+static NcmFunctionSamplePoint *
+_ncm_function_sample_point_new_old (const gdouble x, NcmVector *y)
+{
+  NcmFunctionSamplePoint *sp = g_slice_new (NcmFunctionSamplePoint);
+
+  sp->x           = x;
+  sp->y           = ncm_vector_ref (y);
+  sp->interval_ok = 0;
+  sp->new_point   = FALSE;
+
+  return sp;
+}
+
 static gint
 _ncm_function_sample_point_cmp (gconstpointer a, gconstpointer b)
 {
@@ -174,6 +190,9 @@ ncm_function_sample_set_init (NcmFunctionSampleSet *fss)
   fss->samples        = NULL;
   fss->x_array_cache  = NULL;
   fss->y_arrays_cache = NULL;
+  fss->absmaxF        = NULL;
+  fss->x_min          = GSL_POSINF;
+  fss->x_max          = GSL_NEGINF;
 }
 
 static void
@@ -186,6 +205,7 @@ _ncm_function_sample_set_dispose (GObject *object)
 
   g_clear_pointer (&fss->x_array_cache, g_array_unref);
   g_clear_pointer (&fss->y_arrays_cache, g_ptr_array_unref);
+  g_clear_pointer (&fss->absmaxF, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_function_sample_set_parent_class)->dispose (object);
@@ -246,12 +266,16 @@ _ncm_function_sample_set_constructed (GObject *object)
   /* Initialize cached arrays for efficient spline building */
   fss->x_array_cache  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 100);
   fss->y_arrays_cache = g_ptr_array_new_full (fss->len, (GDestroyNotify) g_array_unref);
+  fss->absmaxF        = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), fss->len);
+  g_array_set_size (fss->absmaxF, fss->len);
 
+  /* Initialize absmaxF to 0.0 for all components */
   for (i = 0; i < fss->len; i++)
   {
     GArray *y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 100);
 
     g_ptr_array_add (fss->y_arrays_cache, y_array);
+    g_array_index (fss->absmaxF, gdouble, i) = 0.0;
   }
 }
 
@@ -662,6 +686,7 @@ ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctio
 {
   NcmFunctionSamplePoint *sp;
   NcmFunctionSampleSetIter *new_iter = g_slice_new (NcmFunctionSampleSetIter);
+  guint i;
 
   g_assert (iter->node != NULL);
   g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
@@ -672,6 +697,20 @@ ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctio
 
   new_iter->node  = iter->node->next;
   new_iter->owner = fss;
+
+  /* Update x_min and x_max tracking */
+  fss->x_min = MIN (fss->x_min, x);
+  fss->x_max = MAX (fss->x_max, x);
+
+  /* Update absmaxF tracking for each component */
+  for (i = 0; i < fss->len; i++)
+  {
+    gdouble y_i        = ncm_vector_get (y, i);
+    gdouble abs_y_i    = fabs (y_i);
+    gdouble *absmaxF_i = &g_array_index (fss->absmaxF, gdouble, i);
+
+    *absmaxF_i = MAX (*absmaxF_i, abs_y_i);
+  }
 
   return new_iter;
 }
@@ -726,6 +765,7 @@ ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFuncti
 {
   NcmFunctionSamplePoint *sp;
   NcmFunctionSampleSetIter *new_iter = g_slice_new (NcmFunctionSampleSetIter);
+  guint i;
 
   g_assert (iter->node != NULL);
   g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
@@ -736,6 +776,20 @@ ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFuncti
 
   new_iter->node  = iter->node->prev;
   new_iter->owner = fss;
+
+  /* Update x_min and x_max tracking */
+  fss->x_min = MIN (fss->x_min, x);
+  fss->x_max = MAX (fss->x_max, x);
+
+  /* Update absmaxF tracking for each component */
+  for (i = 0; i < fss->len; i++)
+  {
+    gdouble y_i        = ncm_vector_get (y, i);
+    gdouble abs_y_i    = fabs (y_i);
+    gdouble *absmaxF_i = &g_array_index (fss->absmaxF, gdouble, i);
+
+    *absmaxF_i = MAX (*absmaxF_i, abs_y_i);
+  }
 
   return new_iter;
 }
@@ -808,11 +862,26 @@ void
 ncm_function_sample_set_add (NcmFunctionSampleSet *fss, const gdouble x, NcmVector *y)
 {
   NcmFunctionSamplePoint *sp;
+  guint i;
 
   g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
 
   sp           = _ncm_function_sample_point_new (x, y);
   fss->samples = g_list_insert_sorted (fss->samples, sp, _ncm_function_sample_point_cmp);
+
+  /* Update x_min and x_max */
+  fss->x_min = MIN (fss->x_min, x);
+  fss->x_max = MAX (fss->x_max, x);
+
+  /* Update absmaxF for each component */
+  for (i = 0; i < fss->len; i++)
+  {
+    const gdouble abs_yi = fabs (ncm_vector_get (y, i));
+    gdouble current_max  = g_array_index (fss->absmaxF, gdouble, i);
+
+    if (abs_yi > current_max)
+      g_array_index (fss->absmaxF, gdouble, i) = abs_yi;
+  }
 }
 
 /**
@@ -835,6 +904,72 @@ ncm_function_sample_set_add_func (NcmFunctionSampleSet *fss, const gdouble x, Nc
 
   f (x, y, user_data);
   ncm_function_sample_set_add (fss, x, y);
+  ncm_vector_free (y);
+}
+
+/**
+ * ncm_function_sample_set_add_old:
+ * @fss: a #NcmFunctionSampleSet
+ * @x: knot position
+ * @y: vector value at @x
+ *
+ * Adds a new sample point to @fss with position @x and vector value @y, marked as OLD.
+ * This function is useful for boundary extensions where the added point should be 
+ * considered part of the base spline rather than a refinement target.
+ * The sample is inserted in the correct position to maintain ascending x-order.
+ * The vector @y is copied and must have dimension matching the @fss:len property.
+ * The interval_ok flag for the new sample is initialized to 0.
+ * The sample is marked as an old point (new_point = FALSE).
+ *
+ */
+void
+ncm_function_sample_set_add_old (NcmFunctionSampleSet *fss, const gdouble x, NcmVector *y)
+{
+  NcmFunctionSamplePoint *sp;
+  guint i;
+
+  g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
+
+  sp           = _ncm_function_sample_point_new_old (x, y);
+  fss->samples = g_list_insert_sorted (fss->samples, sp, _ncm_function_sample_point_cmp);
+
+  /* Update x_min and x_max */
+  fss->x_min = MIN (fss->x_min, x);
+  fss->x_max = MAX (fss->x_max, x);
+
+  /* Update absmaxF for each component */
+  for (i = 0; i < fss->len; i++)
+  {
+    const gdouble abs_yi = fabs (ncm_vector_get (y, i));
+    gdouble current_max  = g_array_index (fss->absmaxF, gdouble, i);
+
+    if (abs_yi > current_max)
+      g_array_index (fss->absmaxF, gdouble, i) = abs_yi;
+  }
+}
+
+/**
+ * ncm_function_sample_set_add_old_func:
+ * @fss: a #NcmFunctionSampleSet
+ * @x: knot position
+ * @f: (scope call): function to evaluate at @x
+ * @user_data: user data to pass to @f
+ *
+ * Evaluates the vector-valued function @f at @x and adds the result as an old sample point.
+ * This function is useful for boundary extensions where the added point should be 
+ * considered part of the base spline rather than a refinement target.
+ * The sample is inserted in the correct position to maintain ascending x-order.
+ * The interval_ok flag for the new sample is initialized to 0.
+ * The sample is marked as an old point (new_point = FALSE).
+ *
+ */
+void
+ncm_function_sample_set_add_old_func (NcmFunctionSampleSet *fss, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data)
+{
+  NcmVector *y = ncm_vector_new (fss->len);
+
+  f (x, y, user_data);
+  ncm_function_sample_set_add_old (fss, x, y);
   ncm_vector_free (y);
 }
 
@@ -864,6 +999,52 @@ guint
 ncm_function_sample_set_get_nsamples (NcmFunctionSampleSet *fss)
 {
   return g_list_length (fss->samples);
+}
+
+/**
+ * ncm_function_sample_set_get_x_min:
+ * @fss: a #NcmFunctionSampleSet
+ *
+ * Gets the minimum x value in the sample set.
+ *
+ * Returns: the minimum x value, or GSL_POSINF if no samples exist
+ */
+gdouble
+ncm_function_sample_set_get_x_min (NcmFunctionSampleSet *fss)
+{
+  return fss->x_min;
+}
+
+/**
+ * ncm_function_sample_set_get_x_max:
+ * @fss: a #NcmFunctionSampleSet
+ *
+ * Gets the maximum x value in the sample set.
+ *
+ * Returns: the maximum x value, or GSL_NEGINF if no samples exist
+ */
+gdouble
+ncm_function_sample_set_get_x_max (NcmFunctionSampleSet *fss)
+{
+  return fss->x_max;
+}
+
+/**
+ * ncm_function_sample_set_get_absmaxF:
+ * @fss: a #NcmFunctionSampleSet
+ * @i: component index
+ *
+ * Gets the maximum absolute value observed for component @i across all samples.
+ * This is useful for determining appropriate tolerances in refinement algorithms.
+ *
+ * Returns: the maximum absolute value for component @i
+ */
+gdouble
+ncm_function_sample_set_get_absmaxF (NcmFunctionSampleSet *fss, const guint i)
+{
+  g_assert_cmpuint (i, <, fss->len);
+
+  return g_array_index (fss->absmaxF, gdouble, i);
 }
 
 /**

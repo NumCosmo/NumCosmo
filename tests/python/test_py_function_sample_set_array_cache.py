@@ -11,7 +11,6 @@
 """Tests for array cache reuse in NcmFunctionSampleSet.to_spline_vec()."""
 
 import math
-import pytest
 import numpy as np
 
 from numcosmo_py import Ncm
@@ -358,7 +357,3 @@ def test_array_cache_range_extension_percentage() -> None:
     y_right = y_right_array[0]
     y_right_expected = math.log(x_test_right)
     assert abs(y_right - y_right_expected) < 0.1
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

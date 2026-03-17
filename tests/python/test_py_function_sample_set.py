@@ -944,3 +944,250 @@ def test_function_sample_set_autoknots_challenging_function() -> None:
         assert error < threshold * 10, f"Error too large at x={x}"
 
     assert fss.all_intervals_ok(min_pass_threshold)
+
+
+def test_x_min_max_tracking_sequential(sample_set_dim2):
+    """Test x_min and x_max tracking with sequential additions."""
+    fss = sample_set_dim2
+
+    # Initially should be inf and -inf
+    assert math.isinf(fss.get_x_min()) and fss.get_x_min() > 0
+    assert math.isinf(fss.get_x_max()) and fss.get_x_max() < 0
+
+    # Add points in ascending order
+    x_values = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+    for x in x_values:
+        y = Ncm.Vector.new_array([x, x**2])
+        fss.add(x, y)
+
+    assert abs(fss.get_x_min() - 0.0) < 1e-10
+    assert abs(fss.get_x_max() - 5.0) < 1e-10
+
+
+def test_x_min_max_tracking_reverse(sample_set_dim2):
+    """Test x_min and x_max tracking with reverse order additions."""
+    fss = sample_set_dim2
+
+    # Add points in descending order
+    x_values = [5.0, 4.0, 3.0, 2.0, 1.0, 0.0]
+    for x in x_values:
+        y = Ncm.Vector.new_array([x, x**2])
+        fss.add(x, y)
+
+    assert abs(fss.get_x_min() - 0.0) < 1e-10
+    assert abs(fss.get_x_max() - 5.0) < 1e-10
+
+
+def test_x_min_max_tracking_random_order(sample_set_dim2):
+    """Test x_min and x_max tracking with random order additions."""
+    fss = sample_set_dim2
+
+    # Add points in non-sequential order
+    x_values = [2.5, 0.5, 4.5, 1.5, 3.5, 5.5]
+    for x in x_values:
+        y = Ncm.Vector.new_array([x, x**2])
+        fss.add(x, y)
+
+    assert abs(fss.get_x_min() - 0.5) < 1e-10
+    assert abs(fss.get_x_max() - 5.5) < 1e-10
+
+
+def test_x_min_max_tracking_negative_values(sample_set_dim2):
+    """Test x_min and x_max tracking with negative x values."""
+    fss = sample_set_dim2
+
+    # Add points with negative values
+    x_values = [-3.0, -1.0, 0.0, 1.0, 2.0, 3.0]
+    for x in x_values:
+        y = Ncm.Vector.new_array([x, x**2])
+        fss.add(x, y)
+
+    assert abs(fss.get_x_min() - (-3.0)) < 1e-10
+    assert abs(fss.get_x_max() - 3.0) < 1e-10
+
+
+def test_x_min_max_tracking_iterator_insertions(sample_set_dim2):
+    """Test x_min and x_max tracking with iterator insertions."""
+    fss = sample_set_dim2
+
+    # Start with some initial points
+    initial_x = [0.0, 2.0, 4.0, 6.0, 8.0, 10.0]
+    for x in initial_x:
+        y = Ncm.Vector.new_array([x, x**2])
+        fss.add(x, y)
+
+    # Insert points before minimum
+    it = fss.iter_begin()
+    y_neg = Ncm.Vector.new_array([-2.0, 4.0])
+    fss.iter_insert_before(it, -2.0, y_neg)
+
+    # Insert points after maximum
+    it = fss.iter_end()
+    y_large = Ncm.Vector.new_array([12.0, 144.0])
+    fss.iter_insert_after(it, 12.0, y_large)
+
+    assert abs(fss.get_x_min() - (-2.0)) < 1e-10
+    assert abs(fss.get_x_max() - 12.0) < 1e-10
+
+
+def test_absmaxF_tracking_dim2(sample_set_dim2):
+    """Test absmaxF tracking for 2D output."""
+    fss = sample_set_dim2
+
+    # Initially should be zero
+    assert abs(fss.get_absmaxF(0) - 0.0) < 1e-10
+    assert abs(fss.get_absmaxF(1) - 0.0) < 1e-10
+
+    # Add points with various values
+    x_values = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+    y0_values = [1.0, -3.0, 2.0, -1.5, 0.5, -2.5]
+    y1_values = [0.5, 1.5, -4.0, 2.5, -1.0, 3.5]
+
+    for x, y0, y1 in zip(x_values, y0_values, y1_values):
+        y = Ncm.Vector.new_array([y0, y1])
+        fss.add(x, y)
+
+    # Component 0: max |y0| should be 3.0 (from -3.0)
+    # Component 1: max |y1| should be 4.0 (from -4.0)
+    assert abs(fss.get_absmaxF(0) - 3.0) < 1e-10
+    assert abs(fss.get_absmaxF(1) - 4.0) < 1e-10
+
+
+def test_absmaxF_tracking_dim3(sample_set_dim3):
+    """Test absmaxF tracking for 3D output."""
+    fss = sample_set_dim3
+
+    # Add points with known max absolute values
+    x_values = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+    y_data = [
+        [1.0, 2.0, 3.0],
+        [-5.0, 1.5, 2.5],
+        [2.0, -6.0, 1.0],
+        [1.5, 2.5, -7.0],
+        [0.5, 1.0, 2.0],
+        [-3.0, -4.0, 5.0],
+    ]
+
+    for x, y_vals in zip(x_values, y_data):
+        y = Ncm.Vector.new_array(y_vals)
+        fss.add(x, y)
+
+    # Component 0: max |y0| should be 5.0
+    # Component 1: max |y1| should be 6.0
+    # Component 2: max |y2| should be 7.0
+    assert abs(fss.get_absmaxF(0) - 5.0) < 1e-10
+    assert abs(fss.get_absmaxF(1) - 6.0) < 1e-10
+    assert abs(fss.get_absmaxF(2) - 7.0) < 1e-10
+
+
+def test_absmaxF_tracking_all_positive(sample_set_dim2):
+    """Test absmaxF tracking with all positive values."""
+    fss = sample_set_dim2
+
+    x_values = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+    y0_values = [1.0, 3.0, 2.0, 1.5, 0.5, 2.5]
+    y1_values = [0.5, 1.5, 4.0, 2.5, 1.0, 3.5]
+
+    for x, y0, y1 in zip(x_values, y0_values, y1_values):
+        y = Ncm.Vector.new_array([y0, y1])
+        fss.add(x, y)
+
+    assert abs(fss.get_absmaxF(0) - 3.0) < 1e-10
+    assert abs(fss.get_absmaxF(1) - 4.0) < 1e-10
+
+
+def test_absmaxF_tracking_all_negative(sample_set_dim2):
+    """Test absmaxF tracking with all negative values."""
+    fss = sample_set_dim2
+
+    x_values = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+    y0_values = [-1.0, -3.0, -2.0, -1.5, -0.5, -2.5]
+    y1_values = [-0.5, -1.5, -4.0, -2.5, -1.0, -3.5]
+
+    for x, y0, y1 in zip(x_values, y0_values, y1_values):
+        y = Ncm.Vector.new_array([y0, y1])
+        fss.add(x, y)
+
+    assert abs(fss.get_absmaxF(0) - 3.0) < 1e-10
+    assert abs(fss.get_absmaxF(1) - 4.0) < 1e-10
+
+
+def test_absmaxF_tracking_with_iterator_insertions(sample_set_dim2):
+    """Test absmaxF tracking with iterator insertions."""
+    fss = sample_set_dim2
+
+    # Add initial points
+    initial_x = [0.0, 2.0, 4.0, 6.0, 8.0, 10.0]
+    for x in initial_x:
+        y = Ncm.Vector.new_array([x * 0.1, x * 0.2])
+        fss.add(x, y)
+
+    # Check initial max values
+    initial_max0 = fss.get_absmaxF(0)
+    initial_max1 = fss.get_absmaxF(1)
+
+    # Insert point with larger absolute values
+    it = fss.iter_begin()
+    it.next()  # Move to second element
+    y_large = Ncm.Vector.new_array([10.0, -15.0])
+    fss.iter_insert_after(it, 1.0, y_large)
+
+    # Should update to new max values
+    assert fss.get_absmaxF(0) >= initial_max0
+    assert fss.get_absmaxF(1) >= initial_max1
+    assert abs(fss.get_absmaxF(0) - 10.0) < 1e-10
+    assert abs(fss.get_absmaxF(1) - 15.0) < 1e-10
+
+
+def test_combined_tracking_comprehensive(sample_set_dim3):
+    """Comprehensive test of all tracking features together."""
+    fss = sample_set_dim3
+
+    # Verify initial state
+    assert math.isinf(fss.get_x_min()) and fss.get_x_min() > 0
+    assert math.isinf(fss.get_x_max()) and fss.get_x_max() < 0
+    assert abs(fss.get_absmaxF(0) - 0.0) < 1e-10
+    assert abs(fss.get_absmaxF(1) - 0.0) < 1e-10
+    assert abs(fss.get_absmaxF(2) - 0.0) < 1e-10
+
+    # Add points covering a range with various y values
+    test_data = [
+        (-2.0, [1.0, -2.0, 3.0]),
+        (-1.0, [-4.0, 1.5, 2.5]),
+        (0.0, [2.0, 5.0, -6.0]),
+        (1.0, [0.5, -3.0, 1.0]),
+        (2.0, [-1.5, 2.0, 7.0]),
+        (3.0, [3.0, -1.0, -2.0]),
+    ]
+
+    for x, y_vals in test_data:
+        y = Ncm.Vector.new_array(y_vals)
+        fss.add(x, y)
+
+    # Verify x range tracking
+    assert abs(fss.get_x_min() - (-2.0)) < 1e-10
+    assert abs(fss.get_x_max() - 3.0) < 1e-10
+
+    # Verify absmaxF tracking
+    # Component 0: max is 4.0 (from -4.0)
+    # Component 1: max is 5.0 (from 5.0)
+    # Component 2: max is 7.0 (from 7.0)
+    assert abs(fss.get_absmaxF(0) - 4.0) < 1e-10
+    assert abs(fss.get_absmaxF(1) - 5.0) < 1e-10
+    assert abs(fss.get_absmaxF(2) - 7.0) < 1e-10
+
+    # Extend range with iterator insertions
+    it = fss.iter_begin()
+    y_before = Ncm.Vector.new_array([-8.0, 1.0, 2.0])
+    fss.iter_insert_before(it, -5.0, y_before)
+
+    it = fss.iter_end()
+    y_after = Ncm.Vector.new_array([2.0, -9.0, 3.0])
+    fss.iter_insert_after(it, 6.0, y_after)
+
+    # Verify updated tracking
+    assert abs(fss.get_x_min() - (-5.0)) < 1e-10
+    assert abs(fss.get_x_max() - 6.0) < 1e-10
+    assert abs(fss.get_absmaxF(0) - 8.0) < 1e-10
+    assert abs(fss.get_absmaxF(1) - 9.0) < 1e-10
+    assert abs(fss.get_absmaxF(2) - 7.0) < 1e-10
