@@ -89,9 +89,13 @@ def test_function_sample_set_add(sample_set_dim3: Ncm.FunctionSampleSet) -> None
     sample_set_dim3.add(x, y)
 
     assert sample_set_dim3.get_nsamples() == 1
-    assert sample_set_dim3.peek_x(0) == x
 
-    y_retrieved = sample_set_dim3.peek_y(0)
+    # Use iterator to access the data
+    it = sample_set_dim3.iter_begin()
+    assert it.is_valid()
+    assert it.get_x() == x
+
+    y_retrieved = it.get_y()
     assert y_retrieved.get(0) == y.get(0)
     assert y_retrieved.get(1) == y.get(1)
     assert y_retrieved.get(2) == y.get(2)
@@ -112,10 +116,13 @@ def test_function_sample_set_add_multiple(
 
     assert sample_set_dim3.get_nsamples() == len(x_values)
 
-    # Verify samples are stored in order
-    for i, expected_x in enumerate(x_values):
-        retrieved_x = sample_set_dim3.peek_x(i)
+    # Verify samples are stored in order using iterator
+    it = sample_set_dim3.iter_begin()
+    for expected_x in x_values:
+        assert it.is_valid()
+        retrieved_x = it.get_x()
         assert retrieved_x == expected_x
+        it.next()
 
 
 def test_function_sample_set_add_unordered(
@@ -132,67 +139,85 @@ def test_function_sample_set_add_unordered(
 
     assert sample_set_dim3.get_nsamples() == 5
 
-    # Verify samples are automatically sorted by x
+    # Verify samples are automatically sorted by x using iterator
     expected_ordered = [0.0, 1.0, 2.0, 5.0, 10.0]
-    for i, expected_x in enumerate(expected_ordered):
-        retrieved_x = sample_set_dim3.peek_x(i)
+    it = sample_set_dim3.iter_begin()
+    for expected_x in expected_ordered:
+        assert it.is_valid()
+        retrieved_x = it.get_x()
         assert retrieved_x == expected_x
+        it.next()
 
 
-def test_function_sample_set_peek_x(
+def test_function_sample_set_iter_get_x(
     sample_set_with_data: Ncm.FunctionSampleSet,
 ) -> None:
-    """Test peeking at x values."""
-    expected_x = [0.0, 1.0, 2.0, 5.0, 10.0]
+    """Test iterator-based access to x values."""
+    expected_x = [0.0, 1.0, 2.0, 5.0, 10.0, 15.0]
 
-    for i, exp_x in enumerate(expected_x):
-        x = sample_set_with_data.peek_x(i)
+    it = sample_set_with_data.iter_begin()
+    for exp_x in expected_x:
+        assert it.is_valid()
+        x = it.get_x()
         assert x == exp_x
+        it.next()
+    assert not it.is_valid()
 
 
-def test_function_sample_set_peek_y(
+def test_function_sample_set_iter_get_y(
     sample_set_with_data: Ncm.FunctionSampleSet,
 ) -> None:
-    """Test peeking at y vectors."""
-    x_values = [0.0, 1.0, 2.0, 5.0, 10.0]
+    """Test iterator-based access to y vectors."""
+    x_values = [0.0, 1.0, 2.0, 5.0, 10.0, 15.0]
 
-    for i, x in enumerate(x_values):
-        y = sample_set_with_data.peek_y(i)
+    it = sample_set_with_data.iter_begin()
+    for x in x_values:
+        assert it.is_valid()
+        y = it.get_y()
         assert isinstance(y, Ncm.Vector)
         assert y.len() == 3
         # Check values approximately match expected functions
         assert abs(y.get(0) - x**2) < 1e-15
         assert abs(y.get(1) - x**3) < 1e-15
         assert abs(y.get(2) - math.cos(x)) < 1e-15
+        it.next()
 
 
 def test_function_sample_set_interval_ok_flags(
     sample_set_with_data: Ncm.FunctionSampleSet,
 ) -> None:
-    """Test interval_ok flag management."""
+    """Test interval_ok flag management using iterators."""
     # Initially all should be 0
-    for i in range(sample_set_with_data.get_nsamples()):
-        assert sample_set_with_data.get_interval_ok(i) == 0
+    it = sample_set_with_data.iter_begin()
+    while it.is_valid():
+        assert it.get_interval_ok() == 0
+        it.next()
 
-    # Set some flags
-    sample_set_with_data.set_interval_ok(0, 1)
-    sample_set_with_data.set_interval_ok(2, 1)
+    # Set some flags using iterators
+    it = sample_set_with_data.iter_begin()
+    it.set_interval_ok(1)  # First sample
+    it.next()
+    it.next()  # Skip second
+    it.set_interval_ok(1)  # Third sample
 
-    assert sample_set_with_data.get_interval_ok(0) == 1
-    assert sample_set_with_data.get_interval_ok(1) == 0
-    assert sample_set_with_data.get_interval_ok(2) == 1
+    # Verify flags
+    it = sample_set_with_data.iter_begin()
+    assert it.get_interval_ok() == 1
+    it.next()
+    assert it.get_interval_ok() == 0
+    it.next()
+    assert it.get_interval_ok() == 1
 
     # Increment a flag
-    sample_set_with_data.inc_interval_ok(1)
-    assert sample_set_with_data.get_interval_ok(1) == 1
-
-    sample_set_with_data.inc_interval_ok(1)
-    assert sample_set_with_data.get_interval_ok(1) == 2
+    it.inc_interval_ok()
+    assert it.get_interval_ok() == 2
 
     # Reset all
     sample_set_with_data.reset_interval_ok()
-    for i in range(sample_set_with_data.get_nsamples()):
-        assert sample_set_with_data.get_interval_ok(i) == 0
+    it = sample_set_with_data.iter_begin()
+    while it.is_valid():
+        assert it.get_interval_ok() == 0
+        it.next()
 
 
 def test_function_sample_set_all_intervals_ok(
@@ -203,10 +228,12 @@ def test_function_sample_set_all_intervals_ok(
     assert not sample_set_with_data.all_intervals_ok(1)
     assert not sample_set_with_data.all_intervals_ok(2)
 
-    # Set all intervals (all points except last) to 2
+    # Set all intervals (all points except last) to 2 using iterators
     nsamples = sample_set_with_data.get_nsamples()
-    for i in range(nsamples - 1):  # Exclude last point
-        sample_set_with_data.set_interval_ok(i, 2)
+    it = sample_set_with_data.iter_begin()
+    for _ in range(nsamples - 1):  # Exclude last point
+        it.set_interval_ok(2)
+        it.next()
 
     # Now all intervals should pass threshold 1 and 2 (interval_ok=2 >= threshold)
     assert sample_set_with_data.all_intervals_ok(1)
@@ -216,7 +243,11 @@ def test_function_sample_set_all_intervals_ok(
     assert not sample_set_with_data.all_intervals_ok(3)
 
     # Set one interval to fail
-    sample_set_with_data.set_interval_ok(2, 1)
+    it = sample_set_with_data.iter_begin()
+    it.next()
+    it.next()  # Move to third sample
+    it.set_interval_ok(1)
+
     assert not sample_set_with_data.all_intervals_ok(2)
     assert sample_set_with_data.all_intervals_ok(0)
 
@@ -236,8 +267,10 @@ def test_function_sample_set_all_intervals_ok_convergence() -> None:
 
     # After one refinement pass where all intervals pass
     # Simulate this by setting all interval_ok flags to 1
-    for i in range(fss.get_nsamples() - 1):
-        fss.inc_interval_ok(i)
+    it = fss.iter_begin()
+    for _ in range(fss.get_nsamples() - 1):
+        it.inc_interval_ok()
+        it.next()
 
     # Now should pass threshold 0 and 1 (interval_ok=1 >= threshold)
     assert fss.all_intervals_ok(0)
@@ -246,17 +279,19 @@ def test_function_sample_set_all_intervals_ok_convergence() -> None:
     assert not fss.all_intervals_ok(2)
 
     # After another pass (interval_ok becomes 2)
-    for i in range(fss.get_nsamples() - 1):
-        fss.inc_interval_ok(i)
+    it = fss.iter_begin()
+    for _ in range(fss.get_nsamples() - 1):
+        it.inc_interval_ok()
+        it.next()
 
     # Now should pass threshold 2 (interval_ok=2 >= 2)
     assert fss.all_intervals_ok(2)
 
 
-def test_function_sample_set_insert_before(
+def test_function_sample_set_iter_insert_before(
     sample_set_dim3: Ncm.FunctionSampleSet,
 ) -> None:
-    """Test inserting samples before a specific index."""
+    """Test inserting samples before an iterator position."""
     # Add initial samples
     for x in [0.0, 5.0, 10.0]:
         y = Ncm.Vector.new(3)
@@ -265,22 +300,31 @@ def test_function_sample_set_insert_before(
         y.set(2, math.cos(x))
         sample_set_dim3.add(x, y)
 
-    # Insert before index 1 (which is x=5.0)
+    # Insert before position 1 (which is x=5.0)
+    it = sample_set_dim3.iter_begin()
+    it.next()  # Move to second sample (x=5.0)
+
     x_new = 2.5
     y_new = Ncm.Vector.new(3)
     y_new.set(0, x_new**2)
     y_new.set(1, x_new**3)
     y_new.set(2, math.cos(x_new))
-    sample_set_dim3.insert_before(1, x_new, y_new)
+
+    new_it = sample_set_dim3.iter_insert_before(it, x_new, y_new)
+    assert new_it.get_x() == x_new
 
     assert sample_set_dim3.get_nsamples() == 4
-    assert sample_set_dim3.peek_x(1) == x_new
+
+    # Verify order
+    it = sample_set_dim3.iter_begin()
+    it.next()  # Now at position 1, should be x_new
+    assert it.get_x() == x_new
 
 
-def test_function_sample_set_insert_after(
+def test_function_sample_set_iter_insert_after(
     sample_set_dim3: Ncm.FunctionSampleSet,
 ) -> None:
-    """Test inserting samples after a specific index."""
+    """Test inserting samples after an iterator position."""
     # Add initial samples
     for x in [0.0, 5.0, 10.0]:
         y = Ncm.Vector.new(3)
@@ -289,16 +333,24 @@ def test_function_sample_set_insert_after(
         y.set(2, math.cos(x))
         sample_set_dim3.add(x, y)
 
-    # Insert after index 0 (which is x=0.0)
+    # Insert after position 0 (which is x=0.0)
+    it = sample_set_dim3.iter_begin()
+
     x_new = 2.5
     y_new = Ncm.Vector.new(3)
     y_new.set(0, x_new**2)
     y_new.set(1, x_new**3)
     y_new.set(2, math.cos(x_new))
-    sample_set_dim3.insert_after(0, x_new, y_new)
+
+    new_it = sample_set_dim3.iter_insert_after(it, x_new, y_new)
+    assert new_it.get_x() == x_new
 
     assert sample_set_dim3.get_nsamples() == 4
-    assert sample_set_dim3.peek_x(1) == x_new
+
+    # Verify order
+    it = sample_set_dim3.iter_begin()
+    it.next()  # Now at position 1, should be x_new
+    assert it.get_x() == x_new
 
 
 def test_function_sample_set_to_spline_vec(
@@ -338,15 +390,17 @@ def test_function_sample_set_to_spline_vec_evaluation(
     base_spline = Ncm.SplineCubicNotaknot.new()
     sv = sample_set_with_data.to_spline_vec(base_spline)
 
-    # Evaluate at knot points
-    for i in range(sample_set_with_data.get_nsamples()):
-        x = sample_set_with_data.peek_x(i)
-        y_expected = sample_set_with_data.peek_y(i)
+    # Evaluate at knot points using iterator
+    it = sample_set_with_data.iter_begin()
+    while it.is_valid():
+        x = it.get_x()
+        y_expected = it.get_y()
         y_computed = sv.eval_array(x)
 
         # At knot points, spline should exactly match
         for j in range(3):
             assert abs(y_computed[j] - y_expected.get(j)) < 1e-12
+        it.next()
 
 
 def test_function_sample_set_iterative_refinement() -> None:
@@ -368,13 +422,17 @@ def test_function_sample_set_iterative_refinement() -> None:
     assert sv.get_len() == 2
 
     # Simulate refinement: add midpoint between first two samples
-    x0 = fss.peek_x(0)
-    x1 = fss.peek_x(1)
+    it = fss.iter_begin()
+    x0 = it.get_x()
+    it.next()
+    x1 = it.get_x()
+    it.prev()  # Back to first
+
     x_mid = (x0 + x1) / 2.0
     y_mid = Ncm.Vector.new(2)
     y_mid.set(0, math.sin(x_mid))
     y_mid.set(1, math.cos(x_mid))
-    fss.insert_after(0, x_mid, y_mid)
+    _ = fss.iter_insert_after(it, x_mid, y_mid)
 
     assert fss.get_nsamples() == 8
 
@@ -405,12 +463,15 @@ def test_function_sample_set_add_func() -> None:
 
     assert fss.get_nsamples() == 5
 
-    # Verify values match
-    for i, x in enumerate([0.0, 1.0, 2.0, 5.0, 10.0]):
-        y = fss.peek_y(i)
+    # Verify values match using iterator
+    it = fss.iter_begin()
+    for x in [0.0, 1.0, 2.0, 5.0, 10.0]:
+        assert it.is_valid()
+        y = it.get_y()
         assert abs(y.get(0) - x**2) < 1e-15
         assert abs(y.get(1) - x**3) < 1e-15
         assert abs(y.get(2) - math.cos(x)) < 1e-15
+        it.next()
 
 
 def test_function_sample_set_add_func_with_user_data() -> None:
@@ -431,30 +492,35 @@ def test_function_sample_set_add_func_with_user_data() -> None:
 
     assert fss.get_nsamples() == 3
 
-    # Verify scaled values
-    for i, x in enumerate([1.0, 2.0, 3.0]):
-        y = fss.peek_y(i)
+    # Verify scaled values using iterator
+    it = fss.iter_begin()
+    for x in [1.0, 2.0, 3.0]:
+        assert it.is_valid()
+        y = it.get_y()
         assert abs(y.get(0) - scale * x**2) < 1e-15
         assert abs(y.get(1) - scale * x**3) < 1e-15
+        it.next()
 
 
-def test_function_sample_set_insert_before_func() -> None:
-    """Test inserting samples before a specific index using a function pointer."""
+def test_function_sample_set_iter_insert_before_func() -> None:
+    """Test inserting samples before an iterator position using a function pointer."""
     fss = Ncm.FunctionSampleSet.new(3)
 
     # Add initial samples
     for x in [0.0, 5.0, 10.0]:
         fss.add_func(x, vector_func_callback, None)
 
-    # Insert before index 1 using function
+    # Insert before position 1 using function
+    it = fss.iter_begin()
+    it.next()  # Move to position 1
     x_new = 2.5
-    fss.insert_before_func(1, x_new, vector_func_callback, None)
+    new_it = fss.iter_insert_before_func(it, x_new, vector_func_callback, None)
 
     assert fss.get_nsamples() == 4
-    assert fss.peek_x(1) == x_new
+    assert new_it.get_x() == x_new
 
     # Verify the inserted value
-    y_new = fss.peek_y(1)
+    y_new = new_it.get_y()
     assert abs(y_new.get(0) - x_new**2) < 1e-15
     assert abs(y_new.get(1) - x_new**3) < 1e-15
     assert abs(y_new.get(2) - math.cos(x_new)) < 1e-15
@@ -468,15 +534,20 @@ def test_function_sample_set_insert_after_func() -> None:
     for x in [0.0, 5.0, 10.0]:
         fss.add_func(x, vector_func_callback, None)
 
-    # Insert after index 0 using function
+    # Insert after first element using iterator and function
     x_new = 2.5
-    fss.insert_after_func(0, x_new, vector_func_callback, None)
+    it = fss.iter_begin()
+    _ = fss.iter_insert_after_func(it, x_new, vector_func_callback, None)
 
     assert fss.get_nsamples() == 4
-    assert fss.peek_x(1) == x_new
+
+    # Check the inserted value is at the right position
+    it = fss.iter_begin()
+    it.next()  # Skip first (x=0.0)
+    assert it.get_x() == x_new
 
     # Verify the inserted value
-    y_new = fss.peek_y(1)
+    y_new = it.get_y()
     assert abs(y_new.get(0) - x_new**2) < 1e-15
     assert abs(y_new.get(1) - x_new**3) < 1e-15
     assert abs(y_new.get(2) - math.cos(x_new)) < 1e-15
@@ -503,11 +574,16 @@ def test_function_sample_set_iterative_refinement_with_func() -> None:
     sv = fss.to_spline_vec(base_spline)
     assert sv.get_len() == 2
 
-    # Simulate refinement: add midpoint using function
-    x0 = fss.peek_x(0)
-    x1 = fss.peek_x(1)
+    # Simulate refinement: add midpoint using function and iterator
+    it = fss.iter_begin()
+    x0 = it.get_x()
+    it.next()
+    x1 = it.get_x()
     x_mid = (x0 + x1) / 2.0
-    fss.insert_after_func(0, x_mid, trig_func, None)
+
+    # Insert after first element
+    it = fss.iter_begin()
+    _ = fss.iter_insert_after_func(it, x_mid, trig_func, None)
 
     assert fss.get_nsamples() == 8
 
@@ -619,14 +695,15 @@ def test_function_sample_set_refine() -> None:
     # So all NEW points should pass the test
     # The interval_ok should be incremented for the new points and their left neighbors
 
-    # Check that interval_ok counters were incremented appropriately
-    # Index 0 (x=0): left of x=1, should be incremented
+    # Check that interval_ok counters were incremented appropriately using iterator
+    # x=0: left of x=1, should be incremented
+    it = fss.iter_begin()
     assert (
-        fss.get_interval_ok(0) >= 0
+        it.get_interval_ok() >= 0
     )  # May or may not be incremented depending on implementation
-    # Index 1 (x=1): new point that passed
-    # Index 2 (x=2): left of x=3, should be incremented
-    # Index 3 (x=3): new point that passed
+    # x=1: new point that passed
+    # x=2: left of x=3, should be incremented
+    # x=3: new point that passed
 
     # Verify all points now are OLD by checking we can create spline with all points
     sv_all = fss.to_spline_vec_old(base_spline)
@@ -711,26 +788,33 @@ def test_function_sample_set_autoknots_refinement() -> None:
             print(f"Converged after {iteration} iterations with {nsamples} knots")
             break
 
-        # Find intervals that need refinement
+        # Find intervals that need refinement using iterators
         # An interval needs refinement if its interval_ok < min_pass_threshold
-        intervals_to_refine = [
-            i
-            for i in range(nsamples - 1)
-            if fss.get_interval_ok(i) < min_pass_threshold
-        ]
+        intervals_to_refine = []
+        it = fss.iter_begin()
+        idx = 0
+        while it.has_next():
+            if it.get_interval_ok() < min_pass_threshold:
+                intervals_to_refine.append((idx, it.copy()))
+            it.next()
+            idx += 1
 
         if not intervals_to_refine:
             # This shouldn't happen if all_intervals_ok returned False
             break
 
-        # Add midpoints to intervals that need refinement
-        for i in reversed(intervals_to_refine):
-            x_left = fss.peek_x(i)
-            x_right = fss.peek_x(i + 1)
+        # Add midpoints to intervals that need refinement (in reverse to preserve
+        # indices)
+        for idx, iter_left in reversed(intervals_to_refine):
+            iter_right = iter_left.copy()
+            iter_right.next()
+
+            x_left = iter_left.get_x()
+            x_right = iter_right.get_x()
             x_mid = 0.5 * (x_left + x_right)
 
-            # Insert after index i (which becomes the midpoint)
-            fss.insert_after_func(i, x_mid, trig_func, None)
+            # Insert after iterator position
+            _ = fss.iter_insert_after_func(iter_left, x_mid, trig_func, None)
 
         # Test the new points
         fss.refine(reltol, abstol, base_spline)
@@ -812,18 +896,28 @@ def test_function_sample_set_autoknots_challenging_function() -> None:
             break
 
         nsamples = fss.get_nsamples()
+        assert nsamples > 1, "Should have at least 2 samples to refine intervals"
         intervals_to_refine = []
 
-        for i in range(nsamples - 1):
-            if fss.get_interval_ok(i) < min_pass_threshold:
-                intervals_to_refine.append(i)
+        # Find intervals that need refinement using iterators
+        it = fss.iter_begin()
+        idx = 0
+        while it.has_next():
+            if it.get_interval_ok() < min_pass_threshold:
+                intervals_to_refine.append((idx, it.copy()))
+            it.next()
+            idx += 1
 
         # Add midpoints (backwards to preserve indices)
-        for i in reversed(intervals_to_refine):
-            x_left = fss.peek_x(i)
-            x_right = fss.peek_x(i + 1)
+        for idx, iter_left in reversed(intervals_to_refine):
+            iter_right = iter_left.copy()
+            iter_right.next()
+
+            x_left = iter_left.get_x()
+            x_right = iter_right.get_x()
             x_mid = 0.5 * (x_left + x_right)
-            fss.insert_after_func(i, x_mid, challenging_func, None)
+
+            _ = fss.iter_insert_after_func(iter_left, x_mid, challenging_func, None)
 
         fss.refine(reltol, abstol, base_spline)
 
