@@ -89,7 +89,7 @@ guint ncm_function_sample_set_get_len (NcmFunctionSampleSet *fss);
 guint ncm_function_sample_set_get_nsamples (NcmFunctionSampleSet *fss);
 gdouble ncm_function_sample_set_get_x_min (NcmFunctionSampleSet *fss);
 gdouble ncm_function_sample_set_get_x_max (NcmFunctionSampleSet *fss);
-gdouble ncm_function_sample_set_get_absmaxF (NcmFunctionSampleSet *fss, const guint i);
+gdouble ncm_function_sample_set_get_absmaxF (NcmFunctionSampleSet *fss, const guint i, gdouble *x);
 
 /* Container-level operations */
 void ncm_function_sample_set_reset_interval_ok (NcmFunctionSampleSet *fss);
@@ -102,6 +102,14 @@ NcmSplineVec *ncm_function_sample_set_to_spline_vec_old (NcmFunctionSampleSet *f
 
 /* Refinement */
 void ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol, const gdouble abstol, NcmSpline *base_spline);
+void ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
+                                                NcmFunctionSampleSetFunc f,
+                                                const gdouble            reltol,
+                                                const gdouble            abstol,
+                                                const guint              max_iter,
+                                                const gint               min_pass_threshold,
+                                                NcmSpline                *base_spline,
+                                                gpointer                 user_data);
 
 /* Debug */
 void ncm_function_sample_set_log_vals (NcmFunctionSampleSet *fss);
@@ -111,9 +119,9 @@ void ncm_function_sample_set_log_vals (NcmFunctionSampleSet *fss);
  * ============================================================================ */
 
 /* Iterator creation */
-NcmFunctionSampleSetIter *ncm_function_sample_set_iter_begin (NcmFunctionSampleSet *fss);
-NcmFunctionSampleSetIter *ncm_function_sample_set_iter_end (NcmFunctionSampleSet *fss);
-NcmFunctionSampleSetIter *ncm_function_sample_set_iter_copy (NcmFunctionSampleSetIter *iter);
+void ncm_function_sample_set_iter_begin (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter **iter_out);
+void ncm_function_sample_set_iter_end (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter **iter_out);
+void ncm_function_sample_set_iter_copy (NcmFunctionSampleSetIter *iter, NcmFunctionSampleSetIter **iter_out);
 void ncm_function_sample_set_iter_free (NcmFunctionSampleSetIter *iter);
 
 /* Iterator state checks */
@@ -137,10 +145,10 @@ void ncm_function_sample_set_iter_inc_interval_ok (NcmFunctionSampleSetIter *ite
 void ncm_function_sample_set_iter_set_new_point (NcmFunctionSampleSetIter *iter, const gboolean new_point);
 
 /* Iterator-based insertion */
-NcmFunctionSampleSetIter *ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmVector *y);
-NcmFunctionSampleSetIter *ncm_function_sample_set_iter_insert_after_func (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data);
-NcmFunctionSampleSetIter *ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmVector *y);
-NcmFunctionSampleSetIter *ncm_function_sample_set_iter_insert_before_func (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data);
+void ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmVector *y, NcmFunctionSampleSetIter **iter_out);
+void ncm_function_sample_set_iter_insert_after_func (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data, NcmFunctionSampleSetIter **iter_out);
+void ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmVector *y, NcmFunctionSampleSetIter **iter_out);
+void ncm_function_sample_set_iter_insert_before_func (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data, NcmFunctionSampleSetIter **iter_out);
 
 /* Iterator helpers for interval operations */
 gboolean ncm_function_sample_set_iter_next_pair (NcmFunctionSampleSetIter *iter, NcmFunctionSampleSetIter *next_iter);

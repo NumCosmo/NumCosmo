@@ -48,8 +48,10 @@
  * efficient. Example usage:
  *
  * |[<!-- language="C" -->
- * // Create iterator and traverse all samples
- * NcmFunctionSampleSetIter *iter = ncm_function_sample_set_iter_begin (fss);
+ * // Create iterator and traverse all samples (stack-allocated - no free needed)
+ * NcmFunctionSampleSetIter iter_s;
+ * NcmFunctionSampleSetIter *iter = &iter_s;
+ * ncm_function_sample_set_iter_begin (fss, &iter);
  * while (ncm_function_sample_set_iter_is_valid (iter))
  * {
  *   gdouble x = ncm_function_sample_set_iter_get_x (iter);
@@ -57,25 +59,25 @@
  *   // Process sample...
  *   ncm_function_sample_set_iter_next (iter);
  * }
- * ncm_function_sample_set_iter_free (iter);
  *
- * // Iterate over intervals using iter_next_pair
- * NcmFunctionSampleSetIter *it = ncm_function_sample_set_iter_begin (fss);
- * NcmFunctionSampleSetIter *next_it = ncm_function_sample_set_iter_copy (it);
+ * // Iterate over intervals using iter_next_pair (stack-allocated iterators)
+ * NcmFunctionSampleSetIter it_s, next_it_s;
+ * NcmFunctionSampleSetIter *it = &it_s;
+ * NcmFunctionSampleSetIter *next_it = &next_it_s;
+ * ncm_function_sample_set_iter_begin (fss, &it);
+ * ncm_function_sample_set_iter_copy (it, &next_it);
  * while (ncm_function_sample_set_iter_next_pair (it, next_it))
  * {
  *   if (ncm_function_sample_set_iter_get_interval_ok (it) < threshold)
  *   {
  *     gdouble x_mid = 0.5 * (ncm_function_sample_set_iter_get_x (it) +
  *                            ncm_function_sample_set_iter_get_x (next_it));
- *     NcmFunctionSampleSetIter *new_it =
- *       ncm_function_sample_set_iter_insert_after_func (fss, it, x_mid, func, NULL);
- *     ncm_function_sample_set_iter_free (new_it);
+ *     NcmFunctionSampleSetIter new_it_s;
+ *     NcmFunctionSampleSetIter *new_it = &new_it_s;
+ *     ncm_function_sample_set_iter_insert_after_func (fss, it, x_mid, func, NULL, &new_it);
  *   }
  *   ncm_function_sample_set_iter_next (it);
  * }
- * ncm_function_sample_set_iter_free (it);
- * ncm_function_sample_set_iter_free (next_it);
  * ]|
  *
  * # Memory Management and Performance
@@ -127,7 +129,8 @@ struct _NcmFunctionSampleSet
   GList *samples;
   GArray *x_array_cache;
   GPtrArray *y_arrays_cache;
-  GArray *absmaxF; /* Maximum absolute value for each component */
+  GArray *absmaxF;   /* Maximum absolute value for each component */
+  GArray *absmaxF_x; /* The x position of the maximum absolute value for each component */
   gdouble x_min;
   gdouble x_max;
 };
@@ -191,6 +194,7 @@ ncm_function_sample_set_init (NcmFunctionSampleSet *fss)
   fss->x_array_cache  = NULL;
   fss->y_arrays_cache = NULL;
   fss->absmaxF        = NULL;
+  fss->absmaxF_x      = NULL;
   fss->x_min          = GSL_POSINF;
   fss->x_max          = GSL_NEGINF;
 }
@@ -206,7 +210,7 @@ _ncm_function_sample_set_dispose (GObject *object)
   g_clear_pointer (&fss->x_array_cache, g_array_unref);
   g_clear_pointer (&fss->y_arrays_cache, g_ptr_array_unref);
   g_clear_pointer (&fss->absmaxF, g_array_unref);
-
+  g_clear_pointer (&fss->absmaxF_x, g_array_unref);
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_function_sample_set_parent_class)->dispose (object);
 }
@@ -267,7 +271,10 @@ _ncm_function_sample_set_constructed (GObject *object)
   fss->x_array_cache  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 100);
   fss->y_arrays_cache = g_ptr_array_new_full (fss->len, (GDestroyNotify) g_array_unref);
   fss->absmaxF        = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), fss->len);
+  fss->absmaxF_x      = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), fss->len);
+
   g_array_set_size (fss->absmaxF, fss->len);
+  g_array_set_size (fss->absmaxF_x, fss->len);
 
   /* Initialize absmaxF to 0.0 for all components */
   for (i = 0; i < fss->len; i++)
@@ -275,7 +282,8 @@ _ncm_function_sample_set_constructed (GObject *object)
     GArray *y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 100);
 
     g_ptr_array_add (fss->y_arrays_cache, y_array);
-    g_array_index (fss->absmaxF, gdouble, i) = 0.0;
+    g_array_index (fss->absmaxF, gdouble, i)   = 0.0;
+    g_array_index (fss->absmaxF_x, gdouble, i) = GSL_NAN;
   }
 }
 
@@ -391,66 +399,83 @@ G_DEFINE_BOXED_TYPE (NcmFunctionSampleSetIter, ncm_function_sample_set_iter,
 /**
  * ncm_function_sample_set_iter_begin:
  * @fss: a #NcmFunctionSampleSet
+ * @iter_out: (out callee-allocates): iterator set to the first sample; if *@iter_out
+ *   is %NULL a new iterator is heap-allocated, otherwise the existing memory is reused
  *
- * Creates an iterator pointing to the first sample in @fss.
+ * Positions an iterator at the first sample in @fss.
  * If @fss is empty, the iterator will be invalid.
- * The returned iterator must be freed with ncm_function_sample_set_iter_free().
+ * When @iter_out points to a %NULL pointer the callee allocates a new iterator
+ * that must be freed with ncm_function_sample_set_iter_free().
+ * When @iter_out points to an already-allocated iterator (e.g. a stack variable)
+ * no allocation occurs and no free is required.
  *
- * Returns: (transfer full): a new iterator to the beginning
  */
-NcmFunctionSampleSetIter *
-ncm_function_sample_set_iter_begin (NcmFunctionSampleSet * fss)
+void
+ncm_function_sample_set_iter_begin (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter **iter_out)
 {
-  NcmFunctionSampleSetIter *iter = g_slice_new (NcmFunctionSampleSetIter);
+  if (*iter_out == NULL)
+    *iter_out = g_slice_new (NcmFunctionSampleSetIter);
 
-  iter->node  = fss->samples;
-  iter->owner = fss;
-
-  return iter;
+  (*iter_out)->node  = fss->samples;
+  (*iter_out)->owner = fss;
 }
 
 /**
  * ncm_function_sample_set_iter_end:
  * @fss: a #NcmFunctionSampleSet
+ * @iter_out: (out callee-allocates): iterator set to the last sample; if *@iter_out
+ *   is %NULL a new iterator is heap-allocated, otherwise the existing memory is reused
  *
- * Creates an iterator pointing to the last sample in @fss.
+ * Positions an iterator at the last sample in @fss.
  * If @fss is empty, the iterator will be invalid.
- * The returned iterator must be freed with ncm_function_sample_set_iter_free().
+ * When @iter_out points to a %NULL pointer the callee allocates a new iterator
+ * that must be freed with ncm_function_sample_set_iter_free().
+ * When @iter_out points to an already-allocated iterator (e.g. a stack variable)
+ * no allocation occurs and no free is required.
  *
- * Returns: (transfer full): a new iterator to the end
  */
-NcmFunctionSampleSetIter *
-ncm_function_sample_set_iter_end (NcmFunctionSampleSet *fss)
+void
+ncm_function_sample_set_iter_end (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter **iter_out)
 {
-  NcmFunctionSampleSetIter *iter = g_slice_new (NcmFunctionSampleSetIter);
+  if (*iter_out == NULL)
+    *iter_out = g_slice_new (NcmFunctionSampleSetIter);
 
-  iter->node  = g_list_last (fss->samples);
-  iter->owner = fss;
-
-  return iter;
+  (*iter_out)->node  = g_list_last (fss->samples);
+  (*iter_out)->owner = fss;
 }
 
 /**
  * ncm_function_sample_set_iter_copy:
  * @iter: a #NcmFunctionSampleSetIter
+ * @iter_out: (out callee-allocates): copy of @iter pointing to the same position;
+ *   if *@iter_out is %NULL a new iterator is heap-allocated, otherwise the
+ *   existing memory is reused
  *
- * Creates a copy of @iter pointing to the same position.
- * The returned iterator must be freed with ncm_function_sample_set_iter_free().
+ * Copies the position of @iter into @iter_out.
+ * When @iter_out points to a %NULL pointer the callee allocates a new iterator
+ * that must be freed with ncm_function_sample_set_iter_free().
+ * When @iter_out points to an already-allocated iterator (e.g. a stack variable)
+ * no allocation occurs and no free is required.
  *
- * Returns: (transfer full): a copy of the iterator
  */
-NcmFunctionSampleSetIter *
-ncm_function_sample_set_iter_copy (NcmFunctionSampleSetIter *iter)
+void
+ncm_function_sample_set_iter_copy (NcmFunctionSampleSetIter *iter, NcmFunctionSampleSetIter **iter_out)
 {
-  return _ncm_function_sample_set_iter_copy (iter);
+  if (*iter_out == NULL)
+    *iter_out = g_slice_new (NcmFunctionSampleSetIter);
+
+  **iter_out = *iter;
 }
 
 /**
  * ncm_function_sample_set_iter_free:
  * @iter: a #NcmFunctionSampleSetIter
  *
- * Frees an iterator created with ncm_function_sample_set_iter_begin(),
- * ncm_function_sample_set_iter_end(), or ncm_function_sample_set_iter_copy().
+ * Frees a heap-allocated iterator. Only call this for iterators allocated by the
+ * callee (i.e. when a %NULL pointer was passed as the @iter_out argument to
+ * ncm_function_sample_set_iter_begin(), ncm_function_sample_set_iter_end(),
+ * ncm_function_sample_set_iter_copy(), or the insert functions). Stack-allocated
+ * iterators must not be freed with this function.
  *
  */
 void
@@ -671,21 +696,24 @@ ncm_function_sample_set_iter_set_new_point (NcmFunctionSampleSetIter *iter, cons
  * @iter: a #NcmFunctionSampleSetIter
  * @x: knot position
  * @y: vector value at @x
+ * @iter_out: (out callee-allocates): iterator pointing to the newly inserted sample;
+ *   if *@iter_out is %NULL a new iterator is heap-allocated, otherwise the
+ *   existing memory is reused
  *
- * Inserts a new sample after the position of @iter. The vector @y must have
- * dimension matching @fss:len property. The new sample's interval_ok is
- * initialized to 0 and new_point is set to TRUE.
- * The returned iterator must be freed with ncm_function_sample_set_iter_free().
+ * Inserts a new sample after the position of @iter. The vector @y must have dimension
+ * matching @fss:len property. The new sample's interval_ok is initialized to 0 and
+ * new_point is set to TRUE. When @iter_out points to a %NULL pointer the callee
+ * allocates a new iterator that must be freed with
+ * ncm_function_sample_set_iter_free(). When @iter_out points to an already-allocated
+ * iterator (e.g. a stack variable) no allocation occurs and no free is required.
  *
  * Warning: This does not check if the insertion maintains x-order. Use with care.
  *
- * Returns: (transfer full): an iterator pointing to the newly inserted sample
  */
-NcmFunctionSampleSetIter *
-ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmVector *y)
+void
+ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmVector *y, NcmFunctionSampleSetIter **iter_out)
 {
   NcmFunctionSamplePoint *sp;
-  NcmFunctionSampleSetIter *new_iter = g_slice_new (NcmFunctionSampleSetIter);
   guint i;
 
   g_assert (iter->node != NULL);
@@ -695,8 +723,11 @@ ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctio
 
   fss->samples = g_list_insert_before (fss->samples, iter->node->next, sp);
 
-  new_iter->node  = iter->node->next;
-  new_iter->owner = fss;
+  if (*iter_out == NULL)
+    *iter_out = g_slice_new (NcmFunctionSampleSetIter);
+
+  (*iter_out)->node  = iter->node->next;
+  (*iter_out)->owner = fss;
 
   /* Update x_min and x_max tracking */
   fss->x_min = MIN (fss->x_min, x);
@@ -709,10 +740,12 @@ ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctio
     gdouble abs_y_i    = fabs (y_i);
     gdouble *absmaxF_i = &g_array_index (fss->absmaxF, gdouble, i);
 
-    *absmaxF_i = MAX (*absmaxF_i, abs_y_i);
+    if (abs_y_i > *absmaxF_i)
+    {
+      *absmaxF_i                                 = abs_y_i;
+      g_array_index (fss->absmaxF_x, gdouble, i) = x;
+    }
   }
-
-  return new_iter;
 }
 
 /**
@@ -722,26 +755,28 @@ ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctio
  * @x: knot position
  * @f: (scope call): function to evaluate at @x
  * @user_data: user data to pass to @f
+ * @iter_out: (out callee-allocates): iterator pointing to the newly inserted sample;
+ *   if *@iter_out is %NULL a new iterator is heap-allocated, otherwise the
+ *   existing memory is reused
  *
- * Evaluates @f at @x and inserts the result as a new sample after @iter.
- * The new sample's interval_ok is initialized to 0 and new_point is set to TRUE.
- * The returned iterator must be freed with ncm_function_sample_set_iter_free().
+ * Evaluates @f at @x and inserts the result as a new sample after @iter. The new
+ * sample's interval_ok is initialized to 0 and new_point is set to TRUE. When
+ * @iter_out points to a %NULL pointer the callee allocates a new iterator that must be
+ * freed with ncm_function_sample_set_iter_free(). When @iter_out points to an
+ * already-allocated iterator (e.g. a stack variable) no allocation occurs and no free
+ * is required.
  *
  * Warning: This does not check if the insertion maintains x-order. Use with care.
  *
- * Returns: (transfer full): an iterator pointing to the newly inserted sample
  */
-NcmFunctionSampleSetIter *
-ncm_function_sample_set_iter_insert_after_func (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data)
+void
+ncm_function_sample_set_iter_insert_after_func (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data, NcmFunctionSampleSetIter **iter_out)
 {
   NcmVector *y = ncm_vector_new (fss->len);
-  NcmFunctionSampleSetIter *new_iter;
 
   f (x, y, user_data);
-  new_iter = ncm_function_sample_set_iter_insert_after (fss, iter, x, y);
+  ncm_function_sample_set_iter_insert_after (fss, iter, x, y, iter_out);
   ncm_vector_free (y);
-
-  return new_iter;
 }
 
 /**
@@ -750,21 +785,24 @@ ncm_function_sample_set_iter_insert_after_func (NcmFunctionSampleSet *fss, NcmFu
  * @iter: a #NcmFunctionSampleSetIter
  * @x: knot position
  * @y: vector value at @x
+ * @iter_out: (out callee-allocates): iterator pointing to the newly inserted sample;
+ *   if *@iter_out is %NULL a new iterator is heap-allocated, otherwise the
+ *   existing memory is reused
  *
- * Inserts a new sample before the position of @iter. The vector @y must have
- * dimension matching @fss:len property. The new sample's interval_ok is
- * initialized to 0 and new_point is set to TRUE.
- * The returned iterator must be freed with ncm_function_sample_set_iter_free().
+ * Inserts a new sample before the position of @iter. The vector @y must have dimension
+ * matching @fss:len property. The new sample's interval_ok is initialized to 0 and
+ * new_point is set to TRUE. When @iter_out points to a %NULL pointer the callee
+ * allocates a new iterator that must be freed with
+ * ncm_function_sample_set_iter_free(). When @iter_out points to an already-allocated
+ * iterator (e.g. a stack variable) no allocation occurs and no free is required.
  *
  * Warning: This does not check if the insertion maintains x-order. Use with care.
  *
- * Returns: (transfer full): an iterator pointing to the newly inserted sample
  */
-NcmFunctionSampleSetIter *
-ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmVector *y)
+void
+ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmVector *y, NcmFunctionSampleSetIter **iter_out)
 {
   NcmFunctionSamplePoint *sp;
-  NcmFunctionSampleSetIter *new_iter = g_slice_new (NcmFunctionSampleSetIter);
   guint i;
 
   g_assert (iter->node != NULL);
@@ -774,8 +812,11 @@ ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFuncti
 
   fss->samples = g_list_insert_before (fss->samples, iter->node, sp);
 
-  new_iter->node  = iter->node->prev;
-  new_iter->owner = fss;
+  if (*iter_out == NULL)
+    *iter_out = g_slice_new (NcmFunctionSampleSetIter);
+
+  (*iter_out)->node  = iter->node->prev;
+  (*iter_out)->owner = fss;
 
   /* Update x_min and x_max tracking */
   fss->x_min = MIN (fss->x_min, x);
@@ -788,10 +829,12 @@ ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFuncti
     gdouble abs_y_i    = fabs (y_i);
     gdouble *absmaxF_i = &g_array_index (fss->absmaxF, gdouble, i);
 
-    *absmaxF_i = MAX (*absmaxF_i, abs_y_i);
+    if (abs_y_i > *absmaxF_i)
+    {
+      *absmaxF_i                                 = abs_y_i;
+      g_array_index (fss->absmaxF_x, gdouble, i) = x;
+    }
   }
-
-  return new_iter;
 }
 
 /**
@@ -801,26 +844,28 @@ ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFuncti
  * @x: knot position
  * @f: (scope call): function to evaluate at @x
  * @user_data: user data to pass to @f
+ * @iter_out: (out callee-allocates): iterator pointing to the newly inserted sample;
+ *   if *@iter_out is %NULL a new iterator is heap-allocated, otherwise the
+ *   existing memory is reused
  *
- * Evaluates @f at @x and inserts the result as a new sample before @iter.
- * The new sample's interval_ok is initialized to 0 and new_point is set to TRUE.
- * The returned iterator must be freed with ncm_function_sample_set_iter_free().
+ * Evaluates @f at @x and inserts the result as a new sample before @iter. The new
+ * sample's interval_ok is initialized to 0 and new_point is set to TRUE. When
+ * @iter_out points to a %NULL pointer the callee allocates a new iterator that must be
+ * freed with ncm_function_sample_set_iter_free(). When @iter_out points to an
+ * already-allocated iterator (e.g. a stack variable) no allocation occurs and no free
+ * is required.
  *
  * Warning: This does not check if the insertion maintains x-order. Use with care.
  *
- * Returns: (transfer full): an iterator pointing to the newly inserted sample
  */
-NcmFunctionSampleSetIter *
-ncm_function_sample_set_iter_insert_before_func (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data)
+void
+ncm_function_sample_set_iter_insert_before_func (NcmFunctionSampleSet *fss, NcmFunctionSampleSetIter *iter, const gdouble x, NcmFunctionSampleSetFunc f, gpointer user_data, NcmFunctionSampleSetIter **iter_out)
 {
   NcmVector *y = ncm_vector_new (fss->len);
-  NcmFunctionSampleSetIter *new_iter;
 
   f (x, y, user_data);
-  new_iter = ncm_function_sample_set_iter_insert_before (fss, iter, x, y);
+  ncm_function_sample_set_iter_insert_before (fss, iter, x, y, iter_out);
   ncm_vector_free (y);
-
-  return new_iter;
 }
 
 /**
@@ -851,11 +896,10 @@ ncm_function_sample_set_iter_next_pair (NcmFunctionSampleSetIter *iter, NcmFunct
  * @x: knot position
  * @y: vector value at @x
  *
- * Adds a new sample point to @fss with position @x and vector value @y.
- * The sample is inserted in the correct position to maintain ascending x-order.
- * The vector @y is copied and must have dimension matching the @fss:len property.
- * The interval_ok flag for the new sample is initialized to 0.
- * The sample is marked as a new point.
+ * Adds a new sample point to @fss with position @x and vector value @y. The sample is
+ * inserted in the correct position to maintain ascending x-order. The vector @y is
+ * copied and must have dimension matching the @fss:len property. The interval_ok flag
+ * for the new sample is initialized to 0. The sample is marked as a new point.
  *
  */
 void
@@ -880,7 +924,10 @@ ncm_function_sample_set_add (NcmFunctionSampleSet *fss, const gdouble x, NcmVect
     gdouble current_max  = g_array_index (fss->absmaxF, gdouble, i);
 
     if (abs_yi > current_max)
-      g_array_index (fss->absmaxF, gdouble, i) = abs_yi;
+    {
+      g_array_index (fss->absmaxF, gdouble, i)   = abs_yi;
+      g_array_index (fss->absmaxF_x, gdouble, i) = x;
+    }
   }
 }
 
@@ -891,10 +938,10 @@ ncm_function_sample_set_add (NcmFunctionSampleSet *fss, const gdouble x, NcmVect
  * @f: (scope call): function to evaluate at @x
  * @user_data: user data to pass to @f
  *
- * Evaluates the vector-valued function @f at @x and adds the result as a new sample point.
- * The sample is inserted in the correct position to maintain ascending x-order.
- * The interval_ok flag for the new sample is initialized to 0.
- * The sample is marked as a new point.
+ * Evaluates the vector-valued function @f at @x and adds the result as a new sample
+ * point. The sample is inserted in the correct position to maintain ascending x-order.
+ * The interval_ok flag for the new sample is initialized to 0. The sample is marked as
+ * a new point.
  *
  */
 void
@@ -914,12 +961,12 @@ ncm_function_sample_set_add_func (NcmFunctionSampleSet *fss, const gdouble x, Nc
  * @y: vector value at @x
  *
  * Adds a new sample point to @fss with position @x and vector value @y, marked as OLD.
- * This function is useful for boundary extensions where the added point should be 
- * considered part of the base spline rather than a refinement target.
- * The sample is inserted in the correct position to maintain ascending x-order.
- * The vector @y is copied and must have dimension matching the @fss:len property.
- * The interval_ok flag for the new sample is initialized to 0.
- * The sample is marked as an old point (new_point = FALSE).
+ * This function is useful for boundary extensions where the added point should be
+ * considered part of the base spline rather than a refinement target. The sample is
+ * inserted in the correct position to maintain ascending x-order. The vector @y is
+ * copied and must have dimension matching the @fss:len property. The interval_ok flag
+ * for the new sample is initialized to 0. The sample is marked as an old point
+ * (new_point = FALSE).
  *
  */
 void
@@ -944,7 +991,10 @@ ncm_function_sample_set_add_old (NcmFunctionSampleSet *fss, const gdouble x, Ncm
     gdouble current_max  = g_array_index (fss->absmaxF, gdouble, i);
 
     if (abs_yi > current_max)
-      g_array_index (fss->absmaxF, gdouble, i) = abs_yi;
+    {
+      g_array_index (fss->absmaxF, gdouble, i)   = abs_yi;
+      g_array_index (fss->absmaxF_x, gdouble, i) = x;
+    }
   }
 }
 
@@ -955,12 +1005,12 @@ ncm_function_sample_set_add_old (NcmFunctionSampleSet *fss, const gdouble x, Ncm
  * @f: (scope call): function to evaluate at @x
  * @user_data: user data to pass to @f
  *
- * Evaluates the vector-valued function @f at @x and adds the result as an old sample point.
- * This function is useful for boundary extensions where the added point should be 
- * considered part of the base spline rather than a refinement target.
- * The sample is inserted in the correct position to maintain ascending x-order.
- * The interval_ok flag for the new sample is initialized to 0.
- * The sample is marked as an old point (new_point = FALSE).
+ * Evaluates the vector-valued function @f at @x and adds the result as an old sample
+ * point. This function is useful for boundary extensions where the added point should
+ * be considered part of the base spline rather than a refinement target. The sample is
+ * inserted in the correct position to maintain ascending x-order. The interval_ok flag
+ * for the new sample is initialized to 0. The sample is marked as an old point
+ * (new_point = FALSE).
  *
  */
 void
@@ -1033,16 +1083,20 @@ ncm_function_sample_set_get_x_max (NcmFunctionSampleSet *fss)
  * ncm_function_sample_set_get_absmaxF:
  * @fss: a #NcmFunctionSampleSet
  * @i: component index
+ * @x: (out): x value where the maximum absolute value for component @i occurs
  *
- * Gets the maximum absolute value observed for component @i across all samples.
- * This is useful for determining appropriate tolerances in refinement algorithms.
+ * Gets the maximum absolute value observed for component @i across all samples. This
+ * is useful for determining appropriate tolerances in refinement algorithms.
  *
  * Returns: the maximum absolute value for component @i
  */
 gdouble
-ncm_function_sample_set_get_absmaxF (NcmFunctionSampleSet *fss, const guint i)
+ncm_function_sample_set_get_absmaxF (NcmFunctionSampleSet *fss, const guint i, gdouble *x)
 {
   g_assert_cmpuint (i, <, fss->len);
+
+  if (x != NULL)
+    *x = g_array_index (fss->absmaxF_x, gdouble, i);
 
   return g_array_index (fss->absmaxF, gdouble, i);
 }
@@ -1071,8 +1125,8 @@ ncm_function_sample_set_reset_interval_ok (NcmFunctionSampleSet *fss)
  * @threshold: minimum interval_ok value required
  *
  * Checks if all intervals have interval_ok >= @threshold. This is useful for
- * determining convergence in refinement algorithms - when all intervals have
- * passed the refinement test enough times.
+ * determining convergence in refinement algorithms - when all intervals have passed
+ * the refinement test enough times.
  *
  * Note: The last sample point is excluded since it doesn't define an interval.
  *
@@ -1105,9 +1159,8 @@ ncm_function_sample_set_all_intervals_ok (NcmFunctionSampleSet *fss, const gint 
  * ncm_function_sample_set_mark_all_old:
  * @fss: a #NcmFunctionSampleSet
  *
- * Marks all points in @fss as old. This is typically called after a refinement
- * pass to indicate that all current points should be used in the next spline
- * construction.
+ * Marks all points in @fss as old. This is typically called after a refinement pass to
+ * indicate that all current points should be used in the next spline construction.
  *
  */
 void
@@ -1126,14 +1179,14 @@ ncm_function_sample_set_mark_all_old (NcmFunctionSampleSet *fss)
  * @fss: a #NcmFunctionSampleSet
  * @base_spline: a #NcmSpline to use as the base spline type
  *
- * Converts the sample set to a #NcmSplineVec. This reuses cached internal arrays
- * for efficiency, which means that:
+ * Converts the sample set to a #NcmSplineVec. This reuses cached internal arrays for
+ * efficiency, which means that:
  *
  * - **The returned #NcmSplineVec is invalidated by subsequent calls** to this function
  *   or ncm_function_sample_set_to_spline_vec_old() on the same @fss object.
- * - If you need to keep multiple #NcmSplineVec objects from the same sample set,
- *   you must call ncm_spline_vec_dup() on the returned object before calling
- *   this function again.
+ * - If you need to keep multiple #NcmSplineVec objects from the same sample set, you
+ *   must call ncm_spline_vec_dup() on the returned object before calling this function
+ *   again.
  *
  * The sample set itself is not modified and can continue to be used for further
  * refinement.
@@ -1205,13 +1258,13 @@ ncm_function_sample_set_to_spline_vec (NcmFunctionSampleSet *fss, NcmSpline *bas
  *
  * - **The returned #NcmSplineVec is invalidated by subsequent calls** to this function
  *   or ncm_function_sample_set_to_spline_vec() on the same @fss object.
- * - If you need to keep multiple #NcmSplineVec objects from the same sample set,
- *   you must call ncm_spline_vec_dup() on the returned object before calling
- *   this function again.
+ * - If you need to keep multiple #NcmSplineVec objects from the same sample set, you
+ *   must call ncm_spline_vec_dup() on the returned object before calling this function
+ *   again.
  *
- * This creates arrays from the samples where new_point is FALSE. The sample set
- * is not modified. This is useful for building a spline to test against NEW points
- * during refinement.
+ * This creates arrays from the samples where new_point is FALSE. The sample set is not
+ * modified. This is useful for building a spline to test against NEW points during
+ * refinement.
  *
  * Returns: (transfer full): a new #NcmSplineVec containing the interpolated function
  */
@@ -1301,8 +1354,9 @@ ncm_function_sample_set_to_spline_vec_old (NcmFunctionSampleSet *fss, NcmSpline 
  * 4. If the test passes, increments interval_ok for both the NEW point and its left neighbor
  * 5. Marks all NEW points as OLD
  *
- * The interval_ok counter at node i indicates how many times the interval [i, i+1] has passed
- * the refinement test. After refinement, all points are marked as OLD for the next iteration.
+ * The interval_ok counter at node i indicates how many times the interval [i, i+1] has
+ * passed the refinement test. After refinement, all points are marked as OLD for the
+ * next iteration.
  *
  */
 void
@@ -1310,7 +1364,8 @@ ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol,
 {
   NcmSplineVec *sv_old;
   NcmVector *y_spline;
-  NcmFunctionSampleSetIter *iter;
+  NcmFunctionSampleSetIter iter_s;
+  NcmFunctionSampleSetIter *iter = &iter_s;
 
   /* Create spline from OLD points only */
   sv_old = ncm_function_sample_set_to_spline_vec_old (fss, base_spline);
@@ -1318,7 +1373,7 @@ ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol,
   y_spline = ncm_vector_new (fss->len);
 
   /* Test each NEW point using iterator */
-  iter = ncm_function_sample_set_iter_begin (fss);
+  ncm_function_sample_set_iter_begin (fss, &iter);
 
   while (ncm_function_sample_set_iter_is_valid (iter))
   {
@@ -1370,7 +1425,7 @@ ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol,
     ncm_function_sample_set_iter_next (iter);
   }
 
-  ncm_function_sample_set_iter_free (iter);
+  /* iter is stack-allocated; no free needed */
 
   /* Mark all points as OLD for next iteration */
   ncm_function_sample_set_mark_all_old (fss);
@@ -1380,11 +1435,89 @@ ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol,
 }
 
 /**
+ * ncm_function_sample_set_adaptive_midpoint:
+ * @fss: a #NcmFunctionSampleSet
+ * @f: (scope call): function used to evaluate new midpoints
+ * @user_data: user data passed to @f
+ * @reltol: relative tolerance for refinement test
+ * @abstol: absolute tolerance for refinement test
+ * @max_iter: maximum number of refinement iterations
+ * @min_pass_threshold: minimum interval_ok threshold to consider interval passed
+ * @base_spline: base spline used for refinement tests
+ *
+ * Performs an iterative midpoint-based adaptive refinement similar to the
+ * Python test harness. On each iteration intervals with interval_ok <
+ * @min_pass_threshold receive their midpoint inserted (evaluated via @f). After
+ * insertion, a refinement pass is performed via ncm_function_sample_set_refine(). The
+ * process stops when all intervals reach @min_pass_threshold or when @max_iter is
+ * reached.
+ */
+void
+ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
+                                           NcmFunctionSampleSetFunc f,
+                                           const gdouble            reltol,
+                                           const gdouble            abstol,
+                                           const guint              max_iter,
+                                           const gint               min_pass_threshold,
+                                           NcmSpline                *base_spline,
+                                           gpointer                 user_data)
+{
+  guint iteration;
+
+  /* The Cubic not-a-knot test requires at least 6 samples */
+  if (ncm_function_sample_set_get_nsamples (fss) < 6)
+    g_error ("Adaptive ncm_function_sample_set_adaptive_midpoint: not enough samples to refine");
+
+  for (iteration = 0; iteration < max_iter; iteration++)
+  {
+    if (ncm_function_sample_set_all_intervals_ok (fss, min_pass_threshold))
+      break;
+
+    {
+      NcmFunctionSampleSetIter it_s;
+      NcmFunctionSampleSetIter *it = &it_s;
+
+      ncm_function_sample_set_iter_begin (fss, &it);
+
+      while (ncm_function_sample_set_iter_has_next (it))
+      {
+        if (ncm_function_sample_set_iter_get_interval_ok (it) < min_pass_threshold)
+        {
+          NcmFunctionSampleSetIter iter_new_s;
+          NcmFunctionSampleSetIter iter_right = *it;
+          NcmFunctionSampleSetIter *iter_new  = &iter_new_s;
+
+          ncm_function_sample_set_iter_next (&iter_right);
+
+          {
+            gdouble x_left  = ncm_function_sample_set_iter_get_x (it);
+            gdouble x_right = ncm_function_sample_set_iter_get_x (&iter_right);
+            gdouble x_mid   = 0.5 * (x_left + x_right);
+
+            ncm_function_sample_set_iter_insert_after_func (fss, it, x_mid, f, user_data, &iter_new);
+
+            *it = *iter_new; /* Move iterator to new point for next loop */
+          }
+        }
+
+        ncm_function_sample_set_iter_next (it);
+      }
+
+      ncm_function_sample_set_refine (fss, reltol, abstol, base_spline);
+    }
+  }
+
+  if (iteration == max_iter)
+    g_message ("ncm_function_sample_set_adaptive_midpoint: Max iterations (%u) reached with %u knots",
+               max_iter, ncm_function_sample_set_get_nsamples (fss));
+}
+
+/**
  * ncm_function_sample_set_log_vals:
  * @fss: a #NcmFunctionSampleSet
  *
- * Logs all sample values in @fss for debugging purposes. This prints the
- * x position, vector components, interval_ok flag, and new_point flag for each sample.
+ * Logs all sample values in @fss for debugging purposes. This prints the x position,
+ * vector components, interval_ok flag, and new_point flag for each sample.
  *
  */
 void

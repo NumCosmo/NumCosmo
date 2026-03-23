@@ -102,6 +102,7 @@ class KernelEvaluation:
     def plot(
         self,
         ax: plt.Axes,
+        n_points: int,
         k_range: tuple[float, float] | None = None,
         color: str = "blue",
         linestyle: str = "-",
@@ -117,7 +118,7 @@ class KernelEvaluation:
         if k_range is not None:
             kmin = max(kmin, k_range[0])
             kmax = min(kmax, k_range[1])
-        k_Mpc = np.logspace(np.log10(kmin), np.log10(kmax), 1000)
+        k_Mpc = np.logspace(np.log10(kmin), np.log10(kmax), n_points)
         kernel_values = self.evaluate(k_Mpc)
         k3_2 = k_Mpc ** (3 / 2)
         ax.plot(k_Mpc, k3_2 * kernel_values, color=color, linestyle=linestyle)
@@ -576,8 +577,20 @@ class ViewKernel:
                 color = colors[idx % len(colors)]
 
                 # Plot both kernels with same color, different line styles
-                main_kernel.plot(ax1, color=color, linestyle="--", k_range=self.k_range)
-                alt_kernel.plot(ax1, color=color, linestyle="-", k_range=self.k_range)
+                main_kernel.plot(
+                    ax1,
+                    n_points=self.n_points,
+                    color=color,
+                    linestyle="--",
+                    k_range=self.k_range,
+                )
+                alt_kernel.plot(
+                    ax1,
+                    n_points=self.n_points,
+                    color=color,
+                    linestyle="-",
+                    k_range=self.k_range,
+                )
 
                 # Plot comparison
                 main_kernel.plot_comparison(
@@ -617,7 +630,13 @@ class ViewKernel:
                 main_kernel = kernel_var.main
                 color = colors[idx % len(colors)]
 
-                main_kernel.plot(ax, color=color, linestyle="-", k_range=self.k_range)
+                main_kernel.plot(
+                    ax,
+                    n_points=self.n_points,
+                    color=color,
+                    linestyle="-",
+                    k_range=self.k_range,
+                )
                 legend_entries.append(f"{main_kernel.name} ({main_kernel.method})")
 
             ax.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)

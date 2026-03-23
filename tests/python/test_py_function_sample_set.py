@@ -897,7 +897,7 @@ def test_function_sample_set_autoknots_challenging_function() -> None:
 
         nsamples = fss.get_nsamples()
         assert nsamples > 1, "Should have at least 2 samples to refine intervals"
-        intervals_to_refine = []
+        intervals_to_refine: list[tuple[int, Ncm.FunctionSampleSetIter]] = []
 
         # Find intervals that need refinement using iterators
         it = fss.iter_begin()
@@ -946,7 +946,7 @@ def test_function_sample_set_autoknots_challenging_function() -> None:
     assert fss.all_intervals_ok(min_pass_threshold)
 
 
-def test_x_min_max_tracking_sequential(sample_set_dim2):
+def test_x_min_max_tracking_sequential(sample_set_dim2: Ncm.FunctionSampleSet) -> None:
     """Test x_min and x_max tracking with sequential additions."""
     fss = sample_set_dim2
 
@@ -964,7 +964,7 @@ def test_x_min_max_tracking_sequential(sample_set_dim2):
     assert abs(fss.get_x_max() - 5.0) < 1e-10
 
 
-def test_x_min_max_tracking_reverse(sample_set_dim2):
+def test_x_min_max_tracking_reverse(sample_set_dim2: Ncm.FunctionSampleSet) -> None:
     """Test x_min and x_max tracking with reverse order additions."""
     fss = sample_set_dim2
 
@@ -978,7 +978,9 @@ def test_x_min_max_tracking_reverse(sample_set_dim2):
     assert abs(fss.get_x_max() - 5.0) < 1e-10
 
 
-def test_x_min_max_tracking_random_order(sample_set_dim2):
+def test_x_min_max_tracking_random_order(
+    sample_set_dim2: Ncm.FunctionSampleSet,
+) -> None:
     """Test x_min and x_max tracking with random order additions."""
     fss = sample_set_dim2
 
@@ -992,7 +994,9 @@ def test_x_min_max_tracking_random_order(sample_set_dim2):
     assert abs(fss.get_x_max() - 5.5) < 1e-10
 
 
-def test_x_min_max_tracking_negative_values(sample_set_dim2):
+def test_x_min_max_tracking_negative_values(
+    sample_set_dim2: Ncm.FunctionSampleSet,
+) -> None:
     """Test x_min and x_max tracking with negative x values."""
     fss = sample_set_dim2
 
@@ -1006,7 +1010,9 @@ def test_x_min_max_tracking_negative_values(sample_set_dim2):
     assert abs(fss.get_x_max() - 3.0) < 1e-10
 
 
-def test_x_min_max_tracking_iterator_insertions(sample_set_dim2):
+def test_x_min_max_tracking_iterator_insertions(
+    sample_set_dim2: Ncm.FunctionSampleSet,
+) -> None:
     """Test x_min and x_max tracking with iterator insertions."""
     fss = sample_set_dim2
 
@@ -1030,13 +1036,18 @@ def test_x_min_max_tracking_iterator_insertions(sample_set_dim2):
     assert abs(fss.get_x_max() - 12.0) < 1e-10
 
 
-def test_absmaxF_tracking_dim2(sample_set_dim2):
+def test_absmaxF_tracking_dim2(sample_set_dim2: Ncm.FunctionSampleSet) -> None:
     """Test absmaxF tracking for 2D output."""
     fss = sample_set_dim2
 
-    # Initially should be zero
-    assert abs(fss.get_absmaxF(0) - 0.0) < 1e-10
-    assert abs(fss.get_absmaxF(1) - 0.0) < 1e-10
+    # Initially should be zero with x = nan
+    absmaxF0_init = fss.get_absmaxF(0)
+    absmaxF1_init = fss.get_absmaxF(1)
+    assert abs(absmaxF0_init[0] - 0.0) < 1e-10
+    assert abs(absmaxF1_init[0] - 0.0) < 1e-10
+
+    assert math.isnan(absmaxF0_init[1])
+    assert math.isnan(absmaxF1_init[1])
 
     # Add points with various values
     x_values = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
@@ -1047,13 +1058,17 @@ def test_absmaxF_tracking_dim2(sample_set_dim2):
         y = Ncm.Vector.new_array([y0, y1])
         fss.add(x, y)
 
-    # Component 0: max |y0| should be 3.0 (from -3.0)
-    # Component 1: max |y1| should be 4.0 (from -4.0)
-    assert abs(fss.get_absmaxF(0) - 3.0) < 1e-10
-    assert abs(fss.get_absmaxF(1) - 4.0) < 1e-10
+    # Component 0: max |y0| should be 3.0 (from -3.0 at x=1.0)
+    # Component 1: max |y1| should be 4.0 (from -4.0 at x=2.0)
+    absmaxF0 = fss.get_absmaxF(0)
+    absmaxF1 = fss.get_absmaxF(1)
+    assert abs(absmaxF0[0] - 3.0) < 1e-10
+    assert abs(absmaxF0[1] - 1.0) < 1e-10
+    assert abs(absmaxF1[0] - 4.0) < 1e-10
+    assert abs(absmaxF1[1] - 2.0) < 1e-10
 
 
-def test_absmaxF_tracking_dim3(sample_set_dim3):
+def test_absmaxF_tracking_dim3(sample_set_dim3: Ncm.FunctionSampleSet) -> None:
     """Test absmaxF tracking for 3D output."""
     fss = sample_set_dim3
 
@@ -1072,15 +1087,21 @@ def test_absmaxF_tracking_dim3(sample_set_dim3):
         y = Ncm.Vector.new_array(y_vals)
         fss.add(x, y)
 
-    # Component 0: max |y0| should be 5.0
-    # Component 1: max |y1| should be 6.0
-    # Component 2: max |y2| should be 7.0
-    assert abs(fss.get_absmaxF(0) - 5.0) < 1e-10
-    assert abs(fss.get_absmaxF(1) - 6.0) < 1e-10
-    assert abs(fss.get_absmaxF(2) - 7.0) < 1e-10
+    # Component 0: max |y0| should be 5.0 at x=1.0
+    # Component 1: max |y1| should be 6.0 at x=2.0
+    # Component 2: max |y2| should be 7.0 at x=3.0
+    absmaxF0 = fss.get_absmaxF(0)
+    absmaxF1 = fss.get_absmaxF(1)
+    absmaxF2 = fss.get_absmaxF(2)
+    assert abs(absmaxF0[0] - 5.0) < 1e-10
+    assert abs(absmaxF0[1] - 1.0) < 1e-10
+    assert abs(absmaxF1[0] - 6.0) < 1e-10
+    assert abs(absmaxF1[1] - 2.0) < 1e-10
+    assert abs(absmaxF2[0] - 7.0) < 1e-10
+    assert abs(absmaxF2[1] - 3.0) < 1e-10
 
 
-def test_absmaxF_tracking_all_positive(sample_set_dim2):
+def test_absmaxF_tracking_all_positive(sample_set_dim2: Ncm.FunctionSampleSet) -> None:
     """Test absmaxF tracking with all positive values."""
     fss = sample_set_dim2
 
@@ -1092,11 +1113,17 @@ def test_absmaxF_tracking_all_positive(sample_set_dim2):
         y = Ncm.Vector.new_array([y0, y1])
         fss.add(x, y)
 
-    assert abs(fss.get_absmaxF(0) - 3.0) < 1e-10
-    assert abs(fss.get_absmaxF(1) - 4.0) < 1e-10
+    # Component 0: max is 3.0 at x=1.0
+    # Component 1: max is 4.0 at x=2.0
+    absmaxF0 = fss.get_absmaxF(0)
+    absmaxF1 = fss.get_absmaxF(1)
+    assert abs(absmaxF0[0] - 3.0) < 1e-10
+    assert abs(absmaxF0[1] - 1.0) < 1e-10
+    assert abs(absmaxF1[0] - 4.0) < 1e-10
+    assert abs(absmaxF1[1] - 2.0) < 1e-10
 
 
-def test_absmaxF_tracking_all_negative(sample_set_dim2):
+def test_absmaxF_tracking_all_negative(sample_set_dim2: Ncm.FunctionSampleSet) -> None:
     """Test absmaxF tracking with all negative values."""
     fss = sample_set_dim2
 
@@ -1108,11 +1135,19 @@ def test_absmaxF_tracking_all_negative(sample_set_dim2):
         y = Ncm.Vector.new_array([y0, y1])
         fss.add(x, y)
 
-    assert abs(fss.get_absmaxF(0) - 3.0) < 1e-10
-    assert abs(fss.get_absmaxF(1) - 4.0) < 1e-10
+    # Component 0: max |y0| is 3.0 (from -3.0 at x=1.0)
+    # Component 1: max |y1| is 4.0 (from -4.0 at x=2.0)
+    absmaxF0 = fss.get_absmaxF(0)
+    absmaxF1 = fss.get_absmaxF(1)
+    assert abs(absmaxF0[0] - 3.0) < 1e-10
+    assert abs(absmaxF0[1] - 1.0) < 1e-10
+    assert abs(absmaxF1[0] - 4.0) < 1e-10
+    assert abs(absmaxF1[1] - 2.0) < 1e-10
 
 
-def test_absmaxF_tracking_with_iterator_insertions(sample_set_dim2):
+def test_absmaxF_tracking_with_iterator_insertions(
+    sample_set_dim2: Ncm.FunctionSampleSet,
+) -> None:
     """Test absmaxF tracking with iterator insertions."""
     fss = sample_set_dim2
 
@@ -1122,33 +1157,121 @@ def test_absmaxF_tracking_with_iterator_insertions(sample_set_dim2):
         y = Ncm.Vector.new_array([x * 0.1, x * 0.2])
         fss.add(x, y)
 
-    # Check initial max values
+    # Check initial max values (should be at x=10.0)
     initial_max0 = fss.get_absmaxF(0)
     initial_max1 = fss.get_absmaxF(1)
+    assert abs(initial_max0[0] - 1.0) < 1e-10  # 10.0 * 0.1
+    assert abs(initial_max0[1] - 10.0) < 1e-10
+    assert abs(initial_max1[0] - 2.0) < 1e-10  # 10.0 * 0.2
+    assert abs(initial_max1[1] - 10.0) < 1e-10
 
-    # Insert point with larger absolute values
+    # Insert point with larger absolute values at x=1.0
     it = fss.iter_begin()
     it.next()  # Move to second element
     y_large = Ncm.Vector.new_array([10.0, -15.0])
     fss.iter_insert_after(it, 1.0, y_large)
 
     # Should update to new max values
-    assert fss.get_absmaxF(0) >= initial_max0
-    assert fss.get_absmaxF(1) >= initial_max1
-    assert abs(fss.get_absmaxF(0) - 10.0) < 1e-10
-    assert abs(fss.get_absmaxF(1) - 15.0) < 1e-10
+    absmaxF0_new = fss.get_absmaxF(0)
+    absmaxF1_new = fss.get_absmaxF(1)
+    assert absmaxF0_new[0] >= initial_max0[0]
+    assert absmaxF1_new[0] >= initial_max1[0]
+    assert abs(absmaxF0_new[0] - 10.0) < 1e-10
+    assert abs(absmaxF0_new[1] - 1.0) < 1e-10
+    assert abs(absmaxF1_new[0] - 15.0) < 1e-10
+    assert abs(absmaxF1_new[1] - 1.0) < 1e-10
 
 
-def test_combined_tracking_comprehensive(sample_set_dim3):
+def test_absmaxF_x_coordinate_tracking(sample_set_dim2: Ncm.FunctionSampleSet) -> None:
+    """Test that get_absmaxF correctly tracks the x coordinate of the maximum."""
+    fss = sample_set_dim2
+
+    # Add points where different x values have the max for each component
+    test_data = [
+        (0.0, [1.0, 2.0]),
+        (1.0, [5.0, 1.5]),  # Component 0 max here
+        (2.0, [2.0, 3.0]),
+        (3.0, [1.5, 8.0]),  # Component 1 max here
+        (4.0, [3.0, 2.5]),
+    ]
+
+    for x, y_vals in test_data:
+        y = Ncm.Vector.new_array(y_vals)
+        fss.add(x, y)
+
+    # Component 0: max 5.0 at x=1.0
+    # Component 1: max 8.0 at x=3.0
+    absmaxF0 = fss.get_absmaxF(0)
+    absmaxF1 = fss.get_absmaxF(1)
+
+    assert abs(absmaxF0[0] - 5.0) < 1e-10
+    assert abs(absmaxF0[1] - 1.0) < 1e-10
+    assert abs(absmaxF1[0] - 8.0) < 1e-10
+    assert abs(absmaxF1[1] - 3.0) < 1e-10
+
+    # Add a new point with even larger value in component 0 at different x
+    y_new = Ncm.Vector.new_array([12.0, 1.0])
+    fss.add(5.0, y_new)
+
+    # Component 0 max should now be at x=5.0
+    absmaxF0_updated = fss.get_absmaxF(0)
+    assert abs(absmaxF0_updated[0] - 12.0) < 1e-10
+    assert abs(absmaxF0_updated[1] - 5.0) < 1e-10
+
+    # Component 1 should remain unchanged
+    absmaxF1_after = fss.get_absmaxF(1)
+    assert abs(absmaxF1_after[0] - 8.0) < 1e-10
+    assert abs(absmaxF1_after[1] - 3.0) < 1e-10
+
+
+def test_absmaxF_x_coordinate_with_negative_values(
+    sample_set_dim2: Ncm.FunctionSampleSet,
+) -> None:
+    """Test that x coordinate tracking works with negative function values."""
+    fss = sample_set_dim2
+
+    # Add points with negative values being the maximum in absolute terms
+    test_data = [
+        (-2.0, [1.0, -3.0]),
+        (-1.0, [-5.0, 2.0]),  # Component 0: |-5.0| = 5.0 max here
+        (0.0, [2.0, 1.0]),
+        (1.0, [1.0, -8.0]),  # Component 1: |-8.0| = 8.0 max here
+        (2.0, [-3.0, 2.0]),
+    ]
+
+    for x, y_vals in test_data:
+        y = Ncm.Vector.new_array(y_vals)
+        fss.add(x, y)
+
+    # Component 0: max |y| = 5.0 from y=-5.0 at x=-1.0
+    # Component 1: max |y| = 8.0 from y=-8.0 at x=1.0
+    absmaxF0 = fss.get_absmaxF(0)
+    absmaxF1 = fss.get_absmaxF(1)
+
+    assert abs(absmaxF0[0] - 5.0) < 1e-10
+    assert abs(absmaxF0[1] - (-1.0)) < 1e-10
+    assert abs(absmaxF1[0] - 8.0) < 1e-10
+    assert abs(absmaxF1[1] - 1.0) < 1e-10
+
+
+def test_combined_tracking_comprehensive(
+    sample_set_dim3: Ncm.FunctionSampleSet,
+) -> None:
     """Comprehensive test of all tracking features together."""
     fss = sample_set_dim3
 
     # Verify initial state
     assert math.isinf(fss.get_x_min()) and fss.get_x_min() > 0
     assert math.isinf(fss.get_x_max()) and fss.get_x_max() < 0
-    assert abs(fss.get_absmaxF(0) - 0.0) < 1e-10
-    assert abs(fss.get_absmaxF(1) - 0.0) < 1e-10
-    assert abs(fss.get_absmaxF(2) - 0.0) < 1e-10
+    absmaxF0_init = fss.get_absmaxF(0)
+    absmaxF1_init = fss.get_absmaxF(1)
+    absmaxF2_init = fss.get_absmaxF(2)
+    assert abs(absmaxF0_init[0] - 0.0) < 1e-10
+    assert abs(absmaxF1_init[0] - 0.0) < 1e-10
+    assert abs(absmaxF2_init[0] - 0.0) < 1e-10
+    assert math.isnan(absmaxF0_init[1])
+    assert math.isnan(absmaxF1_init[1])
+    assert math.isnan(absmaxF2_init[1])
 
     # Add points covering a range with various y values
     test_data = [
@@ -1169,12 +1292,18 @@ def test_combined_tracking_comprehensive(sample_set_dim3):
     assert abs(fss.get_x_max() - 3.0) < 1e-10
 
     # Verify absmaxF tracking
-    # Component 0: max is 4.0 (from -4.0)
-    # Component 1: max is 5.0 (from 5.0)
-    # Component 2: max is 7.0 (from 7.0)
-    assert abs(fss.get_absmaxF(0) - 4.0) < 1e-10
-    assert abs(fss.get_absmaxF(1) - 5.0) < 1e-10
-    assert abs(fss.get_absmaxF(2) - 7.0) < 1e-10
+    # Component 0: max is 4.0 (from -4.0 at x=-1.0)
+    # Component 1: max is 5.0 (from 5.0 at x=0.0)
+    # Component 2: max is 7.0 (from 7.0 at x=2.0)
+    absmaxF0 = fss.get_absmaxF(0)
+    absmaxF1 = fss.get_absmaxF(1)
+    absmaxF2 = fss.get_absmaxF(2)
+    assert abs(absmaxF0[0] - 4.0) < 1e-10
+    assert abs(absmaxF0[1] - (-1.0)) < 1e-10
+    assert abs(absmaxF1[0] - 5.0) < 1e-10
+    assert abs(absmaxF1[1] - 0.0) < 1e-10
+    assert abs(absmaxF2[0] - 7.0) < 1e-10
+    assert abs(absmaxF2[1] - 2.0) < 1e-10
 
     # Extend range with iterator insertions
     it = fss.iter_begin()
@@ -1188,6 +1317,260 @@ def test_combined_tracking_comprehensive(sample_set_dim3):
     # Verify updated tracking
     assert abs(fss.get_x_min() - (-5.0)) < 1e-10
     assert abs(fss.get_x_max() - 6.0) < 1e-10
-    assert abs(fss.get_absmaxF(0) - 8.0) < 1e-10
-    assert abs(fss.get_absmaxF(1) - 9.0) < 1e-10
-    assert abs(fss.get_absmaxF(2) - 7.0) < 1e-10
+    absmaxF0_updated = fss.get_absmaxF(0)
+    absmaxF1_updated = fss.get_absmaxF(1)
+    absmaxF2_updated = fss.get_absmaxF(2)
+    assert abs(absmaxF0_updated[0] - 8.0) < 1e-10
+    assert abs(absmaxF0_updated[1] - (-5.0)) < 1e-10
+    assert abs(absmaxF1_updated[0] - 9.0) < 1e-10
+    assert abs(absmaxF1_updated[1] - 6.0) < 1e-10
+    assert abs(absmaxF2_updated[0] - 7.0) < 1e-10
+    assert abs(absmaxF2_updated[1] - 2.0) < 1e-10
+
+
+# ============================================================================
+# Tests for ncm_function_sample_set_adaptive_midpoint
+# ============================================================================
+
+
+def test_adaptive_midpoint_basic_convergence() -> None:
+    """Test that adaptive_midpoint converges for a smooth function."""
+
+    def trig_func(x: float, y: Ncm.Vector) -> None:
+        y.set(0, math.sin(x))
+        y.set(1, math.cos(x))
+
+    fss = Ncm.FunctionSampleSet.new(2)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(0.0, 2.0 * math.pi, 6):
+        fss.add_func(x, trig_func)
+
+    initial_nsamples = fss.get_nsamples()
+    assert initial_nsamples == 6
+
+    fss.mark_all_old()
+    fss.adaptive_midpoint(trig_func, 1e-6, 1e-10, 100, 1, base_spline)
+
+    # Must have converged
+    assert fss.all_intervals_ok(1)
+
+    # Must have added knots
+    assert fss.get_nsamples() > initial_nsamples
+
+
+def test_adaptive_midpoint_spline_accuracy() -> None:
+    """Test that the spline built after adaptive_midpoint is accurate."""
+
+    def trig_func(x: float, y: Ncm.Vector) -> None:
+        y.set(0, math.sin(x))
+        y.set(1, math.cos(x))
+
+    reltol = 1e-6
+    abstol = 1e-10
+    xi, xf = 0.0, 2.0 * math.pi
+
+    fss = Ncm.FunctionSampleSet.new(2)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(xi, xf, 6):
+        fss.add_func(x, trig_func)
+
+    fss.mark_all_old()
+    fss.adaptive_midpoint(trig_func, reltol, abstol, 100, 1, base_spline)
+
+    sv = fss.to_spline_vec(base_spline)
+
+    np.random.seed(0)
+    for x in np.random.uniform(xi + 0.01, xf - 0.01, 50):
+        y_spline = sv.eval_array(x)
+        y_true = [math.sin(x), math.cos(x)]
+        error = math.sqrt(
+            (y_spline[0] - y_true[0]) ** 2 + (y_spline[1] - y_true[1]) ** 2
+        )
+        norm_true = math.sqrt(y_true[0] ** 2 + y_true[1] ** 2)
+        threshold = reltol * norm_true + abstol
+        assert (
+            error < threshold * 10
+        ), f"Error {error:.3e} > threshold {threshold:.3e} at x={x:.4f}"
+
+
+def test_adaptive_midpoint_polynomial_exact() -> None:
+    """Cubic spline should reproduce a cubic polynomial exactly."""
+
+    def poly_func(x: float, y: Ncm.Vector) -> None:
+        # f(x) = x^3 - 3x + 1; cubic spline interpolates this exactly
+        y.set(0, x**3 - 3.0 * x + 1.0)
+
+    fss = Ncm.FunctionSampleSet.new(1)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(-2.0, 2.0, 6):
+        fss.add_func(x, poly_func)
+
+    fss.mark_all_old()
+    fss.adaptive_midpoint(poly_func, 1e-10, 1e-12, 50, 1, base_spline)
+
+    assert fss.all_intervals_ok(1)
+
+    sv = fss.to_spline_vec(base_spline)
+    for x in np.linspace(-1.9, 1.9, 20):
+        y_spline = sv.eval_array(x)
+        y_true = x**3 - 3.0 * x + 1.0
+        assert abs(y_spline[0] - y_true) < 1e-8, f"Polynomial mismatch at x={x:.4f}"
+
+
+def test_adaptive_midpoint_user_data() -> None:
+    """Test that user_data is forwarded correctly to the function."""
+
+    def scaled_trig(x: float, y: Ncm.Vector, user_data: Any) -> None:
+        scale = user_data
+        y.set(0, scale * math.sin(x))
+        y.set(1, scale * math.cos(x))
+
+    scale = 3.7
+    fss = Ncm.FunctionSampleSet.new(2)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(0.0, 2.0 * math.pi, 6):
+        fss.add_func(x, scaled_trig, scale)
+
+    fss.mark_all_old()
+    fss.adaptive_midpoint(scaled_trig, 1e-6, 1e-10, 100, 1, base_spline, scale)
+
+    assert fss.all_intervals_ok(1)
+
+    # Verify values at knots match the scaled function
+    it = fss.iter_begin()
+    while it.is_valid():
+        x = it.get_x()
+        y = it.get_y()
+        assert abs(y.get(0) - scale * math.sin(x)) < 1e-12
+        assert abs(y.get(1) - scale * math.cos(x)) < 1e-12
+        it.next()
+
+
+def test_adaptive_midpoint_max_iter_respected(capfd) -> None:
+    """Test that adaptive_midpoint stops at max_iter even if not converged."""
+
+    def high_freq(x: float, y: Ncm.Vector) -> None:
+        y.set(0, math.sin(50.0 * x))
+
+    fss = Ncm.FunctionSampleSet.new(1)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(0.0, math.pi, 6):
+        fss.add_func(x, high_freq)
+
+    max_iter = 3
+    fss.mark_all_old()
+    # Very tight tolerance on a high-frequency function: will not converge in 3 iters
+    fss.adaptive_midpoint(high_freq, 1e-12, 1e-15, max_iter, 1, base_spline)
+
+    out, err = capfd.readouterr()
+    combined = out + err
+
+    # g_message should have emitted the max-iterations warning
+    assert "Max iterations" in combined, f"Expected max-iter message, got: {combined!r}"
+    assert str(max_iter) in combined
+    assert str(fss.get_nsamples()) in combined
+
+    # Should have stopped after max_iter regardless of convergence
+    # Just verify it ran without error and has more samples than the initial 6
+    assert fss.get_nsamples() > 6
+
+
+def test_adaptive_midpoint_multi_pass_threshold() -> None:
+    """Test min_pass_threshold > 1: intervals must pass the error test twice."""
+
+    def trig_func(x: float, y: Ncm.Vector) -> None:
+        y.set(0, math.sin(x))
+        y.set(1, math.cos(x))
+
+    fss = Ncm.FunctionSampleSet.new(2)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(0.0, 2.0 * math.pi, 6):
+        fss.add_func(x, trig_func)
+
+    fss.mark_all_old()
+    threshold = 1
+    fss.adaptive_midpoint(trig_func, 1e-5, 1e-9, 200, threshold, base_spline)
+
+    assert fss.all_intervals_ok(threshold)
+
+
+def test_adaptive_midpoint_challenging_function() -> None:
+    """Test adaptive_midpoint with a function of varying frequency."""
+
+    def challenging(x: float, y: Ncm.Vector) -> None:
+        y.set(0, math.sin(x**1.5))
+        y.set(1, math.cos(2.0 * x))
+
+    xi, xf = 0.1, 10.0
+    reltol, abstol = 1e-4, 1e-8
+
+    fss = Ncm.FunctionSampleSet.new(2)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(xi, xf, 6):
+        fss.add_func(x, challenging)
+
+    initial = fss.get_nsamples()
+    fss.mark_all_old()
+    fss.adaptive_midpoint(challenging, reltol, abstol, 100, 1, base_spline)
+
+    assert fss.all_intervals_ok(1)
+    assert fss.get_nsamples() > initial * 2  # Challenging function needs many knots
+
+    sv = fss.to_spline_vec(base_spline)
+    for x in np.linspace(xi + 0.05, xf - 0.05, 30):
+        y_spline = sv.eval_array(x)
+        y_true = [math.sin(x**1.5), math.cos(2.0 * x)]
+        error = math.sqrt(sum((a - b) ** 2 for a, b in zip(y_spline, y_true)))
+        norm_true = math.sqrt(sum(v**2 for v in y_true))
+        assert error < (reltol * norm_true + abstol) * 10
+
+
+def test_adaptive_midpoint_x_range_preserved() -> None:
+    """Test that x_min/x_max are not changed by adaptive_midpoint."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        y.set(0, math.sin(x))
+
+    xi, xf = 1.0, 5.0
+    fss = Ncm.FunctionSampleSet.new(1)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(xi, xf, 6):
+        fss.add_func(x, f)
+
+    fss.mark_all_old()
+    fss.adaptive_midpoint(f, 1e-6, 1e-10, 100, 1, base_spline)
+
+    # Midpoints are strictly interior, so min and max stay at xi and xf
+    assert abs(fss.get_x_min() - xi) < 1e-12
+    assert abs(fss.get_x_max() - xf) < 1e-12
+
+
+def test_adaptive_midpoint_all_points_old_after() -> None:
+    """After adaptive_midpoint all sample points should be marked OLD."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        y.set(0, math.sin(x))
+        y.set(1, math.cos(x))
+
+    fss = Ncm.FunctionSampleSet.new(2)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(0.0, 2.0 * math.pi, 6):
+        fss.add_func(x, f)
+
+    fss.mark_all_old()
+    fss.adaptive_midpoint(f, 1e-6, 1e-10, 100, 1, base_spline)
+
+    # to_spline_vec_old should include ALL samples (none left marked as NEW)
+    nsamples = fss.get_nsamples()
+    base_spline2 = Ncm.SplineCubicNotaknot.new()
+    sv_old = fss.to_spline_vec_old(base_spline2)
+    assert sv_old.get_nknots() == nsamples

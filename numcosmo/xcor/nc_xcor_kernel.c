@@ -55,11 +55,14 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_sbessel_ode_solver.h"
 #include "math/ncm_sbessel_integrator_levin.h"
+#include "math/ncm_function_sample_set.h"
 #include "nc_distance.h"
 #include "xcor/nc_xcor_kernel.h"
 #include "xcor/nc_xcor_kernel_component.h"
 #include "xcor/nc_xcor.h"
 #include "nc_enum_types.h"
+
+#define DEBUG
 
 typedef struct _NcXcorKernelPrivate
 {
@@ -70,6 +73,8 @@ typedef struct _NcXcorKernelPrivate
   NcmSBesselIntegrator *sbi;
   guint lmax;
   gint l_limber;
+  gdouble adaptive_epsilon;
+  guint adaptive_boundary_tries;
   gboolean constructed;
 } NcXcorKernelPrivate;
 
@@ -81,6 +86,8 @@ enum
   PROP_INTEGRATOR,
   PROP_LMAX,
   PROP_L_LIMBER,
+  PROP_ADAPTIVE_EPSILON,
+  PROP_ADAPTIVE_BOUNDARY_TRIES,
   PROP_SIZE,
 };
 
@@ -94,12 +101,14 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->dist        = NULL;
-  self->ps          = NULL;
-  self->sbi         = NULL;
-  self->lmax        = 0;
-  self->l_limber    = 0;
-  self->constructed = FALSE;
+  self->dist                    = NULL;
+  self->ps                      = NULL;
+  self->sbi                     = NULL;
+  self->lmax                    = 0;
+  self->l_limber                = 0;
+  self->adaptive_epsilon        = 1.0e-6;
+  self->adaptive_boundary_tries = 0;
+  self->constructed             = FALSE;
 }
 
 static void
@@ -182,6 +191,12 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_L_LIMBER:
       nc_xcor_kernel_set_l_limber (xclk, g_value_get_int (value));
       break;
+    case PROP_ADAPTIVE_EPSILON:
+      nc_xcor_kernel_set_adaptive_epsilon (xclk, g_value_get_double (value));
+      break;
+    case PROP_ADAPTIVE_BOUNDARY_TRIES:
+      nc_xcor_kernel_set_adaptive_boundary_tries (xclk, g_value_get_uint (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -212,6 +227,12 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_L_LIMBER:
       g_value_set_int (value, nc_xcor_kernel_get_l_limber (xclk));
+      break;
+    case PROP_ADAPTIVE_EPSILON:
+      g_value_set_double (value, nc_xcor_kernel_get_adaptive_epsilon (xclk));
+      break;
+    case PROP_ADAPTIVE_BOUNDARY_TRIES:
+      g_value_set_uint (value, nc_xcor_kernel_get_adaptive_boundary_tries (xclk));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -284,6 +305,22 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                      "Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)",
                                                      -1, G_MAXINT, 100,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_ADAPTIVE_EPSILON,
+                                   g_param_spec_double ("adaptive-epsilon",
+                                                        NULL,
+                                                        "Convergence threshold for adaptive k-range determination",
+                                                        0.0, 1.0, 1.0e-5,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_ADAPTIVE_BOUNDARY_TRIES,
+                                   g_param_spec_uint ("adaptive-boundary-tries",
+                                                      NULL,
+                                                      "Number of consecutive boundary points below threshold before stopping extension",
+                                                      1, G_MAXUINT, 5,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   ncm_mset_model_register_id (model_class, "NcXcorKernel", "Cross-correlation Kernels",
                               NULL, TRUE, NCM_MSET_MODEL_MAIN);
@@ -442,7 +479,8 @@ typedef struct _NonLimberIntegrandData
   gdouble RH_Mpc;
   gint lmin;
   guint len;
-  NcmSpline **spline_ell;
+  NcmSplineVec *spline_vec;
+  NcmVector *eval_result;
   gdouble k_min;
   gdouble k_max;
 } NonLimberIntegrandData;
@@ -453,9 +491,11 @@ _non_limber_integrand_eval (gpointer data, gdouble k, gdouble *W)
   NonLimberIntegrandData *nlid = (NonLimberIntegrandData *) data;
   guint i;
 
+  ncm_spline_vec_eval (nlid->spline_vec, k, nlid->eval_result);
+
   for (i = 0; i < nlid->len; i++)
   {
-    W[i] = ncm_spline_eval (nlid->spline_ell[i], k);
+    W[i] = ncm_vector_get (nlid->eval_result, i);
   }
 }
 
@@ -471,6 +511,12 @@ _non_limber_integrand_get_range (gpointer data, gdouble *kmin, gdouble *kmax)
 static void
 _non_limber_integrand_data_free (gpointer data)
 {
+  NonLimberIntegrandData *nlid = (NonLimberIntegrandData *) data;
+
+  nc_hicosmo_clear (&nlid->cosmo);
+  ncm_spline_vec_clear (&nlid->spline_vec);
+  ncm_vector_clear (&nlid->eval_result);
+
   g_free (data);
 }
 
@@ -486,83 +532,498 @@ _nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble x, gdouble k)
   const NonLimberCompParams *nlcp = (const NonLimberCompParams *) params;
   const gdouble kernel            = nc_xcor_kernel_component_eval_kernel (nlcp->comp, nlcp->cosmo, x, k);
 
-  return kernel;
+  return kernel / (k * sqrt (k));
 }
 
 #define MAX_ELL_BLOCK 64
 #define MAX_COMP_BLOCK 6
 
-typedef struct _NonLimberKernelData
+typedef struct _ComponentState
 {
-  NcXcorKernel *xclk;
-  NcHICosmo *cosmo;
-  GPtrArray *comp_list;
-  gdouble xi_min[MAX_COMP_BLOCK];
-  gdouble xi_max[MAX_COMP_BLOCK];
-  gdouble k_epsilon[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
-  gdouble k_epsilon_val[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
-  guint n_comp;
-  guint n_l;
-  gint lmin;
-  NcmVector *integ_result;
-} NonLimberKernelData;
+  NcXcorKernelComponent *comp;
+  guint comp_idx;
+  gdouble xi_min;
+  gdouble xi_max;
+  gdouble k_min_hard;
+  gdouble k_max_hard;
+  gdouble last_k_left;
+  gdouble last_k_right;
+  gdouble last_values_left[MAX_ELL_BLOCK];
+  gdouble last_values_right[MAX_ELL_BLOCK];
+  guint left_boundary_found;
+  guint right_boundary_found;
+  NonLimberCompParams params;
+} ComponentState;
+
+typedef struct _ComponentStates
+{
+  ComponentState states[MAX_COMP_BLOCK];
+  NcmSBesselIntegrator *sbi;
+  const guint n_comp;
+  const guint lmin;
+  const guint n_l;
+  const gdouble epsilon;
+  const guint adaptive_boundary_tries;
+} ComponentStates;
+
+typedef struct _KRangeInitialization
+{
+  gdouble k_min_hard;
+  gdouble k_max_hard;
+  gdouble k_min_soft;
+  gdouble k_max_soft;
+  gdouble k_center;
+  gdouble k_seeds[MAX_COMP_BLOCK + 4];
+  guint n_k_seeds;
+} KRangeInitialization;
 
 static void
-_nc_xcor_kernel_eval_kernel_at_k (NonLimberKernelData *data, gdouble k, gdouble *kernel_ell)
+_component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint comp_idx, NcHICosmo *cosmo, guint n_l)
 {
-  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (data->xclk);
-  guint i, n;
+  state->comp                 = nc_xcor_kernel_component_ref (comp);
+  state->comp_idx             = comp_idx;
+  state->last_k_left          = 0.0;
+  state->last_k_right         = 0.0;
+  state->left_boundary_found  = 0;
+  state->right_boundary_found = 0;
+  state->params.comp          = comp;
+  state->params.cosmo         = cosmo;
 
-  /* Initialize output array */
-  for (n = 0; n < data->n_l; n++)
-    kernel_ell[n] = 0.0;
+  nc_xcor_kernel_component_get_limits (comp, cosmo,
+                                       &state->xi_min, &state->xi_max,
+                                       &state->k_min_hard, &state->k_max_hard);
+}
 
-  /* Loop over components */
-  for (i = 0; i < data->n_comp; i++)
+gboolean
+_is_new_k (gdouble k, gdouble *arr, guint n)
+{
+  for (guint m = 0; m < n; m++)
+    if (gsl_fcmp (k, arr[m], 1e-3) == 0)
+      return FALSE;
+
+  return TRUE;
+}
+
+static KRangeInitialization
+_component_list_compute_k_init (ComponentStates *comp_states)
+{
+  gdouble log_k_center_sum = 0.0;
+  gdouble k_comp_scales[MAX_COMP_BLOCK];
+  KRangeInitialization result;
+  guint i, j;
+
+  result.k_min_hard = 0.0;
+  result.k_max_hard = G_MAXDOUBLE;
+  result.k_max_soft = 0.0;
+
+  for (i = 0; i < comp_states->n_comp; i++)
   {
-    NcXcorKernelComponent *comp = g_ptr_array_index (data->comp_list, i);
-    NonLimberCompParams params  = { comp, data->cosmo };
-    gboolean need_integration   = FALSE;
+    ComponentState *state = &comp_states->states[i];
+    gdouble ln_k_scale    = 0.0;
 
-    /* Check if we need to compute for any ell (k <= k_epsilon) */
-    for (n = 0; n < data->n_l; n++)
+    result.k_min_hard = GSL_MAX (result.k_min_hard, state->k_min_hard);
+    result.k_max_hard = GSL_MIN (result.k_max_hard, state->k_max_hard);
+
+    for (j = 0; j < comp_states->n_l; j++)
     {
-      if (k <= data->k_epsilon[i][n])
-      {
-        need_integration = TRUE;
-        break;
-      }
+      const gdouble nu           = comp_states->lmin + j + 0.5;
+      const gdouble k_max_ij     = nc_xcor_kernel_component_eval_k_max (state->comp, nu);
+      const gdouble k_epsilon_ij = k_max_ij * 1.1;
+
+      ln_k_scale       += log (k_max_ij);
+      result.k_max_soft = GSL_MAX (result.k_max_soft, k_epsilon_ij);
     }
 
-    /* Only integrate if needed for at least one ell */
-    if (need_integration)
-      ncm_sbessel_integrator_integrate (
-        self->sbi, _nc_xcor_kernel_component_kernel_integ,
-        data->xi_min[i], data->xi_max[i], k, data->integ_result, &params);
+    log_k_center_sum += ln_k_scale / comp_states->n_l;
+    k_comp_scales[i]  = exp (ln_k_scale / comp_states->n_l);
+  }
 
-    /* Accumulate contribution from this component with cutoff */
-    for (n = 0; n < data->n_l; n++)
+  result.k_center   = exp (log_k_center_sum / comp_states->n_comp);
+  result.k_min_soft = result.k_center * result.k_center / result.k_max_soft;
+  result.n_k_seeds  = 0;
+
+  g_assert_cmpfloat (result.k_min_hard, <, result.k_max_hard);
+  g_assert_cmpfloat (result.k_min_soft, <, result.k_max_soft);
+  g_assert_cmpfloat (result.k_min_hard, <=, result.k_min_soft);
+  g_assert_cmpfloat (result.k_max_soft, <=, result.k_max_hard);
+  g_assert_cmpfloat (result.k_min_soft, <, result.k_center);
+  g_assert_cmpfloat (result.k_center, <, result.k_max_soft);
+
+  if (gsl_fcmp (result.k_min_soft, result.k_max_soft, 1.0e-10) == 0)
+    g_error ("_component_list_compute_k_init: computed k_min and k_max are too close (k_min = % 22.15g, k_max = % 22.15g). "
+             "This may indicate that the kernel components have very narrow support in k. "
+             "Consider adjusting the kernel components or their parameters to ensure a wider k range.",
+             result.k_min_soft, result.k_max_soft);
+
+  {
+    const gdouble ln_k_min = log (result.k_min_soft);
+    const gdouble ln_k_max = log (result.k_max_soft);
+
+    for (i = 1; i < 5; i++)
     {
-      /* Apply exponential cutoff for k > k_epsilon */
-      /* Cutoff drops by factor of 10 for 1% increase in k */
-      if (k > data->k_epsilon[i][n])
-      {
-        const gdouble dk_ratio      = (k - data->k_epsilon[i][n]) / data->k_epsilon[i][n];
-        const gdouble cutoff_factor = exp (-log (10.0) * 100.0 * dk_ratio);
+      gdouble ln_k = ln_k_min + (ln_k_max - ln_k_min) * i / 5.0;
+      gdouble k    = exp (ln_k);
 
-        /* Use exponential tail based on value at k_epsilon */
-        kernel_ell[n] += data->k_epsilon_val[i][n] * cutoff_factor;
-      }
-      else
+      if (
+        (k > result.k_min_soft) &&
+        (k < result.k_max_soft) &&
+        (_is_new_k (k, result.k_seeds, result.n_k_seeds)))
       {
-        /* Compute full kernel for k <= k_epsilon */
-        const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (comp, data->cosmo, k, data->lmin + n);
-        const gdouble val       = ncm_vector_get (data->integ_result, n) * prefactor;
-
-        kernel_ell[n] += val;
+        result.k_seeds[result.n_k_seeds] = k;
+        result.n_k_seeds++;
       }
     }
   }
+
+  for (i = 0; i < comp_states->n_comp; i++)
+  {
+    if (
+      (k_comp_scales[i] > result.k_min_soft) &&
+      (k_comp_scales[i] < result.k_max_soft) &&
+      (_is_new_k (k_comp_scales[i], result.k_seeds, result.n_k_seeds)))
+    {
+      result.k_seeds[result.n_k_seeds] = k_comp_scales[i];
+      result.n_k_seeds++;
+    }
+  }
+
+#ifdef DEBUG
+  g_print ("_component_list_compute_k_init: computed k range: [ % 22.15g, % 22.15g ] (soft range: [ % 22.15g, % 22.15g ], center: % 22.15g)\n",
+           result.k_min_hard, result.k_max_hard, result.k_min_soft, result.k_max_soft, result.k_center);
+  g_print ("_component_list_compute_k_init: selected k seeds: ");
+
+  for (i = 0; i < result.n_k_seeds; i++)
+    g_print ("% 22.15g ", result.k_seeds[i]);
+
+  g_print ("\n");
+  fflush (stdout);
+#endif
+
+  return result;
+}
+
+static void
+_compute_components_exact (
+  ComponentStates *comp_states,
+  gdouble         k,
+  gdouble         kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK]
+)
+{
+  for (guint ci = 0; ci < comp_states->n_comp; ci++)
+  {
+    NcmVector *integ_result = ncm_vector_new_data_static (kernel_out[ci], comp_states->n_l, 1);
+    ComponentState *state   = &comp_states->states[ci];
+
+    ncm_sbessel_integrator_integrate (
+      comp_states->sbi, _nc_xcor_kernel_component_kernel_integ,
+      state->xi_min, state->xi_max, k, integ_result, &state->params
+    );
+
+    for (guint i = 0; i < comp_states->n_l; i++)
+    {
+      const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (
+        state->comp, state->params.cosmo, k, comp_states->lmin + i
+      );
+
+      kernel_out[ci][i] *= prefactor * k * sqrt (k);
+
+#ifdef DEBUG
+      g_print ("_compute_components_exact: k = % 22.15g, comp_idx = %d, l = %d, integ_result = % 22.15g, prefactor = % 22.15g, kernel_out = % 22.15g\n",
+               k, ci, comp_states->lmin + i, ncm_vector_get (integ_result, i), prefactor, kernel_out[ci][i]);
+#endif
+    }
+
+    ncm_vector_clear (&integ_result);
+  }
+}
+
+static void
+_compute_components_extrapolated (
+  ComponentStates *comp_states,
+  gdouble         k,
+  gdouble         kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK])
+{
+  for (guint ci = 0; ci < comp_states->n_comp; ci++)
+  {
+    NcmVector *integ_result              = ncm_vector_new_data_static (kernel_out[ci], comp_states->n_l, 1);
+    ComponentState *state                = &comp_states->states[ci];
+    const gboolean right_boundary_found  = comp_states->states[ci].right_boundary_found >= comp_states->adaptive_boundary_tries;
+    const gboolean left_boundary_found   = comp_states->states[ci].left_boundary_found >= comp_states->adaptive_boundary_tries;
+    const gboolean within_left_boundary  = !left_boundary_found || (k >= state->last_k_left);
+    const gboolean within_right_boundary = !right_boundary_found || (k <= state->last_k_right);
+
+    if (within_left_boundary && within_right_boundary)
+    {
+      ncm_sbessel_integrator_integrate (
+        comp_states->sbi, _nc_xcor_kernel_component_kernel_integ,
+        state->xi_min, state->xi_max, k, integ_result, &state->params
+      );
+
+      for (guint i = 0; i < comp_states->n_l; i++)
+      {
+        const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (
+          state->comp, state->params.cosmo, k, comp_states->lmin + i
+        );
+
+        kernel_out[ci][i] *= prefactor * k * sqrt (k);
+#ifdef DEBUG
+        g_print ("_compute_components_extrapolated[I]: k = % 22.15g, comp_idx = %d, l = %d, integ_result = % 22.15g, prefactor = % 22.15g, kernel_out = % 22.15g\n", k, ci, comp_states->lmin + i, ncm_vector_get (integ_result, i), prefactor, kernel_out[ci][i]);
+        fflush (stdout);
+#endif
+      }
+    }
+    else
+    {
+      guint i;
+
+      /* Compute using an exponential tail approximation. */
+      if (!within_right_boundary)
+      {
+        for (i = 0; i < comp_states->n_l; i++)
+        {
+          const gdouble val              = state->last_values_right[i];
+          const gdouble val_extrapolated = val * exp (-(k - state->last_k_right) / state->last_k_right * 2.0);
+
+          kernel_out[ci][i] = val_extrapolated;
+#ifdef DEBUG
+          g_print ("_compute_components_extrapolated[R]: k = % 22.15g, comp_idx = %d, l = %d, last_k_right = % 22.15g, last_val = % 22.15g, val_extrapolated = % 22.15g\n",
+                   k, ci, comp_states->lmin + i, state->last_k_right, val, val_extrapolated);
+          fflush (stdout);
+#endif
+        }
+      }
+      else
+      {
+        for (i = 0; i < comp_states->n_l; i++)
+        {
+          const gdouble val              = state->last_values_left[i];
+          const gdouble val_extrapolated = val * exp (-(state->last_k_left - k) / state->last_k_left * 2.0);
+
+          kernel_out[ci][i] = val_extrapolated;
+#ifdef DEBUG
+          g_print ("_compute_components_extrapolated[L]: k = % 22.15g, comp_idx = %d, l = %d, last_k_left = % 22.15g, last_val = % 22.15g, val_extrapolated = % 22.15g\n",
+                   k, ci, comp_states->lmin + i, state->last_k_left, val, val_extrapolated);
+          fflush (stdout);
+#endif
+        }
+      }
+    }
+
+    ncm_vector_clear (&integ_result);
+  }
+}
+
+static void
+_kernel_sum (
+  const gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK],
+  const guint   n_comp,
+  const guint   n_l,
+  gdouble       kernel_sum[MAX_ELL_BLOCK])
+{
+  for (guint i = 0; i < n_l; i++)
+  {
+    kernel_sum[i] = 0.0;
+
+    for (guint ci = 0; ci < n_comp; ci++)
+      kernel_sum[i] += kernel_out[ci][i];
+  }
+}
+
+static gboolean
+_component_states_expand_right_border (ComponentStates *comp_states, NcmFunctionSampleSet *fss, gdouble expansion_factor)
+{
+  const gdouble k_right      = ncm_function_sample_set_get_x_max (fss);
+  const gdouble new_k        = k_right * (1.0 + expansion_factor);
+  NcmVector *kernel_sum      = ncm_vector_new (comp_states->n_l);
+  gboolean all_below_epsilon = TRUE;
+  gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
+  guint i;
+
+  g_assert_cmpfloat (new_k, <=, comp_states->states[0].k_max_hard);
+
+  _compute_components_extrapolated (comp_states, new_k, kernel_out);
+
+  ncm_vector_set_zero (kernel_sum);
+
+  /* Compute reference scale from all ell components */
+  gdouble max_absF_total = 0.0;
+
+  {
+    guint j;
+
+    for (j = 0; j < comp_states->n_l; j++)
+    {
+      const gdouble absmaxF_j = ncm_function_sample_set_get_absmaxF (fss, j, NULL);
+
+      max_absF_total += gsl_pow_2 (absmaxF_j);
+#ifdef DEBUG
+      g_print ("_component_states_expand_right_border: absmaxF_j = % 22.15g\n", absmaxF_j);
+      fflush (stdout);
+#endif
+    }
+
+    max_absF_total = sqrt (max_absF_total);
+  }
+
+#ifdef DEBUG
+  g_print ("_component_states_expand_right_border: k_right = % 22.15g, new_k = % 22.15g\n", k_right, new_k);
+  fflush (stdout);
+#endif
+
+  for (i = 0; i < comp_states->n_comp; i++)
+  {
+    gdouble val_i = 0.0;
+    guint j;
+
+    for (j = 0; j < comp_states->n_l; j++)
+    {
+      const gdouble val_ij = kernel_out[i][j];
+
+      comp_states->states[i].last_values_right[j] = val_ij;
+      val_i                                      += val_ij * val_ij;
+
+      ncm_vector_addto (kernel_sum, j, val_ij);
+    }
+
+    val_i = sqrt (val_i);
+
+    if (val_i < comp_states->epsilon * max_absF_total)
+    {
+#ifdef DEBUG
+      g_print ("_component_states_expand_right_border: val_i = % 22.15g epsilon = % 22.15g max_absF_total = % 22.15g\n",
+               val_i, comp_states->epsilon, max_absF_total);
+      fflush (stdout);
+#endif
+      comp_states->states[i].right_boundary_found++;
+      comp_states->states[i].last_k_right = new_k;
+    }
+    else
+    {
+      comp_states->states[i].right_boundary_found = 0;
+    }
+
+    if (comp_states->states[i].right_boundary_found < comp_states->adaptive_boundary_tries)
+      all_below_epsilon = FALSE;
+  }
+
+  ncm_function_sample_set_add_old (fss, new_k, kernel_sum);
+
+  ncm_vector_free (kernel_sum);
+
+  return all_below_epsilon;
+}
+
+static gboolean
+_component_states_expand_left_border (ComponentStates *comp_states, NcmFunctionSampleSet *fss, gdouble expansion_factor)
+{
+  const gdouble k_left       = ncm_function_sample_set_get_x_min (fss);
+  const gdouble new_k        = k_left * (1.0 - expansion_factor);
+  NcmVector *kernel_sum      = ncm_vector_new (comp_states->n_l);
+  gboolean all_below_epsilon = TRUE;
+  gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
+  guint i;
+
+  g_assert_cmpfloat (new_k, >=, comp_states->states[0].k_min_hard);
+
+  _compute_components_extrapolated (comp_states, new_k, kernel_out);
+
+  ncm_vector_set_zero (kernel_sum);
+
+  /* Compute reference scale from all ell components */
+  gdouble max_absF_total = 0.0;
+
+  {
+    guint j;
+
+    for (j = 0; j < comp_states->n_l; j++)
+    {
+      const gdouble absmaxF_j = ncm_function_sample_set_get_absmaxF (fss, j, NULL);
+
+      max_absF_total += gsl_pow_2 (absmaxF_j);
+#ifdef DEBUG
+      g_print ("_component_states_expand_left_border: absmaxF_j = % 22.15g\n", absmaxF_j);
+      fflush (stdout);
+#endif
+    }
+
+
+    max_absF_total = sqrt (max_absF_total);
+  }
+
+#ifdef DEBUG
+  g_print ("_component_states_expand_left_border: k_left = % 22.15g, new_k = % 22.15g\n", k_left, new_k);
+  fflush (stdout);
+#endif
+
+  for (i = 0; i < comp_states->n_comp; i++)
+  {
+    gdouble val_i = 0.0;
+    guint j;
+
+    for (j = 0; j < comp_states->n_l; j++)
+    {
+      const gdouble val_ij = kernel_out[i][j];
+
+      comp_states->states[i].last_values_left[j] = val_ij;
+      val_i                                     += val_ij * val_ij;
+
+      ncm_vector_addto (kernel_sum, j, val_ij);
+    }
+
+    val_i = sqrt (val_i);
+
+    if (val_i < comp_states->epsilon * max_absF_total)
+    {
+#ifdef DEBUG
+      g_print ("_component_states_expand_left_border: val_i = % 22.15g epsilon = % 22.15g max_absF_total = % 22.15g\n",
+               val_i, comp_states->epsilon, max_absF_total);
+      fflush (stdout);
+#endif
+      comp_states->states[i].left_boundary_found++;
+      comp_states->states[i].last_k_left = new_k;
+    }
+    else
+    {
+      comp_states->states[i].left_boundary_found = 0;
+    }
+
+    if (comp_states->states[i].left_boundary_found < comp_states->adaptive_boundary_tries)
+      all_below_epsilon = FALSE;
+  }
+
+  ncm_function_sample_set_add_old (fss, new_k, kernel_sum);
+
+  ncm_vector_free (kernel_sum);
+
+  return all_below_epsilon;
+}
+
+static void
+_component_states_compute_func (const gdouble k, NcmVector *y, gpointer user_data)
+{
+  ComponentStates *comp_states = (ComponentStates *) user_data;
+  gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
+  gdouble kernel_sum[MAX_ELL_BLOCK];
+
+  _compute_components_exact (comp_states, k, kernel_out);
+  _kernel_sum (kernel_out, comp_states->n_comp, comp_states->n_l, kernel_sum);
+
+  for (guint i = 0; i < comp_states->n_l; i++)
+    ncm_vector_set (y, i, kernel_sum[i]);
+}
+
+static void
+_component_states_compute_func_extrapolated (const gdouble k, NcmVector *y, gpointer user_data)
+{
+  ComponentStates *comp_states = (ComponentStates *) user_data;
+  gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
+  gdouble kernel_sum[MAX_ELL_BLOCK];
+
+  _compute_components_extrapolated (comp_states, k, kernel_out);
+  _kernel_sum (kernel_out, comp_states->n_comp, comp_states->n_l, kernel_sum);
+
+  for (guint i = 0; i < comp_states->n_l; i++)
+    ncm_vector_set (y, i, kernel_sum[i]);
 }
 
 static NcXcorKernelIntegrand *
@@ -571,11 +1032,20 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
   NcXcorKernelPrivate *self    = nc_xcor_kernel_get_instance_private (xclk);
   NcXcorKernelClass *klass     = NC_XCOR_KERNEL_GET_CLASS (xclk);
   NonLimberIntegrandData *nlid = g_new0 (NonLimberIntegrandData, 1);
-  guint n_l                    = lmax - lmin + 1;
-  NcmVector *integ_result      = ncm_vector_new (n_l);
-  const guint n_k              = 800;
-  NcmVector *k_vec             = ncm_vector_new (n_k);
+  const guint n_l              = lmax - lmin + 1;
   GPtrArray *comp_list         = klass->get_component_list (xclk);
+
+  if ((comp_list == NULL) || (comp_list->len == 0))
+  {
+    if (comp_list != NULL)
+      g_ptr_array_unref (comp_list);
+
+    g_free (nlid);
+    g_error ("_nc_xcor_kernel_build_non_limber_integrand: kernel %s returned empty component list",
+             G_OBJECT_TYPE_NAME (xclk));
+
+    return NULL;
+  }
 
   g_assert_cmpuint (n_l, <=, MAX_ELL_BLOCK);
   g_assert_cmpuint (comp_list->len, <=, MAX_COMP_BLOCK);
@@ -590,123 +1060,199 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
     return NULL;
   }
 
-  if ((comp_list == NULL) || (comp_list->len == 0))
   {
-    if (comp_list != NULL)
-      g_ptr_array_unref (comp_list);
+    const guint n_comp                = comp_list->len;
+    NcmFunctionSampleSet *fss         = ncm_function_sample_set_new (n_l);
+    NcmSpline *spline                 = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+    const guint max_border_expansions = 5000;
+    ComponentStates comp_states       = {
+      .n_comp                  = n_comp,
+      .sbi                     = self->sbi,
+      .lmin                    = lmin,
+      .n_l                     = n_l,
+      .epsilon                 = self->adaptive_epsilon,
+      .adaptive_boundary_tries = self->adaptive_boundary_tries
+    };
+    KRangeInitialization boundaries_and_k_seeds;
+    guint i;
 
-    g_free (nlid);
-    g_error ("_nc_xcor_kernel_build_non_limber_integrand: kernel %s returned empty component list",
-             G_OBJECT_TYPE_NAME (xclk));
+    ncm_sbessel_integrator_set_ell_range (self->sbi, lmin, lmax);
 
-    return NULL;
-  }
-
-  ncm_sbessel_integrator_set_ell_range (self->sbi, lmin, lmax);
-
-  {
-    NcmVector **total_kernel_ell = g_new (NcmVector *, n_l);
-    guint i, j;
-
-    nlid->cosmo  = nc_hicosmo_ref (cosmo);
-    nlid->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-    nlid->lmin   = lmin;
-    nlid->len    = n_l;
-
-    nlid->spline_ell = g_new (NcmSpline *, n_l);
-
-    for (i = 0; i < n_l; i++)
+    for (i = 0; i < comp_states.n_comp; i++)
     {
-      nlid->spline_ell[i] = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-      total_kernel_ell[i] = ncm_vector_new (n_k);
-      ncm_vector_set_zero (total_kernel_ell[i]);
+      ComponentState *state = &comp_states.states[i];
+
+      _component_state_init (state, g_ptr_array_index (comp_list, i), i, cosmo, n_l);
     }
 
+#ifdef DEBUG
     {
-      gdouble k_min_hard    = 0.0;
-      gdouble k_max_hard    = G_MAXDOUBLE;
-      gdouble k_epsilon_max = 0.0;
-      NonLimberKernelData kernel_data;
-      gdouble lnk_min;
-      gdouble lnk_max;
+      guint j;
 
-      /* Allocate and compute k_epsilon for each (component, ell) pair */
-      for (i = 0; i < comp_list->len; i++)
+      g_print ("Component details:\n");
+
+      for (j = 0; j < comp_states.n_comp; j++)
       {
-        NcXcorKernelComponent *comp = g_ptr_array_index (comp_list, i);
-        NonLimberCompParams params  = { comp, cosmo };
-        gdouble k_min, k_max;
+        const ComponentState *state = &comp_states.states[j];
 
-        nc_xcor_kernel_component_get_limits (
-          comp, cosmo, &kernel_data.xi_min[i], &kernel_data.xi_max[i], &k_min, &k_max);
+        g_print ("  [%d] xi_min = % 22.15g, xi_max = % 22.15g, k_min_hard = % 22.15g, k_max_hard = % 22.15g\n",
+                 j, state->xi_min, state->xi_max, state->k_min_hard, state->k_max_hard);
+      }
+    }
+#endif
 
-        for (j = 0; j < n_l; j++)
-        {
-          const gdouble nu        = nlid->lmin + j + 0.5;
-          const gdouble k_eps_val = nc_xcor_kernel_component_eval_k_epsilon (comp, nu) * 100.0;
+    boundaries_and_k_seeds = _component_list_compute_k_init (&comp_states);
 
-          kernel_data.k_epsilon[i][j] = k_eps_val;
-          k_epsilon_max               = GSL_MAX (k_epsilon_max, k_eps_val);
+#ifdef DEBUG
+    {
+      guint j;
 
-          /* Compute and store the kernel value at k_epsilon */
-          ncm_sbessel_integrator_integrate (
-            self->sbi, _nc_xcor_kernel_component_kernel_integ,
-            kernel_data.xi_min[i], kernel_data.xi_max[i], k_eps_val, integ_result, &params);
+      g_print ("Computed k range hard limits: [ % 22.15g, % 22.15g ]\n", boundaries_and_k_seeds.k_min_hard, boundaries_and_k_seeds.k_max_hard);
+      g_print ("Computed k range soft limits: [ % 22.15g, % 22.15g ]\n", boundaries_and_k_seeds.k_min_soft, boundaries_and_k_seeds.k_max_soft);
 
-          {
-            const gdouble prefactor = nc_xcor_kernel_component_eval_prefactor (comp, cosmo, k_eps_val, nlid->lmin + j);
-            const gdouble val       = ncm_vector_get (integ_result, j) * prefactor;
+      g_print ("Initial k seeds:\n");
 
-            kernel_data.k_epsilon_val[i][j] = val;
-          }
-        }
+      for (j = 0; j < boundaries_and_k_seeds.n_k_seeds; j++)
+        g_print ("  % 22.15g\n", boundaries_and_k_seeds.k_seeds[j]);
 
-        k_min_hard = GSL_MAX (k_min_hard, k_min);
-        k_max_hard = GSL_MIN (k_max_hard, k_max);
+      fflush (stdout);
+    }
+#endif
+
+    ncm_function_sample_set_add_old_func (
+      fss,
+      boundaries_and_k_seeds.k_min_soft,
+      _component_states_compute_func,
+      &comp_states
+    );
+
+    for (i = 0; i < boundaries_and_k_seeds.n_k_seeds; i++)
+    {
+      const gdouble k_seed = boundaries_and_k_seeds.k_seeds[i];
+
+      ncm_function_sample_set_add_old_func (
+        fss,
+        k_seed,
+        _component_states_compute_func,
+        &comp_states
+      );
+    }
+
+    ncm_function_sample_set_add_old_func (
+      fss,
+      boundaries_and_k_seeds.k_max_soft,
+      _component_states_compute_func,
+      &comp_states
+    );
+
+    /*
+     * After initial points are added, use adaptive sampling with very large tolerance
+     * to get an initial guess rough approximation within the initial soft range.
+     */
+    ncm_function_sample_set_adaptive_midpoint (
+      fss, _component_states_compute_func, 1.0e-1, 0.0, 10000, 1,
+      spline, &comp_states
+    );
+
+#ifdef DEBUG
+    {
+      g_print ("Initial k range soft limits: [ % 22.15g, % 22.15g ]\n", boundaries_and_k_seeds.k_min_soft, boundaries_and_k_seeds.k_max_soft);
+      g_print ("Initial k range hard limits: [ % 22.15g, % 22.15g ]\n", boundaries_and_k_seeds.k_min_hard, boundaries_and_k_seeds.k_max_hard);
+    }
+#endif
+
+    {
+      /*
+       * Now we start the domain expansion.
+       */
+      const gdouble expansion_factor = 0.2;
+#ifdef DEBUG
+      g_print ("Expanding left border with expansion factor: % 22.15g\n", expansion_factor);
+#endif
+
+      for (i = 0; i < max_border_expansions; i++)
+      {
+        if (_component_states_expand_left_border (&comp_states, fss, expansion_factor))
+          break;
       }
 
-      nlid->k_min = k_min_hard;
-      nlid->k_max = GSL_MIN (k_epsilon_max, k_max_hard);
-
-      lnk_min = log (nlid->k_min);
-      lnk_max = log (nlid->k_max);
-
-      /* Setup kernel data structure */
-      kernel_data.xclk         = xclk;
-      kernel_data.cosmo        = cosmo;
-      kernel_data.comp_list    = comp_list;
-      kernel_data.n_comp       = comp_list->len;
-      kernel_data.n_l          = n_l;
-      kernel_data.lmin         = nlid->lmin;
-      kernel_data.integ_result = integ_result;
-
-      /* Loop over k values and compute kernel using new function */
-      for (j = 0; j < n_k; j++)
+#ifdef DEBUG
       {
-        const gdouble k = exp (lnk_min + (lnk_max - lnk_min) * j / (n_k - 1));
-        gdouble kernel_ell_vals[MAX_ELL_BLOCK];
-
-        ncm_vector_set (k_vec, j, k);
-
-        /* Compute kernel for all ells at this k with cutoff */
-        _nc_xcor_kernel_eval_kernel_at_k (&kernel_data, k, kernel_ell_vals);
-
-        /* Store results in total_kernel_ell arrays */
-        for (i = 0; i < n_l; i++)
-          ncm_vector_set (total_kernel_ell[i], j, kernel_ell_vals[i]);
+        g_print ("k range after left border expansion: [ % 22.15g, % 22.15g ]\n",
+                 ncm_function_sample_set_get_x_min (fss),
+                 ncm_function_sample_set_get_x_max (fss));
+        g_print ("Expanding right border with expansion factor: % 22.15g\n", expansion_factor);
       }
+#endif
+
+      for (i = 0; i < max_border_expansions; i++)
+      {
+        if (_component_states_expand_right_border (&comp_states, fss, expansion_factor))
+          break;
+      }
+
+#ifdef DEBUG
+      {
+        g_print ("k range after right border expansion: [ % 22.15g, % 22.15g ]\n",
+                 ncm_function_sample_set_get_x_min (fss),
+                 ncm_function_sample_set_get_x_max (fss));
+      }
+#endif
+    }
+    ncm_function_sample_set_mark_all_old (fss);
+    ncm_function_sample_set_reset_interval_ok (fss);
+
+    {
+      gdouble max_absF_total = GSL_DBL_MAX;
+      const gdouble reltol   = 1.0e-3;
+      guint i;
+
+      for (i = 0; i < comp_states.n_l; i++)
+      {
+        gdouble absmaxF_j = ncm_function_sample_set_get_absmaxF (fss, i, NULL);
+
+        max_absF_total = GSL_MIN (max_absF_total, gsl_pow_2 (absmaxF_j));
+      }
+
+      max_absF_total = sqrt (max_absF_total);
+
+#ifdef DEBUG
+      g_print ("max_absF_total = % 22.15g\n", max_absF_total);
+#endif
+
+      ncm_function_sample_set_adaptive_midpoint (
+        fss, _component_states_compute_func_extrapolated,
+        reltol, max_absF_total * reltol, 10000, 1,
+        spline, &comp_states
+      );
+    }
+
+    nlid->spline_vec  = ncm_function_sample_set_to_spline_vec (fss, spline);
+    nlid->k_min       = ncm_function_sample_set_get_x_min (fss);
+    nlid->k_max       = ncm_function_sample_set_get_x_max (fss);
+    nlid->lmin        = lmin;
+    nlid->len         = n_l;
+    nlid->RH_Mpc      = nc_hicosmo_RH_Mpc (cosmo);
+    nlid->cosmo       = nc_hicosmo_ref (cosmo);
+    nlid->eval_result = ncm_vector_new (n_l);
+
+#ifdef DEBUG
+    {
+      g_print ("Final k range: [ % 22.15g, % 22.15g ]\n", nlid->k_min, nlid->k_max);
+      g_print ("Final spline number of samples: %d\n", ncm_spline_vec_get_nknots (nlid->spline_vec));
+      g_print ("Evaluating spline at k = 300.0 for a sanity check:\n");
 
       for (i = 0; i < n_l; i++)
-      {
-        ncm_spline_set (nlid->spline_ell[i], k_vec, total_kernel_ell[i], TRUE);
-        ncm_vector_free (total_kernel_ell[i]);
-      }
+        g_print ("  l = %d, W = % 22.15g\n", lmin + i, ncm_vector_get (nlid->eval_result, i));
 
-      ncm_vector_free (k_vec);
-      g_free (total_kernel_ell);
+      fflush (stdout);
     }
+#endif
 
-    ncm_vector_free (integ_result);
+    ncm_spline_vec_eval (nlid->spline_vec, 300.0, nlid->eval_result);
+
+    ncm_function_sample_set_clear (&fss);
+    ncm_spline_free (spline);
 
     return nc_xcor_kernel_integrand_new (n_l,
                                          _non_limber_integrand_eval,
@@ -1141,6 +1687,82 @@ nc_xcor_kernel_set_l_limber (NcXcorKernel *xclk, gint l_limber)
              l_limber, G_OBJECT_TYPE_NAME (xclk));
 
   self->l_limber = l_limber;
+}
+
+/**
+ * nc_xcor_kernel_get_adaptive_epsilon:
+ * @xclk: a #NcXcorKernel
+ *
+ * Gets the convergence threshold for adaptive k-range determination in the
+ * non-Limber integrand. The algorithm stops extending the k range when all
+ * component contributions drop below epsilon times the maximum kernel value.
+ *
+ * Returns: the adaptive epsilon value
+ */
+gdouble
+nc_xcor_kernel_get_adaptive_epsilon (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  return self->adaptive_epsilon;
+}
+
+/**
+ * nc_xcor_kernel_set_adaptive_epsilon:
+ * @xclk: a #NcXcorKernel
+ * @adaptive_epsilon: the convergence threshold (must be > 0)
+ *
+ * Sets the convergence threshold for adaptive k-range determination in the
+ * non-Limber integrand. Typical values range from 1e-4 to 1e-8, with smaller
+ * values providing more accurate integration at the cost of more evaluations.
+ *
+ */
+void
+nc_xcor_kernel_set_adaptive_epsilon (NcXcorKernel *xclk, gdouble adaptive_epsilon)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  g_assert (adaptive_epsilon > 0.0);
+  self->adaptive_epsilon = adaptive_epsilon;
+}
+
+/**
+ * nc_xcor_kernel_get_adaptive_boundary_tries:
+ * @xclk: a #NcXcorKernel
+ *
+ * Gets the number of consecutive boundary points that must be below the
+ * convergence threshold before stopping boundary extension. This helps
+ * avoid false positives where a single low point prematurely stops the
+ * adaptive k-range determination.
+ *
+ * Returns: the number of required consecutive tries
+ */
+guint
+nc_xcor_kernel_get_adaptive_boundary_tries (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  return self->adaptive_boundary_tries;
+}
+
+/**
+ * nc_xcor_kernel_set_adaptive_boundary_tries:
+ * @xclk: a #NcXcorKernel
+ * @adaptive_boundary_tries: the number of consecutive tries (must be >= 1)
+ *
+ * Sets the number of consecutive boundary points that must be below the
+ * convergence threshold before stopping boundary extension. Higher values
+ * provide more robust convergence detection at the cost of additional
+ * function evaluations. Typical values range from 2 to 5.
+ *
+ */
+void
+nc_xcor_kernel_set_adaptive_boundary_tries (NcXcorKernel *xclk, guint adaptive_boundary_tries)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  g_assert (adaptive_boundary_tries >= 1);
+  self->adaptive_boundary_tries = adaptive_boundary_tries;
 }
 
 /**
