@@ -50,6 +50,8 @@
 #include "math/ncm_spline_cubic.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline_cubic_d2.h"
+#include "math/ncm_spline_vec.h"
+#include "math/ncm_function_sample_set.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline2d_gsl.h"
 #include "math/ncm_spline2d_spline.h"
@@ -632,6 +634,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_D2);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_GSL);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE_VEC);
+  ncm_cfg_register_obj (NCM_TYPE_FUNCTION_SAMPLE_SET);
 
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_BICUBIC);

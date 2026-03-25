@@ -20147,6 +20147,10 @@ class XcorKernel(NumCosmoMath.Model):
         Maximum multipole
       l-limber -> gint: l-limber
         Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20173,6 +20177,8 @@ class XcorKernel(NumCosmoMath.Model):
     """
 
     class Props:
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
@@ -20192,6 +20198,8 @@ class XcorKernel(NumCosmoMath.Model):
     parent_instance: NumCosmoMath.Model = ...
     def __init__(
         self,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,
@@ -20226,6 +20234,8 @@ class XcorKernel(NumCosmoMath.Model):
     ) -> float: ...
     def eval_limber_z_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
     def free(self) -> None: ...
+    def get_adaptive_boundary_tries(self) -> int: ...
+    def get_adaptive_epsilon(self) -> float: ...
     def get_component_list(self) -> list[XcorKernelComponent]: ...
     def get_eval(self, cosmo: HICosmo, l: int) -> XcorKernelIntegrand: ...
     def get_eval_vectorized(
@@ -20246,6 +20256,8 @@ class XcorKernel(NumCosmoMath.Model):
     def peek_powspec(self) -> NumCosmoMath.Powspec: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> XcorKernel: ...
+    def set_adaptive_boundary_tries(self, adaptive_boundary_tries: int) -> None: ...
+    def set_adaptive_epsilon(self, adaptive_epsilon: float) -> None: ...
     def set_l_limber(self, l_limber: int) -> None: ...
     def set_lmax(self, lmax: int) -> None: ...
 
@@ -20277,6 +20289,10 @@ class XcorKernelCMBISW(XcorKernel):
         Maximum multipole
       l-limber -> gint: l-limber
         Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20305,6 +20321,8 @@ class XcorKernelCMBISW(XcorKernel):
     class Props:
         Nl: NumCosmoMath.Vector
         recomb: Recomb
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
@@ -20325,6 +20343,8 @@ class XcorKernelCMBISW(XcorKernel):
         self,
         Nl: NumCosmoMath.Vector = ...,
         recomb: Recomb = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,
@@ -20387,6 +20407,10 @@ class XcorKernelCMBLensing(XcorKernel):
         Maximum multipole
       l-limber -> gint: l-limber
         Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20415,6 +20439,8 @@ class XcorKernelCMBLensing(XcorKernel):
     class Props:
         Nl: NumCosmoMath.Vector
         recomb: Recomb
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
@@ -20435,6 +20461,8 @@ class XcorKernelCMBLensing(XcorKernel):
         self,
         Nl: NumCosmoMath.Vector = ...,
         recomb: Recomb = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,
@@ -20616,6 +20644,10 @@ class XcorKernelGal(XcorKernel):
         Maximum multipole
       l-limber -> gint: l-limber
         Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20653,6 +20685,8 @@ class XcorKernelGal(XcorKernel):
         nbarm1: float
         noise_bias: float
         noise_bias_fit: bool
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
@@ -20682,6 +20716,8 @@ class XcorKernelGal(XcorKernel):
         nbarm1: float = ...,
         noise_bias: float = ...,
         noise_bias_fit: bool = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,
@@ -20779,6 +20815,10 @@ class XcorKernelWeakLensing(XcorKernel):
         Maximum multipole
       l-limber -> gint: l-limber
         Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20808,6 +20848,8 @@ class XcorKernelWeakLensing(XcorKernel):
         dndz: NumCosmoMath.Spline
         intr_shear: float
         nbar: float
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
@@ -20829,6 +20871,8 @@ class XcorKernelWeakLensing(XcorKernel):
         dndz: NumCosmoMath.Spline = ...,
         intr_shear: float = ...,
         nbar: float = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,
@@ -20887,6 +20931,10 @@ class XcorKerneltSZ(XcorKernel):
         Maximum multipole
       l-limber -> gint: l-limber
         Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20915,6 +20963,8 @@ class XcorKerneltSZ(XcorKernel):
     class Props:
         noise: float
         zmax: float
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
         dist: Distance
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
@@ -20935,6 +20985,8 @@ class XcorKerneltSZ(XcorKernel):
         self,
         noise: float = ...,
         zmax: float = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
         dist: Distance = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,

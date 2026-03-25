@@ -113,3 +113,103 @@ def test_func_x2(f, df, d2f, interp_nknots, tol) -> None:
 
     d2f_interp = [s.eval_deriv2(x) for x in knots]
     np.testing.assert_allclose(d2f_interp, d2f_true, rtol=tol[0], atol=tol[1])
+
+
+@pytest.mark.parametrize(
+    "f,interp_nknots",
+    [
+        (f_x2, 10),
+        (f_x3, 12),
+        (f_cos, 1000),
+    ],
+)
+def test_func_eval_idx(f, interp_nknots) -> None:
+    """Test the ncm_spline_eval_idx function with provided index.
+
+    Note: This test requires the library to be rebuilt after adding
+    ncm_spline_eval_idx to ensure Python bindings are updated.
+    """
+    interp_knots = np.linspace(0.0, 4.0, interp_nknots, dtype=np.float64)
+
+    s = Ncm.SplineCubicD2.new(
+        Ncm.Vector.new_array(npa_to_seq(interp_knots)),
+        Ncm.Vector.new_array([f(x) for x in interp_knots]),
+        Ncm.Vector.new_array(
+            [0.0 for _ in interp_knots]
+        ),  # d2f values (not used for this test)
+        True,
+    )
+
+    knots = np.linspace(0.0, 4.0, interp_nknots * 10)
+
+    # Test that eval_idx gives the same result as eval
+    for x in knots:
+        idx = s.get_index(x)
+        f_eval = s.eval(x)
+        # eval_idx will be available after rebuilding with GObject introspection
+        f_eval_idx = s.eval_idx(x, idx)
+        np.testing.assert_allclose(f_eval_idx, f_eval, rtol=1.0e-15, atol=1.0e-15)
+
+
+@pytest.mark.parametrize(
+    "f,interp_nknots",
+    [
+        (f_x2, 10),
+        (f_x3, 12),
+        (f_cos, 1000),
+    ],
+)
+def test_func_eval_deriv_idx(f, interp_nknots) -> None:
+    """Test the ncm_spline_eval_deriv_idx function with provided index."""
+    interp_knots = np.linspace(0.0, 4.0, interp_nknots, dtype=np.float64)
+
+    s = Ncm.SplineCubicD2.new(
+        Ncm.Vector.new_array(npa_to_seq(interp_knots)),
+        Ncm.Vector.new_array([f(x) for x in interp_knots]),
+        Ncm.Vector.new_array(
+            [0.0 for _ in interp_knots]
+        ),  # d2f values (not used for this test)
+        True,
+    )
+
+    knots = np.linspace(0.0, 4.0, interp_nknots * 10)
+
+    # Test that eval_deriv_idx gives the same result as eval_deriv
+    for x in knots:
+        idx = s.get_index(x)
+        f_deriv = s.eval_deriv(x)
+        f_deriv_idx = s.eval_deriv_idx(x, idx)
+        np.testing.assert_allclose(f_deriv_idx, f_deriv, rtol=1.0e-15, atol=1.0e-15)
+
+
+@pytest.mark.parametrize(
+    "f,interp_nknots",
+    [
+        (f_x2, 10),
+        (f_x3, 12),
+        (f_cos, 100),
+    ],
+)
+def test_func_eval_integ_idx(f, interp_nknots) -> None:
+    """Test the ncm_spline_eval_integ_idx function with provided indices."""
+    interp_knots = np.linspace(0.0, 4.0, interp_nknots, dtype=np.float64)
+
+    s = Ncm.SplineCubicD2.new(
+        Ncm.Vector.new_array(npa_to_seq(interp_knots)),
+        Ncm.Vector.new_array([f(x) for x in interp_knots]),
+        Ncm.Vector.new_array(
+            [0.0 for _ in interp_knots]
+        ),  # d2f values (not used for this test)
+        True,
+    )
+
+    # Test various integration intervals
+    for _ in range(20):
+        xi = np.random.uniform(0.0, 3.5)
+        xf = np.random.uniform(xi, 4.0)
+        idx_i = s.get_index(xi)
+        idx_f = s.get_index(xf)
+
+        integ = s.eval_integ(xi, xf)
+        integ_idx = s.eval_integ_idx(xi, idx_i, xf, idx_f)
+        np.testing.assert_allclose(integ_idx, integ, rtol=1.0e-15, atol=1.0e-15)
