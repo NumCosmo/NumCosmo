@@ -62,7 +62,7 @@
 #include "xcor/nc_xcor.h"
 #include "nc_enum_types.h"
 
-#define DEBUG
+/* #define DEBUG */
 
 typedef struct _NcXcorKernelPrivate
 {
@@ -615,6 +615,7 @@ _component_list_compute_k_init (ComponentStates *comp_states)
   result.k_min_hard = 0.0;
   result.k_max_hard = G_MAXDOUBLE;
   result.k_max_soft = 0.0;
+  result.k_min_soft = G_MAXDOUBLE;
 
   for (i = 0; i < comp_states->n_comp; i++)
   {
@@ -626,21 +627,22 @@ _component_list_compute_k_init (ComponentStates *comp_states)
 
     for (j = 0; j < comp_states->n_l; j++)
     {
-      const gdouble nu           = comp_states->lmin + j + 0.5;
-      const gdouble k_max_ij     = nc_xcor_kernel_component_eval_k_max (state->comp, nu);
-      const gdouble k_epsilon_ij = k_max_ij * 1.1;
+      const gdouble nu         = comp_states->lmin + j + 0.5;
+      const gdouble k_max_ij   = nc_xcor_kernel_component_eval_k_max (state->comp, nu);
+      const gdouble k_upper_ij = k_max_ij * 1.01;
+      const gdouble k_lower_ij = k_max_ij * 0.99;
 
       ln_k_scale       += log (k_max_ij);
-      result.k_max_soft = GSL_MAX (result.k_max_soft, k_epsilon_ij);
+      result.k_max_soft = GSL_MAX (result.k_max_soft, k_upper_ij);
+      result.k_min_soft = GSL_MIN (result.k_min_soft, k_lower_ij);
     }
 
     log_k_center_sum += ln_k_scale / comp_states->n_l;
     k_comp_scales[i]  = exp (ln_k_scale / comp_states->n_l);
   }
 
-  result.k_center   = exp (log_k_center_sum / comp_states->n_comp);
-  result.k_min_soft = result.k_center * result.k_center / result.k_max_soft;
-  result.n_k_seeds  = 0;
+  result.k_center  = exp (log_k_center_sum / comp_states->n_comp);
+  result.n_k_seeds = 0;
 
   g_assert_cmpfloat (result.k_min_hard, <, result.k_max_hard);
   g_assert_cmpfloat (result.k_min_soft, <, result.k_max_soft);
@@ -649,55 +651,20 @@ _component_list_compute_k_init (ComponentStates *comp_states)
   g_assert_cmpfloat (result.k_min_soft, <, result.k_center);
   g_assert_cmpfloat (result.k_center, <, result.k_max_soft);
 
-  if (gsl_fcmp (result.k_min_soft, result.k_max_soft, 1.0e-10) == 0)
+  if (gsl_fcmp (result.k_min_soft, result.k_max_soft, 1.0e-5) == 0)
     g_error ("_component_list_compute_k_init: computed k_min and k_max are too close (k_min = % 22.15g, k_max = % 22.15g). "
              "This may indicate that the kernel components have very narrow support in k. "
              "Consider adjusting the kernel components or their parameters to ensure a wider k range.",
              result.k_min_soft, result.k_max_soft);
 
-  {
-    const gdouble ln_k_min = log (result.k_min_soft);
-    const gdouble ln_k_max = log (result.k_max_soft);
-
-    for (i = 1; i < 5; i++)
-    {
-      gdouble ln_k = ln_k_min + (ln_k_max - ln_k_min) * i / 5.0;
-      gdouble k    = exp (ln_k);
-
-      if (
-        (k > result.k_min_soft) &&
-        (k < result.k_max_soft) &&
-        (_is_new_k (k, result.k_seeds, result.n_k_seeds)))
-      {
-        result.k_seeds[result.n_k_seeds] = k;
-        result.n_k_seeds++;
-      }
-    }
-  }
-
   for (i = 0; i < comp_states->n_comp; i++)
   {
-    if (
-      (k_comp_scales[i] > result.k_min_soft) &&
-      (k_comp_scales[i] < result.k_max_soft) &&
-      (_is_new_k (k_comp_scales[i], result.k_seeds, result.n_k_seeds)))
+    if (_is_new_k (k_comp_scales[i], result.k_seeds, result.n_k_seeds))
     {
       result.k_seeds[result.n_k_seeds] = k_comp_scales[i];
       result.n_k_seeds++;
     }
   }
-
-#ifdef DEBUG
-  g_print ("_component_list_compute_k_init: computed k range: [ % 22.15g, % 22.15g ] (soft range: [ % 22.15g, % 22.15g ], center: % 22.15g)\n",
-           result.k_min_hard, result.k_max_hard, result.k_min_soft, result.k_max_soft, result.k_center);
-  g_print ("_component_list_compute_k_init: selected k seeds: ");
-
-  for (i = 0; i < result.n_k_seeds; i++)
-    g_print ("% 22.15g ", result.k_seeds[i]);
-
-  g_print ("\n");
-  fflush (stdout);
-#endif
 
   return result;
 }
@@ -726,11 +693,6 @@ _compute_components_exact (
       );
 
       kernel_out[ci][i] *= prefactor * k * sqrt (k);
-
-#ifdef DEBUG
-      g_print ("_compute_components_exact: k = % 22.15g, comp_idx = %d, l = %d, integ_result = % 22.15g, prefactor = % 22.15g, kernel_out = % 22.15g\n",
-               k, ci, comp_states->lmin + i, ncm_vector_get (integ_result, i), prefactor, kernel_out[ci][i]);
-#endif
     }
 
     ncm_vector_clear (&integ_result);
@@ -766,10 +728,6 @@ _compute_components_extrapolated (
         );
 
         kernel_out[ci][i] *= prefactor * k * sqrt (k);
-#ifdef DEBUG
-        g_print ("_compute_components_extrapolated[I]: k = % 22.15g, comp_idx = %d, l = %d, integ_result = % 22.15g, prefactor = % 22.15g, kernel_out = % 22.15g\n", k, ci, comp_states->lmin + i, ncm_vector_get (integ_result, i), prefactor, kernel_out[ci][i]);
-        fflush (stdout);
-#endif
       }
     }
     else
@@ -785,11 +743,6 @@ _compute_components_extrapolated (
           const gdouble val_extrapolated = val * exp (-(k - state->last_k_right) / state->last_k_right * 2.0);
 
           kernel_out[ci][i] = val_extrapolated;
-#ifdef DEBUG
-          g_print ("_compute_components_extrapolated[R]: k = % 22.15g, comp_idx = %d, l = %d, last_k_right = % 22.15g, last_val = % 22.15g, val_extrapolated = % 22.15g\n",
-                   k, ci, comp_states->lmin + i, state->last_k_right, val, val_extrapolated);
-          fflush (stdout);
-#endif
         }
       }
       else
@@ -800,11 +753,6 @@ _compute_components_extrapolated (
           const gdouble val_extrapolated = val * exp (-(state->last_k_left - k) / state->last_k_left * 2.0);
 
           kernel_out[ci][i] = val_extrapolated;
-#ifdef DEBUG
-          g_print ("_compute_components_extrapolated[L]: k = % 22.15g, comp_idx = %d, l = %d, last_k_left = % 22.15g, last_val = % 22.15g, val_extrapolated = % 22.15g\n",
-                   k, ci, comp_states->lmin + i, state->last_k_left, val, val_extrapolated);
-          fflush (stdout);
-#endif
         }
       }
     }
@@ -833,13 +781,23 @@ static gboolean
 _component_states_expand_right_border (ComponentStates *comp_states, NcmFunctionSampleSet *fss, gdouble expansion_factor)
 {
   const gdouble k_right      = ncm_function_sample_set_get_x_max (fss);
-  const gdouble new_k        = k_right * (1.0 + expansion_factor);
+  gdouble new_k              = k_right * (1.0 + expansion_factor);
   NcmVector *kernel_sum      = ncm_vector_new (comp_states->n_l);
   gboolean all_below_epsilon = TRUE;
+  gboolean force_stop        = FALSE;
   gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
   guint i;
 
-  g_assert_cmpfloat (new_k, <=, comp_states->states[0].k_max_hard);
+  if (new_k > comp_states->states[0].k_max_hard)
+  {
+    g_assert_cmpfloat (k_right, !=, comp_states->states[0].k_max_hard);
+    g_warning ("_component_states_expand_right_border: new k = % 22.15g is above hard limit, clipping to % 22.15g",
+               new_k, comp_states->states[0].k_max_hard);
+    force_stop = TRUE;
+    new_k      = comp_states->states[0].k_max_hard;
+
+    return TRUE;
+  }
 
   _compute_components_extrapolated (comp_states, new_k, kernel_out);
 
@@ -856,19 +814,10 @@ _component_states_expand_right_border (ComponentStates *comp_states, NcmFunction
       const gdouble absmaxF_j = ncm_function_sample_set_get_absmaxF (fss, j, NULL);
 
       max_absF_total += gsl_pow_2 (absmaxF_j);
-#ifdef DEBUG
-      g_print ("_component_states_expand_right_border: absmaxF_j = % 22.15g\n", absmaxF_j);
-      fflush (stdout);
-#endif
     }
 
     max_absF_total = sqrt (max_absF_total);
   }
-
-#ifdef DEBUG
-  g_print ("_component_states_expand_right_border: k_right = % 22.15g, new_k = % 22.15g\n", k_right, new_k);
-  fflush (stdout);
-#endif
 
   for (i = 0; i < comp_states->n_comp; i++)
   {
@@ -889,11 +838,6 @@ _component_states_expand_right_border (ComponentStates *comp_states, NcmFunction
 
     if (val_i < comp_states->epsilon * max_absF_total)
     {
-#ifdef DEBUG
-      g_print ("_component_states_expand_right_border: val_i = % 22.15g epsilon = % 22.15g max_absF_total = % 22.15g\n",
-               val_i, comp_states->epsilon, max_absF_total);
-      fflush (stdout);
-#endif
       comp_states->states[i].right_boundary_found++;
       comp_states->states[i].last_k_right = new_k;
     }
@@ -910,20 +854,28 @@ _component_states_expand_right_border (ComponentStates *comp_states, NcmFunction
 
   ncm_vector_free (kernel_sum);
 
-  return all_below_epsilon;
+  return force_stop || all_below_epsilon;
 }
 
 static gboolean
 _component_states_expand_left_border (ComponentStates *comp_states, NcmFunctionSampleSet *fss, gdouble expansion_factor)
 {
   const gdouble k_left       = ncm_function_sample_set_get_x_min (fss);
-  const gdouble new_k        = k_left * (1.0 - expansion_factor);
+  gdouble new_k              = k_left * (1.0 - expansion_factor);
   NcmVector *kernel_sum      = ncm_vector_new (comp_states->n_l);
   gboolean all_below_epsilon = TRUE;
+  gboolean force_stop        = FALSE;
   gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
   guint i;
 
-  g_assert_cmpfloat (new_k, >=, comp_states->states[0].k_min_hard);
+  if (new_k < comp_states->states[0].k_min_hard)
+  {
+    g_assert_cmpfloat (k_left, !=, comp_states->states[0].k_min_hard);
+    g_warning ("_component_states_expand_left_border: new k = % 22.15g is below hard limit, clipping to % 22.15g",
+               new_k, comp_states->states[0].k_min_hard);
+    new_k      = comp_states->states[0].k_min_hard;
+    force_stop = TRUE;
+  }
 
   _compute_components_extrapolated (comp_states, new_k, kernel_out);
 
@@ -940,20 +892,11 @@ _component_states_expand_left_border (ComponentStates *comp_states, NcmFunctionS
       const gdouble absmaxF_j = ncm_function_sample_set_get_absmaxF (fss, j, NULL);
 
       max_absF_total += gsl_pow_2 (absmaxF_j);
-#ifdef DEBUG
-      g_print ("_component_states_expand_left_border: absmaxF_j = % 22.15g\n", absmaxF_j);
-      fflush (stdout);
-#endif
     }
 
 
     max_absF_total = sqrt (max_absF_total);
   }
-
-#ifdef DEBUG
-  g_print ("_component_states_expand_left_border: k_left = % 22.15g, new_k = % 22.15g\n", k_left, new_k);
-  fflush (stdout);
-#endif
 
   for (i = 0; i < comp_states->n_comp; i++)
   {
@@ -974,11 +917,6 @@ _component_states_expand_left_border (ComponentStates *comp_states, NcmFunctionS
 
     if (val_i < comp_states->epsilon * max_absF_total)
     {
-#ifdef DEBUG
-      g_print ("_component_states_expand_left_border: val_i = % 22.15g epsilon = % 22.15g max_absF_total = % 22.15g\n",
-               val_i, comp_states->epsilon, max_absF_total);
-      fflush (stdout);
-#endif
       comp_states->states[i].left_boundary_found++;
       comp_states->states[i].last_k_left = new_k;
     }
@@ -995,7 +933,7 @@ _component_states_expand_left_border (ComponentStates *comp_states, NcmFunctionS
 
   ncm_vector_free (kernel_sum);
 
-  return all_below_epsilon;
+  return force_stop || all_below_epsilon;
 }
 
 static void
@@ -1085,39 +1023,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
       _component_state_init (state, g_ptr_array_index (comp_list, i), i, cosmo, n_l);
     }
 
-#ifdef DEBUG
-    {
-      guint j;
-
-      g_print ("Component details:\n");
-
-      for (j = 0; j < comp_states.n_comp; j++)
-      {
-        const ComponentState *state = &comp_states.states[j];
-
-        g_print ("  [%d] xi_min = % 22.15g, xi_max = % 22.15g, k_min_hard = % 22.15g, k_max_hard = % 22.15g\n",
-                 j, state->xi_min, state->xi_max, state->k_min_hard, state->k_max_hard);
-      }
-    }
-#endif
-
     boundaries_and_k_seeds = _component_list_compute_k_init (&comp_states);
-
-#ifdef DEBUG
-    {
-      guint j;
-
-      g_print ("Computed k range hard limits: [ % 22.15g, % 22.15g ]\n", boundaries_and_k_seeds.k_min_hard, boundaries_and_k_seeds.k_max_hard);
-      g_print ("Computed k range soft limits: [ % 22.15g, % 22.15g ]\n", boundaries_and_k_seeds.k_min_soft, boundaries_and_k_seeds.k_max_soft);
-
-      g_print ("Initial k seeds:\n");
-
-      for (j = 0; j < boundaries_and_k_seeds.n_k_seeds; j++)
-        g_print ("  % 22.15g\n", boundaries_and_k_seeds.k_seeds[j]);
-
-      fflush (stdout);
-    }
-#endif
 
     ncm_function_sample_set_add_old_func (
       fss,
@@ -1145,66 +1051,33 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
       &comp_states
     );
 
-    /*
-     * After initial points are added, use adaptive sampling with very large tolerance
-     * to get an initial guess rough approximation within the initial soft range.
-     */
-    ncm_function_sample_set_adaptive_midpoint (
-      fss, _component_states_compute_func, 1.0e-1, 0.0, 10000, 1,
-      spline, &comp_states
-    );
-
-#ifdef DEBUG
-    {
-      g_print ("Initial k range soft limits: [ % 22.15g, % 22.15g ]\n", boundaries_and_k_seeds.k_min_soft, boundaries_and_k_seeds.k_max_soft);
-      g_print ("Initial k range hard limits: [ % 22.15g, % 22.15g ]\n", boundaries_and_k_seeds.k_min_hard, boundaries_and_k_seeds.k_max_hard);
-    }
-#endif
-
     {
       /*
        * Now we start the domain expansion.
        */
       const gdouble expansion_factor = 0.2;
-#ifdef DEBUG
-      g_print ("Expanding left border with expansion factor: % 22.15g\n", expansion_factor);
-#endif
+      gboolean expanding_left        = TRUE;
+      gboolean expanding_right       = TRUE;
 
       for (i = 0; i < max_border_expansions; i++)
       {
-        if (_component_states_expand_left_border (&comp_states, fss, expansion_factor))
+        if (expanding_left)
+          if (_component_states_expand_left_border (&comp_states, fss, expansion_factor))
+            expanding_left = FALSE;
+
+        if (expanding_right)
+          if (_component_states_expand_right_border (&comp_states, fss, expansion_factor))
+            expanding_right = FALSE;
+
+        if (!(expanding_left || expanding_right))
           break;
       }
-
-#ifdef DEBUG
-      {
-        g_print ("k range after left border expansion: [ % 22.15g, % 22.15g ]\n",
-                 ncm_function_sample_set_get_x_min (fss),
-                 ncm_function_sample_set_get_x_max (fss));
-        g_print ("Expanding right border with expansion factor: % 22.15g\n", expansion_factor);
-      }
-#endif
-
-      for (i = 0; i < max_border_expansions; i++)
-      {
-        if (_component_states_expand_right_border (&comp_states, fss, expansion_factor))
-          break;
-      }
-
-#ifdef DEBUG
-      {
-        g_print ("k range after right border expansion: [ % 22.15g, % 22.15g ]\n",
-                 ncm_function_sample_set_get_x_min (fss),
-                 ncm_function_sample_set_get_x_max (fss));
-      }
-#endif
     }
     ncm_function_sample_set_mark_all_old (fss);
     ncm_function_sample_set_reset_interval_ok (fss);
-
     {
       gdouble max_absF_total = GSL_DBL_MAX;
-      const gdouble reltol   = 1.0e-3;
+      const gdouble reltol   = 1.0e-4;
       guint i;
 
       for (i = 0; i < comp_states.n_l; i++)
@@ -1215,10 +1088,6 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
       }
 
       max_absF_total = sqrt (max_absF_total);
-
-#ifdef DEBUG
-      g_print ("max_absF_total = % 22.15g\n", max_absF_total);
-#endif
 
       ncm_function_sample_set_adaptive_midpoint (
         fss, _component_states_compute_func_extrapolated,
@@ -1235,19 +1104,6 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
     nlid->RH_Mpc      = nc_hicosmo_RH_Mpc (cosmo);
     nlid->cosmo       = nc_hicosmo_ref (cosmo);
     nlid->eval_result = ncm_vector_new (n_l);
-
-#ifdef DEBUG
-    {
-      g_print ("Final k range: [ % 22.15g, % 22.15g ]\n", nlid->k_min, nlid->k_max);
-      g_print ("Final spline number of samples: %d\n", ncm_spline_vec_get_nknots (nlid->spline_vec));
-      g_print ("Evaluating spline at k = 300.0 for a sanity check:\n");
-
-      for (i = 0; i < n_l; i++)
-        g_print ("  l = %d, W = % 22.15g\n", lmin + i, ncm_vector_get (nlid->eval_result, i));
-
-      fflush (stdout);
-    }
-#endif
 
     ncm_spline_vec_eval (nlid->spline_vec, 300.0, nlid->eval_result);
 
