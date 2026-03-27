@@ -1175,10 +1175,13 @@ _ncm_spline_get_index_no_stride (const NcmSpline *s, const gdouble x)
       i_bucket = n_buckets - 1;
 
     left  = g_array_index (self->bucket, gsize, i_bucket);
-    right = g_array_index (self->bucket, gsize, i_bucket + 1) + 1;
+    right = g_array_index (self->bucket, gsize, i_bucket + 1);
   }
 
-  return gsl_interp_bsearch (self->x_data, x, left, right);
+  if (left == right)
+    return left;
+
+  return gsl_interp_bsearch (self->x_data, x, left, right + 1);
 }
 
 static guint
@@ -1211,10 +1214,13 @@ _ncm_spline_get_index_stride (const NcmSpline *s, const gdouble x)
       i_bucket = n_buckets - 1;
 
     left  = g_array_index (self->bucket, gsize, i_bucket);
-    right = g_array_index (self->bucket, gsize, i_bucket + 1) + 1;
+    right = g_array_index (self->bucket, gsize, i_bucket + 1);
   }
 
-  return _ncm_spline_bsearch_stride (self->x_data, self->stride, x, left, right);
+  if (left == right)
+    return left;
+
+  return _ncm_spline_bsearch_stride (self->x_data, self->stride, x, left, right + 1);
 }
 
 /**
