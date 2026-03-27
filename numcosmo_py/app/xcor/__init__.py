@@ -24,27 +24,28 @@
 """Cross-correlation kernel visualization and analysis tools."""
 
 from .kernels import (
-    LSSTSurvey,
     LSSTBinType,
     KernelCMBLensingConfig,
     KernelCMBISWConfig,
     KernelTSZConfig,
-    KernelGalaxyLSSTConfig,
-    KernelWeakLensingLSSTConfig,
+    KernelNumberCountsConfig,
+    KernelWeakLensingConfig,
     KERNEL_CONFIG_REGISTRY,
+    get_kernel_registry_help_text,
     parse_kernel_spec,
 )
-from .view import ViewKernel
+from .view import ViewKernel, ListKernels
 
 __all__ = [
-    "LSSTSurvey",
     "LSSTBinType",
     "KernelCMBLensingConfig",
     "KernelCMBISWConfig",
     "KernelTSZConfig",
-    "KernelGalaxyLSSTConfig",
-    "KernelWeakLensingLSSTConfig",
+    "KernelNumberCountsConfig",
+    "KernelWeakLensingConfig",
     "KERNEL_CONFIG_REGISTRY",
+    "get_kernel_registry_help_text",
     "parse_kernel_spec",
     "ViewKernel",
+    "ListKernels",
 ]

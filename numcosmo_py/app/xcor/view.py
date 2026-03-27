@@ -37,12 +37,12 @@ from numcosmo_py.cosmology import Cosmology
 
 from .kernels import (
     parse_kernel_spec,
-    KERNEL_CONFIG_REGISTRY,
+    get_kernel_registry_help_text,
     KernelCMBLensingConfig,
     KernelCMBISWConfig,
     KernelTSZConfig,
-    KernelGalaxyLSSTConfig,
-    KernelWeakLensingLSSTConfig,
+    KernelNumberCountsConfig,
+    KernelWeakLensingConfig,
     KernelConfigTypes,
 )
 
@@ -166,6 +166,18 @@ class KernelVariants:
     alternative: KernelEvaluation | None = None
 
 
+def ListKernels() -> None:
+    """List all available cross-correlation kernel types.
+
+    Displays a formatted table showing all available kernel types,
+    their model names, and configuration parameters.
+    """
+    print("\nAvailable Cross-Correlation Kernel Types\n")
+    print(get_kernel_registry_help_text())
+    print('\nUsage: numcosmo xcor kernel view --kernel "<kernel_type> param=value ..."')
+    print()
+
+
 @dataclasses.dataclass(kw_only=True)
 class ViewKernel:
     """View cross-correlation kernels.
@@ -182,21 +194,21 @@ class ViewKernel:
         - cmb_lensing: CMB lensing convergence kernel
         - cmb_isw: CMB Integrated Sachs-Wolfe kernel
         - tsz: Thermal Sunyaev-Zeldovich kernel
-        - galaxy_lsst: Galaxy clustering kernel (LSST SRD bins)
-        - weak_lensing_lsst: Weak lensing kernel (LSST SRD bins)
+        - number-counts: Galaxy number counts kernel
+        - weak-lensing: Weak lensing kernel
 
     Examples:
         # View CMB lensing kernel
         numcosmo xcor kernel view --kernel "cmb_lensing lmax=3000" --ell 20
 
-        # View Galaxy clustering kernel (Y1 lens bin 0)
+        # View Galaxy clustering kernel (LSST Y1 lens bin 0)
         numcosmo xcor kernel view \\
-            --kernel "galaxy_lsst survey=y1 bin_idx=0 bias=1.5" \
+            --kernel "number-counts survey=LSST-Y1 bin_idx=0 bias=1.5" \
             --ell 100
 
         # Compare Limber vs non-Limber for weak lensing
         numcosmo xcor kernel view \
-            --kernel "weak_lensing_lsst survey=y10 bin_idx=2" \
+            --kernel "weak-lensing survey=LSST-Y10 bin_idx=2" \
             --ell 50 \\
             --compare-limber \\
             --output wl_comparison.png
@@ -209,8 +221,7 @@ class ViewKernel:
             help=(
                 "Kernel specification string. "
                 "Format: '<kernel_name> key=value ...'. "
-                f"Available types: {', '.join(KERNEL_CONFIG_REGISTRY.keys())}. "
-                "Use --help to see kernel-specific parameters."
+                "Use 'numcosmo xcor kernel list' to see available kernel types and parameters."
             ),
             show_default=True,
         ),
@@ -337,10 +348,10 @@ class ViewKernel:
                 return self._create_cmb_isw_kernels(kernel_config)
             case KernelTSZConfig():
                 return self._create_tsz_kernels(kernel_config)
-            case KernelGalaxyLSSTConfig():
-                return self._create_galaxy_lsst_kernels(kernel_config)
-            case KernelWeakLensingLSSTConfig():
-                return self._create_weak_lensing_lsst_kernels(kernel_config)
+            case KernelNumberCountsConfig():
+                return self._create_number_counts_kernels(kernel_config)
+            case KernelWeakLensingConfig():
+                return self._create_weak_lensing_kernels(kernel_config)
             case _:
                 raise ValueError(f"Unknown kernel type: {type(kernel_config)}")
 
@@ -429,18 +440,24 @@ class ViewKernel:
 
         return kernel_label, kernel_obj
 
-    def _create_galaxy_lsst_kernels(
-        self, config: KernelGalaxyLSSTConfig
+    def _create_number_counts_kernels(
+        self, config: KernelNumberCountsConfig
     ) -> tuple[str, Nc.XcorKernelGal]:
-        """Create Galaxy LSST kernel.
+        """Create number counts kernel.
 
-        :param config: Galaxy LSST configuration.
+        :param config: Number counts configuration.
         :return: Tuple of (kernel_label, kernel_object).
         """
-        assert isinstance(config, KernelGalaxyLSSTConfig)
+        assert isinstance(config, KernelNumberCountsConfig)
 
         # Get LSST bins
         bins, _ = Nc.GalaxySDObsRedshiftGauss.new_lsst_srd_bins(config.bin_type.genum)
+        if len(bins) <= config.bin_idx:
+            raise ValueError(
+                f"Bin index {config.bin_idx} is out of "
+                f"range for survey '{config.survey}'"
+            )
+
         dndz_spline = bins[config.bin_idx].compute_binned_dndz(None)
 
         # Create primary kernel
@@ -455,24 +472,27 @@ class ViewKernel:
         kernel_obj.orig_param_set(Nc.XcorKernelGalSParams.MAG_BIAS, config.mag_bias)
         kernel_obj.prepare(self.cosmo)
 
-        kernel_label = (
-            f"Galaxy LSST ({config.survey.value.upper()} bin {config.bin_idx})"
-        )
+        kernel_label = f"Number Counts ({config.survey} bin {config.bin_idx})"
 
         return kernel_label, kernel_obj
 
-    def _create_weak_lensing_lsst_kernels(
-        self, config: KernelWeakLensingLSSTConfig
+    def _create_weak_lensing_kernels(
+        self, config: KernelWeakLensingConfig
     ) -> tuple[str, Nc.XcorKernelWeakLensing]:
-        """Create Weak Lensing LSST kernel.
+        """Create weak lensing kernel.
 
-        :param config: Weak lensing LSST configuration.
+        :param config: Weak lensing configuration.
         :return: Tuple of (kernel_label, kernel_object).
         """
-        assert isinstance(config, KernelWeakLensingLSSTConfig)
+        assert isinstance(config, KernelWeakLensingConfig)
 
         # Get LSST bins
         bins, _ = Nc.GalaxySDObsRedshiftGauss.new_lsst_srd_bins(config.bin_type.genum)
+        if len(bins) <= config.bin_idx:
+            raise ValueError(
+                f"Bin index {config.bin_idx} is out of "
+                f"range for survey '{config.survey}'"
+            )
         dndz_spline = bins[config.bin_idx].compute_binned_dndz(None)
 
         # Create primary kernel
@@ -486,9 +506,7 @@ class ViewKernel:
         )
         kernel_obj.prepare(self.cosmo)
 
-        kernel_label = (
-            f"Weak Lensing LSST ({config.survey.value.upper()} bin {config.bin_idx})"
-        )
+        kernel_label = f"Weak Lensing ({config.survey} bin {config.bin_idx})"
 
         return kernel_label, kernel_obj
 

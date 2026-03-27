@@ -38,23 +38,12 @@ command-line strings.
 
 import shlex
 from typing import Annotated, Any, Union, Type, cast
-from enum import Enum
 
 from pydantic import BaseModel, Field, ConfigDict
 from pydantic_core import core_schema
+from tabulate import tabulate
 
 from numcosmo_py import Nc, parse_options_strict, GEnum
-
-
-class LSSTSurvey(str, Enum):
-    """LSST survey year.
-
-    :cvar Y1: Year 1 survey (5 bins) - CLI value: 'y1'
-    :cvar Y10: Year 10 survey - CLI value: 'y10'
-    """
-
-    Y1 = "y1"
-    Y10 = "y10"
 
 
 class LSSTBinType(GEnum):
@@ -185,14 +174,14 @@ class KernelTSZConfig(BaseModel):
         return ["KernelTSZ", "zmax=6.0"]
 
 
-class KernelGalaxyLSSTConfig(BaseModel):
-    """Galaxy clustering kernel configuration for LSST SRD bins.
+class KernelNumberCountsConfig(BaseModel):
+    """Galaxy number counts kernel configuration.
 
     This kernel represents the galaxy number density field for a specific
-    redshift bin from the LSST Science Requirements Document (SRD).
+    redshift bin from various surveys.
     Galaxy clustering always uses lens bins.
 
-    :ivar survey: LSST survey year (y1 or y10).
+    :ivar survey: Survey specification (e.g., 'LSST-Y1', 'LSST-Y10').
     :ivar bin_idx: Bin index within the selected survey.
     :ivar bias: Galaxy bias parameter.
     :ivar mag_bias: Magnification bias parameter.
@@ -201,7 +190,7 @@ class KernelGalaxyLSSTConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    survey: Annotated[LSSTSurvey, Field()] = LSSTSurvey.Y1
+    survey: Annotated[str, Field()] = "LSST-Y1"
     bin_idx: Annotated[int, Field(ge=0)] = 0
     bias: Annotated[float, Field(gt=0.0)] = 1.5
     mag_bias: Annotated[float, Field()] = 0.0
@@ -209,16 +198,20 @@ class KernelGalaxyLSSTConfig(BaseModel):
 
     @property
     def bin_type(self) -> LSSTBinType:
-        """Get the appropriate lens bin type based on survey year."""
-        return (
-            LSSTBinType.Y1_LENS
-            if self.survey == LSSTSurvey.Y1
-            else LSSTBinType.Y10_LENS
-        )
+        """Get the appropriate lens bin type based on survey specification."""
+        match self.survey.upper():
+            case "LSST-Y1":
+                return LSSTBinType.Y1_LENS
+            case "LSST-Y10":
+                return LSSTBinType.Y10_LENS
+            case _:
+                raise ValueError(
+                    f"Unknown survey '{self.survey}'. " f"Supported: LSST-Y1, LSST-Y10"
+                )
 
     @classmethod
-    def from_args(cls, args: list[str]) -> "KernelGalaxyLSSTConfig":
-        """Create a KernelGalaxyLSSTConfig from command line arguments.
+    def from_args(cls, args: list[str]) -> "KernelNumberCountsConfig":
+        """Create a KernelNumberCountsConfig from command line arguments.
 
         :param args: List of key=value strings.
         :return: Validated configuration object.
@@ -229,24 +222,24 @@ class KernelGalaxyLSSTConfig(BaseModel):
 
     @staticmethod
     def help_text() -> list[str]:
-        """Return help text for Galaxy LSST kernel.
+        """Return help text for number counts kernel.
 
         :return: List containing [model name, parameter description].
         """
         return [
-            "KernelGalaxyLSST",
-            "survey=y1, bin_idx=0, bias=1.5, mag_bias=0.0, domagbias=True",
+            "KernelNumberCounts",
+            "survey=LSST-Y1, bin_idx=0, bias=1.5, mag_bias=0.0, domagbias=True",
         ]
 
 
-class KernelWeakLensingLSSTConfig(BaseModel):
-    """Weak lensing kernel configuration for LSST SRD bins.
+class KernelWeakLensingConfig(BaseModel):
+    """Weak lensing kernel configuration.
 
     This kernel represents the weak gravitational lensing shear field for
-    a specific source redshift bin from the LSST SRD.
+    a specific source redshift bin from various surveys.
     Weak lensing always uses source bins.
 
-    :ivar survey: LSST survey year (y1 or y10).
+    :ivar survey: Survey specification (e.g., 'LSST-Y1', 'LSST-Y10').
     :ivar bin_idx: Bin index within the selected survey.
     :ivar nbar: Galaxy number density per square arcminute.
     :ivar intr_shear: Intrinsic shear dispersion.
@@ -254,23 +247,27 @@ class KernelWeakLensingLSSTConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    survey: Annotated[LSSTSurvey, Field()] = LSSTSurvey.Y1
+    survey: Annotated[str, Field()] = "LSST-Y1"
     bin_idx: Annotated[int, Field(ge=0)] = 0
     nbar: Annotated[float, Field(gt=0.0)] = 3.0
     intr_shear: Annotated[float, Field(gt=0.0)] = 7.0
 
     @property
     def bin_type(self) -> LSSTBinType:
-        """Get the appropriate source bin type based on survey year."""
-        return (
-            LSSTBinType.Y1_SOURCE
-            if self.survey == LSSTSurvey.Y1
-            else LSSTBinType.Y10_SOURCE
-        )
+        """Get the appropriate source bin type based on survey specification."""
+        match self.survey.upper():
+            case "LSST-Y1":
+                return LSSTBinType.Y1_SOURCE
+            case "LSST-Y10":
+                return LSSTBinType.Y10_SOURCE
+            case _:
+                raise ValueError(
+                    f"Unknown survey '{self.survey}'. " f"Supported: LSST-Y1, LSST-Y10"
+                )
 
     @classmethod
-    def from_args(cls, args: list[str]) -> "KernelWeakLensingLSSTConfig":
-        """Create a KernelWeakLensingLSSTConfig from command line arguments.
+    def from_args(cls, args: list[str]) -> "KernelWeakLensingConfig":
+        """Create a KernelWeakLensingConfig from command line arguments.
 
         :param args: List of key=value strings.
         :return: Validated configuration object.
@@ -281,13 +278,13 @@ class KernelWeakLensingLSSTConfig(BaseModel):
 
     @staticmethod
     def help_text() -> list[str]:
-        """Return help text for Weak Lensing LSST kernel.
+        """Return help text for weak lensing kernel.
 
         :return: List containing [model name, parameter description].
         """
         return [
-            "KernelWeakLensingLSST",
-            "survey=y1, bin_idx=0, nbar=3.0, intr_shear=7.0",
+            "KernelWeakLensing",
+            "survey=LSST-Y1, bin_idx=0, nbar=3.0, intr_shear=7.0",
         ]
 
 
@@ -296,8 +293,8 @@ KernelConfigTypes = Union[
     KernelCMBLensingConfig,
     KernelCMBISWConfig,
     KernelTSZConfig,
-    KernelGalaxyLSSTConfig,
-    KernelWeakLensingLSSTConfig,
+    KernelNumberCountsConfig,
+    KernelWeakLensingConfig,
 ]
 
 
@@ -306,9 +303,26 @@ KERNEL_CONFIG_REGISTRY: dict[str, Type[BaseModel]] = {
     "cmb_lensing": KernelCMBLensingConfig,
     "cmb_isw": KernelCMBISWConfig,
     "tsz": KernelTSZConfig,
-    "galaxy_lsst": KernelGalaxyLSSTConfig,
-    "weak_lensing_lsst": KernelWeakLensingLSSTConfig,
+    "number-counts": KernelNumberCountsConfig,
+    "weak-lensing": KernelWeakLensingConfig,
 }
+
+
+def get_kernel_registry_help_text() -> str:
+    """Generate formatted help text for all available kernel types.
+
+    Returns a formatted table showing kernel names, model names, and parameters.
+
+    :return: Formatted help text as a string.
+    """
+    headers = ["Kernel Type", "Model", "Parameters"]
+    rows = []
+
+    for kernel_name, config_class in KERNEL_CONFIG_REGISTRY.items():
+        help_info = config_class.help_text()  # type: ignore[attr-defined]
+        rows.append([kernel_name] + help_info)
+
+    return tabulate(rows, headers=headers, tablefmt="rounded_grid")
 
 
 def parse_kernel_spec(spec: str) -> tuple[str, KernelConfigTypes]:
@@ -333,8 +347,8 @@ def parse_kernel_spec(spec: str) -> tuple[str, KernelConfigTypes]:
         >>> parse_kernel_spec("cmb_lensing lmax=3000")
         ('cmb_lensing', KernelCMBLensingConfig(lmax=3000))
 
-        >>> parse_kernel_spec("galaxy_lsst survey=y1 bin_idx=0 bias=1.5")
-        ('galaxy_lsst', KernelGalaxyLSSTConfig(...))
+        >>> parse_kernel_spec("number-counts survey=LSST-Y1 bin_idx=0 bias=1.5")
+        ('number-counts', KernelNumberCountsConfig(...))
     """
     # Split the specification using shell-like syntax
     tokens = shlex.split(spec)

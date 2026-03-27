@@ -49,7 +49,7 @@ from .generate import (
     GenerateXCDM,
     GenerateDEWSpline,
 )
-from .xcor import ViewKernel
+from .xcor import ViewKernel, ListKernels
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
 app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")
@@ -201,6 +201,12 @@ XCOR_KERNEL_VIEW_CMD: CMDArg = {
     "help": "View and analyze cross-correlation kernels.",
 }
 
+XCOR_KERNEL_LIST_CMD: CMDArg = {
+    "name": "list",
+    "no_args_is_help": False,
+    "help": "List all available kernel types and their parameters.",
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -238,3 +244,4 @@ app_generate.command(**GEN_DEWSPLINE_CMD)(GenerateDEWSpline)
 # ------------------------------------------------------------------------------
 # Installing xcor kernel subcommands
 app_xcor_kernel.command(**XCOR_KERNEL_VIEW_CMD)(ViewKernel)
+app_xcor_kernel.command(**XCOR_KERNEL_LIST_CMD)(ListKernels)
