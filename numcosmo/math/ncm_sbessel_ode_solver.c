@@ -1530,6 +1530,9 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
 
   g_assert_cmpuint (rhs_len, >, ROWS_TO_ROTATE);
 
+  printf ("Diagonalizing operator with initial solution_order=%u (rhs_len=%u) last_n_cols=%ld\n",
+          solution_order, rhs_len, op->last_n_cols);
+
   /* Try stored rotations if available */
   if (op->last_n_cols > 0)
   {
@@ -1548,6 +1551,8 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
     /* Setup initial rows and RHS */
     _ncm_sbessel_ode_solver_setup_initial_rows (op, rhs, solution_order);
   }
+
+  printf ("Starting Givens rotations from column %ld\n", col);
 
   for ( ; col < first_loop_len; col++)
   {
@@ -1590,6 +1595,8 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
   if (!converged)
   {
     _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
+
+    printf ("Continuing Givens rotations from column %ld with zeroed RHS\n", col);
 
     for ( ; col < solution_order; col++)
     {
@@ -2248,6 +2255,8 @@ _ncm_sbessel_ode_operator_solve_endpoints_batched_internal (NcmSBesselOdeOperato
   /* Step 1: Diagonalize the operator using QR decomposition */
   const glong n_cols = _ncm_sbessel_ode_operator_diagonalize_batched (op, n_ell, rhs);
 
+  printf ("Diagonalization complete with n_cols=%ld for n_ell=%u\n", n_cols, n_ell);
+
   /* Step 2: Compute endpoint derivatives and error estimates directly from diagonalized system */
   _ncm_sbessel_ode_operator_compute_endpoints_batched (op, n_cols, n_ell, solutions);
 }
@@ -2529,6 +2538,8 @@ ncm_sbessel_ode_operator_solve_endpoints (NcmSBesselOdeOperator *op, GArray *rhs
   if (op->n_ell == 1)
   {
     const glong n_cols = _ncm_sbessel_ode_operator_diagonalize (op, rhs);
+
+    printf ("Diagonalization complete with n_cols=%ld for single ell\n", n_cols);
 
     _ncm_sbessel_ode_solver_compute_endpoints (op, n_cols, *endpoints);
 

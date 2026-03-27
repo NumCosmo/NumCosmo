@@ -728,7 +728,14 @@ _compute_components_extrapolated (
         );
 
         kernel_out[ci][i] *= prefactor * k * sqrt (k);
+
+        printf ("Component %u, l = %u: computed kernel value = % 22.15g (% 22.15g, % 22.15g) % 22.15g\n",
+                ci, comp_states->lmin + i, kernel_out[ci][i],
+                state->xi_min, state->xi_max, k
+        );
       }
+
+      printf ("Component %u: computed kernel values at k = % 22.15g (within boundaries)\n", ci, k);
     }
     else
     {
@@ -737,6 +744,9 @@ _compute_components_extrapolated (
       /* Compute using an exponential tail approximation. */
       if (!within_right_boundary)
       {
+        printf ("Extrapolating right boundary for component %u at k = % 22.15g (last k = % 22.15g)\n",
+                ci, k, state->last_k_right);
+
         for (i = 0; i < comp_states->n_l; i++)
         {
           const gdouble val              = state->last_values_right[i];
@@ -747,6 +757,9 @@ _compute_components_extrapolated (
       }
       else
       {
+        printf ("Extrapolating left boundary for component %u at k = % 22.15g (last k = % 22.15g)\n",
+                ci, k, state->last_k_left);
+
         for (i = 0; i < comp_states->n_l; i++)
         {
           const gdouble val              = state->last_values_left[i];
@@ -828,9 +841,7 @@ _component_states_expand_right_border (ComponentStates *comp_states, NcmFunction
     {
       const gdouble val_ij = kernel_out[i][j];
 
-      comp_states->states[i].last_values_right[j] = val_ij;
-      val_i                                      += val_ij * val_ij;
-
+      val_i += val_ij * val_ij;
       ncm_vector_addto (kernel_sum, j, val_ij);
     }
 
@@ -840,6 +851,9 @@ _component_states_expand_right_border (ComponentStates *comp_states, NcmFunction
     {
       comp_states->states[i].right_boundary_found++;
       comp_states->states[i].last_k_right = new_k;
+
+      for (j = 0; j < comp_states->n_l; j++)
+        comp_states->states[i].last_values_right[j] = kernel_out[i][j];
     }
     else
     {
@@ -907,9 +921,7 @@ _component_states_expand_left_border (ComponentStates *comp_states, NcmFunctionS
     {
       const gdouble val_ij = kernel_out[i][j];
 
-      comp_states->states[i].last_values_left[j] = val_ij;
-      val_i                                     += val_ij * val_ij;
-
+      val_i += val_ij * val_ij;
       ncm_vector_addto (kernel_sum, j, val_ij);
     }
 
@@ -917,6 +929,9 @@ _component_states_expand_left_border (ComponentStates *comp_states, NcmFunctionS
 
     if (val_i < comp_states->epsilon * max_absF_total)
     {
+      for (j = 0; j < comp_states->n_l; j++)
+        comp_states->states[i].last_values_left[j] = kernel_out[i][j];
+
       comp_states->states[i].left_boundary_found++;
       comp_states->states[i].last_k_left = new_k;
     }

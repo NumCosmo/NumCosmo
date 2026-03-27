@@ -106,6 +106,8 @@ class KernelEvaluation:
         k_range: tuple[float, float] | None = None,
         color: str = "blue",
         linestyle: str = "-",
+        linewidth: float = 2.0,
+        alpha: float = 1.0,
     ) -> None:
         """Plot kernel on given axes.
 
@@ -113,6 +115,8 @@ class KernelEvaluation:
         :param k_range: Optional k range (k_min, k_max) in Mpc^-1 for plotting.
         :param color: Line color.
         :param linestyle: Line style.
+        :param linewidth: Line width.
+        :param alpha: Line transparency (0-1).
         """
         kmin, kmax = self.range()
         if k_range is not None:
@@ -121,7 +125,14 @@ class KernelEvaluation:
         k_Mpc = np.logspace(np.log10(kmin), np.log10(kmax), n_points)
         kernel_values = self.evaluate(k_Mpc)
         k3_2 = k_Mpc ** (3 / 2)
-        ax.plot(k_Mpc, k3_2 * kernel_values, color=color, linestyle=linestyle)
+        ax.plot(
+            k_Mpc,
+            k3_2 * kernel_values,
+            color=color,
+            linestyle=linestyle,
+            linewidth=linewidth,
+            alpha=alpha,
+        )
         ax.set_xscale("log")
         ax.set_yscale("symlog", linthresh=1e-10)
 
@@ -183,8 +194,10 @@ class ViewKernel:
     """View cross-correlation kernels.
 
     This command visualizes cross-correlation kernels used in cosmological
-    analyses. You can view single kernels or compare Limber vs non-Limber
-    approximations.
+    analyses. By default, kernels are evaluated using the non-Limber method
+    and plotted with full lines. Use --compare-limber to also show the
+    Limber approximation (with thinner, semi-transparent dashed lines) for
+    comparison.
 
     The kernel specification follows the format:
 
@@ -198,17 +211,17 @@ class ViewKernel:
         - weak-lensing: Weak lensing kernel
 
     Examples:
-        # View CMB lensing kernel
+        # View CMB lensing kernel (non-Limber by default)
         numcosmo xcor kernel view --kernel "cmb_lensing lmax=3000" --ell 20
 
         # View Galaxy clustering kernel (LSST Y1 lens bin 0)
         numcosmo xcor kernel view \\
-            --kernel "number-counts survey=LSST-Y1 bin_idx=0 bias=1.5" \
+            --kernel "number-counts survey=LSST-Y1 bin_idx=0 bias=1.5" \\
             --ell 100
 
-        # Compare Limber vs non-Limber for weak lensing
-        numcosmo xcor kernel view \
-            --kernel "weak-lensing survey=LSST-Y10 bin_idx=2" \
+        # Compare non-Limber vs Limber for weak lensing
+        numcosmo xcor kernel view \\
+            --kernel "weak-lensing survey=LSST-Y10 bin_idx=2" \\
             --ell 50 \\
             --compare-limber \\
             --output wl_comparison.png
@@ -247,7 +260,7 @@ class ViewKernel:
     compare_limber: Annotated[
         bool,
         typer.Option(
-            help="Compare Limber vs non-Limber approximations.",
+            help="Also show Limber approximation for comparison (with thinner dashed lines).",
             show_default=True,
         ),
     ] = False
@@ -293,9 +306,9 @@ class ViewKernel:
                 raise ValueError("k range min must be less than max")
 
         # Create cosmology with appropriate maximum redshift
-        # Use larger dist_max_z for non-Limber calculations
+        # Always use larger dist_max_z for non-Limber calculations (default behavior)
         print("Creating cosmology...")
-        dist_max_z = 1000.0 if self.compare_limber else 10.0
+        dist_max_z = 1000.0
         nc_cosmo = Cosmology.default(dist_max_z=dist_max_z)
         self.cosmo = nc_cosmo.cosmo
         self.dist = nc_cosmo.dist
@@ -522,13 +535,13 @@ class ViewKernel:
         print(f"Evaluating kernels at ell = {self.ell}...")
 
         RH_Mpc = self.cosmo.RH_Mpc()
-        # Get evaluator for primary kernel and its range
+        # Default: always use non-Limber for primary evaluation
         kernel_obj.set_l_limber(-1)
         eval_kernel = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, self.ell)
 
         kernel_eval = KernelEvaluation(
             name=kernel_label,
-            method="Limber" if not self.compare_limber else "Non-Limber",
+            method="Non-Limber",
             kernel=kernel_obj,
             evaluator=eval_kernel,
             RH_Mpc=RH_Mpc,
@@ -536,10 +549,11 @@ class ViewKernel:
 
         k_min, k_max = kernel_eval.range()
 
-        print(f"  Primary kernel k range: [{k_min:.2e}, {k_max:.2e}] Mpc^-1")
+        print(f"  Non-Limber kernel k range: [{k_min:.2e}, {k_max:.2e}] Mpc^-1")
 
         kernel_eval_limber: KernelEvaluation | None = None
         if self.compare_limber:
+            # Also evaluate with Limber approximation for comparison
             kernel_obj.set_l_limber(0)
             eval_limber = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, self.ell)
             kernel_eval_limber = KernelEvaluation(
@@ -577,8 +591,8 @@ class ViewKernel:
             # Create figure with two subplots for comparison
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), sharex=True)
             fig.suptitle(
-                f"Kernel Comparison at $\\ell = {self.ell}$ "
-                "(dashed = Non-Limber, solid = Limber)",
+                f"Kernel Comparison at $\\ell = {self.ell}$\n"
+                "(solid = Non-Limber; dashed/thin = Limber, same color)",
                 fontsize=14,
                 fontweight="bold",
             )
@@ -587,35 +601,40 @@ class ViewKernel:
             legend_labels = []
 
             for idx, kernel_var in enumerate(kernel_vars):
-                main_kernel = kernel_var.main
-                alt_kernel = kernel_var.alternative
+                main_kernel = kernel_var.main  # Non-Limber
+                alt_kernel = kernel_var.alternative  # Limber
 
                 assert alt_kernel is not None
 
                 color = colors[idx % len(colors)]
 
-                # Plot both kernels with same color, different line styles
+                # Plot Non-Limber with full solid lines
                 main_kernel.plot(
                     ax1,
                     n_points=self.n_points,
                     color=color,
-                    linestyle="--",
+                    linestyle="-",
+                    linewidth=2.0,
+                    alpha=1.0,
                     k_range=self.k_range,
                 )
+                # Plot Limber with thinner dashed lines and reduced opacity
                 alt_kernel.plot(
                     ax1,
                     n_points=self.n_points,
                     color=color,
-                    linestyle="-",
+                    linestyle="--",
+                    linewidth=1.5,
+                    alpha=0.6,
                     k_range=self.k_range,
                 )
 
-                # Plot comparison
+                # Plot comparison (Non-Limber vs Limber)
                 main_kernel.plot_comparison(
                     alt_kernel, ax2, color=color, linestyle="-", k_range=self.k_range
                 )
 
-                # Add single legend entry per kernel (with both line styles shown)
+                # Add legend entry only for Non-Limber (Limber is indicated by title)
                 legend_handles.append(
                     Line2D([0], [0], color=color, linewidth=2, linestyle="-")
                 )
@@ -625,13 +644,13 @@ class ViewKernel:
             ax1.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
             ax1.set_ylabel("$k^{3/2} |K(k)|$", fontsize=12)
             ax1.set_title("Kernel vs Wave Number", fontsize=11)
-            ax1.legend(legend_handles, legend_labels, fontsize=10)
+            ax1.legend(legend_handles, legend_labels, loc="best", fontsize=10)
             ax1.grid(True, alpha=0.3)
 
             # Configure second subplot
-            ax2.axhline(y=1.0, color="k", linestyle="--", alpha=0.5)
+            ax2.axhline(y=0.0, color="k", linestyle="-", alpha=0.5, linewidth=0.8)
             ax2.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
-            ax2.set_ylabel("Relative Difference", fontsize=12)
+            ax2.set_ylabel("Relative Difference (Limber/Non-Limber - 1)", fontsize=12)
             ax2.set_title("Limber vs Non-Limber Comparison", fontsize=11)
             ax2.grid(True, alpha=0.3)
         else:
@@ -660,7 +679,7 @@ class ViewKernel:
             ax.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
             ax.set_ylabel("$k^{3/2} |K(k)|$", fontsize=12)
             ax.set_title("Kernel vs Wave Number", fontsize=11)
-            ax.legend(legend_entries, fontsize=10)
+            ax.legend(legend_entries, loc="best", fontsize=10)
             ax.grid(True, alpha=0.3)
 
         plt.tight_layout()
