@@ -3188,3 +3188,423 @@ class TestSBesselOperatorMemoryManagement:
             assert np.all(
                 np.isfinite(solution_np)
             ), f"Solution should be finite at iteration {i}, order={order}"
+
+
+class TestSBesselStoredRotations:
+    """Tests for stored rotation reuse: targeting the max_c_A/quiet_cols bug.
+
+    The bug occurred when:
+    1. Stored rotations were applied (updating max_c_A and quiet_cols)
+    2. Extension was needed (more columns required)
+    3. The continuation loop reset max_c_A=0.0 and quiet_cols=0
+    4. This caused premature exit or incorrect convergence checks
+
+    These tests ensure the fix properly carries state across stored/new rotations.
+    """
+
+    def test_stored_rotations_reuse_identical(self) -> None:
+        """Test that reusing stored rotations gives identical results.
+
+        Solves the same RHS twice - second solve should reuse stored rotations
+        and produce identical solution.
+        """
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(1.0, 10.0, 5, 5)
+
+        # Create a non-trivial RHS
+        rhs = np.zeros(50)
+        rhs[10] = 1.0
+        rhs[15] = 0.5
+        rhs[20] = 0.25
+
+        # First solve - builds rotations
+        sol1, len1 = op.solve(rhs)
+        sol1_np = np.array(sol1)
+        n_cols_1 = op.get_n_cols()
+
+        # Second solve - reuses rotations
+        sol2, len2 = op.solve(rhs)
+        sol2_np = np.array(sol2)
+        n_cols_2 = op.get_n_cols()
+
+        # Results should be identical
+        assert len1 == len2, "Solution lengths should match"
+        assert n_cols_1 == n_cols_2, "Number of columns should match"
+        assert_allclose(
+            sol1_np,
+            sol2_np,
+            rtol=1e-15,
+            atol=1e-15,
+            err_msg="Stored rotations should produce identical results",
+        )
+
+    def test_stored_rotations_extend_rhs(self) -> None:
+        """Test extending stored rotations when RHS is longer.
+
+        This specifically tests the bug scenario:
+        1. Solve with short RHS (stores rotations)
+        2. Solve with longer RHS (needs extension)
+        3. Verify max_c_A and quiet_cols carry over correctly
+
+        The bug would cause premature exit when max_c_A was reset to 0.0.
+        """
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(1.0, 10.0, 10, 10)
+
+        # First solve with short RHS
+        rhs_short = np.zeros(40)
+        rhs_short[10] = 1.0
+        _, len_short = op.solve(rhs_short)
+        n_cols_short = op.get_n_cols()
+
+        print(f"Short RHS: n_cols={n_cols_short}, sol_len={len_short}")
+
+        # Second solve with LONGER RHS - requires extension
+        # This triggers the bug: stored rotations applied, then needs more columns
+        rhs_long = np.zeros(80)
+        rhs_long[10] = 1.0  # Same initial coefficients
+        rhs_long[15] = 0.5  # Additional coefficients beyond stored
+        rhs_long[50] = 0.1  # Even further out
+        rhs_long[60] = 0.05
+
+        # Solve from scratch (no stored rotations) - reference solution
+        op_fresh = solver.create_operator(1.0, 10.0, 10, 10)
+        sol_fresh, len_fresh = op_fresh.solve(rhs_long)
+        sol_fresh_np = np.array(sol_fresh)
+        n_cols_fresh = op_fresh.get_n_cols()
+
+        # Solve with stored rotations + extension
+        sol_extended, len_extended = op.solve(rhs_long)
+        sol_extended_np = np.array(sol_extended)
+        n_cols_extended = op.get_n_cols()
+
+        # Should get same result as fresh solve
+        assert (
+            n_cols_extended == n_cols_fresh
+        ), "Extended solve should converge at same column as fresh solve"
+        assert len_extended == len_fresh, "Solution lengths should match"
+
+        max_coeff = np.max(np.abs(sol_fresh_np))
+        assert_allclose(
+            sol_extended_np,
+            sol_fresh_np,
+            rtol=1e-12,
+            atol=1e-12 * max_coeff,
+            err_msg="Extended stored rotations should match fresh solve",
+        )
+
+        # Critical: verify solution is non-zero (bug would give premature zero exit)
+        assert (
+            np.max(np.abs(sol_extended_np)) > 1e-10
+        ), "Solution should be non-zero (bug check: max_c_A=0 premature exit)"
+
+    def test_stored_rotations_multiple_different_rhs(self) -> None:
+        """Test solving multiple different RHS vectors with stored rotations.
+
+        Each solve should reuse rotations correctly and give accurate results.
+        """
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(1.0, 10.0, 8, 8)
+
+        rhs_list = [
+            (np.zeros(50), 10, 1.0),  # Single spike at index 10
+            (np.zeros(50), 20, 0.8),  # Single spike at index 20
+            (np.zeros(50), 15, 1.5),  # Single spike at index 15
+            (np.zeros(60), 25, 1.2),  # Longer RHS, spike at 25
+            (np.zeros(45), 12, 0.9),  # Shorter RHS, spike at 12
+        ]
+
+        solutions = []
+
+        for idx, (rhs, spike_pos, spike_val) in enumerate(rhs_list):
+            rhs[spike_pos] = spike_val
+
+            # Solve with stored rotations
+            sol, _ = op.solve(rhs)
+            sol_np = np.array(sol)
+            solutions.append(sol_np)
+
+            # Verify against fresh solve
+            op_fresh = solver.create_operator(1.0, 10.0, 8, 8)
+            sol_fresh, _ = op_fresh.solve(rhs)
+            sol_fresh_np = np.array(sol_fresh)
+
+            max_coeff = np.max(np.abs(sol_fresh_np))
+            assert_allclose(
+                sol_np,
+                sol_fresh_np,
+                rtol=1e-12,
+                atol=1e-12 * max_coeff,
+                err_msg=f"Solve {idx+1}: stored rotations vs fresh",
+            )
+
+        # All solutions should be different (different RHS)
+        for i in range(len(solutions) - 1):
+            min_len = min(len(solutions[i]), len(solutions[i + 1]))
+            diff = np.max(np.abs(solutions[i][:min_len] - solutions[i + 1][:min_len]))
+            assert diff > 1e-8, f"Solutions {i} and {i+1} should differ"
+
+    def test_stored_rotations_batched_extend(self) -> None:
+        """Test batched stored rotations with RHS extension.
+
+        This tests the batched version with multiple ell values,
+        ensuring max_c_A and quiet_cols carry over correctly for each ell.
+        """
+        solver = Ncm.SBesselOdeSolver.new()
+
+        # Test with multiple ell values
+        lmin, lmax = 5, 8
+        n_ell = lmax - lmin + 1
+        op = solver.create_operator(1.0, 10.0, lmin, lmax)
+
+        # First solve with short RHS
+        rhs_short = np.zeros(40)
+        rhs_short[12] = 1.0
+        rhs_short[15] = 0.3
+
+        sols_short, len_short = op.solve(rhs_short)
+        _ = np.array(sols_short).reshape(n_ell, len_short)
+        _ = op.get_n_cols()
+
+        # Second solve with LONGER RHS - tests extension
+        rhs_long = np.zeros(70)
+        rhs_long[12] = 1.0
+        rhs_long[15] = 0.3
+        rhs_long[35] = 0.15  # Beyond stored rotations
+        rhs_long[50] = 0.08
+
+        # Fresh solve for reference
+        op_fresh = solver.create_operator(1.0, 10.0, lmin, lmax)
+        sols_fresh, len_fresh = op_fresh.solve(rhs_long)
+        sols_fresh_np = np.array(sols_fresh).reshape(n_ell, len_fresh)
+        n_cols_fresh = op_fresh.get_n_cols()
+
+        # Extended solve (reuses stored rotations)
+        sols_extended, len_extended = op.solve(rhs_long)
+        sols_extended_np = np.array(sols_extended).reshape(n_ell, len_extended)
+        n_cols_extended = op.get_n_cols()
+
+        # Should converge at same column
+        assert (
+            n_cols_extended == n_cols_fresh
+        ), f"Extended should match fresh: {n_cols_extended} vs {n_cols_fresh}"
+
+        # Solutions should match for all ell values
+        for i, ell in enumerate(range(lmin, lmax + 1)):
+            max_coeff = np.max(np.abs(sols_fresh_np[i, :]))
+            assert_allclose(
+                sols_extended_np[i, :],
+                sols_fresh_np[i, :],
+                rtol=1e-12,
+                atol=1e-12 * max_coeff,
+                err_msg=f"ell={ell}: extended vs fresh with stored rotations",
+            )
+
+            # Critical: solutions should be non-zero
+            assert (
+                max_coeff > 1e-10
+            ), f"ell={ell}: solution should be non-zero (bug check)"
+
+    def test_stored_rotations_zero_rhs_edge_case(self) -> None:
+        """Test that zero RHS portions don't cause max_c_A reset issues.
+
+        When RHS has leading zeros followed by non-zero values,
+        the algorithm should handle the zero detection correctly.
+        """
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(1.0, 10.0, 5, 5)
+
+        # First solve with non-zero RHS
+        rhs1 = np.zeros(50)
+        rhs1[15] = 1.0
+        _, _ = op.solve(rhs1)
+        _ = op.get_n_cols()
+
+        # Second solve with more leading zeros, non-zero later
+        # This tests that max_c_A from stored rotations carries over
+        rhs2 = np.zeros(60)
+        rhs2[40] = 0.5  # Non-zero far beyond stored rotations
+
+        sol2, _ = op.solve(rhs2)
+        sol2_np = np.array(sol2)
+        _ = op.get_n_cols()
+
+        # Solution should be non-zero despite leading zeros
+        assert np.max(np.abs(sol2_np)) > 1e-10, (
+            "Solution should be non-zero - bug would exit at 'if (max_c_A == 0.0)' "
+            "if state wasn't carried over"
+        )
+
+        # Verify against fresh solve
+        op_fresh = solver.create_operator(1.0, 10.0, 5, 5)
+        sol_fresh, _ = op_fresh.solve(rhs2)
+        sol_fresh_np = np.array(sol_fresh)
+
+        max_coeff = np.max(np.abs(sol_fresh_np))
+        assert_allclose(
+            sol2_np,
+            sol_fresh_np,
+            rtol=1e-12,
+            atol=1e-12 * max_coeff,
+            err_msg="Extended solve with leading zeros should match fresh",
+        )
+
+    def test_stored_rotations_convergence_tracking(self) -> None:
+        """Test that quiet_cols counter properly carries over.
+
+        The quiet_cols counter tracks consecutive columns with small coefficients.
+        It must carry over from stored rotations to new rotations for correct
+        convergence detection.
+        """
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(1.0, 15.0, 12, 12)
+
+        # First solve - creates stored rotations
+        rhs1 = np.zeros(60)
+        rhs1[18] = 1.0
+        rhs1[22] = 0.1
+
+        _, _ = op.solve(rhs1)
+        _ = op.get_n_cols()
+
+        # Second solve - similar RHS but slightly longer
+        # Should converge at similar column count
+        rhs2 = np.zeros(70)
+        rhs2[18] = 1.0
+        rhs2[22] = 0.1
+        rhs2[35] = 0.02  # Small coefficient that should quickly quiet
+
+        sol2, _ = op.solve(rhs2)
+        n_cols_2 = op.get_n_cols()
+
+        # Verify against fresh solve - should converge at same point
+        op_fresh = solver.create_operator(1.0, 15.0, 12, 12)
+        sol_fresh, _ = op_fresh.solve(rhs2)
+        n_cols_fresh = op_fresh.get_n_cols()
+
+        # Convergence point should match (allow small tolerance due to numerical
+        # accumulation)
+        assert abs(n_cols_2 - n_cols_fresh) <= 2, (
+            f"Extended solve should converge at approximately same column as fresh: "
+            f"{n_cols_2} vs {n_cols_fresh} (diff={n_cols_2 - n_cols_fresh}, "
+            f"quiet_cols tracking may have issues)"
+        )
+
+        # Solutions should match
+        sol2_np = np.array(sol2)
+        sol_fresh_np = np.array(sol_fresh)
+        max_coeff = np.max(np.abs(sol_fresh_np))
+
+        assert_allclose(
+            sol2_np,
+            sol_fresh_np,
+            rtol=1e-12,
+            atol=1e-12 * max_coeff,
+            err_msg="Extended solve should match fresh (convergence tracking)",
+        )
+
+    def test_stored_rotations_batched_multiple_solves(self) -> None:
+        """Test batched mode with multiple sequential solves and different RHS.
+
+        Ensures max_c_A and quiet_cols arrays (one per ell) carry over correctly
+        in batched mode.
+        """
+        solver = Ncm.SBesselOdeSolver.new()
+
+        lmin, lmax = 3, 6
+        n_ell = lmax - lmin + 1
+        op = solver.create_operator(1.0, 12.0, lmin, lmax)
+
+        # Solve with progressively longer RHS
+        rhs_lengths = [40, 50, 65, 75]
+        previous_n_cols = 0
+
+        for rhs_len in rhs_lengths:
+            rhs = np.zeros(rhs_len)
+            rhs[15] = 1.0
+            rhs[20] = 0.4
+            if rhs_len > 40:
+                rhs[35] = 0.15
+            if rhs_len > 60:
+                rhs[55] = 0.05
+
+            # Solve with stored rotations
+            sols, sol_len = op.solve(rhs)
+            n_cols = op.get_n_cols()
+
+            # Fresh solve for comparison
+            op_fresh = solver.create_operator(1.0, 12.0, lmin, lmax)
+            sols_fresh, sol_len_fresh = op_fresh.solve(rhs)
+            sols_fresh_np = np.array(sols_fresh).reshape(n_ell, sol_len_fresh)
+
+            # Verify each ell
+            sols_np = np.array(sols).reshape(n_ell, sol_len)
+
+            for i, ell in enumerate(range(lmin, lmax + 1)):
+                max_coeff = np.max(np.abs(sols_fresh_np[i, :]))
+                assert_allclose(
+                    sols_np[i, :],
+                    sols_fresh_np[i, :],
+                    rtol=1e-12,
+                    atol=1e-12 * max_coeff,
+                    err_msg=f"RHS len={rhs_len}, ell={ell}: batched stored vs fresh",
+                )
+
+            # Verify n_cols increases or stays same (never decreases)
+            assert (
+                n_cols >= previous_n_cols
+            ), f"n_cols should not decrease: {previous_n_cols} -> {n_cols}"
+            previous_n_cols = n_cols
+
+    def test_stored_rotations_high_ell_extension(self) -> None:
+        """Test stored rotation extension with high ell values.
+
+        High ell values require more columns to converge. This tests that
+        extension works correctly when many columns beyond the stored ones
+        are needed.
+        """
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(1.0, 20.0, 50, 50)
+
+        # First solve - short RHS
+        rhs_short = np.zeros(80)
+        rhs_short[25] = 1.0
+        rhs_short[30] = 0.2
+
+        _sol_short, _len_short = op.solve(rhs_short)
+        n_cols_short = op.get_n_cols()
+
+        # Second solve - much longer RHS requiring many more columns
+        rhs_long = np.zeros(150)
+        rhs_long[25] = 1.0
+        rhs_long[30] = 0.2
+        rhs_long[60] = 0.1
+        rhs_long[90] = 0.05
+
+        # Fresh reference
+        op_fresh = solver.create_operator(1.0, 20.0, 50, 50)
+        sol_fresh, _ = op_fresh.solve(rhs_long)
+        sol_fresh_np = np.array(sol_fresh)
+        n_cols_fresh = op_fresh.get_n_cols()
+
+        # Extended solve
+        sol_extended, _ = op.solve(rhs_long)
+        sol_extended_np = np.array(sol_extended)
+        n_cols_extended = op.get_n_cols()
+
+        # Should match
+        assert n_cols_extended == n_cols_fresh
+        max_coeff = np.max(np.abs(sol_fresh_np))
+        assert_allclose(
+            sol_extended_np,
+            sol_fresh_np,
+            rtol=1e-11,
+            atol=1e-11 * max_coeff,
+            err_msg="High ell extended should match fresh",
+        )
+
+        # Verify many columns were added
+        columns_added = n_cols_extended - n_cols_short
+        assert columns_added >= 20, (
+            f"Should have added many columns for high ell: " f"added {columns_added}"
+        )

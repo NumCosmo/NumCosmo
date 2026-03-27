@@ -1202,7 +1202,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
   }
   else
   {
-    if (Acol < *max_c_A * op->tolerance)
+    if (Acol / (*max_c_A) <  op->tolerance)
       (*quiet_cols)++;
     else
       *quiet_cols = 0;
@@ -1280,7 +1280,7 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
   }
   else
   {
-    if (max_Acol < *max_c_A * op->tolerance)
+    if (max_Acol / (*max_c_A) <  op->tolerance)
       (*quiet_cols)++;
     else
       *quiet_cols = 0;
@@ -1318,6 +1318,7 @@ _ncm_sbessel_apply_stored_rotation_to_rhs (gdouble * restrict rot_ptr, gdouble *
  * @op: a #NcmSBesselOdeOperator
  * @rhs: right-hand side vector
  * @max_col: maximum column to process (from last_n_cols)
+ * @max_c_A: (inout): maximum coefficient-to-diagonal ratio
  *
  * Applies all stored rotations to a new RHS, checking convergence after each column.
  * Returns the column where convergence occurred, or -1 if extension is needed.
@@ -1325,13 +1326,11 @@ _ncm_sbessel_apply_stored_rotation_to_rhs (gdouble * restrict rot_ptr, gdouble *
  * Returns: column where converged, or -1 if needs extension
  */
 static glong
-_ncm_sbessel_apply_all_stored_rotations (NcmSBesselOdeOperator *op, GArray *rhs, glong max_col)
+_ncm_sbessel_apply_all_stored_rotations (NcmSBesselOdeOperator *op, GArray *rhs, glong max_col, gdouble *max_c_A, guint *quiet_cols)
 {
   const gdouble *rhs_data = (gdouble *) rhs->data;
   const glong rhs_limit   = rhs->len - ROWS_TO_ROTATE;
   const glong first_limit = (max_col < rhs_limit) ? max_col : rhs_limit;
-  gdouble max_c_A         = 0.0;
-  guint quiet_cols        = 0;
   glong col;
 
   for (col = 0; col < ROWS_TO_ROTATE; col++)
@@ -1356,7 +1355,7 @@ _ncm_sbessel_apply_all_stored_rotations (NcmSBesselOdeOperator *op, GArray *rhs,
       _ncm_sbessel_apply_stored_rotation_to_rhs (rot_ptr, c1, c2);
     }
 
-    if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols))
+    if (_ncm_sbessel_check_convergence (op, col, max_c_A, quiet_cols))
       return col + 1;
   }
 
@@ -1377,7 +1376,7 @@ _ncm_sbessel_apply_all_stored_rotations (NcmSBesselOdeOperator *op, GArray *rhs,
       _ncm_sbessel_apply_stored_rotation_to_rhs (rot_ptr, c1, c2);
     }
 
-    if (_ncm_sbessel_check_convergence (op, col, &max_c_A, &quiet_cols))
+    if (_ncm_sbessel_check_convergence (op, col, max_c_A, quiet_cols))
       return col + 1;
   }
 
@@ -1390,19 +1389,19 @@ _ncm_sbessel_apply_all_stored_rotations (NcmSBesselOdeOperator *op, GArray *rhs,
  * @rhs: right-hand side vector
  * @max_col: maximum column to process (from last_n_cols)
  * @n_ell: number of ell values
+ * @max_c_A: (inout): maximum coefficient-to-diagonal ratio
+ * @quiet_cols: (inout): count of consecutive columns with small coefficients
  *
  * Batched version: applies all stored rotations to new RHS for all ell values.
  *
  * Returns: column where converged, or -1 if needs extension
  */
 static glong
-_ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArray *rhs, glong max_col, guint n_ell)
+_ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArray *rhs, glong max_col, guint n_ell, gdouble *max_c_A, guint *quiet_cols)
 {
   const gdouble *rhs_data = (gdouble *) rhs->data;
   const glong rhs_limit   = rhs->len - ROWS_TO_ROTATE;
   const glong first_limit = (max_col < rhs_limit) ? max_col : rhs_limit;
-  gdouble max_c_A         = 0.0;
-  guint quiet_cols        = 0;
   glong col;
   guint l_idx;
 
@@ -1439,7 +1438,7 @@ _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArr
       }
     }
 
-    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols))
+    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, max_c_A, quiet_cols))
       return col + 1;
   }
 
@@ -1468,7 +1467,7 @@ _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArr
       }
     }
 
-    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols))
+    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, max_c_A, quiet_cols))
       return col + 1;
   }
 
@@ -1530,13 +1529,10 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
 
   g_assert_cmpuint (rhs_len, >, ROWS_TO_ROTATE);
 
-  printf ("Diagonalizing operator with initial solution_order=%u (rhs_len=%u) last_n_cols=%ld\n",
-          solution_order, rhs_len, op->last_n_cols);
-
   /* Try stored rotations if available */
   if (op->last_n_cols > 0)
   {
-    col = _ncm_sbessel_apply_all_stored_rotations (op, rhs, op->last_n_cols);
+    col = _ncm_sbessel_apply_all_stored_rotations (op, rhs, op->last_n_cols, &max_c_A, &quiet_cols);
 
     if (col >= 0)
       return col;
@@ -1551,8 +1547,6 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
     /* Setup initial rows and RHS */
     _ncm_sbessel_ode_solver_setup_initial_rows (op, rhs, solution_order);
   }
-
-  printf ("Starting Givens rotations from column %ld\n", col);
 
   for ( ; col < first_loop_len; col++)
   {
@@ -1595,8 +1589,6 @@ _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
   if (!converged)
   {
     _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
-
-    printf ("Continuing Givens rotations from column %ld with zeroed RHS\n", col);
 
     for ( ; col < solution_order; col++)
     {
@@ -1903,7 +1895,7 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
   /* Try stored rotations if available */
   if (op->last_n_cols > 0)
   {
-    col = _ncm_sbessel_apply_all_stored_rotations_batched (op, rhs, op->last_n_cols, n_ell);
+    col = _ncm_sbessel_apply_all_stored_rotations_batched (op, rhs, op->last_n_cols, n_ell, &max_c_A, &quiet_cols);
 
     if (col >= 0)
       return col;
@@ -2255,8 +2247,6 @@ _ncm_sbessel_ode_operator_solve_endpoints_batched_internal (NcmSBesselOdeOperato
   /* Step 1: Diagonalize the operator using QR decomposition */
   const glong n_cols = _ncm_sbessel_ode_operator_diagonalize_batched (op, n_ell, rhs);
 
-  printf ("Diagonalization complete with n_cols=%ld for n_ell=%u\n", n_cols, n_ell);
-
   /* Step 2: Compute endpoint derivatives and error estimates directly from diagonalized system */
   _ncm_sbessel_ode_operator_compute_endpoints_batched (op, n_cols, n_ell, solutions);
 }
@@ -2538,8 +2528,6 @@ ncm_sbessel_ode_operator_solve_endpoints (NcmSBesselOdeOperator *op, GArray *rhs
   if (op->n_ell == 1)
   {
     const glong n_cols = _ncm_sbessel_ode_operator_diagonalize (op, rhs);
-
-    printf ("Diagonalization complete with n_cols=%ld for single ell\n", n_cols);
 
     _ncm_sbessel_ode_solver_compute_endpoints (op, n_cols, *endpoints);
 

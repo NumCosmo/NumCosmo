@@ -648,12 +648,10 @@ _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv,
 {
   NcmSBesselIntegratorLevinWrapper wrapper = {F, k, user_data};
 
-  guint k_final = ncm_spectral_compute_chebyshev_coeffs_adaptive (
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (
     spectral,
     &_ncm_sbessel_integrator_levin_wrapper_func,
     a, b, sbilv->cheb_min_order, sbilv->cheb_reltol, &sbilv->cheb_coeffs, &wrapper);
-
-  printf ("Computed Chebyshev coefficients up to order %u\n", k_final);
 
   ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
   g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
@@ -782,9 +780,6 @@ _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *s
     const gdouble j_l_a     = j_a_p[ell];
     const gdouble j_l_b     = j_b_p[ell];
     const gdouble contrib   = b_p * j_l_b * y_prime_b - a_p * j_l_a * y_prime_a;
-
-    printf ("ell=%u: j_l_a=% 22.15g, j_l_b=% 22.15g, y_prime_a=% 22.15g, y_prime_b=% 22.15g, contrib=% 22.15g error=% 22.15g\n", ell, j_l_a, j_l_b, y_prime_a, y_prime_b, contrib,
-            g_array_index (sbilv->endpoints_result, gdouble, ell_idx * 3 + 2));
 
     result_data[ell_idx] += contrib;
   }
@@ -981,8 +976,6 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
         _ncm_sbessel_integrator_levin_integrate_panel (sbilv, -1, first_knot_idx,
                                                        a_p, b_p, spectral, F, k,
                                                        ell_min, ell_max, result_data, user_data);
-
-      printf ("a_p = % 22.15g, b_p = % 22.15g result_data = % 22.15g\n", a_p, b_p, result_data[0]);
     }
 
     for (i = first_knot_idx; i < (guint) last_knot_idx; i++)
@@ -994,8 +987,6 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
         _ncm_sbessel_integrator_levin_integrate_panel (sbilv, i, i + 1,
                                                        a_p, b_p, spectral, F, k,
                                                        ell_min, ell_max, result_data, user_data);
-
-      printf ("a_p = % 22.15g, b_p = % 22.15g result_data = % 22.15g\n", a_p, b_p, result_data[0]);
     }
 
     if (y_max > last_knot)
@@ -1007,8 +998,6 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
         _ncm_sbessel_integrator_levin_integrate_panel (sbilv, last_knot_idx, -1,
                                                        a_p, b_p, spectral, F, k,
                                                        ell_min, ell_max, result_data, user_data);
-
-      printf ("a_p = % 22.15g, b_p = % 22.15g result_data = % 22.15g\n", a_p, b_p, result_data[0]);
     }
   }
   else
