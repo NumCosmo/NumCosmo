@@ -979,6 +979,7 @@ class SkyMatch:
 
     def match_ID(
         self,
+        use_shared_fraction: bool | None = False, 
         shared_fraction_method: SharedFractionMethod = SharedFractionMethod.NO_PMEM,
     ) -> SkyMatchResult:
         """Match objects in the sky.
@@ -1031,13 +1032,13 @@ class SkyMatch:
 
         
         # Counting number of shared members
-        
-        matched_pairs = np.column_stack((matched_catalog['query_id'], matched_catalog['match_id']))
-        
-        unique_pairs, counts = np.unique(matched_pairs, axis=0, return_counts=True)
-        
-        all_combinations['shared_count'] = counts
-
+               
+        indices = matched_catalog_grouped.groups.indices
+        counts = np.diff(indices)
+        shared_count = matched_catalog_grouped.groups.keys
+        shared_count['shared_count'] = counts        
+       
+        all_combinations = join(all_combinations, shared_count, keys=['query_id', 'match_id'], join_type='left') 
         
         # Shared fraction
         
@@ -1106,8 +1107,20 @@ class SkyMatch:
 
         
         # Linking coefficient
+
+        if use_shared_fraction == True:
         
-        all_combinations["linking_coefficient"] = fraction_query * (fraction_query + fraction_match) / 2
+            all_combinations["linking_coefficient"] = fraction_query * (fraction_query + fraction_match) / 2
+        
+        if use_shared_fraction == False:
+            
+            all_combinations["linking_coefficient"] = all_combinations["shared_count"] / (all_combinations["nmem_query"] + all_combinations["nmem_match"] - all_combinations["shared_count"])
+
+        else:
+            raise ValueError(
+                "use_shared_fraction must be True or False"
+            )
+        
 
         # Structured result
         
