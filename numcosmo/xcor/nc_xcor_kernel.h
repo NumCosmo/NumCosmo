@@ -171,6 +171,18 @@ void nc_xcor_kernel_set_adaptive_epsilon (NcXcorKernel *xclk, gdouble adaptive_e
 guint nc_xcor_kernel_get_adaptive_boundary_tries (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_adaptive_boundary_tries (NcXcorKernel *xclk, guint adaptive_boundary_tries);
 
+gdouble nc_xcor_kernel_get_reltol (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_reltol (NcXcorKernel *xclk, gdouble reltol);
+
+guint nc_xcor_kernel_get_max_border_expansions (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_max_border_expansions (NcXcorKernel *xclk, guint max_border_expansions);
+
+guint nc_xcor_kernel_get_max_iter (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_max_iter (NcXcorKernel *xclk, guint max_iter);
+
+gdouble nc_xcor_kernel_get_expansion_factor (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_expansion_factor (NcXcorKernel *xclk, gdouble expansion_factor);
+
 NcDistance *nc_xcor_kernel_peek_dist (NcXcorKernel *xclk);
 NcmPowspec *nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk);
 NcmSBesselIntegrator *nc_xcor_kernel_peek_integrator (NcXcorKernel *xclk);

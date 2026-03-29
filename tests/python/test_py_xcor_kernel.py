@@ -294,3 +294,67 @@ def test_k_projection_limber_vs_non_limber(
             f"I_limber={I_limber:.6e}, I_exact={I_exact:.6e}, "
             f"rel_diff={rel_diff:.6e} (rtol={rtol:.6e})"
         )
+
+
+def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
+    """Test that all kernel properties can be set and retrieved correctly.
+
+    Validates the getter/setter methods and GObject properties for the adaptive
+    refinement parameters: reltol, max_border_expansions, max_iter, and
+    expansion_factor.
+    """
+    # Test reltol property
+    original_reltol = kernel.get_reltol()
+    assert original_reltol == kernel.props.reltol
+    
+    kernel.set_reltol(1.0e-7)
+    assert kernel.get_reltol() == 1.0e-7
+    assert kernel.props.reltol == 1.0e-7
+    
+    kernel.props.reltol = 2.0e-6
+    assert kernel.get_reltol() == 2.0e-6
+    
+    # Restore original
+    kernel.set_reltol(original_reltol)
+
+    # Test max_border_expansions property
+    original_max_border_expansions = kernel.get_max_border_expansions()
+    assert original_max_border_expansions == kernel.props.max_border_expansions
+    
+    kernel.set_max_border_expansions(3000)
+    assert kernel.get_max_border_expansions() == 3000
+    assert kernel.props.max_border_expansions == 3000
+    
+    kernel.props.max_border_expansions = 7000
+    assert kernel.get_max_border_expansions() == 7000
+    
+    # Restore original
+    kernel.set_max_border_expansions(original_max_border_expansions)
+
+    # Test max_iter property
+    original_max_iter = kernel.get_max_iter()
+    assert original_max_iter == kernel.props.max_iter
+    
+    kernel.set_max_iter(5000)
+    assert kernel.get_max_iter() == 5000
+    assert kernel.props.max_iter == 5000
+    
+    kernel.props.max_iter = 8000
+    assert kernel.get_max_iter() == 8000
+    
+    # Restore original
+    kernel.set_max_iter(original_max_iter)
+
+    # Test expansion_factor property
+    original_expansion_factor = kernel.get_expansion_factor()
+    assert original_expansion_factor == kernel.props.expansion_factor
+    
+    kernel.set_expansion_factor(0.3)
+    assert kernel.get_expansion_factor() == 0.3
+    assert kernel.props.expansion_factor == 0.3
+    
+    kernel.props.expansion_factor = 0.15
+    assert kernel.get_expansion_factor() == 0.15
+    
+    # Restore original
+    kernel.set_expansion_factor(original_expansion_factor)

@@ -20151,6 +20151,14 @@ class XcorKernel(NumCosmoMath.Model):
         Convergence threshold for adaptive k-range determination
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20180,10 +20188,14 @@ class XcorKernel(NumCosmoMath.Model):
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
+        expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
         lmax: int
+        max_border_expansions: int
+        max_iter: int
         powspec: NumCosmoMath.Powspec
+        reltol: float
         implementation: int
         name: str
         nick: str
@@ -20201,10 +20213,14 @@ class XcorKernel(NumCosmoMath.Model):
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
+        expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,
         lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -20241,9 +20257,13 @@ class XcorKernel(NumCosmoMath.Model):
     def get_eval_vectorized(
         self, cosmo: HICosmo, lmin: int, lmax: int
     ) -> XcorKernelIntegrand: ...
+    def get_expansion_factor(self) -> float: ...
     def get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
     def get_l_limber(self) -> int: ...
     def get_lmax(self) -> int: ...
+    def get_max_border_expansions(self) -> int: ...
+    def get_max_iter(self) -> int: ...
+    def get_reltol(self) -> float: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
     @staticmethod
     def id() -> int: ...
@@ -20258,8 +20278,12 @@ class XcorKernel(NumCosmoMath.Model):
     def ref(self) -> XcorKernel: ...
     def set_adaptive_boundary_tries(self, adaptive_boundary_tries: int) -> None: ...
     def set_adaptive_epsilon(self, adaptive_epsilon: float) -> None: ...
+    def set_expansion_factor(self, expansion_factor: float) -> None: ...
     def set_l_limber(self, l_limber: int) -> None: ...
     def set_lmax(self, lmax: int) -> None: ...
+    def set_max_border_expansions(self, max_border_expansions: int) -> None: ...
+    def set_max_iter(self, max_iter: int) -> None: ...
+    def set_reltol(self, reltol: float) -> None: ...
 
 class XcorKernelCMBISW(XcorKernel):
     r"""
@@ -20293,6 +20317,14 @@ class XcorKernelCMBISW(XcorKernel):
         Convergence threshold for adaptive k-range determination
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20324,10 +20356,14 @@ class XcorKernelCMBISW(XcorKernel):
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
+        expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
         lmax: int
+        max_border_expansions: int
+        max_iter: int
         powspec: NumCosmoMath.Powspec
+        reltol: float
         implementation: int
         name: str
         nick: str
@@ -20346,10 +20382,14 @@ class XcorKernelCMBISW(XcorKernel):
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
+        expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,
         lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -20411,6 +20451,14 @@ class XcorKernelCMBLensing(XcorKernel):
         Convergence threshold for adaptive k-range determination
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20442,10 +20490,14 @@ class XcorKernelCMBLensing(XcorKernel):
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
+        expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
         lmax: int
+        max_border_expansions: int
+        max_iter: int
         powspec: NumCosmoMath.Powspec
+        reltol: float
         implementation: int
         name: str
         nick: str
@@ -20464,10 +20516,14 @@ class XcorKernelCMBLensing(XcorKernel):
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
+        expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,
         lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -20648,6 +20704,14 @@ class XcorKernelGal(XcorKernel):
         Convergence threshold for adaptive k-range determination
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20688,10 +20752,14 @@ class XcorKernelGal(XcorKernel):
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
+        expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
         lmax: int
+        max_border_expansions: int
+        max_iter: int
         powspec: NumCosmoMath.Powspec
+        reltol: float
         implementation: int
         name: str
         nick: str
@@ -20719,10 +20787,14 @@ class XcorKernelGal(XcorKernel):
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
+        expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,
         lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -20819,6 +20891,14 @@ class XcorKernelWeakLensing(XcorKernel):
         Convergence threshold for adaptive k-range determination
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20851,10 +20931,14 @@ class XcorKernelWeakLensing(XcorKernel):
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
+        expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
         lmax: int
+        max_border_expansions: int
+        max_iter: int
         powspec: NumCosmoMath.Powspec
+        reltol: float
         implementation: int
         name: str
         nick: str
@@ -20874,10 +20958,14 @@ class XcorKernelWeakLensing(XcorKernel):
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
+        expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,
         lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -20935,6 +21023,14 @@ class XcorKerneltSZ(XcorKernel):
         Convergence threshold for adaptive k-range determination
       adaptive-boundary-tries -> guint: adaptive-boundary-tries
         Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20966,10 +21062,14 @@ class XcorKerneltSZ(XcorKernel):
         adaptive_boundary_tries: int
         adaptive_epsilon: float
         dist: Distance
+        expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
         l_limber: int
         lmax: int
+        max_border_expansions: int
+        max_iter: int
         powspec: NumCosmoMath.Powspec
+        reltol: float
         implementation: int
         name: str
         nick: str
@@ -20988,10 +21088,14 @@ class XcorKerneltSZ(XcorKernel):
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
         dist: Distance = ...,
+        expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
         l_limber: int = ...,
         lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
