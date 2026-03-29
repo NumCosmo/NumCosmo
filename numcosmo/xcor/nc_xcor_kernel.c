@@ -728,14 +728,7 @@ _compute_components_extrapolated (
         );
 
         kernel_out[ci][i] *= prefactor * k * sqrt (k);
-
-        printf ("Component %u, l = %u: computed kernel value = % 22.15g (% 22.15g, % 22.15g) % 22.15g\n",
-                ci, comp_states->lmin + i, kernel_out[ci][i],
-                state->xi_min, state->xi_max, k
-        );
       }
-
-      printf ("Component %u: computed kernel values at k = % 22.15g (within boundaries)\n", ci, k);
     }
     else
     {
@@ -744,9 +737,6 @@ _compute_components_extrapolated (
       /* Compute using an exponential tail approximation. */
       if (!within_right_boundary)
       {
-        printf ("Extrapolating right boundary for component %u at k = % 22.15g (last k = % 22.15g)\n",
-                ci, k, state->last_k_right);
-
         for (i = 0; i < comp_states->n_l; i++)
         {
           const gdouble val              = state->last_values_right[i];
@@ -757,9 +747,6 @@ _compute_components_extrapolated (
       }
       else
       {
-        printf ("Extrapolating left boundary for component %u at k = % 22.15g (last k = % 22.15g)\n",
-                ci, k, state->last_k_left);
-
         for (i = 0; i < comp_states->n_l; i++)
         {
           const gdouble val              = state->last_values_left[i];

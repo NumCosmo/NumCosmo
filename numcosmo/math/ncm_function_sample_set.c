@@ -716,8 +716,6 @@ ncm_function_sample_set_iter_insert_after (NcmFunctionSampleSet *fss, NcmFunctio
   NcmFunctionSamplePoint *sp;
   guint i;
 
-  printf ("Inserting sample at x=% 22.15g\n", x);
-
   g_assert (iter->node != NULL);
   g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
 
@@ -806,8 +804,6 @@ ncm_function_sample_set_iter_insert_before (NcmFunctionSampleSet *fss, NcmFuncti
 {
   NcmFunctionSamplePoint *sp;
   guint i;
-
-  printf ("Inserting sample at x=% 22.15g\n", x);
 
   g_assert (iter->node != NULL);
   g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
@@ -912,8 +908,6 @@ ncm_function_sample_set_add (NcmFunctionSampleSet *fss, const gdouble x, NcmVect
   NcmFunctionSamplePoint *sp;
   guint i;
 
-  printf ("Adding sample: x=% 22.15g\n", x);
-
   g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
 
   sp           = _ncm_function_sample_point_new (x, y);
@@ -980,8 +974,6 @@ ncm_function_sample_set_add_old (NcmFunctionSampleSet *fss, const gdouble x, Ncm
 {
   NcmFunctionSamplePoint *sp;
   guint i;
-
-  printf ("Adding old sample: x=% 22.15g\n", x);
 
   g_assert_cmpuint (ncm_vector_len (y), ==, fss->len);
 
@@ -1414,9 +1406,6 @@ ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol,
       norm_diff = ncm_vector_dnrm2 (y_spline); /* ||f(x) - spline_f(x)||_2 */
       threshold = reltol * norm_f + abstol;
 
-      printf ("Refinement test at x=% 22.15g: ||f(x)||_2=% 22.15g, ||f(x)-spline_f(x)||_2=% 22.15g, threshold=% 22.15g\n",
-              x, norm_f, norm_diff, threshold);
-
       /* If test passes, increment interval_ok for this point and its left neighbor */
       if (norm_diff < threshold)
       {
@@ -1511,11 +1500,7 @@ ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
               continue;
             }
 
-            printf ("Iteration %u: Refining interval [% 22.15g, % 22.15g] with interval_ok=%d, new_point=% 22.15g\n",
-                    iteration, x_left, x_right, ncm_function_sample_set_iter_get_interval_ok (it), x_mid);
-            fflush (stdout);
             ncm_function_sample_set_iter_insert_after_func (fss, it, x_mid, f, user_data, &iter_new);
-
             *it = *iter_new; /* Move iterator to new point for next loop */
           }
         }
