@@ -1102,6 +1102,94 @@ ncm_function_sample_set_get_absmaxF (NcmFunctionSampleSet *fss, const guint i, g
 }
 
 /**
+ * ncm_function_sample_set_get_absmaxF_l2_norm:
+ * @fss: a #NcmFunctionSampleSet
+ *
+ * Computes the $L_2$ norm (Euclidean norm) of the maximum absolute values
+ * across all components:
+ * $$\|\vec{F}\|_2 = \sqrt{\sum_{i=0}^{n-1} (\max_x |F_i(x)|)^2}$$
+ *
+ * This is useful for determining a reference scale when all components
+ * should contribute equally to error estimation.
+ *
+ * Returns: the $L_2$ norm of the component-wise maximum absolute values
+ */
+gdouble
+ncm_function_sample_set_get_absmaxF_l2_norm (NcmFunctionSampleSet *fss)
+{
+  gdouble sum_sq = 0.0;
+  guint i;
+
+  for (i = 0; i < fss->len; i++)
+  {
+    const gdouble absmaxF_i = g_array_index (fss->absmaxF, gdouble, i);
+
+    sum_sq += gsl_pow_2 (absmaxF_i);
+  }
+
+  return sqrt (sum_sq);
+}
+
+/**
+ * ncm_function_sample_set_get_absmaxF_linf_norm:
+ * @fss: a #NcmFunctionSampleSet
+ *
+ * Computes the $L_\infty$ norm (maximum norm) of the maximum absolute values
+ * across all components:
+ * $$\|\vec{F}\|_\infty = \max_{i=0}^{n-1} (\max_x |F_i(x)|)$$
+ *
+ * This represents the largest absolute value observed across all components
+ * and samples, useful for conservative error bounds.
+ *
+ * Returns: the $L_\infty$ norm of the component-wise maximum absolute values
+ */
+gdouble
+ncm_function_sample_set_get_absmaxF_linf_norm (NcmFunctionSampleSet *fss)
+{
+  gdouble max_val = 0.0;
+  guint i;
+
+  for (i = 0; i < fss->len; i++)
+  {
+    const gdouble absmaxF_i = g_array_index (fss->absmaxF, gdouble, i);
+
+    max_val = GSL_MAX (max_val, absmaxF_i);
+  }
+
+  return max_val;
+}
+
+/**
+ * ncm_function_sample_set_get_absmaxF_min:
+ * @fss: a #NcmFunctionSampleSet
+ *
+ * Computes the minimum of the maximum absolute values across all components:
+ * $$\min_{i=0}^{n-1} (\max_x |F_i(x)|)$$
+ *
+ * This returns the smallest peak value among all components, which is useful
+ * for setting conservative tolerances that ensure even the weakest component
+ * is adequately resolved in adaptive refinement algorithms.
+ *
+ * Returns: the minimum of the component-wise maximum absolute values, or
+ *          GSL_POSINF if there are no components
+ */
+gdouble
+ncm_function_sample_set_get_absmaxF_min (NcmFunctionSampleSet *fss)
+{
+  gdouble min_val = GSL_POSINF;
+  guint i;
+
+  for (i = 0; i < fss->len; i++)
+  {
+    const gdouble absmaxF_i = g_array_index (fss->absmaxF, gdouble, i);
+
+    min_val = GSL_MIN (min_val, absmaxF_i);
+  }
+
+  return min_val;
+}
+
+/**
  * ncm_function_sample_set_reset_interval_ok:
  * @fss: a #NcmFunctionSampleSet
  *

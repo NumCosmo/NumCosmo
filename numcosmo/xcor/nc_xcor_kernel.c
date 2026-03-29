@@ -651,12 +651,6 @@ _component_list_compute_k_init (ComponentStates *comp_states)
   g_assert_cmpfloat (result.k_min_soft, <, result.k_center);
   g_assert_cmpfloat (result.k_center, <, result.k_max_soft);
 
-  if (gsl_fcmp (result.k_min_soft, result.k_max_soft, 1.0e-5) == 0)
-    g_error ("_component_list_compute_k_init: computed k_min and k_max are too close (k_min = % 22.15g, k_max = % 22.15g). "
-             "This may indicate that the kernel components have very narrow support in k. "
-             "Consider adjusting the kernel components or their parameters to ensure a wider k range.",
-             result.k_min_soft, result.k_max_soft);
-
   for (i = 0; i < comp_states->n_comp; i++)
   {
     if (_is_new_k (k_comp_scales[i], result.k_seeds, result.n_k_seeds))
@@ -804,20 +798,7 @@ _component_states_expand_right_border (ComponentStates *comp_states, NcmFunction
   ncm_vector_set_zero (kernel_sum);
 
   /* Compute reference scale from all ell components */
-  gdouble max_absF_total = 0.0;
-
-  {
-    guint j;
-
-    for (j = 0; j < comp_states->n_l; j++)
-    {
-      const gdouble absmaxF_j = ncm_function_sample_set_get_absmaxF (fss, j, NULL);
-
-      max_absF_total += gsl_pow_2 (absmaxF_j);
-    }
-
-    max_absF_total = sqrt (max_absF_total);
-  }
+  const gdouble max_absF_total = ncm_function_sample_set_get_absmaxF_l2_norm (fss);
 
   for (i = 0; i < comp_states->n_comp; i++)
   {
@@ -883,21 +864,7 @@ _component_states_expand_left_border (ComponentStates *comp_states, NcmFunctionS
   ncm_vector_set_zero (kernel_sum);
 
   /* Compute reference scale from all ell components */
-  gdouble max_absF_total = 0.0;
-
-  {
-    guint j;
-
-    for (j = 0; j < comp_states->n_l; j++)
-    {
-      const gdouble absmaxF_j = ncm_function_sample_set_get_absmaxF (fss, j, NULL);
-
-      max_absF_total += gsl_pow_2 (absmaxF_j);
-    }
-
-
-    max_absF_total = sqrt (max_absF_total);
-  }
+  gdouble max_absF_total = ncm_function_sample_set_get_absmaxF_l2_norm (fss);
 
   for (i = 0; i < comp_states->n_comp; i++)
   {
@@ -1078,18 +1045,8 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
     ncm_function_sample_set_mark_all_old (fss);
     ncm_function_sample_set_reset_interval_ok (fss);
     {
-      gdouble max_absF_total = GSL_DBL_MAX;
-      const gdouble reltol   = 1.0e-4;
-      guint i;
-
-      for (i = 0; i < comp_states.n_l; i++)
-      {
-        gdouble absmaxF_j = ncm_function_sample_set_get_absmaxF (fss, i, NULL);
-
-        max_absF_total = GSL_MIN (max_absF_total, gsl_pow_2 (absmaxF_j));
-      }
-
-      max_absF_total = sqrt (max_absF_total);
+      const gdouble max_absF_total = ncm_function_sample_set_get_absmaxF_min (fss);
+      const gdouble reltol         = 1.0e-5;
 
       ncm_function_sample_set_adaptive_midpoint (
         fss, _component_states_compute_func_extrapolated,

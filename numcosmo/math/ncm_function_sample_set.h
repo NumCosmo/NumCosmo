@@ -90,6 +90,9 @@ guint ncm_function_sample_set_get_nsamples (NcmFunctionSampleSet *fss);
 gdouble ncm_function_sample_set_get_x_min (NcmFunctionSampleSet *fss);
 gdouble ncm_function_sample_set_get_x_max (NcmFunctionSampleSet *fss);
 gdouble ncm_function_sample_set_get_absmaxF (NcmFunctionSampleSet *fss, const guint i, gdouble *x);
+gdouble ncm_function_sample_set_get_absmaxF_l2_norm (NcmFunctionSampleSet *fss);
+gdouble ncm_function_sample_set_get_absmaxF_linf_norm (NcmFunctionSampleSet *fss);
+gdouble ncm_function_sample_set_get_absmaxF_min (NcmFunctionSampleSet *fss);
 
 /* Container-level operations */
 void ncm_function_sample_set_reset_interval_ok (NcmFunctionSampleSet *fss);

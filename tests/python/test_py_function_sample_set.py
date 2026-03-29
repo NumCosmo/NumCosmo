@@ -1254,6 +1254,245 @@ def test_absmaxF_x_coordinate_with_negative_values(
     assert abs(absmaxF1[1] - 1.0) < 1e-10
 
 
+def test_absmaxF_l2_norm_basic(sample_set_dim2: Ncm.FunctionSampleSet) -> None:
+    """Test L2 norm computation with simple values."""
+    fss = sample_set_dim2
+
+    # Initially should be zero (no samples)
+    l2_norm_init = fss.get_absmaxF_l2_norm()
+    assert abs(l2_norm_init - 0.0) < 1e-10
+
+    # Add samples
+    # Component 0: max will be 3.0
+    # Component 1: max will be 4.0
+    # L2 norm should be sqrt(3^2 + 4^2) = 5.0
+    test_data = [
+        (0.0, [1.0, 2.0]),
+        (1.0, [3.0, 1.5]),
+        (2.0, [2.0, 4.0]),
+        (3.0, [1.5, 2.5]),
+    ]
+
+    for x, y_vals in test_data:
+        y = Ncm.Vector.new_array(y_vals)
+        fss.add(x, y)
+
+    l2_norm = fss.get_absmaxF_l2_norm()
+    expected_l2 = math.sqrt(3.0**2 + 4.0**2)  # sqrt(9 + 16) = 5.0
+    assert abs(l2_norm - expected_l2) < 1e-10
+
+
+def test_absmaxF_l2_norm_with_negatives(
+    sample_set_dim3: Ncm.FunctionSampleSet,
+) -> None:
+    """Test L2 norm with negative values (should use absolute values)."""
+    fss = sample_set_dim3
+
+    # Component 0: max |y| = 5.0 (from -5.0)
+    # Component 1: max |y| = 6.0 (from -6.0)
+    # Component 2: max |y| = 7.0
+    # L2 norm should be sqrt(5^2 + 6^2 + 7^2) = sqrt(25 + 36 + 49) = sqrt(110)
+    test_data = [
+        (0.0, [1.0, 2.0, 3.0]),
+        (1.0, [-5.0, 1.5, 2.5]),
+        (2.0, [2.0, -6.0, 1.0]),
+        (3.0, [1.5, 2.5, 7.0]),
+    ]
+
+    for x, y_vals in test_data:
+        y = Ncm.Vector.new_array(y_vals)
+        fss.add(x, y)
+
+    l2_norm = fss.get_absmaxF_l2_norm()
+    expected_l2 = math.sqrt(5.0**2 + 6.0**2 + 7.0**2)  # sqrt(110) ≈ 10.488
+    assert abs(l2_norm - expected_l2) < 1e-10
+
+
+def test_absmaxF_linf_norm_basic(sample_set_dim2: Ncm.FunctionSampleSet) -> None:
+    """Test L∞ norm computation with simple values."""
+    fss = sample_set_dim2
+
+    # Initially should be zero (no samples)
+    linf_norm_init = fss.get_absmaxF_linf_norm()
+    assert abs(linf_norm_init - 0.0) < 1e-10
+
+    # Add samples
+    # Component 0: max will be 3.0
+    # Component 1: max will be 4.0
+    # L∞ norm should be max(3.0, 4.0) = 4.0
+    test_data = [
+        (0.0, [1.0, 2.0]),
+        (1.0, [3.0, 1.5]),
+        (2.0, [2.0, 4.0]),
+        (3.0, [1.5, 2.5]),
+    ]
+
+    for x, y_vals in test_data:
+        y = Ncm.Vector.new_array(y_vals)
+        fss.add(x, y)
+
+    linf_norm = fss.get_absmaxF_linf_norm()
+    expected_linf = 4.0  # max(3.0, 4.0)
+    assert abs(linf_norm - expected_linf) < 1e-10
+
+
+def test_absmaxF_linf_norm_with_negatives(
+    sample_set_dim3: Ncm.FunctionSampleSet,
+) -> None:
+    """Test L∞ norm with negative values (should use absolute values)."""
+    fss = sample_set_dim3
+
+    # Component 0: max |y| = 5.0 (from -5.0)
+    # Component 1: max |y| = 6.0 (from -6.0)
+    # Component 2: max |y| = 8.0 (from -8.0)
+    # L∞ norm should be max(5.0, 6.0, 8.0) = 8.0
+    test_data = [
+        (0.0, [1.0, 2.0, 3.0]),
+        (1.0, [-5.0, 1.5, 2.5]),
+        (2.0, [2.0, -6.0, 1.0]),
+        (3.0, [1.5, 2.5, -8.0]),
+    ]
+
+    for x, y_vals in test_data:
+        y = Ncm.Vector.new_array(y_vals)
+        fss.add(x, y)
+
+    linf_norm = fss.get_absmaxF_linf_norm()
+    expected_linf = 8.0  # max(5.0, 6.0, 8.0)
+    assert abs(linf_norm - expected_linf) < 1e-10
+
+
+def test_absmaxF_norms_single_component() -> None:
+    """Test that both norms work correctly with single component."""
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    # Add some samples
+    # Component 0: max will be 7.0
+    # L2 norm should be 7.0 (sqrt(7^2) = 7)
+    # L∞ norm should be 7.0 (max(7.0) = 7)
+    test_data = [0.0, 1.0, 7.0, 3.0, 2.0]
+
+    for x in test_data:
+        y = Ncm.Vector.new_array([x])
+        fss.add(x, y)
+
+    l2_norm = fss.get_absmaxF_l2_norm()
+    linf_norm = fss.get_absmaxF_linf_norm()
+
+    assert abs(l2_norm - 7.0) < 1e-10
+    assert abs(linf_norm - 7.0) < 1e-10
+
+
+def test_absmaxF_min_basic(sample_set_dim2: Ncm.FunctionSampleSet) -> None:
+    """Test minimum of component-wise max absolute values."""
+    fss = sample_set_dim2
+
+    # Initially should be 0.0 (no samples yet)
+    min_absF_init = fss.get_absmaxF_min()
+    assert abs(min_absF_init - 0.0) < 1e-10
+
+    # Add samples
+    # Component 0: max will be 3.0
+    # Component 1: max will be 5.0
+    # Min should be min(3.0, 5.0) = 3.0
+    test_data = [
+        (0.0, [1.0, 2.0]),
+        (1.0, [3.0, 5.0]),
+        (2.0, [2.0, 4.0]),
+    ]
+
+    for x, y_vals in test_data:
+        y = Ncm.Vector.new_array(y_vals)
+        fss.add(x, y)
+
+    min_absF = fss.get_absmaxF_min()
+    assert abs(min_absF - 3.0) < 1e-10
+
+
+def test_absmaxF_min_with_negatives(
+    sample_set_dim3: Ncm.FunctionSampleSet,
+) -> None:
+    """Test minimum computation with negative values."""
+    fss = sample_set_dim3
+
+    # Component 0: max |y| = 5.0 (from -5.0)
+    # Component 1: max |y| = 6.0 (from -6.0)
+    # Component 2: max |y| = 8.0 (from -8.0)
+    # Min should be min(5.0, 6.0, 8.0) = 5.0
+    test_data = [
+        (0.0, [1.0, 2.0, 3.0]),
+        (1.0, [-5.0, 1.5, 2.5]),
+        (2.0, [2.0, -6.0, 1.0]),
+        (3.0, [1.5, 2.5, -8.0]),
+    ]
+
+    for x, y_vals in test_data:
+        y = Ncm.Vector.new_array(y_vals)
+        fss.add(x, y)
+
+    min_absF = fss.get_absmaxF_min()
+    assert abs(min_absF - 5.0) < 1e-10
+
+
+def test_absmaxF_min_identifies_weakest_component(
+    sample_set_dim3: Ncm.FunctionSampleSet,
+) -> None:
+    """Test that min correctly identifies the component with smallest peak."""
+    fss = sample_set_dim3
+
+    # Create components with very different peak values
+    # Component 0: max = 100.0
+    # Component 1: max = 2.0  (weakest - this should be the min)
+    # Component 2: max = 50.0
+    test_data = [
+        (0.0, [10.0, 1.0, 5.0]),
+        (1.0, [100.0, 2.0, 50.0]),
+        (2.0, [20.0, 0.5, 10.0]),
+    ]
+
+    for x, y_vals in test_data:
+        y = Ncm.Vector.new_array(y_vals)
+        fss.add(x, y)
+
+    min_absF = fss.get_absmaxF_min()
+    l2_norm = fss.get_absmaxF_l2_norm()
+    linf_norm = fss.get_absmaxF_linf_norm()
+
+    # Min should be 2.0 (component 1)
+    assert abs(min_absF - 2.0) < 1e-10
+
+    # L∞ should be 100.0 (component 0)
+    assert abs(linf_norm - 100.0) < 1e-10
+
+    # L2 should be sqrt(100^2 + 2^2 + 50^2) = sqrt(10000 + 4 + 2500)
+    expected_l2 = math.sqrt(100.0**2 + 2.0**2 + 50.0**2)
+    assert abs(l2_norm - expected_l2) < 1e-10
+
+    # Verify the relationship: min <= L2 <= L∞ * sqrt(n)
+    assert min_absF <= l2_norm
+    assert l2_norm <= linf_norm * math.sqrt(3)
+
+
+def test_absmaxF_min_single_component() -> None:
+    """Test min with single component (should equal the component's max)."""
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    test_data = [0.0, 1.0, 7.0, 3.0, 2.0]
+
+    for x in test_data:
+        y = Ncm.Vector.new_array([x])
+        fss.add(x, y)
+
+    min_absF = fss.get_absmaxF_min()
+    l2_norm = fss.get_absmaxF_l2_norm()
+    linf_norm = fss.get_absmaxF_linf_norm()
+
+    # All three should be 7.0 for single component
+    assert abs(min_absF - 7.0) < 1e-10
+    assert abs(l2_norm - 7.0) < 1e-10
+    assert abs(linf_norm - 7.0) < 1e-10
+
+
 def test_combined_tracking_comprehensive(
     sample_set_dim3: Ncm.FunctionSampleSet,
 ) -> None:
