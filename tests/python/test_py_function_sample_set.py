@@ -1813,3 +1813,513 @@ def test_adaptive_midpoint_all_points_old_after() -> None:
     base_spline2 = Ncm.SplineCubicNotaknot.new()
     sv_old = fss.to_spline_vec_old(base_spline2)
     assert sv_old.get_nknots() == nsamples
+
+
+#
+# Tests for expand_domain
+#
+
+
+def test_expand_domain_basic() -> None:
+    """Test basic domain expansion with fast-decaying function."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        # Exponentially decaying function
+        y.set(0, math.exp(-x))
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    # Initialize with a few points
+    for x in [1.0, 2.0, 3.0]:
+        fss.add_func(x, f)
+
+    x_min_initial = fss.get_x_min()
+    x_max_initial = fss.get_x_max()
+
+    # Expand domain
+    fss.expand_domain(
+        f,
+        x_min_hard=0.01,
+        x_max_hard=100.0,
+        expansion_factor=0.3,
+        epsilon=1e-3,
+        max_iterations=50,
+        consecutive_tries=3,
+    )
+
+    # Domain should have expanded
+    assert fss.get_x_min() < x_min_initial
+    assert fss.get_x_max() > x_max_initial
+
+    # More samples should have been added
+    assert fss.get_nsamples() > 3
+
+
+def test_expand_domain_hard_limits_respected() -> None:
+    """Verify expand_domain respects hard limits."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        y.set(0, 1.0 / (1.0 + x**2))
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    for x in [1.0, 2.0]:
+        fss.add_func(x, f)
+
+    x_min_hard = 0.1
+    x_max_hard = 5.0
+
+    fss.expand_domain(
+        f,
+        x_min_hard=x_min_hard,
+        x_max_hard=x_max_hard,
+        expansion_factor=0.5,
+        epsilon=1e-10,  # Very tight to force expansion to limits
+        max_iterations=100,
+        consecutive_tries=2,
+    )
+
+    # Should not exceed hard limits
+    assert fss.get_x_min() >= x_min_hard
+    assert fss.get_x_max() <= x_max_hard
+
+
+def test_expand_domain_convergence_stops_expansion() -> None:
+    """Test that convergence stops expansion before hitting limits."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        # Very fast decay
+        y.set(0, math.exp(-x * 5.0))
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    for x in [0.5, 1.0, 1.5]:
+        fss.add_func(x, f)
+
+    fss.expand_domain(
+        f,
+        x_min_hard=1e-6,
+        x_max_hard=100.0,
+        expansion_factor=0.2,
+        epsilon=1e-2,
+        max_iterations=100,
+        consecutive_tries=3,
+    )
+
+    # Should converge well before hitting max limit
+    assert fss.get_x_max() < 10.0
+
+
+def test_expand_domain_max_iterations() -> None:
+    """Test that max_iterations limits expansion."""
+
+    def f(_x: float, y: Ncm.Vector) -> None:
+        # Constant function - never converges
+        y.set(0, 1.0)
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    for x in [1.0, 2.0]:
+        fss.add_func(x, f)
+
+    n_initial = fss.get_nsamples()
+    max_iter = 5
+
+    fss.expand_domain(
+        f,
+        x_min_hard=0.01,
+        x_max_hard=100.0,
+        expansion_factor=0.2,
+        epsilon=0.1,
+        max_iterations=max_iter,
+        consecutive_tries=2,
+    )
+
+    # Should have added at most 2*max_iter points (left and right)
+    n_added = fss.get_nsamples() - n_initial
+    assert n_added <= 2 * max_iter
+
+
+def test_expand_domain_consecutive_tries() -> None:
+    """Test consecutive_tries requirement for convergence."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        # Smooth exponential decay
+        y.set(0, math.exp(-0.5 * x))
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    for x in [1.0, 2.0, 3.0]:
+        fss.add_func(x, f)
+
+    # Use consecutive_tries=5 - should need more iterations
+    fss.expand_domain(
+        f,
+        x_min_hard=0.01,
+        x_max_hard=50.0,
+        expansion_factor=0.2,
+        epsilon=1e-2,
+        max_iterations=100,
+        consecutive_tries=5,
+    )
+
+    n_samples_strict = fss.get_nsamples()
+
+    # Reset and try with consecutive_tries=1
+    fss2 = Ncm.FunctionSampleSet.new(1)
+    for x in [1.0, 2.0, 3.0]:
+        fss2.add_func(x, f)
+
+    fss2.expand_domain(
+        f,
+        x_min_hard=0.01,
+        x_max_hard=50.0,
+        expansion_factor=0.2,
+        epsilon=1e-2,
+        max_iterations=100,
+        consecutive_tries=1,
+    )
+
+    n_samples_loose = fss2.get_nsamples()
+
+    # Stricter consecutive_tries should require more points or same
+    assert n_samples_strict >= n_samples_loose
+
+
+def test_expand_domain_multi_component() -> None:
+    """Test expansion with multiple output components."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        y.set(0, math.exp(-x))
+        y.set(1, math.exp(-2.0 * x))
+        y.set(2, math.exp(-0.5 * x))
+
+    fss = Ncm.FunctionSampleSet.new(3)
+
+    for x in [1.0, 2.0, 3.0]:
+        fss.add_func(x, f)
+
+    fss.expand_domain(
+        f,
+        x_min_hard=0.1,
+        x_max_hard=20.0,
+        expansion_factor=0.3,
+        epsilon=1e-3,
+        max_iterations=50,
+        consecutive_tries=3,
+    )
+
+    # All components should be tracked
+    assert fss.get_absmaxF_l2_norm() > 0
+    assert fss.get_len() == 3
+
+
+def test_expand_domain_stress_exponential_decay() -> None:
+    """Stress test with exponentially decaying function."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        # Multiple decay rates
+        y.set(0, math.exp(-0.1 * x))
+        y.set(1, math.exp(-0.5 * x))
+        y.set(2, math.exp(-1.0 * x))
+
+    fss = Ncm.FunctionSampleSet.new(3)
+
+    # Start with tight initial domain
+    for x in np.linspace(0.5, 1.5, 5):
+        fss.add_func(x, f)
+
+    initial_x_min = fss.get_x_min()
+    initial_x_max = fss.get_x_max()
+
+    fss.expand_domain(
+        f,
+        x_min_hard=1e-3,
+        x_max_hard=50.0,
+        expansion_factor=0.2,
+        epsilon=1e-4,
+        max_iterations=200,
+        consecutive_tries=4,
+    )
+
+    # Verify significant expansion occurred
+    assert fss.get_x_min() < initial_x_min * 0.5
+    assert fss.get_x_max() > initial_x_max * 2.0
+
+    # Verify function values decrease at boundaries
+    F_ref = fss.get_absmaxF_l2_norm()
+    assert F_ref > 0
+
+    # Sample at right boundary should be small (converged)
+    # Left boundary may hit hard limit so we only check right
+    y_right = Ncm.Vector.new(3)
+    f(fss.get_x_max(), y_right)
+    norm_right = math.sqrt(sum(y_right.get(i) ** 2 for i in range(3)))
+
+    # Right boundary should have converged
+    assert norm_right < 1e-2 * F_ref
+
+
+def test_expand_domain_stress_power_law() -> None:
+    """Stress test with power-law decay."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        # Power law decay in different components
+        y.set(0, 1.0 / (1.0 + x**2))
+        y.set(1, 1.0 / (1.0 + x**3))
+
+    fss = Ncm.FunctionSampleSet.new(2)
+
+    for x in np.linspace(1.0, 3.0, 10):
+        fss.add_func(x, f)
+
+    fss.expand_domain(
+        f,
+        x_min_hard=0.01,
+        x_max_hard=100.0,
+        expansion_factor=0.25,
+        epsilon=1e-4,
+        max_iterations=150,
+        consecutive_tries=3,
+    )
+
+    # Power law decays slower, should expand further
+    assert fss.get_x_max() > 10.0
+
+    # Verify boundary convergence
+    F_ref = fss.get_absmaxF_l2_norm()
+    y = Ncm.Vector.new(2)
+    f(fss.get_x_max(), y)
+    norm = math.sqrt(y.get(0) ** 2 + y.get(1) ** 2)
+    assert norm < 5e-3 * F_ref
+
+
+def test_expand_domain_asymmetric_expansion() -> None:
+    """Test that left and right boundaries can expand independently."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        # Asymmetric function - decays fast to the left, slow to the right
+        if x < 2.0:
+            y.set(0, math.exp(-5.0 * (2.0 - x)))
+        else:
+            y.set(0, math.exp(-0.5 * (x - 2.0)))
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    # Start centered
+    for x in [1.8, 2.0, 2.2]:
+        fss.add_func(x, f)
+
+    x_min_initial = fss.get_x_min()
+    x_max_initial = fss.get_x_max()
+
+    fss.expand_domain(
+        f,
+        x_min_hard=0.1,
+        x_max_hard=50.0,
+        expansion_factor=0.2,
+        epsilon=1e-3,
+        max_iterations=100,
+        consecutive_tries=3,
+    )
+
+    # Left should not expand much (fast decay)
+    left_expansion = x_min_initial - fss.get_x_min()
+
+    # Right should expand more (slow decay)
+    right_expansion = fss.get_x_max() - x_max_initial
+
+    assert right_expansion > left_expansion * 2.0
+
+
+def test_expand_domain_interleaved_reference_update() -> None:
+    """Test that F_ref is updated after each point (interleaved expansion)."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        # Function that grows in the middle
+        y.set(0, math.exp(-((x - 5.0) ** 2) / 4.0))
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    # Start away from peak
+    for x in [8.0, 9.0, 10.0]:
+        fss.add_func(x, f)
+
+    initial_F_ref = fss.get_absmaxF_l2_norm()
+
+    fss.expand_domain(
+        f,
+        x_min_hard=0.1,
+        x_max_hard=15.0,
+        expansion_factor=0.15,
+        epsilon=1e-3,
+        max_iterations=100,
+        consecutive_tries=3,
+    )
+
+    final_F_ref = fss.get_absmaxF_l2_norm()
+
+    # F_ref should have increased as we discovered the peak
+    assert final_F_ref > initial_F_ref * 1.5
+
+
+def test_expand_domain_with_user_data() -> None:
+    """Test expand_domain with user_data parameter."""
+
+    class UserData:
+        """Example user data class to track calls and provide a scale factor."""
+
+        def __init__(self, scale: float):
+            self.scale = scale
+            self.call_count = 0
+
+        def func(self, x: float, y: Ncm.Vector) -> None:
+            """Function that uses user data to scale the output and counts calls."""
+            self.call_count += 1
+            y.set(0, self.scale * math.exp(-x))
+
+    user_data = UserData(2.5)
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    # Initialize with a couple of points
+    for x in [1.0, 2.0]:
+        fss.add_func(x, user_data.func)
+
+    initial_calls = user_data.call_count
+
+    fss.expand_domain(
+        user_data.func,
+        x_min_hard=0.1,
+        x_max_hard=10.0,
+        expansion_factor=0.2,
+        epsilon=1e-2,
+        max_iterations=20,
+        consecutive_tries=2,
+    )
+
+    # Callback should have been called during expansion
+    assert user_data.call_count > initial_calls
+
+    # Scale should be reflected in values (absmaxF returns tuple with value at [0])
+    assert fss.get_absmaxF(0)[0] > 2.0
+
+
+def test_expand_domain_reaches_hard_limits() -> None:
+    """Test that expand_domain evaluates at hard limits when they are reached."""
+
+    def f(_x: float, y: Ncm.Vector) -> None:
+        # Constant function - will never converge, forcing expansion to limits
+        y.set(0, 1.0)
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    # Start with initial points
+    for x in [5.0, 6.0]:
+        fss.add_func(x, f)
+
+    x_min_hard = 1.0
+    x_max_hard = 10.0
+
+    # Use small max_iterations to force hitting limits quickly
+    fss.expand_domain(
+        f,
+        x_min_hard=x_min_hard,
+        x_max_hard=x_max_hard,
+        expansion_factor=0.5,  # Large factor to reach limits faster
+        epsilon=0.01,  # Tight epsilon so constant function won't converge
+        max_iterations=10,
+        consecutive_tries=2,
+    )
+
+    # First knot should be at or very close to x_min_hard
+    assert abs(fss.get_x_min() - x_min_hard) < 1e-10
+
+    # Last knot should be at or very close to x_max_hard
+    assert abs(fss.get_x_max() - x_max_hard) < 1e-10
+
+
+def test_expand_domain_left_limit_reached() -> None:
+    """Test that left hard limit is reached and becomes first knot."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        y.set(0, 1.0 + x)  # Linear, won't converge quickly
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    for x in [8.0, 9.0]:
+        fss.add_func(x, f)
+
+    x_min_hard = 2.0
+    x_max_hard = 100.0
+
+    fss.expand_domain(
+        f,
+        x_min_hard=x_min_hard,
+        x_max_hard=x_max_hard,
+        expansion_factor=0.4,
+        epsilon=1e-10,  # Very tight to force hitting left limit
+        max_iterations=20,
+        consecutive_tries=3,
+    )
+
+    # Left boundary should reach hard limit
+    assert abs(fss.get_x_min() - x_min_hard) < 1e-10
+
+
+def test_expand_domain_right_limit_reached() -> None:
+    """Test that right hard limit is reached and becomes last knot."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        y.set(0, 1.0 + x)  # Linear, won't converge quickly
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    for x in [1.0, 2.0]:
+        fss.add_func(x, f)
+
+    x_min_hard = 0.01
+    x_max_hard = 8.0
+
+    fss.expand_domain(
+        f,
+        x_min_hard=x_min_hard,
+        x_max_hard=x_max_hard,
+        expansion_factor=0.4,
+        epsilon=1e-10,  # Very tight to force hitting right limit
+        max_iterations=20,
+        consecutive_tries=3,
+    )
+
+    # Right boundary should reach hard limit
+    assert abs(fss.get_x_max() - x_max_hard) < 1e-10
+
+
+def test_expand_domain_both_limits_with_slow_decay() -> None:
+    """Test that both hard limits are reached with slow-decaying function."""
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        # Very slow decay - essentially constant in our range
+        y.set(0, 1.0 / (1.0 + 0.01 * x**2))
+
+    fss = Ncm.FunctionSampleSet.new(1)
+
+    for x in [5.0, 6.0]:
+        fss.add_func(x, f)
+
+    x_min_hard = 0.5
+    x_max_hard = 20.0
+
+    fss.expand_domain(
+        f,
+        x_min_hard=x_min_hard,
+        x_max_hard=x_max_hard,
+        expansion_factor=0.3,
+        epsilon=1e-3,
+        max_iterations=30,
+        consecutive_tries=2,
+    )
+
+    # Both boundaries should reach hard limits
+    assert abs(fss.get_x_min() - x_min_hard) < 1e-10
+    assert abs(fss.get_x_max() - x_max_hard) < 1e-10

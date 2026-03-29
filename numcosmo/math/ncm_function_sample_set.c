@@ -1190,6 +1190,150 @@ ncm_function_sample_set_get_absmaxF_min (NcmFunctionSampleSet *fss)
 }
 
 /**
+ * ncm_function_sample_set_expand_domain:
+ * @fss: a #NcmFunctionSampleSet
+ * @f: (scope call): callback function to evaluate at new points
+ * @x_min_hard: minimum allowed x value (hard limit)
+ * @x_max_hard: maximum allowed x value (hard limit)
+ * @expansion_factor: multiplicative factor for domain expansion (e.g., 0.2 for 20%)
+ * @epsilon: convergence threshold relative to reference scale
+ * @max_iterations: maximum number of expansion iterations
+ * @consecutive_tries: number of consecutive converged points required on each side
+ * @user_data: user data passed to callback function
+ *
+ * Expands the domain of the function sample set by alternating between left and
+ * right boundary expansion until convergence or limits are reached. At each step:
+ *
+ * - Left expansion proposes: $x_{\text{new}} = x_{\text{min}} \times (1 - \alpha)$
+ * - Right expansion proposes: $x_{\text{new}} = x_{\text{max}} \times (1 + \alpha)$
+ * - where $\alpha$ is the @expansion_factor
+ *
+ * The function recomputes the reference scale $F_{\text{ref}} = \|\text{absmaxF}\|_2$
+ * after each point insertion, ensuring proper convergence detection even when the
+ * function is still growing. Expansion on each side stops when:
+ *
+ * - $\|F(x)\| < \epsilon \times F_{\text{ref}}$ for @consecutive_tries consecutive points, OR
+ * - A hard limit is reached
+ *
+ * The interleaved expansion pattern (left, right, left, right, ...) ensures the
+ * reference scale tracks the global function behavior correctly.
+ */
+void
+ncm_function_sample_set_expand_domain (NcmFunctionSampleSet     *fss,
+                                       NcmFunctionSampleSetFunc f,
+                                       const gdouble            x_min_hard,
+                                       const gdouble            x_max_hard,
+                                       const gdouble            expansion_factor,
+                                       const gdouble            epsilon,
+                                       const guint              max_iterations,
+                                       const guint              consecutive_tries,
+                                       gpointer                 user_data)
+{
+  gboolean expanding_left  = TRUE;
+  gboolean expanding_right = TRUE;
+  guint left_converged     = 0;
+  guint right_converged    = 0;
+  guint i;
+
+  for (i = 0; i < max_iterations; i++)
+  {
+    /* Try left expansion */
+    if (expanding_left)
+    {
+      const gdouble x_min         = ncm_function_sample_set_get_x_min (fss);
+      const gdouble new_x         = x_min * (1.0 - expansion_factor);
+      const gdouble new_x_clamped = GSL_MAX (new_x, x_min_hard);
+      NcmVector *y                = ncm_vector_new (fss->len);
+      gdouble norm_y;
+
+      /* Evaluate function at new point (clamped to hard limit) */
+      f (new_x_clamped, y, user_data);
+
+      /* Compute norm of the function value */
+      norm_y = ncm_vector_dnrm2 (y);
+
+      /* Add point to sample set */
+      ncm_function_sample_set_add_old (fss, new_x_clamped, y);
+
+      /* Check if we hit the hard limit */
+      if (new_x < x_min_hard)
+      {
+        expanding_left = FALSE;
+      }
+      else
+      {
+        /* Get updated reference scale */
+        const gdouble F_ref = ncm_function_sample_set_get_absmaxF_l2_norm (fss);
+
+        /* Check convergence */
+        if (norm_y < epsilon * F_ref)
+        {
+          left_converged++;
+
+          if (left_converged >= consecutive_tries)
+            expanding_left = FALSE;
+        }
+        else
+        {
+          left_converged = 0;
+        }
+      }
+
+      ncm_vector_free (y);
+    }
+
+    /* Try right expansion */
+    if (expanding_right)
+    {
+      const gdouble x_max         = ncm_function_sample_set_get_x_max (fss);
+      const gdouble new_x         = x_max * (1.0 + expansion_factor);
+      const gdouble new_x_clamped = GSL_MIN (new_x, x_max_hard);
+      NcmVector *y                = ncm_vector_new (fss->len);
+      gdouble norm_y;
+
+      /* Evaluate function at new point (clamped to hard limit) */
+      f (new_x_clamped, y, user_data);
+
+      /* Compute norm of the function value */
+      norm_y = ncm_vector_dnrm2 (y);
+
+      /* Add point to sample set */
+      ncm_function_sample_set_add_old (fss, new_x_clamped, y);
+
+      /* Check if we hit the hard limit */
+      if (new_x > x_max_hard)
+      {
+        expanding_right = FALSE;
+      }
+      else
+      {
+        /* Get updated reference scale */
+        const gdouble F_ref = ncm_function_sample_set_get_absmaxF_l2_norm (fss);
+
+        /* Check convergence */
+        if (norm_y < epsilon * F_ref)
+        {
+          right_converged++;
+
+          if (right_converged >= consecutive_tries)
+            expanding_right = FALSE;
+        }
+        else
+        {
+          right_converged = 0;
+        }
+      }
+
+      ncm_vector_free (y);
+    }
+
+    /* Stop if both sides converged or hit limits */
+    if (!expanding_left && !expanding_right)
+      break;
+  }
+}
+
+/**
  * ncm_function_sample_set_reset_interval_ok:
  * @fss: a #NcmFunctionSampleSet
  *

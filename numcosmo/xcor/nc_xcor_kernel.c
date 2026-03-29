@@ -771,140 +771,6 @@ _kernel_sum (
   }
 }
 
-static gboolean
-_component_states_expand_right_border (ComponentStates *comp_states, NcmFunctionSampleSet *fss, gdouble expansion_factor)
-{
-  const gdouble k_right      = ncm_function_sample_set_get_x_max (fss);
-  gdouble new_k              = k_right * (1.0 + expansion_factor);
-  NcmVector *kernel_sum      = ncm_vector_new (comp_states->n_l);
-  gboolean all_below_epsilon = TRUE;
-  gboolean force_stop        = FALSE;
-  gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
-  guint i;
-
-  if (new_k > comp_states->states[0].k_max_hard)
-  {
-    g_assert_cmpfloat (k_right, !=, comp_states->states[0].k_max_hard);
-    g_warning ("_component_states_expand_right_border: new k = % 22.15g is above hard limit, clipping to % 22.15g",
-               new_k, comp_states->states[0].k_max_hard);
-    force_stop = TRUE;
-    new_k      = comp_states->states[0].k_max_hard;
-
-    return TRUE;
-  }
-
-  _compute_components_extrapolated (comp_states, new_k, kernel_out);
-
-  ncm_vector_set_zero (kernel_sum);
-
-  /* Compute reference scale from all ell components */
-  const gdouble max_absF_total = ncm_function_sample_set_get_absmaxF_l2_norm (fss);
-
-  for (i = 0; i < comp_states->n_comp; i++)
-  {
-    gdouble val_i = 0.0;
-    guint j;
-
-    for (j = 0; j < comp_states->n_l; j++)
-    {
-      const gdouble val_ij = kernel_out[i][j];
-
-      val_i += val_ij * val_ij;
-      ncm_vector_addto (kernel_sum, j, val_ij);
-    }
-
-    val_i = sqrt (val_i);
-
-    if (val_i < comp_states->epsilon * max_absF_total)
-    {
-      comp_states->states[i].right_boundary_found++;
-      comp_states->states[i].last_k_right = new_k;
-
-      for (j = 0; j < comp_states->n_l; j++)
-        comp_states->states[i].last_values_right[j] = kernel_out[i][j];
-    }
-    else
-    {
-      comp_states->states[i].right_boundary_found = 0;
-    }
-
-    if (comp_states->states[i].right_boundary_found < comp_states->adaptive_boundary_tries)
-      all_below_epsilon = FALSE;
-  }
-
-  ncm_function_sample_set_add_old (fss, new_k, kernel_sum);
-
-  ncm_vector_free (kernel_sum);
-
-  return force_stop || all_below_epsilon;
-}
-
-static gboolean
-_component_states_expand_left_border (ComponentStates *comp_states, NcmFunctionSampleSet *fss, gdouble expansion_factor)
-{
-  const gdouble k_left       = ncm_function_sample_set_get_x_min (fss);
-  gdouble new_k              = k_left * (1.0 - expansion_factor);
-  NcmVector *kernel_sum      = ncm_vector_new (comp_states->n_l);
-  gboolean all_below_epsilon = TRUE;
-  gboolean force_stop        = FALSE;
-  gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
-  guint i;
-
-  if (new_k < comp_states->states[0].k_min_hard)
-  {
-    g_assert_cmpfloat (k_left, !=, comp_states->states[0].k_min_hard);
-    g_warning ("_component_states_expand_left_border: new k = % 22.15g is below hard limit, clipping to % 22.15g",
-               new_k, comp_states->states[0].k_min_hard);
-    new_k      = comp_states->states[0].k_min_hard;
-    force_stop = TRUE;
-  }
-
-  _compute_components_extrapolated (comp_states, new_k, kernel_out);
-
-  ncm_vector_set_zero (kernel_sum);
-
-  /* Compute reference scale from all ell components */
-  gdouble max_absF_total = ncm_function_sample_set_get_absmaxF_l2_norm (fss);
-
-  for (i = 0; i < comp_states->n_comp; i++)
-  {
-    gdouble val_i = 0.0;
-    guint j;
-
-    for (j = 0; j < comp_states->n_l; j++)
-    {
-      const gdouble val_ij = kernel_out[i][j];
-
-      val_i += val_ij * val_ij;
-      ncm_vector_addto (kernel_sum, j, val_ij);
-    }
-
-    val_i = sqrt (val_i);
-
-    if (val_i < comp_states->epsilon * max_absF_total)
-    {
-      for (j = 0; j < comp_states->n_l; j++)
-        comp_states->states[i].last_values_left[j] = kernel_out[i][j];
-
-      comp_states->states[i].left_boundary_found++;
-      comp_states->states[i].last_k_left = new_k;
-    }
-    else
-    {
-      comp_states->states[i].left_boundary_found = 0;
-    }
-
-    if (comp_states->states[i].left_boundary_found < comp_states->adaptive_boundary_tries)
-      all_below_epsilon = FALSE;
-  }
-
-  ncm_function_sample_set_add_old (fss, new_k, kernel_sum);
-
-  ncm_vector_free (kernel_sum);
-
-  return force_stop || all_below_epsilon;
-}
-
 static void
 _component_states_compute_func (const gdouble k, NcmVector *y, gpointer user_data)
 {
@@ -1025,21 +891,46 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
        * Now we start the domain expansion.
        */
       const gdouble expansion_factor = 0.2;
-      gboolean expanding_left        = TRUE;
-      gboolean expanding_right       = TRUE;
 
-      for (i = 0; i < max_border_expansions; i++)
+      ncm_function_sample_set_expand_domain (
+        fss,
+        &_component_states_compute_func_extrapolated,
+        comp_states.states[0].k_min_hard,
+        comp_states.states[0].k_max_hard,
+        expansion_factor,
+        comp_states.epsilon,
+        max_border_expansions,
+        comp_states.adaptive_boundary_tries,
+        &comp_states
+      );
+
+      /* Update boundary values for extrapolation */
       {
-        if (expanding_left)
-          if (_component_states_expand_left_border (&comp_states, fss, expansion_factor))
-            expanding_left = FALSE;
+        const gdouble k_min = ncm_function_sample_set_get_x_min (fss);
+        const gdouble k_max = ncm_function_sample_set_get_x_max (fss);
+        gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
 
-        if (expanding_right)
-          if (_component_states_expand_right_border (&comp_states, fss, expansion_factor))
-            expanding_right = FALSE;
+        /* Evaluate at left boundary */
+        _compute_components_exact (&comp_states, k_min, kernel_out);
 
-        if (!(expanding_left || expanding_right))
-          break;
+        for (i = 0; i < comp_states.n_comp; i++)
+        {
+          comp_states.states[i].last_k_left = k_min;
+
+          for (guint j = 0; j < comp_states.n_l; j++)
+            comp_states.states[i].last_values_left[j] = kernel_out[i][j];
+        }
+
+        /* Evaluate at right boundary */
+        _compute_components_exact (&comp_states, k_max, kernel_out);
+
+        for (i = 0; i < comp_states.n_comp; i++)
+        {
+          comp_states.states[i].last_k_right = k_max;
+
+          for (guint j = 0; j < comp_states.n_l; j++)
+            comp_states.states[i].last_values_right[j] = kernel_out[i][j];
+        }
       }
     }
     ncm_function_sample_set_mark_all_old (fss);
