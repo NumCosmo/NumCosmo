@@ -60,6 +60,9 @@ def test_limber_vs_limber_z(kernel: Nc.XcorKernel, cosmology: Cosmology) -> None
         kmin, kmax = limber_func.get_range()
 
         k_array = np.geomspace(kmin, kmax, 100)
+
+        results_list = []
+        results_z_list = []
         for k in k_array:
             xi = nu / k
             k_Mpc = k / cosmo.RH_Mpc()
@@ -72,16 +75,19 @@ def test_limber_vs_limber_z(kernel: Nc.XcorKernel, cosmology: Cosmology) -> None
                 * np.sqrt(np.pi / 2.0 / nu)
                 / k
             )
-            max_result = np.max(np.abs(result))
-            assert_allclose(
-                result,
-                result_z,
-                rtol=1.0e-3,
-                atol=1.0e-3 * max_result,
-                err_msg=(
-                    f"Limber and limber_z differ at ell={ell}, k={k:.3e}, z={z:.3f}"
-                ),
-            )
+            results_list.append(result)
+            results_z_list.append(result_z)
+
+        results = np.array(results_list)
+        results_z = np.array(results_z_list)
+        max_result = np.max(np.abs(results))
+        assert_allclose(
+            results,
+            results_z,
+            rtol=1.0e-3,
+            atol=1.0e-3 * max_result,
+            err_msg=f"Limber and limber_z differ at ell={ell}",
+        )
 
 
 def test_limber_vs_limber_z_vectorized(
@@ -96,6 +102,8 @@ def test_limber_vs_limber_z_vectorized(
     ps_ml = cosmology.ps_ml
     kernel.set_l_limber(0)  # Treat all ells as limber
     kernel.prepare(cosmo)
+    kernel.set_reltol(1.0e-7)
+    kernel.set_scaled_abstol(1.0e-7)
 
     # Test ell range
     ell_start = 100
@@ -107,12 +115,19 @@ def test_limber_vs_limber_z_vectorized(
 
     # Test at multiple k values
     k_array = np.geomspace(kmin, kmax, 50)
+
+    # Build full result arrays first
+    results_vectorized_list = []
+    results_reference_list = []
+
     for k in k_array:
         # Get all 9 results at once
         results = limber_func.eval_array(k)
+        results_vectorized_list.append(results)
 
-        # Compare each ell individually
-        for i, ell in enumerate(range(ell_start, ell_end + 1)):
+        # Compute reference values for each ell
+        row_reference = []
+        for ell in range(ell_start, ell_end + 1):
             nu = ell + 0.5
             xi = nu / k
             k_Mpc = k / cosmo.RH_Mpc()
@@ -124,16 +139,26 @@ def test_limber_vs_limber_z_vectorized(
                 * np.sqrt(np.pi / 2.0 / nu)
                 / k
             )
-            assert_allclose(
-                results[i],
-                result_z,
-                rtol=1e-13,
-                atol=0.0,
-                err_msg=(
-                    f"Vectorized limber and limber_z differ at "
-                    f"ell={ell}, k={k:.3e}, z={z:.3f}"
-                ),
-            )
+            row_reference.append(result_z)
+        results_reference_list.append(row_reference)
+
+    # Convert to arrays
+    results_vectorized = np.array(results_vectorized_list)
+    results_reference = np.array(results_reference_list)
+
+    # Compute max and atol
+    max_result = np.max(np.abs(results_reference))
+    scaled_abstol = kernel.get_scaled_abstol()
+    atol = max_result * scaled_abstol
+
+    # Compare arrays
+    assert_allclose(
+        results_vectorized,
+        results_reference,
+        rtol=1.0e-5,
+        atol=atol,
+        err_msg="Vectorized limber and limber_z differ",
+    )
 
 
 def test_limber_vs_non_limber(
@@ -176,6 +201,8 @@ def test_limber_vs_non_limber(
     # Test at moderate to high ell where limber should be accurate
     ell_array = np.array([200, 500, 800])
     default_rtol = 1.0e-13
+    kernel.set_reltol(1.0e-7)
+    kernel.set_scaled_abstol(1.0e-7)
 
     for ell in ell_array:
         # Get limber result
@@ -251,6 +278,8 @@ def test_k_projection_limber_vs_non_limber(
         "kernel_wl_bin4": {100: 1.0e-4, 500: 6.0e-6, 800: 4.0e-6},
     }
     default_rtol = 1.0e-13
+    kernel.set_reltol(1.0e-7)  # Use tight tolerance for this test
+    kernel.set_scaled_abstol(1.0e-7)  # Use tight absolute minimum for this test
 
     for ell in ell_array:
         # Get limber result
@@ -300,8 +329,8 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
     """Test that all kernel properties can be set and retrieved correctly.
 
     Validates the getter/setter methods and GObject properties for the adaptive
-    refinement parameters: reltol, max_border_expansions, max_iter, and
-    expansion_factor.
+    refinement parameters: reltol, scaled_abstol, max_border_expansions, max_iter,
+    and expansion_factor.
     """
     # Test reltol property
     original_reltol = kernel.get_reltol()
@@ -316,6 +345,20 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
 
     # Restore original
     kernel.set_reltol(original_reltol)
+
+    # Test scaled_abstol property
+    original_scaled_abstol = kernel.get_scaled_abstol()
+    assert original_scaled_abstol == kernel.props.scaled_abstol
+
+    kernel.set_scaled_abstol(1.0e-8)
+    assert kernel.get_scaled_abstol() == 1.0e-8
+    assert kernel.props.scaled_abstol == 1.0e-8
+
+    kernel.props.scaled_abstol = 5.0e-7
+    assert kernel.get_scaled_abstol() == 5.0e-7
+
+    # Restore original
+    kernel.set_scaled_abstol(original_scaled_abstol)
 
     # Test max_border_expansions property
     original_max_border_expansions = kernel.get_max_border_expansions()

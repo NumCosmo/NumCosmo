@@ -77,6 +77,7 @@ typedef struct _NcXcorKernelPrivate
   gdouble adaptive_epsilon;
   guint adaptive_boundary_tries;
   gdouble reltol;
+  gdouble scaled_abstol;
   guint max_border_expansions;
   guint max_iter;
   gdouble expansion_factor;
@@ -94,6 +95,7 @@ enum
   PROP_ADAPTIVE_EPSILON,
   PROP_ADAPTIVE_BOUNDARY_TRIES,
   PROP_RELTOL,
+  PROP_SCALED_ABSTOL,
   PROP_MAX_BORDER_EXPANSIONS,
   PROP_MAX_ITER,
   PROP_EXPANSION_FACTOR,
@@ -116,12 +118,13 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
   self->k_seeds                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->lmax                    = 0;
   self->l_limber                = 0;
-  self->adaptive_epsilon        = 1.0e-6;
+  self->adaptive_epsilon        = 0.0;
   self->adaptive_boundary_tries = 0;
-  self->reltol                  = 1.0e-6;
-  self->max_border_expansions   = 5000;
-  self->max_iter                = 10000;
-  self->expansion_factor        = 0.2;
+  self->reltol                  = 0.0;
+  self->scaled_abstol           = 0.0;
+  self->max_border_expansions   = 0;
+  self->max_iter                = 0;
+  self->expansion_factor        = 0.0;
   self->constructed             = FALSE;
 }
 
@@ -215,6 +218,9 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_RELTOL:
       nc_xcor_kernel_set_reltol (xclk, g_value_get_double (value));
       break;
+    case PROP_SCALED_ABSTOL:
+      nc_xcor_kernel_set_scaled_abstol (xclk, g_value_get_double (value));
+      break;
     case PROP_MAX_BORDER_EXPANSIONS:
       nc_xcor_kernel_set_max_border_expansions (xclk, g_value_get_uint (value));
       break;
@@ -263,6 +269,9 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_RELTOL:
       g_value_set_double (value, nc_xcor_kernel_get_reltol (xclk));
+      break;
+    case PROP_SCALED_ABSTOL:
+      g_value_set_double (value, nc_xcor_kernel_get_scaled_abstol (xclk));
       break;
     case PROP_MAX_BORDER_EXPANSIONS:
       g_value_set_uint (value, nc_xcor_kernel_get_max_border_expansions (xclk));
@@ -368,6 +377,13 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                         "Relative tolerance for adaptive midpoint refinement",
                                                         0.0, 1.0, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SCALED_ABSTOL,
+                                   g_param_spec_double ("scaled-abstol",
+                                                        NULL,
+                                                        "Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement",
+                                                        GSL_DBL_MIN, 1.0, 1.0e-4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_MAX_BORDER_EXPANSIONS,
@@ -400,152 +416,13 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
 }
 
 /*
- * Base class Limber integrand using components
+ * Spline-based integrand infrastructure (used by both Limber and non-Limber)
  */
-
-typedef struct _LimberIntegrandData
-{
-  NcHICosmo *cosmo;
-  GPtrArray *comp_list;
-  gdouble RH_Mpc;
-  gint lmin;
-  guint len;
-  gdouble *nu_array;
-  gdouble *prefactor;
-  gdouble k_min;
-  gdouble k_max;
-} LimberIntegrandData;
-
-static void
-_limber_integrand_data_free (gpointer data)
-{
-  LimberIntegrandData *lid = (LimberIntegrandData *) data;
-
-  nc_hicosmo_clear (&lid->cosmo);
-  g_ptr_array_unref (lid->comp_list);
-  g_free (lid->nu_array);
-  g_free (lid->prefactor);
-  g_free (data);
-}
-
-static void
-_limber_integrand_get_range (gpointer data, gdouble *kmin, gdouble *kmax)
-{
-  LimberIntegrandData *lid = (LimberIntegrandData *) data;
-
-  *kmin = lid->k_min;
-  *kmax = lid->k_max;
-}
-
-static void
-_limber_integrand_eval (gpointer data, gdouble k, gdouble *W)
-{
-  LimberIntegrandData *lid = (LimberIntegrandData *) data;
-  const gdouble limber_k   = 1.0 / k;
-  const guint n_comp       = lid->comp_list->len;
-  guint i, j;
-
-  for (i = 0; i < lid->len; i++)
-    W[i] = 0.0;
-
-  for (j = 0; j < n_comp; j++)
-  {
-    NcXcorKernelComponent *comp = g_ptr_array_index (lid->comp_list, j);
-
-    for (i = 0; i < lid->len; i++)
-    {
-      const gdouble nu               = lid->nu_array[i];
-      const gint l                   = lid->lmin + i;
-      const gdouble xi               = nu / k;
-      const gdouble kernel_val       = nc_xcor_kernel_component_eval_kernel (comp, lid->cosmo, xi, k);
-      const gdouble prefactor        = nc_xcor_kernel_component_eval_prefactor (comp, lid->cosmo, k, l);
-      const gdouble prefactor_limber = lid->prefactor[i];
-
-      W[i] += prefactor_limber * prefactor * limber_k * kernel_val;
-    }
-  }
-}
-
-static NcXcorKernelIntegrand *
-_nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
-{
-  NcXcorKernelClass *klass = NC_XCOR_KERNEL_GET_CLASS (xclk);
-  LimberIntegrandData *lid = g_new0 (LimberIntegrandData, 1);
-  guint i;
-
-  lid->comp_list = klass->get_component_list (xclk);
-
-  if ((lid->comp_list == NULL) || (lid->comp_list->len == 0))
-  {
-    if (lid->comp_list != NULL)
-      g_ptr_array_unref (lid->comp_list);
-
-    g_free (lid);
-    g_error ("_nc_xcor_kernel_build_limber_integrand: kernel %s returned empty component list",
-             G_OBJECT_TYPE_NAME (xclk));
-
-    return NULL;
-  }
-
-  lid->cosmo  = nc_hicosmo_ref (cosmo);
-  lid->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-  lid->lmin   = lmin;
-  lid->len    = lmax - lmin + 1;
-
-  /* Pre-compute nu values for all l in block */
-  lid->nu_array  = g_new (gdouble, lid->len);
-  lid->prefactor = g_new (gdouble, lid->len);
-
-  for (i = 0; i < lid->len; i++)
-  {
-    const gdouble nu               = lid->lmin + i + 0.5;
-    const gdouble prefactor_limber = sqrt (M_PI / 2.0 / nu);
-
-    lid->nu_array[i]  = nu;
-    lid->prefactor[i] = prefactor_limber;
-  }
-
-  {
-    gdouble global_kmin = 0.0;
-    gdouble global_kmax = G_MAXDOUBLE;
-
-    for (i = 0; i < lid->comp_list->len; i++)
-    {
-      NcXcorKernelComponent *comp = g_ptr_array_index (lid->comp_list, i);
-      gdouble xi_min, xi_max, k_min, k_max;
-      guint l_idx;
-
-      nc_xcor_kernel_component_get_limits (comp, cosmo, &xi_min, &xi_max, &k_min, &k_max);
-
-      for (l_idx = 0; l_idx < lid->len; l_idx++)
-      {
-        const gdouble nu         = lid->nu_array[l_idx];
-        const gdouble k_min_limb = nu / xi_max;
-        const gdouble k_max_limb = nu / xi_min;
-
-        k_min = GSL_MAX (k_min, k_min_limb);
-        k_max = GSL_MIN (k_max, k_max_limb);
-      }
-
-      global_kmin = GSL_MAX (global_kmin, k_min);
-      global_kmax = GSL_MIN (global_kmax, k_max);
-    }
-
-    lid->k_min = global_kmin;
-    lid->k_max = global_kmax;
-  }
-
-  return nc_xcor_kernel_integrand_new (lid->len,
-                                       _limber_integrand_eval,
-                                       _limber_integrand_get_range,
-                                       lid,
-                                       _limber_integrand_data_free);
-}
 
 /*
- * Base class non-Limber integrand using components
+ * Spline-based integrand data (used by both Limber and non-Limber)
  */
-typedef struct _NonLimberIntegrandData
+typedef struct _SplineIntegrandData
 {
   NcHICosmo *cosmo;
   gdouble RH_Mpc;
@@ -555,54 +432,54 @@ typedef struct _NonLimberIntegrandData
   NcmVector *eval_result;
   gdouble k_min;
   gdouble k_max;
-} NonLimberIntegrandData;
+} SplineIntegrandData;
 
 static void
-_non_limber_integrand_eval (gpointer data, gdouble k, gdouble *W)
+_spline_integrand_eval (gpointer data, gdouble k, gdouble *W)
 {
-  NonLimberIntegrandData *nlid = (NonLimberIntegrandData *) data;
+  SplineIntegrandData *sid = (SplineIntegrandData *) data;
   guint i;
 
-  ncm_spline_vec_eval (nlid->spline_vec, k, nlid->eval_result);
+  ncm_spline_vec_eval (sid->spline_vec, k, sid->eval_result);
 
-  for (i = 0; i < nlid->len; i++)
+  for (i = 0; i < sid->len; i++)
   {
-    W[i] = ncm_vector_get (nlid->eval_result, i);
+    W[i] = ncm_vector_get (sid->eval_result, i);
   }
 }
 
 static void
-_non_limber_integrand_get_range (gpointer data, gdouble *kmin, gdouble *kmax)
+_spline_integrand_get_range (gpointer data, gdouble *kmin, gdouble *kmax)
 {
-  NonLimberIntegrandData *nlid = (NonLimberIntegrandData *) data;
+  SplineIntegrandData *sid = (SplineIntegrandData *) data;
 
-  *kmin = nlid->k_min;
-  *kmax = nlid->k_max;
+  *kmin = sid->k_min;
+  *kmax = sid->k_max;
 }
 
 static void
-_non_limber_integrand_data_free (gpointer data)
+_spline_integrand_data_free (gpointer data)
 {
-  NonLimberIntegrandData *nlid = (NonLimberIntegrandData *) data;
+  SplineIntegrandData *sid = (SplineIntegrandData *) data;
 
-  nc_hicosmo_clear (&nlid->cosmo);
-  ncm_spline_vec_clear (&nlid->spline_vec);
-  ncm_vector_clear (&nlid->eval_result);
+  nc_hicosmo_clear (&sid->cosmo);
+  ncm_spline_vec_clear (&sid->spline_vec);
+  ncm_vector_clear (&sid->eval_result);
 
   g_free (data);
 }
 
-typedef struct _NonLimberCompParams
+typedef struct _ComponentParams
 {
   NcXcorKernelComponent *comp;
   NcHICosmo *cosmo;
-} NonLimberCompParams;
+} ComponentParams;
 
 gdouble
 _nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble x, gdouble k)
 {
-  const NonLimberCompParams *nlcp = (const NonLimberCompParams *) params;
-  const gdouble kernel            = nc_xcor_kernel_component_eval_kernel (nlcp->comp, nlcp->cosmo, x, k);
+  const ComponentParams *nlcp = (const ComponentParams *) params;
+  const gdouble kernel        = nc_xcor_kernel_component_eval_kernel (nlcp->comp, nlcp->cosmo, x, k);
 
   return kernel / (k * sqrt (k));
 }
@@ -624,13 +501,13 @@ typedef struct _ComponentState
   gdouble last_values_right[MAX_ELL_BLOCK];
   guint left_boundary_found;
   guint right_boundary_found;
-  NonLimberCompParams params;
+  ComponentParams params;
 } ComponentState;
 
 typedef struct _ComponentStates
 {
   ComponentState states[MAX_COMP_BLOCK];
-  NcmSBesselIntegrator *sbi;
+  NcXcorKernel *xclk;
   gdouble k_min_hard;
   gdouble k_max_hard;
   gdouble l2_norm;
@@ -670,21 +547,45 @@ _is_new_k (gdouble k, gdouble *arr, guint n)
   return TRUE;
 }
 
-static ComponentStates
-_component_states_init (guint n_comp, NcmSBesselIntegrator *sbi, gint lmin, guint n_l,
-                        gdouble epsilon, guint adaptive_boundary_tries,
-                        GPtrArray *comp_list, NcHICosmo *cosmo)
+static GPtrArray *
+_nc_xcor_kernel_validate_component_list (NcXcorKernel *xclk, guint n_l)
 {
+  NcXcorKernelClass *klass = NC_XCOR_KERNEL_GET_CLASS (xclk);
+  GPtrArray *comp_list     = klass->get_component_list (xclk);
+
+  if ((comp_list == NULL) || (comp_list->len == 0))
+  {
+    if (comp_list != NULL)
+      g_ptr_array_unref (comp_list);
+
+    g_error ("_nc_xcor_kernel_validate_component_list: kernel %s returned empty component list",
+             G_OBJECT_TYPE_NAME (xclk));
+
+    return NULL;
+  }
+
+  g_assert_cmpuint (n_l, <=, MAX_ELL_BLOCK);
+  g_assert_cmpuint (comp_list->len, <=, MAX_COMP_BLOCK);
+
+  return comp_list; /* Caller must unref */
+}
+
+static ComponentStates
+_component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
+                                   GPtrArray *comp_list, NcHICosmo *cosmo)
+{
+  NcXcorKernelPrivate *self   = nc_xcor_kernel_get_instance_private (xclk);
+  const guint n_comp          = comp_list->len;
   ComponentStates comp_states = {
-    .sbi                     = sbi,
+    .xclk                    = xclk,
     .k_min_hard              = 0.0,
     .k_max_hard              = G_MAXDOUBLE,
     .l2_norm                 = 0.0,
     .n_comp                  = n_comp,
     .lmin                    = lmin,
     .n_l                     = n_l,
-    .epsilon                 = epsilon,
-    .adaptive_boundary_tries = adaptive_boundary_tries
+    .epsilon                 = self->adaptive_epsilon,
+    .adaptive_boundary_tries = self->adaptive_boundary_tries
   };
   guint i;
 
@@ -698,6 +599,53 @@ _component_states_init (guint n_comp, NcmSBesselIntegrator *sbi, gint lmin, guin
     /* Compute global hard limits as intersection of all component limits */
     comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, state->k_min_hard);
     comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, state->k_max_hard);
+  }
+
+  g_assert_cmpfloat (comp_states.k_min_hard, <, comp_states.k_max_hard);
+
+  return comp_states;
+}
+
+static ComponentStates
+_component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
+                               GPtrArray *comp_list, NcHICosmo *cosmo)
+{
+  NcXcorKernelPrivate *self   = nc_xcor_kernel_get_instance_private (xclk);
+  const guint n_comp          = comp_list->len;
+  const gint lmax             = lmin + n_l - 1;
+  ComponentStates comp_states = {
+    .xclk                    = xclk,
+    .k_min_hard              = 0.0,
+    .k_max_hard              = G_MAXDOUBLE,
+    .l2_norm                 = 0.0,
+    .n_comp                  = n_comp,
+    .lmin                    = lmin,
+    .n_l                     = n_l,
+    .epsilon                 = self->adaptive_epsilon,
+    .adaptive_boundary_tries = self->adaptive_boundary_tries
+  };
+  guint i;
+
+  /* Initialize each component state */
+  for (i = 0; i < n_comp; i++)
+  {
+    ComponentState *state = &comp_states.states[i];
+
+    _component_state_init (state, g_ptr_array_index (comp_list, i), i, cosmo, n_l);
+
+    /* Apply Limber constraints: xi = (l+0.5)/k must be in [xi_min, xi_max]
+     * Rearranging: k must be in [(lmax+0.5)/xi_max, (lmin+0.5)/xi_min]
+     */
+    gdouble k_min_limber = (lmax + 0.5) / state->xi_max;
+    gdouble k_max_limber = (lmin + 0.5) / state->xi_min;
+
+    /* Apply component hard limits */
+    gdouble k_min_comp = GSL_MAX (state->k_min_hard, k_min_limber);
+    gdouble k_max_comp = GSL_MIN (state->k_max_hard, k_max_limber);
+
+    /* Compute global hard limits as intersection of all component limits */
+    comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, k_min_comp);
+    comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, k_max_comp);
   }
 
   g_assert_cmpfloat (comp_states.k_min_hard, <, comp_states.k_max_hard);
@@ -723,24 +671,43 @@ _component_states_compute_k_seeds (ComponentStates *comp_states, GArray *k_seeds
   {
     ComponentState *state = &comp_states->states[i];
     gdouble ln_k_scale    = 0.0;
+    gdouble n_k           = 0.0;
 
     for (j = 0; j < comp_states->n_l; j++)
     {
-      const gdouble nu         = comp_states->lmin + j + 0.5;
-      const gdouble k_max_ij   = nc_xcor_kernel_component_eval_k_max (state->comp, nu);
-      const gdouble k_upper_ij = k_max_ij * 1.01;
-      const gdouble k_lower_ij = k_max_ij * 0.99;
+      const gdouble nu       = comp_states->lmin + j + 0.5;
+      const gdouble k_max_ij = nc_xcor_kernel_component_eval_k_max (state->comp, nu);
+      gdouble k_upper_ij     = k_max_ij * 1.01;
+      gdouble k_lower_ij     = k_max_ij * 0.99;
 
-      ln_k_scale += log (k_max_ij);
-      k_max_soft  = GSL_MAX (k_max_soft, k_upper_ij);
-      k_min_soft  = GSL_MIN (k_min_soft, k_lower_ij);
+      if ((k_lower_ij > comp_states->k_min_hard) && (k_upper_ij < comp_states->k_max_hard))
+      {
+        ln_k_scale += log (k_max_ij);
+        n_k        += 1.0;
+        k_max_soft  = GSL_MAX (k_max_soft, k_upper_ij);
+        k_min_soft  = GSL_MIN (k_min_soft, k_lower_ij);
+      }
     }
 
-    log_k_center_sum += ln_k_scale / comp_states->n_l;
-    k_comp_scales[i]  = exp (ln_k_scale / comp_states->n_l);
+    if (n_k > 0.0)
+    {
+      log_k_center_sum += ln_k_scale / n_k;
+      k_comp_scales[i]  = exp (ln_k_scale / n_k);
+    }
+    else
+    {
+      /* If no valid k_max was found for this component, use the geometric mean of hard limits */
+      k_comp_scales[i]  = sqrt (comp_states->k_min_hard * comp_states->k_max_hard);
+      log_k_center_sum += log (k_comp_scales[i]);
+      k_max_soft        = GSL_MAX (k_max_soft, k_comp_scales[i] * (1.0 + 1.0e-5));
+      k_min_soft        = GSL_MIN (k_min_soft, k_comp_scales[i] * (1.0 - 1.0e-5));
+    }
   }
 
   k_center = exp (log_k_center_sum / comp_states->n_comp);
+
+  if ((k_center < k_min_soft) || (k_center > k_max_soft))
+    k_center = (k_min_soft + k_max_soft) / 2.0;
 
   g_assert_cmpfloat (k_min_soft, <, k_max_soft);
   g_assert_cmpfloat (comp_states->k_min_hard, <=, k_min_soft);
@@ -768,7 +735,7 @@ _component_states_compute_k_seeds (ComponentStates *comp_states, GArray *k_seeds
 }
 
 static void
-_component_states_compute_func_extrapolated (const gdouble k, NcmVector *y, gpointer user_data)
+_component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer user_data)
 {
   ComponentStates *comp_states = (ComponentStates *) user_data;
   gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
@@ -791,10 +758,14 @@ _component_states_compute_func_extrapolated (const gdouble k, NcmVector *y, gpoi
       gboolean below_epsilon    = FALSE;
 
       /* Exact integration within boundaries */
-      ncm_sbessel_integrator_integrate (
-        comp_states->sbi, _nc_xcor_kernel_component_kernel_integ,
-        state->xi_min, state->xi_max, k, integ_result, &state->params
-      );
+      {
+        NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (comp_states->xclk);
+
+        ncm_sbessel_integrator_integrate (
+          self->sbi, _nc_xcor_kernel_component_kernel_integ,
+          state->xi_min, state->xi_max, k, integ_result, &state->params
+        );
+      }
 
       for (i = 0; i < comp_states->n_l; i++)
       {
@@ -881,84 +852,91 @@ _component_states_compute_func_extrapolated (const gdouble k, NcmVector *y, gpoi
     comp_states->l2_norm = l2_norm;
 }
 
-static NcXcorKernelIntegrand *
-_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
+static void
+_component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_data)
 {
-  NcXcorKernelPrivate *self    = nc_xcor_kernel_get_instance_private (xclk);
-  NcXcorKernelClass *klass     = NC_XCOR_KERNEL_GET_CLASS (xclk);
-  NonLimberIntegrandData *nlid = g_new0 (NonLimberIntegrandData, 1);
-  const guint n_l              = lmax - lmin + 1;
-  GPtrArray *comp_list         = klass->get_component_list (xclk);
+  ComponentStates *comp_states = (ComponentStates *) user_data;
+  gdouble kernel_out[MAX_COMP_BLOCK][MAX_ELL_BLOCK];
+  gdouble l2_norm = 0.0;
+  guint ci, i;
 
-  if ((comp_list == NULL) || (comp_list->len == 0))
+  /* Compute kernel for each component using Limber approximation */
+  for (ci = 0; ci < comp_states->n_comp; ci++)
   {
-    if (comp_list != NULL)
-      g_ptr_array_unref (comp_list);
+    ComponentState *state = &comp_states->states[ci];
 
-    g_free (nlid);
-    g_error ("_nc_xcor_kernel_build_non_limber_integrand: kernel %s returned empty component list",
-             G_OBJECT_TYPE_NAME (xclk));
+    /* Direct Limber evaluation - no per-component boundary tracking needed */
+    for (i = 0; i < comp_states->n_l; i++)
+    {
+      const gint l                   = comp_states->lmin + i;
+      const gdouble nu               = l + 0.5;
+      const gdouble xi               = nu / k;
+      const gdouble limber_k         = 1.0 / k;
+      const gdouble prefactor_limber = sqrt (M_PI / (2.0 * nu));
+      const gdouble kernel_val       = nc_xcor_kernel_component_eval_kernel (state->comp, state->params.cosmo, xi, k);
+      const gdouble prefactor        = nc_xcor_kernel_component_eval_prefactor (state->comp, state->params.cosmo, k, l);
 
-    return NULL;
+      kernel_out[ci][i] = prefactor_limber * prefactor * limber_k * kernel_val;
+    }
   }
 
-  g_assert_cmpuint (n_l, <=, MAX_ELL_BLOCK);
-  g_assert_cmpuint (comp_list->len, <=, MAX_COMP_BLOCK);
-
-  if (self->sbi == NULL)
+  /* Sum contributions from all components and compute total L2 norm */
+  for (i = 0; i < comp_states->n_l; i++)
   {
-    g_free (nlid);
-    g_error ("_nc_xcor_kernel_build_non_limber_integrand: integrator property was not set for kernel %s. "
-             "The 'integrator' property must be provided to build the non-Limber integrand.",
-             G_OBJECT_TYPE_NAME (xclk));
+    gdouble sum = 0.0;
 
-    return NULL;
+    for (ci = 0; ci < comp_states->n_comp; ci++)
+      sum += kernel_out[ci][i];
+
+    ncm_vector_set (y, i, sum);
+    l2_norm += sum * sum;
   }
 
+  l2_norm = sqrt (l2_norm);
+
+  /* Update reference L2 norm for overall convergence testing */
+  if (l2_norm > comp_states->l2_norm)
+    comp_states->l2_norm = l2_norm;
+}
+
+static NcXcorKernelIntegrand *
+_nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax,
+                                        ComponentStates *comp_states,
+                                        void (*compute_func) (const gdouble, NcmVector *, gpointer),
+                                        const gdouble reltol, const gdouble abs_reltol)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+  SplineIntegrandData *sid  = g_new0 (SplineIntegrandData, 1);
+  const guint n_l           = lmax - lmin + 1;
+
   {
-    const guint n_comp        = comp_list->len;
     NcmFunctionSampleSet *fss = ncm_function_sample_set_new (n_l);
     NcmSpline *spline         = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
     guint i;
 
-    ncm_sbessel_integrator_set_ell_range (self->sbi, lmin, lmax);
-
-    /* Initialize component states and compute global hard limits */
-    ComponentStates comp_states = _component_states_init (n_comp, self->sbi, lmin, n_l,
-                                                          self->adaptive_epsilon,
-                                                          self->adaptive_boundary_tries,
-                                                          comp_list, cosmo);
-
     /* Compute k-seeds for initial sampling */
-    _component_states_compute_k_seeds (&comp_states, self->k_seeds);
+    _component_states_compute_k_seeds (comp_states, self->k_seeds);
 
     /* Add all k-seeds as initial sampling points */
     for (i = 0; i < self->k_seeds->len; i++)
     {
       const gdouble k_seed = g_array_index (self->k_seeds, gdouble, i);
 
-      ncm_function_sample_set_add_old_func (
-        fss,
-        k_seed,
-        _component_states_compute_func_extrapolated,
-        &comp_states
-      );
+      ncm_function_sample_set_add_old_func (fss, k_seed, compute_func, comp_states);
     }
 
     {
-      /*
-       * Now we start the domain expansion.
-       */
+      /* Domain expansion */
       ncm_function_sample_set_expand_domain (
         fss,
-        &_component_states_compute_func_extrapolated,
-        comp_states.k_min_hard,
-        comp_states.k_max_hard,
+        compute_func,
+        comp_states->k_min_hard,
+        comp_states->k_max_hard,
         self->expansion_factor,
-        comp_states.epsilon,
+        comp_states->epsilon,
         self->max_border_expansions,
-        comp_states.adaptive_boundary_tries,
-        &comp_states
+        comp_states->adaptive_boundary_tries,
+        comp_states
       );
     }
     ncm_function_sample_set_mark_all_old (fss);
@@ -967,31 +945,87 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
       const gdouble max_absF_total = ncm_function_sample_set_get_absmaxF_min (fss);
 
       ncm_function_sample_set_adaptive_midpoint (
-        fss, _component_states_compute_func_extrapolated,
-        self->reltol, max_absF_total * self->reltol, self->max_iter, 1,
-        spline, &comp_states
+        fss, compute_func,
+        reltol, max_absF_total * abs_reltol, self->max_iter, 1,
+        spline, comp_states
       );
     }
 
-    nlid->spline_vec  = ncm_function_sample_set_to_spline_vec (fss, spline);
-    nlid->k_min       = ncm_function_sample_set_get_x_min (fss);
-    nlid->k_max       = ncm_function_sample_set_get_x_max (fss);
-    nlid->lmin        = lmin;
-    nlid->len         = n_l;
-    nlid->RH_Mpc      = nc_hicosmo_RH_Mpc (cosmo);
-    nlid->cosmo       = nc_hicosmo_ref (cosmo);
-    nlid->eval_result = ncm_vector_new (n_l);
-
-    ncm_spline_vec_eval (nlid->spline_vec, 300.0, nlid->eval_result);
+    sid->spline_vec  = ncm_function_sample_set_to_spline_vec (fss, spline);
+    sid->k_min       = ncm_function_sample_set_get_x_min (fss);
+    sid->k_max       = ncm_function_sample_set_get_x_max (fss);
+    sid->lmin        = lmin;
+    sid->len         = n_l;
+    sid->RH_Mpc      = nc_hicosmo_RH_Mpc (cosmo);
+    sid->cosmo       = nc_hicosmo_ref (cosmo);
+    sid->eval_result = ncm_vector_new (n_l);
 
     ncm_function_sample_set_clear (&fss);
     ncm_spline_free (spline);
 
     return nc_xcor_kernel_integrand_new (n_l,
-                                         _non_limber_integrand_eval,
-                                         _non_limber_integrand_get_range,
-                                         nlid,
-                                         _non_limber_integrand_data_free);
+                                         _spline_integrand_eval,
+                                         _spline_integrand_get_range,
+                                         sid,
+                                         _spline_integrand_data_free);
+  }
+}
+
+static NcXcorKernelIntegrand *
+_nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+  const guint n_l           = lmax - lmin + 1;
+  GPtrArray *comp_list      = _nc_xcor_kernel_validate_component_list (xclk, n_l);
+
+  if (comp_list == NULL)
+    return NULL;
+
+  /* Initialize with Limber-specific limits */
+  {
+    ComponentStates comp_states = _component_states_init_limber (xclk, lmin, n_l, comp_list, cosmo);
+
+    g_ptr_array_unref (comp_list);
+
+    return _nc_xcor_kernel_build_spline_integrand (xclk, cosmo, lmin, lmax,
+                                                   &comp_states,
+                                                   _component_states_compute_limber,
+                                                   self->reltol, self->scaled_abstol);
+  }
+}
+
+static NcXcorKernelIntegrand *
+_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+  const guint n_l           = lmax - lmin + 1;
+  GPtrArray *comp_list      = _nc_xcor_kernel_validate_component_list (xclk, n_l);
+
+  if (comp_list == NULL)
+    return NULL;
+
+  if (self->sbi == NULL)
+  {
+    g_ptr_array_unref (comp_list);
+    g_error ("_nc_xcor_kernel_build_non_limber_integrand: integrator property was not set for kernel %s. "
+             "The 'integrator' property must be provided to build the non-Limber integrand.",
+             G_OBJECT_TYPE_NAME (xclk));
+
+    return NULL;
+  }
+
+  ncm_sbessel_integrator_set_ell_range (self->sbi, lmin, lmax);
+
+  /* Initialize with standard (non-Limber) limits */
+  {
+    ComponentStates comp_states = _component_states_init_non_limber (xclk, lmin, n_l, comp_list, cosmo);
+
+    g_ptr_array_unref (comp_list);
+
+    return _nc_xcor_kernel_build_spline_integrand (xclk, cosmo, lmin, lmax,
+                                                   &comp_states,
+                                                   _component_states_compute_non_limber,
+                                                   self->reltol, self->scaled_abstol);
   }
 }
 
@@ -1532,6 +1566,40 @@ nc_xcor_kernel_set_reltol (NcXcorKernel *xclk, gdouble reltol)
 
   g_assert (reltol > 0.0);
   self->reltol = reltol;
+}
+
+/**
+ * nc_xcor_kernel_get_scaled_abstol:
+ * @xclk: a #NcXcorKernel
+ *
+ *
+ */
+gdouble
+nc_xcor_kernel_get_scaled_abstol (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  return self->scaled_abstol;
+}
+
+/**
+ * nc_xcor_kernel_set_scaled_abstol:
+ * @xclk: a #NcXcorKernel
+ * @scaled_abstol: the absolute minimum (must be > 0)
+ *
+ * Sets the absolute minimum threshold for adaptive midpoint refinement. This parameter
+ * helps prevent excessive refinement in cases where the kernel has very low amplitude,
+ * by providing a floor below which the refinement will stop regardless of the relative
+ * tolerance.
+ */
+void
+nc_xcor_kernel_set_scaled_abstol (NcXcorKernel *xclk, gdouble scaled_abstol)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  g_assert_cmpfloat (scaled_abstol, >, 0.0);
+
+  self->scaled_abstol = scaled_abstol;
 }
 
 /**

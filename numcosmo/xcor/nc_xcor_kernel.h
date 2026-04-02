@@ -174,6 +174,9 @@ void nc_xcor_kernel_set_adaptive_boundary_tries (NcXcorKernel *xclk, guint adapt
 gdouble nc_xcor_kernel_get_reltol (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_reltol (NcXcorKernel *xclk, gdouble reltol);
 
+gdouble nc_xcor_kernel_get_scaled_abstol (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_scaled_abstol (NcXcorKernel *xclk, gdouble scaled_abstol);
+
 guint nc_xcor_kernel_get_max_border_expansions (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_max_border_expansions (NcXcorKernel *xclk, guint max_border_expansions);
 
