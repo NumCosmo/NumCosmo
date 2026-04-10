@@ -501,6 +501,8 @@ typedef struct _ComponentState
   gdouble last_values_right[MAX_ELL_BLOCK];
   guint left_boundary_found;
   guint right_boundary_found;
+  gdouble k_min_limber_ell[MAX_ELL_BLOCK]; /* Per-ell minimum k for Limber */
+  gdouble k_max_limber_ell[MAX_ELL_BLOCK]; /* Per-ell maximum k for Limber */
   ComponentParams params;
 } ComponentState;
 
@@ -612,7 +614,6 @@ _component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
 {
   NcXcorKernelPrivate *self   = nc_xcor_kernel_get_instance_private (xclk);
   const guint n_comp          = comp_list->len;
-  const gint lmax             = lmin + n_l - 1;
   ComponentStates comp_states = {
     .xclk                    = xclk,
     .k_min_hard              = 0.0,
@@ -624,31 +625,83 @@ _component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
     .epsilon                 = self->adaptive_epsilon,
     .adaptive_boundary_tries = self->adaptive_boundary_tries
   };
-  guint i;
+  gdouble k_min_union = G_MAXDOUBLE; /* For union of Limber bounds */
+  gdouble k_max_union = 0.0;         /* For union of Limber bounds */
+  guint i, j;
 
-  /* Initialize each component state */
+  /* Initialize each component state and compute hard limit intersection */
   for (i = 0; i < n_comp; i++)
   {
     ComponentState *state = &comp_states.states[i];
 
     _component_state_init (state, g_ptr_array_index (comp_list, i), i, cosmo, n_l);
 
-    /* Apply Limber constraints: xi = (l+0.5)/k must be in [xi_min, xi_max]
-     * Rearranging: k must be in [(lmax+0.5)/xi_max, (lmin+0.5)/xi_min]
-     */
-    gdouble k_min_limber = (lmax + 0.5) / state->xi_max;
-    gdouble k_max_limber = (lmin + 0.5) / state->xi_min;
+    /* Compute intersection of component hard limits */
+    comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, state->k_min_hard);
+    comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, state->k_max_hard);
 
-    /* Apply component hard limits */
-    gdouble k_min_comp = GSL_MAX (state->k_min_hard, k_min_limber);
-    gdouble k_max_comp = GSL_MIN (state->k_max_hard, k_max_limber);
+    /* Compute per-ell Limber constraints for this component */
+    for (j = 0; j < n_l; j++)
+    {
+      const gint l_j     = lmin + j;
+      const gdouble nu_j = l_j + 0.5;
 
-    /* Compute global hard limits as intersection of all component limits */
-    comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, k_min_comp);
-    comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, k_max_comp);
+      /* Limber constraint: xi = nu/k must be in [xi_min, xi_max]
+       * Therefore: k must be in [nu/xi_max, nu/xi_min]
+       */
+      gdouble k_min_limber_j = nu_j / state->xi_max;
+      gdouble k_max_limber_j = nu_j / state->xi_min;
+
+      state->k_min_limber_ell[j] = k_min_limber_j;
+      state->k_max_limber_ell[j] = k_max_limber_j;
+
+      /* Update union of all (component, ell) Limber bounds */
+      k_min_union = GSL_MIN (k_min_union, state->k_min_limber_ell[j]);
+      k_max_union = GSL_MAX (k_max_union, state->k_max_limber_ell[j]);
+    }
   }
 
+  /* Override global bounds with union of Limber bounds (within hard limits) */
+  comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, k_min_union);
+  comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, k_max_union);
+
   g_assert_cmpfloat (comp_states.k_min_hard, <, comp_states.k_max_hard);
+
+  /* Compute boundary values for extrapolation */
+  for (i = 0; i < n_comp; i++)
+  {
+    ComponentState *state = &comp_states.states[i];
+
+    for (j = 0; j < n_l; j++)
+    {
+      const gint l_j        = lmin + j;
+      const gdouble nu_j    = l_j + 0.5;
+      const gdouble k_min_j = state->k_min_limber_ell[j];
+      const gdouble k_max_j = state->k_max_limber_ell[j];
+
+      /* Evaluate at left boundary */
+      {
+        const gdouble xi_left         = nu_j / k_min_j;
+        const gdouble limber_k_left   = 1.0 / k_min_j;
+        const gdouble prefactor_limb  = sqrt (M_PI / (2.0 * nu_j));
+        const gdouble kernel_val_left = nc_xcor_kernel_component_eval_kernel (state->comp, cosmo, xi_left, k_min_j);
+        const gdouble prefactor_left  = nc_xcor_kernel_component_eval_prefactor (state->comp, cosmo, k_min_j, l_j);
+
+        state->last_values_left[j] = prefactor_limb * prefactor_left * limber_k_left * kernel_val_left;
+      }
+
+      /* Evaluate at right boundary */
+      {
+        const gdouble xi_right         = nu_j / k_max_j;
+        const gdouble limber_k_right   = 1.0 / k_max_j;
+        const gdouble prefactor_limb   = sqrt (M_PI / (2.0 * nu_j));
+        const gdouble kernel_val_right = nc_xcor_kernel_component_eval_kernel (state->comp, cosmo, xi_right, k_max_j);
+        const gdouble prefactor_right  = nc_xcor_kernel_component_eval_prefactor (state->comp, cosmo, k_max_j, l_j);
+
+        state->last_values_right[j] = prefactor_limb * prefactor_right * limber_k_right * kernel_val_right;
+      }
+    }
+  }
 
   return comp_states;
 }
@@ -734,6 +787,8 @@ _component_states_compute_k_seeds (ComponentStates *comp_states, GArray *k_seeds
     g_array_append_val (k_seeds, k_max_soft);
 }
 
+#define DECAY_RATE 1.0e10
+
 static void
 _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer user_data)
 {
@@ -813,7 +868,9 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
         for (i = 0; i < comp_states->n_l; i++)
         {
           const gdouble val              = state->last_values_right[i];
-          const gdouble val_extrapolated = val * exp (-(k - state->last_k_right) / state->last_k_right * 2.0);
+          const gdouble delta_k          = k - state->last_k_right;
+          const gdouble decay_rate       = DECAY_RATE;
+          const gdouble val_extrapolated = val * exp (-decay_rate * delta_k / state->last_k_right);
 
           kernel_out[ci][i] = val_extrapolated;
         }
@@ -823,7 +880,9 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
         for (i = 0; i < comp_states->n_l; i++)
         {
           const gdouble val              = state->last_values_left[i];
-          const gdouble val_extrapolated = val * exp (-(state->last_k_left - k) / state->last_k_left * 2.0);
+          const gdouble delta_k          = state->last_k_left - k;
+          const gdouble decay_rate       = DECAY_RATE;
+          const gdouble val_extrapolated = val * exp (-decay_rate * delta_k / state->last_k_left);
 
           kernel_out[ci][i] = val_extrapolated;
         }
@@ -867,18 +926,46 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
   {
     ComponentState *state = &comp_states->states[ci];
 
-    /* Direct Limber evaluation - no per-component boundary tracking needed */
+    /* Evaluate with per-ell boundary checking and extrapolation */
     for (i = 0; i < comp_states->n_l; i++)
     {
-      const gint l                   = comp_states->lmin + i;
-      const gdouble nu               = l + 0.5;
-      const gdouble xi               = nu / k;
-      const gdouble limber_k         = 1.0 / k;
-      const gdouble prefactor_limber = sqrt (M_PI / (2.0 * nu));
-      const gdouble kernel_val       = nc_xcor_kernel_component_eval_kernel (state->comp, state->params.cosmo, xi, k);
-      const gdouble prefactor        = nc_xcor_kernel_component_eval_prefactor (state->comp, state->params.cosmo, k, l);
+      const gint l                = comp_states->lmin + i;
+      const gdouble nu            = l + 0.5;
+      const gboolean within_range = (k >= state->k_min_limber_ell[i]) && (k <= state->k_max_limber_ell[i]);
 
-      kernel_out[ci][i] = prefactor_limber * prefactor * limber_k * kernel_val;
+      if (within_range)
+      {
+        /* Normal Limber evaluation within valid range */
+        const gdouble xi               = nu / k;
+        const gdouble limber_k         = 1.0 / k;
+        const gdouble prefactor_limber = sqrt (M_PI / (2.0 * nu));
+        const gdouble kernel_val       = nc_xcor_kernel_component_eval_kernel (state->comp, state->params.cosmo, xi, k);
+        const gdouble prefactor        = nc_xcor_kernel_component_eval_prefactor (state->comp, state->params.cosmo, k, l);
+
+        kernel_out[ci][i] = prefactor_limber * prefactor * limber_k * kernel_val;
+      }
+      else
+      {
+        /* Exponential extrapolation outside valid Limber range */
+        if (k < state->k_min_limber_ell[i])
+        {
+          /* Left extrapolation */
+          const gdouble delta_k    = state->k_min_limber_ell[i] - k;
+          const gdouble decay_rate = DECAY_RATE;
+          const gdouble decay      = exp (-gsl_pow_2 (decay_rate * delta_k / state->k_min_limber_ell[i]));
+
+          kernel_out[ci][i] = state->last_values_left[i] * decay;
+        }
+        else /* k > state->k_max_limber_ell[i] */
+        {
+          /* Right extrapolation */
+          const gdouble delta_k    = k - state->k_max_limber_ell[i];
+          const gdouble decay_rate = DECAY_RATE;
+          const gdouble decay      = exp (-gsl_pow_2 (decay_rate * delta_k / state->k_max_limber_ell[i]));
+
+          kernel_out[ci][i] = state->last_values_right[i] * decay;
+        }
+      }
     }
   }
 
