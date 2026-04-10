@@ -834,6 +834,8 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
   }
 
   /* Sum contributions from all components and compute total L2 norm */
+  g_assert_cmpuint (ncm_vector_len (y), ==, comp_states->n_l);
+
   for (i = 0; i < comp_states->n_l; i++)
   {
     gdouble sum = 0.0;

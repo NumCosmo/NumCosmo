@@ -325,6 +325,169 @@ def test_k_projection_limber_vs_non_limber(
         )
 
 
+def test_limber_vs_non_limber_vectorized(
+    kernel_case: tuple[str, Nc.XcorKernel], cosmology: Cosmology
+) -> None:
+    """Test Limber vs non-Limber using vectorized evaluation with blocks of ells.
+
+    Validates that vectorized Limber approximation agrees with non-Limber calculation
+    when evaluating multiple multipoles simultaneously. Tests blocks of 8 and 16 ells
+    at moderate to high multipole ranges.
+    """
+    kernel_id, kernel = kernel_case
+    cosmo = cosmology.cosmo
+    kernel_tol = {
+        "kernel_cmb_lens": {200: 5.0e-2, 500: 3.0e-2, 800: 2.8e-2},
+        "kernel_cmb_isw": {200: 4.0, 500: 2.5, 800: 2.0},
+        "kernel_tsz": {200: 0.3, 500: 0.3, 800: 0.3},
+        "kernel_gal_bin0": {200: 4.0e-3, 500: 6.0e-4, 800: 3.0e-4},
+        "kernel_gal_bin1": {200: 8.0e-3, 500: 2.0e-3, 800: 5.1e-4},
+        "kernel_gal_bin2": {200: 2.0e-2, 500: 3.0e-3, 800: 9.6e-4},
+        "kernel_gal_bin3": {200: 3.0e-2, 500: 4.0e-3, 800: 2.0e-3},
+        "kernel_gal_bin4": {200: 4.0e-2, 500: 6.0e-3, 800: 3.0e-3},
+        "kernel_wl_bin0": {200: 8.0e-4, 500: 2.0e-4, 800: 6.0e-5},
+        "kernel_wl_bin1": {200: 2.0e-3, 500: 2.0e-4, 800: 8.0e-5},
+        "kernel_wl_bin2": {200: 2.0e-3, 500: 3.0e-4, 800: 1.0e-4},
+        "kernel_wl_bin3": {200: 2.0e-3, 500: 3.0e-4, 800: 2.0e-4},
+        "kernel_wl_bin4": {200: 7.0e-4, 500: 2.0e-4, 800: 5.0e-5},
+    }
+
+    # Test with blocks of 8 and 16 ells starting at different positions
+    test_configs = [
+        (200, 8),  # 8 ells starting at 200
+        (500, 8),  # 8 ells starting at 500
+        (800, 16),  # 16 ells starting at 800
+    ]
+
+    default_rtol = 1.0e-13
+    kernel.set_reltol(1.0e-7)
+    kernel.set_scaled_abstol(1.0e-7)
+
+    for ell_start, n_ells in test_configs:
+        ell_end = ell_start + n_ells - 1
+        rtol = kernel_tol.get(kernel_id, {}).get(ell_start, default_rtol)
+
+        # Get limber result with vectorized evaluation
+        kernel.set_l_limber(0)
+        kernel.prepare(cosmo)
+        limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        kmin_limber, kmax_limber = limber_func.get_range()
+
+        # Get non-limber result with vectorized evaluation
+        kernel.set_l_limber(-1)
+        kernel.prepare(cosmo)
+        non_limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
+
+        kmin = max(kmin_limber, kmin_non_limber)
+        kmax = min(kmax_limber, kmax_non_limber)
+
+        # Generate 500 k values for validation
+        k_array = np.geomspace(kmin, kmax, 500)
+
+        # Evaluate both methods - each returns array of n_ells values per k
+        limber_results = np.array([limber_func.eval_array(k) for k in k_array])
+        non_limber_results = np.array([non_limber_func.eval_array(k) for k in k_array])
+
+        # Compare across all k and ell values
+        max_non_limber = np.max(np.abs(non_limber_results))
+        rel_diff = np.abs((limber_results - non_limber_results) / max_non_limber)
+        max_rel_diff = np.max(rel_diff)
+
+        assert max_rel_diff < rtol, (
+            f"Vectorized Limber and non-Limber differ for {kernel_id} "
+            f"at ell_range=[{ell_start}, {ell_end}] (n_ells={n_ells}): "
+            f"max_rel_diff={max_rel_diff:.6e} (rtol={rtol:.6e})"
+        )
+
+
+def test_k_projection_limber_vs_non_limber_vectorized(
+    kernel_case: tuple[str, Nc.XcorKernel], cosmology: Cosmology
+) -> None:
+    """Test k-space projection with vectorized evaluation for blocks of ells.
+
+    Validates that k-space projection integrals I = ∫ k³ K²(k) d(ln k) computed
+    using vectorized Limber approximation agree with non-Limber calculation when
+    evaluating multiple multipoles simultaneously. Tests blocks of 8 and 16 ells.
+    """
+    kernel_id, kernel = kernel_case
+    cosmo = cosmology.cosmo
+
+    kernel_tol = {
+        "kernel_cmb_lens": {100: 1.0e-5, 500: 6.0e-5, 800: 8.0e-5},
+        "kernel_cmb_isw": {100: 2.0, 500: 0.5, 800: 0.5},
+        "kernel_tsz": {100: 2.0e-4, 500: 2.0e-4, 800: 8.0e-5},
+        "kernel_gal_bin0": {100: 1.0e-3, 500: 6.0e-5, 800: 3.0e-5},
+        "kernel_gal_bin1": {100: 2.0e-3, 500: 2.0e-4, 800: 6.0e-5},
+        "kernel_gal_bin2": {100: 3.0e-3, 500: 3.0e-4, 800: 1.0e-4},
+        "kernel_gal_bin3": {100: 4.0e-3, 500: 4.0e-4, 800: 2.0e-4},
+        "kernel_gal_bin4": {100: 7.0e-3, 500: 7.1e-4, 800: 4.0e-4},
+        "kernel_wl_bin0": {100: 4.0e-4, 500: 2.0e-5, 800: 7.0e-6},
+        "kernel_wl_bin1": {100: 2.0e-4, 500: 8.0e-6, 800: 8.0e-6},
+        "kernel_wl_bin2": {100: 7.0e-5, 500: 4.0e-6, 800: 2.0e-6},
+        "kernel_wl_bin3": {100: 4.0e-5, 500: 8.0e-7, 800: 8.0e-7},
+        "kernel_wl_bin4": {100: 1.0e-4, 500: 6.0e-6, 800: 4.0e-6},
+    }
+
+    # Test with blocks of 8 and 16 ells
+    test_configs = [
+        (100, 8),  # 8 ells starting at 100
+        (500, 8),  # 8 ells starting at 500
+        (800, 16),  # 16 ells starting at 800
+    ]
+
+    default_rtol = 1.0e-13
+    kernel.set_reltol(1.0e-7)
+    kernel.set_scaled_abstol(1.0e-7)
+
+    for ell_start, n_ells in test_configs:
+        ell_end = ell_start + n_ells - 1
+        rtol = kernel_tol.get(kernel_id, {}).get(ell_start, default_rtol)
+
+        # Get limber result with vectorized evaluation
+        kernel.set_l_limber(0)
+        kernel.prepare(cosmo)
+        limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        kmin_limber, kmax_limber = limber_func.get_range()
+
+        # Get non-limber result with vectorized evaluation
+        kernel.set_l_limber(-1)
+        kernel.prepare(cosmo)
+        non_limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
+
+        kmin = max(kmin_limber, kmin_non_limber)
+        kmax = min(kmax_limber, kmax_non_limber)
+
+        # Use 5000 k points for accurate integration
+        k_array = np.geomspace(kmin, kmax, 5000)
+        lnk = np.log(k_array)
+
+        # Evaluate kernels - each returns array of n_ells values per k
+        limber_results = np.array([limber_func.eval_array(k) for k in k_array])
+        non_limber_results = np.array([non_limber_func.eval_array(k) for k in k_array])
+
+        # Compute k-space projection integrals for each ell
+        # Shape: (n_k, n_ells) -> integrate over k axis for each ell
+        for i in range(n_ells):
+            ell = ell_start + i
+            integrand_limber = k_array**3 * limber_results[:, i] ** 2
+            integrand_non_limber = k_array**3 * non_limber_results[:, i] ** 2
+
+            I_limber = np.trapezoid(integrand_limber, x=lnk)
+            I_exact = np.trapezoid(integrand_non_limber, x=lnk)
+
+            # Check relative agreement for this ell
+            rel_diff = np.abs((I_limber - I_exact) / I_exact)
+
+            assert rel_diff < rtol, (
+                f"k-space projection integral differs for {kernel_id} "
+                f"at ell={ell} (from vectorized range [{ell_start}, {ell_end}]): "
+                f"I_limber={I_limber:.6e}, I_exact={I_exact:.6e}, "
+                f"rel_diff={rel_diff:.6e} (rtol={rtol:.6e})"
+            )
+
+
 def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
     """Test that all kernel properties can be set and retrieved correctly.
 
