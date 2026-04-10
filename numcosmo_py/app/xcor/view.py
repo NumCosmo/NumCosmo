@@ -81,7 +81,8 @@ class KernelEvaluation:
         """Evaluate kernel on a k grid.
 
         :param k_Mpc: Wave number array in Mpc^-1.
-        :return: Kernel values evaluated at k_Mpc. Shape is (n_k, n_ell) if n_ell > 1, else (n_k,).
+        :return: Kernel values evaluated at k_Mpc. Shape is (n_k, n_ell) if n_ell > 1,
+            else (n_k,).
         """
         k = k_Mpc * self.RH_Mpc
         result = np.array([self.evaluator.eval_array(ki) for ki in k])
@@ -164,7 +165,10 @@ class KernelEvaluation:
                     alpha=alpha,
                 )
             # Single legend entry for all ells
-            label = f"{self.name} ({self.method}), $\\ell={self.lmin}$-${self.lmin + self.evaluator.len - 1}$"
+            label = (
+                f"{self.name} ({self.method}), "
+                f"$\\ell={self.lmin}$-${self.lmin + self.evaluator.len - 1}$"
+            )
 
         ax.set_xscale("log")
         ax.set_yscale("symlog", linthresh=1e-10)
@@ -285,7 +289,8 @@ class ViewKernel:
             help=(
                 "Kernel specification string. "
                 "Format: '<kernel_name> key=value ...'. "
-                "Use 'numcosmo xcor kernel list' to see available kernel types and parameters."
+                "Use 'numcosmo xcor kernel list' to see "
+                "available kernel types and parameters."
             ),
             show_default=True,
         ),
@@ -306,7 +311,7 @@ class ViewKernel:
             help="Number of multipole values to evaluate (starting from ell).",
             show_default=True,
             min=1,
-            max=50,
+            max=64,
         ),
     ] = 1
 
@@ -321,7 +326,10 @@ class ViewKernel:
     compare_limber: Annotated[
         bool,
         typer.Option(
-            help="Also show Limber approximation for comparison (with thinner dashed lines).",
+            help=(
+                "Also show Limber approximation for comparison "
+                "(with thinner dashed lines)."
+            ),
             show_default=True,
         ),
     ] = False
@@ -388,7 +396,8 @@ class ViewKernel:
         print("Parsing kernel specification...")
         if self.n_ell > 1:
             print(
-                f"  ✓ Evaluating {self.n_ell} multipoles: ell = {self.ell} to {self.ell + self.n_ell - 1}"
+                f"  ✓ Evaluating {self.n_ell} multipoles: ell = {self.ell} "
+                f"to {self.ell + self.n_ell - 1}"
             )
         else:
             print(f"  ✓ Evaluating single multipole: ell = {self.ell}")
