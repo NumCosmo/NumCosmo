@@ -28,6 +28,7 @@ from typing import Annotated, Optional
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from matplotlib.lines import Line2D
 import numpy as np
 import typer
@@ -58,6 +59,7 @@ class KernelEvaluation:
     :ivar kernel: NumCosmo XcorKernel object.
     :ivar evaluator: NumCosmo XcorKernelIntegrand evaluator.
     :ivar RH_Mpc: Hubble radius in Mpc.
+    :ivar lmin: Minimum multipole value.
     """
 
     name: str
@@ -65,6 +67,7 @@ class KernelEvaluation:
     kernel: Nc.XcorKernel
     evaluator: Nc.XcorKernelIntegrand
     RH_Mpc: float
+    lmin: int
 
     def range(self) -> tuple[float, float]:
         """Return k range in Mpc^-1.
@@ -78,10 +81,14 @@ class KernelEvaluation:
         """Evaluate kernel on a k grid.
 
         :param k_Mpc: Wave number array in Mpc^-1.
-        :return: Kernel values evaluated at k_Mpc.
+        :return: Kernel values evaluated at k_Mpc. Shape is (n_k, n_ell) if n_ell > 1, else (n_k,).
         """
         k = k_Mpc * self.RH_Mpc
-        return np.array([self.evaluator.eval_array(ki)[0] for ki in k])
+        result = np.array([self.evaluator.eval_array(ki) for ki in k])
+        # If single ell, flatten to 1D for backward compatibility
+        if self.evaluator.len == 1:
+            return result[:, 0]
+        return result
 
     def range_intersection(self, *others: "KernelEvaluation") -> tuple[float, float]:
         """Get common k range intersection with other kernels.
@@ -108,7 +115,7 @@ class KernelEvaluation:
         linestyle: str = "-",
         linewidth: float = 2.0,
         alpha: float = 1.0,
-    ) -> None:
+    ) -> str:
         """Plot kernel on given axes.
 
         :param ax: Matplotlib axes object.
@@ -117,6 +124,7 @@ class KernelEvaluation:
         :param linestyle: Line style.
         :param linewidth: Line width.
         :param alpha: Line transparency (0-1).
+        :return: Label for the legend entry.
         """
         kmin, kmax = self.range()
         if k_range is not None:
@@ -125,16 +133,42 @@ class KernelEvaluation:
         k_Mpc = np.logspace(np.log10(kmin), np.log10(kmax), n_points)
         kernel_values = self.evaluate(k_Mpc)
         k3_2 = k_Mpc ** (3 / 2)
-        ax.plot(
-            k_Mpc,
-            k3_2 * kernel_values,
-            color=color,
-            linestyle=linestyle,
-            linewidth=linewidth,
-            alpha=alpha,
-        )
+
+        if self.evaluator.len == 1:
+            # Single ell: plot one line
+            ax.plot(
+                k_Mpc,
+                k3_2 * kernel_values,
+                color=color,
+                linestyle=linestyle,
+                linewidth=linewidth,
+                alpha=alpha,
+            )
+            label = f"{self.name} ({self.method}), $\\ell={self.lmin}$"
+        else:
+            # Multiple ells: use shades of the same color
+            # Create color shades from darker to lighter
+            base_rgb = mcolors.to_rgb(color)
+            for i in range(self.evaluator.len):
+                # Interpolate between 0.5 (darker) and 1.3 (lighter) of base color
+                # Clamp to valid RGB range [0, 1]
+                factor = 0.5 + (0.8 * i / max(1, self.evaluator.len - 1))
+                shade_rgb = tuple(min(1.0, c * factor) for c in base_rgb)
+
+                ax.plot(
+                    k_Mpc,
+                    k3_2 * kernel_values[:, i],
+                    color=shade_rgb,
+                    linestyle=linestyle,
+                    linewidth=linewidth,
+                    alpha=alpha,
+                )
+            # Single legend entry for all ells
+            label = f"{self.name} ({self.method}), $\\ell={self.lmin}$-${self.lmin + self.evaluator.len - 1}$"
+
         ax.set_xscale("log")
         ax.set_yscale("symlog", linthresh=1e-10)
+        return label
 
     def plot_comparison(
         self,
@@ -159,9 +193,26 @@ class KernelEvaluation:
         k_Mpc = np.logspace(np.log10(kmin), np.log10(kmax), 1000)
         kernel_values = self.evaluate(k_Mpc)
         other_values = other.evaluate(k_Mpc)
-        ratio = other_values / kernel_values - 1.0
 
-        ax.loglog(k_Mpc, np.abs(ratio), color=color, linestyle=linestyle)
+        if self.evaluator.len == 1:
+            # Single ell comparison
+            ratio = other_values / kernel_values - 1.0
+            ax.loglog(k_Mpc, np.abs(ratio), color=color, linestyle=linestyle)
+        else:
+            # Multiple ells: use shades of the same color
+            base_rgb = mcolors.to_rgb(color)
+            for i in range(self.evaluator.len):
+                # Create color shades from darker to lighter
+                factor = 0.5 + (0.8 * i / max(1, self.evaluator.len - 1))
+                shade_rgb = tuple(min(1.0, c * factor) for c in base_rgb)
+
+                ratio = other_values[:, i] / kernel_values[:, i] - 1.0
+                ax.loglog(
+                    k_Mpc,
+                    np.abs(ratio),
+                    color=shade_rgb,
+                    linestyle=linestyle,
+                )
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -243,11 +294,21 @@ class ViewKernel:
     ell: Annotated[
         int,
         typer.Option(
-            help="Multipole value for kernel evaluation.",
+            help="Minimum multipole value for kernel evaluation.",
             show_default=True,
             min=2,
         ),
     ] = 20
+
+    n_ell: Annotated[
+        int,
+        typer.Option(
+            help="Number of multipole values to evaluate (starting from ell).",
+            show_default=True,
+            min=1,
+            max=50,
+        ),
+    ] = 1
 
     k_range: Annotated[
         tuple[float, float] | None,
@@ -325,6 +386,13 @@ class ViewKernel:
         print()
 
         print("Parsing kernel specification...")
+        if self.n_ell > 1:
+            print(
+                f"  ✓ Evaluating {self.n_ell} multipoles: ell = {self.ell} to {self.ell + self.n_ell - 1}"
+            )
+        else:
+            print(f"  ✓ Evaluating single multipole: ell = {self.ell}")
+        print()
         kernel_evals = []
         for k0 in self.kernel:
             kernel_name, kernel_config = parse_kernel_spec(k0)
@@ -526,18 +594,22 @@ class ViewKernel:
     def _evaluate_kernels(
         self, kernel_label: str, kernel_obj: Nc.XcorKernel
     ) -> list[KernelVariants]:
-        """Evaluate kernel(s) at specified multipole.
+        """Evaluate kernel(s) at specified multipole range.
 
         :param kernel_label: Label for the kernel.
         :param kernel_obj: NumCosmo XcorKernel object.
         :return: List of KernelVariants containing evaluation results.
         """
-        print(f"Evaluating kernels at ell = {self.ell}...")
+        lmax = self.ell + self.n_ell - 1
+        if self.n_ell > 1:
+            print(f"Evaluating kernels at ell = {self.ell} to {lmax}...")
+        else:
+            print(f"Evaluating kernels at ell = {self.ell}...")
 
         RH_Mpc = self.cosmo.RH_Mpc()
         # Default: always use non-Limber for primary evaluation
         kernel_obj.set_l_limber(-1)
-        eval_kernel = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, self.ell)
+        eval_kernel = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
 
         kernel_eval = KernelEvaluation(
             name=kernel_label,
@@ -545,6 +617,7 @@ class ViewKernel:
             kernel=kernel_obj,
             evaluator=eval_kernel,
             RH_Mpc=RH_Mpc,
+            lmin=self.ell,
         )
 
         k_min, k_max = kernel_eval.range()
@@ -555,13 +628,14 @@ class ViewKernel:
         if self.compare_limber:
             # Also evaluate with Limber approximation for comparison
             kernel_obj.set_l_limber(0)
-            eval_limber = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, self.ell)
+            eval_limber = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
             kernel_eval_limber = KernelEvaluation(
                 name=kernel_label,
                 kernel=kernel_obj,
                 method="Limber",
                 evaluator=eval_limber,
                 RH_Mpc=RH_Mpc,
+                lmin=self.ell,
             )
             k_min_limber, k_max_limber = kernel_eval_limber.range()
 
@@ -590,8 +664,12 @@ class ViewKernel:
         if self.compare_limber:
             # Create figure with two subplots for comparison
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), sharex=True)
+            if self.n_ell > 1:
+                ell_range = f"$\\ell = {self.ell}$ to ${self.ell + self.n_ell - 1}$"
+            else:
+                ell_range = f"$\\ell = {self.ell}$"
             fig.suptitle(
-                f"Kernel Comparison at $\\ell = {self.ell}$\n"
+                f"Kernel Comparison at {ell_range}\n"
                 "(solid = Non-Limber; dashed/thin = Limber, same color)",
                 fontsize=14,
                 fontweight="bold",
@@ -609,7 +687,7 @@ class ViewKernel:
                 color = colors[idx % len(colors)]
 
                 # Plot Non-Limber with full solid lines
-                main_kernel.plot(
+                label_main = main_kernel.plot(
                     ax1,
                     n_points=self.n_points,
                     color=color,
@@ -634,11 +712,11 @@ class ViewKernel:
                     alt_kernel, ax2, color=color, linestyle="-", k_range=self.k_range
                 )
 
-                # Add legend entry only for Non-Limber (Limber is indicated by title)
+                # Add legend entries
                 legend_handles.append(
                     Line2D([0], [0], color=color, linewidth=2, linestyle="-")
                 )
-                legend_labels.append(main_kernel.name)
+                legend_labels.append(label_main)
 
             # Configure first subplot
             ax1.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
@@ -656,25 +734,30 @@ class ViewKernel:
         else:
             # Create single plot
             fig, ax = plt.subplots(figsize=(10, 6))
+            if self.n_ell > 1:
+                ell_range = f"$\\ell = {self.ell}$ to ${self.ell + self.n_ell - 1}$"
+            else:
+                ell_range = f"$\\ell = {self.ell}$"
             fig.suptitle(
-                f"Kernel at $\\ell = {self.ell}$",
+                f"Kernel at {ell_range}",
                 fontsize=14,
                 fontweight="bold",
             )
 
             legend_entries = []
+
             for idx, kernel_var in enumerate(kernel_vars):
                 main_kernel = kernel_var.main
                 color = colors[idx % len(colors)]
 
-                main_kernel.plot(
+                label = main_kernel.plot(
                     ax,
                     n_points=self.n_points,
                     color=color,
                     linestyle="-",
                     k_range=self.k_range,
                 )
-                legend_entries.append(f"{main_kernel.name} ({main_kernel.method})")
+                legend_entries.append(label)
 
             ax.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
             ax.set_ylabel("$k^{3/2} |K(k)|$", fontsize=12)
