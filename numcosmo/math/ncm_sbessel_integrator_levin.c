@@ -492,17 +492,24 @@ _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sb
   g_array_set_size (sbilv->knots, sbilv->n_knots);
 
   {
+    const gdouble period   = 2.0 * M_PI;
     const gdouble ln_y_min = log (sbilv->y_knots_min);
     const gdouble ln_y_max = log (sbilv->y_knots_max);
     const gdouble L        = ln_y_max - ln_y_min;
+    const gdouble dL       = L / (sbilv->n_knots - 1.0);
+    const gdouble expm1_dL = expm1 (dL);
+    gdouble y0             = exp (ln_y_min);
     guint i;
 
-    for (i = 0; i < sbilv->n_knots; i++)
+    g_array_index (sbilv->knots, gdouble, 0) = y0;
+
+    for (i = 1; i < sbilv->n_knots; i++)
     {
-      const gdouble ln_y = ln_y_min + L * i / (sbilv->n_knots - 1);
-      const gdouble y    = exp (ln_y);
+      const gdouble dy = y0 * expm1_dL;
+      const gdouble y  = dy > period ? y0 + floor (dy  / period) * period : y0 + dy;
 
       g_array_index (sbilv->knots, gdouble, i) = y;
+      y0                                       = y;
     }
   }
 }
@@ -938,13 +945,14 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
   const gdouble y_max         = k * b;
   gint first_knot_idx         = -1;
   gint last_knot_idx          = -1;
+  const guint n_ell           = ell_max - ell_min + 1;
   gdouble first_knot, last_knot;
   guint i;
 
   g_assert_cmpuint (ncm_vector_stride (result), ==, 1);
 
   /* Initialize Levin results to zero */
-  memset (result_data, 0, sizeof (gdouble) * (ell_max - ell_min + 1));
+  memset (result_data, 0, sizeof (gdouble) * n_ell);
 
   /* Find knots within [y_min, y_max] in y-space */
   for (i = 0; i < sbilv->knots->len; i++)
