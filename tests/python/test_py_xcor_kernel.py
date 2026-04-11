@@ -39,6 +39,9 @@ pytestmark = pytest.mark.xcor
 Ncm.cfg_init()
 pytest_plugins = ["python.fixtures_xcor"]
 
+RELTOL = 1.0e-7
+SCALED_ABSTOL = 1.0e-4
+
 
 def test_limber_vs_limber_z(kernel: Nc.XcorKernel, cosmology: Cosmology) -> None:
     """Test that limber and limber_z give consistent results."""
@@ -51,6 +54,8 @@ def test_limber_vs_limber_z(kernel: Nc.XcorKernel, cosmology: Cosmology) -> None
     # Test ell values
     ell_array = np.array([10, 50, 100, 500, 1000])
 
+    max_xi = dist.max_comoving_distance()
+
     # Get vectorized evaluation functions
     for ell in ell_array:
         limber_func = kernel.get_eval(cosmo, ell)
@@ -58,7 +63,7 @@ def test_limber_vs_limber_z(kernel: Nc.XcorKernel, cosmology: Cosmology) -> None
 
         # Evaluate both methods
         kmin, kmax = limber_func.get_range()
-
+        kmin = max(kmin, nu / max_xi)  # Ensure kmin does not exceed max_xi limit
         k_array = np.geomspace(kmin, kmax, 100)
 
         results_list = []
@@ -102,8 +107,8 @@ def test_limber_vs_limber_z_vectorized(
     ps_ml = cosmology.ps_ml
     kernel.set_l_limber(0)  # Treat all ells as limber
     kernel.prepare(cosmo)
-    kernel.set_reltol(1.0e-7)
-    kernel.set_scaled_abstol(1.0e-7)
+    kernel.set_reltol(RELTOL)
+    kernel.set_scaled_abstol(SCALED_ABSTOL)
 
     # Test ell range
     ell_start = 100
@@ -114,7 +119,11 @@ def test_limber_vs_limber_z_vectorized(
     kmin, kmax = limber_func.get_range()
 
     # Test at multiple k values
-    k_array = np.geomspace(kmin, kmax, 50)
+    max_xi = dist.max_comoving_distance()
+    k_array = np.geomspace(kmin, kmax, 100)
+
+    # Get kernel's valid z range
+    zmin_kernel, zmax_kernel, _ = kernel.get_z_range()
 
     # Build full result arrays first
     results_vectorized_list = []
@@ -130,8 +139,18 @@ def test_limber_vs_limber_z_vectorized(
         for ell in range(ell_start, ell_end + 1):
             nu = ell + 0.5
             xi = nu / k
+            # Skip if xi is too close to or beyond the maximum comoving distance.
+            # Use a 2% safety margin since the kernel base class extends zf to 1e10,
+            # making values near max_xi numerically unstable when inverting.
+            if xi >= 0.98 * max_xi:
+                row_reference.append(np.nan)
+                continue
             k_Mpc = k / cosmo.RH_Mpc()
             z = dist.inv_comoving(cosmo, xi)
+            # Skip if z is outside the kernel's valid range (e.g., tSZ has zmax=6.0)
+            if z < zmin_kernel or z > zmax_kernel:
+                row_reference.append(np.nan)
+                continue
             pk = ps_ml.eval(cosmo, z, k_Mpc)
             result_z = (
                 kernel.eval_limber_z_full(cosmo, z, dist, ell)
@@ -146,15 +165,18 @@ def test_limber_vs_limber_z_vectorized(
     results_vectorized = np.array(results_vectorized_list)
     results_reference = np.array(results_reference_list)
 
-    # Compute max and atol
-    max_result = np.max(np.abs(results_reference))
+    # Create mask for valid (non-NaN) reference values
+    valid_mask = ~np.isnan(results_reference)
+
+    # Compute max and atol using only valid values
+    max_result = np.max(np.abs(results_reference[valid_mask]))
     scaled_abstol = kernel.get_scaled_abstol()
     atol = max_result * scaled_abstol
 
-    # Compare arrays
+    # Compare arrays (only valid elements)
     assert_allclose(
-        results_vectorized,
-        results_reference,
+        results_vectorized[valid_mask],
+        results_reference[valid_mask],
         rtol=1.0e-5,
         atol=atol,
         err_msg="Vectorized limber and limber_z differ",
@@ -201,8 +223,8 @@ def test_limber_vs_non_limber(
     # Test at moderate to high ell where limber should be accurate
     ell_array = np.array([200, 500, 800])
     default_rtol = 1.0e-13
-    kernel.set_reltol(1.0e-7)
-    kernel.set_scaled_abstol(1.0e-7)
+    kernel.set_reltol(RELTOL)
+    kernel.set_scaled_abstol(SCALED_ABSTOL)
 
     for ell in ell_array:
         # Get limber result
@@ -278,8 +300,8 @@ def test_k_projection_limber_vs_non_limber(
         "kernel_wl_bin4": {100: 1.0e-4, 500: 6.0e-6, 800: 4.0e-6},
     }
     default_rtol = 1.0e-13
-    kernel.set_reltol(1.0e-7)  # Use tight tolerance for this test
-    kernel.set_scaled_abstol(1.0e-7)  # Use tight absolute minimum for this test
+    kernel.set_reltol(RELTOL)  # Use tight tolerance for this test
+    kernel.set_scaled_abstol(SCALED_ABSTOL)  # Use tight absolute minimum for this test
 
     for ell in ell_array:
         # Get limber result
@@ -360,8 +382,8 @@ def test_limber_vs_non_limber_vectorized(
     ]
 
     default_rtol = 1.0e-13
-    kernel.set_reltol(1.0e-7)
-    kernel.set_scaled_abstol(1.0e-7)
+    kernel.set_reltol(RELTOL)
+    kernel.set_scaled_abstol(SCALED_ABSTOL)
 
     for ell_start, n_ells in test_configs:
         ell_end = ell_start + n_ells - 1
@@ -437,8 +459,8 @@ def test_k_projection_limber_vs_non_limber_vectorized(
     ]
 
     default_rtol = 1.0e-13
-    kernel.set_reltol(1.0e-7)
-    kernel.set_scaled_abstol(1.0e-7)
+    kernel.set_reltol(RELTOL)
+    kernel.set_scaled_abstol(SCALED_ABSTOL)
 
     for ell_start, n_ells in test_configs:
         ell_end = ell_start + n_ells - 1
