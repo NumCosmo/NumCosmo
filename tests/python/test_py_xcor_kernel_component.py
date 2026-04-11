@@ -266,7 +266,7 @@ def test_component_k_max_is_maximum(
     Verifies that the cached KL_max value matches direct evaluation at k_max
     within 5% relative tolerance.
     """
-    _, _, component = kernel_component
+    _, _kernel, component = kernel_component
     cosmo = cosmology.cosmo
 
     xi_min, xi_max, k_min, k_max = component.get_limits(cosmo)
@@ -304,7 +304,7 @@ def test_component_KL_max_value(
     Validates consistency between the stored KL_max value and direct kernel
     evaluation. Uses 5% tolerance for real kernels with numerical artifacts.
     """
-    _, _, component = kernel_component
+    _, _kernel, component = kernel_component
     cosmo = cosmology.cosmo
 
     xi_min, xi_max, k_min, k_max = component.get_limits(cosmo)
@@ -400,7 +400,7 @@ def test_component_y_range_pruning(
     Verifies that eval_k_max returns valid results at the boundaries of the
     y range defined by the kernel limits.
     """
-    _, _, component = kernel_component
+    _, _kernel, component = kernel_component
     cosmo = cosmology.cosmo
 
     xi_min, xi_max, k_min, k_max = component.get_limits(cosmo)
@@ -429,12 +429,14 @@ def test_component_k_max_is_maximum1(
     kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
-    """Test that k_max(y) gives a near-maximum value of KL(k, y/k) using Limber approximation.
+    """Test that k_max(y).
 
-    Validates that k_max is among the larger values by sampling points around it.
-    Uses percentile-based checking to handle kernels with oscillatory behavior.
+    Test that k_max(y) gives a near-maximum value of KL(k, y/k) using Limber
+    approximation. Validates that k_max is among the larger values by sampling points
+    around it. Uses percentile-based checking to handle kernels with oscillatory
+    behavior.
     """
-    _, _, component = kernel_component
+    _, __kernel, component = kernel_component
     cosmo = cosmology.cosmo
 
     xi_min, xi_max, k_min, k_max = component.get_limits(cosmo)
@@ -505,12 +507,14 @@ def test_component_KL_max_value1(
     kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
-    """Test that KL_max(y) approximately equals KL(y/k_max, k_max) using Limber approximation.
+    """Test KL_max(y).
 
-    Verifies consistency between the cached KL_max value and direct evaluation.
-    Allows 5% tolerance for spline interpolation and search algorithm precision.
+    Test that KL_max(y) approximately equals KL(y/k_max, k_max) using Limber
+    approximation. Verifies consistency between the cached KL_max value and direct
+    evaluation. Allows 5% tolerance for spline interpolation and search algorithm
+    precision.
     """
-    _, _, component = kernel_component
+    _, _kernel, component = kernel_component
     cosmo = cosmology.cosmo
 
     # Test at multiple y values

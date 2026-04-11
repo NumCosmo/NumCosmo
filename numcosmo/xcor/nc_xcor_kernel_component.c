@@ -123,10 +123,16 @@ nc_xcor_kernel_component_finalize (GObject *object)
 
   /* Free GSL solvers */
   if (self->minimizer != NULL)
+  {
     gsl_min_fminimizer_free (self->minimizer);
+    self->minimizer = NULL;
+  }
 
   if (self->root_solver != NULL)
+  {
     gsl_root_fsolver_free (self->root_solver);
+    self->root_solver = NULL;
+  }
 
   /* Chain up */
   G_OBJECT_CLASS (nc_xcor_kernel_component_parent_class)->finalize (object);

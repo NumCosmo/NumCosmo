@@ -443,6 +443,8 @@ def fixture_kernel_component(
     kernel_name, kernel, component = components[comp_idx]
     if kernel is not None:
         kernel.prepare(cosmology.cosmo)
+    else:
+        component.prepare(cosmology.cosmo)
     return kernel_name, kernel, component
 
 
