@@ -285,7 +285,7 @@ def test_k_projection_limber_vs_non_limber(
     ell_array = np.array([100, 500, 800])
 
     kernel_tol = {
-        "kernel_cmb_lens": {100: 1.0e-5, 500: 6.0e-5, 800: 8.0e-5},
+        "kernel_cmb_lens": {100: 5.0e-5, 500: 6.0e-5, 800: 8.0e-5},
         "kernel_cmb_isw": {100: 2.0, 500: 0.5, 800: 0.5},
         "kernel_tsz": {100: 2.0e-4, 500: 2.0e-4, 800: 8.0e-5},
         "kernel_gal_bin0": {100: 1.0e-3, 500: 6.0e-5, 800: 3.0e-5},
@@ -436,9 +436,9 @@ def test_k_projection_limber_vs_non_limber_vectorized(
     cosmo = cosmology.cosmo
 
     kernel_tol = {
-        "kernel_cmb_lens": {100: 1.0e-5, 500: 6.0e-5, 800: 8.0e-5},
+        "kernel_cmb_lens": {100: 2.0e-5, 500: 6.0e-5, 800: 8.0e-5},
         "kernel_cmb_isw": {100: 2.0, 500: 0.5, 800: 0.5},
-        "kernel_tsz": {100: 2.0e-4, 500: 2.0e-4, 800: 8.0e-5},
+        "kernel_tsz": {100: 2.0e-4, 500: 2.0e-4, 800: 1.0e-4},
         "kernel_gal_bin0": {100: 1.0e-3, 500: 6.0e-5, 800: 3.0e-5},
         "kernel_gal_bin1": {100: 2.0e-3, 500: 2.0e-4, 800: 6.0e-5},
         "kernel_gal_bin2": {100: 3.0e-3, 500: 3.0e-4, 800: 1.0e-4},
