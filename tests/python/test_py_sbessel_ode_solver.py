@@ -2753,7 +2753,7 @@ class TestSBesselOperatorMemoryManagement:
         op = solver.create_operator(1.0, 20.0, 0, 2)
 
         # Before any solve, check initial state
-        initial_capacity = op.get_operator_capacity()
+        initial_capacity = op.get_operator_size()
         initial_n_cols = op.get_n_cols()
 
         assert (
@@ -2766,7 +2766,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs[2] = 1.0
         _, _ = op.solve(rhs)
 
-        capacity_after_solve = op.get_operator_capacity()
+        capacity_after_solve = op.get_operator_size()
         n_cols_after_solve = op.get_n_cols()
 
         assert (
@@ -2790,7 +2790,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs_low[2] = 1.0
         _, _ = op.solve(rhs_low)
 
-        capacity_low = op.get_operator_capacity()
+        capacity_low = op.get_operator_size()
         n_cols_low = op.get_n_cols()
 
         # Second solve with much higher spectral order
@@ -2798,7 +2798,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs_high[50] = 1.0
         _, _ = op.solve(rhs_high)
 
-        capacity_high = op.get_operator_capacity()
+        capacity_high = op.get_operator_size()
         n_cols_high = op.get_n_cols()
 
         # Capacity should not decrease
@@ -2825,7 +2825,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs_large[60] = 1.0  # High spectral order
         solution_large, sol_len_large = op.solve(rhs_large)
 
-        capacity_after_large = op.get_operator_capacity()
+        capacity_after_large = op.get_operator_size()
         _ = op.get_n_cols()
 
         # Second solve with low spectral order
@@ -2833,7 +2833,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs_small[2] = 1.0  # Low spectral order
         solution_small, sol_len_small = op.solve(rhs_small)
 
-        capacity_after_small = op.get_operator_capacity()
+        capacity_after_small = op.get_operator_size()
         n_cols_after_small = op.get_n_cols()
 
         # Capacity should not decrease (memory is reused)
@@ -2868,13 +2868,13 @@ class TestSBesselOperatorMemoryManagement:
         rhs[2] = 1.0
         solution1, _sol_len1 = op.solve(rhs)
 
-        capacity1 = op.get_operator_capacity()
+        capacity1 = op.get_operator_size()
         n_cols1 = op.get_n_cols()
 
         # Second solve with identical RHS (same spectral order)
         solution2, _sol_len2 = op.solve(rhs)
 
-        capacity2 = op.get_operator_capacity()
+        capacity2 = op.get_operator_size()
         n_cols2 = op.get_n_cols()
 
         # Capacity should not grow (factorization reused)
@@ -2913,7 +2913,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs_low[2] = 1.0
         solution_low, sol_len_low = op.solve(rhs_low)
 
-        capacity_low = op.get_operator_capacity()
+        capacity_low = op.get_operator_size()
         _ = op.get_n_cols()
 
         # Higher spectral order: coefficient at index 30
@@ -2921,7 +2921,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs_high[30] = 1.0
         solution_high, sol_len_high = op.solve(rhs_high)
 
-        capacity_high = op.get_operator_capacity()
+        capacity_high = op.get_operator_size()
         _ = op.get_n_cols()
 
         # Capacity should grow if higher spectral order needs more columns
@@ -2967,7 +2967,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs1[first_order] = 1.0
         solution1, sol_len1 = op.solve(rhs1)
 
-        capacity1 = op.get_operator_capacity()
+        capacity1 = op.get_operator_size()
         _ = op.get_n_cols()
 
         # Second solve with higher spectral order
@@ -2975,7 +2975,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs2[second_order] = 1.0
         solution2, sol_len2 = op.solve(rhs2)
 
-        capacity2 = op.get_operator_capacity()
+        capacity2 = op.get_operator_size()
         _ = op.get_n_cols()
 
         # Verify memory management is correct
@@ -3028,7 +3028,7 @@ class TestSBesselOperatorMemoryManagement:
             rhs[order] = 1.0
             solution, sol_len = op.solve(rhs)
 
-            capacity = op.get_operator_capacity()
+            capacity = op.get_operator_size()
             n_cols = op.get_n_cols()
 
             capacities.append(capacity)
@@ -3065,7 +3065,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs1[2] = 1.0
         _, sol_len1 = op.solve(rhs1)
 
-        capacity1 = op.get_operator_capacity()
+        capacity1 = op.get_operator_size()
         n_cols1 = op.get_n_cols()
 
         # Second solve with higher spectral order
@@ -3073,7 +3073,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs2[40] = 1.0
         _, sol_len2 = op.solve(rhs2)
 
-        capacity2 = op.get_operator_capacity()
+        capacity2 = op.get_operator_size()
         n_cols2 = op.get_n_cols()
 
         # Verify growth (capacity should not decrease, n_cols may grow)
@@ -3098,7 +3098,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs_low[2] = 1.0
         _ = op.solve_endpoints(rhs_low)
 
-        capacity_low = op.get_operator_capacity()
+        capacity_low = op.get_operator_size()
         n_cols_low = op.get_n_cols()
 
         # Second solve_endpoints with higher spectral order
@@ -3106,7 +3106,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs_high[40] = 1.0
         _ = op.solve_endpoints(rhs_high)
 
-        capacity_high = op.get_operator_capacity()
+        capacity_high = op.get_operator_size()
         n_cols_high = op.get_n_cols()
 
         # Verify capacity management (should not decrease)
@@ -3129,7 +3129,7 @@ class TestSBesselOperatorMemoryManagement:
         rhs[2] = 1.0
         _, _ = op.solve(rhs)
 
-        capacity_before = op.get_operator_capacity()
+        capacity_before = op.get_operator_size()
         n_cols_before = op.get_n_cols()
 
         assert capacity_before > 0, "Should have capacity before reset"
@@ -3138,7 +3138,7 @@ class TestSBesselOperatorMemoryManagement:
         # Reset the operator
         op.reset(1.0, 20.0, 1, 1)
 
-        _ = op.get_operator_capacity()
+        _ = op.get_operator_size()
         n_cols_after = op.get_n_cols()
 
         # After reset, n_cols should be 0 (no factorization)
@@ -3169,7 +3169,7 @@ class TestSBesselOperatorMemoryManagement:
 
             solution, sol_len = op.solve(rhs)
 
-            capacity = op.get_operator_capacity()
+            capacity = op.get_operator_size()
             n_cols = op.get_n_cols()
 
             # Verify capacity never decreases

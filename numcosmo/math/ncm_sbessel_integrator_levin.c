@@ -492,7 +492,6 @@ _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sb
   g_array_set_size (sbilv->knots, sbilv->n_knots);
 
   {
-    const gdouble period   = 2.0 * M_PI;
     const gdouble ln_y_min = log (sbilv->y_knots_min);
     const gdouble ln_y_max = log (sbilv->y_knots_max);
     const gdouble L        = ln_y_max - ln_y_min;
@@ -506,7 +505,7 @@ _ncm_sbessel_integrator_levin_prepare_knots_array (NcmSBesselIntegratorLevin *sb
     for (i = 1; i < sbilv->n_knots; i++)
     {
       const gdouble dy = y0 * expm1_dL;
-      const gdouble y  = dy > period ? y0 + floor (dy  / period) * period : y0 + dy;
+      const gdouble y  = y0 + dy;
 
       g_array_index (sbilv->knots, gdouble, i) = y;
       y0                                       = y;

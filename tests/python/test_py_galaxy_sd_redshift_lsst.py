@@ -1076,9 +1076,7 @@ def test_compute_binned_dndz_consistency(
     bin_obj.set_zp_support_max(20.0)
 
     z_array = np.linspace(z_min, z_max, 100)
-    dndz_spline = Nc.GalaxySDObsRedshift.compute_binned_dndz(
-        bin_obj, z_array.tolist(), rel_error
-    )
+    dndz_spline = Nc.GalaxySDObsRedshift.compute_binned_dndz(bin_obj, z_array.tolist())
 
     z_test = np.linspace(z_min, min(z_max, 3.0), 50)
 
