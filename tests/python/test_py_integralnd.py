@@ -29,7 +29,6 @@ import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
 
 from numcosmo_py import Ncm, GObject
-from numcosmo_py.helper import npa_to_seq
 
 #
 #  Initializing the library objects, this must be called before
@@ -41,32 +40,15 @@ Ncm.cfg_init()
 class IntegralND(Ncm.IntegralND):
     """Test class for IntegralND."""
 
-    def __init__(self, w: Ncm.Vector | list[float] | np.ndarray, **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:
         """Construct a IntegralND."""
         super().__init__(**kwargs)
-        self.w: np.ndarray
-        self._set_w_vec(w)
+        self.w: Ncm.Vector
 
-    def _get_w_vec(self) -> Ncm.Vector:
-        return Ncm.Vector.new_array(npa_to_seq(self.w))
-
-    def _set_w_vec(self, w: Ncm.Vector | list[float] | np.ndarray) -> None:
-        match w:
-            case Ncm.Vector():
-                self.w = np.array(w.dup_array())
-            case list():
-                self.w = np.array(w)
-            case np.ndarray():
-                self.w = w
-            case _:
-                raise ValueError(f"Invalid type {type(w)} for w")
-
-    w_vec = GObject.Property(
+    w: Ncm.Vector = GObject.Property(  # type: ignore
         type=Ncm.Vector,
         default="default",
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
-        getter=_get_w_vec,
-        setter=_set_w_vec,
     )
 
     # pylint: disable-next=arguments-differ
@@ -85,14 +67,17 @@ class IntegralND(Ncm.IntegralND):
     ) -> None:
         """Integrand function."""
         x = np.asarray(x_vec.dup_array()).reshape((npoints, dim))
-        fval = self.w * x * np.sin(self.w * x)
+        w_array = self.w.to_numpy()
+        fval = w_array * x * np.sin(w_array * x)
 
         fval_vec.set_array(fval.flatten())
 
 
 def test_integral_nd() -> None:
     """Example computing cosmological distances."""
-    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralNDMethod.H_V)
+    test_f = IntegralND(
+        w=Ncm.Vector.new_array([1.0, 2.0, 3.0]), method=Ncm.IntegralNDMethod.H_V
+    )
 
     res = Ncm.Vector.new(3)
     err = Ncm.Vector.new(3)
@@ -105,7 +90,10 @@ def test_integral_nd() -> None:
         res,
         err,
     )
-    assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
+    assert_almost_equal(
+        res.dup_array(),
+        np.sin(test_f.w.to_numpy()) / test_f.w.to_numpy() - np.cos(test_f.w.to_numpy()),
+    )
 
     test_f.set_method(Ncm.IntegralNDMethod.H_V)
     assert test_f.get_method() == Ncm.IntegralNDMethod.H_V
@@ -115,7 +103,10 @@ def test_integral_nd() -> None:
         res,
         err,
     )
-    assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
+    assert_almost_equal(
+        res.dup_array(),
+        np.sin(test_f.w.to_numpy()) / test_f.w.to_numpy() - np.cos(test_f.w.to_numpy()),
+    )
 
     test_f.set_method(Ncm.IntegralNDMethod.P)
     assert test_f.get_method() == Ncm.IntegralNDMethod.P
@@ -125,7 +116,10 @@ def test_integral_nd() -> None:
         res,
         err,
     )
-    assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
+    assert_almost_equal(
+        res.dup_array(),
+        np.sin(test_f.w.to_numpy()) / test_f.w.to_numpy() - np.cos(test_f.w.to_numpy()),
+    )
 
     test_f.set_method(Ncm.IntegralNDMethod.H)
     assert test_f.get_method() == Ncm.IntegralNDMethod.H
@@ -135,12 +129,17 @@ def test_integral_nd() -> None:
         res,
         err,
     )
-    assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
+    assert_almost_equal(
+        res.dup_array(),
+        np.sin(test_f.w.to_numpy()) / test_f.w.to_numpy() - np.cos(test_f.w.to_numpy()),
+    )
 
 
 def test_integral_nd_props() -> None:
     """Example computing cosmological distances."""
-    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralNDMethod.H_V)
+    test_f = IntegralND(
+        w=Ncm.Vector.new_array([1.0, 2.0, 3.0]), method=Ncm.IntegralNDMethod.H_V
+    )
 
     test_f.set_abstol(1e-6)
     assert_almost_equal(test_f.get_abstol(), 1e-6)
@@ -160,7 +159,9 @@ def test_integral_nd_props() -> None:
 
 def test_integral_nd_errors() -> None:
     """Example computing cosmological distances."""
-    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralNDMethod.H_V)
+    test_f = IntegralND(
+        w=Ncm.Vector.new_array([1.0, 2.0, 3.0]), method=Ncm.IntegralNDMethod.H_V
+    )
 
     res = Ncm.Vector.new(3)
     err = Ncm.Vector.new(3)
@@ -173,7 +174,10 @@ def test_integral_nd_errors() -> None:
         res,
         err,
     )
-    assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
+    assert_almost_equal(
+        res.dup_array(),
+        np.sin(test_f.w.to_numpy()) / test_f.w.to_numpy() - np.cos(test_f.w.to_numpy()),
+    )
 
     test_f.set_error(Ncm.IntegralNDError.L2)
     assert test_f.get_error() == Ncm.IntegralNDError.L2
@@ -183,7 +187,10 @@ def test_integral_nd_errors() -> None:
         res,
         err,
     )
-    assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
+    assert_almost_equal(
+        res.dup_array(),
+        np.sin(test_f.w.to_numpy()) / test_f.w.to_numpy() - np.cos(test_f.w.to_numpy()),
+    )
 
     test_f.set_error(Ncm.IntegralNDError.L1)
     assert test_f.get_error() == Ncm.IntegralNDError.L1
@@ -193,7 +200,10 @@ def test_integral_nd_errors() -> None:
         res,
         err,
     )
-    assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
+    assert_almost_equal(
+        res.dup_array(),
+        np.sin(test_f.w.to_numpy()) / test_f.w.to_numpy() - np.cos(test_f.w.to_numpy()),
+    )
 
     test_f.set_error(Ncm.IntegralNDError.LINF)
     assert test_f.get_error() == Ncm.IntegralNDError.LINF
@@ -203,12 +213,17 @@ def test_integral_nd_errors() -> None:
         res,
         err,
     )
-    assert_almost_equal(res.dup_array(), np.sin(test_f.w) / test_f.w - np.cos(test_f.w))
+    assert_almost_equal(
+        res.dup_array(),
+        np.sin(test_f.w.to_numpy()) / test_f.w.to_numpy() - np.cos(test_f.w.to_numpy()),
+    )
 
 
 def test_integral_nd_serialize() -> None:
     """Example computing cosmological distances."""
-    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralNDMethod.H_V)
+    test_f = IntegralND(
+        w=Ncm.Vector.new_array([1.0, 2.0, 3.0]), method=Ncm.IntegralNDMethod.H_V
+    )
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
 
@@ -226,21 +241,26 @@ def test_integral_nd_serialize() -> None:
     assert test_f_dup.get_reltol() == test_f.get_reltol()
     assert test_f_dup.get_maxeval() == test_f.get_maxeval()
     assert test_f_dup.get_error() == test_f.get_error()
-    assert_allclose(test_f_dup.w, test_f.w)
+    assert_allclose(test_f_dup.w.to_numpy(), test_f.w.to_numpy())
 
 
 def test_integral_construct_list() -> None:
     """Test creating a IntegralND object from a list."""
-    test_f = IntegralND(w=[1.0, 2.0, 3.0], method=Ncm.IntegralNDMethod.H_V)
+    test_f = IntegralND(
+        w=Ncm.Vector.new_array([1.0, 2.0, 3.0]), method=Ncm.IntegralNDMethod.H_V
+    )
 
-    assert test_f.w.tolist() == [1.0, 2.0, 3.0]
+    assert test_f.w.dup_array() == [1.0, 2.0, 3.0]
 
 
 def test_integral_construct_array() -> None:
     """Test creating a IntegralND object from an array."""
-    test_f = IntegralND(w=np.array([1.0, 2.0, 3.0]), method=Ncm.IntegralNDMethod.H_V)
+    test_f = IntegralND(
+        w=Ncm.Vector.new_array(np.array([1.0, 2.0, 3.0])),
+        method=Ncm.IntegralNDMethod.H_V,
+    )
 
-    assert test_f.w.tolist() == [1.0, 2.0, 3.0]
+    assert test_f.w.dup_array() == [1.0, 2.0, 3.0]
 
 
 def test_integral_construct_vector() -> None:
@@ -249,10 +269,10 @@ def test_integral_construct_vector() -> None:
         w=Ncm.Vector.new_array([1.0, 2.0, 3.0]), method=Ncm.IntegralNDMethod.H_V
     )
 
-    assert test_f.w.tolist() == [1.0, 2.0, 3.0]
+    assert test_f.w.dup_array() == [1.0, 2.0, 3.0]
 
 
 def test_integral_construct_wrong_type() -> None:
     """Test creating a IntegralND object from a Vector."""
-    with pytest.raises(ValueError, match="Invalid type .* for w"):
+    with pytest.raises(TypeError, match="from str to NcmVector"):
         IntegralND(w="I'm not a list", method=Ncm.IntegralNDMethod.H_V)  # type: ignore
