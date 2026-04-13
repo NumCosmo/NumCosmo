@@ -126,6 +126,7 @@ if enable_gir
                 depends: [numcosmo_gir, numcosmo_math_gir],
                 env: env,
                 timeout: 0,
+                is_parallel: pytest_is_parallel,
                 suite: ['python', 'mpi'],
             )
         endif
