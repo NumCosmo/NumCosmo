@@ -63,18 +63,20 @@ if enable_gir
     # If xdist is available, use it for parallel test execution
     py_xdist = python_module.find_installation(
         'python3',
-        modules: ['pytest_xdist'],
+        modules: ['xdist'],
         required: false,
     )
     if py_xdist.found()
-        pytest_base_args += ['-n', 'auto']
+        pytest_parallel_args = pytest_base_args + ['-n', 'auto']
+    else
+        pytest_parallel_args = pytest_base_args
     endif
 
-    # Full Python test suite
+    # Full Python test suite (excluding specialized markers)
     test(
         'pytest',
         pytest,
-        args: pytest_base_args + [meson.current_source_dir()],
+        args: pytest_parallel_args + [meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env,
         timeout: 0,
@@ -87,7 +89,8 @@ if enable_gir
     test(
         'pytest-powspec',
         pytest,
-        args: pytest_base_args + ['-m', 'powspec', meson.current_source_dir()],
+        args: pytest_parallel_args
+        + ['--run-powspec', '-m', 'powspec', meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env,
         timeout: 0,
@@ -100,7 +103,8 @@ if enable_gir
     test(
         'pytest-xcor',
         pytest,
-        args: pytest_base_args + ['-m', 'xcor', meson.current_source_dir()],
+        args: pytest_parallel_args
+        + ['--run-xcor', '-m', 'xcor', meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env,
         timeout: 0,
@@ -118,7 +122,7 @@ if enable_gir
                 mpiexec,
                 args: ['-n', '2', pytest.full_path()]
                 + pytest_base_args
-                + ['-m', 'mpi', meson.current_source_dir()],
+                + ['--run-mpi', '-m', 'mpi', meson.current_source_dir()],
                 depends: [numcosmo_gir, numcosmo_math_gir],
                 env: env,
                 timeout: 0,

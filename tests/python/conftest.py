@@ -8,6 +8,58 @@ from numcosmo_py.cosmology import Cosmology
 Ncm.cfg_init()
 
 
+def pytest_addoption(parser):
+    """Add custom command-line options for conditional test execution."""
+    parser.addoption(
+        "--run-mpi",
+        action="store_true",
+        default=False,
+        help="Run tests marked with mpi",
+    )
+    parser.addoption(
+        "--run-powspec",
+        action="store_true",
+        default=False,
+        help="Run tests marked with powspec",
+    )
+    parser.addoption(
+        "--run-xcor",
+        action="store_true",
+        default=False,
+        help="Run tests marked with xcor",
+    )
+
+
+def pytest_configure(config):
+    """Configure pytest marker behavior."""
+    config.addinivalue_line("markers", "mpi: MPI-parallel tests (run with --run-mpi)")
+    config.addinivalue_line(
+        "markers", "powspec: Power spectrum tests (run with --run-powspec)"
+    )
+    config.addinivalue_line(
+        "markers", "xcor: Cross-correlation tests (run with --run-xcor)"
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip tests based on markers and command-line options."""
+    run_mpi = config.getoption("--run-mpi")
+    run_powspec = config.getoption("--run-powspec")
+    run_xcor = config.getoption("--run-xcor")
+
+    skip_mpi = pytest.mark.skip(reason="Need --run-mpi option to run")
+    skip_powspec = pytest.mark.skip(reason="Need --run-powspec option to run")
+    skip_xcor = pytest.mark.skip(reason="Need --run-xcor option to run")
+
+    for item in items:
+        if "mpi" in item.keywords and not run_mpi:
+            item.add_marker(skip_mpi)
+        if "powspec" in item.keywords and not run_powspec:
+            item.add_marker(skip_powspec)
+        if "xcor" in item.keywords and not run_xcor:
+            item.add_marker(skip_xcor)
+
+
 @pytest.fixture(name="prim")
 def fixture_prim() -> Nc.HIPrim:
     """Create primordial power spectrum model."""

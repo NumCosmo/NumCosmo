@@ -61,16 +61,10 @@ from numcosmo_py.ccl.comparison import (
 )
 from numcosmo_py.ccl.nc_ccl import create_nc_obj
 from numcosmo_py.plotting.tools import latex_float, format_time
-from .fixtures_ccl import (  # pylint: disable=unused-import # noqa: F401
-    fixture_k_a,
-    fixture_z_a,
-    fixture_ccl_cosmo_eh_linear,
-    fixture_ccl_cosmo_eh_halofit,
-    fixture_nc_cosmo_eh_linear,
-    fixture_nc_cosmo_eh_halofit,
-)
 
 pytestmark = pytest.mark.ccl
+pytest_plugins = ["python.fixtures_ccl"]
+
 Ncm.cfg_init()
 
 
