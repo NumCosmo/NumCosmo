@@ -850,6 +850,9 @@ class SkyMatch:
         dist.prepare(cosmo)
         RH_Mpc = cosmo.RH_Mpc()
 
+        #match_r = dist.angular_diameter_luminosity(cosmo, npa_to_seq(match_z))
+        #query_r = dist.angular_diameter_luminosity(cosmo, npa_to_seq(query_z))
+        ## Decide wich distance is most appropriate to 3d matching
         match_r = dist.angular_diameter_array(cosmo, npa_to_seq(match_z))
         query_r = dist.angular_diameter_array(cosmo, npa_to_seq(query_z))
 

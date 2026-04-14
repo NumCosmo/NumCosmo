@@ -29,7 +29,6 @@ from py_sline_model import PySLineModel
 
 from numcosmo_py import Ncm, GObject
 
-
 #
 # Creating a new MSetFunc
 #
