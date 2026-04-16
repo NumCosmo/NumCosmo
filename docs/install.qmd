@@ -137,8 +137,8 @@ sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-de
   libhdf5-dev gtk-doc-tools
 ```
 
-On current Debian and Ubuntu releases, `libflint-arb-dev` was replaced by
-`libflint-dev`.
+Note: in recent Debian and Ubuntu releases, the package name changed from
+`libflint-arb-dev` to `libflint-dev`.
 
 #### Mac OS using Homebrew
 
