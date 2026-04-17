@@ -151,7 +151,7 @@ def HOD_model(m_halo, logMmin=12.72, sigma_logM=0.26, alpha=1.15, logM1=13.93, l
         mean_n_sat = (np.maximum(0, diff) / 10**logM1)**alpha
         if mean_n_sat > 0:
             n_sat = np.random.poisson(mean_n_sat)
-            
+          
     return n_cen, n_sat
 
 
