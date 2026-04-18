@@ -30,8 +30,8 @@ import numpy as np
 
 from numcosmo_py import Ncm
 
-from .test_py_data_gauss_diag import DataGaussDiagTest
-from .test_py_data_gauss import DataGaussTest
+from .test_gauss_diag import DataGaussDiagTest
+from .test_gauss import DataGaussTest
 
 Ncm.cfg_init()
 
