@@ -28,6 +28,7 @@ import pytest
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -162,7 +163,7 @@ def test_serialization_deserialization(bias_tinker: Nc.HaloBiasTinker):
         bias_tinker.set_c(c)
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-        bias_tinker_dup = ser.dup_obj(bias_tinker)
+        bias_tinker_dup = duplicate_via_serialization(bias_tinker, ser)
 
         assert bias_tinker_dup is not None
         assert isinstance(bias_tinker_dup, Nc.HaloBiasTinker)

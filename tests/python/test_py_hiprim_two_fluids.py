@@ -29,6 +29,7 @@ from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -168,7 +169,7 @@ def test_set_lnk_lnw_spline_serialize(two_fluids):
     )
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    two_fluids2 = ser.dup_obj(two_fluids)
+    two_fluids2 = duplicate_via_serialization(two_fluids, ser)
 
     assert two_fluids2.peek_lnk_lnw_spline() is not None
     assert two_fluids2.peek_lnk_lnw_spline() is not lnPk2d
@@ -248,7 +249,7 @@ def test_Pk0_spline_serialize(two_fluids):
     two_fluids.set_Pk0_spline(Pk0_spline)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    two_fluids2 = ser.dup_obj(two_fluids)
+    two_fluids2 = duplicate_via_serialization(two_fluids, ser)
 
     assert two_fluids2.peek_Pk0_spline() is not None
     assert two_fluids2.peek_Pk0_spline() is not Pk0_spline
@@ -325,7 +326,7 @@ def test_full_serialization_with_Pk0(two_fluids):
 
     # Serialize and deserialize
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    two_fluids2 = ser.dup_obj(two_fluids)
+    two_fluids2 = duplicate_via_serialization(two_fluids, ser)
 
     # Check both splines are preserved
     assert two_fluids2.peek_lnk_lnw_spline() is not None

@@ -37,6 +37,7 @@ pytest.importorskip("scipy")
 from scipy.special import hankel1e  # pylint: disable=no-name-in-module
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -616,8 +617,8 @@ def test_evolution_qgw_duplicate(adiab_qgw):
     adiab, qgw = adiab_qgw
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    adiab_dup = ser.dup_obj(adiab)
-    qgw_dup = ser.dup_obj(qgw)
+    adiab_dup = duplicate_via_serialization(adiab, ser)
+    qgw_dup = duplicate_via_serialization(qgw, ser)
 
     test_evolution_qgw((adiab_dup, qgw_dup))
 
@@ -627,8 +628,8 @@ def test_evolution_vexp_duplicate(adiab_vexp):
     adiab, vexp = adiab_vexp
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    adiab_dup = ser.dup_obj(adiab)
-    vexp_dup = ser.dup_obj(vexp)
+    adiab_dup = duplicate_via_serialization(adiab, ser)
+    vexp_dup = duplicate_via_serialization(vexp, ser)
 
     test_evolution_vexp((adiab_dup, vexp_dup))
 

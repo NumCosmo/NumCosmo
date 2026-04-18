@@ -30,6 +30,7 @@ import math
 import pytest
 import numpy as np
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.helper import duplicate_via_serialization
 from numcosmo_py.helper import npa_to_seq
 
 Ncm.cfg_init()
@@ -730,7 +731,7 @@ def test_serialization_deserialization(cluster_m: Nc.ClusterMassSelection) -> No
     cluster_m.set_enable_rejection(True)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    cluster_m_dup_obj = ser.dup_obj(cluster_m)
+    cluster_m_dup_obj = duplicate_via_serialization(cluster_m, ser)
     assert isinstance(cluster_m_dup_obj, Nc.ClusterMassSelection)
     cluster_m_dup: Nc.ClusterMassSelection = cluster_m_dup_obj
 

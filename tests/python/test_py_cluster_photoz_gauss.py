@@ -23,6 +23,7 @@
 import pytest
 import numpy as np
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -36,7 +37,7 @@ def fixture_cluster_pz() -> Nc.ClusterPhotozGauss:
 def test_serialization_deserialization(cluster_pz: Nc.ClusterPhotozGauss) -> None:
     """Test serialization and deserialization."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    cluster_pz_dup = ser.dup_obj(cluster_pz)
+    cluster_pz_dup = duplicate_via_serialization(cluster_pz, ser)
 
     assert cluster_pz_dup is not None
     assert isinstance(cluster_pz_dup, Nc.ClusterPhotozGauss)

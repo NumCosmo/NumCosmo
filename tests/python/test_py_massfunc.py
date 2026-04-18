@@ -37,6 +37,7 @@ import pyccl
 
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams
 
 pytestmark = pytest.mark.ccl
@@ -466,7 +467,7 @@ def test_compare_mf_dup(
     nc_hmf_orig.prepare(cosmo_nc.cosmo)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    nc_hmf = ser.dup_obj(nc_hmf_orig)
+    nc_hmf = duplicate_via_serialization(nc_hmf_orig, ser)
     assert isinstance(nc_hmf, Nc.HaloMassFunction)
     nc_hmf.prepare(cosmo_nc.cosmo)
 

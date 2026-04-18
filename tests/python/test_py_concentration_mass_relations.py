@@ -39,6 +39,7 @@ pytestmark = pytest.mark.ccl
 
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams
 
 Ncm.cfg_init()
@@ -502,7 +503,7 @@ def test_cmr_serialize_duplicate(
 
     # Serialize and duplicate
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    nc_hms_dup = ser.dup_obj(nc_hms)
+    nc_hms_dup = duplicate_via_serialization(nc_hms, ser)
 
     # Verify it's a different object
     assert nc_hms_dup is not nc_hms

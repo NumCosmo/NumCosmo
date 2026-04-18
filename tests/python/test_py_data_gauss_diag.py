@@ -27,6 +27,7 @@
 from numpy.testing import assert_allclose
 import numpy as np
 from numcosmo_py import Ncm
+from numcosmo_py.helper import duplicate_via_serialization
 from numcosmo_py.ncm import MSet
 
 Ncm.cfg_init()
@@ -289,7 +290,7 @@ def test_data_gauss_diag_serialize():
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
 
-    data_dist_dup = ser.dup_obj(data_dist)
+    data_dist_dup = duplicate_via_serialization(data_dist, ser)
 
     assert data_dist_dup.get_size() == data_dist.get_size()
 
@@ -314,7 +315,7 @@ def test_data_gauss_diag_serialize_bootstrap():
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
 
-    data_dist_dup = ser.dup_obj(data_dist)
+    data_dist_dup = duplicate_via_serialization(data_dist, ser)
 
     assert data_dist_dup.get_size() == data_dist.get_size()
 

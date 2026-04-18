@@ -37,6 +37,7 @@ from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -277,8 +278,8 @@ def test_evolution_vexp_duplicate(pgw_vexp: tuple[Nc.HIPertGW, Nc.HICosmoVexp]) 
     pgw, vexp = pgw_vexp
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    pgw_dup = ser.dup_obj(pgw)
-    vexp_dup = ser.dup_obj(vexp)
+    pgw_dup = duplicate_via_serialization(pgw, ser)
+    vexp_dup = duplicate_via_serialization(vexp, ser)
     assert isinstance(pgw_dup, Nc.HIPertGW)
     assert isinstance(vexp_dup, Nc.HICosmoVexp)
 
@@ -476,8 +477,8 @@ def test_evolution_qgrw_duplicate(pgw_qgrw: tuple[Nc.HIPertGW, Nc.HICosmoQGRW]) 
     pgw, qgrw = pgw_qgrw
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    pgw_dup = ser.dup_obj(pgw)
-    qgrw_dup = ser.dup_obj(qgrw)
+    pgw_dup = duplicate_via_serialization(pgw, ser)
+    qgrw_dup = duplicate_via_serialization(qgrw, ser)
     assert isinstance(pgw_dup, Nc.HIPertGW)
     assert isinstance(qgrw_dup, Nc.HICosmoQGRW)
 

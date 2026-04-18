@@ -27,7 +27,8 @@
 from typing import cast
 
 from numpy.testing import assert_allclose
-from numcosmo_py import Ncm, GObject
+from numcosmo_py import Ncm
+from numcosmo_py.helper import duplicate_via_serialization, GObject
 from numcosmo_py.helper import register_model_class
 
 
@@ -103,7 +104,7 @@ def test_serialization() -> None:
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
 
-    mb_dup = ser.dup_obj(mb)
+    mb_dup = duplicate_via_serialization(mb, ser)
 
     assert mb_dup is not None
     assert isinstance(mb_dup, Ncm.ModelBuilder)

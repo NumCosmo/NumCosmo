@@ -27,6 +27,7 @@ from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -56,7 +57,7 @@ def test_de_cont_serialize():
     de_cont.set_k(1.0)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    de_cont2 = ser.dup_obj(de_cont)
+    de_cont2 = duplicate_via_serialization(de_cont, ser)
     assert de_cont2 is not None
     assert de_cont2 is not de_cont
 

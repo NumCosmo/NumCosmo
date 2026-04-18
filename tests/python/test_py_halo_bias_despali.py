@@ -28,6 +28,7 @@ import pytest
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -168,7 +169,7 @@ def test_serialization_deserialization(bias_despali: Nc.HaloBiasDespali):
         bias_despali.set_eo(eo)
         bias_despali.set_cmf(cmf)
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-        bias_despali_dup = ser.dup_obj(bias_despali)
+        bias_despali_dup = duplicate_via_serialization(bias_despali, ser)
         assert bias_despali_dup is not None
         assert isinstance(bias_despali_dup, Nc.HaloBiasDespali)
         assert bias_despali_dup is not bias_despali

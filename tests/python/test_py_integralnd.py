@@ -29,6 +29,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
 
 from numcosmo_py import Ncm, GObject
+from numcosmo_py.helper import duplicate_via_serialization
 
 #
 #  Initializing the library objects, this must be called before
@@ -232,7 +233,7 @@ def test_integral_nd_serialize() -> None:
     test_f.set_reltol(1e-6)
     test_f.set_maxeval(11234)
     test_f.set_error(Ncm.IntegralNDError.LINF)
-    test_f_dup = ser.dup_obj(test_f)
+    test_f_dup = duplicate_via_serialization(test_f, ser)
 
     assert isinstance(test_f_dup, IntegralND)
 

@@ -24,12 +24,13 @@
 
 """Tests for serialization."""
 
-from typing import List
+from typing import List, cast
 from pathlib import Path
 
 import pytest
 import numpy as np
 from numcosmo_py import Ncm, GObject, dict_to_var_dict
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -320,7 +321,7 @@ def test_serialize_A(ser_opt, dup_mode, a1) -> None:
     ser = Ncm.Serialize.new(ser_opt)
 
     if dup_mode == "variant":
-        a1_dup = ser.dup_obj(a1)
+        a1_dup = duplicate_via_serialization(a1, ser)
     elif dup_mode == "yaml":
         a1_yaml = ser.to_yaml(a1)
         a1_dup = ser.from_yaml(a1_yaml)
@@ -371,10 +372,10 @@ def test_serialize_B_array(ser_opt, dup_mode, a1, a2, a3) -> None:
     ser = Ncm.Serialize.new(ser_opt)
 
     if dup_mode == "variant":
-        b_dup = ser.dup_obj(b)
+        b_dup = duplicate_via_serialization(b, ser)
     elif dup_mode == "yaml":
         b_yaml = ser.to_yaml(b)
-        b_dup = ser.from_yaml(b_yaml)
+        b_dup = cast(GTestB, ser.from_yaml(b_yaml))
     else:
         raise ValueError(f"Invalid dup_mode: {dup_mode}")
 
@@ -398,10 +399,10 @@ def test_serialize_B_dict_str(ser_opt, dup_mode, a1, a2, a3) -> None:
     ser = Ncm.Serialize.new(ser_opt)
 
     if dup_mode == "variant":
-        b_dup = ser.dup_obj(b)
+        b_dup = duplicate_via_serialization(b, ser)
     elif dup_mode == "yaml":
         b_yaml = ser.to_yaml(b)
-        b_dup = ser.from_yaml(b_yaml)
+        b_dup = cast(GTestB, ser.from_yaml(b_yaml))
     else:
         raise ValueError(f"Invalid dup_mode: {dup_mode}")
 
@@ -427,10 +428,10 @@ def test_serialize_B_dict_int(ser_opt, dup_mode, a1, a2, a3) -> None:
     ser = Ncm.Serialize.new(ser_opt)
 
     if dup_mode == "variant":
-        b_dup = ser.dup_obj(b)
+        b_dup = duplicate_via_serialization(b, ser)
     elif dup_mode == "yaml":
         b_yaml = ser.to_yaml(b)
-        b_dup = ser.from_yaml(b_yaml)
+        b_dup = cast(GTestB, ser.from_yaml(b_yaml))
     else:
         raise ValueError(f"Invalid dup_mode: {dup_mode}")
 
@@ -462,10 +463,10 @@ def test_serialize_B_cmp_objs_clean_dup(dup_mode, a1, a2, a3) -> None:
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
     if dup_mode == "variant":
-        b_dup = ser.dup_obj(b)
+        b_dup = duplicate_via_serialization(b, ser)
     elif dup_mode == "yaml":
         b_yaml = ser.to_yaml(b)
-        b_dup = ser.from_yaml(b_yaml)
+        b_dup = cast(GTestB, ser.from_yaml(b_yaml))
     else:
         raise ValueError(f"Invalid dup_mode: {dup_mode}")
 
@@ -505,10 +506,10 @@ def test_serialize_B_cmp_objs_none(dup_mode, a1, a2, a3) -> None:
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
 
     if dup_mode == "variant":
-        b_dup = ser.dup_obj(b)
+        b_dup = duplicate_via_serialization(b, ser)
     elif dup_mode == "yaml":
         b_yaml = ser.to_yaml(b)
-        b_dup = ser.from_yaml(b_yaml)
+        b_dup = cast(GTestB, ser.from_yaml(b_yaml))
     else:
         raise ValueError(f"Invalid dup_mode: {dup_mode}")
 
@@ -568,11 +569,11 @@ def test_serialize_C(ser_opt, dup_mode, a1, a2, a3) -> None:
     ser = Ncm.Serialize.new(ser_opt)
 
     if dup_mode == "variant":
-        c_dup = ser.dup_obj(c)
+        c_dup = duplicate_via_serialization(c, ser)
     elif dup_mode == "yaml":
         c_yaml = ser.to_yaml(c)
         # print(c_yaml)
-        c_dup = ser.from_yaml(c_yaml)
+        c_dup = cast(GTestC, ser.from_yaml(c_yaml))
     else:
         raise ValueError(f"Invalid dup_mode: {dup_mode}")
 
@@ -624,11 +625,11 @@ def test_serialize_C_cmp_objs_none(dup_mode, a1, a2, a3) -> None:
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
 
     if dup_mode == "variant":
-        c_dup = ser.dup_obj(c)
+        c_dup = duplicate_via_serialization(c, ser)
     elif dup_mode == "yaml":
         c_yaml = ser.to_yaml(c)
         # print(c_yaml)
-        c_dup = ser.from_yaml(c_yaml)
+        c_dup = cast(GTestC, ser.from_yaml(c_yaml))
     else:
         raise ValueError(f"Invalid dup_mode: {dup_mode}")
 
@@ -681,11 +682,11 @@ def test_serialize_C_cmp_objs_clean_dup(dup_mode, a1, a2, a3) -> None:
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
     if dup_mode == "variant":
-        c_dup = ser.dup_obj(c)
+        c_dup = duplicate_via_serialization(c, ser)
     elif dup_mode == "yaml":
         c_yaml = ser.to_yaml(c)
         # print(c_yaml)
-        c_dup = ser.from_yaml(c_yaml)
+        c_dup = cast(GTestC, ser.from_yaml(c_yaml))
     else:
         raise ValueError(f"Invalid dup_mode: {dup_mode}")
 

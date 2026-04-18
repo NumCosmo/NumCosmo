@@ -24,6 +24,7 @@ import math
 import pytest
 import numpy as np
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -73,7 +74,7 @@ def test_cluster_mass_ascaso_mean_std(cluster_m: Nc.ClusterMassAscaso) -> None:
 def test_serialization_deserialization(cluster_m: Nc.ClusterMassAscaso) -> None:
     """Test serialization and deserialization."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    cluster_m_dup = ser.dup_obj(cluster_m)
+    cluster_m_dup = duplicate_via_serialization(cluster_m, ser)
 
     assert cluster_m_dup is not None
     assert isinstance(cluster_m_dup, Nc.ClusterMassAscaso)

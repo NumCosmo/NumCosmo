@@ -31,6 +31,7 @@ from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -208,8 +209,8 @@ def test_evolution_vexp_duplicate(pem_vexp):
     pem, vexp = pem_vexp
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    pem_dup = ser.dup_obj(pem)
-    vexp_dup = ser.dup_obj(vexp)
+    pem_dup = duplicate_via_serialization(pem, ser)
+    vexp_dup = duplicate_via_serialization(vexp, ser)
 
     test_evolution_vexp((pem_dup, vexp_dup))
 

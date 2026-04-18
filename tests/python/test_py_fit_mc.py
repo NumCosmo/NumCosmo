@@ -24,7 +24,6 @@
 
 """Tests for NcmFitMC object."""
 
-from typing import cast
 from pathlib import Path
 import re
 import pytest
@@ -32,6 +31,7 @@ import numpy as np
 import numpy.testing as npt
 
 from numcosmo_py import Ncm, GObject
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -107,7 +107,7 @@ def test_serialize_deserialize(mc: Ncm.FitMC, tmp_path: Path):
 
     file = tmp_path / "fit_mc_test.nc"
     mc.set_data_file(file.as_posix())
-    mc2: Ncm.FitMC = cast(Ncm.FitMC, ser.dup_obj(mc))
+    mc2 = duplicate_via_serialization(mc, ser)
 
     assert mc.props.nthreads == mc2.props.nthreads
     assert mc.props.rtype == mc2.props.rtype
@@ -119,7 +119,7 @@ def test_threaded_vs_serial(capfd, mc: Ncm.FitMC):
     """Test NcmFitMC serial vs threaded."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
-    mc2: Ncm.FitMC = cast(Ncm.FitMC, ser.dup_obj(mc))
+    mc2 = duplicate_via_serialization(mc, ser)
 
     mc.set_mtype(Ncm.FitRunMsgs.NONE)
     mc.set_nthreads(1)

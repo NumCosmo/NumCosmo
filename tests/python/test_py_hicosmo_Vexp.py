@@ -30,6 +30,7 @@ from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -234,7 +235,7 @@ def test_serialize(vexp):
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
-    vexp2 = ser.dup_obj(vexp)
+    vexp2 = duplicate_via_serialization(vexp, ser)
 
     assert vexp2 is not None
     assert isinstance(vexp2, Nc.HICosmoVexp)

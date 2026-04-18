@@ -29,6 +29,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -172,7 +173,7 @@ def test_data_cluster_mass_rich_apply_cut(
 def test_serialize_deserialize(cluster_mass_rich: Nc.DataClusterMassRich):
     """Test serialize and deserialize."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    cluster_mass_rich2 = ser.dup_obj(cluster_mass_rich)
+    cluster_mass_rich2 = duplicate_via_serialization(cluster_mass_rich, ser)
     assert isinstance(cluster_mass_rich2, Nc.DataClusterMassRich)
 
     assert cluster_mass_rich2 is not cluster_mass_rich

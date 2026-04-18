@@ -31,6 +31,7 @@ from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -69,7 +70,7 @@ def test_serialize(qgrw: Nc.HICosmoQGRW):
     """Test HICosmoQGRW serialization."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
-    qgrw2 = ser.dup_obj(qgrw)
+    qgrw2 = duplicate_via_serialization(qgrw, ser)
 
     assert qgrw2 is not None
     assert isinstance(qgrw2, Nc.HICosmoQGRW)

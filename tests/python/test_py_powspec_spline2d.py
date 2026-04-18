@@ -30,6 +30,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from numcosmo_py import Ncm
+from numcosmo_py.helper import duplicate_via_serialization
 from numcosmo_py.helper import npa_to_seq
 
 Ncm.cfg_init()
@@ -143,7 +144,7 @@ def test_serialization(Pk2d: Ncm.Spline2d) -> None:
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
-    ps_dup = ser.dup_obj(ps)
+    ps_dup = duplicate_via_serialization(ps, ser)
 
     assert ps_dup is not None
     assert isinstance(ps_dup, Ncm.PowspecSpline2d)

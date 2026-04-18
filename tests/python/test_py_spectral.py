@@ -36,6 +36,7 @@ from scipy.special import iv, eval_gegenbauer  # pylint: disable=no-name-in-modu
 from scipy.fft import dct
 
 from numcosmo_py import Ncm
+from numcosmo_py.helper import duplicate_via_serialization
 
 ATOL = 1.0e-14
 
@@ -193,7 +194,7 @@ class TestSpectral:
 
         # Serialize and deserialize
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-        spectral_dup = ser.dup_obj(spectral)
+        spectral_dup = duplicate_via_serialization(spectral, ser)
 
         # Check that it's a different object
         assert spectral_dup is not None
