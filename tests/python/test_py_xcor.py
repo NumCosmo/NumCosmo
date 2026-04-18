@@ -22,7 +22,38 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Unit tests for NumCosmo power-spectra."""
+"""Unit tests for NumCosmo power-spectra.
+
+⚠️ DEPRECATION NOTICE ⚠️
+=====================================================================
+This test file is DEPRECATED and maintained for backward compatibility only.
+Tests have been refactored into specialized, modern test files.
+
+Please use the new test files instead:
+- test_py_xcor_kernel_observables.py  : Kernel observable count tests
+- test_py_xcor_kernel_serialization.py: Kernel serialization tests
+- test_py_xcor_kernel_noise.py        : Kernel noise behavior tests
+- test_py_xcor_ccl_comparison.py      : CCL cross-validation tests
+- test_py_xcor_integration.py         : Integration method tests
+
+Migration Guide:
+- Observable tests (test_*_obs)         → test_py_xcor_kernel_observables.py
+- Serialization tests (test_*_serial*) → test_py_xcor_kernel_serialization.py
+- Noise tests (test_*_noise)           → test_py_xcor_kernel_noise.py
+- CCL comparison tests (test_*_kernel, test_compare_*) → test_py_xcor_ccl_comparison.py
+- Integration tests (test_xcor_*, test_*_integ_methods) → test_py_xcor_integration.py
+
+The new files provide:
+✓ Better test organization by functionality
+✓ Modern pytest parametrization patterns
+✓ Improved type hints with TypeVar support
+✓ Reusable helper functions (duplicate_via_serialization)
+✓ Comprehensive documentation and docstrings
+
+Created: 2024-08-01 (original)
+Deprecated: 2026-04-17 (refactoring)
+=====================================================================
+"""
 
 import pytest
 
@@ -35,12 +66,17 @@ pytest.importorskip("pyccl")
 
 import pyccl
 
-pytestmark = [pytest.mark.ccl, pytest.mark.xcor]
+pytestmark = [
+    pytest.mark.ccl,
+    pytest.mark.xcor,
+    pytest.mark.filterwarnings("ignore::DeprecationWarning"),
+]
 
 import numcosmo_py.cosmology as ncpy
 from numcosmo_py.ccl.two_point import compute_kernel
 from numcosmo_py import Ncm, Nc
 import numcosmo_py.ccl.comparison as nc_cmp
+from numcosmo_py.helper import duplicate_via_serialization
 
 pytest_plugins = [
     "python.fixtures_ccl",
@@ -140,7 +176,7 @@ def test_cmb_lens_serialization(
 ) -> None:
     """Check that CMB lensing tracer can be serialized."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    nc_cmb_lens_dup = ser.dup_obj(nc_cmb_lens)
+    nc_cmb_lens_dup = duplicate_via_serialization(nc_cmb_lens, ser)
     assert nc_cmb_lens_dup is not None
     assert nc_cmb_lens_dup is not nc_cmb_lens
     assert isinstance(nc_cmb_lens_dup, Nc.XcorKernelCMBLensing)
@@ -168,7 +204,7 @@ def test_cmb_isw_serialization(
 ) -> None:
     """Check that CMB ISW tracer can be serialized."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    nc_cmb_isw_dup = ser.dup_obj(nc_cmb_isw)
+    nc_cmb_isw_dup = duplicate_via_serialization(nc_cmb_isw, ser)
     assert nc_cmb_isw_dup is not None
     assert nc_cmb_isw_dup is not nc_cmb_isw
     assert isinstance(nc_cmb_isw_dup, Nc.XcorKernelCMBISW)
@@ -235,7 +271,7 @@ def test_tsz_serialization(
 ) -> None:
     """Check that tSZ tracer can be serialized."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    nc_tsz_dup = ser.dup_obj(nc_tsz)
+    nc_tsz_dup = duplicate_via_serialization(nc_tsz, ser)
     assert nc_tsz_dup is not None
     assert nc_tsz_dup is not nc_tsz
     assert isinstance(nc_tsz_dup, Nc.XcorKerneltSZ)
@@ -263,7 +299,7 @@ def test_gal_serialization(
 ) -> None:
     """Check that galaxy tracer can be serialized."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    nc_gal_dup = ser.dup_obj(nc_gal)
+    nc_gal_dup = duplicate_via_serialization(nc_gal, ser)
     assert nc_gal_dup is not None
     assert nc_gal_dup is not nc_gal
     assert isinstance(nc_gal_dup, Nc.XcorKernelGal)
@@ -292,7 +328,7 @@ def test_weak_lensing_serialization(
 ) -> None:
     """Check that weak lensing tracer can be serialized."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    nc_wl_dup = ser.dup_obj(nc_weak_lensing)
+    nc_wl_dup = duplicate_via_serialization(nc_weak_lensing, ser)
     assert nc_wl_dup is not None
     assert nc_wl_dup is not nc_weak_lensing
     assert isinstance(nc_wl_dup, Nc.XcorKernelWeakLensing)
