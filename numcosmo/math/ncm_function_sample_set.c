@@ -1696,9 +1696,52 @@ ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
 {
   guint iteration;
 
-  /* The Cubic not-a-knot test requires at least 6 samples */
-  if (ncm_function_sample_set_get_nsamples (fss) < 6)
-    g_error ("Adaptive ncm_function_sample_set_adaptive_midpoint: not enough samples to refine");
+  /* The Cubic not-a-knot spline requires at least 6 samples.
+   * If we have fewer but at least 2, add midpoints until we reach 6.
+   */
+  {
+    const guint nsamples = ncm_function_sample_set_get_nsamples (fss);
+
+    if (nsamples < 2)
+      g_error ("Adaptive ncm_function_sample_set_adaptive_midpoint: "
+               "need at least 2 samples, got %u", nsamples);
+
+    if (nsamples < 6)
+    {
+      /* Add midpoints to reach at least 6 samples */
+      while (ncm_function_sample_set_get_nsamples (fss) < 6)
+      {
+        NcmFunctionSampleSetIter it_s;
+        NcmFunctionSampleSetIter *it = &it_s;
+
+        ncm_function_sample_set_iter_begin (fss, &it);
+
+        while (ncm_function_sample_set_iter_has_next (it))
+        {
+          NcmFunctionSampleSetIter iter_new_s;
+          NcmFunctionSampleSetIter iter_right = *it;
+          NcmFunctionSampleSetIter *iter_new  = &iter_new_s;
+          gdouble x_left, x_right, x_mid;
+
+          ncm_function_sample_set_iter_next (&iter_right);
+
+          x_left  = ncm_function_sample_set_iter_get_x (it);
+          x_right = ncm_function_sample_set_iter_get_x (&iter_right);
+          x_mid   = 0.5 * (x_left + x_right);
+
+          /* Add midpoint as an old point (part of base spline) */
+          ncm_function_sample_set_iter_insert_after_func (fss, it, x_mid, f, user_data, &iter_new);
+
+          /* Mark as old immediately */
+          ncm_function_sample_set_iter_set_new_point (iter_new, FALSE);
+
+          /* Skip the newly inserted point to move to the next interval */
+          *it = *iter_new;
+          ncm_function_sample_set_iter_next (it);
+        }
+      }
+    }
+  }
 
   for (iteration = 0; iteration < max_iter; iteration++)
   {
