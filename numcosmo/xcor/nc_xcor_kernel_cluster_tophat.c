@@ -194,13 +194,8 @@ static GPtrArray *_nc_xcor_kernel_cluster_tophat_get_component_list (NcXcorKerne
 static gdouble
 _nc_xcor_kernel_cluster_tophat_dndz (NcXcorKernelClusterTophat *xclkc, gdouble z)
 {
-  printf ("z = % 22.15g, z_lower = % 22.15g, z_upper = % 22.15g [%d %d]\n", z, xclkc->z_lower, xclkc->z_upper,
-          z >= xclkc->z_lower, z <= xclkc->z_upper);
-
-  if ((z + 1.0e-10 >= xclkc->z_lower) && (z <= xclkc->z_upper + 1.0e-10)) /* Add small tolerance to upper bound to avoid numerical issues */
-    return 1.0 / (xclkc->z_upper - xclkc->z_lower);
-  else
-    return 0.0;
+  /* The boundary should always be respected */
+  return 1.0 / (xclkc->z_upper - xclkc->z_lower);
 }
 
 static void

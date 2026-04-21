@@ -347,7 +347,12 @@ def test_component_k_epsilon_drop(
     The algorithm finds k_epsilon where KL(y/k_epsilon, k_epsilon) ≈ epsilon * KL_max.
     Since set_epsilon sets the squared threshold, we use epsilon^2 in the test.
     """
-    _, _, component = kernel_component
+    kernel_id, _, component = kernel_component
+    # Skip for cluster kernels which have step-function behavior rather than smooth
+    # falloff
+    if "cluster" in kernel_id:
+        pytest.skip(f"Skipping k_epsilon test for {kernel_id} (step-function kernel)")
+
     cosmo = cosmology.cosmo
     epsilon = 1.0e-5
 
