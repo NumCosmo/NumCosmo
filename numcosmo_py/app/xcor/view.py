@@ -44,6 +44,7 @@ from .kernels import (
     KernelTSZConfig,
     KernelNumberCountsConfig,
     KernelWeakLensingConfig,
+    KernelClusterTophatConfig,
     KernelConfigTypes,
 )
 
@@ -301,7 +302,7 @@ class ViewKernel:
         typer.Option(
             help="Minimum multipole value for kernel evaluation.",
             show_default=True,
-            min=2,
+            min=0,
         ),
     ] = 20
 
@@ -442,6 +443,8 @@ class ViewKernel:
                 return self._create_number_counts_kernels(kernel_config)
             case KernelWeakLensingConfig():
                 return self._create_weak_lensing_kernels(kernel_config)
+            case KernelClusterTophatConfig():
+                return self._create_cluster_tophat_kernels(kernel_config)
             case _:
                 raise ValueError(f"Unknown kernel type: {type(kernel_config)}")
 
@@ -597,6 +600,32 @@ class ViewKernel:
         kernel_obj.prepare(self.cosmo)
 
         kernel_label = f"Weak Lensing ({config.survey} bin {config.bin_idx})"
+
+        return kernel_label, kernel_obj
+
+    def _create_cluster_tophat_kernels(
+        self, config: KernelClusterTophatConfig
+    ) -> tuple[str, Nc.XcorKernelClusterTophat]:
+        """Create cluster tophat kernel.
+
+        :param config: Cluster tophat configuration.
+        :return: Tuple of (kernel_label, kernel_object).
+        """
+        assert isinstance(config, KernelClusterTophatConfig)
+
+        # Create primary kernel
+        kernel_obj = Nc.XcorKernelClusterTophat(
+            dist=self.dist,
+            powspec=self.ps_ml,
+            z_lower=config.z_lower,
+            z_upper=config.z_upper,
+            integrator=self.integrator,
+        )
+        kernel_obj.prepare(self.cosmo)
+
+        kernel_label = (
+            f"Cluster Tophat (z=[{config.z_lower:.2f}, {config.z_upper:.2f}])"
+        )
 
         return kernel_label, kernel_obj
 

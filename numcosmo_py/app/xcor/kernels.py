@@ -288,6 +288,46 @@ class KernelWeakLensingConfig(BaseModel):
         ]
 
 
+class KernelClusterTophatConfig(BaseModel):
+    """Cluster number counts kernel configuration (thin-z approximation).
+
+    This kernel represents cluster number counts in a single redshift bin
+    using a simple top-hat window function. It implements the thin-z
+    approximation where clusters are assumed to occupy a narrow redshift
+    range.
+
+    :ivar z_lower: Lower edge of the redshift bin.
+    :ivar z_upper: Upper edge of the redshift bin.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    z_lower: Annotated[float, Field(ge=0.0)] = 0.2
+    z_upper: Annotated[float, Field(gt=0.0)] = 0.8
+
+    @classmethod
+    def from_args(cls, args: list[str]) -> "KernelClusterTophatConfig":
+        """Create a KernelClusterTophatConfig from command line arguments.
+
+        :param args: List of key=value strings.
+        :return: Validated configuration object.
+        :raises ValidationError: If arguments are invalid.
+        """
+        opts = parse_options_strict(args)
+        return cls.model_validate(opts)
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return help text for cluster tophat kernel.
+
+        :return: List containing [model name, parameter description].
+        """
+        return [
+            "KernelClusterTophat",
+            "z_lower=0.2, z_upper=0.8",
+        ]
+
+
 # Type alias for all kernel configuration types
 KernelConfigTypes = Union[
     KernelCMBLensingConfig,
@@ -295,6 +335,7 @@ KernelConfigTypes = Union[
     KernelTSZConfig,
     KernelNumberCountsConfig,
     KernelWeakLensingConfig,
+    KernelClusterTophatConfig,
 ]
 
 
@@ -305,6 +346,7 @@ KERNEL_CONFIG_REGISTRY: dict[str, Type[BaseModel]] = {
     "tsz": KernelTSZConfig,
     "number-counts": KernelNumberCountsConfig,
     "weak-lensing": KernelWeakLensingConfig,
+    "cluster-tophat": KernelClusterTophatConfig,
 }
 
 
