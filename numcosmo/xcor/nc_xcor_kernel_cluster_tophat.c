@@ -316,8 +316,10 @@ static gdouble
 _nc_xcor_kernel_cluster_tophat_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorKernelClusterTophat *xclkc = NC_XCOR_KERNEL_CLUSTER_TOPHAT (xclk);
+  const gdouble dndz               = _nc_xcor_kernel_cluster_tophat_dndz (xclkc, z);
+  const gdouble xi                 = xck->xi_z;
 
-  return _nc_xcor_kernel_cluster_tophat_dndz (xclkc, z);
+  return xi * xi * dndz;
 }
 
 static gdouble
@@ -387,7 +389,7 @@ _clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo
   const gdouble powspec         = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
   const gdouble tophat          = _nc_xcor_kernel_cluster_tophat_dndz (data->xclkc, z);
 
-  return tophat * sqrt (powspec);
+  return xi * xi * tophat * sqrt (powspec);
 }
 
 static gdouble
