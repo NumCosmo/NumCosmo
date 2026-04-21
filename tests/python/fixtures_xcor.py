@@ -288,6 +288,27 @@ def fixture_kernel_tsz() -> Nc.XcorKernel:
     return _get_kernel_tsz()
 
 
+def _get_kernel_cluster_tophat(
+    z_lower: float = 0.3, z_upper: float = 0.6
+) -> Nc.XcorKernelClusterTophat:
+    """Create and cache a cluster top-hat kernel."""
+    cosmology = _get_cosmology()
+    integrator = _get_integrator()
+    return Nc.XcorKernelClusterTophat(
+        dist=cosmology.dist,
+        powspec=cosmology.ps_ml,
+        z_lower=z_lower,
+        z_upper=z_upper,
+        integrator=integrator,
+    )
+
+
+@pytest.fixture(name="kernel_cluster_tophat")
+def fixture_kernel_cluster_tophat() -> Nc.XcorKernel:
+    """Fixture for NumCosmo cluster top-hat tracer."""
+    return _get_kernel_cluster_tophat()
+
+
 def _get_kernel_gal(
     bin_idx: int,
     bias: float = 1.5,
@@ -354,6 +375,7 @@ KERNEL_FIXTURES: list[tuple[str, int, Callable] | tuple[str, None, Callable]] = 
         ("kernel_cmb_lens", None, _get_kernel_cmb_lens),
         ("kernel_cmb_isw", None, _get_kernel_cmb_isw),
         ("kernel_tsz", None, _get_kernel_tsz),
+        ("kernel_cluster_tophat", None, _get_kernel_cluster_tophat),
     ]
     + [
         (f"kernel_gal_bin{i}", i, lambda ii=i: _get_kernel_gal(ii))
