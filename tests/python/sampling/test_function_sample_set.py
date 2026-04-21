@@ -1815,6 +1815,52 @@ def test_adaptive_midpoint_all_points_old_after() -> None:
     assert sv_old.get_nknots() == nsamples
 
 
+def test_adaptive_midpoint_auto_bootstrap_few_samples() -> None:
+    """Test that adaptive_midpoint when starting with <6 samples.
+
+    The cubic notaknot spline requires at least 6 samples, but adaptive_midpoint
+    should automatically bootstrap from any number >= 2 by adding midpoints.
+    """
+
+    def f(x: float, y: Ncm.Vector) -> None:
+        y.set(0, math.sin(x))
+
+    fss = Ncm.FunctionSampleSet.new(1)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    # Start with only 3 samples (less than the 6 required for cubic notaknot)
+    for x in [0.0, math.pi, 2.0 * math.pi]:
+        fss.add_func(x, f)
+
+    assert fss.get_nsamples() == 3
+    initial_x_min = fss.get_x_min()
+    initial_x_max = fss.get_x_max()
+
+    fss.mark_all_old()
+
+    # This should work without error - it will bootstrap to at least 6 samples
+    fss.adaptive_midpoint(f, 1e-6, 1e-10, 100, 1, base_spline)
+
+    # Should have converged
+    assert fss.all_intervals_ok(1)
+
+    # Should have at least 6 samples after bootstrap + refinement
+    assert fss.get_nsamples() >= 6
+
+    # Domain should be preserved (bootstrap adds interior points only)
+    assert abs(fss.get_x_min() - initial_x_min) < 1e-12
+    assert abs(fss.get_x_max() - initial_x_max) < 1e-12
+
+    # Verify the spline is accurate
+    sv = fss.to_spline_vec(base_spline)
+    test_points = np.linspace(0.0, 2.0 * math.pi, 50)
+    for x in test_points:
+        y_true = math.sin(x)
+        y_spline = sv.eval_array(x)[0]
+        # Should be accurate to tolerance
+        assert abs(y_spline - y_true) < 1e-5
+
+
 #
 # Tests for expand_domain
 #
