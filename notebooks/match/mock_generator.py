@@ -125,7 +125,46 @@ class MockGenerator:
         
         return cluster_ra, cluster_dec, cluster_z
 
+    '''
+    def generate_halos_from_hmf(self, hmf):
+        """Generate blabla from a given halo mass function (HMF).
+        :param Nc.HaloMassFunction hmf: Halo mass function object from NumCosmo.
 
+        :return tuple[ndarray, ndarray]: lnm: ln(masses), cluster_z: redshift (z)
+
+        """
+        ramdom_positions = self.generate_cluster_positions()
+        cluster_ra = ramdom_positions[0]
+        cluster_dec = ramdom_positions[1]
+
+        cluster_z = from_hmf
+
+        return cluster_ra, cluster_dec, cluster_z, lnm
+    '''
+
+    '''
+    def generate_clusters_from_hmf_halos(self, hmf_halos):
+        """Generate clusters from a given halo catalog generated from a halo mass function (HMF).
+
+        :param Table hmf_halos: Halo catalog generated from a halo mass function (HMF)."""
+
+        completeness_model = CompletenessModel()
+
+        sampling_obs_probability = np.random.binomial
+
+        if sampling_obs_probability == 1:
+            # Halo is observed
+
+            generate cluster 
+
+        
+        else:
+            # Halo is not observed
+        
+        
+        generate fake detections 
+               
+    '''
 
     def generate_cluster_logm(self):
         """Generate random log10(masses) within the specified mass interval."""
@@ -200,7 +239,7 @@ class MockGenerator:
         return clusters
     
 
-    def generate_halos(self, D_DIM = 2.0):
+    def generate_halos(self, D_DIM = 2.0, clusters = None):
 
         """ Generate halos.
 
@@ -208,7 +247,9 @@ class MockGenerator:
 
         :return Table: halos: Astropy Table with generated halos."""
                 
-        clusters = self.generate_clusters()
+        if clusters is None:
+            clusters = self.generate_clusters()
+
         cluster_x1 = clusters['x1']
         cluster_x2 = clusters['x2']
         cluster_x3 = clusters['x3']
@@ -293,7 +334,8 @@ class MockGenerator:
         return ra_gal, dec_gal
 
 
-    def HOD_model(self, m_halo, logMmin=12.72, sigma_logM=0.26, alpha=1.15, logM1=13.93, logM0=12.7):
+    def HOD_model(self, m_halo, logMmin=12.72, sigma_logM=0.26, alpha=1.15, logM1=13.93, logM0=12.7
+                  ) -> tuple[int, int]:
         """
         Standard HOD model (Zheng et al. 2007)
 
@@ -307,7 +349,6 @@ class MockGenerator:
         :return tuple[int, int]: n_cen: number of central galaxies (0 or 1), n_sat: number of satellite galaxies "
         """
         # 1. Mean Central Occupancy (Error function)
-        from scipy.special import erf
         mean_n_cen = 0.5 * (1 + erf((np.log10(m_halo) - logMmin) / sigma_logM))
         #n_cen = 1 if np.random.random() < mean_n_cen else 0
         n_cen = 1
@@ -424,6 +465,7 @@ class MockGenerator:
 
 
     def share_galaxies(halos,halo_galaxies,cluster_galaxies, cosmo, halo_properties, detections_properties, obj):
+        
         halo_coordinates = {"RA":"RA" , "DEC":"DEC" , "z":"z", "ID":"ids"}   
         detections_coordinates =  {"RA":"RA" , "DEC":"DEC" , "z":"z"}
         
