@@ -254,7 +254,6 @@ _nc_galaxy_sd_shape_hsm_gauss_global_gen (NcGalaxySDShape *gsds, NcmMSet *mset, 
   gdouble theta                                = 0.0;
   gdouble phi                                  = 0.0;
   complex double e_o;
-  gdouble e1, e2, e1_int, e2_int;
   gdouble radius;
 
   nc_halo_position_prepare_if_needed (halo_position, cosmo);
