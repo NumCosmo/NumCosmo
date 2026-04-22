@@ -1,7 +1,7 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 
 /***************************************************************************
- *            nc_galaxy_sd_shape_gauss_hsc.c
+ *            nc_galaxy_sd_shape_hsm_gauss.c
  *
  *  Sun Jan 5 12:57:50 2025
  *  Copyright  2025  Caio Lima de Oliveira
@@ -10,7 +10,7 @@
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
- * nc_galaxy_sd_shape_gauss_hsc.c
+ * nc_galaxy_sd_shape_hsm_gauss.c
  * Copyright (C) 2025 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
@@ -29,7 +29,7 @@
  */
 
 /**
- * NcGalaxySDShapeGaussHSC:
+ * NcGalaxySDShapeHSMGauss:
  *
  * Class describing a galaxy sample shape distribution with a truncated gaussian p.d.f.
  * convoluted with gaussian noise and accounting for bias. Compatible with Subaru's Hyper
@@ -44,8 +44,8 @@
 
 #include "nc_enum_types.h"
 #include "galaxy/nc_galaxy_wl_obs.h"
-#include "galaxy/nc_galaxy_sd_shape_gauss_hsc.h"
-#include "galaxy/nc_galaxy_sd_shape_gauss.h"
+#include "galaxy/nc_galaxy_sd_shape_hsm_gauss.h"
+#include "galaxy/nc_galaxy_sd_shape_hsm_gauss_global.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "lss/nc_halo_position.h"
 #include "math/ncm_stats_vec.h"
@@ -56,19 +56,19 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 
-typedef struct _NcGalaxySDShapeGaussHSCPrivate
+typedef struct _NcGalaxySDShapeHSMGaussPrivate
 {
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_hp;
   NcmStatsVec *obs_stats;
-} NcGalaxySDShapeGaussHSCPrivate;
+} NcGalaxySDShapeHSMGaussPrivate;
 
-struct _NcGalaxySDShapeGaussHSC
+struct _NcGalaxySDShapeHSMGauss
 {
   NcGalaxySDShape parent_instance;
 };
 
-typedef struct _NcGalaxySDShapeGaussHSCData
+typedef struct _NcGalaxySDShapeHSMGaussData
 {
   gdouble epsilon_obs_1;
   gdouble epsilon_obs_2;
@@ -81,7 +81,7 @@ typedef struct _NcGalaxySDShapeGaussHSCData
   gdouble radius;
   gdouble phi;
   NcWLSurfaceMassDensityOptzs optzs;
-} NcGalaxySDShapeGaussHSCData;
+} NcGalaxySDShapeHSMGaussData;
 
 enum
 {
@@ -89,12 +89,12 @@ enum
   PROP_LEN,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDShapeGaussHSC, nc_galaxy_sd_shape_gauss_hsc, NC_TYPE_GALAXY_SD_SHAPE);
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySDShapeHSMGauss, nc_galaxy_sd_shape_hsm_gauss, NC_TYPE_GALAXY_SD_SHAPE);
 
 static void
-nc_galaxy_sd_shape_gauss_hsc_init (NcGalaxySDShapeGaussHSC *gsdshsc)
+nc_galaxy_sd_shape_hsm_gauss_init (NcGalaxySDShapeHSMGauss *gsdshsc)
 {
-  NcGalaxySDShapeGaussHSCPrivate * const self = nc_galaxy_sd_shape_gauss_hsc_get_instance_private (gsdshsc);
+  NcGalaxySDShapeHSMGaussPrivate * const self = nc_galaxy_sd_shape_hsm_gauss_get_instance_private (gsdshsc);
 
   self->ctrl_cosmo = ncm_model_ctrl_new (NULL);
   self->ctrl_hp    = ncm_model_ctrl_new (NULL);
@@ -103,11 +103,11 @@ nc_galaxy_sd_shape_gauss_hsc_init (NcGalaxySDShapeGaussHSC *gsdshsc)
 
 /* LCOV_EXCL_START */
 static void
-_nc_galaxy_sd_shape_gauss_hsc_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_shape_hsm_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcGalaxySDShapeGaussHSC *gsdshsc = NC_GALAXY_SD_SHAPE_GAUSS_HSC (object);
+  NcGalaxySDShapeHSMGauss *gsdshsc = NC_GALAXY_SD_SHAPE_HSM_GAUSS (object);
 
-  g_return_if_fail (NC_IS_GALAXY_SD_SHAPE_GAUSS_HSC (gsdshsc));
+  g_return_if_fail (NC_IS_GALAXY_SD_SHAPE_HSM_GAUSS (gsdshsc));
 
   switch (prop_id)
   {
@@ -118,11 +118,11 @@ _nc_galaxy_sd_shape_gauss_hsc_set_property (GObject *object, guint prop_id, cons
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_hsc_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_galaxy_sd_shape_hsm_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxySDShapeGaussHSC *gsdshsc = NC_GALAXY_SD_SHAPE_GAUSS_HSC (object);
+  NcGalaxySDShapeHSMGauss *gsdshsc = NC_GALAXY_SD_SHAPE_HSM_GAUSS (object);
 
-  g_return_if_fail (NC_IS_GALAXY_SD_SHAPE_GAUSS_HSC (gsdshsc));
+  g_return_if_fail (NC_IS_GALAXY_SD_SHAPE_HSM_GAUSS (gsdshsc));
 
   switch (prop_id)
   {
@@ -135,56 +135,56 @@ _nc_galaxy_sd_shape_gauss_hsc_get_property (GObject *object, guint prop_id, GVal
 /* LCOV_EXCL_STOP */
 
 static void
-_nc_galaxy_sd_shape_gauss_hsc_dispose (GObject *object)
+_nc_galaxy_sd_shape_hsm_gauss_dispose (GObject *object)
 {
-  NcGalaxySDShapeGaussHSC *gsdshsc            = NC_GALAXY_SD_SHAPE_GAUSS_HSC (object);
-  NcGalaxySDShapeGaussHSCPrivate * const self = nc_galaxy_sd_shape_gauss_hsc_get_instance_private (gsdshsc);
+  NcGalaxySDShapeHSMGauss *gsdshsc            = NC_GALAXY_SD_SHAPE_HSM_GAUSS (object);
+  NcGalaxySDShapeHSMGaussPrivate * const self = nc_galaxy_sd_shape_hsm_gauss_get_instance_private (gsdshsc);
 
   ncm_model_ctrl_clear (&self->ctrl_cosmo);
   ncm_model_ctrl_clear (&self->ctrl_hp);
   ncm_stats_vec_clear (&self->obs_stats);
 
   /* Chain up: end */
-  G_OBJECT_CLASS (nc_galaxy_sd_shape_gauss_hsc_parent_class)->dispose (object);
+  G_OBJECT_CLASS (nc_galaxy_sd_shape_hsm_gauss_parent_class)->dispose (object);
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_hsc_finalize (GObject *object)
+_nc_galaxy_sd_shape_hsm_gauss_finalize (GObject *object)
 {
-  /* NcGalaxySDShapeGaussHSC *gsdshsc          = NC_GALAXY_SD_SHAPE_GAUSS_HSC (object); */
-  /* NcGalaxySDShapeGaussHSCPrivate * const self = nc_galaxy_sd_shape_gauss_hsc_get_instance_private (gsdshsc); */
+  /* NcGalaxySDShapeHSMGauss *gsdshsc          = NC_GALAXY_SD_SHAPE_HSM_GAUSS (object); */
+  /* NcGalaxySDShapeHSMGaussPrivate * const self = nc_galaxy_sd_shape_hsm_gauss_get_instance_private (gsdshsc); */
 
   /* Chain up: end */
-  G_OBJECT_CLASS (nc_galaxy_sd_shape_gauss_hsc_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_galaxy_sd_shape_hsm_gauss_parent_class)->finalize (object);
 }
 
-static void _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng);
-static NcGalaxySDShapeIntegrand *_nc_galaxy_sd_shape_gauss_hsc_integ (NcGalaxySDShape *gsds, gboolean use_lnp);
-static gboolean _nc_galaxy_sd_shape_gauss_hsc_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
-static void _nc_galaxy_sd_shape_gauss_hsc_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data);
-static void _nc_galaxy_sd_shape_gauss_hsc_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
+static void _nc_galaxy_sd_shape_hsm_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng);
+static NcGalaxySDShapeIntegrand *_nc_galaxy_sd_shape_hsm_gauss_integ (NcGalaxySDShape *gsds, gboolean use_lnp);
+static gboolean _nc_galaxy_sd_shape_hsm_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
+static void _nc_galaxy_sd_shape_hsm_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data);
+static void _nc_galaxy_sd_shape_hsm_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
 
 static void
-nc_galaxy_sd_shape_gauss_hsc_class_init (NcGalaxySDShapeGaussHSCClass *klass)
+nc_galaxy_sd_shape_hsm_gauss_class_init (NcGalaxySDShapeHSMGaussClass *klass)
 {
   NcGalaxySDShapeClass *sd_shape_class = NC_GALAXY_SD_SHAPE_CLASS (klass);
   GObjectClass *object_class           = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class           = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_nc_galaxy_sd_shape_gauss_hsc_set_property;
-  model_class->get_property = &_nc_galaxy_sd_shape_gauss_hsc_get_property;
-  object_class->dispose     = &_nc_galaxy_sd_shape_gauss_hsc_dispose;
-  object_class->finalize    = &_nc_galaxy_sd_shape_gauss_hsc_finalize;
+  model_class->set_property = &_nc_galaxy_sd_shape_hsm_gauss_set_property;
+  model_class->get_property = &_nc_galaxy_sd_shape_hsm_gauss_get_property;
+  object_class->dispose     = &_nc_galaxy_sd_shape_hsm_gauss_dispose;
+  object_class->finalize    = &_nc_galaxy_sd_shape_hsm_gauss_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Gaussian galaxy shape distribution for HSC data", "Gaussian shape for HSC data");
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
   ncm_model_class_check_params_info (model_class);
 
-  sd_shape_class->gen                = &_nc_galaxy_sd_shape_gauss_hsc_gen;
-  sd_shape_class->integ              = &_nc_galaxy_sd_shape_gauss_hsc_integ;
-  sd_shape_class->prepare_data_array = &_nc_galaxy_sd_shape_gauss_hsc_prepare_data_array;
-  sd_shape_class->data_init          = &_nc_galaxy_sd_shape_gauss_hsc_data_init;
-  sd_shape_class->direct_estimate    = &_nc_galaxy_sd_shape_gauss_hsc_direct_estimate;
+  sd_shape_class->gen                = &_nc_galaxy_sd_shape_hsm_gauss_gen;
+  sd_shape_class->integ              = &_nc_galaxy_sd_shape_hsm_gauss_integ;
+  sd_shape_class->prepare_data_array = &_nc_galaxy_sd_shape_hsm_gauss_prepare_data_array;
+  sd_shape_class->data_init          = &_nc_galaxy_sd_shape_hsm_gauss_data_init;
+  sd_shape_class->direct_estimate    = &_nc_galaxy_sd_shape_hsm_gauss_direct_estimate;
 }
 
 static complex double
@@ -202,9 +202,9 @@ _gauss_cut_gen (NcmRNG *rng, const gdouble sigma)
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng)
+_nc_galaxy_sd_shape_hsm_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng)
 {
-  NcGalaxySDShapeGaussHSCData *ldata           = (NcGalaxySDShapeGaussHSCData *) data->ldata;
+  NcGalaxySDShapeHSMGaussData *ldata           = (NcGalaxySDShapeHSMGaussData *) data->ldata;
   NcHICosmo *cosmo                             = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHaloPosition *halo_position                = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   NcWLSurfaceMassDensity *surface_mass_density = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
@@ -277,7 +277,7 @@ _nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
 
 struct _IntegData
 {
-  NcGalaxySDShapeGaussHSC *gsdshsc;
+  NcGalaxySDShapeHSMGauss *gsdshsc;
   NcGalaxySDShapeData *data;
   NcHICosmo *cosmo;
   NcHaloPosition *halo_position;
@@ -318,11 +318,11 @@ _integ_data_free (gpointer user_data)
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_hsc_pre_integ (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data, gdouble *total_var, gdouble *chi2_1, gdouble *chi2_2, gdouble *lndetjac)
+_nc_galaxy_sd_shape_hsm_gauss_pre_integ (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data, gdouble *total_var, gdouble *chi2_1, gdouble *chi2_2, gdouble *lndetjac)
 {
   struct _IntegData *int_data        = (struct _IntegData *) callback_data;
   NcGalaxySDShape *gsds              = NC_GALAXY_SD_SHAPE (int_data->gsdshsc);
-  NcGalaxySDShapeGaussHSCData *ldata = (NcGalaxySDShapeGaussHSCData *) data->ldata;
+  NcGalaxySDShapeHSMGaussData *ldata = (NcGalaxySDShapeHSMGaussData *) data->ldata;
   gdouble z_cl                       = nc_halo_position_get_redshift (int_data->halo_position);
   gdouble phi                        = ldata->phi;
   gdouble e1                         = ldata->epsilon_obs_1;
@@ -371,21 +371,21 @@ _nc_galaxy_sd_shape_gauss_hsc_pre_integ (gpointer callback_data, const gdouble z
 }
 
 static gdouble
-_nc_galaxy_sd_shape_gauss_hsc_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data)
+_nc_galaxy_sd_shape_hsm_gauss_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data)
 {
   gdouble total_var, chi2_1, chi2_2, lndetjac;
 
-  _nc_galaxy_sd_shape_gauss_hsc_pre_integ (callback_data, z, data, &total_var, &chi2_1, &chi2_2, &lndetjac);
+  _nc_galaxy_sd_shape_hsm_gauss_pre_integ (callback_data, z, data, &total_var, &chi2_1, &chi2_2, &lndetjac);
 
   return exp (-0.5 * (chi2_1 + chi2_2) + lndetjac) / (2.0 * M_PI * total_var);
 }
 
 static gdouble
-_nc_galaxy_sd_shape_gauss_hsc_ln_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data)
+_nc_galaxy_sd_shape_hsm_gauss_ln_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data)
 {
   gdouble total_var, chi2_1, chi2_2, lndetjac;
 
-  _nc_galaxy_sd_shape_gauss_hsc_pre_integ (callback_data, z, data, &total_var, &chi2_1, &chi2_2, &lndetjac);
+  _nc_galaxy_sd_shape_hsm_gauss_pre_integ (callback_data, z, data, &total_var, &chi2_1, &chi2_2, &lndetjac);
 
   return -0.5 * (chi2_1 + chi2_2) + lndetjac - log (2.0 * M_PI * total_var);
 }
@@ -419,11 +419,11 @@ _integ_data_prepare (gpointer user_data, NcmMSet *mset)
 }
 
 static NcGalaxySDShapeIntegrand *
-_nc_galaxy_sd_shape_gauss_hsc_integ (NcGalaxySDShape *gsds, gboolean use_lnp)
+_nc_galaxy_sd_shape_hsm_gauss_integ (NcGalaxySDShape *gsds, gboolean use_lnp)
 {
-  NcGalaxySDShapeGaussHSC *gsdshsc = NC_GALAXY_SD_SHAPE_GAUSS_HSC (gsds);
+  NcGalaxySDShapeHSMGauss *gsdshsc = NC_GALAXY_SD_SHAPE_HSM_GAUSS (gsds);
   struct _IntegData *int_data      = g_new0 (struct _IntegData, 1);
-  NcGalaxySDShapeIntegrand *integ  = nc_galaxy_sd_shape_integrand_new (use_lnp ? _nc_galaxy_sd_shape_gauss_hsc_ln_integ_f : _nc_galaxy_sd_shape_gauss_hsc_integ_f,
+  NcGalaxySDShapeIntegrand *integ  = nc_galaxy_sd_shape_integrand_new (use_lnp ? _nc_galaxy_sd_shape_hsm_gauss_ln_integ_f : _nc_galaxy_sd_shape_hsm_gauss_integ_f,
                                                                        _integ_data_free,
                                                                        _integ_data_copy,
                                                                        _integ_data_prepare,
@@ -435,10 +435,10 @@ _nc_galaxy_sd_shape_gauss_hsc_integ (NcGalaxySDShape *gsds, gboolean use_lnp)
 }
 
 static gboolean
-_nc_galaxy_sd_shape_gauss_hsc_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array)
+_nc_galaxy_sd_shape_hsm_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array)
 {
-  NcGalaxySDShapeGaussHSC *gsdsghsc            = NC_GALAXY_SD_SHAPE_GAUSS_HSC (gsds);
-  NcGalaxySDShapeGaussHSCPrivate * const self  = nc_galaxy_sd_shape_gauss_hsc_get_instance_private (gsdsghsc);
+  NcGalaxySDShapeHSMGauss *gsdsghsc            = NC_GALAXY_SD_SHAPE_HSM_GAUSS (gsds);
+  NcGalaxySDShapeHSMGaussPrivate * const self  = nc_galaxy_sd_shape_hsm_gauss_get_instance_private (gsdsghsc);
   NcHICosmo *cosmo                             = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHaloPosition *halo_position                = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   NcWLSurfaceMassDensity *surface_mass_density = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
@@ -453,7 +453,7 @@ _nc_galaxy_sd_shape_gauss_hsc_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet
   for (i = 0; i < data_array->len; i++)
   {
     NcGalaxySDShapeData *data_i          = g_ptr_array_index (data_array, i);
-    NcGalaxySDShapeGaussHSCData *ldata_i = (NcGalaxySDShapeGaussHSCData *) data_i->ldata;
+    NcGalaxySDShapeHSMGaussData *ldata_i = (NcGalaxySDShapeHSMGaussData *) data_i->ldata;
 
     if ((update_radius) || (ldata_i->radius == 0.0))
     {
@@ -483,81 +483,81 @@ _nc_galaxy_sd_shape_gauss_hsc_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_hsc_ldata_free (gpointer ldata)
+_nc_galaxy_sd_shape_hsm_gauss_ldata_free (gpointer ldata)
 {
   g_free (ldata);
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_hsc_ldata_read_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i)
+_nc_galaxy_sd_shape_hsm_gauss_ldata_read_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  NcGalaxySDShapeGaussHSCData *ldata = (NcGalaxySDShapeGaussHSCData *) data->ldata;
+  NcGalaxySDShapeHSMGaussData *ldata = (NcGalaxySDShapeHSMGaussData *) data->ldata;
 
   nc_galaxy_sd_position_data_read_row (data->sdpos_data, obs, i);
 
-  ldata->epsilon_obs_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_1, i);
-  ldata->epsilon_obs_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_2, i);
-  ldata->std_shape     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_SHAPE, i);
-  ldata->sigma         = nc_galaxy_sd_shape_gauss_sigma_from_std_shape (ldata->std_shape);
-  ldata->std_noise     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_NOISE, i);
-  ldata->c1            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C1, i);
-  ldata->c2            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C2, i);
-  ldata->m             = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_M, i);
+  ldata->epsilon_obs_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_1, i);
+  ldata->epsilon_obs_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_2, i);
+  ldata->std_shape     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_SHAPE, i);
+  ldata->sigma         = nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (ldata->std_shape);
+  ldata->std_noise     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_NOISE, i);
+  ldata->c1            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C1, i);
+  ldata->c2            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C2, i);
+  ldata->m             = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_M, i);
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_hsc_ldata_write_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i)
+_nc_galaxy_sd_shape_hsm_gauss_ldata_write_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  NcGalaxySDShapeGaussHSCData *ldata = (NcGalaxySDShapeGaussHSCData *) data->ldata;
+  NcGalaxySDShapeHSMGaussData *ldata = (NcGalaxySDShapeHSMGaussData *) data->ldata;
 
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_1, i, ldata->epsilon_obs_1);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_2, i, ldata->epsilon_obs_2);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_SHAPE, i, ldata->std_shape);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_NOISE, i, ldata->std_noise);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C1, i, ldata->c1);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C2, i, ldata->c2);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_M, i, ldata->m);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_1, i, ldata->epsilon_obs_1);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_2, i, ldata->epsilon_obs_2);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_SHAPE, i, ldata->std_shape);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_NOISE, i, ldata->std_noise);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C1, i, ldata->c1);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C2, i, ldata->c2);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_M, i, ldata->m);
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_hsc_ldata_required_columns (NcGalaxySDShapeData *data, GList *columns)
+_nc_galaxy_sd_shape_hsm_gauss_ldata_required_columns (NcGalaxySDShapeData *data, GList *columns)
 {
-  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_1));
-  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_2));
-  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_SHAPE));
-  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_NOISE));
-  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C1));
-  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_C2));
-  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_GAUSS_HSC_COL_M));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_1));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_2));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_SHAPE));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_NOISE));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C1));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C2));
+  columns = g_list_append (columns, g_strdup (NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_M));
 }
 
 static gdouble
-_nc_galaxy_sd_shape_gauss_hsc_ldata_get_radius (NcGalaxySDShapeData *data)
+_nc_galaxy_sd_shape_hsm_gauss_ldata_get_radius (NcGalaxySDShapeData *data)
 {
-  NcGalaxySDShapeGaussHSCData *ldata = (NcGalaxySDShapeGaussHSCData *) data->ldata;
+  NcGalaxySDShapeHSMGaussData *ldata = (NcGalaxySDShapeHSMGaussData *) data->ldata;
 
   return ldata->radius;
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_hsc_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data)
+_nc_galaxy_sd_shape_hsm_gauss_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data)
 {
-  NcGalaxySDShapeGaussHSCData *ldata = g_new0 (NcGalaxySDShapeGaussHSCData, 1);
+  NcGalaxySDShapeHSMGaussData *ldata = g_new0 (NcGalaxySDShapeHSMGaussData, 1);
 
   data->sdpos_data             = sdpos_data;
   data->ldata                  = ldata;
-  data->ldata_destroy          = &_nc_galaxy_sd_shape_gauss_hsc_ldata_free;
-  data->ldata_read_row         = &_nc_galaxy_sd_shape_gauss_hsc_ldata_read_row;
-  data->ldata_write_row        = &_nc_galaxy_sd_shape_gauss_hsc_ldata_write_row;
-  data->ldata_required_columns = &_nc_galaxy_sd_shape_gauss_hsc_ldata_required_columns;
-  data->ldata_get_radius       = &_nc_galaxy_sd_shape_gauss_hsc_ldata_get_radius;
+  data->ldata_destroy          = &_nc_galaxy_sd_shape_hsm_gauss_ldata_free;
+  data->ldata_read_row         = &_nc_galaxy_sd_shape_hsm_gauss_ldata_read_row;
+  data->ldata_write_row        = &_nc_galaxy_sd_shape_hsm_gauss_ldata_write_row;
+  data->ldata_required_columns = &_nc_galaxy_sd_shape_hsm_gauss_ldata_required_columns;
+  data->ldata_get_radius       = &_nc_galaxy_sd_shape_hsm_gauss_ldata_get_radius;
 }
 
 static void
-_nc_galaxy_sd_shape_gauss_hsc_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho)
+_nc_galaxy_sd_shape_hsm_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho)
 {
-  NcGalaxySDShapeGaussHSC *gsdshsc            = NC_GALAXY_SD_SHAPE_GAUSS_HSC (gsds);
-  NcGalaxySDShapeGaussHSCPrivate * const self = nc_galaxy_sd_shape_gauss_hsc_get_instance_private (gsdshsc);
+  NcGalaxySDShapeHSMGauss *gsdshsc            = NC_GALAXY_SD_SHAPE_HSM_GAUSS (gsds);
+  NcGalaxySDShapeHSMGaussPrivate * const self = nc_galaxy_sd_shape_hsm_gauss_get_instance_private (gsdshsc);
   NcHICosmo *cosmo                            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHaloPosition *halo_position               = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   NcGalaxyWLObsEllipConv ellip_conv           = nc_galaxy_sd_shape_get_ellip_conv (gsds);
@@ -569,7 +569,7 @@ _nc_galaxy_sd_shape_gauss_hsc_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *m
   for (i = 0; i < data_array->len; i++)
   {
     NcGalaxySDShapeData *data_i          = g_ptr_array_index (data_array, i);
-    NcGalaxySDShapeGaussHSCData *ldata_i = (NcGalaxySDShapeGaussHSCData *) data_i->ldata;
+    NcGalaxySDShapeHSMGaussData *ldata_i = (NcGalaxySDShapeHSMGaussData *) data_i->ldata;
     const gdouble ra                     = data_i->sdpos_data->ra;
     const gdouble dec                    = data_i->sdpos_data->dec;
     const gdouble e1                     = ldata_i->epsilon_obs_1;
@@ -635,17 +635,17 @@ _nc_galaxy_sd_shape_gauss_hsc_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *m
 }
 
 /**
- * nc_galaxy_sd_shape_gauss_hsc_new:
+ * nc_galaxy_sd_shape_hsm_gauss_new:
  * @ellip_conv: a #NcGalaxyWLObsEllipConv
  *
- * Creates a new #NcGalaxySDShapeGaussHSC
+ * Creates a new #NcGalaxySDShapeHSMGauss
  *
- * Returns: (transfer full): a new NcGalaxySDShapeGaussHSC.
+ * Returns: (transfer full): a new NcGalaxySDShapeHSMGauss.
  */
-NcGalaxySDShapeGaussHSC *
-nc_galaxy_sd_shape_gauss_hsc_new (NcGalaxyWLObsEllipConv ellip_conv)
+NcGalaxySDShapeHSMGauss *
+nc_galaxy_sd_shape_hsm_gauss_new (NcGalaxyWLObsEllipConv ellip_conv)
 {
-  NcGalaxySDShapeGaussHSC *gsdshsc = g_object_new (NC_TYPE_GALAXY_SD_SHAPE_GAUSS_HSC,
+  NcGalaxySDShapeHSMGauss *gsdshsc = g_object_new (NC_TYPE_GALAXY_SD_SHAPE_HSM_GAUSS,
                                                    "ellip-conv", ellip_conv,
                                                    NULL);
 
@@ -653,49 +653,49 @@ nc_galaxy_sd_shape_gauss_hsc_new (NcGalaxyWLObsEllipConv ellip_conv)
 }
 
 /**
- * nc_galaxy_sd_shape_gauss_hsc_ref:
- * @gsdshsc: a #NcGalaxySDShapeGaussHSC
+ * nc_galaxy_sd_shape_hsm_gauss_ref:
+ * @gsdshsc: a #NcGalaxySDShapeHSMGauss
  *
  * Increase the reference of @gsdshsc by one.
  *
  * Returns: (transfer full): @gsdshsc.
  */
-NcGalaxySDShapeGaussHSC *
-nc_galaxy_sd_shape_gauss_hsc_ref (NcGalaxySDShapeGaussHSC *gsdshsc)
+NcGalaxySDShapeHSMGauss *
+nc_galaxy_sd_shape_hsm_gauss_ref (NcGalaxySDShapeHSMGauss *gsdshsc)
 {
   return g_object_ref (gsdshsc);
 }
 
 /**
- * nc_galaxy_sd_shape_gauss_hsc_free:
- * @gsdshsc: a #NcGalaxySDShapeGaussHSC
+ * nc_galaxy_sd_shape_hsm_gauss_free:
+ * @gsdshsc: a #NcGalaxySDShapeHSMGauss
  *
  * Decrease the reference count of @gsdshsc by one.
  *
  */
 void
-nc_galaxy_sd_shape_gauss_hsc_free (NcGalaxySDShapeGaussHSC *gsdshsc)
+nc_galaxy_sd_shape_hsm_gauss_free (NcGalaxySDShapeHSMGauss *gsdshsc)
 {
   g_object_unref (gsdshsc);
 }
 
 /**
- * nc_galaxy_sd_shape_gauss_hsc_clear:
- * @gsdshsc: a #NcGalaxySDShapeGaussHSC
+ * nc_galaxy_sd_shape_hsm_gauss_clear:
+ * @gsdshsc: a #NcGalaxySDShapeHSMGauss
  *
  * Decrease the reference count of @gsdshsc by one, and sets the pointer *@gsdshsc to
  * NULL.
  *
  */
 void
-nc_galaxy_sd_shape_gauss_hsc_clear (NcGalaxySDShapeGaussHSC **gsdshsc)
+nc_galaxy_sd_shape_hsm_gauss_clear (NcGalaxySDShapeHSMGauss **gsdshsc)
 {
   g_clear_object (gsdshsc);
 }
 
 /**
- * nc_galaxy_sd_shape_gauss_hsc_gen:
- * @gsdshsc: a #NcGalaxySDShapeGaussHSC
+ * nc_galaxy_sd_shape_hsm_gauss_gen:
+ * @gsdshsc: a #NcGalaxySDShapeHSMGauss
  * @mset: a #NcmMSet
  * @data: a #NcGalaxySDShapeData
  * @std_shape: the intrinsic shape dispersion
@@ -710,15 +710,15 @@ nc_galaxy_sd_shape_gauss_hsc_clear (NcGalaxySDShapeGaussHSC **gsdshsc)
  *
  */
 void
-nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShapeGaussHSC *gsdshsc, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble std_shape, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m, NcGalaxyWLObsCoord coord, NcmRNG *rng)
+nc_galaxy_sd_shape_hsm_gauss_gen (NcGalaxySDShapeHSMGauss *gsdshsc, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble std_shape, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m, NcGalaxyWLObsCoord coord, NcmRNG *rng)
 {
   NcGalaxySDShapeClass *sd_shape_class = NC_GALAXY_SD_SHAPE_GET_CLASS (gsdshsc);
-  NcGalaxySDShapeGaussHSCData *ldata   = (NcGalaxySDShapeGaussHSCData *) data->ldata;
+  NcGalaxySDShapeHSMGaussData *ldata   = (NcGalaxySDShapeHSMGaussData *) data->ldata;
 
   data->coord      = coord;
   ldata->std_shape = std_shape;
   ldata->std_noise = std_noise;
-  ldata->sigma     = nc_galaxy_sd_shape_gauss_sigma_from_std_shape (std_shape);
+  ldata->sigma     = nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (std_shape);
   ldata->c1        = c1;
   ldata->c2        = c2;
   ldata->m         = m;
@@ -727,8 +727,8 @@ nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShapeGaussHSC *gsdshsc, NcmMSet *mse
 }
 
 /**
- * nc_galaxy_sd_shape_gauss_hsc_data_set:
- * @gsdshsc: a #NcGalaxySDShapeGaussHSC
+ * nc_galaxy_sd_shape_hsm_gauss_data_set:
+ * @gsdshsc: a #NcGalaxySDShapeHSMGauss
  * @data: a #NcGalaxySDShapeData
  * @epsilon_obs_1: the observed ellipticity component 1
  * @epsilon_obs_2: the observed ellipticity component 2
@@ -742,14 +742,14 @@ nc_galaxy_sd_shape_gauss_hsc_gen (NcGalaxySDShapeGaussHSC *gsdshsc, NcmMSet *mse
  *
  */
 void
-nc_galaxy_sd_shape_gauss_hsc_data_set (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble std_shape, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m)
+nc_galaxy_sd_shape_hsm_gauss_data_set (NcGalaxySDShapeHSMGauss *gsdshsc, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble std_shape, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m)
 {
-  NcGalaxySDShapeGaussHSCData *ldata = (NcGalaxySDShapeGaussHSCData *) data->ldata;
+  NcGalaxySDShapeHSMGaussData *ldata = (NcGalaxySDShapeHSMGaussData *) data->ldata;
 
   ldata->epsilon_obs_1 = epsilon_obs_1;
   ldata->epsilon_obs_2 = epsilon_obs_2;
   ldata->std_shape     = std_shape;
-  ldata->sigma         = nc_galaxy_sd_shape_gauss_sigma_from_std_shape (std_shape);
+  ldata->sigma         = nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (std_shape);
   ldata->std_noise     = std_noise;
   ldata->c1            = c1;
   ldata->c2            = c2;
@@ -757,8 +757,8 @@ nc_galaxy_sd_shape_gauss_hsc_data_set (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalax
 }
 
 /**
- * nc_galaxy_sd_shape_gauss_hsc_data_get:
- * @gsdshsc: a #NcGalaxySDShapeGaussHSC
+ * nc_galaxy_sd_shape_hsm_gauss_data_get:
+ * @gsdshsc: a #NcGalaxySDShapeHSMGauss
  * @data: a #NcGalaxySDShapeData
  * @epsilon_obs_1: (out): the observed ellipticity component 1
  * @epsilon_obs_2: (out): the observed ellipticity component 2
@@ -772,9 +772,9 @@ nc_galaxy_sd_shape_gauss_hsc_data_set (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalax
  *
  */
 void
-nc_galaxy_sd_shape_gauss_hsc_data_get (NcGalaxySDShapeGaussHSC *gsdshsc, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *std_shape, gdouble *std_noise, gdouble *c1, gdouble *c2, gdouble *m)
+nc_galaxy_sd_shape_hsm_gauss_data_get (NcGalaxySDShapeHSMGauss *gsdshsc, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *std_shape, gdouble *std_noise, gdouble *c1, gdouble *c2, gdouble *m)
 {
-  NcGalaxySDShapeGaussHSCData *ldata = (NcGalaxySDShapeGaussHSCData *) data->ldata;
+  NcGalaxySDShapeHSMGaussData *ldata = (NcGalaxySDShapeHSMGaussData *) data->ldata;
 
   *epsilon_obs_1 = ldata->epsilon_obs_1;
   *epsilon_obs_2 = ldata->epsilon_obs_2;
