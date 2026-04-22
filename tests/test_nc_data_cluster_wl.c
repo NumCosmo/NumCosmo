@@ -404,9 +404,12 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
 
       if (NC_IS_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape))
       {
+        gdouble c1        = ncm_rng_uniform_gen (rng, C1_MIN, C1_MAX);
+        gdouble c2        = ncm_rng_uniform_gen (rng, C2_MIN, C2_MAX);
+        gdouble m         = ncm_rng_uniform_gen (rng, M_MIN, M_MAX);
         gdouble std_noise = ncm_rng_uniform_gen (rng, STD_NOISE_MIN, STD_NOISE_MAX);
 
-        nc_galaxy_sd_shape_hsm_gauss_global_gen (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape), test->mset, s_data, std_noise, test->ell_coord, rng);
+        nc_galaxy_sd_shape_hsm_gauss_global_gen (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape), test->mset, s_data, std_noise, c1, c2, m, test->ell_coord, rng);
       }
       else if (NC_IS_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape))
       {
@@ -489,7 +492,7 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
       std_shape =
         nc_galaxy_sd_shape_hsm_gauss_global_std_shape_from_sigma (
           ncm_model_orig_param_get (NCM_MODEL (test->galaxy_shape), NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_SIGMA)
-                                                      );
+                                                                 );
     else
       std_shape = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_SHAPE, i);
 
