@@ -184,8 +184,8 @@
 #include "galaxy/nc_galaxy_sd_true_redshift.h"
 #include "galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
-#include "galaxy/nc_galaxy_sd_shape_gauss.h"
-#include "galaxy/nc_galaxy_sd_shape_gauss_hsc.h"
+#include "galaxy/nc_galaxy_sd_shape_hsm_gauss.h"
+#include "galaxy/nc_galaxy_sd_shape_hsm_gauss_global.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_cbe.h"
@@ -816,8 +816,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_GAUSS_HSC);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_HSM_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
