@@ -82,6 +82,12 @@ void test_nc_distance_transverse_no_lambda (TestNcDistance *test, gconstpointer 
 void test_nc_distance_luminosity_no_lambda (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_angular_diameter_no_lambda (TestNcDistance *test, gconstpointer pdata);
 
+void test_nc_distance_comoving_volume_radial_integral_flat (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_comoving_volume_radial_integral_open (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_comoving_volume_radial_integral_closed (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_from_Dc_functions (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_wrapper_functions (TestNcDistance *test, gconstpointer pdata);
+
 void test_nc_distance_free (TestNcDistance *test, gconstpointer pdata);
 
 gint
@@ -315,6 +321,54 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_angular_diameter_no_lambda,
               &test_nc_distance_free);
 
+  /*
+   * Testing comoving_volume_radial_integral with GSL numerical integration
+   */
+  g_test_add ("/nc/distance/comoving_volume_radial_integral/flat", TestNcDistance, NULL,
+              &test_nc_distance_new,
+              &test_nc_distance_comoving_volume_radial_integral_flat,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/comoving_volume_radial_integral/open", TestNcDistance, NULL,
+              &test_nc_distance_new_hyperbolic,
+              &test_nc_distance_comoving_volume_radial_integral_open,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/comoving_volume_radial_integral/closed", TestNcDistance, NULL,
+              &test_nc_distance_new_spherical,
+              &test_nc_distance_comoving_volume_radial_integral_closed,
+              &test_nc_distance_free);
+
+  /*
+   * Testing _from_Dc helper functions
+   */
+  g_test_add ("/nc/distance/from_Dc/flat", TestNcDistance, NULL,
+              &test_nc_distance_new,
+              &test_nc_distance_from_Dc_functions,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/from_Dc/open", TestNcDistance, NULL,
+              &test_nc_distance_new_hyperbolic,
+              &test_nc_distance_from_Dc_functions,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/from_Dc/closed", TestNcDistance, NULL,
+              &test_nc_distance_new_spherical,
+              &test_nc_distance_from_Dc_functions,
+              &test_nc_distance_free);
+
+  /*
+   * Testing wrapper functions with standard signature
+   */
+  g_test_add ("/nc/distance/wrappers/flat", TestNcDistance, NULL,
+              &test_nc_distance_new,
+              &test_nc_distance_wrapper_functions,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/wrappers/open", TestNcDistance, NULL,
+              &test_nc_distance_new_hyperbolic,
+              &test_nc_distance_wrapper_functions,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/wrappers/closed", TestNcDistance, NULL,
+              &test_nc_distance_new_spherical,
+              &test_nc_distance_wrapper_functions,
+              &test_nc_distance_free);
+
   g_test_run ();
 }
 
@@ -376,7 +430,7 @@ test_nc_distance_new_spherical (TestNcDistance *test, gconstpointer pdata)
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B,   0.045);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo), NULL);
-  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 1.0e-1, NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", -1.0e-1, NULL);
 
   nc_distance_prepare (dist, cosmo);
 }
@@ -404,7 +458,7 @@ test_nc_distance_new_hyperbolic (TestNcDistance *test, gconstpointer pdata)
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B,   0.045);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
   nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (test->cosmo), NULL);
-  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", -1.0e-1, NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegak", 1.0e-1, NULL);
 
   nc_distance_prepare (dist, cosmo);
 }
@@ -1002,6 +1056,242 @@ test_nc_distance_angular_diameter_no_lambda (TestNcDistance *test, gconstpointer
       g_assert_not_reached ();
 
       break;
+  }
+}
+
+/*
+ * Helper structure and function for GSL integration in volume radial integral tests
+ */
+typedef struct _TestIntegrandData
+{
+  gdouble Omega_k;
+} TestIntegrandData;
+
+static gdouble
+_volume_integrand (gdouble chi_prime, void *params)
+{
+  TestIntegrandData *data = (TestIntegrandData *) params;
+  const gdouble Omega_k   = data->Omega_k;
+
+  if (fabs (Omega_k) > NCM_ZERO_LIMIT)
+  {
+    const gdouble abs_Ok  = fabs (Omega_k);
+    const gdouble sqrt_Ok = sqrt (abs_Ok);
+    gdouble sinn_val;
+
+    if (Omega_k > 0.0)
+      sinn_val = sinh (sqrt_Ok * chi_prime);
+    else
+      sinn_val = sin (sqrt_Ok * chi_prime);
+
+    return (sinn_val * sinn_val) / abs_Ok;
+  }
+  else
+  {
+    return chi_prime * chi_prime;
+  }
+}
+
+void
+test_nc_distance_comoving_volume_radial_integral_flat (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo      = test->cosmo;
+  const gdouble Omega_k = nc_hicosmo_Omega_k0 (cosmo);
+  guint i;
+
+  /* Verify we're in a flat universe */
+  g_assert_cmpfloat (fabs (Omega_k), <, NCM_ZERO_LIMIT);
+
+  /* Test for various values of chi */
+  for (i = 0; i < test->ntests; i++)
+  {
+    const gdouble chi               = g_test_rand_double_range (1.0e-5, 10.0);
+    const gdouble result_func       = nc_distance_radial_volume_integral_from_Dc (chi, Omega_k);
+    const gdouble result_analytical = chi * chi * chi / 3.0;
+
+    ncm_assert_cmpdouble_e (result_func, ==, result_analytical, 1.0e-14, 0.0);
+
+    /* Also test with GSL integration */
+    {
+      TestIntegrandData data;
+      gsl_function F;
+      gdouble result_gsl, error;
+      gsl_integration_workspace *w = gsl_integration_workspace_alloc (1000);
+
+      data.Omega_k = Omega_k;
+      F.function   = &_volume_integrand;
+      F.params     = &data;
+
+      gsl_integration_qag (&F, 0.0, chi, 1.0e-10, 1.0e-10, 1000,
+                           GSL_INTEG_GAUSS61, w, &result_gsl, &error);
+
+      ncm_assert_cmpdouble_e (result_func, ==, result_gsl, 1.0e-10, 0.0);
+
+      gsl_integration_workspace_free (w);
+    }
+  }
+}
+
+void
+test_nc_distance_comoving_volume_radial_integral_open (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo      = test->cosmo;
+  const gdouble Omega_k = nc_hicosmo_Omega_k0 (cosmo);
+  guint i;
+
+  /* Verify we're in an open universe */
+  g_assert_cmpfloat (Omega_k, >, NCM_ZERO_LIMIT);
+
+  /* Test both small and large chi values to exercise both code paths */
+  for (i = 0; i < test->ntests; i++)
+  {
+    const gdouble chi         = g_test_rand_double_range (1.0e-5, 5.0);
+    const gdouble result_func = nc_distance_radial_volume_integral_from_Dc (chi, Omega_k);
+
+    /* Compare against GSL numerical integration */
+    {
+      TestIntegrandData data;
+      gsl_function F;
+      gdouble result_gsl, error;
+      gsl_integration_workspace *w = gsl_integration_workspace_alloc (1000);
+
+      data.Omega_k = Omega_k;
+      F.function   = &_volume_integrand;
+      F.params     = &data;
+
+      gsl_integration_qag (&F, 0.0, chi, 1.0e-10, 1.0e-10, 1000,
+                           GSL_INTEG_GAUSS61, w, &result_gsl, &error);
+
+      ncm_assert_cmpdouble_e (result_func, ==, result_gsl, 1.0e-9, 0.0);
+
+      gsl_integration_workspace_free (w);
+    }
+  }
+
+  /* Also test the analytical formula for large chi */
+  for (i = 0; i < 100; i++)
+  {
+    const gdouble chi         = g_test_rand_double_range (0.5, 5.0);
+    const gdouble result_func = nc_distance_radial_volume_integral_from_Dc (chi, Omega_k);
+    const gdouble abs_Ok      = fabs (Omega_k);
+    const gdouble sqrt_Ok     = sqrt (abs_Ok);
+    const gdouble u           = 2.0 * chi * sqrt_Ok;
+
+    if (u * u >= 0.04)
+    {
+      const gdouble Ok32              = abs_Ok * sqrt_Ok;
+      const gdouble result_analytical = (sinh (u) - u) / (4.0 * Ok32);
+
+      ncm_assert_cmpdouble_e (result_func, ==, result_analytical, 1.0e-14, 0.0);
+    }
+  }
+}
+
+void
+test_nc_distance_comoving_volume_radial_integral_closed (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo      = test->cosmo;
+  const gdouble Omega_k = nc_hicosmo_Omega_k0 (cosmo);
+  guint i;
+
+  /* Verify we're in a closed universe */
+  g_assert_cmpfloat (-Omega_k, >, NCM_ZERO_LIMIT);
+
+  /* Test both small and large chi values to exercise both code paths */
+  for (i = 0; i < test->ntests; i++)
+  {
+    const gdouble chi         = g_test_rand_double_range (1.0e-5, 3.0);
+    const gdouble result_func = nc_distance_radial_volume_integral_from_Dc (chi, Omega_k);
+
+    /* Compare against GSL numerical integration */
+    {
+      TestIntegrandData data;
+      gsl_function F;
+      gdouble result_gsl, error;
+      gsl_integration_workspace *w = gsl_integration_workspace_alloc (1000);
+
+      data.Omega_k = Omega_k;
+      F.function   = &_volume_integrand;
+      F.params     = &data;
+
+      gsl_integration_qag (&F, 0.0, chi, 1.0e-10, 1.0e-10, 1000,
+                           GSL_INTEG_GAUSS61, w, &result_gsl, &error);
+
+      ncm_assert_cmpdouble_e (result_func, ==, result_gsl, 1.0e-9, 0.0);
+
+      gsl_integration_workspace_free (w);
+    }
+  }
+
+  /* Also test the analytical formula for large chi */
+  for (i = 0; i < 100; i++)
+  {
+    const gdouble chi         = g_test_rand_double_range (0.5, 3.0);
+    const gdouble result_func = nc_distance_radial_volume_integral_from_Dc (chi, Omega_k);
+    const gdouble sqrt_Ok     = sqrt (Omega_k);
+    const gdouble u           = 2.0 * chi * sqrt_Ok;
+
+    if (u * u >= 0.04)
+    {
+      const gdouble Ok32              = Omega_k * sqrt_Ok;
+      const gdouble result_analytical = (u - sin (u)) / (4.0 * Ok32);
+
+      ncm_assert_cmpdouble_e (result_func, ==, result_analytical, 1.0e-14, 0.0);
+    }
+  }
+}
+
+void
+test_nc_distance_from_Dc_functions (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo      = test->cosmo;
+  NcDistance *dist      = test->dist;
+  const gdouble Omega_k = nc_hicosmo_Omega_k0 (cosmo);
+  guint i;
+
+  /* Test _from_Dc functions match the standard functions */
+  for (i = 0; i < 100; i++)
+  {
+    const gdouble z  = g_test_rand_double_range (0.1, 5.0);
+    const gdouble Dc = nc_distance_comoving (dist, cosmo, z);
+
+    /* Test transverse */
+    const gdouble Dt_standard = nc_distance_transverse (dist, cosmo, z);
+    const gdouble Dt_from_Dc  = nc_distance_transverse_from_Dc (Dc, Omega_k);
+
+    ncm_assert_cmpdouble_e (Dt_standard, ==, Dt_from_Dc, 1.0e-14, 0.0);
+
+    /* Test luminosity */
+    const gdouble Dl_standard = nc_distance_luminosity (dist, cosmo, z);
+    const gdouble Dl_from_Dc  = nc_distance_luminosity_from_Dc (Dc, Omega_k, z);
+
+    ncm_assert_cmpdouble_e (Dl_standard, ==, Dl_from_Dc, 1.0e-14, 0.0);
+
+    /* Test angular diameter */
+    const gdouble DA_standard = nc_distance_angular_diameter (dist, cosmo, z);
+    const gdouble DA_from_Dc  = nc_distance_angular_diameter_from_Dc (Dc, Omega_k, z);
+
+    ncm_assert_cmpdouble_e (DA_standard, ==, DA_from_Dc, 1.0e-14, 0.0);
+  }
+}
+
+void
+test_nc_distance_wrapper_functions (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo      = test->cosmo;
+  NcDistance *dist      = test->dist;
+  const gdouble Omega_k = nc_hicosmo_Omega_k0 (cosmo);
+  guint i;
+
+  /* Test that the wrapper function matches calling the low-level function directly */
+  for (i = 0; i < 100; i++)
+  {
+    const gdouble z              = g_test_rand_double_range (0.1, 5.0);
+    const gdouble Dc             = nc_distance_comoving (dist, cosmo, z);
+    const gdouble result_wrapper = nc_distance_comoving_volume_radial_integral (dist, cosmo, z);
+    const gdouble result_from_Dc = nc_distance_radial_volume_integral_from_Dc (Dc, Omega_k);
+
+    ncm_assert_cmpdouble_e (result_wrapper, ==, result_from_Dc, 1.0e-14, 0.0);
   }
 }
 
