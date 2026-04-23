@@ -68,8 +68,11 @@ struct _NcXcorKernelClusterTophat
   /*< private >*/
   NcXcorKernelCluster parent_instance;
 
+  NcDistance *dist;
   gdouble z_lower;
   gdouble z_upper;
+  gdouble V_upper;
+  gdouble V_lower;
 
   NcXcorKernelComponent *clustering_comp;
 };
@@ -117,6 +120,7 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_CLUSTER_TOPHAT,
 static void
 nc_xcor_kernel_cluster_tophat_init (NcXcorKernelClusterTophat *xclkc)
 {
+  xclkc->dist            = NULL;
   xclkc->z_lower         = 0.0;
   xclkc->z_upper         = 1.0;
   xclkc->clustering_comp = NULL;
@@ -170,6 +174,7 @@ nc_xcor_kernel_cluster_tophat_dispose (GObject *object)
   NcXcorKernelClusterTophat *xclkc = NC_XCOR_KERNEL_CLUSTER_TOPHAT (object);
 
   nc_xcor_kernel_component_clear (&xclkc->clustering_comp);
+  nc_distance_clear (&xclkc->dist);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_cluster_tophat_parent_class)->dispose (object);
@@ -209,6 +214,7 @@ nc_xcor_kernel_cluster_tophat_constructed (GObject *object)
     NcmPowspec *ps                   = nc_xcor_kernel_peek_powspec (xclk);
 
     g_assert (xclkc->z_upper > xclkc->z_lower);
+    xclkc->dist = nc_distance_ref (dist);
 
     /* Create clustering component */
     g_assert_null (xclkc->clustering_comp);
@@ -317,15 +323,17 @@ _nc_xcor_kernel_cluster_tophat_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cos
 {
   NcXcorKernelClusterTophat *xclkc = NC_XCOR_KERNEL_CLUSTER_TOPHAT (xclk);
   const gdouble dndz               = _nc_xcor_kernel_cluster_tophat_dndz (xclkc, z);
-  const gdouble xi                 = xck->xi_z;
+  const gdouble xi_t               = nc_distance_transverse (xclkc->dist, cosmo, z);
 
-  return xi * xi * dndz;
+  return xi_t * xi_t * dndz;
 }
 
 static gdouble
 _nc_xcor_kernel_cluster_tophat_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
 {
-  return 1.0;
+  NcXcorKernelClusterTophat *xclkc = NC_XCOR_KERNEL_CLUSTER_TOPHAT (xclk);
+
+  return 1.0 / (xclkc->V_upper - xclkc->V_lower);
 }
 
 static void
@@ -337,6 +345,9 @@ _nc_xcor_kernel_cluster_tophat_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
+
+  xclkc->V_lower = nc_distance_comoving_volume_radial_integral (dist, cosmo, xclkc->z_lower);
+  xclkc->V_upper = nc_distance_comoving_volume_radial_integral (dist, cosmo, xclkc->z_upper);
 
   g_assert_nonnull (xclkc->clustering_comp);
   nc_xcor_kernel_component_prepare (xclkc->clustering_comp, cosmo);
