@@ -27,8 +27,8 @@ class MockGenerator:
     def __init__(
         self,
         cosmo: Nc.HICosmo,
-        halo_set_size: tuple[float, float] | None = 200,
-        cluster_set_size: tuple[float, float] | None = 100,
+        halo_set_size: int | None = 200,
+        cluster_set_size: int | None = 100,
         ra_interval: tuple[float, float] | None = (-10, 10),
         dec_interval: tuple[float, float] | None = (-10, 10),
         z_interval: tuple[float, float] | None = (0.2, 0.5),
@@ -198,7 +198,7 @@ class MockGenerator:
     def get_R200c(self, mass, z):
         """Calculate R_{200c} for a given mass and redshift."""
         
-        return ((3 * mass) / (4 * np.pi * 200 * self.rho_crit(self.cosmo, z)))**(1/3)
+        return ((3 * mass) / (4 * np.pi * 200 * self.rho_crit(z)))**(1/3)
     
 
 
@@ -250,9 +250,12 @@ class MockGenerator:
         if clusters is None:
             clusters = self.generate_clusters()
 
+        dist = self.dist()
+
         cluster_x1 = clusters['x1']
         cluster_x2 = clusters['x2']
         cluster_x3 = clusters['x3']
+        cluster_r = clusters['cluster_r']
         cluster_logm = clusters['Mass'] 
 
         # Generate halo positions, redshifts, and masses around the clusters
@@ -269,23 +272,23 @@ class MockGenerator:
         
         # Add more halos randomly
         DELTA_OBJECTS = self.halo_set_size - self.cluster_set_size
+
         halo_ra = np.append(halo_ra, np.random.uniform(self.ra_min, self.ra_max, DELTA_OBJECTS))
         halo_dec = np.append(halo_dec, np.random.uniform(self.dec_min, self.dec_max, DELTA_OBJECTS))
         halo_z = np.append(halo_z, np.random.uniform(self.z_min, self.z_max, DELTA_OBJECTS))
         halo_logm = np.append(
-            halo_logm, np.random.uniform(self.logm_add_halo_min, self.logm_add_halo_max, DELTA_OBJECTS)
+            halo_logm, np.random.uniform(np.log10(self.halo_mass_min), np.log10(self.halo_mass_max), DELTA_OBJECTS)
         )
-        
         # Compute R200 for halos and clusters
-        halos_R200c = self.get_R200c(10**halo_logm, halos_z)
+        halos_R200c = self.get_R200c(10**halo_logm, halo_z)
 
         # Create the halo ID
         halo_id = np.array([int(i + 200000) for i in range(len(halo_z))])
         
         # Table with halos properties
-        halos = Table([halo_id, halo_ra, halo_dec, halo_z, halo_logm, halos_R200c, halo_x1, halo_x2, halo_x3, halo_r], 
-                    names=("halo_id", "RA", "DEC", "z", "Mass", "R200c", "x1", "x2", "x3", "halo_r"), 
-                    dtype=(int, float, float, float, float, float, float, float, float, float))
+        halos = Table([halo_id, halo_ra, halo_dec, halo_z, halo_logm, halos_R200c], #halo_x1, halo_x2, halo_x3, halo_r
+                    names=("halo_id", "RA", "DEC", "z", "Mass", "R200c"), #, "x1", "x2", "x3", "halo_r"
+                    dtype=(int, float, float, float, float, float)) #float, float, float, float
 
         return halos
 
@@ -366,8 +369,8 @@ class MockGenerator:
         return n_cen, n_sat
 
 
-
-    def generate_galaxies(self, catalog, object_type='halo'): 
+    
+    def generate_galaxies(self, catalog, object_type):
         
         if object_type == 'halo':
             obj_id_base = 200000
@@ -391,7 +394,7 @@ class MockGenerator:
             object_ra = catalog['RA'][i]
             object_dec = catalog['DEC'][i]
             object_z = catalog['z'][i]
-            object_r200 = catalog['R200'][i]
+            object_r200 = catalog['R200c'][i]
         
             # Generate local coordinates
             # Central is at (0,0,0), Satellites follow NFW/Uniform profile
@@ -410,7 +413,7 @@ class MockGenerator:
             Hz = self.cosmo.H(object_z)
             
             distancia_radial = galaxy_R * np.cos(galaxy_theta) 
-            delta_z = (Hz / C_LIGHT) * distancia_radial
+            delta_z = (Hz / self.C_LIGHT) * distancia_radial
             z_galaxy = object_z + delta_z
         
         
@@ -464,64 +467,70 @@ class MockGenerator:
         return galaxy_catalog
 
 
-    def share_galaxies(halos,halo_galaxies,cluster_galaxies, cosmo, halo_properties, detections_properties, obj):
+    
+    def match_galaxies_to_objects(self, object_catalog, galaxy_catalog, object_type):
+        """Match galaxies to objects using SkyMatch.
+
+        :param Table object_catalog: Astropy Table with object properties.
+        :param Table galaxy_catalog: Astropy Table with galaxy properties.
+
+        :return Table: halo_galaxies: Updated Astropy Table with matched galaxies to objects."""
+
         
-        halo_coordinates = {"RA":"RA" , "DEC":"DEC" , "z":"z", "ID":"ids"}   
-        detections_coordinates =  {"RA":"RA" , "DEC":"DEC" , "z":"z"}
+
+    def get_common_galaxies_by_distance(self, object_catalog, galaxy_catalog, object_type):
         
-        
-        halos_m = sky_match.SkyMatch(
-                    query_data=halos, 
-                    query_coordinates=halo_coordinates,
-                    match_data=cluster_galaxies,
-                    match_coordinates=detections_coordinates
+        object_coordinates = {"RA":"RA" , "DEC":"DEC" , "z":"z"}   
+        galaxy_coordinates =  {"RA":"RA" , "DEC":"DEC" , "z":"z"}
+
+        obj_id = '%s_id' % (object_type)
+        obj_mass = '%s_mass' % (object_type)
+        obj_properties  = {obj_id: obj_id, 'Mass': obj_mass, "R200c":"R200c"}
+         
+        obj_m = sky_match.SkyMatch(
+                    query_data=object_catalog, 
+                    query_coordinates=object_coordinates,
+                    match_data=galaxy_catalog,
+                    match_coordinates=galaxy_coordinates
                 )
-        halos_matched = halos_m.match_3d(cosmo, 20)
-        halos_table = halos_matched.to_table_complete(query_properties=halo_properties , match_properties=detections_properties)
+        matched_gal = obj_m.match_3d(self.cosmo, 20)
         
-        # 1. Criar a lista de matches filtrados manualmente para evitar o erro de conversão
-        # Isso substitui o explode e o filtro de distância em um único passo eficiente
+        matched_gal_table = matched_gal.to_table_complete(query_properties=obj_properties)
+               
+
         matched_data = []
-        for h7 in halos_table:
-            # Máscara booleana: True para galáxias dentro do R200
-            mask = h7['distances'] <= h7['R200']
+        for h7 in matched_gal_table:
+
+            mask = h7['distances'] <= h7['R200c']
             
-            # Pegamos apenas os índices que passaram no filtro
             indices = h7['Index_matched'][mask]
             
-            # Criamos uma linha para cada galáxia encontrada, repetindo os dados do halo
             for idx in indices:
                 matched_data.append({
                     'matched_index': idx,
-                    '%s_id' % (obj): h7['%s_id' % (obj)],
-                    '%s_z' % (obj): h7['z'],
-                    '%s_mass' % (obj): h7['%s_mass' % (obj)]
+                    '%s_id' % (object_type): h7['%s_id' % (object_type)],
+                    '%s_z' % (object_type): h7['z'],
+                    '%s_mass' % (object_type): h7['%s_mass' % (object_type)]
                 })
         
-        # 2. Transformar os matches em DataFrame
         df_matched = pd.DataFrame(matched_data)
         
-        # 3. Converter a tabela de galáxias para Pandas
-        # Filtramos apenas as colunas 1D para evitar o erro multidimensional se elas existirem lá também
-        names_gal = [name for name in cluster_galaxies.colnames if len(cluster_galaxies[name].shape) <= 1]
-        df_galaxies = cluster_galaxies[names_gal].to_pandas()
+        names_gal = [name for name in galaxy_catalog.colnames if len(galaxy_catalog[name].shape) <= 1]
+        df_galaxies = galaxy_catalog[names_gal].to_pandas()
         
-        # 4. Join (Merge) para trazer os dados RA, DEC, z, etc., das galáxias
-        # Usamos o 'matched_index' que guardamos acima para bater com o índice original da cluster_galaxies
         result_df = df_matched.merge(
             df_galaxies, 
             left_on='matched_index', 
             right_index=True
         )
         
-        # 5. Organizar o catálogo final
-        halo_galaxies_add = result_df[[
-            'galaxy_id', '%s_id' % (obj), 'RA', 'DEC', 'z', '%s_z' % (obj), '%s_mass' % (obj)
+        common_galaxies = result_df[[
+            'galaxy_id', '%s_id' % (object_type), 'RA', 'DEC', 'z', '%s_z' % (object_type), '%s_mass' % (object_type)
         ]].copy()
         
-        halo_galaxies_add['is_central'] = False
+        common_galaxies['is_central'] = False
 
-        halo_galaxies_add = Table.from_pandas(halo_galaxies_add)
-        halo_galaxies = vstack([halo_galaxies, halo_galaxies_add])
+        common_galaxies = Table.from_pandas(common_galaxies)
         
-        return halo_galaxies
+        return common_galaxies
+    
