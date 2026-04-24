@@ -50,3 +50,4 @@ struct _NcXcorKernelClusterClass
 G_END_DECLS
 
 #endif /* _NC_XCOR_KERNEL_CLUSTER_H_ */
+

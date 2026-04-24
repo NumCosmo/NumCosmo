@@ -116,14 +116,14 @@ void ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
 
 /* Domain expansion */
 void ncm_function_sample_set_expand_domain (NcmFunctionSampleSet     *fss,
-                                           NcmFunctionSampleSetFunc f,
-                                           const gdouble            x_min_hard,
-                                           const gdouble            x_max_hard,
-                                           const gdouble            expansion_factor,
-                                           const gdouble            epsilon,
-                                           const guint              max_iterations,
-                                           const guint              consecutive_tries,
-                                           gpointer                 user_data);
+                                            NcmFunctionSampleSetFunc f,
+                                            const gdouble            x_min_hard,
+                                            const gdouble            x_max_hard,
+                                            const gdouble            expansion_factor,
+                                            const gdouble            epsilon,
+                                            const guint              max_iterations,
+                                            const guint              consecutive_tries,
+                                            gpointer                 user_data);
 
 /* Debug */
 void ncm_function_sample_set_log_vals (NcmFunctionSampleSet *fss);

@@ -37,8 +37,9 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcXcorKernelClusterTophat, nc_xcor_kernel_cluster_tophat, NC, XCOR_KERNEL_CLUSTER_TOPHAT, NcXcorKernelCluster)
 
-NcXcorKernelClusterTophat *nc_xcor_kernel_cluster_tophat_new (NcDistance *dist, NcmPowspec *ps, gdouble z_lower, gdouble z_upper);
+NcXcorKernelClusterTophat *nc_xcor_kernel_cluster_tophat_new (NcDistance * dist, NcmPowspec * ps, gdouble z_lower, gdouble z_upper);
 
 G_END_DECLS
 
 #endif /* _NC_XCOR_KERNEL_CLUSTER_TOPHAT_H_ */
+
