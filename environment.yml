@@ -13,7 +13,7 @@ dependencies:
   - healpy
   - jupyterlab
   - libflint
-  - libfyaml
+  - libfyaml < 0.9.6
   - matplotlib
   - nlopt
   - numcosmo >= 0.25.0
