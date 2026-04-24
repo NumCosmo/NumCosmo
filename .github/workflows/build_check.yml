@@ -96,6 +96,10 @@ jobs:
         python3 -m pip install pytest pytest-tap pytest-lazy-fixtures --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
+    - name: Fix libfyaml.pc
+      run: |
+        pc=$(pkg-config --variable=pcfiledir libfyaml)/libfyaml.pc
+        sed -i '' 's/none required//g' "$pc" || true
     - name: Dump pkg-config info (cfitsio + libfyaml)
       run: |
         set -x
