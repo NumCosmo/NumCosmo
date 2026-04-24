@@ -96,6 +96,31 @@ jobs:
         python3 -m pip install pytest pytest-tap pytest-lazy-fixtures --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
+    - name: Dump pkg-config info (cfitsio + libfyaml)
+      run: |
+        set -x
+
+        echo "which pkg-config:"
+        which pkg-config || true
+
+        echo "version:"
+        pkg-config --version || true
+
+        echo "env:"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+        echo "PKG_CONFIG_LIBDIR=$PKG_CONFIG_LIBDIR"
+
+        echo "---- cfitsio ----"
+        pkg-config --libs cfitsio || true
+        pkg-config --cflags cfitsio || true
+        pkg-config --variable=pcfiledir cfitsio || true
+        pkg-config --debug --libs cfitsio || true
+
+        echo "---- libfyaml ----"
+        pkg-config --libs libfyaml || true
+        pkg-config --cflags libfyaml || true
+        pkg-config --variable=pcfiledir libfyaml || true
+        pkg-config --debug --libs libfyaml || true      
     - name: Configure NumCosmo
       run: |
         meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Dmpi=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
