@@ -99,7 +99,7 @@ class CompareFunc1d:
     @property
     def rel_diff_median(self) -> float:
         """Return the median relative difference."""
-        return np.median(self.abs_diff)
+        return float(np.median(self.abs_diff))
 
     @property
     def x_label(self) -> str:
