@@ -159,9 +159,6 @@ jobs:
       - name: Setting up NumCosmo
         run: |
           conda activate numcosmo_developer
-          [[ -e $GCC_AR ]] && AR=$GCC_AR
-          [[ -e $GCC_NM ]] && NM=$GCC_NM
-          [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
           meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
@@ -233,10 +230,7 @@ jobs:
       - name: Setting up NumCosmo
         run: |
           conda activate numcosmo_developer
-          [[ -e $GCC_AR ]] && AR=$GCC_AR
-          [[ -e $GCC_NM ]] && NM=$GCC_NM
-          [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
-          meson setup build -Dbuildtype=debug -Db_coverage=true -Db_lto=false -Dnumcosmo_py=true -Dfftw-planner=estimate -Dnumcosmo_debug=disabled --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
+          meson setup build -Dbuildtype=debug -Db_coverage=true -Dnumcosmo_py=true -Dfftw-planner=estimate -Dnumcosmo_debug=disabled --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
           meson compile -C build
