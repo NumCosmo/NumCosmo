@@ -128,7 +128,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup miniforge
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v4
         with:
           miniforge-version: latest
           python-version: ${{ matrix.python-version }}
@@ -202,7 +202,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup miniforge
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v4
         with:
           miniforge-version: latest
           python-version: ${{ matrix.python-version }}
