@@ -322,7 +322,7 @@ class MockGenerator:
                 cluster_ra_fake =  np.random.uniform(self.ra_min, self.ra_max, fake_clusters_size)
                 cluster_sin_dec_fake = np.random.uniform(np.sin(np.radians(self.dec_min)), np.sin(np.radians(self.dec_max)), fake_clusters_size)
                 cluster_dec_fake = np.degrees(np.arcsin(cluster_sin_dec_fake))
-                cluster_r_fake = np.array(dist.comoving_array(self.cosmo, cluster_z_fake))
+                cluster_r_fake = np.array(dist.comoving_array(self.cosmo, cluster_z_fake))  * self.cosmo.RH_Mpc()
                 cluster_x1_fake, cluster_x2_fake, cluster_x3_fake = self.get_3D_coordinates(cluster_ra_fake, cluster_dec_fake, cluster_r_fake)
 
                 cluster_ra = np.append(cluster_ra, cluster_ra_fake)
