@@ -377,7 +377,7 @@ _nc_xcor_kernel_cluster_tophat_get_component_list (NcXcorKernel *xclk)
   NcXcorKernelClusterTophat *xclkc = NC_XCOR_KERNEL_CLUSTER_TOPHAT (xclk);
   GPtrArray *comp_list             = g_ptr_array_new_with_free_func (g_object_unref);
 
-  g_ptr_array_add (comp_list, xclkc->clustering_comp);
+  g_ptr_array_add (comp_list, nc_xcor_kernel_component_ref (xclkc->clustering_comp));
 
   return comp_list;
 }
@@ -406,7 +406,9 @@ _clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo
 static gdouble
 _clustering_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l)
 {
-  return 1.0;
+  NcXcorKernelClusterTophat *xclkc = _NC_XCOR_KERNEL_COMPONENT_CLUSTER_TOPHAT_GET_DATA (comp)->xclkc;
+
+  return 1.0 / (xclkc->V_upper - xclkc->V_lower);
 }
 
 static void
