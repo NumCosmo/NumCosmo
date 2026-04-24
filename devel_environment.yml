@@ -39,7 +39,7 @@ dependencies:
   - pandas
   - pip
   - pip:
-      - pygobject-stubs
+      - pygobject-stubs < 2.17
       - pytest-tap
       - types-tabulate
   - plotnine < 0.15
