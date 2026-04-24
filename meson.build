@@ -8,8 +8,6 @@ project(
     'buildtype=debugoptimized',
     'warning_level=2',
     'c_std=gnu99',
-    'b_lto=true',
-    'b_lto_threads=2',
   ],
 )
 
