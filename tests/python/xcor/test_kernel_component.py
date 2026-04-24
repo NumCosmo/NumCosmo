@@ -339,7 +339,7 @@ def test_component_KL_max_value(
 
 
 def test_component_k_epsilon_drop(
-    kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
+    kernel_component_drop: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
     """Test that k_epsilon is where KL drops by epsilon from KL_max.
@@ -347,11 +347,7 @@ def test_component_k_epsilon_drop(
     The algorithm finds k_epsilon where KL(y/k_epsilon, k_epsilon) ≈ epsilon * KL_max.
     Since set_epsilon sets the squared threshold, we use epsilon^2 in the test.
     """
-    kernel_id, _, component = kernel_component
-    # Skip for cluster kernels which have step-function behavior rather than smooth
-    # falloff
-    if "cluster" in kernel_id:
-        pytest.skip(f"Skipping k_epsilon test for {kernel_id} (step-function kernel)")
+    _, _, component = kernel_component_drop
 
     cosmo = cosmology.cosmo
     epsilon = 1.0e-5
@@ -543,7 +539,7 @@ def test_component_KL_max_value1(
 
 
 def test_component_k_epsilon_drop1(
-    kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
+    kernel_component_drop: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
     cosmology: Cosmology,
 ) -> None:
     """Test that k_epsilon is where KL drops by epsilon from KL_max for k > k_max.
@@ -552,7 +548,7 @@ def test_component_k_epsilon_drop1(
     Since set_epsilon sets the squared threshold, we configure epsilon^2.
     Allows factor of 10 tolerance due to search algorithm behavior at boundaries.
     """
-    _, _, component = kernel_component
+    _, _, component = kernel_component_drop
     cosmo = cosmology.cosmo
     original_epsilon = component.get_epsilon()
     epsilon = 1.0e-5  # Use larger epsilon for more reliable testing

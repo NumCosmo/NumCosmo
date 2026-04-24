@@ -138,9 +138,6 @@ def test_xcor_compute_methods(
 # Kernel-Level Integrator Tests
 
 
-@pytest.mark.skip(
-    reason="Kernel integrator test with recomb crashes - needs investigation"
-)
 def test_kernel_integrator_types(cosmology: Cosmology) -> None:
     """Test different kernel-level integrator types for CMB ISW.
 

@@ -328,7 +328,7 @@ def test_cmb_lens_auto(
 ) -> None:
     """Compare NumCosmo and CCL CMB lensing auto-correlation power spectrum.
 
-    Tests that the integrated angular power spectrum C_ℓ matches between
+    Tests that the integrated angular power spectrum C_ell matches between
     NumCosmo and CCL for CMB lensing across a range of multipoles.
     """
     cosmo = nc_cosmo_eh_linear.cosmo
@@ -376,9 +376,6 @@ def test_cmb_lens_auto(
 # Comparison Helper Function Tests
 
 
-@pytest.mark.skip(
-    reason="compare_cmb_lens_kernel and related helper functions are broken"
-)
 @pytest.mark.parametrize("n_points", [None, 400])
 def test_compare_kernels(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
@@ -425,7 +422,6 @@ def test_compare_kernels(
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-4, atol=1.0e-12)
 
 
-@pytest.mark.skip(reason="compare_cmb_len_auto and related helper functions are broken")
 @pytest.mark.parametrize("n_points", [None, 400])
 def test_compare_autocorrelation(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
@@ -434,7 +430,7 @@ def test_compare_autocorrelation(
 ) -> None:
     """Compare auto-correlation power spectra using NumCosmo CCL comparison helpers.
 
-    Tests that the angular power spectrum C_ℓ matches between CCL and NumCosmo
+    Tests that the angular power spectrum C_ell matches between CCL and NumCosmo
     for all tracer auto-correlations across a range of multipoles.
 
     Args:

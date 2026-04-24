@@ -450,13 +450,10 @@ def _get_kernel_components_spec() -> list[tuple[str, int]]:
     ]
 
 
-@pytest.fixture(
-    name="kernel_component", params=_get_kernel_components_spec(), ids=lambda x: x[0]
-)
-def fixture_kernel_component(
+def _prepare_kernel_component(
     request: pytest.FixtureRequest, cosmology: ncpy.Cosmology
 ) -> tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent]:
-    """Fixture for kernel components."""
+    """Helper to prepare kernel components for fixtures."""
     components = _get_kernel_components()
     comp_idx = request.param[1]
     kernel_name: str
@@ -468,6 +465,28 @@ def fixture_kernel_component(
     else:
         component.prepare(cosmology.cosmo)
     return kernel_name, kernel, component
+
+
+@pytest.fixture(
+    name="kernel_component", params=_get_kernel_components_spec(), ids=lambda x: x[0]
+)
+def fixture_kernel_component(
+    request: pytest.FixtureRequest, cosmology: ncpy.Cosmology
+) -> tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent]:
+    """Fixture for kernel components."""
+    return _prepare_kernel_component(request, cosmology)
+
+
+@pytest.fixture(
+    name="kernel_component_drop",
+    params=[spec for spec in _get_kernel_components_spec() if "tophat" not in spec[0]],
+    ids=lambda x: x[0],
+)
+def fixture_kernel_component_drop(
+    request: pytest.FixtureRequest, cosmology: ncpy.Cosmology
+) -> tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent]:
+    """Fixture for kernel components (excluding tophat)."""
+    return _prepare_kernel_component(request, cosmology)
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:

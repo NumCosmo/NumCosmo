@@ -830,8 +830,6 @@ test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata)
   }
 
   g_variant_unref (var);
-  NCM_TEST_FAIL (g_variant_unref (var);
-                 fprintf (stderr, "fail (%s)", g_variant_get_type_string (var)));
 }
 
 void
