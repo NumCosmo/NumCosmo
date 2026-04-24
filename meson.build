@@ -586,10 +586,23 @@ endif
 #######################################################################################
 message('Checking for libfyaml')
 
-libfyaml_dep = dependency(
-  'libfyaml',
-  required: false,
-)
+libfyaml_dep = dependency('libfyaml', required: false, method: 'pkg-config')
+
+if libfyaml_dep.found()
+  # Try to use it directly by linking a trivial test
+  test_link = cc.links(
+    '''
+    int main(void) { return 0; }
+  ''',
+    dependencies: libfyaml_dep,
+  )
+
+  if not test_link
+    libfyaml_dep = cc.find_library('fyaml', required: false)
+  endif
+else
+  libfyaml_dep = cc.find_library('fyaml', required: false)
+endif
 
 if libfyaml_dep.found()
   numcosmo_conf.set('HAVE_LIBFYAML', true)
