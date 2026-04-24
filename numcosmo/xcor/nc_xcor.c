@@ -69,6 +69,7 @@ struct _NcXcor
   gdouble RH;
   NcXcorMethod meth;
   gdouble reltol;
+  guint ell_batch_size;
 };
 
 enum
@@ -78,6 +79,7 @@ enum
   PROP_MATTER_POWER_SPECTRUM,
   PROP_METH,
   PROP_RELTOL,
+  PROP_ELL_BATCH_SIZE,
 };
 
 G_DEFINE_TYPE (NcXcor, nc_xcor, G_TYPE_OBJECT)
@@ -94,6 +96,12 @@ typedef struct _NcXcorArg
   gint *ells;
   guint nells;
 
+  /* Vectorized kernel integrands (for kernel cubature methods) */
+  NcXcorKernelIntegrand *xclki1;
+  NcXcorKernelIntegrand *xclki2;
+  gdouble *W1;
+  gdouble *W2;
+
   gdouble RH;
 } NcXcorArg;
 
@@ -101,17 +109,24 @@ static void nc_xcor_auto_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
 static void nc_xcor_auto_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
 static void nc_xcor_cross_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
 static void nc_xcor_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+static void nc_xcor_kernel_auto_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
+static void nc_xcor_kernel_auto_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+static void nc_xcor_kernel_cross_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
+static void nc_xcor_kernel_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
 
 NCM_INTEGRAL_ND_DEFINE_TYPE (NC, XCOR_AUTO, NcXcorAuto, nc_xcor_auto, nc_xcor_auto_dim, nc_xcor_auto_integ, NcXcorArg);
 NCM_INTEGRAL_ND_DEFINE_TYPE (NC, XCOR_CROSS, NcXcorCross, nc_xcor_cross, nc_xcor_cross_dim, nc_xcor_cross_integ, NcXcorArg);
+NCM_INTEGRAL_ND_DEFINE_TYPE (NC, XCOR_KERNEL_AUTO, NcXcorKernelAuto, nc_xcor_kernel_auto, nc_xcor_kernel_auto_dim, nc_xcor_kernel_auto_integ, NcXcorArg);
+NCM_INTEGRAL_ND_DEFINE_TYPE (NC, XCOR_KERNEL_CROSS, NcXcorKernelCross, nc_xcor_kernel_cross, nc_xcor_kernel_cross_dim, nc_xcor_kernel_cross_integ, NcXcorArg);
 
 static void
 nc_xcor_init (NcXcor *xc)
 {
-  xc->ps   = NULL;
-  xc->dist = NULL;
-  xc->RH   = 0.0;
-  xc->meth = NC_XCOR_METHOD_LIMBER_Z_GSL;
+  xc->ps             = NULL;
+  xc->dist           = NULL;
+  xc->RH             = 0.0;
+  xc->meth           = NC_XCOR_METHOD_LIMBER_Z_GSL;
+  xc->ell_batch_size = 8;
 }
 
 static void
@@ -136,6 +151,9 @@ _nc_xcor_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       break;
     case PROP_RELTOL:
       nc_xcor_set_reltol (xc, g_value_get_double (value));
+      break;
+    case PROP_ELL_BATCH_SIZE:
+      nc_xcor_set_ell_batch_size (xc, g_value_get_uint (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -163,6 +181,9 @@ _nc_xcor_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       break;
     case PROP_RELTOL:
       g_value_set_double (value, nc_xcor_get_reltol (xc));
+      break;
+    case PROP_ELL_BATCH_SIZE:
+      g_value_set_uint (value, nc_xcor_get_ell_batch_size (xc));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -253,6 +274,19 @@ nc_xcor_class_init (NcXcorClass *klass)
                                                         "Relative tolerance.",
                                                         GSL_DBL_EPSILON, 1.0e-1, NC_XCOR_PRECISION,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcXcor:ell-batch-size:
+   *
+   * This property keeps the multipole batch size for cubature methods.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ELL_BATCH_SIZE,
+                                   g_param_spec_uint ("ell-batch-size",
+                                                      NULL,
+                                                      "Multipole batch size for cubature methods.",
+                                                      1, 64, 8,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static void
@@ -326,6 +360,79 @@ nc_xcor_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoint
       const gdouble k1z        = nc_xcor_kernel_eval_limber_z (xcor_arg->xclk1, xcor_arg->cosmo, z, &xck, l);
       const gdouble k2z        = nc_xcor_kernel_eval_limber_z (xcor_arg->xclk2, xcor_arg->cosmo, z, &xck, l);
       const gdouble res        = k1z * k2z * power_spec / (xi_z * xi_z * E_z);
+
+      ncm_vector_fast_set (fval, i * fdim + j, res);
+    }
+  }
+}
+
+static void
+nc_xcor_kernel_auto_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
+{
+  NcXcorKernelAuto *xcor_kernel_auto = NC_XCOR_KERNEL_AUTO (intnd);
+  NcXcorArg *xcor_arg                = &xcor_kernel_auto->data;
+
+  *dim  = 1;
+  *fdim = xcor_arg->nells;
+}
+
+static void
+nc_xcor_kernel_cross_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
+{
+  NcXcorKernelCross *xcor_kernel_cross = NC_XCOR_KERNEL_CROSS (intnd);
+  NcXcorArg *xcor_arg                  = &xcor_kernel_cross->data;
+
+  *dim  = 1;
+  *fdim = xcor_arg->nells;
+}
+
+static void
+nc_xcor_kernel_auto_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
+{
+  NcXcorKernelAuto *xcor_kernel_auto = NC_XCOR_KERNEL_AUTO (intnd);
+  NcXcorArg *xcor_arg                = &xcor_kernel_auto->data;
+  guint i;
+
+  for (i = 0; i < npoints; i++)
+  {
+    const gdouble lnk = ncm_vector_fast_get (x, i);
+    const gdouble k   = exp (lnk);
+    const gdouble k3  = gsl_pow_3 (k);
+    guint j;
+
+    /* Evaluate all multipoles at once using pre-computed integrand */
+    nc_xcor_kernel_integrand_eval (xcor_arg->xclki1, k, xcor_arg->W1);
+
+    for (j = 0; j < fdim; j++)
+    {
+      const gdouble res = k3 * xcor_arg->W1[j] * xcor_arg->W1[j];
+
+      ncm_vector_fast_set (fval, i * fdim + j, res);
+    }
+  }
+}
+
+static void
+nc_xcor_kernel_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
+{
+  NcXcorKernelCross *xcor_kernel_cross = NC_XCOR_KERNEL_CROSS (intnd);
+  NcXcorArg *xcor_arg                  = &xcor_kernel_cross->data;
+  guint i;
+
+  for (i = 0; i < npoints; i++)
+  {
+    const gdouble lnk = ncm_vector_fast_get (x, i);
+    const gdouble k   = exp (lnk);
+    const gdouble k3  = gsl_pow_3 (k);
+    guint j;
+
+    /* Evaluate all multipoles at once using pre-computed integrands */
+    nc_xcor_kernel_integrand_eval (xcor_arg->xclki1, k, xcor_arg->W1);
+    nc_xcor_kernel_integrand_eval (xcor_arg->xclki2, k, xcor_arg->W2);
+
+    for (j = 0; j < fdim; j++)
+    {
+      const gdouble res = k3 * xcor_arg->W1[j] * xcor_arg->W2[j];
 
       ncm_vector_fast_set (fval, i * fdim + j, res);
     }
@@ -418,6 +525,32 @@ gdouble
 nc_xcor_get_reltol (NcXcor *xc)
 {
   return xc->reltol;
+}
+
+/**
+ * nc_xcor_set_ell_batch_size:
+ * @xc: a #NcXcor
+ * @ell_batch_size: multipole batch size
+ *
+ * Sets the multipole batch size for cubature methods.
+ *
+ */
+void
+nc_xcor_set_ell_batch_size (NcXcor *xc, const guint ell_batch_size)
+{
+  xc->ell_batch_size = ell_batch_size;
+}
+
+/**
+ * nc_xcor_get_ell_batch_size:
+ * @xc: a #NcXcor
+ *
+ * Returns: the multipole batch size
+ */
+guint
+nc_xcor_get_ell_batch_size (NcXcor *xc)
+{
+  return xc->ell_batch_size;
 }
 
 /**
@@ -702,6 +835,229 @@ _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHIC
   ncm_memory_pool_return (w);
 }
 
+static void
+_nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
+{
+  const guint size           = lmax - lmin + 1;
+  const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
+  gdouble k_min, k_max;
+  gdouble k2_min, k2_max;
+  const gint block   = xc->ell_batch_size;
+  GArray *ells_array = g_array_new (FALSE, FALSE, sizeof (gint));
+  guint i;
+
+  /* Get k ranges from both kernels */
+  nc_xcor_kernel_get_k_range (xclk1, cosmo, lmin, &k_min, &k_max);
+
+  if (!isauto)
+  {
+    nc_xcor_kernel_get_k_range (xclk2, cosmo, lmin, &k2_min, &k2_max);
+    k_min = GSL_MAX (k_min, k2_min);
+    k_max = GSL_MIN (k_max, k2_max);
+  }
+
+  /* Update k range for the full ell range */
+  for (i = lmin + 1; i <= lmax; i++)
+  {
+    gdouble k_min_i, k_max_i;
+
+    nc_xcor_kernel_get_k_range (xclk1, cosmo, i, &k_min_i, &k_max_i);
+    k_min = GSL_MAX (k_min, k_min_i);
+    k_max = GSL_MIN (k_max, k_max_i);
+
+    if (!isauto)
+    {
+      nc_xcor_kernel_get_k_range (xclk2, cosmo, i, &k_min_i, &k_max_i);
+      k_min = GSL_MAX (k_min, k_min_i);
+      k_max = GSL_MIN (k_max, k_max_i);
+    }
+  }
+
+  g_array_set_size (ells_array, size);
+
+  for (i = 0; i < size; i++)
+  {
+    g_array_index (ells_array, gint, i) = lmin + i;
+  }
+
+  if (isauto)
+  {
+    NcXcorKernelAuto *xcor_kernel_auto = g_object_new (nc_xcor_kernel_auto_get_type (), NULL);
+    NcXcorArg *xcor_arg                = &xcor_kernel_auto->data;
+    NcmIntegralND *xcor_int_nd         = NCM_INTEGRAL_ND (xcor_kernel_auto);
+    NcmVector *lnk_min                 = ncm_vector_new (1);
+    NcmVector *lnk_max                 = ncm_vector_new (1);
+    NcmVector *err                     = ncm_vector_new (size);
+
+    ncm_vector_set (lnk_min, 0, log (k_min));
+    ncm_vector_set (lnk_max, 0, log (k_max));
+
+    xcor_arg->xc    = xc;
+    xcor_arg->dist  = xc->dist;
+    xcor_arg->ps    = xc->ps;
+    xcor_arg->RH    = xc->RH;
+    xcor_arg->cosmo = cosmo;
+    xcor_arg->xclk1 = xclk1;
+    xcor_arg->xclk2 = xclk1;
+
+    ncm_integral_nd_set_reltol (xcor_int_nd, xc->reltol);
+    ncm_integral_nd_set_abstol (xcor_int_nd, 0.0);
+    ncm_integral_nd_set_method (xcor_int_nd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
+
+    for (i = 0; i + block < size; i += block)
+    {
+      NcmVector *vp_i  = ncm_vector_get_subvector (vp, i, block);
+      NcmVector *err_i = ncm_vector_get_subvector (err, i, block);
+
+      xcor_arg->ells  = &g_array_index (ells_array, gint, i);
+      xcor_arg->nells = block;
+
+      /* Get vectorized kernel integrand for this batch */
+      xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[block - 1]);
+      xcor_arg->W1     = g_new (gdouble, block);
+
+      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
+
+      /* Clean up batch resources */
+      g_free (xcor_arg->W1);
+      xcor_arg->xclki1 = NULL;
+      xcor_arg->W1     = NULL;
+
+      /* Apply constant factor */
+      ncm_vector_scale (vp_i, const_factor);
+
+      ncm_vector_free (vp_i);
+      ncm_vector_free (err_i);
+    }
+
+    if (i < size)
+    {
+      NcmVector *vp_i       = ncm_vector_get_subvector (vp, i, size - i);
+      NcmVector *err_i      = ncm_vector_get_subvector (err, i, size - i);
+      const guint remaining = size - i;
+
+      xcor_arg->ells  = &g_array_index (ells_array, gint, i);
+      xcor_arg->nells = remaining;
+
+      /* Get vectorized kernel integrand for this batch */
+      xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[remaining - 1]);
+      xcor_arg->W1     = g_new (gdouble, remaining);
+
+      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
+
+      /* Clean up batch resources */
+      g_free (xcor_arg->W1);
+      xcor_arg->xclki1 = NULL;
+      xcor_arg->W1     = NULL;
+
+      /* Apply constant factor */
+      ncm_vector_scale (vp_i, const_factor);
+
+      ncm_vector_free (vp_i);
+      ncm_vector_free (err_i);
+    }
+
+    ncm_vector_free (lnk_min);
+    ncm_vector_free (lnk_max);
+    ncm_vector_free (err);
+    g_object_unref (xcor_kernel_auto);
+  }
+  else
+  {
+    NcXcorKernelCross *xcor_kernel_cross = g_object_new (nc_xcor_kernel_cross_get_type (), NULL);
+    NcXcorArg *xcor_arg                  = &xcor_kernel_cross->data;
+    NcmIntegralND *xcor_int_nd           = NCM_INTEGRAL_ND (xcor_kernel_cross);
+    NcmVector *lnk_min                   = ncm_vector_new (1);
+    NcmVector *lnk_max                   = ncm_vector_new (1);
+    NcmVector *err                       = ncm_vector_new (size);
+
+    ncm_vector_set (lnk_min, 0, log (k_min));
+    ncm_vector_set (lnk_max, 0, log (k_max));
+
+    xcor_arg->xc    = xc;
+    xcor_arg->dist  = xc->dist;
+    xcor_arg->ps    = xc->ps;
+    xcor_arg->RH    = xc->RH;
+    xcor_arg->cosmo = cosmo;
+    xcor_arg->xclk1 = xclk1;
+    xcor_arg->xclk2 = xclk2;
+
+    ncm_integral_nd_set_reltol (xcor_int_nd, xc->reltol);
+    ncm_integral_nd_set_abstol (xcor_int_nd, 0.0);
+    ncm_integral_nd_set_method (xcor_int_nd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
+
+    for (i = 0; i + block < size; i += block)
+    {
+      NcmVector *vp_i  = ncm_vector_get_subvector (vp, i, block);
+      NcmVector *err_i = ncm_vector_get_subvector (err, i, block);
+
+      xcor_arg->ells  = &g_array_index (ells_array, gint, i);
+      xcor_arg->nells = block;
+
+      /* Get vectorized kernel integrands for this batch */
+      xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[block - 1]);
+      xcor_arg->xclki2 = nc_xcor_kernel_get_eval_vectorized (xclk2, cosmo, xcor_arg->ells[0], xcor_arg->ells[block - 1]);
+      xcor_arg->W1     = g_new (gdouble, block);
+      xcor_arg->W2     = g_new (gdouble, block);
+
+      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
+
+      /* Clean up batch resources */
+      g_free (xcor_arg->W1);
+      g_free (xcor_arg->W2);
+      xcor_arg->xclki1 = NULL;
+      xcor_arg->xclki2 = NULL;
+      xcor_arg->W1     = NULL;
+      xcor_arg->W2     = NULL;
+
+      /* Apply constant factor */
+      ncm_vector_scale (vp_i, const_factor);
+
+      ncm_vector_free (vp_i);
+      ncm_vector_free (err_i);
+    }
+
+    if (i < size)
+    {
+      NcmVector *vp_i       = ncm_vector_get_subvector (vp, i, size - i);
+      NcmVector *err_i      = ncm_vector_get_subvector (err, i, size - i);
+      const guint remaining = size - i;
+
+      xcor_arg->ells  = &g_array_index (ells_array, gint, i);
+      xcor_arg->nells = remaining;
+
+      /* Get vectorized kernel integrands for this batch */
+      xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[remaining - 1]);
+      xcor_arg->xclki2 = nc_xcor_kernel_get_eval_vectorized (xclk2, cosmo, xcor_arg->ells[0], xcor_arg->ells[remaining - 1]);
+      xcor_arg->W1     = g_new (gdouble, remaining);
+      xcor_arg->W2     = g_new (gdouble, remaining);
+
+      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
+
+      /* Clean up batch resources */
+      g_free (xcor_arg->W1);
+      g_free (xcor_arg->W2);
+      xcor_arg->xclki1 = NULL;
+      xcor_arg->xclki2 = NULL;
+      xcor_arg->W1     = NULL;
+      xcor_arg->W2     = NULL;
+
+      /* Apply constant factor */
+      ncm_vector_scale (vp_i, const_factor);
+
+      ncm_vector_free (vp_i);
+      ncm_vector_free (err_i);
+    }
+
+    ncm_vector_free (lnk_min);
+    ncm_vector_free (lnk_max);
+    ncm_vector_free (err);
+    g_object_unref (xcor_kernel_cross);
+  }
+
+  g_array_unref (ells_array);
+}
+
 /**
  * nc_xcor_compute:
  * @xc: a #NcXcor
@@ -757,6 +1113,12 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
         break;
       case NC_XCOR_METHOD_KERNEL_GSL:
         _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+
+        return;
+
+        break;
+      case NC_XCOR_METHOD_KERNEL_CUBATURE:
+        _nc_xcor_kernel_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
 
         return;
 

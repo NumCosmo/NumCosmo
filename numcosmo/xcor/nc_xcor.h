@@ -51,6 +51,7 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
  * @NC_XCOR_METHOD_LIMBER_Z_GSL: Use GSL numerical integration
  * @NC_XCOR_METHOD_LIMBER_Z_CUBATURE: Use cubature numerical integration
  * @NC_XCOR_METHOD_KERNEL_GSL: Use GSL numerical integration over kernel variables
+ * @NC_XCOR_METHOD_KERNEL_CUBATURE: Use cubature numerical integration over kernel variables
  *
  * Methods to compute integrals.
  *
@@ -60,6 +61,7 @@ typedef enum _NcXcorMethod
   NC_XCOR_METHOD_LIMBER_Z_GSL = 0,
   NC_XCOR_METHOD_LIMBER_Z_CUBATURE,
   NC_XCOR_METHOD_KERNEL_GSL,
+  NC_XCOR_METHOD_KERNEL_CUBATURE,
 } NcXcorMethod;
 
 #define NC_XCOR_PRECISION (1.0e-6)
@@ -73,6 +75,9 @@ void nc_xcor_clear (NcXcor **xc);
 
 void nc_xcor_set_reltol (NcXcor *xc, const gdouble reltol);
 gdouble nc_xcor_get_reltol (NcXcor *xc);
+
+void nc_xcor_set_ell_batch_size (NcXcor *xc, const guint ell_batch_size);
+guint nc_xcor_get_ell_batch_size (NcXcor *xc);
 
 void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo);
 
