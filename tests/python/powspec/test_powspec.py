@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# test_py_powspec.py
+# test_powspec.py
 #
 # Wed Feb 14 13:44:00 2024
 # Copyright  2023  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# test_py_powspec.py
+# test_powspec.py
 # Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
@@ -22,173 +22,53 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Unit tests for NumCosmo power-spectra."""
+"""Unit tests for NumCosmo power-spectra without CCL dependency."""
+
+# pylint: disable=redefined-outer-name
 
 import pytest
 
 import numpy as np
 from numpy.testing import assert_allclose
 
-pytest.importorskip("pyccl")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
-
-import pyccl
-
-pytestmark = [pytest.mark.ccl, pytest.mark.powspec]
-
-import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
-from numcosmo_py.helper import npa_to_seq
-from numcosmo_py.ccl.nc_ccl import create_nc_obj
-from numcosmo_py.ccl.comparison import (
-    compare_power_spectrum_linear,
-    compare_power_spectrum_nonlinear,
-    compare_sigma_r,
-)
 
-pytest_plugins = ["python.fixtures_ccl"]
+pytestmark = pytest.mark.powspec
 
 Ncm.cfg_init()
 
 
-def _test_powspec_transfer_any(
-    ccl_cosmo_eh_linear: pyccl.Cosmology,
-    nc_cosmo_eh_linear: ncpy.Cosmology,
-    k_a: np.ndarray,
-    z_a: np.ndarray,
-    reltol_target: float,
-) -> None:
-    """Compare NumCosmo and CCL transfer functions."""
-    cosmo = nc_cosmo_eh_linear.cosmo
-    ps_ml = nc_cosmo_eh_linear.ps_ml
+@pytest.fixture
+def nc_cosmo() -> Nc.HICosmo:
+    """Create a simple NumCosmo cosmology object."""
+    cosmo = Nc.HICosmoDEXcdm()
+    reion = Nc.HIReionCamb.new()
+    prim = Nc.HIPrimPowerLaw.new()
 
-    k_vec = Ncm.Vector.new_array(npa_to_seq(k_a))
-    Pk_vec = Ncm.Vector.new(k_vec.len())
+    cosmo.add_submodel(reion)
+    cosmo.add_submodel(prim)
 
-    for z in z_a:
-        a_i = 1.0 / (1.0 + z)
-        pk_ccl = pyccl.linear_matter_power(ccl_cosmo_eh_linear, k_a, a_i)
+    # Set default parameters
+    cosmo.props.H0 = 70.0
+    cosmo.props.Omegab = 0.05
+    cosmo.props.Omegac = 0.25
+    cosmo.props.Omegax = 0.70
+    cosmo.props.Tgamma0 = 2.7255
+    cosmo.props.w = -1.0
 
-        ps_ml.eval_vec(cosmo, z, k_vec, Pk_vec)
-        pk_nc = Pk_vec.dup_array()
+    prim.props.n_SA = 0.96
+    prim.props.ln10e10ASA = 3.0
 
-        assert_allclose(pk_nc, pk_ccl, rtol=reltol_target)
-
-
-def test_powspec_transfer_lowz(
-    ccl_cosmo_eh_linear: pyccl.Cosmology,
-    nc_cosmo_eh_linear: ncpy.Cosmology,
-    k_a: np.ndarray,
-    z_a: np.ndarray,
-) -> None:
-    """Compare NumCosmo and CCL transfer functions for low redshifts."""
-    if ccl_cosmo_eh_linear.high_precision:
-        reltol_target: float = 1.0e-7
-        if ccl_cosmo_eh_linear["m_nu"] != 0.0:
-            reltol_target = 2.0e-3
-    else:
-        reltol_target = 1.0e-3
-        if ccl_cosmo_eh_linear["m_nu"] != 0.0:
-            reltol_target = 2.0e-3
-    _test_powspec_transfer_any(
-        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, k_a, z_a, reltol_target
-    )
+    return cosmo
 
 
-def test_powspec_transfer_highz(
-    ccl_cosmo_eh_linear: pyccl.Cosmology,
-    nc_cosmo_eh_linear: ncpy.Cosmology,
-    k_a: np.ndarray,
-    z_high_a: np.ndarray,
-) -> None:
-    """Compare NumCosmo and CCL transfer functions."""
-    if ccl_cosmo_eh_linear.high_precision:
-        reltol_target: float = 1.0e-4
-        if ccl_cosmo_eh_linear["m_nu"] != 0.0:
-            reltol_target = 4.0e-1
-    else:
-        reltol_target = 1.0e-2
-        if ccl_cosmo_eh_linear["m_nu"] != 0.0:
-            reltol_target = 2.0e-1
-    _test_powspec_transfer_any(
-        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, k_a, z_high_a, reltol_target
-    )
-
-
-def test_powspec_halofit(
-    ccl_cosmo_eh_halofit: pyccl.Cosmology,
-    nc_cosmo_eh_halofit: ncpy.Cosmology,
-    k_a: np.ndarray,
-    z_a: np.ndarray,
-) -> None:
-    """Compare NumCosmo and CCL transfer functions."""
-    cosmo = nc_cosmo_eh_halofit.cosmo
-    ps_mnl = nc_cosmo_eh_halofit.ps_mnl
-    if ccl_cosmo_eh_halofit.high_precision:
-        reltol_target: float = 6.0e-3
-    else:
-        reltol_target = 5.0e-2
-
-    k_vec = Ncm.Vector.new_array(npa_to_seq(k_a))
-    Pk_vec = Ncm.Vector.new(k_vec.len())
-
-    for z in z_a:
-        a_i = 1.0 / (1.0 + z)
-        ccl_cosmo_eh_halofit.compute_nonlin_power()
-        pk_ccl = pyccl.nonlin_matter_power(ccl_cosmo_eh_halofit, k_a, a_i)
-
-        ps_mnl.eval_vec(cosmo, z, k_vec, Pk_vec)
-        pk_nc = Pk_vec.dup_array()
-
-        assert_allclose(pk_nc, pk_ccl, rtol=reltol_target)
-
-
-@pytest.mark.parametrize("sigma8", [0.01, 0.05, 0.1, 0.2, 0.5])
-def test_powspec_halofit_linear_universe(
-    sigma8, k_a: np.ndarray, z_a: np.ndarray
-) -> None:
-    """Test NumCosmo for an linear universe (very small sigma8)."""
-    # Linear universe, halofit power spectrum
-    ccl_cosmo = pyccl.Cosmology(
-        Omega_c=0.25,
-        Omega_b=0.05,
-        Neff=3.046,
-        h=0.7,
-        sigma8=sigma8,
-        n_s=0.96,
-        Omega_k=0.0,
-        w0=-1.0,
-        wa=0.0,
-        transfer_function="eisenstein_hu",
-        matter_power_spectrum="halofit",
-    )
-
-    nc_cosmo = create_nc_obj(ccl_cosmo, ps_nln_z_max=1.0)
-    cosmo = nc_cosmo.cosmo
-    ps_mnl = nc_cosmo.ps_mnl
-
-    k_vec = Ncm.Vector.new_array(npa_to_seq(k_a))
-    Pk_vec = Ncm.Vector.new(k_vec.len())
-
-    step = 10
-    for z in z_a[::step]:
-        ps_mnl.eval_vec(cosmo, z, k_vec, Pk_vec)
-        pk_nc = Pk_vec.dup_array()
-        assert all(np.isfinite(pk_nc))
-
-        for i, k in enumerate(k_a[::step]):
-            Pk = ps_mnl.eval(cosmo, z, k)
-            assert_allclose(Pk_vec.get(i * step), Pk)
-
-
-def test_powspec_class(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
+def test_powspec_class(nc_cosmo: Nc.HICosmo) -> None:
     """Test the power spectrum class."""
     ps_ml = Nc.PowspecMLCBE.new()
     cbe = ps_ml.peek_cbe()
     cbe.use_ppf(True)
 
-    ps_ml.prepare(nc_cosmo_eh_linear.cosmo)
+    ps_ml.prepare(nc_cosmo)
 
     ik_min = ps_ml.get_intern_k_min()
     ik_max = ps_ml.get_intern_k_max()
@@ -200,18 +80,18 @@ def test_powspec_class(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
 
     k_a = np.geomspace(kmin, kmax, 100)
 
-    ps_a = np.array([ps_ml.eval(nc_cosmo_eh_linear.cosmo, 0.0, k) for k in k_a])
+    ps_a = np.array([ps_ml.eval(nc_cosmo, 0.0, k) for k in k_a])
 
     assert np.all(np.isfinite(ps_a))
 
 
-def test_powspec_class_deriv_z(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
+def test_powspec_class_deriv_z(nc_cosmo: Nc.HICosmo) -> None:
     """Test the power spectrum class."""
     ps_ml = Nc.PowspecMLCBE.new()
     cbe = ps_ml.peek_cbe()
     cbe.use_ppf(True)
 
-    ps_ml.prepare(nc_cosmo_eh_linear.cosmo)
+    ps_ml.prepare(nc_cosmo)
 
     ik_min = ps_ml.get_intern_k_min()
     ik_max = ps_ml.get_intern_k_max()
@@ -228,71 +108,5 @@ def test_powspec_class_deriv_z(nc_cosmo_eh_linear: ncpy.Cosmology) -> None:
     diff = Ncm.Diff.new()
 
     for k in k_a:
-        dps, _ = diff.rc_d1_1_to_1(
-            0.2, lambda z, k0: ps_ml.eval(nc_cosmo_eh_linear.cosmo, z, k0), k
-        )
-        assert_allclose(
-            dps, ps_ml.deriv_z(nc_cosmo_eh_linear.cosmo, 0.2, k), atol=0.0, rtol=1.0e-10
-        )
-
-
-Z_ARRAY = np.linspace(0.0, 5.0, 10)
-Z_IDS = [f"z={z:.2f}" for z in Z_ARRAY]
-
-
-@pytest.mark.parametrize("z", Z_ARRAY, ids=Z_IDS)
-def test_power_spectrum_linear(
-    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology, z
-) -> None:
-    """Compare NumCosmo and CCL linear power spectrum."""
-    if ccl_cosmo_eh_linear.high_precision:
-        rtol = 1.0e-8
-        if z > 2.0:
-            rtol = 1.0e-7
-    else:
-        rtol = 1.0e-4
-
-    k_test = np.geomspace(5.0e-5, 1.0e3, 1000)
-
-    cmp = compare_power_spectrum_linear(
-        ccl_cosmo_eh_linear, nc_cosmo_eh_linear, k_test, z
-    )
-    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
-
-
-@pytest.mark.parametrize("z", Z_ARRAY, ids=Z_IDS)
-def test_power_spectrum_nonlinear(
-    ccl_cosmo_eh_halofit: pyccl.Cosmology, nc_cosmo_eh_halofit: ncpy.Cosmology, z
-) -> None:
-    """Compare NumCosmo and CCL nonlinear power spectrum."""
-    if ccl_cosmo_eh_halofit.high_precision:
-        rtol = 1.0e-19
-    else:
-        rtol = 1.0e-4
-        if z > 3.0:
-            rtol = 1.0e-3
-        if z > 4.0:
-            rtol = 1.0e-2
-
-    k_test = np.geomspace(5.0e-5, 1.0e3, 1000)
-
-    cmp = compare_power_spectrum_nonlinear(
-        ccl_cosmo_eh_halofit, nc_cosmo_eh_halofit, k_test, z
-    )
-    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
-
-
-@pytest.mark.parametrize("z", Z_ARRAY, ids=Z_IDS)
-def test_sigma_r(
-    ccl_cosmo_eh_linear: pyccl.Cosmology, nc_cosmo_eh_linear: ncpy.Cosmology, z
-) -> None:
-    """Compare NumCosmo and CCL sigma_r."""
-    if ccl_cosmo_eh_linear.high_precision:
-        rtol = 1.0e-7
-    else:
-        rtol = 1.0e-5
-
-    r_test = np.geomspace(5.0e-2, 1.0e2, 1000)
-
-    cmp = compare_sigma_r(ccl_cosmo_eh_linear, nc_cosmo_eh_linear, r_test, z)
-    assert_allclose(cmp.y1, cmp.y2, rtol=rtol)
+        dps, _ = diff.rc_d1_1_to_1(0.2, lambda z, k0: ps_ml.eval(nc_cosmo, z, k0), k)
+        assert_allclose(dps, ps_ml.deriv_z(nc_cosmo, 0.2, k), atol=0.0, rtol=1.0e-10)
