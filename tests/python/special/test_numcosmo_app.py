@@ -750,7 +750,7 @@ def test_run_mcmc_apes_calibrate(simple_experiment, calibration_method):
 
 def test_generate_planck(tmp_path, planck18_type):
     """Test run theory vector."""
-    tmp_file = tmp_path / "planck_generated.yaml"
+    tmp_file = tmp_path / "planck_generated1.yaml"
 
     result = runner.invoke(
         app,
@@ -763,7 +763,7 @@ def test_generate_planck(tmp_path, planck18_type):
 
 def test_generate_planck_test(tmp_path, planck18_type):
     """Test run theory vector."""
-    tmp_file = tmp_path / "planck_generated.yaml"
+    tmp_file = tmp_path / "planck_generated2.yaml"
 
     result = runner.invoke(
         app,
