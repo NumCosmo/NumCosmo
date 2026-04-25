@@ -30,6 +30,7 @@ import pytest
 
 # These tests depend on pydantic models used in the app
 pytest.importorskip("pydantic")
+pytest.importorskip("typer")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position
 
