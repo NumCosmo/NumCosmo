@@ -29,13 +29,15 @@ import pytest
 
 from numcosmo_py import Ncm, Nc
 
+pytest.importorskip("scipy")
+pytest.importorskip("numcosmo_py.external.pyssc")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 # Import module under test
 from numcosmo_py.experiments import jpas_forecast24 as jpas
 
 Ncm.cfg_init()
-
-# Check if PySSC is available
-pytest.importorskip("numcosmo_py.external.pyssc")
 
 
 class TestEnums:
