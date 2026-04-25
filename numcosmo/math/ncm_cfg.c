@@ -1841,8 +1841,8 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 
   while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
   {
-    name_max_len = GSL_MAX (name_max_len, strlen (snia->value_name));
-    nick_max_len = GSL_MAX (nick_max_len, strlen (snia->value_nick));
+    name_max_len = GSL_MAX (name_max_len, (gint) strlen (snia->value_name));
+    nick_max_len = GSL_MAX (nick_max_len, (gint) strlen (snia->value_nick));
   }
 
   printf ("# %s:\n", header);
