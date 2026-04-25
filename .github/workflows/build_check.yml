@@ -10,7 +10,7 @@ on:
 
 env:
   CONDA_ENV: numcosmo_developer
-  CACHE_VERSION: 0
+  CACHE_VERSION: 1
 
 jobs:
 
