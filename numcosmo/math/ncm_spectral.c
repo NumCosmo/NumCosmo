@@ -76,7 +76,7 @@ G_DEFINE_TYPE (NcmSpectral, ncm_spectral, G_TYPE_OBJECT)
 static void
 ncm_spectral_init (NcmSpectral *spectral)
 {
-  spectral->max_order   = 16; /* Default: N_max = 1025 */
+  spectral->max_order   = 0; /* Default: N_max = 1025 */
   spectral->f_vals      = NULL;
   spectral->coeffs_work = NULL;
   spectral->coeffs      = g_array_new (FALSE, FALSE, sizeof (gdouble));
@@ -312,6 +312,10 @@ ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order)
       fftw_free (spectral->coeffs_work);
       spectral->coeffs_work = NULL;
     }
+
+    /* Clear the coefficients array to prevent stale data */
+    if (spectral->coeffs != NULL)
+      g_array_set_size (spectral->coeffs, 0);
   }
 }
 
@@ -622,6 +626,9 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
 
   if (*coeffs == NULL)
     *coeffs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  /* Clear the internal coefficients array to prevent stale data from affecting the computation */
+  g_array_set_size (spectral->coeffs, 0);
 
   /* Initial evaluation at k_min */
   _ncm_spectral_prepare_plan_for_k (spectral, k);
