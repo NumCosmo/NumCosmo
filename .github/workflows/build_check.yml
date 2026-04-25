@@ -175,7 +175,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
-          pip install -vv pygobject-stubs pytest-tap types-tabulate
+          pip install -v pygobject-stubs pytest-tap types-tabulate
           conda remove -q -v -n numcosmo_developer openmpi
           conda install -q -v -n numcosmo_developer ${{ matrix.mpi }}
           conda install -q -v -n numcosmo_developer libfabric-devel
@@ -250,7 +250,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
-          pip install -vvv pygobject-stubs pytest-tap types-tabulate
+          pip install -v pygobject-stubs pytest-tap types-tabulate
           conda list
       - name: Save conda-forge cache
         id: cache-primes-save
