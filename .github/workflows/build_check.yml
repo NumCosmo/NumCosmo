@@ -138,7 +138,9 @@ jobs:
         python3 example_simple.py
         python3 example_cbe.py
     - name: Check NumCosmo
-      run: meson test -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
+      run: |
+        pytest -ra --tb=short --tap --run-xcor -m xcor tests/python
+        meson test -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge:
     name: (${{ matrix.os }}, py${{ matrix.python-version }}, ${{ matrix.mpi }}, Miniforge)
