@@ -174,7 +174,7 @@ jobs:
       - name: Update environment
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          conda env update -vvv -n ${{ env.CONDA_ENV }} -f environment.yml
+          conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
           pip install -vvv pygobject-stubs pytest-tap types-tabulate
           conda remove -q -v -n numcosmo_developer openmpi
           conda install -q -v -n numcosmo_developer ${{ matrix.mpi }}
