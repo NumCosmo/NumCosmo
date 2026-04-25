@@ -33,16 +33,12 @@ dependencies:
   - mypy
   - ninja
   - nlopt
-  - numpy < 2.4
+  - numpy
   - openblas=*=*openmp*
   - openmpi
   - pandas
   - pip
-  - pip:
-      - pygobject-stubs
-      - pytest-tap
-      - types-tabulate
-  - plotnine < 0.15
+  - plotnine
   - pyccl >= 3.0.0
   - pydantic
   - pygobject
