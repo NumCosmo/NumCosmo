@@ -30,8 +30,6 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 pytest.importorskip("pyccl")
-pytest.importorskip("numcosmo_py.ccl.comparison")
-pytest.importorskip("numcosmo_py.ccl.nc_ccl")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position
 
