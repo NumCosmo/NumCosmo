@@ -141,6 +141,7 @@ jobs:
       run: |
         source build/numcosmo_export.sh
         pytest --run-xcor -m xcor tests/python -xvs
+        pytest --run-powspec -m powspec tests/python -xvs
         meson test -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge:
