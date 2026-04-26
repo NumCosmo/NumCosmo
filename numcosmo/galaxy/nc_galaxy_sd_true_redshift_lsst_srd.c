@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_galaxy_sd_true_redshift_lsst_srd.c
  *
@@ -33,8 +31,8 @@
  *
  * Class describing galaxy sample redshift distributions as in LSST-SRD.
  *
- * Class defining a galaxy sample redshift distribution as described in the LSST Science
- * Roadmap Document,
+ * Class defining a galaxy sample redshift distribution as described in the LSST
+ * Science Roadmap Document,
  *
  */
 
@@ -283,8 +281,8 @@ _nc_galaxy_sd_true_redshift_lsst_srd_get_lim (NcGalaxySDTrueRedshift *gsdtr, gdo
 /**
  * nc_galaxy_sd_true_redshift_lsst_srd_new:
  *
- * Creates a new #NcGalaxySDTrueRedshiftLSSTSRD, the parameter values correspond to the
- * LSST SRD year 1.
+ * Creates a new #NcGalaxySDTrueRedshiftLSSTSRD. The default parameter values correspond to the
+ * LSST SRD year 1 source parametrization.
  *
  * Returns: (transfer full): a new #NcGalaxySDTrueRedshiftLSSTSRD
  */
@@ -301,26 +299,124 @@ nc_galaxy_sd_true_redshift_lsst_srd_new (void)
 }
 
 /**
- * nc_galaxy_sd_true_redshift_lsst_srd_new_y10:
+ * nc_galaxy_sd_true_redshift_lsst_srd_new_y1_source:
  *
- * Creates a new #NcGalaxySDTrueRedshiftLSSTSRD, the parameter values correspond to the
- * LSST SRD year 10.
+ * Creates a new #NcGalaxySDTrueRedshiftLSSTSRD. The parameter values correspond to the
+ * LSST SRD year 1 source parametrization.
  *
  * Returns: (transfer full): a new #NcGalaxySDTrueRedshiftLSSTSRD
  */
 NcGalaxySDTrueRedshiftLSSTSRD *
-nc_galaxy_sd_true_redshift_lsst_srd_new_y10 (void)
+nc_galaxy_sd_true_redshift_lsst_srd_new_y1_source (void)
 {
   NcmDTuple2 lim = NCM_DTUPLE2_STATIC_INIT (NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW,
                                             NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_HIGH);
   NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst = g_object_new (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD,
                                                            "lim", &lim,
-                                                           "alpha", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_ALPHA,
-                                                           "beta", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_BETA,
-                                                           "z0", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_Z0,
+                                                           "alpha", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_ALPHA,
+                                                           "beta", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_BETA,
+                                                           "z0", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_Z0,
                                                            NULL);
 
   return gsdtrlsst;
+}
+
+/**
+ * nc_galaxy_sd_true_redshift_lsst_srd_new_y1_lens:
+ *
+ * Creates a new #NcGalaxySDTrueRedshiftLSSTSRD. The parameter values correspond to the
+ * LSST SRD year 1 lens parametrization.
+ *
+ * Returns: (transfer full): a new #NcGalaxySDTrueRedshiftLSSTSRD
+ */
+NcGalaxySDTrueRedshiftLSSTSRD *
+nc_galaxy_sd_true_redshift_lsst_srd_new_y1_lens (void)
+{
+  NcmDTuple2 lim = NCM_DTUPLE2_STATIC_INIT (NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW,
+                                            NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_HIGH);
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst = g_object_new (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD,
+                                                           "lim", &lim,
+                                                           "alpha", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_ALPHA,
+                                                           "beta", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_BETA,
+                                                           "z0", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_Z0,
+                                                           NULL);
+
+  return gsdtrlsst;
+}
+
+/**
+ * nc_galaxy_sd_true_redshift_lsst_srd_new_y10_source:
+ *
+ * Creates a new #NcGalaxySDTrueRedshiftLSSTSRD. The parameter values correspond to the
+ * LSST SRD year 10 source parametrization.
+ *
+ * Returns: (transfer full): a new #NcGalaxySDTrueRedshiftLSSTSRD
+ */
+NcGalaxySDTrueRedshiftLSSTSRD *
+nc_galaxy_sd_true_redshift_lsst_srd_new_y10_source (void)
+{
+  NcmDTuple2 lim = NCM_DTUPLE2_STATIC_INIT (NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW,
+                                            NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_HIGH);
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst = g_object_new (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD,
+                                                           "lim", &lim,
+                                                           "alpha", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_ALPHA,
+                                                           "beta", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_BETA,
+                                                           "z0", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_Z0,
+                                                           NULL);
+
+  return gsdtrlsst;
+}
+
+/**
+ * nc_galaxy_sd_true_redshift_lsst_srd_new_y10_lens:
+ *
+ * Creates a new #NcGalaxySDTrueRedshiftLSSTSRD. The parameter values correspond to the
+ * LSST SRD year 10 lens parametrization.
+ *
+ * Returns: (transfer full): a new #NcGalaxySDTrueRedshiftLSSTSRD
+ */
+NcGalaxySDTrueRedshiftLSSTSRD *
+nc_galaxy_sd_true_redshift_lsst_srd_new_y10_lens (void)
+{
+  NcmDTuple2 lim = NCM_DTUPLE2_STATIC_INIT (NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW,
+                                            NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_HIGH);
+  NcGalaxySDTrueRedshiftLSSTSRD *gsdtrlsst = g_object_new (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD,
+                                                           "lim", &lim,
+                                                           "alpha", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_ALPHA,
+                                                           "beta", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_BETA,
+                                                           "z0", NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_Z0,
+                                                           NULL);
+
+  return gsdtrlsst;
+}
+
+/**
+ * nc_galaxy_sd_true_redshift_lsst_srd_new_from_type:
+ * @type: a #NcGalaxySDTrueRedshiftLSSTSRDType
+ *
+ * Creates a new #NcGalaxySDTrueRedshiftLSSTSRD using a predefined type.
+ * The type determines which LSST SRD parametrization to use (Year 1 or Year 10,
+ * source or lens).
+ *
+ * Returns: (transfer full): a new #NcGalaxySDTrueRedshiftLSSTSRD
+ */
+NcGalaxySDTrueRedshiftLSSTSRD *
+nc_galaxy_sd_true_redshift_lsst_srd_new_from_type (NcGalaxySDTrueRedshiftLSSTSRDType type)
+{
+  switch (type)
+  {
+    case NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE:
+      return nc_galaxy_sd_true_redshift_lsst_srd_new_y1_source ();
+    case NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS:
+      return nc_galaxy_sd_true_redshift_lsst_srd_new_y1_lens ();
+    case NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE:
+      return nc_galaxy_sd_true_redshift_lsst_srd_new_y10_source ();
+    case NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS:
+      return nc_galaxy_sd_true_redshift_lsst_srd_new_y10_lens ();
+    default:
+      g_error ("nc_galaxy_sd_true_redshift_lsst_srd_new_from_type: invalid type %d", type);
+      return NULL;
+  }
 }
 
 /**

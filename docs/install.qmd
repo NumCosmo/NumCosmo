@@ -48,7 +48,7 @@ These self-contained steps eliminate the need for additional instructions.
 Follow these guidelines when building from the repository or a release. 
 Execute the following command to install the required packages, these commands must be executed in the root directory of the NumCosmo repository:
 ```bash
-  mamba env create -n numcosmo_developer -f devel_environment.yml
+  mamba env create -n numcosmo_developer -f environment.yml
   conda activate numcosmo_developer
   [[ -e $GCC_AR ]] && AR=$GCC_AR
   [[ -e $GCC_NM ]] && NM=$GCC_NM

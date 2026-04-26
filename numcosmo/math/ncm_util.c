@@ -759,8 +759,7 @@ _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint l
                               expr, arg1, cmp, arg2, reltol,
                               fabs (arg1) > fabs (arg2) ? fabs (arg2 / arg1 - 1.0) : fabs (arg1 / arg2 - 1.0),
                               abstol,
-                              fabs (arg1 - arg2)
-                             );
+                              fabs (arg1 - arg2));
 
   g_assertion_message (domain, file, line, func, s);
   g_free (s);
@@ -1281,7 +1280,7 @@ ncm_util_set_or_call_error (GError **error, GQuark domain, gint code, const gcha
       g_error ("ncm_util_set_or_call_error: error piling up: (%s) over (%s)",
                message,
                (*error)->message
-              );
+      );
 
     g_set_error (error, domain, code, "%s", message);
   }

@@ -378,7 +378,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
     ncm_fit_state_set_m2lnL_prec (fstate,
                                   GSL_MAX (nlopt_get_ftol_rel (fit_nlopt->nlopt),
                                            nlopt_get_ftol_abs (fit_nlopt->nlopt) / minf)
-                                 );
+    );
     ncm_fit_state_set_params_prec (fstate, nlopt_get_xtol_rel (fit_nlopt->nlopt));
 
     if (ret < 0)
@@ -537,7 +537,7 @@ ncm_fit_nlopt_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmFi
                        "grad-type", gtype,
                        "algorithm", algo,
                        NULL
-                      );
+  );
 }
 
 /**
@@ -563,7 +563,7 @@ ncm_fit_nlopt_local_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype,
                        "algorithm", algo,
                        "local-algorithm", local_algo,
                        NULL
-                      );
+  );
 }
 
 /**
@@ -584,7 +584,7 @@ ncm_fit_nlopt_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtyp
                        "mset", mset,
                        "grad-type", gtype,
                        NULL
-                      );
+  );
 }
 
 /**

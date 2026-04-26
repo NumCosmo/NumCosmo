@@ -674,7 +674,7 @@ ncm_spline_new_function_spline_sinhknot (NcmSpline *s, gsl_function *F, const gd
 
     if (x_array->len > max_nodes)
     {
-      g_warning ("ncm_spline_new_function_spline: cannot achive requested precision with at most %zu nodes", max_nodes);
+      g_warning ("ncm_spline_new_function_spline: cannot achieve requested precision with at most %zu nodes", max_nodes);
       break;
     }
 

@@ -565,7 +565,7 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
         error,
         ncm_vector_data (res),
         ncm_vector_data (err)
-                      );
+      );
       break;
     case NCM_INTEGRAL_ND_METHOD_CUBATURE_P:
       ret = pcubature (
@@ -581,7 +581,7 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
         error,
         ncm_vector_data (res),
         ncm_vector_data (err)
-                      );
+      );
       break;
     case NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V:
       ret = hcubature_v (
@@ -597,7 +597,7 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
         error,
         ncm_vector_data (res),
         ncm_vector_data (err)
-                        );
+      );
       break;
     case NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V:
       ret = pcubature_v (
@@ -613,7 +613,7 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
         error,
         ncm_vector_data (res),
         ncm_vector_data (err)
-                        );
+      );
       break;
     default:
       g_error ("ncm_integral_nd_eval: invalid method: `%d`.", self->method);

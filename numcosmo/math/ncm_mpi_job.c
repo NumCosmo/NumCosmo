@@ -233,6 +233,8 @@ _ncm_mpi_job_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_mpi_job_parent_class)->finalize (object);
 }
 
+/* LCOV_EXCL_START */
+
 static NcmMPIDatatype
 _ncm_mpi_job_input_datatype (NcmMPIJob *mpi_job, gint *len, gint *size)
 {
@@ -316,6 +318,8 @@ _ncm_mpi_job_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
 {
   g_error ("_ncm_mpi_job_run: method not implemented.");
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 ncm_mpi_job_class_init (NcmMPIJobClass *klass)
