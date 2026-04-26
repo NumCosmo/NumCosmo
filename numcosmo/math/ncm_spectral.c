@@ -519,7 +519,16 @@ _ncm_spectral_refine_to_k (NcmSpectral *spectral, NcmSpectralF F,
 
   /* Move existing values to even positions (BACKWARD to avoid overwriting) */
   for (j = (gint) N_old - 1; j >= 0; j--)
+  {
+    if (j < 10)
+      fprintf (stderr, "Refinement k=%u: f[%u] = % 22.15g, f[%u] = % 22.15g\n",
+               k_new,
+               2 * j, spectral->f_vals[2 * j],
+               j, spectral->f_vals[j]
+      );
+
     spectral->f_vals[2 * j] = spectral->f_vals[j];
+  }
 
   /* Compute new odd positions */
   for (jj = 1; jj < N_new; jj += 2)
