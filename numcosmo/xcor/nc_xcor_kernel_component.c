@@ -157,9 +157,9 @@ nc_xcor_kernel_component_set_property (GObject *object, guint prop_id, const GVa
     case PROP_TOL:
       nc_xcor_kernel_component_set_tol (comp, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -182,9 +182,9 @@ nc_xcor_kernel_component_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_TOL:
       g_value_set_double (value, nc_xcor_kernel_component_get_tol (comp));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

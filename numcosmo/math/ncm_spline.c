@@ -920,6 +920,8 @@ ncm_spline_eval (const NcmSpline *s, const gdouble x)
   return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->eval (s, x);
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _ncm_spline_eval_idx_not_implemented (const NcmSpline *s, const gdouble x, const gsize i)
 {
@@ -927,6 +929,8 @@ _ncm_spline_eval_idx_not_implemented (const NcmSpline *s, const gdouble x, const
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * ncm_spline_eval_idx:
@@ -965,6 +969,8 @@ ncm_spline_eval_deriv (const NcmSpline *s, const gdouble x)
   return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->deriv (s, x);
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _ncm_spline_deriv_idx_not_implemented (const NcmSpline *s, const gdouble x, const gsize i)
 {
@@ -972,6 +978,8 @@ _ncm_spline_deriv_idx_not_implemented (const NcmSpline *s, const gdouble x, cons
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * ncm_spline_eval_deriv_idx:
@@ -1041,6 +1049,8 @@ ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
   return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->integ (s, x0, x1);
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _ncm_spline_integ_idx_not_implemented (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f)
 {
@@ -1048,6 +1058,8 @@ _ncm_spline_integ_idx_not_implemented (const NcmSpline *s, const gdouble xi, con
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * ncm_spline_eval_integ_idx:

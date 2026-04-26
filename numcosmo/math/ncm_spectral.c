@@ -123,9 +123,9 @@ ncm_spectral_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_MAX_ORDER:
       ncm_spectral_set_max_order (spectral, g_value_get_uint (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -141,9 +141,9 @@ ncm_spectral_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_MAX_ORDER:
       g_value_set_uint (value, ncm_spectral_get_max_order (spectral));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

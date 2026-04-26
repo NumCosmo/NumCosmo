@@ -160,6 +160,8 @@ nc_hireion_class_init (NcHIReionClass *klass)
   reion_class->get_Xe     = &_nc_hireion_get_Xe;
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _nc_hireion_get_init_x (NcHIReion *reion, NcHICosmo *cosmo)
 {
@@ -177,6 +179,8 @@ _nc_hireion_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, co
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * nc_hireion_ref:

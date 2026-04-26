@@ -644,6 +644,8 @@ _ncm_spline_rbf_posdef_gauss_deriv2 (NcmSplineRBF *rbf, NcmVector *xv, const gdo
   return res;
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _ncm_spline_rbf_integ_placeholder (NcmSplineRBF *rbf, NcmVector *xv, const gdouble x0, const gdouble x1)
 {
@@ -651,6 +653,8 @@ _ncm_spline_rbf_integ_placeholder (NcmSplineRBF *rbf, NcmVector *xv, const gdoub
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 _ncm_spline_rbf_gauss_default_shape_params (NcmSplineRBF *rbf, NcmVector *xv)

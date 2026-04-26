@@ -396,6 +396,8 @@ _nc_halo_density_profile_add_submodel (NcmModel *model, NcmModel *submodel)
   }
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x)
 {
@@ -403,6 +405,8 @@ _nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdoubl
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 enum
 {

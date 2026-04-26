@@ -213,12 +213,16 @@ _ncm_sbessel_integrator_integrate_ell_default (NcmSBesselIntegrator *sbi, NcmSBe
   return val;
 }
 
+/* LCOV_EXCL_START */
+
 static void
 _ncm_sbessel_integrator_integrate_not_implemented (NcmSBesselIntegrator *sbi, NcmSBesselIntegratorF F, gdouble a, gdouble b, gdouble k, NcmVector *result, gpointer user_data)
 {
   g_error ("ncm_sbessel_integrator_integrate: method not implemented for `%s'",
            G_OBJECT_TYPE_NAME (sbi));
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * ncm_sbessel_integrator_ref:

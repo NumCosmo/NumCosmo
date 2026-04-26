@@ -290,12 +290,16 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
 
 NCM_MSET_MODEL_REGISTER_ID (nc_xcor_kernel, NC_TYPE_XCOR_KERNEL);
 
+/* LCOV_EXCL_START */
+
 static void
 _nc_xcor_kernel_get_z_range_not_implemented (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid)
 {
   g_error ("nc_xcor_kernel_get_z_range: get_z_range virtual method not implemented for %s",
            G_OBJECT_TYPE_NAME (xclk));
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
