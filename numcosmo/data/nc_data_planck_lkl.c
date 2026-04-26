@@ -975,7 +975,7 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
   ncm_message ("# Downloading file [%s]...\n", file);
 
   {
-    gchar *cmd[] = { "wget", "--tries=3", "--timeout=30", "-O", full_filename, (gchar *) url_str, NULL };
+    gchar *cmd[] = {"wget", "--tries=3", "--timeout=30", "-O", full_filename, (gchar *) url_str, NULL };
 
     if (!g_spawn_sync (dir, cmd, NULL,
                        G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
