@@ -289,33 +289,23 @@ ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order)
     spectral->max_order = max_order;
 
     /* Clear cached plans and arrays as they depend on max_order */
-    if (spectral->fftw_plans != NULL)
-    {
-      g_ptr_array_unref (spectral->fftw_plans);
-      spectral->fftw_plans = NULL;
-    }
-
-    if (spectral->cos_arrays != NULL)
-    {
-      g_ptr_array_unref (spectral->cos_arrays);
-      spectral->cos_arrays = NULL;
-    }
-
-    if (spectral->f_vals != NULL)
-    {
-      fftw_free (spectral->f_vals);
-      spectral->f_vals = NULL;
-    }
-
-    if (spectral->coeffs_work != NULL)
-    {
-      fftw_free (spectral->coeffs_work);
-      spectral->coeffs_work = NULL;
-    }
+    g_clear_pointer (&spectral->fftw_plans, g_ptr_array_unref);
+    g_clear_pointer (&spectral->cos_arrays, g_ptr_array_unref);
+    g_clear_pointer (&spectral->f_vals, fftw_free);
+    g_clear_pointer (&spectral->coeffs_work, fftw_free);
 
     /* Clear the coefficients array to prevent stale data */
-    if (spectral->coeffs != NULL)
-      g_array_set_size (spectral->coeffs, 0);
+    g_assert_nonnull (spectral->coeffs);
+    g_array_set_size (spectral->coeffs, 0);
+
+    {
+      const guint N_max = (1 << spectral->max_order) + 1;
+
+      spectral->f_vals      = fftw_malloc (sizeof (gdouble) * N_max);
+      spectral->coeffs_work = fftw_malloc (sizeof (gdouble) * N_max);
+      spectral->fftw_plans  = g_ptr_array_new_with_free_func ((GDestroyNotify) fftw_destroy_plan);
+      spectral->cos_arrays  = g_ptr_array_new_with_free_func (g_free);
+    }
   }
 }
 
@@ -452,16 +442,9 @@ _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k)
   guint j;
 
   /* Check if already prepared */
-  if ((spectral->fftw_plans != NULL) && (k < spectral->fftw_plans->len) &&
+  if ((k < spectral->fftw_plans->len) &&
       (g_ptr_array_index (spectral->fftw_plans, k) != NULL))
     return;
-
-  /* Initialize arrays if needed */
-  if (spectral->fftw_plans == NULL)
-  {
-    spectral->fftw_plans = g_ptr_array_new_with_free_func ((GDestroyNotify) fftw_destroy_plan);
-    spectral->cos_arrays = g_ptr_array_new_with_free_func (g_free);
-  }
 
   /* Ensure arrays are large enough */
   while (spectral->fftw_plans->len <= k)
@@ -470,38 +453,35 @@ _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k)
     g_ptr_array_add (spectral->cos_arrays, NULL);
   }
 
-  /* Allocate working arrays if needed */
-  if (spectral->f_vals == NULL)
+  /* Precompute Chebyshev-Lobatto cosines: cos(j*pi/2^k) */
   {
-    const guint N_max = (1 << spectral->max_order) + 1;
+    gdouble *cos_vals        = g_new (gdouble, N);
+    const gdouble pi_over_2k = M_PI / (1 << k);
 
-    spectral->f_vals      = fftw_malloc (sizeof (gdouble) * N_max);
-    spectral->coeffs_work = fftw_malloc (sizeof (gdouble) * N_max);
+    for (j = 0; j < N; j++)
+      cos_vals[j] = cos (j * pi_over_2k);
+
+    g_ptr_array_index (spectral->cos_arrays, k) = cos_vals;
   }
 
-  /* Precompute Chebyshev-Lobatto cosines: cos(j*pi/2^k) */
-  gdouble *cos_vals        = g_new (gdouble, N);
-  const gdouble pi_over_2k = M_PI / (1 << k);
-
-  for (j = 0; j < N; j++)
-    cos_vals[j] = cos (j * pi_over_2k);
-
-  g_ptr_array_index (spectral->cos_arrays, k) = cos_vals;
-
   /* Create out-of-place FFTW plan */
-  ncm_cfg_load_fftw_wisdom ("ncm_spectral");
-  ncm_cfg_lock_plan_fftw ();
+  {
+    fftw_plan plan;
 
-  fftw_plan plan = fftw_plan_r2r_1d (N,
-                                     spectral->f_vals,
-                                     spectral->coeffs_work,
-                                     FFTW_REDFT00,
-                                     ncm_cfg_get_fftw_default_flag ());
+    ncm_cfg_load_fftw_wisdom ("ncm_spectral");
+    ncm_cfg_lock_plan_fftw ();
 
-  ncm_cfg_unlock_plan_fftw ();
-  ncm_cfg_save_fftw_wisdom ("ncm_spectral");
+    plan = fftw_plan_r2r_1d (N,
+                             spectral->f_vals,
+                             spectral->coeffs_work,
+                             FFTW_REDFT00,
+                             ncm_cfg_get_fftw_default_flag ());
 
-  g_ptr_array_index (spectral->fftw_plans, k) = plan;
+    ncm_cfg_unlock_plan_fftw ();
+    ncm_cfg_save_fftw_wisdom ("ncm_spectral");
+
+    g_ptr_array_index (spectral->fftw_plans, k) = plan;
+  }
 }
 
 static void

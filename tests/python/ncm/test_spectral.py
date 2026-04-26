@@ -189,7 +189,7 @@ class TestSpectral:
     def test_spectral_serialization(self) -> None:
         """Test that NcmSpectral can be serialized and deserialized."""
         # Create a spectral with custom max_order
-        max_order = 12
+        max_order = 13
         spectral = Ncm.Spectral.new_with_max_order(max_order)
 
         # Serialize and deserialize
