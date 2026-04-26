@@ -1,7 +1,15 @@
 """Test fixtures for numcosmo_py."""
 
+import warnings
 import pytest
 import numpy as np
+from gi import PyGIDeprecationWarning  # type: ignore
+
+warnings.filterwarnings(
+    "ignore", message=".*unix_signal_add_full.*", category=PyGIDeprecationWarning
+)
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology
 
