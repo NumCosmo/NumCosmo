@@ -59,6 +59,7 @@ struct _NcmSpectral
   /* Adaptive refinement fields */
   guint max_order;       /* Maximum k: N_max = 2^max_order + 1 */
   gdouble *f_vals;       /* Function values array, size: 2^max_order + 1 */
+  gdouble *f_vals_tmp;   /* Function values array, size: 2^max_order + 1 */
   gdouble *coeffs_work;  /* Coefficients work array, size: 2^max_order + 1 */
   GArray *coeffs;        /* Coefficients array, size: 2^max_order + 1 */
   GPtrArray *cos_arrays; /* Precomputed cosines for each k level */
@@ -78,6 +79,7 @@ ncm_spectral_init (NcmSpectral *spectral)
 {
   spectral->max_order   = 0; /* Default: N_max = 1025 */
   spectral->f_vals      = NULL;
+  spectral->f_vals_tmp  = NULL;
   spectral->coeffs_work = NULL;
   spectral->coeffs      = g_array_new (FALSE, FALSE, sizeof (gdouble));
   spectral->cos_arrays  = NULL;
@@ -95,50 +97,16 @@ ncm_spectral_finalize (GObject *object)
   NcmSpectral *spectral = NCM_SPECTRAL (object);
 
   /* Clean up adaptive refinement resources */
-  if (spectral->fftw_plans != NULL)
-  {
-    g_ptr_array_unref (spectral->fftw_plans);
-    spectral->fftw_plans = NULL;
-  }
-
-  if (spectral->cos_arrays != NULL)
-  {
-    g_ptr_array_unref (spectral->cos_arrays);
-    spectral->cos_arrays = NULL;
-  }
-
-  if (spectral->f_vals != NULL)
-  {
-    fftw_free (spectral->f_vals);
-    spectral->f_vals = NULL;
-  }
-
-  if (spectral->coeffs_work != NULL)
-  {
-    fftw_free (spectral->coeffs_work);
-    spectral->coeffs_work = NULL;
-  }
-
+  g_clear_pointer (&spectral->fftw_plans, g_ptr_array_unref);
+  g_clear_pointer (&spectral->cos_arrays, g_ptr_array_unref);
+  g_clear_pointer (&spectral->f_vals, fftw_free);
+  g_clear_pointer (&spectral->f_vals_tmp, fftw_free);
+  g_clear_pointer (&spectral->coeffs_work, fftw_free);
   g_clear_pointer (&spectral->coeffs, g_array_unref);
 
-  /* Clean up legacy resources */
-  if (spectral->cheb_plan_r2r != NULL)
-  {
-    fftw_destroy_plan (spectral->cheb_plan_r2r);
-    spectral->cheb_plan_r2r = NULL;
-  }
-
-  if (spectral->cheb_f_vals != NULL)
-  {
-    fftw_free (spectral->cheb_f_vals);
-    spectral->cheb_f_vals = NULL;
-  }
-
-  if (spectral->cheb_cos_vals != NULL)
-  {
-    g_free (spectral->cheb_cos_vals);
-    spectral->cheb_cos_vals = NULL;
-  }
+  g_clear_pointer (&spectral->cheb_plan_r2r, fftw_destroy_plan);
+  g_clear_pointer (&spectral->cheb_f_vals, fftw_free);
+  g_clear_pointer (&spectral->cheb_cos_vals, g_free);
 
   G_OBJECT_CLASS (ncm_spectral_parent_class)->finalize (object);
 }
@@ -292,6 +260,7 @@ ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order)
     g_clear_pointer (&spectral->fftw_plans, g_ptr_array_unref);
     g_clear_pointer (&spectral->cos_arrays, g_ptr_array_unref);
     g_clear_pointer (&spectral->f_vals, fftw_free);
+    g_clear_pointer (&spectral->f_vals_tmp, fftw_free);
     g_clear_pointer (&spectral->coeffs_work, fftw_free);
 
     /* Clear the coefficients array to prevent stale data */
@@ -302,6 +271,7 @@ ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order)
       const guint N_max = (1 << spectral->max_order) + 1;
 
       spectral->f_vals      = fftw_malloc (sizeof (gdouble) * N_max);
+      spectral->f_vals_tmp  = fftw_malloc (sizeof (gdouble) * N_max);
       spectral->coeffs_work = fftw_malloc (sizeof (gdouble) * N_max);
       spectral->fftw_plans  = g_ptr_array_new_with_free_func ((GDestroyNotify) fftw_destroy_plan);
       spectral->cos_arrays  = g_ptr_array_new_with_free_func (g_free);
@@ -468,6 +438,8 @@ _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k)
   {
     fftw_plan plan;
 
+    memcpy (spectral->f_vals_tmp, spectral->f_vals, sizeof (gdouble) * N);
+
     ncm_cfg_load_fftw_wisdom ("ncm_spectral");
     ncm_cfg_lock_plan_fftw ();
 
@@ -479,6 +451,8 @@ _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k)
 
     ncm_cfg_unlock_plan_fftw ();
     ncm_cfg_save_fftw_wisdom ("ncm_spectral");
+
+    memcpy (spectral->f_vals, spectral->f_vals_tmp, sizeof (gdouble) * N);
 
     g_ptr_array_index (spectral->fftw_plans, k) = plan;
   }
@@ -520,13 +494,6 @@ _ncm_spectral_refine_to_k (NcmSpectral *spectral, NcmSpectralF F,
   /* Move existing values to even positions (BACKWARD to avoid overwriting) */
   for (j = (gint) N_old - 1; j >= 0; j--)
   {
-    if (j < 10)
-      fprintf (stderr, "Refinement k=%u: f[%u] = % 22.15g, f[%u] = % 22.15g\n",
-               k_new,
-               2 * j, spectral->f_vals[2 * j],
-               j, spectral->f_vals[j]
-      );
-
     spectral->f_vals[2 * j] = spectral->f_vals[j];
   }
 
@@ -536,10 +503,6 @@ _ncm_spectral_refine_to_k (NcmSpectral *spectral, NcmSpectralF F,
     const gdouble x = mid + half_h * cos_vals[jj];
 
     spectral->f_vals[jj] = F (user_data, x);
-
-    if (jj < 10)
-      fprintf (stderr, "Refinement k=%u: Evaluated F at x=% 22.15g -> f=% 22.15g, previous x=% 22.15g, f=% 22.15g\n",
-               k_new, x, spectral->f_vals[jj], mid + half_h * cos_vals[jj - 1], spectral->f_vals[jj - 1]);
   }
 }
 

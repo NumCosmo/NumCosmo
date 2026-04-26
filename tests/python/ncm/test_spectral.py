@@ -2802,7 +2802,6 @@ class TestSpectral:
             atol=1.0e-14,
             err_msg="Adaptive coefficients at max_order don't match non-adaptive",
         )
-        print(coeffs_adaptive)
 
         # Verify evaluation at test points
         x_test = np.linspace(a, b, 50)
