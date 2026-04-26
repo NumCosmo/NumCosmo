@@ -3888,12 +3888,13 @@ nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
   if (download)
   {
     const gchar *dir = ncm_cfg_get_fullpath_base ();
-    gchar *cmd[]     = { "wget", "-O", full_filename, url_str, NULL };
+    gchar *cmd[]     = {"wget", "--tries=3", "--timeout=30", "-O", full_filename, url_str, NULL };
 
     ncm_message ("# Downloading file [%s]...\n", url_str);
 
     if (!g_spawn_sync (dir, cmd, NULL,
-                       G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, &error))
+                       G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+                       NULL, NULL, NULL, NULL, NULL, &error))
       g_error ("nc_data_snia_cov_get_fits: cannot download file: %s. Error: %s. "
                "Please download the file manually from %s and extract it to %s.",
                filename, error->message,

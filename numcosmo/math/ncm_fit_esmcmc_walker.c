@@ -140,6 +140,8 @@ ncm_fit_esmcmc_walker_get_property (GObject *object, guint prop_id, GValue *valu
   }
 }
 
+/* LCOV_EXCL_START */
+
 static void
 _ncm_fit_esmcmc_walker_set_size (NcmFitESMCMCWalker *walker, guint size)
 {
@@ -209,6 +211,8 @@ _ncm_fit_esmcmc_walker_desc (NcmFitESMCMCWalker *walker)
 
   return NULL;
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 ncm_fit_esmcmc_walker_class_init (NcmFitESMCMCWalkerClass *klass)

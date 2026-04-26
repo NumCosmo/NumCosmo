@@ -68,13 +68,13 @@ class CompareFunc1d:
         self.y_unit = y_unit
         self.xscale = xscale
         self.yscale = yscale
-        self.diff = np.zeros_like(y1)
+        self.diff: npt.NDArray[np.float64] = np.zeros_like(y1)
 
         non_zero_indices = y1 != 0.0
         zero_indices = ~non_zero_indices
         self.diff[non_zero_indices] = y2[non_zero_indices] / y1[non_zero_indices] - 1.0
         self.diff[zero_indices] = y2[zero_indices] - y1[zero_indices]
-        self.abs_diff = np.abs(self.diff)
+        self.abs_diff: npt.NDArray[np.float64] = np.abs(self.diff)
 
     @property
     def rel_diff_min(self) -> float:
@@ -89,17 +89,17 @@ class CompareFunc1d:
     @property
     def rel_diff_mean(self) -> float:
         """Return the mean relative difference."""
-        return np.mean(self.abs_diff)
+        return float(np.mean(self.abs_diff))
 
     @property
     def rel_diff_std(self) -> float:
         """Return the standard deviation of the relative difference."""
-        return np.std(self.abs_diff)
+        return float(np.std(self.abs_diff))
 
     @property
     def rel_diff_median(self) -> float:
         """Return the median relative difference."""
-        return np.median(self.abs_diff)
+        return float(np.median(self.abs_diff))
 
     @property
     def x_label(self) -> str:
@@ -726,6 +726,7 @@ def compare_cmb_lens_kernel(
     """Compare CMB lensing kernel from CCL and NumCosmo."""
     cosmo = cosmology.cosmo
     dist = cosmology.dist
+    ps_ml = cosmology.ps_ml
     z_lss = cosmology.dist.decoupling_redshift(cosmo)
     lmax = 3000
 
@@ -738,13 +739,16 @@ def compare_cmb_lens_kernel(
         )
     else:
         ccl_cmb_lens = pyccl.CMBLensingTracer(ccl_cosmo, z_source=z_lss)
-    nc_cmb_lens = Nc.XcorLimberKernelCMBLensing.new(dist, cosmology.recomb, noise)
+    nc_cmb_lens = Nc.XcorKernelCMBLensing.new(dist, ps_ml, cosmology.recomb, noise)
+    nc_cmb_lens.set_l_limber(0)
     nc_cmb_lens.prepare(cosmo)
 
-    z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_cmb_lens, cosmology, ell)
+    z_a, _, ccl_Wchi_a = tp.compute_kernel(ccl_cmb_lens, cosmology, ell)
     nc_Wchi_a = (
-        np.array([nc_cmb_lens.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
-        * H_Mpc_a
+        np.array(
+            [nc_cmb_lens.eval_limber_z_full(cosmo, z, dist, int(ell)) for z in z_a]
+        )
+        / cosmo.RH_Mpc()
     )
 
     return CompareFunc1d(
@@ -780,21 +784,22 @@ def compare_cmb_len_auto(
 
     noise = Ncm.Vector.new(len(ells))
     noise.set_zero()
-    nc_cmb_lens = Nc.XcorLimberKernelCMBLensing.new(
-        cosmology.dist, cosmology.recomb, noise
+    nc_cmb_lens = Nc.XcorKernelCMBLensing.new(
+        cosmology.dist, cosmology.ps_ml, cosmology.recomb, noise
     )
+    nc_cmb_lens.set_l_limber(0)
 
     psp = ccl_cosmo.get_linear_power()
     ccl_cmb_lens_auto = pyccl.angular_cl(
         ccl_cosmo, ccl_cmb_lens, ccl_cmb_lens, ells, p_of_k_a_lin=psp, p_of_k_a=psp
     )
 
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorLimberMethod.CUBATURE)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     nc_cmb_lens_auto_v = Ncm.Vector.new(lmax + 1 - 2)
     xcor.prepare(cosmology.cosmo)
     nc_cmb_lens.prepare(cosmology.cosmo)
 
-    xcor.limber(nc_cmb_lens, nc_cmb_lens, cosmology.cosmo, 2, lmax, nc_cmb_lens_auto_v)
+    xcor.compute(nc_cmb_lens, nc_cmb_lens, cosmology.cosmo, 2, lmax, nc_cmb_lens_auto_v)
     nc_cmb_lens_auto = np.array(nc_cmb_lens_auto_v.dup_array())
 
     return CompareFunc1d(
@@ -833,13 +838,14 @@ def compare_cmb_isw_kernel(
         ccl_cmb_isw = pyccl.ISWTracer(ccl_cosmo, z_max=z_lss, n_chi=n_chi)
     else:
         ccl_cmb_isw = pyccl.ISWTracer(ccl_cosmo, z_max=z_lss)
-    nc_cmb_isw = Nc.XcorLimberKernelCMBISW.new(dist, ps_ml, cosmology.recomb, noise)
+    nc_cmb_isw = Nc.XcorKernelCMBISW.new(dist, ps_ml, cosmology.recomb, noise)
+    nc_cmb_isw.set_l_limber(0)
     nc_cmb_isw.prepare(cosmo)
 
-    z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_cmb_isw, cosmology, ell)
+    z_a, _, ccl_Wchi_a = tp.compute_kernel(ccl_cmb_isw, cosmology, ell)
     nc_Wchi_a = (
-        np.array([nc_cmb_isw.eval_full(cosmo, z, dist, int(ell)) for z in z_a])
-        * H_Mpc_a
+        np.array([nc_cmb_isw.eval_limber_z_full(cosmo, z, dist, int(ell)) for z in z_a])
+        / cosmo.RH_Mpc()
     )
 
     return CompareFunc1d(
@@ -873,9 +879,10 @@ def compare_cmb_isw_auto(
     noise = Ncm.Vector.new(lmax + 1)
     noise.set_zero()
 
-    nc_isw = Nc.XcorLimberKernelCMBISW.new(
+    nc_isw = Nc.XcorKernelCMBISW.new(
         cosmology.dist, cosmology.ps_ml, cosmology.recomb, noise
     )
+    nc_isw.set_l_limber(0)
     nc_isw.prepare(cosmology.cosmo)
 
     psp = ccl_cosmo.get_linear_power()
@@ -883,12 +890,12 @@ def compare_cmb_isw_auto(
         ccl_cosmo, ccl_isw, ccl_isw, ells, p_of_k_a_lin=psp, p_of_k_a=psp
     )
 
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorLimberMethod.CUBATURE)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     nc_isw_auto_v = Ncm.Vector.new(ells[-1] + 1 - 2)
     xcor.prepare(cosmology.cosmo)
     nc_isw.prepare(cosmology.cosmo)
 
-    xcor.limber(nc_isw, nc_isw, cosmology.cosmo, 2, lmax, nc_isw_auto_v)
+    xcor.compute(nc_isw, nc_isw, cosmology.cosmo, 2, lmax, nc_isw_auto_v)
     nc_isw_auto = np.array(nc_isw_auto_v.dup_array())
 
     return CompareFunc1d(
@@ -914,24 +921,26 @@ def compare_tsz_kernel(
     n_chi: int | None = None,
 ):
     """Compare tSZ lensing kernel from CCL and NumCosmo."""
+    cosmo = cosmology.cosmo
     z_max = 6.0
     if n_chi is not None:
         ccl_tsz = pyccl.tSZTracer(ccl_cosmo, z_max=z_max, n_chi=n_chi)
     else:
         ccl_tsz = pyccl.tSZTracer(ccl_cosmo, z_max=z_max)
-    z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_tsz, cosmology, ell)
+    z_a, _, ccl_Wchi_a = tp.compute_kernel(ccl_tsz, cosmology, ell)
 
-    nc_tsz = Nc.XcorLimberKerneltSZ.new(z_max)
+    nc_tsz = Nc.XcorKerneltSZ.new(cosmology.dist, cosmology.ps_ml, z_max)
+    nc_tsz.set_l_limber(0)
     nc_tsz.prepare(cosmology.cosmo)
 
     nc_Wchi_a = (
         np.array(
             [
-                nc_tsz.eval_full(cosmology.cosmo, z, cosmology.dist, int(ell))
+                nc_tsz.eval_limber_z_full(cosmology.cosmo, z, cosmology.dist, int(ell))
                 for z in z_a
             ]
         )
-        * H_Mpc_a
+        / cosmo.RH_Mpc()
     )
 
     return CompareFunc1d(
@@ -962,19 +971,19 @@ def compare_tsz_auto(
         ccl_tsz = pyccl.tSZTracer(ccl_cosmo, z_max=z_max)
     lmax = ells[-1]
 
-    nc_tsz = Nc.XcorLimberKerneltSZ.new(z_max)
-
+    nc_tsz = Nc.XcorKerneltSZ.new(cosmology.dist, cosmology.ps_ml, z_max)
+    nc_tsz.set_l_limber(0)
     psp = ccl_cosmo.get_linear_power()
     ccl_tsz_auto = pyccl.angular_cl(
         ccl_cosmo, ccl_tsz, ccl_tsz, ells, p_of_k_a_lin=psp, p_of_k_a=psp
     )
 
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorLimberMethod.CUBATURE)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     nc_tsz_auto_v = Ncm.Vector.new(ells[-1] + 1 - 2)
     xcor.prepare(cosmology.cosmo)
     nc_tsz.prepare(cosmology.cosmo)
 
-    xcor.limber(nc_tsz, nc_tsz, cosmology.cosmo, 2, lmax, nc_tsz_auto_v)
+    xcor.compute(nc_tsz, nc_tsz, cosmology.cosmo, 2, lmax, nc_tsz_auto_v)
     nc_tsz_auto = np.array(nc_tsz_auto_v.dup_array())
 
     return CompareFunc1d(
@@ -1020,8 +1029,12 @@ def compare_galaxy_weak_lensing_kernel(
     z_len: int = 1000,
 ):
     """Compare weak lensing kernel from CCL and NumCosmo."""
+    cosmo = cosmology.cosmo
     dndz = prepare_dndz(mu, sigma, z_len)
-    nc_wl = Nc.XcorLimberKernelWeakLensing.new(0.0, 2.0, dndz, 3.0, 7.0, cosmology.dist)
+    nc_wl = Nc.XcorKernelWeakLensing.new(
+        cosmology.dist, cosmology.ps_ml, dndz, 3.0, 7.0
+    )
+    nc_wl.set_l_limber(0)
     nc_wl.prepare(cosmology.cosmo)
     z_a = np.array(dndz.peek_xv().dup_array())
     nz_a = np.array(dndz.peek_yv().dup_array())
@@ -1033,13 +1046,16 @@ def compare_galaxy_weak_lensing_kernel(
     else:
         ccl_wl = pyccl.WeakLensingTracer(ccl_cosmo, dndz=(z_a, nz_a))
 
-    z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_wl, cosmology, ell)
+    z_a, _, ccl_Wchi_a = tp.compute_kernel(ccl_wl, cosmology, ell)
 
     nc_Wchi_a = (
         np.array(
-            [nc_wl.eval_full(cosmology.cosmo, z, cosmology.dist, int(ell)) for z in z_a]
+            [
+                nc_wl.eval_limber_z_full(cosmology.cosmo, z, cosmology.dist, int(ell))
+                for z in z_a
+            ]
         )
-        * H_Mpc_a
+        / cosmo.RH_Mpc()
     )
 
     return CompareFunc1d(
@@ -1067,7 +1083,10 @@ def compare_galaxy_weak_lensing_auto(
 ):
     """Compare weak lensing auto from CCL and NumCosmo."""
     dndz = prepare_dndz(mu, sigma, z_len)
-    nc_wl = Nc.XcorLimberKernelWeakLensing.new(0.0, 2.0, dndz, 3.0, 7.0, cosmology.dist)
+    nc_wl = Nc.XcorKernelWeakLensing.new(
+        cosmology.dist, cosmology.ps_ml, dndz, 3.0, 7.0
+    )
+    nc_wl.set_l_limber(0)
     nc_wl.prepare(cosmology.cosmo)
     z_a = np.array(dndz.peek_xv().dup_array())
     nz_a = np.array(dndz.peek_yv().dup_array())
@@ -1085,12 +1104,12 @@ def compare_galaxy_weak_lensing_auto(
         ccl_cosmo, ccl_wl, ccl_wl, ells, p_of_k_a_lin=psp, p_of_k_a=psp
     )
 
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorLimberMethod.CUBATURE)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     nc_wl_auto_v = Ncm.Vector.new(lmax + 1 - 2)
     xcor.prepare(cosmology.cosmo)
     nc_wl.prepare(cosmology.cosmo)
 
-    xcor.limber(nc_wl, nc_wl, cosmology.cosmo, 2, lmax, nc_wl_auto_v)
+    xcor.compute(nc_wl, nc_wl, cosmology.cosmo, 2, lmax, nc_wl_auto_v)
     nc_wl_auto = np.array(nc_wl_auto_v.dup_array())
 
     return CompareFunc1d(
@@ -1120,8 +1139,10 @@ def compare_galaxy_number_count_kernel(
     mbias: float = 1.234,
 ):
     """Compare galaxy count kernel from CCL and NumCosmo."""
+    cosmo = cosmology.cosmo
     dndz = prepare_dndz(mu, sigma, z_len)
-    nc_gal = Nc.XcorLimberKernelGal.new(0.0, 2.0, 1, 3.0, dndz, cosmology.dist, True)
+    nc_gal = Nc.XcorKernelGal.new(cosmology.dist, cosmology.ps_ml, 1, 3.0, dndz, True)
+    nc_gal.set_l_limber(0)
     nc_gal["mag_bias"] = mbias
     nc_gal["bparam_0"] = bias
     nc_gal.prepare(cosmology.cosmo)
@@ -1136,16 +1157,16 @@ def compare_galaxy_number_count_kernel(
         mag_bias=(z_a, np.ones_like(z_a) * mbias),
         n_samples=z_len,
     )
-    z_a, _, H_Mpc_a, ccl_Wchi_a = tp.compute_kernel(ccl_gal, cosmology, ell)
+    z_a, _, ccl_Wchi_a = tp.compute_kernel(ccl_gal, cosmology, ell)
 
     nc_Wchi_a = (
         np.array(
             [
-                nc_gal.eval_full(cosmology.cosmo, z, cosmology.dist, int(ell))
+                nc_gal.eval_limber_z_full(cosmology.cosmo, z, cosmology.dist, int(ell))
                 for z in z_a
             ]
         )
-        * H_Mpc_a
+        / cosmo.RH_Mpc()
     )
 
     return CompareFunc1d(
@@ -1174,7 +1195,8 @@ def compare_galaxy_number_count_auto(
 ):
     """Compare galaxy count kernel from CCL and NumCosmo."""
     dndz = prepare_dndz(mu, sigma, z_len)
-    nc_gal = Nc.XcorLimberKernelGal.new(0.0, 2.0, 1, 3.0, dndz, cosmology.dist, True)
+    nc_gal = Nc.XcorKernelGal.new(cosmology.dist, cosmology.ps_ml, 1, 3.0, dndz, True)
+    nc_gal.set_l_limber(0)
     nc_gal["mag_bias"] = mbias
     nc_gal["bparam_0"] = bias
     nc_gal.prepare(cosmology.cosmo)
@@ -1197,9 +1219,9 @@ def compare_galaxy_number_count_auto(
     )
 
     nc_gal_auto_v = Ncm.Vector.new(lmax + 1 - 2)
-    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorLimberMethod.CUBATURE)
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     xcor.prepare(cosmology.cosmo)
-    xcor.limber(nc_gal, nc_gal, cosmology.cosmo, 2, lmax, nc_gal_auto_v)
+    xcor.compute(nc_gal, nc_gal, cosmology.cosmo, 2, lmax, nc_gal_auto_v)
     nc_gal_auto = np.array(nc_gal_auto_v.dup_array())
 
     return CompareFunc1d(

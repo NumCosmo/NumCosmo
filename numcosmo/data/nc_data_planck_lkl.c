@@ -544,7 +544,7 @@ _nc_data_planck_lkl_file_exists (const gchar *filename)
 
       g_free (file_at_default);
 
-      if (g_file_test (file_at_data, G_FILE_TEST_EXISTS))
+      if ((file_at_data != NULL) && g_file_test (file_at_data, G_FILE_TEST_EXISTS))
         return file_at_data;
 
       g_free (file_at_data);
@@ -975,27 +975,33 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
   ncm_message ("# Downloading file [%s]...\n", file);
 
   {
-    gchar *cmd[] = { "wget", "-O", full_filename, (gchar *) url_str, NULL };
+    gchar *cmd[] = {"wget", "--tries=3", "--timeout=30", "-O", full_filename, (gchar *) url_str, NULL };
 
     if (!g_spawn_sync (dir, cmd, NULL,
-                       G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, &error))
+                       G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+                       NULL, NULL, NULL, NULL, NULL, &error))
       g_error ("nc_data_planck_lkl_download_baseline: cannot download file: %s. Error: %s. "
                "Please download the file manually from %s and extract it to %s.",
                file, error->message,
                url_str, dir);
   }
 
+  ncm_message ("# Extracting file [%s]...\n", file);
+
   {
     gchar *cmd[] = { "tar", "xzf", (gchar *) file, NULL };
 
     if (!g_spawn_sync (dir, cmd, NULL,
-                       G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, &error))
+                       G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+                       NULL, NULL, NULL, NULL, NULL, &error))
       g_error ("nc_data_planck_lkl_download_baseline: cannot extract tar file: %s. Error: %s",
                file, error->message);
   }
 
   g_unlink (full_filename);
   g_free (full_filename);
+
+  ncm_message ("# Baseline data successfully downloaded and extracted.\n");
 
   return;
 }

@@ -342,6 +342,8 @@ nc_recomb_class_init (NcRecombClass *klass)
   klass->XHeII   = &_nc_recomb_XHeII;
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
@@ -365,6 +367,8 @@ _nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * nc_recomb_ref:

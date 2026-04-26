@@ -257,8 +257,8 @@ nc_galaxy_sd_true_redshift_set_lim (NcGalaxySDTrueRedshift *gsdtr, const gdouble
 /**
  * nc_galaxy_sd_true_redshift_get_lim:
  * @gsdtr: a #NcGalaxySDTrueRedshift
- * @z_min: a #gdouble pointer representing minimum redshift
- * @z_max: a #gdouble pointer representing maximum redshift
+ * @z_min: (out): a #gdouble pointer representing minimum redshift
+ * @z_max: (out): a #gdouble pointer representing maximum redshift
  *
  * Gets the redshift limits of the galaxy sample redshift distribution.
  *

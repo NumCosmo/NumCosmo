@@ -1058,7 +1058,7 @@ ncm_spline2dim_integ_total (NcmSpline2d *s2d)
                                   ncm_vector_get (self->xv, ncm_vector_len (self->xv) - 1),
                                   ncm_vector_get (self->yv, 0),
                                   ncm_vector_get (self->yv, ncm_vector_len (self->yv) - 1)
-                                 );
+  );
 }
 
 /**

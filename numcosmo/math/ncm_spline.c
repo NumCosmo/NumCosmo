@@ -222,6 +222,10 @@ _ncm_spline_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
 }
 
+static gdouble _ncm_spline_eval_idx_not_implemented (const NcmSpline *s, const gdouble x, const gsize i);
+static gdouble _ncm_spline_deriv_idx_not_implemented (const NcmSpline *s, const gdouble x, const gsize i);
+static gdouble _ncm_spline_integ_idx_not_implemented (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f);
+
 static void
 ncm_spline_class_init (NcmSplineClass *klass)
 {
@@ -284,6 +288,9 @@ ncm_spline_class_init (NcmSplineClass *klass)
   klass->deriv        = NULL;
   klass->deriv2       = NULL;
   klass->integ        = NULL;
+  klass->eval_idx     = &_ncm_spline_eval_idx_not_implemented;
+  klass->deriv_idx    = &_ncm_spline_deriv_idx_not_implemented;
+  klass->integ_idx    = &_ncm_spline_integ_idx_not_implemented;
 }
 
 /**
@@ -913,6 +920,40 @@ ncm_spline_eval (const NcmSpline *s, const gdouble x)
   return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->eval (s, x);
 }
 
+/* LCOV_EXCL_START */
+
+static gdouble
+_ncm_spline_eval_idx_not_implemented (const NcmSpline *s, const gdouble x, const gsize i)
+{
+  g_error ("ncm_spline_eval_idx: method not implemented for spline type `%s'", G_OBJECT_TYPE_NAME (s));
+
+  return 0.0;
+}
+
+/* LCOV_EXCL_STOP */
+
+/**
+ * ncm_spline_eval_idx:
+ * @s: a constant #NcmSpline
+ * @x: x-coordinate value
+ * @i: index of the lower knot
+ *
+ * Evaluates the spline at @x using the provided index @i. This function
+ * is useful when multiple splines share the same x vector and the index
+ * is already known, avoiding redundant binary searches.
+ *
+ * The index @i should correspond to the interval containing @x, i.e.,
+ * x[i] <= x < x[i+1].
+ *
+ * Returns: The interpolated value of a function computed at @x.
+ */
+
+gdouble
+ncm_spline_eval_idx (const NcmSpline *s, const gdouble x, const gsize i)
+{
+  return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->eval_idx (s, x, i);
+}
+
 /**
  * ncm_spline_eval_deriv:
  * @s: a constant #NcmSpline
@@ -926,6 +967,40 @@ gdouble
 ncm_spline_eval_deriv (const NcmSpline *s, const gdouble x)
 {
   return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->deriv (s, x);
+}
+
+/* LCOV_EXCL_START */
+
+static gdouble
+_ncm_spline_deriv_idx_not_implemented (const NcmSpline *s, const gdouble x, const gsize i)
+{
+  g_error ("ncm_spline_eval_deriv_idx: method not implemented for spline type `%s'", G_OBJECT_TYPE_NAME (s));
+
+  return 0.0;
+}
+
+/* LCOV_EXCL_STOP */
+
+/**
+ * ncm_spline_eval_deriv_idx:
+ * @s: a constant #NcmSpline
+ * @x: x-coordinate value
+ * @i: index of the lower knot
+ *
+ * Evaluates the derivative of the spline at @x using the provided index @i.
+ * This function is useful when multiple splines share the same x vector and
+ * the index is already known, avoiding redundant binary searches.
+ *
+ * The index @i should correspond to the interval containing @x, i.e.,
+ * x[i] <= x < x[i+1].
+ *
+ * Returns: The derivative of an interpolated function computed at @x.
+ */
+
+gdouble
+ncm_spline_eval_deriv_idx (const NcmSpline *s, const gdouble x, const gsize i)
+{
+  return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->deriv_idx (s, x, i);
 }
 
 /**
@@ -972,6 +1047,43 @@ gdouble
 ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 {
   return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->integ (s, x0, x1);
+}
+
+/* LCOV_EXCL_START */
+
+static gdouble
+_ncm_spline_integ_idx_not_implemented (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f)
+{
+  g_error ("ncm_spline_eval_integ_idx: method not implemented for spline type `%s'", G_OBJECT_TYPE_NAME (s));
+
+  return 0.0;
+}
+
+/* LCOV_EXCL_STOP */
+
+/**
+ * ncm_spline_eval_integ_idx:
+ * @s: a constant #NcmSpline
+ * @xi: lower integration limit
+ * @i: index of the lower knot for @xi
+ * @xf: upper integration limit
+ * @f: index of the lower knot for @xf
+ *
+ * Evaluates the integral of the spline from @xi to @xf using the provided
+ * indices @i and @f. This function is useful when multiple splines share
+ * the same x vector and the indices are already known, avoiding redundant
+ * binary searches.
+ *
+ * The indices should correspond to the intervals containing the limits, i.e.,
+ * x[@i] <= @xi < x[@i+1] and x[@f] <= @xf < x[@f+1].
+ *
+ * Returns: The numerical integral of an interpolated function over the range [@xi, @xf].
+ */
+
+gdouble
+ncm_spline_eval_integ_idx (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f)
+{
+  return NCM_SPLINE_GET_CLASS ((NcmSpline *) s)->integ_idx (s, xi, i, xf, f);
 }
 
 /**
@@ -1075,10 +1187,13 @@ _ncm_spline_get_index_no_stride (const NcmSpline *s, const gdouble x)
       i_bucket = n_buckets - 1;
 
     left  = g_array_index (self->bucket, gsize, i_bucket);
-    right = g_array_index (self->bucket, gsize, i_bucket + 1) + 1;
+    right = g_array_index (self->bucket, gsize, i_bucket + 1);
   }
 
-  return gsl_interp_bsearch (self->x_data, x, left, right);
+  if (left == right)
+    return left;
+
+  return gsl_interp_bsearch (self->x_data, x, left, right + 1);
 }
 
 static guint
@@ -1111,10 +1226,13 @@ _ncm_spline_get_index_stride (const NcmSpline *s, const gdouble x)
       i_bucket = n_buckets - 1;
 
     left  = g_array_index (self->bucket, gsize, i_bucket);
-    right = g_array_index (self->bucket, gsize, i_bucket + 1) + 1;
+    right = g_array_index (self->bucket, gsize, i_bucket + 1);
   }
 
-  return _ncm_spline_bsearch_stride (self->x_data, self->stride, x, left, right);
+  if (left == right)
+    return left;
+
+  return _ncm_spline_bsearch_stride (self->x_data, self->stride, x, left, right + 1);
 }
 
 /**

@@ -515,8 +515,8 @@ ncm_sf_spherical_harmonics_get_lmax (NcmSFSphericalHarmonics *spha)
  * @l0: First $l_0$
  * @m: $m$ index
  *
- * Gets an array of #NcmSFSphericalHarmonicsK with the coeficients
- * necessary to move the recurence from $(l_0, m)\; \to\; (l_\mathrm{max}, m)$.
+ * Gets an array of #NcmSFSphericalHarmonicsK with the coefficients necessary to move
+ * the recurrence from $(l_0, m)\; \to\; (l_\mathrm{max}, m)$.
  *
  * Returns: (array) (element-type NcmSFSphericalHarmonicsK): a pointer to an array of #NcmSFSphericalHarmonicsK.
  */

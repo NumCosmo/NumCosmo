@@ -4,10 +4,14 @@
  *  Tue July 14 12:00:00 2015
  *  Copyright  2015  Cyrille Doux
  *  <cdoux@apc.in2p3.fr>
+ *  Sat December 27 20:21:01 2025
+ *  Copyright  2025  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) 2015 Cyrille Doux <cdoux@apc.in2p3.fr>
+ * Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -33,7 +37,7 @@
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel.h>
+#include <numcosmo/xcor/nc_xcor_kernel.h>
 #include <numcosmo/math/ncm_powspec.h>
 
 G_BEGIN_DECLS
@@ -43,24 +47,28 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
 
 /**
- * NcXcorLimberMethod:
- * @NC_XCOR_LIMBER_METHOD_GSL: Use GSL numerical integration
- * @NC_XCOR_LIMBER_METHOD_CUBATURE: Use cubature numerical integration
+ * NcXcorMethod:
+ * @NC_XCOR_METHOD_LIMBER_Z_GSL: Use GSL numerical integration
+ * @NC_XCOR_METHOD_LIMBER_Z_CUBATURE: Use cubature numerical integration
+ * @NC_XCOR_METHOD_KERNEL_GSL: Use GSL numerical integration over kernel variables
+ * @NC_XCOR_METHOD_KERNEL_CUBATURE: Use cubature numerical integration over kernel variables
  *
- * Methods to compute Limber-approximated integrals.
+ * Methods to compute integrals.
  *
  */
-typedef enum _NcXcorLimberMethod
+typedef enum _NcXcorMethod
 {
-  NC_XCOR_LIMBER_METHOD_GSL = 0,
-  NC_XCOR_LIMBER_METHOD_CUBATURE,
-} NcXcorLimberMethod;
+  NC_XCOR_METHOD_LIMBER_Z_GSL = 0,
+  NC_XCOR_METHOD_LIMBER_Z_CUBATURE,
+  NC_XCOR_METHOD_KERNEL_GSL,
+  NC_XCOR_METHOD_KERNEL_CUBATURE,
+} NcXcorMethod;
 
 #define NC_XCOR_PRECISION (1.0e-6)
 
 GType nc_xcor_kinetic_get_type (void) G_GNUC_CONST;
 
-NcXcor *nc_xcor_new (NcDistance *dist, NcmPowspec *ps, NcXcorLimberMethod meth);
+NcXcor *nc_xcor_new (NcDistance *dist, NcmPowspec *ps, NcXcorMethod meth);
 NcXcor *nc_xcor_ref (NcXcor *xc);
 void nc_xcor_free (NcXcor *xc);
 void nc_xcor_clear (NcXcor **xc);
@@ -68,9 +76,12 @@ void nc_xcor_clear (NcXcor **xc);
 void nc_xcor_set_reltol (NcXcor *xc, const gdouble reltol);
 gdouble nc_xcor_get_reltol (NcXcor *xc);
 
+void nc_xcor_set_ell_batch_size (NcXcor *xc, const guint ell_batch_size);
+guint nc_xcor_get_ell_batch_size (NcXcor *xc);
+
 void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo);
 
-void nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);
+void nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);
 
 G_END_DECLS
 

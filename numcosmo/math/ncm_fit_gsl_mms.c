@@ -401,7 +401,7 @@ ncm_fit_gsl_mms_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, Ncm
                        "grad-type", gtype,
                        "algorithm", algo,
                        NULL
-                      );
+  );
 }
 
 /**
@@ -423,7 +423,7 @@ ncm_fit_gsl_mms_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gt
                        "mset", mset,
                        "grad-type", gtype,
                        NULL
-                      );
+  );
 }
 
 /**

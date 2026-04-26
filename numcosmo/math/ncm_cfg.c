@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            ncm_cfg.c
  *
@@ -52,6 +50,8 @@
 #include "math/ncm_spline_cubic.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline_cubic_d2.h"
+#include "math/ncm_spline_vec.h"
+#include "math/ncm_function_sample_set.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline2d_gsl.h"
 #include "math/ncm_spline2d_spline.h"
@@ -88,8 +88,14 @@
 #include "math/ncm_prior_gauss_func.h"
 #include "math/ncm_prior_flat_param.h"
 #include "math/ncm_prior_flat_func.h"
+#include "math/ncm_sbessel_integrator.h"
+#include "math/ncm_sbessel_integrator_fftl.h"
+#include "math/ncm_sbessel_integrator_gl.h"
+#include "math/ncm_sbessel_integrator_levin.h"
+#include "math/ncm_sbessel_ode_solver.h"
 #include "math/ncm_fftlog_sbessel_j.h"
 #include "math/ncm_fftlog_sbessel_jljm.h"
+#include "math/ncm_spectral.h"
 #include "nc_hicosmo.h"
 #include "nc_cbe_precision.h"
 #include "model/nc_hicosmo_qconst.h"
@@ -227,11 +233,14 @@
 #include "data/nc_data_planck_lkl.h"
 #include "xcor/nc_xcor.h"
 #include "xcor/nc_xcor_AB.h"
-#include "xcor/nc_xcor_limber_kernel.h"
-#include "xcor/nc_xcor_limber_kernel_gal.h"
-#include "xcor/nc_xcor_limber_kernel_CMB_lensing.h"
-#include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
-#include "xcor/nc_xcor_limber_kernel_tSZ.h"
+#include "xcor/nc_xcor_kernel.h"
+#include "xcor/nc_xcor_kernel_component.h"
+#include "xcor/nc_xcor_kernel_gal.h"
+#include "xcor/nc_xcor_kernel_cluster.h"
+#include "xcor/nc_xcor_kernel_cluster_tophat.h"
+#include "xcor/nc_xcor_kernel_CMB_lensing.h"
+#include "xcor/nc_xcor_kernel_weak_lensing.h"
+#include "xcor/nc_xcor_kernel_tSZ.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
@@ -627,6 +636,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_D2);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_GSL);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE_VEC);
+  ncm_cfg_register_obj (NCM_TYPE_FUNCTION_SAMPLE_SET);
 
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_BICUBIC);
@@ -636,6 +647,13 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D);
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D_PTR);
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
+
+  ncm_cfg_register_obj (NCM_TYPE_SPECTRAL);
+
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_GL);
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_FFTL);
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN);
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_ODE_SOLVER);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPLINE2D);
@@ -871,11 +889,14 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
 
   ncm_cfg_register_obj (NC_TYPE_XCOR);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_TSZ);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_COMPONENT);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_GAL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER_TOPHAT);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_TSZ);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CMB_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
 
@@ -1820,8 +1841,8 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 
   while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
   {
-    name_max_len = GSL_MAX (name_max_len, strlen (snia->value_name));
-    nick_max_len = GSL_MAX (nick_max_len, strlen (snia->value_nick));
+    name_max_len = GSL_MAX (name_max_len, (gint) strlen (snia->value_name));
+    nick_max_len = GSL_MAX (nick_max_len, (gint) strlen (snia->value_nick));
   }
 
   printf ("# %s:\n", header);
