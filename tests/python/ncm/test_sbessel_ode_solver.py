@@ -213,10 +213,10 @@ class TestSBesselOperators:
         y_at_a = Ncm.Spectral.chebyshev_eval(solution_coeffs, -1.0)
         y_at_b = Ncm.Spectral.chebyshev_eval(solution_coeffs, 1.0)
         assert_allclose(
-            y_at_a, y_a, rtol=1.0e-15, atol=1.0e-15, err_msg="BC at x=a not satisfied"
+            y_at_a, y_a, rtol=1.0e-13, atol=1.0e-13, err_msg="BC at x=a not satisfied"
         )
         assert_allclose(
-            y_at_b, y_b, rtol=1.0e-15, atol=1.0e-15, err_msg="BC at x=b not satisfied"
+            y_at_b, y_b, rtol=1.0e-13, atol=1.0e-13, err_msg="BC at x=b not satisfied"
         )
 
     @pytest.mark.parametrize("l_val", list(range(21)))

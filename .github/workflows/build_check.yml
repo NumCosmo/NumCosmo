@@ -275,8 +275,8 @@ jobs:
         run: |
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
           source build/numcosmo_export.sh
-          pytest tests/python -xvs -k test_spectral_serialization
-          pytest -xsv --tb=short --run-xcor --run-powspec tests/python -n auto
+          pytest tests/python -xvs -k test_spectral_serialization -s -o log_cli=true --log-cli-level=INFO -n auto
+          pytest -xsv --tb=short --run-xcor --run-powspec tests/python -n auto -o log_cli=true --log-cli-level=INFO 
           meson test -C build --timeout-multiplier 0 --num-processes=2 --suite=${{ matrix.suites }} || (cat build/meson-logs/testlog.txt && exit 1)
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info

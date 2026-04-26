@@ -88,8 +88,8 @@ ncm_spectral_init (NcmSpectral *spectral)
   spectral->cheb_cos_vals = NULL;
   spectral->cheb_plan_r2r = NULL;
 
-  printf ("[NCM_SPECTRAL_INIT] Created new NcmSpectral: %p\n", (void *) spectral);
-  printf ("[NCM_SPECTRAL_INIT]   max_order=%u, coeffs=%p\n", spectral->max_order, (void *) spectral->coeffs);
+  fprintf (stderr, "[NCM_SPECTRAL_INIT] Created new NcmSpectral: %p\n", (void *) spectral);
+  fprintf (stderr, "[NCM_SPECTRAL_INIT]   max_order=%u, coeffs=%p\n", spectral->max_order, (void *) spectral->coeffs);
 }
 
 static void
@@ -287,39 +287,39 @@ ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order)
 {
   g_return_if_fail (NCM_IS_SPECTRAL (spectral));
 
-  printf ("[NCM_SPECTRAL_SET_MAX_ORDER] Setting max_order: old=%u, new=%u\n", spectral->max_order, max_order);
+  fprintf (stderr, "[NCM_SPECTRAL_SET_MAX_ORDER] Setting max_order: old=%u, new=%u\n", spectral->max_order, max_order);
 
   if (spectral->max_order != max_order)
   {
     spectral->max_order = max_order;
 
-    printf ("[NCM_SPECTRAL_SET_MAX_ORDER] max_order changed, clearing cached data\n");
+    fprintf (stderr, "[NCM_SPECTRAL_SET_MAX_ORDER] max_order changed, clearing cached data\n");
 
     /* Clear cached plans and arrays as they depend on max_order */
     if (spectral->fftw_plans != NULL)
     {
-      printf ("[NCM_SPECTRAL_SET_MAX_ORDER] Clearing fftw_plans (len=%u)\n", spectral->fftw_plans->len);
+      fprintf (stderr, "[NCM_SPECTRAL_SET_MAX_ORDER] Clearing fftw_plans (len=%u)\n", spectral->fftw_plans->len);
       g_ptr_array_unref (spectral->fftw_plans);
       spectral->fftw_plans = NULL;
     }
 
     if (spectral->cos_arrays != NULL)
     {
-      printf ("[NCM_SPECTRAL_SET_MAX_ORDER] Clearing cos_arrays (len=%u)\n", spectral->cos_arrays->len);
+      fprintf (stderr, "[NCM_SPECTRAL_SET_MAX_ORDER] Clearing cos_arrays (len=%u)\n", spectral->cos_arrays->len);
       g_ptr_array_unref (spectral->cos_arrays);
       spectral->cos_arrays = NULL;
     }
 
     if (spectral->f_vals != NULL)
     {
-      printf ("[NCM_SPECTRAL_SET_MAX_ORDER] Freeing f_vals\n");
+      fprintf (stderr, "[NCM_SPECTRAL_SET_MAX_ORDER] Freeing f_vals\n");
       fftw_free (spectral->f_vals);
       spectral->f_vals = NULL;
     }
 
     if (spectral->coeffs_work != NULL)
     {
-      printf ("[NCM_SPECTRAL_SET_MAX_ORDER] Freeing coeffs_work\n");
+      fprintf (stderr, "[NCM_SPECTRAL_SET_MAX_ORDER] Freeing coeffs_work\n");
       fftw_free (spectral->coeffs_work);
       spectral->coeffs_work = NULL;
     }
@@ -327,15 +327,15 @@ ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order)
     /* Clear the coefficients array to prevent stale data */
     if (spectral->coeffs != NULL)
     {
-      printf ("[NCM_SPECTRAL_SET_MAX_ORDER] Clearing spectral->coeffs (current len=%u)\n", spectral->coeffs->len);
+      fprintf (stderr, "[NCM_SPECTRAL_SET_MAX_ORDER] Clearing spectral->coeffs (current len=%u)\n", spectral->coeffs->len);
       g_array_set_size (spectral->coeffs, 0);
     }
 
-    printf ("[NCM_SPECTRAL_SET_MAX_ORDER] Cleanup complete\n");
+    fprintf (stderr, "[NCM_SPECTRAL_SET_MAX_ORDER] Cleanup complete\n");
   }
   else
   {
-    printf ("[NCM_SPECTRAL_SET_MAX_ORDER] max_order unchanged, no action needed\n");
+    fprintf (stderr, "[NCM_SPECTRAL_SET_MAX_ORDER] max_order unchanged, no action needed\n");
   }
 }
 
@@ -355,7 +355,7 @@ ncm_spectral_get_max_order (NcmSpectral *spectral)
   g_return_val_if_fail (NCM_IS_SPECTRAL (spectral), 0);
 
   max_order = spectral->max_order;
-  printf ("[NCM_SPECTRAL_GET_MAX_ORDER] Returning max_order=%u for spectral=%p\n", max_order, (void *) spectral);
+  fprintf (stderr, "[NCM_SPECTRAL_GET_MAX_ORDER] Returning max_order=%u for spectral=%p\n", max_order, (void *) spectral);
 
   return max_order;
 }
@@ -601,8 +601,8 @@ _ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble to
   gdouble norm2_2N              = 0.0;
   guint i;
 
-  printf ("[NCM_SPECTRAL_CONVERGENCE] Checking convergence: N_len=%u, 2N_len=%u, tol=%.15e\n",
-          coeffs_N->len, coeffs_2N->len, tol);
+  fprintf (stderr, "[NCM_SPECTRAL_CONVERGENCE] Checking convergence: N_len=%u, 2N_len=%u, tol=%.15e\n",
+           coeffs_N->len, coeffs_2N->len, tol);
 
   for (i = 0; i < coeffs_N->len; i++)
   {
@@ -616,8 +616,8 @@ _ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble to
   const gdouble threshold  = tol * tol * norm2_2N + 1.0e-100;
   const gboolean converged = (norm2_diff < threshold);
 
-  printf ("[NCM_SPECTRAL_CONVERGENCE] norm2_diff=%.15e, norm2_2N=%.15e, threshold=%.15e, converged=%d\n",
-          norm2_diff, norm2_2N, threshold, converged);
+  fprintf (stderr, "[NCM_SPECTRAL_CONVERGENCE] norm2_diff=%.15e, norm2_2N=%.15e, threshold=%.15e, converged=%d\n",
+           norm2_diff, norm2_2N, threshold, converged);
 
   if (converged)
     return TRUE;
@@ -658,52 +658,52 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
 
   g_assert (k_min <= spectral->max_order);
 
-  printf ("[NCM_SPECTRAL_ADAPTIVE] Starting adaptive computation:\n");
-  printf ("[NCM_SPECTRAL_ADAPTIVE]   max_order=%u, k_min=%u, tol=%.15e\n", spectral->max_order, k_min, tol);
-  printf ("[NCM_SPECTRAL_ADAPTIVE]   interval=[%.15e, %.15e]\n", a, b);
-  printf ("[NCM_SPECTRAL_ADAPTIVE]   coeffs=%p, *coeffs=%p\n", (void *) coeffs, (void *) *coeffs);
-  printf ("[NCM_SPECTRAL_ADAPTIVE]   spectral->coeffs=%p, len=%u\n", (void *) spectral->coeffs, spectral->coeffs->len);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Starting adaptive computation:\n");
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE]   max_order=%u, k_min=%u, tol=%.15e\n", spectral->max_order, k_min, tol);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE]   interval=[%.15e, %.15e]\n", a, b);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE]   coeffs=%p, *coeffs=%p\n", (void *) coeffs, (void *) *coeffs);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE]   spectral->coeffs=%p, len=%u\n", (void *) spectral->coeffs, spectral->coeffs->len);
 
   if (*coeffs == NULL)
     *coeffs = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
   /* Clear the internal coefficients array to prevent stale data from affecting the computation */
-  printf ("[NCM_SPECTRAL_ADAPTIVE] Clearing spectral->coeffs (current len=%u)\n", spectral->coeffs->len);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Clearing spectral->coeffs (current len=%u)\n", spectral->coeffs->len);
   g_array_set_size (spectral->coeffs, 0);
 
   /* Initial evaluation at k_min */
-  printf ("[NCM_SPECTRAL_ADAPTIVE] Initial evaluation at k=%u (N=%u)\n", k, (1 << k) + 1);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Initial evaluation at k=%u (N=%u)\n", k, (1 << k) + 1);
   _ncm_spectral_prepare_plan_for_k (spectral, k);
   _ncm_spectral_evaluate_all_nodes (spectral, F, a, b, k, user_data);
 
   c_tmp   = spectral->coeffs;
   c_final = *coeffs;
 
-  printf ("[NCM_SPECTRAL_ADAPTIVE] Array pointers: c_tmp=%p, c_final=%p\n", (void *) c_tmp, (void *) c_final);
-  printf ("[NCM_SPECTRAL_ADAPTIVE] c_tmp is spectral->coeffs: %d\n", c_tmp == spectral->coeffs);
-  printf ("[NCM_SPECTRAL_ADAPTIVE] c_final is *coeffs: %d\n", c_final == *coeffs);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Array pointers: c_tmp=%p, c_final=%p\n", (void *) c_tmp, (void *) c_final);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] c_tmp is spectral->coeffs: %d\n", c_tmp == spectral->coeffs);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] c_final is *coeffs: %d\n", c_final == *coeffs);
 
   /* Transform using N and store in coeffs_work */
   {
     const guint N  = (1 << k) + 1;
     fftw_plan plan = g_ptr_array_index (spectral->fftw_plans, k);
 
-    printf ("[NCM_SPECTRAL_ADAPTIVE] Initial transform: k=%u, N=%u\n", k, N);
+    fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Initial transform: k=%u, N=%u\n", k, N);
 
     /* Transform f_vals -> coeffs_work */
     fftw_execute (plan);
 
-    printf ("[NCM_SPECTRAL_ADAPTIVE] Setting c_tmp size to %u (current: %u)\n", N, c_tmp->len);
+    fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Setting c_tmp size to %u (current: %u)\n", N, c_tmp->len);
     g_array_set_size (c_tmp, N);
     _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_tmp, N);
 
-    printf ("[NCM_SPECTRAL_ADAPTIVE] After normalization: c_tmp[0]=%.15e, c_tmp[N-1]=%.15e\n",
-            g_array_index (c_tmp, gdouble, 0), g_array_index (c_tmp, gdouble, N - 1));
+    fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] After normalization: c_tmp[0]=%.15e, c_tmp[N-1]=%.15e\n",
+             g_array_index (c_tmp, gdouble, 0), g_array_index (c_tmp, gdouble, N - 1));
   }
 
   while (k < spectral->max_order)
   {
-    printf ("[NCM_SPECTRAL_ADAPTIVE] === Refinement iteration: k=%u -> k=%u ===\n", k, k + 1);
+    fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] === Refinement iteration: k=%u -> k=%u ===\n", k, k + 1);
 
     /* Transform using 2N and store in coeffs */
     _ncm_spectral_prepare_plan_for_k (spectral, k + 1);
@@ -713,57 +713,57 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
       const guint N  = (1 << k) + 1;
       fftw_plan plan = g_ptr_array_index (spectral->fftw_plans, k);
 
-      printf ("[NCM_SPECTRAL_ADAPTIVE] Refined transform: k=%u, N=%u\n", k, N);
+      fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Refined transform: k=%u, N=%u\n", k, N);
 
       /* Transform f_vals -> coeffs_work */
       fftw_execute (plan);
 
-      printf ("[NCM_SPECTRAL_ADAPTIVE] Setting c_final size to %u (current: %u)\n", N, c_final->len);
+      fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Setting c_final size to %u (current: %u)\n", N, c_final->len);
       g_array_set_size (c_final, N);
       _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_final, N);
 
-      printf ("[NCM_SPECTRAL_ADAPTIVE] After normalization: c_final[0]=%.15e, c_final[N-1]=%.15e\n",
-              g_array_index (c_final, gdouble, 0), g_array_index (c_final, gdouble, N - 1));
+      fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] After normalization: c_final[0]=%.15e, c_final[N-1]=%.15e\n",
+               g_array_index (c_final, gdouble, 0), g_array_index (c_final, gdouble, N - 1));
     }
 
-    printf ("[NCM_SPECTRAL_ADAPTIVE] Before convergence check: c_tmp len=%u, c_final len=%u\n",
-            c_tmp->len, c_final->len);
+    fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Before convergence check: c_tmp len=%u, c_final len=%u\n",
+             c_tmp->len, c_final->len);
 
     /* Check convergence using pre-computed e_total */
     if (_ncm_spectral_check_convergence (c_final, c_tmp, tol))
     {
-      printf ("[NCM_SPECTRAL_ADAPTIVE] Converged at k=%u\n", k);
+      fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Converged at k=%u\n", k);
       break;
     }
 
-    printf ("[NCM_SPECTRAL_ADAPTIVE] Not converged, continuing refinement\n");
+    fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Not converged, continuing refinement\n");
 
     /* Swap c_tmp and c_final */
     {
       GArray *tmp = c_tmp;
 
-      printf ("[NCM_SPECTRAL_ADAPTIVE] Swapping arrays: c_tmp=%p -> c_final=%p\n", (void *) c_tmp, (void *) c_final);
+      fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Swapping arrays: c_tmp=%p -> c_final=%p\n", (void *) c_tmp, (void *) c_final);
       c_tmp   = c_final;
       c_final = tmp;
-      printf ("[NCM_SPECTRAL_ADAPTIVE] After swap: c_tmp=%p, c_final=%p\n", (void *) c_tmp, (void *) c_final);
+      fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] After swap: c_tmp=%p, c_final=%p\n", (void *) c_tmp, (void *) c_final);
     }
   }
 
-  printf ("[NCM_SPECTRAL_ADAPTIVE] Refinement loop complete: final k=%u\n", k);
-  printf ("[NCM_SPECTRAL_ADAPTIVE] c_final=%p, *coeffs=%p, need_copy=%d\n",
-          (void *) c_final, (void *) *coeffs, c_final != *coeffs);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Refinement loop complete: final k=%u\n", k);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] c_final=%p, *coeffs=%p, need_copy=%d\n",
+           (void *) c_final, (void *) *coeffs, c_final != *coeffs);
 
   if (c_final != *coeffs)
   {
     /* If final coefficients are not in *coeffs, copy them */
-    printf ("[NCM_SPECTRAL_ADAPTIVE] Copying c_final (len=%u) to *coeffs\n", c_final->len);
+    fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Copying c_final (len=%u) to *coeffs\n", c_final->len);
     g_array_set_size (*coeffs, c_final->len);
     memcpy ((*coeffs)->data, c_final->data, sizeof (gdouble) * c_final->len);
   }
 
-  printf ("[NCM_SPECTRAL_ADAPTIVE] Final result: k=%u, coeffs_len=%u\n", k, (*coeffs)->len);
-  printf ("[NCM_SPECTRAL_ADAPTIVE] Final coeffs[0]=%.15e, coeffs[N-1]=%.15e\n",
-          g_array_index (*coeffs, gdouble, 0), g_array_index (*coeffs, gdouble, (*coeffs)->len - 1));
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Final result: k=%u, coeffs_len=%u\n", k, (*coeffs)->len);
+  fprintf (stderr, "[NCM_SPECTRAL_ADAPTIVE] Final coeffs[0]=%.15e, coeffs[N-1]=%.15e\n",
+           g_array_index (*coeffs, gdouble, 0), g_array_index (*coeffs, gdouble, (*coeffs)->len - 1));
 
   return k;
 }
