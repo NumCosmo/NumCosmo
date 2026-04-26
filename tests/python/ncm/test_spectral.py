@@ -2747,7 +2747,7 @@ class TestSpectral:
             assert_allclose(result_x, expected, rtol=1e-8, atol=1e-10)
 
     def test_adaptive_max_order_bug(self) -> None:
-        """Test that adaptive refinement returns correct coefficients when hitting max_order.
+        """Test that adaptive refinement when hitting max_order.
 
         This test specifically checks the bug where reaching max_order would cause
         the function to return coefficients from k-1 instead of k due to an
@@ -2802,6 +2802,7 @@ class TestSpectral:
             atol=1.0e-14,
             err_msg="Adaptive coefficients at max_order don't match non-adaptive",
         )
+        print(coeffs_adaptive)
 
         # Verify evaluation at test points
         x_test = np.linspace(a, b, 50)

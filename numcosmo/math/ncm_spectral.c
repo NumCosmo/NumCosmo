@@ -527,6 +527,10 @@ _ncm_spectral_refine_to_k (NcmSpectral *spectral, NcmSpectralF F,
     const gdouble x = mid + half_h * cos_vals[jj];
 
     spectral->f_vals[jj] = F (user_data, x);
+
+    if (jj < 10)
+      fprintf (stderr, "Refinement k=%u: Evaluated F at x=% 22.15g -> f=% 22.15g, previous x=% 22.15g, f=% 22.15g\n",
+               k_new, x, spectral->f_vals[jj], mid + half_h * cos_vals[jj - 1], spectral->f_vals[jj - 1]);
   }
 }
 
