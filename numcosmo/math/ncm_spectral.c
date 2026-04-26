@@ -600,7 +600,7 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
                                                 gdouble tol, GArray **coeffs, gpointer user_data)
 {
   guint k = k_min;
-  GArray *c_tmp, *c_final;
+  GArray *c_previous, *c_current;
 
   g_assert (k_min <= spectral->max_order);
 
@@ -614,8 +614,8 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
   _ncm_spectral_prepare_plan_for_k (spectral, k);
   _ncm_spectral_evaluate_all_nodes (spectral, F, a, b, k, user_data);
 
-  c_tmp   = spectral->coeffs;
-  c_final = *coeffs;
+  c_previous = spectral->coeffs;
+  c_current  = *coeffs;
 
   /* Transform using N and store in coeffs_work */
   {
@@ -625,8 +625,8 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
     /* Transform f_vals -> coeffs_work */
     fftw_execute (plan);
 
-    g_array_set_size (c_tmp, N);
-    _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_tmp, N);
+    g_array_set_size (c_previous, N);
+    _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_previous, N);
   }
 
   while (k < spectral->max_order)
@@ -642,28 +642,29 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
       /* Transform f_vals -> coeffs_work */
       fftw_execute (plan);
 
-      g_array_set_size (c_final, N);
-      _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_final, N);
+      g_array_set_size (c_current, N);
+      _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_current, N);
     }
 
     /* Check convergence using pre-computed e_total */
-    if (_ncm_spectral_check_convergence (c_final, c_tmp, tol))
+    if (_ncm_spectral_check_convergence (c_current, c_previous, tol))
       break;
 
-    /* Swap c_tmp and c_final */
+    /* Swap c_previous and c_current for next iteration */
+    if (k < spectral->max_order)
     {
-      GArray *tmp = c_tmp;
+      GArray *tmp = c_previous;
 
-      c_tmp   = c_final;
-      c_final = tmp;
+      c_previous = c_current;
+      c_current  = tmp;
     }
   }
 
-  if (c_final != *coeffs)
+  if (c_current != *coeffs)
   {
     /* If final coefficients are not in *coeffs, copy them */
-    g_array_set_size (*coeffs, c_final->len);
-    memcpy ((*coeffs)->data, c_final->data, sizeof (gdouble) * c_final->len);
+    g_array_set_size (*coeffs, c_current->len);
+    memcpy ((*coeffs)->data, c_current->data, sizeof (gdouble) * c_current->len);
   }
 
   return k;

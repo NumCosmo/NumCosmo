@@ -2745,3 +2745,75 @@ class TestSpectral:
 
             assert_allclose(result_x, result_t, rtol=1e-14)
             assert_allclose(result_x, expected, rtol=1e-8, atol=1e-10)
+
+    def test_adaptive_max_order_bug(self) -> None:
+        """Test that adaptive refinement returns correct coefficients when hitting max_order.
+
+        This test specifically checks the bug where reaching max_order would cause
+        the function to return coefficients from k-1 instead of k due to an
+        unconditional swap at the end of the loop. The fix ensures the swap only
+        happens when k < max_order.
+        """
+        # Create spectral with low max_order
+        max_order = 14
+        spectral = Ncm.Spectral.new_with_max_order(max_order)
+
+        # Define a function that requires high accuracy
+        def f(_user_data, x):
+            """Highly oscillatory function that won't converge easily."""
+            return np.sin(20.0 * x) * np.exp(-x * x)
+
+        a, b = -2.0, 2.0
+        k_min = 2
+
+        # Use unreasonably small tolerance to force reaching max_order
+        tol = 1.0e-16
+
+        # Compute adaptive coefficients - should hit max_order
+        k_final, coeffs_adaptive_list = spectral.compute_chebyshev_coeffs_adaptive(
+            f, a, b, k_min, tol, None
+        )
+        coeffs_adaptive = np.array(coeffs_adaptive_list)
+
+        # Verify that we hit max_order
+        assert (
+            k_final == max_order
+        ), f"Expected to reach max_order={max_order}, got k={k_final}"
+
+        # Verify the number of coefficients matches 2^k + 1
+        expected_N = (1 << max_order) + 1  # 2^14 + 1 = 16385
+        assert len(coeffs_adaptive) == expected_N, (
+            f"Length mismatch: got {len(coeffs_adaptive)}, "
+            f"expected 2^{max_order}+1={expected_N}"
+        )
+
+        # Compute non-adaptive at the same order to verify correctness
+        coeffs_nonadaptive = np.array(
+            spectral.compute_chebyshev_coeffs(f, a, b, expected_N, None)
+        )
+
+        # The coefficients should match exactly
+        # If the bug exists, coeffs_adaptive would have length 2^13+1 instead
+        # or would contain the wrong coefficients
+        assert_allclose(
+            coeffs_adaptive,
+            coeffs_nonadaptive,
+            rtol=1.0e-13,
+            atol=1.0e-14,
+            err_msg="Adaptive coefficients at max_order don't match non-adaptive",
+        )
+
+        # Verify evaluation at test points
+        x_test = np.linspace(a, b, 50)
+        for x in x_test:
+            val_adaptive = Ncm.Spectral.chebyshev_eval_x(coeffs_adaptive, a, b, x)
+            val_nonadaptive = Ncm.Spectral.chebyshev_eval_x(coeffs_nonadaptive, a, b, x)
+
+            # Both should give identical results
+            assert_allclose(
+                val_adaptive,
+                val_nonadaptive,
+                rtol=1.0e-13,
+                atol=1.0e-14,
+                err_msg=f"Evaluation mismatch at x={x}",
+            )
