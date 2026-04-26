@@ -224,7 +224,13 @@ class TestSpectral:
         )
         coeffs_dup = np.array(coeffs_dup_list)
 
+        coeffs_direct = spectral.compute_chebyshev_coeffs(
+            test_func, a, b, 2**k_orig + 1, None
+        )
+        assert_allclose(coeffs_orig, coeffs_direct, rtol=1.0e-14, atol=ATOL)
+
         # Both should produce identical results
+        assert k_orig == 7
         assert k_orig == k_dup
         assert len(coeffs_orig) == len(coeffs_dup)
         assert_allclose(coeffs_orig, coeffs_dup, rtol=1.0e-14, atol=ATOL)
