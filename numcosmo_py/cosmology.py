@@ -71,11 +71,11 @@ class Cosmology:
     ) -> None:
         """Initialize the NumCosmo cosmology class."""
         self.cosmo = cosmo
-        self.dist = dist
+        self._dist = dist
         self._ps_ml = ps_ml
         self._ps_mnl = ps_mnl
         self._psf_tophat = psf_tophat
-        self.dist.compute_inv_comoving(compute_inv_comoving)
+        self._dist.compute_inv_comoving(compute_inv_comoving)
         self.recomb = Nc.RecombSeager()
 
         self._mset = Ncm.MSet.new_array([cosmo])
@@ -114,10 +114,19 @@ class Cosmology:
         return cls(cosmo=cosmo, dist=dist)
 
     @property
+    def dist(self) -> Nc.Distance:
+        """Return the distance object."""
+        if self._dist is None:
+            raise AttributeError("Distance not set.")
+        self._dist.prepare_if_needed(self.cosmo)
+        return self._dist
+
+    @property
     def ps_ml(self) -> Nc.PowspecML:
         """Return the linear matter power spectrum."""
         if self._ps_ml is None:
             raise AttributeError("Linear matter power spectrum not set.")
+        self._ps_ml.prepare_if_needed(self.cosmo)
         return self._ps_ml
 
     @property
@@ -125,6 +134,7 @@ class Cosmology:
         """Return the non-linear matter power spectrum."""
         if self._ps_mnl is None:
             raise AttributeError("Non-linear matter power spectrum not set.")
+        self._ps_mnl.prepare_if_needed(self.cosmo)
         return self._ps_mnl
 
     @property
@@ -132,6 +142,7 @@ class Cosmology:
         """Return the top-hat power spectrum filter."""
         if self._psf_tophat is None:
             raise AttributeError("Top-hat power spectrum filter not set.")
+        self._psf_tophat.prepare_if_needed(self.cosmo)
         return self._psf_tophat
 
     @property
@@ -141,14 +152,6 @@ class Cosmology:
 
     def prepare(self) -> None:
         """Prepare the cosmology for calculations."""
-        self.dist.prepare_if_needed(self.cosmo)
-        self.recomb.prepare_if_needed(self.cosmo)
-        if self._ps_ml is not None:
-            self._ps_ml.prepare_if_needed(self.cosmo)
-        if self._ps_mnl is not None:
-            self._ps_mnl.prepare_if_needed(self.cosmo)
-        if self._psf_tophat is not None:
-            self._psf_tophat.prepare_if_needed(self.cosmo)
 
 
 def create_cosmo(

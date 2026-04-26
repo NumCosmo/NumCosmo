@@ -137,3 +137,180 @@ def test_cosmology_missing_psf(cosmology_minimal: Cosmology):
     """Test the Cosmology class with missing psf."""
     with pytest.raises(AttributeError, match="Top-hat power spectrum filter not set."):
         _ = cosmology_minimal.psf_tophat
+
+
+def test_cosmology_lazy_dist_preparation():
+    """Test that dist property prepares on access."""
+    # Create a cosmology without calling prepare()
+    cosmo = Nc.HICosmoDEXcdm()
+    cosmo.omega_x2omega_k()
+    cosmo["Omegak"] = 0.0
+    cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
+    cosmo.add_submodel(Nc.HIReionCamb.new())
+    dist = Nc.Distance.new(10.0)
+
+    # Create Cosmology object - but override prepare() to prevent automatic prep
+    cosmology = Cosmology.__new__(Cosmology)
+    cosmology.cosmo = cosmo
+    # pylint: disable=protected-access
+    cosmology._dist = dist
+    cosmology._ps_ml = None
+    cosmology._ps_mnl = None
+    cosmology._psf_tophat = None
+    cosmology._dist.compute_inv_comoving(True)
+    cosmology.recomb = Nc.RecombSeager()
+    cosmology._mset = Ncm.MSet.new_array([cosmo])
+    # pylint: enable=protected-access
+
+    # Access dist property should trigger preparation
+    dist_obj = cosmology.dist
+    assert dist_obj is not None
+    assert isinstance(dist_obj, Nc.Distance)
+
+    # Should be able to use it for calculations
+    z = 1.0
+    distance = dist_obj.comoving(cosmo, z)
+    assert distance > 0.0
+
+
+def test_cosmology_lazy_ps_ml_preparation():
+    """Test that ps_ml property prepares on access."""
+    cosmo = Nc.HICosmoDEXcdm()
+    cosmo.omega_x2omega_k()
+    cosmo["Omegak"] = 0.0
+    cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
+    cosmo.add_submodel(Nc.HIReionCamb.new())
+    dist = Nc.Distance.new(10.0)
+    ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
+
+    cosmology = Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml)
+
+    # Access ps_ml property - should prepare if needed
+    ps_ml_obj = cosmology.ps_ml
+    assert ps_ml_obj is not None
+    assert isinstance(ps_ml_obj, Nc.PowspecML)
+
+    # Should be able to evaluate it
+    k = 0.1
+    z = 0.0
+    power = ps_ml_obj.eval(cosmo, z, k)
+    assert power > 0.0
+
+
+def test_cosmology_lazy_ps_mnl_preparation():
+    """Test that ps_mnl property prepares on access."""
+    cosmo = Nc.HICosmoDEXcdm()
+    cosmo.omega_x2omega_k()
+    cosmo["Omegak"] = 0.0
+    cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
+    cosmo.add_submodel(Nc.HIReionCamb.new())
+    dist = Nc.Distance.new(10.0)
+    ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
+    ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, 5.0, 1.0e-7)
+
+    cosmology = Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mnl)
+
+    # Access ps_mnl property - should prepare if needed
+    ps_mnl_obj = cosmology.ps_mnl
+    assert ps_mnl_obj is not None
+    assert isinstance(ps_mnl_obj, Nc.PowspecMNL)
+
+    # Should be able to evaluate it
+    k = 0.1
+    z = 0.0
+    power = ps_mnl_obj.eval(cosmo, z, k)
+    assert power > 0.0
+
+
+def test_cosmology_lazy_psf_tophat_preparation():
+    """Test that psf_tophat property prepares on access."""
+    cosmo = Nc.HICosmoDEXcdm()
+    cosmo.omega_x2omega_k()
+    cosmo["Omegak"] = 0.0
+    cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
+    cosmo.add_submodel(Nc.HIReionCamb.new())
+    dist = Nc.Distance.new(10.0)
+    ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
+    psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
+
+    cosmology = Cosmology(cosmo=cosmo, dist=dist, ps_ml=ps_ml, psf_tophat=psf)
+
+    # Access psf_tophat property - should prepare if needed
+    psf_obj = cosmology.psf_tophat
+    assert psf_obj is not None
+    assert isinstance(psf_obj, Ncm.PowspecFilter)
+
+    # Should be able to use it
+    r = 8.0
+    z = 0.0
+    sigma = psf_obj.eval_sigma(z, r)
+    assert sigma > 0.0
+
+
+def test_cosmology_multiple_access_same_property(cosmology: Cosmology):
+    """Test that accessing the same property multiple times works correctly."""
+    # Access dist multiple times
+    dist1 = cosmology.dist
+    dist2 = cosmology.dist
+    assert dist1 is dist2  # Should be the same object
+
+    # Access ps_ml multiple times
+    ps_ml1 = cosmology.ps_ml
+    ps_ml2 = cosmology.ps_ml
+    assert ps_ml1 is ps_ml2
+
+    # Access ps_mnl multiple times
+    ps_mnl1 = cosmology.ps_mnl
+    ps_mnl2 = cosmology.ps_mnl
+    assert ps_mnl1 is ps_mnl2
+
+    # Access psf_tophat multiple times
+    psf1 = cosmology.psf_tophat
+    psf2 = cosmology.psf_tophat
+    assert psf1 is psf2
+
+
+def test_cosmology_all_properties_prepared_after_access(cosmology: Cosmology):
+    """Test that all properties work correctly after being accessed."""
+    # Access all properties
+    dist = cosmology.dist
+    ps_ml = cosmology.ps_ml
+    ps_mnl = cosmology.ps_mnl
+    psf = cosmology.psf_tophat
+
+    # All should be usable for calculations
+    z = 1.0
+    k = 0.1
+    r = 8.0
+
+    # Test dist
+    distance = dist.comoving(cosmology.cosmo, z)
+    assert distance > 0.0
+
+    # Test ps_ml
+    power_ml = ps_ml.eval(cosmology.cosmo, 0.0, k)
+    assert power_ml > 0.0
+
+    # Test ps_mnl
+    power_mnl = ps_mnl.eval(cosmology.cosmo, 0.0, k)
+    assert power_mnl > 0.0
+
+    # Test psf
+    sigma = psf.eval_sigma(0.0, r)
+    assert sigma > 0.0
+
+
+def test_cosmology_prepare_method_works(cosmology_minimal: Cosmology):
+    """Test that the prepare() method still works correctly."""
+    # Call prepare explicitly
+    cosmology_minimal.prepare()
+
+    # After prepare, dist should be accessible
+    dist = cosmology_minimal.dist
+    assert dist is not None
+    assert isinstance(dist, Nc.Distance)
+
+    # Should be able to use it
+    z = 1.0
+    distance = dist.comoving(cosmology_minimal.cosmo, z)
+    assert distance > 0.0
