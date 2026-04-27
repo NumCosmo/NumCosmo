@@ -79,6 +79,9 @@ void nc_galaxy_sd_shape_hsm_gauss_global_data_get (NcGalaxySDShapeHSMGaussGlobal
 #define NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_COL_C2 "c2"
 #define NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_COL_M "m"
 
+gdouble nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (const gdouble std_shape);
+gdouble nc_galaxy_sd_shape_hsm_gauss_global_std_shape_from_sigma (const gdouble sigma);
+
 G_END_DECLS
 
 #endif /* _NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_H_ */

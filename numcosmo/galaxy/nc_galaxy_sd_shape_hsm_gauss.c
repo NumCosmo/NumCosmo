@@ -31,7 +31,7 @@
 /**
  * NcGalaxySDShapeHSMGauss:
  *
- * Class describing a galaxy sample shape distribution with a gaussian p.d.f.
+ * Class describing a galaxy sample shape distribution with a truncated gaussian p.d.f.
  * convoluted with gaussian noise. Uses the HSM shape measurement products with
  * individual shape noise, i.e., the same shape noise for all galaxies in the sample.
  *
@@ -77,6 +77,7 @@ typedef struct _NcGalaxySDShapeHSMGaussData
   gdouble c1;
   gdouble c2;
   gdouble m;
+  gdouble sigma;
   gdouble radius;
   gdouble phi;
   NcWLSurfaceMassDensityOptzs optzs;
@@ -187,13 +188,15 @@ nc_galaxy_sd_shape_hsm_gauss_class_init (NcGalaxySDShapeHSMGaussClass *klass)
 }
 
 static complex double
-_gauss_gen (NcmRNG *rng, const gdouble sigma)
+_gauss_cut_gen (NcmRNG *rng, const gdouble sigma)
 {
   gdouble x;
   gdouble y;
 
-  x = ncm_rng_gaussian_gen (rng, 0.0, sigma);
-  y = ncm_rng_gaussian_gen (rng, 0.0, sigma);
+  do {
+    x = ncm_rng_gaussian_gen (rng, 0.0, sigma);
+    y = ncm_rng_gaussian_gen (rng, 0.0, sigma);
+  } while (hypot (x, y) > 1.0);
 
   return x + I * y;
 }
@@ -210,12 +213,13 @@ _nc_galaxy_sd_shape_hsm_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
   const gdouble ra                             = data->sdpos_data->ra;
   const gdouble dec                            = data->sdpos_data->dec;
   const gdouble z                              = data->sdpos_data->sdz_data->z;
+  const gdouble sigma                          = ldata->sigma;
   const gdouble noise1                         = ncm_rng_gaussian_gen (rng, 0.0, ldata->std_noise);
   const gdouble noise2                         = ncm_rng_gaussian_gen (rng, 0.0, ldata->std_noise);
   const gdouble c1                             = ldata->c1;
   const gdouble c2                             = ldata->c2;
   const gdouble m                              = ldata->m;
-  complex double e_s                           = _gauss_gen (rng, ldata->std_shape);
+  complex double e_s                           = _gauss_cut_gen (rng, sigma);
   complex double noise                         = noise1 + I * noise2;
   complex double c                             = c1 + I * c2;
   gdouble theta                                = 0.0;
@@ -327,7 +331,7 @@ _nc_galaxy_sd_shape_hsm_gauss_pre_integ (gpointer callback_data, const gdouble z
   gdouble c1                         = ldata->c1;
   gdouble c2                         = ldata->c2;
   gdouble m                          = ldata->m;
-  gdouble std_shape                  = ldata->std_shape;
+  gdouble sigma                      = ldata->sigma;
   complex double e_o                 = e1 + I * e2;
   complex double g;
   NcmComplex cplx_g, cplx_E_o, cplx_E_s;
@@ -360,7 +364,7 @@ _nc_galaxy_sd_shape_hsm_gauss_pre_integ (gpointer callback_data, const gdouble z
 
   nc_galaxy_sd_shape_apply_shear_inv (gsds, &cplx_g, &cplx_E_o, &cplx_E_s);
 
-  *total_var = gsl_pow_2 (std_shape) + gsl_pow_2 (std_noise);
+  *total_var = gsl_pow_2 (sigma) + gsl_pow_2 (std_noise);
   *chi2_1    = gsl_pow_2 (ncm_complex_Re (&cplx_E_s)) / *total_var;
   *chi2_2    = gsl_pow_2 (ncm_complex_Im (&cplx_E_s)) / *total_var;
   *lndetjac  = nc_galaxy_sd_shape_lndet_jac (gsds, &cplx_g, &cplx_E_o);
@@ -494,6 +498,7 @@ _nc_galaxy_sd_shape_hsm_gauss_ldata_read_row (NcGalaxySDShapeData *data, NcGalax
   ldata->epsilon_obs_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_1, i);
   ldata->epsilon_obs_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_2, i);
   ldata->std_shape     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_SHAPE, i);
+  ldata->sigma         = nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (ldata->std_shape);
   ldata->std_noise     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_NOISE, i);
   ldata->c1            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C1, i);
   ldata->c2            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C2, i);
@@ -713,6 +718,7 @@ nc_galaxy_sd_shape_hsm_gauss_gen (NcGalaxySDShapeHSMGauss *gsdshsc, NcmMSet *mse
   data->coord      = coord;
   ldata->std_shape = std_shape;
   ldata->std_noise = std_noise;
+  ldata->sigma     = nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (std_shape);
   ldata->c1        = c1;
   ldata->c2        = c2;
   ldata->m         = m;
@@ -743,6 +749,7 @@ nc_galaxy_sd_shape_hsm_gauss_data_set (NcGalaxySDShapeHSMGauss *gsdshsc, NcGalax
   ldata->epsilon_obs_1 = epsilon_obs_1;
   ldata->epsilon_obs_2 = epsilon_obs_2;
   ldata->std_shape     = std_shape;
+  ldata->sigma         = nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (std_shape);
   ldata->std_noise     = std_noise;
   ldata->c1            = c1;
   ldata->c2            = c2;
