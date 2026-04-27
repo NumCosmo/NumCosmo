@@ -34,6 +34,8 @@ class MockGenerator:
         z_interval: tuple[float, float] | None = (0.2, 0.5),
         cluster_mass_interval: tuple[float, float] | None = (1e14, 1e15),
         halo_mass_interval: tuple[float, float] | None = (1e13, 1e14),
+        hmf: Nc.HaloMassFunction | None = None,
+        cluster_m: Nc.ClusterMass | None = None,
         seed: int | None = 42
     ) -> None:
         """Create a new MockGenerator object."""
@@ -45,6 +47,8 @@ class MockGenerator:
         self.z_interval = z_interval
         self.cluster_mass_interval = cluster_mass_interval
         self.halo_mass_interval = halo_mass_interval
+        self.hmf = hmf
+        self.cluster_m = cluster_m
         self.seed = seed
         if self.seed is not None:
             np.random.seed(self.seed)
@@ -142,7 +146,7 @@ class MockGenerator:
         
         return cluster_ra, cluster_dec, cluster_z
 
-    def generate_halos_from_hmf(self, hmf, completeness_model=None):
+    def generate_halos_from_hmf(self, completeness_model=None):
         """
         Generates a synthetic halo catalog by sampling a Halo Mass Function (HMF).
         
@@ -152,8 +156,6 @@ class MockGenerator:
     
         Parameters:
         -----------
-        hmf : Nc.HaloMassFunction
-            The NumCosmo Halo Mass Function object
         completeness_model : callable, optional
             A function f(logM, z) that returns detection probability (0.0 to 1.0).
             If None, all halos are marked as detected (is_detected=1).
@@ -168,8 +170,6 @@ class MockGenerator:
         # 1. Initialize NumCosmo mass and redshift distribution constraints
         # lnM_min and lnM_max define the integration bounds for the HMF
         dist = self.dist()
-        cluster_m = Nc.ClusterMassNodist(lnM_min=np.log(self.halo_mass_min), 
-                                         lnM_max=np.log(self.halo_mass_max))
         cluster_z = Nc.ClusterRedshiftNodist(z_min=self.z_min, 
                                              z_max=self.z_max)
         
@@ -177,20 +177,20 @@ class MockGenerator:
         sky_area = self.sky_area()
         sky_area_rad = sky_area * (np.pi / 180) ** 2  # Conversion to steradians
         
-        hmf.prepare(self.cosmo)
-        hmf.set_area(sky_area_rad)
+        self.hmf.prepare(self.cosmo)
+        self.hmf.set_area(sky_area_rad)
         
         # cad (Cluster Abundance) integrates the HMF over the volume and mass range
-        cad = Nc.ClusterAbundance.new(hmf, None)
+        cad = Nc.ClusterAbundance.new(self.hmf, None)
         cad.set_area(sky_area_rad)
-        cad.prepare(self.cosmo, cluster_z, cluster_m)
+        cad.prepare(self.cosmo, cluster_z, self.cluster_m)
     
         # 3. Sample the populations
         rng = Ncm.RNG.seeded_new(None, self.seed)
-        mset = Ncm.MSet.new_array([self.cosmo, cluster_m, cluster_z])
+        mset = Ncm.MSet.new_array([self.cosmo, self.cluster_m, cluster_z])
         
         # ncount handles the realization of the number of objects
-        ncount = Nc.DataClusterNCount.new(cad, "NcClusterRedshiftNodist", "NcClusterMassNodist")      
+        ncount = Nc.DataClusterNCount.new(cad, "NcClusterRedshiftNodist", 'Nc'+str(type(self.cluster_m)).split('.')[-1].strip("'>"))      
         ncount.init_from_sampling(mset, sky_area_rad, rng)
         
         # Store the total count of sampled halos
@@ -199,7 +199,8 @@ class MockGenerator:
         # 4. Vectorized Data Extraction
         # Extract values directly into NumPy arrays
         halo_z = np.array(ncount.get_z_true().dup_array())
-        halo_logm = np.array(ncount.get_lnM_true().dup_array()) / np.log(10) # Convert ln(M) to log10(M)
+        halo_logm = np.array(ncount.get_lnM_true().dup_array())
+        halo_mobs = np.array(ncount.get_lnM_obs().dup_array())
         halo_id = np.arange(200000, 200000 + self.halo_set_size)
         
         # 5. Spatial and Geometric Properties
@@ -215,9 +216,8 @@ class MockGenerator:
     
         # Compute secondary physical properties
         # R200c: Radius where density is 200x the critical density of the Universe
-        halos_R200c = self.get_R200c(10**halo_logm, halo_z)
-    
-       
+        halos_R200c = self.get_R200c(np.exp(halo_logm), halo_z)
+
         
     
         # 6. Apply Completeness Function
@@ -230,29 +230,30 @@ class MockGenerator:
     
         # 7. Package results into an Astropy Table
         halos = Table(
-            [halo_id, halo_ra, halo_dec, halo_z, halo_logm, halos_R200c, 
+            [halo_id, halo_ra, halo_dec, halo_z, halo_logm, halo_mobs, halos_R200c, 
              halo_x1, halo_x2, halo_x3, halo_r, is_detected], 
-            names=("halo_id", "RA", "DEC", "z", "Mass", "R200c", 
+            names=("halo_id", "RA", "DEC", "z", "Mass", "Mass_obs", "R200c", 
                    "x1", "x2", "x3", "halo_r", "is_detected"), 
-            dtype=(int, float, float, float, float, float, 
+            dtype=(int, float, float, float, float, float,  float, 
                    float, float, float, float, int)
         )
+        halos = halos[(halos["Mass"] >= np.log(self.halo_mass_min)) & (halos["Mass"] <= np.log(self.halo_mass_max))]
     
         return halos
     
 
     
-    def generate_clusters_from_halos(self, halos, D_DIM = 2.0,  hmf=None, purity_model=None):
+    def generate_clusters_from_halos(self, halos, D_DIM = 2.0, purity_model=None):
         """Generate clusters from a given halo catalog generated from a halo mass function (HMF).
 
         :param Table hmf_halos: Halo catalog generated from a halo mass function (HMF)."""
         dist = self.dist()
+        
         detected_halos = halos[halos['is_detected'] == 1]
         detected_halos_size = len(detected_halos['z'])
         detected_halos_x1 = detected_halos['x1']
         detected_halos_x2 = detected_halos['x2']
         detected_halos_x3 = detected_halos['x3']
-        detected_halos_logm = detected_halos['Mass']
         detected_halos_r = detected_halos['halo_r']
         
 
@@ -266,79 +267,83 @@ class MockGenerator:
         cluster_r = np.sqrt(cluster_x1**2 + cluster_x2**2 + cluster_x3**2)
         cluster_z = np.array([dist.inv_comoving(self.cosmo, r / self.cosmo.RH_Mpc()) for r in cluster_r])
         cluster_parent_id =  detected_halos['halo_id']
-
-        ##### Pensar na relação massa-observável
-        cluster_logm = detected_halos_logm + np.random.normal(0, 0.1, detected_halos_size)
-        #######################################################################################################################
+        cluster_logm = detected_halos['Mass_obs']
         
-
         if purity_model == None:
-            self.cluster_set_size = detected_halos_size 
+            self.cluster_set_size = detected_halos_size
         else:
-            if hmf == None:
-                raise TypeError("Must Provide a NcHaloMassFunction object to generate fake detections.")
-            else:
+            if self.cluster_m == None or type(self.cluster_m) == Nc.ClusterMassNodist:
                 def hmf_fake(logm,z):
-                    return hmf.d2n_dzdlnM(self.cosmo, logm , z) *(1/purity_model(logm , z)-1)
+                    return self.hmf.d2n_dzdlnM(self.cosmo, logm , z) *(1/purity_model(logm , z)-1)
                 def hmf_fake_pdf(logm, z):
-                    return np.log(hmf.d2n_dzdlnM(self.cosmo, logm , z) *(1/purity_model(logm , z)-1)/mean_fake_clusters_size)
-
-                mean_fake_clusters_size = dblquad(hmf_fake, self.z_min, self.z_max , np.log(self.cluster_mass_min), np.log(self.cluster_mass_max))[0]
+                    return np.log(self.hmf.d2n_dzdlnM(self.cosmo, logm , z) *(1/purity_model(logm , z)-1)/mean_fake_clusters_size)
                 
-                fake_clusters_size = np.random.poisson(lam=mean_fake_clusters_size)
-                self.cluster_set_size = detected_halos_size + fake_clusters_size
+            else:
+                #cluster_logm = detected_halos_logm + np.random.normal(0, 0.1, detected_halos_size)
+                sky_area = self.sky_area()
+                sky_area_rad = sky_area * (np.pi / 180) ** 2  # Conversion to steradians
+                clusterz = Nc.ClusterRedshiftNodist(z_min=self.z_min, z_max=self.z_max)
+                cad = Nc.ClusterAbundance.new(self.hmf, None)
+                cad.set_area(sky_area_rad)
+                cad.prepare(self.cosmo, clusterz, self.cluster_m)
 
-                # ARRUMAR ESSE SAMPLERRR
-                # Faster Unbinned Alternative to MCMC
-                def sample_fakes_rejection(target_func, n_to_generate):
-                    sampled = []
-                    # Simple box bounds for M and z
-                    max_val = calculate_approx_max(target_func) 
-                    while len(sampled) < n_to_generate:
-                        m_test = np.random.uniform(np.log(self.cluster_mass_min), np.log(self.cluster_mass_max))
-                        z_test = np.random.uniform(self.z_min, self.z_max)
-                        if np.random.rand() < target_func(m_test, z_test) / max_val:
-                            sampled.append([m_test, z_test])
-                    return np.array(sampled)
-                def calculate_approx_max(target_func):
-                    # Create a grid across the parameter space
-                    z_grid = np.linspace(self.z_min, self.z_max, 50)
-                    # Use log-mass for the grid to match your hmf_fake inputs
-                    logm_grid = np.linspace(np.log(self.cluster_mass_min), np.log(self.cluster_mass_max), 50)
-                    zz, mm = np.meshgrid(z_grid, logm_grid)
-                    
-                    # Evaluate target function across the grid
-                    # We use a list comprehension because target_func (hmf_fake) 
-                    # might not be fully vectorized for all NumCosmo objects
-                    vals = np.array([target_func(m, z) for m, z in zip(mm.flatten(), zz.flatten())])
-                    
-                    return np.max(vals)  # 10% buffer to ensure the envelope stays above the PDF                
-                sampled = sample_fakes_rejection(hmf_fake_pdf, fake_clusters_size)
-                cluster_z_fake =  sampled[:, 1] 
-                cluster_logm_fake = sampled[:, 0] / np.log(10)
-                #cluster_z_fake = np.random.uniform(self.z_min, self.z_max, fake_clusters_size)
-                #cluster_logm_fake = np.random.uniform(np.log(self.cluster_mass_min), np.log(self.cluster_mass_max), fake_clusters_size)
-                #######################################################################################################################
-                cluster_ra_fake =  np.random.uniform(self.ra_min, self.ra_max, fake_clusters_size)
-                cluster_sin_dec_fake = np.random.uniform(np.sin(np.radians(self.dec_min)), np.sin(np.radians(self.dec_max)), fake_clusters_size)
-                cluster_dec_fake = np.degrees(np.arcsin(cluster_sin_dec_fake))
-                cluster_r_fake = np.array(dist.comoving_array(self.cosmo, cluster_z_fake))  * self.cosmo.RH_Mpc()
-                cluster_x1_fake, cluster_x2_fake, cluster_x3_fake = self.get_3D_coordinates(cluster_ra_fake, cluster_dec_fake, cluster_r_fake)
+                def hmf_fake(logm,z):
+                    return cad.lnM_p_d2n(self.cosmo, clusterz, self.cluster_m, [logm], None , z) *(1/purity_model(logm , z)-1)
+                def hmf_fake_pdf(logm, z):
+                    return np.log(cad.lnM_p_d2n(self.cosmo, clusterz, self.cluster_m, [logm], None , z) *(1/purity_model(logm , z)-1)/mean_fake_clusters_size)
 
-                cluster_ra = np.append(cluster_ra, cluster_ra_fake)
-                cluster_dec = np.append(cluster_dec, cluster_dec_fake)
-                cluster_z = np.append(cluster_z, cluster_z_fake)
-                cluster_logm = np.append(cluster_logm, cluster_logm_fake)
-                cluster_r = np.append(cluster_r, cluster_r_fake)
-                cluster_x1 = np.append(cluster_x1, cluster_x1_fake)
-                cluster_x2 = np.append(cluster_x2, cluster_x2_fake)
-                cluster_x3 = np.append(cluster_x3, cluster_x3_fake)
-                cluster_parent_id = np.append(cluster_parent_id, np.zeros(fake_clusters_size))
-
+            mean_fake_clusters_size = dblquad(hmf_fake, self.z_min, self.z_max , np.log(self.cluster_mass_min), np.log(self.cluster_mass_max))[0]
                 
-        
+            fake_clusters_size = np.random.poisson(lam=mean_fake_clusters_size)
+            self.cluster_set_size = detected_halos_size + fake_clusters_size
+
+            # ARRUMAR ESSE SAMPLERRR
+            # Faster Unbinned Alternative to MCMC
+            def sample_fakes_rejection(target_func, n_to_generate):
+                sampled = []
+                # Simple box bounds for M and z
+                max_val = calculate_approx_max(target_func) 
+                while len(sampled) < n_to_generate:
+                    m_test = np.random.uniform(np.log(self.cluster_mass_min), np.log(self.cluster_mass_max))
+                    z_test = np.random.uniform(self.z_min, self.z_max)
+                    if np.random.rand() < target_func(m_test, z_test) / max_val:
+                        sampled.append([m_test, z_test])
+                return np.array(sampled)
+            def calculate_approx_max(target_func):
+                # Create a grid across the parameter space
+                z_grid = np.linspace(self.z_min, self.z_max, 50)
+                # Use log-mass for the grid to match your hmf_fake inputs
+                logm_grid = np.linspace(np.log(self.cluster_mass_min), np.log(self.cluster_mass_max), 50)
+                zz, mm = np.meshgrid(z_grid, logm_grid)
+                    
+                # Evaluate target function across the grid
+                # We use a list comprehension because target_func (hmf_fake) 
+                # might not be fully vectorized for all NumCosmo objects
+                vals = np.array([target_func(m, z) for m, z in zip(mm.flatten(), zz.flatten())])
+                    
+                return np.max(vals)  # 10% buffer to ensure the envelope stays above the PDF                
+            sampled = sample_fakes_rejection(hmf_fake_pdf, fake_clusters_size)
+            cluster_z_fake =  sampled[:, 1] 
+            cluster_logm_fake = sampled[:, 0]
+
+            cluster_ra_fake =  np.random.uniform(self.ra_min, self.ra_max, fake_clusters_size)
+            cluster_sin_dec_fake = np.random.uniform(np.sin(np.radians(self.dec_min)), np.sin(np.radians(self.dec_max)), fake_clusters_size)
+            cluster_dec_fake = np.degrees(np.arcsin(cluster_sin_dec_fake))
+            cluster_r_fake = np.array(dist.comoving_array(self.cosmo, cluster_z_fake))  * self.cosmo.RH_Mpc()
+            cluster_x1_fake, cluster_x2_fake, cluster_x3_fake = self.get_3D_coordinates(cluster_ra_fake, cluster_dec_fake, cluster_r_fake)
+
+            cluster_ra = np.append(cluster_ra, cluster_ra_fake)
+            cluster_dec = np.append(cluster_dec, cluster_dec_fake)
+            cluster_z = np.append(cluster_z, cluster_z_fake)
+            cluster_logm = np.append(cluster_logm, cluster_logm_fake)
+            cluster_r = np.append(cluster_r, cluster_r_fake)
+            cluster_x1 = np.append(cluster_x1, cluster_x1_fake)
+            cluster_x2 = np.append(cluster_x2, cluster_x2_fake)
+            cluster_x3 = np.append(cluster_x3, cluster_x3_fake)
+            cluster_parent_id = np.append(cluster_parent_id, np.zeros(fake_clusters_size))
+
         # Create the cluster ID
-        cluster_R200c = self.get_R200c(10**cluster_logm, cluster_z)
+        cluster_R200c = self.get_R200c(np.exp(cluster_logm), cluster_z)
         cluster_id = np.array([int(i + 100000) for i in range(self.cluster_set_size)])
 
         # Table with cluster properties
