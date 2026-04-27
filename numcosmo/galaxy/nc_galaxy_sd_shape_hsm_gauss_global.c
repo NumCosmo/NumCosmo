@@ -61,7 +61,6 @@ typedef struct _NcGalaxySDShapeHSMGaussGlobalPrivate
   NcmModelCtrl *ctrl_hp;
   NcmModelCtrl *ctrl_shape;
   NcmStatsVec *obs_stats;
-  gdouble std_shape;
 } NcGalaxySDShapeHSMGaussGlobalPrivate;
 
 struct _NcGalaxySDShapeHSMGaussGlobal
@@ -164,7 +163,6 @@ static NcGalaxySDShapeIntegrand *_nc_galaxy_sd_shape_hsm_gauss_global_integ (NcG
 static gboolean _nc_galaxy_sd_shape_hsm_gauss_global_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
 static void _nc_galaxy_sd_shape_hsm_gauss_global_data_init (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data);
 static void _nc_galaxy_sd_shape_hsm_gauss_global_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
-static void _nc_galaxy_sd_shape_hsm_gauss_global_update_std_shape (NcGalaxySDShape *gsds);
 
 static void
 nc_galaxy_sd_shape_hsm_gauss_global_class_init (NcGalaxySDShapeHSMGaussGlobalClass *klass)
@@ -207,15 +205,6 @@ nc_galaxy_sd_shape_hsm_gauss_global_class_init (NcGalaxySDShapeHSMGaussGlobalCla
 #define VECTOR  (NCM_MODEL (gsds))
 #define SIGMA   (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_SIGMA))
 
-static void
-_nc_galaxy_sd_shape_hsm_gauss_global_update_std_shape (NcGalaxySDShape *gsds)
-{
-  NcGalaxySDShapeHSMGaussGlobalPrivate * const self = nc_galaxy_sd_shape_hsm_gauss_global_get_instance_private (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (gsds));
-
-  if (ncm_model_ctrl_update (self->ctrl_shape, NCM_MODEL (gsds)))
-    self->std_shape = nc_galaxy_sd_shape_hsm_gauss_global_std_shape_from_sigma (SIGMA);
-}
-
 static complex double
 _gauss_gen (NcmRNG *rng, const gdouble sigma)
 {
@@ -240,13 +229,12 @@ _nc_galaxy_sd_shape_hsm_gauss_global_gen (NcGalaxySDShape *gsds, NcmMSet *mset, 
   const gdouble ra                             = data->sdpos_data->ra;
   const gdouble dec                            = data->sdpos_data->dec;
   const gdouble z                              = data->sdpos_data->sdz_data->z;
-  const gdouble sigma                          = SIGMA;
   const gdouble noise1                         = ncm_rng_gaussian_gen (rng, 0.0, ldata->std_noise);
   const gdouble noise2                         = ncm_rng_gaussian_gen (rng, 0.0, ldata->std_noise);
   const gdouble c1                             = ldata->c1;
   const gdouble c2                             = ldata->c2;
   const gdouble m                              = ldata->m;
-  complex double e_s                           = _gauss_gen (rng, sigma);
+  complex double e_s                           = _gauss_gen (rng, SIGMA);
   complex double noise                         = noise1 + I * noise2;
   complex double c                             = c1 + I * c2;
   gdouble theta                                = 0.0;
@@ -289,7 +277,7 @@ _nc_galaxy_sd_shape_hsm_gauss_global_gen (NcGalaxySDShape *gsds, NcmMSet *mset, 
   }
   else
   {
-    e_o = e_s;
+    e_o = e_s + c;
   }
 
   e_o += noise;
@@ -584,11 +572,10 @@ _nc_galaxy_sd_shape_hsm_gauss_global_direct_estimate (NcGalaxySDShape *gsds, Ncm
   NcHICosmo *cosmo                                  = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHaloPosition *halo_position                     = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   NcGalaxyWLObsEllipConv ellip_conv                 = nc_galaxy_sd_shape_get_ellip_conv (gsds);
-  const gdouble std_shape                           = self->std_shape;
+  const gdouble sigma                               = SIGMA;
 
   guint i;
 
-  _nc_galaxy_sd_shape_hsm_gauss_global_update_std_shape (gsds);
   nc_halo_position_prepare_if_needed (halo_position, cosmo);
   ncm_stats_vec_reset (self->obs_stats, TRUE);
 
@@ -604,7 +591,7 @@ _nc_galaxy_sd_shape_hsm_gauss_global_direct_estimate (NcGalaxySDShape *gsds, Ncm
     const gdouble m                            = ldata_i->m;
     const gdouble c1                           = ldata_i->c1;
     const gdouble c2                           = ldata_i->c2;
-    const gdouble var_tot                      = std_shape * std_shape + std_noise * std_noise;
+    const gdouble var_tot                      = sigma * sigma + std_noise * std_noise;
     const gdouble weight                       = 1.0 / var_tot;
     complex double e_o                         = e1 + I * e2;
     complex double hat_g;
@@ -645,8 +632,8 @@ _nc_galaxy_sd_shape_hsm_gauss_global_direct_estimate (NcGalaxySDShape *gsds, Ncm
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
       {
-        const gdouble std_shape2 = std_shape * std_shape;
-        const gdouble R          = 1.0 - std_shape2;
+        const gdouble sigma2 = sigma * sigma;
+        const gdouble R      = 1.0 - sigma2;
 
         *gt      = (0.5 * mean_gt / R - mean_c1) / (1.0 + mean_m);
         *gx      = (0.5 * mean_gx / R - mean_c2) / (1.0 + mean_m);
