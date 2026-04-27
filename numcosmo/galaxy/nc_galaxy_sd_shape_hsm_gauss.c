@@ -32,8 +32,8 @@
  * NcGalaxySDShapeHSMGauss:
  *
  * Class describing a galaxy sample shape distribution with a gaussian p.d.f.
- * convoluted with gaussian noise and accounting for bias. Compatible with Subaru's Hyper
- * Suprime-Cam (HSC) survey data.
+ * convoluted with gaussian noise. Uses the HSM shape measurement products with
+ * individual shape noise, i.e., the same shape noise for all galaxies in the sample.
  *
  */
 
