@@ -291,7 +291,7 @@ _nc_galaxy_sd_shape_hsm_gauss_global_gen (NcGalaxySDShape *gsds, NcmMSet *mset, 
   }
   else
   {
-    e_o = e_s;
+    e_o = e_s + c;
   }
 
   e_o += noise;
