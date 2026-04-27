@@ -33,7 +33,7 @@
  *
  * Class describing a galaxy sample shape distribution with a truncated gaussian p.d.f.
  * convoluted with gaussian noise. Uses the HSM shape measurement products with
- * individual shape noise, i.e., the same shape noise for all galaxies in the sample.
+ * individual shape noise.
  *
  */
 
