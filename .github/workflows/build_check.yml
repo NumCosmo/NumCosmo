@@ -184,6 +184,7 @@ jobs:
           conda install -q -v -n numcosmo_developer libfabric-devel
           conda list
       - name: Save conda-forge cache
+        if: steps.cache.outputs.cache-hit != 'true'
         id: cache-primes-save
         uses: actions/cache/save@v4
         with:
@@ -256,6 +257,7 @@ jobs:
           pip install -v pygobject-stubs pytest-tap types-tabulate
           conda list
       - name: Save conda-forge cache
+        if: steps.cache.outputs.cache-hit != 'true'
         id: cache-primes-save
         uses: actions/cache/save@v4
         with:
