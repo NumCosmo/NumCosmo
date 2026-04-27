@@ -67,8 +67,7 @@ class BestfitDatabase:
 
             # Create table with composite unique key (mock_seed, cut)
             # Stores serialized model as YAML string for flexibility
-            cursor.execute(
-                """
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS best_fits (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     mock_seed INTEGER NOT NULL,
@@ -80,8 +79,7 @@ class BestfitDatabase:
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(mock_seed, cut)
                 )
-                """
-            )
+                """)
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_mock_seed ON best_fits(mock_seed)"
             )

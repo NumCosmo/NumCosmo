@@ -28,7 +28,6 @@ from typing import Any, TypeVar
 
 from numcosmo_py import Nc, Ncm, GLib
 
-
 # Type variable for generic model duplication
 _T = TypeVar("_T", bound=Ncm.Model)
 
@@ -183,7 +182,9 @@ def model_params_from_list(model: Nc.ClusterMassRichness, values: list[float]) -
     :raises ValueError: If number of values doesn't match number of FREE parameters
     """
     free_params = [
-        i for i in range(model.sparam_len()) if model.param_get_ftype(i) != Ncm.ParamType.FIXED
+        i
+        for i in range(model.sparam_len())
+        if model.param_get_ftype(i) != Ncm.ParamType.FIXED
     ]
     if len(values) != len(free_params):
         raise ValueError(

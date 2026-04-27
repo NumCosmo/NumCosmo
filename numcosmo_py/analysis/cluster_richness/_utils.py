@@ -25,7 +25,6 @@ from enum import StrEnum
 
 from numcosmo_py import Nc
 
-
 #: Format string for parameter display
 PARAM_FORMAT = ".3f"
 FIXED_PARAMETERS = ["cut"]
@@ -68,7 +67,7 @@ def create_richness_model(
     # Normalize string input to lowercase for case-insensitive matching
     if isinstance(model_type, str):
         model_type = model_type.lower()
-    
+
     match model_type:
         case RichnessModelType.ASCASO:
             return Nc.ClusterMassAscaso(
