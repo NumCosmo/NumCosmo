@@ -52,12 +52,13 @@ struct _NcmMSetFuncListClass
 
 /**
  * NcmMSetFuncListStruct:
- * @name: FIXME
- * @symbol: FIXME
- * @ns: FIXME
- * @desc: FIXME
+ * @name: function name identifier
+ * @symbol: mathematical symbol or LaTeX representation
+ * @ns: namespace for the function
+ * @desc: human-readable description of the function
  *
- * FIXME
+ * Structure defining a function in the model set function list.
+ * This holds metadata for functions that can be evaluated on model parameter sets.
  *
  */
 typedef struct _NcmMSetFuncListStruct

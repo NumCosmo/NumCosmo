@@ -67,6 +67,10 @@ G_BEGIN_DECLS
  *
  * Enumeration of available BAO (Baryon Acoustic Oscillations) datasets.
  *
+ * These enumerate different Baryon Acoustic Oscillation observations from various
+ * surveys and releases. Each identifier corresponds to a specific measurement type
+ * and publication referenced in the parameter documentation above.
+ *
  */
 typedef enum _NcDataBaoId
 {

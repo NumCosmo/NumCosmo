@@ -106,6 +106,7 @@
 #include <numcosmo/lss/nc_transfer_func.h>
 #include <numcosmo/lss/nc_transfer_func_bbks.h>
 #include <numcosmo/lss/nc_transfer_func_eh.h>
+#include <numcosmo/lss/nc_transfer_func_eh_no_baryon.h>
 #include <numcosmo/lss/nc_transfer_func_camb.h>
 #include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/lss/nc_halo_position.h>
@@ -118,6 +119,10 @@
 #include <numcosmo/lss/nc_halo_cm_param.h>
 #include <numcosmo/lss/nc_halo_cm_duffy08.h>
 #include <numcosmo/lss/nc_halo_cm_klypin11.h>
+#include <numcosmo/lss/nc_halo_cm_prada12.h>
+#include <numcosmo/lss/nc_halo_cm_bhattacharya13.h>
+#include <numcosmo/lss/nc_halo_cm_dutton14.h>
+#include <numcosmo/lss/nc_halo_cm_diemer15.h>
 #include <numcosmo/lss/nc_galaxy_acf.h>
 #include <numcosmo/lss/nc_multiplicity_func.h>
 #include <numcosmo/lss/nc_multiplicity_func_ps.h>
@@ -206,11 +211,14 @@
 /* Cross-correlations */
 #include <numcosmo/xcor/nc_xcor.h>
 #include <numcosmo/xcor/nc_xcor_AB.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel_gal.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel_CMB_lensing.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel_weak_lensing.h>
-#include <numcosmo/xcor/nc_xcor_limber_kernel_tSZ.h>
+#include <numcosmo/xcor/nc_xcor_kernel.h>
+#include <numcosmo/xcor/nc_xcor_kernel_component.h>
+#include <numcosmo/xcor/nc_xcor_kernel_gal.h>
+#include <numcosmo/xcor/nc_xcor_kernel_cluster.h>
+#include <numcosmo/xcor/nc_xcor_kernel_cluster_tophat.h>
+#include <numcosmo/xcor/nc_xcor_kernel_CMB_lensing.h>
+#include <numcosmo/xcor/nc_xcor_kernel_weak_lensing.h>
+#include <numcosmo/xcor/nc_xcor_kernel_tSZ.h>
 
 #endif /* _NUMCOSMO_H */
 

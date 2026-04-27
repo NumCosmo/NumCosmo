@@ -2,7 +2,7 @@
 
 set -e
 source "$(conda info --base)/etc/profile.d/conda.sh"
-conda env update --name numcosmo_developer --file devel_environment.yml --prune
+conda env update --name numcosmo_developer --file environment.yml --prune
 conda activate numcosmo_developer
 meson setup build -Ddocumentation=true -Db_lto=false
 meson compile -C build

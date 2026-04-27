@@ -1062,7 +1062,9 @@ nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de, GError **error)
  * nc_hicosmo_de_new_add_bbn:
  * @lh: a #NcmLikelihood
  *
- * Adds a Big Bang Nucleosynthesis (BBN) prior to the likelihood.
+ * Adds a Gaussian prior for the primordial helium abundance from Big Bang
+ * Nucleosynthesis (BBN) to the likelihood. This constrains the helium-4 mass fraction
+ * $Y_p$ to its BBN predicted value.
  *
  */
 void
@@ -1133,9 +1135,10 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
 /**
  * nc_hicosmo_de_set_dE2Omega_de_dz_impl: (skip)
  * @cosmo_de_class: a #NcHICosmoDEClass
- * @f: function pointer
+ * @f: implementation function for $\mathrm{d}E^2\Omega_{\mathrm{de}}/\mathrm{d}z$
  *
- * Sets the implementation for computing the derivative $\frac{d(E^2\Omega_{\mathrm{de}})}{dz}$.
+ * Sets the implementation for computing the redshift derivative of the
+ * dark energy contribution to $E^2(z)$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEFunc1, dE2Omega_de_dz)
@@ -1143,9 +1146,10 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
 /**
  * nc_hicosmo_de_set_d2E2Omega_de_dz2_impl: (skip)
  * @cosmo_de_class: a #NcHICosmoDEClass
- * @f: function pointer
+ * @f: implementation function for $\mathrm{d}^2E^2\Omega_{\mathrm{de}}/\mathrm{d}z^2$
  *
- * Sets the implementation for computing the second derivative $\frac{d^2(E^2\Omega_{\mathrm{de}})}{dz^2}$.
+ * Sets the implementation for computing the second redshift derivative of
+ * the dark energy contribution to $E^2(z)$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEFunc1, d2E2Omega_de_dz2)
@@ -1153,9 +1157,10 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
 /**
  * nc_hicosmo_de_set_w_de_impl: (skip)
  * @cosmo_de_class: a #NcHICosmoDEClass
- * @f: function pointer
+ * @f: implementation function for $w_{\mathrm{de}}(z)$
  *
- * Sets the implementation for computing the dark energy equation of state $w_{\mathrm{de}}(z)$.
+ * Sets the implementation for computing the dark energy equation of state
+ * parameter $w(z) = p_{\mathrm{de}}/\rho_{\mathrm{de}}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEFunc1, w_de)
@@ -1165,7 +1170,8 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * Computes the dark energy density parameter times $E^2(z)$ at redshift @z.
+ * Computes the dark energy contribution to the normalized Hubble function
+ * squared: $E^2\Omega_{\mathrm{de}}(z)$.
  *
  * Returns: $E^2(z)\Omega_{\mathrm{de}}(z)$
  */
@@ -1174,25 +1180,28 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * Computes the first derivative of $E^2\Omega_{\mathrm{de}}$ with respect to redshift.
+ * Computes the first redshift derivative of the dark energy contribution
+ * to $E^2(z)$: $\mathrm{d}[E^2\Omega_{\mathrm{de}}]/\mathrm{d}z$.
  *
- * Returns: $\frac{d(E^2\Omega_{\mathrm{de}})}{dz}$
+ * Returns: $\mathrm{d}[E^2(z)\Omega_{\mathrm{de}}(z)]/\mathrm{d}z$
  */
 /**
  * nc_hicosmo_d2E2Omega_de_dz2:
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * Computes the second derivative of $E^2\Omega_{\mathrm{de}}$ with respect to redshift.
+ * Computes the second redshift derivative of the dark energy contribution
+ * to $E^2(z)$: $\mathrm{d}^2[E^2\Omega_{\mathrm{de}}]/\mathrm{d}z^2$.
  *
- * Returns: $\frac{d^2(E^2\Omega_{\mathrm{de}})}{dz^2}$
+ * Returns: $\mathrm{d}^2[E^2(z)\Omega_{\mathrm{de}}(z)]/\mathrm{d}z^2$
  */
 /**
  * nc_hicosmo_w_de:
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * Computes the dark energy equation of state parameter at redshift @z.
+ * Computes the dark energy equation of state parameter $w(z)$ defined as
+ * the ratio of pressure to density: $w = p_{\mathrm{de}}/\rho_{\mathrm{de}}$.
  *
  * Returns: $w_{\mathrm{de}}(z)$
  */

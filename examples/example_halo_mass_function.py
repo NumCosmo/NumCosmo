@@ -23,6 +23,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Example fitting SNIa data."""
+
 import math
 import matplotlib.pyplot as plt
 

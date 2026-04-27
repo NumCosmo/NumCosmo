@@ -57,9 +57,12 @@ struct _NcmSplineClass
   gdouble (*deriv_nmax) (const NcmSpline *s, const gdouble x);
   gdouble (*integ) (const NcmSpline *s, const gdouble xi, const gdouble xf);
   NcmSpline *(*copy_empty) (const NcmSpline *s);
+  gdouble (*eval_idx) (const NcmSpline *s, const gdouble x, const gsize i);
+  gdouble (*deriv_idx) (const NcmSpline *s, const gdouble x, const gsize i);
+  gdouble (*integ_idx) (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[7];
+  gpointer padding[4];
 };
 
 NcmSpline *ncm_spline_copy_empty (const NcmSpline *s);
@@ -96,10 +99,13 @@ void ncm_spline_prepare (NcmSpline *s);
 void ncm_spline_post_prepare (NcmSpline *s);
 void ncm_spline_prepare_base (NcmSpline *s);
 gdouble ncm_spline_eval (const NcmSpline *s, const gdouble x);
+gdouble ncm_spline_eval_idx (const NcmSpline *s, const gdouble x, const gsize i);
 gdouble ncm_spline_eval_deriv (const NcmSpline *s, const gdouble x);
+gdouble ncm_spline_eval_deriv_idx (const NcmSpline *s, const gdouble x, const gsize i);
 gdouble ncm_spline_eval_deriv2 (const NcmSpline *s, const gdouble x);
 gdouble ncm_spline_eval_deriv_nmax (const NcmSpline *s, const gdouble x);
 gdouble ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1);
+gdouble ncm_spline_eval_integ_idx (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f);
 gboolean ncm_spline_is_empty (const NcmSpline *s);
 gsize ncm_spline_min_size (const NcmSpline *s);
 guint ncm_spline_get_index (const NcmSpline *s, const gdouble x);

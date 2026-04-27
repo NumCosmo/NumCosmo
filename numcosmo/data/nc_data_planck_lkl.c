@@ -564,7 +564,7 @@ _nc_data_planck_lkl_file_exists (const gchar *filename)
 
       g_free (file_at_default);
 
-      if (g_file_test (file_at_data, G_FILE_TEST_EXISTS))
+      if ((file_at_data != NULL) && g_file_test (file_at_data, G_FILE_TEST_EXISTS))
         return file_at_data;
 
       g_free (file_at_data);
@@ -800,8 +800,8 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
  * nc_data_planck_lkl_new:
  * @filename: a Planck likelihood file
  *
- * Creates a new #NcDataPlanckLKL from a Planck likelihood file.
- * The file should be in the clik format from the Planck Legacy Archive.
+ * Creates a new #NcDataPlanckLKL object from a Planck likelihood data file. This loads
+ * the likelihood data using the Planck likelihood code library.
  *
  * Returns: (transfer full): a new #NcDataPlanckLKL
  */
@@ -820,9 +820,9 @@ nc_data_planck_lkl_new (const gchar *filename)
  * @filename: a Planck likelihood file
  * @pb: a #NcHIPertBoltzmann
  *
- * Creates a new #NcDataPlanckLKL from a Planck likelihood file and
- * associates it with a #NcHIPertBoltzmann object for computing theoretical
- * CMB power spectra.
+ * Creates a new #NcDataPlanckLKL object with a specified Boltzmann code. This
+ * initializes the likelihood using the provided perturbation/Boltzmann solver @pb for
+ * computing the theoretical power spectra.
  *
  * Returns: (transfer full): a new #NcDataPlanckLKL
  */
@@ -890,7 +890,7 @@ nc_data_planck_lkl_get_param_name (NcDataPlanckLKL *plik, guint i)
  * nc_data_planck_lkl_get_param_names:
  * @plik: a #NcDataPlanckLKL
  *
- * Gets all nuisance parameter names for this likelihood.
+ * Gets an array containing all nuisance parameter names used by the likelihood.
  *
  * Returns: (array zero-terminated=1) (element-type utf8) (transfer full): an array of parameter names
  */
@@ -995,27 +995,33 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
   ncm_message ("# Downloading file [%s]...\n", file);
 
   {
-    gchar *cmd[] = { "wget", "-O", full_filename, (gchar *) url_str, NULL };
+    gchar *cmd[] = {"wget", "--tries=3", "--timeout=30", "-O", full_filename, (gchar *) url_str, NULL };
 
     if (!g_spawn_sync (dir, cmd, NULL,
-                       G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, &error))
+                       G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+                       NULL, NULL, NULL, NULL, NULL, &error))
       g_error ("nc_data_planck_lkl_download_baseline: cannot download file: %s. Error: %s. "
                "Please download the file manually from %s and extract it to %s.",
                file, error->message,
                url_str, dir);
   }
 
+  ncm_message ("# Extracting file [%s]...\n", file);
+
   {
     gchar *cmd[] = { "tar", "xzf", (gchar *) file, NULL };
 
     if (!g_spawn_sync (dir, cmd, NULL,
-                       G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, &error))
+                       G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+                       NULL, NULL, NULL, NULL, NULL, &error))
       g_error ("nc_data_planck_lkl_download_baseline: cannot extract tar file: %s. Error: %s",
                file, error->message);
   }
 
   g_unlink (full_filename);
   g_free (full_filename);
+
+  ncm_message ("# Baseline data successfully downloaded and extracted.\n");
 
   return;
 }

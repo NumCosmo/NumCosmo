@@ -29,7 +29,7 @@
  * Cross-correlation data object.
  *
  * This object implements the gaussian likelihood described in
- * \cite{2017arXiv170604583D} for the joint analysis of an abitrary number of cosmic
+ * \cite{2017arXiv170604583D} for the joint analysis of an arbitrary number of cosmic
  * probes with their auto- and cross-angular pseudo power spectra. The covariance of the
  * pseudo spectra implemented here is \begin{align} \mathrm{Cov}\left(
  * \tilde{C}_{\ell}^{AB}, \tilde{C}_{\ell'}^{CD} \right) = & \sqrt{ D_{\ell}^{AD}
@@ -61,7 +61,7 @@
 #include "nc_hireion.h"
 #include "nc_snia_dist_cov.h"
 #include "xcor/nc_xcor.h"
-#include "xcor/nc_xcor_limber_kernel_gal.h"
+#include "xcor/nc_xcor_kernel_gal.h"
 
 #include <glib/gstdio.h>
 
@@ -381,17 +381,17 @@ nc_data_xcor_class_init (NcDataXcorClass *klass)
 }
 
 static gboolean
-_nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorLimberKernel *xcl, guint a, NcmMSet *mset)
+_nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorKernel *xcl, guint a, NcmMSet *mset)
 {
-  if (NC_IS_XCOR_LIMBER_KERNEL_GAL (xcl))
+  if (NC_IS_XCOR_KERNEL_GAL (xcl))
   {
-    NcXcorLimberKernelGal *xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xcl);
+    NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (xcl);
 
-    if (nc_xcor_limber_kernel_gal_get_fast_update (xclkg))
+    if (nc_xcor_kernel_gal_get_fast_update (xclkg))
     {
       gdouble bias, bias_old, noise_bias_old;
 
-      nc_xcor_limber_kernel_gal_get_bias (xclkg, &bias, &bias_old, &noise_bias_old);
+      nc_xcor_kernel_gal_get_bias (xclkg, &bias, &bias_old, &noise_bias_old);
       {
         const gdouble biasratio = bias / bias_old;
 
@@ -400,7 +400,7 @@ _nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorLimberKernel *xcl, guint a, Nc
 
         ncm_vector_add_constant (cl_th_0_aa, -1.0 * noise_bias_old);
         ncm_vector_scale (cl_th_0_aa, gsl_pow_2 (biasratio));
-        nc_xcor_limber_kernel_add_noise (xcl, cl_th_0_aa, cl_th_1_aa, 0);
+        nc_xcor_kernel_add_noise (xcl, cl_th_0_aa, cl_th_1_aa, 0);
 
         ncm_vector_free (cl_th_0_aa);
         ncm_vector_free (cl_th_1_aa);
@@ -441,10 +441,10 @@ _nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorLimberKernel *xcl, guint a, Nc
       {
         NcmVector *orig_vec = ncm_model_orig_params_peek_vector (NCM_MODEL (xclkg));
 
-        nc_xcor_limber_kernel_gal_set_bias_old (xclkg,
-                                                bias,
-                                                ncm_vector_get (orig_vec, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS)
-                                               );
+        nc_xcor_kernel_gal_set_bias_old (xclkg,
+                                         bias,
+                                         ncm_vector_get (orig_vec, NC_XCOR_KERNEL_GAL_NOISE_BIAS)
+        );
       }
 
       return TRUE;
@@ -486,9 +486,9 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
     /* Prepare the kernels */
     for (a = 0; a < nobs; a++)
     {
-      NcXcorLimberKernel *xcl = NC_XCOR_LIMBER_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_limber_kernel_id (), a));
+      NcXcorKernel *xcl = NC_XCOR_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_kernel_id (), a));
 
-      nc_xcor_limber_kernel_prepare (xcl, cosmo);
+      nc_xcor_kernel_prepare (xcl, cosmo);
 
       for (b = a; b < nobs; b++)
       {
@@ -503,15 +503,15 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
     /* guint aa, bb; */
     for (a = 0; a < nobs; a++)
     {
-      NcmModelCtrl *ctrl      = g_ptr_array_index (dxc->xclk_ctrl, a);
-      NcXcorLimberKernel *xcl = NC_XCOR_LIMBER_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_limber_kernel_id (), a));
+      NcmModelCtrl *ctrl = g_ptr_array_index (dxc->xclk_ctrl, a);
+      NcXcorKernel *xcl  = NC_XCOR_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_kernel_id (), a));
 
       if (ncm_model_ctrl_update (ctrl, NCM_MODEL (xcl)))
       {
         /* If the observable is gal, then simply scale with the bias and add the noise_bias term*/
         if (!(_nc_data_xcor_fast_update (dxc, xcl, a, mset)))
         {
-          nc_xcor_limber_kernel_prepare (xcl, cosmo);
+          nc_xcor_kernel_prepare (xcl, cosmo);
 
           for (b = 0; b < nobs; b++)
           {
@@ -527,16 +527,16 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
   /* Compute all the Cl's that need to be updated */
   for (a = 0; a < nobs; a++)
   {
-    NcXcorLimberKernel *xcl1 = NC_XCOR_LIMBER_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_limber_kernel_id (), a));
+    NcXcorKernel *xcl1 = NC_XCOR_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_kernel_id (), a));
 
     if (prep[a][a])
     {
       NcmVector *cl_th_0_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0);
       NcmVector *cl_th_1_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1);
 
-      nc_xcor_limber (dxc->xc, xcl1, NULL, cosmo, 0, dxc->xcab[a][a]->ell_th_cut_off, cl_th_0_aa);
+      nc_xcor_compute (dxc->xc, xcl1, NULL, cosmo, 0, dxc->xcab[a][a]->ell_th_cut_off, cl_th_0_aa);
 
-      nc_xcor_limber_kernel_add_noise (xcl1, cl_th_0_aa, cl_th_1_aa, 0);
+      nc_xcor_kernel_add_noise (xcl1, cl_th_0_aa, cl_th_1_aa, 0);
 
       ncm_vector_free (cl_th_0_aa);
       ncm_vector_free (cl_th_1_aa);
@@ -548,12 +548,12 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
       {
         if (prep[a][b])
         {
-          NcXcorLimberKernel *xcl2 = NC_XCOR_LIMBER_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_limber_kernel_id (), b));
+          NcXcorKernel *xcl2 = NC_XCOR_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_kernel_id (), b));
 
           NcmVector *cl_th_0_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0);
           NcmVector *cl_th_1_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 1);
 
-          nc_xcor_limber (dxc->xc, xcl1, xcl2, cosmo, 0, dxc->xcab[a][b]->ell_th_cut_off, cl_th_0_ab);
+          nc_xcor_compute (dxc->xc, xcl1, xcl2, cosmo, 0, dxc->xcab[a][b]->ell_th_cut_off, cl_th_0_ab);
 
           ncm_vector_memcpy (cl_th_1_ab, cl_th_0_ab);
 
@@ -680,9 +680,8 @@ _nc_data_xcor_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp)
  * @c: a #guint
  * @d: a #guint
  *
- * Computes the covariance matrix element between pseudo-$C_\ell^{AB}$ and
- * pseudo-$C_\ell^{CD}$ for observables @a, @b, @c, and @d, storing the
- * result in @cov.
+ * Computes the covariance matrix for the cross-correlation between pairs
+ * of observables (@a,@b) and (@c,@d), storing the result in matrix @cov.
  *
  */
 void
@@ -829,8 +828,9 @@ _nc_data_xcor_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
  * @xc: a #NcXcor to perform the computation of theoretical power spectra.
  * @use_norma: a #gboolean, whether to normalize the likelihood.
  *
- * Creates a new #NcDataXcor object for @nobs observables using @xc to
- * compute theoretical angular power spectra.
+ * Creates a new #NcDataXcor object for cross-correlation data analysis.
+ * This initializes the data structure for @nobs observables using the
+ * cross-correlation object @xc for theoretical predictions.
  *
  * Returns: (transfer full): a new #NcDataXcor
  */
@@ -840,7 +840,7 @@ nc_data_xcor_new_full (const guint nobs, NcXcor *xc, const gboolean use_norma) /
   return g_object_new (NC_TYPE_DATA_XCOR,
                        "use-norma", use_norma,
                        "nobs", nobs,
-                       "xc", xc, /* ADD EVRYTHING HERE ! */
+                       "xc", xc, /* ADD EVERYTHING HERE ! */
                        NULL);
 }
 
@@ -866,7 +866,7 @@ nc_data_xcor_set_AB (NcDataXcor *dxc, NcXcorAB *xcab)
     dxc->xcidx_ctr  += xcab->nell_lik;
   }
 
-  /* Ref the xcor_AB obejct */
+  /* Ref the xcor_AB object */
   dxc->xcab[a][b] = nc_xcor_AB_ref (xcab);
 }
 
@@ -1066,8 +1066,8 @@ nc_data_xcor_set_5 (NcDataXcor *dxc)
  * @a: a #guint
  * @b: a #guint
  *
- * Retrieves the observed angular power spectrum for the cross-correlation
- * between observables @a and @b, storing it in @vp.
+ * Gets the observed angular power spectrum $C_\ell$ for the cross-correlation
+ * between observables @a and @b, storing the values in vector @vp.
  *
  */
 void

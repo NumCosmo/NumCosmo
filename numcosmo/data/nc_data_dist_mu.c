@@ -26,7 +26,7 @@
 /**
  * NcDataDistMu:
  *
- * Likelihod object for distance modulus data.
+ * Likelihood object for distance modulus data.
  *
  * This class implements the likelihood for distance modulus data.
  *

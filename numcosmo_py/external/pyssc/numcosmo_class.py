@@ -23,7 +23,6 @@
 
 """Functions to compute cosmological quantities using numcosmo."""
 
-
 import numpy as np
 
 from ... import Nc

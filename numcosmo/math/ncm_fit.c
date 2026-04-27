@@ -2217,7 +2217,7 @@ _ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J)
     for (k = 0; k < ncm_vector_len (f); k++)
       ncm_vector_set (J_col_i, k,
                       (ncm_vector_get (J_col_i, k) - ncm_vector_get (f, k)) * one_h
-                     );
+      );
 
     ncm_fit_params_set (fit, i, p);
     ncm_vector_free (J_col_i);
@@ -2255,7 +2255,7 @@ _ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
     for (k = 0; k < ncm_vector_len (f); k++)
       ncm_vector_set (J_col_i, k,
                       (ncm_vector_get (J_col_i, k) - ncm_vector_get (f, k)) * one_2h
-                     );
+      );
 
     ncm_fit_params_set (fit, i, p);
     ncm_vector_free (J_col_i);

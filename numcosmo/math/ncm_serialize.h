@@ -103,6 +103,7 @@ NcmVarDict *ncm_serialize_var_dict_from_yaml (NcmSerialize *ser, const gchar *ya
  */
 GObject *ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename);
 GObject *ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename);
+NcmObjDictStr *ncm_serialize_dict_str_from_binfile (NcmSerialize *ser, const gchar *filename);
 NcmVarDict *ncm_serialize_var_dict_from_variant_file (NcmSerialize *ser, const gchar *filename, gboolean binary);
 GObject *ncm_serialize_from_yaml_file (NcmSerialize *ser, const gchar *filename);
 NcmObjArray *ncm_serialize_array_from_key_file (NcmSerialize *ser, const gchar *filename);
@@ -132,6 +133,7 @@ gchar *ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict);
  */
 void ncm_serialize_to_file (NcmSerialize *ser, GObject *obj, const gchar *filename);
 void ncm_serialize_to_binfile (NcmSerialize *ser, GObject *obj, const gchar *filename);
+void ncm_serialize_dict_str_to_binfile (NcmSerialize *ser, NcmObjDictStr *ods, const gchar *filename);
 void ncm_serialize_var_dict_to_variant_file (NcmSerialize *ser, NcmVarDict *vd, const gchar *filename, gboolean binary);
 void ncm_serialize_to_yaml_file (NcmSerialize *ser, GObject *obj, const gchar *filename);
 void ncm_serialize_array_to_key_file (NcmSerialize *ser, NcmObjArray *oa, const gchar *filename, gboolean save_comment);

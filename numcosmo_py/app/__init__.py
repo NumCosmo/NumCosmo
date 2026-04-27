@@ -50,6 +50,7 @@ from .generate import (
     GenerateDEWSpline,
 )
 from .cluster_richness import RunClusterRichnessAnalysis
+from .xcor import ViewKernel, ListKernels
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
 app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")
@@ -59,12 +60,18 @@ app_cat = typer.Typer(
 )
 app_generate = typer.Typer(no_args_is_help=True, help="Generate experiment files.")
 app_analysis = typer.Typer(no_args_is_help=True, help="Data analysis tools.")
+app_xcor = typer.Typer(no_args_is_help=True, help="Cross-correlation kernel analysis.")
+app_xcor_kernel = typer.Typer(
+    no_args_is_help=True, help="Kernel visualization and analysis."
+)
 
 app.add_typer(app_run, name="run")
 app_run.add_typer(app_run_mcmc, name="mcmc")
 app.add_typer(app_cat, name="catalog")
 app.add_typer(app_generate, name="generate")
 app.add_typer(app_analysis, name="analysis")
+app.add_typer(app_xcor, name="xcor")
+app_xcor.add_typer(app_xcor_kernel, name="kernel")
 
 CMDArg = TypedDict("CMDArg", {"no_args_is_help": bool, "help": str, "name": str})
 
@@ -196,6 +203,17 @@ ANALYSIS_CLUSTER_RICHNESS_CMD: CMDArg = {
     "no_args_is_help": True,
     "help": "Analyze cluster mass-richness scaling relations.",
 }
+XCOR_KERNEL_VIEW_CMD: CMDArg = {
+    "name": "view",
+    "no_args_is_help": True,
+    "help": "View and analyze cross-correlation kernels.",
+}
+
+XCOR_KERNEL_LIST_CMD: CMDArg = {
+    "name": "list",
+    "no_args_is_help": False,
+    "help": "List all available kernel types and their parameters.",
+}
 
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
@@ -234,3 +252,6 @@ app_generate.command(**GEN_DEWSPLINE_CMD)(GenerateDEWSpline)
 # ------------------------------------------------------------------------------
 # Installing analysis subcommands
 app_analysis.command(**ANALYSIS_CLUSTER_RICHNESS_CMD)(RunClusterRichnessAnalysis)
+# Installing xcor kernel subcommands
+app_xcor_kernel.command(**XCOR_KERNEL_VIEW_CMD)(ViewKernel)
+app_xcor_kernel.command(**XCOR_KERNEL_LIST_CMD)(ListKernels)

@@ -185,7 +185,7 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
                                           ncm_fit_get_m2lnL_reltol (fit),
                                           ncm_fit_get_m2lnL_reltol (fit),
                                           &info
-                                         );
+  );
 
   {
     NcmVector *_x = ncm_vector_new_gsl_static (fit_gsl_ls->ls->x);
@@ -307,6 +307,6 @@ ncm_fit_gsl_ls_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
                        "mset", mset,
                        "grad-type", gtype,
                        NULL
-                      );
+  );
 }
 

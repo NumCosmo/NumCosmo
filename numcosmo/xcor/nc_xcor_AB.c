@@ -4,10 +4,14 @@
  *  Tue July 14 12:00:00 2015
  *  Copyright  2015  Cyrille Doux
  *  <cdoux@apc.in2p3.fr>
+ *  Sat December 27 20:21:01 2025
+ *  Copyright  2025  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) 2015 Cyrille Doux <cdoux@apc.in2p3.fr>
+ * Copyright (C) 2025 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -28,7 +32,8 @@
  *
  * Cross-correlations data storage object.
  *
- * This object stores information for observables $A$ and $B$ for use with a #NcDataXcor likelihood object.
+ * This object stores information for observables $A$ and $B$ for use with a
+ * #NcDataXcor likelihood object.
  *
  */
 
@@ -260,7 +265,10 @@ nc_xcor_AB_class_init (NcXcorABClass *klass)
  * @mixing_filename: (allow-none): a #gchar, the name of the file containing the mixing matrix
  * @mixing_filelength: a #guint, the size of the matrix in @mixing_filename (in case it is larger than @ell_th_cut_off)
  *
- * Creates a new #NcXcorAB for cross-correlation between fields A and B.
+ * Creates a new #NcXcorAB object for cross-correlation between observables A and B.
+ * This initializes the angular power spectrum data structures, including the observed
+ * pseudo-spectrum and mixing matrix for handling survey masks and incomplete sky
+ * coverage.
  *
  * Returns: (transfer full): a new #NcXcorAB
  */
@@ -339,7 +347,8 @@ nc_xcor_AB_ref (NcXcorAB *xcab)
  * nc_xcor_AB_free:
  * @xcab: a #NcXcorAB
  *
- * Decreases the reference count of @xcab.
+ * Decreases the reference count of @xcab by one. If the reference count reaches zero,
+ * frees all memory associated with @xcab.
  *
  */
 void
@@ -352,7 +361,8 @@ nc_xcor_AB_free (NcXcorAB *xcab)
  * nc_xcor_AB_clear:
  * @xcab: a #NcXcorAB
  *
- * Clears @xcab and sets the pointer to NULL.
+ * Atomically decrements the reference count of @xcab by one. If the reference count
+ * drops to zero, all memory is freed and @xcab is set to NULL.
  *
  */
 void

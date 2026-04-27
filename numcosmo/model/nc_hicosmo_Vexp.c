@@ -113,7 +113,7 @@ G_DEFINE_TYPE_WITH_CODE (NcHICosmoVexp, nc_hicosmo_Vexp, NC_TYPE_HICOSMO,
                          G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IEM,
                                                 nc_hipert_iem_interface_init)
                          G_ADD_PRIVATE (NcHICosmoVexp)
-                        );
+);
 
 enum
 {
@@ -1257,7 +1257,7 @@ _nc_hicosmo_Vexp_evolve_qt (NcHICosmoVexp *Vexp, gdouble tQ_f)
                 _nc_hicosmo_Vexp_q_smalltq_phi (Vexp, tQ),
                 ralpha / _nc_hicosmo_Vexp_q_smalltq_ralpha (Vexp, tQ) - 1.0,
                 phi / _nc_hicosmo_Vexp_q_smalltq_phi (Vexp, tQ) - 1.0
-               );
+        );
 
       if (root_found)
       {
@@ -1284,7 +1284,7 @@ _nc_hicosmo_Vexp_evolve_qt (NcHICosmoVexp *Vexp, gdouble tQ_f)
           (!set_xb_max && (((x > 0.0) && (rootsfound[1] != 0)) || ((x < 0.0) && (rootsfound[2] != 0))))
           ||
           (set_xb_max && root1_found)
-           )
+        )
         {
           const gint cl_b       = GSL_SIGN (x);
           const gdouble epsilon = _nc_hicosmo_Vexp_epsilon (Vexp, tQ, alpha, phi);

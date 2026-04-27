@@ -1,7 +1,7 @@
 version: 2
 
 conda:
-  environment: devel_environment.yml
+  environment: environment.yml
 
 build:
   os: ubuntu-24.04

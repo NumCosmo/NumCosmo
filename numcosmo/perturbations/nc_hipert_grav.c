@@ -164,6 +164,8 @@ nc_hipert_grav_class_init (NcHIPertGravClass *klass)
   klass->get_dy_scalar     = &_nc_hipert_grav_get_dy_scalar;
 }
 
+/* LCOV_EXCL_START */
+
 static guint
 _nc_hipert_grav_ndyn_var (NcHIPertGrav *grav)
 {
@@ -211,6 +213,8 @@ _nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPe
 {
   g_error ("_nc_hipert_grav_get_dy_scalar: not implemented by `%s'.", G_OBJECT_TYPE_NAME (grav));
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * nc_hipert_grav_scalar_new:

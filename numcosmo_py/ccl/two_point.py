@@ -32,7 +32,7 @@ from numcosmo_py.cosmology import Cosmology
 
 def compute_kernel(
     tracer: pyccl.Tracer, cosmology: Cosmology, ell: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compute the kernel for a given tracer."""
     cosmo = cosmology.cosmo
     dist = cosmology.dist
@@ -57,7 +57,6 @@ def compute_kernel(
                 bessel_factors_list.append(1.0 / nu**2)
 
     z_a = np.array([dist.inv_comoving(cosmo, chi / RH_Mpc) for chi in chi_a])
-    H_Mpc_a = np.array([cosmo.E(z) / RH_Mpc for z in z_a])
     a_array = 1.0 / (1.0 + np.array(z_a))
     transfers_list = tracer.get_transfer(0.0, a_array)
     ell_factors_list = tracer.get_f_ell(ell)
@@ -70,4 +69,4 @@ def compute_kernel(
         assert transfer is not None
         Wtotal += Wchi_a * transfer * ell_factor * bessel_factor
 
-    return z_a[1:-1], chi_a[1:-1], H_Mpc_a[1:-1], Wtotal[1:-1]
+    return z_a[1:-1], chi_a[1:-1], Wtotal[1:-1]

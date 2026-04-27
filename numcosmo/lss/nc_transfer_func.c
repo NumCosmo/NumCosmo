@@ -52,22 +52,30 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcTransferFunc, nc_transfer_func, G_TYPE_OBJECT)
+typedef struct {
+  NcmModelCtrl *ctrl_cosmo;
+  NcmModelCtrl *ctrl_reion;
+} NcTransferFuncPrivate;
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcTransferFunc, nc_transfer_func, G_TYPE_OBJECT)
 
 static void
 nc_transfer_func_init (NcTransferFunc *tf)
 {
-  tf->ctrl_cosmo = ncm_model_ctrl_new (NULL);
-  tf->ctrl_reion = ncm_model_ctrl_new (NULL);
+  NcTransferFuncPrivate *priv = nc_transfer_func_get_instance_private (tf);
+
+  priv->ctrl_cosmo = ncm_model_ctrl_new (NULL);
+  priv->ctrl_reion = ncm_model_ctrl_new (NULL);
 }
 
 static void
 _nc_transfer_func_dispose (GObject *object)
 {
   NcTransferFunc *tf = NC_TRANSFER_FUNC (object);
+  NcTransferFuncPrivate *priv = nc_transfer_func_get_instance_private (tf);
 
-  ncm_model_ctrl_clear (&tf->ctrl_cosmo);
-  ncm_model_ctrl_clear (&tf->ctrl_reion);
+  ncm_model_ctrl_clear (&priv->ctrl_cosmo);
+  ncm_model_ctrl_clear (&priv->ctrl_reion);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_transfer_func_parent_class)->dispose (object);
@@ -143,9 +151,11 @@ nc_transfer_func_clear (NcTransferFunc **tf)
 void
 nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
+  NcTransferFuncPrivate *priv = nc_transfer_func_get_instance_private (tf);
+  
   NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, cosmo);
 
-  ncm_model_ctrl_update (tf->ctrl_cosmo, NCM_MODEL (cosmo));
+  ncm_model_ctrl_update (priv->ctrl_cosmo, NCM_MODEL (cosmo));
 }
 
 /**
@@ -159,7 +169,8 @@ nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 void
 nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
-  gboolean cosmo_up = ncm_model_ctrl_update (tf->ctrl_cosmo, NCM_MODEL (cosmo));
+  NcTransferFuncPrivate *priv = nc_transfer_func_get_instance_private (tf);
+  gboolean cosmo_up = ncm_model_ctrl_update (priv->ctrl_cosmo, NCM_MODEL (cosmo));
 
   if (cosmo_up)
     NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, cosmo);

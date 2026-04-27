@@ -56,7 +56,7 @@ G_DEFINE_TYPE_WITH_CODE (NcHICosmoQGW, nc_hicosmo_qgw, NC_TYPE_HICOSMO,
                          G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IADIAB,
                                                 nc_hipert_iadiab_interface_init)
                          G_ADD_PRIVATE (NcHICosmoQGW)
-                        );
+);
 
 enum
 {

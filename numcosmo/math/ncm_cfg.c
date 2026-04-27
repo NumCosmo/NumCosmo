@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            ncm_cfg.c
  *
@@ -52,6 +50,8 @@
 #include "math/ncm_spline_cubic.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline_cubic_d2.h"
+#include "math/ncm_spline_vec.h"
+#include "math/ncm_function_sample_set.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline2d_gsl.h"
 #include "math/ncm_spline2d_spline.h"
@@ -89,8 +89,14 @@
 #include "math/ncm_prior_gauss_func.h"
 #include "math/ncm_prior_flat_param.h"
 #include "math/ncm_prior_flat_func.h"
+#include "math/ncm_sbessel_integrator.h"
+#include "math/ncm_sbessel_integrator_fftl.h"
+#include "math/ncm_sbessel_integrator_gl.h"
+#include "math/ncm_sbessel_integrator_levin.h"
+#include "math/ncm_sbessel_ode_solver.h"
 #include "math/ncm_fftlog_sbessel_j.h"
 #include "math/ncm_fftlog_sbessel_jljm.h"
+#include "math/ncm_spectral.h"
 #include "nc_hicosmo.h"
 #include "nc_cbe_precision.h"
 #include "model/nc_hicosmo_qconst.h"
@@ -121,6 +127,7 @@
 #include "lss/nc_transfer_func.h"
 #include "lss/nc_transfer_func_bbks.h"
 #include "lss/nc_transfer_func_eh.h"
+#include "lss/nc_transfer_func_eh_no_baryon.h"
 #include "lss/nc_transfer_func_camb.h"
 #include "lss/nc_halo_position.h"
 #include "lss/nc_halo_density_profile.h"
@@ -132,6 +139,10 @@
 #include "lss/nc_halo_cm_param.h"
 #include "lss/nc_halo_cm_duffy08.h"
 #include "lss/nc_halo_cm_klypin11.h"
+#include "lss/nc_halo_cm_prada12.h"
+#include "lss/nc_halo_cm_bhattacharya13.h"
+#include "lss/nc_halo_cm_dutton14.h"
+#include "lss/nc_halo_cm_diemer15.h"
 #include "lss/nc_multiplicity_func.h"
 #include "lss/nc_multiplicity_func_st.h"
 #include "lss/nc_multiplicity_func_ps.h"
@@ -223,11 +234,14 @@
 #include "data/nc_data_planck_lkl.h"
 #include "xcor/nc_xcor.h"
 #include "xcor/nc_xcor_AB.h"
-#include "xcor/nc_xcor_limber_kernel.h"
-#include "xcor/nc_xcor_limber_kernel_gal.h"
-#include "xcor/nc_xcor_limber_kernel_CMB_lensing.h"
-#include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
-#include "xcor/nc_xcor_limber_kernel_tSZ.h"
+#include "xcor/nc_xcor_kernel.h"
+#include "xcor/nc_xcor_kernel_component.h"
+#include "xcor/nc_xcor_kernel_gal.h"
+#include "xcor/nc_xcor_kernel_cluster.h"
+#include "xcor/nc_xcor_kernel_cluster_tophat.h"
+#include "xcor/nc_xcor_kernel_CMB_lensing.h"
+#include "xcor/nc_xcor_kernel_weak_lensing.h"
+#include "xcor/nc_xcor_kernel_tSZ.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
@@ -623,6 +637,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_D2);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_GSL);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE_VEC);
+  ncm_cfg_register_obj (NCM_TYPE_FUNCTION_SAMPLE_SET);
 
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_BICUBIC);
@@ -634,6 +650,12 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
 
   ncm_cfg_register_obj (NCM_TYPE_PLN1D);
+  ncm_cfg_register_obj (NCM_TYPE_SPECTRAL);
+
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_GL);
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_FFTL);
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN);
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_ODE_SOLVER);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPLINE2D);
@@ -732,6 +754,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_BBKS);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
+  ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH_NO_BARYON);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_POSITION);
@@ -746,6 +769,11 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_PARAM);
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_DUFFY08);
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_KLYPIN11);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_PRADA12);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_BHATTACHARYA13);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_DUTTON14);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_DIEMER15);
+
 
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_PS);
@@ -863,11 +891,14 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
 
   ncm_cfg_register_obj (NC_TYPE_XCOR);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_TSZ);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_COMPONENT);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_GAL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER_TOPHAT);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_TSZ);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CMB_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
 
@@ -1812,8 +1843,8 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 
   while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
   {
-    name_max_len = GSL_MAX (name_max_len, strlen (snia->value_name));
-    nick_max_len = GSL_MAX (nick_max_len, strlen (snia->value_nick));
+    name_max_len = GSL_MAX (name_max_len, (gint) strlen (snia->value_name));
+    nick_max_len = GSL_MAX (nick_max_len, (gint) strlen (snia->value_nick));
   }
 
   printf ("# %s:\n", header);

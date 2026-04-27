@@ -3529,7 +3529,7 @@ _ncm_mset_catalog_get_post_lnnorm_sum_bs (NcmMSetCatalog *mcat, NcmVector *mean,
             ncm_stats_vec_get_mean (slnnorm, 1),
             ncm_stats_vec_get_sd (slnnorm, 1),
             ncm_stats_vec_get_sd (slnnorm, 1) / sqrt (j + 1.0)
-           );
+    );
 
 
     g_array_unref (bs_array);
@@ -3918,7 +3918,7 @@ ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat)
                  ncm_stats_vec_get_mean (self->pstats, i),
                  self->bestfit_row != NULL ? ncm_vector_get (self->bestfit_row, i) : GSL_NAN,
                  ncm_stats_vec_get_sd (self->pstats, i)
-                );
+      );
     }
     else
     {
@@ -3931,7 +3931,7 @@ ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat)
                  ncm_stats_vec_get_mean (self->pstats, i),
                  self->bestfit_row != NULL ? ncm_vector_get (self->bestfit_row, i) : GSL_NAN,
                  ncm_stats_vec_get_sd (self->pstats, i)
-                );
+      );
     }
 
     for (j = 0; j < params_len; j++)

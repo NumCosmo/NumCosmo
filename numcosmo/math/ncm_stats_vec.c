@@ -1904,7 +1904,7 @@ ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
       1, svec->nitens,
       &g_array_index (work, gdouble, 0),
       &g_array_index (work_int, gint, 0)
-                                           );
+    );
     var_ii = gsl_pow_2 (var_ii);
     ncm_matrix_set (cov, i, i, var_ii);
   }
@@ -1978,7 +1978,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
       1, svec->nitens,
       &g_array_index (work, gdouble, 0),
       &g_array_index (work_int, gint, 0)
-                                            );
+    );
 
     ncm_vector_set (sigma_x, i, sigma_i);
     ncm_matrix_mul_col (y, i, 1.0 / sigma_i);
@@ -2008,7 +2008,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
         1, svec->nitens,
         &g_array_index (work, gdouble, 0),
         &g_array_index (work_int, gint, 0)
-                                            );
+      );
 
       for (a = 0; a < svec->nitens; a++)
       {
@@ -2024,7 +2024,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
         1, svec->nitens,
         &g_array_index (work, gdouble, 0),
         &g_array_index (work_int, gint, 0)
-                                            );
+      );
       ncm_matrix_set (cov, i, j, 0.25 * (s_ipj * s_ipj - s_imj * s_imj));
     }
   }
@@ -2070,7 +2070,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
         1, svec->nitens,
         &g_array_index (work, gdouble, 0),
         &g_array_index (work_int, gint, 0)
-                                                );
+      );
 
       ncm_vector_set (sigma_z, i, sigma_z_i);
     }

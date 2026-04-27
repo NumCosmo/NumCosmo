@@ -562,10 +562,10 @@ nc_data_cluster_pseudo_counts_set_true_data (NcDataClusterPseudoCounts *dcpc, co
  * @rng: a #NcmRNG
  * @np: number of clusters
  *
- * Initializes the cluster pseudo counts data by sampling @np clusters.
- * Sets the number of clusters and generates observational uncertainties
- * for Planck and CLASH catalogs, then resamples the data using the
- * provided model set @mset and random number generator @rng.
+ * Initializes the cluster pseudo counts data by sampling @np clusters. Sets the number
+ * of clusters and generates observational uncertainties for Planck and CLASH catalogs,
+ * then resamples the data using the provided model set @mset and random number
+ * generator @rng.
  *
  */
 void

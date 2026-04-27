@@ -10,7 +10,7 @@ on:
 
 env:
   CONDA_ENV: numcosmo_developer
-  CACHE_VERSION: 0
+  CACHE_VERSION: 3
 
 jobs:
 
@@ -96,6 +96,35 @@ jobs:
         python3 -m pip install pytest pytest-tap pytest-lazy-fixtures --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
+    - name: Fix libfyaml.pc
+      run: |
+        pc=$(pkg-config --variable=pcfiledir libfyaml)/libfyaml.pc
+        sed -i '' 's/none required//g' "$pc" || true
+    - name: Dump pkg-config info (cfitsio + libfyaml)
+      run: |
+        set -x
+
+        echo "which pkg-config:"
+        which pkg-config || true
+
+        echo "version:"
+        pkg-config --version || true
+
+        echo "env:"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+        echo "PKG_CONFIG_LIBDIR=$PKG_CONFIG_LIBDIR"
+
+        echo "---- cfitsio ----"
+        pkg-config --libs cfitsio || true
+        pkg-config --cflags cfitsio || true
+        pkg-config --variable=pcfiledir cfitsio || true
+        pkg-config --debug --libs cfitsio || true
+
+        echo "---- libfyaml ----"
+        pkg-config --libs libfyaml || true
+        pkg-config --cflags libfyaml || true
+        pkg-config --variable=pcfiledir libfyaml || true
+        pkg-config --debug --libs libfyaml || true      
     - name: Configure NumCosmo
       run: |
         meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Dmpi=disabled --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
@@ -109,7 +138,8 @@ jobs:
         python3 example_simple.py
         python3 example_cbe.py
     - name: Check NumCosmo
-      run: meson test -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
+      run: |
+        meson test -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge:
     name: (${{ matrix.os }}, py${{ matrix.python-version }}, ${{ matrix.mpi }}, Miniforge)
@@ -128,7 +158,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup miniforge
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v4
         with:
           miniforge-version: latest
           python-version: ${{ matrix.python-version }}
@@ -145,12 +175,16 @@ jobs:
       - name: Update environment
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          conda env update -q -v -n ${{ env.CONDA_ENV }} -f devel_environment.yml
+          conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
+          which python
+          conda list
+          pip install -v pygobject-stubs pytest-tap types-tabulate
           conda remove -q -v -n numcosmo_developer openmpi
           conda install -q -v -n numcosmo_developer ${{ matrix.mpi }}
           conda install -q -v -n numcosmo_developer libfabric-devel
           conda list
       - name: Save conda-forge cache
+        if: steps.cache.outputs.cache-hit != 'true'
         id: cache-primes-save
         uses: actions/cache/save@v4
         with:
@@ -159,9 +193,6 @@ jobs:
       - name: Setting up NumCosmo
         run: |
           conda activate numcosmo_developer
-          [[ -e $GCC_AR ]] && AR=$GCC_AR
-          [[ -e $GCC_NM ]] && NM=$GCC_NM
-          [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
           meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
@@ -197,15 +228,15 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu"]
-        python-version: ["3.11"]
-        suites: ["python","c", "stats-dist", "fit-esmcmc", "powspec", "data-cluster-wl"]
+        python-version: ["3.12"]
+        suites: ["python", "c", "stats-dist", "fit-esmcmc", "powspec", "data-cluster-wl", "py-powspec", "py-xcor"]
     defaults:
       run:
         shell: bash -el {0}
     steps:
       - uses: actions/checkout@v4
       - name: Setup miniforge
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v4
         with:
           miniforge-version: latest
           python-version: ${{ matrix.python-version }}
@@ -222,9 +253,11 @@ jobs:
       - name: Update environment
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          conda env update -q -v -n ${{ env.CONDA_ENV }} -f devel_environment.yml
+          conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
+          pip install -v pygobject-stubs pytest-tap types-tabulate
           conda list
       - name: Save conda-forge cache
+        if: steps.cache.outputs.cache-hit != 'true'
         id: cache-primes-save
         uses: actions/cache/save@v4
         with:
@@ -233,10 +266,7 @@ jobs:
       - name: Setting up NumCosmo
         run: |
           conda activate numcosmo_developer
-          [[ -e $GCC_AR ]] && AR=$GCC_AR
-          [[ -e $GCC_NM ]] && NM=$GCC_NM
-          [[ -e $GCC_RANLIB ]] && RANLIB=$GCC_RANLIB
-          meson setup build -Dbuildtype=debug -Db_coverage=true -Db_lto=false -Dnumcosmo_py=true -Dfftw-planner=estimate -Dnumcosmo_debug=disabled --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
+          meson setup build -Dbuildtype=debug -Db_coverage=true -Dnumcosmo_py=true -Dfftw-planner=estimate -Dnumcosmo_debug=disabled --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
       - name: Building NumCosmo
         run: |
           meson compile -C build

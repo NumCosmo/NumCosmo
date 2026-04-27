@@ -72,6 +72,8 @@
 #include <numcosmo/math/ncm_spline_cubic_notaknot.h>
 #include <numcosmo/math/ncm_spline_cubic_d2.h>
 #include <numcosmo/math/ncm_spline_rbf.h>
+#include <numcosmo/math/ncm_spline_vec.h>
+#include <numcosmo/math/ncm_function_sample_set.h>
 #include <numcosmo/math/ncm_spline2d.h>
 #include <numcosmo/math/ncm_spline2d_spline.h>
 #include <numcosmo/math/ncm_spline2d_gsl.h>
@@ -86,6 +88,11 @@
 #include <numcosmo/math/ncm_mpsf_trig_int.h>
 #include <numcosmo/math/ncm_mpsf_sbessel.h>
 #include <numcosmo/math/ncm_sf_sbessel.h>
+#include <numcosmo/math/ncm_sbessel_integrator.h>
+#include <numcosmo/math/ncm_sbessel_integrator_fftl.h>
+#include <numcosmo/math/ncm_sbessel_integrator_gl.h>
+#include <numcosmo/math/ncm_sbessel_integrator_levin.h>
+#include <numcosmo/math/ncm_sbessel_ode_solver.h>
 #include <numcosmo/math/ncm_sf_spherical_harmonics.h>
 #include <numcosmo/math/ncm_mpsf_0F1.h>
 #include <numcosmo/math/ncm_fftlog.h>
@@ -93,6 +100,7 @@
 #include <numcosmo/math/ncm_fftlog_sbessel_jljm.h>
 #include <numcosmo/math/ncm_fftlog_tophatwin2.h>
 #include <numcosmo/math/ncm_fftlog_gausswin2.h>
+#include <numcosmo/math/ncm_spectral.h>
 #include <numcosmo/math/ncm_sparam.h>
 #include <numcosmo/math/ncm_vparam.h>
 #include <numcosmo/math/ncm_reparam.h>

@@ -1912,7 +1912,7 @@ nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x)
             dS_rho_s / dS_rho,
             ncm_spline_eval (self->RePsi_s, x) * ncm_spline_eval_deriv (self->ImPsi_s, x),
             ncm_spline_eval_deriv (self->RePsi_s, x) * ncm_spline_eval (self->ImPsi_s, x)
-           );
+    );
   }
 
   return 2.0 * x * dS_rho_x3 / (Re_psi_x * Re_psi_x + Im_psi_x * Im_psi_x);

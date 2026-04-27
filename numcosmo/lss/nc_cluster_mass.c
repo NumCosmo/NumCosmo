@@ -111,6 +111,8 @@ nc_cluster_mass_class_init (NcClusterMassClass *klass)
   klass->_obs_params_len = 0;
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _nc_cluster_mass_p (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
 {
@@ -174,6 +176,8 @@ _nc_cluster_mass_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, cons
 {
   g_error ("_nc_cluster_mass_p_vec_z_lnMobs: not implemented by `%s'\n", G_OBJECT_TYPE_NAME (clusterm));
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * nc_cluster_mass_class_obs_len:

@@ -53,13 +53,13 @@ typedef gdouble (*NcHICosmoGCGFunc1) (NcHICosmoGCG *cosmo_gcg, gdouble z);
  * @NC_HICOSMO_GCG_H0: Hubble constant [km/(s Mpc)]
  * @NC_HICOSMO_GCG_OMEGA_C: cold dark matter density parameter
  * @NC_HICOSMO_GCG_OMEGA_X: generalized Chaplygin gas density parameter
- * @NC_HICOSMO_GCG_T_GAMMA0: CMB temperature today
- * @NC_HICOSMO_GCG_HE_YP: primordial helium abundance
+ * @NC_HICOSMO_GCG_T_GAMMA0: CMB temperature today [K]
+ * @NC_HICOSMO_GCG_HE_YP: primordial helium mass fraction
  * @NC_HICOSMO_GCG_ENNU: effective number of neutrinos
  * @NC_HICOSMO_GCG_OMEGA_B: baryon density parameter
- * @NC_HICOSMO_GCG_GAMMA: generalized Chaplygin gas parameter
+ * @NC_HICOSMO_GCG_GAMMA: generalized Chaplygin gas parameter $\gamma$
  *
- * Scalar parameters for generalized Chaplygin gas cosmology models.
+ * Scalar parameters for the generalized Chaplygin gas cosmological model.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_SPARAMS >*/
@@ -78,12 +78,12 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_SPARAMS >*/
 
 /**
  * NcHICosmoGCGVParams:
- * @NC_HICOSMO_GCG_MASSNU_M: neutrino masses
- * @NC_HICOSMO_GCG_MASSNU_T: massive neutrino temperatures
- * @NC_HICOSMO_GCG_MASSNU_MU: massive neutrino chemical potentials
- * @NC_HICOSMO_GCG_MASSNU_G: massive neutrino degeneracy factors
+ * @NC_HICOSMO_GCG_MASSNU_M: massive neutrino mass [eV]
+ * @NC_HICOSMO_GCG_MASSNU_T: massive neutrino temperature [K]
+ * @NC_HICOSMO_GCG_MASSNU_MU: massive neutrino chemical potential
+ * @NC_HICOSMO_GCG_MASSNU_G: massive neutrino degeneracy factor
  *
- * Vector parameters for generalized Chaplygin gas cosmology models.
+ * Vector parameters for massive neutrinos in the generalized Chaplygin gas model.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_GCG_VPARAMS >*/

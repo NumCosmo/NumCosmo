@@ -145,6 +145,12 @@ gdouble nc_distance_r_zd_Mpc (NcDistance *dist, NcHICosmo *cosmo);
  * Redshift dependent 'distances'
  ****************************************************************************/
 
+/* Helper functions that work directly with Dc and Omega_k */
+gdouble nc_distance_transverse_from_Dc (const gdouble Dc, const gdouble Omega_k) G_GNUC_CONST;
+gdouble nc_distance_luminosity_from_Dc (const gdouble Dc, const gdouble Omega_k, const gdouble z) G_GNUC_CONST;
+gdouble nc_distance_angular_diameter_from_Dc (const gdouble Dc, const gdouble Omega_k, const gdouble z) G_GNUC_CONST;
+gdouble nc_distance_radial_volume_integral_from_Dc (const gdouble Dc, const gdouble Omega_k) G_GNUC_CONST;
+
 gdouble nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
@@ -152,6 +158,7 @@ gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, const gdoubl
 gdouble nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_comoving_volume_element (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_comoving_volume_radial_integral (NcDistance *dist, NcHICosmo *cosmo, const gdouble z);
 gdouble nc_distance_sigma_critical (NcDistance *dist, NcHICosmo *cosmo, const gdouble zs, const gdouble zl);
 gdouble nc_distance_sigma_critical_infinity (NcDistance *dist, NcHICosmo *cosmo, const gdouble zl);
 gdouble nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, const gdouble z_he, const gdouble z_cmb);
@@ -192,6 +199,7 @@ void nc_distance_dmodulus_vector (NcDistance *dist, NcHICosmo *cosmo, NcmVector 
  * Inverse 'distances'
  ****************************************************************************/
 gdouble nc_distance_inv_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble xi);
+gdouble nc_distance_max_comoving_distance (NcDistance *dist);
 
 /***************************************************************************
  *            cosmic_time.h
