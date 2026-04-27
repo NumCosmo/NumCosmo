@@ -31,7 +31,7 @@
 /**
  * NcGalaxySDShapeHSMGaussGlobal:
  *
- * Class describing a galaxy sample shape distribution with a truncated gaussian p.d.f.
+ * Class describing a galaxy sample shape distribution with a gaussian p.d.f.
  * convoluted with gaussian noise. Uses the HSM shape measurement products with global
  * shape noise, i.e., the same shape noise for all galaxies in the sample.
  *
@@ -217,15 +217,13 @@ _nc_galaxy_sd_shape_hsm_gauss_global_update_std_shape (NcGalaxySDShape *gsds)
 }
 
 static complex double
-_gauss_cut_gen (NcmRNG *rng, const gdouble sigma)
+_gauss_gen (NcmRNG *rng, const gdouble sigma)
 {
   gdouble x;
   gdouble y;
 
-  do {
-    x = ncm_rng_gaussian_gen (rng, 0.0, sigma);
-    y = ncm_rng_gaussian_gen (rng, 0.0, sigma);
-  } while (hypot (x, y) > 1.0);
+  x = ncm_rng_gaussian_gen (rng, 0.0, sigma);
+  y = ncm_rng_gaussian_gen (rng, 0.0, sigma);
 
   return x + I * y;
 }
@@ -248,7 +246,7 @@ _nc_galaxy_sd_shape_hsm_gauss_global_gen (NcGalaxySDShape *gsds, NcmMSet *mset, 
   const gdouble c1                             = ldata->c1;
   const gdouble c2                             = ldata->c2;
   const gdouble m                              = ldata->m;
-  complex double e_s                           = _gauss_cut_gen (rng, sigma);
+  complex double e_s                           = _gauss_gen (rng, sigma);
   complex double noise                         = noise1 + I * noise2;
   complex double c                             = c1 + I * c2;
   gdouble theta                                = 0.0;
@@ -796,110 +794,5 @@ nc_galaxy_sd_shape_hsm_gauss_global_data_get (NcGalaxySDShapeHSMGaussGlobal *gsd
   *c1            = ldata->c1;
   *c2            = ldata->c2;
   *m             = ldata->m;
-}
-
-/**
- * nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape:
- * @std_shape: the physical shape standard deviation
- *
- * Computes the internal variance parameter ($\sigma$) of the Gaussian shape model
- * corresponding to a given observed shape dispersion ($s$).
- *
- * In this model, the observed ellipticity components are assumed to be independent and
- * normally distributed, but constrained to lie within a unit disk. As a result, the
- * variance parameter used in the Gaussian likelihood ($\sigma^2$) does not directly
- * equal the physical shape dispersion ($s^2$). This function solves numerically for the
- * internal parameter that reproduces the given true shape dispersion.
- *
- * Returns: the internal shape dispersion $\sigma$ corresponding to the input $s$.
- */
-gdouble
-nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (const gdouble std_shape)
-{
-  const gdouble std_shape2 = std_shape * std_shape;
-  const gdouble beta       = 0.5 / std_shape2;
-  register gdouble alpha   = beta;
-  gdouble prev_delta[3]    = {0.0, 0.0, 0.0};
-  guint iter               = 0;
-
-  while (TRUE)
-  {
-    gdouble lambda = 1.0;
-    gdouble delta;
-
-    if (alpha < 1.0e2)
-    {
-      const gdouble exp_alpha_m1 = expm1 (alpha);
-      const gdouble exp_alpha    = exp_alpha_m1 + 1.0;
-      const gdouble falpha       = (alpha - beta) * exp_alpha_m1 + alpha * beta;
-      const gdouble dfalpha      = (alpha - beta) * exp_alpha + exp_alpha_m1 + beta;
-
-      delta = falpha / dfalpha;
-    }
-    else
-    {
-      const gdouble exp_malpha_m1 = expm1 (-alpha);
-      const gdouble exp_malpha    = exp_malpha_m1 + 1.0;
-      const gdouble falpha        = -(alpha - beta) * exp_malpha_m1 + alpha * beta * exp_malpha;
-      const gdouble dfalpha       = -(alpha - beta) * exp_malpha - exp_malpha_m1 + beta * exp_malpha;
-
-      delta = falpha / dfalpha;
-    }
-
-    if ((fabs (delta / prev_delta[0] - 1.0) < GSL_DBL_EPSILON) ||
-        (fabs (delta / prev_delta[1] - 1.0) < GSL_DBL_EPSILON) ||
-        (fabs (delta / prev_delta[2] - 1.0) < GSL_DBL_EPSILON))
-      lambda *= 0.5;
-
-    lambda *= (1.0 / (1.0 + 1.0e-1 * (iter / 20)));
-    delta  *= lambda;
-
-    alpha -= delta;
-
-    if (lambda < 1.0e-2)
-    {
-      g_warning ("nc_galaxy_sd_shape_hsm_gauss_global_new: sigma_from_std_shape failed to converge"); /* LCOV_EXCL_LINE */
-      break;                                                                                          /* LCOV_EXCL_LINE */
-    }
-
-    if (++iter == 10000)
-    {
-      g_warning ("nc_galaxy_sd_shape_hsm_gauss_global_new: sigma_from_std_shape failed to converge"); /* LCOV_EXCL_LINE */
-      break;                                                                                          /* LCOV_EXCL_LINE */
-    }
-
-    if (fabs (delta) < GSL_DBL_EPSILON * 10.0)
-      return sqrt (0.5 / alpha);
-
-    prev_delta[2] = prev_delta[1];
-    prev_delta[1] = prev_delta[0];
-    prev_delta[0] = delta;
-  }
-
-  return NAN;
-}
-
-/**
- * nc_galaxy_sd_shape_hsm_gauss_global_std_shape_from_sigma:
- * @sigma: the internal shape dispersion
- *
- * Computes the physical (true) shape standard deviation $s$ corresponding to a given
- * internal Gaussian model dispersion $\sigma$.
- *
- * In the Gaussian likelihood model used for shape measurements, the variance parameter
- * ($\sigma^2$) applies to ellipticity components constrained to lie within
- * a unit disk. This function analytically maps the internal dispersion back to the true
- * shape dispersion, accounting for the truncation of the Gaussian support.
- *
- * Returns: the true observed shape dispersion $s$ corresponding to the input $\sigma$.
- */
-gdouble
-nc_galaxy_sd_shape_hsm_gauss_global_std_shape_from_sigma (const gdouble sigma)
-{
-  gdouble s2      = sigma * sigma;
-  gdouble exp_arg = 1.0 / (2.0 * s2);
-  gdouble denom   = -2.0 * expm1 (exp_arg);
-
-  return sqrt (s2 + 1.0 / denom);
 }
 
