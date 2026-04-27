@@ -119,6 +119,24 @@ def test_create_cosmo_prim_model_power_law(prim_model_cls):
     )
 
 
+def test_cosmology_missing_dist():
+    """Test the Cosmology class with missing dist."""
+    cosmo = Nc.HICosmoDEXcdm()
+    cosmo.omega_x2omega_k()
+    cosmo["Omegak"] = 0.0
+    cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
+    cosmo.add_submodel(Nc.HIReionCamb.new())
+    dist = Nc.Distance.new(10.0)
+
+    # Create cosmology and then manually set _dist to None to test the exception
+    cosmology = Cosmology(cosmo=cosmo, dist=dist)
+    # pylint: disable-next=protected-access
+    cosmology._dist = None
+
+    with pytest.raises(AttributeError, match="Distance not set."):
+        _ = cosmology.dist
+
+
 def test_cosmology_missing_ps_ml(cosmology_minimal: Cosmology):
     """Test the Cosmology class with missing ps_ml."""
     with pytest.raises(AttributeError, match="Linear matter power spectrum not set."):
