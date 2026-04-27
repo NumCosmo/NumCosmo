@@ -983,6 +983,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_gen (TestNcGalaxySDShape *test, gconstp
 
       ncm_stats_vec_update (stats);
     }
+
+    g_assert_cmpfloat (hypot (s_data->epsilon_int_1, s_data->epsilon_int_2), <, 1.0);
+    g_assert_cmpfloat (hypot (epsilon_1_out, epsilon_2_out), <, 1.2);
   }
 
   ncm_assert_cmpdouble_e (ncm_stats_vec_get_sd (stats, 0), ==, std_noise, 1.0e-1, 0.0);
@@ -1088,6 +1091,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_gen (TestNcGalaxySDShape *test, gconstpointer 
 
       ncm_stats_vec_update (stats);
     }
+
+    g_assert_cmpfloat (hypot (s_data->epsilon_int_1, s_data->epsilon_int_2), <, 1.0);
+    g_assert_cmpfloat (hypot (epsilon_1_out, epsilon_2_out), <, 1.2);
   }
 
   ncm_assert_cmpdouble_e (ncm_stats_vec_get_sd (stats, 0), ==, std_noise, 1.0e-1, 0.0);
