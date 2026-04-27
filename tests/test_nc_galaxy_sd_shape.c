@@ -85,6 +85,8 @@ static void test_nc_galaxy_sd_shape_hsm_gauss_data_setget (TestNcGalaxySDShape *
 static void test_nc_galaxy_sd_shape_hsm_gauss_global_strong_lensing (TestNcGalaxySDShape *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_shape_hsm_gauss_strong_lensing (TestNcGalaxySDShape *test, gconstpointer pdata);
 
+static void test_nc_galaxy_sd_shape_hsm_gauss_global_sigma_conversions (void);
+
 typedef struct _TestNcGalaxySDShapeTests
 {
   gchar *test_name;
@@ -255,6 +257,8 @@ main (gint argc, gchar *argv[])
       g_free (test_path);
     }
   }
+
+  g_test_add_func ("/nc/galaxy_sd_shape/gauss/sigma_conversion", &test_nc_galaxy_sd_shape_hsm_gauss_global_sigma_conversions);
 
   g_test_run ();
 
@@ -2271,5 +2275,24 @@ test_nc_galaxy_sd_shape_hsm_gauss_strong_lensing (TestNcGalaxySDShape *test, gco
   nc_galaxy_sd_shape_integrand_free (integrand);
   g_ptr_array_unref (data_array);
   ncm_rng_free (rng);
+}
+
+static void
+test_nc_galaxy_sd_shape_hsm_gauss_global_sigma_conversions (void)
+{
+  gint i;
+
+  for (i = 0; i < 10000; i++)
+  {
+    const gdouble sigma      = g_test_rand_double_range (0.01, 2.0);
+    const gdouble std_shape  = nc_galaxy_sd_shape_hsm_gauss_global_std_shape_from_sigma (sigma);
+    const gdouble sigma2     = nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (std_shape);
+    const gdouble std_shape2 = nc_galaxy_sd_shape_hsm_gauss_global_std_shape_from_sigma (sigma2);
+
+    g_assert (gsl_finite (sigma));
+    g_assert (gsl_finite (std_shape));
+    ncm_assert_cmpdouble_e (sigma, ==, sigma2, 1e-12, 0.0);
+    ncm_assert_cmpdouble_e (std_shape, ==, std_shape2, 1e-12, 0.0);
+  }
 }
 
