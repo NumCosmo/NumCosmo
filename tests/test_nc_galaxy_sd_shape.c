@@ -1137,11 +1137,22 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_integ (TestNcGalaxySDShape *test, gcons
     z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0e-2, 2.0e-2);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0e-2, 2.0e-2);
-    nc_galaxy_sd_shape_hsm_gauss_global_gen (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape), test->mset, s_data, std_noise, c1, c2, m, test->ell_coord, rng);
-    nc_galaxy_sd_shape_hsm_gauss_global_data_get (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape), s_data, &epsilon_1_out, &epsilon_2_out, &std_noise_out, &c1_out, &c2_out, &m_out);
+
+    nc_galaxy_sd_shape_hsm_gauss_global_gen (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape),
+                                             test->mset, s_data, std_noise, c1, c2, m,
+                                             test->ell_coord, rng);
+    nc_galaxy_sd_shape_hsm_gauss_global_data_get (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape),
+                                                  s_data, &epsilon_1_out,
+                                                  &epsilon_2_out, &std_noise_out,
+                                                  &c1_out, &c2_out, &m_out);
 
     g_assert_cmpfloat (hypot (s_data->epsilon_int_1, s_data->epsilon_int_2), <, 1.0);
     g_assert_cmpfloat (hypot (epsilon_1_out, epsilon_2_out), <, 1.2);
+
+    ncm_assert_cmpdouble_e (std_noise_out, ==, std_noise, 1.0e-12, 0.0);
+    ncm_assert_cmpdouble_e (c1_out, ==, c1, 1.0e-12, 0.0);
+    ncm_assert_cmpdouble_e (c2_out, ==, c2, 1.0e-12, 0.0);
+    ncm_assert_cmpdouble_e (m_out, ==, m, 1.0e-12, 0.0);
 
     nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
 
@@ -1172,30 +1183,39 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_integ (TestNcGalaxySDShape *test, gcons
                                                        test->density_profile,
                                                        test->cosmo,
                                                        r, z_data->z, z_cl, z_cl);
-        g = gt * cexp (2.0 * I * phi);
-
-        switch (test->ell_conv)
-        {
-          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-
-            if (gt > 1.0)
-              e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
-            else
-              e_s = (e_o - g) / (1.0 - conj (g) * e_o);  /* LCOV_EXCL_LINE */
-
-            break;
-
-          case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-            e_s = (e_o + g * (g * conj (e_o) - 2.0)) / (1.0 + g * conj (g) - 2.0 * creal (g * conj (e_o)));
-            break;
-
-          default: /* LCOV_EXCL_LINE */
-            g_assert_not_reached ();
-        }
       }
       else
       {
-        e_s = e_o;
+        const gdouble step = exp ((z_data->z - z_cl) / 0.001);
+
+        gt = nc_wl_surface_mass_density_reduced_shear (test->surface_mass_density,
+                                                       test->density_profile,
+                                                       test->cosmo,
+                                                       r, z_cl * (1.0 + GSL_DBL_EPSILON), z_cl, z_cl);
+
+        gt *= step;
+      }
+
+      g = gt * cexp (2.0 * I * phi);
+      g = (1.0 + m) * g + (c1 + I * c2);
+
+      switch (test->ell_conv)
+      {
+        case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+
+          if (gt > 1.0)
+            e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
+          else
+            e_s = (e_o - g) / (1.0 - conj (g) * e_o);  /* LCOV_EXCL_LINE */
+
+          break;
+
+        case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+          e_s = (e_o + g * (g * conj (e_o) - 2.0)) / (1.0 + g * conj (g) - 2.0 * creal (g * conj (e_o)));
+          break;
+
+        default: /* LCOV_EXCL_LINE */
+          g_assert_not_reached ();
       }
 
       {
@@ -1208,13 +1228,13 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_integ (TestNcGalaxySDShape *test, gcons
         switch (test->ell_conv)
         {
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-            jac_num = gsl_pow_2 (1.0 - gt * gt);
-            jac_den = gsl_pow_2 (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt * conj (e_o) * e_o);
+            jac_num = gsl_pow_2 (1.0 - g * conj (g));
+            jac_den = gsl_pow_2 (1.0 - 2.0 * creal (conj (g) * e_o) + g * conj (g) * conj (e_o) * e_o);
             break;
 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-            jac_num = gsl_pow_3 (1.0 - gt * gt);
-            jac_den = gsl_pow_3 (1.0 - 2.0 * creal (conj (g) * e_o) + gt * gt);
+            jac_num = gsl_pow_3 (1.0 - g * conj (g));
+            jac_den = gsl_pow_3 (1.0 - 2.0 * creal (conj (g) * e_o) + g * conj (g));
             break;
 
           default: /* LCOV_EXCL_LINE */
@@ -1287,22 +1307,24 @@ test_nc_galaxy_sd_shape_hsm_gauss_integ (TestNcGalaxySDShape *test, gconstpointe
   for (i = 0; i < ntest; i++)
   {
     const gdouble std_shape = ncm_rng_uniform_gen (rng, 0.15, 0.3);
+    const gdouble sigma     = nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (std_shape);
     const gdouble c1        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
     const gdouble c2        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
     const gdouble m         = ncm_rng_uniform_gen (rng, -0.2, 0.2);
     gdouble epsilon_1_out, epsilon_2_out, std_noise_out, std_shape_out, c1_out, c2_out, m_out;
     gdouble int0, lnint0;
 
-
     z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0e-2, 2.0e-2);
     p_data->dec = ncm_rng_uniform_gen (rng, -2.0e-2, 2.0e-2);
 
-    nc_galaxy_sd_shape_hsm_gauss_gen (NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape), test->mset, s_data,
-                                      std_shape, std_noise, c1, c2, m,
-                                      test->ell_coord, rng);
-    nc_galaxy_sd_shape_hsm_gauss_data_get (NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape), s_data,
-                                           &epsilon_1_out, &epsilon_2_out, &std_shape_out, &std_noise_out, &c1_out, &c2_out, &m_out);
+    nc_galaxy_sd_shape_hsm_gauss_gen (NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape),
+                                      test->mset, s_data, std_shape, std_noise, c1, c2,
+                                      m, test->ell_coord, rng);
+    nc_galaxy_sd_shape_hsm_gauss_data_get (NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape),
+                                           s_data, &epsilon_1_out, &epsilon_2_out,
+                                           &std_shape_out, &std_noise_out, &c1_out,
+                                           &c2_out, &m_out);
 
     g_assert_cmpfloat (hypot (s_data->epsilon_int_1, s_data->epsilon_int_2), <, 1.0);
     g_assert_cmpfloat (hypot (epsilon_1_out, epsilon_2_out), <, 1.2);
@@ -1378,7 +1400,7 @@ test_nc_galaxy_sd_shape_hsm_gauss_integ (TestNcGalaxySDShape *test, gconstpointe
       }
 
       {
-        const gdouble var_int   = gsl_pow_2 (std_shape);
+        const gdouble var_int   = gsl_pow_2 (sigma);
         const gdouble total_var = var_int + gsl_pow_2 (std_noise_out);
         const gdouble chi2_1    = gsl_pow_2 (creal (e_s)) / total_var;
         const gdouble chi2_2    = gsl_pow_2 (cimag (e_s)) / total_var;
@@ -2110,6 +2132,7 @@ test_nc_galaxy_sd_shape_hsm_gauss_strong_lensing (TestNcGalaxySDShape *test, gco
   for (i = 0; i < ntest; i++)
   {
     const gdouble std_shape = ncm_rng_uniform_gen (rng, 0.15, 0.3);
+    const gdouble sigma     = nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (std_shape);
     const gdouble c1        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
     const gdouble c2        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
     const gdouble m         = ncm_rng_uniform_gen (rng, -0.2, 0.2);
@@ -2238,7 +2261,7 @@ test_nc_galaxy_sd_shape_hsm_gauss_strong_lensing (TestNcGalaxySDShape *test, gco
       }
 
       {
-        const gdouble var_int       = gsl_pow_2 (std_shape);
+        const gdouble var_int       = gsl_pow_2 (sigma);
         const gdouble total_var     = var_int + gsl_pow_2 (std_noise_out);
         const gdouble chi2_1        = gsl_pow_2 (creal (e_s)) / total_var;
         const gdouble chi2_2        = gsl_pow_2 (cimag (e_s)) / total_var;
