@@ -586,7 +586,6 @@ _nc_galaxy_sd_shape_hsm_gauss_global_direct_estimate (NcGalaxySDShape *gsds, Ncm
   NcHICosmo *cosmo                                  = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHaloPosition *halo_position                     = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   NcGalaxyWLObsEllipConv ellip_conv                 = nc_galaxy_sd_shape_get_ellip_conv (gsds);
-  const gdouble std_shape                           = self->std_shape;
 
   guint i;
 
@@ -606,7 +605,7 @@ _nc_galaxy_sd_shape_hsm_gauss_global_direct_estimate (NcGalaxySDShape *gsds, Ncm
     const gdouble m                            = ldata_i->m;
     const gdouble c1                           = ldata_i->c1;
     const gdouble c2                           = ldata_i->c2;
-    const gdouble var_tot                      = std_shape * std_shape + std_noise * std_noise;
+    const gdouble var_tot                      = self->std_shape * self->std_shape + std_noise * std_noise;
     const gdouble weight                       = 1.0 / var_tot;
     complex double e_o                         = e1 + I * e2;
     complex double hat_g;
@@ -634,26 +633,23 @@ _nc_galaxy_sd_shape_hsm_gauss_global_direct_estimate (NcGalaxySDShape *gsds, Ncm
     const gdouble mean_m  = ncm_stats_vec_get_mean (self->obs_stats, 2);
     const gdouble mean_c1 = ncm_stats_vec_get_mean (self->obs_stats, 3);
     const gdouble mean_c2 = ncm_stats_vec_get_mean (self->obs_stats, 4);
-
+    const gdouble R       = 1.0 - self->std_shape * self->std_shape;
 
     switch (ellip_conv)
     {
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-        *gt      = (mean_gt - mean_c1) / (1.0 + mean_m);
+        *gt      = (mean_gt / R - mean_c1) / (1.0 + mean_m);
         *gx      = (mean_gx - mean_c2) / (1.0 + mean_m);
-        *sigma_t = ncm_stats_vec_get_sd (self->obs_stats, 0) / (1.0 + mean_m);
+        *sigma_t = ncm_stats_vec_get_sd (self->obs_stats, 0) / R / (1.0 + mean_m);
         *sigma_x = ncm_stats_vec_get_sd (self->obs_stats, 1) / (1.0 + mean_m);
         *rho     = ncm_stats_vec_get_cor (self->obs_stats, 0, 1);
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
       {
-        const gdouble std_shape2 = std_shape * std_shape;
-        const gdouble R          = 1.0 - std_shape2;
-
         *gt      = (0.5 * mean_gt / R - mean_c1) / (1.0 + mean_m);
-        *gx      = (0.5 * mean_gx / R - mean_c2) / (1.0 + mean_m);
+        *gx      = (mean_gx - mean_c2) / (1.0 + mean_m);
         *sigma_t = 0.5 * ncm_stats_vec_get_sd (self->obs_stats, 0) / R / (1.0 + mean_m);
-        *sigma_x = 0.5 * ncm_stats_vec_get_sd (self->obs_stats, 1) / R / (1.0 + mean_m);
+        *sigma_x = ncm_stats_vec_get_sd (self->obs_stats, 1) / (1.0 + mean_m);
         *rho     = ncm_stats_vec_get_cor (self->obs_stats, 0, 1);
         break;
       }
