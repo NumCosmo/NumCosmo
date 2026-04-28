@@ -1800,12 +1800,15 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_required_columns (TestNcGalaxySDShape *
   NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
   GList *columns                    = nc_galaxy_sd_shape_data_required_columns (s_data);
 
-  g_assert_cmpuint (g_list_length (columns), ==, 8);
+  g_assert_cmpuint (g_list_length (columns), ==, 11);
   g_assert_cmpstr (g_list_nth_data (columns, 0), ==, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1);
   g_assert_cmpstr (g_list_nth_data (columns, 1), ==, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2);
   g_assert_cmpstr (g_list_nth_data (columns, 2), ==, NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_COL_EPSILON_OBS_1);
   g_assert_cmpstr (g_list_nth_data (columns, 3), ==, NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_COL_EPSILON_OBS_2);
   g_assert_cmpstr (g_list_nth_data (columns, 4), ==, NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_COL_STD_NOISE);
+  g_assert_cmpstr (g_list_nth_data (columns, 5), ==, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C1);
+  g_assert_cmpstr (g_list_nth_data (columns, 6), ==, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C2);
+  g_assert_cmpstr (g_list_nth_data (columns, 7), ==, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_M);
 
   g_list_free_full (columns, g_free);
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
