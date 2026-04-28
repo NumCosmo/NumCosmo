@@ -98,7 +98,7 @@ nc_galaxy_sd_shape_hsm_gauss_global_init (NcGalaxySDShapeHSMGaussGlobal *gsdsgau
   self->ctrl_cosmo = ncm_model_ctrl_new (NULL);
   self->ctrl_hp    = ncm_model_ctrl_new (NULL);
   self->ctrl_shape = ncm_model_ctrl_new (NULL);
-  self->obs_stats  = ncm_stats_vec_new (3, NCM_STATS_VEC_COV, FALSE);
+  self->obs_stats  = ncm_stats_vec_new (5, NCM_STATS_VEC_COV, FALSE);
 }
 
 /* LCOV_EXCL_START */
