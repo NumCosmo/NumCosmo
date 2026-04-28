@@ -1871,7 +1871,7 @@ ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
                                                  TRUE,
                                                  g_free,
                                                  file
-                                                );
+    );
 
     obj = ncm_serialize_from_variant (ser, obj_ser);
 
@@ -1916,7 +1916,7 @@ ncm_serialize_var_dict_from_variant_file (NcmSerialize *ser, const gchar *filena
                                                 TRUE,
                                                 g_free,
                                                 file
-                                               );
+    );
 
     vd = ncm_serialize_var_dict_from_variant (ser, vd_ser);
 
@@ -2927,7 +2927,7 @@ ncm_serialize_dict_str_from_binfile (NcmSerialize *ser, const gchar *filename)
                                                  TRUE,
                                                  g_free,
                                                  file
-                                                );
+    );
 
     ods = ncm_serialize_dict_str_from_variant (ser, var_ser);
 

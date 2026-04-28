@@ -1,6 +1,7 @@
 import typing
 
 import numpy.typing as npt
+import numpy
 
 from gi.repository import GLib
 from gi.repository import GObject
@@ -93,15 +94,21 @@ GALAXY_SD_SHAPE_GAUSS_HSC_COL_EPSILON_OBS_2: str = r"epsilon_obs_2"
 GALAXY_SD_SHAPE_GAUSS_HSC_COL_M: str = r"m"
 GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_NOISE: str = r"std_noise"
 GALAXY_SD_SHAPE_GAUSS_HSC_COL_STD_SHAPE: str = r"std_shape"
-GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_ALPHA: float = 0.78
-GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_BETA: float = 2.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_PARAMS_ABSTOL: float = 0.0
-GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z0: float = 0.13
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_HIGH: float = 20.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW: float = 0.0
-GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_ALPHA: float = 0.68
-GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_BETA: float = 2.0
-GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_Z0: float = 0.11
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_ALPHA: float = 0.9
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_BETA: float = 2.0
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS_Z0: float = 0.28
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_ALPHA: float = 0.68
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_BETA: float = 2.0
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE_Z0: float = 0.11
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_ALPHA: float = 0.94
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_BETA: float = 2.0
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_Z0: float = 0.26
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_ALPHA: float = 0.78
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_BETA: float = 2.0
+GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_Z0: float = 0.13
 HALO_CM_BHATTACHARYA13_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_CM_BHATTACHARYA13_LOCAL_SPARAM_LEN: int = 1
 HALO_CM_DIEMER15_DEFAULT_PARAMS_ABSTOL: float = 0.0
@@ -410,15 +417,18 @@ WINDOW_VOLUME_TOPHAT: int = 0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL: float = 0.0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PCC: float = 0.8
 WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF: float = 1.0
-XCOR_LIMBER_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL: float = 0.0
-XCOR_LIMBER_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
-XCOR_LIMBER_KERNEL_GAL_BIAS_DEFAULT_LEN: int = 1
-XCOR_LIMBER_KERNEL_GAL_DEFAULT_BIAS: float = 1.0
-XCOR_LIMBER_KERNEL_GAL_DEFAULT_MAG_BIAS: float = 0.4
-XCOR_LIMBER_KERNEL_GAL_DEFAULT_NOISE_BIAS: float = 0.0
-XCOR_LIMBER_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
-XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN: int = 200
-XCOR_LIMBER_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
+XCOR_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL: float = 0.0
+XCOR_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
+XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON: float = 0.0
+XCOR_KERNEL_GAL_BIAS_DEFAULT_LEN: int = 1
+XCOR_KERNEL_GAL_DEFAULT_BIAS: float = 1.0
+XCOR_KERNEL_GAL_DEFAULT_MAG_BIAS: float = 0.4
+XCOR_KERNEL_GAL_DEFAULT_NOISE_BIAS: float = 0.0
+XCOR_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
+XCOR_KERNEL_GAL_G_FUNC_LEN: int = 200
+XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
+XCOR_LENSING_EFFICIENCY_DEFAULT_ABSTOL: float = 0.0
+XCOR_LENSING_EFFICIENCY_DEFAULT_RELTOL: float = 0.0
 XCOR_PRECISION: float = 1e-06
 _lock = ...  # FIXME Constant
 _namespace: str = r"NumCosmo"
@@ -447,6 +457,7 @@ def data_bao_create(dist: Distance, id: DataBaoId) -> NumCosmoMath.Data: ...
 def data_cmb_create(dist: Distance, id: DataCMBId) -> NumCosmoMath.Data: ...
 def data_snia_cov_error_quark() -> int: ...
 def halo_density_profile_nfw_class_set_ni(num: bool) -> None: ...
+def xcor_kernel_integrand_clear(integrand: XcorKernelIntegrand) -> None: ...
 
 class CBE(GObject.Object):
     r"""
@@ -6106,6 +6117,7 @@ class Distance(GObject.Object):
     def luminosity_vector(
         self, cosmo: HICosmo, z: NumCosmoMath.Vector, Dl: NumCosmoMath.Vector
     ) -> None: ...
+    def max_comoving_distance(self) -> float: ...
     @classmethod
     def new(cls, zf: float) -> Distance: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
@@ -6262,6 +6274,18 @@ class GalaxySDObsRedshift(NumCosmoMath.Model):
     ) -> None: ...
     @staticmethod
     def clear(gsdor: GalaxySDObsRedshift) -> None: ...
+    def compute_binned_dndz(
+        self,
+        z_array: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
+    ) -> NumCosmoMath.Spline: ...
+    def do_compute_binned_dndz(
+        self,
+        z_array: typing.Optional[
+            typing.Sequence[float] | npt.NDArray[np.float64]
+        ] = None,
+    ) -> NumCosmoMath.Spline: ...
     def do_data_init(self, data: GalaxySDObsRedshiftData) -> None: ...
     def do_gen(self, data: GalaxySDObsRedshiftData, rng: NumCosmoMath.RNG) -> None: ...
     def do_gen1(self, data: GalaxySDObsRedshiftData, rng: NumCosmoMath.RNG) -> bool: ...
@@ -6308,6 +6332,13 @@ class GalaxySDObsRedshiftClass(GObject.GPointer):
     data_init: typing.Callable[[GalaxySDObsRedshift, GalaxySDObsRedshiftData], None] = (
         ...
     )
+    compute_binned_dndz: typing.Callable[
+        [
+            GalaxySDObsRedshift,
+            typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
+        ],
+        NumCosmoMath.Spline,
+    ] = ...
     padding: list[None] = ...
 
 class GalaxySDObsRedshiftData(GObject.GBoxed):
@@ -6355,6 +6386,12 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
         Galaxy sample photometric redshift limits
       use-true-z -> gboolean: use-true-z
         Use the true redshift distribution
+      bin-sigma0 -> gdouble: bin-sigma0
+        Base photometric redshift scatter for binned analyses
+      reltol -> gdouble: reltol
+        Relative tolerance for numerical integration
+      zp-support-max -> gdouble: zp-support-max
+        Maximum photometric redshift for support
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -6381,8 +6418,11 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
     """
 
     class Props:
+        bin_sigma0: float
+        reltol: float
         use_true_z: bool
         zp_lim: NumCosmoMath.DTuple2
+        zp_support_max: float
         implementation: int
         name: str
         nick: str
@@ -6396,20 +6436,28 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
     props: Props = ...
     def __init__(
         self,
+        bin_sigma0: float = ...,
+        reltol: float = ...,
         use_true_z: bool = ...,
         zp_lim: NumCosmoMath.DTuple2 = ...,
+        zp_support_max: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @staticmethod
     def clear(gsdorgauss: GalaxySDObsRedshiftGauss) -> None: ...
+    def compute_equal_area_photoz_bins(
+        self, n_bins: int, zp_max: float
+    ) -> NumCosmoMath.Vector: ...
     def data_get(
-        self, data: GalaxySDObsRedshiftData, zp: float, sigma0: float, sigma_z: float
-    ) -> None: ...
+        self, data: GalaxySDObsRedshiftData
+    ) -> typing.Tuple[float, float, float]: ...
     def data_set(
         self, data: GalaxySDObsRedshiftData, zp: float, sigma0: float, sigma_z: float
     ) -> None: ...
+    def eval_pz_given_zp(self, z: float) -> float: ...
+    def eval_pzp(self, zp: float) -> float: ...
     def free(self) -> None: ...
     def gen(
         self,
@@ -6425,15 +6473,25 @@ class GalaxySDObsRedshiftGauss(GalaxySDObsRedshift):
         sigma0: float,
         rng: NumCosmoMath.RNG,
     ) -> bool: ...
+    def get_bin_sigma0(self) -> float: ...
+    def get_reltol(self) -> float: ...
     def get_use_true_z(self) -> bool: ...
     def get_zp_lim(self) -> typing.Tuple[float, float]: ...
+    def get_zp_support_max(self) -> float: ...
     @classmethod
     def new(
         cls, sdz: GalaxySDTrueRedshift, zp_min: float, zp_max: float
     ) -> GalaxySDObsRedshiftGauss: ...
+    @staticmethod
+    def new_lsst_srd_bins(
+        type: GalaxySDTrueRedshiftLSSTSRDType,
+    ) -> typing.Tuple[list[GalaxySDObsRedshiftGauss], GalaxySDTrueRedshiftLSSTSRD]: ...
     def ref(self) -> GalaxySDObsRedshiftGauss: ...
+    def set_bin_sigma0(self, bin_sigma0: float) -> None: ...
+    def set_reltol(self, reltol: float) -> None: ...
     def set_use_true_z(self, use_true_z: bool) -> None: ...
     def set_zp_lim(self, zp_min: float, zp_max: float) -> None: ...
+    def set_zp_support_max(self, zp_support_max: float) -> None: ...
 
 class GalaxySDObsRedshiftGaussClass(GObject.GPointer):
     r"""
@@ -7376,13 +7434,13 @@ class GalaxySDTrueRedshift(NumCosmoMath.Model):
     @staticmethod
     def clear(gsdtr: GalaxySDTrueRedshift) -> None: ...
     def do_gen(self, rng: NumCosmoMath.RNG) -> float: ...
-    def do_get_lim(self, z_min: float, z_max: float) -> None: ...
+    def do_get_lim(self) -> typing.Tuple[float, float]: ...
     def do_integ(self, z: float) -> float: ...
     def do_ln_integ(self, z: float) -> float: ...
     def do_set_lim(self, z_min: float, z_max: float) -> None: ...
     def free(self) -> None: ...
     def gen(self, rng: NumCosmoMath.RNG) -> float: ...
-    def get_lim(self, z_min: float, z_max: float) -> None: ...
+    def get_lim(self) -> typing.Tuple[float, float]: ...
     @staticmethod
     def id() -> int: ...
     def integ(self, z: float) -> float: ...
@@ -7404,7 +7462,7 @@ class GalaxySDTrueRedshiftClass(GObject.GPointer):
     integ: typing.Callable[[GalaxySDTrueRedshift, float], float] = ...
     ln_integ: typing.Callable[[GalaxySDTrueRedshift, float], float] = ...
     set_lim: typing.Callable[[GalaxySDTrueRedshift, float, float], None] = ...
-    get_lim: typing.Callable[[GalaxySDTrueRedshift, float, float], None] = ...
+    get_lim: typing.Callable[[GalaxySDTrueRedshift], typing.Tuple[float, float]] = ...
     padding: list[None] = ...
 
 class GalaxySDTrueRedshiftLSSTSRD(GalaxySDTrueRedshift):
@@ -7415,7 +7473,11 @@ class GalaxySDTrueRedshiftLSSTSRD(GalaxySDTrueRedshift):
 
         GalaxySDTrueRedshiftLSSTSRD(**properties)
         new() -> NumCosmo.GalaxySDTrueRedshiftLSSTSRD
-        new_y10() -> NumCosmo.GalaxySDTrueRedshiftLSSTSRD
+        new_from_type(type:NumCosmo.GalaxySDTrueRedshiftLSSTSRDType) -> NumCosmo.GalaxySDTrueRedshiftLSSTSRD
+        new_y10_lens() -> NumCosmo.GalaxySDTrueRedshiftLSSTSRD
+        new_y10_source() -> NumCosmo.GalaxySDTrueRedshiftLSSTSRD
+        new_y1_lens() -> NumCosmo.GalaxySDTrueRedshiftLSSTSRD
+        new_y1_source() -> NumCosmo.GalaxySDTrueRedshiftLSSTSRD
 
     Object NcGalaxySDTrueRedshiftLSSTSRD
 
@@ -7499,7 +7561,17 @@ class GalaxySDTrueRedshiftLSSTSRD(GalaxySDTrueRedshift):
     @classmethod
     def new(cls) -> GalaxySDTrueRedshiftLSSTSRD: ...
     @classmethod
-    def new_y10(cls) -> GalaxySDTrueRedshiftLSSTSRD: ...
+    def new_from_type(
+        cls, type: GalaxySDTrueRedshiftLSSTSRDType
+    ) -> GalaxySDTrueRedshiftLSSTSRD: ...
+    @classmethod
+    def new_y10_lens(cls) -> GalaxySDTrueRedshiftLSSTSRD: ...
+    @classmethod
+    def new_y10_source(cls) -> GalaxySDTrueRedshiftLSSTSRD: ...
+    @classmethod
+    def new_y1_lens(cls) -> GalaxySDTrueRedshiftLSSTSRD: ...
+    @classmethod
+    def new_y1_source(cls) -> GalaxySDTrueRedshiftLSSTSRD: ...
     def ref(self) -> GalaxySDTrueRedshiftLSSTSRD: ...
 
 class GalaxySDTrueRedshiftLSSTSRDClass(GObject.GPointer):
@@ -14698,7 +14770,6 @@ class HaloCMDiemer15(HaloMassSummary):
     def new(
         cls, mdef: HaloMassSummaryMassDef, Delta: float, mfp: HaloMassFunction
     ) -> HaloCMDiemer15: ...
-    def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> HaloCMDiemer15: ...
 
 class HaloCMDiemer15Class(GObject.GPointer):
@@ -19898,7 +19969,7 @@ class Xcor(GObject.Object):
     ::
 
         Xcor(**properties)
-        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, meth:NumCosmo.XcorLimberMethod) -> NumCosmo.Xcor
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, meth:NumCosmo.XcorMethod) -> NumCosmo.Xcor
 
     Object NcXcor
 
@@ -19907,7 +19978,7 @@ class Xcor(GObject.Object):
         Distance.
       power-spec -> NcmPowspec: power-spec
         Matter power spectrum.
-      meth -> NcXcorLimberMethod: meth
+      meth -> NcXcorMethod: meth
         Method.
       reltol -> gdouble: reltol
         Relative tolerance.
@@ -19918,7 +19989,7 @@ class Xcor(GObject.Object):
 
     class Props:
         distance: Distance
-        meth: XcorLimberMethod
+        meth: XcorMethod
         power_spec: NumCosmoMath.Powspec
         reltol: float
 
@@ -19926,26 +19997,26 @@ class Xcor(GObject.Object):
     def __init__(
         self,
         distance: Distance = ...,
-        meth: XcorLimberMethod = ...,
+        meth: XcorMethod = ...,
         power_spec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
     ) -> None: ...
     @staticmethod
     def clear(xc: Xcor) -> None: ...
-    def free(self) -> None: ...
-    def get_reltol(self) -> float: ...
-    def limber(
+    def compute(
         self,
-        xclk1: XcorLimberKernel,
-        xclk2: XcorLimberKernel,
+        xclk1: XcorKernel,
+        xclk2: XcorKernel,
         cosmo: HICosmo,
         lmin: int,
         lmax: int,
         vp: NumCosmoMath.Vector,
     ) -> None: ...
+    def free(self) -> None: ...
+    def get_reltol(self) -> float: ...
     @classmethod
     def new(
-        cls, dist: Distance, ps: NumCosmoMath.Powspec, meth: XcorLimberMethod
+        cls, dist: Distance, ps: NumCosmoMath.Powspec, meth: XcorMethod
     ) -> Xcor: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> Xcor: ...
@@ -20055,35 +20126,41 @@ class XcorClass(GObject.GPointer):
 
     parent_class: GObject.ObjectClass = ...
 
-class XcorKinetic(GObject.GBoxed):
+class XcorKernel(NumCosmoMath.Model):
     r"""
     :Constructors:
 
     ::
 
-        XcorKinetic()
-    """
+        XcorKernel(**properties)
 
-    xi_z: float = ...
-    E_z: float = ...
-    def copy(self) -> XcorKinetic: ...
-    def free(self) -> None: ...
+    Object NcXcorKernel
 
-class XcorLimberKernel(NumCosmoMath.Model):
-    r"""
-    :Constructors:
-
-    ::
-
-        XcorLimberKernel(**properties)
-
-    Object NcXcorLimberKernel
-
-    Properties from NcXcorLimberKernel:
-      zmin -> gdouble: zmin
-        Minimum redshift
-      zmax -> gdouble: zmax
-        Maximum redshift
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20110,8 +20187,18 @@ class XcorLimberKernel(NumCosmoMath.Model):
     """
 
     class Props:
-        zmax: float
-        zmin: float
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
         implementation: int
         name: str
         nick: str
@@ -20126,8 +20213,18 @@ class XcorLimberKernel(NumCosmoMath.Model):
     parent_instance: NumCosmoMath.Model = ...
     def __init__(
         self,
-        zmax: float = ...,
-        zmin: float = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -20136,18 +20233,42 @@ class XcorLimberKernel(NumCosmoMath.Model):
         self, vp1: NumCosmoMath.Vector, vp2: NumCosmoMath.Vector, lmin: int
     ) -> None: ...
     @staticmethod
-    def clear(xclk: XcorLimberKernel) -> None: ...
+    def clear(xclk: XcorKernel) -> None: ...
     def do_add_noise(
         self, vp1: NumCosmoMath.Vector, vp2: NumCosmoMath.Vector, lmin: int
     ) -> None: ...
-    def do_eval(self, cosmo: HICosmo, z: float, xck: XcorKinetic, l: int) -> float: ...
+    def do_eval_limber_z(
+        self, cosmo: HICosmo, z: float, xck: XcorKinetic, l: int
+    ) -> float: ...
+    def do_eval_limber_z_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
+    def do_get_component_list(self) -> list[XcorKernelComponent]: ...
+    def do_get_z_range(self) -> typing.Tuple[float, float, float]: ...
     def do_obs_len(self) -> int: ...
     def do_obs_params_len(self) -> int: ...
     def do_prepare(self, cosmo: HICosmo) -> None: ...
-    def eval(self, cosmo: HICosmo, z: float, xck: XcorKinetic, l: int) -> float: ...
-    def eval_full(self, cosmo: HICosmo, z: float, dist: Distance, l: int) -> float: ...
+    def eval_limber_z(
+        self, cosmo: HICosmo, z: float, xck: XcorKinetic, l: int
+    ) -> float: ...
+    def eval_limber_z_full(
+        self, cosmo: HICosmo, z: float, dist: Distance, l: int
+    ) -> float: ...
+    def eval_limber_z_prefactor(self, cosmo: HICosmo, l: int) -> float: ...
     def free(self) -> None: ...
-    def get_const_factor(self) -> float: ...
+    def get_adaptive_boundary_tries(self) -> int: ...
+    def get_adaptive_epsilon(self) -> float: ...
+    def get_component_list(self) -> list[XcorKernelComponent]: ...
+    def get_eval(self, cosmo: HICosmo, l: int) -> XcorKernelIntegrand: ...
+    def get_eval_vectorized(
+        self, cosmo: HICosmo, lmin: int, lmax: int
+    ) -> XcorKernelIntegrand: ...
+    def get_expansion_factor(self) -> float: ...
+    def get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
+    def get_l_limber(self) -> int: ...
+    def get_lmax(self) -> int: ...
+    def get_max_border_expansions(self) -> int: ...
+    def get_max_iter(self) -> int: ...
+    def get_reltol(self) -> float: ...
+    def get_scaled_abstol(self) -> float: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
     @staticmethod
     def id() -> int: ...
@@ -20155,37 +20276,63 @@ class XcorLimberKernel(NumCosmoMath.Model):
     def log_all_models() -> None: ...
     def obs_len(self) -> int: ...
     def obs_params_len(self) -> int: ...
+    def peek_dist(self) -> Distance: ...
+    def peek_integrator(self) -> typing.Optional[NumCosmoMath.SBesselIntegrator]: ...
+    def peek_powspec(self) -> NumCosmoMath.Powspec: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
-    def ref(self) -> XcorLimberKernel: ...
-    def set_const_factor(self, cf: float) -> None: ...
-    def set_z_range(self, zmin: float, zmax: float, zmid: float) -> None: ...
+    def ref(self) -> XcorKernel: ...
+    def set_adaptive_boundary_tries(self, adaptive_boundary_tries: int) -> None: ...
+    def set_adaptive_epsilon(self, adaptive_epsilon: float) -> None: ...
+    def set_expansion_factor(self, expansion_factor: float) -> None: ...
+    def set_l_limber(self, l_limber: int) -> None: ...
+    def set_lmax(self, lmax: int) -> None: ...
+    def set_max_border_expansions(self, max_border_expansions: int) -> None: ...
+    def set_max_iter(self, max_iter: int) -> None: ...
+    def set_reltol(self, reltol: float) -> None: ...
+    def set_scaled_abstol(self, scaled_abstol: float) -> None: ...
 
-class XcorLimberKernelCMBISW(XcorLimberKernel):
+class XcorKernelCMBISW(XcorKernel):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelCMBISW(**properties)
-        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, recomb:NumCosmo.Recomb, Nl:NumCosmoMath.Vector) -> NumCosmo.XcorLimberKernelCMBISW
+        XcorKernelCMBISW(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, recomb:NumCosmo.Recomb, Nl:NumCosmoMath.Vector) -> NumCosmo.XcorKernelCMBISW
 
-    Object NcXcorLimberKernelCMBISW
+    Object NcXcorKernelCMBISW
 
-    Properties from NcXcorLimberKernelCMBISW:
-      dist -> NcDistance: dist
-        Distance object
-      ps -> NcmPowspec: ps
-        Power Spectrum object
+    Properties from NcXcorKernelCMBISW:
       recomb -> NcRecomb: recomb
         Recombination object
       Nl -> NcmVector: Nl
         Noise spectrum
 
-    Properties from NcXcorLimberKernel:
-      zmin -> gdouble: zmin
-        Minimum redshift
-      zmax -> gdouble: zmax
-        Maximum redshift
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20213,11 +20360,19 @@ class XcorLimberKernelCMBISW(XcorLimberKernel):
 
     class Props:
         Nl: NumCosmoMath.Vector
-        dist: Distance
-        ps: NumCosmoMath.Powspec
         recomb: Recomb
-        zmax: float
-        zmin: float
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
         implementation: int
         name: str
         nick: str
@@ -20232,11 +20387,157 @@ class XcorLimberKernelCMBISW(XcorLimberKernel):
     def __init__(
         self,
         Nl: NumCosmoMath.Vector = ...,
-        dist: Distance = ...,
-        ps: NumCosmoMath.Powspec = ...,
         recomb: Recomb = ...,
-        zmax: float = ...,
-        zmin: float = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def eval_KL_max(self, y: float) -> float: ...
+    def eval_k_epsilon(self, y: float) -> float: ...
+    def eval_k_max(self, y: float) -> float: ...
+    def get_epsilon(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        recomb: Recomb,
+        Nl: NumCosmoMath.Vector,
+    ) -> XcorKernelCMBISW: ...
+    def set_epsilon(self, epsilon: float) -> None: ...
+
+class XcorKernelCMBISWClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelCMBISWClass()
+    """
+
+    parent_class: XcorKernelClass = ...
+
+class XcorKernelCMBLensing(XcorKernel):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelCMBLensing(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, recomb:NumCosmo.Recomb, Nl:NumCosmoMath.Vector) -> NumCosmo.XcorKernelCMBLensing
+
+    Object NcXcorKernelCMBLensing
+
+    Properties from NcXcorKernelCMBLensing:
+      recomb -> NcRecomb: recomb
+        Recombination object
+      Nl -> NcmVector: Nl
+        Noise spectrum
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        Nl: NumCosmoMath.Vector
+        recomb: Recomb
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        Nl: NumCosmoMath.Vector = ...,
+        recomb: Recomb = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -20248,43 +20549,77 @@ class XcorLimberKernelCMBISW(XcorLimberKernel):
         ps: NumCosmoMath.Powspec,
         recomb: Recomb,
         Nl: NumCosmoMath.Vector,
-    ) -> XcorLimberKernelCMBISW: ...
+    ) -> XcorKernelCMBLensing: ...
 
-class XcorLimberKernelCMBISWClass(GObject.GPointer):
+class XcorKernelCMBLensingClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelCMBISWClass()
+        XcorKernelCMBLensingClass()
     """
 
-    parent_class: XcorLimberKernelClass = ...
+    parent_class: XcorKernelClass = ...
 
-class XcorLimberKernelCMBLensing(XcorLimberKernel):
+class XcorKernelClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelCMBLensing(**properties)
-        new(dist:NumCosmo.Distance, recomb:NumCosmo.Recomb, Nl:NumCosmoMath.Vector) -> NumCosmo.XcorLimberKernelCMBLensing
+        XcorKernelClass()
+    """
 
-    Object NcXcorLimberKernelCMBLensing
+    parent_class: NumCosmoMath.ModelClass = ...
+    get_z_range: typing.Callable[[XcorKernel], typing.Tuple[float, float, float]] = ...
+    eval_limber_z: typing.Callable[
+        [XcorKernel, HICosmo, float, XcorKinetic, int], float
+    ] = ...
+    eval_limber_z_prefactor: typing.Callable[[XcorKernel, HICosmo, int], float] = ...
+    prepare: typing.Callable[[XcorKernel, HICosmo], None] = ...
+    add_noise: typing.Callable[
+        [XcorKernel, NumCosmoMath.Vector, NumCosmoMath.Vector, int], None
+    ] = ...
+    obs_len: typing.Callable[[XcorKernel], int] = ...
+    obs_params_len: typing.Callable[[XcorKernel], int] = ...
+    get_component_list: typing.Callable[[XcorKernel], list[XcorKernelComponent]] = ...
 
-    Properties from NcXcorLimberKernelCMBLensing:
+class XcorKernelCluster(XcorKernel):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelCluster(**properties)
+
+    Object NcXcorKernelCluster
+
+    Properties from NcXcorKernel:
       dist -> NcDistance: dist
         Distance object
-      recomb -> NcRecomb: recomb
-        Recombination object
-      Nl -> NcmVector: Nl
-        Noise spectrum
-
-    Properties from NcXcorLimberKernel:
-      zmin -> gdouble: zmin
-        Minimum redshift
-      zmax -> gdouble: zmax
-        Maximum redshift
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20311,11 +20646,143 @@ class XcorLimberKernelCMBLensing(XcorLimberKernel):
     """
 
     class Props:
-        Nl: NumCosmoMath.Vector
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
         dist: Distance
-        recomb: Recomb
-        zmax: float
-        zmin: float
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: XcorKernel = ...
+    def __init__(
+        self,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+
+class XcorKernelClusterClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelClusterClass()
+    """
+
+    parent_class: XcorKernelClass = ...
+    padding: list[None] = ...
+
+class XcorKernelClusterTophat(XcorKernelCluster):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelClusterTophat(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, z_lower:float, z_upper:float) -> NumCosmo.XcorKernelClusterTophat
+
+    Object NcXcorKernelClusterTophat
+
+    Properties from NcXcorKernelClusterTophat:
+      z-lower -> gdouble: z-lower
+        Lower redshift bound
+      z-upper -> gdouble: z-upper
+        Upper redshift bound
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        z_lower: float
+        z_upper: float
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
         implementation: int
         name: str
         nick: str
@@ -20329,63 +20796,135 @@ class XcorLimberKernelCMBLensing(XcorLimberKernel):
     props: Props = ...
     def __init__(
         self,
-        Nl: NumCosmoMath.Vector = ...,
+        z_lower: float = ...,
+        z_upper: float = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
         dist: Distance = ...,
-        recomb: Recomb = ...,
-        zmax: float = ...,
-        zmin: float = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
     def new(
-        cls, dist: Distance, recomb: Recomb, Nl: NumCosmoMath.Vector
-    ) -> XcorLimberKernelCMBLensing: ...
+        cls, dist: Distance, ps: NumCosmoMath.Powspec, z_lower: float, z_upper: float
+    ) -> XcorKernelClusterTophat: ...
 
-class XcorLimberKernelCMBLensingClass(GObject.GPointer):
+class XcorKernelClusterTophatClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelCMBLensingClass()
+        XcorKernelClusterTophatClass()
     """
 
-    parent_class: XcorLimberKernelClass = ...
+    parent_class: XcorKernelClusterClass = ...
 
-class XcorLimberKernelClass(GObject.GPointer):
+class XcorKernelComponent(GObject.Object):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelClass()
+        XcorKernelComponent(**properties)
+
+    Object NcXcorKernelComponent
+
+    Properties from NcXcorKernelComponent:
+      epsilon -> gdouble: epsilon
+        Epsilon value for kernel analysis
+      ny -> guint: ny
+        Number of y points
+      max-iter -> guint: max-iter
+        Maximum iterations for GSL solvers
+      tol -> gdouble: tol
+        Tolerance for GSL solvers
+
+    Signals from GObject:
+      notify (GParam)
     """
 
-    parent_class: NumCosmoMath.ModelClass = ...
-    eval: typing.Callable[
-        [XcorLimberKernel, HICosmo, float, XcorKinetic, int], float
-    ] = ...
-    prepare: typing.Callable[[XcorLimberKernel, HICosmo], None] = ...
-    add_noise: typing.Callable[
-        [XcorLimberKernel, NumCosmoMath.Vector, NumCosmoMath.Vector, int], None
-    ] = ...
-    obs_len: typing.Callable[[XcorLimberKernel], int] = ...
-    obs_params_len: typing.Callable[[XcorLimberKernel], int] = ...
+    class Props:
+        epsilon: float
+        max_iter: int
+        ny: int
+        tol: float
 
-class XcorLimberKernelGal(XcorLimberKernel):
+    props: Props = ...
+    parent_instance: GObject.Object = ...
+    def __init__(
+        self, epsilon: float = ..., max_iter: int = ..., ny: int = ..., tol: float = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(comp: XcorKernelComponent) -> None: ...
+    def do_eval_kernel(self, cosmo: HICosmo, xi: float, k: float) -> float: ...
+    def do_eval_prefactor(self, cosmo: HICosmo, k: float, l: int) -> float: ...
+    def do_get_limits(
+        self, cosmo: HICosmo
+    ) -> typing.Tuple[float, float, float, float]: ...
+    def eval_KL_max(self, y: float) -> float: ...
+    def eval_k_epsilon(self, y: float) -> float: ...
+    def eval_k_max(self, y: float) -> float: ...
+    def eval_kernel(self, cosmo: HICosmo, xi: float, k: float) -> float: ...
+    def eval_prefactor(self, cosmo: HICosmo, k: float, l: int) -> float: ...
+    def free(self) -> None: ...
+    def get_epsilon(self) -> float: ...
+    def get_limits(
+        self, cosmo: HICosmo
+    ) -> typing.Tuple[float, float, float, float]: ...
+    def get_max_iter(self) -> int: ...
+    def get_ny(self) -> int: ...
+    def get_tol(self) -> float: ...
+    def prepare(self, cosmo: HICosmo) -> None: ...
+    def ref(self) -> XcorKernelComponent: ...
+    def set_epsilon(self, epsilon: float) -> None: ...
+    def set_max_iter(self, max_iter: int) -> None: ...
+    def set_ny(self, ny: int) -> None: ...
+    def set_tol(self, tol: float) -> None: ...
+
+class XcorKernelComponentClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelGal(**properties)
-        new(zmin:float, zmax:float, np:int, nbarm1:float, dn_dz:NumCosmoMath.Spline, dist:NumCosmo.Distance, domagbias:bool) -> NumCosmo.XcorLimberKernelGal
+        XcorKernelComponentClass()
+    """
 
-    Object NcXcorLimberKernelGal
+    parent_class: GObject.ObjectClass = ...
+    eval_kernel: typing.Callable[
+        [XcorKernelComponent, HICosmo, float, float], float
+    ] = ...
+    eval_prefactor: typing.Callable[
+        [XcorKernelComponent, HICosmo, float, int], float
+    ] = ...
+    get_limits: typing.Callable[
+        [XcorKernelComponent, HICosmo], typing.Tuple[float, float, float, float]
+    ] = ...
+    padding: list[None] = ...
 
-    Properties from NcXcorLimberKernelGal:
+class XcorKernelGal(XcorKernel):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelGal(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, np:int, nbarm1:float, dn_dz:NumCosmoMath.Spline, domagbias:bool) -> NumCosmo.XcorKernelGal
+
+    Object NcXcorKernelGal
+
+    Properties from NcXcorKernelGal:
       dndz -> NcmSpline: dndz
         Galaxy redshift distribution
       bias -> NcmSpline: bias
@@ -20394,8 +20933,6 @@ class XcorLimberKernelGal(XcorLimberKernel):
         Do magnification bias
       nbarm1 -> gdouble: nbarm1
         One over nbar (galaxy angular density)
-      dist -> NcDistance: dist
-        Distance object
       mag-bias -> gdouble: mag-bias
         mag_bias
       noise-bias -> gdouble: noise-bias
@@ -20411,11 +20948,31 @@ class XcorLimberKernelGal(XcorLimberKernel):
       bparam-fit -> GVariant: bparam-fit
         bparam:fit
 
-    Properties from NcXcorLimberKernel:
-      zmin -> gdouble: zmin
-        Minimum redshift
-      zmax -> gdouble: zmax
-        Maximum redshift
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20446,7 +21003,6 @@ class XcorLimberKernelGal(XcorLimberKernel):
         bparam: NumCosmoMath.Vector
         bparam_fit: GLib.Variant
         bparam_length: int
-        dist: Distance
         dndz: NumCosmoMath.Spline
         domagbias: bool
         mag_bias: float
@@ -20454,8 +21010,18 @@ class XcorLimberKernelGal(XcorLimberKernel):
         nbarm1: float
         noise_bias: float
         noise_bias_fit: bool
-        zmax: float
-        zmin: float
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
         implementation: int
         name: str
         nick: str
@@ -20473,7 +21039,6 @@ class XcorLimberKernelGal(XcorLimberKernel):
         bparam: NumCosmoMath.Vector = ...,
         bparam_fit: GLib.Variant = ...,
         bparam_length: int = ...,
-        dist: Distance = ...,
         dndz: NumCosmoMath.Spline = ...,
         domagbias: bool = ...,
         mag_bias: float = ...,
@@ -20481,8 +21046,18 @@ class XcorLimberKernelGal(XcorLimberKernel):
         nbarm1: float = ...,
         noise_bias: float = ...,
         noise_bias_fit: bool = ...,
-        zmax: float = ...,
-        zmin: float = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -20492,58 +21067,103 @@ class XcorLimberKernelGal(XcorLimberKernel):
     @classmethod
     def new(
         cls,
-        zmin: float,
-        zmax: float,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
         np: int,
         nbarm1: float,
         dn_dz: NumCosmoMath.Spline,
-        dist: Distance,
         domagbias: bool,
-    ) -> XcorLimberKernelGal: ...
+    ) -> XcorKernelGal: ...
     def set_bias_old(self, bias_old: float, noise_bias_old: float) -> None: ...
     def set_fast_update(self, fast_update: bool) -> None: ...
 
-class XcorLimberKernelGalClass(GObject.GPointer):
+class XcorKernelGalClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelGalClass()
+        XcorKernelGalClass()
     """
 
-    parent_class: XcorLimberKernelClass = ...
+    parent_class: XcorKernelClass = ...
 
-class XcorLimberKernelWeakLensing(XcorLimberKernel):
+class XcorKernelIntegrand(GObject.GBoxed):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelWeakLensing(**properties)
-        new(zmin:float, zmax:float, dn_dz:NumCosmoMath.Spline, nbar:float, intr_shear:float, dist:NumCosmo.Distance) -> NumCosmo.XcorLimberKernelWeakLensing
+        XcorKernelIntegrand()
+        new(len:int, eval:NumCosmo.XcorKernelIntegrandEval, get_range:NumCosmo.XcorKernelIntegrandGetRange, data=None) -> NumCosmo.XcorKernelIntegrand
+    """
 
-    Object NcXcorLimberKernelWeakLensing
+    refcount: int = ...
+    len: int = ...
+    eval_func: typing.Callable[[None, float], list[float]] = ...
+    get_range_func: typing.Callable[[None], typing.Tuple[float, float]] = ...
+    data: None = ...
+    data_free: typing.Callable[[None], None] = ...
+    @staticmethod
+    def clear(integrand: XcorKernelIntegrand) -> None: ...
+    def eval_array(self, k: float) -> list[float]: ...
+    def get_len(self) -> int: ...
+    def get_range(self) -> typing.Tuple[float, float]: ...
+    @classmethod
+    def new(
+        cls,
+        len: int,
+        eval: typing.Callable[[None, float], list[float]],
+        get_range: typing.Callable[..., typing.Tuple[float, float]],
+        *data: typing.Any,
+    ) -> XcorKernelIntegrand: ...
+    def ref(self) -> XcorKernelIntegrand: ...
+    def unref(self) -> None: ...
 
-    Properties from NcXcorLimberKernelWeakLensing:
+class XcorKernelWeakLensing(XcorKernel):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelWeakLensing(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, dn_dz:NumCosmoMath.Spline, nbar:float, intr_shear:float) -> NumCosmo.XcorKernelWeakLensing
+
+    Object NcXcorKernelWeakLensing
+
+    Properties from NcXcorKernelWeakLensing:
       dndz -> NcmSpline: dndz
         Source redshift distribution
       nbar -> gdouble: nbar
         nbar (galaxy angular density)
       intr-shear -> gdouble: intr-shear
         Intrinsic galaxy shear
+
+    Properties from NcXcorKernel:
       dist -> NcDistance: dist
         Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
       reltol -> gdouble: reltol
-        Relative tolerance
-      abstol -> gdouble: abstol
-        Absolute tolerance tolerance
-
-    Properties from NcXcorLimberKernel:
-      zmin -> gdouble: zmin
-        Minimum redshift
-      zmax -> gdouble: zmax
-        Maximum redshift
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20570,14 +21190,21 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
     """
 
     class Props:
-        abstol: float
-        dist: Distance
         dndz: NumCosmoMath.Spline
         intr_shear: float
         nbar: float
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
         reltol: float
-        zmax: float
-        zmin: float
+        scaled_abstol: float
         implementation: int
         name: str
         nick: str
@@ -20591,14 +21218,21 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
     props: Props = ...
     def __init__(
         self,
-        abstol: float = ...,
-        dist: Distance = ...,
         dndz: NumCosmoMath.Spline = ...,
         intr_shear: float = ...,
         nbar: float = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
-        zmax: float = ...,
-        zmin: float = ...,
+        scaled_abstol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -20606,45 +21240,66 @@ class XcorLimberKernelWeakLensing(XcorLimberKernel):
     @classmethod
     def new(
         cls,
-        zmin: float,
-        zmax: float,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
         dn_dz: NumCosmoMath.Spline,
         nbar: float,
         intr_shear: float,
-        dist: Distance,
-    ) -> XcorLimberKernelWeakLensing: ...
+    ) -> XcorKernelWeakLensing: ...
 
-class XcorLimberKernelWeakLensingClass(GObject.GPointer):
+class XcorKernelWeakLensingClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKernelWeakLensingClass()
+        XcorKernelWeakLensingClass()
     """
 
-    parent_class: XcorLimberKernelClass = ...
+    parent_class: XcorKernelClass = ...
 
-class XcorLimberKerneltSZ(XcorLimberKernel):
+class XcorKerneltSZ(XcorKernel):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKerneltSZ(**properties)
-        new(zmax:float) -> NumCosmo.XcorLimberKerneltSZ
+        XcorKerneltSZ(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, zmax:float) -> NumCosmo.XcorKerneltSZ
 
-    Object NcXcorLimberKerneltSZ
+    Object NcXcorKerneltSZ
 
-    Properties from NcXcorLimberKerneltSZ:
+    Properties from NcXcorKerneltSZ:
       noise -> gdouble: noise
         Constant noise level
-
-    Properties from NcXcorLimberKernel:
-      zmin -> gdouble: zmin
-        Minimum redshift
       zmax -> gdouble: zmax
         Maximum redshift
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -20673,7 +21328,18 @@ class XcorLimberKerneltSZ(XcorLimberKernel):
     class Props:
         noise: float
         zmax: float
-        zmin: float
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
         implementation: int
         name: str
         nick: str
@@ -20689,24 +21355,114 @@ class XcorLimberKerneltSZ(XcorLimberKernel):
         self,
         noise: float = ...,
         zmax: float = ...,
-        zmin: float = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
-    def new(cls, zmax: float) -> XcorLimberKerneltSZ: ...
+    def new(
+        cls, dist: Distance, ps: NumCosmoMath.Powspec, zmax: float
+    ) -> XcorKerneltSZ: ...
 
-class XcorLimberKerneltSZClass(GObject.GPointer):
+class XcorKerneltSZClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        XcorLimberKerneltSZClass()
+        XcorKerneltSZClass()
     """
 
-    parent_class: XcorLimberKernelClass = ...
+    parent_class: XcorKernelClass = ...
+
+class XcorKinetic(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKinetic()
+    """
+
+    xi_z: float = ...
+    E_z: float = ...
+    def copy(self) -> XcorKinetic: ...
+    def free(self) -> None: ...
+
+class XcorLensingEfficiency(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorLensingEfficiency(**properties)
+
+    Object NcXcorLensingEfficiency
+
+    Properties from NcXcorLensingEfficiency:
+      distance -> NcDistance: distance
+        Distance object
+      reltol -> gdouble: reltol
+        Relative tolerance
+      abstol -> gdouble: abstol
+        Absolute tolerance
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        abstol: float
+        distance: Distance
+        reltol: float
+
+    props: Props = ...
+    parent_instance: GObject.Object = ...
+    def __init__(
+        self, abstol: float = ..., distance: Distance = ..., reltol: float = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(lens_eff: XcorLensingEfficiency) -> None: ...
+    def do_eval_source(self, z: float) -> float: ...
+    def do_get_z_range(self) -> typing.Tuple[float, float]: ...
+    def eval(self, z: float) -> float: ...
+    def free(self) -> None: ...
+    def get_abstol(self) -> float: ...
+    def get_reltol(self) -> float: ...
+    def peek_distance(self) -> Distance: ...
+    def prepare(self, cosmo: HICosmo) -> None: ...
+    def ref(self) -> XcorLensingEfficiency: ...
+    def set_abstol(self, abstol: float) -> None: ...
+    def set_distance(self, dist: Distance) -> None: ...
+    def set_reltol(self, reltol: float) -> None: ...
+
+class XcorLensingEfficiencyClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorLensingEfficiencyClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+    eval_source: typing.Callable[[XcorLensingEfficiency, float], float] = ...
+    get_z_range: typing.Callable[
+        [XcorLensingEfficiency], typing.Tuple[float, float]
+    ] = ...
+    padding: list[None] = ...
 
 class _HaloPositionClass(GObject.GPointer):
     r"""
@@ -21349,6 +22105,23 @@ class GalaxySDTrueRedshiftLSSTSRDSParams(GObject.GEnum):
     ALPHA: GalaxySDTrueRedshiftLSSTSRDSParams = ...
     BETA: GalaxySDTrueRedshiftLSSTSRDSParams = ...
     Z0: GalaxySDTrueRedshiftLSSTSRDSParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class GalaxySDTrueRedshiftLSSTSRDType(GObject.GEnum):
+    Y10_LENS: GalaxySDTrueRedshiftLSSTSRDType = ...
+    Y10_SOURCE: GalaxySDTrueRedshiftLSSTSRDType = ...
+    Y1_LENS: GalaxySDTrueRedshiftLSSTSRDType = ...
+    Y1_SOURCE: GalaxySDTrueRedshiftLSSTSRDType = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22550,8 +23323,8 @@ class WLSurfaceMassDensityParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelCMBLensingSParams(GObject.GEnum):
-    LEN: XcorLimberKernelCMBLensingSParams = ...
+class XcorKernelCMBLensingSParams(GObject.GEnum):
+    LEN: XcorKernelCMBLensingSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22564,9 +23337,9 @@ class XcorLimberKernelCMBLensingSParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelGalSParams(GObject.GEnum):
-    MAG_BIAS: XcorLimberKernelGalSParams = ...
-    NOISE_BIAS: XcorLimberKernelGalSParams = ...
+class XcorKernelGalSParams(GObject.GEnum):
+    MAG_BIAS: XcorKernelGalSParams = ...
+    NOISE_BIAS: XcorKernelGalSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22579,8 +23352,8 @@ class XcorLimberKernelGalSParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelGalVParams(GObject.GEnum):
-    BIAS: XcorLimberKernelGalVParams = ...
+class XcorKernelGalVParams(GObject.GEnum):
+    BIAS: XcorKernelGalVParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22593,10 +23366,10 @@ class XcorLimberKernelGalVParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelImpl(GObject.GEnum):
-    ADD_NOISE: XcorLimberKernelImpl = ...
-    EVAL: XcorLimberKernelImpl = ...
-    PREPARE: XcorLimberKernelImpl = ...
+class XcorKernelImpl(GObject.GEnum):
+    ADD_NOISE: XcorKernelImpl = ...
+    EVAL_RADIAL_WEIGHT: XcorKernelImpl = ...
+    PREPARE: XcorKernelImpl = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22609,8 +23382,8 @@ class XcorLimberKernelImpl(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelWeakLensingSParams(GObject.GEnum):
-    LEN: XcorLimberKernelWeakLensingSParams = ...
+class XcorKernelWeakLensingSParams(GObject.GEnum):
+    LEN: XcorKernelWeakLensingSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22623,8 +23396,8 @@ class XcorLimberKernelWeakLensingSParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKernelWeakLensingVParams(GObject.GEnum):
-    LEN: XcorLimberKernelWeakLensingVParams = ...
+class XcorKernelWeakLensingVParams(GObject.GEnum):
+    LEN: XcorKernelWeakLensingVParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22637,8 +23410,8 @@ class XcorLimberKernelWeakLensingVParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberKerneltSZSParams(GObject.GEnum):
-    LEN: XcorLimberKerneltSZSParams = ...
+class XcorKerneltSZSParams(GObject.GEnum):
+    LEN: XcorKerneltSZSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -22651,9 +23424,10 @@ class XcorLimberKerneltSZSParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class XcorLimberMethod(GObject.GEnum):
-    CUBATURE: XcorLimberMethod = ...
-    GSL: XcorLimberMethod = ...
+class XcorMethod(GObject.GEnum):
+    KERNEL_GSL: XcorMethod = ...
+    LIMBER_Z_CUBATURE: XcorMethod = ...
+    LIMBER_Z_GSL: XcorMethod = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

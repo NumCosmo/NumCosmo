@@ -90,10 +90,13 @@ ncm_spline_cubic_finalize (GObject *object)
 
 static void _ncm_spline_cubic_reset (NcmSpline *s);
 static gdouble _ncm_spline_cubic_eval (const NcmSpline *s, const gdouble x);
+static gdouble _ncm_spline_cubic_eval_idx (const NcmSpline *s, const gdouble x, const gsize i);
 static gdouble _ncm_spline_cubic_deriv (const NcmSpline *s, const gdouble x);
+static gdouble _ncm_spline_cubic_deriv_idx (const NcmSpline *s, const gdouble x, const gsize i);
 static gdouble _ncm_spline_cubic_deriv2 (const NcmSpline *s, const gdouble x);
 static gdouble _ncm_spline_cubic_deriv_nmax (const NcmSpline *s, const gdouble x);
 static gdouble _ncm_spline_cubic_integ (const NcmSpline *s, const gdouble x0, const gdouble x1);
+static gdouble _ncm_spline_cubic_integ_idx (const NcmSpline *s, const gdouble xi, const gsize i, const gdouble xf, const gsize f);
 
 static void
 ncm_spline_cubic_class_init (NcmSplineCubicClass *klass)
@@ -105,10 +108,13 @@ ncm_spline_cubic_class_init (NcmSplineCubicClass *klass)
 
   s_class->reset      = &_ncm_spline_cubic_reset;
   s_class->eval       = &_ncm_spline_cubic_eval;
+  s_class->eval_idx   = &_ncm_spline_cubic_eval_idx;
   s_class->deriv      = &_ncm_spline_cubic_deriv;
+  s_class->deriv_idx  = &_ncm_spline_cubic_deriv_idx;
   s_class->deriv2     = &_ncm_spline_cubic_deriv2;
   s_class->deriv_nmax = &_ncm_spline_cubic_deriv_nmax;
   s_class->integ      = &_ncm_spline_cubic_integ;
+  s_class->integ_idx  = &_ncm_spline_cubic_integ_idx;
 }
 
 static void
@@ -187,11 +193,53 @@ _ncm_spline_cubic_eval (const NcmSpline *s, const gdouble x)
 }
 
 static gdouble
+_ncm_spline_cubic_eval_idx (const NcmSpline *s, const gdouble x, const gsize i)
+{
+  NcmSplineCubic *sc                 = NCM_SPLINE_CUBIC ((NcmSpline *) s);
+  NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private (sc);
+
+  {
+    const gdouble delx = x - ncm_vector_get (self->xv, i);
+    const gdouble a_i  = ncm_vector_get (self->yv, i);
+    const gdouble b_i  = ncm_vector_fast_get (self->b, i);
+    const gdouble c_i  = ncm_vector_fast_get (self->c, i);
+    const gdouble d_i  = ncm_vector_fast_get (self->d, i);
+
+    return a_i + delx * b_i + (delx * delx) * (c_i + delx * d_i);
+  }
+}
+
+static gdouble
 _ncm_spline_cubic_deriv (const NcmSpline *s, const gdouble x)
 {
   NcmSplineCubic *sc                 = NCM_SPLINE_CUBIC ((NcmSpline *) s);
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private (sc);
   const size_t i                     = ncm_spline_get_index (s, x);
+
+  {
+    NcmVector *s_xv    = ncm_spline_peek_xv ((NcmSpline *) s);
+    const gdouble delx = x - ncm_vector_get (s_xv, i);
+    const gdouble b_i  = ncm_vector_fast_get (self->b, i);
+    const gdouble c2_i = 2.0 * ncm_vector_fast_get (self->c, i);
+    const gdouble d3_i = 3.0 * ncm_vector_fast_get (self->d, i);
+
+#ifdef HAVE_FMA
+
+    return fma (fma (delx, d3_i, c2_i), delx, b_i);
+
+#else
+
+    return b_i + delx * (c2_i + delx * d3_i);
+
+#endif /* HAVE_FMA */
+  }
+}
+
+static gdouble
+_ncm_spline_cubic_deriv_idx (const NcmSpline *s, const gdouble x, const gsize i)
+{
+  NcmSplineCubic *sc                 = NCM_SPLINE_CUBIC ((NcmSpline *) s);
+  NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private (sc);
 
   {
     NcmVector *s_xv    = ncm_spline_peek_xv ((NcmSpline *) s);
@@ -278,6 +326,46 @@ _ncm_spline_cubic_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
       {
         gdouble a = (i == index_a) ? x0 : x_lo;
         gdouble b = (i == index_b) ? x1 : x_hi;
+
+        result += _ncm_spline_util_integ_eval (y_lo, b_i, c_i, d_i, x_lo, a, b);
+      }
+      else
+      {
+        const gdouble dx = x_hi - x_lo;
+
+        result += dx * (y_lo + dx * (0.5 * b_i + dx * (c_i / 3.0 + 0.25 * d_i * dx)));
+      }
+    }
+  }
+
+  return result;
+}
+
+static gdouble
+_ncm_spline_cubic_integ_idx (const NcmSpline *s, const gdouble xi, const gsize index_a, const gdouble xf, const gsize index_b)
+{
+  NcmSplineCubic *sc                 = NCM_SPLINE_CUBIC ((NcmSpline *) s);
+  NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private (sc);
+  gdouble result                     = 0.0;
+  size_t i;
+
+  for (i = index_a; i <= index_b; i++)
+  {
+    NcmVector *s_xv    = ncm_spline_peek_xv ((NcmSpline *) s);
+    NcmVector *s_yv    = ncm_spline_peek_yv ((NcmSpline *) s);
+    const gdouble x_hi = ncm_vector_get (s_xv, i + 1);
+    const gdouble x_lo = ncm_vector_get (s_xv, i);
+    const gdouble y_lo = ncm_vector_get (s_yv, i);
+
+    {
+      const gdouble b_i = ncm_vector_fast_get (self->b, i);
+      const gdouble c_i = ncm_vector_fast_get (self->c, i);
+      const gdouble d_i = ncm_vector_fast_get (self->d, i);
+
+      if ((i == index_a) || (i == index_b))
+      {
+        gdouble a = (i == index_a) ? xi : x_lo;
+        gdouble b = (i == index_b) ? xf : x_hi;
 
         result += _ncm_spline_util_integ_eval (y_lo, b_i, c_i, d_i, x_lo, a, b);
       }

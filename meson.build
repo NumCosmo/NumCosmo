@@ -8,8 +8,6 @@ project(
     'buildtype=debugoptimized',
     'warning_level=2',
     'c_std=gnu99',
-    'b_lto=true',
-    'b_lto_threads=2',
   ],
 )
 
@@ -801,6 +799,7 @@ if have_lapack
     'dgeqlf_',
     'dgeqrf_',
     'dgerqf_',
+    'dgesv_',
     'dggglm_',
     'dposv_',
     'dpotrf_',

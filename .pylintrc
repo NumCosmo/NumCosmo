@@ -72,7 +72,7 @@ check-quote-consistency=yes
 # Tells whether to warn about missing members when the owner of the attribute
 # is inferred to be None.
 ignore-none=false
-generated-members = Ncm.*, Nc.*
+generated-members = Ncm.*, Nc.*, GObject.ParamFlags.*
 
 [FORMAT]
 
