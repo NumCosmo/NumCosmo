@@ -367,7 +367,8 @@ def _build(
     ]
 
     if namespace == "Gtk":
-        typevars.append("""CellRendererT = typing.TypeVar(
+        typevars.append(
+            """CellRendererT = typing.TypeVar(
     "CellRendererT",
     CellRendererCombo,
     CellRendererPixbuf,
@@ -376,7 +377,8 @@ def _build(
     CellRendererSpinner,
     CellRendererText,
     CellRendererToggle,
-)""")
+)"""
+        )
 
     imports: list[str] = []
     if "cairo" in ns:
