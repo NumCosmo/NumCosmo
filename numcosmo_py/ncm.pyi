@@ -10132,6 +10132,15 @@ class Spectral(GObject.Object):
         tol: float,
         *user_data: typing.Any,
     ) -> typing.Tuple[int, list[float]]: ...
+    def compute_chebyshev_coeffs_adaptive_weighted(
+        self,
+        F: typing.Callable[..., float],
+        a: float,
+        b: float,
+        k_min: int,
+        tol: float,
+        *user_data: typing.Any,
+    ) -> typing.Tuple[int, list[float]]: ...
     @staticmethod
     def compute_d2_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     @staticmethod
