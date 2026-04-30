@@ -63,6 +63,7 @@ guint ncm_spectral_get_max_order (NcmSpectral *spectral);
 
 void ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint order, GArray **coeffs, gpointer user_data);
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, GArray **coeffs, gpointer user_data);
+guint ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, GArray **coeffs, gpointer user_data);
 
 void ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g);
 void ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g);
