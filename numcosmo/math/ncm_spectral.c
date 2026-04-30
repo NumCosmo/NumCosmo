@@ -63,6 +63,7 @@ struct _NcmSpectral
   gdouble *coeffs_work;  /* Coefficients work array, size: 2^max_order + 1 */
   GArray *coeffs;        /* Coefficients array, size: 2^max_order + 1 */
   GPtrArray *cos_arrays; /* Precomputed cosines for each k level */
+  GPtrArray *sin_arrays; /* Precomputed sines for each k level */
   GPtrArray *fftw_plans; /* FFTW plans for each k level */
 
   /* Legacy fields (backward compatibility) */
@@ -83,6 +84,7 @@ ncm_spectral_init (NcmSpectral *spectral)
   spectral->coeffs_work = NULL;
   spectral->coeffs      = g_array_new (FALSE, FALSE, sizeof (gdouble));
   spectral->cos_arrays  = NULL;
+  spectral->sin_arrays  = NULL;
   spectral->fftw_plans  = NULL;
 
   spectral->cheb_N_cached = 0;
@@ -98,6 +100,7 @@ ncm_spectral_finalize (GObject *object)
 
   /* Clean up adaptive refinement resources */
   g_clear_pointer (&spectral->fftw_plans, g_ptr_array_unref);
+  g_clear_pointer (&spectral->sin_arrays, g_ptr_array_unref);
   g_clear_pointer (&spectral->cos_arrays, g_ptr_array_unref);
   g_clear_pointer (&spectral->f_vals, fftw_free);
   g_clear_pointer (&spectral->f_vals_tmp, fftw_free);
@@ -258,6 +261,7 @@ ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order)
 
     /* Clear cached plans and arrays as they depend on max_order */
     g_clear_pointer (&spectral->fftw_plans, g_ptr_array_unref);
+    g_clear_pointer (&spectral->sin_arrays, g_ptr_array_unref);
     g_clear_pointer (&spectral->cos_arrays, g_ptr_array_unref);
     g_clear_pointer (&spectral->f_vals, fftw_free);
     g_clear_pointer (&spectral->f_vals_tmp, fftw_free);
@@ -275,6 +279,7 @@ ncm_spectral_set_max_order (NcmSpectral *spectral, guint max_order)
       spectral->coeffs_work = fftw_malloc (sizeof (gdouble) * N_max);
       spectral->fftw_plans  = g_ptr_array_new_with_free_func ((GDestroyNotify) fftw_destroy_plan);
       spectral->cos_arrays  = g_ptr_array_new_with_free_func (g_free);
+      spectral->sin_arrays  = g_ptr_array_new_with_free_func (g_free);
     }
   }
 }
@@ -405,6 +410,37 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
 
 /* Helper functions for adaptive refinement */
 
+/**
+ * _NcmSpectralEvaluateFunc:
+ * @spectral: a #NcmSpectral
+ * @F: function to evaluate
+ * @a: left endpoint
+ * @b: right endpoint
+ * @k: refinement level
+ * @user_data: user data for @F
+ *
+ * Function pointer type for evaluating all nodes at refinement level k.
+ */
+typedef void (*_NcmSpectralEvaluateFunc) (NcmSpectral *spectral, NcmSpectralF F,
+                                          gdouble a, gdouble b, guint k,
+                                          gpointer user_data);
+
+/**
+ * _NcmSpectralRefineFunc:
+ * @spectral: a #NcmSpectral
+ * @F: function to evaluate
+ * @a: left endpoint
+ * @b: right endpoint
+ * @k_old: old refinement level
+ * @k_new: new refinement level (k_old + 1)
+ * @user_data: user data for @F
+ *
+ * Function pointer type for refining from level k_old to k_new.
+ */
+typedef void (*_NcmSpectralRefineFunc) (NcmSpectral *spectral, NcmSpectralF F,
+                                        gdouble a, gdouble b, guint k_old,
+                                        guint k_new, gpointer user_data);
+
 static void
 _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k)
 {
@@ -421,17 +457,25 @@ _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k)
   {
     g_ptr_array_add (spectral->fftw_plans, NULL);
     g_ptr_array_add (spectral->cos_arrays, NULL);
+    g_ptr_array_add (spectral->sin_arrays, NULL);
   }
 
-  /* Precompute Chebyshev-Lobatto cosines: cos(j*pi/2^k) */
+  /* Precompute Chebyshev-Lobatto cosines and sines: cos(j*pi/2^k) and sin(j*pi/2^k) */
   {
     gdouble *cos_vals        = g_new (gdouble, N);
+    gdouble *sin_vals        = g_new (gdouble, N);
     const gdouble pi_over_2k = M_PI / (1 << k);
 
     for (j = 0; j < N; j++)
-      cos_vals[j] = cos (j * pi_over_2k);
+    {
+      const gdouble angle = j * pi_over_2k;
+
+      cos_vals[j] = cos (angle);
+      sin_vals[j] = sin (angle);
+    }
 
     g_ptr_array_index (spectral->cos_arrays, k) = cos_vals;
+    g_ptr_array_index (spectral->sin_arrays, k) = sin_vals;
   }
 
   /* Create out-of-place FFTW plan */
@@ -507,6 +551,56 @@ _ncm_spectral_refine_to_k (NcmSpectral *spectral, NcmSpectralF F,
 }
 
 static void
+_ncm_spectral_evaluate_all_nodes_weighted (NcmSpectral *spectral, NcmSpectralF F,
+                                           gdouble a, gdouble b, guint k, gpointer user_data)
+{
+  const guint N           = (1 << k) + 1;
+  const gdouble mid       = 0.5 * (a + b);
+  const gdouble half_h    = 0.5 * (b - a);
+  const gdouble *cos_vals = g_ptr_array_index (spectral->cos_arrays, k);
+  const gdouble *sin_vals = g_ptr_array_index (spectral->sin_arrays, k);
+  guint j;
+
+  for (j = 0; j < N; j++)
+  {
+    const gdouble x = mid + half_h * cos_vals[j];
+
+    spectral->f_vals[j] = F (user_data, x) * sin_vals[j] * half_h;
+  }
+}
+
+static void
+_ncm_spectral_refine_to_k_weighted (NcmSpectral *spectral, NcmSpectralF F,
+                                    gdouble a, gdouble b, guint k_old, guint k_new,
+                                    gpointer user_data)
+{
+  const guint N_old       = (1 << k_old) + 1;
+  const guint N_new       = (1 << k_new) + 1;
+  const gdouble mid       = 0.5 * (a + b);
+  const gdouble half_h    = 0.5 * (b - a);
+  const gdouble *cos_vals = g_ptr_array_index (spectral->cos_arrays, k_new);
+  const gdouble *sin_vals = g_ptr_array_index (spectral->sin_arrays, k_new);
+  gint j;
+  guint jj;
+
+  g_assert (k_new == k_old + 1);
+
+  /* Move existing values to even positions (BACKWARD to avoid overwriting) */
+  for (j = (gint) N_old - 1; j >= 0; j--)
+  {
+    spectral->f_vals[2 * j] = spectral->f_vals[j];
+  }
+
+  /* Compute new odd positions with weight sqrt(1-t^2) = sin(angle) */
+  for (jj = 1; jj < N_new; jj += 2)
+  {
+    const gdouble x = mid + half_h * cos_vals[jj];
+
+    spectral->f_vals[jj] = F (user_data, x) * sin_vals[jj] * half_h;
+  }
+}
+
+static void
 _ncm_spectral_normalize_coeffs (gdouble *coeffs_work, GArray *coeffs, guint N)
 {
   const gdouble inv_2Nm1 = 1.0 / (2.0 * (N - 1.0));
@@ -547,33 +641,12 @@ _ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble to
   return FALSE;
 }
 
-/**
- * ncm_spectral_compute_chebyshev_coeffs_adaptive:
- * @spectral: a #NcmSpectral
- * @F: (scope call): function to evaluate, receives x in [a,b]
- * @a: left endpoint of the interval
- * @b: right endpoint of the interval
- * @k_min: minimum refinement level (N_min = 2^@k_min + 1)
- * @tol: spectral convergence tolerance
- * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
- * @user_data: user data for @F
- *
- * Computes Chebyshev coefficients adaptively using nested Chebyshev-Lobatto nodes.
- * The function @F is evaluated at points x in [a,b]. Starts at level @k_min and refines
- * by doubling until spectral convergence is achieved or max_order is reached. Uses nested
- * nodes: only new odd nodes are computed at each refinement level.
- * The Chebyshev expansion is $f(x) = f(t) = \sum_{k=0}^{N-1} a_k T_k(t)$ where
- * $t = (2x - (a+b))/(b-a)$.
- *
- * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
- * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
- *
- * Returns: the final refinement level k used (N = 2^k + 1)
- */
-guint
-ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F,
-                                                gdouble a, gdouble b, guint k_min,
-                                                gdouble tol, GArray **coeffs, gpointer user_data)
+static guint
+_ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral, NcmSpectralF F,
+                                                          gdouble a, gdouble b, guint k_min,
+                                                          gdouble tol, GArray **coeffs, gpointer user_data,
+                                                          _NcmSpectralEvaluateFunc evaluate_func,
+                                                          _NcmSpectralRefineFunc refine_func)
 {
   guint k = k_min;
   GArray *c_previous, *c_current;
@@ -588,7 +661,7 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
 
   /* Initial evaluation at k_min */
   _ncm_spectral_prepare_plan_for_k (spectral, k);
-  _ncm_spectral_evaluate_all_nodes (spectral, F, a, b, k, user_data);
+  evaluate_func (spectral, F, a, b, k, user_data);
 
   c_previous = spectral->coeffs;
   c_current  = *coeffs;
@@ -609,7 +682,7 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
   {
     /* Transform using 2N and store in coeffs */
     _ncm_spectral_prepare_plan_for_k (spectral, k + 1);
-    _ncm_spectral_refine_to_k (spectral, F, a, b, k, k + 1, user_data);
+    refine_func (spectral, F, a, b, k, k + 1, user_data);
     k++;
     {
       const guint N  = (1 << k) + 1;
@@ -644,6 +717,80 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
   }
 
   return k;
+}
+
+/**
+ * ncm_spectral_compute_chebyshev_coeffs_adaptive:
+ * @spectral: a #NcmSpectral
+ * @F: (scope call): function to evaluate, receives x in [a,b]
+ * @a: left endpoint of the interval
+ * @b: right endpoint of the interval
+ * @k_min: minimum refinement level (N_min = 2^@k_min + 1)
+ * @tol: spectral convergence tolerance
+ * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
+ * @user_data: user data for @F
+ *
+ * Computes Chebyshev coefficients adaptively using nested Chebyshev-Lobatto nodes.
+ * The function @F is evaluated at points x in [a,b]. Starts at level @k_min and refines
+ * by doubling until spectral convergence is achieved or max_order is reached. Uses nested
+ * nodes: only new odd nodes are computed at each refinement level.
+ * The Chebyshev expansion is $f(x) = f(t) = \sum_{k=0}^{N-1} a_k T_k(t)$ where
+ * $t = (2x - (a+b))/(b-a)$.
+ *
+ * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
+ * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
+ *
+ * Returns: the final refinement level k used (N = 2^k + 1)
+ */
+guint
+ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F,
+                                                gdouble a, gdouble b, guint k_min,
+                                                gdouble tol, GArray **coeffs, gpointer user_data)
+{
+  return _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (spectral, F, a, b, k_min,
+                                                                   tol, coeffs, user_data,
+                                                                   _ncm_spectral_evaluate_all_nodes,
+                                                                   _ncm_spectral_refine_to_k);
+}
+
+/**
+ * ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted:
+ * @spectral: a #NcmSpectral
+ * @F: (scope call): function to evaluate, receives x in [a,b]
+ * @a: left endpoint of the interval
+ * @b: right endpoint of the interval
+ * @k_min: minimum refinement level (N_min = 2^@k_min + 1)
+ * @tol: spectral convergence tolerance
+ * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
+ * @user_data: user data for @F
+ *
+ * Computes Chebyshev coefficients of $F(x(t)) \sqrt{1-t^2} h$ adaptively using nested
+ * Chebyshev-Lobatto nodes, where $h = (b-a)/2$. The weight factor $\sqrt{1-t^2} \cdot h$ 
+ * enables direct integral computation: the integral $\int_a^b F(x)dx = \pi \cdot$ @coeffs[0].
+ *
+ * This weighted expansion enables efficient computation of integrals:
+ * $\int_a^b F(x)G(x)dx$ can be computed from the weighted coefficients of $F$
+ * and the standard coefficients of $G$.
+ *
+ * At Chebyshev-Lobatto nodes $t_j = \cos(j\pi/2^k)$, the weight is $\sqrt{1-t_j^2} = \sin(j\pi/2^k)$.
+ *
+ * The function @F is evaluated at points x in [a,b]. Starts at level @k_min and refines
+ * by doubling until spectral convergence is achieved or max_order is reached.
+ *
+ * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
+ * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
+ *
+ * Returns: the final refinement level k used (N = 2^k + 1)
+ */
+guint
+ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted (NcmSpectral *spectral, NcmSpectralF F,
+                                                         gdouble a, gdouble b, guint k_min,
+                                                         gdouble tol, GArray **coeffs, gpointer user_data)
+{
+  return _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (spectral, F, a, b, k_min,
+                                                                   tol, coeffs, user_data,
+                                                                   _ncm_spectral_evaluate_all_nodes_weighted,
+                                                                   _ncm_spectral_refine_to_k_weighted);
 }
 
 /**
