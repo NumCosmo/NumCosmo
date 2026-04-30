@@ -125,90 +125,9 @@ def fixture_redshift_dist_bad(request) -> tuple[str, list[dict]]:
 @pytest.fixture(name="shape_dist", params=[e.value for e in GalaxyShapeGen])
 def fixture_shape_dist(request) -> tuple[str, dict]:
     """Fixture for the galaxy shape distribution."""
-    if request.param == GalaxyShapeGen.GAUSS:
-        config = {
-            "ellip_conv": choice(["trace", "trace-det"]),
-            "ellip_coord": choice(["celestial", "euclidean"]),
-            "sigma": uniform(0.2, 0.5),
-            "std_noise": uniform(0.01, 0.1),
-        }
-    else:
-        config = {
-            "ellip_conv": choice(["trace", "trace-det"]),
-            "ellip_coord": choice(["celestial", "euclidean"]),
-            "std_shape": uniform(0.2, 0.4),
-            "std_noise": uniform(0.01, 0.1),
-            "std_sigma": uniform(0.01, 0.1),
-            "c1_sigma": uniform(0.01, 0.1),
-            "c2_sigma": uniform(0.01, 0.1),
-            "m_sigma": uniform(0.01, 0.1),
-        }
-    return request.param, config
-
-
-@pytest.fixture(
-    name="shape_dist_bad", params=[e.value for e in GalaxyShapeGen] + ["bogus"]
-)
-def fixture_shape_dist_bad(request) -> tuple[str, list[dict]]:
-    """Fixture for the galaxy shape distribution bad configuration."""
-    config: list[dict]
-    if request.param == GalaxyShapeGen.GAUSS:
-        config = [
-            {
-                "ellip_conv": "trace",
-                "ellip_coord": "celestial",
-                "sigma": 0.15,
-                "std_noise": 0.01,
-                "std_shape": 0.2,
-            },
-            {"std_shape": 0.2},
-            {"ellip_conv": "a"},
-            {"ellip_coord": "b"},
-            {"sigma": "c"},
-            {"std_noise": "d"},
-            {"a": None},
-            {"sigma": -0.1},
-            {"std_noise": -0.01},
-        ]
-    elif request.param == GalaxyShapeGen.GAUSS_HSC:
-        config = [
-            {
-                "ellip_conv": "trace",
-                "ellip_coord": "celestial",
-                "std_shape": 0.15,
-                "std_noise": 0.01,
-                "std_sigma": 0.01,
-                "c1_sigma": 0.01,
-                "c2_sigma": 0.01,
-                "m_sigma": 0.01,
-                "sigma": 0.15,
-            },
-            {"sigma": 0.15},
-            {"ellip_conv": "a"},
-            {"ellip_coord": "b"},
-            {"std_shape": "c"},
-            {"std_noise": "d"},
-            {"std_sigma": "e"},
-            {"c1_sigma": "f"},
-            {"c2_sigma": "g"},
-            {"m_sigma": "h"},
-            {"a": None},
-            {"std_shape": -0.1},
-            {"std_noise": -0.01},
-            {"std_sigma": -0.01},
-            {"c1_sigma": -0.01},
-            {"c2_sigma": -0.01},
-            {"m_sigma": -0.01},
-        ]
-    else:
-        config = [
-            {
-                "ellip_conv": choice(["trace", "trace-det"]),
-                "ellip_coord": choice(["celestial", "euclidean"]),
-                "sigma": uniform(0.2, 0.5),
-                "std_noise": uniform(0.01, 0.1),
-            },
-            {
+    match request.param:
+        case GalaxyShapeGen.HSM_GAUSS:
+            config = {
                 "ellip_conv": choice(["trace", "trace-det"]),
                 "ellip_coord": choice(["celestial", "euclidean"]),
                 "std_shape": uniform(0.2, 0.4),
@@ -217,8 +136,95 @@ def fixture_shape_dist_bad(request) -> tuple[str, list[dict]]:
                 "c1_sigma": uniform(0.01, 0.1),
                 "c2_sigma": uniform(0.01, 0.1),
                 "m_sigma": uniform(0.01, 0.1),
-            },
-        ]
+            }
+        case GalaxyShapeGen.HSM_GAUSS_GLOBAL:
+            config = {
+                "ellip_conv": choice(["trace", "trace-det"]),
+                "ellip_coord": choice(["celestial", "euclidean"]),
+                "sigma": uniform(0.2, 0.4),
+                "std_noise": uniform(0.01, 0.1),
+                "c1_sigma": uniform(0.01, 0.1),
+                "c2_sigma": uniform(0.01, 0.1),
+                "m_sigma": uniform(0.01, 0.1),
+            }
+        case _:
+            config = {}
+    return request.param, config
+
+
+@pytest.fixture(
+    name="shape_dist_bad", params=[e.value for e in GalaxyShapeGen] + ["bogus"]
+)
+def fixture_shape_dist_bad(request) -> tuple[str, list[dict]]:
+    """Fixture for the galaxy shape distribution bad configuration."""
+    match request.param:
+        case GalaxyShapeGen.HSM_GAUSS:
+            config = [
+                {
+                    "ellip_conv": "trace",
+                    "ellip_coord": "celestial",
+                    "std_shape": 0.15,
+                    "std_noise": 0.01,
+                    "std_sigma": 0.01,
+                    "c1_sigma": 0.01,
+                    "c2_sigma": 0.01,
+                    "m_sigma": 0.01,
+                    "sigma": 0.15,
+                },
+                {"sigma": 0.15},
+                {"ellip_conv": "a"},
+                {"ellip_coord": "b"},
+                {"std_shape": "c"},
+                {"std_noise": "d"},
+                {"std_sigma": "e"},
+                {"c1_sigma": "f"},
+                {"c2_sigma": "g"},
+                {"m_sigma": "h"},
+                {"a": None},
+                {"std_shape": -0.1},
+                {"std_noise": -0.01},
+                {"std_sigma": -0.01},
+                {"c1_sigma": -0.01},
+                {"c2_sigma": -0.01},
+                {"m_sigma": -0.01},
+            ]
+        case GalaxyShapeGen.HSM_GAUSS_GLOBAL:
+            config = [
+                {
+                    "ellip_conv": "trace",
+                    "ellip_coord": "celestial",
+                    "sigma": 0.15,
+                    "std_noise": 0.01,
+                    "std_shape": 0.2,
+                },
+                {"std_shape": 0.2},
+                {"ellip_conv": "a"},
+                {"ellip_coord": "b"},
+                {"sigma": "c"},
+                {"std_noise": "d"},
+                {"a": None},
+                {"sigma": -0.1},
+                {"std_noise": -0.01},
+            ]
+        case _:
+            config = [
+                {
+                    "ellip_conv": choice(["trace", "trace-det"]),
+                    "ellip_coord": choice(["celestial", "euclidean"]),
+                    "sigma": uniform(0.2, 0.5),
+                    "std_noise": uniform(0.01, 0.1),
+                },
+                {
+                    "ellip_conv": choice(["trace", "trace-det"]),
+                    "ellip_coord": choice(["celestial", "euclidean"]),
+                    "std_shape": uniform(0.2, 0.4),
+                    "std_noise": uniform(0.01, 0.1),
+                    "std_sigma": uniform(0.01, 0.1),
+                    "c1_sigma": uniform(0.01, 0.1),
+                    "c2_sigma": uniform(0.01, 0.1),
+                    "m_sigma": uniform(0.01, 0.1),
+                },
+            ]
     return request.param, config
 
 
@@ -487,10 +493,13 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_dist):
     )
     assert result.exit_code == 0, result.output
 
-    if shape_dist[0] == GalaxyShapeGen.GAUSS:
-        assert "GalaxyShapeGenGauss" in result.output
-    else:
-        assert "GalaxyShapeGenGaussHSC" in result.output
+    match shape_dist[0]:
+        case GalaxyShapeGen.HSM_GAUSS:
+            assert "GalaxyShapeGenHSMGauss" in result.output
+        case GalaxyShapeGen.HSM_GAUSS_GLOBAL:
+            assert "GalaxyShapeGenHSMGaussGlobal" in result.output
+        case _:
+            pass
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
 
@@ -500,32 +509,43 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_dist):
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    dataset = ser.from_binfile(dataset_file.as_posix())
-    cluster_data = dataset.get_data(0)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    cluster_data = cast(Nc.DataClusterWL, dataset.get_data(0))
     obs = cluster_data.peek_obs()
+    s_dist_model = cast(Nc.GalaxySDShape, mset.peek_by_name("NcGalaxySDShape"))
 
     for i in range(obs.len()):
-        if shape_dist[0] == GalaxyShapeGen.GAUSS:
-            assert (
-                abs(obs.get("epsilon_obs_1", i))
-                <= 1.0 + 6.0 * shape_dist[1]["std_noise"]
-            )
-            assert (
-                abs(obs.get("epsilon_obs_2", i))
-                <= 1.0 + 6.0 * shape_dist[1]["std_noise"]
-            )
-            assert obs.get("std_noise", i) == shape_dist[1]["std_noise"]
-        else:
-            assert abs(obs.get("epsilon_obs_1", i)) <= 1.0 + 6.0 * (
-                shape_dist[1]["std_shape"] ** 2 + shape_dist[1]["std_noise"] ** 2
-            ) ** (1 / 2)
-            assert abs(obs.get("epsilon_obs_2", i)) <= 1.0 + 6.0 * (
-                shape_dist[1]["std_shape"] ** 2 + shape_dist[1]["std_noise"] ** 2
-            ) ** (1 / 2)
-            assert obs.get("std_shape", i) <= 0.45
-            assert abs(obs.get("c1", i)) <= 6.0 * shape_dist[1]["c1_sigma"]
-            assert abs(obs.get("c2", i)) <= 6.0 * shape_dist[1]["c2_sigma"]
-            assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_dist[1]["m_sigma"]
+        match shape_dist[0]:
+            case GalaxyShapeGen.HSM_GAUSS:
+                assert abs(obs.get("epsilon_obs_1", i)) <= 1.0 + 6.0 * (
+                    shape_dist[1]["std_shape"] ** 2 + shape_dist[1]["std_noise"] ** 2
+                ) ** (1 / 2)
+                assert abs(obs.get("epsilon_obs_2", i)) <= 1.0 + 6.0 * (
+                    shape_dist[1]["std_shape"] ** 2 + shape_dist[1]["std_noise"] ** 2
+                ) ** (1 / 2)
+                assert obs.get("std_shape", i) <= 0.45
+                assert obs.get("std_noise", i) <= 0.5
+                assert abs(obs.get("c1", i)) <= 6.0 * shape_dist[1]["c1_sigma"]
+                assert abs(obs.get("c2", i)) <= 6.0 * shape_dist[1]["c2_sigma"]
+                assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_dist[1]["m_sigma"]
+            case GalaxyShapeGen.HSM_GAUSS_GLOBAL:
+                assert (
+                    abs(obs.get("epsilon_obs_1", i))
+                    <= 1.0 + 6.0 * shape_dist[1]["std_noise"]
+                )
+                assert (
+                    abs(obs.get("epsilon_obs_2", i))
+                    <= 1.0 + 6.0 * shape_dist[1]["std_noise"]
+                )
+                assert s_dist_model["sigma"] == shape_dist[1]["sigma"]
+                assert obs.get("std_noise", i) <= 0.5
+                assert abs(obs.get("c1", i)) <= 6.0 * shape_dist[1]["c1_sigma"]
+                assert abs(obs.get("c2", i)) <= 6.0 * shape_dist[1]["c2_sigma"]
+                assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_dist[1]["m_sigma"]
+            case _:
+                pass
 
 
 def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_dist_bad):
@@ -646,8 +666,8 @@ def test_cluster_wl_app_halo_mass_summary(experiment_file, halo_mass_summary):
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     _ = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
-    mset = experiment.get("model-set")
-    hms = mset.peek_by_name("NcHaloMassSummary")
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    hms = cast(Nc.HaloMassSummary, mset.peek_by_name("NcHaloMassSummary"))
 
     assert hms["log10MDelta"] == log10(mass)
     assert hms["cDelta"] == c
@@ -713,8 +733,8 @@ def test_cluster_wl_app_halo_position(experiment_file, halo_position):
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     _ = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
-    mset = experiment.get("model-set")
-    hp = mset.peek_by_name("NcHaloPosition")
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    hp = cast(Nc.HaloPosition, mset.peek_by_name("NcHaloPosition"))
 
     assert hp["ra"] == cluster_ra
     assert hp["dec"] == cluster_dec
@@ -763,13 +783,13 @@ def test_cluster_wl_app_radius(experiment_file, radius):
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    dataset = ser.from_binfile(dataset_file.as_posix())
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
-    mset = experiment.get("model-set")
-    cluster_data = dataset.get_data(0)
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    cluster_data = cast(Nc.DataClusterWL, dataset.get_data(0))
     obs = cluster_data.peek_obs()
-    hp = mset.peek_by_name("NcHaloPosition")
-    cosmo = mset.peek_by_name("NcHICosmo")
+    hp = cast(Nc.HaloPosition, mset.peek_by_name("NcHaloPosition"))
+    cosmo = cast(Nc.HICosmo, mset.peek_by_name("NcHICosmo"))
 
     hp.prepare(cosmo)
 
@@ -965,7 +985,7 @@ def test_cluster_wl_app_fit_parameters(experiment_file, fit_parameters):
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     _ = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
-    mset = experiment.get("model-set")
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
     fparam = mset.fparam_full_name(0)
 
     assert (
