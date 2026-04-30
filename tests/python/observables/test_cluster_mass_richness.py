@@ -186,17 +186,17 @@ class TestClusterMassRichnessCommon:
         mean_lnR = cluster_m.mu(lnM, z)
 
         # Probability at mean should be positive
-        p_mean = cluster_m.p(cosmo, lnM, z, [mean_lnR], None)
+        p_mean = cluster_m.p(cosmo, lnM, z, [mean_lnR], [0.0])
         assert p_mean > 0.0
 
         # Probability should decrease away from mean
-        p_above = cluster_m.p(cosmo, lnM, z, [mean_lnR + 1.0], None)
-        p_below = cluster_m.p(cosmo, lnM, z, [mean_lnR - 1.0], None)
+        p_above = cluster_m.p(cosmo, lnM, z, [mean_lnR + 1.0], [0.0])
+        p_below = cluster_m.p(cosmo, lnM, z, [mean_lnR - 1.0], [0.0])
         assert p_above < p_mean
         assert p_below < p_mean
 
         # Far from mean should be very small
-        p_far = cluster_m.p(cosmo, lnM, z, [mean_lnR + 5.0], None)
+        p_far = cluster_m.p(cosmo, lnM, z, [mean_lnR + 5.0], [0.0])
         assert p_far < p_mean * 0.01
 
     def test_p_below_cut_is_zero(
@@ -207,7 +207,7 @@ class TestClusterMassRichnessCommon:
         z = 0.5
         cut = cluster_m.get_cut()
 
-        p_below_cut = cluster_m.p(cosmo, lnM, z, [cut - 1.0], None)
+        p_below_cut = cluster_m.p(cosmo, lnM, z, [cut - 1.0], [0.0])
         assert p_below_cut == 0.0
 
     def test_p_integral_equals_intp(
@@ -221,7 +221,7 @@ class TestClusterMassRichnessCommon:
 
         lnR_array = np.linspace(mean_lnR - 5 * std_lnR, mean_lnR + 5 * std_lnR, 500)
         p_array = np.array(
-            [cluster_m.p(cosmo, lnM, z, [lnR], None) for lnR in lnR_array]
+            [cluster_m.p(cosmo, lnM, z, [lnR], [0.0]) for lnR in lnR_array]
         )
 
         integral = np.trapezoid(p_array, lnR_array)
@@ -250,14 +250,14 @@ class TestClusterMassRichnessCommon:
         std_lnR = cluster_m.sigma(lnM, z)
 
         bin_val = cluster_m.intp_bin(
-            cosmo, lnM, z, [mean_lnR], [mean_lnR + std_lnR], None
+            cosmo, lnM, z, [mean_lnR], [mean_lnR + std_lnR], [0.0]
         )
         assert bin_val > 0.0
 
         # Sum of bins should equal total integral
         lnR_edges = np.linspace(mean_lnR - 5 * std_lnR, mean_lnR + 5 * std_lnR, 11)
         bin_sum = sum(
-            cluster_m.intp_bin(cosmo, lnM, z, [lnR_edges[i]], [lnR_edges[i + 1]], None)
+            cluster_m.intp_bin(cosmo, lnM, z, [lnR_edges[i]], [lnR_edges[i + 1]], [0.0])
             for i in range(len(lnR_edges) - 1)
         )
         total_integral = cluster_m.intp(cosmo, lnM, z)
@@ -278,11 +278,13 @@ class TestClusterMassRichnessCommon:
 
         lnR_array = np.linspace(lnR_lower, lnR_upper, 200)
         p_array = np.array(
-            [cluster_m.p(cosmo, lnM, z, [lnR], None) for lnR in lnR_array]
+            [cluster_m.p(cosmo, lnM, z, [lnR], [0.0]) for lnR in lnR_array]
         )
         manual_integral = np.trapezoid(p_array, lnR_array)
 
-        intp_bin_val = cluster_m.intp_bin(cosmo, lnM, z, [lnR_lower], [lnR_upper], None)
+        intp_bin_val = cluster_m.intp_bin(
+            cosmo, lnM, z, [lnR_lower], [lnR_upper], [0.0]
+        )
 
         assert np.isclose(manual_integral, intp_bin_val, rtol=1e-3)
 
@@ -296,12 +298,15 @@ class TestClusterMassRichnessCommon:
 
         z_vec = Ncm.Vector.new_array(z_array)
         lnR_mat = Ncm.Matrix.new_array(lnR_array, 1)
+        # Create sigma_lnR matrix (zeros for no observational error)
+        sigma_lnR_mat = Ncm.Matrix.new(len(z_array), 1)
+        sigma_lnR_mat.set_zero()
         res = Ncm.Vector.new(len(z_array))
 
-        cluster_m.p_vec_z_lnMobs(cosmo, lnM, z_vec, lnR_mat, None, res)
+        cluster_m.p_vec_z_lnMobs(cosmo, lnM, z_vec, lnR_mat, sigma_lnR_mat, res)
 
         for i, (z, lnR) in enumerate(zip(z_array, lnR_array)):
-            p_scalar = cluster_m.p(cosmo, lnM, z, [lnR], None)
+            p_scalar = cluster_m.p(cosmo, lnM, z, [lnR], [0.0])
             p_vec = res.get(i)
             assert np.isclose(p_scalar, p_vec, rtol=1e-10)
 
@@ -333,9 +338,11 @@ class TestClusterMassRichnessCommon:
         n_in_range = 0
         samples_list = []
         lnR_vec = Ncm.Vector.new(1)
+        sigma_lnR_vec = Ncm.Vector.new(1)
+        sigma_lnR_vec.set_zero()
 
         for _ in range(n_samples):
-            valid = cluster_m.resample_vec(cosmo, lnM, z, lnR_vec, None, rng)
+            valid = cluster_m.resample_vec(cosmo, lnM, z, lnR_vec, sigma_lnR_vec, rng)
             lnR = lnR_vec.get(0)
             samples_list.append(lnR)
             if valid:
@@ -362,9 +369,11 @@ class TestClusterMassRichnessCommon:
 
         n_samples = 100
         lnR_vec = Ncm.Vector.new(1)
+        sigma_lnR_vec = Ncm.Vector.new(1)
+        sigma_lnR_vec.set_zero()
 
         for _ in range(n_samples):
-            valid = cluster_m.resample_vec(cosmo, lnM, z, lnR_vec, None, rng)
+            valid = cluster_m.resample_vec(cosmo, lnM, z, lnR_vec, sigma_lnR_vec, rng)
             lnR = lnR_vec.get(0)
             # With truncated sampling, all values should be >= cut
             assert lnR >= cut
@@ -480,9 +489,10 @@ class TestClusterMassExt:
     def test_mu_formula(self, cluster_m_ext: Nc.ClusterMassExt) -> None:
         """Test mu follows the Ext formula.
 
-        The Ext formula is mu = mup0 + mup1*DlnM + mup2*DlnM^2 + mup3*DlnM^3.
+        The Ext formula is mu = mup0 + mup1*DlnM + mup2*DlnM^2 + mup3*Dln1pz.
         """
         lnM0 = cluster_m_ext.lnM0()
+        ln1pz0 = cluster_m_ext.ln1pz0()
 
         mup0 = cluster_m_ext.param_get_by_name("mup0")
         mup1 = cluster_m_ext.param_get_by_name("mup1")
@@ -490,11 +500,12 @@ class TestClusterMassExt:
         mup3 = cluster_m_ext.param_get_by_name("mup3")
 
         lnM = np.log(1e14)
-        z = 0.5  # z should not affect mu in Ext model
+        z = 0.5
 
         DlnM = lnM - lnM0
+        Dln1pz = np.log1p(z) - ln1pz0
 
-        expected_mu = mup0 + mup1 * DlnM + mup2 * DlnM**2 + mup3 * DlnM**3
+        expected_mu = mup0 + mup1 * DlnM + mup2 * DlnM**2 + mup3 * Dln1pz
         actual_mu = cluster_m_ext.mu(lnM, z)
 
         assert np.isclose(expected_mu, actual_mu, rtol=1e-10)
@@ -518,15 +529,18 @@ class TestClusterMassExt:
 
         assert np.isclose(expected_sigma, actual_sigma, rtol=1e-10)
 
-    def test_mu_no_redshift_dependence(self, cluster_m_ext: Nc.ClusterMassExt) -> None:
-        """Test mu does not depend on redshift in Ext model."""
+    def test_mu_redshift_dependence(self, cluster_m_ext: Nc.ClusterMassExt) -> None:
+        """Test mu depends on redshift in Ext model through mup3 term."""
         lnM = np.log(1e14)
         z_array = [0.1, 0.5, 1.0, 1.5]
 
         mu_values = [cluster_m_ext.mu(lnM, z) for z in z_array]
 
-        # All mu values should be identical
-        assert all(np.isclose(mu_values[0], mu) for mu in mu_values)
+        # With non-zero mup3, mu should vary with redshift
+        mup3 = cluster_m_ext.param_get_by_name("mup3")
+        if abs(mup3) > 1e-10:
+            # mu values should not all be identical
+            assert not all(np.isclose(mu_values[0], mu) for mu in mu_values)
 
     def test_sigma_depends_on_mu(self, cluster_m_ext: Nc.ClusterMassExt) -> None:
         """Test that sigma varies with mu (mass-dependent scatter)."""
@@ -539,24 +553,30 @@ class TestClusterMassExt:
         assert not all(np.isclose(sigma_array[0], s) for s in sigma_array)
 
     def test_polynomial_mu(self, cluster_m_ext: Nc.ClusterMassExt) -> None:
-        """Test cubic polynomial behavior of mu."""
+        """Test polynomial behavior of mu with redshift dependence."""
         lnM0 = cluster_m_ext.lnM0()
-        z = 0.5
+        ln1pz0 = cluster_m_ext.ln1pz0()
 
-        # At pivot mass, DlnM = 0, so mu = mup0
+        # At pivot mass and redshift, DlnM = 0 and Dln1pz = 0, so mu = mup0
+        # But we need to find the pivot redshift z0 from ln1pz0
+        z0 = np.exp(ln1pz0) - 1.0
         mup0 = cluster_m_ext.param_get_by_name("mup0")
-        assert np.isclose(cluster_m_ext.mu(lnM0, z), mup0, rtol=1e-10)
+        assert np.isclose(cluster_m_ext.mu(lnM0, z0), mup0, rtol=1e-10)
 
-        # Test polynomial evaluation at several points
+        # Test formula evaluation at several points
         lnM_array = np.linspace(np.log(1e13), np.log(1e16), 20)
-        for lnM in lnM_array:
-            DlnM = lnM - lnM0
-            mup1 = cluster_m_ext.param_get_by_name("mup1")
-            mup2 = cluster_m_ext.param_get_by_name("mup2")
-            mup3 = cluster_m_ext.param_get_by_name("mup3")
+        z_array = [0.1, 0.5, 1.0]
 
-            expected = mup0 + mup1 * DlnM + mup2 * DlnM**2 + mup3 * DlnM**3
-            assert np.isclose(cluster_m_ext.mu(lnM, z), expected, rtol=1e-10)
+        for lnM in lnM_array:
+            for z_test in z_array:
+                DlnM = lnM - lnM0
+                Dln1pz = np.log1p(z_test) - ln1pz0
+                mup1 = cluster_m_ext.param_get_by_name("mup1")
+                mup2 = cluster_m_ext.param_get_by_name("mup2")
+                mup3 = cluster_m_ext.param_get_by_name("mup3")
+
+                expected = mup0 + mup1 * DlnM + mup2 * DlnM**2 + mup3 * Dln1pz
+                assert np.isclose(cluster_m_ext.mu(lnM, z_test), expected, rtol=1e-10)
 
 
 # =============================================================================
