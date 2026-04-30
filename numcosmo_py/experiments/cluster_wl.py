@@ -251,12 +251,12 @@ class GalaxyZGen(StrEnum):
         return metavar
 
 
-DEFAULT_GAUSS_HSC_STD_SHAPE = 0.3
-DEFAULT_GAUSS_HSC_STD_NOISE = 0.1
-DEFAULT_GAUSS_HSC_STD_SIGMA = 0.01
-DEFAULT_GAUSS_HSC_C1_SIGMA = 0.01
-DEFAULT_GAUSS_HSC_C2_SIGMA = 0.01
-DEFAULT_GAUSS_HSC_M_SIGMA = 0.08
+DEFAULT_HSM_GAUSS_STD_SHAPE = 0.3
+DEFAULT_HSM_GAUSS_STD_NOISE = 0.1
+DEFAULT_HSM_GAUSS_STD_SIGMA = 0.01
+DEFAULT_HSM_GAUSS_C1_SIGMA = 0.01
+DEFAULT_HSM_GAUSS_C2_SIGMA = 0.01
+DEFAULT_HSM_GAUSS_M_SIGMA = 0.08
 
 
 class GalaxyShapeGenHSMGauss(BaseModel):
@@ -266,14 +266,14 @@ class GalaxyShapeGenHSMGauss(BaseModel):
 
     ellip_conv: Annotated[EllipConv, Field()] = EllipConv.TRACE_DET
     ellip_coord: Annotated[EllipCoord, Field()] = EllipCoord.CELESTIAL
-    std_shape: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_STD_SHAPE
-    std_noise: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_STD_NOISE
-    std_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_STD_SIGMA
-    c1_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_C1_SIGMA
-    c2_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_C2_SIGMA
-    m_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_GAUSS_HSC_M_SIGMA
+    std_shape: Annotated[float, Field(gt=0.0)] = DEFAULT_HSM_GAUSS_STD_SHAPE
+    std_noise: Annotated[float, Field(gt=0.0)] = DEFAULT_HSM_GAUSS_STD_NOISE
+    std_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_HSM_GAUSS_STD_SIGMA
+    c1_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_HSM_GAUSS_C1_SIGMA
+    c2_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_HSM_GAUSS_C2_SIGMA
+    m_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_HSM_GAUSS_M_SIGMA
 
-    _gauss_hsc: Nc.GalaxySDShapeHSMGauss = PrivateAttr()
+    _hsm_gauss: Nc.GalaxySDShapeHSMGauss = PrivateAttr()
     _k_shape: float = PrivateAttr()
     _theta_shape: float = PrivateAttr()
     _k_noise: float = PrivateAttr()
@@ -287,12 +287,12 @@ class GalaxyShapeGenHSMGauss(BaseModel):
             (
                 f"ellip_conv={EllipConv.TRACE_DET.value}, "
                 f"ellip_coord={EllipCoord.CELESTIAL.value}, "
-                f"std_shape={DEFAULT_GAUSS_HSC_STD_SHAPE}, "
-                f"std_noise={DEFAULT_GAUSS_HSC_STD_NOISE}, "
-                f"std_sigma={DEFAULT_GAUSS_HSC_STD_SIGMA}, \n"
-                f"c1_sigma={DEFAULT_GAUSS_HSC_C1_SIGMA}, "
-                f"c2_sigma={DEFAULT_GAUSS_HSC_C2_SIGMA}, "
-                f"m_sigma={DEFAULT_GAUSS_HSC_M_SIGMA}"
+                f"std_shape={DEFAULT_HSM_GAUSS_STD_SHAPE}, "
+                f"std_noise={DEFAULT_HSM_GAUSS_STD_NOISE}, "
+                f"std_sigma={DEFAULT_HSM_GAUSS_STD_SIGMA}, \n"
+                f"c1_sigma={DEFAULT_HSM_GAUSS_C1_SIGMA}, "
+                f"c2_sigma={DEFAULT_HSM_GAUSS_C2_SIGMA}, "
+                f"m_sigma={DEFAULT_HSM_GAUSS_M_SIGMA}"
             ),
         ]
 
@@ -304,7 +304,7 @@ class GalaxyShapeGenHSMGauss(BaseModel):
 
     def model_post_init(self, _: Any, /) -> None:
         """Check that sigma is less than std_noise."""
-        self._gauss_hsc = Nc.GalaxySDShapeHSMGauss.new(self.ellip_conv.genum)
+        self._hsm_gauss = Nc.GalaxySDShapeHSMGauss.new(self.ellip_conv.genum)
         self._k_shape = ((self.std_shape**2) / self.std_sigma) ** 2
         self._theta_shape = self.std_sigma**2 / self.std_shape**2
         self._k_noise = ((self.std_noise**2) / self.std_sigma) ** 2
@@ -318,13 +318,13 @@ class GalaxyShapeGenHSMGauss(BaseModel):
         c2 = rng.gaussian_gen(0.0, self.c2_sigma)
         m = np.exp(rng.gaussian_gen(0.0, self.m_sigma))
         coord = self.ellip_coord.genum
-        self._gauss_hsc.gen(
+        self._hsm_gauss.gen(
             mset, shape_data, std_shape, std_noise, c1, c2, m, coord, rng
         )
 
     def get_shape_dist(self) -> Nc.GalaxySDShapeHSMGauss:
         """Return the galaxy shape source distribution data observations."""
-        return self._gauss_hsc
+        return self._hsm_gauss
 
     def __repr__(self):
         """Return a string representation of the model."""
@@ -387,8 +387,8 @@ class GalaxyShapeGenHSMGaussGlobal(BaseModel):
 
     def model_post_init(self, _: Any, /) -> None:
         """Check that sigma is less than std_noise."""
-        self._gauss = Nc.GalaxySDShapeHSMGaussGlobal.new(self.ellip_conv.genum)
-        self._gauss["sigma"] = self.sigma
+        self._hsm_gauss_global = Nc.GalaxySDShapeHSMGaussGlobal.new(self.ellip_conv.genum)
+        self._hsm_gauss_global["sigma"] = self.sigma
         self._k_noise = ((self.std_noise**2) / self.std_sigma) ** 2
         self._theta_noise = self.std_sigma**2 / self.std_noise**2
 
@@ -401,7 +401,7 @@ class GalaxyShapeGenHSMGaussGlobal(BaseModel):
         c2 = rng.gaussian_gen(0.0, self.c2_sigma)
         m = np.exp(rng.gaussian_gen(0.0, self.m_sigma))
         coord = self.ellip_coord.genum
-        self._gauss.gen(mset, shape_data, std_noise, c1, c2, m, coord, rng)
+        self._hsm_gauss_global.gen(mset, shape_data, std_noise, c1, c2, m, coord, rng)
 
     def get_shape_dist(self) -> Nc.GalaxySDShapeHSMGaussGlobal:
         """Return the galaxy shape source distribution data observations."""
