@@ -117,7 +117,6 @@ class RunClusterRichnessAnalysis(AppLogging):
                 "Ignore richness measurement uncertainties in the analysis. "
                 "By default, uncertainties are included."
             ),
-            is_flag=True,
         ),
     ] = False
 
@@ -197,7 +196,6 @@ class RunClusterRichnessAnalysis(AppLogging):
         typer.Option(
             "--run-mocks",
             help="Run mock study for bias assessment (requires --run-analysis).",
-            is_flag=True,
         ),
     ] = False
 
@@ -207,7 +205,6 @@ class RunClusterRichnessAnalysis(AppLogging):
             "--run-diagnostics",
             "-d",
             help="Run diagnostic analysis on the results.",
-            is_flag=True,
         ),
     ] = False
 
@@ -225,7 +222,6 @@ class RunClusterRichnessAnalysis(AppLogging):
             "--show-plots",
             "-p",
             help="Display diagnostic plots (requires --run-analysis).",
-            is_flag=True,
         ),
     ] = False
 

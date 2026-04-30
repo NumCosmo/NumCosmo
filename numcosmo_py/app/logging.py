@@ -63,7 +63,6 @@ class AppLogging:
             "--quite",
             "-q",
             help="Suppress console output.",
-            is_flag=True,
         ),
     ] = False
 
