@@ -35,9 +35,6 @@ from scipy.integrate import quad
 
 from numcosmo_py import Ncm
 
-ATOL = 1.0e-14
-
-
 class TestSpectralWeighted:
     """Tests for NcmSpectral weighted coefficient methods for integral computation."""
 
@@ -50,7 +47,8 @@ class TestSpectralWeighted:
         """Test that weighted coefficients give correct integral for constant function.
 
         For f(x) = c (constant), the integral over [a,b] is c*(b-a).
-        The first weighted coefficient times π*(b-a)/2 should equal this integral.
+        In the weighted API, coeffs[0] already includes the interval scaling,
+        so the integral is obtained as π * coeffs[0].
         """
 
         def f_constant(_user_data, _x):

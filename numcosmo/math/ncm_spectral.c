@@ -766,7 +766,7 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
  *
  * Computes Chebyshev coefficients of $F(x(t)) \sqrt{1-t^2} h$ adaptively using nested
  * Chebyshev-Lobatto nodes, where $h = (b-a)/2$. The weight factor $\sqrt{1-t^2} \cdot h$
- * enables direct integral computation: the integral $\int_a^b F(x)dx = \pi \cdot$ @coeffs[0].
+ * enables direct integral computation: the integral $\int_a^b F(x)dx = \pi \cdot$ coeffs[0].
  *
  * This weighted expansion enables efficient computation of integrals:
  * $\int_a^b F(x)G(x)dx$ can be computed from the weighted coefficients of $F$
