@@ -35,6 +35,7 @@ from scipy.integrate import quad
 
 from numcosmo_py import Ncm
 
+
 class TestSpectralWeighted:
     """Tests for NcmSpectral weighted coefficient methods for integral computation."""
 
@@ -209,7 +210,7 @@ class TestSpectralWeighted:
             coeffs = np.array(coeffs_list)
 
             # Compute reference integral
-            expected_integral, _error = quad(lambda x: func(None, x), a, b)
+            expected_integral, _error = quad(lambda x, f=func: f(None, x), a, b)
 
             # First coefficient times π should match the integral
             computed_integral = coeffs[0] * np.pi
@@ -315,14 +316,14 @@ class TestSpectralWeighted:
         tol = 1.0e-10
 
         # Compute weighted coefficients
-        k_w, coeffs_w_list = spectral.compute_chebyshev_coeffs_adaptive_weighted(
+        _k_w, coeffs_w_list = spectral.compute_chebyshev_coeffs_adaptive_weighted(
             f, a, b, k_min, tol, None
         )
         coeffs_w = np.array(coeffs_w_list)
 
         # Compute standard coefficients at same order
         N_w = len(coeffs_w)
-        k_std, coeffs_std_list = spectral.compute_chebyshev_coeffs_adaptive(
+        _k_std, coeffs_std_list = spectral.compute_chebyshev_coeffs_adaptive(
             f, a, b, k_min, tol, None
         )
         coeffs_std = np.array(coeffs_std_list)
@@ -438,7 +439,7 @@ class TestSpectralWeighted:
         assert_allclose(computed_integral, expected_integral, rtol=1.0e-8, atol=1.0e-9)
 
     def test_weighted_boundary_values(self, spectral: Ncm.Spectral) -> None:
-        """Test weighted coefficients with functions that have specific boundary values."""
+        """Test weighted coefficients with specific boundary values."""
 
         def f_boundary(_user_data, x):
             """Function that is 1 at boundaries, 0 at center."""
@@ -601,7 +602,7 @@ class TestSpectralWeighted:
 
 
 class TestSpectralProductIntegral:
-    """Tests for computing integrals of products using weighted and standard Chebyshev coefficients.
+    """Tests for computing integrals of products.
 
     For two functions F(x) and G(x), the integral of their product can be computed as:
     ∫_a^b F(x)G(x)dx = π·a_0·b_0 + (π/2)·Σ_{k>0} a_k·b_k
