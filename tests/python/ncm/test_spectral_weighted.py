@@ -442,7 +442,7 @@ class TestSpectralWeighted:
         """Test weighted coefficients with specific boundary values."""
 
         def f_boundary(_user_data, x):
-            """Function that is 1 at boundaries, 0 at center."""
+            """Test function."""
             return 1.0 - 4.0 * (x - 0.5) ** 2
 
         a, b = 0.0, 1.0
