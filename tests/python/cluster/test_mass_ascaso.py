@@ -49,7 +49,7 @@ def fixture_cluster_m() -> Nc.ClusterMassAscaso:
 
 def test_get_cut(cluster_m: Nc.ClusterMassAscaso) -> None:
     """Test richness cut parameter."""
-    assert cluster_m.get_cut(np.log(1e14), 0.5) == LN_RICHNESS_CUT
+    assert cluster_m.get_cut() == LN_RICHNESS_CUT
 
 
 def test_cluster_mass_ascaso_mean_std(cluster_m: Nc.ClusterMassAscaso) -> None:
@@ -59,14 +59,12 @@ def test_cluster_mass_ascaso_mean_std(cluster_m: Nc.ClusterMassAscaso) -> None:
     z = np.linspace(0, 1.1, nsize)
 
     for i in range(nsize):
-        assert cluster_m.get_mean(lnM[i], 0.5) >= cluster_m.get_mean_richness(
-            lnM[i], 0.5
-        )
-        assert cluster_m.get_mean(np.log(1e14), z[i]) >= cluster_m.get_mean_richness(
+        assert cluster_m.get_mean(lnM[i], 0.5) >= cluster_m.mu(lnM[i], 0.5)
+        assert cluster_m.get_mean(np.log(1e14), z[i]) >= cluster_m.mu(
             np.log(1e14), z[i]
         )
-        assert cluster_m.get_std(lnM[i], 0.5) <= cluster_m.get_std_richness(lnM[i], 0.5)
-        assert cluster_m.get_std(np.log(1e14), z[i]) <= cluster_m.get_std_richness(
+        assert cluster_m.get_std(lnM[i], 0.5) <= cluster_m.sigma(lnM[i], 0.5)
+        assert cluster_m.get_std(np.log(1e14), z[i]) <= cluster_m.sigma(
             np.log(1e14), z[i]
         )
 
@@ -87,17 +85,17 @@ def test_cluster_mass_ascaso_p_basic(
     """Test probability distribution function."""
     lnM = np.log(1e14)
     z = 0.5
-    mean_lnR = cluster_m.get_mean_richness(lnM, z)
+    mean_lnR = cluster_m.mu(lnM, z)
 
-    p_mean = cluster_m.p(cosmo, lnM, z, [mean_lnR], None)
+    p_mean = cluster_m.p(cosmo, lnM, z, [mean_lnR], [0.0])
     assert p_mean > 0.0
 
-    p_above = cluster_m.p(cosmo, lnM, z, [mean_lnR + 1.0], None)
-    p_below = cluster_m.p(cosmo, lnM, z, [mean_lnR - 1.0], None)
+    p_above = cluster_m.p(cosmo, lnM, z, [mean_lnR + 1.0], [0.0])
+    p_below = cluster_m.p(cosmo, lnM, z, [mean_lnR - 1.0], [0.0])
     assert p_above < p_mean
     assert p_below < p_mean
 
-    p_far = cluster_m.p(cosmo, lnM, z, [mean_lnR + 5.0], None)
+    p_far = cluster_m.p(cosmo, lnM, z, [mean_lnR + 5.0], [0.0])
     assert p_far < p_mean * 0.01
 
 
@@ -107,11 +105,11 @@ def test_cluster_mass_ascaso_p_integral(
     """Test probability distribution integrates correctly."""
     lnM = np.log(1e14)
     z = 0.5
-    mean_lnR = cluster_m.get_mean_richness(lnM, z)
-    std_lnR = cluster_m.get_std_richness(lnM, z)
+    mean_lnR = cluster_m.mu(lnM, z)
+    std_lnR = cluster_m.sigma(lnM, z)
 
     lnR_array = np.linspace(mean_lnR - 5 * std_lnR, mean_lnR + 5 * std_lnR, 200)
-    p_array = np.array([cluster_m.p(cosmo, lnM, z, [lnR], None) for lnR in lnR_array])
+    p_array = np.array([cluster_m.p(cosmo, lnM, z, [lnR], [0.0]) for lnR in lnR_array])
 
     integral = np.trapezoid(p_array, lnR_array)
     intp_val = cluster_m.intp(cosmo, lnM, z)
@@ -136,15 +134,15 @@ def test_cluster_mass_ascaso_intp_bin_basic(
     """Test binned integration of probability distribution."""
     lnM = np.log(1e14)
     z = 0.5
-    mean_lnR = cluster_m.get_mean_richness(lnM, z)
-    std_lnR = cluster_m.get_std_richness(lnM, z)
+    mean_lnR = cluster_m.mu(lnM, z)
+    std_lnR = cluster_m.sigma(lnM, z)
 
-    bin_val = cluster_m.intp_bin(cosmo, lnM, z, [mean_lnR], [mean_lnR + std_lnR], None)
+    bin_val = cluster_m.intp_bin(cosmo, lnM, z, [mean_lnR], [mean_lnR + std_lnR], [0.0])
     assert bin_val > 0.0
 
     lnR_edges = np.linspace(mean_lnR - 5 * std_lnR, mean_lnR + 5 * std_lnR, 11)
     bin_sum = sum(
-        cluster_m.intp_bin(cosmo, lnM, z, [lnR_edges[i]], [lnR_edges[i + 1]], None)
+        cluster_m.intp_bin(cosmo, lnM, z, [lnR_edges[i]], [lnR_edges[i + 1]], [0.0])
         for i in range(len(lnR_edges) - 1)
     )
     total_integral = cluster_m.intp(cosmo, lnM, z)
@@ -158,17 +156,17 @@ def test_cluster_mass_ascaso_intp_bin_consistency(
     """Test intp_bin() matches manual integration of p()."""
     lnM = np.log(1e14)
     z = 0.5
-    mean_lnR = cluster_m.get_mean_richness(lnM, z)
-    std_lnR = cluster_m.get_std_richness(lnM, z)
+    mean_lnR = cluster_m.mu(lnM, z)
+    std_lnR = cluster_m.sigma(lnM, z)
 
     lnR_lower = mean_lnR - std_lnR
     lnR_upper = mean_lnR + std_lnR
 
     lnR_array = np.linspace(lnR_lower, lnR_upper, 200)
-    p_array = np.array([cluster_m.p(cosmo, lnM, z, [lnR], None) for lnR in lnR_array])
+    p_array = np.array([cluster_m.p(cosmo, lnM, z, [lnR], [0.0]) for lnR in lnR_array])
     manual_integral = np.trapezoid(p_array, lnR_array)
 
-    intp_bin_val = cluster_m.intp_bin(cosmo, lnM, z, [lnR_lower], [lnR_upper], None)
+    intp_bin_val = cluster_m.intp_bin(cosmo, lnM, z, [lnR_lower], [lnR_upper], [0.0])
 
     assert np.isclose(manual_integral, intp_bin_val, rtol=1e-3)
 
@@ -179,10 +177,10 @@ def test_cluster_mass_ascaso_truncated_gaussian(
     """Test truncated Gaussian mean and std corrections."""
     lnM = np.log(1e14)
     z = 0.5
-    cut = cluster_m.get_cut(np.log(1e14), 0.5)
+    cut = cluster_m.get_cut()
 
-    mean_untrunc = cluster_m.get_mean_richness(lnM, z)
-    std_untrunc = cluster_m.get_std_richness(lnM, z)
+    mean_untrunc = cluster_m.mu(lnM, z)
+    std_untrunc = cluster_m.sigma(lnM, z)
 
     mean_trunc = cluster_m.get_mean(lnM, z)
     std_trunc = cluster_m.get_std(lnM, z)
@@ -217,15 +215,18 @@ def test_cluster_mass_ascaso_p_vec_z_lnMobs(
     # Create Ncm.Vector for z and Ncm.Matrix for lnR (one column)
     z_vec = Ncm.Vector.new_array(z_array)
     lnR_mat = Ncm.Matrix.new_array(lnR_array, 1)
+    # Create sigma_lnR matrix (zeros for no observational error)
+    sigma_lnR_mat = Ncm.Matrix.new(len(z_array), 1)
+    sigma_lnR_mat.set_zero()
 
     # Allocate result array
     res = Ncm.Vector.new(len(z_array))
 
     # Vectorized call
-    cluster_m.p_vec_z_lnMobs(cosmo, lnM, z_vec, lnR_mat, None, res)
+    cluster_m.p_vec_z_lnMobs(cosmo, lnM, z_vec, lnR_mat, sigma_lnR_mat, res)
 
     # Compare with individual calls
     for i, (z, lnR) in enumerate(zip(z_array, lnR_array)):
-        p_scalar = cluster_m.p(cosmo, lnM, z, [lnR], None)
+        p_scalar = cluster_m.p(cosmo, lnM, z, [lnR], [0.0])
         p_vec = res.get(i)
         assert np.isclose(p_scalar, p_vec, rtol=1e-10)
