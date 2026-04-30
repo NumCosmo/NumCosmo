@@ -387,7 +387,9 @@ class GalaxyShapeGenHSMGaussGlobal(BaseModel):
 
     def model_post_init(self, _: Any, /) -> None:
         """Check that sigma is less than std_noise."""
-        self._hsm_gauss_global = Nc.GalaxySDShapeHSMGaussGlobal.new(self.ellip_conv.genum)
+        self._hsm_gauss_global = Nc.GalaxySDShapeHSMGaussGlobal.new(
+            self.ellip_conv.genum
+        )
         self._hsm_gauss_global["sigma"] = self.sigma
         self._k_noise = ((self.std_noise**2) / self.std_sigma) ** 2
         self._theta_noise = self.std_sigma**2 / self.std_noise**2
