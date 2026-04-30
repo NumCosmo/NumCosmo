@@ -42,6 +42,10 @@ typedef struct _TestNcClusterAbundance
   NcClusterMass *clusterm;
   NcClusterRedshift *clusterz;
   NcHICosmo *cosmo;
+  guint lnM_obs_params_len;
+  guint z_obs_params_len;
+  gdouble *lnM_obs_params;
+  gdouble *z_obs_params;
 } TestNcClusterAbundance;
 
 void test_nc_cluster_abundance_new (TestNcClusterAbundance *test, gconstpointer pdata);
@@ -144,6 +148,14 @@ test_nc_cluster_abundance_new (TestNcClusterAbundance *test, gconstpointer pdata
   test->clusterz = clusterz;
   test->area     = g_test_rand_double_range (0.21, 0.27) * 4.0 * ncm_c_pi () / 100.0;
 
+  /* Query parameter lengths from the model classes */
+  test->lnM_obs_params_len = nc_cluster_mass_class_obs_params_len (NC_CLUSTER_MASS_GET_CLASS (clusterm));
+  test->z_obs_params_len   = nc_cluster_redshift_class_obs_params_len (NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz));
+
+  /* Allocate zero-filled parameter arrays */
+  test->lnM_obs_params = (test->lnM_obs_params_len > 0) ? g_new0 (gdouble, test->lnM_obs_params_len) : NULL;
+  test->z_obs_params   = (test->z_obs_params_len > 0) ? g_new0 (gdouble, test->z_obs_params_len) : NULL;
+
   ncm_model_free (NCM_MODEL (cosmo));
   ncm_model_free (NCM_MODEL (reion));
   ncm_model_free (NCM_MODEL (prim));
@@ -160,6 +172,12 @@ test_nc_cluster_abundance_new (TestNcClusterAbundance *test, gconstpointer pdata
 void
 test_nc_cluster_abundance_free (TestNcClusterAbundance *test, gconstpointer pdata)
 {
+  if (test->lnM_obs_params != NULL)
+    g_free (test->lnM_obs_params);
+
+  if (test->z_obs_params != NULL)
+    g_free (test->z_obs_params);
+
   NCM_TEST_FREE (nc_data_cluster_ncount_free, test->ncdata);
   NCM_TEST_FREE (nc_cluster_abundance_free, test->cad);
   NCM_TEST_FREE (ncm_mset_free, test->mset);
@@ -191,7 +209,7 @@ test_nc_cluster_abundance_sanity (TestNcClusterAbundance *test, gconstpointer pd
 
   g_assert_cmpuint (nc_data_cluster_ncount_get_len (test->ncdata), >, 0);
   g_assert_cmpuint (nc_data_cluster_ncount_lnM_obs_len (test->ncdata), ==, 1);
-  g_assert_cmpuint (nc_data_cluster_ncount_lnM_obs_params_len (test->ncdata), ==, 0);
+  g_assert_cmpuint (nc_data_cluster_ncount_lnM_obs_params_len (test->ncdata), ==, 1);
   g_assert_cmpuint (nc_data_cluster_ncount_z_obs_len (test->ncdata), ==, 1);
   g_assert_cmpuint (nc_data_cluster_ncount_z_obs_params_len (test->ncdata), ==, 0);
 
@@ -212,7 +230,9 @@ test_nc_cluster_abundance_sanity (TestNcClusterAbundance *test, gconstpointer pd
     ncm_matrix_free (m);
 
     m = nc_data_cluster_ncount_get_lnM_obs_params (test->ncdata);
-    g_assert_null (m);
+    g_assert_nonnull (m);
+    g_assert_cmpuint (ncm_matrix_ncols (m), ==, 1);
+    ncm_matrix_free (m);
 
     m = nc_data_cluster_ncount_get_z_obs (test->ncdata);
     ncm_matrix_free (m);
@@ -298,10 +318,8 @@ test_nc_cluster_abundance_intp_bin_d2n (TestNcClusterAbundance *test, gconstpoin
   const gdouble z_obs_bin_lower[1]   = {0.1};
   const gdouble z_obs_bin_upper[1]   = {0.3};
 
-  gdouble d2n_bin1 = nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
-  gdouble d2n_bin2 = nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
-
-
+  gdouble d2n_bin1 = nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, test->lnM_obs_params, z_obs_bin_lower, z_obs_bin_upper, test->z_obs_params);
+  gdouble d2n_bin2 = nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, test->lnM_obs_params, z_obs_bin_lower, z_obs_bin_upper, test->z_obs_params);
 
   g_assert_true (gsl_finite (d2n_bin1));
   g_assert_true (gsl_finite (d2n_bin2));
@@ -316,8 +334,8 @@ test_nc_cluster_abundance_intp_d2n_bias (TestNcClusterAbundance *test, gconstpoi
 
   gdouble lnM_obs[1] = {1.0};
   gdouble z_obs[1]   = {0.3};
-  gdouble d2n_bias1  = nc_cluster_abundance_intp_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs, NULL, z_obs, NULL);
-  gdouble d2n_bias2  = nc_cluster_abundance_intp_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs, NULL, z_obs, NULL);
+  gdouble d2n_bias1  = nc_cluster_abundance_intp_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs, test->lnM_obs_params, z_obs, test->z_obs_params);
+  gdouble d2n_bias2  = nc_cluster_abundance_intp_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs, test->lnM_obs_params, z_obs, test->z_obs_params);
 
   g_assert_true (gsl_finite (d2n_bias1));
   g_assert_true (gsl_finite (d2n_bias2));
@@ -334,8 +352,8 @@ test_nc_cluster_abundance_intp_bin_d2n_bias (TestNcClusterAbundance *test, gcons
     const gdouble lnM_obs_bin_upper[1] = {1.0};
     const gdouble z_obs_bin_lower[1]   = {0.1};
     const gdouble z_obs_bin_upper[1]   = {0.3};
-    gdouble d2n_bias_bin1              = nc_cluster_abundance_intp_bin_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
-    gdouble d2n_bias_bin2              = nc_cluster_abundance_intp_bin_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_lower, z_obs_bin_upper, NULL);
+    gdouble d2n_bias_bin1              = nc_cluster_abundance_intp_bin_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, test->lnM_obs_params, z_obs_bin_lower, z_obs_bin_upper, test->z_obs_params);
+    gdouble d2n_bias_bin2              = nc_cluster_abundance_intp_bin_d2n_bias (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, test->lnM_obs_params, z_obs_bin_lower, z_obs_bin_upper, test->z_obs_params);
 
     g_assert_true (gsl_finite (d2n_bias_bin1));
     g_assert_true (gsl_finite (d2n_bias_bin2));
@@ -372,7 +390,7 @@ test_nc_cluster_abundance_failing_intp_bin_d2n (TestNcClusterAbundance *test, gc
     const gdouble z_obs_bin_lower[1]   = {0.1};
     const gdouble z_obs_bin_upper[1]   = {0.3};
 
-    nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, NULL, z_obs_bin_upper, z_obs_bin_lower, NULL);
+    nc_cluster_abundance_intp_bin_d2n (test->cad, test->cosmo, test->clusterz, test->clusterm, lnM_obs_bin_lower, lnM_obs_bin_upper, test->lnM_obs_params, z_obs_bin_upper, z_obs_bin_lower, test->z_obs_params);
 
     return; /* LCOV_EXCL_LINE */
   }

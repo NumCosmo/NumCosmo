@@ -1498,12 +1498,10 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
     g_assert_cmpuint (ncm_vector_len (self->bin_count), ==, nbins);
 
-    if ((self->lnM_obs_params != NULL) || (self->z_obs_params != NULL))
-      g_error ("_nc_data_cluster_ncount_m2lnL_val: binned distribution with parameters not supported yet.");
-
     for (i = 0; i < nbins; i++)
     {
-      const gint j = 2 * i;
+      const gint j            = 2 * i;
+      gdouble zero_params[10] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
       NcmVector *lnM_obs_lb = NCM_VECTOR (ncm_obj_array_peek (self->lnM_obs_bins, j + 0));
       NcmVector *lnM_obs_ub = NCM_VECTOR (ncm_obj_array_peek (self->lnM_obs_bins, j + 1));
@@ -1511,13 +1509,14 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       NcmVector *z_obs_ub   = NCM_VECTOR (ncm_obj_array_peek (self->z_obs_bins, j + 1));
       const gdouble n_i     = ncm_vector_get (self->bin_count, i);
 
+      /* For binned data, use zero parameters (no observational scatter in bin integration) */
       const gdouble lambda_i = nc_cluster_abundance_intp_bin_d2n (self->cad, cosmo, clusterz, clusterm,
                                                                   ncm_vector_data (lnM_obs_lb),
                                                                   ncm_vector_data (lnM_obs_ub),
-                                                                  NULL,
+                                                                  zero_params,
                                                                   ncm_vector_data (z_obs_lb),
                                                                   ncm_vector_data (z_obs_ub),
-                                                                  NULL);
+                                                                  zero_params);
 
       if (n_i > 0.0)
         *m2lnL += n_i * log (lambda_i / n_i);
