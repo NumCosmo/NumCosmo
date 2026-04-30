@@ -281,7 +281,7 @@ test_nc_data_cluster_ncount_bin (TestNcDataClusterNCount *test, gconstpointer pd
       NcmVector *bin_lnRl_vec = ncm_vector_new_data_static (&bin_lnRl, 1, 1);
       NcmVector *bin_lnRu_vec = ncm_vector_new_data_static (&bin_lnRu, 1, 1);
 
-      nc_data_cluster_ncount_add_bin (test->ncdata, bin_lnRl_vec, bin_lnRu_vec, bin_zl_vec, bin_zu_vec);
+      nc_data_cluster_ncount_add_bin (test->ncdata, bin_lnRl_vec, bin_lnRu_vec, bin_zl_vec, bin_zu_vec, NULL, NULL);
 
       ncm_vector_free (bin_lnRl_vec);
       ncm_vector_free (bin_lnRu_vec);
