@@ -461,11 +461,16 @@ class TestSpectralWeighted:
         computed_integral = coeffs[0] * np.pi
         assert_allclose(computed_integral, expected_integral, rtol=1.0e-9, atol=1.0e-10)
 
-    def test_weighted_asymmetric_function(self, spectral: Ncm.Spectral) -> None:
-        """Test weighted coefficients for asymmetric function."""
+    def test_weighted_piecewise_even_function(self, spectral: Ncm.Spectral) -> None:
+        """Test weighted coefficients for piecewise-defined even function.
 
-        def f_asym(_user_data, x):
-            """Asymmetric function."""
+        The function f(x) = |x|*exp(-x^2) is even (symmetric) but has different
+        expressions for x > 0 and x < 0. This tests that weighted Chebyshev
+        coefficients correctly compute the integral for such piecewise functions.
+        """
+
+        def f_even_piecewise(_user_data, x):
+            """Even piecewise function: |x| * exp(-x^2)."""
             return x * np.exp(-x * x) if x > 0 else -x * np.exp(-x * x)
 
         a, b = -2.0, 2.0
@@ -473,12 +478,12 @@ class TestSpectralWeighted:
         tol = 1.0e-10
 
         _k, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive_weighted(
-            f_asym, a, b, k_min, tol, None
+            f_even_piecewise, a, b, k_min, tol, None
         )
         coeffs = np.array(coeffs_list)
 
         # Compute reference integral
-        expected_integral, _error = quad(lambda x: f_asym(None, x), a, b)
+        expected_integral, _error = quad(lambda x: f_even_piecewise(None, x), a, b)
 
         computed_integral = coeffs[0] * np.pi
         assert_allclose(computed_integral, expected_integral, rtol=1.0e-8, atol=1.0e-9)
