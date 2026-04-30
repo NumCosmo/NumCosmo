@@ -147,7 +147,7 @@ def fixture_shape_dist(request) -> tuple[str, dict]:
                 "c2_sigma": uniform(0.01, 0.1),
                 "m_sigma": uniform(0.01, 0.1),
             }
-        case _:
+        case _:  # pragma: no cover
             config = {}
     return request.param, config
 
@@ -206,7 +206,7 @@ def fixture_shape_dist_bad(request) -> tuple[str, list[dict]]:
                 {"sigma": -0.1},
                 {"std_noise": -0.01},
             ]
-        case _:
+        case _:  # pragma: no cover
             config = [
                 {
                     "ellip_conv": choice(["trace", "trace-det"]),
@@ -498,7 +498,7 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_dist):
             assert "GalaxyShapeGenHSMGauss" in result.output
         case GalaxyShapeGen.HSM_GAUSS_GLOBAL:
             assert "GalaxyShapeGenHSMGaussGlobal" in result.output
-        case _:
+        case _:  # pragma: no cover
             pass
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
@@ -531,20 +531,18 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_dist):
                 assert abs(obs.get("c2", i)) <= 6.0 * shape_dist[1]["c2_sigma"]
                 assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_dist[1]["m_sigma"]
             case GalaxyShapeGen.HSM_GAUSS_GLOBAL:
-                assert (
-                    abs(obs.get("epsilon_obs_1", i))
-                    <= 1.0 + 6.0 * shape_dist[1]["std_noise"]
-                )
-                assert (
-                    abs(obs.get("epsilon_obs_2", i))
-                    <= 1.0 + 6.0 * shape_dist[1]["std_noise"]
-                )
+                assert abs(obs.get("epsilon_obs_1", i)) <= 1.0 + 6.0 * (
+                    shape_dist[1]["sigma"] ** 2 + shape_dist[1]["std_noise"] ** 2
+                ) ** (1 / 2)
+                assert abs(obs.get("epsilon_obs_2", i)) <= 1.0 + 6.0 * (
+                    shape_dist[1]["sigma"] ** 2 + shape_dist[1]["std_noise"] ** 2
+                ) ** (1 / 2)
                 assert s_dist_model["sigma"] == shape_dist[1]["sigma"]
                 assert obs.get("std_noise", i) <= 0.5
                 assert abs(obs.get("c1", i)) <= 6.0 * shape_dist[1]["c1_sigma"]
                 assert abs(obs.get("c2", i)) <= 6.0 * shape_dist[1]["c2_sigma"]
                 assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_dist[1]["m_sigma"]
-            case _:
+            case _:  # pragma: no cover
                 pass
 
 
