@@ -1,4 +1,19 @@
-if enable_gir
+python_for_tests = python_module.find_installation(
+    'python3',
+    modules: [
+        'gi',
+        'matplotlib',
+        'numpy',
+        'pydantic',
+        'pytest_lazy_fixtures',
+        'pytest',
+        'scipy',
+        'typer',
+    ],
+    required: false,
+)
+
+if enable_gir and python_for_tests.found()
     common_env = {
         'GI_TYPELIB_PATH': numcosmo_build_dir / 'numcosmo',
         'LD_LIBRARY_PATH': numcosmo_build_dir / 'numcosmo',
