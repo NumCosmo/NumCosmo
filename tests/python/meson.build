@@ -1,24 +1,15 @@
 if enable_gir
-    env = environment()
-    env.prepend(
-        'GI_TYPELIB_PATH',
-        numcosmo_build_dir / 'numcosmo',
-    )
+    common_env = {
+        'GI_TYPELIB_PATH': numcosmo_build_dir / 'numcosmo',
+        'LD_LIBRARY_PATH': numcosmo_build_dir / 'numcosmo',
+        'DYLD_LIBRARY_PATH': numcosmo_build_dir / 'numcosmo',
+        'PYTHONPATH': numcosmo_source_dir,
+    }
 
-    env.prepend(
-        'LD_LIBRARY_PATH',
-        numcosmo_build_dir / 'numcosmo',
-    )
+    env = environment(common_env)
 
-    env.prepend(
-        'DYLD_LIBRARY_PATH',
-        numcosmo_build_dir / 'numcosmo',
-    )
-
-    env.prepend(
-        'PYTHONPATH',
-        numcosmo_source_dir,
-    )
+    env_sphere_map = environment(common_env)
+    env_sphere_map.set('MALLOC_PERTURB_', '0')
 
     pytest = find_program('pytest', required: true)
 
@@ -111,6 +102,20 @@ if enable_gir
         protocol: pytest_protocol,
         is_parallel: pytest_is_parallel,
         suite: ['py-xcor'],
+    )
+
+    # Sphere_map subset
+    test(
+        'pytest-sphere_map',
+        pytest,
+        args: pytest_parallel_args
+        + ['--run-sphere-map', '-m', 'sphere_map', meson.current_source_dir()],
+        depends: [numcosmo_gir, numcosmo_math_gir],
+        env: env_sphere_map,
+        timeout: 0,
+        protocol: pytest_protocol,
+        is_parallel: pytest_is_parallel,
+        suite: ['python'],
     )
 
     # MPI tests (if available)

@@ -35,6 +35,8 @@ healpy = pytest.importorskip("healpy")
 # pylint: disable-next=wrong-import-position
 from numcosmo_py import Ncm  # noqa: E402
 
+pytestmark = [pytest.mark.sphere_map]
+
 
 @pytest.fixture(params=[8, 16, 32, 64, 128], name="nside")
 def fixture_nside(request: Any) -> int:
