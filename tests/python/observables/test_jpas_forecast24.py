@@ -36,6 +36,14 @@ pytest.importorskip("numcosmo_py.external.pyssc")
 # Import module under test
 from numcosmo_py.experiments import jpas_forecast24 as jpas
 
+# Check for healpy availability
+try:
+    import healpy  # pylint: disable=unused-import
+
+    HAS_HEALPY = True
+except ImportError:
+    HAS_HEALPY = False
+
 Ncm.cfg_init()
 
 
@@ -287,6 +295,7 @@ class TestCovarianceMatrices:
         assert S.nrows() == n_bins
         assert S.ncols() == n_bins
 
+    @pytest.mark.skipif(not HAS_HEALPY, reason="healpy not available")
     def test_create_covariance_S_guaranteed(self, setup_for_covariance):
         """Test guaranteed mask SSC covariance matrix creation."""
         kernel_z, kernels_T, cosmo = setup_for_covariance
@@ -562,6 +571,7 @@ class TestGenerateJpasForecast:
 
         assert isinstance(experiment, Ncm.ObjDictStr)
 
+    @pytest.mark.skipif(not HAS_HEALPY, reason="healpy not available")
     def test_generate_jpas_forecast_2024_area_override_resample(self):
         """Test that resample SSC type overrides area parameter."""
         # When resample uses a masked SSC, the area should be updated
