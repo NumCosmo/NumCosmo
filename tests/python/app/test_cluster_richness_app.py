@@ -32,7 +32,7 @@ pytest.importorskip("typer")
 from astropy.table import Table
 from typer.testing import CliRunner
 
-from numcosmo_py import Nc, Ncm
+from numcosmo_py import Ncm
 from numcosmo_py.app import app
 from numcosmo_py.analysis.cluster_richness import RichnessModelType
 
@@ -52,7 +52,7 @@ def fixture_mock_cluster_data(tmp_path) -> Tuple[Path, dict]:
     - Redshifts between 0.1 and 0.5
     - Richnesses following a mass-richness relation with scatter
     """
-    rng = np.random.RandomState(42)
+    rng = np.random.RandomState(42)  # pylint: disable=no-member
 
     # Generate mock data
     n_clusters = 100
@@ -99,7 +99,7 @@ def fixture_mock_cluster_data(tmp_path) -> Tuple[Path, dict]:
 @pytest.fixture(name="mock_cluster_data_custom_columns")
 def fixture_mock_cluster_data_custom_columns(tmp_path) -> Path:
     """Create a mock FITS file with custom column names."""
-    rng = np.random.RandomState(123)
+    rng = np.random.RandomState(123)  # pylint: disable=no-member
 
     n_clusters = 50
     log_mass = rng.uniform(np.log(1e14), np.log(1e15), n_clusters)
@@ -138,7 +138,9 @@ class TestBasicDataLoading:
     def test_load_default_columns(self, mock_cluster_data):
         """Test loading data with default column names."""
         fits_file, _ = mock_cluster_data
-        result = runner.invoke(app, ["analysis", "cluster-richness", fits_file.as_posix()])
+        result = runner.invoke(
+            app, ["analysis", "cluster-richness", fits_file.as_posix()]
+        )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Data Summary" in result.output
@@ -252,7 +254,9 @@ class TestModelTypes:
             ],
         )
 
-        assert result.exit_code == 0, f"Command failed with {model_type}: {result.output}"
+        assert (
+            result.exit_code == 0
+        ), f"Command failed with {model_type}: {result.output}"
 
 
 class TestCutAnalysis:
@@ -666,7 +670,7 @@ class TestEdgeCases:
 
     def test_very_small_dataset(self, tmp_path):
         """Test with minimal dataset (10 clusters)."""
-        rng = np.random.RandomState(999)
+        rng = np.random.RandomState(999)  # pylint: disable=no-member
 
         n_clusters = 10
         log_mass = rng.uniform(np.log(1e14), np.log(1e15), n_clusters)
@@ -727,7 +731,7 @@ class TestEdgeCases:
 
     def test_consistent_column_naming(self, tmp_path):
         """Test that column name variations work correctly."""
-        rng = np.random.RandomState(555)
+        rng = np.random.RandomState(555)  # pylint: disable=no-member
 
         n_clusters = 50
         log_mass = rng.uniform(np.log(1e14), np.log(1e15), n_clusters)
@@ -799,7 +803,13 @@ class TestDataValidation:
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
             app,
-            ["analysis", "cluster-richness", fits_file.as_posix(), "--n-bootstrap", "0"],
+            [
+                "analysis",
+                "cluster-richness",
+                fits_file.as_posix(),
+                "--n-bootstrap",
+                "0",
+            ],
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
