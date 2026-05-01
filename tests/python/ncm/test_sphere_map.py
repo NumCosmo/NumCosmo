@@ -30,10 +30,12 @@ import numpy as np
 import numpy.typing as npt
 from numpy.testing import assert_allclose, assert_array_equal
 
-healpy = pytest.importorskip("healpy")
+pytest.importorskip("healpy")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
 
-# pylint: disable-next=wrong-import-position
-from numcosmo_py import Ncm  # noqa: E402
+import healpy
+from numcosmo_py import Ncm
 
 pytestmark = [pytest.mark.sphere_map]
 
@@ -123,12 +125,12 @@ class TestPixelIndexing:
 
         assert_array_equal(ncm_nest, hp_nest)
 
-    def test_nest_ring_roundtrip(self, smap: Ncm.SphereMap, nside: int) -> None:
+    def test_nest_ring_roundtrip(self, smap: Ncm.SphereMap) -> None:
         """Test nest->ring->nest roundtrip."""
-        npix = healpy.nside2npix(nside)
+        npix = smap.get_npix()
         nest_indices = np.arange(npix)
 
-        ring_indices = np.array([smap.nest2ring(i) for i in nest_indices])
+        ring_indices = np.array([smap.nest2ring(int(i)) for i in nest_indices])
         nest_back = np.array([smap.ring2nest(i) for i in ring_indices])
 
         assert_array_equal(nest_indices, nest_back)
@@ -550,13 +552,11 @@ class TestIterativeRefinement:
         assert_allclose(nc_alm.real, hp_alm.real, rtol=1e-10, atol=1e-14)
         assert_allclose(nc_alm.imag, hp_alm.imag, rtol=1e-10, atol=1e-14)
 
+    @pytest.mark.parametrize("nside", [32, 64, 128], indirect=True)
     def test_iter_convergence(
         self, smap: Ncm.SphereMap, nside: int, lmax_undersampled: int, random_seed: int
     ) -> None:
         """Test that iterations improve reconstruction accuracy."""
-        if nside < 32:
-            pytest.skip("Need nside >= 32 to see clear iteration benefit")
-
         np.random.seed(random_seed)
         npix = healpy.nside2npix(nside)
 
@@ -599,11 +599,9 @@ class TestIterativeRefinement:
             errors[3] <= errors[0] * 1.1
         ), "iter=3 should not increase error significantly"
 
+    @pytest.mark.parametrize("nside", [16, 32, 64], indirect=True)
     def test_iter_with_different_lmax(self, nside: int, random_seed: int) -> None:
         """Test iter behavior with different lmax values."""
-        if nside < 16:
-            pytest.skip("Need nside >= 16 for this test")
-
         np.random.seed(random_seed)
         npix = healpy.nside2npix(nside)
         noise_map = np.random.randn(npix)
@@ -651,13 +649,11 @@ class TestIterativeRefinement:
         default_iter = smap.get_iter()
         assert default_iter == 0, "Default iter should be 0 for backward compatibility"
 
+    @pytest.mark.parametrize("nside", [32, 64, 128], indirect=True)
     def test_iter_with_roundtrip(
         self, smap: Ncm.SphereMap, nside: int, lmax_undersampled: int, random_seed: int
     ) -> None:
         """Test iter in map -> alm -> map roundtrip."""
-        if nside < 32:
-            pytest.skip("Need nside >= 32 for clear roundtrip test")
-
         np.random.seed(random_seed)
         npix = healpy.nside2npix(nside)
 
@@ -949,11 +945,11 @@ class TestFitsIO:
     ) -> None:
         """Test saving and loading a map to/from FITS file."""
         np.random.seed(random_seed)
-        npix = healpy.nside2npix(nside)
+        smap_save = Ncm.SphereMap.new(nside)
+        npix = smap_save.get_npix()
         test_map = np.random.randn(npix)
 
         # Create and populate map
-        smap_save = Ncm.SphereMap.new(nside)
         smap_save.set_map(test_map)
 
         # Save to FITS file
@@ -976,11 +972,11 @@ class TestFitsIO:
     ) -> None:
         """Test saving and loading with custom signal name."""
         np.random.seed(random_seed)
-        npix = healpy.nside2npix(nside)
+        smap_save = Ncm.SphereMap.new(nside)
+        npix = smap_save.get_npix()
         test_map = np.random.randn(npix)
 
         # Create and populate map
-        smap_save = Ncm.SphereMap.new(nside)
         smap_save.set_map(test_map)
 
         # Save to FITS file with custom signal name
@@ -1001,11 +997,11 @@ class TestFitsIO:
     ) -> None:
         """Test overwriting existing FITS file."""
         np.random.seed(random_seed)
-        npix = healpy.nside2npix(nside)
+        smap1 = Ncm.SphereMap.new(nside)
+        npix = smap1.get_npix()
 
         # Create first map
         test_map1 = np.random.randn(npix)
-        smap1 = Ncm.SphereMap.new(nside)
         smap1.set_map(test_map1)
 
         # Save first map
@@ -1106,11 +1102,9 @@ class TestPerformance:
         """Large sphere map for performance testing."""
         return Ncm.SphereMap.new(large_nside)
 
-    def test_nest2ring_performance(
-        self, large_smap: Ncm.SphereMap, large_nside: int
-    ) -> None:
+    def test_nest2ring_performance(self, large_smap: Ncm.SphereMap) -> None:
         """Benchmark nest2ring conversion (requires pytest-benchmark)."""
-        npix = healpy.nside2npix(large_nside)
+        npix = large_smap.get_npix()
         indices = np.arange(min(10000, npix))
 
         # Simple timing test without benchmark fixture
@@ -1131,11 +1125,11 @@ class TestCrossSpectrum:
     ) -> None:
         """Cross-spectrum of a map with itself should equal auto-spectrum."""
         np.random.seed(random_seed)
-        npix = healpy.nside2npix(nside)
+        smap1 = Ncm.SphereMap.new(nside)
+        npix = smap1.get_npix()
         test_map = np.random.randn(npix)
 
         # Create two maps with same data
-        smap1 = Ncm.SphereMap.new(nside)
         smap2 = Ncm.SphereMap.new(nside)
 
         smap1.set_lmax(lmax_cross)
@@ -1197,13 +1191,13 @@ class TestCrossSpectrum:
     ) -> None:
         """Cross-spectrum of uncorrelated maps should be small."""
         np.random.seed(random_seed)
-        npix = healpy.nside2npix(nside)
+        smap1 = Ncm.SphereMap.new(nside)
+        npix = smap1.get_npix()
 
         # Two independent random maps
         map1 = np.random.randn(npix)
         map2 = np.random.randn(npix + 100)[:npix]  # Different seed effectively
 
-        smap1 = Ncm.SphereMap.new(nside)
         smap2 = Ncm.SphereMap.new(nside)
 
         smap1.set_lmax(lmax_cross)
@@ -1232,13 +1226,13 @@ class TestCrossSpectrum:
     ) -> None:
         """Cross-spectrum of correlated maps should be positive."""
         np.random.seed(random_seed)
-        npix = healpy.nside2npix(nside)
+        smap1 = Ncm.SphereMap.new(nside)
+        npix = smap1.get_npix()
 
         # Create correlated maps: map2 = map1 + noise
         map1 = np.random.randn(npix)
         map2 = map1 * 0.8 + np.random.randn(npix) * 0.2
 
-        smap1 = Ncm.SphereMap.new(nside)
         smap2 = Ncm.SphereMap.new(nside)
 
         smap1.set_lmax(lmax_cross)
@@ -1271,12 +1265,12 @@ class TestCrossSpectrum:
     ) -> None:
         """Cross-spectrum should be commutative: Cl(A,B) = Cl(B,A)."""
         np.random.seed(random_seed)
-        npix = healpy.nside2npix(nside)
+        smap1 = Ncm.SphereMap.new(nside)
+        npix = smap1.get_npix()
 
         map1 = np.random.randn(npix)
         map2 = np.random.randn(npix)
 
-        smap1 = Ncm.SphereMap.new(nside)
         smap2 = Ncm.SphereMap.new(nside)
 
         smap1.set_lmax(lmax_cross)
