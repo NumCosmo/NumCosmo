@@ -122,9 +122,9 @@ nc_cluster_mass_richness_set_property (GObject *object, guint prop_id, const GVa
     case PROP_SAMPLE_FULL_DIST:
       self->sample_full_dist = g_value_get_boolean (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -153,9 +153,9 @@ nc_cluster_mass_richness_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_SAMPLE_FULL_DIST:
       g_value_set_boolean (value, self->sample_full_dist);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -305,6 +305,8 @@ nc_cluster_mass_richness_class_init (NcClusterMassRichnessClass *klass)
   klass->mu_sigma = &_nc_cluster_mass_richness_mu_sigma;
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _nc_cluster_mass_richness_mu (NcClusterMassRichness *mr, gdouble lnM, gdouble z)
 {
@@ -320,6 +322,8 @@ _nc_cluster_mass_richness_sigma (NcClusterMassRichness *mr, gdouble lnM, gdouble
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 _nc_cluster_mass_richness_mu_sigma (NcClusterMassRichness *mr, gdouble lnM, gdouble z, gdouble *mu, gdouble *sigma)

@@ -163,6 +163,24 @@ class RunClusterRichnessAnalysis(AppLogging):
         ),
     ] = 200
 
+    n_mcmc_steps: Annotated[
+        int,
+        typer.Option(
+            "--n-mcmc-steps",
+            help="Number of MCMC steps for each analysis.",
+            min=1,
+        ),
+    ] = 400
+
+    n_mcmc_burnin: Annotated[
+        int,
+        typer.Option(
+            "--n-mcmc-burnin",
+            help="Number of MCMC burn-in steps to discard.",
+            min=0,
+        ),
+    ] = 150
+
     seed: Annotated[
         int,
         typer.Option(
@@ -397,6 +415,8 @@ class RunClusterRichnessAnalysis(AppLogging):
             data,
             cuts_array.tolist(),
             n_bootstrap=self.n_bootstrap,
+            n_mcmc_steps=self.n_mcmc_steps,
+            n_mcmc_burnin=self.n_mcmc_burnin,
             compute_mcmc=self.compute_mcmc,
             compute_bootstrap=self.compute_bootstrap,
             file_prefix=f"{self.output_prefix}_real",
@@ -444,6 +464,8 @@ class RunClusterRichnessAnalysis(AppLogging):
             cuts_array.tolist(),
             n_mocks=self.n_mocks,
             n_bootstrap=self.n_bootstrap,
+            n_mcmc_steps=self.n_mcmc_steps,
+            n_mcmc_burnin=self.n_mcmc_burnin,
             file_prefix=f"{self.output_prefix}_mock",
             fiducial_results=real_results,
             console=self.console,

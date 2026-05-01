@@ -119,6 +119,8 @@ class CutAnalyzer:
         data: ClusterData,
         cuts: list[float],
         n_bootstrap: int = 100,
+        n_mcmc_steps: int = 400,
+        n_mcmc_burnin: int = 150,
         compute_mcmc: bool = False,
         compute_bootstrap: bool = False,
         file_prefix: str | None = None,
@@ -131,6 +133,8 @@ class CutAnalyzer:
         :param data: ClusterData object containing lnM, z, lnR, and sigma_lnR
         :param cuts: List of richness cuts (in log units)
         :param n_bootstrap: Number of bootstrap resamples (default: 100)
+        :param n_mcmc_steps: Number of MCMC steps to run (default: 400)
+        :param n_mcmc_burnin: Number of MCMC burn-in steps to discard (default: 150)
         :param compute_mcmc: Whether to run MCMC (default: False)
         :param compute_bootstrap: Whether to run bootstrap (default: False)
         :param file_prefix: Prefix for output files (default: None)
@@ -141,6 +145,8 @@ class CutAnalyzer:
         self.data = data
         self.cuts = cuts
         self.n_bootstrap = n_bootstrap
+        self.n_mcmc_steps = n_mcmc_steps
+        self.n_mcmc_burnin = n_mcmc_burnin
         self.compute_mcmc = compute_mcmc
         self.compute_bootstrap = compute_bootstrap
         self.file_prefix = file_prefix
@@ -243,12 +249,15 @@ class CutAnalyzer:
                 esmcmc.set_data_file(mcmc_file)
 
             esmcmc.start_run()
-            esmcmc.run(400)
+            esmcmc.run(self.n_mcmc_steps)
             esmcmc.end_run()
 
             mcat = esmcmc.get_catalog()
             rows = np.array(
-                [mcat.peek_row(i).dup_array()[1:] for i in range(150, mcat.len())]
+                [
+                    mcat.peek_row(i).dup_array()[1:]
+                    for i in range(self.n_mcmc_burnin, mcat.len())
+                ]
             )
             # Compute mean from rows
             mcmc_mean_model = dup_model(cluster_m)

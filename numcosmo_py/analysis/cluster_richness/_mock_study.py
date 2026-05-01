@@ -71,6 +71,8 @@ class MockStudy:
         compute_bootstrap: bool = False,
         n_mocks: int = 100,
         n_bootstrap: int = 100,
+        n_mcmc_steps: int = 400,
+        n_mcmc_burnin: int = 150,
         file_prefix: str | None = None,
         verbose: bool = True,
         fiducial_results: dict[float, CutAnalysisResult] | None = None,
@@ -87,6 +89,8 @@ class MockStudy:
         :param compute_bootstrap: Whether to compute bootstrap results (default: False)
         :param n_mocks: Number of mocks to generate (default: 100)
         :param n_bootstrap: Number of bootstrap resamples per analysis (default: 100)
+        :param n_mcmc_steps: Number of MCMC steps per analysis (default: 400)
+        :param n_mcmc_burnin: Number of MCMC burn-in steps to discard (default: 150)
         :param file_prefix: If provided, pass seed-based prefix to CutAnalyzer for
             saving data (default: None)
         :param verbose: Whether to print progress (default: True)
@@ -105,6 +109,8 @@ class MockStudy:
         self.compute_bootstrap = compute_bootstrap
         self.n_mocks = n_mocks
         self.n_bootstrap = n_bootstrap
+        self.n_mcmc_steps = n_mcmc_steps
+        self.n_mcmc_burnin = n_mcmc_burnin
         self.file_prefix = file_prefix
         self.mock_results: list[dict[float, CutAnalysisResult]] = []
         self.fiducial_results = fiducial_results
@@ -374,6 +380,8 @@ class MockStudy:
                     mock_data,
                     self.cuts,
                     n_bootstrap=self.n_bootstrap,
+                    n_mcmc_steps=self.n_mcmc_steps,
+                    n_mcmc_burnin=self.n_mcmc_burnin,
                     compute_mcmc=self.compute_mcmc,
                     compute_bootstrap=self.compute_bootstrap,
                     file_prefix=mock_file_prefix,
