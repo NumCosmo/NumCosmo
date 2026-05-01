@@ -137,6 +137,7 @@ jobs:
         cd examples
         python3 example_simple.py
         python3 example_cbe.py
+        pytest -xvs tests/python
     - name: Check NumCosmo
       run: |
         meson test -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
