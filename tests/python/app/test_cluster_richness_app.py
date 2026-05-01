@@ -24,6 +24,11 @@ from typing import Tuple
 
 import numpy as np
 import pytest
+
+pytest.importorskip("astropy")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 from astropy.table import Table
 from typer.testing import CliRunner
 
