@@ -28,11 +28,6 @@ import numpy as np
 import pytest
 
 from numpy.testing import assert_allclose
-
-pytest.importorskip("scipy")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
-
 from scipy.special import spherical_jn
 
 from numcosmo_py import Ncm

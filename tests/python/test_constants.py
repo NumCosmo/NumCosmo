@@ -28,11 +28,6 @@ import math
 from numpy.testing import assert_allclose
 import numpy as np
 
-import pytest
-
-pytest.importorskip("scipy")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
 from scipy import constants
 from scipy.constants import physical_constants
 from astropy import units as u
