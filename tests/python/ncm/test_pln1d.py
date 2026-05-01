@@ -643,16 +643,15 @@ class TestPLN1D(unittest.TestCase):
         time_eval_lnp = end_time - start_time
         time_per_eval_lnp = time_eval_lnp / num_evals
 
-        # Results should complete in reasonable time (< 1 ms per eval on modern
-        # hardware)
+        # Results should complete in reasonable time (< 1ms on most hardware)
         self.assertLess(
             time_per_eval_p,
-            1.0e-5,
+            1.0e-3,
             f"eval_p should be faster than 1ms, got {time_per_eval_p*1000:.3f}ms",
         )
         self.assertLess(
             time_per_eval_lnp,
-            1.0e-5,
+            1.0e-3,
             f"eval_lnp should be faster than 1ms, got {time_per_eval_lnp*1000:.3f}ms",
         )
 
