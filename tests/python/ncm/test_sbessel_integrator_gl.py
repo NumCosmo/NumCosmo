@@ -28,11 +28,6 @@ from typing import Callable
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
-
-pytest.importorskip("scipy")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
-
 import scipy.special as sp
 import scipy.integrate as integrate
 

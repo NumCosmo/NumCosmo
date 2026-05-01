@@ -1063,8 +1063,8 @@ nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de, GError **error)
  * @lh: a #NcmLikelihood
  *
  * Adds a Gaussian prior for the primordial helium abundance from Big Bang
- * Nucleosynthesis (BBN) to the likelihood. This constrains the helium-4
- * mass fraction $Y_p$ to its BBN predicted value.
+ * Nucleosynthesis (BBN) to the likelihood. This constrains the helium-4 mass fraction
+ * $Y_p$ to its BBN predicted value.
  *
  */
 void
@@ -1124,10 +1124,10 @@ _nc_hicosmo_de_w_de (NcHICosmoDE *cosmo_de, gdouble z)
 
 /**
  * nc_hicosmo_de_set_E2Omega_de_impl: (skip)
- * @cosmo_de_class: FIXME
- * @f: FIXME
+ * @cosmo_de_class: a #NcHICosmoDEClass
+ * @f: function pointer
  *
- * FIXME
+ * Sets the implementation for computing $E^2\Omega_{\mathrm{de}}(z)$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEFunc1, E2Omega_de)
@@ -1210,9 +1210,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
  * @cosmo_de: a #NcHICosmoDE
  * @z: redshift $z$
  *
- * $E^2\Omega_\mathrm{de}(1+w)$.
+ * Computes $E^2\Omega_{\mathrm{de}}(1+w)$ at redshift @z.
  *
- * Returns: $E^2(z)\Omega_{\mathrm{de}}(z)[1+w(z)]$
+ * Returns: $E^2(z)\Omega_{\mathrm{de}}(z)(1+w_{\mathrm{de}}(z))$
  */
 
 static void

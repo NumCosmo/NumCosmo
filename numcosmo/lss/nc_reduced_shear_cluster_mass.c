@@ -173,13 +173,17 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
   /**
    * NcReducedShearClusterMass:a:
    *
-   * FIXME
+   * Model parameter 'a' that controls the overall amplitude or scaling of the
+   * reduced-shear model. The precise functional role depends on the analytic
+   * form implemented by this model; consult the parameter registration below
+   * for its default value and allowed range.
    *
    */
   /**
    * NcReducedShearClusterMass:a-fit:
    *
-   * FIXME
+   * Fittable variant of the 'a' parameter. When fitting data this parameter
+   * is the one that will be adjusted; semantics match the 'a' description.
    *
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_A, "a", "a",
@@ -190,7 +194,9 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
   /**
    * NcReducedShearClusterMass:b:
    *
-   * FIXME
+   * Model parameter 'b' that typically controls the slope or radial scaling
+   * of the reduced-shear profile. See the registration below for valid
+   * ranges and default values used by the implementation.
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_B, "b", "b",
                               0.0,  0.9, 2.0e-2,
@@ -200,7 +206,9 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
   /**
    * NcReducedShearClusterMass:c:
    *
-   * FIXME
+   * Model parameter 'c' that tunes the curvature or additional shape of the
+   * reduced-shear profile. Consult the parameter registration for defaults and
+   * allowed intervals.
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_C, "c", "c",
                               0.0,  2.0, 1.0e-2,
@@ -210,7 +218,10 @@ nc_reduced_shear_cluster_mass_class_init (NcReducedShearClusterMassClass *klass)
   /**
    * NcReducedShearClusterMass:xp:
    *
-   * FIXME
+   * Pivot point or scale parameter 'xp' used by the analytic reduced-shear
+   * model. This parameter sets the characteristic radius/scale at which other
+   * parameters (such as slopes) are referenced; see registration for default
+   * and valid range.
    */
   ncm_model_class_set_sparam (model_class, NC_REDUCED_SHEAR_CLUSTER_MASS_XP, "xp", "xp",
                               0.0,  2.0, 1.0e-2,

@@ -281,9 +281,11 @@ nc_hipert_iem_eval_m (NcHIPertIEM *iem, const gdouble tau, const gdouble k)
  * nc_hipert_iem_eval_unit:
  * @iem: a #NcHIPertIEM
  *
- * FIXME
+ * Evaluates the unit conversion factor for the electromagnetic field.
+ * This factor converts the dimensionless electromagnetic field amplitude
+ * to physical units (Gauss).
  *
- * Returns: FIXME.
+ * Returns: the unit conversion factor.
  */
 gdouble
 nc_hipert_iem_eval_unit (NcHIPertIEM *iem)

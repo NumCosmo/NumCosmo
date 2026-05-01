@@ -26,14 +26,8 @@
 
 import math
 from typing import Tuple
-import pytest
 
 from numpy.testing import assert_allclose
-
-pytest.importorskip("scipy")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
-
 from scipy.stats import norm
 
 from numcosmo_py import Ncm

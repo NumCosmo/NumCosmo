@@ -49,7 +49,7 @@ typedef struct _NcHICosmoDEWSplinePrivate NcHICosmoDEWSplinePrivate;
 
 /**
  * NcHICosmoDEWSplineVParams:
- * @NC_HICOSMO_DE_WSPLINE_W: FIXME
+ * @NC_HICOSMO_DE_WSPLINE_W: Dark energy equation of state parameter values at spline knots
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_WSPLINE_VPARAMS >*/

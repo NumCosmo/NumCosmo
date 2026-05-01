@@ -210,7 +210,7 @@ G_LOCK_DEFINE_STATIC (last_bg_var_id);
  * @long_desc: long description
  * @cstruct_size: component struct size
  *
- * FIXME
+ * Registers a new background variable class with the given namespace and descriptions.
  *
  */
 void

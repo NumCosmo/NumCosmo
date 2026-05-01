@@ -76,7 +76,7 @@ struct _NcClusterAbundance
   /*< private >*/
   GObject parent_instance;
   NcHaloMassFunction *mfp;
-  NcHaloBias *mbiasf; /* new FIXME */
+  NcHaloBias *mbiasf;
   NcClusterAbundanceN N;
   NcClusterAbundanceIntPd2N intp_d2N;
   NcClusterAbundanceIntPd2NBias intp_d2N_bias;
@@ -86,7 +86,7 @@ struct _NcClusterAbundance
   gboolean optimize;
   gsl_histogram2d *purity;
   gsl_histogram2d *sd_lnM;
-  NcmSpline2d *dbdlnM; /* To compute the mean bias. FIXME*/
+  NcmSpline2d *dbdlnM; /* To compute the mean bias. */
   NcmSpline *inv_z;
   NcmSpline *inv_lnM;
   NcmSpline2d *inv_lnM_z;

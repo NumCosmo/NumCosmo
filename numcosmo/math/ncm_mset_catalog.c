@@ -3648,7 +3648,7 @@ ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
       case NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS:
         self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_hyperbox (mcat, TRUE, post_lnnorm_sd);
         break;
-      case NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELIPSOID:
+      case NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID:
         self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_elipsoid (mcat, post_lnnorm_sd);
         break;
       default:

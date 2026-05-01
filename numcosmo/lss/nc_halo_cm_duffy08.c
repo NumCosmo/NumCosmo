@@ -27,10 +27,13 @@
 /**
  * NcHaloCMDuffy08
  *
- *  Class defining the Duffy et al. 2008 concentration-mass relation
- *  
- * This class implements the Duffy et al. 2008 concentration-mass relation.
- * FIXME include reference, equation, ranges of mass and redshift.
+ * Class defining the Duffy et al. 2008 concentration-mass relation. The concentration
+ * parameter $c_\Delta$ is given by: $$c_\Delta = A
+ * \left(\frac{M_\Delta}{M_\mathrm{pivot}}\right)^B (1+z)^C,$$ where $M_\mathrm{pivot}
+ * = 2 \times 10^{12} h^{-1} M_\odot$ and the parameters $(A, B, C)$ depend on the mass
+ * definition (mean, critical, or virial).
+ *
+ * Reference: [Duffy et al. (2008)](https://arxiv.org/abs/0804.2486)
  *
  */
 
@@ -49,6 +52,7 @@ typedef struct _NcHaloCMDuffy08Private
   gint placeholder;
   gdouble Delta;
   NcHaloMassSummaryMassDef mdef;
+
   gdouble (*concentration) (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z);
 } NcHaloCMDuffy08Private;
 

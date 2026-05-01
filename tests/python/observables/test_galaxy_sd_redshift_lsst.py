@@ -32,11 +32,6 @@ from functools import cache
 import pytest
 from numpy.testing import assert_allclose
 import numpy as np
-
-pytest.importorskip("scipy")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
-
 from scipy.special import erf, erfc  # type: ignore # pylint: disable=no-name-in-module
 
 from numcosmo_py import Ncm, Nc

@@ -26,7 +26,7 @@
 /**
  * NcDataDistMu:
  *
- * Likelihod object for distance modulus data.
+ * Likelihood object for distance modulus data.
  *
  * This class implements the likelihood for distance modulus data.
  *
@@ -210,12 +210,11 @@ _nc_data_dist_mu_set_size (NcmDataGaussDiag *diag, guint np)
 
 /**
  * nc_data_dist_mu_new_empty:
- * @dist: a #NcDistance object
+ * @dist: a #NcDistance
  *
- * Creates a new empty #NcDataDistMu object for distance modulus data.
- * The distance object @dist is used to compute theoretical predictions.
+ * Creates a new empty #NcDataDistMu with the given distance object.
  *
- * Returns: a newly created #NcDataDistMu
+ * Returns: (transfer full): a new #NcDataDistMu
  */
 NcDataDistMu *
 nc_data_dist_mu_new_empty (NcDistance *dist)
@@ -251,10 +250,9 @@ nc_data_dist_mu_new_from_file (const gchar *filename)
  * @dist: a #NcDistance
  * @id: a #NcDataSNIAId
  *
- * Creates a new #NcDataDistMu object from a predefined Type Ia supernova dataset.
- * This loads distance modulus data from the survey/compilation specified by @id.
+ * Creates a new #NcDataDistMu from a predefined SNIa dataset identifier.
  *
- * Returns: the newly created #NcDataDistMu
+ * Returns: (transfer full): a new #NcDataDistMu
  */
 NcDataDistMu *
 nc_data_dist_mu_new_from_id (NcDistance *dist, NcDataSNIAId id)

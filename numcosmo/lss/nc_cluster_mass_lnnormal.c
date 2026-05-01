@@ -140,7 +140,7 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
   /**
    * NcClusterMassLnnormal:lnMobs_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum logarithm (base e) of observed mass for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_LNMOBS_MIN,
@@ -153,7 +153,7 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
   /**
    * NcClusterMassLnnormal:lnMobs_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum logarithm (base e) of observed mass for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_LNMOBS_MAX,
@@ -166,8 +166,7 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
   /**
    * NcClusterMassLnnormal:bias:
    *
-   * Distribution's bias.
-   * FIXME Set correct values (limits)
+   * Bias parameter in the log-normal mass distribution.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_LNNORMAL_BIAS, "bias", "bias",
                               0.0,  10.0, 1.0e-2,

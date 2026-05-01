@@ -52,14 +52,14 @@ typedef gdouble (*NcHICosmoIDEM2Func1) (NcHICosmoIDEM2 *cosmo_idem2, gdouble z);
  * NcHICosmoIDEM2SParams:
  * @NC_HICOSMO_IDEM2_H0: Hubble constant [km/(s Mpc)]
  * @NC_HICOSMO_IDEM2_OMEGA_C: cold dark matter density parameter
- * @NC_HICOSMO_IDEM2_OMEGA_X: IDEM2 dark energy density parameter
- * @NC_HICOSMO_IDEM2_T_GAMMA0: CMB temperature today [K]
- * @NC_HICOSMO_IDEM2_HE_YP: primordial helium mass fraction
+ * @NC_HICOSMO_IDEM2_OMEGA_X: interacting dark energy-matter density parameter
+ * @NC_HICOSMO_IDEM2_T_GAMMA0: CMB temperature today
+ * @NC_HICOSMO_IDEM2_HE_YP: primordial helium abundance
  * @NC_HICOSMO_IDEM2_ENNU: effective number of neutrinos
  * @NC_HICOSMO_IDEM2_OMEGA_B: baryon density parameter
- * @NC_HICOSMO_IDEM2_GAMMA: IDEM2 model parameter $\gamma$
+ * @NC_HICOSMO_IDEM2_GAMMA: interaction parameter
  *
- * Scalar parameters for the Interacting Dark Energy Model 2 (IDEM2).
+ * Scalar parameters for interacting dark energy-matter cosmology models (IDEM2).
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_IDEM2_SPARAMS >*/
@@ -78,12 +78,12 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_IDEM2_SPARAMS >*/
 
 /**
  * NcHICosmoIDEM2VParams:
- * @NC_HICOSMO_IDEM2_MASSNU_M: massive neutrino mass [eV]
- * @NC_HICOSMO_IDEM2_MASSNU_T: massive neutrino temperature [K]
- * @NC_HICOSMO_IDEM2_MASSNU_MU: massive neutrino chemical potential
- * @NC_HICOSMO_IDEM2_MASSNU_G: massive neutrino degeneracy factor
+ * @NC_HICOSMO_IDEM2_MASSNU_M: neutrino masses
+ * @NC_HICOSMO_IDEM2_MASSNU_T: massive neutrino temperatures
+ * @NC_HICOSMO_IDEM2_MASSNU_MU: massive neutrino chemical potentials
+ * @NC_HICOSMO_IDEM2_MASSNU_G: massive neutrino degeneracy factors
  *
- * Vector parameters for massive neutrinos in the IDEM2 model.
+ * Vector parameters for interacting dark energy-matter cosmology models (IDEM2).
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_IDEM2_VPARAMS >*/

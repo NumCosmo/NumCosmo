@@ -171,9 +171,9 @@ _nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, g
 /**
  * nc_multiplicity_func_warren_new:
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncWarren with mean mass definition.
  *
- * Returns: A new #NcMultiplicityFuncWarren.
+ * Returns: (transfer full): A new #NcMultiplicityFuncWarren.
  */
 NcMultiplicityFuncWarren *
 nc_multiplicity_func_warren_new (void)

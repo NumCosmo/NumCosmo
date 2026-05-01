@@ -113,7 +113,7 @@ NcHIPertBGVarID nc_hipert_bg_var_class_get_id_by_ns (const gchar *ns);
  * NC_HIPERT_BG_VAR_ID_FUNC: (skip)
  * @obj_ns: object namespace
  *
- * FIXME
+ * Macro to generate the id function name for a background variable.
  *
  */
 #define NC_HIPERT_BG_VAR_ID_FUNC(obj_ns) obj_ns##_id

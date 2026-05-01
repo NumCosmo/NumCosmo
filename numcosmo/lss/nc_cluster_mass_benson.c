@@ -155,7 +155,7 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   /**
    * NcClusterMassBenson:signif_obs_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum observed SZ significance for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_SIGNIFICANCE_OBS_MIN,
@@ -168,7 +168,7 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   /**
    * NcClusterMassBenson:signif_obs_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum observed SZ significance for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_SIGNIFICANCE_OBS_MAX,
@@ -182,7 +182,6 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
    * NcClusterMassBenson:z0:
    *
    * Reference redshift in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
    */
   g_object_class_install_property (object_class,
                                    PROP_Z0,
@@ -196,7 +195,6 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
    * NcClusterMassBenson:M0:
    *
    * Reference mass (in h^(-1) * M_sun unit) in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
    */
   g_object_class_install_property (object_class,
                                    PROP_M0,
@@ -209,8 +207,7 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   /**
    * NcClusterMassBenson:Asz:
    *
-   * Slope of the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
+   * Normalization parameter of the SZ signal-mass scaling relation.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_A_SZ, "A_{SZ}", "Asz",
                               1e-8,  10.0, 1.0e-2,
@@ -220,8 +217,7 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   /**
    * NcClusterMassBenson:Bsz:
    *
-   * SZ signal-mass scaling parameter.
-   * FIXME Set correct values (limits)
+   * Mass slope parameter in the SZ signal-mass scaling relation.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_B_SZ, "B_{SZ}", "Bsz",
                               1e-8,  10.0, 1.0e-2,
@@ -231,8 +227,7 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   /**
    * NcClusterMassBenson:Csz:
    *
-   * SZ signal-mass scaling parameter.
-   * FIXME Set correct values (limits)
+   * Redshift evolution parameter in the SZ signal-mass scaling relation.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_C_SZ, "C_{SZ}", "Csz",
                               1e-8,  10.0, 1.0e-2,

@@ -161,7 +161,7 @@ _ncm_prior_gauss_func_mean (NcmPriorGauss *pg, NcmMSet *mset)
  * @sigma: standard deviation
  * @var: variable
  *
- * Creates a new Gaussiam prior for parameter @pid of model @mid.
+ * Creates a new Gaussian prior for parameter @pid of model @mid.
  *
  * Returns: (transfer full): @pgf.
  */

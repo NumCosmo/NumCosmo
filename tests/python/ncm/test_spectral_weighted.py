@@ -26,11 +26,6 @@
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
-
-pytest.importorskip("scipy")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
-
 from scipy.integrate import quad
 
 from numcosmo_py import Ncm

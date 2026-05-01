@@ -72,8 +72,8 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_SPARAMS >*/
  * NcHICosmoQSplineVParams:
  * @NC_HICOSMO_QSPLINE_Q: Deceleration parameter $q$ as a function of redshift (spline knots)
  *
- * Vector parameters for Q-spline cosmological model.
- * The deceleration parameter spline knots define the evolution of $q(z)$.
+ * Vector parameters for Q-spline cosmological model. The deceleration parameter spline
+ * knots define the evolution of $q(z)$.
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_VPARAMS >*/
 {

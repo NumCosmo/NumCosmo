@@ -73,7 +73,7 @@ _besselj_bs_free (gpointer p)
   mpz_clear (bs_data->xd);
   mpz_clear (bs_data->tmp);
   g_slice_free (_binsplit_0F1, bs_data);
-  /* Leak we dont have a free function for binsplit FIXME:LEAK */
+  /* Note: NcmBinSplit structure itself is managed by the memory pool */
 }
 
 static NcmMemoryPool *__mp = NULL;

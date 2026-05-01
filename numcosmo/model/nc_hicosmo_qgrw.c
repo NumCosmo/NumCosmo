@@ -1265,9 +1265,9 @@ _nc_hicosmo_qgrw_adiab_eval_lapse (NcHIPertIAdiab *iad, const gdouble alpha)
 /**
  * nc_hicosmo_qgrw_new:
  *
- * FIXME
+ * Creates a new #NcHICosmoQGRW quantum generated bounce model.
  *
- * Returns: FIXME
+ * Returns: a new #NcHICosmoQGRW
  */
 NcHICosmoQGRW *
 nc_hicosmo_qgrw_new (void)

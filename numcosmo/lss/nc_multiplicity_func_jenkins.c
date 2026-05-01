@@ -197,9 +197,9 @@ _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, 
 /**
  * nc_multiplicity_func_jenkins_new:
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncJenkins with FoF mass definition.
  *
- * Returns: A new #NcMultiplicityFuncJenkins.
+ * Returns: (transfer full): A new #NcMultiplicityFuncJenkins.
  */
 NcMultiplicityFuncJenkins *
 nc_multiplicity_func_jenkins_new (void)

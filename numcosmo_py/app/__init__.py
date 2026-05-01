@@ -49,6 +49,7 @@ from .generate import (
     GenerateXCDM,
     GenerateDEWSpline,
 )
+from .cluster_richness import RunClusterRichnessAnalysis
 from .xcor import ViewKernel, ListKernels
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
@@ -58,6 +59,7 @@ app_cat = typer.Typer(
     no_args_is_help=True, help="MCMC catalog analysis and calibration."
 )
 app_generate = typer.Typer(no_args_is_help=True, help="Generate experiment files.")
+app_analysis = typer.Typer(no_args_is_help=True, help="Data analysis tools.")
 app_xcor = typer.Typer(no_args_is_help=True, help="Cross-correlation kernel analysis.")
 app_xcor_kernel = typer.Typer(
     no_args_is_help=True, help="Kernel visualization and analysis."
@@ -67,6 +69,7 @@ app.add_typer(app_run, name="run")
 app_run.add_typer(app_run_mcmc, name="mcmc")
 app.add_typer(app_cat, name="catalog")
 app.add_typer(app_generate, name="generate")
+app.add_typer(app_analysis, name="analysis")
 app.add_typer(app_xcor, name="xcor")
 app_xcor.add_typer(app_xcor_kernel, name="kernel")
 
@@ -195,6 +198,11 @@ GEN_DEWSPLINE_CMD: CMDArg = {
     "help": "Generate DE w(z) spline experiments.",
 }
 
+ANALYSIS_CLUSTER_RICHNESS_CMD: CMDArg = {
+    "name": "cluster-richness",
+    "no_args_is_help": True,
+    "help": "Analyze cluster mass-richness scaling relations.",
+}
 XCOR_KERNEL_VIEW_CMD: CMDArg = {
     "name": "view",
     "no_args_is_help": True,
@@ -242,6 +250,8 @@ app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
 app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)
 app_generate.command(**GEN_DEWSPLINE_CMD)(GenerateDEWSpline)
 # ------------------------------------------------------------------------------
+# Installing analysis subcommands
+app_analysis.command(**ANALYSIS_CLUSTER_RICHNESS_CMD)(RunClusterRichnessAnalysis)
 # Installing xcor kernel subcommands
 app_xcor_kernel.command(**XCOR_KERNEL_VIEW_CMD)(ViewKernel)
 app_xcor_kernel.command(**XCOR_KERNEL_LIST_CMD)(ListKernels)

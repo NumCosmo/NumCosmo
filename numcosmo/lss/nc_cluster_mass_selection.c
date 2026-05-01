@@ -239,7 +239,9 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   /**
    * NcClusterMassSelection:M0:
    *
-   * Pivot mass FIXME Set correct values (limits)
+   * Pivot (reference) mass used to make observed and model masses
+   * dimensionless. The property default and allowed range are declared in the
+   * property registration below (see g_param_spec_double).
    */
   g_object_class_install_property (object_class,
                                    PROP_M0,
@@ -249,10 +251,11 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
                                                         11.0 * M_LN10, G_MAXDOUBLE, 3.0e14 / 0.71,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-/**
+/*
  * NcClusterMassSelection:Z0:
  *
- * Pivot redshift FIXME Set correct values (limits)
+ * Pivot redshift used to center redshift-dependent scaling relations. The
+ * concrete default and bounds are set in the property registration below.
  */
   g_object_class_install_property (object_class,
                                    PROP_Z0,
@@ -267,7 +270,8 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   /**
    * NcClusterMassSelection:lnRichness_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum observed richness (lower bound for the selection function). The
+   * default and allowed range are provided in the property declaration below.
    */
   g_object_class_install_property (object_class,
                                    PROP_LNRICHNESS_MIN,
@@ -280,7 +284,8 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   /**
    * NcClusterMassSelection:lnRichness_max:
    *
-   * FIXME Set correct values (limits)intp
+   * Maximum observed richness (upper bound for the selection function). The
+   * default and allowed range are provided in the property declaration below.
    */
   g_object_class_install_property (object_class,
                                    PROP_LNRICHNESS_MAX,
@@ -293,7 +298,9 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   /**
    * NcClusterMassSelection:enable_rejection:
    *
-   * FIXME Set if the objects sampled below CUT are rejected
+   * When TRUE, generated observed richness values below the richness cut are
+   * rejected; when FALSE sampling uses the truncated tail generator so values
+   * below the cut are produced according to the tail distribution.
    */
   g_object_class_install_property (object_class,
                                    PROP_ENABLE_REJECTION,
@@ -308,7 +315,9 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   /**
    * NcClusterMassSelection:lnM_limits:
    *
-   * FIXME Set the mass limits for the cluster mass relation related to the completeness
+   * Optional two-element vector that sets the minimum and maximum logarithmic
+   * true-mass limits to be used by the model (units: ln(h^{-1} M_sun)). If
+   * not provided sensible defaults are used.
    */
   g_object_class_install_property (object_class,
                                    PROP_LNM_LIMITS,
@@ -321,8 +330,8 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   /**
    * NcClusterMassSelection:MU_P0:
    *
-   * Distribution's  bias in the mean.
-   * FIXME Set correct values (limits)
+   * Intercept term of the mean richness model (bias in the mean). The allowed
+   * range and default are set in the parameter registration below.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_MU_P0, "mu_p0", "mup0",
                               0.0,  6.0, 1.0e-1,
@@ -332,8 +341,8 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   /**
    * NcClusterMassSelection:MU_P1:
    *
-   * Distribution's slope with respect to the mass in the mean.
-   * FIXME Set correct values (limits)
+   * Mass dependence (slope) of the mean richness model. Parameter bounds and
+   * default are declared in the registration call below.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_MU_P1, "mu_p1", "mup1",
                               -10.0,  10.0, 1.0e-2,
@@ -343,8 +352,8 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   /**
    * NcClusterMassSelection:MU_P2:
    *
-   * Distribution's slope with respect to the redshift in the mean.
-   * FIXME Set correct values (limits)
+   * Redshift dependence (slope) of the mean richness model. Parameter bounds
+   * and defaults are provided when the parameter is registered.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_MU_P2, "mu_p2", "mup2",
                               -10.0,  10.0, 1.0e-2,
@@ -354,9 +363,9 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   /**
    * NcClusterMassSelection:sigma_P0:
    *
-   * Distribution's bias in the standard deviation, $\sigma \in [10^{-4}, 10]$.
-   *
-   * FIXME Set correct values (limits)
+   * Intercept term of the richness scatter model (standard deviation). The
+   * registration call below constrains the allowed interval and provides a
+   * default value.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_SIGMA_P0, "\\sigma_p0", "sigmap0",
                               1.0e-4, 10.0, 1.0e-2,
@@ -366,9 +375,8 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
   /**
    * NcClusterMassSelection:sigma_P1:
    *
-   * Distribution's slope with respect to the mass in the standard deviation.
-   *
-   * FIXME Set correct values (limits)
+   * Mass dependence (slope) of the richness scatter model. Bounds and default
+   * are set in the parameter registration below.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_SIGMA_P1, "\\sigma_p1", "sigmap1",
                               -10.0, 10.0, 1.0e-2,
@@ -379,9 +387,8 @@ nc_cluster_mass_selection_class_init (NcClusterMassSelectionClass *klass)
 /**
  * NcClusterMassSelection:sigma_P2:
  *
- * Distribution's slope with respect to the redshift in the standard deviation.
- *
- * FIXME Set correct values (limits)
+ * Redshift dependence (slope) of the richness scatter model. Bounds and
+ * default are set in the registration below.
  */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_SELECTION_SIGMA_P2, "\\sigma_p2", "sigmap2",
                               -10.0,  10.0, 1.0e-2,

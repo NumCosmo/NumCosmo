@@ -20,8 +20,6 @@ from numpy.testing import assert_allclose
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology
 
-pytest.importorskip("gi.repository.NumCosmo")
-
 pytest_plugins = [
     "python.fixtures_xcor",
 ]

@@ -29,7 +29,7 @@
  * Cross-correlation data object.
  *
  * This object implements the gaussian likelihood described in
- * \cite{2017arXiv170604583D} for the joint analysis of an abitrary number of cosmic
+ * \cite{2017arXiv170604583D} for the joint analysis of an arbitrary number of cosmic
  * probes with their auto- and cross-angular pseudo power spectra. The covariance of the
  * pseudo spectra implemented here is \begin{align} \mathrm{Cov}\left(
  * \tilde{C}_{\ell}^{AB}, \tilde{C}_{\ell'}^{CD} \right) = & \sqrt{ D_{\ell}^{AD}
@@ -444,7 +444,7 @@ _nc_data_xcor_fast_update (NcDataXcor *dxc, NcXcorKernel *xcl, guint a, NcmMSet 
         nc_xcor_kernel_gal_set_bias_old (xclkg,
                                          bias,
                                          ncm_vector_get (orig_vec, NC_XCOR_KERNEL_GAL_NOISE_BIAS)
-                                        );
+        );
       }
 
       return TRUE;
@@ -572,8 +572,8 @@ _nc_data_xcor_prepare (NcmData *data, NcmMSet *mset)
  * @a: a #guint
  * @b: a #guint
  *
- * Computes the mean (theoretical) cross-correlation function for observables
- * @a and @b, storing the result in vector @vp.
+ * Computes the mean function (theoretical pseudo-$C_\ell$) for the
+ * cross-correlation between observables @a and @b, storing the result in @vp.
  *
  */
 void
@@ -826,7 +826,7 @@ _nc_data_xcor_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
  * nc_data_xcor_new_full:
  * @nobs: a #guint, the number of observables
  * @xc: a #NcXcor to perform the computation of theoretical power spectra.
- * @use_norma: a #gboolean, whether to normalize the likehood.
+ * @use_norma: a #gboolean, whether to normalize the likelihood.
  *
  * Creates a new #NcDataXcor object for cross-correlation data analysis.
  * This initializes the data structure for @nobs observables using the
@@ -840,7 +840,7 @@ nc_data_xcor_new_full (const guint nobs, NcXcor *xc, const gboolean use_norma) /
   return g_object_new (NC_TYPE_DATA_XCOR,
                        "use-norma", use_norma,
                        "nobs", nobs,
-                       "xc", xc, /* ADD EVRYTHING HERE ! */
+                       "xc", xc, /* ADD EVERYTHING HERE ! */
                        NULL);
 }
 
@@ -866,7 +866,7 @@ nc_data_xcor_set_AB (NcDataXcor *dxc, NcXcorAB *xcab)
     dxc->xcidx_ctr  += xcab->nell_lik;
   }
 
-  /* Ref the xcor_AB obejct */
+  /* Ref the xcor_AB object */
   dxc->xcab[a][b] = nc_xcor_AB_ref (xcab);
 }
 

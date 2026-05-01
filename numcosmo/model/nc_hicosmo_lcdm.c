@@ -281,9 +281,9 @@ _nc_hicosmo_lcdm_bgp_cs2 (NcHICosmo *cosmo, gdouble z)
 /**
  * nc_hicosmo_lcdm_new:
  *
- * FIXME
+ * Creates a new instance of #NcHICosmoLCDM (Lambda-CDM cosmological model).
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcHICosmoLCDM
  */
 NcHICosmoLCDM *
 nc_hicosmo_lcdm_new (void)
