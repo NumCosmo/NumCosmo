@@ -90,10 +90,10 @@ jobs:
     - name: Brew install pre-requisites
       run: |
         brew uninstall --ignore-dependencies --force pkg-config@0.29.2
-        brew install python3 gobject-introspection pygobject3 numpy scipy typer matplotlib meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran glib openblas
+        brew install python3 gobject-introspection pygobject3 numpy scipy matplotlib meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran glib openblas
     - name: Pip install pre-requisites
       run: |
-        python3 -m pip install pytest pytest-tap pytest-lazy-fixtures --break-system-packages
+        python3 -m pip install pytest pytest-tap pytest-lazy-fixtures typer pydantic --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Fix libfyaml.pc
