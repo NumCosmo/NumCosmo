@@ -27,9 +27,15 @@
 import math
 from numpy.testing import assert_allclose
 import numpy as np
+import pytest
 
 from scipy import constants
 from scipy.constants import physical_constants
+
+pytest.importorskip("astropy")
+# flake8: noqa: E402
+# pylint: disable=wrong-import-position
+
 from astropy import units as u
 
 from numcosmo_py import Ncm

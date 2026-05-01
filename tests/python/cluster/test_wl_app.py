@@ -30,6 +30,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+pytest.importorskip("astropy")
 pytest.importorskip("getdist")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position

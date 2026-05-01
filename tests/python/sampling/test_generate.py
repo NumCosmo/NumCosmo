@@ -28,6 +28,7 @@ from typing import cast
 from pathlib import Path
 import pytest
 
+pytest.importorskip("astropy")
 pytest.importorskip("getdist")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position
