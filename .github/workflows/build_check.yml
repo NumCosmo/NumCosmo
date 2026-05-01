@@ -137,6 +137,7 @@ jobs:
         cd examples
         python3 example_simple.py
         python3 example_cbe.py
+        cd ..
         pytest -xvs tests/python
     - name: Check NumCosmo
       run: |
