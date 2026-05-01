@@ -25,6 +25,7 @@ from typing import Tuple
 import numpy as np
 import pytest
 
+pytest.importorskip("getdist")
 pytest.importorskip("astropy")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position
