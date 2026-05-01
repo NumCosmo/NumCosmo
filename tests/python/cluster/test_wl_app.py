@@ -28,11 +28,6 @@ from typing import cast
 from filecmp import cmp
 from pathlib import Path
 import pytest
-
-pytest.importorskip("typer")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
-
 from typer.testing import CliRunner
 
 from numpy import sin, cos, pi, log10, deg2rad

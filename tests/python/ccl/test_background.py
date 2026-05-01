@@ -29,7 +29,6 @@ from numpy.testing import assert_allclose
 import numpy as np
 
 pytest.importorskip("pyccl")
-pytest.importorskip("matplotlib.pyplot")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position
 

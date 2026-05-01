@@ -28,11 +28,6 @@ from typing import Tuple
 from pathlib import Path
 
 import pytest
-
-pytest.importorskip("typer")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
-
 from typer.testing import CliRunner
 
 from numcosmo_py import Ncm
