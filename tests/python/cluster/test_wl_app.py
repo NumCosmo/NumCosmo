@@ -28,12 +28,12 @@ from typing import cast
 from filecmp import cmp
 from pathlib import Path
 import pytest
+from typer.testing import CliRunner
 
-pytest.importorskip("typer")
+pytest.importorskip("astropy")
+pytest.importorskip("getdist")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position
-
-from typer.testing import CliRunner
 
 from numpy import sin, cos, pi, log10, deg2rad
 from numpy.random import uniform, choice

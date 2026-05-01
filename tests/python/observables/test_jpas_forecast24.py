@@ -29,7 +29,7 @@ import pytest
 
 from numcosmo_py import Ncm, Nc
 
-pytest.importorskip("scipy")
+pytest.importorskip("healpy")
 pytest.importorskip("numcosmo_py.external.pyssc")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position

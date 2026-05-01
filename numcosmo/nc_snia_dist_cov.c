@@ -280,9 +280,9 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
  * @dist: a #NcDistance
  * @sigma_int_len: length of the sigma_int dataset
  *
- * FIXME
+ * Creates a new #NcSNIADistCov object for Type Ia supernovae distance modulus with covariance matrix.
  *
- * Returns: FIXME
+ * Returns: a newly created #NcSNIADistCov
  */
 NcSNIADistCov *
 nc_snia_dist_cov_new (NcDistance *dist, guint sigma_int_len)

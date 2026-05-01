@@ -174,9 +174,9 @@ nc_planck_fi_log_all_models (void)
  * nc_planck_fi_ref:
  * @pfi: a #NcPlanckFI
  *
- * FIXME
+ * Increases the reference count of @pfi by one.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @pfi
  */
 NcPlanckFI *
 nc_planck_fi_ref (NcPlanckFI *pfi)
@@ -188,7 +188,7 @@ nc_planck_fi_ref (NcPlanckFI *pfi)
  * nc_planck_fi_free:
  * @pfi: a #NcPlanckFI
  *
- * FIXME
+ * Decreases the reference count of @pfi by one.
  *
  */
 void

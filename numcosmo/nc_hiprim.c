@@ -331,20 +331,20 @@ nc_hiprim_get_lnk_pivot (NcHIPrim *prim)
 
 /**
  * nc_hiprim_set_lnSA_powspec_lnk_impl: (skip)
- * @model_class: FIXME
- * @f: (scope notified): FIXME
+ * @model_class: a #NcHIPrimClass
+ * @f: (scope notified): function pointer
  *
- * FIXME
+ * Sets the implementation for computing the adiabatic scalar power spectrum.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HIPRIM, NcHIPrim, nc_hiprim, NcHIPrimFunc1, lnSA_powspec_lnk)
 
 /**
  * nc_hiprim_set_lnT_powspec_lnk_impl: (skip)
- * @model_class: FIXME
- * @f: (scope notified): FIXME
+ * @model_class: a #NcHIPrimClass
+ * @f: (scope notified): function pointer
  *
- * FIXME
+ * Sets the implementation for computing the tensor power spectrum.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HIPRIM, NcHIPrim, nc_hiprim, NcHIPrimFunc1, lnT_powspec_lnk)

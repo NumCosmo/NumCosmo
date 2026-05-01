@@ -58,7 +58,7 @@ typedef struct _NcHICosmoQRBFPrivate NcHICosmoQRBFPrivate;
  * NcHICosmoQRBFSParams:
  * @NC_HICOSMO_QRBF_H0: Hubble constant
  * @NC_HICOSMO_QRBF_OMEGA_T: Total energy density of the universe
- * @NC_HICOSMO_QRBF_AS_DRAG: FIXME
+ * @NC_HICOSMO_QRBF_AS_DRAG: Sound horizon at drag epoch
  * @NC_HICOSMO_QRBF_RBF_H: the rbf wave-length
  *
  */

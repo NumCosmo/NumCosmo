@@ -28,11 +28,11 @@ from typing import cast
 from pathlib import Path
 import pytest
 
-# These tests depend on pydantic models used in the app
-pytest.importorskip("pydantic")
-pytest.importorskip("typer")
+pytest.importorskip("astropy")
+pytest.importorskip("getdist")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position
+
 
 from numcosmo_py import Ncm
 import numcosmo_py.app.generate as gen

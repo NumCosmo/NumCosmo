@@ -128,7 +128,7 @@ nc_halo_density_profile_dk14_class_init (NcHaloDensityProfileDK14Class *klass)
    * NcHaloDensityProfileDK14:Delta:
    *
    * Constant that indicates the overdensity with respect to the critical density.
-   * FIXME Set correct values (limits)
+   * Typical values range from 200 to 1500.
    */
   g_object_class_install_property (object_class,
                                    PROP_DELTA,
@@ -141,8 +141,8 @@ nc_halo_density_profile_dk14_class_init (NcHaloDensityProfileDK14Class *klass)
   /**
    * NcHaloDensityProfileDK14:rt:
    *
-   * Truncation radius.
-   * FIXME Set correct values (limits)
+   * Truncation radius in units of the scale radius.
+   * Typical values range from 0.5 to 10.0.
    */
   ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_DK14_RT, "r_{t}", "rt",
                               0.5,  10.0, 1.0e-1,
@@ -152,8 +152,8 @@ nc_halo_density_profile_dk14_class_init (NcHaloDensityProfileDK14Class *klass)
   /**
    * NcHaloDensityProfileDK14:beta:
    *
-   * Sharpness of the steepening.
-   * FIXME Set correct values (limits)
+   * Sharpness of the steepening in the outer profile.
+   * Typical values range from 1.0 to 10.0, with 4.0 as default.
    */
   ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_DK14_BETA, "\\beta", "beta",
                               1.0,  10.0, 4.0,

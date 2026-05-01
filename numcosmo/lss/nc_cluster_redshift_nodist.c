@@ -150,7 +150,8 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
   /**
    * NcClusterRedshiftNodist:z_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum redshift for the survey selection.
+   * Should match the survey's redshift range.
    */
   g_object_class_install_property (object_class,
                                    PROP_Z_MIN,
@@ -163,7 +164,8 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
   /**
    * NcClusterRedshiftNodist:z_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum redshift for the survey selection.
+   * Should match the survey's redshift range.
    */
   g_object_class_install_property (object_class,
                                    PROP_Z_MAX,

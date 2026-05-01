@@ -281,9 +281,11 @@ nc_hipert_igw_eval_m (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
  * nc_hipert_igw_eval_unit:
  * @igw: a #NcHIPertIGW
  *
- * FIXME
+ * Evaluates the unit conversion factor for the gravitational wave amplitude.
+ * This factor converts the dimensionless gravitational wave amplitude to
+ * physical units.
  *
- * Returns: FIXME.
+ * Returns: the unit conversion factor.
  */
 gdouble
 nc_hipert_igw_eval_unit (NcHIPertIGW *igw)

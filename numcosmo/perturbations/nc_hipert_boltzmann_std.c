@@ -425,9 +425,10 @@ _nc_hipert_boltzmann_std_print_all (NcHIPertBoltzmann *pb)
 /**
  * nc_hipert_boltzmann_std_new:
  * @recomb: a #NcRecomb.
- * @lmax: FIXME
+ * @lmax: maximum multipole moment for the Boltzmann hierarchy
  *
- * FIXME
+ * Creates a new #NcHIPertBoltzmannStd object for solving the standard Boltzmann
+ * hierarchy up to multipole @lmax.
  *
  * Returns: (transfer full): a new #NcHIPertBoltzmannStd object.
  */

@@ -287,13 +287,13 @@ nc_cluster_redshift_intp (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const g
  * @cosmo: a #NcHICosmo
  * @z: true redshift
  * @lnM: true mass
- * @z_obs_lower: (array) (element-type gdouble): FIXME
- * @z_obs_upper: (array) (element-type gdouble): FIXME
- * @z_obs_params:(array) (element-type gdouble) (allow-none): FIXME
+ * @z_obs_lower: (array) (element-type gdouble): lower bounds of observed redshift bins
+ * @z_obs_upper: (array) (element-type gdouble): upper bounds of observed redshift bins
+ * @z_obs_params:(array) (element-type gdouble) (allow-none): parameters for the observed redshift distribution
  *
- * FIXME
+ * Computes the integrated probability over the observed redshift bin.
  *
- * Returns: FIXME
+ * Returns: the integrated probability
  */
 gdouble
 nc_cluster_redshift_intp_bin (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params)
@@ -331,7 +331,7 @@ nc_cluster_redshift_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo, con
  * @z_lower: (out): pointer to the lower limit of the true redshift integration
  * @z_upper: (out): pointer to the upper limit of the true redshift integration
  *
- * FIXME
+ * Computes the integration limits for the true redshift given the observed redshift and its parameters.
  *
  */
 void
@@ -344,13 +344,13 @@ nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, con
  * nc_cluster_redshift_p_bin_limits:
  * @clusterz: a #NcClusterRedshift
  * @cosmo: a #NcHICosmo
- * @z_obs_lower: (array) (element-type gdouble): observed redshift
- * @z_obs_upper: (array) (element-type gdouble): observed redshift
+ * @z_obs_lower: (array) (element-type gdouble): lower bounds of observed redshift bins
+ * @z_obs_upper: (array) (element-type gdouble): upper bounds of observed redshift bins
  * @z_obs_params: (array) (element-type gdouble): observed redshift params
  * @z_lower: (out): pointer to the lower limit of the true redshift integration
  * @z_upper: (out): pointer to the upper limit of the true redshift integration
  *
- * FIXME
+ * Computes the integration limits for the true redshift given the observed redshift bin boundaries.
  *
  */
 void
@@ -366,7 +366,7 @@ nc_cluster_redshift_p_bin_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo,
  * @z_lower: (out): pointer to the lower limit of the true redshift
  * @z_upper: (out): pointer to the upper limit of the true redshift
  *
- * FIXME
+ * Computes the redshift limits for the cluster abundance calculation.
  * The function which will call this one is responsible to allocate memory for @z_lower and @z_upper.
  */
 void
@@ -379,9 +379,9 @@ nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdo
  * nc_cluster_redshift_volume:
  * @clusterz: a #NcClusterRedshift
  *
- * FIXME
+ * Computes the effective volume in the observable redshift space.
  *
- * Returns: FIXME
+ * Returns: the effective volume
  */
 gdouble
 nc_cluster_redshift_volume (NcClusterRedshift *clusterz)

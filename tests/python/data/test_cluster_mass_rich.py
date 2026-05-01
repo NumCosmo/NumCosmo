@@ -77,8 +77,11 @@ def fixture_cluster_mass_rich(
     log_cluster_masses_v = Ncm.Vector.new_array(log_cluster_masses)
     redshifts_v = Ncm.Vector.new_array(redshifts)
     log_R_v = log_cluster_masses_v.dup()
+    # Create sigma_lnR vector (zeros for no observational error in this test)
+    sigma_lnR_v = Ncm.Vector.new(n_clusters)
+    sigma_lnR_v.set_zero()
 
-    dcmr.set_data(log_cluster_masses_v, redshifts_v, log_R_v)
+    dcmr.set_data(log_cluster_masses_v, redshifts_v, log_R_v, sigma_lnR_v)
     mset = Ncm.MSet.new_array([ascaso])
 
     dcmr.resample(mset, rng)

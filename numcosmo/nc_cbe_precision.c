@@ -2370,7 +2370,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
 /**
  * nc_cbe_precision_new: (constructor)
  *
- * FIXME
+ * Creates a new #NcCBEPrecision object with default CLASS precision parameters.
  *
  * Returns: (transfer full): a new #NcCBEPrecision
  */

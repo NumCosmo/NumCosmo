@@ -684,6 +684,12 @@ def generate_jpas_forecast_2024(
     ncounts_gauss.set_z_obs(z_bins_vec)
     ncounts_gauss.set_lnM_obs(lnM_obs_bins_vec)
 
+    # Set lnM_obs_params (sigma_lnR matrix) - for binned data, use zeros
+    # Matrix dimensions: n_bins x n_params (where n_params = 1 for sigma_lnR)
+    lnM_obs_params_mat = Ncm.Matrix.new(n_bins, 1)
+    lnM_obs_params_mat.set_zero()
+    ncounts_gauss.set_lnM_obs_params(lnM_obs_params_mat)
+
     # Set fitting (theoretical) SSC matrix
     if fitting_Sij_type != JpasSSCType.NO_SSC:
         print(f"Computing fitting SSC matrix ({fitting_Sij_type})...", flush=True)

@@ -217,9 +217,9 @@ _nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdoub
 /**
  * nc_multiplicity_func_ps_new:
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncPS with mean mass definition.
  *
- * Returns: A new #NcMultiplicityFuncPS.
+ * Returns: (transfer full): A new #NcMultiplicityFuncPS.
  */
 NcMultiplicityFuncPS *
 nc_multiplicity_func_ps_new (void)

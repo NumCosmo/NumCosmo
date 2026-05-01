@@ -170,7 +170,7 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
   /**
    * NcClusterMassBensonXRay:Yx_obs_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum observed X-ray Yx parameter for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_YX_OBS_MIN,
@@ -183,7 +183,7 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
   /**
    * NcClusterMassBensonXray:Yx_obs_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum observed X-ray Yx parameter for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_YX_OBS_MAX,
@@ -197,7 +197,6 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
    * NcClusterMassBensonXRay:M0:
    *
    * Reference mass (in h^(-1) * M_sun unit) in the X-Ray proxy-mass scaling relation.
-   * FIXME Set correct values (limits)
    */
   g_object_class_install_property (object_class,
                                    PROP_M0X,
@@ -211,7 +210,6 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
    * NcClusterMassBensonXRay:Y0:
    *
    * Yx reference (in 10^{14} * M_sun * keV unit) in the X-Ray proxy-mass scaling relation.
-   * FIXME Set correct values (limits)
    */
   g_object_class_install_property (object_class,
                                    PROP_Y0,
@@ -223,7 +221,6 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
 
   /*
    * X-ray signal-mass scaling parameter: Ax.
-   * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_A_X, "A_{X}", "Ax",
                               1e-8,  10.0, 1.0e-2,
@@ -232,7 +229,6 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
 
   /*
    * X-ray signal-mass scaling parameter: Bx.
-   * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_B_X, "B_{X}", "Bx",
                               1e-8,  10.0, 1.0e-2,
@@ -241,7 +237,6 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
 
   /*
    * X-ray signal-mass scaling parameter: Cx.
-   * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_C_X, "C_{X}", "Cx",
                               -2.0,  8.0, 1.0e-2,
@@ -250,7 +245,6 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
 
   /*
    * X-ray signal-mass scaling parameter: Dx.
-   * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_D_X, "D_{X}", "Dx",
                               1e-8,  10.0, 1.0e-2,

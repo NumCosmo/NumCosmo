@@ -175,9 +175,9 @@ _nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, g
 /**
  * nc_multiplicity_func_crocce_new:
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncCrocce for the MICE simulation FoF(0.2) mass definition.
  *
- * Returns: A new #NcMultiplicityFuncCrocce.
+ * Returns: (transfer full): A new #NcMultiplicityFuncCrocce.
  */
 NcMultiplicityFuncCrocce *
 nc_multiplicity_func_crocce_new (void)

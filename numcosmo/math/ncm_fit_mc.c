@@ -794,10 +794,14 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
 void
 ncm_fit_mc_end_run (NcmFitMC *mc)
 {
+  NcmLikelihood *lh = ncm_fit_peek_likelihood (mc->fit);
+  NcmDataset *dset  = ncm_likelihood_peek_dataset (lh);
+
   if (ncm_timer_task_is_running (mc->nt))
     ncm_timer_task_end (mc->nt);
 
   ncm_mset_catalog_sync (mc->mcat, TRUE);
+  ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
 
   mc->started = FALSE;
 }

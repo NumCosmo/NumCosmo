@@ -267,7 +267,8 @@ nc_xcor_AB_class_init (NcXcorABClass *klass)
  *
  * Creates a new #NcXcorAB object for cross-correlation between observables A and B.
  * This initializes the angular power spectrum data structures, including the observed
- * pseudo-spectrum and mixing matrix for handling survey masks and incomplete sky coverage.
+ * pseudo-spectrum and mixing matrix for handling survey masks and incomplete sky
+ * coverage.
  *
  * Returns: (transfer full): a new #NcXcorAB
  */
@@ -346,8 +347,8 @@ nc_xcor_AB_ref (NcXcorAB *xcab)
  * nc_xcor_AB_free:
  * @xcab: a #NcXcorAB
  *
- * Decreases the reference count of @xcab by one. If the reference count
- * reaches zero, frees all memory associated with @xcab.
+ * Decreases the reference count of @xcab by one. If the reference count reaches zero,
+ * frees all memory associated with @xcab.
  *
  */
 void
@@ -360,9 +361,8 @@ nc_xcor_AB_free (NcXcorAB *xcab)
  * nc_xcor_AB_clear:
  * @xcab: a #NcXcorAB
  *
- * Atomically decrements the reference count of @xcab by one.
- * If the reference count drops to zero, all memory is freed and
- * @xcab is set to NULL.
+ * Atomically decrements the reference count of @xcab by one. If the reference count
+ * drops to zero, all memory is freed and @xcab is set to NULL.
  *
  */
 void

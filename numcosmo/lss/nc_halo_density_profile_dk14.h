@@ -75,10 +75,10 @@ typedef enum _NcHaloDensityProfileDK14Params
 
 /**
  * NcHaloDensityProfileDK14MethodParams:
- * @NC_HALO_DENSITY_PROFILE_DK14_MC2RHOSRS: FIXME
- * @NC_HALO_DENSITY_PROFILE_DK14_DIRECT_RHOSRS: FIXME
+ * @NC_HALO_DENSITY_PROFILE_DK14_MC2RHOSRS: compute rho_s and r_s from mass and concentration
+ * @NC_HALO_DENSITY_PROFILE_DK14_DIRECT_RHOSRS: use rho_s and r_s directly
  *
- * FIXME
+ * Methods for parametrizing the DK14 halo density profile.
  *
  */
 typedef enum _NcHaloDensityProfileDK14MethodParams

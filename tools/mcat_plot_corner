@@ -27,14 +27,10 @@
 import argparse
 import numpy as np
 
+import chainconsumer as cc
 from chainconsumer import ChainConsumer
-import gi
-
-gi.require_version("NumCosmo", "1.0")
-gi.require_version("NumCosmoMath", "1.0")
-
-# pylint:disable-next=wrong-import-position
-from gi.repository import NumCosmoMath as Ncm
+from numcosmo_py import Ncm
+import pandas as pd
 
 parser = argparse.ArgumentParser(description="Process mset catalogs")
 
@@ -92,32 +88,25 @@ for cat in args.catalog:
 
     rows = np.array([mcat.peek_row(i).dup_array() for i in range(mcat.len())])
     params = ["$" + mcat.col_symb(i) + "$" for i in range(mcat.ncols())]
-
-    posterior = -0.5 * rows[:, m2lnL]
-
-    rows = np.delete(rows, m2lnL, 1)
-    params = list(np.delete(params, m2lnL, 0))
-    print(params)
+    param_names = [mcat.col_name(i) for i in range(mcat.ncols())]
+    rows[:, m2lnL] = -0.5 * rows[:, m2lnL]
 
     if args.col:
         assert max(args.col) < mcat.ncols()
         indices = np.array(args.col)
 
         rows = rows[:, indices]
-        params = params[indices]
+        params = [params[i] for i in indices]
+        param_names = [param_names[i] for i in indices]
 
-    c.add_chain(
-        rows, posterior=posterior, parameters=list(params), name=cat.replace("_", "-")
+    chain_df = pd.DataFrame(data=rows, columns=param_names)
+    chain = cc.Chain(
+        samples=chain_df,
+        posterior_column=mcat.col_name(m2lnL),
+        name=cat.replace("_", "-"),
+        walkers=nwalkers,
     )
-
-c.configure(
-    kde=args.kde,
-    label_font_size=8,
-    sigma2d=False,
-    sigmas=args.sigma,
-    spacing=0.0,
-    tick_font_size=8,
-)
+    c.add_chain(chain)
 
 plot_args = {}
 

@@ -172,7 +172,7 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
   /**
    * NcClusterMassVanderlinde:signif_obs_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum observed SZ significance for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_SIGNIFICANCE_OBS_MIN,
@@ -185,7 +185,7 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
   /**
    * NcClusterMassVanderlinde:signif_obs_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum observed SZ significance for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_SIGNIFICANCE_OBS_MAX,
@@ -199,7 +199,6 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
    * NcClusterMassVanderlinde:z0:
    *
    * Reference redshift in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
    */
   g_object_class_install_property (object_class,
                                    PROP_Z0,
@@ -213,7 +212,6 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
    * NcClusterMassVanderlinde:M0:
    *
    * Reference mass (in h^(-1) * M_sun unit) in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
    */
   g_object_class_install_property (object_class,
                                    PROP_M0,
@@ -225,7 +223,8 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
 
   /*
    * SZ signal-mass scaling parameter: Asz.
-   * FIXME Set correct values (limits)
+   * Normalization parameter in the SZ signal-mass relation: $\ln(\zeta) = A_{SZ} + B_{SZ} \ln(M/M_0) + C_{SZ} \ln[(1+z)/(1+z_0)]$.
+   * Range: [1e-8, 10.0], typical values around 1.0.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_A_SZ, "A_{SZ}", "Asz",
                               1e-8,  10.0, 1.0e-2,
@@ -234,7 +233,8 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
 
   /*
    * SZ signal-mass scaling parameter: Bsz.
-   * FIXME Set correct values (limits)
+   * Mass slope in the SZ signal-mass relation: $\ln(\zeta) = A_{SZ} + B_{SZ} \ln(M/M_0) + C_{SZ} \ln[(1+z)/(1+z_0)]$.
+   * Range: [1e-8, 10.0], typical values around 1.5-2.0.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_B_SZ, "B_{SZ}", "Bsz",
                               1e-8,  10.0, 1.0e-2,
@@ -243,7 +243,8 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
 
   /*
    * SZ signal-mass scaling parameter: Csz.
-   * FIXME Set correct values (limits)
+   * Redshift evolution in the SZ signal-mass relation: $\ln(\zeta) = A_{SZ} + B_{SZ} \ln(M/M_0) + C_{SZ} \ln[(1+z)/(1+z_0)]$.
+   * Range: [1e-8, 10.0], typical values around 0.0-1.0.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_C_SZ, "C_{SZ}", "Csz",
                               1e-8,  10.0, 1.0e-2,
@@ -252,7 +253,8 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
 
   /*
    * SZ signal-mass scaling parameter: Dsz.
-   * FIXME Set correct values (limits)
+   * Intrinsic scatter in the SZ signal-mass relation: $\sigma_{\ln\zeta}$.
+   * Range: [1e-8, 10.0], typical values around 0.1-0.5.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_D_SZ, "D_{SZ}", "Dsz",
                               1e-8,  10.0, 1.0e-2,

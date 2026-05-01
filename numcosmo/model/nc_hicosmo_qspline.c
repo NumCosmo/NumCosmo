@@ -225,7 +225,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   /**
    * NcHICosmoQSpline:H0-fit:
    *
-   * FIXME
+   * Whether to fit the Hubble parameter.
    */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_H0, "H_0", "H0",
                               10.0, 500.0, 1.0, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_H0,
@@ -234,12 +234,12 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   /**
    * NcHICosmoQSpline:Omegat:
    *
-   * FIXME
+   * Total density parameter today.
    */
   /**
    * NcHICosmoQSpline:Omegat-fit:
    *
-   * FIXME
+   * Whether to fit the total density parameter.
    */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_OMEGA_T, "\\Omega_{t0}", "Omegat",
                               0.05, 2.0, 1.0e-1,
@@ -249,12 +249,12 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   /**
    * NcHICosmoQSpline:asdrag:
    *
-   * FIXME
+   * Sound horizon at drag epoch.
    */
   /**
    * NcHICosmoQSpline:asdrag-fit:
    *
-   * FIXME
+   * Whether to fit the sound horizon at drag epoch.
    */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_AS_DRAG, "A_s", "asdrag",
                               1.0e-4, 1.0, 1.0e-3,
@@ -264,17 +264,17 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   /**
    * NcHICosmoQSpline:qparam:
    *
-   * FIXME
+   * Deceleration parameter values at spline knots.
    */
   /**
    * NcHICosmoQSpline:qparam-fit:
    *
-   * FIXME
+   * Whether to fit the deceleration parameter values.
    */
   /**
    * NcHICosmoQSpline:qparam-length:
    *
-   * FIXME
+   * Number of deceleration parameter knots.
    */
   ncm_model_class_set_vparam (model_class, NC_HICOSMO_QSPLINE_Q, NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN, "q", "qparam",
                               -50.0, 50.0, 2.0e-1, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_Q,
@@ -431,11 +431,11 @@ _nc_hicosmo_qspline_as_drag (NcHICosmo *cosmo)
  * nc_hicosmo_qspline_new:
  * @s: a #NcmSpline
  * @np: number of knots
- * @z_f: FIXME
+ * @z_f: final redshift
  *
- * FIXME
+ * Creates a new #NcHICosmoQSpline with @np knots up to redshift @z_f.
  *
- * Returns: FIXME
+ * Returns: a new #NcHICosmoQSpline
  */
 NcHICosmoQSpline *
 nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f)
@@ -453,12 +453,12 @@ nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f)
  * nc_hicosmo_qspline_add_continuity_priors:
  * @qspline: a #NcHICosmoQSpline
  * @lh: a #NcmLikelihood
- * @sigma: FIXME
- * @abstol: FIXME
+ * @sigma: standard deviation for continuity prior
+ * @abstol: absolute tolerance for continuity prior
  *
- * FIXME
+ * Adds continuity priors to the spline to ensure smooth transitions between knots.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcHICosmoQSplineContPrior
  */
 NcHICosmoQSplineContPrior *
 nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma, gdouble abstol)
@@ -570,17 +570,17 @@ nc_hicosmo_qspline_cont_prior_class_init (NcHICosmoQSplineContPriorClass *klass)
   /**
    * NcHICosmoQSplineContPrior:abstol:
    *
-   * FIXME
+   * Absolute tolerance for continuity prior.
    */
   /**
    * NcHICosmoQSplineContPrior:abstol-fit:
    *
-   * FIXME
+   * Whether to fit the absolute tolerance.
    */
   /**
    * NcHICosmoQSplineContPrior:abstol-length:
    *
-   * FIXME
+   * Length of the absolute tolerance parameter.
    */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_CONT_PRIOR_ABSTOL, "abstol", "abstol",
                               0.0, G_MAXDOUBLE, 1.0e-1, 0.0, 1.0e-1,
@@ -589,17 +589,17 @@ nc_hicosmo_qspline_cont_prior_class_init (NcHICosmoQSplineContPriorClass *klass)
   /**
    * NcHICosmoQSplineContPrior:lnsigma:
    *
-   * FIXME
+   * Natural logarithm of the standard deviation for continuity prior.
    */
   /**
    * NcHICosmoQSplineContPrior:lnsigma-fit:
    *
-   * FIXME
+   * Whether to fit the log standard deviation.
    */
   /**
    * NcHICosmoQSplineContPrior:lnsigma-length:
    *
-   * FIXME
+   * Number of log standard deviation parameters.
    */
   ncm_model_class_set_vparam (model_class, NC_HICOSMO_QSPLINE_CONT_PRIOR_LNSIGMA, 3, "lnsigma", "lnsigma",
                               log (1e-200), log (1.0e200), fabs (log (1.0e-1)), 0.0, log (1.0e-1),
@@ -630,11 +630,11 @@ _nc_hicosmo_qspline_cont_prior_valid (NcmModel *model)
 
 /**
  * nc_hicosmo_qspline_cont_prior_new:
- * @npriors: FIXME
+ * @npriors: number of continuity priors
  *
- * FIXME
+ * Creates a new #NcHICosmoQSplineContPrior with @npriors continuity constraints.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcHICosmoQSplineContPrior
  */
 NcHICosmoQSplineContPrior *
 nc_hicosmo_qspline_cont_prior_new (guint npriors)
@@ -650,9 +650,9 @@ nc_hicosmo_qspline_cont_prior_new (guint npriors)
  * nc_hicosmo_qspline_cont_prior_ref:
  * @qspline_cp: a #NcHICosmoQSplineContPrior
  *
- * FIXME
+ * Increases the reference count of @qspline_cp.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @qspline_cp
  */
 NcHICosmoQSplineContPrior *
 nc_hicosmo_qspline_cont_prior_ref (NcHICosmoQSplineContPrior *qspline_cp)
@@ -664,7 +664,7 @@ nc_hicosmo_qspline_cont_prior_ref (NcHICosmoQSplineContPrior *qspline_cp)
  * nc_hicosmo_qspline_cont_prior_free:
  * @qspline_cp: a #NcHICosmoQSplineContPrior
  *
- * FIXME
+ * Decreases the reference count of @qspline_cp and frees it if the count reaches zero.
  *
  */
 void
@@ -676,10 +676,10 @@ nc_hicosmo_qspline_cont_prior_free (NcHICosmoQSplineContPrior *qspline_cp)
 /**
  * nc_hicosmo_qspline_cont_prior_set_lnsigma:
  * @qspline_cp: a #NcHICosmoQSplineContPrior
- * @i: FIXME
- * @ln_sigma: FIXME
+ * @i: index of the prior
+ * @ln_sigma: natural logarithm of the standard deviation
  *
- * FIXME
+ * Sets the log standard deviation for the @i-th continuity prior.
  *
  */
 void
@@ -696,9 +696,9 @@ nc_hicosmo_qspline_cont_prior_set_lnsigma (NcHICosmoQSplineContPrior *qspline_cp
 /**
  * nc_hicosmo_qspline_cont_prior_set_all_lnsigma:
  * @qspline_cp: a #NcHICosmoQSplineContPrior
- * @ln_sigma: FIXME
+ * @ln_sigma: natural logarithm of the standard deviation
  *
- * FIXME
+ * Sets the log standard deviation for all continuity priors.
  *
  */
 void
@@ -715,11 +715,11 @@ nc_hicosmo_qspline_cont_prior_set_all_lnsigma (NcHICosmoQSplineContPrior *qsplin
 /**
  * nc_hicosmo_qspline_cont_prior_get_lnsigma:
  * @qspline_cp: a #NcHICosmoQSplineContPrior
- * @i: FIXME
+ * @i: index of the prior
  *
- * FIXME
+ * Gets the log standard deviation for the @i-th continuity prior.
  *
- * Returns: FIXME
+ * Returns: the log standard deviation
  */
 gdouble
 nc_hicosmo_qspline_cont_prior_get_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i)
@@ -735,9 +735,9 @@ nc_hicosmo_qspline_cont_prior_get_lnsigma (NcHICosmoQSplineContPrior *qspline_cp
 /**
  * nc_hicosmo_qspline_cont_prior_set_abstol:
  * @qspline_cp: a #NcHICosmoQSplineContPrior
- * @abstol: FIXME
+ * @abstol: absolute tolerance
  *
- * FIXME
+ * Sets the absolute tolerance for the continuity prior.
  *
  */
 void
@@ -753,9 +753,9 @@ nc_hicosmo_qspline_cont_prior_set_abstol (NcHICosmoQSplineContPrior *qspline_cp,
  * nc_hicosmo_qspline_cont_prior_get_abstol:
  * @qspline_cp: a #NcHICosmoQSplineContPrior
  *
- * FIXME
+ * Gets the absolute tolerance for the continuity prior.
  *
- * Returns: FIXME
+ * Returns: the absolute tolerance
  */
 gdouble
 nc_hicosmo_qspline_cont_prior_get_abstol (NcHICosmoQSplineContPrior *qspline_cp)
@@ -818,7 +818,7 @@ _nc_prior_qspline_cont_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x,
 /**
  * nc_prior_qspline_cont_new:
  *
- * FIXME
+ * Creates a new #NcPriorQSplineCont prior for spline continuity.
  *
  * Returns: (transfer full): the newly created #NcPriorQSplineCont.
  */

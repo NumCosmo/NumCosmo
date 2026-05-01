@@ -34,7 +34,7 @@ and create figure/axes objects explicitly.
 import numpy as np
 import pytest
 
-pytest.importorskip("matplotlib")
+pytest.importorskip("getdist")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position
 

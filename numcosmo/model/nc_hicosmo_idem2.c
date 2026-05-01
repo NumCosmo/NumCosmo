@@ -1017,7 +1017,7 @@ _nc_hicosmo_idem2_reparam_cmb_new2old (NcmReparam *reparam, NcmModel *model)
  * nc_hicosmo_idem2_reparam_cmb_new: (constructor)
  * @length: number of parameters
  *
- * FIXME
+ * Creates a new #NcHICosmoIDEM2ReparamCMB reparametrization object for CMB parameters.
  *
  * Returns: (transfer full): a new #NcHICosmoIDEM2ReparamCMB
  */
@@ -1115,7 +1115,8 @@ _nc_hicosmo_idem2_reparam_ok_new2old (NcmReparam *reparam, NcmModel *model)
  * nc_hicosmo_idem2_reparam_ok_new: (constructor)
  * @length: number of parameters
  *
- * FIXME
+ * Creates a new #NcHICosmoIDEM2ReparamOk reparametrization object that converts
+ * dark energy density parameter to curvature density parameter.
  *
  * Returns: (transfer full): a new #NcHICosmoIDEM2ReparamOk
  */

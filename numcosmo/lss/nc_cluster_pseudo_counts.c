@@ -163,7 +163,9 @@ nc_cluster_pseudo_counts_class_init (NcClusterPseudoCountsClass *klass)
   /**
    * NcClusterPseudoCounts:lnMCut-fit:
    *
-   * FIXME
+   * Flag indicating whether the lower mass cut (lnMCut) is to be treated as a
+   * free/fitted parameter. The detailed parameter bounds and default behavior
+   * are defined in the registration call above.
    *
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_LNMCUT, "\\ln{M_{CUT}}", "lnMCut",
@@ -302,13 +304,16 @@ typedef struct _integrand_data
  * @sigma_pl: Planck mass error
  * @sigma_cl: CLASH mass error
  *
- * This function computes the i-th term of the posterior given flat priors for
- * the selection function and mass function. FIXME (include equations)
+ * Compute the posterior term contribution for a single detection (i-th term)
+ * assuming flat priors for the selection function and halo mass function. The
+ * routine uses the PL-CL cluster mass model to evaluate the likelihood term
+ * for the observed masses at given redshift.
  *
- * Warning!!! The normalization factor of the true redshift prior has to be included in this function
- * if $z_{min}$ and or $z_max$ will be fitted. FIXME Include equations.
+ * Note: when redshift bounds are themselves modelled (z_min or z_max fitted)
+ * the caller must include the appropriate normalization factor for the true
+ * redshift prior. See higher-level posterior assembly routines for details.
  *
- * Returns: FIXME
+ * Returns: Dimensionless posterior contribution for the provided observation.
  */
 gdouble
 nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcHaloMassFunction *mfp, NcHICosmo *cosmo, NcClusterMass *clusterm, gdouble z, gdouble Mpl, gdouble Mcl, gdouble sigma_pl, gdouble sigma_cl)
@@ -339,9 +344,13 @@ _selection_function (NcClusterPseudoCounts *cpc, gdouble lnM500)
  * @lnM: logarithm base e of the true mass
  * @z: true redshift
  *
- * This function computes the selection function (include equation). FIXME
+ * Compute the selection function S(lnM, z), i.e. the probability that a halo
+ * of true log-mass lnM at redshift z is included in the sample given the
+ * modelled survey selection parameters. The selection is 0 outside the
+ * configured redshift window and follows a smooth transition around the mass
+ * cut inside the interval.
  *
- * Returns: FIXME
+ * Returns: Selection probability in the interval [0, 1].
  */
 gdouble
 nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM, gdouble z)
@@ -390,9 +399,12 @@ _Ndet_wout_volume_integrand (gdouble lnM500, gpointer userdata)
  * @cosmo: a #NcHICosmo
  * @z: redshift
  *
- * FIXME
+ * Compute the mass-only integral of the selection-weighted halo mass
+ * function at a fixed redshift. This integrates over the true-mass range and
+ * returns the expected number density contribution for that redshift.
  *
- * Returns: FIXME
+ * Returns: Value of the mass integral (dimensionless expected count per unit
+ * volume or as appropriate for the provided halo mass function normalization).
  */
 gdouble
 nc_cluster_pseudo_counts_ndet_no_z_integral (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo, gdouble z)
@@ -434,9 +446,11 @@ _Ndet_integrand (gdouble lnM500, gdouble z, gpointer userdata)
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Compute the expected number of detections integrating over mass and the
+ * configured redshift interval. The function integrates the selection-weighted
+ * halo mass function over the fiducial mass and redshift limits.
  *
- * Returns: FIXME
+ * Returns: Expected number of detections (dimensionless count).
  */
 gdouble
 nc_cluster_pseudo_counts_ndet (NcClusterPseudoCounts *cpc, NcHaloMassFunction *mfp, NcHICosmo *cosmo)
@@ -497,9 +511,13 @@ _posterior_numerator_integrand (gdouble lnM, gpointer userdata)
  * @Mobs: (array) (element-type double): logarithm base e of the observed mass
  * @Mobs_params: (array) (element-type double): observed mass paramaters
  *
- * FIXME
+ * Compute the numerator of the posterior integrand for a single object given
+ * fixed spectroscopic redshift. The function integrates the product of the
+ * selection function, the halo mass function and the observable likelihood
+ * over true mass to yield the posterior numerator contribution.
  *
- * Returns: FIXME
+ * Returns: Value of the posterior numerator integral for the provided
+ * observation (dimensionless).
  */
 gdouble
 nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcHaloMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params)
@@ -567,9 +585,12 @@ _massfunc_lognormal_integrand (gdouble lnM, gpointer userdata)
  * @lnMl: logarithm base e of lensing mass
  * @z: spectroscopic redshift
  *
- * FIXME
+ * Numerically evaluate the integral of the mass function multiplied by the
+ * log-normal observable distribution for given SZ and lensing observed
+ * masses. This is used in assembling expected counts or likelihoods where a
+ * log-normal approximation is sufficient.
  *
- * Returns: FIXME
+ * Returns: Value of the integral (dimensionless).
  */
 gdouble
 nc_cluster_pseudo_counts_mf_lognormal_integral (NcClusterPseudoCounts *cpc, NcHaloMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnMsz, const gdouble lnMl, const gdouble z)
@@ -734,9 +755,13 @@ _posterior_numerator_integrand_plcl (gdouble w1, gdouble w2, gdouble lnM_M0, gpo
  * @sigma_pl: standard deviation of Planck mass
  * @sigma_cl: standard deviation of CLASH mass
  *
- * FIXME Warning! The pivot mass is hard coded ($M_0 = 5.7 \times 10^{14} \, h^{-1} M_\odot$).
+ * Note: the pivot mass is currently hard-coded in this routine
+ * ($M_0 = 5.7 \times 10^{14} \, h^{-1} M_\odot$) for the purpose of
+ * non-dimensionalizing observed masses. Future work may expose the pivot as a
+ * model property.
  *
- * Returns: FIXME
+ * Returns: Dimensionless posterior numerator contribution for the PL-CL
+ * model evaluated at the provided observed masses and redshift.
  */
 gdouble
 nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, NcHaloMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble Mpl, const gdouble Mcl, const gdouble sigma_pl, const gdouble sigma_cl)

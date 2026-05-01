@@ -62,11 +62,11 @@ struct _NcHaloMassFunction
 
 /**
  * NcHaloMassFunctionSplineOptimize:
- * @NC_HALO_MASS_FUNCTION_SPLINE_NONE: FIXME
- * @NC_HALO_MASS_FUNCTION_SPLINE_LNM: FIXME
- * @NC_HALO_MASS_FUNCTION_SPLINE_Z: FIXME
+ * @NC_HALO_MASS_FUNCTION_SPLINE_NONE: no spline optimization
+ * @NC_HALO_MASS_FUNCTION_SPLINE_LNM: optimize spline in log-mass direction
+ * @NC_HALO_MASS_FUNCTION_SPLINE_Z: optimize spline in redshift direction
  *
- * FIXME
+ * Options for optimizing spline interpolation in halo mass function calculations.
  *
  */
 typedef enum _NcHaloMassFunctionSplineOptimize
