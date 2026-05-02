@@ -19,6 +19,8 @@
 
 """Tests for cluster richness analyzer (CutAnalyzer)."""
 
+import os
+from pathlib import Path
 import numpy as np
 from numpy.random import RandomState  # pylint: disable=no-name-in-module
 import pytest
@@ -462,6 +464,59 @@ class TestCutAnalyzer:
         )
         # Should not raise an error with empty results
         empty_analyzer.display_results()
+
+    def test_file_path_handling_with_base_dir(
+        self,
+        mock_cluster_data: ClusterData,
+        cluster_mass_richness_model: Nc.ClusterMassRichness,
+        tmp_path: Path,
+    ) -> None:
+        """Test that files are created in the correct location with base_dir.
+
+        This test verifies that when file_prefix and base_dir are set,
+        the MCMC and bootstrap files are created in the expected location
+        with the correct naming pattern.
+        """
+
+        cuts = [np.log(10.0)]
+        file_prefix = "test_cluster"
+
+        analyzer = CutAnalyzer(
+            data=mock_cluster_data,
+            cuts=cuts,
+            n_mcmc_steps=10,  # Very small for fast test
+            n_mcmc_burnin=2,
+            n_bootstrap=5,  # Very small for fast test
+            compute_mcmc=True,
+            compute_bootstrap=True,
+            file_prefix=file_prefix,
+            base_dir=tmp_path,
+            verbose=False,
+        )
+
+        results = analyzer.analyze(cluster_mass_richness_model)
+
+        # Check that result was computed
+        assert len(results) == 1
+
+        # Check that the MCMC file was created in tmp_path
+        expected_mcmc_file = tmp_path / f"{file_prefix}_{np.exp(cuts[0]):.2f}_mcmc.fits"
+        assert (
+            expected_mcmc_file.exists()
+        ), f"Expected MCMC file not found: {expected_mcmc_file}"
+
+        # Check that the bootstrap file was created in tmp_path
+        expected_bs_file = tmp_path / f"{file_prefix}_{np.exp(cuts[0]):.2f}_bs.fits"
+        assert (
+            expected_bs_file.exists()
+        ), f"Expected bootstrap file not found: {expected_bs_file}"
+
+        # Verify no files were created in the current directory
+        cwd_files = os.listdir(".")
+        mcmc_in_cwd = any(f.endswith("_mcmc.fits") for f in cwd_files)
+        bs_in_cwd = any(f.endswith("_bs.fits") for f in cwd_files)
+        assert not mcmc_in_cwd, "MCMC file should not be in current directory"
+        assert not bs_in_cwd, "Bootstrap file should not be in current directory"
 
 
 if __name__ == "__main__":
