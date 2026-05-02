@@ -26,6 +26,7 @@ instances, allowing any NcClusterMassRichness subclass to be stored.
 """
 
 import sqlite3
+from pathlib import Path
 
 from numcosmo_py import Nc
 
@@ -48,7 +49,7 @@ class BestfitDatabase:
     NcClusterMassRichness subclass to be stored and retrieved.
     """
 
-    def __init__(self, db_path: str = "bestfits.db"):
+    def __init__(self, db_path: Path = Path("bestfits.db")):
         """Initialize database connection and create schema if needed.
 
         :param db_path: Path to SQLite database file (default: "bestfits.db")

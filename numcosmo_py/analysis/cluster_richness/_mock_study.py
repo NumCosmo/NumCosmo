@@ -22,6 +22,7 @@ This module provides tools for generating mock realizations from a fiducial
 model and analyzing them to assess parameter biases and uncertainties.
 """
 
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -74,16 +75,18 @@ class MockStudy:
         n_mcmc_steps: int = 400,
         n_mcmc_burnin: int = 150,
         file_prefix: str | None = None,
+        base_dir: Path | None = None,
         verbose: bool = True,
         fiducial_results: dict[float, CutAnalysisResult] | None = None,
-        db_path: str = "bestfits.db",
+        db_path: Path = Path("bestfits.db"),
         recompute: bool = False,
         console: Optional[Console] = None,
     ):
         """Initialize mock study.
 
         :param model_fiducial: Fiducial model to generate mocks from
-        :param data: ClusterData with lnM, z, lnR, sigma_lnR (template for mock generation)
+        :param data: ClusterData with lnM, z, lnR, sigma_lnR (template for mock
+            generation)
         :param cuts: List of richness cuts to analyze
         :param compute_mcmc: Whether to compute MCMC results (default: False)
         :param compute_bootstrap: Whether to compute bootstrap results (default: False)
@@ -93,6 +96,8 @@ class MockStudy:
         :param n_mcmc_burnin: Number of MCMC burn-in steps to discard (default: 150)
         :param file_prefix: If provided, pass seed-based prefix to CutAnalyzer for
             saving data (default: None)
+        :param base_dir: Base directory for output files (default: None, uses current
+            dir)
         :param verbose: Whether to print progress (default: True)
         :param fiducial_results: Results from real data analysis for GOF comparison
             (default: None)
@@ -112,9 +117,13 @@ class MockStudy:
         self.n_mcmc_steps = n_mcmc_steps
         self.n_mcmc_burnin = n_mcmc_burnin
         self.file_prefix = file_prefix
+        self.base_dir = base_dir if base_dir is not None else Path(".")
         self.mock_results: list[dict[float, CutAnalysisResult]] = []
         self.fiducial_results = fiducial_results
         self.verbose = verbose
+        # Ensure db_path is in base_dir if it's a relative path
+        if not db_path.is_absolute():
+            db_path = self.base_dir / db_path
         self.db = BestfitDatabase(db_path)
         self.recompute = recompute
         self.cached_bestfits: dict[tuple[int, float], Nc.ClusterMassRichness] = {}
@@ -385,6 +394,7 @@ class MockStudy:
                     compute_mcmc=self.compute_mcmc,
                     compute_bootstrap=self.compute_bootstrap,
                     file_prefix=mock_file_prefix,
+                    base_dir=self.base_dir,
                     sample_desc=f"Mock Seed: {int(mock_seed)}",
                     verbose=False,
                     console=self.console,
