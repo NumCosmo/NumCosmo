@@ -24,6 +24,9 @@ project:
     - examples/intro/recombination.qmd
     - examples/intro/simple.qmd
 
+execute:
+  error: false
+
 website:
   title: "The Numerical Cosmology Library"
   favicon: images/favicon_numcosmo.png
