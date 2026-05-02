@@ -19,6 +19,7 @@
 
 """Tests for cluster richness diagnostic functions."""
 
+from typing import Any
 import numpy as np
 from numpy.random import RandomState  # pylint: disable=no-name-in-module
 import pytest
@@ -55,7 +56,7 @@ Ncm.cfg_init()
 
 
 @pytest.fixture(name="mock_diagnostic_data")
-def fixture_mock_diagnostic_data():
+def fixture_mock_diagnostic_data() -> dict[str, Any]:
     """Create mock data for diagnostic testing.
 
     Returns a dictionary with:
@@ -82,15 +83,15 @@ def fixture_mock_diagnostic_data():
     lnR_cut = np.log(10)  # Cut at richness = 10
 
     # Sample from truncated normal
-    lnR = []
+    lnR_list = []
     for m, s in zip(mu, sigma):
         while True:
             val = rng.normal(m, s)
             if val >= lnR_cut:
-                lnR.append(val)
+                lnR_list.append(val)
                 break
 
-    lnR = np.array(lnR)
+    lnR = np.array(lnR_list)
 
     # Add catalog uncertainties
     sigma_lnR = rng.uniform(0.05, 0.15, n_clusters)
@@ -117,7 +118,7 @@ def fixture_mock_diagnostic_data():
 
 
 @pytest.fixture(name="diagnostic_stats")
-def fixture_diagnostic_stats(mock_diagnostic_data):
+def fixture_diagnostic_stats(mock_diagnostic_data: dict[str, Any]) -> dict[str, Any]:
     """Compute diagnostic statistics from mock data."""
     data = mock_diagnostic_data
     stats = compute_binned_statistics(
@@ -137,7 +138,7 @@ def fixture_diagnostic_stats(mock_diagnostic_data):
 class TestComputeBinnedStatistics:
     """Tests for compute_binned_statistics function."""
 
-    def test_basic_computation(self, mock_diagnostic_data):
+    def test_basic_computation(self, mock_diagnostic_data: dict[str, Any]) -> None:
         """Test basic computation of binned statistics."""
         data = mock_diagnostic_data
         stats = compute_binned_statistics(
@@ -175,7 +176,7 @@ class TestComputeBinnedStatistics:
         assert len(stats["sample_mean"]) == 10
         assert len(stats["mu_bin_centers"]) == 10
 
-    def test_quantile_binning(self, mock_diagnostic_data):
+    def test_quantile_binning(self, mock_diagnostic_data: dict[str, Any]) -> None:
         """Test binning with quantiles."""
         data = mock_diagnostic_data
         stats = compute_binned_statistics(
@@ -198,7 +199,7 @@ class TestComputeBinnedStatistics:
         assert stats["mu_bins"][0] <= data["mu"].min()
         assert stats["mu_bins"][-1] >= data["mu"].max()
 
-    def test_different_bin_counts(self, mock_diagnostic_data):
+    def test_different_bin_counts(self, mock_diagnostic_data: dict[str, Any]) -> None:
         """Test with different numbers of bins."""
         data = mock_diagnostic_data
 
@@ -217,7 +218,9 @@ class TestComputeBinnedStatistics:
             assert len(stats["mu_bins"]) == nbins + 1
             assert len(stats["sample_mean"]) == nbins
 
-    def test_statistics_values_reasonable(self, mock_diagnostic_data):
+    def test_statistics_values_reasonable(
+        self, mock_diagnostic_data: dict[str, Any]
+    ) -> None:
         """Test that computed statistics have reasonable values."""
         data = mock_diagnostic_data
         stats = compute_binned_statistics(
@@ -268,7 +271,7 @@ class TestPlotMuRecovery:
 
         plt.close(fig)
 
-    def test_has_legend(self, diagnostic_stats):
+    def test_has_legend(self, diagnostic_stats: dict[str, Any]) -> None:
         """Test that plot has a legend."""
         fig, ax = plot_mu_recovery(diagnostic_stats, show=False)
 
@@ -320,7 +323,7 @@ class TestPlotBinCounts:
 
         plt.close(fig)
 
-    def test_log_scale(self, diagnostic_stats):
+    def test_log_scale(self, diagnostic_stats: dict[str, Any]) -> None:
         """Test that y-axis uses log scale."""
         fig, ax = plot_bin_counts(diagnostic_stats, show=False)
 
@@ -341,7 +344,7 @@ class TestPlotMeanLnR:
 
         plt.close(fig)
 
-    def test_with_errors(self, diagnostic_stats):
+    def test_with_errors(self, diagnostic_stats: dict[str, Any]) -> None:
         """Test plot with error bars."""
         fig, ax = plot_mean_lnR(diagnostic_stats, with_errors=True, show=False)
 
@@ -350,7 +353,7 @@ class TestPlotMeanLnR:
 
         plt.close(fig)
 
-    def test_without_errors(self, diagnostic_stats):
+    def test_without_errors(self, diagnostic_stats: dict[str, Any]) -> None:
         """Test plot without error bars."""
         fig, ax = plot_mean_lnR(diagnostic_stats, with_errors=False, show=False)
 
@@ -416,7 +419,7 @@ class TestPlotScatterComponents:
 
         plt.close(fig)
 
-    def test_has_multiple_lines(self, diagnostic_stats):
+    def test_has_multiple_lines(self, diagnostic_stats: dict[str, Any]) -> None:
         """Test that plot shows multiple scatter components."""
         fig, ax = plot_scatter_components(diagnostic_stats, show=False)
 
@@ -490,7 +493,7 @@ class TestPlotStandardizedResidualsHistogram:
 
         plt.close(fig)
 
-    def test_plot_has_histogram(self, mock_diagnostic_data):
+    def test_plot_has_histogram(self, mock_diagnostic_data: dict[str, Any]) -> None:
         """Test that plot contains a histogram."""
         data = mock_diagnostic_data
         fig, ax = plot_standardized_residuals_histogram(
@@ -570,7 +573,9 @@ class TestPlotResidualsSummary:
 
         plt.close(fig)
 
-    def test_all_subplots_have_content(self, mock_diagnostic_data):
+    def test_all_subplots_have_content(
+        self, mock_diagnostic_data: dict[str, Any]
+    ) -> None:
         """Test that all subplots have content."""
         data = mock_diagnostic_data
         fig, axes = plot_residuals_summary(
@@ -592,7 +597,9 @@ class TestPlotResidualsSummary:
 class TestPlotDiagnosticSummary:
     """Tests for plot_diagnostic_summary function."""
 
-    def test_basic_plot(self, diagnostic_stats, mock_diagnostic_data):
+    def test_basic_plot(
+        self, diagnostic_stats: dict[str, Any], mock_diagnostic_data: dict[str, Any]
+    ) -> None:
         """Test basic diagnostic summary with 9 subplots."""
         data = mock_diagnostic_data
         fig, axes = plot_diagnostic_summary(
@@ -608,7 +615,9 @@ class TestPlotDiagnosticSummary:
 
         plt.close(fig)
 
-    def test_all_subplots_populated(self, diagnostic_stats, mock_diagnostic_data):
+    def test_all_subplots_populated(
+        self, diagnostic_stats: dict[str, Any], mock_diagnostic_data: dict[str, Any]
+    ) -> None:
         """Test that all subplots are populated."""
         data = mock_diagnostic_data
         fig, axes = plot_diagnostic_summary(
@@ -627,7 +636,9 @@ class TestPlotDiagnosticSummary:
 class TestIntegration:
     """Integration tests for diagnostic workflow."""
 
-    def test_full_diagnostic_pipeline(self, mock_diagnostic_data):
+    def test_full_diagnostic_pipeline(
+        self, mock_diagnostic_data: dict[str, Any]
+    ) -> None:
         """Test complete diagnostic pipeline."""
         data = mock_diagnostic_data
 
@@ -656,7 +667,7 @@ class TestIntegration:
         for fig in [fig1, fig2, fig3, fig4]:
             plt.close(fig)
 
-    def test_summary_plots(self, mock_diagnostic_data):
+    def test_summary_plots(self, mock_diagnostic_data: dict[str, Any]) -> None:
         """Test summary plot functions."""
         data = mock_diagnostic_data
 
@@ -688,7 +699,7 @@ class TestIntegration:
 class TestEdgeCases:
     """Test edge cases and error handling."""
 
-    def test_small_sample(self):
+    def test_small_sample(self) -> None:
         """Test with very small sample size."""
         rng = RandomState(999)
 
@@ -698,20 +709,22 @@ class TestEdgeCases:
         lnR_cut = np.log(5)
 
         # Sample truncated data
-        lnR = []
+        lnR_list = []
         for m, s in zip(mu, sigma):
             while True:
                 val = rng.normal(m, s)
                 if val >= lnR_cut:
-                    lnR.append(val)
+                    lnR_list.append(val)
                     break
-        lnR = np.array(lnR)
+        lnR = np.array(lnR_list)
 
         sigma_lnR = np.full(n, 0.1)
         sigma_total = np.sqrt(sigma**2 + sigma_lnR**2)
         mean_pred = mean_lnR_truncated(mu, sigma_total, lnR_cut)
         std_pred = std_lnR_truncated(mu, sigma_total, lnR_cut)
 
+        assert isinstance(mean_pred, np.ndarray)
+        assert isinstance(std_pred, np.ndarray)
         # Should still work with small sample
         stats = compute_binned_statistics(
             mean_pred,
@@ -726,7 +739,7 @@ class TestEdgeCases:
 
         assert "sample_mean" in stats
 
-    def test_with_nans_in_data(self):
+    def test_with_nans_in_data(self) -> None:
         """Test handling of NaN values in statistics."""
         rng = RandomState(888)
 
@@ -735,19 +748,22 @@ class TestEdgeCases:
         sigma = np.full(n, 0.3)
         lnR_cut = np.log(5)
 
-        lnR = []
+        lnR_list = []
         for m, s in zip(mu, sigma):
             while True:
                 val = rng.normal(m, s)
                 if val >= lnR_cut:
-                    lnR.append(val)
+                    lnR_list.append(val)
                     break
-        lnR = np.array(lnR)
+        lnR = np.array(lnR_list)
 
         sigma_lnR = np.full(n, 0.1)
         sigma_total = np.sqrt(sigma**2 + sigma_lnR**2)
         mean_pred = mean_lnR_truncated(mu, sigma_total, lnR_cut)
         std_pred = std_lnR_truncated(mu, sigma_total, lnR_cut)
+
+        assert isinstance(mean_pred, np.ndarray)
+        assert isinstance(std_pred, np.ndarray)
 
         stats = compute_binned_statistics(
             mean_pred,

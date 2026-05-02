@@ -19,6 +19,8 @@
 
 """Tests for cluster richness analyzer (CutAnalyzer)."""
 
+import os
+from pathlib import Path
 import numpy as np
 from numpy.random import RandomState  # pylint: disable=no-name-in-module
 import pytest
@@ -30,7 +32,7 @@ Ncm.cfg_init()
 
 
 @pytest.fixture(name="mock_cluster_data")
-def fixture_mock_cluster_data():
+def fixture_mock_cluster_data() -> ClusterData:
     """Create mock cluster data for testing.
 
     Returns ClusterData with:
@@ -55,14 +57,14 @@ def fixture_mock_cluster_data():
 
     # Generate observed richness (truncated at ln(10))
     lnR_cut = np.log(10.0)
-    lnR = []
+    lnR_list = []
     for m in mu:
         while True:
             val = rng.normal(m, sigma_intrinsic)
             if val >= lnR_cut:
-                lnR.append(val)
+                lnR_list.append(val)
                 break
-    lnR = np.array(lnR)
+    lnR = np.array(lnR_list)
 
     # Add catalog uncertainties
     sigma_lnR = rng.uniform(0.05, 0.15, n_clusters)
@@ -71,7 +73,7 @@ def fixture_mock_cluster_data():
 
 
 @pytest.fixture(name="cluster_mass_richness_model")
-def fixture_cluster_mass_richness_model():
+def fixture_cluster_mass_richness_model() -> Nc.ClusterMassRichness:
     """Create a simple cluster mass-richness model for testing."""
     cluster_m = Nc.ClusterMassAscaso()
 
@@ -91,7 +93,7 @@ def fixture_cluster_mass_richness_model():
 class TestClusterData:
     """Test ClusterData class."""
 
-    def test_cluster_data_creation(self, mock_cluster_data):
+    def test_cluster_data_creation(self, mock_cluster_data: ClusterData) -> None:
         """Test that ClusterData can be created."""
         assert len(mock_cluster_data) == 100
         assert len(mock_cluster_data.lnM) == 100
@@ -99,7 +101,7 @@ class TestClusterData:
         assert len(mock_cluster_data.lnR) == 100
         assert len(mock_cluster_data.sigma_lnR) == 100
 
-    def test_cluster_data_validation(self):
+    def test_cluster_data_validation(self) -> None:
         """Test that ClusterData validates array lengths."""
         with pytest.raises(ValueError, match="All arrays must have the same length"):
             ClusterData(
@@ -109,7 +111,7 @@ class TestClusterData:
                 sigma_lnR=np.array([0.1, 0.1]),
             )
 
-    def test_apply_cut(self, mock_cluster_data):
+    def test_apply_cut(self, mock_cluster_data: ClusterData) -> None:
         """Test applying richness cut (line 88 in _analyzer.py).
 
         This tests the mask line: mask = self.lnR >= lnR_cut
@@ -141,7 +143,7 @@ class TestClusterData:
         assert len(cut_data.lnR) == n_after_cut
         assert len(cut_data.sigma_lnR) == n_after_cut
 
-    def test_apply_cut_edge_cases(self, mock_cluster_data):
+    def test_apply_cut_edge_cases(self, mock_cluster_data: ClusterData) -> None:
         """Test apply_cut with edge case values."""
         # Cut that keeps all clusters
         very_low_cut = np.log(1.0)
@@ -157,7 +159,7 @@ class TestClusterData:
 class TestCutAnalyzer:
     """Test CutAnalyzer class."""
 
-    def test_analyzer_initialization(self, mock_cluster_data):
+    def test_analyzer_initialization(self, mock_cluster_data: ClusterData) -> None:
         """Test analyzer initialization with various parameters."""
         cuts = [np.log(10.0), np.log(15.0), np.log(20.0)]
 
@@ -175,7 +177,9 @@ class TestCutAnalyzer:
         assert not analyzer.compute_mcmc
         assert not analyzer.compute_bootstrap
 
-    def test_analyzer_with_custom_parameters(self, mock_cluster_data):
+    def test_analyzer_with_custom_parameters(
+        self, mock_cluster_data: ClusterData
+    ) -> None:
         """Test analyzer with custom MCMC and bootstrap parameters."""
         cuts = [np.log(10.0)]
 
@@ -194,7 +198,7 @@ class TestCutAnalyzer:
         assert analyzer.n_mcmc_steps == 50
         assert analyzer.n_mcmc_burnin == 10
 
-    def test_property_getters_setters(self, mock_cluster_data):
+    def test_property_getters_setters(self, mock_cluster_data: ClusterData) -> None:
         """Test that properties can be get and set after initialization."""
         cuts = [np.log(10.0)]
         analyzer = CutAnalyzer(
@@ -218,7 +222,11 @@ class TestCutAnalyzer:
         assert analyzer.n_mcmc_steps == 75
         assert analyzer.n_mcmc_burnin == 20
 
-    def test_analyze_bestfit_only(self, mock_cluster_data, cluster_mass_richness_model):
+    def test_analyze_bestfit_only(
+        self,
+        mock_cluster_data: ClusterData,
+        cluster_mass_richness_model: Nc.ClusterMassRichness,
+    ) -> None:
         """Test analyzer with bestfit only (no MCMC/bootstrap)."""
         cuts = [np.log(10.0)]
 
@@ -243,8 +251,10 @@ class TestCutAnalyzer:
         assert np.isfinite(result.m2lnL)
 
     def test_analyze_with_bootstrap(
-        self, mock_cluster_data, cluster_mass_richness_model
-    ):
+        self,
+        mock_cluster_data: ClusterData,
+        cluster_mass_richness_model: Nc.ClusterMassRichness,
+    ) -> None:
         """Test analyzer with bootstrap."""
         cuts = [np.log(10.0)]
 
@@ -282,7 +292,11 @@ class TestCutAnalyzer:
             assert np.isfinite(bp)
             assert np.isfinite(bsp)
 
-    def test_analyze_with_mcmc(self, mock_cluster_data, cluster_mass_richness_model):
+    def test_analyze_with_mcmc(
+        self,
+        mock_cluster_data: ClusterData,
+        cluster_mass_richness_model: Nc.ClusterMassRichness,
+    ) -> None:
         """Test analyzer with MCMC (tests lines 262, 267-270).
 
         This tests:
@@ -326,8 +340,10 @@ class TestCutAnalyzer:
             assert np.isfinite(param)
 
     def test_analyze_multiple_cuts(
-        self, mock_cluster_data, cluster_mass_richness_model
-    ):
+        self,
+        mock_cluster_data: ClusterData,
+        cluster_mass_richness_model: Nc.ClusterMassRichness,
+    ) -> None:
         """Test analyzer with multiple cuts."""
         cuts = [np.log(10.0), np.log(15.0), np.log(20.0)]
 
@@ -354,8 +370,10 @@ class TestCutAnalyzer:
         assert n_clusters[0] > n_clusters[1] > n_clusters[2]
 
     def test_mcmc_burnin_parameter(
-        self, mock_cluster_data, cluster_mass_richness_model
-    ):
+        self,
+        mock_cluster_data: ClusterData,
+        cluster_mass_richness_model: Nc.ClusterMassRichness,
+    ) -> None:
         """Test that n_mcmc_burnin parameter works correctly.
 
         This specifically tests that the burn-in range uses self.n_mcmc_burnin
@@ -386,7 +404,11 @@ class TestCutAnalyzer:
             assert np.isfinite(result.mcmc_mean["mup0"])
             assert np.isfinite(result.mcmc_median["mup0"])
 
-    def test_mcmc_steps_parameter(self, mock_cluster_data, cluster_mass_richness_model):
+    def test_mcmc_steps_parameter(
+        self,
+        mock_cluster_data: ClusterData,
+        cluster_mass_richness_model: Nc.ClusterMassRichness,
+    ) -> None:
         """Test that n_mcmc_steps parameter works correctly.
 
         This specifically tests that esmcmc.run uses self.n_mcmc_steps
@@ -413,7 +435,11 @@ class TestCutAnalyzer:
             assert result.mcmc_mean is not None
             assert result.mcmc_median is not None
 
-    def test_display_results(self, mock_cluster_data, cluster_mass_richness_model):
+    def test_display_results(
+        self,
+        mock_cluster_data: ClusterData,
+        cluster_mass_richness_model: Nc.ClusterMassRichness,
+    ) -> None:
         """Test display_results method."""
         cuts = [np.log(10.0)]
 
@@ -438,6 +464,59 @@ class TestCutAnalyzer:
         )
         # Should not raise an error with empty results
         empty_analyzer.display_results()
+
+    def test_file_path_handling_with_base_dir(
+        self,
+        mock_cluster_data: ClusterData,
+        cluster_mass_richness_model: Nc.ClusterMassRichness,
+        tmp_path: Path,
+    ) -> None:
+        """Test that files are created in the correct location with base_dir.
+
+        This test verifies that when file_prefix and base_dir are set,
+        the MCMC and bootstrap files are created in the expected location
+        with the correct naming pattern.
+        """
+
+        cuts = [np.log(10.0)]
+        file_prefix = "test_cluster"
+
+        analyzer = CutAnalyzer(
+            data=mock_cluster_data,
+            cuts=cuts,
+            n_mcmc_steps=10,  # Very small for fast test
+            n_mcmc_burnin=2,
+            n_bootstrap=5,  # Very small for fast test
+            compute_mcmc=True,
+            compute_bootstrap=True,
+            file_prefix=file_prefix,
+            base_dir=tmp_path,
+            verbose=False,
+        )
+
+        results = analyzer.analyze(cluster_mass_richness_model)
+
+        # Check that result was computed
+        assert len(results) == 1
+
+        # Check that the MCMC file was created in tmp_path
+        expected_mcmc_file = tmp_path / f"{file_prefix}_{np.exp(cuts[0]):.2f}_mcmc.fits"
+        assert (
+            expected_mcmc_file.exists()
+        ), f"Expected MCMC file not found: {expected_mcmc_file}"
+
+        # Check that the bootstrap file was created in tmp_path
+        expected_bs_file = tmp_path / f"{file_prefix}_{np.exp(cuts[0]):.2f}_bs.fits"
+        assert (
+            expected_bs_file.exists()
+        ), f"Expected bootstrap file not found: {expected_bs_file}"
+
+        # Verify no files were created in the current directory
+        cwd_files = os.listdir(".")
+        mcmc_in_cwd = any(f.endswith("_mcmc.fits") for f in cwd_files)
+        bs_in_cwd = any(f.endswith("_bs.fits") for f in cwd_files)
+        assert not mcmc_in_cwd, "MCMC file should not be in current directory"
+        assert not bs_in_cwd, "Bootstrap file should not be in current directory"
 
 
 if __name__ == "__main__":
