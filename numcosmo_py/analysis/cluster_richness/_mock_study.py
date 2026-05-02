@@ -85,7 +85,8 @@ class MockStudy:
         """Initialize mock study.
 
         :param model_fiducial: Fiducial model to generate mocks from
-        :param data: ClusterData with lnM, z, lnR, sigma_lnR (template for mock generation)
+        :param data: ClusterData with lnM, z, lnR, sigma_lnR (template for mock
+            generation)
         :param cuts: List of richness cuts to analyze
         :param compute_mcmc: Whether to compute MCMC results (default: False)
         :param compute_bootstrap: Whether to compute bootstrap results (default: False)
@@ -95,7 +96,8 @@ class MockStudy:
         :param n_mcmc_burnin: Number of MCMC burn-in steps to discard (default: 150)
         :param file_prefix: If provided, pass seed-based prefix to CutAnalyzer for
             saving data (default: None)
-        :param base_dir: Base directory for output files (default: None, uses current dir)
+        :param base_dir: Base directory for output files (default: None, uses current
+            dir)
         :param verbose: Whether to print progress (default: True)
         :param fiducial_results: Results from real data analysis for GOF comparison
             (default: None)

@@ -237,7 +237,9 @@ class TestModelTypes:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "PHASE 1: Real Data Analysis" in result.output
 
-    def test_all_model_types(self, mock_cluster_data: Tuple[Path, dict], model_type: str) -> None:
+    def test_all_model_types(
+        self, mock_cluster_data: Tuple[Path, dict], model_type: str
+    ) -> None:
         """Test all available model types."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -366,7 +368,9 @@ class TestAnalysisOptions:
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-    def test_custom_output_prefix(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
+    def test_custom_output_prefix(
+        self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path
+    ) -> None:
         """Test analysis with custom output prefix."""
         fits_file, _ = mock_cluster_data
 
@@ -426,7 +430,9 @@ class TestAnalysisOptions:
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-    def test_bootstrap_enabled_small(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
+    def test_bootstrap_enabled_small(
+        self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path
+    ) -> None:
         """Test with small number of bootstrap samples."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -451,7 +457,9 @@ class TestAnalysisOptions:
 class TestMockStudy:
     """Test mock study functionality."""
 
-    def test_mock_study_minimal(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
+    def test_mock_study_minimal(
+        self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path
+    ) -> None:
         """Test mock study with minimal number of mocks."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -476,7 +484,9 @@ class TestMockStudy:
         assert "PHASE 2: Mock Study" in result.output
         assert "PHASE 3: Goodness-of-Fit Analysis" in result.output
 
-    def test_mock_study_zero_mocks(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
+    def test_mock_study_zero_mocks(
+        self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path
+    ) -> None:
         """Test that zero mocks skips mock study."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -500,7 +510,9 @@ class TestMockStudy:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Skipping mock study" in result.output
 
-    def test_mock_study_requires_analysis(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
+    def test_mock_study_requires_analysis(
+        self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path
+    ) -> None:
         """Test that mock study runs only when analysis runs."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -550,7 +562,9 @@ class TestDiagnostics:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Diagnostic Analysis" in result.output
 
-    def test_diagnostics_custom_bins(self, mock_cluster_data: Tuple[Path, dict]) -> None:
+    def test_diagnostics_custom_bins(
+        self, mock_cluster_data: Tuple[Path, dict]
+    ) -> None:
         """Test diagnostics with custom number of bins."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -572,7 +586,9 @@ class TestDiagnostics:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Diagnostic Analysis" in result.output
 
-    def test_diagnostics_with_multiple_cuts(self, mock_cluster_data: Tuple[Path, dict]) -> None:
+    def test_diagnostics_with_multiple_cuts(
+        self, mock_cluster_data: Tuple[Path, dict]
+    ) -> None:
         """Test diagnostics with multiple cuts."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -597,7 +613,9 @@ class TestDiagnostics:
 class TestIntegration:
     """Integration tests combining multiple features."""
 
-    def test_full_pipeline_minimal(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
+    def test_full_pipeline_minimal(
+        self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path
+    ) -> None:
         """Test full pipeline with minimal settings."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -653,7 +671,9 @@ class TestIntegration:
         # Outputs should be identical (parameter values)
         assert results[0].output == results[1].output
 
-    def test_multiple_model_types_same_data(self, mock_cluster_data: Tuple[Path, dict]) -> None:
+    def test_multiple_model_types_same_data(
+        self, mock_cluster_data: Tuple[Path, dict]
+    ) -> None:
         """Test that different models can analyze same data."""
         fits_file, _ = mock_cluster_data
 

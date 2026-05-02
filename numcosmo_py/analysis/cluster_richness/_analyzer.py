@@ -140,7 +140,8 @@ class CutAnalyzer:
         :param compute_mcmc: Whether to run MCMC (default: False)
         :param compute_bootstrap: Whether to run bootstrap (default: False)
         :param file_prefix: Prefix for output files (default: None)
-        :param base_dir: Base directory for output files (default: None, uses current dir)
+        :param base_dir: Base directory for output files (default: None, uses current
+            dir)
         :param sample_desc: Description of the sample for display (default: "Sample")
         :param verbose: Whether to print progress (default: True)
         :param console: Rich Console for output (default: creates new Console)
@@ -249,7 +250,9 @@ class CutAnalyzer:
             esmcmc.set_nthreads(12)
             # Set data file if prefix is provided
             if self.file_prefix is not None:
-                mcmc_file = self.base_dir / f"{self.file_prefix}_{np.exp(cut):.2f}_mcmc.fits"
+                mcmc_file = (
+                    self.base_dir / f"{self.file_prefix}_{np.exp(cut):.2f}_mcmc.fits"
+                )
                 esmcmc.set_data_file(str(mcmc_file))
 
             esmcmc.start_run()
@@ -293,7 +296,9 @@ class CutAnalyzer:
 
             # Set data file if prefix is provided
             if self.file_prefix is not None:
-                bs_file = self.base_dir / f"{self.file_prefix}_{np.exp(cut):.2f}_bs.fits"
+                bs_file = (
+                    self.base_dir / f"{self.file_prefix}_{np.exp(cut):.2f}_bs.fits"
+                )
                 fitmc.set_data_file(str(bs_file))
 
             fitmc.start_run()

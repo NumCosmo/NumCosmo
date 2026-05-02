@@ -19,12 +19,12 @@
 
 """Tests for cluster richness diagnostic functions."""
 
+from typing import Any
 import numpy as np
 from numpy.random import RandomState  # pylint: disable=no-name-in-module
 import pytest
 import matplotlib
 import matplotlib.pyplot as plt
-from typing import Any
 
 # Use non-interactive backend for testing
 # flake8: noqa: E402
