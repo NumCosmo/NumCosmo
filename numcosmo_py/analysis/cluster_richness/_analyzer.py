@@ -23,6 +23,7 @@ mass-richness relations with progressive richness cuts.
 """
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -124,6 +125,7 @@ class CutAnalyzer:
         compute_mcmc: bool = False,
         compute_bootstrap: bool = False,
         file_prefix: str | None = None,
+        base_dir: Path | None = None,
         sample_desc: str = "Sample",
         verbose: bool = True,
         console: Optional[Console] = None,
@@ -138,6 +140,7 @@ class CutAnalyzer:
         :param compute_mcmc: Whether to run MCMC (default: False)
         :param compute_bootstrap: Whether to run bootstrap (default: False)
         :param file_prefix: Prefix for output files (default: None)
+        :param base_dir: Base directory for output files (default: None, uses current dir)
         :param sample_desc: Description of the sample for display (default: "Sample")
         :param verbose: Whether to print progress (default: True)
         :param console: Rich Console for output (default: creates new Console)
@@ -150,6 +153,7 @@ class CutAnalyzer:
         self.compute_mcmc = compute_mcmc
         self.compute_bootstrap = compute_bootstrap
         self.file_prefix = file_prefix
+        self.base_dir = base_dir if base_dir is not None else Path(".")
         self.sample_desc = sample_desc
         self.verbose = verbose
         self.console = console if console is not None else _get_default_console()
@@ -245,8 +249,8 @@ class CutAnalyzer:
             esmcmc.set_nthreads(12)
             # Set data file if prefix is provided
             if self.file_prefix is not None:
-                mcmc_file = f"{self.file_prefix}_{np.exp(cut):.2f}_mcmc.fits"
-                esmcmc.set_data_file(mcmc_file)
+                mcmc_file = self.base_dir / f"{self.file_prefix}_{np.exp(cut):.2f}_mcmc.fits"
+                esmcmc.set_data_file(str(mcmc_file))
 
             esmcmc.start_run()
             esmcmc.run(self.n_mcmc_steps)
@@ -289,8 +293,8 @@ class CutAnalyzer:
 
             # Set data file if prefix is provided
             if self.file_prefix is not None:
-                bs_file = f"{self.file_prefix}_{np.exp(cut):.2f}_bs.fits"
-                fitmc.set_data_file(bs_file)
+                bs_file = self.base_dir / f"{self.file_prefix}_{np.exp(cut):.2f}_bs.fits"
+                fitmc.set_data_file(str(bs_file))
 
             fitmc.start_run()
             fitmc.run(self.n_bootstrap)

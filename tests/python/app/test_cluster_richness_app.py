@@ -44,7 +44,7 @@ Ncm.cfg_init()
 
 
 @pytest.fixture(name="mock_cluster_data")
-def fixture_mock_cluster_data(tmp_path) -> Tuple[Path, dict]:
+def fixture_mock_cluster_data(tmp_path: Path) -> Tuple[Path, dict]:
     """Create a mock FITS file with cluster data.
 
     Creates a realistic but small dataset with:
@@ -98,7 +98,7 @@ def fixture_mock_cluster_data(tmp_path) -> Tuple[Path, dict]:
 
 
 @pytest.fixture(name="mock_cluster_data_custom_columns")
-def fixture_mock_cluster_data_custom_columns(tmp_path) -> Path:
+def fixture_mock_cluster_data_custom_columns(tmp_path: Path) -> Path:
     """Create a mock FITS file with custom column names."""
     rng = np.random.RandomState(123)  # pylint: disable=no-member
 
@@ -128,7 +128,7 @@ def fixture_mock_cluster_data_custom_columns(tmp_path) -> Path:
 
 
 @pytest.fixture(name="model_type", params=[e.value for e in RichnessModelType])
-def fixture_model_type(request) -> str:
+def fixture_model_type(request: pytest.FixtureRequest) -> str:
     """Return model type."""
     return request.param
 
@@ -136,7 +136,7 @@ def fixture_model_type(request) -> str:
 class TestBasicDataLoading:
     """Test basic data loading and summary display."""
 
-    def test_load_default_columns(self, mock_cluster_data):
+    def test_load_default_columns(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test loading data with default column names."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -150,7 +150,7 @@ class TestBasicDataLoading:
         assert "Redshift range:" in result.output
         assert "Richness range:" in result.output
 
-    def test_load_custom_columns(self, mock_cluster_data_custom_columns):
+    def test_load_custom_columns(self, mock_cluster_data_custom_columns: Path) -> None:
         """Test loading data with custom column names."""
         fits_file = mock_cluster_data_custom_columns
         result = runner.invoke(
@@ -174,7 +174,7 @@ class TestBasicDataLoading:
         assert "Data Summary" in result.output
         assert "Total clusters:" in result.output
 
-    def test_missing_column_error(self, mock_cluster_data):
+    def test_missing_column_error(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test error handling for missing column."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -195,7 +195,7 @@ class TestBasicDataLoading:
 class TestModelTypes:
     """Test different richness model types."""
 
-    def test_ascaso_model(self, mock_cluster_data):
+    def test_ascaso_model(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with ASCASO model."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -216,7 +216,7 @@ class TestModelTypes:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "PHASE 1: Real Data Analysis" in result.output
 
-    def test_ext_model(self, mock_cluster_data):
+    def test_ext_model(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with EXT model."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -237,7 +237,7 @@ class TestModelTypes:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "PHASE 1: Real Data Analysis" in result.output
 
-    def test_all_model_types(self, mock_cluster_data, model_type):
+    def test_all_model_types(self, mock_cluster_data: Tuple[Path, dict], model_type: str) -> None:
         """Test all available model types."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -263,7 +263,7 @@ class TestModelTypes:
 class TestCutAnalysis:
     """Test richness cut analysis."""
 
-    def test_single_cut(self, mock_cluster_data):
+    def test_single_cut(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with a single richness cut."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -282,7 +282,7 @@ class TestCutAnalysis:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "λ ≥ 20.0" in result.output
 
-    def test_multiple_cuts(self, mock_cluster_data):
+    def test_multiple_cuts(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with multiple richness cuts."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -303,7 +303,7 @@ class TestCutAnalysis:
         for cut_val in [5.0, 10.0, 15.0, 20.0]:
             assert f"λ ≥ {cut_val}" in result.output
 
-    def test_default_cuts(self, mock_cluster_data):
+    def test_default_cuts(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with default cuts."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -326,7 +326,7 @@ class TestCutAnalysis:
 class TestAnalysisOptions:
     """Test various analysis options."""
 
-    def test_ignore_noise(self, mock_cluster_data):
+    def test_ignore_noise(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis ignoring richness uncertainties."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -346,7 +346,7 @@ class TestAnalysisOptions:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "PHASE 1: Real Data Analysis" in result.output
 
-    def test_custom_seed(self, mock_cluster_data):
+    def test_custom_seed(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with custom random seed."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -366,10 +366,9 @@ class TestAnalysisOptions:
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-    def test_custom_output_prefix(self, mock_cluster_data, tmp_path):
+    def test_custom_output_prefix(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
         """Test analysis with custom output prefix."""
         fits_file, _ = mock_cluster_data
-        output_prefix = (tmp_path / "test_output").as_posix()
 
         result = runner.invoke(
             app,
@@ -378,7 +377,9 @@ class TestAnalysisOptions:
                 "cluster-richness",
                 fits_file.as_posix(),
                 "--output-prefix",
-                output_prefix,
+                "test_output",
+                "--output-dir",
+                tmp_path.as_posix(),
                 "--cuts",
                 "10",
                 "--n-bootstrap",
@@ -388,7 +389,7 @@ class TestAnalysisOptions:
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-    def test_custom_hdu(self, mock_cluster_data):
+    def test_custom_hdu(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test loading from specific HDU."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -408,7 +409,7 @@ class TestAnalysisOptions:
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-    def test_bootstrap_disabled(self, mock_cluster_data):
+    def test_bootstrap_disabled(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test with bootstrap disabled."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -425,7 +426,7 @@ class TestAnalysisOptions:
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-    def test_bootstrap_enabled_small(self, mock_cluster_data):
+    def test_bootstrap_enabled_small(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
         """Test with small number of bootstrap samples."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -439,6 +440,8 @@ class TestAnalysisOptions:
                 "10",
                 "--cuts",
                 "10",
+                "--output-dir",
+                tmp_path.as_posix(),
             ],
         )
 
@@ -448,7 +451,7 @@ class TestAnalysisOptions:
 class TestMockStudy:
     """Test mock study functionality."""
 
-    def test_mock_study_minimal(self, mock_cluster_data):
+    def test_mock_study_minimal(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
         """Test mock study with minimal number of mocks."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -464,6 +467,8 @@ class TestMockStudy:
                 "0",
                 "--cuts",
                 "10",
+                "--output-dir",
+                tmp_path.as_posix(),
             ],
         )
 
@@ -471,7 +476,7 @@ class TestMockStudy:
         assert "PHASE 2: Mock Study" in result.output
         assert "PHASE 3: Goodness-of-Fit Analysis" in result.output
 
-    def test_mock_study_zero_mocks(self, mock_cluster_data):
+    def test_mock_study_zero_mocks(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
         """Test that zero mocks skips mock study."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -487,13 +492,15 @@ class TestMockStudy:
                 "10",
                 "--n-bootstrap",
                 "0",
+                "--output-dir",
+                tmp_path.as_posix(),
             ],
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Skipping mock study" in result.output
 
-    def test_mock_study_requires_analysis(self, mock_cluster_data):
+    def test_mock_study_requires_analysis(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
         """Test that mock study runs only when analysis runs."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -509,6 +516,8 @@ class TestMockStudy:
                 "10",
                 "--n-bootstrap",
                 "0",
+                "--output-dir",
+                tmp_path.as_posix(),
             ],
         )
 
@@ -521,7 +530,7 @@ class TestMockStudy:
 class TestDiagnostics:
     """Test diagnostic analysis functionality."""
 
-    def test_diagnostics_basic(self, mock_cluster_data):
+    def test_diagnostics_basic(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test basic diagnostic analysis."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -541,7 +550,7 @@ class TestDiagnostics:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Diagnostic Analysis" in result.output
 
-    def test_diagnostics_custom_bins(self, mock_cluster_data):
+    def test_diagnostics_custom_bins(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test diagnostics with custom number of bins."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -563,7 +572,7 @@ class TestDiagnostics:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Diagnostic Analysis" in result.output
 
-    def test_diagnostics_with_multiple_cuts(self, mock_cluster_data):
+    def test_diagnostics_with_multiple_cuts(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test diagnostics with multiple cuts."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -588,7 +597,7 @@ class TestDiagnostics:
 class TestIntegration:
     """Integration tests combining multiple features."""
 
-    def test_full_pipeline_minimal(self, mock_cluster_data):
+    def test_full_pipeline_minimal(self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path) -> None:
         """Test full pipeline with minimal settings."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -605,6 +614,8 @@ class TestIntegration:
                 "10,15",
                 "--n-bootstrap",
                 "0",
+                "--output-dir",
+                tmp_path.as_posix(),
             ],
         )
 
@@ -614,7 +625,7 @@ class TestIntegration:
         assert "PHASE 3: Goodness-of-Fit Analysis" in result.output
         assert "Diagnostic Analysis" in result.output
 
-    def test_reproducibility(self, mock_cluster_data):
+    def test_reproducibility(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test that same seed produces same results."""
         fits_file, _ = mock_cluster_data
 
@@ -642,7 +653,7 @@ class TestIntegration:
         # Outputs should be identical (parameter values)
         assert results[0].output == results[1].output
 
-    def test_multiple_model_types_same_data(self, mock_cluster_data):
+    def test_multiple_model_types_same_data(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test that different models can analyze same data."""
         fits_file, _ = mock_cluster_data
 
@@ -669,7 +680,7 @@ class TestIntegration:
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 
-    def test_very_small_dataset(self, tmp_path):
+    def test_very_small_dataset(self, tmp_path: Path) -> None:
         """Test with minimal dataset (10 clusters)."""
         rng = np.random.RandomState(999)  # pylint: disable=no-member
 
@@ -707,7 +718,7 @@ class TestEdgeCases:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Total clusters: 10" in result.output
 
-    def test_high_richness_cut(self, mock_cluster_data):
+    def test_high_richness_cut(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test with high richness cut that filters most data."""
         fits_file, metadata = mock_cluster_data
         max_richness = metadata["richness_range"][1]
@@ -730,7 +741,7 @@ class TestEdgeCases:
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-    def test_consistent_column_naming(self, tmp_path):
+    def test_consistent_column_naming(self, tmp_path: Path) -> None:
         """Test that column name variations work correctly."""
         rng = np.random.RandomState(555)  # pylint: disable=no-member
 
@@ -777,7 +788,7 @@ class TestEdgeCases:
 class TestDataValidation:
     """Test data validation and quality checks."""
 
-    def test_cluster_counts_per_cut(self, mock_cluster_data):
+    def test_cluster_counts_per_cut(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test that cluster counts are reported correctly."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(
@@ -799,7 +810,7 @@ class TestDataValidation:
         assert "N clusters" in result.output
         assert "Fraction" in result.output
 
-    def test_data_summary_ranges(self, mock_cluster_data):
+    def test_data_summary_ranges(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test that data summary includes all range information."""
         fits_file, _ = mock_cluster_data
         result = runner.invoke(

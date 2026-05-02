@@ -209,6 +209,14 @@ class RunClusterRichnessAnalysis(AppLogging):
         ),
     ] = "cluster_richness"
 
+    output_dir: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--output-dir",
+            help="Directory for output files (default: current directory).",
+        ),
+    ] = None
+
     run_mocks: Annotated[
         bool,
         typer.Option(
@@ -420,6 +428,7 @@ class RunClusterRichnessAnalysis(AppLogging):
             compute_mcmc=self.compute_mcmc,
             compute_bootstrap=self.compute_bootstrap,
             file_prefix=f"{self.output_prefix}_real",
+            base_dir=self.output_dir,
             console=self.console,
         )
         real_results = real_analyzer.analyze(model_init=model_init)
@@ -467,6 +476,7 @@ class RunClusterRichnessAnalysis(AppLogging):
             n_mcmc_steps=self.n_mcmc_steps,
             n_mcmc_burnin=self.n_mcmc_burnin,
             file_prefix=f"{self.output_prefix}_mock",
+            base_dir=self.output_dir,
             fiducial_results=real_results,
             console=self.console,
         )
