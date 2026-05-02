@@ -5134,6 +5134,10 @@ class DataClusterNCount(NumCosmoMath.Data):
         Clusters redshifts bins
       lnM-obs-bins -> NcmObjArray: lnM-obs-bins
         Clusters mass bins
+      z-obs-bins-params -> NcmObjArray: z-obs-bins-params
+        Redshift bins observational parameters
+      lnM-obs-bins-params -> NcmObjArray: lnM-obs-bins-params
+        Mass bins observational parameters
       bin-count -> NcmVector: bin-count
         Bin count
       fiducial -> gboolean: fiducial
@@ -5167,6 +5171,7 @@ class DataClusterNCount(NumCosmoMath.Data):
         fiducial: bool
         lnM_obs: NumCosmoMath.Matrix
         lnM_obs_bins: NumCosmoMath.ObjArray
+        lnM_obs_bins_params: NumCosmoMath.ObjArray
         lnM_obs_params: NumCosmoMath.Matrix
         lnM_true: NumCosmoMath.Vector
         mass_type: str
@@ -5176,6 +5181,7 @@ class DataClusterNCount(NumCosmoMath.Data):
         use_true: bool
         z_obs: NumCosmoMath.Matrix
         z_obs_bins: NumCosmoMath.ObjArray
+        z_obs_bins_params: NumCosmoMath.ObjArray
         z_obs_params: NumCosmoMath.Matrix
         z_true: NumCosmoMath.Vector
         bootstrap: NumCosmoMath.Bootstrap
@@ -5196,6 +5202,7 @@ class DataClusterNCount(NumCosmoMath.Data):
         fiducial: bool = ...,
         lnM_obs: NumCosmoMath.Matrix = ...,
         lnM_obs_bins: NumCosmoMath.ObjArray = ...,
+        lnM_obs_bins_params: NumCosmoMath.ObjArray = ...,
         lnM_obs_params: NumCosmoMath.Matrix = ...,
         lnM_true: NumCosmoMath.Vector = ...,
         mass_type: str = ...,
@@ -5205,6 +5212,7 @@ class DataClusterNCount(NumCosmoMath.Data):
         use_true: bool = ...,
         z_obs: NumCosmoMath.Matrix = ...,
         z_obs_bins: NumCosmoMath.ObjArray = ...,
+        z_obs_bins_params: NumCosmoMath.ObjArray = ...,
         z_obs_params: NumCosmoMath.Matrix = ...,
         z_true: NumCosmoMath.Vector = ...,
         bootstrap: NumCosmoMath.Bootstrap = ...,
@@ -5218,6 +5226,8 @@ class DataClusterNCount(NumCosmoMath.Data):
         lnM_obs_ub: NumCosmoMath.Vector,
         z_obs_lb: NumCosmoMath.Vector,
         z_obs_ub: NumCosmoMath.Vector,
+        lnM_obs_params: typing.Optional[NumCosmoMath.Vector] = None,
+        z_obs_params: typing.Optional[NumCosmoMath.Vector] = None,
     ) -> None: ...
     def bin_data(self) -> None: ...
     def catalog_load(self, filename: str) -> None: ...
@@ -5249,10 +5259,16 @@ class DataClusterNCount(NumCosmoMath.Data):
     def set_binned(self, on: bool) -> None: ...
     def set_lnM_obs(self, m: NumCosmoMath.Matrix) -> None: ...
     def set_lnM_obs_bins(self, lnM_obs_bins: NumCosmoMath.ObjArray) -> None: ...
+    def set_lnM_obs_bins_params(
+        self, lnM_obs_bins_params: NumCosmoMath.ObjArray
+    ) -> None: ...
     def set_lnM_obs_params(self, m: NumCosmoMath.Matrix) -> None: ...
     def set_lnM_true(self, v: NumCosmoMath.Vector) -> None: ...
     def set_z_obs(self, m: NumCosmoMath.Matrix) -> None: ...
     def set_z_obs_bins(self, z_obs_bins: NumCosmoMath.ObjArray) -> None: ...
+    def set_z_obs_bins_params(
+        self, z_obs_bins_params: NumCosmoMath.ObjArray
+    ) -> None: ...
     def set_z_obs_params(self, m: NumCosmoMath.Matrix) -> None: ...
     def set_z_true(self, v: NumCosmoMath.Vector) -> None: ...
     def true_data(self, use_true_data: bool) -> None: ...

@@ -41,7 +41,11 @@ from cosmosis.runtime.pipeline import (
     config_to_block,
 )
 from cosmosis.datablock.cosmosis_py.block import DataBlock
-from firecrown.likelihood.likelihood import NamedParameters
+
+try:
+    from firecrown.likelihood import NamedParameters
+except ImportError:
+    from firecrown.likelihood.likelihood import NamedParameters
 from firecrown.connector.numcosmo.numcosmo import NumCosmoFactory, MappingNumCosmo
 
 from numcosmo_py import Ncm, Nc, GObject, to_camel_case
