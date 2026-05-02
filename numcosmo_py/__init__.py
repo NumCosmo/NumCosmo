@@ -45,6 +45,16 @@ from . import ncm as Ncm  # noqa: E402
 # pylint:disable-next=wrong-import-position,unused-import
 from . import nc as Nc  # noqa: E402
 
+# Attempt optional import of the Firecrown–NumCosmo connector.
+# If available, the import registers the connector in the GObject registry,
+# enabling deserialization of models that depend on it (e.g., when loading
+# from the best-fit database). Safe to ignore if Firecrown is not installed.
+try:
+    # pylint:disable-next=wrong-import-position,unused-import
+    import firecrown.connector.numcosmo.numcosmo  # noqa: E402, F401
+except ImportError:
+    pass
+
 __all__ = [
     "Nc",
     "Ncm",
