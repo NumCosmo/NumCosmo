@@ -52,6 +52,17 @@ from .generate import (
 from .cluster_richness import RunClusterRichnessAnalysis
 from .xcor import ViewKernel, ListKernels
 
+# Attempt optional import of the Firecrown-NumCosmo connector.
+# If available, the import registers the connector in the GObject registry,
+# enabling deserialization of models that depend on it (e.g., when loading
+# from the best-fit database). Safe to ignore if Firecrown is not installed.
+try:
+    # pylint:disable-next=wrong-import-position,unused-import
+    import firecrown.connector.numcosmo.numcosmo  # noqa: E402, F401
+except ImportError:
+    pass
+
+
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
 app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")
 app_run_mcmc = typer.Typer(no_args_is_help=True, help="Run MCMC analyses.")
