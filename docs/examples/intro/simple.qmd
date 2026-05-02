@@ -4,7 +4,7 @@ author: "Sandro Dias Pinto Vitenti"
 date: "2023-05-22"
 ---
 
-{{< include /_definitions.qmd >}}
+{{< include /notes/_numcosmo_py.qmd >}}
 
 ## Introduction
 

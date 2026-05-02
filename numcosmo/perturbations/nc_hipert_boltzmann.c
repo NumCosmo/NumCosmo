@@ -155,9 +155,9 @@ _nc_hipert_boltzmann_set_property (GObject *object, guint prop_id, const GValue 
     case PROP_EB_LMAX:
       nc_hipert_boltzmann_set_EB_lmax (pb, g_value_get_uint (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -206,9 +206,9 @@ _nc_hipert_boltzmann_get_property (GObject *object, guint prop_id, GValue *value
     case PROP_EB_LMAX:
       g_value_set_uint (value, nc_hipert_boltzmann_get_EB_lmax (pb));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -808,11 +808,14 @@ nc_hipert_boltzmann_get_EB_lmax (NcHIPertBoltzmann *pb)
 void
 nc_hipert_boltzmann_set_recomb (NcHIPertBoltzmann *pb, NcRecomb *recomb)
 {
+  NcHIPert *pert                = NC_HIPERT (pb);
+  NcHIPertPrivate * const pself = nc_hipert_get_private (pert);
+
   if (pb->recomb != recomb)
   {
     nc_recomb_clear (&pb->recomb);
-    pb->recomb                     = nc_recomb_ref (recomb);
-    NC_HIPERT (pb)->priv->prepared = FALSE;
+    pb->recomb      = nc_recomb_ref (recomb);
+    pself->prepared = FALSE;
     ncm_model_ctrl_force_update (pb->ctrl_cosmo);
   }
 }

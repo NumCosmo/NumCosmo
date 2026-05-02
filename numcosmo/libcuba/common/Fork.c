@@ -94,8 +94,8 @@ Extern void SUFFIX(cubafork)(Spin **pspin)
   spin->spec = cubaworkers_;
   pfp = spin->fp;
   for( core = -spin->spec.naccel; core < spin->spec.ncores; ++core ) {
-    int fd[2];
-    pid_t pid;
+    int fd[2] = { -1, -1 };
+    pid_t pid = 0;
     assert(
       socketpair(AF_LOCAL, SOCK_STREAM, 0, fd) != -1 &&
       (pid = fork()) != -1 );

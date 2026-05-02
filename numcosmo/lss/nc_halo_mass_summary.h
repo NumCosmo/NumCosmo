@@ -46,10 +46,10 @@ G_DECLARE_DERIVABLE_TYPE (NcHaloMassSummary, nc_halo_mass_summary, NC, HALO_MASS
  * @NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL: halo mass defined in terms of the critical density $\rho_\mathrm{bg} = \rho_\mathrm{crit}(z)$
  * @NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL: halo mass defined in terms of virial overdensity times the critical density $\rho_\mathrm{bg} = \rho_\mathrm{crit
  *
- * Spherical overdensity halo mass: $$M_\Delta = \frac{4\pi}{3} \Delta \rho_\mathrm{bg} r_\Delta^3,$$
- * where $\rho_\mathrm{bg}$ is the background density of the universe at redshift z, $\rho_\mathrm{bg} (z)$.
- * For @NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL the virial overdensity is defined as:
- * \begin{equation}\label{def:DVir}
+ * Spherical overdensity halo mass: $$M_\Delta = \frac{4\pi}{3} \Delta \rho_\mathrm{bg}
+ * r_\Delta^3,$$ where $\rho_\mathrm{bg}$ is the background density of the universe at
+ * redshift z, $\rho_\mathrm{bg} (z)$. For @NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL the
+ * virial overdensity is defined as: \begin{equation}\label{def:DVir}
  * \Delta_\mathrm{Vir} = 18 \pi^2 + 82 x - 39 x^2, \quad x \equiv \Omega_m(z) - 1.
  * \end{equation}
  *

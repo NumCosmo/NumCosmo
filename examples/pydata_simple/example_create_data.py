@@ -36,7 +36,6 @@ from py_sline_gauss import PySLineGauss
 
 from numcosmo_py import Ncm
 
-
 #
 #  Initializing the library objects, this must be called before
 #  any other library function.

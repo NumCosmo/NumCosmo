@@ -45,6 +45,7 @@
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_errno.h>
+#include "lintegrate/lintegrate.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcmIntegral1dPrivate
@@ -487,6 +488,37 @@ ncm_integral1d_eval (NcmIntegral1d *int1d, const gdouble xi, const gdouble xf, g
   F.params   = &int1d_H;
 
   ret = gsl_integration_qag (&F, xi, xf, self->abstol, self->reltol, self->partition, self->rule, self->ws, &result, err);
+
+  if (ret != GSL_SUCCESS)
+    g_error ("ncm_integral1d_eval: %s.", gsl_strerror (ret));
+
+  return result;
+}
+
+/**
+ * ncm_integral1d_eval_lnint:
+ * @int1d: a #NcmIntegral1d
+ * @xi: inferior integration limit $x_i$
+ * @xf: superior integration limit $x_f$
+ * @err: (out): the error in the integration
+ *
+ * Evaluated the integral $I_{\ln F}(x_i, x_f) = \ln(\int_{x_i}^{x_f}e^{F(x)}\mathrm{d}x)$.
+ *
+ * Returns: the value of the integral $I_{\ln F}(x_i, x_f)$.
+ */
+gdouble
+ncm_integral1d_eval_lnint (NcmIntegral1d *int1d, const gdouble xi, const gdouble xf, gdouble *err)
+{
+  NcmIntegral1dPrivate * const self = ncm_integral1d_get_instance_private (int1d);
+  NcIntegral1dHermite int1d_H       = {int1d, 0.0, 0.0, 0};
+  gdouble result                    = 0.0;
+  gsl_function F;
+  gint ret;
+
+  F.function = &_ncm_integral1d_eval_p;
+  F.params   = &int1d_H;
+
+  ret = lintegration_qag (&F, xi, xf, self->abstol, self->reltol, self->partition, self->rule, self->ws, &result, err);
 
   if (ret != GSL_SUCCESS)
     g_error ("ncm_integral1d_eval: %s.", gsl_strerror (ret));

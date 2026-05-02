@@ -79,7 +79,7 @@ _besselj_bs_free (gpointer p)
   mpfr_clear (bs_data->sin);
   mpfr_clear (bs_data->cos);
   g_slice_free (_binsplit_spherical_bessel, bs_data);
-  /* Leak we dont have a free function for binsplit FIXME:LEAK */
+  /* Note: NcmBinSplit structure itself is managed by the memory pool */
 }
 
 G_LOCK_DEFINE_STATIC (__create_lock);
@@ -326,7 +326,7 @@ ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
   mpq_t q;
 
   mpq_init (q);
-  ncm_rational_coarce_double (x, q);
+  ncm_rational_coarse_double (x, q);
   ncm_mpsf_sbessel (l, q, res, rnd);
   mpq_clear (q);
 }

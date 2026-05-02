@@ -35,7 +35,7 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
-
+#include <numcosmo/numcosmo.h>
 #include "lss/nc_multiplicity_func_despali.h"
 #include "math/ncm_spline_cubic_d2.h"
 #include "math/ncm_spline_gsl.h"
@@ -396,7 +396,7 @@ _nc_multiplicity_func_despali_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, 
 /**
  * nc_multiplicity_func_despali_new:
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncDespali with default parameters.
  *
  * Returns: A new #NcMultiplicityFuncDespali.
  */
@@ -410,9 +410,9 @@ nc_multiplicity_func_despali_new (void)
 /**
  * nc_multiplicity_func_despali_new_full:
  * @mdef: a #NcMultiplicityFuncMassDef
- * @Delta: parameter that multiplies the background mass density (mean ou critical)
+ * @Delta: parameter that multiplies the background mass density (mean or critical)
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncDespali with the specified mass definition and Delta parameter.
  *
  * Returns: A new #NcMultiplicityFuncDespali.
  */
@@ -535,15 +535,15 @@ nc_multiplicity_func_despali_delta_vir (NcMultiplicityFuncDespali *md, NcHICosmo
 {
   /* NcMultiplicityFuncDespaliPrivate * const self = nc_multiplicity_func_despali_get_instance_private (md); */
   /* NcMultiplicityFunc *mulf                      = NC_MULTIPLICITY_FUNC (md); */
-  const gdouble E2      = nc_hicosmo_E2 (cosmo, z);
-  const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
-  const gdouble x       = Omega_m - 1.0;
+  const gdouble E2       = nc_hicosmo_E2 (cosmo, z);
+  const gdouble Omega_m  = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
+  const gdouble x        = Omega_m - 1.0;
+  const gboolean is_flat = ncm_cmp ((nc_hicosmo_Omega_k0 (cosmo)), (0.0), 1.0e5, 0.0) == 0;
 
-  if (nc_hicosmo_Omega_k0 (cosmo) == 0)
+  if (is_flat)
     return 18.0 * pow (M_PI, 2.0) + 82.0 * x - 39.0 * x * x;
-
   else
-    g_error ("Interpolation does not work in this regime.");
+    g_error ("Interpolation does not work for spatially curved cosmology.");
 }
 
 /**

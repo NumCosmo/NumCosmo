@@ -7,8 +7,7 @@
  ****************************************************************************/
 /*
  * nc_halo_cm_klypin11.c
- * Copyright (C) 2024 Mariana Penna-Lima <pennalima@unb.br>,
- * Copyright (C) 2024 Thais Mikami Ornellas <thais.ornellas@uel.br>
+ * Copyright (C) 2024 Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -28,6 +27,7 @@
  * NcHaloCMKlypin11:
  *
  * Class defining the Klypin et al. 2011 concentration-mass relation.
+ * FIXME Include reference, equation and ranges of mass and reshift.
  *
  */
 

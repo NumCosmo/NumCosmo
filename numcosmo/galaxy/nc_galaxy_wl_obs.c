@@ -3,13 +3,13 @@
  *
  *  Tue Jul 16 06:43:45 2024
  *  Copyright  2024 Caio Lima de Oliveira
- *  <caiooliveiracode@proton.me>
+ *  <caiolimadeoliveira@pm.me>
  *  Copyright  2024  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_galaxy_wl_obs.c
- * Copyright (C) 2024 Caio Lima de Oliveira <caiooliveiracode@proton.me>
+ * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -72,6 +72,7 @@ struct _NcGalaxyWLObsPrivate
   GHashTable *columns_hash;
   guint ncols;
   guint len;
+  NcGalaxyWLObsEllipConv ellip_conv;
 };
 
 enum
@@ -81,6 +82,7 @@ enum
   PROP_PZ,
   PROP_COLUNMS,
   PROP_COORD,
+  PROP_ELLIP_CONV,
   PROP_LEN,
 };
 
@@ -98,6 +100,7 @@ nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
   self->columns_hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
   self->len          = 0;
   self->ncols        = 0;
+  self->ellip_conv   = 0;
 }
 
 static void
@@ -120,6 +123,9 @@ _nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_COORD:
       g_value_set_enum (value, nc_galaxy_wl_obs_get_coord (obs));
       break;
+    case PROP_ELLIP_CONV:
+      g_value_set_enum (value, nc_galaxy_wl_obs_get_ellip_conv (obs));
+      break;
     case PROP_LEN:
       g_value_set_uint (value, nc_galaxy_wl_obs_len (obs));
       break;
@@ -131,6 +137,7 @@ _nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, G
 
 static void _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz);
 static void _nc_galaxy_wl_obs_data (NcGalaxyWLObsPrivate *self, NcmMatrix *data);
+static void _nc_galaxy_wl_obs_set_ellip_conv (NcGalaxyWLObs *obs, NcGalaxyWLObsEllipConv type);
 
 static void
 _nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -152,6 +159,9 @@ _nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *va
       break;
     case PROP_COORD:
       nc_galaxy_wl_obs_set_coord (obs, g_value_get_enum (value));
+      break;
+    case PROP_ELLIP_CONV:
+      _nc_galaxy_wl_obs_set_ellip_conv (obs, g_value_get_enum (value));
       break;
     case PROP_LEN:
       self->len = g_value_get_uint (value);
@@ -294,6 +304,21 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                                       NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
+/**
+ * NcGalaxyWLObs:ellip-conv:
+ *
+ * Ellipticity convention.
+ *
+ */
+  g_object_class_install_property (object_class,
+                                   PROP_ELLIP_CONV,
+                                   g_param_spec_enum ("ellip-conv",
+                                                      "Ellipticity convention",
+                                                      "Weak lensing observables ellipticity convention",
+                                                      NC_TYPE_GALAXY_WL_OBS_ELLIP_CONV,
+                                                      NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
   /**
    * NcGalaxyWLObs:len:
    *
@@ -355,18 +380,20 @@ _nc_galaxy_wl_obs_data (NcGalaxyWLObsPrivate *self, NcmMatrix *data)
 
 /**
  * nc_galaxy_wl_obs_new:
- * @coord: the coordinate system used to store the data.
- * @nrows: the number of data rows.
- * @col_names: a #GStrv.
+ * @ellip_conv: the ellipticity convention
+ * @coord: the coordinate system used to store the data
+ * @nrows: the number of data rows
+ * @col_names: a #GStrv
  *
  * Creates a new #NcGalaxyWLObs object.
  *
  * Returns: (transfer full): a new #NcGalaxyWLObs object.
  */
 NcGalaxyWLObs *
-nc_galaxy_wl_obs_new (NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names)
+nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names)
 {
   return g_object_new (NC_TYPE_GALAXY_WL_OBS,
+                       "ellip-conv", ellip_conv,
                        "columns", col_names,
                        "coord", coord,
                        "len", nrows,
@@ -551,6 +578,30 @@ nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcGalaxyWLObsCoord coord)
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
   self->coord = coord;
+}
+
+static void
+_nc_galaxy_wl_obs_set_ellip_conv (NcGalaxyWLObs *obs, NcGalaxyWLObsEllipConv type)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  self->ellip_conv = type;
+}
+
+/**
+ * nc_galaxy_wl_obs_get_ellip_conv:
+ * @obs: a #NcGalaxyWLObs object
+ *
+ * Gets the ellipse type used to store the data.
+ *
+ * Returns: the ellipse type #NcGalaxyWLObsEllipConv
+ */
+NcGalaxyWLObsEllipConv
+nc_galaxy_wl_obs_get_ellip_conv (NcGalaxyWLObs *obs)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  return self->ellip_conv;
 }
 
 /**

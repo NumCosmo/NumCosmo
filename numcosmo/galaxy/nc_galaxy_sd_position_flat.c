@@ -111,7 +111,7 @@ _nc_galaxy_sd_position_flat_finalize (GObject *object)
 }
 
 static void _nc_galaxy_sd_position_flat_gen (NcGalaxySDPosition *gsdp, NcGalaxySDPositionData *data, NcmRNG *rng);
-static NcGalaxySDPositionIntegrand *_nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp);
+static NcGalaxySDPositionIntegrand *_nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, gboolean use_lnp);
 static gboolean _nc_galaxy_sd_position_flat_set_ra_lim (NcGalaxySDPosition *gsdp, gdouble ra_min, gdouble ra_max);
 static gboolean _nc_galaxy_sd_position_flat_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_min, gdouble *ra_max);
 static gboolean _nc_galaxy_sd_position_flat_set_dec_lim (NcGalaxySDPosition *gsdp, gdouble dec_min, gdouble dec_max);
@@ -159,6 +159,7 @@ struct _IntegData
   NcGalaxySDPositionData *data;
 };
 
+/* LCOV_EXCL_START */
 static gpointer
 _integ_data_copy (gpointer idata)
 {
@@ -169,10 +170,28 @@ _integ_data_copy (gpointer idata)
   return new_idata;
 }
 
+/* LCOV_EXCL_STOP */
+
 static void
 _integ_data_free (gpointer idata)
 {
   g_free (idata);
+}
+
+static gdouble
+_nc_galaxy_sd_position_flat_ln_integ_f (gpointer callback_data, NcGalaxySDPositionData *data)
+{
+  const struct _IntegData *int_data          = (struct _IntegData *) callback_data;
+  NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (int_data->gsdpflat);
+  const gdouble ra_norm                      = self->ra_norm;
+  const gdouble dec_norm                     = self->dec_norm;
+  const gdouble ra                           = data->ra;
+  const gdouble dec                          = data->dec;
+
+  if ((ra >= self->ra_min) && (ra <= self->ra_max) && (dec >= self->dec_min) && (dec <= self->dec_max))
+    return log (ra_norm * dec_norm * cos (ncm_c_degree_to_radian (dec)));
+
+  return GSL_NEGINF;
 }
 
 static gdouble
@@ -192,11 +211,11 @@ _nc_galaxy_sd_position_flat_integ_f (gpointer callback_data, NcGalaxySDPositionD
 }
 
 static NcGalaxySDPositionIntegrand *
-_nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp)
+_nc_galaxy_sd_position_flat_integ (NcGalaxySDPosition *gsdp, gboolean use_lnp)
 {
   NcGalaxySDPositionFlat *gsdpflat   = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   struct _IntegData *int_data        = g_new0 (struct _IntegData, 1);
-  NcGalaxySDPositionIntegrand *integ = nc_galaxy_sd_position_integrand_new (_nc_galaxy_sd_position_flat_integ_f,
+  NcGalaxySDPositionIntegrand *integ = nc_galaxy_sd_position_integrand_new (use_lnp ? _nc_galaxy_sd_position_flat_ln_integ_f : _nc_galaxy_sd_position_flat_integ_f,
                                                                             _integ_data_free,
                                                                             _integ_data_copy,
                                                                             NULL,

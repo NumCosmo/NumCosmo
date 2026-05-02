@@ -41,7 +41,27 @@ from .catalog import (
     ParameterEvolution,
     GetBestFit,
 )
-from .generate import GeneratePlanck, GenerateJpasForecast, GenerateClusterWL
+from .generate import (
+    GeneratePlanck,
+    GenerateJpasForecast,
+    GenerateClusterWL,
+    GenerateQSpline,
+    GenerateXCDM,
+    GenerateDEWSpline,
+)
+from .cluster_richness import RunClusterRichnessAnalysis
+from .xcor import ViewKernel, ListKernels
+
+# Attempt optional import of the Firecrown-NumCosmo connector.
+# If available, the import registers the connector in the GObject registry,
+# enabling deserialization of models that depend on it (e.g., when loading
+# from the best-fit database). Safe to ignore if Firecrown is not installed.
+try:
+    # pylint:disable-next=wrong-import-position,unused-import
+    import firecrown.connector.numcosmo.numcosmo  # noqa: E402, F401
+except ImportError:
+    pass
+
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
 app_run = typer.Typer(no_args_is_help=True, help="Run different statistical analyses.")
@@ -50,11 +70,19 @@ app_cat = typer.Typer(
     no_args_is_help=True, help="MCMC catalog analysis and calibration."
 )
 app_generate = typer.Typer(no_args_is_help=True, help="Generate experiment files.")
+app_analysis = typer.Typer(no_args_is_help=True, help="Data analysis tools.")
+app_xcor = typer.Typer(no_args_is_help=True, help="Cross-correlation kernel analysis.")
+app_xcor_kernel = typer.Typer(
+    no_args_is_help=True, help="Kernel visualization and analysis."
+)
 
 app.add_typer(app_run, name="run")
 app_run.add_typer(app_run_mcmc, name="mcmc")
 app.add_typer(app_cat, name="catalog")
 app.add_typer(app_generate, name="generate")
+app.add_typer(app_analysis, name="analysis")
+app.add_typer(app_xcor, name="xcor")
+app_xcor.add_typer(app_xcor_kernel, name="kernel")
 
 CMDArg = TypedDict("CMDArg", {"no_args_is_help": bool, "help": str, "name": str})
 
@@ -163,6 +191,41 @@ GEN_CLUSTER_WL_CMD: CMDArg = {
     "help": "Generate cluster weak lensing experiments.",
 }
 
+GEN_QSPLINE_CMD: CMDArg = {
+    "name": "qspline",
+    "no_args_is_help": True,
+    "help": "Generate qspline experiments.",
+}
+
+GEN_XCDM_CMD: CMDArg = {
+    "name": "xcdm",
+    "no_args_is_help": True,
+    "help": "Generate xcdm experiments.",
+}
+
+GEN_DEWSPLINE_CMD: CMDArg = {
+    "name": "de-wspline",
+    "no_args_is_help": True,
+    "help": "Generate DE w(z) spline experiments.",
+}
+
+ANALYSIS_CLUSTER_RICHNESS_CMD: CMDArg = {
+    "name": "cluster-richness",
+    "no_args_is_help": True,
+    "help": "Analyze cluster mass-richness scaling relations.",
+}
+XCOR_KERNEL_VIEW_CMD: CMDArg = {
+    "name": "view",
+    "no_args_is_help": True,
+    "help": "View and analyze cross-correlation kernels.",
+}
+
+XCOR_KERNEL_LIST_CMD: CMDArg = {
+    "name": "list",
+    "no_args_is_help": False,
+    "help": "List all available kernel types and their parameters.",
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -194,3 +257,12 @@ app_cat.command(**CAT_GET_BEST_FIT_CMD)(GetBestFit)
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
 app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
 app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)
+app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
+app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)
+app_generate.command(**GEN_DEWSPLINE_CMD)(GenerateDEWSpline)
+# ------------------------------------------------------------------------------
+# Installing analysis subcommands
+app_analysis.command(**ANALYSIS_CLUSTER_RICHNESS_CMD)(RunClusterRichnessAnalysis)
+# Installing xcor kernel subcommands
+app_xcor_kernel.command(**XCOR_KERNEL_VIEW_CMD)(ViewKernel)
+app_xcor_kernel.command(**XCOR_KERNEL_LIST_CMD)(ListKernels)

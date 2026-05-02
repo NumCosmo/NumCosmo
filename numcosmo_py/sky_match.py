@@ -5,19 +5,18 @@ Module to match objects in the sky halo-halo, cluster-halo, cluster-cluster.
 
 from __future__ import annotations
 import dataclasses
+import random
 from typing import TypedDict, cast
 from pathlib import Path
-from enum import Enum, auto
+from enum import StrEnum, auto
 from typing_extensions import assert_never
 import numpy as np
 import numpy.typing as npt
 
 from astropy.table import Table, join
-from numcosmo_py import Ncm, Nc
-from numcosmo_py.helper import npa_to_seq
-
 import networkx as nx
-import random
+
+from numcosmo_py import Ncm, Nc
 
 Ncm.cfg_init()
 
@@ -38,7 +37,6 @@ class Coordinates(TypedDict, total=False):
     z: str
 
 
-
 class IDs(TypedDict, total=False):
     """ID mapping.
 
@@ -54,8 +52,7 @@ class IDs(TypedDict, total=False):
     pmem: str
 
 
-    
-class MatchingType(str,Enum):
+class MatchingType(StrEnum):
     """Matching type.
 
     :param DISTANCE: Match by distance.
@@ -68,33 +65,30 @@ class MatchingType(str,Enum):
 
     DISTANCE = auto()
     ID = auto()
-    
 
 
-class SelectionCriteria(str, Enum):
+class SelectionCriteria(StrEnum):
     """Selection criteria for the best candidate."""
-
-    @staticmethod
-    def _generate_next_value_(name, _start, _count, _last_values):
-        return name.lower()
 
     DISTANCES = auto()
     REDSHIFT_PROXIMITY = auto()
     MORE_MASSIVE = auto()
 
 
-
-class SharedFractionMethod(str, Enum):
+class SharedFractionMethod(StrEnum):
     """Method to evaluate shared fraction in the matching.
 
     :param NO_PMEM: Shared fraction computed as the number of shared members
         divided by the number of members of the object.
-    :param QUERY_PMEM: Shared fraction computed as the sum of probability membership of the shared members
-        divided by the probability of membership of the query object.
-    :param MATCH_PMEM: Shared fraction computed as the sum of probability membership of the shared members
-        divided by the probability of membership of the match object.
-    :param PMEM: Shared fraction computed as the sum of probability membership of the shared members
-        divided by the sum of probability membership of the query and match objects.
+    :param QUERY_PMEM: Shared fraction computed as the sum of probability membership of
+        the shared members divided by the probability of membership of the query
+        object.
+    :param MATCH_PMEM: Shared fraction computed as the sum of probability membership of
+        the shared members divided by the probability of membership of the match
+        object.
+    :param PMEM: Shared fraction computed as the sum of probability membership of the
+        shared members divided by the sum of probability membership of the query and
+        match objects.
     """
 
     @staticmethod
@@ -107,8 +101,7 @@ class SharedFractionMethod(str, Enum):
     PMEM = auto()
 
 
-    
-class DistanceMethod(str, Enum):
+class DistanceMethod(StrEnum):
     """Distance method to use in the matching.
 
     :param ANGULAR_SEPARATION: Angular separation between the objects.
@@ -120,16 +113,11 @@ class DistanceMethod(str, Enum):
         object radii.
     """
 
-    @staticmethod
-    def _generate_next_value_(name, _start, _count, _last_values):
-        return name.lower()
-
     ANGULAR_SEPARATION = auto()
     QUERY_RADIUS = auto()
     MATCH_RADIUS = auto()
     MIN_RADIUS = auto()
     MAX_RADIUS = auto()
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -163,7 +151,6 @@ class Mask:
     def array(self) -> np.ndarray[tuple[int, int], np.dtype[np.bool_]]:
         """Return the mask array."""
         return cast(np.ndarray[tuple[int, int], np.dtype[np.bool_]], self.mask)
-
 
 
 @dataclasses.dataclass(frozen=True)
@@ -210,7 +197,6 @@ class BestCandidates:
         return cross
 
 
-
 def _check_coordinates(table: Table, coordinates: Coordinates) -> None:
     """Check if the coordinates are provided.
 
@@ -237,7 +223,6 @@ def _check_coordinates(table: Table, coordinates: Coordinates) -> None:
         )
 
 
-
 def _check_ID(table: Table, ids: IDs) -> None:
     """Check if the IDs are provided.
 
@@ -249,16 +234,11 @@ def _check_ID(table: Table, ids: IDs) -> None:
     if ("ID" not in ids) or ("MemberID" not in ids):
         raise ValueError("ID and MemberID must be provided.")
 
-    if (ids["ID"] not in table.columns) or (
-        ids["MemberID"] not in table.columns
-    ):
+    if (ids["ID"] not in table.columns) or (ids["MemberID"] not in table.columns):
         raise ValueError(
             f"ID and MemberID coordinates mapped by {ids} "
             f"not found in the provided catalog {table.columns}."
         )
-
-    
-
 
 
 def _load_fits_data(catalog: Path) -> Table:
@@ -270,7 +250,6 @@ def _load_fits_data(catalog: Path) -> Table:
     :return: data from the fits catalog.
     """
     return Table.read(catalog.as_posix(), format="fits")
-
 
 
 class SkyMatchResult:
@@ -300,18 +279,19 @@ class SkyMatchResult:
         )
 
         if self.matching_type == MatchingType.DISTANCE:
-            assert self.nearest_neighbours_indices.shape[0] == len(self.sky_match.query_ra)
+            assert self.nearest_neighbours_indices.shape[0] == len(
+                self.sky_match.query_ra
+            )
 
     def full_mask(self) -> Mask:
         """Return a mask with all the elements set to True."""
-        
+
         if self.matching_type == MatchingType.ID:
             raise ValueError("Full mask is not available for ID matching.")
-        
+
         return Mask(
             np.ones_like(self.nearest_neighbours_distances, dtype=bool),
         )
-       
 
     def filter_mask_by_distance(
         self,
@@ -324,7 +304,7 @@ class SkyMatchResult:
         """
         if self.matching_type == MatchingType.ID:
             raise ValueError("Filtering by distance is not available for ID matching.")
-        
+
         if mask is None:
             mask = self.full_mask()
         return mask & Mask(self.nearest_neighbours_distances < max_distance)
@@ -343,7 +323,9 @@ class SkyMatchResult:
         :param delta_z: Maximum delta_z to consider a match.
         """
         if self.matching_type == MatchingType.ID:
-            raise ValueError("Filtering by redshift proximity is not available for ID matching.")
+            raise ValueError(
+                "Filtering by redshift proximity is not available for ID matching."
+            )
 
         if query_sigma_z_column is not None and (
             query_sigma_z_column not in self.sky_match.query_data.columns
@@ -385,7 +367,6 @@ class SkyMatchResult:
 
         return mask & Mask(z_mask_array)
 
-    
     def _select_best_distance(
         self,
         selection_criteria: SelectionCriteria = SelectionCriteria.DISTANCES,
@@ -448,70 +429,76 @@ class SkyMatchResult:
             query_filter=query_filter,
             indices=np.array(best_candidates_indices, dtype=np.int64),
         )
-    
-    
+
     def _select_best_id(
         self,
-        ) -> BestCandidates:
-       
-        matched_query = np.repeat(self.sky_match.query_id, [len(i) for i in self.nearest_neighbours_indices])
+    ) -> BestCandidates:
+
+        matched_query = np.repeat(
+            self.sky_match.query_id, [len(i) for i in self.nearest_neighbours_indices]
+        )
         matched_match = np.concatenate(self.nearest_neighbours_indices)
         coefficients = np.concatenate(self.nearest_neighbours_distances)
-                
+
         matches = Table(
             [matched_query, matched_match, coefficients],
-            names=('query_id', 'match_id', 'linking_coeff')
+            names=("query_id", "match_id", "linking_coeff"),
         )
 
-        matches = matches[matches['match_id'] != None] #Remove the unmatched objects (with match_id = None)
-       
+        matches = matches[
+            matches["match_id"] is not None
+        ]  # Remove the unmatched objects (with match_id = None)
+
         G = nx.Graph()
         for query_id, match_id, coeff in matches:
             G.add_edge(("query_id", query_id), ("match_id", match_id), weight=coeff)
-        
+
         random.seed(42)
         total_weight = 0.0
         global_matching = set()
-        
+
         for i, nodes in enumerate(nx.connected_components(G)):
-            
+
             subG = G.subgraph(nodes)
-            m = nx.max_weight_matching(subG, maxcardinality=False) 
-            w = sum(subG[u][v]['weight'] for u, v in m)
+            m = nx.max_weight_matching(subG, maxcardinality=False)
+            w = sum(subG[u][v]["weight"] for u, v in m)
 
             total_weight += w
-            global_matching |= m 
+            global_matching |= m
 
-                         
         rows = []
         for u, v in global_matching:
-            
+
             if u[0] == "query_id":
                 node1, node2 = u, v
             else:
                 node1, node2 = v, u
-        
-            rows.append({'query_id': node1[1], 'match_id': node2[1], 'linking_coeff': G[node1][node2]['weight']})
-         
+
+            rows.append(
+                {
+                    "query_id": node1[1],
+                    "match_id": node2[1],
+                    "linking_coeff": G[node1][node2]["weight"],
+                }
+            )
+
         best = Table(rows)
-     
+
         query = Table()
         query["query_id"] = self.sky_match.query_id
-        
-        best = join(query, best, keys='query_id', join_type='left')
-        
-        query_filter =  ~best['match_id'].mask
+
+        best = join(query, best, keys="query_id", join_type="left")
+
+        query_filter = ~best["match_id"].mask
 
         to_index = {mid: i for i, mid in enumerate(self.sky_match.match_id)}
 
-        best_candidates_indices = [to_index[m] for m in best['match_id'][query_filter]]
+        best_candidates_indices = [to_index[m] for m in best["match_id"][query_filter]]
 
-            
         return BestCandidates(
             query_filter=query_filter,
             indices=np.array(best_candidates_indices, dtype=np.int64),
         )
-    
 
     def select_best(
         self,
@@ -519,13 +506,15 @@ class SkyMatchResult:
         more_massive_column: str | None = None,
         mask: Mask | None = None,
     ) -> BestCandidates:
-        
+        """Select the best matched objects."""
         if self.matching_type == MatchingType.ID:
             return self._select_best_id()
-        
-        if self.matching_type == MatchingType.DISTANCE:
-            return self._select_best_distance(selection_criteria, more_massive_column, mask)
 
+        if self.matching_type == MatchingType.DISTANCE:
+            assert selection_criteria is not None
+            return self._select_best_distance(
+                selection_criteria, more_massive_column, mask
+            )
 
     def _get_by_indices(
         self,
@@ -534,23 +523,25 @@ class SkyMatchResult:
         mask: Mask,
     ) -> list[npt.NDArray]:
         assert len(x.shape) == 1
-        
-        if self.matching_type == MatchingType.DISTANCE:  
+
+        if self.matching_type == MatchingType.DISTANCE:
             assert mask.shape == indices.shape
-        
+
             return [x[i[m]] for i, m in zip(indices, mask.array)]
-        
-        if self.matching_type == MatchingType.ID:          
+
+        if self.matching_type == MatchingType.ID:
 
             index_map = {mid: i for i, mid in enumerate(self.sky_match.match_id)}
-            
+
             index = []
             new_mask = []
 
             for ind, obj_mask in zip(indices, mask):
-                
-                mask_i = [(index_map[i], m) for i, m in zip(ind, obj_mask) if i != None]
-                
+
+                mask_i = [
+                    (index_map[i], m) for i, m in zip(ind, obj_mask) if i is not None
+                ]
+
                 if mask_i:
                     idx, m_i = zip(*mask_i)
                     index.append(np.array(idx))
@@ -558,9 +549,8 @@ class SkyMatchResult:
                 else:
                     index.append(np.array([], dtype=np.int64))
                     new_mask.append(np.array([], dtype=bool))
-            
-            return [list(x[i[m]]) for i, m in zip(index, new_mask)]
 
+            return [list(x[i[m]]) for i, m in zip(index, new_mask)]
 
     def to_table_complete(
         self,
@@ -580,10 +570,12 @@ class SkyMatchResult:
         table["DEC"] = self.sky_match.query_dec
         table["z"] = self.sky_match.query_z
 
-        
-        if mask is None and self.matching_type == MatchingType.ID:            
-            mask =  [ [bool(i) for i in query_object] for query_object in self.nearest_neighbours_distances ]
-     
+        if mask is None and self.matching_type == MatchingType.ID:
+            mask = [
+                [bool(i) for i in query_object]
+                for query_object in self.nearest_neighbours_distances
+            ]
+
         if mask is None and self.matching_type == MatchingType.DISTANCE:
             mask = self.full_mask()
 
@@ -612,9 +604,10 @@ class SkyMatchResult:
             ]
         if self.matching_type == MatchingType.ID:
             table["linking coefficient"] = [
-               np.array(d)[np.array(m)] for d, m in zip(self.nearest_neighbours_distances, mask)
+                np.array(d)[np.array(m)]
+                for d, m in zip(self.nearest_neighbours_distances, mask)
             ]
-        
+
         table["RA_matched"] = self._get_by_indices(
             self.sky_match.match_ra, self.nearest_neighbours_indices, mask
         )
@@ -638,10 +631,10 @@ class SkyMatchResult:
 
         assert len(best.query_filter) == len(self.sky_match.query_ra)
         query_filter = best.query_filter
-        
+
         table["Index"] = np.arange(len(self.sky_match.query_ra))[query_filter]
         if self.matching_type == MatchingType.ID:
-            table["ID"] = self.sky_match.query_id[query_filter]   
+            table["ID"] = self.sky_match.query_id[query_filter]
         table["RA"] = self.sky_match.query_ra[query_filter]
         table["DEC"] = self.sky_match.query_dec[query_filter]
         table["z"] = self.sky_match.query_z[query_filter]
@@ -652,8 +645,7 @@ class SkyMatchResult:
         table["RA_matched"] = np.array(self.sky_match.match_ra[best.indices])
         table["DEC_matched"] = np.array(self.sky_match.match_dec[best.indices])
         table["z_matched"] = np.array(self.sky_match.match_z[best.indices])
-     
-        
+
         if query_properties is not None:
             for key, value in query_properties.items():
                 table[value] = self.sky_match.query_data[key][query_filter]
@@ -664,7 +656,6 @@ class SkyMatchResult:
 
         return table
 
-   
 
 class SkyMatch:
     """Class to match objects in the sky halo-halo, cluster-halo, cluster-cluster."""
@@ -698,12 +689,16 @@ class SkyMatch:
         self.query_coordinates = query_coordinates
         self.match_coordinates = match_coordinates
 
-        if query_member_data is not None and match_member_data is not None:   
-            if len(np.unique(self.query_member_data[self.query_ids['ID']])) != len(self.query_data[self.query_ids['ID']]) and (
-                len(np.unique(self.match_member_data[self.match_ids['ID']])) != len(self.match_data[self.match_ids['ID']])
+        if query_member_data is not None and match_member_data is not None:
+            if len(np.unique(self.query_member_data[self.query_ids["ID"]])) != len(
+                self.query_data[self.query_ids["ID"]]
+            ) and (
+                len(np.unique(self.match_member_data[self.match_ids["ID"]]))
+                != len(self.match_data[self.match_ids["ID"]])
             ):
-                raise ValueError("The number of unique 'ID' in object and member catalogs must be the same." )
-                
+                raise ValueError(
+                    "The number of unique 'ID' in object and member catalogs must be the same."
+                )
 
     @classmethod
     def new_from_fits(
@@ -737,13 +732,12 @@ class SkyMatch:
             self.query_ids,
         )
 
-
     def ra_dec_to_theta_phi(self, ra, dec):
         """Convert RA and DEC to theta and phi.
 
-        :param float ra: right ascencion angle in degrees.
+        :param float ra: right ascension angle in degrees.
         :param float dec: declination angle in degrees.
-        :return: float theta: theta in radiands, float phi: phi in radiands
+        :return: float theta: theta in radians, float phi: phi in radians
         """
         ra_rad = np.radians(ra)
         dec_rad = np.radians(dec)
@@ -764,7 +758,7 @@ class SkyMatch:
 
         ids, counts = np.unique(id_column, return_counts=True)
 
-        return Table({'id': ids, 'nmem': counts})
+        return Table({"id": ids, "nmem": counts})
 
     @property
     def query_ra(self) -> np.ndarray:
@@ -795,7 +789,7 @@ class SkyMatch:
     def match_z(self) -> np.ndarray:
         """Return the z coordinates of the match catalog."""
         return self.match_data[self.match_coordinates["z"]]
-    
+
     @property
     def match_id(self) -> np.ndarray:
         """Return the ID coordinates of the match catalog."""
@@ -805,19 +799,16 @@ class SkyMatch:
     def query_id(self) -> np.ndarray:
         """Return the ID coordinates of the query catalog."""
         return self.query_data[self.query_ids["ID"]]
-    
+
     @property
     def query_pmem(self) -> np.ndarray:
         """Return the PMEM values of the query catalog."""
         return self.query_data[self.query_ids["PMEM"]]
-    
+
     @property
     def match_pmem(self) -> np.ndarray:
         """Return the PMEM values of the match catalog."""
         return self.match_data[self.match_ids["PMEM"]]
-    
-
-
 
     def match_3d(self, cosmo: Nc.HICosmo, n_nearest_neighbours: int) -> SkyMatchResult:
         """Match objects in the sky.
@@ -850,11 +841,11 @@ class SkyMatch:
         dist.prepare(cosmo)
         RH_Mpc = cosmo.RH_Mpc()
 
-        #match_r = dist.angular_diameter_luminosity(cosmo, npa_to_seq(match_z))
-        #query_r = dist.angular_diameter_luminosity(cosmo, npa_to_seq(query_z))
-        ## Decide wich distance is most appropriate to 3d matching
-        match_r = dist.angular_diameter_array(cosmo, npa_to_seq(match_z))
-        query_r = dist.angular_diameter_array(cosmo, npa_to_seq(query_z))
+        # match_r = dist.angular_diameter_luminosity(cosmo, npa_to_seq(match_z))
+        # query_r = dist.angular_diameter_luminosity(cosmo, npa_to_seq(query_z))
+        ## Decide which distance is most appropriate to 3d matching
+        match_r = dist.angular_diameter_array(cosmo, match_z)
+        query_r = dist.angular_diameter_array(cosmo, query_z)
 
         snn.insert_array(match_r, match_theta, match_phi)
         snn.rebuild()
@@ -920,9 +911,7 @@ class SkyMatch:
                 distances = (np.sqrt(distances_list) * RH_Mpc).reshape(
                     -1, n_nearest_neighbours
                 )
-                query_r = np.array(
-                    dist.angular_diameter_array(cosmo, npa_to_seq(self.query_z))
-                )
+                query_r = np.array(dist.angular_diameter_array(cosmo, self.query_z))
                 # We multiply the distances by the angular diameter distance of the
                 # query object to rescale the distances to physical distances.
                 distances = cast(
@@ -933,9 +922,7 @@ class SkyMatch:
                 distances = (np.sqrt(distances_list) * RH_Mpc).reshape(
                     -1, n_nearest_neighbours
                 )
-                match_r = np.array(
-                    dist.angular_diameter_array(cosmo, npa_to_seq(self.match_z))
-                )
+                match_r = np.array(dist.angular_diameter_array(cosmo, self.match_z))
                 # We multiply the distances by the angular diameter distance of the
                 # match object to rescale the distances to physical distances.
                 distances = cast(
@@ -946,13 +933,9 @@ class SkyMatch:
                 distances = (np.sqrt(distances_list) * RH_Mpc).reshape(
                     -1, n_nearest_neighbours
                 )
-                query_r = np.array(
-                    dist.angular_diameter_array(cosmo, npa_to_seq(self.query_z))
-                )
+                query_r = np.array(dist.angular_diameter_array(cosmo, self.query_z))
                 query_distances = query_r.reshape(-1, 1) * distances
-                match_r = np.array(
-                    dist.angular_diameter_array(cosmo, npa_to_seq(self.match_z))
-                )
+                match_r = np.array(dist.angular_diameter_array(cosmo, self.match_z))
                 match_distances = match_r[indices] * distances
                 distances = cast(
                     np.ndarray[tuple[int, int], np.dtype[np.float64]],
@@ -962,13 +945,9 @@ class SkyMatch:
                 distances = (np.sqrt(distances_list) * RH_Mpc).reshape(
                     -1, n_nearest_neighbours
                 )
-                query_r = np.array(
-                    dist.angular_diameter_array(cosmo, npa_to_seq(self.query_z))
-                )
+                query_r = np.array(dist.angular_diameter_array(cosmo, self.query_z))
                 query_distances = query_r.reshape(-1, 1) * distances
-                match_r = np.array(
-                    dist.angular_diameter_array(cosmo, npa_to_seq(self.match_z))
-                )
+                match_r = np.array(dist.angular_diameter_array(cosmo, self.match_z))
                 match_distances = match_r[indices] * distances
                 distances = cast(
                     np.ndarray[tuple[int, int], np.dtype[np.float64]],
@@ -978,11 +957,10 @@ class SkyMatch:
                 assert_never(unreachable)
 
         return SkyMatchResult(self, MatchingType.DISTANCE, indices, distances)
-    
 
     def match_ID(
         self,
-        use_shared_fraction: bool | None = False, 
+        use_shared_fraction: bool | None = False,
         shared_fraction_method: SharedFractionMethod = SharedFractionMethod.NO_PMEM,
     ) -> SkyMatchResult:
         """Match objects in the sky.
@@ -993,152 +971,220 @@ class SkyMatch:
         :return: astropy_table: matched: table with all candidates of matched objects,
         :best_matched: table with the best candidate of matched objects
         """
-         
+
         # Preparing the member catalogs for the matching
 
-        query_table = self.query_member_data.copy()        
-        query_table.rename_column(self.query_ids['ID'], 'query_id')
-        query_table.rename_column(self.query_ids['MemberID'], 'MemberID')
-        
+        query_table = self.query_member_data.copy()
+        query_table.rename_column(self.query_ids["ID"], "query_id")
+        query_table.rename_column(self.query_ids["MemberID"], "MemberID")
+
         match_table = self.match_member_data.copy()
-        match_table.rename_column(self.match_ids['ID'], 'match_id')
-        match_table.rename_column(self.match_ids['MemberID'], 'MemberID')
+        match_table.rename_column(self.match_ids["ID"], "match_id")
+        match_table.rename_column(self.match_ids["MemberID"], "MemberID")
 
-        if 'pmem' in query_table.colnames:
-            query_table.rename_column('pmem', 'pmem_query')
-        if 'pmem' in match_table.colnames:
-            match_table.rename_column('pmem', 'pmem_match')
+        if "pmem" in query_table.colnames:
+            query_table.rename_column("pmem", "pmem_query")
+        if "pmem" in match_table.colnames:
+            match_table.rename_column("pmem", "pmem_match")
 
-       
         # Matching the catalogs by MemberID
 
-        matched_catalog = join(query_table, match_table, keys='MemberID', join_type='inner')
-        
-        matched_catalog_grouped = matched_catalog.group_by(['query_id', 'match_id'])
-        
-        all_combinations = matched_catalog_grouped.groups.keys # Table with the multiple matched query_id-match_id pairs
+        matched_catalog = join(
+            query_table, match_table, keys="MemberID", join_type="inner"
+        )
 
-        
+        matched_catalog_grouped = matched_catalog.group_by(["query_id", "match_id"])
+
+        all_combinations = (
+            matched_catalog_grouped.groups.keys
+        )  # Table with the multiple matched query_id-match_id pairs
+
         # Counting 'number of members' for each object in the catalogs
-        
-        nmem_query = self.object_count(query_table['query_id'])
-        nmem_query.rename_columns(['id', 'nmem'], ['query_id', 'nmem_query'])
 
-        nmem_match = self.object_count(match_table['match_id'])
-        nmem_match.rename_columns(['id', 'nmem'], ['match_id', 'nmem_match'])          
-        
-        
-        # Adding the nmem_query and nmem_match columns to all_combinations table 
+        nmem_query = self.object_count(query_table["query_id"])
+        nmem_query.rename_columns(["id", "nmem"], ["query_id", "nmem_query"])
 
-        all_combinations = join(all_combinations, nmem_query, keys='query_id', join_type='left')
-        all_combinations = join(all_combinations, nmem_match, keys='match_id', join_type='left')
+        nmem_match = self.object_count(match_table["match_id"])
+        nmem_match.rename_columns(["id", "nmem"], ["match_id", "nmem_match"])
 
-        
+        # Adding the nmem_query and nmem_match columns to all_combinations table
+
+        all_combinations = join(
+            all_combinations, nmem_query, keys="query_id", join_type="left"
+        )
+        all_combinations = join(
+            all_combinations, nmem_match, keys="match_id", join_type="left"
+        )
+
         # Counting number of shared members
-               
+
         indices = matched_catalog_grouped.groups.indices
         counts = np.diff(indices)
         shared_count = matched_catalog_grouped.groups.keys
-        shared_count['shared_count'] = counts        
-       
-        all_combinations = join(all_combinations, shared_count, keys=['query_id', 'match_id'], join_type='left') 
-        
+        shared_count["shared_count"] = counts
+
+        all_combinations = join(
+            all_combinations,
+            shared_count,
+            keys=["query_id", "match_id"],
+            join_type="left",
+        )
+
         # Shared fraction
-        
+
         fraction_query = None
         fraction_match = None
 
         match shared_fraction_method:
             case SharedFractionMethod.NO_PMEM:
-                fraction_query = all_combinations['shared_count'] / all_combinations['nmem_query']
-                fraction_match = all_combinations['shared_count'] / all_combinations['nmem_match']
+                fraction_query = (
+                    all_combinations["shared_count"] / all_combinations["nmem_query"]
+                )
+                fraction_match = (
+                    all_combinations["shared_count"] / all_combinations["nmem_match"]
+                )
 
             case SharedFractionMethod.QUERY_PMEM:
                 if "pmem_query" not in matched_catalog.colnames:
-                    raise ValueError("To perform a matching, pmem column must be provided for the query catalog.")
-                
-                all_combinations['sum_shared_pmem'] = matched_catalog_grouped.groups.aggregate(np.sum)['pmem_query']
+                    raise ValueError(
+                        "To perform a matching, pmem column must be provided for the query catalog."
+                    )
 
-                query_group = query_table.group_by(['query_id'])
+                all_combinations["sum_shared_pmem"] = (
+                    matched_catalog_grouped.groups.aggregate(np.sum)["pmem_query"]
+                )
 
-                total_pmem = query_group.groups.aggregate(np.sum)['query_id', 'pmem_query']
-                total_pmem.rename_column('pmem_query', 'sum_total_pmem')
-                
-                all_combinations = join(all_combinations, total_pmem, keys='query_id')
-                
-                fraction_query = all_combinations['sum_shared_pmem'] / all_combinations['sum_total_pmem']
-                fraction_match = all_combinations['shared_count'] / all_combinations['nmem_match']
-                
+                query_group = query_table.group_by(["query_id"])
+
+                total_pmem = query_group.groups.aggregate(np.sum)[
+                    "query_id", "pmem_query"
+                ]
+                total_pmem.rename_column("pmem_query", "sum_total_pmem")
+
+                all_combinations = join(all_combinations, total_pmem, keys="query_id")
+
+                fraction_query = (
+                    all_combinations["sum_shared_pmem"]
+                    / all_combinations["sum_total_pmem"]
+                )
+                fraction_match = (
+                    all_combinations["shared_count"] / all_combinations["nmem_match"]
+                )
+
             case SharedFractionMethod.MATCH_PMEM:
                 if "pmem_match" not in matched_catalog.colnames:
-                    raise ValueError("To perform a matching, pmem column must be provided for the match catalog.")
+                    raise ValueError(
+                        "To perform a matching, pmem column must be provided for the match catalog."
+                    )
 
-                all_combinations['sum_shared_pmem'] = matched_catalog_grouped.groups.aggregate(np.sum)['pmem_match']
+                all_combinations["sum_shared_pmem"] = (
+                    matched_catalog_grouped.groups.aggregate(np.sum)["pmem_match"]
+                )
 
-                match_group = match_table.group_by(['match_id'])
-                total_pmem = match_group.groups.aggregate(np.sum)['match_id', 'pmem_match']
-                total_pmem.rename_column('pmem_match', 'sum_total_pmem')
-                
-                all_combinations = join(all_combinations, total_pmem, keys='match_id')
+                match_group = match_table.group_by(["match_id"])
+                total_pmem = match_group.groups.aggregate(np.sum)[
+                    "match_id", "pmem_match"
+                ]
+                total_pmem.rename_column("pmem_match", "sum_total_pmem")
 
-                fraction_query = all_combinations['shared_count'] / all_combinations['nmem_query']
-                fraction_match = all_combinations['sum_shared_pmem'] / all_combinations['sum_total_pmem']
+                all_combinations = join(all_combinations, total_pmem, keys="match_id")
+
+                fraction_query = (
+                    all_combinations["shared_count"] / all_combinations["nmem_query"]
+                )
+                fraction_match = (
+                    all_combinations["sum_shared_pmem"]
+                    / all_combinations["sum_total_pmem"]
+                )
 
             case SharedFractionMethod.PMEM:
-                if "pmem_query" not in matched_catalog.colnames or "pmem_match" not in matched_catalog.colnames:
-                    raise ValueError("To perform a matching, pmem column must be provided for both catalogs.")
-                
-                all_combinations['sum_shared_pmem_query'] = matched_catalog_grouped.groups.aggregate(np.sum)['pmem_query']
-                all_combinations['sum_shared_pmem_match'] = matched_catalog_grouped.groups.aggregate(np.sum)['pmem_match']
-                
-                query_group = query_table.group_by(['query_id'])
-                sum_total_pmem_query = query_group.groups.aggregate(np.sum)['query_id', 'pmem_query']
-                sum_total_pmem_query.rename_column('pmem_query', 'sum_total_pmem_query')
-                
-                match_group = match_table.group_by(['match_id'])
-                sum_total_pmem_match = match_group.groups.aggregate(np.sum)['match_id', 'pmem_match']
-                sum_total_pmem_match.rename_column('pmem_match', 'sum_total_pmem_match')
-                
-                all_combinations = join(all_combinations, sum_total_pmem_query, keys='query_id')
-                all_combinations = join(all_combinations, sum_total_pmem_match, keys='match_id')
-                
-                fraction_query = all_combinations['sum_shared_pmem_query'] / all_combinations['sum_total_pmem_query']
-                fraction_match = all_combinations['sum_shared_pmem_match'] / all_combinations['sum_total_pmem_match']
+                if (
+                    "pmem_query" not in matched_catalog.colnames
+                    or "pmem_match" not in matched_catalog.colnames
+                ):
+                    raise ValueError(
+                        "To perform a matching, pmem column must be provided for both catalogs."
+                    )
+
+                all_combinations["sum_shared_pmem_query"] = (
+                    matched_catalog_grouped.groups.aggregate(np.sum)["pmem_query"]
+                )
+                all_combinations["sum_shared_pmem_match"] = (
+                    matched_catalog_grouped.groups.aggregate(np.sum)["pmem_match"]
+                )
+
+                query_group = query_table.group_by(["query_id"])
+                sum_total_pmem_query = query_group.groups.aggregate(np.sum)[
+                    "query_id", "pmem_query"
+                ]
+                sum_total_pmem_query.rename_column("pmem_query", "sum_total_pmem_query")
+
+                match_group = match_table.group_by(["match_id"])
+                sum_total_pmem_match = match_group.groups.aggregate(np.sum)[
+                    "match_id", "pmem_match"
+                ]
+                sum_total_pmem_match.rename_column("pmem_match", "sum_total_pmem_match")
+
+                all_combinations = join(
+                    all_combinations, sum_total_pmem_query, keys="query_id"
+                )
+                all_combinations = join(
+                    all_combinations, sum_total_pmem_match, keys="match_id"
+                )
+
+                fraction_query = (
+                    all_combinations["sum_shared_pmem_query"]
+                    / all_combinations["sum_total_pmem_query"]
+                )
+                fraction_match = (
+                    all_combinations["sum_shared_pmem_match"]
+                    / all_combinations["sum_total_pmem_match"]
+                )
 
             case _ as unreachable:
                 assert_never(unreachable)
 
-        
         # Linking coefficient
 
         if use_shared_fraction == True:
-        
-            all_combinations["linking_coefficient"] = fraction_query * (fraction_query + fraction_match) / 2
-        
+
+            all_combinations["linking_coefficient"] = (
+                fraction_query * (fraction_query + fraction_match) / 2
+            )
+
         if use_shared_fraction == False:
-            
-            all_combinations["linking_coefficient"] = all_combinations["shared_count"] / (all_combinations["nmem_query"] + all_combinations["nmem_match"] - all_combinations["shared_count"])
+
+            all_combinations["linking_coefficient"] = all_combinations[
+                "shared_count"
+            ] / (
+                all_combinations["nmem_query"]
+                + all_combinations["nmem_match"]
+                - all_combinations["shared_count"]
+            )
 
         else:
-            raise ValueError(
-                "use_shared_fraction must be True or False"
-            )
-        
+            raise ValueError("use_shared_fraction must be True or False")
 
         # Structured result
-        
-        grouped_comb = all_combinations.group_by('query_id')
-        
+
+        grouped_comb = all_combinations.group_by("query_id")
+
         comb_dict = {}
         for group in grouped_comb.groups:
-            qid = group['query_id'][0]
-            comb_dict[qid] = (list(group['match_id']), list(group['linking_coefficient']))
+            qid = group["query_id"][0]
+            comb_dict[qid] = (
+                list(group["match_id"]),
+                list(group["linking_coefficient"]),
+            )
 
+        match_list, coeff_list = zip(
+            *[
+                comb_dict.get(qid, ([None], [None]))
+                for qid in self.query_data[self.query_ids["ID"]]
+            ]
+        )
 
-        match_list, coeff_list = zip(*[comb_dict.get(qid, ([None], [None])) for qid in self.query_data[self.query_ids['ID']]])
-        
         match_list = np.array(match_list, dtype=object)
-        coeff_list = np.array(coeff_list, dtype=object)       
-      
+        coeff_list = np.array(coeff_list, dtype=object)
+
         return SkyMatchResult(self, MatchingType.ID, match_list, coeff_list)
-                

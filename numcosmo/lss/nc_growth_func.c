@@ -89,6 +89,7 @@
 struct _NcGrowthFuncPrivate
 {
   gpointer cvode;
+  SUNContext sunctx;
   N_Vector yv;
   SUNMatrix A;
   SUNLinearSolver LS;
@@ -113,10 +114,13 @@ nc_growth_func_init (NcGrowthFunc *gf)
 {
   NcGrowthFuncPrivate * const self = gf->priv = nc_growth_func_get_instance_private (gf);
 
+  if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
+
   self->cvode      = NULL;
-  self->yv         = N_VNew_Serial (3);
-  self->A          = SUNDenseMatrix (3, 3);
-  self->LS         = SUNDenseLinearSolver (self->yv, self->A);
+  self->yv         = N_VNew_Serial (3, self->sunctx);
+  self->A          = SUNDenseMatrix (3, 3, self->sunctx);
+  self->LS         = SUNLinSol_Dense (self->yv, self->A, self->sunctx);
   self->x_i        = 0.0;
   self->reltol     = 0.0;
   self->abstol     = 0.0;
@@ -147,9 +151,9 @@ _nc_growth_func_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_X_I:
       nc_growth_func_set_x_i (gf, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -171,9 +175,9 @@ _nc_growth_func_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_X_I:
       g_value_set_double (value, nc_growth_func_get_x_i (gf));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -210,6 +214,8 @@ _nc_growth_func_finalize (GObject *object)
     SUNLinSolFree (self->LS);
     self->LS = NULL;
   }
+
+  SUNContext_Free (&self->sunctx);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_growth_func_parent_class)->finalize (object);
@@ -433,7 +439,7 @@ nc_growth_func_get_x_i (NcGrowthFunc *gf)
 }
 
 static gint
-growth_f (realtype a, N_Vector y, N_Vector ydot, gpointer f_data)
+growth_f (sunrealtype a, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHICosmo *cosmo    = NC_HICOSMO (f_data);
   const gdouble a2    = a * a;
@@ -454,7 +460,7 @@ growth_f (realtype a, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-growth_J (realtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+growth_J (sunrealtype a, N_Vector y, N_Vector fy, SUNMatrix J, void *jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHICosmo *cosmo        = NC_HICOSMO (jac_data);
   const gdouble a2        = a * a;
@@ -532,7 +538,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
 
   if (self->cvode == NULL)
   {
-    self->cvode = CVodeCreate (CV_BDF);
+    self->cvode = CVodeCreate (CV_BDF, self->sunctx);
 
     flag = CVodeInit (self->cvode, &growth_f, ai, self->yv);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );

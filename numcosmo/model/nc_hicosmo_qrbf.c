@@ -136,9 +136,9 @@ _nc_hicosmo_qrbf_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_Z_F:
       g_value_set_double (value, self->z_f);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -155,9 +155,9 @@ _nc_hicosmo_qrbf_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_Z_F:
       nc_hicosmo_qrbf_set_z_f (qrbf, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -213,7 +213,7 @@ nc_hicosmo_qrbf_class_init (NcHICosmoQRBFClass *klass)
   /**
    * NcHICosmoQRBF:H0-fit:
    *
-   * FIXME
+   * Hubble constant parameter for fitting.
    */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QRBF_H0, "H_0", "H0",
                               10.0, 500.0, 1.0, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QRBF_DEFAULT_H0,
@@ -222,12 +222,12 @@ nc_hicosmo_qrbf_class_init (NcHICosmoQRBFClass *klass)
   /**
    * NcHICosmoQRBF:Omegat:
    *
-   * FIXME
+   * Total density parameter at present time.
    */
   /**
    * NcHICosmoQRBF:Omegat-fit:
    *
-   * FIXME
+   * Total density parameter for fitting.
    */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QRBF_OMEGA_T, "Omega_t0", "Omegat",
                               0.05, 2.0, 1.0e-1,
@@ -482,11 +482,11 @@ _nc_hicosmo_qrbf_as_drag (NcHICosmo *cosmo)
 /**
  * nc_hicosmo_qrbf_new:
  * @np: number of knots
- * @z_f: FIXME
+ * @z_f: final redshift
  *
- * FIXME
+ * Creates a new #NcHICosmoQRBF with @np knots up to redshift @z_f.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcHICosmoQRBF
  */
 NcHICosmoQRBF *
 nc_hicosmo_qrbf_new (gsize np, gdouble z_f)
@@ -503,9 +503,9 @@ nc_hicosmo_qrbf_new (gsize np, gdouble z_f)
 /**
  * nc_hicosmo_qrbf_set_z_f:
  * @qrbf: a #NcHICosmoQRBF
- * @z_f: FIXME
+ * @z_f: final redshift
  *
- * FIXME
+ * Sets the final redshift for the RBF interpolation.
  *
  */
 void
@@ -591,9 +591,9 @@ _nc_hicosmo_qrbf_rprior_set_property (GObject *object, guint prop_id, const GVal
     case PROP_LAMBDA:
       self->lambda = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -610,9 +610,9 @@ _nc_hicosmo_qrbf_rprior_get_property (GObject *object, guint prop_id, GValue *va
     case PROP_LAMBDA:
       g_value_set_double (value, self->lambda);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -662,7 +662,9 @@ nc_hicosmo_qrbf_rprior_class_init (NcHICosmoQRBFRpriorClass *klass)
  * nc_hicosmo_qrbf_rprior_new:
  * @lambda: penalization height
  *
- * Returns: FIXME
+ * Creates a new regularization prior with penalization parameter @lambda.
+ *
+ * Returns: (transfer full): a new #NcHICosmoQRBFRprior
  */
 NcHICosmoQRBFRprior *
 nc_hicosmo_qrbf_rprior_new (gdouble lambda)

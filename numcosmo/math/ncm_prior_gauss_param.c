@@ -71,6 +71,10 @@ G_DEFINE_TYPE (NcmPriorGaussParam, ncm_prior_gauss_param, NCM_TYPE_PRIOR_GAUSS)
 static void
 ncm_prior_gauss_param_init (NcmPriorGaussParam *pgp)
 {
+  pgp->model_ns   = NULL;
+  pgp->param_name = NULL;
+  pgp->stack_pos  = 0;
+  pgp->mid        = 0;
 }
 
 static void
@@ -124,6 +128,11 @@ _ncm_prior_gauss_param_get_property (GObject *object, guint prop_id, GValue *val
 static void
 _ncm_prior_gauss_param_finalize (GObject *object)
 {
+  NcmPriorGaussParam *pgp = NCM_PRIOR_GAUSS_PARAM (object);
+
+  g_clear_pointer (&pgp->param_name, g_free);
+  g_clear_pointer (&pgp->model_ns, g_free);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_prior_gauss_param_parent_class)->finalize (object);
 }

@@ -298,7 +298,7 @@ ncm_bootstrap_full_new (guint fsize, guint bsize)
  * ncm_bootstrap_ref:
  * @bstrap: a #NcmBootstrap.
  *
- * Incresases the reference count of @bstrap by one.
+ * Increases the reference count of @bstrap by one.
  *
  * Returns: (transfer full): a #NcmBootstrap.
  */
@@ -475,7 +475,7 @@ static gint _ncm_bootstrap_get_sort (gconstpointer a, gconstpointer b);
  * Fills an array with the sorted indexes followed by the number of
  * times they appear.
  *
- * Returns: (array) (element-type guint) (transfer full): the sorted array of indexes and frequences.
+ * Returns: (array) (element-type guint) (transfer full): the sorted array of indexes and frequencies.
  */
 GArray *
 ncm_bootstrap_get_sortncomp (NcmBootstrap *bstrap)

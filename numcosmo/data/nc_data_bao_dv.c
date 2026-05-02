@@ -45,6 +45,19 @@
 #include "nc_enum_types.h"
 #include "math/ncm_cfg.h"
 
+typedef struct _NcDataBaoDVPrivate
+{
+  gint placeholder;
+} NcDataBaoDVPrivate;
+
+struct _NcDataBaoDV
+{
+  /*< private >*/
+  NcmDataGaussDiag parent_instance;
+  NcDistance *dist;
+  NcmVector *x;
+};
+
 enum
 {
   PROP_0,
@@ -77,9 +90,9 @@ nc_data_bao_dv_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_Z:
       ncm_vector_substitute (&bao_dv->x, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -98,9 +111,9 @@ nc_data_bao_dv_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_Z:
       g_value_set_object (value, bao_dv->x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -241,9 +254,9 @@ nc_data_bao_dv_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_DV_EISENSTEIN2005:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_dv_eisenstein2005.obj", TRUE);
       break;
-    default:
-      g_error ("nc_data_bao_dv_new_from_id: id %d not recognized.", id);
-      break;
+    default:                                                             /* LCOV_EXCL_LINE */
+      g_error ("nc_data_bao_dv_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
+      break;                                                             /* LCOV_EXCL_LINE */
   }
 
   bao_dv = nc_data_bao_dv_new_from_file (filename);

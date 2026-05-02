@@ -86,6 +86,7 @@ struct _NcmSerialize
   GRegex *parse_obj_regex;
   NcmSerializeOpt opts;
   guint autosave_count;
+  GPtrArray *dangling_anchors; /* For YAML anchors */
 };
 
 G_DEFINE_TYPE (NcmSerialize, ncm_serialize, G_TYPE_OBJECT)
@@ -105,9 +106,12 @@ ncm_serialize_init (NcmSerialize *ser)
   ser->saved_name_ser = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free,
                                                (GDestroyNotify) & g_variant_unref);
 
-  ser->is_named_regex  = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\-\\_]+)\\s*\\[([A-Za-z0-9\\:]+)\\]\\s*$", 0, 0, &error);
-  ser->parse_obj_regex = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\-\\_]+\\s*(?:\\[[A-Za-z0-9\\:]+\\])?)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
-  ser->autosave_count  = 0;
+  ser->is_named_regex   = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\-\\_]+)\\s*\\[([A-Za-z0-9\\:]+)\\]\\s*$", 0, 0, &error);
+  ser->parse_obj_regex  = g_regex_new ("^\\s*([A-Za-z][A-Za-z0-9\\+\\-\\_]+\\s*(?:\\[[A-Za-z0-9\\:]+\\])?)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
+  ser->autosave_count   = 0;
+  ser->dangling_anchors = g_ptr_array_new ();
+
+  g_ptr_array_set_free_func (ser->dangling_anchors, (GDestroyNotify) g_free);
 }
 
 static void
@@ -165,6 +169,8 @@ _ncm_serialize_finalize (GObject *object)
 
   g_regex_unref (ser->is_named_regex);
   g_regex_unref (ser->parse_obj_regex);
+
+  g_ptr_array_unref (ser->dangling_anchors);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_serialize_parent_class)->finalize (object);
@@ -717,6 +723,8 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
 
     g_variant_iter_free (p_iter);
   }
+
+  g_variant_unref (params);
 }
 
 /**
@@ -1281,6 +1289,7 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
 
                       g_value_take_object (&lval, vector);
 
+                      g_variant_unref (var);
                       g_free (prop_val_str);
                     }
                   }
@@ -1305,6 +1314,7 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
 
                       g_value_take_object (&lval, matrix);
 
+                      g_variant_unref (var);
                       g_free (prop_val_str);
                     }
                   }
@@ -1342,6 +1352,7 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
 
                   dtuple2 = ncm_dtuple2_new_from_variant (var);
                   g_value_take_boxed (&lval, dtuple2);
+                  g_variant_unref (var);
                 }
                 else if (g_type_is_a (pspec->value_type, NCM_TYPE_DTUPLE3))
                 {
@@ -1355,6 +1366,7 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
 
                   dtuple3 = ncm_dtuple3_new_from_variant (var);
                   g_value_take_boxed (&lval, dtuple3);
+                  g_variant_unref (var);
                 }
                 else if (g_type_is_a (pspec->value_type, G_TYPE_STRV))
                 {
@@ -1567,6 +1579,8 @@ ncm_serialize_array_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 
     fy_document_destroy (doc);
 
+    g_ptr_array_set_size (ser->dangling_anchors, 0);
+
     return array;
   }
 
@@ -1631,6 +1645,8 @@ ncm_serialize_dict_str_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
     }
 
     fy_document_destroy (doc);
+
+    g_ptr_array_set_size (ser->dangling_anchors, 0);
 
     return dict;
   }
@@ -1704,6 +1720,8 @@ ncm_serialize_dict_int_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 
     fy_document_destroy (doc);
 
+    g_ptr_array_set_size (ser->dangling_anchors, 0);
+
     return dict;
   }
 
@@ -1774,6 +1792,8 @@ ncm_serialize_var_dict_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
     }
 
     fy_document_destroy (doc);
+
+    g_ptr_array_set_size (ser->dangling_anchors, 0);
 
     return dict;
   }
@@ -1851,7 +1871,7 @@ ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
                                                  TRUE,
                                                  g_free,
                                                  file
-                                                );
+    );
 
     obj = ncm_serialize_from_variant (ser, obj_ser);
 
@@ -1896,7 +1916,7 @@ ncm_serialize_var_dict_from_variant_file (NcmSerialize *ser, const gchar *filena
                                                 TRUE,
                                                 g_free,
                                                 file
-                                               );
+    );
 
     vd = ncm_serialize_var_dict_from_variant (ser, vd_ser);
 
@@ -2553,7 +2573,7 @@ _ncm_serialize_gtype_to_gvariant_type (GType t)
  *
  * Converts a GValue to a GVariant.
  *
- * Returns: (transfer full): A GVariant convertion of @val.
+ * Returns: (transfer full): A GVariant conversion of @val.
  */
 GVariant *
 ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
@@ -2685,7 +2705,7 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
     gchar *ni_name = ncm_serialize_peek_name (ser, obj);
     gchar *fname   = g_strdup_printf ("%s[%s]", obj_name, ni_name);
 
-    /*printf ("# Found instante %p at ptr_name %s.\n", obj, fname);*/
+    /*printf ("# Found instance %p at ptr_name %s.\n", obj, fname);*/
     ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
     g_free (fname);
   }
@@ -2693,7 +2713,7 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
   {
     gchar *fname = g_strdup_printf ("%s[%s]", obj_name, saved_name);
 
-    /*printf ("# Found instante %p at saved_ptr_name %s.\n", obj, fname);*/
+    /*printf ("# Found instance %p at saved_ptr_name %s.\n", obj, fname);*/
     ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
     g_free (fname);
   }
@@ -2845,6 +2865,79 @@ ncm_serialize_dict_str_to_variant (NcmSerialize *ser, NcmObjDictStr *ods)
 }
 
 /**
+ * ncm_serialize_dict_str_to_binfile:
+ * @ser: a #NcmSerialize
+ * @ods: a #NcmObjDictStr
+ * @filename: File where to save the serialized version of the dictionary
+ *
+ * Serializes @ods and saves the binary in @filename.
+ *
+ */
+void
+ncm_serialize_dict_str_to_binfile (NcmSerialize *ser, NcmObjDictStr *ods, const gchar *filename)
+{
+  GError *error     = NULL;
+  GVariant *var_ser = ncm_serialize_dict_str_to_variant (ser, ods);
+  gsize length      = g_variant_get_size (var_ser);
+
+  g_assert (filename != NULL);
+
+  if (!g_file_set_contents (filename, g_variant_get_data (var_ser), length, &error))
+    g_error ("ncm_serialize_dict_str_to_binfile: cannot save to file %s: %s",
+             filename, error->message);
+
+  g_variant_unref (var_ser);
+}
+
+/**
+ * ncm_serialize_dict_str_from_binfile:
+ * @ser: a #NcmSerialize
+ * @filename: File containing the binary serialized version of the dictionary
+ *
+ * Parses the serialized binary data in @filename and returns the newly created #NcmObjDictStr.
+ *
+ * Returns: (transfer full): A new #NcmObjDictStr.
+ */
+NcmObjDictStr *
+ncm_serialize_dict_str_from_binfile (NcmSerialize *ser, const gchar *filename)
+{
+  GError *error      = NULL;
+  gchar *file        = NULL;
+  gsize length       = 0;
+  NcmObjDictStr *ods = NULL;
+
+  g_assert (filename != NULL);
+
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("ncm_serialize_dict_str_from_binfile: cannot open file %s: %s",
+             filename, error->message);
+
+  if (length == 0)
+  {
+    /* Empty dictionary case */
+    g_free (file);
+
+    return ncm_obj_dict_str_new ();
+  }
+
+  {
+    GVariant *var_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_STR_TYPE),
+                                                 file,
+                                                 length,
+                                                 TRUE,
+                                                 g_free,
+                                                 file
+    );
+
+    ods = ncm_serialize_dict_str_from_variant (ser, var_ser);
+
+    g_variant_unref (var_ser);
+  }
+
+  return ods;
+}
+
+/**
  * ncm_serialize_dict_int_to_variant:
  * @ser: a #NcmSerialize
  * @odi: a #NcmObjDictInt
@@ -2949,6 +3042,8 @@ ncm_serialize_variant_to_yaml (NcmSerialize *ser, GVariant *var_obj)
     yaml = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
     fy_document_destroy (doc);
 
+    g_ptr_array_set_size (ser->dangling_anchors, 0);
+
     return yaml;
   }
 #else
@@ -3011,9 +3106,11 @@ _ncm_serialize_to_yaml_node (NcmSerialize *ser, struct fy_document *doc, GVarian
 
     if (anchor)
     {
-      gint rc = fy_node_set_anchor (root_key, g_strdup (anchor), FY_NT);
+      gchar *dup_anchor = g_strdup (anchor);
+      gint rc           = fy_node_set_anchor (root_key, dup_anchor, FY_NT);
 
       g_assert (rc == 0);
+      g_ptr_array_add (ser->dangling_anchors, dup_anchor);
     }
 
     fy_node_mapping_append (root,
@@ -3247,6 +3344,8 @@ ncm_serialize_array_to_yaml (NcmSerialize *ser, NcmObjArray *oa)
   yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
 
+  g_ptr_array_set_size (ser->dangling_anchors, 0);
+
   return yaml_str;
 
 #else /* HAVE_LIBFYAML */
@@ -3293,6 +3392,8 @@ ncm_serialize_dict_str_to_yaml (NcmSerialize *ser, NcmObjDictStr *ods)
   fy_document_set_root (doc, root);
   yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
+
+  g_ptr_array_set_size (ser->dangling_anchors, 0);
 
   return yaml_str;
 
@@ -3342,6 +3443,8 @@ ncm_serialize_dict_int_to_yaml (NcmSerialize *ser, NcmObjDictInt *odi)
   yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
 
+  g_ptr_array_set_size (ser->dangling_anchors, 0);
+
   return yaml_str;
 
 #else /* HAVE_LIBFYAML */
@@ -3385,6 +3488,8 @@ ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict)
   fy_document_set_root (doc, root);
   yaml_str = fy_emit_document_to_string (doc, FYECF_DEFAULT | FYECF_WIDTH_INF);
   fy_document_destroy (doc);
+
+  g_ptr_array_set_size (ser->dangling_anchors, 0);
 
   return yaml_str;
 
@@ -3766,7 +3871,7 @@ static NcmSerialize *_global_ser = NULL;
 /**
  * ncm_serialize_global:
  *
- * Gets the global serialization object, instanciates it if necessary.
+ * Gets the global serialization object, instantiates it if necessary.
  *
  * Returns: (transfer full): The global #NcmSerialize.
  */
@@ -4187,7 +4292,7 @@ ncm_serialize_global_from_name_params (const gchar *obj_name, GVariant *params)
  *
  * Global version of ncm_serialize_gvalue_to_gvariant().
  *
- * Returns: (transfer full): A GVariant convertion of @val.
+ * Returns: (transfer full): A GVariant conversion of @val.
  */
 GVariant *
 ncm_serialize_global_gvalue_to_gvariant (GValue *val)

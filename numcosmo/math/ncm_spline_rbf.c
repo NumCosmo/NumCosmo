@@ -301,7 +301,7 @@ ATimes (gpointer user_data, N_Vector v_vec, N_Vector z_vec)
 }
 
 gint
-PSolve (gpointer user_data, N_Vector r_vec, N_Vector z_vec, realtype tol, int lr)
+PSolve (gpointer user_data, N_Vector r_vec, N_Vector z_vec, sunrealtype tol, int lr)
 {
   NcmSplineRBFPrivate * const self = user_data;
   const gint len                   = ncm_matrix_nrows (self->interp_matrix);
@@ -644,6 +644,8 @@ _ncm_spline_rbf_posdef_gauss_deriv2 (NcmSplineRBF *rbf, NcmVector *xv, const gdo
   return res;
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _ncm_spline_rbf_integ_placeholder (NcmSplineRBF *rbf, NcmVector *xv, const gdouble x0, const gdouble x1)
 {
@@ -651,6 +653,8 @@ _ncm_spline_rbf_integ_placeholder (NcmSplineRBF *rbf, NcmVector *xv, const gdoub
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 _ncm_spline_rbf_gauss_default_shape_params (NcmSplineRBF *rbf, NcmVector *xv)
@@ -895,7 +899,7 @@ ncm_spline_rbf_set_shape_params (NcmSplineRBF *rbf, NcmVector *shape_params)
 /*
  *   SUNLinearSolver LS;
  *   N_Vector        xhat, x, b;
- *   realtype        *vecdata;
+ *   sunrealtype        *vecdata;
  *   gint i;
  *   gint maxl = len;
  *   gint ret;

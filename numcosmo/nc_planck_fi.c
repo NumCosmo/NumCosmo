@@ -66,9 +66,9 @@ nc_planck_fi_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_VERSION:
       pfi->version = g_value_get_uint (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -84,9 +84,9 @@ nc_planck_fi_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_VERSION:
       g_value_set_uint (value, pfi->version);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -174,9 +174,9 @@ nc_planck_fi_log_all_models (void)
  * nc_planck_fi_ref:
  * @pfi: a #NcPlanckFI
  *
- * FIXME
+ * Increases the reference count of @pfi by one.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @pfi
  */
 NcPlanckFI *
 nc_planck_fi_ref (NcPlanckFI *pfi)
@@ -188,7 +188,7 @@ nc_planck_fi_ref (NcPlanckFI *pfi)
  * nc_planck_fi_free:
  * @pfi: a #NcPlanckFI
  *
- * FIXME
+ * Decreases the reference count of @pfi by one.
  *
  */
 void

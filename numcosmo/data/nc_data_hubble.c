@@ -44,6 +44,18 @@
 #include "nc_hicosmo.h"
 #include "nc_enum_types.h"
 
+typedef struct _NcDataHubblePrivate
+{
+  gint placeholder;
+} NcDataHubblePrivate;
+
+struct _NcDataHubble
+{
+  /*< private >*/
+  NcmDataGaussDiag parent_instance;
+  NcmVector *x;
+};
+
 enum
 {
   PROP_0,
@@ -79,9 +91,9 @@ nc_data_hubble_set_property (GObject *object, guint prop_id, const GValue *value
       ncm_vector_clear (&hubble->x);
       hubble->x = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -97,9 +109,9 @@ nc_data_hubble_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_Z:
       g_value_set_object (value, hubble->x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -138,6 +150,11 @@ nc_data_hubble_class_init (NcDataHubbleClass *klass)
   object_class->dispose      = &nc_data_hubble_dispose;
   object_class->finalize     = &nc_data_hubble_finalize;
 
+  /**
+   * NcDataHubble:z:
+   *
+   * Vector containing the redshift values at which Hubble parameter measurements were obtained.
+   */
   g_object_class_install_property (object_class,
                                    PROP_Z,
                                    g_param_spec_object ("z",
@@ -195,9 +212,9 @@ _nc_data_hubble_set_size (NcmDataGaussDiag *diag, guint np)
 /**
  * nc_data_hubble_new_empty:
  *
- * FIXME
+ * Creates a new empty #NcDataHubble object.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcDataHubble
  */
 NcDataHubble *
 nc_data_hubble_new_empty (void)
@@ -230,9 +247,11 @@ nc_data_hubble_new_from_file (const gchar *filename)
  * nc_data_hubble_new_from_id:
  * @id: a #NcDataHubbleId
  *
- * FIXME
+ * Creates a new #NcDataHubble from a predefined dataset identifier.
+ * Loads the corresponding Hubble parameter measurements from the data file
+ * associated with @id.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcDataHubble
  */
 NcDataHubble *
 nc_data_hubble_new_from_id (NcDataHubbleId id)
@@ -278,15 +297,30 @@ nc_data_hubble_new_from_id (NcDataHubbleId id)
     case NC_DATA_HUBBLE_RIESS2016_HST_WFC3:
       filename = ncm_cfg_get_data_filename ("nc_data_hubble_riess2016.obj", TRUE);
       break;
+    case NC_DATA_HUBBLE_RATSIMBAZAFY2017:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_ratsimbazafy2017.obj", TRUE);
+      break;
     case NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018:
       filename = ncm_cfg_get_data_filename ("nc_data_hubble_gomez_valent_comp.obj", TRUE);
       break;
     case NC_DATA_HUBBLE_RIESS2018:
       filename = ncm_cfg_get_data_filename ("nc_data_hubble_riess2018.obj", TRUE);
       break;
-    default:
-      g_error ("nc_data_hubble_new_from_id: id %d not recognized.", id);
+    case NC_DATA_HUBBLE_BORGHI2022:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_borghi2022.obj", TRUE);
       break;
+    case  NC_DATA_HUBBLE_JIAO2023:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_jiao2023.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_JIMENEZ2023:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_jimenez2023.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_TOMASETTI2023:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_tomasetti2023.obj", TRUE);
+      break;
+    default:                                                             /* LCOV_EXCL_LINE */
+      g_error ("nc_data_hubble_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
+      break;                                                             /* LCOV_EXCL_LINE */
   }
 
   hubble = nc_data_hubble_new_from_file (filename);

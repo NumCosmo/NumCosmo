@@ -1,0 +1,13 @@
+(
+  'NcDataHubble', 
+  {
+    'desc':      <'Borghi et al. 2022 -- arXiv:2110.04304'>, 
+    'long-desc': <''>, 
+    'init':      <true>, 
+    'n-points':  <uint32 1>, 
+    'w-mean':    <false>, 
+    'mean':      <[98.8]>, 
+    'sigma':     <[33.6]>, 
+    'z':         <[0.75]>
+  } 
+)

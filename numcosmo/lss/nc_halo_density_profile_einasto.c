@@ -107,9 +107,9 @@ _nc_halo_density_profile_einasto_set_property (GObject *object, guint prop_id, c
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -121,9 +121,9 @@ _nc_halo_density_profile_einasto_get_property (GObject *object, guint prop_id, G
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -157,7 +157,8 @@ nc_halo_density_profile_einasto_class_init (NcHaloDensityProfileEinastoClass *kl
    * NcHaloDensityProfileEinasto:alpha:
    *
    * Defines how the profile steepens with slope.
-   * FIXME Set correct values (limits)
+   * Typical values range from 0.12 to 0.35 based on N-body simulations
+   * (Gao et al. 2008, Dutton & Maccio 2014).
    */
   ncm_model_class_set_sparam (model_class, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA, "\\alpha", "alpha",
                               0.12,  0.35, 0.01,

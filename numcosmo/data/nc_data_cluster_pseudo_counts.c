@@ -92,9 +92,9 @@ nc_data_cluster_pseudo_counts_set_property (GObject *object, guint prop_id, cons
     case PROP_M_Z_FLAT_PRIOR:
       dcpc->M_Z_FlatPrior = g_value_get_boolean (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -122,9 +122,9 @@ nc_data_cluster_pseudo_counts_get_property (GObject *object, guint prop_id, GVal
     case PROP_M_Z_FLAT_PRIOR:
       g_value_set_boolean (value, dcpc->M_Z_FlatPrior);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -304,7 +304,7 @@ _nc_data_cluster_pseudo_counts_prepare (NcmData *data, NcmMSet *mset)
   NcClusterPseudoCounts *cpc      = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
 
   if (dcpc->cad == NULL)
-    g_error ("_nc_data_cluster_pseudo_counts_prepare: NcClusterAbundance not set, call _l");
+    g_error ("_nc_data_cluster_pseudo_counts_prepare: NcClusterAbundance not set, call nc_data_cluster_pseudo_counts_set_cad() first.");
 
   g_assert ((cosmo != NULL) && (clusterz != NULL) && (clusterm != NULL) && (cpc != NULL));
 
@@ -562,7 +562,10 @@ nc_data_cluster_pseudo_counts_set_true_data (NcDataClusterPseudoCounts *dcpc, co
  * @rng: a #NcmRNG
  * @np: number of clusters
  *
- * FIXME
+ * Initializes the cluster pseudo counts data by sampling @np clusters. Sets the number
+ * of clusters and generates observational uncertainties for Planck and CLASH catalogs,
+ * then resamples the data using the provided model set @mset and random number
+ * generator @rng.
  *
  */
 void

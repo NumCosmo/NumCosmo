@@ -90,9 +90,9 @@ _nc_multiplicity_func_set_property (GObject *object, guint prop_id, const GValue
     case PROP_DELTA:
       NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->set_Delta (mulf, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -113,9 +113,9 @@ _nc_multiplicity_func_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_DELTA:
       g_value_set_double (value, nc_multiplicity_func_get_Delta (mulf));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -395,9 +395,10 @@ nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosm
  * @sigma: standard fluctuation of the matter density contrast
  * @z: redshift
  *
- * FIXME
+ * Evaluates the multiplicity function $f(\sigma, z)$ at the given
+ * variance @sigma and redshift @z.
  *
- * Returns: FIXME
+ * Returns: the value of the multiplicity function
  */
 gdouble
 nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
@@ -428,9 +429,10 @@ nc_multiplicity_func_has_correction_factor (NcMultiplicityFunc *mulf)
  * @z: redshift
  * @lnM: logarithm base e of the mass
  *
- * FIXME
+ * Computes the correction factor for the multiplicity function.
+ * Some multiplicity functions require mass-dependent corrections.
  *
- * Returns: FIXME
+ * Returns: the correction factor value
  */
 gdouble
 nc_multiplicity_func_correction_factor (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)

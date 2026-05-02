@@ -95,9 +95,9 @@ _nc_multiplicity_func_st_set_property (GObject *object, guint prop_id, const GVa
     case PROP_DELTA_C:
       nc_multiplicity_func_st_set_delta_c (mst, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -122,9 +122,9 @@ _nc_multiplicity_func_st_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_DELTA_C:
       g_value_set_double (value, nc_multiplicity_func_st_get_delta_c (mst));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -154,7 +154,7 @@ nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
   /**
    * NcMultiplicityFuncST:A:
    *
-   * FIXME Set correct values (limits)
+   * Normalization parameter in the Sheth-Tormen multiplicity function.
    */
   g_object_class_install_property (object_class,
                                    PROP_A,
@@ -167,7 +167,7 @@ nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
   /**
    * NcMultiplicityFuncST:b:
    *
-   * FIXME Set correct values (limits)
+   * Shape parameter in the Sheth-Tormen multiplicity function.
    */
   g_object_class_install_property (object_class,
                                    PROP_B,
@@ -180,7 +180,7 @@ nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
   /**
    * NcMultiplicityFuncST:p:
    *
-   * FIXME Set correct values (limits)
+   * Power-law index parameter in the Sheth-Tormen multiplicity function.
    */
   g_object_class_install_property (object_class,
                                    PROP_P,
@@ -193,7 +193,7 @@ nc_multiplicity_func_st_class_init (NcMultiplicityFuncSTClass *klass)
   /**
    * NcMultiplicityFuncST:critical_delta:
    *
-   * FIXME Set correct values (limits)
+   * Critical overdensity for spherical collapse.
    */
   g_object_class_install_property (object_class,
                                    PROP_DELTA_C,
@@ -292,7 +292,7 @@ _nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdoub
 /**
  * nc_multiplicity_func_st_new:
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncST with default parameters.
  *
  * Returns: A new #NcMultiplicityFuncST.
  */

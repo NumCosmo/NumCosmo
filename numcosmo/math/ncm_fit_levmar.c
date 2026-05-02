@@ -273,6 +273,7 @@ _ncm_fit_levmar_run (NcmFit *fit, NcmFitRunMsgs mtype)
   }
 
   /* Creating a fake vector */
+  ncm_vector_clear (&fit_levmar->f);
   fit_levmar->f = ncm_vector_new_data_static (GINT_TO_POINTER (1), fit_levmar->data_len, 1);
 
   switch (fit_levmar->algo)
@@ -583,7 +584,7 @@ ncm_fit_levmar_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, NcmF
                        "grad-type", gtype,
                        "algorithm", algo,
                        NULL
-                      );
+  );
 }
 
 /**
@@ -605,7 +606,7 @@ ncm_fit_levmar_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gty
                        "mset", mset,
                        "grad-type", gtype,
                        NULL
-                      );
+  );
 }
 
 /**

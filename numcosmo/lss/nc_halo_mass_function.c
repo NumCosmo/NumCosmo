@@ -191,9 +191,9 @@ _nc_halo_mass_function_set_property (GObject *object, guint prop_id, const GValu
     case PROP_MF_LB:
       mfp->mf_lb = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -237,9 +237,9 @@ _nc_halo_mass_function_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_MF_LB:
       g_value_set_double (value, mfp->mf_lb);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -791,11 +791,12 @@ nc_halo_mass_function_dn_dz (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble 
  * @lnMu: logarithm base e of mass, upper threshold $\ln M_u$
  * @zl: minimum redshift
  * @zu: maximum redshift
- * @spline: whenever to create an intermediary spline of the integration
+ * @spline: spline optimization strategy for the integration
  *
- * FIXME
+ * Computes the total number of halos in the mass range $[M_l, M_u]$ and
+ * redshift range $[z_l, z_u]$ within the survey area.
  *
- * Returns: FIXME
+ * Returns: the total number of halos
  */
 gdouble
 nc_halo_mass_function_n (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble zl, gdouble zu, NcHaloMassFunctionSplineOptimize spline)

@@ -73,7 +73,7 @@ _besselj_bs_free (gpointer p)
   mpz_clear (bs_data->xd);
   mpz_clear (bs_data->tmp);
   g_slice_free (_binsplit_0F1, bs_data);
-  /* Leak we dont have a free function for binsplit FIXME:LEAK */
+  /* Note: NcmBinSplit structure itself is managed by the memory pool */
 }
 
 static NcmMemoryPool *__mp = NULL;
@@ -192,8 +192,8 @@ ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
 
   mpq_init (xq);
   mpq_init (bq);
-  ncm_rational_coarce_double (b, bq);
-  ncm_rational_coarce_double (x, xq);
+  ncm_rational_coarse_double (b, bq);
+  ncm_rational_coarse_double (x, xq);
   ncm_mpsf_0F1_q (bq, xq, res, rnd);
   mpq_clear (xq);
   mpq_clear (bq);

@@ -250,9 +250,9 @@ nc_recomb_set_property (GObject *object, guint prop_id, const GValue *value, GPa
       recomb->prec = g_value_get_double (value);
       ncm_model_ctrl_force_update (recomb->ctrl_cosmo);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -274,9 +274,9 @@ nc_recomb_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_PREC:
       g_value_set_double (value, recomb->prec);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -342,6 +342,8 @@ nc_recomb_class_init (NcRecombClass *klass)
   klass->XHeII   = &_nc_recomb_XHeII;
 }
 
+/* LCOV_EXCL_START */
+
 static gdouble
 _nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
@@ -365,6 +367,8 @@ _nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 
   return 0.0;
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * nc_recomb_ref:

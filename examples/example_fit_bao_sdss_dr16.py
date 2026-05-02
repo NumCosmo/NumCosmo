@@ -28,7 +28,6 @@ import os.path
 import argparse
 from numcosmo_py import Nc, Ncm
 
-
 #
 #  Initializing the library objects, this must be called before
 #  any other library function.

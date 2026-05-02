@@ -68,13 +68,30 @@ class RunMC(RunCommonOptions):
         ),
     ] = 100
 
+    seed: Annotated[
+        int | None,
+        typer.Option(
+            help="Seed for the random number generator. "
+            "If None (default), a random seed is used.",
+        ),
+    ] = None
+
     def __post_init__(self) -> None:
         """Compute Monte Carlo Analysis."""
         super().__post_init__()
 
-        mc = Ncm.FitMC.new(
-            fit=self.fit, rtype=self.run_type.genum, mtype=self.run_messages.genum
-        )
+        if self.functions is not None:
+            mc: Ncm.FitMC = Ncm.FitMC.new_funcs_array(
+                fit=self.fit,
+                rtype=self.run_type.genum,
+                mtype=self.run_messages.genum,
+                funcs_array=self.functions,
+            )
+        else:
+
+            mc = Ncm.FitMC.new(
+                fit=self.fit, rtype=self.run_type.genum, mtype=self.run_messages.genum
+            )
 
         if self.output is None:
             raise typer.BadParameter(
@@ -83,6 +100,10 @@ class RunMC(RunCommonOptions):
 
         mc.set_nthreads(self.nthreads)
         mc.set_data_file(self.output.with_suffix(".mc.fits").absolute().as_posix())
+
+        if self.seed is not None:
+            rng = Ncm.RNG.seeded_new("mt19937", self.seed)
+            mc.set_rng(rng)
 
         mc.start_run()
         mc.run(self.nmc)

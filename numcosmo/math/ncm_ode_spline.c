@@ -50,6 +50,7 @@
 typedef struct _NcmOdeSplinePrivate
 {
   gpointer cvode;
+  SUNContext sunctx;
   SUNNonlinearSolver NLS;
   N_Vector y;
   GArray *y_array;
@@ -106,10 +107,13 @@ ncm_ode_spline_init (NcmOdeSpline *os)
 {
   NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
 
+  if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
+    g_error ("ERROR: SUNContext_Create failed\n");
+
   self->spline      = NULL;
-  self->cvode       = CVodeCreate (CV_ADAMS);
+  self->cvode       = CVodeCreate (CV_ADAMS, self->sunctx);
   self->cvode_init  = FALSE;
-  self->y           = N_VNew_Serial (1);
+  self->y           = N_VNew_Serial (1, self->sunctx);
   self->NLS         = NULL;
   self->y_array     = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   self->x_array     = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
@@ -128,7 +132,7 @@ ncm_ode_spline_init (NcmOdeSpline *os)
   self->ini_step    = 0.0;
   self->ctrl        = ncm_model_ctrl_new (NULL);
 
-  self->NLS = SUNNonlinSol_FixedPoint (self->y, 0);
+  self->NLS = SUNNonlinSol_FixedPoint (self->y, 0, self->sunctx);
   NCM_CVODE_CHECK (self->NLS, "SUNNonlinSol_FixedPoint", 0, );
 }
 
@@ -269,6 +273,8 @@ _ncm_ode_spline_finalize (GObject *object)
     SUNNonlinSolFree (self->NLS);
     self->NLS = NULL;
   }
+
+  SUNContext_Free (&self->sunctx);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_ode_spline_parent_class)->finalize (object);
@@ -439,7 +445,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
 }
 
 static gint
-_ncm_ode_spline_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
+_ncm_ode_spline_f (sunrealtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcmOdeSplineDydxData *dydx_data  = (NcmOdeSplineDydxData *) f_data;
   NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (dydx_data->os);
@@ -496,7 +502,7 @@ ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdoubl
 }
 
 static gint
-_ncm_ode_spline_yf_root (realtype lambda, N_Vector y, realtype *gout, gpointer user_data)
+_ncm_ode_spline_yf_root (sunrealtype lambda, N_Vector y, sunrealtype *gout, gpointer user_data)
 {
   NcmOdeSplineDydxData *dydx_data  = (NcmOdeSplineDydxData *) user_data;
   NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (dydx_data->os);

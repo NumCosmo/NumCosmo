@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include <assert.h>
 
 #include "hyrectools.h"
 #include "helium.h"
@@ -29,21 +30,21 @@ void rec_get_cosmoparam(FILE *fin, FILE *fout, REC_COSMOPARAMS *param) {
 
   /* Cosmology */
   if (fout!=NULL && PROMPT==1) fprintf(fout, "Enter CMB temperature today [Kelvin]: ");
-  fscanf(fin, "%lg", &(param->T0));
+  assert(fscanf(fin, "%lg", &(param->T0)) > 0);
   if (fout!=NULL && PROMPT==1) fprintf(fout, "Enter baryon density, omega_bh2: ");
-  fscanf(fin, "%lg", &(param->obh2));
+  assert(fscanf(fin, "%lg", &(param->obh2)) > 0);
   if (fout!=NULL && PROMPT==1) fprintf(fout, "Enter total matter (CDM+baryons) density, omega_mh2: ");
-  fscanf(fin, "%lg", &(param->omh2));
+  assert(fscanf(fin, "%lg", &(param->omh2)) > 0);
   if (fout!=NULL && PROMPT==1) fprintf(fout, "Enter curvature, omega_kh2: ");
-  fscanf(fin, "%lg", &(param->okh2));
+  assert(fscanf(fin, "%lg", &(param->okh2)) > 0);
   if (fout!=NULL && PROMPT==1) fprintf(fout, "Enter dark energy density, omega_deh2: ");
-  fscanf(fin, "%lg", &(param->odeh2));
+  assert(fscanf(fin, "%lg", &(param->odeh2)) > 0);
   if (fout!=NULL && PROMPT==1) fprintf(fout, "Enter dark energy equation of state parameters, w wa: ");
-  fscanf(fin, "%lg %lg", &(param->w0), &(param->wa));
+  assert(fscanf(fin, "%lg %lg", &(param->w0), &(param->wa)) > 0);
   if (fout!=NULL && PROMPT==1) fprintf(fout, "Enter primordial helium mass fraction, Y: ");
-  fscanf(fin, "%lg", &(param->Y));
+  assert(fscanf(fin, "%lg", &(param->Y)) > 0);
   if (fout!=NULL && PROMPT==1) fprintf(fout, "Enter effective number of neutrino species, N_nu_eff: ");
-  fscanf(fin, "%lg", &(param->Nnueff));
+  assert(fscanf(fin, "%lg", &(param->Nnueff)) > 0);
 
   param->nH0 = 11.223846333047*param->obh2*(1.-param->Y);  /* number density of hudrogen today in m-3 */
   param->fHe = param->Y/(1-param->Y)/3.97153;              /* abundance of helium by number */

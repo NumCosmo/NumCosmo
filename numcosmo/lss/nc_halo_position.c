@@ -3,13 +3,13 @@
  *
  *  Thu Aug 08 08:45:20 2024
  *  Copyright  2024
- *  <code.caio@limadeoliveira.me>
+ *  <caiolimadeoliveira@pm.me>
  *  Copyright  2024  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_position.c
- * Copyright (C) 2024 Caio Lima de Oliveira <code.caio@limadeoliveira.me>
+ * Copyright (C) 2024 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -91,6 +91,7 @@ _nc_halo_position_set_property (GObject *object, guint prop_id, const GValue *va
   switch (prop_id)
   {
     case PROP_DIST:
+      nc_distance_clear (&self->dist);
       self->dist = g_value_dup_object (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
@@ -124,8 +125,7 @@ _nc_halo_position_dispose (GObject *object)
   NcHaloPosition *hp                 = NC_HALO_POSITION (object);
   NcHaloPositionPrivate * const self = nc_halo_position_get_instance_private (hp);
 
-  if (self->dist)
-    nc_distance_clear (&self->dist);
+  nc_distance_clear (&self->dist);
 
   if (self->ctrl_cosmo)
     ncm_model_ctrl_clear (&self->ctrl_cosmo);

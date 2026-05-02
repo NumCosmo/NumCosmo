@@ -1,0 +1,13 @@
+(
+  'NcDataHubble', 
+  {
+    'desc':      <'Tomasetti et al. 2023 -- arXiv:2305.16387'>, 
+    'long-desc': <''>, 
+    'init':      <true>, 
+    'n-points':  <uint32 1>, 
+    'w-mean':    <false>, 
+    'mean':      <[135.0]>, 
+    'sigma':     <[65.0]>, 
+    'z':         <[1.26]>
+  } 
+)

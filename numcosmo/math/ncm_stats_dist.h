@@ -55,6 +55,8 @@ struct _NcmStatsDistClass
   void (*prepare_interp) (NcmStatsDist *sd, NcmVector *m2lnp);
   void (*compute_IM) (NcmStatsDist *sd, NcmMatrix *IM);
   NcmMatrix *(*peek_cov_decomp) (NcmStatsDist *sd, guint i);
+  NcmMatrix *(*peek_full_cov_decomp) (NcmStatsDist *sd);
+  NcmMatrix *(*peek_full_cov) (NcmStatsDist *sd);
   gdouble (*get_lnnorm) (NcmStatsDist *sd, guint i);
   gdouble (*eval_weights) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
   gdouble (*eval_weights_m2lnp) (NcmStatsDist *sd, NcmVector *weights, NcmVector *x);
@@ -103,6 +105,9 @@ gdouble ncm_stats_dist_get_over_smooth (NcmStatsDist *sd);
 void ncm_stats_dist_set_split_frac (NcmStatsDist *sd, const gdouble split_frac);
 gdouble ncm_stats_dist_get_split_frac (NcmStatsDist *sd);
 
+void ncm_stats_dist_set_shrink (NcmStatsDist *sd, const gdouble shrink);
+gdouble ncm_stats_dist_get_shrink (NcmStatsDist *sd);
+
 void ncm_stats_dist_set_print_fit (NcmStatsDist *sd, const gboolean print_fit);
 gboolean ncm_stats_dist_get_print_fit (NcmStatsDist *sd);
 
@@ -128,6 +133,8 @@ void ncm_stats_dist_add_obs (NcmStatsDist *sd, NcmVector *y);
 
 GPtrArray *ncm_stats_dist_peek_sample_array (NcmStatsDist *sd);
 NcmMatrix *ncm_stats_dist_peek_cov_decomp (NcmStatsDist *sd, guint i);
+NcmMatrix *ncm_stats_dist_peek_full_cov_decomp (NcmStatsDist *sd);
+NcmMatrix *ncm_stats_dist_peek_full_cov (NcmStatsDist *sd);
 gdouble ncm_stats_dist_get_lnnorm (NcmStatsDist *sd, guint i);
 NcmVector *ncm_stats_dist_peek_weights (NcmStatsDist *sd);
 

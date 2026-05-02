@@ -88,7 +88,7 @@ struct _NcmIntegralNDClass
 
 /**
  * NcmIntegralNDMethod:
- * @NCM_INTEGRAL_ND_METHOD_CUBATURE_H: adapative integration by partitioning the integration domain ("h-adaptive")
+ * @NCM_INTEGRAL_ND_METHOD_CUBATURE_H: adaptive integration by partitioning the integration domain ("h-adaptive")
  *  and using the same fixed-degree quadrature in each subdomain, recursively, until convergence is achieved.
  * @NCM_INTEGRAL_ND_METHOD_CUBATURE_P: adaptive integration by increasing the degree of (tensor-product
  *  Clenshaw-Curtis) quadrature rules ("p-adaptive"), rather than subdividing the domain ("h-adaptive").
@@ -157,7 +157,7 @@ void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmV
  * @MODULE: the name of the module defining the type, all capitalized
  * @OBJ_NAME: the name of the type to define, all capitalized
  * @ModuleObjName: the name of the type to define, camel case
- * @module_obj_name: the name of the type to define, sneake case
+ * @module_obj_name: the name of the type to define, snake case
  * @method_get_dimensions: the name of the method that returns the dimension of the integral argument and the dimension of the function to be integrated
  * @method_integrand: the name of the method that returns the value of the integrand at all points in @x
  * @user_data: the type of the user data
@@ -195,7 +195,7 @@ void ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmV
  * @MODULE: the name of the module defining the type, all capitalized
  * @OBJ_NAME: the name of the type to define, all capitalized
  * @ModuleObjName: the name of the type to define, camel case
- * @module_obj_name: the name of the type to define, sneake case
+ * @module_obj_name: the name of the type to define, snake case
  * @method_get_dimensions: the name of the method that returns the dimension of the integral argument and the dimension of the function to be integrated
  * @method_integrand: the name of the method that returns the value of the integrand at all points in @x
  * @user_data: the type of the user data

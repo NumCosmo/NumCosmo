@@ -38,47 +38,20 @@
 #include "nc_hipert_itwo_fluids.h"
 
 G_DEFINE_INTERFACE (NcHIPertITwoFluids, nc_hipert_itwo_fluids, G_TYPE_OBJECT)
-G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsEOM, nc_hipert_itwo_fluids_eom, nc_hipert_itwo_fluids_eom_dup, nc_hipert_itwo_fluids_eom_free)
 G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsTV, nc_hipert_itwo_fluids_tv, nc_hipert_itwo_fluids_tv_dup, nc_hipert_itwo_fluids_tv_free)
+G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsState, nc_hipert_itwo_fluids_state, nc_hipert_itwo_fluids_state_dup, nc_hipert_itwo_fluids_state_free)
+G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsEOM, nc_hipert_itwo_fluids_eom, nc_hipert_itwo_fluids_eom_dup, nc_hipert_itwo_fluids_eom_free)
+G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsWKB, nc_hipert_itwo_fluids_wkb, nc_hipert_itwo_fluids_wkb_dup, nc_hipert_itwo_fluids_wkb_free)
 
 static void
 nc_hipert_itwo_fluids_default_init (NcHIPertITwoFluidsInterface *iface)
 {
   g_assert_cmpuint ((NC_HIPERT_ITWO_FLUIDS_VARS_LEN % 2), ==, 0);
 
-  iface->eom = NULL;
-  iface->tv  = NULL;
-}
-
-/**
- * nc_hipert_itwo_fluids_eom_dup:
- * @tf_eom: a #NcHIPertITwoFluidsEOM.
- *
- * Duplicates @tf_eom.
- *
- * Returns: (transfer full): a copy of @tf_eom.
- */
-NcHIPertITwoFluidsEOM *
-nc_hipert_itwo_fluids_eom_dup (NcHIPertITwoFluidsEOM *tf_eom)
-{
-  NcHIPertITwoFluidsEOM *tf_eom_dup = g_new (NcHIPertITwoFluidsEOM, 1);
-
-  *tf_eom_dup = *tf_eom;
-
-  return tf_eom_dup;
-}
-
-/**
- * nc_hipert_itwo_fluids_eom_free:
- * @tf_eom: a #NcHIPertITwoFluidsEOM.
- *
- * Frees @tf_eom.
- *
- */
-void
-nc_hipert_itwo_fluids_eom_free (NcHIPertITwoFluidsEOM *tf_eom)
-{
-  g_free (tf_eom);
+  iface->eom       = NULL;
+  iface->wkb       = NULL;
+  iface->tv        = NULL;
+  iface->eval_unit = NULL;
 }
 
 /**
@@ -101,7 +74,7 @@ nc_hipert_itwo_fluids_tv_dup (NcHIPertITwoFluidsTV *tf_tv)
 
 /**
  * nc_hipert_itwo_fluids_tv_free:
- * @tf_tv: a #NcHIPertITwoFluidsTV.
+ * @tf_tv: a #NcHIPertITwoFluidsTV
  *
  * Frees @tf_tv.
  *
@@ -110,6 +83,111 @@ void
 nc_hipert_itwo_fluids_tv_free (NcHIPertITwoFluidsTV *tf_tv)
 {
   g_free (tf_tv);
+}
+
+/**
+ * nc_hipert_itwo_fluids_state_dup:
+ * @tf_state: a #NcHIPertITwoFluidsState
+ *
+ * Duplicates @tf_state.
+ *
+ * Returns: (transfer full): a copy of @tf_state.
+ */
+NcHIPertITwoFluidsState *
+nc_hipert_itwo_fluids_state_dup (NcHIPertITwoFluidsState *tf_state)
+{
+  NcHIPertITwoFluidsState *tf_state_dup = g_new (NcHIPertITwoFluidsState, 1);
+
+  *tf_state_dup = *tf_state;
+
+  return tf_state_dup;
+}
+
+/**
+ * nc_hipert_itwo_fluids_state_free:
+ * @tf_state: a #NcHIPertITwoFluidsState
+ *
+ * Frees @tf_state.
+ *
+ */
+void
+nc_hipert_itwo_fluids_state_free (NcHIPertITwoFluidsState *tf_state)
+{
+  g_free (tf_state);
+}
+
+/**
+ * nc_hipert_itwo_fluids_eom_dup:
+ * @tf_eom: a #NcHIPertITwoFluidsEOM
+ *
+ * Duplicates @tf_eom.
+ *
+ * Returns: (transfer full): a copy of @tf_eom.
+ */
+NcHIPertITwoFluidsEOM *
+nc_hipert_itwo_fluids_eom_dup (NcHIPertITwoFluidsEOM *tf_eom)
+{
+  NcHIPertITwoFluidsEOM *tf_eom_dup = g_new (NcHIPertITwoFluidsEOM, 1);
+
+  *tf_eom_dup = *tf_eom;
+
+  return tf_eom_dup;
+}
+
+/**
+ * nc_hipert_itwo_fluids_eom_free:
+ * @tf_eom: a #NcHIPertITwoFluidsEOM
+ *
+ * Frees @tf_eom.
+ *
+ */
+void
+nc_hipert_itwo_fluids_eom_free (NcHIPertITwoFluidsEOM *tf_eom)
+{
+  g_free (tf_eom);
+}
+
+/**
+ * nc_hipert_itwo_fluids_wkb_dup:
+ * @tf_wkb: a #NcHIPertITwoFluidsWKB
+ *
+ * Duplicates @tf_wkb.
+ *
+ * Returns: (transfer full): a copy of @tf_wkb.
+ */
+NcHIPertITwoFluidsWKB *
+nc_hipert_itwo_fluids_wkb_dup (NcHIPertITwoFluidsWKB *tf_wkb)
+{
+  NcHIPertITwoFluidsWKB *tf_wkb_dup = g_new (NcHIPertITwoFluidsWKB, 1);
+
+  *tf_wkb_dup = *tf_wkb;
+
+  return tf_wkb_dup;
+}
+
+/**
+ * nc_hipert_itwo_fluids_wkb_free:
+ * @tf_wkb: a #NcHIPertITwoFluidsWKB
+ *
+ * Frees @tf_wkb.
+ *
+ */
+void
+nc_hipert_itwo_fluids_wkb_free (NcHIPertITwoFluidsWKB *tf_wkb)
+{
+  g_free (tf_wkb);
+}
+
+/**
+ * nc_hipert_itwo_fluids_wkb_peek_state:
+ * @tf_wkb: a #NcHIPertITwoFluidsWKB
+ *
+ * Returns: (transfer none): the state of @tf_wkb.
+ */
+NcHIPertITwoFluidsState *
+nc_hipert_itwo_fluids_wkb_peek_state (NcHIPertITwoFluidsWKB *tf_wkb)
+{
+  return &tf_wkb->state;
 }
 
 /**
@@ -125,6 +203,25 @@ nc_hipert_itwo_fluids_tv_free (NcHIPertITwoFluidsTV *tf_tv)
  * Returns: (transfer none): a #NcHIPertITwoFluidsEOM.
  */
 
+/**
+ * nc_hipert_itwo_fluids_wkb_eval:
+ * @itf: a #NcHIPertITwoFluids
+ * @alpha: time in log of scale factor
+ * @k: wave number
+ *
+ * Computes the WKB approximations of the perturbations of the
+ * two fluids system.
+ *
+ * Returns: (transfer none): a #NcHIPertITwoFluidsWKB.
+ */
+
+typedef struct _NcHIPertITwoFluidsArgs
+{
+  const gdouble epsilon;
+  const gdouble gw1;
+  const gdouble gw2;
+  const gdouble Fnu;
+} NcHIPertITwoFluidsArgs;
 
 /**
  * nc_hipert_itwo_fluids_tv_eval:
@@ -138,4 +235,140 @@ nc_hipert_itwo_fluids_tv_free (NcHIPertITwoFluidsTV *tf_tv)
  *
  * Returns: (transfer none): a #NcHIPertITwoFluidsTV.
  */
+
+static complex double
+_nc_hipert_itwo_fluids_state_eval_obs_helper (const complex double zeta, const complex double Q, const complex double Pzeta, const complex double PQ, NcHIPertITwoFluidsArgs *args, NcHIPertITwoFluidsObs obs)
+{
+  const gdouble epsilon = args->epsilon;
+  const gdouble gw1     = args->gw1;
+  const gdouble gw2     = args->gw2;
+  const gdouble Fnu     = args->Fnu;
+  complex double val    = 0.0;
+
+  switch (obs)
+  {
+    case NC_HIPERT_ITWO_FLUIDS_OBS_ZETA:
+      val = zeta;
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_ZETA_DIFF:
+      val = (epsilon * (gw1 + gw2) / (gw1 * gw2) * Q);
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_PZETA:
+      val = Pzeta;
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_FKU_TOT:
+      val = Fnu * zeta;
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_FKU_DIFF:
+      val = Fnu * (epsilon * (gw1 + gw2) / (gw1 * gw2) * Q);
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_TOT:
+      val = 3.0 * zeta - epsilon * Pzeta / (gw1 + gw2);
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_DIFF:
+      val = -PQ;
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_FKU_R:
+      val = Fnu * (zeta + epsilon * Q / gw1);
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_FKU_W:
+      val = Fnu * (zeta - epsilon * Q / gw2);
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_R:
+      val = 3.0 * zeta - (gw2 * PQ + epsilon * Pzeta) / (gw1 + gw2);
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_W:
+      val = 3.0 * zeta + (gw1 * PQ - epsilon * Pzeta) / (gw1 + gw2);
+      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
+  }
+
+  return val;
+}
+
+/**
+ * nc_hipert_itwo_fluids_state_eval_obs:
+ * @tf_state: a #NcHIPertITwoFluidsState
+ * @obs_a: a #NcHIPertITwoFluidsObs
+ * @obs_b: a #NcHIPertITwoFluidsObs
+ *
+ * Computes the observable covariance between @obs_a and @obs_b.
+ *
+ * Returns: the value of the observable covariance.
+ */
+gdouble
+nc_hipert_itwo_fluids_state_eval_obs (NcHIPertITwoFluidsState *tf_state, NcHIPertITwoFluidsObsMode obs_mode, NcHIPertITwoFluidsObs obs_a, NcHIPertITwoFluidsObs obs_b)
+{
+  const gdouble norma         = tf_state->norma * tf_state->norma / ncm_c_two_pi_2 ();
+  const gdouble epsilon       = GSL_SIGN (tf_state->alpha);
+  NcHIPertITwoFluidsArgs args = {epsilon, tf_state->gw1, tf_state->gw2, tf_state->Fnu};
+  complex double obs1a        = 0.0;
+  complex double obs1b        = 0.0;
+  complex double obs2a        = 0.0;
+  complex double obs2b        = 0.0;
+
+  switch (obs_mode)
+  {
+    case NC_HIPERT_ITWO_FLUIDS_OBS_MODE_ONE:
+      obs1a = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta1, tf_state->Q1, tf_state->Pzeta1, tf_state->PQ1, &args, obs_a);
+      obs1b = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta1, tf_state->Q1, tf_state->Pzeta1, tf_state->PQ1, &args, obs_b);
+      break;
+
+    case NC_HIPERT_ITWO_FLUIDS_OBS_MODE_TWO:
+      obs2a = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta2, tf_state->Q2, tf_state->Pzeta2, tf_state->PQ2, &args, obs_a);
+      obs2b = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta2, tf_state->Q2, tf_state->Pzeta2, tf_state->PQ2, &args, obs_b);
+      break;
+
+    case NC_HIPERT_ITWO_FLUIDS_OBS_MODE_BOTH:
+      obs1a = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta1, tf_state->Q1, tf_state->Pzeta1, tf_state->PQ1, &args, obs_a);
+      obs2a = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta2, tf_state->Q2, tf_state->Pzeta2, tf_state->PQ2, &args, obs_a);
+      obs1b = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta1, tf_state->Q1, tf_state->Pzeta1, tf_state->PQ1, &args, obs_b);
+      obs2b = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta2, tf_state->Q2, tf_state->Pzeta2, tf_state->PQ2, &args, obs_b);
+      break;
+
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
+  }
+
+  return norma * creal (obs1a * conj (obs1b) + obs2a * conj (obs2b));
+}
+
+/**
+ * nc_hipert_itwo_fluids_state_eval_mode:
+ * @tf_state: a #NcHIPertITwoFluidsState
+ * @obs_mode: a #NcHIPertITwoFluidsObsMode
+ * @obs: a #NcHIPertITwoFluidsObs
+ *
+ * Computes the mode function for @obs.
+ *
+ * Returns: (transfer full): the value of the mode function.
+ */
+NcmComplex *
+nc_hipert_itwo_fluids_state_eval_mode (NcHIPertITwoFluidsState *tf_state, NcHIPertITwoFluidsObsMode obs_mode, NcHIPertITwoFluidsObs obs)
+{
+  const gdouble epsilon       = GSL_SIGN (tf_state->alpha);
+  NcHIPertITwoFluidsArgs args = {epsilon, tf_state->gw1, tf_state->gw2, tf_state->Fnu};
+  complex double mode_func    = 0.0;
+  NcmComplex *mode            = ncm_complex_new ();
+
+  switch (obs_mode)
+  {
+    case NC_HIPERT_ITWO_FLUIDS_OBS_MODE_ONE:
+      mode_func = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta1, tf_state->Q1, tf_state->Pzeta1, tf_state->PQ1, &args, obs);
+      break;
+    case NC_HIPERT_ITWO_FLUIDS_OBS_MODE_TWO:
+      mode_func = _nc_hipert_itwo_fluids_state_eval_obs_helper (tf_state->zeta2, tf_state->Q2, tf_state->Pzeta2, tf_state->PQ2, &args, obs);
+      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
+  }
+
+  ncm_complex_set_c (mode, tf_state->norma * mode_func);
+
+  return mode;
+}
 

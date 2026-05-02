@@ -176,9 +176,9 @@ _nc_distance_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_INV_COMOVING:
       nc_distance_compute_inv_comoving (dist, g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -200,9 +200,9 @@ _nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_INV_COMOVING:
       g_value_set_boolean (value, dist->cpu_inv_comoving);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -265,7 +265,7 @@ nc_distance_class_init (NcDistanceClass *klass)
   /**
    * NcDistance:zf:
    *
-   * The final redhift to compute cosmological distances and related quantities.
+   * The final redshift to compute cosmological distances and related quantities.
    *
    */
   g_object_class_install_property (object_class,
@@ -371,7 +371,7 @@ nc_distance_require_zf (NcDistance *dist, const gdouble zf)
 {
   if (zf > dist->zf)
   {
-    ncm_ode_spline_set_xf (dist->comoving_distance_spline, dist->zf);
+    ncm_ode_spline_set_xf (dist->comoving_distance_spline, zf);
     dist->zf = zf;
 
     ncm_model_ctrl_force_update (dist->ctrl);
@@ -607,6 +607,161 @@ _nc_distance_sinn (const gdouble r, const gdouble Omega_k0)
 }
 
 /**
+ * nc_distance_transverse_from_Dc:
+ * @Dc: comoving distance $D_c$
+ * @Omega_k: spatial curvature parameter $\Omega_k$
+ *
+ * Computes the transverse comoving distance from the comoving distance $D_c$ and
+ * curvature parameter $\Omega_k$. This is the _from_Dc version that works directly
+ * with distances rather than redshifts.
+ *
+ * Returns: transverse comoving distance $D_t$
+ */
+gdouble
+nc_distance_transverse_from_Dc (const gdouble Dc, const gdouble Omega_k)
+{
+  return _nc_distance_sinn (Dc, Omega_k);
+}
+
+/**
+ * nc_distance_luminosity_from_Dc:
+ * @Dc: comoving distance $D_c$
+ * @Omega_k: spatial curvature parameter $\Omega_k$
+ * @z: redshift $z$
+ *
+ * Computes the luminosity distance from the comoving distance $D_c$,
+ * curvature parameter $\Omega_k$, and redshift $z$. This is the _from_Dc version
+ * that works directly with distances rather than cosmology objects.
+ *
+ * Returns: luminosity distance $D_l$
+ */
+gdouble
+nc_distance_luminosity_from_Dc (const gdouble Dc, const gdouble Omega_k, const gdouble z)
+{
+  const gdouble Dt = nc_distance_transverse_from_Dc (Dc, Omega_k);
+
+  return (1.0 + z) * Dt;
+}
+
+/**
+ * nc_distance_angular_diameter_from_Dc:
+ * @Dc: comoving distance $D_c$
+ * @Omega_k: spatial curvature parameter $\Omega_k$
+ * @z: redshift $z$
+ *
+ * Computes the angular diameter distance from the comoving distance $D_c$,
+ * curvature parameter $\Omega_k$, and redshift $z$. This is the _from_Dc version
+ * that works directly with distances rather than cosmology objects.
+ *
+ * Returns: angular diameter distance $D_A$
+ */
+gdouble
+nc_distance_angular_diameter_from_Dc (const gdouble Dc, const gdouble Omega_k, const gdouble z)
+{
+  const gdouble Dt = nc_distance_transverse_from_Dc (Dc, Omega_k);
+
+  return Dt / (1.0 + z);
+}
+
+/**
+ * nc_distance_radial_volume_integral_from_Dc:
+ * @Dc: comoving distance $D_c$ (equivalent to $\chi$)
+ * @Omega_k: spatial curvature parameter $\Omega_k$
+ *
+ * Computes the integral of the squared transverse comoving distance,
+ * $$
+ * V(D_c, \Omega_k) = \int_0^{D_c}
+ * \left[\frac{\mathrm{sinn}(\sqrt{|\Omega_k|}\chi')}{\sqrt{|\Omega_k|}}\right]^2
+ * d\chi',
+ * $$
+ * where $\mathrm{sinn}(x) = \sinh(x)$ for $\Omega_k > 0$ (open universe),
+ * $\mathrm{sinn}(x) = \sin(x)$ for $\Omega_k < 0$ (closed universe), and
+ * $\mathrm{sinn}(x) = x$ for $\Omega_k = 0$ (flat universe).
+ *
+ * Note: $\Omega_k \propto -k$, so positive $\Omega_k$ corresponds to negative curvature (open).
+ *
+ * Defining $u = 2D_c\sqrt{|\Omega_k|}$:
+ *
+ * For $\Omega_k > 0$ (open):
+ * $$
+ * V = \frac{\sinh(u) - u}{4|\Omega_k|^{3/2}}
+ * $$
+ *
+ * For $\Omega_k < 0$ (closed):
+ * $$
+ * V = \frac{u - \sin(u)}{4|\Omega_k|^{3/2}}
+ * $$
+ *
+ * For $\Omega_k = 0$ (flat):
+ * $$
+ * V = \frac{D_c^3}{3}
+ * $$
+ *
+ * For small values of $|u|$ (when $u^2 < 0.01$), a Taylor expansion is used for
+ * numerical accuracy:
+ * $$
+ * V = \frac{D_c^3}{3}
+ *   + \frac{\Omega_k D_c^5}{15}
+ *   + \frac{2\Omega_k^2 D_c^7}{315}
+ *   + \frac{\Omega_k^3 D_c^9}{2835}
+ *   + \frac{2\Omega_k^4 D_c^{11}}{155925}
+ *   + \cdots
+ * $$
+ *
+ * Note: this function returns the radial integral $\int r^2 d\chi$. The full comoving
+ * volume is $4\pi$ times this result.
+ *
+ * Returns: The comoving volume integral $V(D_c, \Omega_k)$
+ */
+gdouble
+nc_distance_radial_volume_integral_from_Dc (const gdouble Dc, const gdouble Omega_k)
+{
+  if (fabs (Omega_k) > NCM_ZERO_LIMIT)
+  {
+    const gdouble abs_Ok  = fabs (Omega_k);
+    const gdouble sqrt_Ok = sqrt (abs_Ok);
+    const gdouble u       = 2.0 * Dc * sqrt_Ok;
+    const gdouble u2      = u * u;
+
+    if (u2 < 0.01) /* |u| < 0.1, use Taylor series for accuracy */
+    {
+      const gdouble Dc2  = Dc * Dc;
+      const gdouble Dc3  = Dc2 * Dc;
+      const gdouble Dc5  = Dc3 * Dc2;
+      const gdouble Dc7  = Dc5 * Dc2;
+      const gdouble Dc9  = Dc7 * Dc2;
+      const gdouble Dc11 = Dc9 * Dc2;
+      const gdouble Ok2  = Omega_k * Omega_k;
+      const gdouble Ok3  = Ok2 * Omega_k;
+      const gdouble Ok4  = Ok2 * Ok2;
+
+      /* Taylor series: Dc^3/3 + Omega_k*Dc^5/15 + 2*Omega_k^2*Dc^7/315 + ... */
+      return (Dc3 / 3.0 +
+              Omega_k * Dc5 / 15.0 +
+              2.0 * Ok2 * Dc7 / 315.0 +
+              Ok3 * Dc9 / 2835.0 +
+              2.0 * Ok4 * Dc11 / 155925.0);
+    }
+    else
+    {
+      const gdouble Ok32 = abs_Ok * sqrt_Ok;
+
+      if (Omega_k < 0.0)
+        /* Closed universe: (u - sin(u)) / (4*|Omega_k|^(3/2)) */
+        return (u - sin (u)) / (4.0 * Ok32);
+      else
+        /* Open universe: (sinh(u) - u) / (4*|Omega_k|^(3/2)) */
+        return (sinh (u) - u) / (4.0 * Ok32);
+    }
+  }
+  else
+  {
+    /* Flat universe: Dc^3/3 */
+    return Dc * Dc * Dc / 3.0;
+  }
+}
+
+/**
  * nc_distance_transverse:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
@@ -834,6 +989,28 @@ nc_distance_comoving_volume_element (NcDistance *dist, NcHICosmo *cosmo, gdouble
 }
 
 /**
+ * nc_distance_comoving_volume_radial_integral:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Computes the comoving volume radial integral from redshift $z$ using
+ * the comoving distance and spatial curvature from the cosmology.
+ *
+ * This is a convenience wrapper around nc_distance_radial_volume_integral_from_Dc().
+ *
+ * Returns: The comoving volume integral at redshift $z$
+ */
+gdouble
+nc_distance_comoving_volume_radial_integral (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
+{
+  const gdouble Dc      = nc_distance_comoving (dist, cosmo, z);
+  const gdouble Omega_k = nc_hicosmo_Omega_k0 (cosmo);
+
+  return nc_distance_radial_volume_integral_from_Dc (Dc, Omega_k);
+}
+
+/**
  * nc_distance_sigma_critical:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
@@ -980,7 +1157,7 @@ nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo
  * \end{equation*}
  * where $\Omega_{m0}$ is the matter density paremeter [nc_hicosmo_Omega_m0()],
  * $D_A(z) = D_{H_0} D_t(z) / (1 + z)$ is the angular diameter distance and
- * $D_t(z)$ is the tranverse comoving distance [Eq. $\eqref{eq:def:Dt}$].
+ * $D_t(z)$ is the transverse comoving distance [Eq. $\eqref{eq:def:Dt}$].
  *
  * Returns: $R(z)$.
  */
@@ -1517,9 +1694,23 @@ nc_distance_inv_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble xi)
 
   if (xi > dist->max_comoving)
     g_error ("nc_distance_inv_comoving: maximum comoving distance exceeded. "
-             "Increase the maximum redshift in the cosmology object.");
+             "Increase the maximum redshift in the cosmology object.\n"
+             "Requested xi = % 22.15g, maximum xi = % 22.15g\n",
+             xi, dist->max_comoving);
 
   return ncm_spline_eval (dist->inv_comoving_dist, xi);
+}
+
+/**
+ * nc_distance_max_comoving_distance:
+ * @dist: a #NcDistance
+ *
+ * Returns: the maximum comoving distance.
+ */
+gdouble
+nc_distance_max_comoving_distance (NcDistance *dist)
+{
+  return dist->max_comoving;
 }
 
 /***************************************************************************

@@ -107,7 +107,6 @@ struct _NcHICosmoVexp
 {
   /*< private >*/
   NcHICosmo parent_instance;
-  NcHICosmoVexpPrivate *priv;
 };
 
 GType nc_hicosmo_Vexp_get_type (void) G_GNUC_CONST;

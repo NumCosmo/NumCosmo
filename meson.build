@@ -1,15 +1,13 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.24.1',
+  version: '0.26.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.3.0',
   default_options: [
     'buildtype=debugoptimized',
     'warning_level=2',
     'c_std=gnu99',
-    'b_lto=true',
-    'b_lto_threads=2',
   ],
 )
 
@@ -92,9 +90,9 @@ numcosmo_includedir = join_paths(
 
 numcosmo_pkgconfigreldir = join_paths(numcosmo_libdir, 'pkgconfig')
 
-# When building numcosmo and gobject-introspection with subprojects, gobject-introspection
-# requires to know the path of the sources and the build directory for the subproject.
-# We provide it here with a variable.
+# When building numcosmo and gobject-introspection with sub-projects,
+# gobject-introspection requires to know the path of the sources and the build directory
+# for the subproject. We provide it here with a variable.
 numcosmo_source_dir = meson.current_source_dir()
 numcosmo_build_dir = meson.current_build_dir()
 
@@ -325,7 +323,6 @@ functions = [
   'lgamma_r',
   'lgammaf_r',
   'powl',
-  'powl',
   'shmget',
   'sin',
   'sincos',
@@ -469,7 +466,7 @@ if omp_fortran.found()
 endif
 
 #######################################################################################
-# Checking for GObject instrospection:
+# Checking for GObject introspection:
 #
 # GObject introspection is not required, but if it is found, we will use it.
 #
@@ -802,6 +799,7 @@ if have_lapack
     'dgeqlf_',
     'dgeqrf_',
     'dgerqf_',
+    'dgesv_',
     'dggglm_',
     'dposv_',
     'dpotrf_',
@@ -832,7 +830,7 @@ endif
 #######################################################################################
 
 python_module = import('python')
-python = python_module.find_installation('python3', modules: ['pytest', 'pytest_lazy_fixtures', 'gi'])
+python = python_module.find_installation('python3')
 
 python_pip = python_module.find_installation(
   'python3',

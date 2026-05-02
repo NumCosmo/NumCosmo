@@ -80,9 +80,9 @@ _nc_cluster_mass_lnnormal_set_property (GObject *object, guint prop_id, const GV
       mlnm->lnMobs_max = g_value_get_double (value);
       g_assert (mlnm->lnMobs_min < mlnm->lnMobs_max);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -101,9 +101,9 @@ _nc_cluster_mass_lnnormal_get_property (GObject *object, guint prop_id, GValue *
     case PROP_LNMOBS_MAX:
       g_value_set_double (value, mlnm->lnMobs_max);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -140,7 +140,7 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
   /**
    * NcClusterMassLnnormal:lnMobs_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum logarithm (base e) of observed mass for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_LNMOBS_MIN,
@@ -153,7 +153,7 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
   /**
    * NcClusterMassLnnormal:lnMobs_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum logarithm (base e) of observed mass for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_LNMOBS_MAX,
@@ -166,8 +166,7 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
   /**
    * NcClusterMassLnnormal:bias:
    *
-   * Distribution's bias.
-   * FIXME Set correct values (limits)
+   * Bias parameter in the log-normal mass distribution.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_LNNORMAL_BIAS, "bias", "bias",
                               0.0,  10.0, 1.0e-2,

@@ -45,10 +45,10 @@ typedef struct _NcClusterMassLnnormal NcClusterMassLnnormal;
 
 /**
  * NcClusterMassLnnormalSParams:
- * @NC_CLUSTER_MASS_LNNORMAL_BIAS: FIXME
+ * @NC_CLUSTER_MASS_LNNORMAL_BIAS: bias parameter of the log-normal mass-observable relation
  * @NC_CLUSTER_MASS_LNNORMAL_SIGMA: standard deviation of the log-normal distribution
  *
- * FIXME
+ * Parameters for the log-normal cluster mass-observable relation.
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_LNNORMAL_SPARAMS >*/
 {

@@ -201,9 +201,9 @@ _nc_multiplicity_func_tinker_mean_normalized_eval (NcMultiplicityFunc *mulf, NcH
 /**
  * nc_multiplicity_func_tinker_mean_normalized_new:
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncTinkerMeanNormalized with mean mass definition.
  *
- * Returns: A new #NcMultiplicityFuncTinkerMeanNormalized.
+ * Returns: (transfer full): A new #NcMultiplicityFuncTinkerMeanNormalized.
  */
 NcMultiplicityFuncTinkerMeanNormalized *
 nc_multiplicity_func_tinker_mean_normalized_new (void)

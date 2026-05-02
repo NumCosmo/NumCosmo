@@ -115,9 +115,9 @@ nc_hireion_camb_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_HEIII_REIONIZED:
       reion_camb->HEII_reionized = g_value_get_boolean (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -142,9 +142,9 @@ nc_hireion_camb_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_HEIII_REIONIZED:
       g_value_set_boolean (value, reion_camb->HEII_reionized);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -284,7 +284,7 @@ _nc_hireion_camb_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambd
 /**
  * nc_hireion_camb_new:
  *
- * FIXME
+ * Creates a new #NcHIReionCamb object implementing the CAMB reionization model.
  *
  * Returns: a newly created #NcHIReionCamb.
  */

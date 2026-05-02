@@ -47,7 +47,7 @@ void ncm_likelihood_free (NcmLikelihood *lh);
 void ncm_likelihood_clear (NcmLikelihood **lh);
 
 NcmDataset *ncm_likelihood_peek_dataset (NcmLikelihood *lh);
-NcmVector *ncm_likelihoood_peek_m2lnL_v (NcmLikelihood *lh);
+NcmVector *ncm_likelihood_peek_m2lnL_v (NcmLikelihood *lh);
 
 void ncm_likelihood_priors_add (NcmLikelihood *lh, NcmPrior *prior);
 void ncm_likelihood_priors_take (NcmLikelihood *lh, NcmPrior *prior);

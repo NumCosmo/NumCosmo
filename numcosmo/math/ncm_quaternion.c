@@ -79,7 +79,7 @@ ncm_trivec_new (void)
 
 /**
  * ncm_trivec_new_full: (constructor)
- * @c: components
+ * @c: (array fixed-size=3) (element-type double): components
  *
  * Creates a new #NcmTriVec with the given components.
  *
@@ -249,7 +249,7 @@ ncm_trivec_set_0 (NcmTriVec *v)
 /**
  * ncm_trivec_scale:
  * @v: a #NcmTriVec
- * @scale: FIXME
+ * @scale: scaling factor
  *
  * Scale a #NcmTriVec.
  *

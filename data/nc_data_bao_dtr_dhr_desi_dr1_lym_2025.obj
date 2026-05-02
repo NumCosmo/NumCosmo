@@ -1,0 +1,14 @@
+(
+  'NcDataBaoDtrDHr', 
+  {
+    'desc'      : <'DESI DR1 -- Adame et al., JCAP 01 (2025) 124; BAO Lyman alpha (D_t / r_sd, DH / r_sd)'>, 
+    'init'      : <true>, 
+    'n-points'  : <2>, 
+    'mean'      : <[39.71, 8.52]>, 
+    'cov'       : <[
+                     [0.9025, -0.07752], 
+                     [-0.07752, 0.0289]
+                   ]>, 
+    'z'         : <[2.33, 2.33]>
+  }
+)

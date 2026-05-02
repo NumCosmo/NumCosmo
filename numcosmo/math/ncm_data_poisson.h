@@ -40,9 +40,10 @@ G_DECLARE_DERIVABLE_TYPE (NcmDataPoisson, ncm_data_poisson, NCM, DATA_POISSON, N
 
 /**
  * NcmDataPoissonType:
- * @NCM_DATA_POISSON_INT: FIXME
+ * @NCM_DATA_POISSON_INT: integer count data following Poisson distribution
  *
- * FIXME
+ * Types of Poisson-distributed data.
+ * These specify the data format for Poisson likelihood calculations.
  */
 typedef enum _NcmDataPoissonType
 {

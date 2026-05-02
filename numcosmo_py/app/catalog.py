@@ -36,7 +36,6 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
 from .. import Ncm
-from ..helper import npa_to_seq
 from ..interpolation.stats_dist import (
     create_stats_dist,
     CrossValidationMethod,
@@ -862,7 +861,7 @@ class GetBestFit(LoadCatalog):
         best_fit = np.array(self.mcat.get_bestfit_row().dup_array(), dtype=np.float64)[
             self.nadd_vals :
         ]
-        self.mset.fparams_set_array(npa_to_seq(best_fit))
+        self.mset.fparams_set_array(best_fit)
 
         if self.output is None:
             raise ValueError("Output file not defined.")

@@ -88,9 +88,9 @@ _nc_cluster_redshift_nodist_set_property (GObject *object, guint prop_id, const 
       self->z_max = g_value_get_double (value);
       self->norma = 1.0 / (self->z_max - self->z_min);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -110,9 +110,9 @@ _nc_cluster_redshift_nodist_get_property (GObject *object, guint prop_id, GValue
     case PROP_Z_MAX:
       g_value_set_double (value, self->z_max);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -150,7 +150,8 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
   /**
    * NcClusterRedshiftNodist:z_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum redshift for the survey selection.
+   * Should match the survey's redshift range.
    */
   g_object_class_install_property (object_class,
                                    PROP_Z_MIN,
@@ -163,7 +164,8 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
   /**
    * NcClusterRedshiftNodist:z_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum redshift for the survey selection.
+   * Should match the survey's redshift range.
    */
   g_object_class_install_property (object_class,
                                    PROP_Z_MAX,
