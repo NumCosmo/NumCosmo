@@ -6,6 +6,13 @@ abstract: |
   This document demonstrates how to use the `Ncm.StatsDist1dEPDF` object from the `numcosmo` library to compute
   the probability density function (PDF) and cumulative distribution function (CDF) of a distribution of points.
   The example uses a Gaussian mixture distribution and compares the results with the true distribution.
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /notes/_numcosmo_py.qmd >}}
@@ -126,10 +133,11 @@ distribution.
 
 ```{python}
 # | label: fig-epdf1d-pdf
-# | fig-cap: The reconstructed probability density function (PDF) compared with the true distribution.
-# | fig-cap-location: margin
-# | fig-width: 100%
-# | code-fold: true
+# | html:
+# |   fig-cap: The reconstructed probability density function (PDF) compared with the true distribution.
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 # Compute the PDF for plotting
 x_a = np.linspace(epdf.get_xi(), epdf.get_xf(), 1000)
@@ -151,10 +159,11 @@ plt.show()
 
 ```{python}
 # | label: fig-epdf1d-pdf-diff
-# | fig-cap: The relative difference between the reconstructed PDF and the true distribution.
-# | fig-cap-location: margin
-# | fig-width: 100%
-# | code-fold: true
+# | html:
+# |   fig-cap: The relative difference between the reconstructed PDF and the true distribution.
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 # Compute the relative difference
 rel_diff_auto = np.abs((p_a - pdf_true) / pdf_true)
@@ -176,10 +185,11 @@ plt.show()
 
 ```{python}
 # | label: fig-epdf1d-cdf
-# | fig-cap: The reconstructed cumulative distribution function (CDF) compared with the true distribution.
-# | fig-cap-location: margin
-# | fig-width: 100%
-# | code-fold: true
+# | html:
+# |   fig-cap: The reconstructed cumulative distribution function (CDF) compared with the true distribution.
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 # Compute the CDF for plotting
 pdf_a = [epdf.eval_pdf(x) for x in x_a]
@@ -200,10 +210,11 @@ plt.show()
 
 ```{python}
 # | label: fig-epdf1d-cdf-diff
-# | fig-cap: The relative difference between the reconstructed CDF and the true distribution.
-# | fig-cap-location: margin
-# | fig-width: 100%
-# | code-fold: true
+# | html:
+# |   fig-cap: The relative difference between the reconstructed CDF and the true distribution.
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 # Compute the relative difference
 rel_diff_auto_cdf = np.abs(pdf_a / cdf_true - 1.0)
@@ -224,10 +235,11 @@ plt.show()
 
 ```{python}
 # | label: fig-epdf1d-invcdf
-# | fig-cap: The reconstructed inverse cumulative distribution function (Inverse CDF).
-# | fig-cap-location: margin
-# | fig-width: 100%
-# | code-fold: true
+# | html:
+# |   fig-cap: The reconstructed inverse cumulative distribution function (Inverse CDF).
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 # Compute the inverse CDF for plotting
 u_a = np.linspace(0, 1, 1000)

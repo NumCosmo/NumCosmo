@@ -7,6 +7,13 @@ abstract: |
   It covers the setup of a cosmological model, computation of linear and nonlinear matter power spectra, 
   and visualization of the results. The example compares the Eisenstein-Hu (EH) transfer function with 
   the CLASS backend and includes HALOFIT for nonlinear corrections.
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /notes/_numcosmo_py.qmd >}}
@@ -151,9 +158,10 @@ The following code plots the linear power spectrum for different redshifts.
 
 ```{python}
 # | label: fig-hiprim_ps_low
-# | fig-cap: The linear power spectrum for different redshifts
-# | fig-cap-location: margin
-# | fig-width: 100%
+# | html:
+# |   fig-cap: The linear power spectrum for different redshifts
+# |   fig-width: 100%
+# |   fig-cap-location: margin
 # | code-fold: true
 
 plt.figure(figsize=(10, 6))
@@ -175,10 +183,11 @@ plt.show()
 
 ```{python}
 # | label: fig-hiprim_rel_diff_low
-# | fig-cap: The relative difference between the EH and CLASS power spectrum
-# | fig-cap-location: margin
-# | fig-width: 100%
-# | code-fold: true
+# | html:
+# |   fig-cap: The relative difference between the EH and CLASS power spectrum
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 
 plt.figure(figsize=(10, 6))
@@ -201,10 +210,11 @@ plt.show()
 
 ```{python}
 # | label: fig-hiprim_nl_low
-# | fig-cap: The nonlinear power spectrum for different redshifts
-# | fig-cap-location: margin
-# | fig-width: 100%
-# | code-fold: true
+# | html:
+# |   fig-cap: The nonlinear power spectrum for different redshifts
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 # Set up HALOFIT for nonlinear corrections
 zmax_nl = 10.0

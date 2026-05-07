@@ -1,6 +1,13 @@
 ---
 title: GObject Basic Concepts 
 subtitle: A brief tutorial on how to write a GObject
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 ## Overview

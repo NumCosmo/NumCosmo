@@ -1214,6 +1214,15 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
  *
  * Returns: $E^2(z)\Omega_{\mathrm{de}}(z)(1+w_{\mathrm{de}}(z))$
  */
+/**
+ * nc_hicosmo_de_d2E2Omega_de_dz2:
+ * @cosmo_de: a #NcHICosmoDE
+ * @z: redshift $z$
+ *
+ * Computes $\mathrm{d}^2[E^2\Omega_{\mathrm{de}}]/\mathrm{d}z^2$.
+ *
+ * Returns: $\mathrm{d}^2[E^2(z)\Omega_{\mathrm{de}}(z)]/\mathrm{d}z^2$
+ */
 
 static void
 _nc_hicosmo_de_flist_Omega_x0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)

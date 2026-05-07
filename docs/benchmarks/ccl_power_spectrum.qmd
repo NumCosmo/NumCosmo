@@ -9,6 +9,10 @@ format:
   html:
     tbl-cap-location: margin
     fig-cap-location: margin
+  ipynb: 
+    echo: true
+
+format-links: [ipynb]
 
 execute:
   warning: true
@@ -69,9 +73,10 @@ The table below summarizes the parameters. There are five parameters sets.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-params
-# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
-# | tbl-colwidths: [10, 30, 60]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# |   tbl-colwidths: [10, 30, 60]
+# |   code-fold: true
 
 # Create DataFrame
 df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
@@ -107,20 +112,21 @@ ps_comparisons: list[list[list[nc_cmp.CompareFunc1d]]] = [
 
 ```{python}
 # | label: fig-ccl-vs-nc-ps-sets
-# | fig-cap:
-# |   - "Linear power spectrum, $z = 0$"
-# |   - "Nonlinear power spectrum, $z = 0$"
-# |   - "Linear power spectrum, $z = 0.2$"
-# |   - "Nonlinear power spectrum, $z = 0.2$"
-# |   - "Linear power spectrum, $z = 0.5$"
-# |   - "Nonlinear power spectrum, $z = 0.5$"
-# |   - "Linear power spectrum, $z = 1.0$"
-# |   - "Nonlinear power spectrum, $z = 1.0$"
-# |   - "Linear power spectrum, $z = 2.0$"
-# |   - "Nonlinear power spectrum, $z = 2.0$"
-# | fig-cap-location: top
-# | layout-ncol: 2
-# | code-fold: true
+# | html:
+# |   fig-cap:
+# |     - "Linear power spectrum, $z = 0$"
+# |     - "Nonlinear power spectrum, $z = 0$"
+# |     - "Linear power spectrum, $z = 0.2$"
+# |     - "Nonlinear power spectrum, $z = 0.2$"
+# |     - "Linear power spectrum, $z = 0.5$"
+# |     - "Nonlinear power spectrum, $z = 0.5$"
+# |     - "Linear power spectrum, $z = 1.0$"
+# |     - "Nonlinear power spectrum, $z = 1.0$"
+# |     - "Linear power spectrum, $z = 2.0$"
+# |     - "Nonlinear power spectrum, $z = 2.0$"
+# |   fig-cap-location: top
+# |   layout-ncol: 2
+# |   code-fold: true
 
 for ps_comparison_z in ps_comparisons:
     for ps_comparison in ps_comparison_z:
@@ -136,9 +142,10 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-ps-sets
-# | tbl-cap: Power Spectrum
-# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Power Spectrum
+# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# |   code-fold: true
 
 table = []
 
@@ -174,15 +181,16 @@ compare_variances: list[nc_cmp.CompareFunc1d] = [
 
 ```{python}
 # | label: fig-ccl-vs-nc-variance-sets
-# | fig-cap:
-# |   - "Matter density variance, $z = 0$"
-# |   - "Matter density variance, $z = 0.2$"
-# |   - "Matter density variance, $z = 0.5$"
-# |   - "Matter density variance, $z = 1.0$"
-# |   - "Matter density variance, $z = 2.0$"
-# |   - "Matter density variance, $z = 6.0$"
-# | fig-cap-location: top
-# | layout-ncol: 2
+# | html:
+# |   fig-cap:
+# |     - "Matter density variance, $z = 0$"
+# |     - "Matter density variance, $z = 0.2$"
+# |     - "Matter density variance, $z = 0.5$"
+# |     - "Matter density variance, $z = 1.0$"
+# |     - "Matter density variance, $z = 2.0$"
+# |     - "Matter density variance, $z = 6.0$"
+# |   fig-cap-location: top
+# |   layout-ncol: 2
 # | code-fold: true
 
 for compare_variance_z in compare_variances:
@@ -198,8 +206,9 @@ plt.close()
 The following table summarizes the results for all parameter sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-variance-sets
-# | tbl-cap: Matter Density Variance
-# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | html:
+# |   tbl-cap: Matter Density Variance
+# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
 # | code-fold: true
 
 table = []
@@ -210,5 +219,4 @@ for compare_variance_z in compare_variances:
 
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
