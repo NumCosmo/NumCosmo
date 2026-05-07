@@ -1,0 +1,22 @@
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const containers = document.querySelectorAll(".quarto-alternate-formats ul");
+
+    containers.forEach(ul => {
+      ul.querySelectorAll('a[href$=".ipynb"]').forEach(ipynb => {
+        const pyHref = ipynb
+          .getAttribute("href")
+          .replace(/\.ipynb$/, ".py");
+
+        const li = document.createElement("li");
+
+        li.innerHTML =
+          `<a href="${pyHref}" download>
+           <i class="bi bi-filetype-py"></i>Python
+         </a>`;
+
+        ul.appendChild(li);
+      });
+    });
+  });
+</script>

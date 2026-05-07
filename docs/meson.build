@@ -1,10 +1,12 @@
 src_site_files = files(
     '_functions.qmd',
     'about.qmd',
+    'add-py-link.html',
     'container.css',
     'custom.scss',
     'index.qmd',
     'install.qmd',
+    'ipynb_to_py.sh',
     'references.bib',
 )
 
