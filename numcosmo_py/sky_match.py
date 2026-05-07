@@ -550,7 +550,7 @@ class SkyMatchResult:
                     index.append(np.array([], dtype=np.int64))
                     new_mask.append(np.array([], dtype=bool))
 
-            return [list(x[i[m]]) for i, m in zip(index, new_mask)]
+            return [x[i[m]] for i, m in zip(index, new_mask)]
 
     def to_table_complete(
         self,
@@ -570,11 +570,14 @@ class SkyMatchResult:
         table["DEC"] = self.sky_match.query_dec
         table["z"] = self.sky_match.query_z
 
-        if mask is None and self.matching_type == MatchingType.ID:
-            mask = [
-                [bool(i) for i in query_object]
-                for query_object in self.nearest_neighbours_distances
-            ]
+        if mask is None and (self.matching_type == MatchingType.ID):
+            mask = np.array(
+                [
+                    np.array(query_object, dtype=bool)
+                    for query_object in self.nearest_neighbours_distances
+                ],
+                dtype=object,
+            )
 
         if mask is None and self.matching_type == MatchingType.DISTANCE:
             mask = self.full_mask()
@@ -843,7 +846,7 @@ class SkyMatch:
 
         # match_r = dist.angular_diameter_luminosity(cosmo, npa_to_seq(match_z))
         # query_r = dist.angular_diameter_luminosity(cosmo, npa_to_seq(query_z))
-        ## Decide which distance is most appropriate to 3d matching
+        # Decide which distance is most appropriate to 3d matching
         match_r = dist.angular_diameter_array(cosmo, match_z)
         query_r = dist.angular_diameter_array(cosmo, query_z)
 
@@ -1047,7 +1050,8 @@ class SkyMatch:
             case SharedFractionMethod.QUERY_PMEM:
                 if "pmem_query" not in matched_catalog.colnames:
                     raise ValueError(
-                        "To perform a matching, pmem column must be provided for the query catalog."
+                        "To perform a matching, pmem column must "
+                        "be provided for the query catalog."
                     )
 
                 all_combinations["sum_shared_pmem"] = (
@@ -1074,7 +1078,8 @@ class SkyMatch:
             case SharedFractionMethod.MATCH_PMEM:
                 if "pmem_match" not in matched_catalog.colnames:
                     raise ValueError(
-                        "To perform a matching, pmem column must be provided for the match catalog."
+                        "To perform a matching, pmem column must "
+                        "be provided for the match catalog."
                     )
 
                 all_combinations["sum_shared_pmem"] = (
@@ -1103,7 +1108,8 @@ class SkyMatch:
                     or "pmem_match" not in matched_catalog.colnames
                 ):
                     raise ValueError(
-                        "To perform a matching, pmem column must be provided for both catalogs."
+                        "To perform a matching, pmem column must "
+                        "be provided for both catalogs."
                     )
 
                 all_combinations["sum_shared_pmem_query"] = (
@@ -1146,13 +1152,13 @@ class SkyMatch:
 
         # Linking coefficient
 
-        if use_shared_fraction == True:
+        if use_shared_fraction:
 
             all_combinations["linking_coefficient"] = (
                 fraction_query * (fraction_query + fraction_match) / 2
             )
 
-        if use_shared_fraction == False:
+        if not use_shared_fraction:
 
             all_combinations["linking_coefficient"] = all_combinations[
                 "shared_count"
