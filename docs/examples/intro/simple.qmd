@@ -2,6 +2,13 @@
 title: "Simple Cosmological Distances Example"
 author: "Sandro Dias Pinto Vitenti"
 date: "2023-05-22"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /notes/_numcosmo_py.qmd >}}
@@ -145,10 +152,11 @@ You can plot the results using a plotting library such as `matplotlib`.
 
 ```{python}
 # | label: fig-simple-comoving-distance
-# | fig-cap: Comoving distance vs. redshift.
-# | fig-cap-location: margin
-# | fig-width: 100%
-# | code-fold: true
+# | html:
+# |   fig-cap: Comoving distance vs. redshift.
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 plt.plot(z_array, dc_array)
 plt.xlabel("Redshift")
 plt.ylabel("Comoving Distance [Mpc]")

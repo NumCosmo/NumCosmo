@@ -1,5 +1,12 @@
 ---
 title: "Supernova Type Ia Analysis"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /_functions.qmd >}} 
@@ -60,9 +67,10 @@ values of the equation of state parameter $w$.
 
 ```{python}
 # | label: fig-comoving-distance
-# | fig-cap: Comoving distance for XCDM cosmology up to redshift $z = 3.0$.
-# | fig-cap-location: margin
-# | code-fold: true
+# | html:
+# |   fig-cap: Comoving distance for XCDM cosmology up to redshift $z = 3.0$.
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 (
     ggplot(dist_pd, aes("z", "Dc", color="eos_w"))
@@ -70,7 +78,6 @@ values of the equation of state parameter $w$.
     + labs(x=r"$z$", y=r"$D_c$ [Mpc]", color=r"$w$")
     + doc_theme()
 )
-
 ```
 
 ### The Modeling
@@ -162,9 +169,10 @@ Fisher matrix.
 
 ```{python}
 # | label: fig-fit-results
-# | fig-cap: Best-fit parameters and confidence regions for the XCDM model.
-# | fig-cap-location: margin
-# | code-fold: true
+# | html:
+# |   fig-cap: Best-fit parameters and confidence regions for the XCDM model.
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 (
     ggplot(regions_pd, aes("Omegac", "w", fill="sigma", color="sigma"))
@@ -201,8 +209,9 @@ Finally, we can extract the MCMC samples and visualize the results.
 
 ```{python}
 # | label: fig-mcmc-results
-# | fig-cap: MCMC samples for the XCDM model.
-# | fig-cap-location: margin
+# | html:
+# |   fig-cap: MCMC samples for the XCDM model.
+# |   fig-cap-location: margin
 
 mcat = esmcmc.peek_catalog()
 mcat.trim(2, 1)

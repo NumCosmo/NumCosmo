@@ -2,6 +2,13 @@
 title: "Recombination Evolution"
 author: "Sandro Dias Pinto Vitenti"
 date: "2023-05-22"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /_functions.qmd >}} 
@@ -123,10 +130,11 @@ This comparison highlights the deviation of $X_e$ from $X_{\text{efi}}$ due to t
 
 ```{python}
 # | label: fig-ionization-history
-# | fig-cap: Ionization history. The plot shows the evolution of the ionization fractions with the scale factor.
-# | fig-width: 100%
-# | fig-cap-location: margin
-# | code-fold: true
+# | html:
+# |   fig-cap: Ionization history. The plot shows the evolution of the ionization fractions with the scale factor.
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 ion_history_melted = ion_history.melt(
     id_vars="alpha",
@@ -149,7 +157,6 @@ ion_history_melted["Ion"] = ion_history_melted["Ion"].replace("Xefi", "Equilibri
     + theme_minimal()
     + theme(figure_size=(10, 6))
 )
-
 ```
 
 In a neutral cosmological model, the ionization fraction of free electrons, denoted as $X_e$, is determined by the contributions from ionized hydrogen and helium. Specifically:
@@ -165,10 +172,11 @@ To better illustrate the contributions to the total ionization fraction, we also
 
 ```{python}
 # | label: fig-equilibrium-ions
-# | fig-cap: Equilibrium fraction of ionized hydrogen and helium as a function of the scale factor.
-# | fig-width: 100%
-# | fig-cap-location: margin
-# | code-fold: true
+# | html:
+# |   fig-cap: Equilibrium fraction of ionized hydrogen and helium as a function of the scale factor.
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 ion_history_melted = ion_history.melt(
     id_vars="alpha",
@@ -190,7 +198,6 @@ ion_history_melted = ion_history.melt(
     + theme_minimal()
     + theme(figure_size=(10, 6))
 )
-
 ```
 
 
@@ -213,10 +220,11 @@ These features provide insight into the photon decoupling process and its dynami
 
 ```{python}
 # | label: fig-visibility-function
-# | fig-cap: Visibility Function and Derivatives
-# | fig-width: 100%
-# | fig-cap-location: margin
-# | code-fold: true
+# | html:
+# |   fig-cap: Visibility Function and Derivatives
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 visibility_data = ion_history[
     (np.exp(ion_history["alpha"]) >= 0.0005) & (np.exp(ion_history["alpha"]) <= 0.002)
@@ -338,7 +346,6 @@ start_a_star = np.exp(lambda_star) + 4.0e-4
     + theme_minimal()
     + theme(figure_size=(10, 6))
 )
-
 ```
 
 ## Optical Depth
@@ -370,10 +377,11 @@ Next, we plot the optical depth as a function of redshift and scale factor.
 
 ```{python}
 # | label: fig-optical-depth
-# | fig-cap: Optical depth as a function of redshift and scale factor.
-# | fig-width: 100%
-# | fig-cap-location: margin
-# | code-fold: true
+# | html:
+# |   fig-cap: Optical depth as a function of redshift and scale factor.
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 optical_depth_melted = pd.melt(
     optical_depth,
     id_vars=["alpha", "x"],

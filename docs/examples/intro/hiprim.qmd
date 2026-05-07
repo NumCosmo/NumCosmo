@@ -2,6 +2,13 @@
 title: "Implementing a Primordial Cosmology Model"
 author: "Sandro Dias Pinto Vitenti"
 date: "2023-05-22"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /notes/_numcosmo_py.qmd >}}
@@ -294,10 +301,11 @@ Dls2_a = ell * (ell + 1.0) * Cls2_a
 
 ```{python}
 # | label: fig-hiprim-example
-# | fig-cap: Comparison of the modified and non-modified power spectrum.
-# | fig-cap-location: margin
-# | fig-width: 100%
-# | code-fold: true
+# | html:
+# |   fig-cap: Comparison of the modified and non-modified power spectrum.
+# |   fig-width: 100%
+# |   fig-cap-location: margin
+# |   code-fold: true
 
 # Plot the modified and non-modified power spectra
 plt.figure(figsize=(10, 6))
@@ -311,5 +319,4 @@ plt.xlabel(r"$\ell$")
 plt.ylabel(r"$\ell(\ell+1)C_\ell$")
 plt.legend(loc="best")
 plt.show()
-
 ```

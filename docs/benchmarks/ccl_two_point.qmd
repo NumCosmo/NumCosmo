@@ -9,6 +9,10 @@ format:
   html:
     tbl-cap-location: margin
     fig-cap-location: margin
+  ipynb: 
+    echo: true
+
+format-links: [ipynb]
 
 execute:
   warning: true
@@ -74,9 +78,10 @@ We consider five sets, designed to cover a broad range of cosmologies, including
 
 ```{python}
 # | label: tbl-ccl-vs-nc-params
-# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
-# | tbl-colwidths: [10, 30, 60]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# |   tbl-colwidths: [10, 30, 60]
+# |   code-fold: true
 
 # Create DataFrame
 df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
@@ -104,12 +109,13 @@ cmb_len_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 
 ```{python}
 # | label: fig-ccl-vs-nc-cmb-lens-sets
-# | fig-cap:
-# |   - "CMB lensing kernel, $\\ell = 80$"
-# |   - "CMB lensing power spectrum"
-# | fig-cap-location: top
-# | layout-ncol: 2
-# | code-fold: true
+# | html:
+# |   fig-cap:
+# |     - "CMB lensing kernel, $\\ell = 80$"
+# |     - "CMB lensing power spectrum"
+# |   fig-cap-location: top
+# |   layout-ncol: 2
+# |   code-fold: true
 
 for comparison in cmb_len_auto_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -125,9 +131,10 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-cmb-lens-sets
-# | tbl-cap: Power Spectrum
-# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Power Spectrum
+# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# |   code-fold: true
 
 table = []
 
@@ -137,7 +144,6 @@ for comparison in cmb_len_auto_comparisons:
 
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 All CCL calculations are consistent with the results from NumCosmo, though this agreement decreases as the number of samples increases.
@@ -167,12 +173,13 @@ cmb_isw_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 
 ```{python}
 # | label: fig-ccl-vs-nc-cmb-isw-sets
-# | fig-cap:
-# |   - "CMB ISW kernel, $\\ell = 80$"
-# |   - "CMB ISW power spectrum"
-# | fig-cap-location: top
-# | layout-ncol: 2
-# | code-fold: true
+# | html:
+# |   fig-cap:
+# |     - "CMB ISW kernel, $\\ell = 80$"
+# |     - "CMB ISW power spectrum"
+# |   fig-cap-location: top
+# |   layout-ncol: 2
+# |   code-fold: true
 
 for comparison in cmb_isw_auto_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -189,9 +196,10 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-cmb-isw-sets
-# | tbl-cap: Power Spectrum
-# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Power Spectrum
+# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# |   code-fold: true
 
 table = []
 
@@ -230,12 +238,13 @@ tsz_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 
 ```{python} 
 # | label: fig-ccl-vs-nc-tsz-sets
-# | fig-cap:
-# |   - "Thermal Sunyaev-Zel'dovich kernel, $\\ell = 80$"
-# |   - "Thermal Sunyaev-Zel'dovich power spectrum"
-# | fig-cap-location: top
-# | layout-ncol: 2
-# | code-fold: true
+# | html:
+# |   fig-cap:
+# |     - "Thermal Sunyaev-Zel'dovich kernel, $\\ell = 80$"
+# |     - "Thermal Sunyaev-Zel'dovich power spectrum"
+# |   fig-cap-location: top
+# |   layout-ncol: 2
+# |   code-fold: true
 
 for comparison in tsz_auto_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -251,9 +260,10 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-tsz-sets
-# | tbl-cap: Power Spectrum
-# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Power Spectrum
+# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# |   code-fold: true
 
 table = []
 
@@ -293,12 +303,13 @@ gwl_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 
 ```{python} 
 # | label: fig-ccl-vs-nc-gwl-sets
-# | fig-cap:
-# |   - "Galaxy Weak Lensing kernel, $\\ell = 80$"
-# |   - "Galaxy Weak Lensing power spectrum"
-# | fig-cap-location: top
-# | layout-ncol: 2
-# | code-fold: true
+# | html:
+# |   fig-cap:
+# |     - "Galaxy Weak Lensing kernel, $\\ell = 80$"
+# |     - "Galaxy Weak Lensing power spectrum"
+# |   fig-cap-location: top
+# |   layout-ncol: 2
+# |   code-fold: true
 
 for comparison in gwl_auto_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -314,9 +325,10 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-gwl-sets
-# | tbl-cap: Power Spectrum
-# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Power Spectrum
+# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# |   code-fold: true
 
 table = []
 
@@ -353,12 +365,13 @@ gnc_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 
 ```{python} 
 # | label: fig-ccl-vs-nc-gnc-sets
-# | fig-cap:
-# |   - "Galaxy Number Count kernel, $\\ell = 80$"
-# |   - "Galaxy Number Count power spectrum"
-# | fig-cap-location: top
-# | layout-ncol: 2
-# | code-fold: true
+# | html:
+# |   fig-cap:
+# |     - "Galaxy Number Count kernel, $\\ell = 80$"
+# |     - "Galaxy Number Count power spectrum"
+# |   fig-cap-location: top
+# |   layout-ncol: 2
+# |   code-fold: true
 
 for comparison in gnc_auto_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -374,9 +387,10 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-gnc-sets
-# | tbl-cap: Power Spectrum
-# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Power Spectrum
+# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# |   code-fold: true
 
 table = []
 
