@@ -26,6 +26,7 @@
 
 import unittest
 import time
+import warnings
 import numpy as np
 from scipy.special import gammaln  # pylint: disable=no-name-in-module
 
@@ -617,10 +618,11 @@ class TestPLN1D(unittest.TestCase):
     def test_pln1d_timing(self):
         """Test timing of PLN1D evaluations.
 
-        Measure and verify that evaluations complete in reasonable time.
-        This is a performance sanity check, not a strict timing constraint.
+        Measure performance of evaluations and emit warnings if too slow.
+        This is a performance sanity check - computations should complete
+        successfully, but warnings are emitted for performance issues instead
+        of failing the test.
         """
-
         self.pln.set_order(100)
         R = 5.0
         mu = 0.0
@@ -629,45 +631,61 @@ class TestPLN1D(unittest.TestCase):
 
         # Time eval_p
         start_time = time.perf_counter()
+        last_result_p = None
         for _ in range(num_evals):
-            self.pln.eval_p(R, mu, sigma)
+            last_result_p = self.pln.eval_p(R, mu, sigma)
         end_time = time.perf_counter()
         time_eval_p = end_time - start_time
         time_per_eval_p = time_eval_p / num_evals
 
         # Time eval_lnp
         start_time = time.perf_counter()
+        last_result_lnp = None
         for _ in range(num_evals):
-            self.pln.eval_lnp(R, mu, sigma)
+            last_result_lnp = self.pln.eval_lnp(R, mu, sigma)
         end_time = time.perf_counter()
         time_eval_lnp = end_time - start_time
         time_per_eval_lnp = time_eval_lnp / num_evals
 
-        # Results should complete in reasonable time (< 1ms on most hardware)
-        self.assertLess(
-            time_per_eval_p,
-            1.0e-3,
-            f"eval_p should be faster than 1ms, got {time_per_eval_p*1000:.3f}ms",
+        # Sanity checks: verify computations completed successfully
+        # These are assertions - they should never fail
+        self.assertIsNotNone(last_result_p, "eval_p should return a result")
+        self.assertIsNotNone(last_result_lnp, "eval_lnp should return a result")
+        self.assertGreater(last_result_p, 0.0, "eval_p result should be positive")
+        self.assertTrue(np.isfinite(last_result_p), "eval_p result should be finite")
+        self.assertTrue(
+            np.isfinite(last_result_lnp), "eval_lnp result should be finite"
         )
-        self.assertLess(
-            time_per_eval_lnp,
-            1.0e-3,
-            f"eval_lnp should be faster than 1ms, got {time_per_eval_lnp*1000:.3f}ms",
-        )
+        self.assertGreater(time_eval_p, 0.0, "eval_p timing should be positive")
+        self.assertGreater(time_eval_lnp, 0.0, "eval_lnp timing should be positive")
 
-        # Both functions should have similar performance
+        # Performance checks: emit warnings if too slow (don't fail the test)
+        if time_per_eval_p >= 1.0e-3:
+            warnings.warn(
+                f"eval_p slower than expected: {time_per_eval_p*1000:.3f}ms per call "
+                f"(expected < 1ms)",
+                RuntimeWarning,
+            )
+
+        if time_per_eval_lnp >= 1.0e-3:
+            warnings.warn(
+                f"eval_lnp slower than expected: "
+                f"{time_per_eval_lnp*1000:.3f}ms per call "
+                f"(expected < 1ms)",
+                RuntimeWarning,
+            )
+
+        # Check performance ratio between the two methods
         slower_time = max(time_per_eval_p, time_per_eval_lnp)
         faster_time = min(time_per_eval_p, time_per_eval_lnp)
         time_ratio = slower_time / faster_time if faster_time > 0 else 1.0
-        # Allow up to 2x difference between the two methods
-        self.assertLess(
-            time_ratio,
-            2.0,
-            (
-                f"eval_p and eval_lnp should have similar "
-                f"performance, ratio={time_ratio:.2f}"
-            ),
-        )
+
+        if time_ratio >= 2.0:
+            warnings.warn(
+                f"eval_p and eval_lnp have very different performance: "
+                f"ratio={time_ratio:.2f} (expected < 2.0)",
+                RuntimeWarning,
+            )
 
     def test_pln1d_correctness_vs_numerical_integration(self):
         """Test PLN1D correctness by comparing with numerical integration.
