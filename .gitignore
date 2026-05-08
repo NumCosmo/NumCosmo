@@ -29,3 +29,5 @@ __pycache__
 *.fits
 *.log
 
+
+/.luarc.json

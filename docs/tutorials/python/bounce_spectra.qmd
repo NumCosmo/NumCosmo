@@ -1,6 +1,12 @@
 ---
 title: "Computing Bounce Spectra"
-format: html
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /_functions.qmd >}}
@@ -241,9 +247,10 @@ We then plot the gravitational weights:
 
 ```{python}
 # | label: fig-gravitational-weight
-# | fig-cap: "Gravitational weights $\\gamma_\\mathrm{r}$, $\\gamma_w$, and $F_\\nu$. Shaded areas show matter/radiation dominance; vertical lines mark $x_{\\rm eq}$ and $x=1$."
-# | fig-cap-location: bottom
-# | code-fold: true
+# | html:
+# |   fig-cap: "Gravitational weights $\\gamma_\\mathrm{r}$, $\\gamma_w$, and $F_\\nu$. Shaded areas show matter/radiation dominance; vertical lines mark $x_{\\rm eq}$ and $x=1$."
+# |   fig-cap-location: bottom
+# |   code-fold: true
 
 results = [Nc.HIPertITwoFluids.eom_eval(cosmo_rw, alpha, k) for alpha in alpha_mode_a]
 gamma_r = np.array([res.gw1 for res in results])
@@ -286,9 +293,10 @@ The simple $c_i F_\nu$ test is only an estimate of the truncation error. In the 
 
 ```{python}
 # | label: fig-truncation-error
-# | fig-cap: "Adiabatic truncation estimates for each mode (compare with $c_iF_\\nu$). Shaded regions: matter/radiation dominance; vertical lines mark $x_{\\rm eq}$ and $x=1$."
-# | fig-cap-location: bottom
-# | code-fold: true
+# | html:
+# |   fig-cap: "Adiabatic truncation estimates for each mode (compare with $c_iF_\\nu$). Shaded regions: matter/radiation dominance; vertical lines mark $x_{\\rm eq}$ and $x=1$."
+# |   fig-cap-location: bottom
+# |   code-fold: true
 
 results = [Nc.HIPertITwoFluids.wkb_eval(cosmo_rw, alpha, k) for alpha in alpha_mode_a]
 
@@ -369,7 +377,8 @@ to zero during the matter-radiation transition. It is useful to zoom in on the r
 ```{python}
 # | label: fig-truncation-error-zoom
 # | fig-cap: "Zoom around matter-radiation equality showing adiabatic truncation estimates."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 alpha_zoom_ini = alpha_eq - 5.0
@@ -557,7 +566,8 @@ We can plot the mode evolution for mode $k\in {k_\mathrm{min}, k_\mathrm{max}}$,
 ```{python}
 # | label: fig-zeta-mode-evolution
 # | fig-cap: "Mode evolution for $\\zeta_i$; colors show comoving wavelength $\\lambda$ (Mpc). Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\zeta_i$ evolution; vertical lines mark sound-horizon crossings."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
@@ -701,7 +711,8 @@ Now we can do the same for the entropy perturbation $Q_i \propto \Delta\zeta_i \
 ```{python}
 # | label: fig-dzeta-mode-evolution
 # | fig-cap: "Mode evolution for the entropy perturbations $\\Delta\\zeta_i$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\Delta\\zeta_i$ evolution."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
@@ -828,7 +839,8 @@ Next we can plot the density perturbations $\bar{\delta}_{\rho i}$ for each mode
 ```{python}
 # | label: fig-delta-rho-mode-evolution
 # | fig-cap: "Mode evolution for density perturbations $\\delta_{\\rho i}$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\bar{\\delta}_{\\rho i}$ evolution."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
@@ -952,7 +964,8 @@ Finally, we can plot the difference in density perturbations $\Delta\delta_{\rho
 ```{python}
 # | label: fig-delta-delta-rho-mode-evolution
 # | fig-cap: "Mode evolution for $\\Delta\\delta_{\\rho i}$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\Delta\\delta_{\\rho i}$ evolution."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
@@ -1076,7 +1089,8 @@ For completeness, we also plot the evolution of the momentum of the curvature pe
 ```{python}
 # | label: fig-pzeta-evolution
 # | fig-cap: "Mode evolution for momentum $\\Pi_{\\zeta i}$; color bar shows $\\lambda$. Top: $\\lambda$ vs. $c_i x R_H$. Bottom: $k^{-1}\\Pi_{\\zeta i}$ evolution."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c2r)
@@ -1197,7 +1211,8 @@ Now we plot the power spectrum time evolution for $\zeta_i$. The figure shows th
 ```{python}
 # | label: fig-zeta-power-spectrum
 # | fig-cap: "Dimensionless power $\\mathcal{P}_{\\zeta_i}(\\alpha)$ for modes 1 (left) and 2 (right); colors show $\\lambda$ (Mpc)."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
@@ -1254,7 +1269,8 @@ Now we plot the power spectrum time evolution for $\Pi_{\zeta i}$:
 ```{python}
 # | label: fig-pzeta-power-spectrum
 # | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Pi_{\\\\zeta i}}(\\\\alpha)$ for each mode; colors show $\\\\lambda$ (Mpc)."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
@@ -1311,7 +1327,8 @@ Now we can plot the power spectrum time evolution for $\Delta\zeta_i$:
 ```{python}
 # | label: fig-delta-zeta-power-spectrum
 # | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Delta\\\\zeta_i}(\\\\alpha)$ for each mode; colors show $\\\\lambda$ (Mpc)."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
@@ -1367,7 +1384,8 @@ Now that we have seen the evolution of each adiabatic perturbation $\zeta_i$ and
 ```{python}
 # | label: fig-full-zeta-power-spectrum
 # | fig-cap: "Total adiabatic power $\\\\mathcal{P}_{\\\\zeta}(\\\\alpha)$ and entropy power $\\\\mathcal{P}_{\\\\Delta\\\\zeta}(\\\\alpha)$; colors show $\\\\lambda$."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
@@ -1436,7 +1454,8 @@ We also plot the power spectrum time evolution for $\delta_{\rho_i}$:
 ```{python}
 # | label: fig-delta-rho-power-spectrum
 # | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\delta_{\\\\rho i}}(\\\\alpha)$ for each mode; colors show comoving wavelength $\\\\lambda$ (Mpc)."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
@@ -1494,7 +1513,8 @@ We also plot the power spectrum time evolution for $\Delta\delta_{\zeta_i}$:
 ```{python}
 # | label: fig-diff-delta-rho-power-spectrum
 # | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Delta\\\\delta_{\\\\rho i}}(\\\\alpha)$ for each mode; colors show comoving wavelength $\\\\lambda$ (Mpc)."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
@@ -1555,8 +1575,9 @@ We also plot the power spectrum time evolution for the total $\delta_{\rho}$:
 # | fig-cap:
 # |   - "Total density power $\\mathcal{P}_{\\delta_{\\rho}}(\\alpha)$; colors show comoving wavelength $\\lambda$ (Mpc)."
 # |   - "Difference density power $\\mathcal{P}_{\\Delta\\delta_{\\rho}}(\\alpha)$; colors show $\\lambda$ (Mpc)."
-# | layout-ncol: 2
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
+# |   layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
@@ -1720,8 +1741,9 @@ Now we can plot the power spectra for the observables of interest. We will plot 
 ```{python}
 # | label: fig-zeta-power-spectrum-k
 # | fig-cap: "Dimensionless power $\\mathcal{P}_{\\zeta}(k)$ at selected times; vertical lines mark characteristic wavenumbers."
-# | fig-cap-location: bottom
-# | layout-ncol: 2
+# | html:
+# |   fig-cap-location: bottom
+# |   layout-ncol: 2
 # | code-fold: true
 
 k_pivot = 1.0
@@ -1851,7 +1873,8 @@ Now we can plot this CMB-like section of the power spectrum and overplot the lin
 ```{python}
 # | label: fig-zeta-power-spectrum-cmb-k
 # | fig-cap: "CMB-range dimensionless power $\\mathcal{P}_{\\zeta}(k)$ with linear and quadratic fits (pivot 0.05 Mpc$^{-1}$)."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
@@ -1901,8 +1924,9 @@ Next we plot the power spectra for $\Pi_\zeta$ and $\Delta\Pi_\zeta$:
 ```{python}
 # | label: fig-pzeta-power-spectrum-k
 # | fig-cap: "Dimensionless power $\\mathcal{P}_{\\Pi_\\zeta}(k)$ at selected times; vertical lines mark characteristic wavenumbers."
-# | fig-cap-location: bottom
-# | layout-ncol: 2
+# | html:
+# |   fig-cap-location: bottom
+# |   layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
@@ -1959,8 +1983,9 @@ Next we plot the power spectra for $\delta_{\rho}$ and $\Delta\delta_{\rho}$:
 ```{python}
 # | label: fig-delta-rho-power-spectrum-k
 # | fig-cap: "Dimensionless power $\\mathcal{P}_{\\delta_{\\rho}}(k)$ and $\\mathcal{P}_{\\Delta\\delta_{\\rho}}(k)$ at selected times; solid/dashed lines show mode 1/2."
-# | fig-cap-location: bottom
-# | layout-ncol: 2
+# | html:
+# |   fig-cap-location: bottom
+# |   layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
@@ -2014,8 +2039,9 @@ We can also plot the power spectra for the individual fluid density perturbation
 # | fig-cap:
 # |   - "Dimensionless power $\\mathcal{P}_{\\delta_{\\mathrm{r}}}(k)$ (solid) at selected times; vertical lines mark characteristic wavenumbers."
 # |   - "Dimensionless power $\\mathcal{P}_{\\delta_w}(k)$ (dashed) at selected times; same layout."
-# | fig-cap-location: bottom
-# | layout-ncol: 2
+# | html:
+# |   fig-cap-location: bottom
+# |   layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
@@ -2067,7 +2093,8 @@ The fluid velocity potentials $\mathcal{V}_{\mathrm{r}}$ and $\mathcal{V}_{w}$:
 ```{python}
 # | label: fig-fku-rw-power-spectrum-k
 # | fig-cap: "Dimensionless power of fluid velocity potentials $\\mathcal{P}_{\\mathcal{V}_r}$ (solid) and $\\mathcal{P}_{\\mathcal{V}_w}$ vs. $k$."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1, aspect_ratio=aspect2c)
@@ -2128,8 +2155,9 @@ We can also plot $\zeta$ and $\Delta\zeta$ in the same plot to observe another s
 # | fig-cap:
 # |   - "Dimensionless power $\\mathcal{P}_{\\zeta}(k)$ at selected times."
 # |   - "Dimensionless power $\\mathcal{P}_{\\Delta\\zeta}(k)$ at selected times."
-# | fig-cap-location: bottom
-# | layout-ncol: 2
+# | html:
+# |   fig-cap-location: bottom
+# |   layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
@@ -2213,7 +2241,8 @@ We can plot the tensor power spectrum evolution for each mode:
 ```{python}
 # | label: fig-tensor-power-spectrum-evol
 # | fig-cap: "Evolution of the tensor power spectrum $\\mathcal{P}_h(\\alpha)$ for each mode."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
@@ -2254,8 +2283,9 @@ We can also plot it at the final time:
 # | fig-cap:
 # |   - "Tensor power $\\mathcal{P}_h(k)$ at an early time; vertical lines mark characteristic wavenumbers."
 # |   - "Tensor power $\\mathcal{P}_h(k)$ at a late/expanding time (e.g. $x=10^{15}$)."
-# | fig-cap-location: bottom
-# | layout-ncol: 2
+# | html:
+# |   fig-cap-location: bottom
+# |   layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
@@ -2324,8 +2354,9 @@ We can plot the tensor-to-scalar ratio as a function of wavenumber:
 # | fig-cap:
 # |   - "Tensor-to-scalar ratio $r(k)$ at an early time."
 # |   - "Tensor-to-scalar ratio $r(k)$ at a late/expanding time."
-# | fig-cap-location: bottom
-# | layout-ncol: 2
+# | html:
+# |   fig-cap-location: bottom
+# |   layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
@@ -2418,7 +2449,8 @@ Now we can visualize this scaling relationship:
 ```{python}
 # | label: fig-pk0-scaling
 # | fig-cap: "Scaling of the power spectrum normalization $\\bar{\\mathcal{P}}(10^{-3}; w)$ with the equation-of-state parameter $w$. The comparison with the expected $w^{-5/2}$ power law shows excellent agreement."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
@@ -2469,7 +2501,8 @@ We can also examine the normalized power spectrum by dividing out the expected s
 ```{python}
 # | label: fig-pk0-normalized
 # | fig-cap: "Normalized power spectrum $\\bar{\\mathcal{P}}(10^{-3}; w)$ divided by the scaling factor $\\ell_\textsc{P}^2x_b^2 \\Omega_w^2 / (R_{H}^2 \\Omega_r c_w^5)$, where $c_w = \\sqrt{w}$. This removes the dominant $w$ dependence."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 # Compute the normalization factor
@@ -2522,7 +2555,8 @@ We use the Boltzmann code interface (`HIPertBoltzmannCBE`) to compute the lensed
 ```{python}
 # | label: fig-cmb-cls-comparison
 # | fig-cap: "CMB temperature power spectra comparison. Top: $\\mathcal{D}_\\ell = \\ell(\\ell+1)C_\\ell/(2\\pi)$ for two-fluids (red) and power-law (blue dashed). Bottom: Ratio $\\mathcal{D}_\\ell^{\\rm 2F}/\\mathcal{D}_\\ell^{\\rm PL}$."
-# | fig-cap-location: bottom
+# | html:
+# |   fig-cap-location: bottom
 # | code-fold: true
 
 

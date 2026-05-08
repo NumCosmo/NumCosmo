@@ -9,6 +9,10 @@ format:
   html:
     tbl-cap-location: margin
     fig-cap-location: margin
+  ipynb: 
+    echo: true
+
+format-links: [ipynb]
 
 execute:
   warning: true
@@ -70,9 +74,10 @@ The table below summarizes the parameters. There are five parameters sets.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-params
-# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
-# | tbl-colwidths: [10, 30, 60]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# |   tbl-colwidths: [10, 30, 60]
+# |   code-fold: true
 
 # Create DataFrame
 df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
@@ -105,14 +110,15 @@ parameter_comparisons: list[list[nc_cmp.CompareFunc1d]] = [
 
 ```{python}
 # | label: fig-ccl-vs-nc-params-sets
-# | fig-cap:
-# |   - "Total matter density parameter"
-# |   - "Radiation density parameter"
-# |   - "Massless neutrino density parameter"
-# |   - "Massive neutrino density parameter"
-# | fig-cap-location: top
-# | layout-ncol: 2
-# | code-fold: true
+# | html:
+# |   fig-cap:
+# |     - "Total matter density parameter"
+# |     - "Radiation density parameter"
+# |     - "Massless neutrino density parameter"
+# |     - "Massive neutrino density parameter"
+# |   fig-cap-location: top
+# |   layout-ncol: 2
+# |   code-fold: true
 
 for parameter_comparison in parameter_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -129,9 +135,10 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-params-table
-# | tbl-cap: Cosmological parameters computed using CCL and NumCosmo
-# | tbl-colwidths: [15, 5, 20, 20, 20, 20]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Cosmological parameters computed using CCL and NumCosmo
+# |   tbl-colwidths: [15, 5, 20, 20, 20, 20]
+# |   code-fold: true
 
 table = []
 
@@ -142,7 +149,6 @@ for parameter_comparison in parameter_comparisons:
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 ## Distances
@@ -174,19 +180,20 @@ distance_comparisons: list[list[nc_cmp.CompareFunc1d]] = [
 We plot the distance comparisons for all parameter sets.
 
 ```{python}
-# | layout-ncol: 2
 # | label: fig-ccl-vs-nc-distances-set0
-# | fig-cap:
-# |   - "Normalized Hubble Function"
-# |   - "Comoving radial distance"
-# |   - "Comoving transverse distance"
-# |   - "Angular diameter distance"
-# |   - "Luminosity distance"
-# |   - "Distance modulus"
-# |   - "Lookback time"
-# |   - "Comoving volume element"
-# | fig-cap-location: top
-# | code-fold: true
+# | html:
+# |   fig-cap:
+# |     - "Normalized Hubble Function"
+# |     - "Comoving radial distance"
+# |     - "Comoving transverse distance"
+# |     - "Angular diameter distance"
+# |     - "Luminosity distance"
+# |     - "Distance modulus"
+# |     - "Lookback time"
+# |     - "Comoving volume element"
+# |   fig-cap-location: top
+# |   layout-ncol: 2
+# |   code-fold: true
 
 for distance_comparison in distance_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -198,16 +205,16 @@ for distance_comparison in distance_comparisons:
 
 plt.show()
 plt.close()
-
 ```
 
 Again a table summarizes the results for all parameter sets.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-distances-table-set0
-# | tbl-cap: Cosmological distances computed using CCL and NumCosmo
-# | tbl-colwidths: [15, 20, 5, 15, 15, 15, 15]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Cosmological distances computed using CCL and NumCosmo
+# |   tbl-colwidths: [15, 20, 5, 15, 15, 15, 15]
+# |   code-fold: true
 
 table = []
 
@@ -218,7 +225,6 @@ for distance_comparison in distance_comparisons:
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 ### Time Comparison
@@ -229,9 +235,10 @@ Below we show the comparison using the first set of parameters.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-times-set0
-# | tbl-cap: Time to compute the cosmological distances
-# | tbl-colwidths: [20, 20, 20, 20]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Time to compute the cosmological distances
+# |   tbl-colwidths: [20, 20, 20, 20]
+# |   code-fold: true
 def compute_distance_times(
     ccl_cosmo: pyccl.Cosmology, cosmology: ncc.Cosmology, z: np.ndarray
 ):
@@ -303,12 +310,13 @@ Below we plot the growth comparisons for all parameter sets.
 
 ```{python}
 # | label: fig-ccl-vs-nc-growth-sets
-# | fig-cap-location: top
-# | fig-cap:
-# |   - "Growth Factor"
-# |   - "Growth Rate"
-# | layout-ncol: 2
-# | code-fold: true
+# | html:
+# |   fig-cap-location: top
+# |   fig-cap:
+# |     - "Growth Factor"
+# |     - "Growth Rate"
+# |   layout-ncol: 2
+# |   code-fold: true
 
 for growth_comparison in growth_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -326,9 +334,10 @@ The following table summarizes the results for all sets.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-growth-sets
-# | tbl-cap: Growth Factor and Growth Rate
-# | tbl-colwidths: [20, 20, 20, 20]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Growth Factor and Growth Rate
+# |   tbl-colwidths: [20, 20, 20, 20]
+# |   code-fold: true
 
 table = []
 
@@ -338,7 +347,6 @@ for growth_comparison in growth_comparisons:
 
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 ## Scale Factor
@@ -360,9 +368,10 @@ Below we compare the scale factors for all parameter sets.
 
 ```{python}
 # | label: fig-ccl-vs-nc-scale-factor-sets
-# | fig-cap-location: top
-# | fig-cap: Scale Factor
-# | code-fold: true
+# | html:
+# |   fig-cap-location: top
+# |   fig-cap: Scale Factor
+# |   code-fold: true
 
 fig, axs = plt.subplots(2, sharex=True)
 fig.subplots_adjust(hspace=0)
@@ -372,16 +381,16 @@ for p, c in zip(compare_scale_factor, COLORS):
 
 plt.show()
 plt.close()
-
 ```
 
 The following table summarizes the results for all sets.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-scale-factor-sets
-# | tbl-cap: Scale Factor
-# | tbl-colwidths: [20, 20, 20, 20]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Scale Factor
+# |   tbl-colwidths: [20, 20, 20, 20]
+# |   code-fold: true
 
 table = []
 
@@ -391,7 +400,6 @@ for d in compare_scale_factor:
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 ## Critical Surface Mass Density
@@ -414,9 +422,10 @@ Below we compare the critical surface mass density for all parameter sets.
 
 ```{python}
 # | label: fig-ccl-vs-nc-sigmaC-sets
-# | fig-cap-location: top
-# | fig-cap: Critical Surface Mass Density
-# | code-fold: true
+# | html:
+# |   fig-cap-location: top
+# |   fig-cap: Critical Surface Mass Density
+# |   code-fold: true
 
 fig, axs = plt.subplots(2, sharex=True)
 fig.subplots_adjust(hspace=0)
@@ -426,16 +435,16 @@ for p, c in zip(compare_sigmaC, COLORS):
 
 plt.show()
 plt.close()
-
 ```
 
 The following table summarizes the results for all sets.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-sigmaC-sets
-# | tbl-cap: Critical Surface Mass Density
-# | tbl-colwidths: [20, 20, 20, 20]
-# | code-fold: true
+# | html:
+# |   tbl-cap: Critical Surface Mass Density
+# |   tbl-colwidths: [20, 20, 20, 20]
+# |   code-fold: true
 
 table = []
 
@@ -445,7 +454,6 @@ for d in compare_sigmaC:
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 ## Summary  

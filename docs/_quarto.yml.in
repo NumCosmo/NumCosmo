@@ -23,6 +23,8 @@ project:
     - examples/intro/power_spectrum.qmd
     - examples/intro/recombination.qmd
     - examples/intro/simple.qmd
+  post-render:
+    - ./ipynb_to_py.sh
 
 execute:
   error: false
@@ -117,6 +119,8 @@ format:
     code-overflow: wrap
     grid:
       body-width: 1200px
+    include-after-body:
+      - add-py-link.html
 
 reference-location: margin
 citation-location: margin
