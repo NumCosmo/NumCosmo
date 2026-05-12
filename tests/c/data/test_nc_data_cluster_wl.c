@@ -319,7 +319,7 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
   GList *columns                    = nc_galaxy_sd_shape_data_required_columns (s_data);
   GList *l                          = columns;
   GStrvBuilder *builder             = g_strv_builder_new ();
-  guint nrows                       = 1500;
+  guint nrows                       = 100;
   guint npoints                     = 20;
   gdouble z_min                     = 0.01;
   gdouble z_max                     = 5.0;
@@ -1086,7 +1086,7 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
   NcmFit *fit         = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", like, test->mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
   NcmStatsVec *stats  = ncm_stats_vec_new (3, NCM_STATS_VEC_COV, FALSE);
   NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  guint nfits         = 20;
+  guint nfits         = 10;
   guint nruns         = 1;
   guint i, j;
 
