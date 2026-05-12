@@ -777,6 +777,9 @@ nc_galaxy_sd_shape_hsm_gauss_global_data_set (NcGalaxySDShapeHSMGaussGlobal *gsd
  * @epsilon_obs_1: (out): the observed ellipticity component 1
  * @epsilon_obs_2: (out): the observed ellipticity component 2
  * @std_noise: (out): the observational shape dispersion
+ * @c1: (out): the additive bias component 1
+ * @c2: (out): the additive bias component 2
+ * @m: (out): the multiplicative bias
  *
  * Gets the observed ellipticity components and the gaussian noise dispersion.
  *
