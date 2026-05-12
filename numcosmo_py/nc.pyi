@@ -7625,8 +7625,8 @@ class GalaxySDShapeHSMGaussGlobal(GalaxySDShape):
     @staticmethod
     def clear(gsdsgauss: GalaxySDShapeHSMGaussGlobal) -> None: ...
     def data_get(
-        self, data: GalaxySDShapeData, c1: float, c2: float, m: float
-    ) -> typing.Tuple[float, float, float]: ...
+        self, data: GalaxySDShapeData
+    ) -> typing.Tuple[float, float, float, float, float, float]: ...
     def data_set(
         self,
         data: GalaxySDShapeData,
