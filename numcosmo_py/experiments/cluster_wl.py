@@ -303,7 +303,7 @@ class GalaxyShapeGenHSMGauss(BaseModel):
         return cls.model_validate(opts)
 
     def model_post_init(self, _: Any, /) -> None:
-        """Check that sigma is less than std_noise."""
+        """Set up the shape and noise parameters for the gamma distribution."""
         self._hsm_gauss = Nc.GalaxySDShapeHSMGauss.new(self.ellip_conv.genum)
         self._k_shape = ((self.std_shape**2) / self.std_sigma) ** 2
         self._theta_shape = self.std_sigma**2 / self.std_shape**2
@@ -397,7 +397,7 @@ class GalaxyShapeGenHSMGaussGlobal(BaseModel):
     def gen_shape(
         self, mset: Ncm.MSet, shape_data: Nc.GalaxySDShapeData, rng: Ncm.RNG
     ) -> None:
-        """Generate the galaxy shape source distribution data observations."""
+        """Set up the shape and noise parameters for the gamma distribution."""
         std_noise = min(np.sqrt(rng.gamma_gen(self._k_noise, self._theta_noise)), 0.5)
         c1 = rng.gaussian_gen(0.0, self.c1_sigma)
         c2 = rng.gaussian_gen(0.0, self.c2_sigma)
