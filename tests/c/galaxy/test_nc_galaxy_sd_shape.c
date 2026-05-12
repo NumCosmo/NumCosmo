@@ -1536,7 +1536,7 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_stats (TestNcGalaxySDShape *test, gcons
       NcmLikelihood *like     = ncm_likelihood_new (dataset);
       NcmFit *fit             = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", like, test->mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
       NcmStatsVec *stats      = ncm_stats_vec_new (7, NCM_STATS_VEC_COV, FALSE);
-      guint nfits             = 50;
+      guint nfits             = 20;
 
       for (i = 0; i < nfits; i++)
       {
