@@ -10,7 +10,7 @@ on:
 
 env:
   CONDA_ENV: numcosmo_developer
-  CACHE_VERSION: 3
+  CACHE_VERSION: 0
 
 jobs:
 
@@ -26,7 +26,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install gobject-introspection gir1.2-glib-2.0 gir1.2-glib-2.0-dev libgirepository-2.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev libopenmpi-dev libcairo2-dev uncrustify
-        pip install meson ninja pytest pytest-tap pytest-lazy-fixtures numpy scipy pygobject typer matplotlib --break-system-packages
+        pip install meson ninja pytest pytest-lazy-fixtures numpy scipy pygobject typer matplotlib --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
@@ -54,7 +54,7 @@ jobs:
         ./example_simple
         ./example_ca
     - name: Check NumCosmo
-      run: meson test -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
+      run: meson test -v -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
     - name: Create a NumCosmo tarball
       run: meson dist -C build --no-tests
     - name: Upload a Build Artifact
@@ -93,7 +93,7 @@ jobs:
         brew install python3 gobject-introspection pygobject3 numpy scipy python-matplotlib meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran glib openblas
     - name: Pip install pre-requisites
       run: |
-        python3 -m pip install pytest pytest-tap pytest-lazy-fixtures typer pydantic --break-system-packages
+        python3 -m pip install pytest pytest-lazy-fixtures typer pydantic --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Fix libfyaml.pc
@@ -141,7 +141,7 @@ jobs:
         pytest -xvs tests/python --run-sphere-map -m sphere_map
     - name: Check NumCosmo
       run: |
-        meson test -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
+        meson test -v -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge:
     name: (${{ matrix.os }}, py${{ matrix.python-version }}, ${{ matrix.mpi }}, Miniforge)
@@ -180,7 +180,6 @@ jobs:
           conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
           which python
           conda list
-          pip install -v pygobject-stubs pytest-tap types-tabulate
           conda remove -q -v -n numcosmo_developer openmpi
           conda install -q -v -n numcosmo_developer ${{ matrix.mpi }}
           conda install -q -v -n numcosmo_developer libfabric-devel
@@ -222,7 +221,7 @@ jobs:
       #  run: |
       #    pylint --rcfile .pylintrc numcosmo_py
       - name: Check NumCosmo
-        run: meson test -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
+        run: meson test -v -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
     name: Cov-${{ matrix.suites }} (py${{ matrix.python-version }}, openmpi)
@@ -256,7 +255,6 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
-          pip install -v pygobject-stubs pytest-tap types-tabulate
           conda list
       - name: Save conda-forge cache
         if: steps.cache.outputs.cache-hit != 'true'
@@ -278,7 +276,7 @@ jobs:
         # Third run to merge the coverage base and the coverage for the tests
         run: |
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
-          meson test -C build --timeout-multiplier 0 --num-processes=2 --suite=${{ matrix.suites }} || (cat build/meson-logs/testlog.txt && exit 1)
+          meson test -v -C build --timeout-multiplier 0 --num-processes=2 --suite=${{ matrix.suites }} || (cat build/meson-logs/testlog.txt && exit 1)
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
           lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/class/*' '*/levmar/*' '*/libcuba/*' '*/plc/*' '*/sundials/*' '*/toeplitz/*' '*/tools/*' --output-file numcosmo-coverage.info
