@@ -55,4 +55,5 @@ dependencies:
   - tabulate
   - tqdm
   - typer
+  - types-tabulate
   - zlib
