@@ -50,6 +50,7 @@ from .generate import (
     GenerateDEWSpline,
 )
 from .cluster_richness import RunClusterRichnessAnalysis
+from .inspect import InspectSummary, InspectClusterNCounts
 from .xcor import ViewKernel, ListKernels
 
 # Attempt optional import of the Firecrown-NumCosmo connector.
@@ -71,6 +72,7 @@ app_cat = typer.Typer(
 )
 app_generate = typer.Typer(no_args_is_help=True, help="Generate experiment files.")
 app_analysis = typer.Typer(no_args_is_help=True, help="Data analysis tools.")
+app_inspect = typer.Typer(no_args_is_help=True, help="Inspect generated experiments.")
 app_xcor = typer.Typer(no_args_is_help=True, help="Cross-correlation kernel analysis.")
 app_xcor_kernel = typer.Typer(
     no_args_is_help=True, help="Kernel visualization and analysis."
@@ -81,6 +83,7 @@ app_run.add_typer(app_run_mcmc, name="mcmc")
 app.add_typer(app_cat, name="catalog")
 app.add_typer(app_generate, name="generate")
 app.add_typer(app_analysis, name="analysis")
+app.add_typer(app_inspect, name="inspect")
 app.add_typer(app_xcor, name="xcor")
 app_xcor.add_typer(app_xcor_kernel, name="kernel")
 
@@ -226,6 +229,18 @@ XCOR_KERNEL_LIST_CMD: CMDArg = {
     "help": "List all available kernel types and their parameters.",
 }
 
+INSPECT_SUMMARY_CMD: CMDArg = {
+    "name": "summary",
+    "no_args_is_help": True,
+    "help": "Inspect experiment summary for likelihood and covariance diagnostics.",
+}
+
+INSPECT_CLUSTER_NCOUNTS_CMD: CMDArg = {
+    "name": "cluster-ncounts",
+    "no_args_is_help": True,
+    "help": "Plot data-vector, covariance/correlation, and optional S_ij diagnostics.",
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -263,6 +278,9 @@ app_generate.command(**GEN_DEWSPLINE_CMD)(GenerateDEWSpline)
 # ------------------------------------------------------------------------------
 # Installing analysis subcommands
 app_analysis.command(**ANALYSIS_CLUSTER_RICHNESS_CMD)(RunClusterRichnessAnalysis)
+# Installing inspect subcommands
+app_inspect.command(**INSPECT_SUMMARY_CMD)(InspectSummary)
+app_inspect.command(**INSPECT_CLUSTER_NCOUNTS_CMD)(InspectClusterNCounts)
 # Installing xcor kernel subcommands
 app_xcor_kernel.command(**XCOR_KERNEL_VIEW_CMD)(ViewKernel)
 app_xcor_kernel.command(**XCOR_KERNEL_LIST_CMD)(ListKernels)
