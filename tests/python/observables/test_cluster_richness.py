@@ -21,6 +21,7 @@
 
 import os
 import tempfile
+from pathlib import Path
 import pytest
 import numpy as np
 from numcosmo_py import Nc, Ncm
@@ -146,10 +147,11 @@ def fixture_temp_db_path():
     """Create a temporary database file."""
     fd, path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
-    yield path
+    path_obj = Path(path)
+    yield path_obj
     # Cleanup
-    if os.path.exists(path):
-        os.remove(path)
+    if path_obj.exists():
+        path_obj.unlink()
 
 
 # =============================================================================
@@ -656,14 +658,14 @@ class TestInvertTruncatedStatsSigmaFromSample:
 class TestBestfitDatabase:
     """Tests for BestfitDatabase class."""
 
-    def test_init_creates_db(self, temp_db_path: str) -> None:
+    def test_init_creates_db(self, temp_db_path: Path) -> None:
         """Test that initialization creates database file."""
         db = BestfitDatabase(temp_db_path)
         assert os.path.exists(temp_db_path)
         assert db.count_entries() == 0
 
     def test_insert_bestfit(
-        self, temp_db_path: str, ascaso_model: Nc.ClusterMassAscaso
+        self, temp_db_path: Path, ascaso_model: Nc.ClusterMassAscaso
     ) -> None:
         """Test inserting a best-fit result."""
         db = BestfitDatabase(temp_db_path)
@@ -681,7 +683,7 @@ class TestBestfitDatabase:
         assert db.count_entries() == 1
 
     def test_insert_duplicate_fails(
-        self, temp_db_path: str, ascaso_model: Nc.ClusterMassAscaso
+        self, temp_db_path: Path, ascaso_model: Nc.ClusterMassAscaso
     ) -> None:
         """Test that inserting duplicate returns False."""
         db = BestfitDatabase(temp_db_path)
@@ -700,7 +702,7 @@ class TestBestfitDatabase:
         assert db.count_entries() == 1
 
     def test_batch_insert(
-        self, temp_db_path: str, ascaso_model: Nc.ClusterMassAscaso
+        self, temp_db_path: Path, ascaso_model: Nc.ClusterMassAscaso
     ) -> None:
         """Test batch inserting multiple results."""
         db = BestfitDatabase(temp_db_path)
@@ -721,7 +723,7 @@ class TestBestfitDatabase:
         assert db.count_entries() == 5
 
     def test_get_bestfit(
-        self, temp_db_path: str, ascaso_model: Nc.ClusterMassAscaso
+        self, temp_db_path: Path, ascaso_model: Nc.ClusterMassAscaso
     ) -> None:
         """Test retrieving a best-fit model."""
         db = BestfitDatabase(temp_db_path)
@@ -741,14 +743,14 @@ class TestBestfitDatabase:
         assert retrieved is not None
         assert retrieved["mup0"] == 5.5
 
-    def test_get_bestfit_not_found(self, temp_db_path: str) -> None:
+    def test_get_bestfit_not_found(self, temp_db_path: Path) -> None:
         """Test that get_bestfit returns None when not found."""
         db = BestfitDatabase(temp_db_path)
         result = db.get_bestfit(mock_seed=999, cut=999.0)
         assert result is None
 
     def test_get_bestfit_params_dict(
-        self, temp_db_path: str, ascaso_model: Nc.ClusterMassAscaso
+        self, temp_db_path: Path, ascaso_model: Nc.ClusterMassAscaso
     ) -> None:
         """Test retrieving best-fit parameters as dictionary."""
         db = BestfitDatabase(temp_db_path)
@@ -769,7 +771,7 @@ class TestBestfitDatabase:
         assert params["mup0"] == 7.7
 
     def test_get_computed_seeds(
-        self, temp_db_path: str, ascaso_model: Nc.ClusterMassAscaso
+        self, temp_db_path: Path, ascaso_model: Nc.ClusterMassAscaso
     ) -> None:
         """Test getting computed seeds for a specific cut."""
         db = BestfitDatabase(temp_db_path)
@@ -790,7 +792,7 @@ class TestBestfitDatabase:
         assert seeds == {1, 3, 5}
 
     def test_get_all_computed_seeds(
-        self, temp_db_path: str, ascaso_model: Nc.ClusterMassAscaso
+        self, temp_db_path: Path, ascaso_model: Nc.ClusterMassAscaso
     ) -> None:
         """Test getting all computed seeds."""
         db = BestfitDatabase(temp_db_path)
@@ -810,7 +812,7 @@ class TestBestfitDatabase:
         assert seeds == {1, 2, 3}
 
     def test_delete_bestfit(
-        self, temp_db_path: str, ascaso_model: Nc.ClusterMassAscaso
+        self, temp_db_path: Path, ascaso_model: Nc.ClusterMassAscaso
     ) -> None:
         """Test deleting a best-fit entry."""
         db = BestfitDatabase(temp_db_path)
@@ -830,14 +832,14 @@ class TestBestfitDatabase:
         assert deleted
         assert db.count_entries() == 0
 
-    def test_delete_bestfit_not_found(self, temp_db_path: str) -> None:
+    def test_delete_bestfit_not_found(self, temp_db_path: Path) -> None:
         """Test that deleting non-existent entry returns False."""
         db = BestfitDatabase(temp_db_path)
         deleted = db.delete_bestfit(mock_seed=999, cut=999.0)
         assert not deleted
 
     def test_stores_ext_model(
-        self, temp_db_path: str, ext_model: Nc.ClusterMassExt
+        self, temp_db_path: Path, ext_model: Nc.ClusterMassExt
     ) -> None:
         """Test that Ext model can be stored and retrieved."""
         db = BestfitDatabase(temp_db_path)

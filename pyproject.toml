@@ -12,8 +12,6 @@ classifiers = [
     "Programming Language :: Fortran",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries",
@@ -25,7 +23,7 @@ classifiers = [
     "Operating System :: Unix",
     "Operating System :: MacOS",
 ]
-requires-python = '>=3.9'
+requires-python = '>=3.11'
 license = {file = 'COPYING'}
 authors = [
   {name = 'Sandro Dias Pinto Vitenti', email = 'vitenti@uel.br'},
