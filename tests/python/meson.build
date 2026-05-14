@@ -45,27 +45,6 @@ if enable_gir and python_for_tests.found()
         pytest_base_args += ['--cov-append']
     endif
 
-    py_tap = python_module.find_installation(
-        'python3',
-        modules: ['pytest_tap'],
-        required: false,
-    )
-    if py_tap.found() and get_option('pytest_tap')
-        r = run_command(
-            python,
-            '-c', 'import importlib.metadata; import sys; sys.stdout.write(importlib.metadata.version("pytest-tap"))',
-            check: true,
-        )
-        message('pytest-tap version: @0@'.format(r.stdout().strip()))
-
-        if r.stdout().version_compare('>= 3.4')
-            pytest_base_args += ['--tap']
-        else
-            pytest_base_args += ['--tap-stream']
-        endif
-        pytest_protocol = 'tap'
-    endif
-
     # If xdist is available, use it for parallel test execution
     py_xdist = python_module.find_installation(
         'python3',

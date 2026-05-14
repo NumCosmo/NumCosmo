@@ -26,7 +26,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install gobject-introspection gir1.2-glib-2.0 gir1.2-glib-2.0-dev libgirepository-2.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev libopenmpi-dev libcairo2-dev uncrustify
-        pip install meson ninja pytest pytest-tap pytest-lazy-fixtures numpy scipy pygobject typer matplotlib --break-system-packages
+        pip install meson ninja pytest pytest-lazy-fixtures numpy scipy pygobject typer matplotlib --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
@@ -93,7 +93,7 @@ jobs:
         brew install python3 gobject-introspection pygobject3 numpy scipy python-matplotlib meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran glib openblas
     - name: Pip install pre-requisites
       run: |
-        python3 -m pip install pytest pytest-tap pytest-lazy-fixtures typer pydantic --break-system-packages
+        python3 -m pip install pytest pytest-lazy-fixtures typer pydantic --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Fix libfyaml.pc
@@ -180,7 +180,7 @@ jobs:
           conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
           which python
           conda list
-          pip install -v pygobject-stubs pytest-tap types-tabulate
+          pip install -v pygobject-stubs types-tabulate
           conda remove -q -v -n numcosmo_developer openmpi
           conda install -q -v -n numcosmo_developer ${{ matrix.mpi }}
           conda install -q -v -n numcosmo_developer libfabric-devel
@@ -256,7 +256,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
-          pip install -v pygobject-stubs pytest-tap types-tabulate
+          pip install -v pygobject-stubs types-tabulate
           conda list
       - name: Save conda-forge cache
         if: steps.cache.outputs.cache-hit != 'true'
