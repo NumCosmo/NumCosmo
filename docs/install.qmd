@@ -60,7 +60,7 @@ Note: The pip packages provide type stubs for better mypy type checking support 
 
 To test the installation, run the unit tests:
 ```bash
-meson test -C build
+meson test -v -C build
 ```
 
 If you prefer using the library without installation, export specific environment variables. A script is generated in the build directory for easy execution (and optional addition to shell initialization):
@@ -181,7 +181,7 @@ meson compile -C build
 ```
   - Optionally run the library unit testing
 ```bash
-meson test -C build
+meson test -v -C build
 ```
   - Install the library (optional). 
   Note that most developers **don't** want to install the library since they prefer to update/modify the library without installing it.
