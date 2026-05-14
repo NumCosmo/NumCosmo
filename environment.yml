@@ -42,6 +42,7 @@ dependencies:
   - pyccl >= 3.0.0
   - pydantic
   - pygobject
+  - pygobject-stubs
   - pylint
   - pytest
   - pytest-cov

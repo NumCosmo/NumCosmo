@@ -10,7 +10,7 @@ on:
 
 env:
   CONDA_ENV: numcosmo_developer
-  CACHE_VERSION: 3
+  CACHE_VERSION: 0
 
 jobs:
 
@@ -180,7 +180,6 @@ jobs:
           conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
           which python
           conda list
-          pip install -v pygobject-stubs
           conda remove -q -v -n numcosmo_developer openmpi
           conda install -q -v -n numcosmo_developer ${{ matrix.mpi }}
           conda install -q -v -n numcosmo_developer libfabric-devel
@@ -256,7 +255,6 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
-          pip install -v pygobject-stubs
           conda list
       - name: Save conda-forge cache
         if: steps.cache.outputs.cache-hit != 'true'
