@@ -81,7 +81,7 @@ We consider five sets, designed to cover a broad range of cosmologies, including
 # | html:
 # |   tbl-cap: Used cosmological parameters in CCL and NumCosmo
 # |   tbl-colwidths: [10, 30, 60]
-# |   code-fold: true
+# | code-fold: true
 
 # Create DataFrame
 df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
@@ -115,7 +115,7 @@ cmb_len_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 # |     - "CMB lensing power spectrum"
 # |   fig-cap-location: top
 # |   layout-ncol: 2
-# |   code-fold: true
+# | code-fold: true
 
 for comparison in cmb_len_auto_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -134,7 +134,7 @@ The following table summarizes the results for all sets.
 # | html:
 # |   tbl-cap: Power Spectrum
 # |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# |   code-fold: true
+# | code-fold: true
 
 table = []
 
@@ -179,7 +179,7 @@ cmb_isw_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 # |     - "CMB ISW power spectrum"
 # |   fig-cap-location: top
 # |   layout-ncol: 2
-# |   code-fold: true
+# | code-fold: true
 
 for comparison in cmb_isw_auto_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -199,7 +199,7 @@ The following table summarizes the results for all sets.
 # | html:
 # |   tbl-cap: Power Spectrum
 # |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# |   code-fold: true
+# | code-fold: true
 
 table = []
 
@@ -244,7 +244,7 @@ tsz_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 # |     - "Thermal Sunyaev-Zel'dovich power spectrum"
 # |   fig-cap-location: top
 # |   layout-ncol: 2
-# |   code-fold: true
+# | code-fold: true
 
 for comparison in tsz_auto_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -263,7 +263,7 @@ The following table summarizes the results for all sets.
 # | html:
 # |   tbl-cap: Power Spectrum
 # |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# |   code-fold: true
+# | code-fold: true
 
 table = []
 
@@ -309,7 +309,7 @@ gwl_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 # |     - "Galaxy Weak Lensing power spectrum"
 # |   fig-cap-location: top
 # |   layout-ncol: 2
-# |   code-fold: true
+# | code-fold: true
 
 for comparison in gwl_auto_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -328,7 +328,7 @@ The following table summarizes the results for all sets.
 # | html:
 # |   tbl-cap: Power Spectrum
 # |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# |   code-fold: true
+# | code-fold: true
 
 table = []
 
@@ -371,7 +371,7 @@ gnc_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 # |     - "Galaxy Number Count power spectrum"
 # |   fig-cap-location: top
 # |   layout-ncol: 2
-# |   code-fold: true
+# | code-fold: true
 
 for comparison in gnc_auto_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -390,7 +390,7 @@ The following table summarizes the results for all sets.
 # | html:
 # |   tbl-cap: Power Spectrum
 # |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# |   code-fold: true
+# | code-fold: true
 
 table = []
 

@@ -23,6 +23,7 @@ project:
     - examples/intro/power_spectrum.qmd
     - examples/intro/recombination.qmd
     - examples/intro/simple.qmd
+    - examples/intro/wspline.qmd
   post-render:
     - ./ipynb_to_py.sh
 
@@ -102,6 +103,8 @@ website:
                 text: "Primordial Tensor Contribution"
               - href: examples/intro/power_spectrum.qmd
                 text: "Matter Power Spectrum"
+              - href: examples/intro/wspline.qmd
+                text: "Dark Energy WSpline"
             - section: "Data Analysis"
               contents:
               - href: examples/data_analysis/snia.qmd

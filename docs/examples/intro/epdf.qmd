@@ -137,7 +137,7 @@ distribution.
 # |   fig-cap: The reconstructed probability density function (PDF) compared with the true distribution.
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 # Compute the PDF for plotting
 x_a = np.linspace(epdf.get_xi(), epdf.get_xf(), 1000)
@@ -163,7 +163,7 @@ plt.show()
 # |   fig-cap: The relative difference between the reconstructed PDF and the true distribution.
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 # Compute the relative difference
 rel_diff_auto = np.abs((p_a - pdf_true) / pdf_true)
@@ -189,7 +189,7 @@ plt.show()
 # |   fig-cap: The reconstructed cumulative distribution function (CDF) compared with the true distribution.
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 # Compute the CDF for plotting
 pdf_a = [epdf.eval_pdf(x) for x in x_a]
@@ -214,7 +214,7 @@ plt.show()
 # |   fig-cap: The relative difference between the reconstructed CDF and the true distribution.
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 # Compute the relative difference
 rel_diff_auto_cdf = np.abs(pdf_a / cdf_true - 1.0)
@@ -239,7 +239,7 @@ plt.show()
 # |   fig-cap: The reconstructed inverse cumulative distribution function (Inverse CDF).
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 # Compute the inverse CDF for plotting
 u_a = np.linspace(0, 1, 1000)

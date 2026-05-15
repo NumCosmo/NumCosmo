@@ -77,7 +77,7 @@ The table below summarizes the parameters. There are five parameters sets.
 # | html:
 # |   tbl-cap: Used cosmological parameters in CCL and NumCosmo
 # |   tbl-colwidths: [10, 30, 60]
-# |   code-fold: true
+# | code-fold: true
 
 # Create DataFrame
 df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
@@ -118,7 +118,7 @@ parameter_comparisons: list[list[nc_cmp.CompareFunc1d]] = [
 # |     - "Massive neutrino density parameter"
 # |   fig-cap-location: top
 # |   layout-ncol: 2
-# |   code-fold: true
+# | code-fold: true
 
 for parameter_comparison in parameter_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -138,7 +138,7 @@ The following table summarizes the results for all sets.
 # | html:
 # |   tbl-cap: Cosmological parameters computed using CCL and NumCosmo
 # |   tbl-colwidths: [15, 5, 20, 20, 20, 20]
-# |   code-fold: true
+# | code-fold: true
 
 table = []
 
@@ -193,7 +193,7 @@ We plot the distance comparisons for all parameter sets.
 # |     - "Comoving volume element"
 # |   fig-cap-location: top
 # |   layout-ncol: 2
-# |   code-fold: true
+# | code-fold: true
 
 for distance_comparison in distance_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -214,7 +214,7 @@ Again a table summarizes the results for all parameter sets.
 # | html:
 # |   tbl-cap: Cosmological distances computed using CCL and NumCosmo
 # |   tbl-colwidths: [15, 20, 5, 15, 15, 15, 15]
-# |   code-fold: true
+# | code-fold: true
 
 table = []
 
@@ -238,7 +238,7 @@ Below we show the comparison using the first set of parameters.
 # | html:
 # |   tbl-cap: Time to compute the cosmological distances
 # |   tbl-colwidths: [20, 20, 20, 20]
-# |   code-fold: true
+# | code-fold: true
 def compute_distance_times(
     ccl_cosmo: pyccl.Cosmology, cosmology: ncc.Cosmology, z: np.ndarray
 ):
@@ -316,7 +316,7 @@ Below we plot the growth comparisons for all parameter sets.
 # |     - "Growth Factor"
 # |     - "Growth Rate"
 # |   layout-ncol: 2
-# |   code-fold: true
+# | code-fold: true
 
 for growth_comparison in growth_comparisons:
     fig, axs = plt.subplots(2, sharex=True)
@@ -337,7 +337,7 @@ The following table summarizes the results for all sets.
 # | html:
 # |   tbl-cap: Growth Factor and Growth Rate
 # |   tbl-colwidths: [20, 20, 20, 20]
-# |   code-fold: true
+# | code-fold: true
 
 table = []
 
@@ -371,7 +371,7 @@ Below we compare the scale factors for all parameter sets.
 # | html:
 # |   fig-cap-location: top
 # |   fig-cap: Scale Factor
-# |   code-fold: true
+# | code-fold: true
 
 fig, axs = plt.subplots(2, sharex=True)
 fig.subplots_adjust(hspace=0)
@@ -390,7 +390,7 @@ The following table summarizes the results for all sets.
 # | html:
 # |   tbl-cap: Scale Factor
 # |   tbl-colwidths: [20, 20, 20, 20]
-# |   code-fold: true
+# | code-fold: true
 
 table = []
 
@@ -425,7 +425,7 @@ Below we compare the critical surface mass density for all parameter sets.
 # | html:
 # |   fig-cap-location: top
 # |   fig-cap: Critical Surface Mass Density
-# |   code-fold: true
+# | code-fold: true
 
 fig, axs = plt.subplots(2, sharex=True)
 fig.subplots_adjust(hspace=0)
@@ -444,7 +444,7 @@ The following table summarizes the results for all sets.
 # | html:
 # |   tbl-cap: Critical Surface Mass Density
 # |   tbl-colwidths: [20, 20, 20, 20]
-# |   code-fold: true
+# | code-fold: true
 
 table = []
 

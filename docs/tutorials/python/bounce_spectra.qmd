@@ -250,7 +250,7 @@ We then plot the gravitational weights:
 # | html:
 # |   fig-cap: "Gravitational weights $\\gamma_\\mathrm{r}$, $\\gamma_w$, and $F_\\nu$. Shaded areas show matter/radiation dominance; vertical lines mark $x_{\\rm eq}$ and $x=1$."
 # |   fig-cap-location: bottom
-# |   code-fold: true
+# | code-fold: true
 
 results = [Nc.HIPertITwoFluids.eom_eval(cosmo_rw, alpha, k) for alpha in alpha_mode_a]
 gamma_r = np.array([res.gw1 for res in results])
@@ -296,7 +296,7 @@ The simple $c_i F_\nu$ test is only an estimate of the truncation error. In the 
 # | html:
 # |   fig-cap: "Adiabatic truncation estimates for each mode (compare with $c_iF_\\nu$). Shaded regions: matter/radiation dominance; vertical lines mark $x_{\\rm eq}$ and $x=1$."
 # |   fig-cap-location: bottom
-# |   code-fold: true
+# | code-fold: true
 
 results = [Nc.HIPertITwoFluids.wkb_eval(cosmo_rw, alpha, k) for alpha in alpha_mode_a]
 
