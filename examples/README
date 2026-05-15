@@ -32,7 +32,7 @@ for the missing header and add the corresponding pkg-config lib or -I
 * Running the python examples
 ***************************************************************************
 
-All examples assumes that you are using python >= 3.8 
+All examples assumes that you are using python >= 3.11
 To test the example ust run the script:
 
 `python ./example_simple.py`
