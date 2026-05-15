@@ -76,7 +76,7 @@ The table below summarizes the parameters. There are five parameters sets.
 # | html:
 # |   tbl-cap: Used cosmological parameters in CCL and NumCosmo
 # |   tbl-colwidths: [10, 30, 60]
-# |   code-fold: true
+# | code-fold: true
 
 # Create DataFrame
 df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
@@ -126,7 +126,7 @@ ps_comparisons: list[list[list[nc_cmp.CompareFunc1d]]] = [
 # |     - "Nonlinear power spectrum, $z = 2.0$"
 # |   fig-cap-location: top
 # |   layout-ncol: 2
-# |   code-fold: true
+# | code-fold: true
 
 for ps_comparison_z in ps_comparisons:
     for ps_comparison in ps_comparison_z:
@@ -145,7 +145,7 @@ The following table summarizes the results for all sets.
 # | html:
 # |   tbl-cap: Power Spectrum
 # |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
-# |   code-fold: true
+# | code-fold: true
 
 table = []
 

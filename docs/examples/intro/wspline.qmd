@@ -146,7 +146,7 @@ comparison.head(8)
 # |   fig-cap: "Dark-energy equation of state. The markers indicate WSpline knot values."
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 fig, ax = plt.subplots(figsize=(9, 5))
 
@@ -172,7 +172,7 @@ plt.show()
 # |     - "$E^2(z)\\,\\Omega_{de}(z)$ and relative difference to XCDM"
 # |   fig-cap-location: top
 # |   layout-ncol: 2
-# |   code-fold: true
+# | code-fold: true
 
 fig1, axs1 = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
 fig1.subplots_adjust(hspace=0)
@@ -217,7 +217,7 @@ plt.show()
 # |     - "Relative change in comoving distance"
 # |   fig-cap-location: top
 # |   layout-ncol: 2
-# |   code-fold: true
+# | code-fold: true
 
 fig1, axs1 = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
 fig1.subplots_adjust(hspace=0)
