@@ -230,6 +230,7 @@ NcmCSQ1DState *ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, con
 NcmCSQ1DState *ncm_csq1d_compute_H (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state);
 NcmCSQ1DState *ncm_csq1d_eval_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state);
 NcmCSQ1DState *ncm_csq1d_eval_at_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DFrame frame, const gdouble t, NcmCSQ1DState *state);
+gdouble ncm_csq1d_eval_delta_theta_at (NcmCSQ1D *csq1d, const gdouble t);
 
 NcmCSQ1DState *ncm_csq1d_change_frame (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state, NcmCSQ1DFrame frame);
 
