@@ -825,6 +825,136 @@ nc_wl_surface_mass_density_reduced_shear_optzs (NcWLSurfaceMassDensity *smd, NcH
 }
 
 /**
+ * nc_wl_surface_mass_density_reduced_shear_crit_cache_prep: (skip)
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @R: projected radius with respect to the center of the lens / halo
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ * @zs: source redshift $z_\mathrm{source}$
+ * @crit_cache: (out): a #NcWLSurfaceMassDensityCritCache
+ *
+ * Computes and stores the critical surface density.
+ *
+ */
+void
+nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, const gdouble zs, NcWLSurfaceMassDensityCritCache *crit_cache)
+{
+  if (zs < zl)
+  {
+    crit_cache->is_source  = FALSE;
+    crit_cache->sigma_crit = GSL_NAN;
+  }
+  else
+  {
+    const gdouble a             = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
+    const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+    const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+    const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+    const gdouble dl            = nc_distance_comoving (smd->dist, cosmo, zl);
+    const gdouble x_i           = 1.0 + zs;
+    const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
+    gdouble Dl, Dls, Ds;
+
+    switch (k)
+    {
+      case -1:
+      {
+        Dl  = sinh (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+        Ds  = sinh (sqrt_Omega_k0 * ds) / (x_i * sqrt_Omega_k0);
+        Dls = sinh (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
+      }
+      break;
+      case 0:
+      {
+        Dl  = dl / (1.0 + zl);
+        Ds  = ds / x_i;
+        Dls = (ds - dl) / x_i;
+      }
+      break;
+      case 1:
+      {
+        Dl  = sin (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+        Ds  = sin (sqrt_Omega_k0 * ds) / (x_i * sqrt_Omega_k0);
+        Dls = sin (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
+      }
+      break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+
+    crit_cache->is_source  = TRUE;
+    crit_cache->sigma_crit = a * Ds / (Dl * Dls);
+  }
+}
+
+/**
+ * nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep: (skip)
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @R: projected radius with respect to the center of the lens / halo
+ * @zl: lens redshift $z_\mathrm{lens}$
+ * @zc: cluster redshift $z_\mathrm{cluster}$
+ * @sigma_cache: (out): a #NcWLSurfaceMassDensitySigmaCache
+ *
+ * Computes and stores the surface mass density $\Sigma(R)$ and the mean surface mass
+ * density $\overline{\Sigma}(<R)$, see Eqs. $\eqref{eq:sigma}$ and
+ * $\eqref{eq:sigma_mean}$.
+ *
+ */
+void
+nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensitySigmaCache *sigma_cache)
+{
+  gdouble r_s, rho_s;
+
+  nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
+
+  const gdouble X          = R / r_s;
+  const gdouble mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+  const gdouble sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
+
+  sigma_cache->sigma      = sigma;
+  sigma_cache->mean_sigma = mean_sigma;
+}
+
+/**
+ * nc_wl_surface_mass_density_reduced_shear_cache:
+ * @smd: a #NcWLSurfaceMassDensity
+ * @dp: a #NcHaloDensityProfile
+ * @cosmo: a #NcHICosmo
+ * @crit_cache: a #NcWLSurfaceMassDensityCritCache
+ * @sigma_cache: a #NcWLSurfaceMassDensitySigmaCache
+ *
+ * Computes the reduced shear:
+ * $$ g(R) = \frac{\gamma(R)}{1 - \kappa(R)},$$
+ * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$
+ * is the convergence [nc_wl_surface_mass_density_convergence()], using the
+ * pre-computed critical surface density and surface mass density.
+ *
+ * Returns: $g(R)$
+ *
+ */
+gdouble
+nc_wl_surface_mass_density_reduced_shear_cache (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, NcWLSurfaceMassDensityCritCache *crit_cache, NcWLSurfaceMassDensitySigmaCache *sigma_cache)
+{
+  if (!crit_cache->is_source)
+  {
+    return 0.0;
+  }
+  else
+  {
+    const gdouble mu            = sigma_cache->sigma / crit_cache->sigma_crit;
+    const gdouble shear         = (sigma_cache->mean_sigma - sigma_cache->sigma) / crit_cache->sigma_crit;
+    const gdouble reduced_shear = shear / (1.0 - mu);
+
+    return reduced_shear;
+  }
+}
+
+/**
  * nc_wl_surface_mass_density_reduced_shear_infinity:
  * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
