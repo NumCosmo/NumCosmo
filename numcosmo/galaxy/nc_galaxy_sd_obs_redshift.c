@@ -158,6 +158,16 @@ _nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, Nc
   return NULL;
 }
 
+static NcmIntegralFixed *
+_nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
+                                                NcGalaxySDObsRedshiftData *data,
+                                                guint n_nodes, guint rule_n)
+{
+  g_error ("_nc_galaxy_sd_obs_redshift_prepare_fixed_nodes: method not implemented");
+
+  return NULL;
+}
+
 /*  LCOV_EXCL_STOP */
 
 static void
@@ -175,13 +185,14 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   ncm_mset_model_register_id (model_class, "NcGalaxySDObsRedshift", "Galaxy sample observed redshift distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
-  klass->gen                 = &_nc_galaxy_sd_obs_redshift_gen;
-  klass->gen1                = &_nc_galaxy_sd_obs_redshift_gen1;
-  klass->prepare             = &_nc_galaxy_sd_obs_redshift_prepare;
-  klass->get_integ_lim       = &_nc_galaxy_sd_obs_redshift_get_integ_lim;
-  klass->integ               = &_nc_galaxy_sd_obs_redshift_integ;
-  klass->data_init           = &_nc_galaxy_sd_obs_redshift_data_init;
-  klass->compute_binned_dndz = &_nc_galaxy_sd_obs_redshift_compute_binned_dndz;
+  klass->gen                   = &_nc_galaxy_sd_obs_redshift_gen;
+  klass->gen1                  = &_nc_galaxy_sd_obs_redshift_gen1;
+  klass->prepare               = &_nc_galaxy_sd_obs_redshift_prepare;
+  klass->get_integ_lim         = &_nc_galaxy_sd_obs_redshift_get_integ_lim;
+  klass->integ                 = &_nc_galaxy_sd_obs_redshift_integ;
+  klass->data_init             = &_nc_galaxy_sd_obs_redshift_data_init;
+  klass->compute_binned_dndz   = &_nc_galaxy_sd_obs_redshift_compute_binned_dndz;
+  klass->prepare_fixed_nodes   = &_nc_galaxy_sd_obs_redshift_prepare_fixed_nodes;
 }
 
 /**
@@ -460,6 +471,28 @@ NcmSpline *
 nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array)
 {
   return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->compute_binned_dndz (gsdor, z_array);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_prepare_fixed_nodes: (skip)
+ * @gsdor: a #NcGalaxySDObsRedshift
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @n_nodes: number of Gauss-Legendre intervals
+ * @rule_n: number of GL points per interval
+ *
+ * Allocates and populates a #NcmIntegralFixed for galaxy @data so that the
+ * precomputed node weights absorb the per-galaxy P(z) factor. The returned
+ * object is owned by the caller.
+ *
+ * Returns: (transfer full): a new #NcmIntegralFixed with P(z)-weighted nodes.
+ */
+NcmIntegralFixed *
+nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
+                                               NcGalaxySDObsRedshiftData *data,
+                                               guint n_nodes, guint rule_n)
+{
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->prepare_fixed_nodes (gsdor, mset, data, n_nodes, rule_n);
 }
 
 /**

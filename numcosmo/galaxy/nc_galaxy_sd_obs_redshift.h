@@ -37,6 +37,7 @@
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_integrate.h>
 #include <numcosmo/galaxy/nc_galaxy_wl_obs.h>
 #include <numcosmo/nc_hicosmo.h>
 
@@ -69,9 +70,12 @@ struct _NcGalaxySDObsRedshiftClass
   void (*get_integ_lim) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
   void (*data_init) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
   NcmSpline *(*compute_binned_dndz) (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array);
+  NcmIntegralFixed *(*prepare_fixed_nodes) (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
+                                            NcGalaxySDObsRedshiftData *data,
+                                            guint n_nodes, guint rule_n);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[11];
+  gpointer padding[10];
 };
 
 struct _NcGalaxySDObsRedshiftData
@@ -108,6 +112,7 @@ NcGalaxySDObsRedshiftIntegrand *nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRe
 NcGalaxySDObsRedshiftData *nc_galaxy_sd_obs_redshift_data_new (NcGalaxySDObsRedshift *gsdor);
 
 NcmSpline *nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array);
+NcmIntegralFixed *nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, guint n_nodes, guint rule_n);
 
 #define NC_GALAXY_SD_OBS_REDSHIFT_COL_Z "z"
 

@@ -218,6 +218,7 @@ static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_gauss_integ (N
 static void _nc_galaxy_sd_obs_redshift_gauss_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static NcmSpline *_nc_galaxy_sd_obs_redshift_gauss_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array);
 static void _nc_galaxy_sd_obs_redshift_gauss_add_submodel (NcmModel *model, NcmModel *submodel);
+static NcmIntegralFixed *_nc_galaxy_sd_obs_redshift_gauss_prepare_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, guint n_nodes, guint rule_n);
 
 static void
 nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *klass)
@@ -328,6 +329,7 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
   gsdor_class->integ               = &_nc_galaxy_sd_obs_redshift_gauss_integ;
   gsdor_class->data_init           = &_nc_galaxy_sd_obs_redshift_gauss_data_init;
   gsdor_class->compute_binned_dndz = &_nc_galaxy_sd_obs_redshift_gauss_compute_binned_dndz;
+  gsdor_class->prepare_fixed_nodes = &_nc_galaxy_sd_obs_redshift_gauss_prepare_fixed_nodes;
   model_class->add_submodel        = &_nc_galaxy_sd_obs_redshift_gauss_add_submodel;
 }
 
@@ -535,6 +537,48 @@ _nc_galaxy_sd_obs_redshift_gauss_data_init (NcGalaxySDObsRedshift *gsdor, NcGala
   data->ldata_read_row         = &_nc_galaxy_sd_obs_redshift_gauss_ldata_read_row;
   data->ldata_write_row        = &_nc_galaxy_sd_obs_redshift_gauss_ldata_write_row;
   data->ldata_required_columns = &_nc_galaxy_sd_obs_redshift_gauss_ldata_required_columns;
+}
+
+typedef struct _GaussFixedNodesGSLArg
+{
+  struct _IntegData int_data;
+  NcGalaxySDObsRedshiftData *data;
+} GaussFixedNodesGSLArg;
+
+static gdouble
+_gauss_fixed_nodes_gsl_f (gdouble z, gpointer user_data)
+{
+  GaussFixedNodesGSLArg *arg = (GaussFixedNodesGSLArg *) user_data;
+
+  return _nc_galaxy_sd_obs_redshift_gauss_integ_f (&arg->int_data, z, arg->data);
+}
+
+static NcmIntegralFixed *
+_nc_galaxy_sd_obs_redshift_gauss_prepare_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
+                                                      NcGalaxySDObsRedshiftData *data,
+                                                      guint n_nodes, guint rule_n)
+{
+  NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
+  gdouble z_min, z_max;
+  NcmIntegralFixed *intf;
+  GaussFixedNodesGSLArg arg;
+  gsl_function F;
+
+  g_assert_nonnull (self->sdz);
+  nc_galaxy_sd_true_redshift_get_lim (self->sdz, &z_min, &z_max);
+
+  intf = ncm_integral_fixed_new (n_nodes, rule_n, z_min, z_max);
+
+  arg.int_data.gsdorgauss = gsdorgauss;
+  arg.data                = data;
+
+  F.function = &_gauss_fixed_nodes_gsl_f;
+  F.params   = &arg;
+
+  ncm_integral_fixed_calc_nodes (intf, &F);
+
+  return intf;
 }
 
 typedef struct _BinnedDndzIntegData
