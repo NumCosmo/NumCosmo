@@ -198,7 +198,7 @@ We plot the power spectra for TT, TE, EE, and BB modes to compare the tensor and
 # |   fig-cap: The power spectrum for TT modes with and without the tensor contribution.
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 plt.figure(figsize=(10, 6))
 plt.title(r"With and without tensor contribution to $C_\ell^\mathrm{TT}$")
@@ -216,7 +216,7 @@ plt.show()
 # |   fig-cap: The power spectrum for TE modes with and without the tensor contribution.
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 plt.figure(figsize=(10, 6))
 plt.title(r"With and without tensor contribution to $C_\ell^\mathrm{TE}$")
@@ -234,7 +234,7 @@ plt.show()
 # |   fig-cap: The power spectrum for EE modes with and without the tensor contribution.
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 plt.figure(figsize=(10, 6))
 plt.title(r"With and without tensor contribution to $C_\ell^\mathrm{EE}$")
@@ -252,7 +252,7 @@ plt.show()
 # |   fig-cap: The power spectrum for BB modes with and without the tensor contribution.
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 plt.figure(figsize=(10, 6))
 plt.title(r"With and without tensor contribution to $C_\ell^\mathrm{BB}$")

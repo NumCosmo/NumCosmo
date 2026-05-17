@@ -187,7 +187,7 @@ plt.show()
 # |   fig-cap: The relative difference between the EH and CLASS power spectrum
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 
 plt.figure(figsize=(10, 6))
@@ -214,7 +214,7 @@ plt.show()
 # |   fig-cap: The nonlinear power spectrum for different redshifts
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 # Set up HALOFIT for nonlinear corrections
 zmax_nl = 10.0

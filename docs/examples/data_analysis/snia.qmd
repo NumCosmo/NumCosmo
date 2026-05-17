@@ -70,7 +70,7 @@ values of the equation of state parameter $w$.
 # | html:
 # |   fig-cap: Comoving distance for XCDM cosmology up to redshift $z = 3.0$.
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 (
     ggplot(dist_pd, aes("z", "Dc", color="eos_w"))
@@ -172,7 +172,7 @@ Fisher matrix.
 # | html:
 # |   fig-cap: Best-fit parameters and confidence regions for the XCDM model.
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 
 (
     ggplot(regions_pd, aes("Omegac", "w", fill="sigma", color="sigma"))

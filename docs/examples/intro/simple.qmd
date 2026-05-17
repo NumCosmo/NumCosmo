@@ -156,7 +156,7 @@ You can plot the results using a plotting library such as `matplotlib`.
 # |   fig-cap: Comoving distance vs. redshift.
 # |   fig-width: 100%
 # |   fig-cap-location: margin
-# |   code-fold: true
+# | code-fold: true
 plt.plot(z_array, dc_array)
 plt.xlabel("Redshift")
 plt.ylabel("Comoving Distance [Mpc]")
