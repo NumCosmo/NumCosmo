@@ -576,15 +576,30 @@ test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
   }
 
   {
-    nc_data_cluster_wl_use_lnint (test->dcwl, TRUE);
+    nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
     ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
     g_assert (gsl_finite (m2lnL_a));
 
-    nc_data_cluster_wl_use_lnint (test->dcwl, FALSE);
+    nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE);
     ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
     g_assert (gsl_finite (m2lnL_b));
 
     ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-7, 0.0);
+  }
+
+  if (!NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (test->galaxy_redshift))
+  {
+    g_object_set (test->dcwl, "n-nodes", 10u, "rule-n", 5u, NULL);
+
+    nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+    g_assert (gsl_finite (m2lnL_a));
+
+    nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE);
+    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+    g_assert (gsl_finite (m2lnL_b));
+
+    ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-5, 0.0);
   }
 }
 
@@ -1281,7 +1296,7 @@ test_nc_data_cluster_wl_monte_carlo_lnint (TestNcDataClusterWL *test, gconstpoin
   guint nruns         = 1;
   guint i, j;
 
-  nc_data_cluster_wl_use_lnint (test->dcwl, TRUE);
+  nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
   nc_data_cluster_wl_set_resample_flag (test->dcwl, NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL);
   g_object_set (test->dcwl, "enable-parallel", TRUE, NULL);
 
