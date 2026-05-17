@@ -5,6 +5,7 @@ src_site_examples_intro_files = files(
     'power_spectrum.qmd',
     'recombination.qmd',
     'simple.qmd',
+    'wspline.qmd',
 )
 
 if get_option('documentation')

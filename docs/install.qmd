@@ -60,7 +60,7 @@ Note: The pip packages provide type stubs for better mypy type checking support 
 
 To test the installation, run the unit tests:
 ```bash
-meson test -C build
+meson test -v -C build
 ```
 
 If you prefer using the library without installation, export specific environment variables. A script is generated in the build directory for easy execution (and optional addition to shell initialization):
@@ -166,7 +166,7 @@ pip install pygobject-stubs pytest-tap types-tabulate
 To build from the git repository, follow the steps below. 
 These instructions are for developers; if you just want to use NumCosmo, you should install it using conda.
 
-NumCosmo uses the [meson](https://mesonbuild.com/) build system, which requires Python 3. 
+NumCosmo uses the [meson](https://mesonbuild.com/) build system and requires Python >= 3.11. 
 Meson is available on most distributions, but if you don't have it, you can follow the [instructions](https://mesonbuild.com/SimpleStart.html).
 
   - Configure the project, here we use the default options:
@@ -181,7 +181,7 @@ meson compile -C build
 ```
   - Optionally run the library unit testing
 ```bash
-meson test -C build
+meson test -v -C build
 ```
   - Install the library (optional). 
   Note that most developers **don't** want to install the library since they prefer to update/modify the library without installing it.

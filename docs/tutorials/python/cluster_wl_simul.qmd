@@ -288,7 +288,7 @@ By plotting these ellipses, we can visually assess the impact of the weak lensin
 # |   fig-cap: Galaxy distribution around the cluster. The blue ellipses represent the observed galaxy shapes, while the red ellipses indicate the intrinsic galaxy shapes. The black dot marks the true cluster position.
 # |   fig-cap-location: margin
 # |   fig-width: 100%
-# |   code-fold: true
+# | code-fold: true
 
 fig, ax = plt.subplots(figsize=(6, 6))
 
@@ -405,7 +405,7 @@ We plot the galaxy distribution for nine different halo positions. The central p
 # |   fig-cap: Galaxy distribution around the cluster for different halo positions. The blue ellipses represent the observed galaxy shapes, while the black dot indicates the true halo position.
 # |   fig-cap-location: margin
 # |   fig-width: 100%
-# |   code-fold: true
+# | code-fold: true
 
 ra_shifts = [-0.05, 0.0, 0.05]
 dec_shifts = [0.05, 0.0, -0.05]
@@ -466,7 +466,7 @@ The panels display the galaxy distribution with cluster masses varying from $10^
 # |   fig-cap: Galaxy distribution around the cluster for different halo masses. The blue ellipses represent the observed galaxy shapes. The black dot indicates the true halo position, with the size of the dot proportional to the halo mass.
 # |   fig-cap-location: margin
 # |   fig-width: 100%
-# |   code-fold: true
+# | code-fold: true
 
 mass_shifts = np.geomspace(10.0 ** (-1.0), 1.0, 9)
 fig, axes = plt.subplots(
