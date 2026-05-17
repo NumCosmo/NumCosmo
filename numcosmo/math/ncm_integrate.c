@@ -1056,3 +1056,90 @@ ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, g
   return res * delta_x * 0.5;
 }
 
+/**
+ * ncm_integral_fixed_integ_vec_mult:
+ * @intf: a pointer to #NcmIntegralFixed whose nodes have been populated by
+ *   #ncm_integral_fixed_calc_nodes.
+ * @f_at_nodes: a #NcmVector of length `(n_nodes - 1) * rule_n` holding the
+ *   integrand values evaluated at the abscissae returned by
+ *   #ncm_integral_fixed_get_nodes.
+ *
+ * Computes the integral $\int F(x) G(x) \mathrm{d}x$ as the dot product of the
+ * stored quadrature-weighted nodes (which already contain $w_k F(x_k)$) with
+ * @f_at_nodes (the externally evaluated $G(x_k)$), scaled by `delta_x / 2`.
+ *
+ * Returns: the value of the integral.
+ */
+gdouble
+ncm_integral_fixed_integ_vec_mult (NcmIntegralFixed *intf, const NcmVector *f_at_nodes)
+{
+  const gulong total_n  = (intf->n_nodes - 1) * intf->rule_n;
+  const gdouble delta_x = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
+  gdouble res           = 0.0;
+  gulong i;
+
+  g_assert_nonnull (f_at_nodes);
+  g_assert_cmpuint (ncm_vector_len (f_at_nodes), ==, total_n);
+
+  for (i = 0; i < total_n; i++)
+    res += intf->int_nodes[i] * ncm_vector_get (f_at_nodes, i);
+
+  return res * delta_x * 0.5;
+}
+
+/**
+ * ncm_integral_fixed_get_nodes:
+ * @intf: a pointer to #NcmIntegralFixed.
+ * @nodes (out): a #NcmVector of length `(n_nodes - 1) * rule_n` to receive the node abscissae.
+ *
+ * Fills @nodes with the canonical node abscissae used by
+ * #ncm_integral_fixed_calc_nodes, in the same iteration order.
+ */
+void
+ncm_integral_fixed_get_nodes (NcmIntegralFixed *intf, NcmVector *nodes)
+{
+  const gulong r2         = intf->rule_n / 2;
+  const gboolean odd_rule = intf->rule_n & 1;
+  const gdouble delta_x   = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
+  const gulong total_n    = (intf->n_nodes - 1) * intf->rule_n;
+  gulong i, j, k = 0;
+
+  g_assert_nonnull (nodes);
+  g_assert_cmpuint (ncm_vector_len (nodes), ==, total_n);
+
+  if (odd_rule)
+  {
+    for (i = 0; i < intf->n_nodes - 1; i++)
+    {
+      const gdouble x0      = intf->xl + delta_x * i;
+      const gdouble x1      = x0 + delta_x;
+      const gdouble x1px0_2 = (x1 + x0) / 2.0;
+      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
+
+      for (j = 1; j < r2 + 1; j++)
+        ncm_vector_set (nodes, k++, x1px0_2 - x1mx0_2 * intf->glt->x[j]);
+
+      ncm_vector_set (nodes, k++, x1px0_2);
+
+      for (j = 1; j < r2 + 1; j++)
+        ncm_vector_set (nodes, k++, x1px0_2 + x1mx0_2 * intf->glt->x[j]);
+    }
+  }
+  else
+  {
+    for (i = 0; i < intf->n_nodes - 1; i++)
+    {
+      const gdouble x0      = intf->xl + delta_x * i;
+      const gdouble x1      = x0 + delta_x;
+      const gdouble x1px0_2 = (x1 + x0) / 2.0;
+      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
+
+      for (j = 0; j < r2; j++)
+        ncm_vector_set (nodes, k++, x1px0_2 - x1mx0_2 * intf->glt->x[j]);
+
+      for (j = 0; j < r2; j++)
+        ncm_vector_set (nodes, k++, x1px0_2 + x1mx0_2 * intf->glt->x[j]);
+    }
+  }
+}
+
