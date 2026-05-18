@@ -320,7 +320,7 @@ NcMultiplicityFuncBhattacharya *
 nc_multiplicity_func_bhattacharya_new (void)
 {
   return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA,
-                       "mass-def", NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN,
+                       "mass-def", NC_MULTIPLICITY_FUNC_MASS_DEF_FOF,
                        NULL);
 }
 
