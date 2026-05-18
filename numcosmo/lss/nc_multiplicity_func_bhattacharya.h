@@ -1,0 +1,87 @@
+/***************************************************************************
+ *            nc_multiplicity_func_bhattacharya.h
+ *
+ *  Mon Jun 28 15:09:13 2010
+ *  Copyright  2026  Cinthia Nunes de Lima / Henrique C. N. Lettieri
+ *  <cinthia.nlima@gmail.com> <henrique.cnl@hotmail.com>
+ ****************************************************************************/
+/*
+ * numcosmo
+ * Copyright (C) 2026  Cinthia Nunes de Lima / Henrique C. N. Lettieri
+ * <cinthia.nlima@gmail.com> <henrique.cnl@hotmail.com>
+ *
+ * numcosmo is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * numcosmo is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef _NC_MULTIPLICITY_FUNC_BHATTACHARYA_H_
+#define _NC_MULTIPLICITY_FUNC_BHATTACHARYA_H_
+
+#include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/build_cfg.h>
+#include <numcosmo/lss/nc_multiplicity_func.h>
+
+G_BEGIN_DECLS
+
+#define NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA             (nc_multiplicity_func_bhattacharya_get_type ())
+#define NC_MULTIPLICITY_FUNC_BHATTACHARYA(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA, NcMultiplicityFuncBhattacharya))
+#define NC_MULTIPLICITY_FUNC_BHATTACHARYA_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA, NcMultiplicityFuncBhattacharyaClass))
+#define NC_IS_MULTIPLICITY_FUNC_BHATTACHARYA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA))
+#define NC_IS_MULTIPLICITY_FUNC_BHATTACHARYA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA))
+#define NC_MULTIPLICITY_FUNC_BHATTACHARYA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA, NcMultiplicityFuncBhattacharyaClass))
+
+typedef struct _NcMultiplicityFuncBhattacharyaClass NcMultiplicityFuncBhattacharyaClass;
+typedef struct _NcMultiplicityFuncBhattacharya NcMultiplicityFuncBhattacharya;
+typedef struct _NcMultiplicityFuncBhattacharyaPrivate NcMultiplicityFuncBhattacharyaPrivate;
+
+struct _NcMultiplicityFuncBhattacharyaClass
+{
+  /*< private >*/
+  NcMultiplicityFuncClass parent_class;
+};
+
+struct _NcMultiplicityFuncBhattacharya
+{
+  /*< private >*/
+  NcMultiplicityFunc parent_instance;
+  NcMultiplicityFuncBhattacharyaPrivate *priv;
+};
+
+GType nc_multiplicity_func_bhattacharya_get_type (void) G_GNUC_CONST;
+
+NcMultiplicityFuncBhattacharya *nc_multiplicity_func_bhattacharya_new (void);
+NcMultiplicityFuncBhattacharya *nc_multiplicity_func_bhattacharya_ref (NcMultiplicityFuncBhattacharya *mbt);
+
+void nc_multiplicity_func_bhattacharya_free (NcMultiplicityFuncBhattacharya *mbt);
+void nc_multiplicity_func_bhattacharya_clear (NcMultiplicityFuncBhattacharya **mbt);
+
+void nc_multiplicity_func_bhattacharya_set_A (NcMultiplicityFuncBhattacharya *mbt, gdouble A);
+gdouble nc_multiplicity_func_bhattacharya_get_A (const NcMultiplicityFuncBhattacharya *mbt);
+
+void nc_multiplicity_func_bhattacharya_set_a (NcMultiplicityFuncBhattacharya *mbt, gdouble a);
+gdouble nc_multiplicity_func_bhattacharya_get_a (const NcMultiplicityFuncBhattacharya *mbt);
+
+void nc_multiplicity_func_bhattacharya_set_p (NcMultiplicityFuncBhattacharya *mbt, gdouble p);
+gdouble nc_multiplicity_func_bhattacharya_get_p (const NcMultiplicityFuncBhattacharya *mbt);
+
+void nc_multiplicity_func_bhattacharya_set_q (NcMultiplicityFuncBhattacharya *mbt, gdouble q);
+gdouble nc_multiplicity_func_bhattacharya_get_q (const NcMultiplicityFuncBhattacharya *mbt);
+
+void nc_multiplicity_func_bhattacharya_set_delta_c (NcMultiplicityFuncBhattacharya *mbt, gdouble delta_c);
+gdouble nc_multiplicity_func_bhattacharya_get_delta_c (const NcMultiplicityFuncBhattacharya *mbt);
+
+G_END_DECLS
+
+#endif /* _NC_MULTIPLICITY_FUNC_BHATTACHARYA_H_ */
+
