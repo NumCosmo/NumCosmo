@@ -243,7 +243,7 @@ class MockGenerator:
     
 
     
-    def generate_clusters_from_halos(self, halos, D_DIM = 2.0, purity_model=None):
+    def generate_clusters_from_halos(self, halos, D_DIM = 2.0, purity_model=None, scaling_relation=None):
         """Generate clusters from a given halo catalog generated from a halo mass function (HMF).
 
         :param Table hmf_halos: Halo catalog generated from a halo mass function (HMF)."""
@@ -268,11 +268,16 @@ class MockGenerator:
         cluster_z = np.array([dist.inv_comoving(self.cosmo, r / self.cosmo.RH_Mpc()) for r in cluster_r])
         cluster_parent_id =  detected_halos['halo_id']
         cluster_logm = detected_halos['Mass_obs']
+        cluster_logm_true =  detected_halos['Mass']
         
         if purity_model == None:
             self.cluster_set_size = detected_halos_size
         else:
+            sky_area = self.sky_area()
+            sky_area_rad = sky_area * (np.pi / 180) ** 2  # Conversion to steradians
+            
             if self.cluster_m == None or type(self.cluster_m) == Nc.ClusterMassNodist:
+                self.hmf.set_area(sky_area_rad)
                 def hmf_fake(logm,z):
                     return self.hmf.d2n_dzdlnM(self.cosmo, logm , z) *(1/purity_model(logm , z)-1)
                 def hmf_fake_pdf(logm, z):
@@ -280,8 +285,7 @@ class MockGenerator:
                 
             else:
                 #cluster_logm = detected_halos_logm + np.random.normal(0, 0.1, detected_halos_size)
-                sky_area = self.sky_area()
-                sky_area_rad = sky_area * (np.pi / 180) ** 2  # Conversion to steradians
+                
                 clusterz = Nc.ClusterRedshiftNodist(z_min=self.z_min, z_max=self.z_max)
                 cad = Nc.ClusterAbundance.new(self.hmf, None)
                 cad.set_area(sky_area_rad)
@@ -325,6 +329,7 @@ class MockGenerator:
             sampled = sample_fakes_rejection(hmf_fake_pdf, fake_clusters_size)
             cluster_z_fake =  sampled[:, 1] 
             cluster_logm_fake = sampled[:, 0]
+            cluster_logm_true_fake = scaling_relation(cluster_logm_fake,cluster_z_fake)
 
             cluster_ra_fake =  np.random.uniform(self.ra_min, self.ra_max, fake_clusters_size)
             cluster_sin_dec_fake = np.random.uniform(np.sin(np.radians(self.dec_min)), np.sin(np.radians(self.dec_max)), fake_clusters_size)
@@ -341,15 +346,16 @@ class MockGenerator:
             cluster_x2 = np.append(cluster_x2, cluster_x2_fake)
             cluster_x3 = np.append(cluster_x3, cluster_x3_fake)
             cluster_parent_id = np.append(cluster_parent_id, np.zeros(fake_clusters_size))
+            cluster_logm_true = np.append(cluster_logm_true, cluster_logm_true_fake)
 
         # Create the cluster ID
-        cluster_R200c = self.get_R200c(np.exp(cluster_logm), cluster_z)
+        cluster_R200c = self.get_R200c(np.exp(cluster_logm_true), cluster_z)
         cluster_id = np.array([int(i + 100000) for i in range(self.cluster_set_size)])
 
         # Table with cluster properties
-        clusters = Table([cluster_id, cluster_ra, cluster_dec, cluster_z, cluster_logm, cluster_R200c, cluster_x1, cluster_x2, cluster_x3, cluster_r, cluster_parent_id], 
-                    names=("cluster_id", "RA", "DEC", "z", "Mass", "R200c", "x1", "x2", "x3", "cluster_r", "parent_id"), 
-                    dtype=(int, float, float, float, float, float, float, float, float, float, int))
+        clusters = Table([cluster_id, cluster_ra, cluster_dec, cluster_z, cluster_logm, cluster_logm_true, cluster_R200c, cluster_x1, cluster_x2, cluster_x3, cluster_r, cluster_parent_id], 
+                    names=("cluster_id", "RA", "DEC", "z", "Mass_obs", "Mass", "R200c", "x1", "x2", "x3", "cluster_r", "parent_id"), 
+                    dtype=(int, float, float, float, float, float, float, float, float, float, float, int))
 
         return clusters
 
