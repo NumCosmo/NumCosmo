@@ -171,7 +171,7 @@ nc_multiplicity_func_bhattacharya_class_init (NcMultiplicityFuncBhattacharyaClas
                                    g_param_spec_double ("A",
                                                         NULL,
                                                         "A",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.3222,
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.333,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -184,7 +184,7 @@ nc_multiplicity_func_bhattacharya_class_init (NcMultiplicityFuncBhattacharyaClas
                                    g_param_spec_double ("a",
                                                         NULL,
                                                         "a",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.707,
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.788,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /**
    * NcMultiplicityFuncBhattacharya:p:
@@ -196,7 +196,7 @@ nc_multiplicity_func_bhattacharya_class_init (NcMultiplicityFuncBhattacharyaClas
                                    g_param_spec_double ("p",
                                                         NULL,
                                                         "p",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.707,
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.807,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -209,7 +209,7 @@ nc_multiplicity_func_bhattacharya_class_init (NcMultiplicityFuncBhattacharyaClas
                                    g_param_spec_double ("q",
                                                         NULL,
                                                         "q",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.3,
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.795,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -240,7 +240,7 @@ _nc_multiplicity_func_bhattacharya_set_mdef (NcMultiplicityFunc *mulf, NcMultipl
   switch (mdef)
   {
     case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
-      /* nothing to do */
+      g_error ("NcMultiplicityFuncBhattacharya does not support mean mass def");
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
       g_error ("NcMultiplicityFuncBhattacharya does not support critical mass def");
@@ -249,7 +249,7 @@ _nc_multiplicity_func_bhattacharya_set_mdef (NcMultiplicityFunc *mulf, NcMultipl
       g_error ("NcMultiplicityFuncBhattacharya does not support virial mass def");
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
-      g_error ("NcMultiplicityFuncBhattacharya does not support fof mass def");
+      /* nothing to do */
       break;
     default:
       g_assert_not_reached ();
@@ -292,7 +292,7 @@ _nc_multiplicity_func_bhattacharya_eval (NcMultiplicityFunc *mulf, NcHICosmo *co
   NcMultiplicityFuncBhattacharya *mba              = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
   NcMultiplicityFuncBhattacharyaPrivate * const self = mba->priv;
 
-  const gdouble A   = self->A;
+  const gdouble A   = self->A / pow((1 + z), 0.11);
   const gdouble a   = self->a;
   const gdouble bc1 = sqrt (2.0 / M_PI);
   const gdouble p   = self->p;
