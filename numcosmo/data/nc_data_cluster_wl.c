@@ -1138,7 +1138,7 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
 
     nc_galaxy_sd_shape_prepare_data_array (galaxy_shape, mset, self->shape_data);
 
-    if (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES)
+    if ((self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) && !NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (galaxy_redshift))
     {
       guint gal_i;
       const guint n_total_nodes = (self->n_nodes - 1) * self->rule_n;
