@@ -85,6 +85,8 @@ void nc_halo_position_get_ra_dec (NcHaloPosition *hp, gdouble *ra, gdouble *dec)
 
 void nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdouble *theta, gdouble *phi);
 gdouble nc_halo_position_projected_radius (NcHaloPosition *hp, NcHICosmo *cosmo, gdouble theta);
+gdouble nc_halo_position_projected_radius_prefactor (NcHaloPosition *hp, NcHICosmo *cosmo);
+gdouble nc_halo_position_projected_radius_from_prefactor (gdouble theta, gdouble prefactor);
 gdouble nc_halo_position_projected_radius_from_ra_dec (NcHaloPosition *hp, NcHICosmo *cosmo, gdouble ra, gdouble dec);
 
 #define NC_HALO_POSITION_DEFAULT_RA (0.0)

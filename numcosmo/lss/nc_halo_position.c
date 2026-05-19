@@ -367,12 +367,46 @@ nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdou
 gdouble
 nc_halo_position_projected_radius (NcHaloPosition *hp, NcHICosmo *cosmo, gdouble theta)
 {
+  return ncm_util_projected_radius (theta, nc_halo_position_projected_radius_prefactor (hp, cosmo));
+}
+
+/**
+ * nc_halo_position_projected_radius_prefactor:
+ * @hp: A #NcHaloPosition
+ * @cosmo: A #NcHICosmo
+ *
+ * Computes the cosmology- and lens-redshift-dependent prefactor (R_H_Mpc * D_A)
+ * used by #nc_halo_position_projected_radius(). When converting many angular
+ * separations to projected radii for the same lens, compute this once and pass
+ * to #nc_halo_position_projected_radius_from_prefactor().
+ *
+ * Returns: The projected radius prefactor in Mpc.
+ */
+gdouble
+nc_halo_position_projected_radius_prefactor (NcHaloPosition *hp, NcHICosmo *cosmo)
+{
   NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
   const gdouble RH_Mpc        = nc_distance_hubble (self->dist, cosmo);
   const gdouble z_halo        = Z;
   const gdouble dA            = nc_distance_angular_diameter (self->dist, cosmo, z_halo);
 
-  return ncm_util_projected_radius (theta, dA * RH_Mpc);
+  return dA * RH_Mpc;
+}
+
+/**
+ * nc_halo_position_projected_radius_from_prefactor: (skip)
+ * @theta: The angular separation
+ * @prefactor: The prefactor returned by #nc_halo_position_projected_radius_prefactor()
+ *
+ * Cheap variant of #nc_halo_position_projected_radius() that reuses a precomputed
+ * prefactor.
+ *
+ * Returns: The projected radius in Mpc.
+ */
+gdouble
+nc_halo_position_projected_radius_from_prefactor (gdouble theta, gdouble prefactor)
+{
+  return ncm_util_projected_radius (theta, prefactor);
 }
 
 /**
