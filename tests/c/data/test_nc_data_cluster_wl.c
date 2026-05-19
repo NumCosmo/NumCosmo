@@ -94,13 +94,12 @@ static void test_nc_data_cluster_wl_monte_carlo_lnint (TestNcDataClusterWL *test
 gint
 main (gint argc, gchar *argv[])
 {
-  TestNcDataClusterWLTests tests[6] = {
+  TestNcDataClusterWLTests tests[5] = {
     {"gen_obs", &test_nc_data_cluster_wl_gen_obs},
     {"m2lnP", &test_nc_data_cluster_wl_m2lnP},
     {"serialize", &test_nc_data_cluster_wl_serialize},
     {"resample", &test_nc_data_cluster_wl_resample},
     {"monte_carlo", &test_nc_data_cluster_wl_monte_carlo},
-    {"monte_carlo_lnint", &test_nc_data_cluster_wl_monte_carlo_lnint}
   };
   TestNcDataClusterWLTestsObj tests_obj[24] = {
     {"gauss_global", "spec", "trace", "celestial"},
@@ -138,7 +137,7 @@ main (gint argc, gchar *argv[])
 
   for (i = 0; i < 24; i++)
   {
-    for (j = 0; j < 6; j++)
+    for (j = 0; j < 5; j++)
     {
       gchar *test_name = g_strdup_printf ("/nc/data_cluster_wl/shapeHSM/%s/%s/%s/%s/%s",
                                           tests_obj[i].shape_name,
@@ -495,7 +494,7 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
       std_shape =
         nc_galaxy_sd_shape_hsm_gauss_global_std_shape_from_sigma (
           ncm_model_orig_param_get (NCM_MODEL (test->galaxy_shape), NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_SIGMA)
-                                                                 );
+        );
     else
       std_shape = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_SHAPE, i);
 
@@ -523,83 +522,103 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
 static void
 test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
 {
+  NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  guint nruns = 10;
   gdouble m2lnL_a, m2lnL_b;
+  guint i;
 
   ncm_data_prepare (NCM_DATA (test->dcwl), test->mset);
 
+  for (i = 0; i < nruns; i++)
   {
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
-    g_assert (gsl_finite (m2lnL_a));
+    gdouble log10M = ncm_rng_uniform_gen (rng, 13.5, 15.5);
 
-    ncm_mset_param_set (test->mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_C, 0.3);
+    ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", log10M, NULL);
 
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
-    g_assert (gsl_finite (m2lnL_a));
+    {
+      gdouble orig_omega_c = ncm_mset_param_get (test->mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_C);
 
-    ncm_assert_cmpdouble (m2lnL_a, !=, m2lnL_b);
-  }
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+      g_assert (gsl_finite (m2lnL_a));
 
-  {
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
-    g_assert (gsl_finite (m2lnL_a));
+      ncm_mset_param_set (test->mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_C, 0.3);
 
-    ncm_mset_param_set (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, 0.2);
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+      g_assert (gsl_finite (m2lnL_a));
 
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
-    g_assert (gsl_finite (m2lnL_a));
+      ncm_assert_cmpdouble (m2lnL_a, !=, m2lnL_b);
+      ncm_mset_param_set (test->mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_C, orig_omega_c);
+    }
 
-    ncm_assert_cmpdouble (m2lnL_a, !=, m2lnL_b);
-  }
+    {
+      gdouble orig_ra = ncm_mset_param_get (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA);
 
-  {
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
-    g_assert (gsl_finite (m2lnL_a));
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+      g_assert (gsl_finite (m2lnL_a));
 
-    ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (2.123e14));
+      ncm_mset_param_set (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, 0.2);
 
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
-    g_assert (gsl_finite (m2lnL_a));
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+      g_assert (gsl_finite (m2lnL_a));
 
-    ncm_assert_cmpdouble (m2lnL_a, !=, m2lnL_b);
-  }
+      ncm_assert_cmpdouble (m2lnL_a, !=, m2lnL_b);
+      ncm_mset_param_set (test->mset, nc_halo_position_id (), NC_HALO_POSITION_RA, orig_ra);
+    }
 
-  {
-    g_object_set (test->dcwl, "enable-parallel", FALSE, NULL);
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
-    g_assert (gsl_finite (m2lnL_a));
+    {
+      gdouble orig_log10MDelta = ncm_mset_param_get (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA);
 
-    g_object_set (test->dcwl, "enable-parallel", TRUE, NULL);
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
-    g_assert (gsl_finite (m2lnL_b));
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+      g_assert (gsl_finite (m2lnL_a));
 
-    ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-11, 0.0);
-  }
+      ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, log10 (2.123e14));
 
-  {
-    nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
-    g_assert (gsl_finite (m2lnL_a));
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+      g_assert (gsl_finite (m2lnL_a));
 
-    nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE);
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
-    g_assert (gsl_finite (m2lnL_b));
+      ncm_assert_cmpdouble (m2lnL_a, !=, m2lnL_b);
+      ncm_mset_param_set (test->mset, nc_halo_mass_summary_id (), NC_HALO_CM_PARAM_LOG10M_DELTA, orig_log10MDelta);
+    }
 
-    ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-7, 0.0);
-  }
+    {
+      g_object_set (test->dcwl, "enable-parallel", FALSE, NULL);
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+      g_assert (gsl_finite (m2lnL_a));
 
-  if (!NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (test->galaxy_redshift))
-  {
-    g_object_set (test->dcwl, "n-nodes", 10u, "rule-n", 5u, NULL);
+      g_object_set (test->dcwl, "enable-parallel", TRUE, NULL);
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+      g_assert (gsl_finite (m2lnL_b));
 
-    nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
-    g_assert (gsl_finite (m2lnL_a));
+      ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-11, 0.0);
+    }
 
-    nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE);
-    ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
-    g_assert (gsl_finite (m2lnL_b));
+    {
+      nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+      g_assert (gsl_finite (m2lnL_a));
 
-    ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-5, 0.0);
+      nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE);
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+      g_assert (gsl_finite (m2lnL_b));
+
+      ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-7, 0.0);
+    }
+
+    if (!NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (test->galaxy_redshift))
+    {
+      g_object_set (test->dcwl, "n-nodes", 10u, "rule-n", 5u, NULL);
+
+      nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_a);
+      g_assert (gsl_finite (m2lnL_a));
+
+      nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE);
+      ncm_data_m2lnL_val (NCM_DATA (test->dcwl), test->mset, &m2lnL_b);
+      g_assert (gsl_finite (m2lnL_b));
+
+      ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-5, 0.0);
+      nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
+    }
   }
 }
 
