@@ -182,16 +182,16 @@ main (gint argc, gchar *argv[])
 
     gchar *test_path_convert_gauss = g_strdup_printf (
       "/nc/galaxy_sd_shape/shapeHSM/gauss/global/%s/convert_coordinate_system", ell_conv_name
-                                                     );
+    );
     gchar *test_path_convert_gauss_hsc = g_strdup_printf (
       "/nc/galaxy_sd_shape/shapeHSM/gauss/%s/convert_coordinate_system", ell_conv_name
-                                                         );
+    );
     gchar *test_path_convert_gauss_noise = g_strdup_printf (
       "/nc/galaxy_sd_shape/shapeHSM/gauss/global/%s/convert_coordinate_system_noise", ell_conv_name
-                                                           );
+    );
     gchar *test_path_convert_gauss_hsc_noise = g_strdup_printf (
       "/nc/galaxy_sd_shape/shapeHSM/gauss/%s/convert_coordinate_system_noise", ell_conv_name
-                                                               );
+    );
 
     g_test_add (test_path_convert_gauss, TestNcGalaxySDShape, (gpointer) ell_def,
                 &test_nc_galaxy_sd_shape_hsm_gauss_global_new,
@@ -473,9 +473,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_convert_coord (TestNcGalaxySDShape *tes
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
 
             if (fabs (gt) > 1.0)
-              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
+              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));  /* LCOV_EXCL_LINE */
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
 
             break;
 
@@ -545,9 +545,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_convert_coord (TestNcGalaxySDShape *tes
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
 
             if (fabs (gt) > 1.0)
-              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
+              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));  /* LCOV_EXCL_LINE */
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
 
             break;
 
@@ -959,9 +959,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_gen (TestNcGalaxySDShape *test, gconstp
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
 
             if (fabs (gt) > 1.0)
-              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
+              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));  /* LCOV_EXCL_LINE */
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
 
             break;
 
@@ -1204,9 +1204,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_integ (TestNcGalaxySDShape *test, gcons
         case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
 
           if (gt > 1.0)
-            e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));
+            e_s = (1.0 - g * conj (e_o)) / (conj (e_o) - conj (g));  /* LCOV_EXCL_LINE */
           else
-            e_s = (e_o - g) / (1.0 - conj (g) * e_o);  /* LCOV_EXCL_LINE */
+            e_s = (e_o - g) / (1.0 - conj (g) * e_o);
 
           break;
 
