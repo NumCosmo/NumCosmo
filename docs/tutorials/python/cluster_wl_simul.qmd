@@ -225,12 +225,18 @@ obs = Nc.GalaxyWLObs.new(
 )
 
 for i in range(n_galaxies):
+    c1 = rng.gaussian_gen(0.0, 0.005)
+    c2 = rng.gaussian_gen(0.0, 0.005)
+    m = rng.gaussian_gen(0.1, 0.05)
     z_dist.gen(mset, z_data, sigma_z, rng)
     p_dist.gen(mset, p_data, rng)
     s_dist.gen(
         mset,
         s_data,
         galaxy_shape_e_sigma,
+        c1,
+        c2,
+        m,
         Nc.GalaxyWLObsCoord.CELESTIAL,
         rng,
     )
