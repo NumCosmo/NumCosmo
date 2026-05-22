@@ -132,7 +132,6 @@ typedef struct _NcmCSQ1DPrivate
   N_Vector y_Up;
   N_Vector y_Um;
   N_Vector y_Prop;
-  N_Vector v_abstol;
   SUNMatrix A;
   SUNMatrix A_Up;
   SUNMatrix A_Um;
@@ -208,11 +207,10 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
     g_error ("ERROR: SUNContext_Create failed\n");
 
-  self->y        = N_VNew_Serial (2, self->sunctx);
-  self->y_Up     = N_VNew_Serial (2, self->sunctx);
-  self->y_Um     = N_VNew_Serial (2, self->sunctx);
-  self->y_Prop   = N_VNew_Serial (4, self->sunctx);
-  self->v_abstol = N_VNew_Serial (2, self->sunctx);
+  self->y      = N_VNew_Serial (2, self->sunctx);
+  self->y_Up   = N_VNew_Serial (2, self->sunctx);
+  self->y_Um   = N_VNew_Serial (2, self->sunctx);
+  self->y_Prop = N_VNew_Serial (4, self->sunctx);
 
   self->A = SUNDenseMatrix (2, 2, self->sunctx);
   NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
@@ -352,7 +350,6 @@ _ncm_csq1d_finalize (GObject *object)
   g_clear_pointer (&self->y_Up,   N_VDestroy);
   g_clear_pointer (&self->y_Um,   N_VDestroy);
   g_clear_pointer (&self->y_Prop, N_VDestroy);
-  g_clear_pointer (&self->v_abstol, N_VDestroy);
 
   if (self->A != NULL)
     SUNMatDestroy (self->A);
@@ -1192,9 +1189,7 @@ ncm_csq1d_set_abstol (NcmCSQ1D *csq1d, const gdouble abstol)
 
   if (self->abstol != abstol)
   {
-    self->abstol                 = abstol;
-    NV_Ith_S (self->v_abstol, 0) = abstol;
-    NV_Ith_S (self->v_abstol, 1) = abstol;
+    self->abstol = abstol;
 
     ncm_model_ctrl_force_update (self->ctrl);
   }
@@ -1602,8 +1597,8 @@ _ncm_csq1d_prepare_integrator (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws)
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
   }
 
-  flag = CVodeSVtolerances (self->cvode, self->reltol, self->v_abstol);
-  NCM_CVODE_CHECK (&flag, "CVodeSVtolerances", 1, );
+  flag = CVodeSStolerances (self->cvode, self->reltol, self->abstol);
+  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
   flag = CVodeSetMaxNumSteps (self->cvode, 0);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
@@ -1648,8 +1643,8 @@ _ncm_csq1d_prepare_integrator_Up (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws)
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
   }
 
-  flag = CVodeSVtolerances (self->cvode_Up, self->reltol, self->v_abstol);
-  NCM_CVODE_CHECK (&flag, "CVodeSVtolerances", 1, );
+  flag = CVodeSStolerances (self->cvode_Up, self->reltol, self->abstol);
+  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
   flag = CVodeSetMaxNumSteps (self->cvode_Up, 100000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
@@ -1702,8 +1697,8 @@ _ncm_csq1d_prepare_integrator_Um (NcmCSQ1D *csq1d, NcmCSQ1DWS *ws)
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
   }
 
-  flag = CVodeSVtolerances (self->cvode_Um, self->reltol, self->v_abstol);
-  NCM_CVODE_CHECK (&flag, "CVodeSVtolerances", 1, );
+  flag = CVodeSStolerances (self->cvode_Um, self->reltol, self->abstol);
+  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
   flag = CVodeSetMaxNumSteps (self->cvode_Um, 100000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
