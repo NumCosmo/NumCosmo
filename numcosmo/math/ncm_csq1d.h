@@ -55,12 +55,13 @@ struct _NcmCSQ1DClass
   gdouble (*eval_int_mnu2)   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_int_qmnu2)  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_int_q2mnu2) (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
+  gdouble (*eval_int_nu)     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_F1)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_F2)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   void (*prepare) (NcmCSQ1D *csq1d, NcmModel *model);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[3];
+  gpointer padding[2];
 };
 
 /**
@@ -214,6 +215,7 @@ NCM_INLINE gdouble ncm_csq1d_eval_int_1_m    (NcmCSQ1D *csq1d, NcmModel *model, 
 NCM_INLINE gdouble ncm_csq1d_eval_int_mnu2   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_int_qmnu2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
+NCM_INLINE gdouble ncm_csq1d_eval_int_nu     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 
@@ -297,6 +299,12 @@ NCM_INLINE gdouble
 ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_int_q2mnu2 (csq1d, model, t);
+}
+
+NCM_INLINE gdouble
+ncm_csq1d_eval_int_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
+{
+  return NCM_CSQ1D_GET_CLASS (csq1d)->eval_int_nu (csq1d, model, t);
 }
 
 NCM_INLINE gdouble

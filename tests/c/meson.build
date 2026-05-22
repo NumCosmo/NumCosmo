@@ -66,6 +66,10 @@ math_tests = [
         'sources': ['math/test_ncm_spline_vec.c'],
     },
     {
+        'name': 'ncm_ode_spline',
+        'sources': ['math/test_ncm_ode_spline.c'],
+    },
+    {
         'name': 'ncm_integral1d',
         'sources': ['math/test_ncm_integral1d.c'],
     },
