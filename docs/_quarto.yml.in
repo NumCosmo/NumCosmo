@@ -7,6 +7,7 @@ project:
     - install.qmd
     - numcosmo-math-api.qmd
     - numcosmo-api.qmd
+    - theory/csq1d.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
@@ -61,6 +62,10 @@ website:
       logo: images/numcosmo_logo.png
       collapse-level: 2
       contents:
+        - section: "Theoretical Background"
+          contents:
+            - href: theory/csq1d.qmd
+              text: "CSQ1D Formalism"
         - section: "Benchmarks"
           contents:
             - href: benchmarks/ccl_background.qmd
@@ -118,6 +123,8 @@ bibliography: references.bib
 format:
   html:
     theme: [serif, custom.scss]
+    filters:
+      - linkgen.lua
     toc: true
     code-overflow: wrap
     grid:

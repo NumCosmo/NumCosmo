@@ -28,25 +28,27 @@
 /**
  * NcmCSQ1D:
  *
- * Abstract class for Harmonic Oscillator calculation through complex structure
- * quantization.
+ * Abstract class for one-dimensional harmonic-oscillator evolution using the
+ * complex-structure formalism.
  *
- * ## Definitions
- *
- * The system:
+ * This class evolves a one-dimensional time-dependent oscillator in the
+ * canonical variables $\phi$ and $P_\phi$:
  * \begin{align}
- * q^\prime &= \frac{\Pi_q}{m}, \\
- * \Pi_q^\prime &= -m\nu^2q.
+ * \phi^\prime &= \frac{P_\phi}{m}, \\\\
+ * P_\phi^\prime &= -m\nu^2\phi.
  * \end{align}
  *
+ * It uses the auxiliary quantities $\xi = \ln(m\nu)$ and
+ * $\gamma = \delta\gamma + \xi$, and evolves adiabatic variables
+ * $(\alpha,\delta\gamma)$ together with the residual phase $\delta\theta$.
+ * The full mode phase is
  * \begin{equation}
- * \xi = \ln (m\nu)
+ * \theta(t) = \int_{t_i}^{t}\nu(t')\,\mathrm{d}t' + \delta\theta(t).
  * \end{equation}
  *
- * \begin{equation}
- * F^n = \left(\frac{1}{2\nu}\frac{\partial}{\partial t}\right)^n \xi.
- * \end{equation}
- *
+ * For derivations, complete equations of motion, and mode-function formulas,
+ * see the theoretical background page:
+ * <a href="../../theory/csq1d.html">CSQ1D Formalism</a>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -944,7 +946,11 @@ ncm_csq1d_state_get_J (NcmCSQ1DState *state, gdouble *J11, gdouble *J12, gdouble
  * @phi: (out caller-allocates) (array fixed-size=2): the $\phi$ of @state
  * @Pphi: (out caller-allocates) (array fixed-size=2): the $P_\phi$ of @state
  *
- * Computes the $(\phi, P_\phi)$ parametrization of @state.
+ * Computes the $(\phi, P_\phi)$ parametrization of @state in the current
+ * phase convention.
+ *
+ * See ncm_csq1d_eval_delta_theta_at() for the residual phase used to build the
+ * full mode phase $\theta(t)$.
  *
  */
 void
@@ -3120,8 +3126,15 @@ _ncm_csq1d_eval_state (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
  * @csq1d: a #NcmCSQ1D
  * @t: time $t$
  *
- * Returns the accumulated phase shift $\delta\theta(t)$ computed during the
- * last call to ncm_csq1d_prepare().
+ * Returns the accumulated residual phase shift $\delta\theta(t)$ computed
+ * during the last call to ncm_csq1d_prepare().
+ *
+ * The full phase entering the mode functions is
+ * $\theta(t) = \int_{t_i}^{t} \nu(t')\,\mathrm{d}t' + \delta\theta(t)$.
+ *
+ * For the full phase and residual-phase equations, including the numerically
+ * stable form used internally, see
+ * <a href="../../theory/csq1d.html">CSQ1D Formalism</a>.
  *
  * Returns: $\delta\theta(t)$
  */
