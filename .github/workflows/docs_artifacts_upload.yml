@@ -3,6 +3,8 @@ name: Docs Artifacts Upload
 on:
   pull_request:
   push:
+    branches:
+      - master
 
 jobs:
   docs-artifacts:
@@ -25,6 +27,8 @@ jobs:
           sudo apt-get install -y \
             texlive-latex-base \
             texlive-latex-extra \
+            texlive-fonts-recommended \
+            cm-super \
             dvipng
       - name: Build documentation
         shell: bash -l {0}
