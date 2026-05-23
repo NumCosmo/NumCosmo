@@ -5548,8 +5548,12 @@ class DataClusterWL(NumCosmoMath.Data):
         Resample flag
       enable-parallel -> gboolean: enable-parallel
         Enable parallelization
-      use-lnint -> gboolean: use-lnint
-        Use logarithmic integration
+      integ-method -> NcDataClusterWLIntegMethod: integ-method
+        Integration method for the redshift integral
+      n-nodes -> guint: n-nodes
+        Number of intervals for the fixed Gauss-Legendre quadrature
+      rule-n -> guint: rule-n
+        Number of GL points per interval for the fixed Gauss-Legendre quadrature
 
     Properties from NcmData:
       name -> gchararray: name
@@ -5569,13 +5573,15 @@ class DataClusterWL(NumCosmoMath.Data):
 
     class Props:
         enable_parallel: bool
+        integ_method: DataClusterWLIntegMethod
         len: int
+        n_nodes: int
         obs: GalaxyWLObs
         prec: float
         r_max: float
         r_min: float
         resample_flag: DataClusterWLResampleFlag
-        use_lnint: bool
+        rule_n: int
         bootstrap: NumCosmoMath.Bootstrap
         desc: str
         init: bool
@@ -5586,13 +5592,15 @@ class DataClusterWL(NumCosmoMath.Data):
     def __init__(
         self,
         enable_parallel: bool = ...,
+        integ_method: DataClusterWLIntegMethod = ...,
         len: int = ...,
+        n_nodes: int = ...,
         obs: GalaxyWLObs = ...,
         prec: float = ...,
         r_max: float = ...,
         r_min: float = ...,
         resample_flag: DataClusterWLResampleFlag = ...,
-        use_lnint: bool = ...,
+        rule_n: int = ...,
         bootstrap: NumCosmoMath.Bootstrap = ...,
         desc: str = ...,
         init: bool = ...,
@@ -5602,6 +5610,7 @@ class DataClusterWL(NumCosmoMath.Data):
     def clear(dcwl: DataClusterWL) -> None: ...
     def estimate_snr(self, mset: NumCosmoMath.MSet) -> float: ...
     def free(self) -> None: ...
+    def get_integ_method(self) -> DataClusterWLIntegMethod: ...
     def get_resample_flag(self) -> DataClusterWLResampleFlag: ...
     @classmethod
     def new(cls) -> DataClusterWL: ...
@@ -5609,10 +5618,10 @@ class DataClusterWL(NumCosmoMath.Data):
     def peek_obs(self) -> GalaxyWLObs: ...
     def ref(self) -> DataClusterWL: ...
     def set_cut(self, r_min: float, r_max: float) -> None: ...
+    def set_integ_method(self, integ_method: DataClusterWLIntegMethod) -> None: ...
     def set_obs(self, obs: GalaxyWLObs) -> None: ...
     def set_prec(self, prec: float) -> None: ...
     def set_resample_flag(self, resample_flag: DataClusterWLResampleFlag) -> None: ...
-    def use_lnint(self, use_lnint: bool) -> None: ...
 
 class DataClusterWLClass(GObject.GPointer):
     r"""
@@ -6658,6 +6667,7 @@ class GalaxySDObsRedshiftClass(GObject.GPointer):
         ],
         NumCosmoMath.Spline,
     ] = ...
+    prepare_fixed_nodes: None = ...
     padding: list[None] = ...
 
 class GalaxySDObsRedshiftData(GObject.GBoxed):
@@ -7369,13 +7379,31 @@ class GalaxySDShape(NumCosmoMath.Model):
     def do_direct_estimate(
         self, mset: NumCosmoMath.MSet, data_array: typing.Sequence[GalaxySDShapeData]
     ) -> typing.Tuple[float, float, float, float, float]: ...
+    def do_eval_at_nodes(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxySDShapeData,
+        z_nodes: NumCosmoMath.Vector,
+    ) -> NumCosmoMath.Vector: ...
     def do_gen(
         self, mset: NumCosmoMath.MSet, data: GalaxySDShapeData, rng: NumCosmoMath.RNG
     ) -> None: ...
     def do_integ(self, use_lnp: bool) -> GalaxySDShapeIntegrand: ...
+    def do_prepare_at_nodes(
+        self,
+        mset: NumCosmoMath.MSet,
+        data_array: typing.Sequence[GalaxySDShapeData],
+        z_nodes_per_galaxy: typing.Sequence[NumCosmoMath.Vector],
+    ) -> bool: ...
     def do_prepare_data_array(
         self, mset: NumCosmoMath.MSet, data_array: typing.Sequence[GalaxySDShapeData]
     ) -> bool: ...
+    def eval_at_nodes(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxySDShapeData,
+        z_nodes: NumCosmoMath.Vector,
+    ) -> NumCosmoMath.Vector: ...
     def free(self) -> None: ...
     def gen(
         self, mset: NumCosmoMath.MSet, data: GalaxySDShapeData, rng: NumCosmoMath.RNG
@@ -7387,6 +7415,12 @@ class GalaxySDShape(NumCosmoMath.Model):
     def lndet_jac(
         self, g: NumCosmoMath.Complex, E_obs: NumCosmoMath.Complex
     ) -> float: ...
+    def prepare_at_nodes(
+        self,
+        mset: NumCosmoMath.MSet,
+        data_array: typing.Sequence[GalaxySDShapeData],
+        z_nodes_per_galaxy: typing.Sequence[NumCosmoMath.Vector],
+    ) -> bool: ...
     def prepare_data_array(
         self, mset: NumCosmoMath.MSet, data_array: typing.Sequence[GalaxySDShapeData]
     ) -> bool: ...
@@ -7415,6 +7449,19 @@ class GalaxySDShapeClass(GObject.GPointer):
     direct_estimate: typing.Callable[
         [GalaxySDShape, NumCosmoMath.MSet, typing.Sequence[GalaxySDShapeData]],
         typing.Tuple[float, float, float, float, float],
+    ] = ...
+    prepare_at_nodes: typing.Callable[
+        [
+            GalaxySDShape,
+            NumCosmoMath.MSet,
+            typing.Sequence[GalaxySDShapeData],
+            typing.Sequence[NumCosmoMath.Vector],
+        ],
+        bool,
+    ] = ...
+    eval_at_nodes: typing.Callable[
+        [GalaxySDShape, NumCosmoMath.MSet, GalaxySDShapeData, NumCosmoMath.Vector],
+        NumCosmoMath.Vector,
     ] = ...
     padding: list[None] = ...
 
@@ -20095,6 +20142,13 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         zl: float,
         zc: float,
     ) -> list[float]: ...
+    def reduced_shear_cache(
+        self,
+        dp: HaloDensityProfile,
+        cosmo: HICosmo,
+        crit_cache: WLSurfaceMassDensityCritCache,
+        sigma_cache: WLSurfaceMassDensitySigmaCache,
+    ) -> float: ...
     def reduced_shear_infinity(
         self,
         dp: HaloDensityProfile,
@@ -20170,6 +20224,18 @@ class WLSurfaceMassDensityClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.ModelClass = ...
 
+class WLSurfaceMassDensityCritCache(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        WLSurfaceMassDensityCritCache()
+    """
+
+    is_source: bool = ...
+    sigma_crit: float = ...
+
 class WLSurfaceMassDensityOptzs(GObject.GPointer):
     r"""
     :Constructors:
@@ -20183,6 +20249,18 @@ class WLSurfaceMassDensityOptzs(GObject.GPointer):
     sqrt_Omega_k0: float = ...
     dl: float = ...
     sc_Dls_Ds: float = ...
+    sigma: float = ...
+    mean_sigma: float = ...
+
+class WLSurfaceMassDensitySigmaCache(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        WLSurfaceMassDensitySigmaCache()
+    """
+
     sigma: float = ...
     mean_sigma: float = ...
 
@@ -22285,6 +22363,22 @@ class DataClusterPseudoCountsObs(GObject.GEnum):
     SD_MCL: DataClusterPseudoCountsObs = ...
     SD_MPL: DataClusterPseudoCountsObs = ...
     Z: DataClusterPseudoCountsObs = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class DataClusterWLIntegMethod(GObject.GEnum):
+    CUBATURE: DataClusterWLIntegMethod = ...
+    FIXED_NODES: DataClusterWLIntegMethod = ...
+    LNINT: DataClusterWLIntegMethod = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
