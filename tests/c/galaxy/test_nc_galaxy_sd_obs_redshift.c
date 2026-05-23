@@ -30,6 +30,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include <math/ncm_integrate.h>
 
 #include <math.h>
 #include <glib.h>
@@ -62,11 +63,13 @@ static void test_nc_galaxy_sd_obs_redshift_spec_lim (TestNcGalaxySDObsRedshift *
 
 static void test_nc_galaxy_sd_obs_redshift_gauss_gen (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_obs_redshift_gauss_integ (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_obs_redshift_gauss_required_columns (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_obs_redshift_gauss_lim (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 
 static void test_nc_galaxy_sd_obs_redshift_pz_gen (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_obs_redshift_pz_integ (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_obs_redshift_pz_integration (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_obs_redshift_pz_required_columns (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_obs_redshift_pz_lim (TestNcGalaxySDObsRedshift *test, gconstpointer pdata);
 
@@ -132,6 +135,11 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_sd_obs_redshift_gauss_integ,
               &test_nc_galaxy_sd_obs_redshift_free);
 
+  g_test_add ("/nc/galaxy_sd_obs_redshift/gauss/integration", TestNcGalaxySDObsRedshift, NULL,
+              &test_nc_galaxy_sd_obs_redshift_gauss_new,
+              &test_nc_galaxy_sd_obs_redshift_gauss_integration,
+              &test_nc_galaxy_sd_obs_redshift_free);
+
   g_test_add ("/nc/galaxy_sd_obs_redshift/gauss/required_columns", TestNcGalaxySDObsRedshift, NULL,
               &test_nc_galaxy_sd_obs_redshift_gauss_new,
               &test_nc_galaxy_sd_obs_redshift_gauss_required_columns,
@@ -175,6 +183,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_sd_obs_redshift/pz/integ", TestNcGalaxySDObsRedshift, NULL,
               &test_nc_galaxy_sd_obs_redshift_pz_new,
               &test_nc_galaxy_sd_obs_redshift_pz_integ,
+              &test_nc_galaxy_sd_obs_redshift_free);
+
+  g_test_add ("/nc/galaxy_sd_obs_redshift/pz/integration", TestNcGalaxySDObsRedshift, NULL,
+              &test_nc_galaxy_sd_obs_redshift_pz_new,
+              &test_nc_galaxy_sd_obs_redshift_pz_integration,
               &test_nc_galaxy_sd_obs_redshift_free);
 
   g_test_add ("/nc/galaxy_sd_obs_redshift/pz/required_columns", TestNcGalaxySDObsRedshift, NULL,
@@ -736,6 +749,304 @@ test_nc_galaxy_sd_obs_redshift_pz_integ (TestNcGalaxySDObsRedshift *test, gconst
   ncm_rng_clear (&rng);
   ncm_vector_clear (&xv);
   ncm_vector_clear (&yv);
+}
+
+typedef struct _TestIntArg
+{
+  NcGalaxySDObsRedshiftIntegrand *integrand;
+  NcGalaxySDObsRedshiftData *data;
+  guint gal_i;
+} TestIntArg;
+
+static void test_integral (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+static void test_integral_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
+
+NCM_INTEGRAL_ND_DEFINE_TYPE (
+  NCM,
+  TEST_INTEGRAL,
+  NcmTestIntegral,
+  test_integral,
+  test_integral_dim,
+  test_integral,
+  TestIntArg)
+;
+
+static void
+test_integral (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
+{
+  NcmTestIntegral *lh_int                            = NCM_TEST_INTEGRAL (intnd);
+  NcGalaxySDObsRedshiftData *data                    = lh_int->data.data;
+  NcGalaxySDObsRedshiftIntegrand *integrand_redshift = lh_int->data.integrand;
+  guint i;
+
+  i = 0;
+
+  for (i = 0; i < npoints; i++)
+  {
+    const gdouble z   = ncm_vector_fast_get (x, i);
+    const gdouble res = nc_galaxy_sd_obs_redshift_integrand_eval (integrand_redshift, z, data);
+
+    ncm_vector_set (fval, i, res);
+  }
+}
+
+static void
+test_integral_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
+{
+  *dim  = 1;
+  *fdim = 1;
+}
+
+static void
+test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *test, gconstpointer pdata)
+{
+  NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *data = nc_galaxy_sd_obs_redshift_data_new (
+    test->gsdor
+  );
+  NcGalaxySDObsRedshiftIntegrand *integrand = nc_galaxy_sd_obs_redshift_integ (
+    test->gsdor,
+    FALSE
+  );
+  NcmMSet *mset             = ncm_mset_empty_new ();
+  NcmTestIntegral *integral = g_object_new (test_integral_get_type (), NULL);
+  NcmVector *zpiv           = ncm_vector_new (1);
+  NcmVector *zpfv           = ncm_vector_new (1);
+  NcmVector *resv           = ncm_vector_new (1);
+  NcmVector *errv           = ncm_vector_new (1);
+  const guint nruns         = 100;
+  NcmIntegralFixed *fixed_integral;
+  guint i;
+
+  ncm_integral_nd_set_reltol (NCM_INTEGRAL_ND (integral), 1.0e-6);
+  ncm_integral_nd_set_abstol (NCM_INTEGRAL_ND (integral), 0.0);
+  ncm_integral_nd_set_method (
+    NCM_INTEGRAL_ND (integral),
+    NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V
+  );
+
+  /* Test integrals are equal when use_true_z = TRUE.
+   * NOTE: with use_true_z = TRUE the integrand is P(z) * Gauss(zp|z,sz) / P(in_bin|z).
+   * Integrating over z gives the marginal photo-z density p(zp|in_bin), NOT 1.
+   * We only check that cubature and fixed-node integration agree. */
+  nc_galaxy_sd_obs_redshift_gauss_set_use_true_z (
+    NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor),
+    TRUE
+  );
+
+  for (i = 0; i < nruns; i++)
+  {
+    const gdouble zp     = g_test_rand_double_range (1.0, 5.0);
+    const gdouble sigma0 = g_test_rand_double_range (0.02, 0.08);
+    gdouble zpi, zpf;
+    gdouble res, fixed_res;
+
+    nc_galaxy_sd_obs_redshift_gauss_data_set (
+      NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor),
+      data,
+      zp,
+      sigma0,
+      sigma0
+    );
+    nc_galaxy_sd_obs_redshift_get_integ_lim (
+      test->gsdor,
+      data,
+      &zpi,
+      &zpf
+    );
+
+    integral->data.integrand = integrand;
+    integral->data.data      = data;
+
+    nc_galaxy_sd_obs_redshift_integrand_prepare (integrand, mset);
+    ncm_vector_fast_set (zpiv, 0, zpi);
+    ncm_vector_fast_set (zpfv, 0, zpf);
+    ncm_integral_nd_eval (NCM_INTEGRAL_ND (integral), zpiv, zpfv, resv, errv);
+
+    res = ncm_vector_fast_get (resv, 0);
+
+    fixed_integral = nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (
+      test->gsdor,
+      mset,
+      data,
+      20,
+      5
+    );
+    fixed_res = ncm_integral_fixed_nodes_eval (fixed_integral);
+
+    ncm_assert_cmpdouble_e (res, ==, fixed_res, 1.0e-5, 0.0);
+  }
+
+  /* Test integrals are equal when use_true_z = FALSE.
+   * With use_true_z = FALSE the integrand is just Gauss(zp|z, sigma), which as a
+   * function of z integrates to 1 (Gaussian normalisation). Both methods should give 1. */
+  nc_galaxy_sd_obs_redshift_gauss_set_use_true_z (
+    NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor),
+    FALSE
+  );
+
+  for (i = 0; i < nruns; i++)
+  {
+    const gdouble zp     = g_test_rand_double_range (1.0, 5.0);
+    const gdouble sigma0 = g_test_rand_double_range (0.02, 0.08);
+    gdouble zpi, zpf;
+    gdouble res, fixed_res;
+
+    nc_galaxy_sd_obs_redshift_gauss_data_set (
+      NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->gsdor),
+      data,
+      zp,
+      sigma0,
+      sigma0
+    );
+    nc_galaxy_sd_obs_redshift_get_integ_lim (
+      test->gsdor,
+      data,
+      &zpi,
+      &zpf
+    );
+
+    integral->data.integrand = integrand;
+    integral->data.data      = data;
+
+    nc_galaxy_sd_obs_redshift_integrand_prepare (integrand, mset);
+    ncm_vector_fast_set (zpiv, 0, zpi);
+    ncm_vector_fast_set (zpfv, 0, zpf);
+    ncm_integral_nd_eval (NCM_INTEGRAL_ND (integral), zpiv, zpfv, resv, errv);
+
+    res = ncm_vector_fast_get (resv, 0);
+
+    fixed_integral = nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (
+      test->gsdor,
+      mset,
+      data,
+      20,
+      5
+    );
+    fixed_res = ncm_integral_fixed_nodes_eval (fixed_integral);
+
+    ncm_assert_cmpdouble_e (res, ==, 1.0, 1.0e-6, 0.0);
+    ncm_assert_cmpdouble_e (res, ==, fixed_res, 1.0e-5, 0.0);
+  }
+
+  nc_galaxy_sd_obs_redshift_data_unref (data);
+  nc_galaxy_sd_obs_redshift_integrand_free (integrand);
+  ncm_integral_nd_free (NCM_INTEGRAL_ND (integral));
+  ncm_integral_fixed_free (fixed_integral);
+  ncm_vector_free (zpiv);
+  ncm_vector_free (zpfv);
+  ncm_vector_free (resv);
+  ncm_vector_free (errv);
+  ncm_mset_free (mset);
+  ncm_rng_clear (&rng);
+}
+
+static void
+test_nc_galaxy_sd_obs_redshift_pz_integration (TestNcGalaxySDObsRedshift *test, gconstpointer pdata)
+{
+  NcmRNG *rng                     = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcGalaxySDObsRedshiftData *data = nc_galaxy_sd_obs_redshift_data_new (
+    test->gsdor
+  );
+  NcGalaxySDObsRedshiftIntegrand *integrand = nc_galaxy_sd_obs_redshift_integ (
+    test->gsdor,
+    FALSE
+  );
+  NcmMSet *mset             = ncm_mset_empty_new ();
+  NcmTestIntegral *integral = g_object_new (test_integral_get_type (), NULL);
+  NcmVector *zpiv           = ncm_vector_new (1);
+  NcmVector *zpfv           = ncm_vector_new (1);
+  NcmVector *resv           = ncm_vector_new (1);
+  NcmVector *errv           = ncm_vector_new (1);
+  const guint nruns         = 100;
+  NcmIntegralFixed *fixed_integral;
+  guint i;
+
+  ncm_integral_nd_set_reltol (NCM_INTEGRAL_ND (integral), 1.0e-6);
+  ncm_integral_nd_set_abstol (NCM_INTEGRAL_ND (integral), 0.0);
+  ncm_integral_nd_set_method (
+    NCM_INTEGRAL_ND (integral),
+    NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V
+  );
+
+  for (i = 0; i < nruns; i++)
+  {
+    const guint npoints = 300;
+    NcmVector *xv       = ncm_vector_new (npoints);
+    NcmVector *yv       = ncm_vector_new (npoints);
+    gdouble z_avg       = g_test_rand_double_range (
+      test->z_min,
+      test->z_max
+    );
+    gdouble z_sd = 0.03 * (1.0 + z_avg);
+    NcmSpline *pz;
+    gdouble zpi, zpf;
+    gdouble res, fixed_res;
+    guint j;
+
+    for (j = 0; j < npoints; j++)
+    {
+      const gdouble z = z_avg - 5.0 * z_sd + 10.0 * z_sd * j / ((gdouble) npoints - 1.0);
+      const gdouble f = exp (-0.5 * gsl_pow_2 ((z - z_avg) / z_sd)) / (sqrt (2.0 * M_PI) * z_sd);
+
+      ncm_vector_set (xv, j, z);
+      ncm_vector_set (yv, j, f);
+    }
+
+    pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+
+    nc_galaxy_sd_obs_redshift_pz_data_set (
+      NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->gsdor),
+      data,
+      pz
+    );
+    nc_galaxy_sd_obs_redshift_get_integ_lim (
+      test->gsdor,
+      data,
+      &zpi,
+      &zpf
+    );
+
+    /* Perform cubature integration */
+    integral->data.integrand = integrand;
+    integral->data.data      = data;
+
+    nc_galaxy_sd_obs_redshift_integrand_prepare (integrand, mset);
+    ncm_vector_fast_set (zpiv, 0, zpi);
+    ncm_vector_fast_set (zpfv, 0, zpf);
+    ncm_integral_nd_eval (NCM_INTEGRAL_ND (integral), zpiv, zpfv, resv, errv);
+
+    res = ncm_vector_fast_get (resv, 0);
+
+    /* Perform fixed node integration */
+    fixed_integral = nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (
+      test->gsdor,
+      mset,
+      data,
+      10,
+      5
+    );
+    fixed_res = ncm_integral_fixed_nodes_eval (fixed_integral);
+
+    /* Compare results */
+    ncm_assert_cmpdouble_e (res, ==, fixed_res, 1.0e-5, 0.0);
+    ncm_assert_cmpdouble_e (res, ==, 1, 1.0e-5, 0.0);
+
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+    ncm_spline_free (pz);
+  }
+
+  nc_galaxy_sd_obs_redshift_data_unref (data);
+  nc_galaxy_sd_obs_redshift_integrand_free (integrand);
+  ncm_integral_nd_free (NCM_INTEGRAL_ND (integral));
+  ncm_integral_fixed_free (fixed_integral);
+  ncm_vector_free (zpiv);
+  ncm_vector_free (zpfv);
+  ncm_vector_free (resv);
+  ncm_vector_free (errv);
+  ncm_mset_free (mset);
+  ncm_rng_clear (&rng);
 }
 
 static void
