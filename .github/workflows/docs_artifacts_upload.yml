@@ -1,0 +1,34 @@
+name: Docs Artifacts Upload
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  docs-artifacts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v4
+        with:
+          activate-environment: numcosmo_developer
+          environment-file: environment.yml
+          auto-activate-base: false
+          auto-update-conda: true
+
+      - name: Build documentation
+        shell: bash -l {0}
+        run: |
+          meson setup BDocs -Ddocumentation=true
+          meson compile -C BDocs
+
+      - name: Upload Quarto freeze
+        uses: actions/upload-artifact@v4
+        with:
+          name: quarto-freeze-${{ github.sha }}
+          path: BDocs/docs/.quarto/_freeze
+          if-no-files-found: error
