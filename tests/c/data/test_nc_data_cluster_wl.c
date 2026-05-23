@@ -631,6 +631,8 @@ test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdat
     NcmData *dcwl_dup = ncm_data_dup (NCM_DATA (test->dcwl), ser);
     gdouble m2lnL, m2lnL_dup;
 
+    ncm_data_prepare (dcwl_dup, mset_dup);
+
     g_object_set (dcwl_dup, "enable-parallel", FALSE, NULL);
     g_object_set (test->dcwl, "enable-parallel", FALSE, NULL);
 
@@ -1300,3 +1302,4 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
   ncm_stats_vec_clear (&stats);
   ncm_rng_clear (&rng);
 }
+
