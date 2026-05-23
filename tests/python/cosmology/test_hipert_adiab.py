@@ -814,6 +814,7 @@ def test_delta_theta_qgw(k: float, w: float) -> None:
     adiab.set_vacuum_max_time(-1.0e1)
     adiab.set_vacuum_reltol(1.0e-8)
     adiab.prepare(qgw)
+    adiab.prepare_phase_splines(qgw)
 
     t_a, _ = adiab.get_time_array()
 

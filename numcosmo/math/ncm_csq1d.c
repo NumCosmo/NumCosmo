@@ -157,6 +157,7 @@ typedef struct _NcmCSQ1DPrivate
   gdouble vacuum_max_time;
   gdouble vacuum_final_time;
   gdouble t_ode_ini;
+  gboolean phase_splines_prepared;
 } NcmCSQ1DPrivate;
 
 enum
@@ -277,6 +278,7 @@ ncm_csq1d_init (NcmCSQ1D *csq1d)
   self->vacuum_reltol          = 0.0;
   self->vacuum_max_time        = 0.0;
   self->vacuum_final_time      = 0.0;
+  self->phase_splines_prepared = FALSE;
 }
 
 static void
@@ -2332,33 +2334,6 @@ _ncm_csq1d_prepare_splines (NcmCSQ1D *csq1d, NcmModel *model)
     g_array_unref (alpha_a);
     g_array_unref (dgamma_a);
     g_array_unref (gamma_a);
-
-    {
-      /* Compute the WKB pre-phase integral [ti, t_ode_ini] using QAG,
-       * then start the NcmOdeSpline at t_ode_ini with that value as IC.
-       * This avoids integrating over the deep-WKB regime where the
-       * adaptive ODE step would collapse to machine epsilon. */
-      gsl_integration_workspace **w = ncm_integral_get_workspace ();
-      gsl_function F;
-      gdouble delta_theta_ini, err;
-
-      if (NCM_CSQ1D_GET_CLASS (csq1d)->eval_int_nu == &_ncm_csq1d_eval_int_nu)
-      {
-        ncm_ode_spline_set_interval (self->int_nu_s, 0.25 * M_PI, self->t_ode_ini, self->tf);
-        ncm_ode_spline_prepare (self->int_nu_s, &ws);
-        self->int_nu_spline = ncm_ode_spline_peek_spline (self->int_nu_s);
-      }
-
-      F.function = &_ncm_csq1d_delta_theta_wkb_f;
-      F.params   = &ws;
-      gsl_integration_qag (&F, self->ti, self->t_ode_ini, 0.0, self->reltol,
-                           NCM_INTEGRAL_PARTITION, 6, *w, &delta_theta_ini, &err);
-      ncm_memory_pool_return (w);
-
-      ncm_ode_spline_set_interval (self->delta_theta_s, delta_theta_ini, self->t_ode_ini, self->tf);
-      ncm_ode_spline_prepare (self->delta_theta_s, &ws);
-      self->delta_theta_spline = ncm_ode_spline_peek_spline (self->delta_theta_s);
-    }
   }
   else
   {
@@ -2396,6 +2371,60 @@ _ncm_csq1d_prepare_adiab (NcmCSQ1D *csq1d, NcmModel *model)
 }
 
 /**
+ * ncm_csq1d_prepare_phase_splines:
+ * @csq1d: a #NcmCSQ1D
+ * @model: (allow-none): a #NcmModel
+ *
+ * Prepares the phase-related splines (int_nu and delta_theta) for evaluation.
+ * This method computes and caches the integrated phase splines, which are used
+ * by ncm_csq1d_eval_int_nu() and ncm_csq1d_eval_delta_theta_at().
+ *
+ * This method should be called explicitly after ncm_csq1d_prepare() if you need
+ * to evaluate delta_theta. It is computed separately to avoid performance overhead
+ * when the phase correction is not needed.
+ *
+ * Note: This method must be called after ncm_csq1d_prepare().
+ */
+void
+ncm_csq1d_prepare_phase_splines (NcmCSQ1D *csq1d, NcmModel *model)
+{
+  NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
+  NcmCSQ1DWS ws                = {csq1d, model, 0.0, 0.0};
+
+  if (self->phase_splines_prepared)
+    return;
+
+  {
+    /* Compute the WKB pre-phase integral [ti, t_ode_ini] using QAG,
+     * then start the NcmOdeSpline at t_ode_ini with that value as IC.
+     * This avoids integrating over the deep-WKB regime where the
+     * adaptive ODE step would collapse to machine epsilon. */
+    gsl_integration_workspace **w = ncm_integral_get_workspace ();
+    gsl_function F;
+    gdouble delta_theta_ini, err;
+
+    if (NCM_CSQ1D_GET_CLASS (csq1d)->eval_int_nu == &_ncm_csq1d_eval_int_nu)
+    {
+      ncm_ode_spline_set_interval (self->int_nu_s, 0.25 * M_PI, self->t_ode_ini, self->tf);
+      ncm_ode_spline_prepare (self->int_nu_s, &ws);
+      self->int_nu_spline = ncm_ode_spline_peek_spline (self->int_nu_s);
+    }
+
+    F.function = &_ncm_csq1d_delta_theta_wkb_f;
+    F.params   = &ws;
+    gsl_integration_qag (&F, self->ti, self->t_ode_ini, 0.0, self->reltol,
+                         NCM_INTEGRAL_PARTITION, 6, *w, &delta_theta_ini, &err);
+    ncm_memory_pool_return (w);
+
+    ncm_ode_spline_set_interval (self->delta_theta_s, delta_theta_ini, self->t_ode_ini, self->tf);
+    ncm_ode_spline_prepare (self->delta_theta_s, &ws);
+    self->delta_theta_spline = ncm_ode_spline_peek_spline (self->delta_theta_s);
+  }
+
+  self->phase_splines_prepared = TRUE;
+}
+
+/**
  * ncm_csq1d_prepare: (virtual prepare)
  * @csq1d: a #NcmCSQ1D
  * @model: (allow-none): a #NcmModel
@@ -2415,6 +2444,11 @@ ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model)
 {
   NcmCSQ1DPrivate * const self = ncm_csq1d_get_instance_private (csq1d);
   gboolean success             = FALSE;
+
+  /* Invalidate phase splines when preparing */
+  self->phase_splines_prepared = FALSE;
+  self->delta_theta_spline     = NULL;
+  self->int_nu_spline          = NULL;
 
   switch (self->initial_condition_type)
   {
@@ -3129,6 +3163,9 @@ _ncm_csq1d_eval_state (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
  * stable form used internally, see
  * <a href="../../theory/csq1d.html">CSQ1D Formalism</a>.
  *
+ * This function automatically prepares the phase splines on first call after
+ * ncm_csq1d_prepare().
+ *
  * Returns: $\delta\theta(t)$
  */
 gdouble
@@ -3138,6 +3175,10 @@ ncm_csq1d_eval_delta_theta_at (NcmCSQ1D *csq1d, const gdouble t)
 
   if (t <= self->t_ode_ini)
     return 0.0;
+
+  if (!self->phase_splines_prepared)
+    g_error ("ncm_csq1d_eval_delta_theta_at: phase splines not prepared. "
+             "Call ncm_csq1d_prepare_phase_splines() first.");
 
   return ncm_spline_eval (self->delta_theta_spline, t);
 }

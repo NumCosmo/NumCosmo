@@ -220,6 +220,7 @@ NCM_INLINE gdouble ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, 
 NCM_INLINE gdouble ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 
 void ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model);
+void ncm_csq1d_prepare_phase_splines (NcmCSQ1D *csq1d, NcmModel *model);
 
 GArray *ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t);
 

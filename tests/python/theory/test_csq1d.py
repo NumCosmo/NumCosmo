@@ -382,6 +382,7 @@ def test_eval_delta_theta_at():
     bs.set_vacuum_max_time(-1.0e1)
     bs.set_vacuum_reltol(1.0e-8)
     bs.prepare(None)
+    bs.prepare_phase_splines(None)
 
     # Pre-ODE times (t <= t_ode_ini) must return 0
     assert_allclose(bs.eval_delta_theta_at(ti), 0.0, atol=1.0e-30)
