@@ -55,12 +55,13 @@ struct _NcmCSQ1DClass
   gdouble (*eval_int_mnu2)   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_int_qmnu2)  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_int_q2mnu2) (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
+  gdouble (*eval_int_nu)     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_F1)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   gdouble (*eval_F2)         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
   void (*prepare) (NcmCSQ1D *csq1d, NcmModel *model);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[3];
+  gpointer padding[2];
 };
 
 /**
@@ -214,10 +215,12 @@ NCM_INLINE gdouble ncm_csq1d_eval_int_1_m    (NcmCSQ1D *csq1d, NcmModel *model, 
 NCM_INLINE gdouble ncm_csq1d_eval_int_mnu2   (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_int_qmnu2  (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
+NCM_INLINE gdouble ncm_csq1d_eval_int_nu     (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_F1         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 NCM_INLINE gdouble ncm_csq1d_eval_F2         (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t);
 
 void ncm_csq1d_prepare (NcmCSQ1D *csq1d, NcmModel *model);
+void ncm_csq1d_prepare_phase_splines (NcmCSQ1D *csq1d, NcmModel *model);
 
 GArray *ncm_csq1d_get_time_array (NcmCSQ1D *csq1d, gdouble *smallest_t);
 
@@ -230,6 +233,7 @@ NcmCSQ1DState *ncm_csq1d_compute_nonadiab (NcmCSQ1D *csq1d, NcmModel *model, con
 NcmCSQ1DState *ncm_csq1d_compute_H (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state);
 NcmCSQ1DState *ncm_csq1d_eval_at (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t, NcmCSQ1DState *state);
 NcmCSQ1DState *ncm_csq1d_eval_at_frame (NcmCSQ1D *csq1d, NcmModel *model, const NcmCSQ1DFrame frame, const gdouble t, NcmCSQ1DState *state);
+gdouble ncm_csq1d_eval_delta_theta_at (NcmCSQ1D *csq1d, const gdouble t);
 
 NcmCSQ1DState *ncm_csq1d_change_frame (NcmCSQ1D *csq1d, NcmModel *model, NcmCSQ1DState *state, NcmCSQ1DFrame frame);
 
@@ -296,6 +300,12 @@ NCM_INLINE gdouble
 ncm_csq1d_eval_int_q2mnu2 (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
 {
   return NCM_CSQ1D_GET_CLASS (csq1d)->eval_int_q2mnu2 (csq1d, model, t);
+}
+
+NCM_INLINE gdouble
+ncm_csq1d_eval_int_nu (NcmCSQ1D *csq1d, NcmModel *model, const gdouble t)
+{
+  return NCM_CSQ1D_GET_CLASS (csq1d)->eval_int_nu (csq1d, model, t);
 }
 
 NCM_INLINE gdouble
