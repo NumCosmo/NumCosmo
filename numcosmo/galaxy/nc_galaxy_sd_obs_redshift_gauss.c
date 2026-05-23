@@ -554,19 +554,40 @@ _gauss_fixed_nodes_gsl_f (gdouble z, gpointer user_data)
 }
 
 static NcmIntegralFixed *
-_nc_galaxy_sd_obs_redshift_gauss_prepare_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
-                                                      NcGalaxySDObsRedshiftData *data,
-                                                      guint n_nodes, guint rule_n)
+_nc_galaxy_sd_obs_redshift_gauss_prepare_fixed_nodes (
+  NcGalaxySDObsRedshift     *gsdor,
+  NcmMSet                   *mset,
+  NcGalaxySDObsRedshiftData *data,
+  guint                     n_nodes,
+  guint                     rule_n
+)
 {
   NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
   NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
-  gdouble z_min, z_max;
-  NcmIntegralFixed *intf;
+  NcGalaxySDObsRedshiftGaussData * const ldata   = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
   GaussFixedNodesGSLArg arg;
+  NcmIntegralFixed *intf;
   gsl_function F;
+  gdouble z_min, z_max;
 
   g_assert_nonnull (self->sdz);
   nc_galaxy_sd_true_redshift_get_lim (self->sdz, &z_min, &z_max);
+
+  /* Restricting the nodes to the Gaussian's effective support */
+  {
+    const gdouble sigma_eff = self->use_true_z
+      ? ldata->sigma0 * (1.0 + ldata->zp)
+      : ldata->sigma;
+    const gdouble sigma_max = self->use_true_z
+      ? ldata->sigma0 * (
+      (1.0 + 7.0 * ldata->sigma0) * (1.0 + ldata->zp)
+      )
+      : ldata->sigma;
+    const gdouble half_width = 7.0 * sigma_max;
+
+    z_min = MAX (z_min, ldata->zp - half_width);
+    z_max = MIN (z_max, ldata->zp + half_width);
+  }
 
   intf = ncm_integral_fixed_new (n_nodes, rule_n, z_min, z_max);
 
