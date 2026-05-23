@@ -706,17 +706,15 @@ _ncm_csq1d_delta_theta_dydx (gdouble y, gdouble x, gpointer userdata)
   const gdouble asinh_x        = asinh (x);
   const gdouble alpha          = ncm_spline_eval (self->alpha_s,  asinh_x);
   const gdouble dgamma         = ncm_spline_eval (self->dgamma_s, asinh_x);
-  /*const gdouble sh_dg2         = sinh (0.5 * dgamma); */
-  const gdouble sh_a2 = sinh (0.5 * alpha);
 
-  /*return 2.0 * nu / cosh (alpha) * (sh_dg2 * sh_dg2 - sh_a2 * sh_a2); */
-  return nu * (expm1 (dgamma) - 2.0 * sh_a2 * sh_a2) / cosh (alpha);
+  return nu * expm1 (dgamma - gsl_sf_lncosh (alpha));
 }
 
 static gdouble
 _ncm_csq1d_delta_theta_wkb_f (gdouble x, gpointer userdata)
 {
-  NcmCSQ1DWS *ws       = (NcmCSQ1DWS *) userdata;
+  NcmCSQ1DWS *ws = (NcmCSQ1DWS *) userdata;
+
   const gdouble nu     = ncm_csq1d_eval_nu (ws->csq1d, ws->model, x);
   const gdouble alpha  = ncm_csq1d_eval_F1 (ws->csq1d, ws->model, x);
   const gdouble dgamma = -ncm_csq1d_eval_F2 (ws->csq1d, ws->model, x);
