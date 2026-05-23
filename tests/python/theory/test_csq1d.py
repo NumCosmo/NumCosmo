@@ -321,6 +321,7 @@ def test_eval_int_nu_default():
     bs.set_vacuum_max_time(-1.0e1)
     bs.set_vacuum_reltol(1.0e-8)
     bs.prepare(None)
+    bs.prepare_phase_splines(None)
 
     # For t <= t_ode_ini the default implementation returns 0
     assert_allclose(bs.eval_int_nu(None, ti), 0.0, atol=1.0e-30)

@@ -1912,7 +1912,8 @@ _ncm_csq1d_J_Um (sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J, gpointer j
  *
  * Computes the integral $\int_{t_i}^{t} \nu(t') \mathrm{d}t'$.
  * If not overridden by a subclass, a default implementation based on
- * #NcmOdeSpline is used, which is prepared during ncm_csq1d_prepare().
+ * #NcmOdeSpline is used. You must call ncm_csq1d_prepare_phase_splines()
+ * after ncm_csq1d_prepare() before using this function.
  *
  * Returns: $\int_{t_i}^{t} \nu(t') \mathrm{d}t'$.
  */
@@ -2379,9 +2380,8 @@ _ncm_csq1d_prepare_adiab (NcmCSQ1D *csq1d, NcmModel *model)
  * This method computes and caches the integrated phase splines, which are used
  * by ncm_csq1d_eval_int_nu() and ncm_csq1d_eval_delta_theta_at().
  *
- * This method should be called explicitly after ncm_csq1d_prepare() if you need
- * to evaluate delta_theta. It is computed separately to avoid performance overhead
- * when the phase correction is not needed.
+ * This method must be called explicitly after ncm_csq1d_prepare() if you need
+ * to use ncm_csq1d_eval_int_nu() or ncm_csq1d_eval_delta_theta_at().
  *
  * Note: This method must be called after ncm_csq1d_prepare().
  */
@@ -3163,8 +3163,8 @@ _ncm_csq1d_eval_state (NcmCSQ1D *csq1d, const gdouble t, NcmCSQ1DState *state)
  * stable form used internally, see
  * <a href="../../theory/csq1d.html">CSQ1D Formalism</a>.
  *
- * This function automatically prepares the phase splines on first call after
- * ncm_csq1d_prepare().
+ * Note: You must call ncm_csq1d_prepare_phase_splines() before using this function,
+ * or it will throw an error.
  *
  * Returns: $\delta\theta(t)$
  */
