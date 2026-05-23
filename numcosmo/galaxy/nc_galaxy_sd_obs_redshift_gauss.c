@@ -575,9 +575,6 @@ _nc_galaxy_sd_obs_redshift_gauss_prepare_fixed_nodes (
 
   /* Restricting the nodes to the Gaussian's effective support */
   {
-    const gdouble sigma_eff = self->use_true_z
-      ? ldata->sigma0 * (1.0 + ldata->zp)
-      : ldata->sigma;
     const gdouble sigma_max = self->use_true_z
       ? ldata->sigma0 * (
       (1.0 + 7.0 * ldata->sigma0) * (1.0 + ldata->zp)
