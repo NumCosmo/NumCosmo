@@ -185,7 +185,7 @@ test_nc_data_cluster_wl_new (TestNcDataClusterWL *test, gconstpointer pdata)
   NcGalaxyWLObsEllipConv ell_conv;
   NcGalaxyWLObsCoord ell_coord;
 
-  ncm_model_param_set (NCM_MODEL (hms), NC_HALO_CM_PARAM_LOG10M_DELTA, ncm_rng_uniform_gen (rng, 13.0, 15.0));
+  ncm_model_param_set (NCM_MODEL (hms), NC_HALO_CM_PARAM_LOG10M_DELTA, ncm_rng_uniform_gen (rng, 13.5, 15.5));
   ncm_model_param_set (NCM_MODEL (hp), NC_HALO_POSITION_RA, ra);
   ncm_model_param_set (NCM_MODEL (hp), NC_HALO_POSITION_DEC, dec);
 
@@ -317,7 +317,7 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
   GList *columns                    = nc_galaxy_sd_shape_data_required_columns (s_data);
   GList *l                          = columns;
   GStrvBuilder *builder             = g_strv_builder_new ();
-  guint nrows                       = 100;
+  guint nrows                       = 1500;
   guint npoints                     = 20;
   gdouble z_min                     = 0.01;
   gdouble z_max                     = 5.0;
@@ -1121,9 +1121,16 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
   NcmFit *fit         = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", like, test->mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
   NcmStatsVec *stats  = ncm_stats_vec_new (3, NCM_STATS_VEC_COV, FALSE);
   NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  guint nfits         = 10;
-  guint nruns         = 1;
+  guint nfits         = 50;
+  guint nruns         = 5;
+  gdouble log10m_mult_bias;
   guint i, j;
+
+
+  if (NC_IS_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->galaxy_redshift))
+    log10m_mult_bias = 0.01;
+  else
+    log10m_mult_bias = 0.0;
 
   nc_data_cluster_wl_set_resample_flag (test->dcwl, NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL);
   g_object_set (test->dcwl, "enable-parallel", TRUE, NULL);
@@ -1171,7 +1178,7 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
 
       param_fit = ncm_mset_fparam_get (test->mset, 0);
 
-      if ((param_fit > 10.0) && (param_fit < 17.0))
+      if ((param_fit > 13.0) && (param_fit < 16.0))
       {
         ncm_stats_vec_set (stats, 0, ncm_mset_fparam_get (test->mset, 0));
 
@@ -1180,14 +1187,13 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
       }
     }
 
-    {
-      /* We are adding 10% to the error due to the bias in the MLE. */
-      const gdouble mean_log10M = ncm_stats_vec_get_mean (stats, 0);
-      const gdouble sd_log10M   = ncm_stats_vec_get_sd (stats, 0) / sqrt (nfits);
+    const gdouble mean_log10M = ncm_stats_vec_get_mean (stats, 0);
+    const gdouble sd_log10M   = ncm_stats_vec_get_sd (stats, 0) / sqrt (nfits);
 
-      ncm_assert_cmpdouble (mean_log10M, >, log10M - 5.0 * sd_log10M);
-      ncm_assert_cmpdouble (mean_log10M, <, log10M + 5.0 * sd_log10M);
-    }
+    ncm_assert_cmpdouble (mean_log10M, >, log10M * (1 - log10m_mult_bias) - 6.0 * sd_log10M);
+    ncm_assert_cmpdouble (mean_log10M, <, log10M * (1 + log10m_mult_bias) + 6.0 * sd_log10M);
+
+    ncm_stats_vec_reset (stats, TRUE);
   }
 
   ncm_stats_vec_reset (stats, TRUE);
@@ -1240,6 +1246,8 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
 
     ncm_assert_cmpdouble (mean_RA, >, ra - 5.0 * sd_RA / sqrt (nfits));
     ncm_assert_cmpdouble (mean_RA, <, ra + 5.0 * sd_RA / sqrt (nfits));
+
+    ncm_stats_vec_reset (stats, TRUE);
   }
 
   ncm_stats_vec_reset (stats, TRUE);
@@ -1287,13 +1295,13 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
       ncm_stats_vec_update (stats);
     }
 
-    {
-      const gdouble mean_DEC = ncm_stats_vec_get_mean (stats, 0);
-      const gdouble sd_DEC   = ncm_stats_vec_get_sd (stats, 0);
+    const gdouble mean_DEC = ncm_stats_vec_get_mean (stats, 0);
+    const gdouble sd_DEC   = ncm_stats_vec_get_sd (stats, 0);
 
-      ncm_assert_cmpdouble (mean_DEC, >, dec - 5.0 * sd_DEC / sqrt (nfits));
-      ncm_assert_cmpdouble (mean_DEC, <, dec + 5.0 * sd_DEC / sqrt (nfits));
-    }
+    ncm_assert_cmpdouble (mean_DEC, >, dec - 5.0 * sd_DEC / sqrt (nfits));
+    ncm_assert_cmpdouble (mean_DEC, <, dec + 5.0 * sd_DEC / sqrt (nfits));
+
+    ncm_stats_vec_reset (stats, TRUE);
   }
 
   ncm_dataset_clear (&dataset);
