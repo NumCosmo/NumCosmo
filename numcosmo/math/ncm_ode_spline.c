@@ -69,6 +69,7 @@ typedef struct _NcmOdeSplinePrivate
   gboolean stop_hnil;
   gboolean auto_abstol;
   gdouble ini_step;
+  guint min_subdivisions;
   NcmModelCtrl *ctrl;
   NcmSpline *spline;
 } NcmOdeSplinePrivate;
@@ -87,6 +88,7 @@ enum
   PROP_STOP_HNIL,
   PROP_AUTO_ABSTOL,
   PROP_INI_STEP,
+  PROP_MIN_SUBDIVISIONS,
 };
 
 struct _NcmOdeSpline
@@ -110,27 +112,28 @@ ncm_ode_spline_init (NcmOdeSpline *os)
   if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
     g_error ("ERROR: SUNContext_Create failed\n");
 
-  self->spline      = NULL;
-  self->cvode       = CVodeCreate (CV_ADAMS, self->sunctx);
-  self->cvode_init  = FALSE;
-  self->y           = N_VNew_Serial (1, self->sunctx);
-  self->NLS         = NULL;
-  self->y_array     = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-  self->x_array     = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-  self->xi          = GSL_NAN;
-  self->xf          = GSL_NAN;
-  self->yi          = GSL_NAN;
-  self->yf          = GSL_NAN;
-  self->yf_attained = GSL_NAN;
-  self->reltol      = 0.0;
-  self->abstol      = 0.0;
-  self->dydx        = NULL;
-  self->s_init      = FALSE;
-  self->hnil        = FALSE;
-  self->stop_hnil   = FALSE;
-  self->auto_abstol = FALSE;
-  self->ini_step    = 0.0;
-  self->ctrl        = ncm_model_ctrl_new (NULL);
+  self->spline           = NULL;
+  self->cvode            = CVodeCreate (CV_ADAMS, self->sunctx);
+  self->cvode_init       = FALSE;
+  self->y                = N_VNew_Serial (1, self->sunctx);
+  self->NLS              = NULL;
+  self->y_array          = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  self->x_array          = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  self->xi               = GSL_NAN;
+  self->xf               = GSL_NAN;
+  self->yi               = GSL_NAN;
+  self->yf               = GSL_NAN;
+  self->yf_attained      = GSL_NAN;
+  self->reltol           = 0.0;
+  self->abstol           = 0.0;
+  self->dydx             = NULL;
+  self->s_init           = FALSE;
+  self->hnil             = FALSE;
+  self->stop_hnil        = FALSE;
+  self->auto_abstol      = FALSE;
+  self->ini_step         = 0.0;
+  self->min_subdivisions = 0;
+  self->ctrl             = ncm_model_ctrl_new (NULL);
 
   self->NLS = SUNNonlinSol_FixedPoint (self->y, 0, self->sunctx);
   NCM_CVODE_CHECK (self->NLS, "SUNNonlinSol_FixedPoint", 0, );
@@ -180,6 +183,9 @@ _ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_INI_STEP:
       ncm_ode_spline_set_ini_step (os, g_value_get_double (value));
       break;
+    case PROP_MIN_SUBDIVISIONS:
+      ncm_ode_spline_set_min_subdivisions (os, g_value_get_uint (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -228,6 +234,9 @@ _ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_INI_STEP:
       g_value_set_double (value, ncm_ode_spline_get_ini_step (os));
+      break;
+    case PROP_MIN_SUBDIVISIONS:
+      g_value_set_uint (value, ncm_ode_spline_get_min_subdivisions (os));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -377,7 +386,7 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
   /**
    * NcmOdeSpline:dydx:
    *
-   * A pointer to the dydx function, a.k.a. the jacobian.
+   * A pointer to the dydx function, a.k.a. the Jacobian.
    *
    */
   g_object_class_install_property (object_class,
@@ -442,6 +451,23 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         "Integration initial step size",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmOdeSpline:min-subdivisions:
+   *
+   * Minimum number of subdivisions of the integration interval. When set to a value
+   * greater than zero, the integrator will enforce a maximum step size of
+   * (xf - xi) / min_subdivisions. This guarantees at least min_subdivisions points
+   * in the resulting spline. Default is 0 (no enforcement).
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MIN_SUBDIVISIONS,
+                                   g_param_spec_uint ("min-subdivisions",
+                                                      NULL,
+                                                      "Minimum number of integration subdivisions",
+                                                      0, G_MAXUINT, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static gint
@@ -564,6 +590,13 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 
   flag = CVodeSetMaxNumSteps (self->cvode, 100000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
+
+  /* Optionally guarantee a minimum number of subdivisions */
+  if (self->min_subdivisions > 0)
+  {
+    flag = CVodeSetMaxStep (self->cvode, (self->xf - self->xi) / self->min_subdivisions);
+    NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
+  }
 
   flag = CVodeSetMaxOrd (self->cvode, 3); /* Cubic splines */
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxOrd", 1, );
@@ -865,6 +898,42 @@ ncm_ode_spline_get_ini_step (NcmOdeSpline *os)
   NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
 
   return self->ini_step;
+}
+
+/**
+ * ncm_ode_spline_set_min_subdivisions:
+ * @os: a #NcmOdeSpline
+ * @min_subdivisions: minimum number of subdivisions
+ *
+ * Sets the minimum number of subdivisions for the integration interval.
+ * When set to a value greater than zero, the integrator will cap the
+ * maximum step size at (xf - xi) / min_subdivisions, guaranteeing at
+ * least min_subdivisions points in the resulting spline. Set to 0 to
+ * disable (default behavior).
+ *
+ */
+void
+ncm_ode_spline_set_min_subdivisions (NcmOdeSpline *os, guint min_subdivisions)
+{
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
+  self->min_subdivisions = min_subdivisions;
+}
+
+/**
+ * ncm_ode_spline_get_min_subdivisions:
+ * @os: a #NcmOdeSpline
+ *
+ * Gets the current minimum number of subdivisions setting.
+ *
+ * Returns: the minimum number of subdivisions (zero means disabled).
+ */
+guint
+ncm_ode_spline_get_min_subdivisions (NcmOdeSpline *os)
+{
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
+  return self->min_subdivisions;
 }
 
 /**

@@ -112,6 +112,89 @@ def test_ode_spline_copy_props() -> None:
     assert_allclose([ss.eval(x) for x in x_a], np.exp(x_a * f.alpha), rtol=1e-7)
 
 
+def test_ode_spline_min_subdivisions_default() -> None:
+    """Test that min_subdivisions defaults to 0."""
+    f = RhsF(2.5)
+    s = Ncm.SplineCubicNotaknot.new()
+    os = Ncm.OdeSpline.new(s, f.rhs)
+
+    assert os.get_min_subdivisions() == 0
+
+
+def test_ode_spline_min_subdivisions_set_get() -> None:
+    """Test setting and getting min_subdivisions."""
+    f = RhsF(2.5)
+    s = Ncm.SplineCubicNotaknot.new()
+    os = Ncm.OdeSpline.new(s, f.rhs)
+
+    test_values = [0, 5, 10, 20, 100]
+    for val in test_values:
+        os.set_min_subdivisions(val)
+        assert os.get_min_subdivisions() == val
+
+
+def test_ode_spline_min_subdivisions_prop() -> None:
+    """Test min_subdivisions via GObject property."""
+    f = RhsF(2.5)
+    s = Ncm.SplineCubicNotaknot.new()
+    os = Ncm.OdeSpline.new(s, f.rhs)
+
+    os.props.min_subdivisions = 42
+    assert os.props.min_subdivisions == 42
+    assert os.get_min_subdivisions() == 42
+
+
+def test_ode_spline_min_subdivisions_effect() -> None:
+    """Test that min_subdivisions enforces minimum number of points."""
+    f = RhsF(2.5)
+    s = Ncm.SplineCubicNotaknot.new()
+    os = Ncm.OdeSpline.new(s, f.rhs)
+    os.set_reltol(1.0e-10)
+
+    x_0 = 0.0
+    y_0 = 1.0
+    x_1 = 5.0
+
+    # Test with min_subdivisions = 0 (default)
+    os.set_min_subdivisions(0)
+    os.props.xi = x_0
+    os.props.xf = x_1
+    os.props.yi = y_0
+    os.prepare(None)
+
+    ss = os.peek_spline()
+    xv = ss.peek_xv()
+    assert xv.len() >= 2
+
+    # Test with min_subdivisions = 10
+    min_subdivisions = 10
+    os.set_min_subdivisions(min_subdivisions)
+    os.props.xi = x_0
+    os.props.xf = x_1
+    os.props.yi = y_0
+    os.prepare(None)
+
+    ss = os.peek_spline()
+    xv = ss.peek_xv()
+    assert xv.len() >= min_subdivisions
+
+    # Test with min_subdivisions = 50
+    min_subdivisions = 50
+    os.set_min_subdivisions(min_subdivisions)
+    os.props.xi = x_0
+    os.props.xf = x_1
+    os.props.yi = y_0
+    os.prepare(None)
+
+    ss = os.peek_spline()
+    xv = ss.peek_xv()
+    assert xv.len() >= min_subdivisions
+
+
 if __name__ == "__main__":
     test_ode_spline()
     test_ode_spline_copy_props()
+    test_ode_spline_min_subdivisions_default()
+    test_ode_spline_min_subdivisions_set_get()
+    test_ode_spline_min_subdivisions_prop()
+    test_ode_spline_min_subdivisions_effect()

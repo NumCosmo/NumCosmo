@@ -107,6 +107,14 @@ class BesselTest(Ncm.CSQ1D):
         """Prepare method, nothing to do."""
 
 
+class BesselTestWithIntNu(BesselTest):
+    """BesselTest subclass with analytic eval_int_nu override."""
+
+    def do_eval_int_nu(self, _model, t):  # pylint: disable=arguments-differ
+        """Evaluate the integral of nu analytically: k * (t - ti)."""
+        return self.k * (t - self.get_ti())
+
+
 def test_csq1d():
     """Test basic functionality of NcmCSQ1D."""
     bs = BesselTest(alpha=2.0)
@@ -295,6 +303,115 @@ def test_evolution_adiabatic2():
         assert_allclose(J11, 2.0 * abs(phi) ** 2, atol=1.0e-7)
         assert_allclose(J22, 2.0 * abs(Pphi) ** 2, atol=1.0e-7)
         assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
+
+
+def test_eval_int_nu_default():
+    """Test default eval_int_nu implementation via ODE spline after prepare()."""
+    bs = BesselTest(alpha=2.0)
+    k = 1.0
+    ti = -1.0e4
+
+    bs.set_k(k)
+    bs.set_ti(ti)
+    bs.set_tf(-1.0e-3)
+    bs.set_save_evol(True)
+    bs.set_reltol(1.0e-10)
+    bs.set_abstol(0.0)
+    bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    bs.set_vacuum_max_time(-1.0e1)
+    bs.set_vacuum_reltol(1.0e-8)
+    bs.prepare(None)
+    bs.prepare_phase_splines(None)
+
+    # For t <= t_ode_ini the default implementation returns 0
+    assert_allclose(bs.eval_int_nu(None, ti), 0.0, atol=1.0e-30)
+
+    # For BesselTest, nu = k (constant), and the spline starts at π/4 at t_ode_ini ≈
+    # -10. Check that d(int_nu)/dt = nu = k via finite difference.
+    test_times = np.linspace(-9.9, -1.0e-3, 20)[:-1]
+    h = 1.0e-7
+    for t in test_times:
+        int_nu_deriv = (bs.eval_int_nu(None, t + h) - bs.eval_int_nu(None, t - h)) / (
+            2.0 * h
+        )
+        assert_allclose(int_nu_deriv, k, rtol=1.0e-5)
+
+
+def test_eval_int_nu_override():
+    """Test that an overridden eval_int_nu is used in place of the ODE spline."""
+    bs = BesselTestWithIntNu(alpha=2.0)
+    k = 1.0
+    ti = -1.0e4
+
+    bs.set_k(k)
+    bs.set_ti(ti)
+    bs.set_tf(-1.0e-3)
+
+    # The override should work without calling prepare()
+    test_times = np.linspace(ti, -1.0e-3, 20)[1:-1]
+    for t in test_times:
+        assert_allclose(bs.eval_int_nu(None, t), k * (t - ti))
+
+    # After prepare(), the override should still be used (not the ODE spline)
+    bs.set_save_evol(True)
+    bs.set_reltol(1.0e-10)
+    bs.set_abstol(0.0)
+    bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    bs.set_vacuum_max_time(-1.0e1)
+    bs.set_vacuum_reltol(1.0e-8)
+    bs.prepare(None)
+
+    for t in test_times:
+        assert_allclose(bs.eval_int_nu(None, t), k * (t - ti))
+
+
+def test_eval_delta_theta_at():
+    """Test eval_delta_theta_at:
+
+    boundary condition, finite values, and derivative check."""
+    bs = BesselTest(alpha=2.0)
+    k = 1.0
+    ti = -1.0e4
+    tf = -1.0e-3
+    bs.set_k(k)
+    bs.set_ti(ti)
+    bs.set_tf(tf)
+    bs.set_save_evol(True)
+    bs.set_reltol(1.0e-10)
+    bs.set_abstol(0.0)
+    bs.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    bs.set_vacuum_max_time(-1.0e1)
+    bs.set_vacuum_reltol(1.0e-8)
+    bs.prepare(None)
+    bs.prepare_phase_splines(None)
+
+    # Pre-ODE times (t <= t_ode_ini) must return 0
+    assert_allclose(bs.eval_delta_theta_at(ti), 0.0, atol=1.0e-30)
+    assert_allclose(bs.eval_delta_theta_at(-1.0e3), 0.0, atol=1.0e-30)
+
+    # Values are finite throughout the ODE range
+    test_times = np.linspace(-1.0e1, tf, 20)[1:]
+    for t in test_times:
+        assert math.isfinite(
+            bs.eval_delta_theta_at(t)
+        ), f"delta_theta_at({t}) is not finite"
+
+    # Finite-difference check in the ODE regime: derivative must match the integrand
+    # evaluated from the evolved splines (same data the NcmOdeSpline uses internally).
+    state = Ncm.CSQ1DState.new()
+    t_ode = -0.1
+    h_ode = 1.0e-7
+    bs.eval_at_frame(None, Ncm.CSQ1DFrame.ADIAB1, t_ode, state)
+    alpha_ode, dgamma_ode = state.get_ag()
+    nu_ode = bs.eval_nu(None, t_ode)
+    sh_a2_ode = math.sinh(0.5 * alpha_ode)
+    integrand_ode = (
+        nu_ode * (math.expm1(dgamma_ode) - 2.0 * sh_a2_ode**2) / math.cosh(alpha_ode)
+    )
+    fd_ode = (
+        bs.eval_delta_theta_at(t_ode + h_ode) - bs.eval_delta_theta_at(t_ode - h_ode)
+    ) / (2.0 * h_ode)
+    assert_allclose(fd_ode, integrand_ode, rtol=1.0e-4)
 
 
 @pytest.mark.parametrize(
@@ -640,6 +757,9 @@ if __name__ == "__main__":
     test_change_frame_adiab1_adiab2()
     test_nonadiab_prop()
     test_nonadiab_evol()
+    test_eval_int_nu_default()
+    test_eval_int_nu_override()
+    test_eval_delta_theta_at()
     test_state_circle()
     test_state_phi_Pphi()
     test_state_um()

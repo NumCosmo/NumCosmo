@@ -25,6 +25,7 @@
 """Tests on NcHIPertAdiab class."""
 
 import math
+from typing import TypeAlias
 import pytest
 
 from numpy.testing import assert_allclose
@@ -36,9 +37,16 @@ from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
+AdiabQGW: TypeAlias = tuple[Nc.HIPertAdiab, Nc.HICosmoQGW]
+AdiabVexp: TypeAlias = tuple[Nc.HIPertAdiab, Nc.HICosmoVexp]
 
-@pytest.fixture(name="adiab_qgw")
-def fixture_adiab_qgw():
+
+@pytest.fixture(
+    name="adiab_qgw",
+    params=[1.0e-2, 1.0e-4, 1.0e-6],
+    ids=lambda w: f"w={w}",
+)
+def fixture_adiab_qgw(request: pytest.FixtureRequest) -> AdiabQGW:
     """Fixture for NcHIPertAdiab."""
     adiab = Nc.HIPertAdiab.new()
 
@@ -48,11 +56,14 @@ def fixture_adiab_qgw():
     adiab.set_tf(-10.0)
     adiab.set_reltol(1.0e-9)
 
-    return adiab, Nc.HICosmoQGW()
+    qgw = Nc.HICosmoQGW()
+    qgw.props.w = request.param
+
+    return adiab, qgw
 
 
 @pytest.fixture(name="adiab_vexp")
-def fixture_adiab_vexp():
+def fixture_adiab_vexp() -> AdiabVexp:
     """Fixture for NcHIPertAdiab."""
     adiab = Nc.HIPertAdiab.new()
     vexp = Nc.HICosmoVexp()
@@ -67,7 +78,7 @@ def fixture_adiab_vexp():
     return adiab, vexp
 
 
-def test_hipert_adiab_qgw(adiab_qgw):
+def test_hipert_adiab_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test basic functionality of NcHIPertAdiab."""
     adiab, _ = adiab_qgw
 
@@ -108,7 +119,7 @@ def test_hipert_adiab_qgw(adiab_qgw):
     assert adiab.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.NONADIABATIC2
 
 
-def test_hipert_adiab_vexp(adiab_vexp):
+def test_hipert_adiab_vexp(adiab_vexp: AdiabVexp) -> None:
     """Test basic functionality of NcHIPertAdiab."""
     adiab, vexp = adiab_vexp
 
@@ -147,7 +158,7 @@ def test_hipert_adiab_vexp(adiab_vexp):
     assert adiab.get_initial_condition_type() == Ncm.CSQ1DInitialStateType.NONADIABATIC2
 
 
-def test_initial_conditions_time_qgw(adiab_qgw):
+def test_initial_conditions_time_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -157,14 +168,14 @@ def test_initial_conditions_time_qgw(adiab_qgw):
     assert t_adiab >= adiab.get_ti()
     assert t_adiab <= adiab.get_tf()
 
-    t_min, F1_min, t_lb, t_ub = adiab.find_adiab_max(qgw, -300.0, -1.0e1, 1.0e-1)
+    t_min, F1_min, t_lb, t_ub = adiab.find_adiab_max(qgw, -300.0, -1.0e1, 9.0e-2)
 
     assert_allclose(F1_min, adiab.eval_F1(qgw, t_min))
     assert math.fabs(F1_min - adiab.eval_F1(qgw, t_lb)) <= 1.0e-1
     assert math.fabs(F1_min - adiab.eval_F1(qgw, t_ub)) <= 1.0e-1
 
 
-def test_initial_conditions_time_vexp(adiab_vexp):
+def test_initial_conditions_time_vexp(adiab_vexp: AdiabVexp) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, vexp = adiab_vexp
 
@@ -185,7 +196,9 @@ def test_initial_conditions_time_vexp(adiab_vexp):
     assert math.fabs(F1_min - adiab.eval_F1(vexp, t_ub)) <= 1.0e-1
 
 
-def _compute_analytical_solution_qgw(adiab_qgw, t_adiab):
+def _compute_analytical_solution_qgw(
+    adiab_qgw: AdiabQGW, t_adiab: float
+) -> tuple[complex, complex]:
     """Compute analytical solution for NcHIPertAdiab using NcHICosmoQGW."""
     adiab, qgw = adiab_qgw
 
@@ -198,19 +211,21 @@ def _compute_analytical_solution_qgw(adiab_qgw, t_adiab):
     alpha = 3.0 * (1.0 - w) / (2.0 * (1.0 + 3.0 * w))
     x = qgw.eval_x(t_adiab)
     E = np.abs(qgw.eval_hubble(t_adiab))
-    eta = 2.0 * x / (E * (1.0 + 3.0 * w))
+    eta = -2.0 * x / (E * (1.0 + 3.0 * w))
     cs = np.sqrt(w)
     cs_k_eta = cs * adiab.get_k() * eta
-    hf_norm = norma * (2.0 / ((1.0 + 3.0 * w) * eta * sqrtOmegaw)) ** (alpha)
+    hf_norm = norma * (2.0 / ((1.0 + 3.0 * w) * (-eta) * sqrtOmegaw)) ** (alpha)
 
     # Analytical solution for phi and Pphi
-    theo_phi = hf_norm * hankel1e(alpha, cs_k_eta)
-    theo_Pphi = (cs_k_eta / hf_norm) * 0.25 * math.pi * hankel1e(1.0 + alpha, cs_k_eta)
+    theo_phi = hf_norm * hankel1e(alpha, -cs_k_eta)
+    theo_Pphi = (
+        -(cs_k_eta / hf_norm) * 0.25 * math.pi * hankel1e(1.0 + alpha, -cs_k_eta)
+    )
 
     return theo_phi, theo_Pphi
 
 
-def test_initial_conditions_adiabatic_qgw(adiab_qgw):
+def test_initial_conditions_adiabatic_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -236,7 +251,7 @@ def test_initial_conditions_adiabatic_qgw(adiab_qgw):
         assert_allclose(abs(Pphi), abs(theo_Pphi), rtol=1.0e-8)
 
 
-def test_initial_conditions_adiabatic_vexp(adiab_vexp):
+def test_initial_conditions_adiabatic_vexp(adiab_vexp: AdiabVexp) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, vexp = adiab_vexp
 
@@ -262,7 +277,7 @@ def test_initial_conditions_adiabatic_vexp(adiab_vexp):
         assert np.isfinite(abs(Pphi))
 
 
-def test_evolution_qgw(adiab_qgw):
+def test_evolution_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -299,7 +314,7 @@ def test_evolution_qgw(adiab_qgw):
         assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
 
 
-def test_evolution_vexp(adiab_vexp):
+def test_evolution_vexp(adiab_vexp: AdiabVexp) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, vexp = adiab_vexp
 
@@ -334,7 +349,7 @@ def test_evolution_vexp(adiab_vexp):
         assert np.isfinite(J12)
 
 
-def test_evolution_adiabatic2_qgw(adiab_qgw):
+def test_evolution_adiabatic2_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -371,7 +386,7 @@ def test_evolution_adiabatic2_qgw(adiab_qgw):
         assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
 
 
-def test_evolution_adiabatic2_vexp(adiab_vexp):
+def test_evolution_adiabatic2_vexp(adiab_vexp: AdiabVexp) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, vexp = adiab_vexp
 
@@ -406,7 +421,7 @@ def test_evolution_adiabatic2_vexp(adiab_vexp):
         assert np.isfinite(J12)
 
 
-def test_evolution_adiabatic4_qgw(adiab_qgw):
+def test_evolution_adiabatic4_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -443,7 +458,7 @@ def test_evolution_adiabatic4_qgw(adiab_qgw):
         assert_allclose(J12, (2.0 * phi * Pphi.conjugate()).real, atol=1.0e-7)
 
 
-def test_evolution_adiabatic4_vexp(adiab_vexp):
+def test_evolution_adiabatic4_vexp(adiab_vexp: AdiabVexp) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, vexp = adiab_vexp
 
@@ -483,7 +498,7 @@ def test_evolution_adiabatic4_vexp(adiab_vexp):
     [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2],
     ids=["orig", "adiab1", "adiab2"],
 )
-def test_evolution_frame_qgw(adiab_qgw, frame):
+def test_evolution_frame_qgw(adiab_qgw: AdiabQGW, frame: Ncm.CSQ1DFrame) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -512,7 +527,7 @@ def test_evolution_frame_qgw(adiab_qgw, frame):
     [Ncm.CSQ1DFrame.ORIG, Ncm.CSQ1DFrame.ADIAB1, Ncm.CSQ1DFrame.ADIAB2],
     ids=["orig", "adiab1", "adiab2"],
 )
-def test_evolution_frame_vexp(adiab_vexp, frame):
+def test_evolution_frame_vexp(adiab_vexp: AdiabVexp, frame: Ncm.CSQ1DFrame) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, vexp = adiab_vexp
 
@@ -538,7 +553,7 @@ def test_evolution_frame_vexp(adiab_vexp, frame):
         assert state.get_frame() == frame
 
 
-def test_change_frame_orig_adiab1_qgw(adiab_qgw):
+def test_change_frame_orig_adiab1_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test change_frame method of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -560,7 +575,7 @@ def test_change_frame_orig_adiab1_qgw(adiab_qgw):
     assert_allclose(state.get_ag(), (0.1, 0.3))
 
 
-def test_change_frame_orig_adiab2_qgw(adiab_qgw):
+def test_change_frame_orig_adiab2_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test change_frame method of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -586,7 +601,7 @@ def test_change_frame_orig_adiab2_qgw(adiab_qgw):
     assert_allclose(state.get_ag(), (alpha0, gamma0))
 
 
-def test_change_frame_adiab1_adiab2_qgw(adiab_qgw):
+def test_change_frame_adiab1_adiab2_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test change_frame method of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -607,7 +622,7 @@ def test_change_frame_adiab1_adiab2_qgw(adiab_qgw):
     assert_allclose(state.get_ag(), (0.1, 0.3))
 
 
-def test_evolution_qgw_duplicate(adiab_qgw):
+def test_evolution_qgw_duplicate(adiab_qgw: AdiabQGW) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -618,7 +633,7 @@ def test_evolution_qgw_duplicate(adiab_qgw):
     test_evolution_qgw((adiab_dup, qgw_dup))
 
 
-def test_evolution_vexp_duplicate(adiab_vexp):
+def test_evolution_vexp_duplicate(adiab_vexp: AdiabVexp) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, vexp = adiab_vexp
 
@@ -629,7 +644,7 @@ def test_evolution_vexp_duplicate(adiab_vexp):
     test_evolution_vexp((adiab_dup, vexp_dup))
 
 
-def test_spectrum_zeta_qgw(adiab_qgw):
+def test_spectrum_zeta_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test spectrum of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -662,7 +677,7 @@ def test_spectrum_zeta_qgw(adiab_qgw):
             )
 
 
-def test_spectrum_zeta_vexp(adiab_vexp):
+def test_spectrum_zeta_vexp(adiab_vexp: AdiabVexp) -> None:
     """Test spectrum of NcHIPertAdiab."""
     adiab, vexp = adiab_vexp
 
@@ -698,7 +713,7 @@ def test_spectrum_zeta_vexp(adiab_vexp):
             )
 
 
-def test_spectrum_Psi_qgw(adiab_qgw):
+def test_spectrum_Psi_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test spectrum of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -733,7 +748,7 @@ def test_spectrum_Psi_qgw(adiab_qgw):
             )
 
 
-def test_spectrum_drho_qgw(adiab_qgw):
+def test_spectrum_drho_qgw(adiab_qgw: AdiabQGW) -> None:
     """Test spectrum of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
@@ -772,3 +787,60 @@ def test_spectrum_drho_qgw(adiab_qgw):
             num_drho = Pdrho.eval(qgw, t, k)
 
             assert_allclose(num_drho, theo_drho, rtol=1.0e-7)
+
+
+@pytest.mark.parametrize("k", [0.1, 1.0, 10.0])
+@pytest.mark.parametrize("w", [0.01, 0.05, 0.09])
+def test_delta_theta_qgw(k: float, w: float) -> None:
+    """Test that delta_theta matches the phase of the analytical Hankel solution.
+
+    The analytical solution is phi ∝ hankel1e(alpha, -cs_k_eta), where hankel1e
+    factors out the main oscillation exp(-i·z). Therefore delta_theta (the residual
+    phase stored by the integrator) must equal -arg(hankel1e) up to an additive
+    constant. We verify this by comparing phasor differences across the ODE regime,
+    for several values of k and w (equation-of-state parameter, w < 1/3).
+    """
+    adiab = Nc.HIPertAdiab.new()
+    qgw = Nc.HICosmoQGW()
+    qgw.props.w = w
+
+    adiab.set_k(k)
+    adiab.set_ti(-300.0)
+    adiab.set_tf(-1.0)
+    adiab.set_save_evol(True)
+    adiab.set_reltol(1.0e-10)
+    adiab.set_abstol(0.0)
+    adiab.set_initial_condition_type(Ncm.CSQ1DInitialStateType.ADIABATIC4)
+    adiab.set_vacuum_max_time(-1.0e1)
+    adiab.set_vacuum_reltol(1.0e-8)
+    adiab.prepare(qgw)
+    adiab.prepare_phase_splines(qgw)
+
+    t_a, _ = adiab.get_time_array()
+
+    # Restrict to the ODE regime where delta_theta is defined
+    t_ode = [t for t in t_a if adiab.eval_int_nu(qgw, t) > 0.0]
+    assert len(t_ode) >= 10, "Need ODE-regime times for delta_theta comparison"
+
+    alpha = 3.0 * (1.0 - w) / (2.0 * (1.0 + 3.0 * w))
+    cs = np.sqrt(w)
+
+    def theo_phase(t: float) -> float:
+        """Return -arg(hankel1e(alpha, -cs_k_eta(t))), the residual Hankel phase."""
+        x = qgw.eval_x(t)
+        E = np.abs(qgw.eval_hubble(t))
+        eta = -2.0 * x / (E * (1.0 + 3.0 * w))
+        cs_k_eta = cs * k * eta
+        return -np.angle(hankel1e(alpha, -cs_k_eta))
+
+    # delta_theta is defined up to an additive constant; compare phasor differences
+    # relative to the first ODE-regime time so the constant cancels out.
+    t_ref = t_ode[0]
+    ref_num = adiab.eval_delta_theta_at(t_ref)
+    ref_theo = theo_phase(t_ref)
+
+    step = max(1, len(t_ode) // 20)
+    for t in t_ode[::step]:
+        num_diff = adiab.eval_delta_theta_at(t) - ref_num
+        theo_diff = theo_phase(t) - ref_theo
+        assert_allclose(np.exp(1j * num_diff), np.exp(1j * theo_diff), atol=1.0e-5)

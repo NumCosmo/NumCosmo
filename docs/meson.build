@@ -7,6 +7,7 @@ src_site_files = files(
     'index.qmd',
     'install.qmd',
     'ipynb_to_py.sh',
+    'linkgen.lua',
     'references.bib',
 )
 
@@ -17,6 +18,7 @@ subdir('images')
 subdir('tutorials')
 subdir('examples')
 subdir('benchmarks')
+subdir('theory')
 subdir('notes')
 
 quarto_conf = configuration_data()
