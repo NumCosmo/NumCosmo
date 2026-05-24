@@ -1129,6 +1129,8 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
 
   if (NC_IS_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->galaxy_redshift))
     log10m_mult_bias = 0.01;
+  else if (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (test->galaxy_redshift))
+    log10m_mult_bias = 0.005;
   else
     log10m_mult_bias = 0.0;
 
