@@ -20142,10 +20142,8 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         zl: float,
         zc: float,
     ) -> list[float]: ...
+    @staticmethod
     def reduced_shear_cache(
-        self,
-        dp: HaloDensityProfile,
-        cosmo: HICosmo,
         crit_cache: WLSurfaceMassDensityCritCache,
         sigma_cache: WLSurfaceMassDensitySigmaCache,
     ) -> float: ...
