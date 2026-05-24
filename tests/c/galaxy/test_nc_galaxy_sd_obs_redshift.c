@@ -30,7 +30,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
-#include <math/ncm_integrate.h>
+#include <numcosmo/math/ncm_integrate.h>
 
 #include <math.h>
 #include <glib.h>
