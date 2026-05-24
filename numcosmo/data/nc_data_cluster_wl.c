@@ -207,9 +207,13 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
       break;
     case PROP_N_NODES:
       self->n_nodes = g_value_get_uint (value);
+      g_ptr_array_set_size (self->fixed_nodes, 0);
+      g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
       break;
     case PROP_RULE_N:
       self->rule_n = g_value_get_uint (value);
+      g_ptr_array_set_size (self->fixed_nodes, 0);
+      g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
