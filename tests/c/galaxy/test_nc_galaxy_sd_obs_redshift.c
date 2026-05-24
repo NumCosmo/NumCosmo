@@ -815,7 +815,6 @@ test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *tes
   NcmVector *resv           = ncm_vector_new (1);
   NcmVector *errv           = ncm_vector_new (1);
   const guint nruns         = 100;
-  NcmIntegralFixed *fixed_integral;
   guint i;
 
   ncm_integral_nd_set_reltol (NCM_INTEGRAL_ND (integral), 1.0e-6);
@@ -838,6 +837,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *tes
   {
     const gdouble zp     = g_test_rand_double_range (1.0, 5.0);
     const gdouble sigma0 = g_test_rand_double_range (0.02, 0.08);
+    NcmIntegralFixed *fixed_integral;
     gdouble zpi, zpf;
     gdouble res, fixed_res;
 
@@ -875,6 +875,8 @@ test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *tes
     fixed_res = ncm_integral_fixed_nodes_eval (fixed_integral);
 
     ncm_assert_cmpdouble_e (res, ==, fixed_res, 1.0e-5, 0.0);
+
+    ncm_integral_fixed_free (fixed_integral);
   }
 
   /* Test integrals are equal when use_true_z = FALSE.
@@ -889,6 +891,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *tes
   {
     const gdouble zp     = g_test_rand_double_range (1.0, 5.0);
     const gdouble sigma0 = g_test_rand_double_range (0.02, 0.08);
+    NcmIntegralFixed *fixed_integral;
     gdouble zpi, zpf;
     gdouble res, fixed_res;
 
@@ -927,12 +930,13 @@ test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *tes
 
     ncm_assert_cmpdouble_e (res, ==, 1.0, 1.0e-6, 0.0);
     ncm_assert_cmpdouble_e (res, ==, fixed_res, 1.0e-5, 0.0);
+
+    ncm_integral_fixed_free (fixed_integral);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (data);
   nc_galaxy_sd_obs_redshift_integrand_free (integrand);
   ncm_integral_nd_free (NCM_INTEGRAL_ND (integral));
-  ncm_integral_fixed_free (fixed_integral);
   ncm_vector_free (zpiv);
   ncm_vector_free (zpfv);
   ncm_vector_free (resv);
@@ -959,7 +963,6 @@ test_nc_galaxy_sd_obs_redshift_pz_integration (TestNcGalaxySDObsRedshift *test, 
   NcmVector *resv           = ncm_vector_new (1);
   NcmVector *errv           = ncm_vector_new (1);
   const guint nruns         = 100;
-  NcmIntegralFixed *fixed_integral;
   guint i;
 
   ncm_integral_nd_set_reltol (NCM_INTEGRAL_ND (integral), 1.0e-6);
@@ -979,6 +982,7 @@ test_nc_galaxy_sd_obs_redshift_pz_integration (TestNcGalaxySDObsRedshift *test, 
       test->z_max
     );
     gdouble z_sd = 0.03 * (1.0 + z_avg);
+    NcmIntegralFixed *fixed_integral;
     NcmSpline *pz;
     gdouble zpi, zpf;
     gdouble res, fixed_res;
@@ -1032,6 +1036,7 @@ test_nc_galaxy_sd_obs_redshift_pz_integration (TestNcGalaxySDObsRedshift *test, 
     ncm_assert_cmpdouble_e (res, ==, fixed_res, 1.0e-5, 0.0);
     ncm_assert_cmpdouble_e (res, ==, 1, 1.0e-5, 0.0);
 
+    ncm_integral_fixed_free (fixed_integral);
     ncm_vector_free (xv);
     ncm_vector_free (yv);
     ncm_spline_free (pz);
@@ -1040,7 +1045,6 @@ test_nc_galaxy_sd_obs_redshift_pz_integration (TestNcGalaxySDObsRedshift *test, 
   nc_galaxy_sd_obs_redshift_data_unref (data);
   nc_galaxy_sd_obs_redshift_integrand_free (integrand);
   ncm_integral_nd_free (NCM_INTEGRAL_ND (integral));
-  ncm_integral_fixed_free (fixed_integral);
   ncm_vector_free (zpiv);
   ncm_vector_free (zpfv);
   ncm_vector_free (resv);
