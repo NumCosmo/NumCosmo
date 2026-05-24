@@ -24,14 +24,6 @@ jobs:
           environment-file: environment.yml
           auto-activate-base: false
           auto-update-conda: true
-      - name: List RTD versions
-        env:
-          RTD_TOKEN: ${{ secrets.RTD_TOKEN }}
-        run: |
-          curl -s \
-            -H "Authorization: Token ${RTD_TOKEN}" \
-            "https://app.readthedocs.org/api/v3/projects/numcosmo/versions/" \
-            | python3 -m json.tool
       - name: Install LaTeX
         run: |
           sudo apt-get update
@@ -52,45 +44,9 @@ jobs:
           name: quarto-freeze-${{ env.ARTIFACT_SHA }}
           path: BDocs/docs/.quarto/_freeze
           if-no-files-found: error
-      - name: Trigger RTD build
-        env:
-          RTD_TOKEN: ${{ secrets.RTD_TOKEN }}
-        run: |
-          # Skip if no token is available (e.g., on forks)
-          if [ -z "${RTD_TOKEN}" ]; then
-            echo "RTD_TOKEN not set, skipping RTD build trigger"
-            exit 0
-          fi
-
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            VERSION="pull/${{ github.event.pull_request.number }}"
-          else
-            VERSION="${{ github.ref_name }}"
-          fi
-
-          export VERSION
-          VERSION_URL=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('VERSION', ''), safe=''))")
-
-          echo "VERSION=${VERSION}"
-          echo "VERSION_URL=${VERSION_URL}"
-
-          API_URL="https://app.readthedocs.org/api/v3/projects/numcosmo/versions/${VERSION_URL}/builds/"
-
-          echo "API_URL=${API_URL}"
-
-          HTTP_CODE=$(curl -L -w "%{http_code}" -o /tmp/rtd_response.json -s -X POST \
-            -H "Authorization: Token ${RTD_TOKEN}" \
-            -H "Content-Type: application/json" \
-            "${API_URL}")
-
-          echo "Response code: ${HTTP_CODE}"
-          cat /tmp/rtd_response.json
-          echo ""
-
-          if [ "${HTTP_CODE}" -ge 200 ] && [ "${HTTP_CODE}" -lt 300 ]; then
-            echo "Successfully triggered RTD build"
-            exit 0
-          else
-            echo "Failed to trigger RTD build (HTTP ${HTTP_CODE})"
-            exit 1
-          fi
+      - name: Trigger RTDs build
+        uses: dfm/rtds-action@v1
+        with:
+          webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
+          webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
+          commit_ref: ${{ github.ref }}
