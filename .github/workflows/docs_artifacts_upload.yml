@@ -50,3 +50,5 @@ jobs:
           webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
           webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
           commit_ref: ${{ github.ref }}
+      - name: Logging
+        run: echo "Artifact quarto-freeze-${{ env.ARTIFACT_SHA }} uploaded for commit ${{ env.ARTIFACT_SHA }}"
