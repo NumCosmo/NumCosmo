@@ -1057,7 +1057,7 @@ _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       case NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES:
         m2lnL[0] = _nc_data_cluster_wl_eval_m2lnP_fixed (dcwl, mset, NULL);
         break;
-      default:
+      default: /* LCOV_EXCL_LINE */
         g_assert_not_reached ();
         break;
     }
