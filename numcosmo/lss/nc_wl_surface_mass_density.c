@@ -923,9 +923,6 @@ nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (NcHaloDensityProfile 
 
 /**
  * nc_wl_surface_mass_density_reduced_shear_cache:
- * @smd: a #NcWLSurfaceMassDensity
- * @dp: a #NcHaloDensityProfile
- * @cosmo: a #NcHICosmo
  * @crit_cache: a #NcWLSurfaceMassDensityCritCache
  * @sigma_cache: a #NcWLSurfaceMassDensitySigmaCache
  *
@@ -939,7 +936,7 @@ nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (NcHaloDensityProfile 
  *
  */
 gdouble
-nc_wl_surface_mass_density_reduced_shear_cache (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, NcWLSurfaceMassDensityCritCache *crit_cache, NcWLSurfaceMassDensitySigmaCache *sigma_cache)
+nc_wl_surface_mass_density_reduced_shear_cache (NcWLSurfaceMassDensityCritCache *crit_cache, NcWLSurfaceMassDensitySigmaCache *sigma_cache)
 {
   if (!crit_cache->is_source)
   {

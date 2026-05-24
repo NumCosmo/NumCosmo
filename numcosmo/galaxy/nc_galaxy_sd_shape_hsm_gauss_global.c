@@ -657,7 +657,7 @@ _nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes (NcGalaxySDShape *gsds, NcmMS
     if (z_j > z_cl)
     {
       cc = &ldata->crit_cache_arr[j];
-      gt = nc_wl_surface_mass_density_reduced_shear_cache (smd, dp, cosmo, cc, &ldata->sigma_cache);
+      gt = nc_wl_surface_mass_density_reduced_shear_cache (cc, &ldata->sigma_cache);
       g  = gt * cexp (2.0 * I * phi);
     }
     else
@@ -665,7 +665,7 @@ _nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes (NcGalaxySDShape *gsds, NcmMS
       const gdouble step = exp ((z_j - z_cl) / 0.001);
 
       cc = &ldata->crit_cache_zcl_eps;
-      gt = nc_wl_surface_mass_density_reduced_shear_cache (smd, dp, cosmo, cc, &ldata->sigma_cache);
+      gt = nc_wl_surface_mass_density_reduced_shear_cache (cc, &ldata->sigma_cache);
       g  = step * gt * cexp (2.0 * I * phi);
     }
 
