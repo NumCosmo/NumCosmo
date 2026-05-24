@@ -457,7 +457,7 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                    g_param_spec_uint ("n-nodes",
                                                       NULL,
                                                       "Number of intervals for the fixed Gauss-Legendre quadrature",
-                                                      1, G_MAXUINT, 10,
+                                                      2, G_MAXUINT, 10,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
