@@ -346,6 +346,26 @@ local function resolve_symbol(target, symbol)
 end
 
 local function root_prefix()
+    -- Try to get the output file path from Quarto metadata
+    local output_file = ""
+    if quarto ~= nil and quarto.doc ~= nil and quarto.doc.output_file ~= nil then
+        output_file = quarto.doc.output_file
+    end
+
+    -- If we have the output file, use it to calculate depth
+    if output_file ~= "" then
+        local dir = output_file:match("^(.*)/[^/]+$")
+        if dir ~= nil and dir ~= "" then
+            local depth = 0
+            for _ in dir:gmatch("[^/]+") do
+                depth = depth + 1
+            end
+            return string.rep("../", depth)
+        end
+        return ""
+    end
+
+    -- Fallback: use input file path
     local input = ""
     if PANDOC_STATE ~= nil and PANDOC_STATE.input_files ~= nil and PANDOC_STATE.input_files[1] ~= nil then
         input = PANDOC_STATE.input_files[1]
