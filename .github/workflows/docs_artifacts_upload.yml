@@ -44,24 +44,46 @@ jobs:
           name: quarto-freeze-${{ env.ARTIFACT_SHA }}
           path: BDocs/docs/.quarto/_freeze
           if-no-files-found: error
+
       - name: Trigger RTD build
         env:
           RTD_TOKEN: ${{ secrets.RTD_TOKEN }}
         run: |
+          # Skip if no token is available (e.g., on forks)
+          if [ -z "${RTD_TOKEN}" ]; then
+            echo "RTD_TOKEN not set, skipping RTD build trigger"
+            exit 0
+          fi
+
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             VERSION="pull/${{ github.event.pull_request.number }}"
           else
             VERSION="${{ github.ref_name }}"
           fi
 
-          VERSION_URL=$(python -c \
-            "import urllib.parse; print(urllib.parse.quote('${VERSION}', safe=''))")
+          export VERSION
+          VERSION_URL=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('VERSION', ''), safe=''))")
 
-          echo "Triggering RTD version: ${VERSION}"
+          echo "VERSION=${VERSION}"
+          echo "VERSION_URL=${VERSION_URL}"
 
-          RESPONSE=$(curl -s -X POST \
+          API_URL="https://app.readthedocs.org/api/v3/projects/numcosmo/versions/${VERSION_URL}/builds/"
+
+          echo "API_URL=${API_URL}"
+
+          HTTP_CODE=$(curl -L -w "%{http_code}" -o /tmp/rtd_response.json -s -X POST \
             -H "Authorization: Token ${RTD_TOKEN}" \
             -H "Content-Type: application/json" \
-            "https://app.readthedocs.org/api/v3/projects/numcosmo/versions/${VERSION_URL}/builds/")
+            "${API_URL}")
 
-          echo "$RESPONSE"
+          echo "Response code: ${HTTP_CODE}"
+          cat /tmp/rtd_response.json
+          echo ""
+
+          if [ "${HTTP_CODE}" -ge 200 ] && [ "${HTTP_CODE}" -lt 300 ]; then
+            echo "Successfully triggered RTD build"
+            exit 0
+          else
+            echo "Failed to trigger RTD build (HTTP ${HTTP_CODE})"
+            exit 1
+          fi
