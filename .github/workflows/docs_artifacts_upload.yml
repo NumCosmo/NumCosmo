@@ -6,6 +6,9 @@ on:
     branches:
       - master
 
+env:
+  ARTIFACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 jobs:
   docs-artifacts:
     runs-on: ubuntu-latest
@@ -35,14 +38,9 @@ jobs:
         run: |
           meson setup BDocs -Ddocumentation=true
           meson compile -C BDocs
-      - name: Print SHA info
-        run: |
-          echo "GITHUB_SHA=${GITHUB_SHA}"
-          echo "HEAD_SHA=${{ github.event.pull_request.head.sha }}"
-          echo "BASE_SHA=${{ github.event.pull_request.base.sha }}"
       - name: Upload Quarto freeze
         uses: actions/upload-artifact@v4
         with:
-          name: quarto-freeze-${{ github.sha }}
+          name: quarto-freeze-${{ env.ARTIFACT_SHA }}
           path: BDocs/docs/.quarto/_freeze
           if-no-files-found: error
