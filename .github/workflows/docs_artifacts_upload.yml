@@ -54,9 +54,14 @@ jobs:
             VERSION="${{ github.ref_name }}"
           fi
 
+          VERSION_URL=$(python -c \
+            "import urllib.parse; print(urllib.parse.quote('${VERSION}', safe=''))")
+
           echo "Triggering RTD version: ${VERSION}"
 
-          curl -X POST \
+          RESPONSE=$(curl -s -X POST \
             -H "Authorization: Token ${RTD_TOKEN}" \
             -H "Content-Type: application/json" \
-            https://readthedocs.org/api/v3/projects/numcosmo/versions/${VERSION}/builds/
+            "https://app.readthedocs.org/api/v3/projects/numcosmo/versions/${VERSION_URL}/builds/")
+
+          echo "$RESPONSE"

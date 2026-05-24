@@ -352,17 +352,25 @@ local function root_prefix()
         output_file = quarto.doc.output_file
     end
 
-    -- If we have the output file, use it to calculate depth
+    -- If we have the output file, extract the site-relative path
     if output_file ~= "" then
-        local dir = output_file:match("^(.*)/[^/]+$")
-        if dir ~= nil and dir ~= "" then
-            local depth = 0
-            for _ in dir:gmatch("[^/]+") do
-                depth = depth + 1
-            end
-            return string.rep("../", depth)
+        -- Strip everything before numcosmo-site/ or docs/ to get site-relative path
+        local site_relative = output_file:match("numcosmo%-site/(.*)")
+        if site_relative == nil then
+            site_relative = output_file:match("docs/numcosmo%-site/(.*)")
         end
-        return ""
+
+        if site_relative ~= nil and site_relative ~= "" then
+            local dir = site_relative:match("^(.*)/[^/]+$")
+            if dir ~= nil and dir ~= "" then
+                local depth = 0
+                for _ in dir:gmatch("[^/]+") do
+                    depth = depth + 1
+                end
+                return string.rep("../", depth)
+            end
+            return ""
+        end
     end
 
     -- Fallback: use input file path
