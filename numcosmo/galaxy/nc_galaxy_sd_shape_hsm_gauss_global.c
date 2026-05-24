@@ -624,9 +624,6 @@ _nc_galaxy_sd_shape_hsm_gauss_global_prepare_at_nodes (NcGalaxySDShape *gsds, Nc
 static void
 _nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, const NcmVector *z_nodes, NcmVector *out)
 {
-  NcWLSurfaceMassDensity *smd              = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-  NcHaloDensityProfile *dp                 = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-  NcHICosmo *cosmo                         = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHaloPosition *halo_position            = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   NcGalaxySDShapeHSMGaussGlobalData *ldata = (NcGalaxySDShapeHSMGaussGlobalData *) data->ldata;
   const gdouble z_cl                       = nc_halo_position_get_redshift (halo_position);
