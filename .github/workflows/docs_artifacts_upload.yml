@@ -44,11 +44,81 @@ jobs:
           name: quarto-freeze-${{ env.ARTIFACT_SHA }}
           path: BDocs/docs/.quarto/_freeze
           if-no-files-found: error
-      - name: Trigger RTDs build
-        uses: dfm/rtds-action@v1
-        with:
-          webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
-          webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
-          commit_ref: ${{ github.ref }}
-      - name: Logging
-        run: echo "Artifact quarto-freeze-${{ env.ARTIFACT_SHA }} uploaded for commit ${{ env.ARTIFACT_SHA }}"
+      - name: Trigger RTD build
+        env:
+          RTD_WEBHOOK_URL: ${{ secrets.RTD_WEBHOOK_URL }}
+          RTD_WEBHOOK_SECRET: ${{ secrets.RTD_WEBHOOK_SECRET }}
+        run: |
+          set -e
+
+          echo "===== RTD Trigger Debug ====="
+          date
+          echo ""
+
+          echo "Checking configuration..."
+
+          if [ -z "${RTD_WEBHOOK_URL}" ]; then
+            echo "ERROR: RTD_WEBHOOK_URL not set"
+            exit 1
+          fi
+
+          if [ -z "${RTD_WEBHOOK_SECRET}" ]; then
+            echo "ERROR: RTD_WEBHOOK_SECRET not set"
+            exit 1
+          fi
+
+          echo "RTD_WEBHOOK_URL is set"
+          echo "RTD_WEBHOOK_SECRET is set"
+          echo ""
+
+          echo "Webhook URL:"
+          echo "${RTD_WEBHOOK_URL}"
+          echo ""
+
+          PAYLOAD="{\"trigger\":\"github-actions\",\"event_name\":\"${{ github.event_name }}\",\"sha\":\"${{ github.sha }}\",\"ref\":\"${{ github.ref }}\",\"ref_name\":\"${{ github.ref_name }}\"}"
+
+          echo "Payload:"
+          echo "${PAYLOAD}"
+          echo ""
+
+          echo "Computing HMAC signature..."
+
+          SIGNATURE=$(printf '%s' "${PAYLOAD}" | openssl dgst -sha256 -hmac "${RTD_WEBHOOK_SECRET}" | sed 's/^.* //')
+
+          echo "Signature computed"
+          echo "Signature prefix: ${SIGNATURE:0:16}..."
+          echo ""
+
+          echo "Sending webhook to RTD..."
+          date
+          echo ""
+
+          CURL_EXIT=0
+
+          HTTP_CODE=$(curl -L -s -o /tmp/rtd_response.txt -w "%{http_code}" -X POST -H "Content-Type: application/json" -H "X-Hub-Signature-256: sha256=${SIGNATURE}" -d "${PAYLOAD}" "${RTD_WEBHOOK_URL}") || CURL_EXIT=$?
+
+          echo "curl exit code: ${CURL_EXIT}"
+          echo "HTTP status: ${HTTP_CODE}"
+          echo ""
+
+          echo "===== RTD Response ====="
+          cat /tmp/rtd_response.txt || true
+          echo ""
+          echo "========================"
+          echo ""
+
+          date
+          echo ""
+
+          if [ "${CURL_EXIT}" -ne 0 ]; then
+            echo "ERROR: curl failed"
+            exit 1
+          fi
+
+          if [ "${HTTP_CODE}" -ge 200 ] && [ "${HTTP_CODE}" -lt 300 ]; then
+            echo "SUCCESS: RTD webhook accepted"
+            exit 0
+          else
+            echo "ERROR: RTD webhook rejected"
+            exit 1
+          fi
