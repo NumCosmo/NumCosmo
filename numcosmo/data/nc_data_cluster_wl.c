@@ -142,7 +142,7 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->ctrl_shape         = ncm_model_ctrl_new (NULL);
   self->resample_flag      = NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL;
   self->enable_parallel    = FALSE;
-  self->integ_method       = NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE;
+  self->integ_method       = NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES;
   self->n_nodes            = 10;
   self->rule_n             = 5;
   self->fixed_nodes        = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_integral_fixed_free);
