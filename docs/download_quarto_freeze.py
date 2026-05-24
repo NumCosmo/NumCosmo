@@ -1,53 +1,197 @@
 #!/usr/bin/env python3
+"""
+Download Quarto freeze artifact from GitHub Actions.
 
-import json
+This script is designed to run during Read the Docs builds. It downloads
+the pre-computed Quarto freeze directory from GitHub Actions artifacts,
+which significantly speeds up the documentation build process by reusing
+cached computational results.
+
+Required environment variables:
+    READTHEDOCS_GIT_COMMIT_HASH: The Git commit SHA for the current build
+    GITHUB_TOKEN: GitHub token for API authentication (optional but recommended)
+"""
+
 import os
 import sys
 import zipfile
+import shutil
+
 import requests
 
+# Configuration constants
 REPO = "NumCosmo/NumCosmo"
-SHA = os.environ["READTHEDOCS_GIT_COMMIT_HASH"]
+FREEZE_ARTIFACT_PREFIX = "quarto-freeze"
+API_TIMEOUT_SECONDS = 120
+DOWNLOAD_TIMEOUT_SECONDS = 3600
+MAX_PAGES = 50
+FREEZE_ZIP_NAME = "freeze.zip"
+FREEZE_TARGET_DIR = "build/docs/.quarto/_freeze"
 
-artifact_name = f"quarto-freeze-{SHA}"
 
-print(f"Looking for {artifact_name}")
+def get_configuration() -> tuple[str, str | None, dict[str, str]]:
+    """
+    Get configuration from environment variables and prepare API headers.
 
-url = f"https://api.github.com/repos/{REPO}/actions/artifacts"
+    Returns:
+        Tuple of (artifact_name, token, headers)
 
-r = requests.get(url)
-r.raise_for_status()
+    Raises:
+        SystemExit: If required environment variables are missing
+    """
+    sha = os.environ.get("READTHEDOCS_GIT_COMMIT_HASH")
+    token = os.environ.get("GITHUB_TOKEN")
 
-artifacts = r.json()["artifacts"]
+    if not sha:
+        print("Error: READTHEDOCS_GIT_COMMIT_HASH environment variable is required")
+        sys.exit(1)
 
-artifact = None
-for a in artifacts:
-    if a["name"] == artifact_name and not a["expired"]:
-        artifact = a
-        break
+    artifact_name = f"{FREEZE_ARTIFACT_PREFIX}-{sha}"
 
-if artifact is None:
-    print(f"Artifact not found: {artifact_name}")
-    sys.exit(1)
+    print(f"Looking for artifact: {artifact_name}")
+    if token:
+        print("Using authenticated GitHub API requests")
+    else:
+        print(
+            "Warning: No GITHUB_TOKEN set, using "
+            "unauthenticated requests (rate-limited)"
+        )
 
-download_url = artifact["archive_download_url"]
+    headers = {"Accept": "application/vnd.github+json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
 
-print(f"Downloading {artifact_name}")
+    return artifact_name, token, headers
 
-r = requests.get(
-    download_url,
-    headers={"Accept": "application/vnd.github+json"},
-)
-r.raise_for_status()
 
-with open("freeze.zip", "wb") as f:
-    f.write(r.content)
+def find_artifact(repo: str, artifact_name: str, headers: dict[str, str]) -> str | None:
+    """
+    Find the artifact by name using GitHub API with pagination.
 
-target = "build/docs/.quarto/_freeze"
+    Args:
+        repo: Repository in "owner/name" format
+        artifact_name: Name of the artifact to find
+        headers: HTTP headers for API requests
 
-os.makedirs(target, exist_ok=True)
+    Returns:
+        Download URL of the artifact, or None if not found
 
-with zipfile.ZipFile("freeze.zip") as z:
-    z.extractall(target)
+    Raises:
+        SystemExit: If API request fails
+    """
+    url = f"https://api.github.com/repos/{repo}/actions/artifacts"
+    page = 1
 
-print(f"Extracted into {target}")
+    while page <= MAX_PAGES:
+        paged_url = f"{url}?per_page=100&page={page}"
+        print(f"Fetching artifacts page {page}")
+
+        try:
+            r = requests.get(paged_url, headers=headers, timeout=API_TIMEOUT_SECONDS)
+            r.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching artifacts: {e}")
+            sys.exit(1)
+
+        artifacts = r.json()["artifacts"]
+
+        if not artifacts:
+            break
+
+        for artifact in artifacts:
+            if artifact["name"] == artifact_name and not artifact["expired"]:
+                return artifact["archive_download_url"]
+
+        page += 1
+    else:
+        print(f"Reached maximum page limit ({MAX_PAGES}) without finding artifact")
+
+    return None
+
+
+def download_artifact(
+    download_url: str, filename: str, headers: dict[str, str]
+) -> None:
+    """
+    Download artifact from GitHub using streaming to handle large files.
+
+    Args:
+        download_url: URL to download the artifact from
+        filename: Local filename to save the artifact to
+        headers: HTTP headers for the request
+
+    Raises:
+        SystemExit: If download or file writing fails
+    """
+    print(f"Downloading artifact from: {download_url}")
+    try:
+        with requests.get(
+            download_url,
+            headers=headers,
+            timeout=DOWNLOAD_TIMEOUT_SECONDS,
+            stream=True,
+        ) as r:
+            r.raise_for_status()
+            with open(filename, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+    except requests.exceptions.RequestException as e:
+        print(f"Error downloading artifact: {e}")
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error writing artifact file: {e}")
+        sys.exit(1)
+
+
+def extract_artifact(zip_filename: str, target_dir: str) -> None:
+    """
+    Extract artifact zip file to target directory and clean up.
+
+    Args:
+        zip_filename: Path to the zip file
+        target_dir: Directory to extract contents to
+
+    Raises:
+        SystemExit: If extraction fails
+    """
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir)
+
+    os.makedirs(target_dir, exist_ok=True)
+
+    print(f"Extracting artifact to {target_dir}")
+    try:
+        with zipfile.ZipFile(zip_filename) as z:
+            z.extractall(target_dir)
+    except (zipfile.BadZipFile, OSError) as e:
+        print(f"Error extracting artifact: {e}")
+        sys.exit(1)
+    finally:
+        # Clean up the downloaded zip file
+        if os.path.exists(zip_filename):
+            os.remove(zip_filename)
+            print(f"Cleaned up {zip_filename}")
+
+
+def main() -> None:
+    """Main execution function."""
+    # Get configuration
+    artifact_name, _token, headers = get_configuration()
+
+    # Find artifact
+    download_url = find_artifact(REPO, artifact_name, headers)
+    if download_url is None:
+        print(f"Artifact not found: {artifact_name}")
+        sys.exit(1)
+
+    # Download artifact
+    download_artifact(download_url, FREEZE_ZIP_NAME, headers)
+
+    # Extract artifact
+    extract_artifact(FREEZE_ZIP_NAME, FREEZE_TARGET_DIR)
+
+    print(f"Successfully extracted Quarto freeze data into {FREEZE_TARGET_DIR}")
+
+
+if __name__ == "__main__":
+    main()
