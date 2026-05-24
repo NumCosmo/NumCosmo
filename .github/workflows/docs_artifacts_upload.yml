@@ -44,3 +44,19 @@ jobs:
           name: quarto-freeze-${{ env.ARTIFACT_SHA }}
           path: BDocs/docs/.quarto/_freeze
           if-no-files-found: error
+      - name: Trigger RTD build
+        env:
+          RTD_TOKEN: ${{ secrets.RTD_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            VERSION="pull/${{ github.event.pull_request.number }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
+
+          echo "Triggering RTD version: ${VERSION}"
+
+          curl -X POST \
+            -H "Authorization: Token ${RTD_TOKEN}" \
+            -H "Content-Type: application/json" \
+            https://readthedocs.org/api/v3/projects/numcosmo/versions/${VERSION}/builds/
