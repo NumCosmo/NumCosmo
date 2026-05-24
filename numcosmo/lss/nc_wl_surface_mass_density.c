@@ -892,7 +892,6 @@ nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (NcWLSurfaceMassDensity
 
 /**
  * nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep: (skip)
- * @smd: a #NcWLSurfaceMassDensity
  * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
  * @R: projected radius with respect to the center of the lens / halo
@@ -906,8 +905,10 @@ nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (NcWLSurfaceMassDensity
  *
  */
 void
-nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensitySigmaCache *sigma_cache)
+nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensitySigmaCache *sigma_cache)
 {
+  NCM_UNUSED (zl);
+
   gdouble r_s, rho_s;
 
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);

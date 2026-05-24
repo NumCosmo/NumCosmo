@@ -572,13 +572,14 @@ _nc_galaxy_sd_shape_hsm_gauss_global_prepare_at_nodes (NcGalaxySDShape *gsds, Nc
     }
 
     if (refresh_sigma)
-      nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (surface_mass_density,
-                                                                 density_profile,
-                                                                 cosmo,
-                                                                 ldata_i->radius,
-                                                                 z_cl,
-                                                                 z_cl,
-                                                                 &ldata_i->sigma_cache);
+      nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (
+        density_profile,
+        cosmo,
+        ldata_i->radius,
+        z_cl,
+        z_cl,
+        &ldata_i->sigma_cache
+      );
 
     /* TODO: crit_cache should be recomputed when z_cl changes */
     if (refresh_crit || (ldata_i->crit_cache_arr == NULL))
