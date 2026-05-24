@@ -827,9 +827,7 @@ nc_wl_surface_mass_density_reduced_shear_optzs (NcWLSurfaceMassDensity *smd, NcH
 /**
  * nc_wl_surface_mass_density_reduced_shear_crit_cache_prep: (skip)
  * @smd: a #NcWLSurfaceMassDensity
- * @dp: a #NcHaloDensityProfile
  * @cosmo: a #NcHICosmo
- * @R: projected radius with respect to the center of the lens / halo
  * @zl: lens redshift $z_\mathrm{lens}$
  * @zc: cluster redshift $z_\mathrm{cluster}$
  * @zs: source redshift $z_\mathrm{source}$
@@ -839,8 +837,10 @@ nc_wl_surface_mass_density_reduced_shear_optzs (NcWLSurfaceMassDensity *smd, NcH
  *
  */
 void
-nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, const gdouble zs, NcWLSurfaceMassDensityCritCache *crit_cache)
+nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zl, const gdouble zc, const gdouble zs, NcWLSurfaceMassDensityCritCache *crit_cache)
 {
+  NCM_UNUSED (zc);
+
   if (zs < zl)
   {
     crit_cache->is_source  = FALSE;

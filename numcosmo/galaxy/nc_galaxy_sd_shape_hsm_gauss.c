@@ -567,24 +567,24 @@ _nc_galaxy_sd_shape_hsm_gauss_prepare_at_nodes (NcGalaxySDShape *gsds, NcmMSet *
       {
         const gdouble z_j = ncm_vector_get (z_nodes_i, j);
 
-        nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (surface_mass_density,
-                                                                  density_profile,
-                                                                  cosmo,
-                                                                  ldata_i->radius,
-                                                                  z_cl,
-                                                                  z_cl,
-                                                                  z_j,
-                                                                  &ldata_i->crit_cache_arr[j]);
+        nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (
+          surface_mass_density,
+          cosmo,
+          z_cl,
+          z_cl,
+          z_j,
+          &ldata_i->crit_cache_arr[j]
+        );
       }
 
-      nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (surface_mass_density,
-                                                                density_profile,
-                                                                cosmo,
-                                                                ldata_i->radius,
-                                                                z_cl,
-                                                                z_cl,
-                                                                z_cl * (1.0 + GSL_DBL_EPSILON),
-                                                                &ldata_i->crit_cache_zcl_eps);
+      nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (
+        surface_mass_density,
+        cosmo,
+        z_cl,
+        z_cl,
+        z_cl * (1.0 + GSL_DBL_EPSILON),
+        &ldata_i->crit_cache_zcl_eps
+      );
     }
   }
 

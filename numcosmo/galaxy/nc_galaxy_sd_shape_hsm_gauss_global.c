@@ -84,7 +84,7 @@ typedef struct _NcGalaxySDShapeHSMGaussGlobalData
   gdouble phi;
   NcWLSurfaceMassDensityOptzs optzs;
   NcWLSurfaceMassDensityCritCache *crit_cache_arr;
-  NcWLSurfaceMassDensityCritCache  crit_cache_zcl_eps;
+  NcWLSurfaceMassDensityCritCache crit_cache_zcl_eps;
   NcWLSurfaceMassDensitySigmaCache sigma_cache;
   guint crit_cache_len;
 } NcGalaxySDShapeHSMGaussGlobalData;
@@ -572,15 +572,13 @@ _nc_galaxy_sd_shape_hsm_gauss_global_prepare_at_nodes (NcGalaxySDShape *gsds, Nc
     }
 
     if (refresh_sigma)
-    {
       nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (surface_mass_density,
-                                                                  density_profile,
-                                                                  cosmo,
-                                                                  ldata_i->radius,
-                                                                  z_cl,
-                                                                  z_cl,
-                                                                  &ldata_i->sigma_cache);
-    }
+                                                                 density_profile,
+                                                                 cosmo,
+                                                                 ldata_i->radius,
+                                                                 z_cl,
+                                                                 z_cl,
+                                                                 &ldata_i->sigma_cache);
 
     /* TODO: crit_cache should be recomputed when z_cl changes */
     if (refresh_crit || (ldata_i->crit_cache_arr == NULL))
@@ -598,24 +596,24 @@ _nc_galaxy_sd_shape_hsm_gauss_global_prepare_at_nodes (NcGalaxySDShape *gsds, Nc
       {
         const gdouble z_j = ncm_vector_get (z_nodes_i, j);
 
-        nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (surface_mass_density,
-                                                                   density_profile,
-                                                                   cosmo,
-                                                                   ldata_i->radius,
-                                                                   z_cl,
-                                                                   z_cl,
-                                                                   z_j,
-                                                                   &ldata_i->crit_cache_arr[j]);
+        nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (
+          surface_mass_density,
+          cosmo,
+          z_cl,
+          z_cl,
+          z_j,
+          &ldata_i->crit_cache_arr[j]
+        );
       }
 
-      nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (surface_mass_density,
-                                                                  density_profile,
-                                                                  cosmo,
-                                                                  ldata_i->radius,
-                                                                  z_cl,
-                                                                  z_cl,
-                                                                  z_cl * (1.0 + GSL_DBL_EPSILON),
-                                                                  &ldata_i->crit_cache_zcl_eps);
+      nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (
+        surface_mass_density,
+        cosmo,
+        z_cl,
+        z_cl,
+        z_cl * (1.0 + GSL_DBL_EPSILON),
+        &ldata_i->crit_cache_zcl_eps
+      );
     }
   }
 
