@@ -35,7 +35,11 @@ jobs:
         run: |
           meson setup BDocs -Ddocumentation=true
           meson compile -C BDocs
-
+      - name: Print SHA info
+        run: |
+          echo "GITHUB_SHA=${GITHUB_SHA}"
+          echo "HEAD_SHA=${{ github.event.pull_request.head.sha }}"
+          echo "BASE_SHA=${{ github.event.pull_request.base.sha }}"
       - name: Upload Quarto freeze
         uses: actions/upload-artifact@v4
         with:
