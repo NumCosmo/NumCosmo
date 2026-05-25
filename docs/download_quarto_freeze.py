@@ -150,7 +150,7 @@ def get_configuration() -> tuple[str, str | None, dict[str, str]]:
 
     headers = {"Accept": "application/vnd.github+json"}
     if token:
-        headers["Authorization"] = f"Bearer {token}"
+        headers["Authorization"] = f"token {token}"
 
     return artifact_name, token, headers
 
