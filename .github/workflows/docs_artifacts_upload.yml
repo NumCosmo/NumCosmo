@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - master
+  release:
+    types: [published]
 
 env:
   ARTIFACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -68,6 +70,10 @@ jobs:
 
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             VERSION="${{ github.event.pull_request.number }}"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="stable"
+          elif [ "${{ github.ref_name }}" = "master" ]; then
+            VERSION="latest"
           else
             VERSION="${{ github.ref_name }}"
           fi
