@@ -345,6 +345,19 @@ local function resolve_symbol(target, symbol)
     return nil
 end
 
+local function calculate_dir_depth(dir)
+    if dir == nil or dir == "" then
+        return 0
+    end
+
+    local depth = 0
+    for _ in dir:gmatch("[^/]+") do
+        depth = depth + 1
+    end
+
+    return depth
+end
+
 local function root_prefix()
     -- Try to get the output file path from Quarto metadata
     local output_file = ""
@@ -363,10 +376,7 @@ local function root_prefix()
         if site_relative ~= nil and site_relative ~= "" then
             local dir = site_relative:match("^(.*)/[^/]+$")
             if dir ~= nil and dir ~= "" then
-                local depth = 0
-                for _ in dir:gmatch("[^/]+") do
-                    depth = depth + 1
-                end
+                local depth = calculate_dir_depth(dir)
                 return string.rep("../", depth)
             end
             return ""
@@ -395,11 +405,7 @@ local function root_prefix()
         return ""
     end
 
-    local depth = 0
-    for _ in dir:gmatch("[^/]+") do
-        depth = depth + 1
-    end
-
+    local depth = calculate_dir_depth(dir)
     return string.rep("../", depth)
 end
 
