@@ -12,12 +12,14 @@ Required environment variables:
     GITHUB_TOKEN: GitHub token for API authentication (optional but recommended)
 """
 
+import json
 import os
-import sys
-import zipfile
 import shutil
-
-import requests
+import sys
+import urllib.error
+import urllib.request
+import zipfile
+from typing import Any
 
 # Configuration constants
 REPO = "NumCosmo/NumCosmo"
@@ -27,6 +29,95 @@ DOWNLOAD_TIMEOUT_SECONDS = 3600
 MAX_PAGES = 50
 FREEZE_ZIP_NAME = "freeze.zip"
 FREEZE_TARGET_DIR = "build/docs/.quarto/_freeze"
+
+
+def http_get_json(url: str, headers: dict[str, str], timeout: int) -> dict[str, Any]:
+    """
+    Perform HTTP GET request and parse JSON response.
+
+    Args:
+        url: URL to fetch
+        headers: HTTP headers for the request
+        timeout: Request timeout in seconds
+
+    Returns:
+        Parsed JSON response as dictionary
+
+    Raises:
+        SystemExit: If request fails or response is not valid JSON
+    """
+    request = urllib.request.Request(url, headers=headers)
+
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            if response.status != 200:
+                print(f"Error: HTTP {response.status} from {url}")
+                sys.exit(1)
+
+            data = response.read()
+            return json.loads(data)
+
+    except urllib.error.HTTPError as e:
+        print(f"HTTP error fetching {url}: {e.code} {e.reason}")
+        sys.exit(1)
+    except urllib.error.URLError as e:
+        print(f"URL error fetching {url}: {e.reason}")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {e}")
+        sys.exit(1)
+    except TimeoutError:
+        print(f"Request timeout for {url}")
+        sys.exit(1)
+
+
+def http_download_file(
+    url: str,
+    filename: str,
+    headers: dict[str, str],
+    timeout: int,
+    chunk_size: int = 8192,
+) -> None:
+    """
+    Download file from URL using streaming to handle large files.
+
+    Args:
+        url: URL to download from
+        filename: Local filename to save to
+        headers: HTTP headers for the request
+        timeout: Request timeout in seconds
+        chunk_size: Size of chunks for streaming download
+
+    Raises:
+        SystemExit: If download or file writing fails
+    """
+    request = urllib.request.Request(url, headers=headers)
+
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            if response.status != 200:
+                print(f"Error: HTTP {response.status} downloading from {url}")
+                sys.exit(1)
+
+            with open(filename, "wb") as f:
+                while True:
+                    chunk = response.read(chunk_size)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+
+    except urllib.error.HTTPError as e:
+        print(f"HTTP error downloading {url}: {e.code} {e.reason}")
+        sys.exit(1)
+    except urllib.error.URLError as e:
+        print(f"URL error downloading {url}: {e.reason}")
+        sys.exit(1)
+    except TimeoutError:
+        print(f"Download timeout for {url}")
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error writing file {filename}: {e}")
+        sys.exit(1)
 
 
 def get_configuration() -> tuple[str, str | None, dict[str, str]]:
@@ -86,14 +177,8 @@ def find_artifact(repo: str, artifact_name: str, headers: dict[str, str]) -> str
         paged_url = f"{url}?per_page=100&page={page}"
         print(f"Fetching artifacts page {page}")
 
-        try:
-            r = requests.get(paged_url, headers=headers, timeout=API_TIMEOUT_SECONDS)
-            r.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching artifacts: {e}")
-            sys.exit(1)
-
-        artifacts = r.json()["artifacts"]
+        data = http_get_json(paged_url, headers, API_TIMEOUT_SECONDS)
+        artifacts = data.get("artifacts", [])
 
         if not artifacts:
             break
@@ -113,7 +198,7 @@ def download_artifact(
     download_url: str, filename: str, headers: dict[str, str]
 ) -> None:
     """
-    Download artifact from GitHub using streaming to handle large files.
+    Download artifact from GitHub.
 
     Args:
         download_url: URL to download the artifact from
@@ -124,23 +209,7 @@ def download_artifact(
         SystemExit: If download or file writing fails
     """
     print(f"Downloading artifact from: {download_url}")
-    try:
-        with requests.get(
-            download_url,
-            headers=headers,
-            timeout=DOWNLOAD_TIMEOUT_SECONDS,
-            stream=True,
-        ) as r:
-            r.raise_for_status()
-            with open(filename, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-    except requests.exceptions.RequestException as e:
-        print(f"Error downloading artifact: {e}")
-        sys.exit(1)
-    except IOError as e:
-        print(f"Error writing artifact file: {e}")
-        sys.exit(1)
+    http_download_file(download_url, filename, headers, DOWNLOAD_TIMEOUT_SECONDS)
 
 
 def extract_artifact(zip_filename: str, target_dir: str) -> None:
