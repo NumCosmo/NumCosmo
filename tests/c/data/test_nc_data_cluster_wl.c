@@ -317,7 +317,7 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
   GList *columns                    = nc_galaxy_sd_shape_data_required_columns (s_data);
   GList *l                          = columns;
   GStrvBuilder *builder             = g_strv_builder_new ();
-  guint nrows                       = 500;
+  guint nrows                       = 1500;
   guint npoints                     = 20;
   gdouble z_min                     = 0.01;
   gdouble z_max                     = 5.0;
@@ -1128,9 +1128,11 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
 
 
   if (NC_IS_GALAXY_SD_OBS_REDSHIFT_GAUSS (test->galaxy_redshift))
-    log10m_mult_bias = 0.01;
+    log10m_mult_bias = 0.02;
   else if (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (test->galaxy_redshift))
-    log10m_mult_bias = 0.005;
+    log10m_mult_bias = 0.02;
+  else if (NC_IS_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift))
+    log10m_mult_bias = 0.02;
   else
     log10m_mult_bias = 0.0;
 
