@@ -212,16 +212,52 @@ def download_artifact(
     http_download_file(download_url, filename, headers, DOWNLOAD_TIMEOUT_SECONDS)
 
 
+def is_safe_zip_path(target_dir: str, member_path: str) -> bool:
+    """
+    Validate that a zip member path is safe to extract.
+
+    Protects against Zip Slip attacks by rejecting:
+    - Absolute paths
+    - Paths containing .. segments
+    - Paths that would resolve outside the target directory
+
+    Args:
+        target_dir: The intended extraction directory
+        member_path: The path from the zip member
+
+    Returns:
+        True if the path is safe to extract, False otherwise
+    """
+    # Reject absolute paths
+    if os.path.isabs(member_path):
+        return False
+
+    # Reject paths with .. segments
+    if ".." in os.path.normpath(member_path).split(os.sep):
+        return False
+
+    # Verify the resolved path stays within target directory
+    target_dir_abs = os.path.abspath(target_dir)
+    member_abs = os.path.abspath(os.path.join(target_dir, member_path))
+
+    # Check if the member path is within target directory
+    return (
+        member_abs.startswith(target_dir_abs + os.sep) or member_abs == target_dir_abs
+    )
+
+
 def extract_artifact(zip_filename: str, target_dir: str) -> None:
     """
-    Extract artifact zip file to target directory and clean up.
+    Safely extract artifact zip file to target directory and clean up.
+
+    Validates all member paths to prevent Zip Slip attacks.
 
     Args:
         zip_filename: Path to the zip file
         target_dir: Directory to extract contents to
 
     Raises:
-        SystemExit: If extraction fails
+        SystemExit: If extraction fails or malicious paths are detected
     """
     if os.path.exists(target_dir):
         shutil.rmtree(target_dir)
@@ -231,7 +267,16 @@ def extract_artifact(zip_filename: str, target_dir: str) -> None:
     print(f"Extracting artifact to {target_dir}")
     try:
         with zipfile.ZipFile(zip_filename) as z:
+            # Validate all member paths before extraction
+            for member in z.namelist():
+                if not is_safe_zip_path(target_dir, member):
+                    print(f"Error: Unsafe path in zip file: {member}")
+                    print("Possible Zip Slip attack detected")
+                    sys.exit(1)
+
+            # Safe to extract after validation
             z.extractall(target_dir)
+
     except (zipfile.BadZipFile, OSError) as e:
         print(f"Error extracting artifact: {e}")
         sys.exit(1)
