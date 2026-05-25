@@ -1030,13 +1030,13 @@ nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (const gdouble std_shap
 
     if (lambda < 1.0e-2)
     {
-      g_warning ("nc_galaxy_sd_shape_hsm_gauss_global_new: sigma_from_std_shape failed to converge"); /* LCOV_EXCL_LINE */
+      g_warning ("nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape: sigma_from_std_shape failed to converge"); /* LCOV_EXCL_LINE */
       break;                                                                                          /* LCOV_EXCL_LINE */
     }
 
     if (++iter == 10000)
     {
-      g_warning ("nc_galaxy_sd_shape_hsm_gauss_global_new: sigma_from_std_shape failed to converge"); /* LCOV_EXCL_LINE */
+      g_warning ("nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape: sigma_from_std_shape failed to converge"); /* LCOV_EXCL_LINE */
       break;                                                                                          /* LCOV_EXCL_LINE */
     }
 
