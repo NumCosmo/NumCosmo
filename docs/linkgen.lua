@@ -345,7 +345,45 @@ local function resolve_symbol(target, symbol)
     return nil
 end
 
+local function calculate_dir_depth(dir)
+    if dir == nil or dir == "" then
+        return 0
+    end
+
+    local depth = 0
+    for _ in dir:gmatch("[^/]+") do
+        depth = depth + 1
+    end
+
+    return depth
+end
+
 local function root_prefix()
+    -- Try to get the output file path from Quarto metadata
+    local output_file = ""
+    if quarto ~= nil and quarto.doc ~= nil and quarto.doc.output_file ~= nil then
+        output_file = quarto.doc.output_file
+    end
+
+    -- If we have the output file, extract the site-relative path
+    if output_file ~= "" then
+        -- Strip everything before numcosmo-site/ or docs/ to get site-relative path
+        local site_relative = output_file:match("numcosmo%-site/(.*)")
+        if site_relative == nil then
+            site_relative = output_file:match("docs/numcosmo%-site/(.*)")
+        end
+
+        if site_relative ~= nil and site_relative ~= "" then
+            local dir = site_relative:match("^(.*)/[^/]+$")
+            if dir ~= nil and dir ~= "" then
+                local depth = calculate_dir_depth(dir)
+                return string.rep("../", depth)
+            end
+            return ""
+        end
+    end
+
+    -- Fallback: use input file path
     local input = ""
     if PANDOC_STATE ~= nil and PANDOC_STATE.input_files ~= nil and PANDOC_STATE.input_files[1] ~= nil then
         input = PANDOC_STATE.input_files[1]
@@ -367,11 +405,7 @@ local function root_prefix()
         return ""
     end
 
-    local depth = 0
-    for _ in dir:gmatch("[^/]+") do
-        depth = depth + 1
-    end
-
+    local depth = calculate_dir_depth(dir)
     return string.rep("../", depth)
 end
 
