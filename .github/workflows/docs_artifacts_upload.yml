@@ -91,8 +91,19 @@ jobs:
             BUILD_URL=$(python3 -c "import json; print(json.load(open('/tmp/rtd_response.json'))['build']['urls']['build'])")
             echo "RTD build URL:"
             echo "${BUILD_URL}"
+            echo "BUILD_URL=${BUILD_URL}" >> "${GITHUB_ENV}"
             echo "SUCCESS"
           else
             echo "FAILED"
             exit 1
           fi
+      - name: Add RTD link to PR
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/statuses/${{ github.sha }} \
+            -f state=success \
+            -f context="Read the Docs" \
+            -f target_url="${BUILD_URL}" \
+            -f description="Open RTD build"
