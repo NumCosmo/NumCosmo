@@ -386,7 +386,7 @@ class GalaxyShapeGenHSMGaussGlobal(BaseModel):
         return cls.model_validate(opts)
 
     def model_post_init(self, _: Any, /) -> None:
-        """Check that sigma is less than std_noise."""
+        """Set up the noise parameters for the gamma distribution."""
         self._hsm_gauss_global = Nc.GalaxySDShapeHSMGaussGlobal.new(
             self.ellip_conv.genum
         )
