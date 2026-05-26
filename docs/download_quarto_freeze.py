@@ -13,9 +13,9 @@ Required environment variables:
 """
 
 import os
+import shutil
 import sys
 import zipfile
-import shutil
 
 import requests
 
@@ -27,6 +27,66 @@ DOWNLOAD_TIMEOUT_SECONDS = 3600
 MAX_PAGES = 50
 FREEZE_ZIP_NAME = "freeze.zip"
 FREEZE_TARGET_DIR = "build/docs/.quarto/_freeze"
+
+
+def http_get_json(url: str, headers: dict[str, str], timeout: int) -> dict:
+    """
+    Perform HTTP GET request and parse JSON response.
+
+    Args:
+        url: URL to fetch
+        headers: HTTP headers for the request
+        timeout: Request timeout in seconds
+
+    Returns:
+        Parsed JSON response as dictionary
+
+    Raises:
+        SystemExit: If request fails or response is not valid JSON
+    """
+    try:
+        response = requests.get(url, headers=headers, timeout=timeout)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching {url}: {e}")
+        sys.exit(1)
+
+
+def http_download_file(
+    url: str,
+    filename: str,
+    headers: dict[str, str],
+    timeout: int,
+    chunk_size: int = 8192,
+) -> None:
+    """
+    Download file from URL using streaming to handle large files.
+
+    Args:
+        url: URL to download from
+        filename: Local filename to save to
+        headers: HTTP headers for the request
+        timeout: Request timeout in seconds
+        chunk_size: Size of chunks for streaming download
+
+    Raises:
+        SystemExit: If download or file writing fails
+    """
+    try:
+        with requests.get(
+            url, headers=headers, timeout=timeout, stream=True
+        ) as response:
+            response.raise_for_status()
+            with open(filename, "wb") as f:
+                for chunk in response.iter_content(chunk_size=chunk_size):
+                    f.write(chunk)
+    except requests.exceptions.RequestException as e:
+        print(f"Error downloading {url}: {e}")
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error writing file {filename}: {e}")
+        sys.exit(1)
 
 
 def get_configuration() -> tuple[str, str | None, dict[str, str]]:
@@ -59,7 +119,9 @@ def get_configuration() -> tuple[str, str | None, dict[str, str]]:
 
     headers = {"Accept": "application/vnd.github+json"}
     if token:
-        headers["Authorization"] = f"Bearer {token}"
+        # Use 'token' format for GitHub PATs (not 'Bearer')
+        # This format works for artifact downloads and API calls
+        headers["Authorization"] = f"token {token}"
 
     return artifact_name, token, headers
 
@@ -86,14 +148,8 @@ def find_artifact(repo: str, artifact_name: str, headers: dict[str, str]) -> str
         paged_url = f"{url}?per_page=100&page={page}"
         print(f"Fetching artifacts page {page}")
 
-        try:
-            r = requests.get(paged_url, headers=headers, timeout=API_TIMEOUT_SECONDS)
-            r.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching artifacts: {e}")
-            sys.exit(1)
-
-        artifacts = r.json()["artifacts"]
+        data = http_get_json(paged_url, headers, API_TIMEOUT_SECONDS)
+        artifacts = data.get("artifacts", [])
 
         if not artifacts:
             break
@@ -113,7 +169,7 @@ def download_artifact(
     download_url: str, filename: str, headers: dict[str, str]
 ) -> None:
     """
-    Download artifact from GitHub using streaming to handle large files.
+    Download artifact from GitHub.
 
     Args:
         download_url: URL to download the artifact from
@@ -124,35 +180,55 @@ def download_artifact(
         SystemExit: If download or file writing fails
     """
     print(f"Downloading artifact from: {download_url}")
-    try:
-        with requests.get(
-            download_url,
-            headers=headers,
-            timeout=DOWNLOAD_TIMEOUT_SECONDS,
-            stream=True,
-        ) as r:
-            r.raise_for_status()
-            with open(filename, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-    except requests.exceptions.RequestException as e:
-        print(f"Error downloading artifact: {e}")
-        sys.exit(1)
-    except IOError as e:
-        print(f"Error writing artifact file: {e}")
-        sys.exit(1)
+    http_download_file(download_url, filename, headers, DOWNLOAD_TIMEOUT_SECONDS)
+
+
+def is_safe_zip_path(target_dir: str, member_path: str) -> bool:
+    """
+    Validate that a zip member path is safe to extract.
+
+    Protects against Zip Slip attacks by rejecting:
+    - Absolute paths
+    - Paths containing .. segments
+    - Paths that would resolve outside the target directory
+
+    Args:
+        target_dir: The intended extraction directory
+        member_path: The path from the zip member
+
+    Returns:
+        True if the path is safe to extract, False otherwise
+    """
+    # Reject absolute paths
+    if os.path.isabs(member_path):
+        return False
+
+    # Reject paths with .. segments
+    if ".." in os.path.normpath(member_path).split(os.sep):
+        return False
+
+    # Verify the resolved path stays within target directory
+    target_dir_abs = os.path.abspath(target_dir)
+    member_abs = os.path.abspath(os.path.join(target_dir, member_path))
+
+    # Check if the member path is within target directory
+    return (
+        member_abs.startswith(target_dir_abs + os.sep) or member_abs == target_dir_abs
+    )
 
 
 def extract_artifact(zip_filename: str, target_dir: str) -> None:
     """
-    Extract artifact zip file to target directory and clean up.
+    Safely extract artifact zip file to target directory and clean up.
+
+    Validates all member paths to prevent Zip Slip attacks.
 
     Args:
         zip_filename: Path to the zip file
         target_dir: Directory to extract contents to
 
     Raises:
-        SystemExit: If extraction fails
+        SystemExit: If extraction fails or malicious paths are detected
     """
     if os.path.exists(target_dir):
         shutil.rmtree(target_dir)
@@ -162,7 +238,16 @@ def extract_artifact(zip_filename: str, target_dir: str) -> None:
     print(f"Extracting artifact to {target_dir}")
     try:
         with zipfile.ZipFile(zip_filename) as z:
+            # Validate all member paths before extraction
+            for member in z.namelist():
+                if not is_safe_zip_path(target_dir, member):
+                    print(f"Error: Unsafe path in zip file: {member}")
+                    print("Possible Zip Slip attack detected")
+                    sys.exit(1)
+
+            # Safe to extract after validation
             z.extractall(target_dir)
+
     except (zipfile.BadZipFile, OSError) as e:
         print(f"Error extracting artifact: {e}")
         sys.exit(1)
