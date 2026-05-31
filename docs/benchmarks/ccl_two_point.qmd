@@ -20,8 +20,6 @@ execute:
 
 ---
 
-{{< include /notes/_numcosmo_py.qmd >}}
-
 ## Introduction
 
 This notebook examines the two-point correlation functions and related quantities implemented in the Core Cosmology Library (CCL) and NumCosmo. 
@@ -78,9 +76,8 @@ We consider five sets, designed to cover a broad range of cosmologies, including
 
 ```{python}
 # | label: tbl-ccl-vs-nc-params
-# | html:
-# |   tbl-cap: Used cosmological parameters in CCL and NumCosmo
-# |   tbl-colwidths: [10, 30, 60]
+# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# | tbl-colwidths: [10, 30, 60]
 # | code-fold: true
 
 # Create DataFrame
@@ -109,12 +106,11 @@ cmb_len_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 
 ```{python}
 # | label: fig-ccl-vs-nc-cmb-lens-sets
-# | html:
-# |   fig-cap:
-# |     - "CMB lensing kernel, $\\ell = 80$"
-# |     - "CMB lensing power spectrum"
-# |   fig-cap-location: top
-# |   layout-ncol: 2
+# | fig-cap:
+# |   - "CMB lensing kernel, $\\ell = 80$"
+# |   - "CMB lensing power spectrum"
+# | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
 for comparison in cmb_len_auto_comparisons:
@@ -131,9 +127,8 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-cmb-lens-sets
-# | html:
-# |   tbl-cap: Power Spectrum
-# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
 # | code-fold: true
 
 table = []
@@ -173,12 +168,11 @@ cmb_isw_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 
 ```{python}
 # | label: fig-ccl-vs-nc-cmb-isw-sets
-# | html:
-# |   fig-cap:
-# |     - "CMB ISW kernel, $\\ell = 80$"
-# |     - "CMB ISW power spectrum"
-# |   fig-cap-location: top
-# |   layout-ncol: 2
+# | fig-cap:
+# |   - "CMB ISW kernel, $\\ell = 80$"
+# |   - "CMB ISW power spectrum"
+# | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
 for comparison in cmb_isw_auto_comparisons:
@@ -196,9 +190,8 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-cmb-isw-sets
-# | html:
-# |   tbl-cap: Power Spectrum
-# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
 # | code-fold: true
 
 table = []
@@ -238,12 +231,11 @@ tsz_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 
 ```{python} 
 # | label: fig-ccl-vs-nc-tsz-sets
-# | html:
-# |   fig-cap:
-# |     - "Thermal Sunyaev-Zel'dovich kernel, $\\ell = 80$"
-# |     - "Thermal Sunyaev-Zel'dovich power spectrum"
-# |   fig-cap-location: top
-# |   layout-ncol: 2
+# | fig-cap:
+# |   - "Thermal Sunyaev-Zel'dovich kernel, $\\ell = 80$"
+# |   - "Thermal Sunyaev-Zel'dovich power spectrum"
+# | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
 for comparison in tsz_auto_comparisons:
@@ -260,9 +252,8 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-tsz-sets
-# | html:
-# |   tbl-cap: Power Spectrum
-# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
 # | code-fold: true
 
 table = []
@@ -303,12 +294,11 @@ gwl_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 
 ```{python} 
 # | label: fig-ccl-vs-nc-gwl-sets
-# | html:
-# |   fig-cap:
-# |     - "Galaxy Weak Lensing kernel, $\\ell = 80$"
-# |     - "Galaxy Weak Lensing power spectrum"
-# |   fig-cap-location: top
-# |   layout-ncol: 2
+# | fig-cap:
+# |   - "Galaxy Weak Lensing kernel, $\\ell = 80$"
+# |   - "Galaxy Weak Lensing power spectrum"
+# | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
 for comparison in gwl_auto_comparisons:
@@ -325,9 +315,8 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-gwl-sets
-# | html:
-# |   tbl-cap: Power Spectrum
-# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
 # | code-fold: true
 
 table = []
@@ -365,12 +354,11 @@ gnc_auto_comparisons: list[nc_cmp.CompareFunc1d] = [
 
 ```{python} 
 # | label: fig-ccl-vs-nc-gnc-sets
-# | html:
-# |   fig-cap:
-# |     - "Galaxy Number Count kernel, $\\ell = 80$"
-# |     - "Galaxy Number Count power spectrum"
-# |   fig-cap-location: top
-# |   layout-ncol: 2
+# | fig-cap:
+# |   - "Galaxy Number Count kernel, $\\ell = 80$"
+# |   - "Galaxy Number Count power spectrum"
+# | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
 for comparison in gnc_auto_comparisons:
@@ -387,9 +375,8 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-gnc-sets
-# | html:
-# |   tbl-cap: Power Spectrum
-# |   tbl-colwidths: [15, 15, 18, 18, 18, 18]
+# | tbl-cap: Power Spectrum
+# | tbl-colwidths: [15, 15, 18, 18, 18, 18]
 # | code-fold: true
 
 table = []

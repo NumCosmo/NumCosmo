@@ -20,8 +20,6 @@ execute:
 
 ---
 
-{{< include /notes/_numcosmo_py.qmd >}}
-
 ## Introduction
 
 This notebook explores the cosmological background functions implemented in the Core Cosmology Library (CCL) and NumCosmo, two frameworks for computing cosmological quantities. 
@@ -74,9 +72,8 @@ The table below summarizes the parameters. There are five parameters sets.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-params
-# | html:
-# |   tbl-cap: Used cosmological parameters in CCL and NumCosmo
-# |   tbl-colwidths: [10, 30, 60]
+# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# | tbl-colwidths: [10, 30, 60]
 # | code-fold: true
 
 # Create DataFrame
@@ -110,14 +107,13 @@ parameter_comparisons: list[list[nc_cmp.CompareFunc1d]] = [
 
 ```{python}
 # | label: fig-ccl-vs-nc-params-sets
-# | html:
-# |   fig-cap:
-# |     - "Total matter density parameter"
-# |     - "Radiation density parameter"
-# |     - "Massless neutrino density parameter"
-# |     - "Massive neutrino density parameter"
-# |   fig-cap-location: top
-# |   layout-ncol: 2
+# | fig-cap:
+# |   - "Total matter density parameter"
+# |   - "Radiation density parameter"
+# |   - "Massless neutrino density parameter"
+# |   - "Massive neutrino density parameter"
+# | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
 for parameter_comparison in parameter_comparisons:
@@ -135,9 +131,8 @@ plt.close()
 The following table summarizes the results for all sets.
 ```{python}
 # | label: tbl-ccl-vs-nc-params-table
-# | html:
-# |   tbl-cap: Cosmological parameters computed using CCL and NumCosmo
-# |   tbl-colwidths: [15, 5, 20, 20, 20, 20]
+# | tbl-cap: Cosmological parameters computed using CCL and NumCosmo
+# | tbl-colwidths: [15, 5, 20, 20, 20, 20]
 # | code-fold: true
 
 table = []
@@ -181,18 +176,17 @@ We plot the distance comparisons for all parameter sets.
 
 ```{python}
 # | label: fig-ccl-vs-nc-distances-set0
-# | html:
-# |   fig-cap:
-# |     - "Normalized Hubble Function"
-# |     - "Comoving radial distance"
-# |     - "Comoving transverse distance"
-# |     - "Angular diameter distance"
-# |     - "Luminosity distance"
-# |     - "Distance modulus"
-# |     - "Lookback time"
-# |     - "Comoving volume element"
-# |   fig-cap-location: top
-# |   layout-ncol: 2
+# | fig-cap:
+# |   - "Normalized Hubble Function"
+# |   - "Comoving radial distance"
+# |   - "Comoving transverse distance"
+# |   - "Angular diameter distance"
+# |   - "Luminosity distance"
+# |   - "Distance modulus"
+# |   - "Lookback time"
+# |   - "Comoving volume element"
+# | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
 for distance_comparison in distance_comparisons:
@@ -211,9 +205,8 @@ Again a table summarizes the results for all parameter sets.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-distances-table-set0
-# | html:
-# |   tbl-cap: Cosmological distances computed using CCL and NumCosmo
-# |   tbl-colwidths: [15, 20, 5, 15, 15, 15, 15]
+# | tbl-cap: Cosmological distances computed using CCL and NumCosmo
+# | tbl-colwidths: [15, 20, 5, 15, 15, 15, 15]
 # | code-fold: true
 
 table = []
@@ -235,9 +228,8 @@ Below we show the comparison using the first set of parameters.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-times-set0
-# | html:
-# |   tbl-cap: Time to compute the cosmological distances
-# |   tbl-colwidths: [20, 20, 20, 20]
+# | tbl-cap: Time to compute the cosmological distances
+# | tbl-colwidths: [20, 20, 20, 20]
 # | code-fold: true
 def compute_distance_times(
     ccl_cosmo: pyccl.Cosmology, cosmology: ncc.Cosmology, z: np.ndarray
@@ -310,12 +302,11 @@ Below we plot the growth comparisons for all parameter sets.
 
 ```{python}
 # | label: fig-ccl-vs-nc-growth-sets
-# | html:
-# |   fig-cap-location: top
-# |   fig-cap:
-# |     - "Growth Factor"
-# |     - "Growth Rate"
-# |   layout-ncol: 2
+# | fig-cap-location: top
+# | fig-cap:
+# |   - "Growth Factor"
+# |   - "Growth Rate"
+# | layout-ncol: 2
 # | code-fold: true
 
 for growth_comparison in growth_comparisons:
@@ -334,9 +325,8 @@ The following table summarizes the results for all sets.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-growth-sets
-# | html:
-# |   tbl-cap: Growth Factor and Growth Rate
-# |   tbl-colwidths: [20, 20, 20, 20]
+# | tbl-cap: Growth Factor and Growth Rate
+# | tbl-colwidths: [20, 20, 20, 20]
 # | code-fold: true
 
 table = []
@@ -368,9 +358,8 @@ Below we compare the scale factors for all parameter sets.
 
 ```{python}
 # | label: fig-ccl-vs-nc-scale-factor-sets
-# | html:
-# |   fig-cap-location: top
-# |   fig-cap: Scale Factor
+# | fig-cap-location: top
+# | fig-cap: Scale Factor
 # | code-fold: true
 
 fig, axs = plt.subplots(2, sharex=True)
@@ -387,9 +376,8 @@ The following table summarizes the results for all sets.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-scale-factor-sets
-# | html:
-# |   tbl-cap: Scale Factor
-# |   tbl-colwidths: [20, 20, 20, 20]
+# | tbl-cap: Scale Factor
+# | tbl-colwidths: [20, 20, 20, 20]
 # | code-fold: true
 
 table = []
@@ -422,9 +410,8 @@ Below we compare the critical surface mass density for all parameter sets.
 
 ```{python}
 # | label: fig-ccl-vs-nc-sigmaC-sets
-# | html:
-# |   fig-cap-location: top
-# |   fig-cap: Critical Surface Mass Density
+# | fig-cap-location: top
+# | fig-cap: Critical Surface Mass Density
 # | code-fold: true
 
 fig, axs = plt.subplots(2, sharex=True)
@@ -441,9 +428,8 @@ The following table summarizes the results for all sets.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-sigmaC-sets
-# | html:
-# |   tbl-cap: Critical Surface Mass Density
-# |   tbl-colwidths: [20, 20, 20, 20]
+# | tbl-cap: Critical Surface Mass Density
+# | tbl-colwidths: [20, 20, 20, 20]
 # | code-fold: true
 
 table = []
