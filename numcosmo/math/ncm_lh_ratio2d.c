@@ -976,8 +976,6 @@ _ncm_lh_ratio2d_set_angular_interval (NcmLHRatio2d *lhr2d, const gdouble da, gdo
 NcmLHRatio2dRegion *
 ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expected_np, NcmFitRunMsgs mtype)
 {
-  GTimer *iter_timer = g_timer_new ();
-  gdouble total_time = 0.0;
   gdouble init_x, init_y;
   gint i, counter = -1;
   GList *points = NULL, *final_points = NULL;
@@ -1051,9 +1049,6 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
     theta1 = lhr2d->theta + M_PI * 0.25;
 
     i           = 0;
-    total_time += g_timer_elapsed (iter_timer, NULL);
-    g_timer_start (iter_timer);
-
     while (TRUE)
     {
       _ncm_lh_ratio2d_set_angular_interval (lhr2d, M_PI * 0.5, &theta0, &theta1);
@@ -1086,8 +1081,6 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
           counter = 5;
         }
       }
-      total_time += g_timer_elapsed (iter_timer, NULL);
-      g_timer_start (iter_timer);
       i++;
     }
 
@@ -1110,9 +1103,6 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
       g_message ("#  Trying in another direction\n");
     }
   }
-
-  /* total_time += g_timer_elapsed (iter_timer, NULL); */
-  g_timer_destroy (iter_timer);
 
   {
     NcmLHRatio2dRegion *rg = ncm_lh_ratio2d_points_to_region (final_points, clevel);
@@ -1240,4 +1230,3 @@ ncm_lh_ratio2d_region_print (NcmLHRatio2dRegion *rg, FILE *out)
     fflush (out);
   }
 }
-

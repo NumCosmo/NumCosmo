@@ -682,7 +682,6 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
   {
     GVariantIter *p_iter = g_variant_iter_new (params);
     GVariant *var        = NULL;
-    guint i              = 0;
 
     while ((var = g_variant_iter_next_value (p_iter)))
     {
@@ -713,7 +712,6 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
 
       g_object_set_property (obj, name, &value);
 
-      i++;
       g_variant_unref (var_key);
       g_variant_unref (val);
       g_variant_unref (var_val);
@@ -4454,4 +4452,3 @@ ncm_serialize_global_variant_to_yaml (GVariant *var_obj)
 
   return ret;
 }
-

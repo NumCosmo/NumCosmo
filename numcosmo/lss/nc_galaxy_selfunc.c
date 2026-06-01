@@ -409,7 +409,6 @@ _nc_galaxy_selfunc_read_file_to_spline (const gchar *filename, NcmSpline *dNdz_s
 {
   GArray *z_a    = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *dNdz_a = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  guint nl       = 0;
   gdouble x, y;
   FILE *selfile;
 
@@ -418,13 +417,10 @@ _nc_galaxy_selfunc_read_file_to_spline (const gchar *filename, NcmSpline *dNdz_s
 
   selfile = fopen (filename, "r");
 
-  nl = 0;
-
   while (fscanf (selfile, "%le %le", &x, &y) != EOF)
   {
     g_array_append_val (z_a, x);
     g_array_append_val (dNdz_a, y);
-    nl++;
   }
 
   fclose (selfile);
@@ -556,4 +552,3 @@ nc_galaxy_selfunc_get_zmax (NcGalaxySelfunc *gsf, guint shell)
 
   return ncm_vector_get (self->zmax, shell);
 }
-
