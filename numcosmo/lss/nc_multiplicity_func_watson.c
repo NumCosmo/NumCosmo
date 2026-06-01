@@ -50,7 +50,8 @@ struct _NcMultiplicityFuncWatsonPrivate
 enum
 {
   PROP_0,
-  PROP_SIZE
+  PROP_SIZE,
+  PROP_LEN,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncWatson, nc_multiplicity_func_watson, NC_TYPE_MULTIPLICITY_FUNC)
@@ -71,9 +72,9 @@ _nc_multiplicity_func_watson_set_property (GObject *object, guint prop_id, const
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -85,9 +86,9 @@ _nc_multiplicity_func_watson_get_property (GObject *object, guint prop_id, GValu
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -246,8 +247,7 @@ _nc_multiplicity_func_watson_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, g
 /**
  * nc_multiplicity_func_watson_new:
  *
- * FIXME
- *
+ * Creates a new #NcMultiplicityFuncWatson with default parameters (FOF mass definition).
  *
  * Returns: A new #NcMultiplicityFuncWatson.
  */

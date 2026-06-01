@@ -51,9 +51,12 @@ typedef struct _NcDataClusterNCountPrivate NcDataClusterNCountPrivate;
 
 /**
  * NcDataClusterAbundanceId:
- * @NC_DATA_CLUSTER_ABUNDANCE_FIT: FIXME
- * @NC_DATA_CLUSTER_ABUNDANCE_TXT: FIXME
- * @NC_DATA_CLUSTER_ABUNDANCE_SAMPLING: FIXME
+ * @NC_DATA_CLUSTER_ABUNDANCE_FIT: fit mode - data from catalog for parameter estimation
+ * @NC_DATA_CLUSTER_ABUNDANCE_TXT: text file mode - load catalog data from text file
+ * @NC_DATA_CLUSTER_ABUNDANCE_SAMPLING: sampling mode - generate mock catalog from model
+ *
+ * Cluster abundance data input modes.
+ * These specify how the cluster number count data is initialized or used.
  */
 typedef enum _NcDataClusterAbundanceId
 {
@@ -94,6 +97,8 @@ void nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const
 
 void nc_data_cluster_ncount_set_lnM_obs_bins (NcDataClusterNCount *ncount, NcmObjArray *lnM_obs_bins);
 void nc_data_cluster_ncount_set_z_obs_bins (NcDataClusterNCount *ncount, NcmObjArray *z_obs_bins);
+void nc_data_cluster_ncount_set_lnM_obs_bins_params (NcDataClusterNCount *ncount, NcmObjArray *lnM_obs_bins_params);
+void nc_data_cluster_ncount_set_z_obs_bins_params (NcDataClusterNCount *ncount, NcmObjArray *z_obs_bins_params);
 void nc_data_cluster_ncount_set_bin_count (NcDataClusterNCount *ncount, NcmVector *bin_count);
 
 gboolean nc_data_cluster_ncount_has_lnM_true (NcDataClusterNCount *ncount);
@@ -118,7 +123,7 @@ void nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use
 gboolean nc_data_cluster_ncount_using_true_data (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, gdouble area_survey, NcmRNG *rng);
 
-void nc_data_cluster_ncount_add_bin (NcDataClusterNCount *ncount, NcmVector *lnM_obs_lb, NcmVector *lnM_obs_ub, NcmVector *z_obs_lb, NcmVector *z_obs_ub);
+void nc_data_cluster_ncount_add_bin (NcDataClusterNCount *ncount, NcmVector *lnM_obs_lb, NcmVector *lnM_obs_ub, NcmVector *z_obs_lb, NcmVector *z_obs_ub, NcmVector *lnM_obs_params, NcmVector *z_obs_params);
 void nc_data_cluster_ncount_del_bins (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_set_binned (NcDataClusterNCount *ncount, gboolean on);
 void nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount);

@@ -210,9 +210,9 @@ _nc_scalefactor_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_ABSTOL:
       nc_scalefactor_set_abstol (a, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -244,9 +244,9 @@ _nc_scalefactor_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_ABSTOL:
       g_value_set_double (value, nc_scalefactor_get_abstol (a));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -398,9 +398,11 @@ static void _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo);
 /**
  * nc_scalefactor_prepare:
  * @a: a #NcScalefactor
- * @cosmo: FIXME
+ * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Prepares the object @a using the cosmological model @cosmo.
+ * This function computes the scale factor evolution and prepares
+ * internal splines for interpolation.
  *
  */
 void
@@ -421,9 +423,11 @@ nc_scalefactor_prepare (NcScalefactor *a, NcHICosmo *cosmo)
 /**
  * nc_scalefactor_prepare_if_needed:
  * @a: a #NcScalefactor
- * @cosmo: FIXME
+ * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Prepares the object @a using the cosmological model @cosmo if the model
+ * has changed since the last preparation. This function checks if an update
+ * is needed before recomputing the scale factor evolution.
  *
  */
 void

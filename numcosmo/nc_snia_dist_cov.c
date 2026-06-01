@@ -144,9 +144,9 @@ _nc_snia_dist_cov_set_property (GObject *object, guint prop_id, const GValue *va
 
       break;
     }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -165,9 +165,9 @@ _nc_snia_dist_cov_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_EMPTY_FAC:
       g_value_set_boolean (value, dcov->empty_fac);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -280,9 +280,9 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
  * @dist: a #NcDistance
  * @sigma_int_len: length of the sigma_int dataset
  *
- * FIXME
+ * Creates a new #NcSNIADistCov object for Type Ia supernovae distance modulus with covariance matrix.
  *
- * Returns: FIXME
+ * Returns: a newly created #NcSNIADistCov
  */
 NcSNIADistCov *
 nc_snia_dist_cov_new (NcDistance *dist, guint sigma_int_len)
@@ -337,7 +337,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
                            "M1-fit",             TRUE,
                            "M2-fit",             TRUE,
                            NULL
-                          );
+      );
       ncm_vector_free (lnsigma_int);
       nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
       break;
@@ -362,7 +362,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
                            "M1-fit",             TRUE,
                            "M2-fit",             TRUE,
                            NULL
-                          );
+      );
       ncm_vector_free (lnsigma_int);
       nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
       break;
@@ -387,7 +387,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
                            "M1-fit",             TRUE,
                            "M2-fit",             FALSE,
                            NULL
-                          );
+      );
       ncm_vector_free (lnsigma_int);
       nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
       break;
@@ -408,7 +408,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
                            "M1-fit",             TRUE,
                            "M2-fit",             FALSE,
                            NULL
-                          );
+      );
       nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
       break;
     }
@@ -428,7 +428,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
                            "M1-fit",             TRUE,
                            "M2-fit",             FALSE,
                            NULL
-                          );
+      );
       nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
       break;
     }
@@ -452,7 +452,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
                            "M1-fit",             TRUE,
                            "M2-fit",             FALSE,
                            NULL
-                          );
+      );
       ncm_vector_free (lnsigma_int);
       nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
       break;
@@ -477,7 +477,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
                            "M1-fit",             TRUE,
                            "M2-fit",             FALSE,
                            NULL
-                          );
+      );
       ncm_vector_free (lnsigma_int);
       nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
       break;
@@ -689,7 +689,7 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
                       + two_alpha * mag_width
                       - two_beta * mag_colour
                       - two_alpha_beta * width_colour
-                     );
+      );
       ij++;
     }
 

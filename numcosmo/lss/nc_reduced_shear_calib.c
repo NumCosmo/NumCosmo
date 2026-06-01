@@ -71,9 +71,9 @@ _nc_reduced_shear_calib_set_property (GObject *object, guint prop_id, const GVal
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -85,9 +85,9 @@ _nc_reduced_shear_calib_get_property (GObject *object, guint prop_id, GValue *va
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -188,12 +188,13 @@ nc_reduced_shear_calib_clear (NcReducedShearCalib **rs_calib)
 /**
  * nc_reduced_shear_calib_eval: (virtual eval)
  * @rs_calib: a #NcReducedShearCalib
- * @g_th: FIXME
- * @psf_size: FIXME
- * @gal_size: FIXME
+ * @g_th: theoretical reduced shear
+ * @psf_size: point spread function size
+ * @gal_size: galaxy size
  *
+ * Evaluates the calibrated reduced shear given the theoretical value and observational parameters.
  *
- * Returns: FIXME
+ * Returns: the calibrated reduced shear
  */
 gdouble
 nc_reduced_shear_calib_eval (NcReducedShearCalib *rs_calib, const gdouble g_th, const gdouble psf_size, const gdouble gal_size)

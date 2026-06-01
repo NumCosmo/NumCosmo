@@ -79,9 +79,9 @@ nc_hiprim_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_K_PIVOT:
       nc_hiprim_set_k_pivot (prim, g_value_get_double (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -97,9 +97,9 @@ nc_hiprim_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
     case PROP_K_PIVOT:
       g_value_set_double (value, nc_hiprim_get_k_pivot (prim));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -331,20 +331,20 @@ nc_hiprim_get_lnk_pivot (NcHIPrim *prim)
 
 /**
  * nc_hiprim_set_lnSA_powspec_lnk_impl: (skip)
- * @model_class: FIXME
- * @f: (scope notified): FIXME
+ * @model_class: a #NcHIPrimClass
+ * @f: (scope notified): function pointer
  *
- * FIXME
+ * Sets the implementation for computing the adiabatic scalar power spectrum.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HIPRIM, NcHIPrim, nc_hiprim, NcHIPrimFunc1, lnSA_powspec_lnk)
 
 /**
  * nc_hiprim_set_lnT_powspec_lnk_impl: (skip)
- * @model_class: FIXME
- * @f: (scope notified): FIXME
+ * @model_class: a #NcHIPrimClass
+ * @f: (scope notified): function pointer
  *
- * FIXME
+ * Sets the implementation for computing the tensor power spectrum.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HIPRIM, NcHIPrim, nc_hiprim, NcHIPrimFunc1, lnT_powspec_lnk)

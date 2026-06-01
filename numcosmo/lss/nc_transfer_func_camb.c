@@ -38,8 +38,23 @@
 #include "build_cfg.h"
 
 #include "lss/nc_transfer_func_camb.h"
+#include "numcosmo/math/ncm_spline.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_cfg.h"
+
+struct _NcTransferFuncCAMB
+{
+  /*< private >*/
+  NcTransferFunc parent_instance;
+  NcmSpline *T_spline;
+  gboolean init;
+};
+
+enum
+{
+  PROP_0,
+  PROP_LEN,
+};
 
 G_DEFINE_TYPE (NcTransferFuncCAMB, nc_transfer_func_camb, NC_TYPE_TRANSFER_FUNC)
 
@@ -48,7 +63,8 @@ gchar *camb_filename = NULL;
 /**
  * nc_transfer_func_camb_new:
  *
- * FIXME
+ * Creates a new #NcTransferFuncCAMB object that uses CAMB as backend for
+ * computing the transfer function.
  *
  * Returns: A new #NcTransferFunc.
  */

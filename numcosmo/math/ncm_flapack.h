@@ -10,6 +10,7 @@ extern void dgemv_ (const char *trans, const int *m, const int *n, const double 
 extern void dgemm_ (const char *transa, const char *transb, const int *m, const int *n, const int *k, const double *alpha, const double *a, const int *lda, const double *b, const int *ldb, const double *beta, double *c, const int *ldc);
 extern void dgetrf_ (int *m, int *n, double *a, int *lda, int *ipiv, int *info);
 extern void dgetrs_ (char *trans, int *n, int *nrhs, double *a, int *lda, int *ipiv, double *b, int *ldb, int *info);
+extern void dgesv_ (const gint *n, const gint *nrhs, gdouble *a, const gint *lda, gint *ipiv, gdouble *b, const gint *ldb, gint *info);
 
 extern void dptsv_ (gint *n, gint *nrhs, gdouble *d, gdouble *e, gdouble *b, gint *ldb, gint *info);
 extern void dpotrf_ (const gchar *uplo, const gint *n, gdouble *a, const gint *lda, gint *info);

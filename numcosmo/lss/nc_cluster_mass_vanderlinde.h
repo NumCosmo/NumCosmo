@@ -46,11 +46,11 @@ typedef struct _NcClusterMassVanderlinde NcClusterMassVanderlinde;
 /**
  * NcClusterMassVanderlindeSParams:
  * @NC_CLUSTER_MASS_VANDERLINDE_A_SZ: normalization of the mass-observable relation
- * @NC_CLUSTER_MASS_VANDERLINDE_B_SZ: FIXME
- * @NC_CLUSTER_MASS_VANDERLINDE_C_SZ: FIXME
+ * @NC_CLUSTER_MASS_VANDERLINDE_B_SZ: mass slope of the mass-observable relation
+ * @NC_CLUSTER_MASS_VANDERLINDE_C_SZ: redshift evolution of the mass-observable relation
  * @NC_CLUSTER_MASS_VANDERLINDE_D_SZ: standard deviation of the mass-observable relation
  *
- * FIXME
+ * Parameters for the Vanderlinde cluster mass-SZ relation.
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_VANDERLINDE_SPARAMS >*/
 {

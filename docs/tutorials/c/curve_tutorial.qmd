@@ -1,6 +1,13 @@
 ---
 title: NcmModel tutorial
 subtitle: Curve fitting tutorial
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 ## Overview

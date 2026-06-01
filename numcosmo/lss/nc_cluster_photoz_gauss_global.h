@@ -44,10 +44,10 @@ typedef struct _NcClusterPhotozGaussGlobal NcClusterPhotozGaussGlobal;
 
 /**
  * NcClusterPhotozGaussGlobalSParams:
- * @NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS: FIXME
+ * @NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS: photometric redshift bias parameter
  * @NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0: standard deviation of the gaussian distribution
  *
- * FIXME
+ * Parameters for the global Gaussian photometric redshift distribution.
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SPARAMS >*/
 {

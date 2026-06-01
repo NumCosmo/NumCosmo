@@ -90,9 +90,9 @@ _nc_cluster_photoz_gauss_global_set_property (GObject *object, guint prop_id, co
     case PROP_PZ_MAX:
       pzg_global->pz_max = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -111,9 +111,9 @@ _nc_cluster_photoz_gauss_global_get_property (GObject *object, guint prop_id, GV
     case PROP_PZ_MAX:
       g_value_set_double (value, pzg_global->pz_max);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -150,7 +150,7 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
   /**
    * NcClusterPhotozGaussGlobal:pz_min:
    *
-   * FIXME Set correct values (limits)
+   * Minimum photometric redshift for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_PZ_MIN,
@@ -163,7 +163,7 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
   /**
    * NcClusterPhotozGaussGlobal:pz_max:
    *
-   * FIXME Set correct values (limits)
+   * Maximum photometric redshift for cluster selection.
    */
   g_object_class_install_property (object_class,
                                    PROP_PZ_MAX,
@@ -176,7 +176,7 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
   /**
    * NcClusterPhotozGaussGlobal:z_bias:
    *
-   * FIXME Set correct values (limits)
+   * Bias parameter in the photometric redshift distribution.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS, "z-bias", "z-bias",
                               -G_MAXDOUBLE, G_MAXDOUBLE, 1.0e-2,
@@ -186,7 +186,7 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
   /**
    * NcClusterPhotozGaussGlobal:sigma0:
    *
-   * FIXME Set correct values (limits)
+   * Standard deviation parameter of the photometric redshift distribution at z=0.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0, "sigma0", "sigma0",
                               0.0, G_MAXDOUBLE, 1.0e-2,
@@ -327,12 +327,12 @@ _nc_cluster_photoz_gauss_global_n_limits (NcClusterRedshift *clusterz, NcHICosmo
 
 /**
  * nc_cluster_photoz_gauss_global_new:
- * @pz_min: FIXME
- * @pz_max: FIXME
- * @z_bias: FIXME
- * @sigma0: FIXME
+ * @pz_min: minimum photometric redshift
+ * @pz_max: maximum photometric redshift
+ * @z_bias: bias parameter in the photometric redshift distribution
+ * @sigma0: standard deviation parameter at z=0
  *
- * FIXME
+ * Creates a new #NcClusterPhotozGaussGlobal with the specified parameters.
  *
  * Returns: A new #NcClusterRedshift.
  */

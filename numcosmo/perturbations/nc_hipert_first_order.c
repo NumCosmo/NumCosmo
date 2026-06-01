@@ -220,9 +220,9 @@ _nc_hipert_first_order_set_property (GObject *object, guint prop_id, const GValu
     case PROP_INTEG:
       nc_hipert_first_order_set_integ (fo, g_value_get_enum (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -276,9 +276,9 @@ _nc_hipert_first_order_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_INTEG:
       g_value_set_enum (value, nc_hipert_first_order_get_integ (fo));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

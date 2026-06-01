@@ -64,7 +64,7 @@ gdouble nc_halo_density_profile_get_reltol (NcHaloDensityProfile *dp);
 gdouble nc_halo_density_profile_get_lnXi (NcHaloDensityProfile *dp);
 gdouble nc_halo_density_profile_get_lnXf (NcHaloDensityProfile *dp);
 
-void nc_halo_density_profile_get_phys_limts (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *Ri, gdouble *Rf);
+void nc_halo_density_profile_get_phys_limits (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble z, gdouble *Ri, gdouble *Rf);
 NcHaloMassSummary *nc_halo_density_profile_peek_mass_summary (NcHaloDensityProfile *dp);
 
 gdouble nc_halo_density_profile_eval_dl_density (NcHaloDensityProfile *dp, const gdouble x);

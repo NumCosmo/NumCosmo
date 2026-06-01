@@ -39,6 +39,7 @@
 
 #include "math/ncm_data_gauss_diag.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_c.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_linalg.h>
@@ -298,9 +299,10 @@ _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
   NcmDataGaussDiagPrivate * const self    = ncm_data_gauss_diag_get_instance_private (diag);
   NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
+  gdouble has_sigma_func                  = (gauss_diag_class->sigma_func != NULL);
   guint i;
 
-  if (gauss_diag_class->sigma_func != NULL)
+  if (has_sigma_func)
     gauss_diag_class->sigma_func (diag, mset, self->sigma);
 
   gauss_diag_class->mean_func (diag, mset, self->y);
@@ -324,12 +326,13 @@ _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
   NcmDataGaussDiagPrivate * const self    = ncm_data_gauss_diag_get_instance_private (diag);
   NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
+  gdouble has_sigma_func                  = (gauss_diag_class->sigma_func != NULL);
   gboolean sigma_update                   = FALSE;
   guint i;
 
   *m2lnL = 0.0;
 
-  if (gauss_diag_class->sigma_func != NULL)
+  if (has_sigma_func)
     sigma_update = gauss_diag_class->sigma_func (diag, mset, self->sigma);
 
   gauss_diag_class->mean_func (diag, mset, self->v);
@@ -351,11 +354,12 @@ _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
         const gdouble w_i  = ncm_vector_get (self->weight, i);
         const gdouble r_i2 = r_i * r_i;
 
-        *m2lnL += r_i2 * w_i;
+        *m2lnL += r_i2 * w_i - log (w_i);
         tmp    += r_i * w_i;
       }
 
       *m2lnL -= tmp * tmp / self->wt;
+      *m2lnL += self->np * ncm_c_ln2pi ();
     }
     else
     {
@@ -364,21 +368,25 @@ _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       gdouble tmp          = 0.0;
       gdouble wt           = 0.0;
 
-      for (i = 0; i < bsize; i++)
+      if (bsize > 0)
       {
-        guint k            = ncm_bootstrap_get (bstrap, i);
-        const gdouble y_k  = ncm_vector_get (self->y, k);
-        const gdouble yt_k = ncm_vector_get (self->v, k);
-        const gdouble r_k  = (yt_k - y_k);
-        const gdouble w_k  = ncm_vector_get (self->weight, k);
-        const gdouble r_k2 = r_k * r_k;
+        for (i = 0; i < bsize; i++)
+        {
+          guint k            = ncm_bootstrap_get (bstrap, i);
+          const gdouble y_k  = ncm_vector_get (self->y, k);
+          const gdouble yt_k = ncm_vector_get (self->v, k);
+          const gdouble r_k  = (yt_k - y_k);
+          const gdouble w_k  = ncm_vector_get (self->weight, k);
+          const gdouble r_k2 = r_k * r_k;
 
-        *m2lnL += r_k2 * w_k;
-        tmp    += r_k * w_k;
-        wt     += w_k;
+          *m2lnL += r_k2 * w_k - log (w_k);
+          tmp    += r_k * w_k;
+          wt     += w_k;
+        }
+
+        *m2lnL -= tmp * tmp / wt;
+        *m2lnL += bsize * ncm_c_ln2pi ();
       }
-
-      *m2lnL -= tmp * tmp / wt;
     }
   }
   else
@@ -392,23 +400,30 @@ _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
         const gdouble sigma_i = ncm_vector_get (self->sigma, i);
         const gdouble r_i     = (yt_i - y_i) / sigma_i;
 
-        *m2lnL += r_i * r_i;
+        *m2lnL += r_i * r_i + 2.0 * log (sigma_i);
       }
+
+      *m2lnL += self->np * ncm_c_ln2pi ();
     }
     else
     {
       NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
       const guint bsize    = ncm_bootstrap_get_bsize (bstrap);
 
-      for (i = 0; i < bsize; i++)
+      if (bsize > 0)
       {
-        guint k               = ncm_bootstrap_get (bstrap, i);
-        const gdouble y_k     = ncm_vector_get (self->y, k);
-        const gdouble yt_k    = ncm_vector_get (self->v, k);
-        const gdouble sigma_k = ncm_vector_get (self->sigma, k);
-        const gdouble r_k     = (yt_k - y_k) / sigma_k;
+        for (i = 0; i < bsize; i++)
+        {
+          guint k               = ncm_bootstrap_get (bstrap, i);
+          const gdouble y_k     = ncm_vector_get (self->y, k);
+          const gdouble yt_k    = ncm_vector_get (self->v, k);
+          const gdouble sigma_k = ncm_vector_get (self->sigma, k);
+          const gdouble r_k     = (yt_k - y_k) / sigma_k;
 
-        *m2lnL += r_k * r_k;
+          *m2lnL += r_k * r_k + 2.0 * log (sigma_k);
+        }
+
+        *m2lnL += bsize * ncm_c_ln2pi ();
       }
     }
   }
@@ -420,13 +435,14 @@ _ncm_data_gauss_diag_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
   NcmDataGaussDiag *diag                  = NCM_DATA_GAUSS_DIAG (data);
   NcmDataGaussDiagPrivate * const self    = ncm_data_gauss_diag_get_instance_private (diag);
   NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
+  gdouble has_sigma_func                  = (gauss_diag_class->sigma_func != NULL);
   gboolean sigma_update                   = FALSE;
   guint i;
 
   if (ncm_data_bootstrap_enabled (data))
     g_error ("NcmDataGaussDiag: does not support bootstrap with least squares");
 
-  if (gauss_diag_class->sigma_func != NULL)
+  if (has_sigma_func)
     sigma_update = gauss_diag_class->sigma_func (diag, mset, self->sigma);
 
   gauss_diag_class->mean_func (diag, mset, v);

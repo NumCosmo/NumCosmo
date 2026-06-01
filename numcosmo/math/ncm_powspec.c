@@ -213,6 +213,14 @@ _ncm_powspec_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, con
   return 0.0;
 }
 
+static gdouble
+_ncm_powspec_deriv_k (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  g_error ("_ncm_powspec_deriv_k: no default implementation, all children must implement it.");
+
+  return 0.0;
+}
+
 /* LCOV_EXCL_STOP */
 
 static void _ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
@@ -373,6 +381,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
   klass->eval_vec      = &_ncm_powspec_eval_vec;
   klass->get_spline_2d = &_ncm_powspec_get_spline_2d;
   klass->deriv_z       = &_ncm_powspec_deriv_z;
+  klass->deriv_k       = &_ncm_powspec_deriv_k;
 }
 
 static void
@@ -776,6 +785,23 @@ gdouble
 ncm_powspec_deriv_z (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   return NCM_POWSPEC_GET_CLASS (powspec)->deriv_z (powspec, model, z, k);
+}
+
+/**
+ * ncm_powspec_deriv_k:
+ * @powspec: a #NcmPowspec
+ * @model: (allow-none): a #NcmModel
+ * @z: time $z$
+ * @k: mode $k$
+ *
+ * Evaluates the derivative of the power spectrum @powspec with respect to $k$ at $(z, k)$.
+ *
+ * Returns: $\partial P(z, k) / \partial k$.
+ */
+gdouble
+ncm_powspec_deriv_k (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
+{
+  return NCM_POWSPEC_GET_CLASS (powspec)->deriv_k (powspec, model, z, k);
 }
 
 /**

@@ -23,7 +23,6 @@
 
 """Example of defining a new MSetFunc to be used in a MCMC analysis."""
 
-
 from scipy import integrate
 from py_sline_model import PySLineModel
 

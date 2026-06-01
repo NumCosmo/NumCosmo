@@ -114,9 +114,9 @@ _nc_wl_surface_mass_density_set_property (GObject *object, guint prop_id, const 
     case PROP_DISTANCE:
       smd->dist = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -132,9 +132,9 @@ _nc_wl_surface_mass_density_get_property (GObject *object, guint prop_id, GValue
     case PROP_DISTANCE:
       g_value_set_object (value, smd->dist);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 

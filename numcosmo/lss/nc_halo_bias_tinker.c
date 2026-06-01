@@ -105,9 +105,9 @@ _nc_halo_bias_tinker_set_property (GObject *object, guint prop_id, const GValue 
     case PROP_C:
       biasf_tinker->c = g_value_get_double (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -132,9 +132,9 @@ _nc_halo_bias_tinker_get_property (GObject *object, guint prop_id, GValue *value
     case PROP_C:
       g_value_set_double (value, biasf_tinker->c);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -243,23 +243,28 @@ nc_halo_bias_tinker_new_full (NcHaloMassFunction *mfp, gdouble delta_c, gdouble 
                        NULL);
 }
 
+/* TODO: Here we are using the Delta definition of in terms of the matter density.
+ * Instead of calling nc_multiplicity_func_get_matter_Delta which would use the
+ * appropriate matter density definition. This needs a better justification.
+ */
 static gdouble
 _nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   NcHaloBiasTinker *bias_tinker = NC_HALO_BIAS_TINKER (biasf);
   NcMultiplicityFunc *mulf      = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
-
-  const gdouble Delta = nc_multiplicity_func_get_matter_Delta (mulf, cosmo, z);
-  const gdouble y     = log10 (Delta);
-  const gdouble u     = exp (-pow (4.0 / y, 4.0));
-  const gdouble A     = 1.0 + 0.24 * y * u;
-  const gdouble a     = 0.44 * y - 0.88;
-  const gdouble B     = bias_tinker->B;
-  const gdouble b     = bias_tinker->b;
-  const gdouble C     = 0.019 + 0.107 * y + 0.19 * u;
-  const gdouble c     = bias_tinker->c;
-  gdouble x           = bias_tinker->delta_c / sigma;
-  gdouble b_Tinker    = 1.0  - A * pow (x, a) / (pow (x, a) + pow (bias_tinker->delta_c, a)) + B * pow (x, b) + C * pow (x, c);
+  const gdouble E2              = nc_hicosmo_E2 (cosmo, z);
+  const gdouble Omega_m         = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
+  const gdouble Delta           = nc_multiplicity_func_get_Delta (mulf) / Omega_m;
+  const gdouble y               = log10 (Delta);
+  const gdouble u               = exp (-pow (4.0 / y, 4.0));
+  const gdouble A               = 1.0 + 0.24 * y * u;
+  const gdouble a               = 0.44 * y - 0.88;
+  const gdouble B               = bias_tinker->B;
+  const gdouble b               = bias_tinker->b;
+  const gdouble C               = 0.019 + 0.107 * y + 0.19 * u;
+  const gdouble c               = bias_tinker->c;
+  gdouble x                     = bias_tinker->delta_c / sigma;
+  gdouble b_Tinker              = 1.0  - A * pow (x, a) / (pow (x, a) + pow (bias_tinker->delta_c, a)) + B * pow (x, b) + C * pow (x, c);
 
   return b_Tinker;
 }

@@ -1,11 +1,14 @@
 src_site_files = files(
-    '_definitions.qmd',
     '_functions.qmd',
     'about.qmd',
+    'add-py-link.html',
     'container.css',
     'custom.scss',
     'index.qmd',
     'install.qmd',
+    'ipynb-strip-xref.lua',
+    'ipynb_to_py.sh',
+    'linkgen.lua',
     'references.bib',
 )
 
@@ -16,6 +19,8 @@ subdir('images')
 subdir('tutorials')
 subdir('examples')
 subdir('benchmarks')
+subdir('theory')
+subdir('notes')
 
 quarto_conf = configuration_data()
 quarto_conf.set('version', meson.project_version())

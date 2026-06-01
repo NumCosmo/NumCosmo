@@ -1,6 +1,12 @@
 ---
 title: "Simulating Galaxy Shapes with NumCosmo Cluster Weak Lensing Tools"
-format: html
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /_functions.qmd >}}
@@ -321,7 +327,6 @@ ax.set_ylim(galaxies_dec0 - angle_border, galaxies_dec1 + angle_border)
 ax.set_aspect("equal")
 
 plt.show()
-
 ```
 
 ## Varying the Cluster Mass and Position
@@ -437,7 +442,6 @@ for i, ra_shift in enumerate(ra_shifts):
         ax.set_aspect("equal")
 
 plt.show()
-
 ```
 
 ### Varying Halo Mass

@@ -126,9 +126,9 @@ nc_hiprim_sbpl_class_init (NcHIPrimSBPLClass *klass)
 /**
  * nc_hiprim_sbpl_new: (constructor)
  *
- * FIXME
+ * Creates a new instance of #NcHIPrimSBPL (Smooth Broken Power Law primordial spectrum).
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcHIPrimSBPL
  */
 NcHIPrimSBPL *
 nc_hiprim_sbpl_new (void)

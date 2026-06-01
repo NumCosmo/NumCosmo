@@ -97,6 +97,8 @@ typedef struct _NcDataClusterNCountsGaussIndex
   gdouble *z_obs_ub;
   gdouble *lnM_obs_lb;
   gdouble *lnM_obs_ub;
+  gdouble *z_obs_params;
+  gdouble *lnM_obs_params;
 } NcDataClusterNCountsGaussIndex;
 
 static void
@@ -335,6 +337,7 @@ _nc_data_cluster_ncounts_gauss_begin (NcmData *data)
 
   {
     gint i_z, i_lnM;
+    gint bin_index = 0;
 
     for (i_z = 0; i_z < nz; i_z++)
     {
@@ -342,14 +345,17 @@ _nc_data_cluster_ncounts_gauss_begin (NcmData *data)
       {
         NcDataClusterNCountsGaussIndex k;
 
-        k.i_z        = i_z;
-        k.i_lnM      = i_lnM;
-        k.z_obs_lb   = ncm_vector_ptr (self->z_obs, i_z + 0);
-        k.z_obs_ub   = ncm_vector_ptr (self->z_obs, i_z + 1);
-        k.lnM_obs_lb = ncm_vector_ptr (self->lnM_obs, i_lnM + 0);
-        k.lnM_obs_ub = ncm_vector_ptr (self->lnM_obs, i_lnM + 1);
+        k.i_z            = i_z;
+        k.i_lnM          = i_lnM;
+        k.z_obs_lb       = ncm_vector_ptr (self->z_obs, i_z + 0);
+        k.z_obs_ub       = ncm_vector_ptr (self->z_obs, i_z + 1);
+        k.lnM_obs_lb     = ncm_vector_ptr (self->lnM_obs, i_lnM + 0);
+        k.lnM_obs_ub     = ncm_vector_ptr (self->lnM_obs, i_lnM + 1);
+        k.z_obs_params   = (self->z_obs_params != NULL) ? ncm_matrix_ptr (self->z_obs_params, bin_index, 0) : NULL;
+        k.lnM_obs_params = (self->lnM_obs_params != NULL) ? ncm_matrix_ptr (self->lnM_obs_params, bin_index, 0) : NULL;
 
         g_array_append_val (self->index_map, k);
+        bin_index++;
       }
     }
   }
@@ -411,14 +417,16 @@ _nc_data_cluster_ncounts_gauss_mean_func (NcmDataGaussCov *gauss_cov, NcmMSet *m
   for (i = 0; i < self->index_map->len; i++)
   {
     const NcDataClusterNCountsGaussIndex *k = &g_array_index (self->index_map, NcDataClusterNCountsGaussIndex, i);
+    const gdouble *lnM_params               = k->lnM_obs_params;
+    const gdouble *z_params                 = k->z_obs_params;
 
     const gdouble mean = nc_cluster_abundance_intp_bin_d2n (cad, cosmo, clusterz, clusterm,
                                                             k->lnM_obs_lb,
                                                             k->lnM_obs_ub,
-                                                            NULL,
+                                                            lnM_params,
                                                             k->z_obs_lb,
                                                             k->z_obs_ub,
-                                                            NULL);
+                                                            z_params);
 
     ncm_vector_set (vp, i, mean);
   }
@@ -457,23 +465,25 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
     else
       s_matrix = self->s_matrix;
 
-    if (s_matrix == NULL)
-      g_error ("Super sample covariance matrix not set");
-
     ncm_matrix_set_zero (cov);
 
     if (self->has_ssc)
     {
+      if (s_matrix == NULL)
+        g_error ("Super sample covariance matrix not set");
+
       for (i = 0; i < self->index_map->len; i++)
       {
         const NcDataClusterNCountsGaussIndex *k_i = &g_array_index (self->index_map, NcDataClusterNCountsGaussIndex, i);
+        const gdouble *lnM_params_i               = k_i->lnM_obs_params;
+        const gdouble *z_params_i                 = k_i->z_obs_params;
         const gdouble bias_i                      = nc_cluster_abundance_intp_bin_d2n_bias (cad, cosmo, clusterz, clusterm,
                                                                                             k_i->lnM_obs_lb,
                                                                                             k_i->lnM_obs_ub,
-                                                                                            NULL,
+                                                                                            lnM_params_i,
                                                                                             k_i->z_obs_lb,
                                                                                             k_i->z_obs_ub,
-                                                                                            NULL);
+                                                                                            z_params_i);
 
         for (j = 0; j < self->index_map->len; j++)
         {
@@ -486,22 +496,24 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
             const gdouble poisson_i = nc_cluster_abundance_intp_bin_d2n (cad, cosmo, clusterz, clusterm,
                                                                          k_i->lnM_obs_lb,
                                                                          k_i->lnM_obs_ub,
-                                                                         NULL,
+                                                                         lnM_params_i,
                                                                          k_i->z_obs_lb,
                                                                          k_i->z_obs_ub,
-                                                                         NULL);
+                                                                         z_params_i);
 
             ncm_matrix_set (cov, i, j, poisson_i + bias_i * bias_i * Sij);
           }
           else
           {
-            const gdouble bias_j = nc_cluster_abundance_intp_bin_d2n_bias (cad, cosmo, clusterz, clusterm,
-                                                                           k_j->lnM_obs_lb,
-                                                                           k_j->lnM_obs_ub,
-                                                                           NULL,
-                                                                           k_j->z_obs_lb,
-                                                                           k_j->z_obs_ub,
-                                                                           NULL);
+            const gdouble *lnM_params_j = k_j->lnM_obs_params;
+            const gdouble *z_params_j   = k_j->z_obs_params;
+            const gdouble bias_j        = nc_cluster_abundance_intp_bin_d2n_bias (cad, cosmo, clusterz, clusterm,
+                                                                                  k_j->lnM_obs_lb,
+                                                                                  k_j->lnM_obs_ub,
+                                                                                  lnM_params_j,
+                                                                                  k_j->z_obs_lb,
+                                                                                  k_j->z_obs_ub,
+                                                                                  z_params_j);
 
             ncm_matrix_set (cov, i, j, bias_i * bias_j * Sij);
           }
@@ -513,13 +525,15 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
       for (i = 0; i < self->index_map->len; i++)
       {
         const NcDataClusterNCountsGaussIndex *k_i = &g_array_index (self->index_map, NcDataClusterNCountsGaussIndex, i);
+        const gdouble *lnM_params                 = k_i->lnM_obs_params;
+        const gdouble *z_params                   = k_i->z_obs_params;
         const gdouble poisson_i                   = nc_cluster_abundance_intp_bin_d2n (cad, cosmo, clusterz, clusterm,
                                                                                        k_i->lnM_obs_lb,
                                                                                        k_i->lnM_obs_ub,
-                                                                                       NULL,
+                                                                                       lnM_params,
                                                                                        k_i->z_obs_lb,
                                                                                        k_i->z_obs_ub,
-                                                                                       NULL);
+                                                                                       z_params);
 
         ncm_matrix_set (cov, i, i, poisson_i);
       }
@@ -674,9 +688,9 @@ nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncounts_g
  * @ncounts_gauss: a #NcDataClusterNCountsGauss
  * @s_matrix: a #NcmMatrix
  *
- * Sets a #NcmMatrix representing the super sample covariance effect in each bin.
- * This matrix will be used only during resampling and it is used to test
- * misspecification of the covariance matrix.
+ * Sets a #NcmMatrix representing the super sample covariance effect in each bin. This
+ * matrix will be used only during resampling and it is used to test miss specification
+ * of the covariance matrix.
  */
 void
 nc_data_cluster_ncounts_gauss_set_resample_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *s_matrix)

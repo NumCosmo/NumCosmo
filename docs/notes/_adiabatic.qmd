@@ -1,0 +1,2 @@
+
+[^adiabatic]: The term *adiabatic* appears in two distinct contexts: **Adiabatic mode in perturbations**: The variable $\zeta$ describes the overall curvature perturbation, which represents a specific combination of all matter fields. In contrast, entropy modes capture the differences between individual matter fields; **Adiabatic regime during evolution**: At early times, each mode evolves through a phase where it is well approximated by the WKB (Wentzel-Kramers-Brillouin) method. This phase is referred to as the *adiabatic regime* for that perturbation.

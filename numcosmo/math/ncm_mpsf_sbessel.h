@@ -42,7 +42,9 @@ typedef struct _NcmMpsfSBesselRecur NcmMpsfSBesselRecur;
 /**
  * NcmMpsfSBesselRecur:
  *
- * FIXME
+ * Multi-precision spherical Bessel function recursion structure.
+ * This structure holds the state for computing spherical Bessel functions
+ * using high-precision MPFR arithmetic with recursion relations.
  */
 struct _NcmMpsfSBesselRecur
 {

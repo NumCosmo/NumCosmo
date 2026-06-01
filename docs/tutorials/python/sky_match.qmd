@@ -1,6 +1,12 @@
 ---
 title: "Matching Observations to Simulations"
-format: html
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /_functions.qmd >}}
@@ -497,7 +503,7 @@ def plot_best(best):
 
 
 plot_best(best)
-plt.show()  
+plt.show()
 ```
 
 ### Cross Match
@@ -717,7 +723,6 @@ The plot below visualizes the best matches:
 
 plot_best(best)
 plt.show()
-
 ```
 
 This final selection ensures that each cluster is associated with the **most massive halo** within the given constraints, optimizing the matching process.

@@ -169,9 +169,9 @@ nc_data_planck_lkl_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_PERT_BOLTZMANN:
       nc_data_planck_lkl_set_hipert_boltzmann (plik, g_value_get_object (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -199,9 +199,9 @@ nc_data_planck_lkl_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_CHKSUM:
       g_value_set_string (value, plik->chksum);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -280,6 +280,11 @@ nc_data_planck_lkl_class_init (NcDataPlanckLKLClass *klass)
   object_class->dispose      = nc_data_planck_lkl_dispose;
   object_class->finalize     = nc_data_planck_lkl_finalize;
 
+  /**
+   * NcDataPlanckLKL:data-file:
+   *
+   * Path to the Planck likelihood (.clik) file.
+   */
   g_object_class_install_property (object_class,
                                    PROP_DATA_FILE,
                                    g_param_spec_string ("data-file",
@@ -288,6 +293,11 @@ nc_data_planck_lkl_class_init (NcDataPlanckLKLClass *klass)
                                                         "no-file",
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcDataPlanckLKL:hipert-boltzmann:
+   *
+   * The #NcHIPertBoltzmann object used to compute theoretical CMB power spectra.
+   */
   g_object_class_install_property (object_class,
                                    PROP_PERT_BOLTZMANN,
                                    g_param_spec_object ("hipert-boltzmann",
@@ -296,6 +306,11 @@ nc_data_planck_lkl_class_init (NcDataPlanckLKLClass *klass)
                                                         NC_TYPE_HIPERT_BOLTZMANN,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcDataPlanckLKL:is-lensing:
+   *
+   * Whether this likelihood includes CMB lensing data.
+   */
   g_object_class_install_property (object_class,
                                    PROP_IS_LENSING,
                                    g_param_spec_boolean ("is-lensing",
@@ -304,6 +319,11 @@ nc_data_planck_lkl_class_init (NcDataPlanckLKLClass *klass)
                                                          FALSE,
                                                          G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcDataPlanckLKL:nparams:
+   *
+   * Number of nuisance parameters expected by this likelihood.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NPARAMS,
                                    g_param_spec_uint ("nparams",
@@ -544,7 +564,7 @@ _nc_data_planck_lkl_file_exists (const gchar *filename)
 
       g_free (file_at_default);
 
-      if (g_file_test (file_at_data, G_FILE_TEST_EXISTS))
+      if ((file_at_data != NULL) && g_file_test (file_at_data, G_FILE_TEST_EXISTS))
         return file_at_data;
 
       g_free (file_at_data);
@@ -780,9 +800,10 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
  * nc_data_planck_lkl_new:
  * @filename: a Planck likelihood file
  *
- * FIXME
+ * Creates a new #NcDataPlanckLKL object from a Planck likelihood data file. This loads
+ * the likelihood data using the Planck likelihood code library.
  *
- * Returns: a new #NcDataPlanckLKL
+ * Returns: (transfer full): a new #NcDataPlanckLKL
  */
 NcDataPlanckLKL *
 nc_data_planck_lkl_new (const gchar *filename)
@@ -799,9 +820,11 @@ nc_data_planck_lkl_new (const gchar *filename)
  * @filename: a Planck likelihood file
  * @pb: a #NcHIPertBoltzmann
  *
- * FIXME
+ * Creates a new #NcDataPlanckLKL object with a specified Boltzmann code. This
+ * initializes the likelihood using the provided perturbation/Boltzmann solver @pb for
+ * computing the theoretical power spectra.
  *
- * Returns: a new #NcDataPlanckLKL
+ * Returns: (transfer full): a new #NcDataPlanckLKL
  */
 NcDataPlanckLKL *
 nc_data_planck_lkl_full_new (const gchar *filename, NcHIPertBoltzmann *pb)
@@ -851,9 +874,9 @@ nc_data_planck_lkl_full_new_id (NcDataPlanckLKLType id, NcHIPertBoltzmann *pb)
  * @plik: a #NcDataPlanckLKL
  * @i: param index
  *
- * FIXME
+ * Gets the name of the nuisance parameter at index @i.
  *
- * Returns: (transfer none): a string containing the param name
+ * Returns: (transfer none): the parameter name
  */
 const gchar *
 nc_data_planck_lkl_get_param_name (NcDataPlanckLKL *plik, guint i)
@@ -867,9 +890,9 @@ nc_data_planck_lkl_get_param_name (NcDataPlanckLKL *plik, guint i)
  * nc_data_planck_lkl_get_param_names:
  * @plik: a #NcDataPlanckLKL
  *
- * FIXME
+ * Gets an array containing all nuisance parameter names used by the likelihood.
  *
- * Returns: (array zero-terminated=1) (element-type utf8) (transfer full): an array of strings containing the param names
+ * Returns: (array zero-terminated=1) (element-type utf8) (transfer full): an array of parameter names
  */
 gchar **
 nc_data_planck_lkl_get_param_names (NcDataPlanckLKL *plik)
@@ -972,27 +995,33 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
   ncm_message ("# Downloading file [%s]...\n", file);
 
   {
-    gchar *cmd[] = { "wget", "-O", full_filename, (gchar *) url_str, NULL };
+    gchar *cmd[] = {"wget", "--tries=3", "--timeout=30", "-O", full_filename, (gchar *) url_str, NULL };
 
     if (!g_spawn_sync (dir, cmd, NULL,
-                       G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, &error))
+                       G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+                       NULL, NULL, NULL, NULL, NULL, &error))
       g_error ("nc_data_planck_lkl_download_baseline: cannot download file: %s. Error: %s. "
                "Please download the file manually from %s and extract it to %s.",
                file, error->message,
                url_str, dir);
   }
 
+  ncm_message ("# Extracting file [%s]...\n", file);
+
   {
     gchar *cmd[] = { "tar", "xzf", (gchar *) file, NULL };
 
     if (!g_spawn_sync (dir, cmd, NULL,
-                       G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, NULL, &error))
+                       G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+                       NULL, NULL, NULL, NULL, NULL, &error))
       g_error ("nc_data_planck_lkl_download_baseline: cannot extract tar file: %s. Error: %s",
                file, error->message);
   }
 
   g_unlink (full_filename);
   g_free (full_filename);
+
+  ncm_message ("# Baseline data successfully downloaded and extracted.\n");
 
   return;
 }

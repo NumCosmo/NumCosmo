@@ -538,9 +538,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, H0)
 /**
  * nc_hicosmo_set_Omega_b0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_b0.
  *
- * FIXME
+ * Sets the implementation for computing the baryon density parameter.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_b0)
@@ -548,9 +548,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_c0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_c0.
  *
- * FIXME
+ * Sets the implementation for computing the cold dark matter density parameter.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_c0)
@@ -558,9 +558,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_g0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_g0.
  *
- * FIXME
+ * Sets the implementation for computing the photon density parameter.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_g0)
@@ -568,9 +568,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_nu0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_nu0.
  *
- * FIXME
+ * Sets the implementation for computing the ultra-relativistic neutrino density parameter.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_nu0)
@@ -578,9 +578,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_mnu0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_mnu0.
  *
- * FIXME
+ * Sets the implementation for computing the massive neutrino density parameter.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_mnu0)
@@ -588,9 +588,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Press_mnu0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Press_mnu0.
  *
- * FIXME
+ * Sets the implementation for computing the massive neutrino pressure.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Press_mnu0)
@@ -598,9 +598,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Pres
 /**
  * nc_hicosmo_set_Omega_mnu0_n_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_mnu0_n.
  *
- * FIXME
+ * Sets the implementation for computing the n-th massive neutrino density parameter.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc0, Omega_mnu0_n)
@@ -608,9 +608,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc0, Ome
 /**
  * nc_hicosmo_set_Press_mnu0_n_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Press_mnu0_n.
  *
- * FIXME
+ * Sets the implementation for computing the n-th massive neutrino pressure.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc0, Press_mnu0_n)
@@ -618,9 +618,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc0, Pre
 /**
  * nc_hicosmo_set_Omega_m0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_m0.
  *
- * FIXME
+ * Sets the implementation for computing the total matter density parameter.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_m0)
@@ -628,9 +628,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_r0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_r0.
  *
- * FIXME
+ * Sets the implementation for computing the total radiation density parameter.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_r0)
@@ -638,9 +638,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_Omega_t0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Omega_t0.
  *
- * FIXME
+ * Sets the implementation for computing the total density parameter.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omega_t0)
@@ -648,9 +648,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Omeg
 /**
  * nc_hicosmo_set_T_gamma0_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of T_gamma0.
  *
- * FIXME
+ * Sets the implementation for computing the CMB temperature today.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, T_gamma0)
@@ -658,9 +658,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, T_ga
 /**
  * nc_hicosmo_set_Yp_4He_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Yp_4He.
  *
- * FIXME
+ * Sets the implementation for computing the primordial Helium mass fraction.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Yp_4He)
@@ -668,9 +668,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, Yp_4
 /**
  * nc_hicosmo_set_z_lss_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of z_lss.
  *
- * FIXME
+ * Sets the implementation for computing the last scattering surface redshift.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, z_lss)
@@ -678,9 +678,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, z_ls
 /**
  * nc_hicosmo_set_as_drag_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of as_drag.
  *
- * FIXME
+ * Sets the implementation for computing the sound horizon at the drag epoch.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, as_drag)
@@ -688,9 +688,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, as_d
 /**
  * nc_hicosmo_set_xb_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of xb.
  *
- * FIXME
+ * Sets the implementation for computing the baryon-photon momentum density ratio.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, xb)
@@ -698,9 +698,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, xb)
 /**
  * nc_hicosmo_set_E2Omega_b_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_b.
  *
- * Baryonic density $E^2\Omega_{b} = \rho_b(z) / \rho_{\mathrm{crit}0}$.
+ * Sets the implementation for computing the baryonic density $E^2\Omega_{b} = \rho_b(z) / \rho_{\mathrm{crit}0}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2Omega_b)
@@ -708,9 +708,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_c_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_c.
  *
- * Cold dark matter density $E^2\Omega_{c} = \rho_c(z) / \rho_{\mathrm{crit}0}$.
+ * Sets the implementation for computing the cold dark matter density $E^2\Omega_{c} = \rho_c(z) / \rho_{\mathrm{crit}0}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2Omega_c)
@@ -718,9 +718,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_g_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_g.
  *
- * Photons density $E^2\Omega_{\gamma} = \rho_\gamma(z) / \rho_{\mathrm{crit}0}$.
+ * Sets the implementation for computing the photons density $E^2\Omega_{\gamma} = \rho_\gamma(z) / \rho_{\mathrm{crit}0}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2Omega_g)
@@ -728,9 +728,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_nu_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_nu.
  *
- * Ultra-relativistic neutrinos density $E^2\Omega_{\nu} = \rho_\nu(z) / \rho_{\mathrm{crit}0}$.
+ * Sets the implementation for computing the ultra-relativistic neutrinos density $E^2\Omega_{\nu} = \rho_\nu(z) / \rho_{\mathrm{crit}0}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2Omega_nu)
@@ -738,9 +738,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_mnu_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_mnu.
  *
- * Massive neutrinos density $E^2\Omega_{m\nu} = \rho_{m\nu}(z) / \rho_{\mathrm{crit}0}$.
+ * Sets the implementation for computing the massive neutrinos density $E^2\Omega_{m\nu} = \rho_{m\nu}(z) / \rho_{\mathrm{crit}0}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2Omega_mnu)
@@ -748,9 +748,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Press_mnu_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Press_mnu.
  *
- * Massive neutrinos density $E^2P_{m\nu} = p_{m\nu}(z) / \rho_{\mathrm{crit}0}$.
+ * Sets the implementation for computing the massive neutrinos pressure $E^2P_{m\nu} = p_{m\nu}(z) / \rho_{\mathrm{crit}0}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2Press_mnu)
@@ -758,9 +758,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2P
 /**
  * nc_hicosmo_set_E2Omega_mnu_n_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_mnu_n.
  *
- * Massive neutrinos density $E^2\Omega_{m\nu,n} = \rho_{m\nu,n}(z) / \rho_{\mathrm{crit}0}$.
+ * Sets the implementation for computing the n-th massive neutrinos density $E^2\Omega_{m\nu,n} = \rho_{m\nu,n}(z) / \rho_{\mathrm{crit}0}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc1Z, E2Omega_mnu_n)
@@ -768,9 +768,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc1Z, E2
 /**
  * nc_hicosmo_set_E2Press_mnu_n_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Press_mnu_n.
  *
- * Massive neutrinos density $E^2P_{m\nu,n} = p_{m\nu,n}(z) / \rho_{\mathrm{crit}0}$.
+ * Sets the implementation for computing the n-th massive neutrinos pressure $E^2P_{m\nu,n} = p_{m\nu,n}(z) / \rho_{\mathrm{crit}0}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc1Z, E2Press_mnu_n)
@@ -778,9 +778,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoVFunc1Z, E2
 /**
  * nc_hicosmo_set_E2Omega_m_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_m.
  *
- * Total matter density $E^2\Omega_{m} = \rho_m(z) / \rho_{\mathrm{crit}0}$.
+ * Sets the implementation for computing the total matter density $E^2\Omega_{m} = \rho_m(z) / \rho_{\mathrm{crit}0}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2Omega_m)
@@ -788,9 +788,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_r_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_r.
  *
- * Total radiation density $\Omega_{r} = \rho_r(z) / \rho_{\mathrm{crit}0}$.
+ * Sets the implementation for computing the total radiation density $\Omega_{r} = \rho_r(z) / \rho_{\mathrm{crit}0}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2Omega_r)
@@ -798,9 +798,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2Omega_t_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2Omega_t.
  *
- * Total density $E2\Omega_{t0} = \rho_t(z) / \rho_{\mathrm{crit}0}$.
+ * Sets the implementation for computing the total density $E2\Omega_{t0} = \rho_t(z) / \rho_{\mathrm{crit}0}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2Omega_t)
@@ -808,9 +808,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2O
 /**
  * nc_hicosmo_set_E2_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of E2.
  *
- * Normalized Hubble function squared, $E^2(z)$.
+ * Sets the implementation for computing the normalized Hubble function squared, $E^2(z)$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2)
@@ -818,9 +818,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, E2)
 /**
  * nc_hicosmo_set_dE2_dz_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of dE2_dz.
  *
- * First derivative with respect to the redshift of the normalized Hubble function squared, $\frac{dE^2(z)}{dz}$.
+ * Sets the implementation for computing the first derivative with respect to the redshift of the normalized Hubble function squared, $\frac{dE^2(z)}{dz}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, dE2_dz)
@@ -828,9 +828,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, dE2
 /**
  * nc_hicosmo_set_d2E2_dz2_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of d2E2_dz2.
  *
- * Second derivative with respect to the redshift of the normalized Hubble function squared, $\frac{d^2E^2(z)}{dz^2}$.
+ * Sets the implementation for computing the second derivative with respect to the redshift of the normalized Hubble function squared, $\frac{d^2E^2(z)}{dz^2}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, d2E2_dz2)
@@ -838,9 +838,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, d2E
 /**
  * nc_hicosmo_set_bgp_cs2_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of bgp_cs2.
  *
- * FIXME
+ * Sets the implementation for computing the baryon-photon plasma sound speed squared.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, bgp_cs2)
@@ -848,9 +848,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, bgp
 /**
  * nc_hicosmo_set_Dc_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of Dc.
  *
- * FIXME
+ * Sets the implementation for computing the comoving distance.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, Dc)
@@ -858,9 +858,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc1Z, Dc)
 /**
  * nc_hicosmo_set_NMassNu_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of NMassNu.
  *
- * FIXME
+ * Sets the implementation for computing the number of massive neutrino species.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFuncNMassNu, NMassNu)
@@ -868,9 +868,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFuncNMassNu
 /**
  * nc_hicosmo_set_MassNuInfo_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of MassNuInfo.
  *
- * FIXME
+ * Sets the implementation for retrieving massive neutrino information.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFuncMassNuInfo, MassNuInfo)
@@ -878,9 +878,9 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFuncMassNuI
 /**
  * nc_hicosmo_set_get_bg_var_impl: (skip)
  * @model_class: a #NcmModelClass
- * @f: FIXME
+ * @f: an implementation of get_bg_var.
  *
- * FIXME
+ * Sets the implementation for retrieving background perturbation variables.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoGetBGVar, get_bg_var)
@@ -1618,7 +1618,7 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * nc_hicosmo_crit_density:
  * @cosmo: a #NcHICosmo
  *
- * Calculares the critical density $\rho_\mathrm{crit}$ using
+ * Calculates the critical density $\rho_\mathrm{crit}$ using
  * ncm_c_crit_density_h2() $\times$ nc_hicosmo_h2().
  *
  * Returns: The critical density $\rho_{\mathrm{crit}0}$.
@@ -1627,7 +1627,7 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * nc_hicosmo_baryon_density:
  * @cosmo: a #NcHICosmo
  *
- * Calculares the baryon density $\rho_{b0} = \rho_{\mathrm{crit}0} \Omega_{b0}$
+ * Calculates the baryon density $\rho_{b0} = \rho_{\mathrm{crit}0} \Omega_{b0}$
  * using nc_hicosmo_crit_density() $\times$ nc_hicosmo_Omega_b0().
  *
  * Returns: The baryon density $\rho_{b0}$.
@@ -1636,7 +1636,7 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * nc_hicosmo_He_number_density:
  * @cosmo: a #NcHICosmo
  *
- * Calculares the Helium-4 number density $n_\mathrm{4He} = Y_p n_{b0} / m_\mathrm{4He}$
+ * Calculates the Helium-4 number density $n_\mathrm{4He} = Y_p n_{b0} / m_\mathrm{4He}$
  * using nc_hicosmo_Yp_4He() $\times$ nc_hicosmo_baryon_density() / ncm_c_rest_energy_4He().
  *
  * Returns: The baryon density $n_\mathrm{4He}$.
@@ -1645,7 +1645,7 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * nc_hicosmo_H_number_density:
  * @cosmo: a #NcHICosmo
  *
- * Calculares the Hydrogen-1 number density $n_\mathrm{1H} = Y_{\mathrm{1H}p} n_{b0} / m_\mathrm{1H}$
+ * Calculates the Hydrogen-1 number density $n_\mathrm{1H} = Y_{\mathrm{1H}p} n_{b0} / m_\mathrm{1H}$
  * using nc_hicosmo_Yp_1H() $\times$ nc_hicosmo_baryon_density() / ncm_c_rest_energy_1H().
  *
  * Returns: The baryon density $n_\mathrm{1H}$.
@@ -1655,25 +1655,25 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * nc_hicosmo_z_lss: (virtual z_lss)
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Computes the redshift of the last scattering surface.
  *
- * Returns: FIXME
+ * Returns: the redshift of the last scattering surface $z_{\mathrm{lss}}$
  */
 /**
  * nc_hicosmo_as_drag: (virtual as_drag)
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Computes the sound horizon at the drag epoch.
  *
- * Returns: FIXME
+ * Returns: the sound horizon at the drag epoch $r_s(z_d)$ in Mpc
  */
 /**
  * nc_hicosmo_xb: (virtual xb)
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Computes the baryon-photon momentum density ratio.
  *
- * Returns: FIXME
+ * Returns: the baryon-photon momentum density ratio $x_b$
  */
 
 /**
@@ -1793,9 +1793,9 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the first derivative of the Hubble function with respect to redshift.
  *
- * Returns: FIXME
+ * Returns: $\frac{dH(z)}{dz}$ in units of $\mathrm{m}\,\mathrm{s}^{-1}\,\mathrm{kpc}^{-1}$
  */
 /**
  * nc_hicosmo_E:
@@ -1829,18 +1829,18 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the first derivative of the normalized Hubble function squared with respect to redshift.
  *
- * Returns: FIXME
+ * Returns: $\frac{dE^2(z)}{dz}$
  */
 /**
  * nc_hicosmo_d2E2_dz2: (virtual d2E2_dz2)
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the second derivative of the normalized Hubble function squared with respect to redshift.
  *
- * Returns: FIXME
+ * Returns: $\frac{d^2E^2(z)}{dz^2}$
  */
 
 /**
@@ -1858,45 +1858,46 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the comoving distance to redshift @z.
  *
- * Returns: FIXME
+ * Returns: the comoving distance $D_c(z)$ in Mpc
  */
 /**
  * nc_hicosmo_NMassNu: (virtual NMassNu)
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Gets the number of massive neutrino species.
  *
- * Returns: FIXME
+ * Returns: the number of massive neutrino species
  */
 /**
  * nc_hicosmo_MassNuInfo: (virtual MassNuInfo)
  * @cosmo: a #NcHICosmo
- * @nu_i: FIXME
- * @mass_eV: (out): FIXME
- * @T_0: (out): FIXME
- * @xi: (out): FIXME
- * @g: (out): FIXME
+ * @nu_i: the massive neutrino index
+ * @mass_eV: (out): the neutrino mass in eV
+ * @T_0: (out): the neutrino temperature today
+ * @xi: (out): the chemical potential
+ * @g: (out): the degeneracy factor
  *
- * FIXME
+ * Gets the physical properties of the @nu_i-th massive neutrino species.
  *
  */
 /**
  * nc_hicosmo_get_bg_var: (virtual get_bg_var)
  * @cosmo: a #NcHICosmo
- * @t: FIXME
+ * @t: conformal time
  * @bg_var: a #NcHIPertBGVar
  *
+ * Gets the background variables at conformal time @t and stores them in @bg_var.
  *
  */
 /**
  * nc_hicosmo_Neff:
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Computes the effective number of relativistic species.
  *
- * Returns: FIXME
+ * Returns: the effective number of relativistic species $N_{\mathrm{eff}}$
  */
 
 /**
@@ -1904,72 +1905,72 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the curvature density parameter $E^2\Omega_k(z) = \Omega_{k0}(1+z)^2$.
  *
- * Returns: FIXME
+ * Returns: $E^2\Omega_k(z)$.
  */
 /**
  * nc_hicosmo_q:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the deceleration parameter $q(z) = -\frac{\ddot{a}a}{\dot{a}^2}$.
  *
- * Returns: FIXME
+ * Returns: the deceleration parameter $q(z)$
  */
 /**
  * nc_hicosmo_nec:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the null energy condition parameter.
  *
- * Returns: FIXME
+ * Returns: the null energy condition parameter
  */
 /**
  * nc_hicosmo_dec:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the dominant energy condition.
  *
- * Returns: FIXME
+ * Returns: the dominant energy condition value.
  */
 /**
  * nc_hicosmo_wec:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the weak energy condition.
  *
- * Returns: FIXME
+ * Returns: the weak energy condition value.
  */
 /**
  * nc_hicosmo_qp:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the derivative of the deceleration parameter with respect to redshift.
  *
- * Returns: FIXME
+ * Returns: $\frac{dq(z)}{dz}$
  */
 /**
  * nc_hicosmo_j:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the jerk parameter $j(z) = \frac{\dddot{a}}{aH^3}$.
  *
- * Returns: FIXME
+ * Returns: the jerk parameter $j(z)$
  */
 /**
  * nc_hicosmo_kinetic_w:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * FIXME
+ * Computes the kinetic equation of state parameter.
  *
- * Returns: FIXME
+ * Returns: the kinetic equation of state parameter $w_k(z)$
  */
 /**
  * nc_hicosmo_mqE2:
@@ -1986,25 +1987,25 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * @cosmo: a #NcHICosmo
  * @x: redshift variable $x = 1 + z$
  *
- * FIXME
+ * Computes the log-scale factor ratio $\alpha = \ln(x_b/x)$ where $x_b$ is the maximum scale factor.
  *
- * Returns: FIXME
+ * Returns: $|\alpha|$.
  */
 /**
  * nc_hicosmo_x_alpha:
  * @cosmo: a #NcHICosmo
- * @alpha: redshift $\alpha$
+ * @alpha: power parameter $\alpha$
  *
- * FIXME
+ * Computes the inverse of abs_alpha, recovering the scale factor from $\alpha$.
  *
- * Returns: FIXME
+ * Returns: $x = x_b \exp(-|\alpha|)$.
  */
 
 /**
  * nc_hicosmo_peek_prim:
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Gets the primordial power spectrum submodel without increasing its reference count.
  *
  * Returns: (transfer none): the #NcHIPrim submodel.
  */
@@ -2012,7 +2013,7 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * nc_hicosmo_peek_reion:
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * Gets the reionization submodel without increasing its reference count.
  *
  * Returns: (transfer none): the #NcHIReion submodel.
  */

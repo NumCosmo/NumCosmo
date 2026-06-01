@@ -121,9 +121,9 @@ nc_hiprim_bpl_class_init (NcHIPrimBPLClass *klass)
 /**
  * nc_hiprim_bpl_new: (constructor)
  *
- * FIXME
+ * Creates a new #NcHIPrimBPL object with default parameters.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a new #NcHIPrimBPL
  */
 NcHIPrimBPL *
 nc_hiprim_bpl_new (void)

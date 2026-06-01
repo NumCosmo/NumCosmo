@@ -116,9 +116,9 @@ _nc_multiplicity_func_tinker_set_property (GObject *object, guint prop_id, const
     case PROP_LINEAR_INTERP:
       nc_multiplicity_func_tinker_set_linear_interp (NC_MULTIPLICITY_FUNC_TINKER (object), g_value_get_boolean (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -135,9 +135,9 @@ _nc_multiplicity_func_tinker_get_property (GObject *object, guint prop_id, GValu
     case PROP_LINEAR_INTERP:
       g_value_set_boolean (value, self->linear_interp);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -308,7 +308,7 @@ _nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, g
 /**
  * nc_multiplicity_func_tinker_new:
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncTinker with default parameters.
  *
  * Returns: A new #NcMultiplicityFuncTinker.
  */
@@ -322,9 +322,9 @@ nc_multiplicity_func_tinker_new (void)
 /**
  * nc_multiplicity_func_tinker_new_full:
  * @mdef: a #NcMultiplicityFuncMassDef
- * @Delta: parameter that multiplies the background mass density (mean ou critical)
+ * @Delta: parameter that multiplies the background mass density (mean or critical)
  *
- * FIXME
+ * Creates a new #NcMultiplicityFuncTinker with the specified mass definition and Delta parameter.
  *
  * Returns: A new #NcMultiplicityFuncTinker.
  */

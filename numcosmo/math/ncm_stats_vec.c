@@ -977,6 +977,31 @@ ncm_stats_vec_get_quantile_spread (NcmStatsVec *svec, guint i)
   }
 }
 
+/**
+ * ncm_stats_vec_get_quantile_all:
+ * @svec: a #NcmStatsVec
+ * @i: a variable index
+ *
+ * Returns the current estimate of the quantile initialized
+ * through ncm_stats_vec_enable_quantile(). It returns an
+ * array containing the minimum, p/2, p, (p + 1)/2 and maximum
+ * value.
+ *
+ * Returns: (transfer none) (array fixed-size=5): the current estimate of the quantile.
+ */
+gdouble *
+ncm_stats_vec_get_quantile_all (NcmStatsVec *svec, guint i)
+{
+  g_assert_cmpuint (i, <, svec->q_array->len);
+
+  {
+    gsl_rstat_quantile_workspace *qws_i = g_ptr_array_index (svec->q_array, i);
+    gdouble *q                          = qws_i->q;
+
+    return q;
+  }
+}
+
 static void
 _ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
 {
@@ -1879,7 +1904,7 @@ ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
       1, svec->nitens,
       &g_array_index (work, gdouble, 0),
       &g_array_index (work_int, gint, 0)
-                                           );
+    );
     var_ii = gsl_pow_2 (var_ii);
     ncm_matrix_set (cov, i, i, var_ii);
   }
@@ -1953,7 +1978,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
       1, svec->nitens,
       &g_array_index (work, gdouble, 0),
       &g_array_index (work_int, gint, 0)
-                                            );
+    );
 
     ncm_vector_set (sigma_x, i, sigma_i);
     ncm_matrix_mul_col (y, i, 1.0 / sigma_i);
@@ -1983,7 +2008,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
         1, svec->nitens,
         &g_array_index (work, gdouble, 0),
         &g_array_index (work_int, gint, 0)
-                                            );
+      );
 
       for (a = 0; a < svec->nitens; a++)
       {
@@ -1999,7 +2024,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
         1, svec->nitens,
         &g_array_index (work, gdouble, 0),
         &g_array_index (work_int, gint, 0)
-                                            );
+      );
       ncm_matrix_set (cov, i, j, 0.25 * (s_ipj * s_ipj - s_imj * s_imj));
     }
   }
@@ -2045,7 +2070,7 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
         1, svec->nitens,
         &g_array_index (work, gdouble, 0),
         &g_array_index (work_int, gint, 0)
-                                                );
+      );
 
       ncm_vector_set (sigma_z, i, sigma_z_i);
     }

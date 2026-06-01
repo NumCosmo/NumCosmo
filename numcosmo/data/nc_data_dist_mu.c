@@ -26,7 +26,7 @@
 /**
  * NcDataDistMu:
  *
- * Likelihod object for distance modulus data.
+ * Likelihood object for distance modulus data.
  *
  * This class implements the likelihood for distance modulus data.
  *
@@ -81,9 +81,9 @@ nc_data_dist_mu_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_Z:
       ncm_vector_substitute (&dist_mu->x, g_value_get_object (value), TRUE);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -102,9 +102,9 @@ nc_data_dist_mu_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_Z:
       g_value_set_object (value, dist_mu->x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -210,11 +210,11 @@ _nc_data_dist_mu_set_size (NcmDataGaussDiag *diag, guint np)
 
 /**
  * nc_data_dist_mu_new_empty:
- * @dist: FIXME
+ * @dist: a #NcDistance
  *
- * FIXME
+ * Creates a new empty #NcDataDistMu with the given distance object.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcDataDistMu
  */
 NcDataDistMu *
 nc_data_dist_mu_new_empty (NcDistance *dist)
@@ -250,9 +250,9 @@ nc_data_dist_mu_new_from_file (const gchar *filename)
  * @dist: a #NcDistance
  * @id: a #NcDataSNIAId
  *
- * FIXME
+ * Creates a new #NcDataDistMu from a predefined SNIa dataset identifier.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcDataDistMu
  */
 NcDataDistMu *
 nc_data_dist_mu_new_from_id (NcDistance *dist, NcDataSNIAId id)

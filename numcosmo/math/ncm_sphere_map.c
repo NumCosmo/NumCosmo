@@ -145,6 +145,7 @@ typedef struct _NcmSphereMapPrivate
   GPtrArray *fft_plan_r2c;
   GPtrArray *fft_plan_c2r;
   guint lmax;
+  guint iter;
   _fft_complex *alm;
   gint64 alm_len;
   NcmVector *alm_v;
@@ -173,6 +174,7 @@ enum
   PROP_ORDER,
   PROP_COORDSYS,
   PROP_LMAX,
+  PROP_ITER,
 };
 
 struct _NcmSphereMap
@@ -215,6 +217,8 @@ ncm_sphere_map_init (NcmSphereMap *smap)
 #endif
   self->alm          = NULL;
   self->alm_len      = 0;
+  self->lmax         = 0;
+  self->iter         = 0;
   self->Cl           = NULL;
   self->has_Cls      = FALSE;
   self->t            = ncm_timer_new ();
@@ -248,6 +252,9 @@ _ncm_sphere_map_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_LMAX:
       ncm_sphere_map_set_lmax (smap, g_value_get_uint (value));
       break;
+    case PROP_ITER:
+      ncm_sphere_map_set_iter (smap, g_value_get_uint (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -275,6 +282,9 @@ _ncm_sphere_map_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_LMAX:
       g_value_set_uint (value, ncm_sphere_map_get_lmax (smap));
+      break;
+    case PROP_ITER:
+      g_value_set_uint (value, ncm_sphere_map_get_iter (smap));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -357,6 +367,13 @@ ncm_sphere_map_class_init (NcmSphereMapClass *klass)
                                    g_param_spec_uint ("lmax",
                                                       NULL,
                                                       "max ell",
+                                                      0, G_MAXUINT32, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_ITER,
+                                   g_param_spec_uint ("iter",
+                                                      NULL,
+                                                      "number of iterations",
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
@@ -867,6 +884,41 @@ ncm_sphere_map_get_lmax (NcmSphereMap *smap)
 }
 
 /**
+ * ncm_sphere_map_set_iter:
+ * @smap: a #NcmSphereMap
+ * @iter: number of iterations for map2alm transform
+ *
+ * Sets the number of iterations to use in the spherical harmonic
+ * transform. Iterations improve the accuracy of the transform for
+ * undersampled maps (when lmax < 3 * nside). iter=0 uses only the
+ * direct transform, iter=3 (recommended) performs 3 refinement iterations.
+ *
+ */
+void
+ncm_sphere_map_set_iter (NcmSphereMap *smap, guint iter)
+{
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
+
+  self->iter = iter;
+}
+
+/**
+ * ncm_sphere_map_get_iter:
+ * @smap: a #NcmSphereMap
+ *
+ * Gets the number of iterations used in the spherical harmonic transform.
+ *
+ * Returns: the number of iterations
+ */
+guint
+ncm_sphere_map_get_iter (NcmSphereMap *smap)
+{
+  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
+
+  return self->iter;
+}
+
+/**
  * ncm_sphere_map_clear_pixels:
  * @smap: a #NcmSphereMap
  *
@@ -1365,7 +1417,8 @@ _ncm_sphere_map_zphi2pix_nest (NcmSphereMap *smap, const gdouble z, const gdoubl
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   const gdouble two_3              = 2.0 / 3.0;
   const gdouble abs_z              = fabs (z);
-  const gdouble tt                 = fmod (phi / M_PI_2, 4.0);
+  const gdouble phi_norm           = (phi < 0.0) ? fmod (phi, 2.0 * M_PI) + 2.0 * M_PI : phi;
+  const gdouble tt                 = fmod (phi_norm / M_PI_2, 4.0);
   gint64 x, y, f;
 
   if (abs_z <= two_3)
@@ -1418,7 +1471,8 @@ _ncm_sphere_map_zphi2pix_ring (NcmSphereMap *smap, const gdouble z, const gdoubl
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   const gdouble two_3              = 2.0 / 3.0;
   const gdouble abs_z              = fabs (z);
-  const gdouble tt                 = fmod (phi / M_PI_2, 4.0);
+  const gdouble phi_norm           = (phi < 0.0) ? fmod (phi, 2.0 * M_PI) + 2.0 * M_PI : phi;
+  const gdouble tt                 = fmod (phi_norm / M_PI_2, 4.0);
 
   if (abs_z <= two_3)
   {
@@ -1783,7 +1837,7 @@ ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
     gchar *coordsys  = g_strdup_printf ("%c       ", coordsys_c);
 
     fits_write_key (fptr, TSTRING, "COORDSYS", coordsys,
-                    "Pixelisation coordinate system", &status);
+                    "Pixalization coordinate system", &status);
     NCM_FITS_ERROR (status);
 
     fits_write_comment (fptr,
@@ -2155,7 +2209,7 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
 
 #ifdef _NCM_SPHERE_MAP_MEASURE
   printf ("# preparing fft plans, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
-  printf ("# Peforming ffts!\n");
+  printf ("# Performing ffts!\n");
   fflush (stdout);
   ncm_timer_start (self->t);
 #endif /* _NCM_SPHERE_MAP_MEASURE */
@@ -2170,7 +2224,7 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
   }
 
 #ifdef _NCM_SPHERE_MAP_MEASURE
-  printf ("# Peforming ffts, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
+  printf ("# Performing ffts, elapsed % 22.15g\n", ncm_timer_elapsed (self->t));
   printf ("# Transforming rings\n");
   fflush (stdout);
   ncm_timer_start (self->t);
@@ -2180,6 +2234,81 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *smap)
 #ifdef _NCM_SPHERE_MAP_MEASURE
   printf ("# %ld rings transformed, elapsed % 22.15g\n", ncm_sphere_map_get_nrings (smap), ncm_timer_elapsed (self->t));
 #endif /* _NCM_SPHERE_MAP_MEASURE */
+
+  /* Iterative refinement if iter > 0 */
+  if (self->iter > 0)
+  {
+    gpointer original_map   = _fft_vec_alloc (self->npix);
+    _fft_complex *saved_alm = _fft_vec_alloc_complex (self->alm_len);
+    guint iter_i;
+
+    /* Save original map */
+    _fft_vec_memcpy (original_map, self->pvec, self->npix);
+
+#ifdef _NCM_SPHERE_MAP_MEASURE
+    printf ("# Performing %u iterations\n", self->iter);
+    fflush (stdout);
+#endif /* _NCM_SPHERE_MAP_MEASURE */
+
+    for (iter_i = 0; iter_i < self->iter; iter_i++)
+    {
+#ifdef _NCM_SPHERE_MAP_MEASURE
+      ncm_timer_start (self->t);
+#endif /* _NCM_SPHERE_MAP_MEASURE */
+
+      /* Save current alm */
+      memcpy (saved_alm, self->alm, sizeof (_fft_complex) * self->alm_len);
+
+      /* Synthesize: alm → map */
+      NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_alm2map_run) (smap);
+
+      /* Complete synthesis with inverse FFT */
+      for (i = 0; i < self->fft_plan_c2r->len; i++)
+      {
+#  ifdef HAVE_FFTW3F
+        fftwf_execute (g_ptr_array_index (self->fft_plan_c2r, i));
+#  else
+        fftw_execute (g_ptr_array_index (self->fft_plan_c2r, i));
+#endif
+      }
+
+      /* Compute residual: original_map - synthesized_map */
+      for (i = 0; i < self->npix; i++)
+      {
+        _fft_vec_idx (self->pvec, i) = _fft_vec_idx (original_map, i) - _fft_vec_idx (self->pvec, i);
+      }
+
+      /* Transform residual → alm_correction with forward FFT */
+      for (i = 0; i < self->fft_plan_r2c->len; i++)
+      {
+#  ifdef HAVE_FFTW3F
+        fftwf_execute (g_ptr_array_index (self->fft_plan_r2c, i));
+#  else
+        fftw_execute (g_ptr_array_index (self->fft_plan_r2c, i));
+#endif
+      }
+
+      /* Compute correction alms from residual */
+      NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_map2alm_run) (smap);
+
+      /* Accumulate: alm = saved_alm + correction */
+      for (i = 0; i < self->alm_len; i++)
+      {
+        self->alm[i] += saved_alm[i];
+      }
+
+#ifdef _NCM_SPHERE_MAP_MEASURE
+      printf ("# Iteration %u completed, elapsed % 22.15g\n", iter_i + 1, ncm_timer_elapsed (self->t));
+#endif /* _NCM_SPHERE_MAP_MEASURE */
+    }
+
+    /* Restore original map */
+    _fft_vec_memcpy (self->pvec, original_map, self->npix);
+
+    /* Clean up */
+    _fft_vec_free (original_map);
+    _fft_vec_free (saved_alm);
+  }
 
   _ncm_sphere_map_map2alm_calc_Cl (smap);
 
@@ -2199,6 +2328,75 @@ void
 ncm_sphere_map_update_Cl (NcmSphereMap *smap)
 {
   _ncm_sphere_map_map2alm_calc_Cl (smap);
+}
+
+/**
+ * ncm_sphere_map_compute_cross_Cl:
+ * @smap1: first #NcmSphereMap with computed $a_{lm}$
+ * @smap2: second #NcmSphereMap with computed $a_{lm}$
+ *
+ * Computes the cross-spectrum between two maps:
+ * $$C_\ell^\mathrm{cross} = \frac{1}{2\ell+1} \sum_{m=-\ell}^\ell \mathrm{Re}(a_{lm}^{(1)} \bar{a}_{lm}^{(2)})$$
+ *
+ * Both maps must have their spherical harmonic coefficients already computed via
+ * ncm_sphere_map_prepare_alm(), and must have the same lmax and nside.
+ *
+ * Returns: (transfer full): a #NcmVector containing the cross-spectrum $C_\ell$
+ * for $\ell = 0, \ldots, \ell_\mathrm{max}$.
+ */
+NcmVector *
+ncm_sphere_map_compute_cross_Cl (NcmSphereMap *smap1, NcmSphereMap *smap2)
+{
+  NcmSphereMapPrivate * const self1 = ncm_sphere_map_get_instance_private (smap1);
+  NcmSphereMapPrivate * const self2 = ncm_sphere_map_get_instance_private (smap2);
+  guint m, l, lm_index = 0;
+  NcmVector *cross_Cl;
+
+  g_assert (self1->lmax == self2->lmax);
+  g_assert (self1->nside == self2->nside);
+  g_assert (self1->alm != NULL);
+  g_assert (self2->alm != NULL);
+
+  cross_Cl = ncm_vector_new (self1->lmax + 1);
+  ncm_vector_set_zero (cross_Cl);
+
+  /* m = 0 term */
+  m = 0;
+
+  for (l = m; l <= self1->lmax; l++)
+  {
+    const gdouble Re_alm1 = creal (self1->alm[lm_index]);
+    const gdouble Re_alm2 = creal (self2->alm[lm_index]);
+
+    /* For m=0, a_lm is real, so cross term is just product */
+    lm_index++;
+    ncm_vector_fast_addto (cross_Cl, l, 1.0 * Re_alm1 * Re_alm2);
+  }
+
+  /* m > 0 terms */
+  for (m = 1; m <= self1->lmax; m++)
+  {
+    for (l = m; l <= self1->lmax; l++)
+    {
+      const gdouble Re_alm1 = creal (self1->alm[lm_index]);
+      const gdouble Im_alm1 = cimag (self1->alm[lm_index]);
+      const gdouble Re_alm2 = creal (self2->alm[lm_index]);
+      const gdouble Im_alm2 = cimag (self2->alm[lm_index]);
+
+      /* Real part of alm1 * conj(alm2) = Re1*Re2 + Im1*Im2 */
+      /* Factor of 2 accounts for both +m and -m terms */
+      lm_index++;
+      ncm_vector_fast_addto (cross_Cl, l, 2.0 * (Re_alm1 * Re_alm2 + Im_alm1 * Im_alm2));
+    }
+  }
+
+  /* Normalize by (2*ell + 1) */
+  for (l = 0; l <= self1->lmax; l++)
+  {
+    ncm_vector_fast_mulby (cross_Cl, l, 1.0 / (2.0 * l + 1.0));
+  }
+
+  return cross_Cl;
 }
 
 /**

@@ -49,7 +49,9 @@ G_DECLARE_FINAL_TYPE (NcmStatsVec, ncm_stats_vec, NCM, STATS_VEC, GObject)
  * @NCM_STATS_VEC_VAR: Calculates mean and variance.
  * @NCM_STATS_VEC_COV: Calculates mean, variance and covariance.
  *
- * FIXME
+ * Statistical types for vector statistics computation.
+ * These determine which statistical quantities are computed and stored
+ * during data accumulation.
  *
  */
 typedef enum
@@ -66,11 +68,13 @@ typedef void (*NcmStatsVecUpdateFunc) (NcmStatsVec *svec, const gdouble w, NcmVe
 /**
  * NcmStatsVecARType:
  * @NCM_STATS_VEC_AR_NONE: Calculates using the required order.
- * @NCM_STATS_VEC_AR_FPE: Uses the FPE criterium to choose the ar order.
- * @NCM_STATS_VEC_AR_AIC: Uses the AIC criterium to choose the ar order.
- * @NCM_STATS_VEC_AR_AICC: Uses the AICc criterium to choose the ar order.
+ * @NCM_STATS_VEC_AR_FPE: Uses the FPE criterion to choose the ar order.
+ * @NCM_STATS_VEC_AR_AIC: Uses the AIC criterion to choose the ar order.
+ * @NCM_STATS_VEC_AR_AICC: Uses the AICc criterion to choose the ar order.
  *
- * FIXME
+ * Autoregressive model selection criteria.
+ * These criteria are used to automatically select the optimal order
+ * for autoregressive models in time series analysis.
  *
  */
 typedef enum
@@ -103,6 +107,7 @@ void ncm_stats_vec_enable_quantile (NcmStatsVec *svec, gdouble p);
 void ncm_stats_vec_disable_quantile (NcmStatsVec *svec);
 gdouble ncm_stats_vec_get_quantile (NcmStatsVec *svec, guint i);
 gdouble ncm_stats_vec_get_quantile_spread (NcmStatsVec *svec, guint i);
+gdouble *ncm_stats_vec_get_quantile_all (NcmStatsVec *svec, guint i);
 
 NcmVector *ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p);
 NcmVector *ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsample);

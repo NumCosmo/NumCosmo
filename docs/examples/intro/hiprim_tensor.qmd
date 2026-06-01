@@ -6,9 +6,16 @@ abstract: |
   This document demonstrates how to test tensor modes in primordial cosmological models using the `numcosmo` library. 
   It covers the setup of a cosmological model with tensor modes, computation of the power spectrum for different 
   CMB observables (TT, TE, EE, BB), and visualization of the results.
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
-{{< include /_definitions.qmd >}}
+{{< include /notes/_numcosmo_py.qmd >}}
 
 ## Introduction
 
@@ -188,8 +195,8 @@ We plot the power spectra for TT, TE, EE, and BB modes to compare the tensor and
 ```{python}
 # | label: fig-hiprim_tensor_tt_low
 # | fig-cap: The power spectrum for TT modes with and without the tensor contribution.
-# | fig-cap-location: margin
 # | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 plt.figure(figsize=(10, 6))
@@ -205,8 +212,8 @@ plt.show()
 ```{python}
 # | label: fig-hiprim_tensor_te_low
 # | fig-cap: The power spectrum for TE modes with and without the tensor contribution.
-# | fig-cap-location: margin
 # | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 plt.figure(figsize=(10, 6))
@@ -222,8 +229,8 @@ plt.show()
 ```{python}
 # | label: fig-hiprim_tensor_ee_low
 # | fig-cap: The power spectrum for EE modes with and without the tensor contribution.
-# | fig-cap-location: margin
 # | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 plt.figure(figsize=(10, 6))
@@ -239,8 +246,8 @@ plt.show()
 ```{python}
 # | label: fig-hiprim_tensor_bb_low
 # | fig-cap: The power spectrum for BB modes with and without the tensor contribution.
-# | fig-cap-location: margin
 # | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 plt.figure(figsize=(10, 6))

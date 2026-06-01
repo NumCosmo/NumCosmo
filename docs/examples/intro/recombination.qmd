@@ -2,11 +2,18 @@
 title: "Recombination Evolution"
 author: "Sandro Dias Pinto Vitenti"
 date: "2023-05-22"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /_functions.qmd >}} 
 
-{{< include /_definitions.qmd >}}
+{{< include /notes/_numcosmo_py.qmd >}}
 
 ## Introduction
 
@@ -149,7 +156,6 @@ ion_history_melted["Ion"] = ion_history_melted["Ion"].replace("Xefi", "Equilibri
     + theme_minimal()
     + theme(figure_size=(10, 6))
 )
-
 ```
 
 In a neutral cosmological model, the ionization fraction of free electrons, denoted as $X_e$, is determined by the contributions from ionized hydrogen and helium. Specifically:
@@ -190,7 +196,6 @@ ion_history_melted = ion_history.melt(
     + theme_minimal()
     + theme(figure_size=(10, 6))
 )
-
 ```
 
 
@@ -338,7 +343,6 @@ start_a_star = np.exp(lambda_star) + 4.0e-4
     + theme_minimal()
     + theme(figure_size=(10, 6))
 )
-
 ```
 
 ## Optical Depth

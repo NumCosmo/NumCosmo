@@ -307,7 +307,7 @@ def _type_to_python(
     if tag == tags.INTERFACE:
         interface = ltype.get_interface()
         if isinstance(interface, GI.CallbackInfo):
-            (names, args, return_args) = _callable_get_arguments(
+            names, args, return_args = _callable_get_arguments(
                 interface, current_namespace, needed_namespaces
             )
 
@@ -367,8 +367,7 @@ def _build(
     ]
 
     if namespace == "Gtk":
-        typevars.append(
-            """CellRendererT = typing.TypeVar(
+        typevars.append("""CellRendererT = typing.TypeVar(
     "CellRendererT",
     CellRendererCombo,
     CellRendererPixbuf,
@@ -377,8 +376,7 @@ def _build(
     CellRendererSpinner,
     CellRendererText,
     CellRendererToggle,
-)"""
-        )
+)""")
 
     imports: list[str] = []
     if "cairo" in ns:
@@ -388,12 +386,18 @@ def _build(
         )
         ns.remove("cairo")
 
-    imports += [f"from gi.repository import {n}" for n in sorted(ns)]
+    imports = []
+    for n in sorted(ns):
+        if n == "NumCosmoMath":
+            imports.append("from . import ncm as NumCosmoMath")
+            continue
+        imports.append(f"from gi.repository import {n}")
 
     return (
         "import typing"
         + "\n\n"
-        + "import numpy.typing as npt"
+        + "import numpy.typing as npt\n"
+        + "import numpy"
         + "\n\n"
         + "\n".join(imports)
         + "\n"
@@ -435,7 +439,7 @@ def _build_function_info(
         static = True
 
     # Arguments
-    (names, args, return_args) = _callable_get_arguments(
+    names, args, return_args = _callable_get_arguments(
         function, current_namespace, needed_namespaces, True
     )
     args_types = [f"{name}: {args[i]}" for (i, name) in enumerate(names)]
@@ -485,7 +489,7 @@ def _wrapped_strip_boolean_result(
     real_function = function.__wrapped__
     fail_ret = inspect.getclosurevars(function).nonlocals.get("fail_ret")
 
-    (_, _, return_args) = _callable_get_arguments(
+    _, _, return_args = _callable_get_arguments(
         real_function, current_namespace, needed_namespaces
     )
     return_args = return_args[1:]  # Strip first return value
@@ -547,7 +551,22 @@ def _build_function(
             current_namespace, name, function.__func__, in_class, needed_namespaces
         )
 
-    signature = str(inspect.signature(function))
+    sig = inspect.signature(function)
+
+    if in_class is not None and inspect.isfunction(function):
+        params = list(sig.parameters.values())
+
+        if params:
+            # Replace first parameter with "self" and drop its annotation
+            first = params[0].replace(
+                name="self",
+                # pylint: disable-next=protected-access
+                annotation=inspect._empty,  # type: ignore
+            )
+            params[0] = first
+            sig = sig.replace(parameters=params)
+
+    signature = str(sig)
     definition = f"def {name}{signature}: ... # FIXME Function\n"
 
     return definition
@@ -739,7 +758,7 @@ def _gi_build_stub(
                             fields.append(f"{n}: {t}")
 
                 # Properties
-                (rp, wp) = _object_get_props(repo, object_info)
+                rp, wp = _object_get_props(repo, object_info)
                 readable_props.extend(rp)
                 writable_props.extend(wp)
 

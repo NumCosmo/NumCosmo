@@ -42,7 +42,7 @@ G_DECLARE_FINAL_TYPE (NcHaloDensityProfileEinasto, nc_halo_density_profile_einas
  * NcHaloDensityProfileEinastoParams:
  * @NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA: determines how quickly the slope of the inner Einasto profile steepens
  *
- * FIXME
+ * Parameters for the Einasto halo density profile.
  */
 typedef enum _NcHaloDensityProfileEinastoParams
 {

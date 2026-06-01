@@ -143,7 +143,7 @@ _nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeDa
 }
 
 static NcGalaxySDShapeIntegrand *
-_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds)
+_nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, gboolean use_lnp)
 {
   g_error ("_nc_galaxy_sd_shape_integ: method not implemented.");
 
@@ -627,15 +627,16 @@ nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeDat
 /**
  * nc_galaxy_sd_shape_integ: (virtual integ)
  * @gsds: a #NcGalaxySDShape
+ * @use_lnp: if TRUE the integrand must return the natural logarithm of the probability density
  *
  * Creates a new galaxy shape integrand.
  *
  * Returns: (transfer full): a new NcGalaxySDShapeIntegrand object.
  */
 NcGalaxySDShapeIntegrand *
-nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds)
+nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, gboolean use_lnp)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ (gsds);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->integ (gsds, use_lnp);
 }
 
 /**

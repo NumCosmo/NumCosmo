@@ -22,7 +22,7 @@
 #endif
 
 #ifndef SUNDIALS_DEPRECATED
-#  define SUNDIALS_DEPRECATED __attribute__ ((__deprecated__))
+#  define SUNDIALS_DEPRECATED 
 #endif
 
 #ifndef SUNDIALS_DEPRECATED_EXPORT

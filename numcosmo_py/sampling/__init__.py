@@ -129,7 +129,7 @@ class NcmHighlighter(RegexHighlighter):
     ]
 
 
-def set_ncm_console(file: Optional[IO[str]]) -> Console:
+def set_ncm_console(file: Optional[IO[str]], quite: bool = False) -> Console:
     """Set console for Ncm.Fit."""
     theme = Theme(
         {
@@ -142,7 +142,11 @@ def set_ncm_console(file: Optional[IO[str]]) -> Console:
         }
     )
     console = Console(
-        highlighter=NcmHighlighter(), theme=theme, soft_wrap=True, file=file
+        highlighter=NcmHighlighter(),
+        theme=theme,
+        soft_wrap=True,
+        file=file,
+        quiet=quite,
     )
 
     Ncm.cfg_set_log_handler(lambda msg: console.print(msg, end=""))

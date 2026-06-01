@@ -35,15 +35,9 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_TRANSFER_FUNC             (nc_transfer_func_get_type ())
-#define NC_TRANSFER_FUNC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_TRANSFER_FUNC, NcTransferFunc))
-#define NC_TRANSFER_FUNC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_TRANSFER_FUNC, NcTransferFuncClass))
-#define NC_IS_TRANSFER_FUNC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_TRANSFER_FUNC))
-#define NC_IS_TRANSFER_FUNC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_TRANSFER_FUNC))
-#define NC_TRANSFER_FUNC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_TRANSFER_FUNC, NcTransferFuncClass))
+#define NC_TYPE_TRANSFER_FUNC (nc_transfer_func_get_type ())
 
-typedef struct _NcTransferFuncClass NcTransferFuncClass;
-typedef struct _NcTransferFunc NcTransferFunc;
+G_DECLARE_DERIVABLE_TYPE (NcTransferFunc, nc_transfer_func, NC, TRANSFER_FUNC, GObject)
 
 struct _NcTransferFuncClass
 {
@@ -54,16 +48,6 @@ struct _NcTransferFuncClass
   void (*prepare) (NcTransferFunc *tf, NcHICosmo *cosmo);
   gdouble (*calc) (NcTransferFunc *tf, gdouble k);
 };
-
-struct _NcTransferFunc
-{
-  /*< private > */
-  GObject parent_instance;
-  NcmModelCtrl *ctrl_cosmo;
-  NcmModelCtrl *ctrl_reion;
-};
-
-GType nc_transfer_func_get_type (void) G_GNUC_CONST;
 
 NcTransferFunc *nc_transfer_func_ref (NcTransferFunc *tf);
 

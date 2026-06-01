@@ -263,7 +263,7 @@ ncm_fit_state_class_init (NcmFitStateClass *klass)
                                    PROP_NITERS,
                                    g_param_spec_uint ("niters",
                                                       NULL,
-                                                      "Number of interations",
+                                                      "Number of iterations",
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 

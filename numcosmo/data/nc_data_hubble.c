@@ -91,9 +91,9 @@ nc_data_hubble_set_property (GObject *object, guint prop_id, const GValue *value
       ncm_vector_clear (&hubble->x);
       hubble->x = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -109,9 +109,9 @@ nc_data_hubble_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_Z:
       g_value_set_object (value, hubble->x);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -150,6 +150,11 @@ nc_data_hubble_class_init (NcDataHubbleClass *klass)
   object_class->dispose      = &nc_data_hubble_dispose;
   object_class->finalize     = &nc_data_hubble_finalize;
 
+  /**
+   * NcDataHubble:z:
+   *
+   * Vector containing the redshift values at which Hubble parameter measurements were obtained.
+   */
   g_object_class_install_property (object_class,
                                    PROP_Z,
                                    g_param_spec_object ("z",
@@ -207,9 +212,9 @@ _nc_data_hubble_set_size (NcmDataGaussDiag *diag, guint np)
 /**
  * nc_data_hubble_new_empty:
  *
- * FIXME
+ * Creates a new empty #NcDataHubble object.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcDataHubble
  */
 NcDataHubble *
 nc_data_hubble_new_empty (void)
@@ -242,9 +247,11 @@ nc_data_hubble_new_from_file (const gchar *filename)
  * nc_data_hubble_new_from_id:
  * @id: a #NcDataHubbleId
  *
- * FIXME
+ * Creates a new #NcDataHubble from a predefined dataset identifier.
+ * Loads the corresponding Hubble parameter measurements from the data file
+ * associated with @id.
  *
- * Returns: FIXME
+ * Returns: (transfer full): a new #NcDataHubble
  */
 NcDataHubble *
 nc_data_hubble_new_from_id (NcDataHubbleId id)

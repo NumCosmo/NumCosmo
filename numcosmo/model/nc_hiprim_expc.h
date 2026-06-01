@@ -54,7 +54,7 @@ typedef struct _NcHIPrimExpc NcHIPrimExpc;
  * @NC_HIPRIM_EXPC_T_SA_RATIO: Tensor-to-scalar ratio
  * @NC_HIPRIM_EXPC_N_T: Tensor spectral index
  *
- * FIXME
+ * Parameters for the exponential cutoff primordial spectrum model.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HIPRIM_EXPC_SPARAMS >*/

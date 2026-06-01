@@ -1935,7 +1935,7 @@ ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
                name_size, pname, pi->mid, pi->pid,
                ncm_mset_fparam_get (mset, i),
                sqrt (ncm_matrix_get (covar, i, i))
-              );
+    );
 
     for (j = 0; j < free_params_len; j++)
     {

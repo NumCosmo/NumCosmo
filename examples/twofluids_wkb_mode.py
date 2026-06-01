@@ -23,6 +23,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Compute WKB approximation for the two-fluids model."""
+
 import sys
 import math
 import numpy as np
@@ -254,9 +255,7 @@ def test_two_fluids_wkb_mode(mode: int = Nc.HIPertTwoFluidsCross.MODE1SUB) -> No
         mode_k**3 * Ps_Pzeta1.pop() / (2.0 * math.pi**2 * cosmo.RH_planck() ** 2)
     )
     # Delta_Pzeta2 = mode_k**3 * Ps_Pzeta2.pop () / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
-    Delta_PS1 = (
-        mode_k**3 * Ps_PS1.pop() / (2.0 * math.pi**2 * cosmo.RH_planck() ** 2)
-    )
+    Delta_PS1 = mode_k**3 * Ps_PS1.pop() / (2.0 * math.pi**2 * cosmo.RH_planck() ** 2)
     # Delta_PS2    = mode_k**3 * Ps_PS2.pop () / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
 
     # print ("# Final values k= % 20.15g Ps_zeta1 = % 21.15e Ps_zeta2 = % 21.15e

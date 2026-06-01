@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            ncm_cfg.c
  *
@@ -52,11 +50,14 @@
 #include "math/ncm_spline_cubic.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline_cubic_d2.h"
+#include "math/ncm_spline_vec.h"
+#include "math/ncm_function_sample_set.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline2d_gsl.h"
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_integral1d.h"
 #include "math/ncm_integral_nd.h"
+#include "math/ncm_pln1d.h"
 #include "math/ncm_powspec_corr3d.h"
 #include "math/ncm_powspec_filter.h"
 #include "math/ncm_powspec_sphere_proj.h"
@@ -86,8 +87,16 @@
 #include "math/ncm_fit_nlopt.h"
 #include "math/ncm_prior_gauss_param.h"
 #include "math/ncm_prior_gauss_func.h"
+#include "math/ncm_prior_flat_param.h"
+#include "math/ncm_prior_flat_func.h"
+#include "math/ncm_sbessel_integrator.h"
+#include "math/ncm_sbessel_integrator_fftl.h"
+#include "math/ncm_sbessel_integrator_gl.h"
+#include "math/ncm_sbessel_integrator_levin.h"
+#include "math/ncm_sbessel_ode_solver.h"
 #include "math/ncm_fftlog_sbessel_j.h"
 #include "math/ncm_fftlog_sbessel_jljm.h"
+#include "math/ncm_spectral.h"
 #include "nc_hicosmo.h"
 #include "nc_cbe_precision.h"
 #include "model/nc_hicosmo_qconst.h"
@@ -118,6 +127,7 @@
 #include "lss/nc_transfer_func.h"
 #include "lss/nc_transfer_func_bbks.h"
 #include "lss/nc_transfer_func_eh.h"
+#include "lss/nc_transfer_func_eh_no_baryon.h"
 #include "lss/nc_transfer_func_camb.h"
 #include "lss/nc_halo_position.h"
 #include "lss/nc_halo_density_profile.h"
@@ -129,6 +139,10 @@
 #include "lss/nc_halo_cm_param.h"
 #include "lss/nc_halo_cm_duffy08.h"
 #include "lss/nc_halo_cm_klypin11.h"
+#include "lss/nc_halo_cm_prada12.h"
+#include "lss/nc_halo_cm_bhattacharya13.h"
+#include "lss/nc_halo_cm_dutton14.h"
+#include "lss/nc_halo_cm_diemer15.h"
 #include "lss/nc_multiplicity_func.h"
 #include "lss/nc_multiplicity_func_st.h"
 #include "lss/nc_multiplicity_func_ps.h"
@@ -150,10 +164,12 @@
 #include "lss/nc_cluster_mass_benson_xray.h"
 #include "lss/nc_cluster_mass_plcl.h"
 #include "lss/nc_cluster_mass_ascaso.h"
+#include "lss/nc_cluster_mass_selection.h"
 #include "lss/nc_cluster_redshift.h"
 #include "lss/nc_cluster_redshift_nodist.h"
 #include "lss/nc_cluster_photoz_gauss_global.h"
 #include "lss/nc_cluster_photoz_gauss.h"
+#include "lss/nc_halo_bias_despali.h"
 #include "lss/nc_halo_bias_ps.h"
 #include "lss/nc_halo_bias_st_ellip.h"
 #include "lss/nc_halo_bias_st_spher.h"
@@ -209,6 +225,7 @@
 #include "data/nc_data_cluster_ncount.h"
 #include "data/nc_data_cluster_ncounts_gauss.h"
 #include "data/nc_data_cluster_wl.h"
+#include "data/nc_data_cluster_mass_rich.h"
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_hubble.h"
@@ -217,11 +234,14 @@
 #include "data/nc_data_planck_lkl.h"
 #include "xcor/nc_xcor.h"
 #include "xcor/nc_xcor_AB.h"
-#include "xcor/nc_xcor_limber_kernel.h"
-#include "xcor/nc_xcor_limber_kernel_gal.h"
-#include "xcor/nc_xcor_limber_kernel_CMB_lensing.h"
-#include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
-#include "xcor/nc_xcor_limber_kernel_tSZ.h"
+#include "xcor/nc_xcor_kernel.h"
+#include "xcor/nc_xcor_kernel_component.h"
+#include "xcor/nc_xcor_kernel_gal.h"
+#include "xcor/nc_xcor_kernel_cluster.h"
+#include "xcor/nc_xcor_kernel_cluster_tophat.h"
+#include "xcor/nc_xcor_kernel_CMB_lensing.h"
+#include "xcor/nc_xcor_kernel_weak_lensing.h"
+#include "xcor/nc_xcor_kernel_tSZ.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
@@ -249,7 +269,7 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /* *INDENT-OFF* */
-G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error) 
+G_DEFINE_QUARK (ncm-cfg-error, ncm_cfg_error)
 /* *INDENT-ON* */
 
 static gchar *numcosmo_path         = NULL;
@@ -350,6 +370,7 @@ void _nc_hiprim_register_functions (void);
 void _nc_hireion_register_functions (void);
 void _nc_distance_register_functions (void);
 void _nc_planck_fi_cor_tt_register_functions (void);
+void _nc_hicosmo_de_wspline_register_functions (void);
 
 #ifdef HAVE_MPI
 static void _ncm_cfg_mpi_main_loop (void);
@@ -539,6 +560,67 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message, NULL);
   _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_error, NULL);
 
+  ncm_cfg_register_objects ();
+  ncm_cfg_register_functions ();
+
+  numcosmo_init = TRUE;
+
+  _mpi_ctrl.initialized    = 0;
+  _mpi_ctrl.size           = 1;
+  _mpi_ctrl.rank           = 0;
+  _mpi_ctrl.nslaves        = 0;
+  _mpi_ctrl.working_slaves = 0;
+
+  atexit (_ncm_cfg_exit);
+
+#ifdef HAVE_MPI
+  MPI_Initialized (&_mpi_ctrl.initialized);
+
+  if (!_mpi_ctrl.initialized)
+  {
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initialized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+    MPI_Init (argc, argv);
+    MPI_Initialized (&_mpi_ctrl.initialized);
+  }
+  else
+  {
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initialized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
+  }
+
+  {
+    gchar mpi_hostname[MPI_MAX_PROCESSOR_NAME];
+    gint len = 0;
+
+    MPI_Comm_size (MPI_COMM_WORLD, &_mpi_ctrl.size);
+    MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
+    MPI_Get_processor_name (mpi_hostname, &len);
+
+    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d MPI process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
+
+    if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
+    {
+      _ncm_cfg_mpi_main_loop ();
+    }
+    else
+    {
+      _mpi_ctrl.nslaves        = (_mpi_ctrl.size - 1);
+      _mpi_ctrl.working_slaves = 0;
+    }
+  }
+#endif /* HAVE_MPI */
+
+  return;
+}
+
+/**
+ * ncm_cfg_register_objects:
+ *
+ * Registers the objects of the library.
+ *
+ */
+void
+ncm_cfg_register_objects (void)
+{
   ncm_cfg_register_obj (NCM_TYPE_RNG);
 
   ncm_cfg_register_obj (NCM_TYPE_VECTOR);
@@ -555,6 +637,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_D2);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_GSL);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE_VEC);
+  ncm_cfg_register_obj (NCM_TYPE_FUNCTION_SAMPLE_SET);
 
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_BICUBIC);
@@ -564,6 +648,14 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D);
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL1D_PTR);
   ncm_cfg_register_obj (NCM_TYPE_INTEGRAL_ND);
+
+  ncm_cfg_register_obj (NCM_TYPE_PLN1D);
+  ncm_cfg_register_obj (NCM_TYPE_SPECTRAL);
+
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_GL);
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_FFTL);
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN);
+  ncm_cfg_register_obj (NCM_TYPE_SBESSEL_ODE_SOLVER);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPLINE2D);
@@ -606,6 +698,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
+
+  ncm_cfg_register_obj (NCM_TYPE_PRIOR_FLAT_PARAM);
+  ncm_cfg_register_obj (NCM_TYPE_PRIOR_FLAT_FUNC);
+
 
   ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_J);
   ncm_cfg_register_obj (NCM_TYPE_FFTLOG_SBESSEL_JLJM);
@@ -658,6 +754,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_BBKS);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
+  ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH_NO_BARYON);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_POSITION);
@@ -672,6 +769,11 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_PARAM);
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_DUFFY08);
   ncm_cfg_register_obj (NC_TYPE_HALO_CM_KLYPIN11);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_PRADA12);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_BHATTACHARYA13);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_DUTTON14);
+  ncm_cfg_register_obj (NC_TYPE_HALO_CM_DIEMER15);
+
 
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_PS);
@@ -697,6 +799,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON_XRAY);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_PLCL);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_ASCASO);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_SELECTION);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
@@ -704,6 +807,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_PS);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_ELLIP);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_SPHER);
@@ -781,73 +885,51 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_MASS_RICH);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_SHIFT_PARAM);
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
 
   ncm_cfg_register_obj (NC_TYPE_XCOR);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_TSZ);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_COMPONENT);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_GAL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER_TOPHAT);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_TSZ);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CMB_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_LKL);
 
-  _nc_hicosmo_register_functions ();
-  _nc_hicosmo_de_register_functions ();
-  _nc_hiprim_register_functions ();
-  _nc_hireion_register_functions ();
-  _nc_distance_register_functions ();
-  _nc_planck_fi_cor_tt_register_functions ();
+  return;
+}
 
-  numcosmo_init = TRUE;
+static gsize _functions_initialized = 0;
 
-  _mpi_ctrl.initialized    = 0;
-  _mpi_ctrl.size           = 1;
-  _mpi_ctrl.rank           = 0;
-  _mpi_ctrl.nslaves        = 0;
-  _mpi_ctrl.working_slaves = 0;
-
-  atexit (_ncm_cfg_exit);
-
-#ifdef HAVE_MPI
-  MPI_Initialized (&_mpi_ctrl.initialized);
-
-  if (!_mpi_ctrl.initialized)
+/**
+ * ncm_cfg_register_functions:
+ *
+ * Register functions for the ncm_cfg namespace.
+ *
+ */
+void
+ncm_cfg_register_functions (void)
+{
+  if (g_once_init_enter (&_functions_initialized))
   {
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI not initialized, calling MPI_Init.\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-    MPI_Init (argc, argv);
-    MPI_Initialized (&_mpi_ctrl.initialized);
+    _nc_hicosmo_register_functions ();
+    _nc_hicosmo_de_register_functions ();
+    _nc_hiprim_register_functions ();
+    _nc_hireion_register_functions ();
+    _nc_distance_register_functions ();
+    _nc_planck_fi_cor_tt_register_functions ();
+    _nc_hicosmo_de_wspline_register_functions ();
+
+    g_once_init_leave (&_functions_initialized, TRUE);
   }
-  else
-  {
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] MPI was already initialized!\n", _mpi_ctrl.size, _mpi_ctrl.rank);
-  }
-
-  {
-    gchar mpi_hostname[MPI_MAX_PROCESSOR_NAME];
-    gint len = 0;
-
-    MPI_Comm_size (MPI_COMM_WORLD, &_mpi_ctrl.size);
-    MPI_Comm_rank (MPI_COMM_WORLD, &_mpi_ctrl.rank);
-    MPI_Get_processor_name (mpi_hostname, &len);
-
-    NCM_MPI_JOB_DEBUG_PRINT ("#[%3d %3d] We have %d MPI process!! My rank is %d and I'm running on `%s'.\n", _mpi_ctrl.size, _mpi_ctrl.rank, _mpi_ctrl.size, _mpi_ctrl.rank, mpi_hostname);
-
-    if (_mpi_ctrl.rank != NCM_MPI_CTRL_MASTER_ID)
-    {
-      _ncm_cfg_mpi_main_loop ();
-    }
-    else
-    {
-      _mpi_ctrl.nslaves        = (_mpi_ctrl.size - 1);
-      _mpi_ctrl.working_slaves = 0;
-    }
-  }
-#endif /* HAVE_MPI */
 
   return;
 }
@@ -1363,7 +1445,7 @@ ncm_message (const gchar *msg, ...)
  *
  * Creates a word wrapped string.
  *
- * Returns: (transfer full): word wraped string @msg.
+ * Returns: (transfer full): word wrapped string @msg.
  */
 gchar *
 ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols)
@@ -1761,8 +1843,8 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 
   while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
   {
-    name_max_len = GSL_MAX (name_max_len, strlen (snia->value_name));
-    nick_max_len = GSL_MAX (nick_max_len, strlen (snia->value_nick));
+    name_max_len = GSL_MAX (name_max_len, (gint) strlen (snia->value_name));
+    nick_max_len = GSL_MAX (nick_max_len, (gint) strlen (snia->value_nick));
   }
 
   printf ("# %s:\n", header);
@@ -1914,22 +1996,22 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
   {
-    char *wisdown_str = fftw_export_wisdom_to_string ();
+    char *wisdom_str = fftw_export_wisdom_to_string ();
 
-    if (wisdown_str != NULL)
+    if (wisdom_str != NULL)
     {
-      gssize len  = strlen (wisdown_str);
+      gssize len  = strlen (wisdom_str);
       gboolean OK = FALSE;
 
 #if GLIB_CHECK_VERSION (2, 66, 0)
-      OK = g_file_set_contents_full (full_filename, wisdown_str, len,
+      OK = g_file_set_contents_full (full_filename, wisdom_str, len,
                                      G_FILE_SET_CONTENTS_CONSISTENT,
                                      0666, NULL);
 #else /* GLIB_CHECK_VERSION (2, 66, 0) */
-      OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+      OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
 #endif /* GLIB_CHECK_VERSION (2, 66, 0) */
       g_assert (OK);
-      g_free (wisdown_str);
+      g_free (wisdom_str);
     }
   }
 
@@ -1941,24 +2023,24 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
   {
-    char *wisdown_str = fftwf_export_wisdom_to_string ();
+    char *wisdom_str = fftwf_export_wisdom_to_string ();
 
-    if (wisdown_str != NULL)
+    if (wisdom_str != NULL)
     {
-      gssize len  = strlen (wisdown_str);
+      gssize len  = strlen (wisdom_str);
       gboolean OK = FALSE;
 
 #if GLIB_CHECK_VERSION (2, 66, 0)
-      OK = g_file_set_contents_full (full_filename, wisdown_str, len,
+      OK = g_file_set_contents_full (full_filename, wisdom_str, len,
                                      G_FILE_SET_CONTENTS_CONSISTENT,
                                      0666, NULL);
 #else /* GLIB_CHECK_VERSION (2, 66, 0) */
-      OK = g_file_set_contents (full_filename, wisdown_str, len, NULL);
+      OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
 #endif /* GLIB_CHECK_VERSION (2, 66, 0) */
 
       g_assert (OK);
 
-      g_free (wisdown_str);
+      g_free (wisdom_str);
     }
   }
 #endif
@@ -2209,7 +2291,7 @@ static gdouble __fftw_timelimit   = 60.0;
  * @error: a GError
  *
  * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
- * to be used when building plans. The variable @timeout sets the maximum time spended on
+ * to be used when building plans. The variable @timeout sets the maximum time spent on
  * planners.
  *
  */
@@ -2249,7 +2331,7 @@ ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout, GError **error
  * @error: a GError
  *
  * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
- * to be used when building plans. The variable @timeout sets the maximum time spended on
+ * to be used when building plans. The variable @timeout sets the maximum time spent on
  * planners. The argument @flag_str is a string representation of the flag:
  *
  * - "estimate": FFTW_ESTIMATE

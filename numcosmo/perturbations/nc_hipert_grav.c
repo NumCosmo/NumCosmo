@@ -88,9 +88,9 @@ _nc_hipert_grav_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_GAUGE:
       nc_hipert_grav_set_gauge (grav, g_value_get_enum (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -106,9 +106,9 @@ _nc_hipert_grav_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_GAUGE:
       g_value_set_enum (value, nc_hipert_grav_get_gauge (grav));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -164,6 +164,8 @@ nc_hipert_grav_class_init (NcHIPertGravClass *klass)
   klass->get_dy_scalar     = &_nc_hipert_grav_get_dy_scalar;
 }
 
+/* LCOV_EXCL_START */
+
 static guint
 _nc_hipert_grav_ndyn_var (NcHIPertGrav *grav)
 {
@@ -211,6 +213,8 @@ _nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPe
 {
   g_error ("_nc_hipert_grav_get_dy_scalar: not implemented by `%s'.", G_OBJECT_TYPE_NAME (grav));
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * nc_hipert_grav_scalar_new:

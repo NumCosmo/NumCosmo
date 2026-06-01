@@ -34,18 +34,18 @@ G_BEGIN_DECLS
 
 /**
  * NcDataSNIAId:
- * @NC_DATA_SNIA_SIMPLE_GOLD_157: FIXME
- * @NC_DATA_SNIA_SIMPLE_GOLD_182: FIXME
- * @NC_DATA_SNIA_SIMPLE_GOLD_182_FULL: FIXME
- * @NC_DATA_SNIA_SIMPLE_ESSENCE: FIXME
- * @NC_DATA_SNIA_SIMPLE_LEGACY: FIXME
- * @NC_DATA_SNIA_SIMPLE_UNION: FIXME
- * @NC_DATA_SNIA_SIMPLE_CfA3: FIXME
- * @NC_DATA_SNIA_SIMPLE_UNION2: FIXME
- * @NC_DATA_SNIA_SIMPLE_UNION2_1: FIXME
- * @NC_DATA_SNIA_SIMPLE_SDSS_EMILLE: FIXME
- * @NC_DATA_SNIA_COV_SNLS3_SYS_STAT: FIXME
- * @NC_DATA_SNIA_COV_SNLS3_STAT_ONLY: FIXME
+ * @NC_DATA_SNIA_SIMPLE_GOLD_157: Gold sample with 157 supernovae
+ * @NC_DATA_SNIA_SIMPLE_GOLD_182: Gold sample with 182 supernovae
+ * @NC_DATA_SNIA_SIMPLE_GOLD_182_FULL: Gold sample with 182 supernovae, full dataset
+ * @NC_DATA_SNIA_SIMPLE_ESSENCE: ESSENCE survey supernova sample
+ * @NC_DATA_SNIA_SIMPLE_LEGACY: Legacy supernova survey sample
+ * @NC_DATA_SNIA_SIMPLE_UNION: Union supernova compilation
+ * @NC_DATA_SNIA_SIMPLE_CfA3: CfA3 supernova survey sample
+ * @NC_DATA_SNIA_SIMPLE_UNION2: Union2 supernova compilation
+ * @NC_DATA_SNIA_SIMPLE_UNION2_1: Union2.1 supernova compilation
+ * @NC_DATA_SNIA_SIMPLE_SDSS_EMILLE: SDSS supernova sample (Emille)
+ * @NC_DATA_SNIA_COV_SNLS3_SYS_STAT: SNLS3 sample with systematic and statistical covariance
+ * @NC_DATA_SNIA_COV_SNLS3_STAT_ONLY: SNLS3 sample with statistical covariance only
  * @NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT: JLA SNIa compilation, reduced covariance already includes intrinsic, redshift and peculiar velocity variances.
  * @NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL: JLA SNIa compilation, complete covariance does *not* include intrinsic, redshift and peculiar velocity variances.
  * @NC_DATA_SNIA_COV_PANTHEON: Pantheon SNIa compilation, reduced covariance already includes intrinsic, redshift and peculiar velocity variances.

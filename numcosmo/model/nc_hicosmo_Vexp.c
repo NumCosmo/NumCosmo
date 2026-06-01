@@ -113,7 +113,7 @@ G_DEFINE_TYPE_WITH_CODE (NcHICosmoVexp, nc_hicosmo_Vexp, NC_TYPE_HICOSMO,
                          G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IEM,
                                                 nc_hipert_iem_interface_init)
                          G_ADD_PRIVATE (NcHICosmoVexp)
-                        );
+);
 
 enum
 {
@@ -1257,7 +1257,7 @@ _nc_hicosmo_Vexp_evolve_qt (NcHICosmoVexp *Vexp, gdouble tQ_f)
                 _nc_hicosmo_Vexp_q_smalltq_phi (Vexp, tQ),
                 ralpha / _nc_hicosmo_Vexp_q_smalltq_ralpha (Vexp, tQ) - 1.0,
                 phi / _nc_hicosmo_Vexp_q_smalltq_phi (Vexp, tQ) - 1.0
-               );
+        );
 
       if (root_found)
       {
@@ -1284,7 +1284,7 @@ _nc_hicosmo_Vexp_evolve_qt (NcHICosmoVexp *Vexp, gdouble tQ_f)
           (!set_xb_max && (((x > 0.0) && (rootsfound[1] != 0)) || ((x < 0.0) && (rootsfound[2] != 0))))
           ||
           (set_xb_max && root1_found)
-           )
+        )
         {
           const gint cl_b       = GSL_SIGN (x);
           const gdouble epsilon = _nc_hicosmo_Vexp_epsilon (Vexp, tQ, alpha, phi);
@@ -3094,9 +3094,10 @@ nc_hicosmo_Vexp_xbc (NcHICosmoVexp *Vexp)
  * nc_hicosmo_Vexp_alpha_0e:
  * @Vexp: a #NcHICosmoVexp
  *
- * FIXME
+ * Computes the value of $\alpha_{0e} = \ln(a_{0e})$ where $a_{0e}$ is the scale factor
+ * at the expansion phase matching point.
  *
- * Returns: FIXME
+ * Returns: $\alpha_{0e}$
  */
 gdouble
 nc_hicosmo_Vexp_alpha_0e (NcHICosmoVexp *Vexp)
@@ -3112,9 +3113,10 @@ nc_hicosmo_Vexp_alpha_0e (NcHICosmoVexp *Vexp)
  * nc_hicosmo_Vexp_alpha_0c:
  * @Vexp: a #NcHICosmoVexp
  *
- * FIXME
+ * Computes the value of $\alpha_{0c} = \ln(a_{0c})$ where $a_{0c}$ is the scale factor
+ * at the contraction phase matching point.
  *
- * Returns: FIXME
+ * Returns: $\alpha_{0c}$
  */
 gdouble
 nc_hicosmo_Vexp_alpha_0c (NcHICosmoVexp *Vexp)
@@ -3179,7 +3181,8 @@ nc_hicosmo_Vexp_xc_tau (NcHICosmoVexp *Vexp, const gdouble tau)
  * @Vexp: a #NcHICosmoVexp
  * @xe: $x_e$
  *
- * FIXME
+ * Computes the time variable $\tau$ corresponding to the given expansion phase
+ * scale factor ratio $x_e = a / a_{0e}$, where $a = a_b \exp(\tau^2/2)$.
  *
  * Returns: $\tau$.
  */
@@ -3206,7 +3209,8 @@ nc_hicosmo_Vexp_tau_xe (NcHICosmoVexp *Vexp, const gdouble xe)
  * @Vexp: a #NcHICosmoVexp
  * @xc: $x_c$
  *
- * FIXME
+ * Computes the time variable $\tau$ corresponding to the given contraction phase
+ * scale factor ratio $x_c = a / a_{0c}$, where $a = a_b \exp(\tau^2/2)$.
  *
  * Returns: $\tau$.
  */
@@ -3333,7 +3337,8 @@ nc_hicosmo_Vexp_phi (NcHICosmoVexp *Vexp, const gdouble tau)
  * @Vexp: a #NcHICosmoVexp
  * @tau: $\tau$
  *
- * FIXME
+ * Computes the Ricci curvature scale length in units of the Planck length at
+ * time $\tau$, where $a = a_b \exp(\tau^2/2)$.
  *
  * Returns: $L_R(\tau) / \ell_\mathrm{P}$.
  */
@@ -3471,7 +3476,8 @@ nc_hicosmo_Vexp_E_tau (NcHICosmoVexp *Vexp, const gdouble tau)
  * @x: (out): the value of $x(\tau)$
  * @y: (out): the value of $y(\tau)$
  *
- * FIXME
+ * Computes the phase space variables $x(\tau)$ and $y(\tau)$ at time $\tau$,
+ * where $x = \dot{\phi} / (\sqrt{6} H)$, $y = \sqrt{1 - x^2}$, and $a = a_b \exp(\tau^2/2)$.
  *
  */
 void

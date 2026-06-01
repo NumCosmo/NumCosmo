@@ -88,9 +88,9 @@ nc_hipert_boltzmann_cbe_set_property (GObject *object, guint prop_id, const GVal
     case PROP_CBE:
       boltzmann_cbe->cbe = g_value_dup_object (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -106,9 +106,9 @@ nc_hipert_boltzmann_cbe_get_property (GObject *object, guint prop_id, GValue *va
     case PROP_CBE:
       g_value_set_object (value, boltzmann_cbe->cbe);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -234,9 +234,10 @@ _nc_hipert_boltzmann_cbe_get_EB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls)
 /**
  * nc_hipert_boltzmann_cbe_new: (constructor)
  *
- * FIXME
+ * Creates a new #NcHIPertBoltzmannCBE object with default CLASS backend settings.
+ * This object provides the Boltzmann hierarchy solver using the CLASS code.
  *
- * Returns: (transfer full): a new #NcCBEPrecision.
+ * Returns: (transfer full): a new #NcHIPertBoltzmannCBE.
  */
 NcHIPertBoltzmannCBE *
 nc_hipert_boltzmann_cbe_new (void)
@@ -255,7 +256,8 @@ nc_hipert_boltzmann_cbe_new (void)
  * nc_hipert_boltzmann_cbe_full_new: (constructor)
  * @cbe: a #NcCBE.
  *
- * FIXME
+ * Creates a new #NcHIPertBoltzmannCBE object using the provided CLASS backend @cbe.
+ * This allows for custom CLASS configuration and precision settings.
  *
  * Returns: (transfer full): a new #NcHIPertBoltzmannCBE.
  */

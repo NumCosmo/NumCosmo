@@ -249,9 +249,9 @@ _nc_recomb_seager_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_OPTS:
       nc_recomb_seager_set_options (recomb_seager, g_value_get_flags (value));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -267,9 +267,9 @@ _nc_recomb_seager_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_OPTS:
       g_value_set_flags (value, nc_recomb_seager_get_options (recomb_seager));
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -1597,14 +1597,14 @@ nc_recomb_seager_hummer_HeI_case_B_trip_dTm (NcRecombSeager *recomb_seager, NcHI
  * nc_recomb_seager_weinberg_HII_ion_rate:
  * @recomb_seager: a #NcRecombSeager
  * @cosmo: a #NcHICosmo
- * @XHII: FIXME
- * @Tm: FIXME
- * @XHeII: FIXME
+ * @XHII: ionized hydrogen fraction
+ * @Tm: matter temperature in K
+ * @XHeII: singly ionized helium fraction
  * @x: normalized scale factor inverse $x = 1 + z = a_0/a$
  *
- * $dX_\e/dx$ implemented using Weinbergs book
+ * Computes $dX_e/dx$ using Weinberg's formulation for the hydrogen ionization rate.
  *
- * Returns: FIXME
+ * Returns: the derivative of the electron fraction with respect to $x$
  */
 gdouble
 nc_recomb_seager_weinberg_HII_ion_rate (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x)

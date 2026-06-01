@@ -55,7 +55,8 @@ typedef struct _NcHICosmoDEPrivate NcHICosmoDEPrivate;
  * @NC_HICOSMO_DE_IMPL_dw_de: DE equation of state
  * @NC_HICOSMO_DE_IMPL_ln_rho_rho0: DE equation of state
  *
- * Flags to select which dark energy functions are implemented.
+ * Implementation flags for dark energy models. These flags indicate which virtual
+ * methods are implemented by a specific dark energy model subclass.
  *
  */
 typedef enum /*< flags,underscore_name=NC_HICOSMO_DE_IMPL >*/
@@ -82,7 +83,8 @@ typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
  * @NC_HICOSMO_DE_ENNU: effective number of neutrinos
  * @NC_HICOSMO_DE_OMEGA_B: baryon density parameter
  *
- * Enumerates the cosmological parameters used by the dark energy models.
+ * Scalar parameters for dark energy cosmological models. These are the standard
+ * cosmological parameters extended to include dark energy contributions.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS >*/
@@ -105,7 +107,9 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS >*/
  * @NC_HICOSMO_DE_MASSNU_MU: massive neutrino chemical potentials
  * @NC_HICOSMO_DE_MASSNU_G: massive neutrino degeneracy factors
  *
- * Enumerates the dark energy model vector parameters.
+ * Vector parameters for dark energy cosmological models. These arrays specify
+ * properties of massive neutrino species, allowing for multiple neutrino families with
+ * different masses and temperatures.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_VPARAMS >*/

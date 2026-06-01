@@ -29,36 +29,13 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_spline.h>
 #include <numcosmo/lss/nc_transfer_func.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_TRANSFER_FUNC_CAMB             (nc_transfer_func_camb_get_type ())
-#define NC_TRANSFER_FUNC_CAMB(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_TRANSFER_FUNC_CAMB, NcTransferFuncCAMB))
-#define NC_TRANSFER_FUNC_CAMB_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_TRANSFER_FUNC_CAMB, NcTransferFuncCAMBClass))
-#define NC_IS_TRANSFER_FUNC_CAMB(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_TRANSFER_FUNC_CAMB))
-#define NC_IS_TRANSFER_FUNC_CAMB_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_TRANSFER_FUNC_CAMB))
-#define NC_TRANSFER_FUNC_CAMB_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_TRANSFER_FUNC_CAMB, NcTransferFuncCAMBClass))
+#define NC_TYPE_TRANSFER_FUNC_CAMB (nc_transfer_func_camb_get_type ())
 
-typedef struct _NcTransferFuncCAMBClass NcTransferFuncCAMBClass;
-typedef struct _NcTransferFuncCAMB NcTransferFuncCAMB;
-
-struct _NcTransferFuncCAMBClass
-{
-  /*< private >*/
-  NcTransferFuncClass parent_class;
-};
-
-struct _NcTransferFuncCAMB
-{
-  /*< private >*/
-  NcTransferFunc parent_instance;
-  NcmSpline *T_spline;
-  gboolean init;
-};
-
-GType nc_transfer_func_camb_get_type (void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE (NcTransferFuncCAMB, nc_transfer_func_camb, NC, TRANSFER_FUNC_CAMB, NcTransferFunc)
 
 NcTransferFunc *nc_transfer_func_camb_new (void);
 
