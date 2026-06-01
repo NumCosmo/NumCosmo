@@ -46,11 +46,11 @@ jobs:
         run: |
           meson setup BDocs -Ddocumentation=true
           meson compile -C BDocs
-      - name: Upload Quarto freeze
+      - name: Upload documentation site
         uses: actions/upload-artifact@v4
         with:
-          name: quarto-freeze-${{ env.ARTIFACT_SHA }}
-          path: BDocs/docs/.quarto/_freeze
+          name: numcosmo-site-${{ env.ARTIFACT_SHA }}
+          path: BDocs/docs/numcosmo-site
           if-no-files-found: error
       - name: Trigger RTD build
         env:
