@@ -30,6 +30,7 @@ project:
 
 execute:
   error: false
+  freeze: auto
 
 website:
   title: "The Numerical Cosmology Library"
@@ -131,7 +132,13 @@ format:
       body-width: 1200px
     include-after-body:
       - add-py-link.html
-
+  ipynb:
+    filters:
+      - ipynb-strip-xref.lua
+    execute:
+      eval: false
+      echo: true
+      output: true
 reference-location: margin
 citation-location: margin
 authors:

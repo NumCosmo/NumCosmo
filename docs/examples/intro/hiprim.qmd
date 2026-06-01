@@ -301,10 +301,9 @@ Dls2_a = ell * (ell + 1.0) * Cls2_a
 
 ```{python}
 # | label: fig-hiprim-example
-# | html:
-# |   fig-cap: Comparison of the modified and non-modified power spectrum.
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: Comparison of the modified and non-modified power spectrum.
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 # Plot the modified and non-modified power spectra
