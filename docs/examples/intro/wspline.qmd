@@ -16,8 +16,6 @@ format:
 format-links: [ipynb]
 ---
 
-{{< include /notes/_numcosmo_py.qmd >}}
-
 ## Introduction
 
 This example compares two cosmologies with the same background parameters:
@@ -142,10 +140,9 @@ comparison.head(8)
 
 ```{python}
 # | label: fig-wspline-wz
-# | html:
-# |   fig-cap: "Dark-energy equation of state. The markers indicate WSpline knot values."
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: "Dark-energy equation of state. The markers indicate WSpline knot values."
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 fig, ax = plt.subplots(figsize=(9, 5))
@@ -166,12 +163,11 @@ plt.show()
 
 ```{python}
 # | label: fig-wspline-background
-# | html:
-# |   fig-cap:
-# |     - "Normalized expansion rate $E^2(z)$ and relative difference to XCDM"
-# |     - "$E^2(z)\\,\\Omega_{de}(z)$ and relative difference to XCDM"
-# |   fig-cap-location: top
-# |   layout-ncol: 2
+# | fig-cap:
+# |   - "Normalized expansion rate $E^2(z)$ and relative difference to XCDM"
+# |   - "$E^2(z)\\,\\Omega_{de}(z)$ and relative difference to XCDM"
+# | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
 fig1, axs1 = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
@@ -211,12 +207,11 @@ plt.show()
 
 ```{python}
 # | label: fig-wspline-derivatives-distance
-# | html:
-# |   fig-cap:
-# |     - "First and second derivatives of $E^2\\Omega_{de}$"
-# |     - "Relative change in comoving distance"
-# |   fig-cap-location: top
-# |   layout-ncol: 2
+# | fig-cap:
+# |   - "First and second derivatives of $E^2\\Omega_{de}$"
+# |   - "Relative change in comoving distance"
+# | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
 fig1, axs1 = plt.subplots(2, 1, figsize=(8, 6), sharex=True)

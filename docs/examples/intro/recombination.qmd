@@ -130,10 +130,9 @@ This comparison highlights the deviation of $X_e$ from $X_{\text{efi}}$ due to t
 
 ```{python}
 # | label: fig-ionization-history
-# | html:
-# |   fig-cap: Ionization history. The plot shows the evolution of the ionization fractions with the scale factor.
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: Ionization history. The plot shows the evolution of the ionization fractions with the scale factor.
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 ion_history_melted = ion_history.melt(
@@ -172,10 +171,9 @@ To better illustrate the contributions to the total ionization fraction, we also
 
 ```{python}
 # | label: fig-equilibrium-ions
-# | html:
-# |   fig-cap: Equilibrium fraction of ionized hydrogen and helium as a function of the scale factor.
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: Equilibrium fraction of ionized hydrogen and helium as a function of the scale factor.
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 ion_history_melted = ion_history.melt(
@@ -220,10 +218,9 @@ These features provide insight into the photon decoupling process and its dynami
 
 ```{python}
 # | label: fig-visibility-function
-# | html:
-# |   fig-cap: Visibility Function and Derivatives
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: Visibility Function and Derivatives
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 visibility_data = ion_history[
@@ -377,10 +374,9 @@ Next, we plot the optical depth as a function of redshift and scale factor.
 
 ```{python}
 # | label: fig-optical-depth
-# | html:
-# |   fig-cap: Optical depth as a function of redshift and scale factor.
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: Optical depth as a function of redshift and scale factor.
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 optical_depth_melted = pd.melt(
     optical_depth,
