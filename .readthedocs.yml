@@ -1,25 +1,16 @@
 version: 2
 
-conda:
-  environment: environment.yml
-
 build:
-  os: ubuntu-24.04
+  os: "ubuntu-24.04"
   tools:
-    # Because we are using python: miniconda-latest, we will be using conda
-    # instead of conda.
-    python: mambaforge-latest
+    python: "latest"
   jobs:
     pre_build:
-      - echo $PATH
-      - conda info
-      - conda env list
+      - pip install requests
     build:
       html:
-        - bash docs/build_rtd.sh
+        - python -u docs/download_docs_site.py
         - mkdir --parents $READTHEDOCS_OUTPUT/html/
-        - mv build/docs/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
-  
+        - mv build/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
 
-# Debug line
-#     - . build/numcosmo_export.sh; PATH="$HOME/opt/quarto-1.8.25/bin:$PATH" conda run -n numcosmo_developer quarto render build/docs --output-dir test-site --execute-debug --log-level debug --no-cache --execute-daemon-restart --debug
+

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Download Quarto freeze artifact from GitHub Actions.
+Download pre-built documentation site artifact from GitHub Actions.
 
 This script is designed to run during Read the Docs builds. It downloads
-the pre-computed Quarto freeze directory from GitHub Actions artifacts,
-which significantly speeds up the documentation build process by reusing
-cached computational results.
+the pre-built documentation site from GitHub Actions artifacts,
+which significantly speeds up the documentation deployment by reusing
+the site built during the GitHub Actions workflow.
 
 Required environment variables:
     READTHEDOCS_GIT_COMMIT_HASH: The Git commit SHA for the current build
@@ -21,12 +21,12 @@ import requests
 
 # Configuration constants
 REPO = "NumCosmo/NumCosmo"
-FREEZE_ARTIFACT_PREFIX = "quarto-freeze"
+SITE_ARTIFACT_PREFIX = "numcosmo-site"
 API_TIMEOUT_SECONDS = 120
 DOWNLOAD_TIMEOUT_SECONDS = 3600
 MAX_PAGES = 50
-FREEZE_ZIP_NAME = "freeze.zip"
-FREEZE_TARGET_DIR = "build/docs/.quarto/_freeze"
+SITE_ZIP_NAME = "site.zip"
+SITE_TARGET_DIR = "build"
 
 
 def http_get_json(url: str, headers: dict[str, str], timeout: int) -> dict:
@@ -106,7 +106,7 @@ def get_configuration() -> tuple[str, str | None, dict[str, str]]:
         print("Error: READTHEDOCS_GIT_COMMIT_HASH environment variable is required")
         sys.exit(1)
 
-    artifact_name = f"{FREEZE_ARTIFACT_PREFIX}-{sha}"
+    artifact_name = f"{SITE_ARTIFACT_PREFIX}-{sha}"
 
     print(f"Looking for artifact: {artifact_name}")
     if token:
@@ -270,12 +270,12 @@ def main() -> None:
         sys.exit(1)
 
     # Download artifact
-    download_artifact(download_url, FREEZE_ZIP_NAME, headers)
+    download_artifact(download_url, SITE_ZIP_NAME, headers)
 
     # Extract artifact
-    extract_artifact(FREEZE_ZIP_NAME, FREEZE_TARGET_DIR)
+    extract_artifact(SITE_ZIP_NAME, SITE_TARGET_DIR)
 
-    print(f"Successfully extracted Quarto freeze data into {FREEZE_TARGET_DIR}")
+    print(f"Successfully extracted documentation site into {SITE_TARGET_DIR}")
 
 
 if __name__ == "__main__":
