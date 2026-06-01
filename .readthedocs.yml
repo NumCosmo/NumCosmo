@@ -11,6 +11,6 @@ build:
       html:
         - python -u docs/download_docs_site.py
         - mkdir --parents $READTHEDOCS_OUTPUT/html/
-        - mv build/numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
+        - mv numcosmo-site/* $READTHEDOCS_OUTPUT/html/.
 
 

@@ -26,7 +26,7 @@ API_TIMEOUT_SECONDS = 120
 DOWNLOAD_TIMEOUT_SECONDS = 3600
 MAX_PAGES = 50
 SITE_ZIP_NAME = "site.zip"
-SITE_TARGET_DIR = "build"
+SITE_TARGET_DIR = "numcosmo-site"
 
 
 def http_get_json(url: str, headers: dict[str, str], timeout: int) -> dict:
