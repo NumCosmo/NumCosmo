@@ -431,7 +431,7 @@ LM_REAL alpha=LM_CNST(1e-4), beta=LM_CNST(0.9), gamma=LM_CNST(0.99995), rho=LM_C
 LM_REAL t, t0, jacTeDp;
 LM_REAL /*tmin=LM_CNST(1e-12),*/ tming=LM_CNST(1e-18); /* minimum step length for LS and PG steps */
 const LM_REAL tini=LM_CNST(1.0); /* initial step length for LS and PG steps */
-int nLMsteps=0, nLSsteps=0, nPGsteps=0, gprevtaken=0;
+int gprevtaken=0;
 int numactive;
 int (*linsolver)(LM_REAL *A, LM_REAL *B, LM_REAL *x, int m)=NULL;
 
@@ -779,7 +779,6 @@ if(!(k%100)){
           for(i=0; i<n; ++i) /* update e and ||e||_2 */
             e[i]=hx[i];
           p_eL2=pDp_eL2;
-          ++nLMsteps;
           gprevtaken=0;
           break;
         }
@@ -859,7 +858,6 @@ if(!(k%100)){
         }
 #endif /* line search alternatives */
 
-        ++nLSsteps;
         gprevtaken=0;
 
         /* NOTE: new estimate for p is in pDp, associated error in hx and its norm in pDp_eL2.
@@ -940,7 +938,6 @@ gradproj:
 
 terminatePGLS:
 
-        ++nPGsteps;
         gprevtaken=1;
         /* NOTE: new estimate for p is in pDp, associated error in hx and its norm in pDp_eL2 */
       }
@@ -1007,10 +1004,6 @@ breaknested: /* NOTE: this point is also reached via an explicit goto! */
     if(linsolver) (*linsolver)(NULL, NULL, NULL, 0);
 #endif
     if (linsolver) { i = 0; }
-
-#if 0
-printf("%d LM steps, %d line search, %d projected gradient\n", nLMsteps, nLSsteps, nPGsteps);
-#endif
 
   if(dscl){
     /* scale final point and constraints */

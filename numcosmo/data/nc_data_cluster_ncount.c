@@ -1559,7 +1559,6 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   {
     const guint len   = self->z_obs_bins->len;
     const guint nbins = len / 2;
-    gdouble lambda    = 0.0;
     guint i;
 
     if ((len != self->lnM_obs_bins->len) || (len == 0) || (len % 2 == 1))
@@ -1597,7 +1596,6 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       if (n_i > 0.0)
         *m2lnL += n_i * log (lambda_i / n_i);
 
-      lambda += lambda_i;
       *m2lnL += -(lambda_i - n_i);
     }
 
@@ -2587,4 +2585,3 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 }
 
 #endif /* HAVE_CFITSIO */
-
