@@ -1,4 +1,5 @@
 src_site_examples_data_analysis_files = files(
+    'inspect_data_objects.qmd',
     'snia.qmd',
 )
 

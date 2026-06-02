@@ -1,0 +1,664 @@
+---
+title: "Inspecting Data Objects"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+---
+
+{{< include /_functions.qmd >}} 
+
+{{< include /notes/_numcosmo_py.qmd >}}
+
+## Introduction
+
+In this example, we show how to inspect observational data objects available in
+NumCosmo. This is useful before building a likelihood or adapting an existing fitting
+example to a different dataset.
+
+A pure Python companion script is also provided with this example as
+`inspect_data_objects.py`.
+
+We first inspect the NumCosmo source tree to identify the available data-object files.
+Then we inspect one selected data source file and finally create a concrete `DataHubble`
+object from Python to examine its runtime properties.
+
+The source-tree inspection gives a broad map of available data types. The runtime
+inspection shows what a concrete object exposes through methods such as
+`list_properties()` and `get_property()`.
+
+## Inspecting the Data Source Files
+
+NumCosmo data objects are implemented in the source tree under:
+
+```text
+numcosmo/data/
+```
+
+Files named `nc_data_*.h` and `nc_data_*.c` define the main data-object types used by
+NumCosmo. For example, files such as `nc_data_hubble.h`, `nc_data_bao.h`,
+`nc_data_snia.h`, and `nc_data_cmb_dist_priors.h` correspond to different families of
+observational data.
+
+In this first step, we inspect the source tree and print a compact list of available
+data-type files.
+
+```{python}
+# | code-fold: true
+
+from pathlib import Path
+import os
+import re
+
+from numcosmo_py import Nc, Ncm
+
+# Initialize the library.
+Ncm.cfg_init()
+
+
+def find_numcosmo_data_dir():
+    """
+    Try to find the NumCosmo source data directory.
+
+    The preferred method is to set the environment variable:
+
+        NUMCOSMO_SOURCE_DIR=/path/to/NumCosmo
+
+    If this variable is not set, we try to find the repository root
+    by walking upward from the current working directory.
+    """
+
+    candidates = []
+
+    env_source_dir = os.environ.get("NUMCOSMO_SOURCE_DIR")
+
+    if env_source_dir is not None:
+        candidates.append(Path(env_source_dir).expanduser().resolve())
+
+    cwd = Path.cwd().resolve()
+
+    for parent in [cwd] + list(cwd.parents):
+        candidates.append(parent)
+
+    for candidate in candidates:
+        data_dir = candidate / "numcosmo" / "data"
+
+        if data_dir.is_dir() and any(data_dir.glob("nc_data*.h")):
+            return data_dir
+
+    return None
+
+
+def read_text(path):
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def family_from_header_name(header_name):
+    """
+    Infer a broad data family from the header filename.
+
+    Examples
+    --------
+    nc_data_bao.h              -> bao
+    nc_data_bao_a.h            -> bao
+    nc_data_hubble.h           -> hubble
+    nc_data_hubble_bao.h       -> hubble
+    nc_data_cluster_ncount.h   -> cluster
+    nc_data_cmb_dist_priors.h  -> cmb
+    nc_data_snia_cov.h         -> snia
+    """
+
+    stem = header_name.removesuffix(".h")
+
+    if not stem.startswith("nc_data_"):
+        return "other"
+
+    rest = stem.removeprefix("nc_data_")
+    return rest.split("_")[0]
+
+
+def extract_concrete_data_type(header_text):
+    """
+    Extract the public C/GObject data type from declarations such as:
+
+        G_DECLARE_FINAL_TYPE (NcDataHubble, ...)
+        G_DECLARE_DERIVABLE_TYPE (NcDataBaoA, ...)
+
+    Some base or factory-style files may not declare a concrete type.
+    In those cases, this function returns None.
+    """
+
+    pattern = re.compile(
+        r"G_DECLARE_(?:FINAL|DERIVABLE)_TYPE\s*\(\s*(NcData[A-Za-z0-9_]*)\s*,",
+        re.MULTILINE,
+    )
+
+    match = pattern.search(header_text)
+
+    if match:
+        return match.group(1)
+
+    return None
+
+
+def analyze_data_header(header_path):
+    """
+    Analyze one nc_data_*.h file.
+    """
+
+    source_path = header_path.with_suffix(".c")
+    header_text = read_text(header_path)
+
+    return {
+        "family": family_from_header_name(header_path.name),
+        "header": header_path.name,
+        "source": source_path.name if source_path.exists() else None,
+        "concrete_data_type": extract_concrete_data_type(header_text),
+    }
+
+
+def print_data_type_overview(data_dir):
+    """
+    Print a compact overview of the NumCosmo data-type source files.
+    """
+
+    headers = sorted(data_dir.glob("nc_data*.h"))
+    items = [analyze_data_header(header) for header in headers]
+
+    items.sort(key=lambda item: (item["family"], item["header"]))
+
+    print("=" * 90)
+    print("NumCosmo data type files")
+    print("=" * 90)
+    print()
+
+    print(f"{'Family':<12} {'Header':<38} {'Source':<38} {'Concrete data type'}")
+    print("-" * 90)
+
+    for item in items:
+        source = item["source"] if item["source"] is not None else "-"
+        concrete_type = (
+            item["concrete_data_type"]
+            if item["concrete_data_type"] is not None
+            else "-"
+        )
+
+        print(
+            f"{item['family']:<12} "
+            f"{item['header']:<38} "
+            f"{source:<38} "
+            f"{concrete_type}"
+        )
+
+    print()
+
+
+data_dir = find_numcosmo_data_dir()
+```
+
+The helper code above searches for the NumCosmo source directory and defines a compact
+summary of the available data-object files. The code is folded to keep the rendered page
+focused on the output.
+
+```{python}
+if data_dir is None:
+    print("Could not find the NumCosmo source data directory.")
+    print()
+    print("If you are running this example from outside the NumCosmo repository,")
+    print("set NUMCOSMO_SOURCE_DIR to the NumCosmo source path.")
+    print()
+    print("For example:")
+    print("  export NUMCOSMO_SOURCE_DIR=$HOME/dev/NumCosmo")
+else:
+    print("Using NumCosmo data directory:")
+    print(f"  {data_dir}")
+    print()
+
+    print_data_type_overview(data_dir)
+```
+
+The table gives a first map of the available data-object families and their corresponding
+source files. For example, the `hubble` family contains the Hubble expansion-rate data
+object, while the `bao` family contains several BAO-related data formats.
+
+A dash in the `Concrete data type` column does not mean that the file is incomplete or
+unused. It only means that this simple inspection code did not detect a concrete GObject
+data class declared directly in that header.
+
+Some files, such as `nc_data_bao.h`, can still be important because they may define shared
+dataset identifiers, factory functions, or common infrastructure for a whole data family.
+More specific files, such as `nc_data_bao_a.h` or `nc_data_bao_dv.h`, may then define
+concrete data classes for particular formats.
+
+## Inspecting a Selected Data Source File
+
+After listing the available data-type files, we can choose one of them for a more focused
+inspection. Here we choose:
+
+```text
+nc_data_hubble.h
+```
+
+This file corresponds to the Hubble expansion-rate data object.
+
+The next code block prints documentation-relevant information: the data family, the
+corresponding source file, the concrete data type when detected, dataset identifier enum
+types when present, the enum members when present, and GObject property names found in
+the source file.
+
+It intentionally avoids lower-level C details such as public C functions or internal
+GObject declarations.
+
+```{python}
+# | code-fold: true
+
+def remove_c_comments(text):
+    """
+    Remove C and C++-style comments before parsing enums.
+    """
+
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    text = re.sub(r"//.*?$", "", text, flags=re.MULTILINE)
+
+    return text
+
+
+def extract_dataset_enums(header_text):
+    """
+    Extract dataset identifier enums such as:
+
+        NcDataHubbleId
+        NcDataBaoId
+        NcDataSNIAId
+
+    Returns a list of dictionaries with enum names and members.
+    """
+
+    text = remove_c_comments(header_text)
+
+    pattern = re.compile(
+        r"typedef\s+enum(?:\s+[A-Za-z0-9_]+)?\s*\{"
+        r"(?P<body>.*?)"
+        r"\}\s*(?P<name>NcData[A-Za-z0-9_]*Id)\s*;",
+        re.DOTALL,
+    )
+
+    enums = []
+
+    for match in pattern.finditer(text):
+        body = match.group("body")
+        enum_name = match.group("name")
+
+        members = []
+
+        for raw_item in body.split(","):
+            item = raw_item.strip()
+
+            if not item:
+                continue
+
+            item = item.split("=")[0].strip()
+
+            if item.startswith("NC_DATA_"):
+                members.append(item)
+
+        enums.append(
+            {
+                "name": enum_name,
+                "members": members,
+            }
+        )
+
+    return enums
+
+
+def common_prefix_ending_in_underscore(names):
+    """
+    Find a readable common prefix among enum members.
+
+    Example
+    -------
+    NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018
+    NC_DATA_HUBBLE_RIESS2018
+
+    gives:
+
+    NC_DATA_HUBBLE_
+    """
+
+    if not names:
+        return ""
+
+    prefix = names[0]
+
+    for name in names[1:]:
+        while not name.startswith(prefix):
+            prefix = prefix[:-1]
+
+            if not prefix:
+                return ""
+
+    if "_" in prefix:
+        return prefix[: prefix.rfind("_") + 1]
+
+    return ""
+
+
+def extract_gobject_properties(source_text):
+    """
+    Extract property names from g_param_spec_* calls.
+
+    These names often correspond to properties accessible in Python through:
+
+        data.get_property("property-name")
+    """
+
+    pattern = re.compile(
+        r"g_param_spec_[A-Za-z0-9_]+\s*\(\s*\"([^\"]+)\"",
+        re.MULTILINE,
+    )
+
+    return sorted(set(pattern.findall(source_text)))
+
+
+def analyze_selected_data_header(data_dir, header_name):
+    """
+    Analyze one selected nc_data_*.h file and its corresponding .c file.
+    """
+
+    header_path = data_dir / header_name
+
+    if not header_path.exists():
+        raise FileNotFoundError(f"Header not found: {header_path}")
+
+    source_path = header_path.with_suffix(".c")
+
+    header_text = read_text(header_path)
+    source_text = read_text(source_path) if source_path.exists() else ""
+
+    return {
+        "family": family_from_header_name(header_path.name),
+        "header": header_path.name,
+        "source": source_path.name if source_path.exists() else None,
+        "concrete_data_type": extract_concrete_data_type(header_text),
+        "dataset_enums": extract_dataset_enums(header_text),
+        "properties": extract_gobject_properties(source_text),
+    }
+
+
+def print_selected_data_header(data_dir, header_name):
+    """
+    Print documentation-oriented information for one data source file.
+    """
+
+    item = analyze_selected_data_header(data_dir, header_name)
+
+    print("=" * 90)
+    print("NumCosmo data source assessment")
+    print("=" * 90)
+    print()
+    print(f"Data directory: {data_dir}")
+    print()
+
+    print("=" * 90)
+    print(item["header"])
+    print("=" * 90)
+
+    print(f"Family: {item['family']}")
+
+    if item["source"] is not None:
+        print(f"Source: {item['source']}")
+    else:
+        print("Source: not found")
+
+    if item["concrete_data_type"] is not None:
+        print(f"Concrete data type: {item['concrete_data_type']}")
+    else:
+        print("Concrete data type: not detected in this header")
+
+    print()
+
+    if item["dataset_enums"]:
+        print("Dataset identifier enum type(s):")
+
+        for enum in item["dataset_enums"]:
+            print(f"  - {enum['name']}")
+
+            if enum["members"]:
+                prefix = common_prefix_ending_in_underscore(enum["members"])
+
+                print("    Identifier members:")
+
+                for member in enum["members"]:
+                    short_name = member.removeprefix(prefix) if prefix else member
+                    print(f"      - {short_name}")
+
+    else:
+        print("Dataset identifier enum type(s): none detected")
+
+    print()
+
+    if item["properties"]:
+        print("GObject property name(s) found in source:")
+
+        for prop in item["properties"]:
+            print(f"  - {prop}")
+
+    else:
+        print("GObject property name(s) found in source: none detected")
+
+    print()
+```
+
+Now we inspect the selected Hubble data source file.
+
+```{python}
+selected_header = "nc_data_hubble.h"
+
+if data_dir is None:
+    print("Skipping source-file inspection because the NumCosmo source directory was not found.")
+else:
+    print_selected_data_header(data_dir, selected_header)
+```
+
+When the selected file does not show a concrete data type, this does not necessarily mean
+that the file is unused. It may define common infrastructure for a data family rather than
+a directly instantiable data object.
+
+The most important item for a Python user is the dataset identifier enum. In this case,
+the enum tells us which built-in Hubble datasets can be passed to the constructor. For
+example, if `GOMEZ_VALENT_COMP2018` appears among the identifier members, it corresponds
+to the Python enum member:
+
+```python
+Nc.DataHubbleId.GOMEZ_VALENT_COMP2018
+```
+
+## Runtime Inspection
+
+The source-tree inspection is useful to understand how data objects are organized in the
+NumCosmo source code. However, once a concrete data object has been created, the most
+direct way to inspect it from Python is to use its runtime properties.
+
+We first list the available members of the `DataHubbleId` enum as exposed in Python.
+
+```{python}
+def list_python_enum_members(enum_cls):
+    """
+    List enum-like members exposed through Python/GObject introspection.
+    """
+
+    members = []
+
+    for name in sorted(dir(enum_cls)):
+        if name.isupper() and not name.startswith("_"):
+            members.append(name)
+
+    return members
+
+
+print("Available Nc.DataHubbleId members:")
+print()
+
+for name in list_python_enum_members(Nc.DataHubbleId):
+    print("-", name)
+```
+
+We now instantiate one concrete Hubble expansion-rate dataset.
+
+```{python}
+data = Nc.DataHubble.new_from_id(Nc.DataHubbleId.GOMEZ_VALENT_COMP2018)
+```
+
+The object `data` contains the observational data and metadata associated with the
+selected Hubble-rate compilation.
+
+A first useful check is to inspect the Python type of the object.
+
+```{python}
+print(type(data))
+```
+
+The method `list_properties()` lists the GObject properties exposed by the object. These
+are the properties that can usually be accessed from Python with `get_property()`.
+
+```{python}
+print("Runtime properties exposed by this data object:")
+print()
+
+for prop in data.list_properties():
+    print(f"- {prop.name}: {prop.value_type.name}")
+```
+
+Many NumCosmo data objects provide a short textual description through the `desc`
+property.
+
+```{python}
+print(data.get_property("desc"))
+```
+
+The number of data points is available through the `n-points` property.
+
+```{python}
+n_points = data.get_property("n-points")
+
+print(f"Number of points: {n_points}")
+```
+
+## Accessing Numerical Arrays
+
+For this Hubble-rate dataset, the redshifts, measured values, and uncertainties are
+exposed through the properties `z`, `mean`, and `sigma`.
+
+```{python}
+z = data.get_property("z")
+mean = data.get_property("mean")
+sigma = data.get_property("sigma")
+```
+
+These properties are NumCosmo vector objects. Individual entries can be accessed with
+`.get(i)`.
+
+```{python}
+print("First redshift:", z.get(0))
+print("First H(z) value:", mean.get(0))
+print("First uncertainty:", sigma.get(0))
+```
+
+We can print a small table with the first few data points.
+
+```{python}
+print("First five rows:")
+print()
+print("   i        z        H(z)      sigma")
+print("--------------------------------------")
+
+for i in range(min(5, n_points)):
+    print(f"{i:4d} {z.get(i):8.4f} {mean.get(i):10.4f} {sigma.get(i):10.4f}")
+```
+
+This gives a quick preview of the dataset before using it in a fit.
+
+## Helper Function
+
+When exploring data objects, it is useful to define a small helper function.
+
+```{python}
+# | code-fold: true
+
+def inspect_data_object(data):
+    """
+    Print basic runtime information about a NumCosmo data object.
+    """
+
+    print("=" * 80)
+    print("Runtime data object inspection")
+    print("=" * 80)
+    print()
+
+    print("Object type:")
+    print(type(data))
+    print()
+
+    property_names = [prop.name for prop in data.list_properties()]
+
+    if "desc" in property_names:
+        print("Description:")
+        print(data.get_property("desc"))
+        print()
+
+    if "n-points" in property_names:
+        print("Number of points:")
+        print(data.get_property("n-points"))
+        print()
+
+    print("Runtime properties:")
+    for prop in data.list_properties():
+        print(f"- {prop.name}: {prop.value_type.name}")
+
+    print()
+```
+
+We can then call the helper on the Hubble data object.
+
+```{python}
+inspect_data_object(data)
+```
+
+This helper does not replace the documentation for each data class, but it provides a
+useful first overview.
+
+## General Strategy
+
+When working with NumCosmo data objects, a useful workflow is:
+
+1. Look at the available data-type source files under `numcosmo/data/`.
+2. Choose the data family relevant to the example, such as Hubble, BAO, CMB, or
+   supernova data.
+3. Inspect the corresponding source file to find the dataset identifier enum, if
+   available.
+4. Instantiate one concrete data object from Python.
+5. Use `list_properties()` to see what the object exposes at runtime.
+6. Use `get_property()` to access metadata and numerical arrays.
+7. Print a small preview before using the data in a fit.
+
+For example, the Hubble case follows this pattern.
+
+```{python}
+data = Nc.DataHubble.new_from_id(Nc.DataHubbleId.GOMEZ_VALENT_COMP2018)
+
+print(type(data))
+print(data.get_property("desc"))
+print(data.get_property("n-points"))
+
+for prop in data.list_properties():
+    print(prop.name)
+```
+
+In fitting examples, it is usually better to keep the main text focused on the
+cosmological model, likelihood, sampler, and results. Instead of explaining the internal
+structure of the data object in every fitting example, those examples can briefly mention
+the dataset being used and point to this page for details.
