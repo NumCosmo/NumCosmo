@@ -119,4 +119,5 @@ jobs:
             -f state=success \
             -f context="Read the Docs" \
             -f target_url="${BUILD_URL}" \
-            -f description="Open RTD build"
+            -f description="Open RTD build" \
+            || echo "Unable to create commit status (likely fork PR); skipping."
