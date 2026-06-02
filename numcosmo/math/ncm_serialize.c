@@ -4452,3 +4452,4 @@ ncm_serialize_global_variant_to_yaml (GVariant *var_obj)
 
   return ret;
 }
+

@@ -1048,7 +1048,8 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
     theta0 = lhr2d->theta - M_PI * 0.25;
     theta1 = lhr2d->theta + M_PI * 0.25;
 
-    i           = 0;
+    i = 0;
+
     while (TRUE)
     {
       _ncm_lh_ratio2d_set_angular_interval (lhr2d, M_PI * 0.5, &theta0, &theta1);
@@ -1230,3 +1231,4 @@ ncm_lh_ratio2d_region_print (NcmLHRatio2dRegion *rg, FILE *out)
     fflush (out);
   }
 }
+
