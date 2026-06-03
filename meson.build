@@ -833,7 +833,9 @@ python_module = import('python')
 python = python_module.find_installation('python3')
 
 if python.language_version().version_compare('<3.11')
-  error('Python >= 3.11 is required (uses StrEnum and structural pattern matching)')
+  error(
+    'Python >= 3.11 is required (uses StrEnum and structural pattern matching)',
+  )
 endif
 
 python_pip = python_module.find_installation(
