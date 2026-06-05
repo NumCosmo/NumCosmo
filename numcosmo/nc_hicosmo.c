@@ -152,6 +152,10 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   ncm_model_class_set_name_nick (model_class, "Abstract class for HI cosmological models.", "NcHICosmo");
   ncm_model_class_add_params (model_class, 0, 0, 1);
 
+  ncm_model_class_add_submodels (model_class, 2);
+  ncm_model_class_set_submodel (model_class, 0, "reion", "reion", NC_TYPE_HIREION);
+  ncm_model_class_set_submodel (model_class, 1, "prim", "prim", NC_TYPE_HIPRIM);
+
   ncm_mset_model_register_id (model_class,
                               "NcHICosmo",
                               "Homogeneous and isotropic cosmological models.",

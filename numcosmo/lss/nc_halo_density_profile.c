@@ -324,6 +324,9 @@ nc_halo_density_profile_class_init (NcHaloDensityProfileClass *klass)
   ncm_model_class_set_name_nick (model_class, "Matter Density Profile", "DensityProfile");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
+  ncm_model_class_add_submodels (model_class, 1);
+  ncm_model_class_set_submodel (model_class, 0, "mass-summary", "mass-summary", NC_TYPE_HALO_MASS_SUMMARY);
+
   /**
    * NcHaloDensityProfile:reltol:
    *

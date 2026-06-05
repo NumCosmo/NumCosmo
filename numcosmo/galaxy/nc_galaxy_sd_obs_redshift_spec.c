@@ -167,6 +167,9 @@ nc_galaxy_sd_obs_redshift_spec_class_init (NcGalaxySDObsRedshiftSpecClass *klass
   ncm_model_class_set_name_nick (model_class, "Spectroscopic Observed Redshift", "GalaxySDObsRedshiftSpec");
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
 
+  ncm_model_class_add_submodels (model_class, 1);
+  ncm_model_class_set_submodel (model_class, 0, "true-redshift", "true-redshift", NC_TYPE_GALAXY_SD_TRUE_REDSHIFT);
+
   /**
    * NcGalaxySDObsRedshiftSpec:z_lim:
    *
@@ -359,9 +362,8 @@ nc_galaxy_sd_obs_redshift_spec_new (NcGalaxySDTrueRedshift *sdz, const gdouble z
   NcmDTuple2 lim                       = NCM_DTUPLE2_STATIC_INIT (z_min, z_max);
   NcGalaxySDObsRedshiftSpec *gsdorspec = g_object_new (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_SPEC,
                                                        "z-lim", &lim,
+                                                       "true-redshift", sdz,
                                                        NULL);
-
-  ncm_model_add_submodel (NCM_MODEL (gsdorspec), NCM_MODEL (sdz));
 
   return gsdorspec;
 }
@@ -378,6 +380,22 @@ NcGalaxySDObsRedshiftSpec *
 nc_galaxy_sd_obs_redshift_spec_ref (NcGalaxySDObsRedshiftSpec *gsdorspec)
 {
   return g_object_ref (gsdorspec);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_spec_peek_true_redshift:
+ * @gsdorspec: a #NcGalaxySDObsRedshiftSpec
+ *
+ * Peeks the #NcGalaxySDTrueRedshift submodel attached at construction.
+ *
+ * Returns: (transfer none): the #NcGalaxySDTrueRedshift submodel.
+ */
+NcGalaxySDTrueRedshift *
+nc_galaxy_sd_obs_redshift_spec_peek_true_redshift (NcGalaxySDObsRedshiftSpec *gsdorspec)
+{
+  NcGalaxySDObsRedshiftSpecPrivate * const self = nc_galaxy_sd_obs_redshift_spec_get_instance_private (gsdorspec);
+
+  return self->sdz;
 }
 
 /**

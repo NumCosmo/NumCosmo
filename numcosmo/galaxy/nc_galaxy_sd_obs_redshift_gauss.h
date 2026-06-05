@@ -46,6 +46,8 @@ NcGalaxySDObsRedshiftGauss *nc_galaxy_sd_obs_redshift_gauss_new (NcGalaxySDTrueR
 GPtrArray *nc_galaxy_sd_obs_redshift_gauss_new_lsst_srd_bins (NcGalaxySDTrueRedshiftLSSTSRDType type, NcGalaxySDTrueRedshiftLSSTSRD **gsdtr_new);
 NcGalaxySDObsRedshiftGauss *nc_galaxy_sd_obs_redshift_gauss_ref (NcGalaxySDObsRedshiftGauss *gsdorgauss);
 
+NcGalaxySDTrueRedshift *nc_galaxy_sd_obs_redshift_gauss_peek_true_redshift (NcGalaxySDObsRedshiftGauss *gsdorgauss);
+
 void nc_galaxy_sd_obs_redshift_gauss_free (NcGalaxySDObsRedshiftGauss *gsdorgauss);
 void nc_galaxy_sd_obs_redshift_gauss_clear (NcGalaxySDObsRedshiftGauss **gsdorgauss);
 

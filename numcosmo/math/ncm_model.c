@@ -90,6 +90,23 @@ G_DEFINE_QUARK (ncm-model-error, ncm_model_error)
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmModel, ncm_model, G_TYPE_OBJECT)
 
+typedef struct _NcmModelSubmodelSlot
+{
+  gchar *name;
+  gchar *symbol;
+  GType submodel_type;
+} NcmModelSubmodelSlot;
+
+static void
+_ncm_model_submodel_slot_free (gpointer ptr)
+{
+  NcmModelSubmodelSlot *slot = ptr;
+
+  g_free (slot->name);
+  g_free (slot->symbol);
+  g_slice_free (NcmModelSubmodelSlot, slot);
+}
+
 static void
 ncm_model_init (NcmModel *model)
 {
@@ -420,6 +437,10 @@ ncm_model_class_init (NcmModelClass *klass)
   klass->sparam            = NULL;
   klass->vparam            = NULL;
 
+  klass->submodel_slot_len        = 0;
+  klass->parent_submodel_slot_len = 0;
+  klass->submodel_slot            = NULL;
+
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
@@ -513,6 +534,7 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
   const guint vparam_len_id    = vparam_id     - model_class->vparam_len        + model_class->parent_vparam_len;
   const guint sparam_fit_id    = vparam_len_id - model_class->vparam_len        + model_class->parent_sparam_len;
   const guint vparam_fit_id    = sparam_fit_id - model_class->sparam_len        + model_class->parent_vparam_len;
+  const guint submodel_slot_id = vparam_fit_id - model_class->vparam_len        + model_class->parent_submodel_slot_len;
 
   if ((prop_id < model_class->nonparam_prop_len) && model_class->get_property)
   {
@@ -558,6 +580,14 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
 
     g_value_take_variant (value, var);
   }
+  else if (submodel_slot_id < model_class->submodel_slot_len)
+  {
+    NcmModelSubmodelSlot *slot = g_ptr_array_index (model_class->submodel_slot, submodel_slot_id);
+    NcmModelID mid             = ncm_model_id_by_type (slot->submodel_type, NULL);
+    NcmModel *submodel         = (mid >= 0) ? ncm_model_peek_submodel_by_mid (model, mid) : NULL;
+
+    g_value_set_object (value, submodel);
+  }
   else
   {
     g_assert_not_reached ();
@@ -586,6 +616,7 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   const guint vparam_len_id    = vparam_id     - model_class->vparam_len        + model_class->parent_vparam_len;
   const guint sparam_fit_id    = vparam_len_id - model_class->vparam_len        + model_class->parent_sparam_len;
   const guint vparam_fit_id    = sparam_fit_id - model_class->sparam_len        + model_class->parent_vparam_len;
+  const guint submodel_slot_id = vparam_fit_id - model_class->vparam_len        + model_class->parent_submodel_slot_len;
 
   /*printf ("[%u %u] [%u %u] [%u %u] [%u %u] [%u %u] [%u %u]\n", prop_id, model_class->nonparam_prop_len, sparam_id, model_class->sparam_len, vparam_id, model_class->vparam_len, vparam_len_id, model_class->vparam_len, sparam_fit_id, model_class->sparam_len, vparam_fit_id, model_class->vparam_len);*/
 
@@ -696,6 +727,13 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
       }
     }
   }
+  else if (submodel_slot_id < model_class->submodel_slot_len)
+  {
+    NcmModel *submodel = g_value_get_object (value);
+
+    if (submodel != NULL)
+      ncm_model_add_submodel (model, submodel);
+  }
   else
   {
     g_assert_not_reached ();
@@ -720,8 +758,9 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
 
   object_class->set_property     = &ncm_model_class_set_property;
   object_class->get_property     = &ncm_model_class_get_property;
-  model_class->parent_sparam_len = model_class->sparam_len;
-  model_class->parent_vparam_len = model_class->vparam_len;
+  model_class->parent_sparam_len        = model_class->sparam_len;
+  model_class->parent_vparam_len        = model_class->vparam_len;
+  model_class->parent_submodel_slot_len = model_class->submodel_slot_len;
   model_class->sparam_len       += sparam_len;
   model_class->vparam_len       += vparam_len;
   model_class->nonparam_prop_len = nonparam_prop_len;
@@ -947,6 +986,101 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
   ncm_model_class_set_vparam_obj (model_class, vparam_id, vparam);
 
   ncm_vparam_free (vparam);
+}
+
+/**
+ * ncm_model_class_add_submodels:
+ * @model_class: a #NcmModelClass
+ * @submodel_slot_len: number of submodel slots to add
+ *
+ * Class function to be used when implementing NcmModels. It declares that the
+ * model has @submodel_slot_len submodel slots, in addition to any inherited
+ * from the parent class. Submodels can only be attached at construction time,
+ * through the slots declared with ncm_model_class_set_submodel(). It must be
+ * called after ncm_model_class_add_params().
+ *
+ */
+void
+ncm_model_class_add_submodels (NcmModelClass *model_class, guint submodel_slot_len)
+{
+  model_class->submodel_slot_len += submodel_slot_len;
+
+  if (model_class->submodel_slot_len > 0)
+  {
+    if (model_class->submodel_slot == NULL)
+    {
+      model_class->submodel_slot = g_ptr_array_new_with_free_func (&_ncm_model_submodel_slot_free);
+      g_ptr_array_set_size (model_class->submodel_slot, model_class->submodel_slot_len);
+    }
+    else
+    {
+      GPtrArray *submodel_slot = g_ptr_array_new_with_free_func (&_ncm_model_submodel_slot_free);
+      guint i;
+
+      g_ptr_array_set_size (submodel_slot, model_class->submodel_slot_len);
+
+      /* Copy all parent submodel slot info */
+      for (i = 0; i < model_class->parent_submodel_slot_len; i++)
+      {
+        NcmModelSubmodelSlot *pslot = g_ptr_array_index (model_class->submodel_slot, i);
+        NcmModelSubmodelSlot *slot  = g_slice_new0 (NcmModelSubmodelSlot);
+
+        slot->name          = g_strdup (pslot->name);
+        slot->symbol        = g_strdup (pslot->symbol);
+        slot->submodel_type = pslot->submodel_type;
+        g_ptr_array_index (submodel_slot, i) = slot;
+      }
+
+      model_class->submodel_slot = submodel_slot;
+    }
+  }
+}
+
+/**
+ * ncm_model_class_set_submodel:
+ * @model_class: a #NcmModelClass
+ * @submodel_slot_id: id of the submodel slot
+ * @name: name of the submodel slot
+ * @symbol: symbol of the submodel slot
+ * @submodel_type: the #GType of the submodel accepted by the slot
+ *
+ * Sets the @submodel_slot_id-th submodel slot of the model. The slot is
+ * exposed as a construct-only, type-checked object property named @name. The
+ * submodel is therefore part of the model's structure, fixed at construction.
+ *
+ */
+void
+ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id, const gchar *name, const gchar *symbol, GType submodel_type)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (model_class);
+  const guint base           = model_class->nonparam_prop_len
+                               + 2 * (model_class->sparam_len - model_class->parent_sparam_len)
+                               + 3 * (model_class->vparam_len - model_class->parent_vparam_len);
+  const guint prop_id        = base + (submodel_slot_id - model_class->parent_submodel_slot_len);
+  NcmModelSubmodelSlot *slot;
+
+  g_assert (g_type_is_a (submodel_type, NCM_TYPE_MODEL));
+
+  if (submodel_slot_id >= model_class->submodel_slot_len)
+    g_error ("ncm_model_class_set_submodel: setting submodel slot %u-th of %u declared for model ``%s''.",
+             submodel_slot_id + 1, model_class->submodel_slot_len, model_class->name);
+
+  g_assert_cmpint (prop_id, >, 0);
+
+  if (g_ptr_array_index (model_class->submodel_slot, submodel_slot_id) != NULL)
+    g_error ("ncm_model_class_set_submodel: submodel slot %u is already set.", submodel_slot_id);
+
+  slot                = g_slice_new0 (NcmModelSubmodelSlot);
+  slot->name          = g_strdup (name);
+  slot->symbol        = g_strdup (symbol);
+  slot->submodel_type = submodel_type;
+
+  g_ptr_array_index (model_class->submodel_slot, submodel_slot_id) = slot;
+
+  g_object_class_install_property (object_class, prop_id,
+                                   g_param_spec_object (name, NULL, symbol,
+                                                        submodel_type,
+                                                        G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 }
 
 /**

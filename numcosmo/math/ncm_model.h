@@ -70,6 +70,9 @@ struct _NcmModelClass
   guint parent_vparam_len;
   GPtrArray *sparam;
   GPtrArray *vparam;
+  guint submodel_slot_len;
+  guint parent_submodel_slot_len;
+  GPtrArray *submodel_slot;
 };
 
 #define NCM_MODEL_MAX_STATES (10)
@@ -122,6 +125,9 @@ void ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id
 
 void ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
 void ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint default_length, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
+
+void ncm_model_class_add_submodels (NcmModelClass *model_class, guint submodel_slot_len);
+void ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id, const gchar *name, const gchar *symbol, GType submodel_type);
 
 void ncm_model_class_check_params_info (NcmModelClass *model_class);
 

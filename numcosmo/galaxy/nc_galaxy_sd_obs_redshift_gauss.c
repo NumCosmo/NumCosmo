@@ -234,6 +234,9 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
   ncm_model_class_set_name_nick (model_class, "Gaussian Observed Redshift", "GalaxySDObsRedshiftGauss");
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
 
+  ncm_model_class_add_submodels (model_class, 1);
+  ncm_model_class_set_submodel (model_class, 0, "true-redshift", "true-redshift", NC_TYPE_GALAXY_SD_TRUE_REDSHIFT);
+
   /**
    * NcGalaxySDObsRedshiftGauss:zp_lim:
    *
@@ -838,9 +841,8 @@ nc_galaxy_sd_obs_redshift_gauss_new (NcGalaxySDTrueRedshift *sdz, const gdouble 
   NcmDTuple2 lim                         = NCM_DTUPLE2_STATIC_INIT (zp_min, zp_max);
   NcGalaxySDObsRedshiftGauss *gsdorgauss = g_object_new (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS,
                                                          "zp-lim", &lim,
+                                                         "true-redshift", sdz,
                                                          NULL);
-
-  ncm_model_add_submodel (NCM_MODEL (gsdorgauss), NCM_MODEL (sdz));
 
   return gsdorgauss;
 }
@@ -926,9 +928,8 @@ nc_galaxy_sd_obs_redshift_gauss_new_lsst_srd_bins (NcGalaxySDTrueRedshiftLSSTSRD
     },
       "bin-sigma0", sigma_z,
       "zp-support-max", 20.0,
+      "true-redshift", gsdtr,
       NULL);
-
-    ncm_model_add_submodel (NCM_MODEL (gsdorgauss_temp), NCM_MODEL (gsdtr));
 
     bin_edges = nc_galaxy_sd_obs_redshift_gauss_compute_equal_area_photoz_bins (
       gsdorgauss_temp,
@@ -951,8 +952,8 @@ nc_galaxy_sd_obs_redshift_gauss_new_lsst_srd_bins (NcGalaxySDTrueRedshiftLSSTSRD
                                "zp-lim", &lim,
                                "bin-sigma0", sigma_z,
                                "zp-support-max", zp_support_max,
+                               "true-redshift", gsdtr,
                                NULL);
-    ncm_model_add_submodel (NCM_MODEL (gsdorgauss), NCM_MODEL (gsdtr));
 
     g_ptr_array_add (bins, gsdorgauss);
   }
@@ -980,6 +981,22 @@ NcGalaxySDObsRedshiftGauss *
 nc_galaxy_sd_obs_redshift_gauss_ref (NcGalaxySDObsRedshiftGauss *gsdorgauss)
 {
   return g_object_ref (gsdorgauss);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_gauss_peek_true_redshift:
+ * @gsdorgauss: a #NcGalaxySDObsRedshiftGauss
+ *
+ * Peeks the #NcGalaxySDTrueRedshift submodel attached at construction.
+ *
+ * Returns: (transfer none): the #NcGalaxySDTrueRedshift submodel.
+ */
+NcGalaxySDTrueRedshift *
+nc_galaxy_sd_obs_redshift_gauss_peek_true_redshift (NcGalaxySDObsRedshiftGauss *gsdorgauss)
+{
+  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
+
+  return self->sdz;
 }
 
 /**

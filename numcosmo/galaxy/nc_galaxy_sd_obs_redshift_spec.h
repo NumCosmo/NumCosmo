@@ -44,6 +44,8 @@ G_DECLARE_FINAL_TYPE (NcGalaxySDObsRedshiftSpec, nc_galaxy_sd_obs_redshift_spec,
 NcGalaxySDObsRedshiftSpec *nc_galaxy_sd_obs_redshift_spec_new (NcGalaxySDTrueRedshift *sdz, const gdouble z_min, const gdouble z_max);
 NcGalaxySDObsRedshiftSpec *nc_galaxy_sd_obs_redshift_spec_ref (NcGalaxySDObsRedshiftSpec *gsdorspec);
 
+NcGalaxySDTrueRedshift *nc_galaxy_sd_obs_redshift_spec_peek_true_redshift (NcGalaxySDObsRedshiftSpec *gsdorspec);
+
 void nc_galaxy_sd_obs_redshift_spec_free (NcGalaxySDObsRedshiftSpec *gsdorspec);
 void nc_galaxy_sd_obs_redshift_spec_clear (NcGalaxySDObsRedshiftSpec **gsdorspec);
 
