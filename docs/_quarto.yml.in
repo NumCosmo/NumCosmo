@@ -17,6 +17,7 @@ project:
     - tutorials/python/bounce_spectra.qmd
     - tutorials/python/cluster_wl_simul.qmd
     - tutorials/python/sky_match.qmd
+    - examples/data_analysis/inspect_data_objects.qmd
     - examples/data_analysis/snia.qmd
     - examples/intro/epdf.qmd
     - examples/intro/hiprim.qmd
@@ -113,6 +114,8 @@ website:
                 text: "Dark Energy WSpline"
             - section: "Data Analysis"
               contents:
+              - href: examples/data_analysis/inspect_data_objects.qmd
+                text: "Inspect Data Objects"
               - href: examples/data_analysis/snia.qmd
                 text: "SN Ia Fitting"
 
