@@ -654,7 +654,9 @@ def generate_jpas_forecast_2024(
     cluster_m, default_lnM_obs_min, default_lnM_obs_max = create_cluster_mass(
         cluster_mass_type
     )
-    cluster_z = create_cluster_redshift(cluster_redshift_type, sigma0=cluster_redshift_sigma0)
+    cluster_z = create_cluster_redshift(
+        cluster_redshift_type, sigma0=cluster_redshift_sigma0
+    )
     cosmo = create_cosmo()
 
     # Use defaults if not specified
