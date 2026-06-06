@@ -504,11 +504,13 @@ def create_cluster_mass(
 
 def create_cluster_redshift(
     cluster_redshift_type: ClusterRedshiftType,
+    sigma0: float = 0.1,
 ) -> Nc.ClusterRedshift:
     """Create the cluster photometric redshift (photoz) relation model.
 
     :param cluster_redshift_type: The type of photoz relation to use.
-    :param cluster_redshift_type: The type of photoz relation to use.
+    :param sigma0: Photo-z scatter normalization sigma_z(z) = sigma0 (1+z) for the
+        GAUSS relation (ignored by NODIST).
     :raises ValueError: If the cluster redshift type is invalid.
     :return: An initialized NumCosmo ClusterRedshift model.
     """
@@ -520,7 +522,7 @@ def create_cluster_redshift(
         # Gaussian photoz error distribution
         cluster_z = Nc.ClusterPhotozGaussGlobal(pz_min=0.0, pz_max=1.0)
         cluster_z["z-bias"] = 0  # Photoz bias $langle z_{obs} - z_{true} rangle$
-        cluster_z["sigma0"] = 0.1  # Photoz scatter $sigma_z$
+        cluster_z["sigma0"] = sigma0  # Photoz scatter $sigma_z$
     else:
         raise ValueError(f"Invalid cluster redshift type: {cluster_redshift_type}")
 
@@ -568,6 +570,7 @@ def generate_jpas_forecast_2024(
     z_max: float = 0.8,
     znknots: int = 8,
     cluster_redshift_type: ClusterRedshiftType = ClusterRedshiftType.NODIST,
+    cluster_redshift_sigma0: float = 0.1,
     lnM_obs_min: float | None = None,
     lnM_obs_max: float | None = None,
     lnMobsnknots: int = 2,
@@ -651,7 +654,7 @@ def generate_jpas_forecast_2024(
     cluster_m, default_lnM_obs_min, default_lnM_obs_max = create_cluster_mass(
         cluster_mass_type
     )
-    cluster_z = create_cluster_redshift(cluster_redshift_type)
+    cluster_z = create_cluster_redshift(cluster_redshift_type, sigma0=cluster_redshift_sigma0)
     cosmo = create_cosmo()
 
     # Use defaults if not specified
