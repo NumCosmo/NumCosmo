@@ -556,7 +556,15 @@ class SkyMatchIDResult:
                     weight=float(coeff),
                 )
 
-        matching = nx.max_weight_matching(graph, maxcardinality=False)
+        # Solve the matching per connected component. The candidate graph is very
+        # sparse (each object shares members with only a handful of others), so it
+        # splits into many tiny components; matching each one separately avoids the
+        # global O(V^3) cost of running the blossom algorithm over the whole graph.
+        matching: set[tuple] = set()
+        for component in nx.connected_components(graph):
+            matching |= nx.max_weight_matching(
+                graph.subgraph(component), maxcardinality=False
+            )
 
         query_to_match_row: dict[int, int] = {}
         for node_a, node_b in matching:
@@ -974,6 +982,142 @@ class SkyMatch:
 
         return SkyMatchResult(self, indices, distances)
 
+    def _compute_shared_fractions(
+        self,
+        shared_fraction_method: SharedFractionMethod,
+        matched_catalog_grouped: Table,
+        all_combinations: Table,
+        query_table: Table,
+        match_table: Table,
+    ) -> tuple[Table, Column, Column]:
+        """Compute the per-pair shared member fractions for both catalogs.
+
+        Depending on ``shared_fraction_method`` the fractions are derived from raw
+        member counts or from probability-membership (pmem) weighted sums. The pmem
+        methods add intermediate columns to ``all_combinations`` (via joins), so the
+        possibly-augmented table is returned alongside the two fractions.
+
+        :param shared_fraction_method: Method to compute the shared fraction.
+        :param matched_catalog_grouped: Member matches grouped by (query_id, match_id).
+        :param all_combinations: Candidate (query_id, match_id) pairs already carrying
+            their ``nmem_query``, ``nmem_match`` and ``shared_count`` columns.
+        :param query_table: Query member catalog with renamed columns.
+        :param match_table: Match member catalog with renamed columns.
+        :return: ``(all_combinations, fraction_query, fraction_match)``.
+        """
+        match shared_fraction_method:
+            case SharedFractionMethod.NO_PMEM:
+                fraction_query = (
+                    all_combinations["shared_count"] / all_combinations["nmem_query"]
+                )
+                fraction_match = (
+                    all_combinations["shared_count"] / all_combinations["nmem_match"]
+                )
+
+            case SharedFractionMethod.QUERY_PMEM:
+                if "pmem_query" not in matched_catalog_grouped.colnames:
+                    raise ValueError(
+                        "To perform a matching, pmem column must "
+                        "be provided for the query catalog."
+                    )
+
+                all_combinations["sum_shared_pmem"] = matched_catalog_grouped[
+                    "query_id", "match_id", "pmem_query"
+                ].groups.aggregate(np.sum)["pmem_query"]
+
+                query_group = query_table.group_by(["query_id"])
+                total_pmem = query_group["query_id", "pmem_query"].groups.aggregate(
+                    np.sum
+                )
+                total_pmem.rename_column("pmem_query", "sum_total_pmem")
+
+                all_combinations = join(all_combinations, total_pmem, keys="query_id")
+
+                fraction_query = (
+                    all_combinations["sum_shared_pmem"]
+                    / all_combinations["sum_total_pmem"]
+                )
+                fraction_match = (
+                    all_combinations["shared_count"] / all_combinations["nmem_match"]
+                )
+
+            case SharedFractionMethod.MATCH_PMEM:
+                if "pmem_match" not in matched_catalog_grouped.colnames:
+                    raise ValueError(
+                        "To perform a matching, pmem column must "
+                        "be provided for the match catalog."
+                    )
+
+                all_combinations["sum_shared_pmem"] = matched_catalog_grouped[
+                    "query_id", "match_id", "pmem_match"
+                ].groups.aggregate(np.sum)["pmem_match"]
+
+                match_group = match_table.group_by(["match_id"])
+                total_pmem = match_group["match_id", "pmem_match"].groups.aggregate(
+                    np.sum
+                )
+                total_pmem.rename_column("pmem_match", "sum_total_pmem")
+
+                all_combinations = join(all_combinations, total_pmem, keys="match_id")
+
+                fraction_query = (
+                    all_combinations["shared_count"] / all_combinations["nmem_query"]
+                )
+                fraction_match = (
+                    all_combinations["sum_shared_pmem"]
+                    / all_combinations["sum_total_pmem"]
+                )
+
+            case SharedFractionMethod.PMEM:
+                if (
+                    "pmem_query" not in matched_catalog_grouped.colnames
+                    or "pmem_match" not in matched_catalog_grouped.colnames
+                ):
+                    raise ValueError(
+                        "To perform a matching, pmem column must "
+                        "be provided for both catalogs."
+                    )
+
+                all_combinations["sum_shared_pmem_query"] = matched_catalog_grouped[
+                    "query_id", "match_id", "pmem_query"
+                ].groups.aggregate(np.sum)["pmem_query"]
+                all_combinations["sum_shared_pmem_match"] = matched_catalog_grouped[
+                    "query_id", "match_id", "pmem_match"
+                ].groups.aggregate(np.sum)["pmem_match"]
+
+                query_group = query_table.group_by(["query_id"])
+                sum_total_pmem_query = query_group[
+                    "query_id", "pmem_query"
+                ].groups.aggregate(np.sum)
+                sum_total_pmem_query.rename_column("pmem_query", "sum_total_pmem_query")
+
+                match_group = match_table.group_by(["match_id"])
+                sum_total_pmem_match = match_group[
+                    "match_id", "pmem_match"
+                ].groups.aggregate(np.sum)
+                sum_total_pmem_match.rename_column("pmem_match", "sum_total_pmem_match")
+
+                all_combinations = join(
+                    all_combinations, sum_total_pmem_query, keys="query_id"
+                )
+                all_combinations = join(
+                    all_combinations, sum_total_pmem_match, keys="match_id"
+                )
+
+                fraction_query = (
+                    all_combinations["sum_shared_pmem_query"]
+                    / all_combinations["sum_total_pmem_query"]
+                )
+                fraction_match = (
+                    all_combinations["sum_shared_pmem_match"]
+                    / all_combinations["sum_total_pmem_match"]
+                )
+
+            case _ as unreachable:
+                assert_never(unreachable)
+
+        return all_combinations, fraction_query, fraction_match
+
     def match_ID(
         self,
         use_shared_fraction: bool = False,
@@ -1056,120 +1200,15 @@ class SkyMatch:
 
         # Shared fraction
 
-        fraction_query = None
-        fraction_match = None
-
-        match shared_fraction_method:
-            case SharedFractionMethod.NO_PMEM:
-                fraction_query = (
-                    all_combinations["shared_count"] / all_combinations["nmem_query"]
-                )
-                fraction_match = (
-                    all_combinations["shared_count"] / all_combinations["nmem_match"]
-                )
-
-            case SharedFractionMethod.QUERY_PMEM:
-                if "pmem_query" not in matched_catalog.colnames:
-                    raise ValueError(
-                        "To perform a matching, pmem column must "
-                        "be provided for the query catalog."
-                    )
-
-                all_combinations["sum_shared_pmem"] = matched_catalog_grouped[
-                    "query_id", "match_id", "pmem_query"
-                ].groups.aggregate(np.sum)["pmem_query"]
-
-                query_group = query_table.group_by(["query_id"])
-
-                total_pmem = query_group["query_id", "pmem_query"].groups.aggregate(
-                    np.sum
-                )
-                total_pmem.rename_column("pmem_query", "sum_total_pmem")
-
-                all_combinations = join(all_combinations, total_pmem, keys="query_id")
-
-                fraction_query = (
-                    all_combinations["sum_shared_pmem"]
-                    / all_combinations["sum_total_pmem"]
-                )
-                fraction_match = (
-                    all_combinations["shared_count"] / all_combinations["nmem_match"]
-                )
-
-            case SharedFractionMethod.MATCH_PMEM:
-                if "pmem_match" not in matched_catalog.colnames:
-                    raise ValueError(
-                        "To perform a matching, pmem column must "
-                        "be provided for the match catalog."
-                    )
-
-                all_combinations["sum_shared_pmem"] = matched_catalog_grouped[
-                    "query_id", "match_id", "pmem_match"
-                ].groups.aggregate(np.sum)["pmem_match"]
-
-                match_group = match_table.group_by(["match_id"])
-                total_pmem = match_group["match_id", "pmem_match"].groups.aggregate(
-                    np.sum
-                )
-                total_pmem.rename_column("pmem_match", "sum_total_pmem")
-
-                all_combinations = join(all_combinations, total_pmem, keys="match_id")
-
-                fraction_query = (
-                    all_combinations["shared_count"] / all_combinations["nmem_query"]
-                )
-                fraction_match = (
-                    all_combinations["sum_shared_pmem"]
-                    / all_combinations["sum_total_pmem"]
-                )
-
-            case SharedFractionMethod.PMEM:
-                if (
-                    "pmem_query" not in matched_catalog.colnames
-                    or "pmem_match" not in matched_catalog.colnames
-                ):
-                    raise ValueError(
-                        "To perform a matching, pmem column must "
-                        "be provided for both catalogs."
-                    )
-
-                all_combinations["sum_shared_pmem_query"] = matched_catalog_grouped[
-                    "query_id", "match_id", "pmem_query"
-                ].groups.aggregate(np.sum)["pmem_query"]
-                all_combinations["sum_shared_pmem_match"] = matched_catalog_grouped[
-                    "query_id", "match_id", "pmem_match"
-                ].groups.aggregate(np.sum)["pmem_match"]
-
-                query_group = query_table.group_by(["query_id"])
-                sum_total_pmem_query = query_group[
-                    "query_id", "pmem_query"
-                ].groups.aggregate(np.sum)
-                sum_total_pmem_query.rename_column("pmem_query", "sum_total_pmem_query")
-
-                match_group = match_table.group_by(["match_id"])
-                sum_total_pmem_match = match_group[
-                    "match_id", "pmem_match"
-                ].groups.aggregate(np.sum)
-                sum_total_pmem_match.rename_column("pmem_match", "sum_total_pmem_match")
-
-                all_combinations = join(
-                    all_combinations, sum_total_pmem_query, keys="query_id"
-                )
-                all_combinations = join(
-                    all_combinations, sum_total_pmem_match, keys="match_id"
-                )
-
-                fraction_query = (
-                    all_combinations["sum_shared_pmem_query"]
-                    / all_combinations["sum_total_pmem_query"]
-                )
-                fraction_match = (
-                    all_combinations["sum_shared_pmem_match"]
-                    / all_combinations["sum_total_pmem_match"]
-                )
-
-            case _ as unreachable:
-                assert_never(unreachable)
+        all_combinations, fraction_query, fraction_match = (
+            self._compute_shared_fractions(
+                shared_fraction_method,
+                matched_catalog_grouped,
+                all_combinations,
+                query_table,
+                match_table,
+            )
+        )
 
         # Linking coefficient
 
