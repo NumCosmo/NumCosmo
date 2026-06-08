@@ -228,6 +228,15 @@ class GenerateJpasForecast:
         typer.Option(help="Cluster photoz relation.", show_default=True),
     ] = ClusterRedshiftType.NODIST
 
+    cluster_redshift_sigma0: Annotated[
+        float,
+        typer.Option(
+            help="Photo-z scatter sigma0 in sigma_z(z)=sigma0(1+z) (GAUSS only).",
+            show_default=True,
+            min=0.0,
+        ),
+    ] = 0.1
+
     lnM_obs_min: Annotated[
         float,
         typer.Option(
@@ -300,6 +309,7 @@ class GenerateJpasForecast:
             z_max=self.z_max,
             znknots=self.znknots,
             cluster_redshift_type=self.cluster_redshift_type,
+            cluster_redshift_sigma0=self.cluster_redshift_sigma0,
             lnM_obs_min=self.lnM_obs_min,
             lnM_obs_max=self.lnM_obs_max,
             lnMobsnknots=self.lnMobsnknots,
