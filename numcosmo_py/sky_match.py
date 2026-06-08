@@ -5,7 +5,6 @@ Module to match objects in the sky halo-halo, cluster-halo, cluster-cluster.
 
 from __future__ import annotations
 import dataclasses
-import random
 from typing import TypedDict, cast
 from pathlib import Path
 from enum import StrEnum, auto
@@ -13,7 +12,7 @@ from typing_extensions import assert_never
 import numpy as np
 import numpy.typing as npt
 
-from astropy.table import Table, join
+from astropy.table import Table, Column, join
 import networkx as nx
 
 from numcosmo_py import Ncm, Nc
@@ -45,26 +44,12 @@ class IDs(TypedDict, total=False):
 
     :param ID: Object ID.
     :param MemberID: Member ID.
+    :param pmem: Probability of membership.
     """
 
     ID: str
     MemberID: str
     pmem: str
-
-
-class MatchingType(StrEnum):
-    """Matching type.
-
-    :param DISTANCE: Match by distance.
-    :param ID: Match by ID.
-    """
-
-    @staticmethod
-    def _generate_next_value_(name, _start, _count, _last_values):
-        return name.lower()
-
-    DISTANCE = auto()
-    ID = auto()
 
 
 class SelectionCriteria(StrEnum):
@@ -223,7 +208,7 @@ def _check_coordinates(table: Table, coordinates: Coordinates) -> None:
         )
 
 
-def _check_ID(table: Table, ids: IDs) -> None:
+def _check_ID(table: Table, ids: IDs | None) -> None:
     """Check if the IDs are provided.
 
     :param table: fits table to be used with the IDs.
@@ -231,7 +216,7 @@ def _check_ID(table: Table, ids: IDs) -> None:
 
     The function checks if the IDs are provided in the table.
     """
-    if ("ID" not in ids) or ("MemberID" not in ids):
+    if ids is None or ("ID" not in ids) or ("MemberID" not in ids):
         raise ValueError("ID and MemberID must be provided.")
 
     if (ids["ID"] not in table.columns) or (ids["MemberID"] not in table.columns):
@@ -253,23 +238,27 @@ def _load_fits_data(catalog: Path) -> Table:
 
 
 class SkyMatchResult:
-    """Class to store the results of the sky match."""
+    """Result of a distance based sky match (:meth:`SkyMatch.match_2d` / ``match_3d``).
+
+    Holds, for each of the ``n_query`` query objects, the row indices of its
+    ``k`` nearest neighbours in the match catalog together with the corresponding
+    distances. Both arrays are dense and have shape ``(n_query, k)``.
+    """
 
     def __init__(
         self,
         sky_match: SkyMatch,
-        matching_type: MatchingType,
         nearest_neighbours_indices: np.ndarray[tuple[int, int], np.dtype[np.int64]],
         nearest_neighbours_distances: np.ndarray[tuple[int, int], np.dtype[np.float64]],
     ):
         """Initialize the SkyMatchResult class.
 
         :param sky_match: SkyMatch object used to perform the match.
-        :param matching_type: Type of matching performed.
-        :param nearest_neighbours: Array of indices of the nearest neighbours.
+        :param nearest_neighbours_indices: Array of indices of the nearest neighbours.
+        :param nearest_neighbours_distances: Array of distances to the nearest
+            neighbours.
         """
         self.sky_match = sky_match
-        self.matching_type = matching_type
         self.nearest_neighbours_indices = nearest_neighbours_indices
         self.nearest_neighbours_distances = nearest_neighbours_distances
 
@@ -277,18 +266,10 @@ class SkyMatchResult:
             self.nearest_neighbours_indices.shape
             == self.nearest_neighbours_distances.shape
         )
-
-        if self.matching_type == MatchingType.DISTANCE:
-            assert self.nearest_neighbours_indices.shape[0] == len(
-                self.sky_match.query_ra
-            )
+        assert self.nearest_neighbours_indices.shape[0] == len(self.sky_match.query_ra)
 
     def full_mask(self) -> Mask:
         """Return a mask with all the elements set to True."""
-
-        if self.matching_type == MatchingType.ID:
-            raise ValueError("Full mask is not available for ID matching.")
-
         return Mask(
             np.ones_like(self.nearest_neighbours_distances, dtype=bool),
         )
@@ -302,9 +283,6 @@ class SkyMatchResult:
 
         :param max_distance: Maximum distance to consider a match.
         """
-        if self.matching_type == MatchingType.ID:
-            raise ValueError("Filtering by distance is not available for ID matching.")
-
         if mask is None:
             mask = self.full_mask()
         return mask & Mask(self.nearest_neighbours_distances < max_distance)
@@ -322,11 +300,6 @@ class SkyMatchResult:
 
         :param delta_z: Maximum delta_z to consider a match.
         """
-        if self.matching_type == MatchingType.ID:
-            raise ValueError(
-                "Filtering by redshift proximity is not available for ID matching."
-            )
-
         if query_sigma_z_column is not None and (
             query_sigma_z_column not in self.sky_match.query_data.columns
         ):
@@ -339,6 +312,7 @@ class SkyMatchResult:
 
         if mask is None:
             mask = self.full_mask()
+
         if query_sigma_z_column is None:
             query_delta_z = n_sigma * sigma_z * (1.0 + self.sky_match.query_z)
         else:
@@ -367,7 +341,7 @@ class SkyMatchResult:
 
         return mask & Mask(z_mask_array)
 
-    def _select_best_distance(
+    def select_best(
         self,
         selection_criteria: SelectionCriteria = SelectionCriteria.DISTANCES,
         more_massive_column: str | None = None,
@@ -430,92 +404,6 @@ class SkyMatchResult:
             indices=np.array(best_candidates_indices, dtype=np.int64),
         )
 
-    def _select_best_id(
-        self,
-    ) -> BestCandidates:
-
-        matched_query = np.repeat(
-            self.sky_match.query_id, [len(i) for i in self.nearest_neighbours_indices]
-        )
-        matched_match = np.concatenate(self.nearest_neighbours_indices)
-        coefficients = np.concatenate(self.nearest_neighbours_distances)
-
-        matches = Table(
-            [matched_query, matched_match, coefficients],
-            names=("query_id", "match_id", "linking_coeff"),
-        )
-
-        matches = matches[
-            matches["match_id"] is not None
-        ]  # Remove the unmatched objects (with match_id = None)
-
-        G = nx.Graph()
-        for query_id, match_id, coeff in matches:
-            G.add_edge(("query_id", query_id), ("match_id", match_id), weight=coeff)
-
-        random.seed(42)
-        total_weight = 0.0
-        global_matching = set()
-
-        for i, nodes in enumerate(nx.connected_components(G)):
-
-            subG = G.subgraph(nodes)
-            m = nx.max_weight_matching(subG, maxcardinality=False)
-            w = sum(subG[u][v]["weight"] for u, v in m)
-
-            total_weight += w
-            global_matching |= m
-
-        rows = []
-        for u, v in global_matching:
-
-            if u[0] == "query_id":
-                node1, node2 = u, v
-            else:
-                node1, node2 = v, u
-
-            rows.append(
-                {
-                    "query_id": node1[1],
-                    "match_id": node2[1],
-                    "linking_coeff": G[node1][node2]["weight"],
-                }
-            )
-
-        best = Table(rows)
-
-        query = Table()
-        query["query_id"] = self.sky_match.query_id
-
-        best = join(query, best, keys="query_id", join_type="left")
-
-        query_filter = ~best["match_id"].mask
-
-        to_index = {mid: i for i, mid in enumerate(self.sky_match.match_id)}
-
-        best_candidates_indices = [to_index[m] for m in best["match_id"][query_filter]]
-
-        return BestCandidates(
-            query_filter=query_filter,
-            indices=np.array(best_candidates_indices, dtype=np.int64),
-        )
-
-    def select_best(
-        self,
-        selection_criteria: SelectionCriteria | None = None,
-        more_massive_column: str | None = None,
-        mask: Mask | None = None,
-    ) -> BestCandidates:
-        """Select the best matched objects."""
-        if self.matching_type == MatchingType.ID:
-            return self._select_best_id()
-
-        if self.matching_type == MatchingType.DISTANCE:
-            assert selection_criteria is not None
-            return self._select_best_distance(
-                selection_criteria, more_massive_column, mask
-            )
-
     def _get_by_indices(
         self,
         x: npt.NDArray,
@@ -523,34 +411,8 @@ class SkyMatchResult:
         mask: Mask,
     ) -> list[npt.NDArray]:
         assert len(x.shape) == 1
-
-        if self.matching_type == MatchingType.DISTANCE:
-            assert mask.shape == indices.shape
-
-            return [x[i[m]] for i, m in zip(indices, mask.array)]
-
-        if self.matching_type == MatchingType.ID:
-
-            index_map = {mid: i for i, mid in enumerate(self.sky_match.match_id)}
-
-            index = []
-            new_mask = []
-
-            for ind, obj_mask in zip(indices, mask):
-
-                mask_i = [
-                    (index_map[i], m) for i, m in zip(ind, obj_mask) if i is not None
-                ]
-
-                if mask_i:
-                    idx, m_i = zip(*mask_i)
-                    index.append(np.array(idx))
-                    new_mask.append(np.array(m_i))
-                else:
-                    index.append(np.array([], dtype=np.int64))
-                    new_mask.append(np.array([], dtype=bool))
-
-            return [x[i[m]] for i, m in zip(index, new_mask)]
+        assert mask.shape == indices.shape
+        return [x[i[m]] for i, m in zip(indices, mask.array)]
 
     def to_table_complete(
         self,
@@ -565,30 +427,19 @@ class SkyMatchResult:
         and the properties of the match catalog for the best matched objects.
         """
         table = Table()
-        table["Index"] = np.arange(len(self.sky_match.query_ra))
+        table["ID"] = np.arange(len(self.sky_match.query_ra))
         table["RA"] = self.sky_match.query_ra
         table["DEC"] = self.sky_match.query_dec
         table["z"] = self.sky_match.query_z
 
-        if mask is None and (self.matching_type == MatchingType.ID):
-            mask = np.array(
-                [
-                    np.array(query_object, dtype=bool)
-                    for query_object in self.nearest_neighbours_distances
-                ],
-                dtype=object,
-            )
-
-        if mask is None and self.matching_type == MatchingType.DISTANCE:
+        if mask is None:
             mask = self.full_mask()
 
         if query_properties is not None:
-            assert isinstance(query_properties, dict)
             for key, value in query_properties.items():
                 table[value] = self.sky_match.query_data[key]
 
         if match_properties is not None:
-            assert isinstance(match_properties, dict)
             for key, value in match_properties.items():
                 table[value] = self._get_by_indices(
                     self.sky_match.match_data[key],
@@ -596,21 +447,14 @@ class SkyMatchResult:
                     mask,
                 )
 
-        table["Index_matched"] = self._get_by_indices(
+        table["ID_matched"] = self._get_by_indices(
             np.arange(len(self.sky_match.match_ra)),
             self.nearest_neighbours_indices,
             mask,
         )
-        if self.matching_type == MatchingType.DISTANCE:
-            table["distances"] = [
-                d[m] for d, m in zip(self.nearest_neighbours_distances, mask.array)
-            ]
-        if self.matching_type == MatchingType.ID:
-            table["linking coefficient"] = [
-                np.array(d)[np.array(m)]
-                for d, m in zip(self.nearest_neighbours_distances, mask)
-            ]
-
+        table["distances"] = [
+            d[m] for d, m in zip(self.nearest_neighbours_distances, mask.array)
+        ]
         table["RA_matched"] = self._get_by_indices(
             self.sky_match.match_ra, self.nearest_neighbours_indices, mask
         )
@@ -635,19 +479,182 @@ class SkyMatchResult:
         assert len(best.query_filter) == len(self.sky_match.query_ra)
         query_filter = best.query_filter
 
-        table["Index"] = np.arange(len(self.sky_match.query_ra))[query_filter]
-        if self.matching_type == MatchingType.ID:
-            table["ID"] = self.sky_match.query_id[query_filter]
+        table["ID"] = np.arange(len(self.sky_match.query_ra))[query_filter]
         table["RA"] = self.sky_match.query_ra[query_filter]
         table["DEC"] = self.sky_match.query_dec[query_filter]
         table["z"] = self.sky_match.query_z[query_filter]
 
-        table["Index_matched"] = best.indices
-        if self.matching_type == MatchingType.ID:
-            table["ID_matched"] = np.array(self.sky_match.match_id[best.indices])
-        table["RA_matched"] = np.array(self.sky_match.match_ra[best.indices])
-        table["DEC_matched"] = np.array(self.sky_match.match_dec[best.indices])
-        table["z_matched"] = np.array(self.sky_match.match_z[best.indices])
+        table["ID_matched"] = best.indices
+        table["RA_matched"] = self.sky_match.match_ra[best.indices]
+        table["DEC_matched"] = self.sky_match.match_dec[best.indices]
+        table["z_matched"] = self.sky_match.match_z[best.indices]
+
+        if query_properties is not None:
+            for key, value in query_properties.items():
+                table[value] = self.sky_match.query_data[key][query_filter]
+
+        if match_properties is not None:
+            for key, value in match_properties.items():
+                table[value] = self.sky_match.match_data[key][best.indices]
+
+        return table
+
+
+class SkyMatchIDResult:
+    """Result of a membership based sky match (:meth:`SkyMatch.match_ID`).
+
+    Unlike :class:`SkyMatchResult`, the candidate lists are ragged: each query
+    object may share members with an arbitrary number of match objects (possibly
+    none). For every query row we therefore store a variable length array of the
+    matched object IDs (as they appear in the match catalog) and the corresponding
+    linking coefficients.
+    """
+
+    def __init__(
+        self,
+        sky_match: SkyMatch,
+        candidate_ids: npt.NDArray[np.object_],
+        candidate_coefficients: npt.NDArray[np.object_],
+    ):
+        """Initialize the SkyMatchIDResult class.
+
+        :param sky_match: SkyMatch object used to perform the match.
+        :param candidate_ids: Object array, one entry per query row, each holding the
+            match-catalog object IDs sharing members with that query object.
+        :param candidate_coefficients: Object array, one entry per query row, each
+            holding the linking coefficients aligned with ``candidate_ids``.
+        """
+        self.sky_match = sky_match
+        self.candidate_ids = candidate_ids
+        self.candidate_coefficients = candidate_coefficients
+
+        assert candidate_ids.shape == candidate_coefficients.shape
+        assert candidate_ids.shape[0] == len(self.sky_match.query_ra)
+
+    def _match_id_to_row(self) -> dict[int, int]:
+        """Map match-catalog object IDs to their row index in the match catalog."""
+        return {mid: i for i, mid in enumerate(self.sky_match.match_id)}
+
+    def select_best(self) -> BestCandidates:
+        """Resolve a one-to-one matching maximizing the total linking coefficient.
+
+        The candidate graph (query objects on one side, match objects on the other,
+        edges weighted by the linking coefficient) is solved with a maximum weight
+        matching. The returned :class:`BestCandidates` holds, for every query object
+        that keeps a match, the row index of its match in the match catalog.
+        """
+        match_id_to_row = self._match_id_to_row()
+
+        graph = nx.Graph()
+        for query_row, (ids, coeffs) in enumerate(
+            zip(self.candidate_ids, self.candidate_coefficients)
+        ):
+            for match_id, coeff in zip(ids, coeffs):
+                graph.add_edge(
+                    ("query", query_row),
+                    ("match", match_id_to_row[match_id]),
+                    weight=float(coeff),
+                )
+
+        matching = nx.max_weight_matching(graph, maxcardinality=False)
+
+        query_to_match_row: dict[int, int] = {}
+        for node_a, node_b in matching:
+            query_node, match_node = (
+                (node_a, node_b) if node_a[0] == "query" else (node_b, node_a)
+            )
+            query_to_match_row[query_node[1]] = match_node[1]
+
+        n_query = len(self.sky_match.query_ra)
+        query_filter = np.zeros(n_query, dtype=bool)
+        indices = []
+        for query_row in sorted(query_to_match_row):
+            query_filter[query_row] = True
+            indices.append(query_to_match_row[query_row])
+
+        return BestCandidates(
+            query_filter=query_filter,
+            indices=np.array(indices, dtype=np.int64),
+        )
+
+    def _coefficient_for(self, query_row: int, match_id) -> float:
+        """Return the linking coefficient stored for a given query/match pair."""
+        ids = list(self.candidate_ids[query_row])
+        return float(self.candidate_coefficients[query_row][ids.index(match_id)])
+
+    def to_table_complete(
+        self,
+        *,
+        query_properties: dict[str, str] | None = None,
+        match_properties: dict[str, str] | None = None,
+    ) -> Table:
+        """Convert the match result to a complete table.
+
+        The table has one row per query object, with the full (ragged) list of
+        candidate matches and their linking coefficients.
+        """
+        match_id_to_row = self._match_id_to_row()
+        candidate_rows = [
+            np.array([match_id_to_row[mid] for mid in ids], dtype=np.int64)
+            for ids in self.candidate_ids
+        ]
+
+        table = Table()
+        table["query_id"] = np.asarray(self.sky_match.query_id)
+        table["RA"] = self.sky_match.query_ra
+        table["DEC"] = self.sky_match.query_dec
+        table["z"] = self.sky_match.query_z
+
+        if query_properties is not None:
+            for key, value in query_properties.items():
+                table[value] = self.sky_match.query_data[key]
+
+        table["match_id"] = [np.asarray(ids) for ids in self.candidate_ids]
+        table["linking_coefficient"] = [
+            np.asarray(coeffs, dtype=float) for coeffs in self.candidate_coefficients
+        ]
+
+        match_ra = np.asarray(self.sky_match.match_ra)
+        match_dec = np.asarray(self.sky_match.match_dec)
+        match_z = np.asarray(self.sky_match.match_z)
+        table["RA_matched"] = [match_ra[rows] for rows in candidate_rows]
+        table["DEC_matched"] = [match_dec[rows] for rows in candidate_rows]
+        table["z_matched"] = [match_z[rows] for rows in candidate_rows]
+
+        if match_properties is not None:
+            for key, value in match_properties.items():
+                column = np.asarray(self.sky_match.match_data[key])
+                table[value] = [column[rows] for rows in candidate_rows]
+
+        return table
+
+    def to_table_best(
+        self,
+        best: BestCandidates,
+        *,
+        query_properties: dict[str, str] | None = None,
+        match_properties: dict[str, str] | None = None,
+    ) -> Table:
+        """Convert the match result to a table with only the best matched objects."""
+        table = Table()
+
+        assert len(best.query_filter) == len(self.sky_match.query_ra)
+        query_filter = best.query_filter
+
+        table["query_id"] = np.asarray(self.sky_match.query_id)[query_filter]
+        table["RA"] = np.asarray(self.sky_match.query_ra)[query_filter]
+        table["DEC"] = np.asarray(self.sky_match.query_dec)[query_filter]
+        table["z"] = np.asarray(self.sky_match.query_z)[query_filter]
+
+        match_id = np.asarray(self.sky_match.match_id)
+        table["match_id"] = match_id[best.indices]
+        table["linking_coefficient"] = [
+            self._coefficient_for(query_row, match_id[match_row])
+            for query_row, match_row in best.query_match_dict.items()
+        ]
+        table["RA_matched"] = np.asarray(self.sky_match.match_ra)[best.indices]
+        table["DEC_matched"] = np.asarray(self.sky_match.match_dec)[best.indices]
+        table["z_matched"] = np.asarray(self.sky_match.match_z)[best.indices]
 
         if query_properties is not None:
             for key, value in query_properties.items():
@@ -679,28 +686,29 @@ class SkyMatch:
         self.match_data = match_data
         self.query_member_data = query_member_data
         self.match_member_data = match_member_data
-        # if query_ids or match_id is not None:
-        #     _check_ID(self.query_data, query_ids)
-        #     _check_ID(self.match_data, match_ids)
-        if query_member_data is not None and match_member_data is not None:
-            _check_ID(self.query_member_data, query_ids)
-            _check_ID(self.match_member_data, match_ids)
         self.query_ids = query_ids
         self.match_ids = match_ids
+
         _check_coordinates(self.query_data, query_coordinates)
         _check_coordinates(self.match_data, match_coordinates)
         self.query_coordinates = query_coordinates
         self.match_coordinates = match_coordinates
 
         if query_member_data is not None and match_member_data is not None:
-            if len(np.unique(self.query_member_data[self.query_ids["ID"]])) != len(
-                self.query_data[self.query_ids["ID"]]
-            ) and (
-                len(np.unique(self.match_member_data[self.match_ids["ID"]]))
-                != len(self.match_data[self.match_ids["ID"]])
-            ):
+            _check_ID(query_member_data, query_ids)
+            _check_ID(match_member_data, match_ids)
+            assert query_ids is not None and match_ids is not None
+
+            query_consistent = len(
+                np.unique(query_member_data[query_ids["ID"]])
+            ) == len(np.unique(self.query_data[query_ids["ID"]]))
+            match_consistent = len(
+                np.unique(match_member_data[match_ids["ID"]])
+            ) == len(np.unique(self.match_data[match_ids["ID"]]))
+            if not (query_consistent and match_consistent):
                 raise ValueError(
-                    "The number of unique 'ID' in object and member catalogs must be the same."
+                    "The number of unique 'ID' in object and member "
+                    "catalogs must be the same."
                 )
 
     @classmethod
@@ -735,12 +743,15 @@ class SkyMatch:
             self.query_ids,
         )
 
-    def ra_dec_to_theta_phi(self, ra, dec):
+    @staticmethod
+    def ra_dec_to_theta_phi(
+        ra: npt.ArrayLike, dec: npt.ArrayLike
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Convert RA and DEC to theta and phi.
 
-        :param float ra: right ascension angle in degrees.
-        :param float dec: declination angle in degrees.
-        :return: float theta: theta in radians, float phi: phi in radians
+        :param ra: right ascension angle in degrees.
+        :param dec: declination angle in degrees.
+        :return: theta in radians, phi in radians.
         """
         ra_rad = np.radians(ra)
         dec_rad = np.radians(dec)
@@ -750,7 +761,8 @@ class SkyMatch:
 
         return theta, phi
 
-    def object_count(self, id_column: np.ndarray) -> Table:
+    @staticmethod
+    def object_count(id_column: npt.ArrayLike) -> Table:
         """Return the number of occurrences for each unique object ID.
 
         :param id_column: The array or column containing the object IDs to be counted.
@@ -758,60 +770,63 @@ class SkyMatch:
         - ``id``: The unique object IDs found in the input.
         - ``nmem``: The count of occurrences for each ID.
         """
-
         ids, counts = np.unique(id_column, return_counts=True)
 
         return Table({"id": ids, "nmem": counts})
 
     @property
-    def query_ra(self) -> np.ndarray:
+    def query_ra(self) -> Column:
         """Return the RA coordinates of the query catalog."""
         return self.query_data[self.query_coordinates["RA"]]
 
     @property
-    def query_dec(self) -> np.ndarray:
+    def query_dec(self) -> Column:
         """Return the DEC coordinates of the query catalog."""
         return self.query_data[self.query_coordinates["DEC"]]
 
     @property
-    def query_z(self) -> np.ndarray:
+    def query_z(self) -> Column:
         """Return the z coordinates of the query catalog."""
         return self.query_data[self.query_coordinates["z"]]
 
     @property
-    def match_ra(self) -> np.ndarray:
+    def match_ra(self) -> Column:
         """Return the RA coordinates of the match catalog."""
         return self.match_data[self.match_coordinates["RA"]]
 
     @property
-    def match_dec(self) -> np.ndarray:
+    def match_dec(self) -> Column:
         """Return the DEC coordinates of the match catalog."""
         return self.match_data[self.match_coordinates["DEC"]]
 
     @property
-    def match_z(self) -> np.ndarray:
+    def match_z(self) -> Column:
         """Return the z coordinates of the match catalog."""
         return self.match_data[self.match_coordinates["z"]]
 
     @property
-    def match_id(self) -> np.ndarray:
-        """Return the ID coordinates of the match catalog."""
+    def match_id(self) -> Column:
+        """Return the ID column of the match catalog."""
+        assert self.match_ids is not None
         return self.match_data[self.match_ids["ID"]]
 
     @property
-    def query_id(self) -> np.ndarray:
-        """Return the ID coordinates of the query catalog."""
+    def query_id(self) -> Column:
+        """Return the ID column of the query catalog."""
+        assert self.query_ids is not None
         return self.query_data[self.query_ids["ID"]]
 
     @property
-    def query_pmem(self) -> np.ndarray:
-        """Return the PMEM values of the query catalog."""
-        return self.query_data[self.query_ids["PMEM"]]
+    def query_pmem(self) -> Column:
+        """Return the pmem values of the query catalog."""
+        assert self.query_ids is not None
+        return self.query_data[self.query_ids["pmem"]]
 
     @property
-    def match_pmem(self) -> np.ndarray:
-        """Return the PMEM values of the match catalog."""
-        return self.match_data[self.match_ids["PMEM"]]
+    def match_pmem(self) -> Column:
+        """Return the pmem values of the match catalog."""
+        assert self.match_ids is not None
+        return self.match_data[self.match_ids["pmem"]]
 
     def match_3d(self, cosmo: Nc.HICosmo, n_nearest_neighbours: int) -> SkyMatchResult:
         """Match objects in the sky.
@@ -844,8 +859,6 @@ class SkyMatch:
         dist.prepare(cosmo)
         RH_Mpc = cosmo.RH_Mpc()
 
-        # match_r = dist.angular_diameter_luminosity(cosmo, npa_to_seq(match_z))
-        # query_r = dist.angular_diameter_luminosity(cosmo, npa_to_seq(query_z))
         # Decide which distance is most appropriate to 3d matching
         match_r = dist.angular_diameter_array(cosmo, match_z)
         query_r = dist.angular_diameter_array(cosmo, query_z)
@@ -859,7 +872,7 @@ class SkyMatch:
         distances = (np.sqrt(distances_list) * RH_Mpc).reshape(-1, n_nearest_neighbours)
         indices = np.array(indices_list, dtype=int).reshape(-1, n_nearest_neighbours)
 
-        return SkyMatchResult(self, MatchingType.DISTANCE, indices, distances)
+        return SkyMatchResult(self, indices, distances)
 
     def match_2d(
         self,
@@ -959,21 +972,29 @@ class SkyMatch:
             case _ as unreachable:  # pragma: no cover
                 assert_never(unreachable)
 
-        return SkyMatchResult(self, MatchingType.DISTANCE, indices, distances)
+        return SkyMatchResult(self, indices, distances)
 
     def match_ID(
         self,
-        use_shared_fraction: bool | None = False,
+        use_shared_fraction: bool = False,
         shared_fraction_method: SharedFractionMethod = SharedFractionMethod.NO_PMEM,
-    ) -> SkyMatchResult:
-        """Match objects in the sky.
+    ) -> SkyMatchIDResult:
+        """Match objects in the sky using shared members.
 
-        The function matches objects in the sky using the provided ids.
+        The function matches objects by their members: two objects are candidate
+        matches when they share at least one member. The strength of each candidate
+        match is summarized by a linking coefficient.
 
+        :param use_shared_fraction: If True, compute the linking coefficient from the
+            shared member fractions (see ``shared_fraction_method``); otherwise use the
+            Jaccard index of the member sets.
         :param shared_fraction_method: Method to compute the shared fraction of members.
-        :return: astropy_table: matched: table with all candidates of matched objects,
-        :best_matched: table with the best candidate of matched objects
+        :return: A SkyMatchIDResult object.
         """
+        assert self.query_member_data is not None
+        assert self.match_member_data is not None
+        assert self.query_ids is not None
+        assert self.match_ids is not None
 
         # Preparing the member catalogs for the matching
 
@@ -1054,15 +1075,15 @@ class SkyMatch:
                         "be provided for the query catalog."
                     )
 
-                all_combinations["sum_shared_pmem"] = (
-                    matched_catalog_grouped.groups.aggregate(np.sum)["pmem_query"]
-                )
+                all_combinations["sum_shared_pmem"] = matched_catalog_grouped[
+                    "query_id", "match_id", "pmem_query"
+                ].groups.aggregate(np.sum)["pmem_query"]
 
                 query_group = query_table.group_by(["query_id"])
 
-                total_pmem = query_group.groups.aggregate(np.sum)[
-                    "query_id", "pmem_query"
-                ]
+                total_pmem = query_group["query_id", "pmem_query"].groups.aggregate(
+                    np.sum
+                )
                 total_pmem.rename_column("pmem_query", "sum_total_pmem")
 
                 all_combinations = join(all_combinations, total_pmem, keys="query_id")
@@ -1082,14 +1103,14 @@ class SkyMatch:
                         "be provided for the match catalog."
                     )
 
-                all_combinations["sum_shared_pmem"] = (
-                    matched_catalog_grouped.groups.aggregate(np.sum)["pmem_match"]
-                )
+                all_combinations["sum_shared_pmem"] = matched_catalog_grouped[
+                    "query_id", "match_id", "pmem_match"
+                ].groups.aggregate(np.sum)["pmem_match"]
 
                 match_group = match_table.group_by(["match_id"])
-                total_pmem = match_group.groups.aggregate(np.sum)[
-                    "match_id", "pmem_match"
-                ]
+                total_pmem = match_group["match_id", "pmem_match"].groups.aggregate(
+                    np.sum
+                )
                 total_pmem.rename_column("pmem_match", "sum_total_pmem")
 
                 all_combinations = join(all_combinations, total_pmem, keys="match_id")
@@ -1112,23 +1133,23 @@ class SkyMatch:
                         "be provided for both catalogs."
                     )
 
-                all_combinations["sum_shared_pmem_query"] = (
-                    matched_catalog_grouped.groups.aggregate(np.sum)["pmem_query"]
-                )
-                all_combinations["sum_shared_pmem_match"] = (
-                    matched_catalog_grouped.groups.aggregate(np.sum)["pmem_match"]
-                )
+                all_combinations["sum_shared_pmem_query"] = matched_catalog_grouped[
+                    "query_id", "match_id", "pmem_query"
+                ].groups.aggregate(np.sum)["pmem_query"]
+                all_combinations["sum_shared_pmem_match"] = matched_catalog_grouped[
+                    "query_id", "match_id", "pmem_match"
+                ].groups.aggregate(np.sum)["pmem_match"]
 
                 query_group = query_table.group_by(["query_id"])
-                sum_total_pmem_query = query_group.groups.aggregate(np.sum)[
+                sum_total_pmem_query = query_group[
                     "query_id", "pmem_query"
-                ]
+                ].groups.aggregate(np.sum)
                 sum_total_pmem_query.rename_column("pmem_query", "sum_total_pmem_query")
 
                 match_group = match_table.group_by(["match_id"])
-                sum_total_pmem_match = match_group.groups.aggregate(np.sum)[
+                sum_total_pmem_match = match_group[
                     "match_id", "pmem_match"
-                ]
+                ].groups.aggregate(np.sum)
                 sum_total_pmem_match.rename_column("pmem_match", "sum_total_pmem_match")
 
                 all_combinations = join(
@@ -1153,13 +1174,10 @@ class SkyMatch:
         # Linking coefficient
 
         if use_shared_fraction:
-
             all_combinations["linking_coefficient"] = (
                 fraction_query * (fraction_query + fraction_match) / 2
             )
-
-        if not use_shared_fraction:
-
+        else:
             all_combinations["linking_coefficient"] = all_combinations[
                 "shared_count"
             ] / (
@@ -1168,10 +1186,7 @@ class SkyMatch:
                 - all_combinations["shared_count"]
             )
 
-        else:
-            raise ValueError("use_shared_fraction must be True or False")
-
-        # Structured result
+        # Structured result: gather candidate matches per query object
 
         grouped_comb = all_combinations.group_by("query_id")
 
@@ -1183,14 +1198,11 @@ class SkyMatch:
                 list(group["linking_coefficient"]),
             )
 
-        match_list, coeff_list = zip(
-            *[
-                comb_dict.get(qid, ([None], [None]))
-                for qid in self.query_data[self.query_ids["ID"]]
-            ]
-        )
+        candidate_ids = np.empty(len(self.query_data), dtype=object)
+        candidate_coefficients = np.empty(len(self.query_data), dtype=object)
+        for i, qid in enumerate(self.query_data[self.query_ids["ID"]]):
+            ids, coeffs = comb_dict.get(qid, ([], []))
+            candidate_ids[i] = np.array(ids)
+            candidate_coefficients[i] = np.array(coeffs, dtype=float)
 
-        match_list = np.array(match_list, dtype=object)
-        coeff_list = np.array(coeff_list, dtype=object)
-
-        return SkyMatchResult(self, MatchingType.ID, match_list, coeff_list)
+        return SkyMatchIDResult(self, candidate_ids, candidate_coefficients)
