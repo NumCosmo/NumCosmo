@@ -41,6 +41,7 @@ from astropy.io import fits
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.sky_match import (
     SkyMatch,
+    SkyMatchResult,
     DistanceMethod,
     Mask,
     SelectionCriteria,
@@ -1471,3 +1472,90 @@ def test_match_id_select_best_contested(setup_id_match_contested):
     assert list(best.query_filter) == [True, False]
     matched_ids = sky_match.match_id[best.indices]
     assert list(matched_ids) == [100]
+
+
+# ---------------------------------------------------------------------------
+# Global distance-assignment matching (select_best_assignment)
+# ---------------------------------------------------------------------------
+#
+# These build a SkyMatchResult directly from synthetic neighbour index/distance
+# arrays so the assignment logic is exercised deterministically, independent of
+# the cosmology and the kNN search.
+
+
+def _make_distance_result(indices, distances, n_match=None):
+    """Build a SkyMatchResult from explicit (n_query, k) index/distance arrays."""
+    indices = np.array(indices, dtype=np.int64)
+    distances = np.array(distances, dtype=np.float64)
+    n_query = indices.shape[0]
+    if n_match is None:
+        n_match = int(indices.max()) + 1
+
+    def _coords(n):
+        return Table(
+            {
+                "RA": [float(i) for i in range(n)],
+                "DEC": [-float(i) for i in range(n)],
+                "z": [0.5] * n,
+            }
+        )
+
+    coords = {"RA": "RA", "DEC": "DEC", "z": "z"}
+    sky_match = SkyMatch(_coords(n_query), coords, _coords(n_match), coords)
+    return SkyMatchResult(sky_match, indices, distances)
+
+
+def test_assignment_resolves_collision():
+    """Global assignment reassigns to reach a lower total than greedy collisions."""
+    # q0: rows [0, 1] d [1.0, 3.0]; q1: rows [0, 2] d [1.5, 4.0]
+    result = _make_distance_result([[0, 1], [0, 2]], [[1.0, 3.0], [1.5, 4.0]])
+
+    # Greedy double-books match row 0 (both queries' nearest).
+    greedy = result.select_best(selection_criteria=SelectionCriteria.DISTANCES)
+    assert greedy.query_match_dict == {0: 0, 1: 0}
+
+    # Assignment minimizes the total distance: q0->1 (3.0) + q1->0 (1.5) = 4.5,
+    # which beats the greedy-consistent q0->0 (1.0) + q1->2 (4.0) = 5.0.
+    best = result.select_best_assignment()
+    assert best.query_match_dict == {0: 1, 1: 0}
+    # One-to-one: no match row used twice.
+    assert len(set(best.indices)) == len(best.indices)
+
+
+def test_assignment_matches_greedy_when_disjoint():
+    """With no contended match, assignment equals the greedy nearest choice."""
+    result = _make_distance_result([[0, 1], [2, 3]], [[1.0, 5.0], [2.0, 6.0]])
+
+    greedy = result.select_best(selection_criteria=SelectionCriteria.DISTANCES)
+    best = result.select_best_assignment()
+    assert best.query_match_dict == greedy.query_match_dict == {0: 0, 1: 2}
+
+
+def test_assignment_respects_mask():
+    """Masked-out candidates are not eligible for the assignment."""
+    result = _make_distance_result([[0, 1], [0, 2]], [[1.0, 3.0], [1.5, 4.0]])
+
+    # Forbid q0's second candidate (row 1); q0 can then only take row 0, forcing
+    # q1 onto row 2 to keep both matched.
+    mask = Mask(np.array([[True, False], [True, True]]))
+    best = result.select_best_assignment(mask=mask)
+    assert best.query_match_dict == {0: 0, 1: 2}
+
+
+def test_assignment_one_to_one_drops_losers():
+    """When several queries can only reach one match, only the closest is kept."""
+    result = _make_distance_result([[0], [0], [0]], [[1.0], [2.0], [3.0]], n_match=1)
+
+    best = result.select_best_assignment()
+    assert list(best.query_filter) == [True, False, False]
+    assert list(best.indices) == [0]
+
+
+def test_assignment_empty_mask_yields_no_matches():
+    """An all-False mask produces an empty assignment."""
+    result = _make_distance_result([[0, 1], [0, 2]], [[1.0, 3.0], [1.5, 4.0]])
+
+    mask = Mask(np.zeros((2, 2), dtype=bool))
+    best = result.select_best_assignment(mask=mask)
+    assert not best.query_filter.any()
+    assert len(best.indices) == 0

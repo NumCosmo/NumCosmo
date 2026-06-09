@@ -237,6 +237,38 @@ def _load_fits_data(catalog: Path) -> Table:
     return Table.read(catalog.as_posix(), format="fits")
 
 
+def _best_candidates_from_matching(
+    matching: set[tuple], n_query: int
+) -> BestCandidates:
+    """Build a :class:`BestCandidates` from a bipartite query/match matching.
+
+    The matching is a set of unordered edges, each connecting a ``("query", row)``
+    node to a ``("match", row)`` node. The resulting candidates are ordered by
+    ascending query row, as expected by :attr:`BestCandidates.query_indices`.
+
+    :param matching: Set of matched ``(node, node)`` pairs.
+    :param n_query: Total number of query objects.
+    :return: A BestCandidates with one match row per matched query.
+    """
+    query_to_match_row: dict[int, int] = {}
+    for node_a, node_b in matching:
+        query_node, match_node = (
+            (node_a, node_b) if node_a[0] == "query" else (node_b, node_a)
+        )
+        query_to_match_row[query_node[1]] = match_node[1]
+
+    query_filter = np.zeros(n_query, dtype=bool)
+    indices = []
+    for query_row in sorted(query_to_match_row):
+        query_filter[query_row] = True
+        indices.append(query_to_match_row[query_row])
+
+    return BestCandidates(
+        query_filter=query_filter,
+        indices=np.array(indices, dtype=np.int64),
+    )
+
+
 class SkyMatchResult:
     """Result of a distance based sky match (:meth:`SkyMatch.match_2d` / ``match_3d``).
 
@@ -404,6 +436,51 @@ class SkyMatchResult:
             indices=np.array(best_candidates_indices, dtype=np.int64),
         )
 
+    def select_best_assignment(self, mask: Mask | None = None) -> BestCandidates:
+        """Select best matches by global distance assignment (one-to-one).
+
+        Unlike :meth:`select_best`, which lets every query independently grab its
+        nearest candidate (so two queries may claim the same match), this resolves a
+        one-to-one assignment that minimizes the total matched distance. The candidate
+        graph (queries on one side, matches on the other, edges weighted by distance)
+        is sparse and breaks into small connected components, so it is solved with a
+        per-component minimum-weight matching. Use the ``mask`` (e.g. from
+        :meth:`filter_mask_by_distance`) to bound which candidates are eligible.
+
+        :param mask: Mask of eligible candidates; defaults to all candidates.
+        :return: A BestCandidates holding, for each matched query, its assigned match
+            row in the match catalog.
+        """
+        if mask is None:
+            mask = self.full_mask()
+        assert mask.shape == self.nearest_neighbours_distances.shape
+
+        graph = nx.Graph()
+        for query_row, (match_rows, distances, active) in enumerate(
+            zip(
+                self.nearest_neighbours_indices,
+                self.nearest_neighbours_distances,
+                mask.array,
+            )
+        ):
+            for match_row, distance, is_active in zip(match_rows, distances, active):
+                if is_active:
+                    graph.add_edge(
+                        ("query", query_row),
+                        ("match", int(match_row)),
+                        weight=float(distance),
+                    )
+
+        # The candidate graph is very sparse, so it splits into many tiny connected
+        # components; matching each one separately avoids the global O(V^3) cost of
+        # the blossom algorithm. Min-weight matching decomposes exactly over
+        # components, so the result is the global minimum-distance assignment.
+        matching: set[tuple] = set()
+        for component in nx.connected_components(graph):
+            matching |= nx.min_weight_matching(graph.subgraph(component))
+
+        return _best_candidates_from_matching(matching, len(self.sky_match.query_ra))
+
     def _get_by_indices(
         self,
         x: npt.NDArray,
@@ -566,24 +643,7 @@ class SkyMatchIDResult:
                 graph.subgraph(component), maxcardinality=False
             )
 
-        query_to_match_row: dict[int, int] = {}
-        for node_a, node_b in matching:
-            query_node, match_node = (
-                (node_a, node_b) if node_a[0] == "query" else (node_b, node_a)
-            )
-            query_to_match_row[query_node[1]] = match_node[1]
-
-        n_query = len(self.sky_match.query_ra)
-        query_filter = np.zeros(n_query, dtype=bool)
-        indices = []
-        for query_row in sorted(query_to_match_row):
-            query_filter[query_row] = True
-            indices.append(query_to_match_row[query_row])
-
-        return BestCandidates(
-            query_filter=query_filter,
-            indices=np.array(indices, dtype=np.int64),
-        )
+        return _best_candidates_from_matching(matching, len(self.sky_match.query_ra))
 
     def _coefficient_for(self, query_row: int, match_id) -> float:
         """Return the linking coefficient stored for a given query/match pair."""
