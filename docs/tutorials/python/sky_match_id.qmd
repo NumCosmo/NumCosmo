@@ -1,0 +1,303 @@
+---
+title: "Matching by Shared Membership"
+format: html
+---
+
+{{< include /_functions.qmd >}}
+
+## Purpose {#sec-purpose}
+
+The companion tutorial [Matching Observations to Simulations](sky_match.qmd) matches
+objects by their **positions** on the sky. NumCosmo's `sky_match` module also supports a
+complementary strategy: matching objects by their **shared members**.
+
+Many catalogs describe extended objects (galaxy clusters, halos) as collections of member
+galaxies. When two catalogs are built from the same underlying galaxies, two objects can
+be associated by how many members they have in common, regardless of their catalog
+positions. This is what the `match_ID` method does: it links a *query* object to a *match*
+object whenever they share member galaxies, and scores each candidate link with a
+**linking coefficient**.
+
+In this tutorial we build a pair of mock catalogs of halos and detected clusters, each
+described by a member catalog, and use `match_ID` to associate them.
+
+## Member Catalogs {#sec-mock}
+
+Membership matching needs two pieces of information per catalog:
+
+- an **object catalog**, with one row per object and a unique object ID, and
+- a **member catalog**, with one row per member, mapping each member (e.g. a galaxy)
+  to the object it belongs to and, optionally, a probability of membership `pmem`.
+
+We generate `35` matched halo/cluster pairs plus a handful of unmatched *field* objects in
+each catalog. Each object has `10` members; a matched halo and its cluster share `7` of
+them, so the expected Jaccard overlap is $7 / (10 + 10 - 7) \approx 0.54$. Member galaxies
+carry a random `pmem` to illustrate the probability-weighted methods later on. Object
+positions are generated too — matched pairs sit close together — but note that **positions
+are not used by `match_ID`**; they only help visualize the result.
+
+```{python}
+import numpy as np
+import pandas as pd
+from astropy.table import Table
+from IPython.display import HTML
+
+from numcosmo_py import Ncm
+from numcosmo_py.sky_match import (
+    SkyMatch,
+    Coordinates,
+    IDs,
+    SharedFractionMethod,
+)
+
+Ncm.cfg_init()
+rng = np.random.default_rng(123)
+
+N_MATCHED, N_FIELD = 35, 5
+N_MEM, N_SHARED = 10, 7
+RA_MIN, RA_MAX = -10.0, 10.0
+DEC_MIN, DEC_MAX = -10.0, 10.0
+Z_MIN, Z_MAX = 0.2, 0.5
+
+
+def random_position():
+    return (
+        rng.uniform(RA_MIN, RA_MAX),
+        rng.uniform(DEC_MIN, DEC_MAX),
+        rng.uniform(Z_MIN, Z_MAX),
+    )
+
+
+galaxy_id = 0
+halo_members, cluster_members = [], []
+halo_objects, cluster_objects = [], []
+
+# Matched pairs: the cluster shares N_SHARED of the halo's galaxies.
+for i in range(N_MATCHED):
+    halo_gals = list(range(galaxy_id, galaxy_id + N_MEM))
+    galaxy_id += N_MEM
+    shared = halo_gals[:N_SHARED]
+    new_gals = list(range(galaxy_id, galaxy_id + (N_MEM - N_SHARED)))
+    galaxy_id += N_MEM - N_SHARED
+    cluster_gals = shared + new_gals
+
+    for g in halo_gals:
+        halo_members.append((i, g, rng.uniform(0.6, 1.0)))
+    for g in cluster_gals:
+        cluster_members.append((1000 + i, g, rng.uniform(0.6, 1.0)))
+
+    ra, dec, z = random_position()
+    halo_objects.append((i, ra, dec, z))
+    cluster_objects.append((1000 + i, ra + rng.normal(0, 0.2), dec + rng.normal(0, 0.2), z))
+
+# Field objects: members that are not shared with the other catalog.
+for i in range(N_FIELD):
+    for g in range(galaxy_id, galaxy_id + N_MEM):
+        halo_members.append((500 + i, g, rng.uniform(0.6, 1.0)))
+    galaxy_id += N_MEM
+    halo_objects.append((500 + i, *random_position()))
+for i in range(N_FIELD):
+    for g in range(galaxy_id, galaxy_id + N_MEM):
+        cluster_members.append((2000 + i, g, rng.uniform(0.6, 1.0)))
+    galaxy_id += N_MEM
+    cluster_objects.append((2000 + i, *random_position()))
+
+halo_data = Table(rows=halo_objects, names=["halo_id", "RA", "DEC", "z"])
+cluster_data = Table(rows=cluster_objects, names=["cluster_id", "RA", "DEC", "z"])
+halo_member_data = Table(rows=halo_members, names=["halo_id", "galaxy_id", "pmem"])
+cluster_member_data = Table(rows=cluster_members, names=["cluster_id", "galaxy_id", "pmem"])
+```
+
+The object and member catalogs for the halos look like this (clusters are analogous):
+
+```{python}
+# | label: tbl-id-catalogs
+# | tbl-cap: The halo object catalog (left) and the first rows of its member catalog (right).
+# | tbl-cap-location: margin
+# | tbl-width: 100%
+# | code-fold: true
+
+
+def show_pandas(df: pd.DataFrame):
+    return HTML(df.to_html(float_format="%.2f", max_rows=10))
+
+
+show_pandas(halo_data.to_pandas())
+```
+
+```{python}
+# | label: tbl-id-members
+# | tbl-cap: The first rows of the halo member catalog.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
+# | code-fold: true
+
+show_pandas(halo_member_data.to_pandas())
+```
+
+## Building the SkyMatch {#sec-build}
+
+The `SkyMatch` object now receives, in addition to the object catalogs and their
+`Coordinates`, the **member catalogs** and an `IDs` map that names the object-ID,
+member-ID, and (optional) `pmem` columns in each member catalog.
+
+```{python}
+halo_coords = Coordinates(RA="RA", DEC="DEC", z="z")
+cluster_coords = Coordinates(RA="RA", DEC="DEC", z="z")
+
+halo_ids = IDs(ID="halo_id", MemberID="galaxy_id", pmem="pmem")
+cluster_ids = IDs(ID="cluster_id", MemberID="galaxy_id", pmem="pmem")
+
+sm = SkyMatch(
+    query_data=halo_data,
+    query_coordinates=halo_coords,
+    query_member_data=halo_member_data,
+    query_ids=halo_ids,
+    match_data=cluster_data,
+    match_coordinates=cluster_coords,
+    match_member_data=cluster_member_data,
+    match_ids=cluster_ids,
+)
+```
+
+## Membership Matching {#sec-match}
+
+The `match_ID` method joins the two member catalogs on the shared member IDs and groups
+the result by query/match object pairs. By default the linking coefficient is the
+**Jaccard index** of the two member sets,
+
+$$
+J = \frac{|M_\text{query} \cap M_\text{match}|}{|M_\text{query} \cup M_\text{match}|},
+$$
+
+so for our matched pairs $J = 7 / 13 \approx 0.54$.
+
+```{python}
+result = sm.match_ID()
+```
+
+The result is a `SkyMatchIDResult`. Unlike the distance-based `SkyMatchResult`, the
+candidate lists are ragged: each query object may share members with any number of match
+objects (or none). The `to_table_complete` method lays out every candidate per query, with
+its linking coefficient:
+
+```{python}
+# | label: tbl-id-complete
+# | tbl-cap: All candidate matches per halo with their linking (Jaccard) coefficients.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
+# | code-fold: true
+
+
+def stringify_candidate_columns(table):
+    for col in ["match_id", "linking_coefficient", "RA_matched", "DEC_matched", "z_matched"]:
+        table[col] = [np.array2string(np.asarray(v), precision=2) for v in table[col]]
+    return table
+
+
+show_pandas(stringify_candidate_columns(result.to_table_complete()).to_pandas())
+```
+
+The field halos (IDs `500`–`504`) share no members with any cluster, so their candidate
+lists are empty.
+
+## Best Match {#sec-best}
+
+`select_best` resolves a one-to-one matching. It builds the bipartite graph of candidate
+links (weighted by the linking coefficient), splits it into connected components, and runs
+a maximum-weight matching on each, so no cluster is assigned to more than one halo and the
+total linking coefficient is maximized.
+
+```{python}
+best = result.select_best()
+```
+
+The returned `BestCandidates` behaves exactly as in the distance tutorial, and
+`to_table_best` produces one row per matched halo:
+
+```{python}
+# | label: tbl-id-best
+# | tbl-cap: The best (one-to-one) membership matches.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
+# | code-fold: true
+
+show_pandas(result.to_table_best(best).to_pandas())
+```
+
+Only the `35` matched pairs survive; the `5` field halos and `5` field clusters are left
+unmatched. Although `match_ID` never looked at the positions, plotting the matched pairs
+shows that they are indeed spatially coincident:
+
+```{python}
+# | label: fig-id-best
+# | fig-cap: Halos (red) and clusters (blue); black lines connect membership-matched pairs.
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(10, 8))
+ax.scatter(halo_data["RA"], halo_data["DEC"], c="red", label="Halos", alpha=0.7)
+ax.scatter(cluster_data["RA"], cluster_data["DEC"], c="blue", label="Clusters", alpha=0.7)
+
+for halo_i, cluster_i in zip(best.query_indices, best.indices):
+    ax.plot(
+        [halo_data["RA"][halo_i], cluster_data["RA"][cluster_i]],
+        [halo_data["DEC"][halo_i], cluster_data["DEC"][cluster_i]],
+        color="black",
+        alpha=0.5,
+    )
+
+ax.set_xlabel("Right Ascension (RA) [°]")
+ax.set_ylabel("Declination (Dec) [°]")
+ax.legend()
+plt.show()
+```
+
+## Probability-Weighted Membership {#sec-pmem}
+
+The Jaccard index counts members equally. When a probability of membership `pmem` is
+available, `match_ID(use_shared_fraction=True, ...)` weights the shared and total members
+by their `pmem`. The `shared_fraction_method` controls how the shared fraction is formed:
+
+- `NO_PMEM`: shared member counts (no weighting);
+- `QUERY_PMEM`: weight the shared fraction by the query object's `pmem`;
+- `MATCH_PMEM`: weight by the match object's `pmem`;
+- `PMEM`: weight by both.
+
+The table below contrasts the linking coefficient of a single matched pair under each
+method:
+
+```{python}
+# | label: tbl-id-pmem
+# | tbl-cap: Linking coefficient of one matched pair under each shared-fraction method.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
+# | code-fold: true
+
+rows = []
+for method in SharedFractionMethod:
+    weighted = method != SharedFractionMethod.NO_PMEM
+    method_result = sm.match_ID(use_shared_fraction=weighted, shared_fraction_method=method)
+    coeff = float(method_result.candidate_coefficients[0][0])
+    rows.append({"method": str(method), "linking coefficient (halo 0)": coeff})
+
+HTML(pd.DataFrame(rows).to_html(index=False, float_format="%.4f"))
+```
+
+The exact value depends on the random `pmem` weights, but all methods agree on the same
+best matches here, since the membership overlap is unambiguous.
+
+## Summary {#sec-summary}
+
+This tutorial demonstrated NumCosmo's `match_ID`, which associates objects by their
+**shared members** rather than their positions. We built halo and cluster catalogs with
+member galaxies, scored candidate links with the Jaccard index (and its
+probability-weighted variants), and resolved a one-to-one matching with `select_best`.
+
+Membership matching is the natural choice when both catalogs are built from a common set of
+tracer galaxies — for example, comparing a cluster finder's detections to the true halos in
+a simulation. Combined with the position-based [distance matching](sky_match.qmd), the
+`sky_match` module covers both regimes with a common result and table interface.
