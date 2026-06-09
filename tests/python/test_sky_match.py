@@ -1559,3 +1559,144 @@ def test_assignment_empty_mask_yields_no_matches():
     best = result.select_best_assignment(mask=mask)
     assert not best.query_filter.any()
     assert len(best.indices) == 0
+
+
+# ---------------------------------------------------------------------------
+# ID matching: validation, pmem requirements and property pass-through
+# ---------------------------------------------------------------------------
+
+
+def _id_sky_match(*, with_pmem=True, query_member=None, match_member=None):
+    """Build an ID SkyMatch with mass columns and optional pmem member weights."""
+    query_data = Table(
+        {
+            QUERY_ID_COL: [0, 1],
+            "RA_query": [10.0, 20.0],
+            "DEC_query": [-10.0, -20.0],
+            "z_query": [0.5, 0.6],
+            "mass_q": [2.0, 1.0],
+        }
+    )
+    match_data = Table(
+        {
+            MATCH_ID_COL: [100, 101],
+            "RA_match": [10.1, 20.1],
+            "DEC_match": [-10.1, -20.1],
+            "z_match": [0.5, 0.6],
+            "mass_m": [5.0, 4.0],
+        }
+    )
+    if query_member is None:
+        query_member = {
+            QUERY_ID_COL: [0, 0, 0, 1, 1],
+            "MemID": ["a", "b", "c", "d", "e"],
+        }
+        if with_pmem:
+            query_member["pmem"] = [1.0] * 5
+    if match_member is None:
+        match_member = {
+            MATCH_ID_COL: [100, 100, 100, 101, 101, 101],
+            "MemID": ["a", "b", "f", "d", "g", "h"],
+        }
+        if with_pmem:
+            match_member["pmem"] = [1.0] * 6
+    query_ids = {"ID": QUERY_ID_COL, "MemberID": "MemID"}
+    match_ids = {"ID": MATCH_ID_COL, "MemberID": "MemID"}
+    if with_pmem:
+        query_ids["pmem"] = "pmem"
+        match_ids["pmem"] = "pmem"
+    return SkyMatch(
+        query_data=query_data,
+        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
+        query_member_data=Table(query_member),
+        query_ids=query_ids,
+        match_data=match_data,
+        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
+        match_member_data=Table(match_member),
+        match_ids=match_ids,
+    )
+
+
+def _minimal_id_sky_match(*, query_ids):
+    """Build a tiny ID SkyMatch, parametrizing only the (possibly invalid) ID map."""
+    return SkyMatch(
+        query_data=Table({QUERY_ID_COL: [0, 1], "RA": [1.0, 2.0], "DEC": [-1.0, -2.0]}),
+        query_coordinates={"RA": "RA", "DEC": "DEC"},
+        query_member_data=Table({QUERY_ID_COL: [0, 1], "MemID": ["a", "b"]}),
+        query_ids=query_ids,
+        match_data=Table({MATCH_ID_COL: [9], "RA": [1.0], "DEC": [-1.0]}),
+        match_coordinates={"RA": "RA", "DEC": "DEC"},
+        match_member_data=Table({MATCH_ID_COL: [9], "MemID": ["a"]}),
+        match_ids={"ID": MATCH_ID_COL, "MemberID": "MemID"},
+    )
+
+
+def test_id_check_missing_member_key():
+    """Omitting MemberID from the ID map is rejected at construction."""
+    with pytest.raises(ValueError, match="ID and MemberID must be provided"):
+        _minimal_id_sky_match(query_ids={"ID": QUERY_ID_COL})  # no MemberID
+
+
+def test_id_check_member_column_not_found():
+    """A MemberID column absent from the member table is rejected."""
+    with pytest.raises(ValueError, match="not found"):
+        _minimal_id_sky_match(
+            query_ids={"ID": QUERY_ID_COL, "MemberID": "does_not_exist"}
+        )
+
+
+def test_id_inconsistent_object_member_counts():
+    """A member catalogue missing an object's members is rejected."""
+    # query object 1 has no members, so unique member IDs (1) != object IDs (2).
+    with pytest.raises(ValueError, match="number of unique 'ID'"):
+        _id_sky_match(
+            query_member={QUERY_ID_COL: [0, 0, 0], "MemID": ["a", "b", "c"]},
+        )
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        SharedFractionMethod.QUERY_PMEM,
+        SharedFractionMethod.MATCH_PMEM,
+        SharedFractionMethod.PMEM,
+    ],
+)
+def test_match_id_pmem_method_requires_pmem(method):
+    """pmem-based shared fractions raise when no pmem column is provided."""
+    sky_match = _id_sky_match(with_pmem=False)
+    with pytest.raises(ValueError, match="pmem column must"):
+        sky_match.match_ID(use_shared_fraction=True, shared_fraction_method=method)
+
+
+def test_match_id_to_table_best_properties():
+    """to_table_best carries requested query and match property columns."""
+    sky_match = _id_sky_match()
+    result = sky_match.match_ID()
+    best = result.select_best()
+    table = result.to_table_best(
+        best,
+        query_properties={"mass_q": "MASS_Q"},
+        match_properties={"mass_m": "MASS_M"},
+    )
+    assert "MASS_Q" in table.colnames
+    assert "MASS_M" in table.colnames
+    by_query = {row["query_id"]: row for row in table}
+    assert by_query[0]["MASS_Q"] == 2.0  # query object 0
+    assert by_query[0]["MASS_M"] == 5.0  # matched to match object 100 (row 0)
+
+
+def test_match_id_to_table_complete_properties():
+    """to_table_complete carries requested query and match property columns."""
+    sky_match = _id_sky_match()
+    result = sky_match.match_ID()
+    table = result.to_table_complete(
+        query_properties={"mass_q": "MASS_Q"},
+        match_properties={"mass_m": "MASS_M"},
+    )
+    assert "MASS_Q" in table.colnames
+    assert "MASS_M" in table.colnames
+    by_query = {row["query_id"]: row for row in table}
+    assert by_query[0]["MASS_Q"] == 2.0
+    # query 0 has a single candidate (match 100, row 0) -> mass 5.0
+    assert list(by_query[0]["MASS_M"]) == [5.0]
