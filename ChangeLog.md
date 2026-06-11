@@ -1,7 +1,389 @@
 CHANGELOG
 ----------------------
 
-[v0.26.0]
+[Current]
+
+[v0.27.0]
+ * Adding codecov configuration.
+
+ * Avoid create commit status for fork PRs.
+
+ * Fixing minor issues with unused variables. (#257)
+
+     * Fixing minor glitches.
+     * Fixing indentation.
+ * Full site upload from GHA. (#256)
+
+     * Uploading full site from GHA to RTD.
+ * Improving documentaton build time and ipynb generation. (#255)
+ * More verbose run in RTD.
+
+ * Settling for requests.
+
+ * Reverted to using requests.
+
+ * Trying token instead of Bearer.
+
+ * Handling RTD stable and latest relases.
+
+ * Build artifacts on GHA and uploading to RTD. (#254)
+
+     * Testing a new RTD scheme and validating the integration between GHA
+     artifacts and RTD builds.
+     * Installing LaTeX on the GHA build environment and identifying missing
+     packages required for documentation compilation.
+     * Confirming that artifact downloads from GHA are publicly accessible and
+     free.
+     * Inspecting hashes and fixing artifact SHA handling to ensure integrity
+     verification works correctly.
+     * Improving the artifact download script, including using `urllib` instead
+     of `requests`, packing related functions together, and testing problematic
+     ZIP files and edge cases.
+     * Removing temporary debug `echo` statements and applying minor fixes to
+     the GHA–RTD workflow.
+     * Fixing link generation and validating links pointing to RTD builds and
+     pages.
+     * Adding, testing, and logging multiple RTD triggering approaches,
+     including direct API usage, an older existing GitHub Action, alternative
+     triggering strategies, and testing behavior with the RTD application
+     disabled.
+     * Fixing variable names in the workflow and scripts.
+     * Removing problematic RTD trigger approaches when necessary and iterating
+     on alternatives.
+     * Making the authentication token non-mandatory to support more flexible
+     execution paths.
+ * Csq1d phase support (#253)
+
+     * Adding support for integrating delta theta.
+     * Adding support for phase determination.
+     * Improving docs.
+     * Improving expression for delta theta.
+     * Making phase spline preparation optional.
+     * Fixing docs and add call to prepare in tests.
+ * Moving wspline example to quarto. (#251)
+
+     * Moving wspline example to quarto.
+     * Fixing code-fold everywhere.
+ * Update min python version to 3.11 (#250)
+
+     * Updating minimal python version to 3.11.
+     * Fixing mypy errors in tests.
+ * New inspect command. Removing tap support in pytest. (#249)
+
+     * New inspect command.
+     * Adding tests.
+     * Removing tap support for python tests.
+     * Making CI tests more verbose.
+     * Updating docs.
+     * Using types-tabulate from conda-forge.
+     * Using pygobject-stubs from conda-forge.
+ * Calibrating pln1d test. (#248)
+
+     Converted assertions to warnings in the timing tests. These tests were
+     failing in CI because they run in parallel, which can skew the timing
+     measurements.
+ * Downloadable docs (#247)
+
+     * Making all relevant quarto documents downloadable.
+     * Downloadable scripts.
+ * Fix xcor benchmark document. (#246)
+
+     * Updating stubs.
+     * Fixing CCL benchmark.
+ * Update firecrown import (#245)
+
+     * Updating firecrown connection.
+     * Breaking circular dependency.
+ * Improve tests to avoid leaving leftovers. (#244)
+
+     * Improve tests to avoid leaving leftovers.
+     * Improving tests type hints.
+     * Test file creation in cluster analysis.
+ * Improving richness analysis tools (#241)
+
+     * Improving documentation and fixing typos.
+     * Removing bootstrap after FitMC; adding Poisson noise; improving resample.
+     * Updating stubs and tests.
+     * Adding ncm_pln1d (Poisson-LogNormal) with tests and conditional testing.
+     * Adding cumulative calculation support and tests.
+     * Creating abstract Richness interface; implementing Ascaso and Extended
+     models with tests.
+     * New cluster richness analysis package; reorganizing tests.
+     * Fixing exception handling and logging.
+     * Improving diagnostics and integer R diagnostics.
+     * Adding support for noise, obs_params (Mobs, zobs), and persistence.
+     * Fixing tests and unsupported flags.
+     * Code formatting (black) and cleanup.
+     * Refining Python requirements and CI:
+
+       - conditional/skipped tests (astropy, getdist, healpy)
+      - separating sphere_map suite (no MALLOC_PERTURB_)
+      - relaxing timing requirements
+      - simplifying/installing reqs
+      - macOS adjustments and matplotlib via brew
+      - pytest debugging
+
+     * Removing leftovers and debug calls.
+     * Removing Amazon LLM files.
+ * Extend spectral (#243)
+
+     * Adding weighted decompositon in Spectral.
+     * Tests for weighted decomp.
+     * Uncrustify.
+     * Fixing python warnings.
+     * Adjusting docstrings.
+ * Update install guide (#239)
+
+     * Update install guide for libflint package rename
+
+     Agent-Logs-Url:
+     https://github.com/NumCosmo/NumCosmo/sessions/6068332e-c37f-4953-80cb-cdf009eb73c9
+
+     Co-authored-by: vitenti <7767706+vitenti@users.noreply.github.com>
+
+     * Clarify historical note for libflint package rename
+
+     Agent-Logs-Url:
+     https://github.com/NumCosmo/NumCosmo/sessions/6068332e-c37f-4953-80cb-cdf009eb73c9
+
+     Co-authored-by: vitenti <7767706+vitenti@users.noreply.github.com>
+
+     * Restricting libfyaml version.
+
+     * Adding restriction to the environment.yml.
+
+     * More verbose builds.
+
+     * Decreasing verbosity.
+
+     * Makeing Cosmology lazy properties.
+
+     * Improving doc.
+
+     * Adding missing test.
+
+     * Saving cache only when creating.
+
+     ---------
+
+     Co-authored-by: copilot-swe-agent[bot]
+     <198982749+Copilot@users.noreply.github.com> Co-authored-by: vitenti
+     <7767706+vitenti@users.noreply.github.com> Co-authored-by: Sandro Dias
+     Pinto Vitenti <vitenti@uel.br>
+ * New xcor (#240)
+
+     * Optimize hypot and memcpy of RHS.
+     * Optimize row construction and creation.
+     * Optimize Givens rotations.
+     * Optimize solve (loop unrolling, alignment).
+     * General performance improvements.
+
+     * Improve Chebyshev evaluation and adaptive coefficient computation.
+     * Improve spectral object and adaptivity.
+     * Fix spectral adaptive bugs and return adaptive order.
+
+     * Refactor solve into diagonalization + backsubstitution.
+     * Refactor Spectral to use GArray.
+     * Refactor OdeSolve and Levin integrator to use GArray.
+     * Simplify operator storage.
+     * Simplify memory management in ODE solver.
+     * Move allocation of rotations to appropriate location.
+
+     * Implement batched solver and integrator.
+     * Reuse previous diagonalization and solution state.
+     * Store and reuse rotations.
+     * Add support for panel reuse.
+
+     * Improve ODE solver interface and finalize implementation.
+     * Remove integration interface from ODE solver.
+     * Add direct integration for smooth intervals.
+
+     * Transition fully to Levin integrator.
+     * Refactor integrator to receive K(x,k).
+     * Add callback-based integrand interface.
+
+     * Introduce kernel component object and new interface.
+     * Refactor and reorganize kernel code.
+     * Unify Limber and non-Limber kernel construction.
+     * Extend Limber to union of bounds with aggressive cutoff.
+     * Fix kernel normalization and k-factors.
+     * Add cluster kernel and related functionality.
+
+     * Improve FunctionSampleSet and spline vector objects.
+     * Improve bucket search and range extensions.
+
+     * Improve documentation and docstrings.
+     * Update and fix stubs.
+     * Adjust tolerance parameters.
+
+     * Improve and reorganize tests.
+     * Split and relocate test files.
+     * Add regression and truth-table tests.
+     * Improve pytest + meson interaction.
+     * Fix parallelization and fixture usage.
+     * Skip tests when dependencies (e.g., scipy) are missing.
+     * Remove unreliable CI tests.
+
+     * Improve LSST-related functionality and constructors.
+     * Add galaxy redshift extensions and LSST bins.
+
+     * Improve logging and remove debug prints.
+     * Remove obsolete interfaces and indentation spec.
+     * Rename variables (e.g., l → ell).
+
+     * Fix bugs (allocation, precision, FFTL, ODE solver, nlopt, reference
+     issues).
+     * Fix CI, build, and environment issues (libfyaml, macOS, pip/conda).
+     * Improve dependency handling and configuration.
+
+     * Improve download routines (Planck data).
+     * Improve coverage exclusion.
+
+     * Code formatting and cleanup (uncrustify, remove redundancy).
+ * docs: Replace FIXME placeholders with proper documentation (73/588) (#238)
+
+     * Replace FIXMEs in numcosmo/data directory (27/588 complete)
+     * Replace FIXMEs in numcosmo/math directory (10 doc FIXMEs complete)
+     * Replace FIXMEs in numcosmo/xcor directory (20 doc FIXMEs complete)
+     * Replace FIXMEs in nc_hicosmo_de files (13 doc FIXMEs complete)
+     * Replace FIXMEs in model header files (3 more complete - 73 total)
+
+     ---------
+
+     Co-authored-by: copilot-swe-agent[bot]
+     <198982749+Copilot@users.noreply.github.com> Co-authored-by: vitenti
+     <7767706+vitenti@users.noreply.github.com>
+ * docs: Replace FIXME placeholders with proper documentation (170/758) (#237)
+
+     * Replace FIXMEs in nc_hicosmo.c set_impl functions
+     * Complete FIXME replacement in nc_hicosmo.c (all 83 FIXMEs resolved)
+     * Replace FIXMEs in model enum headers (gcg, idem2)
+     * Replace FIXMEs in xcor galaxy kernel enum header
+     * Replace FIXMEs in xcor CMB and weak lensing kernel headers
+     * Replace FIXMEs in data headers (hubble, snia)
+     * New black formating.
+
+     ---------
+
+     Co-authored-by: copilot-swe-agent[bot]
+     <198982749+Copilot@users.noreply.github.com> Co-authored-by: vitenti
+     <7767706+vitenti@users.noreply.github.com> Co-authored-by: Sandro Dias
+     Pinto Vitenti <vitenti@uel.br>
+ * Mass concentration bhattacharya13 (#234)
+
+     * Mass concentration duffy08
+     * Mass concentration bhattacharya13
+     * Corrected issues with mdef
+     * Mass concentration dutton14
+     * c-M dutton14
+     * c-M prada12 added to branch
+     * c-M diemer15
+     * Mass-concentration relations: fixing structure (properties, struct,
+     documentation...) and typo in some equations. 
+     * Transfer functions:
+
+       - Created No-baryon EH transfer function, to be used in the Diemer15
+     mass-concentration relation.
+      - Updated (GObject's sintax) all transfer function objects.
+
+     * Watson multiplicity function: fixed the properties list (included
+     PROP_LEN).
+     * Unit tests for BBKS, EH and "No baryon" EH transfer functions.
+     * Power spectrum - new function: derivative with respect to k (mode).
+     * Fixing little-h bug in klypin11.
+     * Finishing tests.
+     * Adjusting parameters.
+     * Testing Bhattacharya13.
+     * Updating stubs.
+     * More tests for concentration.
+     * More testing for Mass Concentration.
+     * Adding missing tests for meson.build.
+     * Testing virial.
+
+     ---------
+
+     Co-authored-by: thaisornellas <thais.ornellas@uel.br> Co-authored-by:
+     Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Jpas forecast bug (#235)
+
+     * pulling spherenn
+     * jpas forecast
+     * fixing the bug of mcmc for low values of omegac
+     * fixing small omegac bug for mcmc, documentation and change from lnM to
+     lnM-obs in jpas_forecast24
+     * Adding tests for NcmSphereMap.
+     * Adding refinement support for SphereMap.
+     * Adding support for cross correlations.
+     * Tests for JPas.
+     * Minor tweaks in formatting and docstrings.
+     * Using ncm_util_gaussian.
+     * Numpy 2.4 breaks healpy.
+     * Adding healpy to envs.
+     * Conditional test of sphere map.
+
+     ---------
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Create notebook and minor fix in the documentation. (#196)
+
+     Fixing documentation and adding examples.
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Twofluid tensor (#236)
+
+     * Adding tensor modes plots.
+     * Fixing list and filename.
+     * Adding support for saving/loading dicts.
+     * Fixing typos.
+     * Removed leftover debug print.
+     * Updated HIPrimTwoFluids to store and use Pk0.
+     * Updating stubs.
+     * Adding Pk normalization plot.
+     * Final plots and sections in bounce_spectra.
+     * Cleaning notebooks.
+     * Matching output when more stderr is produced.
+     * Updating python version.
+     * Separating slower tests to new suites.
+ * Jpas forecast (#170)
+
+     * Updating notebooks.
+     * Moving psf to psf_tophat.
+     * Minor improvements.
+
+     ---------
+
+     Co-authored-by: henriquelettieri <henrique.cnl@hotmail.com>
+ * Testing Richness proxies (#117)
+
+     * Added and expanded support for **cluster richness–mass analysis**:
+     improvements to `nc_data_cluster_mass_rich`, new resampling/apply_cut
+     functions, bootstrap support, stability fixes, and multiple algorithm
+     optimizations.
+     * Introduced new functions for **Ascaso mass–richness calibration**, fixed
+     bugs in the Ascaso model, and added corresponding tests.
+     * Improved **cluster mass selection**: numerical integration optimizations,
+     new limits handling, bug fixes, and expanded test coverage.
+     * Added and reorganized various **tests and benchmarks**, including Despali
+     halo bias, photo-z Gaussian model, interpolation tests, and general
+     fixture-based refactors.
+     * General **code quality updates**: documentation fixes, indentation/style
+     cleanup, removal of unused models, interface adjustments for bindings, and
+     improved CI caching.
+     * Removed all Jupyter notebooks and other unnecessary files during cleanup.
+
+     If you want, I can also draft a final squash commit message.
+
+     ---------
+
+     Co-authored-by: Cinthia Nunes Lima <cinthia.n.lima@uel.br> Co-authored-by:
+     cinthia <cinthia.n.lima@hotmail.com> Co-authored-by: Henrique Cardoso Naves
+     Lettieri <henrique.cnl@hotmail.com>
+ * Removed deprecated option. (#233)
+
+     * Removed deprecated option.
+     * Avoiding buggy plotnine 0.15.
+ * New version 0.26.0
+
  * Splitting NumCosmo initialization. (#232)
 
      * Splitting NumCosmo initialization.
@@ -718,7 +1100,8 @@ CHANGELOG
      * Added tests for tSZ.
      
      ---------
-      Co-authored-by: Arthur de Souza Molina <arthur.souza.molina@gmail.com> 
+      Co-authored-by: Arthur de Souza Molina <arthur.souza.molina@gmail.com>
+ 
      Co-authored-by: Mariana Penna Lima <pennalima@gmail.com>
  * Xcor CCL comparisons (#168)
 
@@ -810,7 +1193,8 @@ CHANGELOG
      * Refactored and cleaned up code
      
      ---------
-      Co-authored-by: Caio Lima de Oliveira <caiolimadeoliveira@proton.me> 
+      Co-authored-by: Caio Lima de Oliveira <caiolimadeoliveira@proton.me>
+ 
      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * Magnetic Fields in Vexp cosmology (#153)
 
@@ -951,7 +1335,8 @@ CHANGELOG
      * Updating primordial_perturbations/magnetic_dust_bounce.ipynb.
      
      ---------
-      Co-authored-by: EFrion <frion.emmanuel@hotmail.fr> Co-authored-by:
+      Co-authored-by: EFrion <frion.emmanuel@hotmail.fr>
+ Co-authored-by:
      Eduardo Barroso <eduardojsbarroso@gmail.com>
  * Adding Bayesian evidence support for numcosmo app. (#152)
 
@@ -1622,7 +2007,8 @@ CHANGELOG
      * Fixed copyright notices
      
      ---------
-      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br> 
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ 
      Co-authored-by: Caio Lima de Oliveira <caiolimadeoliveira@proton.me>
  * Added check to see if the python interface is available.
 
@@ -1731,7 +2117,8 @@ CHANGELOG
      * Updated plcl script.
      
      ---------
-      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com> Co-authored-by:
+      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com>
+ Co-authored-by:
      Mariana Penna Lima <pennalima@gmail.com>
  * Halo bias tests (#73)
 
@@ -1769,8 +2156,10 @@ CHANGELOG
      * Bias as function of mass
      * Added minimal documentation to bias objects.
      * Finished Documentations
-      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br> 
-     Co-authored-by: Eduardo Barroso <eduardojsbarroso@gmail.com> 
+      Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ 
+     Co-authored-by: Eduardo Barroso <eduardojsbarroso@gmail.com>
+ 
      Co-authored-by: root <root@eduardo>
  * Added interface to generate models using an array of NcmSParams
 
@@ -1888,7 +2277,8 @@ CHANGELOG
      * missing files
      
      * multiplicity_watson_install
-      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com> Co-authored-by:
+      Co-authored-by: Cinthia Lima <cinthia.n.lima@hotmail.com>
+ Co-authored-by:
      Henrique Lettieri <henrique.cnl@hotmail.com>
  * Removed ckern algo.
 
@@ -5498,6 +5888,40 @@ CHANGELOG
 
 
 []
+ * Adding codecov configuration.
+ * Avoid create commit status for fork PRs.
+ * Fixing minor issues with unused variables. (#257)
+ * Full site upload from GHA. (#256)
+ * Improving documentaton build time and ipynb generation. (#255)
+ * More verbose run in RTD.
+ * Settling for requests.
+ * Reverted to using requests.
+ * Trying token instead of Bearer.
+ * Handling RTD stable and latest relases.
+ * Build artifacts on GHA and uploading to RTD. (#254)
+ * Csq1d phase support (#253)
+ * Moving wspline example to quarto. (#251)
+ * Update min python version to 3.11 (#250)
+ * New inspect command. Removing tap support in pytest. (#249)
+ * Calibrating pln1d test. (#248)
+ * Downloadable docs (#247)
+ * Fix xcor benchmark document. (#246)
+ * Update firecrown import (#245)
+ * Improve tests to avoid leaving leftovers. (#244)
+ * Improving richness analysis tools (#241)
+ * Extend spectral (#243)
+ * Update install guide (#239)
+ * New xcor (#240)
+ * docs: Replace FIXME placeholders with proper documentation (73/588) (#238)
+ * docs: Replace FIXME placeholders with proper documentation (170/758) (#237)
+ * Mass concentration bhattacharya13 (#234)
+ * Jpas forecast bug (#235)
+ * Create notebook and minor fix in the documentation. (#196)
+ * Twofluid tensor (#236)
+ * Jpas forecast (#170)
+ * Testing Richness proxies (#117)
+ * Removed deprecated option. (#233)
+ * New version 0.26.0
  * Splitting NumCosmo initialization. (#232)
  * Bounce tutorial (#212)
  * DE w(z) spline - experiment (#226)

@@ -158,10 +158,9 @@ The following code plots the linear power spectrum for different redshifts.
 
 ```{python}
 # | label: fig-hiprim_ps_low
-# | html:
-# |   fig-cap: The linear power spectrum for different redshifts
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: The linear power spectrum for different redshifts
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 plt.figure(figsize=(10, 6))
@@ -183,10 +182,9 @@ plt.show()
 
 ```{python}
 # | label: fig-hiprim_rel_diff_low
-# | html:
-# |   fig-cap: The relative difference between the EH and CLASS power spectrum
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: The relative difference between the EH and CLASS power spectrum
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 
@@ -210,10 +208,9 @@ plt.show()
 
 ```{python}
 # | label: fig-hiprim_nl_low
-# | html:
-# |   fig-cap: The nonlinear power spectrum for different redshifts
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: The nonlinear power spectrum for different redshifts
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 # Set up HALOFIT for nonlinear corrections

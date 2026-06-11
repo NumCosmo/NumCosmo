@@ -167,10 +167,9 @@ We plot the generated cluster and halo positions, with the dot sizes proportiona
 
 ```{python}
 # | label: fig-cluster-halo
-# | html:
-# |   fig-cap: Cluster (red) and halo (blue) positions in the sky with sizes proportional to log mass. The redshift ranges from 0.2 to 0.5 and is indicated on the color intensity scale.
-# |   fig-cap-location: margin
-# |   fig-width: 100%
+# | fig-cap: Cluster (red) and halo (blue) positions in the sky with sizes proportional to log mass. The redshift ranges from 0.2 to 0.5 and is indicated on the color intensity scale.
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 
 
@@ -357,10 +356,9 @@ We can also visualize the filtered results, using the same plot characteristics 
 
 ```{python}
 # | label: fig-sky-match-3d
-# | html:
-# |   fig-cap: The 3D matched clusters
-# |   fig-cap-location: margin
-# |   fig-width: 100%
+# | fig-cap: The 3D matched clusters
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 # Plot the filtered results
 
@@ -451,10 +449,9 @@ We can also visualize the best matches, using the same plot characteristics as i
 
 ```{python}
 # | label: fig-sky-match-3d-best
-# | html:
-# |   fig-cap: The 3D best matched clusters
-# |   fig-cap-location: margin
-# |   fig-width: 100%
+# | fig-cap: The 3D best matched clusters
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 # Plot the best matches
 
@@ -533,10 +530,9 @@ Finally, we plot the cross matches:
 
 ```{python}
 # | label: fig-sky-match-3d-cross
-# | html:
-# |   fig-cap: The 3D cross matched clusters
-# |   fig-cap-location: margin
-# |   fig-width: 100%
+# | fig-cap: The 3D cross matched clusters
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 # Plot the cross matches
 
@@ -669,10 +665,9 @@ The plot below illustrates the filtered results:
 
 ```{python}
 # | label: fig-sky-match-2d-filtered
-# | html:
-# |   fig-cap: The filtered distances between clusters and halos computed using the cluster redshifts.
-# |   fig-cap-location: margin
-# |   fig-width: 100%
+# | fig-cap: The filtered distances between clusters and halos computed using the cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 
 plot_mask(mask)
@@ -721,10 +716,9 @@ The plot below visualizes the best matches:
 
 ```{python}
 # | label: fig-sky-match-2d-best
-# | html:
-# |   fig-cap: Best matches between clusters and halos computed using cluster redshifts.
-# |   fig-cap-location: margin
-# |   fig-width: 100%
+# | fig-cap: Best matches between clusters and halos computed using cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 
 plot_best(best)
@@ -782,10 +776,9 @@ The following plot visualizes the cross matches:
 
 ```{python}
 # | label: fig-sky-match-2d-cross
-# | html:
-# |   fig-cap: Cross matches between clusters and halos computed using cluster redshifts.
-# |   fig-cap-location: margin
-# |   fig-width: 100%
+# | fig-cap: Cross matches between clusters and halos computed using cluster redshifts.
+# | fig-cap-location: margin
+# | fig-width: 100%
 # | code-fold: true
 
 plot_cross(cross_match)

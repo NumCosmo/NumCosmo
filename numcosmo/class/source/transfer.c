@@ -4914,7 +4914,6 @@ int transfer_get_lmax(int (*get_xmin_generic)(int sgnK,
   int fevals=0, index_l_mid;
   int multiplier;
   int right_boundary_checked = _FALSE_;
-  int hil=0,hir=0,bini=0;
   class_call(get_xmin_generic(sgnK,
                               lvec[0],
                               nu,
@@ -4948,7 +4947,6 @@ int transfer_get_lmax(int (*get_xmin_generic)(int sgnK,
   }
   /* Hunt for left boundary: */
   for (multiplier=1; ;multiplier *= 5){
-    hil++;
     class_call(get_xmin_generic(sgnK,
                                 lvec[*index_l_left],
                                 nu,
@@ -4978,7 +4976,6 @@ int transfer_get_lmax(int (*get_xmin_generic)(int sgnK,
   /* If not found, hunt for right boundary: */
   if (right_boundary_checked == _FALSE_){
     for (multiplier=1; ;multiplier *= 5){
-      hir++;
       //printf("right iteration %d,index_l_right:%d\n",hir,*index_l_right);
       class_call(get_xmin_generic(sgnK,
                                   lvec[*index_l_right],
@@ -5011,7 +5008,6 @@ int transfer_get_lmax(int (*get_xmin_generic)(int sgnK,
   //  printf("Do binary search in get_lmax. \n");
   //printf("Region: [%d, %d]\n",*index_l_left,*index_l_right);
   while (((*index_l_right) - (*index_l_left)) > 1) {
-    bini++;
     index_l_mid= (int)(0.5*((*index_l_right)+(*index_l_left)));
     //printf("left:%d, mid=%d, right=%d\n",*index_l_left,index_l_mid,*index_l_right);
     class_call(get_xmin_generic(sgnK,

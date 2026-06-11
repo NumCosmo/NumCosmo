@@ -307,9 +307,8 @@ Now we plot the evolution of the mode ($k = 1 \mathrm{Mpc}^{-1}$) for both model
 
 ```{python}
 # | label: fig-adiabatic-evolution
-# | html:
-# |   fig-cap: Adiabatic Evolution
-# |   fig-cap-location: top
+# | fig-cap: Adiabatic Evolution
+# | fig-cap-location: top
 # | code-fold: true
 
 unit_w = Nc.HIPertIAdiab.eval_unit(cosmo_w)
@@ -351,12 +350,11 @@ For that we plot the evolution of the mode for different $k$ values.
 
 ```{python}
 # | label: fig-adiabatic-k-dependence
-# | html:
-# |   fig-cap:
-# |     - "Adiabatic mode $k$ dependence for QGW"
-# |     - "Adiabatic mode $k$ dependence for QGRW"
-# |   fig-cap-location: top
-# |   layout-ncol: 2
+# | fig-cap:
+# | - "Adiabatic mode $k$ dependence for QGW"
+# | - "Adiabatic mode $k$ dependence for QGRW"
+# | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1)
@@ -490,9 +488,8 @@ We plot the power spectrum for the QGW and QGRW models.
 
 ```{python}
 # | label: fig-adiabatic-power-spectrum
-# | html:
-# |   fig-cap: Adiabatic Power Spectrum
-# |   fig-cap-location: top
+# | fig-cap: Adiabatic Power Spectrum
+# | fig-cap-location: top
 # | code-fold: true
 
 set_rc_params_article(ncol=2, nrows=1)
