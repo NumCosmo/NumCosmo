@@ -1319,6 +1319,8 @@ int get_anti_regular_lef_schurlev(fdouble *work,finteger lwork,fdouble *theta,
   if (lwork < 3*k)
     fprintf(stderr,"get_anti_regular_lef_schurlev has got too little "
 	    "workspace\n");
+#else
+  (void)lwork;
 #endif
 #else
   lwork-=k*k;
@@ -1326,6 +1328,8 @@ int get_anti_regular_lef_schurlev(fdouble *work,finteger lwork,fdouble *theta,
   if (lwork < 0)
     fprintf(stderr,"get_anti_regular_lef_schurlev has got too little "
 	    "workspace\n");
+#else
+  (void)lwork;
 #endif
 #endif
 
@@ -1669,6 +1673,8 @@ int get_anti_regular_pair_schurlev(fdouble *work,finteger lwork,
   if (lwork < 0)
     fprintf(stderr,"get_anti_regular_pair_schurlev has got too little "
 	    "workspace\n");
+#else
+  (void)lwork;
 #endif
 #else
   finteger *perm;

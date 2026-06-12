@@ -120,5 +120,6 @@ test_nc_transfer_func_eval (void)
 
     tot += T;
   }
-}
 
+  g_assert_true (isfinite (tot));
+}

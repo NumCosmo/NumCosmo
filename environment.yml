@@ -42,6 +42,7 @@ dependencies:
   - pyccl >= 3.0.0
   - pydantic
   - pygobject
+  - pygobject-stubs
   - pylint
   - pytest
   - pytest-cov
@@ -49,10 +50,12 @@ dependencies:
   - pytest-xdist
   - python >= 3.11
   - quarto
+  - requests
   - rich
   - scipy
   - setuptools
   - tabulate
   - tqdm
   - typer
+  - types-tabulate
   - zlib

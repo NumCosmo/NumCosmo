@@ -9,14 +9,16 @@ format:
   html:
     tbl-cap-location: margin
     fig-cap-location: margin
+  ipynb: 
+    echo: true
+
+format-links: [ipynb]
 
 execute:
   warning: true
   error: true
 
 ---
-
-{{< include /notes/_numcosmo_py.qmd >}}
 
 ## Introduction
 
@@ -137,7 +139,6 @@ for comparison in cmb_len_auto_comparisons:
 
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 All CCL calculations are consistent with the results from NumCosmo, though this agreement decreases as the number of samples increases.

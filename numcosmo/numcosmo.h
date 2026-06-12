@@ -133,6 +133,7 @@
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean_normalized.h>
 #include <numcosmo/lss/nc_multiplicity_func_crocce.h>
 #include <numcosmo/lss/nc_multiplicity_func_bocquet.h>
+#include <numcosmo/lss/nc_multiplicity_func_bhattacharya.h>
 #include <numcosmo/lss/nc_multiplicity_func_despali.h>
 #include <numcosmo/lss/nc_multiplicity_func_watson.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>

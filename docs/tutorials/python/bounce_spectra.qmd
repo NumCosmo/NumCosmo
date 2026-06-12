@@ -1,6 +1,7 @@
 ---
 title: "Computing Bounce Spectra"
-format: html
+
+format-links: [ipynb]
 ---
 
 {{< include /_functions.qmd >}}
@@ -99,7 +100,6 @@ def large_scale_P_zeta(kh):
 fig_dir = "bounce/figures"
 if not os.path.exists(fig_dir):
     os.makedirs(fig_dir)
-
 ```
 
 ### Model parameters
@@ -236,6 +236,7 @@ def get_next_color():
     return next_color
 
 ```
+
 
 We then plot the gravitational weights:
 
@@ -1180,7 +1181,6 @@ cbar.set_label(r"$\lambda$ [Mpc]")
 plt.savefig(os.path.join(fig_dir, "mode_pzeta_evolution.pdf"), bbox_inches="tight")
 fig.set_size_inches(12, 12 * aspect2c2r)
 plt.show()
-
 ```
 
 ## Power Spectra
@@ -1253,7 +1253,7 @@ Now we plot the power spectrum time evolution for $\Pi_{\zeta i}$:
 
 ```{python}
 # | label: fig-pzeta-power-spectrum
-# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Pi_{\\\\zeta i}}(\\\\alpha)$ for each mode; colors show $\\\\lambda$ (Mpc)."
+# | fig-cap: "Time evolution of $\\mathcal{P}_{\\Pi_{\\zeta i}}(\\alpha)$ for each mode; colors show $\\lambda$ (Mpc)."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1310,7 +1310,7 @@ Now we can plot the power spectrum time evolution for $\Delta\zeta_i$:
 
 ```{python}
 # | label: fig-delta-zeta-power-spectrum
-# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Delta\\\\zeta_i}(\\\\alpha)$ for each mode; colors show $\\\\lambda$ (Mpc)."
+# | fig-cap: "Time evolution of $\\mathcal{P}_{\\Delta\\zeta_i}(\\alpha)$ for each mode; colors show $\\lambda$ (Mpc)."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1366,7 +1366,7 @@ Now that we have seen the evolution of each adiabatic perturbation $\zeta_i$ and
 
 ```{python}
 # | label: fig-full-zeta-power-spectrum
-# | fig-cap: "Total adiabatic power $\\\\mathcal{P}_{\\\\zeta}(\\\\alpha)$ and entropy power $\\\\mathcal{P}_{\\\\Delta\\\\zeta}(\\\\alpha)$; colors show $\\\\lambda$."
+# | fig-cap: "Total adiabatic power $\\mathcal{P}_{\\zeta}(\\alpha)$ and entropy power $\\mathcal{P}_{\\Delta\\zeta}(\\alpha)$; colors show $\\lambda$."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1420,6 +1420,22 @@ format_alpha_xaxis(ax1, cosmo_rw)
 ax1.set_xlabel(r"$\alpha$")
 ax1.grid()
 
+# Report the maximum values at the bounce for both spectra
+max_report = []
+for k, power_spectra in zip(k_values, power_spectra_list):
+    P_zeta = k**3 * RH_Mpc**3 * power_spectra["zeta"]
+    P_dzeta = k**3 * RH_Mpc**3 * power_spectra["dzeta"]
+    idx_zeta = np.argmax(P_zeta)
+    idx_dzeta = np.argmax(P_dzeta)
+    max_report.append(
+        f"k = {k:.3e} Mpc^-1: "
+        f"max P_zeta = {P_zeta[idx_zeta]:.3e} at alpha = {alpha_pk_a[idx_zeta]:.3f}; "
+        f"max P_dzeta = {P_dzeta[idx_dzeta]:.3e} at alpha = {alpha_pk_a[idx_dzeta]:.3f}"
+    )
+print("Maximum power at the bounce for each mode:")
+for line in max_report:
+    print(line)
+
 # Colorbar for k
 cbar = fig.colorbar(sm, ax=ax1, pad=0.02)
 cbar.set_label(r"$\lambda$ [Mpc]")
@@ -1428,14 +1444,13 @@ fig.savefig(os.path.join(fig_dir, "zeta_total_power_spectrum.pdf"), bbox_inches=
 
 fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
-
 ```
 
 We also plot the power spectrum time evolution for $\delta_{\rho_i}$:
 
 ```{python}
 # | label: fig-delta-rho-power-spectrum
-# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\delta_{\\\\rho i}}(\\\\alpha)$ for each mode; colors show comoving wavelength $\\\\lambda$ (Mpc)."
+# | fig-cap: "Time evolution of $\\mathcal{P}_{\\delta_{\\rho i}}(\\alpha)$ for each mode; colors show comoving wavelength $\\lambda$ (Mpc)."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1486,14 +1501,13 @@ fig.savefig(os.path.join(fig_dir, "delta_rho_power_spectrum.pdf"), bbox_inches="
 
 fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
-
 ```
 
 We also plot the power spectrum time evolution for $\Delta\delta_{\zeta_i}$:
 
 ```{python}
 # | label: fig-diff-delta-rho-power-spectrum
-# | fig-cap: "Time evolution of $\\\\mathcal{P}_{\\\\Delta\\\\delta_{\\\\rho i}}(\\\\alpha)$ for each mode; colors show comoving wavelength $\\\\lambda$ (Mpc)."
+# | fig-cap: "Time evolution of $\\mathcal{P}_{\\Delta\\delta_{\\rho i}}(\\alpha)$ for each mode; colors show comoving wavelength $\\lambda$ (Mpc)."
 # | fig-cap-location: bottom
 # | code-fold: true
 
@@ -1545,7 +1559,6 @@ fig.savefig(
 
 fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
-
 ```
 
 We also plot the power spectrum time evolution for the total $\delta_{\rho}$:
@@ -1553,10 +1566,10 @@ We also plot the power spectrum time evolution for the total $\delta_{\rho}$:
 ```{python}
 # | label: fig-full-delta-rho-power-spectrum
 # | fig-cap:
-# |   - "Total density power $\\mathcal{P}_{\\delta_{\\rho}}(\\alpha)$; colors show comoving wavelength $\\lambda$ (Mpc)."
-# |   - "Difference density power $\\mathcal{P}_{\\Delta\\delta_{\\rho}}(\\alpha)$; colors show $\\lambda$ (Mpc)."
-# | layout-ncol: 2
+# | - "Total density power $\\mathcal{P}_{\\delta_{\\rho}}(\\alpha)$; colors show comoving wavelength $\\lambda$ (Mpc)."
+# | - "Difference density power $\\mathcal{P}_{\\Delta\\delta_{\\rho}}(\\alpha)$; colors show $\\lambda$ (Mpc)."
 # | fig-cap-location: bottom
+# | layout-ncol: 2
 # | code-fold: true
 
 set_rc_params_article(ncol=1, nrows=1, aspect_ratio=0.5)
@@ -1632,7 +1645,6 @@ fig.savefig(
 
 fig.set_size_inches(6, 3)
 plt.show()
-
 ```
 
 
@@ -1804,10 +1816,9 @@ for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
 
 for text in text_a:
     print(text)
-
 ```
 
-Now considering a CMB like interval ($10^{-4} < k < 10^0$ Mpc$^{-1}$), we can see that the power spectrum is dominated by the large-scale approximation plus the small-scale loss of power. To be more precise, we fit polynomial in this interval providing an effective spectral index. Moreover, we can also fit higher-order polynomials to the power spectrum in the CMB-scales obtaining the effective spectral index and running parameters.
+Now considering a CMB-like interval ($10^{-4} < k < 10^{0}$ Mpc$^{-1}$), we see that the power spectrum is dominated by the large-scale approximation together with the small-scale suppression of power. To characterize this behavior more precisely, we fit polynomials in this interval to obtain an effective spectral index. Higher-order polynomial fits additionally provide effective running and running-of-the-running parameters describing the spectrum within the CMB scales.
 
 ```{python}
 
@@ -1829,6 +1840,12 @@ fit_quad = np.polyfit(lnk_for_cmb, ln_zeta_cmb, deg=2)
 ns_quad = fit_quad[-2] + 1.0
 alpha_s = fit_quad[-3] * 2.0
 
+# Cubic fit (spectral index + running + running of running)
+fit_cubic = np.polyfit(lnk_for_cmb, ln_zeta_cmb, deg=3)
+ns_cubic = fit_cubic[-2] + 1.0
+alpha_s_cubic = fit_cubic[-3] * 2.0
+beta_s = fit_cubic[-4] * 6.0
+
 # Report
 report = f"""
 ### Fit to the power spectrum in the CMB-scales interval
@@ -1841,12 +1858,17 @@ report = f"""
 
 - Effective spectral index: {ns_quad:.4f}  
 - Running parameter: {alpha_s:.4f}
+
+**Cubic fit (including running of running):**
+
+- Effective spectral index: {ns_cubic:.4f}  
+- Running parameter: {alpha_s_cubic:.4f}  
+- Running of the running: {beta_s:.4f}
 """
 display(Markdown(report))
-
 ```
 
-Now we can plot this CMB-like section of the power spectrum and overplot the linear and quadratic fits used to extract an effective spectral index and running parameter.
+Now we can plot this CMB-like section of the power spectrum and overplot the linear, quadratic, and cubic fits used to extract an effective spectral index, running, and running of the running.
 
 ```{python}
 # | label: fig-zeta-power-spectrum-cmb-k
@@ -1864,6 +1886,12 @@ P_zeta_lin_k = np.exp(fit_lin[0] * lnk_for_cmb + fit_lin[1])
 P_zeta_quad_k = np.exp(
     fit_quad[0] * lnk_for_cmb**2 + fit_quad[1] * lnk_for_cmb + fit_quad[2]
 )
+P_zeta_cubic_k = np.exp(
+    fit_cubic[0] * lnk_for_cmb**3
+    + fit_cubic[1] * lnk_for_cmb**2
+    + fit_cubic[2] * lnk_for_cmb
+    + fit_cubic[3]
+)
 
 ax.plot(k_for_cmb, P_zeta_k, lw=lw, linestyle="solid", label=r"$\mathcal{P}_{\zeta}$")
 ax.plot(
@@ -1880,6 +1908,13 @@ ax.plot(
     linestyle="dotted",
     label=r"$\mathcal{P}_{\zeta}$ (quadratic fit)",
 )
+ax.plot(
+    k_for_cmb,
+    P_zeta_cubic_k,
+    lw=lw,
+    linestyle=(0, (3, 1, 1, 1)),
+    label=r"$\mathcal{P}_{\zeta}$ (cubic fit)",
+)
 
 ax.set_ylabel(r"$\mathcal{P}_{\zeta}$")
 ax.set_xlabel(r"$k$ [Mpc$^{-1}$]")
@@ -1893,7 +1928,6 @@ fig.savefig(os.path.join(fig_dir, "zeta_power_spectrum_cmb_k.pdf"), bbox_inches=
 
 fig.set_size_inches(6, 3)
 plt.show()
-
 ```
 
 Next we plot the power spectra for $\Pi_\zeta$ and $\Delta\Pi_\zeta$:
@@ -1950,8 +1984,6 @@ for i, (alpha, power_spectra_k) in enumerate(zip(alpha_a, power_spectra_k_a)):
 
     fig.set_size_inches(6, 3)
     plt.show()
-
-
 ```
 
 Next we plot the power spectra for $\delta_{\rho}$ and $\Delta\delta_{\rho}$:
@@ -2012,8 +2044,8 @@ We can also plot the power spectra for the individual fluid density perturbation
 ```{python}
 # | label: fig-delta-rw-power-spectrum-k
 # | fig-cap:
-# |   - "Dimensionless power $\\mathcal{P}_{\\delta_{\\mathrm{r}}}(k)$ (solid) at selected times; vertical lines mark characteristic wavenumbers."
-# |   - "Dimensionless power $\\mathcal{P}_{\\delta_w}(k)$ (dashed) at selected times; same layout."
+# | - "Dimensionless power $\\mathcal{P}_{\\delta_{\\mathrm{r}}}(k)$ (solid) at selected times; vertical lines mark characteristic wavenumbers."
+# | - "Dimensionless power $\\mathcal{P}_{\\delta_w}(k)$ (dashed) at selected times; same layout."
 # | fig-cap-location: bottom
 # | layout-ncol: 2
 # | code-fold: true
@@ -2118,7 +2150,6 @@ fig.savefig(os.path.join(fig_dir, f"fku_rw_power_spectrum_k.pdf"), bbox_inches="
 
 fig.set_size_inches(12, 12 * aspect2c)
 plt.show()
-
 ```
 
 We can also plot $\zeta$ and $\Delta\zeta$ in the same plot to observe another source of isocurvature.
@@ -2126,8 +2157,8 @@ We can also plot $\zeta$ and $\Delta\zeta$ in the same plot to observe another s
 ```{python}
 # | label: fig-zeta-dzeta-power-spectrum-k
 # | fig-cap:
-# |   - "Dimensionless power $\\mathcal{P}_{\\zeta}(k)$ at selected times."
-# |   - "Dimensionless power $\\mathcal{P}_{\\Delta\\zeta}(k)$ at selected times."
+# | - "Dimensionless power $\\mathcal{P}_{\\zeta}(k)$ at selected times."
+# | - "Dimensionless power $\\mathcal{P}_{\\Delta\\zeta}(k)$ at selected times."
 # | fig-cap-location: bottom
 # | layout-ncol: 2
 # | code-fold: true
@@ -2244,7 +2275,6 @@ cbar.set_label(r"$\lambda$ [Mpc]")
 fig.savefig(os.path.join(fig_dir, f"tensor_pw_evol.pdf"), bbox_inches="tight")
 fig.set_size_inches(6, 3)
 plt.show()
-
 ```
 
 We can also plot it at the final time:
@@ -2252,8 +2282,8 @@ We can also plot it at the final time:
 ```{python}
 # | label: fig-tensor-power-spectrum-k
 # | fig-cap:
-# |   - "Tensor power $\\mathcal{P}_h(k)$ at an early time; vertical lines mark characteristic wavenumbers."
-# |   - "Tensor power $\\mathcal{P}_h(k)$ at a late/expanding time (e.g. $x=10^{15}$)."
+# | - "Tensor power $\\mathcal{P}_h(k)$ at an early time; vertical lines mark characteristic wavenumbers."
+# | - "Tensor power $\\mathcal{P}_h(k)$ at a late/expanding time (e.g. $x=10^{15}$)."
 # | fig-cap-location: bottom
 # | layout-ncol: 2
 # | code-fold: true
@@ -2289,7 +2319,6 @@ for i, alpha in enumerate(alpha_a):
     fig.savefig(os.path.join(fig_dir, f"tensor_pw{i}_k.pdf"), bbox_inches="tight")
     fig.set_size_inches(6, 3)
 plt.show()
-
 ```
 
 ### Tensor-to-scalar ratio
@@ -2322,8 +2351,8 @@ We can plot the tensor-to-scalar ratio as a function of wavenumber:
 ```{python}
 # | label: fig-tensor-to-scalar-ratio
 # | fig-cap:
-# |   - "Tensor-to-scalar ratio $r(k)$ at an early time."
-# |   - "Tensor-to-scalar ratio $r(k)$ at a late/expanding time."
+# | - "Tensor-to-scalar ratio $r(k)$ at an early time."
+# | - "Tensor-to-scalar ratio $r(k)$ at a late/expanding time."
 # | fig-cap-location: bottom
 # | layout-ncol: 2
 # | code-fold: true
@@ -2360,7 +2389,6 @@ for i, alpha in enumerate(alpha_a):
     )
     fig.set_size_inches(6, 3)
 plt.show()
-
 ```
 
 We can also compute the mean tensor-to-scalar ratio in the CMB-scales interval ($10^{-4} < k < 10^0$ Mpc$^{-1}$):
@@ -2524,7 +2552,6 @@ We use the Boltzmann code interface (`HIPertBoltzmannCBE`) to compute the lensed
 # | fig-cap: "CMB temperature power spectra comparison. Top: $\\mathcal{D}_\\ell = \\ell(\\ell+1)C_\\ell/(2\\pi)$ for two-fluids (red) and power-law (blue dashed). Bottom: Ratio $\\mathcal{D}_\\ell^{\\rm 2F}/\\mathcal{D}_\\ell^{\\rm PL}$."
 # | fig-cap-location: bottom
 # | code-fold: true
-
 
 def compute_D_ell_twofluid(lmax=2500):
     """Compute CMB TT power spectrum for two-fluids bounce model."""

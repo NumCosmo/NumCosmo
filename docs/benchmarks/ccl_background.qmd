@@ -9,14 +9,16 @@ format:
   html:
     tbl-cap-location: margin
     fig-cap-location: margin
+  ipynb: 
+    echo: true
+
+format-links: [ipynb]
 
 execute:
   warning: true
   error: true
 
 ---
-
-{{< include /notes/_numcosmo_py.qmd >}}
 
 ## Introduction
 
@@ -142,7 +144,6 @@ for parameter_comparison in parameter_comparisons:
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 ## Distances
@@ -174,7 +175,6 @@ distance_comparisons: list[list[nc_cmp.CompareFunc1d]] = [
 We plot the distance comparisons for all parameter sets.
 
 ```{python}
-# | layout-ncol: 2
 # | label: fig-ccl-vs-nc-distances-set0
 # | fig-cap:
 # |   - "Normalized Hubble Function"
@@ -186,6 +186,7 @@ We plot the distance comparisons for all parameter sets.
 # |   - "Lookback time"
 # |   - "Comoving volume element"
 # | fig-cap-location: top
+# | layout-ncol: 2
 # | code-fold: true
 
 for distance_comparison in distance_comparisons:
@@ -198,7 +199,6 @@ for distance_comparison in distance_comparisons:
 
 plt.show()
 plt.close()
-
 ```
 
 Again a table summarizes the results for all parameter sets.
@@ -218,7 +218,6 @@ for distance_comparison in distance_comparisons:
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 ### Time Comparison
@@ -338,7 +337,6 @@ for growth_comparison in growth_comparisons:
 
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 ## Scale Factor
@@ -372,7 +370,6 @@ for p, c in zip(compare_scale_factor, COLORS):
 
 plt.show()
 plt.close()
-
 ```
 
 The following table summarizes the results for all sets.
@@ -391,7 +388,6 @@ for d in compare_scale_factor:
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 ## Critical Surface Mass Density
@@ -426,7 +422,6 @@ for p, c in zip(compare_sigmaC, COLORS):
 
 plt.show()
 plt.close()
-
 ```
 
 The following table summarizes the results for all sets.
@@ -445,7 +440,6 @@ for d in compare_sigmaC:
 df = pd.DataFrame(table, columns=nc_cmp.CompareFunc1d.table_header())
 
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-
 ```
 
 ## Summary  

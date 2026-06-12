@@ -1,6 +1,12 @@
 ---
 title: "Computing Bounce Adiabatic Spectrum"
-format: html
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /_functions.qmd >}}
@@ -332,7 +338,6 @@ plt.savefig(f"{fig_dir}/adiabatic_evolution.pdf", bbox_inches="tight")
 fig.set_size_inches(12, 8)
 
 plt.show()
-
 ```
 
 Both models yield the same result during the adiabatic regime and before radiation dominance. 
@@ -346,8 +351,8 @@ For that we plot the evolution of the mode for different $k$ values.
 ```{python}
 # | label: fig-adiabatic-k-dependence
 # | fig-cap:
-# |   - "Adiabatic mode $k$ dependence for QGW"
-# |   - "Adiabatic mode $k$ dependence for QGRW"
+# | - "Adiabatic mode $k$ dependence for QGW"
+# | - "Adiabatic mode $k$ dependence for QGRW"
 # | fig-cap-location: top
 # | layout-ncol: 2
 # | code-fold: true
@@ -435,7 +440,6 @@ fig1.set_size_inches(6, 4)
 fig2.set_size_inches(6, 4)
 
 plt.show()
-
 ```
 
 The QGW model, lacking a radiation component, exhibits an almost scale-invariant spectrum. 
@@ -507,5 +511,4 @@ plt.savefig(f"{fig_dir}/adiabatic_power_spectrum.pdf", bbox_inches="tight")
 fig.set_size_inches(12, 8)
 
 plt.show()
-
 ```

@@ -1,5 +1,12 @@
 ---
 title: "Supernova Type Ia Analysis"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
 ---
 
 {{< include /_functions.qmd >}} 
@@ -70,7 +77,6 @@ values of the equation of state parameter $w$.
     + labs(x=r"$z$", y=r"$D_c$ [Mpc]", color=r"$w$")
     + doc_theme()
 )
-
 ```
 
 ### The Modeling

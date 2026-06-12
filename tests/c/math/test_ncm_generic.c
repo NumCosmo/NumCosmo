@@ -101,6 +101,10 @@ void test_nc_halo_cm_diemer15_basic (void);
 void test_nc_halo_cm_prada12_basic (void);
 void test_nc_halo_cm_dutton14_basic (void);
 void test_nc_halo_bias_despali_basic (void);
+void test_nc_multiplicity_func_bhattacharya_basic (void);
+void test_nc_multiplicity_func_bhattacharya_mean_mdef (void);
+void test_nc_multiplicity_func_bhattacharya_critical_mdef (void);
+void test_nc_multiplicity_func_bhattacharya_virial_mdef (void);
 void test_nc_cluster_mass_ascaso_basic (void);
 void test_nc_cluster_mass_selection_basic (void);
 void test_nc_cluster_photoz_gauss_basic (void);
@@ -182,6 +186,11 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/halo_cm_dutton14/basic", test_nc_halo_cm_dutton14_basic);
 
   g_test_add_func ("/nc/halo_bias_despali/basic", test_nc_halo_bias_despali_basic);
+
+  g_test_add_func ("/nc/multiplicity_func_bhattacharya/basic", test_nc_multiplicity_func_bhattacharya_basic);
+  g_test_add_func ("/nc/multiplicity_func_bhattacharya/mean_mdef", test_nc_multiplicity_func_bhattacharya_mean_mdef);
+  g_test_add_func ("/nc/multiplicity_func_bhattacharya/critical_mdef", test_nc_multiplicity_func_bhattacharya_critical_mdef);
+  g_test_add_func ("/nc/multiplicity_func_bhattacharya/virial_mdef", test_nc_multiplicity_func_bhattacharya_virial_mdef);
 
   g_test_add_func ("/nc/cluster_mass_ascaso/basic", test_nc_cluster_mass_ascaso_basic);
   g_test_add_func ("/nc/cluster_mass_selection/basic", test_nc_cluster_mass_selection_basic);
@@ -1553,6 +1562,94 @@ test_nc_halo_bias_despali_basic (void)
   nc_halo_mass_function_clear (&hmf);
 
   NCM_TEST_FREE (nc_halo_bias_despali_free, hbd);
+}
+
+void
+test_nc_multiplicity_func_bhattacharya_basic (void)
+{
+  NcMultiplicityFuncBhattacharya *mbt = nc_multiplicity_func_bhattacharya_new ();
+  NcMultiplicityFunc *mulf            = NC_MULTIPLICITY_FUNC (mbt);
+  NcHICosmo *cosmo                    = NC_HICOSMO (nc_hicosmo_lcdm_new ());
+  NcMultiplicityFuncBhattacharya *mbt2;
+
+  g_assert_true (mbt != NULL);
+  g_assert_true (NC_IS_MULTIPLICITY_FUNC_BHATTACHARYA (mbt));
+  g_assert_cmpint (nc_multiplicity_func_get_mdef (mulf), ==, NC_MULTIPLICITY_FUNC_MASS_DEF_FOF);
+
+  mbt2 = nc_multiplicity_func_bhattacharya_ref (mbt);
+  nc_multiplicity_func_bhattacharya_clear (&mbt2);
+  g_assert_true (mbt2 == NULL);
+
+  g_assert_true (NC_IS_MULTIPLICITY_FUNC_BHATTACHARYA (mbt));
+
+  nc_multiplicity_func_bhattacharya_set_A (mbt, 0.35);
+  nc_multiplicity_func_bhattacharya_set_a (mbt, 0.8);
+  nc_multiplicity_func_bhattacharya_set_p (mbt, 0.9);
+  nc_multiplicity_func_bhattacharya_set_q (mbt, 1.7);
+  nc_multiplicity_func_bhattacharya_set_delta_c (mbt, 1.686);
+
+  g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_A (mbt), ==, 0.35);
+  g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_a (mbt), ==, 0.8);
+  g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_p (mbt), ==, 0.9);
+  g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_q (mbt), ==, 1.7);
+  g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_delta_c (mbt), ==, 1.686);
+
+  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf, cosmo, 1.0, 0.5), >, 0.0);
+
+  nc_hicosmo_clear (&cosmo);
+
+  NCM_TEST_FREE (nc_multiplicity_func_bhattacharya_free, mbt);
+}
+
+void
+test_nc_multiplicity_func_bhattacharya_mean_mdef (void)
+{
+  if (g_test_subprocess ())
+  {
+    NcMultiplicityFuncBhattacharya *mbt = nc_multiplicity_func_bhattacharya_new ();
+
+    nc_multiplicity_func_set_mdef (NC_MULTIPLICITY_FUNC (mbt), NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN);
+
+    return; /* LCOV_EXCL_LINE */
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*does not support mean mass def*");
+}
+
+void
+test_nc_multiplicity_func_bhattacharya_critical_mdef (void)
+{
+  if (g_test_subprocess ())
+  {
+    NcMultiplicityFuncBhattacharya *mbt = nc_multiplicity_func_bhattacharya_new ();
+
+    nc_multiplicity_func_set_mdef (NC_MULTIPLICITY_FUNC (mbt), NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL);
+
+    return; /* LCOV_EXCL_LINE */
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*does not support critical mass def*");
+}
+
+void
+test_nc_multiplicity_func_bhattacharya_virial_mdef (void)
+{
+  if (g_test_subprocess ())
+  {
+    NcMultiplicityFuncBhattacharya *mbt = nc_multiplicity_func_bhattacharya_new ();
+
+    nc_multiplicity_func_set_mdef (NC_MULTIPLICITY_FUNC (mbt), NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL);
+
+    return; /* LCOV_EXCL_LINE */
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*does not support virial mass def*");
 }
 
 void
