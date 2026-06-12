@@ -25,6 +25,12 @@ from .mock import (
     PurityModel,
     identity_scaling_relation,
 )
+from .confusion import (
+    CatalogType,
+    calculate_catalog_metrics,
+    calculate_split_metrics,
+    get_ratios,
+)
 
 __all__ = [
     "BestCandidates",
@@ -43,4 +49,8 @@ __all__ = [
     "MockGenerator",
     "PurityModel",
     "identity_scaling_relation",
+    "CatalogType",
+    "calculate_catalog_metrics",
+    "calculate_split_metrics",
+    "get_ratios",
 ]
