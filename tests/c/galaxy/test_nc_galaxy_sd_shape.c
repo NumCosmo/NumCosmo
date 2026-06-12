@@ -236,7 +236,7 @@ main (gint argc, gchar *argv[])
     gchar *ell_conv_name       = ell_def->ell_conv_name;
     gchar *ell_coord_name      = ell_def->ell_coord_name;
 
-    for (j = 0; j < 10; j++)
+    for (j = 0; j < 11; j++)
     {
       gchar *test_name = tests_gauss[j].test_name;
 
@@ -252,7 +252,7 @@ main (gint argc, gchar *argv[])
       g_free (test_path);
     }
 
-    for (j = 0; j < 10; j++)
+    for (j = 0; j < 11; j++)
     {
       gchar *test_name = tests_gauss_hsc[j].test_name;
 
