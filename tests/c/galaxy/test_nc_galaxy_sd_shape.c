@@ -648,9 +648,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_convert_coord (TestNcGalaxySDShape *test, gcon
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
 
             if (fabs (gt) > 1.0)
-              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
+              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));  /* LCOV_EXCL_LINE */
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
 
             break;
 
@@ -718,9 +718,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_convert_coord (TestNcGalaxySDShape *test, gcon
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
 
             if (fabs (gt) > 1.0)
-              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
+              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));  /* LCOV_EXCL_LINE */
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
 
             break;
 
@@ -1067,9 +1067,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_gen (TestNcGalaxySDShape *test, gconstpointer 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
 
             if (fabs (gt) > 1.0)
-              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
+              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));  /* LCOV_EXCL_LINE */
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
 
             break;
 
