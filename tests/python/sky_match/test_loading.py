@@ -33,7 +33,7 @@ pytest.importorskip("astropy")
 # pylint: disable=wrong-import-position
 
 from numcosmo_py import Ncm
-from numcosmo_py.sky_match import SkyMatch, Mask
+from numcosmo_py.catalog import SkyMatch, Mask
 
 Ncm.cfg_init()
 

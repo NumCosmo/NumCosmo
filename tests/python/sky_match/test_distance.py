@@ -37,7 +37,7 @@ pytest.importorskip("astropy")
 from astropy.table import Table
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.sky_match import (
+from numcosmo_py.catalog import (
     SkyMatch,
     SkyMatchResult,
     DistanceMethod,

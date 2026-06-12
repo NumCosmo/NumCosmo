@@ -36,7 +36,7 @@ pytest.importorskip("astropy")
 from astropy.table import Table
 
 from numcosmo_py import Ncm
-from numcosmo_py.sky_match import SkyMatch, SharedFractionMethod
+from numcosmo_py.catalog import SkyMatch, SharedFractionMethod
 
 Ncm.cfg_init()
 

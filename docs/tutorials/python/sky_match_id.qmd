@@ -43,7 +43,7 @@ from astropy.table import Table
 from IPython.display import HTML
 
 from numcosmo_py import Ncm
-from numcosmo_py.sky_match import (
+from numcosmo_py.catalog import (
     SkyMatch,
     Coordinates,
     IDs,

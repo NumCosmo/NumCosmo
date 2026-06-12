@@ -37,7 +37,7 @@ from astropy.table import Table
 from astropy.io import fits
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.sky_match import SkyMatch, DistanceMethod
+from numcosmo_py.catalog import SkyMatch, DistanceMethod
 
 Ncm.cfg_init()
 
