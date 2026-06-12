@@ -112,7 +112,7 @@ typedef struct _TestEllDefinition
 gint
 main (gint argc, gchar *argv[])
 {
-  TestNcGalaxySDShapeTests tests_gauss[10] = {
+  TestNcGalaxySDShapeTests tests_gauss[11] = {
     {"serialize", &test_nc_galaxy_sd_shape_serialize},
     {"model_id", &test_nc_galaxy_sd_shape_model_id},
     {"coord", &test_nc_galaxy_sd_shape_hsm_gauss_global_convert_coord},
@@ -125,7 +125,7 @@ main (gint argc, gchar *argv[])
     {"strong_lensing", &test_nc_galaxy_sd_shape_hsm_gauss_global_strong_lensing},
     {"at_nodes", &test_nc_galaxy_sd_shape_hsm_gauss_global_at_nodes},
   };
-  TestNcGalaxySDShapeTests tests_gauss_hsc[10] = {
+  TestNcGalaxySDShapeTests tests_gauss_hsc[11] = {
     {"serialize", &test_nc_galaxy_sd_shape_serialize},
     {"model_id", &test_nc_galaxy_sd_shape_model_id},
     {"coord", &test_nc_galaxy_sd_shape_hsm_gauss_convert_coord},
