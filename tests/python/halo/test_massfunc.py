@@ -506,3 +506,132 @@ def test_compare_mf_dup(
         nc_nm = m_arr * nc_mf
 
         assert_allclose(nc_nm_orig, nc_nm, rtol=1.0e-14)
+
+
+def bhattacharya_f_sigma(
+    sigma: np.ndarray,
+    z: float,
+    A0: float = 0.333,
+    a0: float = 0.788,
+    p: float = 0.807,
+    q: float = 1.795,
+    delta_c: float = 1.6864701998411454502,
+) -> np.ndarray:
+    """Bhattacharya et al. 2011 (arXiv:1005.2239) multiplicity function.
+
+    Equation (12) with the redshift evolution of table 4, fitted for 0 <= z <= 2.
+    """
+    A = A0 / (1.0 + z) ** 0.11
+    a = a0 / (1.0 + z) ** 0.01
+    nu = delta_c / sigma
+
+    return (
+        A
+        * np.sqrt(2.0 / np.pi)
+        * np.exp(-0.5 * a * nu**2)
+        * (1.0 + (a * nu**2) ** -p)
+        * (np.sqrt(a) * nu) ** q
+    )
+
+
+def test_multiplicity_bhattacharya(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+) -> None:
+    """Test the Bhattacharya multiplicity function against the paper formula."""
+    _, cosmo_nc = cosmologies
+    mulf = Nc.MultiplicityFuncBhattacharya.new()
+
+    assert mulf.get_mdef() == Nc.MultiplicityFuncMassDef.FOF
+    assert_allclose(mulf.get_A(), 0.333)
+    assert_allclose(mulf.get_a(), 0.788)
+    assert_allclose(mulf.get_p(), 0.807)
+    assert_allclose(mulf.get_q(), 1.795)
+
+    sigma_arr = np.geomspace(0.2, 5.0, 64)
+    for z in np.linspace(0.0, 2.0, 5):
+        nc_f = np.array([mulf.eval(cosmo_nc.cosmo, sigma, z) for sigma in sigma_arr])
+        ref_f = bhattacharya_f_sigma(sigma_arr, z, delta_c=mulf.get_delta_c())
+
+        assert_allclose(nc_f, ref_f, rtol=1.0e-13)
+
+
+def test_multiplicity_bhattacharya_setters(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+) -> None:
+    """Test the Bhattacharya multiplicity function parameter setters."""
+    _, cosmo_nc = cosmologies
+    mulf = Nc.MultiplicityFuncBhattacharya.new()
+
+    mulf.set_A(0.35)
+    mulf.set_a(0.8)
+    mulf.set_p(0.9)
+    mulf.set_q(1.7)
+    mulf.set_delta_c(1.686)
+
+    assert_allclose(mulf.get_A(), 0.35)
+    assert_allclose(mulf.get_a(), 0.8)
+    assert_allclose(mulf.get_p(), 0.9)
+    assert_allclose(mulf.get_q(), 1.7)
+    assert_allclose(mulf.get_delta_c(), 1.686)
+
+    sigma_arr = np.geomspace(0.2, 5.0, 64)
+    for z in np.linspace(0.0, 2.0, 5):
+        nc_f = np.array([mulf.eval(cosmo_nc.cosmo, sigma, z) for sigma in sigma_arr])
+        ref_f = bhattacharya_f_sigma(
+            sigma_arr, z, A0=0.35, a0=0.8, p=0.9, q=1.7, delta_c=1.686
+        )
+
+        assert_allclose(nc_f, ref_f, rtol=1.0e-13)
+
+
+def test_multiplicity_bhattacharya_dup(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+) -> None:
+    """Test the Bhattacharya multiplicity function serialization round-trip."""
+    _, cosmo_nc = cosmologies
+    mulf_orig = Nc.MultiplicityFuncBhattacharya.new()
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    mulf = duplicate_via_serialization(mulf_orig, ser)
+    assert isinstance(mulf, Nc.MultiplicityFuncBhattacharya)
+
+    assert mulf.get_mdef() == mulf_orig.get_mdef()
+    assert_allclose(mulf.get_A(), mulf_orig.get_A(), rtol=1.0e-14, atol=0.0)
+    assert_allclose(mulf.get_a(), mulf_orig.get_a(), rtol=1.0e-14, atol=0.0)
+    assert_allclose(mulf.get_p(), mulf_orig.get_p(), rtol=1.0e-14, atol=0.0)
+    assert_allclose(mulf.get_q(), mulf_orig.get_q(), rtol=1.0e-14, atol=0.0)
+    assert_allclose(mulf.get_delta_c(), mulf_orig.get_delta_c(), rtol=1.0e-14, atol=0.0)
+
+    sigma_arr = np.geomspace(0.2, 5.0, 64)
+    for z in np.linspace(0.0, 2.0, 5):
+        nc_f_orig = np.array(
+            [mulf_orig.eval(cosmo_nc.cosmo, sigma, z) for sigma in sigma_arr]
+        )
+        nc_f = np.array([mulf.eval(cosmo_nc.cosmo, sigma, z) for sigma in sigma_arr])
+
+        assert_allclose(nc_f, nc_f_orig, rtol=1.0e-14)
+
+
+def test_massfunc_bhattacharya(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+    mass_and_z_array: tuple[np.ndarray, np.ndarray],
+) -> None:
+    """Test the Bhattacharya multiplicity function within NcHaloMassFunction."""
+    _, cosmo_nc = cosmologies
+    mulf = Nc.MultiplicityFuncBhattacharya.new()
+    nc_hmf = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf_tophat, mulf)
+    m_arr, z_arr = mass_and_z_array
+
+    nc_hmf.set_eval_limits(cosmo_nc.cosmo, np.log(1.0e11), np.log(1.0e16), 0.0, 2.0)
+    nc_hmf.prepare(cosmo_nc.cosmo)
+
+    for z in z_arr:
+        nc_mf = np.array(
+            [
+                nc_hmf.dn_dlnM(cosmo_nc.cosmo, logm, z) * np.log(10.0)
+                for logm in np.log(m_arr)
+            ]
+        )
+
+        assert np.all(np.isfinite(nc_mf))
+        assert np.all(nc_mf > 0.0)
