@@ -614,10 +614,11 @@ class MockGenerator:
 
         :return tuple[int, int]: n_cen: number of central galaxies (0 or 1), n_sat: number of satellite galaxies "
         """
-        from scipy.special import erf
-
         # 1. Mean Central Occupancy (Error function)
-        mean_n_cen = 0.5 * (1 + erf((np.log10(m_halo) - logMmin) / sigma_logM))
+        # 0.5 * (1 + erf(arg)) is the unit-normal CDF at arg * sqrt(2), i.e.
+        # 0.5 + normal_gaussian_integral(0, arg * sqrt(2)).
+        arg = (np.log10(m_halo) - logMmin) / sigma_logM
+        mean_n_cen = 0.5 + Ncm.util_normal_gaussian_integral(0.0, arg * np.sqrt(2.0))
         #n_cen = 1 if np.random.random() < mean_n_cen else 0
         n_cen = 1
 
