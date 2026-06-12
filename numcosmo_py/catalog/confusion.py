@@ -17,6 +17,8 @@ Both return a nested ``dict`` with ``counts``, ``ratios`` and ``sums`` entries;
 metric could not be computed).
 """
 
+from __future__ import annotations
+
 from typing import Literal
 
 import numpy as np

@@ -3,6 +3,7 @@
 Module to match objects in the sky halo-halo, cluster-halo, cluster-cluster.
 """
 
+from __future__ import annotations
 import dataclasses
 from typing import TypedDict, cast
 from pathlib import Path
