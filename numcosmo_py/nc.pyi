@@ -16460,6 +16460,91 @@ class MultiplicityFunc(GObject.Object):
     def set_Delta(self, Delta: float) -> None: ...
     def set_mdef(self, mdef: MultiplicityFuncMassDef) -> None: ...
 
+class MultiplicityFuncBhattacharya(MultiplicityFunc):
+    r"""
+    :Constructors:
+
+    ::
+
+        MultiplicityFuncBhattacharya(**properties)
+        new() -> NumCosmo.MultiplicityFuncBhattacharya
+
+    Object NcMultiplicityFuncBhattacharya
+
+    Properties from NcMultiplicityFuncBhattacharya:
+      A -> gdouble: A
+        A
+      a -> gdouble: a
+        a
+      p -> gdouble: p
+        p
+      q -> gdouble: q
+        q
+      critical-delta -> gdouble: critical-delta
+        Critical delta
+
+    Properties from NcMultiplicityFunc:
+      mass-def -> NcMultiplicityFuncMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Delta
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        A: float
+        a: float
+        critical_delta: float
+        p: float
+        q: float
+        Delta: float
+        mass_def: MultiplicityFuncMassDef
+
+    props: Props = ...
+    parent_instance: MultiplicityFunc = ...
+    priv: MultiplicityFuncBhattacharyaPrivate = ...
+    def __init__(
+        self,
+        A: float = ...,
+        a: float = ...,
+        critical_delta: float = ...,
+        p: float = ...,
+        q: float = ...,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(mbt: MultiplicityFuncBhattacharya) -> None: ...
+    def free(self) -> None: ...
+    def get_A(self) -> float: ...
+    def get_a(self) -> float: ...
+    def get_delta_c(self) -> float: ...
+    def get_p(self) -> float: ...
+    def get_q(self) -> float: ...
+    @classmethod
+    def new(cls) -> MultiplicityFuncBhattacharya: ...
+    def ref(self) -> MultiplicityFuncBhattacharya: ...
+    def set_A(self, A: float) -> None: ...
+    def set_a(self, a: float) -> None: ...
+    def set_delta_c(self, delta_c: float) -> None: ...
+    def set_p(self, p: float) -> None: ...
+    def set_q(self, q: float) -> None: ...
+
+class MultiplicityFuncBhattacharyaClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        MultiplicityFuncBhattacharyaClass()
+    """
+
+    parent_class: MultiplicityFuncClass = ...
+
+class MultiplicityFuncBhattacharyaPrivate(GObject.GPointer): ...
+
 class MultiplicityFuncBocquet(MultiplicityFunc):
     r"""
     :Constructors:

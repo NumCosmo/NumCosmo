@@ -1,7 +1,7 @@
 /***************************************************************************
  *            nc_multiplicity_func_bhattacharya.h
  *
- *  Mon Jun 28 15:09:13 2010
+ *  Mon May 18 14:26:00 2026
  *  Copyright  2026  Cinthia Nunes de Lima / Henrique C. N. Lettieri
  *  <cinthia.nlima@gmail.com> <henrique.cnl@hotmail.com>
  ****************************************************************************/

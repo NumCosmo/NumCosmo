@@ -29,8 +29,15 @@
  *
  * Dark matter halo -- Bhattacharya multiplicity function.
  *
- * Computes the multiplicity function of dark matter halos using the Bhattacharya model.
+ * Dark matter halo multiplicity function fitted to LCDM simulations using the
+ * friends of friends algorithm, FoF(0.2). See reference arXiv:1005.2239.
  *
+ * $$f(\sigma, z) = A(z) \sqrt{\frac{2}{\pi}} e^{-\frac{a(z) \delta_c^2}{2 \sigma^2}}
+ * \left[ 1 + \left( \frac{\sigma^2}{a(z) \delta_c^2} \right)^{p} \right]
+ * \left( \frac{\delta_c \sqrt{a(z)}}{\sigma} \right)^{q},$$
+ * where $A(z) = A_0 (1+z)^{-0.11}$, $a(z) = a_0 (1+z)^{-0.01}$, and the default values
+ * fitted in the range $0 \leq z \leq 2$ are $A_0 = 0.333$, $a_0 = 0.788$, $p = 0.807$
+ * and $q = 1.795$.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -186,6 +193,7 @@ nc_multiplicity_func_bhattacharya_class_init (NcMultiplicityFuncBhattacharyaClas
                                                         "a",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.788,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcMultiplicityFuncBhattacharya:p:
    *
@@ -213,7 +221,7 @@ nc_multiplicity_func_bhattacharya_class_init (NcMultiplicityFuncBhattacharyaClas
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcMultiplicityFuncBhattacharya:critical_delta:
+   * NcMultiplicityFuncBhattacharya:critical-delta:
    *
    * Critical overdensity for spherical collapse.
    */
@@ -234,7 +242,7 @@ nc_multiplicity_func_bhattacharya_class_init (NcMultiplicityFuncBhattacharyaClas
 static void
 _nc_multiplicity_func_bhattacharya_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
-  NcMultiplicityFuncBhattacharya *mbt              = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
+  NcMultiplicityFuncBhattacharya *mbt                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
   NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
 
   switch (mdef)
@@ -262,7 +270,7 @@ _nc_multiplicity_func_bhattacharya_set_mdef (NcMultiplicityFunc *mulf, NcMultipl
 static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_bhattacharya_get_mdef (NcMultiplicityFunc *mulf)
 {
-  NcMultiplicityFuncBhattacharya *mba              = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
+  NcMultiplicityFuncBhattacharya *mba                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
   NcMultiplicityFuncBhattacharyaPrivate * const self = mba->priv;
 
   return self->mdef;
@@ -271,7 +279,7 @@ _nc_multiplicity_func_bhattacharya_get_mdef (NcMultiplicityFunc *mulf)
 static void
 _nc_multiplicity_func_bhattacharya_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
-  NcMultiplicityFuncBhattacharya *mba              = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
+  NcMultiplicityFuncBhattacharya *mba                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
   NcMultiplicityFuncBhattacharyaPrivate * const self = mba->priv;
 
   self->Delta = Delta;
@@ -280,7 +288,7 @@ _nc_multiplicity_func_bhattacharya_set_Delta (NcMultiplicityFunc *mulf, gdouble 
 static gdouble
 _nc_multiplicity_func_bhattacharya_get_Delta (NcMultiplicityFunc *mulf)
 {
-  NcMultiplicityFuncBhattacharya *mba              = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
+  NcMultiplicityFuncBhattacharya *mba                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
   NcMultiplicityFuncBhattacharyaPrivate * const self = mba->priv;
 
   return self->Delta;
@@ -289,22 +297,20 @@ _nc_multiplicity_func_bhattacharya_get_Delta (NcMultiplicityFunc *mulf)
 static gdouble
 _nc_multiplicity_func_bhattacharya_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* f(\sigma) - Bhattacharya */
 {
-  NcMultiplicityFuncBhattacharya *mba              = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
+  NcMultiplicityFuncBhattacharya *mba                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
   NcMultiplicityFuncBhattacharyaPrivate * const self = mba->priv;
 
-  const gdouble A   = self->A / pow((1 + z), 0.11);
-  const gdouble a   = self->a;
+  const gdouble A   = self->A / pow (1.0 + z, 0.11);
+  const gdouble a   = self->a / pow (1.0 + z, 0.01);
   const gdouble bc1 = sqrt (2.0 / M_PI);
   const gdouble p   = self->p;
   const gdouble q   = self->q;
-  gdouble x         = self->delta_c / sigma;
-  gdouble x2        = x * x;
+  const gdouble x   = self->delta_c / sigma;
+  const gdouble x2  = x * x;
 
-  gdouble f_Bhattacharya = A * bc1  * ( exp (-(a * x2) / 2.0) ) * ( 1.0 + pow (x2 * a, -p) ) * ( pow(x * sqrt(a), q) );  /* Bhattacharya's paper */
+  const gdouble f_Bhattacharya = A * bc1 * exp (-0.5 * a * x2) * (1.0 + pow (a * x2, -p)) * pow (x * sqrt (a), q);
 
   NCM_UNUSED (cosmo);
-  NCM_UNUSED (z);
-  /*  printf ("A = %.5g, a=%.5g, p=%.5g, delta_c= %.5g\n", A, a, p, mulf_bhattacharya->delta_c); */
 
   return f_Bhattacharya;
 }
@@ -403,7 +409,7 @@ nc_multiplicity_func_bhattacharya_get_A (const NcMultiplicityFuncBhattacharya *m
  * @mbt: a #NcMultiplicityFuncBhattacharya.
  * @a: value of #NcMultiplicityFuncBhattacharya:a.
  *
- * Sets the value @b to the #NcMultiplicityFuncBhattacharya:b property.
+ * Sets the value @a to the #NcMultiplicityFuncBhattacharya:a property.
  *
  */
 void
@@ -493,7 +499,6 @@ nc_multiplicity_func_bhattacharya_get_q (const NcMultiplicityFuncBhattacharya *m
 
   return self->q;
 }
-
 
 /**
  * nc_multiplicity_func_bhattacharya_set_delta_c:
