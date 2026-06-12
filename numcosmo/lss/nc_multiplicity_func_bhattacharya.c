@@ -247,6 +247,10 @@ _nc_multiplicity_func_bhattacharya_set_mdef (NcMultiplicityFunc *mulf, NcMultipl
 
   switch (mdef)
   {
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
+      /* nothing to do */
+      break;
+    /* LCOV_EXCL_START */
     case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
       g_error ("NcMultiplicityFuncBhattacharya does not support mean mass def");
       break;
@@ -256,12 +260,10 @@ _nc_multiplicity_func_bhattacharya_set_mdef (NcMultiplicityFunc *mulf, NcMultipl
     case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
       g_error ("NcMultiplicityFuncBhattacharya does not support virial mass def");
       break;
-    case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
-      /* nothing to do */
-      break;
     default:
       g_assert_not_reached ();
       break;
+      /* LCOV_EXCL_STOP */
   }
 
   self->mdef = mdef;
