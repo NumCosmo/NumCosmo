@@ -67,9 +67,8 @@ values of the equation of state parameter $w$.
 
 ```{python}
 # | label: fig-comoving-distance
-# | html:
-# |   fig-cap: Comoving distance for XCDM cosmology up to redshift $z = 3.0$.
-# |   fig-cap-location: margin
+# | fig-cap: Comoving distance for XCDM cosmology up to redshift $z = 3.0$.
+# | fig-cap-location: margin
 # | code-fold: true
 
 (
@@ -169,9 +168,8 @@ Fisher matrix.
 
 ```{python}
 # | label: fig-fit-results
-# | html:
-# |   fig-cap: Best-fit parameters and confidence regions for the XCDM model.
-# |   fig-cap-location: margin
+# | fig-cap: Best-fit parameters and confidence regions for the XCDM model.
+# | fig-cap-location: margin
 # | code-fold: true
 
 (
@@ -209,9 +207,8 @@ Finally, we can extract the MCMC samples and visualize the results.
 
 ```{python}
 # | label: fig-mcmc-results
-# | html:
-# |   fig-cap: MCMC samples for the XCDM model.
-# |   fig-cap-location: margin
+# | fig-cap: MCMC samples for the XCDM model.
+# | fig-cap-location: margin
 
 mcat = esmcmc.peek_catalog()
 mcat.trim(2, 1)

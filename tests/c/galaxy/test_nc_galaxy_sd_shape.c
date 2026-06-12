@@ -77,6 +77,9 @@ static void test_nc_galaxy_sd_shape_hsm_gauss_integ (TestNcGalaxySDShape *test, 
 static void test_nc_galaxy_sd_shape_hsm_gauss_global_stats (TestNcGalaxySDShape *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_shape_hsm_gauss_stats (TestNcGalaxySDShape *test, gconstpointer pdata);
 
+static void test_nc_galaxy_sd_shape_hsm_gauss_global_estimate (TestNcGalaxySDShape *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_shape_hsm_gauss_estimate (TestNcGalaxySDShape *test, gconstpointer pdata);
+
 static void test_nc_galaxy_sd_shape_hsm_gauss_global_required_columns (TestNcGalaxySDShape *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_shape_hsm_gauss_required_columns (TestNcGalaxySDShape *test, gconstpointer pdata);
 
@@ -116,6 +119,7 @@ main (gint argc, gchar *argv[])
     {"gen", &test_nc_galaxy_sd_shape_hsm_gauss_global_gen},
     {"integ", &test_nc_galaxy_sd_shape_hsm_gauss_global_integ},
     {"stats", &test_nc_galaxy_sd_shape_hsm_gauss_global_stats},
+    {"estimate", &test_nc_galaxy_sd_shape_hsm_gauss_global_estimate},
     {"required_columns", &test_nc_galaxy_sd_shape_hsm_gauss_global_required_columns},
     {"data_setget", &test_nc_galaxy_sd_shape_hsm_gauss_global_data_setget},
     {"strong_lensing", &test_nc_galaxy_sd_shape_hsm_gauss_global_strong_lensing},
@@ -128,6 +132,7 @@ main (gint argc, gchar *argv[])
     {"gen", &test_nc_galaxy_sd_shape_hsm_gauss_gen},
     {"integ", &test_nc_galaxy_sd_shape_hsm_gauss_integ},
     {"stats", &test_nc_galaxy_sd_shape_hsm_gauss_stats},
+    {"estimate", &test_nc_galaxy_sd_shape_hsm_gauss_estimate},
     {"required_columns", &test_nc_galaxy_sd_shape_hsm_gauss_required_columns},
     {"data_setget", &test_nc_galaxy_sd_shape_hsm_gauss_data_setget},
     {"strong_lensing", &test_nc_galaxy_sd_shape_hsm_gauss_strong_lensing},
@@ -654,9 +659,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_convert_coord (TestNcGalaxySDShape *test, gcon
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
 
             if (fabs (gt) > 1.0)
-              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
+              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));  /* LCOV_EXCL_LINE */
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
 
             break;
 
@@ -724,9 +729,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_convert_coord (TestNcGalaxySDShape *test, gcon
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
 
             if (fabs (gt) > 1.0)
-              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
+              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));  /* LCOV_EXCL_LINE */
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
 
             break;
 
@@ -1073,9 +1078,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_gen (TestNcGalaxySDShape *test, gconstpointer 
           case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
 
             if (fabs (gt) > 1.0)
-              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));
+              e_o = (1.0 + g * conj (e_s)) / (conj (e_s) + conj (g));  /* LCOV_EXCL_LINE */
             else
-              e_o = (e_s + g) / (1.0 + conj (g) * e_s);  /* LCOV_EXCL_LINE */
+              e_o = (e_s + g) / (1.0 + conj (g) * e_s);
 
             break;
 
@@ -2489,6 +2494,158 @@ static void
 test_nc_galaxy_sd_shape_hsm_gauss_at_nodes (TestNcGalaxySDShape *test, gconstpointer pdata)
 {
   _test_nc_galaxy_sd_shape_at_nodes_impl (test, pdata, FALSE);
+}
+
+/*
+ * Deterministic test of the direct shear estimator. The observed ellipticities
+ * are constructed so that the per-galaxy rotated shape hat_g = e_o * exp (-2 i phi)
+ * takes prescribed values whose sample mean is (INJ_GT, INJ_GX) and whose real and
+ * imaginary parts share the *same* zero-mean offset sequence (so sd_re == sd_im
+ * exactly). With no bias (m = c = 0) the estimator must return, for the responsivity
+ * R = 1 - std_shape^2:
+ *   - TRACE_DET (epsilon):    gt = INJ_GT,           gx = INJ_GX           (no R factor);
+ *   - TRACE     (distortion): gt = 0.5 * INJ_GT / R, gx = 0.5 * INJ_GX / R (R on both).
+ * In both conventions sigma_t / sigma_x == 1, since the responsivity (when present)
+ * multiplies both components equally. This pins down the R placement that the
+ * tangential/cross asymmetry bug got wrong.
+ */
+#define TEST_ESTIMATE_INJ_GT 0.2
+#define TEST_ESTIMATE_INJ_GX 0.1
+
+static void
+test_nc_galaxy_sd_shape_estimate_check (TestNcGalaxySDShape *test, GPtrArray *data_array, const gdouble R)
+{
+  gdouble hat_gt, hat_gx, hat_sigma_t, hat_sigma_x, hat_rho;
+  gdouble exp_gt, exp_gx;
+
+  nc_galaxy_sd_shape_direct_estimate (test->galaxy_shape, test->mset, data_array,
+                                      &hat_gt, &hat_gx, &hat_sigma_t, &hat_sigma_x, &hat_rho);
+
+  switch (test->ell_conv)
+  {
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+      exp_gt = TEST_ESTIMATE_INJ_GT;
+      exp_gx = TEST_ESTIMATE_INJ_GX;
+      break;
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+      exp_gt = 0.5 * TEST_ESTIMATE_INJ_GT / R;
+      exp_gx = 0.5 * TEST_ESTIMATE_INJ_GX / R;
+      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
+  }
+
+  g_assert_true (gsl_finite (hat_gt) && gsl_finite (hat_gx));
+  g_assert_true (gsl_finite (hat_sigma_t) && gsl_finite (hat_sigma_x));
+  g_assert_cmpfloat (hat_sigma_x, >, 0.0);
+
+  ncm_assert_cmpdouble_e (hat_gt, ==, exp_gt, 1.0e-9, 0.0);
+  ncm_assert_cmpdouble_e (hat_gx, ==, exp_gx, 1.0e-9, 0.0);
+  /* Responsivity is isotropic: it cancels in the ratio of the two components. */
+  ncm_assert_cmpdouble_e (hat_sigma_t / hat_sigma_x, ==, 1.0, 1.0e-9, 0.0);
+}
+
+/* hat_g for galaxy i: prescribed mean plus a deterministic symmetric (zero-mean) spread,
+ * identical on the real and imaginary axes so that sd_re == sd_im. */
+static complex double
+test_nc_galaxy_sd_shape_estimate_hat_g (const guint i, const guint ngals, const gdouble std_shape)
+{
+  const gdouble off = std_shape * (2.0 * i / (ngals - 1.0) - 1.0);
+
+  return (TEST_ESTIMATE_INJ_GT + off) + I * (TEST_ESTIMATE_INJ_GX + off);
+}
+
+/* e_o that yields the prescribed hat_g at the galaxy position, inverting the rotation
+ * (and Euclidean flip) the estimator applies. */
+static complex double
+test_nc_galaxy_sd_shape_estimate_e_o (TestNcGalaxySDShape *test, const gdouble ra, const gdouble dec, const complex double hat_g)
+{
+  gdouble theta, phi;
+
+  nc_halo_position_polar_angles (test->halo_position, ra, dec, &theta, &phi);
+
+  if (test->ell_coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
+    phi = M_PI - phi;
+
+  return hat_g * cexp (2.0 * I * phi);
+}
+
+static void
+test_nc_galaxy_sd_shape_hsm_gauss_global_estimate (TestNcGalaxySDShape *test, gconstpointer pdata)
+{
+  GPtrArray *data_array   = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_galaxy_sd_shape_data_unref);
+  const guint ngals       = 1000;
+  const gdouble sigma     = ncm_model_orig_param_get (NCM_MODEL (test->galaxy_shape), NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_SIGMA);
+  const gdouble std_shape = nc_galaxy_sd_shape_hsm_gauss_global_std_shape_from_sigma (sigma);
+  const gdouble R         = 1.0 - std_shape * std_shape;
+  const gdouble ra        = 0.05;
+  const gdouble dec       = -0.04;
+  guint i;
+
+  for (i = 0; i < ngals; i++)
+  {
+    NcGalaxySDObsRedshiftData *z_data = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
+    NcGalaxySDPositionData *p_data    = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
+    NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
+    const complex double hat_g        = test_nc_galaxy_sd_shape_estimate_hat_g (i, ngals, std_shape);
+    complex double e_o;
+
+    p_data->ra    = ra;
+    p_data->dec   = dec;
+    s_data->coord = test->ell_coord;
+
+    e_o = test_nc_galaxy_sd_shape_estimate_e_o (test, ra, dec, hat_g);
+
+    nc_galaxy_sd_shape_hsm_gauss_global_data_set (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape),
+                                                  s_data, creal (e_o), cimag (e_o), 0.1, 0.0, 0.0, 0.0);
+
+    g_ptr_array_add (data_array, s_data);
+    nc_galaxy_sd_obs_redshift_data_unref (z_data);
+    nc_galaxy_sd_position_data_unref (p_data);
+  }
+
+  test_nc_galaxy_sd_shape_estimate_check (test, data_array, R);
+
+  g_ptr_array_unref (data_array);
+}
+
+static void
+test_nc_galaxy_sd_shape_hsm_gauss_estimate (TestNcGalaxySDShape *test, gconstpointer pdata)
+{
+  GPtrArray *data_array   = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_galaxy_sd_shape_data_unref);
+  const guint ngals       = 1000;
+  const gdouble std_shape = 0.3;
+  const gdouble R         = 1.0 - std_shape * std_shape;
+  const gdouble ra        = 0.05;
+  const gdouble dec       = -0.04;
+  guint i;
+
+  for (i = 0; i < ngals; i++)
+  {
+    NcGalaxySDObsRedshiftData *z_data = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
+    NcGalaxySDPositionData *p_data    = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
+    NcGalaxySDShapeData *s_data       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data);
+    const complex double hat_g        = test_nc_galaxy_sd_shape_estimate_hat_g (i, ngals, std_shape);
+    complex double e_o;
+
+    p_data->ra    = ra;
+    p_data->dec   = dec;
+    s_data->coord = test->ell_coord;
+
+    e_o = test_nc_galaxy_sd_shape_estimate_e_o (test, ra, dec, hat_g);
+
+    nc_galaxy_sd_shape_hsm_gauss_data_set (NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape),
+                                           s_data, creal (e_o), cimag (e_o), std_shape, 0.1, 0.0, 0.0, 0.0);
+
+    g_ptr_array_add (data_array, s_data);
+    nc_galaxy_sd_obs_redshift_data_unref (z_data);
+    nc_galaxy_sd_position_data_unref (p_data);
+  }
+
+  test_nc_galaxy_sd_shape_estimate_check (test, data_array, R);
+
+  g_ptr_array_unref (data_array);
 }
 
 static void

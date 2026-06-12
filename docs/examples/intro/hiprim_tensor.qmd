@@ -194,10 +194,9 @@ We plot the power spectra for TT, TE, EE, and BB modes to compare the tensor and
 
 ```{python}
 # | label: fig-hiprim_tensor_tt_low
-# | html:
-# |   fig-cap: The power spectrum for TT modes with and without the tensor contribution.
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: The power spectrum for TT modes with and without the tensor contribution.
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 plt.figure(figsize=(10, 6))
@@ -212,10 +211,9 @@ plt.show()
 
 ```{python}
 # | label: fig-hiprim_tensor_te_low
-# | html:
-# |   fig-cap: The power spectrum for TE modes with and without the tensor contribution.
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: The power spectrum for TE modes with and without the tensor contribution.
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 plt.figure(figsize=(10, 6))
@@ -230,10 +228,9 @@ plt.show()
 
 ```{python}
 # | label: fig-hiprim_tensor_ee_low
-# | html:
-# |   fig-cap: The power spectrum for EE modes with and without the tensor contribution.
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: The power spectrum for EE modes with and without the tensor contribution.
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 plt.figure(figsize=(10, 6))
@@ -248,10 +245,9 @@ plt.show()
 
 ```{python}
 # | label: fig-hiprim_tensor_bb_low
-# | html:
-# |   fig-cap: The power spectrum for BB modes with and without the tensor contribution.
-# |   fig-width: 100%
-# |   fig-cap-location: margin
+# | fig-cap: The power spectrum for BB modes with and without the tensor contribution.
+# | fig-width: 100%
+# | fig-cap-location: margin
 # | code-fold: true
 
 plt.figure(figsize=(10, 6))

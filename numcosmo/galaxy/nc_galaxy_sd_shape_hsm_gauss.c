@@ -787,17 +787,19 @@ _nc_galaxy_sd_shape_hsm_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *m
     switch (ellip_conv)
     {
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-        *gt      = (mean_gt / R - mean_c1) / (1.0 + mean_m);
+        /* epsilon convention: <epsilon> = g, no responsivity factor R */
+        *gt      = (mean_gt - mean_c1) / (1.0 + mean_m);
         *gx      = (mean_gx - mean_c2) / (1.0 + mean_m);
-        *sigma_t = ncm_stats_vec_get_sd (self->obs_stats, 0) / R / (1.0 + mean_m);
+        *sigma_t = ncm_stats_vec_get_sd (self->obs_stats, 0) / (1.0 + mean_m);
         *sigma_x = ncm_stats_vec_get_sd (self->obs_stats, 1) / (1.0 + mean_m);
         *rho     = ncm_stats_vec_get_cor (self->obs_stats, 0, 1);
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+        /* distortion convention: <chi> = 2 R g, responsivity applies to both components */
         *gt      = (0.5 * mean_gt / R - mean_c1) / (1.0 + mean_m);
-        *gx      = (mean_gx  - mean_c2) / (1.0 + mean_m);
+        *gx      = (0.5 * mean_gx / R - mean_c2) / (1.0 + mean_m);
         *sigma_t = 0.5 * ncm_stats_vec_get_sd (self->obs_stats, 0) / R / (1.0 + mean_m);
-        *sigma_x = ncm_stats_vec_get_sd (self->obs_stats, 1) / (1.0 + mean_m);
+        *sigma_x = 0.5 * ncm_stats_vec_get_sd (self->obs_stats, 1) / R / (1.0 + mean_m);
         *rho     = ncm_stats_vec_get_cor (self->obs_stats, 0, 1);
         break;
       default:                   /* LCOV_EXCL_LINE */

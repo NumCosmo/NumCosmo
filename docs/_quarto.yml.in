@@ -17,6 +17,7 @@ project:
     - tutorials/python/bounce_spectra.qmd
     - tutorials/python/cluster_wl_simul.qmd
     - tutorials/python/sky_match.qmd
+    - examples/data_analysis/inspect_data_objects.qmd
     - examples/data_analysis/snia.qmd
     - examples/intro/epdf.qmd
     - examples/intro/hiprim.qmd
@@ -30,6 +31,7 @@ project:
 
 execute:
   error: false
+  freeze: auto
 
 website:
   title: "The Numerical Cosmology Library"
@@ -112,6 +114,8 @@ website:
                 text: "Dark Energy WSpline"
             - section: "Data Analysis"
               contents:
+              - href: examples/data_analysis/inspect_data_objects.qmd
+                text: "Inspect Data Objects"
               - href: examples/data_analysis/snia.qmd
                 text: "SN Ia Fitting"
 
@@ -131,7 +135,13 @@ format:
       body-width: 1200px
     include-after-body:
       - add-py-link.html
-
+  ipynb:
+    filters:
+      - ipynb-strip-xref.lua
+    execute:
+      eval: false
+      echo: true
+      output: true
 reference-location: margin
 citation-location: margin
 authors:
