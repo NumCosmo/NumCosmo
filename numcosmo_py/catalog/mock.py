@@ -12,8 +12,6 @@ and therefore :mod:`numcosmo_py.catalog` -- stays cheap and does not require
 those packages unless the relevant features are used.
 """
 
-from __future__ import annotations
-
 from typing import Protocol
 
 import numpy as np
