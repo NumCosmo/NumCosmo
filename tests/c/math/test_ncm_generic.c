@@ -102,6 +102,7 @@ void test_nc_halo_cm_prada12_basic (void);
 void test_nc_halo_cm_dutton14_basic (void);
 void test_nc_halo_bias_despali_basic (void);
 void test_nc_multiplicity_func_bhattacharya_basic (void);
+void test_nc_multiplicity_func_bhattacharya_convention (void);
 void test_nc_multiplicity_func_bhattacharya_mean_mdef (void);
 void test_nc_multiplicity_func_bhattacharya_critical_mdef (void);
 void test_nc_multiplicity_func_bhattacharya_virial_mdef (void);
@@ -188,6 +189,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/halo_bias_despali/basic", test_nc_halo_bias_despali_basic);
 
   g_test_add_func ("/nc/multiplicity_func_bhattacharya/basic", test_nc_multiplicity_func_bhattacharya_basic);
+  g_test_add_func ("/nc/multiplicity_func_bhattacharya/convention", test_nc_multiplicity_func_bhattacharya_convention);
   g_test_add_func ("/nc/multiplicity_func_bhattacharya/mean_mdef", test_nc_multiplicity_func_bhattacharya_mean_mdef);
   g_test_add_func ("/nc/multiplicity_func_bhattacharya/critical_mdef", test_nc_multiplicity_func_bhattacharya_critical_mdef);
   g_test_add_func ("/nc/multiplicity_func_bhattacharya/virial_mdef", test_nc_multiplicity_func_bhattacharya_virial_mdef);
@@ -1575,6 +1577,7 @@ test_nc_multiplicity_func_bhattacharya_basic (void)
   g_assert_true (mbt != NULL);
   g_assert_true (NC_IS_MULTIPLICITY_FUNC_BHATTACHARYA (mbt));
   g_assert_cmpint (nc_multiplicity_func_get_mdef (mulf), ==, NC_MULTIPLICITY_FUNC_MASS_DEF_FOF);
+  g_assert_cmpint (nc_multiplicity_func_bhattacharya_get_convention (mbt), ==, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011);
 
   mbt2 = nc_multiplicity_func_bhattacharya_ref (mbt);
   nc_multiplicity_func_bhattacharya_clear (&mbt2);
@@ -1599,6 +1602,33 @@ test_nc_multiplicity_func_bhattacharya_basic (void)
   nc_hicosmo_clear (&cosmo);
 
   NCM_TEST_FREE (nc_multiplicity_func_bhattacharya_free, mbt);
+}
+
+void
+test_nc_multiplicity_func_bhattacharya_convention (void)
+{
+  NcMultiplicityFuncBhattacharya *mbt_b = nc_multiplicity_func_bhattacharya_new_full (NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011);
+  NcMultiplicityFuncBhattacharya *mbt_h = nc_multiplicity_func_bhattacharya_new_full (NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019);
+  NcMultiplicityFunc *mulf_b            = NC_MULTIPLICITY_FUNC (mbt_b);
+  NcMultiplicityFunc *mulf_h            = NC_MULTIPLICITY_FUNC (mbt_h);
+  NcHICosmo *cosmo                      = NC_HICOSMO (nc_hicosmo_lcdm_new ());
+
+  g_assert_cmpint (nc_multiplicity_func_bhattacharya_get_convention (mbt_b), ==, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011);
+  g_assert_cmpint (nc_multiplicity_func_bhattacharya_get_convention (mbt_h), ==, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019);
+
+  /* The two conventions agree at z = 0 and differ for z > 0. */
+  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 0.0), ==,
+                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 0.0), 1.0e-15, 0.0);
+  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 1.0), !=,
+                     nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 1.0));
+
+  nc_multiplicity_func_bhattacharya_set_convention (mbt_h, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011);
+  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 1.0), ==,
+                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 1.0), 1.0e-15, 0.0);
+
+  nc_hicosmo_clear (&cosmo);
+  nc_multiplicity_func_bhattacharya_free (mbt_b);
+  NCM_TEST_FREE (nc_multiplicity_func_bhattacharya_free, mbt_h);
 }
 
 void
