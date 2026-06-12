@@ -153,7 +153,7 @@ p_dist = Nc.GalaxySDPositionFlat.new(
 )
 z_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
 z_dist = Nc.GalaxySDObsRedshiftGauss.new(z_true, 0.1, 2.0)
-s_dist = Nc.GalaxySDShapeGauss.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
+s_dist = Nc.GalaxySDShapeHSMGaussGlobal.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
 
 s_dist["sigma"] = galaxy_shape_e_rms
 
@@ -225,12 +225,18 @@ obs = Nc.GalaxyWLObs.new(
 )
 
 for i in range(n_galaxies):
+    c1 = rng.gaussian_gen(0.0, 0.005)
+    c2 = rng.gaussian_gen(0.0, 0.005)
+    m = rng.gaussian_gen(0.1, 0.05)
     z_dist.gen(mset, z_data, sigma_z, rng)
     p_dist.gen(mset, p_data, rng)
     s_dist.gen(
         mset,
         s_data,
         galaxy_shape_e_sigma,
+        c1,
+        c2,
+        m,
         Nc.GalaxyWLObsCoord.CELESTIAL,
         rng,
     )
@@ -354,12 +360,19 @@ def gen_galaxies(halo_ra: float, halo_dec: float, halo_mass: float) -> pd.DataFr
     )
 
     for i in range(n_galaxies):
+        std_noise = rng.uniform_gen(0.05, 0.25)
+        c1 = rng.gaussian_gen(0.0, 0.005)
+        c2 = rng.gaussian_gen(0.0, 0.005)
+        m = rng.gaussian_gen(0.1, 0.05)
         z_dist.gen(mset, z_data, sigma_z, rng)
         p_dist.gen(mset, p_data, rng)
         s_dist.gen(
             mset,
             s_data,
-            galaxy_shape_e_sigma,
+            std_noise,
+            c1,
+            c2,
+            m,
             Nc.GalaxyWLObsCoord.CELESTIAL,
             rng,
         )
