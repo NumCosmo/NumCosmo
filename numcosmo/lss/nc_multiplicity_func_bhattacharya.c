@@ -35,9 +35,15 @@
  * $$f(\sigma, z) = A(z) \sqrt{\frac{2}{\pi}} e^{-\frac{a(z) \delta_c^2}{2 \sigma^2}}
  * \left[ 1 + \left( \frac{\sigma^2}{a(z) \delta_c^2} \right)^{p} \right]
  * \left( \frac{\delta_c \sqrt{a(z)}}{\sigma} \right)^{q},$$
- * where $A(z) = A_0 (1+z)^{-0.11}$, $a(z) = a_0 (1+z)^{-0.01}$, and the default values
- * fitted in the range $0 \leq z \leq 2$ are $A_0 = 0.333$, $a_0 = 0.788$, $p = 0.807$
- * and $q = 1.795$.
+ * where $A(z) = A_0 (1+z)^{-0.11}$, and the default values fitted in the range
+ * $0 \leq z \leq 2$ are $A_0 = 0.333$, $a_0 = 0.788$, $p = 0.807$ and $q = 1.795$.
+ *
+ * The redshift evolution of the shape parameter $a$ is selected through the
+ * #NcMultiplicityFuncBhattacharya:convention property: the original
+ * Bhattacharya et al. 2011 fit (arXiv:1005.2239) uses
+ * $a(z) = a_0 (1+z)^{-0.01}$, while the Heitmann et al. 2019 Outer Rim form
+ * (arXiv:1904.11970) keeps $a = a_0$ constant in redshift. The two agree at
+ * $z = 0$ and differ by at most $\sim 1\%$ in $a$ over $0 \leq z \leq 2$.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,10 +52,12 @@
 #include "build_cfg.h"
 
 #include "lss/nc_multiplicity_func_bhattacharya.h"
+#include "numcosmo/nc_enum_types.h"
 
 struct _NcMultiplicityFuncBhattacharyaPrivate
 {
   NcMultiplicityFuncMassDef mdef;
+  NcMultiplicityFuncBhattacharyaConvention convention;
   gdouble A;
   gdouble a;
   gdouble p;
@@ -66,6 +74,7 @@ enum
   PROP_p,
   PROP_q,
   PROP_DELTA_C,
+  PROP_CONVENTION,
   PROP_SIZE,
 };
 
@@ -76,13 +85,14 @@ nc_multiplicity_func_bhattacharya_init (NcMultiplicityFuncBhattacharya *mbt)
 {
   NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
-  self->mdef    = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
-  self->A       = 0.0;
-  self->a       = 0.0;
-  self->p       = 0.0;
-  self->q       = 0.0;
-  self->delta_c = 0.0;
-  self->Delta   = 0.0;
+  self->mdef       = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
+  self->convention = NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_LEN;
+  self->A          = 0.0;
+  self->a          = 0.0;
+  self->p          = 0.0;
+  self->q          = 0.0;
+  self->delta_c    = 0.0;
+  self->Delta      = 0.0;
 }
 
 static void
@@ -108,6 +118,9 @@ _nc_multiplicity_func_bhattacharya_set_property (GObject *object, guint prop_id,
       break;
     case PROP_DELTA_C:
       nc_multiplicity_func_bhattacharya_set_delta_c (mbt, g_value_get_double (value));
+      break;
+    case PROP_CONVENTION:
+      nc_multiplicity_func_bhattacharya_set_convention (mbt, g_value_get_enum (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -138,6 +151,9 @@ _nc_multiplicity_func_bhattacharya_get_property (GObject *object, guint prop_id,
       break;
     case PROP_DELTA_C:
       g_value_set_double (value, nc_multiplicity_func_bhattacharya_get_delta_c (mbt));
+      break;
+    case PROP_CONVENTION:
+      g_value_set_enum (value, nc_multiplicity_func_bhattacharya_get_convention (mbt));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -232,6 +248,22 @@ nc_multiplicity_func_bhattacharya_class_init (NcMultiplicityFuncBhattacharyaClas
                                                         "Critical delta",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, NC_MULTIPLICITY_FUNC_DELTA_C0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcMultiplicityFuncBhattacharya:convention:
+   *
+   * Convention selecting the redshift evolution of the shape parameter $a$,
+   * see #NcMultiplicityFuncBhattacharyaConvention.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_CONVENTION,
+                                   g_param_spec_enum ("convention",
+                                                      NULL,
+                                                      "Redshift evolution convention",
+                                                      NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION,
+                                                      NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   parent_class->set_mdef  = &_nc_multiplicity_func_bhattacharya_set_mdef;
   parent_class->get_mdef  = &_nc_multiplicity_func_bhattacharya_get_mdef;
   parent_class->set_Delta = &_nc_multiplicity_func_bhattacharya_set_Delta;
@@ -302,8 +334,9 @@ _nc_multiplicity_func_bhattacharya_eval (NcMultiplicityFunc *mulf, NcHICosmo *co
   NcMultiplicityFuncBhattacharya *mba                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
   NcMultiplicityFuncBhattacharyaPrivate * const self = mba->priv;
 
-  const gdouble A   = self->A / pow (1.0 + z, 0.11);
-  const gdouble a   = self->a / pow (1.0 + z, 0.01);
+  const gdouble A = self->A / pow (1.0 + z, 0.11);
+  const gdouble a = (self->convention == NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019) ?
+                    self->a : self->a / pow (1.0 + z, 0.01);
   const gdouble bc1 = sqrt (2.0 / M_PI);
   const gdouble p   = self->p;
   const gdouble q   = self->q;
@@ -329,6 +362,24 @@ nc_multiplicity_func_bhattacharya_new (void)
 {
   return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA,
                        "mass-def", NC_MULTIPLICITY_FUNC_MASS_DEF_FOF,
+                       NULL);
+}
+
+/**
+ * nc_multiplicity_func_bhattacharya_new_full:
+ * @convention: a #NcMultiplicityFuncBhattacharyaConvention
+ *
+ * Creates a new #NcMultiplicityFuncBhattacharya using the redshift evolution
+ * @convention for the shape parameter $a$.
+ *
+ * Returns: A new #NcMultiplicityFuncBhattacharya.
+ */
+NcMultiplicityFuncBhattacharya *
+nc_multiplicity_func_bhattacharya_new_full (NcMultiplicityFuncBhattacharyaConvention convention)
+{
+  return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA,
+                       "mass-def",   NC_MULTIPLICITY_FUNC_MASS_DEF_FOF,
+                       "convention", convention,
                        NULL);
 }
 
@@ -532,5 +583,37 @@ nc_multiplicity_func_bhattacharya_get_delta_c (const NcMultiplicityFuncBhattacha
   NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
 
   return self->delta_c;
+}
+
+/**
+ * nc_multiplicity_func_bhattacharya_set_convention:
+ * @mbt: a #NcMultiplicityFuncBhattacharya.
+ * @convention: a #NcMultiplicityFuncBhattacharyaConvention.
+ *
+ * Sets the redshift evolution @convention used for the shape parameter $a$.
+ *
+ */
+void
+nc_multiplicity_func_bhattacharya_set_convention (NcMultiplicityFuncBhattacharya *mbt, NcMultiplicityFuncBhattacharyaConvention convention)
+{
+  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+
+  g_assert_cmpint (convention, <, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_LEN);
+
+  self->convention = convention;
+}
+
+/**
+ * nc_multiplicity_func_bhattacharya_get_convention:
+ * @mbt: a #NcMultiplicityFuncBhattacharya.
+ *
+ * Returns: the #NcMultiplicityFuncBhattacharyaConvention used by @mbt.
+ */
+NcMultiplicityFuncBhattacharyaConvention
+nc_multiplicity_func_bhattacharya_get_convention (const NcMultiplicityFuncBhattacharya *mbt)
+{
+  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+
+  return self->convention;
 }
 

@@ -45,6 +45,25 @@ typedef struct _NcMultiplicityFuncBhattacharyaClass NcMultiplicityFuncBhattachar
 typedef struct _NcMultiplicityFuncBhattacharya NcMultiplicityFuncBhattacharya;
 typedef struct _NcMultiplicityFuncBhattacharyaPrivate NcMultiplicityFuncBhattacharyaPrivate;
 
+/**
+ * NcMultiplicityFuncBhattacharyaConvention:
+ * @NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011: original fit, $a(z) = a_0 (1+z)^{-0.01}$
+ * @NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019: Outer Rim form, $a$ constant in redshift
+ *
+ * Selects the redshift evolution of the shape parameter $a$. The two papers state
+ * the same functional form with the same $z = 0$ parameters; they differ only in
+ * whether $a$ evolves with redshift. See arXiv:1005.2239 (Bhattacharya et al. 2011)
+ * and arXiv:1904.11970 (Heitmann et al. 2019).
+ *
+ */
+typedef enum _NcMultiplicityFuncBhattacharyaConvention
+{
+  NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011 = 0,
+  NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019,
+  /* < private > */
+  NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_LEN, /*< skip >*/
+} NcMultiplicityFuncBhattacharyaConvention;
+
 struct _NcMultiplicityFuncBhattacharyaClass
 {
   /*< private >*/
@@ -61,10 +80,14 @@ struct _NcMultiplicityFuncBhattacharya
 GType nc_multiplicity_func_bhattacharya_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFuncBhattacharya *nc_multiplicity_func_bhattacharya_new (void);
+NcMultiplicityFuncBhattacharya *nc_multiplicity_func_bhattacharya_new_full (NcMultiplicityFuncBhattacharyaConvention convention);
 NcMultiplicityFuncBhattacharya *nc_multiplicity_func_bhattacharya_ref (NcMultiplicityFuncBhattacharya *mbt);
 
 void nc_multiplicity_func_bhattacharya_free (NcMultiplicityFuncBhattacharya *mbt);
 void nc_multiplicity_func_bhattacharya_clear (NcMultiplicityFuncBhattacharya **mbt);
+
+void nc_multiplicity_func_bhattacharya_set_convention (NcMultiplicityFuncBhattacharya *mbt, NcMultiplicityFuncBhattacharyaConvention convention);
+NcMultiplicityFuncBhattacharyaConvention nc_multiplicity_func_bhattacharya_get_convention (const NcMultiplicityFuncBhattacharya *mbt);
 
 void nc_multiplicity_func_bhattacharya_set_A (NcMultiplicityFuncBhattacharya *mbt, gdouble A);
 gdouble nc_multiplicity_func_bhattacharya_get_A (const NcMultiplicityFuncBhattacharya *mbt);

@@ -516,13 +516,17 @@ def bhattacharya_f_sigma(
     p: float = 0.807,
     q: float = 1.795,
     delta_c: float = 1.6864701998411454502,
+    a_z_exp: float = 0.01,
 ) -> np.ndarray:
-    """Bhattacharya et al. 2011 (arXiv:1005.2239) multiplicity function.
+    """Bhattacharya multiplicity function.
 
-    Equation (12) with the redshift evolution of table 4, fitted for 0 <= z <= 2.
+    Equation (12) of Bhattacharya et al. 2011 (arXiv:1005.2239) with the redshift
+    evolution of their table 4, fitted for 0 <= z <= 2. The shape parameter evolves
+    as a(z) = a0 (1+z)^-a_z_exp: a_z_exp=0.01 reproduces Bhattacharya 2011, while
+    a_z_exp=0.0 reproduces the Heitmann et al. 2019 Outer Rim form (a constant).
     """
     A = A0 / (1.0 + z) ** 0.11
-    a = a0 / (1.0 + z) ** 0.01
+    a = a0 / (1.0 + z) ** a_z_exp
     nu = delta_c / sigma
 
     return (
@@ -534,14 +538,28 @@ def bhattacharya_f_sigma(
     )
 
 
+BHATTACHARYA_CONVENTIONS = [
+    (Nc.MultiplicityFuncBhattacharyaConvention.BHATTACHARYA2011, 0.01),
+    (Nc.MultiplicityFuncBhattacharyaConvention.HEITMANN2019, 0.0),
+]
+
+
+@pytest.mark.parametrize(
+    "convention,a_z_exp",
+    BHATTACHARYA_CONVENTIONS,
+    ids=["bhattacharya2011", "heitmann2019"],
+)
 def test_multiplicity_bhattacharya(
     cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+    convention: Nc.MultiplicityFuncBhattacharyaConvention,
+    a_z_exp: float,
 ) -> None:
     """Test the Bhattacharya multiplicity function against the paper formula."""
     _, cosmo_nc = cosmologies
-    mulf = Nc.MultiplicityFuncBhattacharya.new()
+    mulf = Nc.MultiplicityFuncBhattacharya.new_full(convention)
 
     assert mulf.get_mdef() == Nc.MultiplicityFuncMassDef.FOF
+    assert mulf.get_convention() == convention
     assert_allclose(mulf.get_A(), 0.333)
     assert_allclose(mulf.get_a(), 0.788)
     assert_allclose(mulf.get_p(), 0.807)
@@ -550,9 +568,45 @@ def test_multiplicity_bhattacharya(
     sigma_arr = np.geomspace(0.2, 5.0, 64)
     for z in np.linspace(0.0, 2.0, 5):
         nc_f = np.array([mulf.eval(cosmo_nc.cosmo, sigma, z) for sigma in sigma_arr])
-        ref_f = bhattacharya_f_sigma(sigma_arr, z, delta_c=mulf.get_delta_c())
+        ref_f = bhattacharya_f_sigma(
+            sigma_arr, z, delta_c=mulf.get_delta_c(), a_z_exp=a_z_exp
+        )
 
         assert_allclose(nc_f, ref_f, rtol=1.0e-13)
+
+
+def test_multiplicity_bhattacharya_default_convention(
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
+) -> None:
+    """The default convention is Bhattacharya 2011 (a evolves with redshift)."""
+    _, cosmo_nc = cosmologies
+    mulf_default = Nc.MultiplicityFuncBhattacharya.new()
+    mulf_heitmann = Nc.MultiplicityFuncBhattacharya.new_full(
+        Nc.MultiplicityFuncBhattacharyaConvention.HEITMANN2019
+    )
+
+    assert (
+        mulf_default.get_convention()
+        == Nc.MultiplicityFuncBhattacharyaConvention.BHATTACHARYA2011
+    )
+
+    sigma_arr = np.geomspace(0.2, 5.0, 64)
+    # Conventions agree at z = 0 and differ for z > 0.
+    f0_default = np.array(
+        [mulf_default.eval(cosmo_nc.cosmo, s, 0.0) for s in sigma_arr]
+    )
+    f0_heitmann = np.array(
+        [mulf_heitmann.eval(cosmo_nc.cosmo, s, 0.0) for s in sigma_arr]
+    )
+    assert_allclose(f0_default, f0_heitmann, rtol=1.0e-14)
+
+    f1_default = np.array(
+        [mulf_default.eval(cosmo_nc.cosmo, s, 1.0) for s in sigma_arr]
+    )
+    f1_heitmann = np.array(
+        [mulf_heitmann.eval(cosmo_nc.cosmo, s, 1.0) for s in sigma_arr]
+    )
+    assert not np.allclose(f1_default, f1_heitmann, rtol=1.0e-6)
 
 
 def test_multiplicity_bhattacharya_setters(
@@ -591,11 +645,14 @@ def test_multiplicity_bhattacharya_dup(
     _, cosmo_nc = cosmologies
     mulf_orig = Nc.MultiplicityFuncBhattacharya.new()
 
+    mulf_orig.set_convention(Nc.MultiplicityFuncBhattacharyaConvention.HEITMANN2019)
+
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     mulf = duplicate_via_serialization(mulf_orig, ser)
     assert isinstance(mulf, Nc.MultiplicityFuncBhattacharya)
 
     assert mulf.get_mdef() == mulf_orig.get_mdef()
+    assert mulf.get_convention() == mulf_orig.get_convention()
     assert_allclose(mulf.get_A(), mulf_orig.get_A(), rtol=1.0e-14, atol=0.0)
     assert_allclose(mulf.get_a(), mulf_orig.get_a(), rtol=1.0e-14, atol=0.0)
     assert_allclose(mulf.get_p(), mulf_orig.get_p(), rtol=1.0e-14, atol=0.0)
