@@ -154,6 +154,7 @@
 #include "lss/nc_multiplicity_func_bocquet.h"
 #include "lss/nc_multiplicity_func_despali.h"
 #include "lss/nc_multiplicity_func_watson.h"
+#include "lss/nc_multiplicity_func_bhattacharya.h"
 #include "lss/nc_halo_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
@@ -786,6 +787,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BOCQUET);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_WATSON);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
 
