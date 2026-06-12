@@ -78,6 +78,10 @@ math_tests = [
         'sources': ['math/test_ncm_integral_nd.c'],
     },
     {
+        'name': 'ncm_integral_fixed',
+        'sources': ['math/test_ncm_integral_fixed.c'],
+    },
+    {
         'name': 'ncm_sf_sbessel',
         'sources': ['math/test_ncm_sf_sbessel.c'],
     },

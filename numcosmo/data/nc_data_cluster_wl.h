@@ -59,6 +59,13 @@ typedef enum _NcDataClusterWLResampleFlag /*< flags,underscore_name=NC_DATA_CLUS
   NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL      = (1 << 3) - 1,
 } NcDataClusterWLResampleFlag;
 
+typedef enum _NcDataClusterWLIntegMethod /*< enum,underscore_name=NC_DATA_CLUSTER_WL_INTEG_METHOD >*/
+{
+  NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE    = 0,
+  NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT       = 1,
+  NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES = 2,
+} NcDataClusterWLIntegMethod;
+
 typedef struct _NcDataClusterWLPrivate NcDataClusterWLPrivate;
 
 NcDataClusterWL *nc_data_cluster_wl_new (void);
@@ -70,7 +77,8 @@ void nc_data_cluster_wl_clear (NcDataClusterWL **dcwl);
 void nc_data_cluster_wl_set_prec (NcDataClusterWL *dcwl, gdouble prec);
 void nc_data_cluster_wl_set_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs);
 void nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gdouble r_max);
-void nc_data_cluster_wl_use_lnint (NcDataClusterWL *dcwl, gboolean use_lnint);
+void nc_data_cluster_wl_set_integ_method (NcDataClusterWL *dcwl, NcDataClusterWLIntegMethod integ_method);
+NcDataClusterWLIntegMethod nc_data_cluster_wl_get_integ_method (NcDataClusterWL *dcwl);
 
 NcGalaxyWLObs *nc_data_cluster_wl_peek_obs (NcDataClusterWL *dcwl);
 

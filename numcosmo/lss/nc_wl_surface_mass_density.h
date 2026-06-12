@@ -47,6 +47,8 @@ G_BEGIN_DECLS
 typedef struct _NcWLSurfaceMassDensityClass NcWLSurfaceMassDensityClass;
 typedef struct _NcWLSurfaceMassDensity NcWLSurfaceMassDensity;
 typedef struct _NcWLSurfaceMassDensityOptzs NcWLSurfaceMassDensityOptzs;
+typedef struct _NcWLSurfaceMassDensityCritCache NcWLSurfaceMassDensityCritCache;
+typedef struct _NcWLSurfaceMassDensitySigmaCache NcWLSurfaceMassDensitySigmaCache;
 
 /**
  * NcWLSurfaceMassDensityParams:
@@ -100,6 +102,32 @@ struct _NcWLSurfaceMassDensityOptzs
   gdouble mean_sigma;
 };
 
+/**
+ * NcWLSurfaceMassDensityCritCache:
+ *
+ * Cache for the critical surface mass density.
+ *
+ */
+struct _NcWLSurfaceMassDensityCritCache
+{
+  /*< private >*/
+  gboolean is_source;
+  gdouble sigma_crit;
+};
+
+/**
+ * NcWLSurfaceMassDensitySigmaCache:
+ *
+ * Cache for the surface mass density.
+ *
+ */
+struct _NcWLSurfaceMassDensitySigmaCache
+{
+  /*< private >*/
+  gdouble sigma;
+  gdouble mean_sigma;
+};
+
 GType nc_wl_surface_mass_density_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_wl_surface_mass_density);
@@ -129,6 +157,10 @@ gdouble nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, N
 
 void nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensityOptzs *optzs);
 gdouble nc_wl_surface_mass_density_reduced_shear_optzs (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, NcWLSurfaceMassDensityOptzs *optzs);
+
+void nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensitySigmaCache *sigma_cache);
+void nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zl, const gdouble zc, const gdouble zs, NcWLSurfaceMassDensityCritCache *crit_cache);
+gdouble nc_wl_surface_mass_density_reduced_shear_cache (NcWLSurfaceMassDensityCritCache *crit_cache, NcWLSurfaceMassDensitySigmaCache *sigma_cache);
 
 GArray *nc_wl_surface_mass_density_sigma_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc);
 GArray *nc_wl_surface_mass_density_sigma_excess_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc);

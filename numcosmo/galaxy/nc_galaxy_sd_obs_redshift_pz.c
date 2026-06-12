@@ -96,6 +96,7 @@ static void _nc_galaxy_sd_obs_redshift_pz_prepare (NcGalaxySDObsRedshift *gsdor,
 static void _nc_galaxy_sd_obs_redshift_pz_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_pz_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp);
 static void _nc_galaxy_sd_obs_redshift_pz_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
+static NcmIntegralFixed *_nc_galaxy_sd_obs_redshift_pz_prepare_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, guint n_nodes, guint rule_n);
 
 static void
 nc_galaxy_sd_obs_redshift_pz_class_init (NcGalaxySDObsRedshiftPzClass *klass)
@@ -111,11 +112,12 @@ nc_galaxy_sd_obs_redshift_pz_class_init (NcGalaxySDObsRedshiftPzClass *klass)
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
   ncm_model_class_check_params_info (model_class);
 
-  gsdor_class->gen           = &_nc_galaxy_sd_obs_redshift_pz_gen;
-  gsdor_class->prepare       = &_nc_galaxy_sd_obs_redshift_pz_prepare;
-  gsdor_class->get_integ_lim = &_nc_galaxy_sd_obs_redshift_pz_get_integ_lim;
-  gsdor_class->integ         = &_nc_galaxy_sd_obs_redshift_pz_integ;
-  gsdor_class->data_init     = &_nc_galaxy_sd_obs_redshift_pz_data_init;
+  gsdor_class->gen                 = &_nc_galaxy_sd_obs_redshift_pz_gen;
+  gsdor_class->prepare             = &_nc_galaxy_sd_obs_redshift_pz_prepare;
+  gsdor_class->get_integ_lim       = &_nc_galaxy_sd_obs_redshift_pz_get_integ_lim;
+  gsdor_class->integ               = &_nc_galaxy_sd_obs_redshift_pz_integ;
+  gsdor_class->data_init           = &_nc_galaxy_sd_obs_redshift_pz_data_init;
+  gsdor_class->prepare_fixed_nodes = &_nc_galaxy_sd_obs_redshift_pz_prepare_fixed_nodes;
 }
 
 static void
@@ -285,6 +287,37 @@ _nc_galaxy_sd_obs_redshift_pz_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxyS
   data->ldata_read_row         = &_nc_galaxy_sd_obs_redshift_pz_ldata_read_row;
   data->ldata_write_row        = &_nc_galaxy_sd_obs_redshift_pz_ldata_write_row;
   data->ldata_required_columns = &_nc_galaxy_sd_obs_redshift_pz_ldata_required_columns;
+}
+
+static gdouble
+_pz_gsl_f (gdouble z, gpointer user_data)
+{
+  NcGalaxySDObsRedshiftPzData *ldata = (NcGalaxySDObsRedshiftPzData *) user_data;
+
+  return ncm_spline_eval (ldata->pz, z);
+}
+
+static NcmIntegralFixed *
+_nc_galaxy_sd_obs_redshift_pz_prepare_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
+                                                   NcGalaxySDObsRedshiftData *data,
+                                                   guint n_nodes, guint rule_n)
+{
+  NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
+  gdouble z_min, z_max;
+  NcmIntegralFixed *intf;
+  gsl_function F;
+
+  g_assert_nonnull (ldata->pz);
+  ncm_spline_get_bounds (ldata->pz, &z_min, &z_max);
+
+  intf = ncm_integral_fixed_new (n_nodes, rule_n, z_min, z_max);
+
+  F.function = &_pz_gsl_f;
+  F.params   = ldata;
+
+  ncm_integral_fixed_calc_nodes (intf, &F);
+
+  return intf;
 }
 
 /**

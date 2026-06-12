@@ -93,7 +93,11 @@ struct _NcDataClusterWLPrivate
   NcGalaxySDShape *galaxy_shape;
   NcGalaxySDObsRedshift *galaxy_redshift;
   NcGalaxySDPosition *galaxy_position;
-  gboolean use_lnint;
+  NcDataClusterWLIntegMethod integ_method;
+  guint n_nodes;
+  guint rule_n;
+  GPtrArray *fixed_nodes;
+  GPtrArray *z_nodes_per_galaxy;
 };
 
 enum
@@ -107,7 +111,9 @@ enum
   PROP_SIZE,
   PROP_RESAMPLE_FLAG,
   PROP_ENABLE_PARALLEL,
-  PROP_USE_LNINT,
+  PROP_INTEG_METHOD,
+  PROP_N_NODES,
+  PROP_RULE_N,
 };
 
 struct _NcDataClusterWL
@@ -123,20 +129,24 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
 {
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
 
-  self->obs             = NULL;
-  self->shape_data      = g_ptr_array_new ();
-  self->constructed     = FALSE;
-  self->r_max           = 0.0;
-  self->r_min           = 0.0;
-  self->dr              = 0.0;
-  self->prec            = 1.0e-6;
-  self->len             = 0;
-  self->ctrl_redshift   = ncm_model_ctrl_new (NULL);
-  self->ctrl_position   = ncm_model_ctrl_new (NULL);
-  self->ctrl_shape      = ncm_model_ctrl_new (NULL);
-  self->resample_flag   = NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL;
-  self->enable_parallel = FALSE;
-  self->use_lnint       = FALSE;
+  self->obs                = NULL;
+  self->shape_data         = g_ptr_array_new ();
+  self->constructed        = FALSE;
+  self->r_max              = 0.0;
+  self->r_min              = 0.0;
+  self->dr                 = 0.0;
+  self->prec               = 1.0e-6;
+  self->len                = 0;
+  self->ctrl_redshift      = ncm_model_ctrl_new (NULL);
+  self->ctrl_position      = ncm_model_ctrl_new (NULL);
+  self->ctrl_shape         = ncm_model_ctrl_new (NULL);
+  self->resample_flag      = NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL;
+  self->enable_parallel    = FALSE;
+  self->integ_method       = NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES;
+  self->n_nodes            = 10;
+  self->rule_n             = 5;
+  self->fixed_nodes        = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_integral_fixed_free);
+  self->z_nodes_per_galaxy = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
 
   self->err = ncm_vector_new (1);
   self->zpi = ncm_vector_new (1);
@@ -192,8 +202,18 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_ENABLE_PARALLEL:
       self->enable_parallel = g_value_get_boolean (value);
       break;
-    case PROP_USE_LNINT:
-      nc_data_cluster_wl_use_lnint (dcwl, g_value_get_boolean (value));
+    case PROP_INTEG_METHOD:
+      nc_data_cluster_wl_set_integ_method (dcwl, g_value_get_enum (value));
+      break;
+    case PROP_N_NODES:
+      self->n_nodes = g_value_get_uint (value);
+      g_ptr_array_set_size (self->fixed_nodes, 0);
+      g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
+      break;
+    case PROP_RULE_N:
+      self->rule_n = g_value_get_uint (value);
+      g_ptr_array_set_size (self->fixed_nodes, 0);
+      g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -232,8 +252,14 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_ENABLE_PARALLEL:
       g_value_set_boolean (value, self->enable_parallel);
       break;
-    case PROP_USE_LNINT:
-      g_value_set_boolean (value, self->use_lnint);
+    case PROP_INTEG_METHOD:
+      g_value_set_enum (value, self->integ_method);
+      break;
+    case PROP_N_NODES:
+      g_value_set_uint (value, self->n_nodes);
+      break;
+    case PROP_RULE_N:
+      g_value_set_uint (value, self->rule_n);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -254,6 +280,8 @@ nc_data_cluster_wl_dispose (GObject *object)
   ncm_model_ctrl_clear (&self->ctrl_shape);
 
   g_clear_pointer (&self->shape_data, g_ptr_array_unref);
+  g_clear_pointer (&self->fixed_nodes, g_ptr_array_unref);
+  g_clear_pointer (&self->z_nodes_per_galaxy, g_ptr_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_wl_parent_class)->dispose (object);
@@ -408,18 +436,47 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcDataClusterWL:use-lnint
+   * NcDataClusterWL:integ-method
    *
-   * Use logarithmic integration.
+   * Integration method for the redshift integral.
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_USE_LNINT,
-                                   g_param_spec_boolean ("use-lnint",
-                                                         NULL,
-                                                         "Use logarithmic integration",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_INTEG_METHOD,
+                                   g_param_spec_enum ("integ-method",
+                                                      NULL,
+                                                      "Integration method for the redshift integral",
+                                                      NC_TYPE_DATA_CLUSTER_WL_INTEG_METHOD,
+                                                      NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWL:n-nodes
+   *
+   * Number of intervals for the fixed Gauss-Legendre quadrature.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_N_NODES,
+                                   g_param_spec_uint ("n-nodes",
+                                                      NULL,
+                                                      "Number of intervals for the fixed Gauss-Legendre quadrature",
+                                                      2, G_MAXUINT, 10,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWL:rule-n
+   *
+   * Number of GL points per interval for the fixed Gauss-Legendre quadrature.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_RULE_N,
+                                   g_param_spec_uint ("rule-n",
+                                                      NULL,
+                                                      "Number of GL points per interval for the fixed Gauss-Legendre quadrature",
+                                                      1, G_MAXUINT, 5,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->bootstrap  = TRUE;
   data_class->resample   = &_nc_data_cluster_wl_resample;
@@ -518,9 +575,9 @@ typedef struct _CubatureIntegrator
 gpointer
 cubature_integrator_new (NcDataClusterWL *dcwl)
 {
-  NcDataClusterWLPrivate * const self     = nc_data_cluster_wl_get_instance_private (dcwl);
+  NcDataClusterWLPrivate * const self                   = nc_data_cluster_wl_get_instance_private (dcwl);
   NcDataClusterWLCubatureIntegrand *likelihood_integral = g_object_new (nc_data_cluster_wl_cubature_integrand_get_type (), NULL);
-  CubatureIntegrator *integrator          = g_new0 (CubatureIntegrator, 1);
+  CubatureIntegrator *integrator                        = g_new0 (CubatureIntegrator, 1);
 
   integrator->likelihood_integral = likelihood_integral;
   integrator->lh_int              = NCM_INTEGRAL_ND (likelihood_integral);
@@ -629,6 +686,101 @@ lnint_integrator_integrate (gpointer integrator, gdouble zmin, gdouble zmax)
 /* End of lnint integrator */
 
 static gdouble
+_nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal)
+{
+  NcmData *data                       = NCM_DATA (dcwl);
+  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+  const guint n_total_nodes           = (self->n_nodes - 1) * self->rule_n;
+  gdouble result                      = 0;
+
+  #pragma omp parallel reduction(+:result) if (self->enable_parallel)
+  {
+    NcGalaxySDPositionIntegrand *integrand_position = nc_galaxy_sd_position_integ (self->galaxy_position, FALSE);
+    NcmVector *shape_at_nodes                       = ncm_vector_new (n_total_nodes);
+
+    nc_galaxy_sd_position_integrand_prepare (integrand_position, mset);
+
+    if (m2lnP_gal != NULL)
+      g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
+
+    if (!ncm_data_bootstrap_enabled (data))
+    {
+      guint gal_i;
+
+      #pragma omp for schedule (dynamic, 5)
+
+      for (gal_i = 0; gal_i < self->len; gal_i++)
+      {
+        NcGalaxySDShapeData *s_data    = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+        NcGalaxySDPositionData *p_data = s_data->sdpos_data;
+        NcmIntegralFixed *intf         = (NcmIntegralFixed *) g_ptr_array_index (self->fixed_nodes, gal_i);
+        NcmVector *z_nodes             = (NcmVector *) g_ptr_array_index (self->z_nodes_per_galaxy, gal_i);
+        const gdouble int_pos          = nc_galaxy_sd_position_integrand_eval (integrand_position, p_data);
+        gdouble P_gal, m2lnP_gal_i;
+
+        nc_galaxy_sd_shape_eval_at_nodes (self->galaxy_shape, mset, s_data, z_nodes, shape_at_nodes);
+
+        P_gal       = ncm_integral_fixed_integ_vec_mult (intf, shape_at_nodes) * int_pos;
+        m2lnP_gal_i = P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
+
+        if (!gsl_finite (m2lnP_gal_i))
+        {
+          g_warning ("_nc_data_cluster_wl_eval_m2lnP_fixed: galaxy %d has undefined likelihood [%g]. Skipping it.", gal_i, m2lnP_gal_i);
+          continue;
+        }
+
+        if (m2lnP_gal != NULL)
+          ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
+
+        result += _nc_data_cluster_wl_eval_m2lnP_weight (dcwl, m2lnP_gal_i, 0.0);
+      }
+    }
+    else
+    {
+      NcmBootstrap *bstrap = ncm_data_peek_bootstrap (data);
+
+      const guint bsize = ncm_bootstrap_get_bsize (bstrap);
+      guint i;
+
+      #pragma omp for schedule (dynamic, 5)
+
+      for (i = 0; i < bsize; i++)
+      {
+        guint gal_i = ncm_bootstrap_get (bstrap, i);
+
+        NcGalaxySDShapeData *s_data    = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+        NcGalaxySDPositionData *p_data = s_data->sdpos_data;
+        NcmIntegralFixed *intf         = (NcmIntegralFixed *) g_ptr_array_index (self->fixed_nodes, gal_i);
+        NcmVector *z_nodes             = (NcmVector *) g_ptr_array_index (self->z_nodes_per_galaxy, gal_i);
+        const gdouble int_pos          = nc_galaxy_sd_position_integrand_eval (integrand_position, p_data);
+        gdouble P_gal, m2lnP_gal_i;
+
+        nc_galaxy_sd_shape_eval_at_nodes (self->galaxy_shape, mset, s_data, z_nodes, shape_at_nodes);
+
+        P_gal       = ncm_integral_fixed_integ_vec_mult (intf, shape_at_nodes) * int_pos;
+        m2lnP_gal_i = P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
+
+        if (!gsl_finite (m2lnP_gal_i))
+        {
+          g_warning ("_nc_data_cluster_wl_eval_m2lnP_fixed: galaxy %d has undefined likelihood [%g]. Skipping it.", gal_i, m2lnP_gal_i);
+          continue;
+        }
+
+        if (m2lnP_gal != NULL)
+          ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
+
+        result += _nc_data_cluster_wl_eval_m2lnP_weight (dcwl, m2lnP_gal_i, 0.0);
+      }
+    }
+
+    nc_galaxy_sd_position_integrand_free (integrand_position);
+    ncm_vector_free (shape_at_nodes);
+  }
+
+  return result;
+}
+
+static gdouble
 _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
   NcmData *data                       = NCM_DATA (dcwl);
@@ -640,7 +792,9 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   NcDataClusterWLIntArg *(*get_arg) (gpointer integrator) = NULL;
   void (*free_integrator) (gpointer integrator) = NULL;
 
-  if (self->use_lnint)
+  const gboolean use_lnint = (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
+
+  if (use_lnint)
   {
     integrator_new  = lnint_integrator_new;
     integrate       = lnint_integrator_integrate;
@@ -657,9 +811,9 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
 
   #pragma omp parallel reduction(+:result) if (self->enable_parallel)
   {
-    NcGalaxySDObsRedshiftIntegrand *integrand_redshift = nc_galaxy_sd_obs_redshift_integ (self->galaxy_redshift, self->use_lnint);
-    NcGalaxySDPositionIntegrand *integrand_position    = nc_galaxy_sd_position_integ (self->galaxy_position, self->use_lnint);
-    NcGalaxySDShapeIntegrand *integrand_shape          = nc_galaxy_sd_shape_integ (self->galaxy_shape, self->use_lnint);
+    NcGalaxySDObsRedshiftIntegrand *integrand_redshift = nc_galaxy_sd_obs_redshift_integ (self->galaxy_redshift, use_lnint);
+    NcGalaxySDPositionIntegrand *integrand_position    = nc_galaxy_sd_position_integ (self->galaxy_position, use_lnint);
+    NcGalaxySDShapeIntegrand *integrand_shape          = nc_galaxy_sd_shape_integ (self->galaxy_shape, use_lnint);
     gpointer integrator                                = integrator_new (dcwl);
     NcDataClusterWLIntArg *arg                         = get_arg (integrator);
 
@@ -889,14 +1043,29 @@ static void
 _nc_data_cluster_wl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
   NcDataClusterWL *dcwl                  = NC_DATA_CLUSTER_WL (data);
+  NcDataClusterWLPrivate * const self    = nc_data_cluster_wl_get_instance_private (dcwl);
   NcGalaxySDObsRedshift *galaxy_redshift = NC_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (mset, nc_galaxy_sd_obs_redshift_id ()));
 
   if (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (galaxy_redshift))
+  {
     m2lnL[0] = _nc_data_cluster_wl_eval_m2lnP (dcwl, mset, NULL);
+  }
   else
-    m2lnL[0] = _nc_data_cluster_wl_eval_m2lnP_integ (dcwl, mset, NULL);
-
-  return;
+  {
+    switch (self->integ_method)
+    {
+      case NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE:
+      case NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT:
+        m2lnL[0] = _nc_data_cluster_wl_eval_m2lnP_integ (dcwl, mset, NULL);
+        break;
+      case NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES:
+        m2lnL[0] = _nc_data_cluster_wl_eval_m2lnP_fixed (dcwl, mset, NULL);
+        break;
+      default: /* LCOV_EXCL_LINE */
+        g_assert_not_reached ();
+        break;
+    }
+  }
 }
 
 static guint
@@ -972,6 +1141,36 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
       _nc_data_cluster_wl_load_obs (dcwl, self->obs, self->shape_data);
 
     nc_galaxy_sd_shape_prepare_data_array (galaxy_shape, mset, self->shape_data);
+
+    if ((self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) && !NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (galaxy_redshift))
+    {
+      guint gal_i;
+      const guint n_total_nodes = (self->n_nodes - 1) * self->rule_n;
+
+      if (model_update || (self->fixed_nodes->len != self->len))
+      {
+        g_ptr_array_set_size (self->fixed_nodes, 0);
+        g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
+
+        for (gal_i = 0; gal_i < self->len; gal_i++)
+        {
+          NcGalaxySDShapeData *s_data       = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+          NcGalaxySDObsRedshiftData *z_data = s_data->sdpos_data->sdz_data;
+          NcmIntegralFixed *intf            = nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (
+            galaxy_redshift, mset, z_data,
+            self->n_nodes, self->rule_n);
+          NcmVector *z_nodes = ncm_vector_new (n_total_nodes);
+
+          ncm_integral_fixed_get_nodes (intf, z_nodes);
+
+          g_ptr_array_add (self->fixed_nodes, intf);
+          g_ptr_array_add (self->z_nodes_per_galaxy, z_nodes);
+        }
+      }
+
+      nc_galaxy_sd_shape_prepare_at_nodes (galaxy_shape, mset, self->shape_data,
+                                           self->z_nodes_per_galaxy);
+    }
   }
 }
 
@@ -1089,19 +1288,35 @@ nc_data_cluster_wl_set_cut (NcDataClusterWL *dcwl, const gdouble r_min, const gd
 }
 
 /**
- * nc_data_cluster_wl_use_lnint:
+ * nc_data_cluster_wl_set_integ_method:
  * @dcwl: a #NcDataClusterWL
- * @use_lnint: use logarithmic integration
+ * @integ_method: a #NcDataClusterWLIntegMethod
  *
- * Sets flag to use logarithmic integration.
+ * Sets the integration method for the redshift integral.
  *
  */
 void
-nc_data_cluster_wl_use_lnint (NcDataClusterWL *dcwl, gboolean use_lnint)
+nc_data_cluster_wl_set_integ_method (NcDataClusterWL *dcwl, NcDataClusterWLIntegMethod integ_method)
 {
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
 
-  self->use_lnint = use_lnint;
+  self->integ_method = integ_method;
+}
+
+/**
+ * nc_data_cluster_wl_get_integ_method:
+ * @dcwl: a #NcDataClusterWL
+ *
+ * Gets the integration method for the redshift integral.
+ *
+ * Returns: the integration method #NcDataClusterWLIntegMethod.
+ */
+NcDataClusterWLIntegMethod
+nc_data_cluster_wl_get_integ_method (NcDataClusterWL *dcwl)
+{
+  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+
+  return self->integ_method;
 }
 
 /**
