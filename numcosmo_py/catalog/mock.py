@@ -952,16 +952,6 @@ class MockGenerator:
 
         return galaxy_catalog
 
-    def match_galaxies_to_objects(self, object_catalog, galaxy_catalog, object_type):
-        """Match galaxies to objects using SkyMatch.
-
-        :param Table object_catalog: Astropy Table with object properties.
-        :param Table galaxy_catalog: Astropy Table with galaxy properties.
-
-        :return Table: halo_galaxies: Updated Astropy Table with matched galaxies to
-            objects.
-        """
-
     def get_common_galaxies_by_distance(
         self, object_catalog, galaxy_catalog, object_type
     ):
