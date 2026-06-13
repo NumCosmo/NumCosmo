@@ -257,6 +257,10 @@ data_tests = [
 # Cluster and halo tests
 cluster_tests = [
     {
+        'name': 'nc_halo_catalog',
+        'sources': ['cluster/test_nc_halo_catalog.c'],
+    },
+    {
         'name': 'nc_halo_bias',
         'sources': ['cluster/test_nc_halo_bias.c'],
     },
