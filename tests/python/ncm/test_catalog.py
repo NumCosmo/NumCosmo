@@ -140,7 +140,7 @@ def test_serialization_preserves_column_types() -> None:
 
 
 def test_unknown_column_get_raises() -> None:
-    """get on an unknown column raises a ValueError."""
+    """get on an unknown column raises a GLib.Error."""
     catalog = Ncm.Catalog.new(1, ["only"])
 
     with pytest.raises(
@@ -185,7 +185,7 @@ def test_unknown_column_get_raises() -> None:
 
 
 def test_unknown_column_set_raises() -> None:
-    """set on an unknown column raises a ValueError."""
+    """set on an unknown column raises a GLib.Error."""
     catalog = Ncm.Catalog.new(1, ["only"])
 
     with pytest.raises(

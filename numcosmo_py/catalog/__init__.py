@@ -31,6 +31,10 @@ from .confusion import (
     calculate_split_metrics,
     get_ratios,
 )
+from .table import (
+    catalog_from_table,
+    catalog_to_table,
+)
 
 __all__ = [
     "BestCandidates",
@@ -53,4 +57,6 @@ __all__ = [
     "calculate_catalog_metrics",
     "calculate_split_metrics",
     "get_ratios",
+    "catalog_from_table",
+    "catalog_to_table",
 ]
