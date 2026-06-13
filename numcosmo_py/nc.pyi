@@ -15670,6 +15670,52 @@ class HaloCatalogClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.CatalogClass = ...
 
+class HaloCatalogGenerator(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCatalogGenerator(**properties)
+        new(cad:NumCosmo.ClusterAbundance) -> NumCosmo.HaloCatalogGenerator
+
+    Object NcHaloCatalogGenerator
+
+    Properties from NcHaloCatalogGenerator:
+      abundance -> NcClusterAbundance: Abundance
+        Cluster abundance model
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        abundance: ClusterAbundance
+
+    props: Props = ...
+    def __init__(self, abundance: ClusterAbundance = ...) -> None: ...
+    @staticmethod
+    def clear(gen: HaloCatalogGenerator) -> None: ...
+    def free(self) -> None: ...
+    def generate(
+        self, mset: NumCosmoMath.MSet, rng: NumCosmoMath.RNG
+    ) -> HaloCatalog: ...
+    @classmethod
+    def new(cls, cad: ClusterAbundance) -> HaloCatalogGenerator: ...
+    def peek_abundance(self) -> ClusterAbundance: ...
+    def ref(self) -> HaloCatalogGenerator: ...
+
+class HaloCatalogGeneratorClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCatalogGeneratorClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class HaloDensityProfile(NumCosmoMath.Model):
     r"""
     :Constructors:
