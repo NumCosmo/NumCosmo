@@ -30,7 +30,12 @@ pytest.importorskip("astropy")
 from astropy.table import Table
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.catalog import MockGenerator, ConstantCompleteness
+from numcosmo_py.catalog import (
+    MockGenerator,
+    ConstantCompleteness,
+    ConstantPurity,
+    identity_scaling_relation,
+)
 from numcosmo_py.cosmology import Cosmology
 
 Ncm.cfg_init()
@@ -248,3 +253,78 @@ def test_generate_halos_from_hmf_completeness() -> None:
     detected = np.asarray(halos["is_detected"])
     assert set(np.unique(detected)).issubset({0, 1})
     assert 0 < detected.mean() < 1
+
+
+def test_generate_clusters_from_halos_real_only() -> None:
+    """Without a purity model, every cluster is a real detection of a parent halo."""
+    mg = _mock_with_hmf()
+    halos = mg.generate_halos_from_hmf()
+    n_detected = int(np.sum(np.asarray(halos["is_detected"]) == 1))
+
+    clusters = mg.generate_clusters_from_halos(halos)
+
+    assert set(clusters.colnames) == {
+        "cluster_id",
+        "RA",
+        "DEC",
+        "z",
+        "Mass_obs",
+        "Mass",
+        "R200c",
+        "x1",
+        "x2",
+        "x3",
+        "cluster_r",
+        "parent_id",
+    }
+    assert len(clusters) == n_detected
+    assert mg.cluster_set_size == n_detected
+    # All real: parent_id non-zero and drawn from the detected halo ids.
+    assert np.all(np.asarray(clusters["parent_id"]) != 0)
+    assert set(np.asarray(clusters["parent_id"])).issubset(
+        set(np.asarray(halos["halo_id"]))
+    )
+    # R200c consistent with the helper (uses true mass).
+    expected = mg.get_R200c(np.exp(np.asarray(clusters["Mass"])), clusters["z"])
+    assert np.allclose(clusters["R200c"], np.asarray(expected), rtol=1e-12)
+
+
+def test_generate_clusters_from_halos_purity_injects_fakes() -> None:
+    """A purity model appends fake (parent_id == 0) clusters inside the footprint."""
+    mg = _mock_with_hmf()
+    halos = mg.generate_halos_from_hmf()
+    n_detected = int(np.sum(np.asarray(halos["is_detected"]) == 1))
+
+    clusters = mg.generate_clusters_from_halos(
+        halos, 2.0, ConstantPurity(0.9), identity_scaling_relation
+    )
+
+    parent = np.asarray(clusters["parent_id"])
+    n_real = int(np.sum(parent != 0))
+    n_fake = int(np.sum(parent == 0))
+    assert n_real == n_detected
+    assert n_fake > 0
+    assert len(clusters) == n_detected + n_fake
+    assert mg.cluster_set_size == len(clusters)
+
+    # Fakes are drawn uniformly within the footprint.
+    fakes = clusters[parent == 0]
+    assert np.all(fakes["RA"] >= -2.0) and np.all(fakes["RA"] <= 2.0)
+    assert np.all(fakes["DEC"] >= -2.0) and np.all(fakes["DEC"] <= 2.0)
+    assert np.all(fakes["z"] >= 0.2) and np.all(fakes["z"] <= 0.5)
+
+
+def test_generate_clusters_from_halos_reproducible() -> None:
+    """Same seed reproduces the cluster catalog (real + fakes) across instances."""
+
+    def run():
+        mg = _mock_with_hmf()
+        halos = mg.generate_halos_from_hmf()
+        return mg.generate_clusters_from_halos(
+            halos, 2.0, ConstantPurity(0.9), identity_scaling_relation
+        )
+
+    a, b = run(), run()
+    assert len(a) == len(b)
+    for col in ("RA", "DEC", "z", "Mass", "Mass_obs", "parent_id"):
+        assert np.array_equal(a[col], b[col])
