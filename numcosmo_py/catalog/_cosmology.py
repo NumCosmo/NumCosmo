@@ -34,6 +34,6 @@ def r200c(cosmo: Nc.HICosmo, mass, z):
     :param z: redshift (scalar or array-like).
     """
     mass_a = np.asarray(mass, dtype=float)
-    return (
-        (3.0 * mass_a) / (4.0 * np.pi * 200.0 * critical_density(cosmo, z))
-    ) ** (1.0 / 3.0)
+    return ((3.0 * mass_a) / (4.0 * np.pi * 200.0 * critical_density(cosmo, z))) ** (
+        1.0 / 3.0
+    )
