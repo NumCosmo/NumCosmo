@@ -7972,7 +7972,7 @@ class GalaxySelfuncClass(GObject.GPointer):
 
 class GalaxySelfuncPrivate(GObject.GPointer): ...
 
-class GalaxyWLObs(GObject.Object):
+class GalaxyWLObs(NumCosmoMath.Catalog):
     r"""
     :Constructors:
 
@@ -7984,40 +7984,46 @@ class GalaxyWLObs(GObject.Object):
     Object NcGalaxyWLObs
 
     Properties from NcGalaxyWLObs:
-      data -> NcmMatrix: Data
-        Weak lensing observation data matrix
       pz -> NcmObjDictInt: P(z)
         P(z) splines
-      columns -> GStrv: Colunms
-        Data columns names
       coord -> NcGalaxyWLObsCoord: Coordinate system
         Coordinate system used to store the data
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
         Weak lensing observables ellipticity convention
+
+    Properties from NcmCatalog:
+      data -> NcmMatrix: Data
+        Catalog data matrix
+      columns -> GStrv: Columns
+        Catalog column names
+      col-types -> GVariant: Column types
+        Per-column logical types
       len -> guint: Length
-        Number of data rows
+        Number of catalog rows
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        columns: list[str]
         coord: GalaxyWLObsCoord
-        data: NumCosmoMath.Matrix
         ellip_conv: GalaxyWLObsEllipConv
-        len: int
         pz: NumCosmoMath.ObjDictInt
+        col_types: GLib.Variant
+        columns: list[str]
+        data: NumCosmoMath.Matrix
+        len: int
 
     props: Props = ...
     def __init__(
         self,
-        columns: typing.Sequence[str] = ...,
         coord: GalaxyWLObsCoord = ...,
-        data: NumCosmoMath.Matrix = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
-        len: int = ...,
         pz: NumCosmoMath.ObjDictInt = ...,
+        col_types: GLib.Variant = ...,
+        columns: typing.Sequence[str] = ...,
+        data: NumCosmoMath.Matrix = ...,
+        len: int = ...,
     ) -> None: ...
     @staticmethod
     def clear(obs: GalaxyWLObs) -> None: ...
@@ -8036,6 +8042,7 @@ class GalaxyWLObs(GObject.Object):
         col_names: typing.Sequence[str],
     ) -> GalaxyWLObs: ...
     def peek_columns(self) -> list[str]: ...
+    def peek_data(self) -> NumCosmoMath.Matrix: ...
     def peek_pz(self, i: int) -> NumCosmoMath.Spline: ...
     def ref(self) -> GalaxyWLObs: ...
     def set(self, col: str, i: int, val: float) -> None: ...
@@ -8051,7 +8058,7 @@ class GalaxyWLObsClass(GObject.GPointer):
         GalaxyWLObsClass()
     """
 
-    parent_class: GObject.ObjectClass = ...
+    parent_class: NumCosmoMath.CatalogClass = ...
 
 class GalaxyWLObsPrivate(GObject.GPointer): ...
 

@@ -495,14 +495,14 @@ _nc_galaxy_sd_shape_hsm_gauss_ldata_read_row (NcGalaxySDShapeData *data, NcGalax
 
   nc_galaxy_sd_position_data_read_row (data->sdpos_data, obs, i);
 
-  ldata->epsilon_obs_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_1, i);
-  ldata->epsilon_obs_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_2, i);
-  ldata->std_shape     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_SHAPE, i);
+  ldata->epsilon_obs_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_1, i, NULL);
+  ldata->epsilon_obs_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_2, i, NULL);
+  ldata->std_shape     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_SHAPE, i, NULL);
   ldata->sigma         = nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (ldata->std_shape);
-  ldata->std_noise     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_NOISE, i);
-  ldata->c1            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C1, i);
-  ldata->c2            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C2, i);
-  ldata->m             = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_M, i);
+  ldata->std_noise     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_NOISE, i, NULL);
+  ldata->c1            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C1, i, NULL);
+  ldata->c2            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C2, i, NULL);
+  ldata->m             = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_M, i, NULL);
 }
 
 static void
@@ -510,13 +510,13 @@ _nc_galaxy_sd_shape_hsm_gauss_ldata_write_row (NcGalaxySDShapeData *data, NcGala
 {
   NcGalaxySDShapeHSMGaussData *ldata = (NcGalaxySDShapeHSMGaussData *) data->ldata;
 
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_1, i, ldata->epsilon_obs_1);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_2, i, ldata->epsilon_obs_2);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_SHAPE, i, ldata->std_shape);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_NOISE, i, ldata->std_noise);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C1, i, ldata->c1);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C2, i, ldata->c2);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_M, i, ldata->m);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_1, i, ldata->epsilon_obs_1, NULL);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_EPSILON_OBS_2, i, ldata->epsilon_obs_2, NULL);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_SHAPE, i, ldata->std_shape, NULL);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_STD_NOISE, i, ldata->std_noise, NULL);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C1, i, ldata->c1, NULL);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_C2, i, ldata->c2, NULL);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_HSM_GAUSS_COL_M, i, ldata->m, NULL);
 }
 
 static void
