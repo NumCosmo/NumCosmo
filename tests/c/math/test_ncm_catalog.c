@@ -37,6 +37,8 @@ typedef struct _TestNcmCatalog
   NcmCatalog *catalog;
 } TestNcmCatalog;
 
+static void _test_ncm_catalog_assert_column_not_found_error (GError **error, const gchar *col);
+
 void test_ncm_catalog_new (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_free (TestNcmCatalog *test, gconstpointer pdata);
 
@@ -100,6 +102,20 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 
   return 0;
+}
+
+static void
+_test_ncm_catalog_assert_column_not_found_error (GError **error, const gchar *col)
+{
+  gchar *expected_message = g_strdup_printf ("Column '%s' not found.", col);
+
+  g_assert_nonnull (*error);
+  g_assert_error (*error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND);
+  g_assert_cmpstr ((*error)->message, ==, expected_message);
+
+  g_clear_error (error);
+  g_assert_null (*error);
+  g_free (expected_message);
 }
 
 void
@@ -249,11 +265,14 @@ test_ncm_catalog_invalid_get (TestNcmCatalog *test, gconstpointer pdata)
 {
   GError *error = NULL;
 
-  ncm_catalog_get (test->catalog, "missing", 0, &error);
-  g_assert_nonnull (error);
-  g_assert_cmpint (error->code, ==, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND);
-  g_assert_cmpstr (error->message, ==, "Column 'missing' not found.");
-  g_error_free (error);
+  g_assert_true (isnan (ncm_catalog_get (test->catalog, "missing", 0, &error)));
+  _test_ncm_catalog_assert_column_not_found_error (&error, "missing");
+
+  ncm_catalog_get_int (test->catalog, "missing", 0, &error);
+  _test_ncm_catalog_assert_column_not_found_error (&error, "missing");
+
+  ncm_catalog_get_bool (test->catalog, "missing", 0, &error);
+  _test_ncm_catalog_assert_column_not_found_error (&error, "missing");
 }
 
 void
@@ -262,8 +281,13 @@ test_ncm_catalog_invalid_set (TestNcmCatalog *test, gconstpointer pdata)
   GError *error = NULL;
 
   ncm_catalog_set (test->catalog, "missing", 0, 1.0, &error);
-  g_assert_nonnull (error);
-  g_error_free (error);
+  _test_ncm_catalog_assert_column_not_found_error (&error, "missing");
+
+  ncm_catalog_set_int (test->catalog, "missing", 0, 42, &error);
+  _test_ncm_catalog_assert_column_not_found_error (&error, "missing");
+
+  ncm_catalog_set_bool (test->catalog, "missing", 0, TRUE, &error);
+  _test_ncm_catalog_assert_column_not_found_error (&error, "missing");
 }
 
 void
@@ -271,8 +295,6 @@ test_ncm_catalog_invalid_col_type (TestNcmCatalog *test, gconstpointer pdata)
 {
   GError *error = NULL;
 
-  ncm_catalog_get_col_type (test->catalog, "missing", &error);
-  g_assert_nonnull (error);
-  g_error_free (error);
+  g_assert_cmpint (ncm_catalog_get_col_type (test->catalog, "missing", &error), ==, NCM_CATALOG_COL_TYPE_INVALID);
+  _test_ncm_catalog_assert_column_not_found_error (&error, "missing");
 }
-

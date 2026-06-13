@@ -20,7 +20,10 @@
 
 """Tests for the NcmCatalog named-column container."""
 
-from numcosmo_py import Ncm
+import re
+import pytest
+
+from numcosmo_py import Ncm, GLib
 
 Ncm.cfg_init()
 
@@ -134,3 +137,83 @@ def test_serialization_preserves_column_types() -> None:
     assert dup.get_col_type("flag") == Ncm.CatalogColType.BOOL
     assert dup.get_int("id", 0) == 42
     assert dup.get_bool("flag", 0) is True
+
+
+def test_unknown_column_get_raises() -> None:
+    """get on an unknown column raises a ValueError."""
+    catalog = Ncm.Catalog.new(1, ["only"])
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-catalog-error: Column 'nope' not found. "
+            rf"\({int(Ncm.CatalogError.COLUMN_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        catalog.get("nope", 0)
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-catalog-error: Column 'nope' not found. "
+            rf"\({int(Ncm.CatalogError.COLUMN_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        catalog.get_int("nope", 0)
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-catalog-error: Column 'nope' not found. "
+            rf"\({int(Ncm.CatalogError.COLUMN_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        catalog.get_bool("nope", 0)
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-catalog-error: Column 'nope' not found. "
+            rf"\({int(Ncm.CatalogError.COLUMN_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        catalog.get_col_type("nope")
+
+
+def test_unknown_column_set_raises() -> None:
+    """set on an unknown column raises a ValueError."""
+    catalog = Ncm.Catalog.new(1, ["only"])
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-catalog-error: Column 'nope' not found. "
+            rf"\({int(Ncm.CatalogError.COLUMN_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        catalog.set("nope", 0, 1.0)
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-catalog-error: Column 'nope' not found. "
+            rf"\({int(Ncm.CatalogError.COLUMN_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        catalog.set_int("nope", 0, 42)
+
+    with pytest.raises(
+        GLib.Error,
+        match=re.compile(
+            rf"^ncm-catalog-error: Column 'nope' not found. "
+            rf"\({int(Ncm.CatalogError.COLUMN_NOT_FOUND)}\)$",
+            re.DOTALL,
+        ),
+    ):
+        catalog.set_bool("nope", 0, True)

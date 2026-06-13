@@ -77,7 +77,7 @@ typedef enum _NcmCatalogColType
  * Error codes returned by the #NcmCatalog class.
  *
  */
-typedef enum _NcmCatalogError
+typedef enum _NcmCatalogError /*< enum,prefix=NCM_CATALOG_ERROR >*/
 {
   NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
 } NcmCatalogError;
