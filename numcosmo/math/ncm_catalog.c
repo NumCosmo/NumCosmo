@@ -1,6 +1,7 @@
 /***************************************************************************
  *            ncm_catalog.c
  *
+ *  Sat Jun 13 14:00 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
  ****************************************************************************/
@@ -649,3 +650,4 @@ ncm_catalog_ncols (NcmCatalog *catalog)
 
   return self->ncols;
 }
+

@@ -1,6 +1,7 @@
 /***************************************************************************
  *            ncm_catalog.h
  *
+ *  Sat Jun 13 14:00 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
  ****************************************************************************/
@@ -95,3 +96,4 @@ guint ncm_catalog_ncols (NcmCatalog *catalog);
 G_END_DECLS
 
 #endif /* _NCM_CATALOG_H */
+
