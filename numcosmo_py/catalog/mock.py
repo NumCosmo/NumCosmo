@@ -219,93 +219,28 @@ class MockGenerator:
         return cluster_ra, cluster_dec, cluster_z
 
     def generate_halos_from_hmf(self, completeness_model=None):
+        """Generate a synthetic halo catalog by sampling a Halo Mass Function (HMF).
+
+        Orchestrates the stages: draw the halo population from the HMF
+        (:meth:`_sample_halo_abundance`), assign sky positions
+        (:meth:`_assign_positions`), compute geometry/R200c, apply the detection
+        completeness (:meth:`_apply_completeness`) and package the result.
+
+        :param completeness_model: optional callable ``f(logM, z)`` returning a
+            detection probability in [0, 1]. If ``None`` every halo is detected.
+        :return: astropy Table with IDs, coordinates (RA, Dec, x1/x2/x3), redshift,
+            log-mass (true and observed), R200c, comoving radius and detection flag.
         """
-        Generates a synthetic halo catalog by sampling a Halo Mass Function (HMF).
-
-        This method uses NumCosmo to perform a sampling of the mass-redshift
-        plane based on a theoretical HMF. It then assigns spatial coordinates and
-        computes physical properties for each realization.
-
-        Parameters:
-        -----------
-        completeness_model : callable, optional
-            A function f(logM, z) that returns detection probability (0.0 to 1.0).
-            If None, all halos are marked as detected (is_detected=1).
-
-        Returns:
-        --------
-        halos : astropy.table.Table
-            Table containing IDs, coordinates (RA, Dec, x, y, z), Redshift,
-            Mass (log10), R200c, and detection status.
-        """
-
-        # 1. Initialize NumCosmo mass and redshift distribution constraints
-        # lnM_min and lnM_max define the integration bounds for the HMF
-        dist = self.dist()
-        cluster_z = Nc.ClusterRedshiftNodist(z_min=self.z_min, z_max=self.z_max)
-
-        # 2. Setup Survey Area and Abundance model
-        sky_area = self.sky_area()
-        sky_area_rad = sky_area * (np.pi / 180) ** 2  # Conversion to steradians
-
-        self.hmf.prepare(self.cosmo)
-        self.hmf.set_area(sky_area_rad)
-
-        # cad (Cluster Abundance) integrates the HMF over the volume and mass range
-        cad = Nc.ClusterAbundance.new(self.hmf, None)
-        cad.set_area(sky_area_rad)
-        cad.prepare(self.cosmo, cluster_z, self.cluster_m)
-
-        # 3. Sample the populations
-        rng = Ncm.RNG.seeded_new(None, self.seed)
-        mset = Ncm.MSet.new_array([self.cosmo, self.cluster_m, cluster_z])
-
-        # ncount handles the realization of the number of objects
-        ncount = Nc.DataClusterNCount.new(
-            cad,
-            "NcClusterRedshiftNodist",
-            "Nc" + str(type(self.cluster_m)).rsplit(".", maxsplit=1)[-1].strip("'>"),
-        )
-        ncount.init_from_sampling(mset, sky_area_rad, rng)
-
-        # Store the total count of sampled halos
-        self.halo_set_size = ncount.get_lnM_true().len()
-
-        # 4. Vectorized Data Extraction
-        # Extract values directly into NumPy arrays
-        halo_z = np.array(ncount.get_z_true().dup_array())
-        halo_logm = np.array(ncount.get_lnM_true().dup_array())
-        halo_mobs = np.array(ncount.get_lnM_obs().dup_array())
+        # Core NumCosmo step: realize the halo population (true z, true/obs lnM).
+        halo_z, halo_logm, halo_mobs = self._sample_halo_abundance()
         halo_id = np.arange(200000, 200000 + self.halo_set_size)
 
-        # 5. Spatial and Geometric Properties
-        # Randomly distribute halos within the defined survey footprint
-
-        halo_ra = np.random.uniform(self.ra_min, self.ra_max, self.halo_set_size)
-        halo_sin_dec = np.random.uniform(
-            np.sin(np.radians(self.dec_min)),
-            np.sin(np.radians(self.dec_max)),
-            self.halo_set_size,
-        )
-        halo_dec = np.degrees(np.arcsin(halo_sin_dec))
-        halo_r = np.array(dist.comoving_array(self.cosmo, halo_z)) * self.cosmo.RH_Mpc()
-
-        # Convert spherical coordinates (RA, Dec, r) to 3D Cartesian (x1, x2, x3)
+        # Decoration: positions, geometry, derived properties, detection.
+        halo_ra, halo_dec, halo_r = self._assign_positions(self.halo_set_size, halo_z)
         halo_x1, halo_x2, halo_x3 = self.get_3D_coordinates(halo_ra, halo_dec, halo_r)
-
-        # Compute secondary physical properties
-        # R200c: Radius where density is 200x the critical density of the Universe
         halos_R200c = self.get_R200c(np.exp(halo_logm), halo_z)
+        is_detected = self._apply_completeness(halo_logm, halo_z, completeness_model)
 
-        # 6. Apply Completeness Function
-        if completeness_model is None:
-            is_detected = np.ones_like(halo_logm)
-        else:
-            # Probabilistic detection using a Binomial realization based on the model
-            probs = completeness_model(halo_logm, halo_z)
-            is_detected = np.random.binomial(n=1, p=probs)
-
-        # 7. Package results into an Astropy Table
         halos = Table(
             [
                 halo_id,
@@ -350,12 +285,78 @@ class MockGenerator:
                 int,
             ),
         )
-        halos = halos[
+        return halos[
             (halos["Mass"] >= np.log(self.halo_mass_min))
             & (halos["Mass"] <= np.log(self.halo_mass_max))
         ]
 
-        return halos
+    def _sample_halo_abundance(self):
+        """Sample the halo population from the HMF via NumCosmo's cluster abundance.
+
+        This is the core step: it realizes the number of objects over the survey
+        volume and mass range and returns their true redshift, true log-mass and
+        observed log-mass. Also sets :attr:`halo_set_size`.
+
+        :return: tuple ``(z_true, lnM_true, lnM_obs)`` numpy arrays.
+        """
+        sky_area_rad = self.sky_area() * (np.pi / 180) ** 2  # deg^2 -> steradians
+        cluster_z = Nc.ClusterRedshiftNodist(z_min=self.z_min, z_max=self.z_max)
+
+        self.hmf.prepare(self.cosmo)
+        self.hmf.set_area(sky_area_rad)
+
+        # Cluster abundance integrates the HMF over the volume and mass range.
+        cad = Nc.ClusterAbundance.new(self.hmf, None)
+        cad.set_area(sky_area_rad)
+        cad.prepare(self.cosmo, cluster_z, self.cluster_m)
+
+        rng = Ncm.RNG.seeded_new(None, self.seed)
+        mset = Ncm.MSet.new_array([self.cosmo, self.cluster_m, cluster_z])
+        ncount = Nc.DataClusterNCount.new(
+            cad,
+            "NcClusterRedshiftNodist",
+            "Nc" + str(type(self.cluster_m)).rsplit(".", maxsplit=1)[-1].strip("'>"),
+        )
+        ncount.init_from_sampling(mset, sky_area_rad, rng)
+
+        self.halo_set_size = ncount.get_lnM_true().len()
+        z_true = np.array(ncount.get_z_true().dup_array())
+        lnm_true = np.array(ncount.get_lnM_true().dup_array())
+        lnm_obs = np.array(ncount.get_lnM_obs().dup_array())
+        return z_true, lnm_true, lnm_obs
+
+    def _assign_positions(self, n, z):
+        """Assign random sky positions within the footprint and comoving radii.
+
+        Samples RA uniformly and DEC uniformly in ``sin(DEC)`` (uniform on the
+        sphere patch), and computes the comoving distance for each redshift.
+
+        :param n: number of objects.
+        :param z: per-object redshift array.
+        :return: tuple ``(ra, dec, r)`` numpy arrays (degrees, degrees, Mpc).
+        """
+        ra = np.random.uniform(self.ra_min, self.ra_max, n)
+        sin_dec = np.random.uniform(
+            np.sin(np.radians(self.dec_min)),
+            np.sin(np.radians(self.dec_max)),
+            n,
+        )
+        dec = np.degrees(np.arcsin(sin_dec))
+        r = np.array(self.dist().comoving_array(self.cosmo, z)) * self.cosmo.RH_Mpc()
+        return ra, dec, r
+
+    def _apply_completeness(self, log_mass, z, completeness_model):
+        """Realize the detection flag from a completeness model.
+
+        :param log_mass: per-object natural-log mass.
+        :param z: per-object redshift.
+        :param completeness_model: callable ``f(logM, z) -> probability`` or ``None``.
+        :return: integer detection flag array (all ones when no model is given).
+        """
+        if completeness_model is None:
+            return np.ones_like(log_mass)
+        probs = completeness_model(log_mass, z)
+        return np.random.binomial(n=1, p=probs)
 
     def generate_clusters_from_halos(
         self, halos, D_DIM=2.0, purity_model=None, scaling_relation=None

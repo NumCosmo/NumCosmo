@@ -30,7 +30,8 @@ pytest.importorskip("astropy")
 from astropy.table import Table
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.catalog import MockGenerator
+from numcosmo_py.catalog import MockGenerator, ConstantCompleteness
+from numcosmo_py.cosmology import Cosmology
 
 Ncm.cfg_init()
 
@@ -45,6 +46,28 @@ def _cosmo() -> Nc.HICosmo:
     cosmo.props.Omegab = 0.05
     cosmo.props.Omegax = 0.70
     return cosmo
+
+
+def _mock_with_hmf(**kwargs) -> MockGenerator:
+    """A MockGenerator wired with a real halo mass function and cluster mass.
+
+    Small footprint and a narrow high-mass range keep the abundance sampling fast
+    and the realization modest (~100 halos).
+    """
+    cosmology = Cosmology.default()
+    mulf = Nc.MultiplicityFuncTinker.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
+    hmf = Nc.HaloMassFunction.new(cosmology.dist, cosmology.psf_tophat, mulf)
+    cluster_m = Nc.ClusterMassNodist(lnM_min=np.log(1e14), lnM_max=np.log(1e15))
+    params = dict(
+        ra_interval=(-2.0, 2.0),
+        dec_interval=(-2.0, 2.0),
+        z_interval=(0.2, 0.5),
+        halo_mass_interval=(1e14, 1e15),
+        seed=42,
+    )
+    params.update(kwargs)
+    return MockGenerator(cosmo=cosmology.cosmo, hmf=hmf, cluster_m=cluster_m, **params)
 
 
 def test_rho_crit_matches_numcosmo() -> None:
@@ -102,7 +125,9 @@ def test_generate_clusters_reproducible_and_within_footprint() -> None:
 
     # R200c column is consistent with the helper.
     mg = MockGenerator(cosmo=cosmo, **box)
-    expected_r200c = mg.get_R200c(10.0 ** np.asarray(clusters_a["Mass"]), clusters_a["z"])
+    expected_r200c = mg.get_R200c(
+        10.0 ** np.asarray(clusters_a["Mass"]), clusters_a["z"]
+    )
     assert np.allclose(clusters_a["R200c"], np.asarray(expected_r200c), rtol=1e-12)
 
 
@@ -166,3 +191,60 @@ def test_generate_galaxies_empty_returns_empty_table() -> None:
     result = mg.generate_galaxies(catalog, "cluster")
     assert isinstance(result, Table)
     assert len(result) == 0
+
+
+def test_generate_halos_from_hmf_invariants() -> None:
+    """HMF-sampled halo catalog respects footprint, mass cut and derived columns."""
+    mg = _mock_with_hmf()
+    halos = mg.generate_halos_from_hmf()
+
+    assert len(halos) > 0
+    assert set(halos.colnames) == {
+        "halo_id",
+        "RA",
+        "DEC",
+        "z",
+        "Mass",
+        "Mass_obs",
+        "R200c",
+        "x1",
+        "x2",
+        "x3",
+        "halo_r",
+        "is_detected",
+    }
+
+    # Footprint and mass cut.
+    assert np.all(halos["RA"] >= -2.0) and np.all(halos["RA"] <= 2.0)
+    assert np.all(halos["DEC"] >= -2.0) and np.all(halos["DEC"] <= 2.0)
+    assert np.all(halos["z"] >= 0.2) and np.all(halos["z"] <= 0.5)
+    assert np.all(halos["Mass"] >= np.log(1e14) - 1e-9)
+    assert np.all(halos["Mass"] <= np.log(1e15) + 1e-9)
+
+    # No completeness model -> everything detected.
+    assert np.all(np.asarray(halos["is_detected"]) == 1)
+
+    # Derived columns consistent with the helpers.
+    expected_r200c = mg.get_R200c(np.exp(np.asarray(halos["Mass"])), halos["z"])
+    assert np.allclose(halos["R200c"], np.asarray(expected_r200c), rtol=1e-12)
+    x1, x2, x3 = mg.get_3D_coordinates(halos["RA"], halos["DEC"], halos["halo_r"])
+    assert np.allclose(halos["x1"], x1, rtol=1e-12)
+    assert np.allclose(halos["x2"], x2, rtol=1e-12)
+    assert np.allclose(halos["x3"], x3, rtol=1e-12)
+
+
+def test_generate_halos_from_hmf_reproducible() -> None:
+    """Same seed reproduces the HMF-sampled catalog across instances."""
+    halos_a = _mock_with_hmf().generate_halos_from_hmf()
+    halos_b = _mock_with_hmf().generate_halos_from_hmf()
+    assert len(halos_a) == len(halos_b)
+    for col in ("RA", "DEC", "z", "Mass", "Mass_obs"):
+        assert np.array_equal(halos_a[col], halos_b[col])
+
+
+def test_generate_halos_from_hmf_completeness() -> None:
+    """A completeness model yields a binary, non-trivial detection flag."""
+    halos = _mock_with_hmf().generate_halos_from_hmf(ConstantCompleteness(0.5))
+    detected = np.asarray(halos["is_detected"])
+    assert set(np.unique(detected)).issubset({0, 1})
+    assert 0 < detected.mean() < 1
