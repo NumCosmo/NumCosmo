@@ -48,6 +48,7 @@ struct _NcmCatalogClass
 
 /**
  * NcmCatalogColType:
+ * @NCM_CATALOG_COL_TYPE_INVALID: invalid column type.
  * @NCM_CATALOG_COL_TYPE_DOUBLE: a real-valued column.
  * @NCM_CATALOG_COL_TYPE_INT: an integer-valued column (stored losslessly in the double matrix).
  * @NCM_CATALOG_COL_TYPE_BOOL: a boolean-valued column (stored as 0.0/1.0 in the double matrix).
@@ -59,12 +60,32 @@ struct _NcmCatalogClass
  */
 typedef enum _NcmCatalogColType
 {
-  NCM_CATALOG_COL_TYPE_DOUBLE = 0,
+  NCM_CATALOG_COL_TYPE_INVALID = -1,
+  NCM_CATALOG_COL_TYPE_DOUBLE  = 0,
   NCM_CATALOG_COL_TYPE_INT,
   NCM_CATALOG_COL_TYPE_BOOL,
   /* < private > */
   NCM_CATALOG_COL_TYPE_LEN, /*< skip >*/
 } NcmCatalogColType;
+
+/* Error domain for the NcmCatalog class */
+
+/**
+ * NcmCatalogError:
+ * @NCM_CATALOG_ERROR_COLUMN_NOT_FOUND: The column was not found.
+ *
+ * Error codes returned by the #NcmCatalog class.
+ *
+ */
+typedef enum _NcmCatalogError
+{
+  NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
+} NcmCatalogError;
+
+GQuark ncm_catalog_error_quark (void);
+
+#define NCM_CATALOG_ERROR (ncm_catalog_error_quark ())
+
 
 NcmCatalog *ncm_catalog_new (guint nrows, GStrv col_names);
 NcmCatalog *ncm_catalog_new_full (guint nrows, GStrv col_names, const NcmCatalogColType *col_types, guint n_types);
@@ -76,16 +97,16 @@ void ncm_catalog_clear (NcmCatalog **catalog);
 gboolean ncm_catalog_get_index (NcmCatalog *catalog, const gchar *col, guint *i);
 gboolean ncm_catalog_has_column (NcmCatalog *catalog, const gchar *col);
 
-NcmCatalogColType ncm_catalog_get_col_type (NcmCatalog *catalog, const gchar *col);
+NcmCatalogColType ncm_catalog_get_col_type (NcmCatalog *catalog, const gchar *col, GError **error);
 
-void ncm_catalog_set (NcmCatalog *catalog, const gchar *col, const guint i, gdouble val);
-gdouble ncm_catalog_get (NcmCatalog *catalog, const gchar *col, const guint i);
+void ncm_catalog_set (NcmCatalog *catalog, const gchar *col, const guint i, gdouble val, GError **error);
+gdouble ncm_catalog_get (NcmCatalog *catalog, const gchar *col, const guint i, GError **error);
 
-void ncm_catalog_set_int (NcmCatalog *catalog, const gchar *col, const guint i, gint64 val);
-gint64 ncm_catalog_get_int (NcmCatalog *catalog, const gchar *col, const guint i);
+void ncm_catalog_set_int (NcmCatalog *catalog, const gchar *col, const guint i, gint64 val, GError **error);
+gint64 ncm_catalog_get_int (NcmCatalog *catalog, const gchar *col, const guint i, GError **error);
 
-void ncm_catalog_set_bool (NcmCatalog *catalog, const gchar *col, const guint i, gboolean val);
-gboolean ncm_catalog_get_bool (NcmCatalog *catalog, const gchar *col, const guint i);
+void ncm_catalog_set_bool (NcmCatalog *catalog, const gchar *col, const guint i, gboolean val, GError **error);
+gboolean ncm_catalog_get_bool (NcmCatalog *catalog, const gchar *col, const guint i, GError **error);
 
 GStrv ncm_catalog_peek_columns (NcmCatalog *catalog);
 NcmMatrix *ncm_catalog_peek_data (NcmCatalog *catalog);

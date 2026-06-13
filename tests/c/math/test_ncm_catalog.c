@@ -158,17 +158,17 @@ test_ncm_catalog_set_get (TestNcmCatalog *test, gconstpointer pdata)
   /* A new catalog is zero-initialized. */
   for (i = 0; i < ncm_catalog_len (test->catalog); i++)
   {
-    g_assert_cmpfloat (ncm_catalog_get (test->catalog, "ra", i), ==, 0.0);
-    g_assert_cmpfloat (ncm_catalog_get (test->catalog, "dec", i), ==, 0.0);
-    g_assert_cmpfloat (ncm_catalog_get (test->catalog, "z", i), ==, 0.0);
+    g_assert_cmpfloat (ncm_catalog_get (test->catalog, "ra", i, NULL), ==, 0.0);
+    g_assert_cmpfloat (ncm_catalog_get (test->catalog, "dec", i, NULL), ==, 0.0);
+    g_assert_cmpfloat (ncm_catalog_get (test->catalog, "z", i, NULL), ==, 0.0);
   }
 
-  ncm_catalog_set (test->catalog, "ra", 0, 1.5);
-  ncm_catalog_set (test->catalog, "z", 3, -3.25);
+  ncm_catalog_set (test->catalog, "ra", 0, 1.5, NULL);
+  ncm_catalog_set (test->catalog, "z", 3, -3.25, NULL);
 
-  g_assert_cmpfloat (ncm_catalog_get (test->catalog, "ra", 0), ==, 1.5);
-  g_assert_cmpfloat (ncm_catalog_get (test->catalog, "z", 3), ==, -3.25);
-  g_assert_cmpfloat (ncm_catalog_get (test->catalog, "z", 0), ==, 0.0);
+  g_assert_cmpfloat (ncm_catalog_get (test->catalog, "ra", 0, NULL), ==, 1.5);
+  g_assert_cmpfloat (ncm_catalog_get (test->catalog, "z", 3, NULL), ==, -3.25);
+  g_assert_cmpfloat (ncm_catalog_get (test->catalog, "z", 0, NULL), ==, 0.0);
 
   /* The backing matrix reflects the same values. */
   data = ncm_catalog_peek_data (test->catalog);
@@ -193,21 +193,21 @@ test_ncm_catalog_types (TestNcmCatalog *test, gconstpointer pdata)
   NcmCatalog *typed = ncm_catalog_new_full (2, (GStrv) col_names, col_types, 3);
 
   /* Plain new defaults every column to DOUBLE. */
-  g_assert_cmpuint (ncm_catalog_get_col_type (test->catalog, "ra"), ==, NCM_CATALOG_COL_TYPE_DOUBLE);
+  g_assert_cmpuint (ncm_catalog_get_col_type (test->catalog, "ra", NULL), ==, NCM_CATALOG_COL_TYPE_DOUBLE);
 
   /* new_full records the requested per-column types. */
-  g_assert_cmpuint (ncm_catalog_get_col_type (typed, "id"), ==, NCM_CATALOG_COL_TYPE_INT);
-  g_assert_cmpuint (ncm_catalog_get_col_type (typed, "mass"), ==, NCM_CATALOG_COL_TYPE_DOUBLE);
-  g_assert_cmpuint (ncm_catalog_get_col_type (typed, "detected"), ==, NCM_CATALOG_COL_TYPE_BOOL);
+  g_assert_cmpuint (ncm_catalog_get_col_type (typed, "id", NULL), ==, NCM_CATALOG_COL_TYPE_INT);
+  g_assert_cmpuint (ncm_catalog_get_col_type (typed, "mass", NULL), ==, NCM_CATALOG_COL_TYPE_DOUBLE);
+  g_assert_cmpuint (ncm_catalog_get_col_type (typed, "detected", NULL), ==, NCM_CATALOG_COL_TYPE_BOOL);
 
   /* Typed accessors round-trip through the double backing store. */
-  ncm_catalog_set_int (typed, "id", 0, G_GINT64_CONSTANT (9007199254740991)); /* 2^53 - 1 */
-  ncm_catalog_set_bool (typed, "detected", 0, TRUE);
-  ncm_catalog_set_bool (typed, "detected", 1, FALSE);
+  ncm_catalog_set_int (typed, "id", 0, G_GINT64_CONSTANT (9007199254740991), NULL); /* 2^53 - 1 */
+  ncm_catalog_set_bool (typed, "detected", 0, TRUE, NULL);
+  ncm_catalog_set_bool (typed, "detected", 1, FALSE, NULL);
 
-  g_assert_cmpint (ncm_catalog_get_int (typed, "id", 0), ==, G_GINT64_CONSTANT (9007199254740991));
-  g_assert_true (ncm_catalog_get_bool (typed, "detected", 0));
-  g_assert_false (ncm_catalog_get_bool (typed, "detected", 1));
+  g_assert_cmpint (ncm_catalog_get_int (typed, "id", 0, NULL), ==, G_GINT64_CONSTANT (9007199254740991));
+  g_assert_true (ncm_catalog_get_bool (typed, "detected", 0, NULL));
+  g_assert_false (ncm_catalog_get_bool (typed, "detected", 1, NULL));
 
   NCM_TEST_FREE (ncm_catalog_free, typed);
 }
@@ -225,18 +225,18 @@ test_ncm_catalog_serialize (TestNcmCatalog *test, gconstpointer pdata)
   GVariant *var;
   NcmCatalog *dup;
 
-  ncm_catalog_set_int (typed, "id", 0, 42);
-  ncm_catalog_set_bool (typed, "flag", 0, TRUE);
+  ncm_catalog_set_int (typed, "id", 0, 42, NULL);
+  ncm_catalog_set_bool (typed, "flag", 0, TRUE, NULL);
 
   var = ncm_serialize_to_variant (ser, G_OBJECT (typed));
   dup = NCM_CATALOG (ncm_serialize_from_variant (ser, var));
 
   g_assert_cmpuint (ncm_catalog_len (dup), ==, 1);
   g_assert_cmpuint (ncm_catalog_ncols (dup), ==, 2);
-  g_assert_cmpuint (ncm_catalog_get_col_type (dup, "id"), ==, NCM_CATALOG_COL_TYPE_INT);
-  g_assert_cmpuint (ncm_catalog_get_col_type (dup, "flag"), ==, NCM_CATALOG_COL_TYPE_BOOL);
-  g_assert_cmpint (ncm_catalog_get_int (dup, "id", 0), ==, 42);
-  g_assert_true (ncm_catalog_get_bool (dup, "flag", 0));
+  g_assert_cmpuint (ncm_catalog_get_col_type (dup, "id", NULL), ==, NCM_CATALOG_COL_TYPE_INT);
+  g_assert_cmpuint (ncm_catalog_get_col_type (dup, "flag", NULL), ==, NCM_CATALOG_COL_TYPE_BOOL);
+  g_assert_cmpint (ncm_catalog_get_int (dup, "id", 0, NULL), ==, 42);
+  g_assert_true (ncm_catalog_get_bool (dup, "flag", 0, NULL));
 
   g_variant_unref (var);
   ncm_serialize_free (ser);
@@ -247,18 +247,32 @@ test_ncm_catalog_serialize (TestNcmCatalog *test, gconstpointer pdata)
 void
 test_ncm_catalog_invalid_get (TestNcmCatalog *test, gconstpointer pdata)
 {
-  NCM_TEST_FAIL (ncm_catalog_get (test->catalog, "missing", 0));
+  GError *error = NULL;
+
+  ncm_catalog_get (test->catalog, "missing", 0, &error);
+  g_assert_nonnull (error);
+  g_assert_cmpint (error->code, ==, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND);
+  g_assert_cmpstr (error->message, ==, "Column 'missing' not found.");
+  g_error_free (error);
 }
 
 void
 test_ncm_catalog_invalid_set (TestNcmCatalog *test, gconstpointer pdata)
 {
-  NCM_TEST_FAIL (ncm_catalog_set (test->catalog, "missing", 0, 1.0));
+  GError *error = NULL;
+
+  ncm_catalog_set (test->catalog, "missing", 0, 1.0, &error);
+  g_assert_nonnull (error);
+  g_error_free (error);
 }
 
 void
 test_ncm_catalog_invalid_col_type (TestNcmCatalog *test, gconstpointer pdata)
 {
-  NCM_TEST_FAIL (ncm_catalog_get_col_type (test->catalog, "missing"));
+  GError *error = NULL;
+
+  ncm_catalog_get_col_type (test->catalog, "missing", &error);
+  g_assert_nonnull (error);
+  g_error_free (error);
 }
 
