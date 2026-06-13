@@ -197,9 +197,11 @@ class MockGenerator:
         )
 
     def generate_cluster_positions(self):
-        """Generate random cluster positions within the specified RA, Dec, and redshift intervals.
+        """Generate random cluster positions within the specified RA, Dec, and redshift
+        intervals.
 
-        :return tuple[ndarray, ndarray, ndarray]: cluster_ra: cluster right ascension (RA), cluster_dec: cluster declination (Dec), cluster_z: redshift (z)
+        :return tuple[ndarray, ndarray, ndarray]: cluster_ra: cluster right ascension
+            (RA), cluster_dec: cluster declination (Dec), cluster_z: redshift (z)
         """
 
         cluster_ra = np.random.uniform(self.ra_min, self.ra_max, self.cluster_set_size)
@@ -262,7 +264,7 @@ class MockGenerator:
         ncount = Nc.DataClusterNCount.new(
             cad,
             "NcClusterRedshiftNodist",
-            "Nc" + str(type(self.cluster_m)).split(".")[-1].strip("'>"),
+            "Nc" + str(type(self.cluster_m)).rsplit(".", maxsplit=1)[-1].strip("'>"),
         )
         ncount.init_from_sampling(mset, sky_area_rad, rng)
 
@@ -358,7 +360,8 @@ class MockGenerator:
     def generate_clusters_from_halos(
         self, halos, D_DIM=2.0, purity_model=None, scaling_relation=None
     ):
-        """Generate clusters from a given halo catalog generated from a halo mass function (HMF).
+        """Generate clusters from a given halo catalog generated from a halo mass
+        function (HMF).
 
         :param Table hmf_halos: Halo catalog generated from a halo mass function (HMF).
         """
@@ -400,7 +403,9 @@ class MockGenerator:
             sky_area = self.sky_area()
             sky_area_rad = sky_area * (np.pi / 180) ** 2  # Conversion to steradians
 
-            if self.cluster_m is None or type(self.cluster_m) == Nc.ClusterMassNodist:
+            if self.cluster_m is None or isinstance(
+                self.cluster_m, Nc.ClusterMassNodist
+            ):
                 self.hmf.set_area(sky_area_rad)
 
                 def hmf_fake(logm, z):
@@ -416,7 +421,8 @@ class MockGenerator:
                     )
 
             else:
-                # cluster_logm = detected_halos_logm + np.random.normal(0, 0.1, detected_halos_size)
+                # cluster_logm = detected_halos_logm + np.random.normal(0, 0.1,
+                # detected_halos_size)
 
                 clusterz = Nc.ClusterRedshiftNodist(z_min=self.z_min, z_max=self.z_max)
                 cad = Nc.ClusterAbundance.new(self.hmf, None)
@@ -448,7 +454,7 @@ class MockGenerator:
             fake_clusters_size = np.random.poisson(lam=mean_fake_clusters_size)
             self.cluster_set_size = detected_halos_size + fake_clusters_size
 
-            # ARRUMAR ESSE SAMPLERRR
+            # ARRUMAR ESSE SAMPLER
             # Faster Unbinned Alternative to MCMC
             def sample_fakes_rejection(target_func, n_to_generate):
                 sampled = []
@@ -659,7 +665,8 @@ class MockGenerator:
     def generate_halos(self, D_DIM=2.0, clusters=None):
         """Generate halos.
 
-        :param float D_DIM: size of the region around each cluster where the main halos are generated.
+        :param float D_DIM: size of the region around each cluster where the main halos
+            are generated.
 
         :return Table: halos: Astropy Table with generated halos."""
 
@@ -741,14 +748,18 @@ class MockGenerator:
         self, ra_c: float, dec_c: float, sep_angular_rad: float, phi_rad: float
     ) -> tuple[float, float]:
         """
-        Compute the RA and DEC of a galaxy given the angular separation, position angle and center coordinates of the cluster/halo.
+        Compute the RA and DEC of a galaxy given the angular separation, position angle
+        and center coordinates of the cluster/halo.
 
-        :param float ra_c: cluster/halo central right ascencion angle in degrees.
+        :param float ra_c: cluster/halo central right ascension angle in degrees.
         :param float dec_c: cluster/halo central declination angle in degrees.
-        :param float sep_angular_rad: galaxy angular separation from the center in radians.
-        :param float phi_rad: galaxy position angle (angle from north to east) in radians.
+        :param float sep_angular_rad: galaxy angular separation from the center in
+            radians.
+        :param float phi_rad: galaxy position angle (angle from north to east) in
+            radians.
 
-        :return tuple[float, float]: ra: galaxy right ascencion angle in degrees, dec: galaxy declination angle in degrees
+        :return tuple[float, float]: ra: galaxy right ascension angle in degrees, dec:
+            galaxy declination angle in degrees
         """
 
         # Convert center coordinates to radians
@@ -799,7 +810,8 @@ class MockGenerator:
             probability ``<N_cen>``; if ``False`` it is present deterministically
             when ``<N_cen> >= 0.5``. Defaults to the instance's ``stochastic_central``.
 
-        :return tuple[int, int]: n_cen: number of central galaxies (0 or 1), n_sat: number of satellite galaxies "
+        :return tuple[int, int]: n_cen: number of central galaxies (0 or 1), n_sat:
+            number of satellite galaxies "
         """
         if stochastic_central is None:
             stochastic_central = self.stochastic_central
@@ -862,8 +874,8 @@ class MockGenerator:
                 )
 
             # galaxy_R = object_r200 * np.random.uniform(0, 1, total_gals)**(1/3)
-            costheta = np.random.uniform(-1, 1, total_gals)
-            galaxy_theta = np.arccos(costheta)
+            cos_theta = np.random.uniform(-1, 1, total_gals)
+            galaxy_theta = np.arccos(cos_theta)
             galaxy_phi = np.random.uniform(0, 2 * np.pi, total_gals)
 
             Hz = self.cosmo.H(object_z)
@@ -918,7 +930,8 @@ class MockGenerator:
             galaxy_catalog = galaxy_catalog[ordered_cols]
 
             print(
-                f"Generated {len(galaxy_catalog)} galaxies from {len(catalog)} {object_type}(s)."
+                f"Generated {len(galaxy_catalog)} galaxies "
+                f"from {len(catalog)} {object_type}(s)."
             )
 
         else:
@@ -933,7 +946,8 @@ class MockGenerator:
         :param Table object_catalog: Astropy Table with object properties.
         :param Table galaxy_catalog: Astropy Table with galaxy properties.
 
-        :return Table: halo_galaxies: Updated Astropy Table with matched galaxies to objects.
+        :return Table: halo_galaxies: Updated Astropy Table with matched galaxies to
+            objects.
         """
 
     def get_common_galaxies_by_distance(
@@ -944,8 +958,8 @@ class MockGenerator:
         object_coordinates = {"RA": "RA", "DEC": "DEC", "z": "z"}
         galaxy_coordinates = {"RA": "RA", "DEC": "DEC", "z": "z"}
 
-        obj_id = "%s_id" % (object_type)
-        obj_mass = "%s_mass" % (object_type)
+        obj_id = f"{object_type}_id"
+        obj_mass = f"{object_type}_mass"
         obj_properties = {obj_id: obj_id, "Mass": obj_mass, "R200c": "R200c"}
 
         obj_m = sky_match.SkyMatch(
@@ -960,7 +974,7 @@ class MockGenerator:
             query_properties=obj_properties
         )
 
-        obj_z = "%s_z" % (object_type)
+        obj_z = f"{object_type}_z"
 
         matched_index = []
         matched_obj_id = []
