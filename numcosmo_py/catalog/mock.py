@@ -6,10 +6,11 @@ members following a Halo Occupation Distribution. It also provides small,
 well-defined selection models (:class:`CompletenessModel`, :class:`PurityModel`)
 used to inject detection incompleteness and impurity into the mocks.
 
-Heavy or uncommon dependencies (``scipy`` and ``spherical_geometry``) are
-imported lazily inside the methods that need them, so importing this module --
-and therefore :mod:`numcosmo_py.catalog` -- stays cheap and does not require
-those packages unless the relevant features are used.
+Geometry and cosmology helpers live in :mod:`numcosmo_py.catalog._geometry` and
+:mod:`numcosmo_py.catalog._cosmology`, which wrap NumCosmo primitives. The only
+heavy/uncommon dependency, ``scipy``, is imported lazily inside the one method
+that needs it, so importing this module -- and therefore
+:mod:`numcosmo_py.catalog` -- stays cheap.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from astropy.table import Table, vstack
 from numcosmo_py import Nc, Ncm
 
 from . import sky_match
+from . import _cosmology, _geometry
 
 
 class CompletenessModel(Protocol):
@@ -111,14 +113,15 @@ class MockGenerator:
         cosmo: Nc.HICosmo,
         halo_set_size: int | None = 200,
         cluster_set_size: int | None = 100,
-        ra_interval: tuple[float, float] | None = (-10, 10),
-        dec_interval: tuple[float, float] | None = (-10, 10),
-        z_interval: tuple[float, float] | None = (0.2, 0.5),
-        cluster_mass_interval: tuple[float, float] | None = (1e14, 1e15),
-        halo_mass_interval: tuple[float, float] | None = (1e13, 1e14),
+        ra_interval: tuple[float, float] = (-10, 10),
+        dec_interval: tuple[float, float] = (-10, 10),
+        z_interval: tuple[float, float] = (0.2, 0.5),
+        cluster_mass_interval: tuple[float, float] = (1e14, 1e15),
+        halo_mass_interval: tuple[float, float] = (1e13, 1e14),
         hmf: Nc.HaloMassFunction | None = None,
         cluster_m: Nc.ClusterMass | None = None,
         seed: int | None = 42,
+        stochastic_central: bool = True,
     ) -> None:
         """Create a new MockGenerator object."""
         self.cosmo = cosmo
@@ -132,6 +135,8 @@ class MockGenerator:
         self.hmf = hmf
         self.cluster_m = cluster_m
         self.seed = seed
+        self.stochastic_central = stochastic_central
+        self._dist: Nc.Distance | None = None
         if self.seed is not None:
             np.random.seed(self.seed)
 
@@ -187,24 +192,9 @@ class MockGenerator:
 
     def sky_area(self):
         """Compute the survey footprint area in square degrees."""
-        from astropy import units as u
-        from astropy.coordinates import SkyCoord
-        from spherical_geometry.polygon import SphericalPolygon
-
-        corners = SkyCoord(
-            [self.ra_min, self.ra_max, self.ra_max, self.ra_min] * u.deg,
-            [self.dec_min, self.dec_min, self.dec_max, self.dec_max] * u.deg,
-            frame="icrs",
+        return _geometry.rectangular_sky_area(
+            self.ra_min, self.ra_max, self.dec_min, self.dec_max
         )
-
-        polygon = SphericalPolygon.from_radec(
-            corners.ra.value, corners.dec.value, degrees=True
-        )
-
-        # Calculate the area in steradians and convert to square degrees
-        sky_area_sterad = polygon.area()  # in steradians
-        sky_area = sky_area_sterad * (180 / np.pi) ** 2  # convert to deg²
-        return sky_area
 
     def generate_cluster_positions(self):
         """Generate random cluster positions within the specified RA, Dec, and redshift intervals.
@@ -592,37 +582,24 @@ class MockGenerator:
         return cluster_logm
 
     def get_3D_coordinates(self, RA, DEC, R):
-        """Get positions in 3D coordinates."""
-
-        x1 = R * np.cos(np.radians(DEC)) * np.cos(np.radians(RA))
-        x2 = R * np.cos(np.radians(DEC)) * np.sin(np.radians(RA))
-        x3 = R * np.sin(np.radians(DEC))
-
-        return x1, x2, x3
+        """Get positions in 3D coordinates (NumCosmo astro convention)."""
+        return _geometry.spherical_to_cartesian(RA, DEC, R)
 
     def rho_crit(self, z):
-        """Critical density of the Universe at redshift ``z``."""
-        return (
-            2.8
-            * 10 ** (11)
-            * self.cosmo.h2()
-            * (
-                (self.cosmo["Omegac"] + self.cosmo["Omegab"]) / (1 + z) ** 3
-                + (1 - self.cosmo["Omegac"] - self.cosmo["Omegab"])
-            )
-        )
+        """Critical density of the Universe at redshift ``z`` (solar masses / Mpc^3)."""
+        return _cosmology.critical_density(self.cosmo, z)
 
     def get_R200c(self, mass, z):
         """Calculate R_{200c} for a given mass and redshift."""
-
-        return ((3 * mass) / (4 * np.pi * 200 * self.rho_crit(z))) ** (1 / 3)
+        return _cosmology.r200c(self.cosmo, mass, z)
 
     def dist(self, zf=100.0):
-        """Build and prepare a NumCosmo distance object up to redshift ``zf``."""
-        d = Nc.Distance.new(zf)
-        d.compute_inv_comoving(True)
-        d.prepare(self.cosmo)
-        return d
+        """Return a prepared NumCosmo distance object, built once and reused."""
+        if self._dist is None:
+            self._dist = Nc.Distance.new(zf)
+            self._dist.compute_inv_comoving(True)
+            self._dist.prepare(self.cosmo)
+        return self._dist
 
     def generate_clusters(self):
         """Generate clusters.
@@ -807,6 +784,7 @@ class MockGenerator:
         alpha=1.15,
         logM1=13.93,
         logM0=12.7,
+        stochastic_central: bool | None = None,
     ) -> tuple[int, int]:
         """
         Standard HOD model (Zheng et al. 2007)
@@ -817,16 +795,24 @@ class MockGenerator:
         :param float alpha: power law index for satellite occupation.
         :param float logM1: log10(Mass) at which satellite occupation starts.
         :param float logM0: log10(Mass) at which central occupation starts.
+        :param stochastic_central: if ``True`` the central is a Bernoulli draw with
+            probability ``<N_cen>``; if ``False`` it is present deterministically
+            when ``<N_cen> >= 0.5``. Defaults to the instance's ``stochastic_central``.
 
         :return tuple[int, int]: n_cen: number of central galaxies (0 or 1), n_sat: number of satellite galaxies "
         """
+        if stochastic_central is None:
+            stochastic_central = self.stochastic_central
+
         # 1. Mean Central Occupancy (Error function)
         # 0.5 * (1 + erf(arg)) is the unit-normal CDF at arg * sqrt(2), i.e.
         # 0.5 + normal_gaussian_integral(0, arg * sqrt(2)).
         arg = (np.log10(m_halo) - logMmin) / sigma_logM
         mean_n_cen = 0.5 + Ncm.util_normal_gaussian_integral(0.0, arg * np.sqrt(2.0))
-        # n_cen = 1 if np.random.random() < mean_n_cen else 0
-        n_cen = 1
+        if stochastic_central:
+            n_cen = int(np.random.binomial(1, np.clip(mean_n_cen, 0.0, 1.0)))
+        else:
+            n_cen = int(mean_n_cen >= 0.5)
 
         # 2. Mean Satellite Occupancy (Power Law)
         n_sat = 0
@@ -835,7 +821,7 @@ class MockGenerator:
             diff = m_halo - 10**logM0
             mean_n_sat = (np.maximum(0, diff) / 10**logM1) ** alpha
             if mean_n_sat > 0:
-                n_sat = np.random.poisson(mean_n_sat)
+                n_sat = int(np.random.poisson(mean_n_sat))
 
         return n_cen, n_sat
 
@@ -936,7 +922,7 @@ class MockGenerator:
             )
 
         else:
-
+            galaxy_catalog = Table()
             print("No galaxies were generated. Check your HOD mass thresholds.")
 
         return galaxy_catalog

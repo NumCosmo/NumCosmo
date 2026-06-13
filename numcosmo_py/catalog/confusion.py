@@ -151,7 +151,8 @@ def calculate_catalog_metrics(
 
     # 2. Total Counts for Denominators
     n_total_detections = len(catalog_table[id_col])
-    # n_non_detections is the difference between found matches and the ground truth catalog
+    # n_non_detections is the difference between found matches and the ground truth
+    # catalog
     n_non_detections = abs(len(catalog_table[id_col]) - len(mock_table[id_col]))
 
     # 3. True Positives (TP) and False Positives (FP)
