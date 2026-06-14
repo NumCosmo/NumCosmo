@@ -707,17 +707,16 @@ def test_lsst_bins_pzp_normalization(
 
 
 @pytest.mark.parametrize(
-    "lsst_bins_case",
+    "lsst_source_case",
     [
         (t0, t0.name)
         for t0 in list(Nc.GalaxySDTrueRedshiftLSSTSRDType)
         if "SOURCE" in t0.name
     ],
-    indirect=True,
     ids=lambda x: f"{x[1]}_BINS",
 )
 def test_lsst_bins_equal_area_verification(
-    lsst_bins_case: tuple[Nc.GalaxySDTrueRedshiftLSSTSRDType, str],
+    lsst_source_case: tuple[Nc.GalaxySDTrueRedshiftLSSTSRDType, str],
 ) -> None:
     """Test that source sample bins have equal areas under P(zp).
 
@@ -725,7 +724,7 @@ def test_lsst_bins_equal_area_verification(
     probability. The bins are computed using the CDF of P(zp), so we verify by
     integrating P(zp) over each bin and checking that all bins have equal area.
     """
-    lsst_type, _ = lsst_bins_case
+    lsst_type, _ = lsst_source_case
     bins, _ = Nc.GalaxySDObsRedshiftGauss.new_lsst_srd_bins(lsst_type)
 
     sigma0 = 0.05
