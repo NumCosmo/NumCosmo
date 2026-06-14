@@ -5,10 +5,9 @@ Module to match objects in the sky halo-halo, cluster-halo, cluster-cluster.
 
 from __future__ import annotations
 import dataclasses
-from typing import TypedDict, cast
+from typing import TypedDict, cast, assert_never
 from pathlib import Path
 from enum import StrEnum, auto
-from typing_extensions import assert_never
 import numpy as np
 import numpy.typing as npt
 
