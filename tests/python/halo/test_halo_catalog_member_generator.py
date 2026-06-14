@@ -146,6 +146,60 @@ def test_central_sits_at_host_and_satellites_inside() -> None:
         assert abs(float(row["z"]) - z_c) <= dz_max * (1.0 + 1e-9)
 
 
+def _haversine_rad(ra1, dec1, ra2, dec2):
+    """Great-circle separation (radians), stable for small angles."""
+    r1, d1, r2, d2 = map(math.radians, (ra1, dec1, ra2, dec2))
+    a = (
+        math.sin((d2 - d1) / 2.0) ** 2
+        + math.cos(d1) * math.cos(d2) * math.sin((r2 - r1) / 2.0) ** 2
+    )
+    return 2.0 * math.asin(math.sqrt(a))
+
+
+def test_satellite_radii_are_uniform_in_volume() -> None:
+    """Satellite 3D radii, recovered from the output geometry, fill r_Delta uniformly.
+
+    Each satellite's transverse offset is R sin(theta) and its line-of-sight
+    offset is R cos(theta); recombining them recovers the sampled 3D radius R.
+    Uniform-in-volume sampling means (R / r_Delta)**3 is uniform on [0, 1].
+    """
+    cosmo, mset = _cosmo_mset()
+    ra_c, dec_c, z_c, r_delta = 100.0, 20.0, 0.3, 2.0
+    n_hosts = 400
+    host = _host_catalog([(ra_c, dec_c, z_c, math.log(1.0e15), r_delta)] * n_hosts)
+
+    dist = Nc.Distance.new(2.0)
+    hod = Nc.GalaxyHODZheng07.new()
+    hod.set_stochastic_central(False)
+    memgen = Nc.HaloCatalogMemberGenerator.new(hod)
+    memgen.set_distance(dist)  # share the distance so the recovery is exact
+
+    rng = Ncm.RNG.seeded_new(None, 11)
+    members = memgen.generate(host, mset, rng)
+    assert members is not None
+    table = catalog_to_table(members)
+
+    dist.prepare(cosmo)
+    d_a = dist.angular_diameter(cosmo, z_c) * cosmo.RH_Mpc()
+    h_z = cosmo.H(z_c)
+    c_kms = Ncm.C.c() / 1.0e3
+
+    sats = table[~np.asarray(table["is_central"], dtype=bool)]
+    assert len(sats) > 1000
+
+    transverse = (
+        np.array([_haversine_rad(r["ra"], r["dec"], ra_c, dec_c) for r in sats]) * d_a
+    )
+    radial = (np.asarray(sats["z"], dtype=np.float64) - z_c) * c_kms / h_z
+    radii = np.hypot(transverse, radial)
+
+    assert radii.max() <= r_delta * (1.0 + 1e-9)
+    # (R / r_Delta)**3 ~ Uniform(0, 1): mean 1/2, and well spread across the ball.
+    u = (radii / r_delta) ** 3
+    assert abs(u.mean() - 0.5) < 0.03
+    assert u.min() < 0.1 and u.max() > 0.9
+
+
 def test_find_children_links_to_host() -> None:
     """Members can be grouped back to their host through the parent linkage."""
     cosmo, mset = _cosmo_mset()

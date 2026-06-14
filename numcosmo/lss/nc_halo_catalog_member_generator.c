@@ -43,13 +43,16 @@
  * - `r_Delta`: host spherical-overdensity radius (Mpc).
  *
  * For each host the central galaxy sits at the host position; satellites are
- * placed uniformly in volume within `r_Delta`, isotropically in direction. The
- * line-of-sight displacement is converted to a Hubble-flow redshift offset
- * $\delta z = H(z)\,\Delta r_\parallel / c$, and the transverse displacement to
- * an angular separation $\theta = R / d_A(z)$ that is applied to the host
- * position with the spherical law of cosines. (The reference Python prototype
- * used the speed of light in m/s while $H$ is in km/s/Mpc, an inconsistency this
- * implementation does not reproduce: $c$ is taken in km/s.)
+ * placed uniformly in volume within `r_Delta` ($R = r_\Delta\,U^{1/3}$),
+ * isotropically in direction ($\cos\theta$ uniform, $\phi$ uniform). The
+ * displacement is decomposed about the line of sight: the radial part
+ * $R\cos\theta$ becomes a Hubble-flow redshift offset $\delta z = H(z)\,
+ * R\cos\theta / c$, and the transverse part $R\sin\theta$ becomes an angular
+ * separation $R\sin\theta / d_A(z)$ applied to the host position with the
+ * spherical law of cosines. (Two inconsistencies of the reference Python
+ * prototype are not reproduced: it used $c$ in m/s while $H$ is in km/s/Mpc,
+ * and it used the full $R$ instead of $R\sin\theta$ for the transverse
+ * separation; here $c$ is in km/s and the projection uses $R\sin\theta$.)
  *
  * The generated member catalog has columns `galaxy_id` (id), `parent_id`
  * (linking back to the host id, or the host row index when the host has no id
@@ -430,14 +433,21 @@ nc_halo_catalog_member_generator_generate (NcHaloCatalogMemberGenerator *memgen,
       gdouble z_gal, sep, ra_gal, dec_gal;
       gdouble gid, pid, cen;
 
+      gdouble sin_theta;
+
       ncm_rng_lock (rng);
       R         = is_central ? 0.0 : r_D * cbrt (ncm_rng_uniform01_gen (rng));
       cos_theta = ncm_rng_uniform_gen (rng, -1.0, 1.0);
       phi       = ncm_rng_uniform_gen (rng, 0.0, 2.0 * M_PI);
       ncm_rng_unlock (rng);
 
+      sin_theta = sqrt (1.0 - cos_theta * cos_theta);
+
+      /* Decompose the 3D displacement into a line-of-sight part R cos(theta),
+       * turned into a Hubble-flow redshift offset, and a transverse part
+       * R sin(theta), turned into an angular separation. */
       z_gal = z_c + (Hz / c_kms) * (R * cos_theta);
-      sep   = R / dA;
+      sep   = R * sin_theta / dA;
 
       _nc_halo_catalog_member_generator_sky_offset (ra_c, dec_c, sep, phi, &ra_gal, &dec_gal);
 
