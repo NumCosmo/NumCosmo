@@ -104,7 +104,11 @@ class DistanceMethod(StrEnum):
     MAX_RADIUS = auto()
 
 
-@dataclasses.dataclass(frozen=True)
+# eq=False: this dataclass wraps numpy arrays, whose element-wise __eq__ makes the
+# auto-generated dataclass equality return an array / raise "truth value ambiguous"
+# (numpy-version dependent). Identity comparison is well-defined; compare .array
+# explicitly when content equality is needed.
+@dataclasses.dataclass(frozen=True, eq=False)
 class Mask:
     """Sky match mask.
 
@@ -137,7 +141,9 @@ class Mask:
         return cast(np.ndarray[tuple[int, int], np.dtype[np.bool_]], self.mask)
 
 
-@dataclasses.dataclass(frozen=True)
+# eq=False: wraps numpy arrays (see Mask above) -- avoid the version-dependent
+# auto-generated array equality.
+@dataclasses.dataclass(frozen=True, eq=False)
 class BestCandidates:
     """Sky match best candidates.
 
