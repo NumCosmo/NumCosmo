@@ -18,15 +18,24 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""Golden snapshot guarding NcDataClusterNCount.resample bit-for-bit.
+"""Golden snapshot guarding NcDataClusterNCount.resample.
 
-The resample draw order is RNG-sensitive. This test pins the exact output for a
-fixed seed so the planned extraction of the sampling pipeline into
-NcHaloCatalogGenerator can be verified to preserve behavior bit-for-bit.
+The resample draw order is RNG-sensitive. This test pins the output for a fixed
+seed against a stored reference catalog, so the extraction of the sampling
+pipeline into NcHaloCatalogGenerator can be verified to preserve behavior.
+
+The reference is the resampled :class:`Nc.DataClusterNCount` itself, serialized
+with NumCosmo's GVariant binfile format under
+``data/truth_tables/nc_data_cluster_ncount_golden_seed0.bin``. The comparison is
+tolerance-based (not a byte hash) so it survives the sub-ULP drift of the
+spline/transcendental evaluations across different libm/GSL/BLAS builds, while
+still catching genuine regressions. Regenerate the reference with::
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    ser.to_binfile(_resampled_ncount(), "<path>")
 """
 
 import math
-import hashlib
 
 import numpy as np
 
@@ -34,10 +43,20 @@ from numcosmo_py import Nc, Ncm
 
 Ncm.cfg_init()
 
+GOLDEN_FILE = "truth_tables/nc_data_cluster_ncount_golden_seed0.bin"
+# Cross-stack libm/GSL/BLAS rounding drifts the proxy draws by a few ULP; this
+# tolerance absorbs that while still flagging real changes in the draw order.
+GOLDEN_RTOL = 1.0e-9
+GOLDEN_ATOL = 1.0e-12
 
-def _digest(array: np.ndarray) -> str:
-    """Stable short digest of an array's raw bytes."""
-    return hashlib.sha256(array.tobytes()).hexdigest()[:16]
+
+def _load_golden() -> Nc.DataClusterNCount:
+    """Load the stored reference NcDataClusterNCount (seed 0)."""
+    path = Ncm.cfg_get_data_filename(GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    golden = ser.from_binfile(path)
+    assert isinstance(golden, Nc.DataClusterNCount)
+    return golden
 
 
 def _resampled_ncount() -> Nc.DataClusterNCount:
@@ -92,21 +111,19 @@ def _resampled_ncount() -> Nc.DataClusterNCount:
 
 
 def test_resample_matches_golden_snapshot() -> None:
-    """Seed-0 resample reproduces the pinned output exactly."""
+    """Seed-0 resample reproduces the stored reference within tolerance."""
     ncdata = _resampled_ncount()
+    golden = _load_golden()
 
-    assert ncdata.get_len() == 4242
-
-    lnM_obs = np.array(ncdata.get_lnM_obs().dup_array())
-    z_obs = np.array(ncdata.get_z_obs().dup_array())
-    lnM_true = np.array(ncdata.get_lnM_true().dup_array())
-    z_true = np.array(ncdata.get_z_true().dup_array())
+    assert ncdata.get_len() == golden.get_len() == 4242
 
     # No observable params for these models.
     assert ncdata.get_lnM_obs_params() is None
     assert ncdata.get_z_obs_params() is None
 
-    assert _digest(lnM_obs) == "daffcd2e0548bb36"
-    assert _digest(z_obs) == "42aa22695f8e8d7f"
-    assert _digest(lnM_true) == "aa0e1d840a11608d"
-    assert _digest(z_true) == "8d16a125aa223efa"
+    for getter in ("get_lnM_obs", "get_z_obs", "get_lnM_true", "get_z_true"):
+        got = np.array(getattr(ncdata, getter)().dup_array())
+        ref = np.array(getattr(golden, getter)().dup_array())
+        np.testing.assert_allclose(
+            got, ref, rtol=GOLDEN_RTOL, atol=GOLDEN_ATOL, err_msg=getter
+        )

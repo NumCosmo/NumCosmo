@@ -22,12 +22,16 @@
 
 The generator owns the cluster-count sampling pipeline used by
 NcDataClusterNCount. These tests check its catalog output shape and that, run
-standalone with the same seed, it reproduces the pinned NcDataClusterNCount
-golden snapshot bit-for-bit (the two share the extracted pipeline).
+standalone with the same seed, it reproduces the NcDataClusterNCount golden
+snapshot (the two share the extracted pipeline).
+
+The reference is the stored seed-0 NcDataClusterNCount catalog at
+``data/truth_tables/nc_data_cluster_ncount_golden_seed0.bin`` (see
+test_ncount_resample_golden.py). The comparison is tolerance-based so it survives
+cross-stack sub-ULP rounding while still catching real regressions.
 """
 
 import math
-import hashlib
 
 import numpy as np
 
@@ -38,10 +42,23 @@ Ncm.cfg_init()
 
 AREA = 270 * (math.pi / 180.0) ** 2
 
+GOLDEN_FILE = "truth_tables/nc_data_cluster_ncount_golden_seed0.bin"
+GOLDEN_RTOL = 1.0e-9
+GOLDEN_ATOL = 1.0e-12
 
-def _digest(array: np.ndarray) -> str:
-    """Stable short digest of an array's raw bytes."""
-    return hashlib.sha256(array.tobytes()).hexdigest()[:16]
+
+def _load_golden_columns() -> dict[str, np.ndarray]:
+    """Load the reference seed-0 catalog as plain arrays keyed by column."""
+    path = Ncm.cfg_get_data_filename(GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    golden = ser.from_binfile(path)
+    assert isinstance(golden, Nc.DataClusterNCount)
+    return {
+        "lnM_obs": np.array(golden.get_lnM_obs().dup_array()),
+        "z_obs": np.array(golden.get_z_obs().dup_array()),
+        "lnM_true": np.array(golden.get_lnM_true().dup_array()),
+        "z_true": np.array(golden.get_z_true().dup_array()),
+    }
 
 
 def _setup():
@@ -181,12 +198,15 @@ def test_generate_matches_golden_snapshot() -> None:
     rng = Ncm.RNG.seeded_new(None, 0)
     table = catalog_to_table(gen.generate(mset, rng))
 
-    z_true = np.asarray(table["z_true"], dtype=np.float64)
-    lnM_true = np.asarray(table["lnM_true"], dtype=np.float64)
-    z_obs = np.asarray(table["z_obs_0"], dtype=np.float64)
-    lnM_obs = np.asarray(table["lnM_obs_0"], dtype=np.float64)
+    got = {
+        "z_true": np.asarray(table["z_true"], dtype=np.float64),
+        "lnM_true": np.asarray(table["lnM_true"], dtype=np.float64),
+        "z_obs": np.asarray(table["z_obs_0"], dtype=np.float64),
+        "lnM_obs": np.asarray(table["lnM_obs_0"], dtype=np.float64),
+    }
+    golden = _load_golden_columns()
 
-    assert _digest(lnM_obs) == "daffcd2e0548bb36"
-    assert _digest(z_obs) == "42aa22695f8e8d7f"
-    assert _digest(lnM_true) == "aa0e1d840a11608d"
-    assert _digest(z_true) == "8d16a125aa223efa"
+    for column, ref in golden.items():
+        np.testing.assert_allclose(
+            got[column], ref, rtol=GOLDEN_RTOL, atol=GOLDEN_ATOL, err_msg=column
+        )
