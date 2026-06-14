@@ -293,6 +293,10 @@ cluster_tests = [
 # Galaxy and weak lensing tests
 galaxy_tests = [
     {
+        'name': 'nc_galaxy_hod',
+        'sources': ['galaxy/test_nc_galaxy_hod.c'],
+    },
+    {
         'name': 'nc_galaxy_acf',
         'sources': ['galaxy/test_nc_galaxy_acf.c'],
     },

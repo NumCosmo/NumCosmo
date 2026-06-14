@@ -82,6 +82,12 @@ DATA_SNIA_COV_LEN: int = 1
 DATA_SNIA_SIMPLE_LEN: int = 1
 DATA_XCOR_DL: int = 10
 DATA_XCOR_MAX: int = 5
+GALAXY_HOD_ZHENG07_DEFAULT_ALPHA: float = 1.15
+GALAXY_HOD_ZHENG07_DEFAULT_LOG_M0: float = 12.7
+GALAXY_HOD_ZHENG07_DEFAULT_LOG_M1: float = 13.93
+GALAXY_HOD_ZHENG07_DEFAULT_LOG_MMIN: float = 12.72
+GALAXY_HOD_ZHENG07_DEFAULT_PARAMS_ABSTOL: float = 0.0
+GALAXY_HOD_ZHENG07_DEFAULT_SIGMA_LOG_M: float = 0.26
 GALAXY_SD_OBS_REDSHIFT_COL_Z: str = r"z"
 GALAXY_SD_OBS_REDSHIFT_GAUSS_COL_SIGMA: str = r"sigma_z"
 GALAXY_SD_OBS_REDSHIFT_GAUSS_COL_SIGMA0: str = r"sigma_0"
@@ -6538,6 +6544,212 @@ class GalaxyAcfClass(GObject.GPointer):
     """
 
     parent_class: GObject.ObjectClass = ...
+
+class GalaxyHOD(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyHOD(**properties)
+
+    Object NcGalaxyHOD
+
+    Properties from NcGalaxyHOD:
+      stochastic-central -> gboolean: Stochastic central
+        Whether the central occupation is a Bernoulli draw
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        stochastic_central: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: NumCosmoMath.Model = ...
+    def __init__(
+        self,
+        stochastic_central: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(hod: GalaxyHOD) -> None: ...
+    def do_mean_n_central(self, lnM: float) -> float: ...
+    def do_mean_n_satellite(self, lnM: float) -> float: ...
+    def free(self) -> None: ...
+    def gen(self, lnM: float, rng: NumCosmoMath.RNG) -> typing.Tuple[int, int]: ...
+    def get_stochastic_central(self) -> bool: ...
+    @staticmethod
+    def id() -> int: ...
+    def mean_n_central(self, lnM: float) -> float: ...
+    def mean_n_satellite(self, lnM: float) -> float: ...
+    def ref(self) -> GalaxyHOD: ...
+    def set_stochastic_central(self, stochastic_central: bool) -> None: ...
+
+class GalaxyHODClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyHODClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
+    mean_n_central: typing.Callable[[GalaxyHOD, float], float] = ...
+    mean_n_satellite: typing.Callable[[GalaxyHOD, float], float] = ...
+    padding: list[None] = ...
+
+class GalaxyHODZheng07(GalaxyHOD):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyHODZheng07(**properties)
+        new() -> NumCosmo.GalaxyHODZheng07
+
+    Object NcGalaxyHODZheng07
+
+    Properties from NcGalaxyHODZheng07:
+      logMmin -> gdouble: logMmin
+        \log_{10}M_\mathrm{min}
+      sigmalogM -> gdouble: sigmalogM
+        \sigma_{\log M}
+      logM0 -> gdouble: logM0
+        \log_{10}M_0
+      logM1 -> gdouble: logM1
+        \log_{10}M_1
+      alpha -> gdouble: alpha
+        \alpha
+      logMmin-fit -> gboolean: logMmin-fit
+        \log_{10}M_\mathrm{min}:fit
+      sigmalogM-fit -> gboolean: sigmalogM-fit
+        \sigma_{\log M}:fit
+      logM0-fit -> gboolean: logM0-fit
+        \log_{10}M_0:fit
+      logM1-fit -> gboolean: logM1-fit
+        \log_{10}M_1:fit
+      alpha-fit -> gboolean: alpha-fit
+        \alpha:fit
+
+    Properties from NcGalaxyHOD:
+      stochastic-central -> gboolean: Stochastic central
+        Whether the central occupation is a Bernoulli draw
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        alpha: float
+        alpha_fit: bool
+        logM0: float
+        logM0_fit: bool
+        logM1: float
+        logM1_fit: bool
+        logMmin: float
+        logMmin_fit: bool
+        sigmalogM: float
+        sigmalogM_fit: bool
+        stochastic_central: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        alpha: float = ...,
+        alpha_fit: bool = ...,
+        logM0: float = ...,
+        logM0_fit: bool = ...,
+        logM1: float = ...,
+        logM1_fit: bool = ...,
+        logMmin: float = ...,
+        logMmin_fit: bool = ...,
+        sigmalogM: float = ...,
+        sigmalogM_fit: bool = ...,
+        stochastic_central: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(zheng07: GalaxyHODZheng07) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> GalaxyHODZheng07: ...
+    def ref(self) -> GalaxyHODZheng07: ...
+
+class GalaxyHODZheng07Class(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyHODZheng07Class()
+    """
+
+    parent_class: GalaxyHODClass = ...
 
 class GalaxySDObsRedshift(NumCosmoMath.Model):
     r"""
@@ -22674,6 +22886,24 @@ class DataSNIAId(GObject.GEnum):
 class DistanceComovingMethod(GObject.GEnum):
     FROM_MODEL: DistanceComovingMethod = ...
     INT_E: DistanceComovingMethod = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class GalaxyHODZheng07SParams(GObject.GEnum):
+    ALPHA: GalaxyHODZheng07SParams = ...
+    LOG_M0: GalaxyHODZheng07SParams = ...
+    LOG_M1: GalaxyHODZheng07SParams = ...
+    LOG_MMIN: GalaxyHODZheng07SParams = ...
+    SIGMA_LOG_M: GalaxyHODZheng07SParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
