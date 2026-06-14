@@ -21,6 +21,14 @@ math_tests = [
         'sources': ['math/test_ncm_dtuple.c'],
     },
     {
+        'name': 'ncm_catalog',
+        'sources': ['math/test_ncm_catalog.c'],
+    },
+    {
+        'name': 'ncm_sky_footprint',
+        'sources': ['math/test_ncm_sky_footprint.c'],
+    },
+    {
         'name': 'ncm_fftlog',
         'sources': ['math/test_ncm_fftlog.c'],
         'timeout': 0,
@@ -253,6 +261,18 @@ data_tests = [
 # Cluster and halo tests
 cluster_tests = [
     {
+        'name': 'nc_halo_catalog',
+        'sources': ['cluster/test_nc_halo_catalog.c'],
+    },
+    {
+        'name': 'nc_halo_catalog_generator',
+        'sources': ['cluster/test_nc_halo_catalog_generator.c'],
+    },
+    {
+        'name': 'nc_halo_catalog_member_generator',
+        'sources': ['cluster/test_nc_halo_catalog_member_generator.c'],
+    },
+    {
         'name': 'nc_halo_bias',
         'sources': ['cluster/test_nc_halo_bias.c'],
     },
@@ -276,6 +296,10 @@ cluster_tests = [
 
 # Galaxy and weak lensing tests
 galaxy_tests = [
+    {
+        'name': 'nc_galaxy_hod',
+        'sources': ['galaxy/test_nc_galaxy_hod.c'],
+    },
     {
         'name': 'nc_galaxy_acf',
         'sources': ['galaxy/test_nc_galaxy_acf.c'],

@@ -230,7 +230,7 @@ nc_galaxy_sd_obs_redshift_data_unref (NcGalaxySDObsRedshiftData *data)
 void
 nc_galaxy_sd_obs_redshift_data_read_row (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  data->z = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_OBS_REDSHIFT_COL_Z, i);
+  data->z = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_OBS_REDSHIFT_COL_Z, i, NULL);
   data->ldata_read_row (data, obs, i);
 }
 
@@ -246,7 +246,7 @@ nc_galaxy_sd_obs_redshift_data_read_row (NcGalaxySDObsRedshiftData *data, NcGala
 void
 nc_galaxy_sd_obs_redshift_data_write_row (NcGalaxySDObsRedshiftData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_OBS_REDSHIFT_COL_Z, i, data->z);
+  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_OBS_REDSHIFT_COL_Z, i, data->z, NULL);
   data->ldata_write_row (data, obs, i);
 }
 

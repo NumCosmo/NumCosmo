@@ -60,47 +60,33 @@
 struct _NcGalaxyWLObs
 {
   /*< private >*/
-  GObject parent_instance;
+  NcmCatalog parent_instance;
 };
 
 struct _NcGalaxyWLObsPrivate
 {
-  NcmMatrix *data;
   NcmObjDictInt *pz;
   NcGalaxyWLObsCoord coord;
-  GStrv columns;
-  GHashTable *columns_hash;
-  guint ncols;
-  guint len;
   NcGalaxyWLObsEllipConv ellip_conv;
 };
 
 enum
 {
-  PROP_0,
-  PROP_DATA,
-  PROP_PZ,
-  PROP_COLUNMS,
+  PROP_PZ = 1000,
   PROP_COORD,
   PROP_ELLIP_CONV,
-  PROP_LEN,
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLObs, nc_galaxy_wl_obs, G_TYPE_OBJECT)
+G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLObs, nc_galaxy_wl_obs, NCM_TYPE_CATALOG)
 
 static void
 nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  self->data         = NULL;
-  self->pz           = NULL;
-  self->coord        = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
-  self->columns      = NULL;
-  self->columns_hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
-  self->len          = 0;
-  self->ncols        = 0;
-  self->ellip_conv   = 0;
+  self->pz         = ncm_obj_dict_int_new ();
+  self->coord      = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
+  self->ellip_conv = 0;
 }
 
 static void
@@ -111,23 +97,14 @@ _nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, G
 
   switch (prop_id)
   {
-    case PROP_DATA:
-      g_value_set_object (value, self->data);
-      break;
     case PROP_PZ:
       g_value_set_boxed (value, self->pz);
-      break;
-    case PROP_COLUNMS:
-      g_value_set_boxed (value, self->columns);
       break;
     case PROP_COORD:
       g_value_set_enum (value, nc_galaxy_wl_obs_get_coord (obs));
       break;
     case PROP_ELLIP_CONV:
       g_value_set_enum (value, nc_galaxy_wl_obs_get_ellip_conv (obs));
-      break;
-    case PROP_LEN:
-      g_value_set_uint (value, nc_galaxy_wl_obs_len (obs));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -136,7 +113,6 @@ _nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, G
 }
 
 static void _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz);
-static void _nc_galaxy_wl_obs_data (NcGalaxyWLObsPrivate *self, NcmMatrix *data);
 static void _nc_galaxy_wl_obs_set_ellip_conv (NcGalaxyWLObs *obs, NcGalaxyWLObsEllipConv type);
 
 static void
@@ -147,25 +123,14 @@ _nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *va
 
   switch (prop_id)
   {
-    case PROP_DATA:
-      _nc_galaxy_wl_obs_data (self, g_value_get_object (value));
-      break;
     case PROP_PZ:
       _nc_galaxy_wl_obs_take_pz (self, g_value_dup_boxed (value));
-      break;
-    case PROP_COLUNMS:
-      g_assert_null (self->columns);
-      self->columns = g_value_dup_boxed (value);
       break;
     case PROP_COORD:
       nc_galaxy_wl_obs_set_coord (obs, g_value_get_enum (value));
       break;
     case PROP_ELLIP_CONV:
       _nc_galaxy_wl_obs_set_ellip_conv (obs, g_value_get_enum (value));
-      break;
-    case PROP_LEN:
-      self->len = g_value_get_uint (value);
-      g_assert_cmpuint (self->len, >, 0);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -178,31 +143,6 @@ _nc_galaxy_wl_obs_constructed (GObject *object)
 {
   /* Chain up : start */
   G_OBJECT_CLASS (nc_galaxy_wl_obs_parent_class)->constructed (object);
-  {
-    NcGalaxyWLObs *obs                = NC_GALAXY_WL_OBS (object);
-    NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
-    guint i;
-
-    self->ncols = g_strv_length (self->columns);
-
-    for (i = 0; i < self->ncols; i++)
-    {
-      const gchar *col = self->columns[i];
-      guint *index     = g_new0 (guint, 1);
-
-      *index = i;
-
-      g_assert (col != NULL);
-      g_assert (!g_hash_table_contains (self->columns_hash, col));
-      g_hash_table_insert (self->columns_hash, g_strdup (col), index);
-    }
-
-    if (self->data == NULL)
-    {
-      self->data = ncm_matrix_new (self->len, self->ncols);
-      ncm_matrix_set_zero (self->data);
-    }
-  }
 }
 
 static void
@@ -211,12 +151,7 @@ _nc_galaxy_wl_obs_dispose (GObject *object)
   NcGalaxyWLObs *obs                = NC_GALAXY_WL_OBS (object);
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  ncm_matrix_clear (&self->data);
   ncm_obj_dict_int_clear (&self->pz);
-  g_clear_pointer (&self->columns_hash, g_hash_table_unref);
-
-  if (self->columns != NULL)
-    g_strfreev (self->columns);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_wl_obs_parent_class)->dispose (object);
@@ -248,20 +183,6 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
   object_class->finalize     = &_nc_galaxy_wl_obs_finalize;
 
   /**
-   * NcGalaxyWLObs:data:
-   *
-   * Weak lensing observation data.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_DATA,
-                                   g_param_spec_object ("data",
-                                                        "Data",
-                                                        "Weak lensing observation data matrix",
-                                                        NCM_TYPE_MATRIX,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-  /**
    * NcGalaxyWLObs:pz:
    *
    * P(z) splines.
@@ -273,20 +194,6 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                                        "P(z)",
                                                        "P(z) splines",
                                                        NCM_TYPE_OBJ_DICT_INT,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
-
-  /**
-   * NcGalaxyWLObs:columns:
-   *
-   * Data columns names.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_COLUNMS,
-                                   g_param_spec_boxed ("columns",
-                                                       "Colunms",
-                                                       "Data columns names",
-                                                       G_TYPE_STRV,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   /**
@@ -318,20 +225,6 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                                       NC_TYPE_GALAXY_WL_OBS_ELLIP_CONV,
                                                       NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
-
-  /**
-   * NcGalaxyWLObs:len:
-   *
-   * Number of data rows.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_LEN,
-                                   g_param_spec_uint ("len",
-                                                      "Length",
-                                                      "Number of data rows",
-                                                      0, G_MAXUINT, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 }
 
 void
@@ -361,20 +254,6 @@ _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz)
   else
   {
     self->pz = ncm_obj_dict_int_new ();
-  }
-}
-
-static void
-_nc_galaxy_wl_obs_data (NcGalaxyWLObsPrivate *self, NcmMatrix *data)
-{
-  ncm_matrix_clear (&self->data);
-  self->data = ncm_matrix_ref (data);
-
-  if (self->data != NULL)
-  {
-    self->len = ncm_matrix_nrows (self->data);
-    g_assert_cmpuint (ncm_matrix_ncols (self->data), ==, self->ncols);
-    g_assert_cmpuint (ncm_matrix_nrows (self->data), ==, self->len);
   }
 }
 
@@ -453,17 +332,7 @@ nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs)
 gboolean
 nc_galaxy_wl_obs_get_index (NcGalaxyWLObs *obs, const gchar *col, guint *i)
 {
-  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
-  guint *j;
-
-  j = g_hash_table_lookup (self->columns_hash, col);
-
-  if (j == NULL)
-    return FALSE;
-
-  *i = *j;
-
-  return TRUE;
+  return ncm_catalog_get_index (NCM_CATALOG (obs), col, i);
 }
 
 /**
@@ -472,22 +341,15 @@ nc_galaxy_wl_obs_get_index (NcGalaxyWLObs *obs, const gchar *col, guint *i)
  * @col: column name
  * @i: row index
  * @val: value to be set
+ * @error: a #GError for error reporting
  *
  * Sets a value in the observation data.
  *
  */
 void
-nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val)
+nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val, GError **error)
 {
-  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
-  guint *j;
-
-  j = g_hash_table_lookup (self->columns_hash, col);
-
-  if (j == NULL)
-    g_error ("nc_galaxy_wl_obs_set: column '%s' not found.", col);
-
-  ncm_matrix_set (self->data, i, *j, val);
+  ncm_catalog_set (NCM_CATALOG (obs), col, i, val, error);
 }
 
 /**
@@ -512,22 +374,30 @@ nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz)
  * @obs: a #NcGalaxyWLObs object.
  * @col: column name.
  * @i: row index.
+ * @error: a #GError for error reporting
  *
  * Gets a value from the observation data.
  *
+ * Returns: the requested value.
  */
 gdouble
-nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i)
+nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i, GError **error)
 {
-  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
-  guint *j;
+  return ncm_catalog_get (NCM_CATALOG (obs), col, i, error);
+}
 
-  j = g_hash_table_lookup (self->columns_hash, col);
-
-  if (j == NULL)
-    g_error ("nc_galaxy_wl_obs_get: column '%s' not found.", col);
-
-  return ncm_matrix_get (self->data, i, *j);
+/**
+ * nc_galaxy_wl_obs_peek_data:
+ * @obs: a #NcGalaxyWLObs object.
+ *
+ * Gets the observation data matrix.
+ *
+ * Returns: (transfer none): the observation data matrix.
+ */
+NcmMatrix *
+nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs)
+{
+  return ncm_catalog_peek_data (NCM_CATALOG (obs));
 }
 
 /**
@@ -559,9 +429,7 @@ nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
 GStrv
 nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs)
 {
-  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
-
-  return self->columns;
+  return ncm_catalog_peek_columns (NCM_CATALOG (obs));
 }
 
 /**
@@ -631,8 +499,5 @@ nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs)
 guint
 nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs)
 {
-  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
-
-  return ncm_matrix_nrows (self->data);
+  return ncm_catalog_len (NCM_CATALOG (obs));
 }
-

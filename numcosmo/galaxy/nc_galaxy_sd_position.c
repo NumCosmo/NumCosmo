@@ -319,8 +319,8 @@ nc_galaxy_sd_position_data_read_row (NcGalaxySDPositionData *data, NcGalaxyWLObs
 {
   nc_galaxy_sd_obs_redshift_data_read_row (data->sdz_data, obs, i);
   {
-    data->ra  = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_RA, i);
-    data->dec = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_DEC, i);
+    data->ra  = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_RA, i, NULL);
+    data->dec = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_POSITION_COL_DEC, i, NULL);
     data->ldata_read_row (data, obs, i);
   }
 }
@@ -339,8 +339,8 @@ nc_galaxy_sd_position_data_write_row (NcGalaxySDPositionData *data, NcGalaxyWLOb
 {
   nc_galaxy_sd_obs_redshift_data_write_row (data->sdz_data, obs, i);
   {
-    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_POSITION_COL_RA, i, data->ra);
-    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_POSITION_COL_DEC, i, data->dec);
+    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_POSITION_COL_RA, i, data->ra, NULL);
+    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_POSITION_COL_DEC, i, data->dec, NULL);
     data->ldata_write_row (data, obs, i);
   }
 }

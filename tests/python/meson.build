@@ -98,6 +98,21 @@ if enable_gir and python_for_tests.found()
         suite: ['py-xcor'],
     )
 
+    # App/CLI subset (incl. parallel ESMCMC). Gated behind --run-app so the
+    # default smoke runs (e.g. the pip build jobs) skip the heavy MCMC tests.
+    test(
+        'pytest-app',
+        pytest,
+        args: pytest_parallel_args
+        + ['--run-app', '-m', 'app', meson.current_source_dir()],
+        depends: [numcosmo_gir, numcosmo_math_gir],
+        env: env,
+        timeout: 0,
+        protocol: pytest_protocol,
+        is_parallel: pytest_is_parallel,
+        suite: ['py-app'],
+    )
+
     # Sphere_map subset
     test(
         'pytest-sphere_map',

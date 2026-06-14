@@ -82,6 +82,12 @@ DATA_SNIA_COV_LEN: int = 1
 DATA_SNIA_SIMPLE_LEN: int = 1
 DATA_XCOR_DL: int = 10
 DATA_XCOR_MAX: int = 5
+GALAXY_HOD_ZHENG07_DEFAULT_ALPHA: float = 1.15
+GALAXY_HOD_ZHENG07_DEFAULT_LOG_M0: float = 12.7
+GALAXY_HOD_ZHENG07_DEFAULT_LOG_M1: float = 13.93
+GALAXY_HOD_ZHENG07_DEFAULT_LOG_MMIN: float = 12.72
+GALAXY_HOD_ZHENG07_DEFAULT_PARAMS_ABSTOL: float = 0.0
+GALAXY_HOD_ZHENG07_DEFAULT_SIGMA_LOG_M: float = 0.26
 GALAXY_SD_OBS_REDSHIFT_COL_Z: str = r"z"
 GALAXY_SD_OBS_REDSHIFT_GAUSS_COL_SIGMA: str = r"sigma_z"
 GALAXY_SD_OBS_REDSHIFT_GAUSS_COL_SIGMA0: str = r"sigma_0"
@@ -468,6 +474,8 @@ def ca_mean_bias_numerator(
 def data_bao_create(dist: Distance, id: DataBaoId) -> NumCosmoMath.Data: ...
 def data_cmb_create(dist: Distance, id: DataCMBId) -> NumCosmoMath.Data: ...
 def data_snia_cov_error_quark() -> int: ...
+def halo_catalog_error_quark() -> int: ...
+def halo_catalog_member_generator_error_quark() -> int: ...
 def halo_density_profile_nfw_class_set_ni(num: bool) -> None: ...
 def xcor_kernel_integrand_clear(integrand: XcorKernelIntegrand) -> None: ...
 
@@ -6538,6 +6546,212 @@ class GalaxyAcfClass(GObject.GPointer):
 
     parent_class: GObject.ObjectClass = ...
 
+class GalaxyHOD(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyHOD(**properties)
+
+    Object NcGalaxyHOD
+
+    Properties from NcGalaxyHOD:
+      stochastic-central -> gboolean: Stochastic central
+        Whether the central occupation is a Bernoulli draw
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        stochastic_central: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: NumCosmoMath.Model = ...
+    def __init__(
+        self,
+        stochastic_central: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(hod: GalaxyHOD) -> None: ...
+    def do_mean_n_central(self, lnM: float) -> float: ...
+    def do_mean_n_satellite(self, lnM: float) -> float: ...
+    def free(self) -> None: ...
+    def gen(self, lnM: float, rng: NumCosmoMath.RNG) -> typing.Tuple[int, int]: ...
+    def get_stochastic_central(self) -> bool: ...
+    @staticmethod
+    def id() -> int: ...
+    def mean_n_central(self, lnM: float) -> float: ...
+    def mean_n_satellite(self, lnM: float) -> float: ...
+    def ref(self) -> GalaxyHOD: ...
+    def set_stochastic_central(self, stochastic_central: bool) -> None: ...
+
+class GalaxyHODClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyHODClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
+    mean_n_central: typing.Callable[[GalaxyHOD, float], float] = ...
+    mean_n_satellite: typing.Callable[[GalaxyHOD, float], float] = ...
+    padding: list[None] = ...
+
+class GalaxyHODZheng07(GalaxyHOD):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyHODZheng07(**properties)
+        new() -> NumCosmo.GalaxyHODZheng07
+
+    Object NcGalaxyHODZheng07
+
+    Properties from NcGalaxyHODZheng07:
+      logMmin -> gdouble: logMmin
+        \log_{10}M_\mathrm{min}
+      sigmalogM -> gdouble: sigmalogM
+        \sigma_{\log M}
+      logM0 -> gdouble: logM0
+        \log_{10}M_0
+      logM1 -> gdouble: logM1
+        \log_{10}M_1
+      alpha -> gdouble: alpha
+        \alpha
+      logMmin-fit -> gboolean: logMmin-fit
+        \log_{10}M_\mathrm{min}:fit
+      sigmalogM-fit -> gboolean: sigmalogM-fit
+        \sigma_{\log M}:fit
+      logM0-fit -> gboolean: logM0-fit
+        \log_{10}M_0:fit
+      logM1-fit -> gboolean: logM1-fit
+        \log_{10}M_1:fit
+      alpha-fit -> gboolean: alpha-fit
+        \alpha:fit
+
+    Properties from NcGalaxyHOD:
+      stochastic-central -> gboolean: Stochastic central
+        Whether the central occupation is a Bernoulli draw
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        alpha: float
+        alpha_fit: bool
+        logM0: float
+        logM0_fit: bool
+        logM1: float
+        logM1_fit: bool
+        logMmin: float
+        logMmin_fit: bool
+        sigmalogM: float
+        sigmalogM_fit: bool
+        stochastic_central: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        alpha: float = ...,
+        alpha_fit: bool = ...,
+        logM0: float = ...,
+        logM0_fit: bool = ...,
+        logM1: float = ...,
+        logM1_fit: bool = ...,
+        logMmin: float = ...,
+        logMmin_fit: bool = ...,
+        sigmalogM: float = ...,
+        sigmalogM_fit: bool = ...,
+        stochastic_central: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(zheng07: GalaxyHODZheng07) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> GalaxyHODZheng07: ...
+    def ref(self) -> GalaxyHODZheng07: ...
+
+class GalaxyHODZheng07Class(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyHODZheng07Class()
+    """
+
+    parent_class: GalaxyHODClass = ...
+
 class GalaxySDObsRedshift(NumCosmoMath.Model):
     r"""
     :Constructors:
@@ -7972,7 +8186,7 @@ class GalaxySelfuncClass(GObject.GPointer):
 
 class GalaxySelfuncPrivate(GObject.GPointer): ...
 
-class GalaxyWLObs(GObject.Object):
+class GalaxyWLObs(NumCosmoMath.Catalog):
     r"""
     :Constructors:
 
@@ -7984,40 +8198,46 @@ class GalaxyWLObs(GObject.Object):
     Object NcGalaxyWLObs
 
     Properties from NcGalaxyWLObs:
-      data -> NcmMatrix: Data
-        Weak lensing observation data matrix
       pz -> NcmObjDictInt: P(z)
         P(z) splines
-      columns -> GStrv: Colunms
-        Data columns names
       coord -> NcGalaxyWLObsCoord: Coordinate system
         Coordinate system used to store the data
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
         Weak lensing observables ellipticity convention
+
+    Properties from NcmCatalog:
+      data -> NcmMatrix: Data
+        Catalog data matrix
+      columns -> GStrv: Columns
+        Catalog column names
+      col-types -> GVariant: Column types
+        Per-column logical types
       len -> guint: Length
-        Number of data rows
+        Number of catalog rows
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        columns: list[str]
         coord: GalaxyWLObsCoord
-        data: NumCosmoMath.Matrix
         ellip_conv: GalaxyWLObsEllipConv
-        len: int
         pz: NumCosmoMath.ObjDictInt
+        col_types: GLib.Variant
+        columns: list[str]
+        data: NumCosmoMath.Matrix
+        len: int
 
     props: Props = ...
     def __init__(
         self,
-        columns: typing.Sequence[str] = ...,
         coord: GalaxyWLObsCoord = ...,
-        data: NumCosmoMath.Matrix = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
-        len: int = ...,
         pz: NumCosmoMath.ObjDictInt = ...,
+        col_types: GLib.Variant = ...,
+        columns: typing.Sequence[str] = ...,
+        data: NumCosmoMath.Matrix = ...,
+        len: int = ...,
     ) -> None: ...
     @staticmethod
     def clear(obs: GalaxyWLObs) -> None: ...
@@ -8036,6 +8256,7 @@ class GalaxyWLObs(GObject.Object):
         col_names: typing.Sequence[str],
     ) -> GalaxyWLObs: ...
     def peek_columns(self) -> list[str]: ...
+    def peek_data(self) -> NumCosmoMath.Matrix: ...
     def peek_pz(self, i: int) -> NumCosmoMath.Spline: ...
     def ref(self) -> GalaxyWLObs: ...
     def set(self, col: str, i: int, val: float) -> None: ...
@@ -8051,7 +8272,7 @@ class GalaxyWLObsClass(GObject.GPointer):
         GalaxyWLObsClass()
     """
 
-    parent_class: GObject.ObjectClass = ...
+    parent_class: NumCosmoMath.CatalogClass = ...
 
 class GalaxyWLObsPrivate(GObject.GPointer): ...
 
@@ -15577,6 +15798,207 @@ class HaloCMPrada12Class(GObject.GPointer):
 
     parent_class: HaloMassSummaryClass = ...
 
+class HaloCatalog(NumCosmoMath.Catalog):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCatalog(**properties)
+        new(kind:NumCosmo.HaloCatalogKind, id_col:str=None, parent_id_col:str=None, nrows:int, col_names:list, col_types:list=None) -> NumCosmo.HaloCatalog
+
+    Object NcHaloCatalog
+
+    Properties from NcHaloCatalog:
+      kind -> NcHaloCatalogKind: Kind
+        Kind of objects stored in the catalog
+      id-col -> gchararray: Id column
+        Name of the column holding each row id
+      parent-id-col -> gchararray: Parent id column
+        Name of the column holding each row parent id
+
+    Properties from NcmCatalog:
+      data -> NcmMatrix: Data
+        Catalog data matrix
+      columns -> GStrv: Columns
+        Catalog column names
+      col-types -> GVariant: Column types
+        Per-column logical types
+      len -> guint: Length
+        Number of catalog rows
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        id_col: str
+        kind: HaloCatalogKind
+        parent_id_col: str
+        col_types: GLib.Variant
+        columns: list[str]
+        data: NumCosmoMath.Matrix
+        len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        id_col: str = ...,
+        kind: HaloCatalogKind = ...,
+        parent_id_col: str = ...,
+        col_types: GLib.Variant = ...,
+        columns: typing.Sequence[str] = ...,
+        data: NumCosmoMath.Matrix = ...,
+        len: int = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(hcat: HaloCatalog) -> None: ...
+    def find_children(self, parent_id: int) -> list[int]: ...
+    def free(self) -> None: ...
+    def get_id(self, i: int) -> int: ...
+    def get_kind(self) -> HaloCatalogKind: ...
+    def get_parent_id(self, i: int) -> int: ...
+    @classmethod
+    def new(
+        cls,
+        kind: HaloCatalogKind,
+        id_col: typing.Optional[str],
+        parent_id_col: typing.Optional[str],
+        nrows: int,
+        col_names: typing.Sequence[str],
+        col_types: typing.Optional[typing.Sequence[NumCosmoMath.CatalogColType]] = None,
+    ) -> HaloCatalog: ...
+    def peek_id_col(self) -> typing.Optional[str]: ...
+    def peek_parent_id_col(self) -> typing.Optional[str]: ...
+    def ref(self) -> HaloCatalog: ...
+
+class HaloCatalogClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCatalogClass()
+    """
+
+    parent_class: NumCosmoMath.CatalogClass = ...
+
+class HaloCatalogGenerator(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCatalogGenerator(**properties)
+        new(cad:NumCosmo.ClusterAbundance) -> NumCosmo.HaloCatalogGenerator
+
+    Object NcHaloCatalogGenerator
+
+    Properties from NcHaloCatalogGenerator:
+      abundance -> NcClusterAbundance: Abundance
+        Cluster abundance model
+      footprint -> NcmSkyFootprint: Footprint
+        Optional sky footprint for position sampling
+      with-radius -> gboolean: With radius
+        Whether to output the halo spherical-overdensity radius
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        abundance: ClusterAbundance
+        footprint: typing.Optional[NumCosmoMath.SkyFootprint]
+        with_radius: bool
+
+    props: Props = ...
+    def __init__(
+        self,
+        abundance: ClusterAbundance = ...,
+        footprint: typing.Optional[NumCosmoMath.SkyFootprint] = ...,
+        with_radius: bool = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gen: HaloCatalogGenerator) -> None: ...
+    def free(self) -> None: ...
+    def generate(
+        self, mset: NumCosmoMath.MSet, rng: NumCosmoMath.RNG
+    ) -> HaloCatalog: ...
+    def get_with_radius(self) -> bool: ...
+    @classmethod
+    def new(cls, cad: ClusterAbundance) -> HaloCatalogGenerator: ...
+    def peek_abundance(self) -> ClusterAbundance: ...
+    def peek_footprint(self) -> typing.Optional[NumCosmoMath.SkyFootprint]: ...
+    def ref(self) -> HaloCatalogGenerator: ...
+    def set_footprint(
+        self, footprint: typing.Optional[NumCosmoMath.SkyFootprint] = None
+    ) -> None: ...
+    def set_with_radius(self, with_radius: bool) -> None: ...
+
+class HaloCatalogGeneratorClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCatalogGeneratorClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class HaloCatalogMemberGenerator(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCatalogMemberGenerator(**properties)
+        new(hod:NumCosmo.GalaxyHOD) -> NumCosmo.HaloCatalogMemberGenerator
+
+    Object NcHaloCatalogMemberGenerator
+
+    Properties from NcHaloCatalogMemberGenerator:
+      hod -> NcGalaxyHOD: HOD
+        Halo occupation distribution
+      distance -> NcDistance: Distance
+        Distance object for angular-diameter distances
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        distance: typing.Optional[Distance]
+        hod: GalaxyHOD
+
+    props: Props = ...
+    def __init__(
+        self, distance: typing.Optional[Distance] = ..., hod: GalaxyHOD = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(memgen: HaloCatalogMemberGenerator) -> None: ...
+    def free(self) -> None: ...
+    def generate(
+        self, host: HaloCatalog, mset: NumCosmoMath.MSet, rng: NumCosmoMath.RNG
+    ) -> typing.Optional[HaloCatalog]: ...
+    @classmethod
+    def new(cls, hod: GalaxyHOD) -> HaloCatalogMemberGenerator: ...
+    def peek_distance(self) -> typing.Optional[Distance]: ...
+    def peek_hod(self) -> GalaxyHOD: ...
+    def ref(self) -> HaloCatalogMemberGenerator: ...
+    def set_distance(self, dist: typing.Optional[Distance] = None) -> None: ...
+
+class HaloCatalogMemberGeneratorClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloCatalogMemberGeneratorClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class HaloDensityProfile(NumCosmoMath.Model):
     r"""
     :Constructors:
@@ -22549,6 +22971,24 @@ class DistanceComovingMethod(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class GalaxyHODZheng07SParams(GObject.GEnum):
+    ALPHA: GalaxyHODZheng07SParams = ...
+    LOG_M0: GalaxyHODZheng07SParams = ...
+    LOG_M1: GalaxyHODZheng07SParams = ...
+    LOG_MMIN: GalaxyHODZheng07SParams = ...
+    SIGMA_LOG_M: GalaxyHODZheng07SParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class GalaxySDShapeHSMGaussGlobalParams(GObject.GEnum):
     SIGMA: GalaxySDShapeHSMGaussGlobalParams = ...
     _generate_next_value_: function = ...
@@ -23423,6 +23863,54 @@ class HaloCMPrada12SParams(GObject.GEnum):
     _use_args_: bool = ...
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
+
+class HaloCatalogError(GObject.GEnum):
+    NO_LINKAGE: HaloCatalogError = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+    @staticmethod
+    def quark() -> int: ...
+
+class HaloCatalogKind(GObject.GEnum):
+    CLUSTER: HaloCatalogKind = ...
+    HALO: HaloCatalogKind = ...
+    MEMBER: HaloCatalogKind = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class HaloCatalogMemberGeneratorError(GObject.GEnum):
+    MISSING_COLUMN: HaloCatalogMemberGeneratorError = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+    @staticmethod
+    def quark() -> int: ...
 
 class HaloDensityProfileDK14MethodParams(GObject.GEnum):
     DIRECT_RHOSRS: HaloDensityProfileDK14MethodParams = ...

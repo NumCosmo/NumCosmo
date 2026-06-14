@@ -44,7 +44,7 @@ import pandas as pd
 from IPython.display import HTML
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.sky_match import (
+from numcosmo_py.catalog import (
     BestCandidates,
     Coordinates,
     DistanceMethod,
@@ -422,7 +422,7 @@ plt.show()
 ### Best Match
 
 We can also use the `select_best` method to find the best match for each query object.
-This method returns the index of the best match, the distance between the query object and the best match, and the nearest neighbour index.
+This method returns a `BestCandidates` object holding, for each query that has a match, the index of its selected match in the match catalog (`indices`) together with a boolean `query_filter` marking which queries were matched.
 There are different `selection_criteria` that can be used to select the best match, such as distance, redshift proximity, or more massive.
 Here we apply the default selection criteria, which is distance.
 
@@ -587,10 +587,217 @@ plot_cross(cross_match)
 plt.show()
 ```
 
-## 2D Sky Match  
+### Global Assignment
 
-The `SkyMatch2D` class functions similarly to the `SkyMatch` class but performs a 2D match instead of a 3D one.  
-In practice, it matches clusters to halos within the same plane of the sky, which is particularly useful when redshift measurement errors are significant.  
+The `select_best` method lets every cluster independently pick its nearest halo, so nothing prevents two clusters from claiming the *same* halo.
+The cross match above resolves this conservatively: it keeps only pairs that are each other's best (mutual matches) and discards the rest.
+
+The `select_best_assignment` method offers a third option, a **global one-to-one assignment** that minimizes the total matched distance.
+It builds the bipartite cluster–halo graph (edges weighted by distance, restricted to the supplied `mask`), splits it into connected components, and solves a minimum-weight matching on each.
+The result assigns halos to clusters with the smallest possible total distance while guaranteeing that no halo is used twice.
+
+```{python}
+best_assignment = result.select_best_assignment(mask=mask)
+```
+
+Because it returns the same `BestCandidates` type as `select_best`, the existing table and plotting helpers apply unchanged:
+
+```{python}
+# | label: tbl-sky-match-3d-assignment
+# | tbl-cap: The globally assigned (one-to-one) 3D matches.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
+# | code-fold: true
+
+show_pandas(convert_table_multi_column(result.to_table_best(best_assignment)).to_pandas())
+```
+
+```{python}
+# | label: fig-sky-match-3d-assignment
+# | fig-cap: The globally assigned 3D matches (one halo per cluster).
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+plot_best(best_assignment)
+plt.show()
+```
+
+The three strategies trade completeness against uniqueness and confidence.
+The table below compares them on the filtered 3D matches:
+
+```{python}
+# | label: tbl-sky-match-3d-strategies
+# | tbl-cap: Comparison of the best-match selection strategies on the filtered 3D matches.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
+# | code-fold: true
+
+greedy_best = result.select_best(mask=mask)
+
+HTML(
+    pd.DataFrame(
+        {
+            "Strategy": [
+                "select_best (greedy)",
+                "select_best_assignment",
+                "cross match (mutual best)",
+            ],
+            "Pairs": [
+                len(greedy_best.indices),
+                len(best_assignment.indices),
+                len(cross_match),
+            ],
+            "Distinct halos": [
+                len(set(greedy_best.indices.tolist())),
+                len(set(best_assignment.indices.tolist())),
+                len(cross_match),
+            ],
+            "One-to-one": ["not guaranteed", "guaranteed", "guaranteed"],
+        }
+    ).to_html(index=False)
+)
+```
+
+For these well-separated mock catalogs the greedy and assignment results coincide, but only the assignment *guarantees* a one-to-one mapping, which matters whenever candidates contend for the same object.
+The mutual-best cross match is the most conservative: it keeps the fewest pairs, retaining only those that are reciprocally each other's best.
+
+### When the Methods Disagree
+
+On the well-separated catalog above the three strategies nearly coincide.
+They diverge when objects contend for the same match — for instance when a cluster finder splits a single halo into several detections.
+To see this, we build a small catalog in which five of the ten halos are each detected as **three** clusters (two more halos are detected once, and the last two are missed), plus two spurious detections with no associated halo.
+
+```{python}
+def radecz_to_xyz(ra, dec, z):
+    r = np.array(dist.comoving_array(cosmo, np.atleast_1d(z))) * cosmo.RH_Mpc()
+    return (
+        r * np.cos(np.radians(dec)) * np.cos(np.radians(ra)),
+        r * np.cos(np.radians(dec)) * np.sin(np.radians(ra)),
+        r * np.sin(np.radians(dec)),
+    )
+
+
+def xyz_to_radecz(x, y, z):
+    r = np.sqrt(x * x + y * y + z * z)
+    return (
+        np.degrees(np.arctan2(y, x)),
+        np.degrees(np.arcsin(z / r)),
+        np.array([dist.inv_comoving(cosmo, ri / cosmo.RH_Mpc()) for ri in r]),
+    )
+
+
+rng_c = np.random.default_rng(11)
+
+halo_ra_c = rng_c.uniform(RA_MIN, RA_MAX, 10)
+halo_dec_c = rng_c.uniform(DEC_MIN, DEC_MAX, 10)
+halo_z_c = rng_c.uniform(0.3, 0.4, 10)
+hx, hy, hz = radecz_to_xyz(halo_ra_c, halo_dec_c, halo_z_c)
+
+# Halos 0-4 are each detected three times (fragmentation); 5-7 once; 8-9 missed.
+parents = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6, 7])
+scatter = 25.0
+cx = hx[parents] + rng_c.uniform(-scatter, scatter, parents.size)
+cy = hy[parents] + rng_c.uniform(-scatter, scatter, parents.size)
+cz = hz[parents] + rng_c.uniform(-scatter, scatter, parents.size)
+cluster_ra_c, cluster_dec_c, cluster_z_c = xyz_to_radecz(cx, cy, cz)
+
+# Two spurious detections with no underlying halo.
+cluster_ra_c = np.append(cluster_ra_c, rng_c.uniform(RA_MIN, RA_MAX, 2))
+cluster_dec_c = np.append(cluster_dec_c, rng_c.uniform(DEC_MIN, DEC_MAX, 2))
+cluster_z_c = np.append(cluster_z_c, rng_c.uniform(0.3, 0.4, 2))
+
+clusters_c = Table(
+    [cluster_ra_c, cluster_dec_c, cluster_z_c], names=["RA", "DEC", "z"]
+)
+halos_c = Table([halo_ra_c, halo_dec_c, halo_z_c], names=["RA", "DEC", "z"])
+coords_c = Coordinates(RA="RA", DEC="DEC", z="z")
+
+sm_c = SkyMatch(clusters_c, coords_c, halos_c, coords_c)
+result_c = sm_c.match_3d(cosmo, n_nearest_neighbours=4)
+mask_c = result_c.filter_mask_by_distance(60.0)
+
+greedy_c = result_c.select_best(mask=mask_c)
+assignment_c = result_c.select_best_assignment(mask=mask_c)
+
+inverse_c = sm_c.invert_query_match()
+inverse_result_c = inverse_c.match_3d(cosmo, n_nearest_neighbours=4)
+inverse_best_c = inverse_result_c.select_best(
+    mask=inverse_result_c.filter_mask_by_distance(60.0)
+)
+cross_c = greedy_c.get_cross_match_indices(inverse_best_c)
+```
+
+Greedy lets *both* detections of a fragmented halo keep it, so that halo is matched twice; the assignment forces a one-to-one mapping; the cross match keeps only mutual bests:
+
+```{python}
+# | label: tbl-sky-match-contended
+# | tbl-cap: The three strategies on the contended catalog. Greedy reuses the five fragmented halos.
+# | tbl-cap-location: margin
+# | tbl-width: 100%
+# | code-fold: true
+
+HTML(
+    pd.DataFrame(
+        {
+            "Strategy": [
+                "select_best (greedy)",
+                "select_best_assignment",
+                "cross match (mutual best)",
+            ],
+            "Pairs": [len(greedy_c.indices), len(assignment_c.indices), len(cross_c)],
+            "Distinct halos": [
+                len(set(greedy_c.indices.tolist())),
+                len(set(assignment_c.indices.tolist())),
+                len(cross_c),
+            ],
+        }
+    ).to_html(index=False)
+)
+```
+
+The plot makes the difference concrete: in the greedy panel each of the five fragmented halos sits at the centre of a *fan* of three clusters (the colliding detections), while the assignment panel keeps a single cluster per halo — and reassigns some of the displaced detections to other nearby halos.
+
+```{python}
+# | label: fig-sky-match-contended
+# | fig-cap: "Greedy (left) double-books the fragmented halos; the global assignment (right) is one-to-one."
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+
+def plot_strategy(ax, candidates, title):
+    ax.scatter(halo_ra_c, halo_dec_c, c="red", label="Halos", alpha=0.7)
+    ax.scatter(cluster_ra_c, cluster_dec_c, c="blue", label="Clusters", alpha=0.7)
+    for cluster_i, halo_i in zip(candidates.query_indices, candidates.indices):
+        ax.plot(
+            [cluster_ra_c[cluster_i], halo_ra_c[halo_i]],
+            [cluster_dec_c[cluster_i], halo_dec_c[halo_i]],
+            color="black",
+            alpha=0.5,
+        )
+    ax.set_title(title)
+    ax.set_xlabel("RA")
+    ax.set_ylabel("Dec")
+
+
+fig, (ax_greedy, ax_assign) = plt.subplots(
+    1, 2, figsize=(14, 6), sharex=True, sharey=True
+)
+plot_strategy(ax_greedy, greedy_c, "Greedy select_best")
+plot_strategy(ax_assign, assignment_c, "select_best_assignment")
+ax_greedy.legend()
+plt.show()
+```
+
+Which behaviour is appropriate depends on the question being asked.
+If a halo can legitimately host several detections, the many-to-one greedy result is correct and the assignment would *discard* valid associations.
+If instead you need a deduplicated, one-to-one catalog cross-match, `select_best_assignment` gives the globally optimal mapping, and the mutual-best cross match gives the smaller high-confidence subset.
+
+## 2D Sky Match
+
+The `match_2d` method functions similarly to `match_3d` but performs a 2D match instead of a 3D one.
+In practice, it matches clusters to halos within the same plane of the sky, which is particularly useful when redshift measurement errors are significant.
 
 In a 2D match, the angular separation between clusters and halos is first computed and then converted to a physical distance. 
 This conversion can be performed using different reference redshifts: the cluster redshift, the halo redshift, or the minimum/maximum of the two. 
@@ -678,7 +885,7 @@ The refined selection highlights **cluster-halo pairs that are both spatially an
 
 ### Best Match Selection  
 
-To further refine the associations, we use the `best_match` method to identify the **most suitable halo for each cluster**.  
+To further refine the associations, we use the `select_best` method to identify the **most suitable halo for each cluster**.
 
 We specify the `selection_criteria` as **MORE_MASSIVE**, meaning we select the halo with the largest **halo_logM** value as the best match.  
 
@@ -727,9 +934,30 @@ plt.show()
 
 This final selection ensures that each cluster is associated with the **most massive halo** within the given constraints, optimizing the matching process.
 
-### Cross Matching  
+### Best Match by Global Assignment
 
-To improve the accuracy of our cluster-halo associations, we use the `cross_match` method to identify the **best match for each halo**.  
+Just as in 3D, `select_best_assignment` provides a one-to-one alternative to the greedy `select_best`.
+It is especially relevant in 2D, where the larger positional and redshift uncertainties make it more likely that several clusters would otherwise claim the same halo.
+It accepts the same filtered `mask` and returns the familiar `BestCandidates`:
+
+```{python}
+best_assignment = result.select_best_assignment(mask=mask)
+```
+
+```{python}
+# | label: fig-sky-match-2d-assignment
+# | fig-cap: The globally assigned (one-to-one) 2D matches.
+# | fig-cap-location: margin
+# | fig-width: 100%
+# | code-fold: true
+
+plot_best(best_assignment)
+plt.show()
+```
+
+### Cross Matching
+
+To improve the accuracy of our cluster-halo associations, we invert the catalogs with `invert_query_match` and combine the two best-match results with `get_cross_match_indices` to identify the **best match for each halo**.
 Previously, in @tbl-sky-match-2d-best, we selected the best match for each cluster. 
 However, since we did not use actual distances, some incorrect matches may have been included.  
 By applying `cross_match` from the halo perspective, we refine the matching process.  
@@ -831,8 +1059,56 @@ HTML(
 )
 ```
 
-In summary, we have successfully matched the clusters with the halos, keeping in mind that the artificial dataset was intentionally generated with increased errors to enhance visibility. 
+In summary, we have successfully matched the clusters with the halos, keeping in mind that the artificial dataset was intentionally generated with increased errors to enhance visibility.
 As a result, some incorrect or suboptimal matches were expected.
+
+Finally, we compare the three selection strategies on these 2D matches.
+Because cluster *i* was generated near halo *i*, a match is *correct* when the assigned halo index equals the cluster index:
+
+```{python}
+# | label: tbl-sky-match-2d-strategies
+# | tbl-cap: Completeness of the selection strategies on the 2D matches (correct = halo index equals cluster index).
+# | tbl-cap-location: margin
+# | tbl-width: 100%
+# | code-fold: true
+
+greedy_2d = result.select_best(mask=mask)
+assignment_2d = result.select_best_assignment(mask=mask)
+
+
+def count_correct(candidates):
+    return sum(
+        1
+        for q, m in zip(candidates.query_indices, candidates.indices)
+        if q == m
+    )
+
+
+HTML(
+    pd.DataFrame(
+        {
+            "Strategy": [
+                "select_best (greedy)",
+                "select_best_assignment",
+                "cross match (mutual best)",
+            ],
+            "Pairs": [
+                len(greedy_2d.indices),
+                len(assignment_2d.indices),
+                len(cross_match),
+            ],
+            "Correct": [
+                count_correct(greedy_2d),
+                count_correct(assignment_2d),
+                sum(1 for q, m in cross_match.items() if q == m),
+            ],
+        }
+    ).to_html(index=False)
+)
+```
+
+Here the greedy and assignment strategies keep every cluster with the same number of correct matches, but only the assignment *guarantees* that no halo is reused.
+The mutual-best cross match keeps far fewer pairs: it is the conservative choice, paying in completeness for its reciprocity requirement, which is most worthwhile when the matches are genuinely ambiguous (as in the contended example above).
 
 ## Summary
 

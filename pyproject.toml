@@ -30,17 +30,28 @@ authors = [
   {name = 'Mariana Penna-Lima', email = 'pennalima@unb.br'}
 ]
 
+# Runtime requirements of the numcosmo_py package itself. The C library and its
+# GObject-introspection typelib are a separate artifact (built with meson,
+# shipped via conda-forge/system) and are not expressed here.
+dependencies = [
+    "numpy",
+    "pygobject",
+]
+
+# Feature extras grouped by subpackage. Heavy deps stay behind subpackage
+# imports, so a bare `import numcosmo_py` only needs the core dependencies.
 [project.optional-dependencies]
+catalog = ["astropy", "networkx", "scipy"]
+app = ["astropy", "matplotlib", "pydantic", "rich", "tabulate", "typer"]
+plot = ["getdist", "matplotlib"]
+all = ["numcosmo_py[catalog,app,plot]"]
+# Optional cosmology integrations; pulled in only when needed (not in the
+# default test run, as they are heavy to build from PyPI).
+firecrown = ["firecrown", "pyccl", "sacc"]
 test = [
-    "firecrown",
-    "pyccl",
-    "pydantic",
-    "pytest-lazy-fixtures",
+    "numcosmo_py[all]",
     "pytest",
-    "rich",
-    "sacc",
-    "tabulate",
-    "typer",
+    "pytest-lazy-fixtures",
 ]
 dev = [
     "mypy",
@@ -53,8 +64,9 @@ Repository = "https://github.com/NumCosmo/NumCosmo"
 Documentation = "https://numcosmo.github.io/"
 Changelog = "https://github.com/NumCosmo/NumCosmo/blob/master/ChangeLog.md"
 
-[tool.setuptools.package-dir]
-numcosmo_py = "numcosmo_py"
+[tool.setuptools.packages.find]
+include = ["numcosmo_py*"]
+namespaces = false
 
 [tool.setuptools.package-data]
 numcosmo_py = ["*.pyi", "py.typed"]
