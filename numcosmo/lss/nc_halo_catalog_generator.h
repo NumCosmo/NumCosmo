@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_rng.h>
+#include <numcosmo/math/ncm_sky_footprint.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_halo_catalog.h>
 
@@ -47,6 +48,9 @@ void nc_halo_catalog_generator_free (NcHaloCatalogGenerator *gen);
 void nc_halo_catalog_generator_clear (NcHaloCatalogGenerator **gen);
 
 NcClusterAbundance *nc_halo_catalog_generator_peek_abundance (NcHaloCatalogGenerator *gen);
+
+void nc_halo_catalog_generator_set_footprint (NcHaloCatalogGenerator *gen, NcmSkyFootprint *footprint);
+NcmSkyFootprint *nc_halo_catalog_generator_peek_footprint (NcHaloCatalogGenerator *gen);
 
 NcHaloCatalog *nc_halo_catalog_generator_generate (NcHaloCatalogGenerator *gen, NcmMSet *mset, NcmRNG *rng);
 

@@ -47,7 +47,9 @@
  *   observable length);
  * - `lnM_obs_0` .. `lnM_obs_{m-1}`: the observed mass block;
  * - `z_obs_param_0` .. and `lnM_obs_param_0` .. : the observable parameter
- *   blocks, when the models declare any.
+ *   blocks, when the models declare any;
+ * - `ra`, `dec`: sky position (degrees), only when a #NcmSkyFootprint is set
+ *   (see nc_halo_catalog_generator_set_footprint()).
  *
  */
 
@@ -67,12 +69,14 @@
 typedef struct _NcHaloCatalogGeneratorPrivate
 {
   NcClusterAbundance *cad;
+  NcmSkyFootprint *footprint;
 } NcHaloCatalogGeneratorPrivate;
 
 enum
 {
   PROP_0,
   PROP_ABUNDANCE,
+  PROP_FOOTPRINT,
 };
 
 struct _NcHaloCatalogGenerator
@@ -87,7 +91,8 @@ nc_halo_catalog_generator_init (NcHaloCatalogGenerator *gen)
 {
   NcHaloCatalogGeneratorPrivate * const self = nc_halo_catalog_generator_get_instance_private (gen);
 
-  self->cad = NULL;
+  self->cad       = NULL;
+  self->footprint = NULL;
 }
 
 static void
@@ -101,6 +106,9 @@ _nc_halo_catalog_generator_set_property (GObject *object, guint prop_id, const G
     case PROP_ABUNDANCE:
       nc_cluster_abundance_clear (&self->cad);
       self->cad = g_value_dup_object (value);
+      break;
+    case PROP_FOOTPRINT:
+      nc_halo_catalog_generator_set_footprint (gen, g_value_get_object (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -119,6 +127,9 @@ _nc_halo_catalog_generator_get_property (GObject *object, guint prop_id, GValue 
     case PROP_ABUNDANCE:
       g_value_set_object (value, self->cad);
       break;
+    case PROP_FOOTPRINT:
+      g_value_set_object (value, self->footprint);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -132,6 +143,7 @@ _nc_halo_catalog_generator_dispose (GObject *object)
   NcHaloCatalogGeneratorPrivate * const self = nc_halo_catalog_generator_get_instance_private (gen);
 
   nc_cluster_abundance_clear (&self->cad);
+  ncm_sky_footprint_clear (&self->footprint);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_catalog_generator_parent_class)->dispose (object);
@@ -159,6 +171,21 @@ nc_halo_catalog_generator_class_init (NcHaloCatalogGeneratorClass *klass)
                                                         "Cluster abundance model",
                                                         NC_TYPE_CLUSTER_ABUNDANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcHaloCatalogGenerator:footprint:
+   *
+   * Optional sky footprint. When set, the generated catalog gains `ra` and `dec`
+   * columns sampled over the footprint; when unset, no positions are generated.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_FOOTPRINT,
+                                   g_param_spec_object ("footprint",
+                                                        "Footprint",
+                                                        "Optional sky footprint for position sampling",
+                                                        NCM_TYPE_SKY_FOOTPRINT,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
 /**
@@ -234,8 +261,45 @@ nc_halo_catalog_generator_peek_abundance (NcHaloCatalogGenerator *gen)
   return self->cad;
 }
 
+/**
+ * nc_halo_catalog_generator_set_footprint:
+ * @gen: a #NcHaloCatalogGenerator
+ * @footprint: (nullable): a #NcmSkyFootprint, or %NULL to disable position sampling
+ *
+ * Sets the sky footprint used to sample positions. When a footprint is set, the
+ * generated catalog gains `ra` and `dec` columns; when %NULL, no positions are
+ * generated.
+ *
+ */
+void
+nc_halo_catalog_generator_set_footprint (NcHaloCatalogGenerator *gen, NcmSkyFootprint *footprint)
+{
+  NcHaloCatalogGeneratorPrivate * const self = nc_halo_catalog_generator_get_instance_private (gen);
+
+  ncm_sky_footprint_clear (&self->footprint);
+
+  if (footprint != NULL)
+    self->footprint = ncm_sky_footprint_ref (footprint);
+}
+
+/**
+ * nc_halo_catalog_generator_peek_footprint:
+ * @gen: a #NcHaloCatalogGenerator
+ *
+ * Gets the sky footprint used to sample positions, or %NULL when none is set.
+ *
+ * Returns: (transfer none) (nullable): the #NcmSkyFootprint.
+ */
+NcmSkyFootprint *
+nc_halo_catalog_generator_peek_footprint (NcHaloCatalogGenerator *gen)
+{
+  NcHaloCatalogGeneratorPrivate * const self = nc_halo_catalog_generator_get_instance_private (gen);
+
+  return self->footprint;
+}
+
 static GStrv
-_nc_halo_catalog_generator_build_columns (guint z_obs_len, guint z_obs_params_len, guint lnM_obs_len, guint lnM_obs_params_len)
+_nc_halo_catalog_generator_build_columns (guint z_obs_len, guint z_obs_params_len, guint lnM_obs_len, guint lnM_obs_params_len, gboolean with_position)
 {
   GPtrArray *cols = g_ptr_array_new ();
   guint k;
@@ -254,6 +318,12 @@ _nc_halo_catalog_generator_build_columns (guint z_obs_len, guint z_obs_params_le
 
   for (k = 0; k < lnM_obs_params_len; k++)
     g_ptr_array_add (cols, g_strdup_printf ("lnM_obs_param_%u", k));
+
+  if (with_position)
+  {
+    g_ptr_array_add (cols, g_strdup ("ra"));
+    g_ptr_array_add (cols, g_strdup ("dec"));
+  }
 
   g_ptr_array_add (cols, NULL);
 
@@ -286,6 +356,7 @@ nc_halo_catalog_generator_generate (NcHaloCatalogGenerator *gen, NcmMSet *mset, 
   const guint z_obs_params_len   = nc_cluster_redshift_class_obs_params_len (NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz));
   const guint lnM_obs_len        = nc_cluster_mass_class_obs_len (NC_CLUSTER_MASS_GET_CLASS (clusterm));
   const guint lnM_obs_params_len = nc_cluster_mass_class_obs_params_len (NC_CLUSTER_MASS_GET_CLASS (clusterm));
+  const gboolean with_position   = self->footprint != NULL;
 
   gdouble *zi_obs          = g_new (gdouble, z_obs_len);
   gdouble *zi_obs_params   = z_obs_params_len > 0 ? g_new (gdouble, z_obs_params_len) : NULL;
@@ -337,12 +408,21 @@ nc_halo_catalog_generator_generate (NcHaloCatalogGenerator *gen, NcmMSet *mset, 
         for (k = 0; k < lnM_obs_params_len; k++)
           g_array_append_val (rows, lnMi_obs_params[k]);
 
+        if (with_position)
+        {
+          gdouble ra, dec;
+
+          ncm_sky_footprint_gen_ra_dec (self->footprint, rng, &ra, &dec);
+          g_array_append_val (rows, ra);
+          g_array_append_val (rows, dec);
+        }
+
         np++;
       }
     }
   }
 
-  col_names = _nc_halo_catalog_generator_build_columns (z_obs_len, z_obs_params_len, lnM_obs_len, lnM_obs_params_len);
+  col_names = _nc_halo_catalog_generator_build_columns (z_obs_len, z_obs_params_len, lnM_obs_len, lnM_obs_params_len, with_position);
   hcat      = nc_halo_catalog_new (NC_HALO_CATALOG_KIND_CLUSTER, NULL, NULL, np, col_names, NULL, 0);
 
   if (np > 0)

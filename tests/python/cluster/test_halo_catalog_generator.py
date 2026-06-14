@@ -108,6 +108,33 @@ def test_generate_shape_and_metadata() -> None:
     assert hcat.len() == 4242
 
 
+def test_generate_with_footprint_adds_positions() -> None:
+    """Setting a footprint augments the catalog with in-bounds ra/dec columns."""
+    cosmo, cad, cluster_z, cluster_m, mset = _setup()
+    cad.set_area(AREA)
+    cad.prepare(cosmo, cluster_z, cluster_m)
+
+    footprint = Ncm.SkyFootprintRectangular.new(10.0, 40.0, -5.0, 25.0)
+    gen = Nc.HaloCatalogGenerator.new(cad)
+    gen.set_footprint(footprint)
+    assert gen.peek_footprint() is footprint
+
+    rng = Ncm.RNG.seeded_new(None, 0)
+    hcat = gen.generate(mset, rng)
+    table = catalog_to_table(hcat)
+
+    assert table.colnames == ["z_true", "lnM_true", "z_obs_0", "lnM_obs_0", "ra", "dec"]
+    ra = np.asarray(table["ra"], dtype=np.float64)
+    dec = np.asarray(table["dec"], dtype=np.float64)
+    assert ra.min() >= 10.0 and ra.max() <= 40.0
+    assert dec.min() >= -5.0 and dec.max() <= 25.0
+    # Positions are one row per object; interleaving their draws shifts the RNG
+    # stream, so the accepted count may differ slightly from the no-footprint run
+    # (4242) but stays near it.
+    assert len(ra) == hcat.len()
+    assert 4100 <= hcat.len() <= 4242
+
+
 def test_generate_matches_golden_snapshot() -> None:
     """Standalone generation reproduces the NcDataClusterNCount golden snapshot."""
     cosmo, cad, cluster_z, cluster_m, mset = _setup()

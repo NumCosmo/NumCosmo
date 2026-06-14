@@ -25,6 +25,10 @@ math_tests = [
         'sources': ['math/test_ncm_catalog.c'],
     },
     {
+        'name': 'ncm_sky_footprint',
+        'sources': ['math/test_ncm_sky_footprint.c'],
+    },
+    {
         'name': 'ncm_fftlog',
         'sources': ['math/test_ncm_fftlog.c'],
         'timeout': 0,

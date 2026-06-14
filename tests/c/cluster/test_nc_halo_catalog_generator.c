@@ -44,6 +44,7 @@ void test_nc_halo_catalog_generator_free (TestNcHaloCatalogGenerator *test, gcon
 
 void test_nc_halo_catalog_generator_ref (TestNcHaloCatalogGenerator *test, gconstpointer pdata);
 void test_nc_halo_catalog_generator_abundance (TestNcHaloCatalogGenerator *test, gconstpointer pdata);
+void test_nc_halo_catalog_generator_footprint (TestNcHaloCatalogGenerator *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -60,6 +61,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/halo_catalog_generator/abundance", TestNcHaloCatalogGenerator, NULL,
               &test_nc_halo_catalog_generator_new,
               &test_nc_halo_catalog_generator_abundance,
+              &test_nc_halo_catalog_generator_free);
+
+  g_test_add ("/nc/halo_catalog_generator/footprint", TestNcHaloCatalogGenerator, NULL,
+              &test_nc_halo_catalog_generator_new,
+              &test_nc_halo_catalog_generator_footprint,
               &test_nc_halo_catalog_generator_free);
 
   g_test_run ();
@@ -114,4 +120,20 @@ void
 test_nc_halo_catalog_generator_abundance (TestNcHaloCatalogGenerator *test, gconstpointer pdata)
 {
   g_assert_true (nc_halo_catalog_generator_peek_abundance (test->gen) == test->cad);
+}
+
+void
+test_nc_halo_catalog_generator_footprint (TestNcHaloCatalogGenerator *test, gconstpointer pdata)
+{
+  NcmSkyFootprintRectangular *rect = ncm_sky_footprint_rectangular_new (10.0, 40.0, -5.0, 25.0);
+
+  g_assert_null (nc_halo_catalog_generator_peek_footprint (test->gen));
+
+  nc_halo_catalog_generator_set_footprint (test->gen, NCM_SKY_FOOTPRINT (rect));
+  g_assert_true (nc_halo_catalog_generator_peek_footprint (test->gen) == NCM_SKY_FOOTPRINT (rect));
+
+  nc_halo_catalog_generator_set_footprint (test->gen, NULL);
+  g_assert_null (nc_halo_catalog_generator_peek_footprint (test->gen));
+
+  ncm_sky_footprint_rectangular_free (rect);
 }

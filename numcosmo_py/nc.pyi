@@ -15684,6 +15684,8 @@ class HaloCatalogGenerator(GObject.Object):
     Properties from NcHaloCatalogGenerator:
       abundance -> NcClusterAbundance: Abundance
         Cluster abundance model
+      footprint -> NcmSkyFootprint: Footprint
+        Optional sky footprint for position sampling
 
     Signals from GObject:
       notify (GParam)
@@ -15691,9 +15693,14 @@ class HaloCatalogGenerator(GObject.Object):
 
     class Props:
         abundance: ClusterAbundance
+        footprint: typing.Optional[NumCosmoMath.SkyFootprint]
 
     props: Props = ...
-    def __init__(self, abundance: ClusterAbundance = ...) -> None: ...
+    def __init__(
+        self,
+        abundance: ClusterAbundance = ...,
+        footprint: typing.Optional[NumCosmoMath.SkyFootprint] = ...,
+    ) -> None: ...
     @staticmethod
     def clear(gen: HaloCatalogGenerator) -> None: ...
     def free(self) -> None: ...
@@ -15703,7 +15710,11 @@ class HaloCatalogGenerator(GObject.Object):
     @classmethod
     def new(cls, cad: ClusterAbundance) -> HaloCatalogGenerator: ...
     def peek_abundance(self) -> ClusterAbundance: ...
+    def peek_footprint(self) -> typing.Optional[NumCosmoMath.SkyFootprint]: ...
     def ref(self) -> HaloCatalogGenerator: ...
+    def set_footprint(
+        self, footprint: typing.Optional[NumCosmoMath.SkyFootprint] = None
+    ) -> None: ...
 
 class HaloCatalogGeneratorClass(GObject.GPointer):
     r"""
