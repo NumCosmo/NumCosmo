@@ -52,3 +52,4 @@ void ncm_sky_footprint_rectangular_get_dec_lim (NcmSkyFootprintRectangular *rect
 G_END_DECLS
 
 #endif /* _NCM_SKY_FOOTPRINT_RECTANGULAR_H */
+

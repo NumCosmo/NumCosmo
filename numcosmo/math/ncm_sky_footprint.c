@@ -226,3 +226,4 @@ ncm_sky_footprint_ln_density (NcmSkyFootprint *footprint, const gdouble ra, cons
 {
   return NCM_SKY_FOOTPRINT_GET_CLASS (footprint)->ln_density (footprint, ra, dec);
 }
+

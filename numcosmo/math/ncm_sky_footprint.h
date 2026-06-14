@@ -66,3 +66,4 @@ gdouble ncm_sky_footprint_ln_density (NcmSkyFootprint *footprint, const gdouble 
 G_END_DECLS
 
 #endif /* _NCM_SKY_FOOTPRINT_H */
+

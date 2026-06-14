@@ -162,7 +162,7 @@ static gdouble _ncm_sky_footprint_rectangular_ln_density (NcmSkyFootprint *footp
 static void
 ncm_sky_footprint_rectangular_class_init (NcmSkyFootprintRectangularClass *klass)
 {
-  GObjectClass *object_class           = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
   NcmSkyFootprintClass *footprint_class = NCM_SKY_FOOTPRINT_CLASS (klass);
 
   object_class->set_property = &_ncm_sky_footprint_rectangular_set_property;
@@ -405,3 +405,4 @@ ncm_sky_footprint_rectangular_get_dec_lim (NcmSkyFootprintRectangular *rect, gdo
   *dec_min = self->dec_min;
   *dec_max = self->dec_max;
 }
+
