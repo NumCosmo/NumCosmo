@@ -15,22 +15,23 @@ format-links: [ipynb]
 
 This tutorial shows how to generate mock halo/cluster catalogs and their galaxy
 members entirely from NumCosmo's C objects, and how to chain them together with
-the :py:class:`~numcosmo_py.catalog.MockPipeline` orchestrator.
+the `MockPipeline` orchestrator.
 
 The generation is split into small, reusable pieces, each assembled from the
 existing modelling machinery rather than reimplemented:
 
-- `Nc.HaloCatalogGenerator` draws a Poisson realization of the cluster number
-  counts from a `Nc.ClusterAbundance`, samples the observed redshift and mass
-  through the cluster proxies, and (optionally) adds sky positions over a
-  `Ncm.SkyFootprint` and the spherical-overdensity radius `r_Delta`;
-- `Nc.GalaxyHODZheng07` is a halo occupation distribution turning a halo mass
-  into central and satellite galaxy counts;
-- `Nc.HaloCatalogMemberGenerator` populates each host with its galaxies, placing
-  them in 3D within `r_Delta` and projecting them to sky coordinates and
-  redshift;
-- `MockPipeline` wires the cluster and member generators together and returns
-  the two linked catalogs as `astropy` tables.
+- [[numcosmo|NcHaloCatalogGenerator]] draws a Poisson realization of the cluster
+  number counts from a [[numcosmo|NcClusterAbundance]], samples the observed
+  redshift and mass through the cluster proxies, and (optionally) adds sky
+  positions over an [[math|NcmSkyFootprint]] and the spherical-overdensity radius
+  `r_Delta`;
+- [[numcosmo|NcGalaxyHODZheng07]] is a halo occupation distribution turning a
+  halo mass into central and satellite galaxy counts;
+- [[numcosmo|NcHaloCatalogMemberGenerator]] populates each host with its
+  galaxies, placing them in 3D within `r_Delta` and projecting them to sky
+  coordinates and redshift;
+- `MockPipeline` wires the cluster and member generators together and returns the
+  two linked [[numcosmo|NcHaloCatalog]] tables.
 
 The resulting catalogs are ready to feed the matching tools of the
 [Sky Match](sky_match.qmd) tutorial or the cluster number-counts likelihood.
@@ -39,18 +40,26 @@ The resulting catalogs are ready to feed the matching tools of the
 
 We start with a flat $\Lambda$CDM cosmology and the ingredients of the halo mass
 function: a linear matter power spectrum, a top-hat variance filter and a
-multiplicity function with a critical $\Delta = 200$ mass definition. The mass
-definition carried here is what fixes the meaning of `r_Delta` later on.
+multiplicity function ([[numcosmo|NcMultiplicityFuncBocquet]]) with a critical
+$\Delta = 200$ mass definition. The mass definition carried here is what fixes
+the meaning of `r_Delta` later on.
 
 ```{python}
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-from astropy.table import Table
+from IPython.display import HTML
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.catalog import MockPipeline, catalog_to_table
 
 Ncm.cfg_init()
+
+
+def show_table(table, float_format="%.3f", max_rows=10):
+    """Render an astropy Table as a compact HTML table."""
+    return HTML(table.to_pandas().to_html(float_format=float_format, max_rows=max_rows))
+
 
 cosmo = Nc.HICosmoDEXcdm.new()
 cosmo.add_submodel(Nc.HIReionCamb.new())
@@ -80,8 +89,10 @@ hmf.prepare(cosmo)
 ### Observable Proxies and Abundance
 
 The cluster abundance needs proxies relating the true mass and redshift to the
-observed ones. We use a log-normal mass proxy and a global Gaussian photometric
-redshift, and we collect every model into an `Ncm.MSet`.
+observed ones. We use a log-normal mass proxy ([[numcosmo|NcClusterMassLnnormal]])
+and a global Gaussian photometric redshift
+([[numcosmo|NcClusterPhotozGaussGlobal]]), and we collect every model into an
+[[math|NcmMSet]].
 
 ```{python}
 cluster_m = Nc.ClusterMassLnnormal(
@@ -101,8 +112,9 @@ mset = Ncm.MSet.new_array([cosmo, cluster_z, cluster_m])
 
 ### Footprint and Halo Occupation
 
-The footprint is the sky region over which positions are drawn; the HOD turns
-each halo mass into a number of central and satellite galaxies.
+The footprint ([[math|NcmSkyFootprintRectangular]]) is the sky region over which
+positions are drawn; the HOD turns each halo mass into a number of central and
+satellite galaxies.
 
 ```{python}
 footprint = Ncm.SkyFootprintRectangular.new(10.0, 14.0, -2.0, 2.0)
@@ -128,14 +140,29 @@ clusters = mock.clusters
 members = mock.members
 
 print(f"Generated {len(clusters)} clusters and {len(members)} members.")
-clusters[:5]
+```
+
+The cluster catalog carries the true and observed redshift/mass, the sky
+position and the spherical-overdensity radius `r_Delta`, plus a `cluster_id`
+join key:
+
+```{python}
+# | label: tbl-clusters
+# | tbl-cap: First rows of the generated cluster catalog.
+# | tbl-cap-location: margin
+# | code-fold: true
+show_table(clusters)
 ```
 
 Each member links back to its host cluster through `parent_id`, which matches the
-`cluster_id` column added to the cluster table:
+`cluster_id` column of the cluster table:
 
 ```{python}
-members[:5]
+# | label: tbl-members
+# | tbl-cap: First rows of the generated member catalog.
+# | tbl-cap-location: margin
+# | code-fold: true
+show_table(members)
 ```
 
 ```{python}
@@ -146,18 +173,14 @@ print(f"{n_central} centrals and {len(members) - n_central} satellites.")
 ## Visualising the Catalogs {#sec-plots}
 
 The clusters trace the footprint; member galaxies cluster tightly around their
-hosts. We size the cluster markers by mass.
+hosts. We size the cluster markers by mass and colour them by redshift.
 
 ```{python}
+# | label: fig-sky
+# | fig-cap: Mock clusters (coloured by redshift) and their member galaxies.
 fig, ax = plt.subplots(figsize=(7, 6))
 
-ax.scatter(
-    members["ra"],
-    members["dec"],
-    s=2,
-    color="0.7",
-    label="members",
-)
+ax.scatter(members["ra"], members["dec"], s=2, color="0.7", label="members")
 sc = ax.scatter(
     clusters["ra"],
     clusters["dec"],
@@ -172,7 +195,6 @@ fig.colorbar(sc, ax=ax, label="cluster $z$")
 ax.set_xlabel("RA [deg]")
 ax.set_ylabel("Dec [deg]")
 ax.legend(loc="upper right")
-ax.set_title("Mock clusters and their members")
 plt.show()
 ```
 
@@ -180,6 +202,8 @@ Zooming on the most massive cluster shows the members distributed around the
 host position, with the central sitting exactly on it.
 
 ```{python}
+# | label: fig-zoom
+# | fig-cap: Members of the most massive cluster within its r_Delta.
 i = int(np.argmax(clusters["lnM_true"]))
 cid = int(clusters["cluster_id"][i])
 sel = members[members["parent_id"] == cid]
@@ -201,7 +225,9 @@ plt.show()
 ## Working with the Generators Directly {#sec-direct}
 
 `MockPipeline` is a thin wrapper; the underlying generators can be used on their
-own. For example, to obtain just the cluster catalog with positions and radius:
+own. For example, to obtain just the cluster catalog with positions and radius,
+enable them with [[numcosmo|nc_halo_catalog_generator_set_footprint]] and
+[[numcosmo|nc_halo_catalog_generator_set_with_radius]]:
 
 ```{python}
 cluster_gen = Nc.HaloCatalogGenerator.new(cad)
@@ -210,11 +236,19 @@ cluster_gen.set_with_radius(True)
 
 hcat = cluster_gen.generate(mset, Ncm.RNG.seeded_new(None, 2))
 print(list(hcat.peek_columns()))
-catalog_to_table(hcat)[:3]
 ```
 
-The member generator can then populate any host catalog carrying the
-`ra`, `dec`, `z_true`, `lnM_true` and `r_Delta` columns:
+```{python}
+# | label: tbl-direct
+# | tbl-cap: Cluster catalog produced directly by the generator.
+# | tbl-cap-location: margin
+# | code-fold: true
+show_table(catalog_to_table(hcat))
+```
+
+The member generator can then populate any host catalog carrying the `ra`,
+`dec`, `z_true`, `lnM_true` and `r_Delta` columns, via
+[[numcosmo|nc_halo_catalog_member_generator_generate]]:
 
 ```{python}
 member_gen = Nc.HaloCatalogMemberGenerator.new(hod)
@@ -229,3 +263,22 @@ the cluster abundance and proxies produce the cluster catalog, a halo occupation
 distribution populates each cluster with galaxies, and `MockPipeline` returns
 both as `astropy` tables linked by id. These catalogs feed naturally into the
 [Sky Match](sky_match.qmd) tools and the cluster number-counts likelihood.
+
+## API Reference {#sec-api}
+
+The objects used in this tutorial:
+
+- catalogs: [[numcosmo|NcHaloCatalog]], [[math|NcmCatalog]]
+- generators: [[numcosmo|NcHaloCatalogGenerator]]
+  ([[numcosmo|nc_halo_catalog_generator_set_footprint]],
+  [[numcosmo|nc_halo_catalog_generator_set_with_radius]],
+  [[numcosmo|nc_halo_catalog_generator_generate]]) and
+  [[numcosmo|NcHaloCatalogMemberGenerator]]
+  ([[numcosmo|nc_halo_catalog_member_generator_generate]])
+- occupation: [[numcosmo|NcGalaxyHOD]], [[numcosmo|NcGalaxyHODZheng07]]
+- footprint: [[math|NcmSkyFootprint]], [[math|NcmSkyFootprintRectangular]]
+- abundance and proxies: [[numcosmo|NcClusterAbundance]],
+  [[numcosmo|NcClusterMassLnnormal]], [[numcosmo|NcClusterPhotozGaussGlobal]]
+
+The Python-level helpers `MockPipeline` and `catalog_to_table` live in the
+`numcosmo_py.catalog` subpackage.
