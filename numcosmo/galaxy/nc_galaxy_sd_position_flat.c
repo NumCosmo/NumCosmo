@@ -50,17 +50,12 @@
 #include "math/ncm_vector.h"
 #include "math/ncm_rng.h"
 #include "math/ncm_c.h"
+#include "math/ncm_sky_footprint.h"
+#include "math/ncm_sky_footprint_rectangular.h"
 
 typedef struct _NcGalaxySDPositionFlatPrivate
 {
-  gdouble ra_min;
-  gdouble ra_max;
-  gdouble ra_norm;
-  gdouble dec_min;
-  gdouble dec_max;
-  gdouble sin_dec_min;
-  gdouble sin_dec_max;
-  gdouble dec_norm;
+  NcmSkyFootprintRectangular *footprint;
 } NcGalaxySDPositionFlatPrivate;
 
 struct _NcGalaxySDPositionFlat
@@ -86,19 +81,17 @@ nc_galaxy_sd_position_flat_init (NcGalaxySDPositionFlat *gsdpflat)
 {
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
 
-  self->ra_min      = 0.0;
-  self->ra_max      = 0.0;
-  self->ra_norm     = 0.0;
-  self->dec_min     = 0.0;
-  self->dec_max     = 0.0;
-  self->sin_dec_min = 0.0;
-  self->sin_dec_max = 0.0;
-  self->dec_norm    = 0.0;
+  self->footprint = g_object_new (NCM_TYPE_SKY_FOOTPRINT_RECTANGULAR, NULL);
 }
 
 static void
 _nc_galaxy_sd_position_flat_dispose (GObject *object)
 {
+  NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (object);
+  NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
+
+  ncm_sky_footprint_rectangular_clear (&self->footprint);
+
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_sd_position_flat_parent_class)->dispose (object);
 }
@@ -147,10 +140,8 @@ _nc_galaxy_sd_position_flat_gen (NcGalaxySDPosition *gsdp, NcGalaxySDPositionDat
 {
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
-  gdouble sin_dec                            = ncm_rng_uniform_gen (rng, self->sin_dec_min, self->sin_dec_max);
 
-  data->ra  = ncm_rng_uniform_gen (rng, self->ra_min, self->ra_max);
-  data->dec = ncm_c_radian_to_degree (asin (sin_dec));
+  ncm_sky_footprint_gen_ra_dec (NCM_SKY_FOOTPRINT (self->footprint), rng, &data->ra, &data->dec);
 }
 
 struct _IntegData
@@ -183,15 +174,8 @@ _nc_galaxy_sd_position_flat_ln_integ_f (gpointer callback_data, NcGalaxySDPositi
 {
   const struct _IntegData *int_data          = (struct _IntegData *) callback_data;
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (int_data->gsdpflat);
-  const gdouble ra_norm                      = self->ra_norm;
-  const gdouble dec_norm                     = self->dec_norm;
-  const gdouble ra                           = data->ra;
-  const gdouble dec                          = data->dec;
 
-  if ((ra >= self->ra_min) && (ra <= self->ra_max) && (dec >= self->dec_min) && (dec <= self->dec_max))
-    return log (ra_norm * dec_norm * cos (ncm_c_degree_to_radian (dec)));
-
-  return GSL_NEGINF;
+  return ncm_sky_footprint_ln_density (NCM_SKY_FOOTPRINT (self->footprint), data->ra, data->dec);
 }
 
 static gdouble
@@ -199,15 +183,8 @@ _nc_galaxy_sd_position_flat_integ_f (gpointer callback_data, NcGalaxySDPositionD
 {
   const struct _IntegData *int_data          = (struct _IntegData *) callback_data;
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (int_data->gsdpflat);
-  const gdouble ra_norm                      = self->ra_norm;
-  const gdouble dec_norm                     = self->dec_norm;
-  const gdouble ra                           = data->ra;
-  const gdouble dec                          = data->dec;
 
-  if ((ra >= self->ra_min) && (ra <= self->ra_max) && (dec >= self->dec_min) && (dec <= self->dec_max))
-    return ra_norm * dec_norm * cos (ncm_c_degree_to_radian (dec));
-
-  return 0.0;
+  return ncm_sky_footprint_density (NCM_SKY_FOOTPRINT (self->footprint), data->ra, data->dec);
 }
 
 static NcGalaxySDPositionIntegrand *
@@ -232,11 +209,7 @@ _nc_galaxy_sd_position_flat_set_ra_lim (NcGalaxySDPosition *gsdp, gdouble ra_min
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
 
-  g_assert_cmpfloat (ra_min, <, ra_max);
-
-  self->ra_min  = ra_min;
-  self->ra_max  = ra_max;
-  self->ra_norm = 1.0 / (self->ra_max - self->ra_min);
+  ncm_sky_footprint_rectangular_set_ra_lim (self->footprint, ra_min, ra_max);
 
   return TRUE;
 }
@@ -250,8 +223,7 @@ _nc_galaxy_sd_position_flat_get_ra_lim (NcGalaxySDPosition *gsdp, gdouble *ra_mi
   g_assert_nonnull (ra_min);
   g_assert_nonnull (ra_max);
 
-  *ra_min = self->ra_min;
-  *ra_max = self->ra_max;
+  ncm_sky_footprint_rectangular_get_ra_lim (self->footprint, ra_min, ra_max);
 
   return TRUE;
 }
@@ -262,13 +234,7 @@ _nc_galaxy_sd_position_flat_set_dec_lim (NcGalaxySDPosition *gsdp, gdouble dec_m
   NcGalaxySDPositionFlat *gsdpflat           = NC_GALAXY_SD_POSITION_FLAT (gsdp);
   NcGalaxySDPositionFlatPrivate * const self = nc_galaxy_sd_position_flat_get_instance_private (gsdpflat);
 
-  g_assert_cmpfloat (dec_min, <, dec_max);
-
-  self->dec_min     = dec_min;
-  self->dec_max     = dec_max;
-  self->sin_dec_min = sin (ncm_c_degree_to_radian (dec_min));
-  self->sin_dec_max = sin (ncm_c_degree_to_radian (dec_max));
-  self->dec_norm    = ncm_c_pi () / (180.0 * (self->sin_dec_max - self->sin_dec_min));
+  ncm_sky_footprint_rectangular_set_dec_lim (self->footprint, dec_min, dec_max);
 
   return TRUE;
 }
@@ -282,8 +248,7 @@ _nc_galaxy_sd_position_flat_get_dec_lim (NcGalaxySDPosition *gsdp, gdouble *dec_
   g_assert_nonnull (dec_min);
   g_assert_nonnull (dec_max);
 
-  *dec_min = self->dec_min;
-  *dec_max = self->dec_max;
+  ncm_sky_footprint_rectangular_get_dec_lim (self->footprint, dec_min, dec_max);
 
   return TRUE;
 }
