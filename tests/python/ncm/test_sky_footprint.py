@@ -21,7 +21,6 @@
 """Tests for the NcmSkyFootprint rectangular sky region."""
 
 import math
-import hashlib
 
 import numpy as np
 
@@ -29,10 +28,39 @@ from numcosmo_py import Ncm
 
 Ncm.cfg_init()
 
+# Reference draw for seed 123, stored as an NcmMatrix (N x 2) binfile. The
+# comparison is tolerance-based (not a byte hash) so it survives the sub-ULP
+# drift of the asin equal-area transform across libm/GSL builds while still
+# catching real changes in the sampling. Regenerate with Ncm.Serialize.to_binfile
+# on Ncm.Matrix.new_array(<ra,dec interleaved>, 2).
+GOLDEN_FILE = "truth_tables/ncm_sky_footprint_rect_seed123.bin"
+GOLDEN_RTOL = 1.0e-9
+GOLDEN_ATOL = 1.0e-12
+GOLDEN_N = 5000
+
 
 def _rect() -> Ncm.SkyFootprintRectangular:
     """A rectangular footprint over [10, 40] x [-5, 25] degrees."""
     return Ncm.SkyFootprintRectangular.new(10.0, 40.0, -5.0, 25.0)
+
+
+def _load_golden() -> np.ndarray:
+    """Load the stored seed-123 reference draw as an (N, 2) array."""
+    path = Ncm.cfg_get_data_filename(GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    matrix = ser.from_binfile(path)
+    assert isinstance(matrix, Ncm.Matrix)
+    return np.array(matrix.dup_array()).reshape(GOLDEN_N, 2)
+
+
+def _gen_sample(seed: int, n: int) -> np.ndarray:
+    """Generate an (n, 2) array of (ra, dec) draws for a fixed seed."""
+    rect = _rect()
+    rng = Ncm.RNG.seeded_new(None, seed)
+    sample = np.empty((n, 2))
+    for i in range(n):
+        sample[i, 0], sample[i, 1] = rect.gen_ra_dec(rng)
+    return sample
 
 
 def test_limits_roundtrip() -> None:
@@ -83,19 +111,19 @@ def test_density_normalization() -> None:
 
 
 def test_gen_within_bounds_and_reproducible() -> None:
-    """Sampling stays in the rectangle and is deterministic for a fixed seed."""
-    rect = _rect()
-    rng = Ncm.RNG.seeded_new(None, 123)
-    ras = np.empty(5000)
-    decs = np.empty(5000)
-    for i in range(5000):
-        ras[i], decs[i] = rect.gen_ra_dec(rng)
+    """Sampling stays in the rectangle and matches the stored reference draw."""
+    sample = _gen_sample(123, GOLDEN_N)
+    ras, decs = sample[:, 0], sample[:, 1]
 
     assert ras.min() >= 10.0 and ras.max() <= 40.0
     assert decs.min() >= -5.0 and decs.max() <= 25.0
 
-    digest = hashlib.sha256(np.concatenate([ras, decs]).tobytes()).hexdigest()[:16]
-    assert digest == "419ea91d5c40d247"
+    # Same seed twice is bit-identical (determinism is machine-independent).
+    np.testing.assert_array_equal(sample, _gen_sample(123, GOLDEN_N))
+
+    # And it reproduces the stored reference draw within cross-stack tolerance.
+    golden = _load_golden()
+    np.testing.assert_allclose(sample, golden, rtol=GOLDEN_RTOL, atol=GOLDEN_ATOL)
 
 
 def test_serialization_roundtrip() -> None:
