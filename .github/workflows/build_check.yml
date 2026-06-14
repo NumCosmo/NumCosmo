@@ -240,6 +240,15 @@ jobs:
       #    pylint --rcfile .pylintrc numcosmo_py
       - name: Check NumCosmo
         run: meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) || (cat build/meson-logs/testlog.txt && exit 1)
+      - name: Check NumCosmo (OMP lane)
+        # Re-run the OpenMP-path tests (suites omp/py-omp) with process parallelism OFF and
+        # OMP_NUM_THREADS = runner cores, overriding the global OMP=1 pin, so the
+        # `#pragma omp parallel` branches are actually exercised. See TESTING.md.
+        run: |
+          NP=$(getconf _NPROCESSORS_ONLN)
+          OMP_NUM_THREADS=$NP OMP_THREAD_LIMIT=$NP OMP_MAX_ACTIVE_LEVELS=1 \
+            meson test -v -C build --num-processes=1 --suite omp --suite py-omp \
+            || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
     name: Cov-${{ matrix.suites }} (py${{ matrix.python-version }}, openmpi)
