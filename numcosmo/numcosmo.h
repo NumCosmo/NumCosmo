@@ -109,6 +109,9 @@
 #include <numcosmo/lss/nc_transfer_func_eh_no_baryon.h>
 #include <numcosmo/lss/nc_transfer_func_camb.h>
 #include <numcosmo/lss/nc_growth_func.h>
+#include <numcosmo/lss/nc_halo_catalog.h>
+#include <numcosmo/lss/nc_halo_catalog_generator.h>
+#include <numcosmo/lss/nc_halo_catalog_member_generator.h>
 #include <numcosmo/lss/nc_halo_position.h>
 #include <numcosmo/lss/nc_halo_density_profile.h>
 #include <numcosmo/lss/nc_halo_density_profile_nfw.h>
@@ -133,6 +136,7 @@
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean_normalized.h>
 #include <numcosmo/lss/nc_multiplicity_func_crocce.h>
 #include <numcosmo/lss/nc_multiplicity_func_bocquet.h>
+#include <numcosmo/lss/nc_multiplicity_func_bhattacharya.h>
 #include <numcosmo/lss/nc_multiplicity_func_despali.h>
 #include <numcosmo/lss/nc_multiplicity_func_watson.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
@@ -174,11 +178,13 @@
 #include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift_spec.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift_gauss.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift_pz.h>
+#include <numcosmo/galaxy/nc_galaxy_hod.h>
+#include <numcosmo/galaxy/nc_galaxy_hod_zheng07.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_true_redshift.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
-#include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss.h>
-#include <numcosmo/galaxy/nc_galaxy_sd_shape_gauss_hsc.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape_hsm_gauss.h>
+#include <numcosmo/galaxy/nc_galaxy_sd_shape_hsm_gauss_global.h>
 
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>

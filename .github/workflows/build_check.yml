@@ -26,7 +26,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install gobject-introspection gir1.2-glib-2.0 gir1.2-glib-2.0-dev libgirepository-2.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev libopenmpi-dev libcairo2-dev uncrustify
-        pip install meson ninja pytest pytest-lazy-fixtures numpy scipy pygobject typer matplotlib --break-system-packages
+        pip install -e ".[test]" meson ninja --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Configure NumCosmo
@@ -54,7 +54,10 @@ jobs:
         ./example_simple
         ./example_ca
     - name: Check NumCosmo
-      run: meson test -v -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
+      # pip build job is a smoke test: exclude the parallel-ESMCMC app suite,
+      # which deadlocks on the mixed pip/apt OpenBLAS stack. It is covered by the
+      # conda coverage job (py-app shard) instead.
+      run: meson test -v -C build --num-processes=2 --no-suite py-app || (cat build/meson-logs/testlog.txt && exit 1)
     - name: Create a NumCosmo tarball
       run: meson dist -C build --no-tests
     - name: Upload a Build Artifact
@@ -93,7 +96,7 @@ jobs:
         brew install python3 gobject-introspection pygobject3 numpy scipy python-matplotlib meson ninja gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran glib openblas
     - name: Pip install pre-requisites
       run: |
-        python3 -m pip install pytest pytest-lazy-fixtures typer pydantic --break-system-packages
+        python3 -m pip install -e ".[test]" --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
     - name: Fix libfyaml.pc
@@ -141,7 +144,7 @@ jobs:
         pytest -xvs tests/python --run-sphere-map -m sphere_map
     - name: Check NumCosmo
       run: |
-        meson test -v -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
+        meson test -v -C build --num-processes=2 --no-suite py-app || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge:
     name: (${{ matrix.os }}, py${{ matrix.python-version }}, ${{ matrix.mpi }}, Miniforge)
@@ -230,7 +233,7 @@ jobs:
       matrix:
         os: ["ubuntu"]
         python-version: ["3.12"]
-        suites: ["python", "c", "stats-dist", "fit-esmcmc", "powspec", "data-cluster-wl", "py-powspec", "py-xcor"]
+        suites: ["python", "c", "stats-dist", "fit-esmcmc", "powspec", "data-cluster-wl", "py-powspec", "py-xcor", "py-app"]
     defaults:
       run:
         shell: bash -el {0}

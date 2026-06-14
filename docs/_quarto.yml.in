@@ -16,7 +16,10 @@ project:
     - tutorials/python/bounce.qmd
     - tutorials/python/bounce_spectra.qmd
     - tutorials/python/cluster_wl_simul.qmd
+    - tutorials/python/halo_catalog_mock.qmd
     - tutorials/python/sky_match.qmd
+    - tutorials/python/sky_match_id.qmd
+    - examples/data_analysis/inspect_data_objects.qmd
     - examples/data_analysis/snia.qmd
     - examples/intro/epdf.qmd
     - examples/intro/hiprim.qmd
@@ -91,8 +94,12 @@ website:
                 text: "Bounce Two-Fluid Spectra"
               - href: tutorials/python/cluster_wl_simul.qmd
                 text: "Cluster WL Simulation"
+              - href: tutorials/python/halo_catalog_mock.qmd
+                text: "Halo Catalog Mock"
               - href: tutorials/python/sky_match.qmd
                 text: "Sky Match"
+              - href: tutorials/python/sky_match_id.qmd
+                text: "Sky Match by Membership"
         - section: "Examples"
           contents:
             - section: "Introduction"
@@ -113,6 +120,8 @@ website:
                 text: "Dark Energy WSpline"
             - section: "Data Analysis"
               contents:
+              - href: examples/data_analysis/inspect_data_objects.qmd
+                text: "Inspect Data Objects"
               - href: examples/data_analysis/snia.qmd
                 text: "SN Ia Fitting"
 

@@ -79,8 +79,8 @@ void test_nc_galaxy_sd_true_redshift_lsst_srd_y10_lens_basic (void);
 void test_nc_galaxy_sd_true_redshift_lsst_srd_from_type_basic (void);
 void test_nc_galaxy_sd_obs_redshift_gauss_lsst_srd_bins_basic (void);
 void test_nc_galaxy_sd_shape_basic (void);
-void test_nc_galaxy_sd_shape_gauss_basic (void);
-void test_nc_galaxy_sd_shape_gauss_hsc_basic (void);
+void test_nc_galaxy_sd_shape_hsm_gauss_global_basic (void);
+void test_nc_galaxy_sd_shape_hsm_gauss_basic (void);
 void test_nc_galaxy_sd_z_proxy_basic (void);
 void test_nc_galaxy_sd_z_proxy_dirac_basic (void);
 void test_nc_galaxy_sd_z_proxy_gauss_basic (void);
@@ -101,6 +101,11 @@ void test_nc_halo_cm_diemer15_basic (void);
 void test_nc_halo_cm_prada12_basic (void);
 void test_nc_halo_cm_dutton14_basic (void);
 void test_nc_halo_bias_despali_basic (void);
+void test_nc_multiplicity_func_bhattacharya_basic (void);
+void test_nc_multiplicity_func_bhattacharya_convention (void);
+void test_nc_multiplicity_func_bhattacharya_mean_mdef (void);
+void test_nc_multiplicity_func_bhattacharya_critical_mdef (void);
+void test_nc_multiplicity_func_bhattacharya_virial_mdef (void);
 void test_nc_cluster_mass_ascaso_basic (void);
 void test_nc_cluster_mass_selection_basic (void);
 void test_nc_cluster_photoz_gauss_basic (void);
@@ -152,8 +157,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/sd_position/basic", test_nc_galaxy_sd_position_basic);
   g_test_add_func ("/nc/galaxy/sd_position_flat/basic", test_nc_galaxy_sd_position_flat_basic);
   g_test_add_func ("/nc/galaxy/sd_shape/basic", test_nc_galaxy_sd_shape_basic);
-  g_test_add_func ("/nc/galaxy/sd_shape_gauss/basic", test_nc_galaxy_sd_shape_gauss_basic);
-  g_test_add_func ("/nc/galaxy/sd_shape_gauss_hsc/basic", test_nc_galaxy_sd_shape_gauss_hsc_basic);
+  g_test_add_func ("/nc/galaxy/sd_shape_hsm_gauss_global/basic", test_nc_galaxy_sd_shape_hsm_gauss_global_basic);
+  g_test_add_func ("/nc/galaxy/sd_shape_hsm_gauss/basic", test_nc_galaxy_sd_shape_hsm_gauss_basic);
   g_test_add_func ("/nc/galaxy/sd_true_redshift/basic", test_nc_galaxy_sd_true_redshift_basic);
   g_test_add_func ("/nc/galaxy/sd_true_redshift_lsst_srd/basic", test_nc_galaxy_sd_true_redshift_lsst_srd_basic);
   g_test_add_func ("/nc/galaxy/sd_true_redshift_lsst_srd_y1_source/basic", test_nc_galaxy_sd_true_redshift_lsst_srd_y1_source_basic);
@@ -182,6 +187,12 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/halo_cm_dutton14/basic", test_nc_halo_cm_dutton14_basic);
 
   g_test_add_func ("/nc/halo_bias_despali/basic", test_nc_halo_bias_despali_basic);
+
+  g_test_add_func ("/nc/multiplicity_func_bhattacharya/basic", test_nc_multiplicity_func_bhattacharya_basic);
+  g_test_add_func ("/nc/multiplicity_func_bhattacharya/convention", test_nc_multiplicity_func_bhattacharya_convention);
+  g_test_add_func ("/nc/multiplicity_func_bhattacharya/mean_mdef", test_nc_multiplicity_func_bhattacharya_mean_mdef);
+  g_test_add_func ("/nc/multiplicity_func_bhattacharya/critical_mdef", test_nc_multiplicity_func_bhattacharya_critical_mdef);
+  g_test_add_func ("/nc/multiplicity_func_bhattacharya/virial_mdef", test_nc_multiplicity_func_bhattacharya_virial_mdef);
 
   g_test_add_func ("/nc/cluster_mass_ascaso/basic", test_nc_cluster_mass_ascaso_basic);
   g_test_add_func ("/nc/cluster_mass_selection/basic", test_nc_cluster_mass_selection_basic);
@@ -924,7 +935,7 @@ test_nc_galaxy_sd_position_flat_basic (void)
 void
 test_nc_galaxy_sd_shape_basic (void)
 {
-  NcGalaxySDShape *gsds = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_gauss_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
+  NcGalaxySDShape *gsds = NC_GALAXY_SD_SHAPE (nc_galaxy_sd_shape_hsm_gauss_global_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
   NcGalaxySDShape *gsds2;
 
   g_assert_true (gsds != NULL);
@@ -940,39 +951,39 @@ test_nc_galaxy_sd_shape_basic (void)
 }
 
 void
-test_nc_galaxy_sd_shape_gauss_basic (void)
+test_nc_galaxy_sd_shape_hsm_gauss_global_basic (void)
 {
-  NcGalaxySDShapeGauss *gsdsg = nc_galaxy_sd_shape_gauss_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
-  NcGalaxySDShapeGauss *gsdsg2;
+  NcGalaxySDShapeHSMGaussGlobal *gsdsg = nc_galaxy_sd_shape_hsm_gauss_global_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
+  NcGalaxySDShapeHSMGaussGlobal *gsdsg2;
 
   g_assert_true (gsdsg != NULL);
-  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS (gsdsg));
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (gsdsg));
 
-  gsdsg2 = nc_galaxy_sd_shape_gauss_ref (gsdsg);
-  nc_galaxy_sd_shape_gauss_clear (&gsdsg2);
+  gsdsg2 = nc_galaxy_sd_shape_hsm_gauss_global_ref (gsdsg);
+  nc_galaxy_sd_shape_hsm_gauss_global_clear (&gsdsg2);
   g_assert_true (gsdsg2 == NULL);
 
-  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS (gsdsg));
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (gsdsg));
 
-  NCM_TEST_FREE (nc_galaxy_sd_shape_gauss_free, gsdsg);
+  NCM_TEST_FREE (nc_galaxy_sd_shape_hsm_gauss_global_free, gsdsg);
 }
 
 void
-test_nc_galaxy_sd_shape_gauss_hsc_basic (void)
+test_nc_galaxy_sd_shape_hsm_gauss_basic (void)
 {
-  NcGalaxySDShapeGaussHSC *gsdsgh = nc_galaxy_sd_shape_gauss_hsc_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
-  NcGalaxySDShapeGaussHSC *gsdsgh2;
+  NcGalaxySDShapeHSMGauss *gsdsgh = nc_galaxy_sd_shape_hsm_gauss_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
+  NcGalaxySDShapeHSMGauss *gsdsgh2;
 
   g_assert_true (gsdsgh != NULL);
-  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS_HSC (gsdsgh));
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_HSM_GAUSS (gsdsgh));
 
-  gsdsgh2 = nc_galaxy_sd_shape_gauss_hsc_ref (gsdsgh);
-  nc_galaxy_sd_shape_gauss_hsc_clear (&gsdsgh2);
+  gsdsgh2 = nc_galaxy_sd_shape_hsm_gauss_ref (gsdsgh);
+  nc_galaxy_sd_shape_hsm_gauss_clear (&gsdsgh2);
   g_assert_true (gsdsgh2 == NULL);
 
-  g_assert_true (NC_IS_GALAXY_SD_SHAPE_GAUSS_HSC (gsdsgh));
+  g_assert_true (NC_IS_GALAXY_SD_SHAPE_HSM_GAUSS (gsdsgh));
 
-  NCM_TEST_FREE (nc_galaxy_sd_shape_gauss_hsc_free, gsdsgh);
+  NCM_TEST_FREE (nc_galaxy_sd_shape_hsm_gauss_free, gsdsgh);
 }
 
 void
@@ -1553,6 +1564,122 @@ test_nc_halo_bias_despali_basic (void)
   nc_halo_mass_function_clear (&hmf);
 
   NCM_TEST_FREE (nc_halo_bias_despali_free, hbd);
+}
+
+void
+test_nc_multiplicity_func_bhattacharya_basic (void)
+{
+  NcMultiplicityFuncBhattacharya *mbt = nc_multiplicity_func_bhattacharya_new ();
+  NcMultiplicityFunc *mulf            = NC_MULTIPLICITY_FUNC (mbt);
+  NcHICosmo *cosmo                    = NC_HICOSMO (nc_hicosmo_lcdm_new ());
+  NcMultiplicityFuncBhattacharya *mbt2;
+
+  g_assert_true (mbt != NULL);
+  g_assert_true (NC_IS_MULTIPLICITY_FUNC_BHATTACHARYA (mbt));
+  g_assert_cmpint (nc_multiplicity_func_get_mdef (mulf), ==, NC_MULTIPLICITY_FUNC_MASS_DEF_FOF);
+  g_assert_cmpint (nc_multiplicity_func_bhattacharya_get_convention (mbt), ==, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011);
+
+  mbt2 = nc_multiplicity_func_bhattacharya_ref (mbt);
+  nc_multiplicity_func_bhattacharya_clear (&mbt2);
+  g_assert_true (mbt2 == NULL);
+
+  g_assert_true (NC_IS_MULTIPLICITY_FUNC_BHATTACHARYA (mbt));
+
+  nc_multiplicity_func_bhattacharya_set_A (mbt, 0.35);
+  nc_multiplicity_func_bhattacharya_set_a (mbt, 0.8);
+  nc_multiplicity_func_bhattacharya_set_p (mbt, 0.9);
+  nc_multiplicity_func_bhattacharya_set_q (mbt, 1.7);
+  nc_multiplicity_func_bhattacharya_set_delta_c (mbt, 1.686);
+
+  g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_A (mbt), ==, 0.35);
+  g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_a (mbt), ==, 0.8);
+  g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_p (mbt), ==, 0.9);
+  g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_q (mbt), ==, 1.7);
+  g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_delta_c (mbt), ==, 1.686);
+
+  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf, cosmo, 1.0, 0.5), >, 0.0);
+
+  nc_hicosmo_clear (&cosmo);
+
+  NCM_TEST_FREE (nc_multiplicity_func_bhattacharya_free, mbt);
+}
+
+void
+test_nc_multiplicity_func_bhattacharya_convention (void)
+{
+  NcMultiplicityFuncBhattacharya *mbt_b = nc_multiplicity_func_bhattacharya_new_full (NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011);
+  NcMultiplicityFuncBhattacharya *mbt_h = nc_multiplicity_func_bhattacharya_new_full (NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019);
+  NcMultiplicityFunc *mulf_b            = NC_MULTIPLICITY_FUNC (mbt_b);
+  NcMultiplicityFunc *mulf_h            = NC_MULTIPLICITY_FUNC (mbt_h);
+  NcHICosmo *cosmo                      = NC_HICOSMO (nc_hicosmo_lcdm_new ());
+
+  g_assert_cmpint (nc_multiplicity_func_bhattacharya_get_convention (mbt_b), ==, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011);
+  g_assert_cmpint (nc_multiplicity_func_bhattacharya_get_convention (mbt_h), ==, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019);
+
+  /* The two conventions agree at z = 0 and differ for z > 0. */
+  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 0.0), ==,
+                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 0.0), 1.0e-15, 0.0);
+  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 1.0), !=,
+                     nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 1.0));
+
+  nc_multiplicity_func_bhattacharya_set_convention (mbt_h, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011);
+  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 1.0), ==,
+                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 1.0), 1.0e-15, 0.0);
+
+  nc_hicosmo_clear (&cosmo);
+  nc_multiplicity_func_bhattacharya_free (mbt_b);
+  NCM_TEST_FREE (nc_multiplicity_func_bhattacharya_free, mbt_h);
+}
+
+void
+test_nc_multiplicity_func_bhattacharya_mean_mdef (void)
+{
+  if (g_test_subprocess ())
+  {
+    NcMultiplicityFuncBhattacharya *mbt = nc_multiplicity_func_bhattacharya_new ();
+
+    nc_multiplicity_func_set_mdef (NC_MULTIPLICITY_FUNC (mbt), NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN);
+
+    return; /* LCOV_EXCL_LINE */
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*does not support mean mass def*");
+}
+
+void
+test_nc_multiplicity_func_bhattacharya_critical_mdef (void)
+{
+  if (g_test_subprocess ())
+  {
+    NcMultiplicityFuncBhattacharya *mbt = nc_multiplicity_func_bhattacharya_new ();
+
+    nc_multiplicity_func_set_mdef (NC_MULTIPLICITY_FUNC (mbt), NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL);
+
+    return; /* LCOV_EXCL_LINE */
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*does not support critical mass def*");
+}
+
+void
+test_nc_multiplicity_func_bhattacharya_virial_mdef (void)
+{
+  if (g_test_subprocess ())
+  {
+    NcMultiplicityFuncBhattacharya *mbt = nc_multiplicity_func_bhattacharya_new ();
+
+    nc_multiplicity_func_set_mdef (NC_MULTIPLICITY_FUNC (mbt), NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL);
+
+    return; /* LCOV_EXCL_LINE */
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*does not support virial mass def*");
 }
 
 void

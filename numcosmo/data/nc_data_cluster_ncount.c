@@ -39,6 +39,8 @@
 
 #include "data/nc_data_cluster_ncount.h"
 #include "nc_hireion.h"
+#include "lss/nc_halo_catalog.h"
+#include "lss/nc_halo_catalog_generator.h"
 
 #include "math/ncm_func_eval.h"
 #include "math/ncm_serialize.h"
@@ -613,162 +615,90 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
   NcDataClusterNCountPrivate * const self = ncount->priv;
-  NcClusterAbundance *cad                 = self->cad;
   NcHICosmo *cosmo                        = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcClusterRedshift *clusterz             = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
   NcClusterMass *clusterm                 = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-
-  GArray *lnM_true_array       = NULL;
-  GArray *z_true_array         = NULL;
-  GArray *z_obs_array          = NULL;
-  GArray *z_obs_params_array   = NULL;
-  GArray *lnM_obs_array        = NULL;
-  GArray *lnM_obs_params_array = NULL;
-  guint total_np;
+  NcHaloCatalogGenerator *gen             = nc_halo_catalog_generator_new (self->cad);
+  NcHaloCatalog *hcat;
+  NcmMatrix *cat_data;
+  guint np;
   guint i;
-
-  gdouble *zi_obs          = g_new (gdouble, self->z_obs_len);
-  gdouble *zi_obs_params   = self->z_obs_params_len > 0 ? g_new (gdouble, self->z_obs_params_len) : NULL;
-  gdouble *lnMi_obs        = g_new (gdouble, self->lnM_obs_len);
-  gdouble *lnMi_obs_params = self->lnM_obs_params_len > 0 ? g_new (gdouble, self->lnM_obs_params_len) : NULL;
 
   g_assert (G_OBJECT_TYPE (clusterz) == self->redshift_type);
   g_assert (G_OBJECT_TYPE (clusterm) == self->mass_type);
 
-  ncm_rng_lock (rng);
-  total_np = ncm_rng_poisson_gen (rng, cad->norma);
-  ncm_rng_unlock (rng);
-
-  if (total_np == 0)
-  {
-    self->np = 0;
-    g_free (zi_obs);
-    g_free (lnMi_obs);
-
-    if (self->z_obs_params_len > 0)
-      g_free (zi_obs_params);
-
-    if (self->lnM_obs_params_len > 0)
-      g_free (lnMi_obs_params);
-
-    ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
-
-    return;
-  }
-
-  lnM_true_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
-  z_true_array   = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
-
-  z_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->z_obs_len);
-
-  if (self->z_obs_params_len > 0)
-    z_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->z_obs_params_len);
-
-  lnM_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->lnM_obs_len);
-
-  if (self->lnM_obs_params_len > 0)
-    lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * self->lnM_obs_params_len);
-
-  nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())),
-                                         cad->lnMi);
-
-  for (i = 0; i < total_np; i++)
-  {
-    ncm_rng_lock (rng);
-    {
-      const gdouble u1       = _nc_cad_inv_dNdz_convergence_f (ncm_rng_uniform01_pos_gen (rng), cad->z_epsilon);
-      const gdouble u2       = _nc_cad_inv_dNdz_convergence_f (ncm_rng_uniform01_pos_gen (rng), cad->lnM_epsilon);
-      const gdouble z_true   = ncm_spline_eval (cad->inv_z, u1);
-      const gdouble lnM_true = ncm_spline2d_eval (cad->inv_lnM_z, u2, z_true);
-
-      ncm_rng_unlock (rng);
-
-      if (nc_cluster_redshift_resample (clusterz, cosmo, lnM_true, z_true, zi_obs, zi_obs_params, rng) &&
-          nc_cluster_mass_resample (clusterm, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params, rng))
-      {
-        g_array_append_val (lnM_true_array, lnM_true);
-        g_array_append_val (z_true_array, z_true);
-
-        g_array_append_vals (z_obs_array, zi_obs, self->z_obs_len);
-        g_array_append_vals (lnM_obs_array, lnMi_obs, self->lnM_obs_len);
-
-        if (self->z_obs_params_len > 0)
-          g_array_append_vals (z_obs_params_array, zi_obs_params, self->z_obs_params_len);
-
-        if (self->lnM_obs_params_len > 0)
-          g_array_append_vals (lnM_obs_params_array, lnMi_obs_params, self->lnM_obs_params_len);
-      }
-    }
-  }
-
-  if ((z_obs_array->len == 0) || (lnM_obs_array->len == 0))
-  {
-    self->np = 0;
-    g_free (zi_obs);
-    g_free (lnMi_obs);
-
-    if (self->z_obs_params_len > 0)
-      g_free (zi_obs_params);
-
-    if (self->lnM_obs_params_len > 0)
-      g_free (lnMi_obs_params);
-
-    ncm_vector_clear (&self->lnM_true);
-    g_array_unref (lnM_true_array);
-    ncm_vector_clear (&self->z_true);
-    g_array_unref (z_true_array);
-    ncm_matrix_clear (&self->z_obs);
-    g_array_unref (z_obs_array);
-    ncm_matrix_clear (&self->lnM_obs);
-    g_array_unref (lnM_obs_array);
-
-    ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
-
-    return;
-  }
+  /* The sampling pipeline (Poisson draw + per-object redshift/mass resampling)
+   * is owned by NcHaloCatalogGenerator; here we only repack the resulting
+   * catalog into the internal per-observable representation. The generator runs
+   * in the prepared-abundance context, so the draw order (and hence the Monte
+   * Carlo realization) is preserved. */
+  hcat = nc_halo_catalog_generator_generate (gen, mset, rng);
+  np   = ncm_catalog_len (NCM_CATALOG (hcat));
 
   ncm_vector_clear (&self->lnM_true);
-  self->lnM_true = ncm_vector_new_array (lnM_true_array);
-  g_array_unref (lnM_true_array);
-
   ncm_vector_clear (&self->z_true);
-  self->z_true = ncm_vector_new_array (z_true_array);
-  g_array_unref (z_true_array);
-
   ncm_matrix_clear (&self->z_obs);
-  self->z_obs = ncm_matrix_new_array (z_obs_array, self->z_obs_len);
-  g_array_unref (z_obs_array);
-
   ncm_matrix_clear (&self->lnM_obs);
-  self->lnM_obs = ncm_matrix_new_array (lnM_obs_array, self->lnM_obs_len);
-  g_array_unref (lnM_obs_array);
 
   if (self->z_obs_params_len > 0)
-  {
     ncm_matrix_clear (&self->z_obs_params);
-    self->z_obs_params = ncm_matrix_new_array (z_obs_params_array, self->z_obs_params_len);
-    g_array_unref (z_obs_params_array);
-  }
 
   if (self->lnM_obs_params_len > 0)
-  {
     ncm_matrix_clear (&self->lnM_obs_params);
-    self->lnM_obs_params = ncm_matrix_new_array (lnM_obs_params_array, self->lnM_obs_params_len);
-    g_array_unref (lnM_obs_params_array);
+
+  if (np == 0)
+  {
+    self->np = 0;
+    ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
+    nc_halo_catalog_free (hcat);
+    nc_halo_catalog_generator_free (gen);
+
+    return;
   }
 
-  self->np = ncm_matrix_nrows (self->z_obs);
+  cat_data = ncm_catalog_peek_data (NCM_CATALOG (hcat));
 
-  /* printf ("Generated %u, Expected %10.5g\n", self->np, nc_cluster_abundance_n (cad, cosmo)); */
+  self->z_true   = ncm_vector_new (np);
+  self->lnM_true = ncm_vector_new (np);
+  self->z_obs    = ncm_matrix_new (np, self->z_obs_len);
+  self->lnM_obs  = ncm_matrix_new (np, self->lnM_obs_len);
+
+  if (self->z_obs_params_len > 0)
+    self->z_obs_params = ncm_matrix_new (np, self->z_obs_params_len);
+
+  if (self->lnM_obs_params_len > 0)
+    self->lnM_obs_params = ncm_matrix_new (np, self->lnM_obs_params_len);
+
+  for (i = 0; i < np; i++)
+  {
+    guint col = 0;
+    guint k;
+
+    ncm_vector_set (self->z_true, i, ncm_matrix_get (cat_data, i, col++));
+    ncm_vector_set (self->lnM_true, i, ncm_matrix_get (cat_data, i, col++));
+
+    for (k = 0; k < self->z_obs_len; k++)
+      ncm_matrix_set (self->z_obs, i, k, ncm_matrix_get (cat_data, i, col++));
+
+    for (k = 0; k < self->lnM_obs_len; k++)
+      ncm_matrix_set (self->lnM_obs, i, k, ncm_matrix_get (cat_data, i, col++));
+
+    for (k = 0; k < self->z_obs_params_len; k++)
+      ncm_matrix_set (self->z_obs_params, i, k, ncm_matrix_get (cat_data, i, col++));
+
+    for (k = 0; k < self->lnM_obs_params_len; k++)
+      ncm_matrix_set (self->lnM_obs_params, i, k, ncm_matrix_get (cat_data, i, col++));
+  }
+
+  self->np = np;
+
   ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
 
   if (self->binned)
     nc_data_cluster_ncount_bin_data (ncount);
 
-  g_free (zi_obs);
-  g_free (zi_obs_params);
-  g_free (lnMi_obs);
-  g_free (lnMi_obs_params);
+  nc_halo_catalog_free (hcat);
+  nc_halo_catalog_generator_free (gen);
 }
 
 /**
@@ -1559,7 +1489,6 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   {
     const guint len   = self->z_obs_bins->len;
     const guint nbins = len / 2;
-    gdouble lambda    = 0.0;
     guint i;
 
     if ((len != self->lnM_obs_bins->len) || (len == 0) || (len % 2 == 1))
@@ -1597,7 +1526,6 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       if (n_i > 0.0)
         *m2lnL += n_i * log (lambda_i / n_i);
 
-      lambda += lambda_i;
       *m2lnL += -(lambda_i - n_i);
     }
 
@@ -2587,4 +2515,3 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 }
 
 #endif /* HAVE_CFITSIO */
-

@@ -23,9 +23,8 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""Tests for the sky_match module."""
+"""Distance-based matching: match_2d/3d, filters, select_best, assignment."""
 
-from pathlib import Path
 import re
 import pytest
 import numpy as np
@@ -36,401 +35,21 @@ pytest.importorskip("astropy")
 # pylint: disable=wrong-import-position
 
 from astropy.table import Table
-from astropy.io import fits
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.sky_match import SkyMatch, DistanceMethod, Mask, SelectionCriteria
+from numcosmo_py.catalog import (
+    SkyMatch,
+    SkyMatchResult,
+    DistanceMethod,
+    Mask,
+    SelectionCriteria,
+)
 
 Ncm.cfg_init()
 
 ATOL = 1.0e-7
 RTOL = 1.0e-5
 QUERY_SIZE = 1200
-MATCH_SIZE = 1000
-
-
-@pytest.fixture(name="cosmo")
-def fixture_cosmo():
-    """Return a cosmology object."""
-    return Nc.HICosmoDEXcdm()
-
-
-@pytest.fixture(name="setup_catalogs")
-def fixture_setup_catalogs(tmp_path) -> tuple[Path, Path]:
-    """Create temporary FITS files for testing."""
-    # Create temporary FITS files for testing
-    query_catalog_path = tmp_path / "query_catalog.fits"
-    match_catalog_path = tmp_path / "match_catalog.fits"
-    RA_min = 10.0
-    RA_max = 30.0
-    DEC_min = -30.0
-    DEC_max = -10.0
-    # Create dummy data for query catalog (QUERY_SIZE objects)
-    query_data = Table(
-        {
-            "RA_query": [np.random.uniform(RA_min, RA_max) for _ in range(QUERY_SIZE)],
-            "DEC_query": [
-                np.random.uniform(DEC_min, DEC_max) for _ in range(QUERY_SIZE)
-            ],
-            "z_query": [np.random.uniform(0.9, 1.0) for _ in range(QUERY_SIZE)],
-            "z_err": [np.random.uniform(0.01, 0.02) for _ in range(QUERY_SIZE)],
-            "ID_query": range(QUERY_SIZE),
-        }
-    )
-    query_data.write(query_catalog_path, format="fits")
-    # Create dummy data for match catalog (MATCH_SIZE objects)
-    match_data = Table(
-        {
-            "RA_match": [np.random.uniform(RA_min, RA_max) for _ in range(MATCH_SIZE)],
-            "DEC_match": [
-                np.random.uniform(DEC_min, DEC_max) for _ in range(MATCH_SIZE)
-            ],
-            "z_match": [np.random.uniform(0.9, 1.0) for _ in range(MATCH_SIZE)],
-            "z_err": [np.random.uniform(0.01, 0.02) for _ in range(MATCH_SIZE)],
-            "ID_match": range(MATCH_SIZE),
-        }
-    )
-    match_data.write(match_catalog_path, format="fits")
-
-    return query_catalog_path, match_catalog_path
-
-
-@pytest.fixture(name="setup_catalogs_extra_columns")
-def fixture_setup_catalogs_extra_columns(tmp_path) -> tuple[Path, Path]:
-    """Create temporary FITS files for testing."""
-    # Create temporary FITS files for testing
-    query_catalog_path = tmp_path / "query_catalog.fits"
-    match_catalog_path = tmp_path / "match_catalog.fits"
-    RA_min = 10.0
-    RA_max = 30.0
-    DEC_min = -30.0
-    DEC_max = -10.0
-    # Create dummy data for query catalog (QUERY_SIZE objects)
-    query_data = Table(
-        {
-            "RA_query": [np.random.uniform(RA_min, RA_max) for _ in range(QUERY_SIZE)],
-            "DEC_query": [
-                np.random.uniform(DEC_min, DEC_max) for _ in range(QUERY_SIZE)
-            ],
-            "z_query": [np.random.uniform(0.9, 1.0) for _ in range(QUERY_SIZE)],
-            "ID_query": range(QUERY_SIZE),
-            "extra_query": [np.random.uniform(0.0, 1.0) for _ in range(QUERY_SIZE)],
-        }
-    )
-    query_data.write(query_catalog_path, format="fits")
-    # Create dummy data for match catalog (MATCH_SIZE objects)
-    match_data = Table(
-        {
-            "RA_match": [np.random.uniform(RA_min, RA_max) for _ in range(MATCH_SIZE)],
-            "DEC_match": [
-                np.random.uniform(DEC_min, DEC_max) for _ in range(MATCH_SIZE)
-            ],
-            "z_match": [np.random.uniform(0.9, 1.0) for _ in range(MATCH_SIZE)],
-            "ID_match": range(MATCH_SIZE),
-            "extra_match": [np.random.uniform(0.0, 1.0) for _ in range(MATCH_SIZE)],
-        }
-    )
-    match_data.write(match_catalog_path, format="fits")
-
-    return query_catalog_path, match_catalog_path
-
-
-@pytest.fixture(name="setup_catalogs_nonexistent")
-def fixture_setup_catalogs_nonexistent(tmp_path) -> tuple[Path, Path]:
-    """Create temporary FITS files for testing."""
-    # Create temporary FITS files for testing
-    query_catalog_path = tmp_path / "query_catalog.fits"
-    match_catalog_path = tmp_path / "match_catalog.fits"
-    return query_catalog_path, match_catalog_path
-
-
-@pytest.fixture(name="setup_catalogs_fits_containing_image")
-def fixture_setup_catalogs_fits_containing_image(tmp_path) -> tuple[Path, Path]:
-    """Create temporary FITS files for testing."""
-    # Create temporary FITS files for testing
-    query_catalog_path = tmp_path / "query_catalog.fits"
-    match_catalog_path = tmp_path / "match_catalog.fits"
-    fits_data = np.random.rand(100, 100)
-    hdu = fits.PrimaryHDU(fits_data)
-    hdul = fits.HDUList([hdu])
-    hdul.writeto(query_catalog_path)
-    hdul.writeto(match_catalog_path)
-
-    return query_catalog_path, match_catalog_path
-
-
-@pytest.fixture(name="distance_method", params=list(DistanceMethod))
-def fixture_distance_method(request):
-    """Return a distance method."""
-    return request.param
-
-
-def test_mask() -> None:
-    """Test the mask_new function."""
-    mask_all_true = Mask(mask=np.ones((10, 10), dtype=bool))
-    assert mask_all_true.shape == (10, 10)
-    assert mask_all_true.array.shape == (10, 10)
-
-    mask_all_false = Mask(mask=np.zeros((10, 10), dtype=bool))
-    assert mask_all_false.shape == (10, 10)
-    assert mask_all_false.array.shape == (10, 10)
-
-    mask = mask_all_false & mask_all_true
-    assert mask.shape == (10, 10)
-    assert mask.array.shape == (10, 10)
-
-    assert np.all(mask.array == mask_all_false.array)
-
-    assert np.all(mask_all_true & mask_all_true == mask_all_true)
-    assert np.all(~mask_all_false == mask_all_true)
-
-
-def test_load_fits_data(setup_catalogs):
-    """Test the load_fits_data function."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    matching = SkyMatch.new_from_fits(
-        query_catalog_path=query_catalog_path,
-        query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-        match_catalog_path=match_catalog_path,
-        match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-    )
-    assert matching is not None
-    assert matching.query_data is not None
-    assert matching.match_data is not None
-    assert len(matching.query_data) == QUERY_SIZE
-    assert len(matching.match_data) == MATCH_SIZE
-
-
-def test_load_fits_data_wrong_query_map(setup_catalogs):
-    """Test the load_fits_data function with wrong query map."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(ValueError, match="RA and DEC coordinates mapped by.*"):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={
-                "RA": "RA_bob",
-                "DEC": "DEC_fred",
-                "z": "z_wilma",
-                "ID": "ID_dunga",
-            },
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        )
-
-
-def test_load_fits_data_wrong_match_map(setup_catalogs):
-    """Test the load_fits_data function with wrong match map."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(ValueError, match="RA and DEC coordinates mapped by.*"):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={
-                "RA": "RA_bob",
-                "DEC": "DEC_fred",
-                "z": "z_wilma",
-                "ID": "ID_dunga",
-            },
-        )
-
-
-def test_load_fits_data_nonexistent(setup_catalogs_nonexistent):
-    """Test the load_fits_data function with nonexistent catalog."""
-    query_catalog_path, match_catalog_path = setup_catalogs_nonexistent
-    with pytest.raises(FileNotFoundError):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        )
-
-
-def test_load_fits_data_fits_containing_image(setup_catalogs_fits_containing_image):
-    """Test the load_fits_data function with FITS containing image."""
-    query_catalog_path, match_catalog_path = setup_catalogs_fits_containing_image
-    with pytest.raises(ValueError, match="No table found"):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        )
-
-
-def test_load_fits_data_missing_RA_query(setup_catalogs):
-    """Test the load_fits_data function with missing RA_query column."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"DEC": "DEC_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        )
-
-
-def test_load_fits_data_missing_DEC_query(setup_catalogs):
-    """Test the load_fits_data function with missing DEC_query column."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"RA": "RA_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        )
-
-
-def test_load_fits_data_missing_RA_match(setup_catalogs):
-    """Test the load_fits_data function with missing RA_match column."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"DEC": "DEC_match", "z": "z_match"},
-        )
-
-
-def test_load_fits_data_missing_DEC_match(setup_catalogs):
-    """Test the load_fits_data function with missing DEC_match column."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(ValueError, match="RA and DEC coordinates must be provided."):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"RA": "RA_match", "z": "z_match"},
-        )
-
-
-def test_load_fits_data_wrong_RA_query(setup_catalogs):
-    """Test the load_fits_data function with wrong RA_query column."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(
-        ValueError,
-        match=(
-            "RA and DEC coordinates mapped by .* "
-            "not found in the provided catalog .*"
-        ),
-    ):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={
-                "RA": "RA_query_wrong",
-                "DEC": "DEC_query",
-                "z": "z_query",
-            },
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        )
-
-
-def test_load_fits_data_wrong_DEC_query(setup_catalogs):
-    """Test the load_fits_data function with wrong DEC_query column."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(
-        ValueError,
-        match=(
-            "RA and DEC coordinates mapped by .* "
-            "not found in the provided catalog .*"
-        ),
-    ):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={
-                "RA": "RA_query",
-                "DEC": "DEC_query_wrong",
-                "z": "z_query",
-            },
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        )
-
-
-def test_load_fits_data_wrong_RA_match(setup_catalogs):
-    """Test the load_fits_data function with wrong RA_match column."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(
-        ValueError,
-        match=(
-            "RA and DEC coordinates mapped by .* "
-            "not found in the provided catalog .*"
-        ),
-    ):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={
-                "RA": "RA_match_wrong",
-                "DEC": "DEC_match",
-                "z": "z_match",
-            },
-        )
-
-
-def test_load_fits_data_wrong_DEC_match(setup_catalogs):
-    """Test the load_fits_data function with wrong DEC_match column."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(
-        ValueError,
-        match=(
-            "RA and DEC coordinates mapped by .* "
-            "not found in the provided catalog .*"
-        ),
-    ):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={
-                "RA": "RA_match",
-                "DEC": "DEC_match_wrong",
-                "z": "z_match",
-            },
-        )
-
-
-def test_load_fits_data_wrong_z_query(setup_catalogs):
-    """Test the load_fits_data function with wrong z_query column."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(
-        ValueError,
-        match="Redshift coordinate mapped by .* not found in the provided catalog .*",
-    ):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={
-                "RA": "RA_query",
-                "DEC": "DEC_query",
-                "z": "z_query_wrong",
-            },
-            match_catalog_path=match_catalog_path,
-            match_coordinates={"RA": "RA_match", "DEC": "DEC_match", "z": "z_match"},
-        )
-
-
-def test_load_fits_data_wrong_z_match(setup_catalogs):
-    """Test the load_fits_data function with wrong z_match column."""
-    query_catalog_path, match_catalog_path = setup_catalogs
-    with pytest.raises(
-        ValueError,
-        match="Redshift coordinate mapped by .* not found in the provided catalog .*",
-    ):
-        _ = SkyMatch.new_from_fits(
-            query_catalog_path=query_catalog_path,
-            query_coordinates={"RA": "RA_query", "DEC": "DEC_query", "z": "z_query"},
-            match_catalog_path=match_catalog_path,
-            match_coordinates={
-                "RA": "RA_match",
-                "DEC": "DEC_match",
-                "z": "z_match_wrong",
-            },
-        )
 
 
 def test_match_2d(cosmo, setup_catalogs, distance_method):
@@ -1261,3 +880,90 @@ def test_match_2d_best_cross(cosmo, setup_catalogs, distance_method):
     for query_i, match_i in cross.items():
         assert best_dict[query_i] == match_i
         assert inversed_best_dict[match_i] == query_i
+
+
+# ---------------------------------------------------------------------------
+# Global distance-assignment matching (select_best_assignment)
+# ---------------------------------------------------------------------------
+#
+# These build a SkyMatchResult directly from synthetic neighbour index/distance
+# arrays so the assignment logic is exercised deterministically, independent of
+# the cosmology and the kNN search.
+
+
+def _make_distance_result(indices, distances, n_match=None):
+    """Build a SkyMatchResult from explicit (n_query, k) index/distance arrays."""
+    indices = np.array(indices, dtype=np.int64)
+    distances = np.array(distances, dtype=np.float64)
+    n_query = indices.shape[0]
+    if n_match is None:
+        n_match = int(indices.max()) + 1
+
+    def _coords(n):
+        return Table(
+            {
+                "RA": [float(i) for i in range(n)],
+                "DEC": [-float(i) for i in range(n)],
+                "z": [0.5] * n,
+            }
+        )
+
+    coords = {"RA": "RA", "DEC": "DEC", "z": "z"}
+    sky_match = SkyMatch(_coords(n_query), coords, _coords(n_match), coords)
+    return SkyMatchResult(sky_match, indices, distances)
+
+
+def test_assignment_resolves_collision():
+    """Global assignment reassigns to reach a lower total than greedy collisions."""
+    # q0: rows [0, 1] d [1.0, 3.0]; q1: rows [0, 2] d [1.5, 4.0]
+    result = _make_distance_result([[0, 1], [0, 2]], [[1.0, 3.0], [1.5, 4.0]])
+
+    # Greedy double-books match row 0 (both queries' nearest).
+    greedy = result.select_best(selection_criteria=SelectionCriteria.DISTANCES)
+    assert greedy.query_match_dict == {0: 0, 1: 0}
+
+    # Assignment minimizes the total distance: q0->1 (3.0) + q1->0 (1.5) = 4.5,
+    # which beats the greedy-consistent q0->0 (1.0) + q1->2 (4.0) = 5.0.
+    best = result.select_best_assignment()
+    assert best.query_match_dict == {0: 1, 1: 0}
+    # One-to-one: no match row used twice.
+    assert len(set(best.indices)) == len(best.indices)
+
+
+def test_assignment_matches_greedy_when_disjoint():
+    """With no contended match, assignment equals the greedy nearest choice."""
+    result = _make_distance_result([[0, 1], [2, 3]], [[1.0, 5.0], [2.0, 6.0]])
+
+    greedy = result.select_best(selection_criteria=SelectionCriteria.DISTANCES)
+    best = result.select_best_assignment()
+    assert best.query_match_dict == greedy.query_match_dict == {0: 0, 1: 2}
+
+
+def test_assignment_respects_mask():
+    """Masked-out candidates are not eligible for the assignment."""
+    result = _make_distance_result([[0, 1], [0, 2]], [[1.0, 3.0], [1.5, 4.0]])
+
+    # Forbid q0's second candidate (row 1); q0 can then only take row 0, forcing
+    # q1 onto row 2 to keep both matched.
+    mask = Mask(np.array([[True, False], [True, True]]))
+    best = result.select_best_assignment(mask=mask)
+    assert best.query_match_dict == {0: 0, 1: 2}
+
+
+def test_assignment_one_to_one_drops_losers():
+    """When several queries can only reach one match, only the closest is kept."""
+    result = _make_distance_result([[0], [0], [0]], [[1.0], [2.0], [3.0]], n_match=1)
+
+    best = result.select_best_assignment()
+    assert list(best.query_filter) == [True, False, False]
+    assert list(best.indices) == [0]
+
+
+def test_assignment_empty_mask_yields_no_matches():
+    """An all-False mask produces an empty assignment."""
+    result = _make_distance_result([[0, 1], [0, 2]], [[1.0, 3.0], [1.5, 4.0]])
+
+    mask = Mask(np.zeros((2, 2), dtype=bool))
+    best = result.select_best_assignment(mask=mask)
+    assert not best.query_filter.any()
+    assert len(best.indices) == 0

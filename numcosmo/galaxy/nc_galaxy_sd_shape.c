@@ -466,8 +466,8 @@ nc_galaxy_sd_shape_data_read_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs,
   nc_galaxy_sd_position_data_read_row (data->sdpos_data, obs, i);
   {
     data->coord         = nc_galaxy_wl_obs_get_coord (obs);
-    data->epsilon_int_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1, i);
-    data->epsilon_int_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2, i);
+    data->epsilon_int_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1, i, NULL);
+    data->epsilon_int_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2, i, NULL);
 
     data->ldata_read_row (data, obs, i);
   }
@@ -487,8 +487,8 @@ nc_galaxy_sd_shape_data_write_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs
 {
   nc_galaxy_sd_position_data_write_row (data->sdpos_data, obs, i);
   {
-    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1, i, data->epsilon_int_1);
-    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2, i, data->epsilon_int_2);
+    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_1, i, data->epsilon_int_1, NULL);
+    nc_galaxy_wl_obs_set (obs, NC_GALAXY_SD_SHAPE_COL_EPSILON_INT_2, i, data->epsilon_int_2, NULL);
 
     data->ldata_write_row (data, obs, i);
   }
