@@ -49,7 +49,12 @@
  * - `z_obs_param_0` .. and `lnM_obs_param_0` .. : the observable parameter
  *   blocks, when the models declare any;
  * - `ra`, `dec`: sky position (degrees), only when a #NcmSkyFootprint is set
- *   (see nc_halo_catalog_generator_set_footprint()).
+ *   (see nc_halo_catalog_generator_set_footprint());
+ * - `r_Delta`: the spherical-overdensity radius (Mpc) of the true halo, only when
+ *   radius output is enabled (see nc_halo_catalog_generator_set_with_radius()).
+ *   It is computed from $M_\Delta = \frac{4\pi}{3}\,\Delta\,\rho_\mathrm{bg}\,
+ *   r_\Delta^3$ using the mass definition ($\Delta$ and background density)
+ *   carried by the multiplicity function used to draw the counts.
  *
  */
 
@@ -61,7 +66,10 @@
 #include "lss/nc_cluster_abundance.h"
 #include "lss/nc_cluster_redshift.h"
 #include "lss/nc_cluster_mass.h"
+#include "lss/nc_halo_mass_function.h"
+#include "lss/nc_multiplicity_func.h"
 #include "nc_hicosmo.h"
+#include "math/ncm_c.h"
 #include "math/ncm_matrix.h"
 #include "math/ncm_spline.h"
 #include "math/ncm_spline2d.h"
@@ -70,6 +78,7 @@ typedef struct _NcHaloCatalogGeneratorPrivate
 {
   NcClusterAbundance *cad;
   NcmSkyFootprint *footprint;
+  gboolean with_radius;
 } NcHaloCatalogGeneratorPrivate;
 
 enum
@@ -77,6 +86,7 @@ enum
   PROP_0,
   PROP_ABUNDANCE,
   PROP_FOOTPRINT,
+  PROP_WITH_RADIUS,
 };
 
 struct _NcHaloCatalogGenerator
@@ -91,8 +101,9 @@ nc_halo_catalog_generator_init (NcHaloCatalogGenerator *gen)
 {
   NcHaloCatalogGeneratorPrivate * const self = nc_halo_catalog_generator_get_instance_private (gen);
 
-  self->cad       = NULL;
-  self->footprint = NULL;
+  self->cad         = NULL;
+  self->footprint   = NULL;
+  self->with_radius = FALSE;
 }
 
 static void
@@ -109,6 +120,9 @@ _nc_halo_catalog_generator_set_property (GObject *object, guint prop_id, const G
       break;
     case PROP_FOOTPRINT:
       nc_halo_catalog_generator_set_footprint (gen, g_value_get_object (value));
+      break;
+    case PROP_WITH_RADIUS:
+      nc_halo_catalog_generator_set_with_radius (gen, g_value_get_boolean (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -129,6 +143,9 @@ _nc_halo_catalog_generator_get_property (GObject *object, guint prop_id, GValue 
       break;
     case PROP_FOOTPRINT:
       g_value_set_object (value, self->footprint);
+      break;
+    case PROP_WITH_RADIUS:
+      g_value_set_boolean (value, self->with_radius);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -186,6 +203,22 @@ nc_halo_catalog_generator_class_init (NcHaloCatalogGeneratorClass *klass)
                                                         "Optional sky footprint for position sampling",
                                                         NCM_TYPE_SKY_FOOTPRINT,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcHaloCatalogGenerator:with-radius:
+   *
+   * Whether to append an `r_Delta` column with the spherical-overdensity radius
+   * (Mpc) of each true halo, computed from the mass definition carried by the
+   * multiplicity function. Disabled by default.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_WITH_RADIUS,
+                                   g_param_spec_boolean ("with-radius",
+                                                         "With radius",
+                                                         "Whether to output the halo spherical-overdensity radius",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
 /**
@@ -298,8 +331,65 @@ nc_halo_catalog_generator_peek_footprint (NcHaloCatalogGenerator *gen)
   return self->footprint;
 }
 
+/**
+ * nc_halo_catalog_generator_set_with_radius:
+ * @gen: a #NcHaloCatalogGenerator
+ * @with_radius: whether to output the halo radius
+ *
+ * Sets whether the generated catalog gains an `r_Delta` column with the
+ * spherical-overdensity radius (Mpc) of each true halo.
+ *
+ */
+void
+nc_halo_catalog_generator_set_with_radius (NcHaloCatalogGenerator *gen, gboolean with_radius)
+{
+  NcHaloCatalogGeneratorPrivate * const self = nc_halo_catalog_generator_get_instance_private (gen);
+
+  self->with_radius = with_radius;
+}
+
+/**
+ * nc_halo_catalog_generator_get_with_radius:
+ * @gen: a #NcHaloCatalogGenerator
+ *
+ * Gets whether the generated catalog includes the `r_Delta` radius column.
+ *
+ * Returns: %TRUE when the radius column is generated.
+ */
+gboolean
+nc_halo_catalog_generator_get_with_radius (NcHaloCatalogGenerator *gen)
+{
+  NcHaloCatalogGeneratorPrivate * const self = nc_halo_catalog_generator_get_instance_private (gen);
+
+  return self->with_radius;
+}
+
+static gdouble
+_nc_halo_catalog_generator_radius (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble lnM, gdouble z)
+{
+  const gdouble rho_crit0  = ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo);
+  const gdouble Delta      = nc_multiplicity_func_get_Delta (mulf);
+  const gdouble M          = exp (lnM);
+  gdouble Delta_rho_bg;
+
+  switch (nc_multiplicity_func_get_mdef (mulf))
+  {
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
+      Delta_rho_bg = Delta * rho_crit0 * nc_hicosmo_E2Omega_m (cosmo, z);
+      break;
+    case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
+      Delta_rho_bg = Delta * rho_crit0 * nc_hicosmo_E2 (cosmo, z);
+      break;
+    default:
+      g_error ("nc_halo_catalog_generator: radius output unsupported for this mass definition");
+      return 0.0;
+  }
+
+  return cbrt (3.0 * M / (4.0 * M_PI * Delta_rho_bg));
+}
+
 static GStrv
-_nc_halo_catalog_generator_build_columns (guint z_obs_len, guint z_obs_params_len, guint lnM_obs_len, guint lnM_obs_params_len, gboolean with_position)
+_nc_halo_catalog_generator_build_columns (guint z_obs_len, guint z_obs_params_len, guint lnM_obs_len, guint lnM_obs_params_len, gboolean with_position, gboolean with_radius)
 {
   GPtrArray *cols = g_ptr_array_new ();
   guint k;
@@ -324,6 +414,9 @@ _nc_halo_catalog_generator_build_columns (guint z_obs_len, guint z_obs_params_le
     g_ptr_array_add (cols, g_strdup ("ra"));
     g_ptr_array_add (cols, g_strdup ("dec"));
   }
+
+  if (with_radius)
+    g_ptr_array_add (cols, g_strdup ("r_Delta"));
 
   g_ptr_array_add (cols, NULL);
 
@@ -357,6 +450,8 @@ nc_halo_catalog_generator_generate (NcHaloCatalogGenerator *gen, NcmMSet *mset, 
   const guint lnM_obs_len        = nc_cluster_mass_class_obs_len (NC_CLUSTER_MASS_GET_CLASS (clusterm));
   const guint lnM_obs_params_len = nc_cluster_mass_class_obs_params_len (NC_CLUSTER_MASS_GET_CLASS (clusterm));
   const gboolean with_position   = self->footprint != NULL;
+  const gboolean with_radius     = self->with_radius;
+  NcMultiplicityFunc *mulf       = with_radius ? nc_halo_mass_function_peek_multiplicity_function (cad->mfp) : NULL;
 
   gdouble *zi_obs          = g_new (gdouble, z_obs_len);
   gdouble *zi_obs_params   = z_obs_params_len > 0 ? g_new (gdouble, z_obs_params_len) : NULL;
@@ -417,12 +512,19 @@ nc_halo_catalog_generator_generate (NcHaloCatalogGenerator *gen, NcmMSet *mset, 
           g_array_append_val (rows, dec);
         }
 
+        if (with_radius)
+        {
+          const gdouble r_Delta = _nc_halo_catalog_generator_radius (mulf, cosmo, lnM_true, z_true);
+
+          g_array_append_val (rows, r_Delta);
+        }
+
         np++;
       }
     }
   }
 
-  col_names = _nc_halo_catalog_generator_build_columns (z_obs_len, z_obs_params_len, lnM_obs_len, lnM_obs_params_len, with_position);
+  col_names = _nc_halo_catalog_generator_build_columns (z_obs_len, z_obs_params_len, lnM_obs_len, lnM_obs_params_len, with_position, with_radius);
   hcat      = nc_halo_catalog_new (NC_HALO_CATALOG_KIND_CLUSTER, NULL, NULL, np, col_names, NULL, 0);
 
   if (np > 0)

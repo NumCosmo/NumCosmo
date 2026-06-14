@@ -15898,6 +15898,8 @@ class HaloCatalogGenerator(GObject.Object):
         Cluster abundance model
       footprint -> NcmSkyFootprint: Footprint
         Optional sky footprint for position sampling
+      with-radius -> gboolean: With radius
+        Whether to output the halo spherical-overdensity radius
 
     Signals from GObject:
       notify (GParam)
@@ -15906,12 +15908,14 @@ class HaloCatalogGenerator(GObject.Object):
     class Props:
         abundance: ClusterAbundance
         footprint: typing.Optional[NumCosmoMath.SkyFootprint]
+        with_radius: bool
 
     props: Props = ...
     def __init__(
         self,
         abundance: ClusterAbundance = ...,
         footprint: typing.Optional[NumCosmoMath.SkyFootprint] = ...,
+        with_radius: bool = ...,
     ) -> None: ...
     @staticmethod
     def clear(gen: HaloCatalogGenerator) -> None: ...
@@ -15919,6 +15923,7 @@ class HaloCatalogGenerator(GObject.Object):
     def generate(
         self, mset: NumCosmoMath.MSet, rng: NumCosmoMath.RNG
     ) -> HaloCatalog: ...
+    def get_with_radius(self) -> bool: ...
     @classmethod
     def new(cls, cad: ClusterAbundance) -> HaloCatalogGenerator: ...
     def peek_abundance(self) -> ClusterAbundance: ...
@@ -15927,6 +15932,7 @@ class HaloCatalogGenerator(GObject.Object):
     def set_footprint(
         self, footprint: typing.Optional[NumCosmoMath.SkyFootprint] = None
     ) -> None: ...
+    def set_with_radius(self, with_radius: bool) -> None: ...
 
 class HaloCatalogGeneratorClass(GObject.GPointer):
     r"""

@@ -52,6 +52,9 @@ NcClusterAbundance *nc_halo_catalog_generator_peek_abundance (NcHaloCatalogGener
 void nc_halo_catalog_generator_set_footprint (NcHaloCatalogGenerator *gen, NcmSkyFootprint *footprint);
 NcmSkyFootprint *nc_halo_catalog_generator_peek_footprint (NcHaloCatalogGenerator *gen);
 
+void nc_halo_catalog_generator_set_with_radius (NcHaloCatalogGenerator *gen, gboolean with_radius);
+gboolean nc_halo_catalog_generator_get_with_radius (NcHaloCatalogGenerator *gen);
+
 NcHaloCatalog *nc_halo_catalog_generator_generate (NcHaloCatalogGenerator *gen, NcmMSet *mset, NcmRNG *rng);
 
 G_END_DECLS

@@ -135,6 +135,42 @@ def test_generate_with_footprint_adds_positions() -> None:
     assert 4100 <= hcat.len() <= 4242
 
 
+def test_generate_with_radius_adds_r_delta() -> None:
+    """Enabling radius output appends an r_Delta column with the SO radius."""
+    cosmo, cad, cluster_z, cluster_m, mset = _setup()
+    cad.set_area(AREA)
+    cad.prepare(cosmo, cluster_z, cluster_m)
+
+    gen = Nc.HaloCatalogGenerator.new(cad)
+    gen.set_with_radius(True)
+    assert gen.get_with_radius()
+
+    rng = Ncm.RNG.seeded_new(None, 0)
+    table = catalog_to_table(gen.generate(mset, rng))
+
+    assert table.colnames == [
+        "z_true",
+        "lnM_true",
+        "z_obs_0",
+        "lnM_obs_0",
+        "r_Delta",
+    ]
+
+    # The mass function uses a critical Delta=200 definition, so
+    # M = (4/3) pi Delta rho_crit(z) r^3 with rho_crit(z) = rho_crit0 h^2 E2(z).
+    z_true = np.asarray(table["z_true"], dtype=np.float64)
+    lnm_true = np.asarray(table["lnM_true"], dtype=np.float64)
+    r_delta = np.asarray(table["r_Delta"], dtype=np.float64)
+
+    rho_crit0 = Ncm.C.crit_mass_density_h2_solar_mass_Mpc3() * cosmo.h2()
+    e2 = np.array([cosmo.E2(z) for z in z_true])
+    delta_rho_bg = 200.0 * rho_crit0 * e2
+    expected = np.cbrt(3.0 * np.exp(lnm_true) / (4.0 * np.pi * delta_rho_bg))
+
+    assert r_delta.shape == z_true.shape
+    np.testing.assert_allclose(r_delta, expected, rtol=1e-12)
+
+
 def test_generate_matches_golden_snapshot() -> None:
     """Standalone generation reproduces the NcDataClusterNCount golden snapshot."""
     cosmo, cad, cluster_z, cluster_m, mset = _setup()

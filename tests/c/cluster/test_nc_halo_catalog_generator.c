@@ -45,6 +45,7 @@ void test_nc_halo_catalog_generator_free (TestNcHaloCatalogGenerator *test, gcon
 void test_nc_halo_catalog_generator_ref (TestNcHaloCatalogGenerator *test, gconstpointer pdata);
 void test_nc_halo_catalog_generator_abundance (TestNcHaloCatalogGenerator *test, gconstpointer pdata);
 void test_nc_halo_catalog_generator_footprint (TestNcHaloCatalogGenerator *test, gconstpointer pdata);
+void test_nc_halo_catalog_generator_with_radius (TestNcHaloCatalogGenerator *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -66,6 +67,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/halo_catalog_generator/footprint", TestNcHaloCatalogGenerator, NULL,
               &test_nc_halo_catalog_generator_new,
               &test_nc_halo_catalog_generator_footprint,
+              &test_nc_halo_catalog_generator_free);
+
+  g_test_add ("/nc/halo_catalog_generator/with_radius", TestNcHaloCatalogGenerator, NULL,
+              &test_nc_halo_catalog_generator_new,
+              &test_nc_halo_catalog_generator_with_radius,
               &test_nc_halo_catalog_generator_free);
 
   g_test_run ();
@@ -136,4 +142,16 @@ test_nc_halo_catalog_generator_footprint (TestNcHaloCatalogGenerator *test, gcon
   g_assert_null (nc_halo_catalog_generator_peek_footprint (test->gen));
 
   ncm_sky_footprint_rectangular_free (rect);
+}
+
+void
+test_nc_halo_catalog_generator_with_radius (TestNcHaloCatalogGenerator *test, gconstpointer pdata)
+{
+  g_assert_false (nc_halo_catalog_generator_get_with_radius (test->gen));
+
+  nc_halo_catalog_generator_set_with_radius (test->gen, TRUE);
+  g_assert_true (nc_halo_catalog_generator_get_with_radius (test->gen));
+
+  nc_halo_catalog_generator_set_with_radius (test->gen, FALSE);
+  g_assert_false (nc_halo_catalog_generator_get_with_radius (test->gen));
 }
