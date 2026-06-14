@@ -35,6 +35,10 @@ from .table import (
     catalog_from_table,
     catalog_to_table,
 )
+from .pipeline import (
+    MockCatalogs,
+    MockPipeline,
+)
 
 __all__ = [
     "BestCandidates",
@@ -59,4 +63,6 @@ __all__ = [
     "get_ratios",
     "catalog_from_table",
     "catalog_to_table",
+    "MockCatalogs",
+    "MockPipeline",
 ]
