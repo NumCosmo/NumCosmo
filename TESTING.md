@@ -99,20 +99,33 @@ the project test-overhaul plan.
 
 ## 3. Capabilities (the Capability axis)
 
-For tests that need an optional dependency or a special runtime. These are **gated**: the
-default run skips them; they are enabled with a `--run-*` flag and selected with `-m`.
+For tests that need an optional dependency or a special runtime. There are **two** gating
+mechanisms, by intent:
+
+**(a) Opt-in capabilities** — runnable in most environments but skipped by default because
+they are heavy or special. Gated by a `--run-*` flag (the skip logic lives in
+`tests/python/conftest.py`), selected with `-m`:
 
 | Marker | Needs | Enable with |
 |--------|-------|-------------|
 | `mpi` | MPI runtime (`mpiexec`) | `--run-mpi` |
-| `ccl` | `pyccl` (cross-checks vs CCL) | `--run-ccl` |
 | `app` | CLI dependencies / heavy app flows | `--run-app` |
 | `powspec` | power-spectrum extras | `--run-powspec` |
 | `xcor` | cross-correlation extras | `--run-xcor` |
 | `sphere_map` | sphere-map extras | `--run-sphere-map` |
 
-Capability is orthogonal to tier: a test can be `unit` *and* `ccl`. Every marker used must
-be declared in `tests/python/pytest.ini` (today `sphere_map` is used but undeclared — fix).
+**(b) Optional-dependency tests** — should run *whenever the dependency is installed* and
+skip silently otherwise. Gated at module top by `pytest.importorskip("<dep>")`, **not** a
+`--run-*` flag:
+
+| Dependency | Marker | Gate |
+|-----------|--------|------|
+| `pyccl` | `ccl` (selection label) | `pytest.importorskip("pyccl")` |
+| `getdist`, `astropy`, `healpy`, … | — | `pytest.importorskip(...)` |
+
+Capability is orthogonal to tier: a test can be `unit` *and* `ccl`. **All markers are
+declared once in `tests/python/pytest.ini`** (the single source); `conftest.py` only wires
+the `--run-*` options and their skip logic — it must not re-declare markers.
 
 ---
 
