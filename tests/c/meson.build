@@ -269,6 +269,10 @@ cluster_tests = [
         'sources': ['cluster/test_nc_halo_catalog_generator.c'],
     },
     {
+        'name': 'nc_halo_catalog_member_generator',
+        'sources': ['cluster/test_nc_halo_catalog_member_generator.c'],
+    },
+    {
         'name': 'nc_halo_bias',
         'sources': ['cluster/test_nc_halo_bias.c'],
     },

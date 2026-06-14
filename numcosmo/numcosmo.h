@@ -111,6 +111,7 @@
 #include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/lss/nc_halo_catalog.h>
 #include <numcosmo/lss/nc_halo_catalog_generator.h>
+#include <numcosmo/lss/nc_halo_catalog_member_generator.h>
 #include <numcosmo/lss/nc_halo_position.h>
 #include <numcosmo/lss/nc_halo_density_profile.h>
 #include <numcosmo/lss/nc_halo_density_profile_nfw.h>
