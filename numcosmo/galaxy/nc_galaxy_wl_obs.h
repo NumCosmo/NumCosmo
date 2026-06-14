@@ -34,6 +34,7 @@
 #include <stdarg.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_enum_types.h>
+#include <numcosmo/math/ncm_catalog.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_obj_array.h>
 #include <numcosmo/math/ncm_spline.h>
@@ -43,7 +44,7 @@ G_BEGIN_DECLS
 
 #define NC_TYPE_GALAXY_WL_OBS (nc_galaxy_wl_obs_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcGalaxyWLObs, nc_galaxy_wl_obs, NC, GALAXY_WL_OBS, GObject)
+G_DECLARE_FINAL_TYPE (NcGalaxyWLObs, nc_galaxy_wl_obs, NC, GALAXY_WL_OBS, NcmCatalog)
 
 typedef struct _NcGalaxyWLObsPrivate NcGalaxyWLObsPrivate;
 
@@ -109,13 +110,14 @@ void nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs);
 
 gboolean nc_galaxy_wl_obs_get_index (NcGalaxyWLObs *obs, const gchar *col, guint *i);
 
-void nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val);
+void nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val, GError **error);
 void nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz);
 
-gdouble nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i);
+gdouble nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i, GError **error);
 NcmSpline *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
 
 GStrv nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs);
+NcmMatrix *nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs);
 
 void nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcGalaxyWLObsCoord coord);
 NcGalaxyWLObsCoord nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs);
@@ -127,4 +129,3 @@ guint nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs);
 G_END_DECLS
 
 #endif /* _NC_GALAXY_WL_OBS_H */
-

@@ -31,6 +31,9 @@
 /* Macros, Constants and Enums */
 #include <numcosmo/ncm_enum_types.h>
 #include <numcosmo/math/ncm_c.h>
+#include <numcosmo/math/ncm_catalog.h>
+#include <numcosmo/math/ncm_sky_footprint.h>
+#include <numcosmo/math/ncm_sky_footprint_rectangular.h>
 
 /* MPI Objects */
 #include <numcosmo/math/ncm_mpi_job.h>
