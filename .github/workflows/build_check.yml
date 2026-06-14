@@ -11,11 +11,15 @@ on:
 env:
   CONDA_ENV: numcosmo_developer
   CACHE_VERSION: 0
-  # Pin BLAS/OpenMP to a single thread per test process. Test-level parallelism is
-  # provided by `meson test --num-processes` (≈ runner cores); letting BLAS/OpenMP also
-  # spin up per-core threads inside each process causes ~cores^2 oversubscription, and on
-  # the mixed apt/pip OpenBLAS stack it deadlocks (e.g. scipy.linalg.solve in
-  # test_sbessel_ode_solver). NumCosmo's own ESMCMC thread pool / MPI are unaffected.
+  # Pin BLAS/OpenMP to a single thread per test process on the default lane. Test-level
+  # parallelism is provided by `meson test --num-processes` (≈ runner cores); letting
+  # BLAS/OpenMP also spin up per-core threads inside each process causes ~cores^2
+  # oversubscription, and on the mixed apt/pip OpenBLAS stack it deadlocks (e.g.
+  # scipy.linalg.solve in test_sbessel_ode_solver, which is omp simd / BLAS, not threads).
+  # NOTE: this serializes NumCosmo's OpenMP-parallel paths too (ESMCMC/MC/cluster_wl use
+  # `#pragma omp parallel`, governed by OMP_NUM_THREADS — there is no separate thread pool).
+  # Those parallel branches are covered separately by a dedicated OMP_NUM_THREADS>1 lane
+  # (see TESTING.md); MPI tests run under mpiexec in their own lane.
   OMP_NUM_THREADS: 1
   OMP_MAX_ACTIVE_LEVELS: 1
   OMP_THREAD_LIMIT: 1

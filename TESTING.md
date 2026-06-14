@@ -113,6 +113,7 @@ they are heavy or special. Gated by a `--run-*` flag (the skip logic lives in
 | `powspec` | power-spectrum extras | `--run-powspec` |
 | `xcor` | cross-correlation extras | `--run-xcor` |
 | `sphere_map` | sphere-map extras | `--run-sphere-map` |
+| `omp` | `OMP_NUM_THREADS>1` to exercise the OpenMP-parallel branch | dedicated lane (see below) |
 
 **(b) Optional-dependency tests** — should run *whenever the dependency is installed* and
 skip silently otherwise. Gated at module top by `pytest.importorskip("<dep>")`, **not** a
@@ -126,6 +127,37 @@ skip silently otherwise. Gated at module top by `pytest.importorskip("<dep>")`, 
 Capability is orthogonal to tier: a test can be `unit` *and* `ccl`. **All markers are
 declared once in `tests/python/pytest.ini`** (the single source); `conftest.py` only wires
 the `--run-*` options and their skip logic — it must not re-declare markers.
+
+### Parallelism and the `OMP_NUM_THREADS` pin
+
+NumCosmo has three distinct parallel mechanisms, which must not be confused:
+
+- **OpenMP threads** — `#pragma omp parallel [for]`, governed by `OMP_NUM_THREADS`. Used by
+  `ncm_fit_esmcmc`, `ncm_fit_mc`, `nc_data_cluster_wl` (when `enable_parallel`),
+  `ncm_stats_dist`, `ncm_stats_dist_vkde`. Note: ESMCMC's `set_nthreads(N)` only toggles the
+  `if (nthreads > 1)` clause; the *actual* thread count is `OMP_NUM_THREADS`. There is **no**
+  separate NumCosmo thread pool for these — it is OpenMP.
+- **MPI** — separate processes via `mpiexec`; some objects in `perturbations/` branch on both
+  OMP and MPI.
+- **OpenMP SIMD** — `#pragma omp simd` (e.g. `ncm_sbessel_ode_solver`) is *vectorization*, not
+  threading; **unaffected** by `OMP_NUM_THREADS`.
+
+The two lanes are inverses of each other; in both, total live threads ≈ runner cores:
+
+| Lane | Process parallelism | `OMP_NUM_THREADS` |
+|------|--------------------|-------------------|
+| **default** | many: `--num-processes=$(getconf _NPROCESSORS_ONLN)` / pytest `-n auto` | `1` |
+| **omp** | **off**: `--num-processes=1` / pytest **without** xdist | `$(getconf _NPROCESSORS_ONLN)` (all cores) |
+
+CI pins `OMP_NUM_THREADS=1` (and BLAS threads) on the **default lane** to avoid cores²
+oversubscription and the mixed-OpenBLAS deadlock. Consequence: the OpenMP-parallel *branches*
+(thread coordination, `reduction`, scheduling) are **not exercised** on the default lane. To
+cover them, tests with an OpenMP-parallel path carry the **`omp`** marker and are
+**additionally** run in the dedicated omp lane above: process-level parallelism **disabled**
+so the one test process owns the machine, and `OMP_NUM_THREADS` set to the cores available on
+the runner so the parallel path actually uses them. This mirrors how `mpi` gets its own
+`mpiexec` lane. `omp` is a selection label (the same tests still run serially on the default
+lane); it is not a skip.
 
 ---
 
