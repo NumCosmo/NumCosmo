@@ -28,7 +28,9 @@ if enable_gir and python_for_tests.found()
 
     pytest = find_program('pytest', required: true)
 
-    pytest_base_args = ['-ra', '--tb=short']
+    # --durations surfaces the slowest tests in every run, so tier/speed regressions are
+    # visible in CI logs instead of needing a dedicated profiling pass.
+    pytest_base_args = ['-ra', '--tb=short', '--durations=25']
     pytest_protocol = 'exitcode'
     # We are using xdist for parallel test execution, so we set this to false to avoid
     # conflicts with pytest's internal parallelization mechanisms.
@@ -57,14 +59,37 @@ if enable_gir and python_for_tests.found()
         pytest_parallel_args = pytest_base_args
     endif
 
-    # Full Python test suite (excluding specialized markers)
+    # Default (unit) lane: everything except the statistical/acceptance tiers (see
+    # TESTING.md). Capability-gated tests (powspec/xcor/app/...) are already skipped here by
+    # conftest since no --run-* flag is passed. The real timeout bounds a total hang;
+    # per-test hangs are dumped by pytest.ini's faulthandler_timeout. The coverage job
+    # neutralizes this timeout via `--timeout-multiplier 0`.
     test(
         'pytest',
         pytest,
-        args: pytest_parallel_args + [meson.current_source_dir()],
+        args: pytest_parallel_args
+        + ['-m', 'not statistical and not acceptance', meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env,
-        timeout: 0,
+        timeout: 1200,
+        protocol: pytest_protocol,
+        is_parallel: pytest_is_parallel,
+        suite: ['python'],
+    )
+
+    # Acceptance tier: full integration / posterior-recovery / pipeline tests, moved off the
+    # default lane. Kept in the `python` suite (like pytest-sphere_map) so the no-filter and
+    # `--suite python` CI runs still execute them without a dedicated shard. Not capability
+    # gated, so no --run-* flag. (No statistical-tier lane yet: heavy-only tiering left the
+    # `statistical` marker with no Python members; add the lane when one exists, since an
+    # empty `-m statistical` selection makes pytest exit 5 = failure.)
+    test(
+        'pytest-acceptance',
+        pytest,
+        args: pytest_parallel_args + ['-m', 'acceptance', meson.current_source_dir()],
+        depends: [numcosmo_gir, numcosmo_math_gir],
+        env: env,
+        timeout: 1800,
         protocol: pytest_protocol,
         is_parallel: pytest_is_parallel,
         suite: ['python'],

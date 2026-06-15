@@ -267,6 +267,7 @@ class TestMFuncArray:
         assert isinstance(func1, Ncm.MSetFuncList)
 
 
+@pytest.mark.acceptance
 class TestCovarianceMatrices:
     """Test SSC covariance matrix creation."""
 
@@ -400,6 +401,7 @@ class TestClusterModels:
             jpas.create_cluster_redshift("invalid_type")  # type: ignore
 
 
+@pytest.mark.acceptance
 class TestGenerateJpasForecast:
     """Test main experiment generation function."""
 
