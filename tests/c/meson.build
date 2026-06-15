@@ -166,47 +166,32 @@ math_tests = [
     },
 ]
 
-# Cosmology tests
-cosmology_tests = [
+# Model tests (NcHICosmo, recombination, distance, CLASS backend)
+model_tests = [
     {
         'name': 'nc_hicosmo_de',
-        'sources': ['cosmology/test_nc_hicosmo_de.c'],
+        'sources': ['model/test_nc_hicosmo_de.c'],
     },
     {
         'name': 'nc_hicosmo_qgw',
-        'sources': ['cosmology/test_nc_hicosmo_qgw.c'],
-    },
-    {
-        'name': 'nc_window',
-        'sources': ['cosmology/test_nc_window.c'],
-    },
-    {
-        'name': 'nc_transfer_func',
-        'sources': ['cosmology/test_nc_transfer_func.c'],
+        'sources': ['model/test_nc_hicosmo_qgw.c'],
     },
     {
         'name': 'nc_recomb',
-        'sources': ['cosmology/test_nc_recomb.c'],
+        'sources': ['model/test_nc_recomb.c'],
     },
     {
         'name': 'nc_cbe',
-        'sources': ['cosmology/test_nc_cbe.c'],
+        'sources': ['model/test_nc_cbe.c'],
         'timeout': 0,
     },
     {
         'name': 'nc_hiqg_1d',
-        'sources': ['cosmology/test_nc_hiqg_1d.c'],
-    },
-    {
-        'name': 'nc_powspec',
-        'sources': ['cosmology/test_nc_powspec.c'],
-        'timeout': 0,
-        'priority': 10,
-        'suite': ['c-slow', 'powspec'],
+        'sources': ['model/test_nc_hiqg_1d.c'],
     },
     {
         'name': 'nc_distance',
-        'sources': ['cosmology/test_nc_distance.c'],
+        'sources': ['model/test_nc_distance.c'],
     },
 ]
 
@@ -258,39 +243,62 @@ data_tests = [
     },
 ]
 
-# Cluster and halo tests
-cluster_tests = [
+# Large-scale structure tests (halos, clusters, bias, transfer, power spectrum, window)
+lss_tests = [
     {
         'name': 'nc_halo_catalog',
-        'sources': ['cluster/test_nc_halo_catalog.c'],
+        'sources': ['lss/test_nc_halo_catalog.c'],
     },
     {
         'name': 'nc_halo_catalog_generator',
-        'sources': ['cluster/test_nc_halo_catalog_generator.c'],
+        'sources': ['lss/test_nc_halo_catalog_generator.c'],
     },
     {
         'name': 'nc_halo_catalog_member_generator',
-        'sources': ['cluster/test_nc_halo_catalog_member_generator.c'],
+        'sources': ['lss/test_nc_halo_catalog_member_generator.c'],
     },
     {
         'name': 'nc_halo_bias',
-        'sources': ['cluster/test_nc_halo_bias.c'],
+        'sources': ['lss/test_nc_halo_bias.c'],
     },
     {
         'name': 'nc_cluster_pseudo_counts',
-        'sources': ['cluster/test_nc_cluster_pseudo_counts.c'],
+        'sources': ['lss/test_nc_cluster_pseudo_counts.c'],
     },
     {
         'name': 'nc_cluster_abundance',
-        'sources': ['cluster/test_nc_cluster_abundance.c'],
+        'sources': ['lss/test_nc_cluster_abundance.c'],
     },
     {
         'name': 'nc_halo_density_profile',
-        'sources': ['cluster/test_nc_halo_density_profile.c'],
+        'sources': ['lss/test_nc_halo_density_profile.c'],
     },
     {
         'name': 'nc_halo_position',
-        'sources': ['cluster/test_nc_halo_position.c'],
+        'sources': ['lss/test_nc_halo_position.c'],
+    },
+    {
+        'name': 'nc_window',
+        'sources': ['lss/test_nc_window.c'],
+    },
+    {
+        'name': 'nc_transfer_func',
+        'sources': ['lss/test_nc_transfer_func.c'],
+    },
+    {
+        'name': 'nc_powspec',
+        'sources': ['lss/test_nc_powspec.c'],
+        'timeout': 0,
+        'priority': 10,
+        'suite': ['c-slow', 'powspec'],
+    },
+    {
+        'name': 'nc_galaxy_acf',
+        'sources': ['lss/test_nc_galaxy_acf.c'],
+    },
+    {
+        'name': 'nc_wl_surface_mass_density',
+        'sources': ['lss/test_nc_wl_surface_mass_density.c'],
     },
 ]
 
@@ -299,14 +307,6 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_hod',
         'sources': ['galaxy/test_nc_galaxy_hod.c'],
-    },
-    {
-        'name': 'nc_galaxy_acf',
-        'sources': ['galaxy/test_nc_galaxy_acf.c'],
-    },
-    {
-        'name': 'nc_wl_surface_mass_density',
-        'sources': ['galaxy/test_nc_wl_surface_mass_density.c'],
     },
     {
         'name': 'nc_galaxy_wl_obs',
@@ -331,7 +331,7 @@ galaxy_tests = [
 ]
 
 # Combine all test arrays
-all_c_tests = math_tests + cosmology_tests + data_tests + cluster_tests + galaxy_tests
+all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests
 
 # Build and register all tests
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
