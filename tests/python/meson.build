@@ -78,11 +78,11 @@ if enable_gir and python_for_tests.found()
     )
 
     # Acceptance tier: full integration / posterior-recovery / pipeline tests, moved off the
-    # default lane. Kept in the `python` suite (like pytest-sphere_map) so the no-filter and
-    # `--suite python` CI runs still execute them without a dedicated shard. Not capability
-    # gated, so no --run-* flag. (No statistical-tier lane yet: heavy-only tiering left the
-    # `statistical` marker with no Python members; add the lane when one exists, since an
-    # empty `-m statistical` selection makes pytest exit 5 = failure.)
+    # default lane. Its own `py-acceptance` suite so the fast non-coverage CI jobs can exclude
+    # it (--no-suite py-acceptance) while the coverage job runs it as a dedicated shard. Not
+    # capability gated, so no --run-* flag. (No statistical-tier lane yet: heavy-only tiering
+    # left the `statistical` marker with no Python members; add the lane when one exists, since
+    # an empty `-m statistical` selection makes pytest exit 5 = failure.)
     test(
         'pytest-acceptance',
         pytest,
@@ -92,7 +92,7 @@ if enable_gir and python_for_tests.found()
         timeout: 1800,
         protocol: pytest_protocol,
         is_parallel: pytest_is_parallel,
-        suite: ['python'],
+        suite: ['py-acceptance'],
     )
 
     # Powspec subset

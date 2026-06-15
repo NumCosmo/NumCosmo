@@ -61,16 +61,25 @@ typedef struct _TestNcPowspecFunc
   gpointer pdata;
 } TestNcPowspecFuncData;
 
-#define TEST_NC_POWSPECS_LEN 6
-TestNcPowspecFuncData powspecs[TEST_NC_POWSPECS_LEN] =
+/* Built twice from this source (see tests/c/meson.build): with -DPOWSPEC_SPLIT_CHEAP only
+ * the analytic transfer-function spectra (EH/BBKS, fast); with -DPOWSPEC_SPLIT_EXPENSIVE only
+ * the CLASS-backed (cbe) spectra, which dominate the wall time. Splitting lets the cheap half
+ * stay on the fast lane and the cbe half move to the coverage-only acceptance tier. With
+ * neither macro all six run (local default). */
+TestNcPowspecFuncData powspecs[] =
 {
+#ifndef POWSPEC_SPLIT_EXPENSIVE
   {test_nc_powspec_ml_transfer_new_EH,   "ml/transfer/EH",               NULL},
   {test_nc_powspec_ml_transfer_new_BBKS, "ml/transfer/BBKS",             NULL},
-  {test_nc_powspec_ml_cbe_new,           "ml/cbe",                       NULL},
   {test_nc_powspec_mnl_halofit_new,      "mnl/halofit/ml/transfer/EH",   test_nc_powspec_ml_transfer_new_EH},
   {test_nc_powspec_mnl_halofit_new,      "mnl/halofit/ml/transfer/BBKS", test_nc_powspec_ml_transfer_new_BBKS},
+#endif
+#ifndef POWSPEC_SPLIT_CHEAP
+  {test_nc_powspec_ml_cbe_new,           "ml/cbe",                       NULL},
   {test_nc_powspec_mnl_halofit_new,      "mnl/halofit/ml/cbe",           test_nc_powspec_ml_cbe_new},
+#endif
 };
+#define TEST_NC_POWSPECS_LEN G_N_ELEMENTS (powspecs)
 
 #define TEST_NC_POWSPEC_TESTS 3
 TestNcPowspecFuncData tests[TEST_NC_POWSPEC_TESTS] =
@@ -83,7 +92,7 @@ TestNcPowspecFuncData tests[TEST_NC_POWSPEC_TESTS] =
 gint
 main (gint argc, gchar *argv[])
 {
-  gint i, j;
+  guint i, j;
 
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);

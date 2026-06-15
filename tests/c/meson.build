@@ -297,11 +297,21 @@ lss_tests = [
         'name': 'nc_transfer_func',
         'sources': ['lss/test_nc_transfer_func.c'],
     },
+    # nc_powspec is built twice from one source (via -D, see the C file): the analytic
+    # transfer-function spectra are a fast unit test; the CLASS-backed (cbe) spectra dominate
+    # the wall time and move to the acceptance tier (coverage-only lane).
+    {
+        'name': 'nc_powspec_analytic',
+        'sources': ['lss/test_nc_powspec.c'],
+        'c_args': ['-DPOWSPEC_SPLIT_CHEAP'],
+    },
     {
         'name': 'nc_powspec',
         'sources': ['lss/test_nc_powspec.c'],
+        'c_args': ['-DPOWSPEC_SPLIT_EXPENSIVE'],
         'timeout': 0,
         'priority': 10,
+        'suite': ['c-acceptance'],
     },
     {
         'name': 'nc_galaxy_acf',
