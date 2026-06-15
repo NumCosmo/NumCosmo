@@ -36,6 +36,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/galaxy/nc_galaxy_wl_obs.h>
 #include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
@@ -88,6 +89,7 @@ NcDataClusterWLResampleFlag nc_data_cluster_wl_get_resample_flag (NcDataClusterW
 NcmObjArray *nc_data_cluster_wl_peek_data_array (NcDataClusterWL *dcwl);
 
 gdouble nc_data_cluster_wl_estimate_snr (NcDataClusterWL *dcwl, NcmMSet *mset);
+void nc_data_cluster_wl_eval_m2lnP_gal (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal);
 
 G_END_DECLS
 

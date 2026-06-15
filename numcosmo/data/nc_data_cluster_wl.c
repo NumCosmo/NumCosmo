@@ -1408,3 +1408,55 @@ nc_data_cluster_wl_estimate_snr (NcDataClusterWL *dcwl, NcmMSet *mset)
   return hat_gt / hat_sigma_gt;
 }
 
+/**
+ * nc_data_cluster_wl_eval_m2lnP_gal:
+ * @dcwl: a #NcDataClusterWL
+ * @mset: a #NcmMSet
+ * @m2lnP_gal: a #NcmVector of length equal to the number of galaxies, filled in place
+ *
+ * Computes the per-galaxy $-2\ln P_i$ using the currently selected integration
+ * method (see nc_data_cluster_wl_set_integ_method()) and stores them in
+ * @m2lnP_gal. This is the per-galaxy breakdown of the total $-2\ln L$ returned by
+ * ncm_data_m2lnL_val(), and is primarily a diagnostic to compare integration
+ * methods galaxy by galaxy.
+ *
+ * Galaxies whose likelihood is not finite (and are therefore skipped in the
+ * total) are left as NAN, so the caller can identify them.
+ *
+ */
+void
+nc_data_cluster_wl_eval_m2lnP_gal (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal)
+{
+  NcDataClusterWLPrivate * const self    = nc_data_cluster_wl_get_instance_private (dcwl);
+  NcGalaxySDObsRedshift *galaxy_redshift = NC_GALAXY_SD_OBS_REDSHIFT (ncm_mset_peek (mset, nc_galaxy_sd_obs_redshift_id ()));
+
+  g_assert_nonnull (m2lnP_gal);
+
+  ncm_data_prepare (NCM_DATA (dcwl), mset);
+
+  g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
+
+  ncm_vector_set_all (m2lnP_gal, GSL_NAN);
+
+  if (NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (galaxy_redshift))
+  {
+    _nc_data_cluster_wl_eval_m2lnP (dcwl, mset, m2lnP_gal);
+  }
+  else
+  {
+    switch (self->integ_method)
+    {
+      case NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE:
+      case NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT:
+        _nc_data_cluster_wl_eval_m2lnP_integ (dcwl, mset, m2lnP_gal);
+        break;
+      case NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES:
+        _nc_data_cluster_wl_eval_m2lnP_fixed (dcwl, mset, m2lnP_gal);
+        break;
+      default:                   /* LCOV_EXCL_LINE */
+        g_assert_not_reached (); /* LCOV_EXCL_LINE */
+        break;                   /* LCOV_EXCL_LINE */
+    }
+  }
+}
+
