@@ -581,7 +581,7 @@ _nc_galaxy_sd_shape_hsm_gauss_global_prepare_at_nodes (NcGalaxySDShape *gsds, Nc
         &ldata_i->sigma_cache
       );
 
-    if (refresh_crit || (ldata_i->crit_cache_arr == NULL))
+    if (refresh_crit || (ldata_i->crit_cache_arr == NULL) || (ldata_i->crit_cache_len != n_nodes))
     {
       guint j;
 

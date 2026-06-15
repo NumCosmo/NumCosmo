@@ -2507,6 +2507,52 @@ _test_nc_galaxy_sd_shape_at_nodes_impl (
     ncm_model_param_set_by_name (NCM_MODEL (test->halo_position), "z", zcl_orig, NULL);
   }
 
+  /* Stale-cache guard: change the number of nodes with the cosmology and halo
+   * held fixed and verify eval_at_nodes stays consistent with integrand_eval.
+   * The per-node crit cache must be resized and recomputed when the node count
+   * changes, even when nothing else triggers a refresh. */
+  {
+    const guint n_small          = n_total / 2;
+    NcmVector *z_nodes_small     = ncm_vector_new (n_small);
+    NcmVector *out_small         = ncm_vector_new (n_small);
+    GPtrArray *z_nodes_small_arr = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+
+    for (i = 0; i < n_small; i++)
+    {
+      /* Sample the same range with a different spacing so that a stale crit
+       * cache (built for the original nodes) would yield wrong values. */
+      const gdouble z_i = z_node_min + (z_node_max - z_node_min) * (i + 0.5) / n_small;
+
+      ncm_vector_set (z_nodes_small, i, z_i);
+    }
+
+    g_ptr_array_add (z_nodes_small_arr, ncm_vector_ref (z_nodes_small));
+
+    /* Settle: prepare with the original (length n_total) nodes so the following
+     * node-count change does not coincide with a cosmology/halo update. */
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+
+    /* Now switch to a different node count with everything else fixed. */
+    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_small_arr);
+    nc_galaxy_sd_shape_eval_at_nodes (test->galaxy_shape, test->mset, s_data, z_nodes_small, out_small);
+
+    nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+
+    for (i = 0; i < n_small; i++)
+    {
+      const gdouble z_i   = ncm_vector_get (z_nodes_small, i);
+      const gdouble ref_i = nc_galaxy_sd_shape_integrand_eval (integrand, z_i, s_data);
+      const gdouble out_i = ncm_vector_get (out_small, i);
+
+      ncm_assert_cmpdouble_e (out_i, ==, ref_i, 1.0e-6, 0.0);
+    }
+
+    ncm_vector_free (z_nodes_small);
+    ncm_vector_free (out_small);
+    g_ptr_array_unref (z_nodes_small_arr);
+  }
+
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
   nc_galaxy_sd_position_data_unref (p_data);
   nc_galaxy_sd_shape_data_unref (s_data);
