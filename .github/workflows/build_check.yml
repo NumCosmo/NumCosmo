@@ -251,13 +251,23 @@ jobs:
             || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
-    name: Cov-${{ matrix.suites }} (py${{ matrix.python-version }}, openmpi)
+    name: Cov-${{ matrix.name }} (py${{ matrix.python-version }}, openmpi)
     runs-on: ${{ matrix.os }}-latest
     strategy:
+      # Shards are DERIVED, not hand-labeled (see TESTING.md): the C tests are split by
+      # `meson test --slice K/N` over the tier suites, so they auto-distribute as tests are
+      # added (no per-test shard suite to curate). The Python `pytest` lane is internally
+      # parallel (xdist), so it stays a single shard; the marker-gated py-* subsets are their
+      # own shards because they are opt-in, not for balancing.
       matrix:
-        os: ["ubuntu"]
-        python-version: ["3.12"]
-        suites: ["python", "c", "stats-dist", "fit-esmcmc", "powspec", "data-cluster-wl", "py-powspec", "py-xcor", "py-app"]
+        include:
+          - { os: ubuntu, python-version: "3.12", name: python, args: "--suite python" }
+          - { os: ubuntu, python-version: "3.12", name: py-powspec, args: "--suite py-powspec" }
+          - { os: ubuntu, python-version: "3.12", name: py-xcor, args: "--suite py-xcor" }
+          - { os: ubuntu, python-version: "3.12", name: py-app, args: "--suite py-app" }
+          - { os: ubuntu, python-version: "3.12", name: c-1, args: "--suite c --suite c-acceptance --suite c-statistical --slice 1/3" }
+          - { os: ubuntu, python-version: "3.12", name: c-2, args: "--suite c --suite c-acceptance --suite c-statistical --slice 2/3" }
+          - { os: ubuntu, python-version: "3.12", name: c-3, args: "--suite c --suite c-acceptance --suite c-statistical --slice 3/3" }
     defaults:
       run:
         shell: bash -el {0}
@@ -303,7 +313,7 @@ jobs:
         # Third run to merge the coverage base and the coverage for the tests
         run: |
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
-          meson test -v -C build --timeout-multiplier 0 --num-processes=$(getconf _NPROCESSORS_ONLN) --suite=${{ matrix.suites }} || (cat build/meson-logs/testlog.txt && exit 1)
+          meson test -v -C build --timeout-multiplier 0 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
           lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/class/*' '*/levmar/*' '*/libcuba/*' '*/plc/*' '*/sundials/*' '*/toeplitz/*' '*/tools/*' --output-file numcosmo-coverage.info

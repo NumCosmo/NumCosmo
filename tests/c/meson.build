@@ -55,7 +55,7 @@ math_tests = [
         'sources': ['math/test_ncm_stats_dist.c'],
         'timeout': 0,
         'priority': 10,
-        'suite': ['c-statistical', 'stats-dist', 'omp'],
+        'suite': ['c-statistical', 'omp'],
     },
     {
         'name': 'ncm_stats_dist_kernel',
@@ -141,7 +141,7 @@ math_tests = [
         'sources': ['math/test_ncm_fit_esmcmc.c'],
         'timeout': 0,
         'priority': 10,
-        'suite': ['c-acceptance', 'fit-esmcmc', 'omp'],
+        'suite': ['c-acceptance', 'omp'],
     },
     {
         'name': 'ncm_func_eval',
@@ -234,12 +234,24 @@ data_tests = [
         'name': 'nc_data_hubble',
         'sources': ['data/test_nc_data_hubble.c'],
     },
+    # The cluster_wl test is one combinatorial 24x6 executable; it is built twice from the
+    # same source (via -D, see the C file) so meson --slice can balance CI wall time. The
+    # cheap property checks are a normal unit test; the heavy MC/fit half is acceptance.
+    {
+        'name': 'nc_data_cluster_wl_prop',
+        'sources': ['data/test_nc_data_cluster_wl.c'],
+        'c_args': ['-DCLUSTER_WL_SPLIT_CHEAP'],
+        # m2lnP (the OpenMP-parallel likelihood eval) is in the cheap half, so this exec
+        # also exercises the OpenMP path and stays in the omp lane.
+        'suite': ['c', 'omp'],
+    },
     {
         'name': 'nc_data_cluster_wl',
         'sources': ['data/test_nc_data_cluster_wl.c'],
+        'c_args': ['-DCLUSTER_WL_SPLIT_EXPENSIVE'],
         'timeout': 0,
         'priority': 10,
-        'suite': ['c-acceptance', 'data-cluster-wl', 'omp'],
+        'suite': ['c-acceptance', 'omp'],
     },
 ]
 
@@ -290,7 +302,6 @@ lss_tests = [
         'sources': ['lss/test_nc_powspec.c'],
         'timeout': 0,
         'priority': 10,
-        'suite': ['powspec'],
     },
     {
         'name': 'nc_galaxy_acf',
@@ -337,10 +348,11 @@ all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
 
 foreach c_test : all_c_tests
+    extra_c_args = c_test.has_key('c_args') ? c_test['c_args'] : []
     executable_test = executable(
         c_test['name'],
         c_test['sources'],
-        c_args: tests_c_args,
+        c_args: tests_c_args + extra_c_args,
         dependencies: [libnumcosmo_dep, gsl_dep],
         include_directories: [configinc, numcosmoinc],
     )

@@ -69,12 +69,18 @@ static void test_nc_data_cluster_wl_new (TestNcDataClusterWL *test, gconstpointe
 static void test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_free (TestNcDataClusterWL *test, gconstpointer pdata);
 
-static void test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_monte_carlo_lnint (TestNcDataClusterWL *test, gconstpointer pdata);
+/* The executable is built twice (see tests/c/meson.build): with -DCLUSTER_WL_SPLIT_CHEAP
+ * it registers only the cheap property checks (gen_obs/m2lnP/serialize); with
+ * -DCLUSTER_WL_SPLIT_EXPENSIVE only the heavy MC/fit functions (resample/monte_carlo/
+ * monte_carlo_lnint). Splitting one combinatorial 24x6 executable into two lets meson
+ * --slice balance CI wall time. With neither macro defined all six run (local default).
+ * G_GNUC_UNUSED keeps the half that a given build does not register from warning. */
+static void test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata) G_GNUC_UNUSED;
+static void test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata) G_GNUC_UNUSED;
+static void test_nc_data_cluster_wl_serialize (TestNcDataClusterWL *test, gconstpointer pdata) G_GNUC_UNUSED;
+static void test_nc_data_cluster_wl_resample (TestNcDataClusterWL *test, gconstpointer pdata) G_GNUC_UNUSED;
+static void test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pdata) G_GNUC_UNUSED;
+static void test_nc_data_cluster_wl_monte_carlo_lnint (TestNcDataClusterWL *test, gconstpointer pdata) G_GNUC_UNUSED;
 
 /*
  *  The shape dispersion bounds are artificially set to lower values to avoid low signal
@@ -94,14 +100,19 @@ static void test_nc_data_cluster_wl_monte_carlo_lnint (TestNcDataClusterWL *test
 gint
 main (gint argc, gchar *argv[])
 {
-  TestNcDataClusterWLTests tests[6] = {
+  TestNcDataClusterWLTests tests[] = {
+#ifndef CLUSTER_WL_SPLIT_EXPENSIVE
     {"gen_obs", &test_nc_data_cluster_wl_gen_obs},
     {"m2lnP", &test_nc_data_cluster_wl_m2lnP},
     {"serialize", &test_nc_data_cluster_wl_serialize},
+#endif
+#ifndef CLUSTER_WL_SPLIT_CHEAP
     {"resample", &test_nc_data_cluster_wl_resample},
     {"monte_carlo", &test_nc_data_cluster_wl_monte_carlo},
     {"monte_carlo_lnint", &test_nc_data_cluster_wl_monte_carlo_lnint}
+#endif
   };
+  const guint n_tests = G_N_ELEMENTS (tests);
   TestNcDataClusterWLTestsObj tests_obj[24] = {
     {"gauss_global", "spec", "trace", "celestial"},
     {"gauss_global", "spec", "trace", "euclidean"},
@@ -138,7 +149,7 @@ main (gint argc, gchar *argv[])
 
   for (i = 0; i < 24; i++)
   {
-    for (j = 0; j < 6; j++)
+    for (j = 0; j < n_tests; j++)
     {
       gchar *test_name = g_strdup_printf ("/nc/data_cluster_wl/shapeHSM/%s/%s/%s/%s/%s",
                                           tests_obj[i].shape_name,
