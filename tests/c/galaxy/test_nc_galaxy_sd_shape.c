@@ -2472,6 +2472,41 @@ _test_nc_galaxy_sd_shape_at_nodes_impl (
     ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "H0", h0_orig, NULL);
   }
 
+  /* Stale-cache guard: change the cluster redshift z_cl (with the cosmology held
+   * fixed) and verify eval_at_nodes stays consistent with integrand_eval. The
+   * critical surface density depends on z_cl, so the per-node crit cache must be
+   * refreshed when z_cl changes even if the cosmology is unchanged. */
+  {
+    const gdouble zcl_orig = ncm_model_param_get_by_name (NCM_MODEL (test->halo_position), "z", NULL);
+    const gdouble zcl_alt  = zcl_orig + 0.3;
+
+    /* Settle the cosmology control so the following z_cl-only change does not
+     * coincide with a cosmology update (which would refresh the crit cache for
+     * unrelated reasons and mask a z_cl-staleness bug). */
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+
+    ncm_model_param_set_by_name (NCM_MODEL (test->halo_position), "z", zcl_alt, NULL);
+
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+    nc_galaxy_sd_shape_eval_at_nodes (test->galaxy_shape, test->mset, s_data, z_nodes, out_alt);
+
+    nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+
+    for (i = 0; i < n_total; i++)
+    {
+      const gdouble z_i       = ncm_vector_get (z_nodes, i);
+      const gdouble ref_i     = nc_galaxy_sd_shape_integrand_eval (integrand, z_i, s_data);
+      const gdouble out_alt_i = ncm_vector_get (out_alt, i);
+
+      ncm_assert_cmpdouble_e (out_alt_i, ==, ref_i, 1.0e-6, 0.0);
+    }
+
+    /* Restore */
+    ncm_model_param_set_by_name (NCM_MODEL (test->halo_position), "z", zcl_orig, NULL);
+  }
+
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
   nc_galaxy_sd_position_data_unref (p_data);
   nc_galaxy_sd_shape_data_unref (s_data);

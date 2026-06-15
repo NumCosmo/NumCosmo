@@ -543,7 +543,7 @@ _nc_galaxy_sd_shape_hsm_gauss_global_prepare_at_nodes (NcGalaxySDShape *gsds, Nc
   const gboolean dp_changed                         = ncm_model_ctrl_update (self->ctrl_dp_nodes, NCM_MODEL (density_profile));
   const gboolean refresh_radius                     = cosmo_changed || hp_changed;
   const gboolean refresh_sigma                      = refresh_radius || dp_changed;
-  const gboolean refresh_crit                       = cosmo_changed;
+  const gboolean refresh_crit                       = cosmo_changed || hp_changed;
   guint i;
 
   nc_halo_position_prepare_if_needed (halo_position, cosmo);
@@ -581,7 +581,6 @@ _nc_galaxy_sd_shape_hsm_gauss_global_prepare_at_nodes (NcGalaxySDShape *gsds, Nc
         &ldata_i->sigma_cache
       );
 
-    /* TODO: crit_cache should be recomputed when z_cl changes */
     if (refresh_crit || (ldata_i->crit_cache_arr == NULL))
     {
       guint j;
