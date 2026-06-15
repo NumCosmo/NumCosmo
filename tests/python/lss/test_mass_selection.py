@@ -474,7 +474,7 @@ def test_cluster_mass_selection_distribution(
     ]
 
     for name, func in tests:
-        avg_time = timeit(func, number=100)
+        avg_time = timeit(func, number=1)  # timing smoke test; one pass covers each path
         print(f"Average time per execution cluster_m.p {name}: {avg_time:.6f} seconds")
 
 
@@ -496,7 +496,7 @@ def test_cluster_mass_selection_cumulative(
     ]
 
     for name, func in tests:
-        avg_time = timeit(func, number=100)
+        avg_time = timeit(func, number=1)  # timing smoke test; one pass covers each path
         print(
             f"Average time per execution cluster_m.intp {name}: {avg_time:.6f} seconds"
         )
@@ -536,8 +536,10 @@ def test_cluster_mass_selection_cumulative_bin(
         ),
     ]
 
+    # Timing smoke test (no correctness assertions): one pass over the nsize x nsize grid is
+    # ample coverage, so timeit `number` is 1 rather than repeating each covered path.
     for name, func in tests:
-        avg_time = timeit(func, number=100)
+        avg_time = timeit(func, number=1)
         print(
             f"Average time per execution cluster_m.intp_bin {name}: "
             f"{avg_time:.6f} seconds"
@@ -643,14 +645,17 @@ def test_cluster_mass_selection_hmf(
 
     cad = cluster_abundance
 
+    # This is a timing smoke test (no correctness assertions): each path is exercised over
+    # nsize points, which is enough coverage. timeit `number` is kept at 1 so it does not
+    # repeat each (already-covered) path dozens of times on the PR lane.
     tests = [
-        ("cad.n", lambda: cad.n(cosmo, cluster_z, cluster_m), 100),
+        ("cad.n", lambda: cad.n(cosmo, cluster_z, cluster_m), 1),
         (
             "cad.d2n mass",
             lambda: [
                 cad.d2n(cosmo, cluster_z, cluster_m, lnM[i], 0.5) for i in range(nsize)
             ],
-            100,
+            1,
         ),
         (
             "cad.d2n redshift",
@@ -658,7 +663,7 @@ def test_cluster_mass_selection_hmf(
                 cad.d2n(cosmo, cluster_z, cluster_m, np.log(1e13), z[i])
                 for i in range(nsize)
             ],
-            100,
+            1,
         ),
         (
             "cad.intp_bin_d2n richness",
