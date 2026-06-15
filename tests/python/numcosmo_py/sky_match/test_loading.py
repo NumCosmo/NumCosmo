@@ -57,8 +57,8 @@ def test_mask() -> None:
 
     assert np.all(mask.array == mask_all_false.array)
 
-    assert np.all(mask_all_true & mask_all_true == mask_all_true)
-    assert np.all(~mask_all_false == mask_all_true)
+    assert np.all((mask_all_true & mask_all_true).array == mask_all_true.array)
+    assert np.all((~mask_all_false).array == mask_all_true.array)
 
 
 def test_load_fits_data(setup_catalogs):

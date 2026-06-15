@@ -66,6 +66,7 @@ def test_constructor_catalog_id(cov_id):
     assert snia_cov.get_length() > 0
 
 
+@pytest.mark.acceptance
 def test_recover_best_fit_PantheonPlus():
     """Test recover best fit PantheonPlus."""
     cov_id = Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT
@@ -107,6 +108,7 @@ def test_recover_best_fit_PantheonPlus():
     )
 
 
+@pytest.mark.acceptance
 def test_recover_best_fit_DES_Y5():
     """Test recover best fit DES Y5."""
     cov_id = Nc.DataSNIAId.COV_DES_Y5_STAT_SYS

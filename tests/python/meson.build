@@ -28,7 +28,9 @@ if enable_gir and python_for_tests.found()
 
     pytest = find_program('pytest', required: true)
 
-    pytest_base_args = ['-ra', '--tb=short']
+    # --durations surfaces the slowest tests in every run, so tier/speed regressions are
+    # visible in CI logs instead of needing a dedicated profiling pass.
+    pytest_base_args = ['-ra', '--tb=short', '--durations=25']
     pytest_protocol = 'exitcode'
     # We are using xdist for parallel test execution, so we set this to false to avoid
     # conflicts with pytest's internal parallelization mechanisms.
@@ -57,17 +59,40 @@ if enable_gir and python_for_tests.found()
         pytest_parallel_args = pytest_base_args
     endif
 
-    # Full Python test suite (excluding specialized markers)
+    # Default (unit) lane: everything except the statistical/acceptance tiers (see
+    # TESTING.md). Capability-gated tests (powspec/xcor/app/...) are already skipped here by
+    # conftest since no --run-* flag is passed. The real timeout bounds a total hang;
+    # per-test hangs are dumped by pytest.ini's faulthandler_timeout. The coverage job
+    # neutralizes this timeout via `--timeout-multiplier 0`.
     test(
         'pytest',
         pytest,
-        args: pytest_parallel_args + [meson.current_source_dir()],
+        args: pytest_parallel_args
+        + ['-m', 'not statistical and not acceptance', meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env,
-        timeout: 0,
+        timeout: 1200,
         protocol: pytest_protocol,
         is_parallel: pytest_is_parallel,
         suite: ['python'],
+    )
+
+    # Acceptance tier: full integration / posterior-recovery / pipeline tests, moved off the
+    # default lane. Its own `py-acceptance` suite so the fast non-coverage CI jobs can exclude
+    # it (--no-suite py-acceptance) while the coverage job runs it as a dedicated shard. Not
+    # capability gated, so no --run-* flag. (No statistical-tier lane yet: heavy-only tiering
+    # left the `statistical` marker with no Python members; add the lane when one exists, since
+    # an empty `-m statistical` selection makes pytest exit 5 = failure.)
+    test(
+        'pytest-acceptance',
+        pytest,
+        args: pytest_parallel_args + ['-m', 'acceptance', meson.current_source_dir()],
+        depends: [numcosmo_gir, numcosmo_math_gir],
+        env: env,
+        timeout: 1800,
+        protocol: pytest_protocol,
+        is_parallel: pytest_is_parallel,
+        suite: ['py-acceptance'],
     )
 
     # Powspec subset
@@ -111,6 +136,22 @@ if enable_gir and python_for_tests.found()
         protocol: pytest_protocol,
         is_parallel: pytest_is_parallel,
         suite: ['py-app'],
+    )
+
+    # OMP lane: re-run the OpenMP-path tests (marked `omp`) with process-level parallelism
+    # OFF (no xdist) so the single process owns the machine. The CI step / shell sets
+    # OMP_NUM_THREADS to the available cores; this lane is what actually exercises the
+    # `#pragma omp parallel` branches that the default lane (OMP=1) serializes. See TESTING.md.
+    test(
+        'pytest-omp',
+        pytest,
+        args: pytest_base_args + ['-m', 'omp', meson.current_source_dir()],
+        depends: [numcosmo_gir, numcosmo_math_gir],
+        env: env,
+        timeout: 0,
+        protocol: pytest_protocol,
+        is_parallel: pytest_is_parallel,
+        suite: ['py-omp'],
     )
 
     # Sphere_map subset

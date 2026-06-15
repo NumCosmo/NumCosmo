@@ -55,7 +55,7 @@ math_tests = [
         'sources': ['math/test_ncm_stats_dist.c'],
         'timeout': 0,
         'priority': 10,
-        'suite': ['c-slow', 'stats-dist'],
+        'suite': ['c-statistical', 'omp'],
     },
     {
         'name': 'ncm_stats_dist_kernel',
@@ -145,7 +145,7 @@ math_tests = [
         'sources': ['math/test_ncm_fit_esmcmc.c'],
         'timeout': 0,
         'priority': 10,
-        'suite': ['c-slow', 'fit-esmcmc'],
+        'suite': ['c-acceptance', 'omp'],
     },
     {
         'name': 'ncm_func_eval',
@@ -170,47 +170,32 @@ math_tests = [
     },
 ]
 
-# Cosmology tests
-cosmology_tests = [
+# Model tests (NcHICosmo, recombination, distance, CLASS backend)
+model_tests = [
     {
         'name': 'nc_hicosmo_de',
-        'sources': ['cosmology/test_nc_hicosmo_de.c'],
+        'sources': ['model/test_nc_hicosmo_de.c'],
     },
     {
         'name': 'nc_hicosmo_qgw',
-        'sources': ['cosmology/test_nc_hicosmo_qgw.c'],
-    },
-    {
-        'name': 'nc_window',
-        'sources': ['cosmology/test_nc_window.c'],
-    },
-    {
-        'name': 'nc_transfer_func',
-        'sources': ['cosmology/test_nc_transfer_func.c'],
+        'sources': ['model/test_nc_hicosmo_qgw.c'],
     },
     {
         'name': 'nc_recomb',
-        'sources': ['cosmology/test_nc_recomb.c'],
+        'sources': ['model/test_nc_recomb.c'],
     },
     {
         'name': 'nc_cbe',
-        'sources': ['cosmology/test_nc_cbe.c'],
+        'sources': ['model/test_nc_cbe.c'],
         'timeout': 0,
     },
     {
         'name': 'nc_hiqg_1d',
-        'sources': ['cosmology/test_nc_hiqg_1d.c'],
-    },
-    {
-        'name': 'nc_powspec',
-        'sources': ['cosmology/test_nc_powspec.c'],
-        'timeout': 0,
-        'priority': 10,
-        'suite': ['c-slow', 'powspec'],
+        'sources': ['model/test_nc_hiqg_1d.c'],
     },
     {
         'name': 'nc_distance',
-        'sources': ['cosmology/test_nc_distance.c'],
+        'sources': ['model/test_nc_distance.c'],
     },
 ]
 
@@ -253,48 +238,93 @@ data_tests = [
         'name': 'nc_data_hubble',
         'sources': ['data/test_nc_data_hubble.c'],
     },
+    # The cluster_wl test is one combinatorial 24x6 executable; it is built twice from the
+    # same source (via -D, see the C file) so meson --slice can balance CI wall time. The
+    # cheap property checks are a normal unit test; the heavy MC/fit half is acceptance.
+    {
+        'name': 'nc_data_cluster_wl_prop',
+        'sources': ['data/test_nc_data_cluster_wl.c'],
+        'c_args': ['-DCLUSTER_WL_SPLIT_CHEAP'],
+        # m2lnP (the OpenMP-parallel likelihood eval) is in the cheap half, so this exec
+        # also exercises the OpenMP path and stays in the omp lane.
+        'suite': ['c', 'omp'],
+    },
     {
         'name': 'nc_data_cluster_wl',
         'sources': ['data/test_nc_data_cluster_wl.c'],
+        'c_args': ['-DCLUSTER_WL_SPLIT_EXPENSIVE'],
         'timeout': 0,
         'priority': 10,
-        'suite': ['c-slow', 'data-cluster-wl'],
+        'suite': ['c-acceptance', 'omp'],
     },
 ]
 
-# Cluster and halo tests
-cluster_tests = [
+# Large-scale structure tests (halos, clusters, bias, transfer, power spectrum, window)
+lss_tests = [
     {
         'name': 'nc_halo_catalog',
-        'sources': ['cluster/test_nc_halo_catalog.c'],
+        'sources': ['lss/test_nc_halo_catalog.c'],
     },
     {
         'name': 'nc_halo_catalog_generator',
-        'sources': ['cluster/test_nc_halo_catalog_generator.c'],
+        'sources': ['lss/test_nc_halo_catalog_generator.c'],
     },
     {
         'name': 'nc_halo_catalog_member_generator',
-        'sources': ['cluster/test_nc_halo_catalog_member_generator.c'],
+        'sources': ['lss/test_nc_halo_catalog_member_generator.c'],
     },
     {
         'name': 'nc_halo_bias',
-        'sources': ['cluster/test_nc_halo_bias.c'],
+        'sources': ['lss/test_nc_halo_bias.c'],
     },
     {
         'name': 'nc_cluster_pseudo_counts',
-        'sources': ['cluster/test_nc_cluster_pseudo_counts.c'],
+        'sources': ['lss/test_nc_cluster_pseudo_counts.c'],
     },
     {
         'name': 'nc_cluster_abundance',
-        'sources': ['cluster/test_nc_cluster_abundance.c'],
+        'sources': ['lss/test_nc_cluster_abundance.c'],
     },
     {
         'name': 'nc_halo_density_profile',
-        'sources': ['cluster/test_nc_halo_density_profile.c'],
+        'sources': ['lss/test_nc_halo_density_profile.c'],
     },
     {
         'name': 'nc_halo_position',
-        'sources': ['cluster/test_nc_halo_position.c'],
+        'sources': ['lss/test_nc_halo_position.c'],
+    },
+    {
+        'name': 'nc_window',
+        'sources': ['lss/test_nc_window.c'],
+    },
+    {
+        'name': 'nc_transfer_func',
+        'sources': ['lss/test_nc_transfer_func.c'],
+    },
+    # nc_powspec is built twice from one source (via -D, see the C file). Measured: the
+    # CLASS-backed cbe half is fast (~4s, splined once) -> fast-lane unit; the analytic
+    # transfer-function half (EH/BBKS + halofit + corr3d) is the slow one (>2 min) -> heavy
+    # acceptance tier (coverage-only, unbounded timeout).
+    {
+        'name': 'nc_powspec_cbe',
+        'sources': ['lss/test_nc_powspec.c'],
+        'c_args': ['-DPOWSPEC_SPLIT_CBE'],
+    },
+    {
+        'name': 'nc_powspec_transfer',
+        'sources': ['lss/test_nc_powspec.c'],
+        'c_args': ['-DPOWSPEC_SPLIT_TRANSFER'],
+        'timeout': 0,
+        'priority': 10,
+        'suite': ['c-acceptance'],
+    },
+    {
+        'name': 'nc_galaxy_acf',
+        'sources': ['lss/test_nc_galaxy_acf.c'],
+    },
+    {
+        'name': 'nc_wl_surface_mass_density',
+        'sources': ['lss/test_nc_wl_surface_mass_density.c'],
     },
 ]
 
@@ -303,14 +333,6 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_hod',
         'sources': ['galaxy/test_nc_galaxy_hod.c'],
-    },
-    {
-        'name': 'nc_galaxy_acf',
-        'sources': ['galaxy/test_nc_galaxy_acf.c'],
-    },
-    {
-        'name': 'nc_wl_surface_mass_density',
-        'sources': ['galaxy/test_nc_wl_surface_mass_density.c'],
     },
     {
         'name': 'nc_galaxy_wl_obs',
@@ -335,16 +357,17 @@ galaxy_tests = [
 ]
 
 # Combine all test arrays
-all_c_tests = math_tests + cosmology_tests + data_tests + cluster_tests + galaxy_tests
+all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests
 
 # Build and register all tests
 tests_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
 
 foreach c_test : all_c_tests
+    extra_c_args = c_test.has_key('c_args') ? c_test['c_args'] : []
     executable_test = executable(
         c_test['name'],
         c_test['sources'],
-        c_args: tests_c_args,
+        c_args: tests_c_args + extra_c_args,
         dependencies: [libnumcosmo_dep, gsl_dep],
         include_directories: [configinc, numcosmoinc],
     )

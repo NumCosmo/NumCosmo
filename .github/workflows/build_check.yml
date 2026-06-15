@@ -11,6 +11,26 @@ on:
 env:
   CONDA_ENV: numcosmo_developer
   CACHE_VERSION: 0
+  # Pin BLAS/OpenMP to a single thread per test process on the default lane. Test-level
+  # parallelism is provided by `meson test --num-processes` (≈ runner cores); letting
+  # BLAS/OpenMP also spin up per-core threads inside each process causes ~cores^2
+  # oversubscription, and on the mixed apt/pip OpenBLAS stack it deadlocks (e.g.
+  # scipy.linalg.solve in test_sbessel_ode_solver, which is omp simd / BLAS, not threads).
+  # NOTE: this serializes NumCosmo's OpenMP-parallel paths too (ESMCMC/MC/cluster_wl use
+  # `#pragma omp parallel`, governed by OMP_NUM_THREADS — there is no separate thread pool).
+  # Those parallel branches are covered separately by a dedicated OMP_NUM_THREADS>1 lane
+  # (see TESTING.md); MPI tests run under mpiexec in their own lane.
+  OMP_NUM_THREADS: 1
+  OMP_MAX_ACTIVE_LEVELS: 1
+  OMP_THREAD_LIMIT: 1
+  OPENBLAS_NUM_THREADS: 1
+  BLIS_NUM_THREADS: 1
+  MKL_NUM_THREADS: 1
+  # The non-coverage build jobs run a FAST subset: skip the heavy acceptance/statistical
+  # tiers and the opt-in capability lanes. Full coverage of these is provided by the
+  # sharded coverage job below, which runs everything. (The build-miniforge job additionally
+  # runs the dedicated OMP lane, which is where the OpenMP-parallel heavy tests get exercised.)
+  FAST_TEST_ARGS: "--no-suite py-app --no-suite py-acceptance --no-suite py-powspec --no-suite py-xcor --no-suite py-omp --no-suite c-acceptance --no-suite c-statistical"
 
 jobs:
 
@@ -57,7 +77,7 @@ jobs:
       # pip build job is a smoke test: exclude the parallel-ESMCMC app suite,
       # which deadlocks on the mixed pip/apt OpenBLAS stack. It is covered by the
       # conda coverage job (py-app shard) instead.
-      run: meson test -v -C build --num-processes=2 --no-suite py-app || (cat build/meson-logs/testlog.txt && exit 1)
+      run: meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.FAST_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
     - name: Create a NumCosmo tarball
       run: meson dist -C build --no-tests
     - name: Upload a Build Artifact
@@ -144,7 +164,7 @@ jobs:
         pytest -xvs tests/python --run-sphere-map -m sphere_map
     - name: Check NumCosmo
       run: |
-        meson test -v -C build --num-processes=2 --no-suite py-app || (cat build/meson-logs/testlog.txt && exit 1)
+        meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.FAST_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge:
     name: (${{ matrix.os }}, py${{ matrix.python-version }}, ${{ matrix.mpi }}, Miniforge)
@@ -224,16 +244,36 @@ jobs:
       #  run: |
       #    pylint --rcfile .pylintrc numcosmo_py
       - name: Check NumCosmo
-        run: meson test -v -C build --num-processes=2 || (cat build/meson-logs/testlog.txt && exit 1)
+        run: meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.FAST_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
+      - name: Check NumCosmo (OMP lane)
+        # Re-run the OpenMP-path tests (suites omp/py-omp) with process parallelism OFF and
+        # OMP_NUM_THREADS = runner cores, overriding the global OMP=1 pin, so the
+        # `#pragma omp parallel` branches are actually exercised. See TESTING.md.
+        run: |
+          NP=$(getconf _NPROCESSORS_ONLN)
+          OMP_NUM_THREADS=$NP OMP_THREAD_LIMIT=$NP OMP_MAX_ACTIVE_LEVELS=1 \
+            meson test -v -C build --num-processes=1 --suite omp --suite py-omp \
+            || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
-    name: Cov-${{ matrix.suites }} (py${{ matrix.python-version }}, openmpi)
+    name: Cov-${{ matrix.name }} (py${{ matrix.python-version }}, openmpi)
     runs-on: ${{ matrix.os }}-latest
     strategy:
+      # Shards are DERIVED, not hand-labeled (see TESTING.md): the C tests are split by
+      # `meson test --slice K/N` over the tier suites, so they auto-distribute as tests are
+      # added (no per-test shard suite to curate). The Python `pytest` lane is internally
+      # parallel (xdist), so it stays a single shard; the marker-gated py-* subsets are their
+      # own shards because they are opt-in, not for balancing.
       matrix:
-        os: ["ubuntu"]
-        python-version: ["3.12"]
-        suites: ["python", "c", "stats-dist", "fit-esmcmc", "powspec", "data-cluster-wl", "py-powspec", "py-xcor", "py-app"]
+        include:
+          - { os: ubuntu, python-version: "3.12", name: python, args: "--suite python" }
+          - { os: ubuntu, python-version: "3.12", name: py-acceptance, args: "--suite py-acceptance" }
+          - { os: ubuntu, python-version: "3.12", name: py-powspec, args: "--suite py-powspec" }
+          - { os: ubuntu, python-version: "3.12", name: py-xcor, args: "--suite py-xcor" }
+          - { os: ubuntu, python-version: "3.12", name: py-app, args: "--suite py-app" }
+          - { os: ubuntu, python-version: "3.12", name: c-1, args: "--suite c --suite c-acceptance --suite c-statistical --slice 1/3" }
+          - { os: ubuntu, python-version: "3.12", name: c-2, args: "--suite c --suite c-acceptance --suite c-statistical --slice 2/3" }
+          - { os: ubuntu, python-version: "3.12", name: c-3, args: "--suite c --suite c-acceptance --suite c-statistical --slice 3/3" }
     defaults:
       run:
         shell: bash -el {0}
@@ -279,10 +319,33 @@ jobs:
         # Third run to merge the coverage base and the coverage for the tests
         run: |
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
-          meson test -v -C build --timeout-multiplier 0 --num-processes=2 --suite=${{ matrix.suites }} || (cat build/meson-logs/testlog.txt && exit 1)
+          meson test -v -C build --timeout-multiplier 0 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
           lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/class/*' '*/levmar/*' '*/libcuba/*' '*/plc/*' '*/sundials/*' '*/toeplitz/*' '*/tools/*' --output-file numcosmo-coverage.info
+      - name: Test timing summary
+        if: always()
+        # Surface the slowest tests of this shard in the job summary so wall-time imbalance
+        # across slices is visible at a glance (meson --slice balances by count, not time).
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          log = pathlib.Path("build/meson-logs/testlog.json")
+          rows = []
+          if log.exists():
+              for line in log.read_text().splitlines():
+                  line = line.strip()
+                  if line:
+                      d = json.loads(line)
+                      rows.append((float(d.get("duration", 0.0)), d.get("name", "?")))
+          rows.sort(reverse=True)
+          total = sum(d for d, _ in rows)
+          print("### Test durations — ${{ matrix.name }} (top 25 of %d, total %.1fs)" % (len(rows), total))
+          print("```")
+          for dur, name in rows[:25]:
+              print("%8.2fs  %s" % (dur, name))
+          print("```")
+          PY
       - name: CodeCov
         uses: codecov/codecov-action@v4
         with:

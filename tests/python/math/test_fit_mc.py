@@ -35,6 +35,10 @@ from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
+# FitMC parallelism is OpenMP (NcmFitMC + `#pragma omp parallel`); these tests set
+# nthreads>1 and so exercise the OpenMP-parallel path in the dedicated omp lane. See TESTING.md.
+pytestmark = pytest.mark.omp
+
 MEAN = 1.2543
 MC_RESAMPLE_TYPES = [
     Ncm.FitMCResampleType.FROM_MODEL,
