@@ -55,7 +55,7 @@ math_tests = [
         'sources': ['math/test_ncm_stats_dist.c'],
         'timeout': 0,
         'priority': 10,
-        'suite': ['c-slow', 'stats-dist'],
+        'suite': ['c-slow', 'stats-dist', 'omp'],
     },
     {
         'name': 'ncm_stats_dist_kernel',
@@ -141,7 +141,7 @@ math_tests = [
         'sources': ['math/test_ncm_fit_esmcmc.c'],
         'timeout': 0,
         'priority': 10,
-        'suite': ['c-slow', 'fit-esmcmc'],
+        'suite': ['c-slow', 'fit-esmcmc', 'omp'],
     },
     {
         'name': 'ncm_func_eval',
@@ -254,7 +254,7 @@ data_tests = [
         'sources': ['data/test_nc_data_cluster_wl.c'],
         'timeout': 0,
         'priority': 10,
-        'suite': ['c-slow', 'data-cluster-wl'],
+        'suite': ['c-slow', 'data-cluster-wl', 'omp'],
     },
 ]
 

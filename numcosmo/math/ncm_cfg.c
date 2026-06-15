@@ -1925,6 +1925,10 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 
   g_assert (numcosmo_init);
 
+  /* FFTW_ESTIMATE neither consumes nor produces useful wisdom; skip the file I/O. */
+  if (ncm_cfg_get_fftw_default_flag () == FFTW_ESTIMATE)
+    return FALSE;
+
   G_LOCK (fftw_saveload_lock);
 
   va_start (ap, filename);
@@ -1984,6 +1988,10 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   va_list ap;
 
   g_assert (numcosmo_init);
+
+  /* FFTW_ESTIMATE neither consumes nor produces useful wisdom; skip the file I/O. */
+  if (ncm_cfg_get_fftw_default_flag () == FFTW_ESTIMATE)
+    return FALSE;
 
   G_LOCK (fftw_saveload_lock);
 
