@@ -126,6 +126,7 @@ def test_data_cluster_mass_rich_fit(fit: Ncm.Fit):
     assert np.sum(diff**2) < fparam_len
 
 
+@pytest.mark.omp  # FitMC.set_nthreads(2) exercises the OpenMP-parallel MC path
 @pytest.mark.parametrize(
     "mc_type",
     [Ncm.FitMCResampleType.FROM_MODEL, Ncm.FitMCResampleType.BOOTSTRAP_NOMIX],

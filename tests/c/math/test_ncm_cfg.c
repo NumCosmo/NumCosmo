@@ -43,6 +43,7 @@ void test_ncm_cfg_new (TesNcmCfg *test, gconstpointer pdata);
 void test_ncm_cfg_free (TesNcmCfg *test, gconstpointer pdata);
 
 void test_ncm_cfg_misc (TesNcmCfg *test, gconstpointer pdata);
+void test_ncm_cfg_fftw_planner (TesNcmCfg *test, gconstpointer pdata);
 void test_ncm_cfg_logfile_set_logstream (TesNcmCfg *test, gconstpointer pdata);
 void test_ncm_cfg_logfile_on_off (TesNcmCfg *test, gconstpointer pdata);
 void test_ncm_cfg_logfile_str_on_off (TesNcmCfg *test, gconstpointer pdata);
@@ -62,6 +63,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/cfg/misc", TesNcmCfg, NULL,
               &test_ncm_cfg_new,
               &test_ncm_cfg_misc,
+              &test_ncm_cfg_free);
+
+  g_test_add ("/ncm/cfg/fftw_planner", TesNcmCfg, NULL,
+              &test_ncm_cfg_new,
+              &test_ncm_cfg_fftw_planner,
               &test_ncm_cfg_free);
 
   g_test_add ("/ncm/cfg/logfile/set_logstream", TesNcmCfg, NULL,
@@ -140,6 +146,53 @@ test_ncm_cfg_misc (TesNcmCfg *test, gconstpointer pdata)
     ncm_cfg_set_blis_nthreads (1);
     ncm_cfg_set_mkl_nthreads (1);
   }
+}
+
+void
+test_ncm_cfg_fftw_planner (TesNcmCfg *test, gconstpointer pdata)
+{
+#ifdef HAVE_FFTW3
+  const gchar *flags[] = {"estimate", "measure", "patient", "exhaustive"};
+  GError *error        = NULL;
+  guint i;
+
+  /* String round-trip for every planner flag. */
+  for (i = 0; i < G_N_ELEMENTS (flags); i++)
+  {
+    ncm_cfg_set_fftw_default_flag_str (flags[i], 60.0, &error);
+    g_assert_no_error (error);
+    g_assert_cmpstr (ncm_cfg_get_fftw_default_flag_str (), ==, flags[i]);
+    g_assert_cmpfloat (ncm_cfg_get_fftw_timelimit (), ==, 60.0);
+  }
+
+  /* Fallback path used by the -Dfftw-planner build option: with NCM_FFTW_PLANNER
+   * unset, the fallback string must take effect. Guards against silent breakage of
+   * the compile-time default plumbing (NUMCOSMO_FFTW_PLAN). */
+  g_unsetenv ("NCM_FFTW_PLANNER");
+  g_unsetenv ("NCM_FFTW_PLANNER_TIMELIMIT");
+  ncm_cfg_set_fftw_default_from_env_str ("estimate", 30.0, &error);
+  g_assert_no_error (error);
+  g_assert_cmpstr (ncm_cfg_get_fftw_default_flag_str (), ==, "estimate");
+  g_assert_cmpfloat (ncm_cfg_get_fftw_timelimit (), ==, 30.0);
+
+  /* Environment override wins over the fallback. */
+  g_setenv ("NCM_FFTW_PLANNER", "measure", TRUE);
+  g_setenv ("NCM_FFTW_PLANNER_TIMELIMIT", "12.5", TRUE);
+  ncm_cfg_set_fftw_default_from_env_str ("estimate", 30.0, &error);
+  g_assert_no_error (error);
+  g_assert_cmpstr (ncm_cfg_get_fftw_default_flag_str (), ==, "measure");
+  g_assert_cmpfloat (ncm_cfg_get_fftw_timelimit (), ==, 12.5);
+  g_unsetenv ("NCM_FFTW_PLANNER");
+  g_unsetenv ("NCM_FFTW_PLANNER_TIMELIMIT");
+
+  /* Invalid planner string must raise an error and leave the flag unchanged. */
+  ncm_cfg_set_fftw_default_flag_str ("nonsense", 60.0, &error);
+  g_assert_error (error, NCM_CFG_ERROR, NCM_CFG_ERROR_INVALID_FFTW_FLAG_STRING);
+  g_clear_error (&error);
+
+  /* Restore the build default for the remaining tests. */
+  ncm_cfg_set_fftw_default_flag_str ("estimate", 60.0, NULL);
+#endif /* HAVE_FFTW3 */
 }
 
 void

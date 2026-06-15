@@ -50,24 +50,6 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_configure(config):
-    """Configure pytest marker behavior."""
-    config.addinivalue_line("markers", "mpi: MPI-parallel tests (run with --run-mpi)")
-    config.addinivalue_line(
-        "markers", "powspec: Power spectrum tests (run with --run-powspec)"
-    )
-    config.addinivalue_line(
-        "markers", "xcor: Cross-correlation tests (run with --run-xcor)"
-    )
-    config.addinivalue_line(
-        "markers", "sphere_map: Sphere map tests (run with --run-sphere-map)"
-    )
-    config.addinivalue_line(
-        "markers",
-        "app: Application/CLI tests, incl. parallel ESMCMC (run with --run-app)",
-    )
-
-
 def pytest_collection_modifyitems(config, items):
     """Skip tests based on markers and command-line options."""
     run_mpi = config.getoption("--run-mpi")
