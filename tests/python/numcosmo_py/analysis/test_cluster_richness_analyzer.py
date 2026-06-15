@@ -292,6 +292,7 @@ class TestCutAnalyzer:
             assert np.isfinite(bp)
             assert np.isfinite(bsp)
 
+    @pytest.mark.acceptance
     def test_analyze_with_mcmc(
         self,
         mock_cluster_data: ClusterData,
@@ -369,6 +370,7 @@ class TestCutAnalyzer:
         n_clusters = [results[cut].n_clusters for cut in sorted(cuts)]
         assert n_clusters[0] > n_clusters[1] > n_clusters[2]
 
+    @pytest.mark.acceptance
     def test_mcmc_burnin_parameter(
         self,
         mock_cluster_data: ClusterData,
@@ -404,6 +406,7 @@ class TestCutAnalyzer:
             assert np.isfinite(result.mcmc_mean["mup0"])
             assert np.isfinite(result.mcmc_median["mup0"])
 
+    @pytest.mark.acceptance
     def test_mcmc_steps_parameter(
         self,
         mock_cluster_data: ClusterData,

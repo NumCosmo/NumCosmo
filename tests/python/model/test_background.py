@@ -62,7 +62,9 @@ from numcosmo_py.ccl.comparison import (
 from numcosmo_py.ccl.nc_ccl import create_nc_obj
 from numcosmo_py.plotting.tools import latex_float, format_time
 
-pytestmark = pytest.mark.ccl
+# CCL cross-validation of the background/distance: a heavy comparison against an external
+# library, so it is tiered as acceptance (coverage-only lane), not a fast-lane unit test.
+pytestmark = [pytest.mark.ccl, pytest.mark.acceptance]
 pytest_plugins = ["python.fixtures_ccl"]
 
 Ncm.cfg_init()
