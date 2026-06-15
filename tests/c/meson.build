@@ -297,18 +297,19 @@ lss_tests = [
         'name': 'nc_transfer_func',
         'sources': ['lss/test_nc_transfer_func.c'],
     },
-    # nc_powspec is built twice from one source (via -D, see the C file): the analytic
-    # transfer-function spectra are a fast unit test; the CLASS-backed (cbe) spectra dominate
-    # the wall time and move to the acceptance tier (coverage-only lane).
+    # nc_powspec is built twice from one source (via -D, see the C file). Measured: the
+    # CLASS-backed cbe half is fast (~4s, splined once) -> fast-lane unit; the analytic
+    # transfer-function half (EH/BBKS + halofit + corr3d) is the slow one (>2 min) -> heavy
+    # acceptance tier (coverage-only, unbounded timeout).
     {
-        'name': 'nc_powspec_analytic',
+        'name': 'nc_powspec_cbe',
         'sources': ['lss/test_nc_powspec.c'],
-        'c_args': ['-DPOWSPEC_SPLIT_CHEAP'],
+        'c_args': ['-DPOWSPEC_SPLIT_CBE'],
     },
     {
-        'name': 'nc_powspec',
+        'name': 'nc_powspec_transfer',
         'sources': ['lss/test_nc_powspec.c'],
-        'c_args': ['-DPOWSPEC_SPLIT_EXPENSIVE'],
+        'c_args': ['-DPOWSPEC_SPLIT_TRANSFER'],
         'timeout': 0,
         'priority': 10,
         'suite': ['c-acceptance'],

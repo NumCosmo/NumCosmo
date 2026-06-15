@@ -61,20 +61,21 @@ typedef struct _TestNcPowspecFunc
   gpointer pdata;
 } TestNcPowspecFuncData;
 
-/* Built twice from this source (see tests/c/meson.build): with -DPOWSPEC_SPLIT_CHEAP only
- * the analytic transfer-function spectra (EH/BBKS, fast); with -DPOWSPEC_SPLIT_EXPENSIVE only
- * the CLASS-backed (cbe) spectra, which dominate the wall time. Splitting lets the cheap half
- * stay on the fast lane and the cbe half move to the coverage-only acceptance tier. With
- * neither macro all six run (local default). */
+/* Built twice from this source (see tests/c/meson.build): with -DPOWSPEC_SPLIT_CBE only the
+ * CLASS-backed (cbe) spectra, which are FAST here (the spectrum is splined once, ~4s); with
+ * -DPOWSPEC_SPLIT_TRANSFER only the analytic transfer-function spectra (EH/BBKS + halofit +
+ * corr3d), which are the SLOW half (>2 min, re-evaluated pointwise). Splitting lets the fast
+ * cbe half stay on the fast lane (unit) and the heavy transfer half move to the coverage-only
+ * acceptance tier. With neither macro all six run (local default). */
 TestNcPowspecFuncData powspecs[] =
 {
-#ifndef POWSPEC_SPLIT_EXPENSIVE
+#ifndef POWSPEC_SPLIT_CBE
   {test_nc_powspec_ml_transfer_new_EH,   "ml/transfer/EH",               NULL},
   {test_nc_powspec_ml_transfer_new_BBKS, "ml/transfer/BBKS",             NULL},
   {test_nc_powspec_mnl_halofit_new,      "mnl/halofit/ml/transfer/EH",   test_nc_powspec_ml_transfer_new_EH},
   {test_nc_powspec_mnl_halofit_new,      "mnl/halofit/ml/transfer/BBKS", test_nc_powspec_ml_transfer_new_BBKS},
 #endif
-#ifndef POWSPEC_SPLIT_CHEAP
+#ifndef POWSPEC_SPLIT_TRANSFER
   {test_nc_powspec_ml_cbe_new,           "ml/cbe",                       NULL},
   {test_nc_powspec_mnl_halofit_new,      "mnl/halofit/ml/cbe",           test_nc_powspec_ml_cbe_new},
 #endif
