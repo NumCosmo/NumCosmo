@@ -97,7 +97,9 @@ struct _NcDataClusterWLPrivate
   guint n_nodes;
   guint rule_n;
   GPtrArray *fixed_nodes;
+  GPtrArray *fixed_nodes_hi;
   GPtrArray *z_nodes_per_galaxy;
+  gdouble fixed_nodes_zcl;
 };
 
 enum
@@ -124,6 +126,15 @@ struct _NcDataClusterWL
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterWL, nc_data_cluster_wl, NCM_TYPE_DATA);
 
+/* The high panel is absent (NULL) for galaxies whose support does not straddle
+ * the lens redshift, so the free func must tolerate NULL entries. */
+static void
+_nc_data_cluster_wl_integral_fixed_free0 (gpointer intf)
+{
+  if (intf != NULL)
+    ncm_integral_fixed_free ((NcmIntegralFixed *) intf);
+}
+
 static void
 nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
 {
@@ -145,8 +156,10 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->integ_method       = NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES;
   self->n_nodes            = 10;
   self->rule_n             = 5;
-  self->fixed_nodes        = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_integral_fixed_free);
+  self->fixed_nodes        = g_ptr_array_new_with_free_func (_nc_data_cluster_wl_integral_fixed_free0);
+  self->fixed_nodes_hi     = g_ptr_array_new_with_free_func (_nc_data_cluster_wl_integral_fixed_free0);
   self->z_nodes_per_galaxy = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  self->fixed_nodes_zcl    = GSL_NAN;
 
   self->err = ncm_vector_new (1);
   self->zpi = ncm_vector_new (1);
@@ -208,11 +221,13 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_N_NODES:
       self->n_nodes = g_value_get_uint (value);
       g_ptr_array_set_size (self->fixed_nodes, 0);
+      g_ptr_array_set_size (self->fixed_nodes_hi, 0);
       g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
       break;
     case PROP_RULE_N:
       self->rule_n = g_value_get_uint (value);
       g_ptr_array_set_size (self->fixed_nodes, 0);
+      g_ptr_array_set_size (self->fixed_nodes_hi, 0);
       g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
@@ -281,6 +296,7 @@ nc_data_cluster_wl_dispose (GObject *object)
 
   g_clear_pointer (&self->shape_data, g_ptr_array_unref);
   g_clear_pointer (&self->fixed_nodes, g_ptr_array_unref);
+  g_clear_pointer (&self->fixed_nodes_hi, g_ptr_array_unref);
   g_clear_pointer (&self->z_nodes_per_galaxy, g_ptr_array_unref);
 
   /* Chain up : end */
@@ -685,6 +701,34 @@ lnint_integrator_integrate (gpointer integrator, gdouble zmin, gdouble zmax)
 
 /* End of lnint integrator */
 
+/* Integrates the shape values stored in @shape_at_nodes against the precomputed
+ * P(z)-weighted nodes of galaxy @gal_i. When the integration support straddles
+ * the lens redshift the galaxy has two panels ([z_lo, z_cl] and [z_cl, z_hi]);
+ * the shape values for the two panels occupy the first and second halves of
+ * @shape_at_nodes and are integrated separately and summed, so no Gauss-Legendre
+ * interval crosses the non-smooth point at the lens redshift. */
+static gdouble
+_nc_data_cluster_wl_fixed_panels_integ (NcDataClusterWLPrivate * const self, guint gal_i, guint n_total_nodes, NcmVector *shape_at_nodes)
+{
+  NcmIntegralFixed *intf_lo = (NcmIntegralFixed *) g_ptr_array_index (self->fixed_nodes, gal_i);
+  NcmIntegralFixed *intf_hi = (NcmIntegralFixed *) g_ptr_array_index (self->fixed_nodes_hi, gal_i);
+  NcmVector *sub_lo         = ncm_vector_get_subvector (shape_at_nodes, 0, n_total_nodes);
+  gdouble P;
+
+  P = ncm_integral_fixed_integ_vec_mult (intf_lo, sub_lo);
+  ncm_vector_free (sub_lo);
+
+  if (intf_hi != NULL)
+  {
+    NcmVector *sub_hi = ncm_vector_get_subvector (shape_at_nodes, n_total_nodes, n_total_nodes);
+
+    P += ncm_integral_fixed_integ_vec_mult (intf_hi, sub_hi);
+    ncm_vector_free (sub_hi);
+  }
+
+  return P;
+}
+
 static gdouble
 _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
@@ -696,7 +740,8 @@ _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   #pragma omp parallel reduction(+:result) if (self->enable_parallel)
   {
     NcGalaxySDPositionIntegrand *integrand_position = nc_galaxy_sd_position_integ (self->galaxy_position, FALSE);
-    NcmVector *shape_at_nodes                       = ncm_vector_new (n_total_nodes);
+    /* Up to two panels per galaxy when the support straddles the lens redshift. */
+    NcmVector *shape_at_nodes                       = ncm_vector_new (2 * n_total_nodes);
 
     nc_galaxy_sd_position_integrand_prepare (integrand_position, mset);
 
@@ -713,14 +758,13 @@ _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
       {
         NcGalaxySDShapeData *s_data    = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
         NcGalaxySDPositionData *p_data = s_data->sdpos_data;
-        NcmIntegralFixed *intf         = (NcmIntegralFixed *) g_ptr_array_index (self->fixed_nodes, gal_i);
         NcmVector *z_nodes             = (NcmVector *) g_ptr_array_index (self->z_nodes_per_galaxy, gal_i);
         const gdouble int_pos          = nc_galaxy_sd_position_integrand_eval (integrand_position, p_data);
         gdouble P_gal, m2lnP_gal_i;
 
         nc_galaxy_sd_shape_eval_at_nodes (self->galaxy_shape, mset, s_data, z_nodes, shape_at_nodes);
 
-        P_gal       = ncm_integral_fixed_integ_vec_mult (intf, shape_at_nodes) * int_pos;
+        P_gal       = _nc_data_cluster_wl_fixed_panels_integ (self, gal_i, n_total_nodes, shape_at_nodes) * int_pos;
         m2lnP_gal_i = P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
 
         if (!gsl_finite (m2lnP_gal_i))
@@ -750,14 +794,13 @@ _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
 
         NcGalaxySDShapeData *s_data    = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
         NcGalaxySDPositionData *p_data = s_data->sdpos_data;
-        NcmIntegralFixed *intf         = (NcmIntegralFixed *) g_ptr_array_index (self->fixed_nodes, gal_i);
         NcmVector *z_nodes             = (NcmVector *) g_ptr_array_index (self->z_nodes_per_galaxy, gal_i);
         const gdouble int_pos          = nc_galaxy_sd_position_integrand_eval (integrand_position, p_data);
         gdouble P_gal, m2lnP_gal_i;
 
         nc_galaxy_sd_shape_eval_at_nodes (self->galaxy_shape, mset, s_data, z_nodes, shape_at_nodes);
 
-        P_gal       = ncm_integral_fixed_integ_vec_mult (intf, shape_at_nodes) * int_pos;
+        P_gal       = _nc_data_cluster_wl_fixed_panels_integ (self, gal_i, n_total_nodes, shape_at_nodes) * int_pos;
         m2lnP_gal_i = P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
 
         if (!gsl_finite (m2lnP_gal_i))
@@ -1146,26 +1189,60 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
     {
       guint gal_i;
       const guint n_total_nodes = (self->n_nodes - 1) * self->rule_n;
+      const gdouble z_cl        = nc_halo_position_get_redshift (halo_position);
+      /* The reduced shear has a non-smooth point at the lens redshift z_cl. The
+       * node layout splits the support there, so the grid must be rebuilt when
+       * z_cl changes (in addition to the usual model/length triggers). */
+      const gboolean zcl_changed = (z_cl != self->fixed_nodes_zcl);
 
-      if (model_update || (self->fixed_nodes->len != self->len))
+      if (model_update || zcl_changed || (self->fixed_nodes->len != self->len))
       {
         g_ptr_array_set_size (self->fixed_nodes, 0);
+        g_ptr_array_set_size (self->fixed_nodes_hi, 0);
         g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
 
         for (gal_i = 0; gal_i < self->len; gal_i++)
         {
           NcGalaxySDShapeData *s_data       = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
           NcGalaxySDObsRedshiftData *z_data = s_data->sdpos_data->sdz_data;
-          NcmIntegralFixed *intf            = nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (
-            galaxy_redshift, mset, z_data,
-            self->n_nodes, self->rule_n);
-          NcmVector *z_nodes = ncm_vector_new (n_total_nodes);
+          gdouble z_lo, z_hi;
 
-          ncm_integral_fixed_get_nodes (intf, z_nodes);
+          nc_galaxy_sd_obs_redshift_get_fixed_support (galaxy_redshift, mset, z_data, &z_lo, &z_hi);
 
-          g_ptr_array_add (self->fixed_nodes, intf);
-          g_ptr_array_add (self->z_nodes_per_galaxy, z_nodes);
+          if ((z_cl > z_lo) && (z_cl < z_hi))
+          {
+            /* Support straddles z_cl: two panels [z_lo, z_cl] and [z_cl, z_hi]
+             * so no Gauss-Legendre interval crosses the kink at z_cl. */
+            NcmIntegralFixed *intf_lo = nc_galaxy_sd_obs_redshift_make_fixed_nodes (galaxy_redshift, mset, z_data, z_lo, z_cl, self->n_nodes, self->rule_n);
+            NcmIntegralFixed *intf_hi = nc_galaxy_sd_obs_redshift_make_fixed_nodes (galaxy_redshift, mset, z_data, z_cl, z_hi, self->n_nodes, self->rule_n);
+            NcmVector *z_nodes        = ncm_vector_new (2 * n_total_nodes);
+            NcmVector *z_nodes_lo     = ncm_vector_get_subvector (z_nodes, 0, n_total_nodes);
+            NcmVector *z_nodes_hi     = ncm_vector_get_subvector (z_nodes, n_total_nodes, n_total_nodes);
+
+            ncm_integral_fixed_get_nodes (intf_lo, z_nodes_lo);
+            ncm_integral_fixed_get_nodes (intf_hi, z_nodes_hi);
+            ncm_vector_free (z_nodes_lo);
+            ncm_vector_free (z_nodes_hi);
+
+            g_ptr_array_add (self->fixed_nodes, intf_lo);
+            g_ptr_array_add (self->fixed_nodes_hi, intf_hi);
+            g_ptr_array_add (self->z_nodes_per_galaxy, z_nodes);
+          }
+          else
+          {
+            /* Support entirely behind or in front of the lens: a single smooth panel. */
+            NcmIntegralFixed *intf = nc_galaxy_sd_obs_redshift_make_fixed_nodes (galaxy_redshift, mset, z_data, z_lo, z_hi, self->n_nodes, self->rule_n);
+            NcmVector *z_nodes     = ncm_vector_new (n_total_nodes);
+
+            ncm_integral_fixed_get_nodes (intf, z_nodes);
+
+            g_ptr_array_add (self->fixed_nodes, intf);
+            g_ptr_array_add (self->fixed_nodes_hi, NULL);
+            g_ptr_array_add (self->z_nodes_per_galaxy, z_nodes);
+          }
         }
+
+        self->fixed_nodes_zcl = z_cl;
       }
 
       nc_galaxy_sd_shape_prepare_at_nodes (galaxy_shape, mset, self->shape_data,

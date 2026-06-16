@@ -218,7 +218,8 @@ static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_gauss_integ (N
 static void _nc_galaxy_sd_obs_redshift_gauss_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static NcmSpline *_nc_galaxy_sd_obs_redshift_gauss_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array);
 static void _nc_galaxy_sd_obs_redshift_gauss_add_submodel (NcmModel *model, NcmModel *submodel);
-static NcmIntegralFixed *_nc_galaxy_sd_obs_redshift_gauss_prepare_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, guint n_nodes, guint rule_n);
+static void _nc_galaxy_sd_obs_redshift_gauss_get_fixed_support (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble *z_lo, gdouble *z_hi);
+static NcmIntegralFixed *_nc_galaxy_sd_obs_redshift_gauss_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
 
 static void
 nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *klass)
@@ -329,7 +330,8 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
   gsdor_class->integ               = &_nc_galaxy_sd_obs_redshift_gauss_integ;
   gsdor_class->data_init           = &_nc_galaxy_sd_obs_redshift_gauss_data_init;
   gsdor_class->compute_binned_dndz = &_nc_galaxy_sd_obs_redshift_gauss_compute_binned_dndz;
-  gsdor_class->prepare_fixed_nodes = &_nc_galaxy_sd_obs_redshift_gauss_prepare_fixed_nodes;
+  gsdor_class->get_fixed_support   = &_nc_galaxy_sd_obs_redshift_gauss_get_fixed_support;
+  gsdor_class->make_fixed_nodes    = &_nc_galaxy_sd_obs_redshift_gauss_make_fixed_nodes;
   model_class->add_submodel        = &_nc_galaxy_sd_obs_redshift_gauss_add_submodel;
 }
 
@@ -553,21 +555,18 @@ _gauss_fixed_nodes_gsl_f (gdouble z, gpointer user_data)
   return _nc_galaxy_sd_obs_redshift_gauss_integ_f (&arg->int_data, z, arg->data);
 }
 
-static NcmIntegralFixed *
-_nc_galaxy_sd_obs_redshift_gauss_prepare_fixed_nodes (
+static void
+_nc_galaxy_sd_obs_redshift_gauss_get_fixed_support (
   NcGalaxySDObsRedshift     *gsdor,
   NcmMSet                   *mset,
   NcGalaxySDObsRedshiftData *data,
-  guint                     n_nodes,
-  guint                     rule_n
+  gdouble                   *z_lo,
+  gdouble                   *z_hi
 )
 {
   NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
   NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
   NcGalaxySDObsRedshiftGaussData * const ldata   = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
-  GaussFixedNodesGSLArg arg;
-  NcmIntegralFixed *intf;
-  gsl_function F;
   gdouble z_min, z_max;
 
   g_assert_nonnull (self->sdz);
@@ -586,7 +585,27 @@ _nc_galaxy_sd_obs_redshift_gauss_prepare_fixed_nodes (
     z_max = MIN (z_max, ldata->zp + half_width);
   }
 
-  intf = ncm_integral_fixed_new (n_nodes, rule_n, z_min, z_max);
+  *z_lo = z_min;
+  *z_hi = z_max;
+}
+
+static NcmIntegralFixed *
+_nc_galaxy_sd_obs_redshift_gauss_make_fixed_nodes (
+  NcGalaxySDObsRedshift     *gsdor,
+  NcmMSet                   *mset,
+  NcGalaxySDObsRedshiftData *data,
+  gdouble                   z_lo,
+  gdouble                   z_hi,
+  guint                     n_nodes,
+  guint                     rule_n
+)
+{
+  NcGalaxySDObsRedshiftGauss *gsdorgauss = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
+  GaussFixedNodesGSLArg arg;
+  NcmIntegralFixed *intf;
+  gsl_function F;
+
+  intf = ncm_integral_fixed_new (n_nodes, rule_n, z_lo, z_hi);
 
   arg.int_data.gsdorgauss = gsdorgauss;
   arg.data                = data;

@@ -158,12 +158,21 @@ _nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, Nc
   return NULL;
 }
 
-static NcmIntegralFixed *
-_nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
-                                                NcGalaxySDObsRedshiftData *data,
-                                                guint n_nodes, guint rule_n)
+static void
+_nc_galaxy_sd_obs_redshift_get_fixed_support (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
+                                              NcGalaxySDObsRedshiftData *data,
+                                              gdouble *z_lo, gdouble *z_hi)
 {
-  g_error ("_nc_galaxy_sd_obs_redshift_prepare_fixed_nodes: method not implemented");
+  g_error ("_nc_galaxy_sd_obs_redshift_get_fixed_support: method not implemented");
+}
+
+static NcmIntegralFixed *
+_nc_galaxy_sd_obs_redshift_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
+                                             NcGalaxySDObsRedshiftData *data,
+                                             gdouble z_lo, gdouble z_hi,
+                                             guint n_nodes, guint rule_n)
+{
+  g_error ("_nc_galaxy_sd_obs_redshift_make_fixed_nodes: method not implemented");
 
   return NULL;
 }
@@ -192,7 +201,8 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   klass->integ                 = &_nc_galaxy_sd_obs_redshift_integ;
   klass->data_init             = &_nc_galaxy_sd_obs_redshift_data_init;
   klass->compute_binned_dndz   = &_nc_galaxy_sd_obs_redshift_compute_binned_dndz;
-  klass->prepare_fixed_nodes   = &_nc_galaxy_sd_obs_redshift_prepare_fixed_nodes;
+  klass->get_fixed_support     = &_nc_galaxy_sd_obs_redshift_get_fixed_support;
+  klass->make_fixed_nodes      = &_nc_galaxy_sd_obs_redshift_make_fixed_nodes;
 }
 
 /**
@@ -474,25 +484,51 @@ nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, Ncm
 }
 
 /**
- * nc_galaxy_sd_obs_redshift_prepare_fixed_nodes: (skip)
+ * nc_galaxy_sd_obs_redshift_get_fixed_support: (skip)
  * @gsdor: a #NcGalaxySDObsRedshift
  * @mset: a #NcmMSet
  * @data: a #NcGalaxySDObsRedshiftData
+ * @z_lo: (out): lower limit of the effective integration support
+ * @z_hi: (out): upper limit of the effective integration support
+ *
+ * Computes the effective redshift support over which the per-galaxy P(z) factor
+ * should be integrated (e.g. the photometric kernel restricted to its relevant
+ * range). This is the domain to be covered by the fixed Gauss-Legendre nodes.
+ *
+ */
+void
+nc_galaxy_sd_obs_redshift_get_fixed_support (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
+                                             NcGalaxySDObsRedshiftData *data,
+                                             gdouble *z_lo, gdouble *z_hi)
+{
+  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->get_fixed_support (gsdor, mset, data, z_lo, z_hi);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_make_fixed_nodes: (skip)
+ * @gsdor: a #NcGalaxySDObsRedshift
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @z_lo: lower integration limit
+ * @z_hi: upper integration limit
  * @n_nodes: number of Gauss-Legendre intervals
  * @rule_n: number of GL points per interval
  *
- * Allocates and populates a #NcmIntegralFixed for galaxy @data so that the
+ * Allocates and populates a #NcmIntegralFixed over [@z_lo, @z_hi] so that the
  * precomputed node weights absorb the per-galaxy P(z) factor. The returned
- * object is owned by the caller.
+ * object is owned by the caller. Callers may build several panels over adjacent
+ * sub-ranges so that a known non-smooth point (e.g. the lens redshift) falls on
+ * a panel boundary rather than inside a Gauss-Legendre interval.
  *
  * Returns: (transfer full): a new #NcmIntegralFixed with P(z)-weighted nodes.
  */
 NcmIntegralFixed *
-nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
-                                               NcGalaxySDObsRedshiftData *data,
-                                               guint n_nodes, guint rule_n)
+nc_galaxy_sd_obs_redshift_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
+                                            NcGalaxySDObsRedshiftData *data,
+                                            gdouble z_lo, gdouble z_hi,
+                                            guint n_nodes, guint rule_n)
 {
-  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->prepare_fixed_nodes (gsdor, mset, data, n_nodes, rule_n);
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->make_fixed_nodes (gsdor, mset, data, z_lo, z_hi, n_nodes, rule_n);
 }
 
 /**

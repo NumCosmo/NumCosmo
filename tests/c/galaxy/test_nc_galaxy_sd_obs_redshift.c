@@ -797,6 +797,18 @@ test_integral_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
   *fdim = 1;
 }
 
+/* Builds a single fixed-node panel over the full effective support, matching the
+ * old prepare_fixed_nodes behavior (no lens-redshift split). */
+static NcmIntegralFixed *
+test_make_fixed_nodes_full (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, guint n_nodes, guint rule_n)
+{
+  gdouble z_lo, z_hi;
+
+  nc_galaxy_sd_obs_redshift_get_fixed_support (gsdor, mset, data, &z_lo, &z_hi);
+
+  return nc_galaxy_sd_obs_redshift_make_fixed_nodes (gsdor, mset, data, z_lo, z_hi, n_nodes, rule_n);
+}
+
 static void
 test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *test, gconstpointer pdata)
 {
@@ -865,7 +877,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *tes
 
     res = ncm_vector_fast_get (resv, 0);
 
-    fixed_integral = nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (
+    fixed_integral = test_make_fixed_nodes_full (
       test->gsdor,
       mset,
       data,
@@ -919,7 +931,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *tes
 
     res = ncm_vector_fast_get (resv, 0);
 
-    fixed_integral = nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (
+    fixed_integral = test_make_fixed_nodes_full (
       test->gsdor,
       mset,
       data,
@@ -1023,7 +1035,7 @@ test_nc_galaxy_sd_obs_redshift_pz_integration (TestNcGalaxySDObsRedshift *test, 
     res = ncm_vector_fast_get (resv, 0);
 
     /* Perform fixed node integration */
-    fixed_integral = nc_galaxy_sd_obs_redshift_prepare_fixed_nodes (
+    fixed_integral = test_make_fixed_nodes_full (
       test->gsdor,
       mset,
       data,
