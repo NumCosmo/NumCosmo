@@ -687,14 +687,17 @@ test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
 
     if (!NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (test->galaxy_redshift))
     {
-      g_object_set (test->dcwl, "n-nodes", 10u, "rule-n", 5u, NULL);
-
       /* FIXED_NODES splits its grid at the lens redshift so no Gauss-Legendre
-       * interval crosses the reduced-shear kink. It is then at least as accurate
-       * as the adaptive CUBATURE (reltol = 1e-6): the residual is dominated by
-       * CUBATURE's own error and vanishes (~1e-9) when its reltol is tightened,
-       * while increasing the node count leaves it unchanged. Measured worst rel
-       * ~5e-7; tolerances follow CUBATURE's precision. */
+       * interval crosses the reduced-shear kink; it is then at least as accurate
+       * as the adaptive CUBATURE (reltol = 1e-6), the residual being dominated by
+       * CUBATURE's own error (it vanishes to ~1e-9 when CUBATURE's reltol is
+       * tightened). Its accuracy is set by the node count: the analytic gauss
+       * integrand reaches the CUBATURE floor at ~45 nodes/panel, but the pz
+       * integrand is a cubic spline (piecewise C2) and needs ~90, so use 20
+       * n-nodes here. With that the worst per-galaxy residual is ~1e-6 for both,
+       * and the 1e-5 tolerances follow CUBATURE's precision (not loosened). */
+      g_object_set (test->dcwl, "n-nodes", 20u, "rule-n", 5u, NULL);
+
       _test_nc_data_cluster_wl_cmp_methods (test,
                                             NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES,
                                             NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE,
