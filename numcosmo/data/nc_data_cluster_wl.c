@@ -78,6 +78,9 @@ struct _NcDataClusterWLPrivate
   NcmModelCtrl *ctrl_redshift;
   NcmModelCtrl *ctrl_position;
   NcmModelCtrl *ctrl_shape;
+  NcmModelCtrl *ctrl_cosmo_nodes;
+  NcmModelCtrl *ctrl_hp_nodes;
+  NcmModelCtrl *ctrl_dp_nodes;
   NcDataClusterWLResampleFlag resample_flag;
   gboolean enable_parallel;
   /* Integration temporary variables */
@@ -151,6 +154,9 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->ctrl_redshift      = ncm_model_ctrl_new (NULL);
   self->ctrl_position      = ncm_model_ctrl_new (NULL);
   self->ctrl_shape         = ncm_model_ctrl_new (NULL);
+  self->ctrl_cosmo_nodes   = ncm_model_ctrl_new (NULL);
+  self->ctrl_hp_nodes      = ncm_model_ctrl_new (NULL);
+  self->ctrl_dp_nodes      = ncm_model_ctrl_new (NULL);
   self->resample_flag      = NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL;
   self->enable_parallel    = FALSE;
   self->integ_method       = NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES;
@@ -293,6 +299,9 @@ nc_data_cluster_wl_dispose (GObject *object)
   ncm_model_ctrl_clear (&self->ctrl_redshift);
   ncm_model_ctrl_clear (&self->ctrl_position);
   ncm_model_ctrl_clear (&self->ctrl_shape);
+  ncm_model_ctrl_clear (&self->ctrl_cosmo_nodes);
+  ncm_model_ctrl_clear (&self->ctrl_hp_nodes);
+  ncm_model_ctrl_clear (&self->ctrl_dp_nodes);
 
   g_clear_pointer (&self->shape_data, g_ptr_array_unref);
   g_clear_pointer (&self->fixed_nodes, g_ptr_array_unref);
@@ -1176,12 +1185,23 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
   nc_halo_position_prepare_if_needed (halo_position, cosmo);
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
   {
-    const gboolean model_update = ncm_model_ctrl_model_update (self->ctrl_position, NCM_MODEL (galaxy_position)) ||
-                                  ncm_model_ctrl_model_update (self->ctrl_redshift, NCM_MODEL (galaxy_redshift)) ||
-                                  ncm_model_ctrl_model_update (self->ctrl_shape, NCM_MODEL (galaxy_shape));
+    /* These ncm_model_ctrl_model_update calls have side effects (they prime the
+     * ctrl with the current model), so each must be evaluated unconditionally;
+     * a short-circuit '||' would leave the later ctrls un-primed and make
+     * model_update spuriously TRUE on the following prepares. */
+    const gboolean pos_changed   = ncm_model_ctrl_model_update (self->ctrl_position, NCM_MODEL (galaxy_position));
+    const gboolean z_changed     = ncm_model_ctrl_model_update (self->ctrl_redshift, NCM_MODEL (galaxy_redshift));
+    const gboolean shape_changed = ncm_model_ctrl_model_update (self->ctrl_shape, NCM_MODEL (galaxy_shape));
+    const gboolean model_update  = pos_changed || z_changed || shape_changed;
 
     if (model_update)
+    {
       _nc_data_cluster_wl_load_obs (dcwl, self->obs, self->shape_data);
+      /* shape_data was rebuilt: the per-galaxy node caches it holds and the
+       * derived fixed-node grid are now invalid. Force a rebuild on the next
+       * fixed-nodes prepare, even if it happens after a cubature/lnint eval. */
+      self->fixed_nodes_zcl = GSL_NAN;
+    }
 
     nc_galaxy_sd_shape_prepare_data_array (galaxy_shape, mset, self->shape_data);
 
@@ -1193,9 +1213,18 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
       /* The reduced shear has a non-smooth point at the lens redshift z_cl. The
        * node layout splits the support there, so the grid must be rebuilt when
        * z_cl changes (in addition to the usual model/length triggers). */
-      const gboolean zcl_changed = (z_cl != self->fixed_nodes_zcl);
+      const gboolean zcl_changed   = (z_cl != self->fixed_nodes_zcl);
+      const gboolean nodes_rebuilt = model_update || zcl_changed || (self->fixed_nodes->len != self->len);
+      /* The per-galaxy node caches (radius, sigma, critical surface density)
+       * live in the shape data this dcwl owns; prepare_at_nodes recomputes them
+       * unconditionally. We track the relevant models here so it is only invoked
+       * when the grid was rebuilt or cosmo/halo/profile parameters changed. Each
+       * ctrl is updated unconditionally to keep its pkey state in sync. */
+      const gboolean cosmo_changed = ncm_model_ctrl_update (self->ctrl_cosmo_nodes, NCM_MODEL (cosmo));
+      const gboolean hp_changed    = ncm_model_ctrl_update (self->ctrl_hp_nodes, NCM_MODEL (halo_position));
+      const gboolean dp_changed    = ncm_model_ctrl_update (self->ctrl_dp_nodes, NCM_MODEL (density_profile));
 
-      if (model_update || zcl_changed || (self->fixed_nodes->len != self->len))
+      if (nodes_rebuilt)
       {
         g_ptr_array_set_size (self->fixed_nodes, 0);
         g_ptr_array_set_size (self->fixed_nodes_hi, 0);
@@ -1245,8 +1274,9 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
         self->fixed_nodes_zcl = z_cl;
       }
 
-      nc_galaxy_sd_shape_prepare_at_nodes (galaxy_shape, mset, self->shape_data,
-                                           self->z_nodes_per_galaxy);
+      if (nodes_rebuilt || cosmo_changed || hp_changed || dp_changed)
+        nc_galaxy_sd_shape_prepare_at_nodes (galaxy_shape, mset, self->shape_data,
+                                             self->z_nodes_per_galaxy);
     }
   }
 }
