@@ -200,17 +200,13 @@ def set_rc_params_article(
     if use_tex is None:
         use_tex = bool(shutil.which("latex"))
 
-    params: dict[str, float | bool | list[float]] = {
-        "axes.labelsize": fontsize,
-        "font.size": fontsize,
-        "legend.fontsize": fontsize,
-        "xtick.labelsize": fontsize,
-        "ytick.labelsize": fontsize,
-        "text.usetex": use_tex,
-        "figure.figsize": fig_size,
-    }
-    for k, v in params.items():
-        plt.rcParams[k] = v
+    plt.rcParams["axes.labelsize"] = fontsize
+    plt.rcParams["font.size"] = fontsize
+    plt.rcParams["legend.fontsize"] = fontsize
+    plt.rcParams["xtick.labelsize"] = fontsize
+    plt.rcParams["ytick.labelsize"] = fontsize
+    plt.rcParams["text.usetex"] = use_tex
+    plt.rcParams["figure.figsize"] = fig_size
 
 
 def plot_m2lnp(
