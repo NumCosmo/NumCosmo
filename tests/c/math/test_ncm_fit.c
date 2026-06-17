@@ -177,6 +177,11 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_sub_fit_set,                                              \
                     &test_ncm_fit_free);                                                    \
                                                                                             \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/sub_fit/save_mset", TestNcmFit, NULL,     \
+                    &test_ncm_fit_ ## lib ## _ ## algo ## _new,                             \
+                    &test_ncm_fit_sub_fit_save_mset,                                        \
+                    &test_ncm_fit_free);                                                    \
+                                                                                            \
         g_test_add ("/ncm/fit/" #lib "/" #algo "/constraints/equality", TestNcmFit, NULL,   \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new,                             \
                     &test_ncm_fit_equality_constraints,                                     \
@@ -342,6 +347,7 @@ void test_ncm_fit_sub_fit_wrong_mset (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_wrong_param (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_sub_fit_set (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_sub_fit_save_mset (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_inequality_constraints (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_serialize_constraints (TestNcmFit *test, gconstpointer pdata);
@@ -1223,6 +1229,65 @@ test_ncm_fit_sub_fit_set (TestNcmFit *test, gconstpointer pdata)
 
     g_assert_true (fit_dup2 == fit_dup);
     ncm_fit_free (fit_dup2);
+  }
+
+  ncm_fit_free (fit_dup);
+}
+
+void
+test_ncm_fit_sub_fit_save_mset (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmMSet *mset     = ncm_fit_peek_mset (test->fit);
+  NcmMSet *mset_dup = ncm_mset_shallow_copy (mset, NULL);
+  NcmFit *fit_dup   = ncm_fit_copy_new (test->fit,
+                                        ncm_fit_peek_likelihood (test->fit),
+                                        mset_dup,
+                                        ncm_fit_get_grad_type (test->fit));
+
+  ncm_mset_param_set_ftype (mset, ncm_model_mvnd_id (), 0, NCM_PARAM_TYPE_FIXED);
+
+  ncm_mset_param_set_all_ftype (mset_dup, NCM_PARAM_TYPE_FIXED);
+  ncm_mset_param_set_ftype (mset_dup, ncm_model_mvnd_id (), 0, NCM_PARAM_TYPE_FREE);
+
+  ncm_fit_set_sub_fit (test->fit, fit_dup);
+  ncm_fit_run (test->fit, NCM_FIT_RUN_MSGS_NONE);
+
+  {
+    gchar **main_fmap       = ncm_mset_get_fmap (mset);
+    guint main_fparam_len   = ncm_mset_fparam_len (mset);
+    NcmSerialize *ser       = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    gchar *tmpfile          = g_strdup_printf ("%s/test_ncm_fit_sub_fit_save_mset_XXXXXX.mset",
+                                               g_get_tmp_dir ());
+    gint fd                 = g_mkstemp (tmpfile);
+    NcmMSet *loaded_mset;
+    gchar **loaded_fmap;
+    guint loaded_fparam_len;
+    guint i;
+
+    g_assert_cmpint (fd, >=, 0);
+    g_close (fd, NULL);
+
+    ncm_mset_save (mset, ser, tmpfile, FALSE, NULL);
+    ncm_serialize_reset (ser, TRUE);
+    loaded_mset = ncm_mset_load (tmpfile, ser, NULL);
+
+    g_assert_nonnull (loaded_mset);
+
+    loaded_fmap       = ncm_mset_get_fmap (loaded_mset);
+    loaded_fparam_len = ncm_mset_fparam_len (loaded_mset);
+
+    g_assert_cmpuint (loaded_fparam_len, ==, main_fparam_len);
+
+    for (i = 0; i < main_fparam_len; i++)
+      g_assert_cmpstr (loaded_fmap[i], ==, main_fmap[i]);
+
+    g_strfreev (main_fmap);
+    g_strfreev (loaded_fmap);
+    ncm_mset_free (loaded_mset);
+    ncm_serialize_free (ser);
+
+    g_unlink (tmpfile);
+    g_free (tmpfile);
   }
 
   ncm_fit_free (fit_dup);

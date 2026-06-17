@@ -2458,7 +2458,7 @@ ncm_mset_param_set_vector (NcmMSet *mset, NcmVector *params)
  * @mset: a #NcmMSet
  * @params: a #NcmVector
  *
- * Sets the compontents of @params using the models parameters.
+ * Sets the components of @params using the models parameters.
  *
  */
 void
@@ -3431,11 +3431,47 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
       {
         NcmModelClass *model_class = NCM_MODEL_GET_CLASS (item->model);
         GObjectClass *oclass       = G_OBJECT_CLASS (model_class);
-        GVariant *model_var        = ncm_serialize_to_variant (ser, G_OBJECT (item->model));
         guint nsubmodels           = ncm_model_get_submodel_len (item->model);
+        GArray *saved_ftypes       = NULL;
         GVariant *params           = NULL;
         gchar *obj_name            = NULL;
+        GVariant *model_var;
         guint nparams, j;
+
+        if (self->valid_map)
+        {
+          GArray *fpi_array     = g_hash_table_lookup (self->fpi_hash, GINT_TO_POINTER (item->mid));
+          const guint model_len = ncm_model_len (item->model);
+          guint pid;
+
+          saved_ftypes = g_array_sized_new (FALSE, FALSE, sizeof (NcmParamType), model_len);
+          g_array_set_size (saved_ftypes, model_len);
+
+          for (pid = 0; pid < model_len; pid++)
+          {
+            g_array_index (saved_ftypes, NcmParamType, pid) = ncm_model_param_get_ftype (item->model, pid);
+            ncm_model_param_set_ftype (item->model, pid, NCM_PARAM_TYPE_FIXED);
+          }
+
+          for (pid = 0; pid < item->added_total_params; pid++)
+          {
+            if (g_array_index (fpi_array, gint, pid) >= 0)
+              ncm_model_param_set_ftype (item->model, pid, NCM_PARAM_TYPE_FREE);
+          }
+        }
+
+        model_var = ncm_serialize_to_variant (ser, G_OBJECT (item->model));
+
+        if (saved_ftypes != NULL)
+        {
+          const guint model_len = ncm_model_len (item->model);
+          guint pid;
+
+          for (pid = 0; pid < model_len; pid++)
+            ncm_model_param_set_ftype (item->model, pid, g_array_index (saved_ftypes, NcmParamType, pid));
+
+          g_array_unref (saved_ftypes);
+        }
 
         g_variant_get (model_var, NCM_SERIALIZE_OBJECT_FORMAT, &obj_name, &params);
         nparams = g_variant_n_children (params);
