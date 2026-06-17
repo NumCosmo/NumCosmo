@@ -29,6 +29,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_function_cache.h>
+#include <numcosmo/math/ncm_vector.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_integration.h>
@@ -115,6 +116,8 @@ void ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F);
 gdouble ncm_integral_fixed_nodes_eval (NcmIntegralFixed *intf);
 gdouble ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F);
 gdouble ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol);
+void ncm_integral_fixed_get_nodes (NcmIntegralFixed *intf, NcmVector *nodes);
+gdouble ncm_integral_fixed_integ_vec_mult (NcmIntegralFixed *intf, const NcmVector *f_at_nodes);
 
 #define NCM_INTEGRAL_PARTITION 100000
 #define NCM_INTEGRAL_ALG 6

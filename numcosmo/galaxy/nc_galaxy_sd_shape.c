@@ -170,6 +170,20 @@ _nc_galaxy_sd_shape_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrA
   g_error ("_nc_galaxy_sd_shape_direct_estimate: method not implemented.");
 }
 
+static gboolean
+_nc_galaxy_sd_shape_prepare_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy)
+{
+  g_error ("_nc_galaxy_sd_shape_prepare_at_nodes: method not implemented.");
+
+  return FALSE;
+}
+
+static void
+_nc_galaxy_sd_shape_eval_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, const NcmVector *z_nodes, NcmVector *out)
+{
+  g_error ("_nc_galaxy_sd_shape_eval_at_nodes: method not implemented.");
+}
+
 /* LCOV_EXCL_STOP */
 
 static void
@@ -207,6 +221,8 @@ nc_galaxy_sd_shape_class_init (NcGalaxySDShapeClass *klass)
   klass->prepare_data_array = &_nc_galaxy_sd_shape_prepare_data_array;
   klass->data_init          = &_nc_galaxy_sd_shape_data_init;
   klass->direct_estimate    = &_nc_galaxy_sd_shape_direct_estimate;
+  klass->prepare_at_nodes   = &_nc_galaxy_sd_shape_prepare_at_nodes;
+  klass->eval_at_nodes      = &_nc_galaxy_sd_shape_eval_at_nodes;
 }
 
 /* LCOV_EXCL_START */
@@ -673,6 +689,41 @@ void
 nc_galaxy_sd_shape_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho)
 {
   NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->direct_estimate (gsds, mset, data_array, gt, gx, sigma_t, sigma_x, rho);
+}
+
+/**
+ * nc_galaxy_sd_shape_prepare_at_nodes: (virtual prepare_at_nodes)
+ * @gsds: a #NcGalaxySDShape
+ * @mset: a #NcmMSet
+ * @data_array: (element-type NcGalaxySDShapeData): per-galaxy shape data
+ * @z_nodes_per_galaxy: (element-type NcmVector): per-galaxy z node vectors
+ *
+ * Pre-computes cached quantities (Σ_crit per node, Σ(R)) for the fixed GL quadrature path.
+ *
+ * Returns: TRUE if successful.
+ */
+gboolean
+nc_galaxy_sd_shape_prepare_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy)
+{
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare_at_nodes (gsds, mset, data_array, z_nodes_per_galaxy);
+}
+
+/**
+ * nc_galaxy_sd_shape_eval_at_nodes: (virtual eval_at_nodes)
+ * @gsds: a #NcGalaxySDShape
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxySDShapeData
+ * @z_nodes: the z values at each GL node
+ * @out: (out): shape likelihood evaluated at each node
+ *
+ * Evaluates the shape likelihood P(epsilon_obs | z_j, data) at every GL node,
+ * writing the result into @out. Requires prior call to nc_galaxy_sd_shape_prepare_at_nodes().
+ *
+ */
+void
+nc_galaxy_sd_shape_eval_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, const NcmVector *z_nodes, NcmVector *out)
+{
+  NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->eval_at_nodes (gsds, mset, data, z_nodes, out);
 }
 
 /**

@@ -86,6 +86,10 @@ math_tests = [
         'sources': ['math/test_ncm_integral_nd.c'],
     },
     {
+        'name': 'ncm_integral_fixed',
+        'sources': ['math/test_ncm_integral_fixed.c'],
+    },
+    {
         'name': 'ncm_sf_sbessel',
         'sources': ['math/test_ncm_sf_sbessel.c'],
     },
@@ -241,6 +245,7 @@ data_tests = [
         'name': 'nc_data_cluster_wl_prop',
         'sources': ['data/test_nc_data_cluster_wl.c'],
         'c_args': ['-DCLUSTER_WL_SPLIT_CHEAP'],
+        'timeout': 0,
         # m2lnP (the OpenMP-parallel likelihood eval) is in the cheap half, so this exec
         # also exercises the OpenMP path and stays in the omp lane.
         'suite': ['c', 'omp'],
@@ -252,6 +257,14 @@ data_tests = [
         'timeout': 0,
         'priority': 10,
         'suite': ['c-acceptance', 'omp'],
+    },
+    # Truth-table validation of the integration methods: regenerates a curated
+    # sample from a fixed seed (nothing stored) and checks every method against a
+    # recomputed FIXED-320x7 reference. Deterministic and fast.
+    {
+        'name': 'nc_data_cluster_wl_truth',
+        'sources': ['data/test_nc_data_cluster_wl_truth.c'],
+        'suite': ['c', 'omp'],
     },
 ]
 

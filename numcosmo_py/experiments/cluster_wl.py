@@ -623,7 +623,11 @@ class GalaxyDistributionModel:
 
         cluster_data.props.r_min = cluster.r_min
         cluster_data.props.r_max = cluster.r_max
-        cluster_data.use_lnint(use_lnint)
+        cluster_data.set_integ_method(
+            Nc.DataClusterWLIntegMethod.LNINT
+            if use_lnint
+            else Nc.DataClusterWLIntegMethod.CUBATURE
+        )
 
         mset = Ncm.MSet.new_array(
             [

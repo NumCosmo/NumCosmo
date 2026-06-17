@@ -34,6 +34,7 @@
 #include <math.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_math.h>
 
 typedef struct _TestNcGalaxySDShape
 {
@@ -88,6 +89,9 @@ static void test_nc_galaxy_sd_shape_hsm_gauss_data_setget (TestNcGalaxySDShape *
 static void test_nc_galaxy_sd_shape_hsm_gauss_global_strong_lensing (TestNcGalaxySDShape *test, gconstpointer pdata);
 static void test_nc_galaxy_sd_shape_hsm_gauss_strong_lensing (TestNcGalaxySDShape *test, gconstpointer pdata);
 
+static void test_nc_galaxy_sd_shape_hsm_gauss_global_at_nodes (TestNcGalaxySDShape *test, gconstpointer pdata);
+static void test_nc_galaxy_sd_shape_hsm_gauss_at_nodes (TestNcGalaxySDShape *test, gconstpointer pdata);
+
 static void test_nc_galaxy_sd_shape_hsm_gauss_global_sigma_conversions (void);
 
 typedef struct _TestNcGalaxySDShapeTests
@@ -108,7 +112,7 @@ typedef struct _TestEllDefinition
 gint
 main (gint argc, gchar *argv[])
 {
-  TestNcGalaxySDShapeTests tests_gauss[10] = {
+  TestNcGalaxySDShapeTests tests_gauss[11] = {
     {"serialize", &test_nc_galaxy_sd_shape_serialize},
     {"model_id", &test_nc_galaxy_sd_shape_model_id},
     {"coord", &test_nc_galaxy_sd_shape_hsm_gauss_global_convert_coord},
@@ -119,8 +123,9 @@ main (gint argc, gchar *argv[])
     {"required_columns", &test_nc_galaxy_sd_shape_hsm_gauss_global_required_columns},
     {"data_setget", &test_nc_galaxy_sd_shape_hsm_gauss_global_data_setget},
     {"strong_lensing", &test_nc_galaxy_sd_shape_hsm_gauss_global_strong_lensing},
+    {"at_nodes", &test_nc_galaxy_sd_shape_hsm_gauss_global_at_nodes},
   };
-  TestNcGalaxySDShapeTests tests_gauss_hsc[10] = {
+  TestNcGalaxySDShapeTests tests_gauss_hsc[11] = {
     {"serialize", &test_nc_galaxy_sd_shape_serialize},
     {"model_id", &test_nc_galaxy_sd_shape_model_id},
     {"coord", &test_nc_galaxy_sd_shape_hsm_gauss_convert_coord},
@@ -131,6 +136,7 @@ main (gint argc, gchar *argv[])
     {"required_columns", &test_nc_galaxy_sd_shape_hsm_gauss_required_columns},
     {"data_setget", &test_nc_galaxy_sd_shape_hsm_gauss_data_setget},
     {"strong_lensing", &test_nc_galaxy_sd_shape_hsm_gauss_strong_lensing},
+    {"at_nodes", &test_nc_galaxy_sd_shape_hsm_gauss_at_nodes},
   };
 
   gint i, j;
@@ -230,7 +236,7 @@ main (gint argc, gchar *argv[])
     gchar *ell_conv_name       = ell_def->ell_conv_name;
     gchar *ell_coord_name      = ell_def->ell_coord_name;
 
-    for (j = 0; j < 10; j++)
+    for (j = 0; j < 11; j++)
     {
       gchar *test_name = tests_gauss[j].test_name;
 
@@ -246,7 +252,7 @@ main (gint argc, gchar *argv[])
       g_free (test_path);
     }
 
-    for (j = 0; j < 10; j++)
+    for (j = 0; j < 11; j++)
     {
       gchar *test_name = tests_gauss_hsc[j].test_name;
 
@@ -2080,8 +2086,8 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_strong_lensing (TestNcGalaxySDShape *te
             jac_den = fabs (gsl_pow_3 (1.0 - 2.0 * creal (conj (g) * e_o) + abs_g2));
             break;
 
-          default:
-            g_assert_not_reached (); /* LCOV_EXCL_LINE */
+          default: /* LCOV_EXCL_LINE */
+            g_assert_not_reached ();
             break;
         }
 
@@ -2292,6 +2298,283 @@ test_nc_galaxy_sd_shape_hsm_gauss_strong_lensing (TestNcGalaxySDShape *test, gco
   nc_galaxy_sd_shape_integrand_free (integrand);
   g_ptr_array_unref (data_array);
   ncm_rng_free (rng);
+}
+
+/* Verifies that eval_at_nodes and integrand_eval produce identical values at each node.
+ * Also checks that re-preparing after a parameter change yields different (updated) values. */
+static void
+_test_nc_galaxy_sd_shape_at_nodes_impl (
+  TestNcGalaxySDShape *test,
+  gconstpointer       pdata,
+  gboolean            is_global
+)
+{
+  NcmRNG *rng                   = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  GPtrArray *z_nodes_per_galaxy = g_ptr_array_new_with_free_func (
+    (GDestroyNotify) ncm_vector_free
+  );
+  NcGalaxySDShapeIntegrand *integrand = nc_galaxy_sd_shape_integ (
+    test->galaxy_shape,
+    FALSE
+  );
+  NcGalaxySDObsRedshiftData *z_data = nc_galaxy_sd_obs_redshift_data_new (
+    test->galaxy_redshift
+  );
+  NcGalaxySDPositionData *p_data = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data);
+  NcGalaxySDShapeData *s_data    = nc_galaxy_sd_shape_data_new (
+    test->galaxy_shape,
+    p_data
+  );
+  GPtrArray *data_array    = g_ptr_array_new ();
+  const gdouble z_node_min = 0.1;
+  const gdouble z_node_max = 1.5;
+  const guint n_total      = 100;
+  NcmVector *z_nodes       = ncm_vector_new (n_total);
+  NcmVector *out           = ncm_vector_new (n_total);
+  NcmVector *out_ref       = ncm_vector_new (n_total);
+  NcmVector *out_alt       = ncm_vector_new (n_total);
+  guint i;
+
+  for (i = 0; i < n_total; i++)
+  {
+    const gdouble z_i = z_node_min + (z_node_max - z_node_min) * i / (n_total - 1);
+
+    ncm_vector_set (z_nodes, i, z_i);
+  }
+
+  g_ptr_array_add (z_nodes_per_galaxy, z_nodes);
+  nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+
+  z_data->z   = g_test_rand_double_range (0.15, 1.4);
+  p_data->ra  = g_test_rand_double_range (-1.0e-2, 1.0e-2);
+  p_data->dec = g_test_rand_double_range (-1.0e-2, 1.0e-2);
+
+  if (is_global)
+    nc_galaxy_sd_shape_hsm_gauss_global_gen (
+      NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape),
+      test->mset,
+      s_data,
+      0.03,
+      0.0,
+      0.0,
+      0.0,
+      test->ell_coord,
+      rng);
+  else
+    nc_galaxy_sd_shape_hsm_gauss_gen (
+      NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape),
+      test->mset,
+      s_data,
+      0.3,
+      0.03,
+      0.0,
+      0.0,
+      0.0,
+      test->ell_coord,
+      rng
+    );
+
+  g_ptr_array_add (data_array, s_data);
+  nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+
+  {
+    for (i = 0; i < n_total; i++)
+    {
+      const gdouble z_i   = ncm_vector_get (z_nodes, i);
+      const gdouble ref_i = nc_galaxy_sd_shape_integrand_eval (integrand, z_i, s_data);
+
+      ncm_vector_fast_set (out_ref, i, ref_i);
+    }
+
+    nc_galaxy_sd_shape_prepare_at_nodes (
+      test->galaxy_shape,
+      test->mset,
+      data_array,
+      z_nodes_per_galaxy
+    );
+    nc_galaxy_sd_shape_eval_at_nodes (
+      test->galaxy_shape,
+      test->mset,
+      s_data,
+      z_nodes,
+      out
+    );
+
+    for (i = 0; i < n_total; i++)
+    {
+      const gdouble ref_i = ncm_vector_fast_get (out_ref, i);
+      const gdouble out_i = ncm_vector_fast_get (out, i);
+
+      ncm_assert_cmpdouble_e (out_i, ==, ref_i, 1.0e-12, 0.0);
+    }
+  }
+
+  /* Stale-cache guard: change log10MDelta and verify values change */
+  {
+    const gdouble mass_orig = ncm_model_param_get_by_name (NCM_MODEL (test->hms), "log10MDelta", NULL);
+    const gdouble mass_alt  = mass_orig - 0.5;
+
+    ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", mass_alt, NULL);
+
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+    nc_galaxy_sd_shape_eval_at_nodes (test->galaxy_shape, test->mset, s_data, z_nodes, out_alt);
+
+    nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+
+    for (i = 0; i < n_total; i++)
+    {
+      const gdouble z_i       = ncm_vector_get (z_nodes, i);
+      const gdouble ref_i     = nc_galaxy_sd_shape_integrand_eval (integrand, z_i, s_data);
+      const gdouble out_i     = ncm_vector_get (out, i);
+      const gdouble out_alt_i = ncm_vector_get (out_alt, i);
+
+      /* Values must have changed */
+      if (z_i > nc_halo_position_get_redshift (test->halo_position))
+        g_assert_cmpfloat (out_alt_i, !=, out_i);
+
+      /* And must still agree with integrand_eval */
+      ncm_assert_cmpdouble_e (out_alt_i, ==, ref_i, 1.0e-12, 0.0);
+    }
+
+    /* Restore */
+    ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", mass_orig, NULL);
+  }
+
+  /* Stale-cache guard: change H0 and verify eval_at_nodes stays consistent with integrand_eval. */
+  {
+    const gdouble h0_orig = ncm_model_param_get_by_name (NCM_MODEL (test->cosmo), "H0", NULL);
+    const gdouble h0_alt  = h0_orig + 5.0;
+
+    ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "H0", h0_alt, NULL);
+
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+    nc_galaxy_sd_shape_eval_at_nodes (test->galaxy_shape, test->mset, s_data, z_nodes, out_alt);
+
+    nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+
+    for (i = 0; i < n_total; i++)
+    {
+      const gdouble z_i       = ncm_vector_get (z_nodes, i);
+      const gdouble ref_i     = nc_galaxy_sd_shape_integrand_eval (integrand, z_i, s_data);
+      const gdouble out_i     = ncm_vector_get (out, i);
+      const gdouble out_alt_i = ncm_vector_get (out_alt, i);
+
+      /* Values must have changed */
+      if (z_i > nc_halo_position_get_redshift (test->halo_position))
+        g_assert_cmpfloat (out_alt_i, !=, out_i);
+
+      ncm_assert_cmpdouble_e (out_alt_i, ==, ref_i, 1.0e-6, 0.0);
+    }
+
+    /* Restore */
+    ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "H0", h0_orig, NULL);
+  }
+
+  /* Stale-cache guard: change the cluster redshift z_cl (with the cosmology held
+   * fixed) and verify eval_at_nodes stays consistent with integrand_eval. The
+   * critical surface density depends on z_cl, so the per-node crit cache must be
+   * refreshed when z_cl changes even if the cosmology is unchanged. */
+  {
+    const gdouble zcl_orig = ncm_model_param_get_by_name (NCM_MODEL (test->halo_position), "z", NULL);
+    const gdouble zcl_alt  = zcl_orig + 0.3;
+
+    /* Settle the cosmology control so the following z_cl-only change does not
+     * coincide with a cosmology update (which would refresh the crit cache for
+     * unrelated reasons and mask a z_cl-staleness bug). */
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+
+    ncm_model_param_set_by_name (NCM_MODEL (test->halo_position), "z", zcl_alt, NULL);
+
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+    nc_galaxy_sd_shape_eval_at_nodes (test->galaxy_shape, test->mset, s_data, z_nodes, out_alt);
+
+    nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+
+    for (i = 0; i < n_total; i++)
+    {
+      const gdouble z_i       = ncm_vector_get (z_nodes, i);
+      const gdouble ref_i     = nc_galaxy_sd_shape_integrand_eval (integrand, z_i, s_data);
+      const gdouble out_alt_i = ncm_vector_get (out_alt, i);
+
+      ncm_assert_cmpdouble_e (out_alt_i, ==, ref_i, 1.0e-6, 0.0);
+    }
+
+    /* Restore */
+    ncm_model_param_set_by_name (NCM_MODEL (test->halo_position), "z", zcl_orig, NULL);
+  }
+
+  /* Stale-cache guard: change the number of nodes with the cosmology and halo
+   * held fixed and verify eval_at_nodes stays consistent with integrand_eval.
+   * The per-node crit cache must be resized and recomputed when the node count
+   * changes, even when nothing else triggers a refresh. */
+  {
+    const guint n_small          = n_total / 2;
+    NcmVector *z_nodes_small     = ncm_vector_new (n_small);
+    NcmVector *out_small         = ncm_vector_new (n_small);
+    GPtrArray *z_nodes_small_arr = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+
+    for (i = 0; i < n_small; i++)
+    {
+      /* Sample the same range with a different spacing so that a stale crit
+       * cache (built for the original nodes) would yield wrong values. */
+      const gdouble z_i = z_node_min + (z_node_max - z_node_min) * (i + 0.5) / n_small;
+
+      ncm_vector_set (z_nodes_small, i, z_i);
+    }
+
+    g_ptr_array_add (z_nodes_small_arr, ncm_vector_ref (z_nodes_small));
+
+    /* Settle: prepare with the original (length n_total) nodes so the following
+     * node-count change does not coincide with a cosmology/halo update. */
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+
+    /* Now switch to a different node count with everything else fixed. */
+    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_small_arr);
+    nc_galaxy_sd_shape_eval_at_nodes (test->galaxy_shape, test->mset, s_data, z_nodes_small, out_small);
+
+    nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+
+    for (i = 0; i < n_small; i++)
+    {
+      const gdouble z_i   = ncm_vector_get (z_nodes_small, i);
+      const gdouble ref_i = nc_galaxy_sd_shape_integrand_eval (integrand, z_i, s_data);
+      const gdouble out_i = ncm_vector_get (out_small, i);
+
+      ncm_assert_cmpdouble_e (out_i, ==, ref_i, 1.0e-6, 0.0);
+    }
+
+    ncm_vector_free (z_nodes_small);
+    ncm_vector_free (out_small);
+    g_ptr_array_unref (z_nodes_small_arr);
+  }
+
+  nc_galaxy_sd_obs_redshift_data_unref (z_data);
+  nc_galaxy_sd_position_data_unref (p_data);
+  nc_galaxy_sd_shape_data_unref (s_data);
+  nc_galaxy_sd_shape_integrand_free (integrand);
+  ncm_vector_free (out);
+  ncm_vector_free (out_ref);
+  ncm_vector_free (out_alt);
+  g_ptr_array_unref (data_array);
+  g_ptr_array_unref (z_nodes_per_galaxy);
+  ncm_rng_free (rng);
+}
+
+static void
+test_nc_galaxy_sd_shape_hsm_gauss_global_at_nodes (TestNcGalaxySDShape *test, gconstpointer pdata)
+{
+  _test_nc_galaxy_sd_shape_at_nodes_impl (test, pdata, TRUE);
+}
+
+static void
+test_nc_galaxy_sd_shape_hsm_gauss_at_nodes (TestNcGalaxySDShape *test, gconstpointer pdata)
+{
+  _test_nc_galaxy_sd_shape_at_nodes_impl (test, pdata, FALSE);
 }
 
 /*

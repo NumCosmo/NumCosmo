@@ -552,7 +552,7 @@ class TestIterativeRefinement:
         assert_allclose(nc_alm.real, hp_alm.real, rtol=1e-10, atol=1e-14)
         assert_allclose(nc_alm.imag, hp_alm.imag, rtol=1e-10, atol=1e-14)
 
-    @pytest.mark.parametrize("nside", [32, 64, 128], indirect=True)
+    @pytest.mark.parametrize("nside", [32, 64, 128])
     def test_iter_convergence(
         self, smap: Ncm.SphereMap, nside: int, lmax_undersampled: int, random_seed: int
     ) -> None:
@@ -599,7 +599,7 @@ class TestIterativeRefinement:
             errors[3] <= errors[0] * 1.1
         ), "iter=3 should not increase error significantly"
 
-    @pytest.mark.parametrize("nside", [16, 32, 64], indirect=True)
+    @pytest.mark.parametrize("nside", [16, 32, 64])
     def test_iter_with_different_lmax(self, nside: int, random_seed: int) -> None:
         """Test iter behavior with different lmax values."""
         np.random.seed(random_seed)
@@ -649,7 +649,7 @@ class TestIterativeRefinement:
         default_iter = smap.get_iter()
         assert default_iter == 0, "Default iter should be 0 for backward compatibility"
 
-    @pytest.mark.parametrize("nside", [32, 64, 128], indirect=True)
+    @pytest.mark.parametrize("nside", [32, 64, 128])
     def test_iter_with_roundtrip(
         self, smap: Ncm.SphereMap, nside: int, lmax_undersampled: int, random_seed: int
     ) -> None:

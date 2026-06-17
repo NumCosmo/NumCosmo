@@ -131,7 +131,7 @@ _nc_galaxy_sd_obs_redshift_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsR
 }
 
 static void
-_nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
+_nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
 {
   g_error ("_nc_galaxy_sd_obs_redshift_get_integ_lim: method not implemented");
 }
@@ -158,6 +158,17 @@ _nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, Nc
   return NULL;
 }
 
+static NcmIntegralFixed *
+_nc_galaxy_sd_obs_redshift_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
+                                             NcGalaxySDObsRedshiftData *data,
+                                             gdouble z_lo, gdouble z_hi,
+                                             guint n_nodes, guint rule_n)
+{
+  g_error ("_nc_galaxy_sd_obs_redshift_make_fixed_nodes: method not implemented");
+
+  return NULL;
+}
+
 /*  LCOV_EXCL_STOP */
 
 static void
@@ -175,13 +186,14 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   ncm_mset_model_register_id (model_class, "NcGalaxySDObsRedshift", "Galaxy sample observed redshift distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
-  klass->gen                 = &_nc_galaxy_sd_obs_redshift_gen;
-  klass->gen1                = &_nc_galaxy_sd_obs_redshift_gen1;
-  klass->prepare             = &_nc_galaxy_sd_obs_redshift_prepare;
-  klass->get_integ_lim       = &_nc_galaxy_sd_obs_redshift_get_integ_lim;
-  klass->integ               = &_nc_galaxy_sd_obs_redshift_integ;
-  klass->data_init           = &_nc_galaxy_sd_obs_redshift_data_init;
-  klass->compute_binned_dndz = &_nc_galaxy_sd_obs_redshift_compute_binned_dndz;
+  klass->gen                   = &_nc_galaxy_sd_obs_redshift_gen;
+  klass->gen1                  = &_nc_galaxy_sd_obs_redshift_gen1;
+  klass->prepare               = &_nc_galaxy_sd_obs_redshift_prepare;
+  klass->get_integ_lim         = &_nc_galaxy_sd_obs_redshift_get_integ_lim;
+  klass->integ                 = &_nc_galaxy_sd_obs_redshift_integ;
+  klass->data_init             = &_nc_galaxy_sd_obs_redshift_data_init;
+  klass->compute_binned_dndz   = &_nc_galaxy_sd_obs_redshift_compute_binned_dndz;
+  klass->make_fixed_nodes      = &_nc_galaxy_sd_obs_redshift_make_fixed_nodes;
 }
 
 /**
@@ -407,17 +419,22 @@ nc_galaxy_sd_obs_redshift_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRe
 /**
  * nc_galaxy_sd_obs_redshift_get_integ_lim:
  * @gsdor: a #NcGalaxySDObsRedshift
+ * @mset: a #NcmMSet
  * @data: a #NcGalaxySDObsRedshiftData
  * @z_min: (out): the minimum redshift for integration
  * @z_max: (out): the maximum redshift for integration
  *
- * Gets the redshift integration limits for the galaxy redshift data.
+ * Gets the effective redshift integration support for the galaxy redshift data:
+ * the range over which the per-galaxy P(z) factor is non-negligible (e.g. the
+ * photometric kernel restricted to its relevant range). This is the domain used
+ * by every integration method - fixed Gauss-Legendre nodes as well as the
+ * adaptive quadratures.
  *
  */
 void
-nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
+nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
 {
-  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->get_integ_lim (gsdor, data, z_min, z_max);
+  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->get_integ_lim (gsdor, mset, data, z_min, z_max);
 }
 
 /**
@@ -460,6 +477,33 @@ NcmSpline *
 nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array)
 {
   return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->compute_binned_dndz (gsdor, z_array);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_make_fixed_nodes: (skip)
+ * @gsdor: a #NcGalaxySDObsRedshift
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxySDObsRedshiftData
+ * @z_lo: lower integration limit
+ * @z_hi: upper integration limit
+ * @n_nodes: number of Gauss-Legendre intervals
+ * @rule_n: number of GL points per interval
+ *
+ * Allocates and populates a #NcmIntegralFixed over [@z_lo, @z_hi] so that the
+ * precomputed node weights absorb the per-galaxy P(z) factor. The returned
+ * object is owned by the caller. Callers may build several panels over adjacent
+ * sub-ranges so that a known non-smooth point (e.g. the lens redshift) falls on
+ * a panel boundary rather than inside a Gauss-Legendre interval.
+ *
+ * Returns: (transfer full): a new #NcmIntegralFixed with P(z)-weighted nodes.
+ */
+NcmIntegralFixed *
+nc_galaxy_sd_obs_redshift_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
+                                            NcGalaxySDObsRedshiftData *data,
+                                            gdouble z_lo, gdouble z_hi,
+                                            guint n_nodes, guint rule_n)
+{
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->make_fixed_nodes (gsdor, mset, data, z_lo, z_hi, n_nodes, rule_n);
 }
 
 /**
