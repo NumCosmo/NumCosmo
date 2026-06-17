@@ -529,77 +529,6 @@ test_nc_data_cluster_wl_gen_obs (TestNcDataClusterWL *test, gconstpointer pdata)
   ncm_rng_free (rng);
 }
 
-/* Per-galaxy comparison of two -2lnP vectors @a and @b: locates the galaxy with
- * the largest disagreement and fails (reporting that galaxy) if it exceeds the
- * tolerance. Comparing per galaxy, instead of the summed -2lnL, pinpoints which
- * integral diverges rather than letting many small per-galaxy differences
- * average into one opaque number. Both methods must also agree on which galaxies
- * are finite. */
-static void
-_test_nc_data_cluster_wl_cmp_vectors (const gchar  *label,
-                                      NcmVector    *a,
-                                      NcmVector    *b,
-                                      const gdouble reltol,
-                                      const gdouble abstol)
-{
-  const guint len      = ncm_vector_len (a);
-  gdouble worst_excess = -G_MAXDOUBLE;
-  guint worst_i        = 0;
-  guint n_checked      = 0;
-  guint i;
-
-  for (i = 0; i < len; i++)
-  {
-    const gdouble ai   = ncm_vector_get (a, i);
-    const gdouble bi   = ncm_vector_get (b, i);
-    const gdouble mean = GSL_MAX (fabs (ai), fabs (bi));
-    gdouble excess;
-
-    g_assert_true (gsl_finite (ai) == gsl_finite (bi));
-
-    if (!gsl_finite (ai))
-      continue;
-
-    n_checked++;
-    excess = fabs (ai - bi) - (reltol * mean + abstol);
-
-    if (excess > worst_excess)
-    {
-      worst_excess = excess;
-      worst_i      = i;
-    }
-  }
-
-  {
-    const gdouble ai   = ncm_vector_get (a, worst_i);
-    const gdouble bi   = ncm_vector_get (b, worst_i);
-    const gdouble mean = GSL_MAX (fabs (ai), fabs (bi));
-    const gdouble rel  = (mean > 0.0) ? fabs (ai - bi) / mean : 0.0;
-
-    g_test_message ("%s: %u/%u galaxies checked, worst at %u: % .17g vs % .17g "
-                    "(abs %.3e, rel %.3e; reltol %.3e abstol %.3e)",
-                    label, n_checked, len, worst_i, ai, bi, fabs (ai - bi), rel, reltol, abstol);
-
-    if (worst_excess > 0.0)
-      g_error ("%s disagree at galaxy %u: % .17g vs % .17g "
-               "(abs %.3e, rel %.3e exceeds reltol %.3e abstol %.3e)",
-               label, worst_i, ai, bi, fabs (ai - bi), rel, reltol, abstol);
-  }
-}
-
-static NcmVector *
-_test_nc_data_cluster_wl_eval (TestNcDataClusterWL *test, NcDataClusterWLIntegMethod method)
-{
-  const guint len = nc_data_cluster_wl_peek_data_array (test->dcwl)->len;
-  NcmVector *v    = ncm_vector_new (len);
-
-  g_assert_cmpuint (len, >, 0);
-  nc_data_cluster_wl_set_integ_method (test->dcwl, method);
-  nc_data_cluster_wl_eval_m2lnP_gal (test->dcwl, test->mset, v);
-
-  return v;
-}
-
 static void
 test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
 {
@@ -673,57 +602,9 @@ test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
       ncm_assert_cmpdouble_e (m2lnL_a, ==, m2lnL_b, 1.0e-11, 0.0);
     }
 
-    /* Cross-validate the three integration methods per galaxy. All three split
-     * the integration at the reduced-shear kink at z_cl and integrate over the
-     * galaxy's effective redshift support; FIXED_NODES is the production default
-     * and deterministic reference. Two checks:
-     *
-     *   1. FIXED self-convergence (20 vs 40 nodes): deterministic, proves the
-     *      production node count is converged (floors at ~2e-8).
-     *   2. Each adaptive method (LNINT, CUBATURE) vs FIXED. The adaptive
-     *      integrators run at prec=1e-6 on the linear integral, so -2lnP carries
-     *      ~2*prec amplified by the adaptive error-estimator overshoot. The
-     *      analytic gauss kernel floors at ~1e-8, but the pz integrand is a cubic
-     *      spline (only C2 at its knots) and floors at ~1e-5; the tolerance is
-     *      matched to each integrand rather than set below the method's precision. */
-    if (!NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (test->galaxy_redshift))
-    {
-      const gdouble adaptive_abstol = NC_IS_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift) ? 2.0e-5 : 1.0e-6;
-      NcmVector *vF, *vF2, *vL, *vC;
-
-      /* FIXED node count: the analytic gauss integrand reaches its floor at ~45
-       * nodes/panel, but the pz integrand is a cubic spline (piecewise C2) and
-       * needs ~90, so use 20 n-nodes (the reference) and 40 (self-convergence). */
-      g_object_set (test->dcwl, "n-nodes", 20u, "rule-n", 5u, NULL);
-      vF = _test_nc_data_cluster_wl_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
-      vL = _test_nc_data_cluster_wl_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
-      vC = _test_nc_data_cluster_wl_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE);
-      g_object_set (test->dcwl, "n-nodes", 40u, "rule-n", 7u, NULL);
-      vF2 = _test_nc_data_cluster_wl_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
-
-      _test_nc_data_cluster_wl_cmp_vectors ("FIXED self-convergence (20 vs 40 nodes)", vF, vF2, 1.0e-7, 1.0e-7);
-      _test_nc_data_cluster_wl_cmp_vectors ("LNINT vs FIXED", vL, vF, 1.0e-6, adaptive_abstol);
-      _test_nc_data_cluster_wl_cmp_vectors ("CUBATURE vs FIXED", vC, vF, 1.0e-6, adaptive_abstol);
-
-      ncm_vector_free (vF);
-      ncm_vector_free (vF2);
-      ncm_vector_free (vL);
-      ncm_vector_free (vC);
-
-      g_object_set (test->dcwl, "n-nodes", 20u, "rule-n", 5u, NULL);
-      nc_data_cluster_wl_set_integ_method (test->dcwl, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
-    }
-    else
-    {
-      /* spec redshift integrates a delta-function z; all methods reduce to the
-       * same evaluation, so the two adaptive ones must agree exactly. */
-      NcmVector *vL = _test_nc_data_cluster_wl_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
-      NcmVector *vC = _test_nc_data_cluster_wl_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE);
-
-      _test_nc_data_cluster_wl_cmp_vectors ("CUBATURE vs LNINT (spec)", vC, vL, 1.0e-5, 1.0e-5);
-      ncm_vector_free (vL);
-      ncm_vector_free (vC);
-    }
+    /* The per-method integration cross-validation lives in the deterministic
+     * truth-table test (test_nc_data_cluster_wl_truth.c); here we only check that
+     * the likelihood is finite and responds to the model parameters. */
   }
 }
 
