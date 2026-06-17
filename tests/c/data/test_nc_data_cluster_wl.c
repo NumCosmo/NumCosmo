@@ -675,15 +675,20 @@ test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
 
     /* Cross-validate the three integration methods per galaxy. All three split
      * the integration at the reduced-shear kink at z_cl and integrate over the
-     * galaxy's effective redshift support, so they agree to ~1e-9; FIXED_NODES is
-     * the production default and deterministic reference. Two checks:
+     * galaxy's effective redshift support; FIXED_NODES is the production default
+     * and deterministic reference. Two checks:
      *
      *   1. FIXED self-convergence (20 vs 40 nodes): deterministic, proves the
-     *      production node count is converged.
-     *   2. Each adaptive method (LNINT, CUBATURE) vs FIXED, tight and ungated -
-     *      with the kink split they are reliable on every galaxy. */
+     *      production node count is converged (floors at ~2e-8).
+     *   2. Each adaptive method (LNINT, CUBATURE) vs FIXED. The adaptive
+     *      integrators run at prec=1e-6 on the linear integral, so -2lnP carries
+     *      ~2*prec amplified by the adaptive error-estimator overshoot. The
+     *      analytic gauss kernel floors at ~1e-8, but the pz integrand is a cubic
+     *      spline (only C2 at its knots) and floors at ~1e-5; the tolerance is
+     *      matched to each integrand rather than set below the method's precision. */
     if (!NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (test->galaxy_redshift))
     {
+      const gdouble adaptive_abstol = NC_IS_GALAXY_SD_OBS_REDSHIFT_PZ (test->galaxy_redshift) ? 2.0e-5 : 1.0e-6;
       NcmVector *vF, *vF2, *vL, *vC;
 
       /* FIXED node count: the analytic gauss integrand reaches its floor at ~45
@@ -696,9 +701,9 @@ test_nc_data_cluster_wl_m2lnP (TestNcDataClusterWL *test, gconstpointer pdata)
       g_object_set (test->dcwl, "n-nodes", 40u, "rule-n", 7u, NULL);
       vF2 = _test_nc_data_cluster_wl_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
 
-      _test_nc_data_cluster_wl_cmp_vectors ("FIXED self-convergence (20 vs 40 nodes)", vF, vF2, 1.0e-6, 1.0e-6);
-      _test_nc_data_cluster_wl_cmp_vectors ("LNINT vs FIXED", vL, vF, 1.0e-6, 1.0e-6);
-      _test_nc_data_cluster_wl_cmp_vectors ("CUBATURE vs FIXED", vC, vF, 1.0e-6, 1.0e-6);
+      _test_nc_data_cluster_wl_cmp_vectors ("FIXED self-convergence (20 vs 40 nodes)", vF, vF2, 1.0e-7, 1.0e-7);
+      _test_nc_data_cluster_wl_cmp_vectors ("LNINT vs FIXED", vL, vF, 1.0e-6, adaptive_abstol);
+      _test_nc_data_cluster_wl_cmp_vectors ("CUBATURE vs FIXED", vC, vF, 1.0e-6, adaptive_abstol);
 
       ncm_vector_free (vF);
       ncm_vector_free (vF2);
