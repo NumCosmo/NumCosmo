@@ -200,7 +200,7 @@ def set_rc_params_article(
     if use_tex is None:
         use_tex = bool(shutil.which("latex"))
 
-    params = {
+    params: dict[str, float | bool | list[float]] = {
         "axes.labelsize": fontsize,
         "font.size": fontsize,
         "legend.fontsize": fontsize,
