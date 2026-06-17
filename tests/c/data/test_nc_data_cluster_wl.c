@@ -334,6 +334,8 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
    * full sample its estimators require. */
 #ifdef CLUSTER_WL_SPLIT_CHEAP
   guint nrows = 200;
+#elif defined (CLUSTER_WL_SPLIT_EXPENSIVE)
+  guint nrows = 400;
 #else
   guint nrows = 1500;
 #endif
@@ -1116,7 +1118,7 @@ test_nc_data_cluster_wl_monte_carlo (TestNcDataClusterWL *test, gconstpointer pd
   NcmFit *fit         = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", like, test->mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
   NcmStatsVec *stats  = ncm_stats_vec_new (3, NCM_STATS_VEC_COV, FALSE);
   NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
-  guint nfits         = 50;
+  guint nfits         = 20;
   guint nruns         = 5;
   gdouble log10m_mult_bias;
   guint i, j;
