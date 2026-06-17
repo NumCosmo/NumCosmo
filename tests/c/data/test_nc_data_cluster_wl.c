@@ -328,7 +328,15 @@ test_nc_data_cluster_wl_gen (TestNcDataClusterWL *test, gconstpointer pdata)
   GList *columns                    = nc_galaxy_sd_shape_data_required_columns (s_data);
   GList *l                          = columns;
   GStrvBuilder *builder             = g_strv_builder_new ();
-  guint nrows                       = 1500;
+  /* The cheap property checks (gen_obs/m2lnP/serialize) are per-galaxy and need
+   * no statistical power, so the CLUSTER_WL_SPLIT_CHEAP build uses a small sample
+   * for speed; the heavy MC/fit half (and the local all-in-one build) keep the
+   * full sample its estimators require. */
+#ifdef CLUSTER_WL_SPLIT_CHEAP
+  guint nrows = 200;
+#else
+  guint nrows = 1500;
+#endif
   guint npoints                     = 20;
   gdouble z_min                     = 0.01;
   gdouble z_max                     = 5.0;
