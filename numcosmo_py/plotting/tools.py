@@ -209,8 +209,8 @@ def set_rc_params_article(
         "text.usetex": use_tex,
         "figure.figsize": fig_size,
     }
-
-    plt.rcParams.update(params)
+    for k, v in params.items():
+        plt.rcParams[k] = v
 
 
 def plot_m2lnp(
