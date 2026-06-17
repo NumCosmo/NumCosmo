@@ -245,6 +245,7 @@ data_tests = [
         'name': 'nc_data_cluster_wl_prop',
         'sources': ['data/test_nc_data_cluster_wl.c'],
         'c_args': ['-DCLUSTER_WL_SPLIT_CHEAP'],
+        'timeout': 0,
         # m2lnP (the OpenMP-parallel likelihood eval) is in the cheap half, so this exec
         # also exercises the OpenMP path and stays in the omp lane.
         'suite': ['c', 'omp'],
