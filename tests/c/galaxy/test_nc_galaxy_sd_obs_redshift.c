@@ -804,7 +804,7 @@ test_make_fixed_nodes_full (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalax
 {
   gdouble z_lo, z_hi;
 
-  nc_galaxy_sd_obs_redshift_get_fixed_support (gsdor, mset, data, &z_lo, &z_hi);
+  nc_galaxy_sd_obs_redshift_get_integ_lim (gsdor, mset, data, &z_lo, &z_hi);
 
   return nc_galaxy_sd_obs_redshift_make_fixed_nodes (gsdor, mset, data, z_lo, z_hi, n_nodes, rule_n);
 }
@@ -862,6 +862,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *tes
     );
     nc_galaxy_sd_obs_redshift_get_integ_lim (
       test->gsdor,
+      mset,
       data,
       &zpi,
       &zpf
@@ -916,6 +917,7 @@ test_nc_galaxy_sd_obs_redshift_gauss_integration (TestNcGalaxySDObsRedshift *tes
     );
     nc_galaxy_sd_obs_redshift_get_integ_lim (
       test->gsdor,
+      mset,
       data,
       &zpi,
       &zpf
@@ -1018,6 +1020,7 @@ test_nc_galaxy_sd_obs_redshift_pz_integration (TestNcGalaxySDObsRedshift *test, 
     );
     nc_galaxy_sd_obs_redshift_get_integ_lim (
       test->gsdor,
+      mset,
       data,
       &zpi,
       &zpf
@@ -1108,7 +1111,7 @@ test_nc_galaxy_sd_obs_redshift_spec_lim (TestNcGalaxySDObsRedshift *test, gconst
   g_assert_cmpfloat (z_min, ==, test->z_min);
   g_assert_cmpfloat (z_max, ==, test->z_max);
 
-  nc_galaxy_sd_obs_redshift_get_integ_lim (NC_GALAXY_SD_OBS_REDSHIFT (test->gsdor), data, &int_z_min, &int_z_max);
+  nc_galaxy_sd_obs_redshift_get_integ_lim (NC_GALAXY_SD_OBS_REDSHIFT (test->gsdor), NULL, data, &int_z_min, &int_z_max);
 
   nc_galaxy_sd_true_redshift_get_lim (
     NC_GALAXY_SD_TRUE_REDSHIFT (ncm_model_peek_submodel_by_mid (NCM_MODEL (test->gsdor),
@@ -1166,7 +1169,7 @@ test_nc_galaxy_sd_obs_redshift_pz_lim (TestNcGalaxySDObsRedshift *test, gconstpo
 
   nc_galaxy_sd_obs_redshift_pz_data_set (NC_GALAXY_SD_OBS_REDSHIFT_PZ (test->gsdor), data, pz);
 
-  nc_galaxy_sd_obs_redshift_get_integ_lim (test->gsdor, data, &z_min, &z_max);
+  nc_galaxy_sd_obs_redshift_get_integ_lim (test->gsdor, NULL, data, &z_min, &z_max);
 
   g_assert_cmpfloat_with_epsilon (z_min, z_avg - 5 * z_sd, 1e-10);
   g_assert_cmpfloat_with_epsilon (z_max, z_avg + 5 * z_sd, 1e-10);
@@ -1329,7 +1332,12 @@ test_nc_galaxy_sd_obs_redshift_gauss_eval_pz_given_zp (TestNcGalaxySDObsRedshift
   gdouble z_min, z_max;
 
   nc_galaxy_sd_obs_redshift_gauss_get_zp_lim (gsdorgauss, &zp_min, &zp_max);
-  nc_galaxy_sd_obs_redshift_get_integ_lim (test->gsdor, NULL, &z_min, &z_max);
+  /* Normalization is checked over the full true-z range (get_integ_lim now
+   * returns the per-galaxy effective support, which would clip the tails). */
+  nc_galaxy_sd_true_redshift_get_lim (
+    NC_GALAXY_SD_TRUE_REDSHIFT (ncm_model_peek_submodel_by_mid (NCM_MODEL (test->gsdor),
+                                                                nc_galaxy_sd_true_redshift_id ())),
+    &z_min, &z_max);
   nc_galaxy_sd_obs_redshift_gauss_set_bin_sigma0 (gsdorgauss, sigma0);
   nc_galaxy_sd_obs_redshift_gauss_set_zp_support_max (gsdorgauss, zp_max);
   nc_galaxy_sd_obs_redshift_gauss_set_reltol (gsdorgauss, rel_error);

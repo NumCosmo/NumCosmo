@@ -67,19 +67,16 @@ struct _NcGalaxySDObsRedshiftClass
   gboolean (*gen1) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
   NcGalaxySDObsRedshiftIntegrand *(*integ) (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp);
   void (*prepare) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
-  void (*get_integ_lim) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
+  void (*get_integ_lim) (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
   void (*data_init) (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
   NcmSpline *(*compute_binned_dndz) (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array);
-  void (*get_fixed_support) (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
-                             NcGalaxySDObsRedshiftData *data,
-                             gdouble *z_lo, gdouble *z_hi);
   NcmIntegralFixed *(*make_fixed_nodes) (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
                                          NcGalaxySDObsRedshiftData *data,
                                          gdouble z_lo, gdouble z_hi,
                                          guint n_nodes, guint rule_n);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[9];
+  gpointer padding[10];
 };
 
 struct _NcGalaxySDObsRedshiftData
@@ -111,12 +108,11 @@ void nc_galaxy_sd_obs_redshift_clear (NcGalaxySDObsRedshift **gsdor);
 void nc_galaxy_sd_obs_redshift_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 gboolean nc_galaxy_sd_obs_redshift_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 void nc_galaxy_sd_obs_redshift_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
-void nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
+void nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 NcGalaxySDObsRedshiftIntegrand *nc_galaxy_sd_obs_redshift_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp);
 NcGalaxySDObsRedshiftData *nc_galaxy_sd_obs_redshift_data_new (NcGalaxySDObsRedshift *gsdor);
 
 NcmSpline *nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array);
-void nc_galaxy_sd_obs_redshift_get_fixed_support (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble *z_lo, gdouble *z_hi);
 NcmIntegralFixed *nc_galaxy_sd_obs_redshift_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
 
 #define NC_GALAXY_SD_OBS_REDSHIFT_COL_Z "z"

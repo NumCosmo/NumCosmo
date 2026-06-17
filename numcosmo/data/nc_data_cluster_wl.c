@@ -832,6 +832,24 @@ _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   return result;
 }
 
+/* Combine two adaptive sub-integrals split at z_cl. Each panel returns
+ * -2 ln I_panel; recombine in the linear domain I = I_lo + I_hi (the panel
+ * straddling the ramp at z_cl is ~0 and contributes nothing). */
+static gdouble
+_nc_data_cluster_wl_integ_combine (gdouble m2_lo, gdouble m2_hi)
+{
+  if (!gsl_finite (m2_lo)) return m2_hi;
+  if (!gsl_finite (m2_hi)) return m2_lo;
+
+  {
+    const gdouble a = -0.5 * m2_lo;
+    const gdouble b = -0.5 * m2_hi;
+    const gdouble m = MAX (a, b);
+
+    return -2.0 * (m + log (exp (a - m) + exp (b - m)));
+  }
+}
+
 static gdouble
 _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
@@ -896,8 +914,22 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
         arg->gal_i = gal_i;
         arg->data  = s_data;
 
-        nc_galaxy_sd_obs_redshift_get_integ_lim (self->galaxy_redshift, z_data, &zpi, &zpf);
-        m2lnP_gal_i = integrate (integrator, zpi, zpf);
+        /* Integrate over the galaxy's effective redshift support, not the full
+         * true-z range: the integrand is the narrow photo-z likelihood times the
+         * bounded reduced shear, negligible outside it. Over the full range the
+         * adaptive quadratures under-resolve this needle-in-a-haystack. When the
+         * support straddles z_cl, split there too (as the fixed-node path does):
+         * the reduced shear has a kink at the lens redshift and an adaptive
+         * interval crossing it converges poorly. */
+        nc_galaxy_sd_obs_redshift_get_integ_lim (self->galaxy_redshift, mset, z_data, &zpi, &zpf);
+        {
+          const gdouble z_cl = nc_halo_position_get_redshift (self->halo_position);
+
+          if ((z_cl > zpi) && (z_cl < zpf))
+            m2lnP_gal_i = _nc_data_cluster_wl_integ_combine (integrate (integrator, zpi, z_cl), integrate (integrator, z_cl, zpf));
+          else
+            m2lnP_gal_i = integrate (integrator, zpi, zpf);
+        }
 
         if (!gsl_finite (m2lnP_gal_i))
         {
@@ -932,8 +964,15 @@ _nc_data_cluster_wl_eval_m2lnP_integ (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
         arg->gal_i = gal_i;
         arg->data  = s_data_i;
 
-        nc_galaxy_sd_obs_redshift_get_integ_lim (self->galaxy_redshift, z_data, &zpi, &zpf);
-        m2lnP_gal_i = integrate (integrator, zpi, zpf);
+        nc_galaxy_sd_obs_redshift_get_integ_lim (self->galaxy_redshift, mset, z_data, &zpi, &zpf);
+        {
+          const gdouble z_cl = nc_halo_position_get_redshift (self->halo_position);
+
+          if ((z_cl > zpi) && (z_cl < zpf))
+            m2lnP_gal_i = _nc_data_cluster_wl_integ_combine (integrate (integrator, zpi, z_cl), integrate (integrator, z_cl, zpf));
+          else
+            m2lnP_gal_i = integrate (integrator, zpi, zpf);
+        }
 
         if (!gsl_finite (m2lnP_gal_i))
         {
@@ -1236,7 +1275,7 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
           NcGalaxySDObsRedshiftData *z_data = s_data->sdpos_data->sdz_data;
           gdouble z_lo, z_hi;
 
-          nc_galaxy_sd_obs_redshift_get_fixed_support (galaxy_redshift, mset, z_data, &z_lo, &z_hi);
+          nc_galaxy_sd_obs_redshift_get_integ_lim (galaxy_redshift, mset, z_data, &z_lo, &z_hi);
 
           if ((z_cl > z_lo) && (z_cl < z_hi))
           {

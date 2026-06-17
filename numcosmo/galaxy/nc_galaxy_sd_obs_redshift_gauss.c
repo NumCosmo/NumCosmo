@@ -213,12 +213,11 @@ _nc_galaxy_sd_obs_redshift_gauss_finalize (GObject *object)
 static void _nc_galaxy_sd_obs_redshift_gauss_gen (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static gboolean _nc_galaxy_sd_obs_redshift_gauss_gen1 (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, NcmRNG *rng);
 static void _nc_galaxy_sd_obs_redshift_gauss_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
-static void _nc_galaxy_sd_obs_redshift_gauss_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
+static void _nc_galaxy_sd_obs_redshift_gauss_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max);
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_gauss_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp);
 static void _nc_galaxy_sd_obs_redshift_gauss_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static NcmSpline *_nc_galaxy_sd_obs_redshift_gauss_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array);
 static void _nc_galaxy_sd_obs_redshift_gauss_add_submodel (NcmModel *model, NcmModel *submodel);
-static void _nc_galaxy_sd_obs_redshift_gauss_get_fixed_support (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble *z_lo, gdouble *z_hi);
 static NcmIntegralFixed *_nc_galaxy_sd_obs_redshift_gauss_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
 
 static void
@@ -330,7 +329,6 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
   gsdor_class->integ               = &_nc_galaxy_sd_obs_redshift_gauss_integ;
   gsdor_class->data_init           = &_nc_galaxy_sd_obs_redshift_gauss_data_init;
   gsdor_class->compute_binned_dndz = &_nc_galaxy_sd_obs_redshift_gauss_compute_binned_dndz;
-  gsdor_class->get_fixed_support   = &_nc_galaxy_sd_obs_redshift_gauss_get_fixed_support;
   gsdor_class->make_fixed_nodes    = &_nc_galaxy_sd_obs_redshift_gauss_make_fixed_nodes;
   model_class->add_submodel        = &_nc_galaxy_sd_obs_redshift_gauss_add_submodel;
 }
@@ -391,12 +389,33 @@ _nc_galaxy_sd_obs_redshift_gauss_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxy
 }
 
 static void
-_nc_galaxy_sd_obs_redshift_gauss_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
+_nc_galaxy_sd_obs_redshift_gauss_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
 {
   NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
   NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
+  NcGalaxySDObsRedshiftGaussData * const ldata   = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
+  gdouble zi, zf;
 
-  nc_galaxy_sd_true_redshift_get_lim (self->sdz, z_min, z_max);
+  g_assert_nonnull (self->sdz);
+  nc_galaxy_sd_true_redshift_get_lim (self->sdz, &zi, &zf);
+
+  /* Restrict to the Gaussian photo-z kernel's effective support: outside +-7
+   * sigma the likelihood is negligible, so integrating the full true-z range
+   * would leave the adaptive quadratures resolving a needle in a haystack. */
+  {
+    const gdouble sigma_max = self->use_true_z
+      ? ldata->sigma0 * (
+      (1.0 + 7.0 * ldata->sigma0) * (1.0 + ldata->zp)
+      )
+      : ldata->sigma;
+    const gdouble half_width = 7.0 * sigma_max;
+
+    zi = MAX (zi, ldata->zp - half_width);
+    zf = MIN (zf, ldata->zp + half_width);
+  }
+
+  *z_min = zi;
+  *z_max = zf;
 }
 
 struct _IntegData
@@ -553,40 +572,6 @@ _gauss_fixed_nodes_gsl_f (gdouble z, gpointer user_data)
   GaussFixedNodesGSLArg *arg = (GaussFixedNodesGSLArg *) user_data;
 
   return _nc_galaxy_sd_obs_redshift_gauss_integ_f (&arg->int_data, z, arg->data);
-}
-
-static void
-_nc_galaxy_sd_obs_redshift_gauss_get_fixed_support (
-  NcGalaxySDObsRedshift     *gsdor,
-  NcmMSet                   *mset,
-  NcGalaxySDObsRedshiftData *data,
-  gdouble                   *z_lo,
-  gdouble                   *z_hi
-)
-{
-  NcGalaxySDObsRedshiftGauss *gsdorgauss         = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
-  NcGalaxySDObsRedshiftGaussPrivate * const self = nc_galaxy_sd_obs_redshift_gauss_get_instance_private (gsdorgauss);
-  NcGalaxySDObsRedshiftGaussData * const ldata   = (NcGalaxySDObsRedshiftGaussData *) data->ldata;
-  gdouble z_min, z_max;
-
-  g_assert_nonnull (self->sdz);
-  nc_galaxy_sd_true_redshift_get_lim (self->sdz, &z_min, &z_max);
-
-  /* Restricting the nodes to the Gaussian's effective support */
-  {
-    const gdouble sigma_max = self->use_true_z
-      ? ldata->sigma0 * (
-      (1.0 + 7.0 * ldata->sigma0) * (1.0 + ldata->zp)
-      )
-      : ldata->sigma;
-    const gdouble half_width = 7.0 * sigma_max;
-
-    z_min = MAX (z_min, ldata->zp - half_width);
-    z_max = MIN (z_max, ldata->zp + half_width);
-  }
-
-  *z_lo = z_min;
-  *z_hi = z_max;
 }
 
 static NcmIntegralFixed *

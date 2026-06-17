@@ -131,7 +131,7 @@ _nc_galaxy_sd_obs_redshift_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsR
 }
 
 static void
-_nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
+_nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
 {
   g_error ("_nc_galaxy_sd_obs_redshift_get_integ_lim: method not implemented");
 }
@@ -156,14 +156,6 @@ _nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, Nc
   g_error ("_nc_galaxy_sd_obs_redshift_compute_binned_dndz: method not implemented");
 
   return NULL;
-}
-
-static void
-_nc_galaxy_sd_obs_redshift_get_fixed_support (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
-                                              NcGalaxySDObsRedshiftData *data,
-                                              gdouble *z_lo, gdouble *z_hi)
-{
-  g_error ("_nc_galaxy_sd_obs_redshift_get_fixed_support: method not implemented");
 }
 
 static NcmIntegralFixed *
@@ -201,7 +193,6 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   klass->integ                 = &_nc_galaxy_sd_obs_redshift_integ;
   klass->data_init             = &_nc_galaxy_sd_obs_redshift_data_init;
   klass->compute_binned_dndz   = &_nc_galaxy_sd_obs_redshift_compute_binned_dndz;
-  klass->get_fixed_support     = &_nc_galaxy_sd_obs_redshift_get_fixed_support;
   klass->make_fixed_nodes      = &_nc_galaxy_sd_obs_redshift_make_fixed_nodes;
 }
 
@@ -428,17 +419,22 @@ nc_galaxy_sd_obs_redshift_prepare (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRe
 /**
  * nc_galaxy_sd_obs_redshift_get_integ_lim:
  * @gsdor: a #NcGalaxySDObsRedshift
+ * @mset: a #NcmMSet
  * @data: a #NcGalaxySDObsRedshiftData
  * @z_min: (out): the minimum redshift for integration
  * @z_max: (out): the maximum redshift for integration
  *
- * Gets the redshift integration limits for the galaxy redshift data.
+ * Gets the effective redshift integration support for the galaxy redshift data:
+ * the range over which the per-galaxy P(z) factor is non-negligible (e.g. the
+ * photometric kernel restricted to its relevant range). This is the domain used
+ * by every integration method - fixed Gauss-Legendre nodes as well as the
+ * adaptive quadratures.
  *
  */
 void
-nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
+nc_galaxy_sd_obs_redshift_get_integ_lim (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble *z_min, gdouble *z_max)
 {
-  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->get_integ_lim (gsdor, data, z_min, z_max);
+  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->get_integ_lim (gsdor, mset, data, z_min, z_max);
 }
 
 /**
@@ -481,27 +477,6 @@ NcmSpline *
 nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array)
 {
   return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->compute_binned_dndz (gsdor, z_array);
-}
-
-/**
- * nc_galaxy_sd_obs_redshift_get_fixed_support: (skip)
- * @gsdor: a #NcGalaxySDObsRedshift
- * @mset: a #NcmMSet
- * @data: a #NcGalaxySDObsRedshiftData
- * @z_lo: (out): lower limit of the effective integration support
- * @z_hi: (out): upper limit of the effective integration support
- *
- * Computes the effective redshift support over which the per-galaxy P(z) factor
- * should be integrated (e.g. the photometric kernel restricted to its relevant
- * range). This is the domain to be covered by the fixed Gauss-Legendre nodes.
- *
- */
-void
-nc_galaxy_sd_obs_redshift_get_fixed_support (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset,
-                                             NcGalaxySDObsRedshiftData *data,
-                                             gdouble *z_lo, gdouble *z_hi)
-{
-  NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->get_fixed_support (gsdor, mset, data, z_lo, z_hi);
 }
 
 /**
