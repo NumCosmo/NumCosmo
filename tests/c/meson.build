@@ -258,6 +258,14 @@ data_tests = [
         'priority': 10,
         'suite': ['c-acceptance', 'omp'],
     },
+    # Truth-table validation of the integration methods: regenerates a curated
+    # sample from a fixed seed (nothing stored) and checks every method against a
+    # recomputed FIXED-320x7 reference. Deterministic and fast.
+    {
+        'name': 'nc_data_cluster_wl_truth',
+        'sources': ['data/test_nc_data_cluster_wl_truth.c'],
+        'suite': ['c', 'omp'],
+    },
 ]
 
 # Large-scale structure tests (halos, clusters, bias, transfer, power spectrum, window)
