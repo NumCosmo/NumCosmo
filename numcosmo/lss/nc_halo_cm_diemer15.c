@@ -37,8 +37,8 @@
 
 /* #include "nc_enum_types.h" */
 #include "lss/nc_halo_cm_diemer15.h"
-#include "nc_powspec_ml_transfer.h"
-#include "lss/nc_transfer_func_eh_no_baryon.h"
+#include "nc/powspec/nc_powspec_ml_transfer.h"
+#include "nc/powspec/nc_transfer_func_eh_no_baryon.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
 

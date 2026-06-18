@@ -174,28 +174,28 @@ math_tests = [
 model_tests = [
     {
         'name': 'nc_hicosmo_de',
-        'sources': ['model/test_nc_hicosmo_de.c'],
+        'sources': ['nc/background/test_nc_hicosmo_de.c'],
     },
     {
         'name': 'nc_hicosmo_qgw',
-        'sources': ['model/test_nc_hicosmo_qgw.c'],
+        'sources': ['nc/background/test_nc_hicosmo_qgw.c'],
     },
     {
         'name': 'nc_recomb',
-        'sources': ['model/test_nc_recomb.c'],
+        'sources': ['nc/recomb/test_nc_recomb.c'],
     },
     {
         'name': 'nc_cbe',
-        'sources': ['model/test_nc_cbe.c'],
+        'sources': ['nc/cmb/test_nc_cbe.c'],
         'timeout': 0,
     },
     {
         'name': 'nc_hiqg_1d',
-        'sources': ['model/test_nc_hiqg_1d.c'],
+        'sources': ['nc/quantum/test_nc_hiqg_1d.c'],
     },
     {
         'name': 'nc_distance',
-        'sources': ['model/test_nc_distance.c'],
+        'sources': ['nc/background/test_nc_distance.c'],
     },
 ]
 

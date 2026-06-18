@@ -39,7 +39,7 @@
 #include "build_cfg.h"
 
 #include "nc_enum_types.h"
-#include "nc_distance.h"
+#include "nc/background/nc_distance.h"
 #include "lss/nc_halo_position.h"
 #include "math/ncm_quaternion.h"
 

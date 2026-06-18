@@ -36,7 +36,7 @@
 #include "build_cfg.h"
 
 #include "lss/nc_galaxy_acf.h"
-#include "lss/nc_window_tophat.h"
+#include "nc/powspec/nc_window_tophat.h"
 #include "math/ncm_integrate.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 

@@ -39,7 +39,7 @@
 #include "build_cfg.h"
 
 #include "data/nc_data_cluster_pseudo_counts.h"
-#include "nc_hicosmo.h"
+#include "nc/background/nc_hicosmo.h"
 #include "lss/nc_cluster_redshift.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_abundance.h"

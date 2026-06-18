@@ -39,7 +39,7 @@
 #include "build_cfg.h"
 
 #include "data/nc_data_cluster_ncounts_gauss.h"
-#include "nc_hireion.h"
+#include "nc/reion/nc_hireion.h"
 
 #include "math/ncm_func_eval.h"
 #include "math/ncm_serialize.h"

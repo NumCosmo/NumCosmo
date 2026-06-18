@@ -68,7 +68,7 @@
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_halo_mass_function.h"
 #include "lss/nc_multiplicity_func.h"
-#include "nc_hicosmo.h"
+#include "nc/background/nc_hicosmo.h"
 #include "math/ncm_c.h"
 #include "math/ncm_matrix.h"
 #include "math/ncm_spline.h"

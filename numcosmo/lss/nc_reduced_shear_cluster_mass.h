@@ -30,7 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model.h>
-#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/lss/nc_halo_density_profile.h>
 #include <numcosmo/lss/nc_wl_surface_mass_density.h>
 

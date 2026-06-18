@@ -41,7 +41,7 @@
 
 #include "math/ncm_data_gauss_diag.h"
 #include "math/ncm_cfg.h"
-#include "nc_hicosmo.h"
+#include "nc/background/nc_hicosmo.h"
 #include "nc_enum_types.h"
 
 typedef struct _NcDataHubblePrivate

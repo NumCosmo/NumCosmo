@@ -41,8 +41,8 @@
 #include "math/ncm_mset.h"
 #include "math/ncm_model.h"
 #include "math/ncm_cfg.h"
-#include "nc_planck_fi.h"
-#include "nc_planck_fi_cor_tt.h"
+#include "nc/cmb/nc_planck_fi.h"
+#include "nc/cmb/nc_planck_fi_cor_tt.h"
 #include "data/nc_data_planck_lkl.h"
 
 #include <gio/gio.h>

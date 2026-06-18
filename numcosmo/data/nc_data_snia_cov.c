@@ -38,7 +38,7 @@
 #include "build_cfg.h"
 
 #include "data/nc_data_snia_cov.h"
-#include "nc_snia_dist_cov.h"
+#include "nc/supernova/nc_snia_dist_cov.h"
 #include "nc_enum_types.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_lapack.h"

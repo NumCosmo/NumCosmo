@@ -38,7 +38,7 @@
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_integrate.h>
 #include <numcosmo/galaxy/nc_galaxy_wl_obs.h>
-#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/nc/background/nc_hicosmo.h>
 
 G_BEGIN_DECLS
 

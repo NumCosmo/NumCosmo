@@ -29,9 +29,9 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/lss/nc_growth_func.h>
-#include <numcosmo/lss/nc_transfer_func.h>
-#include <numcosmo/nc_distance.h>
+#include <numcosmo/nc/powspec/nc_growth_func.h>
+#include <numcosmo/nc/powspec/nc_transfer_func.h>
+#include <numcosmo/nc/background/nc_distance.h>
 
 G_BEGIN_DECLS
 

@@ -58,10 +58,10 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_lapack.h"
 #include "math/ncm_model_ctrl.h"
-#include "nc_hireion.h"
-#include "nc_snia_dist_cov.h"
-#include "xcor/nc_xcor.h"
-#include "xcor/nc_xcor_kernel_gal.h"
+#include "nc/reion/nc_hireion.h"
+#include "nc/supernova/nc_snia_dist_cov.h"
+#include "nc/xcor/nc_xcor.h"
+#include "nc/xcor/nc_xcor_kernel_gal.h"
 
 #include <glib/gstdio.h>
 

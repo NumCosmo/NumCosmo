@@ -43,8 +43,8 @@
 #include "build_cfg.h"
 
 #include "data/nc_data_bao_empirical_fit.h"
-#include "nc_hicosmo.h"
-#include "nc_distance.h"
+#include "nc/background/nc_hicosmo.h"
+#include "nc/background/nc_distance.h"
 #include "math/ncm_cfg.h"
 
 typedef struct _NcDataBaoEmpiricalFitPrivate

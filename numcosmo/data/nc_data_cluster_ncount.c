@@ -38,7 +38,7 @@
 #include "build_cfg.h"
 
 #include "data/nc_data_cluster_ncount.h"
-#include "nc_hireion.h"
+#include "nc/reion/nc_hireion.h"
 #include "lss/nc_halo_catalog.h"
 #include "lss/nc_halo_catalog_generator.h"
 

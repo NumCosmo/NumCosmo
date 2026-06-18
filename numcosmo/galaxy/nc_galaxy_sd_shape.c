@@ -45,7 +45,7 @@
 #include "galaxy/nc_galaxy_wl_obs.h"
 #include "galaxy/nc_galaxy_sd_shape.h"
 #include "nc_enum_types.h"
-#include "nc_hicosmo.h"
+#include "nc/background/nc_hicosmo.h"
 #include "lss/nc_halo_position.h"
 #include "lss/nc_halo_density_profile.h"
 #include "lss/nc_wl_surface_mass_density.h"

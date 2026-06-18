@@ -34,7 +34,7 @@
 #include <numcosmo/math/ncm_powspec_filter.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
 #include <numcosmo/lss/nc_halo_mass_summary.h>
-#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/nc/background/nc_hicosmo.h>
 
 
 G_BEGIN_DECLS

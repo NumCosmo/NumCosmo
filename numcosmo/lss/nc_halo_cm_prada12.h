@@ -31,7 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/lss/nc_halo_mass_summary.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
-#include <numcosmo/model/nc_hicosmo_de.h>
+#include <numcosmo/nc/background/nc_hicosmo_de.h>
 
 
 G_BEGIN_DECLS

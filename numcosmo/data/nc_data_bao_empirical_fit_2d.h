@@ -31,7 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_data_dist2d.h>
 #include <numcosmo/math/ncm_stats_dist2d_spline.h>
-#include <numcosmo/nc_distance.h>
+#include <numcosmo/nc/background/nc_distance.h>
 #include <numcosmo/data/nc_data_bao.h>
 
 G_BEGIN_DECLS

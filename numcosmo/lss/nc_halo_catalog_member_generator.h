@@ -31,7 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_rng.h>
-#include <numcosmo/nc_distance.h>
+#include <numcosmo/nc/background/nc_distance.h>
 #include <numcosmo/galaxy/nc_galaxy_hod.h>
 #include <numcosmo/lss/nc_halo_catalog.h>
 

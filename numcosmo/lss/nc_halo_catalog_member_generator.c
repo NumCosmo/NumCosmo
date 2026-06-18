@@ -66,8 +66,8 @@
 #include "build_cfg.h"
 #include "lss/nc_halo_catalog_member_generator.h"
 #include "galaxy/nc_galaxy_hod.h"
-#include "nc_hicosmo.h"
-#include "nc_distance.h"
+#include "nc/background/nc_hicosmo.h"
+#include "nc/background/nc_distance.h"
 #include "math/ncm_c.h"
 #include "math/ncm_matrix.h"
 

@@ -28,8 +28,8 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/nc_distance.h>
+#include <numcosmo/nc/background/nc_hicosmo.h>
+#include <numcosmo/nc/background/nc_distance.h>
 #include <numcosmo/lss/nc_halo_density_profile.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_model.h>

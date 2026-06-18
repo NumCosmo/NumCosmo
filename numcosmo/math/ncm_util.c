@@ -38,7 +38,7 @@
 
 #include "math/ncm_util.h"
 #include "math/ncm_memory_pool.h"
-#include "numcosmo/nc_hicosmo.h"
+#include "numcosmo/nc/background/nc_hicosmo.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_legendre.h>

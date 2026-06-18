@@ -32,8 +32,8 @@
 #include <numcosmo/math/ncm_data_gauss_cov.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/math/ncm_obj_array.h>
-#include <numcosmo/xcor/nc_xcor.h>
-#include <numcosmo/xcor/nc_xcor_AB.h>
+#include <numcosmo/nc/xcor/nc_xcor.h>
+#include <numcosmo/nc/xcor/nc_xcor_AB.h>
 
 G_BEGIN_DECLS
 

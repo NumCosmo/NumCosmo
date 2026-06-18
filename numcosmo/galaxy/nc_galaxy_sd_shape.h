@@ -42,7 +42,7 @@
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/nc_enum_types.h>
-#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/nc/background/nc_hicosmo.h>
 
 G_BEGIN_DECLS
 

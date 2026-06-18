@@ -28,7 +28,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/nc_distance.h>
+#include <numcosmo/nc/background/nc_distance.h>
 #include <numcosmo/lss/nc_multiplicity_func.h>
 #include <numcosmo/math/ncm_spline2d.h>
 #include <numcosmo/math/ncm_powspec_filter.h>

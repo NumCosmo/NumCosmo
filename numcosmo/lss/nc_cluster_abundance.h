@@ -28,7 +28,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
 #include <numcosmo/lss/nc_halo_bias.h>
 #include <numcosmo/lss/nc_cluster_redshift.h>

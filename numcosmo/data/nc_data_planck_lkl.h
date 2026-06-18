@@ -33,7 +33,7 @@
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/data/nc_data_cmb.h>
-#include <numcosmo/perturbations/nc_hipert_boltzmann.h>
+#include <numcosmo/nc/perturbations/nc_hipert_boltzmann.h>
 
 G_BEGIN_DECLS
 
