@@ -38,13 +38,13 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/nc/background/nc_distance.h>
-#include <numcosmo/galaxy/nc_galaxy_wl_obs.h>
-#include <numcosmo/galaxy/nc_galaxy_sd_shape.h>
-#include <numcosmo/galaxy/nc_galaxy_sd_obs_redshift.h>
-#include <numcosmo/galaxy/nc_galaxy_sd_position.h>
-#include <numcosmo/lss/nc_halo_position.h>
-#include <numcosmo/lss/nc_halo_density_profile.h>
-#include <numcosmo/lss/nc_wl_surface_mass_density.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_obs_redshift.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_position.h>
+#include <numcosmo/nc/lss/halo/nc_halo_position.h>
+#include <numcosmo/nc/lss/halo/nc_halo_density_profile.h>
+#include <numcosmo/nc/lss/wl/nc_wl_surface_mass_density.h>
 
 G_BEGIN_DECLS
 

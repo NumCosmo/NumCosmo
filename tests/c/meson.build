@@ -272,43 +272,43 @@ data_tests = [
 lss_tests = [
     {
         'name': 'nc_halo_catalog',
-        'sources': ['lss/test_nc_halo_catalog.c'],
+        'sources': ['nc/lss/halo/test_nc_halo_catalog.c'],
     },
     {
         'name': 'nc_halo_catalog_generator',
-        'sources': ['lss/test_nc_halo_catalog_generator.c'],
+        'sources': ['nc/lss/halo/test_nc_halo_catalog_generator.c'],
     },
     {
         'name': 'nc_halo_catalog_member_generator',
-        'sources': ['lss/test_nc_halo_catalog_member_generator.c'],
+        'sources': ['nc/lss/halo/test_nc_halo_catalog_member_generator.c'],
     },
     {
         'name': 'nc_halo_bias',
-        'sources': ['lss/test_nc_halo_bias.c'],
+        'sources': ['nc/lss/halo/test_nc_halo_bias.c'],
     },
     {
         'name': 'nc_cluster_pseudo_counts',
-        'sources': ['lss/test_nc_cluster_pseudo_counts.c'],
+        'sources': ['nc/lss/cluster/test_nc_cluster_pseudo_counts.c'],
     },
     {
         'name': 'nc_cluster_abundance',
-        'sources': ['lss/test_nc_cluster_abundance.c'],
+        'sources': ['nc/lss/cluster/test_nc_cluster_abundance.c'],
     },
     {
         'name': 'nc_halo_density_profile',
-        'sources': ['lss/test_nc_halo_density_profile.c'],
+        'sources': ['nc/lss/halo/test_nc_halo_density_profile.c'],
     },
     {
         'name': 'nc_halo_position',
-        'sources': ['lss/test_nc_halo_position.c'],
+        'sources': ['nc/lss/halo/test_nc_halo_position.c'],
     },
     {
         'name': 'nc_window',
-        'sources': ['lss/test_nc_window.c'],
+        'sources': ['nc/powspec/test_nc_window.c'],
     },
     {
         'name': 'nc_transfer_func',
-        'sources': ['lss/test_nc_transfer_func.c'],
+        'sources': ['nc/powspec/test_nc_transfer_func.c'],
     },
     # nc_powspec is built twice from one source (via -D, see the C file). Measured: the
     # CLASS-backed cbe half is fast (~4s, splined once) -> fast-lane unit; the analytic
@@ -316,12 +316,12 @@ lss_tests = [
     # acceptance tier (coverage-only, unbounded timeout).
     {
         'name': 'nc_powspec_cbe',
-        'sources': ['lss/test_nc_powspec.c'],
+        'sources': ['nc/powspec/test_nc_powspec.c'],
         'c_args': ['-DPOWSPEC_SPLIT_CBE'],
     },
     {
         'name': 'nc_powspec_transfer',
-        'sources': ['lss/test_nc_powspec.c'],
+        'sources': ['nc/powspec/test_nc_powspec.c'],
         'c_args': ['-DPOWSPEC_SPLIT_TRANSFER'],
         'timeout': 0,
         'priority': 10,
@@ -329,11 +329,11 @@ lss_tests = [
     },
     {
         'name': 'nc_galaxy_acf',
-        'sources': ['lss/test_nc_galaxy_acf.c'],
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_acf.c'],
     },
     {
         'name': 'nc_wl_surface_mass_density',
-        'sources': ['lss/test_nc_wl_surface_mass_density.c'],
+        'sources': ['nc/lss/wl/test_nc_wl_surface_mass_density.c'],
     },
 ]
 
@@ -341,27 +341,27 @@ lss_tests = [
 galaxy_tests = [
     {
         'name': 'nc_galaxy_hod',
-        'sources': ['galaxy/test_nc_galaxy_hod.c'],
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_hod.c'],
     },
     {
         'name': 'nc_galaxy_wl_obs',
-        'sources': ['galaxy/test_nc_galaxy_wl_obs.c'],
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs.c'],
     },
     {
         'name': 'nc_galaxy_sd_position',
-        'sources': ['galaxy/test_nc_galaxy_sd_position.c'],
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_position.c'],
     },
     {
         'name': 'nc_galaxy_sd_true_redshift',
-        'sources': ['galaxy/test_nc_galaxy_sd_true_redshift.c'],
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_true_redshift.c'],
     },
     {
         'name': 'nc_galaxy_sd_obs_redshift',
-        'sources': ['galaxy/test_nc_galaxy_sd_obs_redshift.c'],
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_obs_redshift.c'],
     },
     {
         'name': 'nc_galaxy_sd_shape',
-        'sources': ['galaxy/test_nc_galaxy_sd_shape.c'],
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_shape.c'],
     },
 ]
 

@@ -30,7 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_data_gauss_cov.h>
-#include <numcosmo/lss/nc_cluster_abundance.h>
+#include <numcosmo/nc/lss/cluster/nc_cluster_abundance.h>
 
 G_BEGIN_DECLS
 

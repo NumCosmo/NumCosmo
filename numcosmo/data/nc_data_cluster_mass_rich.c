@@ -40,7 +40,7 @@
 #include "build_cfg.h"
 
 #include "data/nc_data_cluster_mass_rich.h"
-#include "lss/nc_cluster_mass_richness.h"
+#include "nc/lss/cluster/nc_cluster_mass_richness.h"
 
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"

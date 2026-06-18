@@ -40,9 +40,9 @@
 
 #include "data/nc_data_cluster_pseudo_counts.h"
 #include "nc/background/nc_hicosmo.h"
-#include "lss/nc_cluster_redshift.h"
-#include "lss/nc_cluster_mass.h"
-#include "lss/nc_cluster_abundance.h"
+#include "nc/lss/cluster/nc_cluster_redshift.h"
+#include "nc/lss/cluster/nc_cluster_mass.h"
+#include "nc/lss/cluster/nc_cluster_abundance.h"
 #include "math/ncm_cfg.h"
 
 enum
