@@ -1,0 +1,101 @@
+/***************************************************************************
+ *            nc_multiplicity_func.h
+ *
+ *  Mon Jun 28 15:09:13 2010
+ *  Copyright  2010  Mariana Penna Lima
+ *  <pennalima@gmail.com>
+ ****************************************************************************/
+/*
+ * numcosmo
+ * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
+ *
+ * numcosmo is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * numcosmo is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef _NC_MULTIPLICITY_FUNC_H_
+#define _NC_MULTIPLICITY_FUNC_H_
+
+#include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/build_cfg.h>
+#include <numcosmo/nc/background/nc_hicosmo.h>
+
+G_BEGIN_DECLS
+
+#define NC_TYPE_MULTIPLICITY_FUNC             (nc_multiplicity_func_get_type ())
+
+G_DECLARE_DERIVABLE_TYPE (NcMultiplicityFunc, nc_multiplicity_func, NC, MULTIPLICITY_FUNC, GObject)
+
+/**
+ * NcMultiplicityFuncMassDef:
+ * @NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN: halo mass defined in terms of the mean density $\rho_\mathrm{bg} = \rho_m(z)$
+ * @NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL: halo mass defined in terms of the critical density $\rho_\mathrm{bg} = \rho_\mathrm{crit}(z)$
+ * @NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL: halo mass defined in terms of virial overdensity times the critical density $\rho_\mathrm{bg} = \rho_\mathrm{crit
+ * @NC_MULTIPLICITY_FUNC_MASS_DEF_FOF: friends of friends
+ *
+ * Spherical overdensity halo mass: $$M_\Delta = \frac{4\pi}{3} \Delta \rho_\mathrm{bg} r_\Delta^3,$$
+ * where $\rho_\mathrm{bg}$ is the background density of the universe at redshift z, $\rho_\mathrm{bg} (z)$.
+ * For @NC_HALO_DENSITY_PROFILE_MASS_DEF_VIRIAL the virial overdensity is defined as:
+ * \begin{equation}\label{def:DVir}
+ * \Delta_\mathrm{Vir} = 18 \pi^2 + 82 x - 39 x^2, \quad x \equiv \Omega_m(z) - 1.
+ * \end{equation}
+ *
+ */
+typedef enum _NcMultiplicityFuncMassDef
+{
+  NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN = 0,
+  NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL,
+  NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL,
+  NC_MULTIPLICITY_FUNC_MASS_DEF_FOF,
+  /* < private > */
+  NC_MULTIPLICITY_FUNC_MASS_DEF_LEN, /*< skip >*/
+} NcMultiplicityFuncMassDef;
+
+struct _NcMultiplicityFuncClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  void (*set_mdef) (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+  void (*set_Delta) (NcMultiplicityFunc *mulf, gdouble Delta);
+  gdouble (*get_Delta) (NcMultiplicityFunc *mulf);
+  gdouble (*get_matter_Delta) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble z);
+  NcMultiplicityFuncMassDef (*get_mdef) (NcMultiplicityFunc *mulf);
+  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+  gboolean (*has_correction_factor) (NcMultiplicityFunc *mulf);
+  gdouble (*correction_factor) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
+
+  /* Padding to allow adding up to 10 more virtual functions without breaking ABI. */
+  gpointer padding[10];
+};
+
+
+void nc_multiplicity_func_free (NcMultiplicityFunc *mulf);
+void nc_multiplicity_func_clear (NcMultiplicityFunc **mulf);
+
+void nc_multiplicity_func_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef);
+void nc_multiplicity_func_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
+gdouble nc_multiplicity_func_get_Delta (NcMultiplicityFunc *mulf);
+gdouble nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble z);
+NcMultiplicityFuncMassDef nc_multiplicity_func_get_mdef (NcMultiplicityFunc *mulf);
+
+gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+gboolean nc_multiplicity_func_has_correction_factor (NcMultiplicityFunc *mulf);
+gdouble nc_multiplicity_func_correction_factor (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
+
+#define NC_MULTIPLICITY_FUNC_DELTA_C0 (1.6864701998411454502)
+
+G_END_DECLS
+
+#endif /* _NC_MULTIPLICITY_FUNC_H_ */
+

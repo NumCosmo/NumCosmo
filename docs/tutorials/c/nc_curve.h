@@ -34,7 +34,7 @@
  * Here we are writing an object external to NumCosmo so we must use
  * the full header numcosmo/numcosmo.h. Otherwise we could include
  * only the actual header we need, i.e.,
- * #include <numcosmo/math/ncm_model.h>
+ * #include <numcosmo/ncm/model/ncm_model.h>
  *
  */
 #include <numcosmo/numcosmo.h>

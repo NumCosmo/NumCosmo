@@ -1,0 +1,139 @@
+/***************************************************************************
+ *            nc_halo_mass_function.h
+ *
+ *  Mon Jun 28 15:09:13 2010
+ *  Copyright  2010  Mariana Penna Lima
+ *  <pennalima@gmail.com>
+ ****************************************************************************/
+/*
+ * numcosmo
+ * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
+ * numcosmo is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * numcosmo is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef _NC_HALO_MASS_FUNCTION_H_
+#define _NC_HALO_MASS_FUNCTION_H_
+
+#include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/build_cfg.h>
+#include <numcosmo/nc/background/nc_distance.h>
+#include <numcosmo/nc/lss/halo/nc_multiplicity_func.h>
+#include <numcosmo/ncm/spline/ncm_spline2d.h>
+#include <numcosmo/ncm/powspec/ncm_powspec_filter.h>
+
+G_BEGIN_DECLS
+
+#define NC_TYPE_HALO_MASS_FUNCTION             (nc_halo_mass_function_get_type ())
+#define NC_HALO_MASS_FUNCTION(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HALO_MASS_FUNCTION, NcHaloMassFunction))
+#define NC_HALO_MASS_FUNCTION_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HALO_MASS_FUNCTION, NcHaloMassFunctionClass))
+#define NC_IS_HALO_MASS_FUNCTION(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HALO_MASS_FUNCTION))
+#define NC_IS_HALO_MASS_FUNCTION_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HALO_MASS_FUNCTION))
+#define NC_HALO_MASS_FUNCTION_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HALO_MASS_FUNCTION, NcHaloMassFunctionClass))
+typedef struct _NcHaloMassFunctionClass NcHaloMassFunctionClass;
+typedef struct _NcHaloMassFunction NcHaloMassFunction;
+typedef struct _NcHaloMassFunctionPrivate NcHaloMassFunctionPrivate;
+
+struct _NcHaloMassFunctionClass
+{
+  /*< private > */
+  GObjectClass parent_class;
+};
+
+struct _NcHaloMassFunction
+{
+  /*< private > */
+  GObject parent_instance;
+  NcHaloMassFunctionPrivate *priv;
+  NcmSpline2d *d2NdzdlnM;
+  gdouble mf_lb;
+};
+
+/**
+ * NcHaloMassFunctionSplineOptimize:
+ * @NC_HALO_MASS_FUNCTION_SPLINE_NONE: no spline optimization
+ * @NC_HALO_MASS_FUNCTION_SPLINE_LNM: optimize spline in log-mass direction
+ * @NC_HALO_MASS_FUNCTION_SPLINE_Z: optimize spline in redshift direction
+ *
+ * Options for optimizing spline interpolation in halo mass function calculations.
+ *
+ */
+typedef enum _NcHaloMassFunctionSplineOptimize
+{
+  NC_HALO_MASS_FUNCTION_SPLINE_NONE = 0,
+  NC_HALO_MASS_FUNCTION_SPLINE_LNM,
+  NC_HALO_MASS_FUNCTION_SPLINE_Z,
+} NcHaloMassFunctionSplineOptimize;
+
+GType nc_halo_mass_function_get_type (void) G_GNUC_CONST;
+
+NcHaloMassFunction *nc_halo_mass_function_new (NcDistance *dist, NcmPowspecFilter *psf, NcMultiplicityFunc *mulf);
+void nc_halo_mass_function_free (NcHaloMassFunction *mfp);
+void nc_halo_mass_function_clear (NcHaloMassFunction **mfp);
+
+void nc_halo_mass_function_set_area (NcHaloMassFunction *mfp, gdouble area);
+void nc_halo_mass_function_set_prec (NcHaloMassFunction *mfp, gdouble prec);
+void nc_halo_mass_function_set_area_sd (NcHaloMassFunction *mfp, gdouble area_sd);
+void nc_halo_mass_function_set_eval_limits (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf);
+void nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
+void nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
+
+NcmPowspecFilter *nc_halo_mass_function_peek_psf (NcHaloMassFunction *mfp);
+NcMultiplicityFunc *nc_halo_mass_function_peek_multiplicity_function (NcHaloMassFunction *mfp);
+gdouble nc_halo_mass_function_peek_survey_area (NcHaloMassFunction *mfp);
+
+gdouble nc_halo_mass_function_lnM_to_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM);
+gdouble nc_halo_mass_function_lnR_to_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR);
+
+gdouble nc_halo_mass_function_sigma_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z);
+gdouble nc_halo_mass_function_sigma_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
+
+gdouble nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z);
+gdouble nc_halo_mass_function_dn_dlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
+
+gdouble nc_halo_mass_function_dv_dzdomega (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble z);
+
+NCM_INLINE gdouble nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
+
+gdouble nc_halo_mass_function_dn_dz (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble z, gboolean spline);
+gdouble nc_halo_mass_function_n (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble zl, gdouble zu, NcHaloMassFunctionSplineOptimize spline);
+
+G_END_DECLS
+
+#endif /* _NC_HALO_MASS_FUNCTION_H_ */
+
+#ifndef _NC_HALO_MASS_FUNCTION_INLINE_H_
+#define _NC_HALO_MASS_FUNCTION_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
+#ifndef __GTK_DOC_IGNORE__
+
+G_BEGIN_DECLS
+
+NCM_INLINE gdouble
+nc_halo_mass_function_d2n_dzdlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
+{
+  const gdouble res = ncm_spline2d_eval (mfp->d2NdzdlnM, lnM, z);
+
+  if (res < mfp->mf_lb)
+    return mfp->mf_lb;
+
+  return res;
+}
+
+G_END_DECLS
+
+#endif /* __GTK_DOC_IGNORE__ */
+#endif /* NUMCOSMO_HAVE_INLINE */
+#endif /* _NC_HALO_MASS_FUNCTION_INLINE_H_ */
+

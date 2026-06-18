@@ -13,6 +13,13 @@ option(
 )
 
 option(
+       'flaky_tests',
+       type: 'boolean',
+       value: false,
+       description: 'Randomized (flaky) test mode: use a fresh random g_test seed each run instead of the fixed reproducible one. Pair with `meson test --repeat=N` for the weekly stress lane. Default false = fixed seed, deterministic push-CI.',
+)
+
+option(
        'numcosmo_debug',
        type: 'feature',
        value: 'auto',

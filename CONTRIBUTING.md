@@ -14,7 +14,7 @@ When adding new files to NumCosmo, please follow these steps:
 
 3. Include the new files in the appropriate section of `docs/numcosmo-docs.sgml`. If no suitable section exists, create a new one.
 
-4. Add the header inclusion to `numcosmo/math/ncm_cfg.h`. All new objects should be registered using `ncm_cfg_register_obj (NCM_TYPE_NEW_OBJECT);`.
+4. Add the header inclusion to `numcosmo/ncm/core/ncm_cfg.h`. All new objects should be registered using `ncm_cfg_register_obj (NCM_TYPE_NEW_OBJECT);`.
 
 ## Unit Testing
 

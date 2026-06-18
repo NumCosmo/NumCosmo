@@ -21,9 +21,14 @@ if enable_gir and python_for_tests.found()
         'PYTHONPATH': numcosmo_source_dir,
     }
 
-    env = environment(common_env)
+    # xdist lanes spawn many worker processes, so pin threading to 1 (avoid
+    # oversubscription). The non-xdist OMP lane (pytest-omp) instead gets cores
+    # threads so the `#pragma omp parallel` paths run. See tests/meson.build.
+    env = environment(common_env + omp_vars_serial)
 
-    env_sphere_map = environment(common_env)
+    env_omp = environment(common_env + omp_vars_threaded)
+
+    env_sphere_map = environment(common_env + omp_vars_serial)
     env_sphere_map.set('MALLOC_PERTURB_', '0')
 
     pytest = find_program('pytest', required: true)
@@ -139,15 +144,15 @@ if enable_gir and python_for_tests.found()
     )
 
     # OMP lane: re-run the OpenMP-path tests (marked `omp`) with process-level parallelism
-    # OFF (no xdist) so the single process owns the machine. The CI step / shell sets
-    # OMP_NUM_THREADS to the available cores; this lane is what actually exercises the
-    # `#pragma omp parallel` branches that the default lane (OMP=1) serializes. See TESTING.md.
+    # OFF (no xdist, pytest_base_args) so the single process owns the machine, and with
+    # env_omp (OMP_NUM_THREADS = cores) so the `#pragma omp parallel` branches that the
+    # default lane (OMP=1) serializes are actually exercised. See TESTING.md.
     test(
         'pytest-omp',
         pytest,
         args: pytest_base_args + ['-m', 'omp', meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
-        env: env,
+        env: env_omp,
         timeout: 0,
         protocol: pytest_protocol,
         is_parallel: pytest_is_parallel,

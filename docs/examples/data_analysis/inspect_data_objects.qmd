@@ -35,7 +35,7 @@ inspection shows what a concrete object exposes through methods such as
 NumCosmo data objects are implemented in the source tree under:
 
 ```text
-numcosmo/data/
+numcosmo/nc/data/
 ```
 
 Files named `nc_data_*.h` and `nc_data_*.c` define the main data-object types used by
@@ -737,7 +737,7 @@ useful first overview.
 
 When working with NumCosmo data objects, a useful workflow is:
 
-1. Look at the available data-type source files under `numcosmo/data/`.
+1. Look at the available data-type source files under `numcosmo/nc/data/`.
 2. Choose the data family relevant to the example, such as Hubble, BAO, CMB, or
    supernova data.
 3. Inspect the corresponding source file to find the dataset identifier enum, if

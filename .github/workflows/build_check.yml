@@ -11,15 +11,13 @@ on:
 env:
   CONDA_ENV: numcosmo_developer
   CACHE_VERSION: 0
-  # Pin BLAS/OpenMP to a single thread per test process on the default lane. Test-level
-  # parallelism is provided by `meson test --num-processes` (≈ runner cores); letting
-  # BLAS/OpenMP also spin up per-core threads inside each process causes ~cores^2
-  # oversubscription, and on the mixed apt/pip OpenBLAS stack it deadlocks (e.g.
-  # scipy.linalg.solve in test_sbessel_ode_solver, which is omp simd / BLAS, not threads).
-  # NOTE: this serializes NumCosmo's OpenMP-parallel paths too (ESMCMC/MC/cluster_wl use
-  # `#pragma omp parallel`, governed by OMP_NUM_THREADS — there is no separate thread pool).
-  # Those parallel branches are covered separately by a dedicated OMP_NUM_THREADS>1 lane
-  # (see TESTING.md); MPI tests run under mpiexec in their own lane.
+  # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
+  # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock, e.g.
+  # scipy.linalg.solve in test_sbessel_ode_solver), and the run-alone OpenMP tests
+  # (omp suite ⇒ is_parallel: false) get OMP_NUM_THREADS = cores so their `#pragma omp
+  # parallel` branches actually run, inside the ordinary `meson test` invocation (see
+  # TESTING.md). The globals below are just a single-thread fallback for the meson driver
+  # and any non-test step; meson's per-test env overrides them.
   OMP_NUM_THREADS: 1
   OMP_MAX_ACTIVE_LEVELS: 1
   OMP_THREAD_LIMIT: 1
@@ -28,8 +26,8 @@ env:
   MKL_NUM_THREADS: 1
   # The non-coverage build jobs run a FAST subset: skip the heavy acceptance/statistical
   # tiers and the opt-in capability lanes. Full coverage of these is provided by the
-  # sharded coverage job below, which runs everything. (The build-miniforge job additionally
-  # runs the dedicated OMP lane, which is where the OpenMP-parallel heavy tests get exercised.)
+  # sharded coverage job below, which runs everything. (The omp-suite C tests already run
+  # threaded in this subset; only the py-omp lane needs the extra step in build-miniforge.)
   FAST_TEST_ARGS: "--no-suite py-app --no-suite py-acceptance --no-suite py-powspec --no-suite py-xcor --no-suite py-omp --no-suite c-acceptance --no-suite c-statistical"
 
 jobs:
@@ -55,10 +53,8 @@ jobs:
       run: meson compile -C build
     - name: Checking indentation
       run: |
-        uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/*.c numcosmo/*.h
-        uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/math/*.c numcosmo/math/*.h
-        uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/model/*.c numcosmo/model/*.h
-        uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/xcor/*.c numcosmo/xcor/*.h
+        find numcosmo -path numcosmo/external -prune -o \( -name '*.c' -o -name '*.h' \) -print0 \
+          | xargs -0 uncrustify -c numcosmo_uncrustify.cfg --check -q
     - name: Test python examples
       run: |
         source build/numcosmo_export.sh
@@ -245,15 +241,11 @@ jobs:
       #    pylint --rcfile .pylintrc numcosmo_py
       - name: Check NumCosmo
         run: meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.FAST_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
-      - name: Check NumCosmo (OMP lane)
-        # Re-run the OpenMP-path tests (suites omp/py-omp) with process parallelism OFF and
-        # OMP_NUM_THREADS = runner cores, overriding the global OMP=1 pin, so the
-        # `#pragma omp parallel` branches are actually exercised. See TESTING.md.
-        run: |
-          NP=$(getconf _NPROCESSORS_ONLN)
-          OMP_NUM_THREADS=$NP OMP_THREAD_LIMIT=$NP OMP_MAX_ACTIVE_LEVELS=1 \
-            meson test -v -C build --num-processes=1 --suite omp --suite py-omp \
-            || (cat build/meson-logs/testlog.txt && exit 1)
+      - name: Check NumCosmo (py-omp lane)
+        # The omp-suite C tests already run threaded (is_parallel: false) in the fast subset
+        # above; only py-omp is excluded there, so run it here. meson sets OMP_NUM_THREADS =
+        # cores for this non-xdist lane (see TESTING.md), so no manual env is needed.
+        run: meson test -v -C build --suite py-omp || (cat build/meson-logs/testlog.txt && exit 1)
 
   build-miniforge-coverage:
     name: Cov-${{ matrix.name }} (py${{ matrix.python-version }}, openmpi)
@@ -322,7 +314,7 @@ jobs:
           meson test -v -C build --timeout-multiplier 0 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
-          lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/class/*' '*/levmar/*' '*/libcuba/*' '*/plc/*' '*/sundials/*' '*/toeplitz/*' '*/tools/*' --output-file numcosmo-coverage.info
+          lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' --output-file numcosmo-coverage.info
       - name: Test timing summary
         if: always()
         # Surface the slowest tests of this shard in the job summary so wall-time imbalance
