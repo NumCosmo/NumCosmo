@@ -395,17 +395,26 @@ foreach c_test : all_c_tests
     else
         suite = ['c']
     endif
+    # OMP-path tests run alone with all cores; the rest run concurrently, pinned to
+    # a single thread (see tests/meson.build).
+    test_is_omp = suite.contains('omp')
+    test_env = [
+        'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
+        'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
+    ]
+    foreach k, v : (test_is_omp ? omp_vars_threaded : omp_vars_serial)
+        test_env += '@0@=@1@'.format(k, v)
+    endforeach
     test(
         c_test['name'],
         executable_test,
+        args: test_seed_args,
         timeout: timeout,
-        env: [
-            'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
-            'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
-        ],
+        env: test_env,
         protocol: 'tap',
         priority: priority,
         suite: suite,
+        is_parallel: not test_is_omp,
     )
 endforeach
 
@@ -444,18 +453,22 @@ if mpi_c_dep.found()
                 [
                     '-n', '2',
                     executable_test.full_path(),
-                ]
+                ] + test_seed_args
             )
+            mpi_test_env = [
+                'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
+                'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
+            ]
+            foreach k, v : omp_vars_serial
+                mpi_test_env += '@0@=@1@'.format(k, v)
+            endforeach
             test(
                 c_test_mpi['name'],
                 mpiexec,
                 args: mpiexec_args,
                 depends: [executable_test],
                 timeout: timeout,
-                env: [
-                    'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
-                    'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
-                ],
+                env: mpi_test_env,
                 protocol: 'tap',
                 suite: suite,
             )

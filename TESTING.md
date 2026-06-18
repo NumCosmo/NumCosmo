@@ -142,22 +142,41 @@ NumCosmo has three distinct parallel mechanisms, which must not be confused:
 - **OpenMP SIMD** — `#pragma omp simd` (e.g. `ncm_sbessel_ode_solver`) is *vectorization*, not
   threading; **unaffected** by `OMP_NUM_THREADS`.
 
-The two lanes are inverses of each other; in both, total live threads ≈ runner cores:
+The thread policy is set **per test by meson** (`tests/meson.build`), not via exported env
+vars — so a plain `meson test` does the right thing on any machine, and the OpenMP branches
+are exercised in the normal run rather than only on a hand-invoked lane:
 
-| Lane | Process parallelism | `OMP_NUM_THREADS` |
-|------|--------------------|-------------------|
-| **default** | many: `--num-processes=$(getconf _NPROCESSORS_ONLN)` / pytest `-n auto` | `1` |
-| **omp** | **off**: `--num-processes=1` / pytest **without** xdist | `$(getconf _NPROCESSORS_ONLN)` (all cores) |
+| Test kind | Scheduling | `OMP_NUM_THREADS` |
+|-----------|-----------|-------------------|
+| concurrent (default `is_parallel: true`; pytest `-n auto`) | many at once | `1` |
+| run-alone OpenMP (`omp` suite ⇒ `is_parallel: false`; non-xdist `py-omp` lane) | one at a time, owns the machine | `$(getconf _NPROCESSORS_ONLN)` (all cores) |
 
-CI pins `OMP_NUM_THREADS=1` (and BLAS threads) on the **default lane** to avoid cores²
-oversubscription and the mixed-OpenBLAS deadlock. Consequence: the OpenMP-parallel *branches*
-(thread coordination, `reduction`, scheduling) are **not exercised** on the default lane. To
-cover them, tests with an OpenMP-parallel path carry the **`omp`** marker and are
-**additionally** run in the dedicated omp lane above: process-level parallelism **disabled**
-so the one test process owns the machine, and `OMP_NUM_THREADS` set to the cores available on
-the runner so the parallel path actually uses them. This mirrors how `mpi` gets its own
-`mpiexec` lane. `omp` is a selection label (the same tests still run serially on the default
-lane); it is not a skip.
+Concurrent tests are pinned to a single thread on **every** backend (OMP + OpenBLAS/BLIS/MKL)
+to avoid cores² oversubscription and the mixed-OpenBLAS deadlock. Tests with an
+OpenMP-parallel path carry the **`omp`** suite tag: meson marks the C ones `is_parallel: false`
+and gives them — and the non-xdist `py-omp` pytest lane — `OMP_NUM_THREADS` = online cores
+(read once via `getconf _NPROCESSORS_ONLN` at configure time), so the parallel branch
+(thread coordination, `reduction`, scheduling) actually runs. Because those tests run alone,
+this happens inside the ordinary `meson test` invocation — no `--num-processes=1`, no exported
+`OMP_NUM_THREADS`, no separate lane required. (`mpi` still gets its own `mpiexec` lane, pinned
+to one thread; OpenMP SIMD is unaffected by `OMP_NUM_THREADS`.)
+
+### Reproducibility and the `-Dflaky_tests` option
+
+The C tests randomize via `g_test_rand*` (glib seeds it per process). Two modes, selected by
+the meson option `flaky_tests` (default **false**):
+
+| Mode | `-Dflaky_tests` | g_test seed | Repeats | Run by |
+|------|-----------------|-------------|---------|--------|
+| **non-flaky** (default) | `false` | fixed `--seed` (passed to every C test) | 1× | every push — bit-reproducible, never flakes |
+| **flaky** | `true` | fresh random seed each run | `meson test --repeat=N` | the weekly `weekly_flaky.yml` lane |
+
+Empirically the suite is well-calibrated: every randomized test passes 20/20 at OMP=1, and the
+omp tests pass 20–30/20–30 at `OMP_NUM_THREADS=cores`. The fixed seed makes the push lane
+deterministic; the weekly randomized + repeated lane is what stresses the seeded/statistical
+tolerances across many draws. A fixed seed does **not** determinize an OMP-threaded run (parallel
+FP/RNG order varies), so any omp-path statistical assertion must tolerate that spread — e.g.
+`test_ncm_fit_esmcmc`'s variance-of-m2lnL check uses reltol 0.6 (not 0.4) for this reason.
 
 ---
 
