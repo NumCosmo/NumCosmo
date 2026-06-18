@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_hiqg_1d.h
  *
@@ -36,31 +34,12 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_HIQG_1D             (nc_hiqg_1d_get_type ())
-#define NC_HIQG_1D(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HIQG_1D, NcHIQG1D))
-#define NC_HIQG_1D_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HIQG_1D, NcHIQG1DClass))
-#define NC_IS_HIQG_1D(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HIQG_1D))
-#define NC_IS_HIQG_1D_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HIQG_1D))
-#define NC_HIQG_1D_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HIQG_1D, NcHIQG1DClass))
 
-typedef struct _NcHIQG1DClass NcHIQG1DClass;
-typedef struct _NcHIQG1D NcHIQG1D;
-typedef struct _NcHIQG1DPrivate NcHIQG1DPrivate;
+G_DECLARE_FINAL_TYPE (NcHIQG1D, nc_hiqg_1d, NC, HIQG_1D, GObject)
+
 typedef struct _NcHIQG1DGauss NcHIQG1DGauss;
 typedef struct _NcHIQG1DExp NcHIQG1DExp;
 typedef struct _NcHIQG1DSQ NcHIQG1DSQ;
-
-struct _NcHIQG1DClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
-struct _NcHIQG1D
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcHIQG1DPrivate *priv;
-};
 
 /**
  * NcHIQG1DGauss:
@@ -119,7 +98,6 @@ struct _NcHIQG1DSQ
  */
 typedef void (*NcHIQG1DPsi) (gpointer psi_data, const gdouble x, gdouble *psi);
 
-GType nc_hiqg_1d_get_type (void) G_GNUC_CONST;
 GType nc_hiqg_1d_gauss_get_type (void) G_GNUC_CONST;
 GType nc_hiqg_1d_exp_get_type (void) G_GNUC_CONST;
 GType nc_hiqg_1d_sq_get_type (void) G_GNUC_CONST;

@@ -50,10 +50,10 @@
 #include "math/ncm_cfg.h"
 #include "numcosmo/nc_enum_types.h"
 
-struct _NcMultiplicityFuncPrivate
+typedef struct _NcMultiplicityFuncPrivate
 {
   gint place_holder;
-};
+} NcMultiplicityFuncPrivate;
 
 enum
 {
@@ -68,7 +68,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcMultiplicityFunc, nc_multiplicity_func, G
 static void
 nc_multiplicity_func_init (NcMultiplicityFunc *mulf)
 {
-  NcMultiplicityFuncPrivate * const self = mulf->priv = nc_multiplicity_func_get_instance_private (mulf);
+  NcMultiplicityFuncPrivate * const self = nc_multiplicity_func_get_instance_private (mulf);
 
   self->place_holder = 0;
 }
@@ -78,7 +78,7 @@ _nc_multiplicity_func_set_property (GObject *object, guint prop_id, const GValue
 {
   NcMultiplicityFunc *mulf = NC_MULTIPLICITY_FUNC (object);
 
-  /* NcMultiplicityFuncPrivate * const self = mulf->priv; */
+  /* NcMultiplicityFuncPrivate * const self = nc_multiplicity_func_get_instance_private (mulf); */
 
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC (object));
 
@@ -101,7 +101,7 @@ _nc_multiplicity_func_get_property (GObject *object, guint prop_id, GValue *valu
 {
   NcMultiplicityFunc *mulf = NC_MULTIPLICITY_FUNC (object);
 
-  /* NcMultiplicityFuncPrivate * const self = mulf->priv; */
+  /* NcMultiplicityFuncPrivate * const self = nc_multiplicity_func_get_instance_private (mulf); */
 
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC (object));
 

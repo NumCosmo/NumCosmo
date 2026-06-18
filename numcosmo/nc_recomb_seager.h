@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_recomb_seager.h
  *
@@ -62,7 +60,7 @@ struct _NcRecombSeagerClass
  * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO: Also includes the continum opacity effect due to H.
  * @NC_RECOM_SEAGER_OPT_ALL: All options.
  *
- * FIXME
+ * Options for the Seager recombination model.
  *
  */
 typedef enum _NcRecombSeagerOpt

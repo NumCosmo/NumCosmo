@@ -35,30 +35,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_POWSPEC_ML_CBE             (nc_powspec_ml_cbe_get_type ())
-#define NC_POWSPEC_ML_CBE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_POWSPEC_ML_CBE, NcPowspecMLCBE))
-#define NC_POWSPEC_ML_CBE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_POWSPEC_ML_CBE, NcPowspecMLCBEClass))
-#define NC_IS_POWSPEC_ML_CBE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_POWSPEC_ML_CBE))
-#define NC_IS_POWSPEC_ML_CBE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_POWSPEC_ML_CBE))
-#define NC_POWSPEC_ML_CBE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_POWSPEC_ML_CBE, NcPowspecMLCBEClass))
 
-typedef struct _NcPowspecMLCBEClass NcPowspecMLCBEClass;
-typedef struct _NcPowspecMLCBE NcPowspecMLCBE;
-typedef struct _NcPowspecMLCBEPrivate NcPowspecMLCBEPrivate;
+G_DECLARE_FINAL_TYPE (NcPowspecMLCBE, nc_powspec_ml_cbe, NC, POWSPEC_ML_CBE, NcPowspecML)
 
-struct _NcPowspecMLCBEClass
-{
-  /*< private > */
-  NcPowspecMLClass parent_class;
-};
-
-struct _NcPowspecMLCBE
-{
-  /*< private > */
-  NcPowspecML parent_instance;
-  NcPowspecMLCBEPrivate *priv;
-};
-
-GType nc_powspec_ml_cbe_get_type (void) G_GNUC_CONST;
 
 NcPowspecMLCBE *nc_powspec_ml_cbe_new (void);
 NcPowspecMLCBE *nc_powspec_ml_cbe_new_full (NcCBE *cbe);

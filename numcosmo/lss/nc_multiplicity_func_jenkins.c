@@ -42,11 +42,11 @@
 
 #include "lss/nc_multiplicity_func_jenkins.h"
 
-struct _NcMultiplicityFuncJenkinsPrivate
+typedef struct _NcMultiplicityFuncJenkinsPrivate
 {
   NcMultiplicityFuncMassDef mdef;
   gdouble Delta;
-};
+} NcMultiplicityFuncJenkinsPrivate;
 
 enum
 {
@@ -54,12 +54,18 @@ enum
   PROP_SIZE
 };
 
+
+struct _NcMultiplicityFuncJenkins
+{
+  NcMultiplicityFunc parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncJenkins, nc_multiplicity_func_jenkins, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_jenkins_init (NcMultiplicityFuncJenkins *mj)
 {
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv = nc_multiplicity_func_jenkins_get_instance_private (mj);
+  NcMultiplicityFuncJenkinsPrivate * const self = nc_multiplicity_func_jenkins_get_instance_private (mj);
 
   self->mdef = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
 }
@@ -128,7 +134,7 @@ static void
 _nc_multiplicity_func_jenkins_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
   NcMultiplicityFuncJenkins *mj                 = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+  NcMultiplicityFuncJenkinsPrivate * const self = nc_multiplicity_func_jenkins_get_instance_private (mj);
 
   switch (mdef)
   {
@@ -156,7 +162,7 @@ static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_jenkins_get_mdef (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncJenkins *mj                 = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+  NcMultiplicityFuncJenkinsPrivate * const self = nc_multiplicity_func_jenkins_get_instance_private (mj);
 
   return self->mdef;
 }
@@ -165,7 +171,7 @@ static void
 _nc_multiplicity_func_jenkins_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
   NcMultiplicityFuncJenkins *mj                 = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+  NcMultiplicityFuncJenkinsPrivate * const self = nc_multiplicity_func_jenkins_get_instance_private (mj);
 
   self->Delta = Delta;
 }
@@ -174,7 +180,7 @@ static gdouble
 _nc_multiplicity_func_jenkins_get_Delta (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncJenkins *mj                 = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
-  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv;
+  NcMultiplicityFuncJenkinsPrivate * const self = nc_multiplicity_func_jenkins_get_instance_private (mj);
 
   return self->Delta;
 }
@@ -183,7 +189,7 @@ static gdouble
 _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   /* NcMultiplicityFuncJenkins *mj = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
-   *  NcMultiplicityFuncJenkinsPrivate * const self = mj->priv; */
+   *  NcMultiplicityFuncJenkinsPrivate * const self = nc_multiplicity_func_jenkins_get_instance_private (mj); */
 
   gdouble f_Jenkins = 0.315 * exp (-pow (fabs (-log (sigma) + 0.61), 3.8));
 

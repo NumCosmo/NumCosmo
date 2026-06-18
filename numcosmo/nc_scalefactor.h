@@ -33,32 +33,11 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_SCALEFACTOR             (nc_scalefactor_get_type ())
-#define NC_SCALEFACTOR(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_SCALEFACTOR, NcScalefactor))
-#define NC_SCALEFACTOR_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_SCALEFACTOR, NcScalefactorClass))
-#define NC_IS_SCALEFACTOR(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_SCALEFACTOR))
-#define NC_IS_SCALEFACTOR_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_SCALEFACTOR))
-#define NC_SCALEFACTOR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_SCALEFACTOR, NcScalefactorClass))
 
-typedef struct _NcScalefactorClass NcScalefactorClass;
-typedef struct _NcScalefactor NcScalefactor;
-typedef struct _NcScalefactorPrivate NcScalefactorPrivate;
+G_DECLARE_FINAL_TYPE (NcScalefactor, nc_scalefactor, NC, SCALEFACTOR, GObject)
 
-struct _NcScalefactorClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
 
-struct _NcScalefactor
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcScalefactorPrivate *priv;
-};
-
-GType nc_scalefactor_get_type (void) G_GNUC_CONST;
-
-NcScalefactor *nc_scalefactor_new (const gdouble zf, NcDistance *dist);
+NcScalefactor *nc_scalefactor_new (const gdouble zf, NcDistance * dist);
 NcScalefactor *nc_scalefactor_ref (NcScalefactor *a);
 void nc_scalefactor_free (NcScalefactor *a);
 void nc_scalefactor_clear (NcScalefactor **a);

@@ -36,6 +36,12 @@
 #include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de.h"
 
+
+struct _NcHICosmoDEReparamOk
+{
+  NcmReparam parent_instance;
+};
+
 G_DEFINE_TYPE (NcHICosmoDEReparamOk, nc_hicosmo_de_reparam_ok, NCM_TYPE_REPARAM)
 
 static void

@@ -1,10 +1,8 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_halo_cm_dutton14.c
  *
  *  Mon Dec 16 13:06:37 2024
- *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br> 
+ *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_cm_dutton14.c
@@ -26,11 +24,11 @@
 
 /**
  * NcHaloCMDutton14
- * 
+ *
  * Class defining the Dutton et al. 2014 concentration-mass relation
- * 
- * This class implements the A. A. Dutton and A. V. Macciò 2014 concentration-mass relation.
- * FIXME include reference (arXiv:1402.7073), equation and range of mass and redshift.
+ *
+ * This class implements the Dutton and Macciò (2014) concentration-mass relation
+ * [Dutton and Macciò (2014)][XDutton2014] [[arXiv](https://arxiv.org/abs/1402.7073)].
  *
  */
 
@@ -149,7 +147,8 @@ _nc_halo_cm_dutton14_mass (NcHaloMassSummary *hms)
   return exp10 (LOG10M_DELTA);
 }
 
-static gdouble _nc_halo_cm_dutton14_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
+static gdouble
+_nc_halo_cm_dutton14_concentration (NcHaloMassSummary *hms, NcHICosmo *cosmo, gdouble z)
 {
   NcHaloCMDutton14 *hcmdm              = NC_HALO_CM_DUTTON14 (hms);
   NcHaloCMDutton14Private * const self = nc_halo_cm_dutton14_get_instance_private (hcmdm);
@@ -157,7 +156,8 @@ static gdouble _nc_halo_cm_dutton14_concentration (NcHaloMassSummary *hms, NcHIC
   return self->concentration (hms, cosmo, z);
 }
 
-static void _nc_halo_cm_dutton14_set_Delta (NcHaloMassSummary *hms, gdouble Delta)
+static void
+_nc_halo_cm_dutton14_set_Delta (NcHaloMassSummary *hms, gdouble Delta)
 {
   NcHaloCMDutton14 *hcmdm              = NC_HALO_CM_DUTTON14 (hms);
   NcHaloCMDutton14Private * const self = nc_halo_cm_dutton14_get_instance_private (hcmdm);
@@ -167,7 +167,6 @@ static void _nc_halo_cm_dutton14_set_Delta (NcHaloMassSummary *hms, gdouble Delt
       g_error ("Dutton14 concentration: mdef must be NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL or Delta must be 200.0 critical");
 
   self->Delta = Delta;
-
 }
 
 static gdouble
@@ -177,8 +176,8 @@ _nc_halo_cm_dutton14_concentration_critical (NcHaloMassSummary *hms, NcHICosmo *
   gdouble h    = nc_hicosmo_h (cosmo);
   gdouble a, b, logc;
 
-  a = 0.520 + (0.905 - 0.520) * exp(-0.617 * pow (z, 1.21));
-  b = -0.101 + 0.026 * z;
+  a    = 0.520 + (0.905 - 0.520) * exp (-0.617 * pow (z, 1.21));
+  b    = -0.101 + 0.026 * z;
   logc = a + b * log10 (mass * h / 1.0e12);
 
   return pow (10, logc);
@@ -191,8 +190,8 @@ _nc_halo_cm_dutton14_concentration_virial (NcHaloMassSummary *hms, NcHICosmo *co
   gdouble h    = nc_hicosmo_h (cosmo);
   gdouble a, b, logc;
 
-  a = 0.537 + (1.025 - 0.537) * exp(-0.718 * pow (z, 1.08));
-  b = -0.097 + 0.024 * z;
+  a    = 0.537 + (1.025 - 0.537) * exp (-0.718 * pow (z, 1.08));
+  b    = -0.097 + 0.024 * z;
   logc = a + b * log10 (mass * h / 1.0e12);
 
   return pow (10, logc);
@@ -240,9 +239,9 @@ NcHaloCMDutton14 *
 nc_halo_cm_dutton14_new (const NcHaloMassSummaryMassDef mdef, const gdouble Delta)
 {
   NcHaloCMDutton14 *hcmdm = g_object_new (NC_TYPE_HALO_CM_DUTTON14,
-                                         "mass-def", mdef,
-                                         "Delta",    Delta,
-                                         NULL);
+                                          "mass-def", mdef,
+                                          "Delta",    Delta,
+                                          NULL);
 
   return hcmdm;
 }

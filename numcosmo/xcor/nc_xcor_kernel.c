@@ -1829,9 +1829,9 @@ nc_xcor_kernel_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, c
  * @cosmo: a #NcHICosmo
  * @l: a #gint
  *
- * FIXME
+ * Evaluates the Limber approximation redshift-dependent prefactor for multipole @l.
  *
- * Returns: FIXME
+ * Returns: the Limber redshift prefactor.
  */
 gdouble
 nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)

@@ -1,4 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
 /*
  * nc_hipert_boltzmann_std.h
  * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>

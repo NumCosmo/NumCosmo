@@ -54,7 +54,7 @@
 #include "lss/nc_multiplicity_func_bhattacharya.h"
 #include "numcosmo/nc_enum_types.h"
 
-struct _NcMultiplicityFuncBhattacharyaPrivate
+typedef struct _NcMultiplicityFuncBhattacharyaPrivate
 {
   NcMultiplicityFuncMassDef mdef;
   NcMultiplicityFuncBhattacharyaConvention convention;
@@ -64,7 +64,7 @@ struct _NcMultiplicityFuncBhattacharyaPrivate
   gdouble q;
   gdouble delta_c;
   gdouble Delta;
-};
+} NcMultiplicityFuncBhattacharyaPrivate;
 
 enum
 {
@@ -78,12 +78,18 @@ enum
   PROP_SIZE,
 };
 
+
+struct _NcMultiplicityFuncBhattacharya
+{
+  NcMultiplicityFunc parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncBhattacharya, nc_multiplicity_func_bhattacharya, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_bhattacharya_init (NcMultiplicityFuncBhattacharya *mbt)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   self->mdef       = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
   self->convention = NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_LEN;
@@ -275,7 +281,7 @@ static void
 _nc_multiplicity_func_bhattacharya_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
   NcMultiplicityFuncBhattacharya *mbt                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   switch (mdef)
   {
@@ -305,7 +311,7 @@ static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_bhattacharya_get_mdef (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncBhattacharya *mba                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mba->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mba);
 
   return self->mdef;
 }
@@ -314,7 +320,7 @@ static void
 _nc_multiplicity_func_bhattacharya_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
   NcMultiplicityFuncBhattacharya *mba                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mba->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mba);
 
   self->Delta = Delta;
 }
@@ -323,7 +329,7 @@ static gdouble
 _nc_multiplicity_func_bhattacharya_get_Delta (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncBhattacharya *mba                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mba->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mba);
 
   return self->Delta;
 }
@@ -332,7 +338,7 @@ static gdouble
 _nc_multiplicity_func_bhattacharya_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* f(\sigma) - Bhattacharya */
 {
   NcMultiplicityFuncBhattacharya *mba                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mba->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mba);
 
   const gdouble A = self->A / pow (1.0 + z, 0.11);
   const gdouble a = (self->convention == NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019) ?
@@ -436,7 +442,7 @@ nc_multiplicity_func_bhattacharya_clear (NcMultiplicityFuncBhattacharya **mbt)
 void
 nc_multiplicity_func_bhattacharya_set_A (NcMultiplicityFuncBhattacharya *mbt, gdouble A)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   g_assert (A >= 0);
 
@@ -452,7 +458,7 @@ nc_multiplicity_func_bhattacharya_set_A (NcMultiplicityFuncBhattacharya *mbt, gd
 gdouble
 nc_multiplicity_func_bhattacharya_get_A (const NcMultiplicityFuncBhattacharya *mbt)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   return self->A;
 }
@@ -468,7 +474,7 @@ nc_multiplicity_func_bhattacharya_get_A (const NcMultiplicityFuncBhattacharya *m
 void
 nc_multiplicity_func_bhattacharya_set_a (NcMultiplicityFuncBhattacharya *mbt, gdouble a)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   g_assert (a >= 0);
 
@@ -484,7 +490,7 @@ nc_multiplicity_func_bhattacharya_set_a (NcMultiplicityFuncBhattacharya *mbt, gd
 gdouble
 nc_multiplicity_func_bhattacharya_get_a (const NcMultiplicityFuncBhattacharya *mbt)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   return self->a;
 }
@@ -500,7 +506,7 @@ nc_multiplicity_func_bhattacharya_get_a (const NcMultiplicityFuncBhattacharya *m
 void
 nc_multiplicity_func_bhattacharya_set_p (NcMultiplicityFuncBhattacharya *mbt, gdouble p)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   g_assert (p >= 0);
 
@@ -516,7 +522,7 @@ nc_multiplicity_func_bhattacharya_set_p (NcMultiplicityFuncBhattacharya *mbt, gd
 gdouble
 nc_multiplicity_func_bhattacharya_get_p (const NcMultiplicityFuncBhattacharya *mbt)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   return self->p;
 }
@@ -532,7 +538,7 @@ nc_multiplicity_func_bhattacharya_get_p (const NcMultiplicityFuncBhattacharya *m
 void
 nc_multiplicity_func_bhattacharya_set_q (NcMultiplicityFuncBhattacharya *mbt, gdouble q)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   g_assert (q >= 0);
 
@@ -548,7 +554,7 @@ nc_multiplicity_func_bhattacharya_set_q (NcMultiplicityFuncBhattacharya *mbt, gd
 gdouble
 nc_multiplicity_func_bhattacharya_get_q (const NcMultiplicityFuncBhattacharya *mbt)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   return self->q;
 }
@@ -564,7 +570,7 @@ nc_multiplicity_func_bhattacharya_get_q (const NcMultiplicityFuncBhattacharya *m
 void
 nc_multiplicity_func_bhattacharya_set_delta_c (NcMultiplicityFuncBhattacharya *mbt, gdouble delta_c)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   g_assert (delta_c >= 0);
 
@@ -580,7 +586,7 @@ nc_multiplicity_func_bhattacharya_set_delta_c (NcMultiplicityFuncBhattacharya *m
 gdouble
 nc_multiplicity_func_bhattacharya_get_delta_c (const NcMultiplicityFuncBhattacharya *mbt)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   return self->delta_c;
 }
@@ -596,7 +602,7 @@ nc_multiplicity_func_bhattacharya_get_delta_c (const NcMultiplicityFuncBhattacha
 void
 nc_multiplicity_func_bhattacharya_set_convention (NcMultiplicityFuncBhattacharya *mbt, NcMultiplicityFuncBhattacharyaConvention convention)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   g_assert_cmpint (convention, <, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_LEN);
 
@@ -612,7 +618,7 @@ nc_multiplicity_func_bhattacharya_set_convention (NcMultiplicityFuncBhattacharya
 NcMultiplicityFuncBhattacharyaConvention
 nc_multiplicity_func_bhattacharya_get_convention (const NcMultiplicityFuncBhattacharya *mbt)
 {
-  NcMultiplicityFuncBhattacharyaPrivate * const self = mbt->priv;
+  NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
   return self->convention;
 }

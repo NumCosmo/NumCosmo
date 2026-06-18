@@ -35,32 +35,11 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS             (nc_data_cluster_ncounts_gauss_get_type ())
-#define NC_DATA_CLUSTER_NCOUNTS_GAUSS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS, NcDataClusterNCountsGauss))
-#define NC_DATA_CLUSTER_NCOUNTS_GAUSS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS, NcDataClusterNCountsGaussClass))
-#define NC_IS_DATA_CLUSTER_NCOUNTS_GAUSS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS))
-#define NC_IS_DATA_CLUSTER_NCOUNTS_GAUSS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS))
-#define NC_DATA_CLUSTER_NCOUNTS_GAUSS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS, NcDataClusterNCountsGaussClass))
 
-typedef struct _NcDataClusterNCountsGaussClass NcDataClusterNCountsGaussClass;
-typedef struct _NcDataClusterNCountsGauss NcDataClusterNCountsGauss;
-typedef struct _NcDataClusterNCountsGaussPrivate NcDataClusterNCountsGaussPrivate;
+G_DECLARE_FINAL_TYPE (NcDataClusterNCountsGauss, nc_data_cluster_ncounts_gauss, NC, DATA_CLUSTER_NCOUNTS_GAUSS, NcmDataGaussCov)
 
-struct _NcDataClusterNCountsGaussClass
-{
-  /*< private >*/
-  NcmDataGaussCovClass parent_class;
-};
 
-struct _NcDataClusterNCountsGauss
-{
-  /*< private >*/
-  NcmDataGaussCov parent_instance;
-  NcDataClusterNCountsGaussPrivate *priv;
-};
-
-GType nc_data_cluster_ncounts_gauss_get_type (void) G_GNUC_CONST;
-
-NcDataClusterNCountsGauss *nc_data_cluster_ncounts_gauss_new (NcClusterAbundance *cad);
+NcDataClusterNCountsGauss *nc_data_cluster_ncounts_gauss_new (NcClusterAbundance * cad);
 void nc_data_cluster_ncounts_gauss_free (NcDataClusterNCountsGauss *ncounts_gauss);
 
 

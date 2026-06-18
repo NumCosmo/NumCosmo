@@ -39,11 +39,17 @@
 #include "lss/nc_cluster_mass_nodist.h"
 #include "math/ncm_cfg.h"
 
-struct _NcClusterMassNodistPrivate
+typedef struct _NcClusterMassNodistPrivate
 {
   gdouble lnM_min;
   gdouble lnM_max;
   gdouble norma;
+} NcClusterMassNodistPrivate;
+
+
+struct _NcClusterMassNodist
+{
+  NcClusterMass parent_instance;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassNodist, nc_cluster_mass_nodist, NC_TYPE_CLUSTER_MASS)
@@ -59,7 +65,7 @@ enum
 static void
 nc_cluster_mass_nodist_init (NcClusterMassNodist *mn)
 {
-  NcClusterMassNodistPrivate * const self = mn->priv = nc_cluster_mass_nodist_get_instance_private (mn);
+  NcClusterMassNodistPrivate * const self = nc_cluster_mass_nodist_get_instance_private (mn);
 
   self->lnM_min = 0.0;
   self->lnM_max = 0.0;
@@ -70,7 +76,7 @@ static void
 _nc_cluster_mass_nodist_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (object);
-  NcClusterMassNodistPrivate * const self = mnodist->priv;
+  NcClusterMassNodistPrivate * const self = nc_cluster_mass_nodist_get_instance_private (mnodist);
 
   g_return_if_fail (NC_IS_CLUSTER_MASS_NODIST (object));
 
@@ -94,7 +100,7 @@ static void
 _nc_cluster_mass_nodist_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (object);
-  NcClusterMassNodistPrivate * const self = mnodist->priv;
+  NcClusterMassNodistPrivate * const self = nc_cluster_mass_nodist_get_instance_private (mnodist);
 
   g_return_if_fail (NC_IS_CLUSTER_MASS_NODIST (object));
 
@@ -197,7 +203,7 @@ static gdouble
 _nc_cluster_mass_nodist_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
   /*NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (clusterm);*/
-  /*NcClusterMassNodistPrivate * const self = mnodist->priv;*/
+  /*NcClusterMassNodistPrivate * const self = nc_cluster_mass_nodist_get_instance_private (mnodist);*/
 
   return 1.0;
 }
@@ -206,7 +212,7 @@ static gdouble
 _nc_cluster_mass_nodist_intp_bin (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params)
 {
   /*NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (clusterm);*/
-  /*NcClusterMassNodistPrivate * const self = mnodist->priv;*/
+  /*NcClusterMassNodistPrivate * const self = nc_cluster_mass_nodist_get_instance_private (mnodist);*/
 
   if ((lnM < lnM_obs_lower[0]) || (lnM > lnM_obs_upper[0]))
     return 0.0;
@@ -218,7 +224,7 @@ static gboolean
 _nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng)
 {
   NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (clusterm);
-  NcClusterMassNodistPrivate * const self = mnodist->priv;
+  NcClusterMassNodistPrivate * const self = nc_cluster_mass_nodist_get_instance_private (mnodist);
 
   lnM_obs[0] = lnM;
 
@@ -229,7 +235,7 @@ static void
 _nc_cluster_mass_nodist_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (clusterm);
-  NcClusterMassNodistPrivate * const self = mnodist->priv;
+  NcClusterMassNodistPrivate * const self = nc_cluster_mass_nodist_get_instance_private (mnodist);
 
   *lnM_lower = self->lnM_min;
   *lnM_upper = self->lnM_max;
@@ -250,7 +256,7 @@ static void
 _nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnm_lower, gdouble *lnm_upper)
 {
   NcClusterMassNodist *mnodist            = NC_CLUSTER_MASS_NODIST (clusterm);
-  NcClusterMassNodistPrivate * const self = mnodist->priv;
+  NcClusterMassNodistPrivate * const self = nc_cluster_mass_nodist_get_instance_private (mnodist);
 
   *lnm_lower = self->lnM_min;
   *lnm_upper = self->lnM_max;

@@ -31,8 +31,7 @@
  * See [Eisenstein and Hu (1998)][XEisenstein1998]
  * [[arXiv](https://arxiv.org/abs/astro-ph/9709112)] for more details.
  *
- * FIXME (update this doc)
- * The transfer function is divided into a sum of two picies,
+ * The transfer function is divided into a sum of two pieces,
  * \begin{equation*}
  *  T(k) = \frac{\Omega_b}{\Omega_m} T_b(k) + \frac{\Omega_{c}}{\Omega_m} T_c(k) \, ,
  * \end{equation*}

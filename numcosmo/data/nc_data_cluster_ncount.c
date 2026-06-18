@@ -85,7 +85,7 @@ enum
   PROP_SIZE,
 };
 
-struct _NcDataClusterNCountPrivate
+typedef struct _NcDataClusterNCountPrivate
 {
   NcClusterAbundance *cad;
   GType mass_type;
@@ -123,6 +123,12 @@ struct _NcDataClusterNCountPrivate
   gboolean fiducial;
   guint64 seed;
   gchar *rnd_name;
+} NcDataClusterNCountPrivate;
+
+
+struct _NcDataClusterNCount
+{
+  NcmData parent_instance;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterNCount, nc_data_cluster_ncount, NCM_TYPE_DATA)
@@ -130,7 +136,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterNCount, nc_data_cluster_ncount, NCM_TYP
 static void
 nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv = nc_data_cluster_ncount_get_instance_private (ncount);
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   self->cad                 = NULL;
   self->mass_type           = G_TYPE_INVALID;
@@ -174,7 +180,7 @@ static void
 nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (object);
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   g_return_if_fail (NC_IS_DATA_CLUSTER_NCOUNT (object));
 
@@ -282,7 +288,7 @@ static void
 nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (object);
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   g_return_if_fail (NC_IS_DATA_CLUSTER_NCOUNT (object));
 
@@ -358,7 +364,7 @@ static void
 nc_data_cluster_ncount_dispose (GObject *object)
 {
   NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (object);
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   nc_cluster_abundance_clear (&self->cad);
 
@@ -395,7 +401,7 @@ static void
 nc_data_cluster_ncount_finalize (GObject *object)
 {
   NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (object);
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   g_clear_pointer (&self->rnd_name, g_free);
   g_clear_pointer (&self->purity, gsl_histogram2d_free);
@@ -576,7 +582,7 @@ static guint
 _nc_data_cluster_ncount_get_length (NcmData *data)
 {
   NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   return self->np;
 }
@@ -585,7 +591,7 @@ static void
 _nc_data_cluster_ncount_begin (NcmData *data)
 {
   NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
   gint signp                              = 0;
 
   self->log_np_fac = lgamma_r (self->np + 1, &signp);
@@ -595,7 +601,7 @@ static void
 _nc_data_cluster_ncount_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
   NcHICosmo *cosmo                        = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcClusterRedshift *clusterz             = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
   NcClusterMass *clusterm                 = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
@@ -614,7 +620,7 @@ static void
 _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
   NcHICosmo *cosmo                        = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcClusterRedshift *clusterz             = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
   NcClusterMass *clusterm                 = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
@@ -777,7 +783,7 @@ nc_data_cluster_ncount_clear (NcDataClusterNCount **ncount)
 void
 nc_data_cluster_ncount_set_lnM_true (NcDataClusterNCount *ncount, const NcmVector *v)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->np > 0)
   {
@@ -808,7 +814,7 @@ nc_data_cluster_ncount_set_lnM_true (NcDataClusterNCount *ncount, const NcmVecto
 void
 nc_data_cluster_ncount_set_z_true (NcDataClusterNCount *ncount, const NcmVector *v)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->np > 0)
   {
@@ -839,7 +845,7 @@ nc_data_cluster_ncount_set_z_true (NcDataClusterNCount *ncount, const NcmVector 
 void
 nc_data_cluster_ncount_set_lnM_obs (NcDataClusterNCount *ncount, const NcmMatrix *m)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->np > 0)
   {
@@ -877,7 +883,7 @@ nc_data_cluster_ncount_set_lnM_obs (NcDataClusterNCount *ncount, const NcmMatrix
 void
 nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, const NcmMatrix *m)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->np > 0)
   {
@@ -915,7 +921,7 @@ nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, const Nc
 void
 nc_data_cluster_ncount_set_z_obs (NcDataClusterNCount *ncount, const NcmMatrix *m)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->np > 0)
   {
@@ -953,7 +959,7 @@ nc_data_cluster_ncount_set_z_obs (NcDataClusterNCount *ncount, const NcmMatrix *
 void
 nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmMatrix *m)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->np > 0)
   {
@@ -992,7 +998,7 @@ nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmM
 void
 nc_data_cluster_ncount_set_lnM_obs_bins (NcDataClusterNCount *ncount, NcmObjArray *lnM_obs_bins)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   ncm_obj_array_clear (&self->lnM_obs_bins);
   self->lnM_obs_bins = ncm_obj_array_ref (lnM_obs_bins);
@@ -1010,7 +1016,7 @@ nc_data_cluster_ncount_set_lnM_obs_bins (NcDataClusterNCount *ncount, NcmObjArra
 void
 nc_data_cluster_ncount_set_z_obs_bins (NcDataClusterNCount *ncount, NcmObjArray *z_obs_bins)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   ncm_obj_array_clear (&self->z_obs_bins);
   self->z_obs_bins = ncm_obj_array_ref (z_obs_bins);
@@ -1028,7 +1034,7 @@ nc_data_cluster_ncount_set_z_obs_bins (NcDataClusterNCount *ncount, NcmObjArray 
 void
 nc_data_cluster_ncount_set_lnM_obs_bins_params (NcDataClusterNCount *ncount, NcmObjArray *lnM_obs_bins_params)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   ncm_obj_array_clear (&self->lnM_obs_bins_params);
   self->lnM_obs_bins_params = ncm_obj_array_ref (lnM_obs_bins_params);
@@ -1046,7 +1052,7 @@ nc_data_cluster_ncount_set_lnM_obs_bins_params (NcDataClusterNCount *ncount, Ncm
 void
 nc_data_cluster_ncount_set_z_obs_bins_params (NcDataClusterNCount *ncount, NcmObjArray *z_obs_bins_params)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   ncm_obj_array_clear (&self->z_obs_bins_params);
   self->z_obs_bins_params = ncm_obj_array_ref (z_obs_bins_params);
@@ -1063,7 +1069,7 @@ nc_data_cluster_ncount_set_z_obs_bins_params (NcDataClusterNCount *ncount, NcmOb
 void
 nc_data_cluster_ncount_set_bin_count (NcDataClusterNCount *ncount, NcmVector *bin_count)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   ncm_vector_clear (&self->bin_count);
   self->bin_count = ncm_vector_ref (bin_count);
@@ -1079,7 +1085,7 @@ nc_data_cluster_ncount_set_bin_count (NcDataClusterNCount *ncount, NcmVector *bi
 gboolean
 nc_data_cluster_ncount_has_lnM_true (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   return self->lnM_true != NULL;
 }
@@ -1094,7 +1100,7 @@ nc_data_cluster_ncount_has_lnM_true (NcDataClusterNCount *ncount)
 gboolean
 nc_data_cluster_ncount_has_z_true (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   return self->z_true != NULL;
 }
@@ -1110,7 +1116,7 @@ nc_data_cluster_ncount_has_z_true (NcDataClusterNCount *ncount)
 guint
 nc_data_cluster_ncount_get_len (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   return self->np;
 }
@@ -1127,7 +1133,7 @@ nc_data_cluster_ncount_get_len (NcDataClusterNCount *ncount)
 guint
 nc_data_cluster_ncount_lnM_obs_len (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   return self->lnM_obs_len;
 }
@@ -1144,7 +1150,7 @@ nc_data_cluster_ncount_lnM_obs_len (NcDataClusterNCount *ncount)
 guint
 nc_data_cluster_ncount_lnM_obs_params_len (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   return self->lnM_obs_params_len;
 }
@@ -1161,7 +1167,7 @@ nc_data_cluster_ncount_lnM_obs_params_len (NcDataClusterNCount *ncount)
 guint
 nc_data_cluster_ncount_z_obs_len (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   return self->z_obs_len;
 }
@@ -1178,7 +1184,7 @@ nc_data_cluster_ncount_z_obs_len (NcDataClusterNCount *ncount)
 guint
 nc_data_cluster_ncount_z_obs_params_len (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   return self->z_obs_params_len;
 }
@@ -1194,7 +1200,7 @@ nc_data_cluster_ncount_z_obs_params_len (NcDataClusterNCount *ncount)
 NcmVector *
 nc_data_cluster_ncount_get_lnM_true (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->lnM_true != NULL)
     return ncm_vector_ref (self->lnM_true);
@@ -1213,7 +1219,7 @@ nc_data_cluster_ncount_get_lnM_true (NcDataClusterNCount *ncount)
 NcmVector *
 nc_data_cluster_ncount_get_z_true (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->z_true != NULL)
     return ncm_vector_ref (self->z_true);
@@ -1232,7 +1238,7 @@ nc_data_cluster_ncount_get_z_true (NcDataClusterNCount *ncount)
 NcmMatrix *
 nc_data_cluster_ncount_get_lnM_obs (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->lnM_obs != NULL)
     return ncm_matrix_ref (self->lnM_obs);
@@ -1251,7 +1257,7 @@ nc_data_cluster_ncount_get_lnM_obs (NcDataClusterNCount *ncount)
 NcmMatrix *
 nc_data_cluster_ncount_get_lnM_obs_params (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->lnM_obs_params != NULL)
     return ncm_matrix_ref (self->lnM_obs_params);
@@ -1270,7 +1276,7 @@ nc_data_cluster_ncount_get_lnM_obs_params (NcDataClusterNCount *ncount)
 NcmMatrix *
 nc_data_cluster_ncount_get_z_obs (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->z_obs != NULL)
     return ncm_matrix_ref (self->z_obs);
@@ -1289,7 +1295,7 @@ nc_data_cluster_ncount_get_z_obs (NcDataClusterNCount *ncount)
 NcmMatrix *
 nc_data_cluster_ncount_get_z_obs_params (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (self->z_obs_params != NULL)
     return ncm_matrix_ref (self->z_obs_params);
@@ -1304,7 +1310,7 @@ nc_data_cluster_ncount_get_z_obs_params (NcDataClusterNCount *ncount)
 static void
 _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
   NcClusterAbundance *cad                 = self->cad;
 
   cad->purity = self->purity;
@@ -1316,7 +1322,7 @@ _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount)
 static gchar *
 _nc_data_cluster_ncount_desc (NcDataClusterNCount *ncount, NcHICosmo *cosmo)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
   NcClusterAbundance *cad                 = self->cad;
 
   return g_strdup_printf ("Cluster NCount resample %s. Generated %u from mean %10.5g (full). "
@@ -1475,7 +1481,7 @@ static void
 _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
   NcDataClusterNCount *ncount             = NC_DATA_CLUSTER_NCOUNT (data);
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
   NcClusterAbundance *cad                 = self->cad;
   NcHICosmo *cosmo                        = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcClusterRedshift *clusterz             = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
@@ -1627,7 +1633,7 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 void
 nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true_data)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   if (use_true_data)
   {
@@ -1647,7 +1653,7 @@ nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true
 gboolean
 nc_data_cluster_ncount_using_true_data (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   return self->use_true_data;
 }
@@ -1669,7 +1675,7 @@ static void _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount);
 void
 nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, gdouble area_survey, NcmRNG *rng)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   self->area_survey = area_survey;
   _nc_data_cluster_ncount_model_init (ncount);
@@ -1697,7 +1703,7 @@ nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet 
 void
 nc_data_cluster_ncount_add_bin (NcDataClusterNCount *ncount, NcmVector *lnM_obs_lb, NcmVector *lnM_obs_ub, NcmVector *z_obs_lb, NcmVector *z_obs_ub, NcmVector *lnM_obs_params, NcmVector *z_obs_params)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
   NcmVector *tmp;
 
   g_assert_cmpuint (ncm_vector_len (lnM_obs_lb), ==, self->lnM_obs_len);
@@ -1746,7 +1752,7 @@ nc_data_cluster_ncount_add_bin (NcDataClusterNCount *ncount, NcmVector *lnM_obs_
 void
 nc_data_cluster_ncount_del_bins (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   g_ptr_array_set_size (self->lnM_obs_bins, 0);
   g_ptr_array_set_size (self->z_obs_bins, 0);
@@ -1767,7 +1773,7 @@ nc_data_cluster_ncount_del_bins (NcDataClusterNCount *ncount)
 void
 nc_data_cluster_ncount_set_binned (NcDataClusterNCount *ncount, gboolean on)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
 
   self->binned = on;
 }
@@ -1788,7 +1794,7 @@ nc_data_cluster_ncount_set_binned (NcDataClusterNCount *ncount, gboolean on)
 void
 nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
   const guint len                         = self->z_obs_bins->len;
   const guint nbins                       = len / 2;
   guint i;
@@ -1877,7 +1883,7 @@ nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
 void
 nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filename, gboolean overwrite)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
   /*******************************************************************/
   /* Create a binary table extension                                 */
   /*******************************************************************/
@@ -2162,7 +2168,7 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
 void
 nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filename)
 {
-  NcDataClusterNCountPrivate * const self = ncount->priv;
+  NcDataClusterNCountPrivate * const self = nc_data_cluster_ncount_get_instance_private (ncount);
   gint status, hdutype;
   gchar comment[FLEN_COMMENT];
   fitsfile *fptr;
@@ -2515,3 +2521,4 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 }
 
 #endif /* HAVE_CFITSIO */
+

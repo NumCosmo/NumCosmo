@@ -238,7 +238,7 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
   /**
    * NcXcorKernelCMBLensing:recomb:
    *
-   * FIXME Set correct values (limits)
+   * Recombination object used for computing the visibility function.
    */
   g_object_class_install_property (object_class,
                                    PROP_RECOMB,
@@ -251,7 +251,7 @@ nc_xcor_kernel_cmb_lensing_class_init (NcXcorKernelCMBLensingClass *klass)
   /**
    * NcXcorKernelCMBLensing:Nl:
    *
-   * FIXME Set correct values (limits)
+   * Noise power spectrum $N_\ell$.
    */
   g_object_class_install_property (object_class,
                                    PROP_NL,

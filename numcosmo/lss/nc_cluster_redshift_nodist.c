@@ -43,11 +43,17 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcClusterRedshiftNodistPrivate
+typedef struct _NcClusterRedshiftNodistPrivate
 {
   gdouble z_min;
   gdouble z_max;
   gdouble norma;
+} NcClusterRedshiftNodistPrivate;
+
+
+struct _NcClusterRedshiftNodist
+{
+  NcClusterRedshift parent_instance;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcClusterRedshiftNodist, nc_cluster_redshift_nodist, NC_TYPE_CLUSTER_REDSHIFT)
@@ -63,7 +69,7 @@ enum
 static void
 nc_cluster_redshift_nodist_init (NcClusterRedshiftNodist *zn)
 {
-  NcClusterRedshiftNodistPrivate * const self = zn->priv = nc_cluster_redshift_nodist_get_instance_private (zn);
+  NcClusterRedshiftNodistPrivate * const self = nc_cluster_redshift_nodist_get_instance_private (zn);
 
   self->z_min = 0.0;
   self->z_max = 0.0;
@@ -74,7 +80,7 @@ static void
 _nc_cluster_redshift_nodist_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (object);
-  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+  NcClusterRedshiftNodistPrivate * const self = nc_cluster_redshift_nodist_get_instance_private (zn);
 
   g_return_if_fail (NC_IS_CLUSTER_REDSHIFT_NODIST (object));
 
@@ -98,7 +104,7 @@ static void
 _nc_cluster_redshift_nodist_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (object);
-  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+  NcClusterRedshiftNodistPrivate * const self = nc_cluster_redshift_nodist_get_instance_private (zn);
 
   g_return_if_fail (NC_IS_CLUSTER_REDSHIFT_NODIST (object));
 
@@ -204,7 +210,7 @@ static gdouble
 _nc_cluster_redshift_nodist_intp (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z)
 {
   /*NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);*/
-  /*NcClusterRedshiftNodistPrivate * const self = zn->priv;*/
+  /*NcClusterRedshiftNodistPrivate * const self = nc_cluster_redshift_nodist_get_instance_private (zn);*/
 
   return 1.0;
 }
@@ -213,7 +219,7 @@ static gdouble
 _nc_cluster_redshift_nodist_intp_bin (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params)
 {
   /*NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);*/
-  /*NcClusterRedshiftNodistPrivate * const self = zn->priv;*/
+  /*NcClusterRedshiftNodistPrivate * const self = nc_cluster_redshift_nodist_get_instance_private (zn);*/
 
   if ((z < z_obs_lower[0]) || (z > z_obs_upper[0]))
     return 0.0;
@@ -225,7 +231,7 @@ static gboolean
 _nc_cluster_redshift_nodist_resample (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng)
 {
   NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
-  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+  NcClusterRedshiftNodistPrivate * const self = nc_cluster_redshift_nodist_get_instance_private (zn);
 
   z_obs[0] = z;
 
@@ -236,7 +242,7 @@ static void
 _nc_cluster_redshift_nodist_p_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
 {
   NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
-  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+  NcClusterRedshiftNodistPrivate * const self = nc_cluster_redshift_nodist_get_instance_private (zn);
 
   *z_lower = self->z_min;
   *z_upper = self->z_max;
@@ -255,7 +261,7 @@ static void
 _nc_cluster_redshift_nodist_n_limits (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper)
 {
   NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
-  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+  NcClusterRedshiftNodistPrivate * const self = nc_cluster_redshift_nodist_get_instance_private (zn);
 
   *z_lower = self->z_min;
   *z_upper = self->z_max;
@@ -267,7 +273,7 @@ static gdouble
 _nc_cluster_redshift_nodist_volume (NcClusterRedshift *clusterz)
 {
   NcClusterRedshiftNodist *zn                 = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
-  NcClusterRedshiftNodistPrivate * const self = zn->priv;
+  NcClusterRedshiftNodistPrivate * const self = nc_cluster_redshift_nodist_get_instance_private (zn);
 
   return (self->z_max - self->z_min);
 }

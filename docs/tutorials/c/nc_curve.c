@@ -49,11 +49,11 @@
  * advanced example.
  *
  */
-struct _NcCurvePrivate
+typedef struct _NcCurvePrivate
 {
   gdouble xl;
   gdouble xu;
-};
+} NcCurvePrivate;
 
 /*
  * Properties enumerator, note that we added a last item PROP_SIZE,

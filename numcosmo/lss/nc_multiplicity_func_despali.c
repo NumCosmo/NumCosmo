@@ -42,14 +42,16 @@
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
 
-struct _NcMultiplicityFuncDespaliPrivate
+typedef struct _NcMultiplicityFuncDespaliPrivate
 {
   NcMultiplicityFuncMassDef mdef;
+
   gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+
   gboolean EO;
   gboolean CMF;
   gdouble Delta;
-};
+} NcMultiplicityFuncDespaliPrivate;
 
 enum
 {
@@ -57,6 +59,12 @@ enum
   PROP_EO,
   PROP_CMF,
   PROP_SIZE,
+};
+
+
+struct _NcMultiplicityFuncDespali
+{
+  NcMultiplicityFunc parent_instance;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncDespali, nc_multiplicity_func_despali, NC_TYPE_MULTIPLICITY_FUNC)

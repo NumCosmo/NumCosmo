@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_reduced_shear_calib.c
  *
@@ -50,17 +48,17 @@ enum
   PROP_SIZE,
 };
 
-struct _NcReducedShearCalibPrivate
+typedef struct _NcReducedShearCalibPrivate
 {
   gint a;
-};
+} NcReducedShearCalibPrivate;
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcReducedShearCalib, nc_reduced_shear_calib, NCM_TYPE_MODEL)
 
 static void
 nc_reduced_shear_calib_init (NcReducedShearCalib *rs_calib)
 {
-  rs_calib->priv = nc_reduced_shear_calib_get_instance_private (rs_calib);
+  /* private data initialized by GLib */
 }
 
 static void

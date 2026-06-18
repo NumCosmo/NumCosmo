@@ -64,6 +64,12 @@ typedef struct _NcClusterMassSelectionPrivate
   NcmVector *lnM_limits;
 } NcClusterMassSelectionPrivate;
 
+
+struct _NcClusterMassSelection
+{
+  NcClusterMass parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcClusterMassSelection, nc_cluster_mass_selection, NC_TYPE_CLUSTER_MASS)
 
 #define VECTOR   (NCM_MODEL (selection))
@@ -97,7 +103,7 @@ enum
 static void
 nc_cluster_mass_selection_init (NcClusterMassSelection *selection)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv = nc_cluster_mass_selection_get_instance_private (selection);
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   self->M0               = 0.0;
   self->z0               = 0.0;
@@ -115,7 +121,7 @@ static void
 _nc_cluster_mass_selection_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (object);
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   g_return_if_fail (NC_IS_CLUSTER_MASS_SELECTION (object));
 
@@ -169,7 +175,7 @@ static void
 _nc_cluster_mass_selection_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (object);
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   g_return_if_fail (NC_IS_CLUSTER_MASS_SELECTION (object));
 
@@ -448,7 +454,7 @@ static void
 _nc_cluster_mass_selection_lnR_sigma (NcClusterMass *clusterm, const gdouble lnM, const gdouble z, gdouble *lnR, gdouble *sigma)
 {
   NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
   const gdouble DlnM                         = lnM - self->lnM0;
   const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
 
@@ -459,7 +465,7 @@ _nc_cluster_mass_selection_lnR_sigma (NcClusterMass *clusterm, const gdouble lnM
 void
 nc_cluster_mass_selection_set_completeness (NcClusterMassSelection *selection, NcmSpline2dBicubic *completeness)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   ncm_spline2d_clear (&self->completeness);
   self->completeness = NCM_SPLINE2D (completeness);
@@ -478,7 +484,7 @@ nc_cluster_mass_selection_set_completeness (NcClusterMassSelection *selection, N
 NcmSpline2d *
 nc_cluster_mass_selection_peek_completeness (NcClusterMassSelection *selection)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   return self->completeness;
 }
@@ -486,7 +492,7 @@ nc_cluster_mass_selection_peek_completeness (NcClusterMassSelection *selection)
 gdouble
 nc_cluster_mass_selection_completeness (NcClusterMassSelection *selection, gdouble lnM, gdouble z)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   if (self->completeness == NULL)
     return 1.0;
@@ -497,7 +503,7 @@ nc_cluster_mass_selection_completeness (NcClusterMassSelection *selection, gdoub
 void
 nc_cluster_mass_selection_set_ipurity (NcClusterMassSelection *selection, NcmSpline2dBicubic *ipurity)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   self->ipurity = NCM_SPLINE2D (ipurity);
   ncm_spline2d_prepare (self->ipurity);
@@ -516,7 +522,7 @@ nc_cluster_mass_selection_set_ipurity (NcClusterMassSelection *selection, NcmSpl
 NcmSpline2d *
 nc_cluster_mass_selection_peek_ipurity (NcClusterMassSelection *selection)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   return self->ipurity;
 }
@@ -524,7 +530,7 @@ nc_cluster_mass_selection_peek_ipurity (NcClusterMassSelection *selection)
 gdouble
 nc_cluster_mass_selection_ipurity (NcClusterMassSelection *selection, gdouble lnM_obs, gdouble z)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   if (self->ipurity == NULL)
     return 1.0;
@@ -585,7 +591,7 @@ static gdouble
 _nc_cluster_mass_selection_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
   NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
   gsl_integration_workspace **w              = ncm_integral_get_workspace ();
   NcClusterMassSelectionInt obs_data;
   gdouble intp, err, completeness;
@@ -651,7 +657,7 @@ static gboolean
 _nc_cluster_mass_selection_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng)
 {
   NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
   gdouble lnR_true, sigma;
 
   _nc_cluster_mass_selection_lnR_sigma (clusterm, lnM, z, &lnR_true, &sigma);
@@ -684,7 +690,7 @@ _nc_cluster_mass_selection_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo,
 void
 nc_cluster_mass_selection_set_lnM_limits (NcClusterMassSelection *selection, NcmVector *lnM_limits)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   g_assert_cmpuint (ncm_vector_len (lnM_limits), ==, 2);
 
@@ -696,7 +702,7 @@ static void
 _nc_cluster_mass_selection_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
   gdouble lnMl, lnMu;
 
   if (self->lnM_limits == NULL)
@@ -720,7 +726,7 @@ static void
 _nc_cluster_mass_selection_p_bin_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs_lower, const gdouble *lnM_obs_upper, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
   gdouble lnMl, lnMu;
 
   if (self->lnM_limits == NULL)
@@ -744,7 +750,7 @@ static void
 _nc_cluster_mass_selection_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
   gdouble lnMl, lnMu;
 
   if (self->lnM_limits == NULL)
@@ -768,7 +774,7 @@ static gdouble
 _nc_cluster_mass_selection_volume (NcClusterMass *clusterm)
 {
   NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   return (self->lnR_max - CUT);
 }
@@ -777,7 +783,7 @@ static void
 _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnM, const NcmVector *z, const NcmMatrix *lnM_obs, const NcmMatrix *lnM_obs_params, NcmVector *res)
 {
   NcClusterMassSelection *selection          = NC_CLUSTER_MASS_SELECTION (clusterm);
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   const gdouble *lnM_obs_ptr = ncm_matrix_const_data (lnM_obs);
   const gdouble *z_ptr       = ncm_vector_const_data (z);
@@ -846,7 +852,7 @@ _nc_cluster_mass_selection_p_vec_z_lnMobs (NcClusterMass *clusterm, NcHICosmo *c
 gdouble
 nc_cluster_mass_selection_get_mean_richness (NcClusterMassSelection *selection, gdouble lnM, gdouble z)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
   const gdouble DlnM                         = lnM - self->lnM0;
   const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
 
@@ -865,7 +871,7 @@ nc_cluster_mass_selection_get_mean_richness (NcClusterMassSelection *selection, 
 gdouble
 nc_cluster_mass_selection_get_std_richness (NcClusterMassSelection *selection, gdouble lnM, gdouble z)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
   const gdouble DlnM                         = lnM - self->lnM0;
   const gdouble Dln1pz                       = log1p (z) - self->ln1pz0;
 
@@ -942,7 +948,7 @@ nc_cluster_mass_selection_get_std (NcClusterMassSelection *selection, gdouble ln
 void
 nc_cluster_mass_selection_set_enable_rejection (NcClusterMassSelection *selection, gboolean on)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   self->enable_rejection = on;
 }
@@ -957,7 +963,7 @@ nc_cluster_mass_selection_set_enable_rejection (NcClusterMassSelection *selectio
 gboolean
 nc_cluster_mass_selection_get_enable_rejection (NcClusterMassSelection *selection)
 {
-  NcClusterMassSelectionPrivate * const self = selection->priv;
+  NcClusterMassSelectionPrivate * const self = nc_cluster_mass_selection_get_instance_private (selection);
 
   return self->enable_rejection;
 }

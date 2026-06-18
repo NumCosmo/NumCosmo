@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_halo_cm_prada12.c
  *
@@ -29,8 +27,8 @@
  *
  * Class defining the Prada et al. 2012 concentration-mass relation
  *
- * This class implements the Prada et al. 2012 concentration-mass relation.
- * FIXME include reference, equation and ranges of mass and redshift.
+ * This class implements the Prada et al. (2012) concentration-mass relation
+ * [Prada et al. (2012)][XPrada2012].
  *
  */
 

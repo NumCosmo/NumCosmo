@@ -40,12 +40,12 @@
 
 #include "lss/nc_multiplicity_func_ps.h"
 
-struct _NcMultiplicityFuncPSPrivate
+typedef struct _NcMultiplicityFuncPSPrivate
 {
   NcMultiplicityFuncMassDef mdef;
   gdouble delta_c;
   gdouble Delta;
-};
+} NcMultiplicityFuncPSPrivate;
 
 enum
 {
@@ -54,12 +54,18 @@ enum
   PROP_SIZE,
 };
 
+
+struct _NcMultiplicityFuncPS
+{
+  NcMultiplicityFunc parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncPS, nc_multiplicity_func_ps, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_ps_init (NcMultiplicityFuncPS *mps)
 {
-  NcMultiplicityFuncPSPrivate * const self = mps->priv = nc_multiplicity_func_ps_get_instance_private (mps);
+  NcMultiplicityFuncPSPrivate * const self = nc_multiplicity_func_ps_get_instance_private (mps);
 
   self->mdef    = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
   self->delta_c = 0.0;
@@ -149,7 +155,7 @@ static void
 _nc_multiplicity_func_ps_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
   NcMultiplicityFuncPS *mps                = NC_MULTIPLICITY_FUNC_PS (mulf);
-  NcMultiplicityFuncPSPrivate * const self = mps->priv;
+  NcMultiplicityFuncPSPrivate * const self = nc_multiplicity_func_ps_get_instance_private (mps);
 
   switch (mdef)
   {
@@ -177,7 +183,7 @@ static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_ps_get_mdef (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncPS *mps                = NC_MULTIPLICITY_FUNC_PS (mulf);
-  NcMultiplicityFuncPSPrivate * const self = mps->priv;
+  NcMultiplicityFuncPSPrivate * const self = nc_multiplicity_func_ps_get_instance_private (mps);
 
   return self->mdef;
 }
@@ -186,7 +192,7 @@ static void
 _nc_multiplicity_func_ps_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
   NcMultiplicityFuncPS *mps                = NC_MULTIPLICITY_FUNC_PS (mulf);
-  NcMultiplicityFuncPSPrivate * const self = mps->priv;
+  NcMultiplicityFuncPSPrivate * const self = nc_multiplicity_func_ps_get_instance_private (mps);
 
   self->Delta = Delta;
 }
@@ -195,7 +201,7 @@ gdouble
 _nc_multiplicity_func_ps_get_Delta (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncPS *mps                = NC_MULTIPLICITY_FUNC_PS (mulf);
-  NcMultiplicityFuncPSPrivate * const self = mps->priv;
+  NcMultiplicityFuncPSPrivate * const self = nc_multiplicity_func_ps_get_instance_private (mps);
 
   return self->Delta;
 }
@@ -204,7 +210,7 @@ static gdouble
 _nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* f(\sigma) - Press \& Schechter (PS) */
 {
   NcMultiplicityFuncPS *mps                = NC_MULTIPLICITY_FUNC_PS (mulf);
-  NcMultiplicityFuncPSPrivate * const self = mps->priv;
+  NcMultiplicityFuncPSPrivate * const self = nc_multiplicity_func_ps_get_instance_private (mps);
 
   const gdouble c1   = sqrt (2.0 / M_PI);     /* c1 = \sqrt{\frac{2}{\pi}} */
   const gdouble x    = self->delta_c / sigma; /* \delta_c \sigma^{-1} */
@@ -282,7 +288,7 @@ nc_multiplicity_func_ps_clear (NcMultiplicityFuncPS **mps)
 void
 nc_multiplicity_func_ps_set_delta_c (NcMultiplicityFuncPS *mps, gdouble delta_c)
 {
-  NcMultiplicityFuncPSPrivate * const self = mps->priv;
+  NcMultiplicityFuncPSPrivate * const self = nc_multiplicity_func_ps_get_instance_private (mps);
 
   g_assert (delta_c >= 0);
 
@@ -298,7 +304,7 @@ nc_multiplicity_func_ps_set_delta_c (NcMultiplicityFuncPS *mps, gdouble delta_c)
 gdouble
 nc_multiplicity_func_ps_get_delta_c (const NcMultiplicityFuncPS *mps)
 {
-  NcMultiplicityFuncPSPrivate * const self = mps->priv;
+  NcMultiplicityFuncPSPrivate * const self = nc_multiplicity_func_ps_get_instance_private (mps);
 
   return self->delta_c;
 }

@@ -1,5 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
-
 /***************************************************************************
  *            nc_halo_cm_diemer15.c
  *
@@ -27,8 +25,8 @@
 /**
  * NcHaloCMDiemer15:
  *
- * Class defining the Diemer & Kravtsov 2015 concentration-mass relation.
- * FIXME include reference and equation
+ * Class defining the Diemer & Kravtsov (2015) concentration-mass relation
+ * [Diemer and Kravtsov (2015)][XDiemer2015].
  *
  */
 

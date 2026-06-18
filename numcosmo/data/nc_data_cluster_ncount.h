@@ -39,15 +39,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_CLUSTER_NCOUNT             (nc_data_cluster_ncount_get_type ())
-#define NC_DATA_CLUSTER_NCOUNT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_CLUSTER_NCOUNT, NcDataClusterNCount))
-#define NC_DATA_CLUSTER_NCOUNT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_CLUSTER_NCOUNT, NcDataClusterNCountClass))
-#define NC_IS_DATA_CLUSTER_NCOUNT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_CLUSTER_NCOUNT))
-#define NC_IS_DATA_CLUSTER_NCOUNT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_CLUSTER_NCOUNT))
-#define NC_DATA_CLUSTER_NCOUNT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_CLUSTER_NCOUNT, NcDataClusterNCountClass))
 
-typedef struct _NcDataClusterNCountClass NcDataClusterNCountClass;
-typedef struct _NcDataClusterNCount NcDataClusterNCount;
-typedef struct _NcDataClusterNCountPrivate NcDataClusterNCountPrivate;
+G_DECLARE_FINAL_TYPE (NcDataClusterNCount, nc_data_cluster_ncount, NC, DATA_CLUSTER_NCOUNT, NcmData)
+
 
 /**
  * NcDataClusterAbundanceId:
@@ -66,21 +60,6 @@ typedef enum _NcDataClusterAbundanceId
   /* < private > */
   NC_DATA_CLUSTER_ABUNDANCE_NSAMPLES, /*< skip >*/
 } NcDataClusterAbundanceId;
-
-struct _NcDataClusterNCountClass
-{
-  /*< private >*/
-  NcmDataClass parent_class;
-};
-
-struct _NcDataClusterNCount
-{
-  /*< private >*/
-  NcmData parent_instance;
-  NcDataClusterNCountPrivate *priv;
-};
-
-GType nc_data_cluster_ncount_get_type (void) G_GNUC_CONST;
 
 NcDataClusterNCount *nc_data_cluster_ncount_new (NcClusterAbundance *cad, const gchar *redshift_type, const gchar *mass_type);
 

@@ -34,29 +34,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_MULTIPLICITY_FUNC_DESPALI             (nc_multiplicity_func_despali_get_type ())
-#define NC_MULTIPLICITY_FUNC_DESPALI(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MULTIPLICITY_FUNC_DESPALI, NcMultiplicityFuncDespali))
-#define NC_MULTIPLICITY_FUNC_DESPALI_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MULTIPLICITY_FUNC_DESPALI, NcMultiplicityFuncDespaliClass))
-#define NC_IS_MULTIPLICITY_FUNC_DESPALI(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MULTIPLICITY_FUNC_DESPALI))
-#define NC_IS_MULTIPLICITY_FUNC_DESPALI_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MULTIPLICITY_FUNC_DESPALI))
-#define NC_MULTIPLICITY_FUNC_DESPALI_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MULTIPLICITY_FUNC_DESPALI, NcMultiplicityFuncDespaliClass))
 
-typedef struct _NcMultiplicityFuncDespaliClass NcMultiplicityFuncDespaliClass;
-typedef struct _NcMultiplicityFuncDespali NcMultiplicityFuncDespali;
-typedef struct _NcMultiplicityFuncDespaliPrivate NcMultiplicityFuncDespaliPrivate;
+G_DECLARE_FINAL_TYPE (NcMultiplicityFuncDespali, nc_multiplicity_func_despali, NC, MULTIPLICITY_FUNC_DESPALI, NcMultiplicityFunc)
 
-struct _NcMultiplicityFuncDespaliClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
-};
-
-struct _NcMultiplicityFuncDespali
-{
-  /*< private >*/
-  NcMultiplicityFunc parent_instance;
-};
-
-GType nc_multiplicity_func_despali_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFuncDespali *nc_multiplicity_func_despali_new (void);
 NcMultiplicityFuncDespali *nc_multiplicity_func_despali_new_full (NcMultiplicityFuncMassDef mdef, gdouble Delta);

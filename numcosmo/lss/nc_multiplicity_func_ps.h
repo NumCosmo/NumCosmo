@@ -34,30 +34,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_MULTIPLICITY_FUNC_PS             (nc_multiplicity_func_ps_get_type ())
-#define NC_MULTIPLICITY_FUNC_PS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MULTIPLICITY_FUNC_PS, NcMultiplicityFuncPS))
-#define NC_MULTIPLICITY_FUNC_PS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MULTIPLICITY_FUNC_PS, NcMultiplicityFuncPSClass))
-#define NC_IS_MULTIPLICITY_FUNC_PS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MULTIPLICITY_FUNC_PS))
-#define NC_IS_MULTIPLICITY_FUNC_PS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MULTIPLICITY_FUNC_PS))
-#define NC_MULTIPLICITY_FUNC_PS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MULTIPLICITY_FUNC_PS, NcMultiplicityFuncPSClass))
 
-typedef struct _NcMultiplicityFuncPSClass NcMultiplicityFuncPSClass;
-typedef struct _NcMultiplicityFuncPS NcMultiplicityFuncPS;
-typedef struct _NcMultiplicityFuncPSPrivate NcMultiplicityFuncPSPrivate;
+G_DECLARE_FINAL_TYPE (NcMultiplicityFuncPS, nc_multiplicity_func_ps, NC, MULTIPLICITY_FUNC_PS, NcMultiplicityFunc)
 
-struct _NcMultiplicityFuncPSClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
-};
-
-struct _NcMultiplicityFuncPS
-{
-  /*< private >*/
-  NcMultiplicityFunc parent_instance;
-  NcMultiplicityFuncPSPrivate *priv;
-};
-
-GType nc_multiplicity_func_ps_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFuncPS *nc_multiplicity_func_ps_new (void);
 NcMultiplicityFuncPS *nc_multiplicity_func_ps_ref (NcMultiplicityFuncPS *mps);

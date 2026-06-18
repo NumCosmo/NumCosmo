@@ -65,6 +65,12 @@
 #include <gsl/gsl_sf_bessel.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+
+struct _NcWindowTophat
+{
+  NcWindow parent_instance;
+};
+
 G_DEFINE_TYPE (NcWindowTophat, nc_window_tophat, NC_TYPE_WINDOW)
 
 /**

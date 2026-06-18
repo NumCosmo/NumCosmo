@@ -1,4 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*-  */
 
 /***************************************************************************
  *            nc_halo_cm_prada12.h

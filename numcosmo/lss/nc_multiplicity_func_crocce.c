@@ -43,10 +43,10 @@
 
 #include "lss/nc_multiplicity_func_crocce.h"
 
-struct _NcMultiplicityFuncCroccePrivate
+typedef struct _NcMultiplicityFuncCroccePrivate
 {
   NcMultiplicityFuncMassDef mdef;
-};
+} NcMultiplicityFuncCroccePrivate;
 
 enum
 {
@@ -54,12 +54,18 @@ enum
   PROP_SIZE,
 };
 
+
+struct _NcMultiplicityFuncCrocce
+{
+  NcMultiplicityFunc parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncCrocce, nc_multiplicity_func_crocce, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_crocce_init (NcMultiplicityFuncCrocce *mc)
 {
-  NcMultiplicityFuncCroccePrivate * const self = mc->priv = nc_multiplicity_func_crocce_get_instance_private (mc);
+  NcMultiplicityFuncCroccePrivate * const self = nc_multiplicity_func_crocce_get_instance_private (mc);
 
   self->mdef = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
 }
@@ -122,7 +128,7 @@ static void
 _nc_multiplicity_func_crocce_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
   NcMultiplicityFuncCrocce *mc                 = NC_MULTIPLICITY_FUNC_CROCCE (mulf);
-  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+  NcMultiplicityFuncCroccePrivate * const self = nc_multiplicity_func_crocce_get_instance_private (mc);
 
   switch (mdef)
   {
@@ -150,7 +156,7 @@ static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_crocce_get_mdef (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncCrocce *mc                 = NC_MULTIPLICITY_FUNC_CROCCE (mulf);
-  NcMultiplicityFuncCroccePrivate * const self = mc->priv;
+  NcMultiplicityFuncCroccePrivate * const self = nc_multiplicity_func_crocce_get_instance_private (mc);
 
   return self->mdef;
 }

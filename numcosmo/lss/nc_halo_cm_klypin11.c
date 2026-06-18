@@ -26,8 +26,8 @@
 /**
  * NcHaloCMKlypin11:
  *
- * Class defining the Klypin et al. 2011 concentration-mass relation.
- * FIXME Include reference, equation and ranges of mass and reshift.
+ * Class defining the Klypin et al. (2011) concentration-mass relation
+ * [Klypin et al. (2011)][XKlypin2011].
  *
  */
 

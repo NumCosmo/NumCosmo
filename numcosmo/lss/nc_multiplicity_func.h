@@ -34,15 +34,8 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_MULTIPLICITY_FUNC             (nc_multiplicity_func_get_type ())
-#define NC_MULTIPLICITY_FUNC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MULTIPLICITY_FUNC, NcMultiplicityFunc))
-#define NC_MULTIPLICITY_FUNC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MULTIPLICITY_FUNC, NcMultiplicityFuncClass))
-#define NC_IS_MULTIPLICITY_FUNC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MULTIPLICITY_FUNC))
-#define NC_IS_MULTIPLICITY_FUNC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MULTIPLICITY_FUNC))
-#define NC_MULTIPLICITY_FUNC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MULTIPLICITY_FUNC, NcMultiplicityFuncClass))
 
-typedef struct _NcMultiplicityFuncClass NcMultiplicityFuncClass;
-typedef struct _NcMultiplicityFunc NcMultiplicityFunc;
-typedef struct _NcMultiplicityFuncPrivate NcMultiplicityFuncPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcMultiplicityFunc, nc_multiplicity_func, NC, MULTIPLICITY_FUNC, GObject)
 
 /**
  * NcMultiplicityFuncMassDef:
@@ -81,16 +74,11 @@ struct _NcMultiplicityFuncClass
   gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
   gboolean (*has_correction_factor) (NcMultiplicityFunc *mulf);
   gdouble (*correction_factor) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
+
+  /* Padding to allow adding up to 10 more virtual functions without breaking ABI. */
+  gpointer padding[10];
 };
 
-struct _NcMultiplicityFunc
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcMultiplicityFuncPrivate *priv;
-};
-
-GType nc_multiplicity_func_get_type (void) G_GNUC_CONST;
 
 void nc_multiplicity_func_free (NcMultiplicityFunc *mulf);
 void nc_multiplicity_func_clear (NcMultiplicityFunc **mulf);
