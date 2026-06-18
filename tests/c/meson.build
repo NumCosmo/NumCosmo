@@ -31,8 +31,8 @@ math_tests = [
     {
         'name': 'ncm_fftlog',
         'sources': ['ncm/fftlog/test_ncm_fftlog.c'],
+        'priority': 2,
         'timeout': 0,
-        'priority': 10,
     },
     {
         'name': 'ncm_vector',
@@ -54,7 +54,6 @@ math_tests = [
         'name': 'ncm_stats_dist',
         'sources': ['ncm/stats/test_ncm_stats_dist.c'],
         'timeout': 0,
-        'priority': 10,
         'suite': ['c-statistical', 'omp'],
     },
     {
@@ -64,6 +63,7 @@ math_tests = [
     {
         'name': 'ncm_spline',
         'sources': ['ncm/spline/test_ncm_spline.c'],
+        'priority': 3,
     },
     {
         'name': 'ncm_spline2d',
@@ -120,8 +120,8 @@ math_tests = [
     {
         'name': 'ncm_mset_catalog',
         'sources': ['ncm/fit/test_ncm_mset_catalog.c'],
+        'priority': 1,
         'timeout': 0,
-        'priority': 10,
     },
     {
         'name': 'ncm_obj_array',
@@ -134,6 +134,7 @@ math_tests = [
     {
         'name': 'ncm_fit',
         'sources': ['ncm/fit/test_ncm_fit.c'],
+        'priority': 6,
         'timeout': 0,
     },
     {
@@ -144,7 +145,6 @@ math_tests = [
         'name': 'ncm_fit_esmcmc',
         'sources': ['ncm/fit/test_ncm_fit_esmcmc.c'],
         'timeout': 0,
-        'priority': 10,
         'suite': ['c-acceptance', 'omp'],
     },
     {
@@ -187,6 +187,7 @@ model_tests = [
     {
         'name': 'nc_cbe',
         'sources': ['nc/cmb/test_nc_cbe.c'],
+        'priority': 4,
         'timeout': 0,
     },
     {
@@ -255,7 +256,6 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_cluster_wl.c'],
         'c_args': ['-DCLUSTER_WL_SPLIT_EXPENSIVE'],
         'timeout': 0,
-        'priority': 10,
         'suite': ['c-acceptance', 'omp'],
     },
     # Truth-table validation of the integration methods: regenerates a curated
@@ -324,7 +324,7 @@ lss_tests = [
         'sources': ['nc/powspec/test_nc_powspec.c'],
         'c_args': ['-DPOWSPEC_SPLIT_TRANSFER'],
         'timeout': 0,
-        'priority': 10,
+        'priority': 5,
         'suite': ['c-acceptance'],
     },
     {
@@ -405,6 +405,9 @@ foreach c_test : all_c_tests
     foreach k, v : (test_is_omp ? omp_vars_threaded : omp_vars_serial)
         test_env += '@0@=@1@'.format(k, v)
     endforeach
+    if test_is_omp
+        priority = 100
+    endif
     test(
         c_test['name'],
         executable_test,
@@ -453,7 +456,8 @@ if mpi_c_dep.found()
                 [
                     '-n', '2',
                     executable_test.full_path(),
-                ] + test_seed_args
+                ]
+                + test_seed_args
             )
             mpi_test_env = [
                 'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
