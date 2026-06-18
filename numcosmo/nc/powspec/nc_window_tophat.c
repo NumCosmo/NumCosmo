@@ -87,7 +87,7 @@ nc_window_tophat_new ()
 }
 
 static gdouble
-_nc_window_tophat_eval_fourier (const NcWindow *wp, const gdouble k, const gdouble R)
+_nc_window_tophat_eval_fourier (NcWindow *wp, const gdouble k, const gdouble R)
 {
   gdouble kR = k * R;
 
@@ -100,7 +100,7 @@ _nc_window_tophat_eval_fourier (const NcWindow *wp, const gdouble k, const gdoub
 }
 
 static gdouble
-_nc_window_tophat_deriv_fourier (const NcWindow *wp, const gdouble k, const gdouble R)
+_nc_window_tophat_deriv_fourier (NcWindow *wp, const gdouble k, const gdouble R)
 {
   gdouble dWT = -3.0 * gsl_sf_bessel_j2 (k * R) / R;
 
@@ -110,7 +110,7 @@ _nc_window_tophat_deriv_fourier (const NcWindow *wp, const gdouble k, const gdou
 }
 
 static gdouble
-_nc_window_tophat_eval_realspace (const NcWindow *wp, const gdouble r, const gdouble R)
+_nc_window_tophat_eval_realspace (NcWindow *wp, const gdouble r, const gdouble R)
 {
   gdouble WT_realspace;
   gdouble R3 = R * R * R;

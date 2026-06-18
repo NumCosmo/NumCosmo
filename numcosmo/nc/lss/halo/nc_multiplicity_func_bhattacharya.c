@@ -456,7 +456,7 @@ nc_multiplicity_func_bhattacharya_set_A (NcMultiplicityFuncBhattacharya *mbt, gd
  * Returns: the value of #NcMultiplicityFuncBhattacharya:A property.
  */
 gdouble
-nc_multiplicity_func_bhattacharya_get_A (const NcMultiplicityFuncBhattacharya *mbt)
+nc_multiplicity_func_bhattacharya_get_A (NcMultiplicityFuncBhattacharya *mbt)
 {
   NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
@@ -488,7 +488,7 @@ nc_multiplicity_func_bhattacharya_set_a (NcMultiplicityFuncBhattacharya *mbt, gd
  * Returns: the value of #NcMultiplicityFuncBhattacharya:a property.
  */
 gdouble
-nc_multiplicity_func_bhattacharya_get_a (const NcMultiplicityFuncBhattacharya *mbt)
+nc_multiplicity_func_bhattacharya_get_a (NcMultiplicityFuncBhattacharya *mbt)
 {
   NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
@@ -520,7 +520,7 @@ nc_multiplicity_func_bhattacharya_set_p (NcMultiplicityFuncBhattacharya *mbt, gd
  * Returns: the value of #NcMultiplicityFuncBhattacharya:p property.
  */
 gdouble
-nc_multiplicity_func_bhattacharya_get_p (const NcMultiplicityFuncBhattacharya *mbt)
+nc_multiplicity_func_bhattacharya_get_p (NcMultiplicityFuncBhattacharya *mbt)
 {
   NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
@@ -552,7 +552,7 @@ nc_multiplicity_func_bhattacharya_set_q (NcMultiplicityFuncBhattacharya *mbt, gd
  * Returns: the value of #NcMultiplicityFuncBhattacharya:q property.
  */
 gdouble
-nc_multiplicity_func_bhattacharya_get_q (const NcMultiplicityFuncBhattacharya *mbt)
+nc_multiplicity_func_bhattacharya_get_q (NcMultiplicityFuncBhattacharya *mbt)
 {
   NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
@@ -584,7 +584,7 @@ nc_multiplicity_func_bhattacharya_set_delta_c (NcMultiplicityFuncBhattacharya *m
  * Returns: the value of #NcMultiplicityFuncBhattacharya:critical-delta property.
  */
 gdouble
-nc_multiplicity_func_bhattacharya_get_delta_c (const NcMultiplicityFuncBhattacharya *mbt)
+nc_multiplicity_func_bhattacharya_get_delta_c (NcMultiplicityFuncBhattacharya *mbt)
 {
   NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 
@@ -616,7 +616,7 @@ nc_multiplicity_func_bhattacharya_set_convention (NcMultiplicityFuncBhattacharya
  * Returns: the #NcMultiplicityFuncBhattacharyaConvention used by @mbt.
  */
 NcMultiplicityFuncBhattacharyaConvention
-nc_multiplicity_func_bhattacharya_get_convention (const NcMultiplicityFuncBhattacharya *mbt)
+nc_multiplicity_func_bhattacharya_get_convention (NcMultiplicityFuncBhattacharya *mbt)
 {
   NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mbt);
 

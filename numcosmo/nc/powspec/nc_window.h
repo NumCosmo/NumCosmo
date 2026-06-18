@@ -41,9 +41,9 @@ struct _NcWindowClass
   GObjectClass parent_class;
   gdouble volume; /* Volume de uma janela de raio 1 */
 
-  gdouble (*eval_fourier) (const NcWindow *wf, const gdouble k, const gdouble R);
-  gdouble (*deriv_fourier) (const NcWindow *wf, const gdouble k, const gdouble R);
-  gdouble (*eval_real) (const NcWindow *wf, const gdouble r, const gdouble R);
+  gdouble (*eval_fourier) (NcWindow *wf, const gdouble k, const gdouble R);
+  gdouble (*deriv_fourier) (NcWindow *wf, const gdouble k, const gdouble R);
+  gdouble (*eval_real) (NcWindow *wf, const gdouble r, const gdouble R);
 
   /* Padding to allow adding up to 15 more virtual functions without breaking ABI. */
   gpointer padding[15];
@@ -51,9 +51,9 @@ struct _NcWindowClass
 
 
 gdouble nc_window_volume (NcWindow *wf);
-gdouble nc_window_eval_fourier (const NcWindow *wf, const gdouble k, const gdouble R);
-gdouble nc_window_deriv_fourier (const NcWindow *wf, const gdouble k, const gdouble R);
-gdouble nc_window_eval_realspace (const NcWindow *wf, const gdouble r, const gdouble R);
+gdouble nc_window_eval_fourier (NcWindow *wf, const gdouble k, const gdouble R);
+gdouble nc_window_deriv_fourier (NcWindow *wf, const gdouble k, const gdouble R);
+gdouble nc_window_eval_realspace (NcWindow *wf, const gdouble r, const gdouble R);
 void nc_window_free (NcWindow *wf);
 void nc_window_clear (NcWindow **wf);
 

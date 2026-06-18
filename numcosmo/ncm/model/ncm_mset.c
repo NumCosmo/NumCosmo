@@ -3453,7 +3453,9 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
             ncm_model_param_set_ftype (item->model, pid, NCM_PARAM_TYPE_FIXED);
           }
 
-          for (pid = 0; pid < item->added_total_params; pid++)
+          g_assert_cmpint (item->added_total_params, >=, 0);
+
+          for (pid = 0; pid < (guint) item->added_total_params; pid++)
           {
             if (g_array_index (fpi_array, gint, pid) >= 0)
               ncm_model_param_set_ftype (item->model, pid, NCM_PARAM_TYPE_FREE);

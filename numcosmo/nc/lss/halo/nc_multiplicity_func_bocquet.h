@@ -61,7 +61,7 @@ void nc_multiplicity_func_bocquet_free (NcMultiplicityFuncBocquet *mb);
 void nc_multiplicity_func_bocquet_clear (NcMultiplicityFuncBocquet **mb);
 
 void nc_multiplicity_func_bocquet_set_sim (NcMultiplicityFuncBocquet *mb, NcMultiplicityFuncBocquetSim sim);
-NcMultiplicityFuncBocquetSim nc_multiplicity_func_bocquet_get_sim (const NcMultiplicityFuncBocquet *mb);
+NcMultiplicityFuncBocquetSim nc_multiplicity_func_bocquet_get_sim (NcMultiplicityFuncBocquet *mb);
 
 G_END_DECLS
 

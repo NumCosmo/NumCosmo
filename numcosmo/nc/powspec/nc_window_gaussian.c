@@ -88,7 +88,7 @@ nc_window_gaussian_new ()
 }
 
 static gdouble
-_nc_window_gaussian_eval_fourier (const NcWindow *wp, const gdouble k, const gdouble R)
+_nc_window_gaussian_eval_fourier (NcWindow *wp, const gdouble k, const gdouble R)
 {
   gdouble kR  = k * R;
   gdouble kR2 = kR * kR;
@@ -100,7 +100,7 @@ _nc_window_gaussian_eval_fourier (const NcWindow *wp, const gdouble k, const gdo
 }
 
 static gdouble
-_nc_window_gaussian_deriv_fourier (const NcWindow *wp, const gdouble k, const gdouble R)
+_nc_window_gaussian_deriv_fourier (NcWindow *wp, const gdouble k, const gdouble R)
 {
   gdouble kR  = k * R;
   gdouble kR2 = kR * kR;
@@ -113,7 +113,7 @@ _nc_window_gaussian_deriv_fourier (const NcWindow *wp, const gdouble k, const gd
 }
 
 static gdouble
-_nc_window_gaussian_eval_realspace (const NcWindow *wp, const gdouble r, const gdouble R)
+_nc_window_gaussian_eval_realspace (NcWindow *wp, const gdouble r, const gdouble R)
 {
   gdouble r_R2         = r * r / (R * R);
   gdouble WG_realspace = 1.0 / gsl_pow_3 (sqrt (2 * M_PI * R * R)) * exp (-r_R2 / 2.0);

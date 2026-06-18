@@ -45,16 +45,16 @@ void nc_multiplicity_func_st_free (NcMultiplicityFuncST *mst);
 void nc_multiplicity_func_st_clear (NcMultiplicityFuncST **mst);
 
 void nc_multiplicity_func_st_set_A (NcMultiplicityFuncST *mst, gdouble A);
-gdouble nc_multiplicity_func_st_get_A (const NcMultiplicityFuncST *mst);
+gdouble nc_multiplicity_func_st_get_A (NcMultiplicityFuncST *mst);
 
 void nc_multiplicity_func_st_set_b (NcMultiplicityFuncST *mst, gdouble b);
-gdouble nc_multiplicity_func_st_get_b (const NcMultiplicityFuncST *mst);
+gdouble nc_multiplicity_func_st_get_b (NcMultiplicityFuncST *mst);
 
 void nc_multiplicity_func_st_set_p (NcMultiplicityFuncST *mst, gdouble p);
-gdouble nc_multiplicity_func_st_get_p (const NcMultiplicityFuncST *mst);
+gdouble nc_multiplicity_func_st_get_p (NcMultiplicityFuncST *mst);
 
 void nc_multiplicity_func_st_set_delta_c (NcMultiplicityFuncST *mst, gdouble delta_c);
-gdouble nc_multiplicity_func_st_get_delta_c (const NcMultiplicityFuncST *mst);
+gdouble nc_multiplicity_func_st_get_delta_c (NcMultiplicityFuncST *mst);
 
 G_END_DECLS
 

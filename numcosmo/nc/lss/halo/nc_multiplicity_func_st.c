@@ -377,7 +377,7 @@ nc_multiplicity_func_st_set_A (NcMultiplicityFuncST *mst, gdouble A)
  * Returns: the value of #NcMultiplicityFuncST:A property.
  */
 gdouble
-nc_multiplicity_func_st_get_A (const NcMultiplicityFuncST *mst)
+nc_multiplicity_func_st_get_A (NcMultiplicityFuncST *mst)
 {
   NcMultiplicityFuncSTPrivate * const self = nc_multiplicity_func_st_get_instance_private (mst);
 
@@ -409,7 +409,7 @@ nc_multiplicity_func_st_set_b (NcMultiplicityFuncST *mst, gdouble b)
  * Returns: the value of #NcMultiplicityFuncST:b property.
  */
 gdouble
-nc_multiplicity_func_st_get_b (const NcMultiplicityFuncST *mst)
+nc_multiplicity_func_st_get_b (NcMultiplicityFuncST *mst)
 {
   NcMultiplicityFuncSTPrivate * const self = nc_multiplicity_func_st_get_instance_private (mst);
 
@@ -441,7 +441,7 @@ nc_multiplicity_func_st_set_p (NcMultiplicityFuncST *mst, gdouble p)
  * Returns: the value of #NcMultiplicityFuncST:p property.
  */
 gdouble
-nc_multiplicity_func_st_get_p (const NcMultiplicityFuncST *mst)
+nc_multiplicity_func_st_get_p (NcMultiplicityFuncST *mst)
 {
   NcMultiplicityFuncSTPrivate * const self = nc_multiplicity_func_st_get_instance_private (mst);
 
@@ -473,7 +473,7 @@ nc_multiplicity_func_st_set_delta_c (NcMultiplicityFuncST *mst, gdouble delta_c)
  * Returns: the value of #NcMultiplicityFuncST:critical_delta property.
  */
 gdouble
-nc_multiplicity_func_st_get_delta_c (const NcMultiplicityFuncST *mst)
+nc_multiplicity_func_st_get_delta_c (NcMultiplicityFuncST *mst)
 {
   NcMultiplicityFuncSTPrivate * const self = nc_multiplicity_func_st_get_instance_private (mst);
 

@@ -302,7 +302,7 @@ nc_multiplicity_func_ps_set_delta_c (NcMultiplicityFuncPS *mps, gdouble delta_c)
  * Returns: the value of #NcMultiplicityFuncPS:critical-delta property.
  */
 gdouble
-nc_multiplicity_func_ps_get_delta_c (const NcMultiplicityFuncPS *mps)
+nc_multiplicity_func_ps_get_delta_c (NcMultiplicityFuncPS *mps)
 {
   NcMultiplicityFuncPSPrivate * const self = nc_multiplicity_func_ps_get_instance_private (mps);
 

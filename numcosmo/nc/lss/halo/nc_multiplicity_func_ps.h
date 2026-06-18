@@ -45,7 +45,7 @@ void nc_multiplicity_func_ps_free (NcMultiplicityFuncPS *mps);
 void nc_multiplicity_func_ps_clear (NcMultiplicityFuncPS **mps);
 
 void nc_multiplicity_func_ps_set_delta_c (NcMultiplicityFuncPS *mps, const gdouble delta_c);
-gdouble nc_multiplicity_func_ps_get_delta_c (const NcMultiplicityFuncPS *mps);
+gdouble nc_multiplicity_func_ps_get_delta_c (NcMultiplicityFuncPS *mps);
 
 G_END_DECLS
 

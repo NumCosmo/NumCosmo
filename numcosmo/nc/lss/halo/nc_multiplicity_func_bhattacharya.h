@@ -66,22 +66,22 @@ void nc_multiplicity_func_bhattacharya_free (NcMultiplicityFuncBhattacharya *mbt
 void nc_multiplicity_func_bhattacharya_clear (NcMultiplicityFuncBhattacharya **mbt);
 
 void nc_multiplicity_func_bhattacharya_set_convention (NcMultiplicityFuncBhattacharya *mbt, NcMultiplicityFuncBhattacharyaConvention convention);
-NcMultiplicityFuncBhattacharyaConvention nc_multiplicity_func_bhattacharya_get_convention (const NcMultiplicityFuncBhattacharya *mbt);
+NcMultiplicityFuncBhattacharyaConvention nc_multiplicity_func_bhattacharya_get_convention (NcMultiplicityFuncBhattacharya *mbt);
 
 void nc_multiplicity_func_bhattacharya_set_A (NcMultiplicityFuncBhattacharya *mbt, gdouble A);
-gdouble nc_multiplicity_func_bhattacharya_get_A (const NcMultiplicityFuncBhattacharya *mbt);
+gdouble nc_multiplicity_func_bhattacharya_get_A (NcMultiplicityFuncBhattacharya *mbt);
 
 void nc_multiplicity_func_bhattacharya_set_a (NcMultiplicityFuncBhattacharya *mbt, gdouble a);
-gdouble nc_multiplicity_func_bhattacharya_get_a (const NcMultiplicityFuncBhattacharya *mbt);
+gdouble nc_multiplicity_func_bhattacharya_get_a (NcMultiplicityFuncBhattacharya *mbt);
 
 void nc_multiplicity_func_bhattacharya_set_p (NcMultiplicityFuncBhattacharya *mbt, gdouble p);
-gdouble nc_multiplicity_func_bhattacharya_get_p (const NcMultiplicityFuncBhattacharya *mbt);
+gdouble nc_multiplicity_func_bhattacharya_get_p (NcMultiplicityFuncBhattacharya *mbt);
 
 void nc_multiplicity_func_bhattacharya_set_q (NcMultiplicityFuncBhattacharya *mbt, gdouble q);
-gdouble nc_multiplicity_func_bhattacharya_get_q (const NcMultiplicityFuncBhattacharya *mbt);
+gdouble nc_multiplicity_func_bhattacharya_get_q (NcMultiplicityFuncBhattacharya *mbt);
 
 void nc_multiplicity_func_bhattacharya_set_delta_c (NcMultiplicityFuncBhattacharya *mbt, gdouble delta_c);
-gdouble nc_multiplicity_func_bhattacharya_get_delta_c (const NcMultiplicityFuncBhattacharya *mbt);
+gdouble nc_multiplicity_func_bhattacharya_get_delta_c (NcMultiplicityFuncBhattacharya *mbt);
 
 G_END_DECLS
 

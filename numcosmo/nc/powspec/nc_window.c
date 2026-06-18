@@ -103,7 +103,7 @@ nc_window_volume (NcWindow *wf)
  * Returns: The value of the window function in the Fourier space at scale @R.
  */
 gdouble
-nc_window_eval_fourier (const NcWindow *wf, const gdouble k, const gdouble R)
+nc_window_eval_fourier (NcWindow *wf, const gdouble k, const gdouble R)
 {
   return NC_WINDOW_GET_CLASS (wf)->eval_fourier (wf, k, R);
 }
@@ -120,7 +120,7 @@ nc_window_eval_fourier (const NcWindow *wf, const gdouble k, const gdouble R)
  * Returns: The value of the first derivative of the window function in the Fourier space at scale @R.
  */
 gdouble
-nc_window_deriv_fourier (const NcWindow *wf, const gdouble k, const gdouble R)
+nc_window_deriv_fourier (NcWindow *wf, const gdouble k, const gdouble R)
 {
   return NC_WINDOW_GET_CLASS (wf)->deriv_fourier (wf, k, R);
 }
@@ -136,7 +136,7 @@ nc_window_deriv_fourier (const NcWindow *wf, const gdouble k, const gdouble R)
  * Returns: The value of the window function in the real space at scale @R.
  */
 gdouble
-nc_window_eval_realspace (const NcWindow *wf, const gdouble r, const gdouble R)
+nc_window_eval_realspace (NcWindow *wf, const gdouble r, const gdouble R)
 {
   return NC_WINDOW_GET_CLASS (wf)->eval_real (wf, r, R);
 }

@@ -572,7 +572,7 @@ nc_multiplicity_func_bocquet_set_sim (NcMultiplicityFuncBocquet *mb, NcMultiplic
  * Returns: a #NcMultiplicityFuncBocquetSim.
  */
 NcMultiplicityFuncBocquetSim
-nc_multiplicity_func_bocquet_get_sim (const NcMultiplicityFuncBocquet *mb)
+nc_multiplicity_func_bocquet_get_sim (NcMultiplicityFuncBocquet *mb)
 {
   NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mb);
 
