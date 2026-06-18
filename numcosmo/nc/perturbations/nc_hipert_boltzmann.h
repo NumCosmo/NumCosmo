@@ -35,7 +35,7 @@
 #include <numcosmo/nc/perturbations/nc_hipert.h>
 #include <numcosmo/nc/recomb/nc_recomb.h>
 #include <numcosmo/nc/background/nc_scalefactor.h>
-#include <numcosmo/data/nc_data_cmb.h>
+#include <numcosmo/nc/data/nc_data_cmb.h>
 
 G_BEGIN_DECLS
 

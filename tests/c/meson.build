@@ -204,46 +204,46 @@ data_tests = [
     {
         'name': 'ncm_data_gauss_cov',
         'sources': [
-            'data/test_ncm_data_gauss_cov.c',
-            'data/ncm_data_gauss_cov_test.c',
-            'data/ncm_data_gauss_cov_test.h',
+            'ncm/data/test_ncm_data_gauss_cov.c',
+            'ncm/data/ncm_data_gauss_cov_test.c',
+            'ncm/data/ncm_data_gauss_cov_test.h',
         ],
         'timeout': 0,
     },
     {
         'name': 'nc_data_bao_dtr_dhr',
-        'sources': ['data/test_nc_data_bao_dtr_dhr.c'],
+        'sources': ['nc/data/test_nc_data_bao_dtr_dhr.c'],
     },
     {
         'name': 'nc_data_bao_rdv',
-        'sources': ['data/test_nc_data_bao_rdv.c'],
+        'sources': ['nc/data/test_nc_data_bao_rdv.c'],
     },
     {
         'name': 'nc_data_bao_dvdv',
-        'sources': ['data/test_nc_data_bao_dvdv.c'],
+        'sources': ['nc/data/test_nc_data_bao_dvdv.c'],
     },
     {
         'name': 'nc_data_bao_dvr_dtdh',
-        'sources': ['data/test_nc_data_bao_dvr_dtdh.c'],
+        'sources': ['nc/data/test_nc_data_bao_dvr_dtdh.c'],
     },
     {
         'name': 'nc_data_cluster_ncount',
-        'sources': ['data/test_nc_data_cluster_ncount.c'],
+        'sources': ['nc/data/test_nc_data_cluster_ncount.c'],
     },
     {
         'name': 'nc_data_cluster_ncounts_gauss',
-        'sources': ['data/test_nc_data_cluster_ncounts_gauss.c'],
+        'sources': ['nc/data/test_nc_data_cluster_ncounts_gauss.c'],
     },
     {
         'name': 'nc_data_hubble',
-        'sources': ['data/test_nc_data_hubble.c'],
+        'sources': ['nc/data/test_nc_data_hubble.c'],
     },
     # The cluster_wl test is one combinatorial 24x6 executable; it is built twice from the
     # same source (via -D, see the C file) so meson --slice can balance CI wall time. The
     # cheap property checks are a normal unit test; the heavy MC/fit half is acceptance.
     {
         'name': 'nc_data_cluster_wl_prop',
-        'sources': ['data/test_nc_data_cluster_wl.c'],
+        'sources': ['nc/data/test_nc_data_cluster_wl.c'],
         'c_args': ['-DCLUSTER_WL_SPLIT_CHEAP'],
         'timeout': 0,
         # m2lnP (the OpenMP-parallel likelihood eval) is in the cheap half, so this exec
@@ -252,7 +252,7 @@ data_tests = [
     },
     {
         'name': 'nc_data_cluster_wl',
-        'sources': ['data/test_nc_data_cluster_wl.c'],
+        'sources': ['nc/data/test_nc_data_cluster_wl.c'],
         'c_args': ['-DCLUSTER_WL_SPLIT_EXPENSIVE'],
         'timeout': 0,
         'priority': 10,
@@ -263,7 +263,7 @@ data_tests = [
     # recomputed FIXED-320x7 reference. Deterministic and fast.
     {
         'name': 'nc_data_cluster_wl_truth',
-        'sources': ['data/test_nc_data_cluster_wl_truth.c'],
+        'sources': ['nc/data/test_nc_data_cluster_wl_truth.c'],
         'suite': ['c', 'omp'],
     },
 ]

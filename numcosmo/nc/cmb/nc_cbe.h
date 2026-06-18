@@ -36,7 +36,7 @@
 #include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/nc/background/nc_scalefactor.h>
 #include <numcosmo/nc/cmb/nc_cbe_precision.h>
-#include <numcosmo/data/nc_data_cmb.h>
+#include <numcosmo/nc/data/nc_data_cmb.h>
 
 G_BEGIN_DECLS
 
