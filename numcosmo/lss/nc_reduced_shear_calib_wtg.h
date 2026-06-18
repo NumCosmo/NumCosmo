@@ -36,28 +36,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_REDUCED_SHEAR_CALIB_WTG             (nc_reduced_shear_calib_wtg_get_type ())
-#define NC_REDUCED_SHEAR_CALIB_WTG(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_REDUCED_SHEAR_CALIB_WTG, NcReducedShearCalibWtg))
-#define NC_REDUCED_SHEAR_CALIB_WTG_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_REDUCED_SHEAR_CALIB_WTG, NcReducedShearCalibWtgClass))
-#define NC_IS_REDUCED_SHEAR_CALIB_WTG(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_REDUCED_SHEAR_CALIB_WTG))
-#define NC_IS_REDUCED_SHEAR_CALIB_WTG_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_REDUCED_SHEAR_CALIB_WTG))
-#define NC_REDUCED_SHEAR_CALIB_WTG_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_REDUCED_SHEAR_CALIB_WTG, NcReducedShearCalibWtgClass))
 
-typedef struct _NcReducedShearCalibWtgClass NcReducedShearCalibWtgClass;
-typedef struct _NcReducedShearCalibWtg NcReducedShearCalibWtg;
-typedef struct _NcReducedShearCalibWtgPrivate NcReducedShearCalibWtgPrivate;
+G_DECLARE_FINAL_TYPE (NcReducedShearCalibWtg, nc_reduced_shear_calib_wtg, NC, REDUCED_SHEAR_CALIB_WTG, NcReducedShearCalib)
 
-struct _NcReducedShearCalibWtgClass
-{
-  /*< private >*/
-  NcReducedShearCalibClass parent_class;
-};
-
-struct _NcReducedShearCalibWtg
-{
-  /*< private >*/
-  NcReducedShearCalib parent_instance;
-  NcReducedShearCalibWtgPrivate *priv;
-};
 
 /**
  * NcReducedShearCalibWtgSParams:
@@ -78,8 +59,6 @@ typedef enum _NcReducedShearCalibWtgSParams
   /* < private > */
   NNC_REDUCED_SHEAR_CALIB_WTG_SPARAM_LEN, /*< skip >*/
 } NcReducedShearCalibWtgSParams;
-
-GType nc_reduced_shear_calib_wtg_get_type (void) G_GNUC_CONST;
 
 NcReducedShearCalibWtg *nc_reduced_shear_calib_wtg_new (void);
 NcReducedShearCalibWtg *nc_reduced_shear_calib_wtg_ref (NcReducedShearCalibWtg *rs_wtg);

@@ -34,28 +34,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_WINDOW_GAUSSIAN             (nc_window_gaussian_get_type ())
-#define NC_WINDOW_GAUSSIAN(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_WINDOW_GAUSSIAN, NcWindowGaussian))
-#define NC_WINDOW_GAUSSIAN_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_WINDOW_GAUSSIAN, NcWindowGaussianClass))
-#define NC_IS_WINDOW_GAUSSIAN(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_WINDOW_GAUSSIAN))
-#define NC_IS_WINDOW_GAUSSIAN_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_WINDOW_GAUSSIAN))
-#define NC_WINDOW_GAUSSIAN_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_WINDOW_GAUSSIAN, NcWindowGaussianClass))
 
-typedef struct _NcWindowGaussianClass NcWindowGaussianClass;
-typedef struct _NcWindowGaussian NcWindowGaussian;
+G_DECLARE_FINAL_TYPE (NcWindowGaussian, nc_window_gaussian, NC, WINDOW_GAUSSIAN, NcWindow)
 
-struct _NcWindowGaussianClass
-{
-  /*< private > */
-  NcWindowClass parent_class;
-};
-
-struct _NcWindowGaussian
-{
-  /*< private > */
-  NcWindow parent_instance;
-};
-
-GType nc_window_gaussian_get_type (void) G_GNUC_CONST;
 
 NcWindow *nc_window_gaussian_new (void);
 

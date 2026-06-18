@@ -39,11 +39,11 @@
 
 #include "lss/nc_multiplicity_func_warren.h"
 
-struct _NcMultiplicityFuncWarrenPrivate
+typedef struct _NcMultiplicityFuncWarrenPrivate
 {
   NcMultiplicityFuncMassDef mdef;
   gdouble Delta;
-};
+} NcMultiplicityFuncWarrenPrivate;
 
 enum
 {
@@ -51,12 +51,18 @@ enum
   PROP_SIZE,
 };
 
+
+struct _NcMultiplicityFuncWarren
+{
+  NcMultiplicityFunc parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncWarren, nc_multiplicity_func_warren, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_warren_init (NcMultiplicityFuncWarren *mw)
 {
-  NcMultiplicityFuncWarrenPrivate * const self = mw->priv = nc_multiplicity_func_warren_get_instance_private (mw);
+  NcMultiplicityFuncWarrenPrivate * const self = nc_multiplicity_func_warren_get_instance_private (mw);
 
   self->mdef  = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
   self->Delta = 0.0;
@@ -124,7 +130,7 @@ static void
 _nc_multiplicity_func_warren_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
   NcMultiplicityFuncWarren *mw                 = NC_MULTIPLICITY_FUNC_WARREN (mulf);
-  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+  NcMultiplicityFuncWarrenPrivate * const self = nc_multiplicity_func_warren_get_instance_private (mw);
 
   switch (mdef)
   {
@@ -152,7 +158,7 @@ static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_warren_get_mdef (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncWarren *mw                 = NC_MULTIPLICITY_FUNC_WARREN (mulf);
-  NcMultiplicityFuncWarrenPrivate * const self = mw->priv;
+  NcMultiplicityFuncWarrenPrivate * const self = nc_multiplicity_func_warren_get_instance_private (mw);
 
   return self->mdef;
 }
@@ -161,7 +167,7 @@ static gdouble
 _nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Warren: astro-ph/0506395 */
 {
   /* NcMultiplicityFuncWarren *mw = NC_MULTIPLICITY_FUNC_WARREN (mulf);
-   *  NcMultiplicityFuncWarrenPrivate * const self = mw->priv; */
+   *  NcMultiplicityFuncWarrenPrivate * const self = nc_multiplicity_func_warren_get_instance_private (mw); */
 
   gdouble f_Warren = 0.7234 * (pow (sigma, -1.625) + 0.2538) * exp (-1.1982 / (sigma * sigma));
 

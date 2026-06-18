@@ -34,30 +34,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_CLUSTER_MASS_NODIST             (nc_cluster_mass_nodist_get_type ())
-#define NC_CLUSTER_MASS_NODIST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_CLUSTER_MASS_NODIST, NcClusterMassNodist))
-#define NC_CLUSTER_MASS_NODIST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_CLUSTER_MASS_NODIST, NcClusterMassNodistClass))
-#define NC_IS_CLUSTER_MASS_NODIST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_CLUSTER_MASS_NODIST))
-#define NC_IS_CLUSTER_MASS_NODIST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_CLUSTER_MASS_NODIST))
-#define NC_CLUSTER_MASS_NODIST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_CLUSTER_MASS_NODIST, NcClusterMassNodistClass))
 
-typedef struct _NcClusterMassNodistClass NcClusterMassNodistClass;
-typedef struct _NcClusterMassNodist NcClusterMassNodist;
-typedef struct _NcClusterMassNodistPrivate NcClusterMassNodistPrivate;
+G_DECLARE_FINAL_TYPE (NcClusterMassNodist, nc_cluster_mass_nodist, NC, CLUSTER_MASS_NODIST, NcClusterMass)
 
-struct _NcClusterMassNodistClass
-{
-  /*< private >*/
-  NcClusterMassClass parent_class;
-};
-
-struct _NcClusterMassNodist
-{
-  /*< private >*/
-  NcClusterMass parent_instance;
-  NcClusterMassNodistPrivate *priv;
-};
-
-GType nc_cluster_mass_nodist_get_type (void) G_GNUC_CONST;
 
 G_END_DECLS
 

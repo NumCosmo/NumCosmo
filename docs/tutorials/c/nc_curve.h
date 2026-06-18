@@ -43,32 +43,36 @@ G_BEGIN_DECLS
 
 /* These are the basic macros useful for the GObject framework */
 #define NC_TYPE_CURVE             (nc_curve_get_type ())
-#define NC_CURVE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_CURVE, NcCurve))
-#define NC_CURVE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_CURVE, NcCurveClass))
-#define NC_IS_CURVE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_CURVE))
-#define NC_IS_CURVE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_CURVE))
-#define NC_CURVE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_CURVE, NcCurveClass))
+
+G_DECLARE_DERIVABLE_TYPE (NcCurve, nc_curve, NC, CURVE, NcmModel)
+
+struct _NcCurveClass
+{
+  /*< private >*/
+  NcmModelClass parent_class;
+  NcCurveF f;
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[18];
+};
 
 /*
  * This is the class struct, it will contains everything that is
  * that is defined across instances.
  *
  */
-typedef struct _NcCurveClass NcCurveClass;
 
 /*
  * This is the instance struct, it will contains everything pertaining
  * to a given instance.
  *
  */
-typedef struct _NcCurve NcCurve;
 
 /*
  * This is the instance private struct, it will contains everything
  * pertaining that should never be seen outside of the compilation unit.
  *
  */
-typedef struct _NcCurvePrivate NcCurvePrivate;
 
 /*
  * Here we define a type to describe the virtual function which represets
@@ -82,25 +86,13 @@ typedef gdouble (*NcCurveF) (NcCurve *curve, const gdouble x);
  * by implementations. The first item is just the parent class structure.
  *
  */
-struct _NcCurveClass
-{
-  /*< private >*/
-  NcmModelClass parent_class;
-  NcCurveF f;
-};
+
 
 /*
  * No elements needed apart from our private struct.
  * The first item is just the parent object structure.
  *
  */
-struct _NcCurve
-{
-  /*< private >*/
-  NcmModel parent_instance;
-  NcCurvePrivate *priv;
-};
-
 /**
  * NcCurveImpl:
  * @NC_CURVE_F: The curve function $f(x)$.
@@ -119,8 +111,6 @@ typedef enum _NcCurveImpl
 } NcCurveImpl;
 
 #define NC_CURVE_IMPL_ALL NCM_MODEL_CLASS_IMPL_ALL
-
-GType nc_curve_get_type (void) G_GNUC_CONST;
 
 /*
  * Since this is a abstract model we need to define its ID

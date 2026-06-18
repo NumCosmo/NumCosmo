@@ -34,30 +34,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_MULTIPLICITY_FUNC_JENKINS             (nc_multiplicity_func_jenkins_get_type ())
-#define NC_MULTIPLICITY_FUNC_JENKINS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MULTIPLICITY_FUNC_JENKINS, NcMultiplicityFuncJenkins))
-#define NC_MULTIPLICITY_FUNC_JENKINS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MULTIPLICITY_FUNC_JENKINS, NcMultiplicityFuncJenkinsClass))
-#define NC_IS_MULTIPLICITY_FUNC_JENKINS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MULTIPLICITY_FUNC_JENKINS))
-#define NC_IS_MULTIPLICITY_FUNC_JENKINS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MULTIPLICITY_FUNC_JENKINS))
-#define NC_MULTIPLICITY_FUNC_JENKINS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MULTIPLICITY_FUNC_JENKINS, NcMultiplicityFuncJenkinsClass))
 
-typedef struct _NcMultiplicityFuncJenkinsClass NcMultiplicityFuncJenkinsClass;
-typedef struct _NcMultiplicityFuncJenkins NcMultiplicityFuncJenkins;
-typedef struct _NcMultiplicityFuncJenkinsPrivate NcMultiplicityFuncJenkinsPrivate;
+G_DECLARE_FINAL_TYPE (NcMultiplicityFuncJenkins, nc_multiplicity_func_jenkins, NC, MULTIPLICITY_FUNC_JENKINS, NcMultiplicityFunc)
 
-struct _NcMultiplicityFuncJenkinsClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
-};
-
-struct _NcMultiplicityFuncJenkins
-{
-  /*< private >*/
-  NcMultiplicityFunc parent_instance;
-  NcMultiplicityFuncJenkinsPrivate *priv;
-};
-
-GType nc_multiplicity_func_jenkins_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFuncJenkins *nc_multiplicity_func_jenkins_new (void);
 NcMultiplicityFuncJenkins *nc_multiplicity_func_jenkins_ref (NcMultiplicityFuncJenkins *mj);

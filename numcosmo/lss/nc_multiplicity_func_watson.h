@@ -34,30 +34,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_MULTIPLICITY_FUNC_WATSON             (nc_multiplicity_func_watson_get_type ())
-#define NC_MULTIPLICITY_FUNC_WATSON(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MULTIPLICITY_FUNC_WATSON, NcMultiplicityFuncWatson))
-#define NC_MULTIPLICITY_FUNC_WATSON_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MULTIPLICITY_FUNC_WATSON, NcMultiplicityFuncWatsonClass))
-#define NC_IS_MULTIPLICITY_FUNC_WATSON(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MULTIPLICITY_FUNC_WATSON))
-#define NC_IS_MULTIPLICITY_FUNC_WATSON_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MULTIPLICITY_FUNC_WATSON))
-#define NC_MULTIPLICITY_FUNC_WATSON_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MULTIPLICITY_FUNC_WATSON, NcMultiplicityFuncWatsonClass))
 
-typedef struct _NcMultiplicityFuncWatsonClass NcMultiplicityFuncWatsonClass;
-typedef struct _NcMultiplicityFuncWatson NcMultiplicityFuncWatson;
-typedef struct _NcMultiplicityFuncWatsonPrivate NcMultiplicityFuncWatsonPrivate;
+G_DECLARE_FINAL_TYPE (NcMultiplicityFuncWatson, nc_multiplicity_func_watson, NC, MULTIPLICITY_FUNC_WATSON, NcMultiplicityFunc)
 
-struct _NcMultiplicityFuncWatsonClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
-};
-
-struct _NcMultiplicityFuncWatson
-{
-  /*< private >*/
-  NcMultiplicityFunc parent_instance;
-  NcMultiplicityFuncWatsonPrivate *priv;
-};
-
-GType nc_multiplicity_func_watson_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFuncWatson *nc_multiplicity_func_watson_new (void);
 NcMultiplicityFuncWatson *nc_multiplicity_func_watson_ref (NcMultiplicityFuncWatson *mwat);

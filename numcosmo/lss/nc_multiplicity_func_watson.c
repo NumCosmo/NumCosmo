@@ -40,12 +40,12 @@
 
 #include "lss/nc_multiplicity_func_watson.h"
 
-struct _NcMultiplicityFuncWatsonPrivate
+typedef struct _NcMultiplicityFuncWatsonPrivate
 {
   NcMultiplicityFuncMassDef mdef;
   gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
   gdouble Delta;
-};
+} NcMultiplicityFuncWatsonPrivate;
 
 enum
 {
@@ -54,12 +54,18 @@ enum
   PROP_LEN,
 };
 
+
+struct _NcMultiplicityFuncWatson
+{
+  NcMultiplicityFunc parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncWatson, nc_multiplicity_func_watson, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_watson_init (NcMultiplicityFuncWatson *mwat)
 {
-  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv = nc_multiplicity_func_watson_get_instance_private (mwat);
+  NcMultiplicityFuncWatsonPrivate * const self = nc_multiplicity_func_watson_get_instance_private (mwat);
 
   self->mdef = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
 }
@@ -128,7 +134,7 @@ static gdouble
 _nc_multiplicity_func_watson_fof_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   /*NcMultiplicityFuncWatson *mwat = NC_MULTIPLICITY_FUNC_WATSON (mulf); */
-  /*NcMultiplicityFuncWatsonPrivate * const self = mwat->priv; */
+  /*NcMultiplicityFuncWatsonPrivate * const self = nc_multiplicity_func_watson_get_instance_private (mwat); */
   const gdouble A     = 0.282;
   const gdouble alpha = 2.163;
   const gdouble beta  = 1.406;
@@ -147,7 +153,7 @@ static gdouble
 _nc_multiplicity_func_watson_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   NcMultiplicityFuncWatson *mwat               = NC_MULTIPLICITY_FUNC_WATSON (mulf);
-  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
+  NcMultiplicityFuncWatsonPrivate * const self = nc_multiplicity_func_watson_get_instance_private (mwat);
   const gdouble Omega_m                        = nc_hicosmo_E2Omega_m (cosmo, z) / nc_hicosmo_E2 (cosmo, z);
   const gdouble Delta_178                      = self->Delta / 178.0;
 
@@ -202,7 +208,7 @@ static void
 _nc_multiplicity_func_watson_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
   NcMultiplicityFuncWatson *mwat               = NC_MULTIPLICITY_FUNC_WATSON (mulf);
-  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
+  NcMultiplicityFuncWatsonPrivate * const self = nc_multiplicity_func_watson_get_instance_private (mwat);
 
   switch (mdef)
   {
@@ -230,7 +236,7 @@ static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_watson_get_mdef (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncWatson *mwat               = NC_MULTIPLICITY_FUNC_WATSON (mulf);
-  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
+  NcMultiplicityFuncWatsonPrivate * const self = nc_multiplicity_func_watson_get_instance_private (mwat);
 
   return self->mdef;
 }
@@ -239,7 +245,7 @@ static gdouble
 _nc_multiplicity_func_watson_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ watson: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncWatson *mwat               = NC_MULTIPLICITY_FUNC_WATSON (mulf);
-  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
+  NcMultiplicityFuncWatsonPrivate * const self = nc_multiplicity_func_watson_get_instance_private (mwat);
 
   return self->eval (mulf, cosmo, sigma, z);
 }
@@ -313,7 +319,7 @@ void
 _nc_multiplicity_func_watson_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
   NcMultiplicityFuncWatson *mwat               = NC_MULTIPLICITY_FUNC_WATSON (mulf);
-  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
+  NcMultiplicityFuncWatsonPrivate * const self = nc_multiplicity_func_watson_get_instance_private (mwat);
 
   g_assert (Delta >= 0);
 
@@ -330,7 +336,7 @@ gdouble
 _nc_multiplicity_func_watson_get_Delta (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncWatson *mwat               = NC_MULTIPLICITY_FUNC_WATSON (mulf);
-  NcMultiplicityFuncWatsonPrivate * const self = mwat->priv;
+  NcMultiplicityFuncWatsonPrivate * const self = nc_multiplicity_func_watson_get_instance_private (mwat);
 
   return self->Delta;
 }

@@ -35,15 +35,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_CLUSTER_MASS_SELECTION             (nc_cluster_mass_selection_get_type ())
-#define NC_CLUSTER_MASS_SELECTION(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_CLUSTER_MASS_SELECTION, NcClusterMassSelection))
-#define NC_CLUSTER_MASS_SELECTION_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_CLUSTER_MASS_SELECTION, NcClusterMassSelectionClass))
-#define NC_IS_CLUSTER_MASS_SELECTION(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_CLUSTER_MASS_SELECTION))
-#define NC_IS_CLUSTER_MASS_SELECTION_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_CLUSTER_MASS_SELECTION))
-#define NC_CLUSTER_MASS_SELECTION_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_CLUSTER_MASS_SELECTION, NcClusterMassSelectionClass))
 
-typedef struct _NcClusterMassSelectionClass NcClusterMassSelectionClass;
-typedef struct _NcClusterMassSelection NcClusterMassSelection;
-typedef struct _NcClusterMassSelectionPrivate NcClusterMassSelectionPrivate;
+G_DECLARE_FINAL_TYPE (NcClusterMassSelection, nc_cluster_mass_selection, NC, CLUSTER_MASS_SELECTION, NcClusterMass)
+
 
 /**
  * NcClusterMassSelectionSParams:
@@ -79,21 +73,6 @@ typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_SELECTION_SPARAMS >*/
 #define NC_CLUSTER_MASS_SELECTION_DEFAULT_SIGMA_P2  (0.0)
 #define NC_CLUSTER_MASS_SELECTION_DEFAULT_CUT  (0.0)
 #define NC_CLUSTER_MASS_SELECTION_DEFAULT_PARAMS_ABSTOL (0.0)
-
-struct _NcClusterMassSelectionClass
-{
-  /*< private >*/
-  NcClusterMassClass parent_class;
-};
-
-struct _NcClusterMassSelection
-{
-  /*< private >*/
-  NcClusterMass parent_instance;
-  NcClusterMassSelectionPrivate *priv;
-};
-
-GType nc_cluster_mass_selection_get_type (void) G_GNUC_CONST;
 
 void nc_cluster_mass_selection_set_enable_rejection (NcClusterMassSelection *selection, gboolean on);
 void nc_cluster_mass_selection_set_ipurity (NcClusterMassSelection *selection, NcmSpline2dBicubic *ipurity);

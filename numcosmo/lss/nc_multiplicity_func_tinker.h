@@ -34,30 +34,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_MULTIPLICITY_FUNC_TINKER             (nc_multiplicity_func_tinker_get_type ())
-#define NC_MULTIPLICITY_FUNC_TINKER(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MULTIPLICITY_FUNC_TINKER, NcMultiplicityFuncTinker))
-#define NC_MULTIPLICITY_FUNC_TINKER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MULTIPLICITY_FUNC_TINKER, NcMultiplicityFuncTinkerClass))
-#define NC_IS_MULTIPLICITY_FUNC_TINKER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MULTIPLICITY_FUNC_TINKER))
-#define NC_IS_MULTIPLICITY_FUNC_TINKER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MULTIPLICITY_FUNC_TINKER))
-#define NC_MULTIPLICITY_FUNC_TINKER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MULTIPLICITY_FUNC_TINKER, NcMultiplicityFuncTinkerClass))
 
-typedef struct _NcMultiplicityFuncTinkerClass NcMultiplicityFuncTinkerClass;
-typedef struct _NcMultiplicityFuncTinker NcMultiplicityFuncTinker;
-typedef struct _NcMultiplicityFuncTinkerPrivate NcMultiplicityFuncTinkerPrivate;
+G_DECLARE_FINAL_TYPE (NcMultiplicityFuncTinker, nc_multiplicity_func_tinker, NC, MULTIPLICITY_FUNC_TINKER, NcMultiplicityFunc)
 
-struct _NcMultiplicityFuncTinkerClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
-};
-
-struct _NcMultiplicityFuncTinker
-{
-  /*< private >*/
-  NcMultiplicityFunc parent_instance;
-  NcMultiplicityFuncTinkerPrivate *priv;
-};
-
-GType nc_multiplicity_func_tinker_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFuncTinker *nc_multiplicity_func_tinker_new (void);
 NcMultiplicityFuncTinker *nc_multiplicity_func_tinker_new_full (NcMultiplicityFuncMassDef mdef, gdouble Delta);

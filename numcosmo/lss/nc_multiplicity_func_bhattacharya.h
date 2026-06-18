@@ -35,15 +35,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA             (nc_multiplicity_func_bhattacharya_get_type ())
-#define NC_MULTIPLICITY_FUNC_BHATTACHARYA(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA, NcMultiplicityFuncBhattacharya))
-#define NC_MULTIPLICITY_FUNC_BHATTACHARYA_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA, NcMultiplicityFuncBhattacharyaClass))
-#define NC_IS_MULTIPLICITY_FUNC_BHATTACHARYA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA))
-#define NC_IS_MULTIPLICITY_FUNC_BHATTACHARYA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA))
-#define NC_MULTIPLICITY_FUNC_BHATTACHARYA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA, NcMultiplicityFuncBhattacharyaClass))
 
-typedef struct _NcMultiplicityFuncBhattacharyaClass NcMultiplicityFuncBhattacharyaClass;
-typedef struct _NcMultiplicityFuncBhattacharya NcMultiplicityFuncBhattacharya;
-typedef struct _NcMultiplicityFuncBhattacharyaPrivate NcMultiplicityFuncBhattacharyaPrivate;
+G_DECLARE_FINAL_TYPE (NcMultiplicityFuncBhattacharya, nc_multiplicity_func_bhattacharya, NC, MULTIPLICITY_FUNC_BHATTACHARYA, NcMultiplicityFunc)
+
 
 /**
  * NcMultiplicityFuncBhattacharyaConvention:
@@ -63,21 +57,6 @@ typedef enum _NcMultiplicityFuncBhattacharyaConvention
   /* < private > */
   NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_LEN, /*< skip >*/
 } NcMultiplicityFuncBhattacharyaConvention;
-
-struct _NcMultiplicityFuncBhattacharyaClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
-};
-
-struct _NcMultiplicityFuncBhattacharya
-{
-  /*< private >*/
-  NcMultiplicityFunc parent_instance;
-  NcMultiplicityFuncBhattacharyaPrivate *priv;
-};
-
-GType nc_multiplicity_func_bhattacharya_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFuncBhattacharya *nc_multiplicity_func_bhattacharya_new (void);
 NcMultiplicityFuncBhattacharya *nc_multiplicity_func_bhattacharya_new_full (NcMultiplicityFuncBhattacharyaConvention convention);

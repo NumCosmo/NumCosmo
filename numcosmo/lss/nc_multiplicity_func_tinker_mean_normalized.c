@@ -39,7 +39,7 @@
 
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
 
-struct _NcMultiplicityFuncTinkerMeanNormalizedPrivate
+typedef struct _NcMultiplicityFuncTinkerMeanNormalizedPrivate
 {
   NcMultiplicityFuncMassDef mdef;
   gdouble Delta;
@@ -49,7 +49,7 @@ struct _NcMultiplicityFuncTinkerMeanNormalizedPrivate
   gdouble phi;
   gdouble eta;
   gdouble gamma;
-};
+} NcMultiplicityFuncTinkerMeanNormalizedPrivate;
 
 enum
 {
@@ -57,12 +57,18 @@ enum
   PROP_SIZE,
 };
 
+
+struct _NcMultiplicityFuncTinkerMeanNormalized
+{
+  NcMultiplicityFunc parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncTinkerMeanNormalized, nc_multiplicity_func_tinker_mean_normalized, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_tinker_mean_normalized_init (NcMultiplicityFuncTinkerMeanNormalized *mt10)
 {
-  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = mt10->priv = nc_multiplicity_func_tinker_mean_normalized_get_instance_private (mt10);
+  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = nc_multiplicity_func_tinker_mean_normalized_get_instance_private (mt10);
 
   self->mdef      = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
   self->Delta     = 0.0;
@@ -136,7 +142,7 @@ static void
 _nc_multiplicity_func_tinker_mean_normalized_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
   NcMultiplicityFuncTinkerMeanNormalized *mt10               = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (mulf);
-  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = mt10->priv;
+  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = nc_multiplicity_func_tinker_mean_normalized_get_instance_private (mt10);
 
   switch (mdef)
   {
@@ -164,7 +170,7 @@ static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_tinker_mean_normalized_get_mdef (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncTinkerMeanNormalized *mt10               = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (mulf);
-  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = mt10->priv;
+  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = nc_multiplicity_func_tinker_mean_normalized_get_instance_private (mt10);
 
   return self->mdef;
 }
@@ -173,7 +179,7 @@ static gdouble
 _nc_multiplicity_func_tinker_mean_normalized_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $g(\sigma) = \nu x f(\nu)$ Tinker: Eq. 8 1001.3162 */
 {
   NcMultiplicityFuncTinkerMeanNormalized *mt10               = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (mulf);
-  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = mt10->priv;
+  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = nc_multiplicity_func_tinker_mean_normalized_get_instance_private (mt10);
 
   const gdouble nu = 1.686 / sigma;
   gdouble f_Tinker_mean_normalized;
@@ -267,7 +273,7 @@ static void
 _nc_multiplicity_func_tinker_mean_normalized_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
   NcMultiplicityFuncTinkerMeanNormalized *mt10               = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (mulf);
-  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = mt10->priv;
+  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = nc_multiplicity_func_tinker_mean_normalized_get_instance_private (mt10);
 
   const guint int_Delta = Delta;
 
@@ -358,7 +364,7 @@ static gdouble
 _nc_multiplicity_func_tinker_mean_normalized_get_Delta (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncTinkerMeanNormalized *mt10               = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (mulf);
-  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = mt10->priv;
+  NcMultiplicityFuncTinkerMeanNormalizedPrivate * const self = nc_multiplicity_func_tinker_mean_normalized_get_instance_private (mt10);
 
   return self->Delta;
 }

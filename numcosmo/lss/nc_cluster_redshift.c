@@ -39,17 +39,17 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-struct _NcClusterRedshiftPrivate
+typedef struct _NcClusterRedshiftPrivate
 {
   guint place_holder;
-};
+} NcClusterRedshiftPrivate;
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcClusterRedshift, nc_cluster_redshift, NCM_TYPE_MODEL)
 
 static void
 nc_cluster_redshift_init (NcClusterRedshift *clusterz)
 {
-  NcClusterRedshiftPrivate * const self = clusterz->priv = nc_cluster_redshift_get_instance_private (clusterz);
+  NcClusterRedshiftPrivate * const self = nc_cluster_redshift_get_instance_private (clusterz);
 
   self->place_holder = 0;
 }

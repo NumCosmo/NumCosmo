@@ -35,15 +35,29 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_CLUSTER_REDSHIFT             (nc_cluster_redshift_get_type ())
-#define NC_CLUSTER_REDSHIFT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_CLUSTER_REDSHIFT, NcClusterRedshift))
-#define NC_CLUSTER_REDSHIFT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_CLUSTER_REDSHIFT, NcClusterRedshiftClass))
-#define NC_IS_CLUSTER_REDSHIFT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_CLUSTER_REDSHIFT))
-#define NC_IS_CLUSTER_REDSHIFT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_CLUSTER_REDSHIFT))
-#define NC_CLUSTER_REDSHIFT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_CLUSTER_REDSHIFT, NcClusterRedshiftClass))
 
-typedef struct _NcClusterRedshiftClass NcClusterRedshiftClass;
-typedef struct _NcClusterRedshift NcClusterRedshift;
-typedef struct _NcClusterRedshiftPrivate NcClusterRedshiftPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcClusterRedshift, nc_cluster_redshift, NC, CLUSTER_REDSHIFT, NcmModel)
+
+struct _NcClusterRedshiftClass
+{
+  /*< private >*/
+  NcmModelClass parent_class;
+
+  gdouble (*P) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs, const gdouble *z_obs_params);
+  gdouble (*intP) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z);
+  gdouble (*intP_bin) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params);
+  gboolean (*resample) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng);
+  void (*P_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
+  void (*P_bin_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
+  void (*N_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
+  gdouble (*volume) (NcClusterRedshift *clusterz);
+  guint _obs_len;
+  guint _obs_params_len;
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[18];
+};
+
 
 /**
  * NcClusterRedshiftImpl:
@@ -68,31 +82,6 @@ typedef enum _NcClusterRedshiftImpl
 
 #define NC_CLUSTER_REDSHIFT_IMPL_ALL NCM_MODEL_CLASS_IMPL_ALL
 
-struct _NcClusterRedshiftClass
-{
-  /*< private >*/
-  NcmModelClass parent_class;
-
-  gdouble (*P) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs, const gdouble *z_obs_params);
-  gdouble (*intP) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z);
-  gdouble (*intP_bin) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params);
-  gboolean (*resample) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble lnM, const gdouble z, gdouble *z_obs, const gdouble *z_obs_params, NcmRNG *rng);
-  void (*P_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
-  void (*P_bin_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, const gdouble *z_obs_lower, const gdouble *z_obs_upper, const gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
-  void (*N_limits) (NcClusterRedshift *clusterz, NcHICosmo *cosmo, gdouble *z_lower, gdouble *z_upper);
-  gdouble (*volume) (NcClusterRedshift *clusterz);
-  guint _obs_len;
-  guint _obs_params_len;
-};
-
-struct _NcClusterRedshift
-{
-  /*< private >*/
-  NcmModel parent_instance;
-  NcClusterRedshiftPrivate *priv;
-};
-
-GType nc_cluster_redshift_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_cluster_redshift);
 

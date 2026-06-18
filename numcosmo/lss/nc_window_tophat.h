@@ -34,28 +34,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_WINDOW_TOPHAT             (nc_window_tophat_get_type ())
-#define NC_WINDOW_TOPHAT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_WINDOW_TOPHAT, NcWindowTophat))
-#define NC_WINDOW_TOPHAT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_WINDOW_TOPHAT, NcWindowTophatClass))
-#define NC_IS_WINDOW_TOPHAT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_WINDOW_TOPHAT))
-#define NC_IS_WINDOW_TOPHAT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_WINDOW_TOPHAT))
-#define NC_WINDOW_TOPHAT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_WINDOW_TOPHAT, NcWindowTophatClass))
 
-typedef struct _NcWindowTophatClass NcWindowTophatClass;
-typedef struct _NcWindowTophat NcWindowTophat;
+G_DECLARE_FINAL_TYPE (NcWindowTophat, nc_window_tophat, NC, WINDOW_TOPHAT, NcWindow)
 
-struct _NcWindowTophatClass
-{
-  /*< private > */
-  NcWindowClass parent_class;
-};
-
-struct _NcWindowTophat
-{
-  /*< private > */
-  NcWindow parent_instance;
-};
-
-GType nc_window_tophat_get_type (void) G_GNUC_CONST;
 
 NcWindow *nc_window_tophat_new (void);
 

@@ -34,30 +34,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_GALAXY_SELFUNC             (nc_galaxy_selfunc_get_type ())
-#define NC_GALAXY_SELFUNC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_GALAXY_SELFUNC, NcGalaxySelfunc))
-#define NC_GALAXY_SELFUNC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_GALAXY_SELFUNC, NcGalaxySelfuncClass))
-#define NC_IS_GALAXY_SELFUNC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_GALAXY_SELFUNC))
-#define NC_IS_GALAXY_SELFUNC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_GALAXY_SELFUNC))
-#define NC_GALAXY_SELFUNC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_GALAXY_SELFUNC, NcGalaxySelfuncClass))
 
-typedef struct _NcGalaxySelfuncClass NcGalaxySelfuncClass;
-typedef struct _NcGalaxySelfunc NcGalaxySelfunc;
-typedef struct _NcGalaxySelfuncPrivate NcGalaxySelfuncPrivate;
+G_DECLARE_FINAL_TYPE (NcGalaxySelfunc, nc_galaxy_selfunc, NC, GALAXY_SELFUNC, GObject)
 
-struct _NcGalaxySelfuncClass
-{
-  /*< private > */
-  GObjectClass parent_class;
-};
-
-struct _NcGalaxySelfunc 
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcGalaxySelfuncPrivate *priv;
-};
-
-GType nc_galaxy_selfunc_get_type (void) G_GNUC_CONST;
 
 NcGalaxySelfunc *nc_galaxy_selfunc_new (const guint nshells);
 NcGalaxySelfunc *nc_galaxy_selfunc_ref (NcGalaxySelfunc *gsf);

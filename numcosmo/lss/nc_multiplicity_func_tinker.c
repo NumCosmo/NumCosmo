@@ -42,7 +42,7 @@
 #include "math/ncm_spline_cubic_d2.h"
 #include "math/ncm_spline_gsl.h"
 
-struct _NcMultiplicityFuncTinkerPrivate
+typedef struct _NcMultiplicityFuncTinkerPrivate
 {
   NcMultiplicityFuncMassDef mdef;
   gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
@@ -56,13 +56,19 @@ struct _NcMultiplicityFuncTinkerPrivate
   NcmSpline *b_s;
   NcmSpline *c_s;
   gboolean linear_interp;
-};
+} NcMultiplicityFuncTinkerPrivate;
 
 enum
 {
   PROP_0,
   PROP_LINEAR_INTERP,
   PROP_SIZE,
+};
+
+
+struct _NcMultiplicityFuncTinker
+{
+  NcMultiplicityFunc parent_instance;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncTinker, nc_multiplicity_func_tinker, NC_TYPE_MULTIPLICITY_FUNC)
@@ -88,7 +94,7 @@ _nc_multiplicity_func_tinker_eval_error (NcMultiplicityFunc *mulf, NcHICosmo *co
 static void
 nc_multiplicity_func_tinker_init (NcMultiplicityFuncTinker *mt)
 {
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv = nc_multiplicity_func_tinker_get_instance_private (mt);
+  NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
 
   self->mdef  = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
   self->eval  = &_nc_multiplicity_func_tinker_eval_error;
@@ -109,7 +115,7 @@ static void
 _nc_multiplicity_func_tinker_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
-  /*NcMultiplicityFuncTinkerPrivate * const self = mt->priv;*/
+  /*NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);*/
 
   switch (prop_id)
   {
@@ -126,7 +132,7 @@ static void
 _nc_multiplicity_func_tinker_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (object);
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
 
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_TINKER (object));
 
@@ -145,7 +151,7 @@ static void
 _nc_multiplicity_func_tinker_dispose (GObject *object)
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (object);
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
 
   ncm_spline_clear (&self->A_s);
   ncm_spline_clear (&self->a_s);
@@ -199,7 +205,7 @@ static gdouble
 _nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (mulf);
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
 
   const gdouble Delta = self->Delta;
 
@@ -217,7 +223,7 @@ static gdouble
 _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (mulf);
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
   const gdouble E2                             = nc_hicosmo_E2 (cosmo, z);
   const gdouble Omega_m                        = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
   const gdouble Delta_z                        = self->Delta / Omega_m;
@@ -263,7 +269,7 @@ static void
 _nc_multiplicity_func_tinker_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (mulf);
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
 
   switch (mdef)
   {
@@ -291,7 +297,7 @@ static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_tinker_get_mdef (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (mulf);
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
 
   return self->mdef;
 }
@@ -300,7 +306,7 @@ static gdouble
 _nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (mulf);
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
 
   return self->eval (mulf, cosmo, sigma, z);
 }
@@ -391,7 +397,7 @@ static void
 _nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (mulf);
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
   const gdouble log10_Delta                    = log10 (Delta);
 
   g_assert (Delta >= 0);
@@ -415,7 +421,7 @@ gdouble
 _nc_multiplicity_func_tinker_get_Delta (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (mulf);
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
 
   return self->Delta;
 }
@@ -433,7 +439,7 @@ _nc_multiplicity_func_tinker_get_Delta (NcMultiplicityFunc *mulf)
 void
 nc_multiplicity_func_tinker_set_linear_interp (NcMultiplicityFuncTinker *mt, gboolean lin_interp)
 {
-  NcMultiplicityFuncTinkerPrivate * const self = mt->priv;
+  NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
   NcMultiplicityFunc *mulf                     = NC_MULTIPLICITY_FUNC (mt);
   const gdouble Delta                          = nc_multiplicity_func_get_Delta (mulf);
 

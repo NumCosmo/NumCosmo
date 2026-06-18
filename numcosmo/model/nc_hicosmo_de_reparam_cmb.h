@@ -35,28 +35,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_HICOSMO_DE_REPARAM_CMB             (nc_hicosmo_de_reparam_cmb_get_type ())
-#define NC_HICOSMO_DE_REPARAM_CMB(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_DE_REPARAM_CMB, NcHICosmoDEReparamCMB))
-#define NC_HICOSMO_DE_REPARAM_CMB_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HICOSMO_DE_REPARAM_CMB, NcHICosmoDEReparamCMBClass))
-#define NC_IS_HICOSMO_DE_REPARAM_CMB(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_DE_REPARAM_CMB))
-#define NC_IS_HICOSMO_DE_REPARAM_CMB_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_DE_REPARAM_CMB))
-#define NC_HICOSMO_DE_REPARAM_CMB_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_DE_REPARAM_CMB, NcHICosmoDEReparamCMBClass))
 
-typedef struct _NcHICosmoDEReparamCMBClass NcHICosmoDEReparamCMBClass;
-typedef struct _NcHICosmoDEReparamCMB NcHICosmoDEReparamCMB;
+G_DECLARE_FINAL_TYPE (NcHICosmoDEReparamCMB, nc_hicosmo_de_reparam_cmb, NC, HICOSMO_DE_REPARAM_CMB, NcmReparam)
 
-struct _NcHICosmoDEReparamCMBClass
-{
-  /*< private >*/
-  NcmReparamClass parent_class;
-};
-
-struct _NcHICosmoDEReparamCMB
-{
-  /*< private >*/
-  NcmReparam parent_instance;
-};
-
-GType nc_hicosmo_de_reparam_cmb_get_type (void) G_GNUC_CONST;
 
 NcHICosmoDEReparamCMB *nc_hicosmo_de_reparam_cmb_new (guint length);
 

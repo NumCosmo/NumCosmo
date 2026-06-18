@@ -73,7 +73,7 @@ enum
   PROP_SIZE,
 };
 
-struct _NcDataClusterNCountsGaussPrivate
+typedef struct _NcDataClusterNCountsGaussPrivate
 {
   NcmVector *z_obs;
   NcmMatrix *z_obs_params;
@@ -85,6 +85,12 @@ struct _NcDataClusterNCountsGaussPrivate
   NcmMatrix *resample_s_matrix;
   gboolean fix_cov;
   GArray *index_map;
+} NcDataClusterNCountsGaussPrivate;
+
+
+struct _NcDataClusterNCountsGauss
+{
+  NcmDataGaussCov parent_instance;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterNCountsGauss, nc_data_cluster_ncounts_gauss, NCM_TYPE_DATA_GAUSS_COV);
@@ -104,7 +110,7 @@ typedef struct _NcDataClusterNCountsGaussIndex
 static void
 nc_data_cluster_ncounts_gauss_init (NcDataClusterNCountsGauss *ncounts_gauss)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   self->z_obs             = NULL;
   self->z_obs_params      = NULL;
@@ -122,7 +128,7 @@ static void
 _nc_data_cluster_ncounts_gauss_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (object);
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   g_return_if_fail (NC_DATA_CLUSTER_NCOUNTS_GAUSS (object));
 
@@ -166,7 +172,7 @@ static void
 _nc_data_cluster_ncounts_gauss_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (object);
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   g_return_if_fail (NC_DATA_CLUSTER_NCOUNTS_GAUSS (object));
 
@@ -209,7 +215,7 @@ static void
 _nc_data_cluster_ncounts_gauss_dispose (GObject *object)
 {
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (object);
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   ncm_vector_clear (&self->z_obs);
   ncm_matrix_clear (&self->z_obs_params);
@@ -326,7 +332,7 @@ _nc_data_cluster_ncounts_gauss_begin (NcmData *data)
 {
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (data);
   NcmDataGaussCov *gauss_cov                    = NCM_DATA_GAUSS_COV (data);
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
   const guint np                                = ncm_data_gauss_cov_get_size (gauss_cov);
   const gint nz                                 = ncm_vector_len (self->z_obs) - 1;
   const gint nlnM                               = ncm_vector_len (self->lnM_obs) - 1;
@@ -365,7 +371,7 @@ static void
 _nc_data_cluster_ncounts_gauss_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (data);
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
   NcHICosmo *cosmo                              = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcClusterRedshift *clusterz                   = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
   NcClusterMass *clusterm                       = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
@@ -407,7 +413,7 @@ static void
 _nc_data_cluster_ncounts_gauss_mean_func (NcmDataGaussCov *gauss_cov, NcmMSet *mset, NcmVector *vp)
 {
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (gauss_cov);
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
   NcHICosmo *cosmo                              = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcClusterRedshift *clusterz                   = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
   NcClusterMass *clusterm                       = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
@@ -445,7 +451,7 @@ static gboolean
 _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *mset, NcmMatrix *cov)
 {
   NcDataClusterNCountsGauss *ncounts_gauss      = NC_DATA_CLUSTER_NCOUNTS_GAUSS (gauss_cov);
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   if (self->fix_cov)
   {
@@ -574,7 +580,7 @@ nc_data_cluster_ncounts_gauss_new (NcClusterAbundance *cad)
 void
 nc_data_cluster_ncounts_gauss_set_z_obs (NcDataClusterNCountsGauss *ncounts_gauss, NcmVector *z_obs)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
   NcmDataGaussCov *gauss_cov                    =  NCM_DATA_GAUSS_COV (ncounts_gauss);
 
   ncm_vector_clear (&self->z_obs);
@@ -600,7 +606,7 @@ nc_data_cluster_ncounts_gauss_set_z_obs (NcDataClusterNCountsGauss *ncounts_gaus
 void
 nc_data_cluster_ncounts_gauss_set_z_obs_params (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *z_obs_params)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   ncm_matrix_clear (&self->z_obs_params);
   self->z_obs_params = ncm_matrix_ref (z_obs_params);
@@ -618,7 +624,7 @@ nc_data_cluster_ncounts_gauss_set_z_obs_params (NcDataClusterNCountsGauss *ncoun
 void
 nc_data_cluster_ncounts_gauss_set_lnM_obs (NcDataClusterNCountsGauss *ncounts_gauss, NcmVector *lnM_obs)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
   NcmDataGaussCov *gauss_cov                    =  NCM_DATA_GAUSS_COV (ncounts_gauss);
 
   ncm_vector_clear (&self->lnM_obs);
@@ -644,7 +650,7 @@ nc_data_cluster_ncounts_gauss_set_lnM_obs (NcDataClusterNCountsGauss *ncounts_ga
 void
 nc_data_cluster_ncounts_gauss_set_lnM_obs_params (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *lnM_obs_params)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   ncm_matrix_clear (&self->lnM_obs_params);
   self->lnM_obs_params = ncm_matrix_ref (lnM_obs_params);
@@ -661,7 +667,7 @@ nc_data_cluster_ncounts_gauss_set_lnM_obs_params (NcDataClusterNCountsGauss *nco
 void
 nc_data_cluster_ncounts_gauss_set_has_ssc (NcDataClusterNCountsGauss *ncounts_gauss, gboolean on)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   self->has_ssc = on;
 }
@@ -677,7 +683,7 @@ nc_data_cluster_ncounts_gauss_set_has_ssc (NcDataClusterNCountsGauss *ncounts_ga
 void
 nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *s_matrix)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   ncm_matrix_clear (&self->s_matrix);
   self->s_matrix = ncm_matrix_ref (s_matrix);
@@ -695,7 +701,7 @@ nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncounts_g
 void
 nc_data_cluster_ncounts_gauss_set_resample_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *s_matrix)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   ncm_matrix_clear (&self->resample_s_matrix);
   self->resample_s_matrix = ncm_matrix_ref (s_matrix);
@@ -713,7 +719,7 @@ nc_data_cluster_ncounts_gauss_set_resample_s_matrix (NcDataClusterNCountsGauss *
 void
 nc_data_cluster_ncounts_gauss_set_fix_cov (NcDataClusterNCountsGauss *ncounts_gauss, gboolean on)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   self->fix_cov = on;
 }
@@ -729,7 +735,7 @@ nc_data_cluster_ncounts_gauss_set_fix_cov (NcDataClusterNCountsGauss *ncounts_ga
 NcmVector *
 nc_data_cluster_ncounts_gauss_get_z_obs (NcDataClusterNCountsGauss *ncounts_gauss)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   if (self->z_obs != NULL)
     return ncm_vector_ref (self->z_obs);
@@ -748,7 +754,7 @@ nc_data_cluster_ncounts_gauss_get_z_obs (NcDataClusterNCountsGauss *ncounts_gaus
 NcmMatrix *
 nc_data_cluster_ncounts_gauss_get_z_obs_params (NcDataClusterNCountsGauss *ncounts_gauss)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   if (self->z_obs_params != NULL)
     return ncm_matrix_ref (self->z_obs_params);
@@ -767,7 +773,7 @@ nc_data_cluster_ncounts_gauss_get_z_obs_params (NcDataClusterNCountsGauss *ncoun
 NcmVector *
 nc_data_cluster_ncounts_gauss_get_lnM_obs (NcDataClusterNCountsGauss *ncounts_gauss)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   if (self->lnM_obs != NULL)
     return ncm_vector_ref (self->lnM_obs);
@@ -786,7 +792,7 @@ nc_data_cluster_ncounts_gauss_get_lnM_obs (NcDataClusterNCountsGauss *ncounts_ga
 NcmMatrix *
 nc_data_cluster_ncounts_gauss_get_lnM_obs_params (NcDataClusterNCountsGauss *ncounts_gauss)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   if (self->lnM_obs_params != NULL)
     return ncm_matrix_ref (self->lnM_obs_params);
@@ -805,7 +811,7 @@ nc_data_cluster_ncounts_gauss_get_lnM_obs_params (NcDataClusterNCountsGauss *nco
 gboolean
 nc_data_cluster_ncounts_gauss_get_has_ssc (NcDataClusterNCountsGauss *ncounts_gauss)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   return self->has_ssc;
 }
@@ -821,7 +827,7 @@ nc_data_cluster_ncounts_gauss_get_has_ssc (NcDataClusterNCountsGauss *ncounts_ga
 NcmMatrix *
 nc_data_cluster_ncounts_gauss_get_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   if (self->s_matrix != NULL)
     return ncm_matrix_ref (self->s_matrix);
@@ -842,7 +848,7 @@ nc_data_cluster_ncounts_gauss_get_s_matrix (NcDataClusterNCountsGauss *ncounts_g
 NcmMatrix *
 nc_data_cluster_ncounts_gauss_get_resample_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   if (self->resample_s_matrix != NULL)
     return ncm_matrix_ref (self->resample_s_matrix);
@@ -861,7 +867,7 @@ nc_data_cluster_ncounts_gauss_get_resample_s_matrix (NcDataClusterNCountsGauss *
 gboolean
 nc_data_cluster_ncounts_gauss_get_fix_cov (NcDataClusterNCountsGauss *ncounts_gauss)
 {
-  NcDataClusterNCountsGaussPrivate * const self = ncounts_gauss->priv;
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
 
   return self->fix_cov;
 }

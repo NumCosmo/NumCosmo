@@ -66,7 +66,7 @@ enum
   PROP_ABSTOL,
 };
 
-struct _NcScalefactorPrivate
+typedef struct _NcScalefactorPrivate
 {
   NcDistance *dist;
   NcmModelCtrl *ctrl;
@@ -90,6 +90,12 @@ struct _NcScalefactorPrivate
   N_Vector y;
   SUNMatrix A;
   SUNLinearSolver LS;
+} NcScalefactorPrivate;
+
+
+struct _NcScalefactor
+{
+  GObject parent_instance;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcScalefactor, nc_scalefactor, G_TYPE_OBJECT)
@@ -97,7 +103,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcScalefactor, nc_scalefactor, G_TYPE_OBJECT)
 static void
 nc_scalefactor_init (NcScalefactor *a)
 {
-  NcScalefactorPrivate * const self = a->priv = nc_scalefactor_get_instance_private (a);
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
     g_error ("ERROR: SUNContext_Create failed\n");
@@ -139,7 +145,7 @@ static void
 nc_scalefactor_dispose (GObject *object)
 {
   NcScalefactor *a                  = NC_SCALEFACTOR (object);
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   ncm_spline_clear (&self->a_eta);
   ncm_spline_clear (&self->eta_a);
@@ -157,7 +163,7 @@ static void
 nc_scalefactor_finalize (GObject *object)
 {
   NcScalefactor *a                  = NC_SCALEFACTOR (object);
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   CVodeFree (&self->cvode);
   N_VDestroy (self->y);
@@ -184,7 +190,7 @@ static void
 nc_scalefactor_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcScalefactor *a                  = NC_SCALEFACTOR (object);
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   g_return_if_fail (NC_IS_SCALEFACTOR (object));
 
@@ -218,7 +224,7 @@ static void
 nc_scalefactor_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcScalefactor *a                  = NC_SCALEFACTOR (object);
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   g_return_if_fail (NC_IS_SCALEFACTOR (object));
 
@@ -392,7 +398,7 @@ static void _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo);
 void
 nc_scalefactor_prepare (NcScalefactor *a, NcHICosmo *cosmo)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   nc_distance_prepare_if_needed (self->dist, cosmo);
 
@@ -414,7 +420,7 @@ nc_scalefactor_prepare (NcScalefactor *a, NcHICosmo *cosmo)
 void
 nc_scalefactor_prepare_if_needed (NcScalefactor *a, NcHICosmo *cosmo)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   if (ncm_model_ctrl_update (self->ctrl, NCM_MODEL (cosmo)))
     nc_scalefactor_prepare (a, cosmo);
@@ -431,7 +437,7 @@ nc_scalefactor_prepare_if_needed (NcScalefactor *a, NcHICosmo *cosmo)
 void
 nc_scalefactor_set_zf (NcScalefactor *a, const gdouble zf)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   if (self->zf != zf)
   {
@@ -454,7 +460,7 @@ nc_scalefactor_set_zf (NcScalefactor *a, const gdouble zf)
 void
 nc_scalefactor_require_zf (NcScalefactor *a, const gdouble zf)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   if (zf > self->zf)
   {
@@ -477,7 +483,7 @@ nc_scalefactor_require_zf (NcScalefactor *a, const gdouble zf)
 void
 nc_scalefactor_set_a0 (NcScalefactor *a, const gdouble a0)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   if (self->a0 != a0)
   {
@@ -497,7 +503,7 @@ nc_scalefactor_set_a0 (NcScalefactor *a, const gdouble a0)
 void
 nc_scalefactor_set_reltol (NcScalefactor *a, const gdouble reltol)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   if (self->reltol != reltol)
   {
@@ -517,7 +523,7 @@ nc_scalefactor_set_reltol (NcScalefactor *a, const gdouble reltol)
 void
 nc_scalefactor_set_abstol (NcScalefactor *a, const gdouble abstol)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   if (self->abstol != abstol)
   {
@@ -541,7 +547,7 @@ nc_scalefactor_set_abstol (NcScalefactor *a, const gdouble abstol)
 void
 nc_scalefactor_set_a0_conformal_normal (NcScalefactor *a, gboolean enable)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   if ((!self->sets_conf_norm && enable) || (self->sets_conf_norm && !enable))
   {
@@ -561,7 +567,7 @@ nc_scalefactor_set_a0_conformal_normal (NcScalefactor *a, gboolean enable)
 gdouble
 nc_scalefactor_get_zf (NcScalefactor *a)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   return self->zf;
 }
@@ -577,7 +583,7 @@ nc_scalefactor_get_zf (NcScalefactor *a)
 gdouble
 nc_scalefactor_get_a0 (NcScalefactor *a)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   return self->a0;
 }
@@ -593,7 +599,7 @@ nc_scalefactor_get_a0 (NcScalefactor *a)
 gdouble
 nc_scalefactor_get_reltol (NcScalefactor *a)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   return self->reltol;
 }
@@ -609,7 +615,7 @@ nc_scalefactor_get_reltol (NcScalefactor *a)
 gdouble
 nc_scalefactor_get_abstol (NcScalefactor *a)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   return self->abstol;
 }
@@ -619,7 +625,7 @@ static void nc_scalefactor_init_cvode (NcScalefactor *a, NcHICosmo *cosmo);
 static void
 _nc_scalefactor_init (NcScalefactor *a, NcHICosmo *cosmo)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
   const gdouble Omega_k0            = nc_hicosmo_Omega_k0 (cosmo);
 
   self->eta_i = nc_distance_conformal_time (self->dist, cosmo, self->zf);
@@ -651,7 +657,7 @@ _nc_scalefactor_init (NcScalefactor *a, NcHICosmo *cosmo)
 static void
 nc_scalefactor_init_cvode (NcScalefactor *a, NcHICosmo *cosmo)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
   gint flag;
 
   if (self->cvode_init)
@@ -700,7 +706,7 @@ nc_scalefactor_init_cvode (NcScalefactor *a, NcHICosmo *cosmo)
 gdouble
 nc_scalefactor_eval_z_eta (NcScalefactor *a, const gdouble eta)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   return -ncm_spline_eval (self->a_eta, eta);
 }
@@ -718,7 +724,7 @@ nc_scalefactor_eval_z_eta (NcScalefactor *a, const gdouble eta)
 gdouble
 nc_scalefactor_eval_eta_z (NcScalefactor *a, const gdouble z)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   return ncm_spline_eval (self->eta_a, -z);
 }
@@ -736,7 +742,7 @@ nc_scalefactor_eval_eta_z (NcScalefactor *a, const gdouble z)
 gdouble
 nc_scalefactor_eval_eta_x (NcScalefactor *a, const gdouble x)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   return ncm_spline_eval (self->eta_a, -(x - 1.0));
 }
@@ -754,7 +760,7 @@ nc_scalefactor_eval_eta_x (NcScalefactor *a, const gdouble x)
 gdouble
 nc_scalefactor_eval_a_eta (NcScalefactor *a, const gdouble eta)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
   gdouble mz;
 
   mz = ncm_spline_eval (self->a_eta, eta);
@@ -775,7 +781,7 @@ nc_scalefactor_eval_a_eta (NcScalefactor *a, const gdouble eta)
 gdouble
 nc_scalefactor_eval_t_eta (NcScalefactor *a, const gdouble eta)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   return ncm_spline_eval (self->t_eta, eta);
 }
@@ -793,7 +799,7 @@ nc_scalefactor_eval_t_eta (NcScalefactor *a, const gdouble eta)
 gdouble
 nc_scalefactor_eval_eta_t (NcScalefactor *a, const gdouble t)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
 
   return ncm_spline_eval (self->eta_t, t);
 }
@@ -801,7 +807,7 @@ nc_scalefactor_eval_eta_t (NcScalefactor *a, const gdouble t)
 static void
 _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo)
 {
-  NcScalefactorPrivate * const self = a->priv;
+  NcScalefactorPrivate * const self = nc_scalefactor_get_instance_private (a);
   GArray *eta_a, *mz_a, *t_a = NULL;
   gdouble mzi, last_eta;
   gint flag;

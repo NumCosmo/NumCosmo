@@ -88,7 +88,7 @@
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
-struct _NcHIQG1DPrivate
+typedef struct _NcHIQG1DPrivate
 {
   gdouble lambda;
   gdouble acs_a;
@@ -146,7 +146,7 @@ struct _NcHIQG1DPrivate
   NcmVector *vlvr;
   gint nBohm;
   N_Vector yBohm;
-};
+} NcHIQG1DPrivate;
 
 enum
 {
@@ -158,6 +158,12 @@ enum
   PROP_NOBOUNDARY,
 };
 
+
+struct _NcHIQG1D
+{
+  GObject parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcHIQG1D, nc_hiqg_1d, G_TYPE_OBJECT)
 G_DEFINE_BOXED_TYPE (NcHIQG1DGauss, nc_hiqg_1d_gauss, nc_hiqg_1d_gauss_dup, nc_hiqg_1d_gauss_free)
 G_DEFINE_BOXED_TYPE (NcHIQG1DExp,   nc_hiqg_1d_exp,   nc_hiqg_1d_exp_dup,   nc_hiqg_1d_exp_free)
@@ -166,7 +172,7 @@ G_DEFINE_BOXED_TYPE (NcHIQG1DSQ,    nc_hiqg_1d_sq,    nc_hiqg_1d_sq_dup,    nc_h
 static void
 nc_hiqg_1d_init (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv = nc_hiqg_1d_get_instance_private (qg1d);
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   if (SUNContext_Create (SUN_COMM_NULL, &self->sunctx))
     g_error ("ERROR: SUNContext_Create failed\n");
@@ -249,7 +255,7 @@ static void
 _nc_hiqg_1d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHIQG1D *qg1d               = NC_HIQG_1D (object);
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   g_return_if_fail (NC_IS_HIQG_1D (object));
 
@@ -284,7 +290,7 @@ static void
 _nc_hiqg_1d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcHIQG1D *qg1d               = NC_HIQG_1D (object);
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   g_return_if_fail (NC_IS_HIQG_1D (object));
 
@@ -315,7 +321,7 @@ static void
 _nc_hiqg_1d_dispose (GObject *object)
 {
   NcHIQG1D *qg1d               = NC_HIQG_1D (object);
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   g_clear_pointer (&self->LS, SUNLinSolFree);
   g_clear_pointer (&self->A, SUNMatDestroy);
@@ -370,7 +376,7 @@ static void
 _nc_hiqg_1d_finalize (GObject *object)
 {
   NcHIQG1D *qg1d               = NC_HIQG_1D (object);
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   if (self->bohm != NULL)
   {
@@ -870,7 +876,7 @@ nc_hiqg_1d_clear (NcHIQG1D **qg1d)
 void
 nc_hiqg_1d_set_nknots (NcHIQG1D *qg1d, const guint nknots)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   if (self->nknots != nknots)
   {
@@ -956,7 +962,7 @@ nc_hiqg_1d_set_nknots (NcHIQG1D *qg1d, const guint nknots)
 guint
 nc_hiqg_1d_get_nknots (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   return self->nknots;
 }
@@ -982,7 +988,7 @@ typedef struct _NcHIQG1DInitCond
 void
 nc_hiqg_1d_set_init_cond (NcHIQG1D *qg1d, NcHIQG1DPsi psi0_lnRS, gpointer psi_data, const gdouble xi, const gdouble xf)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   guint i;
 
   g_assert_cmpfloat (xi, <, xf);
@@ -1242,7 +1248,7 @@ nc_hiqg_1d_Sbasis_x3 (NcHIQG1D *qg1d, const gdouble x, const gdouble y1, const g
 gdouble
 nc_hiqg_1d_get_lambda (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   return self->lambda;
 }
@@ -1258,7 +1264,7 @@ nc_hiqg_1d_get_lambda (NcHIQG1D *qg1d)
 gdouble
 nc_hiqg_1d_get_basis_a (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   return self->basis_a;
 }
@@ -1274,7 +1280,7 @@ nc_hiqg_1d_get_basis_a (NcHIQG1D *qg1d)
 gdouble
 nc_hiqg_1d_get_acs_a (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   return self->acs_a;
 }
@@ -1290,7 +1296,7 @@ nc_hiqg_1d_get_acs_a (NcHIQG1D *qg1d)
 gdouble
 nc_hiqg_1d_get_nu (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   return self->nu;
 }
@@ -1306,7 +1312,7 @@ nc_hiqg_1d_get_nu (NcHIQG1D *qg1d)
 gdouble
 nc_hiqg_1d_get_mu (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   return self->mu;
 }
@@ -1332,7 +1338,7 @@ static gint
 _nc_hiqg_1d_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
 {
   NcHIQG1D *qg1d               = NC_HIQG_1D (user_data);
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   gdouble *psi                 = N_VGetArrayPointer (y);
   gdouble *dpsi                = N_VGetArrayPointer (ydot);
   gint i;
@@ -1351,7 +1357,7 @@ _nc_hiqg_1d_bohm_f (gdouble t, N_Vector y, N_Vector ydot, gpointer user_data)
 void
 _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   const gdouble t0             = 0.0;
   const gdouble ini_q          = nc_hiqg_1d_int_xrho_0_inf (qg1d);
   gint flag;
@@ -1394,7 +1400,7 @@ _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
 void
 nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   gint ret                     = 0;
   guint i;
 
@@ -1671,7 +1677,7 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
 NcmVector *
 nc_hiqg_1d_peek_knots (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   return self->knots;
 }
@@ -1689,7 +1695,7 @@ nc_hiqg_1d_peek_knots (NcHIQG1D *qg1d)
 gdouble
 nc_hiqg_1d_eval_ev (NcHIQG1D *qg1d, const gint i, const gdouble x)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   g_assert_cmpint (i, <, self->nknots);
   {
@@ -1723,7 +1729,7 @@ nc_hiqg_1d_eval_ev (NcHIQG1D *qg1d, const gint i, const gdouble x)
 void
 nc_hiqg_1d_eval_psi0 (NcHIQG1D *qg1d, const gdouble x, gdouble *psi0)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   guint i;
 
   psi0[0] = 0.0;
@@ -1744,7 +1750,7 @@ nc_hiqg_1d_eval_psi0 (NcHIQG1D *qg1d, const gdouble x, gdouble *psi0)
 static void
 _nc_hiqg_1d_evol_C (NcHIQG1D *qg1d, const gdouble t)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   complex double *A0           = (complex double *) ncm_vector_data (self->A0);
   guint i;
 
@@ -1763,7 +1769,7 @@ _nc_hiqg_1d_evol_C (NcHIQG1D *qg1d, const gdouble t)
 static void
 _nc_hiqg_1d_prepare_splines (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   gint ret;
   guint i;
 
@@ -1797,7 +1803,7 @@ _nc_hiqg_1d_prepare_splines (NcHIQG1D *qg1d)
 void
 nc_hiqg_1d_evol (NcHIQG1D *qg1d, const gdouble t)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   /*gdouble *psi = N_VGetArrayPointer (self->yBohm);*/
   gdouble ts = 0.0;
   gint flag;
@@ -1827,7 +1833,7 @@ nc_hiqg_1d_evol (NcHIQG1D *qg1d, const gdouble t)
 void
 nc_hiqg_1d_eval_psi (NcHIQG1D *qg1d, const gdouble x, gdouble *psi)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   guint i;
 
   if (FALSE)
@@ -1865,7 +1871,7 @@ nc_hiqg_1d_eval_psi (NcHIQG1D *qg1d, const gdouble x, gdouble *psi)
 gdouble
 nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   gdouble dS_rho_x3            = 0.0;
   gdouble Re_psi_x             = 0.0;
   gdouble Im_psi_x             = 0.0;
@@ -1920,14 +1926,15 @@ nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x)
  * nc_hiqg_1d_int_rho_0_inf:
  * @qg1d: a #NcHIQG1D
  *
- * Integrates the probability density $ho$ from 0 to infinity.
+ * Integrates the probability density $
+ho$ from 0 to infinity.
  *
  * Returns: the total probability.
  */
 gdouble
 nc_hiqg_1d_int_rho_0_inf (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   gdouble int_rho              = 0.0;
 
   if (FALSE)
@@ -1994,14 +2001,16 @@ _nc_hiqg_1d_mean_d_int (gdouble x, NcHIQG1DPrivate * const self)
  * nc_hiqg_1d_int_xrho_0_inf:
  * @qg1d: a #NcHIQG1D
  *
- * Integrates $x ho$ from 0 to infinity, computing the expectation value of $x$.
+ * Integrates $x 
+ho$ from 0 to infinity, computing the expectation value of $x$.
  *
- * Returns: $\langle x angle$.
+ * Returns: $\langle x 
+angle$.
  */
 gdouble
 nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   gdouble int_xrho             = 0.0;
 
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
@@ -2022,14 +2031,17 @@ nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d)
  * nc_hiqg_1d_int_x2rho_0_inf:
  * @qg1d: a #NcHIQG1D
  *
- * Integrates $x^2 ho$ from 0 to infinity, computing $\langle x^2 angle$.
+ * Integrates $x^2 
+ho$ from 0 to infinity, computing $\langle x^2 
+angle$.
  *
- * Returns: $\langle x^2 angle$.
+ * Returns: $\langle x^2 
+angle$.
  */
 gdouble
 nc_hiqg_1d_int_x2rho_0_inf (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   gdouble int_x2rho            = 0.0;
 
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
@@ -2052,12 +2064,13 @@ nc_hiqg_1d_int_x2rho_0_inf (NcHIQG1D *qg1d)
  *
  * Computes the expectation value of the momentum.
  *
- * Returns: $\langle p angle$.
+ * Returns: $\langle p 
+angle$.
  */
 gdouble
 nc_hiqg_1d_expect_p (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   gdouble mean_p               = 0.0;
 
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
@@ -2080,12 +2093,13 @@ nc_hiqg_1d_expect_p (NcHIQG1D *qg1d)
  *
  * Computes the expectation value of the weighted current.
  *
- * Returns: $\langle d angle$.
+ * Returns: $\langle d 
+angle$.
  */
 gdouble
 nc_hiqg_1d_expect_d (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   gdouble mean_d               = 0.0;
 
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
@@ -2113,7 +2127,7 @@ nc_hiqg_1d_expect_d (NcHIQG1D *qg1d)
 gint
 nc_hiqg_1d_nBohm (NcHIQG1D *qg1d)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   return self->nBohm;
 }
@@ -2130,7 +2144,7 @@ nc_hiqg_1d_nBohm (NcHIQG1D *qg1d)
 gdouble
 nc_hiqg_1d_Bohm (NcHIQG1D *qg1d, gint i)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
 
   return NV_Ith_S (self->yBohm, i);
 }
@@ -2147,7 +2161,7 @@ nc_hiqg_1d_Bohm (NcHIQG1D *qg1d, gint i)
 gdouble
 nc_hiqg_1d_Bohm_p (NcHIQG1D *qg1d, gint i)
 {
-  NcHIQG1DPrivate * const self = qg1d->priv;
+  NcHIQG1DPrivate * const self = nc_hiqg_1d_get_instance_private (qg1d);
   const gdouble a              = NV_Ith_S (self->yBohm, i);
 
   return nc_hiqg_1d_eval_dS (qg1d, a);

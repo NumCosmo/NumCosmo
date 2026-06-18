@@ -41,7 +41,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_obj_array.h"
 
-struct _NcGalaxySelfuncPrivate
+typedef struct _NcGalaxySelfuncPrivate
 {
   guint nshells;
 
@@ -54,7 +54,7 @@ struct _NcGalaxySelfuncPrivate
   NcmVector *zmax;
 
   NcmObjArray *dNdz_a;
-};
+} NcGalaxySelfuncPrivate;
 
 enum
 {
@@ -64,12 +64,18 @@ enum
   PROP_SIZE,
 };
 
+
+struct _NcGalaxySelfunc
+{
+  GObject parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxySelfunc, nc_galaxy_selfunc, G_TYPE_OBJECT)
 
 static void
 nc_galaxy_selfunc_init (NcGalaxySelfunc *gsf)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv = nc_galaxy_selfunc_get_instance_private (gsf);
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
 
   self->nshells  = 0;
   self->zmin_all = 0;
@@ -127,7 +133,7 @@ static void
 _nc_galaxy_selfunc_dispose (GObject *object)
 {
   NcGalaxySelfunc *gsf                = NC_GALAXY_SELFUNC (object);
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
 
   ncm_vector_clear (&self->norm);
   ncm_vector_clear (&self->zmin);
@@ -244,7 +250,7 @@ nc_galaxy_selfunc_clear (NcGalaxySelfunc **gsf)
 void
 nc_galaxy_selfunc_set_nshells (NcGalaxySelfunc *gsf, const guint nshells)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
 
   if (self->nshells != nshells)
   {
@@ -296,7 +302,7 @@ static void _nc_galaxy_selfunc_set_survey_redshift_limits (NcGalaxySelfunc *gsf)
 void
 nc_galaxy_selfunc_set_shell_splines (NcGalaxySelfunc *gsf, NcmObjArray *dNdz_a)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
   guint iz;
 
   for (iz = 0; iz < self->nshells; iz++)
@@ -324,7 +330,7 @@ nc_galaxy_selfunc_set_shell_splines (NcGalaxySelfunc *gsf, NcmObjArray *dNdz_a)
 NcmObjArray *
 nc_galaxy_selfunc_get_shell_splines (NcGalaxySelfunc *gsf)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
 
   return ncm_obj_array_ref (self->dNdz_a);
 }
@@ -340,7 +346,7 @@ nc_galaxy_selfunc_get_shell_splines (NcGalaxySelfunc *gsf)
 guint
 nc_galaxy_selfunc_get_nshells (NcGalaxySelfunc *gsf)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
 
   return self->nshells;
 }
@@ -348,7 +354,7 @@ nc_galaxy_selfunc_get_nshells (NcGalaxySelfunc *gsf)
 static void
 _nc_galaxy_selfunc_set_zmean (NcGalaxySelfunc *gsf, const guint shell)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
 
   guint iz;
   gdouble zmin, zmean, zmax;
@@ -383,7 +389,7 @@ _nc_galaxy_selfunc_set_zmean (NcGalaxySelfunc *gsf, const guint shell)
 static void
 _nc_galaxy_selfunc_set_minmax_norma (NcGalaxySelfunc *gsf, const guint shell)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
   NcmSpline *dNdz                     = NCM_SPLINE (ncm_obj_array_peek (self->dNdz_a, shell));
   NcmVector *z                        = ncm_spline_get_xv (dNdz);
   NcmVector *phi                      = ncm_spline_get_yv (dNdz);
@@ -434,7 +440,7 @@ _nc_galaxy_selfunc_read_file_to_spline (const gchar *filename, NcmSpline *dNdz_s
 static void
 _nc_galaxy_selfunc_set_dNdz_from_file (NcGalaxySelfunc *gsf, const gchar *prefix, const gchar *suffix, const guint shell)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
   NcmSpline *dNdz                     = NCM_SPLINE (ncm_obj_array_peek (self->dNdz_a, shell));
   gchar *filename;
 
@@ -448,7 +454,7 @@ _nc_galaxy_selfunc_set_dNdz_from_file (NcGalaxySelfunc *gsf, const gchar *prefix
 static void
 _nc_galaxy_selfunc_set_survey_redshift_limits (NcGalaxySelfunc *gsf)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
 
   self->zmin_all = ncm_vector_get_min (self->zmin);
   self->zmax_all = ncm_vector_get_max (self->zmax);
@@ -471,7 +477,7 @@ _nc_galaxy_selfunc_set_survey_redshift_limits (NcGalaxySelfunc *gsf)
 void
 nc_galaxy_selfunc_load_from_txts (NcGalaxySelfunc *gsf, const gchar *prefix, const gchar *suffix)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
   guint iz;
 
   for (iz = 0; iz < self->nshells; iz++)
@@ -497,7 +503,7 @@ nc_galaxy_selfunc_load_from_txts (NcGalaxySelfunc *gsf, const gchar *prefix, con
 gdouble
 nc_galaxy_selfunc_eval (NcGalaxySelfunc *gsf, const guint shell, const gdouble z)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
 
   return ncm_spline_eval (NCM_SPLINE (ncm_obj_array_peek (self->dNdz_a, shell)), z);
 }
@@ -514,7 +520,7 @@ nc_galaxy_selfunc_eval (NcGalaxySelfunc *gsf, const guint shell, const gdouble z
 gdouble
 nc_galaxy_selfunc_get_zmin (NcGalaxySelfunc *gsf, guint shell)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
 
   return ncm_vector_get (self->zmin, shell);
 }
@@ -531,7 +537,7 @@ nc_galaxy_selfunc_get_zmin (NcGalaxySelfunc *gsf, guint shell)
 gdouble
 nc_galaxy_selfunc_get_zmean (NcGalaxySelfunc *gsf, guint shell)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
 
   return ncm_vector_get (self->zmean, shell);
 }
@@ -548,7 +554,7 @@ nc_galaxy_selfunc_get_zmean (NcGalaxySelfunc *gsf, guint shell)
 gdouble
 nc_galaxy_selfunc_get_zmax (NcGalaxySelfunc *gsf, guint shell)
 {
-  NcGalaxySelfuncPrivate * const self = gsf->priv;
+  NcGalaxySelfuncPrivate * const self = nc_galaxy_selfunc_get_instance_private (gsf);
 
   return ncm_vector_get (self->zmax, shell);
 }

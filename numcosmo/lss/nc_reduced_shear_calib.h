@@ -35,31 +35,19 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_REDUCED_SHEAR_CALIB             (nc_reduced_shear_calib_get_type ())
-#define NC_REDUCED_SHEAR_CALIB(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_REDUCED_SHEAR_CALIB, NcReducedShearCalib))
-#define NC_REDUCED_SHEAR_CALIB_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_REDUCED_SHEAR_CALIB, NcReducedShearCalibClass))
-#define NC_IS_REDUCED_SHEAR_CALIB(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_REDUCED_SHEAR_CALIB))
-#define NC_IS_REDUCED_SHEAR_CALIB_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_REDUCED_SHEAR_CALIB))
-#define NC_REDUCED_SHEAR_CALIB_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_REDUCED_SHEAR_CALIB, NcReducedShearCalibClass))
 
-typedef struct _NcReducedShearCalibClass NcReducedShearCalibClass;
-typedef struct _NcReducedShearCalib NcReducedShearCalib;
-typedef struct _NcReducedShearCalibPrivate NcReducedShearCalibPrivate;
+G_DECLARE_DERIVABLE_TYPE (NcReducedShearCalib, nc_reduced_shear_calib, NC, REDUCED_SHEAR_CALIB, NcmModel)
 
 struct _NcReducedShearCalibClass
 {
   /*< private >*/
   NcmModelClass parent_class;
   gdouble (*eval) (NcReducedShearCalib *rs_calib, const gdouble g_th, const gdouble psf_size, const gdouble gal_size);
+
+  /* Padding to allow 18 virtual functions without breaking ABI. */
+  gpointer padding[18];
 };
 
-struct _NcReducedShearCalib
-{
-  /*< private >*/
-  NcmModel parent_instance;
-  NcReducedShearCalibPrivate *priv;
-};
-
-GType nc_reduced_shear_calib_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_reduced_shear_calib);
 

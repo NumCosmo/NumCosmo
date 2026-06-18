@@ -58,7 +58,7 @@
 #include "lss/nc_multiplicity_func_bocquet.h"
 #include "numcosmo/nc_enum_types.h"
 
-struct _NcMultiplicityFuncBocquetPrivate
+typedef struct _NcMultiplicityFuncBocquetPrivate
 {
   NcMultiplicityFuncMassDef mdef;
   NcMultiplicityFuncBocquetSim sim;
@@ -72,7 +72,7 @@ struct _NcMultiplicityFuncBocquetPrivate
   gdouble cz;
   gdouble Delta;
   gboolean constructed;
-};
+} NcMultiplicityFuncBocquetPrivate;
 
 enum
 {
@@ -81,12 +81,18 @@ enum
   PROP_SIZE,
 };
 
+
+struct _NcMultiplicityFuncBocquet
+{
+  NcMultiplicityFunc parent_instance;
+};
+
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncBocquet, nc_multiplicity_func_bocquet, NC_TYPE_MULTIPLICITY_FUNC)
 
 static void
 nc_multiplicity_func_bocquet_init (NcMultiplicityFuncBocquet *mb)
 {
-  NcMultiplicityFuncBocquetPrivate * const self = mb->priv = nc_multiplicity_func_bocquet_get_instance_private (mb);
+  NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mb);
 
   self->mdef        = NC_MULTIPLICITY_FUNC_MASS_DEF_LEN;
   self->sim         = NC_MULTIPLICITY_FUNC_BOCQUET_SIM_LEN;
@@ -148,7 +154,7 @@ _nc_multiplicity_func_bocquet_constructed (GObject *object)
 
   {
     NcMultiplicityFuncBocquet *mb                 = NC_MULTIPLICITY_FUNC_BOCQUET (object);
-    NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
+    NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mb);
 
     _nc_multiplicity_func_bocquet_set_all (mb);
 
@@ -208,7 +214,7 @@ nc_multiplicity_func_bocquet_class_init (NcMultiplicityFuncBocquetClass *klass)
 static void
 _nc_multiplicity_func_bocquet_set_all (NcMultiplicityFuncBocquet *mb)
 {
-  NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
+  NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mb);
 
   switch (self->sim)
   {
@@ -340,7 +346,7 @@ static void
 _nc_multiplicity_func_bocquet_set_mdef (NcMultiplicityFunc *mulf, NcMultiplicityFuncMassDef mdef)
 {
   NcMultiplicityFuncBocquet *mb                 = NC_MULTIPLICITY_FUNC_BOCQUET (mulf);
-  NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
+  NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mb);
 
   self->mdef = mdef;
 
@@ -352,7 +358,7 @@ static NcMultiplicityFuncMassDef
 _nc_multiplicity_func_bocquet_get_mdef (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncBocquet *mb                 = NC_MULTIPLICITY_FUNC_BOCQUET (mulf);
-  NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
+  NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mb);
 
   return self->mdef;
 }
@@ -361,7 +367,7 @@ static gboolean
 _nc_multiplicity_func_bocquet_has_correction_factor (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncBocquet *mb                 = NC_MULTIPLICITY_FUNC_BOCQUET (mulf);
-  NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
+  NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mb);
 
   if (self->mdef == NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL)
     return TRUE;
@@ -373,7 +379,7 @@ static gdouble
 _nc_multiplicity_func_bocquet_correction_factor (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM)
 {
   NcMultiplicityFuncBocquet *mt                 = NC_MULTIPLICITY_FUNC_BOCQUET (mulf);
-  NcMultiplicityFuncBocquetPrivate * const self = mt->priv;
+  NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mt);
   const gdouble Omega_m                         = nc_hicosmo_E2Omega_m (cosmo, z) / nc_hicosmo_E2 (cosmo, z);
   guint Delta                                   = (guint) self->Delta;
 
@@ -416,7 +422,7 @@ static gdouble
 _nc_multiplicity_func_bocquet_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Bocquet: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncBocquet *mt                 = NC_MULTIPLICITY_FUNC_BOCQUET (mulf);
-  NcMultiplicityFuncBocquetPrivate * const self = mt->priv;
+  NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mt);
 
   const gdouble A = self->A0 * pow (1.0 + z, self->Az);
   const gdouble a = self->a0 * pow (1.0 + z, self->az);
@@ -517,7 +523,7 @@ void
 _nc_multiplicity_func_bocquet_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta)
 {
   NcMultiplicityFuncBocquet *mb                 = NC_MULTIPLICITY_FUNC_BOCQUET (mulf);
-  NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
+  NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mb);
 
   self->Delta = Delta;
 
@@ -535,7 +541,7 @@ gdouble
 _nc_multiplicity_func_bocquet_get_Delta (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncBocquet *mb                 = NC_MULTIPLICITY_FUNC_BOCQUET (mulf);
-  NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
+  NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mb);
 
   return self->Delta;
 }
@@ -551,7 +557,7 @@ _nc_multiplicity_func_bocquet_get_Delta (NcMultiplicityFunc *mulf)
 void
 nc_multiplicity_func_bocquet_set_sim (NcMultiplicityFuncBocquet *mb, NcMultiplicityFuncBocquetSim sim)
 {
-  NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
+  NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mb);
 
   self->sim = sim;
 
@@ -568,7 +574,7 @@ nc_multiplicity_func_bocquet_set_sim (NcMultiplicityFuncBocquet *mb, NcMultiplic
 NcMultiplicityFuncBocquetSim
 nc_multiplicity_func_bocquet_get_sim (const NcMultiplicityFuncBocquet *mb)
 {
-  NcMultiplicityFuncBocquetPrivate * const self = mb->priv;
+  NcMultiplicityFuncBocquetPrivate * const self = nc_multiplicity_func_bocquet_get_instance_private (mb);
 
   return self->sim;
 }

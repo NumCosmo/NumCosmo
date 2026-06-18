@@ -35,15 +35,9 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_MULTIPLICITY_FUNC_BOCQUET             (nc_multiplicity_func_bocquet_get_type ())
-#define NC_MULTIPLICITY_FUNC_BOCQUET(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MULTIPLICITY_FUNC_BOCQUET, NcMultiplicityFuncBocquet))
-#define NC_MULTIPLICITY_FUNC_BOCQUET_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MULTIPLICITY_FUNC_BOCQUET, NcMultiplicityFuncBocquetClass))
-#define NC_IS_MULTIPLICITY_FUNC_BOCQUET(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MULTIPLICITY_FUNC_BOCQUET))
-#define NC_IS_MULTIPLICITY_FUNC_BOCQUET_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MULTIPLICITY_FUNC_BOCQUET))
-#define NC_MULTIPLICITY_FUNC_BOCQUET_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MULTIPLICITY_FUNC_BOCQUET, NcMultiplicityFuncBocquetClass))
 
-typedef struct _NcMultiplicityFuncBocquetClass NcMultiplicityFuncBocquetClass;
-typedef struct _NcMultiplicityFuncBocquet NcMultiplicityFuncBocquet;
-typedef struct _NcMultiplicityFuncBocquetPrivate NcMultiplicityFuncBocquetPrivate;
+G_DECLARE_FINAL_TYPE (NcMultiplicityFuncBocquet, nc_multiplicity_func_bocquet, NC, MULTIPLICITY_FUNC_BOCQUET, NcMultiplicityFunc)
+
 
 /**
  * NcMultiplicityFuncBocquetSim:
@@ -58,21 +52,6 @@ typedef enum _NcMultiplicityFuncBocquetSim
   /* < private > */
   NC_MULTIPLICITY_FUNC_BOCQUET_SIM_LEN, /*< skip >*/
 } NcMultiplicityFuncBocquetSim;
-
-struct _NcMultiplicityFuncBocquetClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
-};
-
-struct _NcMultiplicityFuncBocquet
-{
-  /*< private >*/
-  NcMultiplicityFunc parent_instance;
-  NcMultiplicityFuncBocquetPrivate *priv;
-};
-
-GType nc_multiplicity_func_bocquet_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFuncBocquet *nc_multiplicity_func_bocquet_new (void);
 NcMultiplicityFuncBocquet *nc_multiplicity_func_bocquet_new_full (NcMultiplicityFuncMassDef mdef, NcMultiplicityFuncBocquetSim sim, gdouble Delta);

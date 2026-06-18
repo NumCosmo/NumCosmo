@@ -66,6 +66,12 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+
+struct _NcWindowGaussian
+{
+  NcWindow parent_instance;
+};
+
 G_DEFINE_TYPE (NcWindowGaussian, nc_window_gaussian, NC_TYPE_WINDOW)
 
 /**
