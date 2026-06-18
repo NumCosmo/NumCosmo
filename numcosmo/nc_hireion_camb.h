@@ -56,10 +56,10 @@ struct _NcHIReionCambClass
 
 /**
  * NcHIReionCambSParams:
- * @NC_HIREION_CAMB_HII_HEII_Z: FIXME
- * @NC_HIREION_CAMB_HEIII_Z: FIXME
+ * @NC_HIREION_CAMB_HII_HEII_Z: redshift of hydrogen and helium-II reionization
+ * @NC_HIREION_CAMB_HEIII_Z: redshift of helium-III reionization
  *
- * FIXME
+ * CAMB-like reionization model parameters.
  *
  */
 typedef enum /*< enum,underscore_name=NC_HIREION_CAMB_SPARAMS >*/

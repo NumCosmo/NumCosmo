@@ -27,12 +27,11 @@
  *
  *  Class defining the Bhattacharya et al. 2013 concentration-mass relation
  *
- * This class implements the Bhattacharya et al. 2013 concentration-mass relation.
- * FIXME include reference, equation, ranges of mass and redshift.
- * TODO: include the following conditions for the mass (parameter):
- * Range -  M_min = 2E12 up to M_max = 2E15
- * But, if z > 0.5, then M_max = 2E14 and, if z > 1.5, then M_max = 1E14.
- * These values are in units of Msun/h.
+ * This class implements the Bhattacharya et al. (2013) concentration-mass relation
+ * [Bhattacharya et al. (2013)][XBhattacharya2013].
+ * Valid mass range: $M \in [2 \times 10^{12},\, 2 \times 10^{15}]\, M_\odot/h$,
+ * with $M_\mathrm{max} = 2 \times 10^{14}\, M_\odot/h$ for $z > 0.5$ and
+ * $M_\mathrm{max} = 10^{14}\, M_\odot/h$ for $z > 1.5$.
  */
 
 #ifdef HAVE_CONFIG_H

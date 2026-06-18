@@ -26,8 +26,8 @@
 /**
  * NcHaloCMDiemer15:
  *
- * Class defining the Diemer & Kravtsov 2015 concentration-mass relation.
- * FIXME include reference and equation
+ * Class defining the Diemer & Kravtsov (2015) concentration-mass relation
+ * [Diemer and Kravtsov (2015)][XDiemer2015].
  *
  */
 

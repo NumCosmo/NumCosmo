@@ -24,9 +24,9 @@
 
 /**
  * @file
- * @brief FIXME
+ * @brief CMB map analysis tool
  *
- * FIXME
+ * Tool for CMB map processing and analysis.
  */
 
 

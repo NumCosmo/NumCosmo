@@ -55,7 +55,7 @@ typedef struct _NcClusterMassSelectionPrivate NcClusterMassSelectionPrivate;
  * @NC_CLUSTER_MASS_SELECTION_SIGMA_P2: redshift dependency standard deviation of the log-normal distribution
  * @NC_CLUSTER_MASS_SELECTION_CUT: cut in richness
  *
- * FIXME
+ * Cluster mass selection function model parameters.
  *
  */
 typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_SELECTION_SPARAMS >*/

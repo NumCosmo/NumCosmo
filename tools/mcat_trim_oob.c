@@ -50,7 +50,7 @@ main (gint argc, gchar *argv[])
   
   context = g_option_context_new ("- trim out of bounds points.");
   g_option_context_set_summary (context, "catalog trim oob");
-  g_option_context_set_description (context, "CJ Description <FIXME>");
+  g_option_context_set_description (context, "Trims out-of-bounds points from a catalog.");
 
   g_option_context_add_main_entries (context, entries, NULL);
 

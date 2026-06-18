@@ -28,8 +28,8 @@
  *
  * Class defining the Prada et al. 2012 concentration-mass relation
  *
- * This class implements the Prada et al. 2012 concentration-mass relation.
- * FIXME include reference, equation and ranges of mass and redshift.
+ * This class implements the Prada et al. (2012) concentration-mass relation
+ * [Prada et al. (2012)][XPrada2012].
  *
  */
 

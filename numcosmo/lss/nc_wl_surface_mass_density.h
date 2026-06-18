@@ -55,7 +55,7 @@ typedef struct _NcWLSurfaceMassDensitySigmaCache NcWLSurfaceMassDensitySigmaCach
  * @NC_WL_SURFACE_MASS_DENSITY_PCC:  percentage of correctly centered clusters
  * @NC_WL_SURFACE_MASS_DENSITY_ROFF: scale length of the miscentering probability distribution [Mpc/h]
  *
- * FIXME
+ * Weak lensing surface mass density model parameters.
  */
 typedef enum _NcWLSurfaceMassDensityParams
 {

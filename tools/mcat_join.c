@@ -52,7 +52,7 @@ main (gint argc, gchar *argv[])
   
   context = g_option_context_new ("- join different compatible catalogs in a single one.");
   g_option_context_set_summary (context, "catalog join");
-  g_option_context_set_description (context, "CJ Description <FIXME>");
+  g_option_context_set_description (context, "Joins different compatible catalogs into a single one.");
 
   g_option_context_add_main_entries (context, entries, NULL);
 

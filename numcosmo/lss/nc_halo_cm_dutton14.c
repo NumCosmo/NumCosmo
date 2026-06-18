@@ -28,8 +28,8 @@
  * 
  * Class defining the Dutton et al. 2014 concentration-mass relation
  * 
- * This class implements the A. A. Dutton and A. V. Macciò 2014 concentration-mass relation.
- * FIXME include reference (arXiv:1402.7073), equation and range of mass and redshift.
+ * This class implements the Dutton and Macciò (2014) concentration-mass relation
+ * [Dutton and Macciò (2014)][XDutton2014] [[arXiv](https://arxiv.org/abs/1402.7073)].
  *
  */
 

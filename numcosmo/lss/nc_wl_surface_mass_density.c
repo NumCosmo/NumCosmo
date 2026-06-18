@@ -207,7 +207,7 @@ nc_wl_surface_mass_density_class_init (NcWLSurfaceMassDensityClass *klass)
    * NcWLSurfaceMassDensity:Roff:
    *
    * Scale length of the miscentering probability distribution.
-   * FIXME Set correct values (limits) Units: Mpc
+   * Scale length of the miscentering probability distribution (units: Mpc).
    */
   ncm_model_class_set_sparam (model_class, NC_WL_SURFACE_MASS_DENSITY_ROFF, "R_{off}", "Roff",
                               0.0,  2.0, 1e-1,
@@ -692,7 +692,6 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDen
  * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
  * [nc_wl_surface_mass_density_convergence()].
  *
- * FIXME
  *
  */
 void
@@ -764,7 +763,6 @@ nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd
  * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()] and $\kappa(R)$ is the convergence
  * [nc_wl_surface_mass_density_convergence()].
  *
- * FIXME
  *
  * Returns: $g(R)$
  */

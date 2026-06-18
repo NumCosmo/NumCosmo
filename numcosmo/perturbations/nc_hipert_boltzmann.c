@@ -452,7 +452,7 @@ nc_hipert_boltzmann_clear (NcHIPertBoltzmann **pb)
  * @pb: a #NcHIPertBoltzmann
  * @tCls: Cls targets
  *
- * FIXME
+ * Sets the target Cls to compute.
  *
  */
 void
@@ -470,7 +470,7 @@ nc_hipert_boltzmann_set_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType tCl
  * @pb: a #NcHIPertBoltzmann
  * @tCls: Cls targets
  *
- * FIXME
+ * Appends the target Cls to the existing set.
  *
  */
 void
@@ -487,9 +487,9 @@ nc_hipert_boltzmann_append_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType 
  * nc_hipert_boltzmann_get_target_Cls:
  * @pb: a #NcHIPertBoltzmann.
  *
- * FIXME
+ * Gets the target Cls.
  *
- * Returns: FIXME
+ * Returns: the target Cls flags.
  */
 NcDataCMBDataType
 nc_hipert_boltzmann_get_target_Cls (NcHIPertBoltzmann *pb)
@@ -502,7 +502,7 @@ nc_hipert_boltzmann_get_target_Cls (NcHIPertBoltzmann *pb)
  * @pb: a #NcHIPertBoltzmann
  * @calc_transfer: a boolean
  *
- * FIXME
+ * Sets whether to compute the transfer function.
  *
  */
 void
@@ -516,9 +516,9 @@ nc_hipert_boltzmann_set_calc_transfer (NcHIPertBoltzmann *pb, gboolean calc_tran
  * nc_hipert_boltzmann_get_calc_transfer:
  * @pb: a #NcHIPertBoltzmann.
  *
- * FIXME
+ * Gets whether the transfer function is computed.
  *
- * Returns: FIXME
+ * Returns: whether the transfer function computation is enabled.
  */
 gboolean
 nc_hipert_boltzmann_get_calc_transfer (NcHIPertBoltzmann *pb)
@@ -531,7 +531,7 @@ nc_hipert_boltzmann_get_calc_transfer (NcHIPertBoltzmann *pb)
  * @pb: a #NcHIPertBoltzmann
  * @use_lensed_Cls: a boolean
  *
- * FIXME
+ * Sets whether to use lensed Cls.
  *
  */
 void
@@ -545,9 +545,9 @@ nc_hipert_boltzmann_set_lensed_Cls (NcHIPertBoltzmann *pb, gboolean use_lensed_C
  * nc_hipert_boltzmann_lensed_Cls:
  * @pb: a #NcHIPertBoltzmann.
  *
- * FIXME
+ * Gets whether lensed Cls are used.
  *
- * Returns: FIXME
+ * Returns: whether lensed Cls are enabled.
  */
 gboolean
 nc_hipert_boltzmann_lensed_Cls (NcHIPertBoltzmann *pb)
@@ -560,7 +560,7 @@ nc_hipert_boltzmann_lensed_Cls (NcHIPertBoltzmann *pb)
  * @pb: a #NcHIPertBoltzmann
  * @use_tensor: a boolean
  *
- * FIXME
+ * Sets whether to include tensor perturbations.
  *
  */
 void
@@ -574,9 +574,9 @@ nc_hipert_boltzmann_set_tensor (NcHIPertBoltzmann *pb, gboolean use_tensor)
  * nc_hipert_boltzmann_tensor:
  * @pb: a #NcHIPertBoltzmann.
  *
- * FIXME
+ * Gets whether tensor perturbations are included.
  *
- * Returns: FIXME
+ * Returns: whether tensor perturbations are enabled.
  */
 gboolean
 nc_hipert_boltzmann_tensor (NcHIPertBoltzmann *pb)
@@ -589,7 +589,7 @@ nc_hipert_boltzmann_tensor (NcHIPertBoltzmann *pb)
  * @pb: a #NcHIPertBoltzmann.
  * @lmax: last mutipole.
  *
- * FIXME
+ * Sets the maximum multipole for the PHIPHI spectrum.
  *
  */
 void
@@ -606,7 +606,7 @@ nc_hipert_boltzmann_set_PHIPHI_lmax (NcHIPertBoltzmann *pb, guint lmax)
  * @pb: a #NcHIPertBoltzmann.
  * @lmax: last mutipole.
  *
- * FIXME
+ * Sets the maximum multipole for the TT spectrum.
  *
  */
 void
@@ -624,7 +624,7 @@ nc_hipert_boltzmann_set_TT_lmax (NcHIPertBoltzmann *pb, guint lmax)
  * @pb: a #NcHIPertBoltzmann.
  * @lmax: last mutipole.
  *
- * FIXME
+ * Sets the maximum multipole for the EE spectrum.
  *
  */
 void
@@ -640,7 +640,7 @@ nc_hipert_boltzmann_set_EE_lmax (NcHIPertBoltzmann *pb, guint lmax)
  * @pb: a #NcHIPertBoltzmann.
  * @lmax: last mutipole.
  *
- * FIXME
+ * Sets the maximum multipole for the BB spectrum.
  *
  */
 void
@@ -656,7 +656,7 @@ nc_hipert_boltzmann_set_BB_lmax (NcHIPertBoltzmann *pb, guint lmax)
  * @pb: a #NcHIPertBoltzmann.
  * @lmax: last mutipole.
  *
- * FIXME
+ * Sets the maximum multipole for the TE spectrum.
  *
  */
 void
@@ -672,7 +672,7 @@ nc_hipert_boltzmann_set_TE_lmax (NcHIPertBoltzmann *pb, guint lmax)
  * @pb: a #NcHIPertBoltzmann.
  * @lmax: last mutipole.
  *
- * FIXME
+ * Sets the maximum multipole for the TB spectrum.
  *
  */
 void
@@ -688,7 +688,7 @@ nc_hipert_boltzmann_set_TB_lmax (NcHIPertBoltzmann *pb, guint lmax)
  * @pb: a #NcHIPertBoltzmann.
  * @lmax: last mutipole.
  *
- * FIXME
+ * Sets the maximum multipole for the EB spectrum.
  *
  */
 void
@@ -703,9 +703,9 @@ nc_hipert_boltzmann_set_EB_lmax (NcHIPertBoltzmann *pb, guint lmax)
  * nc_hipert_boltzmann_get_PHIPHI_lmax:
  * @pb: a #NcHIPertBoltzmann.
  *
- * FIXME
+ * Gets the maximum multipole for the PHIPHI spectrum.
  *
- * Returns: FIXME
+ * Returns: the maximum multipole.
  */
 guint
 nc_hipert_boltzmann_get_PHIPHI_lmax (NcHIPertBoltzmann *pb)
@@ -717,9 +717,9 @@ nc_hipert_boltzmann_get_PHIPHI_lmax (NcHIPertBoltzmann *pb)
  * nc_hipert_boltzmann_get_TT_lmax:
  * @pb: a #NcHIPertBoltzmann.
  *
- * FIXME
+ * Gets the maximum multipole for the TT spectrum.
  *
- * Returns: FIXME
+ * Returns: the maximum multipole.
  */
 guint
 nc_hipert_boltzmann_get_TT_lmax (NcHIPertBoltzmann *pb)
@@ -731,9 +731,9 @@ nc_hipert_boltzmann_get_TT_lmax (NcHIPertBoltzmann *pb)
  * nc_hipert_boltzmann_get_EE_lmax:
  * @pb: a #NcHIPertBoltzmann.
  *
- * FIXME
+ * Gets the maximum multipole for the EE spectrum.
  *
- * Returns: FIXME
+ * Returns: the maximum multipole.
  */
 guint
 nc_hipert_boltzmann_get_EE_lmax (NcHIPertBoltzmann *pb)
@@ -745,9 +745,9 @@ nc_hipert_boltzmann_get_EE_lmax (NcHIPertBoltzmann *pb)
  * nc_hipert_boltzmann_get_BB_lmax:
  * @pb: a #NcHIPertBoltzmann.
  *
- * FIXME
+ * Gets the maximum multipole for the BB spectrum.
  *
- * Returns: FIXME
+ * Returns: the maximum multipole.
  */
 guint
 nc_hipert_boltzmann_get_BB_lmax (NcHIPertBoltzmann *pb)
@@ -759,9 +759,9 @@ nc_hipert_boltzmann_get_BB_lmax (NcHIPertBoltzmann *pb)
  * nc_hipert_boltzmann_get_TE_lmax:
  * @pb: a #NcHIPertBoltzmann.
  *
- * FIXME
+ * Gets the maximum multipole for the TE spectrum.
  *
- * Returns: FIXME
+ * Returns: the maximum multipole.
  */
 guint
 nc_hipert_boltzmann_get_TE_lmax (NcHIPertBoltzmann *pb)
@@ -773,9 +773,9 @@ nc_hipert_boltzmann_get_TE_lmax (NcHIPertBoltzmann *pb)
  * nc_hipert_boltzmann_get_TB_lmax:
  * @pb: a #NcHIPertBoltzmann.
  *
- * FIXME
+ * Gets the maximum multipole for the TB spectrum.
  *
- * Returns: FIXME
+ * Returns: the maximum multipole.
  */
 guint
 nc_hipert_boltzmann_get_TB_lmax (NcHIPertBoltzmann *pb)
@@ -787,9 +787,9 @@ nc_hipert_boltzmann_get_TB_lmax (NcHIPertBoltzmann *pb)
  * nc_hipert_boltzmann_get_EB_lmax:
  * @pb: a #NcHIPertBoltzmann.
  *
- * FIXME
+ * Gets the maximum multipole for the EB spectrum.
  *
- * Returns: FIXME
+ * Returns: the maximum multipole.
  */
 guint
 nc_hipert_boltzmann_get_EB_lmax (NcHIPertBoltzmann *pb)

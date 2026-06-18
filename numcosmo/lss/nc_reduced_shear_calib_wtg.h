@@ -61,9 +61,9 @@ struct _NcReducedShearCalibWtg
 
 /**
  * NcReducedShearCalibWtgSParams:
- * @NC_REDUCED_SHEAR_CALIB_WTG_MSLOPE: FIXME
- * @NC_REDUCED_SHEAR_CALIB_WTG_MB: FIXME
- * @NC_REDUCED_SHEAR_CALIB_WTG_C: FIXME
+ * @NC_REDUCED_SHEAR_CALIB_WTG_MSLOPE: multiplicative shear calibration slope
+ * @NC_REDUCED_SHEAR_CALIB_WTG_MB: multiplicative shear calibration bias
+ * @NC_REDUCED_SHEAR_CALIB_WTG_C: additive shear calibration constant
  * @NC_REDUCED_SHEAR_CALIB_WTG_SIZE_RATIO: ratio between galaxy and psf sizes 
  *
  * WtG calibration parameters.

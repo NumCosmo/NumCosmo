@@ -462,7 +462,6 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
 
   /*
    * Distribution's magnification bias: mag_bias.
-   * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_XCOR_KERNEL_GAL_MAG_BIAS,
                               "mag_bias", "mag_bias",

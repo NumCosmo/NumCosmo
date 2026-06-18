@@ -72,7 +72,7 @@ main (gint argc, gchar *argv[])
 
   context = g_option_context_new ("- test the dark energy models");
   g_option_context_set_summary (context, "general darkenergy and kinematic models analyzer");
-  g_option_context_set_description (context, "DE Description <FIXME>");
+  g_option_context_set_description (context, "General dark energy and kinematic models analyzer.");
 
   g_option_context_set_main_group (context, nc_de_opt_get_run_group (&de_run));
   g_option_context_add_group (context, nc_de_opt_get_model_group (&de_model, &de_model_entries));

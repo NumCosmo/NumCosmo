@@ -1091,14 +1091,14 @@ _nc_hiqg_1d_basis (const gdouble x, const gdouble y, const gdouble h, const gdou
 /**
  * nc_hiqg_1d_basis:
  * @qg1d: a #NcHIQG1D
- * @x: FIXME
- * @y: FIXME
- * @h: FIXME
- * @a: FIXME
+ * @x: evaluation point
+ * @y: evaluation point
+ * @h: grid spacing parameter
+ * @a: power parameter
  *
- * FIXME
+ * Evaluates the kernel basis function $K(x, y)$.
  *
- * Returns: FIXME
+ * Returns: the basis function value.
  */
 gdouble
 nc_hiqg_1d_basis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble h, const gdouble a)
@@ -1133,14 +1133,14 @@ _nc_hiqg_1d_Hbasis (const gdouble x, const gdouble y, const gdouble h, const gdo
 /**
  * nc_hiqg_1d_Hbasis:
  * @qg1d: a #NcHIQG1D
- * @x: FIXME
- * @y: FIXME
- * @h: FIXME
- * @a: FIXME
+ * @x: evaluation point
+ * @y: evaluation point
+ * @h: grid spacing parameter
+ * @a: power parameter
  *
- * FIXME
+ * Evaluates the Hamiltonian applied to the basis function $H \cdot K(x, y)$.
  *
- * Returns: FIXME
+ * Returns: the Hamiltonian-basis product value.
  */
 gdouble
 nc_hiqg_1d_Hbasis (NcHIQG1D *qg1d, const gdouble x, const gdouble y, const gdouble h, const gdouble a)
@@ -1215,15 +1215,15 @@ _nc_hiqg_1d_Sbasis_x3 (const gdouble x, const gdouble y1, const gdouble y2, cons
 /**
  * nc_hiqg_1d_Sbasis_x3:
  * @qg1d: a #NcHIQG1D
- * @x: FIXME
- * @y1: FIXME
- * @y2: FIXME
- * @h: FIXME
- * @a: FIXME
+ * @x: evaluation point
+ * @y1: first grid point
+ * @y2: second grid point
+ * @h: grid spacing parameter
+ * @a: power parameter
  *
- * FIXME
+ * Evaluates the symmetrized basis function divided by $x^3$.
  *
- * Returns: FIXME
+ * Returns: the symmetrized basis value divided by $x^3$.
  */
 gdouble
 nc_hiqg_1d_Sbasis_x3 (NcHIQG1D *qg1d, const gdouble x, const gdouble y1, const gdouble y2, const gdouble h, const gdouble a)
@@ -1235,9 +1235,9 @@ nc_hiqg_1d_Sbasis_x3 (NcHIQG1D *qg1d, const gdouble x, const gdouble y1, const g
  * nc_hiqg_1d_get_lambda:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Gets the lambda parameter.
  *
- * Returns: FIXME
+ * Returns: the lambda value.
  */
 gdouble
 nc_hiqg_1d_get_lambda (NcHIQG1D *qg1d)
@@ -1251,9 +1251,9 @@ nc_hiqg_1d_get_lambda (NcHIQG1D *qg1d)
  * nc_hiqg_1d_get_basis_a:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Gets the basis power parameter a parameter.
  *
- * Returns: FIXME
+ * Returns: the basis power parameter a value.
  */
 gdouble
 nc_hiqg_1d_get_basis_a (NcHIQG1D *qg1d)
@@ -1267,9 +1267,9 @@ nc_hiqg_1d_get_basis_a (NcHIQG1D *qg1d)
  * nc_hiqg_1d_get_acs_a:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Gets the acs power parameter a parameter.
  *
- * Returns: FIXME
+ * Returns: the acs power parameter a value.
  */
 gdouble
 nc_hiqg_1d_get_acs_a (NcHIQG1D *qg1d)
@@ -1283,9 +1283,9 @@ nc_hiqg_1d_get_acs_a (NcHIQG1D *qg1d)
  * nc_hiqg_1d_get_nu:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Gets the nu parameter.
  *
- * Returns: FIXME
+ * Returns: the nu value.
  */
 gdouble
 nc_hiqg_1d_get_nu (NcHIQG1D *qg1d)
@@ -1299,9 +1299,9 @@ nc_hiqg_1d_get_nu (NcHIQG1D *qg1d)
  * nc_hiqg_1d_get_mu:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Gets the mu parameter.
  *
- * Returns: FIXME
+ * Returns: the mu value.
  */
 gdouble
 nc_hiqg_1d_get_mu (NcHIQG1D *qg1d)
@@ -1387,9 +1387,8 @@ _nc_hiqg_1d_init_solver (NcHIQG1D *qg1d)
  * nc_hiqg_1d_prepare:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
- *
- * READ HERE
+ * Prepares the 1D quantum gravity solver by computing the kernel matrix,
+ * eigenvalues, and initial wave function coefficients.
  *
  */
 void
@@ -1665,9 +1664,9 @@ nc_hiqg_1d_prepare (NcHIQG1D *qg1d)
  * nc_hiqg_1d_peek_knots:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Peeks at the grid knots vector.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the knots vector.
  */
 NcmVector *
 nc_hiqg_1d_peek_knots (NcHIQG1D *qg1d)
@@ -1680,12 +1679,12 @@ nc_hiqg_1d_peek_knots (NcHIQG1D *qg1d)
 /**
  * nc_hiqg_1d_eval_ev:
  * @qg1d: a #NcHIQG1D
- * @i: FIXME
- * @x: FIXME
+ * @i: eigenstate index
+ * @x: evaluation point
  *
- * FIXME
+ * Evaluates the @i-th eigenstate at point @x.
  *
- * Returns: FIXME
+ * Returns: the eigenstate value.
  */
 gdouble
 nc_hiqg_1d_eval_ev (NcHIQG1D *qg1d, const gint i, const gdouble x)
@@ -1715,10 +1714,10 @@ nc_hiqg_1d_eval_ev (NcHIQG1D *qg1d, const gint i, const gdouble x)
 /**
  * nc_hiqg_1d_eval_psi0:
  * @qg1d: a #NcHIQG1D
- * @x: FIXME
+ * @x: evaluation point
  * @psi0: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\psi_0$
  *
- * FIXME
+ * Evaluates the initial wave function at point @x.
  *
  */
 void
@@ -1790,9 +1789,9 @@ _nc_hiqg_1d_prepare_splines (NcHIQG1D *qg1d)
 /**
  * nc_hiqg_1d_evol:
  * @qg1d: a #NcHIQG1D
- * @t: FIXME
+ * @t: evolution time
  *
- * FIXME
+ * Evolves the system to time @t.
  *
  */
 void
@@ -1819,10 +1818,10 @@ nc_hiqg_1d_evol (NcHIQG1D *qg1d, const gdouble t)
 /**
  * nc_hiqg_1d_eval_psi:
  * @qg1d: a #NcHIQG1D
- * @x: FIXME
+ * @x: evaluation point
  * @psi: (out caller-allocates) (array fixed-size=2) (element-type gdouble): $\psi_0$
  *
- * FIXME
+ * Evaluates the wave function at point @x at the current evolution time.
  *
  */
 void
@@ -1857,11 +1856,11 @@ nc_hiqg_1d_eval_psi (NcHIQG1D *qg1d, const gdouble x, gdouble *psi)
 /**
  * nc_hiqg_1d_eval_dS:
  * @qg1d: a #NcHIQG1D
- * @x: FIXME
+ * @x: evaluation point
  *
- * FIXME
+ * Evaluates the derivative of the phase at point @x.
  *
- * Returns: FIXME
+ * Returns: the phase derivative value.
  */
 gdouble
 nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x)
@@ -1921,9 +1920,9 @@ nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x)
  * nc_hiqg_1d_int_rho_0_inf:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Integrates the probability density $ho$ from 0 to infinity.
  *
- * Returns: FIXME
+ * Returns: the total probability.
  */
 gdouble
 nc_hiqg_1d_int_rho_0_inf (NcHIQG1D *qg1d)
@@ -1995,9 +1994,9 @@ _nc_hiqg_1d_mean_d_int (gdouble x, NcHIQG1DPrivate * const self)
  * nc_hiqg_1d_int_xrho_0_inf:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Integrates $x ho$ from 0 to infinity, computing the expectation value of $x$.
  *
- * Returns: FIXME
+ * Returns: $\langle x angle$.
  */
 gdouble
 nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d)
@@ -2023,9 +2022,9 @@ nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d)
  * nc_hiqg_1d_int_x2rho_0_inf:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Integrates $x^2 ho$ from 0 to infinity, computing $\langle x^2 angle$.
  *
- * Returns: FIXME
+ * Returns: $\langle x^2 angle$.
  */
 gdouble
 nc_hiqg_1d_int_x2rho_0_inf (NcHIQG1D *qg1d)
@@ -2051,9 +2050,9 @@ nc_hiqg_1d_int_x2rho_0_inf (NcHIQG1D *qg1d)
  * nc_hiqg_1d_expect_p:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Computes the expectation value of the momentum.
  *
- * Returns: FIXME
+ * Returns: $\langle p angle$.
  */
 gdouble
 nc_hiqg_1d_expect_p (NcHIQG1D *qg1d)
@@ -2079,9 +2078,9 @@ nc_hiqg_1d_expect_p (NcHIQG1D *qg1d)
  * nc_hiqg_1d_expect_d:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Computes the expectation value of the weighted current.
  *
- * Returns: FIXME
+ * Returns: $\langle d angle$.
  */
 gdouble
 nc_hiqg_1d_expect_d (NcHIQG1D *qg1d)
@@ -2107,9 +2106,9 @@ nc_hiqg_1d_expect_d (NcHIQG1D *qg1d)
  * nc_hiqg_1d_nBohm:
  * @qg1d: a #NcHIQG1D
  *
- * FIXME
+ * Gets the number of Bohmian trajectories.
  *
- * Returns: FIXME
+ * Returns: the number of Bohmian trajectories.
  */
 gint
 nc_hiqg_1d_nBohm (NcHIQG1D *qg1d)
@@ -2122,11 +2121,11 @@ nc_hiqg_1d_nBohm (NcHIQG1D *qg1d)
 /**
  * nc_hiqg_1d_Bohm:
  * @qg1d: a #NcHIQG1D
- * @i: FIXME
+ * @i: trajectory index
  *
- * FIXME
+ * Gets the Bohmian trajectory position for particle @i.
  *
- * Returns: FIXME
+ * Returns: the trajectory position.
  */
 gdouble
 nc_hiqg_1d_Bohm (NcHIQG1D *qg1d, gint i)
@@ -2139,11 +2138,11 @@ nc_hiqg_1d_Bohm (NcHIQG1D *qg1d, gint i)
 /**
  * nc_hiqg_1d_Bohm_p:
  * @qg1d: a #NcHIQG1D
- * @i: FIXME
+ * @i: trajectory index
  *
- * FIXME
+ * Gets the Bohmian trajectory momentum for particle @i.
  *
- * Returns: FIXME
+ * Returns: the trajectory momentum.
  */
 gdouble
 nc_hiqg_1d_Bohm_p (NcHIQG1D *qg1d, gint i)
