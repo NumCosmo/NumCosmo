@@ -45,7 +45,9 @@
 typedef struct _NcMultiplicityFuncDespaliPrivate
 {
   NcMultiplicityFuncMassDef mdef;
+
   gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+
   gboolean EO;
   gboolean CMF;
   gdouble Delta;

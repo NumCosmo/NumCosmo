@@ -558,3 +558,4 @@ nc_galaxy_selfunc_get_zmax (NcGalaxySelfunc *gsf, guint shell)
 
   return ncm_vector_get (self->zmax, shell);
 }
+

@@ -39,7 +39,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcDataClusterNCountsGauss, nc_data_cluster_ncounts_gauss, NC, DATA_CLUSTER_NCOUNTS_GAUSS, NcmDataGaussCov)
 
 
-NcDataClusterNCountsGauss *nc_data_cluster_ncounts_gauss_new (NcClusterAbundance *cad);
+NcDataClusterNCountsGauss *nc_data_cluster_ncounts_gauss_new (NcClusterAbundance * cad);
 void nc_data_cluster_ncounts_gauss_free (NcDataClusterNCountsGauss *ncounts_gauss);
 
 

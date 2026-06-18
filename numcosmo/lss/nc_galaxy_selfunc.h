@@ -2,7 +2,7 @@
  *            nc_galaxy_selfunc.h
  *
  *  Wed March 14 16:30:36 2018
- *  Copyright  2018 Fernando de Simoni 
+ *  Copyright  2018 Fernando de Simoni
  *  <fsimoni@id.uff.br>
  ****************************************************************************/
 /*
@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -60,3 +60,4 @@ gdouble nc_galaxy_selfunc_get_zmax (NcGalaxySelfunc *gsf, const guint shell);
 G_END_DECLS
 
 #endif /* _NC_GALAXY_SELFUNC_H_ */
+

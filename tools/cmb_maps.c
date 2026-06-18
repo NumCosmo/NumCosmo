@@ -78,7 +78,7 @@ main (void)
             gsl_stats_float_kurtosis (map->dt->data, 1, map->npix),
             gsl_stats_float_lag1_autocorrelation (map->dt->data, 1, map->npix),
             gsl_stats_float_skew (map->dt->data, 1, map->npix)
-           );
+    );
     printf ("# Stats of [%ld] pixels took %fs\n", map->npix, g_timer_elapsed (bench, NULL));
   }
 
@@ -153,7 +153,7 @@ main (void)
             gsl_stats_float_kurtosis (map->dt->data, 1, map->npix),
             gsl_stats_float_lag1_autocorrelation (map->dt->data, 1, map->npix),
             gsl_stats_float_skew (map->dt->data, 1, map->npix)
-           );
+    );
     printf ("# Stats of [%ld] pixels took %fs\n", map->npix, g_timer_elapsed (bench, NULL));
   }
 

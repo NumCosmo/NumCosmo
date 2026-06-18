@@ -35,8 +35,8 @@ gint
 main (gint argc, gchar *argv[])
 {
   gchar *cat_filename = NULL;
-  gchar *out           = NULL;
-  
+  gchar *out          = NULL;
+
   GError *error = NULL;
   GOptionContext *context;
   GOptionEntry entries[] =
@@ -47,7 +47,7 @@ main (gint argc, gchar *argv[])
   };
 
   ncm_cfg_init_full_ptr (&argc, &argv);
-  
+
   context = g_option_context_new ("- trim out of bounds points.");
   g_option_context_set_summary (context, "catalog trim oob");
   g_option_context_set_description (context, "Trims out-of-bounds points from a catalog.");
@@ -66,13 +66,13 @@ main (gint argc, gchar *argv[])
     exit (1);
   }
   else
-  {    
+  {
     NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (cat_filename, 0);
-    guint ndel = ncm_mset_catalog_trim_oob (mcat, out);
+    guint ndel           = ncm_mset_catalog_trim_oob (mcat, out);
 
     g_message ("# Trimming `%s', %u points deleted, saving to `%s'.\n", cat_filename, ndel, out);
   }
-  
+
   return 0;
 }
 

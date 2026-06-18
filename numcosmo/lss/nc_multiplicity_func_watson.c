@@ -43,7 +43,9 @@
 typedef struct _NcMultiplicityFuncWatsonPrivate
 {
   NcMultiplicityFuncMassDef mdef;
+
   gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+
   gdouble Delta;
 } NcMultiplicityFuncWatsonPrivate;
 

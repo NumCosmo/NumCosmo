@@ -45,7 +45,9 @@
 typedef struct _NcMultiplicityFuncTinkerPrivate
 {
   NcMultiplicityFuncMassDef mdef;
+
   gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+
   gdouble A0;
   gdouble a0;
   gdouble b0;

@@ -2521,3 +2521,4 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 }
 
 #endif /* HAVE_CFITSIO */
+

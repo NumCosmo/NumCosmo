@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -45,17 +45,17 @@ G_DECLARE_FINAL_TYPE (NcReducedShearCalibWtg, nc_reduced_shear_calib_wtg, NC, RE
  * @NC_REDUCED_SHEAR_CALIB_WTG_MSLOPE: multiplicative shear calibration slope
  * @NC_REDUCED_SHEAR_CALIB_WTG_MB: multiplicative shear calibration bias
  * @NC_REDUCED_SHEAR_CALIB_WTG_C: additive shear calibration constant
- * @NC_REDUCED_SHEAR_CALIB_WTG_SIZE_RATIO: ratio between galaxy and psf sizes 
+ * @NC_REDUCED_SHEAR_CALIB_WTG_SIZE_RATIO: ratio between galaxy and psf sizes
  *
  * WtG calibration parameters.
- * 
+ *
  */
 typedef enum _NcReducedShearCalibWtgSParams
 {
-  NC_REDUCED_SHEAR_CALIB_WTG_MSLOPE, 
-  NC_REDUCED_SHEAR_CALIB_WTG_MB, 
-  NC_REDUCED_SHEAR_CALIB_WTG_C, 
-  NC_REDUCED_SHEAR_CALIB_WTG_SIZE_RATIO, 
+  NC_REDUCED_SHEAR_CALIB_WTG_MSLOPE,
+  NC_REDUCED_SHEAR_CALIB_WTG_MB,
+  NC_REDUCED_SHEAR_CALIB_WTG_C,
+  NC_REDUCED_SHEAR_CALIB_WTG_SIZE_RATIO,
   /* < private > */
   NNC_REDUCED_SHEAR_CALIB_WTG_SPARAM_LEN, /*< skip >*/
 } NcReducedShearCalibWtgSParams;
@@ -68,3 +68,4 @@ void nc_reduced_shear_calib_wtg_clear (NcReducedShearCalibWtg **rs_wtg);
 G_END_DECLS
 
 #endif /* _NC_REDUCED_SHEAR_CALIB_WTG_H_ */
+

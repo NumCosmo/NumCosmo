@@ -52,8 +52,8 @@ struct _NcCurveClass
   NcmModelClass parent_class;
   NcCurveF f;
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[18];
+  /* Padding to allow adding up to 17 more virtual functions without breaking ABI. */
+  gpointer padding[17];
 };
 
 /*

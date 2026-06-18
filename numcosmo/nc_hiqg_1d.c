@@ -1,4 +1,3 @@
-
 /***************************************************************************
  *            nc_hiqg_1d.c
  *
@@ -1927,7 +1926,7 @@ nc_hiqg_1d_eval_dS (NcHIQG1D *qg1d, const gdouble x)
  * @qg1d: a #NcHIQG1D
  *
  * Integrates the probability density $
-ho$ from 0 to infinity.
+ *  ho$ from 0 to infinity.
  *
  * Returns: the total probability.
  */
@@ -2001,11 +2000,11 @@ _nc_hiqg_1d_mean_d_int (gdouble x, NcHIQG1DPrivate * const self)
  * nc_hiqg_1d_int_xrho_0_inf:
  * @qg1d: a #NcHIQG1D
  *
- * Integrates $x 
-ho$ from 0 to infinity, computing the expectation value of $x$.
+ * Integrates $x
+ *  ho$ from 0 to infinity, computing the expectation value of $x$.
  *
- * Returns: $\langle x 
-angle$.
+ * Returns: $\langle x
+ *  angle$.
  */
 gdouble
 nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d)
@@ -2031,12 +2030,12 @@ nc_hiqg_1d_int_xrho_0_inf (NcHIQG1D *qg1d)
  * nc_hiqg_1d_int_x2rho_0_inf:
  * @qg1d: a #NcHIQG1D
  *
- * Integrates $x^2 
-ho$ from 0 to infinity, computing $\langle x^2 
-angle$.
+ * Integrates $x^2
+ *  ho$ from 0 to infinity, computing $\langle x^2
+ *  angle$.
  *
- * Returns: $\langle x^2 
-angle$.
+ * Returns: $\langle x^2
+ *  angle$.
  */
 gdouble
 nc_hiqg_1d_int_x2rho_0_inf (NcHIQG1D *qg1d)
@@ -2064,8 +2063,8 @@ nc_hiqg_1d_int_x2rho_0_inf (NcHIQG1D *qg1d)
  *
  * Computes the expectation value of the momentum.
  *
- * Returns: $\langle p 
-angle$.
+ * Returns: $\langle p
+ *  angle$.
  */
 gdouble
 nc_hiqg_1d_expect_p (NcHIQG1D *qg1d)
@@ -2093,8 +2092,8 @@ nc_hiqg_1d_expect_p (NcHIQG1D *qg1d)
  *
  * Computes the expectation value of the weighted current.
  *
- * Returns: $\langle d 
-angle$.
+ * Returns: $\langle d
+ *  angle$.
  */
 gdouble
 nc_hiqg_1d_expect_d (NcHIQG1D *qg1d)

@@ -40,13 +40,13 @@ struct _NcWindowClass
   /*< private > */
   GObjectClass parent_class;
   gdouble volume; /* Volume de uma janela de raio 1 */
-  
+
   gdouble (*eval_fourier) (const NcWindow *wf, const gdouble k, const gdouble R);
   gdouble (*deriv_fourier) (const NcWindow *wf, const gdouble k, const gdouble R);
   gdouble (*eval_real) (const NcWindow *wf, const gdouble r, const gdouble R);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[18];
+  /* Padding to allow adding up to 15 more virtual functions without breaking ABI. */
+  gpointer padding[15];
 };
 
 

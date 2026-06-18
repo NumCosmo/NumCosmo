@@ -544,7 +544,7 @@ main (gint argc, gchar *argv[])
     {
       NcPlanckFI *planck_fi = NC_PLANCK_FI (ncm_serialize_global_from_string (
                                               de_data_simple.PlanckFI == NULL ? "NcPlanckFICorTT" : de_data_simple.PlanckFI)
-                                           );
+      );
 
       g_assert (NC_IS_PLANCK_FI (planck_fi));
 

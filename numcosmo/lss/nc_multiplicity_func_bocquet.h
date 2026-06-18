@@ -9,17 +9,17 @@
  * numcosmo
  * Copyright (C) 2021 Mariana Penna Lima and Cinthia Nunes de Lima
  * <pennalima@gmail.com>, <cinthia.n.lima@uel.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -42,7 +42,7 @@ G_DECLARE_FINAL_TYPE (NcMultiplicityFuncBocquet, nc_multiplicity_func_bocquet, N
 /**
  * NcMultiplicityFuncBocquetSim:
  * @NC_MULTIPLICITY_FUNC_BOCQUET_SIM_DM: simulation - Dark Matter only
- * @NC_MULTIPLICITY_FUNC_BOCQUET_SIM_HYDRO: hydrodynamical simulation (baryon effects) 
+ * @NC_MULTIPLICITY_FUNC_BOCQUET_SIM_HYDRO: hydrodynamical simulation (baryon effects)
  *
  */
 typedef enum _NcMultiplicityFuncBocquetSim
@@ -66,3 +66,4 @@ NcMultiplicityFuncBocquetSim nc_multiplicity_func_bocquet_get_sim (const NcMulti
 G_END_DECLS
 
 #endif /* _NC_MULTIPLICITY_FUNC_BOCQUET_H_ */
+

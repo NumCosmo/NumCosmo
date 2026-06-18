@@ -75,8 +75,8 @@ struct _NcMultiplicityFuncClass
   gboolean (*has_correction_factor) (NcMultiplicityFunc *mulf);
   gdouble (*correction_factor) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z, gdouble lnM);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[18];
+  /* Padding to allow adding up to 10 more virtual functions without breaking ABI. */
+  gpointer padding[10];
 };
 
 

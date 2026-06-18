@@ -37,7 +37,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (NcScalefactor, nc_scalefactor, NC, SCALEFACTOR, GObject)
 
 
-NcScalefactor *nc_scalefactor_new (const gdouble zf, NcDistance *dist);
+NcScalefactor *nc_scalefactor_new (const gdouble zf, NcDistance * dist);
 NcScalefactor *nc_scalefactor_ref (NcScalefactor *a);
 void nc_scalefactor_free (NcScalefactor *a);
 void nc_scalefactor_clear (NcScalefactor **a);

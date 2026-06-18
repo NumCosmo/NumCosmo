@@ -54,8 +54,8 @@ struct _NcClusterRedshiftClass
   guint _obs_len;
   guint _obs_params_len;
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[18];
+  /* Padding to allow adding up to 10 more virtual functions without breaking ABI. */
+  gpointer padding[10];
 };
 
 

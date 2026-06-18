@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -44,8 +44,8 @@ struct _NcReducedShearCalibClass
   NcmModelClass parent_class;
   gdouble (*eval) (NcReducedShearCalib *rs_calib, const gdouble g_th, const gdouble psf_size, const gdouble gal_size);
 
-  /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[18];
+  /* Padding to allow adding up to 17 more virtual functions without breaking ABI. */
+  gpointer padding[17];
 };
 
 
@@ -60,3 +60,4 @@ gdouble nc_reduced_shear_calib_eval (NcReducedShearCalib *rs_calib, const gdoubl
 G_END_DECLS
 
 #endif /* _NC_REDUCED_SHEAR_CALIB_H_ */
+
