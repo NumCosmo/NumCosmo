@@ -100,7 +100,7 @@ NCM_INLINE gdouble
 nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
   const gdouble a = 1.0 / (1.0 + z);
-  
+
   return ncm_spline_eval (gf->s, a);
 }
 
@@ -108,7 +108,7 @@ NCM_INLINE gdouble
 nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
   const gdouble a = 1.0 / (1.0 + z);
-  
+
   return -a *a *ncm_spline_eval_deriv (gf->s, a);
 }
 
@@ -116,7 +116,7 @@ NCM_INLINE void
 nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f)
 {
   const gdouble a = 1.0 / (1.0 + z);
-  
+
   *d = ncm_spline_eval (gf->s, a);
   *f = -a *a *ncm_spline_eval_deriv (gf->s, a);
 }

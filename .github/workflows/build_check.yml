@@ -55,12 +55,8 @@ jobs:
       run: meson compile -C build
     - name: Checking indentation
       run: |
-        uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/*.c numcosmo/*.h
-        find numcosmo/ncm \( -name '*.c' -o -name '*.h' \) -print0 | xargs -0 uncrustify -c numcosmo_uncrustify.cfg --check -q
-        for d in background recomb reion primordial cmb quantum supernova xcor; do
-          uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/nc/$d/*.c numcosmo/nc/$d/*.h
-        done
-        uncrustify -c numcosmo_uncrustify.cfg --check -q numcosmo/nc/powspec/nc_powspec_*.c numcosmo/nc/powspec/nc_powspec_*.h
+        find numcosmo -path numcosmo/external -prune -o \( -name '*.c' -o -name '*.h' \) -print0 \
+          | xargs -0 uncrustify -c numcosmo_uncrustify.cfg --check -q
     - name: Test python examples
       run: |
         source build/numcosmo_export.sh

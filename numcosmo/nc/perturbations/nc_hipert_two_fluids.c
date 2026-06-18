@@ -941,7 +941,7 @@ _nc_hipert_two_fluids_f_zetaS (sunrealtype alpha, N_Vector y, N_Vector ydot, gpo
             AS / AvQ2,
             APzeta / AvPzeta2,
             APS / AvPQ2
-           );
+    );
     fflush (stdout);
     fflush (stderr);
   }

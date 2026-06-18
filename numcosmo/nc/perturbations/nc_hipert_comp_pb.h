@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -65,9 +65,9 @@ struct _NcHIPertCompPB
  * @NC_HIPERT_COMP_PB_VAR_V_G: $\mathcal{V}_\gamma$
  * @NC_HIPERT_COMP_PB_VAR_THETA_G: $\theta_\gamma$
  * @NC_HIPERT_COMP_PB_VAR_F_G3: $\mathcal{F}_{\gamma3}$
- * 
+ *
  * Photon-baryon component variables
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HIPERT_COMP_PB_VAR >*/
 {

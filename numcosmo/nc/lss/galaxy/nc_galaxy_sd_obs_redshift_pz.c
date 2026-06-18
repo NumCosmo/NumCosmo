@@ -112,12 +112,12 @@ nc_galaxy_sd_obs_redshift_pz_class_init (NcGalaxySDObsRedshiftPzClass *klass)
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
   ncm_model_class_check_params_info (model_class);
 
-  gsdor_class->gen                 = &_nc_galaxy_sd_obs_redshift_pz_gen;
-  gsdor_class->prepare             = &_nc_galaxy_sd_obs_redshift_pz_prepare;
-  gsdor_class->get_integ_lim       = &_nc_galaxy_sd_obs_redshift_pz_get_integ_lim;
-  gsdor_class->integ               = &_nc_galaxy_sd_obs_redshift_pz_integ;
-  gsdor_class->data_init           = &_nc_galaxy_sd_obs_redshift_pz_data_init;
-  gsdor_class->make_fixed_nodes    = &_nc_galaxy_sd_obs_redshift_pz_make_fixed_nodes;
+  gsdor_class->gen              = &_nc_galaxy_sd_obs_redshift_pz_gen;
+  gsdor_class->prepare          = &_nc_galaxy_sd_obs_redshift_pz_prepare;
+  gsdor_class->get_integ_lim    = &_nc_galaxy_sd_obs_redshift_pz_get_integ_lim;
+  gsdor_class->integ            = &_nc_galaxy_sd_obs_redshift_pz_integ;
+  gsdor_class->data_init        = &_nc_galaxy_sd_obs_redshift_pz_data_init;
+  gsdor_class->make_fixed_nodes = &_nc_galaxy_sd_obs_redshift_pz_make_fixed_nodes;
 }
 
 static void

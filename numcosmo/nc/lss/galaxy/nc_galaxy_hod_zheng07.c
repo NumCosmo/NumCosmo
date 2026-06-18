@@ -80,9 +80,9 @@ static gdouble _nc_galaxy_hod_zheng07_mean_n_satellite (NcGalaxyHOD *hod, const 
 static void
 nc_galaxy_hod_zheng07_class_init (NcGalaxyHODZheng07Class *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class  = G_OBJECT_CLASS (klass);
   NcGalaxyHODClass *hod_class = NC_GALAXY_HOD_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  NcmModelClass *model_class  = NCM_MODEL_CLASS (klass);
 
   object_class->finalize = &_nc_galaxy_hod_zheng07_finalize;
 
@@ -235,3 +235,4 @@ nc_galaxy_hod_zheng07_clear (NcGalaxyHODZheng07 **zheng07)
 {
   g_clear_object (zheng07);
 }
+

@@ -367,9 +367,9 @@ nc_halo_catalog_generator_get_with_radius (NcHaloCatalogGenerator *gen)
 static gdouble
 _nc_halo_catalog_generator_radius (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  const gdouble rho_crit0  = ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo);
-  const gdouble Delta      = nc_multiplicity_func_get_Delta (mulf);
-  const gdouble M          = exp (lnM);
+  const gdouble rho_crit0 = ncm_c_crit_mass_density_h2_solar_mass_Mpc3 () * nc_hicosmo_h2 (cosmo);
+  const gdouble Delta     = nc_multiplicity_func_get_Delta (mulf);
+  const gdouble M         = exp (lnM);
   gdouble Delta_rho_bg;
 
   switch (nc_multiplicity_func_get_mdef (mulf))
@@ -382,6 +382,7 @@ _nc_halo_catalog_generator_radius (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, g
       break;
     default:
       g_error ("nc_halo_catalog_generator: radius output unsupported for this mass definition");
+
       return 0.0;
   }
 
@@ -542,3 +543,4 @@ nc_halo_catalog_generator_generate (NcHaloCatalogGenerator *gen, NcmMSet *mset, 
 
   return hcat;
 }
+

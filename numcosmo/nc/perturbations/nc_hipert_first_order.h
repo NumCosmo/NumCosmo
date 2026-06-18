@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -63,9 +63,9 @@ struct _NcHIPertFirstOrder
  * NcHIPertFirstOrderInteg:
  * @NC_HIPERT_FIRST_ORDER_INTEG_CVODE: CVode integrator
  * @NC_HIPERT_FIRST_ORDER_INTEG_ARKODE: ARKode integrator
- * 
+ *
  * ODE integrators.
- * 
+ *
  */
 typedef enum /*< enum,underscore_name=NC_HIPERT_FIRST_ORDER_INTEG >*/
 {
@@ -106,3 +106,4 @@ void nc_hipert_first_order_prepare (NcHIPertFirstOrder *fo, NcHICosmo *cosmo);
 G_END_DECLS
 
 #endif /* _NC_HIPERT_FIRST_ORDER_H_ */
+

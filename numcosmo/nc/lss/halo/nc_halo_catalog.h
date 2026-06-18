@@ -93,3 +93,4 @@ GArray *nc_halo_catalog_find_children (NcHaloCatalog *hcat, const gint64 parent_
 G_END_DECLS
 
 #endif /* _NC_HALO_CATALOG_H */
+

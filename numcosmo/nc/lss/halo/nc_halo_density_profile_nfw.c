@@ -231,7 +231,7 @@ _nc_halo_density_profile_nfw_eval_dl_2d_density (NcHaloDensityProfile *dp, const
         (7.0 / 2.0  +  6.0 * log_X_2) * X_2 * X_2 * X_2 * X_2 +
         (37.0 / 3.0  + 20.0 * log_X_2) * X_2 * X_2 * X_2 * X_2 * X_2 * X_2 +
         (533.0 / 12.0 + 70.0 * log_X_2) * X_2 * X_2 * X_2 * X_2 * X_2 * X_2 * X_2 * X_2
-                          );
+      );
     }
     else
     {
@@ -281,7 +281,7 @@ _nc_halo_density_profile_nfw_eval_dl_cyl_mass (NcHaloDensityProfile *dp, const g
             ) * X_22
           ) * X_22
         ) * X_22
-                    );
+      );
     }
     else
     {

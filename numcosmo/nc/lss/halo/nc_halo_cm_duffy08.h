@@ -1,9 +1,8 @@
-
 /***************************************************************************
  *            nc_halo_cm_duffy08.h
  *
  *  Thu Dec 05 09:42:15 2024
- *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br> 
+ *  Copyright  2024  Mariana Penna-Lima <pennalima@unb.br>, Thais Mikami Ornellas <thais.ornellas@uel.br>
  ****************************************************************************/
 /*
  * nc_halo_cm_duffy08.h
@@ -42,7 +41,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMDuffy08, nc_halo_cm_duffy08, NC, HALO_CM_DUFFY08, 
  * @NC_HALO_CM_DUFFY08_LOG10M_DELTA: halo mass $\log_{10}(M_\Delta)$
  *
  * Fundamental parametrization of the profile $\rho(r)$.
- * The halo mass is a paremeter while the concentration is given by the 
+ * The halo mass is a paremeter while the concentration is given by the
  * Duffy et al. (2008) concentration-mass relation.
  *
  */

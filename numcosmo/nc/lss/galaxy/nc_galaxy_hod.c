@@ -323,3 +323,4 @@ nc_galaxy_hod_gen (NcGalaxyHOD *hod, const gdouble lnM, NcmRNG *rng, gint *n_cen
   *n_central   = n_cen;
   *n_satellite = n_sat;
 }
+

@@ -526,7 +526,7 @@ _nc_hipert_boltzmann_std_step (sunrealtype lambda, N_Vector y, N_Vector ydot, gp
               -log (NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda)),
               (_NC_THETA0 - _NC_PHI + _NC_THETA1 / kx_3E),
               _NC_THETA0, -_NC_PHI, _NC_THETA1 / kx_3E
-             );
+      );
 
 /*      printf ("% 20.15g % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n",
  *             -log (NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda)),

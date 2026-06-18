@@ -73,3 +73,4 @@ gdouble nc_halo_bias_st_spher_get_p (const NcHaloBiasSTSpher *biasf_st_spher);
 G_END_DECLS
 
 #endif /* _NC_HALO_BIAS_ST_SPHER_H_ */
+

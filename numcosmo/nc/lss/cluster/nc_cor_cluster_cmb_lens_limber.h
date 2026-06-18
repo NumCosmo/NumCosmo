@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -30,9 +30,9 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/background/nc_distance.h>
-//#include <numcosmo/lss/nc_matter_var.h>
+/*#include <numcosmo/lss/nc_matter_var.h> */
 #include <numcosmo/nc/powspec/nc_growth_func.h>
-//#include <numcosmo/lss/nc_mass_function.h>
+/*#include <numcosmo/lss/nc_mass_function.h> */
 #include <numcosmo/nc/lss/halo/nc_halo_density_profile.h>
 #include <numcosmo/nc/lss/halo/nc_halo_bias.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_abundance.h>

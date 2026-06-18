@@ -450,3 +450,4 @@ nc_halo_catalog_find_children (NcHaloCatalog *hcat, const gint64 parent_id, GErr
 
   return indices;
 }
+

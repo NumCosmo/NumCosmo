@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -88,7 +88,7 @@ struct _NcHIPertBGVar
 
 /**
  * NcHIPertBGVarYDY:
- * 
+ *
  * Boxed object containing the current status of the ode system.
  */
 struct _NcHIPertBGVarYDY
@@ -115,7 +115,7 @@ NcHIPertBGVarID nc_hipert_bg_var_class_get_id_by_ns (const gchar *ns);
  * Macro to generate the id function name for a background variable.
  *
  */
-#define NC_HIPERT_BG_VAR_ID_FUNC(obj_ns) obj_ns##_id
+#define NC_HIPERT_BG_VAR_ID_FUNC(obj_ns) obj_ns ## _id
 
 /**
  * NC_HIPERT_BG_VAR_ID_FUNC_DECL: (skip)
@@ -124,7 +124,7 @@ NcHIPertBGVarID nc_hipert_bg_var_class_get_id_by_ns (const gchar *ns);
  * Declare the id function associated with @obj_ns.
  *
  */
-#define NC_HIPERT_BG_VAR_ID_FUNC_DECL(obj_ns) NcHIPertBGVarID NC_HIPERT_BG_VAR_ID_FUNC(obj_ns) (void) G_GNUC_CONST
+#define NC_HIPERT_BG_VAR_ID_FUNC_DECL(obj_ns) NcHIPertBGVarID NC_HIPERT_BG_VAR_ID_FUNC (obj_ns) (void) G_GNUC_CONST
 
 /**
  * NC_HIPERT_BG_VAR_ID_FUNC_IMPL: (skip)
@@ -134,18 +134,18 @@ NcHIPertBGVarID nc_hipert_bg_var_class_get_id_by_ns (const gchar *ns);
  * The implementation of the id function associated with @obj_ns.
  *
  */
-#define NC_HIPERT_BG_VAR_ID_FUNC_IMPL(obj_ns,ns) \
-NcHIPertBGVarID NC_HIPERT_BG_VAR_ID_FUNC(obj_ns) (void) \
-{ \
-  static NcHIPertBGVarID id = -1; \
-  if (id == -1) \
-  { \
-    NcHIPertBGVarClass *bg_var_class = g_type_class_ref (NC_TYPE_HIPERT_BG_VAR); \
-    id = nc_hipert_bg_var_class_get_id_by_ns (#ns); \
-    g_type_class_unref (bg_var_class); \
-  } \
-  return id; \
-}
+#define NC_HIPERT_BG_VAR_ID_FUNC_IMPL(obj_ns, ns)                                        \
+        NcHIPertBGVarID NC_HIPERT_BG_VAR_ID_FUNC (obj_ns) (void)                         \
+        {                                                                                \
+          static NcHIPertBGVarID id = -1;                                                \
+          if (id == -1)                                                                  \
+          {                                                                              \
+            NcHIPertBGVarClass *bg_var_class = g_type_class_ref (NC_TYPE_HIPERT_BG_VAR); \
+            id = nc_hipert_bg_var_class_get_id_by_ns (#ns);                              \
+            g_type_class_unref (bg_var_class);                                           \
+          }                                                                              \
+          return id;                                                                     \
+        }
 
 NCM_INLINE NcHIPertBGVarYDY *nc_hipert_bg_var_ydy_new (void);
 NCM_INLINE NcHIPertBGVarYDY *nc_hipert_bg_var_ydy_dup (NcHIPertBGVarYDY *ydy);
@@ -202,6 +202,7 @@ NCM_INLINE NcHIPertBGVarYDY *
 nc_hipert_bg_var_ydy_new (void)
 {
   NcHIPertBGVarYDY *ydy = g_new0 (NcHIPertBGVarYDY, 1);
+
   return ydy;
 }
 
@@ -215,31 +216,31 @@ nc_hipert_bg_var_ydy_dup (NcHIPertBGVarYDY *ydy)
   return ydy_dup;
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 nc_hipert_bg_var_ydy_free (NcHIPertBGVarYDY *ydy)
 {
   g_free (ydy);
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_hipert_bg_var_ydy_get_y_i (NcHIPertBGVarYDY *ydy, guint i)
 {
   return ydy->y[ydy->perm_inv[ydy->start_index + i]];
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 nc_hipert_bg_var_ydy_set_dy_i (NcHIPertBGVarYDY *ydy, guint i, const gdouble dy_i)
 {
   ydy->dy[ydy->perm_inv[ydy->start_index + i]] = dy_i;
 }
 
-NCM_INLINE gdouble 
+NCM_INLINE gdouble
 nc_hipert_bg_var_ydy_get_dy_i (NcHIPertBGVarYDY *ydy, guint i)
 {
   return ydy->dy[ydy->perm_inv[ydy->start_index + i]];
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 nc_hipert_bg_var_set_dist (NcHIPertBGVar *bg_var, NcDistance *dist)
 {
   nc_distance_clear (&bg_var->dist);
@@ -251,7 +252,7 @@ nc_hipert_bg_var_set_dist (NcHIPertBGVar *bg_var, NcDistance *dist)
   }
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 nc_hipert_bg_var_set_recomb (NcHIPertBGVar *bg_var, NcRecomb *recomb)
 {
   nc_recomb_clear (&bg_var->recomb);
@@ -263,11 +264,11 @@ nc_hipert_bg_var_set_recomb (NcHIPertBGVar *bg_var, NcRecomb *recomb)
   }
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 nc_hipert_bg_var_set_scalefactor (NcHIPertBGVar *bg_var, NcScalefactor *a)
 {
   nc_scalefactor_clear (&bg_var->a);
-  
+
   if (a != NULL)
   {
     bg_var->a = nc_scalefactor_ref (a);
@@ -284,7 +285,7 @@ nc_hipert_bg_var_get_dist (NcHIPertBGVar *bg_var)
 NCM_INLINE NcRecomb *
 nc_hipert_bg_var_get_recomb (NcHIPertBGVar *bg_var)
 {
-  return (bg_var->recomb != NULL) ? nc_recomb_ref (bg_var->recomb) : bg_var->recomb;  
+  return (bg_var->recomb != NULL) ? nc_recomb_ref (bg_var->recomb) : bg_var->recomb;
 }
 
 NCM_INLINE NcScalefactor *
@@ -293,8 +294,9 @@ nc_hipert_bg_var_get_scalefactor (NcHIPertBGVar *bg_var)
   return (bg_var->a != NULL) ? nc_scalefactor_ref (bg_var->a) : bg_var->a;
 }
 
-NCM_INLINE 
-NcDistance *nc_hipert_bg_var_peek_dist (NcHIPertBGVar *bg_var)
+NCM_INLINE
+NcDistance *
+nc_hipert_bg_var_peek_dist (NcHIPertBGVar *bg_var)
 {
   return bg_var->dist;
 }
@@ -316,3 +318,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPERT_BG_VAR_INLINE_H_ */
+

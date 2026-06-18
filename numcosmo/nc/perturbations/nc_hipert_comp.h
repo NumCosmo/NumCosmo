@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -113,21 +113,23 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NCM_INLINE NcHIPertBGVarID 
+NCM_INLINE NcHIPertBGVarID
 nc_hipert_comp_get_id (NcHIPertComp *comp)
 {
   const NcHIPertBGVarID id = nc_hipert_bg_var_class_get_id_by_ns (G_OBJECT_TYPE_NAME (comp));
+
   g_assert_cmpint (id, >=, 0);
+
   return id;
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 nc_hipert_comp_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar)
 {
   NC_HIPERT_COMP_GET_CLASS (comp)->get_T_scalar (comp, bg_var, ydy, T_scalar);
 }
 
-NCM_INLINE void 
+NCM_INLINE void
 nc_hipert_comp_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
 {
   NC_HIPERT_COMP_GET_CLASS (comp)->get_dy_scalar (comp, bg_var, ydy, T_scalar, G_scalar);
@@ -138,3 +140,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_HIPERT_COMP_INLINE_H_ */
+

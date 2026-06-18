@@ -186,14 +186,14 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   ncm_mset_model_register_id (model_class, "NcGalaxySDObsRedshift", "Galaxy sample observed redshift distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
-  klass->gen                   = &_nc_galaxy_sd_obs_redshift_gen;
-  klass->gen1                  = &_nc_galaxy_sd_obs_redshift_gen1;
-  klass->prepare               = &_nc_galaxy_sd_obs_redshift_prepare;
-  klass->get_integ_lim         = &_nc_galaxy_sd_obs_redshift_get_integ_lim;
-  klass->integ                 = &_nc_galaxy_sd_obs_redshift_integ;
-  klass->data_init             = &_nc_galaxy_sd_obs_redshift_data_init;
-  klass->compute_binned_dndz   = &_nc_galaxy_sd_obs_redshift_compute_binned_dndz;
-  klass->make_fixed_nodes      = &_nc_galaxy_sd_obs_redshift_make_fixed_nodes;
+  klass->gen                 = &_nc_galaxy_sd_obs_redshift_gen;
+  klass->gen1                = &_nc_galaxy_sd_obs_redshift_gen1;
+  klass->prepare             = &_nc_galaxy_sd_obs_redshift_prepare;
+  klass->get_integ_lim       = &_nc_galaxy_sd_obs_redshift_get_integ_lim;
+  klass->integ               = &_nc_galaxy_sd_obs_redshift_integ;
+  klass->data_init           = &_nc_galaxy_sd_obs_redshift_data_init;
+  klass->compute_binned_dndz = &_nc_galaxy_sd_obs_redshift_compute_binned_dndz;
+  klass->make_fixed_nodes    = &_nc_galaxy_sd_obs_redshift_make_fixed_nodes;
 }
 
 /**

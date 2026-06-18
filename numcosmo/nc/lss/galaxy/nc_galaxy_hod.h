@@ -69,3 +69,4 @@ void nc_galaxy_hod_gen (NcGalaxyHOD *hod, const gdouble lnM, NcmRNG *rng, gint *
 G_END_DECLS
 
 #endif /* _NC_GALAXY_HOD_H */
+

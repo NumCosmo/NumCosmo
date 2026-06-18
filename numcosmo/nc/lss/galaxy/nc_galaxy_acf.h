@@ -72,3 +72,4 @@ void nc_galaxy_acf_prepare_psi (NcGalaxyAcf *acf, NcHICosmo *cosmo, guint l);
 G_END_DECLS
 
 #endif /* _NC_GALAXY_ACF_H_ */
+

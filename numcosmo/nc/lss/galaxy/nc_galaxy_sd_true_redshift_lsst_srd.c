@@ -196,7 +196,7 @@ _nc_galaxy_sd_true_redshift_lsst_srd_update (NcGalaxySDTrueRedshift *gsdtr)
     self->y0      = pow (z0, alpha);
     self->z_norm  = alpha / (pow (z0, 1.0 + self->beta) * (gsl_sf_gamma_inc (self->gamma_a, y_low / self->y0) -
                                                            gsl_sf_gamma_inc (self->gamma_a, y_up / self->y0))
-                            );
+    );
     self->ln_z_norm = log (self->z_norm);
 
     ncm_model_state_set_update (model);
@@ -407,14 +407,19 @@ nc_galaxy_sd_true_redshift_lsst_srd_new_from_type (NcGalaxySDTrueRedshiftLSSTSRD
   {
     case NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE:
       return nc_galaxy_sd_true_redshift_lsst_srd_new_y1_source ();
+
     case NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS:
       return nc_galaxy_sd_true_redshift_lsst_srd_new_y1_lens ();
+
     case NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_SOURCE:
       return nc_galaxy_sd_true_redshift_lsst_srd_new_y10_source ();
+
     case NC_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y10_LENS:
       return nc_galaxy_sd_true_redshift_lsst_srd_new_y10_lens ();
+
     default:
       g_error ("nc_galaxy_sd_true_redshift_lsst_srd_new_from_type: invalid type %d", type);
+
       return NULL;
   }
 }

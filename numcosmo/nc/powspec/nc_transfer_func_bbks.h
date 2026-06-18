@@ -61,4 +61,3 @@ G_END_DECLS
 
 #endif /* _NC_TRANSFER_FUNC_BBKS_H_ */
 
-

@@ -52,7 +52,8 @@
 #include "ncm/core/ncm_serialize.h"
 #include "ncm/core/ncm_cfg.h"
 
-typedef struct {
+typedef struct
+{
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_reion;
 } NcTransferFuncPrivate;
@@ -71,7 +72,7 @@ nc_transfer_func_init (NcTransferFunc *tf)
 static void
 _nc_transfer_func_dispose (GObject *object)
 {
-  NcTransferFunc *tf = NC_TRANSFER_FUNC (object);
+  NcTransferFunc *tf          = NC_TRANSFER_FUNC (object);
   NcTransferFuncPrivate *priv = nc_transfer_func_get_instance_private (tf);
 
   ncm_model_ctrl_clear (&priv->ctrl_cosmo);
@@ -152,7 +153,7 @@ void
 nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
   NcTransferFuncPrivate *priv = nc_transfer_func_get_instance_private (tf);
-  
+
   NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, cosmo);
 
   ncm_model_ctrl_update (priv->ctrl_cosmo, NCM_MODEL (cosmo));
@@ -170,7 +171,7 @@ void
 nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
   NcTransferFuncPrivate *priv = nc_transfer_func_get_instance_private (tf);
-  gboolean cosmo_up = ncm_model_ctrl_update (priv->ctrl_cosmo, NCM_MODEL (cosmo));
+  gboolean cosmo_up           = ncm_model_ctrl_update (priv->ctrl_cosmo, NCM_MODEL (cosmo));
 
   if (cosmo_up)
     NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, cosmo);

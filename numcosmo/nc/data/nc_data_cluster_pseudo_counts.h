@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -59,7 +59,7 @@ struct _NcDataClusterPseudoCountsClass
  * @NC_DATA_CLUSTER_PSEUDO_COUNTS_MCL: CLASH cluster mass
  * @NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL: Planck mass error
  * @NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL: CLASH mass error
- * 
+ *
  */
 typedef enum _NcDataClusterPseudoCountsObs
 {
@@ -67,7 +67,7 @@ typedef enum _NcDataClusterPseudoCountsObs
   NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL,
   NC_DATA_CLUSTER_PSEUDO_COUNTS_MCL,
   NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL,
-  NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL, 
+  NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL,
   /* < private > */
   NC_DATA_CLUSTER_PSEUDO_COUNTS_LEN, /*< skip >*/
 } NcDataClusterPseudoCountsObs;
@@ -106,3 +106,4 @@ void nc_data_cluster_pseudo_counts_init_from_sampling (NcDataClusterPseudoCounts
 G_END_DECLS
 
 #endif /* _NC_DATA_CLUSTER_PSEUDO_COUNTS_H_ */
+

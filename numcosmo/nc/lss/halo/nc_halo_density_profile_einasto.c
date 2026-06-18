@@ -203,11 +203,11 @@ _nc_halo_density_profile_einasto_eval_dl_density (NcHaloDensityProfile *dp, cons
 static gdouble
 _nc_halo_density_profile_einasto_eval_dl_spher_mass (NcHaloDensityProfile *dp, const gdouble x)
 {
-  //NcHaloDensityProfileEinasto *dpe                = NC_HALO_DENSITY_PROFILE_EINASTO (dp);
-  //NcHaloDensityProfileEinastoPrivate * const self = nc_halo_density_profile_einasto_get_instance_private (dpe);
-  const gdouble gamma_3_alpha                     = gsl_sf_gamma (3.0 / ALPHA);
-  const gdouble arg_2                             = 2.0 * pow (x, ALPHA) / ALPHA;
-  const gdouble gamma_inc_P                       = gsl_sf_gamma_inc_P (3.0 / ALPHA, arg_2);
+  /*NcHaloDensityProfileEinasto *dpe                = NC_HALO_DENSITY_PROFILE_EINASTO (dp); */
+  /*NcHaloDensityProfileEinastoPrivate * const self = nc_halo_density_profile_einasto_get_instance_private (dpe); */
+  const gdouble gamma_3_alpha = gsl_sf_gamma (3.0 / ALPHA);
+  const gdouble arg_2         = 2.0 * pow (x, ALPHA) / ALPHA;
+  const gdouble gamma_inc_P   = gsl_sf_gamma_inc_P (3.0 / ALPHA, arg_2);
 
   return (pow (ALPHA / 2.0, 3.0 / ALPHA) * exp (2.0 / ALPHA) / ALPHA * gamma_3_alpha * gamma_inc_P);
 }

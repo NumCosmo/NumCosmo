@@ -123,8 +123,8 @@ nc_galaxy_acf_psi_kernel (gdouble z, gpointer p)
   return Dz * sel_func * (apk->acf->b * jl +
                           fz * (
                             ((apk->l * (1.0 - apk->l) + x2) * jl - 2 * x * jlp1) / x2
-                               )
-                         );
+                          )
+  );
 }
 
 gdouble

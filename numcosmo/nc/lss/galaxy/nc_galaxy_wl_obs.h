@@ -129,3 +129,4 @@ guint nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs);
 G_END_DECLS
 
 #endif /* _NC_GALAXY_WL_OBS_H */
+

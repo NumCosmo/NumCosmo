@@ -121,9 +121,9 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_BOLTZMANN_VARS  >*/
   NC_HIPERT_BOLTZMANN_THETA2,
   NC_HIPERT_BOLTZMANN_THETA_P0,
   NC_HIPERT_BOLTZMANN_THETA_P1,
-  NC_HIPERT_BOLTZMANN_THETA_P2, 
+  NC_HIPERT_BOLTZMANN_THETA_P2,
   /* < private > */
-  NC_HIPERT_BOLTZMANN_LEN,      /*< skip >*/
+  NC_HIPERT_BOLTZMANN_LEN, /*< skip >*/
 } NcHIPertBoltzmannVars;
 
 #define NC_HIPERT_BOLTZMANN_BASE_SIZE (NC_HIPERT_BOLTZMANN_THETA2 + 1)
@@ -218,3 +218,4 @@ void nc_hipert_boltzmann_get_EB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
 G_END_DECLS
 
 #endif /* _NC_HIPERT_BOLTZMANN_H_ */
+

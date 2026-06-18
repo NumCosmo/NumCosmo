@@ -501,3 +501,4 @@ nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs)
 {
   return ncm_catalog_len (NCM_CATALOG (obs));
 }
+

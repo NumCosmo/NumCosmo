@@ -1,4 +1,3 @@
-
 /***************************************************************************
  *            nc_galaxy_sd_shape_hsm_gauss_global.c
  *
@@ -98,10 +97,10 @@ nc_galaxy_sd_shape_hsm_gauss_global_init (NcGalaxySDShapeHSMGaussGlobal *gsdsgau
 {
   NcGalaxySDShapeHSMGaussGlobalPrivate * const self = nc_galaxy_sd_shape_hsm_gauss_global_get_instance_private (gsdsgauss);
 
-  self->ctrl_cosmo       = ncm_model_ctrl_new (NULL);
-  self->ctrl_hp          = ncm_model_ctrl_new (NULL);
-  self->ctrl_shape       = ncm_model_ctrl_new (NULL);
-  self->obs_stats        = ncm_stats_vec_new (5, NCM_STATS_VEC_COV, FALSE);
+  self->ctrl_cosmo = ncm_model_ctrl_new (NULL);
+  self->ctrl_hp    = ncm_model_ctrl_new (NULL);
+  self->ctrl_shape = ncm_model_ctrl_new (NULL);
+  self->obs_stats  = ncm_stats_vec_new (5, NCM_STATS_VEC_COV, FALSE);
 }
 
 /* LCOV_EXCL_START */
@@ -1012,13 +1011,13 @@ nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape (const gdouble std_shap
     if (lambda < 1.0e-2)
     {
       g_warning ("nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape: sigma_from_std_shape failed to converge"); /* LCOV_EXCL_LINE */
-      break;                                                                                          /* LCOV_EXCL_LINE */
+      break;                                                                                                           /* LCOV_EXCL_LINE */
     }
 
     if (++iter == 10000)
     {
       g_warning ("nc_galaxy_sd_shape_hsm_gauss_global_sigma_from_std_shape: sigma_from_std_shape failed to converge"); /* LCOV_EXCL_LINE */
-      break;                                                                                          /* LCOV_EXCL_LINE */
+      break;                                                                                                           /* LCOV_EXCL_LINE */
     }
 
     if (fabs (delta) < GSL_DBL_EPSILON * 10.0)

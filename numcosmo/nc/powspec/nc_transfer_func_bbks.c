@@ -68,7 +68,7 @@ typedef struct _NcTransferFuncBBKSPrivate
   gdouble c4;
   gdouble c5_wm; /* c5_wm = c5/wm */
   gdouble h;
-}NcTransferFuncBBKSPrivate;
+} NcTransferFuncBBKSPrivate;
 
 struct _NcTransferFuncBBKS
 {
@@ -89,7 +89,7 @@ static void
 nc_transfer_func_bbks_init (NcTransferFuncBBKS *tf_bbks)
 {
   NcTransferFuncBBKSPrivate * const self = nc_transfer_func_bbks_get_instance_private (tf_bbks);
-  
+
   self->c1    = 0.0;
   self->c2    = 0.0;
   self->c3    = 0.0;

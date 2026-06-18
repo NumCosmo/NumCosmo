@@ -76,3 +76,4 @@ void nc_galaxy_hod_zheng07_clear (NcGalaxyHODZheng07 **zheng07);
 G_END_DECLS
 
 #endif /* _NC_GALAXY_HOD_ZHENG07_H */
+

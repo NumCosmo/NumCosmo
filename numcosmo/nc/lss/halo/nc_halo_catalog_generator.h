@@ -41,7 +41,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcHaloCatalogGenerator, nc_halo_catalog_generator, NC, HALO_CATALOG_GENERATOR, GObject)
 
-NcHaloCatalogGenerator *nc_halo_catalog_generator_new (NcClusterAbundance *cad);
+NcHaloCatalogGenerator *nc_halo_catalog_generator_new (NcClusterAbundance * cad);
 NcHaloCatalogGenerator *nc_halo_catalog_generator_ref (NcHaloCatalogGenerator *gen);
 
 void nc_halo_catalog_generator_free (NcHaloCatalogGenerator *gen);
@@ -60,3 +60,4 @@ NcHaloCatalog *nc_halo_catalog_generator_generate (NcHaloCatalogGenerator *gen, 
 G_END_DECLS
 
 #endif /* _NC_HALO_CATALOG_GENERATOR_H */
+

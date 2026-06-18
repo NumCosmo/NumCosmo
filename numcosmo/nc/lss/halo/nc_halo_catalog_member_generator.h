@@ -75,3 +75,4 @@ NcHaloCatalog *nc_halo_catalog_member_generator_generate (NcHaloCatalogMemberGen
 G_END_DECLS
 
 #endif /* _NC_HALO_CATALOG_MEMBER_GENERATOR_H */
+

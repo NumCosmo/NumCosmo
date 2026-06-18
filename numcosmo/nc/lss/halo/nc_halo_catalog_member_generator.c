@@ -330,7 +330,7 @@ _nc_halo_catalog_member_generator_sky_offset (gdouble ra_c, gdouble dec_c, gdoub
 static gboolean
 _nc_halo_catalog_member_generator_check_columns (NcmCatalog *host, GError **error)
 {
-  const gchar *const required[] = {"ra", "dec", "z_true", "lnM_true", "r_Delta"};
+  const gchar * const required[] = {"ra", "dec", "z_true", "lnM_true", "r_Delta"};
   guint i;
 
   for (i = 0; i < G_N_ELEMENTS (required); i++)
@@ -436,7 +436,8 @@ nc_halo_catalog_member_generator_generate (NcHaloCatalogMemberGenerator *memgen,
       gdouble sin_theta;
 
       ncm_rng_lock (rng);
-      R         = is_central ? 0.0 : r_D * cbrt (ncm_rng_uniform01_gen (rng));
+      R = is_central ? 0.0 : r_D *cbrt (ncm_rng_uniform01_gen (rng));
+
       cos_theta = ncm_rng_uniform_gen (rng, -1.0, 1.0);
       phi       = ncm_rng_uniform_gen (rng, 0.0, 2.0 * M_PI);
       ncm_rng_unlock (rng);
@@ -494,3 +495,4 @@ nc_halo_catalog_member_generator_generate (NcHaloCatalogMemberGenerator *memgen,
 
   return members;
 }
+

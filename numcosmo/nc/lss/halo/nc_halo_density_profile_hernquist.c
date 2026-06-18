@@ -257,7 +257,7 @@ _nc_halo_density_profile_hernquist_eval_dl_cyl_mass (NcHaloDensityProfile *dp, c
             ) * X_22
           ) * X_22
         ) * X_22
-                    );
+      );
     }
     else
     {

@@ -750,7 +750,7 @@ _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   {
     NcGalaxySDPositionIntegrand *integrand_position = nc_galaxy_sd_position_integ (self->galaxy_position, FALSE);
     /* Up to two panels per galaxy when the support straddles the lens redshift. */
-    NcmVector *shape_at_nodes                       = ncm_vector_new (2 * n_total_nodes);
+    NcmVector *shape_at_nodes = ncm_vector_new (2 * n_total_nodes);
 
     nc_galaxy_sd_position_integrand_prepare (integrand_position, mset);
 
@@ -838,8 +838,11 @@ _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
 static gdouble
 _nc_data_cluster_wl_integ_combine (gdouble m2_lo, gdouble m2_hi)
 {
-  if (!gsl_finite (m2_lo)) return m2_hi;
-  if (!gsl_finite (m2_hi)) return m2_lo;
+  if (!gsl_finite (m2_lo))
+    return m2_hi;
+
+  if (!gsl_finite (m2_hi))
+    return m2_lo;
 
   {
     const gdouble a = -0.5 * m2_lo;
@@ -1236,6 +1239,7 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
     if (model_update)
     {
       _nc_data_cluster_wl_load_obs (dcwl, self->obs, self->shape_data);
+
       /* shape_data was rebuilt: the per-galaxy node caches it holds and the
        * derived fixed-node grid are now invalid. Force a rebuild on the next
        * fixed-nodes prepare, even if it happens after a cubature/lnint eval. */
@@ -1249,11 +1253,13 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
       guint gal_i;
       const guint n_total_nodes = (self->n_nodes - 1) * self->rule_n;
       const gdouble z_cl        = nc_halo_position_get_redshift (halo_position);
+
       /* The reduced shear has a non-smooth point at the lens redshift z_cl. The
        * node layout splits the support there, so the grid must be rebuilt when
        * z_cl changes (in addition to the usual model/length triggers). */
       const gboolean zcl_changed   = (z_cl != self->fixed_nodes_zcl);
       const gboolean nodes_rebuilt = model_update || zcl_changed || (self->fixed_nodes->len != self->len);
+
       /* The per-galaxy node caches (radius, sigma, critical surface density)
        * live in the shape data this dcwl owns; prepare_at_nodes recomputes them
        * unconditionally. We track the relevant models here so it is only invoked
