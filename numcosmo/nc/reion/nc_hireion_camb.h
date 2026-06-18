@@ -28,7 +28,7 @@
 
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/ncm/model/ncm_model_ctrl.h>
 #include <numcosmo/nc/reion/nc_hireion.h>
 
 #ifndef NUMCOSMO_GIR_SCAN

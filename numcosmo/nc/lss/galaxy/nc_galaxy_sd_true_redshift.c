@@ -43,7 +43,7 @@
 
 #include "nc/lss/galaxy/nc_galaxy_sd_true_redshift.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift.h"
-#include "math/ncm_dtuple.h"
+#include "ncm/core/ncm_dtuple.h"
 
 typedef struct _NcGalaxySDTrueRedshiftPrivate
 {

@@ -28,11 +28,11 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_c.h>
-#include <numcosmo/math/ncm_model.h>
-#include <numcosmo/math/ncm_mset_func.h>
-#include <numcosmo/math/ncm_likelihood.h>
-#include <numcosmo/math/ncm_powspec_filter.h>
+#include <numcosmo/ncm/core/ncm_c.h>
+#include <numcosmo/ncm/model/ncm_model.h>
+#include <numcosmo/ncm/model/ncm_mset_func.h>
+#include <numcosmo/ncm/fit/ncm_likelihood.h>
+#include <numcosmo/ncm/powspec/ncm_powspec_filter.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_roots.h>

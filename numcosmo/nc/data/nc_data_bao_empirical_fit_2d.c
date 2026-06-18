@@ -48,7 +48,7 @@
 #include "nc/data/nc_data_bao_empirical_fit_2d.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/background/nc_distance.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 
 typedef struct _NcDataBaoEmpiricalFit2dPrivate
 {

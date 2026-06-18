@@ -38,8 +38,8 @@
 #include "build_cfg.h"
 
 #include "nc/data/nc_data_dist_mu.h"
-#include "math/ncm_data_gauss_diag.h"
-#include "math/ncm_cfg.h"
+#include "ncm/data/ncm_data_gauss_diag.h"
+#include "ncm/core/ncm_cfg.h"
 #include "nc_enum_types.h"
 
 enum

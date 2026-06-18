@@ -44,13 +44,13 @@
 
 #include "nc/lss/galaxy/nc_galaxy_sd_position_flat.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_position.h"
-#include "math/ncm_dtuple.h"
-#include "math/ncm_model.h"
-#include "math/ncm_vector.h"
-#include "math/ncm_rng.h"
-#include "math/ncm_c.h"
-#include "math/ncm_sky_footprint.h"
-#include "math/ncm_sky_footprint_rectangular.h"
+#include "ncm/core/ncm_dtuple.h"
+#include "ncm/model/ncm_model.h"
+#include "ncm/algebra/ncm_vector.h"
+#include "ncm/core/ncm_rng.h"
+#include "ncm/core/ncm_c.h"
+#include "ncm/sphere/ncm_sky_footprint.h"
+#include "ncm/sphere/ncm_sky_footprint_rectangular.h"
 
 typedef struct _NcGalaxySDPositionFlatPrivate
 {

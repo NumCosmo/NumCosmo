@@ -50,7 +50,7 @@
 #include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift_spec.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_position.h"
-#include "math/ncm_integral_nd.h"
+#include "ncm/integration/ncm_integral_nd.h"
 #include <math.h>
 #include <gsl/gsl_math.h>
 
@@ -59,10 +59,10 @@
 #include "nc/lss/halo/nc_halo_position.h"
 #include "nc/lss/halo/nc_halo_density_profile.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_util.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
 
 #define NC_GALAXY_LOW_PROB 1.0e6
 struct _NcDataClusterWLPrivate

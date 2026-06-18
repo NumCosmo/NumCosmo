@@ -40,11 +40,11 @@
 #include "build_cfg.h"
 
 #include "nc/background/nc_hicosmo_de_wspline.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_spline_gsl.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
-#include "math/ncm_mset_func_list.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_gsl.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/model/ncm_mset_func_list.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_integration.h>

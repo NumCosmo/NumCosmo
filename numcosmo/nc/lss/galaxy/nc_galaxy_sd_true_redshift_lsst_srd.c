@@ -45,10 +45,10 @@
 #include "gsl/gsl_sf.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_true_redshift.h"
-#include "math/ncm_dtuple.h"
-#include "math/ncm_model.h"
-#include "math/ncm_rng.h"
-#include "math/ncm_vector.h"
+#include "ncm/core/ncm_dtuple.h"
+#include "ncm/model/ncm_model.h"
+#include "ncm/core/ncm_rng.h"
+#include "ncm/algebra/ncm_vector.h"
 
 typedef struct _NcGalaxySDTrueRedshiftLSSTSRDPrivate
 {

@@ -44,7 +44,7 @@
 #include "build_cfg.h"
 #include "nc/data/nc_data_bao_dvr_dtdh.h"
 #include "nc_enum_types.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 
 typedef struct _NcDataBaoDvrDtDhPrivate
 {

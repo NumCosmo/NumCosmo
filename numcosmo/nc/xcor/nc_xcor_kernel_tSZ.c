@@ -50,7 +50,7 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 #include "nc/xcor/nc_xcor_kernel_tSZ.h"
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor.h"

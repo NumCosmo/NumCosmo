@@ -29,7 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_obj_array.h>
+#include <numcosmo/ncm/core/ncm_obj_array.h>
 
 G_BEGIN_DECLS
 

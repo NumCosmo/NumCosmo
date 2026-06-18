@@ -41,7 +41,7 @@
 
 #include "nc/perturbations/nc_hipert_first_order.h"
 #include "nc/recomb/nc_recomb_seager.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 #include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

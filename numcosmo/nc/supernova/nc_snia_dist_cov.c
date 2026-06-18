@@ -42,7 +42,7 @@
 #include "build_cfg.h"
 
 #include "nc/supernova/nc_snia_dist_cov.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 
 #define VECTOR       (NCM_MODEL (dcov))
 #define ALPHA        (ncm_model_orig_param_get (VECTOR, NC_SNIA_DIST_COV_ALPHA))

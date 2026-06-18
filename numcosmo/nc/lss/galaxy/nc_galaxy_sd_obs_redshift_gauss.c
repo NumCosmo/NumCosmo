@@ -44,14 +44,14 @@
 #include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_true_redshift.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h"
-#include "math/ncm_vector.h"
-#include "math/ncm_rng.h"
-#include "math/ncm_dtuple.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_integral1d_ptr.h"
-#include "math/ncm_stats_dist1d_spline.h"
-#include "math/ncm_spline_func.h"
-#include "math/ncm_util.h"
+#include "ncm/algebra/ncm_vector.h"
+#include "ncm/core/ncm_rng.h"
+#include "ncm/core/ncm_dtuple.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/integration/ncm_integral1d_ptr.h"
+#include "ncm/stats/ncm_stats_dist1d_spline.h"
+#include "ncm/spline/ncm_spline_func.h"
+#include "ncm/core/ncm_util.h"
 
 typedef struct _NcGalaxySDObsRedshiftGaussPrivate
 {

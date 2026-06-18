@@ -41,7 +41,7 @@
 #include "nc/perturbations/nc_hipert_adiab.h"
 #include "nc/perturbations/nc_hipert_gw.h"
 #include "nc/perturbations/nc_hipert_em.h"
-#include "math/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

@@ -31,10 +31,10 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/nc/reion/nc_hireion.h>
-#include <numcosmo/math/ncm_util.h>
-#include <numcosmo/math/ncm_model_ctrl.h>
-#include <numcosmo/math/ncm_spline.h>
-#include <numcosmo/math/ncm_ode_spline.h>
+#include <numcosmo/ncm/core/ncm_util.h>
+#include <numcosmo/ncm/model/ncm_model_ctrl.h>
+#include <numcosmo/ncm/spline/ncm_spline.h>
+#include <numcosmo/ncm/spline/ncm_ode_spline.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_min.h>

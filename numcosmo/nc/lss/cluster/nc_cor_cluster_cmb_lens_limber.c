@@ -36,9 +36,9 @@
 #include "build_cfg.h"
 
 #include "nc/lss/cluster/nc_cor_cluster_cmb_lens_limber.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
-#include "math/ncm_cfg.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/core/ncm_cfg.h"
 
 G_DEFINE_TYPE (NcCorClusterCmbLensLimber, nc_cor_cluster_cmb_lens_limber, G_TYPE_OBJECT)
 

@@ -41,7 +41,7 @@
 
 #include "nc/reion/nc_hireion_camb.h"
 #include "nc/reion/nc_hireion_camb_reparam_tau.h"
-#include "math/ncm_util.h"
+#include "ncm/core/ncm_util.h"
 
 enum
 {

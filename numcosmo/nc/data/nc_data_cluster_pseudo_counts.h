@@ -32,7 +32,7 @@
 #include <numcosmo/nc/lss/cluster/nc_cluster_mass.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_abundance.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_pseudo_counts.h>
-#include <numcosmo/math/ncm_data.h>
+#include <numcosmo/ncm/data/ncm_data.h>
 
 G_BEGIN_DECLS
 

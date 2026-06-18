@@ -36,12 +36,12 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/powspec/nc_growth_func.h>
 #include <numcosmo/nc/powspec/nc_transfer_func.h>
-#include <numcosmo/math/ncm_c.h>
-#include <numcosmo/math/ncm_model.h>
-#include <numcosmo/math/ncm_powspec.h>
-#include <numcosmo/math/ncm_sbessel_integrator.h>
-#include <numcosmo/math/ncm_util.h>
-#include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/ncm/core/ncm_c.h>
+#include <numcosmo/ncm/model/ncm_model.h>
+#include <numcosmo/ncm/powspec/ncm_powspec.h>
+#include <numcosmo/ncm/specfunc/ncm_sbessel_integrator.h>
+#include <numcosmo/ncm/core/ncm_util.h>
+#include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/nc/background/nc_distance.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 

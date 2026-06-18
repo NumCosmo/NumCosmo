@@ -157,13 +157,13 @@
 
 #include "nc_enum_types.h"
 #include "nc/lss/halo/nc_halo_density_profile.h"
-#include "math/ncm_serialize.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_util.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_ode_spline.h"
-#include "math/ncm_memory_pool.h"
+#include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_ode_spline.h"
+#include "ncm/core/ncm_memory_pool.h"
 #include "nc/lss/halo/nc_halo_mass_summary.h"
 
 typedef struct _NcHaloDensityProfilePrivate

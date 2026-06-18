@@ -31,7 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/nc/reion/nc_hireion.h>
-#include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/ncm/model/ncm_model_ctrl.h>
 
 G_BEGIN_DECLS
 

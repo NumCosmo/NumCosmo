@@ -46,7 +46,7 @@
 #include "nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss_global.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_shape.h"
 #include "nc/lss/halo/nc_halo_position.h"
-#include "math/ncm_stats_vec.h"
+#include "ncm/stats/ncm_stats_vec.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>

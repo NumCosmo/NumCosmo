@@ -29,7 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/ncm/model/ncm_model_ctrl.h>
 #include <numcosmo/nc/primordial/nc_hiprim.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/nc/perturbations/nc_hipert.h>

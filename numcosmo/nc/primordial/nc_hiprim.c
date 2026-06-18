@@ -38,11 +38,11 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_serialize.h"
+#include "ncm/core/ncm_serialize.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/primordial/nc_hiprim.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_mset_func_list.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/model/ncm_mset_func_list.h"
 
 enum
 {

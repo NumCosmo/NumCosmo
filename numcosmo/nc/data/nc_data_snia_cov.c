@@ -40,10 +40,10 @@
 #include "nc/data/nc_data_snia_cov.h"
 #include "nc/supernova/nc_snia_dist_cov.h"
 #include "nc_enum_types.h"
-#include "math/ncm_model_ctrl.h"
-#include "math/ncm_lapack.h"
-#include "math/ncm_iset.h"
-#include "math/ncm_cfg.h"
+#include "ncm/model/ncm_model_ctrl.h"
+#include "ncm/algebra/ncm_lapack.h"
+#include "ncm/core/ncm_iset.h"
+#include "ncm/core/ncm_cfg.h"
 
 #include <gio/gio.h>
 #include <glib/gstdio.h>

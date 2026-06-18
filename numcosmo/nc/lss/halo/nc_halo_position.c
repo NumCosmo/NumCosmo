@@ -41,7 +41,7 @@
 #include "nc_enum_types.h"
 #include "nc/background/nc_distance.h"
 #include "nc/lss/halo/nc_halo_position.h"
-#include "math/ncm_quaternion.h"
+#include "ncm/algebra/ncm_quaternion.h"
 
 
 typedef struct _NcHaloPositionPrivate

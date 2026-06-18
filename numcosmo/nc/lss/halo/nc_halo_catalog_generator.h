@@ -29,9 +29,9 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_mset.h>
-#include <numcosmo/math/ncm_rng.h>
-#include <numcosmo/math/ncm_sky_footprint.h>
+#include <numcosmo/ncm/model/ncm_mset.h>
+#include <numcosmo/ncm/core/ncm_rng.h>
+#include <numcosmo/ncm/sphere/ncm_sky_footprint.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_abundance.h>
 #include <numcosmo/nc/lss/halo/nc_halo_catalog.h>
 

@@ -29,9 +29,9 @@
 #include <glib-object.h>
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_data_gauss_cov.h>
-#include <numcosmo/math/ncm_model_ctrl.h>
-#include <numcosmo/math/ncm_obj_array.h>
+#include <numcosmo/ncm/data/ncm_data_gauss_cov.h>
+#include <numcosmo/ncm/model/ncm_model_ctrl.h>
+#include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/nc/xcor/nc_xcor.h>
 #include <numcosmo/nc/xcor/nc_xcor_AB.h>
 

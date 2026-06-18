@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "nc/lss/cluster/nc_cluster_mass_nodist.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 
 typedef struct _NcClusterMassNodistPrivate
 {

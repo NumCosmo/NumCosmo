@@ -29,7 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_c.h>
+#include <numcosmo/ncm/core/ncm_c.h>
 #include <numcosmo/nc/primordial/nc_hiprim.h>
 
 G_BEGIN_DECLS

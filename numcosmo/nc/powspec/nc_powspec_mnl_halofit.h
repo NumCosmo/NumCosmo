@@ -29,7 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_powspec_filter.h>
+#include <numcosmo/ncm/powspec/ncm_powspec_filter.h>
 #include <numcosmo/nc/powspec/nc_powspec_mnl.h>
 #include <numcosmo/nc/powspec/nc_powspec_ml.h>
 

@@ -51,8 +51,8 @@
 #include "build_cfg.h"
 
 #include "nc/lss/cluster/nc_cluster_mass_ext.h"
-#include "math/ncm_c.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_c.h"
+#include "ncm/core/ncm_cfg.h"
 
 typedef struct _NcClusterMassExtPrivate
 {

@@ -53,15 +53,15 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 #include "nc/xcor/nc_xcor_kernel_gal.h"
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor_lensing_efficiency.h"
 #include "nc/xcor/nc_xcor.h"
 
-#include "math/ncm_integrate.h"
-#include "math/ncm_spline_gsl.h"
-#include "math/ncm_spline_func.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/spline/ncm_spline_gsl.h"
+#include "ncm/spline/ncm_spline_func.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>

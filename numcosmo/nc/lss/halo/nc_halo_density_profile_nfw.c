@@ -68,9 +68,9 @@
 #include "build_cfg.h"
 
 #include "nc/lss/halo/nc_halo_density_profile_nfw.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_util.h"
-#include "math/ncm_integrate.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
+#include "ncm/integration/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_expint.h>

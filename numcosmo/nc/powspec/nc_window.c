@@ -47,9 +47,9 @@
 #include "build_cfg.h"
 
 #include "nc/powspec/nc_window.h"
-#include "math/ncm_serialize.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_util.h"
+#include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcWindow, nc_window, G_TYPE_OBJECT)
 

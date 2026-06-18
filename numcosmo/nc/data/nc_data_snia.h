@@ -27,7 +27,7 @@
 
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_data.h>
+#include <numcosmo/ncm/data/ncm_data.h>
 #include <numcosmo/nc/background/nc_distance.h>
 
 G_BEGIN_DECLS

@@ -39,8 +39,8 @@
 #include "build_cfg.h"
 
 #include "nc/lss/halo/nc_multiplicity_func_tinker.h"
-#include "math/ncm_spline_cubic_d2.h"
-#include "math/ncm_spline_gsl.h"
+#include "ncm/spline/ncm_spline_cubic_d2.h"
+#include "ncm/spline/ncm_spline_gsl.h"
 
 typedef struct _NcMultiplicityFuncTinkerPrivate
 {

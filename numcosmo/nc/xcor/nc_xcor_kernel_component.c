@@ -50,8 +50,8 @@
 #include "build_cfg.h"
 
 #include "nc/xcor/nc_xcor_kernel_component.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_cfg.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>

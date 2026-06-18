@@ -59,8 +59,8 @@
 #include "build_cfg.h"
 
 #include "nc/powspec/nc_window_gaussian.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_util.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>

@@ -36,10 +36,10 @@
 #include "build_cfg.h"
 
 #include "nc/lss/galaxy/nc_galaxy_selfunc.h"
-#include "math/ncm_vector.h"
-#include "math/ncm_spline.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_obj_array.h"
+#include "ncm/algebra/ncm_vector.h"
+#include "ncm/spline/ncm_spline.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/core/ncm_obj_array.h"
 
 typedef struct _NcGalaxySelfuncPrivate
 {

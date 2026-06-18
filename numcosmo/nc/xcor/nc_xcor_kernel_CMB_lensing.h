@@ -33,8 +33,8 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_spline.h>
-#include <numcosmo/math/ncm_spline_cubic_notaknot.h>
+#include <numcosmo/ncm/spline/ncm_spline.h>
+#include <numcosmo/ncm/spline/ncm_spline_cubic_notaknot.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel.h>
 #include <numcosmo/nc/recomb/nc_recomb.h>
 

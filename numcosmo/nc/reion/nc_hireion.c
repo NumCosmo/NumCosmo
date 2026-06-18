@@ -50,11 +50,11 @@
 
 #include "nc/reion/nc_hireion.h"
 #include "nc/recomb/nc_recomb.h"
-#include "math/ncm_serialize.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
-#include "math/ncm_mset_func_list.h"
+#include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/model/ncm_mset_func_list.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_integration.h>

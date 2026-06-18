@@ -51,8 +51,8 @@
 #include "build_cfg.h"
 
 #include "nc/lss/halo/nc_halo_bias_tinker.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_util.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
 
 G_DEFINE_TYPE (NcHaloBiasTinker, nc_halo_bias_tinker, NC_TYPE_HALO_BIAS)
 

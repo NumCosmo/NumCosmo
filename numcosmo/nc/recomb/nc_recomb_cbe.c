@@ -38,7 +38,7 @@
 #include "build_cfg.h"
 
 #include "nc/recomb/nc_recomb_cbe.h"
-#include "math/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 
 enum
 {

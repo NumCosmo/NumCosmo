@@ -42,11 +42,11 @@
 #include "nc/data/nc_data_cluster_mass_rich.h"
 #include "nc/lss/cluster/nc_cluster_mass_richness.h"
 
-#include "math/ncm_cfg.h"
-#include "math/ncm_util.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
-#include "math/ncm_pln1d.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/core/ncm_pln1d.h"
 
 #include <gsl/gsl_sf_erf.h>
 

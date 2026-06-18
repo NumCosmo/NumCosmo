@@ -37,13 +37,13 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_mset_func_list.h"
-#include "math/ncm_prior_gauss_func.h"
-#include "math/ncm_spline_cubic_notaknot.h"
+#include "ncm/model/ncm_mset_func_list.h"
+#include "ncm/fit/ncm_prior_gauss_func.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "nc/background/nc_hicosmo_de.h"
 #include "nc/background/nc_hicosmo_de_reparam_cmb.h"
 #include "nc/background/nc_hicosmo_de_reparam_ok.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_min.h>

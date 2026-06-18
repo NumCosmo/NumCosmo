@@ -32,7 +32,7 @@
 #include <complex.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_ode_spline.h>
+#include <numcosmo/ncm/spline/ncm_ode_spline.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/nc/perturbations/nc_hipert.h>
 #include <numcosmo/nc/perturbations/nc_hipert_itwo_fluids.h>

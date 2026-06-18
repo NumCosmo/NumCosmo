@@ -32,9 +32,9 @@
 #include <numcosmo/nc/lss/cluster/nc_cluster_redshift.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_mass.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_abundance.h>
-#include <numcosmo/math/ncm_data.h>
-#include <numcosmo/math/ncm_vector.h>
-#include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/ncm/data/ncm_data.h>
+#include <numcosmo/ncm/algebra/ncm_vector.h>
+#include <numcosmo/ncm/algebra/ncm_matrix.h>
 
 G_BEGIN_DECLS
 

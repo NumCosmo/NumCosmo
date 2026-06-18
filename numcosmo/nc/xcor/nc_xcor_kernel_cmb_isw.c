@@ -44,10 +44,10 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_cfg.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
-#include "math/ncm_spline2d_bicubic.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/spline/ncm_spline2d_bicubic.h"
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor_kernel_cmb_isw.h"
 #include "nc/xcor/nc_xcor.h"

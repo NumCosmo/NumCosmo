@@ -29,7 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_likelihood.h>
+#include <numcosmo/ncm/fit/ncm_likelihood.h>
 #include <numcosmo/nc/cmb/nc_planck_fi_cor_tt.h>
 
 G_BEGIN_DECLS

@@ -143,11 +143,11 @@
 #include "build_cfg.h"
 
 #include "nc/recomb/nc_recomb.h"
-#include "math/ncm_util.h"
-#include "math/ncm_serialize.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_spline_func.h"
-#include "math/ncm_spline_cubic_notaknot.h"
+#include "ncm/core/ncm_util.h"
+#include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/spline/ncm_spline_func.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_exp.h>

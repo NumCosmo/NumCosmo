@@ -45,7 +45,7 @@
 
 #include "nc/data/nc_data_bao_dmr_hr.h"
 #include "nc_enum_types.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 
 
 typedef struct _NcDataBaoDMrHrPrivate

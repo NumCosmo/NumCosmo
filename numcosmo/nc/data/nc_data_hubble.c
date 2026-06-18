@@ -39,8 +39,8 @@
 
 #include "nc/data/nc_data_hubble.h"
 
-#include "math/ncm_data_gauss_diag.h"
-#include "math/ncm_cfg.h"
+#include "ncm/data/ncm_data_gauss_diag.h"
+#include "ncm/core/ncm_cfg.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc_enum_types.h"
 

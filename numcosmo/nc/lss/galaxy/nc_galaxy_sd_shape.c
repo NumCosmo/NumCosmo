@@ -49,8 +49,8 @@
 #include "nc/lss/halo/nc_halo_position.h"
 #include "nc/lss/halo/nc_halo_density_profile.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
-#include "math/ncm_rng.h"
-#include "math/ncm_vector.h"
+#include "ncm/core/ncm_rng.h"
+#include "ncm/algebra/ncm_vector.h"
 
 typedef struct _NcGalaxySDShapePrivate
 {

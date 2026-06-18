@@ -30,9 +30,9 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
-#include <numcosmo/math/ncm_c.h>
-#include <numcosmo/math/ncm_model.h>
-#include <numcosmo/math/ncm_mset.h>
+#include <numcosmo/ncm/core/ncm_c.h>
+#include <numcosmo/ncm/model/ncm_model.h>
+#include <numcosmo/ncm/model/ncm_mset.h>
 
 G_BEGIN_DECLS
 

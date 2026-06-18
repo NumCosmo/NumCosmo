@@ -40,9 +40,9 @@
 #include "build_cfg.h"
 
 #include "nc/cmb/nc_planck_fi_cor_tt.h"
-#include "math/ncm_prior_gauss_param.h"
-#include "math/ncm_prior_gauss_func.h"
-#include "math/ncm_mset_func_list.h"
+#include "ncm/fit/ncm_prior_gauss_param.h"
+#include "ncm/fit/ncm_prior_gauss_func.h"
+#include "ncm/model/ncm_mset_func_list.h"
 
 enum
 {

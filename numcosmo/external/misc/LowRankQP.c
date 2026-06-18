@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <time.h>
 
-#include "math/ncm_lapack.h"
-#include "math/ncm_flapack.h"
+#include "ncm/algebra/ncm_lapack.h"
+#include "ncm/algebra/ncm_flapack.h"
 
 //#include <R.h>
 //#include <R_ext/Lapack.h>

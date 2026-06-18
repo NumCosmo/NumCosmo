@@ -42,10 +42,10 @@
 #include "nc/lss/halo/nc_halo_catalog.h"
 #include "nc/lss/halo/nc_halo_catalog_generator.h"
 
-#include "math/ncm_func_eval.h"
-#include "math/ncm_serialize.h"
-#include "math/ncm_obj_array.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_func_eval.h"
+#include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_obj_array.h"
+#include "ncm/core/ncm_cfg.h"
 
 #include "external/misc/cubature.h"
 

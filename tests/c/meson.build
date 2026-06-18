@@ -2,171 +2,171 @@
 math_tests = [
     {
         'name': 'ncm_cfg',
-        'sources': ['math/test_ncm_cfg.c'],
+        'sources': ['ncm/core/test_ncm_cfg.c'],
     },
     {
         'name': 'ncm_generic',
-        'sources': ['math/test_ncm_generic.c'],
+        'sources': ['ncm/core/test_ncm_generic.c'],
     },
     {
         'name': 'ncm_sparam',
-        'sources': ['math/test_ncm_sparam.c'],
+        'sources': ['ncm/model/test_ncm_sparam.c'],
     },
     {
         'name': 'ncm_diff',
-        'sources': ['math/test_ncm_diff.c'],
+        'sources': ['ncm/integration/test_ncm_diff.c'],
     },
     {
         'name': 'ncm_dtuple',
-        'sources': ['math/test_ncm_dtuple.c'],
+        'sources': ['ncm/core/test_ncm_dtuple.c'],
     },
     {
         'name': 'ncm_catalog',
-        'sources': ['math/test_ncm_catalog.c'],
+        'sources': ['ncm/data/test_ncm_catalog.c'],
     },
     {
         'name': 'ncm_sky_footprint',
-        'sources': ['math/test_ncm_sky_footprint.c'],
+        'sources': ['ncm/sphere/test_ncm_sky_footprint.c'],
     },
     {
         'name': 'ncm_fftlog',
-        'sources': ['math/test_ncm_fftlog.c'],
+        'sources': ['ncm/fftlog/test_ncm_fftlog.c'],
         'timeout': 0,
         'priority': 10,
     },
     {
         'name': 'ncm_vector',
-        'sources': ['math/test_ncm_vector.c'],
+        'sources': ['ncm/algebra/test_ncm_vector.c'],
     },
     {
         'name': 'ncm_matrix',
-        'sources': ['math/test_ncm_matrix.c'],
+        'sources': ['ncm/algebra/test_ncm_matrix.c'],
     },
     {
         'name': 'ncm_stats_vec',
-        'sources': ['math/test_ncm_stats_vec.c'],
+        'sources': ['ncm/stats/test_ncm_stats_vec.c'],
     },
     {
         'name': 'ncm_stats_dist1d_epdf',
-        'sources': ['math/test_ncm_stats_dist1d_epdf.c'],
+        'sources': ['ncm/stats/test_ncm_stats_dist1d_epdf.c'],
     },
     {
         'name': 'ncm_stats_dist',
-        'sources': ['math/test_ncm_stats_dist.c'],
+        'sources': ['ncm/stats/test_ncm_stats_dist.c'],
         'timeout': 0,
         'priority': 10,
         'suite': ['c-statistical', 'omp'],
     },
     {
         'name': 'ncm_stats_dist_kernel',
-        'sources': ['math/test_ncm_stats_dist_kernel.c'],
+        'sources': ['ncm/stats/test_ncm_stats_dist_kernel.c'],
     },
     {
         'name': 'ncm_spline',
-        'sources': ['math/test_ncm_spline.c'],
+        'sources': ['ncm/spline/test_ncm_spline.c'],
     },
     {
         'name': 'ncm_spline2d',
-        'sources': ['math/test_ncm_spline2d.c'],
+        'sources': ['ncm/spline/test_ncm_spline2d.c'],
     },
     {
         'name': 'ncm_spline_vec',
-        'sources': ['math/test_ncm_spline_vec.c'],
+        'sources': ['ncm/spline/test_ncm_spline_vec.c'],
     },
     {
         'name': 'ncm_ode_spline',
-        'sources': ['math/test_ncm_ode_spline.c'],
+        'sources': ['ncm/spline/test_ncm_ode_spline.c'],
     },
     {
         'name': 'ncm_integral1d',
-        'sources': ['math/test_ncm_integral1d.c'],
+        'sources': ['ncm/integration/test_ncm_integral1d.c'],
     },
     {
         'name': 'ncm_integral_nd',
-        'sources': ['math/test_ncm_integral_nd.c'],
+        'sources': ['ncm/integration/test_ncm_integral_nd.c'],
     },
     {
         'name': 'ncm_integral_fixed',
-        'sources': ['math/test_ncm_integral_fixed.c'],
+        'sources': ['ncm/integration/test_ncm_integral_fixed.c'],
     },
     {
         'name': 'ncm_sf_sbessel',
-        'sources': ['math/test_ncm_sf_sbessel.c'],
+        'sources': ['ncm/specfunc/test_ncm_sf_sbessel.c'],
     },
     {
         'name': 'ncm_mpsf_0F1',
-        'sources': ['math/test_ncm_mpsf_0F1.c'],
+        'sources': ['ncm/specfunc/test_ncm_mpsf_0F1.c'],
     },
     {
         'name': 'ncm_mpsf_trig_int',
-        'sources': ['math/test_ncm_mpsf_trig_int.c'],
+        'sources': ['ncm/specfunc/test_ncm_mpsf_trig_int.c'],
     },
     {
         'name': 'ncm_model',
         'sources': [
-            'math/test_ncm_model.c',
-            'math/ncm_model_test.c',
-            'math/ncm_model_test.h',
+            'ncm/model/test_ncm_model.c',
+            'ncm/model/ncm_model_test.c',
+            'ncm/model/ncm_model_test.h',
         ],
     },
     {
         'name': 'ncm_model_ctrl',
-        'sources': ['math/test_ncm_model_ctrl.c'],
+        'sources': ['ncm/model/test_ncm_model_ctrl.c'],
     },
     {
         'name': 'ncm_mset',
-        'sources': ['math/test_ncm_mset.c'],
+        'sources': ['ncm/model/test_ncm_mset.c'],
     },
     {
         'name': 'ncm_mset_catalog',
-        'sources': ['math/test_ncm_mset_catalog.c'],
+        'sources': ['ncm/fit/test_ncm_mset_catalog.c'],
         'timeout': 0,
         'priority': 10,
     },
     {
         'name': 'ncm_obj_array',
-        'sources': ['math/test_ncm_obj_array.c'],
+        'sources': ['ncm/core/test_ncm_obj_array.c'],
     },
     {
         'name': 'ncm_serialize',
-        'sources': ['math/test_ncm_serialize.c'],
+        'sources': ['ncm/core/test_ncm_serialize.c'],
     },
     {
         'name': 'ncm_fit',
-        'sources': ['math/test_ncm_fit.c'],
+        'sources': ['ncm/fit/test_ncm_fit.c'],
         'timeout': 0,
     },
     {
         'name': 'ncm_fit_state',
-        'sources': ['math/test_ncm_fit_state.c'],
+        'sources': ['ncm/fit/test_ncm_fit_state.c'],
     },
     {
         'name': 'ncm_fit_esmcmc',
-        'sources': ['math/test_ncm_fit_esmcmc.c'],
+        'sources': ['ncm/fit/test_ncm_fit_esmcmc.c'],
         'timeout': 0,
         'priority': 10,
         'suite': ['c-acceptance', 'omp'],
     },
     {
         'name': 'ncm_func_eval',
-        'sources': ['math/test_ncm_func_eval.c'],
+        'sources': ['ncm/core/test_ncm_func_eval.c'],
     },
     {
         'name': 'ncm_sf_spherical_harmonics',
-        'sources': ['math/test_ncm_sf_spherical_harmonics.c'],
+        'sources': ['ncm/specfunc/test_ncm_sf_spherical_harmonics.c'],
     },
     {
         'name': 'ncm_sphere_map',
-        'sources': ['math/test_ncm_sphere_map.c'],
+        'sources': ['ncm/sphere/test_ncm_sphere_map.c'],
         'timeout': 0,
     },
     {
         'name': 'ncm_util',
-        'sources': ['math/test_ncm_util.c'],
+        'sources': ['ncm/core/test_ncm_util.c'],
     },
     {
         'name': 'ncm_quaternion',
-        'sources': ['math/test_ncm_quaternion.c'],
+        'sources': ['ncm/algebra/test_ncm_quaternion.c'],
     },
 ]
 
@@ -417,7 +417,7 @@ if mpi_c_dep.found()
         c_tests_mpi = [
             {
                 'name': 'ncm_fit_esmcmc_mpi',
-                'sources': ['math/test_ncm_fit_esmcmc_mpi.c'],
+                'sources': ['ncm/fit/test_ncm_fit_esmcmc_mpi.c'],
                 'timeout': 0,
             },
         ]

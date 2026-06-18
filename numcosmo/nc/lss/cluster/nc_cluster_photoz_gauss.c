@@ -35,9 +35,9 @@
 #include "build_cfg.h"
 
 #include "nc/lss/cluster/nc_cluster_photoz_gauss.h"
-#include "math/ncm_data.h"
-#include "math/ncm_rng.h"
-#include "math/ncm_cfg.h"
+#include "ncm/data/ncm_data.h"
+#include "ncm/core/ncm_rng.h"
+#include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>

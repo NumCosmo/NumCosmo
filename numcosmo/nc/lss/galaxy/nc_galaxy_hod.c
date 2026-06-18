@@ -51,7 +51,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 #include "nc/lss/galaxy/nc_galaxy_hod.h"
-#include "math/ncm_rng.h"
+#include "ncm/core/ncm_rng.h"
 
 typedef struct _NcGalaxyHODPrivate
 {

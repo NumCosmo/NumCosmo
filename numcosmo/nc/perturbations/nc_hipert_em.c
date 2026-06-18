@@ -39,7 +39,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_spline2d_bicubic.h"
+#include "ncm/spline/ncm_spline2d_bicubic.h"
 #include "nc/perturbations/nc_hipert_em.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

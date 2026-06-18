@@ -71,8 +71,8 @@
 #include "build_cfg.h"
 
 #include "nc/powspec/nc_growth_func.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_cfg.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvode/cvode.h>

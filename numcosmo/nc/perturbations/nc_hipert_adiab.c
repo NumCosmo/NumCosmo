@@ -68,10 +68,10 @@
 #include "build_cfg.h"
 
 #include "nc/perturbations/nc_hipert_adiab.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_spline2d_bicubic.h"
-#include "math/ncm_ode_spline.h"
-#include "math/ncm_model_ctrl.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline2d_bicubic.h"
+#include "ncm/spline/ncm_ode_spline.h"
+#include "ncm/model/ncm_model_ctrl.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvode/cvode.h>

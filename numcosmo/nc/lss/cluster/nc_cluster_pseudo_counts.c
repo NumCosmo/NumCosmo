@@ -36,10 +36,10 @@
 #include "build_cfg.h"
 
 #include "nc/lss/cluster/nc_cluster_pseudo_counts.h"
-#include "math/ncm_serialize.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
+#include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_roots.h>

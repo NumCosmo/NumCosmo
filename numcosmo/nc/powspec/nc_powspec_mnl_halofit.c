@@ -48,9 +48,9 @@
 #include "nc/background/nc_hicosmo_de_cpl.h"
 #include "nc/background/nc_distance.h"
 
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
-#include "math/ncm_spline_cubic_notaknot.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>

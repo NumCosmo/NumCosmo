@@ -40,8 +40,8 @@
 #include "build_cfg.h"
 
 #include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift.h"
-#include "math/ncm_vector.h"
-#include "math/ncm_rng.h"
+#include "ncm/algebra/ncm_vector.h"
+#include "ncm/core/ncm_rng.h"
 
 typedef struct _NcGalaxySDObsRedshiftPrivate
 {

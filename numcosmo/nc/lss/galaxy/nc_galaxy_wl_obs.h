@@ -34,11 +34,11 @@
 #include <stdarg.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_enum_types.h>
-#include <numcosmo/math/ncm_catalog.h>
-#include <numcosmo/math/ncm_matrix.h>
-#include <numcosmo/math/ncm_obj_array.h>
-#include <numcosmo/math/ncm_spline.h>
-#include <numcosmo/math/ncm_mset.h>
+#include <numcosmo/ncm/data/ncm_catalog.h>
+#include <numcosmo/ncm/algebra/ncm_matrix.h>
+#include <numcosmo/ncm/core/ncm_obj_array.h>
+#include <numcosmo/ncm/spline/ncm_spline.h>
+#include <numcosmo/ncm/model/ncm_mset.h>
 
 G_BEGIN_DECLS
 

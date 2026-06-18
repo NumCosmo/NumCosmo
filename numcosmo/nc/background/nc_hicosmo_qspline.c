@@ -38,8 +38,8 @@
 #include "build_cfg.h"
 
 #include "nc/background/nc_hicosmo_qspline.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_spline_gsl.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_gsl.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_fit.h>

@@ -36,7 +36,7 @@
 #include "build_cfg.h"
 
 #include "nc/lss/cluster/nc_cluster_mass_lnnormal.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>

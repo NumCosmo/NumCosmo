@@ -39,9 +39,9 @@
 #include "nc/background/nc_hicosmo.h"
 #include "nc/primordial/nc_hiprim.h"
 #include "nc/reion/nc_hireion.h"
-#include "math/ncm_serialize.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_mset_func_list.h"
+#include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/model/ncm_mset_func_list.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_errno.h>

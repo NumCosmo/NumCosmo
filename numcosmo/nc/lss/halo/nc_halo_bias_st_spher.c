@@ -55,8 +55,8 @@
 #include "build_cfg.h"
 
 #include "nc/lss/halo/nc_halo_bias_st_spher.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_util.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
 
 G_DEFINE_TYPE (NcHaloBiasSTSpher, nc_halo_bias_st_spher, NC_TYPE_HALO_BIAS)
 

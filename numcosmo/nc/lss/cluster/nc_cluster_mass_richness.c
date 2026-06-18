@@ -47,12 +47,12 @@
 #include "build_cfg.h"
 
 #include "nc/lss/cluster/nc_cluster_mass_richness.h"
-#include "math/ncm_serialize.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_c.h"
-#include "math/ncm_rng.h"
-#include "math/ncm_vector.h"
-#include "math/ncm_matrix.h"
+#include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_c.h"
+#include "ncm/core/ncm_rng.h"
+#include "ncm/algebra/ncm_vector.h"
+#include "ncm/algebra/ncm_matrix.h"
 
 typedef struct _NcClusterMassRichnessPrivate
 {

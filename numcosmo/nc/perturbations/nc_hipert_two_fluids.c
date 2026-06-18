@@ -71,8 +71,8 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_spline_func.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_func.h"
 #include "nc/perturbations/nc_hipert_two_fluids.h"
 #include "nc/perturbations/nc_hipert_itwo_fluids.h"
 

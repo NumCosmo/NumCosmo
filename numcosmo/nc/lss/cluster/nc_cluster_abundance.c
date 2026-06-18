@@ -39,11 +39,11 @@
 #include "nc/lss/cluster/nc_cluster_abundance.h"
 #include "nc/lss/cluster/nc_cluster_mass_benson.h"
 #include "nc/primordial/nc_hiprim.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_spline2d_bicubic.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
-#include "math/ncm_cfg.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline2d_bicubic.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_histogram.h>

@@ -38,9 +38,9 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_mset.h"
-#include "math/ncm_model.h"
-#include "math/ncm_cfg.h"
+#include "ncm/model/ncm_mset.h"
+#include "ncm/model/ncm_model.h"
+#include "ncm/core/ncm_cfg.h"
 #include "nc/cmb/nc_planck_fi.h"
 #include "nc/cmb/nc_planck_fi_cor_tt.h"
 #include "nc/data/nc_data_planck_lkl.h"

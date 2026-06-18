@@ -34,7 +34,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel.h>
-#include <numcosmo/math/ncm_c.h>
+#include <numcosmo/ncm/core/ncm_c.h>
 G_BEGIN_DECLS
 
 #define NC_TYPE_XCOR_KERNEL_TSZ (nc_xcor_kernel_tsz_get_type ())

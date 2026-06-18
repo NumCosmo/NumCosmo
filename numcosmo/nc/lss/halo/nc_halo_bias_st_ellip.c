@@ -55,8 +55,8 @@
 #include "build_cfg.h"
 
 #include "nc/lss/halo/nc_halo_bias_st_ellip.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_util.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
 
 G_DEFINE_TYPE (NcHaloBiasSTEllip, nc_halo_bias_st_ellip, NC_TYPE_HALO_BIAS)
 

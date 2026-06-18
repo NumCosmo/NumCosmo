@@ -55,9 +55,9 @@
 #include "build_cfg.h"
 
 #include "nc/data/nc_data_xcor.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_lapack.h"
-#include "math/ncm_model_ctrl.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/algebra/ncm_lapack.h"
+#include "ncm/model/ncm_model_ctrl.h"
 #include "nc/reion/nc_hireion.h"
 #include "nc/supernova/nc_snia_dist_cov.h"
 #include "nc/xcor/nc_xcor.h"

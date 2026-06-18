@@ -41,9 +41,9 @@
 
 #include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift_pz.h"
-#include "math/ncm_spline.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_stats_dist1d_spline.h"
+#include "ncm/spline/ncm_spline.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/stats/ncm_stats_dist1d_spline.h"
 
 typedef struct _NcGalaxySDObsRedshiftPzPrivate
 {

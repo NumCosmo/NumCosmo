@@ -53,8 +53,8 @@
 
 #include "build_cfg.h"
 
-#include "math/ncm_spline2d_bicubic.h"
-#include "math/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline2d_bicubic.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "nc/background/nc_hicosmo_de.h"
 #include "nc/background/nc_hicosmo_de_xcdm.h"
 #include "nc/background/nc_hicosmo_de_cpl.h"

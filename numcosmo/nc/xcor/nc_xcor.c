@@ -49,11 +49,11 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_serialize.h"
-#include "math/ncm_integral_nd.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_serialize.h"
+#include "ncm/integration/ncm_integral_nd.h"
 #include "nc/xcor/nc_xcor.h"
 #include "nc_enum_types.h"
 

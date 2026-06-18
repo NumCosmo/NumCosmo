@@ -41,7 +41,7 @@
 
 #include "nc/powspec/nc_powspec_ml_transfer.h"
 #include "nc/primordial/nc_hiprim.h"
-#include "math/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 
 struct _NcPowspecMLTransfer
 {

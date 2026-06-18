@@ -42,7 +42,7 @@
 #include "build_cfg.h"
 
 #include "nc/data/nc_data_bao_dvdv.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 #include "nc_enum_types.h"
 
 typedef struct _NcDataBaoDVDVPrivate

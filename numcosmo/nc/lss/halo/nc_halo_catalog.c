@@ -45,8 +45,8 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 #include "nc/lss/halo/nc_halo_catalog.h"
-#include "math/ncm_catalog.h"
-#include "math/ncm_cfg.h"
+#include "ncm/data/ncm_catalog.h"
+#include "ncm/core/ncm_cfg.h"
 #include "nc_enum_types.h"
 
 /* *INDENT-OFF* */

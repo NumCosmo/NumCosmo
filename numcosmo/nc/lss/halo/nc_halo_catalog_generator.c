@@ -69,10 +69,10 @@
 #include "nc/lss/halo/nc_halo_mass_function.h"
 #include "nc/lss/halo/nc_multiplicity_func.h"
 #include "nc/background/nc_hicosmo.h"
-#include "math/ncm_c.h"
-#include "math/ncm_matrix.h"
-#include "math/ncm_spline.h"
-#include "math/ncm_spline2d.h"
+#include "ncm/core/ncm_c.h"
+#include "ncm/algebra/ncm_matrix.h"
+#include "ncm/spline/ncm_spline.h"
+#include "ncm/spline/ncm_spline2d.h"
 
 typedef struct _NcHaloCatalogGeneratorPrivate
 {

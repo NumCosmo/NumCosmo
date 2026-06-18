@@ -41,9 +41,9 @@
 #include "build_cfg.h"
 
 #include "nc/lss/cluster/nc_cluster_mass.h"
-#include "math/ncm_serialize.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_vector.h"
+#include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/algebra/ncm_vector.h"
 
 typedef struct _NcClusterMassPrivate
 {

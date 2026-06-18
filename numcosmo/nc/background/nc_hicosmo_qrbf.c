@@ -41,8 +41,8 @@
 #include "build_cfg.h"
 
 #include "nc/background/nc_hicosmo_qrbf.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
 
 
 #ifndef NUMCOSMO_GIR_SCAN

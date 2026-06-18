@@ -39,7 +39,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "nc/perturbations/nc_hipert_gw.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

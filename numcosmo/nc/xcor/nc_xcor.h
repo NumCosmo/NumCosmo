@@ -33,12 +33,12 @@
 #include <glib-object.h>
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_c.h>
-#include <numcosmo/math/ncm_model.h>
+#include <numcosmo/ncm/core/ncm_c.h>
+#include <numcosmo/ncm/model/ncm_model.h>
 #include <numcosmo/nc/background/nc_distance.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel.h>
-#include <numcosmo/math/ncm_powspec.h>
+#include <numcosmo/ncm/powspec/ncm_powspec.h>
 
 G_BEGIN_DECLS
 

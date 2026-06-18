@@ -33,7 +33,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_true_redshift.h>
-#include <numcosmo/math/ncm_rng.h>
+#include <numcosmo/ncm/core/ncm_rng.h>
 
 G_BEGIN_DECLS
 

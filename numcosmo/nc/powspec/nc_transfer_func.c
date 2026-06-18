@@ -49,8 +49,8 @@
 #include "build_cfg.h"
 
 #include "nc/powspec/nc_transfer_func.h"
-#include "math/ncm_serialize.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_cfg.h"
 
 typedef struct {
   NcmModelCtrl *ctrl_cosmo;

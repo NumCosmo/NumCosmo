@@ -31,9 +31,9 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/nc/recomb/nc_recomb.h>
-#include <numcosmo/math/ncm_ode_spline.h>
-#include <numcosmo/math/ncm_model_ctrl.h>
-#include <numcosmo/math/ncm_function_cache.h>
+#include <numcosmo/ncm/spline/ncm_ode_spline.h>
+#include <numcosmo/ncm/model/ncm_model_ctrl.h>
+#include <numcosmo/ncm/core/ncm_function_cache.h>
 
 G_BEGIN_DECLS
 

@@ -44,7 +44,7 @@
 
 #include "nc/background/nc_scalefactor.h"
 #include "nc_enum_types.h"
-#include "math/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvode/cvode.h>

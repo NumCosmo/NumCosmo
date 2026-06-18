@@ -52,7 +52,7 @@
 #include "build_cfg.h"
 
 #include "nc/cmb/nc_cbe_precision.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 
 struct _NcCBEPrecisionPrivate
 {

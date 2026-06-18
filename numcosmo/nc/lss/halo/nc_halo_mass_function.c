@@ -37,9 +37,9 @@
 #include "build_cfg.h"
 
 #include "nc/lss/halo/nc_halo_mass_function.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_spline2d_bicubic.h"
-#include "math/ncm_cfg.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/spline/ncm_spline2d_bicubic.h"
+#include "ncm/core/ncm_cfg.h"
 
 enum
 {

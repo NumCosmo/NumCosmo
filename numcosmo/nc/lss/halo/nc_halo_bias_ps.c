@@ -55,8 +55,8 @@
 #include "build_cfg.h"
 
 #include "nc/lss/halo/nc_halo_bias_ps.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_util.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
 
 G_DEFINE_TYPE (NcHaloBiasPS, nc_halo_bias_ps, NC_TYPE_HALO_BIAS)
 

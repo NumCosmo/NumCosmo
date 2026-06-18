@@ -43,7 +43,7 @@
 #include "nc/lss/cluster/nc_cluster_redshift.h"
 #include "nc/lss/cluster/nc_cluster_mass.h"
 #include "nc/lss/cluster/nc_cluster_abundance.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 
 enum
 {

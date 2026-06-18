@@ -108,11 +108,11 @@
 #include "build_cfg.h"
 
 #include "nc/background/nc_distance.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_c.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_mset_func_list.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_c.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/model/ncm_mset_func_list.h"
 
 typedef struct _ComovingDistanceArgument
 {

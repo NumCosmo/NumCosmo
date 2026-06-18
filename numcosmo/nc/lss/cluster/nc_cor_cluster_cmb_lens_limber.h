@@ -36,8 +36,8 @@
 #include <numcosmo/nc/lss/halo/nc_halo_density_profile.h>
 #include <numcosmo/nc/lss/halo/nc_halo_bias.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_abundance.h>
-#include <numcosmo/math/ncm_spline_cubic_notaknot.h>
-#include <numcosmo/math/ncm_spline2d.h>
+#include <numcosmo/ncm/spline/ncm_spline_cubic_notaknot.h>
+#include <numcosmo/ncm/spline/ncm_spline2d.h>
 
 G_BEGIN_DECLS
 

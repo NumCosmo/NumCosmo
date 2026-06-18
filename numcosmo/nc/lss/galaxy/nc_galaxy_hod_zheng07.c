@@ -45,8 +45,8 @@
 #include "build_cfg.h"
 #include "nc/lss/galaxy/nc_galaxy_hod_zheng07.h"
 #include "nc/lss/galaxy/nc_galaxy_hod.h"
-#include "math/ncm_model.h"
-#include "math/ncm_util.h"
+#include "ncm/model/ncm_model.h"
+#include "ncm/core/ncm_util.h"
 
 #include <math.h>
 

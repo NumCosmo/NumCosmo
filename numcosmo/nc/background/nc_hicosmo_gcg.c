@@ -37,11 +37,11 @@
 #include "build_cfg.h"
 
 #include "nc/background/nc_hicosmo_gcg.h"
-#include "math/ncm_mset_func_list.h"
-#include "math/ncm_prior_gauss_func.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_util.h"
+#include "ncm/model/ncm_mset_func_list.h"
+#include "ncm/fit/ncm_prior_gauss_func.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
 
 struct _NcHICosmoGCGPrivate
 {

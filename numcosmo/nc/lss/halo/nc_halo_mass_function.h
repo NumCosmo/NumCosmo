@@ -30,8 +30,8 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/background/nc_distance.h>
 #include <numcosmo/nc/lss/halo/nc_multiplicity_func.h>
-#include <numcosmo/math/ncm_spline2d.h>
-#include <numcosmo/math/ncm_powspec_filter.h>
+#include <numcosmo/ncm/spline/ncm_spline2d.h>
+#include <numcosmo/ncm/powspec/ncm_powspec_filter.h>
 
 G_BEGIN_DECLS
 

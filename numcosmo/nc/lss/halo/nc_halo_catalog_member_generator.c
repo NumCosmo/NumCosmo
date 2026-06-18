@@ -68,8 +68,8 @@
 #include "nc/lss/galaxy/nc_galaxy_hod.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/background/nc_distance.h"
-#include "math/ncm_c.h"
-#include "math/ncm_matrix.h"
+#include "ncm/core/ncm_c.h"
+#include "ncm/algebra/ncm_matrix.h"
 
 #include <math.h>
 

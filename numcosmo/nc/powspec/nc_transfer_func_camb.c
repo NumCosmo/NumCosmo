@@ -38,9 +38,9 @@
 #include "build_cfg.h"
 
 #include "nc/powspec/nc_transfer_func_camb.h"
-#include "numcosmo/math/ncm_spline.h"
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_cfg.h"
+#include "numcosmo/ncm/spline/ncm_spline.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/core/ncm_cfg.h"
 
 struct _NcTransferFuncCAMB
 {

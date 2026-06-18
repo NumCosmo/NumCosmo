@@ -38,7 +38,7 @@
 #include "build_cfg.h"
 
 #include "nc/data/nc_data_cmb_shift_param.h"
-#include "math/ncm_cfg.h"
+#include "ncm/core/ncm_cfg.h"
 #include "nc_enum_types.h"
 
 enum

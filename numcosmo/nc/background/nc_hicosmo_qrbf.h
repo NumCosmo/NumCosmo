@@ -32,8 +32,8 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
-#include <numcosmo/math/ncm_fit.h>
-#include <numcosmo/math/ncm_prior.h>
+#include <numcosmo/ncm/fit/ncm_fit.h>
+#include <numcosmo/ncm/fit/ncm_prior.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_multifit.h>

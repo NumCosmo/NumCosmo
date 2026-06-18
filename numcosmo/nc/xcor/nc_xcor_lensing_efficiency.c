@@ -62,8 +62,8 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_cfg.h"
-#include "math/ncm_spline_cubic_notaknot.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "nc/xcor/nc_xcor_lensing_efficiency.h"
 
 #ifndef NUMCOSMO_GIR_SCAN

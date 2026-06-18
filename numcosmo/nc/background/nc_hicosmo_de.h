@@ -29,9 +29,9 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
-#include <numcosmo/math/ncm_likelihood.h>
-#include <numcosmo/math/ncm_spline2d.h>
-#include <numcosmo/math/ncm_integral1d_ptr.h>
+#include <numcosmo/ncm/fit/ncm_likelihood.h>
+#include <numcosmo/ncm/spline/ncm_spline2d.h>
+#include <numcosmo/ncm/integration/ncm_integral1d_ptr.h>
 
 G_BEGIN_DECLS
 

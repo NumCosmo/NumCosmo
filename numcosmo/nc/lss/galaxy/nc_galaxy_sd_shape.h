@@ -37,10 +37,10 @@
 #include <numcosmo/nc/lss/halo/nc_halo_position.h>
 #include <numcosmo/nc/lss/halo/nc_halo_density_profile.h>
 #include <numcosmo/nc/lss/wl/nc_wl_surface_mass_density.h>
-#include <numcosmo/math/ncm_model.h>
-#include <numcosmo/math/ncm_mset.h>
-#include <numcosmo/math/ncm_rng.h>
-#include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/ncm/model/ncm_model.h>
+#include <numcosmo/ncm/model/ncm_mset.h>
+#include <numcosmo/ncm/core/ncm_rng.h>
+#include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/nc_enum_types.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 

@@ -36,12 +36,12 @@
 #include "build_cfg.h"
 
 #include "nc/lss/cluster/nc_cluster_mass_selection.h"
-#include "math/ncm_integrate.h"
-#include "math/ncm_spline2d_bicubic.h"
-#include "math/ncm_spline2d.h"
-#include "math/ncm_memory_pool.h"
-#include "math/ncm_c.h"
-#include "math/ncm_cfg.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/spline/ncm_spline2d_bicubic.h"
+#include "ncm/spline/ncm_spline2d.h"
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/core/ncm_c.h"
+#include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>

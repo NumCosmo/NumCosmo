@@ -29,8 +29,8 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/ncm_reparam.h>
-#include <numcosmo/math/ncm_model.h>
+#include <numcosmo/ncm/model/ncm_reparam.h>
+#include <numcosmo/ncm/model/ncm_model.h>
 
 G_BEGIN_DECLS
 

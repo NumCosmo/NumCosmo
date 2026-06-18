@@ -42,10 +42,10 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_integrate.h"
-#include "math/ncm_memory_pool.h"
-#include "math/ncm_cfg.h"
-#include "math/ncm_serialize.h"
+#include "ncm/integration/ncm_integrate.h"
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_serialize.h"
 #include "nc/xcor/nc_xcor_AB.h"
 
 enum

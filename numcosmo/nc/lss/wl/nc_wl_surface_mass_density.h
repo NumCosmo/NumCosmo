@@ -31,9 +31,9 @@
 #include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/nc/background/nc_distance.h>
 #include <numcosmo/nc/lss/halo/nc_halo_density_profile.h>
-#include <numcosmo/math/ncm_ode_spline.h>
-#include <numcosmo/math/ncm_model.h>
-#include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/ncm/spline/ncm_ode_spline.h>
+#include <numcosmo/ncm/model/ncm_model.h>
+#include <numcosmo/ncm/model/ncm_model_ctrl.h>
 
 G_BEGIN_DECLS
 

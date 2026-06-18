@@ -37,10 +37,10 @@
 #include "build_cfg.h"
 #include <numcosmo/numcosmo.h>
 #include "nc/lss/halo/nc_multiplicity_func_despali.h"
-#include "math/ncm_spline_cubic_d2.h"
-#include "math/ncm_spline_gsl.h"
-#include "math/ncm_c.h"
-#include "math/ncm_cfg.h"
+#include "ncm/spline/ncm_spline_cubic_d2.h"
+#include "ncm/spline/ncm_spline_gsl.h"
+#include "ncm/core/ncm_c.h"
+#include "ncm/core/ncm_cfg.h"
 
 typedef struct _NcMultiplicityFuncDespaliPrivate
 {

@@ -96,9 +96,9 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/ncm_spline_cubic_notaknot.h"
-#include "math/ncm_spline_func.h"
-#include "math/ncm_util.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_func.h"
+#include "ncm/core/ncm_util.h"
 #include "nc_enum_types.h"
 #include "nc/recomb/nc_recomb.h"
 #include "nc/recomb/nc_recomb_seager.h"
