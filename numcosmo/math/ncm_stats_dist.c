@@ -115,7 +115,7 @@
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_sort.h>
-#include "levmar/levmar.h"
+#include "external/levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #include "math/ncm_stats_dist_private.h"

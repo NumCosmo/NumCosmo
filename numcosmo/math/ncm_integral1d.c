@@ -45,7 +45,7 @@
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_errno.h>
-#include "lintegrate/lintegrate.h"
+#include "external/lintegrate/lintegrate.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcmIntegral1dPrivate

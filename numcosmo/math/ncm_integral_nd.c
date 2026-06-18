@@ -85,7 +85,7 @@
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
 
-#include "misc/cubature.h"
+#include "external/misc/cubature.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_cdf.h>

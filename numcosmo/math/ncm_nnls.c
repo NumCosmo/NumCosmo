@@ -44,7 +44,7 @@
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include "misc/libqp.h"
+#include "external/misc/libqp.h"
 #include <gsl/gsl_multifit.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 

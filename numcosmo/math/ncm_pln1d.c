@@ -99,7 +99,7 @@
 
 #include "math/ncm_pln1d.h"
 #include "math/ncm_c.h"
-#include "lintegrate/logadd.c"
+#include "external/lintegrate/logadd.c"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_integration.h>

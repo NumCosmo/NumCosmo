@@ -46,7 +46,7 @@
  * with the default includes.
  */
 #ifndef NUMCOSMO_GIR_SCAN
-#include "class/include/class.h"
+#include "external/class/include/class.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #include "build_cfg.h"

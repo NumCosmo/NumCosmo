@@ -90,7 +90,7 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_sf_gamma.h>
-#include "levmar/levmar.h"
+#include "external/levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #include "math/ncm_stats_dist_kernel_private.h"

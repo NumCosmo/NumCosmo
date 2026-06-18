@@ -47,7 +47,7 @@
  * It must be include before anything else, several symbols clash
  * with the default includes.
  */
-#include "class/include/class.h"
+#include "external/class/include/class.h"
 
 #include "build_cfg.h"
 

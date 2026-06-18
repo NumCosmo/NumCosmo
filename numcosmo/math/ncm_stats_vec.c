@@ -97,7 +97,7 @@
 
 #include <math.h>
 
-#include "toeplitz/solvers/toeplitz.h"
+#include "external/toeplitz/solvers/toeplitz.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum

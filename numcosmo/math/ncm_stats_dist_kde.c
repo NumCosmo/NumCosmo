@@ -103,7 +103,7 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_statistics_double.h>
-#include "levmar/levmar.h"
+#include "external/levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #include "math/ncm_stats_dist_kde_private.h"

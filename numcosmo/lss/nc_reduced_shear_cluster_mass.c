@@ -40,7 +40,7 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_integrate.h"
 #include "math/ncm_memory_pool.h"
-#include "misc/Faddeeva.h"
+#include "external/misc/Faddeeva.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_roots.h>

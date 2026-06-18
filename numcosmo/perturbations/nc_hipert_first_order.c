@@ -45,7 +45,7 @@
 #include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include "misc/rcm.h"
+#include "external/misc/rcm.h"
 
 #include <nvector/nvector_serial.h>
 

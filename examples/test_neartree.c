@@ -35,11 +35,11 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <time.h>
-#include <numcosmo/misc/CVector.h>
+#include <numcosmo/external/misc/CVector.h>
 #include <numcosmo/numcosmo.h>
-#include <numcosmo/misc/rhrand.h>
+#include <numcosmo/external/misc/rhrand.h>
 CRHrand rhr;
-#include <numcosmo/misc/CNearTree.h>
+#include <numcosmo/external/misc/CNearTree.h>
 
 int
 main (int argc, char **argv)

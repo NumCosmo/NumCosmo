@@ -10,14 +10,14 @@ numcosmo_build_cfg_h = configure_file(
 )
 numcosmo_sources += numcosmo_build_cfg_h
 
-subdir('sundials')
-subdir('libcuba')
-subdir('levmar')
-subdir('misc')
-subdir('toeplitz')
-subdir('class')
-subdir('plc')
-subdir('lintegrate')
+subdir('external/sundials')
+subdir('external/libcuba')
+subdir('external/levmar')
+subdir('external/misc')
+subdir('external/toeplitz')
+subdir('external/class')
+subdir('external/plc')
+subdir('external/lintegrate')
 
 ncm_sources = files(
     'math/ncm_binsplit.c',
@@ -773,9 +773,9 @@ install_headers(
     subdir: 'numcosmo',
 )
 
-sundials_inc = include_directories('sundials/include')
-libcuba_inc = include_directories('libcuba')
-lintegrate_inc = include_directories('lintegrate')
+sundials_inc = include_directories('external/sundials/include')
+libcuba_inc = include_directories('external/libcuba')
+lintegrate_inc = include_directories('external/lintegrate')
 
 libnumcosmo_dep_list = [
     mpi_c_dep,

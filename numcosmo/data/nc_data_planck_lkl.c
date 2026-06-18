@@ -49,7 +49,7 @@
 #include <glib/gstdio.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include "plc/clik.h"
+#include "external/plc/clik.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 static gchar *_nc_data_planck_lkl_files[NC_DATA_PLANCK_LKL_TYPE_LENGTH] = {

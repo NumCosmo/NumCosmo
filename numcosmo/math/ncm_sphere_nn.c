@@ -45,8 +45,8 @@
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_complex_math.h>
 #include <gsl/gsl_sf_trig.h>
-#include "misc/kdtree.h"
-#include "misc/rb_knn_list.h"
+#include "external/misc/kdtree.h"
+#include "external/misc/rb_knn_list.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 

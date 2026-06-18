@@ -51,7 +51,7 @@
 #include "math/ncm_fit_levmar.h"
 #include "math/ncm_cfg.h"
 #include "ncm_enum_types.h"
-#include "levmar/levmar.h"
+#include "external/levmar/levmar.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>

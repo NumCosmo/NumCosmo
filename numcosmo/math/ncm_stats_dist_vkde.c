@@ -78,9 +78,9 @@
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
-#include "misc/kdtree.h"
-#include "misc/rb_knn_list.h"
-#include "levmar/levmar.h"
+#include "external/misc/kdtree.h"
+#include "external/misc/rb_knn_list.h"
+#include "external/levmar/levmar.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 #include "math/ncm_stats_dist_vkde_private.h"
