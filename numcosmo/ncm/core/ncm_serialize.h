@@ -190,7 +190,7 @@ gchar *ncm_serialize_global_variant_to_yaml (GVariant *var_obj);
 
 /*
  * NCM_SERIALIZE_VECTOR_TYPE and NCM_SERIALIZE_MATRIX_TYPE are
- * also hardcoded in numcosmo/math/ncm_matrix.c and numcosmo/math/ncm_vector.c.
+ * also hardcoded in numcosmo/ncm/algebra/ncm_matrix.c and numcosmo/ncm/algebra/ncm_vector.c.
  */
 #define NCM_SERIALIZE_PROPERTY_TYPE "{sv}"
 #define NCM_SERIALIZE_PROPERTIES_TYPE "a"NCM_SERIALIZE_PROPERTY_TYPE
