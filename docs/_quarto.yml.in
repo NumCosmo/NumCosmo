@@ -75,6 +75,12 @@ website:
     logo: images/numcosmo_logo.png
     collapse-level: 1
     contents:
+      - section: "Getting Started"
+        contents:
+          - href: install.qmd
+            text: "Installation"
+          - href: examples/intro/simple.qmd
+            text: "First Steps"
       - section: tutorials/index.qmd
         contents:
           - section: "C Foundations"
@@ -107,12 +113,6 @@ website:
                 text: "CSQ1D Formalism"
       - section: examples/index.qmd
         contents:
-          - section: "Introduction"
-            contents:
-              - href: examples/intro/simple.qmd
-                text: "Simple Example"
-              - href: examples/intro/epdf.qmd
-                text: "Empirical PDF"
           - section: "Background & Distances"
             contents:
               - href: examples/intro/wspline.qmd
@@ -151,6 +151,8 @@ website:
                 text: "SN Ia Fitting"
               - href: examples/data_analysis/inspect_data_objects.qmd
                 text: "Inspect Data Objects"
+              - href: examples/intro/epdf.qmd
+                text: "Empirical PDF"
       - section: benchmarks/index.qmd
         contents:
           - href: benchmarks/ccl_background.qmd

@@ -4,12 +4,9 @@ title: Worked Examples
 
 # Worked Examples
 
-End-to-end examples grouped by physics domain. Most are runnable notebooks.
-
-## Introduction
-
-- [Simple Example](intro/simple.qmd) — a minimal end-to-end run.
-- [Empirical PDF](intro/epdf.qmd) — building an empirical distribution.
+End-to-end examples grouped by physics domain. Most are runnable notebooks. New
+here? Start with [Getting Started](../index.qmd) and the
+[Simple Example](intro/simple.qmd).
 
 ## Background & Distances
 
@@ -41,3 +38,4 @@ End-to-end examples grouped by physics domain. Most are runnable notebooks.
 
 - [SN Ia Fitting](data_analysis/snia.qmd) — fitting a Type Ia supernova sample.
 - [Inspect Data Objects](data_analysis/inspect_data_objects.qmd) — exploring NumCosmo data objects.
+- [Empirical PDF](intro/epdf.qmd) — building an empirical distribution.
