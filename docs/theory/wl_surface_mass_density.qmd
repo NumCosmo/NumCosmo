@@ -1,0 +1,56 @@
+---
+title: Weak-Lensing Surface Mass Density
+---
+
+# Weak-Lensing Surface Mass Density
+
+This page describes the projected surface mass density and the related
+weak-lensing observables — convergence and tangential shear — implemented by
+[[numcosmo|NcWLSurfaceMassDensity]]. The three-dimensional mass distribution is
+supplied by a halo density profile [[numcosmo|NcHaloDensityProfile]], and the
+geometry by [[numcosmo|NcDistance]].
+
+## Projected Surface Mass Density
+
+The projected surface mass density is the line-of-sight integral of the
+three-dimensional density profile $\rho(r)$,
+$$
+\Sigma(R) = \int \mathrm{d}\chi\,\rho\!\left(\sqrt{R^2 + \chi^2}\right),
+$$
+where $R$ is the projected (two-dimensional) distance from the halo center and
+$\chi$ is the distance along the line of sight, so that $r^2 = R^2 + \chi^2$.
+
+The mean surface mass density within a circular aperture of radius $R$ is
+$$
+\overline{\Sigma}(<R) = \frac{2}{R^2}\int_0^R \mathrm{d}R^\prime\,R^\prime\,\Sigma(R^\prime).
+$$
+
+## Convergence and Shear
+
+The convergence $\kappa(R)$ and tangential shear $\gamma(R)$ are
+$$
+\kappa(R) = \frac{\Sigma(R)}{\Sigma_\mathrm{crit}},
+\qquad
+\gamma(R) = \frac{\Delta\Sigma(R)}{\Sigma_\mathrm{crit}} = \frac{\overline{\Sigma}(<R) - \Sigma(R)}{\Sigma_\mathrm{crit}},
+$$
+where the critical surface density is
+$$
+\Sigma_\mathrm{crit} = \frac{c^2}{4\pi G}\frac{D_s}{D_l D_{ls}},
+$$
+with $c$ the speed of light, $G$ the gravitational constant, and $D_s$, $D_l$,
+$D_{ls}$ the angular diameter distances to the source, to the lens, and between
+lens and source, respectively.
+
+For background on cluster weak-lensing mass measurements, see
+@Mandelbaum2006, @Umetsu2012, @Applegate2014, @Melchior2017, and @Parroni2017.
+
+## API Reference
+
+See [[numcosmo|NcWLSurfaceMassDensity]] for the full class reference. The most
+relevant methods are:
+
+- surface mass density: [[numcosmo|nc_wl_surface_mass_density_sigma]],
+  [[numcosmo|nc_wl_surface_mass_density_sigma_mean]]
+- convergence and shear: [[numcosmo|nc_wl_surface_mass_density_convergence]],
+  [[numcosmo|nc_wl_surface_mass_density_shear]]
+- critical surface density: [[numcosmo|nc_wl_surface_mass_density_sigma_critical]]

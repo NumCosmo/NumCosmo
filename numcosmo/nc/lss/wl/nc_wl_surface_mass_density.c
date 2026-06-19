@@ -27,42 +27,23 @@
  *
  * Weak lensing surface mass density.
  *
- * This object implements the projected surface mass density and related quantities, such as the convergence and tangential shear.
+ * This object implements the projected surface mass density and related
+ * weak-lensing observables — convergence and tangential shear — from a halo
+ * density profile (#NcHaloDensityProfile). The projected surface mass density is
+ * \begin{equation*}
+ * \Sigma(R) = \int \mathrm{d}\chi\,\rho\!\left(\sqrt{R^2 + \chi^2}\right),
+ * \end{equation*}
+ * and the convergence and shear follow as $\kappa = \Sigma/\Sigma_\mathrm{crit}$
+ * and $\gamma = \Delta\Sigma/\Sigma_\mathrm{crit}$, with $\Sigma_\mathrm{crit}$
+ * the critical surface density set by the lens/source geometry (#NcDistance).
  *
- * The projected surface mass density is [nc_wl_surface_mass_density_sigma()]
- * \begin{equation}\label{eq:sigma}
- * \Sigma (R) = \int \mathrm{d}\chi \, \rho\left(\sqrt{R^2 + \chi^2} \right),
- * \end{equation}
- * where $\rho(r)$ is the three-dimensional mass density profile (#NcHaloDensityProfile), $r^2 = R^2 + \chi^2$ is a three-dimensional vector in space, $R$ is a
- * two-dimensional vector from the halo center. In particular, we consider a projection $\Sigma (R)$ onto the lens plane.
- * $\chi$ is the distance along the line of sight.
+ * For the full definitions, the mean surface density, and the critical surface
+ * density, see the theoretical background page:
+ * <a href="../../theory/wl_surface_mass_density.html">Weak-Lensing Surface Mass Density</a>.
  *
- * The mean surface mass density within a circular aperture of radius $R$ is, [nc_wl_surface_mass_density_sigma_mean()]
- * \begin{equation}\label{eq:sigma_mean}
- * \overline{\Sigma} (<R) = \frac{2}{R^2} \int_0^R \mathrm{d}R^\prime \, R^\prime \Sigma (R^\prime).
- * \end{equation}
- *
- * The convergence $\kappa (R)$ [nc_wl_surface_mass_density_convergence()] and the shear $\gamma(R)$ [nc_wl_surface_mass_density_shear()]
- * are given by, respectively,
- * \begin{equation}\label{eq:convergence}
- * \kappa (R) = \frac{\Sigma (R)}{\Sigma_{crit}},
- * \end{equation}
- * * \begin{equation}\label{eq:shear}
- * \gamma (R) = \frac{\Delta\Sigma (R)}{\Sigma_{crit}} = \frac{\overline{\Sigma} (<R) - \Sigma (R)}{\Sigma_{crit}},
- * \end{equation}
- * where $\Sigma_{crit}$ is the critical surface density [nc_wl_surface_mass_density_sigma_critical()],
- * \begin{equation}\label{eq:sigma_critical}
- * \Sigma_{crit} = \frac{c^2}{4\pi G} \frac{D_s}{D_l D_{ls}}.
- * \end{equation}
- * where $c^2$ is the speed of light squared [ncm_c_c2()], $G$ is the gravitational constant [ncm_c_G()], $D_s$ and $Dl$ are the angular diameter distances
- * to the source and lens, respectively, and $D_{ls}$ is the angular diameter distance between the lens and source.
- *
- * See, e.g., [Mandelbaum (2006)](https://arxiv.org/abs/astro-ph/0605476), [Umetsu (2012)](https://arxiv.org/abs/1204.3630), [Applegate (2014)](https://arxiv.org/abs/1208.0605),
- * [Melchior (2017)](https://arxiv.org/abs/1610.06890), [Parroni (2017)](https://arxiv.org/abs/1705.04329).
- *
- * Usually $z_{lens} = z_{cluster}, but we define these as two different arguments in order to handle cases where shear signal has been
- * rescaled to a different cluster redshift (following D. Applegate's code.).
- *
+ * Usually $z_\mathrm{lens} = z_\mathrm{cluster}$, but these are kept as separate
+ * arguments to handle cases where the shear signal has been rescaled to a
+ * different cluster redshift (following D. Applegate's code).
  */
 
 #ifdef HAVE_CONFIG_H

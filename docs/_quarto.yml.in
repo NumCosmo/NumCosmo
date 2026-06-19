@@ -11,6 +11,7 @@ project:
     - theory/distances.qmd
     - theory/recombination.qmd
     - theory/transfer_func_eh.qmd
+    - theory/wl_surface_mass_density.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
@@ -89,6 +90,8 @@ website:
               text: "Cosmic Recombination"
             - href: theory/transfer_func_eh.qmd
               text: "Eisenstein–Hu Transfer Function"
+            - href: theory/wl_surface_mass_density.qmd
+              text: "Weak-Lensing Surface Mass Density"
             - href: theory/csq1d.qmd
               text: "CSQ1D Formalism"
         - section: "Worked Examples"
