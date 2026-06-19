@@ -1,0 +1,13 @@
+---
+title: Tutorials
+---
+
+# Tutorials
+
+Step-by-step guides to working with the NumCosmo framework. New to the library?
+Start with the [Simple Example](../examples/intro/simple.qmd).
+
+## C Foundations
+
+- [GObject in C](c/gobject.qmd) — how NumCosmo's object system works, and how to build your own object.
+- [Model Fitting in C](c/curve_tutorial.qmd) — define a model and fit it to data from C.

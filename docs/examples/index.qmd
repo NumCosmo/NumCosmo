@@ -1,0 +1,43 @@
+---
+title: Worked Examples
+---
+
+# Worked Examples
+
+End-to-end examples grouped by physics domain. Most are runnable notebooks.
+
+## Introduction
+
+- [Simple Example](intro/simple.qmd) — a minimal end-to-end run.
+- [Empirical PDF](intro/epdf.qmd) — building an empirical distribution.
+
+## Background & Distances
+
+- [Dark Energy WSpline](intro/wspline.qmd) — a spline-reconstructed dark-energy equation of state.
+- [Recombination](intro/recombination.qmd) — computing the ionization and visibility history.
+
+## Large-Scale Structure
+
+- [Matter Power Spectrum](intro/power_spectrum.qmd) — linear and nonlinear power spectra.
+
+## Primordial & Bouncing
+
+- [Primordial Modeling](intro/hiprim.qmd) — primordial power spectra.
+- [Primordial Tensor Contribution](intro/hiprim_tensor.qmd) — tensor modes.
+- [Bounce Adiabatic Spectrum](../tutorials/python/bounce.qmd) — adiabatic spectrum from a bounce.
+- [Bounce Two-Fluid Spectra](../tutorials/python/bounce_spectra.qmd) — two-fluid bounce spectra.
+
+## Clusters & Weak Lensing
+
+- [Cluster WL Simulation](../tutorials/python/cluster_wl_simul.qmd) — simulating cluster weak-lensing data.
+- [Halo Catalog Mock](../tutorials/python/halo_catalog_mock.qmd) — generating a mock halo catalog.
+
+## Catalogs & Matching
+
+- [Sky Match](../tutorials/python/sky_match.qmd) — matching catalogs by sky position.
+- [Sky Match by Membership](../tutorials/python/sky_match_id.qmd) — matching by membership identifiers.
+
+## Data & Statistics
+
+- [SN Ia Fitting](data_analysis/snia.qmd) — fitting a Type Ia supernova sample.
+- [Inspect Data Objects](data_analysis/inspect_data_objects.qmd) — exploring NumCosmo data objects.

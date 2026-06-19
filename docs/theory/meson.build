@@ -1,4 +1,5 @@
 src_site_theory_files = files(
+    'index.qmd',
     'csq1d.qmd',
     'distances.qmd',
     'recombination.qmd',

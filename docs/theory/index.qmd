@@ -1,0 +1,27 @@
+---
+title: Theory
+---
+
+# Theoretical Background
+
+The physics, derivations, and conventions behind NumCosmo's models. Each page is
+linked from the corresponding API documentation, and links back to the relevant
+classes and methods.
+
+## Background & Thermal History
+
+- [Cosmological Distances](distances.qmd) — comoving, transverse, luminosity, and angular diameter distances.
+- [Cosmic Recombination](recombination.qmd) — Saha equilibrium, the Seager solver, optical depth and visibility.
+
+## Linear Theory & Power Spectrum
+
+- [Eisenstein–Hu Transfer Function](transfer_func_eh.qmd) — the EH (1998) fitting formula, with and without baryons.
+
+## Clusters & Weak Lensing
+
+- [Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd) — projected surface density, convergence, and shear.
+
+## Numerical Methods
+
+- [FFTLog](fftlog.qmd) — logarithmic fast Fourier transform.
+- [CSQ1D Formalism](csq1d.qmd) — complex-structure evolution of a time-dependent oscillator.
