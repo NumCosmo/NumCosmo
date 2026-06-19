@@ -7,10 +7,10 @@ title: Halo Density Profiles
 This page describes the spherical matter density profiles used to model dark
 matter halos, implemented by the abstract base class
 [[numcosmo|NcHaloDensityProfile]] and its concrete subclasses (NFW, Einasto,
-Hernquist, Diemer–Kravtsov). It covers the common parametrization shared by all
-profiles, the projected (two-dimensional) quantities derived from them, and the
-closed-form expressions provided by each family. The projected quantities feed
-directly into the weak-lensing observables of
+Hernquist). It covers the common parametrization shared by all profiles, the
+projected (two-dimensional) quantities derived from them, and the closed-form
+expressions provided by each family. The projected quantities feed directly into
+the weak-lensing observables of
 [Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd).
 
 ## Dimensionless Profile
@@ -164,21 +164,12 @@ using the same $\mathrm{arctanh}$ rewriting and Taylor expansions near the
 singular points as the NFW case. Implemented by
 [[numcosmo|NcHaloDensityProfileHernquist]].
 
-### Diemer–Kravtsov
-
-The DK14 profile [@Diemer2014] extends the Einasto form with a steepening outer
-term governed by a truncation radius $r_t$ and a sharpness parameter $\beta$,
-plus an overdensity parameter $\Delta$. It is designed to capture the steepening
-of halo profiles near the splashback radius. Implemented by
-[[numcosmo|NcHaloDensityProfileDK14]].
-
 ## API Reference
 
 See [[numcosmo|NcHaloDensityProfile]] for the full base-class reference, and the
 subclasses [[numcosmo|NcHaloDensityProfileNFW]],
-[[numcosmo|NcHaloDensityProfileEinasto]],
-[[numcosmo|NcHaloDensityProfileHernquist]], and
-[[numcosmo|NcHaloDensityProfileDK14]]. The most relevant methods are:
+[[numcosmo|NcHaloDensityProfileEinasto]], and
+[[numcosmo|NcHaloDensityProfileHernquist]]. The most relevant methods are:
 
 - dimensionless quantities: [[numcosmo|nc_halo_density_profile_eval_dl_density]],
   [[numcosmo|nc_halo_density_profile_eval_dl_spher_mass]],
