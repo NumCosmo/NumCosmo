@@ -24,12 +24,19 @@
  */
 
 /**
- * SECTION:ncm_spectral
- * @title: NcmSpectral
- * @short_description: Spectral methods for function approximation
+ * NcmSpectral:
  *
- * Provides spectral methods for function approximation using Chebyshev
- * and Gegenbauer polynomials.
+ * Spectral methods for function approximation.
+ *
+ * Represents a function on an interval by its Chebyshev series, computed
+ * adaptively on nested Chebyshev–Lobatto grids via FFTW. Provides
+ * Clenshaw–Curtis integration, Clenshaw evaluation and differentiation, and the
+ * banded ultraspherical (Gegenbauer) operators of the well-conditioned spectral
+ * method.
+ *
+ * For the node placement, coefficient normalization, integration and operator
+ * formulas, see the theoretical background page:
+ * <a href="../../theory/spectral.html">Spectral Methods</a>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -310,11 +317,10 @@ ncm_spectral_get_max_order (NcmSpectral *spectral)
  * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
  * @user_data: user data for @F
  *
- * Computes Chebyshev coefficients of f(x) on [a,b] using FFTW DCT-I. The function @F
- * is sampled at Chebyshev nodes $x_k = (a+b)/2 - (b-a)/2\cos(k\pi/(N-1))$ which correspond
- * to the Chebyshev points $t_k = \cos(k\pi/(N-1))$ in $[-1,1]$ transformed to $[a,b]$.
- * The Chebyshev expansion is $f(x) = f(t) = \sum_{k=0}^{N-1} a_k T_k(t)$ where
- * $t = (2x - (a+b))/(b-a)$.
+ * Computes @order Chebyshev coefficients of $f(x)$ on $[a,b]$ at fixed resolution,
+ * sampling @F at the Chebyshev–Lobatto nodes and applying FFTW DCT-I. See the
+ * <a href="../../theory/spectral.html">Spectral Methods</a> page for the node
+ * placement and coefficient normalization.
  *
  * If @coeffs points to NULL, allocates a new GArray of size @order. If @coeffs points
  * to an existing GArray, resizes it to @order. Through bindings, @coeffs always receives NULL.
@@ -730,12 +736,12 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
  * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
  * @user_data: user data for @F
  *
- * Computes Chebyshev coefficients adaptively using nested Chebyshev-Lobatto nodes.
- * The function @F is evaluated at points x in [a,b]. Starts at level @k_min and refines
- * by doubling until spectral convergence is achieved or max_order is reached. Uses nested
- * nodes: only new odd nodes are computed at each refinement level.
- * The Chebyshev expansion is $f(x) = f(t) = \sum_{k=0}^{N-1} a_k T_k(t)$ where
- * $t = (2x - (a+b))/(b-a)$.
+ * Computes Chebyshev coefficients of $f(x)$ on $[a,b]$ adaptively, starting at
+ * level @k_min and doubling the nested Chebyshev–Lobatto grid until the
+ * coefficients converge to @tol or `max-order` is reached. Only the new odd
+ * nodes are evaluated at each refinement. See the
+ * <a href="../../theory/spectral.html">Spectral Methods</a> page for the nested
+ * grids and convergence criterion.
  *
  * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
  * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
@@ -764,18 +770,14 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
  * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
  * @user_data: user data for @F
  *
- * Computes Chebyshev coefficients of $F(x(t)) \sqrt{1-t^2} h$ adaptively using nested
- * Chebyshev-Lobatto nodes, where $h = (b-a)/2$. The weight factor $\sqrt{1-t^2} \cdot h$
- * enables direct integral computation: the integral $\int_a^b F(x)dx = \pi \cdot$ coeffs[0].
- *
- * This weighted expansion enables efficient computation of integrals:
- * $\int_a^b F(x)G(x)dx$ can be computed from the weighted coefficients of $F$
- * and the standard coefficients of $G$.
- *
- * At Chebyshev-Lobatto nodes $t_j = \cos(j\pi/2^k)$, the weight is $\sqrt{1-t_j^2} = \sin(j\pi/2^k)$.
- *
- * The function @F is evaluated at points x in [a,b]. Starts at level @k_min and refines
- * by doubling until spectral convergence is achieved or max_order is reached.
+ * Computes the Chebyshev coefficients of the weighted function
+ * $F(x(t))\sqrt{1-t^2}\,h$, with $h = (b-a)/2$, using the same adaptive nested
+ * grids as ncm_spectral_compute_chebyshev_coeffs_adaptive(). The weight turns
+ * the expansion into a Clenshaw–Curtis quadrature: $\int_a^b F(x)\,dx = \pi\,$
+ * coeffs[0], and weighted inner products $\int_a^b F(x)G(x)\,dx$ follow from
+ * these coefficients and the standard coefficients of $G$. See the
+ * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * derivation.
  *
  * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
  * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
@@ -798,8 +800,10 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted (NcmSpectral *spectral, 
  * @c: (element-type gdouble): Chebyshev coefficients array
  * @g: (out callee-allocates) (transfer full) (element-type gdouble): Gegenbauer $C^{(1)}_n$ coefficients array
  *
- * Converts Chebyshev $T_n$ coefficients to Gegenbauer $C^{(1)}_n$ coefficients ($\alpha=1$).
- * Uses the relationship: $T_n = \frac{1}{2}(C^{(1)}_n + C^{(1)}_{n-2})$ for $n \geq 2$.
+ * Converts Chebyshev $T_n$ coefficients to Gegenbauer $C^{(1)}_n$ coefficients
+ * ($\alpha=1$), where $C^{(1)}_n = U_n$. See the
+ * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * conversion relation.
  *
  * If @g points to NULL, allocates a new GArray with same size as @c. If @g points to an
  * existing GArray, resizes it to match @c. Through bindings, @g always receives NULL.
@@ -849,11 +853,10 @@ ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g)
  * @c: (element-type gdouble): Chebyshev coefficients array
  * @g: (out callee-allocates) (transfer full) (element-type gdouble): Gegenbauer $C^{(2)}_k$ coefficients array
  *
- * Converts Chebyshev $T_n$ coefficients to Gegenbauer $C^{(2)}_k$ coefficients ($\alpha=2$).
- *
- * Uses the projection formula:
- * $$g_k = \frac{1}{2} c_0 \delta_{k,0} + \frac{c_k}{2(k+1)} - \frac{(k+2) c_{k+2}}{(k+1)(k+3)} + \frac{c_{k+4}}{2(k+3)}$$
- * where $f(x) = \sum_n c_n T_n(x)$.
+ * Converts Chebyshev $T_n$ coefficients to Gegenbauer $C^{(2)}_k$ coefficients
+ * ($\alpha=2$) via the basis-projection formula. See the
+ * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * formula.
  *
  * If @g points to NULL, allocates a new GArray with same size as @c. If @g points to an
  * existing GArray, resizes it to match @c. Through bindings, @g always receives NULL.
@@ -910,11 +913,10 @@ ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g)
  * @c: (element-type gdouble): Gegenbauer $C^{(1)}_n$ coefficients array
  * @t: point to evaluate in [-1, 1]
  *
- * Evaluates a Gegenbauer $C^{(1)}_n$ expansion at t using Clenshaw recurrence.
- * For $\alpha=1$, $C^{(1)}_n(t) = U_n(t)$ (Chebyshev polynomials of the second kind).
- * The variable t should be in the interval [-1, 1]. To evaluate at a point x in [a, b],
- * use ncm_spectral_gegenbauer_alpha1_eval_x() or first convert x to t using
- * ncm_spectral_x_to_t().
+ * Evaluates a Gegenbauer $C^{(1)}_n$ expansion at t using a stable recurrence
+ * (with $C^{(1)}_n = U_n$). The variable t should be in the interval [-1, 1]. To
+ * evaluate at a point x in [a, b], use ncm_spectral_gegenbauer_alpha1_eval_x() or
+ * first convert x to t using ncm_spectral_x_to_t().
  *
  * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(1)}_n(t)$
  */
@@ -983,12 +985,12 @@ ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble t)
  * @c: (element-type gdouble): Gegenbauer $C^{(2)}_n$ coefficients array
  * @t: point to evaluate in [-1, 1]
  *
- * Evaluates a Gegenbauer $C^{(2)}_n$ expansion at t using Clenshaw recurrence.
- * For $\alpha=2$, the recurrence relation is:
- * $(n+1) C^{(2)}_{n+1}(t) = 2(n+2)t C^{(2)}_n(t) - (n+3) C^{(2)}_{n-1}(t)$
- * The variable t should be in the interval [-1, 1]. To evaluate at a point x in [a, b],
- * use ncm_spectral_gegenbauer_alpha2_eval_x() or first convert x to t using
- * ncm_spectral_x_to_t().
+ * Evaluates a Gegenbauer $C^{(2)}_n$ expansion at t using a stable recurrence.
+ * The variable t should be in the interval [-1, 1]. To evaluate at a point x in
+ * [a, b], use ncm_spectral_gegenbauer_alpha2_eval_x() or first convert x to t
+ * using ncm_spectral_x_to_t(). See the
+ * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * $C^{(2)}_n$ recurrence.
  *
  * Returns: the value of $\sum_{n=0}^{N-1} c_n C^{(2)}_n(t)$
  */
@@ -1063,9 +1065,11 @@ ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble t)
  * @t: point to evaluate in [-1, 1]
  *
  * Evaluates a Chebyshev expansion $f(t) = \sum_{k=0}^{N-1} a_k T_k(t)$ at t
- * using Clenshaw recurrence with Reinsch modification near endpoints.
- * The variable t should be in the interval [-1, 1]. To evaluate at a point x in [a, b],
- * use ncm_spectral_chebyshev_eval_x() or first convert x to t using ncm_spectral_x_to_t().
+ * using the Clenshaw recurrence, switching to the Reinsch modification near the
+ * endpoints to avoid cancellation. The variable t should be in the interval
+ * [-1, 1]. To evaluate at a point x in [a, b], use ncm_spectral_chebyshev_eval_x()
+ * or first convert x to t using ncm_spectral_x_to_t(). See the
+ * <a href="../../theory/spectral.html">Spectral Methods</a> page for details.
  *
  * Returns: the value of the Chebyshev expansion at t
  */
@@ -1170,20 +1174,11 @@ ncm_spectral_chebyshev_eval (GArray *a, gdouble t)
  * @a: (element-type gdouble): Chebyshev coefficients array (a_j multiplies T_j)
  * @t: point to evaluate in [-1,1]
  *
- * Evaluates the first derivative of a Chebyshev expansion at $t$.
- *
- * The Chebyshev series is
- * $$ f(t) = \sum_{j=0}^{N-1} a_j T_j(t) , $$
- * and its derivative can be written as
- * $$ f'(t) = \sum_{k=0}^{N-2} b_k T_k(t) . $$
- *
- * The derivative coefficients $b_k$ satisfy
- * $$ b_k = \sum_{j=k+1,k+3,\dots}^{N-1} 2 j a_j , \quad k \ge 1, $$
- * and
- * $$ b_0 = \sum_{j=1,3,5,\dots}^{N-1} j a_j . $$
- *
- * The derivative is evaluated using a fused backward recurrence and
- * the Clenshaw algorithm, without explicitly forming the coefficients $b_k$.
+ * Evaluates the first derivative of a Chebyshev expansion at $t$ using a fused
+ * backward recurrence and Clenshaw algorithm, without explicitly forming the
+ * derivative series. See the
+ * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * derivative-coefficient relations.
  *
  * Returns: the value of the derivative at $t$
  */
@@ -1706,13 +1701,6 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
  * Output: Gegenbauer $C^{(2)}_k(x)$ basis coefficient (row k)
  *
- * Mathematical formula:
- * $$
- * C^{(2)}_k = \frac{1}{2} c_0 \delta_{k,0} +
- * \frac{c_k}{2(k+1)} - \frac{(k+2) c_{k+2}}{(k+1)(k+3)} + \frac{c_{k+4}}{2(k+3)}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
- *
  * Adds to existing row data (for linear combinations of operators).
  *
  * Matrix entries for row k:
@@ -1734,14 +1722,6 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  *
  * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
  * Output: Gegenbauer $C^{(2)}_k(x)$ basis coefficient for $x \cdot f(x)$ (row k)
- *
- * Mathematical formula:
- * $$
- * (x \cdot f)^{(2)}_k = \frac{\theta(k-1) c_{k-1}}{4(k+1)} - \frac{c_{k+1}}{4(k+3)} -
- * \frac{c_{k+3}}{4(k+1)} + \frac{c_{k+5}}{4(k+3)}
- * $$
- * plus special contributions: $\frac{c_1}{4}\delta_{k,0}$ and $\frac{c_0}{8}\delta_{k,1}$,
- * where $c_n$ are the input Chebyshev coefficients and $\theta$ is the Heaviside function.
  *
  * Adds to existing row data (for linear combinations of operators).
  *
@@ -1766,14 +1746,6 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  *
  * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
  * Output: Gegenbauer $C^{(2)}_k(x)$ basis coefficient for $x^2 \cdot f(x)$ (row k)
- *
- * Mathematical formula:
- * $$
- * (x^2 \cdot f)^{(2)}_k = \frac{\theta(k-2) c_{k-2}}{8(k+1)} + \frac{c_k}{4(k+1)(k+3)} -
- * \frac{(k+2) c_{k+2}}{4(k+1)(k+3)} - \frac{c_{k+4}}{4(k+1)(k+3)} + \frac{c_{k+6}}{8(k+3)}
- * $$
- * plus special contributions at k=0,1,2, where $c_n$ are the input Chebyshev
- * coefficients and $\theta$ is the Heaviside function.
  *
  * Adds to existing row data (for linear combinations of operators).
  *
@@ -1800,12 +1772,6 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
  * Output: $\langle C^{(2)}_k, f' \rangle$ - projection of $f'$ (row k)
  *
- * Mathematical formula:
- * $$
- * \langle C^{(2)}_k, f' \rangle = c_{k+1} - c_{k+3}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
- *
  * Adds to existing row data (for linear combinations of operators).
  *
  * Matrix entries for row k:
@@ -1825,13 +1791,6 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  *
  * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
  * Output: $\langle C^{(2)}_k, x \cdot f' \rangle$ - projection of $x \cdot f'$ (row k)
- *
- * Mathematical formula:
- * $$
- * \langle C^{(2)}_k, x \cdot f' \rangle = \frac{k c_k}{2(k+1)} + \frac{(k+2) c_{k+2}}{(k+1)(k+3)} -
- * \frac{(k+4) c_{k+4}}{2(k+3)}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
  *
  * Adds to existing row data (for linear combinations of operators).
  *
@@ -1854,12 +1813,6 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
  * Output: $\langle C^{(2)}_k, f'' \rangle$ - projection of $f''$ (row k)
  *
- * Mathematical formula:
- * $$
- * \langle C^{(2)}_k, f'' \rangle = 2(k+2) c_{k+2}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
- *
  * Adds to existing row data (for linear combinations of operators).
  *
  * Matrix entries for row k:
@@ -1878,12 +1831,6 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  *
  * Input: Chebyshev $T_n(x)$ basis coefficients (columns)
  * Output: $\langle C^{(2)}_k, x \cdot f'' \rangle$ - projection of $x \cdot f''$ (row k)
- *
- * Mathematical formula:
- * $$
- * \langle C^{(2)}_k, x \cdot f'' \rangle = k c_{k+1} + (k+4) c_{k+3}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
  *
  * Adds to existing row data (for linear combinations of operators).
  *
@@ -1904,13 +1851,6 @@ ncm_spectral_get_x2_d2_matrix (guint N)
  *
  * Input: Chebyshev $T_n(x)$ basis coefficients (columns) Output: $\langle C^{(2)}_k,
  * x^2 \cdot f'' \rangle$ - projection of $x^2 \cdot f''$ (row k)
- *
- * Mathematical formula:
- * $$
- * \langle C^{(2)}_k, x^2 \cdot f'' \rangle = \frac{k(k-1) c_k}{2(k+1)} +
- * \frac{(k+2)((k+2)^2-3) c_{k+2}}{(k+1)(k+3)} + \frac{(k+4)(k+5) c_{k+4}}{2(k+3)}
- * $$
- * where $c_n$ are the input Chebyshev coefficients.
  *
  * Adds to existing row data (for linear combinations of operators).
  *

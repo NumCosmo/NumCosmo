@@ -18,6 +18,7 @@ project:
     - theory/wl_surface_mass_density.qmd
     - theory/halo_density_profile.qmd
     - theory/fftlog.qmd
+    - theory/spectral.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
@@ -112,6 +113,8 @@ website:
             contents:
               - href: theory/fftlog.qmd
                 text: "FFTLog"
+              - href: theory/spectral.qmd
+                text: "Spectral Methods"
               - href: theory/csq1d.qmd
                 text: "CSQ1D Formalism"
       - section: examples/index.qmd

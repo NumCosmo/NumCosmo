@@ -7,6 +7,7 @@ src_site_theory_files = files(
     'wl_surface_mass_density.qmd',
     'halo_density_profile.qmd',
     'fftlog.qmd',
+    'spectral.qmd',
 )
 
 if get_option('documentation')

@@ -25,4 +25,5 @@ classes and methods.
 ## Numerical Methods
 
 - [FFTLog](fftlog.qmd) — logarithmic fast Fourier transform.
+- [Spectral Methods](spectral.qmd) — Chebyshev approximation, Clenshaw–Curtis integration, and ultraspherical operators.
 - [CSQ1D Formalism](csq1d.qmd) — complex-structure evolution of a time-dependent oscillator.
