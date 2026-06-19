@@ -29,10 +29,10 @@
  * Supernovae distance covariance between distance estimates.
  *
  * This object implements the calculation necessary to make a statistical analysis using
- * data from [Conley et al. (2011)][XConley2011] and [Sullivan et al.
- * (2011)][XSullivan2011].
+ * data from [Conley et al. (2011)](https://arxiv.org/abs/1104.1443) and [Sullivan et al.
+ * (2011)](https://arxiv.org/abs/1104.1444).
  *
- * Is also supports [Betoule et al. (2014)][XBetoule2014].
+ * Is also supports [Betoule et al. (2014)](https://arxiv.org/abs/1401.4064).
  *
  */
 

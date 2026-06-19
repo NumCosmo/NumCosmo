@@ -29,7 +29,7 @@
  * Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
  *
  * This objects implements the Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
- * See appendix G from [Bardeen et al. (1986)][XBardeen1986a] [[ads](https://ui.adsabs.harvard.edu/abs/1986ApJ...304...15B/abstract)].
+ * See appendix G from [Bardeen et al. (1986)](https://doi.org/10.1086/164143) [[ads](https://ui.adsabs.harvard.edu/abs/1986ApJ...304...15B/abstract)].
  *
  * All three available transfer functions basically follow the same pattern,
  * \begin{equation*}

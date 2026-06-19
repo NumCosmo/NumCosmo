@@ -1563,7 +1563,7 @@ _ncm_stats_vec_heidel_diag_pcramer (const gdouble q)
  * -1 and the return vector the p-values considering the whole system.
  *
  * See:
- * - [Heidelberger (1981)][XHeidelberger1981]
+ * - [Heidelberger (1981)](https://doi.org/10.1145/358598.358630)
  * - [Schruben (1982)][XSchruben1982]
  * - [Heidelberger (1983)][XHeidelberger1983]
  *

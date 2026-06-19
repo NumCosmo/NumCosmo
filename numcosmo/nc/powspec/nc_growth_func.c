@@ -32,7 +32,7 @@
  * This object implements the integration of second order differential equation (ODE)
  * for the matter (baryons + cold dark matter: $\Omega_m$, see nc_hicosmo_E2Omega_m()
  * and nc_hicosmo_E2()) density contrast, $\delta$, in the linear regime of
- * perturbations, see for instance [Matínez and Saar (2002)][XMartinez2002].
+ * perturbations, see for instance [Matínez and Saar (2002)](https://ui.adsabs.harvard.edu/abs/2002sgd..book.....M).
  * The equation is given by
  * \begin{equation*}
  * \ddot{ \delta } + 2 \frac{\dot{a}}{a} \dot{ \delta } - 4\pi G \bar{\rho}(a)\delta = 0,

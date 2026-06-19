@@ -27,7 +27,7 @@
  *
  * Dark Energy -- Jassal-Bagla-Padmanabhan equation of state.
  *
- * See [Jassal et al. (2005)][XJassal2005]: $w(z) = w_0 + w_1 \frac{z}{(1.0 + z)^2}$.
+ * See [Jassal et al. (2005)](https://arxiv.org/abs/astro-ph/0404378): $w(z) = w_0 + w_1 \frac{z}{(1.0 + z)^2}$.
  *
  */
 

@@ -29,8 +29,8 @@
  * Planck Foreground and Instrument model for TT correlation maps.
  *
  * If you use this object, cite [Planck 2015 results XI
- * (2015)][XPlanckCollaboration2015a], [Planck 2018 results V
- * (2019)][XPlanckCollaboration2019] and related papers.
+ * (2015)](https://arxiv.org/abs/1507.02704), [Planck 2018 results V
+ * (2019)](https://arxiv.org/abs/1907.12875) and related papers.
  *
  */
 
@@ -204,7 +204,7 @@ nc_planck_fi_cor_tt_add_gal_priors (NcmLikelihood *lh, NcmVector *mean, NcmVecto
  * nc_planck_fi_cor_tt_add_default_gal_priors:
  * @lh: a #NcmLikelihood
  *
- * Add the galaxy dust priors as described in [Planck 2015 results XI (2015)][XPlanckCollaboration2015a].
+ * Add the galaxy dust priors as described in [Planck 2015 results XI (2015)](https://arxiv.org/abs/1507.02704).
  * It uses the default values.
  *
  */
@@ -226,7 +226,7 @@ nc_planck_fi_cor_tt_add_default_gal_priors (NcmLikelihood *lh)
  * nc_planck_fi_cor_tt_add_default18_gal_priors:
  * @lh: a #NcmLikelihood
  *
- * Add the galaxy dust priors as described in [Planck 2018 results V (2019)][XPlanckCollaboration2019].
+ * Add the galaxy dust priors as described in [Planck 2018 results V (2019)](https://arxiv.org/abs/1907.12875).
  * It uses the default values.
  *
  */
@@ -268,7 +268,7 @@ nc_planck_fi_cor_tt_add_calib_priors (NcmLikelihood *lh, NcmVector *mean, NcmVec
  * nc_planck_fi_cor_tt_add_default_calib_priors:
  * @lh: a #NcmLikelihood
  *
- * Add the calibration priors as described in [Planck 2015 results XI (2015)][XPlanckCollaboration2015a].
+ * Add the calibration priors as described in [Planck 2015 results XI (2015)](https://arxiv.org/abs/1507.02704).
  * It uses the default values.
  *
  */
@@ -290,7 +290,7 @@ nc_planck_fi_cor_tt_add_default_calib_priors (NcmLikelihood *lh)
  * nc_planck_fi_cor_tt_add_default18_calib_priors:
  * @lh: a #NcmLikelihood
  *
- * Add the calibration priors as described in [Planck 2018 results V (2019)][XPlanckCollaboration2019].
+ * Add the calibration priors as described in [Planck 2018 results V (2019)](https://arxiv.org/abs/1907.12875).
  * It uses the default values.
  *
  */
@@ -327,8 +327,8 @@ _nc_planck_fi_cor_tt_sz_prior_f (NcmMSetFuncList *flist, NcmMSet *mset, const gd
  * @mean: the mean $\mu$
  * @sigma: the standard deviation
  *
- * Add the SZ prior as described in [Planck 2015 results XI (2015)][XPlanckCollaboration2015a],
- * see also [Planck 2018 results V (2019)][XPlanckCollaboration2019] Eq. (23),
+ * Add the SZ prior as described in [Planck 2015 results XI (2015)](https://arxiv.org/abs/1507.02704),
+ * see also [Planck 2018 results V (2019)](https://arxiv.org/abs/1907.12875) Eq. (23),
  * The prior is given by a $\chi^2$ factor in the form $$\frac{(A^{\\mathrm{kSZ}} + f_\\mathrm{tSZ} A^{\\mathrm{tSZ}} - \\mu)^2}{\sigma^2}.$$
  *
  */
@@ -348,7 +348,7 @@ nc_planck_fi_cor_tt_add_sz_prior (NcmLikelihood *lh, gdouble f_tSZ, gdouble mean
  * nc_planck_fi_cor_tt_add_default_sz_prior:
  * @lh: a #NcmLikelihood
  *
- * Add the SZ prior as described in [Planck 2015 results XI (2015)][XPlanckCollaboration2015a].
+ * Add the SZ prior as described in [Planck 2015 results XI (2015)](https://arxiv.org/abs/1507.02704).
  * The prior is given by a $\chi^2$ factor in the form $$\frac{(A^{\\mathrm{kSZ}} + f_\\mathrm{tSZ} A^{\\mathrm{tSZ}} - \\mu)^2}{\sigma^2}.$$
  * It uses the default values.
  *
@@ -363,7 +363,7 @@ nc_planck_fi_cor_tt_add_default_sz_prior (NcmLikelihood *lh)
  * nc_planck_fi_cor_tt_add_default18_sz_prior:
  * @lh: a #NcmLikelihood
  *
- * Add the SZ prior as described in [Planck 2018 results V (2019)][XPlanckCollaboration2019].
+ * Add the SZ prior as described in [Planck 2018 results V (2019)](https://arxiv.org/abs/1907.12875).
  *
  */
 void

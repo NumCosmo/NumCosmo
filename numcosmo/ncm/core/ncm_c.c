@@ -46,7 +46,7 @@
  * - Astronomical constants: [IAU
  *   2015](https://www.iau.org/administration/resolutions/general_assemblies/)
  *   resolutions for the astronomical unit ncm_c_au(), parsec ncm_c_pc() and derived
- *   constants. See also [Luzum 2011][XLuzum2011].
+ *   constants. See also [Luzum 2011](https://doi.org/10.1007/s10569-011-9352-4).
  *
  * - Atomic Spectra: National Institute of Standards and Technology (NIST) [Atomic
  *   Spectra](http://www.nist.gov/pml/data/asd.cfm) Standard Reference Database 78 -
@@ -1813,7 +1813,7 @@ ncm_c_class_init (NcmCClass *klass)
  * ncm_c_decay_H_rate_2s_1s:
  *
  * Theoretical value for the two photons decay rate for Hydrogen
- * $2\mathrm{s} \to 1\mathrm{s}$ states [Goldman 1989][XGoldman1989].
+ * $2\mathrm{s} \to 1\mathrm{s}$ states [Goldman 1989](https://doi.org/10.1103/PhysRevA.40.1185).
  *
  * Returns: Decay rate of Hydrogen from $\Lambda_{2\mathrm{s} \to 1\mathrm{s}} = 8.2245809 \,\left[\mathrm{s}^{-1}\right]$.
  */
@@ -1822,7 +1822,7 @@ ncm_c_class_init (NcmCClass *klass)
  * ncm_c_decay_He_rate_2s_1s:
  *
  * Theoretical value for the two photons decay rate for Helium
- * $2\mathrm{s} \to 1\mathrm{s}$ states [Drake 1969][XDrake1969].
+ * $2\mathrm{s} \to 1\mathrm{s}$ states [Drake 1969](https://doi.org/10.1103/PhysRev.180.25).
  *
  * Returns: Decay rate of Helium from $\Lambda_{2\mathrm{s} \to 1\mathrm{s}} = 51.3 \,\left[\mathrm{s}^{-1}\right]$.
  */

@@ -30,11 +30,11 @@
  *
  * This object provides an interface for the CLASS code.
  *
- * If you use this object please cite: [Blas (2011) CLASS II][XBlas2011],
+ * If you use this object please cite: [Blas (2011) CLASS II](https://doi.org/10.1088/1475-7516/2011/07/034),
  * see also:
- * - [Lesgourgues (2011) CLASS I][XLesgourgues2011],
- * - [Lesgourgues (2011) CLASS III][XLesgourgues2011a],
- * - [Lesgourgues (2011) CLASS IV][XLesgourgues2011b] and
+ * - [Lesgourgues (2011) CLASS I](https://arxiv.org/abs/1104.2932),
+ * - [Lesgourgues (2011) CLASS III](https://arxiv.org/abs/1104.2934),
+ * - [Lesgourgues (2011) CLASS IV](https://arxiv.org/abs/1104.2935) and
  * - [CLASS website](http://class-code.net/).
  *
  */

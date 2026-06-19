@@ -30,7 +30,7 @@
  *
  * This object provides the computation of the adiabatic mode for the cosmological
  * perturbations. It solves the equation of motion for the gauge invariant variable
- * (see [Vitenti (2013)][XVitenti2013] for notation and details)
+ * (see [Vitenti (2013)](https://arxiv.org/abs/1206.4374) for notation and details)
  * $$
  * \zeta \equiv \Psi - \frac{2\bar{K}}{\kappa(\bar{\rho} + \bar{p})} + H\mathcal{V}.
  * $$

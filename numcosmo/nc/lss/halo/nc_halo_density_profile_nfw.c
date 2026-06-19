@@ -59,7 +59,7 @@
  * \end{equation}
  * Similar expressions in terms of $\mathrm{arctanh}$ and approximations, as described above, are used here.
  *
- * References: [Navarro (1996)][XNavarro1996], [Wright (2000)][XWright2000], astro-ph/0206508 and arxiv:1010.0744.
+ * References: [Navarro (1996)](https://arxiv.org/abs/astro-ph/9508025), [Wright (2000)](https://doi.org/10.1086/308744), astro-ph/0206508 and arxiv:1010.0744.
  */
 
 #ifdef HAVE_CONFIG_H

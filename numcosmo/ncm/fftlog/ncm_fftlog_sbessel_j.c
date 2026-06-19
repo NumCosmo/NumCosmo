@@ -51,7 +51,7 @@
  * Note that the spherical Bessel function's order, $\ell$ (#NcmFftlogSBesselJ:ell), must be an integer number.
  *
  * The spatial correlation function multipoles, $\xi_{\ell}^{(n)}(r)$, can be defined as
- * (see [Matsubara (2004)][XMatsubara2004a] [[arXiv](https://arxiv.org/abs/astro-ph/0408349)])
+ * (see [Matsubara (2004)](https://arxiv.org/abs/astro-ph/0408349) [[arXiv](https://arxiv.org/abs/astro-ph/0408349)])
  *
  * \begin{equation}\label{eq:xi_multipoles}
  * \xi_{\ell}^{(n)}(r) = \frac{(-1)^{n+\ell}}{r^{2n-\ell}} \int_{0}^{\infty} \frac{\mathrm{d} k}{2\pi^2} \frac{k^2}{k^{2n-\ell}} j_{\ell}(kr) P(k) \,\, .

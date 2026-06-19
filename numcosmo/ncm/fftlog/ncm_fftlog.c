@@ -31,7 +31,7 @@
  *
  * This class provides the tools to compute the Fast Fourier Transform of any function,
  * which is assumed to be a periodic sequence of logarithmically spaced points. It is
- * inspired on the approach FFTLog developed by [Hamilton (2000)][XHamilton2000]
+ * inspired on the approach FFTLog developed by [Hamilton (2000)](https://arxiv.org/abs/astro-ph/9905191)
  * [[arXiv](https://arxiv.org/abs/astro-ph/9905191)], which was extended as described
  * below.
  *
@@ -71,7 +71,7 @@
  * \end{align}
  * However, since we are assuming that these functions are periodic with period $L$ these two
  * points refer to the same value of the functions. Thus, we do not need to include both points and in
- * the case of even $N$ we include the point $\ln(k_0) - \frac{L}{2}$ only. In the original [FFTLog][XHamilton2000]
+ * the case of even $N$ we include the point $\ln(k_0) - \frac{L}{2}$ only. In the original [FFTLog](https://arxiv.org/abs/astro-ph/9905191)
  * paper they include both points but give them a $1/2$ weight, here we avoid this complication by using the lower
  * end point only.
  *

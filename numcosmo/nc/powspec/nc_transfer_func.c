@@ -39,7 +39,7 @@
  * for mode (wavenumber) $k$ at redshift $z$. By definition, we have
  * $$ \lim_{k \rightarrow 0} T(k) \rightarrow  1 \, .$$
  *
- * See [Eisenstein and Hu (1998)][XEisenstein1998] [[arXiv](https://arxiv.org/abs/astro-ph/9709112)] for more details.
+ * See [Eisenstein and Hu (1998)](https://arxiv.org/abs/astro-ph/9709112) [[arXiv](https://arxiv.org/abs/astro-ph/9709112)] for more details.
  *
  */
 

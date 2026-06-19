@@ -57,8 +57,8 @@
  * where $c^2$ is the speed of light squared [ncm_c_c2()], $G$ is the gravitational constant [ncm_c_G()], $D_s$ and $Dl$ are the angular diameter distances
  * to the source and lens, respectively, and $D_{ls}$ is the angular diameter distance between the lens and source.
  *
- * See, e.g., [Mandelbaum (2006)][XMandelbaum2006], [Umetsu (2012)][XUmetsu2012], [Applegate (2014)][XApplegate2014],
- * [Melchior (2017)][XMelchior2017], [Parroni (2017)][XParroni2017].
+ * See, e.g., [Mandelbaum (2006)](https://arxiv.org/abs/astro-ph/0605476), [Umetsu (2012)](https://arxiv.org/abs/1204.3630), [Applegate (2014)](https://arxiv.org/abs/1208.0605),
+ * [Melchior (2017)](https://arxiv.org/abs/1610.06890), [Parroni (2017)](https://arxiv.org/abs/1705.04329).
  *
  * Usually $z_{lens} = z_{cluster}, but we define these as two different arguments in order to handle cases where shear signal has been
  * rescaled to a different cluster redshift (following D. Applegate's code.).
@@ -965,7 +965,7 @@ nc_wl_surface_mass_density_reduced_shear_cache (NcWLSurfaceMassDensityCritCache 
  * where $\gamma(R)$ is the shear [nc_wl_surface_mass_density_shear()], $\kappa(R)$ is the convergence
  * [nc_wl_surface_mass_density_convergence()], $z_b$ is the background-galaxy redshift and
  * $$\beta_s = \frac{D_s}{D_l D_{ls}} \frac{D_\infty}{D_l D_{l\infty}}.$$
- * See [Applegate (2014)][XApplegate2014]
+ * See [Applegate (2014)](https://arxiv.org/abs/1208.0605)
  *
  * Returns: $g(R)$, source at $z = \infty$
  */
