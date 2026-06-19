@@ -29,8 +29,8 @@
  * Baryon Oscillation Data -- $(D_H/r,\; D_A/r)$ data.
  *
  * See: [Font-Ribera et al. (2014)][XFont-Ribera2014],
- * [Delubac et al. (2015)][XDelubac2015] and
- * [Aubourg et al. (2014)][XAubourg2014].
+ * [Delubac et al. (2015)](https://arxiv.org/abs/1404.1801) and
+ * [Aubourg et al. (2014)](https://arxiv.org/abs/1411.1074).
  *
  * The data is stored in a #NcDataBaoDHrDAr object. The data is stored in a
  * #NcmDataGaussCov base class object, which is a subclass of #NcmData.

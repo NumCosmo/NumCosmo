@@ -29,7 +29,7 @@
  * Baryon oscillation data -- $D_H / r_d$ and $D_t / r_d$ empirical likelihood.
  *
  * This object implements the BAO data when its likelihood function is provided, e.g.,
- * [Bautista et al. (2017)][XBautista2017].
+ * [Bautista et al. (2017)](https://arxiv.org/abs/1702.00176).
  *
  * The data is stored in a #NcDataBaoEmpiricalFit2d object. The data is stored in a
  * #NcmDataDist2d base class object, which is a subclass of #NcmData. The data

@@ -28,7 +28,7 @@
  *
  * Baryon oscillation data -- volume mean $D_V$.
  *
- * See [Eisenstein et al. (2005)][XEisenstein2005].
+ * See [Eisenstein et al. (2005)](https://arxiv.org/abs/astro-ph/0501171).
  *
  * The data is stored in a #NcDataBaoDV object. The data is stored in a
  * #NcmDataGaussDiag base class object, which is a subclass of #NcmData. The data

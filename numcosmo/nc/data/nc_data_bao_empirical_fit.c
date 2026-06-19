@@ -29,7 +29,7 @@
  * Baryon oscillation data -- $D_V / r_s$ empirical likelihood.
  *
  * This object implements the BAO data when its likelihood function is provided, e.g.,
- * [Ross et al. (2015)][XRoss2015].
+ * [Ross et al. (2015)](https://arxiv.org/abs/1409.3242).
  *
  * The data is stored in a #NcmSpline object, which is used to calculate the likelihood
  * function. The spline must be provided in the constructor.
