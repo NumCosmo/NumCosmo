@@ -28,78 +28,20 @@
  *
  * Cosmological distance and time related quantities.
  *
- * This object implements several distances used in cosmology, here we have
- * the following definitions.
+ * This object computes the dimensionless distances used in cosmology, built on
+ * the comoving distance
+ * \begin{equation}
+ * D_c(z) = \int_0^z \frac{\mathrm{d}z^\prime}{E(z^\prime)},
+ * \qquad E(z) \equiv \frac{H(z)}{H_0},
+ * \end{equation}
+ * where $E(z)$ is the normalized Hubble function. Dimensionful distances are
+ * recovered by multiplying by the appropriate Hubble radius $R_H = c/H_0$. From
+ * $D_c$ it derives the transverse comoving, luminosity, and angular diameter
+ * distances, the distance modulus, and distances between two redshifts.
  *
- * $
- *  \newcommand{\RH}{{R_H}}
- *  \newcommand{\RHc}{{R^\mathrm{c}_H}}
- * $
- *
- * The Hubble radius (or scale) is defined as the inverse of the Hubble
- * function $H(z)$ [nc_hicosmo_H()],
- * \begin{equation}\label{eq:def:RHc}
- * \RH = \frac{c}{H(z)}, \qquad \RH_0 = \frac{c}{H_0},
- * \end{equation}
- * where $c$ is the speed of light [ncm_c_c()], $z$ is the redshift and
- * $H_0 \equiv H(0)$ is the Hubble parameter [nc_hicosmo_H0()]. Similarly,
- * we also define the comoving Hubble radius as
- * \begin{equation}\label{eq:def:DH}
- * \RHc(z) = \frac{c}{aH(z)} = \frac{c(1+z)}{a_0H(z)}, \qquad \RHc_0 = \frac{c}{a_0H_0}
- * \end{equation}
- * where ${}_0$ subscript means that the function is calculated at the
- * present time and the redshift $z$ is defined by the expression
- * $$1 + z = \frac{a_0}{a}.$$
- *
- * The comoving distance $D_c$ is defined as
- * \begin{equation}\label{eq:def:dc}
- * d_c(z) = \RHc_0\int_0^z \frac{dz^\prime}{E (z^\prime)},
- * \end{equation}
- * where $E(z)$ is the normalized Hubble function [nc_hicosmo_E()], i.e.,
- * \begin{equation}\label{eq:def:Ez}
- * E(z) \equiv \frac{H(z)}{H_0}.
- * \end{equation}
- *
- * In this object we will compute the dimensionless version of the distances,
- * for the comoving distance we define
- * \begin{equation}\label{eq:def:Dc}
- * D_c(z) \equiv \frac{d_c(z)}{\RHc_0}.
- * \end{equation}
- * note, however, that $D_c(z)$ coincides with the proper distance today
- * $r(z) \equiv a_0 d_c(z)$ in unit of the Hubble radius, i.e.,
- * $D_c(z) = r(z) / \RH_0$. Therefore, both the comoving distance and
- * the proper distance today can be obtained by multiplying $D_c(z)$
- * by $\RHc_0$ and $\RH_0$ respectively.
- *
- * The transverse comoving distance $D_t$ and its derivative with respect to
- * $z$ are given by
- * \begin{equation}\label{eq:def:Dt}
- * D_t(z) = \frac{\sinh\left[\sqrt{\Omega_{k0}}D_c(z)\right]}{\sqrt{\Omega_{k0}}},
- * \qquad \frac{dD_t}{dz}(z) = \frac{\cosh\left[\sqrt{\Omega_{k0}}D_c(z)\right]}{E(z)},
- * \end{equation}
- * where $\Omega_{k0}$ is the value of the curvature today [nc_hicosmo_Omega_k0()].
- * Using the definition above we have that the luminosity and angular diameter distances
- * are respectively:
- * \begin{equation}\label{eq:def:Dl}
- * D_l = (1 + z)D_t(z), \qquad D_A = D_t (z) / (1 + z),
- * \end{equation}
- * and the distance modulus is given by
- * \begin{equation}\label{eq:def:dmu}
- * \delta\mu(z) = 5\log_{10}(D_l(z)) + 25.
- * \end{equation}
- * Note that the distance modulus is defined as
- * $$\mu(z) = 5\log_{10}[\RH_0D_l(z)/(1\,\text{Mpc})] + 25.$$
- * Thus, this differs from our definition by a factor of
- * $5\log_{10}[\RH_0/(1\,\text{Mpc})]$, i.e.,
- * $$\mu(z) = \delta\mu(z) + 5\log_{10}[\RH_0/(1\,\text{Mpc})],$$
- * where $\text{Mpc}$ is megaparsec [ncm_c_Mpc()].
- *
- * We also implement the following distances between $z_1$ and $z_2$:
- * \begin{align}\label{eq:def:Dt12}
- * D_t(z_1, z_2) &= \frac{\sinh\left\\{\sqrt{\Omega_{k0}}\left[D_c(z_2)-D_c(z_1)\right]\right\\}}{\sqrt{\Omega_{k0}}}, \\\\ \label{eq:def:DA12}
- * D_A(z_1, z_2) &= D_t (z_1, z_2) / (1 + z_2).
- * \end{align}
- *
+ * For the full set of definitions, conventions, and the dimensionless-to-physical
+ * conversion, see the theoretical background page:
+ * <a href="../../theory/distances.html">Cosmological Distances</a>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1228,7 +1170,7 @@ nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
  * the last scattering surface of the cosmic microwave background photons.
  *
  * This function computes $z_\star$ using [nc_hicosmo_z_lss()], if @cosmo implements
- * it, or using Hu & Sugiyama fitting formula [Hu (1996)][XHu1996][[arXiv](https://arxiv.org/abs/astro-ph/9510117)],
+ * it, or using Hu & Sugiyama fitting formula [Hu (1996)](https://arxiv.org/abs/astro-ph/9510117),
  * $$ z_\star = 1048 \left(1 + 1.24 \times 10^{-3}  (\Omega_{b0} h^2)^{-0.738}\right) \left(1 + g_1 (\Omega_{m0} h^2)^{g_2}\right),$$
  * where $\Omega_{b0} h^2$ [nc_hicosmo_Omega_b0h2()] and $\Omega_{m0} h^2$ [nc_hicosmo_Omega_m0h2()]
  * are, respectively, the baryonic and matter density parameters times the square
@@ -1391,7 +1333,7 @@ nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo)
  *
  * If the @dist object constains a NcRecomb object, it calculates the drag
  * redshift through the recombination history. Otherwise, it computes $z_d$
- * using the fitting formula given in [Eisenstein & Hu (1998)][XEisenstein1998] [[arXiv](https://arxiv.org/abs/astro-ph/9709112)],
+ * using the fitting formula given in [Eisenstein & Hu (1998)](https://arxiv.org/abs/astro-ph/9709112),
  * $$z_d = \frac{1291 (\Omega_{m0} h^2)^{0.251}}{(1 + 0.659 (\Omega_{m0} h^2)^{0.828})}
  * \left(1 + b_1 (\Omega_{b0} h^2)^{b_2}\right),$$
  * where $\Omega_{b0} h^2$ [nc_hicosmo_Omega_b0h2()] and $\Omega_{m0} h^2$ [nc_hicosmo_Omega_m0h2()]
@@ -1435,7 +1377,7 @@ nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
  * $$D_V(z) = \left[D_{H_0}^2 D_t(z)^2 \frac{cz}{H(z)} \right]^{1/3},$$
  * where $D_t(z)$ is the transverse comoving distance [Eq. $\eqref{eq:def:Dt}$], $c$ is the speed of light
  * [ncm_c_c()] and $H(z)$ is the Hubble function [nc_hicosmo_H()].
- * See [Eisenstein et al. (2005)][XEisenstein2005] [[arXiv](https://arxiv.org/abs/astro-ph/0501171)].
+ * See [Eisenstein et al. (2005)](https://arxiv.org/abs/astro-ph/0501171).
  *
  * This function computes the dimensionless dilation scale:
  * $$D_V^\star(z) = \left[D_t(z)^2 \frac{z}{E(z)} \right]^{1/3} = \frac{D_V(z)}{D_{H_0}},$$
@@ -1464,7 +1406,7 @@ nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
  * $$ A \equiv D_V (z) \frac{\sqrt{\Omega_{m0} H_0^2}}{z c},$$
  * where $\Omega_{m0}$ is the matter density parameter [nc_hicosmo_Omega_m0()], $c$ is the speed of light [ncm_c_c()],
  * $H_0$ is the Hubble parameter [nc_hicosmo_H0()] and $D_V(z)$ is the dilation scale [nc_distance_dilation_scale()].
- * See Section 4.5 from [Eisenstein et al. (2005)][XEisenstein2005] [[arXiv](https://arxiv.org/abs/astro-ph/0501171)].
+ * See Section 4.5 from [Eisenstein et al. (2005)](https://arxiv.org/abs/astro-ph/0501171).
  *
  * Returns: $A(z)$.
  */
@@ -1532,7 +1474,7 @@ nc_distance_r_zd_Mpc (NcDistance *dist, NcHICosmo *cosmo)
  *
  * This function computes $r(z_d) / D_V(z)$,
  * where $r(z_d)$ is given by nc_distance_r_zd() and $D_V(z)$ by nc_distance_dilation_scale().
- * For more information see [Percival et al. (2007)][XPercival2007] [[arXiv](https://arxiv.org/abs/0705.3323)].
+ * For more information see [Percival et al. (2007)](https://arxiv.org/abs/0705.3323).
  *
  * Returns: $r(z_d) / D_V(z)$.
  */
