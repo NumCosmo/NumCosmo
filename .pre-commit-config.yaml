@@ -1,0 +1,16 @@
+# Optional developer convenience. To enable:
+#   pip install pre-commit
+#   pre-commit install
+# CI enforces the same check regardless (see .github/workflows/bib_lint.yml).
+repos:
+  - repo: local
+    hooks:
+      - id: bibtex-tidy
+        name: tidy docs/references.bib
+        entry: docs/tidy_references.sh
+        language: system
+        files: ^docs/references\.bib$
+        pass_filenames: false
+        description: >-
+          Re-format the bibliography with bibtex-tidy (requires
+          `npm install -g bibtex-tidy@1.14.0`).

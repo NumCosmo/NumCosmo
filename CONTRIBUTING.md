@@ -85,6 +85,25 @@ pandoc `[@Key]` against `docs/references.bib`; API doc comments (gi-docgen has n
 bibliography support) use inline links instead, e.g.
 `[Author (year)](https://arxiv.org/abs/...)`.
 
+### Bibliography (`docs/references.bib`)
+
+`bibtex-tidy` is the canonical formatter for `docs/references.bib`; the file is no
+longer formatted by hand or by a reference manager. After adding or editing an
+entry, run:
+
+```bash
+docs/tidy_references.sh          # re-format in place
+docs/tidy_references.sh --check  # verify (this is what CI runs)
+```
+
+CI rejects a bibliography that is not tidy (`.github/workflows/bib_lint.yml`), so
+run the formatter before committing. Install the pinned version with
+`npm install -g bibtex-tidy@1.14.0` (different versions format differently). A
+`pre-commit` hook is available — `pip install pre-commit && pre-commit install` —
+to run this automatically. If you use a reference manager such as JabRef, treat
+its output as a draft and re-tidy before committing; the local `file`, `owner`,
+`timestamp`, and `__markedentry` fields are stripped from the repo copy.
+
 ### Building the documentation
 
 Build the site with a documentation-enabled build directory:
