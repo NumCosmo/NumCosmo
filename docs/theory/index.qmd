@@ -19,6 +19,7 @@ classes and methods.
 
 ## Clusters & Weak Lensing
 
+- [Halo Density Profiles](halo_density_profile.qmd) — NFW, Einasto, Hernquist, and DK14 profiles and their projected quantities.
 - [Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd) — projected surface density, convergence, and shear.
 
 ## Numerical Methods

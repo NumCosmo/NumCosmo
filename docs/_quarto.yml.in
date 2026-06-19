@@ -16,6 +16,7 @@ project:
     - theory/recombination.qmd
     - theory/transfer_func_eh.qmd
     - theory/wl_surface_mass_density.qmd
+    - theory/halo_density_profile.qmd
     - theory/fftlog.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
@@ -103,6 +104,8 @@ website:
                 text: "Eisenstein–Hu Transfer Function"
           - section: "Clusters & Weak Lensing"
             contents:
+              - href: theory/halo_density_profile.qmd
+                text: "Halo Density Profiles"
               - href: theory/wl_surface_mass_density.qmd
                 text: "Weak-Lensing Surface Mass Density"
           - section: "Numerical Methods"

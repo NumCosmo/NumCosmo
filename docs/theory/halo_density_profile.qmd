@@ -1,0 +1,193 @@
+---
+title: Halo Density Profiles
+---
+
+# Halo Density Profiles
+
+This page describes the spherical matter density profiles used to model dark
+matter halos, implemented by the abstract base class
+[[numcosmo|NcHaloDensityProfile]] and its concrete subclasses (NFW, Einasto,
+Hernquist, Diemer–Kravtsov). It covers the common parametrization shared by all
+profiles, the projected (two-dimensional) quantities derived from them, and the
+closed-form expressions provided by each family. The projected quantities feed
+directly into the weak-lensing observables of
+[Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd).
+
+## Dimensionless Profile
+
+Every profile is written in terms of a dimensionless three-dimensional density
+$\hat\rho(x)$,
+$$
+\hat\rho(x) \equiv \frac{\rho(x\,r_s)}{\rho_s},
+\qquad
+\rho(r) = \rho_s\,\hat\rho\!\left(\frac{r}{r_s}\right),
+$$
+where $\rho(r)$ is the physical density, $\rho_s$ is the density scale, and $r_s$
+is the scale radius. A subclass only needs to supply $\hat\rho(x)$; everything
+else can be derived from it, numerically if necessary.
+
+## Parametrization
+
+The pair $(\rho_s,\,r_s)$ is fixed by a more physical parametrization in terms of
+a halo mass $M_\Delta$ and a concentration $c_\Delta$, defined relative to an
+overdensity $\Delta$ and a background density $\rho_\mathrm{bg}$. These are
+supplied by a halo mass summary object [[numcosmo|NcHaloMassSummary]] attached to
+the profile at construction time.
+
+### Scale Radius
+
+The mass–radius relation defines $r_\Delta$ through
+$$
+M_\Delta = \frac{4\pi}{3}\,r_\Delta^3\,\Delta\,\rho_\mathrm{bg},
+$$
+and the concentration is $c_\Delta \equiv r_\Delta/r_s$. The scale radius then
+follows directly from $(M_\Delta,\,c_\Delta)$,
+$$
+r_s = \frac{1}{c_\Delta}\left(\frac{3M_\Delta}{4\pi\,\Delta\,\rho_\mathrm{bg}}\right)^{1/3}
+    = \frac{r_{s0}}{(\Delta\,\rho_\mathrm{bg})^{1/3}},
+\qquad
+r_{s0} \equiv \frac{1}{c_\Delta}\left(\frac{3M_\Delta}{4\pi}\right)^{1/3}.
+$$
+The constant part $r_{s0}$ is independent of redshift; the only time dependence
+enters through $\Delta\,\rho_\mathrm{bg}(z)$.
+
+### Density Scale
+
+Integrating the profile out to $r_\Delta$ and matching the mass definition gives
+$$
+M_\Delta = \int_0^{r_\Delta} 4\pi r^2 \rho(r)\,\mathrm{d}r
+         = 4\pi r_s^3 \rho_s\, I_{x^2\hat\rho}(c_\Delta),
+\qquad
+I_{x^2\hat\rho}(c_\Delta) \equiv \int_0^{c_\Delta} x^2\,\hat\rho(x)\,\mathrm{d}x.
+$$
+Equating this to the mass–radius relation fixes the density scale,
+$$
+\rho_s = \frac{c_\Delta^3\,\Delta\,\rho_\mathrm{bg}}{3\,I_{x^2\hat\rho}(c_\Delta)},
+\qquad
+\rho_{s0} \equiv \frac{\rho_s}{\Delta\,\rho_\mathrm{bg}}
+        = \frac{c_\Delta^3}{3\,I_{x^2\hat\rho}(c_\Delta)},
+$$
+where $\rho_{s0}$, like $r_{s0}$, is the redshift-independent part. A subclass may
+provide $I_{x^2\hat\rho}$ in closed form; otherwise it is integrated numerically
+from $\hat\rho$.
+
+## Projected Quantities
+
+The line-of-sight projection of the profile yields the surface mass density
+$$
+\Sigma(R) = \int_{-\infty}^{\infty} \rho\!\left(\sqrt{R^2 + z^2}\right)\mathrm{d}z
+          = r_s\,\rho_s\,\hat\Sigma(R/r_s),
+\qquad
+\hat\Sigma(X) \equiv 2\int_0^\infty \hat\rho\!\left(\sqrt{X^2 + u^2}\right)\mathrm{d}u,
+$$
+with $X = R/r_s$. The total mass inside an infinite cylinder of projected radius
+$R$ is
+$$
+\overline{M}(R) = \int_0^R \Sigma(R')\,2\pi R'\,\mathrm{d}R'
+               = 2\pi r_s^3 \rho_s\,\hat{\overline{M}}(<X),
+\qquad
+\hat{\overline{M}}(X) \equiv \int_0^X \hat\Sigma(X')\,X'\,\mathrm{d}X'.
+$$
+As with the spherical mass, a subclass may implement $\hat\Sigma$ and
+$\hat{\overline{M}}$ directly, or rely on numerical integration of $\hat\rho$.
+
+### Numerical Computation
+
+When a subclass does not provide closed forms for the spherical mass, surface
+density, or cylinder mass, they are computed by integrating $\hat\rho$ over the
+interval $(X_i,\,X_f)$ set by the `lnXi` and `lnXf` properties, to the relative
+tolerance `reltol`. These are controlled with
+[[numcosmo|nc_halo_density_profile_set_lnXi]],
+[[numcosmo|nc_halo_density_profile_set_lnXf]], and
+[[numcosmo|nc_halo_density_profile_set_reltol]].
+
+### Units
+
+Distances are in $\mathrm{Mpc}$, masses in $\mathrm{M}_\odot$, densities in
+$\mathrm{M}_\odot\,\mathrm{Mpc}^{-3}$, and surface mass densities in
+$\mathrm{M}_\odot\,\mathrm{Mpc}^{-2}$.
+
+## Profile Families
+
+### Navarro–Frenk–White
+
+The NFW profile [@Navarro1996] is
+$$
+\hat\rho(x) = \frac{1}{x(1 + x)^2},
+\qquad
+I_{x^2\hat\rho}(x) = \ln(1 + x) - \frac{x}{1 + x}.
+$$
+Its projected quantities have closed forms [@Wright2000],
+$$
+\hat\Sigma(X) = \frac{2}{X^2 - 1}\left[1 - \frac{\arctan\sqrt{X^2 - 1}}{\sqrt{X^2 - 1}}\right],
+\qquad
+\hat{\overline{M}}(<X) = 2\left[\frac{\arctan\sqrt{X^2 - 1}}{\sqrt{X^2 - 1}} + \ln\frac{X}{2}\right].
+$$
+For $X < 1$ these are rewritten with $\mathrm{arctanh}\sqrt{1 - X^2}$, and near
+$X = 1$ or $X = 0$ a Taylor expansion is used to retain double precision.
+Implemented by [[numcosmo|NcHaloDensityProfileNFW]].
+
+### Einasto
+
+The Einasto profile [@Einasto1965] introduces a shape parameter $\alpha$
+controlling how steeply the slope changes with radius,
+$$
+\hat\rho(x) = \exp\left[-\frac{2}{\alpha}\left(x^\alpha - 1\right)\right],
+$$
+with spherical-mass integral
+$$
+I_{x^2\hat\rho}(x) = \left(\frac{\alpha}{2}\right)^{3/\alpha}\frac{e^{2/\alpha}}{\alpha}\,
+\Gamma\!\left(\frac{3}{\alpha}\right)
+\left[1 - \frac{\Gamma\!\left(3/\alpha,\;2x^\alpha/\alpha\right)}{\Gamma\!\left(3/\alpha\right)}\right],
+$$
+where $\Gamma(s)$ and $\Gamma(s,\,t)$ are the complete and upper incomplete gamma
+functions. Typical values $\alpha \approx 0.12$–$0.35$ are motivated by $N$-body
+simulations [@Gao2008; @Dutton2014]. The projected quantities are computed
+numerically.
+Implemented by [[numcosmo|NcHaloDensityProfileEinasto]].
+
+### Hernquist
+
+The Hernquist profile is
+$$
+\hat\rho(x) = \frac{1}{x(1 + x)^3},
+\qquad
+I_{x^2\hat\rho}(x) = \frac{x^2}{2(1 + x)^2},
+$$
+with projected surface density and cylinder mass
+$$
+\hat\Sigma(X) = \frac{1}{(X^2 - 1)^2}\left[\frac{(2 + X^2)\,\arctan\sqrt{X^2 - 1}}{\sqrt{X^2 - 1}} - 3\right],
+\qquad
+\hat{\overline{M}}(<X) = \frac{X^2}{X^2 - 1}\left[1 - \frac{\arctan\sqrt{X^2 - 1}}{\sqrt{X^2 - 1}}\right],
+$$
+using the same $\mathrm{arctanh}$ rewriting and Taylor expansions near the
+singular points as the NFW case. Implemented by
+[[numcosmo|NcHaloDensityProfileHernquist]].
+
+### Diemer–Kravtsov
+
+The DK14 profile [@Diemer2014] extends the Einasto form with a steepening outer
+term governed by a truncation radius $r_t$ and a sharpness parameter $\beta$,
+plus an overdensity parameter $\Delta$. It is designed to capture the steepening
+of halo profiles near the splashback radius. Implemented by
+[[numcosmo|NcHaloDensityProfileDK14]].
+
+## API Reference
+
+See [[numcosmo|NcHaloDensityProfile]] for the full base-class reference, and the
+subclasses [[numcosmo|NcHaloDensityProfileNFW]],
+[[numcosmo|NcHaloDensityProfileEinasto]],
+[[numcosmo|NcHaloDensityProfileHernquist]], and
+[[numcosmo|NcHaloDensityProfileDK14]]. The most relevant methods are:
+
+- dimensionless quantities: [[numcosmo|nc_halo_density_profile_eval_dl_density]],
+  [[numcosmo|nc_halo_density_profile_eval_dl_spher_mass]],
+  [[numcosmo|nc_halo_density_profile_eval_dl_2d_density]],
+  [[numcosmo|nc_halo_density_profile_eval_dl_cyl_mass]]
+- physical quantities: [[numcosmo|nc_halo_density_profile_eval_density]],
+  [[numcosmo|nc_halo_density_profile_eval_spher_mass]],
+  [[numcosmo|nc_halo_density_profile_eval_2d_density]],
+  [[numcosmo|nc_halo_density_profile_eval_cyl_mass]]
+- scale parameters: [[numcosmo|nc_halo_density_profile_r_s]],
+  [[numcosmo|nc_halo_density_profile_rho_s]],
+  [[numcosmo|nc_halo_density_profile_r_s_rho_s]]

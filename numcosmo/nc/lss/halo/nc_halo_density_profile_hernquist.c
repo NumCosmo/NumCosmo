@@ -56,7 +56,7 @@
  *
  * The Hernquist enclosed mass is [virtual function nc_halo_density_profile_eval_dl_cyl_mass()]
  * \begin{equation}
- * \hat{\overline{\Sigma}} (< X) = X^2 / (X^2 - 1) * \eft[1 - 2 * \arctan \left(\sqrt{\vert X - 1 \vert / (X + 1)\right)\right];,
+ * \hat{\overline{M}} (< X) = \frac{X^2}{X^2 - 1} \left[1 - \frac{\arctan \sqrt{X^2 - 1}}{\sqrt{X^2 - 1}}\right],
  * \end{equation}
  * Similar expressions in terms of $\mathrm{arctanh}$ and approximations, as described above, are used here.
  *
