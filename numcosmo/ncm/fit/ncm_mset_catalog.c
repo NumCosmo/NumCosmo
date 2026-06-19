@@ -4110,7 +4110,7 @@ ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p)
  * $$\hat{R}^p = \sqrt{\frac{\hat{d} + 3}{\hat{d} + 1} \left(\frac{n - 1}{n} + \left( \frac{m + 1}{m} \right) \lambda_1\right)},$$
  * where $\hat{d} = 2 \hat{V}^2 / \widehat{Var}(\hat{V})$, $$\hat{V} = \frac{n -1}{n}W + \frac{m + 1}{m} \frac{B}{n}.$$
  *
- * Some references for this MCMC convergence diagnostic: [Brooks and Gelman (1998)][XBrooks1998],
+ * Some references for this MCMC convergence diagnostic: [Brooks and Gelman (1998)](https://doi.org/10.1080/10618600.1998.10474787),
  * [Gelman and Rubin (1992)](https://doi.org/10.1214/ss/1177011136), [SAS/STAT](http://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introbayes_sect008.htm).
  *
  * Returns: the shrink factor $\hat{R}^p$

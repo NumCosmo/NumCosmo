@@ -27,7 +27,7 @@
  *  Class defining the Bhattacharya et al. 2013 concentration-mass relation
  *
  * This class implements the Bhattacharya et al. (2013) concentration-mass relation
- * [Bhattacharya et al. (2013)][XBhattacharya2013].
+ * [Bhattacharya et al. (2013)](https://arxiv.org/abs/1112.5479).
  * Valid mass range: $M \in [2 \times 10^{12},\, 2 \times 10^{15}]\, M_\odot/h$,
  * with $M_\mathrm{max} = 2 \times 10^{14}\, M_\odot/h$ for $z > 0.5$ and
  * $M_\mathrm{max} = 10^{14}\, M_\odot/h$ for $z > 1.5$.

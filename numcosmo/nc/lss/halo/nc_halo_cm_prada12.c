@@ -28,7 +28,7 @@
  * Class defining the Prada et al. 2012 concentration-mass relation
  *
  * This class implements the Prada et al. (2012) concentration-mass relation
- * [Prada et al. (2012)][XPrada2012].
+ * [Prada et al. (2012)](https://arxiv.org/abs/1104.5130).
  *
  */
 

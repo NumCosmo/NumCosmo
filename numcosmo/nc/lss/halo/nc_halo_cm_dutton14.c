@@ -28,7 +28,7 @@
  * Class defining the Dutton et al. 2014 concentration-mass relation
  *
  * This class implements the Dutton and Macciò (2014) concentration-mass relation
- * [Dutton and Macciò (2014)][XDutton2014] [[arXiv](https://arxiv.org/abs/1402.7073)].
+ * [Dutton and Macciò (2014)](https://arxiv.org/abs/1402.7073).
  *
  */
 
