@@ -1,0 +1,147 @@
+---
+title: Eisenstein–Hu Transfer Function
+---
+
+# Eisenstein–Hu Transfer Function
+
+This page describes the Eisenstein & Hu (1998) fitting function for the matter
+transfer function implemented by `NcTransferFuncEH`. The full fit, including
+baryon acoustic features, is reproduced here; the zero-baryon ("no-wiggle")
+variant is implemented separately by `NcTransferFuncEHNoBaryon`.
+
+Reference: [Eisenstein & Hu (1998)](https://arxiv.org/abs/astro-ph/9709112).
+
+## Decomposition
+
+The transfer function is split into baryon and cold-dark-matter contributions,
+$$
+T(k) = \frac{\Omega_b}{\Omega_m} T_b(k) + \frac{\Omega_c}{\Omega_m} T_c(k),
+$$
+where $\Omega_b$, $\Omega_m$, and $\Omega_c$ are the baryon, total matter, and
+cold-dark-matter density parameters today, and $T_b(k)$ and $T_c(k)$ are the
+baryon and CDM weights.
+
+## Cold Dark Matter Term
+
+$$
+T_c(k) = f\,\widetilde{T}_0(k, 1, \beta_c) + (1-f)\,\widetilde{T}_0(k, \alpha_c, \beta_c),
+$$
+with
+$$
+f = \frac{1}{1 + (ks/5.4)^4},
+$$
+$$
+\widetilde{T}_0(k, \alpha_c, \beta_c) = \frac{\ln\left(e + 1.8\,\beta_c\,q\right)}{\ln\left(e + 1.8\,\beta_c\,q\right) + C q^2},
+\qquad
+C = \frac{14.2}{\alpha_c} + \frac{386}{1 + 69.9\,q^{1.08}},
+$$
+and the dimensionless wavenumber
+$$
+q = \frac{k}{13.41\,k_{\rm eq}}.
+$$
+The shape parameters $\alpha_c$ and $\beta_c$ are fit by
+$$
+\alpha_c = a_1^{-\Omega_b/\Omega_m}\,a_2^{-(\Omega_b/\Omega_m)^3},
+$$
+$$
+a_1 = (46.9\,\Omega_m h^2)^{0.670}\left[1 + (32.1\,\Omega_m h^2)^{-0.532}\right],
+$$
+$$
+a_2 = (12.0\,\Omega_m h^2)^{0.424}\left[1 + (45.0\,\Omega_m h^2)^{-0.582}\right],
+$$
+$$
+\beta_c^{-1} = 1 + b_1\left[(\Omega_c/\Omega_m)^{b_2} - 1\right],
+$$
+$$
+b_1 = 0.944\left[1 + (458\,\Omega_m h^2)^{-0.708}\right]^{-1},
+\qquad
+b_2 = (0.395\,\Omega_m h^2)^{-0.0266}.
+$$
+
+## Baryon Term
+
+$$
+T_b(k) = \left[\frac{\widetilde{T}_0(k, 1, 1)}{1 + (ks/5.2)^2} + \frac{\alpha_b}{1 + (\beta_b/ks)^3}\,\mathrm{e}^{-(k/k_{\rm Silk})^{1.4}}\right]\frac{\sin(k\tilde{s})}{k\tilde{s}}.
+$$
+
+The sound horizon scale is
+$$
+s = \int_0^{z_d} c_s (1+z)\,\mathrm{d}t
+  = \frac{2}{3k_{\rm eq}}\sqrt{\frac{6}{R(z_{\rm eq})}}\,\ln\left(\frac{\sqrt{1+R(z_d)} + \sqrt{R(z_d) + R(z_{\rm eq})}}{1 + \sqrt{R(z_{\rm eq})}}\right),
+$$
+where $z_d$ is the drag redshift, $c_s$ is the baryon-photon plasma speed of
+sound, and
+$$
+R(z) \equiv 31.5\,\Omega_b h^2\left(\frac{T_{\rm CMB}}{2.7}\right)^{-4}\left(\frac{z}{10^3}\right)^{-1}.
+$$
+
+The Silk damping scale is approximated by
+$$
+k_{\rm Silk} = 1.6\,(\Omega_b h^2)^{0.52}(\Omega_m h^2)^{0.73}\left[1 + (10.4\,\Omega_m h^2)^{-0.95}\right]\,\mathrm{Mpc}^{-1},
+$$
+and the remaining baryon parameters are
+$$
+\alpha_b = 2.07\,k_{\rm eq}\,s\,(1 + R_d)^{-3/4}\,G\!\left(\frac{1 + z_{\rm eq}}{1 + z_d}\right),
+$$
+$$
+G(y) = y\left[-6\sqrt{1+y} + (2+3y)\ln\left(\frac{\sqrt{1+y} + 1}{\sqrt{1+y} - 1}\right)\right],
+$$
+$$
+\tilde{s}(k) = \frac{s}{\left[1 + (\beta_{\rm node}/ks)^3\right]^{1/3}},
+\qquad
+\beta_{\rm node} = 8.41\,(\Omega_m h^2)^{0.435},
+$$
+$$
+\beta_b = 0.5 + \frac{\Omega_b}{\Omega_m} + \left(3 - 2\frac{\Omega_b}{\Omega_m}\right)\sqrt{(17.2\,\Omega_m h^2)^2 + 1}.
+$$
+
+## Background Scales
+
+$$
+k_{\rm eq} = (2\,\Omega_m H_0^2\,z_{\rm eq})^{1/2},
+\qquad
+z_{\rm eq} = 2.5\times10^4\,\Omega_m h^2\left(\frac{T_{\rm CMB}}{2.7}\right)^{-4},
+$$
+$$
+R(z_d) = 31.5\,\Omega_b h^2\left(\frac{T_{\rm CMB}}{2.7}\right)^{-4}\left(\frac{z_d}{10^3}\right)^{-1}.
+$$
+
+## Zero-Baryon (No-Wiggle) Variant
+
+`NcTransferFuncEHNoBaryon` implements the Eisenstein & Hu (1998) zero-baryon
+("no-wiggle") form, which smooths over the baryon acoustic oscillations while
+retaining the broadband shape. Writing $\omega_b = \Omega_b h^2$,
+$\omega_m = \Omega_m h^2$, and $\theta = T_{\rm CMB}/2.7$, the transfer function is
+$$
+T_0(k) = \frac{L_0}{L_0 + C_0\,q^2},
+\qquad
+L_0 = \ln(2e + 1.8\,q),
+\qquad
+C_0 = 14.2 + \frac{731}{1 + 62.5\,q}.
+$$
+The dimensionless wavenumber uses an effective shape parameter $\Gamma_{\rm eff}$
+rather than a sharp sound-horizon feature,
+$$
+q = \frac{k\,\theta^2}{\Gamma_{\rm eff}},
+\qquad
+\Gamma_{\rm eff} = \omega_m\left[\alpha_\Gamma + \frac{1 - \alpha_\Gamma}{1 + (0.43\,k s)^4}\right],
+$$
+with the approximate sound horizon and shape suppression
+$$
+s = \frac{44.5\,\ln(9.83/\omega_m)}{\sqrt{1 + 10\,\omega_b^{3/4}}}\ \mathrm{Mpc},
+$$
+$$
+\alpha_\Gamma = 1 - 0.328\,\ln(431\,\omega_m)\,\frac{\omega_b}{\omega_m}
+  + 0.38\,\ln(22.3\,\omega_m)\left(\frac{\omega_b}{\omega_m}\right)^2.
+$$
+Here $k$ is in $\mathrm{Mpc}^{-1}$.
+
+## API Reference
+
+See [[numcosmo|NcTransferFuncEH]] for the full class reference, and
+[[numcosmo|NcTransferFuncEHNoBaryon]] for the zero-baryon variant. The cosmology
+enters through the [[numcosmo|NcHICosmo]] density parameters
+[[numcosmo|nc_hicosmo_Omega_b0]], [[numcosmo|nc_hicosmo_Omega_m0]], and
+[[numcosmo|nc_hicosmo_Omega_c0]], the drag redshift
+[[numcosmo|nc_distance_drag_redshift]], and the plasma sound speed
+[[numcosmo|nc_hicosmo_bgp_cs2]].
