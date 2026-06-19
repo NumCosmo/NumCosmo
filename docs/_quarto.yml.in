@@ -9,6 +9,7 @@ project:
     - numcosmo-api.qmd
     - theory/csq1d.qmd
     - theory/distances.qmd
+    - theory/recombination.qmd
     - theory/transfer_func_eh.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
@@ -84,6 +85,8 @@ website:
           contents:
             - href: theory/distances.qmd
               text: "Cosmological Distances"
+            - href: theory/recombination.qmd
+              text: "Cosmic Recombination"
             - href: theory/transfer_func_eh.qmd
               text: "Eisenstein–Hu Transfer Function"
             - href: theory/csq1d.qmd

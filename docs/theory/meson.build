@@ -1,6 +1,7 @@
 src_site_theory_files = files(
     'csq1d.qmd',
     'distances.qmd',
+    'recombination.qmd',
     'transfer_func_eh.qmd',
 )
 

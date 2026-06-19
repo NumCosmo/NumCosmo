@@ -28,113 +28,19 @@
  *
  * Abstract class for cosmic recombination.
  *
- * $
- *  \newcommand{\He}{\text{He}}
- *  \newcommand{\HeI}{\text{HeI}}
- *  \newcommand{\HeII}{\text{HeII}}
- *  \newcommand{\HeIII}{\text{HeIII}}
- *  \newcommand{\Hy}{\text{H}}
- *  \newcommand{\HyI}{\text{HI}}
- *  \newcommand{\HyII}{\text{HII}}
- *  \newcommand{\e}{{\text{e}^-}}
- * $
+ * #NcRecomb describes a general recombination process: the equilibrium (Saha)
+ * ionization fractions of hydrogen and helium, the free-electron fraction
+ * $X_\mathrm{e}$, and the derived optical depth and visibility function. Using
+ * the redshift time $\lambda \equiv -\ln(1+z)$, the optical depth derivative is
+ * \begin{equation*}
+ * \frac{\mathrm{d}\tau}{\mathrm{d}\lambda} = -\frac{c\,\sigma_T n_B X_\mathrm{e}}{H},
+ * \end{equation*}
+ * and the visibility function is $v_\tau = (\mathrm{d}\tau/\mathrm{d}\lambda)\,e^{-\tau}$.
  *
- * The #NcRecomb abstract object describe a general recombination process.
- * To describe the functions we have the following definitions,
- * more details in [Weinberg (2008)][XWeinberg2008].
- *
- * We refer to the total number of hydrogen nucleus (ionized or not) as
- * $n_{\Hy}$, the neutral hydrogen atoms as $n_{\HyI}$ and ionized hydrogen as
- * $n_{\HyII}$ and, therefore, $n_{\HyI} + n_{\HyII} = n_{\Hy}$. Similarly,
- * the number of helium nuclei is $n_{\He}$ and the neutral,
- * single and double ionized are $n_{\HeI}$, $n_{\HeII}$ and $n_{\HeIII}$,
- * respectively.
- *
- * We also define the helium primordial abundance as the ratio of the helium
- * mass to the total baryonic mass, i.e.,
- * \begin{align}\label{def:Yp}
- * Y_p = \frac{n_{\He} m_{\He}}{(n_{\He} m_{\He} + n_{\Hy} m_{\Hy})},
- * \end{align}
- * where $m_{\Hy}$ and $m_{\He}$ are the hydrogen and helium masses.
- *
- * The element abundances are defined as the ratio of the element by the total
- * number of free protons $n_p \equiv n_\Hy$:
- * \begin{align}
- * X_{f} = \frac{n_{f}}{n_p},
- * \end{align}
- * where $f$ is any one of the elements described above and $\e$ represent
- * the number of free electrons.
- *
- * These fractions have the following properties:
- * \begin{align}\label{eq:Hy:add}
- * X_\HyI + X_{\HyII} &= 1, \\\\ \label{eq:He:add}
- * X_{\HeI} + X_{\HeII} + X_{\HeIII} &= X_{\He}, \\\\
- * X_{\He} &\equiv \frac{m_p}{m_{\He}}\frac{Y_p}{1-Y_p}.
- * \end{align}
- * We also define the number of free electrons as $n_\e$. Assuming a neutral
- * universe we have
- * \begin{equation}\label{eq:def:Xe}
- * X_\e = X_{\HyII} + X_{\HeII} + 2X_{\HeIII}.
- * \end{equation}
- *
- * <bridgehead>Equilibrium fractions</bridgehead>
- *
- * Equilibrium ratio $X_{\HyII}X_\e / X_\Hy$ through Saha equation, i.e.,
- * \begin{equation}\label{eq:saha:HyI}
- * \frac{X_{\HyII}X_\e}{X_\HyI} = \frac{e^{-\HyI_{1s}/(k_BT)}}{n_{\Hy}\lambda_{\e}^3},
- * \end{equation}
- * where $\HyI_{1s}$ is the hydrogen $1s$ binding energy ncm_c_HI_ion_E_1s_2S0_5(),
- * $\lambda_{\e}$ is the electron thermal wavelength, i.e.,
- * \begin{equation}
- * \lambda_{\e} = \sqrt{\frac{2\pi\hbar^2}{m_\e{}k_BT}},
- * \end{equation}
- * $k_K$ is the Boltzmann constant ncm_c_kb (), $m_\e$ the electron mass and
- * $\hbar$ is the Planck constant ncm_c_hbar ().
- *
- * This calculation is done using the Saha equation as in
- * [Weinberg (2008)][XWeinberg2008].
- *
- * The equilibrium single/non-ionized helium ratio $X_{\HeII}X_\e/X_{\HeI}$
- * through Saha equation, i.e.,
- * \begin{equation}\label{eq:saha:HeI}
- * \frac{X_{\HeII}X_\e}{X_{\HeI}} = \frac{e^{-\HeI_{1s}/(k_BT)}}{4n_{\Hy}\lambda_{\e}^3},
- * \end{equation}
- * where $\HeI_{1s}$ is the helium I $1s$ binding energy ncm_c_HeI_ion_E_1s_1S0().
- * This calculation is done using the Saha equation as in
- * [Seager (2000)][XSeager2000].
- *
- * The equilibrium double/single-ionized helium ratio $X_{\HeIII}X_\e/X_{\HeII}$
- * through Saha equation, i.e.,
- * \begin{equation}\label{eq:saha:HeII}
- * \frac{X_{\HeIII}X_\e}{X_{\HeII}} = \frac{e^{-\HeII_{1s}/(k_BT)}}{4n_{\Hy}\lambda_{\e}^3},
- * \end{equation}
- * where $\HeII_{1s}$ is the helium II $1s$ binding energy ncm_c_HeII_ion_E_1s_2S0_5().
- * This calculation is done using the Saha equation as in
- * [Seager (2000)][XSeager2000].
- *
- * The default value of the helium primordial abundance
- * is given by nc_hicosmo_Yp_4He().
- * The primordial Helium fraction is define by nc_hicosmo_XHe().
- *
- * <bridgehead>Optical depth and visibility function</bridgehead>
- *
- * The derivative of the optical depth $\tau$ with respect to the redshift
- * time $\lambda \equiv -\ln(x) = -\ln(1 + z)$ is
- * \begin{equation}\label{eq:def:dtaudlambda}
- * \frac{d\tau}{d\lambda} = -\frac{c\sigma_Tn_BX_\e}{H},
- * \end{equation}
- * where $c$ is the speed of light [ncm_c_c ()], $\sigma_T$ is the Thomson
- * cross section [ncm_c_thomson_cs ()], $n_B$ is the number density of baryons
- * and $H$ the Hubble function. We define the optical depth $\tau$ integrating
- * from the present time, i.e.,
- * \begin{equation}\label{eq:def:tau}
- * \tau = \int_0^\lambda\frac{d\tau}{d\lambda}.
- * \end{equation}
- * Using the equations above we define the visibility function $v_\tau$ as
- * \begin{equation}\label{eq:def:vtau}
- * v_\tau = \frac{d\tau}{d\lambda}e^{-\tau}.
- * \end{equation}
- *
+ * For the abundance definitions, the Saha equilibrium relations, and the
+ * optical-depth conventions, see the theoretical background page:
+ * <a href="../../theory/recombination.html">Cosmic Recombination</a>.
+ * Further background in Weinberg (2008), Cosmology.
  */
 
 #ifdef HAVE_CONFIG_H
