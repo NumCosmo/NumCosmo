@@ -4,6 +4,7 @@ src_site_theory_files = files(
     'recombination.qmd',
     'transfer_func_eh.qmd',
     'wl_surface_mass_density.qmd',
+    'fftlog.qmd',
 )
 
 if get_option('documentation')

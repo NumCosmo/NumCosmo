@@ -1,0 +1,109 @@
+---
+title: FFTLog
+---
+
+# FFTLog
+
+This page describes the logarithmic Fast Fourier Transform implemented by the
+abstract [[numcosmo-math|NcmFftlog]] class. It computes the FFT of a function
+assumed to be a periodic sequence of logarithmically spaced points, following
+the FFTLog approach of @Hamilton2000 with the extensions described below.
+
+## Decomposition
+
+A function $G(r)$ is written as
+$$
+G(r) = \int_0^\infty F(k)\,K(kr)\,\mathrm{d}k, \tag{1}
+$$
+where $F(k)$ is defined in the fundamental interval
+$[\ln k_0 - L/2,\ \ln k_0 + L/2]$, $L$ is the period, $\ln k_0$ the center value,
+and $K(kr)$ a kernel function. Assuming $F(k)$ can be written in terms of the $N$
+lowest Fourier modes,
+$$
+F(k) = \sum_n c_n\,e^{\frac{2\pi i n}{L}\ln\left(\frac{k}{k_0}\right)}.
+$$
+Substituting into Eq. (1) and changing variables $k \rightarrow t = kr$,
+$$
+\begin{aligned}
+r G(r) &= \sum_n c_n \int_0^\infty \left(\frac{k}{k_0}\right)^{\frac{2\pi i n}{L}} K(kr)\,\mathrm{d}(kr) \\
+       &= \sum_n c_n \int_0^\infty \left(\frac{t}{k_0 r}\right)^{\frac{2\pi i n}{L}} K(t)\,\mathrm{d}t \\
+       &= \sum_n c_n\,e^{-\frac{2\pi i n}{L}\ln\left(\frac{r}{r_0}\right)}\,e^{-\frac{2\pi i n}{L}\ln(k_0 r_0)}\,Y_n,
+\end{aligned}
+$$
+where
+$$
+Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t)\,\mathrm{d}t,
+$$
+and the Fourier coefficients are
+$$
+c_n = \frac{1}{N}\sum_m F(k_m)\,e^{-\frac{2\pi i n m}{N}}.
+$$
+The total number of points $N$ is the number of knots in the fundamental
+interval, which are equally spaced.
+
+## Discretization
+
+The variable discretization differs depending on whether $N$ is even or odd; in
+general
+$$
+k_n = k_0\,\mathrm{e}^{n L / N}, \qquad r_m = r_0\,\mathrm{e}^{m L / N}.
+$$
+If $N$ is odd, $n$ and $m$ run over $[-\lfloor N/2\rfloor, \lfloor N/2\rfloor]$,
+where $\lfloor N/2\rfloor$ is the round-down of $N/2$. In this case
+$$
+\begin{aligned}
+\ln\left(k_{-\lfloor N/2\rfloor}\right) &= \ln(k_0) - \frac{N-1}{N}\frac{L}{2}, \\
+\ln\left(k_{+\lfloor N/2\rfloor}\right) &= \ln(k_0) + \frac{N-1}{N}\frac{L}{2},
+\end{aligned}
+$$
+so for odd $N$ the values of $k_n$ (and $r_n$) never touch the borders
+$\ln(k_0) \pm L/2$ and $\ln(r_0) \pm L/2$. For even $N$
+($\lfloor N/2\rfloor = N/2$),
+$$
+\begin{aligned}
+\ln\left(k_{-\lfloor N/2\rfloor}\right) &= \ln(k_0) - \frac{L}{2}, \\
+\ln\left(k_{+\lfloor N/2\rfloor}\right) &= \ln(k_0) + \frac{L}{2}.
+\end{aligned}
+$$
+Since the functions are assumed periodic with period $L$, these two points refer
+to the same value. We therefore include only the lower end point
+$\ln(k_0) - L/2$ for even $N$. The original FFTLog paper includes both points with
+a $1/2$ weight; using only the lower end point avoids that complication.
+
+## Padding and Knot Count
+
+Because the algorithm assumes the decomposed function is periodic, it is worth
+extending the interval in $\ln k$ so that $F(k) \equiv 0$ in
+$\left[\ln k_0 - \frac{L_T}{2},\ \ln k_0 - \frac{L}{2}\right)$ and
+$\left(\ln k_0 + \frac{L}{2},\ \ln k_0 + \frac{L_T}{2}\right]$, where the total
+period $L_T$ is set by the final number of knots, $N_f = N(1 + \mathrm{padding})$.
+The $N$ fundamental knots are equally distributed, and $N \times \mathrm{padding}$
+knots are placed in the two symmetric padding intervals.
+
+For efficiency, the final number of points $N_f$ is replaced by the smallest
+$N_f^\prime \ge N_f$ that factorizes as
+$N_f^\prime = N^\prime(1 + \mathrm{padding}) = 2^a 3^b 5^c 7^d$, with $a,b,c,d$
+non-negative integers.
+
+## Usage
+
+The user provides $\ln k_0$, $\ln r_0$, $L$, the padding percentage, $N$, and the
+function $F(k)$. The function can be supplied either as a `gsl_function` —
+evaluated at the fundamental-interval knots and set to zero in the padding
+intervals — or as a vector of values computed at each $\ln k$ knot.
+
+The kernel-dependent coefficients $Y_n$ are provided by the concrete
+implementations, e.g. [[numcosmo-math|NcmFftlogTophatwin2]] and
+[[numcosmo-math|NcmFftlogGausswin2]].
+
+## API Reference
+
+See [[numcosmo-math|NcmFftlog]] for the full class reference. The most relevant
+methods are:
+
+- setup: [[numcosmo-math|ncm_fftlog_set_lnk0]],
+  [[numcosmo-math|ncm_fftlog_set_lnr0]], [[numcosmo-math|ncm_fftlog_set_length]],
+  [[numcosmo-math|ncm_fftlog_set_padding]], [[numcosmo-math|ncm_fftlog_set_size]]
+- evaluation: [[numcosmo-math|ncm_fftlog_eval_by_gsl_function]],
+  [[numcosmo-math|ncm_fftlog_eval_by_vector]],
+  [[numcosmo-math|ncm_fftlog_get_lnk_vector]]

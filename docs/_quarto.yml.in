@@ -12,6 +12,7 @@ project:
     - theory/recombination.qmd
     - theory/transfer_func_eh.qmd
     - theory/wl_surface_mass_density.qmd
+    - theory/fftlog.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
@@ -84,16 +85,26 @@ website:
               text: "Model Fitting in C"
         - section: "Theory"
           contents:
-            - href: theory/distances.qmd
-              text: "Cosmological Distances"
-            - href: theory/recombination.qmd
-              text: "Cosmic Recombination"
-            - href: theory/transfer_func_eh.qmd
-              text: "Eisenstein–Hu Transfer Function"
-            - href: theory/wl_surface_mass_density.qmd
-              text: "Weak-Lensing Surface Mass Density"
-            - href: theory/csq1d.qmd
-              text: "CSQ1D Formalism"
+            - section: "Background & Thermal History"
+              contents:
+                - href: theory/distances.qmd
+                  text: "Cosmological Distances"
+                - href: theory/recombination.qmd
+                  text: "Cosmic Recombination"
+            - section: "Linear Theory & Power Spectrum"
+              contents:
+                - href: theory/transfer_func_eh.qmd
+                  text: "Eisenstein–Hu Transfer Function"
+            - section: "Clusters & Weak Lensing"
+              contents:
+                - href: theory/wl_surface_mass_density.qmd
+                  text: "Weak-Lensing Surface Mass Density"
+            - section: "Numerical Methods"
+              contents:
+                - href: theory/fftlog.qmd
+                  text: "FFTLog"
+                - href: theory/csq1d.qmd
+                  text: "CSQ1D Formalism"
         - section: "Worked Examples"
           contents:
             - section: "Background & Distances"
