@@ -64,127 +64,101 @@ website:
           - text: "Issues"
             href: https://github.com/NumCosmo/NumCosmo/issues
     left:
-      - text: "Install"
-        href: install.qmd
-      - text: "Tutorials"
-        href: tutorials/index.qmd
-      - text: "Theory"
-        href: theory/index.qmd
-      - text: "Examples"
-        href: examples/index.qmd
-      - text: "Validation"
-        href: benchmarks/index.qmd
-      - text: "About"
-        href: about.qmd
+      - about.qmd
+      - install.qmd
       - text: "NumCosmoMath"
         href: reference/numcosmo-math/index.html
       - text: "NumCosmo"
         href: reference/numcosmo/index.html
   sidebar:
-    - id: tutorials
-      title: "Tutorials"
-      style: "docked"
-      logo: images/numcosmo_logo.png
-      collapse-level: 1
-      contents:
-        - tutorials/index.qmd
-        - section: "C Foundations"
-          contents:
-            - href: tutorials/c/gobject.qmd
-              text: "GObject in C"
-            - href: tutorials/c/curve_tutorial.qmd
-              text: "Model Fitting in C"
-    - id: theory
-      title: "Theory"
-      style: "docked"
-      logo: images/numcosmo_logo.png
-      collapse-level: 1
-      contents:
-        - theory/index.qmd
-        - section: "Background & Thermal History"
-          contents:
-            - href: theory/distances.qmd
-              text: "Cosmological Distances"
-            - href: theory/recombination.qmd
-              text: "Cosmic Recombination"
-        - section: "Linear Theory & Power Spectrum"
-          contents:
-            - href: theory/transfer_func_eh.qmd
-              text: "Eisenstein–Hu Transfer Function"
-        - section: "Clusters & Weak Lensing"
-          contents:
-            - href: theory/wl_surface_mass_density.qmd
-              text: "Weak-Lensing Surface Mass Density"
-        - section: "Numerical Methods"
-          contents:
-            - href: theory/fftlog.qmd
-              text: "FFTLog"
-            - href: theory/csq1d.qmd
-              text: "CSQ1D Formalism"
-    - id: examples
-      title: "Worked Examples"
-      style: "docked"
-      logo: images/numcosmo_logo.png
-      collapse-level: 1
-      contents:
-        - examples/index.qmd
-        - section: "Introduction"
-          contents:
-            - href: examples/intro/simple.qmd
-              text: "Simple Example"
-            - href: examples/intro/epdf.qmd
-              text: "Empirical PDF"
-        - section: "Background & Distances"
-          contents:
-            - href: examples/intro/wspline.qmd
-              text: "Dark Energy WSpline"
-            - href: examples/intro/recombination.qmd
-              text: "Recombination"
-        - section: "Large-Scale Structure"
-          contents:
-            - href: examples/intro/power_spectrum.qmd
-              text: "Matter Power Spectrum"
-        - section: "Primordial & Bouncing"
-          contents:
-            - href: examples/intro/hiprim.qmd
-              text: "Primordial Modeling"
-            - href: examples/intro/hiprim_tensor.qmd
-              text: "Primordial Tensor Contribution"
-            - href: tutorials/python/bounce.qmd
-              text: "Bounce Adiabatic Spectrum"
-            - href: tutorials/python/bounce_spectra.qmd
-              text: "Bounce Two-Fluid Spectra"
-        - section: "Clusters & Weak Lensing"
-          contents:
-            - href: tutorials/python/cluster_wl_simul.qmd
-              text: "Cluster WL Simulation"
-            - href: tutorials/python/halo_catalog_mock.qmd
-              text: "Halo Catalog Mock"
-        - section: "Catalogs & Matching"
-          contents:
-            - href: tutorials/python/sky_match.qmd
-              text: "Sky Match"
-            - href: tutorials/python/sky_match_id.qmd
-              text: "Sky Match by Membership"
-        - section: "Data & Statistics"
-          contents:
-            - href: examples/data_analysis/snia.qmd
-              text: "SN Ia Fitting"
-            - href: examples/data_analysis/inspect_data_objects.qmd
-              text: "Inspect Data Objects"
-    - id: validation
-      title: "Validation"
-      style: "docked"
-      logo: images/numcosmo_logo.png
-      collapse-level: 1
-      contents:
-        - benchmarks/index.qmd
-        - href: benchmarks/ccl_background.qmd
-          text: "CCL Background"
-        - href: benchmarks/ccl_power_spectrum.qmd
-          text: "CCL Power Spectrum"
-        - href: benchmarks/ccl_two_point.qmd
-          text: "CCL Two-Point Correlation"
+    style: "docked"
+    logo: images/numcosmo_logo.png
+    collapse-level: 1
+    contents:
+      - section: tutorials/index.qmd
+        contents:
+          - section: "C Foundations"
+            contents:
+              - href: tutorials/c/gobject.qmd
+                text: "GObject in C"
+              - href: tutorials/c/curve_tutorial.qmd
+                text: "Model Fitting in C"
+      - section: theory/index.qmd
+        contents:
+          - section: "Background & Thermal History"
+            contents:
+              - href: theory/distances.qmd
+                text: "Cosmological Distances"
+              - href: theory/recombination.qmd
+                text: "Cosmic Recombination"
+          - section: "Linear Theory & Power Spectrum"
+            contents:
+              - href: theory/transfer_func_eh.qmd
+                text: "Eisenstein–Hu Transfer Function"
+          - section: "Clusters & Weak Lensing"
+            contents:
+              - href: theory/wl_surface_mass_density.qmd
+                text: "Weak-Lensing Surface Mass Density"
+          - section: "Numerical Methods"
+            contents:
+              - href: theory/fftlog.qmd
+                text: "FFTLog"
+              - href: theory/csq1d.qmd
+                text: "CSQ1D Formalism"
+      - section: examples/index.qmd
+        contents:
+          - section: "Introduction"
+            contents:
+              - href: examples/intro/simple.qmd
+                text: "Simple Example"
+              - href: examples/intro/epdf.qmd
+                text: "Empirical PDF"
+          - section: "Background & Distances"
+            contents:
+              - href: examples/intro/wspline.qmd
+                text: "Dark Energy WSpline"
+              - href: examples/intro/recombination.qmd
+                text: "Recombination"
+          - section: "Large-Scale Structure"
+            contents:
+              - href: examples/intro/power_spectrum.qmd
+                text: "Matter Power Spectrum"
+          - section: "Primordial & Bouncing"
+            contents:
+              - href: examples/intro/hiprim.qmd
+                text: "Primordial Modeling"
+              - href: examples/intro/hiprim_tensor.qmd
+                text: "Primordial Tensor Contribution"
+              - href: tutorials/python/bounce.qmd
+                text: "Bounce Adiabatic Spectrum"
+              - href: tutorials/python/bounce_spectra.qmd
+                text: "Bounce Two-Fluid Spectra"
+          - section: "Clusters & Weak Lensing"
+            contents:
+              - href: tutorials/python/cluster_wl_simul.qmd
+                text: "Cluster WL Simulation"
+              - href: tutorials/python/halo_catalog_mock.qmd
+                text: "Halo Catalog Mock"
+          - section: "Catalogs & Matching"
+            contents:
+              - href: tutorials/python/sky_match.qmd
+                text: "Sky Match"
+              - href: tutorials/python/sky_match_id.qmd
+                text: "Sky Match by Membership"
+          - section: "Data & Statistics"
+            contents:
+              - href: examples/data_analysis/snia.qmd
+                text: "SN Ia Fitting"
+              - href: examples/data_analysis/inspect_data_objects.qmd
+                text: "Inspect Data Objects"
+      - section: benchmarks/index.qmd
+        contents:
+          - href: benchmarks/ccl_background.qmd
+            text: "CCL Background"
+          - href: benchmarks/ccl_power_spectrum.qmd
+            text: "CCL Power Spectrum"
+          - href: benchmarks/ccl_two_point.qmd
+            text: "CCL Two-Point Correlation"
 
 resources:
   - reference/**
