@@ -1,75 +1,105 @@
 # Contributing to NumCosmo
 
-Thank you for your interest in contributing to NumCosmo! We welcome contributions from the community to help improve and expand the library. Before getting started, please review the guidelines and requirements outlined below.
+Thank you for your interest in contributing to NumCosmo. This guide covers the
+mechanics of adding code, tests, and documentation so that a new contribution
+integrates cleanly with the build, the test suite, and the generated API
+reference.
 
-## Adding New Files
+For build and dependency setup, see the
+[installation guide](https://numcosmo.readthedocs.io/en/latest/install.html).
+NumCosmo uses the [meson](https://mesonbuild.com/) build system.
 
-When adding new files to NumCosmo, please follow these steps:
+## Source layout
 
-1. Add the new files to the appropriate sections in the `numcosmo/Makefile.am` file:
-   - If it is a generic math or statistics code, include the file in `ncm_sources` and `ncm_headers`.
-   - If it is cosmology-related, include the file in `nc_sources` and `nc_headers`.
+The library is split into two GObject namespaces, mirrored by the directory tree:
 
-2. Ensure the new files are also included in `numcosmo-math.h` or `numcosmo.h` as necessary.
+- `numcosmo/ncm/` — **NumCosmoMath**: foundation code with no cosmology
+  (algebra, splines, integration, statistics, the model/MSet system, fitting).
+- `numcosmo/nc/` — **NumCosmo**: cosmology models and likelihoods
+  (background, perturbations, large-scale structure, clusters, CMB, …).
 
-3. Include the new files in the appropriate section of `docs/numcosmo-docs.sgml`. If no suitable section exists, create a new one.
+Each subdirectory groups a coherent family; an abstract base lives together with
+its concrete subclasses. Vendored third-party code is quarantined under
+`numcosmo/external/`.
 
-4. Add the header inclusion to `numcosmo/ncm/core/ncm_cfg.h`. All new objects should be registered using `ncm_cfg_register_obj (NCM_TYPE_NEW_OBJECT);`.
+## Adding a new class
 
-## Unit Testing
+1. **Place the files** in the subdirectory that matches the family, under
+   `numcosmo/ncm/<area>/` or `numcosmo/nc/<area>/`.
 
-All new code must have at least minimal unit testing. Follow these steps to include unit tests for your new code:
+2. **Register the sources** in `numcosmo/meson.build`. Add the `.c` to the
+   `ncm_sources` (or `nc_sources`) `files()` list and the `.h` to `ncm_headers`
+   (or `nc_headers`), using the subdirectory-qualified path, e.g.
+   `'ncm/algebra/ncm_my_object.c'`.
 
-1. Create unit tests for the new code in the `tests` directory.
+3. **Export through the umbrella header.** Add the header to `numcosmo/numcosmo.h`
+   (cosmology) or `numcosmo/numcosmo-math.h` (math). These two umbrellas are the
+   only supported public include surface — never document reaching into a
+   subdirectory header directly.
 
-2. Include the new files in `tests/Makefile.am` following the provided pattern:
+4. **Register the type** for serialization. Include the header in
+   `numcosmo/ncm/core/ncm_cfg.h` and register the object in `ncm_cfg.c` with
+   `ncm_cfg_register_obj (NCM_TYPE_MY_OBJECT);`.
 
-```
-test_nc_new_test_SOURCES =  \
-        test_nc_new_test.c
+## Unit testing
 
-test_programs =  \
-        test_ncm_cfg    \
-        test_ncm_vector \
-...
-        test_nc_new_test \
-...
+Tests follow their sources as a hard invariant: a class in
+`numcosmo/<ns>/<area>/` is tested in the mirrored `tests/c/<ns>/<area>/` and/or
+`tests/python/<ns>/<area>/`. All new code must have at least minimal testing.
 
-test_nc_new_test_LDADD = \
-        $(top_builddir)/numcosmo/libnumcosmo.la \
-        $(GLIB_LIBS) \
-        $(GSL_LIBS) \
-        $(COVLIBS)
+1. Add the test under the mirrored path (`tests/c/...` for C, prefixed
+   `test_`; `tests/python/...` for Python, prefixed `test_py_`).
+2. Register it in the corresponding `tests/c/meson.build` or
+   `tests/python/meson.build`.
+3. Run the affected suite with `meson test -v -C build`.
 
-```
+## Documentation
 
-3. Ensure the unit tests link against the necessary libraries and dependencies.
+Documentation is split by purpose, and the split is intentional:
 
-## Code Formatting
+- **API reference** (gi-docgen, generated from the GObject doc comments in the
+  `.c` files) — brief and operational. State what the class does, the defining
+  relation or signature, and the key methods. Keep it short.
+- **Theoretical background** (the Quarto project under `docs/`, rendered to the
+  website) — the physics, derivations, and full equations live here, in
+  `docs/theory/<area>/<topic>.qmd`.
 
-All C files, including headers, must be formatted using uncrustify with the provided configuration file `numcosmo_uncrustify.cfg`.
+When a class involves non-trivial math, **do not put the derivation in the C doc
+comment.** Put it on a theory page and link to it. The pattern is established by
+`NcmCSQ1D`: see the short doc comment in
+`numcosmo/ncm/dynamics/ncm_csq1d.c` and the corresponding
+`docs/theory/csq1d.qmd`.
 
-## Submitting Contributions
+- From the C doc comment, link to the theory page with a plain anchor, e.g.
+  `<a href="../../theory/csq1d.html">CSQ1D Formalism</a>`.
+- From the theory page, link back to the API with wiki-style symbol references:
+  `[[numcosmo-math|NcmCSQ1D]]`, `[[numcosmo|NcDistance]]`,
+  `[[numcosmo-math|ncm_csq1d_prepare]]`. Unresolved references degrade to plain
+  text, so verify the symbol name.
 
-When submitting a contribution to NumCosmo, please follow these steps:
+A single inline `$x$` in a doc comment is fine; a multi-line `\begin{align}`
+derivation belongs on a theory page.
 
-1. Fork the NumCosmo repository to your GitHub account. If you in the development team you can skip this.
+## Code formatting
 
-2. Create a new branch for your contribution based on the latest `master` branch.
+All C files, including headers, must be formatted with uncrustify using the
+provided configuration `numcosmo_uncrustify.cfg`. Formatting is checked in CI.
 
-3. Make your changes and ensure all new code adheres to the project guidelines, including file inclusion, unit testing, and code formatting.
+Python code is checked with the configured `flake8`, `pylint`, and `mypy`
+settings (see `.flake8`, `.pylintrc`, `.mypy.ini`).
 
-4. Commit your changes and push them to your forked repository.
+## Submitting contributions
 
-5. Submit a pull request to the main NumCosmo repository. Provide a clear description of your changes and any relevant details.
-
-6. Your contribution will be reviewed by the maintainers, and they may provide feedback or request additional changes.
-
-7. Once approved, your contribution will be merged into the main repository.
+1. Fork the repository (skip if you are on the development team).
+2. Branch from the latest `master`.
+3. Make your changes, keeping each commit independently building so the series is
+   bisectable.
+4. Ensure the file is registered, tested, formatted, and (if it carries physics)
+   documented per the sections above.
+5. Open a pull request with a clear description of the change.
+6. Address review feedback from the maintainers.
 
 ## Code of Conduct
 
-Please note that by contributing to NumCosmo, you are expected to abide by the [Code of Conduct](CODE_OF_CONDUCT.md). Ensure your interactions and contributions align with the principles of respect and inclusivity.
-
-We appreciate your interest in contributing to NumCosmo and look forward to your contributions!
-
+By contributing to NumCosmo you agree to abide by the
+[Code of Conduct](CODE_OF_CONDUCT.md).
