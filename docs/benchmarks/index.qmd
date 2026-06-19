@@ -1,0 +1,12 @@
+---
+title: Validation
+---
+
+# Validation & Benchmarks
+
+Comparisons of NumCosmo against the Core Cosmology Library (CCL), validating
+agreement on key observables.
+
+- [CCL Background](ccl_background.qmd) — background expansion and distances.
+- [CCL Power Spectrum](ccl_power_spectrum.qmd) — linear and nonlinear matter power spectra.
+- [CCL Two-Point Correlation](ccl_two_point.qmd) — angular two-point statistics.

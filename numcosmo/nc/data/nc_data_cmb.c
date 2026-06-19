@@ -34,7 +34,7 @@
  *
  * - Shift parameter $R$: #NcDataCMBShiftParam (see also #nc_distance_shift_parameter).
  * - Location of the first acoustic peak $l_A$ (see [Hinshaw et al.
- *   (2012)][XHinshaw2013a] section 4.6.1 [[arXiv](https://arxiv.org/abs/1212.5226)]).
+ *   (2012)](https://arxiv.org/abs/1212.5226) section 4.6.1 [[arXiv](https://arxiv.org/abs/1212.5226)]).
  *
  */
 

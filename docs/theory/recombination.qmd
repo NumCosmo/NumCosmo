@@ -1,0 +1,158 @@
+---
+title: Cosmic Recombination
+---
+
+::: {.hidden}
+$$
+\newcommand{\He}{\text{He}}
+\newcommand{\HeI}{\text{HeI}}
+\newcommand{\HeII}{\text{HeII}}
+\newcommand{\HeIII}{\text{HeIII}}
+\newcommand{\Hy}{\text{H}}
+\newcommand{\HyI}{\text{HI}}
+\newcommand{\HyII}{\text{HII}}
+\newcommand{\e}{{\text{e}^-}}
+$$
+:::
+
+# Cosmic Recombination
+
+This page describes the recombination physics implemented by the abstract
+[[numcosmo|NcRecomb]] class and its concrete Seager solver
+[[numcosmo|NcRecombSeager]]. Further background is given in Weinberg (2008),
+*Cosmology*.
+
+## Abundances and Notation
+
+Let $n_\Hy$ be the total number density of hydrogen nuclei (ionized or not),
+split into neutral $n_\HyI$ and ionized $n_\HyII$ with $n_\HyI + n_\HyII = n_\Hy$.
+Similarly $n_\He$ is the number density of helium nuclei, with neutral, single,
+and double ionized fractions $n_\HeI$, $n_\HeII$, and $n_\HeIII$.
+
+The helium primordial abundance is the ratio of the helium mass to the total
+baryonic mass,
+$$
+Y_p = \frac{n_\He m_\He}{n_\He m_\He + n_\Hy m_\Hy},
+$$
+where $m_\Hy$ and $m_\He$ are the hydrogen and helium masses. Element abundances
+are defined relative to the number of free protons $n_p \equiv n_\Hy$,
+$$
+X_f = \frac{n_f}{n_p},
+$$
+for any element $f$, with $\e$ denoting free electrons. These fractions satisfy
+$$
+\begin{aligned}
+X_\HyI + X_\HyII &= 1, \\
+X_\HeI + X_\HeII + X_\HeIII &= X_\He, \\
+X_\He &\equiv \frac{m_p}{m_\He}\frac{Y_p}{1 - Y_p}.
+\end{aligned}
+$$
+Assuming a neutral universe, the free-electron fraction is
+$$
+X_\e = X_\HyII + X_\HeII + 2 X_\HeIII.
+$$
+
+## Equilibrium Fractions
+
+In equilibrium, the ionized-to-neutral ratios follow the Saha equation. For
+hydrogen,
+$$
+\frac{X_\HyII X_\e}{X_\HyI} = \frac{e^{-\HyI_{1s}/(k_B T)}}{n_\Hy \lambda_\e^3},
+$$
+where $\HyI_{1s}$ is the hydrogen $1s$ binding energy and $\lambda_\e$ is the
+electron thermal wavelength,
+$$
+\lambda_\e = \sqrt{\frac{2\pi\hbar^2}{m_\e k_B T}},
+$$
+with $k_B$ the Boltzmann constant, $m_\e$ the electron mass, and $\hbar$ the
+reduced Planck constant. For singly ionized helium,
+$$
+\frac{X_\HeII X_\e}{X_\HeI} = \frac{e^{-\HeI_{1s}/(k_B T)}}{4 n_\Hy \lambda_\e^3},
+$$
+and for doubly ionized helium,
+$$
+\frac{X_\HeIII X_\e}{X_\HeII} = \frac{e^{-\HeII_{1s}/(k_B T)}}{4 n_\Hy \lambda_\e^3},
+$$
+where $\HeI_{1s}$ and $\HeII_{1s}$ are the corresponding $1s$ binding energies.
+
+## Optical Depth and Visibility Function
+
+Using the redshift time $\lambda \equiv -\ln(x) = -\ln(1+z)$, the derivative of
+the optical depth $\tau$ is
+$$
+\frac{\mathrm{d}\tau}{\mathrm{d}\lambda} = -\frac{c\,\sigma_T n_B X_\e}{H},
+$$
+where $c$ is the speed of light, $\sigma_T$ the Thomson cross section, $n_B$ the
+baryon number density, and $H$ the Hubble function. The optical depth is
+integrated from the present time,
+$$
+\tau = \int_0^\lambda \frac{\mathrm{d}\tau}{\mathrm{d}\lambda},
+$$
+and the visibility function is
+$$
+v_\tau = \frac{\mathrm{d}\tau}{\mathrm{d}\lambda}\,e^{-\tau}.
+$$
+
+## Seager Solver
+
+[[numcosmo|NcRecombSeager]] implements cosmic recombination following Seager
+(1999) and Seager (2000), with the modifications of
+[recfast 1.5.2](http://www.astro.ubc.ca/people/scott/recfast.html) — including
+those discussed in Wong (2008). The matter-temperature modification of
+Scott (2009) is not included, as the more robust integration method used here
+makes it unnecessary.
+
+The code solves the coupled system for the singly ionized hydrogen $X_\HyII$,
+singly ionized helium $X_\HeII$, and the baryon temperature $T_m$:
+$$
+\begin{aligned}
+\frac{\mathrm{d}X_\HyII}{\mathrm{d}x} &= \frac{X_\HyII X_\e n_\Hy - X_\HyI B_{\HyI, 1s\,{}^2\!S_{1/2}}(T_m)}{H x}\left[\alpha_\Hy(T_m)\frac{n_\Hy K_\HyI X_\HyI \Lambda_\Hy + 1}{n_\Hy K_\HyI X_\HyI \left[\Lambda_\Hy + B_{\HyI, 2s\,{}^2\!S_{1/2}}(T_m)\,\alpha_\Hy(T_m)\right] + 1}\right], \\
+\frac{\mathrm{d}T_m}{\mathrm{d}x} &= \frac{c}{Hx}\frac{8\sigma_\mathrm{T} a_\mathrm{R} T_r^4}{3 m_\mathrm{e} c^2}\frac{X_\e(T_m - T_r)}{1 + X_\He + X_\e} + \frac{2T_m}{x}, \\
+\frac{\mathrm{d}X_\HeII}{\mathrm{d}x} &= \frac{X_\HeII X_\e n_\Hy - X_\HeI B_{\HeI, 1s\,{}^1\!S_0}(T_m)}{H x}\Bigg\{\left[\alpha_\He(T_m)\frac{n_\Hy K_\HeI X_\HeI \Lambda_\He + B^{\HeI, 2s\,{}^1\!S_0}_{\HeI, 2p\,{}^1\!P_1}(T_m)}{n_\Hy K_\HeI X_\HeI \left[\Lambda_\He + B_{\HeI, 2s\,{}^1\!S_0}(T_m)\,\alpha_\He(T_m)\right] + B^{\HeI, 2s\,{}^1\!S_0}_{\HeI, 2p\,{}^1\!P_1}(T_m)}\right] \\
+&\quad + \alpha_\He^\mathrm{t}(T_m)\frac{1}{n_\Hy K_\HeI^\mathrm{t} X_\HeI B_{\HeI, 2p\,{}^3\!P_\mathrm{mean}}(T_m)\,\alpha_\He^\mathrm{t}(T_m) + 1}\Bigg\}.
+\end{aligned}
+$$
+
+### Boltzmann Factors
+
+The Boltzmann factors for the hydrogen levels are
+$$
+B_{\HyI, l}(T_m) = k_\mathrm{e}^3(T_m)\,\exp\left[-E_{\HyI, l}/(k_B T_m)\right],
+$$
+for $l = 1s\,{}^2\!S_{1/2},\, 2s\,{}^2\!S_{1/2}$, where $k_\mathrm{e}$ is the
+electron thermal wavenumber. For the helium-I levels,
+$$
+B_{\HeI, l}(T_m) = 4 k_\mathrm{e}^3(T_m)\,\exp\left[-E_{\HeI, l}/(k_B T_m)\right],
+$$
+with levels $l = 1s\,{}^1\!S_0,\, 2s\,{}^1\!S_0,\, 2p\,{}^1\!P_1$. The symbol
+$B^{\HeI, 2s\,{}^1\!S_0}_{\HeI, 2p\,{}^1\!P_1}(T_m)$ denotes the ratio of two
+Boltzmann factors,
+$$
+B^{\HeI, 2s\,{}^1\!S_0}_{\HeI, 2p\,{}^1\!P_1}(T_m) = \exp\left[-\left(E_{\HeI, 2s\,{}^1\!S_0} - E_{\HeI, 2p\,{}^1\!P_1}\right)/(k_B T_m)\right].
+$$
+
+### Rates and Coefficients
+
+The two-photon decay rates are $\Lambda_\Hy$ for hydrogen and $\Lambda_\He$ for
+helium-I. The Case B recombination coefficient for hydrogen, $\alpha_\Hy$, uses
+the Pequignot (1991) fit; the helium-I coefficients $\alpha_\He$ and
+$\alpha_\He^\mathrm{t}$ (triplet) use the Hummer (1998) fits. The
+`NcRecombSeagerOpt` flags select which $K$ factors are used and whether the
+triplet contribution is included in the helium rate.
+
+The integration starting point in $\lambda$ is obtained from the helium Saha
+equilibrium, and the system is integrated over all components without switching
+or approximation.
+
+## API Reference
+
+See [[numcosmo|NcRecomb]] (abstract base) and [[numcosmo|NcRecombSeager]]
+(Seager solver). The most relevant methods are:
+
+- recombination coefficients: [[numcosmo|nc_recomb_seager_pequignot_HI_case_B]],
+  [[numcosmo|nc_recomb_seager_hummer_HeI_case_B]],
+  [[numcosmo|nc_recomb_seager_hummer_HeI_case_B_trip]]
+- integration start: [[numcosmo|nc_recomb_HeII_ion_saha_x_by_HeIII_He]]
+- primordial helium: [[numcosmo|nc_hicosmo_Yp_4He]], [[numcosmo|nc_hicosmo_XHe]]
+
+Physical constants and binding energies are provided by [[numcosmo-math|NcmC]].

@@ -26,31 +26,20 @@
 /**
  * NcHaloDensityProfileEinasto:
  *
- * Density profile of Einasto type.
+ * Einasto density profile.
  *
- * This object implements the #NcHaloDensityProfile class for the Einasto density
- * profile.
- *
- * As described #NcHaloDensityProfile, we just need to implement the dimensionless 3D density $\hat{\rho}(x)$
- * [which refers to the virtual function nc_halo_density_profile_eval_dl_density()].
- * In particular, the Einasto profile is given by
+ * Implements #NcHaloDensityProfile with the dimensionless 3D density
  * \begin{equation}
  * \hat{\rho}(x) = \exp \left[ - \frac{2}{\alpha} \left( x^\alpha - 1 \right) \right],
  * \end{equation}
- * where $x = r/r_s$ and $r_s$ is the scale radius and $\alpha$ is a parameter that defines how the
- * profile steepens with slope.
+ * where $x = r/r_s$ and $\alpha$ is the shape parameter
+ * (#NcHaloDensityProfileEinasto:alpha) controlling how steeply the slope
+ * changes with radius. The spherical mass has a closed form; the projected
+ * quantities are computed numerically.
  *
- * Both the mass $M_\Delta$ and the scale profile $\rho_s$ are written in terms of the integral
- * $I_{x^2\hat\rho}(c_\Delta)$ [virtual function nc_halo_density_profile_eval_dl_spher_mass()].
- * The respective Einasto implementation provides
- * \begin{equation}
- * I_{x^2\hat\rho}(x) = \left(\frac{\alpha}{2}\right)^{3/\alpha} \frac{e^{2/\alpha}}{\alpha}
- * \Gamma \left( \frac{3}{\alpha} \right) \left[1 - \frac{\Gamma \left( 3/\alpha, 2c_{\Delta}^\alpha / \alpha\right)}{\Gamma \left( 3/\alpha \right)} \right],
- * \end{equation}
- * where $c_{\Delta}$ is the concentration parameter.
- *
- * References: Einasto (1965), arXiv:1712.04512. $\alpha$ parameter range values: Gao et al. (2008) https://ui.adsabs.harvard.edu/abs/2008MNRAS.387..536G/abstract,
- * Dutton \& Maccio (2014) https://academic.oup.com/mnras/article/441/4/3359/1209689.
+ * For the closed-form spherical mass and references, see the theoretical
+ * background page:
+ * <a href="../../theory/halo_density_profile.html">Halo Density Profiles</a>.
  */
 
 #ifdef HAVE_CONFIG_H

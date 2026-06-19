@@ -135,8 +135,8 @@ typedef struct _NcPlanckFICorTTTEEE NcPlanckFICorTTTEEE;
  * @NC_PLANCK_FI_COR_TTTEEE_A_pol: Calibration of the polarization relative to the temperature
  *
  * Planck Foregound and Instrument parameters, compatible with 2013, 2015 and 2018
- * releases (see [Planck 2015 results XI (2015)][XPlanckCollaboration2015a] and
- * [Planck 2018 results V (2019)][XPlanckCollaboration2019]).
+ * releases (see [Planck 2015 results XI (2015)](https://arxiv.org/abs/1507.02704) and
+ * [Planck 2018 results V (2019)](https://arxiv.org/abs/1907.12875)).
  *
  */
 typedef enum /*< enum,underscore_name=NC_PLANCK_FI_COR_TTTEEE_SPARAMS >*/

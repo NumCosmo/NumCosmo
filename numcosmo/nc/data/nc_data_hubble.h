@@ -42,11 +42,11 @@ G_DECLARE_FINAL_TYPE (NcDataHubble, nc_data_hubble, NC, DATA_HUBBLE, NcmDataGaus
  * @NC_DATA_HUBBLE_SIMON2005: Simon et al. (2005) Hubble parameter measurements
  * @NC_DATA_HUBBLE_CABRE: Cabre & Gaztanaga Hubble parameter measurements
  * @NC_DATA_HUBBLE_STERN2009: Stern et al. (2009) Hubble parameter measurements
- * @NC_DATA_HUBBLE_MORESCO2012_BC03: [Moresco et al. (2012)][XMoresco2012]
- * @NC_DATA_HUBBLE_MORESCO2012_MASTRO: [Moresco et al. (2012)][XMoresco2012]
- * @NC_DATA_HUBBLE_MORESCO2015: [Moresco (2015)][XMoresco2015]
- * @NC_DATA_HUBBLE_MORESCO2016_DR9_BC03: [Moresco et al. (2016)][XMoresco2016]
- * @NC_DATA_HUBBLE_MORESCO2016_DR9_MASTRO: [Moresco et al. (2016)][XMoresco2016]
+ * @NC_DATA_HUBBLE_MORESCO2012_BC03: [Moresco et al. (2012)](https://arxiv.org/abs/1201.3609)
+ * @NC_DATA_HUBBLE_MORESCO2012_MASTRO: [Moresco et al. (2012)](https://arxiv.org/abs/1201.3609)
+ * @NC_DATA_HUBBLE_MORESCO2015: [Moresco (2015)](https://arxiv.org/abs/1503.01116)
+ * @NC_DATA_HUBBLE_MORESCO2016_DR9_BC03: [Moresco et al. (2016)](https://arxiv.org/abs/1601.01701)
+ * @NC_DATA_HUBBLE_MORESCO2016_DR9_MASTRO: [Moresco et al. (2016)](https://arxiv.org/abs/1601.01701)
  * @NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP: Busca et al. (2013) BAO+WMAP measurements
  * @NC_DATA_HUBBLE_RIESS2008_HST: Riess et al. (2008) HST measurements
  * @NC_DATA_HUBBLE_ZHANG2012: Zhang et al. (2012) Hubble parameter measurements

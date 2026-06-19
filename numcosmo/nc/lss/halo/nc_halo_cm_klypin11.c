@@ -27,7 +27,7 @@
  * NcHaloCMKlypin11:
  *
  * Class defining the Klypin et al. (2011) concentration-mass relation
- * [Klypin et al. (2011)][XKlypin2011].
+ * [Klypin et al. (2011)](https://arxiv.org/abs/1002.3660).
  *
  */
 

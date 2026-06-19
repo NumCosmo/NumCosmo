@@ -74,7 +74,7 @@ typedef struct _NcReducedShearClusterMass NcReducedShearClusterMass;
  *   \end{array}\right. $$
  * and $c = constant.$
  * $r_{gal}$ and $r_{PSF}$ are the galaxy and PSF (point spread function) sizes, respectively.
- * See [Applegate (2014)][XApplegate2014].
+ * See [Applegate (2014)](https://arxiv.org/abs/1208.0605).
  *
  */
 typedef enum _NcReducedShearClusterMassParams

@@ -28,67 +28,23 @@
  *
  * Cosmic recombination implementing Seager (1999).
  *
- * Cosmic recombination as initially describe in [Seager (1999)][XSeager1999] and [Seager
- * (2000)][XSeager2000]. The code includes now all modifications as in [recfast
- * 1.5.2](http://www.astro.ubc.ca/people/scott/recfast.html), which includes the
- * modifications discussed in [Wong (2008)][XWong2008]. Nonetheless, we do not include
- * the modification for the matter temperature evolution as describe in [Scott
- * (2009)][XScott2009]. Since we use a more robust integration method such modification
- * for the temperature evolution is simply unnecessary.
+ * Cosmic recombination as initially described in
+ * [Seager (1999)](https://doi.org/10.1086/312250) and
+ * [Seager (2000)](https://arxiv.org/abs/astro-ph/9912182). The code includes all
+ * modifications as in [recfast 1.5.2](http://www.astro.ubc.ca/people/scott/recfast.html),
+ * including those discussed in [Wong (2008)](https://arxiv.org/abs/0711.1357). The
+ * matter-temperature modification of [Scott (2009)](https://arxiv.org/abs/0902.3438) is
+ * not included: the more robust integration method used here makes it unnecessary.
  *
- * See [NcRecomb][NcRecomb.description] for symbol definitions.
+ * This object solves the coupled system for the singly ionized hydrogen $X_\mathrm{HII}$,
+ * singly ionized helium $X_\mathrm{HeII}$, and the baryon temperature $T_m$, with Case B
+ * recombination coefficients from #nc_recomb_seager_pequignot_HI_case_B (hydrogen) and
+ * #nc_recomb_seager_hummer_HeI_case_B (helium). The #NcRecombSeagerOpt flags select the
+ * $K$ factors and whether the triplet contribution is included.
  *
- * $
- *  \newcommand{\He}{\text{He}}
- *  \newcommand{\HeI}{\text{HeI}}
- *  \newcommand{\HeII}{\text{HeII}}
- *  \newcommand{\HeIII}{\text{HeIII}}
- *  \newcommand{\Hy}{\text{H}}
- *  \newcommand{\HyI}{\text{HI}}
- *  \newcommand{\HyII}{\text{HII}}
- *  \newcommand{\e}{{\text{e}^-}}
- * $
- *
- * This code solves the system of equations for the singly ionized hydrogen $X_\HyII$
- * and helium $X_\HeII$ as well as for the baryon temperature $T_m$.
- *
- * The equations are:
- * \begin{align}
- * \frac{\mathrm{d}X_\HyII}{\mathrm{d}x} &= \frac{X_\HyII X_\e n_\Hy - X_\HyI B_{\HyI, 1s\,{}^2\\!S_{1/2}}(T_m)}{H x}\left[\alpha_\Hy(T_m)\frac{n_\Hy K_{\HyI} X_\HyI \Lambda_\Hy + 1}{n_\Hy K_{\HyI} X_\HyI \left[\Lambda_\Hy + B_{\HyI, 2s\,{}^2\\!S_{1/2}}(T_m) \alpha_\Hy(T_m)\right] + 1}\right], \\\\
- * \frac{\mathrm{d}T_m}{\mathrm{d}x} &= \frac{c}{Hx}\frac{8\sigma_\mathrm{T}a_\mathrm{R} T^4_r}{3m_\mathrm{e}c^2} \frac{X_\e(T_m - T_r)}{1 + X_\He + X_\e} + \frac{2T_m}{x}, \\\\
- * \frac{\mathrm{d}X_\HeII}{\mathrm{d}x} &= \frac{X_\HeII X_\e n_\Hy - X_\HeI B_{\HeI, 1s\,{}^1\\!S_{0}}(T_m)}{H x}\Bigg\\{\left[\alpha_\He(T_m)\frac{n_\Hy K_{\HeI} X_\HeI \Lambda_\He + B^{\HeI, 2s\,{}^1\\!S_{0}}_{\HeI, 2p\,{}^1\\!P_{1}}(T_m)}{n_H K_{\HeI} X_\HeI \left[\Lambda_\He + B_{\HeI, 2s\,{}^1\\!S_{0}}(T_m) \alpha_\He(T_m)\right] + B^{\HeI, 2s\,{}^1\\!S_{0}}_{\HeI, 2p\,{}^1\\!P_{1}}(T_m)}\right] \nonumber\\\\
- * &+ \alpha_\He^\mathrm{t}(T_m)\frac{1}{n_H K_{\HeI}^\mathrm{t} X_\HeI B_{\HeI, 2p\,{}^3\\!P_\mathrm{mean}}(T_m) \alpha_\He^\mathrm{t}(T_m) + 1} \Bigg\\},
- * \end{align}
- *
- * The Boltzmann factor for hydrogen levels are given by
- * $$B_{\HyI, l}(T_m) = k_\mathrm{e}^3(T_m)\,\exp\left[-E_{\HyI, l} / (k_\mathrm{B}T_m)\right],$$
- * for $l = 1s\,{}^2\\!S_{1/2}, 2s\,{}^2\\!S_{1/2}$, see ncm_c_boltzmann_factor_HI_1s_2S0_5(),
- * ncm_c_boltzmann_factor_HI_2s_2S0_5() and ncm_c_thermal_wn_e() for the definition
- * of the electron thermal wavenumber $k_\mathrm{e}$.
- *
- * For the helium-I levels the Boltzmann factors are
- * $$B_{\HeI, l}(T_m) = 4 k_\mathrm{e}^3(T_m)\,\exp\left[-E_{\HeI, l} / (k_\mathrm{B}T_m)\right],$$
- * where the levels $l$ used are $1s\,{}^1\\!S_{0}$, $2s\,{}^1\\!S_{0}$ and $2p\,{}^1\\!P_{1}$,
- * see ncm_c_HeI_ion_wn_1s_1S0(), ncm_c_HeI_ion_wn_2s_1S0(),
- * ncm_c_HeI_ion_wn_2p_1P1(). The symbol $B^{\HeI, 2s\,{}^1\\!S_{0}}_{\HeI, 2p\,{}^1\\!P_{1}}(T_m)$
- * represents the ratio of two Boltzmann factors, i.e.,
- * $$B^{\HeI, 2s\,{}^1\\!S_{0}}_{\HeI, 2p\,{}^1\\!P_{1}}(T_m) =
- * \exp\left[-(E_{\HeI, 2s\,{}^1\\!S_{0}} - E_{\HeI, 2p\,{}^1\\!P_{1}})/ (k_\mathrm{B}T_m)\right].$$
- *
- * The two photon decaying rates for $\Hy$ is $\Lambda_\Hy$ and is given by ncm_c_decay_H_rate_2s_1s(),
- * and for helium-I is $\Lambda_\He$ given by ncm_c_decay_He_rate_2s_1s().
- *
- * The Case B coefficient for $\Hy$, $\alpha_\Hy$ is calculated by nc_recomb_seager_pequignot_HI_case_B(),
- * while the Case B coefficient for $\He$, $\alpha_\He$ and $\alpha_\He^\mathrm{t}$ are given
- * respectively by nc_recomb_seager_hummer_HeI_case_B() and nc_recomb_seager_hummer_HeI_case_B_trip().
- *
- * The flags in #NcRecombSeagerOpt define which are the $K$ factors to be used and whether to include
- * triplets factors in the $\He$ rate.
- *
- * The code uses nc_recomb_HeII_ion_saha_x_by_HeIII_He() to obtain the value of $\lambda$
- * where the numerical integration will start. The integration is performed considering all
- * components without any switching or approximation.
- *
+ * For the full evolution equations, Boltzmann factors, and rate definitions, see the
+ * theoretical background page:
+ * <a href="../../theory/recombination.html">Cosmic Recombination</a>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1393,7 +1349,7 @@ nc_recomb_seager_get_options (NcRecombSeager *recomb_seager)
  * The case B $\HyII$ recombination coefficient.
  *
  * The fitting formula of the case B recombination coefficient for $\HyII$ as
- * in [Pequignot (1991)][XPequignot1991].
+ * in [Pequignot (1991)](https://ui.adsabs.harvard.edu/abs/1991A%26A...251..680P).
  *
  * Returns: the value of the case B recombination coefficient for
  * $\HyII$, $\alpha_H$ .
@@ -1458,7 +1414,7 @@ nc_recomb_seager_pequignot_HI_case_B_dTm (NcRecombSeager *recomb_seager, NcHICos
  * The case B $\HeII$ recombination coefficient.
  *
  * The fitting formula of the case B recombination coefficient for $\HeII$ as
- * in [Hummer (1998)][XHummer1998].
+ * in [Hummer (1998)](https://doi.org/10.1046/j.1365-8711.1998.2970041073.x).
  *
  * Returns: the value of the case B recombination coefficient for $\HeII$, $\alpha_H$ .
  */
@@ -1529,7 +1485,7 @@ nc_recomb_seager_hummer_HeI_case_B_dTm (NcRecombSeager *recomb_seager, NcHICosmo
  * The case B via triplets $\HeII$ recombination coefficient.
  *
  * The fitting formula of the case B via triplets recombination coefficient for $\HeII$ as
- * in [Hummer (1998)][XHummer1998].
+ * in [Hummer (1998)](https://doi.org/10.1046/j.1365-8711.1998.2970041073.x).
  *
  * Returns: the value of the case B via triplets recombination coefficient for $\HeII$, $\alpha_H$ .
  */

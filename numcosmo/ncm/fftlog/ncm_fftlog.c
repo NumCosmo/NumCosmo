@@ -29,74 +29,21 @@
  *
  * Abstract class for implementing logarithm fast fourier transform.
  *
- * This class provides the tools to compute the Fast Fourier Transform of any function,
- * which is assumed to be a periodic sequence of logarithmically spaced points. It is
- * inspired on the approach FFTLog developed by [Hamilton (2000)][XHamilton2000]
- * [[arXiv](https://arxiv.org/abs/astro-ph/9905191)], which was extended as described
- * below.
+ * This class computes the Fast Fourier Transform of a function assumed to be a
+ * periodic sequence of logarithmically spaced points, following the FFTLog
+ * approach of Hamilton (2000) with extensions. A function $G(r)$ is decomposed as
+ * \begin{equation*}
+ * G(r) = \int_0^\infty F(k)\,K(kr)\,\mathrm{d}k,
+ * \end{equation*}
+ * with $F(k)$ expanded in its lowest Fourier modes over a logarithmic
+ * fundamental interval and $K(kr)$ a kernel. The kernel-dependent coefficients
+ * are provided by the concrete implementations (e.g. #NcmFftlogTophatwin2,
+ * #NcmFftlogGausswin2).
  *
- * A function $G(r)$ is written as \begin{equation}\label{eq:Gr} G(r) = \int_0^\infty
- * F(k) \ K(kr) dk, \end{equation} where $F(k)$ is defined in the fundamental interval
- * $[\ln k_0 - L/2, \ln k_0 + L/2]$, $L$ is the period, $\ln k_0$ is the center value
- * and $K(kr)$ is a kernel function. Assuming that $F(k)$ can be written in terms of the
- * $N$ lowest Fourier modes, we have
- *
- * $$F(k) = \sum_{n} c_n e^{\frac{2\pi i n}{L} \ln\left(\frac{k}{k_0}\right)}.$$
- * Substituting $F(k)$ in Eq. \eqref{eq:Gr} and changing the variable $k \rightarrow t = kr$, thus
- * \begin{align}\label{eq:Gr_decomp}
- * r G(r) &= \sum_n c_n \int_0^\infty \frac{k}{k_0}^{\frac{2\pi i n}{L}} K(kr)^2 d(kr) \\
- * &= \sum_n c_n  \int_0^\infty \frac{t}{k_0 r}^{\frac{2\pi i n}{L}} K(t) dt \\
- * &= \sum_n c_n e^{-\frac{2\pi i n}{L} \ln\left(\frac{r}{r_0}\right)} e^{-\frac{2\pi i n}{L} \ln(k_0 r_0)} Y_n,
- * \end{align}
- * where
- * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t) dt,$$
- * and the Fourier coefficients are
- * $$c_n = \frac{1}{N} \sum_m F(k_m) e^{- \frac{2\pi i nm}{N}}.$$
- * The total number of points $N$ corresponds to the number of knots in the fundamental interval, which is equally spaced.
- *
- * The variables discretization is different depending whether $N$ is even or odd, in general
- * $$ k_n = k_0 \mathrm{e}^{n L / N}, \qquad r_m = r_0 \mathrm{e}^{m L / N}. $$
- * If $N$ is odd, $n$ and $m$ runs from $[-\lfloor N/2\rfloor, \lfloor N/2\rfloor]$,
- * where $\lfloor N/2\rfloor$  is the round-down (largest integer smaller than $N/2$)
- * of $N/2$. In this case
- * \begin{align}
- * \ln\left(k_{-\lfloor N/2\rfloor}\right) = \ln(k_0) - \frac{(N-1)}{N} \frac{L}{2}, \\
- * \ln\left(k_{+\lfloor N/2\rfloor}\right) = \ln(k_0) + \frac{(N-1)}{N} \frac{L}{2}.
- * \end{align}
- * This means that for odd $N$ the values of $k_n$ (and $r_n$) never touches the borders $\ln(k_0) \pm L/2$
- * and $\ln(r_0) \pm L/2$. On the other hand if $N$ is even ($\lfloor N/2\rfloor = N/2$)
- * \begin{align}
- * \ln\left(k_{-\lfloor N/2\rfloor}\right) = \ln(k_0) - \frac{L}{2}, \\
- * \ln\left(k_{+\lfloor N/2\rfloor}\right) = \ln(k_0) + \frac{L}{2}.
- * \end{align}
- * However, since we are assuming that these functions are periodic with period $L$ these two
- * points refer to the same value of the functions. Thus, we do not need to include both points and in
- * the case of even $N$ we include the point $\ln(k_0) - \frac{L}{2}$ only. In the original [FFTLog][XHamilton2000]
- * paper they include both points but give them a $1/2$ weight, here we avoid this complication by using the lower
- * end point only.
- *
- * The user must provide the following input values: $\ln k_0$ - ncm_fftlog_set_lnk0(), $\ln r_0$ - ncm_fftlog_set_lnr0(),
- * $L$ - ncm_fftlog_set_length(), padding percentage - ncm_fftlog_set_padding(), $N$ - ncm_fftlog_set_size(),
- * $F(k)$ (or $F(k_m)$ -- see description below).
- *
- * - Since the algorithm assumes that the function to be decomposed is periodic, it is worth extending the interval in $\ln k$ such that
- * $F(k) \equiv 0$ in the intervals $\left[\ln k_0 -\frac{L_T}{2}, \ln k_0 - \frac{L}{2} \right)$ and
- * $ \left(\ln k_0 + \frac{L}{2}, \ln k_0 + \frac{L_T}{2}\right]$, where the total period $L_T$ is defined by the final
- * number of knots, i.e., $N_f = N (1 + \mathrm{padding})$.
- * - $N$ knots are equally distributed in the fundamental interval and $N \times \mathrm{padding}$ knots are distributed
- * in the two symmetric intervals as mentioned above.
- * - For the sake of optimization, the final number of points $N_f$ is substituted by the smallest number $N_f^\prime$ (bigger than $N_f$)
- * which can be decomposed as $N_f \leq N_f^\prime = N^\prime (1 + \mathrm{padding}) = 2^a 3^b 5^c 7^d$, where $a$,
- * $b$, $c$ and $d$ are positive integers.
- * - The function $F(k)$ can be provided as:
- * 1. a gsl_function - ncm_fftlog_eval_by_gsl_function() - whose values are computed at the knots
- * within the fundamental interval, and set to zero within the padding intervals.
- * 2. as a vector - ncm_fftlog_eval_by_vector() - first one must get the vector of $\ln k$ knots, ncm_fftlog_get_lnk_vector(),
- * and then pass a vector containing the values of the function computed at each knot.
- *
- * - Regarding $Y_n$, see the different implementations of #NcmFftlog, e.g., #NcmFftlogTophatwin2 and #NcmFftlogGausswin2.
- *
- *
+ * For the full derivation, discretization, and padding scheme, see the
+ * theoretical background page:
+ * <a href="../../theory/fftlog.html">FFTLog</a>.
+ * Reference: [Hamilton (2000)](https://arxiv.org/abs/astro-ph/9905191).
  */
 
 #ifdef HAVE_CONFIG_H

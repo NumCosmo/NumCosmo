@@ -29,10 +29,10 @@
  * Nonlinear matter power spectrum from Halofit model.
  *
  * Provides the nonlinear matter power spectrum using Halofit model [Smith et al
- * (2003)][XSmith2003] and [Takahashi et al. (2012)][XTakahashi2012].
+ * (2003)](https://arxiv.org/abs/astro-ph/0207664) and [Takahashi et al. (2012)](https://arxiv.org/abs/1208.2701).
  *
- * For PKEqual see [Casarini et al. (2009)][XCasarini2009] and [Casarini et al.
- * (2016)][XCasarini2016].
+ * For PKEqual see [Casarini et al. (2009)](https://arxiv.org/abs/0810.0190) and [Casarini et al.
+ * (2016)](https://arxiv.org/abs/1601.07230).
  *
  */
 
@@ -973,7 +973,7 @@ nc_powspec_mnl_halofit_set_kbounds_from_ml (NcPowspecMNLHaloFit *pshf)
  * @on: a boolean
  *
  * Whether to use PKEqual to adjust the HaloFit formula when using a #NcHICosmoDECpl
- * model, see [Casarini et al. (2009)][XCasarini2009] and [Casarini et al. (2016)][XCasarini2016].
+ * model, see [Casarini et al. (2009)](https://arxiv.org/abs/0810.0190) and [Casarini et al. (2016)](https://arxiv.org/abs/1601.07230).
  *
  */
 void

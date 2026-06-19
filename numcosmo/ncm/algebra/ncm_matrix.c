@@ -1239,7 +1239,7 @@ ncm_matrix_cholesky_solve2 (NcmMatrix *cm, NcmVector *b, gchar UL)
  *
  * Assuming that @cm is a symmetric matrix with data on @UL
  * side, computes the nearest positive definite matrix
- * in the Frobenius norm. See [Higham (2002)][XHigham2002].
+ * in the Frobenius norm. See [Higham (2002)](https://doi.org/10.1093/imanum/22.3.329).
  * The iterations stop when the Cholesky decomposition is valid.
  *
  * Returns: the return value of the last Cholesky decomposition.

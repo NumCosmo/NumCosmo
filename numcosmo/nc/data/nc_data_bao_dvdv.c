@@ -28,7 +28,7 @@
  *
  * Baryon oscillation data -- $D_V / D_V$ ratio.
  *
- * See [Percival et al. (2007)][XPercival2007].
+ * See [Percival et al. (2007)](https://arxiv.org/abs/0705.3323).
  *
  * The data is stored in a #NcDataBaoDVDV object. The data is stored in a
  * #NcmDataGaussDiag base class object, which is a subclass of #NcmData. The data

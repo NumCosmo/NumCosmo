@@ -26,40 +26,18 @@
 /**
  * NcHaloDensityProfileNFW:
  *
- * Density profile of Navarro-Frenk-White type.
+ * Navarro-Frenk-White (NFW) density profile.
  *
- * This object implements the #NcHaloDensityProfile class for a Navarro-Frenk-White (NFW) density profile.
- *
- * As described #NcHaloDensityProfile, we just need to implement the dimensionless 3D density $\hat{\rho}(x)$
- * [which refers to the virtual function nc_halo_density_profile_eval_dl_density()].
- * In particular, the NFW profile is given by
+ * Implements #NcHaloDensityProfile with the dimensionless 3D density
  * \begin{equation}
  * \hat{\rho}(x) = \frac{1}{x(1 + x)^2},
  * \end{equation}
- * where $x = r/r_s$ and $r_s$ is the scale radius.
+ * where $x = r/r_s$. The spherical mass, surface density, and cylinder mass all
+ * have closed forms.
  *
- * Both the mass $M_\Delta$ and the scale profile $\rho_s$ are written in terms of the integral
- * $I_{x^2\hat\rho}(c_\Delta)$ [virtual function nc_halo_density_profile_eval_dl_spher_mass()].
- * The respective NFW implementation provides
- * \begin{equation}
- * I_{x^2\hat\rho}(x) = \ln(1 + x) - \frac{x}{1 + x}.
- * \end{equation}
- *
- * The NFW dimensionless surface mass density [virtual function nc_halo_density_profile_eval_dl_2d_density()] is
- * \begin{equation}
- * \hat{\Sigma}(X) = \frac{2}{X^2 -1} \left[1 - \frac{\arctan (\sqrt{X^2 -1})}{\sqrt{X^2 - 1}}\right].
- * \end{equation}
- * For $X^2 - 1 < 0$ the equation above can be written in terms of $\mathrm{arctanh}(\sqrt{1 - X^2})/\sqrt{1 - X^2}$.
- * If $\vert X - 1 \vert < 10^{-6}$ or $X < 10^{-6}$, $\hat{\Sigma} (X)$ is computed using
- * the Taylor series expansion at $1$ or $0$ respectively (with sufficient terms in order to obtain double precision).
- *
- * The NFW enclosed mass is [virtual function nc_halo_density_profile_eval_dl_cyl_mass()]
- * \begin{equation}
- * \hat{\overline{\Sigma}} (< X) = 2 \left[\frac{\arctan  (\sqrt{X^2 - 1})}{\sqrt{X^2 - 1}} + \ln (X / 2)\right],
- * \end{equation}
- * Similar expressions in terms of $\mathrm{arctanh}$ and approximations, as described above, are used here.
- *
- * References: [Navarro (1996)][XNavarro1996], [Wright (2000)][XWright2000], astro-ph/0206508 and arxiv:1010.0744.
+ * For these closed-form expressions and references, see the theoretical
+ * background page:
+ * <a href="../../theory/halo_density_profile.html">Halo Density Profiles</a>.
  */
 
 #ifdef HAVE_CONFIG_H

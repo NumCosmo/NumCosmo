@@ -28,7 +28,7 @@
  * Single scalar field with an exponential potential.
  *
  * Bounce cosmological model assuming a single scalar field with an exponential
- * potential. For details see [Bacalhau et al. (2017)][XBacalhau2017].
+ * potential. For details see [Bacalhau et al. (2017)](https://arxiv.org/abs/1706.08830).
  *
  */
 

@@ -33,7 +33,7 @@
  * [nc_hicosmo_Omega_m0()], $c$ is the speed of light [ncm_c_c()], $H_0$ is the Hubble
  * parameter [nc_hicosmo_H0()] and $D_V(z)$ is the dilation scale
  * [nc_distance_dilation_scale()]. See Section 4.5 from [Eisenstein et al.
- * (2005)][XEisenstein2005].
+ * (2005)](https://arxiv.org/abs/astro-ph/0501171).
  *
  */
 
