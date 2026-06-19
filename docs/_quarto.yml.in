@@ -68,7 +68,7 @@ website:
   sidebar:
       style: "docked"
       logo: images/numcosmo_logo.png
-      collapse-level: 2
+      collapse-level: 1
       contents:
         - section: "Getting Started"
           contents:

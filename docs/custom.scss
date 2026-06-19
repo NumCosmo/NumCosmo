@@ -39,3 +39,35 @@ $red: #dc1111;
   // This is used for code blocks, not inline code
   font-size: smaller;
 }
+
+// Website sidebar: differentiate navigation levels for readability.
+.sidebar-navigation {
+  // Top-level sections (Getting Started, Theory, Worked Examples, ...):
+  // bold, uppercase, spaced, with separation above each.
+  .sidebar-menu-container > ul > li.sidebar-item-section {
+    margin-top: 0.7rem;
+
+    > .sidebar-item-container .menu-text {
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      font-size: 0.92em;
+    }
+  }
+
+  // Nested sub-sections (e.g. the Worked Examples groups): lighter and muted,
+  // so they read as a second level rather than competing with the top sections.
+  ul.sidebar-section li.sidebar-item-section > .sidebar-item-container .menu-text {
+    text-transform: none;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: #5a5a5a;
+  }
+
+  // Leaf links inside nested groups: subtle left border to show grouping.
+  ul.sidebar-section ul.sidebar-section {
+    border-left: 1px solid #dcdcdc;
+    margin-left: 0.45rem;
+    padding-left: 0.35rem;
+  }
+}

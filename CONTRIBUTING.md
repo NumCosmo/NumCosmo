@@ -80,6 +80,31 @@ comment.** Put it on a theory page and link to it. The pattern is established by
 A single inline `$x$` in a doc comment is fine; a multi-line `\begin{align}`
 derivation belongs on a theory page.
 
+References use the bibliography only on the Quarto side: theory pages cite with
+pandoc `[@Key]` against `docs/references.bib`; API doc comments (gi-docgen has no
+bibliography support) use inline links instead, e.g.
+`[Author (year)](https://arxiv.org/abs/...)`.
+
+### Building the documentation
+
+Build the site with a documentation-enabled build directory:
+
+```bash
+meson compile -C <builddir> numcosmo-site
+```
+
+Note: when you change **only** a `.c`/`.h` doc comment (no `.qmd`/`_quarto`
+change), the site bundle may not re-render because the `numcosmo-site` target
+does not detect changes in the generated API reference. Force it with:
+
+```bash
+ninja -C <builddir> -t clean docs/numcosmo-site
+meson compile -C <builddir> numcosmo-site
+```
+
+This affects only local incremental builds; CI and Read the Docs build from
+clean, so the published site is unaffected.
+
 ## Code formatting
 
 All C files, including headers, must be formatted with uncrustify using the
