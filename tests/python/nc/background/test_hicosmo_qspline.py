@@ -89,3 +89,56 @@ def test_qspline_lp_prior(cosmo_q: Nc.HICosmoQSpline) -> None:
     func = Ncm.MSetFuncList.new("NcHICosmoQSpline:lp_q2", None)
     prior = Ncm.PriorGaussFunc.new(func, 0.0, 1.0, 16.0)
     assert prior is not None
+
+
+def test_qspline_q_transition() -> None:
+    """The q=0 crossing matches the analytic root of a linear q(z)."""
+    n_knots, z_max = 8, 2.0
+    cosmo = Nc.HICosmoQSpline.new(Ncm.SplineCubicNotaknot.new(), n_knots, z_max)
+    z_knots = np.array(cosmo.props.spline.peek_xv().dup_array())
+    # q(z) = 0.5 - z crosses zero at z = 0.5 (exactly, linear -> cubic spline).
+    cosmo.props.qparam = Ncm.Vector.new_array((0.5 - z_knots).tolist())
+
+    assert_allclose(cosmo.q_transition(), 0.5, atol=1e-6)
+    # And it matches the registered MSetFunc.
+    func = Ncm.MSetFuncList.new("NcHICosmoQSpline:q_transition", None)
+    mset = Ncm.MSet.new_array([cosmo])
+    assert_allclose(cosmo.q_transition(), func.eval0(mset))
+
+
+def test_qspline_q_transition_no_crossing() -> None:
+    """With q(z) > 0 everywhere there is no transition, returning NaN."""
+    cosmo = Nc.HICosmoQSpline.new(Ncm.SplineCubicNotaknot.new(), 8, 2.0)
+    cosmo.props.qparam = Ncm.Vector.new_array([0.5] * 8)
+    assert np.isnan(cosmo.q_transition())
+
+
+def test_qspline_band_function_grid() -> None:
+    """A bound-z q(z) function evaluates via eval0 and round-trips through YAML."""
+    import tempfile
+    from pathlib import Path
+
+    cosmo = Nc.HICosmoQSpline.new(Ncm.SplineCubicNotaknot.new(), 8, 2.0)
+    cosmo.props.qparam = Ncm.Vector.new_array(list(np.linspace(0.5, -0.6, 8)))
+    mset = Ncm.MSet.new_array([cosmo])
+
+    oa = Ncm.ObjArray.new()
+    z_nodes = [0.0, 0.5, 1.0, 1.5]
+    for z in z_nodes:
+        func = Ncm.MSetFuncList.new("NcHICosmo:q", None)
+        func.set_eval_x([z])
+        oa.add(func)
+
+    direct = [cosmo.q(z) for z in z_nodes]
+    assert_allclose([oa.get(i).eval0(mset) for i in range(oa.len())], direct)
+
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "funcs.yaml"
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser.array_to_yaml_file(oa, path.absolute().as_posix())
+        reloaded = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).array_from_yaml_file(
+            path.absolute().as_posix()
+        )
+    assert_allclose(
+        [reloaded.get(i).eval0(mset) for i in range(reloaded.len())], direct
+    )

@@ -199,6 +199,27 @@ def test_generate_qspline_curvature_prior(
     assert exp_file.with_suffix(".functions.yaml").exists()
 
 
+@pytest.mark.parametrize(
+    "generator, n_base",
+    [(gen.GenerateQSpline, 2), (gen.GenerateDEWSpline, 2)],
+)
+def test_generate_band_nodes(tmp_path: Path, generator, n_base: int):
+    """band_nodes adds that many reconstruction-band functions to the catalog."""
+    exp_file = tmp_path / "band.yaml"
+    band_nodes = 7
+    _ = generator(
+        experiment=exp_file.absolute(),
+        include_bao=hicosmo.BAOID.ALL_COMBINED_JUN_2025,
+        band_nodes=band_nodes,
+    )
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    funcs = ser.array_from_yaml_file(
+        exp_file.with_suffix(".functions.yaml").absolute().as_posix()
+    )
+    # n_base nvar=0 diagnostics + band_nodes bound-z functions.
+    assert funcs.len() == n_base + band_nodes
+
+
 def test_generate_dewspline_no_data(tmp_path: Path):
     """Test DEWSpline rejects experiment with no data."""
     exp_file = tmp_path / "qspline.yaml"

@@ -107,6 +107,24 @@ def _add_curvature_prior(
     likelihood.priors_add(Ncm.PriorGaussFunc.new(func, 0.0, sigma, var))
 
 
+def _add_function_grid(
+    mfunc_oa: Ncm.ObjArray,
+    func_name: str,
+    z_nodes: "np.ndarray",
+) -> None:
+    """Append nvar=0 functions evaluating ``func_name`` at each redshift node.
+
+    Each node binds its redshift through ``set_eval_x`` (which serializes with the
+    function and is read by ``eval0``), so an MC/MCMC run records the function at
+    every node as a catalog column. Sampling a whole grid yields the
+    reconstruction band and its full node-to-node covariance for free.
+    """
+    for z in z_nodes:
+        func = Ncm.MSetFuncList.new(func_name, None)
+        func.set_eval_x([float(z)])
+        mfunc_oa.add(func)
+
+
 @dataclasses.dataclass(kw_only=True)
 class GeneratePlanck:
     """Generate Planck 2018 experiment."""
@@ -649,6 +667,16 @@ class GenerateQSpline:
         ),
     ] = 2.0
 
+    band_nodes: Annotated[
+        int,
+        typer.Option(
+            help="Number of redshift nodes for the q(z) reconstruction band "
+            "recorded in MC/MCMC catalogs (0 disables).",
+            show_default=True,
+            min=0,
+        ),
+    ] = 20
+
     def __post_init__(self):
         """Generate QSpline experiment."""
         Ncm.cfg_init()
@@ -685,10 +713,17 @@ class GenerateQSpline:
         mset.prepare_fparam_map()
         likelihood = Ncm.Likelihood.new(dset)
 
-        # Expose mean_kappa as a derived (nvar=0) function for post-processing.
+        # Expose mean_kappa and the transition redshift as derived (nvar=0)
+        # functions for post-processing.
         mfunc_oa = Ncm.ObjArray.new()
-        mfunc_mean_kappa = Ncm.MSetFuncList.new("NcHICosmoQSpline:mean_kappa", None)
-        mfunc_oa.add(mfunc_mean_kappa)
+        mfunc_oa.add(Ncm.MSetFuncList.new("NcHICosmoQSpline:mean_kappa", None))
+        mfunc_oa.add(Ncm.MSetFuncList.new("NcHICosmoQSpline:q_transition", None))
+
+        # Sample q(z) on a redshift grid -> reconstruction band + covariance.
+        if self.band_nodes > 0:
+            _add_function_grid(
+                mfunc_oa, "NcHICosmo:q", np.linspace(0.0, self.z_max, self.band_nodes)
+            )
 
         _add_curvature_prior(
             likelihood,
@@ -850,6 +885,16 @@ class GenerateDEWSpline:
         ),
     ] = 2.0
 
+    band_nodes: Annotated[
+        int,
+        typer.Option(
+            help="Number of redshift nodes for the w(z) reconstruction band "
+            "recorded in MC/MCMC catalogs (0 disables).",
+            show_default=True,
+            min=0,
+        ),
+    ] = 20
+
     def __post_init__(self):
         """Generate DE WSpline experiment."""
         Ncm.cfg_init()
@@ -894,6 +939,14 @@ class GenerateDEWSpline:
         # Always expose mean_kappa as a derived (nvar=0) function for post-processing.
         mfunc_mean_kappa = Ncm.MSetFuncList.new("NcHICosmoDEWSpline:mean_kappa", None)
         mfunc_oa.add(mfunc_mean_kappa)
+
+        # Sample w(z) on a redshift grid -> reconstruction band + covariance.
+        if self.band_nodes > 0:
+            _add_function_grid(
+                mfunc_oa,
+                "NcHICosmoDE:wDE_z",
+                np.linspace(0.0, self.z_max, self.band_nodes),
+            )
 
         _add_curvature_prior(
             likelihood,
