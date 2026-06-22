@@ -96,6 +96,59 @@ ncm_mset_func_init (NcmMSetFunc *func)
   self->diff    = ncm_diff_new ();
 }
 
+/*
+ * _ncm_mset_func_update_unames:
+ * @func: a #NcmMSetFunc
+ *
+ * (Re)builds the unique name/symbol from the bound evaluation point @eval_x.
+ * The unique name is what identifies a function column in a #NcmMSetCatalog, so
+ * it must encode @eval_x; otherwise several functions sharing the same base name
+ * (e.g. a single function evaluated over a redshift grid, all named "wDE_z")
+ * produce colliding column names and the catalog cannot be reopened. Both
+ * ncm_mset_func_set_eval_x() and the "eval-x" property (restored on
+ * deserialization) route through here.
+ */
+static void
+_ncm_mset_func_update_unames (NcmMSetFunc *func)
+{
+  NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  g_clear_pointer (&self->usymbol, g_free);
+  g_clear_pointer (&self->uname,   g_free);
+
+  if (self->eval_x == NULL)
+    return;
+
+  {
+    const gchar *name   = ncm_mset_func_peek_name (func);
+    const gchar *symbol = ncm_mset_func_peek_symbol (func);
+    const guint len     = ncm_vector_len (self->eval_x);
+    GString *args_s     = g_string_new ("(");
+    gchar *args;
+    guint i;
+
+    for (i = 0; i < len; i++)
+      g_string_append_printf (args_s, "%.15g", ncm_vector_get (self->eval_x, i));
+
+    g_string_append (args_s, ")");
+    args = g_string_free (args_s, FALSE);
+
+    self->usymbol = g_strjoin (NULL, symbol, args, NULL);
+
+    {
+      GRegex *reg  = g_regex_new ("[^0-9]+", 0, 0, NULL);
+      gchar *nargs = g_regex_replace_literal (reg, args, -1, 0, "_", 0, NULL);
+
+      self->uname = g_strjoin (NULL, name, nargs, NULL);
+
+      g_free (nargs);
+      g_regex_unref (reg);
+    }
+
+    g_free (args);
+  }
+}
+
 static void
 _ncm_mset_func_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
@@ -115,6 +168,10 @@ _ncm_mset_func_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_EVAL_X:
       ncm_vector_clear (&self->eval_x);
       self->eval_x = g_value_dup_object (value);
+      /* Drop stale unique name/symbol; they are rebuilt lazily (peek_uname /
+       * peek_usymbol) once the base name/symbol are available. */
+      g_clear_pointer (&self->uname,   g_free);
+      g_clear_pointer (&self->usymbol, g_free);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -412,38 +469,9 @@ ncm_mset_func_set_eval_x (NcmMSetFunc *func, gdouble *x, guint len)
 
   self->eval_x = ncm_vector_new_data_dup (x, self->nvar, 1);
 
-  ncm_mset_func_peek_name (func);
   ncm_mset_func_peek_desc (func);
-  ncm_mset_func_peek_symbol (func);
 
-  {
-    GString *args_s = g_string_new ("(");
-    gchar *args;
-    guint i;
-
-    for (i = 0; i < len; i++)
-      g_string_append_printf (args_s, "%.15g", x[i]);
-
-    g_string_append (args_s, ")");
-
-    args = g_string_free (args_s, FALSE);
-
-    g_clear_pointer (&self->usymbol, g_free);
-    g_clear_pointer (&self->uname,   g_free);
-
-    self->usymbol = g_strjoin (NULL, self->symbol, args, NULL);
-
-    {
-      GRegex *reg  = g_regex_new ("[^0-9]+", 0, 0, NULL);
-      gchar *nargs = g_regex_replace_literal (reg, args, -1, 0, "_", 0, NULL);
-
-      self->uname = g_strjoin (NULL, self->name, nargs, NULL);
-
-      g_regex_unref (reg);
-    }
-
-    g_free (args);
-  }
+  _ncm_mset_func_update_unames (func);
 }
 
 /**
@@ -738,6 +766,9 @@ ncm_mset_func_peek_uname (NcmMSetFunc *func)
 {
   NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
 
+  if ((self->uname == NULL) && (self->eval_x != NULL))
+    _ncm_mset_func_update_unames (func);
+
   if (self->uname != NULL)
     return self->uname;
   else
@@ -756,6 +787,9 @@ const gchar *
 ncm_mset_func_peek_usymbol (NcmMSetFunc *func)
 {
   NcmMSetFuncPrivate * const self = ncm_mset_func_get_instance_private (func);
+
+  if ((self->usymbol == NULL) && (self->eval_x != NULL))
+    _ncm_mset_func_update_unames (func);
 
   if (self->usymbol != NULL)
     return self->usymbol;
