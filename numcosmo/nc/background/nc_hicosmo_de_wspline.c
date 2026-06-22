@@ -411,21 +411,13 @@ nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline)
   return ncm_spline_peek_xv (self->w_alpha);
 }
 
-gdouble
-_mean_kappa_integrand (gdouble alpha, gpointer data)
-{
-  NcHICosmoDEWSplinePrivate * const self = (NcHICosmoDEWSplinePrivate * const) data;
-  const gdouble d2w                      = ncm_spline_eval_deriv2 (self->w_alpha, alpha);
-  const gdouble d1w                      = ncm_spline_eval_deriv (self->w_alpha, alpha);
-
-  return d2w * d2w / gsl_pow_3 (1.0 + d1w * d1w);
-}
-
 /**
  * nc_hicosmo_de_wspline_mean_kappa:
  * @wspline: a #NcHICosmoDEWSpline
  *
- * Gets the mean value of $w(z)$ curvature.
+ * Gets the mean value of $w(z)$ curvature, i.e. the root-mean-square geometric
+ * curvature of $w(\alpha)$ over $[0, \alpha_f]$ (the $p = 2$,
+ * #NCM_SPLINE_CURVATURE_GEOMETRIC member of ncm_spline_curvature_lp_norm()).
  *
  * Returns: The mean value of $w(z)$ curvature
  */
@@ -433,20 +425,10 @@ gdouble
 nc_hicosmo_de_wspline_mean_kappa (NcHICosmoDEWSpline *wspline)
 {
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
-  gsl_integration_workspace **w          = ncm_integral_get_workspace ();
-  gsl_function F;
-  gdouble result, error;
 
   _nc_hicosmo_de_wspline_prepare (wspline);
 
-  F.function = &_mean_kappa_integrand;
-  F.params   = self;
-
-  gsl_integration_qag (&F, 0.0, self->alpha_f, 1e-9, 0.0, NCM_INTEGRAL_PARTITION, 6, *w, &result, &error);
-
-  ncm_memory_pool_return (w);
-
-  return sqrt (result / self->alpha_f);
+  return ncm_spline_curvature_lp_norm (self->w_alpha, NCM_SPLINE_CURVATURE_GEOMETRIC, 2.0, 0.0, self->alpha_f);
 }
 
 static void
