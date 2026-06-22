@@ -33,6 +33,7 @@ from numcosmo_py.experiments.wz_reconstruction import (
     WSplineTarget,
     QSplineTarget,
     lcdm_fiducial,
+    save_mset_yaml,
 )
 
 Ncm.cfg_init()
@@ -217,3 +218,40 @@ def test_qspline_null_recovers_fiducial_curvature() -> None:
     # represents the smooth fiducial closely.
     assert result.injected_curvature > 0.0
     assert_allclose(result.projected_curvature, result.injected_curvature, rtol=0.1)
+
+
+def test_build_truth_mset_carries_injection() -> None:
+    """The built mset's reconstruction has the injected (projected) curvature."""
+    target = wspline_target()
+    sampler = target_sampler(target)
+    coeffs = sampler.sample_coeffs(np.random.default_rng(5))
+
+    mset = target.build_truth_mset(sampler, coeffs)
+    assert isinstance(mset, Ncm.MSet)
+
+    cosmo = target.new_cosmo()
+    target.set_truth(cosmo, sampler, coeffs)
+    expected = target.curvature_lp(cosmo, D2, 2.0)
+    model = mset.peek(cosmo.id())
+    assert_allclose(target.curvature_lp(model, D2, 2.0), expected)
+
+
+def test_save_mset_yaml_round_trips(tmp_path) -> None:
+    """A saved truth mset reloads as an MSet (the run mc --fiducial path)."""
+    target = wspline_target()
+    sampler = target_sampler(target)
+    coeffs = sampler.sample_coeffs(np.random.default_rng(6))
+    mset = target.build_truth_mset(sampler, coeffs)
+
+    path = tmp_path / "truth.mset.yaml"
+    save_mset_yaml(mset, path)
+    assert path.exists()
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    reloaded = ser.from_yaml_file(path.absolute().as_posix())
+    assert isinstance(reloaded, Ncm.MSet)
+    cosmo = reloaded.peek(target.new_cosmo().id())
+    assert_allclose(
+        target.curvature_lp(cosmo, D2, 2.0),
+        target.curvature_lp(mset.peek(cosmo.id()), D2, 2.0),
+    )

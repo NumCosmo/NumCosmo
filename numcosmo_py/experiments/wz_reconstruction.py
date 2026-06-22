@@ -39,6 +39,7 @@ footing.
 
 from enum import StrEnum, auto
 from abc import ABC, abstractmethod
+from pathlib import Path
 import dataclasses
 import math
 
@@ -211,6 +212,25 @@ class ReconstructionTarget(ABC):
         x = self.knot_x(cosmo)
         self.set_knots(cosmo, self.fiducial(x) + sampler.deviation(coeffs, x))
 
+    def build_truth_mset(
+        self,
+        sampler: TruncatedBasisSampler,
+        coeffs: npt.NDArray[np.float64],
+        cosmo: "Nc.HICosmo | None" = None,
+    ) -> Ncm.MSet:
+        """Build an MSet whose reconstruction carries the injected truth.
+
+        Pass ``cosmo`` (e.g. duplicated from a generated experiment's model set)
+        to preserve its other cosmological parameters and overwrite only the
+        reconstruction knots; otherwise a fresh model with default parameters is
+        used. The result is a fiducial mset suitable for ``run mc --fiducial`` to
+        resample from.
+        """
+        if cosmo is None:
+            cosmo = self.new_cosmo()
+        self.set_truth(cosmo, sampler, coeffs)
+        return Ncm.MSet.new_array([cosmo])
+
     def _truth_spline(
         self,
         sampler: TruncatedBasisSampler,
@@ -343,3 +363,12 @@ def lcdm_fiducial(omega_c0: float = 0.25, omega_b0: float = 0.05) -> Nc.HICosmo:
     cosmo["Omegab"] = omega_b0
     cosmo["w"] = -1.0
     return cosmo
+
+
+def save_mset_yaml(mset: Ncm.MSet, path: "str | Path") -> None:
+    """Serialize an MSet to YAML, the canonical NcmSerialize format.
+
+    Use this to write a fiducial truth mset that ``run mc --fiducial`` reads.
+    """
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.to_yaml_file(mset, str(path))
