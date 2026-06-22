@@ -40,6 +40,7 @@
 #include "nc/background/nc_hicosmo_qspline.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/spline/ncm_spline_gsl.h"
+#include "ncm/model/ncm_mset_func_list.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_fit.h>
@@ -829,5 +830,54 @@ nc_prior_qspline_cont_new (void)
                                                   NULL);
 
   return prior_qz_cp;
+}
+
+/**
+ * nc_hicosmo_qspline_lp_norm:
+ * @qspline: a #NcHICosmoQSpline
+ * @ctype: a #NcmSplineCurvatureType
+ * @p: the norm order $p > 0$
+ *
+ * Computes the domain-normalized $L_p$ norm of the $q(z)$ curvature density
+ * (selected by @ctype) over the reconstruction range $[0, z_f]$. The case
+ * @p = 2 yields the root-mean-square curvature; large @p approaches the maximum
+ * (see ncm_spline_curvature_lp_norm()).
+ *
+ * Returns: the curvature $L_p$ norm.
+ */
+gdouble
+nc_hicosmo_qspline_lp_norm (NcHICosmoQSpline *qspline, NcmSplineCurvatureType ctype, const gdouble p)
+{
+  gdouble lb, ub;
+
+  _nc_hicosmo_qspline_prepare (qspline);
+  ncm_spline_get_bounds (qspline->q_z, &lb, &ub);
+
+  return ncm_spline_curvature_lp_norm (qspline->q_z, ctype, p, lb, ub);
+}
+
+static void
+_nc_hicosmo_qspline_lp_kappa (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *cosmo = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_QSPLINE (cosmo));
+  f[0] = nc_hicosmo_qspline_lp_norm (cosmo, NCM_SPLINE_CURVATURE_GEOMETRIC, x[0]);
+}
+
+static void
+_nc_hicosmo_qspline_lp_q2 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *cosmo = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_QSPLINE (cosmo));
+  f[0] = nc_hicosmo_qspline_lp_norm (cosmo, NCM_SPLINE_CURVATURE_D2, x[0]);
+}
+
+void
+_nc_hicosmo_qspline_register_functions (void)
+{
+  ncm_mset_func_list_register ("lp_kappa", "\\Vert\\kappa\\Vert_p", "NcHICosmoQSpline", "Lp norm of q geometric curvature, x[0]=p", G_TYPE_NONE, _nc_hicosmo_qspline_lp_kappa, 1, 1);
+  ncm_mset_func_list_register ("lp_q2", "\\Vert q''\\Vert_p", "NcHICosmoQSpline", "Lp norm of q'' (second derivative), x[0]=p", G_TYPE_NONE, _nc_hicosmo_qspline_lp_q2, 1, 1);
 }
 

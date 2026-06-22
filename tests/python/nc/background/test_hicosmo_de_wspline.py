@@ -101,3 +101,41 @@ def test_wspline_mean_kappa_mset_func(cosmo_w: Nc.HICosmoDEWSpline) -> None:
 
     mset = Ncm.MSet.new_array([cosmo_w])
     assert_allclose(kappa_mean, kappa_mean_func.eval0(mset))
+
+
+def test_wspline_lp_norm_equals_mean_kappa(cosmo_w: Nc.HICosmoDEWSpline) -> None:
+    """mean_kappa is the p=2 geometric case of lp_norm."""
+    w_len = cosmo_w.get_alpha().len()
+    cosmo_w.props.w = Ncm.Vector.new_array(
+        np.random.uniform(-1.5, -0.5, size=w_len).tolist()
+    )
+    assert_allclose(
+        cosmo_w.mean_kappa(),
+        cosmo_w.lp_norm(Ncm.SplineCurvatureType.GEOMETRIC, 2.0),
+    )
+
+
+@pytest.mark.parametrize("name", ["lp_kappa", "lp_w2"])
+def test_wspline_lp_mset_func(cosmo_w: Nc.HICosmoDEWSpline, name: str) -> None:
+    """The lp_* MSetFuncList entries take p = x[0] and match the C accessor."""
+    w_len = cosmo_w.get_alpha().len()
+    cosmo_w.props.w = Ncm.Vector.new_array(
+        np.random.uniform(-1.5, -0.5, size=w_len).tolist()
+    )
+    ctype = (
+        Ncm.SplineCurvatureType.GEOMETRIC
+        if name == "lp_kappa"
+        else Ncm.SplineCurvatureType.D2
+    )
+    mset = Ncm.MSet.new_array([cosmo_w])
+    func = Ncm.MSetFuncList.new(f"NcHICosmoDEWSpline:{name}", None)
+
+    assert func.get_nvar() == 1
+    for p in (2.0, 8.0, 16.0):
+        assert_allclose(func.eval1(mset, p), cosmo_w.lp_norm(ctype, p))
+
+    # L_p norm is non-decreasing in p (tiny slack for the near-constant
+    # curvature degenerate case where all norms coincide).
+    norms = [func.eval1(mset, p) for p in (2.0, 8.0, 32.0)]
+    assert norms[0] <= norms[1] * (1.0 + 1e-9)
+    assert norms[1] <= norms[2] * (1.0 + 1e-9)

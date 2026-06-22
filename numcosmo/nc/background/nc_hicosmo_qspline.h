@@ -30,6 +30,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/ncm/fit/ncm_fit.h>
+#include <numcosmo/ncm/spline/ncm_spline.h>
 #include <numcosmo/ncm/spline/ncm_ode_spline.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -108,6 +109,8 @@ struct _NcHICosmoQSpline
 GType nc_hicosmo_qspline_get_type (void) G_GNUC_CONST;
 
 NcHICosmoQSpline *nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f);
+
+gdouble nc_hicosmo_qspline_lp_norm (NcHICosmoQSpline *qspline, NcmSplineCurvatureType ctype, const gdouble p);
 
 NcHICosmoQSplineContPrior *nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma, gdouble abstol);
 
