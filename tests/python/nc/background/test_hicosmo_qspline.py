@@ -73,6 +73,17 @@ def test_qspline_lp_norm_nondecreasing(cosmo_q: Nc.HICosmoQSpline) -> None:
         assert norms[1] <= norms[2] * (1.0 + 1e-9)
 
 
+def test_qspline_mean_kappa(cosmo_q: Nc.HICosmoQSpline) -> None:
+    """mean_kappa is the p=2 geometric case of lp_norm, and matches its MSetFunc."""
+    mean_kappa = cosmo_q.mean_kappa()
+    assert_allclose(mean_kappa, cosmo_q.lp_norm(Ncm.SplineCurvatureType.GEOMETRIC, 2.0))
+
+    func = Ncm.MSetFuncList.new("NcHICosmoQSpline:mean_kappa", None)
+    assert func.get_nvar() == 0
+    mset = Ncm.MSet.new_array([cosmo_q])
+    assert_allclose(mean_kappa, func.eval0(mset))
+
+
 def test_qspline_lp_prior(cosmo_q: Nc.HICosmoQSpline) -> None:
     """A curvature L_p norm can drive a Gaussian prior via the var = p slot."""
     func = Ncm.MSetFuncList.new("NcHICosmoQSpline:lp_q2", None)

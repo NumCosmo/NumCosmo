@@ -157,21 +157,38 @@ def test_generate_dewspline(tmp_path: Path):
     assert exp_file.exists()
 
 
-@pytest.mark.parametrize(
-    "curvature_prior",
-    [
-        gen.CurvaturePriorType.NONE,
-        gen.CurvaturePriorType.MEAN_KAPPA,
-        gen.CurvaturePriorType.LP_KAPPA,
-        gen.CurvaturePriorType.LP_W2,
-    ],
-)
+CURVATURE_PRIORS = [
+    gen.CurvaturePriorType.NONE,
+    gen.CurvaturePriorType.MEAN_KAPPA,
+    gen.CurvaturePriorType.LP_KAPPA,
+    gen.CurvaturePriorType.LP_D2,
+]
+
+
+@pytest.mark.parametrize("curvature_prior", CURVATURE_PRIORS)
 def test_generate_dewspline_curvature_prior(
     tmp_path: Path, curvature_prior: "gen.CurvaturePriorType"
 ):
     """Test DEWSpline generation across curvature prior options."""
     exp_file = tmp_path / "dewspline.yaml"
     _ = gen.GenerateDEWSpline(
+        experiment=exp_file.absolute(),
+        include_bao=hicosmo.BAOID.ALL_COMBINED_JUN_2025,
+        curvature_prior=curvature_prior,
+        curvature_sigma=1.5,
+        curvature_p=12.0,
+    )
+    assert exp_file.exists()
+    assert exp_file.with_suffix(".functions.yaml").exists()
+
+
+@pytest.mark.parametrize("curvature_prior", CURVATURE_PRIORS)
+def test_generate_qspline_curvature_prior(
+    tmp_path: Path, curvature_prior: "gen.CurvaturePriorType"
+):
+    """Test QSpline generation across curvature prior options."""
+    exp_file = tmp_path / "qspline.yaml"
+    _ = gen.GenerateQSpline(
         experiment=exp_file.absolute(),
         include_bao=hicosmo.BAOID.ALL_COMBINED_JUN_2025,
         curvature_prior=curvature_prior,

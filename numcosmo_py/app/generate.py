@@ -61,6 +61,52 @@ from numcosmo_py.datasets.hicosmo import (
 )
 
 
+class CurvaturePriorType(StrEnum):
+    """Curvature prior functional for a spline reconstruction (q(z) or w(z)).
+
+    NONE disables the prior; MEAN_KAPPA is the geometric L2 curvature (default);
+    LP_KAPPA / LP_D2 are the Lp norms of the geometric curvature and of the second
+    derivative respectively, with order p given by ``--curvature-p`` (large p
+    approaches the maximum curvature).
+    """
+
+    NONE = auto()
+    MEAN_KAPPA = auto()
+    LP_KAPPA = auto()
+    LP_D2 = auto()
+
+
+def _add_curvature_prior(
+    likelihood: Ncm.Likelihood,
+    *,
+    namespace: str,
+    d2_name: str,
+    prior_type: CurvaturePriorType,
+    sigma: float,
+    p: float,
+) -> None:
+    """Add the selected curvature Gaussian prior to ``likelihood``.
+
+    The norm order p is fed through the PriorGaussFunc variable slot, which the
+    nvar=1 ``lp_*`` functions read as ``x[0]``. ``namespace`` selects the model
+    (e.g. ``NcHICosmoQSpline``); ``d2_name`` is its second-derivative function
+    (``lp_q2`` or ``lp_w2``). The prior func is added to the likelihood only, not
+    to the derived-function array (those are evaluated with nvar=0).
+    """
+    if prior_type is CurvaturePriorType.NONE:
+        return
+
+    if prior_type is CurvaturePriorType.MEAN_KAPPA:
+        func_name, var = f"{namespace}:mean_kappa", 0.0
+    elif prior_type is CurvaturePriorType.LP_KAPPA:
+        func_name, var = f"{namespace}:lp_kappa", p
+    else:  # LP_D2
+        func_name, var = f"{namespace}:{d2_name}", p
+
+    func = Ncm.MSetFuncList.new(func_name, None)
+    likelihood.priors_add(Ncm.PriorGaussFunc.new(func, 0.0, sigma, var))
+
+
 @dataclasses.dataclass(kw_only=True)
 class GeneratePlanck:
     """Generate Planck 2018 experiment."""
@@ -584,6 +630,25 @@ class GenerateQSpline:
         Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
     ] = None
 
+    curvature_prior: Annotated[
+        CurvaturePriorType,
+        typer.Option(help="Curvature prior functional.", show_default=True),
+    ] = CurvaturePriorType.MEAN_KAPPA
+
+    curvature_sigma: Annotated[
+        float,
+        typer.Option(help="Curvature prior standard deviation.", show_default=True),
+    ] = 3.0
+
+    curvature_p: Annotated[
+        float,
+        typer.Option(
+            help="Lp norm order p for the lp_* curvature priors "
+            "(large p approaches the maximum curvature).",
+            show_default=True,
+        ),
+    ] = 2.0
+
     def __post_init__(self):
         """Generate QSpline experiment."""
         Ncm.cfg_init()
@@ -619,6 +684,21 @@ class GenerateQSpline:
 
         mset.prepare_fparam_map()
         likelihood = Ncm.Likelihood.new(dset)
+
+        # Expose mean_kappa as a derived (nvar=0) function for post-processing.
+        mfunc_oa = Ncm.ObjArray.new()
+        mfunc_mean_kappa = Ncm.MSetFuncList.new("NcHICosmoQSpline:mean_kappa", None)
+        mfunc_oa.add(mfunc_mean_kappa)
+
+        _add_curvature_prior(
+            likelihood,
+            namespace="NcHICosmoQSpline",
+            d2_name="lp_q2",
+            prior_type=self.curvature_prior,
+            sigma=self.curvature_sigma,
+            p=self.curvature_p,
+        )
+
         # Save experiment
         experiment = Ncm.ObjDictStr()
 
@@ -631,6 +711,11 @@ class GenerateQSpline:
             dset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
         )
         ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())
+
+        ser.array_to_yaml_file(
+            mfunc_oa,
+            self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
+        )
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -716,21 +801,6 @@ class GenerateXCDM:
             mfunc_oa,
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
-
-
-class CurvaturePriorType(StrEnum):
-    """Curvature prior functional for the w(z) spline reconstruction.
-
-    NONE disables the prior; MEAN_KAPPA is the geometric L2 curvature (back-compat
-    default); LP_KAPPA / LP_W2 are the Lp norms of the geometric curvature and of
-    w'' respectively, with order p given by ``--curvature-p`` (large p approaches
-    the maximum curvature).
-    """
-
-    NONE = auto()
-    MEAN_KAPPA = auto()
-    LP_KAPPA = auto()
-    LP_W2 = auto()
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -821,32 +891,18 @@ class GenerateDEWSpline:
         mfunc_oa = Ncm.ObjArray.new()
         mfunc_Omegam = Ncm.MSetFuncList.new("NcHICosmo:Omega_m0", None)
         mfunc_oa.add(mfunc_Omegam)
-        # Always expose mean_kappa as a derived function for post-processing.
+        # Always expose mean_kappa as a derived (nvar=0) function for post-processing.
         mfunc_mean_kappa = Ncm.MSetFuncList.new("NcHICosmoDEWSpline:mean_kappa", None)
         mfunc_oa.add(mfunc_mean_kappa)
 
-        # The lp_* functions take p = x[0]; PriorGaussFunc feeds it through its
-        # variable slot, so the same function serves any norm order.
-        curvature_func_name = {
-            CurvaturePriorType.MEAN_KAPPA: "NcHICosmoDEWSpline:mean_kappa",
-            CurvaturePriorType.LP_KAPPA: "NcHICosmoDEWSpline:lp_kappa",
-            CurvaturePriorType.LP_W2: "NcHICosmoDEWSpline:lp_w2",
-        }
-        if self.curvature_prior is not CurvaturePriorType.NONE:
-            if self.curvature_prior is CurvaturePriorType.MEAN_KAPPA:
-                curv_func = mfunc_mean_kappa
-                curv_var = 0.0
-            else:
-                curv_func = Ncm.MSetFuncList.new(
-                    curvature_func_name[self.curvature_prior], None
-                )
-                mfunc_oa.add(curv_func)
-                curv_var = self.curvature_p
-
-            prior = Ncm.PriorGaussFunc.new(
-                curv_func, 0.0, self.curvature_sigma, curv_var
-            )
-            likelihood.priors_add(prior)
+        _add_curvature_prior(
+            likelihood,
+            namespace="NcHICosmoDEWSpline",
+            d2_name="lp_w2",
+            prior_type=self.curvature_prior,
+            sigma=self.curvature_sigma,
+            p=self.curvature_p,
+        )
 
         # Save experiment
         experiment = Ncm.ObjDictStr()

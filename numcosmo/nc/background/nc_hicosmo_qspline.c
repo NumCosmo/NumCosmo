@@ -856,6 +856,31 @@ nc_hicosmo_qspline_lp_norm (NcHICosmoQSpline *qspline, NcmSplineCurvatureType ct
   return ncm_spline_curvature_lp_norm (qspline->q_z, ctype, p, lb, ub);
 }
 
+/**
+ * nc_hicosmo_qspline_mean_kappa:
+ * @qspline: a #NcHICosmoQSpline
+ *
+ * Gets the mean value of $q(z)$ curvature, i.e. the root-mean-square geometric
+ * curvature of $q(z)$ over $[0, z_f]$ (the $p = 2$,
+ * #NCM_SPLINE_CURVATURE_GEOMETRIC case of nc_hicosmo_qspline_lp_norm()).
+ *
+ * Returns: The mean value of $q(z)$ curvature
+ */
+gdouble
+nc_hicosmo_qspline_mean_kappa (NcHICosmoQSpline *qspline)
+{
+  return nc_hicosmo_qspline_lp_norm (qspline, NCM_SPLINE_CURVATURE_GEOMETRIC, 2.0);
+}
+
+static void
+_nc_hicosmo_qspline_mean_kappa (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *cosmo = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_QSPLINE (cosmo));
+  f[0] = nc_hicosmo_qspline_mean_kappa (cosmo);
+}
+
 static void
 _nc_hicosmo_qspline_lp_kappa (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
 {
@@ -877,6 +902,7 @@ _nc_hicosmo_qspline_lp_q2 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble 
 void
 _nc_hicosmo_qspline_register_functions (void)
 {
+  ncm_mset_func_list_register ("mean_kappa", "\\bar{\\kappa}", "NcHICosmoQSpline", "Mean q geometric curvature (L2)", G_TYPE_NONE, _nc_hicosmo_qspline_mean_kappa, 0, 1);
   ncm_mset_func_list_register ("lp_kappa", "\\Vert\\kappa\\Vert_p", "NcHICosmoQSpline", "Lp norm of q geometric curvature, x[0]=p", G_TYPE_NONE, _nc_hicosmo_qspline_lp_kappa, 1, 1);
   ncm_mset_func_list_register ("lp_q2", "\\Vert q''\\Vert_p", "NcHICosmoQSpline", "Lp norm of q'' (second derivative), x[0]=p", G_TYPE_NONE, _nc_hicosmo_qspline_lp_q2, 1, 1);
 }
