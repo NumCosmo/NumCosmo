@@ -30,6 +30,9 @@ from numcosmo_py import Ncm
 from numcosmo_py.experiments.wz_reconstruction import (
     TruncatedBasisSampler,
     BasisType,
+    WSplineTarget,
+    QSplineTarget,
+    lcdm_fiducial,
 )
 
 Ncm.cfg_init()
@@ -134,3 +137,83 @@ def test_invalid_configuration() -> None:
         make_sampler(n_modes=0)
     with pytest.raises(ValueError):
         make_sampler(amplitude=-1.0)
+
+
+def wspline_target(n_knots: int = 10, z_max: float = 2.0) -> WSplineTarget:
+    """A w(z) reconstruction target."""
+    return WSplineTarget(n_knots=n_knots, z_max=z_max)
+
+
+def qspline_target(n_knots: int = 10, z_max: float = 2.0) -> QSplineTarget:
+    """A q(z) reconstruction target with an LCDM fiducial."""
+    return QSplineTarget(n_knots=n_knots, z_max=z_max, fiducial_cosmo=lcdm_fiducial())
+
+
+def target_sampler(target, **kwargs) -> TruncatedBasisSampler:
+    """A deviation sampler matching a target's domain."""
+    x_min, x_max = target.domain
+    defaults = dict(n_modes=8, amplitude=0.15, decay=2.0)
+    defaults.update(kwargs)
+    return TruncatedBasisSampler(x_min=x_min, x_max=x_max, **defaults)
+
+
+@pytest.mark.parametrize("make_target", [wspline_target, qspline_target])
+def test_projection_basic(make_target) -> None:
+    """Projection returns finite, non-negative curvatures and error."""
+    target = make_target()
+    sampler = target_sampler(target)
+    coeffs = sampler.sample_coeffs(np.random.default_rng(1))
+    result = target.project(sampler, coeffs, D2, 2.0)
+
+    for value in (
+        result.injected_curvature,
+        result.projected_curvature,
+        result.projection_error,
+    ):
+        assert np.isfinite(value)
+        assert value >= 0.0
+
+
+def test_set_truth_sets_fiducial_plus_deviation() -> None:
+    """Knot values equal fiducial + deviation at the knot positions."""
+    target = wspline_target()
+    sampler = target_sampler(target)
+    coeffs = sampler.sample_coeffs(np.random.default_rng(2))
+    cosmo = target.new_cosmo()
+    target.set_truth(cosmo, sampler, coeffs)
+
+    alpha = target.knot_x(cosmo)
+    expected = target.fiducial(alpha) + sampler.deviation(coeffs, alpha)
+    got = np.array([cosmo.w_de(np.expm1(a)) for a in alpha])
+    assert_allclose(got, expected, rtol=1e-7)
+
+
+def test_projection_null_is_flat_for_wspline() -> None:
+    """Zero deviation on a constant fiducial has zero injected/projected curvature."""
+    target = wspline_target()
+    sampler = target_sampler(target)
+    result = target.project(sampler, np.zeros(sampler.n_modes), D2, 2.0)
+    assert_allclose(result.injected_curvature, 0.0, atol=1e-9)
+    assert_allclose(result.projected_curvature, 0.0, atol=1e-9)
+
+
+def test_projection_error_decreases_with_more_knots() -> None:
+    """More knots represent the same truth better (smaller projection error)."""
+    coarse = wspline_target(n_knots=6)
+    fine = wspline_target(n_knots=20)
+    sampler = target_sampler(coarse)
+    coeffs = sampler.sample_coeffs(np.random.default_rng(4))
+    err_coarse = coarse.project(sampler, coeffs, D2, 2.0).projection_error
+    err_fine = fine.project(sampler, coeffs, D2, 2.0).projection_error
+    assert err_fine < err_coarse
+
+
+def test_qspline_null_recovers_fiducial_curvature() -> None:
+    """With zero deviation, injected curvature is the fiducial q(z) curvature."""
+    target = qspline_target()
+    sampler = target_sampler(target)
+    result = target.project(sampler, np.zeros(sampler.n_modes), D2, 2.0)
+    # LCDM q(z) is curved, so this is strictly positive, and the knot model
+    # represents the smooth fiducial closely.
+    assert result.injected_curvature > 0.0
+    assert_allclose(result.projected_curvature, result.injected_curvature, rtol=0.1)
