@@ -895,6 +895,15 @@ class GenerateDEWSpline:
         ),
     ] = 20
 
+    fit_h0: Annotated[
+        bool,
+        typer.Option(
+            help="Fit H0 even without Hubble data (e.g. with SH0ES-calibrated "
+            "SNIa, which constrains H0).",
+            show_default=True,
+        ),
+    ] = False
+
     def __post_init__(self):
         """Generate DE WSpline experiment."""
         Ncm.cfg_init()
@@ -925,6 +934,9 @@ class GenerateDEWSpline:
 
         if self.include_hubble is not None:
             add_h_likelihood(dset, mset, self.include_hubble)
+            cosmo.param_set_desc("H0", {"fit": True})
+
+        if self.fit_h0:
             cosmo.param_set_desc("H0", {"fit": True})
 
         if dset.get_length() == 0:
