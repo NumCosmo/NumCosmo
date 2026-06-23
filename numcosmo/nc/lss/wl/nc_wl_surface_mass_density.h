@@ -49,6 +49,7 @@ typedef struct _NcWLSurfaceMassDensity NcWLSurfaceMassDensity;
 typedef struct _NcWLSurfaceMassDensityOptzs NcWLSurfaceMassDensityOptzs;
 typedef struct _NcWLSurfaceMassDensityCritCache NcWLSurfaceMassDensityCritCache;
 typedef struct _NcWLSurfaceMassDensitySigmaCache NcWLSurfaceMassDensitySigmaCache;
+typedef struct _NcWLSurfaceMassDensityLensCtx NcWLSurfaceMassDensityLensCtx;
 
 /**
  * NcWLSurfaceMassDensityParams:
@@ -128,6 +129,23 @@ struct _NcWLSurfaceMassDensitySigmaCache
   gdouble mean_sigma;
 };
 
+/**
+ * NcWLSurfaceMassDensityLensCtx:
+ *
+ * Lens-side context that caches the z_lens-dependent constants shared across
+ * many source redshifts during `crit_cache_prep`.
+ *
+ */
+struct _NcWLSurfaceMassDensityLensCtx
+{
+  /*< private >*/
+  gint k;
+  gdouble sqrt_Omega_k0;
+  gdouble zl;
+  gdouble dl;
+  gdouble sc_over_Dl;
+};
+
 GType nc_wl_surface_mass_density_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_wl_surface_mass_density);
@@ -156,10 +174,13 @@ gdouble nc_wl_surface_mass_density_reduced_shear_infinity (NcWLSurfaceMassDensit
 gdouble nc_wl_surface_mass_density_magnification (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zs, const gdouble zl, const gdouble zc);
 
 void nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensityOptzs *optzs);
+void nc_wl_surface_mass_density_reduced_shear_optzs_prep_with_lens_ctx (NcHaloDensityProfile *dp, const NcWLSurfaceMassDensityLensCtx *ctx, const gdouble R, const gdouble r_s, const gdouble rho_s, NcWLSurfaceMassDensityOptzs *optzs);
 gdouble nc_wl_surface_mass_density_reduced_shear_optzs (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, NcWLSurfaceMassDensityOptzs *optzs);
 
 void nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensitySigmaCache *sigma_cache);
 void nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zl, const gdouble zc, const gdouble zs, NcWLSurfaceMassDensityCritCache *crit_cache);
+void nc_wl_surface_mass_density_lens_ctx_prep (NcWLSurfaceMassDensityLensCtx *ctx, NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zl);
+void nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const NcWLSurfaceMassDensityLensCtx *ctx, const gdouble zs, NcWLSurfaceMassDensityCritCache *crit_cache);
 gdouble nc_wl_surface_mass_density_reduced_shear_cache (NcWLSurfaceMassDensityCritCache *crit_cache, NcWLSurfaceMassDensitySigmaCache *sigma_cache);
 
 GArray *nc_wl_surface_mass_density_sigma_array (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, GArray *R, gdouble fin, gdouble fout, const gdouble zc);
