@@ -219,23 +219,23 @@ _truth_gen_shape (const gchar *shape, NcGalaxySDShape *sd, NcmMSet *mset,
 static void
 test_nc_data_cluster_wl_truth_new (TestNcDataClusterWLTruth *test, gconstpointer pdata)
 {
-  const TruthCfg *cfg                 = (const TruthCfg *) pdata;
-  NcmRNG *rng                         = ncm_rng_seeded_new (NULL, cfg->seed);
-  NcHICosmo *cosmo                    = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcDistance *dist                    = nc_distance_new (100.0);
-  NcHaloMassSummary *hms              = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
-  NcHaloDensityProfile *dp            = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
-  NcHaloPosition *hp                  = nc_halo_position_new (dist);
-  NcWLSurfaceMassDensity *smd         = nc_wl_surface_mass_density_new (dist);
-  NcGalaxySDTrueRedshift *z_true      = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
-  const NcGalaxyWLObsEllipConv ec     = (g_strcmp0 (cfg->conv, "trace") == 0) ? NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE : NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET;
-  const NcGalaxyWLObsCoord co         = (g_strcmp0 (cfg->coord, "celestial") == 0) ? NC_GALAXY_WL_OBS_COORD_CELESTIAL : NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
-  const gdouble min_radius            = ncm_rng_uniform_gen (rng, 0.1, 0.5);
-  const gdouble max_radius            = ncm_rng_uniform_gen (rng, 2.0, 5.0);
-  const gdouble ra                    = ncm_rng_uniform_gen (rng, -180, 180);
-  const gdouble dec                   = ncm_rng_uniform_gen (rng, -90, 90);
-  const gint n_straddle               = (g_strcmp0 (cfg->redshift, "pz") == 0) ? (gint) G_N_ELEMENTS (STRADDLE_ZAVG) : 0;
-  NcGalaxySDPosition *p_dist          = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (ra - 0.2, ra + 0.2, dec - 0.2, dec + 0.2));
+  const TruthCfg *cfg             = (const TruthCfg *) pdata;
+  NcmRNG *rng                     = ncm_rng_seeded_new (NULL, cfg->seed);
+  NcHICosmo *cosmo                = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist                = nc_distance_new (100.0);
+  NcHaloMassSummary *hms          = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp        = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
+  NcHaloPosition *hp              = nc_halo_position_new (dist);
+  NcWLSurfaceMassDensity *smd     = nc_wl_surface_mass_density_new (dist);
+  NcGalaxySDTrueRedshift *z_true  = NC_GALAXY_SD_TRUE_REDSHIFT (nc_galaxy_sd_true_redshift_lsst_srd_new ());
+  const NcGalaxyWLObsEllipConv ec = (g_strcmp0 (cfg->conv, "trace") == 0) ? NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE : NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET;
+  const NcGalaxyWLObsCoord co     = (g_strcmp0 (cfg->coord, "celestial") == 0) ? NC_GALAXY_WL_OBS_COORD_CELESTIAL : NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
+  const gdouble min_radius        = ncm_rng_uniform_gen (rng, 0.1, 0.5);
+  const gdouble max_radius        = ncm_rng_uniform_gen (rng, 2.0, 5.0);
+  const gdouble ra                = ncm_rng_uniform_gen (rng, -180, 180);
+  const gdouble dec               = ncm_rng_uniform_gen (rng, -90, 90);
+  const gint n_straddle           = (g_strcmp0 (cfg->redshift, "pz") == 0) ? (gint) G_N_ELEMENTS (STRADDLE_ZAVG) : 0;
+  NcGalaxySDPosition *p_dist      = NC_GALAXY_SD_POSITION (nc_galaxy_sd_position_flat_new (ra - 0.2, ra + 0.2, dec - 0.2, dec + 0.2));
   NcGalaxySDShape *s_dist;
   NcGalaxySDObsRedshift *z_dist;
   NcGalaxySDObsRedshiftData *z_data;
@@ -387,6 +387,7 @@ test_nc_data_cluster_wl_truth_methods (TestNcDataClusterWLTruth *test, gconstpoi
 {
   const gboolean is_spec = (g_strcmp0 (test->redshift, "spec") == 0);
   const gboolean is_pz   = (g_strcmp0 (test->redshift, "pz") == 0);
+
   /* Per-redshift tolerance vs the FIXED-320x7 golden over this frozen sample. The
    * production FIXED 20-node truncation is the largest error in each case and
    * sets the bar (adaptive at prec=1e-6 is well inside it): spec is a delta (all
@@ -395,9 +396,9 @@ test_nc_data_cluster_wl_truth_methods (TestNcDataClusterWLTruth *test, gconstpoi
    * margin - tight enough to catch dropping the z_cl split or the effective
    * support, or a node-count regression. */
   const gdouble abstol = is_spec ? 1.0e-9 : (is_pz ? 1.0e-5 : 1.0e-6);
-  NcmVector *vF = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
-  NcmVector *vL = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
-  NcmVector *vC = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+  NcmVector *vF        = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+  NcmVector *vL        = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+  NcmVector *vC        = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
 
   _truth_cmp ("FIXED vs golden", vF, test->golden, 1.0e-6, abstol);
   _truth_cmp ("LNINT vs golden", vL, test->golden, 1.0e-6, abstol);
@@ -407,3 +408,4 @@ test_nc_data_cluster_wl_truth_methods (TestNcDataClusterWLTruth *test, gconstpoi
   ncm_vector_free (vL);
   ncm_vector_free (vC);
 }
+
