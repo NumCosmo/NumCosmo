@@ -24,6 +24,8 @@
 
 """Unit tests for NcHICosmoQSpline curvature functionals."""
 
+from pathlib import Path
+
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -117,11 +119,8 @@ def test_qspline_q_transition_no_crossing() -> None:
     assert np.isnan(cosmo.q_transition())
 
 
-def test_qspline_band_function_grid() -> None:
+def test_qspline_band_function_grid(tmp_path: Path) -> None:
     """A bound-z q(z) function evaluates via eval0 and round-trips through YAML."""
-    import tempfile
-    from pathlib import Path
-
     cosmo = Nc.HICosmoQSpline.new(Ncm.SplineCubicNotaknot.new(), 8, 2.0)
     cosmo.props.qparam = Ncm.Vector.new_array(list(np.linspace(0.5, -0.6, 8)))
     mset = Ncm.MSet.new_array([cosmo])
@@ -136,13 +135,12 @@ def test_qspline_band_function_grid() -> None:
     direct = [cosmo.q(z) for z in z_nodes]
     assert_allclose([oa.get(i).eval0(mset) for i in range(oa.len())], direct)
 
-    with tempfile.TemporaryDirectory() as d:
-        path = Path(d) / "funcs.yaml"
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-        ser.array_to_yaml_file(oa, path.absolute().as_posix())
-        reloaded = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).array_from_yaml_file(
-            path.absolute().as_posix()
-        )
+    path = tmp_path / "funcs.yaml"
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.array_to_yaml_file(oa, path.absolute().as_posix())
+    reloaded = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).array_from_yaml_file(
+        path.absolute().as_posix()
+    )
     assert_allclose(
         [reloaded.get(i).eval0(mset) for i in range(reloaded.len())], direct
     )
