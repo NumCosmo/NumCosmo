@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "nc/background/nc_hicosmo_qspline.h"
+#include "nc_enum_types.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/spline/ncm_spline_gsl.h"
 #include "ncm/model/ncm_mset_func_list.h"
@@ -55,6 +56,7 @@ enum
   PROP_SPLINE,
   PROP_NKNOTS,
   PROP_Z_F,
+  PROP_KNOTS,
   PROP_SIZE,
 };
 
@@ -94,7 +96,11 @@ _nc_hicosmo_qspline_constructed (GObject *object)
 
     for (i = 0; i < qz_size; i++)
     {
-      gdouble zi  = qspline->z_f / (qz_size - 1.0) * i;
+      /* Knot placement in z over [0, z_f]: uniform spreads resolution evenly,
+       * Chebyshev clusters it toward the endpoints. */
+      const gdouble zi = (qspline->knots == NC_HICOSMO_SPLINE_KNOTS_CHEBYSHEV) ?
+                         0.5 * qspline->z_f * (1.0 - cos (M_PI * i / (qz_size - 1.0))) :
+                         qspline->z_f / (qz_size - 1.0) * i;
       gdouble xi  = zi + 1.0;
       gdouble xi2 = xi * xi;
       gdouble xi3 = xi2 * xi;
@@ -147,6 +153,9 @@ _nc_hicosmo_qspline_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_Z_F:
       g_value_set_double (value, qspline->z_f);
       break;
+    case PROP_KNOTS:
+      g_value_set_enum (value, qspline->knots);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -170,6 +179,9 @@ _nc_hicosmo_qspline_set_property (GObject *object, guint prop_id, const GValue *
       break;
     case PROP_Z_F:
       qspline->z_f = g_value_get_double (value);
+      break;
+    case PROP_KNOTS:
+      qspline->knots = g_value_get_enum (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -299,6 +311,15 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
                                                         "final redshift",
                                                         0.0, 100.0, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_KNOTS,
+                                   g_param_spec_enum ("knots",
+                                                      NULL,
+                                                      "knot placement in z",
+                                                      NC_TYPE_HICOSMO_SPLINE_KNOTS,
+                                                      NC_HICOSMO_SPLINE_KNOTS_UNIFORM,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   nc_hicosmo_set_H0_impl       (parent_class, &_nc_hicosmo_qspline_H0);
   nc_hicosmo_set_E2_impl       (parent_class, &_nc_hicosmo_qspline_E2);

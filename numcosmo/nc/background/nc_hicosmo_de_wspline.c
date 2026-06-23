@@ -40,6 +40,7 @@
 #include "build_cfg.h"
 
 #include "nc/background/nc_hicosmo_de_wspline.h"
+#include "nc_enum_types.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/spline/ncm_spline_gsl.h"
 #include "ncm/integration/ncm_integrate.h"
@@ -59,6 +60,7 @@ struct _NcHICosmoDEWSplinePrivate
   gdouble alpha_f;
   gdouble w_f;
   gdouble int_f;
+  NcHICosmoSplineKnots knots;
   NcmSpline *w_alpha;
 };
 
@@ -69,6 +71,7 @@ enum
   PROP_0,
   PROP_Z_1,
   PROP_Z_F,
+  PROP_KNOTS,
   PROP_SIZE,
 };
 
@@ -103,6 +106,9 @@ _nc_hicosmo_de_wspline_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_Z_F:
       g_value_set_double (value, self->z_f);
       break;
+    case PROP_KNOTS:
+      g_value_set_enum (value, self->knots);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -124,6 +130,9 @@ _nc_hicosmo_de_wspline_set_property (GObject *object, guint prop_id, const GValu
       break;
     case PROP_Z_F:
       self->z_f = g_value_get_double (value);
+      break;
+    case PROP_KNOTS:
+      self->knots = g_value_get_enum (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -159,11 +168,27 @@ _nc_hicosmo_de_wspline_constructed (GObject *object)
     wv     = ncm_vector_get_subvector (orig_vec, wvi, wz_size);
 
     {
+      /* Knot placement in alpha = ln(1+z) over [0, alpha_f]. The default
+       * Chebyshev grid clusters knots toward both endpoints (good for
+       * interpolation conditioning), which puts the densest knots at high z
+       * where expansion data are sparsest. The uniform alternative spreads the
+       * resolution evenly, trading endpoint conditioning for a less degenerate
+       * high-z boundary.
+       */
       for (i = 0; i < wz_size; i++)
       {
-        const gdouble alpha = 0.5 * alphaf + 0.5 * alphaf * cos (M_PI * (i * 1.0) / (wz_size - 1.0));
+        if (self->knots == NC_HICOSMO_SPLINE_KNOTS_UNIFORM)
+        {
+          const gdouble alpha = alphaf * i / (wz_size - 1.0);
 
-        ncm_vector_set (alphav, wz_size - 1 - i, alpha);
+          ncm_vector_set (alphav, i, alpha);
+        }
+        else
+        {
+          const gdouble alpha = 0.5 * alphaf + 0.5 * alphaf * cos (M_PI * (i * 1.0) / (wz_size - 1.0));
+
+          ncm_vector_set (alphav, wz_size - 1 - i, alpha);
+        }
       }
     }
 
@@ -241,6 +266,15 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
                                                         "final redshift",
                                                         1.0, 1.0e10, 2.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_KNOTS,
+                                   g_param_spec_enum ("knots",
+                                                      NULL,
+                                                      "knot placement in alpha=ln(1+z)",
+                                                      NC_TYPE_HICOSMO_SPLINE_KNOTS,
+                                                      NC_HICOSMO_SPLINE_KNOTS_CHEBYSHEV,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /* Set w_0 param info */
   ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_WSPLINE_W, 6, "w", "w",

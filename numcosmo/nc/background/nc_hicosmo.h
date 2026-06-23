@@ -49,6 +49,25 @@ G_BEGIN_DECLS
 #define NC_HICOSMO_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO, NcHICosmoClass))
 
 /**
+ * NcHICosmoSplineKnots:
+ * @NC_HICOSMO_SPLINE_KNOTS_UNIFORM: knots spaced uniformly over the reconstruction interval
+ * @NC_HICOSMO_SPLINE_KNOTS_CHEBYSHEV: knots on a Chebyshev grid (clustered toward both endpoints)
+ *
+ * Knot placement for the spline-based $w(z)$ / $q(z)$ reconstruction models
+ * (#NcHICosmoDEWSpline, #NcHICosmoQSpline). Uniform spreads resolution evenly;
+ * Chebyshev clusters it toward the endpoints (better interpolation conditioning,
+ * but denser where high-$z$ data are sparse).
+ *
+ */
+typedef enum /*< enum,underscore_name=NC_HICOSMO_SPLINE_KNOTS >*/
+{
+  NC_HICOSMO_SPLINE_KNOTS_UNIFORM = 0,
+  NC_HICOSMO_SPLINE_KNOTS_CHEBYSHEV,
+  /* < private > */
+  NC_HICOSMO_SPLINE_KNOTS_LEN, /*< skip >*/
+} NcHICosmoSplineKnots;
+
+/**
  * NcHICosmoImpl:
  * @NC_HICOSMO_IMPL_H0: Hubble constant
  * @NC_HICOSMO_IMPL_Omega_b0: Baryonic density today $\Omega_{b0} = \rho_{b0} / \rho_{\mathrm{crit}0}$
