@@ -458,7 +458,7 @@ test_nc_wl_surface_mass_density_reduced_shear_cache (TestNcWLSurfaceMassDensity 
         g_ref    = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, R, zs, zl, zc);
         g_cached = nc_wl_surface_mass_density_reduced_shear_cache (&crit_cache, &sigma_cache);
 
-        ncm_assert_cmpdouble_e (g_cached, ==, g_ref, 1.0e-8, 0.0);
+        ncm_assert_cmpdouble_e (g_cached, ==, g_ref, 1.0e-11, 0.0);
       }
 
       /* Test with source in front of lens (zs < zl): both paths must return 0 */
@@ -509,7 +509,7 @@ test_nc_wl_surface_mass_density_reduced_shear_cache (TestNcWLSurfaceMassDensity 
       g_ref    = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, R, zs, zl, zc);
       g_cached = nc_wl_surface_mass_density_reduced_shear_cache (&crit_cache, &sigma_cache);
 
-      ncm_assert_cmpdouble_e (g_cached, ==, g_ref, 1.0e-8, 0.0);
+      ncm_assert_cmpdouble_e (g_cached, ==, g_ref, 1.0e-11, 0.0);
     }
   }
 }
