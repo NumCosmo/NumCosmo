@@ -169,7 +169,7 @@ def test_resample_type_lightcurve_requires_complete_cov():
         Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT, False
     )
     assert not snia_cov.has_complete_cov()
-    with pytest.raises(GLib.GError, match="light-curve"):
+    with pytest.raises(GLib.Error, match="light-curve"):
         snia_cov.set_resample_type(Nc.DataSNIACovResample.FROM_LIGHTCURVE)
     # The rejected request leaves the previous value untouched.
     assert snia_cov.get_resample_type() == Nc.DataSNIACovResample.AUTO

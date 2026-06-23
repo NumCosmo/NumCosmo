@@ -1788,9 +1788,9 @@ nc_data_snia_cov_set_resample_type (NcDataSNIACov *snia_cov, NcDataSNIACovResamp
 
   if ((resample_type == NC_DATA_SNIA_COV_RESAMPLE_FROM_LIGHTCURVE) && !self->has_complete_cov)
   {
-    g_set_error (error, NC_DATA_SNIA_COV_ERROR, NC_DATA_SNIA_COV_ERROR_UNAVAILABLE_RESAMPLE,
-                 "nc_data_snia_cov_set_resample_type: the dataset has no light-curve "
-                 "(complete) covariance, FROM_LIGHTCURVE resampling is unavailable.");
+    ncm_util_set_or_call_error (error, NC_DATA_SNIA_COV_ERROR, NC_DATA_SNIA_COV_ERROR_UNAVAILABLE_RESAMPLE,
+                                "nc_data_snia_cov_set_resample_type: the dataset has no light-curve "
+                                "(complete) covariance, FROM_LIGHTCURVE resampling is unavailable.");
 
     return FALSE;
   }
