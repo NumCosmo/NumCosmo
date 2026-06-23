@@ -97,6 +97,7 @@ static void _nc_galaxy_sd_obs_redshift_pz_get_integ_lim (NcGalaxySDObsRedshift *
 static NcGalaxySDObsRedshiftIntegrand *_nc_galaxy_sd_obs_redshift_pz_integ (NcGalaxySDObsRedshift *gsdor, gboolean use_lnp);
 static void _nc_galaxy_sd_obs_redshift_pz_data_init (NcGalaxySDObsRedshift *gsdor, NcGalaxySDObsRedshiftData *data);
 static NcmIntegralFixed *_nc_galaxy_sd_obs_redshift_pz_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
+static gdouble _nc_galaxy_sd_obs_redshift_pz_norm (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data);
 
 static void
 nc_galaxy_sd_obs_redshift_pz_class_init (NcGalaxySDObsRedshiftPzClass *klass)
@@ -118,6 +119,7 @@ nc_galaxy_sd_obs_redshift_pz_class_init (NcGalaxySDObsRedshiftPzClass *klass)
   gsdor_class->integ            = &_nc_galaxy_sd_obs_redshift_pz_integ;
   gsdor_class->data_init        = &_nc_galaxy_sd_obs_redshift_pz_data_init;
   gsdor_class->make_fixed_nodes = &_nc_galaxy_sd_obs_redshift_pz_make_fixed_nodes;
+  gsdor_class->norm             = &_nc_galaxy_sd_obs_redshift_pz_norm;
 }
 
 static void
@@ -317,6 +319,19 @@ _nc_galaxy_sd_obs_redshift_pz_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, Nc
   ncm_integral_fixed_calc_nodes (intf, &F);
 
   return intf;
+}
+
+static gdouble
+_nc_galaxy_sd_obs_redshift_pz_norm (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data)
+{
+  NcGalaxySDObsRedshiftPzData * const ldata = (NcGalaxySDObsRedshiftPzData *) data->ldata;
+  gdouble z_min, z_max;
+
+  g_assert_nonnull (ldata->pz);
+
+  ncm_spline_get_bounds (ldata->pz, &z_min, &z_max);
+
+  return ncm_spline_eval_integ (ldata->pz, z_min, z_max);
 }
 
 /**

@@ -219,6 +219,7 @@ static void _nc_galaxy_sd_obs_redshift_gauss_data_init (NcGalaxySDObsRedshift *g
 static NcmSpline *_nc_galaxy_sd_obs_redshift_gauss_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array);
 static void _nc_galaxy_sd_obs_redshift_gauss_add_submodel (NcmModel *model, NcmModel *submodel);
 static NcmIntegralFixed *_nc_galaxy_sd_obs_redshift_gauss_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
+static gdouble _nc_galaxy_sd_obs_redshift_gauss_norm (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data);
 
 static void
 nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *klass)
@@ -330,6 +331,7 @@ nc_galaxy_sd_obs_redshift_gauss_class_init (NcGalaxySDObsRedshiftGaussClass *kla
   gsdor_class->data_init           = &_nc_galaxy_sd_obs_redshift_gauss_data_init;
   gsdor_class->compute_binned_dndz = &_nc_galaxy_sd_obs_redshift_gauss_compute_binned_dndz;
   gsdor_class->make_fixed_nodes    = &_nc_galaxy_sd_obs_redshift_gauss_make_fixed_nodes;
+  gsdor_class->norm                = &_nc_galaxy_sd_obs_redshift_gauss_norm;
   model_class->add_submodel        = &_nc_galaxy_sd_obs_redshift_gauss_add_submodel;
 }
 
@@ -601,6 +603,35 @@ _nc_galaxy_sd_obs_redshift_gauss_make_fixed_nodes (
   ncm_integral_fixed_calc_nodes (intf, &F);
 
   return intf;
+}
+
+static gdouble
+_gauss_norm_integ1d_f (gpointer user_data, const gdouble z, const gdouble w)
+{
+  GaussFixedNodesGSLArg *arg = (GaussFixedNodesGSLArg *) user_data;
+
+  return _nc_galaxy_sd_obs_redshift_gauss_integ_f (&arg->int_data, z, arg->data);
+}
+
+static gdouble
+_nc_galaxy_sd_obs_redshift_gauss_norm (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data)
+{
+  NcGalaxySDObsRedshiftGauss *gsdorgauss = NC_GALAXY_SD_OBS_REDSHIFT_GAUSS (gsdor);
+  GaussFixedNodesGSLArg arg;
+  NcmIntegral1dPtr *integrator;
+  gdouble z_min, z_max, err, result;
+
+  nc_galaxy_sd_obs_redshift_get_integ_lim (gsdor, mset, data, &z_min, &z_max);
+
+  arg.int_data.gsdorgauss = gsdorgauss;
+  arg.data                = data;
+
+  integrator = ncm_integral1d_ptr_new (&_gauss_norm_integ1d_f, NULL);
+  ncm_integral1d_ptr_set_userdata (integrator, &arg);
+  result = ncm_integral1d_eval (NCM_INTEGRAL1D (integrator), z_min, z_max, &err);
+  ncm_integral1d_ptr_free (integrator);
+
+  return result;
 }
 
 typedef struct _BinnedDndzIntegData
