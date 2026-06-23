@@ -76,6 +76,7 @@ typedef struct _NcGalaxySDShapeHSMGaussGlobalData
   gdouble std_noise;
   gdouble c1;
   gdouble c2;
+
   /* Sky-frame calibration bias (c1, c2) rotated into the tangential/cross frame
    * by exp(-2i phi); precomputed in prepare so both the integrand and the
    * fixed-node eval can work consistently in the tangential frame (where the
@@ -209,13 +210,13 @@ nc_galaxy_sd_shape_hsm_gauss_global_class_init (NcGalaxySDShapeHSMGaussGlobalCla
 
   ncm_model_class_check_params_info (model_class);
 
-  sd_shape_class->gen                = &_nc_galaxy_sd_shape_hsm_gauss_global_gen;
-  sd_shape_class->integ              = &_nc_galaxy_sd_shape_hsm_gauss_global_integ;
-  sd_shape_class->prepare_data_array = &_nc_galaxy_sd_shape_hsm_gauss_global_prepare_data_array;
-  sd_shape_class->data_init          = &_nc_galaxy_sd_shape_hsm_gauss_global_data_init;
-  sd_shape_class->direct_estimate    = &_nc_galaxy_sd_shape_hsm_gauss_global_direct_estimate;
+  sd_shape_class->gen                         = &_nc_galaxy_sd_shape_hsm_gauss_global_gen;
+  sd_shape_class->integ                       = &_nc_galaxy_sd_shape_hsm_gauss_global_integ;
+  sd_shape_class->prepare_data_array          = &_nc_galaxy_sd_shape_hsm_gauss_global_prepare_data_array;
+  sd_shape_class->data_init                   = &_nc_galaxy_sd_shape_hsm_gauss_global_data_init;
+  sd_shape_class->direct_estimate             = &_nc_galaxy_sd_shape_hsm_gauss_global_direct_estimate;
   sd_shape_class->prepare_data_array_at_nodes = &_nc_galaxy_sd_shape_hsm_gauss_global_prepare_data_array_at_nodes;
-  sd_shape_class->eval_at_nodes      = &_nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes;
+  sd_shape_class->eval_at_nodes               = &_nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes;
 }
 
 #define VECTOR  (NCM_MODEL (gsds))
