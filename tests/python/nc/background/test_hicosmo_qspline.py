@@ -79,6 +79,46 @@ def test_qspline_lp_norm_nondecreasing(cosmo_q: Nc.HICosmoQSpline) -> None:
         assert norms[1] <= norms[2] * (1.0 + 1e-9)
 
 
+def _z_spline(z_max: float, values) -> Ncm.Spline:
+    """A not-a-knot weight spline W(z) on a uniform grid over [0, z_max]."""
+    z = np.linspace(0.0, z_max, len(values))
+    return Ncm.Spline.new(
+        Ncm.SplineCubicNotaknot.new(),
+        Ncm.Vector.new_array(z.tolist()),
+        Ncm.Vector.new_array(np.asarray(values, dtype=float).tolist()),
+        True,
+    )
+
+
+@pytest.mark.parametrize("ctype_name", ["GEOMETRIC", "D2"])
+def test_qspline_weighted_lp_constant_weight(
+    cosmo_q: Nc.HICosmoQSpline, ctype_name: str
+) -> None:
+    """A constant weight reduces the weighted L_p norm to the plain one."""
+    ctype = getattr(Ncm.SplineCurvatureType, ctype_name)
+    weight = _z_spline(2.0, [1.0] * 16)
+    for p in (2.0, 4.0, 8.0):
+        assert_allclose(
+            cosmo_q.weighted_lp_norm(ctype, p, weight),
+            cosmo_q.lp_norm(ctype, p),
+            rtol=1e-6,
+        )
+
+
+def test_qspline_wlp_mset_func_serializes(cosmo_q: Nc.HICosmoQSpline) -> None:
+    """wlp_* carries its weight spline through serialization and stays evaluable."""
+    rng = np.random.default_rng(13)
+    weight = _z_spline(2.0, rng.uniform(0.2, 2.0, 16))
+    func = Ncm.MSetFuncList.new("NcHICosmoQSpline:wlp_q2", weight)
+    assert func.get_nvar() == 1
+    mset = Ncm.MSet.new_array([cosmo_q])
+    direct = func.eval1(mset, 4.0)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    reloaded = ser.from_yaml(ser.to_yaml(func))
+    assert_allclose(reloaded.eval1(mset, 4.0), direct)
+
+
 def test_qspline_mean_kappa(cosmo_q: Nc.HICosmoQSpline) -> None:
     """mean_kappa is the p=2 geometric case of lp_norm, and matches its MSetFunc."""
     mean_kappa = cosmo_q.mean_kappa()

@@ -9481,6 +9481,12 @@ class HICosmoDEWSpline(HICosmoDE):
     def mean_kappa(self) -> float: ...
     @classmethod
     def new(cls, nknots: int, z_f: float) -> HICosmoDEWSpline: ...
+    def weighted_lp_norm(
+        self,
+        ctype: NumCosmoMath.SplineCurvatureType,
+        p: float,
+        weight: NumCosmoMath.Spline,
+    ) -> float: ...
 
 class HICosmoDEWSplineClass(GObject.GPointer):
     r"""
@@ -11174,6 +11180,12 @@ class HICosmoQSpline(HICosmo):
     @classmethod
     def new(cls, s: NumCosmoMath.Spline, np: int, z_f: float) -> HICosmoQSpline: ...
     def q_transition(self) -> float: ...
+    def weighted_lp_norm(
+        self,
+        ctype: NumCosmoMath.SplineCurvatureType,
+        p: float,
+        weight: NumCosmoMath.Spline,
+    ) -> float: ...
 
 class HICosmoQSplineClass(GObject.GPointer):
     r"""

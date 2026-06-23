@@ -143,3 +143,84 @@ def test_wspline_lp_mset_func(cosmo_w: Nc.HICosmoDEWSpline, name: str) -> None:
     norms = [func.eval1(mset, p) for p in (2.0, 8.0, 16.0)]
     assert norms[0] <= norms[1] * (1.0 + 1e-9)
     assert norms[1] <= norms[2] * (1.0 + 1e-9)
+
+
+def _alpha_spline(alpha_max: float, values) -> Ncm.Spline:
+    """A not-a-knot weight spline W(alpha) on a uniform grid over [0, alpha_max]."""
+    x = np.linspace(0.0, alpha_max, len(values))
+    return Ncm.Spline.new(
+        Ncm.SplineCubicNotaknot.new(),
+        Ncm.Vector.new_array(x.tolist()),
+        Ncm.Vector.new_array(np.asarray(values, dtype=float).tolist()),
+        True,
+    )
+
+
+@pytest.mark.parametrize("ctype_name", ["GEOMETRIC", "D2"])
+def test_wspline_weighted_lp_constant_weight(
+    cosmo_w: Nc.HICosmoDEWSpline, ctype_name: str
+) -> None:
+    """A constant weight reduces the weighted L_p norm to the plain one."""
+    rng = np.random.default_rng(7)
+    w_len = cosmo_w.get_alpha().len()
+    cosmo_w.props.w = Ncm.Vector.new_array(rng.uniform(-1.5, -0.5, w_len).tolist())
+    ctype = getattr(Ncm.SplineCurvatureType, ctype_name)
+    alpha_max = cosmo_w.get_alpha().dup_array()[-1]
+    weight = _alpha_spline(alpha_max, [1.0] * 16)
+
+    for p in (2.0, 4.0, 8.0):
+        assert_allclose(
+            cosmo_w.weighted_lp_norm(ctype, p, weight),
+            cosmo_w.lp_norm(ctype, p),
+            rtol=1e-6,
+        )
+
+
+def test_wspline_weighted_lp_localizes() -> None:
+    """A weight concentrated on a sub-interval probes only that region's curvature.
+
+    Uses a dedicated, deliberately asymmetric profile: the curvature lives almost
+    entirely in the high-alpha half, so a weight there must report a larger norm
+    than one on the low-alpha half.
+    """
+    cosmo = Nc.HICosmoDEWSpline.new(nknots=12, z_f=2.0)
+    alpha = np.array(cosmo.get_alpha().dup_array())
+    alpha_max = alpha[-1]
+    # Flat in the first half, a sharp bend in the second half.
+    bend = np.where(alpha > alpha_max / 2, (alpha - alpha_max / 2) ** 2, 0.0)
+    cosmo.props.w = Ncm.Vector.new_array((-1.0 + 3.0 * bend).tolist())
+    ctype = Ncm.SplineCurvatureType.D2
+    grid = np.linspace(0.0, alpha_max, 16)
+
+    lo = _alpha_spline(alpha_max, np.where(grid <= alpha_max / 2, 1.0, 1e-6))
+    hi = _alpha_spline(alpha_max, np.where(grid >= alpha_max / 2, 1.0, 1e-6))
+    n_lo = cosmo.weighted_lp_norm(ctype, 2.0, lo)
+    n_hi = cosmo.weighted_lp_norm(ctype, 2.0, hi)
+
+    assert np.isfinite(n_lo) and n_lo >= 0.0
+    assert np.isfinite(n_hi) and n_hi >= 0.0
+    # Curvature is concentrated in the high-alpha half.
+    assert n_hi > n_lo
+
+
+def test_wspline_wlp_mset_func_serializes(cosmo_w: Nc.HICosmoDEWSpline) -> None:
+    """wlp_* carries its weight spline through serialization and stays evaluable.
+
+    Regression: a deserialized weight spline is not auto-prepared; the accessor
+    must prepare it before integrating, else eval1 dereferences uninitialized
+    coefficients.
+    """
+    rng = np.random.default_rng(13)
+    w_len = cosmo_w.get_alpha().len()
+    cosmo_w.props.w = Ncm.Vector.new_array(rng.uniform(-1.5, -0.5, w_len).tolist())
+    alpha_max = cosmo_w.get_alpha().dup_array()[-1]
+    weight = _alpha_spline(alpha_max, rng.uniform(0.2, 2.0, 16))
+
+    func = Ncm.MSetFuncList.new("NcHICosmoDEWSpline:wlp_w2", weight)
+    assert func.get_nvar() == 1
+    mset = Ncm.MSet.new_array([cosmo_w])
+    direct = func.eval1(mset, 4.0)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    reloaded = ser.from_yaml(ser.to_yaml(func))
+    assert_allclose(reloaded.eval1(mset, 4.0), direct)
