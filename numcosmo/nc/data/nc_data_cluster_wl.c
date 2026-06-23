@@ -761,7 +761,7 @@ _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
     {
       guint gal_i;
 
-      #pragma omp for schedule (dynamic, 5)
+      #pragma omp for schedule (static)
 
       for (gal_i = 0; gal_i < self->len; gal_i++)
       {
