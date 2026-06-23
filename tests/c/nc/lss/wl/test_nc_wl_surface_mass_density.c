@@ -54,6 +54,7 @@ void test_nc_wl_surface_mass_density_reduced_shear (TestNcWLSurfaceMassDensity *
 void test_nc_wl_surface_mass_density_reduced_shear_array (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 void test_nc_wl_surface_mass_density_reduced_shear_infinity (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 void test_nc_wl_surface_mass_density_reduced_shear_cache (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
+void test_nc_wl_surface_mass_density_reduced_shear_optzs (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 void test_nc_wl_surface_mass_density_free (TestNcWLSurfaceMassDensity *test, gconstpointer pdata);
 
 gint
@@ -114,6 +115,18 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/wl_surface_mass_density/Okn/nfw/reduced_shear/cache", TestNcWLSurfaceMassDensity, NULL,
               &test_nc_wl_surface_mass_density_new_Okn,
               &test_nc_wl_surface_mass_density_reduced_shear_cache,
+              &test_nc_wl_surface_mass_density_free);
+  g_test_add ("/nc/wl_surface_mass_density/nfw/reduced_shear/optzs", TestNcWLSurfaceMassDensity, NULL,
+              &test_nc_wl_surface_mass_density_new,
+              &test_nc_wl_surface_mass_density_reduced_shear_optzs,
+              &test_nc_wl_surface_mass_density_free);
+  g_test_add ("/nc/wl_surface_mass_density/Okp/nfw/reduced_shear/optzs", TestNcWLSurfaceMassDensity, NULL,
+              &test_nc_wl_surface_mass_density_new_Okp,
+              &test_nc_wl_surface_mass_density_reduced_shear_optzs,
+              &test_nc_wl_surface_mass_density_free);
+  g_test_add ("/nc/wl_surface_mass_density/Okn/nfw/reduced_shear/optzs", TestNcWLSurfaceMassDensity, NULL,
+              &test_nc_wl_surface_mass_density_new_Okn,
+              &test_nc_wl_surface_mass_density_reduced_shear_optzs,
               &test_nc_wl_surface_mass_density_free);
 
   g_test_run ();
@@ -510,6 +523,78 @@ test_nc_wl_surface_mass_density_reduced_shear_cache (TestNcWLSurfaceMassDensity 
       g_cached = nc_wl_surface_mass_density_reduced_shear_cache (&crit_cache, &sigma_cache);
 
       ncm_assert_cmpdouble_e (g_cached, ==, g_ref, 1.0e-11, 0.0);
+    }
+  }
+}
+
+void
+test_nc_wl_surface_mass_density_reduced_shear_optzs (TestNcWLSurfaceMassDensity *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo            = test->cosmo;
+  NcHaloDensityProfile *dp    = test->dp;
+  NcWLSurfaceMassDensity *smd = test->smd;
+  const gdouble zl            = test->zl;
+  const gdouble zc            = test->zc;
+  const gint nR               = g_test_rand_int_range (10, 20);
+  const gint nzs              = g_test_rand_int_range (10, 20);
+  gint i, j;
+
+  test->R2 = nc_halo_density_profile_r_s (dp, cosmo, zc);
+
+  /* Test fixed R values from fixture */
+  {
+    const gdouble R_vals[3] = {test->R1, test->R2, test->R3};
+
+    for (i = 0; i < 3; i++)
+    {
+      const gdouble R = R_vals[i];
+      NcWLSurfaceMassDensityOptzs optzs;
+
+      nc_wl_surface_mass_density_reduced_shear_optzs_prep (smd, dp, cosmo, R, zl, zc, &optzs);
+
+      /* Test with source behind lens (zs > zl) */
+      {
+        const gdouble zs = test->zs;
+        gdouble g_ref, g_optzs;
+
+        g_ref   = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, R, zs, zl, zc);
+        g_optzs = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, zs, zl, &optzs);
+
+        ncm_assert_cmpdouble_e (g_optzs, ==, g_ref, 1.0e-11, 0.0);
+      }
+
+      /* Test with source in front of lens (zs < zl): both paths must return 0 */
+      {
+        const gdouble zs = 0.5 * zl;
+        gdouble g_ref, g_optzs;
+
+        g_ref   = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, R, zs, zl, zc);
+        g_optzs = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, zs, zl, &optzs);
+
+        g_assert_cmpfloat (g_ref, ==, 0.0);
+        g_assert_cmpfloat (g_optzs, ==, 0.0);
+      }
+    }
+  }
+
+  /* Randomised sweep: prepare optzs once per R, sweep multiple zs values */
+  for (i = 0; i < nR; i++)
+  {
+    const gdouble R = exp (g_test_rand_double_range (log (1.0e-2), log (1.0e1)));
+    NcWLSurfaceMassDensityOptzs optzs;
+
+    nc_wl_surface_mass_density_reduced_shear_optzs_prep (smd, dp, cosmo, R, zl, zc, &optzs);
+
+    for (j = 0; j < nzs; j++)
+    {
+      /* Restrict to zs > zl to stay away from the zs == zl boundary */
+      const gdouble zs = g_test_rand_double_range (zl * 1.01, 3.0);
+      gdouble g_ref, g_optzs;
+
+      g_ref   = nc_wl_surface_mass_density_reduced_shear (smd, dp, cosmo, R, zs, zl, zc);
+      g_optzs = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, zs, zl, &optzs);
+
+      ncm_assert_cmpdouble_e (g_optzs, ==, g_ref, 1.0e-11, 0.0);
     }
   }
 }
