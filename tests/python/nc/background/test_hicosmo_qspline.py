@@ -144,3 +144,35 @@ def test_qspline_band_function_grid(tmp_path: Path) -> None:
     assert_allclose(
         [reloaded.get(i).eval0(mset) for i in range(reloaded.len())], direct
     )
+
+
+def test_qspline_knots_default_is_uniform() -> None:
+    """The default q(z) knot placement is uniform in z."""
+    cosmo = Nc.HICosmoQSpline.new(Ncm.SplineCubicNotaknot.new(), 8, 2.0)
+    assert cosmo.props.knots == Nc.HICosmoSplineKnots.UNIFORM
+
+    z = np.array(cosmo.props.spline.peek_xv().dup_array())
+    assert_allclose(np.diff(z), np.diff(z)[0])  # evenly spaced in z
+
+
+def test_qspline_knots_chebyshev_clusters() -> None:
+    """The Chebyshev option clusters q(z) knots toward the endpoints in z."""
+    n, z_f = 8, 2.0
+    uni = Nc.HICosmoQSpline.new(Ncm.SplineCubicNotaknot.new(), n, z_f)
+    cheb = Nc.HICosmoQSpline(
+        spline=Ncm.SplineCubicNotaknot.new(),
+        qparam_length=n,
+        zf=z_f,
+        knots=Nc.HICosmoSplineKnots.CHEBYSHEV,
+    )
+    assert cheb.props.knots == Nc.HICosmoSplineKnots.CHEBYSHEV
+
+    z_uni = np.array(uni.props.spline.peek_xv().dup_array())
+    z_cheb = np.array(cheb.props.spline.peek_xv().dup_array())
+    assert_allclose(z_cheb[0], z_uni[0])
+    assert_allclose(z_cheb[-1], z_uni[-1])
+    # Chebyshev's high-z gap is tighter than uniform's.
+    assert (z_cheb[-1] - z_cheb[-2]) < (z_uni[-1] - z_uni[-2])
+    # and the central gap exceeds the boundary gaps.
+    d = np.diff(z_cheb)
+    assert d[len(d) // 2] > d[0]
