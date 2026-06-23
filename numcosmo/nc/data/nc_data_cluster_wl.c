@@ -103,6 +103,7 @@ struct _NcDataClusterWLPrivate
   GPtrArray *z_nodes_per_galaxy;
   GArray *fixed_norm;
   gdouble fixed_nodes_zcl;
+
   /* Staleness of the per-galaxy radius/optzs caches read by the cubature/lnint
    * integrand path. These accumulate across prepares and are cleared only when
    * prepare_data_array() actually runs, so a fixed-node prepare (which leaves
@@ -764,6 +765,7 @@ _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
   #pragma omp parallel reduction(+:result) if (self->enable_parallel)
   {
     NcGalaxySDPositionIntegrand *integrand_position = nc_galaxy_sd_position_integ (self->galaxy_position, FALSE);
+
     /* Index 0 is the anchor node (z_lo); the remaining n_total_nodes are the
      * background Gauss-Legendre nodes (unused, i.e. left untouched, for
      * fully-foreground galaxies). */
@@ -1264,11 +1266,12 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
     const gboolean update_nodes  = model_update || zcl_changed || (self->fixed_nodes->len != self->len);
     const gboolean update_radius = cosmo_changed || hp_changed;
     const gboolean update_optzs  = cosmo_changed || hp_changed || dp_changed;
+
     /* update_nodes rebuilds z_nodes_per_galaxy at a new grid (e.g. a changed
      * n-nodes/rule-n), which resizes and repositions every per-node crit cache;
      * fold it in so the cache is never read at stale grid positions. */
-    const gboolean update_crit   = cosmo_changed || zcl_changed || update_nodes;
-    const gboolean update_sigma  = cosmo_changed || hp_changed || dp_changed;
+    const gboolean update_crit  = cosmo_changed || zcl_changed || update_nodes;
+    const gboolean update_sigma = cosmo_changed || hp_changed || dp_changed;
 
     if (model_update)
     {

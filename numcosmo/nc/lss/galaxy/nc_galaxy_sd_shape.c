@@ -727,7 +727,7 @@ nc_galaxy_sd_shape_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrAr
 gboolean
 nc_galaxy_sd_shape_prepare_data_array_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy, gboolean update_radius, gboolean update_crit, gboolean update_sigma)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare_data_array_at_nodes (gsds, mset, data_array, z_nodes_per_galaxy, update_radius, update_crit, update_sigma); 
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare_data_array_at_nodes (gsds, mset, data_array, z_nodes_per_galaxy, update_radius, update_crit, update_sigma);
 }
 
 /**

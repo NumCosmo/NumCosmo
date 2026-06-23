@@ -76,6 +76,7 @@ typedef struct _NcGalaxySDShapeHSMGaussData
   gdouble std_noise;
   gdouble c1;
   gdouble c2;
+
   /* Sky-frame calibration bias (c1, c2) rotated into the tangential/cross frame
    * by exp(-2i phi); precomputed in prepare so both the integrand and the
    * fixed-node eval work consistently in the tangential frame. */
