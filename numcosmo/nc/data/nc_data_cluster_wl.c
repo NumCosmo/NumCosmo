@@ -103,14 +103,7 @@ struct _NcDataClusterWLPrivate
   GPtrArray *z_nodes_per_galaxy;
   GArray *fixed_norm;
   gdouble fixed_nodes_zcl;
-
-  /* Staleness of the per-galaxy radius/optzs caches read by the cubature/lnint
-   * integrand path. These accumulate across prepares and are cleared only when
-   * prepare_data_array() actually runs, so a fixed-node prepare (which leaves
-   * those caches untouched) does not silently swallow a model change that a
-   * later integrand-path eval still needs to see. */
-  gboolean da_radius_dirty;
-  gboolean da_optzs_dirty;
+  gboolean force_rebuild;
 };
 
 enum
@@ -175,14 +168,12 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->z_nodes_per_galaxy = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   self->fixed_norm         = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->fixed_nodes_zcl    = GSL_NAN;
-  self->da_radius_dirty    = TRUE;
-  self->da_optzs_dirty     = TRUE;
-
-  self->err = ncm_vector_new (1);
-  self->zpi = ncm_vector_new (1);
-  self->zpf = ncm_vector_new (1);
-  self->res = ncm_vector_new (1);
-  self->tmp = ncm_vector_new (1);
+  self->force_rebuild      = TRUE;
+  self->err                = ncm_vector_new (1);
+  self->zpi                = ncm_vector_new (1);
+  self->zpf                = ncm_vector_new (1);
+  self->res                = ncm_vector_new (1);
+  self->tmp                = ncm_vector_new (1);
 
   g_ptr_array_set_free_func (self->shape_data, (GDestroyNotify) nc_galaxy_sd_shape_data_unref);
 }
@@ -1246,23 +1237,27 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
   nc_halo_position_prepare_if_needed (halo_position, cosmo);
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
   {
-    const gboolean z_changed    = ncm_model_ctrl_model_update (self->ctrl_redshift, NCM_MODEL (galaxy_redshift));
-    const gboolean model_update = z_changed;
-    const gdouble z_cl          = nc_halo_position_get_redshift (halo_position);
+    const gboolean force_rebuild = self->force_rebuild;
+    const gboolean z_changed     = ncm_model_ctrl_model_update (self->ctrl_redshift, NCM_MODEL (galaxy_redshift));
+    const gboolean model_update  = z_changed || force_rebuild;
+    const gdouble z_cl           = nc_halo_position_get_redshift (halo_position);
+
+    if (force_rebuild)
+      self->force_rebuild = FALSE;
 
     /* The per-galaxy node caches (radius, sigma, critical surface density)
      * live in the shape data this dcwl owns; prepare_at_nodes recomputes them
      * unconditionally. We track the relevant models here so it is only invoked
      * when the grid was rebuilt or cosmo/halo/profile parameters changed. Each
      * ctrl is updated unconditionally to keep its pkey state in sync. */
-    const gboolean cosmo_changed = ncm_model_ctrl_update (self->ctrl_cosmo_nodes, NCM_MODEL (cosmo));
-    const gboolean hp_changed    = ncm_model_ctrl_update (self->ctrl_hp_nodes, NCM_MODEL (halo_position));
-    const gboolean dp_changed    = ncm_model_ctrl_update (self->ctrl_dp_nodes, NCM_MODEL (density_profile));
+    const gboolean cosmo_changed = ncm_model_ctrl_update (self->ctrl_cosmo_nodes, NCM_MODEL (cosmo)) || force_rebuild;
+    const gboolean hp_changed    = ncm_model_ctrl_update (self->ctrl_hp_nodes, NCM_MODEL (halo_position)) || force_rebuild;
+    const gboolean dp_changed    = ncm_model_ctrl_update (self->ctrl_dp_nodes, NCM_MODEL (density_profile)) || force_rebuild;
 
     /* The reduced shear has a non-smooth point at the lens redshift z_cl. The
      * node layout splits the support there, so the grid must be rebuilt when
      * z_cl changes (in addition to the usual model/length triggers). */
-    const gboolean zcl_changed   = (z_cl != self->fixed_nodes_zcl);
+    const gboolean zcl_changed   = (z_cl != self->fixed_nodes_zcl)  || force_rebuild;
     const gboolean update_nodes  = model_update || zcl_changed || (self->fixed_nodes->len != self->len);
     const gboolean update_radius = cosmo_changed || hp_changed;
     const gboolean update_optzs  = cosmo_changed || hp_changed || dp_changed;
@@ -1283,18 +1278,9 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
       self->fixed_nodes_zcl = GSL_NAN;
     }
 
-    /* Accumulate invalidation for the integrand-path (radius/optzs) caches.
-     * These flags persist across prepares and are cleared only when
-     * prepare_data_array() runs below, so a fixed-node prepare in between does
-     * not consume a model change that a later cubature/lnint eval still needs. */
-    self->da_radius_dirty = self->da_radius_dirty || model_update || update_radius;
-    self->da_optzs_dirty  = self->da_optzs_dirty || model_update || update_optzs;
-
     if ((self->integ_method != NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) || NC_IS_GALAXY_SD_OBS_REDSHIFT_SPEC (galaxy_redshift))
     {
-      nc_galaxy_sd_shape_prepare_data_array (galaxy_shape, mset, self->shape_data, self->da_radius_dirty, self->da_optzs_dirty);
-      self->da_radius_dirty = FALSE;
-      self->da_optzs_dirty  = FALSE;
+      nc_galaxy_sd_shape_prepare_data_array (galaxy_shape, mset, self->shape_data, update_radius, update_optzs);
     }
     else
     {
@@ -1490,7 +1476,8 @@ nc_data_cluster_wl_set_integ_method (NcDataClusterWL *dcwl, NcDataClusterWLInteg
 {
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
 
-  self->integ_method = integ_method;
+  self->integ_method  = integ_method;
+  self->force_rebuild = TRUE;
 }
 
 /**
