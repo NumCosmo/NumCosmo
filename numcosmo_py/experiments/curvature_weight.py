@@ -247,6 +247,7 @@ def wspline_curvature_weight(
     x_grid = np.linspace(0.0, alpha_f, n_grid)
 
     def eval_w(model: Nc.HICosmo, alpha: float) -> float:
+        assert isinstance(model, Nc.HICosmoDE)
         return model.w_de(float(np.expm1(alpha)))
 
     return fisher_information_weight(
