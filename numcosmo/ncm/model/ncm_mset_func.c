@@ -168,6 +168,7 @@ _ncm_mset_func_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_EVAL_X:
       ncm_vector_clear (&self->eval_x);
       self->eval_x = g_value_dup_object (value);
+
       /* Drop stale unique name/symbol; they are rebuilt lazily (peek_uname /
        * peek_usymbol) once the base name/symbol are available. */
       g_clear_pointer (&self->uname,   g_free);

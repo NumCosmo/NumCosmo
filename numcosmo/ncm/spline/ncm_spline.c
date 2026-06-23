@@ -1279,15 +1279,17 @@ ncm_spline_curvature_density (NcmSpline *s, NcmSplineCurvatureType ctype, const 
   {
     case NCM_SPLINE_CURVATURE_D2:
       return d2;
+
     case NCM_SPLINE_CURVATURE_GEOMETRIC:
     {
       const gdouble d1 = ncm_spline_eval_deriv (s, x);
 
       return d2 / pow (1.0 + d1 * d1, 1.5);
     }
-    default:                  /* LCOV_EXCL_LINE */
+    default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
-      return 0.0;             /* LCOV_EXCL_LINE */
+
+      return 0.0; /* LCOV_EXCL_LINE */
   }
 }
 
