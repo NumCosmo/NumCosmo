@@ -376,7 +376,7 @@ def lcdm_fiducial(omega_c0: float = 0.25, omega_b0: float = 0.05) -> Nc.HICosmo:
     return cosmo
 
 
-def save_mset_yaml(mset: Ncm.MSet, path: "str | Path") -> None:
+def save_mset_yaml(mset: Ncm.MSet, path: str | Path) -> None:
     """Serialize an MSet to YAML, the canonical NcmSerialize format.
 
     Use this to write a fiducial truth mset that ``run mc --fiducial`` reads.
