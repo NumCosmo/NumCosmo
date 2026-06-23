@@ -40,9 +40,11 @@
 #include "nc/background/nc_hicosmo_qspline.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/spline/ncm_spline_gsl.h"
+#include "ncm/model/ncm_mset_func_list.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_fit.h>
+#include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcHICosmoQSpline, nc_hicosmo_qspline, NC_TYPE_HICOSMO)
@@ -829,5 +831,150 @@ nc_prior_qspline_cont_new (void)
                                                   NULL);
 
   return prior_qz_cp;
+}
+
+/**
+ * nc_hicosmo_qspline_lp_norm:
+ * @qspline: a #NcHICosmoQSpline
+ * @ctype: a #NcmSplineCurvatureType
+ * @p: the norm order $p > 0$
+ *
+ * Computes the domain-normalized $L_p$ norm of the $q(z)$ curvature density
+ * (selected by @ctype) over the reconstruction range $[0, z_f]$. The case
+ * @p = 2 yields the root-mean-square curvature; large @p approaches the maximum
+ * (see ncm_spline_curvature_lp_norm()).
+ *
+ * Returns: the curvature $L_p$ norm.
+ */
+gdouble
+nc_hicosmo_qspline_lp_norm (NcHICosmoQSpline *qspline, NcmSplineCurvatureType ctype, const gdouble p)
+{
+  gdouble lb, ub;
+
+  _nc_hicosmo_qspline_prepare (qspline);
+  ncm_spline_get_bounds (qspline->q_z, &lb, &ub);
+
+  return ncm_spline_curvature_lp_norm (qspline->q_z, ctype, p, lb, ub);
+}
+
+/**
+ * nc_hicosmo_qspline_mean_kappa:
+ * @qspline: a #NcHICosmoQSpline
+ *
+ * Gets the mean value of $q(z)$ curvature, i.e. the root-mean-square geometric
+ * curvature of $q(z)$ over $[0, z_f]$ (the $p = 2$,
+ * #NCM_SPLINE_CURVATURE_GEOMETRIC case of nc_hicosmo_qspline_lp_norm()).
+ *
+ * Returns: The mean value of $q(z)$ curvature
+ */
+gdouble
+nc_hicosmo_qspline_mean_kappa (NcHICosmoQSpline *qspline)
+{
+  return nc_hicosmo_qspline_lp_norm (qspline, NCM_SPLINE_CURVATURE_GEOMETRIC, 2.0);
+}
+
+static void
+_nc_hicosmo_qspline_mean_kappa (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *cosmo = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_QSPLINE (cosmo));
+  f[0] = nc_hicosmo_qspline_mean_kappa (cosmo);
+}
+
+/**
+ * nc_hicosmo_qspline_q_transition:
+ * @qspline: a #NcHICosmoQSpline
+ *
+ * Gets the deceleration-acceleration transition redshift, i.e. the smallest
+ * $z \in [0, z_f]$ where the reconstructed $q(z)$ crosses zero. Returns NaN when
+ * $q(z)$ has no sign change over the reconstruction range.
+ *
+ * Returns: The transition redshift $z_t$ such that $q(z_t) = 0$, or NaN.
+ */
+gdouble
+nc_hicosmo_qspline_q_transition (NcHICosmoQSpline *qspline)
+{
+  const guint n_scan = 1000;
+  gdouble lb, ub, z0, q0;
+  guint i;
+
+  _nc_hicosmo_qspline_prepare (qspline);
+  ncm_spline_get_bounds (qspline->q_z, &lb, &ub);
+
+  z0 = lb;
+  q0 = ncm_spline_eval (qspline->q_z, z0);
+
+  for (i = 1; i <= n_scan; i++)
+  {
+    const gdouble z1 = lb + (ub - lb) * i / (1.0 * n_scan);
+    const gdouble q1 = ncm_spline_eval (qspline->q_z, z1);
+
+    if (q0 == 0.0)
+      return z0;
+
+    if (q0 * q1 < 0.0)
+    {
+      gdouble a = z0, b = z1, fa = q0;
+      guint it;
+
+      for (it = 0; it < 60; it++)
+      {
+        const gdouble m  = 0.5 * (a + b);
+        const gdouble fm = ncm_spline_eval (qspline->q_z, m);
+
+        if ((fm == 0.0) || ((b - a) < 1.0e-13))
+          return m;
+
+        if (fa * fm < 0.0)
+          b = m;
+        else
+          a = m, fa = fm;
+      }
+
+      return 0.5 * (a + b);
+    }
+
+    z0 = z1;
+    q0 = q1;
+  }
+
+  return GSL_NAN;
+}
+
+static void
+_nc_hicosmo_qspline_q_transition (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *cosmo = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_QSPLINE (cosmo));
+  f[0] = nc_hicosmo_qspline_q_transition (cosmo);
+}
+
+static void
+_nc_hicosmo_qspline_lp_kappa (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *cosmo = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_QSPLINE (cosmo));
+  f[0] = nc_hicosmo_qspline_lp_norm (cosmo, NCM_SPLINE_CURVATURE_GEOMETRIC, x[0]);
+}
+
+static void
+_nc_hicosmo_qspline_lp_q2 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *cosmo = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_QSPLINE (cosmo));
+  f[0] = nc_hicosmo_qspline_lp_norm (cosmo, NCM_SPLINE_CURVATURE_D2, x[0]);
+}
+
+void
+_nc_hicosmo_qspline_register_functions (void)
+{
+  ncm_mset_func_list_register ("mean_kappa", "\\bar{\\kappa}", "NcHICosmoQSpline", "Mean q geometric curvature (L2)", G_TYPE_NONE, _nc_hicosmo_qspline_mean_kappa, 0, 1);
+  ncm_mset_func_list_register ("q_transition", "z_t", "NcHICosmoQSpline", "Deceleration-acceleration transition redshift q(z_t)=0", G_TYPE_NONE, _nc_hicosmo_qspline_q_transition, 0, 1);
+  ncm_mset_func_list_register ("lp_kappa", "\\Vert\\kappa\\Vert_p", "NcHICosmoQSpline", "Lp norm of q geometric curvature, x[0]=p", G_TYPE_NONE, _nc_hicosmo_qspline_lp_kappa, 1, 1);
+  ncm_mset_func_list_register ("lp_q2", "\\Vert q''\\Vert_p", "NcHICosmoQSpline", "Lp norm of q'' (second derivative), x[0]=p", G_TYPE_NONE, _nc_hicosmo_qspline_lp_q2, 1, 1);
 }
 

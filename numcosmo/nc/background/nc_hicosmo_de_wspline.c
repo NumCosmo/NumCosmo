@@ -411,42 +411,43 @@ nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline)
   return ncm_spline_peek_xv (self->w_alpha);
 }
 
+/**
+ * nc_hicosmo_de_wspline_lp_norm:
+ * @wspline: a #NcHICosmoDEWSpline
+ * @ctype: a #NcmSplineCurvatureType
+ * @p: the norm order $p > 0$
+ *
+ * Computes the domain-normalized $L_p$ norm of the $w(\alpha)$ curvature density
+ * (selected by @ctype) over the active range $[0, \alpha_f]$. The case @p = 2
+ * yields the root-mean-square curvature; large @p approaches the maximum (see
+ * ncm_spline_curvature_lp_norm()).
+ *
+ * Returns: the curvature $L_p$ norm.
+ */
 gdouble
-_mean_kappa_integrand (gdouble alpha, gpointer data)
+nc_hicosmo_de_wspline_lp_norm (NcHICosmoDEWSpline *wspline, NcmSplineCurvatureType ctype, const gdouble p)
 {
-  NcHICosmoDEWSplinePrivate * const self = (NcHICosmoDEWSplinePrivate * const) data;
-  const gdouble d2w                      = ncm_spline_eval_deriv2 (self->w_alpha, alpha);
-  const gdouble d1w                      = ncm_spline_eval_deriv (self->w_alpha, alpha);
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
 
-  return d2w * d2w / gsl_pow_3 (1.0 + d1w * d1w);
+  _nc_hicosmo_de_wspline_prepare (wspline);
+
+  return ncm_spline_curvature_lp_norm (self->w_alpha, ctype, p, 0.0, self->alpha_f);
 }
 
 /**
  * nc_hicosmo_de_wspline_mean_kappa:
  * @wspline: a #NcHICosmoDEWSpline
  *
- * Gets the mean value of $w(z)$ curvature.
+ * Gets the mean value of $w(z)$ curvature, i.e. the root-mean-square geometric
+ * curvature of $w(\alpha)$ over $[0, \alpha_f]$ (the $p = 2$,
+ * #NCM_SPLINE_CURVATURE_GEOMETRIC case of nc_hicosmo_de_wspline_lp_norm()).
  *
  * Returns: The mean value of $w(z)$ curvature
  */
 gdouble
 nc_hicosmo_de_wspline_mean_kappa (NcHICosmoDEWSpline *wspline)
 {
-  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
-  gsl_integration_workspace **w          = ncm_integral_get_workspace ();
-  gsl_function F;
-  gdouble result, error;
-
-  _nc_hicosmo_de_wspline_prepare (wspline);
-
-  F.function = &_mean_kappa_integrand;
-  F.params   = self;
-
-  gsl_integration_qag (&F, 0.0, self->alpha_f, 1e-9, 0.0, NCM_INTEGRAL_PARTITION, 6, *w, &result, &error);
-
-  ncm_memory_pool_return (w);
-
-  return sqrt (result / self->alpha_f);
+  return nc_hicosmo_de_wspline_lp_norm (wspline, NCM_SPLINE_CURVATURE_GEOMETRIC, 2.0);
 }
 
 static void
@@ -458,9 +459,29 @@ _nc_hicosmo_de_wspline_mean_kappa (NcmMSetFuncList *flist, NcmMSet *mset, const 
   f[0] = nc_hicosmo_de_wspline_mean_kappa (cosmo);
 }
 
+static void
+_nc_hicosmo_de_wspline_lp_kappa (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoDEWSpline *cosmo = NC_HICOSMO_DE_WSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_DE_WSPLINE (cosmo));
+  f[0] = nc_hicosmo_de_wspline_lp_norm (cosmo, NCM_SPLINE_CURVATURE_GEOMETRIC, x[0]);
+}
+
+static void
+_nc_hicosmo_de_wspline_lp_w2 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoDEWSpline *cosmo = NC_HICOSMO_DE_WSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_DE_WSPLINE (cosmo));
+  f[0] = nc_hicosmo_de_wspline_lp_norm (cosmo, NCM_SPLINE_CURVATURE_D2, x[0]);
+}
+
 void
 _nc_hicosmo_de_wspline_register_functions (void)
 {
-  ncm_mset_func_list_register ("mean_kappa", "\\bar{\\kappa}", "NcHICosmoDEWSpline", "Mean w curvature", G_TYPE_NONE, _nc_hicosmo_de_wspline_mean_kappa, 0, 1);
+  ncm_mset_func_list_register ("mean_kappa", "\\bar{\\kappa}", "NcHICosmoDEWSpline", "Mean w geometric curvature (L2)", G_TYPE_NONE, _nc_hicosmo_de_wspline_mean_kappa, 0, 1);
+  ncm_mset_func_list_register ("lp_kappa", "\\Vert\\kappa\\Vert_p", "NcHICosmoDEWSpline", "Lp norm of w geometric curvature, x[0]=p", G_TYPE_NONE, _nc_hicosmo_de_wspline_lp_kappa, 1, 1);
+  ncm_mset_func_list_register ("lp_w2", "\\Vert w''\\Vert_p", "NcHICosmoDEWSpline", "Lp norm of w'' (second derivative), x[0]=p", G_TYPE_NONE, _nc_hicosmo_de_wspline_lp_w2, 1, 1);
 }
 

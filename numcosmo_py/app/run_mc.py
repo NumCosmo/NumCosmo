@@ -24,7 +24,8 @@
 """NumCosmo APP subcommand to run Monte Carlo Analysis."""
 
 import dataclasses
-from typing import Annotated
+from pathlib import Path
+from typing import Annotated, Optional
 
 import typer
 
@@ -76,6 +77,14 @@ class RunMC(RunCommonOptions):
         ),
     ] = None
 
+    fiducial: Annotated[
+        Optional[Path],
+        typer.Option(
+            help="YAML file with a fiducial NcmMSet to resample from (the injected "
+            "truth). If omitted, resampling uses the fit model itself.",
+        ),
+    ] = None
+
     def __post_init__(self) -> None:
         """Compute Monte Carlo Analysis."""
         super().__post_init__()
@@ -97,6 +106,15 @@ class RunMC(RunCommonOptions):
             raise typer.BadParameter(
                 "Either --output or --product-file must be provided."
             )
+
+        if self.fiducial is not None:
+            ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            fiduc = ser.from_yaml_file(self.fiducial.absolute().as_posix())
+            if not isinstance(fiduc, Ncm.MSet):
+                raise typer.BadParameter(
+                    f"Fiducial file {self.fiducial} does not contain an NcmMSet."
+                )
+            mc.set_fiducial(fiduc)
 
         mc.set_nthreads(self.nthreads)
         mc.set_data_file(self.output.with_suffix(".mc.fits").absolute().as_posix())

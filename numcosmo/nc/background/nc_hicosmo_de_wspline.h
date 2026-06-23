@@ -32,6 +32,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/background/nc_hicosmo_de.h>
+#include <numcosmo/ncm/spline/ncm_spline.h>
 
 G_BEGIN_DECLS
 
@@ -81,6 +82,7 @@ GType nc_hicosmo_de_wspline_get_type (void) G_GNUC_CONST;
 NcHICosmoDEWSpline *nc_hicosmo_de_wspline_new (gsize nknots, const gdouble z_f);
 
 NcmVector *nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline);
+gdouble nc_hicosmo_de_wspline_lp_norm (NcHICosmoDEWSpline *wspline, NcmSplineCurvatureType ctype, const gdouble p);
 gdouble nc_hicosmo_de_wspline_mean_kappa (NcHICosmoDEWSpline *wspline);
 
 G_END_DECLS

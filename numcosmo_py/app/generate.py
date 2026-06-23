@@ -24,6 +24,7 @@
 """NumCosmo APP subcommands generate experiment files."""
 
 from typing import Annotated, Optional
+from enum import StrEnum, auto
 import dataclasses
 from pathlib import Path
 import shlex
@@ -58,6 +59,70 @@ from numcosmo_py.datasets.hicosmo import (
     add_h_likelihood,
     add_snia_likelihood,
 )
+
+
+class CurvaturePriorType(StrEnum):
+    """Curvature prior functional for a spline reconstruction (q(z) or w(z)).
+
+    NONE disables the prior; MEAN_KAPPA is the geometric L2 curvature (default);
+    LP_KAPPA / LP_D2 are the Lp norms of the geometric curvature and of the second
+    derivative respectively, with order p given by ``--curvature-p`` (large p
+    approaches the maximum curvature).
+    """
+
+    NONE = auto()
+    MEAN_KAPPA = auto()
+    LP_KAPPA = auto()
+    LP_D2 = auto()
+
+
+def _add_curvature_prior(
+    likelihood: Ncm.Likelihood,
+    *,
+    namespace: str,
+    d2_name: str,
+    prior_type: CurvaturePriorType,
+    sigma: float,
+    p: float,
+) -> None:
+    """Add the selected curvature Gaussian prior to ``likelihood``.
+
+    The norm order p is fed through the PriorGaussFunc variable slot, which the
+    nvar=1 ``lp_*`` functions read as ``x[0]``. ``namespace`` selects the model
+    (e.g. ``NcHICosmoQSpline``); ``d2_name`` is its second-derivative function
+    (``lp_q2`` or ``lp_w2``). The prior func is added to the likelihood only, not
+    to the derived-function array (those are evaluated with nvar=0).
+    """
+    if prior_type is CurvaturePriorType.NONE:
+        return
+
+    if prior_type is CurvaturePriorType.MEAN_KAPPA:
+        func_name, var = f"{namespace}:mean_kappa", 0.0
+    elif prior_type is CurvaturePriorType.LP_KAPPA:
+        func_name, var = f"{namespace}:lp_kappa", p
+    else:  # LP_D2
+        func_name, var = f"{namespace}:{d2_name}", p
+
+    func = Ncm.MSetFuncList.new(func_name, None)
+    likelihood.priors_add(Ncm.PriorGaussFunc.new(func, 0.0, sigma, var))
+
+
+def _add_function_grid(
+    mfunc_oa: Ncm.ObjArray,
+    func_name: str,
+    z_nodes: "np.ndarray",
+) -> None:
+    """Append nvar=0 functions evaluating ``func_name`` at each redshift node.
+
+    Each node binds its redshift through ``set_eval_x`` (which serializes with the
+    function and is read by ``eval0``), so an MC/MCMC run records the function at
+    every node as a catalog column. Sampling a whole grid yields the
+    reconstruction band and its full node-to-node covariance for free.
+    """
+    for z in z_nodes:
+        func = Ncm.MSetFuncList.new(func_name, None)
+        func.set_eval_x([float(z)])
+        mfunc_oa.add(func)
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -583,6 +648,35 @@ class GenerateQSpline:
         Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
     ] = None
 
+    curvature_prior: Annotated[
+        CurvaturePriorType,
+        typer.Option(help="Curvature prior functional.", show_default=True),
+    ] = CurvaturePriorType.MEAN_KAPPA
+
+    curvature_sigma: Annotated[
+        float,
+        typer.Option(help="Curvature prior standard deviation.", show_default=True),
+    ] = 3.0
+
+    curvature_p: Annotated[
+        float,
+        typer.Option(
+            help="Lp norm order p for the lp_* curvature priors "
+            "(large p approaches the maximum curvature).",
+            show_default=True,
+        ),
+    ] = 2.0
+
+    band_nodes: Annotated[
+        int,
+        typer.Option(
+            help="Number of redshift nodes for the q(z) reconstruction band "
+            "recorded in MC/MCMC catalogs (0 disables).",
+            show_default=True,
+            min=0,
+        ),
+    ] = 20
+
     def __post_init__(self):
         """Generate QSpline experiment."""
         Ncm.cfg_init()
@@ -618,6 +712,28 @@ class GenerateQSpline:
 
         mset.prepare_fparam_map()
         likelihood = Ncm.Likelihood.new(dset)
+
+        # Expose mean_kappa and the transition redshift as derived (nvar=0)
+        # functions for post-processing.
+        mfunc_oa = Ncm.ObjArray.new()
+        mfunc_oa.add(Ncm.MSetFuncList.new("NcHICosmoQSpline:mean_kappa", None))
+        mfunc_oa.add(Ncm.MSetFuncList.new("NcHICosmoQSpline:q_transition", None))
+
+        # Sample q(z) on a redshift grid -> reconstruction band + covariance.
+        if self.band_nodes > 0:
+            _add_function_grid(
+                mfunc_oa, "NcHICosmo:q", np.linspace(0.0, self.z_max, self.band_nodes)
+            )
+
+        _add_curvature_prior(
+            likelihood,
+            namespace="NcHICosmoQSpline",
+            d2_name="lp_q2",
+            prior_type=self.curvature_prior,
+            sigma=self.curvature_sigma,
+            p=self.curvature_p,
+        )
+
         # Save experiment
         experiment = Ncm.ObjDictStr()
 
@@ -630,6 +746,11 @@ class GenerateQSpline:
             dset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
         )
         ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())
+
+        ser.array_to_yaml_file(
+            mfunc_oa,
+            self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
+        )
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -745,6 +866,44 @@ class GenerateDEWSpline:
         Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
     ] = None
 
+    curvature_prior: Annotated[
+        CurvaturePriorType,
+        typer.Option(help="Curvature prior functional.", show_default=True),
+    ] = CurvaturePriorType.MEAN_KAPPA
+
+    curvature_sigma: Annotated[
+        float,
+        typer.Option(help="Curvature prior standard deviation.", show_default=True),
+    ] = 3.0
+
+    curvature_p: Annotated[
+        float,
+        typer.Option(
+            help="Lp norm order p for the lp_* curvature priors "
+            "(large p approaches the maximum curvature).",
+            show_default=True,
+        ),
+    ] = 2.0
+
+    band_nodes: Annotated[
+        int,
+        typer.Option(
+            help="Number of redshift nodes for the w(z) reconstruction band "
+            "recorded in MC/MCMC catalogs (0 disables).",
+            show_default=True,
+            min=0,
+        ),
+    ] = 20
+
+    fit_h0: Annotated[
+        bool,
+        typer.Option(
+            help="Fit H0 even without Hubble data (e.g. with SH0ES-calibrated "
+            "SNIa, which constrains H0).",
+            show_default=True,
+        ),
+    ] = False
+
     def __post_init__(self):
         """Generate DE WSpline experiment."""
         Ncm.cfg_init()
@@ -777,6 +936,9 @@ class GenerateDEWSpline:
             add_h_likelihood(dset, mset, self.include_hubble)
             cosmo.param_set_desc("H0", {"fit": True})
 
+        if self.fit_h0:
+            cosmo.param_set_desc("H0", {"fit": True})
+
         if dset.get_length() == 0:
             raise ValueError("No data included in the experiment.")
 
@@ -786,11 +948,26 @@ class GenerateDEWSpline:
         mfunc_oa = Ncm.ObjArray.new()
         mfunc_Omegam = Ncm.MSetFuncList.new("NcHICosmo:Omega_m0", None)
         mfunc_oa.add(mfunc_Omegam)
+        # Always expose mean_kappa as a derived (nvar=0) function for post-processing.
         mfunc_mean_kappa = Ncm.MSetFuncList.new("NcHICosmoDEWSpline:mean_kappa", None)
         mfunc_oa.add(mfunc_mean_kappa)
 
-        prior = Ncm.PriorGaussFunc.new(mfunc_mean_kappa, 0.0, 3.0, 0.0)
-        likelihood.priors_add(prior)
+        # Sample w(z) on a redshift grid -> reconstruction band + covariance.
+        if self.band_nodes > 0:
+            _add_function_grid(
+                mfunc_oa,
+                "NcHICosmoDE:wDE_z",
+                np.linspace(0.0, self.z_max, self.band_nodes),
+            )
+
+        _add_curvature_prior(
+            likelihood,
+            namespace="NcHICosmoDEWSpline",
+            d2_name="lp_w2",
+            prior_type=self.curvature_prior,
+            sigma=self.curvature_sigma,
+            p=self.curvature_p,
+        )
 
         # Save experiment
         experiment = Ncm.ObjDictStr()
