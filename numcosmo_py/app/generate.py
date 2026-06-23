@@ -65,6 +65,27 @@ from numcosmo_py.experiments.curvature_weight import (
 )
 
 
+class KnotPlacement(StrEnum):
+    """Knot distribution for a spline reconstruction (q(z) or w(z)).
+
+    DEFAULT keeps the model's own default (Chebyshev for the w-spline, uniform
+    for the q-spline); UNIFORM / CHEBYSHEV force the placement explicitly.
+    """
+
+    DEFAULT = auto()
+    UNIFORM = auto()
+    CHEBYSHEV = auto()
+
+
+def _spline_knots(placement: "KnotPlacement"):
+    """Map a KnotPlacement to the Nc enum, or None to keep the model default."""
+    if placement is KnotPlacement.UNIFORM:
+        return Nc.HICosmoSplineKnots.UNIFORM
+    if placement is KnotPlacement.CHEBYSHEV:
+        return Nc.HICosmoSplineKnots.CHEBYSHEV
+    return None
+
+
 class CurvaturePriorType(StrEnum):
     """Curvature prior functional for a spline reconstruction (q(z) or w(z)).
 
@@ -654,6 +675,11 @@ class GenerateQSpline:
         int, typer.Option(help="Number of knots.", show_default=True, min=6)
     ] = 6
 
+    knots: Annotated[
+        KnotPlacement,
+        typer.Option(help="Knot placement in z.", show_default=True),
+    ] = KnotPlacement.DEFAULT
+
     z_max: Annotated[
         float, typer.Option(help="Maximum redshift.", show_default=True)
     ] = 2.1
@@ -717,9 +743,18 @@ class GenerateQSpline:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        cosmo = Nc.HICosmoQSpline.new(
-            Ncm.SplineCubicNotaknot(), self.n_knots, self.z_max
-        )
+        knots = _spline_knots(self.knots)
+        if knots is None:
+            cosmo = Nc.HICosmoQSpline.new(
+                Ncm.SplineCubicNotaknot(), self.n_knots, self.z_max
+            )
+        else:
+            cosmo = Nc.HICosmoQSpline(
+                spline=Ncm.SplineCubicNotaknot(),
+                qparam_length=self.n_knots,
+                zf=self.z_max,
+                knots=knots,
+            )
         for i in range(self.n_knots):
             cosmo.param_set_desc(f"qparam_{i}", {"fit": True})
         mset = Ncm.MSet.new_array([cosmo])
@@ -895,6 +930,11 @@ class GenerateDEWSpline:
         int, typer.Option(help="Number of knots.", show_default=True, min=5)
     ] = 5
 
+    knots: Annotated[
+        KnotPlacement,
+        typer.Option(help="Knot placement in alpha=ln(1+z).", show_default=True),
+    ] = KnotPlacement.DEFAULT
+
     z_max: Annotated[
         float, typer.Option(help="Maximum redshift.", show_default=True)
     ] = 2.33
@@ -967,7 +1007,13 @@ class GenerateDEWSpline:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        cosmo = Nc.HICosmoDEWSpline.new(self.n_knots, self.z_max)
+        knots = _spline_knots(self.knots)
+        if knots is None:
+            cosmo = Nc.HICosmoDEWSpline.new(self.n_knots, self.z_max)
+        else:
+            cosmo = Nc.HICosmoDEWSpline(
+                zf=self.z_max, w_length=self.n_knots, knots=knots
+            )
         cosmo.omega_x2omega_k()
         cosmo["Omegak"] = 0.0
 
