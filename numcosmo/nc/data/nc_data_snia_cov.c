@@ -292,6 +292,7 @@ typedef struct _NcDataSNIACovPrivate
   NcmMatrix *inv_cov_mm;
   NcmMatrix *inv_cov_mm_LU;
   gboolean has_complete_cov;
+  NcDataSNIACovResample resample_type;
   guint cov_full_state;
   gboolean has_true_wc;
   GArray *dataset;
@@ -329,6 +330,7 @@ enum
   PROP_COV_FULL,
   PROP_HAS_COMPLETE_COV,
   PROP_COV_MBC_MBC,
+  PROP_RESAMPLE_TYPE,
   PROP_SIZE,
 };
 
@@ -530,6 +532,13 @@ nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_COV_MBC_MBC:
       nc_data_snia_cov_set_cov_mbc_mbc (snia_cov, g_value_get_object (value));
       break;
+    case PROP_RESAMPLE_TYPE:
+      /* Store raw: availability of the light-curve covariance is only known after
+       * the catalog is loaded (constructed), and serialized configs may set this
+       * before that. nc_data_snia_cov_set_resample_type() validates interactively,
+       * and the resample method enforces the invariant at use time. */
+      self->resample_type = g_value_get_enum (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -614,6 +623,9 @@ nc_data_snia_cov_get_property (GObject *object, guint prop_id, GValue *value, GP
       break;
     case PROP_COV_MBC_MBC:
       g_value_set_object (value, nc_data_snia_cov_peek_cov_mbc_mbc (snia_cov));
+      break;
+    case PROP_RESAMPLE_TYPE:
+      g_value_set_enum (value, self->resample_type);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -829,6 +841,23 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
                                                         "Covariance matrix for mag b corr",
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataSNIACov:resample-type:
+   *
+   * Strategy used to resample mock realizations, see #NcDataSNIACovResample. The
+   * default %NC_DATA_SNIA_COV_RESAMPLE_AUTO picks the light-curve covariance when
+   * the dataset provides it and falls back to the distance-modulus covariance
+   * otherwise.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_RESAMPLE_TYPE,
+                                   g_param_spec_enum ("resample-type",
+                                                      NULL,
+                                                      "Resampling strategy",
+                                                      NC_TYPE_DATA_SNIA_COV_RESAMPLE,
+                                                      NC_DATA_SNIA_COV_RESAMPLE_AUTO,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->resample = &_nc_data_snia_cov_resample;
 
@@ -1719,6 +1748,70 @@ nc_data_snia_cov_get_mag_cut (NcDataSNIACov *snia_cov)
   NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
   return self->mag_cut;
+}
+
+/**
+ * nc_data_snia_cov_has_complete_cov:
+ * @snia_cov: a #NcDataSNIACov
+ *
+ * Whether the dataset ships the full SALT2 light-curve covariance, which is
+ * required to resample with %NC_DATA_SNIA_COV_RESAMPLE_FROM_LIGHTCURVE.
+ *
+ * Returns: %TRUE if the light-curve covariance is available.
+ */
+gboolean
+nc_data_snia_cov_has_complete_cov (NcDataSNIACov *snia_cov)
+{
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+
+  return self->has_complete_cov;
+}
+
+/**
+ * nc_data_snia_cov_set_resample_type:
+ * @snia_cov: a #NcDataSNIACov
+ * @resample_type: a #NcDataSNIACovResample
+ * @error: a #GError
+ *
+ * Sets the strategy used to resample mock realizations. Requesting
+ * %NC_DATA_SNIA_COV_RESAMPLE_FROM_LIGHTCURVE on a dataset that already declares
+ * it has no light-curve covariance fails and leaves the current value unchanged.
+ *
+ * Returns: %TRUE on success.
+ */
+gboolean
+nc_data_snia_cov_set_resample_type (NcDataSNIACov *snia_cov, NcDataSNIACovResample resample_type, GError **error)
+{
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+
+  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+  if ((resample_type == NC_DATA_SNIA_COV_RESAMPLE_FROM_LIGHTCURVE) && !self->has_complete_cov)
+  {
+    g_set_error (error, NC_DATA_SNIA_COV_ERROR, NC_DATA_SNIA_COV_ERROR_UNAVAILABLE_RESAMPLE,
+                 "nc_data_snia_cov_set_resample_type: the dataset has no light-curve "
+                 "(complete) covariance, FROM_LIGHTCURVE resampling is unavailable.");
+
+    return FALSE;
+  }
+
+  self->resample_type = resample_type;
+
+  return TRUE;
+}
+
+/**
+ * nc_data_snia_cov_get_resample_type:
+ * @snia_cov: a #NcDataSNIACov
+ *
+ * Returns: the strategy used to resample mock realizations.
+ */
+NcDataSNIACovResample
+nc_data_snia_cov_get_resample_type (NcDataSNIACov *snia_cov)
+{
+  NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+
+  return self->resample_type;
 }
 
 /**
@@ -3497,8 +3590,31 @@ _nc_data_snia_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcDataSNIACov *snia_cov           = NC_DATA_SNIA_COV (data);
   NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
+  gboolean use_lightcurve;
 
-  if (self->has_complete_cov)
+  switch (self->resample_type)
+  {
+    case NC_DATA_SNIA_COV_RESAMPLE_AUTO:
+      use_lightcurve = self->has_complete_cov;
+      break;
+    case NC_DATA_SNIA_COV_RESAMPLE_FROM_COV:
+      use_lightcurve = FALSE;
+      break;
+    case NC_DATA_SNIA_COV_RESAMPLE_FROM_LIGHTCURVE:
+
+      if (!self->has_complete_cov)
+        g_error ("_nc_data_snia_cov_resample: resample-type is FROM_LIGHTCURVE but the "
+                 "dataset has no light-curve (complete) covariance.");
+
+      use_lightcurve = TRUE;
+      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      use_lightcurve = FALSE;  /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
+  }
+
+  if (use_lightcurve)
   {
     NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
     NcSNIADistCov *dcov   = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
@@ -3550,8 +3666,7 @@ _nc_data_snia_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   }
   else
   {
-    /* Fallback to the default method. */
-    g_warning ("_nc_data_snia_cov_resample: data set does not support full covariance resampling. Resampling from the reduced covariance.");
+    /* Resample directly from the distance-modulus covariance (parent method). */
     NCM_DATA_CLASS (nc_data_snia_cov_parent_class)->resample (data, mset, rng);
   }
 }

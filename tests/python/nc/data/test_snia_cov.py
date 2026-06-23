@@ -26,6 +26,7 @@
 
 import pytest
 import numpy as np
+from gi.repository import GLib
 
 from numcosmo_py import Ncm, Nc
 
@@ -144,3 +145,85 @@ def test_recover_best_fit_DES_Y5():
     np.testing.assert_allclose(
         [cosmo["Omegac"], cosmo["w"]], [0.2208, -0.80], rtol=1e-2, atol=1e-2
     )
+
+
+def test_resample_type_default_is_auto():
+    """The resample strategy defaults to AUTO."""
+    snia_cov = Nc.DataSNIACov.new(False, 0)
+    assert snia_cov.get_resample_type() == Nc.DataSNIACovResample.AUTO
+
+
+def test_resample_type_from_cov_always_available():
+    """FROM_COV is valid regardless of whether the light-curve covariance exists."""
+    snia_cov = Nc.DataSNIACov.new_from_cat_id(
+        Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT, False
+    )
+    assert not snia_cov.has_complete_cov()
+    assert snia_cov.set_resample_type(Nc.DataSNIACovResample.FROM_COV)
+    assert snia_cov.get_resample_type() == Nc.DataSNIACovResample.FROM_COV
+
+
+def test_resample_type_lightcurve_requires_complete_cov():
+    """FROM_LIGHTCURVE is rejected (with a GError) on a mu-only dataset."""
+    snia_cov = Nc.DataSNIACov.new_from_cat_id(
+        Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT, False
+    )
+    assert not snia_cov.has_complete_cov()
+    with pytest.raises(GLib.GError, match="light-curve"):
+        snia_cov.set_resample_type(Nc.DataSNIACovResample.FROM_LIGHTCURVE)
+    # The rejected request leaves the previous value untouched.
+    assert snia_cov.get_resample_type() == Nc.DataSNIACovResample.AUTO
+
+
+def test_resample_type_lightcurve_allowed_when_complete():
+    """FROM_LIGHTCURVE is accepted when the dataset ships the light-curve cov."""
+    snia_cov = Nc.DataSNIACov.new_from_cat_id(
+        Nc.DataSNIAId.COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL, False
+    )
+    assert snia_cov.has_complete_cov()
+    assert snia_cov.set_resample_type(Nc.DataSNIACovResample.FROM_LIGHTCURVE)
+    assert snia_cov.get_resample_type() == Nc.DataSNIACovResample.FROM_LIGHTCURVE
+
+
+def test_resample_type_survives_serialization():
+    """The chosen strategy round-trips through serialization (raw, unvalidated).
+
+    The property channel stores the value verbatim (validation happens in the
+    public setter / at resample time), so an experiment file can carry the choice
+    even before the catalog is loaded. An empty catalog is used here because a
+    full-catalog dup_obj trips an unrelated abs_mag_set length assertion.
+    """
+    snia_cov = Nc.DataSNIACov.new(False, 0)
+    snia_cov.set_property("resample-type", Nc.DataSNIACovResample.FROM_LIGHTCURVE)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dup = ser.dup_obj(snia_cov)
+    assert dup.get_resample_type() == Nc.DataSNIACovResample.FROM_LIGHTCURVE
+
+
+@pytest.mark.parametrize(
+    "resample_type",
+    [
+        Nc.DataSNIACovResample.AUTO,
+        Nc.DataSNIACovResample.FROM_COV,
+        Nc.DataSNIACovResample.FROM_LIGHTCURVE,
+    ],
+)
+def test_resample_runs_in_each_mode(resample_type):
+    """Each resample strategy produces a finite realization on a complete dataset."""
+    snia_cov = Nc.DataSNIACov.new_from_cat_id(
+        Nc.DataSNIAId.COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL, False
+    )
+    snia_cov.set_resample_type(resample_type)
+
+    cosmo = Nc.HICosmoDEXcdm.new()
+    cosmo.omega_x2omega_k()
+    cosmo["Omegak"] = 0.0
+    dcov = Nc.SNIADistCov.new_by_id(
+        Nc.Distance.new(10.0), Nc.DataSNIAId.COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL
+    )
+    mset = Ncm.MSet.new_array([cosmo, dcov])
+    mset.prepare_fparam_map()
+
+    rng = Ncm.RNG.seeded_new(None, 123)
+    snia_cov.resample(mset, rng)
+    assert np.all(np.isfinite(snia_cov.peek_mag().dup_array()))
