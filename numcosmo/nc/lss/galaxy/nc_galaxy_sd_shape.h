@@ -107,6 +107,11 @@ void nc_galaxy_sd_shape_apply_shear (NcGalaxySDShape *gsds, const NcmComplex *g,
 void nc_galaxy_sd_shape_apply_shear_inv (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs, NcmComplex *E);
 gdouble nc_galaxy_sd_shape_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs);
 
+typedef void (*NcGalaxySDShapeApplyShearInvFn) (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs, NcmComplex *E);
+typedef gdouble (*NcGalaxySDShapeLndetJacFn) (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs);
+
+void nc_galaxy_sd_shape_peek_dispatch (NcGalaxySDShape *gsds, NcGalaxySDShapeApplyShearInvFn *apply_shear_inv, NcGalaxySDShapeLndetJacFn *lndet_jac);
+
 void nc_galaxy_sd_shape_data_read_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_sd_shape_data_write_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
 GList *nc_galaxy_sd_shape_data_required_columns (NcGalaxySDShapeData *data);

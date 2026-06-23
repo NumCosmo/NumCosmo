@@ -466,6 +466,25 @@ nc_galaxy_sd_shape_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const 
 }
 
 /**
+ * nc_galaxy_sd_shape_peek_dispatch: (skip)
+ * @gsds: a #NcGalaxySDShape instance
+ * @apply_shear_inv: pointer that receives the apply-shear-inverse dispatch slot
+ * @lndet_jac: pointer that receives the lndet-jac dispatch slot
+ *
+ * Returns the function pointers used by nc_galaxy_sd_shape_apply_shear_inv() and
+ * nc_galaxy_sd_shape_lndet_jac(). Allows callers in tight loops to avoid the
+ * per-call private-data dereference.
+ */
+void
+nc_galaxy_sd_shape_peek_dispatch (NcGalaxySDShape *gsds, NcGalaxySDShapeApplyShearInvFn *apply_shear_inv, NcGalaxySDShapeLndetJacFn *lndet_jac)
+{
+  NcGalaxySDShapePrivate * const self = nc_galaxy_sd_shape_get_instance_private (gsds);
+
+  *apply_shear_inv = self->apply_shear_inv;
+  *lndet_jac       = self->int_to_obs_lndet_jac;
+}
+
+/**
  * nc_galaxy_sd_shape_data_read_row:
  * @data: a #NcGalaxySDShapeData
  * @obs: a #NcGalaxyWLObs
