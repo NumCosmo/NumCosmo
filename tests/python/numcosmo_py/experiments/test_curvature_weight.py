@@ -54,6 +54,19 @@ def fixture_wspline_experiment():
     return cosmo, mset, dataset, z_max
 
 
+def test_expected_fisher_dataset_keeps_gaussian(wspline_experiment) -> None:
+    """The expected-Fisher subset keeps the Gaussian-family data (here, all of it)."""
+    _, _, dataset, _ = wspline_experiment
+    subset = cw.expected_fisher_dataset(dataset)
+    assert subset.get_length() == dataset.get_length()  # SNIa cov is Gaussian
+
+
+def test_expected_fisher_dataset_empty_raises() -> None:
+    """An empty dataset has no analytic Fisher and is rejected."""
+    with pytest.raises(ValueError):
+        cw.expected_fisher_dataset(Ncm.Dataset.new())
+
+
 def test_information_weight_values_monotonic() -> None:
     """W(I) decreases with information and stays within [floor, 1]."""
     info = np.array([0.0, 0.1, 1.0, 10.0, 100.0])

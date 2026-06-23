@@ -69,6 +69,32 @@ def _matrix_to_numpy(matrix: Ncm.Matrix) -> npt.NDArray[np.float64]:
     return 0.5 * (out + out.T)
 
 
+# Data families with an analytic mean vector + covariance, for which the expected
+# Fisher F = J^T C^-1 J is defined. Empirical / non-Gaussian likelihoods (e.g.
+# DataBaoEmpiricalFit) have no mean vector and cannot contribute an analytic
+# Fisher, so they are skipped when building the weight (they remain in the
+# likelihood used for the actual fit/MCMC).
+_GAUSS_DATA_TYPES = (Ncm.DataGauss, Ncm.DataGaussCov, Ncm.DataGaussDiag)
+
+
+def expected_fisher_dataset(dataset: Ncm.Dataset) -> Ncm.Dataset:
+    """Sub-dataset of the Gaussian-family data, on which ``fisher_matrix`` works.
+
+    Raises:
+        ValueError: if no data object supports an analytic (expected) Fisher.
+    """
+    subset = Ncm.Dataset.new()
+    for i in range(dataset.get_length()):
+        data = dataset.peek_data(i)
+        if isinstance(data, _GAUSS_DATA_TYPES):
+            subset.append_data(data)
+    if subset.get_length() == 0:
+        raise ValueError(
+            "no Gaussian-family data to build the expected Fisher weight from."
+        )
+    return subset
+
+
 def knot_fparam_indices(mset: Ncm.MSet, knot_prefix: str) -> list[int]:
     """Free-parameter indices whose names start with ``knot_prefix``.
 
@@ -181,7 +207,7 @@ def fisher_information_weight(
         A not-a-knot ``NcmSpline`` ``W(x)`` on ``x_grid``, ready to feed a
         ``wlp_*`` curvature-prior function.
     """
-    fisher = _matrix_to_numpy(dataset.fisher_matrix(mset))
+    fisher = _matrix_to_numpy(expected_fisher_dataset(dataset).fisher_matrix(mset))
     knot_fpi = knot_fparam_indices(mset, knot_prefix)
     if not knot_fpi:
         raise ValueError(f"no free knots with prefix {knot_prefix!r} in mset")
