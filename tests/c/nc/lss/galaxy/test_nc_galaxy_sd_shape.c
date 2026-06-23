@@ -2562,6 +2562,67 @@ _test_nc_galaxy_sd_shape_at_nodes_impl (
     g_ptr_array_unref (z_nodes_small_arr);
   }
 
+  /* Lazy lens-ctx guard: a freshly added galaxy (never prepared, so its
+   * crit_cache_arr is still NULL) must get its per-node crit cache built
+   * even when update_crit=FALSE for the call, because the existing galaxy
+   * (whose cache is already built) does not force the lens context to be
+   * prepared up front in that case. */
+  {
+    NcGalaxySDObsRedshiftData *z_data2 = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
+    NcGalaxySDPositionData *p_data2    = nc_galaxy_sd_position_data_new (test->galaxy_position, z_data2);
+    NcGalaxySDShapeData *s_data2       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_data2);
+    NcmVector *z_nodes2                = ncm_vector_new (n_total);
+    NcmVector *out2                    = ncm_vector_new (n_total);
+
+    for (i = 0; i < n_total; i++)
+    {
+      const gdouble z_i = z_node_min + (z_node_max - z_node_min) * i / (n_total - 1);
+
+      ncm_vector_set (z_nodes2, i, z_i);
+    }
+
+    z_data2->z   = g_test_rand_double_range (0.15, 1.4);
+    p_data2->ra  = g_test_rand_double_range (-1.0e-2, 1.0e-2);
+    p_data2->dec = g_test_rand_double_range (-1.0e-2, 1.0e-2);
+
+    if (is_global)
+      nc_galaxy_sd_shape_hsm_gauss_global_gen (
+        NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape),
+        test->mset, s_data2, 0.03, 0.0, 0.0, 0.0, test->ell_coord, rng);
+    else
+      nc_galaxy_sd_shape_hsm_gauss_gen (
+        NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape),
+        test->mset, s_data2, 0.3, 0.03, 0.0, 0.0, 0.0, test->ell_coord, rng);
+
+    /* Settle galaxy 1's caches first, so the next call's update_crit=FALSE
+     * only exercises galaxy 2's never-prepared state. */
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, TRUE, TRUE);
+    nc_galaxy_sd_shape_prepare_data_array_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy, TRUE, TRUE, TRUE);
+
+    g_ptr_array_add (data_array, s_data2);
+    g_ptr_array_add (z_nodes_per_galaxy, z_nodes2);
+
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, TRUE, TRUE);
+    nc_galaxy_sd_shape_prepare_data_array_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy, TRUE, FALSE, TRUE);
+    nc_galaxy_sd_shape_eval_at_nodes (test->galaxy_shape, test->mset, s_data2, z_nodes2, out2);
+
+    nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+
+    for (i = 0; i < n_total; i++)
+    {
+      const gdouble z_i   = ncm_vector_get (z_nodes2, i);
+      const gdouble ref_i = nc_galaxy_sd_shape_integrand_eval (integrand, z_i, s_data2);
+      const gdouble out_i = ncm_vector_get (out2, i);
+
+      ncm_assert_cmpdouble_e (out_i, ==, ref_i, 1.0e-6, 0.0);
+    }
+
+    nc_galaxy_sd_obs_redshift_data_unref (z_data2);
+    nc_galaxy_sd_position_data_unref (p_data2);
+    nc_galaxy_sd_shape_data_unref (s_data2);
+    ncm_vector_free (out2);
+  }
+
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
   nc_galaxy_sd_position_data_unref (p_data);
   nc_galaxy_sd_shape_data_unref (s_data);
