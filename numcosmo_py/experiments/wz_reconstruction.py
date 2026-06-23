@@ -37,6 +37,7 @@ reconstruction priors, so injected and recovered curvature live on a common
 footing.
 """
 
+from typing import Any
 from enum import StrEnum, auto
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -87,7 +88,9 @@ class TruncatedBasisSampler:
         k = np.arange(1, self.n_modes + 1, dtype=float)
         return self.amplitude * k ** (-self.decay)
 
-    def design_matrix(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    def design_matrix(
+        self, x: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.floating[Any]]:
         """Basis matrix ``phi_k(x)`` with shape ``(len(x), n_modes)``."""
         x = np.asarray(x, dtype=float)
         if self.basis is BasisType.CHEBYSHEV:
@@ -297,23 +300,27 @@ class WSplineTarget(ReconstructionTarget):
         return Nc.HICosmoDEWSpline.new(self.n_knots, self.z_max)
 
     def knot_x(self, cosmo: Nc.HICosmo) -> npt.NDArray[np.float64]:
+        assert isinstance(cosmo, Nc.HICosmoDEWSpline)
         return np.array(cosmo.get_alpha().dup_array())
 
     def fiducial(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         return np.full_like(np.asarray(x, dtype=float), self.w_fid)
 
     def set_knots(self, cosmo: Nc.HICosmo, values: npt.NDArray[np.float64]) -> None:
+        assert isinstance(cosmo, Nc.HICosmoDEWSpline)
         cosmo.props.w = Ncm.Vector.new_array(np.asarray(values).tolist())
 
     def evaluate(
         self, cosmo: Nc.HICosmo, x: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.float64]:
         # x is alpha = ln(1+z); the model evaluates w as a function of z.
+        assert isinstance(cosmo, Nc.HICosmoDEWSpline)
         return np.array([cosmo.w_de(math.expm1(xi)) for xi in np.asarray(x)])
 
     def curvature_lp(
         self, cosmo: Nc.HICosmo, ctype: Ncm.SplineCurvatureType, p: float
     ) -> float:
+        assert isinstance(cosmo, Nc.HICosmoDEWSpline)
         return cosmo.lp_norm(ctype, p)
 
 
@@ -335,22 +342,26 @@ class QSplineTarget(ReconstructionTarget):
         )
 
     def knot_x(self, cosmo: Nc.HICosmo) -> npt.NDArray[np.float64]:
+        assert isinstance(cosmo, Nc.HICosmoQSpline)
         return np.array(cosmo.props.spline.peek_xv().dup_array())
 
     def fiducial(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         return np.array([self.fiducial_cosmo.q(float(xi)) for xi in np.asarray(x)])
 
     def set_knots(self, cosmo: Nc.HICosmo, values: npt.NDArray[np.float64]) -> None:
+        assert isinstance(cosmo, Nc.HICosmoQSpline)
         cosmo.props.qparam = Ncm.Vector.new_array(np.asarray(values).tolist())
 
     def evaluate(
         self, cosmo: Nc.HICosmo, x: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.float64]:
+        assert isinstance(cosmo, Nc.HICosmoQSpline)
         return np.array([cosmo.q(float(xi)) for xi in np.asarray(x)])
 
     def curvature_lp(
         self, cosmo: Nc.HICosmo, ctype: Ncm.SplineCurvatureType, p: float
     ) -> float:
+        assert isinstance(cosmo, Nc.HICosmoQSpline)
         return cosmo.lp_norm(ctype, p)
 
 
