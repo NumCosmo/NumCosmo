@@ -9336,6 +9336,8 @@ class HICosmoDEWSpline(HICosmoDE):
         second redshift knot
       zf -> gdouble: zf
         final redshift
+      knots -> NcHICosmoSplineKnots: knots
+        knot placement in alpha=ln(1+z)
       w -> NcmVector: w
         w
       w-length -> guint: w-length
@@ -9424,6 +9426,7 @@ class HICosmoDEWSpline(HICosmoDE):
     """
 
     class Props:
+        knots: HICosmoSplineKnots
         w: NumCosmoMath.Vector
         w_fit: GLib.Variant
         w_length: int
@@ -9471,6 +9474,7 @@ class HICosmoDEWSpline(HICosmoDE):
     priv: HICosmoDEWSplinePrivate = ...
     def __init__(
         self,
+        knots: HICosmoSplineKnots = ...,
         w: NumCosmoMath.Vector = ...,
         w_fit: GLib.Variant = ...,
         w_length: int = ...,
@@ -11108,6 +11112,8 @@ class HICosmoQSpline(HICosmo):
         Spline object
       zf -> gdouble: zf
         final redshift
+      knots -> NcHICosmoSplineKnots: knots
+        knot placement in z
       H0 -> gdouble: H0
         H_0
       Omegat -> gdouble: Omegat
@@ -11158,6 +11164,7 @@ class HICosmoQSpline(HICosmo):
         Omegat_fit: bool
         asdrag: float
         asdrag_fit: bool
+        knots: HICosmoSplineKnots
         qparam: NumCosmoMath.Vector
         qparam_fit: GLib.Variant
         qparam_length: int
@@ -11178,6 +11185,7 @@ class HICosmoQSpline(HICosmo):
     nknots: int = ...
     size: int = ...
     z_f: float = ...
+    knots: HICosmoSplineKnots = ...
     q_z: NumCosmoMath.Spline = ...
     E2_z: NumCosmoMath.OdeSpline = ...
     def __init__(
@@ -11188,6 +11196,7 @@ class HICosmoQSpline(HICosmo):
         Omegat_fit: bool = ...,
         asdrag: float = ...,
         asdrag_fit: bool = ...,
+        knots: HICosmoSplineKnots = ...,
         qparam: NumCosmoMath.Vector = ...,
         qparam_fit: GLib.Variant = ...,
         qparam_length: int = ...,
@@ -23419,6 +23428,21 @@ class HICosmoQSplineSParams(GObject.GEnum):
 
 class HICosmoQSplineVParams(GObject.GEnum):
     Q: HICosmoQSplineVParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class HICosmoSplineKnots(GObject.GEnum):
+    CHEBYSHEV: HICosmoSplineKnots = ...
+    UNIFORM: HICosmoSplineKnots = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
