@@ -119,6 +119,18 @@ def test_qspline_wlp_mset_func_serializes(cosmo_q: Nc.HICosmoQSpline) -> None:
     assert_allclose(reloaded.eval1(mset, 4.0), direct)
 
 
+def test_qspline_wlp_kappa_mset_func_evaluates(cosmo_q: Nc.HICosmoQSpline) -> None:
+    """The geometric-curvature wlp_kappa accessor evaluates against a weight spline."""
+    weight = _z_spline(2.0, [1.0] * 16)
+    func = Ncm.MSetFuncList.new("NcHICosmoQSpline:wlp_kappa", weight)
+    assert func.get_nvar() == 1
+    mset = Ncm.MSet.new_array([cosmo_q])
+    value = func.eval1(mset, 2.0)
+    assert_allclose(
+        value, cosmo_q.weighted_lp_norm(Ncm.SplineCurvatureType.GEOMETRIC, 2.0, weight)
+    )
+
+
 def test_qspline_mean_kappa(cosmo_q: Nc.HICosmoQSpline) -> None:
     """mean_kappa is the p=2 geometric case of lp_norm, and matches its MSetFunc."""
     mean_kappa = cosmo_q.mean_kappa()

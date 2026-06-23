@@ -199,6 +199,65 @@ def test_generate_qspline_curvature_prior(
     assert exp_file.with_suffix(".functions.yaml").exists()
 
 
+# LOCAL_* priors build a data-driven weight from the expected Fisher, so they
+# need Gaussian-family data (Hubble) rather than the empirical-fit BAO alone.
+LOCAL_CURVATURE_PRIORS = [
+    gen.CurvaturePriorType.LOCAL_KAPPA,
+    gen.CurvaturePriorType.LOCAL_D2,
+]
+
+
+@pytest.mark.parametrize("curvature_prior", LOCAL_CURVATURE_PRIORS)
+@pytest.mark.parametrize("generator", [gen.GenerateDEWSpline, gen.GenerateQSpline])
+def test_generate_spline_local_curvature_prior(
+    tmp_path: Path, generator, curvature_prior: "gen.CurvaturePriorType"
+):
+    """Local (data-driven) curvature priors build the weight and the wlp_* func."""
+    exp_file = tmp_path / "spline.yaml"
+    _ = generator(
+        experiment=exp_file.absolute(),
+        include_hubble=hicosmo.HID.ALL_COMBINED_APR_2025,
+        curvature_prior=curvature_prior,
+        curvature_sigma=1.5,
+        curvature_p=2.0,
+        curvature_ref_factor=0.5,
+    )
+    assert exp_file.exists()
+    assert exp_file.with_suffix(".functions.yaml").exists()
+
+
+@pytest.mark.parametrize(
+    "knots", [gen.KnotPlacement.UNIFORM, gen.KnotPlacement.CHEBYSHEV]
+)
+@pytest.mark.parametrize("generator", [gen.GenerateDEWSpline, gen.GenerateQSpline])
+def test_generate_spline_knot_placement(
+    tmp_path: Path, generator, knots: "gen.KnotPlacement"
+):
+    """Explicit knot placement constructs the model through the knots= path."""
+    exp_file = tmp_path / "spline.yaml"
+    _ = generator(
+        experiment=exp_file.absolute(),
+        include_bao=hicosmo.BAOID.ALL_COMBINED_JUN_2025,
+        knots=knots,
+    )
+    assert exp_file.exists()
+
+
+def test_add_curvature_prior_local_requires_weight():
+    """A LOCAL_* prior without a precomputed weight spline is rejected."""
+    likelihood = Ncm.Likelihood.new(Ncm.Dataset.new())
+    with pytest.raises(ValueError, match="requires a precomputed weight spline"):
+        gen._add_curvature_prior(
+            likelihood,
+            namespace="NcHICosmoDEWSpline",
+            d2_name="lp_w2",
+            prior_type=gen.CurvaturePriorType.LOCAL_D2,
+            sigma=1.0,
+            p=2.0,
+            weight=None,
+        )
+
+
 @pytest.mark.parametrize(
     "generator, n_base",
     [(gen.GenerateQSpline, 2), (gen.GenerateDEWSpline, 2)],

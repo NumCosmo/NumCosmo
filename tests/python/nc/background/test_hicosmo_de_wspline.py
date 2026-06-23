@@ -226,6 +226,22 @@ def test_wspline_wlp_mset_func_serializes(cosmo_w: Nc.HICosmoDEWSpline) -> None:
     assert_allclose(reloaded.eval1(mset, 4.0), direct)
 
 
+def test_wspline_wlp_kappa_mset_func_evaluates(cosmo_w: Nc.HICosmoDEWSpline) -> None:
+    """The geometric-curvature wlp_kappa accessor evaluates against a weight spline."""
+    rng = np.random.default_rng(21)
+    w_len = cosmo_w.get_alpha().len()
+    cosmo_w.props.w = Ncm.Vector.new_array(rng.uniform(-1.5, -0.5, w_len).tolist())
+    alpha_max = cosmo_w.get_alpha().dup_array()[-1]
+    weight = _alpha_spline(alpha_max, [1.0] * 16)
+    func = Ncm.MSetFuncList.new("NcHICosmoDEWSpline:wlp_kappa", weight)
+    assert func.get_nvar() == 1
+    mset = Ncm.MSet.new_array([cosmo_w])
+    value = func.eval1(mset, 2.0)
+    assert_allclose(
+        value, cosmo_w.weighted_lp_norm(Ncm.SplineCurvatureType.GEOMETRIC, 2.0, weight)
+    )
+
+
 def test_wspline_knots_default_is_chebyshev() -> None:
     """The default knot placement is Chebyshev (clustered toward the endpoints)."""
     cosmo = Nc.HICosmoDEWSpline.new(nknots=8, z_f=2.0)
