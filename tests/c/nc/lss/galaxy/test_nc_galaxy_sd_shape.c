@@ -1165,7 +1165,7 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_integ (TestNcGalaxySDShape *test, gcons
     ncm_assert_cmpdouble_e (c2_out, ==, c2, 1.0e-12, 0.0);
     ncm_assert_cmpdouble_e (m_out, ==, m, 1.0e-12, 0.0);
 
-    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, TRUE, TRUE);
 
     int0   = nc_galaxy_sd_shape_integrand_eval (integrand, z_data->z, s_data);
     lnint0 = nc_galaxy_sd_shape_integrand_eval (ln_integrand, z_data->z, s_data);
@@ -1346,7 +1346,7 @@ test_nc_galaxy_sd_shape_hsm_gauss_integ (TestNcGalaxySDShape *test, gconstpointe
     ncm_assert_cmpdouble_e (c2_out, ==, c2, 1.0e-12, 0.0);
     ncm_assert_cmpdouble_e (m_out, ==, m, 1.0e-12, 0.0);
 
-    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, TRUE, TRUE);
 
     int0   = nc_galaxy_sd_shape_integrand_eval (integrand, z_data->z, s_data);
     lnint0 = nc_galaxy_sd_shape_integrand_eval (ln_integrand, z_data->z, s_data);
@@ -2009,7 +2009,7 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_strong_lensing (TestNcGalaxySDShape *te
     nc_galaxy_sd_shape_hsm_gauss_global_gen (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape), test->mset, s_data, 0.03, c1, c2, m, test->ell_coord, rng);
     nc_galaxy_sd_shape_hsm_gauss_global_data_get (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape), s_data, &epsilon_1_out, &epsilon_2_out, &std_noise_out, &c1_out, &c2_out, &m_out);
 
-    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, TRUE, TRUE);
     int0 = nc_galaxy_sd_shape_integrand_eval (integrand, z_data->z, s_data);
 
     {
@@ -2203,7 +2203,7 @@ test_nc_galaxy_sd_shape_hsm_gauss_strong_lensing (TestNcGalaxySDShape *test, gco
     nc_galaxy_sd_shape_hsm_gauss_data_get (NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape), s_data,
                                            &epsilon_1_out, &epsilon_2_out, &std_shape_out, &std_noise_out, &c1_out, &c2_out, &m_out);
 
-    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, TRUE, TRUE);
     int0 = nc_galaxy_sd_shape_integrand_eval (integrand, z_data->z, s_data);
 
     {
@@ -2375,7 +2375,7 @@ _test_nc_galaxy_sd_shape_at_nodes_impl (
     );
 
   g_ptr_array_add (data_array, s_data);
-  nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
+  nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, TRUE, TRUE);
 
   {
     for (i = 0; i < n_total; i++)
@@ -2386,11 +2386,12 @@ _test_nc_galaxy_sd_shape_at_nodes_impl (
       ncm_vector_fast_set (out_ref, i, ref_i);
     }
 
-    nc_galaxy_sd_shape_prepare_at_nodes (
+    nc_galaxy_sd_shape_prepare_data_array_at_nodes (
       test->galaxy_shape,
       test->mset,
       data_array,
-      z_nodes_per_galaxy
+      z_nodes_per_galaxy,
+      TRUE, TRUE, TRUE
     );
     nc_galaxy_sd_shape_eval_at_nodes (
       test->galaxy_shape,
@@ -2416,8 +2417,10 @@ _test_nc_galaxy_sd_shape_at_nodes_impl (
 
     ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", mass_alt, NULL);
 
-    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
-    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+    /* log10MDelta only affects the density profile, which feeds the per-node
+     * sigma cache (not the radius or the critical surface density cache). */
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, FALSE, TRUE);
+    nc_galaxy_sd_shape_prepare_data_array_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy, FALSE, FALSE, TRUE);
     nc_galaxy_sd_shape_eval_at_nodes (test->galaxy_shape, test->mset, s_data, z_nodes, out_alt);
 
     nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
@@ -2448,8 +2451,10 @@ _test_nc_galaxy_sd_shape_at_nodes_impl (
 
     ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "H0", h0_alt, NULL);
 
-    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
-    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+    /* H0 affects the cosmology-dependent radius, critical surface density,
+     * and sigma caches alike. */
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, TRUE, TRUE);
+    nc_galaxy_sd_shape_prepare_data_array_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy, TRUE, TRUE, TRUE);
     nc_galaxy_sd_shape_eval_at_nodes (test->galaxy_shape, test->mset, s_data, z_nodes, out_alt);
 
     nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
@@ -2483,13 +2488,15 @@ _test_nc_galaxy_sd_shape_at_nodes_impl (
     /* Settle the cosmology control so the following z_cl-only change does not
      * coincide with a cosmology update (which would refresh the crit cache for
      * unrelated reasons and mask a z_cl-staleness bug). */
-    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
-    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, TRUE, TRUE);
+    nc_galaxy_sd_shape_prepare_data_array_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy, TRUE, TRUE, TRUE);
 
     ncm_model_param_set_by_name (NCM_MODEL (test->halo_position), "z", zcl_alt, NULL);
 
-    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
-    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+    /* z_cl feeds the radius (via the halo position prefactor), the critical
+     * surface density cache, and the sigma cache alike. */
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, TRUE, TRUE);
+    nc_galaxy_sd_shape_prepare_data_array_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy, TRUE, TRUE, TRUE);
     nc_galaxy_sd_shape_eval_at_nodes (test->galaxy_shape, test->mset, s_data, z_nodes, out_alt);
 
     nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
@@ -2530,11 +2537,13 @@ _test_nc_galaxy_sd_shape_at_nodes_impl (
 
     /* Settle: prepare with the original (length n_total) nodes so the following
      * node-count change does not coincide with a cosmology/halo update. */
-    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array);
-    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy);
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, data_array, TRUE, TRUE);
+    nc_galaxy_sd_shape_prepare_data_array_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_per_galaxy, TRUE, TRUE, TRUE);
 
-    /* Now switch to a different node count with everything else fixed. */
-    nc_galaxy_sd_shape_prepare_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_small_arr);
+    /* Now switch to a different node count with everything else fixed. Only
+     * the critical surface density cache needs to be told to refresh: its
+     * resize-on-mismatch logic is gated by update_crit. */
+    nc_galaxy_sd_shape_prepare_data_array_at_nodes (test->galaxy_shape, test->mset, data_array, z_nodes_small_arr, FALSE, TRUE, FALSE);
     nc_galaxy_sd_shape_eval_at_nodes (test->galaxy_shape, test->mset, s_data, z_nodes_small, out_small);
 
     nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
