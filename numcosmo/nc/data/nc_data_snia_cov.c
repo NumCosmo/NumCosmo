@@ -1784,8 +1784,6 @@ nc_data_snia_cov_set_resample_type (NcDataSNIACov *snia_cov, NcDataSNIACovResamp
 {
   NcDataSNIACovPrivate * const self = nc_data_snia_cov_get_instance_private (snia_cov);
 
-  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
-
   if ((resample_type == NC_DATA_SNIA_COV_RESAMPLE_FROM_LIGHTCURVE) && !self->has_complete_cov)
   {
     ncm_util_set_or_call_error (error, NC_DATA_SNIA_COV_ERROR, NC_DATA_SNIA_COV_ERROR_UNAVAILABLE_RESAMPLE,
