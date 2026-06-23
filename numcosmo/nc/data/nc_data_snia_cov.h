@@ -79,9 +79,33 @@ typedef enum /*< enum,underscore_name=NC_DATA_SNIA_COV_ERROR >*/
   NC_DATA_SNIA_COV_ERROR_ID_NOT_FOUND,
   NC_DATA_SNIA_COV_ERROR_INVALID_ID,
   NC_DATA_SNIA_COV_ERROR_INVALID_SAMPLE,
+  NC_DATA_SNIA_COV_ERROR_UNAVAILABLE_RESAMPLE,
   /* < private > */
   NC_DATA_SNIA_COV_ERROR_LENGTH, /*< skip >*/
 } NcDataSNIACovError;
+
+/**
+ * NcDataSNIACovResample:
+ * @NC_DATA_SNIA_COV_RESAMPLE_AUTO: resample from the light-curve covariance when
+ * available, otherwise from the distance-modulus covariance.
+ * @NC_DATA_SNIA_COV_RESAMPLE_FROM_COV: resample directly from the final
+ * distance-modulus covariance provided with the dataset (always available).
+ * @NC_DATA_SNIA_COV_RESAMPLE_FROM_LIGHTCURVE: resample from the full SALT2
+ * light-curve (mag, width, colour) covariance (requires a complete covariance).
+ *
+ * Strategy used by #NcDataSNIACov to resample a mock realization. Not every
+ * dataset ships the light-curve covariance, so @NC_DATA_SNIA_COV_RESAMPLE_FROM_LIGHTCURVE
+ * is only valid when nc_data_snia_cov_has_complete_cov() is %TRUE.
+ *
+ */
+typedef enum /*< enum,underscore_name=NC_DATA_SNIA_COV_RESAMPLE >*/
+{
+  NC_DATA_SNIA_COV_RESAMPLE_AUTO = 0,
+  NC_DATA_SNIA_COV_RESAMPLE_FROM_COV,
+  NC_DATA_SNIA_COV_RESAMPLE_FROM_LIGHTCURVE,
+  /* < private > */
+  NC_DATA_SNIA_COV_RESAMPLE_LENGTH, /*< skip >*/
+} NcDataSNIACovResample;
 
 GQuark nc_data_snia_cov_error_quark (void) G_GNUC_CONST;
 
@@ -111,6 +135,10 @@ GArray *nc_data_snia_cov_peek_used_in_sh0es (NcDataSNIACov *snia_cov);
 
 void nc_data_snia_cov_set_mag_cut (NcDataSNIACov *snia_cov, const gdouble mag_cut);
 gdouble nc_data_snia_cov_get_mag_cut (NcDataSNIACov *snia_cov);
+
+gboolean nc_data_snia_cov_has_complete_cov (NcDataSNIACov *snia_cov);
+gboolean nc_data_snia_cov_set_resample_type (NcDataSNIACov *snia_cov, NcDataSNIACovResample resample_type, GError **error);
+NcDataSNIACovResample nc_data_snia_cov_get_resample_type (NcDataSNIACov *snia_cov);
 
 void nc_data_snia_cov_set_z_hd (NcDataSNIACov *snia_cov, NcmVector *z_hd);
 void nc_data_snia_cov_set_z_cmb (NcDataSNIACov *snia_cov, NcmVector *z_cmb);
