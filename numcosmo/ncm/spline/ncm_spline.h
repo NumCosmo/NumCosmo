@@ -41,6 +41,22 @@ G_BEGIN_DECLS
 
 G_DECLARE_DERIVABLE_TYPE (NcmSpline, ncm_spline, NCM, SPLINE, GObject)
 
+/**
+ * NcmSplineCurvatureType:
+ * @NCM_SPLINE_CURVATURE_D2: plain second derivative, $c(x) = f''(x)$
+ * @NCM_SPLINE_CURVATURE_GEOMETRIC: geometric curvature of the curve $(x, f(x))$,
+ *   $c(x) = f''(x) / \left(1 + f'(x)^2\right)^{3/2}$
+ *
+ * Choice of the curvature density $c(x)$ used by the $L_p$ curvature functionals
+ * ncm_spline_curvature_lp_norm() and ncm_spline_curvature_max().
+ *
+ */
+typedef enum _NcmSplineCurvatureType
+{
+  NCM_SPLINE_CURVATURE_D2,
+  NCM_SPLINE_CURVATURE_GEOMETRIC,
+} NcmSplineCurvatureType;
+
 struct _NcmSplineClass
 {
   /*< private >*/
@@ -109,6 +125,10 @@ gdouble ncm_spline_eval_integ_idx (const NcmSpline *s, const gdouble xi, const g
 gboolean ncm_spline_is_empty (const NcmSpline *s);
 gsize ncm_spline_min_size (const NcmSpline *s);
 guint ncm_spline_get_index (const NcmSpline *s, const gdouble x);
+
+gdouble ncm_spline_curvature_density (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble x);
+gdouble ncm_spline_curvature_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble p, const gdouble xi, const gdouble xf);
+gdouble ncm_spline_curvature_max (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble xi, const gdouble xf);
 
 /* Utilities -- internal use */
 

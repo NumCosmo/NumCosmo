@@ -39,6 +39,13 @@
 
 #include "ncm/spline/ncm_spline.h"
 #include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_memory_pool.h"
+#include "ncm/integration/ncm_integrate.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_integration.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcmSplinePrivate
 {
@@ -1249,6 +1256,138 @@ ncm_spline_get_index (const NcmSpline *s, const gdouble x)
   NcmSplinePrivate * const self = ncm_spline_get_instance_private ((NcmSpline *) s);
 
   return self->get_index (s, x);
+}
+
+/**
+ * ncm_spline_curvature_density:
+ * @s: a #NcmSpline
+ * @ctype: a #NcmSplineCurvatureType
+ * @x: a value of the abscissa axis
+ *
+ * Evaluates the curvature density $c(x)$ of the interpolated function at @x,
+ * as selected by @ctype (see #NcmSplineCurvatureType). The spline must be
+ * prepared.
+ *
+ * Returns: the curvature density $c(@x)$.
+ */
+gdouble
+ncm_spline_curvature_density (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble x)
+{
+  const gdouble d2 = ncm_spline_eval_deriv2 (s, x);
+
+  switch (ctype)
+  {
+    case NCM_SPLINE_CURVATURE_D2:
+      return d2;
+
+    case NCM_SPLINE_CURVATURE_GEOMETRIC:
+    {
+      const gdouble d1 = ncm_spline_eval_deriv (s, x);
+
+      return d2 / pow (1.0 + d1 * d1, 1.5);
+    }
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+
+      return 0.0; /* LCOV_EXCL_LINE */
+  }
+}
+
+typedef struct _NcmSplineCurvatureArg
+{
+  NcmSpline *s;
+  NcmSplineCurvatureType ctype;
+  gdouble p;
+} NcmSplineCurvatureArg;
+
+static gdouble
+_ncm_spline_curvature_lp_integrand (gdouble x, gpointer data)
+{
+  NcmSplineCurvatureArg *arg = (NcmSplineCurvatureArg *) data;
+  const gdouble c            = ncm_spline_curvature_density (arg->s, arg->ctype, x);
+
+  return pow (fabs (c), arg->p);
+}
+
+/**
+ * ncm_spline_curvature_lp_norm:
+ * @s: a #NcmSpline
+ * @ctype: a #NcmSplineCurvatureType
+ * @p: the norm order $p > 0$
+ * @xi: the lower integration limit
+ * @xf: the upper integration limit
+ *
+ * Computes the domain-normalized $L_p$ norm of the curvature density $c(x)$
+ * (selected by @ctype) over the interval [@xi, @xf],
+ * $$N_p = \left(\frac{1}{x_f - x_i}\int_{x_i}^{x_f} |c(x)|^p\,\mathrm{d}x\right)^{1/p}.$$
+ * The case @p = 2 yields the root-mean-square curvature; as $p \to \infty$ the
+ * result approaches ncm_spline_curvature_max(). The spline must be prepared.
+ *
+ * Returns: the curvature $L_p$ norm $N_p$.
+ */
+gdouble
+ncm_spline_curvature_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble p, const gdouble xi, const gdouble xf)
+{
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  NcmSplineCurvatureArg arg     = {s, ctype, p};
+  gsl_function F;
+  gdouble result, error;
+
+  g_assert_cmpfloat (p, >, 0.0);
+  g_assert_cmpfloat (xf, >, xi);
+
+  F.function = &_ncm_spline_curvature_lp_integrand;
+  F.params   = &arg;
+
+  gsl_integration_qag (&F, xi, xf, 1.0e-9, 0.0, NCM_INTEGRAL_PARTITION, 6, *w, &result, &error);
+
+  ncm_memory_pool_return (w);
+
+  return pow (result / (xf - xi), 1.0 / p);
+}
+
+/**
+ * ncm_spline_curvature_max:
+ * @s: a #NcmSpline
+ * @ctype: a #NcmSplineCurvatureType
+ * @xi: the lower limit
+ * @xf: the upper limit
+ *
+ * Computes the maximum absolute curvature density $\|c\|_\infty = \max_{x}
+ * |c(x)|$ over [@xi, @xf] (the $p \to \infty$ limit of
+ * ncm_spline_curvature_lp_norm()). The extremum is searched over the spline
+ * knots inside the interval and a refining grid; intended as a diagnostic
+ * rather than for use inside a likelihood. The spline must be prepared.
+ *
+ * Returns: the maximum absolute curvature density.
+ */
+gdouble
+ncm_spline_curvature_max (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble xi, const gdouble xf)
+{
+  NcmVector *xv      = ncm_spline_peek_xv (s);
+  const guint len    = ncm_vector_len (xv);
+  const guint n_grid = 20 * len;
+  gdouble cmax       = 0.0;
+  guint i;
+
+  g_assert_cmpfloat (xf, >, xi);
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x = ncm_vector_get (xv, i);
+
+    if ((x >= xi) && (x <= xf))
+      cmax = GSL_MAX_DBL (cmax, fabs (ncm_spline_curvature_density (s, ctype, x)));
+  }
+
+  for (i = 0; i <= n_grid; i++)
+  {
+    const gdouble x = xi + (xf - xi) * i / (1.0 * n_grid);
+
+    cmax = GSL_MAX_DBL (cmax, fabs (ncm_spline_curvature_density (s, ctype, x)));
+  }
+
+  return cmax;
 }
 
 /* Utilities -- internal use */

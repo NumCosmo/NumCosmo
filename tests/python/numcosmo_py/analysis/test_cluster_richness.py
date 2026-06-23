@@ -20,7 +20,6 @@
 """Tests for the numcosmo_py.analysis.cluster_richness package."""
 
 import os
-import tempfile
 from pathlib import Path
 import pytest
 import numpy as np
@@ -143,15 +142,9 @@ def fixture_sample_data(ascaso_model: Nc.ClusterMassAscaso) -> ClusterData:
 
 
 @pytest.fixture(name="temp_db_path")
-def fixture_temp_db_path():
-    """Create a temporary database file."""
-    fd, path = tempfile.mkstemp(suffix=".db")
-    os.close(fd)
-    path_obj = Path(path)
-    yield path_obj
-    # Cleanup
-    if path_obj.exists():
-        path_obj.unlink()
+def fixture_temp_db_path(tmp_path: Path) -> Path:
+    """Path for a temporary database file (created by the code under test)."""
+    return tmp_path / "bestfit.db"
 
 
 # =============================================================================

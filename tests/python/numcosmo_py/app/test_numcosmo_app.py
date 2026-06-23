@@ -327,6 +327,55 @@ def test_run_mc_seed(simple_experiment):
         raise result.exception
 
 
+def test_run_mc_fiducial(simple_experiment, tmp_path):
+    """run mc resamples from an external fiducial mset (--fiducial)."""
+    filename, experiment = simple_experiment
+
+    # A fiducial mset with shifted parameters, serialized to YAML.
+    fiducial = experiment.get("model-set").dup(Ncm.Serialize.new(0))
+    fiducial.param_set_all_ftype(Ncm.ParamType.FREE)
+    fiducial.fparams_set_array([0.5] * fiducial.fparam_len())
+    fiducial_file = tmp_path / "fiducial.mset.yaml"
+    Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).to_yaml_file(
+        fiducial, fiducial_file.as_posix()
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mc",
+            "-p",
+            "--seed",
+            "123",
+            "--nmc",
+            "5",
+            "--fiducial",
+            fiducial_file.as_posix(),
+            filename.as_posix(),
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mc_fiducial_not_an_mset(simple_experiment, tmp_path):
+    """run mc rejects a --fiducial file that is not an NcmMSet."""
+    filename, _ = simple_experiment
+
+    # A serialized model (not wrapped in an MSet) must be rejected.
+    not_mset = tmp_path / "not_mset.yaml"
+    Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).to_yaml_file(
+        Ncm.ModelMVND.new(2), not_mset.as_posix()
+    )
+
+    result = runner.invoke(
+        app,
+        ["run", "mc", "-p", "--fiducial", not_mset.as_posix(), filename.as_posix()],
+    )
+    assert result.exit_code != 0
+
+
 def test_run_theory_vector(simple_experiment):
     """Test run theory vector."""
     filename, _ = simple_experiment
