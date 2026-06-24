@@ -217,9 +217,15 @@ test_nc_wl_ellipticity_frame_parity (void)
 {
   guint j;
 
+  const gdouble phi = 0.37;
+
   /* values must match the legacy NcGalaxyWLObsCoord (CELESTIAL=0, EUCLIDEAN=1) */
   g_assert_cmpint (NC_WL_ELLIPTICITY_FRAME_CELESTIAL, ==, 0);
   g_assert_cmpint (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, ==, 1);
+
+  /* position angle: identity for celestial, reflected for cartesian */
+  g_assert_cmpfloat (fabs (nc_wl_ellipticity_frame_position_angle (NC_WL_ELLIPTICITY_FRAME_CELESTIAL, phi) - phi), <, 1.0e-15);
+  g_assert_cmpfloat (fabs (nc_wl_ellipticity_frame_position_angle (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, phi) - (M_PI - phi)), <, 1.0e-15);
 
   for (j = 0; j < G_N_ELEMENTS (test_ellips); j++)
   {

@@ -245,12 +245,12 @@ _nc_galaxy_sd_shape_hsm_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
 
   nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-  if (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
-  {
-    phi   = M_PI - phi;
-    e_s   = conj (e_s);
-    noise = conj (noise);
-  }
+  /* Express the position angle and the (parity-covariant) intrinsic ellipticity
+   * and noise in the data's coordinate frame; both helpers are the identity for
+   * the celestial frame. The additive bias is frame-fixed and not conjugated. */
+  phi   = nc_wl_ellipticity_frame_position_angle (data->coord, phi);
+  e_s   = nc_wl_ellipticity_frame_to_celestial_c (data->coord, e_s);
+  noise = nc_wl_ellipticity_frame_to_celestial_c (data->coord, noise);
 
   radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
 
@@ -550,8 +550,7 @@ _nc_galaxy_sd_shape_hsm_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet
 
       nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-      if (data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
-        phi = M_PI - phi;
+      phi = nc_wl_ellipticity_frame_position_angle (data_i->coord, phi);
 
       e_o_rotated  = e_o * cexp (-2.0 * I * phi);
       bias_rotated = (ldata_i->c1 + I * ldata_i->c2) * cexp (-2.0 * I * phi);
@@ -639,8 +638,7 @@ _nc_galaxy_sd_shape_hsm_gauss_prepare_data_array_at_nodes (NcGalaxySDShape *gsds
 
       nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-      if (data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
-        phi = M_PI - phi;
+      phi = nc_wl_ellipticity_frame_position_angle (data_i->coord, phi);
 
       e_o_rotated  = e_o * cexp (-2.0 * I * phi);
       bias_rotated = (ldata_i->c1 + I * ldata_i->c2) * cexp (-2.0 * I * phi);
@@ -885,8 +883,7 @@ _nc_galaxy_sd_shape_hsm_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *m
 
     nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-    if (data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
-      phi = M_PI - phi;
+    phi = nc_wl_ellipticity_frame_position_angle (data_i->coord, phi);
 
     hat_g = e_o * cexp (-2.0 * I * phi);
 

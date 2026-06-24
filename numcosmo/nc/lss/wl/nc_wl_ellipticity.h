@@ -99,6 +99,11 @@ gdouble nc_wl_ellipticity_lndet_jac_trace_det (const NcmComplex *g, const NcmCom
  * involution). CELESTIAL is the identity, CARTESIAN conjugates. */
 NCM_INLINE complex double nc_wl_ellipticity_frame_to_celestial_c (NcWLEllipticityFrame frame, complex double e);
 
+/* Position angle to use for the spin-2 tangential rotation in @frame: the
+ * handedness of CARTESIAN reverses the sense of the angle (phi -> pi - phi),
+ * CELESTIAL leaves it unchanged. */
+NCM_INLINE gdouble nc_wl_ellipticity_frame_position_angle (NcWLEllipticityFrame frame, gdouble phi);
+
 /* Inline complex double kernels (TRACE convention: distortion chi). */
 NCM_INLINE complex double nc_wl_ellipticity_apply_shear_trace_c (complex double g, complex double chi);
 NCM_INLINE complex double nc_wl_ellipticity_apply_shear_inv_trace_c (complex double g, complex double chi_obs);
@@ -129,6 +134,12 @@ NCM_INLINE complex double
 nc_wl_ellipticity_frame_to_celestial_c (NcWLEllipticityFrame frame, complex double e)
 {
   return (frame == NC_WL_ELLIPTICITY_FRAME_CARTESIAN) ? conj (e) : e;
+}
+
+NCM_INLINE gdouble
+nc_wl_ellipticity_frame_position_angle (NcWLEllipticityFrame frame, gdouble phi)
+{
+  return (frame == NC_WL_ELLIPTICITY_FRAME_CARTESIAN) ? (M_PI - phi) : phi;
 }
 
 /* TRACE convention (distortion chi). */
