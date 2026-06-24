@@ -335,6 +335,10 @@ lss_tests = [
         'name': 'nc_wl_surface_mass_density',
         'sources': ['nc/lss/wl/test_nc_wl_surface_mass_density.c'],
     },
+    {
+        'name': 'nc_wl_ellipticity',
+        'sources': ['nc/lss/wl/test_nc_wl_ellipticity.c'],
+    },
 ]
 
 # Galaxy and weak lensing tests
