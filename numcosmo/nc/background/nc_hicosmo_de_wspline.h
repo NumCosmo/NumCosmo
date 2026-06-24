@@ -83,6 +83,7 @@ NcHICosmoDEWSpline *nc_hicosmo_de_wspline_new (gsize nknots, const gdouble z_f);
 
 NcmVector *nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline);
 gdouble nc_hicosmo_de_wspline_lp_norm (NcHICosmoDEWSpline *wspline, NcmSplineCurvatureType ctype, const gdouble p);
+gdouble nc_hicosmo_de_wspline_weighted_lp_norm (NcHICosmoDEWSpline *wspline, NcmSplineCurvatureType ctype, const gdouble p, NcmSpline *weight);
 gdouble nc_hicosmo_de_wspline_mean_kappa (NcHICosmoDEWSpline *wspline);
 
 G_END_DECLS

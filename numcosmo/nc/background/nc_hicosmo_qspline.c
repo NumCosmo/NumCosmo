@@ -879,6 +879,33 @@ nc_hicosmo_qspline_lp_norm (NcHICosmoQSpline *qspline, NcmSplineCurvatureType ct
 }
 
 /**
+ * nc_hicosmo_qspline_weighted_lp_norm:
+ * @qspline: a #NcHICosmoQSpline
+ * @ctype: a #NcmSplineCurvatureType
+ * @p: the norm order $p > 0$
+ * @weight: a #NcmSpline holding the non-negative weight density $W(z)$
+ *
+ * Computes the weight-normalized $L_p$ norm of the $q(z)$ curvature density
+ * (selected by @ctype) over the reconstruction range $[0, z_f]$, see
+ * ncm_spline_curvature_weighted_lp_norm(). The @weight abscissa is the redshift
+ * $z$, matching the internal $q(z)$ spline; a large $W(z)$ penalizes curvature
+ * near that $z$, a small one tolerates it.
+ *
+ * Returns: the weighted curvature $L_p$ norm.
+ */
+gdouble
+nc_hicosmo_qspline_weighted_lp_norm (NcHICosmoQSpline *qspline, NcmSplineCurvatureType ctype, const gdouble p, NcmSpline *weight)
+{
+  gdouble lb, ub;
+
+  _nc_hicosmo_qspline_prepare (qspline);
+  ncm_spline_prepare (weight);
+  ncm_spline_get_bounds (qspline->q_z, &lb, &ub);
+
+  return ncm_spline_curvature_weighted_lp_norm (qspline->q_z, ctype, p, weight, lb, ub);
+}
+
+/**
  * nc_hicosmo_qspline_mean_kappa:
  * @qspline: a #NcHICosmoQSpline
  *
@@ -990,6 +1017,26 @@ _nc_hicosmo_qspline_lp_q2 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble 
   f[0] = nc_hicosmo_qspline_lp_norm (cosmo, NCM_SPLINE_CURVATURE_D2, x[0]);
 }
 
+static void
+_nc_hicosmo_qspline_wlp_kappa (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *cosmo = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcmSpline *weight       = NCM_SPLINE (ncm_mset_func_list_peek_obj (flist));
+
+  g_assert (NC_IS_HICOSMO_QSPLINE (cosmo));
+  f[0] = nc_hicosmo_qspline_weighted_lp_norm (cosmo, NCM_SPLINE_CURVATURE_GEOMETRIC, x[0], weight);
+}
+
+static void
+_nc_hicosmo_qspline_wlp_q2 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *cosmo = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcmSpline *weight       = NCM_SPLINE (ncm_mset_func_list_peek_obj (flist));
+
+  g_assert (NC_IS_HICOSMO_QSPLINE (cosmo));
+  f[0] = nc_hicosmo_qspline_weighted_lp_norm (cosmo, NCM_SPLINE_CURVATURE_D2, x[0], weight);
+}
+
 void
 _nc_hicosmo_qspline_register_functions (void)
 {
@@ -997,5 +1044,7 @@ _nc_hicosmo_qspline_register_functions (void)
   ncm_mset_func_list_register ("q_transition", "z_t", "NcHICosmoQSpline", "Deceleration-acceleration transition redshift q(z_t)=0", G_TYPE_NONE, _nc_hicosmo_qspline_q_transition, 0, 1);
   ncm_mset_func_list_register ("lp_kappa", "\\Vert\\kappa\\Vert_p", "NcHICosmoQSpline", "Lp norm of q geometric curvature, x[0]=p", G_TYPE_NONE, _nc_hicosmo_qspline_lp_kappa, 1, 1);
   ncm_mset_func_list_register ("lp_q2", "\\Vert q''\\Vert_p", "NcHICosmoQSpline", "Lp norm of q'' (second derivative), x[0]=p", G_TYPE_NONE, _nc_hicosmo_qspline_lp_q2, 1, 1);
+  ncm_mset_func_list_register ("wlp_kappa", "\\Vert\\kappa\\Vert_{p,W}", "NcHICosmoQSpline", "Weighted Lp norm of q geometric curvature, x[0]=p, obj=weight spline W(z)", NCM_TYPE_SPLINE, _nc_hicosmo_qspline_wlp_kappa, 1, 1);
+  ncm_mset_func_list_register ("wlp_q2", "\\Vert q''\\Vert_{p,W}", "NcHICosmoQSpline", "Weighted Lp norm of q'' (second derivative), x[0]=p, obj=weight spline W(z)", NCM_TYPE_SPLINE, _nc_hicosmo_qspline_wlp_q2, 1, 1);
 }
 

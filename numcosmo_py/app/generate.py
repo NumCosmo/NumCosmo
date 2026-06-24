@@ -59,6 +59,31 @@ from numcosmo_py.datasets.hicosmo import (
     add_h_likelihood,
     add_snia_likelihood,
 )
+from numcosmo_py.experiments.curvature_weight import (
+    wspline_curvature_weight,
+    qspline_curvature_weight,
+)
+
+
+class KnotPlacement(StrEnum):
+    """Knot distribution for a spline reconstruction (q(z) or w(z)).
+
+    DEFAULT keeps the model's own default (Chebyshev for the w-spline, uniform
+    for the q-spline); UNIFORM / CHEBYSHEV force the placement explicitly.
+    """
+
+    DEFAULT = auto()
+    UNIFORM = auto()
+    CHEBYSHEV = auto()
+
+
+def _spline_knots(placement: "KnotPlacement"):
+    """Map a KnotPlacement to the Nc enum, or None to keep the model default."""
+    if placement is KnotPlacement.UNIFORM:
+        return Nc.HICosmoSplineKnots.UNIFORM
+    if placement is KnotPlacement.CHEBYSHEV:
+        return Nc.HICosmoSplineKnots.CHEBYSHEV
+    return None
 
 
 class CurvaturePriorType(StrEnum):
@@ -67,13 +92,19 @@ class CurvaturePriorType(StrEnum):
     NONE disables the prior; MEAN_KAPPA is the geometric L2 curvature (default);
     LP_KAPPA / LP_D2 are the Lp norms of the geometric curvature and of the second
     derivative respectively, with order p given by ``--curvature-p`` (large p
-    approaches the maximum curvature).
+    approaches the maximum curvature). LOCAL_KAPPA / LOCAL_D2 are the data-driven
+    *local* counterparts: the curvature norm is weighted by W(x), built from the
+    data Fisher information so the prior relaxes where the data constrains the
+    reconstruction and stays strong where it is blind (see
+    ``numcosmo_py.experiments.curvature_weight``).
     """
 
     NONE = auto()
     MEAN_KAPPA = auto()
     LP_KAPPA = auto()
     LP_D2 = auto()
+    LOCAL_KAPPA = auto()
+    LOCAL_D2 = auto()
 
 
 def _add_curvature_prior(
@@ -84,26 +115,38 @@ def _add_curvature_prior(
     prior_type: CurvaturePriorType,
     sigma: float,
     p: float,
+    weight: "Ncm.Spline | None" = None,
 ) -> None:
     """Add the selected curvature Gaussian prior to ``likelihood``.
 
     The norm order p is fed through the PriorGaussFunc variable slot, which the
-    nvar=1 ``lp_*`` functions read as ``x[0]``. ``namespace`` selects the model
-    (e.g. ``NcHICosmoQSpline``); ``d2_name`` is its second-derivative function
-    (``lp_q2`` or ``lp_w2``). The prior func is added to the likelihood only, not
-    to the derived-function array (those are evaluated with nvar=0).
+    nvar=1 ``lp_*``/``wlp_*`` functions read as ``x[0]``. ``namespace`` selects
+    the model (e.g. ``NcHICosmoQSpline``); ``d2_name`` is its second-derivative
+    function (``lp_q2`` or ``lp_w2``). For the LOCAL_* variants the weighted
+    ``wlp_*`` function carries ``weight`` (a precomputed W(x) spline) as its
+    associated object. The prior func is added to the likelihood only, not to the
+    derived-function array (those are evaluated with nvar=0).
     """
     if prior_type is CurvaturePriorType.NONE:
         return
 
+    obj: "Ncm.Spline | None" = None
     if prior_type is CurvaturePriorType.MEAN_KAPPA:
         func_name, var = f"{namespace}:mean_kappa", 0.0
     elif prior_type is CurvaturePriorType.LP_KAPPA:
         func_name, var = f"{namespace}:lp_kappa", p
-    else:  # LP_D2
+    elif prior_type is CurvaturePriorType.LP_D2:
         func_name, var = f"{namespace}:{d2_name}", p
+    elif prior_type is CurvaturePriorType.LOCAL_KAPPA:
+        func_name, var, obj = f"{namespace}:wlp_kappa", p, weight
+    else:  # LOCAL_D2
+        func_name, var, obj = f"{namespace}:w{d2_name}", p, weight
 
-    func = Ncm.MSetFuncList.new(func_name, None)
+    if prior_type in (CurvaturePriorType.LOCAL_KAPPA, CurvaturePriorType.LOCAL_D2):
+        if weight is None:
+            raise ValueError(f"{prior_type} requires a precomputed weight spline.")
+
+    func = Ncm.MSetFuncList.new(func_name, obj)
     likelihood.priors_add(Ncm.PriorGaussFunc.new(func, 0.0, sigma, var))
 
 
@@ -632,6 +675,11 @@ class GenerateQSpline:
         int, typer.Option(help="Number of knots.", show_default=True, min=6)
     ] = 6
 
+    knots: Annotated[
+        KnotPlacement,
+        typer.Option(help="Knot placement in z.", show_default=True),
+    ] = KnotPlacement.DEFAULT
+
     z_max: Annotated[
         float, typer.Option(help="Maximum redshift.", show_default=True)
     ] = 2.1
@@ -667,6 +715,15 @@ class GenerateQSpline:
         ),
     ] = 2.0
 
+    curvature_ref_factor: Annotated[
+        float,
+        typer.Option(
+            help="Crossover-scale knob for the LOCAL_* data-driven curvature "
+            "weight (smaller relaxes the prior more eagerly where data informs).",
+            show_default=True,
+        ),
+    ] = 1.0
+
     band_nodes: Annotated[
         int,
         typer.Option(
@@ -686,9 +743,18 @@ class GenerateQSpline:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        cosmo = Nc.HICosmoQSpline.new(
-            Ncm.SplineCubicNotaknot(), self.n_knots, self.z_max
-        )
+        knots = _spline_knots(self.knots)
+        if knots is None:
+            cosmo = Nc.HICosmoQSpline.new(
+                Ncm.SplineCubicNotaknot(), self.n_knots, self.z_max
+            )
+        else:
+            cosmo = Nc.HICosmoQSpline(
+                spline=Ncm.SplineCubicNotaknot(),
+                qparam_length=self.n_knots,
+                zf=self.z_max,
+                knots=knots,
+            )
         for i in range(self.n_knots):
             cosmo.param_set_desc(f"qparam_{i}", {"fit": True})
         mset = Ncm.MSet.new_array([cosmo])
@@ -725,6 +791,19 @@ class GenerateQSpline:
                 mfunc_oa, "NcHICosmo:q", np.linspace(0.0, self.z_max, self.band_nodes)
             )
 
+        weight = None
+        if self.curvature_prior in (
+            CurvaturePriorType.LOCAL_KAPPA,
+            CurvaturePriorType.LOCAL_D2,
+        ):
+            weight = qspline_curvature_weight(
+                dset,
+                mset,
+                cosmo,
+                z_max=self.z_max,
+                ref_factor=self.curvature_ref_factor,
+            )
+
         _add_curvature_prior(
             likelihood,
             namespace="NcHICosmoQSpline",
@@ -732,6 +811,7 @@ class GenerateQSpline:
             prior_type=self.curvature_prior,
             sigma=self.curvature_sigma,
             p=self.curvature_p,
+            weight=weight,
         )
 
         # Save experiment
@@ -850,6 +930,11 @@ class GenerateDEWSpline:
         int, typer.Option(help="Number of knots.", show_default=True, min=5)
     ] = 5
 
+    knots: Annotated[
+        KnotPlacement,
+        typer.Option(help="Knot placement in alpha=ln(1+z).", show_default=True),
+    ] = KnotPlacement.DEFAULT
+
     z_max: Annotated[
         float, typer.Option(help="Maximum redshift.", show_default=True)
     ] = 2.33
@@ -885,6 +970,15 @@ class GenerateDEWSpline:
         ),
     ] = 2.0
 
+    curvature_ref_factor: Annotated[
+        float,
+        typer.Option(
+            help="Crossover-scale knob for the LOCAL_* data-driven curvature "
+            "weight (smaller relaxes the prior more eagerly where data informs).",
+            show_default=True,
+        ),
+    ] = 1.0
+
     band_nodes: Annotated[
         int,
         typer.Option(
@@ -913,7 +1007,13 @@ class GenerateDEWSpline:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        cosmo = Nc.HICosmoDEWSpline.new(self.n_knots, self.z_max)
+        knots = _spline_knots(self.knots)
+        if knots is None:
+            cosmo = Nc.HICosmoDEWSpline.new(self.n_knots, self.z_max)
+        else:
+            cosmo = Nc.HICosmoDEWSpline(
+                zf=self.z_max, w_length=self.n_knots, knots=knots
+            )
         cosmo.omega_x2omega_k()
         cosmo["Omegak"] = 0.0
 
@@ -960,6 +1060,15 @@ class GenerateDEWSpline:
                 np.linspace(0.0, self.z_max, self.band_nodes),
             )
 
+        weight = None
+        if self.curvature_prior in (
+            CurvaturePriorType.LOCAL_KAPPA,
+            CurvaturePriorType.LOCAL_D2,
+        ):
+            weight = wspline_curvature_weight(
+                dset, mset, cosmo, ref_factor=self.curvature_ref_factor
+            )
+
         _add_curvature_prior(
             likelihood,
             namespace="NcHICosmoDEWSpline",
@@ -967,6 +1076,7 @@ class GenerateDEWSpline:
             prior_type=self.curvature_prior,
             sigma=self.curvature_sigma,
             p=self.curvature_p,
+            weight=weight,
         )
 
         # Save experiment

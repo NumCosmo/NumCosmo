@@ -112,6 +112,7 @@ GType nc_hicosmo_qspline_get_type (void) G_GNUC_CONST;
 NcHICosmoQSpline *nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f);
 
 gdouble nc_hicosmo_qspline_lp_norm (NcHICosmoQSpline *qspline, NcmSplineCurvatureType ctype, const gdouble p);
+gdouble nc_hicosmo_qspline_weighted_lp_norm (NcHICosmoQSpline *qspline, NcmSplineCurvatureType ctype, const gdouble p, NcmSpline *weight);
 gdouble nc_hicosmo_qspline_mean_kappa (NcHICosmoQSpline *qspline);
 gdouble nc_hicosmo_qspline_q_transition (NcHICosmoQSpline *qspline);
 
