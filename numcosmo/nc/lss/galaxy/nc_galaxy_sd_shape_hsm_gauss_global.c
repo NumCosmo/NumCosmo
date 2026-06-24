@@ -590,7 +590,7 @@ _nc_galaxy_sd_shape_hsm_gauss_global_prepare_data_array_at_nodes (NcGalaxySDShap
   gboolean lens_ctx_ready                      = FALSE;
   gboolean pr_prefactor_ready                  = FALSE;
   NcWLSurfaceMassDensityLensCtx lens_ctx;
-  gdouble pr_prefactor                         = 0.0;
+  gdouble pr_prefactor = 0.0;
   guint i;
 
   NCM_UNUSED (gsds);
