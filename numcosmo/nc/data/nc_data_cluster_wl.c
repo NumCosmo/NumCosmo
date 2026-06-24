@@ -99,11 +99,18 @@ struct _NcDataClusterWLPrivate
   NcDataClusterWLIntegMethod integ_method;
   guint n_nodes;
   guint rule_n;
+  gboolean auto_nodes;
+  gdouble node_reltol;
+  guint max_total_nodes;
   GPtrArray *fixed_nodes;
   GPtrArray *z_nodes_per_galaxy;
   GArray *fixed_norm;
-  gdouble fixed_nodes_zcl;
   gboolean force_rebuild;
+
+  /* Per-galaxy background node count (n_nodes-1)*rule_n selected by the
+   * auto-nodes calibration; 0 for fully-foreground galaxies. */
+  GArray *n_total_per_galaxy;
+  gdouble fixed_nodes_zcl;
 };
 
 enum
@@ -120,6 +127,9 @@ enum
   PROP_INTEG_METHOD,
   PROP_N_NODES,
   PROP_RULE_N,
+  PROP_AUTO_NODES,
+  PROP_NODE_RELTOL,
+  PROP_MAX_TOTAL_NODES,
 };
 
 struct _NcDataClusterWL
@@ -164,9 +174,13 @@ nc_data_cluster_wl_init (NcDataClusterWL *dcwl)
   self->integ_method       = NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES;
   self->n_nodes            = 10;
   self->rule_n             = 5;
+  self->auto_nodes         = FALSE;
+  self->node_reltol        = 1.0e-3;
+  self->max_total_nodes    = 2000;
   self->fixed_nodes        = g_ptr_array_new_with_free_func (_nc_data_cluster_wl_integral_fixed_free0);
   self->z_nodes_per_galaxy = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   self->fixed_norm         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->n_total_per_galaxy = g_array_new (FALSE, FALSE, sizeof (guint));
   self->fixed_nodes_zcl    = GSL_NAN;
   self->force_rebuild      = TRUE;
   self->err                = ncm_vector_new (1);
@@ -238,6 +252,24 @@ nc_data_cluster_wl_set_property (GObject *object, guint prop_id, const GValue *v
       g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
       g_array_set_size (self->fixed_norm, 0);
       break;
+    case PROP_AUTO_NODES:
+      self->auto_nodes = g_value_get_boolean (value);
+      g_ptr_array_set_size (self->fixed_nodes, 0);
+      g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
+      g_array_set_size (self->fixed_norm, 0);
+      break;
+    case PROP_NODE_RELTOL:
+      self->node_reltol = g_value_get_double (value);
+      g_ptr_array_set_size (self->fixed_nodes, 0);
+      g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
+      g_array_set_size (self->fixed_norm, 0);
+      break;
+    case PROP_MAX_TOTAL_NODES:
+      self->max_total_nodes = g_value_get_uint (value);
+      g_ptr_array_set_size (self->fixed_nodes, 0);
+      g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
+      g_array_set_size (self->fixed_norm, 0);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -284,6 +316,15 @@ nc_data_cluster_wl_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_RULE_N:
       g_value_set_uint (value, self->rule_n);
       break;
+    case PROP_AUTO_NODES:
+      g_value_set_boolean (value, self->auto_nodes);
+      break;
+    case PROP_NODE_RELTOL:
+      g_value_set_double (value, self->node_reltol);
+      break;
+    case PROP_MAX_TOTAL_NODES:
+      g_value_set_uint (value, self->max_total_nodes);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -309,6 +350,7 @@ nc_data_cluster_wl_dispose (GObject *object)
   g_clear_pointer (&self->fixed_nodes, g_ptr_array_unref);
   g_clear_pointer (&self->z_nodes_per_galaxy, g_ptr_array_unref);
   g_clear_pointer (&self->fixed_norm, g_array_unref);
+  g_clear_pointer (&self->n_total_per_galaxy, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_wl_parent_class)->dispose (object);
@@ -503,6 +545,58 @@ nc_data_cluster_wl_class_init (NcDataClusterWLClass *klass)
                                                       NULL,
                                                       "Number of GL points per interval for the fixed Gauss-Legendre quadrature",
                                                       1, G_MAXUINT, 5,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWL:auto-nodes
+   *
+   * Whether to automatically select, per galaxy, the minimal fixed
+   * Gauss-Legendre configuration reaching #NcDataClusterWL:node-reltol. When
+   * disabled, the fixed-node method uses the global #NcDataClusterWL:n-nodes /
+   * #NcDataClusterWL:rule-n for every galaxy.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_AUTO_NODES,
+                                   g_param_spec_boolean ("auto-nodes",
+                                                         NULL,
+                                                         "Automatically select the per-galaxy fixed-node configuration",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWL:node-reltol
+   *
+   * Target relative tolerance for the per-galaxy fixed-node selection (see
+   * #NcDataClusterWL:auto-nodes). This is a per-galaxy relative tolerance on the
+   * galaxy likelihood, i.e. roughly an absolute tolerance on $\ln P$ per galaxy;
+   * these accumulate over the N galaxies in the total $-2\ln L$, so choose it
+   * with N in mind.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_NODE_RELTOL,
+                                   g_param_spec_double ("node-reltol",
+                                                        NULL,
+                                                        "Target relative tolerance for the per-galaxy fixed-node selection",
+                                                        0.0, G_MAXDOUBLE, 1.0e-4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWL:max-total-nodes
+   *
+   * Safety ceiling on the total background node count $(n_\mathrm{nodes}-1)\,
+   * \mathrm{rule}_n$ explored by the auto-nodes selection. If the tolerance is
+   * not met within this budget the best configuration found is used and a
+   * warning is emitted.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MAX_TOTAL_NODES,
+                                   g_param_spec_uint ("max-total-nodes",
+                                                      NULL,
+                                                      "Safety ceiling on the total background node count for auto-nodes selection",
+                                                      2, G_MAXUINT, 2000,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->bootstrap  = TRUE;
@@ -712,6 +806,43 @@ lnint_integrator_integrate (gpointer integrator, gdouble zmin, gdouble zmax)
 
 /* End of lnint integrator */
 
+/* Auto-nodes calibration.
+ *
+ * For each (background) galaxy we pick the minimal fixed Gauss-Legendre config
+ * that integrates P(z) * P(e_o|z) over the background support to within
+ * node-reltol, by handing ncm_integral_fixed_calibrate() the weight F(z) = P(z)
+ * and the slowly-varying probe G(z) = P(e_o|z) (the actual shape factor at the
+ * current model). The exact background P(z) mass is passed as a missed-mass guard
+ * against spikes narrower than the reference panel width. */
+
+typedef struct _NcDataClusterWLCalibArg
+{
+  NcGalaxySDObsRedshiftIntegrand *integrand_redshift;
+  NcGalaxySDShapeIntegrand *integrand_shape;
+  NcGalaxySDObsRedshiftData *z_data;
+  NcGalaxySDShapeData *s_data;
+} NcDataClusterWLCalibArg;
+
+/* gsl_function F(z) = P(z): the photo-z weight baked into the quadrature nodes. */
+static gdouble
+_nc_data_cluster_wl_calib_pz (gdouble z, gpointer user_data)
+{
+  NcDataClusterWLCalibArg *a = (NcDataClusterWLCalibArg *) user_data;
+
+  return nc_galaxy_sd_obs_redshift_integrand_eval (a->integrand_redshift, z, a->z_data);
+}
+
+/* gsl_function G(z) = P(e_o|z): the slowly-varying shape factor at the current
+ * model, probed at the candidate nodes. The z-independent position factor is
+ * dropped: it scales F*G and INT F equally and so cancels in every tolerance. */
+static gdouble
+_nc_data_cluster_wl_calib_shape (gdouble z, gpointer user_data)
+{
+  NcDataClusterWLCalibArg *a = (NcDataClusterWLCalibArg *) user_data;
+
+  return nc_galaxy_sd_shape_integrand_eval (a->integrand_shape, z, a->s_data);
+}
+
 /* Integrates the shape values stored in @shape_at_nodes against the precomputed
  * P(z)-weighted background nodes of galaxy @gal_i using a control-variate form:
  *
@@ -750,17 +881,23 @@ _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
 {
   NcmData *data                       = NCM_DATA (dcwl);
   NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
-  const guint n_total_nodes           = (self->n_nodes - 1) * self->rule_n;
   gdouble result                      = 0;
+  guint max_n_total                   = 0;
+  guint gi;
+
+  /* Per-galaxy node counts differ (auto-nodes selection); size the reusable
+   * shape buffer to the largest. */
+  for (gi = 0; gi < self->n_total_per_galaxy->len; gi++)
+    max_n_total = MAX (max_n_total, g_array_index (self->n_total_per_galaxy, guint, gi));
 
   #pragma omp parallel reduction(+:result) if (self->enable_parallel)
   {
     NcGalaxySDPositionIntegrand *integrand_position = nc_galaxy_sd_position_integ (self->galaxy_position, FALSE);
 
-    /* Index 0 is the anchor node (z_lo); the remaining n_total_nodes are the
-     * background Gauss-Legendre nodes (unused, i.e. left untouched, for
-     * fully-foreground galaxies). */
-    NcmVector *shape_at_nodes = ncm_vector_new (n_total_nodes + 1);
+    /* Index 0 is the anchor node (z_lo); the remaining nodes are the background
+     * Gauss-Legendre nodes. Sized to the largest per-galaxy node count; each
+     * galaxy uses a leading subvector of its own length. */
+    NcmVector *shape_at_nodes = ncm_vector_new (max_n_total + 1);
 
     nc_galaxy_sd_position_integrand_prepare (integrand_position, mset);
 
@@ -781,9 +918,16 @@ _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
         const gdouble int_pos          = nc_galaxy_sd_position_integrand_eval (integrand_position, p_data);
         gdouble P_gal, m2lnP_gal_i;
 
-        nc_galaxy_sd_shape_eval_at_nodes (self->galaxy_shape, mset, s_data, z_nodes, shape_at_nodes);
+        {
+          const guint n_total_i = g_array_index (self->n_total_per_galaxy, guint, gal_i);
+          NcmVector *sub        = ncm_vector_get_subvector (shape_at_nodes, 0, n_total_i + 1);
 
-        P_gal       = _nc_data_cluster_wl_fixed_panels_integ (self, gal_i, n_total_nodes, shape_at_nodes) * int_pos;
+          nc_galaxy_sd_shape_eval_at_nodes (self->galaxy_shape, mset, s_data, z_nodes, sub);
+
+          P_gal = _nc_data_cluster_wl_fixed_panels_integ (self, gal_i, n_total_i, sub) * int_pos;
+          ncm_vector_free (sub);
+        }
+
         m2lnP_gal_i = P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
 
         if (!gsl_finite (m2lnP_gal_i))
@@ -817,9 +961,16 @@ _nc_data_cluster_wl_eval_m2lnP_fixed (NcDataClusterWL *dcwl, NcmMSet *mset, NcmV
         const gdouble int_pos          = nc_galaxy_sd_position_integrand_eval (integrand_position, p_data);
         gdouble P_gal, m2lnP_gal_i;
 
-        nc_galaxy_sd_shape_eval_at_nodes (self->galaxy_shape, mset, s_data, z_nodes, shape_at_nodes);
+        {
+          const guint n_total_i = g_array_index (self->n_total_per_galaxy, guint, gal_i);
+          NcmVector *sub        = ncm_vector_get_subvector (shape_at_nodes, 0, n_total_i + 1);
 
-        P_gal       = _nc_data_cluster_wl_fixed_panels_integ (self, gal_i, n_total_nodes, shape_at_nodes) * int_pos;
+          nc_galaxy_sd_shape_eval_at_nodes (self->galaxy_shape, mset, s_data, z_nodes, sub);
+
+          P_gal = _nc_data_cluster_wl_fixed_panels_integ (self, gal_i, n_total_i, sub) * int_pos;
+          ncm_vector_free (sub);
+        }
+
         m2lnP_gal_i = P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
 
         if (!gsl_finite (m2lnP_gal_i))
@@ -1207,6 +1358,144 @@ _nc_data_cluster_wl_load_obs (NcDataClusterWL *dcwl, NcGalaxyWLObs *obs, GPtrArr
   }
 }
 
+/* Rebuilds the per-galaxy fixed-node integrals after a grid-invalidating change
+ * (update_nodes). Resizes the per-galaxy output arrays, then in parallel selects
+ * each background galaxy's node grid - auto-calibrated to node-reltol when
+ * auto-nodes is on, otherwise the global (n-nodes, rule-n) - and stores its
+ * NcmIntegralFixed, node abscissae, exact P(z) norm and total node count. */
+static void
+_nc_data_cluster_wl_rebuild_fixed_nodes (NcDataClusterWL *dcwl, NcmMSet *mset, NcGalaxySDObsRedshift *galaxy_redshift, NcGalaxySDShape *galaxy_shape, const gdouble z_cl, const gboolean update_radius, const gboolean update_optzs)
+{
+  NcDataClusterWLPrivate * const self = nc_data_cluster_wl_get_instance_private (dcwl);
+
+  if (self->auto_nodes)
+    /* The shape factor G(z) probed during calibration is evaluated through the
+     * integrand path, so its per-galaxy radius / Sigma_crit caches must be
+     * current. Prepare them once here, serially, before any thread reads them
+     * (clearing the dirty flags, exactly as a cubature/lnint eval would). */
+    nc_galaxy_sd_shape_prepare_data_array (galaxy_shape, mset, self->shape_data, update_radius, update_optzs);
+
+  /* Pre-size the per-galaxy output arrays so each thread writes its own galaxy
+   * index below: g_ptr_array_add / g_array_append_val are not thread-safe.
+   * set_size to 0 first frees any prior entries via the registered free funcs;
+   * set_size to self->len then nulls every slot. */
+  g_ptr_array_set_size (self->fixed_nodes, 0);
+  g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
+  g_array_set_size (self->fixed_norm, 0);
+  g_array_set_size (self->n_total_per_galaxy, 0);
+
+  g_ptr_array_set_size (self->fixed_nodes, self->len);
+  g_ptr_array_set_size (self->z_nodes_per_galaxy, self->len);
+  g_array_set_size (self->fixed_norm, self->len);
+  g_array_set_size (self->n_total_per_galaxy, self->len);
+
+  /* The per-galaxy calibration is the dominant prepare cost (the reference
+   * integral is evaluated for every background galaxy) and is embarrassingly
+   * parallel: each iteration writes a disjoint galaxy index and only reads
+   * shared model state. Mirror the eval loops' pattern of per-thread integrand
+   * objects. */
+  #pragma omp parallel if (self->enable_parallel)
+  {
+    guint gal_i;
+    NcGalaxySDObsRedshiftIntegrand *integrand_redshift = NULL;
+    NcGalaxySDShapeIntegrand *integrand_shape          = NULL;
+    NcDataClusterWLCalibArg calib_arg                  = { NULL, NULL, NULL, NULL };
+
+    if (self->auto_nodes)
+    {
+      integrand_redshift = nc_galaxy_sd_obs_redshift_integ (galaxy_redshift, FALSE);
+      integrand_shape    = nc_galaxy_sd_shape_integ (galaxy_shape, FALSE);
+      nc_galaxy_sd_obs_redshift_integrand_prepare (integrand_redshift, mset);
+      nc_galaxy_sd_shape_integrand_prepare (integrand_shape, mset);
+
+      calib_arg.integrand_redshift = integrand_redshift;
+      calib_arg.integrand_shape    = integrand_shape;
+    }
+
+    #pragma omp for schedule (dynamic, 5)
+
+    for (gal_i = 0; gal_i < self->len; gal_i++)
+    {
+      NcGalaxySDShapeData *s_data       = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
+      NcGalaxySDObsRedshiftData *z_data = s_data->sdpos_data->sdz_data;
+      gdouble z_lo, z_hi, norm;
+      gboolean has_bg;
+      guint n_total_i = 0;
+      NcmIntegralFixed *bg_intf;
+      NcmVector *z_nodes;
+
+      nc_galaxy_sd_obs_redshift_get_integ_lim (galaxy_redshift, mset, z_data, &z_lo, &z_hi);
+      norm   = nc_galaxy_sd_obs_redshift_norm (galaxy_redshift, mset, z_data);
+      has_bg = z_hi > z_cl;
+
+      /* Anchor node (z_lo) at index 0, followed by the background Gauss-Legendre
+       * nodes over [max(z_lo, z_cl), z_hi] (absent when the support lies entirely
+       * in front of the lens). The foreground bulk is carried analytically
+       * through @norm, so no Gauss-Legendre interval ever crosses the kink at
+       * z_cl. The node count is selected per galaxy (when auto-nodes is on) to
+       * reach node-reltol. */
+      if (has_bg)
+      {
+        const gdouble bg_lo = MAX (z_lo, z_cl);
+        guint n_nodes_i     = self->n_nodes;
+        guint rule_n_i      = self->rule_n;
+        NcmVector *z_nodes_bg;
+
+        if (self->auto_nodes)
+        {
+          gsl_function F = { _nc_data_cluster_wl_calib_pz, &calib_arg };
+          gsl_function G = { _nc_data_cluster_wl_calib_shape, &calib_arg };
+          gdouble exact_bg_norm;
+          NcmIntegralFixed *cal;
+
+          calib_arg.z_data = z_data;
+          calib_arg.s_data = s_data;
+
+          /* No foreground (support fully above z_cl): the exact full P(z) mass is
+           * the background mass, a free exact guard baseline. When the support
+           * straddles z_cl the background mass is not analytically at hand, so let
+           * calibrate fall back to its own reference mass. */
+          exact_bg_norm = (z_lo >= z_cl) ? norm : GSL_NAN;
+
+          cal = ncm_integral_fixed_calibrate (&F, &G, bg_lo, z_hi,
+                                              self->node_reltol, exact_bg_norm,
+                                              self->max_total_nodes, &n_nodes_i, &rule_n_i);
+          ncm_integral_fixed_free (cal);
+        }
+
+        n_total_i  = (n_nodes_i - 1) * rule_n_i;
+        bg_intf    = nc_galaxy_sd_obs_redshift_make_fixed_nodes (galaxy_redshift, mset, z_data, bg_lo, z_hi, n_nodes_i, rule_n_i);
+        z_nodes    = ncm_vector_new (n_total_i + 1);
+        z_nodes_bg = ncm_vector_get_subvector (z_nodes, 1, n_total_i);
+
+        ncm_integral_fixed_get_nodes (bg_intf, z_nodes_bg);
+        ncm_vector_free (z_nodes_bg);
+      }
+      else
+      {
+        bg_intf = NULL;
+        z_nodes = ncm_vector_new (1);
+      }
+
+      ncm_vector_set (z_nodes, 0, z_lo);
+
+      /* Disjoint indices, pre-nulled slots: safe to write concurrently. */
+      g_ptr_array_index (self->fixed_nodes, gal_i)           = bg_intf;
+      g_ptr_array_index (self->z_nodes_per_galaxy, gal_i)    = z_nodes;
+      g_array_index (self->fixed_norm, gdouble, gal_i)       = norm;
+      g_array_index (self->n_total_per_galaxy, guint, gal_i) = n_total_i;
+    }
+
+    if (integrand_shape != NULL)
+      nc_galaxy_sd_shape_integrand_free (integrand_shape);
+
+    if (integrand_redshift != NULL)
+      nc_galaxy_sd_obs_redshift_integrand_free (integrand_redshift);
+  }
+
+  self->fixed_nodes_zcl = z_cl;
+}
+
 static void
 _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
 {
@@ -1284,60 +1573,8 @@ _nc_data_cluster_wl_prepare (NcmData *data, NcmMSet *mset)
     }
     else
     {
-      guint gal_i;
-      const guint n_total_nodes = (self->n_nodes - 1) * self->rule_n;
-
       if (update_nodes)
-      {
-        g_ptr_array_set_size (self->fixed_nodes, 0);
-        g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
-        g_array_set_size (self->fixed_norm, 0);
-
-        for (gal_i = 0; gal_i < self->len; gal_i++)
-        {
-          NcGalaxySDShapeData *s_data       = NC_GALAXY_SD_SHAPE_DATA (ncm_obj_array_peek (self->shape_data, gal_i));
-          NcGalaxySDObsRedshiftData *z_data = s_data->sdpos_data->sdz_data;
-          gdouble z_lo, z_hi, norm;
-          gboolean has_bg;
-          NcmIntegralFixed *bg_intf;
-          NcmVector *z_nodes;
-
-          nc_galaxy_sd_obs_redshift_get_integ_lim (galaxy_redshift, mset, z_data, &z_lo, &z_hi);
-          norm   = nc_galaxy_sd_obs_redshift_norm (galaxy_redshift, mset, z_data);
-          has_bg = z_hi > z_cl;
-
-          /* Anchor node (z_lo) at index 0, followed by the background
-           * Gauss-Legendre nodes over [max(z_lo, z_cl), z_hi] (absent when the
-           * support lies entirely in front of the lens). The foreground bulk
-           * is carried analytically through @norm, so no Gauss-Legendre
-           * interval ever crosses the kink at z_cl. */
-          if (has_bg)
-          {
-            const gdouble bg_lo = MAX (z_lo, z_cl);
-            NcmVector *z_nodes_bg;
-
-            bg_intf    = nc_galaxy_sd_obs_redshift_make_fixed_nodes (galaxy_redshift, mset, z_data, bg_lo, z_hi, self->n_nodes, self->rule_n);
-            z_nodes    = ncm_vector_new (n_total_nodes + 1);
-            z_nodes_bg = ncm_vector_get_subvector (z_nodes, 1, n_total_nodes);
-
-            ncm_integral_fixed_get_nodes (bg_intf, z_nodes_bg);
-            ncm_vector_free (z_nodes_bg);
-          }
-          else
-          {
-            bg_intf = NULL;
-            z_nodes = ncm_vector_new (1);
-          }
-
-          ncm_vector_set (z_nodes, 0, z_lo);
-
-          g_ptr_array_add (self->fixed_nodes, bg_intf);
-          g_ptr_array_add (self->z_nodes_per_galaxy, z_nodes);
-          g_array_append_val (self->fixed_norm, norm);
-        }
-
-        self->fixed_nodes_zcl = z_cl;
-      }
+        _nc_data_cluster_wl_rebuild_fixed_nodes (dcwl, mset, galaxy_redshift, galaxy_shape, z_cl, update_radius, update_optzs);
 
       if (update_nodes || cosmo_changed || hp_changed || dp_changed || zcl_changed)
         nc_galaxy_sd_shape_prepare_data_array_at_nodes (
