@@ -1028,14 +1028,14 @@ nc_galaxy_sd_shape_hsm_gauss_global_clear (NcGalaxySDShapeHSMGaussGlobal **gsdsg
  * @mset: a #NcmMSet
  * @data: a #NcGalaxySDShapeData
  * @std_noise: the observational shape dispersion
- * @coord: the coordinate system #NcGalaxyWLObsCoord
+ * @coord: the coordinate system #NcWLEllipticityFrame
  * @rng: a #NcmRNG
  *
  * Generates a galaxy sample shape.
  *
  */
 void
-nc_galaxy_sd_shape_hsm_gauss_global_gen (NcGalaxySDShapeHSMGaussGlobal *gsdsgauss, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m, NcGalaxyWLObsCoord coord, NcmRNG *rng)
+nc_galaxy_sd_shape_hsm_gauss_global_gen (NcGalaxySDShapeHSMGaussGlobal *gsdsgauss, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m, NcWLEllipticityFrame coord, NcmRNG *rng)
 {
   NcGalaxySDShapeClass *sd_shape_class     = NC_GALAXY_SD_SHAPE_GET_CLASS (gsdsgauss);
   NcGalaxySDShapeHSMGaussGlobalData *ldata = (NcGalaxySDShapeHSMGaussGlobalData *) data->ldata;

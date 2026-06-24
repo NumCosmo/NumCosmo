@@ -210,6 +210,32 @@ test_nc_wl_ellipticity_introspectable_wrappers (void)
   }
 }
 
+/* The frame parity must be the identity for CELESTIAL, a complex conjugation for
+ * CARTESIAN, an involution, and value-compatible with the legacy enum. */
+static void
+test_nc_wl_ellipticity_frame_parity (void)
+{
+  guint j;
+
+  /* values must match the legacy NcGalaxyWLObsCoord (CELESTIAL=0, EUCLIDEAN=1) */
+  g_assert_cmpint (NC_WL_ELLIPTICITY_FRAME_CELESTIAL, ==, 0);
+  g_assert_cmpint (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, ==, 1);
+
+  for (j = 0; j < G_N_ELEMENTS (test_ellips); j++)
+  {
+    const complex double e = test_ellips[j];
+
+    test_assert_cmplx_close (nc_wl_ellipticity_frame_to_celestial_c (NC_WL_ELLIPTICITY_FRAME_CELESTIAL, e), e, 1.0e-15);
+    test_assert_cmplx_close (nc_wl_ellipticity_frame_to_celestial_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e), conj (e), 1.0e-15);
+
+    /* involution: applying twice returns the original, in either frame */
+    test_assert_cmplx_close (
+      nc_wl_ellipticity_frame_to_celestial_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN,
+                                              nc_wl_ellipticity_frame_to_celestial_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e)),
+      e, 1.0e-15);
+  }
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -233,6 +259,8 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/nc/wl_ellipticity/introspectable_wrappers",
                    &test_nc_wl_ellipticity_introspectable_wrappers);
+  g_test_add_func ("/nc/wl_ellipticity/frame_parity",
+                   &test_nc_wl_ellipticity_frame_parity);
 
   return g_test_run ();
 }

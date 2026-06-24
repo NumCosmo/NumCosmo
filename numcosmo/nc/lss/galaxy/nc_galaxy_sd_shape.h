@@ -82,7 +82,7 @@ struct _NcGalaxySDShapeClass
 struct _NcGalaxySDShapeData
 {
   NcGalaxySDPositionData *sdpos_data;
-  NcGalaxyWLObsCoord coord;
+  NcWLEllipticityFrame coord;
   gdouble epsilon_int_1;
   gdouble epsilon_int_2;
   gpointer ldata;

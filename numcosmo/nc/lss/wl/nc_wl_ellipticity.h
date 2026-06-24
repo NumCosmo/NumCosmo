@@ -37,6 +37,29 @@
 
 G_BEGIN_DECLS
 
+/**
+ * NcWLEllipticityFrame:
+ * @NC_WL_ELLIPTICITY_FRAME_CELESTIAL: celestial frame (RA increasing eastward;
+ *   left-handed on the sky).
+ * @NC_WL_ELLIPTICITY_FRAME_CARTESIAN: right-handed Cartesian (image/pixel) frame.
+ *
+ * Handedness of the coordinate frame in which a complex ellipticity (or shear)
+ * is expressed. The two frames are related by a parity (handedness) flip: the
+ * position angle reverses sense and the spin-2 ellipticity transforms by
+ * complex conjugation, i.e. the second component changes sign,
+ * $$ \epsilon_{\rm cartesian} = \epsilon_{\rm celestial}^{*} . $$
+ * @NC_WL_ELLIPTICITY_FRAME_CELESTIAL is taken as the reference (identity); the
+ * parity is its own inverse. The integer values match the legacy
+ * NcGalaxyWLObsCoord (CELESTIAL = 0, EUCLIDEAN = CARTESIAN = 1), so previously
+ * serialized data is read back unchanged.
+ *
+ */
+typedef enum _NcWLEllipticityFrame
+{
+  NC_WL_ELLIPTICITY_FRAME_CELESTIAL = 0,
+  NC_WL_ELLIPTICITY_FRAME_CARTESIAN,
+} NcWLEllipticityFrame;
+
 /*
  * Reduced-shear transformations of the complex ellipticity, one set per
  * convention. The convention suffix matches #NcGalaxyWLObsEllipConv:
@@ -71,6 +94,11 @@ gdouble nc_wl_ellipticity_lndet_jac_trace_det (const NcmComplex *g, const NcmCom
 
 #ifndef NUMCOSMO_GIR_SCAN
 
+/* Re-express a complex ellipticity from @frame into the celestial frame; the
+ * inverse (celestial -> @frame) is the same operation (the parity is an
+ * involution). CELESTIAL is the identity, CARTESIAN conjugates. */
+NCM_INLINE complex double nc_wl_ellipticity_frame_to_celestial_c (NcWLEllipticityFrame frame, complex double e);
+
 /* Inline complex double kernels (TRACE convention: distortion chi). */
 NCM_INLINE complex double nc_wl_ellipticity_apply_shear_trace_c (complex double g, complex double chi);
 NCM_INLINE complex double nc_wl_ellipticity_apply_shear_inv_trace_c (complex double g, complex double chi_obs);
@@ -94,6 +122,14 @@ G_END_DECLS
 #ifndef NUMCOSMO_GIR_SCAN
 
 G_BEGIN_DECLS
+
+/* Coordinate-frame handedness (parity). */
+
+NCM_INLINE complex double
+nc_wl_ellipticity_frame_to_celestial_c (NcWLEllipticityFrame frame, complex double e)
+{
+  return (frame == NC_WL_ELLIPTICITY_FRAME_CARTESIAN) ? conj (e) : e;
+}
 
 /* TRACE convention (distortion chi). */
 

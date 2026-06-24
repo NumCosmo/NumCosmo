@@ -66,7 +66,7 @@ struct _NcGalaxyWLObs
 struct _NcGalaxyWLObsPrivate
 {
   NcmObjDictInt *pz;
-  NcGalaxyWLObsCoord coord;
+  NcWLEllipticityFrame coord;
   NcGalaxyWLObsEllipConv ellip_conv;
 };
 
@@ -269,7 +269,7 @@ _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz)
  * Returns: (transfer full): a new #NcGalaxyWLObs object.
  */
 NcGalaxyWLObs *
-nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names)
+nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcWLEllipticityFrame coord, guint nrows, GStrv col_names)
 {
   return g_object_new (NC_TYPE_GALAXY_WL_OBS,
                        "ellip-conv", ellip_conv,
@@ -441,7 +441,7 @@ nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs)
  *
  */
 void
-nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcGalaxyWLObsCoord coord)
+nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcWLEllipticityFrame coord)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
@@ -481,7 +481,7 @@ nc_galaxy_wl_obs_get_ellip_conv (NcGalaxyWLObs *obs)
  * Returns: the coordinate system.
  *
  */
-NcGalaxyWLObsCoord
+NcWLEllipticityFrame
 nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);

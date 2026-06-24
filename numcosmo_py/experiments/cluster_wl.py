@@ -70,8 +70,8 @@ class EllipCoord(GEnum):
     """Ellipticity coordinate system."""
 
     # pylint: disable=no-member
-    EUCLIDEAN = Nc.GalaxyWLObsCoord.EUCLIDEAN
-    CELESTIAL = Nc.GalaxyWLObsCoord.CELESTIAL
+    EUCLIDEAN = Nc.WLEllipticityFrame.CARTESIAN
+    CELESTIAL = Nc.WLEllipticityFrame.CELESTIAL
 
     @classmethod
     def __get_pydantic_core_schema__(

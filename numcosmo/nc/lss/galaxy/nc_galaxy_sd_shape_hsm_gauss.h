@@ -48,7 +48,7 @@ NcGalaxySDShapeHSMGauss *nc_galaxy_sd_shape_hsm_gauss_ref (NcGalaxySDShapeHSMGau
 void nc_galaxy_sd_shape_hsm_gauss_free (NcGalaxySDShapeHSMGauss *gsdshsc);
 void nc_galaxy_sd_shape_hsm_gauss_clear (NcGalaxySDShapeHSMGauss **gsdshsc);
 
-void nc_galaxy_sd_shape_hsm_gauss_gen (NcGalaxySDShapeHSMGauss *gsdshsc, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble std_shape, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m, NcGalaxyWLObsCoord coord, NcmRNG *rng);
+void nc_galaxy_sd_shape_hsm_gauss_gen (NcGalaxySDShapeHSMGauss *gsdshsc, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble std_shape, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m, NcWLEllipticityFrame coord, NcmRNG *rng);
 
 void nc_galaxy_sd_shape_hsm_gauss_data_set (NcGalaxySDShapeHSMGauss *gsdshsc, NcGalaxySDShapeData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble std_shape, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m);
 void nc_galaxy_sd_shape_hsm_gauss_data_get (NcGalaxySDShapeHSMGauss *gsdshsc, NcGalaxySDShapeData *data, gdouble *epsilon_obs_1, gdouble *epsilon_obs_2, gdouble *std_shape, gdouble *std_noise, gdouble *c1, gdouble *c2, gdouble *m);

@@ -39,6 +39,7 @@
 #include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/ncm/spline/ncm_spline.h>
 #include <numcosmo/ncm/model/ncm_mset.h>
+#include <numcosmo/nc/lss/wl/nc_wl_ellipticity.h>
 
 G_BEGIN_DECLS
 
@@ -48,19 +49,21 @@ G_DECLARE_FINAL_TYPE (NcGalaxyWLObs, nc_galaxy_wl_obs, NC, GALAXY_WL_OBS, NcmCat
 
 typedef struct _NcGalaxyWLObsPrivate NcGalaxyWLObsPrivate;
 
-/**
+/*
  * NcGalaxyWLObsCoord:
- * @NC_GALAXY_WL_OBS_COORD_CELESTIAL: Celestial coordinates.
- * @NC_GALAXY_WL_OBS_COORD_EUCLIDEAN: Euclidean coordinates.
  *
- * Coordinate system for the galaxy weak lensing ellipticity data.
- *
+ * Legacy C alias of #NcWLEllipticityFrame, kept for backward compatibility; new
+ * code should use #NcWLEllipticityFrame directly. The handedness/parity meaning
+ * is documented there; the values are identical, so EUCLIDEAN maps to the
+ * better-named CARTESIAN frame. Hidden from GObject introspection (which does
+ * not support enum aliases) - Python uses #NcWLEllipticityFrame.
  */
-typedef enum _NcGalaxyWLObsCoord
-{
-  NC_GALAXY_WL_OBS_COORD_CELESTIAL,
-  NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
-} NcGalaxyWLObsCoord;
+#ifndef __GI_SCANNER__
+typedef NcWLEllipticityFrame NcGalaxyWLObsCoord;
+#define NC_GALAXY_WL_OBS_COORD_CELESTIAL NC_WL_ELLIPTICITY_FRAME_CELESTIAL
+#define NC_GALAXY_WL_OBS_COORD_EUCLIDEAN NC_WL_ELLIPTICITY_FRAME_CARTESIAN
+#define NC_TYPE_GALAXY_WL_OBS_COORD      NC_TYPE_WL_ELLIPTICITY_FRAME
+#endif /* __GI_SCANNER__ */
 
 
 /**
@@ -102,7 +105,7 @@ typedef enum _NcGalaxyWLObsEllipConv
   NC_GALAXY_WL_OBS_ELLIP_CONV_LEN
 } NcGalaxyWLObsEllipConv;
 
-NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names);
+NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcWLEllipticityFrame coord, guint nrows, GStrv col_names);
 NcGalaxyWLObs *nc_galaxy_wl_obs_ref (NcGalaxyWLObs *obs);
 
 void nc_galaxy_wl_obs_free (NcGalaxyWLObs *obs);
@@ -119,8 +122,8 @@ NcmSpline *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
 GStrv nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs);
 NcmMatrix *nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs);
 
-void nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcGalaxyWLObsCoord coord);
-NcGalaxyWLObsCoord nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs);
+void nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcWLEllipticityFrame coord);
+NcWLEllipticityFrame nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs);
 
 NcGalaxyWLObsEllipConv nc_galaxy_wl_obs_get_ellip_conv (NcGalaxyWLObs *obs);
 
