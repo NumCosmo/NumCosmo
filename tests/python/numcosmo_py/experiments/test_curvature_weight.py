@@ -97,6 +97,29 @@ def test_marginal_knot_fisher_schur() -> None:
     assert_allclose(f_d, np.linalg.inv(cov[np.ix_(knot_idx, knot_idx)]))
 
 
+def test_marginal_knot_fisher_no_other_block() -> None:
+    """With no parameters to marginalize, the marginal Fisher is the block itself."""
+    rng = np.random.default_rng(1)
+    a = rng.normal(size=(3, 3))
+    fisher = a @ a.T + 3.0 * np.eye(3)  # SPD
+    f_d = cw.marginal_knot_fisher(fisher, [0, 1, 2])
+    assert_allclose(f_d, fisher)
+
+
+def test_fisher_information_weight_no_knots_raises(wspline_experiment) -> None:
+    """A knot prefix that matches no free parameter is rejected."""
+    cosmo, mset, dataset, z_max = wspline_experiment
+    with pytest.raises(ValueError, match="no free knots"):
+        cw.fisher_information_weight(
+            dataset,
+            mset,
+            cosmo,
+            knot_prefix="bogus_",
+            eval_fn=lambda model, x: 0.0,
+            x_grid=np.linspace(0.0, z_max, 8),
+        )
+
+
 def test_wspline_weight_relaxes_where_data_constrains(wspline_experiment) -> None:
     """W is small where SNIa constrain w(z) and rises to 1 where data is blind."""
     cosmo, mset, dataset, _ = wspline_experiment
