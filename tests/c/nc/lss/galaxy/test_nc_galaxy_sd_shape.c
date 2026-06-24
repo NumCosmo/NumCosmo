@@ -2623,6 +2623,74 @@ _test_nc_galaxy_sd_shape_at_nodes_impl (
     ncm_vector_free (out2);
   }
 
+  /* Lazy radius guard (regression for an uninitialized projected-radius
+   * prefactor): a freshly added galaxy (radius still 0) must get a correct
+   * projected radius from prepare_data_array() even when it is called with
+   * update_radius=FALSE. The radius==0 fallback must compute the prefactor
+   * itself instead of reading a local that is only assigned when
+   * update_radius is TRUE. The lens redshift is changed between priming and
+   * the update_radius=FALSE call, so a stale/uninitialized prefactor would
+   * give a detectably wrong radius (and hence a wrong integrand). */
+  {
+    GPtrArray *guard_array             = g_ptr_array_new ();
+    NcGalaxySDObsRedshiftData *z_dataA = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
+    NcGalaxySDPositionData *p_dataA    = nc_galaxy_sd_position_data_new (test->galaxy_position, z_dataA);
+    NcGalaxySDShapeData *s_prime       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_dataA);
+    NcGalaxySDObsRedshiftData *z_dataB = nc_galaxy_sd_obs_redshift_data_new (test->galaxy_redshift);
+    NcGalaxySDPositionData *p_dataB    = nc_galaxy_sd_position_data_new (test->galaxy_position, z_dataB);
+    NcGalaxySDShapeData *s_fresh       = nc_galaxy_sd_shape_data_new (test->galaxy_shape, p_dataB);
+    const gdouble z_eval               = 1.2;
+    gdouble int_lazy, int_ref;
+
+    z_dataA->z  = 0.7;
+    p_dataA->ra = 4.0e-3; p_dataA->dec = -3.0e-3;
+    z_dataB->z  = 0.7;
+    p_dataB->ra = -3.0e-3; p_dataB->dec = 4.0e-3;
+
+    /* Use the observed-data setter (not gen): it leaves radius == 0, which is
+     * what triggers the radius==0 fallback under test (gen would set radius). */
+    if (is_global)
+    {
+      nc_galaxy_sd_shape_hsm_gauss_global_data_set (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape), s_prime, 0.05, -0.03, 0.03, 0.0, 0.0, 0.0);
+      nc_galaxy_sd_shape_hsm_gauss_global_data_set (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape), s_fresh, 0.05, -0.03, 0.03, 0.0, 0.0, 0.0);
+    }
+    else
+    {
+      nc_galaxy_sd_shape_hsm_gauss_data_set (NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape), s_prime, 0.05, -0.03, 0.3, 0.03, 0.0, 0.0, 0.0);
+      nc_galaxy_sd_shape_hsm_gauss_data_set (NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape), s_fresh, 0.05, -0.03, 0.3, 0.03, 0.0, 0.0, 0.0);
+    }
+
+    /* Prime the prefactor at one lens redshift via a galaxy that becomes
+     * "already prepared" (radius != 0). */
+    ncm_model_param_set_by_name (NCM_MODEL (test->halo_position), "z", 0.2, NULL);
+    g_ptr_array_add (guard_array, s_prime);
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, guard_array, TRUE, TRUE);
+
+    /* Change the lens redshift, add the never-prepared galaxy, prepare with
+     * update_radius=FALSE: only s_fresh (radius==0) takes the fallback. */
+    ncm_model_param_set_by_name (NCM_MODEL (test->halo_position), "z", 0.5, NULL);
+    g_ptr_array_add (guard_array, s_fresh);
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, guard_array, FALSE, TRUE);
+
+    nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+    int_lazy = nc_galaxy_sd_shape_integrand_eval (integrand, z_eval, s_fresh);
+
+    /* Reference: same galaxy and lens redshift, prepared with update_radius=TRUE. */
+    nc_galaxy_sd_shape_prepare_data_array (test->galaxy_shape, test->mset, guard_array, TRUE, TRUE);
+    nc_galaxy_sd_shape_integrand_prepare (integrand, test->mset);
+    int_ref = nc_galaxy_sd_shape_integrand_eval (integrand, z_eval, s_fresh);
+
+    ncm_assert_cmpdouble_e (int_lazy, ==, int_ref, 1.0e-9, 0.0);
+
+    nc_galaxy_sd_obs_redshift_data_unref (z_dataA);
+    nc_galaxy_sd_position_data_unref (p_dataA);
+    nc_galaxy_sd_shape_data_unref (s_prime);
+    nc_galaxy_sd_obs_redshift_data_unref (z_dataB);
+    nc_galaxy_sd_position_data_unref (p_dataB);
+    nc_galaxy_sd_shape_data_unref (s_fresh);
+    g_ptr_array_unref (guard_array);
+  }
+
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
   nc_galaxy_sd_position_data_unref (p_data);
   nc_galaxy_sd_shape_data_unref (s_data);

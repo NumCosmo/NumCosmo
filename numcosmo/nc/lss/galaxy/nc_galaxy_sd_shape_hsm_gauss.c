@@ -475,7 +475,8 @@ _nc_galaxy_sd_shape_hsm_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet
   NcHaloDensityProfile *density_profile        = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
   const gdouble z_cl                           = nc_halo_position_get_redshift (halo_position);
   NcWLSurfaceMassDensityLensCtx lens_ctx;
-  gdouble r_s, rho_s, pr_prefactor;
+  gboolean pr_prefactor_ready = FALSE;
+  gdouble r_s, rho_s, pr_prefactor = 0.0;
   guint i;
 
   NCM_UNUSED (gsds);
@@ -484,7 +485,10 @@ _nc_galaxy_sd_shape_hsm_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
 
   if (update_radius)
-    pr_prefactor = nc_halo_position_projected_radius_prefactor (halo_position, cosmo);
+  {
+    pr_prefactor       = nc_halo_position_projected_radius_prefactor (halo_position, cosmo);
+    pr_prefactor_ready = TRUE;
+  }
 
   if (update_optzs)
   {
@@ -515,6 +519,12 @@ _nc_galaxy_sd_shape_hsm_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet
 
       e_o_rotated  = e_o * cexp (-2.0 * I * phi);
       bias_rotated = (ldata_i->c1 + I * ldata_i->c2) * cexp (-2.0 * I * phi);
+
+      if (!pr_prefactor_ready)
+      {
+        pr_prefactor       = nc_halo_position_projected_radius_prefactor (halo_position, cosmo);
+        pr_prefactor_ready = TRUE;
+      }
 
       ldata_i->radius        = nc_halo_position_projected_radius_from_prefactor (theta, pr_prefactor);
       ldata_i->phi           = phi;
@@ -547,8 +557,9 @@ _nc_galaxy_sd_shape_hsm_gauss_prepare_data_array_at_nodes (NcGalaxySDShape *gsds
   NcHaloDensityProfile *density_profile        = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
   const gdouble z_cl                           = nc_halo_position_get_redshift (halo_position);
   gboolean lens_ctx_ready                      = FALSE;
+  gboolean pr_prefactor_ready                  = FALSE;
   NcWLSurfaceMassDensityLensCtx lens_ctx;
-  gdouble pr_prefactor;
+  gdouble pr_prefactor                         = 0.0;
   guint i;
 
   NCM_UNUSED (gsds);
@@ -561,7 +572,10 @@ _nc_galaxy_sd_shape_hsm_gauss_prepare_data_array_at_nodes (NcGalaxySDShape *gsds
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
 
   if (update_radius)
-    pr_prefactor = nc_halo_position_projected_radius_prefactor (halo_position, cosmo);
+  {
+    pr_prefactor       = nc_halo_position_projected_radius_prefactor (halo_position, cosmo);
+    pr_prefactor_ready = TRUE;
+  }
 
   if (update_crit)
   {
@@ -594,6 +608,12 @@ _nc_galaxy_sd_shape_hsm_gauss_prepare_data_array_at_nodes (NcGalaxySDShape *gsds
 
       e_o_rotated  = e_o * cexp (-2.0 * I * phi);
       bias_rotated = (ldata_i->c1 + I * ldata_i->c2) * cexp (-2.0 * I * phi);
+
+      if (!pr_prefactor_ready)
+      {
+        pr_prefactor       = nc_halo_position_projected_radius_prefactor (halo_position, cosmo);
+        pr_prefactor_ready = TRUE;
+      }
 
       ldata_i->radius        = nc_halo_position_projected_radius_from_prefactor (theta, pr_prefactor);
       ldata_i->phi           = phi;
