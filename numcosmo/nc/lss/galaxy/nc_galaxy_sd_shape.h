@@ -68,10 +68,10 @@ struct _NcGalaxySDShapeClass
 
   void (*gen) (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng);
   NcGalaxySDShapeIntegrand *(*integ) (NcGalaxySDShape *gsds, gboolean use_lnp);
-  gboolean (*prepare_data_array) (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
+  gboolean (*prepare_data_array) (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gboolean update_radius, gboolean update_optzs);
   void (*data_init) (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data, NcGalaxySDShapeData *data);
   void (*direct_estimate) (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
-  gboolean (*prepare_at_nodes) (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy);
+  gboolean (*prepare_data_array_at_nodes) (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy, gboolean update_radius, gboolean update_crit, gboolean update_sigma);
   void (*eval_at_nodes) (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, const NcmVector *z_nodes, NcmVector *out);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
@@ -107,6 +107,11 @@ void nc_galaxy_sd_shape_apply_shear (NcGalaxySDShape *gsds, const NcmComplex *g,
 void nc_galaxy_sd_shape_apply_shear_inv (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs, NcmComplex *E);
 gdouble nc_galaxy_sd_shape_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs);
 
+typedef void (*NcGalaxySDShapeApplyShearInvFn) (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs, NcmComplex *E);
+typedef gdouble (*NcGalaxySDShapeLndetJacFn) (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs);
+
+void nc_galaxy_sd_shape_peek_dispatch (NcGalaxySDShape *gsds, NcGalaxySDShapeApplyShearInvFn *apply_shear_inv, NcGalaxySDShapeLndetJacFn *lndet_jac);
+
 void nc_galaxy_sd_shape_data_read_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_sd_shape_data_write_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
 GList *nc_galaxy_sd_shape_data_required_columns (NcGalaxySDShapeData *data);
@@ -119,9 +124,9 @@ void nc_galaxy_sd_shape_clear (NcGalaxySDShape **gsds);
 
 void nc_galaxy_sd_shape_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, NcmRNG *rng);
 NcGalaxySDShapeIntegrand *nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, gboolean use_lnp);
-gboolean nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array);
+gboolean nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gboolean update_radius, gboolean update_optzs);
 void nc_galaxy_sd_shape_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
-gboolean nc_galaxy_sd_shape_prepare_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy);
+gboolean nc_galaxy_sd_shape_prepare_data_array_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy, gboolean update_radius, gboolean update_crit, gboolean update_sigma);
 void nc_galaxy_sd_shape_eval_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, const NcmVector *z_nodes, NcmVector *out);
 
 NcGalaxySDShapeData *nc_galaxy_sd_shape_data_new (NcGalaxySDShape *gsds, NcGalaxySDPositionData *sdpos_data);

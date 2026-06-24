@@ -169,6 +169,14 @@ _nc_galaxy_sd_obs_redshift_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMS
   return NULL;
 }
 
+static gdouble
+_nc_galaxy_sd_obs_redshift_norm (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data)
+{
+  g_error ("_nc_galaxy_sd_obs_redshift_norm: method not implemented");
+
+  return 0.0;
+}
+
 /*  LCOV_EXCL_STOP */
 
 static void
@@ -194,6 +202,7 @@ nc_galaxy_sd_obs_redshift_class_init (NcGalaxySDObsRedshiftClass *klass)
   klass->data_init           = &_nc_galaxy_sd_obs_redshift_data_init;
   klass->compute_binned_dndz = &_nc_galaxy_sd_obs_redshift_compute_binned_dndz;
   klass->make_fixed_nodes    = &_nc_galaxy_sd_obs_redshift_make_fixed_nodes;
+  klass->norm                = &_nc_galaxy_sd_obs_redshift_norm;
 }
 
 /**
@@ -504,6 +513,26 @@ nc_galaxy_sd_obs_redshift_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSe
                                             guint n_nodes, guint rule_n)
 {
   return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->make_fixed_nodes (gsdor, mset, data, z_lo, z_hi, n_nodes, rule_n);
+}
+
+/**
+ * nc_galaxy_sd_obs_redshift_norm:
+ * @gsdor: a #NcGalaxySDObsRedshift
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxySDObsRedshiftData
+ *
+ * Computes the exact normalization $\int P(z) \mathrm{d}z$ of the per-galaxy
+ * P(z) factor over its effective support [nc_galaxy_sd_obs_redshift_get_integ_lim()].
+ * Unlike the Gauss-Legendre node weights, this is computed analytically (e.g.
+ * directly from the underlying spline), so it can be used as an exact anchor
+ * term in control-variate integration schemes.
+ *
+ * Returns: the exact normalization of P(z) over its support.
+ */
+gdouble
+nc_galaxy_sd_obs_redshift_norm (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data)
+{
+  return NC_GALAXY_SD_OBS_REDSHIFT_GET_CLASS (gsdor)->norm (gsdor, mset, data);
 }
 
 /**

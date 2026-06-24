@@ -6824,6 +6824,9 @@ class GalaxySDObsRedshift(NumCosmoMath.Model):
         self, mset: NumCosmoMath.MSet, data: GalaxySDObsRedshiftData
     ) -> typing.Tuple[float, float]: ...
     def do_integ(self, use_lnp: bool) -> GalaxySDObsRedshiftIntegrand: ...
+    def do_norm(
+        self, mset: NumCosmoMath.MSet, data: GalaxySDObsRedshiftData
+    ) -> float: ...
     def do_prepare(self, data: GalaxySDObsRedshiftData) -> None: ...
     def free(self) -> None: ...
     def gen(self, data: GalaxySDObsRedshiftData, rng: NumCosmoMath.RNG) -> None: ...
@@ -6834,6 +6837,7 @@ class GalaxySDObsRedshift(NumCosmoMath.Model):
     @staticmethod
     def id() -> int: ...
     def integ(self, use_lnp: bool) -> GalaxySDObsRedshiftIntegrand: ...
+    def norm(self, mset: NumCosmoMath.MSet, data: GalaxySDObsRedshiftData) -> float: ...
     def prepare(self, data: GalaxySDObsRedshiftData) -> None: ...
     def ref(self) -> GalaxySDObsRedshift: ...
 
@@ -6872,6 +6876,9 @@ class GalaxySDObsRedshiftClass(GObject.GPointer):
         NumCosmoMath.Spline,
     ] = ...
     make_fixed_nodes: None = ...
+    norm: typing.Callable[
+        [GalaxySDObsRedshift, NumCosmoMath.MSet, GalaxySDObsRedshiftData], float
+    ] = ...
     padding: list[None] = ...
 
 class GalaxySDObsRedshiftData(GObject.GBoxed):
@@ -7593,14 +7600,21 @@ class GalaxySDShape(NumCosmoMath.Model):
         self, mset: NumCosmoMath.MSet, data: GalaxySDShapeData, rng: NumCosmoMath.RNG
     ) -> None: ...
     def do_integ(self, use_lnp: bool) -> GalaxySDShapeIntegrand: ...
-    def do_prepare_at_nodes(
+    def do_prepare_data_array(
+        self,
+        mset: NumCosmoMath.MSet,
+        data_array: typing.Sequence[GalaxySDShapeData],
+        update_radius: bool,
+        update_optzs: bool,
+    ) -> bool: ...
+    def do_prepare_data_array_at_nodes(
         self,
         mset: NumCosmoMath.MSet,
         data_array: typing.Sequence[GalaxySDShapeData],
         z_nodes_per_galaxy: typing.Sequence[NumCosmoMath.Vector],
-    ) -> bool: ...
-    def do_prepare_data_array(
-        self, mset: NumCosmoMath.MSet, data_array: typing.Sequence[GalaxySDShapeData]
+        update_radius: bool,
+        update_crit: bool,
+        update_sigma: bool,
     ) -> bool: ...
     def eval_at_nodes(
         self,
@@ -7619,14 +7633,21 @@ class GalaxySDShape(NumCosmoMath.Model):
     def lndet_jac(
         self, g: NumCosmoMath.Complex, E_obs: NumCosmoMath.Complex
     ) -> float: ...
-    def prepare_at_nodes(
+    def prepare_data_array(
+        self,
+        mset: NumCosmoMath.MSet,
+        data_array: typing.Sequence[GalaxySDShapeData],
+        update_radius: bool,
+        update_optzs: bool,
+    ) -> bool: ...
+    def prepare_data_array_at_nodes(
         self,
         mset: NumCosmoMath.MSet,
         data_array: typing.Sequence[GalaxySDShapeData],
         z_nodes_per_galaxy: typing.Sequence[NumCosmoMath.Vector],
-    ) -> bool: ...
-    def prepare_data_array(
-        self, mset: NumCosmoMath.MSet, data_array: typing.Sequence[GalaxySDShapeData]
+        update_radius: bool,
+        update_crit: bool,
+        update_sigma: bool,
     ) -> bool: ...
     def ref(self) -> GalaxySDShape: ...
 
@@ -7645,7 +7666,14 @@ class GalaxySDShapeClass(GObject.GPointer):
     ] = ...
     integ: typing.Callable[[GalaxySDShape, bool], GalaxySDShapeIntegrand] = ...
     prepare_data_array: typing.Callable[
-        [GalaxySDShape, NumCosmoMath.MSet, typing.Sequence[GalaxySDShapeData]], bool
+        [
+            GalaxySDShape,
+            NumCosmoMath.MSet,
+            typing.Sequence[GalaxySDShapeData],
+            bool,
+            bool,
+        ],
+        bool,
     ] = ...
     data_init: typing.Callable[
         [GalaxySDShape, GalaxySDPositionData, GalaxySDShapeData], None
@@ -7654,12 +7682,15 @@ class GalaxySDShapeClass(GObject.GPointer):
         [GalaxySDShape, NumCosmoMath.MSet, typing.Sequence[GalaxySDShapeData]],
         typing.Tuple[float, float, float, float, float],
     ] = ...
-    prepare_at_nodes: typing.Callable[
+    prepare_data_array_at_nodes: typing.Callable[
         [
             GalaxySDShape,
             NumCosmoMath.MSet,
             typing.Sequence[GalaxySDShapeData],
             typing.Sequence[NumCosmoMath.Vector],
+            bool,
+            bool,
+            bool,
         ],
         bool,
     ] = ...
@@ -16876,6 +16907,7 @@ class HaloPosition(NumCosmoMath.Model):
     def projected_radius_from_ra_dec(
         self, cosmo: HICosmo, ra: float, dec: float
     ) -> float: ...
+    def projected_radius_prefactor(self, cosmo: HICosmo) -> float: ...
     def ref(self) -> HaloPosition: ...
 
 class HaloPositionClass(GObject.GPointer):
@@ -20701,6 +20733,21 @@ class WLSurfaceMassDensityCritCache(GObject.GPointer):
 
     is_source: bool = ...
     sigma_crit: float = ...
+
+class WLSurfaceMassDensityLensCtx(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        WLSurfaceMassDensityLensCtx()
+    """
+
+    k: int = ...
+    sqrt_Omega_k0: float = ...
+    zl: float = ...
+    dl: float = ...
+    sc_over_Dl: float = ...
 
 class WLSurfaceMassDensityOptzs(GObject.GPointer):
     r"""

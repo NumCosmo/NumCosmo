@@ -678,56 +678,39 @@ nc_wl_surface_mass_density_reduced_shear (NcWLSurfaceMassDensity *smd, NcHaloDen
 void
 nc_wl_surface_mass_density_reduced_shear_optzs_prep (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensityOptzs *optzs)
 {
+  NcWLSurfaceMassDensityLensCtx ctx;
   gdouble r_s, rho_s;
 
+  nc_wl_surface_mass_density_lens_ctx_prep (&ctx, smd, cosmo, zl);
   nc_halo_density_profile_r_s_rho_s (dp, cosmo, zc, &r_s, &rho_s);
+  nc_wl_surface_mass_density_reduced_shear_optzs_prep_with_lens_ctx (dp, &ctx, R, r_s, rho_s, optzs);
+}
 
-  {
-    const gdouble a        = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
-    const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
+/**
+ * nc_wl_surface_mass_density_reduced_shear_optzs_prep_with_lens_ctx: (skip)
+ * @dp: a #NcHaloDensityProfile
+ * @ctx: a #NcWLSurfaceMassDensityLensCtx already prepared via #nc_wl_surface_mass_density_lens_ctx_prep()
+ * @R: projected radius with respect to the center of the lens / halo
+ * @r_s: scale radius from #nc_halo_density_profile_r_s_rho_s()
+ * @rho_s: scale density from #nc_halo_density_profile_r_s_rho_s()
+ * @optzs: (out): a #NcWLSurfaceMassDensityOptzs
+ *
+ * Variant of #nc_wl_surface_mass_density_reduced_shear_optzs_prep() that reuses
+ * a pre-computed lens-side context and pre-computed (r_s, rho_s). Only the per-R
+ * surface-mass-density profile evaluations are computed per call.
+ *
+ */
+void
+nc_wl_surface_mass_density_reduced_shear_optzs_prep_with_lens_ctx (NcHaloDensityProfile *dp, const NcWLSurfaceMassDensityLensCtx *ctx, const gdouble R, const gdouble r_s, const gdouble rho_s, NcWLSurfaceMassDensityOptzs *optzs)
+{
+  const gdouble X = R / r_s;
 
-    optzs->sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
-
-    optzs->k  = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
-    optzs->dl = nc_distance_comoving (smd->dist, cosmo, zl);
-
-    switch (optzs->k)
-    {
-      case -1:
-      {
-        const gdouble X  = R / r_s;
-        const gdouble Dl = sinh (optzs->sqrt_Omega_k0 * optzs->dl) / ((1.0 + zl) * optzs->sqrt_Omega_k0);
-
-        optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
-        optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
-        optzs->sc_Dls_Ds  = a / Dl;
-      }
-      break;
-      case 0:
-      {
-        const gdouble X  = R / r_s;
-        const gdouble Dl = optzs->dl / (1.0 + zl);
-
-        optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
-        optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
-        optzs->sc_Dls_Ds  = a / Dl;
-      }
-      break;
-      case 1:
-      {
-        const gdouble X  = R / r_s;
-        const gdouble Dl = sin (optzs->sqrt_Omega_k0 * optzs->dl) / ((1.0 + zl) * optzs->sqrt_Omega_k0);
-
-        optzs->mean_sigma = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
-        optzs->sigma      = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
-        optzs->sc_Dls_Ds  = a / Dl;
-      }
-      break;
-      default:
-        g_assert_not_reached ();
-        break;
-    }
-  }
+  optzs->k             = ctx->k;
+  optzs->sqrt_Omega_k0 = ctx->sqrt_Omega_k0;
+  optzs->dl            = ctx->dl;
+  optzs->sc_Dls_Ds     = ctx->sc_over_Dl;
+  optzs->mean_sigma    = (2.0 * nc_halo_density_profile_eval_dl_cyl_mass (dp, X) / (X * X)) * rho_s * r_s;
+  optzs->sigma         = (nc_halo_density_profile_eval_dl_2d_density (dp, X)) * rho_s * r_s;
 }
 
 /**
@@ -820,52 +803,108 @@ nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (NcWLSurfaceMassDensity
 {
   NCM_UNUSED (zc);
 
-  if (zs < zl)
+  NcWLSurfaceMassDensityLensCtx ctx;
+
+  nc_wl_surface_mass_density_lens_ctx_prep (&ctx, smd, cosmo, zl);
+  nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx (smd, cosmo, &ctx, zs, crit_cache);
+}
+
+/**
+ * nc_wl_surface_mass_density_lens_ctx_prep: (skip)
+ * @ctx: a #NcWLSurfaceMassDensityLensCtx
+ * @smd: a #NcWLSurfaceMassDensity
+ * @cosmo: a #NcHICosmo
+ * @zl: lens redshift $z_\mathrm{lens}$
+ *
+ * Precomputes the lens-side constants (curvature, comoving distance, sigma_crit
+ * prefactor) used by repeated #nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx()
+ * calls that share the same @cosmo and @zl. Hoists cosmology getters and one
+ * comoving-distance evaluation out of an inner-loop call site.
+ *
+ */
+void
+nc_wl_surface_mass_density_lens_ctx_prep (NcWLSurfaceMassDensityLensCtx *ctx, NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zl)
+{
+  const gdouble a             = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+  const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
+  const gdouble dl            = nc_distance_comoving (smd->dist, cosmo, zl);
+  gdouble Dl;
+
+  switch (k)
+  {
+    case -1:
+      Dl = sinh (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+      break;
+    case 0:
+      Dl = dl / (1.0 + zl);
+      break;
+    case 1:
+      Dl = sin (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  ctx->k             = k;
+  ctx->sqrt_Omega_k0 = sqrt_Omega_k0;
+  ctx->zl            = zl;
+  ctx->dl            = dl;
+  ctx->sc_over_Dl    = a / Dl;
+}
+
+/**
+ * nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx: (skip)
+ * @smd: a #NcWLSurfaceMassDensity
+ * @cosmo: a #NcHICosmo
+ * @ctx: a #NcWLSurfaceMassDensityLensCtx already prepared via #nc_wl_surface_mass_density_lens_ctx_prep()
+ * @zs: source redshift $z_\mathrm{source}$
+ * @crit_cache: (out): a #NcWLSurfaceMassDensityCritCache
+ *
+ * Variant of #nc_wl_surface_mass_density_reduced_shear_crit_cache_prep() that
+ * reuses a pre-computed lens-side context. Only the source-side comoving
+ * distance and curvature transform are computed per call.
+ *
+ */
+void
+nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const NcWLSurfaceMassDensityLensCtx *ctx, const gdouble zs, NcWLSurfaceMassDensityCritCache *crit_cache)
+{
+  if (zs < ctx->zl)
   {
     crit_cache->is_source  = FALSE;
     crit_cache->sigma_crit = GSL_NAN;
-  }
-  else
-  {
-    const gdouble a             = ncm_c_c2 () / (4.0 * M_PI * ncm_c_G_mass_solar ()) * ncm_c_Mpc () / nc_hicosmo_RH_Mpc (cosmo); /* [ M_solar / Mpc^2 ] */
-    const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
-    const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
-    const gint k                = fabs (Omega_k0) < NCM_ZERO_LIMIT ? 0 : (Omega_k0 > 0.0 ? -1 : 1);
-    const gdouble dl            = nc_distance_comoving (smd->dist, cosmo, zl);
-    const gdouble x_i           = 1.0 + zs;
-    const gdouble ds            = nc_distance_comoving (smd->dist, cosmo, zs);
-    gdouble Dl, Dls, Ds;
 
-    switch (k)
+    return;
+  }
+
+  {
+    const gdouble x_i = 1.0 + zs;
+    const gdouble ds  = nc_distance_comoving (smd->dist, cosmo, zs);
+    gdouble Ds, Dls;
+
+    switch (ctx->k)
     {
       case -1:
-      {
-        Dl  = sinh (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
-        Ds  = sinh (sqrt_Omega_k0 * ds) / (x_i * sqrt_Omega_k0);
-        Dls = sinh (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
-      }
-      break;
+        Ds  = sinh (ctx->sqrt_Omega_k0 * ds) / (x_i * ctx->sqrt_Omega_k0);
+        Dls = sinh (ctx->sqrt_Omega_k0 * (ds - ctx->dl)) / (x_i * ctx->sqrt_Omega_k0);
+        break;
       case 0:
-      {
-        Dl  = dl / (1.0 + zl);
         Ds  = ds / x_i;
-        Dls = (ds - dl) / x_i;
-      }
-      break;
+        Dls = (ds - ctx->dl) / x_i;
+        break;
       case 1:
-      {
-        Dl  = sin (sqrt_Omega_k0 * dl) / ((1.0 + zl) * sqrt_Omega_k0);
-        Ds  = sin (sqrt_Omega_k0 * ds) / (x_i * sqrt_Omega_k0);
-        Dls = sin (sqrt_Omega_k0 * (ds - dl)) / (x_i * sqrt_Omega_k0);
-      }
-      break;
+        Ds  = sin (ctx->sqrt_Omega_k0 * ds) / (x_i * ctx->sqrt_Omega_k0);
+        Dls = sin (ctx->sqrt_Omega_k0 * (ds - ctx->dl)) / (x_i * ctx->sqrt_Omega_k0);
+        break;
       default:
         g_assert_not_reached ();
         break;
     }
 
     crit_cache->is_source  = TRUE;
-    crit_cache->sigma_crit = a * Ds / (Dl * Dls);
+    crit_cache->sigma_crit = ctx->sc_over_Dl * Ds / Dls;
   }
 }
 

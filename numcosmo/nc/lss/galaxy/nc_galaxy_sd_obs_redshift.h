@@ -72,9 +72,10 @@ struct _NcGalaxySDObsRedshiftClass
                                          NcGalaxySDObsRedshiftData *data,
                                          gdouble z_lo, gdouble z_hi,
                                          guint n_nodes, guint rule_n);
+  gdouble (*norm) (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[10];
+  gpointer padding[9];
 };
 
 struct _NcGalaxySDObsRedshiftData
@@ -112,6 +113,7 @@ NcGalaxySDObsRedshiftData *nc_galaxy_sd_obs_redshift_data_new (NcGalaxySDObsReds
 
 NcmSpline *nc_galaxy_sd_obs_redshift_compute_binned_dndz (NcGalaxySDObsRedshift *gsdor, NcmVector *z_array);
 NcmIntegralFixed *nc_galaxy_sd_obs_redshift_make_fixed_nodes (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
+gdouble nc_galaxy_sd_obs_redshift_norm (NcGalaxySDObsRedshift *gsdor, NcmMSet *mset, NcGalaxySDObsRedshiftData *data);
 
 #define NC_GALAXY_SD_OBS_REDSHIFT_COL_Z "z"
 

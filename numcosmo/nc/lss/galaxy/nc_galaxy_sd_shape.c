@@ -149,7 +149,7 @@ _nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, gboolean use_lnp)
 }
 
 static gboolean
-_nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array)
+_nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gboolean update_radius, gboolean update_optzs)
 {
   g_error ("_nc_galaxy_sd_shape_prepare: method not implemented.");
 
@@ -169,7 +169,7 @@ _nc_galaxy_sd_shape_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrA
 }
 
 static gboolean
-_nc_galaxy_sd_shape_prepare_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy)
+_nc_galaxy_sd_shape_prepare_data_array_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy, gboolean update_radius, gboolean update_crit, gboolean update_sigma)
 {
   g_error ("_nc_galaxy_sd_shape_prepare_at_nodes: method not implemented.");
 
@@ -214,13 +214,13 @@ nc_galaxy_sd_shape_class_init (NcGalaxySDShapeClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
   ncm_model_class_check_params_info (model_class);
 
-  klass->gen                = &_nc_galaxy_sd_shape_gen;
-  klass->integ              = &_nc_galaxy_sd_shape_integ;
-  klass->prepare_data_array = &_nc_galaxy_sd_shape_prepare_data_array;
-  klass->data_init          = &_nc_galaxy_sd_shape_data_init;
-  klass->direct_estimate    = &_nc_galaxy_sd_shape_direct_estimate;
-  klass->prepare_at_nodes   = &_nc_galaxy_sd_shape_prepare_at_nodes;
-  klass->eval_at_nodes      = &_nc_galaxy_sd_shape_eval_at_nodes;
+  klass->gen                         = &_nc_galaxy_sd_shape_gen;
+  klass->integ                       = &_nc_galaxy_sd_shape_integ;
+  klass->prepare_data_array          = &_nc_galaxy_sd_shape_prepare_data_array;
+  klass->data_init                   = &_nc_galaxy_sd_shape_data_init;
+  klass->direct_estimate             = &_nc_galaxy_sd_shape_direct_estimate;
+  klass->prepare_data_array_at_nodes = &_nc_galaxy_sd_shape_prepare_data_array_at_nodes;
+  klass->eval_at_nodes               = &_nc_galaxy_sd_shape_eval_at_nodes;
 }
 
 /* LCOV_EXCL_START */
@@ -466,6 +466,25 @@ nc_galaxy_sd_shape_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const 
 }
 
 /**
+ * nc_galaxy_sd_shape_peek_dispatch: (skip)
+ * @gsds: a #NcGalaxySDShape instance
+ * @apply_shear_inv: pointer that receives the apply-shear-inverse dispatch slot
+ * @lndet_jac: pointer that receives the lndet-jac dispatch slot
+ *
+ * Returns the function pointers used by nc_galaxy_sd_shape_apply_shear_inv() and
+ * nc_galaxy_sd_shape_lndet_jac(). Allows callers in tight loops to avoid the
+ * per-call private-data dereference.
+ */
+void
+nc_galaxy_sd_shape_peek_dispatch (NcGalaxySDShape *gsds, NcGalaxySDShapeApplyShearInvFn *apply_shear_inv, NcGalaxySDShapeLndetJacFn *lndet_jac)
+{
+  NcGalaxySDShapePrivate * const self = nc_galaxy_sd_shape_get_instance_private (gsds);
+
+  *apply_shear_inv = self->apply_shear_inv;
+  *lndet_jac       = self->int_to_obs_lndet_jac;
+}
+
+/**
  * nc_galaxy_sd_shape_data_read_row:
  * @data: a #NcGalaxySDShapeData
  * @obs: a #NcGalaxyWLObs
@@ -658,15 +677,17 @@ nc_galaxy_sd_shape_integ (NcGalaxySDShape *gsds, gboolean use_lnp)
  * @gsds: a #NcGalaxySDShape
  * @mset: a #NcmMSet
  * @data_array: (element-type NcGalaxySDShapeData): a #GPtrArray of #NcGalaxySDShapeData
+ * @update_radius: whether the radius must be updated
+ * @update_optzs: whether optzs must be updated
  *
  * Prepares the matrix to compute the probability density of the observable shape.
  *
  * Returns: TRUE if the matrix was prepared, FALSE otherwise.
  */
 gboolean
-nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array)
+nc_galaxy_sd_shape_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, gboolean update_radius, gboolean update_optzs)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare_data_array (gsds, mset, data_array);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare_data_array (gsds, mset, data_array, update_radius, update_optzs);
 }
 
 /**
@@ -690,20 +711,23 @@ nc_galaxy_sd_shape_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrAr
 }
 
 /**
- * nc_galaxy_sd_shape_prepare_at_nodes: (virtual prepare_at_nodes)
+ * nc_galaxy_sd_shape_prepare_data_array_at_nodes: (virtual prepare_data_array_at_nodes)
  * @gsds: a #NcGalaxySDShape
  * @mset: a #NcmMSet
  * @data_array: (element-type NcGalaxySDShapeData): per-galaxy shape data
  * @z_nodes_per_galaxy: (element-type NcmVector): per-galaxy z node vectors
+ * @update_radius: whether the radius must be updated
+ * @update_crit: whether the critical surface density cache data must be updated
+ * @update_sigma: whether the surface mass density cache must be updated
  *
  * Pre-computes cached quantities (Σ_crit per node, Σ(R)) for the fixed GL quadrature path.
  *
  * Returns: TRUE if successful.
  */
 gboolean
-nc_galaxy_sd_shape_prepare_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy)
+nc_galaxy_sd_shape_prepare_data_array_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy, gboolean update_radius, gboolean update_crit, gboolean update_sigma)
 {
-  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare_at_nodes (gsds, mset, data_array, z_nodes_per_galaxy);
+  return NC_GALAXY_SD_SHAPE_GET_CLASS (gsds)->prepare_data_array_at_nodes (gsds, mset, data_array, z_nodes_per_galaxy, update_radius, update_crit, update_sigma);
 }
 
 /**
