@@ -40,6 +40,8 @@ import numcosmo_py.datasets.hicosmo as hicosmo
 
 Ncm.cfg_init()
 
+pytestmark = pytest.mark.app
+
 
 # JPAS Forecast
 def test_generate_jpas(tmp_path: Path):
