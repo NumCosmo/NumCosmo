@@ -53,10 +53,6 @@
 
 typedef struct _NcGalaxySDShapePrivate
 {
-  void (*apply_shear) (NcGalaxySDShape *, const NcmComplex *, const NcmComplex *, NcmComplex *);
-  void (*apply_shear_inv) (NcGalaxySDShape *, const NcmComplex *, const NcmComplex *, NcmComplex *);
-  gdouble (*int_to_obs_lndet_jac) (NcGalaxySDShape *, const NcmComplex *, const NcmComplex *);
-
   NcGalaxyWLObsEllipConv ellip_conv;
 } NcGalaxySDShapePrivate;
 
@@ -81,10 +77,7 @@ nc_galaxy_sd_shape_init (NcGalaxySDShape *gsds)
 {
   NcGalaxySDShapePrivate * const self = nc_galaxy_sd_shape_get_instance_private (gsds);
 
-  self->ellip_conv           = 0;
-  self->apply_shear          = NULL;
-  self->apply_shear_inv      = NULL;
-  self->int_to_obs_lndet_jac = NULL;
+  self->ellip_conv = 0;
 }
 
 static void _nc_galaxy_sd_shape_set_ellip_conv (NcGalaxySDShape *gsds, NcGalaxyWLObsEllipConv ellip_conv);
@@ -263,111 +256,6 @@ nc_galaxy_sd_shape_data_unref (NcGalaxySDShapeData *data)
 }
 
 static void
-_nc_galaxy_sd_shape_apply_shear_trace (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *chi, NcmComplex *chi_obs)
-{
-  complex double gn   = ncm_complex_c (g);
-  complex double chin = ncm_complex_c (chi);
-  complex double chin_obs;
-
-  chin_obs = (chin + gn * (gn * conj (chin) + 2.0)) / (1.0 + gn * conj (gn) + 2.0 * creal (gn * conj (chin)));
-
-  ncm_complex_set_c (chi_obs, chin_obs);
-}
-
-static void
-_nc_galaxy_sd_shape_apply_shear_inv_trace (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *chi_obs, NcmComplex *chi)
-{
-  complex double gn       = ncm_complex_c (g);
-  complex double chin_obs = ncm_complex_c (chi_obs);
-  complex double chin;
-
-  chin = (chin_obs + gn * (gn * conj (chin_obs) - 2.0)) / (1.0 + gn * conj (gn) - 2.0 * creal (gn * conj (chin_obs)));
-
-  ncm_complex_set_c (chi, chin);
-}
-
-static gdouble
-_nc_galaxy_sd_shape_apply_shear_trace_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *chi_obs)
-{
-  complex double gn           = ncm_complex_c (g);
-  complex double chin_obs     = ncm_complex_c (chi_obs);
-  complex double gn_conj      = conj (gn);
-  const gdouble abs_g2        = gn * gn_conj;
-  const gdouble lndet_jac_den = 3.0 * log (fabs (1 - 2.0 * creal (gn_conj * chin_obs) + abs_g2));
-
-  if (abs_g2 <= 1.0)
-  {
-    const gdouble lndet_jac_num = 3.0 * log1p (-abs_g2);
-
-    return lndet_jac_num - lndet_jac_den;
-  }
-  else
-  {
-    const gdouble lndet_jac_num = 3.0 * log (abs_g2 - 1.0);
-
-    return lndet_jac_num - lndet_jac_den;
-  }
-}
-
-static void
-_nc_galaxy_sd_shape_apply_shear_trace_det (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *e, NcmComplex *e_obs)
-{
-  complex double gn = ncm_complex_c (g);
-  complex double en = ncm_complex_c (e);
-  complex double en_obs;
-
-  if (cabs (gn) <= 1.0)
-    en_obs = (en + gn) / (1.0 + conj (gn) * en);
-  else
-    en_obs = (1.0 + gn * conj (en)) / (conj (en) + conj (gn));
-
-  ncm_complex_set_c (e_obs, en_obs);
-}
-
-static void
-_nc_galaxy_sd_shape_apply_shear_inv_trace_det (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *e_obs, NcmComplex *e)
-{
-  complex double gn     = ncm_complex_c (g);
-  complex double en_obs = ncm_complex_c (e_obs);
-  complex double en;
-
-  if (cabs (gn) <= 1.0)
-    en = (en_obs - gn) / (1.0 - conj (gn) * en_obs);
-  else
-    en = (1.0 - gn * conj (en_obs)) / (conj (en_obs) - conj (gn));
-
-  ncm_complex_set_c (e, en);
-}
-
-static gdouble
-_nc_galaxy_sd_shape_apply_shear_trace_det_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *e_obs)
-{
-  complex double gn          = ncm_complex_c (g);
-  complex double en_obs      = ncm_complex_c (e_obs);
-  complex double gn_conj     = conj (gn);
-  complex double en_obs_conj = conj (en_obs);
-  const gdouble abs_g2       = gn * gn_conj;
-
-  if (abs_g2 <= 1.0)
-  {
-    const gdouble abs_en_obs2 = en_obs * en_obs_conj;
-    const gdouble ln_jac_num  = 2.0 * log1p (-abs_g2);
-    const gdouble ln_jac_den  = 2.0 * log1p (-2.0 * creal (gn_conj * en_obs) + abs_g2 * abs_en_obs2);
-
-    return ln_jac_num - ln_jac_den;
-  }
-  else
-  {
-    const complex double en_obs_m_gn = en_obs - gn;
-    const gdouble abs_en_obs_m_gn2   = en_obs_m_gn * conj (en_obs_m_gn);
-    const gdouble ln_jac_num         = 2.0 * log (abs_g2 - 1.0);
-    const gdouble ln_jac_den         = 2.0 * log (abs_en_obs_m_gn2);
-
-    return ln_jac_num - ln_jac_den;
-  }
-}
-
-static void
 _nc_galaxy_sd_shape_set_ellip_conv (NcGalaxySDShape *gsds, NcGalaxyWLObsEllipConv ellip_conv)
 {
   NcGalaxySDShapePrivate * const self = nc_galaxy_sd_shape_get_instance_private (gsds);
@@ -375,18 +263,11 @@ _nc_galaxy_sd_shape_set_ellip_conv (NcGalaxySDShape *gsds, NcGalaxyWLObsEllipCon
   switch (ellip_conv)
   {
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-      self->apply_shear          = _nc_galaxy_sd_shape_apply_shear_trace;
-      self->apply_shear_inv      = _nc_galaxy_sd_shape_apply_shear_inv_trace;
-      self->int_to_obs_lndet_jac = _nc_galaxy_sd_shape_apply_shear_trace_lndet_jac;
-      break;
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-      self->apply_shear          = _nc_galaxy_sd_shape_apply_shear_trace_det;
-      self->apply_shear_inv      = _nc_galaxy_sd_shape_apply_shear_inv_trace_det;
-      self->int_to_obs_lndet_jac = _nc_galaxy_sd_shape_apply_shear_trace_det_lndet_jac;
       break;
-    default:                                                                                             /* LCOV_EXCL_LINE */
-      g_error ("nc_galaxy_sd_shape_get_ellip_conv: ellipse type %d not implemented.", self->ellip_conv); /* LCOV_EXCL_LINE */
-      break;                                                                                             /* LCOV_EXCL_LINE */
+    default:                                                                                       /* LCOV_EXCL_LINE */
+      g_error ("nc_galaxy_sd_shape_set_ellip_conv: ellipse type %d not implemented.", ellip_conv); /* LCOV_EXCL_LINE */
+      break;                                                                                       /* LCOV_EXCL_LINE */
   }
 
   self->ellip_conv = ellip_conv;
@@ -423,8 +304,20 @@ void
 nc_galaxy_sd_shape_apply_shear (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E, NcmComplex *E_obs)
 {
   NcGalaxySDShapePrivate * const self = nc_galaxy_sd_shape_get_instance_private (gsds);
+  const complex double gn             = ncm_complex_c (g);
+  const complex double En             = ncm_complex_c (E);
 
-  self->apply_shear (gsds, g, E, E_obs);
+  switch (self->ellip_conv)
+  {
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+      ncm_complex_set_c (E_obs, nc_wl_ellipticity_apply_shear_trace_c (gn, En));
+      break;
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+      ncm_complex_set_c (E_obs, nc_wl_ellipticity_apply_shear_trace_det_c (gn, En));
+      break;
+    default:                    /* LCOV_EXCL_LINE */
+      g_assert_not_reached ();  /* LCOV_EXCL_LINE */
+  }
 }
 
 /**
@@ -442,8 +335,20 @@ void
 nc_galaxy_sd_shape_apply_shear_inv (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs, NcmComplex *E)
 {
   NcGalaxySDShapePrivate * const self = nc_galaxy_sd_shape_get_instance_private (gsds);
+  const complex double gn             = ncm_complex_c (g);
+  const complex double En_obs         = ncm_complex_c (E_obs);
 
-  self->apply_shear_inv (gsds, g, E_obs, E);
+  switch (self->ellip_conv)
+  {
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+      ncm_complex_set_c (E, nc_wl_ellipticity_apply_shear_inv_trace_c (gn, En_obs));
+      break;
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+      ncm_complex_set_c (E, nc_wl_ellipticity_apply_shear_inv_trace_det_c (gn, En_obs));
+      break;
+    default:                    /* LCOV_EXCL_LINE */
+      g_assert_not_reached ();  /* LCOV_EXCL_LINE */
+  }
 }
 
 /**
@@ -461,27 +366,22 @@ gdouble
 nc_galaxy_sd_shape_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs)
 {
   NcGalaxySDShapePrivate * const self = nc_galaxy_sd_shape_get_instance_private (gsds);
+  const complex double gn             = ncm_complex_c (g);
+  const complex double En_obs         = ncm_complex_c (E_obs);
 
-  return self->int_to_obs_lndet_jac (gsds, g, E_obs);
-}
+  switch (self->ellip_conv)
+  {
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+      return nc_wl_ellipticity_lndet_jac_trace_c (gn, En_obs);
 
-/**
- * nc_galaxy_sd_shape_peek_dispatch: (skip)
- * @gsds: a #NcGalaxySDShape instance
- * @apply_shear_inv: pointer that receives the apply-shear-inverse dispatch slot
- * @lndet_jac: pointer that receives the lndet-jac dispatch slot
- *
- * Returns the function pointers used by nc_galaxy_sd_shape_apply_shear_inv() and
- * nc_galaxy_sd_shape_lndet_jac(). Allows callers in tight loops to avoid the
- * per-call private-data dereference.
- */
-void
-nc_galaxy_sd_shape_peek_dispatch (NcGalaxySDShape *gsds, NcGalaxySDShapeApplyShearInvFn *apply_shear_inv, NcGalaxySDShapeLndetJacFn *lndet_jac)
-{
-  NcGalaxySDShapePrivate * const self = nc_galaxy_sd_shape_get_instance_private (gsds);
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+      return nc_wl_ellipticity_lndet_jac_trace_det_c (gn, En_obs);
 
-  *apply_shear_inv = self->apply_shear_inv;
-  *lndet_jac       = self->int_to_obs_lndet_jac;
+    default:                    /* LCOV_EXCL_LINE */
+      g_assert_not_reached ();  /* LCOV_EXCL_LINE */
+
+      return 0.0;               /* LCOV_EXCL_LINE */
+  }
 }
 
 /**
