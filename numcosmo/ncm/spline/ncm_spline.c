@@ -1346,6 +1346,78 @@ ncm_spline_curvature_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctype, const 
   return pow (result / (xf - xi), 1.0 / p);
 }
 
+typedef struct _NcmSplineCurvatureWeightedArg
+{
+  NcmSpline *s;
+  NcmSpline *weight;
+  NcmSplineCurvatureType ctype;
+  gdouble p;
+} NcmSplineCurvatureWeightedArg;
+
+static gdouble
+_ncm_spline_curvature_weighted_lp_integrand (gdouble x, gpointer data)
+{
+  NcmSplineCurvatureWeightedArg *arg = (NcmSplineCurvatureWeightedArg *) data;
+  const gdouble w                    = ncm_spline_eval (arg->weight, x);
+  const gdouble c                    = ncm_spline_curvature_density (arg->s, arg->ctype, x);
+
+  return w * pow (fabs (c), arg->p);
+}
+
+static gdouble
+_ncm_spline_curvature_weight_integrand (gdouble x, gpointer data)
+{
+  NcmSplineCurvatureWeightedArg *arg = (NcmSplineCurvatureWeightedArg *) data;
+
+  return ncm_spline_eval (arg->weight, x);
+}
+
+/**
+ * ncm_spline_curvature_weighted_lp_norm:
+ * @s: a #NcmSpline
+ * @ctype: a #NcmSplineCurvatureType
+ * @p: the norm order $p > 0$
+ * @weight: a #NcmSpline holding the non-negative weight density $W(x)$
+ * @xi: the lower integration limit
+ * @xf: the upper integration limit
+ *
+ * Computes the weight-normalized $L_p$ norm of the curvature density $c(x)$
+ * (selected by @ctype) over the interval [@xi, @xf],
+ * $$N_p = \left(\frac{\int_{x_i}^{x_f} W(x)\,|c(x)|^p\,\mathrm{d}x}{\int_{x_i}^{x_f} W(x)\,\mathrm{d}x}\right)^{1/p}.$$
+ * A constant @weight recovers ncm_spline_curvature_lp_norm(). The weight encodes
+ * where curvature is penalized (large $W$) versus tolerated (small $W$), turning
+ * the global curvature functional into a local one. @weight must share the
+ * abscissa of @s and be non-negative with a positive integral over [@xi, @xf];
+ * both splines must be prepared.
+ *
+ * Returns: the weighted curvature $L_p$ norm $N_p$.
+ */
+gdouble
+ncm_spline_curvature_weighted_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble p, NcmSpline *weight, const gdouble xi, const gdouble xf)
+{
+  gsl_integration_workspace **w     = ncm_integral_get_workspace ();
+  NcmSplineCurvatureWeightedArg arg = {s, weight, ctype, p};
+  gsl_function F;
+  gdouble num, wnorm, error;
+
+  g_assert_cmpfloat (p, >, 0.0);
+  g_assert_cmpfloat (xf, >, xi);
+
+  F.params = &arg;
+
+  F.function = &_ncm_spline_curvature_weighted_lp_integrand;
+  gsl_integration_qag (&F, xi, xf, 1.0e-9, 0.0, NCM_INTEGRAL_PARTITION, 6, *w, &num, &error);
+
+  F.function = &_ncm_spline_curvature_weight_integrand;
+  gsl_integration_qag (&F, xi, xf, 1.0e-9, 0.0, NCM_INTEGRAL_PARTITION, 6, *w, &wnorm, &error);
+
+  ncm_memory_pool_return (w);
+
+  g_assert_cmpfloat (wnorm, >, 0.0);
+
+  return pow (num / wnorm, 1.0 / p);
+}
+
 /**
  * ncm_spline_curvature_max:
  * @s: a #NcmSpline

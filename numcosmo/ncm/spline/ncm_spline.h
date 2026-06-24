@@ -128,6 +128,7 @@ guint ncm_spline_get_index (const NcmSpline *s, const gdouble x);
 
 gdouble ncm_spline_curvature_density (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble x);
 gdouble ncm_spline_curvature_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble p, const gdouble xi, const gdouble xf);
+gdouble ncm_spline_curvature_weighted_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble p, NcmSpline *weight, const gdouble xi, const gdouble xf);
 gdouble ncm_spline_curvature_max (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble xi, const gdouble xf);
 
 /* Utilities -- internal use */
