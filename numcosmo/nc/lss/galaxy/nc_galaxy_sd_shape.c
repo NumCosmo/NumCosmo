@@ -315,8 +315,8 @@ nc_galaxy_sd_shape_apply_shear (NcGalaxySDShape *gsds, const NcmComplex *g, cons
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
       ncm_complex_set_c (E_obs, nc_wl_ellipticity_apply_shear_trace_det_c (gn, En));
       break;
-    default:                    /* LCOV_EXCL_LINE */
-      g_assert_not_reached ();  /* LCOV_EXCL_LINE */
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
   }
 }
 
@@ -346,8 +346,8 @@ nc_galaxy_sd_shape_apply_shear_inv (NcGalaxySDShape *gsds, const NcmComplex *g, 
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
       ncm_complex_set_c (E, nc_wl_ellipticity_apply_shear_inv_trace_det_c (gn, En_obs));
       break;
-    default:                    /* LCOV_EXCL_LINE */
-      g_assert_not_reached ();  /* LCOV_EXCL_LINE */
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
   }
 }
 
@@ -377,10 +377,10 @@ nc_galaxy_sd_shape_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const 
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
       return nc_wl_ellipticity_lndet_jac_trace_det_c (gn, En_obs);
 
-    default:                    /* LCOV_EXCL_LINE */
-      g_assert_not_reached ();  /* LCOV_EXCL_LINE */
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
-      return 0.0;               /* LCOV_EXCL_LINE */
+      return 0.0; /* LCOV_EXCL_LINE */
   }
 }
 

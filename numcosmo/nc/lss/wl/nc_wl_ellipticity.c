@@ -147,3 +147,4 @@ nc_wl_ellipticity_lndet_jac_trace_det (const NcmComplex *g, const NcmComplex *e_
 {
   return nc_wl_ellipticity_lndet_jac_trace_det_c (ncm_complex_c (g), ncm_complex_c (e_obs));
 }
+

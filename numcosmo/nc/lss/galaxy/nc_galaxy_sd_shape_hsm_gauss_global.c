@@ -519,8 +519,8 @@ _nc_galaxy_sd_shape_hsm_gauss_global_integ (NcGalaxySDShape *gsds, gboolean use_
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
       integ_f = use_lnp ? _nc_galaxy_sd_shape_hsm_gauss_global_ln_integ_f_trace_det : _nc_galaxy_sd_shape_hsm_gauss_global_integ_f_trace_det;
       break;
-    default:                    /* LCOV_EXCL_LINE */
-      g_assert_not_reached ();  /* LCOV_EXCL_LINE */
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
   }
 
   integ = nc_galaxy_sd_shape_integrand_new (integ_f,
@@ -794,16 +794,16 @@ _nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes (NcGalaxySDShape *gsds, NcmMS
   {
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
       _nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes_conv (ldata, z_nodes, out, z_cl, e_o, total_var,
-                                                              nc_wl_ellipticity_apply_shear_inv_trace_c,
-                                                              nc_wl_ellipticity_lndet_jac_trace_c);
+                                                               nc_wl_ellipticity_apply_shear_inv_trace_c,
+                                                               nc_wl_ellipticity_lndet_jac_trace_c);
       break;
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
       _nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes_conv (ldata, z_nodes, out, z_cl, e_o, total_var,
-                                                              nc_wl_ellipticity_apply_shear_inv_trace_det_c,
-                                                              nc_wl_ellipticity_lndet_jac_trace_det_c);
+                                                               nc_wl_ellipticity_apply_shear_inv_trace_det_c,
+                                                               nc_wl_ellipticity_lndet_jac_trace_det_c);
       break;
-    default:                    /* LCOV_EXCL_LINE */
-      g_assert_not_reached ();  /* LCOV_EXCL_LINE */
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
   }
 }
 

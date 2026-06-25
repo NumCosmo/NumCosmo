@@ -223,3 +223,4 @@ G_END_DECLS
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_WL_ELLIPTICITY_INLINE_H_ */
+
