@@ -90,7 +90,7 @@ main (gint argc, gchar *argv[])
   static const gchar *shapes[]    = {"gauss_global", "gauss"};
   static const gchar *redshifts[] = {"spec", "gauss", "pz"};
   static const gchar *convs[]     = {"trace", "trace_det"};
-  static const gchar *coords[]    = {"celestial", "euclidean"};
+  static const gchar *coords[]    = {"celestial", "cartesian"};
   static TruthCfg cfgs[2 * 3 * 2 * 2];
   guint n = 0;
   guint si, ri, ci, di;

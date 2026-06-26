@@ -70,7 +70,7 @@ class EllipCoord(GEnum):
     """Ellipticity coordinate system."""
 
     # pylint: disable=no-member
-    EUCLIDEAN = Nc.WLEllipticityFrame.CARTESIAN
+    CARTESIAN = Nc.WLEllipticityFrame.CARTESIAN
     CELESTIAL = Nc.WLEllipticityFrame.CELESTIAL
 
     @classmethod

@@ -113,29 +113,29 @@ main (gint argc, gchar *argv[])
   const guint n_tests = G_N_ELEMENTS (tests);
   TestNcDataClusterWLTestsObj tests_obj[24] = {
     {"gauss_global", "spec", "trace", "celestial"},
-    {"gauss_global", "spec", "trace", "euclidean"},
+    {"gauss_global", "spec", "trace", "cartesian"},
     {"gauss_global", "spec", "trace_det", "celestial"},
-    {"gauss_global", "spec", "trace_det", "euclidean"},
+    {"gauss_global", "spec", "trace_det", "cartesian"},
     {"gauss_global", "gauss", "trace", "celestial"},
-    {"gauss_global", "gauss", "trace", "euclidean"},
+    {"gauss_global", "gauss", "trace", "cartesian"},
     {"gauss_global", "gauss", "trace_det", "celestial"},
-    {"gauss_global", "gauss", "trace_det", "euclidean"},
+    {"gauss_global", "gauss", "trace_det", "cartesian"},
     {"gauss_global", "pz", "trace", "celestial"},
-    {"gauss_global", "pz", "trace", "euclidean"},
+    {"gauss_global", "pz", "trace", "cartesian"},
     {"gauss_global", "pz", "trace_det", "celestial"},
-    {"gauss_global", "pz", "trace_det", "euclidean"},
+    {"gauss_global", "pz", "trace_det", "cartesian"},
     {"gauss", "spec", "trace", "celestial"},
-    {"gauss", "spec", "trace", "euclidean"},
+    {"gauss", "spec", "trace", "cartesian"},
     {"gauss", "spec", "trace_det", "celestial"},
-    {"gauss", "spec", "trace_det", "euclidean"},
+    {"gauss", "spec", "trace_det", "cartesian"},
     {"gauss", "gauss", "trace", "celestial"},
-    {"gauss", "gauss", "trace", "euclidean"},
+    {"gauss", "gauss", "trace", "cartesian"},
     {"gauss", "gauss", "trace_det", "celestial"},
-    {"gauss", "gauss", "trace_det", "euclidean"},
+    {"gauss", "gauss", "trace_det", "cartesian"},
     {"gauss", "pz", "trace", "celestial"},
-    {"gauss", "pz", "trace", "euclidean"},
+    {"gauss", "pz", "trace", "cartesian"},
     {"gauss", "pz", "trace_det", "celestial"},
-    {"gauss", "pz", "trace_det", "euclidean"}
+    {"gauss", "pz", "trace_det", "cartesian"}
   };
   guint i, j;
 
@@ -241,7 +241,7 @@ test_nc_data_cluster_wl_new (TestNcDataClusterWL *test, gconstpointer pdata)
 
   if (g_strcmp0 (ell_coord_name, "celestial") == 0)
     ell_coord = NC_GALAXY_WL_OBS_COORD_CELESTIAL;
-  else if (g_strcmp0 (ell_coord_name, "euclidean") == 0)
+  else if (g_strcmp0 (ell_coord_name, "cartesian") == 0)
     ell_coord = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
   else
     g_error ("test_nc_data_cluster_wl_new: unknown ellip_conv name.");
