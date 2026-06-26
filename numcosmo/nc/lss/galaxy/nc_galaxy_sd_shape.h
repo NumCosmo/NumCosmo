@@ -82,6 +82,7 @@ struct _NcGalaxySDShapeClass
 struct _NcGalaxySDShapeData
 {
   NcGalaxySDPositionData *sdpos_data;
+
   /* Handedness frame in which this galaxy's ellipticity components are
    * expressed (see #NcWLEllipticityFrame). Sky positions are always RA/Dec, so
    * only the ellipticity basis is selected by this field. */
