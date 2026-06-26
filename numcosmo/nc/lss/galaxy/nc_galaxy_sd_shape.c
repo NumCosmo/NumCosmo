@@ -298,7 +298,7 @@ nc_galaxy_sd_shape_get_ellip_conv (NcGalaxySDShape *gsds)
  *
  * Applies the reduced shear @g to the intrinsic ellipticity @E, storing the resulting
  * observed ellipticity in @E_obs. The transformation depends on the
- * #NcGalaxySDShapeEllipsisType configured in @gsds.
+ * #NcGalaxyWLObsEllipConv configured in @gsds.
  */
 void
 nc_galaxy_sd_shape_apply_shear (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E, NcmComplex *E_obs)

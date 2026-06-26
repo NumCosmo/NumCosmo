@@ -224,20 +224,20 @@ test_nc_wl_ellipticity_frame_parity (void)
   g_assert_cmpint (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, ==, 1);
 
   /* position angle: identity for celestial, reflected for cartesian */
-  g_assert_cmpfloat (fabs (nc_wl_ellipticity_frame_position_angle (NC_WL_ELLIPTICITY_FRAME_CELESTIAL, phi) - phi), <, 1.0e-15);
-  g_assert_cmpfloat (fabs (nc_wl_ellipticity_frame_position_angle (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, phi) - (M_PI - phi)), <, 1.0e-15);
+  g_assert_cmpfloat (fabs (nc_wl_ellipticity_celestial_to_frame_angle (NC_WL_ELLIPTICITY_FRAME_CELESTIAL, phi) - phi), <, 1.0e-15);
+  g_assert_cmpfloat (fabs (nc_wl_ellipticity_celestial_to_frame_angle (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, phi) - (M_PI - phi)), <, 1.0e-15);
 
   for (j = 0; j < G_N_ELEMENTS (test_ellips); j++)
   {
     const complex double e = test_ellips[j];
 
-    test_assert_cmplx_close (nc_wl_ellipticity_frame_to_celestial_c (NC_WL_ELLIPTICITY_FRAME_CELESTIAL, e), e, 1.0e-15);
-    test_assert_cmplx_close (nc_wl_ellipticity_frame_to_celestial_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e), conj (e), 1.0e-15);
+    test_assert_cmplx_close (nc_wl_ellipticity_celestial_to_frame_c (NC_WL_ELLIPTICITY_FRAME_CELESTIAL, e), e, 1.0e-15);
+    test_assert_cmplx_close (nc_wl_ellipticity_celestial_to_frame_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e), conj (e), 1.0e-15);
 
     /* involution: applying twice returns the original, in either frame */
     test_assert_cmplx_close (
-      nc_wl_ellipticity_frame_to_celestial_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN,
-                                              nc_wl_ellipticity_frame_to_celestial_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e)),
+      nc_wl_ellipticity_celestial_to_frame_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN,
+                                              nc_wl_ellipticity_celestial_to_frame_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e)),
       e, 1.0e-15);
   }
 }

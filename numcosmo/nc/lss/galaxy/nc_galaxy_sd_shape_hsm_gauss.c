@@ -245,12 +245,20 @@ _nc_galaxy_sd_shape_hsm_gauss_gen (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalax
 
   nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-  /* Express the position angle and the (parity-covariant) intrinsic ellipticity
-   * and noise in the data's coordinate frame; both helpers are the identity for
-   * the celestial frame. The additive bias is frame-fixed and not conjugated. */
-  phi   = nc_wl_ellipticity_frame_position_angle (data->coord, phi);
-  e_s   = nc_wl_ellipticity_frame_to_celestial_c (data->coord, e_s);
-  noise = nc_wl_ellipticity_frame_to_celestial_c (data->coord, noise);
+  /* polar_angles returns the celestial position angle phi_C. The shear, the
+   * intrinsic ellipticity e_s and the noise are all built here in the celestial
+   * frame and then mapped into the data's frame (data->coord) so that the stored
+   * observed ellipticity lands in that frame: the position angle is re-expressed
+   * (phi_C -> phi_E) and the spin-2 quantities are conjugated. Both helpers are
+   * the identity for CELESTIAL. e_s and noise are drawn isotropically, so the
+   * parity flip leaves their distribution unchanged (the generation is
+   * frame-symmetric); it is applied only to keep the deterministic pieces (phi
+   * and the resulting e_o) consistent with data->coord. The additive bias c is
+   * taken to be already expressed in data->coord, so it is added below without
+   * any parity flip. See #NcWLEllipticityFrame. */
+  phi   = nc_wl_ellipticity_celestial_to_frame_angle (data->coord, phi);
+  e_s   = nc_wl_ellipticity_celestial_to_frame_c (data->coord, e_s);
+  noise = nc_wl_ellipticity_celestial_to_frame_c (data->coord, noise);
 
   radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
 
@@ -550,7 +558,10 @@ _nc_galaxy_sd_shape_hsm_gauss_prepare_data_array (NcGalaxySDShape *gsds, NcmMSet
 
       nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-      phi = nc_wl_ellipticity_frame_position_angle (data_i->coord, phi);
+      /* Re-express the celestial phi_C in the data frame (phi_E) so the spin-2
+       * rotation e^{-2 i phi} carries the data-frame observed ellipticity into
+       * the tangential/cross frame. See #NcWLEllipticityFrame. */
+      phi = nc_wl_ellipticity_celestial_to_frame_angle (data_i->coord, phi);
 
       e_o_rotated  = e_o * cexp (-2.0 * I * phi);
       bias_rotated = (ldata_i->c1 + I * ldata_i->c2) * cexp (-2.0 * I * phi);
@@ -638,7 +649,10 @@ _nc_galaxy_sd_shape_hsm_gauss_prepare_data_array_at_nodes (NcGalaxySDShape *gsds
 
       nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-      phi = nc_wl_ellipticity_frame_position_angle (data_i->coord, phi);
+      /* Re-express the celestial phi_C in the data frame (phi_E) so the spin-2
+       * rotation e^{-2 i phi} carries the data-frame observed ellipticity into
+       * the tangential/cross frame. See #NcWLEllipticityFrame. */
+      phi = nc_wl_ellipticity_celestial_to_frame_angle (data_i->coord, phi);
 
       e_o_rotated  = e_o * cexp (-2.0 * I * phi);
       bias_rotated = (ldata_i->c1 + I * ldata_i->c2) * cexp (-2.0 * I * phi);
@@ -883,7 +897,11 @@ _nc_galaxy_sd_shape_hsm_gauss_direct_estimate (NcGalaxySDShape *gsds, NcmMSet *m
 
     nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-    phi = nc_wl_ellipticity_frame_position_angle (data_i->coord, phi);
+    /* Re-express the celestial phi_C in the data frame (phi_E) and rotate the
+     * data-frame observed ellipticity into the tangential/cross frame. The bias
+     * (c1, c2) stays in the data frame and is averaged below without rotation.
+     * See #NcWLEllipticityFrame. */
+    phi = nc_wl_ellipticity_celestial_to_frame_angle (data_i->coord, phi);
 
     hat_g = e_o * cexp (-2.0 * I * phi);
 
@@ -997,13 +1015,17 @@ nc_galaxy_sd_shape_hsm_gauss_clear (NcGalaxySDShapeHSMGauss **gsdshsc)
  * @data: a #NcGalaxySDShapeData
  * @std_shape: the intrinsic shape dispersion
  * @std_noise: the observational shape dispersion
- * @c1: the first additive bias parameter
- * @c2: the second additive bias parameter
+ * @c1: the first additive bias parameter (in the @coord frame)
+ * @c2: the second additive bias parameter (in the @coord frame)
  * @m: the multiplicative bias parameter
- * @coord: the coordinate system #NcWLEllipticityFrame
+ * @coord: the ellipticity handedness frame #NcWLEllipticityFrame
  * @rng: a #NcmRNG
  *
- * Generates a galaxy sample shape.
+ * Generates a galaxy sample shape and stores its observed ellipticity in the
+ * frame @coord. The shape is generated in the celestial frame and mapped to
+ * @coord (see #NcWLEllipticityFrame); since the intrinsic shape and noise are
+ * isotropic the generation is frame-symmetric, while the additive bias (@c1,
+ * @c2) is taken to be already expressed in @coord.
  *
  */
 void

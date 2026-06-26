@@ -336,6 +336,12 @@ nc_halo_position_get_ra_dec (NcHaloPosition *hp, gdouble *ra, gdouble *dec)
  * into the xz-plane and then rotated onto the positive z-axis, with no additional
  * rotation about the halo axis. Consequently, @phi is uniquely defined and is
  * consistent for all sky positions associated with the same halo.
+ *
+ * Because the input positions are right ascension and declination, @phi is the
+ * position angle in the celestial convention ($\phi_C$, increasing eastward). A
+ * consumer that expresses ellipticities in a different handedness (see
+ * #NcWLEllipticityFrame) must convert it accordingly, e.g. with
+ * nc_wl_ellipticity_celestial_to_frame_angle().
  */
 void
 nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdouble *theta, gdouble *phi)

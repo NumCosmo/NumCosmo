@@ -39,19 +39,41 @@ G_BEGIN_DECLS
 
 /**
  * NcWLEllipticityFrame:
- * @NC_WL_ELLIPTICITY_FRAME_CELESTIAL: celestial frame (RA increasing eastward;
- *   left-handed on the sky).
- * @NC_WL_ELLIPTICITY_FRAME_CARTESIAN: right-handed Cartesian (image/pixel) frame.
+ * @NC_WL_ELLIPTICITY_FRAME_CELESTIAL: celestial frame (reference frame).
+ * @NC_WL_ELLIPTICITY_FRAME_CARTESIAN: Earth-view ("Euclidean"/image) frame.
  *
- * Handedness of the coordinate frame in which a complex ellipticity (or shear)
- * is expressed. The two frames are related by a parity (handedness) flip: the
- * position angle reverses sense and the spin-2 ellipticity transforms by
- * complex conjugation, i.e. the second component changes sign,
- * $$ \epsilon_{\rm cartesian} = \epsilon_{\rm celestial}^{*} . $$
- * @NC_WL_ELLIPTICITY_FRAME_CELESTIAL is taken as the reference (identity); the
- * parity is its own inverse. The integer values match the legacy
- * NcGalaxyWLObsCoord (CELESTIAL = 0, EUCLIDEAN = CARTESIAN = 1), so previously
- * serialized data is read back unchanged.
+ * Handedness of the orthonormal frame whose basis vectors are used to resolve a
+ * complex spin-2 ellipticity (or reduced shear) into its two components.
+ *
+ * Every sky position in NumCosmo is given as right ascension and declination, so
+ * the position angle is always *measured* in the celestial convention ($\phi$
+ * increases eastward, i.e. with increasing RA). This enum does not change how the
+ * angle is measured; it only selects the basis onto which the spin-2 ellipticity
+ * components are projected:
+ *
+ * - #NC_WL_ELLIPTICITY_FRAME_CELESTIAL: the holonomic frame of the celestial
+ *   convention. The position angle $\phi_C$ increases eastward. Taken as the
+ *   reference frame (identity).
+ *
+ * - #NC_WL_ELLIPTICITY_FRAME_CARTESIAN: the frame an observer on the ground sees
+ *   when facing the object with their head pointing to the North celestial pole.
+ *   The right-hand direction then points East, so the image $x$-axis increases
+ *   towards the West (decreasing RA) -- the opposite handedness. This is the
+ *   "Euclidean" image-plane view (the legacy name was EUCLIDEAN).
+ *
+ * The two frames differ by a parity (handedness) flip. The position angle
+ * reverses sense,
+ * $$ \phi_E = \pi - \phi_C \quad (\equiv -\phi_C \bmod \pi), $$
+ * and the spin-2 ellipticity transforms by complex conjugation, i.e. its
+ * second/cross component changes sign,
+ * $$ \epsilon_E = \epsilon_C^{*} . $$
+ * Since $e^{2 i \phi_E} = e^{-2 i \phi_C}$, flipping $\phi$ and conjugating
+ * $\epsilon$ are the same operation; the parity is its own inverse, so a single
+ * map converts CELESTIAL -> CARTESIAN and CARTESIAN -> CELESTIAL alike.
+ *
+ * The integer values match the legacy #NcGalaxyWLObsCoord (CELESTIAL = 0,
+ * EUCLIDEAN = CARTESIAN = 1), so previously serialized data is read back
+ * unchanged.
  *
  */
 typedef enum _NcWLEllipticityFrame
@@ -94,15 +116,19 @@ gdouble nc_wl_ellipticity_lndet_jac_trace_det (const NcmComplex *g, const NcmCom
 
 #ifndef NUMCOSMO_GIR_SCAN
 
-/* Re-express a complex ellipticity from @frame into the celestial frame; the
- * inverse (celestial -> @frame) is the same operation (the parity is an
- * involution). CELESTIAL is the identity, CARTESIAN conjugates. */
-NCM_INLINE complex double nc_wl_ellipticity_frame_to_celestial_c (NcWLEllipticityFrame frame, complex double e);
+/* Express a celestial-frame complex spin-2 ellipticity @e in @frame:
+ * epsilon_E = conj (epsilon_C) for CARTESIAN, identity for CELESTIAL. The map is
+ * its own inverse (a parity flip), so it equally takes a @frame ellipticity back
+ * to celestial; a separate frame_to_celestial entry point can be added if a call
+ * site needs to read in the opposite direction. */
+NCM_INLINE complex double nc_wl_ellipticity_celestial_to_frame_c (NcWLEllipticityFrame frame, complex double e);
 
-/* Position angle to use for the spin-2 tangential rotation in @frame: the
- * handedness of CARTESIAN reverses the sense of the angle (phi -> pi - phi),
- * CELESTIAL leaves it unchanged. */
-NCM_INLINE gdouble nc_wl_ellipticity_frame_position_angle (NcWLEllipticityFrame frame, gdouble phi);
+/* Re-express the celestial position angle phi_C (as returned by
+ * nc_halo_position_polar_angles) in @frame: CARTESIAN reverses the handedness,
+ * phi_E = pi - phi_C; CELESTIAL leaves it unchanged. Using this angle in the
+ * spin-2 factor e^{2 i phi} is equivalent to conjugating the ellipticity, so it
+ * stays consistent with nc_wl_ellipticity_celestial_to_frame_c(). */
+NCM_INLINE gdouble nc_wl_ellipticity_celestial_to_frame_angle (NcWLEllipticityFrame frame, gdouble phi);
 
 /* Inline complex double kernels (TRACE convention: distortion chi). */
 NCM_INLINE complex double nc_wl_ellipticity_apply_shear_trace_c (complex double g, complex double chi);
@@ -131,13 +157,13 @@ G_BEGIN_DECLS
 /* Coordinate-frame handedness (parity). */
 
 NCM_INLINE complex double
-nc_wl_ellipticity_frame_to_celestial_c (NcWLEllipticityFrame frame, complex double e)
+nc_wl_ellipticity_celestial_to_frame_c (NcWLEllipticityFrame frame, complex double e)
 {
   return (frame == NC_WL_ELLIPTICITY_FRAME_CARTESIAN) ? conj (e) : e;
 }
 
 NCM_INLINE gdouble
-nc_wl_ellipticity_frame_position_angle (NcWLEllipticityFrame frame, gdouble phi)
+nc_wl_ellipticity_celestial_to_frame_angle (NcWLEllipticityFrame frame, gdouble phi)
 {
   return (frame == NC_WL_ELLIPTICITY_FRAME_CARTESIAN) ? (M_PI - phi) : phi;
 }

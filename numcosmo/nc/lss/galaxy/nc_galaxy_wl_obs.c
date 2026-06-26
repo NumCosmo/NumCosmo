@@ -435,9 +435,11 @@ nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs)
 /**
  * nc_galaxy_wl_obs_set_coord:
  * @obs: a #NcGalaxyWLObs object.
- * @coord: the coordinate system.
+ * @coord: the ellipticity handedness frame #NcWLEllipticityFrame.
  *
- * Sets the coordinate system used to store the data.
+ * Sets the frame in which the stored ellipticity components are expressed. Sky
+ * positions are always RA/Dec; this only selects the ellipticity basis (see
+ * #NcWLEllipticityFrame).
  *
  */
 void
@@ -476,9 +478,10 @@ nc_galaxy_wl_obs_get_ellip_conv (NcGalaxyWLObs *obs)
  * nc_galaxy_wl_obs_get_coord:
  * @obs: a #NcGalaxyWLObs object.
  *
- * Gets the coordinate system used to store the data.
+ * Gets the frame in which the stored ellipticity components are expressed (see
+ * #NcWLEllipticityFrame).
  *
- * Returns: the coordinate system.
+ * Returns: the ellipticity handedness frame #NcWLEllipticityFrame.
  *
  */
 NcWLEllipticityFrame
