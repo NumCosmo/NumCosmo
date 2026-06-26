@@ -157,6 +157,7 @@ def fixture_shape_dist(request) -> tuple[str, dict]:
 )
 def fixture_shape_dist_bad(request) -> tuple[str, list[dict]]:
     """Fixture for the galaxy shape distribution bad configuration."""
+    config: list[dict]
     match request.param:
         case GalaxyShapeGen.HSM_GAUSS:
             config = [
