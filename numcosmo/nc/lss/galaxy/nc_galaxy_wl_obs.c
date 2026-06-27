@@ -66,7 +66,7 @@ struct _NcGalaxyWLObs
 struct _NcGalaxyWLObsPrivate
 {
   NcmObjDictInt *pz;
-  NcGalaxyWLObsCoord coord;
+  NcWLEllipticityFrame coord;
   NcGalaxyWLObsEllipConv ellip_conv;
 };
 
@@ -269,7 +269,7 @@ _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz)
  * Returns: (transfer full): a new #NcGalaxyWLObs object.
  */
 NcGalaxyWLObs *
-nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcGalaxyWLObsCoord coord, guint nrows, GStrv col_names)
+nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcWLEllipticityFrame coord, guint nrows, GStrv col_names)
 {
   return g_object_new (NC_TYPE_GALAXY_WL_OBS,
                        "ellip-conv", ellip_conv,
@@ -435,13 +435,15 @@ nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs)
 /**
  * nc_galaxy_wl_obs_set_coord:
  * @obs: a #NcGalaxyWLObs object.
- * @coord: the coordinate system.
+ * @coord: the ellipticity handedness frame #NcWLEllipticityFrame.
  *
- * Sets the coordinate system used to store the data.
+ * Sets the frame in which the stored ellipticity components are expressed. Sky
+ * positions are always RA/Dec; this only selects the ellipticity basis (see
+ * #NcWLEllipticityFrame).
  *
  */
 void
-nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcGalaxyWLObsCoord coord)
+nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcWLEllipticityFrame coord)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
@@ -476,12 +478,13 @@ nc_galaxy_wl_obs_get_ellip_conv (NcGalaxyWLObs *obs)
  * nc_galaxy_wl_obs_get_coord:
  * @obs: a #NcGalaxyWLObs object.
  *
- * Gets the coordinate system used to store the data.
+ * Gets the frame in which the stored ellipticity components are expressed (see
+ * #NcWLEllipticityFrame).
  *
- * Returns: the coordinate system.
+ * Returns: the ellipticity handedness frame #NcWLEllipticityFrame.
  *
  */
-NcGalaxyWLObsCoord
+NcWLEllipticityFrame
 nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);

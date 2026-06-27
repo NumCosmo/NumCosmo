@@ -129,7 +129,7 @@ def fixture_shape_dist(request) -> tuple[str, dict]:
         case GalaxyShapeGen.HSM_GAUSS:
             config = {
                 "ellip_conv": choice(["trace", "trace-det"]),
-                "ellip_coord": choice(["celestial", "euclidean"]),
+                "ellip_coord": choice(["celestial", "cartesian"]),
                 "std_shape": uniform(0.2, 0.4),
                 "std_noise": uniform(0.01, 0.1),
                 "std_sigma": uniform(0.01, 0.1),
@@ -140,7 +140,7 @@ def fixture_shape_dist(request) -> tuple[str, dict]:
         case GalaxyShapeGen.HSM_GAUSS_GLOBAL:
             config = {
                 "ellip_conv": choice(["trace", "trace-det"]),
-                "ellip_coord": choice(["celestial", "euclidean"]),
+                "ellip_coord": choice(["celestial", "cartesian"]),
                 "sigma": uniform(0.2, 0.4),
                 "std_noise": uniform(0.01, 0.1),
                 "c1_sigma": uniform(0.01, 0.1),
@@ -157,6 +157,7 @@ def fixture_shape_dist(request) -> tuple[str, dict]:
 )
 def fixture_shape_dist_bad(request) -> tuple[str, list[dict]]:
     """Fixture for the galaxy shape distribution bad configuration."""
+    config: list[dict]
     match request.param:
         case GalaxyShapeGen.HSM_GAUSS:
             config = [
@@ -210,13 +211,13 @@ def fixture_shape_dist_bad(request) -> tuple[str, list[dict]]:
             config = [
                 {
                     "ellip_conv": choice(["trace", "trace-det"]),
-                    "ellip_coord": choice(["celestial", "euclidean"]),
+                    "ellip_coord": choice(["celestial", "cartesian"]),
                     "sigma": uniform(0.2, 0.5),
                     "std_noise": uniform(0.01, 0.1),
                 },
                 {
                     "ellip_conv": choice(["trace", "trace-det"]),
-                    "ellip_coord": choice(["celestial", "euclidean"]),
+                    "ellip_coord": choice(["celestial", "cartesian"]),
                     "std_shape": uniform(0.2, 0.4),
                     "std_noise": uniform(0.01, 0.1),
                     "std_sigma": uniform(0.01, 0.1),

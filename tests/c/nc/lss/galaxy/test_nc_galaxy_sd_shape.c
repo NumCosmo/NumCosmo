@@ -150,13 +150,13 @@ main (gint argc, gchar *argv[])
       NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE,
       NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
       "trace",
-      "euclidean"
+      "cartesian"
     },
     {
       NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET,
       NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
       "trace_det",
-      "euclidean"
+      "cartesian"
     }
   };
   TestEllDefinition ell_defs[4] = {
@@ -164,13 +164,13 @@ main (gint argc, gchar *argv[])
       NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE,
       NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
       "trace",
-      "euclidean"
+      "cartesian"
     },
     {
       NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET,
       NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
       "trace_det",
-      "euclidean"
+      "cartesian"
     },
     {
       NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE,
@@ -436,9 +436,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_convert_coord (TestNcGalaxySDShape *tes
     const gdouble c2 = ncm_rng_uniform_gen (rng, -0.01, 0.01);
     const gdouble m  = ncm_rng_uniform_gen (rng, -0.2, 0.2);
     gdouble e_s_1_celestial, e_s_2_celestial;
-    gdouble e_s_1_euclidean, e_s_2_euclidean;
-    gdouble e_o_1_celestial, e_o_2_celestial, std_noise_celestial, c1_euclidean, c2_euclidean, m_euclidean;
-    gdouble e_o_1_euclidean, e_o_2_euclidean, std_noise_euclidean, c1_celestial, c2_celestial, m_celestial;
+    gdouble e_s_1_cartesian, e_s_2_cartesian;
+    gdouble e_o_1_celestial, e_o_2_celestial, std_noise_celestial, c1_cartesian, c2_cartesian, m_cartesian;
+    gdouble e_o_1_cartesian, e_o_2_cartesian, std_noise_cartesian, c1_celestial, c2_celestial, m_celestial;
 
     z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0, 2.0);
@@ -515,23 +515,23 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_convert_coord (TestNcGalaxySDShape *tes
                                              m, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
                                              rng_shape2);
     nc_galaxy_sd_shape_hsm_gauss_global_data_get (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape),
-                                                  s_data, &e_o_1_euclidean,
-                                                  &e_o_2_euclidean,
-                                                  &std_noise_euclidean,
-                                                  &c1_euclidean, &c2_euclidean,
-                                                  &m_euclidean);
+                                                  s_data, &e_o_1_cartesian,
+                                                  &e_o_2_cartesian,
+                                                  &std_noise_cartesian,
+                                                  &c1_cartesian, &c2_cartesian,
+                                                  &m_cartesian);
 
-    e_s_1_euclidean = s_data->epsilon_int_1;
-    e_s_2_euclidean = s_data->epsilon_int_2;
+    e_s_1_cartesian = s_data->epsilon_int_1;
+    e_s_2_cartesian = s_data->epsilon_int_2;
 
-    ncm_assert_cmpdouble_e (e_s_1_celestial, ==, e_s_1_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_s_2_celestial, ==, -e_s_2_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_o_1_celestial, ==, e_o_1_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_o_2_celestial, ==, -e_o_2_euclidean, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_s_1_celestial, ==, e_s_1_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_s_2_celestial, ==, -e_s_2_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_o_1_celestial, ==, e_o_1_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_o_2_celestial, ==, -e_o_2_cartesian, 1e-10, 1e-10);
 
     {
       const gdouble z_cl = nc_halo_position_get_redshift (test->halo_position);
-      complex double e_s = e_s_1_euclidean + I * e_s_2_euclidean;
+      complex double e_s = e_s_1_cartesian + I * e_s_2_cartesian;
       complex double e_o = e_s;
       gdouble theta, phi, gt, r;
 
@@ -575,10 +575,10 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_convert_coord (TestNcGalaxySDShape *tes
         e_o = e_s + c1 - I * c2;
       }
 
-      ncm_assert_cmpdouble_e (creal (e_s), ==, e_s_1_euclidean, 1e-10, 1e-10);
-      ncm_assert_cmpdouble_e (cimag (e_s), ==, e_s_2_euclidean, 1e-10, 1e-10);
-      ncm_assert_cmpdouble_e (creal (e_o), ==, e_o_1_euclidean, 1e-10, 1e-10);
-      ncm_assert_cmpdouble_e (cimag (e_o), ==, e_o_2_euclidean, 1e-10, 1e-10);
+      ncm_assert_cmpdouble_e (creal (e_s), ==, e_s_1_cartesian, 1e-10, 1e-10);
+      ncm_assert_cmpdouble_e (cimag (e_s), ==, e_s_2_cartesian, 1e-10, 1e-10);
+      ncm_assert_cmpdouble_e (creal (e_o), ==, e_o_1_cartesian, 1e-10, 1e-10);
+      ncm_assert_cmpdouble_e (cimag (e_o), ==, e_o_2_cartesian, 1e-10, 1e-10);
     }
   }
 
@@ -611,11 +611,11 @@ test_nc_galaxy_sd_shape_hsm_gauss_convert_coord (TestNcGalaxySDShape *test, gcon
     const gdouble c2        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
     const gdouble m         = ncm_rng_uniform_gen (rng, -0.2, 0.2);
     gdouble e_s_1_celestial, e_s_2_celestial;
-    gdouble e_s_1_euclidean, e_s_2_euclidean;
+    gdouble e_s_1_cartesian, e_s_2_cartesian;
     gdouble e_o_1_celestial, e_o_2_celestial, std_shape_celestial;
     gdouble std_noise_celestial, c1_celestial, c2_celestial, m_celestial;
-    gdouble e_o_1_euclidean, e_o_2_euclidean, std_shape_euclidean;
-    gdouble std_noise_euclidean, c1_euclidean, c2_euclidean, m_euclidean;
+    gdouble e_o_1_cartesian, e_o_2_cartesian, std_shape_cartesian;
+    gdouble std_noise_cartesian, c1_cartesian, c2_cartesian, m_cartesian;
 
     z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0, 2.0);
@@ -690,21 +690,21 @@ test_nc_galaxy_sd_shape_hsm_gauss_convert_coord (TestNcGalaxySDShape *test, gcon
                                       -c2, m, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
                                       rng_shape2);
     nc_galaxy_sd_shape_hsm_gauss_data_get (NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape),
-                                           s_data, &e_o_1_euclidean, &e_o_2_euclidean,
-                                           &std_shape_euclidean, &std_noise_euclidean,
-                                           &c1_euclidean, &c2_euclidean, &m_euclidean);
+                                           s_data, &e_o_1_cartesian, &e_o_2_cartesian,
+                                           &std_shape_cartesian, &std_noise_cartesian,
+                                           &c1_cartesian, &c2_cartesian, &m_cartesian);
 
-    e_s_1_euclidean = s_data->epsilon_int_1;
-    e_s_2_euclidean = s_data->epsilon_int_2;
+    e_s_1_cartesian = s_data->epsilon_int_1;
+    e_s_2_cartesian = s_data->epsilon_int_2;
 
-    ncm_assert_cmpdouble_e (e_s_1_celestial, ==, e_s_1_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_s_2_celestial, ==, -e_s_2_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_o_1_celestial, ==, e_o_1_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_o_2_celestial, ==, -e_o_2_euclidean, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_s_1_celestial, ==, e_s_1_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_s_2_celestial, ==, -e_s_2_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_o_1_celestial, ==, e_o_1_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_o_2_celestial, ==, -e_o_2_cartesian, 1e-10, 1e-10);
 
     {
       const gdouble z_cl = nc_halo_position_get_redshift (test->halo_position);
-      complex double e_s = e_s_1_euclidean + I * e_s_2_euclidean;
+      complex double e_s = e_s_1_cartesian + I * e_s_2_cartesian;
       complex double e_o = e_s;
       gdouble theta, phi, gt, r;
 
@@ -748,10 +748,10 @@ test_nc_galaxy_sd_shape_hsm_gauss_convert_coord (TestNcGalaxySDShape *test, gcon
         e_o = e_s + c1 - I * c2;
       }
 
-      ncm_assert_cmpdouble_e (creal (e_s), ==, e_s_1_euclidean, 1e-10, 1e-10);
-      ncm_assert_cmpdouble_e (cimag (e_s), ==, e_s_2_euclidean, 1e-10, 1e-10);
-      ncm_assert_cmpdouble_e (creal (e_o), ==, e_o_1_euclidean, 1e-10, 1e-10);
-      ncm_assert_cmpdouble_e (cimag (e_o), ==, e_o_2_euclidean, 1e-10, 1e-10);
+      ncm_assert_cmpdouble_e (creal (e_s), ==, e_s_1_cartesian, 1e-10, 1e-10);
+      ncm_assert_cmpdouble_e (cimag (e_s), ==, e_s_2_cartesian, 1e-10, 1e-10);
+      ncm_assert_cmpdouble_e (creal (e_o), ==, e_o_1_cartesian, 1e-10, 1e-10);
+      ncm_assert_cmpdouble_e (cimag (e_o), ==, e_o_2_cartesian, 1e-10, 1e-10);
     }
   }
 
@@ -783,9 +783,9 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_convert_coord_noise (TestNcGalaxySDShap
     const gdouble c2 = ncm_rng_uniform_gen (rng, -0.01, 0.01);
     const gdouble m  = ncm_rng_uniform_gen (rng, -0.2, 0.2);
     gdouble e_s_1_celestial, e_s_2_celestial;
-    gdouble e_s_1_euclidean, e_s_2_euclidean;
+    gdouble e_s_1_cartesian, e_s_2_cartesian;
     gdouble e_o_1_celestial, e_o_2_celestial, std_noise_celestial, c1_celestial, c2_celestial, m_celestial;
-    gdouble e_o_1_euclidean, e_o_2_euclidean, std_noise_euclidean, c1_euclidean, c2_euclidean, m_euclidean;
+    gdouble e_o_1_cartesian, e_o_2_cartesian, std_noise_cartesian, c1_cartesian, c2_cartesian, m_cartesian;
 
     z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0, 2.0);
@@ -811,19 +811,19 @@ test_nc_galaxy_sd_shape_hsm_gauss_global_convert_coord_noise (TestNcGalaxySDShap
                                              m, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
                                              rng_shape2);
     nc_galaxy_sd_shape_hsm_gauss_global_data_get (NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (test->galaxy_shape),
-                                                  s_data, &e_o_1_euclidean,
-                                                  &e_o_2_euclidean,
-                                                  &std_noise_euclidean,
-                                                  &c1_euclidean, &c2_euclidean,
-                                                  &m_euclidean);
+                                                  s_data, &e_o_1_cartesian,
+                                                  &e_o_2_cartesian,
+                                                  &std_noise_cartesian,
+                                                  &c1_cartesian, &c2_cartesian,
+                                                  &m_cartesian);
 
-    e_s_1_euclidean = s_data->epsilon_int_1;
-    e_s_2_euclidean = s_data->epsilon_int_2;
+    e_s_1_cartesian = s_data->epsilon_int_1;
+    e_s_2_cartesian = s_data->epsilon_int_2;
 
-    ncm_assert_cmpdouble_e (e_s_1_celestial, ==, e_s_1_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_s_2_celestial, ==, -e_s_2_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_o_1_celestial, ==, e_o_1_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_o_2_celestial, ==, -e_o_2_euclidean, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_s_1_celestial, ==, e_s_1_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_s_2_celestial, ==, -e_s_2_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_o_1_celestial, ==, e_o_1_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_o_2_celestial, ==, -e_o_2_cartesian, 1e-10, 1e-10);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
@@ -855,11 +855,11 @@ test_nc_galaxy_sd_shape_hsm_gauss_convert_coord_noise (TestNcGalaxySDShape *test
     const gdouble c2        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
     const gdouble m         = ncm_rng_uniform_gen (rng, -0.2, 0.2);
     gdouble e_s_1_celestial, e_s_2_celestial;
-    gdouble e_s_1_euclidean, e_s_2_euclidean;
+    gdouble e_s_1_cartesian, e_s_2_cartesian;
     gdouble e_o_1_celestial, e_o_2_celestial, std_shape_celestial;
     gdouble std_noise_celestial, c1_celestial, c2_celestial, m_celestial;
-    gdouble e_o_1_euclidean, e_o_2_euclidean, std_shape_euclidean;
-    gdouble std_noise_euclidean, c1_euclidean, c2_euclidean, m_euclidean;
+    gdouble e_o_1_cartesian, e_o_2_cartesian, std_shape_cartesian;
+    gdouble std_noise_cartesian, c1_cartesian, c2_cartesian, m_cartesian;
 
     z_data->z   = ncm_rng_uniform_gen (rng, 0.1, 1.2);
     p_data->ra  = ncm_rng_uniform_gen (rng, -2.0, 2.0);
@@ -883,17 +883,17 @@ test_nc_galaxy_sd_shape_hsm_gauss_convert_coord_noise (TestNcGalaxySDShape *test
                                       -c2, m, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN,
                                       rng_shape2);
     nc_galaxy_sd_shape_hsm_gauss_data_get (NC_GALAXY_SD_SHAPE_HSM_GAUSS (test->galaxy_shape),
-                                           s_data, &e_o_1_euclidean, &e_o_2_euclidean,
-                                           &std_shape_euclidean, &std_noise_euclidean,
-                                           &c1_euclidean, &c2_euclidean, &m_euclidean);
+                                           s_data, &e_o_1_cartesian, &e_o_2_cartesian,
+                                           &std_shape_cartesian, &std_noise_cartesian,
+                                           &c1_cartesian, &c2_cartesian, &m_cartesian);
 
-    e_s_1_euclidean = s_data->epsilon_int_1;
-    e_s_2_euclidean = s_data->epsilon_int_2;
+    e_s_1_cartesian = s_data->epsilon_int_1;
+    e_s_2_cartesian = s_data->epsilon_int_2;
 
-    ncm_assert_cmpdouble_e (e_s_1_celestial, ==, e_s_1_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_s_2_celestial, ==, -e_s_2_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_o_1_celestial, ==, e_o_1_euclidean, 1e-10, 1e-10);
-    ncm_assert_cmpdouble_e (e_o_2_celestial, ==, -e_o_2_euclidean, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_s_1_celestial, ==, e_s_1_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_s_2_celestial, ==, -e_s_2_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_o_1_celestial, ==, e_o_1_cartesian, 1e-10, 1e-10);
+    ncm_assert_cmpdouble_e (e_o_2_celestial, ==, -e_o_2_cartesian, 1e-10, 1e-10);
   }
 
   nc_galaxy_sd_obs_redshift_data_unref (z_data);
