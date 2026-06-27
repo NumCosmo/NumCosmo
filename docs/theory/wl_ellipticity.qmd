@@ -1,0 +1,227 @@
+---
+title: Galaxy Shapes and Ellipticity Frames
+---
+
+# Galaxy Shapes and Ellipticity Frames
+
+This page describes the weak-lensing forward model for galaxy shapes — how an
+intrinsic ellipticity is sheared, calibrated, and observed — and the two
+conventions that NumCosmo must keep track of: the *ellipticity convention*
+(how a shape is turned into a complex number) and the *handedness frame* (which
+basis the two ellipticity components are projected onto). The forward model is
+implemented by the shape distributions [[numcosmo|NcGalaxySDShape]] (concretely
+[[numcosmo|NcGalaxySDShapeHSMGauss]] and
+[[numcosmo|NcGalaxySDShapeHSMGaussGlobal]]); the reduced-shear transforms live in
+[[numcosmo|NcWLEllipticityFrame]] and the surrounding `nc_wl_ellipticity`
+functions. The reduced shear itself comes from
+[[numcosmo|NcWLSurfaceMassDensity]] (see
+[Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd)) and the lens
+geometry from [[numcosmo|NcHaloPosition]].
+
+## Complex Ellipticity and the Two Conventions
+
+A galaxy image is summarized by its second-brightness-moment (quadrupole)
+matrix, which defines an ellipse with semi-axes $a \ge b$ and orientation
+$\theta$. The shape is encoded as a single spin-2 complex number. Two
+normalizations are in common use:
+
+$$
+\chi = \frac{a^2 - b^2}{a^2 + b^2}\, e^{2 i \theta},
+\qquad
+\epsilon = \frac{a - b}{a + b}\, e^{2 i \theta} .
+$$
+
+The trace normalization $\chi$ (the *distortion*) and the trace–determinant
+normalization $\epsilon$ (the *axis-ratio ellipticity*) are selected by
+[[numcosmo|NcGalaxyWLObsEllipConv]]
+(`NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE` and
+`NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET`). They carry the same orientation
+information but transform differently under shear and have different intrinsic
+distributions; the spin-2 factor $e^{2 i \theta}$ is common to both.
+
+## The Reduced Shear
+
+For a source at projected radius $R$ and redshift $z$ behind a lens at $z_l$,
+the lensing distortion is set by the convergence $\kappa$ and the (tangential)
+shear $\gamma$ through the complex **reduced shear**
+
+$$
+g = \frac{\gamma}{1 - \kappa}.
+$$
+
+NumCosmo computes the real tangential reduced shear
+$g_t(R,z) = \gamma_t/(1-\kappa)$ from
+[[numcosmo|NcWLSurfaceMassDensity]] and orients it with the source position
+angle (see below),
+
+$$
+g = g_t\, e^{2 i \phi}.
+$$
+
+Sources in front of the lens ($z \le z_l$) are unlensed, $g_t = 0$.
+
+## Shear Transformation of the Ellipticity
+
+An intrinsic shape $\epsilon^{(s)}$ is mapped to the lensed (observed) shape by
+a Möbius transformation whose form depends on the convention and on whether the
+lensing is weak ($|g| \le 1$) or strong ($|g| > 1$). For the axis-ratio
+ellipticity $\epsilon$,
+
+$$
+\epsilon^{(o)} =
+\begin{cases}
+\dfrac{\epsilon^{(s)} + g}{1 + g^{*}\,\epsilon^{(s)}}, & |g| \le 1, \\[2ex]
+\dfrac{1 + g\,\epsilon^{(s)*}}{\epsilon^{(s)*} + g^{*}}, & |g| > 1,
+\end{cases}
+$$
+
+with the inverse map (observed $\to$ intrinsic) obtained by $g \to -g$. For the
+distortion $\chi$ the corresponding transformation is
+
+$$
+\chi^{(o)} =
+\frac{\chi^{(s)} + g\,(g\,\chi^{(s)*} + 2)}
+{1 + |g|^2 + 2\,\mathrm{Re}(g\,\chi^{(s)*})} .
+$$
+
+These are the standard reduced-shear ellipticity transforms (see e.g.
+@Bartelmann2001). They are implemented as inlined kernels (`apply_shear`,
+`apply_shear_inv`) selected once per convention; the public
+introspectable entry points are
+[[numcosmo|nc_galaxy_sd_shape_apply_shear]] and
+[[numcosmo|nc_galaxy_sd_shape_apply_shear_inv]].
+
+### Calibration
+
+Real catalogs carry shape-measurement biases. NumCosmo applies a multiplicative
+bias $m$ and an additive bias $c = c_1 + i c_2$ to the reduced shear before the
+transformation,
+
+$$
+g \;\longrightarrow\; (1 + m)\,g + c ,
+$$
+
+and adds a complex measurement noise $n$ to the result,
+$\epsilon^{(o)} \to \epsilon^{(o)} + n$. The additive bias $c$ is a per-catalog
+calibration and is taken to be **already expressed in the catalog's storage
+frame** (see below); it is therefore never re-projected.
+
+## Handedness Frames: Celestial vs. Euclidean
+
+Every sky position in NumCosmo is given as right ascension and declination, so
+the **position angle is always measured in the celestial convention**: building
+a halo-centred coordinate system with [[numcosmo|nc_halo_position_polar_angles]]
+returns the polar angle $\theta$ (the lens–source separation) and the azimuth
+$\phi_C$, which increases eastward (with increasing RA).
+
+What the catalog *chooses* is the orthonormal basis onto which the two
+ellipticity components are projected. The "celestial" / "Euclidean" nomenclature
+for these two handedness frames follows the GalSim image-simulation toolkit
+[@Rowe2015]; the Subaru Hyper Suprime-Cam shape catalogs, for instance, adopt
+the celestial convention throughout [@Mandelbaum2018; @Li2022]. This is the
+handedness frame [[numcosmo|NcWLEllipticityFrame]]:
+
+- **Celestial** (`CELESTIAL`): the holonomic frame of the celestial convention.
+  The position angle is $\phi_C$ and the complex ellipticity is
+  $\epsilon_C = |\epsilon|\,e^{2 i \phi_C}$. This is the reference frame.
+
+- **Euclidean / image** (`CARTESIAN`): the frame an observer on the ground sees
+  when facing the source with their head toward the North celestial pole. The
+  right-hand direction then points East, so the image $x$-axis increases toward
+  the **West** (decreasing RA). This is the opposite handedness (the legacy name
+  was `EUCLIDEAN`).
+
+The two frames differ by a parity (handedness) flip. The position angle reverses
+sense,
+
+$$
+\phi_E = \pi - \phi_C \quad (\equiv -\phi_C \bmod \pi),
+$$
+
+and, because the ellipticity is spin-2, this is equivalent to complex
+conjugation of the shape (its cross component flips sign),
+
+$$
+\boxed{\;\epsilon_E = \epsilon_C^{*}\;}
+$$
+
+The equivalence follows from $e^{2 i \phi_E} = e^{2 i (\pi - \phi_C)} = e^{-2 i
+\phi_C}$. Conjugating the ellipticity and flipping $\phi$ are thus the *same*
+operation, and the parity is its own inverse — a single map converts
+celestial $\to$ Euclidean and Euclidean $\to$ celestial alike. The two helpers
+[[numcosmo|nc_wl_ellipticity_celestial_to_frame_c]] (conjugates $\epsilon$ for
+`CARTESIAN`, identity for `CELESTIAL`) and
+[[numcosmo|nc_wl_ellipticity_celestial_to_frame_angle]] ($\phi_C \to \phi_E$) encode
+exactly this, and are no-ops for the celestial frame.
+
+### Generation is frame-symmetric
+
+When a mock galaxy is simulated, the intrinsic shape and the measurement noise
+are drawn from isotropic distributions in the celestial frame, the reduced shear
+is oriented with $\phi_C$, and the resulting observed ellipticity is then mapped
+into the catalog's storage frame so that it is stored consistently. Because the
+intrinsic shape and noise are isotropic, conjugating them leaves their
+distribution unchanged: generating in celestial-and-conjugating is statistically
+identical to generating directly in the Euclidean frame. The parity flip
+therefore affects only the *deterministic* pieces — the position angle and hence
+the lensed shape — while the calibration bias $c$, assumed to live in the
+storage frame, is added without any flip.
+
+## The Shape Likelihood
+
+For inference the model needs $P(\epsilon^{(o)} \mid z, \text{lens})$. The
+observed shape is mapped back to the intrinsic one,
+$\epsilon^{(s)} = \texttt{apply\_shear\_inv}\big((1+m)g + c,\ \epsilon^{(o)}\big)$,
+and the intrinsic distribution is evaluated there, weighted by the Jacobian of
+the change of variables. For the Gaussian shape models the intrinsic shape and
+noise combine into a single isotropic Gaussian of total variance
+$\sigma_{\rm tot}^2 = \sigma^2 + \sigma_{\rm noise}^2$, giving
+
+$$
+P\!\left(\epsilon^{(o)} \mid z\right)
+= \frac{1}{2\pi\,\sigma_{\rm tot}^2}\,
+\exp\!\left[
+-\frac{\lvert\epsilon^{(s)}\rvert^2}{2\,\sigma_{\rm tot}^2}
++ \ln\left\lvert\det\frac{\partial\epsilon^{(s)}}{\partial\epsilon^{(o)}}\right\rvert
+\right].
+$$
+
+For the $\epsilon$ convention in the weak regime the log-Jacobian is
+
+$$
+\ln\left\lvert\det\frac{\partial\epsilon^{(s)}}{\partial\epsilon^{(o)}}\right\rvert
+= 2\ln\!\left(1 - |g|^2\right)
+- 2\ln\left\lvert 1 - g^{*}\epsilon^{(o)}\right\rvert^2 ,
+$$
+
+with analogous expressions for the $\chi$ convention and for the strong-lensing
+branch. These are provided by `lndet_jac` (e.g.
+[[numcosmo|nc_galaxy_sd_shape_lndet_jac]]).
+
+Because the likelihood is rotation invariant, the implementation works in the
+**tangential/cross frame**: the stored observed ellipticity is rotated by
+$e^{-2 i \phi}$ (with $\phi = \phi_E$ in the catalog frame), which makes the
+reduced shear real ($g \to g_t$) and the calibration bias is pre-rotated
+consistently. The full observed likelihood marginalizes this expression over the
+source redshift distribution, handled by [[numcosmo|NcDataClusterWL]].
+
+## API Reference
+
+The forward model and the frame machinery are spread over a few classes:
+
+- shape distributions: [[numcosmo|NcGalaxySDShape]],
+  [[numcosmo|NcGalaxySDShapeHSMGauss]],
+  [[numcosmo|NcGalaxySDShapeHSMGaussGlobal]]
+- ellipticity convention and storage frame:
+  [[numcosmo|NcGalaxyWLObsEllipConv]], [[numcosmo|NcWLEllipticityFrame]],
+  [[numcosmo|NcGalaxyWLObs]]
+- shear transforms and Jacobian:
+  [[numcosmo|nc_galaxy_sd_shape_apply_shear]],
+  [[numcosmo|nc_galaxy_sd_shape_apply_shear_inv]],
+  [[numcosmo|nc_galaxy_sd_shape_lndet_jac]]
+- frame helpers: [[numcosmo|nc_wl_ellipticity_celestial_to_frame_c]],
+  [[numcosmo|nc_wl_ellipticity_celestial_to_frame_angle]]
+- lens geometry and reduced shear:
+  [[numcosmo|nc_halo_position_polar_angles]],
+  [[numcosmo|NcWLSurfaceMassDensity]]
+- the assembled likelihood: [[numcosmo|NcDataClusterWL]]

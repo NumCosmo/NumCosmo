@@ -219,7 +219,7 @@ s_data = Nc.GalaxySDShapeData.new(s_dist, p_data)
 
 obs = Nc.GalaxyWLObs.new(
     Nc.GalaxyWLObsEllipConv.TRACE_DET,
-    Nc.GalaxyWLObsCoord.CELESTIAL,
+    Nc.WLEllipticityFrame.CELESTIAL,
     n_galaxies,
     list(s_data.required_columns()),
 )
@@ -237,7 +237,7 @@ for i in range(n_galaxies):
         c1,
         c2,
         m,
-        Nc.GalaxyWLObsCoord.CELESTIAL,
+        Nc.WLEllipticityFrame.CELESTIAL,
         rng,
     )
     s_data.write_row(obs, i)
@@ -354,7 +354,7 @@ def gen_galaxies(halo_ra: float, halo_dec: float, halo_mass: float) -> pd.DataFr
 
     obs = Nc.GalaxyWLObs.new(
         Nc.GalaxyWLObsEllipConv.TRACE_DET,
-        Nc.GalaxyWLObsCoord.CELESTIAL,
+        Nc.WLEllipticityFrame.CELESTIAL,
         n_galaxies,
         list(s_data.required_columns()),
     )
@@ -373,7 +373,7 @@ def gen_galaxies(halo_ra: float, halo_dec: float, halo_mass: float) -> pd.DataFr
             c1,
             c2,
             m,
-            Nc.GalaxyWLObsCoord.CELESTIAL,
+            Nc.WLEllipticityFrame.CELESTIAL,
             rng,
         )
         s_data.write_row(obs, i)

@@ -36,6 +36,7 @@
 #include <numcosmo/nc/lss/halo/nc_halo_position.h>
 #include <numcosmo/nc/lss/halo/nc_halo_density_profile.h>
 #include <numcosmo/nc/lss/wl/nc_wl_surface_mass_density.h>
+#include <numcosmo/nc/lss/wl/nc_wl_ellipticity.h>
 #include <numcosmo/ncm/model/ncm_model.h>
 #include <numcosmo/ncm/model/ncm_mset.h>
 #include <numcosmo/ncm/core/ncm_rng.h>
@@ -81,7 +82,11 @@ struct _NcGalaxySDShapeClass
 struct _NcGalaxySDShapeData
 {
   NcGalaxySDPositionData *sdpos_data;
-  NcGalaxyWLObsCoord coord;
+
+  /* Handedness frame in which this galaxy's ellipticity components are
+   * expressed (see #NcWLEllipticityFrame). Sky positions are always RA/Dec, so
+   * only the ellipticity basis is selected by this field. */
+  NcWLEllipticityFrame coord;
   gdouble epsilon_int_1;
   gdouble epsilon_int_2;
   gpointer ldata;
@@ -106,11 +111,6 @@ NcGalaxyWLObsEllipConv nc_galaxy_sd_shape_get_ellip_conv (NcGalaxySDShape *gsds)
 void nc_galaxy_sd_shape_apply_shear (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E, NcmComplex *E_obs);
 void nc_galaxy_sd_shape_apply_shear_inv (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs, NcmComplex *E);
 gdouble nc_galaxy_sd_shape_lndet_jac (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs);
-
-typedef void (*NcGalaxySDShapeApplyShearInvFn) (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs, NcmComplex *E);
-typedef gdouble (*NcGalaxySDShapeLndetJacFn) (NcGalaxySDShape *gsds, const NcmComplex *g, const NcmComplex *E_obs);
-
-void nc_galaxy_sd_shape_peek_dispatch (NcGalaxySDShape *gsds, NcGalaxySDShapeApplyShearInvFn *apply_shear_inv, NcGalaxySDShapeLndetJacFn *lndet_jac);
 
 void nc_galaxy_sd_shape_data_read_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_sd_shape_data_write_row (NcGalaxySDShapeData *data, NcGalaxyWLObs *obs, const guint i);

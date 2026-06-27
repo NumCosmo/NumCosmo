@@ -276,12 +276,20 @@ _nc_galaxy_sd_shape_hsm_gauss_global_gen (NcGalaxySDShape *gsds, NcmMSet *mset, 
 
   nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-  if (data->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
-  {
-    phi   = M_PI - phi;
-    e_s   = conj (e_s);
-    noise = conj (noise);
-  }
+  /* polar_angles returns the celestial position angle phi_C. The shear, the
+   * intrinsic ellipticity e_s and the noise are all built here in the celestial
+   * frame and then mapped into the data's frame (data->coord) so that the stored
+   * observed ellipticity lands in that frame: the position angle is re-expressed
+   * (phi_C -> phi_E) and the spin-2 quantities are conjugated. Both helpers are
+   * the identity for CELESTIAL. e_s and noise are drawn isotropically, so the
+   * parity flip leaves their distribution unchanged (the generation is
+   * frame-symmetric); it is applied only to keep the deterministic pieces (phi
+   * and the resulting e_o) consistent with data->coord. The additive bias c is
+   * taken to be already expressed in data->coord, so it is added below without
+   * any parity flip. See #NcWLEllipticityFrame. */
+  phi   = nc_wl_ellipticity_celestial_to_frame_angle (data->coord, phi);
+  e_s   = nc_wl_ellipticity_celestial_to_frame_c (data->coord, e_s);
+  noise = nc_wl_ellipticity_celestial_to_frame_c (data->coord, noise);
 
   radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
 
@@ -376,8 +384,11 @@ _integ_data_free (gpointer user_data)
   g_free (int_data);
 }
 
-static void
-_nc_galaxy_sd_shape_hsm_gauss_global_pre_integ (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data, gdouble *total_var, gdouble *chi2_1, gdouble *chi2_2, gdouble *lndetjac)
+static inline void
+_nc_galaxy_sd_shape_hsm_gauss_global_pre_integ (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data,
+                                                complex double (*apply_shear_inv) (complex double, complex double),
+                                                gdouble (*lndet_jac) (complex double, complex double),
+                                                gdouble *total_var, gdouble *chi2_1, gdouble *chi2_2, gdouble *lndetjac)
 {
   struct _IntegData *int_data              = (struct _IntegData *) callback_data;
   NcGalaxySDShape *gsds                    = NC_GALAXY_SD_SHAPE (int_data->gsdsgauss);
@@ -391,8 +402,7 @@ _nc_galaxy_sd_shape_hsm_gauss_global_pre_integ (gpointer callback_data, const gd
   gdouble c2_rot                           = ldata->c2_rot;
   gdouble m                                = ldata->m;
   complex double e_o                       = et + I * ex;
-  complex double g;
-  NcmComplex cplx_g, cplx_E_o, cplx_E_s;
+  complex double g, e_s;
 
   /* Work in the tangential/cross frame (real reduced shear gt, observed
    * ellipticity epsilon_obs_t/x, calibration bias pre-rotated to c1_rot/c2_rot),
@@ -422,36 +432,55 @@ _nc_galaxy_sd_shape_hsm_gauss_global_pre_integ (gpointer callback_data, const gd
   /* Adding bias */
   g = (1.0 + m) * g + (c1_rot + I * c2_rot);
 
-  ncm_complex_set_c (&cplx_g, g);
-  ncm_complex_set_c (&cplx_E_o, e_o);
-
-  nc_galaxy_sd_shape_apply_shear_inv (gsds, &cplx_g, &cplx_E_o, &cplx_E_s);
+  e_s = apply_shear_inv (g, e_o);
 
   *total_var = gsl_pow_2 (sigma) + gsl_pow_2 (std_noise);
-  *chi2_1    = gsl_pow_2 (ncm_complex_Re (&cplx_E_s)) / *total_var;
-  *chi2_2    = gsl_pow_2 (ncm_complex_Im (&cplx_E_s)) / *total_var;
-  *lndetjac  = nc_galaxy_sd_shape_lndet_jac (gsds, &cplx_g, &cplx_E_o);
+  *chi2_1    = gsl_pow_2 (creal (e_s)) / *total_var;
+  *chi2_2    = gsl_pow_2 (cimag (e_s)) / *total_var;
+  *lndetjac  = lndet_jac (g, e_o);
 }
 
-static gdouble
-_nc_galaxy_sd_shape_hsm_gauss_global_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data)
+static inline gdouble
+_nc_galaxy_sd_shape_hsm_gauss_global_integ_value (gdouble total_var, gdouble chi2_1, gdouble chi2_2, gdouble lndetjac)
 {
-  gdouble total_var, chi2_1, chi2_2, lndetjac;
-
-  _nc_galaxy_sd_shape_hsm_gauss_global_pre_integ (callback_data, z, data, &total_var, &chi2_1, &chi2_2, &lndetjac);
-
   return exp (-0.5 * (chi2_1 + chi2_2) + lndetjac) / (2.0 * M_PI * total_var);
 }
 
-static gdouble
-_nc_galaxy_sd_shape_hsm_gauss_global_ln_integ_f (gpointer callback_data, const gdouble z, NcGalaxySDShapeData *data)
+static inline gdouble
+_nc_galaxy_sd_shape_hsm_gauss_global_ln_integ_value (gdouble total_var, gdouble chi2_1, gdouble chi2_2, gdouble lndetjac)
 {
-  gdouble total_var, chi2_1, chi2_2, lndetjac;
-
-  _nc_galaxy_sd_shape_hsm_gauss_global_pre_integ (callback_data, z, data, &total_var, &chi2_1, &chi2_2, &lndetjac);
-
   return -0.5 * (chi2_1 + chi2_2) + lndetjac - log (2.0 * M_PI * total_var);
 }
+
+/* Per-convention integrands, selected once in _integ() to keep the convention
+ * branch out of the per-evaluation path. */
+#define NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_INTEG_F(name, apply_shear_inv, lndet_jac, value)        \
+        static gdouble                                                                              \
+        name (gpointer callback_data, const gdouble z, NcGalaxySDShapeData * data)                  \
+        {                                                                                           \
+          gdouble total_var, chi2_1, chi2_2, lndetjac;                                              \
+          _nc_galaxy_sd_shape_hsm_gauss_global_pre_integ (callback_data, z, data,                   \
+                                                          apply_shear_inv, lndet_jac,               \
+                                                          &total_var, &chi2_1, &chi2_2, &lndetjac); \
+          return value (total_var, chi2_1, chi2_2, lndetjac);                                       \
+        }
+
+NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_INTEG_F (_nc_galaxy_sd_shape_hsm_gauss_global_integ_f_trace,
+                                             nc_wl_ellipticity_apply_shear_inv_trace_c,
+                                             nc_wl_ellipticity_lndet_jac_trace_c,
+                                             _nc_galaxy_sd_shape_hsm_gauss_global_integ_value)
+NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_INTEG_F (_nc_galaxy_sd_shape_hsm_gauss_global_integ_f_trace_det,
+                                             nc_wl_ellipticity_apply_shear_inv_trace_det_c,
+                                             nc_wl_ellipticity_lndet_jac_trace_det_c,
+                                             _nc_galaxy_sd_shape_hsm_gauss_global_integ_value)
+NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_INTEG_F (_nc_galaxy_sd_shape_hsm_gauss_global_ln_integ_f_trace,
+                                             nc_wl_ellipticity_apply_shear_inv_trace_c,
+                                             nc_wl_ellipticity_lndet_jac_trace_c,
+                                             _nc_galaxy_sd_shape_hsm_gauss_global_ln_integ_value)
+NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_INTEG_F (_nc_galaxy_sd_shape_hsm_gauss_global_ln_integ_f_trace_det,
+                                             nc_wl_ellipticity_apply_shear_inv_trace_det_c,
+                                             nc_wl_ellipticity_lndet_jac_trace_det_c,
+                                             _nc_galaxy_sd_shape_hsm_gauss_global_ln_integ_value)
 
 static void
 _integ_data_prepare (gpointer user_data, NcmMSet *mset)
@@ -486,11 +515,27 @@ _nc_galaxy_sd_shape_hsm_gauss_global_integ (NcGalaxySDShape *gsds, gboolean use_
 {
   NcGalaxySDShapeHSMGaussGlobal *gsdsgauss = NC_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL (gsds);
   struct _IntegData *int_data              = g_new0 (struct _IntegData, 1);
-  NcGalaxySDShapeIntegrand *integ          = nc_galaxy_sd_shape_integrand_new (use_lnp ? _nc_galaxy_sd_shape_hsm_gauss_global_ln_integ_f : _nc_galaxy_sd_shape_hsm_gauss_global_integ_f,
-                                                                               _integ_data_free,
-                                                                               _integ_data_copy,
-                                                                               _integ_data_prepare,
-                                                                               int_data);
+  const NcGalaxyWLObsEllipConv ellip_conv  = nc_galaxy_sd_shape_get_ellip_conv (gsds);
+  NcGalaxySDShapeIntegrandFunc integ_f;
+  NcGalaxySDShapeIntegrand *integ;
+
+  switch (ellip_conv)
+  {
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+      integ_f = use_lnp ? _nc_galaxy_sd_shape_hsm_gauss_global_ln_integ_f_trace : _nc_galaxy_sd_shape_hsm_gauss_global_integ_f_trace;
+      break;
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+      integ_f = use_lnp ? _nc_galaxy_sd_shape_hsm_gauss_global_ln_integ_f_trace_det : _nc_galaxy_sd_shape_hsm_gauss_global_integ_f_trace_det;
+      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+  }
+
+  integ = nc_galaxy_sd_shape_integrand_new (integ_f,
+                                            _integ_data_free,
+                                            _integ_data_copy,
+                                            _integ_data_prepare,
+                                            int_data);
 
   int_data->gsdsgauss = gsdsgauss;
 
@@ -545,8 +590,10 @@ _nc_galaxy_sd_shape_hsm_gauss_global_prepare_data_array (NcGalaxySDShape *gsds, 
 
       nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-      if (data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
-        phi = M_PI - phi;
+      /* Re-express the celestial phi_C in the data frame (phi_E) so the spin-2
+       * rotation e^{-2 i phi} carries the data-frame observed ellipticity into
+       * the tangential/cross frame. See #NcWLEllipticityFrame. */
+      phi = nc_wl_ellipticity_celestial_to_frame_angle (data_i->coord, phi);
 
       e_o_rotated  = e_o * cexp (-2.0 * I * phi);
       bias_rotated = (ldata_i->c1 + I * ldata_i->c2) * cexp (-2.0 * I * phi);
@@ -634,8 +681,10 @@ _nc_galaxy_sd_shape_hsm_gauss_global_prepare_data_array_at_nodes (NcGalaxySDShap
 
       nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-      if (data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
-        phi = M_PI - phi;
+      /* Re-express the celestial phi_C in the data frame (phi_E) so the spin-2
+       * rotation e^{-2 i phi} carries the data-frame observed ellipticity into
+       * the tangential/cross frame. See #NcWLEllipticityFrame. */
+      phi = nc_wl_ellipticity_celestial_to_frame_angle (data_i->coord, phi);
 
       e_o_rotated  = e_o * cexp (-2.0 * I * phi);
       bias_rotated = (ldata_i->c1 + I * ldata_i->c2) * cexp (-2.0 * I * phi);
@@ -704,6 +753,41 @@ _nc_galaxy_sd_shape_hsm_gauss_global_prepare_data_array_at_nodes (NcGalaxySDShap
   return TRUE;
 }
 
+static inline void
+_nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes_conv (NcGalaxySDShapeHSMGaussGlobalData *ldata, const NcmVector *z_nodes, NcmVector *out,
+                                                         gdouble z_cl, complex double e_o, gdouble total_var,
+                                                         complex double (*apply_shear_inv) (complex double, complex double),
+                                                         gdouble (*lndet_jac) (complex double, complex double))
+{
+  const gdouble c1_rot = ldata->c1_rot;
+  const gdouble c2_rot = ldata->c2_rot;
+  const gdouble m      = ldata->m;
+  const guint n_nodes  = ncm_vector_len (z_nodes);
+  guint j;
+
+  for (j = 0; j < n_nodes; j++)
+  {
+    const gdouble z_j = ncm_vector_get (z_nodes, j);
+    gdouble gt;
+    complex double g, e_s;
+    gdouble lndetjac, chi2_1, chi2_2;
+
+    if (z_j > z_cl)
+      gt = nc_wl_surface_mass_density_reduced_shear_cache (&ldata->crit_cache_arr[j], &ldata->sigma_cache);
+    else
+      gt = 0.0;
+
+    g   = (1.0 + m) * gt + (c1_rot + I * c2_rot);
+    e_s = apply_shear_inv (g, e_o);
+
+    lndetjac = lndet_jac (g, e_o);
+    chi2_1   = gsl_pow_2 (creal (e_s)) / total_var;
+    chi2_2   = gsl_pow_2 (cimag (e_s)) / total_var;
+
+    ncm_vector_set (out, j, exp (-0.5 * (chi2_1 + chi2_2) + lndetjac) / (2.0 * M_PI * total_var));
+  }
+}
+
 static void
 _nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes (NcGalaxySDShape *gsds, NcmMSet *mset, NcGalaxySDShapeData *data, const NcmVector *z_nodes, NcmVector *out)
 {
@@ -714,51 +798,26 @@ _nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes (NcGalaxySDShape *gsds, NcmMS
   const gdouble et                         = ldata->epsilon_obs_t;
   const gdouble ex                         = ldata->epsilon_obs_x;
   const gdouble std_noise                  = ldata->std_noise;
-  const gdouble c1_rot                     = ldata->c1_rot;
-  const gdouble c2_rot                     = ldata->c2_rot;
-  const gdouble m                          = ldata->m;
   const complex double e_o                 = et + I * ex;
   const gdouble total_var                  = gsl_pow_2 (sigma) + gsl_pow_2 (std_noise);
-  const guint n_nodes                      = ncm_vector_len (z_nodes);
-  NcGalaxySDShapeApplyShearInvFn apply_shear_inv_fn;
-  NcGalaxySDShapeLndetJacFn lndet_jac_fn;
-  guint j;
-
-  nc_galaxy_sd_shape_peek_dispatch (gsds, &apply_shear_inv_fn, &lndet_jac_fn);
+  const NcGalaxyWLObsEllipConv ellip_conv  = nc_galaxy_sd_shape_get_ellip_conv (gsds);
 
   g_assert_nonnull (ldata->crit_cache_arr);
 
-  for (j = 0; j < n_nodes; j++)
+  switch (ellip_conv)
   {
-    const gdouble z_j = ncm_vector_get (z_nodes, j);
-    NcWLSurfaceMassDensityCritCache *cc;
-    gdouble gt;
-    complex double g;
-    NcmComplex cplx_g, cplx_E_o, cplx_E_s;
-    gdouble lndetjac, chi2_1, chi2_2;
-
-    if (z_j > z_cl)
-    {
-      cc = &ldata->crit_cache_arr[j];
-      gt = nc_wl_surface_mass_density_reduced_shear_cache (cc, &ldata->sigma_cache);
-    }
-    else
-    {
-      gt = 0.0;
-    }
-
-    g = (1.0 + m) * gt + (c1_rot + I * c2_rot);
-
-    ncm_complex_set_c (&cplx_g, g);
-    ncm_complex_set_c (&cplx_E_o, e_o);
-
-    apply_shear_inv_fn (gsds, &cplx_g, &cplx_E_o, &cplx_E_s);
-
-    lndetjac = lndet_jac_fn (gsds, &cplx_g, &cplx_E_o);
-    chi2_1   = gsl_pow_2 (ncm_complex_Re (&cplx_E_s)) / total_var;
-    chi2_2   = gsl_pow_2 (ncm_complex_Im (&cplx_E_s)) / total_var;
-
-    ncm_vector_set (out, j, exp (-0.5 * (chi2_1 + chi2_2) + lndetjac) / (2.0 * M_PI * total_var));
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
+      _nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes_conv (ldata, z_nodes, out, z_cl, e_o, total_var,
+                                                               nc_wl_ellipticity_apply_shear_inv_trace_c,
+                                                               nc_wl_ellipticity_lndet_jac_trace_c);
+      break;
+    case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
+      _nc_galaxy_sd_shape_hsm_gauss_global_eval_at_nodes_conv (ldata, z_nodes, out, z_cl, e_o, total_var,
+                                                               nc_wl_ellipticity_apply_shear_inv_trace_det_c,
+                                                               nc_wl_ellipticity_lndet_jac_trace_det_c);
+      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
   }
 }
 
@@ -867,8 +926,11 @@ _nc_galaxy_sd_shape_hsm_gauss_global_direct_estimate (NcGalaxySDShape *gsds, Ncm
 
     nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-    if (data_i->coord == NC_GALAXY_WL_OBS_COORD_EUCLIDEAN)
-      phi = M_PI - phi;
+    /* Re-express the celestial phi_C in the data frame (phi_E) and rotate the
+     * data-frame observed ellipticity into the tangential/cross frame. The bias
+     * (c1, c2) stays in the data frame and is averaged below without rotation.
+     * See #NcWLEllipticityFrame. */
+    phi = nc_wl_ellipticity_celestial_to_frame_angle (data_i->coord, phi);
 
     hat_g = e_o * cexp (-2.0 * I * phi);
 
@@ -981,14 +1043,21 @@ nc_galaxy_sd_shape_hsm_gauss_global_clear (NcGalaxySDShapeHSMGaussGlobal **gsdsg
  * @mset: a #NcmMSet
  * @data: a #NcGalaxySDShapeData
  * @std_noise: the observational shape dispersion
- * @coord: the coordinate system #NcGalaxyWLObsCoord
+ * @c1: the additive bias component 1 (in the @coord frame)
+ * @c2: the additive bias component 2 (in the @coord frame)
+ * @m: the multiplicative bias
+ * @coord: the ellipticity handedness frame #NcWLEllipticityFrame
  * @rng: a #NcmRNG
  *
- * Generates a galaxy sample shape.
+ * Generates a galaxy sample shape and stores its observed ellipticity in the
+ * frame @coord. The shape is generated in the celestial frame and mapped to
+ * @coord (see #NcWLEllipticityFrame); since the intrinsic shape and noise are
+ * isotropic the generation is frame-symmetric, while the additive bias (@c1,
+ * @c2) is taken to be already expressed in @coord.
  *
  */
 void
-nc_galaxy_sd_shape_hsm_gauss_global_gen (NcGalaxySDShapeHSMGaussGlobal *gsdsgauss, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m, NcGalaxyWLObsCoord coord, NcmRNG *rng)
+nc_galaxy_sd_shape_hsm_gauss_global_gen (NcGalaxySDShapeHSMGaussGlobal *gsdsgauss, NcmMSet *mset, NcGalaxySDShapeData *data, const gdouble std_noise, const gdouble c1, const gdouble c2, const gdouble m, NcWLEllipticityFrame coord, NcmRNG *rng)
 {
   NcGalaxySDShapeClass *sd_shape_class     = NC_GALAXY_SD_SHAPE_GET_CLASS (gsdsgauss);
   NcGalaxySDShapeHSMGaussGlobalData *ldata = (NcGalaxySDShapeHSMGaussGlobalData *) data->ldata;

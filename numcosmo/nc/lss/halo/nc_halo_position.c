@@ -324,11 +324,24 @@ nc_halo_position_get_ra_dec (NcHaloPosition *hp, gdouble *ra, gdouble *dec)
  * @theta: (out): The polar angle.
  * @phi: (out): The azimuthal angle.
  *
- * Considering a spherical coordinate system where the halo is at the north pole, this
- * function calculates the polar and azimuthal angles of a point in the sky. That is,
- * $\theta$ = @theta provides the angular separation from the halo to the point in the
- * sky, and $\phi$ = @phi provides the azimuthal angle.
+ * Computes the spherical coordinates of a sky position in a halo-centered coordinate
+ * system. The coordinate system is obtained by a rigid rotation of the celestial
+ * sphere that places the halo at the north pole.
  *
+ * The returned polar angle @theta is the angular separation between the halo and the
+ * sky position. The azimuth @phi is measured in the rotated coordinate system.
+ *
+ * The rotation preserves all angular distances and relative position angles on the
+ * sky. Its orientation is uniquely fixed by requiring that the halo is first brought
+ * into the xz-plane and then rotated onto the positive z-axis, with no additional
+ * rotation about the halo axis. Consequently, @phi is uniquely defined and is
+ * consistent for all sky positions associated with the same halo.
+ *
+ * Because the input positions are right ascension and declination, @phi is the
+ * position angle in the celestial convention ($\phi_C$, increasing eastward). A
+ * consumer that expresses ellipticities in a different handedness (see
+ * #NcWLEllipticityFrame) must convert it accordingly, e.g. with
+ * nc_wl_ellipticity_celestial_to_frame_angle().
  */
 void
 nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdouble *theta, gdouble *phi)
