@@ -305,6 +305,8 @@ test_nc_data_cluster_wl_truth_new (TestNcDataClusterWLTruth *test, gconstpointer
   nc_data_cluster_wl_set_cut (test->dcwl, min_radius, max_radius);
   nc_data_cluster_wl_set_obs (test->dcwl, obs);
   g_object_set (test->dcwl, "enable-parallel", FALSE, NULL);
+  g_object_set (test->dcwl, "auto-nodes", FALSE, NULL);
+  g_object_set (test->dcwl, "node_reltol", 1e-6, NULL);
 
   test->golden = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, TRUTH_GOLDEN_NODES, TRUTH_GOLDEN_RULE);
 
@@ -397,10 +399,15 @@ test_nc_data_cluster_wl_truth_methods (TestNcDataClusterWLTruth *test, gconstpoi
    * support, or a node-count regression. */
   const gdouble abstol = is_spec ? 1.0e-9 : (is_pz ? 1.0e-5 : 1.0e-6);
   NcmVector *vF        = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
-  NcmVector *vL        = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
-  NcmVector *vC        = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+
+  g_object_set (test->dcwl, "auto-nodes", TRUE, NULL);
+
+  NcmVector *vA = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+  NcmVector *vL = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+  NcmVector *vC = _truth_eval (test, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
 
   _truth_cmp ("FIXED vs golden", vF, test->golden, 1.0e-6, abstol);
+  _truth_cmp ("FIXED AUTO vs golden", vA, test->golden, 1.0e-6, abstol);
   _truth_cmp ("LNINT vs golden", vL, test->golden, 1.0e-6, abstol);
   _truth_cmp ("CUBATURE vs golden", vC, test->golden, 1.0e-6, abstol);
 
