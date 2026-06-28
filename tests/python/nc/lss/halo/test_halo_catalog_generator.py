@@ -1,0 +1,212 @@
+#!/usr/bin/env python
+#
+# test_halo_catalog_generator.py
+#
+# Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+"""Tests for NcHaloCatalogGenerator.
+
+The generator owns the cluster-count sampling pipeline used by
+NcDataClusterNCount. These tests check its catalog output shape and that, run
+standalone with the same seed, it reproduces the NcDataClusterNCount golden
+snapshot (the two share the extracted pipeline).
+
+The reference is the stored seed-0 NcDataClusterNCount catalog at
+``data/truth_tables/nc_data_cluster_ncount_golden_seed0.bin`` (see
+test_ncount_resample_golden.py). The comparison is tolerance-based so it survives
+cross-stack sub-ULP rounding while still catching real regressions.
+"""
+
+import math
+
+import numpy as np
+
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.catalog import catalog_to_table
+
+Ncm.cfg_init()
+
+AREA = 270 * (math.pi / 180.0) ** 2
+
+GOLDEN_FILE = "truth_tables/nc_data_cluster_ncount_golden_seed0.bin"
+GOLDEN_RTOL = 1.0e-9
+GOLDEN_ATOL = 1.0e-12
+
+
+def _load_golden_columns() -> dict[str, np.ndarray]:
+    """Load the reference seed-0 catalog as plain arrays keyed by column."""
+    path = Ncm.cfg_get_data_filename(GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    golden = ser.from_binfile(path)
+    assert isinstance(golden, Nc.DataClusterNCount)
+    return {
+        "lnM_obs": np.array(golden.get_lnM_obs().dup_array()),
+        "z_obs": np.array(golden.get_z_obs().dup_array()),
+        "lnM_true": np.array(golden.get_lnM_true().dup_array()),
+        "z_true": np.array(golden.get_z_true().dup_array()),
+    }
+
+
+def _setup():
+    """Build cosmology, abundance, models and mset matching the golden test."""
+    cosmo = Nc.HICosmoDEXcdm()
+    cosmo.add_submodel(Nc.HIReionCamb())
+    cosmo.add_submodel(Nc.HIPrimPowerLaw())
+
+    dist = Nc.Distance.new(2.0)
+    psml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
+    psml.require_kmin(1.0e-3)
+    psml.require_kmax(1.0e3)
+    psf = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
+    psf.set_best_lnr0()
+
+    mulf = Nc.MultiplicityFuncBocquet.new()
+    mulf.set_mdef(Nc.MultiplicityFuncMassDef.CRITICAL)
+    mulf.set_Delta(200.0)
+    mulf.set_sim(Nc.MultiplicityFuncBocquetSim.DM)
+
+    hmf = Nc.HaloMassFunction.new(dist, psf, mulf)
+    hmf.prepare(cosmo)
+
+    cluster_m = Nc.ClusterMassLnnormal(
+        lnMobs_min=math.log(1.0e14), lnMobs_max=math.log(1.0e16)
+    )
+    cluster_z = Nc.ClusterPhotozGaussGlobal(
+        pz_min=0.0, pz_max=0.7, z_bias=0.0, sigma0=0.03
+    )
+    cad = Nc.ClusterAbundance.new(hmf, None)
+
+    mset = Ncm.MSet.new_array([cosmo, cluster_z, cluster_m])
+    for name, value in (
+        ("H0", 70.0),
+        ("Omegab", 0.05),
+        ("Omegac", 0.25),
+        ("Omegax", 0.70),
+        ("Tgamma0", 2.72),
+        ("w", -1.0),
+    ):
+        cosmo.param_set_by_name(name, value)
+    cluster_m.param_set_by_name("bias", 0.0)
+    cluster_m.param_set_by_name("sigma", 0.2)
+
+    return cosmo, cad, cluster_z, cluster_m, mset
+
+
+def test_generate_shape_and_metadata() -> None:
+    """The generated catalog is a cluster NcHaloCatalog with the expected columns."""
+    cosmo, cad, cluster_z, cluster_m, mset = _setup()
+    cad.set_area(AREA)
+    cad.prepare(cosmo, cluster_z, cluster_m)
+
+    gen = Nc.HaloCatalogGenerator.new(cad)
+    assert gen.peek_abundance() is cad
+
+    rng = Ncm.RNG.seeded_new(None, 0)
+    hcat = gen.generate(mset, rng)
+
+    assert isinstance(hcat, Nc.HaloCatalog)
+    assert hcat.get_kind() == Nc.HaloCatalogKind.CLUSTER
+    # LnNormal mass and global photo-z have observable length 1 and no params.
+    assert list(hcat.peek_columns()) == ["z_true", "lnM_true", "z_obs_0", "lnM_obs_0"]
+    assert hcat.len() == 4242
+
+
+def test_generate_with_footprint_adds_positions() -> None:
+    """Setting a footprint augments the catalog with in-bounds ra/dec columns."""
+    cosmo, cad, cluster_z, cluster_m, mset = _setup()
+    cad.set_area(AREA)
+    cad.prepare(cosmo, cluster_z, cluster_m)
+
+    footprint = Ncm.SkyFootprintRectangular.new(10.0, 40.0, -5.0, 25.0)
+    gen = Nc.HaloCatalogGenerator.new(cad)
+    gen.set_footprint(footprint)
+    assert gen.peek_footprint() is footprint
+
+    rng = Ncm.RNG.seeded_new(None, 0)
+    hcat = gen.generate(mset, rng)
+    table = catalog_to_table(hcat)
+
+    assert table.colnames == ["z_true", "lnM_true", "z_obs_0", "lnM_obs_0", "ra", "dec"]
+    ra = np.asarray(table["ra"], dtype=np.float64)
+    dec = np.asarray(table["dec"], dtype=np.float64)
+    assert ra.min() >= 10.0 and ra.max() <= 40.0
+    assert dec.min() >= -5.0 and dec.max() <= 25.0
+    # Positions are one row per object; interleaving their draws shifts the RNG
+    # stream, so the accepted count may differ slightly from the no-footprint run
+    # (4242) but stays near it.
+    assert len(ra) == hcat.len()
+    assert 4100 <= hcat.len() <= 4242
+
+
+def test_generate_with_radius_adds_r_delta() -> None:
+    """Enabling radius output appends an r_Delta column with the SO radius."""
+    cosmo, cad, cluster_z, cluster_m, mset = _setup()
+    cad.set_area(AREA)
+    cad.prepare(cosmo, cluster_z, cluster_m)
+
+    gen = Nc.HaloCatalogGenerator.new(cad)
+    gen.set_with_radius(True)
+    assert gen.get_with_radius()
+
+    rng = Ncm.RNG.seeded_new(None, 0)
+    table = catalog_to_table(gen.generate(mset, rng))
+
+    assert table.colnames == [
+        "z_true",
+        "lnM_true",
+        "z_obs_0",
+        "lnM_obs_0",
+        "r_Delta",
+    ]
+
+    # The mass function uses a critical Delta=200 definition, so
+    # M = (4/3) pi Delta rho_crit(z) r^3 with rho_crit(z) = rho_crit0 h^2 E2(z).
+    z_true = np.asarray(table["z_true"], dtype=np.float64)
+    lnm_true = np.asarray(table["lnM_true"], dtype=np.float64)
+    r_delta = np.asarray(table["r_Delta"], dtype=np.float64)
+
+    rho_crit0 = Ncm.C.crit_mass_density_h2_solar_mass_Mpc3() * cosmo.h2()
+    e2 = np.array([cosmo.E2(z) for z in z_true])
+    delta_rho_bg = 200.0 * rho_crit0 * e2
+    expected = np.cbrt(3.0 * np.exp(lnm_true) / (4.0 * np.pi * delta_rho_bg))
+
+    assert r_delta.shape == z_true.shape
+    np.testing.assert_allclose(r_delta, expected, rtol=1e-12)
+
+
+def test_generate_matches_golden_snapshot() -> None:
+    """Standalone generation reproduces the NcDataClusterNCount golden snapshot."""
+    cosmo, cad, cluster_z, cluster_m, mset = _setup()
+    cad.set_area(AREA)
+    cad.prepare(cosmo, cluster_z, cluster_m)
+
+    gen = Nc.HaloCatalogGenerator.new(cad)
+    rng = Ncm.RNG.seeded_new(None, 0)
+    table = catalog_to_table(gen.generate(mset, rng))
+
+    got = {
+        "z_true": np.asarray(table["z_true"], dtype=np.float64),
+        "lnM_true": np.asarray(table["lnM_true"], dtype=np.float64),
+        "z_obs": np.asarray(table["z_obs_0"], dtype=np.float64),
+        "lnM_obs": np.asarray(table["lnM_obs_0"], dtype=np.float64),
+    }
+    golden = _load_golden_columns()
+
+    for column, ref in golden.items():
+        np.testing.assert_allclose(
+            got[column], ref, rtol=GOLDEN_RTOL, atol=GOLDEN_ATOL, err_msg=column
+        )

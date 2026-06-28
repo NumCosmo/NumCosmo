@@ -1,0 +1,112 @@
+---
+title: Cosmological Distances
+---
+
+::: {.hidden}
+$$
+\newcommand{\RH}{{R_H}}
+\newcommand{\RHc}{{R^\mathrm{c}_H}}
+$$
+:::
+
+# Cosmological Distances
+
+This page describes the distance and time-related quantities implemented by
+`NcDistance`. The object computes the dimensionless versions of these distances;
+the dimensionful results are recovered by multiplying by the appropriate Hubble
+radius, as described below.
+
+## Hubble Radius
+
+The Hubble radius (or scale) is the inverse of the Hubble function $H(z)$,
+$$
+\RH = \frac{c}{H(z)}, \qquad \RH_0 = \frac{c}{H_0},
+$$
+where $c$ is the speed of light, $z$ is the redshift, and
+$H_0 \equiv H(0)$ is the Hubble parameter. The comoving Hubble radius is
+$$
+\RHc(z) = \frac{c}{aH(z)} = \frac{c(1+z)}{a_0H(z)}, \qquad \RHc_0 = \frac{c}{a_0H_0},
+$$
+where the ${}_0$ subscript denotes evaluation at the present time, and the
+redshift $z$ is defined by
+$$
+1 + z = \frac{a_0}{a}.
+$$
+
+## Comoving Distance
+
+The comoving distance $d_c$ is
+$$
+d_c(z) = \RHc_0\int_0^z \frac{\mathrm{d}z^\prime}{E(z^\prime)},
+$$
+where $E(z)$ is the normalized Hubble function,
+$$
+E(z) \equiv \frac{H(z)}{H_0}.
+$$
+
+The object works with the dimensionless comoving distance,
+$$
+D_c(z) \equiv \frac{d_c(z)}{\RHc_0}.
+$$
+Note that $D_c(z)$ also coincides with the proper distance today,
+$r(z) \equiv a_0 d_c(z)$, in units of the Hubble radius:
+$D_c(z) = r(z) / \RH_0$. The comoving distance and the proper distance today are
+therefore recovered by multiplying $D_c(z)$ by $\RHc_0$ and $\RH_0$,
+respectively.
+
+## Transverse, Luminosity, and Angular Diameter Distances
+
+The transverse comoving distance $D_t$ and its derivative with respect to $z$ are
+$$
+D_t(z) = \frac{\sinh\left[\sqrt{\Omega_{k0}}\,D_c(z)\right]}{\sqrt{\Omega_{k0}}},
+\qquad
+\frac{\mathrm{d}D_t}{\mathrm{d}z}(z) = \frac{\cosh\left[\sqrt{\Omega_{k0}}\,D_c(z)\right]}{E(z)},
+$$
+where $\Omega_{k0}$ is the curvature density parameter today. The luminosity and
+angular diameter distances follow as
+$$
+D_l = (1 + z)\,D_t(z), \qquad D_A = D_t(z) / (1 + z).
+$$
+
+## Distance Modulus
+
+The distance modulus is
+$$
+\delta\mu(z) = 5\log_{10}(D_l(z)) + 25.
+$$
+The conventional distance modulus is
+$$
+\mu(z) = 5\log_{10}[\RH_0 D_l(z)/(1\,\mathrm{Mpc})] + 25,
+$$
+which differs from the definition above by a constant factor
+$5\log_{10}[\RH_0/(1\,\mathrm{Mpc})]$:
+$$
+\mu(z) = \delta\mu(z) + 5\log_{10}[\RH_0/(1\,\mathrm{Mpc})],
+$$
+where $\mathrm{Mpc}$ is the megaparsec.
+
+## Distances Between Two Redshifts
+
+For a pair $z_1 < z_2$, the transverse comoving and angular diameter distances are
+$$
+\begin{aligned}
+D_t(z_1, z_2) &= \frac{\sinh\left\{\sqrt{\Omega_{k0}}\left[D_c(z_2)-D_c(z_1)\right]\right\}}{\sqrt{\Omega_{k0}}}, \\
+D_A(z_1, z_2) &= D_t(z_1, z_2) / (1 + z_2).
+\end{aligned}
+$$
+
+## API Reference
+
+See [[numcosmo|NcDistance]] for the full class reference. The underlying
+cosmology enters through the Hubble function and density parameters of the
+[[numcosmo|NcHICosmo]] model, notably [[numcosmo|nc_hicosmo_H]],
+[[numcosmo|nc_hicosmo_H0]], [[numcosmo|nc_hicosmo_E]], and
+[[numcosmo|nc_hicosmo_Omega_k0]].
+
+The most relevant methods are:
+
+- comoving distance: [[numcosmo|nc_distance_comoving]]
+- transverse comoving distance: [[numcosmo|nc_distance_transverse]]
+- luminosity distance and modulus: [[numcosmo|nc_distance_luminosity]],
+  [[numcosmo|nc_distance_dmodulus]]
+- angular diameter distance: [[numcosmo|nc_distance_angular_diameter]]

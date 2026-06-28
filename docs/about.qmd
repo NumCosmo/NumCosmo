@@ -3,33 +3,23 @@ title: About NumCosmo
 ---
 # About NumCosmo
 
-## Overview
+NumCosmo is an open-source library for cosmological calculations and statistical
+analysis, written in C with GObject and usable from Python. For an overview of
+what it computes, see the [home page](index.qmd); for setup, the
+[installation guide](install.qmd).
 
-NumCosmo (Numerical Cosmology Library) is a high-performance, modular library designed for advanced cosmological modeling and statistical analysis. Developed primarily in C with GObject for seamless language bindings, NumCosmo offers both speed and ease of use. It supports parallelization with MPI and OpenMP, making it suitable for a wide range of computational tasks in cosmology.
+**Current version**: {{< meta version >}}.
 
-## Version Information
+## Project
 
-- **Current Version**: {{< meta version >}} in preparation for Version 1.0.
-- **Upcoming**: Version 2.0 is in development, with enhanced Python integration and additional features.
+NumCosmo is developed in the open on
+[GitHub](https://github.com/NumCosmo/NumCosmo) under the GPL v3 license.
+Contributions are welcome — bug reports, feature requests, and code. See the
+[contributing guide](https://github.com/NumCosmo/NumCosmo/blob/master/CONTRIBUTING.md)
+for the mechanics of adding code, tests, and documentation.
 
-## Development and Contributions
-
-NumCosmo is an open-source project hosted on GitHub. We actively encourage contributions from the community, whether it's reporting bugs, suggesting new features, or contributing code.
-
-## Command Line Tool
-
-NumCosmo comes with a command-line tool that simplifies interactions with the library, making it easier for users to execute common tasks without diving deep into the codebase. This tool is especially useful for quick analyses and model testing.
-
-## State of Development
-
-We are in the final stages of completing Version 1, focusing on stability and performance. As we look ahead to Version 2, our goals include better Python integration, new cosmological models, and enhanced statistical tools with a simpler interface and set-up. 
-
-## Getting Involved
-
-NumCosmo encourages community involvement. Whether you are a researcher, developer, or just curious about cosmology, we welcome your input and contributions.
-
-- **How to Contribute**: Fork the repository, make your changes, and submit a pull request.
-- **Join the Discussion**: Engage with us on GitHub and help improving NumCosmo.
+A command-line tool (`numcosmo`) ships with the library for common tasks such as
+running fits and generating data without writing a script.
 
 ## Authors
 
@@ -37,4 +27,20 @@ NumCosmo encourages community involvement. Whether you are a researcher, develop
 * Mariana Penna-Lima <pennalima@gmail.com>
 * Cyrille Doux <cdoux@apc.in2p3.fr>
 
+## Citation
 
+If NumCosmo is useful for your research, please cite it:
+
+```bibtex
+@Misc{Vitenti2012c,
+  author        = {S. D. P. Vitenti and M. Penna-Lima},
+  title         = {Numerical Cosmology -- {NumCosmo}},
+  year          = {2014},
+  howpublished  = {Astrophysics Source Code Library},
+  eprint        = {1408.013},
+  url           = {https://github.com/NumCosmo/NumCosmo},
+  adsurl        = {http://adsabs.harvard.edu/abs/2014ascl.soft08013D},
+  archiveprefix = {ascl},
+  primaryclass  = {ascl}
+}
+```

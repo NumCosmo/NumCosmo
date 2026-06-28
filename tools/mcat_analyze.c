@@ -171,7 +171,7 @@ main (gint argc, gchar *argv[])
 
   context = g_option_context_new ("- analyze catalogs from Monte Carlo (MC, MCMC, ESMCMC, bootstrap MC).");
   g_option_context_set_summary (context, "catalog analyzer");
-  g_option_context_set_description (context, "CA Description <FIXME>");
+  g_option_context_set_description (context, "Analyzes catalogs from Monte Carlo (MC, MCMC, ESMCMC, bootstrap MC) runs.");
 
   g_option_context_add_main_entries (context, entries, NULL);
 

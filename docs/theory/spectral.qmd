@@ -1,0 +1,212 @@
+---
+title: Spectral Methods
+---
+
+# Spectral Methods
+
+This page describes the spectral approximation tools implemented by the
+[[numcosmo-math|NcmSpectral]] class: representing a function by its Chebyshev
+series, computing the series adaptively, integrating and evaluating it, and
+building the banded ultraspherical operators used to discretize linear
+differential operators following the well-conditioned spectral method of
+@Olver2013.
+
+## Chebyshev Representation
+
+A function $f$ on an interval $[a,b]$ is approximated by a truncated Chebyshev
+series in the affine coordinate
+$$
+t = \frac{2x - (a+b)}{b-a} \in [-1,1],
+\qquad
+x = \frac{a+b}{2} + \frac{b-a}{2}\,t,
+$$
+so that
+$$
+f(x) = \sum_{k=0}^{N-1} a_k\,T_k(t),
+\tag{1}
+$$
+where $T_k$ is the Chebyshev polynomial of the first kind. The forward and
+inverse maps are [[numcosmo-math|ncm_spectral_x_to_t]] and
+[[numcosmo-math|ncm_spectral_t_to_x]].
+
+## Computing the Coefficients
+
+The coefficients in Eq. (1) are obtained by sampling $f$ at the
+Chebyshev–Lobatto nodes
+$$
+t_k = \cos\!\left(\frac{k\pi}{N-1}\right),
+\qquad
+x_k = \frac{a+b}{2} + \frac{b-a}{2}\,t_k,
+\qquad k = 0,\dots,N-1,
+$$
+and applying a type-I discrete cosine transform (FFTW `REDFT00`). The transform
+output $\tilde a_k$ is normalized to the coefficients of Eq. (1) by
+$$
+a_0 = \frac{\tilde a_0}{2(N-1)},
+\qquad
+a_{N-1} = \frac{\tilde a_{N-1}}{2(N-1)},
+\qquad
+a_k = \frac{\tilde a_k}{N-1}\;\;(0 < k < N-1),
+$$
+the half-weight on the endpoints being the usual Clenshaw–Curtis rule for the
+Lobatto grid. This fixed-order transform is
+[[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs]].
+
+## Adaptive Refinement
+
+For adaptive computation the node count is tied to a refinement level $k$ by
+$N = 2^{k} + 1$, which makes the Lobatto grids *nested*: the nodes at level $k$,
+$$
+t_j = \cos\!\left(\frac{j\pi}{2^{k}}\right),
+\qquad j = 0,\dots,2^{k},
+$$
+are a subset of those at level $k+1$. Refining therefore reuses every existing
+sample — the previous values move to the even-indexed positions and only the new
+odd-indexed nodes are evaluated, halving the number of function calls per level.
+
+Starting from a minimum level $k_\mathrm{min}$, the level is doubled until the
+coefficient vectors at successive resolutions agree to a relative tolerance
+$\varepsilon$,
+$$
+\sum_k \left(a_k^{(2N)} - a_k^{(N)}\right)^2
+\;<\;
+\varepsilon^2 \sum_k \left(a_k^{(2N)}\right)^2,
+$$
+or until the maximum order (`max-order`) is reached. The entry point is
+[[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive]], which returns
+the final level $k$.
+
+## Spectral Integration
+
+A weighted variant expands $F(x(t))\,\sqrt{1-t^2}\,h$ with $h = (b-a)/2$, taking
+advantage of the fact that at the Lobatto nodes the weight is simply
+$\sqrt{1-t_j^2} = \sin(j\pi/2^{k})$. Writing this weighted function as
+$\sum_k b_k T_k(t)$ and using the orthogonality relation
+$$
+\int_{-1}^{1} \frac{T_k(t)}{\sqrt{1-t^2}}\,\mathrm{d}t = \pi\,\delta_{k,0},
+$$
+the definite integral collapses to a single coefficient,
+$$
+\int_a^b F(x)\,\mathrm{d}x = \pi\,b_0,
+$$
+which is Clenshaw–Curtis quadrature [@Trefethen2008]. The same weighted
+coefficients give weighted inner products: if $G$ has standard Chebyshev
+coefficients $d_k$, then
+$$
+\int_a^b F(x)\,G(x)\,\mathrm{d}x
+= \pi\,b_0 d_0 + \frac{\pi}{2}\sum_{k\ge 1} b_k d_k,
+$$
+so a product integral costs one weighted transform of $F$ and one standard
+transform of $G$. This is
+[[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted]].
+
+## Evaluation
+
+A Chebyshev series is evaluated with the Clenshaw recurrence. For interior
+points $|t| < 0.9$,
+$$
+b_k = 2t\,b_{k+1} - b_{k+2} + a_k,
+\qquad
+f = t\,b_1 - b_2 + a_0,
+$$
+run downward from $k = N-1$ with $b_N = b_{N+1} = 0$. Near the endpoints the
+plain recurrence loses accuracy through cancellation, so the Reinsch
+modification is used instead, propagating the differenced quantities
+$d_k$ and $e_k = d_k \pm e_{k+1}$ with the shifted argument $t \mp 1$. Exactly at
+$t = \pm 1$ the closed forms $T_k(1) = 1$ and $T_k(-1) = (-1)^k$ are summed
+directly. Evaluation is [[numcosmo-math|ncm_spectral_chebyshev_eval]] (and
+[[numcosmo-math|ncm_spectral_chebyshev_eval_x]] for an argument in $[a,b]$).
+
+The derivative is obtained without explicitly forming the derivative series. The
+coefficients $b_k$ of $f'(t) = \sum_k b_k T_k(t)$ satisfy
+$$
+b_k = \sum_{\substack{j > k \\ j-k\ \mathrm{odd}}} 2j\,a_j\;\;(k\ge 1),
+\qquad
+b_0 = \sum_{\substack{j\ \mathrm{odd}}} j\,a_j,
+$$
+and are folded into a single fused backward Clenshaw pass in
+[[numcosmo-math|ncm_spectral_chebyshev_deriv]]. The chain rule supplies the
+derivative with respect to the physical variable,
+$\mathrm{d}f/\mathrm{d}x = (2/(b-a))\,\mathrm{d}f/\mathrm{d}t$, in
+[[numcosmo-math|ncm_spectral_chebyshev_deriv_x]].
+
+## Ultraspherical Bases
+
+The differential operators below produce their output in an *ultraspherical*
+(Gegenbauer) basis $C^{(\lambda)}_n$ rather than in the Chebyshev basis. Two
+cases are used:
+
+- $\lambda = 1$: $C^{(1)}_n = U_n$, the Chebyshev polynomials of the second
+  kind, with $U_n(\pm 1) = (n+1)(\pm 1)^n$ and the recurrence
+  $U_{n+1} = 2t\,U_n - U_{n-1}$.
+- $\lambda = 2$: $C^{(2)}_n$, with $C^{(2)}_0 = 1$, $C^{(2)}_1 = 4t$,
+  endpoint values $C^{(2)}_n(\pm 1) = \binom{n+3}{3}(\pm 1)^n$, and the
+  recurrence
+  $(n+1)\,C^{(2)}_{n+1} = 2(n+2)\,t\,C^{(2)}_n - (n+3)\,C^{(2)}_{n-1}$.
+
+Conversion from the Chebyshev to the $\lambda=1$ basis uses the identity
+$U_n - U_{n-2} = 2T_n$, i.e. $T_n = \tfrac12\!\left(C^{(1)}_n - C^{(1)}_{n-2}\right)$
+for $n \ge 2$ (with $T_0 = C^{(1)}_0$ and $T_1 = \tfrac12 C^{(1)}_1$), giving the
+coefficient map $g_k = \tfrac12(c_k - c_{k+2})$. Conversion to the
+$\lambda=2$ basis,
+$$
+g_k = \tfrac12 c_0\,\delta_{k,0}
+    + \frac{c_k}{2(k+1)}
+    - \frac{(k+2)\,c_{k+2}}{(k+1)(k+3)}
+    + \frac{c_{k+4}}{2(k+3)},
+$$
+is the projection (identity) operator written between bases. These are
+[[numcosmo-math|ncm_spectral_chebT_to_gegenbauer_alpha1]] and
+[[numcosmo-math|ncm_spectral_chebT_to_gegenbauer_alpha2]]; the corresponding
+series are evaluated by [[numcosmo-math|ncm_spectral_gegenbauer_alpha1_eval]]
+and [[numcosmo-math|ncm_spectral_gegenbauer_alpha2_eval]] with the same Clenshaw
+strategy as above.
+
+## Ultraspherical Operators
+
+The well-conditioned spectral method of @Olver2013 represents a linear
+differential operator as a *banded* matrix by mapping the Chebyshev
+coefficients $c_n$ of $f$ to the $C^{(2)}$ coefficients of the transformed
+function. Each operator below is banded (bandwidth $\le 9$) and adds into a
+shared row buffer, so that a full operator such as
+$a_2(x)\,f'' + a_1(x)\,f' + a_0(x)\,f$ with polynomial coefficients up to degree
+two is assembled as a banded linear combination of these primitives.
+
+| Operator | $C^{(2)}$ coefficient of the output | Method |
+|---|---|---|
+| identity | $\dfrac{c_k}{2(k+1)} - \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} + \dfrac{c_{k+4}}{2(k+3)}$ $\big(+\tfrac12 c_0\,\delta_{k,0}\big)$ | [[numcosmo-math|ncm_spectral_get_proj_matrix]] |
+| $x$ | $\dfrac{\theta(k-1)\,c_{k-1}}{4(k+1)} - \dfrac{c_{k+1}}{4(k+3)} - \dfrac{c_{k+3}}{4(k+1)} + \dfrac{c_{k+5}}{4(k+3)}$ | [[numcosmo-math|ncm_spectral_get_x_matrix]] |
+| $x^2$ | $\dfrac{\theta(k-2)\,c_{k-2}}{8(k+1)} + \dfrac{c_k}{4(k+1)(k+3)} - \dfrac{(k+2)c_{k+2}}{4(k+1)(k+3)} - \dfrac{c_{k+4}}{4(k+1)(k+3)} + \dfrac{c_{k+6}}{8(k+3)}$ | [[numcosmo-math|ncm_spectral_get_x2_matrix]] |
+| $\mathrm{d}/\mathrm{d}x$ | $c_{k+1} - c_{k+3}$ | [[numcosmo-math|ncm_spectral_get_d_matrix]] |
+| $x\,\mathrm{d}/\mathrm{d}x$ | $\dfrac{k\,c_k}{2(k+1)} + \dfrac{(k+2)c_{k+2}}{(k+1)(k+3)} - \dfrac{(k+4)c_{k+4}}{2(k+3)}$ | [[numcosmo-math|ncm_spectral_get_x_d_matrix]] |
+| $\mathrm{d}^2/\mathrm{d}x^2$ | $2(k+2)\,c_{k+2}$ | [[numcosmo-math|ncm_spectral_get_d2_matrix]] |
+| $x\,\mathrm{d}^2/\mathrm{d}x^2$ | $k\,c_{k+1} + (k+4)\,c_{k+3}$ | [[numcosmo-math|ncm_spectral_get_x_d2_matrix]] |
+| $x^2\,\mathrm{d}^2/\mathrm{d}x^2$ | $\dfrac{k(k-1)c_k}{2(k+1)} + \dfrac{(k+2)\big((k+2)^2-3\big)c_{k+2}}{(k+1)(k+3)} + \dfrac{(k+4)(k+5)c_{k+4}}{2(k+3)}$ | [[numcosmo-math|ncm_spectral_get_x2_d2_matrix]] |
+
+Here $\theta$ is the Heaviside step (terms with negative index are dropped) and a
+few extra contributions appear in the first one or two rows of the $x$ and $x^2$
+operators; see the per-method documentation for the exact low-$k$ entries. The
+single-row builders ([[numcosmo-math|ncm_spectral_compute_proj_row]] and the
+companions) expose the same coefficients for assembling custom combinations.
+
+## API Reference
+
+See [[numcosmo-math|NcmSpectral]] for the full class reference. The most relevant
+methods are:
+
+- coefficients: [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs]],
+  [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive]],
+  [[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted]]
+- evaluation: [[numcosmo-math|ncm_spectral_chebyshev_eval]],
+  [[numcosmo-math|ncm_spectral_chebyshev_eval_x]],
+  [[numcosmo-math|ncm_spectral_chebyshev_deriv]],
+  [[numcosmo-math|ncm_spectral_chebyshev_deriv_x]]
+- ultraspherical conversions:
+  [[numcosmo-math|ncm_spectral_chebT_to_gegenbauer_alpha1]],
+  [[numcosmo-math|ncm_spectral_chebT_to_gegenbauer_alpha2]],
+  [[numcosmo-math|ncm_spectral_gegenbauer_alpha1_eval]],
+  [[numcosmo-math|ncm_spectral_gegenbauer_alpha2_eval]]
+- operator matrices: [[numcosmo-math|ncm_spectral_get_proj_matrix]],
+  [[numcosmo-math|ncm_spectral_get_x_matrix]],
+  [[numcosmo-math|ncm_spectral_get_d_matrix]],
+  [[numcosmo-math|ncm_spectral_get_d2_matrix]]

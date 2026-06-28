@@ -27,7 +27,7 @@ typedef struct _NcDERunEntries NcDERunEntries;
 /**
  * NcDERunEntries:
  *
- * FIXME
+ * Dark energy run configuration entries.
  */
 struct _NcDERunEntries
 {
@@ -44,7 +44,7 @@ typedef struct _NcDEModelEntries NcDEModelEntries;
 /**
  * NcDEModelEntries:
  *
- * FIXME
+ * Dark energy model configuration entries.
  */
 struct _NcDEModelEntries
 {
@@ -65,7 +65,7 @@ typedef struct _NcDEDataSimpleEntries NcDEDataSimpleEntries;
 /**
  * NcDEDataSimpleEntries:
  *
- * FIXME
+ * Dark energy simple data configuration entries.
  */
 struct _NcDEDataSimpleEntries
 {
@@ -93,7 +93,7 @@ typedef struct _NcDEDataClusterEntries NcDEDataClusterEntries;
 /**
  * NcDEDataClusterEntries:
  *
- * FIXME
+ * Dark energy cluster data configuration entries.
  *
  */
 struct _NcDEDataClusterEntries
@@ -122,7 +122,7 @@ typedef struct _NcDEFitEntries NcDEFitEntries;
 /**
  * NcDEFitEntries:
  *
- * FIXME
+ * Dark energy fit configuration entries.
  *
  */
 struct _NcDEFitEntries

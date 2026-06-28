@@ -31,3 +31,6 @@ __pycache__
 
 
 /.luarc.json
+
+build/
+*.info

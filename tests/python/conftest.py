@@ -42,19 +42,11 @@ def pytest_addoption(parser):
         default=False,
         help="Run tests marked with sphere_map",
     )
-
-
-def pytest_configure(config):
-    """Configure pytest marker behavior."""
-    config.addinivalue_line("markers", "mpi: MPI-parallel tests (run with --run-mpi)")
-    config.addinivalue_line(
-        "markers", "powspec: Power spectrum tests (run with --run-powspec)"
-    )
-    config.addinivalue_line(
-        "markers", "xcor: Cross-correlation tests (run with --run-xcor)"
-    )
-    config.addinivalue_line(
-        "markers", "sphere_map: Sphere map tests (run with --run-sphere-map)"
+    parser.addoption(
+        "--run-app",
+        action="store_true",
+        default=False,
+        help="Run tests marked with app",
     )
 
 
@@ -64,11 +56,13 @@ def pytest_collection_modifyitems(config, items):
     run_powspec = config.getoption("--run-powspec")
     run_xcor = config.getoption("--run-xcor")
     run_sphere_map = config.getoption("--run-sphere-map")
+    run_app = config.getoption("--run-app")
 
     skip_mpi = pytest.mark.skip(reason="Need --run-mpi option to run")
     skip_powspec = pytest.mark.skip(reason="Need --run-powspec option to run")
     skip_xcor = pytest.mark.skip(reason="Need --run-xcor option to run")
     skip_sphere_map = pytest.mark.skip(reason="Need --run-sphere-map option to run")
+    skip_app = pytest.mark.skip(reason="Need --run-app option to run")
 
     for item in items:
         if "mpi" in item.keywords and not run_mpi:
@@ -79,6 +73,8 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(skip_xcor)
         if "sphere_map" in item.keywords and not run_sphere_map:
             item.add_marker(skip_sphere_map)
+        if "app" in item.keywords and not run_app:
+            item.add_marker(skip_app)
 
 
 @pytest.fixture(name="prim")

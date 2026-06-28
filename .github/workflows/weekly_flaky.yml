@@ -1,0 +1,44 @@
+name: Weekly flaky/repeated tests
+
+# Stress lane for the seeded/statistical tests. Unlike the per-push CI (which pins a fixed
+# g_test seed for bit-reproducibility, -Dflaky_tests=false), this configures with
+# -Dflaky_tests=true so every test run draws a fresh random seed, and `meson test --repeat`
+# re-runs each test many times -- surfacing tolerance regressions that a single fixed-seed run
+# would miss. The per-test threading policy (omp tests run alone with OMP_NUM_THREADS=cores,
+# everything else concurrent at 1 thread) is provided by meson itself (see TESTING.md), so no
+# env vars are set here. Tunables: the cron schedule, --repeat count, and suite scope below.
+
+on:
+  schedule:
+    - cron: '0 4 * * 0'   # Sundays 04:00 UTC
+  workflow_dispatch:
+
+env:
+  CONDA_ENV: numcosmo_developer
+
+jobs:
+  flaky:
+    name: (ubuntu, apt) random seed x repeat
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+    - name: Install pre-requisites
+      run: |
+        sudo apt-get update
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 gir1.2-glib-2.0-dev libgirepository-2.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libfyaml-dev libnlopt-dev libhdf5-dev libopenmpi-dev libcairo2-dev
+        pip install -e ".[test]" meson ninja --break-system-packages
+    - name: Configure NumCosmo (flaky mode)
+      run: meson setup build -Dbuildtype=release -Dnumcosmo_py=true -Dfftw-planner=estimate -Ddocumentation=false -Dflaky_tests=true --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+    - name: Building NumCosmo
+      run: meson compile -C build
+    - name: Repeated randomized test run
+      # Repeat the random-seeded unit + statistical tiers to catch tolerance flakes. The very
+      # heavy acceptance/app tiers are excluded to keep the lane bounded; raise --repeat or add
+      # suites as needed.
+      run: |
+        meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) --repeat 20 \
+          --suite c --suite c-statistical --suite python \
+          || (cat build/meson-logs/testlog.txt && exit 1)

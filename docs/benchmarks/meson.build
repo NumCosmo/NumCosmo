@@ -1,4 +1,5 @@
 src_site_benchmark_files = files(
+    'index.qmd',
     '_setup_models.qmd',
     'ccl_background.qmd',
     'ccl_power_spectrum.qmd',

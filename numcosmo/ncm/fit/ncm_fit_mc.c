@@ -1,0 +1,1244 @@
+/***************************************************************************
+ *            ncm_fit_mc.c
+ *
+ *  Sat December 01 17:19:10 2012
+ *  Copyright  2012  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
+ ****************************************************************************/
+/*
+ * numcosmo
+ * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ *
+ * numcosmo is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * numcosmo is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * NcmFitMC:
+ *
+ * Monte Carlo analysis.
+ *
+ * This object implements a Monte Carlo analysis. This object is initialized
+ * with a #NcmFit object and a #NcmMSet object. The #NcmFit object is used to
+ * calculate the likelihood of the #NcmMSet object. The #NcmMSet object is
+ * used to sample the parameter space.
+ *
+ * The #NcmFitMC object will resample the likelihood using the input #NcmMSet
+ * object as a fiducial model. The resampling can be done in three ways:
+ * #NCM_FIT_MC_RESAMPLE_FROM_MODEL, #NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX and
+ * #NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX. The first option will resample the
+ * likelihood from the input #NcmMSet object. The other two options will
+ * resample the likelihood from the original likelihood data using bootstrap
+ * resampling. The difference between the last two options is that the
+ * #NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX will resample each #NcmData separately
+ * while the #NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX will resample all #NcmData
+ * together.
+ *
+ */
+
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#endif /* HAVE_CONFIG_H */
+#include "build_cfg.h"
+
+#include "ncm/fit/ncm_fit_mc.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_func_eval.h"
+#include "ncm_enum_types.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_statistics_double.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+
+enum
+{
+  PROP_0,
+  PROP_FIT,
+  PROP_RTYPE,
+  PROP_FIDUC,
+  PROP_MTYPE,
+  PROP_NTHREADS,
+  PROP_DATA_FILE,
+  PROP_FUNC_ARRAY,
+};
+
+struct _NcmFitMC
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmFitMCResample resample;
+  NcmFit *fit;
+  NcmMSet *fiduc;
+  NcmMSetCatalog *mcat;
+  NcmFitRunMsgs mtype;
+  NcmFitMCResampleType rtype;
+  NcmVector *bf;
+  NcmTimer *nt;
+  NcmSerialize *ser;
+  guint nthreads;
+  guint n;
+  NcmMemoryPool *mp;
+  gint write_index;
+  gint cur_sample_id;
+  gint first_sample_id;
+  gboolean started;
+  NcmObjArray *func_oa;
+  gchar *func_oa_file;
+  guint nadd_vals;
+  guint theta_len;
+  gboolean constructed;
+};
+
+G_DEFINE_TYPE (NcmFitMC, ncm_fit_mc, G_TYPE_OBJECT)
+
+static void
+ncm_fit_mc_init (NcmFitMC *mc)
+{
+  mc->fit           = NULL;
+  mc->fiduc         = NULL;
+  mc->mcat          = NULL;
+  mc->mtype         = NCM_FIT_RUN_MSGS_NONE;
+  mc->rtype         = NCM_FIT_MC_RESAMPLE_BOOTSTRAP_LEN;
+  mc->bf            = NULL;
+  mc->nt            = ncm_timer_new ();
+  mc->ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  mc->nthreads      = 0;
+  mc->n             = 0;
+  mc->cur_sample_id = -1; /* Represents that no samples were calculated yet. */
+  mc->write_index   = 0;
+  mc->started       = FALSE;
+  mc->func_oa       = NULL;
+  mc->func_oa_file  = NULL;
+  mc->nadd_vals     = 0;
+  mc->theta_len     = 0;
+  mc->constructed   = FALSE;
+}
+
+static void
+ncm_fit_mc_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmFitMC *mc = NCM_FIT_MC (object);
+
+  g_return_if_fail (NCM_IS_FIT_MC (object));
+
+  switch (prop_id)
+  {
+    case PROP_FIT:
+      g_assert (mc->fit == NULL);
+      mc->fit = g_value_dup_object (value);
+
+      break;
+    case PROP_RTYPE:
+
+      if (mc->constructed)
+        ncm_fit_mc_set_rtype (mc, g_value_get_enum (value));
+      else
+        mc->rtype = g_value_get_enum (value);
+
+      break;
+    case PROP_FIDUC:
+      ncm_fit_mc_set_fiducial (mc, g_value_get_object (value));
+      break;
+    case PROP_MTYPE:
+      ncm_fit_mc_set_mtype (mc, g_value_get_enum (value));
+      break;
+    case PROP_NTHREADS:
+      ncm_fit_mc_set_nthreads (mc, g_value_get_uint (value));
+      break;
+    case PROP_DATA_FILE:
+      ncm_fit_mc_set_data_file (mc, g_value_get_string (value));
+      break;
+    case PROP_FUNC_ARRAY:
+    {
+      ncm_obj_array_clear (&mc->func_oa);
+      mc->func_oa = g_value_dup_boxed (value);
+
+      if (mc->func_oa != NULL)
+      {
+        guint i;
+
+        for (i = 0; i < mc->func_oa->len; i++)
+        {
+          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (mc->func_oa, i));
+
+          g_assert (NCM_IS_MSET_FUNC (func));
+          g_assert (ncm_mset_func_is_scalar (func));
+          g_assert (ncm_mset_func_is_const (func));
+        }
+      }
+
+      break;
+    }
+
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+static void
+ncm_fit_mc_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmFitMC *mc = NCM_FIT_MC (object);
+
+  g_return_if_fail (NCM_IS_FIT_MC (object));
+
+  switch (prop_id)
+  {
+    case PROP_FIT:
+      g_value_set_object (value, mc->fit);
+      break;
+    case PROP_RTYPE:
+      g_value_set_enum (value, mc->rtype);
+      break;
+    case PROP_FIDUC:
+      g_value_set_object (value, mc->fiduc);
+      break;
+    case PROP_MTYPE:
+      g_value_set_enum (value, mc->mtype);
+      break;
+    case PROP_NTHREADS:
+      g_value_set_uint (value, mc->nthreads);
+      break;
+    case PROP_DATA_FILE:
+      g_value_set_string (value, ncm_mset_catalog_peek_filename (mc->mcat));
+      break;
+    case PROP_FUNC_ARRAY:
+      g_value_set_boxed (value, mc->func_oa);
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+static void
+ncm_fit_mc_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_fit_mc_parent_class)->constructed (object);
+  {
+    NcmFitMC *mc           = NCM_FIT_MC (object);
+    NcmMSet *mset          = ncm_fit_peek_mset (mc->fit);
+    const guint nfuncs     = (mc->func_oa != NULL) ? mc->func_oa->len : 0;
+    const guint nadd_vals  = mc->nadd_vals = nfuncs + 1;
+    const guint fparam_len = ncm_mset_fparam_len (mset);
+
+    mc->theta_len =  fparam_len + nadd_vals;
+
+    if (nfuncs > 0)
+    {
+      gchar **names   = g_new (gchar *, nadd_vals + 1);
+      gchar **symbols = g_new (gchar *, nadd_vals + 1);
+      guint k;
+
+      names[0]   = g_strdup (NCM_MSET_CATALOG_M2LNL_COLNAME);
+      symbols[0] = g_strdup (NCM_MSET_CATALOG_M2LNL_SYMBOL);
+
+      for (k = 0; k < nfuncs; k++)
+      {
+        NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (mc->func_oa, k));
+
+        g_assert (NCM_IS_MSET_FUNC (func));
+
+        names[1 + k]   = g_strdup (ncm_mset_func_peek_uname (func));
+        symbols[1 + k] = g_strdup (ncm_mset_func_peek_usymbol (func));
+      }
+
+      names[1 + k]   = NULL;
+      symbols[1 + k] = NULL;
+
+      mc->mcat = ncm_mset_catalog_new_array (mset, nadd_vals, 1, FALSE, names, symbols);
+
+      g_strfreev (names);
+      g_strfreev (symbols);
+    }
+    else
+    {
+      mc->mcat = ncm_mset_catalog_new (mset, nadd_vals, 1, FALSE,
+                                       NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL,
+                                       NULL);
+    }
+
+    ncm_mset_catalog_set_m2lnp_var (mc->mcat, 0);
+
+    ncm_fit_mc_set_rtype (mc, mc->rtype);
+    mc->constructed = TRUE;
+  }
+}
+
+static void
+ncm_fit_mc_dispose (GObject *object)
+{
+  NcmFitMC *mc = NCM_FIT_MC (object);
+
+  ncm_fit_clear (&mc->fit);
+  ncm_mset_clear (&mc->fiduc);
+  ncm_vector_clear (&mc->bf);
+  ncm_timer_clear (&mc->nt);
+  ncm_serialize_clear (&mc->ser);
+  ncm_mset_catalog_clear (&mc->mcat);
+
+  ncm_obj_array_clear (&mc->func_oa);
+  g_clear_pointer (&mc->func_oa_file, g_free);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_fit_mc_parent_class)->dispose (object);
+}
+
+static void
+ncm_fit_mc_finalize (GObject *object)
+{
+  /* NcmFitMC *mc = NCM_FIT_MC (object); */
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_fit_mc_parent_class)->finalize (object);
+}
+
+static void
+ncm_fit_mc_class_init (NcmFitMCClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->set_property = &ncm_fit_mc_set_property;
+  object_class->get_property = &ncm_fit_mc_get_property;
+  object_class->constructed  = &ncm_fit_mc_constructed;
+  object_class->dispose      = &ncm_fit_mc_dispose;
+  object_class->finalize     = &ncm_fit_mc_finalize;
+
+  g_object_class_install_property (object_class,
+                                   PROP_FIT,
+                                   g_param_spec_object ("fit",
+                                                        NULL,
+                                                        "Fit object",
+                                                        NCM_TYPE_FIT,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RTYPE,
+                                   g_param_spec_enum ("rtype",
+                                                      NULL,
+                                                      "Monte Carlo run type",
+                                                      NCM_TYPE_FIT_MC_RESAMPLE_TYPE, NCM_FIT_MC_RESAMPLE_FROM_MODEL,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_FIDUC,
+                                   g_param_spec_object ("fiducial",
+                                                        NULL,
+                                                        "Fiducial model to sample from",
+                                                        NCM_TYPE_MSET,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_MTYPE,
+                                   g_param_spec_enum ("mtype",
+                                                      NULL,
+                                                      "Run messages type",
+                                                      NCM_TYPE_FIT_RUN_MSGS, NCM_FIT_RUN_MSGS_SIMPLE,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NTHREADS,
+                                   g_param_spec_uint ("nthreads",
+                                                      NULL,
+                                                      "Number of threads to run",
+                                                      0, 100, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_DATA_FILE,
+                                   g_param_spec_string ("data-file",
+                                                        NULL,
+                                                        "Data file to be used by the catalog",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_FUNC_ARRAY,
+                                   g_param_spec_boxed ("function-array",
+                                                       NULL,
+                                                       "Functions array",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
+/**
+ * ncm_fit_mc_new:
+ * @fit: a #NcmFit
+ * @rtype: a #NcmFitMCResampleType
+ * @mtype: a #NcmFitRunMsgs
+ *
+ * Creates a new #NcmFitMC object with the fit object @fit, the resample type
+ * @rtype and the run messages type @mtype.
+ *
+ * Returns: (transfer full): a new #NcmFitMC.
+ */
+NcmFitMC *
+ncm_fit_mc_new (NcmFit *fit, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype)
+{
+  NcmFitMC *mc = g_object_new (NCM_TYPE_FIT_MC,
+                               "fit", fit,
+                               "rtype", rtype,
+                               "mtype", mtype,
+                               NULL);
+
+  return mc;
+}
+
+/**
+ * ncm_fit_mc_new_funcs_array:
+ * @fit: a #NcmFit
+ * @rtype: a #NcmFitMCResampleType
+ * @mtype: a #NcmFitRunMsgs
+ * @funcs_array: a #NcmObjArray
+ *
+ * Creates a new #NcmFitMC object with the fit object @fit, the resample type
+ * @rtype and the run messages type @mtype. The functions array @funcs_array
+ * is used to compute extra columns in the catalog.
+ *
+ * Returns: (transfer full): a new #NcmFitMC.
+ */
+NcmFitMC *
+ncm_fit_mc_new_funcs_array (NcmFit *fit, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, NcmObjArray *funcs_array)
+{
+  NcmFitMC *mc = g_object_new (NCM_TYPE_FIT_MC,
+                               "fit", fit,
+                               "rtype", rtype,
+                               "mtype", mtype,
+                               "function-array", funcs_array,
+                               NULL);
+
+  return mc;
+}
+
+/**
+ * ncm_fit_mc_free:
+ * @mc: a #NcmFitMC
+ *
+ * Decrement the reference count atomically by one. If the reference count
+ * reaches zero, all memory allocated by the object is released and the object
+ * is freed.
+ *
+ */
+void
+ncm_fit_mc_free (NcmFitMC *mc)
+{
+  g_object_unref (mc);
+}
+
+/**
+ * ncm_fit_mc_clear:
+ * @mc: a #NcmFitMC
+ *
+ * When this function is invoked, it first checks whether *@mc is not %NULL. If *@mc is
+ * not NULL, the function reduces the reference count of *@mc by one. If the reference
+ * count reaches zero, all memory allocated by the object is released, the object is
+ * freed, and *@mc is set to %NULL.
+ */
+void
+ncm_fit_mc_clear (NcmFitMC **mc)
+{
+  g_clear_object (mc);
+}
+
+static void ncm_fit_mc_intern_skip (NcmFitMC *mc, guint n);
+
+/**
+ * ncm_fit_mc_set_data_file:
+ * @mc: a #NcmFitMC
+ * @filename: a filename
+ *
+ * Sets the data file to be used by the #NcmMSetCatalog object of @mc.
+ *
+ */
+void
+ncm_fit_mc_set_data_file (NcmFitMC *mc, const gchar *filename)
+{
+  const gchar *cur_filename = ncm_mset_catalog_peek_filename (mc->mcat);
+
+  if (mc->started && (cur_filename != NULL))
+    g_error ("ncm_fit_mc_set_data_file: Cannot change data file during a run, call ncm_fit_mc_end_run() first.");
+
+  if ((cur_filename != NULL) && (strcmp (cur_filename, filename) == 0))
+    return;
+
+  ncm_mset_catalog_set_file (mc->mcat, filename);
+
+  if (mc->started)
+  {
+    const gint mcat_cur_id = ncm_mset_catalog_get_cur_id (mc->mcat);
+
+    if (mcat_cur_id > mc->cur_sample_id)
+    {
+      ncm_fit_mc_intern_skip (mc, mcat_cur_id - mc->cur_sample_id);
+      g_assert_cmpint (mc->cur_sample_id, ==, mcat_cur_id);
+    }
+    else if (mcat_cur_id < mc->cur_sample_id)
+    {
+      g_error ("ncm_fit_mc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].",
+               mcat_cur_id, mc->cur_sample_id);
+    }
+  }
+}
+
+/**
+ * ncm_fit_mc_set_mtype:
+ * @mc: a #NcmFitMC
+ * @mtype: a #NcmFitRunMsgs
+ *
+ * Sets the run messages type of @mc to @mtype.
+ *
+ */
+void
+ncm_fit_mc_set_mtype (NcmFitMC *mc, NcmFitRunMsgs mtype)
+{
+  mc->mtype = mtype;
+}
+
+static void _ncm_fit_mc_resample_bstrap (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng);
+
+static gint
+_ncm_fit_mc_resample (NcmFitMC *mc, NcmFit *fit)
+{
+  NcmLikelihood *lh = ncm_fit_peek_likelihood (fit);
+  NcmDataset *dset  = ncm_likelihood_peek_dataset (lh);
+
+  mc->resample (dset, mc->fiduc, ncm_mset_catalog_peek_rng (mc->mcat));
+  mc->cur_sample_id++;
+
+  return mc->cur_sample_id;
+}
+
+/**
+ * ncm_fit_mc_set_rtype:
+ * @mc: a #NcmFitMC
+ * @rtype: a #NcmFitMCResampleType
+ *
+ * Sets the resample type of @mc to @rtype.
+ *
+ */
+void
+ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
+{
+  const GEnumValue *eval = ncm_cfg_enum_get_value (NCM_TYPE_FIT_MC_RESAMPLE_TYPE, rtype);
+  NcmLikelihood *lh      = ncm_fit_peek_likelihood (mc->fit);
+  NcmDataset *dset       = ncm_likelihood_peek_dataset (lh);
+
+  if (mc->started)
+    g_error ("ncm_fit_mc_set_rtype: Cannot change resample type during a run, call ncm_fit_mc_end_run() first.");
+
+  mc->rtype = rtype;
+
+  ncm_mset_catalog_set_run_type (mc->mcat, eval->value_nick);
+
+  switch (rtype)
+  {
+    case NCM_FIT_MC_RESAMPLE_FROM_MODEL:
+      mc->resample = &ncm_dataset_resample;
+      ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
+      break;
+    case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX:
+      mc->resample = &_ncm_fit_mc_resample_bstrap;
+      ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_PARTIAL);
+      break;
+    case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX:
+      mc->resample = &_ncm_fit_mc_resample_bstrap;
+      ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_TOTAL);
+      break;
+    case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_LEN:
+      g_assert_not_reached ();
+      break;
+  }
+}
+
+/**
+ * ncm_fit_mc_set_nthreads:
+ * @mc: a #NcmFitMC
+ * @nthreads: number of threads
+ *
+ * Sets the number of threads to be used by @mc to @nthreads.
+ *
+ */
+void
+ncm_fit_mc_set_nthreads (NcmFitMC *mc, guint nthreads)
+{
+  mc->nthreads = nthreads;
+}
+
+/**
+ * ncm_fit_mc_set_fiducial:
+ * @mc: a #NcmFitMC
+ * @fiduc: a #NcmMSet
+ *
+ * Sets the fiducial model of @mc to @fiduc. If @fiduc is %NULL, the fiducial
+ * model is set to the model set of the fit object of @mc. If @fiduc is not
+ * %NULL, the fiducial model is set to @fiduc. If @fiduc is not %NULL, it must
+ * be equal to the model set of the fit object of @mc.
+ *
+ * Note that in the end of an analysis, the #NcmMSet in @mc will be equal to
+ * the last sampled model set.
+ *
+ */
+void
+ncm_fit_mc_set_fiducial (NcmFitMC *mc, NcmMSet *fiduc)
+{
+  NcmMSet *mset = ncm_fit_peek_mset (mc->fit);
+
+  ncm_mset_clear (&mc->fiduc);
+
+  if ((fiduc == NULL) || (fiduc == mset))
+  {
+    mc->fiduc = ncm_mset_dup (mset, mc->ser);
+    ncm_serialize_reset (mc->ser, TRUE);
+  }
+  else
+  {
+    mc->fiduc = ncm_mset_ref (fiduc);
+    g_assert (ncm_mset_cmp (mset, fiduc, FALSE));
+  }
+}
+
+/**
+ * ncm_fit_mc_set_rng:
+ * @mc: a #NcmFitMC
+ * @rng: a #NcmRNG
+ *
+ * Sets the RNG object of @mc to @rng.
+ *
+ */
+void
+ncm_fit_mc_set_rng (NcmFitMC *mc, NcmRNG *rng)
+{
+  if (mc->started)
+    g_error ("ncm_fit_mc_set_rng: Cannot change the RNG object during a run, call ncm_fit_mc_end_run() first.");
+
+  ncm_mset_catalog_set_rng (mc->mcat, rng);
+}
+
+/**
+ * ncm_fit_mc_is_running:
+ * @mc: a #NcmFitMC
+ *
+ * Checks whether a run is running, that is whether ncm_fit_mc_start_run()
+ * was called and ncm_fit_mc_end_run() was not called yet.
+ *
+ * Returns: %TRUE if a run is running, %FALSE otherwise.
+ */
+gboolean
+ncm_fit_mc_is_running (NcmFitMC *mc)
+{
+  return mc->started;
+}
+
+void _ncm_fit_mc_update_post (NcmFitMC *mc);
+
+void
+_ncm_fit_mc_update_from_theta (NcmFitMC *mc, NcmVector *theta)
+{
+  ncm_mset_catalog_add_from_vector (mc->mcat, theta);
+
+  _ncm_fit_mc_update_post (mc);
+}
+
+void
+_ncm_fit_mc_update_post (NcmFitMC *mc)
+{
+  const guint part = 5;
+  const guint step = (mc->n / part) == 0 ? 1 : (mc->n / part);
+
+  ncm_timer_task_increment (mc->nt);
+
+  switch (mc->mtype)
+  {
+    case NCM_FIT_RUN_MSGS_NONE:
+      break;
+    case NCM_FIT_RUN_MSGS_SIMPLE:
+    {
+      guint stepi          = ncm_timer_task_completed (mc->nt) % step;
+      gboolean log_timeout = FALSE;
+
+      if (ncm_timer_elapsed_since_last_log (mc->nt) > 60.0)
+        log_timeout = TRUE;
+
+      if (log_timeout || (stepi == 0) || ncm_timer_task_has_ended (mc->nt))
+      {
+        /* guint acc = stepi == 0 ? step : stepi; */
+        ncm_mset_catalog_log_current_stats (mc->mcat);
+        /* ncm_timer_task_accumulate (mc->nt, acc); */
+        ncm_timer_task_log_elapsed (mc->nt);
+        ncm_timer_task_log_mean_time (mc->nt);
+        ncm_timer_task_log_time_left (mc->nt);
+        ncm_timer_task_log_cur_datetime (mc->nt);
+        ncm_timer_task_log_end_datetime (mc->nt);
+      }
+
+      break;
+    }
+    default:
+    case NCM_FIT_RUN_MSGS_FULL:
+      ncm_mset_catalog_log_current_stats (mc->mcat);
+      /* ncm_timer_task_increment (mc->nt); */
+      ncm_timer_task_log_elapsed (mc->nt);
+      ncm_timer_task_log_mean_time (mc->nt);
+      ncm_timer_task_log_time_left (mc->nt);
+      ncm_timer_task_log_cur_datetime (mc->nt);
+      ncm_timer_task_log_end_datetime (mc->nt);
+      break;
+  }
+}
+
+void
+_ncm_fit_mc_resample_bstrap (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
+{
+  ncm_dataset_bootstrap_resample (dset, rng);
+}
+
+/**
+ * ncm_fit_mc_start_run:
+ * @mc: a #NcmFitMC
+ *
+ * Starts a Monte Carlo run. This function will start a Monte Carlo run
+ * using the #NcmFit object and the #NcmMSet object of @mc.
+ *
+ * This method will not compute the any likelihood. It will only start
+ * the run. To compute samples, call ncm_fit_mc_run() or ncm_fit_mc_run_lre()
+ * after this function.
+ *
+ * To finish the run, call ncm_fit_mc_end_run().
+ *
+ */
+void
+ncm_fit_mc_start_run (NcmFitMC *mc)
+{
+  NcmLikelihood *lh      = ncm_fit_peek_likelihood (mc->fit);
+  NcmMSet *mset          = ncm_fit_peek_mset (mc->fit);
+  const guint param_len  = ncm_mset_total_len (mc->fiduc);
+  const gint mcat_cur_id = ncm_mset_catalog_get_cur_id (mc->mcat);
+  NcmRNG *mcat_rng       = ncm_mset_catalog_peek_rng (mc->mcat);
+  NcmDataset *dset       = ncm_likelihood_peek_dataset (lh);
+
+  if (mc->started)
+    g_error ("ncm_fit_mc_start_run: run already started, run ncm_fit_mc_end_run() first.");
+
+  ncm_vector_clear (&mc->bf);
+  mc->bf = ncm_vector_new (param_len);
+  ncm_mset_param_get_vector (mc->fiduc, mc->bf);
+
+  switch (mc->mtype)
+  {
+    default:
+    case NCM_FIT_RUN_MSGS_FULL:
+      ncm_cfg_msg_sepa ();
+      g_message ("# NcmFitMC: Starting Monte Carlo...\n");
+      ncm_dataset_log_info (dset);
+      ncm_cfg_msg_sepa ();
+      g_message ("# NcmFitMC: Fiducial model set:\n");
+      ncm_mset_pretty_log (mc->fiduc);
+      ncm_cfg_msg_sepa ();
+      g_message ("# NcmFitMC: Fitting model set:\n");
+      ncm_mset_pretty_log (mset);
+      break;
+    case NCM_FIT_RUN_MSGS_SIMPLE:
+      break;
+    case NCM_FIT_RUN_MSGS_NONE:
+      break;
+  }
+
+  if (mcat_rng == NULL)
+  {
+    NcmRNG *rng = ncm_rng_new (NULL);
+
+    ncm_rng_set_random_seed (rng, FALSE);
+    ncm_fit_mc_set_rng (mc, rng);
+
+    if (mc->mtype > NCM_FIT_RUN_MSGS_NONE)
+      g_message ("# NcmFitMC: No RNG was defined, using algorithm: `%s' and seed: %lu.\n",
+                 ncm_rng_get_algo (rng), ncm_rng_get_seed (rng));
+
+    ncm_rng_free (rng);
+  }
+
+  mc->started = TRUE;
+
+  ncm_mset_catalog_set_sync_mode (mc->mcat, NCM_MSET_CATALOG_SYNC_TIMED);
+  ncm_mset_catalog_set_sync_interval (mc->mcat, NCM_FIT_MC_MIN_SYNC_INTERVAL);
+
+  ncm_mset_catalog_sync (mc->mcat, TRUE);
+
+  if (mcat_cur_id > mc->cur_sample_id)
+  {
+    ncm_fit_mc_intern_skip (mc, mcat_cur_id - mc->cur_sample_id);
+    g_assert_cmpint (mc->cur_sample_id, ==, mcat_cur_id);
+  }
+  else if (mcat_cur_id < mc->cur_sample_id)
+  {
+    g_error ("ncm_fit_mc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].",
+             mcat_cur_id, mc->cur_sample_id);
+  }
+}
+
+/**
+ * ncm_fit_mc_end_run:
+ * @mc: a #NcmFitMC
+ *
+ * Ends a Monte Carlo run. This function will end a Monte Carlo run
+ * using the #NcmFit object and the #NcmMSet object of @mc.
+ *
+ */
+void
+ncm_fit_mc_end_run (NcmFitMC *mc)
+{
+  NcmLikelihood *lh = ncm_fit_peek_likelihood (mc->fit);
+  NcmDataset *dset  = ncm_likelihood_peek_dataset (lh);
+
+  if (ncm_timer_task_is_running (mc->nt))
+    ncm_timer_task_end (mc->nt);
+
+  ncm_mset_catalog_sync (mc->mcat, TRUE);
+  ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
+
+  mc->started = FALSE;
+}
+
+/**
+ * ncm_fit_mc_reset:
+ * @mc: a #NcmFitMC
+ *
+ * Resets the Monte Carlo run. This function will reset the Monte Carlo run
+ * erase all samples and reset the catalog.
+ *
+ */
+void
+ncm_fit_mc_reset (NcmFitMC *mc)
+{
+  mc->n             = 0;
+  mc->cur_sample_id = -1;
+  mc->write_index   = 0;
+  mc->started       = FALSE;
+  ncm_mset_catalog_reset (mc->mcat);
+}
+
+static void
+ncm_fit_mc_intern_skip (NcmFitMC *mc, guint n)
+{
+  if (n == 0)
+    return;
+
+  switch (mc->mtype)
+  {
+    default:
+    case NCM_FIT_RUN_MSGS_FULL:
+    case NCM_FIT_RUN_MSGS_SIMPLE:
+    {
+      ncm_cfg_msg_sepa ();
+      g_message ("# NcmFitMC: Skipping %u realizations, will start at %u-th realization.\n", n, mc->cur_sample_id + n + 1 + 1);
+    }
+    case NCM_FIT_RUN_MSGS_NONE:
+      break;
+  }
+
+  mc->cur_sample_id += n;
+  mc->write_index    = mc->cur_sample_id + 1;
+}
+
+/**
+ * ncm_fit_mc_set_first_sample_id:
+ * @mc: a #NcmFitMC
+ * @first_sample_id: first sample id
+ *
+ * Sets the first sample id of the Monte Carlo run to @first_sample_id.
+ * This function will skip all samples until it reaches the @first_sample_id.
+ *
+ */
+void
+ncm_fit_mc_set_first_sample_id (NcmFitMC *mc, gint first_sample_id)
+{
+  const gint mcat_first_id = ncm_mset_catalog_get_first_id (mc->mcat);
+
+  if (mcat_first_id == first_sample_id)
+    return;
+
+  if (!mc->started)
+    g_error ("ncm_fit_mc_set_first_sample_id: run not started, run ncm_fit_mc_start_run() first.");
+
+  if (first_sample_id <= mc->cur_sample_id)
+    g_error ("ncm_fit_mc_set_first_sample_id: cannot move first sample id backwards to: %d, catalog first id: %d, current sample id: %d.",
+             first_sample_id, mcat_first_id, mc->cur_sample_id);
+
+  ncm_mset_catalog_set_first_id (mc->mcat, first_sample_id);
+  ncm_fit_mc_intern_skip (mc, first_sample_id - mc->cur_sample_id - 1);
+}
+
+static void _ncm_fit_mc_run_single (NcmFitMC *mc);
+static void _ncm_fit_mc_run_mt (NcmFitMC *mc);
+
+/**
+ * ncm_fit_mc_run:
+ * @mc: a #NcmFitMC
+ * @n: total number of realizations to run
+ *
+ * Runs the Monte Carlo until it reaches the @n-th realization. Note that
+ * if the first_id is non-zero it will run @n - first_id realizations.
+ *
+ */
+void
+ncm_fit_mc_run (NcmFitMC *mc, guint n)
+{
+  if (!mc->started)
+    g_error ("ncm_fit_mc_run: run not started, run ncm_fit_mc_start_run() first.");
+
+  if (n <= (guint) (mc->cur_sample_id + 1))
+  {
+    if (mc->mtype > NCM_FIT_RUN_MSGS_NONE)
+    {
+      ncm_cfg_msg_sepa ();
+      g_message ("# NcmFitMC: Nothing to do, current Monte Carlo run is %d\n", mc->cur_sample_id + 1);
+    }
+
+    return;
+  }
+
+  mc->n = n - (mc->cur_sample_id + 1);
+
+  switch (mc->mtype)
+  {
+    default:
+    case NCM_FIT_RUN_MSGS_FULL:
+    case NCM_FIT_RUN_MSGS_SIMPLE:
+    {
+      const GEnumValue *eval = ncm_cfg_enum_get_value (NCM_TYPE_FIT_MC_RESAMPLE_TYPE, mc->rtype);
+
+      ncm_cfg_msg_sepa ();
+      g_message ("# NcmFitMC: Calculating [%06d] Monte Carlo fits [%s]\n", mc->n, eval->value_nick);
+    }
+    case NCM_FIT_RUN_MSGS_NONE:
+      break;
+  }
+
+  if (ncm_timer_task_is_running (mc->nt))
+  {
+    ncm_timer_task_add_tasks (mc->nt, mc->n);
+    ncm_timer_task_continue (mc->nt);
+  }
+  else
+  {
+    ncm_timer_task_start (mc->nt, mc->n);
+    ncm_timer_set_name (mc->nt, "NcmFitMC");
+  }
+
+  if (mc->mtype > NCM_FIT_RUN_MSGS_NONE)
+    ncm_timer_task_log_start_datetime (mc->nt);
+
+  if (mc->nthreads <= 1)
+    _ncm_fit_mc_run_single (mc);
+  else
+    _ncm_fit_mc_run_mt (mc);
+
+  ncm_timer_task_pause (mc->nt);
+}
+
+static void
+_ncm_fit_mc_run_single (NcmFitMC *mc)
+{
+  NcmMSet *mset    = ncm_fit_peek_mset (mc->fit);
+  NcmVector *theta = ncm_vector_new (mc->theta_len);
+  guint i;
+
+  for (i = 0; i < mc->n; i++)
+  {
+    ncm_mset_param_set_vector (mset, mc->bf);
+    _ncm_fit_mc_resample (mc, mc->fit);
+    ncm_fit_run (mc->fit, NCM_FIT_RUN_MSGS_NONE);
+
+    {
+      NcmFitState *fstate = ncm_fit_peek_state (mc->fit);
+
+      ncm_vector_set (theta, 0, ncm_fit_state_get_m2lnL_curval (fstate));
+      ncm_mset_fparams_get_vector_offset (mset, theta, mc->nadd_vals);
+    }
+
+    if (mc->func_oa != NULL)
+    {
+      glong k;
+
+      for (k = 0; k < mc->func_oa->len; k++)
+      {
+        NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (mc->func_oa, k));
+        const gdouble a_k = ncm_mset_func_eval0 (func, mset);
+
+        ncm_vector_set (theta, k + 1, a_k);
+      }
+    }
+
+    _ncm_fit_mc_update_from_theta (mc, theta);
+    mc->write_index++;
+  }
+
+  ncm_vector_free (theta);
+}
+
+static void
+_ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
+{
+  NcmFitMC *mc                 = NCM_FIT_MC (data);
+  const glong n                = f - i;
+  const glong cur_pos          = mc->cur_sample_id + 1;
+  const glong last_write_index = mc->write_index + n;
+  GPtrArray *thetas            = g_ptr_array_sized_new (n);
+  GArray *ready                = g_array_sized_new (FALSE, FALSE, sizeof (gboolean), n);
+  glong li;
+
+  g_ptr_array_set_free_func (thetas, (GDestroyNotify) ncm_vector_free);
+
+  for (li = 0; li < n; li++)
+  {
+    NcmVector *theta = ncm_vector_new (mc->theta_len);
+
+    g_ptr_array_add (thetas, theta);
+    g_array_index (ready, gboolean, li) = FALSE;
+  }
+
+#pragma omp parallel shared (mc, thetas, ready)
+  {
+    /* Each thread gets a fit */
+    NcmFit *fit              = NULL;
+    NcmMSet *mset            = NULL;
+    NcmFitState *fstate      = NULL;
+    NcmVector *theta         = NULL;
+    NcmObjArray *funcs_array = NULL;
+    NcmVector *oa_vals       = NULL;
+    glong j, k, sample_index;
+
+    #pragma omp critical(dup_fit)
+    {
+      fit    = ncm_fit_dup (mc->fit, mc->ser);
+      mset   = ncm_fit_peek_mset (fit);
+      fstate = ncm_fit_peek_state (fit);
+
+      if (mc->func_oa != NULL)
+      {
+        funcs_array = ncm_serialize_dup_array (mc->ser, mc->func_oa);
+        oa_vals     = ncm_vector_new (mc->func_oa->len);
+      }
+
+      ncm_serialize_reset (mc->ser, TRUE);
+    }
+
+    #pragma omp for
+
+    for (j = 0; j < n; j++)
+    {
+      ncm_mset_param_set_vector (mset, mc->bf);
+
+      #pragma omp critical(resample_phase)
+      {
+        sample_index = _ncm_fit_mc_resample (mc, fit);
+      }
+      theta = g_ptr_array_index (thetas, sample_index - cur_pos);
+
+      /* This is the slow section that we want to parallelize over */
+      ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+      if (mc->func_oa != NULL)
+      {
+        for (k = 0; k < mc->func_oa->len; k++)
+        {
+          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (funcs_array, k));
+          const gdouble a_k = ncm_mset_func_eval0 (func, mset);
+
+          ncm_vector_set (oa_vals, k, a_k);
+        }
+      }
+
+      /* End of the slow section */
+
+      #pragma omp critical(update_phase)
+      {
+        ncm_vector_set (theta, 0, ncm_fit_state_get_m2lnL_curval (fstate));
+        ncm_mset_fparams_get_vector_offset (mset, theta, mc->nadd_vals);
+
+        if (mc->func_oa != NULL)
+        {
+          for (k = 0; k < mc->func_oa->len; k++)
+          {
+            const gdouble a_k = ncm_vector_get (oa_vals, k);
+
+            ncm_vector_set (theta, k + 1, a_k);
+          }
+        }
+
+        g_array_index (ready, gboolean, sample_index - cur_pos) = TRUE;
+
+        {
+          const glong cur_write_index = mc->write_index;
+
+          for (k = cur_write_index; k < last_write_index; k++)
+          {
+            if (g_array_index (ready, gboolean, k - cur_pos))
+            {
+              NcmVector *saving_theta = g_ptr_array_index (thetas, k - cur_pos);
+
+              _ncm_fit_mc_update_from_theta (mc, saving_theta);
+              mc->write_index++;
+            }
+            else
+            {
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    ncm_fit_clear (&fit);
+    ncm_obj_array_clear (&funcs_array);
+  }
+
+  {
+    const glong cur_write_index = mc->write_index;
+
+    for (li = cur_write_index; li < last_write_index; li++)
+    {
+      NcmVector *theta = g_ptr_array_index (thetas, li - cur_pos);
+
+      g_assert (g_array_index (ready, gboolean, li - cur_pos));
+
+      _ncm_fit_mc_update_from_theta (mc, theta);
+      mc->write_index++;
+    }
+  }
+
+  g_ptr_array_free (thetas, TRUE);
+  g_array_free (ready, TRUE);
+}
+
+static void
+_ncm_fit_mc_run_mt (NcmFitMC *mc)
+{
+  const guint nthreads = mc->n > mc->nthreads ? mc->nthreads : (mc->n - 1);
+
+  if (nthreads == 0)
+  {
+    _ncm_fit_mc_run_single (mc);
+
+    return;
+  }
+
+  g_assert_cmpuint (mc->nthreads, >, 1);
+
+  _ncm_fit_mc_mt_eval (0, mc->n, mc);
+}
+
+/**
+ * ncm_fit_mc_run_lre:
+ * @mc: a #NcmFitMC
+ * @prerun: number of pre-runs
+ * @lre: largest relative error
+ *
+ * Runs the Monte Carlo until the largest relative error considering the errors on the
+ * parameter means is less than @lre.
+ *
+ */
+void
+ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre)
+{
+  gdouble lerror;
+  const gdouble lre2 = lre * lre;
+
+  g_assert_cmpfloat (lre, >, 0.0);
+  /* g_assert_cmpfloat (lre, <, 1.0); */
+
+  prerun = (prerun == 0) ? 100 : prerun;
+
+  if (ncm_mset_catalog_len (mc->mcat) < prerun)
+  {
+    guint prerun_left = prerun - ncm_mset_catalog_len (mc->mcat);
+
+    if (mc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+      g_message ("# NcmFitMC: Running first %u pre-runs...\n", prerun_left);
+
+    ncm_fit_mc_run (mc, prerun);
+  }
+
+  lerror = ncm_mset_catalog_largest_error (mc->mcat);
+
+  while (lerror > lre)
+  {
+    const gdouble lerror2 = lerror * lerror;
+    gdouble n             = ncm_mset_catalog_len (mc->mcat);
+    gdouble m             = n * lerror2 / lre2;
+    guint runs            = ((m - n) > 1000.0) ? ceil ((m - n) * 0.25) : ceil (m - n);
+
+    if (mc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+    {
+      g_message ("# NcmFitMC: Largest relative error %e not attained: %e\n", lre, lerror);
+      g_message ("# NcmFitMC: Running more %u runs...\n", runs);
+    }
+
+    ncm_fit_mc_run (mc, mc->cur_sample_id + runs + 1);
+    lerror = ncm_mset_catalog_largest_error (mc->mcat);
+  }
+
+  if (mc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+    g_message ("# NcmFitMC: Largest relative error %e attained: %e\n", lre, lerror);
+}
+
+/**
+ * ncm_fit_mc_mean_covar:
+ * @mc: a #NcmFitMC
+ *
+ * Computes the mean and covariance of the Monte Carlo run.
+ * The mean and covariance are stored in the #NcmFit object of @mc.
+ * The mean is stored in the #NcmFitState object of the #NcmFit object
+ * and in the #NcmMSetCatalog object of @mc.
+ *
+ */
+void
+ncm_fit_mc_mean_covar (NcmFitMC *mc)
+{
+  NcmMSet *mset       = ncm_mset_catalog_peek_mset (mc->mcat);
+  NcmFitState *fstate = ncm_fit_peek_state (mc->fit);
+  NcmVector *fparams  = ncm_fit_state_peek_fparams (fstate);
+  NcmMatrix *covar    = ncm_fit_state_peek_covar (fstate);
+
+  ncm_mset_catalog_get_mean (mc->mcat, &fparams);
+  ncm_mset_catalog_get_covar (mc->mcat, &covar);
+  ncm_mset_fparams_set_vector (mset, fparams);
+
+  ncm_fit_state_set_has_covar (fstate, TRUE);
+}
+
+/**
+ * ncm_fit_mc_get_catalog:
+ * @mc: a #NcmFitMC
+ *
+ * Gets the generated catalog of @mc.
+ *
+ * Returns: (transfer full): the generated catalog.
+ */
+NcmMSetCatalog *
+ncm_fit_mc_get_catalog (NcmFitMC *mc)
+{
+  return ncm_mset_catalog_ref (mc->mcat);
+}
+
+/**
+ * ncm_fit_mc_peek_catalog:
+ * @mc: a #NcmFitMC
+ *
+ * Peeks the generated catalog of @mc.
+ *
+ * Returns: (transfer none): the generated catalog.
+ */
+NcmMSetCatalog *
+ncm_fit_mc_peek_catalog (NcmFitMC *mc)
+{
+  return mc->mcat;
+}
+

@@ -50,8 +50,8 @@ def test_wl_likelihood() -> None:
     n_galaxies = 10000
     sigma_z = 0.03
     galaxies_ang_dist = 0.15
-    galaxy_shape_e_rms = 2.0e-1
-    galaxy_shape_e_sigma = 1.0e-4
+    galaxy_shape_sigma = 3.0e-1
+    galaxy_shape_std_noise = 1.0e-1
     min_r, max_r = 0.3, 3.0
 
     dist = Nc.Distance.new(5.0)
@@ -64,8 +64,8 @@ def test_wl_likelihood() -> None:
     surface_mass_density = Nc.WLSurfaceMassDensity.new(dist)
     halo_position = Nc.HaloPosition.new(dist)
 
-    density_profile["cDelta"] = cluster_c
-    density_profile["log10MDelta"] = np.log10(cluster_mass)
+    halo_mass_summary["cDelta"] = cluster_c
+    halo_mass_summary["log10MDelta"] = np.log10(cluster_mass)
 
     galaxies_ra0 = cluster_ra - galaxies_ang_dist
     galaxies_ra1 = cluster_ra + galaxies_ang_dist
@@ -77,11 +77,15 @@ def test_wl_likelihood() -> None:
     )
     galaxy_redshift_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
     if use_spec:
-        galaxy_redshift = Nc.GalaxySDObsRedshiftSpec.new(galaxy_redshift_true)
+        galaxy_redshift = Nc.GalaxySDObsRedshiftSpec.new(
+            galaxy_redshift_true, 0.01, 6.0
+        )
     else:
-        galaxy_redshift = Nc.GalaxySDObsRedshiftGauss.new(galaxy_redshift_true)
+        galaxy_redshift = Nc.GalaxySDObsRedshiftGauss.new(
+            galaxy_redshift_true, 0.01, 6.0
+        )
 
-    galaxy_shape = Nc.GalaxySDShapeGauss.new()
+    galaxy_shape = Nc.GalaxySDShapeHSMGaussGlobal.new(Nc.GalaxyWLObsEllipConv.TRACE)
 
     cosmo["H0"] = H0
     cosmo["Omegab"] = Omegab
@@ -91,19 +95,19 @@ def test_wl_likelihood() -> None:
     halo_position["ra"] = cluster_ra
     halo_position["dec"] = cluster_dec
     halo_position["z"] = cluster_z
-    galaxy_shape["e-rms"] = galaxy_shape_e_rms
+    galaxy_shape["sigma"] = galaxy_shape_sigma
 
     dist.prepare(cosmo)
     halo_position.prepare(cosmo)
     surface_mass_density.prepare(cosmo)
 
     cluster = Nc.DataClusterWL.new()
-    cluster.set_cut(min_r, max_r)
+    cluster.set_cut(min_r / cosmo.h(), max_r / cosmo.h())
 
     halo_position.param_set_desc("ra", {"fit": True})
     halo_position.param_set_desc("dec", {"fit": True})
-    density_profile.param_set_desc("cDelta", {"fit": False})
-    density_profile.param_set_desc("log10MDelta", {"fit": True})
+    halo_mass_summary.param_set_desc("cDelta", {"fit": False})
+    halo_mass_summary.param_set_desc("log10MDelta", {"fit": True})
 
     mset = Ncm.MSet.new_array(
         [
@@ -124,21 +128,31 @@ def test_wl_likelihood() -> None:
     s_data = Nc.GalaxySDShapeData.new(galaxy_shape, p_data)
 
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsCoord.EUCLIDEAN, n_galaxies, list(s_data.required_columns())
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.GalaxyWLObsCoord.EUCLIDEAN,
+        n_galaxies,
+        list(s_data.required_columns()),
     )
 
     for i in range(n_galaxies):
         if use_spec:
-            galaxy_redshift.gen(mset, z_data, rng)
+            galaxy_redshift.gen1(mset, z_data, rng)
         else:
-            galaxy_redshift.gen(mset, z_data, sigma_z, rng)  # type: ignore
+            galaxy_redshift.gen1(mset, z_data, sigma_z, rng)
 
         galaxy_position.gen(mset, p_data, rng)
+
+        c1 = rng.gaussian_gen(0.0, 0.01)
+        c2 = rng.gaussian_gen(0.0, 0.01)
+        m = np.exp(rng.gaussian_gen(0.0, 0.08))
+        std_noise = galaxy_shape_std_noise
         galaxy_shape.gen(
             mset,
             s_data,
-            galaxy_shape_e_sigma,
-            galaxy_shape_e_sigma,
+            std_noise,
+            c1,
+            c2,
+            m,
             Nc.GalaxyWLObsCoord.EUCLIDEAN,
             rng,
         )

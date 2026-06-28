@@ -24,6 +24,7 @@
 """NumCosmo APP subcommands generate experiment files."""
 
 from typing import Annotated, Optional
+from enum import StrEnum, auto
 import dataclasses
 from pathlib import Path
 import shlex
@@ -58,6 +59,113 @@ from numcosmo_py.datasets.hicosmo import (
     add_h_likelihood,
     add_snia_likelihood,
 )
+from numcosmo_py.experiments.curvature_weight import (
+    wspline_curvature_weight,
+    qspline_curvature_weight,
+)
+
+
+class KnotPlacement(StrEnum):
+    """Knot distribution for a spline reconstruction (q(z) or w(z)).
+
+    DEFAULT keeps the model's own default (Chebyshev for the w-spline, uniform
+    for the q-spline); UNIFORM / CHEBYSHEV force the placement explicitly.
+    """
+
+    DEFAULT = auto()
+    UNIFORM = auto()
+    CHEBYSHEV = auto()
+
+
+def _spline_knots(placement: "KnotPlacement"):
+    """Map a KnotPlacement to the Nc enum, or None to keep the model default."""
+    if placement is KnotPlacement.UNIFORM:
+        return Nc.HICosmoSplineKnots.UNIFORM
+    if placement is KnotPlacement.CHEBYSHEV:
+        return Nc.HICosmoSplineKnots.CHEBYSHEV
+    return None
+
+
+class CurvaturePriorType(StrEnum):
+    """Curvature prior functional for a spline reconstruction (q(z) or w(z)).
+
+    NONE disables the prior; MEAN_KAPPA is the geometric L2 curvature (default);
+    LP_KAPPA / LP_D2 are the Lp norms of the geometric curvature and of the second
+    derivative respectively, with order p given by ``--curvature-p`` (large p
+    approaches the maximum curvature). LOCAL_KAPPA / LOCAL_D2 are the data-driven
+    *local* counterparts: the curvature norm is weighted by W(x), built from the
+    data Fisher information so the prior relaxes where the data constrains the
+    reconstruction and stays strong where it is blind (see
+    ``numcosmo_py.experiments.curvature_weight``).
+    """
+
+    NONE = auto()
+    MEAN_KAPPA = auto()
+    LP_KAPPA = auto()
+    LP_D2 = auto()
+    LOCAL_KAPPA = auto()
+    LOCAL_D2 = auto()
+
+
+def _add_curvature_prior(
+    likelihood: Ncm.Likelihood,
+    *,
+    namespace: str,
+    d2_name: str,
+    prior_type: CurvaturePriorType,
+    sigma: float,
+    p: float,
+    weight: "Ncm.Spline | None" = None,
+) -> None:
+    """Add the selected curvature Gaussian prior to ``likelihood``.
+
+    The norm order p is fed through the PriorGaussFunc variable slot, which the
+    nvar=1 ``lp_*``/``wlp_*`` functions read as ``x[0]``. ``namespace`` selects
+    the model (e.g. ``NcHICosmoQSpline``); ``d2_name`` is its second-derivative
+    function (``lp_q2`` or ``lp_w2``). For the LOCAL_* variants the weighted
+    ``wlp_*`` function carries ``weight`` (a precomputed W(x) spline) as its
+    associated object. The prior func is added to the likelihood only, not to the
+    derived-function array (those are evaluated with nvar=0).
+    """
+    if prior_type is CurvaturePriorType.NONE:
+        return
+
+    obj: "Ncm.Spline | None" = None
+    if prior_type is CurvaturePriorType.MEAN_KAPPA:
+        func_name, var = f"{namespace}:mean_kappa", 0.0
+    elif prior_type is CurvaturePriorType.LP_KAPPA:
+        func_name, var = f"{namespace}:lp_kappa", p
+    elif prior_type is CurvaturePriorType.LP_D2:
+        func_name, var = f"{namespace}:{d2_name}", p
+    elif prior_type is CurvaturePriorType.LOCAL_KAPPA:
+        func_name, var, obj = f"{namespace}:wlp_kappa", p, weight
+    else:  # LOCAL_D2
+        func_name, var, obj = f"{namespace}:w{d2_name}", p, weight
+
+    if prior_type in (CurvaturePriorType.LOCAL_KAPPA, CurvaturePriorType.LOCAL_D2):
+        if weight is None:
+            raise ValueError(f"{prior_type} requires a precomputed weight spline.")
+
+    func = Ncm.MSetFuncList.new(func_name, obj)
+    likelihood.priors_add(Ncm.PriorGaussFunc.new(func, 0.0, sigma, var))
+
+
+def _add_function_grid(
+    mfunc_oa: Ncm.ObjArray,
+    func_name: str,
+    z_nodes: "np.ndarray",
+) -> None:
+    """Append nvar=0 functions evaluating ``func_name`` at each redshift node.
+
+    Each node binds its redshift through ``set_eval_x`` (which serializes with the
+    function and is read by ``eval0``), so an MC/MCMC run records the function at
+    every node as a catalog column. Sampling a whole grid yields the
+    reconstruction band and its full node-to-node covariance for free.
+    """
+    for z in z_nodes:
+        func = Ncm.MSetFuncList.new(func_name, None)
+        func.set_eval_x([float(z)])
+        mfunc_oa.add(func)
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -228,6 +336,15 @@ class GenerateJpasForecast:
         typer.Option(help="Cluster photoz relation.", show_default=True),
     ] = ClusterRedshiftType.NODIST
 
+    cluster_redshift_sigma0: Annotated[
+        float,
+        typer.Option(
+            help="Photo-z scatter sigma0 in sigma_z(z)=sigma0(1+z) (GAUSS only).",
+            show_default=True,
+            min=0.0,
+        ),
+    ] = 0.1
+
     lnM_obs_min: Annotated[
         float,
         typer.Option(
@@ -300,6 +417,7 @@ class GenerateJpasForecast:
             z_max=self.z_max,
             znknots=self.znknots,
             cluster_redshift_type=self.cluster_redshift_type,
+            cluster_redshift_sigma0=self.cluster_redshift_sigma0,
             lnM_obs_min=self.lnM_obs_min,
             lnM_obs_max=self.lnM_obs_max,
             lnMobsnknots=self.lnMobsnknots,
@@ -420,7 +538,7 @@ class GenerateClusterWL:
             metavar=GalaxyShapeGen.get_help_metavar(),
             rich_help_panel="Galaxy shape source distribution",
         ),
-    ] = "gauss ellip_conv=trace-det ellip_coord=celestial sigma=0.3 std_noise=0.1"
+    ] = "hsm_gauss ellip_conv=trace-det ellip_coord=celestial std_shape=0.3 std_noise=0.1 c1_sigma=0.05 c2_sigma=0.05 m_sigma=0.05"
 
     galaxy_density: Annotated[
         float, typer.Option(help="Galaxy density.", show_default=True)
@@ -557,6 +675,11 @@ class GenerateQSpline:
         int, typer.Option(help="Number of knots.", show_default=True, min=6)
     ] = 6
 
+    knots: Annotated[
+        KnotPlacement,
+        typer.Option(help="Knot placement in z.", show_default=True),
+    ] = KnotPlacement.DEFAULT
+
     z_max: Annotated[
         float, typer.Option(help="Maximum redshift.", show_default=True)
     ] = 2.1
@@ -573,6 +696,44 @@ class GenerateQSpline:
         Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
     ] = None
 
+    curvature_prior: Annotated[
+        CurvaturePriorType,
+        typer.Option(help="Curvature prior functional.", show_default=True),
+    ] = CurvaturePriorType.MEAN_KAPPA
+
+    curvature_sigma: Annotated[
+        float,
+        typer.Option(help="Curvature prior standard deviation.", show_default=True),
+    ] = 3.0
+
+    curvature_p: Annotated[
+        float,
+        typer.Option(
+            help="Lp norm order p for the lp_* curvature priors "
+            "(large p approaches the maximum curvature).",
+            show_default=True,
+        ),
+    ] = 2.0
+
+    curvature_ref_factor: Annotated[
+        float,
+        typer.Option(
+            help="Crossover-scale knob for the LOCAL_* data-driven curvature "
+            "weight (smaller relaxes the prior more eagerly where data informs).",
+            show_default=True,
+        ),
+    ] = 1.0
+
+    band_nodes: Annotated[
+        int,
+        typer.Option(
+            help="Number of redshift nodes for the q(z) reconstruction band "
+            "recorded in MC/MCMC catalogs (0 disables).",
+            show_default=True,
+            min=0,
+        ),
+    ] = 20
+
     def __post_init__(self):
         """Generate QSpline experiment."""
         Ncm.cfg_init()
@@ -582,9 +743,18 @@ class GenerateQSpline:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        cosmo = Nc.HICosmoQSpline.new(
-            Ncm.SplineCubicNotaknot(), self.n_knots, self.z_max
-        )
+        knots = _spline_knots(self.knots)
+        if knots is None:
+            cosmo = Nc.HICosmoQSpline.new(
+                Ncm.SplineCubicNotaknot(), self.n_knots, self.z_max
+            )
+        else:
+            cosmo = Nc.HICosmoQSpline(
+                spline=Ncm.SplineCubicNotaknot(),
+                qparam_length=self.n_knots,
+                zf=self.z_max,
+                knots=knots,
+            )
         for i in range(self.n_knots):
             cosmo.param_set_desc(f"qparam_{i}", {"fit": True})
         mset = Ncm.MSet.new_array([cosmo])
@@ -608,6 +778,42 @@ class GenerateQSpline:
 
         mset.prepare_fparam_map()
         likelihood = Ncm.Likelihood.new(dset)
+
+        # Expose mean_kappa and the transition redshift as derived (nvar=0)
+        # functions for post-processing.
+        mfunc_oa = Ncm.ObjArray.new()
+        mfunc_oa.add(Ncm.MSetFuncList.new("NcHICosmoQSpline:mean_kappa", None))
+        mfunc_oa.add(Ncm.MSetFuncList.new("NcHICosmoQSpline:q_transition", None))
+
+        # Sample q(z) on a redshift grid -> reconstruction band + covariance.
+        if self.band_nodes > 0:
+            _add_function_grid(
+                mfunc_oa, "NcHICosmo:q", np.linspace(0.0, self.z_max, self.band_nodes)
+            )
+
+        weight = None
+        if self.curvature_prior in (
+            CurvaturePriorType.LOCAL_KAPPA,
+            CurvaturePriorType.LOCAL_D2,
+        ):
+            weight = qspline_curvature_weight(
+                dset,
+                mset,
+                cosmo,
+                z_max=self.z_max,
+                ref_factor=self.curvature_ref_factor,
+            )
+
+        _add_curvature_prior(
+            likelihood,
+            namespace="NcHICosmoQSpline",
+            d2_name="lp_q2",
+            prior_type=self.curvature_prior,
+            sigma=self.curvature_sigma,
+            p=self.curvature_p,
+            weight=weight,
+        )
+
         # Save experiment
         experiment = Ncm.ObjDictStr()
 
@@ -620,6 +826,11 @@ class GenerateQSpline:
             dset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
         )
         ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())
+
+        ser.array_to_yaml_file(
+            mfunc_oa,
+            self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
+        )
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -719,6 +930,11 @@ class GenerateDEWSpline:
         int, typer.Option(help="Number of knots.", show_default=True, min=5)
     ] = 5
 
+    knots: Annotated[
+        KnotPlacement,
+        typer.Option(help="Knot placement in alpha=ln(1+z).", show_default=True),
+    ] = KnotPlacement.DEFAULT
+
     z_max: Annotated[
         float, typer.Option(help="Maximum redshift.", show_default=True)
     ] = 2.33
@@ -735,6 +951,53 @@ class GenerateDEWSpline:
         Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
     ] = None
 
+    curvature_prior: Annotated[
+        CurvaturePriorType,
+        typer.Option(help="Curvature prior functional.", show_default=True),
+    ] = CurvaturePriorType.MEAN_KAPPA
+
+    curvature_sigma: Annotated[
+        float,
+        typer.Option(help="Curvature prior standard deviation.", show_default=True),
+    ] = 3.0
+
+    curvature_p: Annotated[
+        float,
+        typer.Option(
+            help="Lp norm order p for the lp_* curvature priors "
+            "(large p approaches the maximum curvature).",
+            show_default=True,
+        ),
+    ] = 2.0
+
+    curvature_ref_factor: Annotated[
+        float,
+        typer.Option(
+            help="Crossover-scale knob for the LOCAL_* data-driven curvature "
+            "weight (smaller relaxes the prior more eagerly where data informs).",
+            show_default=True,
+        ),
+    ] = 1.0
+
+    band_nodes: Annotated[
+        int,
+        typer.Option(
+            help="Number of redshift nodes for the w(z) reconstruction band "
+            "recorded in MC/MCMC catalogs (0 disables).",
+            show_default=True,
+            min=0,
+        ),
+    ] = 20
+
+    fit_h0: Annotated[
+        bool,
+        typer.Option(
+            help="Fit H0 even without Hubble data (e.g. with SH0ES-calibrated "
+            "SNIa, which constrains H0).",
+            show_default=True,
+        ),
+    ] = False
+
     def __post_init__(self):
         """Generate DE WSpline experiment."""
         Ncm.cfg_init()
@@ -744,7 +1007,13 @@ class GenerateDEWSpline:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        cosmo = Nc.HICosmoDEWSpline.new(self.n_knots, self.z_max)
+        knots = _spline_knots(self.knots)
+        if knots is None:
+            cosmo = Nc.HICosmoDEWSpline.new(self.n_knots, self.z_max)
+        else:
+            cosmo = Nc.HICosmoDEWSpline(
+                zf=self.z_max, w_length=self.n_knots, knots=knots
+            )
         cosmo.omega_x2omega_k()
         cosmo["Omegak"] = 0.0
 
@@ -767,6 +1036,9 @@ class GenerateDEWSpline:
             add_h_likelihood(dset, mset, self.include_hubble)
             cosmo.param_set_desc("H0", {"fit": True})
 
+        if self.fit_h0:
+            cosmo.param_set_desc("H0", {"fit": True})
+
         if dset.get_length() == 0:
             raise ValueError("No data included in the experiment.")
 
@@ -776,11 +1048,36 @@ class GenerateDEWSpline:
         mfunc_oa = Ncm.ObjArray.new()
         mfunc_Omegam = Ncm.MSetFuncList.new("NcHICosmo:Omega_m0", None)
         mfunc_oa.add(mfunc_Omegam)
+        # Always expose mean_kappa as a derived (nvar=0) function for post-processing.
         mfunc_mean_kappa = Ncm.MSetFuncList.new("NcHICosmoDEWSpline:mean_kappa", None)
         mfunc_oa.add(mfunc_mean_kappa)
 
-        prior = Ncm.PriorGaussFunc.new(mfunc_mean_kappa, 0.0, 3.0, 0.0)
-        likelihood.priors_add(prior)
+        # Sample w(z) on a redshift grid -> reconstruction band + covariance.
+        if self.band_nodes > 0:
+            _add_function_grid(
+                mfunc_oa,
+                "NcHICosmoDE:wDE_z",
+                np.linspace(0.0, self.z_max, self.band_nodes),
+            )
+
+        weight = None
+        if self.curvature_prior in (
+            CurvaturePriorType.LOCAL_KAPPA,
+            CurvaturePriorType.LOCAL_D2,
+        ):
+            weight = wspline_curvature_weight(
+                dset, mset, cosmo, ref_factor=self.curvature_ref_factor
+            )
+
+        _add_curvature_prior(
+            likelihood,
+            namespace="NcHICosmoDEWSpline",
+            d2_name="lp_w2",
+            prior_type=self.curvature_prior,
+            sigma=self.curvature_sigma,
+            p=self.curvature_p,
+            weight=weight,
+        )
 
         # Save experiment
         experiment = Ncm.ObjDictStr()
