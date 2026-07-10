@@ -26,6 +26,7 @@
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 from typer.testing import CliRunner
 
@@ -37,6 +38,33 @@ pytestmark = pytest.mark.app
 runner = CliRunner()
 
 Ncm.cfg_init()
+
+
+@pytest.fixture(name="dc2_like_file")
+def fixture_dc2_like_file(tmp_path: Path) -> Path:
+    """Create a small FITS file mimicking a DC2-style true-count catalog."""
+    pytest.importorskip("astropy")
+    # flake8: noqa: E402
+    # pylint: disable=import-outside-toplevel
+    from astropy.table import Table
+
+    rng = np.random.default_rng(7)
+    n = 200
+    halo_mass = 10 ** rng.uniform(13.0, 15.0, n)
+    redshift = rng.uniform(0.1, 0.9, n)
+    lnM = np.log(halo_mass)
+    mu = 4.0 + 1.0 * (lnM - np.log(3.0e14)) + 0.2 * np.log1p(redshift)
+    sigma = np.maximum(
+        0.5 + 0.03 * (lnM - np.log(3.0e14)) + 0.15 * np.log1p(redshift), 0.05
+    )
+    lam = np.exp(rng.normal(mu, sigma))
+    richness = rng.poisson(lam)
+
+    data_file = tmp_path / "dc2_like.fits"
+    Table({"halo_mass": halo_mass, "redshift": redshift, "richness": richness}).write(
+        data_file
+    )
+    return data_file
 
 
 @pytest.fixture(name="experiment_file")
@@ -150,3 +178,79 @@ def test_run_fit_cluster_richness_count(experiment_file: Path):
 
     result = runner.invoke(app, ["run", "fit", experiment_file.as_posix()])
     assert result.exit_code == 0, result.output
+
+
+def test_generate_cluster_richness_count_from_file(
+    dc2_like_file: Path, experiment_file: Path
+):
+    """Test loading real (DC2-like) data via --data-file."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-richness-count",
+            experiment_file.as_posix(),
+            "--data-file",
+            dc2_like_file.as_posix(),
+            "--mass-column",
+            "halo_mass",
+            "--redshift-column",
+            "redshift",
+            "--n-gal-column",
+            "richness",
+            "--summary",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert experiment_file.exists()
+    assert "Cluster Mass-Richness Count Data" in result.output
+    assert "Clusters loaded" in result.output
+
+
+def test_generate_cluster_richness_count_from_file_bad_column(
+    dc2_like_file: Path, experiment_file: Path
+):
+    """Test that a missing data column is reported clearly."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-richness-count",
+            experiment_file.as_posix(),
+            "--data-file",
+            dc2_like_file.as_posix(),
+            "--n-gal-column",
+            "bogus_column",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert not experiment_file.exists()
+
+
+def test_run_test_cluster_richness_count_from_file(
+    dc2_like_file: Path, experiment_file: Path
+):
+    """Test that data loaded from a file can be evaluated through run test."""
+    gen_result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-richness-count",
+            experiment_file.as_posix(),
+            "--data-file",
+            dc2_like_file.as_posix(),
+            "--mass-column",
+            "halo_mass",
+            "--redshift-column",
+            "redshift",
+            "--n-gal-column",
+            "richness",
+        ],
+    )
+    assert gen_result.exit_code == 0, gen_result.output
+
+    result = runner.invoke(app, ["run", "test", experiment_file.as_posix()])
+    assert result.exit_code == 0, result.output
+    assert "NcDataClusterMassRichCount" in result.output

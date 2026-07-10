@@ -53,6 +53,7 @@ from numcosmo_py.experiments.cluster_wl import (
 )
 from numcosmo_py.experiments.cluster_richness_count import (
     generate_cluster_richness_count,
+    load_cluster_richness_count,
 )
 from numcosmo_py.datasets.hicosmo import (
     SNIaID,
@@ -668,17 +669,60 @@ class GenerateClusterWL:
 
 @dataclasses.dataclass(kw_only=True)
 class GenerateClusterRichnessCount:
-    """Generate a mock cluster mass-richness-count experiment.
+    """Generate a cluster mass-richness-count experiment.
 
-    True log-masses and redshifts are drawn uniformly; the observed richness
-    (galaxy count) of each cluster is a Poisson-Lognormal realization implied
-    by a NcClusterMassAscaso model, keeping only clusters above the
-    selection cut.
+    By default generates a mock: true log-masses and redshifts are drawn
+    uniformly, and the observed richness (galaxy count) of each cluster is a
+    Poisson-Lognormal realization implied by a NcClusterMassAscaso model,
+    keeping only clusters above the selection cut.
+
+    If --data-file is given, real data is loaded instead (e.g. true halo
+    mass, redshift and galaxy count from a simulation catalog such as DC2,
+    with no projection/background contamination applied); the mock
+    generation options (n-clusters, mass-min/max, z-min/max, seed) are then
+    ignored.
     """
 
     experiment: Annotated[
         Path, typer.Argument(help="Path to the experiment file to write.")
     ]
+
+    data_file: Annotated[
+        Optional[Path],
+        typer.Option(
+            help=(
+                "Path to a FITS file with real cluster data (mass, redshift "
+                "and galaxy count columns). If given, real data is loaded "
+                "instead of generating a mock."
+            ),
+            exists=True,
+            readable=True,
+        ),
+    ] = None
+
+    mass_column: Annotated[
+        str,
+        typer.Option(help="Name of the halo mass column (--data-file only)."),
+    ] = "halo_mass"
+
+    redshift_column: Annotated[
+        str,
+        typer.Option(help="Name of the redshift column (--data-file only)."),
+    ] = "redshift"
+
+    n_gal_column: Annotated[
+        str,
+        typer.Option(help="Name of the true galaxy count column (--data-file only)."),
+    ] = "richness"
+
+    mass_in_log10: Annotated[
+        bool,
+        typer.Option(
+            help=("Mass column is log10(M) instead of linear M " "(--data-file only).")
+        ),
+    ] = False
+
+    hdu: Annotated[int, typer.Option(help="HDU number to read from the FITS file.")] = 1
 
     n_clusters: Annotated[
         int,
@@ -770,10 +814,11 @@ class GenerateClusterRichnessCount:
     ] = False
 
     def __post_init__(self):
-        """Generate a mock cluster mass-richness-count experiment.
+        """Generate or load a cluster mass-richness-count experiment.
 
         Raises:
-            ValueError: Invalid experiment file suffix or fit parameter.
+            ValueError: Invalid experiment file suffix, data column or fit
+                parameter.
         """
         Ncm.cfg_init()
 
@@ -782,22 +827,25 @@ class GenerateClusterRichnessCount:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        exp = generate_cluster_richness_count(
-            n_clusters=self.n_clusters,
-            lnM_min=float(np.log(self.mass_min)),
-            lnM_max=float(np.log(self.mass_max)),
-            z_min=self.z_min,
-            z_max=self.z_max,
-            mup0=self.mup0,
-            mup1=self.mup1,
-            mup2=self.mup2,
-            sigmap0=self.sigmap0,
-            sigmap1=self.sigmap1,
-            sigmap2=self.sigmap2,
-            cut=self.cut,
-            seed=self.seed,
-            summary=self.summary,
-        )
+        if self.data_file is not None:
+            exp = self._load_from_file()
+        else:
+            exp = generate_cluster_richness_count(
+                n_clusters=self.n_clusters,
+                lnM_min=float(np.log(self.mass_min)),
+                lnM_max=float(np.log(self.mass_max)),
+                z_min=self.z_min,
+                z_max=self.z_max,
+                mup0=self.mup0,
+                mup1=self.mup1,
+                mup2=self.mup2,
+                sigmap0=self.sigmap0,
+                sigmap1=self.sigmap1,
+                sigmap2=self.sigmap2,
+                cut=self.cut,
+                seed=self.seed,
+                summary=self.summary,
+            )
 
         mset = exp.peek("model-set")
         assert isinstance(mset, Ncm.MSet)
@@ -812,6 +860,43 @@ class GenerateClusterRichnessCount:
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
         ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
+
+    def _load_from_file(self) -> Ncm.ObjDictStr:
+        """Load real cluster data from self.data_file into an experiment.
+
+        Raises:
+            ValueError: A requested column is not present in the table.
+        """
+        from astropy.table import Table  # pylint: disable=import-outside-toplevel
+
+        assert self.data_file is not None
+        table = Table.read(self.data_file, hdu=self.hdu)
+
+        try:
+            mass = np.array(table[self.mass_column], dtype=float)
+            z = np.array(table[self.redshift_column], dtype=float)
+            n_gal = np.array(table[self.n_gal_column], dtype=float)
+        except KeyError as e:
+            available_cols = ", ".join(table.colnames)
+            raise ValueError(
+                f"Column {e} not found. Available columns: {available_cols}"
+            ) from e
+
+        lnM = mass * np.log(10.0) if self.mass_in_log10 else np.log(mass)
+
+        return load_cluster_richness_count(
+            lnM=lnM,
+            z=z,
+            N=n_gal,
+            mup0=self.mup0,
+            mup1=self.mup1,
+            mup2=self.mup2,
+            sigmap0=self.sigmap0,
+            sigmap1=self.sigmap1,
+            sigmap2=self.sigmap2,
+            cut=self.cut,
+            summary=self.summary,
+        )
 
 
 @dataclasses.dataclass(kw_only=True)
