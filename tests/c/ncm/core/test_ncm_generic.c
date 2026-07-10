@@ -59,6 +59,7 @@ void test_ncm_powspec_spline2d_basic (void);
 void test_ncm_pln1d_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
+void test_nc_data_cluster_mass_rich_count_basic (void);
 void test_nc_data_cluster_wl_basic (void);
 void test_nc_de_cont_basic (void);
 void test_nc_distance_basic (void);
@@ -145,6 +146,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/pln1d/basic", test_ncm_pln1d_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
+  g_test_add_func ("/nc/data/cluster_mass_rich_count/basic", test_nc_data_cluster_mass_rich_count_basic);
   g_test_add_func ("/nc/data/cluster_wl/basic", test_nc_data_cluster_wl_basic);
   g_test_add_func ("/nc/de_cont/basic", test_nc_de_cont_basic);
   g_test_add_func ("/nc/distance/basic", test_nc_distance_basic);
@@ -801,6 +803,24 @@ test_nc_data_cluster_mass_rich_basic (void)
   g_assert_true (NC_IS_DATA_CLUSTER_MASS_RICH (dcmr));
 
   NCM_TEST_FREE (nc_data_cluster_mass_rich_free, dcmr);
+}
+
+void
+test_nc_data_cluster_mass_rich_count_basic (void)
+{
+  NcDataClusterMassRichCount *dmrc = nc_data_cluster_mass_rich_count_new ();
+  NcDataClusterMassRichCount *dmrc2;
+
+  g_assert_true (dmrc != NULL);
+  g_assert_true (NC_IS_DATA_CLUSTER_MASS_RICH_COUNT (dmrc));
+
+  dmrc2 = nc_data_cluster_mass_rich_count_ref (dmrc);
+  nc_data_cluster_mass_rich_count_clear (&dmrc2);
+  g_assert_true (dmrc2 == NULL);
+
+  g_assert_true (NC_IS_DATA_CLUSTER_MASS_RICH_COUNT (dmrc));
+
+  NCM_TEST_FREE (nc_data_cluster_mass_rich_count_free, dmrc);
 }
 
 void
