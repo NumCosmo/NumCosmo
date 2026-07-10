@@ -46,7 +46,6 @@
 #include "ncm/core/ncm_util.h"
 #include "ncm/integration/ncm_integrate.h"
 #include "ncm/core/ncm_memory_pool.h"
-#include "ncm/core/ncm_pln1d.h"
 
 #include <gsl/gsl_sf_erf.h>
 
@@ -60,7 +59,6 @@ typedef struct _NcDataClusterMassRichPrivate
   NcmVector *z_original;
   NcmVector *lnR_original;
   NcmVector *sigma_lnR_original;
-  NcmPLN1D *pln1d;
 } NcDataClusterMassRichPrivate;
 
 enum
@@ -97,7 +95,6 @@ nc_data_cluster_mass_rich_init (NcDataClusterMassRich *dmr)
   self->z_original         = NULL;
   self->lnR_original       = NULL;
   self->sigma_lnR_original = NULL;
-  self->pln1d              = ncm_pln1d_new (120);
 }
 
 static void
@@ -218,18 +215,6 @@ nc_data_cluster_mass_rich_dispose (GObject *object)
   G_OBJECT_CLASS (nc_data_cluster_mass_rich_parent_class)->dispose (object);
 }
 
-static void
-nc_data_cluster_mass_rich_finalize (GObject *object)
-{
-  NcDataClusterMassRich *dmr                = NC_DATA_CLUSTER_MASS_RICH (object);
-  NcDataClusterMassRichPrivate * const self = nc_data_cluster_mass_rich_get_instance_private (dmr);
-
-  ncm_pln1d_clear (&self->pln1d);
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_data_cluster_mass_rich_parent_class)->finalize (object);
-}
-
 static guint _nc_data_cluster_mass_rich_get_length (NcmData *data);
 static guint _nc_data_cluster_mass_rich_get_dof (NcmData *data);
 static void _nc_data_cluster_mass_rich_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
@@ -245,7 +230,6 @@ nc_data_cluster_mass_rich_class_init (NcDataClusterMassRichClass *klass)
   object_class->set_property = nc_data_cluster_mass_rich_set_property;
   object_class->get_property = nc_data_cluster_mass_rich_get_property;
   object_class->dispose      = nc_data_cluster_mass_rich_dispose;
-  object_class->finalize     = nc_data_cluster_mass_rich_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_Z_CLUSTER,

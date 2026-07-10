@@ -5107,6 +5107,99 @@ class DataClusterMassRichClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.DataClass = ...
 
+class DataClusterMassRichCount(NumCosmoMath.Data):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterMassRichCount(**properties)
+        new() -> NumCosmo.DataClusterMassRichCount
+
+    Object NcDataClusterMassRichCount
+
+    Properties from NcDataClusterMassRichCount:
+      z-cluster -> NcmVector: z-cluster
+        Clusters (halo) redshift array
+      lnM-cluster -> NcmVector: lnM-cluster
+        Clusters (halo) ln-mass array
+      N-cluster -> NcmVector: N-cluster
+        Clusters (halo) richness (galaxy count) array
+      lnM-original -> NcmVector: lnM-original
+        Clusters (halo) ln-mass array with original data
+      z-original -> NcmVector: z-original
+        Clusters (halo) redshift array with original data
+      N-original -> NcmVector: N-original
+        Clusters (halo) richness (galaxy count) array with original data
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        N_cluster: NumCosmoMath.Vector
+        N_original: NumCosmoMath.Vector
+        lnM_cluster: NumCosmoMath.Vector
+        lnM_original: NumCosmoMath.Vector
+        z_cluster: NumCosmoMath.Vector
+        z_original: NumCosmoMath.Vector
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        N_cluster: NumCosmoMath.Vector = ...,
+        N_original: NumCosmoMath.Vector = ...,
+        lnM_cluster: NumCosmoMath.Vector = ...,
+        lnM_original: NumCosmoMath.Vector = ...,
+        z_cluster: NumCosmoMath.Vector = ...,
+        z_original: NumCosmoMath.Vector = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    def apply_cut(self, N_min: int) -> None: ...
+    @staticmethod
+    def clear(dmrc: DataClusterMassRichCount) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> DataClusterMassRichCount: ...
+    def peek_N(self) -> NumCosmoMath.Vector: ...
+    def peek_lnM(self) -> NumCosmoMath.Vector: ...
+    def peek_z(self) -> NumCosmoMath.Vector: ...
+    def ref(self) -> DataClusterMassRichCount: ...
+    def set_data(
+        self, lnM: NumCosmoMath.Vector, z: NumCosmoMath.Vector, N: NumCosmoMath.Vector
+    ) -> None: ...
+
+class DataClusterMassRichCountClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterMassRichCountClass()
+    """
+
+    parent_class: NumCosmoMath.DataClass = ...
+
 class DataClusterNCount(NumCosmoMath.Data):
     r"""
     :Constructors:
