@@ -227,6 +227,7 @@
 #include "nc/data/nc_data_cluster_ncounts_gauss.h"
 #include "nc/data/nc_data_cluster_wl.h"
 #include "nc/data/nc_data_cluster_mass_rich.h"
+#include "nc/data/nc_data_cluster_mass_rich_count.h"
 #include "nc/data/nc_data_cmb_shift_param.h"
 #include "nc/data/nc_data_cmb_dist_priors.h"
 #include "nc/data/nc_data_hubble.h"
@@ -889,6 +890,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_MASS_RICH);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_MASS_RICH_COUNT);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_SHIFT_PARAM);
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
