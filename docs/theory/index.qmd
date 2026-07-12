@@ -26,6 +26,8 @@ classes and methods.
 
 - [Galaxy Population & WL Framework](galaxy_wl_framework.qmd) — the Pop/Obs/ObsSel/Factor vocabulary, the fixed Z⇒P⇒S pipeline, and the per-galaxy data/cache idiom shared by every calculator.
 - [Galaxy Shapes and Ellipticity Frames](wl_ellipticity.qmd) — the shape forward model, ellipticity conventions, and the celestial/Euclidean handedness frames.
+- [A Small-Shear Series Marginalization for the Shape Likelihood](wl_shape_marginalization_series.qmd) — in-progress derivation of a Bessel-series marginalization scheme for the large-noise, small-$g$ regime.
+- [Fixed-Node Lens-Domain Quadrature for the Shape Likelihood](wl_shape_marginalization_fixed_quad.qmd) — a fast, series-free alternative: fixed-node quadrature over the noise-disk/unit-disc intersection in the lensed frame.
 
 ## Numerical Methods
 

@@ -1,0 +1,281 @@
+---
+title: Fixed-Node Lens-Domain Quadrature for the Shape Likelihood
+---
+
+# Fixed-Node Lens-Domain Quadrature for the Shape Likelihood
+
+::: {.callout-note}
+This page documents [[numcosmo|NcGalaxyShapeFactorFixedQuad]], a sibling of
+[[numcosmo|NcGalaxyShapeFactorQuad]] and the series-based schemes described in
+[A Small-Shear Series Marginalization](wl_shape_marginalization_series.qmd):
+same exact integral, no series truncation in $g$ anywhere, but a *fixed* node
+count over a much smaller domain than Quad's generic box, instead of Quad's
+adaptive Divonne cubature. Unlike [[numcosmo|NcGalaxyShapeFactorSeriesLensed]]
+(which caches a *truncated polynomial* approximation to a function that must
+stay positive, and so is guarded against — but not immune to — crossing
+zero at large $g$), this class removes the polynomial altogether. Every
+number quoted below was checked against an independent scipy oracle and
+against the real `Quad` C class. See `docs/theory/wl_shape_factor_history.md`
+for the design history behind this class.
+:::
+
+## The domain is an intersection of two discs
+
+The exact marginal, changed to the lensed variable $\chi_L=f_g(\chi_I)$
+(same substitution `Quad` and `SeriesLensed` already use),
+
+$$
+P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_L|<1} \mathrm{d}^2\chi_L\,
+P_\mathrm{pop}\big(f_g^{-1}(\chi_L)\big)\,
+\left|\det J_{f_g^{-1}}(\chi_L)\right|\,
+N_2\big(\epsilon_\mathrm{obs} - \chi_L;\, \sigma_\mathrm{noise}^2\big),
+$$
+
+has two independent domain restrictions: $P_\mathrm{pop}\circ f_g^{-1}$ is
+only supported on the unit disc ($R_1=1$, centered at the origin), and the
+noise kernel $N_2$ only has appreciable support within
+$R_2=n_\sigma\sigma_\mathrm{noise}$ of $\epsilon_\mathrm{obs}$ ($n_\sigma=8$,
+same windowing convention `SeriesLensed` uses — a Gaussian tail of
+$e^{-32}\sim10^{-14}$ beyond that). `Quad` integrates over the *whole* unit
+disc regardless, using two explicit peak hints and adaptive Divonne search to
+find where the integrand actually lives; that costs roughly 75 ms per
+evaluation. The domain actually needed is the **intersection** of the two
+discs — for the small-$\sigma_\mathrm{noise}$ regime this project cares
+about, a disc a few hundredths wide, not the whole unit disc.
+
+Three cases, entirely determined by $(R_1,R_2,d)=(1,\,n_\sigma\sigma_\mathrm{noise},\,
+|\epsilon_\mathrm{obs}|)$:
+
+1. **Noise disk contained in the unit disc** ($R_2\le R_1$ and
+   $d+R_2\le R_1$): the production regime. Plain polar quadrature centered
+   at $\epsilon_\mathrm{obs}$.
+2. **Unit disc contained in the noise disk** ($R_2>R_1$ and $d+R_1\le R_2$):
+   large $\sigma_\mathrm{noise}$. Polar quadrature centered at the *origin*.
+3. **Genuine partial overlap**: a two-circle "lens". A two-arc Coons-patch
+   blend, described below — with an important correction (an *effective*,
+   grown $R_2$ used only here, not for the checks above) covered in
+   [Why the Lens Branch Uses an Effective, Grown Noise-Disk Radius](#sec-boundary-fix).
+
+There is deliberately no fourth "no overlap" ($d\ge R_1+R_2$) case — see
+[Why the Lens Branch Uses an Effective, Grown Noise-Disk Radius](#sec-boundary-fix)
+for why.
+
+## Why the domain is $g$-independent — the actual speed story
+
+Nothing in $(R_1,R_2,d)$ depends on $g$: the noise kernel lives entirely in
+$\chi_L$-space, and $g$ only enters through the *integrand* value at a fixed
+node ($f_g^{-1}(\chi_L)$ and its Jacobian), never through where the nodes
+sit. So the node positions, quadrature weights, and even the noise-kernel
+VALUE at each node (also $g$-independent) are computed once per galaxy and
+cached, keyed only on $(R,\phi,\sigma_\mathrm{noise})=(|\epsilon_\mathrm{obs}|,
+\arg\epsilon_\mathrm{obs},\sigma_\mathrm{noise})$ — reused across every $g$ a
+fit tries. This is the key structural difference from the now-removed
+`NcGalaxyShapeFactorKnots`, which already did fixed-node
+quadrature but in $\chi_I$-space via a $(u,v)$ plane compactification: its
+integrand's peak moved with $g$, so it had to re-center its box (or, in its
+"adaptive" mode, re-run a Newton mode-search) on *every* evaluation. `Knots`
+was also explicitly documented as "not a recommended likelihood backend...
+meant to be poked at", with no accuracy validation — this class is the
+validated version of that idea, specific to the regime where its fixed grid
+is trustworthy (see [Limitations](#sec-limits)), and `Knots` was removed once
+it was superseded.
+
+Measured effect of this caching, at the production/crash configuration
+(200 evaluations of $g$ on the same galaxy, real C class):
+
+| | time/eval |
+|---|---|
+| `Quad` (adaptive Divonne) | 72.1 ms |
+| `FixedQuad` (this class) | 4.8 µs |
+| `SeriesLensed` (cached polynomial, for comparison) | 0.5 µs |
+
+`FixedQuad` is about **15,000× faster than `Quad`**, and about 9× slower
+than `SeriesLensed`'s $O(1)$ Horner evaluation (this class sums over
+$O(n_\mathrm{radial}\times n_\mathrm{angular})\sim225$ cached nodes per
+call) — but with no truncated polynomial anywhere, so no crash mode to guard
+against.
+
+### Hot-loop cost avoidance
+
+Three costs are avoided in the hot loop, together roughly 3.2× fewer
+instructions in the genuine-lens branch (the most expensive one), bit-identical
+output throughout:
+
+- The Jacobian is computed directly in linear scale
+  (`nc_wl_ellipticity_det_jac_{trace,trace_det}_c()`) rather than via the
+  log-based `lndet_jac_*_c()` followed by `exp()`, since this class sums
+  linearly rather than in log-space.
+- The per-galaxy domain cache's validity check compares the raw
+  `epsilon_obs_1`/`epsilon_obs_2` doubles directly, rather than recomputing
+  `R=hypot(eps_obs)`/`phi=atan2(eps_obs)` on every call — those are only
+  computed on the rare path that actually rebuilds the domain.
+- `apply_shear_inv`'s domain check compares `|g|^2<=1.0` rather than
+  `cabs(g)<=1.0`, avoiding a `sqrt` (mathematically identical, since `sqrt`
+  is monotonic) — in the shared `nc_wl_ellipticity.h`, so this also benefits
+  `Quad`, `VarAdd`, and `Laplace`.
+
+See `docs/theory/wl_shape_factor_history.md` for the profiling numbers
+behind these three fixes.
+
+## Branch 1: the noise-contained case exploits an exact symmetry
+
+In branch 1, quadrature is polar, centered at $\epsilon_\mathrm{obs}$:
+$r\in[0,R_2]$ via fixed Gauss–Legendre, $\theta$ over the full circle. The
+noise kernel $N_2(\epsilon_\mathrm{obs}-\chi_L)$ depends on $r$ alone here —
+it is exactly radially symmetric about its own center — so only the
+population/Jacobian factor varies with $\theta$, and that factor is smooth
+and $2\pi$-periodic. **Equally-spaced** $\theta$ nodes (not Gauss–Legendre)
+are then spectrally accurate, since a uniform trapezoidal rule is
+exponentially convergent for a smooth periodic integrand — the same Fourier
+structure the series schemes' Jacobi–Anger reduction exploits analytically,
+here exploited numerically instead. Measured at the crash configuration:
+
+| $n_\theta$ | equally-spaced | Gauss–Legendre |
+|---|---|---|
+| 4 | $1.3\times10^{-4}$ | $1.3\times10^{-3}$ |
+| 8 | $3.2\times10^{-9}$ | $7.6\times10^{-7}$ |
+| 10 | float floor | $1.5\times10^{-8}$ |
+| 15 | float floor | float floor |
+
+so the default `n-angular=15` carries a comfortable margin in this branch.
+This symmetry is specific to branch 1 (noise disk as the domain, centered on
+itself); branch 2 integrates over the unit disc centered at the *origin*,
+where the noise kernel is not radially symmetric, so it uses plain
+Gauss–Legendre in $\theta$ instead.
+
+## Branch 3: the lens domain, and a free correctness margin
+
+The genuine-overlap case is parametrized as a Coons-patch blend of two
+arcs: for $u\in[0,1]$, points on each circle's boundary
+($\theta_1(u)=(2u-1)\alpha$ on circle 1, $\theta_2(u)=(2u-1)\beta$ on circle
+2, with $\alpha,\beta$ the half-angles subtended by the chord joining the two
+intersection points) are linearly blended by $v\in[0,1]$. This traces out the
+lens interior without self-intersection (the two boundary angles move
+monotonically together), and the quadrature weight includes the resulting
+Jacobian.
+
+A useful, free property: at $u=0.5$, both $\theta_1$ and $\theta_2$ collapse
+to $0$, so both chord endpoints land exactly on the line joining the two
+circle centers — and because $d=|\epsilon_\mathrm{obs}|<1=R_1$ always holds
+for a physical observation, that line always passes through the noise disk's
+own center, i.e. through the peak of $N_2$. Odd-order Gauss–Legendre always
+places a node exactly at the midpoint of its interval (its nodes are
+symmetric about the center, and the center itself is always a root for odd
+$n$), so **forcing `n-lens` to the next odd number** guarantees a quadrature
+node lands exactly on that symmetry line, at zero extra cost. This does not
+by itself guarantee a node at the noise peak (the matching $v$ on that chord
+is not generally a node too), so it is a correctness margin, not a fix for
+narrow features — see below.
+
+Node counts needed for the lens branch are larger than for the contained
+branches (the domain is less symmetric): a sweep of 14 genuine-lens
+configurations found `n=15` giving a 22% worst-case error, `n=30` giving
+$4.5\times10^{-4}$, `n=40` giving $1.4\times10^{-5}$ — convergence is
+essentially spectral once past $n\sim25$, just needing more resolution than
+branch 1's clean circle. The shipped default, `n-lens=41` (rounded to odd),
+sits comfortably past that point.
+
+### A real cost cliff: which branch dominates in aggregate
+
+At `n-lens=41`, the lens branch costs $1681$ nodes vs. branch 1's $225$ —
+known and accepted in isolation, but the branch a given galaxy lands in
+depends on $\sigma_\mathrm{noise}$ relative to $1=R_1$, not on `n-lens`.
+Once $R_2=n_\sigma\sigma_\mathrm{noise}$ gets close to $R_1=1$
+(roughly $\sigma_\mathrm{noise}\in[0.09,0.2]$ for $n_\sigma=8$), *almost
+every* galaxy in a realistic population lands in the expensive lens branch
+(measured directly on a real dataset: 198/200 galaxies at
+$\sigma_\mathrm{noise}=0.12$), not just the tail. Below that range
+($\sigma_\mathrm{noise}\lesssim0.06$) most galaxies are cleanly in branch 1;
+above it ($\sigma_\mathrm{noise}\gtrsim0.25$, given this project's
+$\sigma_\mathrm{int}=0.28$) the noise disk swallows essentially the whole
+unit disc and branches into the equally cheap branch 2. So there is a real,
+narrow "expensive middle" in aggregate per-fit cost — Nelder-Mead needs the
+*same* iteration/function-eval count regardless (22 iterations, 24 evals,
+bit-identical fitted mass to `SeriesLensed` on the same data), confirming
+this is purely a per-evaluation cost effect from the branch mix, not a
+harder optimization landscape. Not yet addressed here (candidates: a
+smaller default `n-lens` given the branch-3 accuracy table above, or a
+per-galaxy adaptive `n-lens` capped by domain size, prototyped separately —
+see `dev-notes/wl_fixed_quad_lens_nlens_calibration.py`) — worth revisiting
+before treating this class as production-ready across the full
+`std_noise` range production actually uses.
+
+## {#sec-boundary-fix} Why the Lens Branch Uses an Effective, Grown Noise-Disk Radius
+
+The branch-3 (lens) domain degenerates at its own $d=R_1+R_2$ boundary: both
+two-arc half-angles $\alpha,\beta\to0$ there, collapsing the $(u,v)$ grid
+onto a single point regardless of node count — a parametrization
+degeneracy, not a resolution one. Right at/beyond that boundary, the
+surviving probability is also a deep $e^{-x^2}$ tail concentrated in a
+sliver near the disc edge closest to the observation, narrower the smaller
+$\sigma_\mathrm{noise}$ is, so a full-disc grid at a modest,
+uniformly-spaced node count has no reason to sample near it either.
+
+The domain construction therefore does not use the fixed $n_\sigma$ window
+for the lens branch's own integration bounds. Instead it grows an
+*effective* noise-disk radius just enough to guarantee real overlap depth
+into the unit disc:
+$$
+R_2^\mathrm{eff} = \max\!\big(R_2,\ (d-R_1) + n_\sigma^\mathrm{tail}\,
+\sigma_\mathrm{noise}\big), \qquad n_\sigma^\mathrm{tail}=n_\sigma=8,
+$$
+with a guard that falls through to branch 2 (full-disc) instead if this
+growth would itself already fully contain the unit disc (only relevant for
+$\sigma_\mathrm{noise}$ comparable to $R_1/n_\sigma^\mathrm{tail}$, i.e.
+large $\sigma_\mathrm{noise}$, where branch 2 is exact anyway). Since
+$R_1+R_2^\mathrm{eff} > d$ whenever $\sigma_\mathrm{noise}>0$, the
+degenerate $d=R_1+R_2$ boundary is never reached — this reuses the
+Coons-patch machinery unchanged, just reaching further. Verified smooth and
+accurate (sub-percent to a few percent, down to $\sim10^{-130}$-scale
+deep-tail values) against scipy across the actual $\sigma_\mathrm{noise}$
+range this project uses (0.03–0.3). See
+`docs/theory/wl_shape_factor_history.md` for the discontinuity this design
+avoids and a rejected alternative fix.
+
+## {#sec-limits} Limitation: narrow populations
+
+A fixed grid cannot resolve a population much narrower than its node
+spacing — the same blind spot an earlier, fixed-degree version of `Quad`
+itself had (see that class' own docs), which is exactly why `Quad` moved to
+adaptive Divonne cubature with explicit peak hints. Stress-tested directly
+against a Gaussian population narrower than production ever uses:
+
+| $\sigma_\mathrm{pop}$ | error (default nodes) |
+|---|---|
+| $0.4$ – $0.15$ (production range) | $\lesssim10^{-7}$ |
+| $0.1$ | $3.9\times10^{-8}$ |
+| $0.05$ | $1.9\times10^{-2}$ |
+| $0.02$ | wrong by dozens of orders of magnitude |
+
+A concentrated [[numcosmo|NcGalaxyShapePopBeta]] population shows the same
+pattern. Production only ever uses a Gaussian population with
+$\sigma_\mathrm{pop}\in(0.2,0.4)$ — comfortably inside the validated regime;
+use `Quad` for narrower or more exotic populations.
+
+Closing this gap for real would need Divonne-style active peak-seeking,
+which is exactly what `Quad` already is. See
+`docs/theory/wl_shape_factor_history.md` for an adaptive quadrature
+alternative that was tried and does not help.
+
+## Verified regimes
+
+All checked against both an independent scipy disc integral and the real
+`Quad` C class:
+
+- Real and complex $g$ through $|g|=0.99$ (well past where the series
+  schemes' truncated polynomial crosses zero) — accurate to
+  $\sim10^{-9}$, no crash.
+- $R=|\epsilon_\mathrm{obs}|$ from near-zero to $0.995$ (near the physical
+  disc boundary) — accurate once node counts clear the branch-3 threshold
+  above.
+- All three domain branches individually, each matched against the scipy
+  oracle.
+- Both ellipticity conventions ([[numcosmo|NcGalaxyWLObsEllipConv]]
+  `TRACE` and `TRACE_DET`).
+- Any population (not just Gaussian): each node evaluates
+  `nc_galaxy_shape_pop_eval_p()` directly, the same convention `Quad` uses —
+  unlike `SeriesLensed`, there is no Taylor-composition step requiring an
+  analytic population form, so no Gaussian-only guard.
+
+See `tests/python/nc/lss/galaxy/test_galaxy_shape_factor_fixed_quad.py` for
+the full test suite this page's numbers are drawn from.

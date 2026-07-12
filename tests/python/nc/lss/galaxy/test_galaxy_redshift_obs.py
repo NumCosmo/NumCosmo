@@ -58,7 +58,9 @@ def test_peak(model, z_true, sigma0):
     data = Nc.GalaxyRedshiftObsData.new(model)
     sz = sigma0 * (1.0 + z_true)
     model.data_set(data, z_true, sigma0)
-    assert_allclose(model.eval(data, z_true), 1.0 / (np.sqrt(2.0 * np.pi) * sz), rtol=1.0e-12)
+    assert_allclose(
+        model.eval(data, z_true), 1.0 / (np.sqrt(2.0 * np.pi) * sz), rtol=1.0e-12
+    )
 
 
 @pytest.mark.parametrize("z_true,sigma0", [(0.3, 0.05), (0.8, 0.03), (1.5, 0.1)])

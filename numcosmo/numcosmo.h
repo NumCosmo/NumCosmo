@@ -197,9 +197,10 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss_global.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_quad.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_knots.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_var_add.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_laplace.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h>

@@ -510,6 +510,7 @@ def ca_mean_bias_numerator(
 def data_bao_create(dist: Distance, id: DataBaoId) -> NumCosmoMath.Data: ...
 def data_cmb_create(dist: Distance, id: DataCMBId) -> NumCosmoMath.Data: ...
 def data_snia_cov_error_quark() -> int: ...
+def galaxy_shape_factor_error_quark() -> int: ...
 def halo_catalog_error_quark() -> int: ...
 def halo_catalog_member_generator_error_quark() -> int: ...
 def halo_density_profile_nfw_class_set_ni(num: bool) -> None: ...
@@ -5771,6 +5772,136 @@ class DataClusterWLClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.DataClass = ...
 
+class DataClusterWLFactor(NumCosmoMath.Data):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterWLFactor(**properties)
+        new(position_factor:NumCosmo.GalaxyPositionFactor, redshift_factor:NumCosmo.GalaxyRedshiftFactor, shape_factor:NumCosmo.GalaxyShapeFactor) -> NumCosmo.DataClusterWLFactor
+
+    Object NcDataClusterWLFactor
+
+    Properties from NcDataClusterWLFactor:
+      obs -> NcGalaxyWLObs: obs
+        Galaxy weak lensing observables
+      position-factor -> NcGalaxyPositionFactor: position-factor
+        Galaxy position factor calculator
+      redshift-factor -> NcGalaxyRedshiftFactor: redshift-factor
+        Galaxy redshift factor calculator
+      shape-factor -> NcGalaxyShapeFactor: shape-factor
+        Galaxy shape factor calculator
+      r-min -> gdouble: r-min
+        Minimum radius of the weak lensing observables
+      r-max -> gdouble: r-max
+        Maximum radius of the weak lensing observables
+      prec -> gdouble: prec
+        Precision for the z-integral
+      len -> guint: len
+        Number of galaxies
+      resample-flag -> NcDataClusterWLResampleFlag: resample-flag
+        Resample flag
+      integ-method -> NcDataClusterWLIntegMethod: integ-method
+        Integration method for the redshift integral
+      n-nodes -> guint: n-nodes
+        Number of fixed-quadrature panels (FIXED_NODES only)
+      rule-n -> guint: rule-n
+        Gauss-Legendre rule order per panel (FIXED_NODES only)
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        integ_method: DataClusterWLIntegMethod
+        len: int
+        n_nodes: int
+        obs: GalaxyWLObs
+        position_factor: GalaxyPositionFactor
+        prec: float
+        r_max: float
+        r_min: float
+        redshift_factor: GalaxyRedshiftFactor
+        resample_flag: DataClusterWLResampleFlag
+        rule_n: int
+        shape_factor: GalaxyShapeFactor
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        integ_method: DataClusterWLIntegMethod = ...,
+        n_nodes: int = ...,
+        obs: GalaxyWLObs = ...,
+        position_factor: GalaxyPositionFactor = ...,
+        prec: float = ...,
+        r_max: float = ...,
+        r_min: float = ...,
+        redshift_factor: GalaxyRedshiftFactor = ...,
+        resample_flag: DataClusterWLResampleFlag = ...,
+        rule_n: int = ...,
+        shape_factor: GalaxyShapeFactor = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(dcwlf: DataClusterWLFactor) -> None: ...
+    def eval_m2lnP_gal(
+        self, mset: NumCosmoMath.MSet, m2lnP_gal: NumCosmoMath.Vector
+    ) -> None: ...
+    def free(self) -> None: ...
+    def get_integ_method(self) -> DataClusterWLIntegMethod: ...
+    def get_n_nodes(self) -> int: ...
+    def get_resample_flag(self) -> DataClusterWLResampleFlag: ...
+    def get_rule_n(self) -> int: ...
+    @classmethod
+    def new(
+        cls,
+        position_factor: GalaxyPositionFactor,
+        redshift_factor: GalaxyRedshiftFactor,
+        shape_factor: GalaxyShapeFactor,
+    ) -> DataClusterWLFactor: ...
+    def peek_data_array(self) -> list[GalaxyShapeFactorData]: ...
+    def peek_obs(self) -> GalaxyWLObs: ...
+    def ref(self) -> DataClusterWLFactor: ...
+    def set_cut(self, r_min: float, r_max: float) -> None: ...
+    def set_integ_method(self, integ_method: DataClusterWLIntegMethod) -> None: ...
+    def set_n_nodes(self, n_nodes: int) -> None: ...
+    def set_obs(self, obs: GalaxyWLObs) -> None: ...
+    def set_prec(self, prec: float) -> None: ...
+    def set_resample_flag(self, resample_flag: DataClusterWLResampleFlag) -> None: ...
+    def set_rule_n(self, rule_n: int) -> None: ...
+
+class DataClusterWLFactorClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterWLFactorClass()
+    """
+
+    parent_class: NumCosmoMath.DataClass = ...
+
 class DataClusterWLPrivate(GObject.GPointer): ...
 
 class DataDistMu(NumCosmoMath.DataGaussDiag):
@@ -6923,12 +7054,12 @@ class GalaxyPositionFactor(GObject.Object):
         data: GalaxyPositionFactorData,
         rng: NumCosmoMath.RNG,
     ) -> None: ...
+    def do_get_hash(self) -> int: ...
     def do_integ(
         self, mset: NumCosmoMath.MSet, use_lnp: bool
     ) -> GalaxyPositionFactorIntegrand: ...
-    def do_prepare(
-        self, mset: NumCosmoMath.MSet, data: GalaxyPositionFactorData
-    ) -> None: ...
+    def do_prepare(self, mset: NumCosmoMath.MSet) -> None: ...
+    def do_update_data(self, data: GalaxyPositionFactorData) -> None: ...
     def free(self) -> None: ...
     def gen(
         self,
@@ -6936,13 +7067,13 @@ class GalaxyPositionFactor(GObject.Object):
         data: GalaxyPositionFactorData,
         rng: NumCosmoMath.RNG,
     ) -> None: ...
+    def get_hash(self) -> int: ...
     def integ(
         self, mset: NumCosmoMath.MSet, use_lnp: bool
     ) -> GalaxyPositionFactorIntegrand: ...
-    def prepare(
-        self, mset: NumCosmoMath.MSet, data: GalaxyPositionFactorData
-    ) -> None: ...
+    def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
     def ref(self) -> GalaxyPositionFactor: ...
+    def update_data(self, data: GalaxyPositionFactorData) -> None: ...
 
 class GalaxyPositionFactorClass(GObject.GPointer):
     r"""
@@ -6966,11 +7097,13 @@ class GalaxyPositionFactorClass(GObject.GPointer):
         ],
         None,
     ] = ...
-    prepare: typing.Callable[
-        [GalaxyPositionFactor, NumCosmoMath.MSet, GalaxyPositionFactorData], None
-    ] = ...
+    prepare: typing.Callable[[GalaxyPositionFactor, NumCosmoMath.MSet], None] = ...
     integ: typing.Callable[
         [GalaxyPositionFactor, NumCosmoMath.MSet, bool], GalaxyPositionFactorIntegrand
+    ] = ...
+    get_hash: typing.Callable[[GalaxyPositionFactor], int] = ...
+    update_data: typing.Callable[
+        [GalaxyPositionFactor, GalaxyPositionFactorData], None
     ] = ...
     padding: list[None] = ...
 
@@ -7185,6 +7318,7 @@ class GalaxyRedshiftFactor(GObject.Object):
         data: GalaxyRedshiftFactorData,
         rng: NumCosmoMath.RNG,
     ) -> bool: ...
+    def do_get_hash(self) -> int: ...
     def do_get_integ_lim(
         self, mset: NumCosmoMath.MSet, data: GalaxyRedshiftFactorData
     ) -> typing.Tuple[float, float]: ...
@@ -7194,9 +7328,8 @@ class GalaxyRedshiftFactor(GObject.Object):
     def do_norm(
         self, mset: NumCosmoMath.MSet, data: GalaxyRedshiftFactorData
     ) -> float: ...
-    def do_prepare(
-        self, mset: NumCosmoMath.MSet, data: GalaxyRedshiftFactorData
-    ) -> None: ...
+    def do_prepare(self, mset: NumCosmoMath.MSet) -> None: ...
+    def do_update_data(self, data: GalaxyRedshiftFactorData) -> None: ...
     def free(self) -> None: ...
     def gen(
         self,
@@ -7210,6 +7343,7 @@ class GalaxyRedshiftFactor(GObject.Object):
         data: GalaxyRedshiftFactorData,
         rng: NumCosmoMath.RNG,
     ) -> bool: ...
+    def get_hash(self) -> int: ...
     def get_integ_lim(
         self, mset: NumCosmoMath.MSet, data: GalaxyRedshiftFactorData
     ) -> typing.Tuple[float, float]: ...
@@ -7219,10 +7353,9 @@ class GalaxyRedshiftFactor(GObject.Object):
     def norm(
         self, mset: NumCosmoMath.MSet, data: GalaxyRedshiftFactorData
     ) -> float: ...
-    def prepare(
-        self, mset: NumCosmoMath.MSet, data: GalaxyRedshiftFactorData
-    ) -> None: ...
+    def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
     def ref(self) -> GalaxyRedshiftFactor: ...
+    def update_data(self, data: GalaxyRedshiftFactorData) -> None: ...
 
 class GalaxyRedshiftFactorClass(GObject.GPointer):
     r"""
@@ -7255,9 +7388,7 @@ class GalaxyRedshiftFactorClass(GObject.GPointer):
         ],
         bool,
     ] = ...
-    prepare: typing.Callable[
-        [GalaxyRedshiftFactor, NumCosmoMath.MSet, GalaxyRedshiftFactorData], None
-    ] = ...
+    prepare: typing.Callable[[GalaxyRedshiftFactor, NumCosmoMath.MSet], None] = ...
     integ: typing.Callable[
         [GalaxyRedshiftFactor, NumCosmoMath.MSet, bool], GalaxyRedshiftFactorIntegrand
     ] = ...
@@ -7269,6 +7400,10 @@ class GalaxyRedshiftFactorClass(GObject.GPointer):
         [GalaxyRedshiftFactor, NumCosmoMath.MSet, GalaxyRedshiftFactorData], float
     ] = ...
     make_fixed_nodes: None = ...
+    get_hash: typing.Callable[[GalaxyRedshiftFactor], int] = ...
+    update_data: typing.Callable[
+        [GalaxyRedshiftFactor, GalaxyRedshiftFactorData], None
+    ] = ...
     padding: list[None] = ...
 
 class GalaxyRedshiftFactorComposed(GalaxyRedshiftFactor):
@@ -9484,6 +9619,7 @@ class GalaxyShapeFactor(GObject.Object):
         E_obs: NumCosmoMath.Complex,
         E: NumCosmoMath.Complex,
     ) -> None: ...
+    def check_obs(self, obs: GalaxyWLObs) -> bool: ...
     @staticmethod
     def clear(gsf: GalaxyShapeFactor) -> None: ...
     def data_get(
@@ -9526,9 +9662,7 @@ class GalaxyShapeFactor(GObject.Object):
         epsilon_obs_1: float,
         epsilon_obs_2: float,
     ) -> float: ...
-    def do_prepare(
-        self, mset: NumCosmoMath.MSet, data: GalaxyShapeFactorData
-    ) -> None: ...
+    def do_prepare(self, mset: NumCosmoMath.MSet) -> None: ...
     def eval_at_nodes(
         self,
         mset: NumCosmoMath.MSet,
@@ -9562,12 +9696,16 @@ class GalaxyShapeFactor(GObject.Object):
         rng: NumCosmoMath.RNG,
     ) -> None: ...
     def get_ellip_conv(self) -> GalaxyWLObsEllipConv: ...
+    def get_optzs_hash(self) -> int: ...
+    def get_pop_hash(self) -> int: ...
+    def get_radius_hash(self) -> int: ...
     def integ(
         self, mset: NumCosmoMath.MSet, use_lnp: bool
     ) -> GalaxyShapeFactorIntegrand: ...
     def lndet_jac(
         self, g: NumCosmoMath.Complex, E_obs: NumCosmoMath.Complex
     ) -> float: ...
+    def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
     def prepare_data_array(
         self,
         mset: NumCosmoMath.MSet,
@@ -9585,6 +9723,13 @@ class GalaxyShapeFactor(GObject.Object):
         update_sigma: bool,
     ) -> bool: ...
     def ref(self) -> GalaxyShapeFactor: ...
+    def update_data_at_nodes_crit(
+        self, data: GalaxyShapeFactorData, z_nodes: NumCosmoMath.Vector
+    ) -> None: ...
+    def update_data_at_nodes_sigma(self, data: GalaxyShapeFactorData) -> None: ...
+    def update_data_optzs(self, data: GalaxyShapeFactorData) -> None: ...
+    def update_data_pop(self, data: GalaxyShapeFactorData) -> None: ...
+    def update_data_radius(self, data: GalaxyShapeFactorData) -> None: ...
 
 class GalaxyShapeFactorClass(GObject.GPointer):
     r"""
@@ -9599,9 +9744,7 @@ class GalaxyShapeFactorClass(GObject.GPointer):
     data_init: typing.Callable[
         [GalaxyShapeFactor, NumCosmoMath.MSet, GalaxyShapeFactorData], None
     ] = ...
-    prepare: typing.Callable[
-        [GalaxyShapeFactor, NumCosmoMath.MSet, GalaxyShapeFactorData], None
-    ] = ...
+    prepare: typing.Callable[[GalaxyShapeFactor, NumCosmoMath.MSet], None] = ...
     eval_marginal: typing.Callable[
         [
             GalaxyShapeFactor,
@@ -9676,43 +9819,24 @@ class GalaxyShapeFactorData(GObject.GBoxed):
     def unref(self) -> None: ...
     def write_row(self, obs: GalaxyWLObs, i: int) -> None: ...
 
-class GalaxyShapeFactorIntegrand(GObject.GBoxed):
+class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
     r"""
     :Constructors:
 
     ::
 
-        GalaxyShapeFactorIntegrand()
-    """
+        GalaxyShapeFactorFixedQuad(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorFixedQuad
 
-    func: typing.Callable[[None, float, GalaxyShapeFactorData], float] = ...
-    callback_data_free: typing.Callable[[None], None] = ...
-    callback_data_copy: typing.Callable[[None], None] = ...
-    callback_data_prepare: typing.Callable[[None, NumCosmoMath.MSet], None] = ...
-    callback_data: None = ...
-    def copy(self) -> GalaxyShapeFactorIntegrand: ...
-    def eval(self, z: float, data: GalaxyShapeFactorData) -> float: ...
-    def free(self) -> None: ...
-    def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
+    Object NcGalaxyShapeFactorFixedQuad
 
-class GalaxyShapeFactorKnots(GalaxyShapeFactor):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorKnots(**properties)
-        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorKnots
-
-    Object NcGalaxyShapeFactorKnots
-
-    Properties from NcGalaxyShapeFactorKnots:
-      bound -> gdouble: bound
-        Plane-integration box half-width
-      n -> guint: n
-        Number of knots per axis
-      method -> NcGalaxyShapeFactorKnotsMethod: method
-        Fixed-knot generation scheme
+    Properties from NcGalaxyShapeFactorFixedQuad:
+      n-radial -> guint: Number of radial nodes
+        Number of fixed Gauss-Legendre nodes in the radial direction
+      n-angular -> guint: Number of angular nodes
+        Number of angular quadrature nodes
+      n-lens -> guint: Number of lens-branch nodes
+        Number of fixed Gauss-Legendre nodes per axis in the genuine-lens branch
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -9723,41 +9847,104 @@ class GalaxyShapeFactorKnots(GalaxyShapeFactor):
     """
 
     class Props:
-        bound: float
-        method: GalaxyShapeFactorKnotsMethod
-        n: int
+        n_angular: int
+        n_lens: int
+        n_radial: int
         ellip_conv: GalaxyWLObsEllipConv
 
     props: Props = ...
     def __init__(
         self,
-        bound: float = ...,
-        method: GalaxyShapeFactorKnotsMethod = ...,
-        n: int = ...,
+        n_angular: int = ...,
+        n_lens: int = ...,
+        n_radial: int = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
     ) -> None: ...
     @staticmethod
-    def clear(gsfk: GalaxyShapeFactorKnots) -> None: ...
+    def clear(gsffq: GalaxyShapeFactorFixedQuad) -> None: ...
     def free(self) -> None: ...
-    def get_bound(self) -> float: ...
-    def get_method(self) -> GalaxyShapeFactorKnotsMethod: ...
-    def get_n(self) -> int: ...
     @classmethod
-    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorKnots: ...
-    def peek_nodes(self) -> NumCosmoMath.Vector: ...
-    def peek_weights(self) -> NumCosmoMath.Vector: ...
-    def ref(self) -> GalaxyShapeFactorKnots: ...
-    def set_bound(self, bound: float) -> None: ...
-    def set_method(self, method: GalaxyShapeFactorKnotsMethod) -> None: ...
-    def set_n(self, n: int) -> None: ...
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorFixedQuad: ...
+    def ref(self) -> GalaxyShapeFactorFixedQuad: ...
 
-class GalaxyShapeFactorKnotsClass(GObject.GPointer):
+class GalaxyShapeFactorFixedQuadClass(GObject.GPointer):
     r"""
     :Constructors:
 
     ::
 
-        GalaxyShapeFactorKnotsClass()
+        GalaxyShapeFactorFixedQuadClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
+class GalaxyShapeFactorIntegrand(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorIntegrand()
+        new(func:NumCosmo.GalaxyShapeFactorIntegrandFunc, callback_data_free:NumCosmo.GalaxyShapeFactorIntegrandFreeData, callback_data_copy:NumCosmo.GalaxyShapeFactorIntegrandCopyData, callback_data_prepare:NumCosmo.GalaxyShapeFactorIntegrandPrepareData, callback_data=None) -> NumCosmo.GalaxyShapeFactorIntegrand
+    """
+
+    func: typing.Callable[[None, float, GalaxyShapeFactorData], float] = ...
+    callback_data_free: typing.Callable[[None], None] = ...
+    callback_data_copy: typing.Callable[[None], None] = ...
+    callback_data_prepare: typing.Callable[[None, NumCosmoMath.MSet], None] = ...
+    callback_data: None = ...
+    def copy(self) -> GalaxyShapeFactorIntegrand: ...
+    def eval(self, z: float, data: GalaxyShapeFactorData) -> float: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        func: typing.Callable[..., float],
+        callback_data_free: typing.Callable[..., None],
+        callback_data_copy: typing.Callable[..., None],
+        callback_data_prepare: typing.Callable[..., None],
+        *callback_data: typing.Any,
+    ) -> GalaxyShapeFactorIntegrand: ...
+    def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
+
+class GalaxyShapeFactorLaplace(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorLaplace(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorLaplace
+
+    Object NcGalaxyShapeFactorLaplace
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(self, ellip_conv: GalaxyWLObsEllipConv = ...) -> None: ...
+    @staticmethod
+    def clear(gsfl: GalaxyShapeFactorLaplace) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorLaplace: ...
+    def ref(self) -> GalaxyShapeFactorLaplace: ...
+
+class GalaxyShapeFactorLaplaceClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorLaplaceClass()
     """
 
     parent_class: GalaxyShapeFactorClass = ...
@@ -9817,6 +10004,63 @@ class GalaxyShapeFactorQuadClass(GObject.GPointer):
     ::
 
         GalaxyShapeFactorQuadClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
+class GalaxyShapeFactorSeriesLensed(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorSeriesLensed(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv, trunc_order:int) -> NumCosmo.GalaxyShapeFactorSeriesLensed
+
+    Object NcGalaxyShapeFactorSeriesLensed
+
+    Properties from NcGalaxyShapeFactorSeriesLensed:
+      trunc-order -> guint: Truncation order
+        Truncation order N of the g-power series
+      n-nodes -> guint: Number of radial nodes
+        Number of fixed Gauss-Legendre nodes for the rho integral
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        n_nodes: int
+        trunc_order: int
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(
+        self,
+        n_nodes: int = ...,
+        trunc_order: int = ...,
+        ellip_conv: GalaxyWLObsEllipConv = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gsfsl: GalaxyShapeFactorSeriesLensed) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(
+        cls, ellip_conv: GalaxyWLObsEllipConv, trunc_order: int
+    ) -> GalaxyShapeFactorSeriesLensed: ...
+    def ref(self) -> GalaxyShapeFactorSeriesLensed: ...
+
+class GalaxyShapeFactorSeriesLensedClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorSeriesLensedClass()
     """
 
     parent_class: GalaxyShapeFactorClass = ...
@@ -9933,6 +10177,7 @@ class GalaxyShapePop(NumCosmoMath.Model):
     def gen(
         self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
     ) -> typing.Tuple[float, float]: ...
+    def get_mode_x(self, data: GalaxyShapePopData) -> float: ...
     def get_sigma(self, data: GalaxyShapePopData) -> float: ...
     @staticmethod
     def id() -> int: ...
@@ -10068,6 +10313,7 @@ class GalaxyShapePopData(GObject.GBoxed):
     ldata_write_row: typing.Callable[[GalaxyShapePopData, GalaxyWLObs, int], None] = ...
     ldata_required_columns: None = ...
     ldata_get_sigma: typing.Callable[[GalaxyShapePopData], float] = ...
+    ldata_get_mode_x: typing.Callable[[GalaxyShapePopData], float] = ...
     ref_count: int = ...
     @classmethod
     def new(cls, gsp: GalaxyShapePop) -> GalaxyShapePopData: ...
@@ -25167,8 +25413,8 @@ class GalaxySDTrueRedshiftLSSTSRDType(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class GalaxyShapeFactorKnotsMethod(GObject.GEnum):
-    CARTESIAN: GalaxyShapeFactorKnotsMethod = ...
+class GalaxyShapeFactorError(GObject.GEnum):
+    MISMATCH: GalaxyShapeFactorError = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -25180,6 +25426,8 @@ class GalaxyShapeFactorKnotsMethod(GObject.GEnum):
     _use_args_: bool = ...
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
+    @staticmethod
+    def quark() -> int: ...
 
 class GalaxyShapePopBetaParams(GObject.GEnum):
     MU: GalaxyShapePopBetaParams = ...

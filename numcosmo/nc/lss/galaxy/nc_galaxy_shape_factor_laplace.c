@@ -89,6 +89,19 @@ typedef struct _NcGalaxyShapeFactorLaplacePrivate
    * struct for why. */
   complex double (*apply_shear) (complex double g, complex double chi);
   complex double (*apply_shear_inv) (complex double g, complex double eps_obs);
+
+  /* TRACE_DET has a closed-form mode-finder (no apply_shear calls in its
+   * search loop, see nc_galaxy_shape_intrinsic_mode.c); TRACE still uses
+   * the generic finite-difference one. Dispatched once here, not per
+   * galaxy -- same "specialize and choose once" convention as apply_shear
+   * itself. */
+  gboolean use_closed_form_trace_det;
+
+  /* TEMPORARY, for an A/B experiment only -- not a shipped feature, remove
+   * after comparing production results with/without the closed-form TRACE
+   * mode-finder. Gated on an env var so both arms can be run from the same
+   * build. */
+  gboolean use_closed_form_trace;
 } NcGalaxyShapeFactorLaplacePrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyShapeFactorLaplace, nc_galaxy_shape_factor_laplace, NC_TYPE_GALAXY_SHAPE_FACTOR)
@@ -128,8 +141,13 @@ _nc_galaxy_shape_factor_laplace_eval (NcGalaxyShapeFactorLaplace *gsfl, NcGalaxy
   const complex double eps_obs                   = epsilon_obs_1 + I * epsilon_obs_2;
   NcGalaxyShapeIntrinsicMode mode;
 
-  nc_galaxy_shape_intrinsic_mode_find (self->apply_shear, self->apply_shear_inv,
-                                       pop, data->pop_data, g, eps_obs, data->std_noise, &mode);
+  if (self->use_closed_form_trace_det)
+    nc_galaxy_shape_intrinsic_mode_find_trace_det (pop, data->pop_data, g, eps_obs, data->std_noise, &mode);
+  else if (self->use_closed_form_trace)
+    nc_galaxy_shape_intrinsic_mode_find_trace (pop, data->pop_data, g, eps_obs, data->std_noise, &mode);
+  else
+    nc_galaxy_shape_intrinsic_mode_find (self->apply_shear, self->apply_shear_inv,
+                                         pop, data->pop_data, g, eps_obs, data->std_noise, &mode);
 
   return nc_galaxy_shape_intrinsic_mode_laplace (&mode);
 }
@@ -153,8 +171,10 @@ nc_galaxy_shape_factor_laplace_init (NcGalaxyShapeFactorLaplace *gsfl)
 {
   NcGalaxyShapeFactorLaplacePrivate * const self = nc_galaxy_shape_factor_laplace_get_instance_private (gsfl);
 
-  self->apply_shear     = NULL;
-  self->apply_shear_inv = NULL;
+  self->apply_shear               = NULL;
+  self->apply_shear_inv           = NULL;
+  self->use_closed_form_trace_det = FALSE;
+  self->use_closed_form_trace     = FALSE;
 }
 
 static void
@@ -170,12 +190,14 @@ _nc_galaxy_shape_factor_laplace_constructed (GObject *object)
     switch (ellip_conv)
     {
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-        self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace_c;
-        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace_c;
+        self->apply_shear         = &nc_wl_ellipticity_apply_shear_trace_c;
+        self->apply_shear_inv     = &nc_wl_ellipticity_apply_shear_inv_trace_c;
+        self->use_closed_form_trace = (g_getenv ("NC_TRACE_CLOSED_FORM") != NULL);
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-        self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace_det_c;
-        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace_det_c;
+        self->apply_shear               = &nc_wl_ellipticity_apply_shear_trace_det_c;
+        self->apply_shear_inv           = &nc_wl_ellipticity_apply_shear_inv_trace_det_c;
+        self->use_closed_form_trace_det = TRUE;
         break;
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */

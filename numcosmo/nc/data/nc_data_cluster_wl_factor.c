@@ -873,7 +873,7 @@ _nc_data_cluster_wl_factor_eval_m2lnP_lnint (NcDataClusterWLFactor *dcwlf, NcmMS
  * analytically through @norm). Direct translation of NcDataClusterWL's own
  * _nc_data_cluster_wl_fixed_panels_integ. */
 static gdouble
-_nc_data_cluster_wl_factor_fixed_panels_integ (NcDataClusterWLFactorPrivate * const self, guint gal_i, guint n_total_nodes, NcmVector *shape_at_nodes)
+_nc_data_cluster_wl_factor_fixed_panels_integ (NcDataClusterWLFactorPrivate * const self, guint gal_i, NcmVector *shape_at_nodes, NcmVector *sub)
 {
   NcmIntegralFixed *bg_intf = (NcmIntegralFixed *) g_ptr_array_index (self->fixed_bg_nodes, gal_i);
   const gdouble norm        = g_array_index (self->fixed_norm, gdouble, gal_i);
@@ -882,11 +882,8 @@ _nc_data_cluster_wl_factor_fixed_panels_integ (NcDataClusterWLFactorPrivate * co
 
   if (bg_intf != NULL)
   {
-    NcmVector *sub = ncm_vector_get_subvector (shape_at_nodes, 1, n_total_nodes);
-
     ncm_vector_add_constant (sub, -p_a);
     P += ncm_integral_fixed_integ_vec_mult (bg_intf, sub);
-    ncm_vector_free (sub);
   }
 
   return P;
@@ -898,7 +895,13 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
   const guint n_total_nodes                 = (self->n_nodes - 1) * self->rule_n;
   NcmVector *shape_at_nodes                 = ncm_vector_new (n_total_nodes + 1);
-  gdouble result                            = 0.0;
+
+  /* Always the same [1, n_total_nodes) view into shape_at_nodes (itself
+   * overwritten, not reallocated, every galaxy) -- built once per call
+   * instead of once per galaxy to avoid a GObject alloc/dispose per galaxy
+   * (ncm_vector_get_subvector is a full g_object_new). */
+  NcmVector *sub = (n_total_nodes > 0) ? ncm_vector_get_subvector (shape_at_nodes, 1, n_total_nodes) : NULL;
+  gdouble result = 0.0;
   guint gal_i;
 
   if (m2lnP_gal != NULL)
@@ -913,7 +916,7 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
 
     nc_galaxy_shape_factor_eval_at_nodes (self->shape_factor, mset, s_data, z_nodes, shape_at_nodes);
 
-    P_gal       = _nc_data_cluster_wl_factor_fixed_panels_integ (self, gal_i, n_total_nodes, shape_at_nodes) * int_pos;
+    P_gal       = _nc_data_cluster_wl_factor_fixed_panels_integ (self, gal_i, shape_at_nodes, sub) * int_pos;
     m2lnP_gal_i = P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
 
     if (!gsl_finite (m2lnP_gal_i))
@@ -931,6 +934,9 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
 
     result += m2lnP_gal_i;
   }
+
+  if (sub != NULL)
+    ncm_vector_free (sub);
 
   ncm_vector_free (shape_at_nodes);
 

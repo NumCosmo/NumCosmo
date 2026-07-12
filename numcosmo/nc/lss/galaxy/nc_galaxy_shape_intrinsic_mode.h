@@ -44,10 +44,8 @@ G_BEGIN_DECLS
  *   P_pop(chi_I) N_2(eps_obs - f_g(chi_I); std_noise^2),
  * over chi_I in the unit disc, plus the Hessian of its log at that point
  * (Cartesian chi_I_1, chi_I_2), for building a local Gaussian/Laplace
- * description of the peak. Not a GObject: a plain, stateless result struct,
- * shared internal machinery between #NcGalaxyShapeFactorKnots (peak
- * hint/re-centering) and #NcGalaxyShapeFactorLaplace (the analytic
- * approximation itself).
+ * description of the peak. Not a GObject: a plain, stateless result struct
+ * used by #NcGalaxyShapeFactorLaplace (the analytic approximation itself).
  */
 typedef struct _NcGalaxyShapeIntrinsicMode
 {

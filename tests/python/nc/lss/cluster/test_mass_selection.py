@@ -474,7 +474,9 @@ def test_cluster_mass_selection_distribution(
     ]
 
     for name, func in tests:
-        avg_time = timeit(func, number=1)  # timing smoke test; one pass covers each path
+        avg_time = timeit(
+            func, number=1
+        )  # timing smoke test; one pass covers each path
         print(f"Average time per execution cluster_m.p {name}: {avg_time:.6f} seconds")
 
 
@@ -496,7 +498,9 @@ def test_cluster_mass_selection_cumulative(
     ]
 
     for name, func in tests:
-        avg_time = timeit(func, number=1)  # timing smoke test; one pass covers each path
+        avg_time = timeit(
+            func, number=1
+        )  # timing smoke test; one pass covers each path
         print(
             f"Average time per execution cluster_m.intp {name}: {avg_time:.6f} seconds"
         )

@@ -35,7 +35,7 @@ resolved in the original study). It is a from-model MC acceptance gate, not a
 tight numerical parity check like Tier 1 -- it only needs to confirm the new
 pipeline exhibits the *same known pathology* (a significant, negative bias
 of comparable order of magnitude) before ``VarAdd`` is ever swapped for
-``Quad``/``Laplace``/``Knots`` to test whether that swap closes the gap.
+``Quad``/``Laplace``/``FixedQuad`` to test whether that swap closes the gap.
 
 A single 3000-galaxy cluster gives a *very* weak individual mass constraint
 (the per-realization scatter in the fitted log10MDelta is order 0.5-1 dex),
@@ -108,7 +108,9 @@ def _build():
         mset.set(model)
     mset.prepare_fparam_map()
 
-    position_factor = Nc.GalaxyPositionFactorFlat.new(-FIELD_HALF, FIELD_HALF, -FIELD_HALF, FIELD_HALF)
+    position_factor = Nc.GalaxyPositionFactorFlat.new(
+        -FIELD_HALF, FIELD_HALF, -FIELD_HALF, FIELD_HALF
+    )
     redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(0.0, 5.0)
     shape_factor = Nc.GalaxyShapeFactorVarAdd.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
 
@@ -117,7 +119,9 @@ def _build():
     s_data0 = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data0, z_data0)
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data0)
 
-    obs = Nc.GalaxyWLObs.new(Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, N_GAL, cols)
+    obs = Nc.GalaxyWLObs.new(
+        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, N_GAL, cols
+    )
     for i in range(N_GAL):
         for c in cols:
             obs.set(c, i, 0.0)
@@ -133,7 +137,11 @@ def _build():
     dset.append_data(dcwlf)
     likelihood = Ncm.Likelihood.new(dset)
     fit = Ncm.Fit.factory(
-        Ncm.FitType.NLOPT, "ln-neldermead", likelihood, mset, Ncm.FitGradType.NUMDIFF_FORWARD
+        Ncm.FitType.NLOPT,
+        "ln-neldermead",
+        likelihood,
+        mset,
+        Ncm.FitGradType.NUMDIFF_FORWARD,
     )
     fit.set_params_reltol(1.0e-8)
     fit.set_m2lnL_reltol(1.0e-9)
@@ -168,7 +176,7 @@ def test_mass_recovery_bias_matches_known_pathology():
 
     mean_log10m = converged.mean()
     sem_log10m = converged.std(ddof=1) / np.sqrt(len(converged))
-    mean_bias = 10.0 ** mean_log10m / 10.0 ** TRUE_LOG10M - 1.0
+    mean_bias = 10.0**mean_log10m / 10.0**TRUE_LOG10M - 1.0
     significance = (TRUE_LOG10M - mean_log10m) / sem_log10m
 
     assert mean_bias < 0.0, f"expected a negative mass bias, got {mean_bias:+.1%}"

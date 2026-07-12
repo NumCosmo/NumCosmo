@@ -24,7 +24,7 @@
  */
 
 /**
- * SECTION:nc_galaxy_shape_intrinsic_mode
+ * NcGalaxyShapeIntrinsicMode:
  *
  * Finds the joint mode (rho, theta) of
  * $P_\mathrm{pop}(\chi_I)\,N_2(\epsilon_\mathrm{obs}-f_g(\chi_I);\sigma_\mathrm{noise}^2)$
@@ -578,9 +578,8 @@ _trace_theta_hat_rot (const gdouble rho, const gdouble lam,
         /* t=tan(theta_B/4) where theta_B is the Weierstrass-substitution
          * variable from the symbolic derivation; the actual angle is
          * theta_B/2, NOT theta_B itself -- i.e. 2*atan(t)+branch*pi, not
-         * 4*atan(t)+branch*2pi (caught by re-deriving from the verified
-         * Python reference after this exact off-by-factor-of-2 bug caused
-         * a ~45% NAN-mismatch rate on first C implementation). */
+         * 4*atan(t)+branch*2pi. See docs/theory/wl_shape_factor_history.md
+         * for the off-by-factor-of-2 mistake this guards against. */
         const gdouble theta_rot = 2.0 * atan (zr) + branch * M_PI;
         const gdouble D2        = _trace_D2_only (rho, theta_rot, g_rot, 0.0, chiOr_r, chiOr_i);
 

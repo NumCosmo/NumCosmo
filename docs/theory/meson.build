@@ -7,6 +7,8 @@ src_site_theory_files = files(
     'wl_surface_mass_density.qmd',
     'wl_ellipticity.qmd',
     'galaxy_wl_framework.qmd',
+    'wl_shape_marginalization_series.qmd',
+    'wl_shape_marginalization_fixed_quad.qmd',
     'halo_density_profile.qmd',
     'fftlog.qmd',
     'spectral.qmd',

@@ -63,7 +63,11 @@ def _moment(model, data, power):
     special-purpose quadrature.
     """
     result, _ = integrate.quad(
-        lambda x: (x**power) * model.eval_p(data, x), 0.0, 1.0, epsabs=1.0e-12, epsrel=1.0e-10
+        lambda x: (x**power) * model.eval_p(data, x),
+        0.0,
+        1.0,
+        epsabs=1.0e-12,
+        epsrel=1.0e-10,
     )
     return result
 
@@ -107,10 +111,14 @@ def test_eval_p_rho2_matches_eval_p(name):
     model, data = _make(name)
     for rho2 in (1.0e-3, 0.1, 1.0, 5.0, 50.0):
         x = rho2 / (1.0 + rho2)
-        assert_allclose(model.eval_p_rho2(data, rho2), model.eval_p(data, x), rtol=1.0e-10)
+        assert_allclose(
+            model.eval_p_rho2(data, rho2), model.eval_p(data, x), rtol=1.0e-10
+        )
 
 
-@pytest.mark.parametrize("mu,nu", [(0.3, 1.0e4), (0.5, 1.0e3), (0.6, 1.0e4), (0.99, 1.0e3)])
+@pytest.mark.parametrize(
+    "mu,nu", [(0.3, 1.0e4), (0.5, 1.0e3), (0.6, 1.0e4), (0.99, 1.0e3)]
+)
 def test_beta_concentrated_no_overflow(mu, nu):
     """eval_p/eval_p_rho2 stay finite and normalized for concentrated Beta
     populations (large alpha=mu*nu, beta=(1-mu)*nu).

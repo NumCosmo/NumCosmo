@@ -17,6 +17,8 @@ project:
     - theory/transfer_func_eh.qmd
     - theory/wl_ellipticity.qmd
     - theory/galaxy_wl_framework.qmd
+    - theory/wl_shape_marginalization_series.qmd
+    - theory/wl_shape_marginalization_fixed_quad.qmd
     - theory/wl_surface_mass_density.qmd
     - theory/halo_density_profile.qmd
     - theory/fftlog.qmd
@@ -112,6 +114,10 @@ website:
                 text: "Galaxy Population & WL Framework"
               - href: theory/wl_ellipticity.qmd
                 text: "Weak-Lensing Ellipticity"
+              - href: theory/wl_shape_marginalization_series.qmd
+                text: "Small-Shear Series Marginalization"
+              - href: theory/wl_shape_marginalization_fixed_quad.qmd
+                text: "Fixed-Node Lens-Domain Quadrature"
           - section: "Clusters & Weak Lensing"
             contents:
               - href: theory/halo_density_profile.qmd

@@ -63,7 +63,9 @@ from numcosmo_py import Ncm, Nc
 Ncm.cfg_init()
 
 ELLIP_CONV = Nc.GalaxyWLObsEllipConv.TRACE_DET
-GALAXY = dict(ra=0.03, dec=-0.02, z=0.6, e1=0.05, e2=-0.02, std_noise=0.03, c1=0.0, c2=0.0, m=0.0)
+GALAXY = dict(
+    ra=0.03, dec=-0.02, z=0.6, e1=0.05, e2=-0.02, std_noise=0.03, c1=0.0, c2=0.0, m=0.0
+)
 
 
 def _build_persistent_mset():
@@ -106,7 +108,9 @@ def _set_config(mset, cosmo, hms, hp, pop, config, prev_config):
     being varied, so this mirrors real usage, not just this test's needs.
     """
     log10_mdelta, c_delta, hp_z, pop_sigma = config
-    plog10_mdelta, pc_delta, php_z, ppop_sigma = prev_config if prev_config is not None else (None,) * 4
+    plog10_mdelta, pc_delta, php_z, ppop_sigma = (
+        prev_config if prev_config is not None else (None,) * 4
+    )
 
     if log10_mdelta != plog10_mdelta:
         hms.param_set_by_name("log10MDelta", log10_mdelta)
@@ -140,8 +144,14 @@ def _make_data(gsf, mset):
     pos_data.dec = GALAXY["dec"]
     z_data.z = GALAXY["z"]
     gsf.data_set(
-        data, GALAXY["e1"], GALAXY["e2"], GALAXY["std_noise"],
-        GALAXY["c1"], GALAXY["c2"], GALAXY["m"], Nc.WLEllipticityFrame.CELESTIAL,
+        data,
+        GALAXY["e1"],
+        GALAXY["e2"],
+        GALAXY["std_noise"],
+        GALAXY["c1"],
+        GALAXY["c2"],
+        GALAXY["m"],
+        Nc.WLEllipticityFrame.CELESTIAL,
     )
     return data
 
@@ -192,7 +202,10 @@ def test_cached_matches_fresh_across_revisits(use_lnp):
         fresh_vals = [integ_fresh.eval(z, data_fresh) for z in _Z_EVAL]
 
         assert_allclose(
-            cached_vals, fresh_vals, rtol=1.0e-12, atol=0.0,
+            cached_vals,
+            fresh_vals,
+            rtol=1.0e-12,
+            atol=0.0,
             err_msg=f"cached vs fresh mismatch at config={config}",
         )
 
@@ -229,7 +242,11 @@ def test_hash_changes_when_driving_model_changes():
             plog10_mdelta, pc_delta, php_z, ppop_sigma = prev_config
 
             radius_should_change = hp_z != php_z
-            optzs_should_change = (log10_mdelta, c_delta, hp_z) != (plog10_mdelta, pc_delta, php_z)
+            optzs_should_change = (log10_mdelta, c_delta, hp_z) != (
+                plog10_mdelta,
+                pc_delta,
+                php_z,
+            )
             pop_should_change = pop_sigma != ppop_sigma
 
             if radius_should_change:
@@ -239,7 +256,11 @@ def test_hash_changes_when_driving_model_changes():
             if pop_should_change:
                 assert pop_hash != prev_pop_hash, config
 
-        prev_radius_hash, prev_optzs_hash, prev_pop_hash = radius_hash, optzs_hash, pop_hash
+        prev_radius_hash, prev_optzs_hash, prev_pop_hash = (
+            radius_hash,
+            optzs_hash,
+            pop_hash,
+        )
         prev_config = config
 
 

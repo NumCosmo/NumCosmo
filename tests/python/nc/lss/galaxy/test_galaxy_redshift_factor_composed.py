@@ -88,7 +88,9 @@ def test_integrand_parity(variant, zp, sigma0, zp_min, zp_max, use_lnp):
     new_integ = composed.integ(mset, use_lnp)
     old_integ = gsdor.integ(use_lnp)
 
-    zs = np.linspace(max(1.0e-2, zp - 3.0 * sigma0 * (1.0 + zp)), zp + 3.0 * sigma0 * (1.0 + zp), 200)
+    zs = np.linspace(
+        max(1.0e-2, zp - 3.0 * sigma0 * (1.0 + zp)), zp + 3.0 * sigma0 * (1.0 + zp), 200
+    )
     new_vals = np.array([new_integ.eval(z, new_data) for z in zs])
     old_vals = np.array([old_integ.eval(z, old_data) for z in zs])
     assert_allclose(new_vals, old_vals, rtol=1.0e-12, atol=0.0)

@@ -1196,6 +1196,42 @@ _nc_galaxy_shape_factor_integ_f (gpointer callback_data, const gdouble z, NcGala
 }
 
 /**
+ * nc_galaxy_shape_factor_integrand_new:
+ * @func: (scope async) (closure callback_data): a #NcGalaxyShapeFactorIntegrandFunc
+ * @callback_data_free: (scope async) (closure callback_data): a #NcGalaxyShapeFactorIntegrandFreeData
+ * @callback_data_copy: (scope async) (closure callback_data): a #NcGalaxyShapeFactorIntegrandCopyData
+ * @callback_data_prepare: (scope async) (closure callback_data): a #NcGalaxyShapeFactorIntegrandPrepareData
+ * @callback_data: a gpointer
+ *
+ * Creates a new galaxy shape integrand.
+ *
+ * Returns: (transfer full): a new NcGalaxyShapeFactorIntegrand object.
+ */
+/**
+ * nc_galaxy_shape_factor_integrand_copy:
+ * @callback_obj: a NcGalaxyShapeFactorIntegrand
+ *
+ * Copies the integrand for the galaxy shape data.
+ *
+ * Returns: (transfer full): a copy of @callback_obj
+ */
+/**
+ * nc_galaxy_shape_factor_integrand_free:
+ * @callback_obj: a NcGalaxyShapeFactorIntegrand
+ *
+ * Frees the integrand for the galaxy shape data.
+ *
+ */
+/**
+ * nc_galaxy_shape_factor_integrand_prepare:
+ * @callback_obj: a NcGalaxyShapeFactorIntegrand
+ * @mset: a #NcmMSet
+ *
+ * Prepares the integrand for the galaxy shape data.
+ *
+ */
+
+/**
  * nc_galaxy_shape_factor_integ:
  * @gsf: a #NcGalaxyShapeFactor
  * @mset: a #NcmMSet
@@ -1421,9 +1457,15 @@ nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, Nc
 void
 nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out)
 {
-  NcGalaxyShapeFactorClass *klass = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
-  NcHaloPosition *halo_position   = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
-  NcGalaxyShapePop *pop           = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+  NcGalaxyShapeFactorClass *klass         = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
+
+  /* halo_position/pop are already cached (ref-held, kept current by
+   * prepare()) -- read them from there instead of re-peeking mset, which
+   * would otherwise cost a hash-table lookup on every galaxy (this function
+   * runs once per galaxy per eval, not once per prepare() cycle). */
+  NcHaloPosition *halo_position   = self->halo_position;
+  NcGalaxyShapePop *pop           = self->pop;
   NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
   const gdouble z_cl              = nc_halo_position_get_redshift (halo_position);
   const gdouble et                = cdata->epsilon_obs_t;

@@ -88,15 +88,23 @@ def _eval_both(pop, ellip_conv, g, eps_obs, std_noise):
 
     gsfl = Nc.GalaxyShapeFactorLaplace.new(ellip_conv)
     data_l, _, _ = _build_factor_data(gsfl, mset)
-    gsfl.data_set(data_l, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+    gsfl.data_set(
+        data_l, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
     gsfl.prepare_data_array(mset, [data_l], True, True)
-    laplace_val = gsfl.eval_marginal(pop, data_l, g.real, g.imag, eps_obs.real, eps_obs.imag)
+    laplace_val = gsfl.eval_marginal(
+        pop, data_l, g.real, g.imag, eps_obs.real, eps_obs.imag
+    )
 
     gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
     data_q, _, _ = _build_factor_data(gsfq, mset)
-    gsfq.data_set(data_q, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+    gsfq.data_set(
+        data_q, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
     gsfq.prepare_data_array(mset, [data_q], True, True)
-    quad_val = gsfq.eval_marginal(pop, data_q, g.real, g.imag, eps_obs.real, eps_obs.imag)
+    quad_val = gsfq.eval_marginal(
+        pop, data_q, g.real, g.imag, eps_obs.real, eps_obs.imag
+    )
 
     return laplace_val, quad_val
 

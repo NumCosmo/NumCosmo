@@ -120,9 +120,7 @@ def test_wspline_lp_mset_func(cosmo_w: Nc.HICosmoDEWSpline, name: str) -> None:
     """The lp_* MSetFuncList entries take p = x[0] and match the C accessor."""
     rng = np.random.default_rng(42)
     w_len = cosmo_w.get_alpha().len()
-    cosmo_w.props.w = Ncm.Vector.new_array(
-        rng.uniform(-1.5, -0.5, size=w_len).tolist()
-    )
+    cosmo_w.props.w = Ncm.Vector.new_array(rng.uniform(-1.5, -0.5, size=w_len).tolist())
     ctype = (
         Ncm.SplineCurvatureType.GEOMETRIC
         if name == "lp_kappa"
@@ -258,9 +256,7 @@ def test_wspline_knots_uniform_is_evenly_spaced() -> None:
     """The uniform option spaces knots evenly in alpha and spreads the high-z end."""
     n = 8
     cheb = Nc.HICosmoDEWSpline.new(nknots=n, z_f=2.0)
-    uni = Nc.HICosmoDEWSpline(
-        zf=2.0, w_length=n, knots=Nc.HICosmoSplineKnots.UNIFORM
-    )
+    uni = Nc.HICosmoDEWSpline(zf=2.0, w_length=n, knots=Nc.HICosmoSplineKnots.UNIFORM)
     assert uni.props.knots.value_nick == "uniform"
 
     a_cheb = np.array(cheb.get_alpha().dup_array())
@@ -276,9 +272,7 @@ def test_wspline_knots_uniform_is_evenly_spaced() -> None:
 
 def test_wspline_knots_survive_serialization() -> None:
     """The knot-placement choice round-trips through serialization."""
-    uni = Nc.HICosmoDEWSpline(
-        zf=2.0, w_length=8, knots=Nc.HICosmoSplineKnots.UNIFORM
-    )
+    uni = Nc.HICosmoDEWSpline(zf=2.0, w_length=8, knots=Nc.HICosmoSplineKnots.UNIFORM)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     dup = ser.dup_obj(uni)
     assert dup.props.knots.value_nick == "uniform"

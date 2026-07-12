@@ -130,12 +130,19 @@ def test_marginal_matches_scipy_truth_table_gauss(ellip_conv, case):
 
     gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
     data, _, _ = _build_factor_data(gsfq, mset)
-    gsfq.data_set(data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+    gsfq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
     gsfq.prepare_data_array(mset, [data], True, True)
 
     quad_val = gsfq.eval_marginal(pop, data, g_1, g_2, eps_obs_1, eps_obs_2)
     exact_val = _scipy_exact_marginal(
-        pop, data.pop_data, ellip_conv, g_1 + 1j * g_2, eps_obs_1 + 1j * eps_obs_2, std_noise
+        pop,
+        data.pop_data,
+        ellip_conv,
+        g_1 + 1j * g_2,
+        eps_obs_1 + 1j * eps_obs_2,
+        std_noise,
     )
 
     assert_allclose(quad_val, exact_val, rtol=2.0e-4)
@@ -189,13 +196,19 @@ def test_marginal_matches_scipy_truth_table_narrow_gauss(case):
 
     gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
     data, _, _ = _build_factor_data(gsfq, mset)
-    gsfq.data_set(data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+    gsfq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
     gsfq.prepare_data_array(mset, [data], True, True)
 
     quad_val = gsfq.eval_marginal(pop, data, g_1, g_2, eps_obs_1, eps_obs_2)
     exact_val = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET,
-        g_1 + 1j * g_2, eps_obs_1 + 1j * eps_obs_2, std_noise,
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        g_1 + 1j * g_2,
+        eps_obs_1 + 1j * eps_obs_2,
+        std_noise,
     )
 
     assert_allclose(quad_val, exact_val, rtol=1.0e-4)
@@ -216,13 +229,19 @@ def test_marginal_matches_scipy_truth_table_narrow_trace_convention():
 
     gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE)
     data, _, _ = _build_factor_data(gsfq, mset)
-    gsfq.data_set(data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+    gsfq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
     gsfq.prepare_data_array(mset, [data], True, True)
 
     quad_val = gsfq.eval_marginal(pop, data, g_1, g_2, eps_obs_1, eps_obs_2)
     exact_val = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE,
-        g_1 + 1j * g_2, eps_obs_1 + 1j * eps_obs_2, std_noise,
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        g_1 + 1j * g_2,
+        eps_obs_1 + 1j * eps_obs_2,
+        std_noise,
     )
 
     assert_allclose(quad_val, exact_val, rtol=1.0e-4)
@@ -255,11 +274,15 @@ def test_marginal_matches_scipy_truth_table_beta_peaked_off_center(ellip_conv):
 
     gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
     data, _, _ = _build_factor_data(gsfq, mset)
-    gsfq.data_set(data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+    gsfq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
     gsfq.prepare_data_array(mset, [data], True, True)
 
     quad_val = gsfq.eval_marginal(pop, data, g.real, g.imag, eps_obs.real, eps_obs.imag)
-    exact_val = _scipy_exact_marginal(pop, data.pop_data, ellip_conv, g, eps_obs, std_noise)
+    exact_val = _scipy_exact_marginal(
+        pop, data.pop_data, ellip_conv, g, eps_obs, std_noise
+    )
 
     assert_allclose(quad_val, exact_val, rtol=1.0e-4)
 
@@ -281,7 +304,9 @@ def test_marginal_matches_scipy_truth_table_concentrated_beta():
     g = 0.1 + 0.05j
     eps_obs = 0.2 - 0.1j
     quad_val = gsfq.eval_marginal(pop, data, g.real, g.imag, eps_obs.real, eps_obs.imag)
-    exact_val = _scipy_exact_marginal(pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, g, eps_obs, 0.25)
+    exact_val = _scipy_exact_marginal(
+        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, g, eps_obs, 0.25
+    )
 
     assert_allclose(quad_val, exact_val, rtol=1.0e-4)
 
@@ -316,8 +341,14 @@ def test_required_columns():
 
     cols = Nc.GalaxyShapeFactorData.required_columns(data)
     own = [
-        "epsilon_int_1", "epsilon_int_2", "epsilon_obs_1", "epsilon_obs_2",
-        "std_noise", "c1", "c2", "m",
+        "epsilon_int_1",
+        "epsilon_int_2",
+        "epsilon_obs_1",
+        "epsilon_obs_2",
+        "std_noise",
+        "c1",
+        "c2",
+        "m",
     ]
     assert cols[: len(own)] == own
     for col in ("ra", "dec", "zp"):
@@ -352,7 +383,9 @@ def test_converges_to_var_add_as_shear_shrinks(ellip_conv):
     data_q, _, _ = _build_factor_data(gsfq, mset)
 
     for gsf, data in ((gsfva, data_va), (gsfq, data_q)):
-        gsf.data_set(data, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+        gsf.data_set(
+            data, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+        )
         gsf.prepare_data_array(mset, [data], True, True)
 
     eps_obs_1, eps_obs_2 = 0.1, -0.05

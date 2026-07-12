@@ -100,9 +100,16 @@ def _build_mset():
 
     mset = Ncm.MSet.empty_new()
     for model in (
-        cosmo, dp, hp, smd,
-        pop_shape, pop_z, obs_z,
-        sd_obs_z, sd_pos, sd_shape,  # sd_true_z auto-registers as sd_obs_z's submodel
+        cosmo,
+        dp,
+        hp,
+        smd,
+        pop_shape,
+        pop_z,
+        obs_z,
+        sd_obs_z,
+        sd_pos,
+        sd_shape,  # sd_true_z auto-registers as sd_obs_z's submodel
     ):
         mset.set(model)
     mset.prepare_fparam_map()
@@ -236,12 +243,16 @@ def test_m2lnL_fixed_nodes_matches_lnint():
 
     position_factor, redshift_factor, shape_factor, new_obs = _build_new_obs(mset)
 
-    dcwlf_fixed = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_fixed = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_fixed.set_obs(new_obs)
     dcwlf_fixed.set_prec(1.0e-8)
     dcwlf_fixed.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
 
-    dcwlf_lnint = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_lnint = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_lnint.set_obs(new_obs)
     dcwlf_lnint.set_prec(1.0e-8)
     dcwlf_lnint.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
@@ -381,7 +392,9 @@ def test_fixed_nodes_resample_reuse_is_a_known_shared_limitation():
 
     position_factor, redshift_factor, shape_factor, new_obs = _build_new_obs(mset)
 
-    dcwlf_reused = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_reused = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_reused.set_obs(new_obs)
     dcwlf_reused.set_prec(1.0e-8)
     dcwlf_reused.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
@@ -391,7 +404,9 @@ def test_fixed_nodes_resample_reuse_is_a_known_shared_limitation():
 
     reused_val = dcwlf_reused.m2lnL_val(mset)
 
-    dcwlf_fresh = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_fresh = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_fresh.set_obs(new_obs)  # same, now-resampled catalog
     dcwlf_fresh.set_prec(1.0e-8)
     dcwlf_fresh.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
@@ -400,7 +415,9 @@ def test_fixed_nodes_resample_reuse_is_a_known_shared_limitation():
 
     # A fresh instance (the actually-supported usage pattern) is internally
     # consistent with LNINT on the same catalog...
-    dcwlf_lnint = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_lnint = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_lnint.set_obs(new_obs)
     dcwlf_lnint.set_prec(1.0e-8)
     dcwlf_lnint.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
@@ -495,7 +512,9 @@ def test_fixed_nodes_correct_after_swapping_obs_to_different_sized_catalog():
     small_galaxies = _GALAXIES[:3]
     small_obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(small_galaxies), cols)
 
-    for i, (ra, dec, zp, sigma0, e1, e2, std_noise, c1, c2, m) in enumerate(small_galaxies):
+    for i, (ra, dec, zp, sigma0, e1, e2, std_noise, c1, c2, m) in enumerate(
+        small_galaxies
+    ):
         small_obs.set("ra", i, ra)
         small_obs.set("dec", i, dec)
         small_obs.set("z", i, 0.0)
@@ -513,7 +532,9 @@ def test_fixed_nodes_correct_after_swapping_obs_to_different_sized_catalog():
     dcwlf.set_obs(small_obs)
     swapped_val = dcwlf.m2lnL_val(mset)
 
-    dcwlf_fresh = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_fresh = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_fresh.set_obs(small_obs)
     dcwlf_fresh.set_prec(1.0e-8)
     dcwlf_fresh.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)

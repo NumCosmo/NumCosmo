@@ -73,9 +73,7 @@ def test_full_window_mass_is_physical_norm():
     for z in (0.2, 1.0, 2.5):
         sigmaz = 0.05 * (1.0 + z)
         expected = 0.5 * erfc(-z / (np.sqrt(2.0) * sigmaz))
-        assert_allclose(
-            obs_pop.window_mass(z, 0.0, np.inf), expected, rtol=1.0e-12
-        )
+        assert_allclose(obs_pop.window_mass(z, 0.0, np.inf), expected, rtol=1.0e-12)
 
 
 if __name__ == "__main__":

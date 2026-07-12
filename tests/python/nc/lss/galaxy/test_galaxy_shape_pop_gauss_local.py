@@ -128,7 +128,16 @@ def test_local_matches_global_at_equal_e_rms(ellip_conv):
         z_data = data.z_data
         pos_data.ra, pos_data.dec = 0.03, 0.02
         z_data.z = 0.9
-        gsf.data_set(data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL)
+        gsf.data_set(
+            data,
+            0.05,
+            -0.02,
+            0.03,
+            0.005,
+            -0.003,
+            0.05,
+            Nc.WLEllipticityFrame.CELESTIAL,
+        )
 
     pop_local = mset_local.peek(Nc.GalaxyShapePop.id())
     pop_local_data = data_l.pop_data
@@ -179,7 +188,9 @@ def test_integ_parity_legacy_per_galaxy(ellip_conv, galaxy, use_lnp):
     old_integ.prepare(mset)
 
     for zz in np.linspace(0.05, 1.5, 50):
-        assert_allclose(new_integ.eval(zz, data), old_integ.eval(zz, ls_data), rtol=1.0e-8)
+        assert_allclose(
+            new_integ.eval(zz, data), old_integ.eval(zz, ls_data), rtol=1.0e-8
+        )
 
 
 if __name__ == "__main__":

@@ -77,30 +77,26 @@
  * still reliably finds the true peak from there in every case tested, see
  * below). $f_g(0)$ is convention-dependent -- exactly $g$ in the TRACE_DET
  * (ellipticity) convention, but $2g/(1+\lvert g\rvert^2)$ in the TRACE
- * (distortion) convention -- so it is computed via the actual forward map,
- * not hardcoded as $g$ (an earlier version of this hint did exactly that and
- * silently missed the peak for narrow, off-center TRACE-convention
- * populations).
+ * (distortion) convention -- so it is computed via the actual forward map
+ * rather than hardcoded as $g$, since hardcoding it would miss the peak for
+ * narrow, off-center TRACE-convention populations.
  *
- * An earlier version of this class evaluated $P_\mathrm{pop}$ directly at
- * $\chi_I$ (not $\chi_L$) via the h-adaptive #NcmIntegralND cubature, then
- * via Cuhre with a box scaled to $\sigma_\mathrm{noise}$: both silently
- * returned confidently wrong results (off by orders of magnitude, at tight
- * reltol) whenever the population was narrow relative to the box AND
- * off-center -- Cuhre's fixed-degree base rule has no mechanism to notice an
- * isolated narrow feature it never samples near. Divonne's explicit peak
- * hints solve this directly (they tell it where to look, rather than relying
- * on it to stumble onto the feature by chance), which is why @bound can go
- * back to being a single fixed constant: shrinking it does not help an
- * already-hint-found narrow feature, but does progressively truncate a
- * broad population's disc-spanning support, so keep it generous (a few units
- * already covers the disc for any population, same reasoning as the
- * pre-$\chi_L$ version of this class). Verified against an independent scipy
- * reference across populations from $\sigma=0.30$ down to $\sigma=0.001$,
- * five different $g$/$\epsilon_\mathrm{obs}$/$\sigma_\mathrm{noise}$
- * geometries (including near the disc boundary), and #NcGalaxyShapePopBeta
- * concentrations up to $\nu=10^5$: every case matches to $\sim\!10^{-6}$
- * relative accuracy or better, with no known remaining failure mode.
+ * Divonne's explicit peak hints matter: a fixed-degree base rule with no
+ * explicit hints (e.g. Cuba's Cuhre) has no mechanism to notice an isolated
+ * feature it never samples near, and can return a confidently wrong result
+ * (off by orders of magnitude, at tight reltol) whenever the population is
+ * narrow relative to the integration box and off-center. Because Divonne is
+ * told where to look, @bound can be a single generous fixed constant:
+ * shrinking it does not help an already-hint-found narrow feature, but does
+ * progressively truncate a broad population's disc-spanning support (a few
+ * units already covers the disc for any population). Verified against an
+ * independent scipy reference across populations from $\sigma=0.30$ down to
+ * $\sigma=0.001$, five different $g$/$\epsilon_\mathrm{obs}$/
+ * $\sigma_\mathrm{noise}$ geometries (including near the disc boundary), and
+ * #NcGalaxyShapePopBeta concentrations up to $\nu=10^5$: every case matches
+ * to $\sim\!10^{-6}$ relative accuracy or better. See
+ * docs/theory/wl_shape_factor_history.md for earlier implementations of
+ * this class that were tried and rejected.
  *
  * The integrand clamps any non-finite evaluation to zero before returning:
  * Cuba can segfault outright on a NaN/Inf sample (reproduced directly), and
@@ -109,9 +105,8 @@
  * which can coincide with a peak hint).
  *
  * This scheme is exact but substantially more expensive per evaluation than
- * `VarAdd` (a full 2D cubature vs. one closed-form expression) or even the
- * previous Cuhre-based version of this class: Divonne with two hints
- * typically costs $\sim\!100\,\mathrm{ms}$ per evaluation, rising to several
+ * `VarAdd` (a full 2D cubature vs. one closed-form expression): Divonne with
+ * two hints typically costs $\sim\!100\,\mathrm{ms}$ per evaluation, rising to several
  * seconds for extremely concentrated populations. It is meant as an accuracy
  * reference / fallback for regimes where the variance-add approximation is
  * not trusted, not as a routine replacement in large-catalog likelihood

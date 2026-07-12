@@ -163,8 +163,14 @@ def test_gen_parity_legacy(ellip_conv, galaxy):
     for _ in range(50):
         gsf.gen(mset, s_data, rng_new)
         lshape.gen(
-            mset, ls_data, std_noise, c1, c2, m,
-            Nc.WLEllipticityFrame.CELESTIAL, rng_old,
+            mset,
+            ls_data,
+            std_noise,
+            c1,
+            c2,
+            m,
+            Nc.WLEllipticityFrame.CELESTIAL,
+            rng_old,
         )
         e1, e2, *_ = lshape.data_get(ls_data)
         assert s_data.epsilon_int_1 == ls_data.epsilon_int_1
@@ -227,8 +233,14 @@ def test_direct_estimate_parity_legacy(ellip_conv):
 
         gsf.gen(mset, new_i[1], rng_new)
         lshape.gen(
-            mset, legacy_i[1], std_noise, c1, c2, m,
-            Nc.WLEllipticityFrame.CELESTIAL, rng_old,
+            mset,
+            legacy_i[1],
+            std_noise,
+            c1,
+            c2,
+            m,
+            Nc.WLEllipticityFrame.CELESTIAL,
+            rng_old,
         )
         new_array.append(new_i[1])
         old_array.append(legacy_i[1])
@@ -264,8 +276,14 @@ def test_required_columns():
 
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
     own = [
-        "epsilon_int_1", "epsilon_int_2", "epsilon_obs_1", "epsilon_obs_2",
-        "std_noise", "c1", "c2", "m",
+        "epsilon_int_1",
+        "epsilon_int_2",
+        "epsilon_obs_1",
+        "epsilon_obs_2",
+        "std_noise",
+        "c1",
+        "c2",
+        "m",
     ]
     assert cols[: len(own)] == own
     # Upstream position and redshift fragments append theirs.
@@ -280,7 +298,9 @@ def test_eval_marginal_dispatch(ellip_conv):
     gsf, s_data, _, _ = _build_new(mset, ellip_conv)
     pop = mset.peek(Nc.GalaxyShapePop.id())
 
-    gsf.data_set(s_data, 0.04, -0.03, 0.03, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+    gsf.data_set(
+        s_data, 0.04, -0.03, 0.03, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
 
     p = gsf.eval_marginal(pop, s_data, 0.02, 0.01, 0.04, -0.03)
     lnp = gsf.eval_ln_marginal(pop, s_data, 0.02, 0.01, 0.04, -0.03)

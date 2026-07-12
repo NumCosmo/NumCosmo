@@ -134,11 +134,13 @@ NCM_INLINE gdouble nc_wl_ellipticity_celestial_to_frame_angle (NcWLEllipticityFr
 NCM_INLINE complex double nc_wl_ellipticity_apply_shear_trace_c (complex double g, complex double chi);
 NCM_INLINE complex double nc_wl_ellipticity_apply_shear_inv_trace_c (complex double g, complex double chi_obs);
 NCM_INLINE gdouble nc_wl_ellipticity_lndet_jac_trace_c (complex double g, complex double chi_obs);
+NCM_INLINE gdouble nc_wl_ellipticity_det_jac_trace_c (complex double g, complex double chi_obs);
 
 /* Inline complex double kernels (TRACE_DET convention: ellipticity epsilon). */
 NCM_INLINE complex double nc_wl_ellipticity_apply_shear_trace_det_c (complex double g, complex double e);
 NCM_INLINE complex double nc_wl_ellipticity_apply_shear_inv_trace_det_c (complex double g, complex double e_obs);
 NCM_INLINE gdouble nc_wl_ellipticity_lndet_jac_trace_det_c (complex double g, complex double e_obs);
+NCM_INLINE gdouble nc_wl_ellipticity_det_jac_trace_det_c (complex double g, complex double e_obs);
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -197,24 +199,64 @@ nc_wl_ellipticity_lndet_jac_trace_c (complex double g, complex double chi_obs)
     return 3.0 * log (abs_g2 - 1.0) - lndet_jac_den;
 }
 
+/* Same quantity as nc_wl_ellipticity_lndet_jac_trace_c(), but the linear
+ * (not log) Jacobian directly: exp(lndet_jac_trace_c(g,chi_obs)) ==
+ * det_jac_trace_c(g,chi_obs) to machine precision (see
+ * tests/c/nc/lss/wl/test_nc_wl_ellipticity.c), computed WITHOUT the
+ * log1p/log + exp round-trip. Callers that sum the marginal linearly
+ * (rather than in log-space) should use this directly instead of exp()-ing
+ * the log form, to avoid that round-trip. */
+NCM_INLINE gdouble
+nc_wl_ellipticity_det_jac_trace_c (complex double g, complex double chi_obs)
+{
+  const complex double g_conj = conj (g);
+  const gdouble abs_g2        = creal (g * g_conj);
+  const gdouble den           = fabs (1.0 - 2.0 * creal (g_conj * chi_obs) + abs_g2);
+  const gdouble jac_den       = den * den * den;
+  const gdouble num_base      = (abs_g2 <= 1.0) ? (1.0 - abs_g2) : (abs_g2 - 1.0);
+  const gdouble jac_num       = num_base * num_base * num_base;
+
+  return jac_num / jac_den;
+}
+
 /* TRACE_DET convention (ellipticity epsilon). */
+
+/* Naive complex division: skips the overflow/underflow guarding libc's
+ * general complex division (__divdc3) does, which is unneeded here since
+ * g/e are always within/near the unit disk. This matters because
+ * nc_galaxy_shape_intrinsic_mode.c's per-galaxy mode search calls
+ * apply_shear/apply_shear_inv repeatedly inside a finite-difference Newton
+ * search, where __divdc3's overflow/underflow guards dominate runtime. */
+static inline complex double
+_nc_wl_ellipticity_cdiv (const complex double a, const complex double b)
+{
+  const gdouble br    = creal (b);
+  const gdouble bi    = cimag (b);
+  const gdouble denom = br * br + bi * bi;
+
+  return ((creal (a) * br + cimag (a) * bi) + I * (cimag (a) * br - creal (a) * bi)) / denom;
+}
 
 NCM_INLINE complex double
 nc_wl_ellipticity_apply_shear_trace_det_c (complex double g, complex double e)
 {
-  if (cabs (g) <= 1.0)
-    return (e + g) / (1.0 + conj (g) * e);
+  /* cabs(g)<=1.0 compares a square root against 1 -- comparing the squared
+   * magnitude instead is mathematically identical (sqrt is monotonic) and
+   * avoids the sqrt entirely. This branch runs on every call since g
+   * changes every call, unlike quantities that can be cached per galaxy. */
+  if (creal (g) * creal (g) + cimag (g) * cimag (g) <= 1.0)
+    return _nc_wl_ellipticity_cdiv (e + g, 1.0 + conj (g) * e);
   else
-    return (1.0 + g * conj (e)) / (conj (e) + conj (g));
+    return _nc_wl_ellipticity_cdiv (1.0 + g * conj (e), conj (e) + conj (g));
 }
 
 NCM_INLINE complex double
 nc_wl_ellipticity_apply_shear_inv_trace_det_c (complex double g, complex double e_obs)
 {
-  if (cabs (g) <= 1.0)
-    return (e_obs - g) / (1.0 - conj (g) * e_obs);
+  if (creal (g) * creal (g) + cimag (g) * cimag (g) <= 1.0)
+    return _nc_wl_ellipticity_cdiv (e_obs - g, 1.0 - conj (g) * e_obs);
   else
-    return (1.0 - g * conj (e_obs)) / (conj (e_obs) - conj (g));
+    return _nc_wl_ellipticity_cdiv (1.0 - g * conj (e_obs), conj (e_obs) - conj (g));
 }
 
 NCM_INLINE gdouble
@@ -240,6 +282,34 @@ nc_wl_ellipticity_lndet_jac_trace_det_c (complex double g, complex double e_obs)
     const gdouble ln_jac_den       = 2.0 * log (abs_e_obs_m_g2);
 
     return ln_jac_num - ln_jac_den;
+  }
+}
+
+/* Same quantity as nc_wl_ellipticity_lndet_jac_trace_det_c(), but the linear
+ * (not log) Jacobian directly -- see nc_wl_ellipticity_det_jac_trace_c()'s
+ * docs for the rationale. */
+NCM_INLINE gdouble
+nc_wl_ellipticity_det_jac_trace_det_c (complex double g, complex double e_obs)
+{
+  const complex double g_conj     = conj (g);
+  const complex double e_obs_conj = conj (e_obs);
+  const gdouble abs_g2            = creal (g * g_conj);
+
+  if (abs_g2 <= 1.0)
+  {
+    const gdouble abs_e_obs2 = creal (e_obs * e_obs_conj);
+    const gdouble num_base   = 1.0 - abs_g2;
+    const gdouble den_base   = 1.0 - 2.0 * creal (g_conj * e_obs) + abs_g2 * abs_e_obs2;
+
+    return (num_base * num_base) / (den_base * den_base);
+  }
+  else
+  {
+    const complex double e_obs_m_g = e_obs - g;
+    const gdouble abs_e_obs_m_g2   = creal (e_obs_m_g * conj (e_obs_m_g));
+    const gdouble num_base         = abs_g2 - 1.0;
+
+    return (num_base * num_base) / (abs_e_obs_m_g2 * abs_e_obs_m_g2);
   }
 }
 
