@@ -361,3 +361,4 @@ nc_galaxy_redshift_obs_get_true_z_lim (NcGalaxyRedshiftObs *gsdre, NcGalaxyRedsh
 {
   NC_GALAXY_REDSHIFT_OBS_GET_CLASS (gsdre)->get_true_z_lim (gsdre, data, z_min, z_max);
 }
+

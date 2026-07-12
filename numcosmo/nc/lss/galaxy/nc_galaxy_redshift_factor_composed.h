@@ -51,3 +51,4 @@ void nc_galaxy_redshift_factor_composed_get_zp_lim (NcGalaxyRedshiftFactorCompos
 G_END_DECLS
 
 #endif /* _NC_GALAXY_REDSHIFT_FACTOR_COMPOSED_H_ */
+

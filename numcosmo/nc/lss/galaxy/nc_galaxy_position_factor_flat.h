@@ -50,3 +50,4 @@ void nc_galaxy_position_factor_flat_get_dec_lim (NcGalaxyPositionFactorFlat *gsp
 G_END_DECLS
 
 #endif /* _NC_GALAXY_POSITION_FACTOR_FLAT_H_ */
+

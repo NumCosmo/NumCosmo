@@ -81,8 +81,8 @@ static void
 nc_galaxy_redshift_obs_sel_gauss_class_init (NcGalaxyRedshiftObsSelGaussClass *klass)
 {
   NcGalaxyRedshiftObsSelClass *gsdrop_class = NC_GALAXY_REDSHIFT_OBS_SEL_CLASS (klass);
-  GObjectClass *object_class                               = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class                               = NCM_MODEL_CLASS (klass);
+  GObjectClass *object_class                = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class                = NCM_MODEL_CLASS (klass);
 
   object_class->finalize = &_nc_galaxy_redshift_obs_sel_gauss_finalize;
 
@@ -140,7 +140,7 @@ NcGalaxyRedshiftObsSelGauss *
 nc_galaxy_redshift_obs_sel_gauss_new (void)
 {
   NcGalaxyRedshiftObsSelGauss *gsdropg = g_object_new (NC_TYPE_GALAXY_REDSHIFT_OBS_SEL_GAUSS,
-                                                                       NULL);
+                                                       NULL);
 
   return gsdropg;
 }
@@ -185,3 +185,4 @@ nc_galaxy_redshift_obs_sel_gauss_clear (NcGalaxyRedshiftObsSelGauss **gsdropg)
 {
   g_clear_object (gsdropg);
 }
+

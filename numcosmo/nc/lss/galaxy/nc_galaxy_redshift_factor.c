@@ -129,9 +129,9 @@ _nc_galaxy_redshift_factor_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, Nc
 
 static NcmIntegralFixed *
 _nc_galaxy_redshift_factor_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset,
-                                         NcGalaxyRedshiftFactorData *data,
-                                         gdouble z_lo, gdouble z_hi,
-                                         guint n_nodes, guint rule_n)
+                                             NcGalaxyRedshiftFactorData *data,
+                                             gdouble z_lo, gdouble z_hi,
+                                             guint n_nodes, guint rule_n)
 {
   g_error ("_nc_galaxy_redshift_factor_make_fixed_nodes: method not implemented");
 
@@ -147,14 +147,14 @@ nc_galaxy_redshift_factor_class_init (NcGalaxyRedshiftFactorClass *klass)
 
   object_class->finalize = &_nc_galaxy_redshift_factor_finalize;
 
-  klass->data_init           = &_nc_galaxy_redshift_factor_data_init;
-  klass->gen                 = &_nc_galaxy_redshift_factor_gen;
-  klass->gen1                = &_nc_galaxy_redshift_factor_gen1;
-  klass->prepare             = &_nc_galaxy_redshift_factor_prepare;
-  klass->integ               = &_nc_galaxy_redshift_factor_integ;
-  klass->get_integ_lim       = &_nc_galaxy_redshift_factor_get_integ_lim;
-  klass->norm                = &_nc_galaxy_redshift_factor_norm;
-  klass->make_fixed_nodes    = &_nc_galaxy_redshift_factor_make_fixed_nodes;
+  klass->data_init        = &_nc_galaxy_redshift_factor_data_init;
+  klass->gen              = &_nc_galaxy_redshift_factor_gen;
+  klass->gen1             = &_nc_galaxy_redshift_factor_gen1;
+  klass->prepare          = &_nc_galaxy_redshift_factor_prepare;
+  klass->integ            = &_nc_galaxy_redshift_factor_integ;
+  klass->get_integ_lim    = &_nc_galaxy_redshift_factor_get_integ_lim;
+  klass->norm             = &_nc_galaxy_redshift_factor_norm;
+  klass->make_fixed_nodes = &_nc_galaxy_redshift_factor_make_fixed_nodes;
 }
 
 /**
@@ -459,3 +459,4 @@ nc_galaxy_redshift_factor_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSe
 {
   return NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->make_fixed_nodes (gsdr, mset, data, z_lo, z_hi, n_nodes, rule_n);
 }
+

@@ -349,3 +349,4 @@ nc_galaxy_position_factor_integ (NcGalaxyPositionFactor *gspf, NcmMSet *mset, gb
 {
   return NC_GALAXY_POSITION_FACTOR_GET_CLASS (gspf)->integ (gspf, mset, use_lnp);
 }
+

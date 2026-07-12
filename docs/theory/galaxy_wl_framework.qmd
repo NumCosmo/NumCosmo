@@ -1,0 +1,258 @@
+---
+title: The Galaxy Population & Weak-Lensing Framework
+---
+
+# The Galaxy Population & Weak-Lensing Framework
+
+NumCosmo builds a galaxy weak-lensing likelihood out of small, single-purpose
+pieces rather than one monolithic class per survey. This page is the map: the
+vocabulary shared by every piece, how they nest into a pipeline, and how a
+single galaxy's data flows through it. It does not derive any physics —
+the shape forward model lives on the
+[Weak-Lensing Ellipticity](wl_ellipticity.qmd) page, the projected mass on
+[Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd) — this page
+is about the *shape* of the code, so that those physics pages (and the
+classes themselves) are easier to place. To see the framework used end to
+end, generating a mock catalog, see the
+[Simulating a Weak-Lensing Galaxy Catalog](../tutorials/python/galaxy_wl_mock.qmd)
+tutorial.
+
+## Three Kinds of Object
+
+Every galaxy observable (sky position, redshift, shape) is described by up to
+three collaborating objects, distinguished by what they own and where they
+live:
+
+**Models** ([[math|NcmModel]] subclasses, registered in an [[math|NcmMSet]])
+carry the *fitted parameters* of a pure conditional density. They are
+evaluated at values handed to them; they never integrate, never touch a
+catalog row, never know how many galaxies exist. A model is where a sampler
+or optimizer looks for degrees of freedom.
+
+**Calculators** (plain `GObject`s, *not* models, *not* in the `MSet`) own the
+*mechanism*: the per-galaxy data layout, the file/catalog I/O, the generative
+draw, and — where relevant — the marginalization/integration recipe. A
+calculator reads whichever models it needs from an `NcmMSet` passed into each
+call; it never stores a reference to one — mirroring the
+[[numcosmo|NcDistance]] pattern of resolving cosmology on every call rather
+than caching it.
+
+**Orchestrators** sit above the calculators and wire a fixed pipeline of
+them together for a specific likelihood or generator (e.g.
+[[numcosmo|NcDataClusterWL]]). This layer is still being built for the new
+framework described here; see [Current Status](#sec-status).
+
+Distinguishing calc-vs-model is mostly by *type*, reinforced by naming: a
+bare object name (`NcGalaxyRedshiftFactor`) is a calculator; a name with a
+role suffix (`NcGalaxyRedshiftPop`, `NcGalaxyShapePopGauss`) is a model.
+
+## The Role Vocabulary
+
+Within each physical quantity (redshift, position, shape), models and
+calculators are named by the *role* they play, not by which survey or
+implementation they encode. The reserved role tokens are:
+
+- **`Pop`** — the distribution of a galaxy population's *true* property,
+  $p(\mathrm{true})$, e.g. $p(z)$ for the redshift distribution of a source
+  sample ([[numcosmo|NcGalaxyRedshiftPop]],
+  [[numcosmo|NcGalaxyRedshiftPopLSSTSRD]]) or $p(\chi_I)$ for the intrinsic
+  ellipticity of a population ([[numcosmo|NcGalaxyShapePopGauss]],
+  [[numcosmo|NcGalaxyShapePopBeta]]).
+- **`Obs`** — the observational model for a *single* object,
+  $p(d \mid \mathrm{true})$, whose scatter is per-galaxy *data* (e.g. each
+  galaxy's own photo-$z$ error $\sigma_0$,
+  [[numcosmo|NcGalaxyRedshiftObsGauss]]).
+- **`ObsSel`** — the *population-level* observable law, also
+  $p(d \mid \mathrm{true})$ but as a mixture over per-object scatter whose
+  width is a fitted population parameter, not per-galaxy data. Its windows
+  define observable-space selection and marginals such as $P(z_p)$. `Obs` and
+  `ObsSel` are different mathematical objects (single-object conditional vs.
+  population mixture) that only happen to coincide for a Gaussian kernel.
+- **`Factor`** — the likelihood-factor *calculator role*: a normalized
+  conditional density that (a) composes multiplicatively / by marginalization
+  into a data likelihood, and (b) doubles as a generative node for sampling
+  (every `Factor` carries a `gen`). `NcGalaxyRedshiftFactor` assembles the
+  per-observation redshift factor $p(z_p, z)$; `NcGalaxyShapeFactor` the
+  per-observation shape factor $p(\epsilon_\mathrm{obs} \mid z, \dots)$.
+  Note the factors are a *mix* of priors (`Pop` terms) and likelihoods (`Obs`
+  terms) — "factor in the computation of the (marginal) likelihood," not
+  "every factor is itself a likelihood."
+- **`Binning`** — a distinct calculator role, standalone rather than a
+  `Factor` scheme: the dn/dz and $P(z_p)$ population-level query
+  ([[numcosmo|NcGalaxyRedshiftBinning]]), consumed by cross-correlation
+  tooling independently of any per-galaxy likelihood.
+
+Where a calculator role has more than one implementation strategy, they are
+*schemes* sharing one abstract base — e.g. `NcGalaxyRedshiftFactorComposed`
+(true-$z$ kernel $\otimes$ photo-$z$ error kernel) is one scheme of
+`NcGalaxyRedshiftFactor`, mirroring how [[numcosmo|NcPowspecMLTransfer]] and
+friends are schemes of [[math|NcmPowspec]]. The scheme name is appended
+after the role (`Factor` + `Composed`), never a numerical-method name.
+
+## The Fixed Pipeline: Z ⇒ P ⇒ S
+
+A galaxy observation nests three factors in a fixed order — redshift, then
+position, then shape — because each later stage conditions on the earlier
+ones (the shape likelihood needs the source redshift to compute the reduced
+shear; the position, in the general case, can depend on it too). The nesting
+is a "russian doll": the shape factor's data holds a reference to the
+position factor's data, which can hold a reference to the redshift factor's
+data. What is pluggable is *within* each level — which scheme, which models
+fill its slots — never the Z ⇒ P ⇒ S order itself.
+
+Concretely, [[numcosmo|NcGalaxyShapeFactorData]] carries flat pointers to the
+upstream fragments:
+
+```c
+struct _NcGalaxyShapeFactorData
+{
+  NcGalaxyPositionFactorData *pos_data;
+  NcGalaxyRedshiftFactorData *z_data;
+  NcGalaxyShapePopData       *pop_data;
+  ...
+};
+```
+
+so the shape engine can read `ra`/`dec` (for the lens geometry) and `z` (for
+the shear and the intrinsic-model evaluation) without re-deriving them. If a
+future stage needs a field it does not yet have — e.g. a clustered position
+scheme reading the source redshift for magnification bias — the fix is
+additive: add a pointer to that struct, not a redesign.
+
+## Data Objects: Fragments, Vtables, and the Catalog
+
+Every calculator's per-galaxy `...Data` struct (`NcGalaxyRedshiftFactorData`,
+`NcGalaxyPositionFactorData`, `NcGalaxyShapeFactorData`, and each `Pop`
+model's `...PopData`) follows the same small idiom, so that any of them can be
+stored, generated, or replayed the same way:
+
+- a few **typed public fields** for the universal, always-present part of the
+  observation (e.g. `z`, `ra`/`dec`, `epsilon_obs_1/2`);
+- an opaque **`ldata`** pointer for whatever the concrete scheme/model needs
+  that isn't universal (e.g. the Composed redshift scheme's cached
+  $\{z_p, \sigma_0\}$ fragment, or a `Pop` model's resolved
+  $\{\sigma, \mathrm{norm}\}$);
+- a **fragment vtable** of four function pointers travelling with `ldata`:
+  `ldata_read_row`, `ldata_write_row`, `ldata_required_columns`, and
+  `ldata_destroy`. These are set once, in the constructing scheme's
+  `data_init`, and never switched on again afterwards — so reading/writing a
+  row is a plain vtable call, not a per-row type dispatch.
+
+`ldata_required_columns` takes a `GList **` (not `GList *`): each level
+*appends* its own column names to the list threaded down from its caller, so
+the columns needed by a whole pipeline (position + redshift + shape) can be
+collected by concatenating what every level reports, with no level needing to
+know the others' column names in advance.
+
+The **catalog** these rows are read from and written to is
+[[numcosmo|NcGalaxyWLObs]] — a plain matrix of named `double` columns (an
+[[math|NcmCatalog]] subclass) with one extra per-row field for a photo-$z$
+spline, plus the ellipticity convention ($\chi$ vs. $\epsilon$) and
+handedness frame it was recorded in. It carries *no* calculator- or
+model-specific knowledge: it is just storage, addressed by column name. A
+factor's `data_new(calculator, mset, ...)` allocates the typed fragments (a
+model-identity-dependent, param-*independent* layout, so it is safe to reuse
+across every galaxy and every `prepare()` in an MCMC chain — no per-step
+reallocation); `write_row`/`read_row` move a fragment to/from one row of the
+shared `NcGalaxyWLObs`.
+
+## Caches and the Hot-Loop Discipline
+
+A galaxy's shape likelihood is evaluated at many source-redshift nodes during
+one $z$-integral, and that integral runs once per galaxy per likelihood
+evaluation — so anything that does *not* depend on the integration variable
+must be computed exactly once per galaxy, not once per node. This discipline
+shows up as two kinds of cache:
+
+**Engine-owned geometry caches** (`cdata` on `NcGalaxyShapeFactorData`):
+the projected radius from the lens, the rotation into the tangential/cross
+frame, and the surface-mass-density optimization structs
+([[numcosmo|NcWLSurfaceMassDensityOptzs]] and the critical/$\Sigma$ caches)
+are all resolved once by
+[[numcosmo|nc_galaxy_shape_factor_prepare_data_array]] /
+`..._prepare_data_array_at_nodes`, opaque to the marginalization subclasses —
+by the time `eval_marginal`/`eval_ln_marginal` run, the reduced shear and
+observed ellipticity are already in the tangential/cross frame, so no
+subclass ever repeats that work per node.
+
+**Per-galaxy resolved model state** (`ldata` on a `Pop` model's `...Data`):
+the same principle applies one level down. `NcGalaxyShapePopGaussLocal`, for
+instance, must invert a per-galaxy target $e_\mathrm{rms}$ into the internal
+Gaussian width $\sigma$ by bisection — an $O(\log)$ root-find that would be
+wasteful to repeat at every $z$-node, so the calculators keep to a strict rule: anything that
+does not depend on the integration variable is resolved once, in `prepare()`,
+never inside the marginalization loop. `NcGalaxyShapePopGaussLocal`'s
+`prepare()` vfunc runs the bisection once per galaxy and caches
+$\{\sigma, \sigma^{-2}/2, \mathrm{norm}\}$ into `ldata`; `eval_p`,
+called once per node thereafter, only ever reads the cache.
+
+### Optional Capabilities via the Data Vtable
+
+The same per-galaxy `...Data` struct is also how a model advertises an
+*optional* capability to a consumer it doesn't otherwise know about, without
+resorting to a concrete-type check. `NcGalaxyShapePopData` carries a fifth,
+optional vtable slot,
+
+```c
+gdouble (*ldata_get_sigma) (NcGalaxyShapePopData *data);
+```
+
+`NULL` unless the concrete `Pop` model parameterizes its density through an
+(untruncated) Gaussian width — true for both `NcGalaxyShapePopGauss`
+(Global) and `NcGalaxyShapePopGaussLocal` (per-galaxy), false for
+`NcGalaxyShapePopBeta`. `NcGalaxyShapeFactorVarAdd` (the variance-add
+marginalization scheme) needs exactly this width and gets it through the
+base-level dispatcher `nc_galaxy_shape_pop_get_sigma()`, which reads the slot
+and raises a clear error if it is `NULL`. This is the reason
+`NcGalaxyShapePopGaussLocal` is a *sibling* of `NcGalaxyShapePopGauss` — both
+derive directly from `NcGalaxyShapePop` and fill this slot with the same
+function — rather than a subclass kept around only so a concrete type-check
+would accept it: the capability the consumer needs is expressed on the shared
+data, not on the class hierarchy.
+
+## Generation and Likelihood Share One Engine
+
+Every `Factor` calculator carries both a `gen` (draw a synthetic observation)
+and an `integ`/`eval_marginal` path (evaluate the likelihood factor), built
+from the *same* per-galaxy data and the *same* cached geometry — there is no
+separate "simulation mode" struct. This is deliberate: it guarantees the
+mock generator and the likelihood agree on every convention (frame, sign,
+calibration order) by construction, since they are, quite literally, the same
+code evaluated in different directions. The
+[Simulating a Weak-Lensing Galaxy Catalog](../tutorials/python/galaxy_wl_mock.qmd)
+tutorial exercises exactly this: the same `NcGalaxyShapeFactorVarAdd` instance
+first generates a catalog with `gen`, then evaluates its own likelihood
+factor for it with `integ`.
+
+## Current Status {#sec-status}
+
+As of this writing, the redshift (`Composed` scheme), position (`Flat`
+scheme) and shape (`VarAdd` marginalization scheme) factors are implemented
+and validated bit-for-bit or to tight tolerance against the legacy
+`NcGalaxySDShape*`/`NcGalaxySDObsRedshift*`/`NcGalaxySDPosition*` classes,
+which remain in the tree unmodified as the parity oracle during this
+migration. Two pieces are still open:
+
+- the orchestrator that wires the three factors and runs the single
+  $z$-integral automatically (today a caller threads `pos_data`/`z_data`
+  into the shape factor by hand, as the tutorial shows);
+- additional shape marginalization schemes (a 2D quadrature over the
+  intrinsic-ellipticity disc, and/or a Laplace approximation), of which
+  `VarAdd` is the first and simplest.
+
+## API Reference
+
+- calculators: [[numcosmo|NcGalaxyRedshiftFactor]],
+  [[numcosmo|NcGalaxyRedshiftFactorComposed]],
+  [[numcosmo|NcGalaxyPositionFactor]],
+  [[numcosmo|NcGalaxyPositionFactorFlat]],
+  [[numcosmo|NcGalaxyShapeFactor]],
+  [[numcosmo|NcGalaxyShapeFactorVarAdd]],
+  [[numcosmo|NcGalaxyRedshiftBinning]]
+- population/observable models: [[numcosmo|NcGalaxyRedshiftPop]],
+  [[numcosmo|NcGalaxyRedshiftPopLSSTSRD]],
+  [[numcosmo|NcGalaxyRedshiftObs]], [[numcosmo|NcGalaxyRedshiftObsGauss]],
+  [[numcosmo|NcGalaxyRedshiftObsSel]],
+  [[numcosmo|NcGalaxyShapePop]], [[numcosmo|NcGalaxyShapePopGauss]],
+  [[numcosmo|NcGalaxyShapePopGaussLocal]], [[numcosmo|NcGalaxyShapePopBeta]]
+- storage: [[numcosmo|NcGalaxyWLObs]], [[math|NcmCatalog]], [[math|NcmMSet]]

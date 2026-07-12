@@ -72,3 +72,4 @@ gdouble nc_galaxy_redshift_obs_sel_window_mass (NcGalaxyRedshiftObsSel *gsdrop, 
 G_END_DECLS
 
 #endif /* _NC_GALAXY_REDSHIFT_OBS_SEL_H_ */
+

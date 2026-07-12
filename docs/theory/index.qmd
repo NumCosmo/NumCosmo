@@ -21,6 +21,10 @@ classes and methods.
 
 - [Halo Density Profiles](halo_density_profile.qmd) — NFW, Einasto, and Hernquist profiles and their projected quantities.
 - [Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd) — projected surface density, convergence, and shear.
+
+## Galaxy Population & Weak Lensing
+
+- [Galaxy Population & WL Framework](galaxy_wl_framework.qmd) — the Pop/Obs/ObsSel/Factor vocabulary, the fixed Z⇒P⇒S pipeline, and the per-galaxy data/cache idiom shared by every calculator.
 - [Galaxy Shapes and Ellipticity Frames](wl_ellipticity.qmd) — the shape forward model, ellipticity conventions, and the celestial/Euclidean handedness frames.
 
 ## Numerical Methods

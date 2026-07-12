@@ -88,8 +88,8 @@ static void
 nc_galaxy_redshift_obs_gauss_class_init (NcGalaxyRedshiftObsGaussClass *klass)
 {
   NcGalaxyRedshiftObsClass *gsdre_class = NC_GALAXY_REDSHIFT_OBS_CLASS (klass);
-  GObjectClass *object_class                = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class                = NCM_MODEL_CLASS (klass);
+  GObjectClass *object_class            = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class            = NCM_MODEL_CLASS (klass);
 
   object_class->finalize = &_nc_galaxy_redshift_obs_gauss_finalize;
 
@@ -145,8 +145,8 @@ static gdouble
 _nc_galaxy_redshift_obs_gauss_eval (NcGalaxyRedshiftObs *gsdre, NcGalaxyRedshiftObsData *data, const gdouble z)
 {
   NcGalaxyRedshiftObsGaussLData *ldata = (NcGalaxyRedshiftObsGaussLData *) data->ldata;
-  const gdouble sigmaz                     = ldata->sigma0 * (1.0 + z);
-  const gdouble arg                        = (ldata->zp - z) / sigmaz;
+  const gdouble sigmaz                 = ldata->sigma0 * (1.0 + z);
+  const gdouble arg                    = (ldata->zp - z) / sigmaz;
 
   return exp (-0.5 * arg * arg) / (sqrt (2.0 * M_PI) * sigmaz);
 }
@@ -155,7 +155,7 @@ static gdouble
 _nc_galaxy_redshift_obs_gauss_gen (NcGalaxyRedshiftObs *gsdre, NcGalaxyRedshiftObsData *data, const gdouble z, NcmRNG *rng)
 {
   NcGalaxyRedshiftObsGaussLData *ldata = (NcGalaxyRedshiftObsGaussLData *) data->ldata;
-  const gdouble sigmaz                     = ldata->sigma0 * (1.0 + z);
+  const gdouble sigmaz                 = ldata->sigma0 * (1.0 + z);
 
   ldata->zp = ncm_rng_gaussian_gen (rng, z, sigmaz);
 
@@ -166,7 +166,7 @@ static gdouble
 _nc_galaxy_redshift_obs_gauss_window_mass (NcGalaxyRedshiftObs *gsdre, NcGalaxyRedshiftObsData *data, const gdouble z, const gdouble obs_lo, const gdouble obs_hi)
 {
   NcGalaxyRedshiftObsGaussLData *ldata = (NcGalaxyRedshiftObsGaussLData *) data->ldata;
-  const gdouble sigmaz                          = ldata->sigma0 * (1.0 + z);
+  const gdouble sigmaz                 = ldata->sigma0 * (1.0 + z);
 
   /* P(zp in [obs_lo, obs_hi] | z) for zp ~ N(z, sigmaz). */
   return ncm_util_gaussian_integral (obs_lo, obs_hi, z, sigmaz);
@@ -176,6 +176,7 @@ static void
 _nc_galaxy_redshift_obs_gauss_get_true_z_lim (NcGalaxyRedshiftObs *gsdre, NcGalaxyRedshiftObsData *data, gdouble *z_min, gdouble *z_max)
 {
   NcGalaxyRedshiftObsGaussLData *ldata = (NcGalaxyRedshiftObsGaussLData *) data->ldata;
+
   /* Effective support around the point estimate zp: outside +-7 sigma the
    * Gaussian kernel is negligible. sigma_z = sigma0 (1 + z), estimated at the
    * upper edge z ~ zp + 7 sigma_z so the band comfortably covers the peak. */
@@ -197,7 +198,7 @@ NcGalaxyRedshiftObsGauss *
 nc_galaxy_redshift_obs_gauss_new (void)
 {
   NcGalaxyRedshiftObsGauss *gsdreg = g_object_new (NC_TYPE_GALAXY_REDSHIFT_OBS_GAUSS,
-                                                       NULL);
+                                                   NULL);
 
   return gsdreg;
 }
@@ -280,3 +281,4 @@ nc_galaxy_redshift_obs_gauss_data_get (NcGalaxyRedshiftObsGauss *gsdreg, NcGalax
   *zp     = ldata->zp;
   *sigma0 = ldata->sigma0;
 }
+

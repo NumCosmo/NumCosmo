@@ -63,3 +63,4 @@ void nc_galaxy_redshift_obs_sel_gauss_clear (NcGalaxyRedshiftObsSelGauss **gsdro
 G_END_DECLS
 
 #endif /* _NC_GALAXY_REDSHIFT_OBS_SEL_GAUSS_H_ */
+

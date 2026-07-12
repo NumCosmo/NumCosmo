@@ -63,7 +63,7 @@ struct _NcGalaxyRedshiftObsClass
  * NcGalaxyRedshiftObsData:
  *
  * Per-galaxy data for the photometric-redshift observable model. Following the
- * #NcGalaxySDShapeIntrinsicData idiom, the whole per-galaxy photometric-redshift
+ * #NcGalaxyShapePopData idiom, the whole per-galaxy photometric-redshift
  * observation (e.g. the point estimate and its scatter) lives in the opaque
  * @ldata owned by the concrete subclass: the observation's structure is defined
  * by the observable model, so the redshift calculator never accesses it directly.
@@ -102,3 +102,4 @@ void nc_galaxy_redshift_obs_get_true_z_lim (NcGalaxyRedshiftObs *gsdre, NcGalaxy
 G_END_DECLS
 
 #endif /* _NC_GALAXY_REDSHIFT_OBS_H_ */
+

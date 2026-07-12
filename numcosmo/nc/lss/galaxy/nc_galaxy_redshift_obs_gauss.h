@@ -52,3 +52,4 @@ void nc_galaxy_redshift_obs_gauss_data_get (NcGalaxyRedshiftObsGauss *gsdreg, Nc
 G_END_DECLS
 
 #endif /* _NC_GALAXY_REDSHIFT_OBS_GAUSS_H_ */
+

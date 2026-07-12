@@ -115,8 +115,8 @@ static void
 nc_galaxy_redshift_pop_lsst_srd_class_init (NcGalaxyRedshiftPopLSSTSRDClass *klass)
 {
   NcGalaxyRedshiftPopClass *sd_redshift_class = NC_GALAXY_REDSHIFT_POP_CLASS (klass);
-  GObjectClass *object_class                     = G_OBJECT_CLASS (klass);
-  NcmModelClass *model_class                     = NCM_MODEL_CLASS (klass);
+  GObjectClass *object_class                  = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class                  = NCM_MODEL_CLASS (klass);
 
   object_class->dispose  = &_nc_galaxy_redshift_pop_lsst_srd_dispose;
   object_class->finalize = &_nc_galaxy_redshift_pop_lsst_srd_finalize;
@@ -159,11 +159,11 @@ nc_galaxy_redshift_pop_lsst_srd_class_init (NcGalaxyRedshiftPopLSSTSRDClass *kla
 
   ncm_model_class_check_params_info (model_class);
 
-  sd_redshift_class->gen      = &_nc_galaxy_redshift_pop_lsst_srd_gen;
+  sd_redshift_class->gen     = &_nc_galaxy_redshift_pop_lsst_srd_gen;
   sd_redshift_class->eval    = &_nc_galaxy_redshift_pop_lsst_srd_eval;
   sd_redshift_class->ln_eval = &_nc_galaxy_redshift_pop_lsst_srd_ln_eval;
-  sd_redshift_class->set_lim  = &_nc_galaxy_redshift_pop_lsst_srd_set_lim;
-  sd_redshift_class->get_lim  = &_nc_galaxy_redshift_pop_lsst_srd_get_lim;
+  sd_redshift_class->set_lim = &_nc_galaxy_redshift_pop_lsst_srd_set_lim;
+  sd_redshift_class->get_lim = &_nc_galaxy_redshift_pop_lsst_srd_get_lim;
 }
 
 #define VECTOR (NCM_MODEL (gsdrp))
@@ -175,7 +175,7 @@ static void
 _nc_galaxy_redshift_pop_lsst_srd_update (NcGalaxyRedshiftPop *gsdrp)
 {
   NcGalaxyRedshiftPopLSSTSRD *gsdrplsst = NC_GALAXY_REDSHIFT_POP_LSST_SRD (gsdrp);
-  NcmModel *model                          = NCM_MODEL (gsdrp);
+  NcmModel *model                       = NCM_MODEL (gsdrp);
 
   if (ncm_model_state_is_update (model))
     return;
@@ -292,8 +292,8 @@ nc_galaxy_redshift_pop_lsst_srd_new (void)
   NcmDTuple2 lim = NCM_DTUPLE2_STATIC_INIT (NC_GALAXY_REDSHIFT_POP_LSST_SRD_DEFAULT_Z_LOW,
                                             NC_GALAXY_REDSHIFT_POP_LSST_SRD_DEFAULT_Z_HIGH);
   NcGalaxyRedshiftPopLSSTSRD *gsdrplsst = g_object_new (NC_TYPE_GALAXY_REDSHIFT_POP_LSST_SRD,
-                                                           "lim", &lim,
-                                                           NULL);
+                                                        "lim", &lim,
+                                                        NULL);
 
   return gsdrplsst;
 }
@@ -312,11 +312,11 @@ nc_galaxy_redshift_pop_lsst_srd_new_y1_source (void)
   NcmDTuple2 lim = NCM_DTUPLE2_STATIC_INIT (NC_GALAXY_REDSHIFT_POP_LSST_SRD_DEFAULT_Z_LOW,
                                             NC_GALAXY_REDSHIFT_POP_LSST_SRD_DEFAULT_Z_HIGH);
   NcGalaxyRedshiftPopLSSTSRD *gsdrplsst = g_object_new (NC_TYPE_GALAXY_REDSHIFT_POP_LSST_SRD,
-                                                           "lim", &lim,
-                                                           "alpha", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_SOURCE_ALPHA,
-                                                           "beta", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_SOURCE_BETA,
-                                                           "z0", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_SOURCE_Z0,
-                                                           NULL);
+                                                        "lim", &lim,
+                                                        "alpha", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_SOURCE_ALPHA,
+                                                        "beta", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_SOURCE_BETA,
+                                                        "z0", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_SOURCE_Z0,
+                                                        NULL);
 
   return gsdrplsst;
 }
@@ -335,11 +335,11 @@ nc_galaxy_redshift_pop_lsst_srd_new_y1_lens (void)
   NcmDTuple2 lim = NCM_DTUPLE2_STATIC_INIT (NC_GALAXY_REDSHIFT_POP_LSST_SRD_DEFAULT_Z_LOW,
                                             NC_GALAXY_REDSHIFT_POP_LSST_SRD_DEFAULT_Z_HIGH);
   NcGalaxyRedshiftPopLSSTSRD *gsdrplsst = g_object_new (NC_TYPE_GALAXY_REDSHIFT_POP_LSST_SRD,
-                                                           "lim", &lim,
-                                                           "alpha", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_LENS_ALPHA,
-                                                           "beta", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_LENS_BETA,
-                                                           "z0", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_LENS_Z0,
-                                                           NULL);
+                                                        "lim", &lim,
+                                                        "alpha", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_LENS_ALPHA,
+                                                        "beta", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_LENS_BETA,
+                                                        "z0", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_LENS_Z0,
+                                                        NULL);
 
   return gsdrplsst;
 }
@@ -358,11 +358,11 @@ nc_galaxy_redshift_pop_lsst_srd_new_y10_source (void)
   NcmDTuple2 lim = NCM_DTUPLE2_STATIC_INIT (NC_GALAXY_REDSHIFT_POP_LSST_SRD_DEFAULT_Z_LOW,
                                             NC_GALAXY_REDSHIFT_POP_LSST_SRD_DEFAULT_Z_HIGH);
   NcGalaxyRedshiftPopLSSTSRD *gsdrplsst = g_object_new (NC_TYPE_GALAXY_REDSHIFT_POP_LSST_SRD,
-                                                           "lim", &lim,
-                                                           "alpha", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_SOURCE_ALPHA,
-                                                           "beta", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_SOURCE_BETA,
-                                                           "z0", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_SOURCE_Z0,
-                                                           NULL);
+                                                        "lim", &lim,
+                                                        "alpha", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_SOURCE_ALPHA,
+                                                        "beta", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_SOURCE_BETA,
+                                                        "z0", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_SOURCE_Z0,
+                                                        NULL);
 
   return gsdrplsst;
 }
@@ -381,11 +381,11 @@ nc_galaxy_redshift_pop_lsst_srd_new_y10_lens (void)
   NcmDTuple2 lim = NCM_DTUPLE2_STATIC_INIT (NC_GALAXY_REDSHIFT_POP_LSST_SRD_DEFAULT_Z_LOW,
                                             NC_GALAXY_REDSHIFT_POP_LSST_SRD_DEFAULT_Z_HIGH);
   NcGalaxyRedshiftPopLSSTSRD *gsdrplsst = g_object_new (NC_TYPE_GALAXY_REDSHIFT_POP_LSST_SRD,
-                                                           "lim", &lim,
-                                                           "alpha", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_LENS_ALPHA,
-                                                           "beta", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_LENS_BETA,
-                                                           "z0", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_LENS_Z0,
-                                                           NULL);
+                                                        "lim", &lim,
+                                                        "alpha", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_LENS_ALPHA,
+                                                        "beta", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_LENS_BETA,
+                                                        "z0", NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_LENS_Z0,
+                                                        NULL);
 
   return gsdrplsst;
 }

@@ -344,9 +344,9 @@ _composed_integ_f (gpointer callback_data, const gdouble z, NcGalaxyRedshiftFact
   const struct _IntegData *int_data                  = (struct _IntegData *) callback_data;
   NcGalaxyRedshiftFactorComposedPrivate * const self = nc_galaxy_redshift_factor_composed_get_instance_private (int_data->gsdrc);
   ComposedLData *cldata                              = (ComposedLData *) data->ldata;
-  const gdouble Pz    = nc_galaxy_redshift_pop_eval (int_data->population, z);
-  const gdouble Pobs  = nc_galaxy_redshift_obs_eval (int_data->observable, cldata->obs_data, z);
-  const gdouble Wnorm = nc_galaxy_redshift_obs_window_mass (int_data->observable, cldata->obs_data, z, self->zp_min, self->zp_max);
+  const gdouble Pz                                   = nc_galaxy_redshift_pop_eval (int_data->population, z);
+  const gdouble Pobs                                 = nc_galaxy_redshift_obs_eval (int_data->observable, cldata->obs_data, z);
+  const gdouble Wnorm                                = nc_galaxy_redshift_obs_window_mass (int_data->observable, cldata->obs_data, z, self->zp_min, self->zp_max);
 
   return Pz * Pobs / Wnorm;
 }
@@ -357,9 +357,9 @@ _composed_ln_integ_f (gpointer callback_data, const gdouble z, NcGalaxyRedshiftF
   const struct _IntegData *int_data                  = (struct _IntegData *) callback_data;
   NcGalaxyRedshiftFactorComposedPrivate * const self = nc_galaxy_redshift_factor_composed_get_instance_private (int_data->gsdrc);
   ComposedLData *cldata                              = (ComposedLData *) data->ldata;
-  const gdouble ln_Pz = nc_galaxy_redshift_pop_ln_eval (int_data->population, z);
-  const gdouble Pobs  = nc_galaxy_redshift_obs_eval (int_data->observable, cldata->obs_data, z);
-  const gdouble Wnorm = nc_galaxy_redshift_obs_window_mass (int_data->observable, cldata->obs_data, z, self->zp_min, self->zp_max);
+  const gdouble ln_Pz                                = nc_galaxy_redshift_pop_ln_eval (int_data->population, z);
+  const gdouble Pobs                                 = nc_galaxy_redshift_obs_eval (int_data->observable, cldata->obs_data, z);
+  const gdouble Wnorm                                = nc_galaxy_redshift_obs_window_mass (int_data->observable, cldata->obs_data, z, self->zp_min, self->zp_max);
 
   return ln_Pz + log (Pobs) - log (Wnorm);
 }
@@ -568,3 +568,4 @@ nc_galaxy_redshift_factor_composed_get_zp_lim (NcGalaxyRedshiftFactorComposed *g
   *zp_min = self->zp_min;
   *zp_max = self->zp_max;
 }
+

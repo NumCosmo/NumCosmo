@@ -143,8 +143,8 @@ _nc_galaxy_redshift_binning_set_property (GObject *object, guint prop_id, const 
 static void
 _nc_galaxy_redshift_binning_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcGalaxyRedshiftBinning *gsdrb               = NC_GALAXY_REDSHIFT_BINNING (object);
-  NcGalaxyRedshiftBinningPrivate * const self  = nc_galaxy_redshift_binning_get_instance_private (gsdrb);
+  NcGalaxyRedshiftBinning *gsdrb              = NC_GALAXY_REDSHIFT_BINNING (object);
+  NcGalaxyRedshiftBinningPrivate * const self = nc_galaxy_redshift_binning_get_instance_private (gsdrb);
 
   g_return_if_fail (NC_IS_GALAXY_REDSHIFT_BINNING (gsdrb));
 
@@ -165,8 +165,8 @@ _nc_galaxy_redshift_binning_get_property (GObject *object, guint prop_id, GValue
 static void
 _nc_galaxy_redshift_binning_dispose (GObject *object)
 {
-  NcGalaxyRedshiftBinning *gsdrb               = NC_GALAXY_REDSHIFT_BINNING (object);
-  NcGalaxyRedshiftBinningPrivate * const self  = nc_galaxy_redshift_binning_get_instance_private (gsdrb);
+  NcGalaxyRedshiftBinning *gsdrb              = NC_GALAXY_REDSHIFT_BINNING (object);
+  NcGalaxyRedshiftBinningPrivate * const self = nc_galaxy_redshift_binning_get_instance_private (gsdrb);
 
   ncm_spline_clear (&self->pzp);
   ncm_stats_dist1d_clear (&self->pzp_stats);
@@ -556,14 +556,14 @@ nc_galaxy_redshift_binning_compute_dndz (NcGalaxyRedshiftBinning *gsdrb, NcGalax
 NcmSpline *
 nc_galaxy_redshift_binning_compute_dndz_on_nodes (NcGalaxyRedshiftBinning *gsdrb, NcGalaxyRedshiftPop *population, NcGalaxyRedshiftObsSel *observable_population, const gdouble zp_min, const gdouble zp_max, NcmVector *z_nodes)
 {
-  NcmSpline *dndz    = _nc_galaxy_redshift_binning_build_dndz (gsdrb, population, observable_population, zp_min, zp_max);
-  NcmVector *dndz_xv = ncm_spline_peek_xv (dndz);
+  NcmSpline *dndz      = _nc_galaxy_redshift_binning_build_dndz (gsdrb, population, observable_population, zp_min, zp_max);
+  NcmVector *dndz_xv   = ncm_spline_peek_xv (dndz);
   const guint dndz_len = ncm_vector_len (dndz_xv);
-  const gdouble z_lo = ncm_vector_get (dndz_xv, 0);
-  const gdouble z_hi = ncm_vector_get (dndz_xv, dndz_len - 1);
-  const guint len    = ncm_vector_len (z_nodes);
-  NcmVector *xv      = ncm_vector_dup (z_nodes);
-  NcmVector *yv      = ncm_vector_new (len);
+  const gdouble z_lo   = ncm_vector_get (dndz_xv, 0);
+  const gdouble z_hi   = ncm_vector_get (dndz_xv, dndz_len - 1);
+  const guint len      = ncm_vector_len (z_nodes);
+  NcmVector *xv        = ncm_vector_dup (z_nodes);
+  NcmVector *yv        = ncm_vector_new (len);
   NcmSpline *dndz_nodes;
   guint i;
 
@@ -614,10 +614,10 @@ nc_galaxy_redshift_binning_prepare (NcGalaxyRedshiftBinning *gsdrb, NcGalaxyReds
 
   integ_data.population            = population;
   integ_data.observable_population = observable_population;
-  integ_data.integrator           = ncm_integral1d_ptr_new (&_nc_galaxy_redshift_binning_pzp_integrand, NULL);
-  integ_data.zp                   = 0.0;
-  integ_data.z_min                = z_min;
-  integ_data.z_max                = z_max;
+  integ_data.integrator            = ncm_integral1d_ptr_new (&_nc_galaxy_redshift_binning_pzp_integrand, NULL);
+  integ_data.zp                    = 0.0;
+  integ_data.z_min                 = z_min;
+  integ_data.z_max                 = z_max;
 
   F.function = &_nc_galaxy_redshift_binning_m2lnpzp_gsl;
   F.params   = &integ_data;
@@ -753,10 +753,10 @@ nc_galaxy_redshift_binning_lsst_srd_edges (NcGalaxyRedshiftPopLSSTSRDType type, 
       sigma0  = 0.03;
       is_lens = TRUE;
       break;
-    default:                                                                                  /* LCOV_EXCL_LINE */
-      g_error ("nc_galaxy_redshift_binning_lsst_srd_edges: invalid type %d", type);           /* LCOV_EXCL_LINE */
+    default:                                                                        /* LCOV_EXCL_LINE */
+      g_error ("nc_galaxy_redshift_binning_lsst_srd_edges: invalid type %d", type); /* LCOV_EXCL_LINE */
 
-      return NULL;                                                                            /* LCOV_EXCL_LINE */
+      return NULL; /* LCOV_EXCL_LINE */
   }
 
   ncm_model_param_set (NCM_MODEL (obs_gauss), NC_GALAXY_REDSHIFT_OBS_SEL_GAUSS_SIGMA0, sigma0);
@@ -787,3 +787,4 @@ nc_galaxy_redshift_binning_lsst_srd_edges (NcGalaxyRedshiftPopLSSTSRDType type, 
 
   return bin_edges;
 }
+

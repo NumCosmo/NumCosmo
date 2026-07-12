@@ -118,3 +118,4 @@ NcmIntegralFixed *nc_galaxy_redshift_factor_make_fixed_nodes (NcGalaxyRedshiftFa
 G_END_DECLS
 
 #endif /* _NC_GALAXY_REDSHIFT_FACTOR_H_ */
+

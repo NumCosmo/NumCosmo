@@ -6,6 +6,7 @@ src_site_theory_files = files(
     'transfer_func_eh.qmd',
     'wl_surface_mass_density.qmd',
     'wl_ellipticity.qmd',
+    'galaxy_wl_framework.qmd',
     'halo_density_profile.qmd',
     'fftlog.qmd',
     'spectral.qmd',

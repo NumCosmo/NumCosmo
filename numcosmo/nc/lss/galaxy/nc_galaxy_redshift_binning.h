@@ -66,3 +66,4 @@ NcmVector *nc_galaxy_redshift_binning_lsst_srd_edges (NcGalaxyRedshiftPopLSSTSRD
 G_END_DECLS
 
 #endif /* _NC_GALAXY_REDSHIFT_BINNING_H_ */
+

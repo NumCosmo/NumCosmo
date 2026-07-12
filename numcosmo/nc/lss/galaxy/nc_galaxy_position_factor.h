@@ -111,3 +111,4 @@ NcGalaxyPositionFactorIntegrand *nc_galaxy_position_factor_integ (NcGalaxyPositi
 G_END_DECLS
 
 #endif /* _NC_GALAXY_POSITION_FACTOR_H_ */
+

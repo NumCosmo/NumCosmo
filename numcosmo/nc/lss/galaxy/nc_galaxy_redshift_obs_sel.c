@@ -181,3 +181,4 @@ nc_galaxy_redshift_obs_sel_window_mass (NcGalaxyRedshiftObsSel *gsdrop, const gd
 {
   return NC_GALAXY_REDSHIFT_OBS_SEL_GET_CLASS (gsdrop)->window_mass (gsdrop, z, obs_lo, obs_hi);
 }
+

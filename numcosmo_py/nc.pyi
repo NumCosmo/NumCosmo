@@ -134,11 +134,6 @@ GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_COL_M: str = r"m"
 GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_COL_STD_NOISE: str = r"std_noise"
 GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL_DEFAULT_SIGMA: float = 0.3
-GALAXY_SD_SHAPE_INTRINSIC_BETA_DEFAULT_MU: float = 0.18
-GALAXY_SD_SHAPE_INTRINSIC_BETA_DEFAULT_NU: float = 5.0
-GALAXY_SD_SHAPE_INTRINSIC_BETA_DEFAULT_PARAMS_ABSTOL: float = 0.0
-GALAXY_SD_SHAPE_INTRINSIC_GAUSS_DEFAULT_PARAMS_ABSTOL: float = 0.0
-GALAXY_SD_SHAPE_INTRINSIC_GAUSS_DEFAULT_SIGMA: float = 0.3
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_PARAMS_ABSTOL: float = 0.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_HIGH: float = 20.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_DEFAULT_Z_LOW: float = 0.0
@@ -154,6 +149,20 @@ GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_LENS_Z0: float = 0.26
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_ALPHA: float = 0.78
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_BETA: float = 2.0
 GALAXY_SD_TRUE_REDSHIFT_LSST_SRD_Y1_SOURCE_Z0: float = 0.13
+GALAXY_SHAPE_FACTOR_COL_C1: str = r"c1"
+GALAXY_SHAPE_FACTOR_COL_C2: str = r"c2"
+GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1: str = r"epsilon_int_1"
+GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2: str = r"epsilon_int_2"
+GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1: str = r"epsilon_obs_1"
+GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2: str = r"epsilon_obs_2"
+GALAXY_SHAPE_FACTOR_COL_M: str = r"m"
+GALAXY_SHAPE_FACTOR_COL_STD_NOISE: str = r"std_noise"
+GALAXY_SHAPE_POP_BETA_DEFAULT_MU: float = 0.18
+GALAXY_SHAPE_POP_BETA_DEFAULT_NU: float = 5.0
+GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL: float = 0.0
+GALAXY_SHAPE_POP_GAUSS_DEFAULT_PARAMS_ABSTOL: float = 0.0
+GALAXY_SHAPE_POP_GAUSS_DEFAULT_SIGMA: float = 0.3
+GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS: str = r"e_rms"
 HALO_CM_BHATTACHARYA13_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_CM_BHATTACHARYA13_LOCAL_SPARAM_LEN: int = 1
 HALO_CM_DIEMER15_DEFAULT_PARAMS_ABSTOL: float = 0.0
@@ -9168,309 +9177,6 @@ class GalaxySDShapeIntegrand(GObject.GBoxed):
     ) -> GalaxySDShapeIntegrand: ...
     def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
 
-class GalaxySDShapeIntrinsic(NumCosmoMath.Model):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxySDShapeIntrinsic(**properties)
-
-    Object NcGalaxySDShapeIntrinsic
-
-    Properties from NcmModel:
-      name -> gchararray: name
-        Model's name
-      nick -> gchararray: nick
-        Model's nick
-      scalar-params-len -> guint: scalar-params-len
-        Number of scalar parameters
-      vector-params-len -> guint: vector-params-len
-        Number of vector parameters
-      implementation -> guint64: implementation
-        Bitwise specification of functions implementation
-      sparam-array -> NcmObjDictInt: sparam-array
-        NcmModel array of NcmSParam
-      params-types -> GArray: params-types
-        Parameters' types
-      reparam -> NcmReparam: reparam
-        Model reparametrization
-      submodel-array -> NcmObjArray: submodel-array
-        NcmModel array of submodels
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        implementation: int
-        name: str
-        nick: str
-        params_types: list[None]
-        reparam: NumCosmoMath.Reparam
-        scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjDictInt
-        submodel_array: NumCosmoMath.ObjArray
-        vector_params_len: int
-
-    props: Props = ...
-    parent_instance: NumCosmoMath.Model = ...
-    def __init__(
-        self,
-        reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjDictInt = ...,
-        submodel_array: NumCosmoMath.ObjArray = ...,
-    ) -> None: ...
-    @staticmethod
-    def clear(gsi: GalaxySDShapeIntrinsic) -> None: ...
-    def do_data_init(self, data: GalaxySDShapeIntrinsicData) -> None: ...
-    def do_e_rms(self, data: GalaxySDShapeIntrinsicData) -> float: ...
-    def do_eval_residual(self, data: GalaxySDShapeIntrinsicData, x: float) -> float: ...
-    def do_gen(
-        self, data: GalaxySDShapeIntrinsicData, rng: NumCosmoMath.RNG
-    ) -> typing.Tuple[float, float]: ...
-    def do_prepare(self, data: GalaxySDShapeIntrinsicData) -> None: ...
-    def e_rms(self, data: GalaxySDShapeIntrinsicData) -> float: ...
-    def eval_p(self, data: GalaxySDShapeIntrinsicData, x: float) -> float: ...
-    def eval_residual(self, data: GalaxySDShapeIntrinsicData, x: float) -> float: ...
-    def free(self) -> None: ...
-    def gen(
-        self, data: GalaxySDShapeIntrinsicData, rng: NumCosmoMath.RNG
-    ) -> typing.Tuple[float, float]: ...
-    @staticmethod
-    def id() -> int: ...
-    def prepare(self, data: GalaxySDShapeIntrinsicData) -> None: ...
-    def ref(self) -> GalaxySDShapeIntrinsic: ...
-
-class GalaxySDShapeIntrinsicBeta(GalaxySDShapeIntrinsic):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxySDShapeIntrinsicBeta(**properties)
-        new() -> NumCosmo.GalaxySDShapeIntrinsicBeta
-
-    Object NcGalaxySDShapeIntrinsicBeta
-
-    Properties from NcGalaxySDShapeIntrinsicBeta:
-      mu -> gdouble: mu
-        \mu
-      nu -> gdouble: nu
-        \nu
-      mu-fit -> gboolean: mu-fit
-        \mu:fit
-      nu-fit -> gboolean: nu-fit
-        \nu:fit
-
-    Properties from NcmModel:
-      name -> gchararray: name
-        Model's name
-      nick -> gchararray: nick
-        Model's nick
-      scalar-params-len -> guint: scalar-params-len
-        Number of scalar parameters
-      vector-params-len -> guint: vector-params-len
-        Number of vector parameters
-      implementation -> guint64: implementation
-        Bitwise specification of functions implementation
-      sparam-array -> NcmObjDictInt: sparam-array
-        NcmModel array of NcmSParam
-      params-types -> GArray: params-types
-        Parameters' types
-      reparam -> NcmReparam: reparam
-        Model reparametrization
-      submodel-array -> NcmObjArray: submodel-array
-        NcmModel array of submodels
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        mu: float
-        mu_fit: bool
-        nu: float
-        nu_fit: bool
-        implementation: int
-        name: str
-        nick: str
-        params_types: list[None]
-        reparam: NumCosmoMath.Reparam
-        scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjDictInt
-        submodel_array: NumCosmoMath.ObjArray
-        vector_params_len: int
-
-    props: Props = ...
-    def __init__(
-        self,
-        mu: float = ...,
-        mu_fit: bool = ...,
-        nu: float = ...,
-        nu_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjDictInt = ...,
-        submodel_array: NumCosmoMath.ObjArray = ...,
-    ) -> None: ...
-    @staticmethod
-    def clear(gsib: GalaxySDShapeIntrinsicBeta) -> None: ...
-    def free(self) -> None: ...
-    @classmethod
-    def new(cls) -> GalaxySDShapeIntrinsicBeta: ...
-    def ref(self) -> GalaxySDShapeIntrinsicBeta: ...
-
-class GalaxySDShapeIntrinsicBetaClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxySDShapeIntrinsicBetaClass()
-    """
-
-    parent_class: GalaxySDShapeIntrinsicClass = ...
-
-class GalaxySDShapeIntrinsicClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxySDShapeIntrinsicClass()
-    """
-
-    parent_class: NumCosmoMath.ModelClass = ...
-    data_init: typing.Callable[
-        [GalaxySDShapeIntrinsic, GalaxySDShapeIntrinsicData], None
-    ] = ...
-    prepare: typing.Callable[
-        [GalaxySDShapeIntrinsic, GalaxySDShapeIntrinsicData], None
-    ] = ...
-    eval_residual: typing.Callable[
-        [GalaxySDShapeIntrinsic, GalaxySDShapeIntrinsicData, float], float
-    ] = ...
-    gen: typing.Callable[
-        [GalaxySDShapeIntrinsic, GalaxySDShapeIntrinsicData, NumCosmoMath.RNG],
-        typing.Tuple[float, float],
-    ] = ...
-    e_rms: typing.Callable[
-        [GalaxySDShapeIntrinsic, GalaxySDShapeIntrinsicData], float
-    ] = ...
-    padding: list[None] = ...
-
-class GalaxySDShapeIntrinsicData(GObject.GBoxed):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxySDShapeIntrinsicData()
-        new(gsi:NumCosmo.GalaxySDShapeIntrinsic) -> NumCosmo.GalaxySDShapeIntrinsicData
-    """
-
-    e_rms: float = ...
-    jacobi_a: float = ...
-    jacobi_b: float = ...
-    ldata: None = ...
-    ldata_destroy: typing.Callable[[None], None] = ...
-    ldata_read_row: typing.Callable[
-        [GalaxySDShapeIntrinsicData, GalaxyWLObs, int], None
-    ] = ...
-    ldata_write_row: typing.Callable[
-        [GalaxySDShapeIntrinsicData, GalaxyWLObs, int], None
-    ] = ...
-    ldata_required_columns: None = ...
-    ref_count: int = ...
-    @classmethod
-    def new(cls, gsi: GalaxySDShapeIntrinsic) -> GalaxySDShapeIntrinsicData: ...
-    def read_row(self, obs: GalaxyWLObs, i: int) -> None: ...
-    def ref(self) -> GalaxySDShapeIntrinsicData: ...
-    def required_columns(self) -> list[str]: ...
-    def unref(self) -> None: ...
-    def write_row(self, obs: GalaxyWLObs, i: int) -> None: ...
-
-class GalaxySDShapeIntrinsicGauss(GalaxySDShapeIntrinsic):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxySDShapeIntrinsicGauss(**properties)
-        new() -> NumCosmo.GalaxySDShapeIntrinsicGauss
-
-    Object NcGalaxySDShapeIntrinsicGauss
-
-    Properties from NcGalaxySDShapeIntrinsicGauss:
-      sigma -> gdouble: sigma
-        \sigma
-      sigma-fit -> gboolean: sigma-fit
-        \sigma:fit
-
-    Properties from NcmModel:
-      name -> gchararray: name
-        Model's name
-      nick -> gchararray: nick
-        Model's nick
-      scalar-params-len -> guint: scalar-params-len
-        Number of scalar parameters
-      vector-params-len -> guint: vector-params-len
-        Number of vector parameters
-      implementation -> guint64: implementation
-        Bitwise specification of functions implementation
-      sparam-array -> NcmObjDictInt: sparam-array
-        NcmModel array of NcmSParam
-      params-types -> GArray: params-types
-        Parameters' types
-      reparam -> NcmReparam: reparam
-        Model reparametrization
-      submodel-array -> NcmObjArray: submodel-array
-        NcmModel array of submodels
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        sigma: float
-        sigma_fit: bool
-        implementation: int
-        name: str
-        nick: str
-        params_types: list[None]
-        reparam: NumCosmoMath.Reparam
-        scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjDictInt
-        submodel_array: NumCosmoMath.ObjArray
-        vector_params_len: int
-
-    props: Props = ...
-    def __init__(
-        self,
-        sigma: float = ...,
-        sigma_fit: bool = ...,
-        reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjDictInt = ...,
-        submodel_array: NumCosmoMath.ObjArray = ...,
-    ) -> None: ...
-    @staticmethod
-    def clear(gsig: GalaxySDShapeIntrinsicGauss) -> None: ...
-    def free(self) -> None: ...
-    @classmethod
-    def new(cls) -> GalaxySDShapeIntrinsicGauss: ...
-    def ref(self) -> GalaxySDShapeIntrinsicGauss: ...
-
-class GalaxySDShapeIntrinsicGaussClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxySDShapeIntrinsicGaussClass()
-    """
-
-    parent_class: GalaxySDShapeIntrinsicClass = ...
-
 class GalaxySDTrueRedshift(NumCosmoMath.Model):
     r"""
     :Constructors:
@@ -9741,6 +9447,789 @@ class GalaxySelfuncClass(GObject.GPointer):
     """
 
     parent_class: GObject.ObjectClass = ...
+
+class GalaxyShapeFactor(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactor(**properties)
+
+    Object NcGalaxyShapeFactor
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    parent_instance: GObject.Object = ...
+    def __init__(self, ellip_conv: GalaxyWLObsEllipConv = ...) -> None: ...
+    def apply_shear(
+        self,
+        g: NumCosmoMath.Complex,
+        E: NumCosmoMath.Complex,
+        E_obs: NumCosmoMath.Complex,
+    ) -> None: ...
+    def apply_shear_inv(
+        self,
+        g: NumCosmoMath.Complex,
+        E_obs: NumCosmoMath.Complex,
+        E: NumCosmoMath.Complex,
+    ) -> None: ...
+    @staticmethod
+    def clear(gsf: GalaxyShapeFactor) -> None: ...
+    def data_get(
+        self, data: GalaxyShapeFactorData
+    ) -> typing.Tuple[float, float, float, float, float, float]: ...
+    def data_set(
+        self,
+        data: GalaxyShapeFactorData,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+        std_noise: float,
+        c1: float,
+        c2: float,
+        m: float,
+        coord: WLEllipticityFrame,
+    ) -> None: ...
+    def direct_estimate(
+        self,
+        mset: NumCosmoMath.MSet,
+        data_array: typing.Sequence[GalaxyShapeFactorData],
+    ) -> typing.Tuple[float, float, float, float, float]: ...
+    def do_data_init(
+        self, mset: NumCosmoMath.MSet, data: GalaxyShapeFactorData
+    ) -> None: ...
+    def do_eval_ln_marginal(
+        self,
+        pop: GalaxyShapePop,
+        data: GalaxyShapeFactorData,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+    ) -> float: ...
+    def do_eval_marginal(
+        self,
+        pop: GalaxyShapePop,
+        data: GalaxyShapeFactorData,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+    ) -> float: ...
+    def do_prepare(
+        self, mset: NumCosmoMath.MSet, data: GalaxyShapeFactorData
+    ) -> None: ...
+    def eval_at_nodes(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxyShapeFactorData,
+        z_nodes: NumCosmoMath.Vector,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
+    def eval_ln_marginal(
+        self,
+        pop: GalaxyShapePop,
+        data: GalaxyShapeFactorData,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+    ) -> float: ...
+    def eval_marginal(
+        self,
+        pop: GalaxyShapePop,
+        data: GalaxyShapeFactorData,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+    ) -> float: ...
+    def free(self) -> None: ...
+    def gen(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxyShapeFactorData,
+        rng: NumCosmoMath.RNG,
+    ) -> None: ...
+    def get_ellip_conv(self) -> GalaxyWLObsEllipConv: ...
+    def integ(
+        self, mset: NumCosmoMath.MSet, use_lnp: bool
+    ) -> GalaxyShapeFactorIntegrand: ...
+    def lndet_jac(
+        self, g: NumCosmoMath.Complex, E_obs: NumCosmoMath.Complex
+    ) -> float: ...
+    def prepare_data_array(
+        self,
+        mset: NumCosmoMath.MSet,
+        data_array: typing.Sequence[GalaxyShapeFactorData],
+        update_radius: bool,
+        update_optzs: bool,
+    ) -> bool: ...
+    def prepare_data_array_at_nodes(
+        self,
+        mset: NumCosmoMath.MSet,
+        data_array: typing.Sequence[GalaxyShapeFactorData],
+        z_nodes_per_galaxy: typing.Sequence[NumCosmoMath.Vector],
+        update_radius: bool,
+        update_crit: bool,
+        update_sigma: bool,
+    ) -> bool: ...
+    def ref(self) -> GalaxyShapeFactor: ...
+
+class GalaxyShapeFactorClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+    data_init: typing.Callable[
+        [GalaxyShapeFactor, NumCosmoMath.MSet, GalaxyShapeFactorData], None
+    ] = ...
+    prepare: typing.Callable[
+        [GalaxyShapeFactor, NumCosmoMath.MSet, GalaxyShapeFactorData], None
+    ] = ...
+    eval_marginal: typing.Callable[
+        [
+            GalaxyShapeFactor,
+            GalaxyShapePop,
+            GalaxyShapeFactorData,
+            float,
+            float,
+            float,
+            float,
+        ],
+        float,
+    ] = ...
+    eval_ln_marginal: typing.Callable[
+        [
+            GalaxyShapeFactor,
+            GalaxyShapePop,
+            GalaxyShapeFactorData,
+            float,
+            float,
+            float,
+            float,
+        ],
+        float,
+    ] = ...
+    padding: list[None] = ...
+
+class GalaxyShapeFactorData(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorData()
+        new(gsf:NumCosmo.GalaxyShapeFactor, mset:NumCosmoMath.MSet, pos_data:NumCosmo.GalaxyPositionFactorData, z_data:NumCosmo.GalaxyRedshiftFactorData) -> NumCosmo.GalaxyShapeFactorData
+    """
+
+    pos_data: GalaxyPositionFactorData = ...
+    z_data: GalaxyRedshiftFactorData = ...
+    pop_data: GalaxyShapePopData = ...
+    coord: WLEllipticityFrame = ...
+    epsilon_int_1: float = ...
+    epsilon_int_2: float = ...
+    epsilon_obs_1: float = ...
+    epsilon_obs_2: float = ...
+    std_noise: float = ...
+    c1: float = ...
+    c2: float = ...
+    m: float = ...
+    cdata: None = ...
+    ldata: None = ...
+    ldata_destroy: typing.Callable[[None], None] = ...
+    ldata_read_row: typing.Callable[[GalaxyShapeFactorData, GalaxyWLObs, int], None] = (
+        ...
+    )
+    ldata_write_row: typing.Callable[
+        [GalaxyShapeFactorData, GalaxyWLObs, int], None
+    ] = ...
+    ldata_required_columns: None = ...
+    ref_count: int = ...
+    def get_radius(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        gsf: GalaxyShapeFactor,
+        mset: NumCosmoMath.MSet,
+        pos_data: GalaxyPositionFactorData,
+        z_data: GalaxyRedshiftFactorData,
+    ) -> GalaxyShapeFactorData: ...
+    def read_row(self, obs: GalaxyWLObs, i: int) -> None: ...
+    def ref(self) -> GalaxyShapeFactorData: ...
+    def required_columns(self) -> list[str]: ...
+    def unref(self) -> None: ...
+    def write_row(self, obs: GalaxyWLObs, i: int) -> None: ...
+
+class GalaxyShapeFactorIntegrand(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorIntegrand()
+    """
+
+    func: typing.Callable[[None, float, GalaxyShapeFactorData], float] = ...
+    callback_data_free: typing.Callable[[None], None] = ...
+    callback_data_copy: typing.Callable[[None], None] = ...
+    callback_data_prepare: typing.Callable[[None, NumCosmoMath.MSet], None] = ...
+    callback_data: None = ...
+    def copy(self) -> GalaxyShapeFactorIntegrand: ...
+    def eval(self, z: float, data: GalaxyShapeFactorData) -> float: ...
+    def free(self) -> None: ...
+    def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
+
+class GalaxyShapeFactorKnots(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorKnots(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorKnots
+
+    Object NcGalaxyShapeFactorKnots
+
+    Properties from NcGalaxyShapeFactorKnots:
+      bound -> gdouble: bound
+        Plane-integration box half-width
+      n -> guint: n
+        Number of knots per axis
+      method -> NcGalaxyShapeFactorKnotsMethod: method
+        Fixed-knot generation scheme
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        bound: float
+        method: GalaxyShapeFactorKnotsMethod
+        n: int
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(
+        self,
+        bound: float = ...,
+        method: GalaxyShapeFactorKnotsMethod = ...,
+        n: int = ...,
+        ellip_conv: GalaxyWLObsEllipConv = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gsfk: GalaxyShapeFactorKnots) -> None: ...
+    def free(self) -> None: ...
+    def get_bound(self) -> float: ...
+    def get_method(self) -> GalaxyShapeFactorKnotsMethod: ...
+    def get_n(self) -> int: ...
+    @classmethod
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorKnots: ...
+    def peek_nodes(self) -> NumCosmoMath.Vector: ...
+    def peek_weights(self) -> NumCosmoMath.Vector: ...
+    def ref(self) -> GalaxyShapeFactorKnots: ...
+    def set_bound(self, bound: float) -> None: ...
+    def set_method(self, method: GalaxyShapeFactorKnotsMethod) -> None: ...
+    def set_n(self, n: int) -> None: ...
+
+class GalaxyShapeFactorKnotsClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorKnotsClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
+class GalaxyShapeFactorQuad(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorQuad(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorQuad
+
+    Object NcGalaxyShapeFactorQuad
+
+    Properties from NcGalaxyShapeFactorQuad:
+      bound -> gdouble: bound
+        Plane-integration box half-width
+      reltol -> gdouble: reltol
+        Cubature relative tolerance
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        bound: float
+        reltol: float
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(
+        self,
+        bound: float = ...,
+        reltol: float = ...,
+        ellip_conv: GalaxyWLObsEllipConv = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gsfq: GalaxyShapeFactorQuad) -> None: ...
+    def free(self) -> None: ...
+    def get_bound(self) -> float: ...
+    def get_reltol(self) -> float: ...
+    @classmethod
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorQuad: ...
+    def ref(self) -> GalaxyShapeFactorQuad: ...
+    def set_bound(self, bound: float) -> None: ...
+    def set_reltol(self, reltol: float) -> None: ...
+
+class GalaxyShapeFactorQuadClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorQuadClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
+class GalaxyShapeFactorVarAdd(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorVarAdd(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorVarAdd
+
+    Object NcGalaxyShapeFactorVarAdd
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(self, ellip_conv: GalaxyWLObsEllipConv = ...) -> None: ...
+    @staticmethod
+    def clear(gsfva: GalaxyShapeFactorVarAdd) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorVarAdd: ...
+    def ref(self) -> GalaxyShapeFactorVarAdd: ...
+
+class GalaxyShapeFactorVarAddClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorVarAddClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
+class GalaxyShapePop(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapePop(**properties)
+
+    Object NcGalaxyShapePop
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: NumCosmoMath.Model = ...
+    def __init__(
+        self,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gsp: GalaxyShapePop) -> None: ...
+    def do_data_init(self, data: GalaxyShapePopData) -> None: ...
+    def do_e_rms(self, data: GalaxyShapePopData) -> float: ...
+    def do_eval_p(self, data: GalaxyShapePopData, x: float) -> float: ...
+    def do_eval_p_rho2(self, data: GalaxyShapePopData, rho2: float) -> float: ...
+    def do_gen(
+        self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
+    ) -> typing.Tuple[float, float]: ...
+    def do_prepare(self, data: GalaxyShapePopData) -> None: ...
+    def e_rms(self, data: GalaxyShapePopData) -> float: ...
+    def eval_p(self, data: GalaxyShapePopData, x: float) -> float: ...
+    def eval_p_rho2(self, data: GalaxyShapePopData, rho2: float) -> float: ...
+    def free(self) -> None: ...
+    def gen(
+        self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
+    ) -> typing.Tuple[float, float]: ...
+    def get_sigma(self, data: GalaxyShapePopData) -> float: ...
+    @staticmethod
+    def id() -> int: ...
+    def prepare(self, data: GalaxyShapePopData) -> None: ...
+    def ref(self) -> GalaxyShapePop: ...
+
+class GalaxyShapePopBeta(GalaxyShapePop):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapePopBeta(**properties)
+        new() -> NumCosmo.GalaxyShapePopBeta
+
+    Object NcGalaxyShapePopBeta
+
+    Properties from NcGalaxyShapePopBeta:
+      mu -> gdouble: mu
+        \mu
+      nu -> gdouble: nu
+        \nu
+      mu-fit -> gboolean: mu-fit
+        \mu:fit
+      nu-fit -> gboolean: nu-fit
+        \nu:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        mu: float
+        mu_fit: bool
+        nu: float
+        nu_fit: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        mu: float = ...,
+        mu_fit: bool = ...,
+        nu: float = ...,
+        nu_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gspb: GalaxyShapePopBeta) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> GalaxyShapePopBeta: ...
+    def ref(self) -> GalaxyShapePopBeta: ...
+
+class GalaxyShapePopBetaClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapePopBetaClass()
+    """
+
+    parent_class: GalaxyShapePopClass = ...
+
+class GalaxyShapePopClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapePopClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
+    data_init: typing.Callable[[GalaxyShapePop, GalaxyShapePopData], None] = ...
+    prepare: typing.Callable[[GalaxyShapePop, GalaxyShapePopData], None] = ...
+    eval_p: typing.Callable[[GalaxyShapePop, GalaxyShapePopData, float], float] = ...
+    eval_p_rho2: typing.Callable[[GalaxyShapePop, GalaxyShapePopData, float], float] = (
+        ...
+    )
+    gen: typing.Callable[
+        [GalaxyShapePop, GalaxyShapePopData, NumCosmoMath.RNG],
+        typing.Tuple[float, float],
+    ] = ...
+    e_rms: typing.Callable[[GalaxyShapePop, GalaxyShapePopData], float] = ...
+    padding: list[None] = ...
+
+class GalaxyShapePopData(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapePopData()
+        new(gsp:NumCosmo.GalaxyShapePop) -> NumCosmo.GalaxyShapePopData
+    """
+
+    e_rms: float = ...
+    ldata: None = ...
+    ldata_destroy: typing.Callable[[None], None] = ...
+    ldata_read_row: typing.Callable[[GalaxyShapePopData, GalaxyWLObs, int], None] = ...
+    ldata_write_row: typing.Callable[[GalaxyShapePopData, GalaxyWLObs, int], None] = ...
+    ldata_required_columns: None = ...
+    ldata_get_sigma: typing.Callable[[GalaxyShapePopData], float] = ...
+    ref_count: int = ...
+    @classmethod
+    def new(cls, gsp: GalaxyShapePop) -> GalaxyShapePopData: ...
+    def read_row(self, obs: GalaxyWLObs, i: int) -> None: ...
+    def ref(self) -> GalaxyShapePopData: ...
+    def required_columns(self) -> list[str]: ...
+    def unref(self) -> None: ...
+    def write_row(self, obs: GalaxyWLObs, i: int) -> None: ...
+
+class GalaxyShapePopGauss(GalaxyShapePop):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapePopGauss(**properties)
+        new() -> NumCosmo.GalaxyShapePopGauss
+
+    Object NcGalaxyShapePopGauss
+
+    Properties from NcGalaxyShapePopGauss:
+      sigma -> gdouble: sigma
+        \sigma
+      sigma-fit -> gboolean: sigma-fit
+        \sigma:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        sigma: float
+        sigma_fit: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        sigma: float = ...,
+        sigma_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gspg: GalaxyShapePopGauss) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> GalaxyShapePopGauss: ...
+    def ref(self) -> GalaxyShapePopGauss: ...
+
+class GalaxyShapePopGaussClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapePopGaussClass()
+    """
+
+    parent_class: GalaxyShapePopClass = ...
+
+class GalaxyShapePopGaussLocal(GalaxyShapePop):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapePopGaussLocal(**properties)
+        new() -> NumCosmo.GalaxyShapePopGaussLocal
+
+    Object NcGalaxyShapePopGaussLocal
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gspgl: GalaxyShapePopGaussLocal) -> None: ...
+    def data_get(self, data: GalaxyShapePopData) -> float: ...
+    def data_set(self, data: GalaxyShapePopData, e_rms: float) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> GalaxyShapePopGaussLocal: ...
+    def ref(self) -> GalaxyShapePopGaussLocal: ...
+
+class GalaxyShapePopGaussLocalClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapePopGaussLocalClass()
+    """
+
+    parent_class: GalaxyShapePopClass = ...
 
 class GalaxyWLObs(NumCosmoMath.Catalog):
     r"""
@@ -24645,35 +25134,6 @@ class GalaxySDShapeHSMGaussGlobalParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
-class GalaxySDShapeIntrinsicBetaParams(GObject.GEnum):
-    MU: GalaxySDShapeIntrinsicBetaParams = ...
-    NU: GalaxySDShapeIntrinsicBetaParams = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class GalaxySDShapeIntrinsicGaussParams(GObject.GEnum):
-    SIGMA: GalaxySDShapeIntrinsicGaussParams = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
 class GalaxySDTrueRedshiftLSSTSRDSParams(GObject.GEnum):
     ALPHA: GalaxySDTrueRedshiftLSSTSRDSParams = ...
     BETA: GalaxySDTrueRedshiftLSSTSRDSParams = ...
@@ -24695,6 +25155,49 @@ class GalaxySDTrueRedshiftLSSTSRDType(GObject.GEnum):
     Y10_SOURCE: GalaxySDTrueRedshiftLSSTSRDType = ...
     Y1_LENS: GalaxySDTrueRedshiftLSSTSRDType = ...
     Y1_SOURCE: GalaxySDTrueRedshiftLSSTSRDType = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class GalaxyShapeFactorKnotsMethod(GObject.GEnum):
+    CARTESIAN: GalaxyShapeFactorKnotsMethod = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class GalaxyShapePopBetaParams(GObject.GEnum):
+    MU: GalaxyShapePopBetaParams = ...
+    NU: GalaxyShapePopBetaParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class GalaxyShapePopGaussParams(GObject.GEnum):
+    SIGMA: GalaxyShapePopGaussParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

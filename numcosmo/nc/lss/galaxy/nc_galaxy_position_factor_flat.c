@@ -177,7 +177,7 @@ static NcGalaxyPositionFactorIntegrand *_nc_galaxy_position_factor_flat_integ (N
 static void
 nc_galaxy_position_factor_flat_class_init (NcGalaxyPositionFactorFlatClass *klass)
 {
-  GObjectClass *object_class                   = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class                         = G_OBJECT_CLASS (klass);
   NcGalaxyPositionFactorClass *position_factor_class = NC_GALAXY_POSITION_FACTOR_CLASS (klass);
 
   object_class->set_property = &_nc_galaxy_position_factor_flat_set_property;
@@ -315,13 +315,13 @@ _nc_galaxy_position_factor_flat_integ_f (gpointer callback_data, NcGalaxyPositio
 static NcGalaxyPositionFactorIntegrand *
 _nc_galaxy_position_factor_flat_integ (NcGalaxyPositionFactor *gspf, NcmMSet *mset, gboolean use_lnp)
 {
-  NcGalaxyPositionFactorFlat *gspfflat        = NC_GALAXY_POSITION_FACTOR_FLAT (gspf);
-  struct _IntegData *int_data                 = g_new0 (struct _IntegData, 1);
-  NcGalaxyPositionFactorIntegrand *integ      = nc_galaxy_position_factor_integrand_new (use_lnp ? _nc_galaxy_position_factor_flat_ln_integ_f : _nc_galaxy_position_factor_flat_integ_f,
-                                                                                         _integ_data_free,
-                                                                                         _integ_data_copy,
-                                                                                         NULL,
-                                                                                         int_data);
+  NcGalaxyPositionFactorFlat *gspfflat   = NC_GALAXY_POSITION_FACTOR_FLAT (gspf);
+  struct _IntegData *int_data            = g_new0 (struct _IntegData, 1);
+  NcGalaxyPositionFactorIntegrand *integ = nc_galaxy_position_factor_integrand_new (use_lnp ? _nc_galaxy_position_factor_flat_ln_integ_f : _nc_galaxy_position_factor_flat_integ_f,
+                                                                                    _integ_data_free,
+                                                                                    _integ_data_copy,
+                                                                                    NULL,
+                                                                                    int_data);
 
   int_data->gspfflat = gspfflat;
 
@@ -472,3 +472,4 @@ nc_galaxy_position_factor_flat_get_dec_lim (NcGalaxyPositionFactorFlat *gspfflat
 
   ncm_sky_footprint_rectangular_get_dec_lim (self->footprint, dec_min, dec_max);
 }
+
