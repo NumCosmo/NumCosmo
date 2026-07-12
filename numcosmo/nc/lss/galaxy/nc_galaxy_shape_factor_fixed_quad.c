@@ -74,6 +74,21 @@
  * validated regime. See docs/theory/wl_shape_factor_history.md for why an
  * adaptive alternative was tried and rejected for the narrow-population
  * case, and for the design history of this class more generally.
+ *
+ * Cost cliff: at $\sigma_\mathrm{noise}$ where the noise disk is comparable
+ * in size to the unit disc (roughly $\sigma_\mathrm{noise}\in(0.05,0.2)$,
+ * see docs/theory/wl_shape_marginalization_fixed_quad.qmd's own "cost
+ * cliff" section), nearly every galaxy lands in the genuine-lens branch
+ * ($\mathtt{n\_lens}^2$ nodes, 1681 at the default 41) rather than the
+ * cheaper contained branches -- expensive, though this project's actual
+ * production regime ($\sigma_\mathrm{noise}\sim0.3$) is unaffected either
+ * side of it. #NcGalaxyShapeFactorFixedQuad:auto-lens-nodes (default
+ * %FALSE, opt-in) calibrates a per-galaxy lens-branch node count instead
+ * of always using the configured #NcGalaxyShapeFactorFixedQuad:n-lens,
+ * cutting cost in that regime (~2x fewer nodes typical, more in the
+ * expensive middle) with no change to shipped behavior unless explicitly
+ * enabled -- see _calibrate_n_lens()'s own docs for the calibration
+ * strategy.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -139,6 +154,18 @@ typedef struct _NcGalaxyShapeFactorFixedQuadPrivate
   guint n_angular;
   guint n_lens; /* forced odd, see constructed() */
   guint n_max;  /* max (n_radial*n_angular, n_lens*n_lens): ldata buffer size */
+
+  /* Opt-in per-galaxy lens-branch node-count calibration -- see
+   * _calibrate_n_lens()'s own docs. Off by default: zero behavior change
+   * unless explicitly enabled. CONSTRUCT_ONLY (like n-radial/n-angular/
+   * n-lens above), not mutable mid-run -- this class's per-galaxy cache
+   * (ldata->cache_valid) is invalidated only by epsilon_obs/std_noise
+   * changes, so a mid-run change to either of these would silently reuse
+   * a stale grid built under the old setting; simplest fix is to not allow
+   * that in the first place, matching this class's own existing
+   * convention for n-lens itself. */
+  gboolean auto_lens_nodes;
+  gdouble lens_node_reltol;
 } NcGalaxyShapeFactorFixedQuadPrivate;
 
 enum
@@ -147,6 +174,8 @@ enum
   PROP_N_RADIAL,
   PROP_N_ANGULAR,
   PROP_N_LENS,
+  PROP_AUTO_LENS_NODES,
+  PROP_LENS_NODE_RELTOL,
   PROP_LEN,
 };
 
@@ -157,12 +186,14 @@ nc_galaxy_shape_factor_fixed_quad_init (NcGalaxyShapeFactorFixedQuad *gsffq)
 {
   NcGalaxyShapeFactorFixedQuadPrivate * const self = nc_galaxy_shape_factor_fixed_quad_get_instance_private (gsffq);
 
-  self->apply_shear_inv = NULL;
-  self->det_jac         = NULL;
-  self->n_radial        = 15;
-  self->n_angular       = 15;
-  self->n_lens          = 41;
-  self->n_max           = 0;
+  self->apply_shear_inv  = NULL;
+  self->det_jac          = NULL;
+  self->n_radial         = 15;
+  self->n_angular        = 15;
+  self->n_lens           = 41;
+  self->n_max            = 0;
+  self->auto_lens_nodes  = FALSE;
+  self->lens_node_reltol = 1.0e-4;
 }
 
 static void
@@ -181,6 +212,12 @@ _nc_galaxy_shape_factor_fixed_quad_set_property (GObject *object, guint prop_id,
       break;
     case PROP_N_LENS:
       self->n_lens = g_value_get_uint (value);
+      break;
+    case PROP_AUTO_LENS_NODES:
+      self->auto_lens_nodes = g_value_get_boolean (value);
+      break;
+    case PROP_LENS_NODE_RELTOL:
+      self->lens_node_reltol = g_value_get_double (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -204,6 +241,12 @@ _nc_galaxy_shape_factor_fixed_quad_get_property (GObject *object, guint prop_id,
       break;
     case PROP_N_LENS:
       g_value_set_uint (value, self->n_lens);
+      break;
+    case PROP_AUTO_LENS_NODES:
+      g_value_set_boolean (value, self->auto_lens_nodes);
+      break;
+    case PROP_LENS_NODE_RELTOL:
+      g_value_set_double (value, self->lens_node_reltol);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -399,20 +442,27 @@ _regen_unit_contained (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex
  * blend in the LOCAL frame (real axis along the line joining the disc
  * centers, i.e. along eps_obs), rotated by phi at the end. See
  * dev-notes/wl_fixed_quad_lens_domain_prototype.py's lens_nodes() for the
- * reference Python implementation. */
+ * reference Python implementation.
+ *
+ * @n_lens: nodes per axis for THIS call -- normally self->n_lens, but
+ * _calibrate_n_lens() also calls this at smaller trial values, and the
+ * production call site passes a calibrated value when auto-lens-nodes is
+ * on (see _regen_domain). Always odd; callers are responsible for that
+ * (self->n_lens is forced odd once in constructed(), and
+ * _calibrate_n_lens() only ever tries odd values itself). */
 static void
 _regen_lens (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double eps_obs, gdouble R2, gdouble d, gdouble phi, gdouble sig2,
-             complex double *chi_L, gdouble *eff_weight, guint *n_used)
+             guint n_lens, complex double *chi_L, gdouble *eff_weight, guint *n_used)
 {
   const gdouble R1                     = 1.0;
   const gdouble x0                     = (gsl_pow_2 (d) + gsl_pow_2 (R1) - gsl_pow_2 (R2)) / (2.0 * d);
   const gdouble alpha                  = acos (CLAMP (x0 / R1, -1.0, 1.0));
   const gdouble beta                   = acos (CLAMP ((d - x0) / R2, -1.0, 1.0));
   const complex double phase           = cexp (I * phi);
-  gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (self->n_lens);
+  gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (n_lens);
   guint i, j, idx = 0;
 
-  for (i = 0; i < self->n_lens; i++)
+  for (i = 0; i < n_lens; i++)
   {
     gdouble u, wu;
     gdouble theta1, theta2, x1, y1, x2, y2, dx1_du, dy1_du, dx2_du, dy2_du;
@@ -432,7 +482,7 @@ _regen_lens (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double ep
     dx2_du = R2 * sin (theta2) * (2.0 * beta);
     dy2_du = R2 * cos (theta2) * (2.0 * beta);
 
-    for (j = 0; j < self->n_lens; j++)
+    for (j = 0; j < n_lens; j++)
     {
       gdouble v, wv;
       gdouble x, y, dx_du, dy_du, dx_dv, dy_dv, jac;
@@ -459,13 +509,132 @@ _regen_lens (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double ep
   *n_used = idx;
 }
 
+/* Fixed, documented calibration shear for _calibrate_n_lens() -- a
+ * representative moderate shear, not tied to any particular galaxy's own
+ * g. Validated (dev-notes/wl_fixed_quad_lens_nlens_calibration.py) that
+ * calibrating the (g-independent) domain's node count at this one g value
+ * generalizes across the full g range a fit actually explores; see
+ * docs/theory/wl_shape_factor_history.md. */
+#define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_LENS_CALIB_G (0.15)
+
+/* One-off evaluation of the lens-branch marginal at a trial node count @n,
+ * used only by _calibrate_n_lens() below -- never on the per-galaxy
+ * production path (which reuses ldata's own persistent buffers via
+ * _regen_lens directly). Allocates its own small scratch buffers: this
+ * runs at most a handful of times per galaxy (calibration only, not per
+ * node/per-g), nowhere near the per-node-per-eval scale the SeriesLensed
+ * malloc-churn fix addressed. */
+static gdouble
+_lens_quad_at_n (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                 complex double eps_obs, gdouble R2, gdouble d, gdouble phi, gdouble sig2, guint n, complex double g)
+{
+  complex double *chi_L = g_new (complex double, n * n);
+  gdouble *eff_weight   = g_new (gdouble, n * n);
+  gdouble result        = 0.0;
+  guint n_used          = 0;
+  guint i;
+
+  _regen_lens (self, eps_obs, R2, d, phi, sig2, n, chi_L, eff_weight, &n_used);
+
+  for (i = 0; i < n_used; i++)
+  {
+    const complex double chi_i = self->apply_shear_inv (g, chi_L[i]);
+    const gdouble x_i          = gsl_pow_2 (creal (chi_i)) + gsl_pow_2 (cimag (chi_i));
+    const gdouble p_pop        = nc_galaxy_shape_pop_eval_p (pop, data->pop_data, x_i) / M_PI;
+    const gdouble jac          = self->det_jac (g, chi_L[i]);
+
+    result += eff_weight[i] * p_pop * jac;
+  }
+
+  g_free (chi_L);
+  g_free (eff_weight);
+
+  return result;
+}
+
+/* Calibrates the minimal odd lens-branch node count (per axis, capped at
+ * self->n_lens) whose marginal (at the fixed calibration shear above)
+ * matches a self-consistent, always-more-accurate reference to
+ * self->lens_node_reltol -- same "self-consistent high-resolution
+ * reference, no external oracle, geometric bracket then bisection"
+ * strategy as ncm_integral_fixed_calibrate() (numcosmo/ncm/integration/
+ * ncm_integrate.c), adapted here to this branch's 2D (u,v) grid instead of
+ * that function's 1D fixed rule -- the domain shapes genuinely differ, so
+ * this is a purpose-built calibration, not a call into the existing one.
+ * Reference resolution is 2*self->n_lens+1 (always odd, always stricter
+ * than the shipped default), so a calibrated result can never be trusted
+ * less than this class's own baseline accuracy. Never returns more than
+ * self->n_lens (the search is capped there, matching this property's role
+ * as both "the exact count when auto is off" and "the upper bound when
+ * auto is on"). */
+static guint
+_calibrate_n_lens (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                   complex double eps_obs, gdouble R2, gdouble d, gdouble phi, gdouble sig2)
+{
+  const complex double g_calib = NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_LENS_CALIB_G;
+  const guint n_ref            = 2 * self->n_lens + 1;
+  const gdouble I_ref          = _lens_quad_at_n (self, pop, data, eps_obs, R2, d, phi, sig2, n_ref, g_calib);
+  const gdouble denom          = (I_ref != 0.0) ? fabs (I_ref) : 1.0;
+  guint n                      = 5;
+  guint last_fail              = 0;
+  guint hi                     = 0;
+
+  if (self->n_lens <= 5)
+    return self->n_lens;
+
+  while (TRUE)
+  {
+    const gboolean at_ceiling = (n >= self->n_lens);
+    const guint n_try         = (at_ceiling ? self->n_lens : n) | 1;
+    const gdouble I_n         = _lens_quad_at_n (self, pop, data, eps_obs, R2, d, phi, sig2, n_try, g_calib);
+    const gdouble err         = fabs (I_n - I_ref) / denom;
+
+    if (err < self->lens_node_reltol)
+    {
+      hi = n_try;
+      break;
+    }
+
+    last_fail = n_try;
+
+    if (at_ceiling)
+      return self->n_lens;  /* no passing config below the cap */
+
+    n = (guint) ceil (n * 1.5);
+  }
+
+  {
+    guint lo = (last_fail > 0) ? last_fail : 3;
+
+    while (hi - lo > 2)
+    {
+      guint mid = ((lo + hi) / 2) | 1;
+
+      if (mid <= lo)
+        mid = lo + 2;
+
+      {
+        const gdouble I_mid   = _lens_quad_at_n (self, pop, data, eps_obs, R2, d, phi, sig2, mid, g_calib);
+        const gdouble err_mid = fabs (I_mid - I_ref) / denom;
+
+        if (err_mid < self->lens_node_reltol)
+          hi = mid;
+        else
+          lo = mid;
+      }
+    }
+  }
+
+  return hi;
+}
+
 /* R/phi (and the hypot/atan2 needed to get them) are only needed here, on
  * the path that rebuilds the domain -- the cache-validity check in
  * _marginal() below compares the raw epsilon_obs_1/epsilon_obs_2 doubles
  * directly instead, so a fit that holds a galaxy's observed ellipticity
  * fixed across many g values never pays for hypot/atan2. */
 static void
-_regen_domain (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapeFactorFixedQuadData *ldata,
+_regen_domain (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, NcGalaxyShapeFactorFixedQuadData *ldata,
                gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise)
 {
   const gdouble R              = hypot (epsilon_obs_1, epsilon_obs_2);
@@ -502,9 +671,17 @@ _regen_domain (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapeFa
     const gdouble R2_eff = fmax (R2, (d - R1) + NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA_TAIL * std_noise);
 
     if (d + R1 <= R2_eff)
+    {
       _regen_unit_contained (self, eps_obs, sig2, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
+    }
     else
-      _regen_lens (self, eps_obs, R2_eff, d, phi, sig2, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
+    {
+      const guint n_lens = self->auto_lens_nodes ?
+                           _calibrate_n_lens (self, pop, data, eps_obs, R2_eff, d, phi, sig2) :
+                           self->n_lens;
+
+      _regen_lens (self, eps_obs, R2_eff, d, phi, sig2, n_lens, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
+    }
   }
 
   ldata->cached_epsilon_obs_1 = epsilon_obs_1;
@@ -530,7 +707,7 @@ _nc_galaxy_shape_factor_fixed_quad_marginal (NcGalaxyShapeFactorFixedQuad *gsffq
    * docs. */
   if (!ldata->cache_valid || (ldata->cached_epsilon_obs_1 != epsilon_obs_1) ||
       (ldata->cached_epsilon_obs_2 != epsilon_obs_2) || (ldata->cached_std_noise != data->std_noise))
-    _regen_domain (self, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
+    _regen_domain (self, pop, data, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
 
   result = 0.0;
 
@@ -617,6 +794,37 @@ nc_galaxy_shape_factor_fixed_quad_class_init (NcGalaxyShapeFactorFixedQuadClass 
                                                       "Number of fixed Gauss-Legendre nodes per axis in the genuine-lens branch",
                                                       3, G_MAXUINT, 41,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorFixedQuad:auto-lens-nodes:
+   *
+   * When %TRUE, calibrates a per-galaxy lens-branch node count (capped at
+   * #NcGalaxyShapeFactorFixedQuad:n-lens) instead of always using
+   * #NcGalaxyShapeFactorFixedQuad:n-lens for every galaxy -- see
+   * _calibrate_n_lens()'s docs. Default %FALSE (zero behavior change unless
+   * explicitly enabled).
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_AUTO_LENS_NODES,
+                                   g_param_spec_boolean ("auto-lens-nodes",
+                                                         "Auto lens-branch nodes",
+                                                         "Calibrate a per-galaxy lens-branch node count instead of always using n-lens",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorFixedQuad:lens-node-reltol:
+   *
+   * Target relative tolerance for #NcGalaxyShapeFactorFixedQuad:auto-lens-nodes's
+   * calibration. Default 1e-4.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_LENS_NODE_RELTOL,
+                                   g_param_spec_double ("lens-node-reltol",
+                                                        "Lens-branch node calibration reltol",
+                                                        "Target relative tolerance for auto-lens-nodes' calibration",
+                                                        0.0, 1.0, 1.0e-4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   gsf_class->data_init        = &_nc_galaxy_shape_factor_fixed_quad_data_init;
   gsf_class->prepare          = &_nc_galaxy_shape_factor_fixed_quad_prepare;

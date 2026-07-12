@@ -45,13 +45,17 @@
  * integrates $z$ itself; the orchestrator integrates this against every
  * other $z$-dependent factor").
  *
- * v1 scope, explicit rather than silent: only the `LNINT`-equivalent
- * adaptive log-domain 1D z-integral is implemented (legacy's `CUBATURE` and
- * `FIXED_NODES` schemes are deferred, not silently omitted -- all three are
- * mathematically exact, differing only in numerical strategy/cost). No
- * bootstrap, no Fisher-matrix support, no OpenMP parallelism, no fit-time
- * `r_min`/`r_max` weighting (matching #NcDataClusterWL's own deliberate
- * no-op there -- a previous attempt "introduced bias in the estimates").
+ * Implements all three of legacy's redshift-integral methods: `LNINT`
+ * (default, adaptive log-domain 1D), `FIXED_NODES` (fixed Gauss-Legendre,
+ * with an optional per-galaxy `auto-nodes` calibration -- see
+ * nc_data_cluster_wl_factor_set_auto_nodes()) and `CUBATURE` (adaptive
+ * `NcmIntegralND` over the linear-domain product). All three are
+ * mathematically exact, differing only in numerical strategy/cost. No
+ * bootstrap, no Fisher-matrix support, no OpenMP parallelism (including for
+ * `auto-nodes` calibration, which stays serial for the same reason), no
+ * fit-time `r_min`/`r_max` weighting (matching #NcDataClusterWL's own
+ * deliberate no-op there -- a previous attempt "introduced bias in the
+ * estimates").
  *
  * Design principle followed throughout: all preparation work happens in
  * prepare() -- resolving models, refreshing each Factor's own caches,
@@ -76,6 +80,7 @@
 #include "nc/background/nc_hicosmo.h"
 #include "nc/lss/halo/nc_halo_position.h"
 #include "ncm/integration/ncm_integral1d_ptr.h"
+#include "ncm/integration/ncm_integral_nd.h"
 #include "ncm/integration/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -94,6 +99,84 @@ typedef struct _NcDataClusterWLFactorIntArg
   NcGalaxyShapeFactorData *s_data;
 } NcDataClusterWLFactorIntArg;
 
+/* Linear-domain arg for the auto-nodes calibration probes F(z)=P(z),
+ * G(z)=P(eps_obs|z): the position factor is deliberately not included, since
+ * it scales F*G and INT F equally and so cancels in every tolerance
+ * ncm_integral_fixed_calibrate() checks. */
+typedef struct _NcDataClusterWLFactorCalibArg
+{
+  NcGalaxyRedshiftFactorIntegrand *integ_z_lin;
+  NcGalaxyShapeFactorIntegrand *integ_shape_lin;
+  NcGalaxyRedshiftFactorData *z_data;
+  NcGalaxyShapeFactorData *s_data;
+} NcDataClusterWLFactorCalibArg;
+
+/* Linear-domain arg for CUBATURE's product integrand int_pos*int_z*int_shape
+ * -- reuses the same integ_pos_lin/integ_z_lin/integ_shape_lin twins the
+ * auto-nodes calibration above already needs. */
+typedef struct _NcDataClusterWLFactorCubatureIntArg
+{
+  NcGalaxyPositionFactorIntegrand *integ_pos_lin;
+  NcGalaxyRedshiftFactorIntegrand *integ_z_lin;
+  NcGalaxyShapeFactorIntegrand *integ_shape_lin;
+  NcGalaxyShapeFactorData *s_data;
+} NcDataClusterWLFactorCubatureIntArg;
+
+static void _nc_data_cluster_wl_factor_cubature_integrand (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+static void _nc_data_cluster_wl_factor_cubature_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
+
+NCM_INTEGRAL_ND_DEFINE_TYPE (NC, DATA_CLUSTER_WL_FACTOR_CUBATURE_INTEGRAND, NcDataClusterWLFactorCubatureIntegrand, nc_data_cluster_wl_factor_cubature_integrand, _nc_data_cluster_wl_factor_cubature_dim, _nc_data_cluster_wl_factor_cubature_integrand, NcDataClusterWLFactorCubatureIntArg);
+
+/* Linear-domain product int_pos*int_z*int_shape at each of the @npoints
+ * values of z in @x -- direct translation of legacy's
+ * nc_data_cluster_wl_cubature_integrand. */
+static void
+_nc_data_cluster_wl_factor_cubature_integrand (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
+{
+  NcDataClusterWLFactorCubatureIntegrand *lh_int = NC_DATA_CLUSTER_WL_FACTOR_CUBATURE_INTEGRAND (intnd);
+  NcDataClusterWLFactorCubatureIntArg *arg       = &lh_int->data;
+  guint i;
+
+  for (i = 0; i < npoints; i++)
+  {
+    const gdouble z         = ncm_vector_fast_get (x, i);
+    const gdouble int_pos   = nc_galaxy_position_factor_integrand_eval (arg->integ_pos_lin, arg->s_data->pos_data);
+    const gdouble int_z     = nc_galaxy_redshift_factor_integrand_eval (arg->integ_z_lin, z, arg->s_data->z_data);
+    const gdouble int_shape = nc_galaxy_shape_factor_integrand_eval (arg->integ_shape_lin, z, arg->s_data);
+
+    ncm_vector_set (fval, i, int_pos * int_z * int_shape);
+  }
+}
+
+static void
+_nc_data_cluster_wl_factor_cubature_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
+{
+  *dim  = 1;
+  *fdim = 1;
+}
+
+/* gsl_function F(z) = P(z): the photo-z weight baked into the calibrated
+ * quadrature nodes. Direct translation of legacy's
+ * _nc_data_cluster_wl_calib_pz. */
+static gdouble
+_nc_data_cluster_wl_factor_calib_pz (gdouble z, gpointer user_data)
+{
+  NcDataClusterWLFactorCalibArg *a = (NcDataClusterWLFactorCalibArg *) user_data;
+
+  return nc_galaxy_redshift_factor_integrand_eval (a->integ_z_lin, z, a->z_data);
+}
+
+/* gsl_function G(z) = P(eps_obs|z): the slowly-varying shape factor probed
+ * at the candidate nodes. Direct translation of legacy's
+ * _nc_data_cluster_wl_calib_shape. */
+static gdouble
+_nc_data_cluster_wl_factor_calib_shape (gdouble z, gpointer user_data)
+{
+  NcDataClusterWLFactorCalibArg *a = (NcDataClusterWLFactorCalibArg *) user_data;
+
+  return nc_galaxy_shape_factor_integrand_eval (a->integ_shape_lin, z, a->s_data);
+}
+
 typedef struct _NcDataClusterWLFactorPrivate
 {
   NcGalaxyWLObs *obs;
@@ -107,11 +190,19 @@ typedef struct _NcDataClusterWLFactorPrivate
   guint len;
   NcDataClusterWLResampleFlag resample_flag;
 
-  /* FIXED_NODES-only state: CUBATURE is not implemented by this class in
-   * either phase (see the class documentation). */
+  /* FIXED_NODES/CUBATURE state. */
   NcDataClusterWLIntegMethod integ_method;
   guint n_nodes;
   guint rule_n;
+
+  /* Per-galaxy auto-nodes calibration (FIXED_NODES only): instead of every
+   * galaxy using the global (n_nodes, rule_n), calibrate each galaxy's own
+   * minimal fixed Gauss-Legendre configuration reaching node_reltol, via
+   * ncm_integral_fixed_calibrate(). Opt-in, default off (matches every
+   * other orchestrator knob's own opt-in convention). */
+  gboolean auto_nodes;
+  gdouble node_reltol;
+  guint max_total_nodes;
 
   /* Per-galaxy fixed-node grid: index i pairs with shape_data's element i.
    * fixed_bg_nodes[i] is NULL when galaxy i's redshift support lies entirely
@@ -120,6 +211,12 @@ typedef struct _NcDataClusterWLFactorPrivate
   GPtrArray *fixed_bg_nodes;     /* element type: NcmIntegralFixed* */
   GPtrArray *z_nodes_per_galaxy; /* element type: NcmVector* */
   GArray *fixed_norm;            /* element type: gdouble */
+
+  /* Per-galaxy background node count (n_nodes-1)*rule_n selected by the
+   * auto-nodes calibration (or the global value when auto_nodes is off,
+   * i.e. every galaxy the same); 0 for fully-foreground galaxies. Mirrors
+   * fixed_norm's exact lifecycle (same reset points). */
+  GArray *n_total_per_galaxy; /* element type: guint */
 
   /* Last z_cl the grid was actually built for (GSL_NAN forces the first
    * rebuild). The grid only depends on z_cl, not on halo_position as a
@@ -142,11 +239,23 @@ typedef struct _NcDataClusterWLFactorPrivate
   guint fixed_nodes_n_nodes_seen;
   guint fixed_nodes_rule_n_seen;
 
-  /* Linear-domain position integrand, used only by the fixed-nodes path's
-   * control-variate combination (which is inherently linear-domain) --
-   * built lazily alongside integ_pos/integ_z/integ_shape and re-prepared
-   * unconditionally every cycle exactly like them. */
+  /* Same mid-run-change-detection mechanism as fixed_nodes_n_nodes_seen/
+   * fixed_nodes_rule_n_seen above, for the three auto-nodes properties
+   * (also orchestrator properties bumping no pkey). */
+  gboolean fixed_nodes_auto_nodes_seen;
+  gdouble fixed_nodes_node_reltol_seen;
+  guint fixed_nodes_max_total_nodes_seen;
+
+  /* Linear-domain twins of integ_pos/integ_z/integ_shape below, used by the
+   * fixed-nodes path's control-variate combination (integ_pos_lin) and by
+   * the auto-nodes calibration probes / CUBATURE's product integrand
+   * (integ_z_lin/integ_shape_lin) -- all inherently linear-domain, unlike
+   * integ_pos/integ_z/integ_shape (built with use_lnp=TRUE for LNINT's
+   * log-domain sum). Built lazily alongside integ_pos/integ_z/integ_shape
+   * and re-prepared unconditionally every cycle exactly like them. */
   NcGalaxyPositionFactorIntegrand *integ_pos_lin;
+  NcGalaxyRedshiftFactorIntegrand *integ_z_lin;
+  NcGalaxyShapeFactorIntegrand *integ_shape_lin;
 
   /* Per-galaxy data cache; element type NcGalaxyShapeFactorData (a boxed
    * type, ref/unref via nc_galaxy_shape_factor_data_{ref,unref}, NOT a
@@ -183,6 +292,18 @@ typedef struct _NcDataClusterWLFactorPrivate
   NcmIntegral1dPtr *int1d;
   NcDataClusterWLFactorIntArg int_arg;
 
+  /* CUBATURE-only state: built lazily alongside int1d, reusing
+   * integ_pos_lin/integ_z_lin/integ_shape_lin (no re-preparation needed
+   * beyond what those three already get every cycle). zpi/zpf/res/err are
+   * length-1 vectors reused across every ncm_integral_nd_eval() call,
+   * matching legacy's own CubatureIntegrator. */
+  NcmIntegralND *cub_intnd;
+  NcDataClusterWLFactorCubatureIntArg *cub_arg; /* owned by cub_intnd, not freed separately */
+  NcmVector *cub_zpi;
+  NcmVector *cub_zpf;
+  NcmVector *cub_res;
+  NcmVector *cub_err;
+
   gboolean constructed;
 } NcDataClusterWLFactorPrivate;
 
@@ -201,6 +322,9 @@ enum
   PROP_INTEG_METHOD,
   PROP_N_NODES,
   PROP_RULE_N,
+  PROP_AUTO_NODES,
+  PROP_NODE_RELTOL,
+  PROP_MAX_TOTAL_NODES,
 };
 
 struct _NcDataClusterWLFactor
@@ -258,11 +382,28 @@ _step_shape_pop (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGalaxyShap
  * Gauss-Legendre nodes after) -- direct translation of legacy's per-galaxy
  * construction body (nc_data_cluster_wl.c:1296-1337). The foreground bulk is
  * carried analytically through fixed_norm, so no quadrature interval ever
- * crosses the non-smooth point at z_cl. */
+ * crosses the non-smooth point at z_cl.
+ *
+ * When auto_nodes is on, (n_nodes_i, rule_n_i) are calibrated per galaxy via
+ * ncm_integral_fixed_calibrate() instead of using the global (n_nodes,
+ * rule_n) for every galaxy -- F(z)=P(z), G(z)=P(eps_obs|z), both linear
+ * domain (see integ_z_lin/integ_shape_lin's own docs). exact_bg_norm is the
+ * exact background P(z) mass, usable as the calibration's missed-mass guard
+ * baseline only when the galaxy's support doesn't straddle z_cl (only then
+ * is the background mass analytically the full norm); otherwise
+ * calibrate() falls back to its own high-resolution reference mass.
+ * calibrate()'s own returned NcmIntegralFixed is discarded and the grid is
+ * rebuilt via make_fixed_nodes() at the chosen (n_nodes_i, rule_n_i): that
+ * virtual method may bake in a scheme-specific construction (e.g. bypassing
+ * the generic integrand-eval path) that calibrate()'s generic F closure
+ * cannot reproduce, so reusing its result would risk a different answer
+ * than the non-auto-nodes path gives at the same (n_nodes_i, rule_n_i). */
 static void
 _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGalaxyShapeFactorData *s_data, guint gal_i)
 {
-  const guint n_total_nodes = (self->n_nodes - 1) * self->rule_n;
+  guint n_nodes_i = self->n_nodes;
+  guint rule_n_i  = self->rule_n;
+  guint n_total_i = 0;
   gdouble z_lo, z_hi, norm;
   gboolean has_bg;
   NcmIntegralFixed *bg_intf;
@@ -277,9 +418,21 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
     const gdouble bg_lo = MAX (z_lo, self->z_cl);
     NcmVector *z_nodes_bg;
 
-    bg_intf    = nc_galaxy_redshift_factor_make_fixed_nodes (self->redshift_factor, mset, s_data->z_data, bg_lo, z_hi, self->n_nodes, self->rule_n);
-    z_nodes    = ncm_vector_new (n_total_nodes + 1);
-    z_nodes_bg = ncm_vector_get_subvector (z_nodes, 1, n_total_nodes);
+    if (self->auto_nodes)
+    {
+      NcDataClusterWLFactorCalibArg calib_arg = { self->integ_z_lin, self->integ_shape_lin, s_data->z_data, s_data };
+      gsl_function F                          = { &_nc_data_cluster_wl_factor_calib_pz, &calib_arg };
+      gsl_function G                          = { &_nc_data_cluster_wl_factor_calib_shape, &calib_arg };
+      const gdouble exact_bg_norm             = (z_lo >= self->z_cl) ? norm : GSL_NAN;
+      NcmIntegralFixed *cal                   = ncm_integral_fixed_calibrate (&F, &G, bg_lo, z_hi, self->node_reltol, exact_bg_norm, self->max_total_nodes, &n_nodes_i, &rule_n_i);
+
+      ncm_integral_fixed_free (cal);
+    }
+
+    n_total_i  = (n_nodes_i - 1) * rule_n_i;
+    bg_intf    = nc_galaxy_redshift_factor_make_fixed_nodes (self->redshift_factor, mset, s_data->z_data, bg_lo, z_hi, n_nodes_i, rule_n_i);
+    z_nodes    = ncm_vector_new (n_total_i + 1);
+    z_nodes_bg = ncm_vector_get_subvector (z_nodes, 1, n_total_i);
 
     ncm_integral_fixed_get_nodes (bg_intf, z_nodes_bg);
     ncm_vector_free (z_nodes_bg);
@@ -292,9 +445,10 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
 
   ncm_vector_set (z_nodes, 0, z_lo);
 
-  g_ptr_array_index (self->fixed_bg_nodes, gal_i)     = bg_intf;
-  g_ptr_array_index (self->z_nodes_per_galaxy, gal_i) = z_nodes;
-  g_array_index (self->fixed_norm, gdouble, gal_i)    = norm;
+  g_ptr_array_index (self->fixed_bg_nodes, gal_i)        = bg_intf;
+  g_ptr_array_index (self->z_nodes_per_galaxy, gal_i)    = z_nodes;
+  g_array_index (self->fixed_norm, gdouble, gal_i)       = norm;
+  g_array_index (self->n_total_per_galaxy, guint, gal_i) = n_total_i;
 }
 
 static void
@@ -345,6 +499,9 @@ _fixed_nodes_grid_reset (NcDataClusterWLFactorPrivate *self)
   g_ptr_array_set_size (self->z_nodes_per_galaxy, self->shape_data->len);
 
   g_array_set_size (self->fixed_norm, self->shape_data->len);
+
+  g_array_set_size (self->n_total_per_galaxy, 0);
+  g_array_set_size (self->n_total_per_galaxy, self->shape_data->len);
 }
 
 static void
@@ -382,23 +539,39 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->int1d          = NULL;
   self->int_arg.s_data = NULL;
 
-  self->integ_method = NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT;
-  self->n_nodes      = 10;
-  self->rule_n       = 5;
+  self->integ_method    = NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT;
+  self->n_nodes         = 10;
+  self->rule_n          = 5;
+  self->auto_nodes      = FALSE;
+  self->node_reltol     = 1.0e-4;
+  self->max_total_nodes = 2000;
 
   /* No destroy-func on fixed_bg_nodes: entries are nullable (NcmIntegralFixed
    * is not NULL-safe to free), so clearing/resizing this array is handled
    * manually with an explicit NULL check -- see _fixed_nodes_grid_reset().
    * z_nodes_per_galaxy's entries are never NULL, so its destroy-func is
    * safe to rely on for both resizing and disposal. */
-  self->fixed_bg_nodes           = g_ptr_array_new ();
-  self->z_nodes_per_galaxy       = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
-  self->fixed_norm               = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  self->fixed_nodes_zcl          = GSL_NAN;
-  self->fixed_nodes_n_nodes_seen = 0;
-  self->fixed_nodes_rule_n_seen  = 0;
+  self->fixed_bg_nodes                   = g_ptr_array_new ();
+  self->z_nodes_per_galaxy               = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  self->fixed_norm                       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->n_total_per_galaxy               = g_array_new (FALSE, FALSE, sizeof (guint));
+  self->fixed_nodes_zcl                  = GSL_NAN;
+  self->fixed_nodes_n_nodes_seen         = 0;
+  self->fixed_nodes_rule_n_seen          = 0;
+  self->fixed_nodes_auto_nodes_seen      = FALSE;
+  self->fixed_nodes_node_reltol_seen     = 0.0;
+  self->fixed_nodes_max_total_nodes_seen = 0;
 
-  self->integ_pos_lin = NULL;
+  self->integ_pos_lin   = NULL;
+  self->integ_z_lin     = NULL;
+  self->integ_shape_lin = NULL;
+
+  self->cub_intnd = NULL;
+  self->cub_arg   = NULL;
+  self->cub_zpi   = NULL;
+  self->cub_zpf   = NULL;
+  self->cub_res   = NULL;
+  self->cub_err   = NULL;
 
   self->constructed = FALSE;
 }
@@ -448,6 +621,15 @@ _nc_data_cluster_wl_factor_set_property (GObject *object, guint prop_id, const G
       break;
     case PROP_RULE_N:
       nc_data_cluster_wl_factor_set_rule_n (dcwlf, g_value_get_uint (value));
+      break;
+    case PROP_AUTO_NODES:
+      nc_data_cluster_wl_factor_set_auto_nodes (dcwlf, g_value_get_boolean (value));
+      break;
+    case PROP_NODE_RELTOL:
+      nc_data_cluster_wl_factor_set_node_reltol (dcwlf, g_value_get_double (value));
+      break;
+    case PROP_MAX_TOTAL_NODES:
+      nc_data_cluster_wl_factor_set_max_total_nodes (dcwlf, g_value_get_uint (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -501,6 +683,15 @@ _nc_data_cluster_wl_factor_get_property (GObject *object, guint prop_id, GValue 
     case PROP_RULE_N:
       g_value_set_uint (value, self->rule_n);
       break;
+    case PROP_AUTO_NODES:
+      g_value_set_boolean (value, self->auto_nodes);
+      break;
+    case PROP_NODE_RELTOL:
+      g_value_set_double (value, self->node_reltol);
+      break;
+    case PROP_MAX_TOTAL_NODES:
+      g_value_set_uint (value, self->max_total_nodes);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -528,11 +719,23 @@ _nc_data_cluster_wl_factor_dispose (GObject *object)
   g_clear_pointer (&self->integ_shape, nc_galaxy_shape_factor_integrand_free);
   g_clear_pointer (&self->int1d, ncm_integral1d_ptr_free);
   g_clear_pointer (&self->integ_pos_lin, nc_galaxy_position_factor_integrand_free);
+  g_clear_pointer (&self->integ_z_lin, nc_galaxy_redshift_factor_integrand_free);
+  g_clear_pointer (&self->integ_shape_lin, nc_galaxy_shape_factor_integrand_free);
+
+  /* cub_arg is owned by cub_intnd (embedded, not a separate allocation);
+   * freeing cub_intnd is enough. */
+  self->cub_arg = NULL;
+  g_clear_pointer (&self->cub_intnd, ncm_integral_nd_free);
+  g_clear_pointer (&self->cub_zpi, ncm_vector_free);
+  g_clear_pointer (&self->cub_zpf, ncm_vector_free);
+  g_clear_pointer (&self->cub_res, ncm_vector_free);
+  g_clear_pointer (&self->cub_err, ncm_vector_free);
 
   _fixed_bg_nodes_free_entries (self->fixed_bg_nodes);
   g_clear_pointer (&self->fixed_bg_nodes, g_ptr_array_unref);
   g_clear_pointer (&self->z_nodes_per_galaxy, g_ptr_array_unref);
   g_clear_pointer (&self->fixed_norm, g_array_unref);
+  g_clear_pointer (&self->n_total_per_galaxy, g_array_unref);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_data_cluster_wl_factor_parent_class)->dispose (object);
@@ -661,10 +864,14 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     self->integ_z     = nc_galaxy_redshift_factor_integ (self->redshift_factor, mset, TRUE);
     self->integ_shape = nc_galaxy_shape_factor_integ (self->shape_factor, mset, TRUE);
 
-    /* Linear-domain twin of integ_pos, needed only by the fixed-nodes
-     * control-variate combination (inherently linear-domain -- see the
-     * class documentation). */
-    self->integ_pos_lin = nc_galaxy_position_factor_integ (self->position_factor, mset, FALSE);
+    /* Linear-domain twins of integ_pos/integ_z/integ_shape, needed by the
+     * fixed-nodes control-variate combination (integ_pos_lin), the
+     * auto-nodes calibration probes, and CUBATURE's product integrand
+     * (integ_z_lin/integ_shape_lin) -- all inherently linear-domain, see
+     * the class documentation. */
+    self->integ_pos_lin   = nc_galaxy_position_factor_integ (self->position_factor, mset, FALSE);
+    self->integ_z_lin     = nc_galaxy_redshift_factor_integ (self->redshift_factor, mset, FALSE);
+    self->integ_shape_lin = nc_galaxy_shape_factor_integ (self->shape_factor, mset, FALSE);
 
     self->int_arg.integ_pos   = self->integ_pos;
     self->int_arg.integ_z     = self->integ_z;
@@ -672,6 +879,27 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
 
     self->int1d = ncm_integral1d_ptr_new (&_nc_data_cluster_wl_factor_lnint_integrand, NULL);
     ncm_integral1d_ptr_set_userdata (self->int1d, &self->int_arg);
+
+    /* CUBATURE-only state: an NcmIntegralND wrapping the linear-domain
+     * product int_pos_lin*int_z_lin*int_shape_lin, built once here alongside
+     * int1d -- no re-preparation needed beyond what the three _lin twins
+     * already get every cycle, since the ND integrator object itself is
+     * stateless across calls. */
+    self->cub_intnd = g_object_new (nc_data_cluster_wl_factor_cubature_integrand_get_type (), NULL);
+    self->cub_arg   = &NC_DATA_CLUSTER_WL_FACTOR_CUBATURE_INTEGRAND (self->cub_intnd)->data;
+
+    self->cub_arg->integ_pos_lin   = self->integ_pos_lin;
+    self->cub_arg->integ_z_lin     = self->integ_z_lin;
+    self->cub_arg->integ_shape_lin = self->integ_shape_lin;
+
+    ncm_integral_nd_set_reltol (self->cub_intnd, self->prec);
+    ncm_integral_nd_set_abstol (self->cub_intnd, 0.0);
+    ncm_integral_nd_set_method (self->cub_intnd, NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V);
+
+    self->cub_zpi = ncm_vector_new (1);
+    self->cub_zpf = ncm_vector_new (1);
+    self->cub_res = ncm_vector_new (1);
+    self->cub_err = ncm_vector_new (1);
   }
   else
   {
@@ -679,10 +907,13 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     nc_galaxy_redshift_factor_integrand_prepare (self->integ_z, mset);
     nc_galaxy_shape_factor_integrand_prepare (self->integ_shape, mset);
     nc_galaxy_position_factor_integrand_prepare (self->integ_pos_lin, mset);
+    nc_galaxy_redshift_factor_integrand_prepare (self->integ_z_lin, mset);
+    nc_galaxy_shape_factor_integrand_prepare (self->integ_shape_lin, mset);
   }
 
   ncm_integral1d_set_reltol (NCM_INTEGRAL1D (self->int1d), self->prec);
   ncm_integral1d_set_abstol (NCM_INTEGRAL1D (self->int1d), 0.0);
+  ncm_integral_nd_set_reltol (self->cub_intnd, self->prec);
 
   /* radius_changed:      galaxy geometry changed (halo_position/cosmo).
    * optzs_changed:       lens model changed (cosmo/density_profile/
@@ -709,7 +940,10 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   pop_changed    = obs_was_changed || (nc_galaxy_shape_factor_get_pop_hash (self->shape_factor) != self->shape_pop_hash);
 
   fixed_grid_changed = obs_was_changed || z_changed || (self->z_cl != self->fixed_nodes_zcl) ||
-                       (self->n_nodes != self->fixed_nodes_n_nodes_seen) || (self->rule_n != self->fixed_nodes_rule_n_seen);
+                       (self->n_nodes != self->fixed_nodes_n_nodes_seen) || (self->rule_n != self->fixed_nodes_rule_n_seen) ||
+                       (self->auto_nodes != self->fixed_nodes_auto_nodes_seen) ||
+                       (self->node_reltol != self->fixed_nodes_node_reltol_seen) ||
+                       (self->max_total_nodes != self->fixed_nodes_max_total_nodes_seen);
 
   self->pos_hash          = nc_galaxy_position_factor_get_hash (self->position_factor);
   self->z_hash            = nc_galaxy_redshift_factor_get_hash (self->redshift_factor);
@@ -723,16 +957,29 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   if ((self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) && fixed_grid_changed)
   {
     _fixed_nodes_grid_reset (self);
-    self->fixed_nodes_zcl          = self->z_cl;
-    self->fixed_nodes_n_nodes_seen = self->n_nodes;
-    self->fixed_nodes_rule_n_seen  = self->rule_n;
+    self->fixed_nodes_zcl                  = self->z_cl;
+    self->fixed_nodes_n_nodes_seen         = self->n_nodes;
+    self->fixed_nodes_rule_n_seen          = self->rule_n;
+    self->fixed_nodes_auto_nodes_seen      = self->auto_nodes;
+    self->fixed_nodes_node_reltol_seen     = self->node_reltol;
+    self->fixed_nodes_max_total_nodes_seen = self->max_total_nodes;
   }
 
   /* Specialize and choose once: no per-galaxy branch on any of these. The
    * three fixed-nodes steps are only ever appended under FIXED_NODES;
    * ordering matters -- _step_shape_radius before _step_fixed_nodes_sigma
    * (sigma reads the projected radius) and _step_fixed_nodes_grid before
-   * _step_fixed_nodes_crit (crit reads the current z_nodes). */
+   * _step_fixed_nodes_crit (crit reads the current z_nodes).
+   *
+   * optzs/pop are moved ahead of the FIXED_NODES block (rather than after
+   * it, as their own hash-gating alone would otherwise suggest) because
+   * auto-nodes calibration inside _step_fixed_nodes_grid evaluates the
+   * continuous-z shape integrand directly, which reads cdata->optzs (from
+   * update_data_optzs) and data->pop_data (from update_data_pop) -- both
+   * uninitialized on a galaxy's very first cycle if left in their original
+   * post-FIXED_NODES position. Moving them earlier costs nothing when
+   * auto_nodes is off (grid doesn't touch either), and optzs still only
+   * needs radius (already placed before this block) to be current. */
   if (pos_changed)
     steps[n_steps++] = &_step_pos;
 
@@ -741,6 +988,12 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
 
   if (radius_changed)
     steps[n_steps++] = &_step_shape_radius;
+
+  if (optzs_changed)
+    steps[n_steps++] = &_step_shape_optzs;
+
+  if (pop_changed)
+    steps[n_steps++] = &_step_shape_pop;
 
   if (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES)
   {
@@ -761,12 +1014,6 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     if (fixed_grid_changed || radius_changed || optzs_changed)
       steps[n_steps++] = &_step_fixed_nodes_sigma;
   }
-
-  if (optzs_changed)
-    steps[n_steps++] = &_step_shape_optzs;
-
-  if (pop_changed)
-    steps[n_steps++] = &_step_shape_pop;
 
   {
     guint gal_i;
@@ -893,16 +1140,21 @@ static gdouble
 _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
-  const guint n_total_nodes                 = (self->n_nodes - 1) * self->rule_n;
-  NcmVector *shape_at_nodes                 = ncm_vector_new (n_total_nodes + 1);
-
-  /* Always the same [1, n_total_nodes) view into shape_at_nodes (itself
-   * overwritten, not reallocated, every galaxy) -- built once per call
-   * instead of once per galaxy to avoid a GObject alloc/dispose per galaxy
-   * (ncm_vector_get_subvector is a full g_object_new). */
-  NcmVector *sub = (n_total_nodes > 0) ? ncm_vector_get_subvector (shape_at_nodes, 1, n_total_nodes) : NULL;
+  guint max_n_total                         = 0;
+  NcmVector *shape_at_nodes;
   gdouble result = 0.0;
   guint gal_i;
+
+  /* Per-galaxy node counts can differ under auto-nodes (and are all equal
+   * to the global (n_nodes-1)*rule_n otherwise): size the reusable shape
+   * buffer to the largest, then take a per-galaxy leading subvector below.
+   * Built once per call, not once per galaxy, to avoid a GObject
+   * alloc/dispose per galaxy (ncm_vector_get_subvector is a full
+   * g_object_new). */
+  for (gal_i = 0; gal_i < self->n_total_per_galaxy->len; gal_i++)
+    max_n_total = MAX (max_n_total, g_array_index (self->n_total_per_galaxy, guint, gal_i));
+
+  shape_at_nodes = ncm_vector_new (max_n_total + 1);
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
@@ -911,13 +1163,29 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
   {
     NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
     NcmVector *z_nodes              = (NcmVector *) g_ptr_array_index (self->z_nodes_per_galaxy, gal_i);
+    const guint n_total_i           = g_array_index (self->n_total_per_galaxy, guint, gal_i);
     const gdouble int_pos           = nc_galaxy_position_factor_integrand_eval (self->integ_pos_lin, s_data->pos_data);
+
+    /* eval_at_nodes needs an @out exactly as long as @z_nodes (which is
+     * this galaxy's own n_total_i+1, possibly shorter than shape_at_nodes'
+     * own max_n_total+1 buffer under auto-nodes) -- a leading [0,
+     * n_total_i+1) view, distinct from @sub's [1, n_total_i) view used only
+     * by _fixed_panels_integ below. Both are non-owning views of the same
+     * underlying buffer, safe to hold simultaneously. */
+    NcmVector *nodes_view = (n_total_i < max_n_total) ? ncm_vector_get_subvector (shape_at_nodes, 0, n_total_i + 1) : shape_at_nodes;
+    NcmVector *sub        = (n_total_i > 0) ? ncm_vector_get_subvector (shape_at_nodes, 1, n_total_i) : NULL;
     gdouble P_gal, m2lnP_gal_i;
 
-    nc_galaxy_shape_factor_eval_at_nodes (self->shape_factor, mset, s_data, z_nodes, shape_at_nodes);
+    nc_galaxy_shape_factor_eval_at_nodes (self->shape_factor, mset, s_data, z_nodes, nodes_view);
 
     P_gal       = _nc_data_cluster_wl_factor_fixed_panels_integ (self, gal_i, shape_at_nodes, sub) * int_pos;
     m2lnP_gal_i = P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
+
+    if (nodes_view != shape_at_nodes)
+      ncm_vector_free (nodes_view);
+
+    if (sub != NULL)
+      ncm_vector_free (sub);
 
     if (!gsl_finite (m2lnP_gal_i))
     {
@@ -935,17 +1203,82 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
     result += m2lnP_gal_i;
   }
 
-  if (sub != NULL)
-    ncm_vector_free (sub);
-
   ncm_vector_free (shape_at_nodes);
 
   return result;
 }
 
+/* One panel of the CUBATURE integral over [zmin, zmax], as -2lnP -- direct
+ * translation of legacy's cubature_integrator_integrate. */
+static gdouble
+_nc_data_cluster_wl_factor_cubature_integrate (NcDataClusterWLFactorPrivate * const self, gdouble zmin, gdouble zmax)
+{
+  gdouble P_gal;
+
+  ncm_vector_fast_set (self->cub_zpi, 0, zmin);
+  ncm_vector_fast_set (self->cub_zpf, 0, zmax);
+
+  ncm_integral_nd_eval (self->cub_intnd, self->cub_zpi, self->cub_zpf, self->cub_res, self->cub_err);
+
+  P_gal = ncm_vector_fast_get (self->cub_res, 0);
+
+  return P_gal > 0.0 ? -2.0 * log (P_gal) : NC_GALAXY_LOW_PROB;
+}
+
+static gdouble
+_nc_data_cluster_wl_factor_eval_m2lnP_cubature (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcmVector *m2lnP_gal)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  gdouble result                            = 0.0;
+  guint gal_i;
+
+  if (m2lnP_gal != NULL)
+    g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
+
+  for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
+  {
+    NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
+    gdouble zpi, zpf, m2lnP_gal_i;
+
+    self->cub_arg->s_data = s_data;
+
+    nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, s_data->z_data, &zpi, &zpf);
+
+    /* Split at z_cl when it falls strictly inside the support, exactly like
+     * the LNINT path above. */
+    if ((self->z_cl > zpi) && (self->z_cl < zpf))
+    {
+      const gdouble m2_lo = _nc_data_cluster_wl_factor_cubature_integrate (self, zpi, self->z_cl);
+      const gdouble m2_hi = _nc_data_cluster_wl_factor_cubature_integrate (self, self->z_cl, zpf);
+
+      m2lnP_gal_i = _nc_data_cluster_wl_factor_integ_combine (m2_lo, m2_hi);
+    }
+    else
+    {
+      m2lnP_gal_i = _nc_data_cluster_wl_factor_cubature_integrate (self, zpi, zpf);
+    }
+
+    if (!gsl_finite (m2lnP_gal_i))
+    {
+      g_warning ("_nc_data_cluster_wl_factor_eval_m2lnP_cubature: galaxy %d has undefined likelihood [%g]. Skipping it.", gal_i, m2lnP_gal_i);
+
+      if (m2lnP_gal != NULL)
+        ncm_vector_set (m2lnP_gal, gal_i, GSL_NAN);
+
+      continue;
+    }
+
+    if (m2lnP_gal != NULL)
+      ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
+
+    result += m2lnP_gal_i;
+  }
+
+  return result;
+}
+
 /* Dispatch: decided once per call, not per galaxy -- mirrors the steps[]
- * "specialize and choose once" convention above. CUBATURE is not
- * implemented by this class in either phase (see the class doc). */
+ * "specialize and choose once" convention above. */
 static gdouble
 _nc_data_cluster_wl_factor_eval_m2lnP (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
@@ -960,8 +1293,10 @@ _nc_data_cluster_wl_factor_eval_m2lnP (NcDataClusterWLFactor *dcwlf, NcmMSet *ms
       return _nc_data_cluster_wl_factor_eval_m2lnP_lnint (dcwlf, mset, m2lnP_gal);
 
     case NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE:
-    default:
-      g_error ("_nc_data_cluster_wl_factor_eval_m2lnP: CUBATURE is not implemented by NcDataClusterWLFactor.");
+      return _nc_data_cluster_wl_factor_eval_m2lnP_cubature (dcwlf, mset, m2lnP_gal);
+
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
       return 0.0; /* LCOV_EXCL_LINE */
   }
@@ -1004,6 +1339,20 @@ _nc_data_cluster_wl_factor_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     nc_galaxy_shape_factor_gen (self->shape_factor, mset, s_data, rng);
     nc_galaxy_shape_factor_data_write_row (s_data, self->obs, gal_i);
   }
+
+  /* ncm_data_resample() calls prepare() *before* this function runs, using
+   * whatever per-galaxy data was current at that point (e.g. set_obs()'s
+   * placeholder zeros, on a fresh object). This loop just overwrote every
+   * galaxy's raw data in place, but touches none of the NcmModel-side
+   * hashes that pos_changed/z_changed/radius_changed/optzs_changed/
+   * pop_changed/fixed_grid_changed are keyed on -- so without this, every
+   * cache built from the pre-resample data (most dangerously the
+   * FIXED_NODES z-node grid, which is gated only by z_cl/n_nodes/rule_n and
+   * so is *not* naturally invalidated by a subsequent mass-only fit/scan)
+   * would silently stay stale for the rest of the object's life. Marking
+   * obs as changed forces the next prepare() cycle to redo everything from
+   * the fresh data, exactly as if set_obs() had just been called. */
+  self->obs_changed = TRUE;
 }
 
 static guint
@@ -1154,8 +1503,8 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
   /**
    * NcDataClusterWLFactor:integ-method:
    *
-   * Integration method for the redshift integral. `CUBATURE` is not
-   * implemented by this class (see the class documentation).
+   * Integration method for the redshift integral: `LNINT`, `FIXED_NODES` or
+   * `CUBATURE`.
    */
   g_object_class_install_property (object_class,
                                    PROP_INTEG_METHOD,
@@ -1192,6 +1541,53 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                                       NULL,
                                                       "Gauss-Legendre rule order per panel (FIXED_NODES only)",
                                                       1, G_MAXUINT, 5,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWLFactor:auto-nodes:
+   *
+   * Whether to automatically select, per galaxy, the minimal fixed
+   * Gauss-Legendre configuration reaching #NcDataClusterWLFactor:node-reltol
+   * (`FIXED_NODES` only, ignored otherwise). When disabled (the default),
+   * every galaxy uses the global #NcDataClusterWLFactor:n-nodes /
+   * #NcDataClusterWLFactor:rule-n.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_AUTO_NODES,
+                                   g_param_spec_boolean ("auto-nodes",
+                                                         NULL,
+                                                         "Automatically select the per-galaxy fixed-node configuration (FIXED_NODES only)",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWLFactor:node-reltol:
+   *
+   * Target relative tolerance for the per-galaxy fixed-node selection (see
+   * #NcDataClusterWLFactor:auto-nodes).
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_NODE_RELTOL,
+                                   g_param_spec_double ("node-reltol",
+                                                        NULL,
+                                                        "Target relative tolerance for the per-galaxy fixed-node selection",
+                                                        0.0, G_MAXDOUBLE, 1.0e-4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWLFactor:max-total-nodes:
+   *
+   * Safety ceiling on the total background node count $(n_\mathrm{nodes}-1)\,
+   * \mathrm{rule}_n$ explored by the #NcDataClusterWLFactor:auto-nodes
+   * selection. If the tolerance is not met within this budget the best
+   * configuration found is used and a warning is emitted.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MAX_TOTAL_NODES,
+                                   g_param_spec_uint ("max-total-nodes",
+                                                      NULL,
+                                                      "Safety ceiling on the total background node count for auto-nodes selection",
+                                                      2, G_MAXUINT, 2000,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->bootstrap  = FALSE; /* deferred to a follow-up, see the class doc */
@@ -1369,16 +1765,12 @@ nc_data_cluster_wl_factor_get_resample_flag (NcDataClusterWLFactor *dcwlf)
  * @dcwlf: a #NcDataClusterWLFactor
  * @integ_method: a #NcDataClusterWLIntegMethod
  *
- * Sets the redshift-integral method. `CUBATURE` is not implemented by this
- * class in either phase.
+ * Sets the redshift-integral method.
  */
 void
 nc_data_cluster_wl_factor_set_integ_method (NcDataClusterWLFactor *dcwlf, NcDataClusterWLIntegMethod integ_method)
 {
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
-
-  if (integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE)
-    g_error ("nc_data_cluster_wl_factor_set_integ_method: CUBATURE is not implemented by NcDataClusterWLFactor.");
 
   self->integ_method = integ_method;
 }
@@ -1455,6 +1847,99 @@ nc_data_cluster_wl_factor_get_rule_n (NcDataClusterWLFactor *dcwlf)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   return self->rule_n;
+}
+
+/**
+ * nc_data_cluster_wl_factor_set_auto_nodes:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @auto_nodes: whether to auto-calibrate the per-galaxy fixed-node configuration
+ *
+ * Sets whether to automatically select, per galaxy, the minimal fixed
+ * Gauss-Legendre configuration reaching #NcDataClusterWLFactor:node-reltol
+ * (`FIXED_NODES` only).
+ */
+void
+nc_data_cluster_wl_factor_set_auto_nodes (NcDataClusterWLFactor *dcwlf, gboolean auto_nodes)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  self->auto_nodes = auto_nodes;
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_auto_nodes:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * Returns: whether per-galaxy auto-nodes calibration is enabled.
+ */
+gboolean
+nc_data_cluster_wl_factor_get_auto_nodes (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  return self->auto_nodes;
+}
+
+/**
+ * nc_data_cluster_wl_factor_set_node_reltol:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @node_reltol: target relative tolerance
+ *
+ * Sets the target relative tolerance for the per-galaxy fixed-node
+ * selection (see #NcDataClusterWLFactor:auto-nodes).
+ */
+void
+nc_data_cluster_wl_factor_set_node_reltol (NcDataClusterWLFactor *dcwlf, gdouble node_reltol)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  self->node_reltol = node_reltol;
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_node_reltol:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * Returns: the target relative tolerance for the per-galaxy fixed-node
+ * selection.
+ */
+gdouble
+nc_data_cluster_wl_factor_get_node_reltol (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  return self->node_reltol;
+}
+
+/**
+ * nc_data_cluster_wl_factor_set_max_total_nodes:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @max_total_nodes: safety ceiling on the total background node count
+ *
+ * Sets the safety ceiling on the total background node count explored by
+ * the auto-nodes selection (see #NcDataClusterWLFactor:auto-nodes).
+ */
+void
+nc_data_cluster_wl_factor_set_max_total_nodes (NcDataClusterWLFactor *dcwlf, guint max_total_nodes)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  self->max_total_nodes = max_total_nodes;
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_max_total_nodes:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * Returns: the safety ceiling on the total background node count for
+ * auto-nodes selection.
+ */
+guint
+nc_data_cluster_wl_factor_get_max_total_nodes (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  return self->max_total_nodes;
 }
 
 /**

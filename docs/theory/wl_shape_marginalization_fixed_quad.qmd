@@ -193,12 +193,31 @@ narrow "expensive middle" in aggregate per-fit cost — Nelder-Mead needs the
 *same* iteration/function-eval count regardless (22 iterations, 24 evals,
 bit-identical fitted mass to `SeriesLensed` on the same data), confirming
 this is purely a per-evaluation cost effect from the branch mix, not a
-harder optimization landscape. Not yet addressed here (candidates: a
-smaller default `n-lens` given the branch-3 accuracy table above, or a
-per-galaxy adaptive `n-lens` capped by domain size, prototyped separately —
-see `dev-notes/wl_fixed_quad_lens_nlens_calibration.py`) — worth revisiting
-before treating this class as production-ready across the full
-`std_noise` range production actually uses.
+harder optimization landscape. A production 480-cell mass-recovery sweep
+later confirmed the practical cost of this: 5/600 realizations at
+`std_noise=0.12` combined with the largest galaxy counts tested timed out
+inside their per-cell budget.
+
+#### Fix: opt-in per-galaxy adaptive `n-lens`
+
+`auto-lens-nodes` (default `False`, zero behavior change unless enabled)
+calibrates a per-galaxy lens-branch node count instead of always using the
+configured `n-lens`. Same strategy as `ncm_integral_fixed_calibrate()`
+(already shipped, used by `NcDataClusterWLFactor`'s own `auto-nodes`
+property): a self-consistent, always-more-accurate internal reference
+(built at `2*n-lens+1` nodes per axis) plus a geometric-bracket-then-
+bisection search for the minimal odd node count matching it to
+`lens-node-reltol` (default `1e-4`) — adapted here to this branch's 2D
+`(u,v)` grid rather than a 1D fixed rule. The search is evaluated at one
+fixed, representative calibration shear (`g=0.15`); validated (both in the
+original prototype, `dev-notes/wl_fixed_quad_lens_nlens_calibration.py`,
+and in the shipped C tests) that calibrating there generalizes across the
+full `g` range a fit actually explores, since the domain itself is
+`g`-independent by construction. Across the same "expensive middle"
+configurations, this typically halves the node count or better (measured
+directly: roughly 2x fewer nodes, ~2.1x faster per evaluation, in a
+representative `std_noise=0.12` case) — capped so a calibrated
+configuration is never larger than the configured `n-lens` itself.
 
 ## {#sec-boundary-fix} Why the Lens Branch Uses an Effective, Grown Noise-Disk Radius
 

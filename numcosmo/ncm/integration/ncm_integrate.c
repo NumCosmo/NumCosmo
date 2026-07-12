@@ -1143,3 +1143,213 @@ ncm_integral_fixed_get_nodes (NcmIntegralFixed *intf, NcmVector *nodes)
   }
 }
 
+/* Builds the fixed rule (@n_nodes, @rule_n) over [@xl, @xu], bakes @F, and tests
+ * whether its INT F*G matches @I_ref and its INT F matches @guard_mass, both to
+ * @reltol. The F*G relative error is returned in @err_I_out for fallback ranking. */
+static gboolean
+_ncm_integral_fixed_calib_try (gsl_function *F, gsl_function *G, gdouble xl, gdouble xu, gulong n_nodes, gulong rule_n, gdouble reltol, gdouble I_ref, gdouble denom_I, gdouble guard_mass, gdouble *err_I_out)
+{
+  NcmIntegralFixed *trial = ncm_integral_fixed_new (n_nodes, rule_n, xl, xu);
+  const gdouble denom_m   = (guard_mass != 0.0) ? fabs (guard_mass) : 1.0;
+  gdouble I_trial, mass, err_I;
+  gboolean ok;
+
+  ncm_integral_fixed_calc_nodes (trial, F);
+  I_trial = ncm_integral_fixed_integ_mult (trial, G);
+  mass    = ncm_integral_fixed_nodes_eval (trial);
+  ncm_integral_fixed_free (trial);
+
+  err_I = fabs (I_trial - I_ref) / denom_I;
+  ok    = (err_I < reltol) && (fabs (mass - guard_mass) / denom_m < reltol);
+
+  if (err_I_out != NULL)
+    *err_I_out = err_I;
+
+  return ok;
+}
+
+/**
+ * ncm_integral_fixed_calibrate: (skip)
+ * @F: a pointer to a gsl_function, the integration weight (baked into the nodes).
+ * @G: a pointer to a gsl_function, the slowly-varying factor probed at the nodes.
+ * @xl: the interval lower limit.
+ * @xu: the interval upper limit.
+ * @reltol: target relative tolerance.
+ * @exact_F_integ: the exact value of $\int F \mathrm{d}x$ over [@xl, @xu] for the
+ *   missed-mass guard, or %GSL_NAN to fall back to the reference's own
+ *   $\int F \mathrm{d}x$.
+ * @max_total_nodes: ceiling on the total node count $(n_\mathrm{nodes}-1)\,r$.
+ * @n_nodes_out: (out): receives the selected number of nodes.
+ * @rule_n_out: (out): receives the selected Gauss-Legendre rule order.
+ *
+ * Searches the $(n_\mathrm{nodes}, \mathrm{rule}_n)$ configuration space for the
+ * fixed Gauss-Legendre rule of minimal *total* node count whose estimate of
+ * $\int F(x) G(x) \mathrm{d}x$ over [@xl, @xu] matches a high-resolution
+ * reference (n_nodes = 1000, rule_n = 7) to within @reltol. The selected
+ * configuration must additionally reproduce $\int F \mathrm{d}x$ (via
+ * #ncm_integral_fixed_nodes_eval) to within @reltol — this catches an @F feature
+ * narrower than the reference panel width, where the $F\,G$ test alone could
+ * false-pass because both reference and trial straddle it. The guard baseline is
+ * @exact_F_integ when finite, otherwise the reference's own $\int F$.
+ *
+ * For each candidate @rule_n the threshold $n_\mathrm{nodes}$ is bracketed by
+ * geometric growth and then pinned exactly by bisection (assuming convergence is
+ * monotone in $n_\mathrm{nodes}$), so the returned configuration is the true
+ * minimal-total rule rather than a geometric overshoot.
+ *
+ * If no configuration within @max_total_nodes meets the tolerance, the
+ * configuration with the smallest $F\,G$ error seen is used and a warning is
+ * emitted.
+ *
+ * Returns: (transfer full): a newly allocated #NcmIntegralFixed at the selected
+ * configuration, with @F already baked into its nodes (see
+ * #ncm_integral_fixed_calc_nodes).
+ */
+NcmIntegralFixed *
+ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdouble xu, gdouble reltol, gdouble exact_F_integ, gulong max_total_nodes, guint *n_nodes_out, guint *rule_n_out)
+{
+  /* Reference resolution scaled to the target tolerance. A fixed Gauss-Legendre
+   * rule resolves a piecewise-smooth weight at ~4th order, so panels growing as
+   * reltol^(-1/4) keep the reference comfortably more accurate than @reltol while
+   * staying just fine enough to exceed the selected configs (which themselves
+   * grow as the tolerance tightens) - avoiding the cost of a fixed
+   * ultra-high-resolution grid for loose tolerances. Clamped to a sane range. */
+  const gulong ref_n_nodes      = (gulong) CLAMP ((glong) (10.0 * pow (reltol, -0.3) + 0.5), 96, 2048);
+  const gulong ref_rule_n       = 7;
+  const guint rule_candidates[] = { 3, 5, 7 };
+  gdouble I_ref, denom_I, guard_mass;
+  gulong best_n_nodes = 0, best_rule_n = 0, best_total = 0;
+  gulong fb_n_nodes = 0, fb_rule_n = 0;
+  gdouble fb_err     = GSL_POSINF;
+  gboolean converged = FALSE;
+  guint ri;
+
+  g_assert (xu > xl);
+  g_assert_cmpfloat (reltol, >, 0.0);
+
+  /* High-resolution reference: INT F*G and (for the missed-mass guard) INT F.
+   * The guard baseline is the caller's exact INT F when finite, else the
+   * reference's own INT F - which still flags any trial that drops mass the
+   * reference resolves, without requiring an (abort-prone) adaptive integral. */
+  {
+    NcmIntegralFixed *ref = ncm_integral_fixed_new (ref_n_nodes, ref_rule_n, xl, xu);
+
+    ncm_integral_fixed_calc_nodes (ref, F);
+    I_ref      = ncm_integral_fixed_integ_mult (ref, G);
+    guard_mass = gsl_finite (exact_F_integ) ? exact_F_integ : ncm_integral_fixed_nodes_eval (ref);
+    ncm_integral_fixed_free (ref);
+  }
+
+  denom_I = (I_ref != 0.0) ? fabs (I_ref) : 1.0;
+
+  for (ri = 0; ri < G_N_ELEMENTS (rule_candidates); ri++)
+  {
+    const gulong rule_n = rule_candidates[ri];
+
+    /* Largest n_nodes worth testing for this rule: its total must not exceed the
+     * cap, nor (once a candidate exists) the best total already found - so only a
+     * strictly smaller total can win. (n_ceil - 1) * rule_n <= cap_total. */
+    const gulong cap_total = (best_total != 0) ? MIN (best_total - 1, max_total_nodes) : max_total_nodes;
+    const gulong n_ceil    = cap_total / rule_n + 1;
+    gulong n_nodes         = 2;
+    gulong last_fail       = 0; /* largest n_nodes seen to fail (0 = none) */
+    gulong hi              = 0; /* a passing n_nodes that brackets the threshold (0 = none) */
+    gdouble err_I;
+
+    if (n_ceil < 2)
+      continue;  /* even the coarsest rule of this order cannot beat the best */
+
+    /* Geometric phase: grow n_nodes (x1.5) only to BRACKET the pass threshold,
+     * clamped to n_ceil. Convergence is assumed monotone in n_nodes. */
+    while (TRUE)
+    {
+      const gboolean at_ceiling = (n_nodes >= n_ceil);
+      const gulong n_try        = at_ceiling ? n_ceil : n_nodes;
+      const gboolean ok         = _ncm_integral_fixed_calib_try (F, G, xl, xu, n_try, rule_n, reltol, I_ref, denom_I, guard_mass, &err_I);
+
+      if (err_I < fb_err)
+      {
+        fb_err     = err_I;
+        fb_n_nodes = n_try;
+        fb_rule_n  = rule_n;
+      }
+
+      if (ok)
+      {
+        hi = n_try;
+        break;
+      }
+
+      last_fail = n_try;
+
+      if (at_ceiling)
+        break;  /* ceiling fails => no passing config for this rule in range */
+
+      {
+        const gulong next = (gulong) ceil (n_nodes * 1.5);
+
+        n_nodes = (next > n_nodes) ? next : (n_nodes + 1);
+      }
+    }
+
+    if (hi == 0)
+      continue;
+
+    /* Bisection: exact smallest passing n_nodes in (last_fail, hi]. */
+    {
+      gulong lo = (last_fail > 0) ? last_fail : 1;
+
+      while (hi - lo > 1)
+      {
+        const gulong mid = lo + (hi - lo) / 2;
+
+        if (_ncm_integral_fixed_calib_try (F, G, xl, xu, mid, rule_n, reltol, I_ref, denom_I, guard_mass, &err_I))
+          hi = mid;
+        else
+          lo = mid;
+
+        if (err_I < fb_err)
+        {
+          fb_err     = err_I;
+          fb_n_nodes = mid;
+          fb_rule_n  = rule_n;
+        }
+      }
+    }
+
+    {
+      const gulong total = (hi - 1) * rule_n;
+
+      if ((best_total == 0) || (total < best_total))
+      {
+        best_n_nodes = hi;
+        best_rule_n  = rule_n;
+        best_total   = total;
+        converged    = TRUE;
+      }
+    }
+  }
+
+  if (!converged)
+  {
+    best_n_nodes = fb_n_nodes;
+    best_rule_n  = fb_rule_n;
+    g_warning ("ncm_integral_fixed_calibrate: did not reach reltol %g within %lu total nodes "
+               "(best rel error %g at n_nodes=%lu, rule_n=%lu).",
+               reltol, max_total_nodes, fb_err, best_n_nodes, best_rule_n);
+  }
+
+  if (n_nodes_out != NULL)
+    *n_nodes_out = (guint) best_n_nodes;
+
+  if (rule_n_out != NULL)
+    *rule_n_out = (guint) best_rule_n;
+
+  {
+    NcmIntegralFixed *intf = ncm_integral_fixed_new (best_n_nodes, best_rule_n, xl, xu);
+
+    ncm_integral_fixed_calc_nodes (intf, F);
+
+    return intf;
+  }
+}

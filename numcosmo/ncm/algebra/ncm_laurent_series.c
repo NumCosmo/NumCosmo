@@ -54,6 +54,14 @@
  * callers own whatever they create and must free it themselves (or track a
  * short-lived batch, e.g. a #GPtrArray with ncm_laurent_series_free() as its
  * free function, freed in one sweep at the end of a computation).
+ *
+ * For hot loops that would otherwise allocate and free many of these per
+ * call, ncm_laurent_series_reset() plus the `_into`-suffixed counterparts
+ * of add/conv/scale_c/conj/new_single write into a caller-supplied,
+ * already-allocated #NcmLaurentSeries instead of allocating a new one
+ * (grow-only, so a reused instance never reallocates once it reaches its
+ * steady-state size) -- see nc_galaxy_shape_factor_series_lensed.c for the
+ * intended usage (a per-instance pool of reusable series).
  */
 
 #ifdef HAVE_CONFIG_H
@@ -66,6 +74,7 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
 #include <math.h>
+#include <string.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_BOXED_TYPE (NcmLaurentSeries, ncm_laurent_series, ncm_laurent_series_copy, ncm_laurent_series_free)
@@ -84,12 +93,44 @@ NcmLaurentSeries *
 ncm_laurent_series_new (gint hmin, gint hmax)
 {
   NcmLaurentSeries *a = g_new (NcmLaurentSeries, 1);
+  gint n              = hmax - hmin + 1;
 
-  a->hmin = hmin;
-  a->hmax = hmax;
-  a->c    = g_new0 (complex double, hmax - hmin + 1);
+  a->hmin  = hmin;
+  a->hmax  = hmax;
+  a->c_cap = n;
+  a->c     = g_new0 (complex double, n);
 
   return a;
+}
+
+/**
+ * ncm_laurent_series_reset: (skip)
+ * @a: a #NcmLaurentSeries
+ * @hmin: new lowest harmonic
+ * @hmax: new highest harmonic
+ *
+ * Resizes @a in place to harmonics $h\in[hmin,hmax]$, zeroing every
+ * coefficient. Grow-only: reuses @a's existing buffer (no allocation) when
+ * it is already big enough, reallocates bigger otherwise -- never shrinks
+ * the underlying allocation. Lets a hot loop reuse one #NcmLaurentSeries
+ * across many calls instead of allocating fresh every time (see
+ * nc_galaxy_shape_factor_series_lensed.c).
+ */
+void
+ncm_laurent_series_reset (NcmLaurentSeries *a, gint hmin, gint hmax)
+{
+  gint n = hmax - hmin + 1;
+
+  if (n > a->c_cap)
+  {
+    g_free (a->c);
+    a->c     = g_new (complex double, n);
+    a->c_cap = n;
+  }
+
+  memset (a->c, 0, n * sizeof (complex double));
+  a->hmin = hmin;
+  a->hmax = hmax;
 }
 
 /**
@@ -184,6 +225,22 @@ ncm_laurent_series_new_single (gint h, complex double val)
 }
 
 /**
+ * ncm_laurent_series_set_single_into: (skip)
+ * @out: a #NcmLaurentSeries, resized in place
+ * @h: the single nonzero harmonic
+ * @val: its coefficient
+ *
+ * Reuse counterpart of ncm_laurent_series_new_single(): resets @out to
+ * $[h,h]$ and sets its one coefficient, instead of allocating.
+ */
+void
+ncm_laurent_series_set_single_into (NcmLaurentSeries *out, gint h, complex double val)
+{
+  ncm_laurent_series_reset (out, h, h);
+  out->c[0] = val;
+}
+
+/**
  * ncm_laurent_series_get_c:
  * @a: a #NcmLaurentSeries
  * @h: the harmonic to query
@@ -265,6 +322,32 @@ ncm_laurent_series_add (const NcmLaurentSeries *a, const NcmLaurentSeries *b, gd
 }
 
 /**
+ * ncm_laurent_series_add_into: (skip)
+ * @out: a #NcmLaurentSeries, resized in place, must not alias @a or @b
+ * @a: a #NcmLaurentSeries
+ * @b: a #NcmLaurentSeries
+ * @sb: scale factor applied to @b
+ *
+ * Reuse counterpart of ncm_laurent_series_add(): writes $a+sb\cdot b$ into
+ * @out instead of allocating a new series.
+ */
+void
+ncm_laurent_series_add_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, const NcmLaurentSeries *b, gdouble sb)
+{
+  gint hmin = MIN (a->hmin, b->hmin);
+  gint hmax = MAX (a->hmax, b->hmax);
+  gint h;
+
+  ncm_laurent_series_reset (out, hmin, hmax);
+
+  for (h = a->hmin; h <= a->hmax; h++)
+    out->c[h - hmin] += ncm_laurent_series_get_c (a, h);
+
+  for (h = b->hmin; h <= b->hmax; h++)
+    out->c[h - hmin] += sb * ncm_laurent_series_get_c (b, h);
+}
+
+/**
  * ncm_laurent_series_scale_c: (skip)
  * @a: a #NcmLaurentSeries
  * @s: scale factor
@@ -281,6 +364,26 @@ ncm_laurent_series_scale_c (const NcmLaurentSeries *a, complex double s)
     out->c[i] = s * a->c[i];
 
   return out;
+}
+
+/**
+ * ncm_laurent_series_scale_c_into: (skip)
+ * @out: a #NcmLaurentSeries, resized in place, must not alias @a
+ * @a: a #NcmLaurentSeries
+ * @s: scale factor
+ *
+ * Reuse counterpart of ncm_laurent_series_scale_c(): writes $s\cdot a$ into
+ * @out instead of allocating a new series.
+ */
+void
+ncm_laurent_series_scale_c_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, complex double s)
+{
+  gint i, n = a->hmax - a->hmin + 1;
+
+  ncm_laurent_series_reset (out, a->hmin, a->hmax);
+
+  for (i = 0; i < n; i++)
+    out->c[i] = s * a->c[i];
 }
 
 /**
@@ -327,6 +430,37 @@ ncm_laurent_series_conv (const NcmLaurentSeries *a, const NcmLaurentSeries *b)
 }
 
 /**
+ * ncm_laurent_series_conv_into: (skip)
+ * @out: a #NcmLaurentSeries, resized in place, must not alias @a or @b
+ * @a: a #NcmLaurentSeries
+ * @b: a #NcmLaurentSeries
+ *
+ * Reuse counterpart of ncm_laurent_series_conv(): writes the
+ * Laurent-polynomial product $a\cdot b$ into @out instead of allocating a
+ * new series.
+ */
+void
+ncm_laurent_series_conv_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, const NcmLaurentSeries *b)
+{
+  gint hmin = a->hmin + b->hmin;
+  gint hmax = a->hmax + b->hmax;
+  gint h1, h2;
+
+  ncm_laurent_series_reset (out, hmin, hmax);
+
+  for (h1 = a->hmin; h1 <= a->hmax; h1++)
+  {
+    complex double v1 = a->c[h1 - a->hmin];
+
+    if (v1 == 0.0)
+      continue;
+
+    for (h2 = b->hmin; h2 <= b->hmax; h2++)
+      out->c[(h1 + h2) - hmin] += v1 * b->c[h2 - b->hmin];
+  }
+}
+
+/**
  * ncm_laurent_series_conj:
  * @a: a #NcmLaurentSeries
  *
@@ -344,6 +478,25 @@ ncm_laurent_series_conj (const NcmLaurentSeries *a)
     out->c[(-h) - out->hmin] = conj (ncm_laurent_series_get_c (a, h));
 
   return out;
+}
+
+/**
+ * ncm_laurent_series_conj_into: (skip)
+ * @out: a #NcmLaurentSeries, resized in place, must not alias @a
+ * @a: a #NcmLaurentSeries
+ *
+ * Reuse counterpart of ncm_laurent_series_conj(): writes
+ * $\overline{a(1/w)}$ into @out instead of allocating a new series.
+ */
+void
+ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries *a)
+{
+  gint h;
+
+  ncm_laurent_series_reset (out, -a->hmax, -a->hmin);
+
+  for (h = a->hmin; h <= a->hmax; h++)
+    out->c[(-h) - out->hmin] = conj (ncm_laurent_series_get_c (a, h));
 }
 
 /**

@@ -194,6 +194,26 @@
 #include "nc/lss/galaxy/nc_galaxy_sd_shape.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss_global.h"
+#include "nc/lss/galaxy/nc_galaxy_position_factor.h"
+#include "nc/lss/galaxy/nc_galaxy_position_factor_flat.h"
+#include "nc/lss/galaxy/nc_galaxy_redshift_factor.h"
+#include "nc/lss/galaxy/nc_galaxy_redshift_factor_composed.h"
+#include "nc/lss/galaxy/nc_galaxy_redshift_obs.h"
+#include "nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.h"
+#include "nc/lss/galaxy/nc_galaxy_redshift_obs_sel.h"
+#include "nc/lss/galaxy/nc_galaxy_redshift_obs_sel_gauss.h"
+#include "nc/lss/galaxy/nc_galaxy_redshift_pop.h"
+#include "nc/lss/galaxy/nc_galaxy_redshift_pop_lsst_srd.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_var_add.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_laplace.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_quad.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_pop_beta.h"
 #include "nc/background/nc_distance.h"
 #include "nc/recomb/nc_recomb.h"
 #include "nc/recomb/nc_recomb_cbe.h"
@@ -226,6 +246,7 @@
 #include "nc/data/nc_data_cluster_ncount.h"
 #include "nc/data/nc_data_cluster_ncounts_gauss.h"
 #include "nc/data/nc_data_cluster_wl.h"
+#include "nc/data/nc_data_cluster_wl_factor.h"
 #include "nc/data/nc_data_cluster_mass_rich.h"
 #include "nc/data/nc_data_cluster_mass_rich_count.h"
 #include "nc/data/nc_data_cmb_shift_param.h"
@@ -843,6 +864,27 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_HSM_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL);
 
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR_FLAT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_FACTOR);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_FACTOR_COMPOSED);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_OBS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_OBS_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_OBS_SEL);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_OBS_SEL_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_POP);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_POP_LSST_SRD);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_VAR_ADD);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_LAPLACE);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_QUAD);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_FIXED_QUAD);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_SERIES_LENSED);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS_LOCAL);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_BETA);
+
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
   ncm_cfg_register_obj (NC_TYPE_RECOMB);
@@ -889,6 +931,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL_FACTOR);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_MASS_RICH);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_MASS_RICH_COUNT);
 

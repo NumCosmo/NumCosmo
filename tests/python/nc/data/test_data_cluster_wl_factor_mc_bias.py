@@ -84,7 +84,7 @@ MIN_SIGNIFICANCE_SIGMA = 1.5
 MAX_NON_CONVERGED_FRACTION = 0.30
 
 
-def _build():
+def _build(integ_method=Nc.DataClusterWLIntegMethod.LNINT):
     cosmo = Nc.HICosmoDEXcdm.new()
     dist = Nc.Distance.new(100.0)
     hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)
@@ -132,6 +132,7 @@ def _build():
     dcwlf.set_obs(obs)
     dcwlf.set_cut(R_MIN, R_MAX)
     dcwlf.set_prec(1.0e-6)
+    dcwlf.set_integ_method(integ_method)
 
     dset = Ncm.Dataset.new()
     dset.append_data(dcwlf)
@@ -188,6 +189,60 @@ def test_mass_recovery_bias_matches_known_pathology():
         f"bias {mean_bias:+.1%} outside the order-of-magnitude band matching "
         f"the legacy-measured -20% to -32%"
     )
+
+
+def test_fixed_nodes_fit_recovery_matches_lnint():
+    """Regression test for a real bug found via a mass-recovery timing
+    sweep: ``Ncm.Fit`` (NLOPT's derivative-free Nelder-Mead) under
+    FIXED_NODES converged to ``log10MDelta``'s upper/lower bound regardless
+    of the true mass, while the identical setup under LNINT converged
+    correctly. Root cause: ``ncm_data_resample()`` calls ``prepare()``
+    *before* the ``resample`` virtual, so on an instance whose integ-method
+    was already FIXED_NODES, the very first per-galaxy z-grid got built from
+    pre-resample (placeholder) data and, because that grid is gated only by
+    z_cl/n-nodes/rule-n (deliberately not by any per-galaxy data hash), was
+    never rebuilt again for the rest of a mass-only fit -- corrupting every
+    single likelihood evaluation the optimizer made. Fixed in
+    ``_nc_data_cluster_wl_factor_resample`` (marks ``obs_changed`` so the
+    next prepare() cycle redoes every cache from the fresh data). None of
+    the existing parity tests exercised ``Ncm.Fit`` itself (only direct
+    ``m2lnL_val`` calls), which is why this was not caught earlier -- a
+    fit's very first evaluations happen before any model parameter has
+    moved, which is exactly the condition that leaves the stale-grid bug
+    unmasked (a mass-only *scan*, by contrast, masks it after the first
+    step, since the shape-radius/optzs caches are keyed on the mass-
+    dependent hash and so recover on their own).
+
+    Reuses the same ``dcwlf``/``fit`` across several resample()+fit.run()
+    cycles -- exactly the pattern the timing sweep and Tier-2 MC test use --
+    for both LNINT and FIXED_NODES with identical seeds, and requires the
+    fitted mass to agree closely realization by realization, not just in
+    aggregate."""
+    mset_lnint, hms_lnint, dcwlf_lnint, fit_lnint = _build(
+        Nc.DataClusterWLIntegMethod.LNINT
+    )
+    mset_fixed, hms_fixed, dcwlf_fixed, fit_fixed = _build(
+        Nc.DataClusterWLIntegMethod.FIXED_NODES
+    )
+
+    n_realizations = 8
+    for i in range(n_realizations):
+        hms_lnint.param_set_by_name("log10MDelta", TRUE_LOG10M)
+        rng_lnint = Ncm.RNG.seeded_new(None, SEED0 + i)
+        dcwlf_lnint.resample(mset_lnint, rng_lnint)
+        fit_lnint.run(Ncm.FitRunMsgs.NONE)
+        log10m_lnint = hms_lnint.param_get(1)
+
+        hms_fixed.param_set_by_name("log10MDelta", TRUE_LOG10M)
+        rng_fixed = Ncm.RNG.seeded_new(None, SEED0 + i)
+        dcwlf_fixed.resample(mset_fixed, rng_fixed)
+        fit_fixed.run(Ncm.FitRunMsgs.NONE)
+        log10m_fixed = hms_fixed.param_get(1)
+
+        assert abs(log10m_fixed - log10m_lnint) < 0.02, (
+            f"realization {i}: FIXED_NODES fit ({log10m_fixed:.4f}) diverges "
+            f"from LNINT fit ({log10m_lnint:.4f}) with identical data"
+        )
 
 
 if __name__ == "__main__":

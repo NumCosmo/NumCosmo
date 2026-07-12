@@ -366,27 +366,24 @@ def test_fixed_nodes_correct_after_switching_integ_method_mid_run():
     assert_allclose(dcwlf.m2lnL_val(mset), new_m2lnL, rtol=1.0e-5)
 
 
-def test_fixed_nodes_resample_reuse_is_a_known_shared_limitation():
-    """Documents a real characteristic found during review, confirmed to be
-    inherited from legacy NcDataClusterWL rather than introduced by this
-    port: FIXED_NODES caches each galaxy's z-grid (z_lo/z_hi/norm/quadrature
-    nodes) at prepare()-time, keyed on model-level pkeys. resample()
-    rewrites a galaxy's z_data (e.g. zp) *in place*, which bumps no model
-    pkey at all -- so reusing one instance across resample()+FIXED_NODES
-    cycles (rather than building a fresh instance per realization, which is
-    what every MC harness in this project actually does) leaves the grid
-    keyed to the pre-resample redshift. Verified (manually, see the plan
-    file) that legacy exhibits bit-identical m2lnL to this class in the
-    exact same single-shared-catalog scenario -- not tested here directly
-    since the two engines' independent gen() call sequences are not
-    guaranteed to stay RNG-draw-aligned across a resample of the whole
-    catalog with independently-seeded RNGs (only true within one already-
-    resampled catalog). This test instead locks in the new engine's own
-    internal signature of the limitation: a FIXED_NODES instance reused
-    across resample() disagrees with LNINT on the very data it just wrote,
-    while a *fresh* FIXED_NODES instance pointed at the same post-resample
-    catalog agrees -- confirming the grid, not the physics, is what's
-    stale."""
+def test_fixed_nodes_resample_reuse_matches_lnint():
+    """Regression test for a real, severe bug found during a mass-recovery
+    timing sweep: `ncm_data_resample()` calls `prepare()` *before* invoking
+    the `resample` virtual (see `ncm_data_resample()` in `ncm_data.c`), so
+    FIXED_NODES's per-galaxy z-grid could get built from whatever data was
+    current *before* resample() overwrote it (e.g. set_obs()'s placeholder
+    zeros on a fresh instance). Because the grid is deliberately gated only
+    by z_cl/n-nodes/rule-n (not by any per-galaxy data hash, so that a
+    mass-only fit doesn't rebuild it every iteration), that staleness was
+    never naturally corrected afterwards -- reusing one instance across
+    repeated resample()+fit cycles (exactly what every MC/timing harness in
+    this project does) silently corrupted every likelihood evaluation,
+    driving fits to the mass parameter's bound. This used to be documented
+    here as a "known shared limitation" inherited from legacy
+    `NcDataClusterWL` (which has the identical bug); it is now fixed by
+    having `resample()` mark `obs_changed` so the very next prepare() cycle
+    redoes every per-galaxy cache from the fresh data, regardless of which
+    integ-method is active or whether any model parameter has moved."""
     mset, hms = _build_mset()
     hms.param_set_by_name("log10MDelta", 14.0)
 
@@ -397,38 +394,30 @@ def test_fixed_nodes_resample_reuse_is_a_known_shared_limitation():
     )
     dcwlf_reused.set_obs(new_obs)
     dcwlf_reused.set_prec(1.0e-8)
+    # integ-method set to FIXED_NODES *before* the first resample() -- the
+    # exact ordering that used to poison the grid with pre-resample data.
     dcwlf_reused.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
 
-    rng = Ncm.RNG.seeded_new(None, 42)
-    dcwlf_reused.resample(mset, rng)
-
-    reused_val = dcwlf_reused.m2lnL_val(mset)
-
-    dcwlf_fresh = Nc.DataClusterWLFactor.new(
-        position_factor, redshift_factor, shape_factor
-    )
-    dcwlf_fresh.set_obs(new_obs)  # same, now-resampled catalog
-    dcwlf_fresh.set_prec(1.0e-8)
-    dcwlf_fresh.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
-
-    fresh_val = dcwlf_fresh.m2lnL_val(mset)
-
-    # A fresh instance (the actually-supported usage pattern) is internally
-    # consistent with LNINT on the same catalog...
     dcwlf_lnint = Nc.DataClusterWLFactor.new(
         position_factor, redshift_factor, shape_factor
     )
     dcwlf_lnint.set_obs(new_obs)
     dcwlf_lnint.set_prec(1.0e-8)
     dcwlf_lnint.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
-    lnint_val = dcwlf_lnint.m2lnL_val(mset)
 
-    assert_allclose(fresh_val, lnint_val, rtol=1.0e-5)
+    # Several resample() cycles on the *same* reused instances, mirroring a
+    # real MC harness -- must agree with LNINT on every single one, not just
+    # the first.
+    for seed in (42, 43, 44):
+        rng_reused = Ncm.RNG.seeded_new(None, seed)
+        dcwlf_reused.resample(mset, rng_reused)
+        reused_val = dcwlf_reused.m2lnL_val(mset)
 
-    # ...while the reused instance genuinely differs, reproducing the known
-    # limitation rather than silently "fixing" it (which would break parity
-    # with legacy's own identical behavior).
-    assert abs(reused_val - lnint_val) / abs(lnint_val) > 1.0e-3
+        rng_lnint = Ncm.RNG.seeded_new(None, seed)
+        dcwlf_lnint.resample(mset, rng_lnint)
+        lnint_val = dcwlf_lnint.m2lnL_val(mset)
+
+        assert_allclose(reused_val, lnint_val, rtol=1.0e-5)
 
 
 def test_fixed_nodes_correct_after_changing_n_nodes_rule_n_mid_run():
@@ -606,6 +595,112 @@ def test_prepare_reacts_to_mass_change():
     m2lnL_b = dcwlf.m2lnL_val(mset)
 
     assert m2lnL_a != m2lnL_b
+
+
+def test_auto_nodes_matches_fixed_and_lnint():
+    """auto-nodes calibrates a per-galaxy fixed-node configuration instead of
+    using the global (n-nodes, rule-n) for every galaxy -- it must still
+    agree with the plain FIXED_NODES path and with LNINT to within a
+    tolerance consistent with the default node-reltol."""
+    mset, hms = _build_mset()
+    hms.param_set_by_name("log10MDelta", 14.0)
+
+    position_factor, redshift_factor, shape_factor, new_obs = _build_new_obs(mset)
+
+    dcwlf_auto = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_auto.set_obs(new_obs)
+    dcwlf_auto.set_prec(1.0e-8)
+    dcwlf_auto.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf_auto.set_auto_nodes(True)
+
+    dcwlf_fixed = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_fixed.set_obs(new_obs)
+    dcwlf_fixed.set_prec(1.0e-8)
+    dcwlf_fixed.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+
+    dcwlf_lnint = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_lnint.set_obs(new_obs)
+    dcwlf_lnint.set_prec(1.0e-8)
+    dcwlf_lnint.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
+
+    auto_m2lnL = dcwlf_auto.m2lnL_val(mset)
+    fixed_m2lnL = dcwlf_fixed.m2lnL_val(mset)
+    lnint_m2lnL = dcwlf_lnint.m2lnL_val(mset)
+
+    assert_allclose(auto_m2lnL, fixed_m2lnL, rtol=1.0e-3)
+    assert_allclose(auto_m2lnL, lnint_m2lnL, rtol=1.0e-3)
+
+
+def test_auto_nodes_mid_run_property_changes_do_not_corrupt_state():
+    """auto-nodes/node-reltol/max-total-nodes are orchestrator properties,
+    not NcmModel parameters -- changing them bumps no pkey, exactly like
+    n-nodes/rule-n (see test_fixed_nodes_correct_after_changing_n_nodes_rule_n_mid_run).
+    Toggling them mid-run must not corrupt the per-galaxy fixed-node grid,
+    and each configuration must still agree with LNINT."""
+    mset, hms = _build_mset()
+    hms.param_set_by_name("log10MDelta", 14.0)
+
+    position_factor, redshift_factor, shape_factor, new_obs = _build_new_obs(mset)
+
+    dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf.set_obs(new_obs)
+    dcwlf.set_prec(1.0e-8)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+
+    dcwlf_lnint = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_lnint.set_obs(new_obs)
+    dcwlf_lnint.set_prec(1.0e-8)
+    dcwlf_lnint.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
+    lnint_m2lnL = dcwlf_lnint.m2lnL_val(mset)
+
+    dcwlf.m2lnL_val(mset)  # first cycle, auto-nodes off
+
+    for auto_nodes, node_reltol, max_total_nodes in (
+        (True, 1.0e-3, 2000),
+        (True, 1.0e-5, 500),
+        (False, 1.0e-4, 2000),
+        (True, 1.0e-4, 2000),
+    ):
+        dcwlf.set_auto_nodes(auto_nodes)
+        dcwlf.set_node_reltol(node_reltol)
+        dcwlf.set_max_total_nodes(max_total_nodes)
+
+        new_m2lnL = dcwlf.m2lnL_val(mset)
+
+        assert_allclose(new_m2lnL, lnint_m2lnL, rtol=1.0e-2)
+
+
+def test_cubature_matches_lnint_and_fixed():
+    """CUBATURE (an NcmIntegralND cubature over the linear-domain product,
+    reusing the same linear-domain integrand twins auto-nodes calibration
+    needs) is a third, independently-coded exact scheme -- it must agree
+    with both LNINT and FIXED_NODES to a tight tolerance."""
+    mset, hms = _build_mset()
+    hms.param_set_by_name("log10MDelta", 14.0)
+
+    position_factor, redshift_factor, shape_factor, new_obs = _build_new_obs(mset)
+
+    dcwlf_cub = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_cub.set_obs(new_obs)
+    dcwlf_cub.set_prec(1.0e-8)
+    dcwlf_cub.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
+
+    dcwlf_lnint = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_lnint.set_obs(new_obs)
+    dcwlf_lnint.set_prec(1.0e-8)
+    dcwlf_lnint.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
+
+    dcwlf_fixed = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_fixed.set_obs(new_obs)
+    dcwlf_fixed.set_prec(1.0e-8)
+    dcwlf_fixed.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+
+    cub_m2lnL = dcwlf_cub.m2lnL_val(mset)
+    lnint_m2lnL = dcwlf_lnint.m2lnL_val(mset)
+    fixed_m2lnL = dcwlf_fixed.m2lnL_val(mset)
+
+    assert_allclose(cub_m2lnL, lnint_m2lnL, rtol=1.0e-6)
+    assert_allclose(cub_m2lnL, fixed_m2lnL, rtol=1.0e-6)
 
 
 if __name__ == "__main__":

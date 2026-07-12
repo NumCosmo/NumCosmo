@@ -47,6 +47,7 @@ struct _NcmLaurentSeries
 {
   gint hmin;
   gint hmax;
+  gint c_cap; /* allocated length of c, >= hmax-hmin+1; see ncm_laurent_series_reset() */
   complex double *c;
 };
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -63,6 +64,11 @@ NcmLaurentSeries *ncm_laurent_series_new (gint hmin, gint hmax);
 NcmLaurentSeries *ncm_laurent_series_copy (const NcmLaurentSeries *a);
 void ncm_laurent_series_free (NcmLaurentSeries *a);
 void ncm_laurent_series_clear (NcmLaurentSeries **a);
+
+#ifndef NUMCOSMO_GIR_SCAN
+void ncm_laurent_series_reset (NcmLaurentSeries *a, gint hmin, gint hmax);
+
+#endif /* NUMCOSMO_GIR_SCAN */
 
 gint ncm_laurent_series_hmin (const NcmLaurentSeries *a);
 gint ncm_laurent_series_hmax (const NcmLaurentSeries *a);
@@ -97,6 +103,19 @@ complex double ncm_laurent_series_get_c (const NcmLaurentSeries *a, gint h);
 
 void ncm_laurent_series_set_c (NcmLaurentSeries *a, gint h, complex double val);
 NcmLaurentSeries *ncm_laurent_series_scale_c (const NcmLaurentSeries *a, complex double s);
+
+/* Reuse (no-allocation-in-the-common-case) counterparts of add/conv/
+ * scale_c/conj/new_single: write into a caller-supplied @out (which
+ * ncm_laurent_series_reset()'s to the correct range internally) instead of
+ * allocating a fresh #NcmLaurentSeries. @out must not alias any input.
+ * Meant for hot loops that keep a pool of reusable #NcmLaurentSeries around
+ * (see nc_galaxy_shape_factor_series_lensed.c) -- the "returns new" siblings
+ * above are unaffected and remain the introspectable/general-purpose API. */
+void ncm_laurent_series_set_single_into (NcmLaurentSeries *out, gint h, complex double val);
+void ncm_laurent_series_add_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, const NcmLaurentSeries *b, gdouble sb);
+void ncm_laurent_series_conv_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, const NcmLaurentSeries *b);
+void ncm_laurent_series_scale_c_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, complex double s);
+void ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries *a);
 
 #endif /* NUMCOSMO_GIR_SCAN */
 

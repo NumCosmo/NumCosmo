@@ -416,6 +416,94 @@ def test_n_lens_forced_odd():
     assert gsffq_even.props.n_lens == 11
 
 
+def _make_auto(ellip_conv, sigma_pop, std_noise, auto_lens_nodes=True):
+    """Same as _make(), but constructs with auto-lens-nodes (CONSTRUCT_ONLY,
+    so it must be passed to the constructor, not set afterward)."""
+    pop = Nc.GalaxyShapePopGauss.new()
+    pop["sigma"] = sigma_pop
+    mset = _build_mset(pop)
+
+    gsffq = Nc.GalaxyShapeFactorFixedQuad(
+        ellip_conv=ellip_conv, auto_lens_nodes=auto_lens_nodes
+    )
+    data, _, _ = _build_factor_data(gsffq, mset)
+    gsffq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsffq.prepare_data_array(mset, [data], True, True)
+    return gsffq, pop, data
+
+
+# (std_noise, R) pairs landing in the genuine-lens branch's "expensive
+# middle" (R1=1, R2=8*std_noise, both discs partially overlapping) --
+# same regime dev-notes/wl_fixed_quad_lens_nlens_calibration.py validated.
+_EXPENSIVE_MIDDLE = [
+    (std_noise, R)
+    for std_noise in (0.06, 0.09, 0.12, 0.15, 0.2)
+    for R in (0.1, 0.3, 0.5, 0.7)
+    if abs(1.0 - 8.0 * std_noise) < R < 1.0 + 8.0 * std_noise
+]
+
+
+@pytest.mark.parametrize("std_noise,R", _EXPENSIVE_MIDDLE)
+def test_auto_lens_nodes_matches_scipy_truth_in_expensive_middle(std_noise, R):
+    """auto-lens-nodes' calibrated node count must still match the scipy
+    oracle, within a tolerance consistent with the default lens-node-reltol
+    (looser than the fixed default's own rtol=2e-4 -- this honestly
+    reflects the calibrated tradeoff, not a tightened requirement)."""
+    gsffq, pop, data = _make_auto(Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.28, std_noise)
+
+    val = gsffq.eval_marginal(pop, data, 0.15, 0.0, R, 0.0)
+    exact = _scipy_exact_marginal(
+        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.15 + 0.0j, R + 0.0j, std_noise
+    )
+    assert_allclose(val, exact, rtol=5.0e-3)
+
+
+@pytest.mark.parametrize("std_noise,R", _EXPENSIVE_MIDDLE[:6])
+def test_auto_lens_nodes_generalizes_across_g(std_noise, R):
+    """The node count is calibrated once at a fixed g_calib (see
+    _calibrate_n_lens()'s docs) but reused for every g a fit tries --
+    confirm it stays accurate at g values other than the calibration
+    point, not just at g_calib itself."""
+    gsffq, pop, data = _make_auto(Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.28, std_noise)
+
+    for g_test in (0.05, 0.25, 0.4):
+        val = gsffq.eval_marginal(pop, data, g_test, 0.0, R, 0.0)
+        exact = _scipy_exact_marginal(
+            pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET,
+            g_test + 0.0j, R + 0.0j, std_noise,
+        )
+        assert_allclose(val, exact, rtol=5.0e-3)
+
+
+def test_auto_lens_nodes_matches_fixed_default_closely():
+    """auto-lens-nodes' result must be numerically close to the fixed
+    n-lens=41 default on the same data -- both are approximations of the
+    same exact integral, calibrated to a tolerance stricter than the gap
+    between them should ever be in practice."""
+    std_noise, R = 0.12, 0.3
+    gsffq_fixed, pop_fixed, data_fixed = _make(
+        Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.28, std_noise
+    )
+    gsffq_auto, pop_auto, data_auto = _make_auto(
+        Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.28, std_noise
+    )
+
+    for g_test in (0.05, 0.15, 0.35):
+        val_fixed = gsffq_fixed.eval_marginal(pop_fixed, data_fixed, g_test, 0.0, R, 0.0)
+        val_auto = gsffq_auto.eval_marginal(pop_auto, data_auto, g_test, 0.0, R, 0.0)
+        assert_allclose(val_auto, val_fixed, rtol=2.0e-3)
+
+
+def test_auto_lens_nodes_off_by_default():
+    """auto-lens-nodes defaults False -- a freshly-constructed instance
+    behaves exactly like before this feature existed."""
+    gsffq = Nc.GalaxyShapeFactorFixedQuad.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
+    assert gsffq.props.auto_lens_nodes is False
+    assert_allclose(gsffq.props.lens_node_reltol, 1.0e-4)
+
+
 def test_required_columns():
     pop = Nc.GalaxyShapePopGauss.new()
     pop["sigma"] = 0.3

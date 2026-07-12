@@ -98,6 +98,7 @@
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h"
 #include "nc/lss/wl/nc_wl_ellipticity.h"
 #include "ncm/algebra/ncm_laurent_series.h"
+#include "ncm/core/ncm_memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
@@ -108,36 +109,65 @@
 
 /* ===========================================================================
  * Generic bivariate (power-series-in-g of Laurent series) helpers. Plain
- * NcmLaurentSeries** arrays of length order+1, every allocation tracked in
- * @scratch for one bulk free at the end of a single rho-node's computation
- * (see _compute_J) -- no arena, matching ncm_laurent_series' own
- * independently-heap-allocated convention.
+ * NcmLaurentSeries** arrays of length order+1, every #NcmLaurentSeries drawn
+ * from @arena instead of freshly allocated -- see the "arena" struct and
+ * _arena_next() below. The exact sequence and sizes requested here are
+ * driven purely by @order (fixed for an instance's whole life) and which
+ * chi_taylor/jac_taylor pair is selected (also fixed), never by rho/R/phi
+ * or any other per-node/per-galaxy value -- so @arena grows only during the
+ * very first node ever computed for a given workspace, and is pure reuse
+ * (zero allocation) on every call after that. See _compute_J for where
+ * @arena's backing pool lives (a per-instance NcmMemoryPool of
+ * pre-populated workspaces) and where its bump index gets reset to 0 once
+ * per node.
  * ===========================================================================
  */
 
-static NcmLaurentSeries *
-_track (GPtrArray *scratch, NcmLaurentSeries *x)
+typedef struct _NcGalaxyShapeFactorSeriesLensedArena
 {
-  g_ptr_array_add (scratch, x);
+  GPtrArray *pool; /* NcmLaurentSeries*, persists for the owning workspace's whole life */
+  guint idx;       /* bump index, reset to 0 at the start of each node's computation */
+} NcGalaxyShapeFactorSeriesLensedArena;
 
-  return x;
+static NcmLaurentSeries *
+_arena_next (NcGalaxyShapeFactorSeriesLensedArena *arena)
+{
+  NcmLaurentSeries *a;
+
+  if (arena->idx < arena->pool->len)
+  {
+    a = g_ptr_array_index (arena->pool, arena->idx);
+  }
+  else
+  {
+    a = ncm_laurent_series_new (0, 0);
+    g_ptr_array_add (arena->pool, a);
+  }
+
+  arena->idx++;
+
+  return a;
 }
 
 static void
-_bivar_conv (GPtrArray *scratch, NcmLaurentSeries * const *a, NcmLaurentSeries * const *b, guint order, NcmLaurentSeries **out)
+_bivar_conv (NcGalaxyShapeFactorSeriesLensedArena *arena, NcmLaurentSeries * const *a, NcmLaurentSeries * const *b, guint order, NcmLaurentSeries **out)
 {
   guint m;
 
   for (m = 0; m <= order; m++)
   {
-    NcmLaurentSeries *acc = _track (scratch, ncm_laurent_series_new (0, 0));
+    NcmLaurentSeries *acc = _arena_next (arena);
     guint k;
+
+    ncm_laurent_series_reset (acc, 0, 0);
 
     for (k = 0; k <= m; k++)
     {
-      NcmLaurentSeries *term = _track (scratch, ncm_laurent_series_conv (a[k], b[m - k]));
-      NcmLaurentSeries *acc2 = _track (scratch, ncm_laurent_series_add (acc, term, 1.0));
+      NcmLaurentSeries *term = _arena_next (arena);
+      NcmLaurentSeries *acc2 = _arena_next (arena);
 
+      ncm_laurent_series_conv_into (term, a[k], b[m - k]);
+      ncm_laurent_series_add_into (acc2, acc, term, 1.0);
       acc = acc2;
     }
 
@@ -146,21 +176,31 @@ _bivar_conv (GPtrArray *scratch, NcmLaurentSeries * const *a, NcmLaurentSeries *
 }
 
 static void
-_bivar_scale (GPtrArray *scratch, NcmLaurentSeries * const *a, complex double s, guint order, NcmLaurentSeries **out)
+_bivar_scale (NcGalaxyShapeFactorSeriesLensedArena *arena, NcmLaurentSeries * const *a, complex double s, guint order, NcmLaurentSeries **out)
 {
   guint m;
 
   for (m = 0; m <= order; m++)
-    out[m] = _track (scratch, ncm_laurent_series_scale_c (a[m], s));
+  {
+    NcmLaurentSeries *o = _arena_next (arena);
+
+    ncm_laurent_series_scale_c_into (o, a[m], s);
+    out[m] = o;
+  }
 }
 
 static void
-_bivar_conj (GPtrArray *scratch, NcmLaurentSeries * const *a, guint order, NcmLaurentSeries **out)
+_bivar_conj (NcGalaxyShapeFactorSeriesLensedArena *arena, NcmLaurentSeries * const *a, guint order, NcmLaurentSeries **out)
 {
   guint m;
 
   for (m = 0; m <= order; m++)
-    out[m] = _track (scratch, ncm_laurent_series_conj (a[m]));
+  {
+    NcmLaurentSeries *o = _arena_next (arena);
+
+    ncm_laurent_series_conj_into (o, a[m]);
+    out[m] = o;
+  }
 }
 
 /* ===========================================================================
@@ -172,25 +212,28 @@ _bivar_conj (GPtrArray *scratch, NcmLaurentSeries * const *a, guint order, NcmLa
  * ===========================================================================
  */
 
-typedef void (*NcGalaxyShapeFactorSeriesLensedChiTaylorFunc) (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries **c);
-typedef void (*NcGalaxyShapeFactorSeriesLensedJacTaylorFunc) (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries **jac);
+typedef void (*NcGalaxyShapeFactorSeriesLensedChiTaylorFunc) (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **c);
+typedef void (*NcGalaxyShapeFactorSeriesLensedJacTaylorFunc) (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **jac);
 
 /* eps: chi_I(chi_L,g)=(chi_L-g)/(1-g*chi_L), closed form, no recursion:
  * c_0=chi_L={1:rho}; c_k=chi_L^(k-1)*(chi_L^2-1) = rho^(k+1)*w^(k+1) -
  * rho^(k-1)*w^(k-1) for k>=1 -- a 2-term Laurent series at every order. */
 static void
-_chi_taylor_eps (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries **c)
+_chi_taylor_eps (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **c)
 {
   guint k;
+  NcmLaurentSeries *c0 = _arena_next (arena);
 
-  c[0] = _track (scratch, ncm_laurent_series_new_single (1, rho));
+  ncm_laurent_series_set_single_into (c0, 1, rho);
+  c[0] = c0;
 
   for (k = 1; k <= order; k++)
   {
     gdouble rho_km1      = pow (rho, (gdouble) (k - 1));
     gdouble rho_kp1      = rho_km1 * rho * rho;
-    NcmLaurentSeries *ck = _track (scratch, ncm_laurent_series_new ((gint) k - 1, (gint) k + 1));
+    NcmLaurentSeries *ck = _arena_next (arena);
 
+    ncm_laurent_series_reset (ck, (gint) k - 1, (gint) k + 1);
     ncm_laurent_series_set_c (ck, (gint) k - 1, -rho_km1);
     ncm_laurent_series_set_c (ck, (gint) k + 1, rho_kp1);
     c[k] = ck;
@@ -202,7 +245,7 @@ _chi_taylor_eps (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries 
  * series, single-term at harmonic n each), times (1-g^2). Jac=|that|^2 is
  * this series convolved with its own bivariate conjugate. */
 static void
-_jac_taylor_eps (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries **jac)
+_jac_taylor_eps (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **jac)
 {
   NcmLaurentSeries **binom      = g_new0 (NcmLaurentSeries *, order + 3);
   NcmLaurentSeries **deriv      = g_new0 (NcmLaurentSeries *, order + 1);
@@ -210,18 +253,30 @@ _jac_taylor_eps (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries 
   guint n;
 
   for (n = 0; n <= order + 2; n++)
-    binom[n] = _track (scratch, ncm_laurent_series_new_single ((gint) n, (n + 1.0) * pow (rho, (gdouble) n)));
+  {
+    NcmLaurentSeries *b = _arena_next (arena);
+
+    ncm_laurent_series_set_single_into (b, (gint) n, (n + 1.0) * pow (rho, (gdouble) n));
+    binom[n] = b;
+  }
 
   for (n = 0; n <= order; n++)
   {
     if (n >= 2)
-      deriv[n] = _track (scratch, ncm_laurent_series_add (binom[n], binom[n - 2], -1.0));
+    {
+      NcmLaurentSeries *d = _arena_next (arena);
+
+      ncm_laurent_series_add_into (d, binom[n], binom[n - 2], -1.0);
+      deriv[n] = d;
+    }
     else
+    {
       deriv[n] = binom[n];
+    }
   }
 
-  _bivar_conj (scratch, deriv, order, deriv_conj);
-  _bivar_conv (scratch, deriv, deriv_conj, order, jac);
+  _bivar_conj (arena, deriv, order, deriv_conj);
+  _bivar_conv (arena, deriv, deriv_conj, order, jac);
 
   g_free (binom);
   g_free (deriv);
@@ -235,32 +290,55 @@ _jac_taylor_eps (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries 
  * n_k=0 otherwise, d1=-(chi_L+chibar_L), d2=1 (so the d2 term is just
  * c_{k-2} itself, no convolution needed). */
 static void
-_chi_taylor_chi (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries **c)
+_chi_taylor_chi (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **c)
 {
-  NcmLaurentSeries *chi_L    = _track (scratch, ncm_laurent_series_new_single (1, rho));
-  NcmLaurentSeries *chibar_L = _track (scratch, ncm_laurent_series_new_single (-1, rho));
-  NcmLaurentSeries *two_s    = _track (scratch, ncm_laurent_series_add (chi_L, chibar_L, 1.0));
-  NcmLaurentSeries *d1       = _track (scratch, ncm_laurent_series_scale_c (two_s, -1.0));
+  NcmLaurentSeries *chi_L    = _arena_next (arena);
+  NcmLaurentSeries *chibar_L = _arena_next (arena);
+  NcmLaurentSeries *two_s    = _arena_next (arena);
+  NcmLaurentSeries *d1       = _arena_next (arena);
   guint k;
+
+  ncm_laurent_series_set_single_into (chi_L, 1, rho);
+  ncm_laurent_series_set_single_into (chibar_L, -1, rho);
+  ncm_laurent_series_add_into (two_s, chi_L, chibar_L, 1.0);
+  ncm_laurent_series_scale_c_into (d1, two_s, -1.0);
 
   c[0] = chi_L;
 
   for (k = 1; k <= order; k++)
   {
     NcmLaurentSeries *base;
+    NcmLaurentSeries *conv_term;
     NcmLaurentSeries *acc;
 
     if (k == 1)
-      base = _track (scratch, ncm_laurent_series_new_single (0, -2.0));
+    {
+      base = _arena_next (arena);
+      ncm_laurent_series_set_single_into (base, 0, -2.0);
+    }
     else if (k == 2)
+    {
       base = chibar_L;
+    }
     else
-      base = _track (scratch, ncm_laurent_series_new (0, 0));
+    {
+      base = _arena_next (arena);
+      ncm_laurent_series_reset (base, 0, 0);
+    }
 
-    acc = _track (scratch, ncm_laurent_series_add (base, _track (scratch, ncm_laurent_series_conv (d1, c[k - 1])), -1.0));
+    conv_term = _arena_next (arena);
+    ncm_laurent_series_conv_into (conv_term, d1, c[k - 1]);
+
+    acc = _arena_next (arena);
+    ncm_laurent_series_add_into (acc, base, conv_term, -1.0);
 
     if (k >= 2)
-      acc = _track (scratch, ncm_laurent_series_add (acc, c[k - 2], -1.0));
+    {
+      NcmLaurentSeries *acc2 = _arena_next (arena);
+
+      ncm_laurent_series_add_into (acc2, acc, c[k - 2], -1.0);
+      acc = acc2;
+    }
 
     c[k] = acc;
   }
@@ -272,38 +350,54 @@ _chi_taylor_chi (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries 
  * against the already-shipped nc_wl_ellipticity_lndet_jac_trace_c, see the
  * class docs). */
 static void
-_jac_taylor_chi (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries **jac)
+_jac_taylor_chi (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **jac)
 {
-  NcmLaurentSeries *chi_L    = _track (scratch, ncm_laurent_series_new_single (1, rho));
-  NcmLaurentSeries *chibar_L = _track (scratch, ncm_laurent_series_new_single (-1, rho));
-  NcmLaurentSeries *two_s    = _track (scratch, ncm_laurent_series_add (chi_L, chibar_L, 1.0));
-  NcmLaurentSeries *d1       = _track (scratch, ncm_laurent_series_scale_c (two_s, -1.0));
+  NcmLaurentSeries *chi_L    = _arena_next (arena);
+  NcmLaurentSeries *chibar_L = _arena_next (arena);
+  NcmLaurentSeries *two_s    = _arena_next (arena);
+  NcmLaurentSeries *d1       = _arena_next (arena);
   NcmLaurentSeries **r       = g_new0 (NcmLaurentSeries *, order + 1);
   NcmLaurentSeries **r2      = g_new0 (NcmLaurentSeries *, order + 1);
   NcmLaurentSeries **r3      = g_new0 (NcmLaurentSeries *, order + 1);
   NcmLaurentSeries **num     = g_new0 (NcmLaurentSeries *, order + 1);
   guint k;
 
+  ncm_laurent_series_set_single_into (chi_L, 1, rho);
+  ncm_laurent_series_set_single_into (chibar_L, -1, rho);
+  ncm_laurent_series_add_into (two_s, chi_L, chibar_L, 1.0);
+  ncm_laurent_series_scale_c_into (d1, two_s, -1.0);
+
   /* r = 1/D(g), D(g)=1+d1*g+g^2 (d0=1, d2=1) */
-  r[0] = _track (scratch, ncm_laurent_series_new_single (0, 1.0));
+  r[0] = _arena_next (arena);
+  ncm_laurent_series_set_single_into (r[0], 0, 1.0);
 
   for (k = 1; k <= order; k++)
   {
-    NcmLaurentSeries *acc = _track (scratch, ncm_laurent_series_scale_c (_track (scratch, ncm_laurent_series_conv (d1, r[k - 1])), -1.0));
+    NcmLaurentSeries *conv_term = _arena_next (arena);
+    NcmLaurentSeries *acc       = _arena_next (arena);
+
+    ncm_laurent_series_conv_into (conv_term, d1, r[k - 1]);
+    ncm_laurent_series_scale_c_into (acc, conv_term, -1.0);
 
     if (k >= 2)
-      acc = _track (scratch, ncm_laurent_series_add (acc, r[k - 2], -1.0));
+    {
+      NcmLaurentSeries *acc2 = _arena_next (arena);
+
+      ncm_laurent_series_add_into (acc2, acc, r[k - 2], -1.0);
+      acc = acc2;
+    }
 
     r[k] = acc;
   }
 
-  _bivar_conv (scratch, r, r, order, r2);
-  _bivar_conv (scratch, r2, r, order, r3);
+  _bivar_conv (arena, r, r, order, r2);
+  _bivar_conv (arena, r2, r, order, r3);
 
   /* (1-g^2)^3 = 1 - 3g^2 + 3g^4 - g^6 */
   for (k = 0; k <= order; k++)
   {
     gdouble coeff;
+    NcmLaurentSeries *n;
 
     if (k == 0)
       coeff = 1.0;
@@ -316,10 +410,12 @@ _jac_taylor_chi (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries 
     else
       coeff = 0.0;
 
-    num[k] = _track (scratch, ncm_laurent_series_new_single (0, coeff));
+    n = _arena_next (arena);
+    ncm_laurent_series_set_single_into (n, 0, coeff);
+    num[k] = n;
   }
 
-  _bivar_conv (scratch, num, r3, order, jac);
+  _bivar_conv (arena, num, r3, order, jac);
 
   g_free (r);
   g_free (r2);
@@ -338,7 +434,7 @@ _jac_taylor_chi (GPtrArray *scratch, gdouble rho, guint order, NcmLaurentSeries 
  * always) -- pull out exp(a0) as a scalar prefactor, apply the standard
  * c_m recursion to the g>=1 remainder. */
 static void
-_exp_series (GPtrArray *scratch, NcmLaurentSeries * const *A, guint order, NcmLaurentSeries **out)
+_exp_series (NcGalaxyShapeFactorSeriesLensedArena *arena, NcmLaurentSeries * const *A, guint order, NcmLaurentSeries **out)
 {
   complex double a0 = ncm_laurent_series_get_c (A[0], 0);
   complex double prefactor;
@@ -350,31 +446,43 @@ _exp_series (GPtrArray *scratch, NcmLaurentSeries * const *A, guint order, NcmLa
 
   prefactor = cexp (a0);
 
-  c[0] = _track (scratch, ncm_laurent_series_new_single (0, 1.0));
+  c[0] = _arena_next (arena);
+  ncm_laurent_series_set_single_into (c[0], 0, 1.0);
 
   for (m = 1; m <= order; m++)
   {
-    NcmLaurentSeries *acc = _track (scratch, ncm_laurent_series_new (0, 0));
+    NcmLaurentSeries *acc = _arena_next (arena);
     guint k;
+
+    ncm_laurent_series_reset (acc, 0, 0);
 
     for (k = 1; k <= m; k++)
     {
-      NcmLaurentSeries *term = _track (scratch, ncm_laurent_series_conv (A[k], c[m - k]));
+      NcmLaurentSeries *term = _arena_next (arena);
+      NcmLaurentSeries *acc2 = _arena_next (arena);
 
-      acc = _track (scratch, ncm_laurent_series_add (acc, term, (gdouble) k));
+      ncm_laurent_series_conv_into (term, A[k], c[m - k]);
+      ncm_laurent_series_add_into (acc2, acc, term, (gdouble) k);
+      acc = acc2;
     }
 
-    c[m] = _track (scratch, ncm_laurent_series_scale_c (acc, 1.0 / m));
+    c[m] = _arena_next (arena);
+    ncm_laurent_series_scale_c_into (c[m], acc, 1.0 / m);
   }
 
   for (m = 0; m <= order; m++)
-    out[m] = _track (scratch, ncm_laurent_series_scale_c (c[m], prefactor));
+  {
+    NcmLaurentSeries *o = _arena_next (arena);
+
+    ncm_laurent_series_scale_c_into (o, c[m], prefactor);
+    out[m] = o;
+  }
 
   g_free (c);
 }
 
 static void
-_F_g_taylor (GPtrArray *scratch, NcGalaxyShapeFactorSeriesLensedChiTaylorFunc chi_taylor, NcGalaxyShapeFactorSeriesLensedJacTaylorFunc jac_taylor,
+_F_g_taylor (NcGalaxyShapeFactorSeriesLensedArena *arena, NcGalaxyShapeFactorSeriesLensedChiTaylorFunc chi_taylor, NcGalaxyShapeFactorSeriesLensedJacTaylorFunc jac_taylor,
              gdouble rho, gdouble sigma_pop, guint order, NcmLaurentSeries **F)
 {
   NcmLaurentSeries **c        = g_new0 (NcmLaurentSeries *, order + 1);
@@ -384,15 +492,15 @@ _F_g_taylor (GPtrArray *scratch, NcGalaxyShapeFactorSeriesLensedChiTaylorFunc ch
   NcmLaurentSeries **pop      = g_new0 (NcmLaurentSeries *, order + 1);
   NcmLaurentSeries **jac      = g_new0 (NcmLaurentSeries *, order + 1);
 
-  chi_taylor (scratch, rho, order, c);
-  _bivar_conj (scratch, c, order, cbar);
-  _bivar_conv (scratch, c, cbar, order, abs_sq);
-  _bivar_scale (scratch, abs_sq, -1.0 / (2.0 * sigma_pop * sigma_pop), order, exponent);
-  _exp_series (scratch, exponent, order, pop);
+  chi_taylor (arena, rho, order, c);
+  _bivar_conj (arena, c, order, cbar);
+  _bivar_conv (arena, c, cbar, order, abs_sq);
+  _bivar_scale (arena, abs_sq, -1.0 / (2.0 * sigma_pop * sigma_pop), order, exponent);
+  _exp_series (arena, exponent, order, pop);
 
-  jac_taylor (scratch, rho, order, jac);
+  jac_taylor (arena, rho, order, jac);
 
-  _bivar_conv (scratch, pop, jac, order, F);
+  _bivar_conv (arena, pop, jac, order, F);
 
   g_free (c);
   g_free (cbar);
@@ -419,6 +527,17 @@ typedef struct _NcGalaxyShapeFactorSeriesLensedPrivate
 
   guint trunc_order;
   guint n_nodes;
+
+  /* Pool of per-computation workspaces (NcGalaxyShapeFactorSeriesLensedWS,
+   * defined further down, right before _compute_J), each bundling a
+   * reusable NcmLaurentSeries arena plus the rho_nodes/weights/GL-table
+   * triple _compute_J needs. NcmMemoryPool (ncm_memory_pool.h) is this
+   * project's own thread-safe, auto-growing checkout pool -- same pattern
+   * as ncm_integral_get_workspace() and NcmStatsDistKDE's mp_eval_vars:
+   * _compute_J checks out one workspace per call and returns it when done,
+   * so concurrent calls (were this ever parallelized) get independent
+   * workspaces rather than racing on shared state. */
+  NcmMemoryPool *mp_ws;
 } NcGalaxyShapeFactorSeriesLensedPrivate;
 
 enum
@@ -431,6 +550,10 @@ enum
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyShapeFactorSeriesLensed, nc_galaxy_shape_factor_series_lensed, NC_TYPE_GALAXY_SHAPE_FACTOR)
 
+/* Defined near _compute_J, forward-declared here for _init()'s use. */
+static gpointer _nc_galaxy_shape_factor_series_lensed_ws_new (gpointer userdata);
+static void _nc_galaxy_shape_factor_series_lensed_ws_free (gpointer p);
+
 static void
 nc_galaxy_shape_factor_series_lensed_init (NcGalaxyShapeFactorSeriesLensed *gsfsl)
 {
@@ -440,6 +563,13 @@ nc_galaxy_shape_factor_series_lensed_init (NcGalaxyShapeFactorSeriesLensed *gsfs
   self->jac_taylor  = NULL;
   self->trunc_order = 4;
   self->n_nodes     = 60;
+
+  /* Lazily populated (ncm_memory_pool_new itself allocates no workspace),
+   * so this runs safely before trunc-order/n-nodes's CONSTRUCT properties
+   * are set -- _ws_new (defined near _compute_J) reads them from @gsfsl's
+   * own private data only when a workspace is actually first requested,
+   * by which point construction has completed. */
+  self->mp_ws = ncm_memory_pool_new (&_nc_galaxy_shape_factor_series_lensed_ws_new, gsfsl, &_nc_galaxy_shape_factor_series_lensed_ws_free);
 }
 
 static void
@@ -529,6 +659,14 @@ _nc_galaxy_shape_factor_series_lensed_prepare (NcGalaxyShapeFactor *gsf, NcmMSet
 static void
 _nc_galaxy_shape_factor_series_lensed_finalize (GObject *object)
 {
+  NcGalaxyShapeFactorSeriesLensedPrivate * const self = nc_galaxy_shape_factor_series_lensed_get_instance_private (NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED (object));
+
+  if (self->mp_ws != NULL)
+  {
+    ncm_memory_pool_free (self->mp_ws, TRUE);
+    self->mp_ws = NULL;
+  }
+
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_shape_factor_series_lensed_parent_class)->finalize (object);
 }
@@ -593,47 +731,92 @@ _nc_galaxy_shape_factor_series_lensed_data_init (NcGalaxyShapeFactor *gsf, NcmMS
  * _nc_galaxy_shape_factor_series_lensed_marginal. */
 #define NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_MIN_MARGINAL (1.0e-300)
 
+/* Per-computation workspace, pooled via #NcmMemoryPool (see mp_ws's own
+ * comment on the private struct above): bundles the NcmLaurentSeries arena
+ * every function in the _F_g_taylor cascade draws its scratch objects from,
+ * plus the rho_nodes/weights/GL-table triple _compute_J needs. n_nodes is
+ * CONSTRUCT_ONLY (fixed for the instance's whole life), so rho_nodes/
+ * weights/table are sized correctly here, once, and never resized; the
+ * arena starts empty and is grown lazily by _arena_next() the first time
+ * this workspace is actually used (see the arena's own comment above --
+ * that growth is a one-time, first-node-only event, stable forever after).
+ */
+typedef struct _NcGalaxyShapeFactorSeriesLensedWS
+{
+  GPtrArray *arena;
+  gdouble *rho_nodes;
+  gdouble *weights;
+  gsl_integration_glfixed_table *table;
+} NcGalaxyShapeFactorSeriesLensedWS;
+
+static gpointer
+_nc_galaxy_shape_factor_series_lensed_ws_new (gpointer userdata)
+{
+  NcGalaxyShapeFactorSeriesLensed *gsfsl              = NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED (userdata);
+  NcGalaxyShapeFactorSeriesLensedPrivate * const self = nc_galaxy_shape_factor_series_lensed_get_instance_private (gsfsl);
+  NcGalaxyShapeFactorSeriesLensedWS *ws               = g_new0 (NcGalaxyShapeFactorSeriesLensedWS, 1);
+
+  ws->arena     = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_laurent_series_free);
+  ws->rho_nodes = g_new (gdouble, self->n_nodes);
+  ws->weights   = g_new (gdouble, self->n_nodes);
+  ws->table     = gsl_integration_glfixed_table_alloc (self->n_nodes);
+
+  return ws;
+}
+
+static void
+_nc_galaxy_shape_factor_series_lensed_ws_free (gpointer p)
+{
+  NcGalaxyShapeFactorSeriesLensedWS *ws = (NcGalaxyShapeFactorSeriesLensedWS *) p;
+
+  g_ptr_array_unref (ws->arena);
+  g_free (ws->rho_nodes);
+  g_free (ws->weights);
+  gsl_integration_glfixed_table_free (ws->table);
+  g_free (ws);
+}
+
 /*
  * Per-galaxy radial integral: fills J[0..order] with the (g-independent)
  * Bessel-reduced radial integrals at fixed (R,phi,sig2,sigma_pop), one fixed
  * Gauss-Legendre pass over rho in a window around the envelope's peak at
- * rho=R.
+ * rho=R. Checks out one pooled workspace for the whole call (all n_nodes
+ * iterations), returning it at the end -- same get/return granularity as
+ * ncm_integral_locked_a_b's own bracketing of ncm_integral_get_workspace().
  */
 static void
 _compute_J (NcGalaxyShapeFactorSeriesLensedPrivate * const self, gdouble sigma_pop, gdouble pop_norm,
             gdouble R, gdouble phi, gdouble sig2, gdouble *J)
 {
-  const guint order                    = self->trunc_order;
-  const guint n_nodes                  = self->n_nodes;
-  const gdouble sigma_n                = sqrt (sig2);
-  const gdouble rho_lo                 = fmax (0.0, R - NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_WINDOW_NSIGMA * sigma_n);
-  const gdouble rho_hi                 = fmin (1.0, R + NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_WINDOW_NSIGMA * sigma_n);
-  gdouble *rho_nodes                   = g_new (gdouble, n_nodes);
-  gdouble *weights                     = g_new (gdouble, n_nodes);
-  gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (n_nodes);
+  const guint order                          = self->trunc_order;
+  const guint n_nodes                        = self->n_nodes;
+  const gdouble sigma_n                      = sqrt (sig2);
+  const gdouble rho_lo                       = fmax (0.0, R - NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_WINDOW_NSIGMA * sigma_n);
+  const gdouble rho_hi                       = fmin (1.0, R + NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_WINDOW_NSIGMA * sigma_n);
+  NcGalaxyShapeFactorSeriesLensedWS **ws_ptr = ncm_memory_pool_get (self->mp_ws);
+  NcGalaxyShapeFactorSeriesLensedWS *ws      = *ws_ptr;
+  NcGalaxyShapeFactorSeriesLensedArena arena = { ws->arena, 0 };
   guint i, m;
 
   for (i = 0; i < n_nodes; i++)
-    gsl_integration_glfixed_point (rho_lo, rho_hi, i, &rho_nodes[i], &weights[i], table);
-
-  gsl_integration_glfixed_table_free (table);
+    gsl_integration_glfixed_point (rho_lo, rho_hi, i, &ws->rho_nodes[i], &ws->weights[i], ws->table);
 
   for (m = 0; m <= order; m++)
     J[m] = 0.0;
 
   for (i = 0; i < n_nodes; i++)
   {
-    const gdouble rho       = rho_nodes[i];
-    const gdouble w         = weights[i];
+    const gdouble rho       = ws->rho_nodes[i];
+    const gdouble w         = ws->weights[i];
     const gdouble z         = R * rho / sig2;
     const gdouble envelope  = exp (-gsl_pow_2 (R - rho) / (2.0 * sig2)) / (2.0 * M_PI * sig2);
     const gdouble prefactor = w * rho * envelope * pop_norm;
-    GPtrArray *scratch      = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_laurent_series_free);
     NcmLaurentSeries **F    = g_new0 (NcmLaurentSeries *, order + 1);
     gint maxk, k;
     gdouble *Ik;
 
-    _F_g_taylor (scratch, self->chi_taylor, self->jac_taylor, rho, sigma_pop, order, F);
+    arena.idx = 0;
+    _F_g_taylor (&arena, self->chi_taylor, self->jac_taylor, rho, sigma_pop, order, F);
 
     maxk = 0;
 
@@ -650,11 +833,9 @@ _compute_J (NcGalaxyShapeFactorSeriesLensedPrivate * const self, gdouble sigma_p
 
     g_free (Ik);
     g_free (F);
-    g_ptr_array_unref (scratch);
   }
 
-  g_free (rho_nodes);
-  g_free (weights);
+  ncm_memory_pool_return (ws_ptr);
 }
 
 static gdouble

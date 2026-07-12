@@ -1050,6 +1050,20 @@ _nc_data_cluster_wl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     nc_galaxy_sd_shape_gen (galaxy_shape, mset, data_i, rng);
     nc_galaxy_sd_shape_data_write_row (data_i, self->obs, gal_i);
   }
+
+  /* ncm_data_resample() calls prepare() *before* this function runs, using
+   * whatever per-galaxy data was current at that point (e.g. set_obs()'s
+   * placeholder data on a fresh object, or a previous realization's on a
+   * reused one). This loop just overwrote every galaxy's raw data in place,
+   * but touches no NcmModel pkey at all -- so under FIXED_NODES, whose
+   * z_nodes_per_galaxy/fixed_nodes grid is gated only by
+   * model_update/zcl_changed (see _nc_data_cluster_wl_prepare), the grid
+   * built from the pre-resample data would otherwise never be rebuilt again
+   * for the rest of this instance's life (z_cl does not move during a
+   * mass-only fit/scan). Forcing a rebuild here mirrors what
+   * nc_data_cluster_wl_set_integ_method() already does, and matches the
+   * equivalent fix in NcDataClusterWLFactor's own resample(). */
+  self->force_rebuild = TRUE;
 }
 
 static gdouble

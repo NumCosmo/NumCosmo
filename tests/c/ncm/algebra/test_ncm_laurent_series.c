@@ -345,6 +345,131 @@ test_copy_is_independent (void)
   ncm_laurent_series_free (b);
 }
 
+/* ncm_laurent_series_reset() is the grow-only reuse primitive
+ * nc_galaxy_shape_factor_series_lensed.c's per-instance workspace pool
+ * relies on: reusing a range within the existing allocation must not
+ * reallocate (checked here by comparing the raw `c` pointer, direct field
+ * access being explicitly sanctioned by the header's own doc comment on
+ * the struct); growing beyond it must reallocate and preserve correctness;
+ * either way every coefficient must come back zeroed. */
+static void
+test_reset_grows_only_when_needed (void)
+{
+  NcmLaurentSeries *a = ncm_laurent_series_new (0, 4); /* 5 slots */
+  complex double *c0;
+
+  ncm_laurent_series_set_c (a, 0, 1.0);
+  ncm_laurent_series_set_c (a, 4, 2.0);
+  c0 = a->c;
+
+  /* Shrinks the logical range but stays within the 5-slot allocation --
+   * must reuse the same buffer and zero it. */
+  ncm_laurent_series_reset (a, 0, 2);
+  g_assert_true (a->c == c0);
+  g_assert_cmpint (a->c_cap, ==, 5);
+  g_assert_cmpint (ncm_laurent_series_hmin (a), ==, 0);
+  g_assert_cmpint (ncm_laurent_series_hmax (a), ==, 2);
+  g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (a, 0)), <, 1.0e-13);
+
+  ncm_laurent_series_set_c (a, 1, 3.0 + 4.0 * I);
+
+  /* Still within the original 5-slot allocation -- no reallocation. */
+  ncm_laurent_series_reset (a, -1, 3);
+  g_assert_true (a->c == c0);
+  g_assert_cmpint (a->c_cap, ==, 5);
+  g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (a, 1)), <, 1.0e-13);
+
+  ncm_laurent_series_set_c (a, -1, 5.0);
+
+  /* Exceeds the 5-slot allocation -- must grow, preserving no stale data
+   * (freshly zeroed) and remaining fully usable. */
+  ncm_laurent_series_reset (a, -4, 4);
+  g_assert_cmpint (a->c_cap, ==, 9);
+  g_assert_cmpint (ncm_laurent_series_hmin (a), ==, -4);
+  g_assert_cmpint (ncm_laurent_series_hmax (a), ==, 4);
+  g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (a, -1)), <, 1.0e-13);
+
+  ncm_laurent_series_set_c (a, -4, 9.0);
+  g_assert_cmpfloat (fabs (creal (ncm_laurent_series_get_c (a, -4)) - 9.0), <, 1.0e-13);
+
+  ncm_laurent_series_free (a);
+}
+
+/* Every `_into` variant must produce results bit-identical to its existing
+ * "returns new" sibling, both when the output object already has enough
+ * capacity (pure reuse) and when it must grow -- the two paths inside
+ * ncm_laurent_series_reset(). */
+static void
+test_into_variants_match_returns_new (void)
+{
+  NcmLaurentSeries *a             = ncm_laurent_series_new_single (1, 2.0 + 1.0 * I);
+  NcmLaurentSeries *b             = ncm_laurent_series_new_single (-1, 3.0 - 2.0 * I);
+  NcmLaurentSeries *expected_sum  = ncm_laurent_series_add (a, b, 2.0);
+  NcmLaurentSeries *expected_conv = ncm_laurent_series_conv (a, b);
+  NcmLaurentSeries *expected_scl  = ncm_laurent_series_scale_c (a, I);
+  NcmLaurentSeries *expected_conj = ncm_laurent_series_conj (a);
+  gint h;
+
+  /* Pure reuse: already big enough for every result below. */
+  {
+    NcmLaurentSeries *out_single = ncm_laurent_series_new (0, 4);
+    NcmLaurentSeries *out_sum    = ncm_laurent_series_new (-4, 4);
+    NcmLaurentSeries *out_conv   = ncm_laurent_series_new (-4, 4);
+    NcmLaurentSeries *out_scl    = ncm_laurent_series_new (-4, 4);
+    NcmLaurentSeries *out_conj   = ncm_laurent_series_new (-4, 4);
+
+    ncm_laurent_series_set_single_into (out_single, 1, 2.0 + 1.0 * I);
+    g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (out_single, 1) - (2.0 + 1.0 * I)), <, 1.0e-13);
+
+    ncm_laurent_series_add_into (out_sum, a, b, 2.0);
+    ncm_laurent_series_conv_into (out_conv, a, b);
+    ncm_laurent_series_scale_c_into (out_scl, a, I);
+    ncm_laurent_series_conj_into (out_conj, a);
+
+    for (h = -4; h <= 4; h++)
+    {
+      g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (out_sum, h) - ncm_laurent_series_get_c (expected_sum, h)), <, 1.0e-13);
+      g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (out_conv, h) - ncm_laurent_series_get_c (expected_conv, h)), <, 1.0e-13);
+      g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (out_scl, h) - ncm_laurent_series_get_c (expected_scl, h)), <, 1.0e-13);
+      g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (out_conj, h) - ncm_laurent_series_get_c (expected_conj, h)), <, 1.0e-13);
+    }
+
+    ncm_laurent_series_free (out_single);
+    ncm_laurent_series_free (out_sum);
+    ncm_laurent_series_free (out_conv);
+    ncm_laurent_series_free (out_scl);
+    ncm_laurent_series_free (out_conj);
+  }
+
+  /* Must-grow path: outputs start with zero capacity (a single [0,0] slot). */
+  {
+    NcmLaurentSeries *out_sum  = ncm_laurent_series_new (0, 0);
+    NcmLaurentSeries *out_conv = ncm_laurent_series_new (0, 0);
+
+    ncm_laurent_series_add_into (out_sum, a, b, 2.0);
+    ncm_laurent_series_conv_into (out_conv, a, b);
+
+    g_assert_cmpint (ncm_laurent_series_hmin (out_sum), ==, ncm_laurent_series_hmin (expected_sum));
+    g_assert_cmpint (ncm_laurent_series_hmax (out_sum), ==, ncm_laurent_series_hmax (expected_sum));
+
+    for (h = ncm_laurent_series_hmin (expected_sum); h <= ncm_laurent_series_hmax (expected_sum); h++)
+      g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (out_sum, h) - ncm_laurent_series_get_c (expected_sum, h)), <, 1.0e-13);
+
+    for (h = ncm_laurent_series_hmin (expected_conv); h <= ncm_laurent_series_hmax (expected_conv); h++)
+      g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (out_conv, h) - ncm_laurent_series_get_c (expected_conv, h)), <, 1.0e-13);
+
+    ncm_laurent_series_free (out_sum);
+    ncm_laurent_series_free (out_conv);
+  }
+
+  ncm_laurent_series_free (a);
+  ncm_laurent_series_free (b);
+  ncm_laurent_series_free (expected_sum);
+  ncm_laurent_series_free (expected_conv);
+  ncm_laurent_series_free (expected_scl);
+  ncm_laurent_series_free (expected_conj);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -359,6 +484,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/laurent_series/chi_taylor_matches_python_reference", &test_chi_taylor_matches_python_reference);
   g_test_add_func ("/ncm/laurent_series/introspectable_api_matches_native", &test_introspectable_api_matches_native);
   g_test_add_func ("/ncm/laurent_series/copy_is_independent", &test_copy_is_independent);
+  g_test_add_func ("/ncm/laurent_series/reset_grows_only_when_needed", &test_reset_grows_only_when_needed);
+  g_test_add_func ("/ncm/laurent_series/into_variants_match_returns_new", &test_into_variants_match_returns_new);
 
   return g_test_run ();
 }
