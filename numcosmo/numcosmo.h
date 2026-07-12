@@ -183,9 +183,23 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_hod_zheng07.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_true_redshift.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_pop.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_pop_lsst_srd.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor_composed.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_sel.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_sel_gauss.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_binning.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_position_factor.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_position_factor_flat.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss_global.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape_intrinsic.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape_intrinsic_gauss.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape_intrinsic_beta.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.h>
 
 /* Observable data */
 #include <numcosmo/nc/data/nc_data_snia.h>
