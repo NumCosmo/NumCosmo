@@ -57,11 +57,11 @@ typedef struct _NcGalaxyShapeIntrinsicMode
   gdouble ln_peak;
 } NcGalaxyShapeIntrinsicMode;
 
-void nc_galaxy_shape_intrinsic_mode_find (complex double ( *apply_shear ) (complex double, complex double),
+void nc_galaxy_shape_intrinsic_mode_find (complex double (*apply_shear)(complex double, complex double),
                                           complex double (*apply_shear_inv) (complex double, complex double),
-                                          NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data,
+                                          NcGalaxyShapePop * pop, NcGalaxyShapePopData * pop_data,
                                           complex double g, complex double eps_obs, gdouble std_noise,
-                                          NcGalaxyShapeIntrinsicMode *mode);
+                                          NcGalaxyShapeIntrinsicMode * mode);
 
 void nc_galaxy_shape_intrinsic_mode_find_trace_det (NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data,
                                                     complex double g, complex double eps_obs, gdouble std_noise,

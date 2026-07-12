@@ -1353,3 +1353,4 @@ ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdou
     return intf;
   }
 }
+
