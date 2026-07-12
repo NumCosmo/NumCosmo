@@ -214,6 +214,7 @@
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich.h>
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich_count.h>
 #include <numcosmo/nc/data/nc_data_planck_lkl.h>
+#include <numcosmo/nc/data/nc_data_planck_plik_lite.h>
 #include <numcosmo/nc/data/nc_data_xcor.h>
 
 /* Cross-correlations */
