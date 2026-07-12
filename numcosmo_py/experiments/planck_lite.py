@@ -35,16 +35,31 @@ precision (see tests/python/nc/data/test_planck_plik_lite.py).
 import os
 
 import numpy as np
+from astropy.io import fits
 
 from numcosmo_py import Ncm, Nc
 
 # plik v22 fixed layout.
 PLMIN = 30
 NBIN_TT = 215
-NBIN_TOTAL = 613  # 215 TT + 199 TE + 199 EE
+NBIN_TE = 199
+NBIN_EE = 199
+NBIN_TOTAL = 613  # 215 TT + 199 TE + 199 EE, in this order
 PLIK_LITE_TT_RELPATH = os.path.join(
     "baseline", "plc_3.0", "hi_l", "plik_lite", "plik_lite_v22_TT.clik"
 )
+PLIK_LITE_TTTEEE_RELPATH = os.path.join(
+    "baseline", "plc_3.0", "hi_l", "plik_lite", "plik_lite_v22_TTTEEE.clik"
+)
+
+# Spectrum tag (must match NcDataPlikLiteSpec in the C source) and its layout.
+_SPEC_TT, _SPEC_EE, _SPEC_TE = 0, 1, 2
+# name -> (tag, number of bins, offset of its block in the 613-long data vector)
+_SPEC_LAYOUT = {
+    "TT": (_SPEC_TT, NBIN_TT, 0),
+    "TE": (_SPEC_TE, NBIN_TE, NBIN_TT),
+    "EE": (_SPEC_EE, NBIN_EE, NBIN_TT + NBIN_TE),
+}
 
 
 def find_baseline_file(relpath: str) -> str | None:
@@ -79,48 +94,87 @@ def _read_fortran_unformatted_matrix(path: str, n: int) -> np.ndarray:
     return mat
 
 
-def read_plik_lite_tt(clik_path: str) -> dict:
-    """Parse the ``plik_lite`` TT clik ``_external`` payload (validated recipe).
+def _spectra_from_has_cl(clik_path: str) -> list[str]:
+    """Return the active spectra, in data-vector order (TT, TE, EE).
 
-    Returns a dict with the TT-selected data vector, covariance and per-bin
-    binning operator (absolute multipole ranges + flattened averaging weights).
+    Read from ``clik/lkl_0/has_cl`` = [TT, EE, BB, TE, TB, EB] (plik_cmbonly uses
+    has_cl[0]=TT, has_cl[1]=EE, has_cl[3]=TE).
     """
-    ext = os.path.join(clik_path, "clik", "lkl_0", "_external")
+    has_cl = fits.getdata(
+        os.path.join(clik_path, "clik", "lkl_0", "has_cl")
+    ).ravel()
+    spectra = []
+    if has_cl[0]:
+        spectra.append("TT")
+    if has_cl[3]:
+        spectra.append("TE")
+    if has_cl[1]:
+        spectra.append("EE")
+    return spectra
 
-    x_data = np.loadtxt(os.path.join(ext, "cl_cmb_plik_v22.dat"))[:, 1]
-    cov = _read_fortran_unformatted_matrix(
+
+def read_plik_lite(clik_path: str, spectra: list[str] | None = None) -> dict:
+    """Parse a ``plik_lite`` clik ``_external`` payload (validated recipe).
+
+    @spectra: subset/order of {"TT","TE","EE"}; defaults to the file's ``has_cl``.
+
+    Returns the selected data vector, covariance (sub-block for the active
+    spectra) and the per-bin binning operator (absolute multipole ranges +
+    flattened averaging weights + spectrum tag). All three spectra share the
+    same multipole binning; TT uses 215 bins, TE and EE the first 199.
+    """
+    if spectra is None:
+        spectra = _spectra_from_has_cl(clik_path)
+
+    ext = os.path.join(clik_path, "clik", "lkl_0", "_external")
+    x_all = np.loadtxt(os.path.join(ext, "cl_cmb_plik_v22.dat"))[:, 1]
+    cov_all = _read_fortran_unformatted_matrix(
         os.path.join(ext, "c_matrix_plik_v22.dat"), NBIN_TOTAL
     )
     blmin = np.loadtxt(os.path.join(ext, "blmin.dat")).astype(int)[:NBIN_TT]
     blmax = np.loadtxt(os.path.join(ext, "blmax.dat")).astype(int)[:NBIN_TT]
     bin_w = np.loadtxt(os.path.join(ext, "bweight.dat"))
 
-    lmin_abs = (blmin + PLMIN).tolist()
-    lmax_abs = (blmax + PLMIN).tolist()
+    rows: list[int] = []  # indices into the 613-long data/cov, in output order
+    lmin_abs: list[float] = []
+    lmax_abs: list[float] = []
     weights: list[float] = []
-    for lo, hi in zip(blmin, blmax):
-        weights.extend(bin_w[lo : hi + 1].tolist())
+    spectrum_id: list[float] = []
+    for name in spectra:
+        tag, nbin, off = _SPEC_LAYOUT[name]
+        rows.extend(range(off, off + nbin))
+        for b in range(nbin):
+            lo, hi = blmin[b], blmax[b]
+            lmin_abs.append(float(lo + PLMIN))
+            lmax_abs.append(float(hi + PLMIN))
+            weights.extend(bin_w[lo : hi + 1].tolist())
+            spectrum_id.append(float(tag))
 
+    idx = np.array(rows, dtype=int)
     return {
-        "x_data": x_data[:NBIN_TT],
-        "cov": cov[:NBIN_TT, :NBIN_TT],
+        "x_data": x_all[idx],
+        "cov": cov_all[np.ix_(idx, idx)],
         "bin_lmin": lmin_abs,
         "bin_lmax": lmax_abs,
         "bin_weight": weights,
-        "spectrum_id": [0] * NBIN_TT,  # 0 = TT
+        "spectrum_id": spectrum_id,
     }
 
 
-def build_plik_lite_tt(
-    clik_path: str, pb: Nc.HIPertBoltzmann | None = None, lmax: int = 2508
+def build_plik_lite(
+    clik_path: str,
+    pb: Nc.HIPertBoltzmann | None = None,
+    spectra: list[str] | None = None,
+    lmax: int = 2508,
 ) -> Nc.DataPlanckPlikLite:
-    """Build a native #NcDataPlanckPlikLite (TT) from a clik file and a Cls source.
+    """Build a native #NcDataPlanckPlikLite from a clik file and a Cls source.
 
-    @clik_path: path to a ``plik_lite_v22_TT.clik`` directory.
+    @clik_path: path to a ``plik_lite_v22_*.clik`` directory (TT or TTTEEE).
     @pb: the theory Cls source (use a #NcHIPertBoltzmannCBE, the CLASS backend).
       May be %None to build a data-only object (e.g. for serialization).
+    @spectra: subset of {"TT","TE","EE"}; defaults to the file's ``has_cl``.
     """
-    d = read_plik_lite_tt(clik_path)
+    d = read_plik_lite(clik_path, spectra=spectra)
     np_bins = len(d["bin_lmin"])
 
     plik = Nc.DataPlanckPlikLite()
@@ -134,10 +188,10 @@ def build_plik_lite_tt(
             cov.set(i, j, cov_np[i, j])
     Ncm.DataGaussCov.set_cov(plik, cov)
 
-    plik.set_property("bin-lmin", Ncm.Vector.new_array([float(x) for x in d["bin_lmin"]]))
-    plik.set_property("bin-lmax", Ncm.Vector.new_array([float(x) for x in d["bin_lmax"]]))
+    plik.set_property("bin-lmin", Ncm.Vector.new_array(d["bin_lmin"]))
+    plik.set_property("bin-lmax", Ncm.Vector.new_array(d["bin_lmax"]))
     plik.set_property("bin-weight", Ncm.Vector.new_array(d["bin_weight"]))
-    plik.set_property("spectrum-id", Ncm.Vector.new_array([float(x) for x in d["spectrum_id"]]))
+    plik.set_property("spectrum-id", Ncm.Vector.new_array(d["spectrum_id"]))
     plik.set_property("lmax", lmax)
     plik.set_property("calib-name", "A_planck")
     if pb is not None:
@@ -145,3 +199,10 @@ def build_plik_lite_tt(
     plik.set_init(True)
 
     return plik
+
+
+def build_plik_lite_tt(
+    clik_path: str, pb: Nc.HIPertBoltzmann | None = None, lmax: int = 2508
+) -> Nc.DataPlanckPlikLite:
+    """Build a native TT-only #NcDataPlanckPlikLite (convenience wrapper)."""
+    return build_plik_lite(clik_path, pb=pb, spectra=["TT"], lmax=lmax)

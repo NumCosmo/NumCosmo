@@ -30,8 +30,11 @@ import pytest
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.experiments.planck_lite import (
     PLIK_LITE_TT_RELPATH,
+    PLIK_LITE_TTTEEE_RELPATH,
     NBIN_TT,
+    NBIN_TOTAL,
     find_baseline_file,
+    build_plik_lite,
     build_plik_lite_tt,
 )
 
@@ -41,6 +44,7 @@ _CLIK = find_baseline_file(PLIK_LITE_TT_RELPATH)
 needs_data = pytest.mark.skipif(
     _CLIK is None, reason=f"plik_lite baseline data not found ({PLIK_LITE_TT_RELPATH})"
 )
+
 
 
 def test_type_is_resampleable_gausscov():
@@ -86,6 +90,10 @@ def test_matches_clik_reference():
     Both likelihoods share one CBE Boltzmann + cosmology + PlanckFI, so they see
     identical theory Cl. The clik reference reproduces the file's check_value, so
     an exact match validates the native reimplementation. Also checks resample.
+
+    Uses the TTTEEE file: it exercises the full TT+TE+EE code path (TT is its
+    first block). Only one clik plik_lite can be built per process (the Fortran
+    ``plik_cmbonly`` keeps global module state), so a single superset case is used.
     """
     # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
@@ -94,18 +102,23 @@ def test_matches_clik_reference():
         Planck18Types,
     )
 
+    clik_path = find_baseline_file(PLIK_LITE_TTTEEE_RELPATH)
+    if clik_path is None:
+        pytest.skip(f"baseline data not found ({PLIK_LITE_TTTEEE_RELPATH})")
+
     cbe = Nc.HIPertBoltzmannCBE.new()
     cosmo = create_cosmo(prim_model=HIPrimModel.POWER_LAW)
-    planck = Nc.PlanckFICorTT()
+    planck = Nc.PlanckFICorTT()  # plik_lite's only nuisance param is A_planck
     planck.params_set_default_ftype()
     mset = Ncm.MSet.new_array([planck, cosmo])
     mset_set_parameters(mset, Planck18Types.TT, HIPrimModel.POWER_LAW)
     mset.prepare_fparam_map()
 
     ref = Nc.DataPlanckLKL.full_new_id(
-        Nc.DataPlanckLKLType.BASELINE_18_HIGHL_TT_LITE, cbe
+        Nc.DataPlanckLKLType.BASELINE_18_HIGHL_TTTEEE_LITE, cbe
     )
-    native = build_plik_lite_tt(_CLIK, cbe)
+    native = build_plik_lite(clik_path, cbe)
+    assert native.get_size() == NBIN_TOTAL
 
     ref.prepare(mset)
     native.prepare(mset)
