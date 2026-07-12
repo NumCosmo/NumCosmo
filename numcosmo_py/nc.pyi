@@ -5808,6 +5808,12 @@ class DataClusterWLFactor(NumCosmoMath.Data):
         Number of fixed-quadrature panels (FIXED_NODES only)
       rule-n -> guint: rule-n
         Gauss-Legendre rule order per panel (FIXED_NODES only)
+      auto-nodes -> gboolean: auto-nodes
+        Automatically select the per-galaxy fixed-node configuration (FIXED_NODES only)
+      node-reltol -> gdouble: node-reltol
+        Target relative tolerance for the per-galaxy fixed-node selection
+      max-total-nodes -> guint: max-total-nodes
+        Safety ceiling on the total background node count for auto-nodes selection
 
     Properties from NcmData:
       name -> gchararray: name
@@ -5826,9 +5832,12 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     """
 
     class Props:
+        auto_nodes: bool
         integ_method: DataClusterWLIntegMethod
         len: int
+        max_total_nodes: int
         n_nodes: int
+        node_reltol: float
         obs: GalaxyWLObs
         position_factor: GalaxyPositionFactor
         prec: float
@@ -5847,8 +5856,11 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     props: Props = ...
     def __init__(
         self,
+        auto_nodes: bool = ...,
         integ_method: DataClusterWLIntegMethod = ...,
+        max_total_nodes: int = ...,
         n_nodes: int = ...,
+        node_reltol: float = ...,
         obs: GalaxyWLObs = ...,
         position_factor: GalaxyPositionFactor = ...,
         prec: float = ...,
@@ -5869,8 +5881,11 @@ class DataClusterWLFactor(NumCosmoMath.Data):
         self, mset: NumCosmoMath.MSet, m2lnP_gal: NumCosmoMath.Vector
     ) -> None: ...
     def free(self) -> None: ...
+    def get_auto_nodes(self) -> bool: ...
     def get_integ_method(self) -> DataClusterWLIntegMethod: ...
+    def get_max_total_nodes(self) -> int: ...
     def get_n_nodes(self) -> int: ...
+    def get_node_reltol(self) -> float: ...
     def get_resample_flag(self) -> DataClusterWLResampleFlag: ...
     def get_rule_n(self) -> int: ...
     @classmethod
@@ -5883,9 +5898,12 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     def peek_data_array(self) -> list[GalaxyShapeFactorData]: ...
     def peek_obs(self) -> GalaxyWLObs: ...
     def ref(self) -> DataClusterWLFactor: ...
+    def set_auto_nodes(self, auto_nodes: bool) -> None: ...
     def set_cut(self, r_min: float, r_max: float) -> None: ...
     def set_integ_method(self, integ_method: DataClusterWLIntegMethod) -> None: ...
+    def set_max_total_nodes(self, max_total_nodes: int) -> None: ...
     def set_n_nodes(self, n_nodes: int) -> None: ...
+    def set_node_reltol(self, node_reltol: float) -> None: ...
     def set_obs(self, obs: GalaxyWLObs) -> None: ...
     def set_prec(self, prec: float) -> None: ...
     def set_resample_flag(self, resample_flag: DataClusterWLResampleFlag) -> None: ...
@@ -9837,6 +9855,10 @@ class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
         Number of angular quadrature nodes
       n-lens -> guint: Number of lens-branch nodes
         Number of fixed Gauss-Legendre nodes per axis in the genuine-lens branch
+      auto-lens-nodes -> gboolean: Auto lens-branch nodes
+        Calibrate a per-galaxy lens-branch node count instead of always using n-lens
+      lens-node-reltol -> gdouble: Lens-branch node calibration reltol
+        Target relative tolerance for auto-lens-nodes' calibration
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -9847,6 +9869,8 @@ class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
     """
 
     class Props:
+        auto_lens_nodes: bool
+        lens_node_reltol: float
         n_angular: int
         n_lens: int
         n_radial: int
@@ -9855,6 +9879,8 @@ class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
     props: Props = ...
     def __init__(
         self,
+        auto_lens_nodes: bool = ...,
+        lens_node_reltol: float = ...,
         n_angular: int = ...,
         n_lens: int = ...,
         n_radial: int = ...,
