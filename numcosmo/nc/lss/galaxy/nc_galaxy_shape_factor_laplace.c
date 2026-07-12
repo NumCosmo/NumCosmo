@@ -116,7 +116,7 @@ _nc_galaxy_shape_factor_laplace_data_init (NcGalaxyShapeFactor *gsf, NcmMSet *ms
 }
 
 static void
-_nc_galaxy_shape_factor_laplace_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data)
+_nc_galaxy_shape_factor_laplace_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
 }
 

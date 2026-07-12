@@ -156,15 +156,21 @@ _nc_galaxy_shape_factor_var_add_data_init (NcGalaxyShapeFactor *gsf, NcmMSet *ms
 }
 
 static void
-_nc_galaxy_shape_factor_var_add_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data)
+_nc_galaxy_shape_factor_var_add_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
-  if (data->pop_data->ldata_get_sigma == NULL)
-  {
-    NcGalaxyShapePop *pop = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+  /* Sigma-support is a property of the pop MODEL, identical for every
+   * galaxy sharing it -- checked once here via a throwaway pop_data, not
+   * per-galaxy (this is factory-level state, not something a specific
+   * galaxy's data could vary). */
+  NcGalaxyShapePop *pop              = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+  NcGalaxyShapePopData *tmp_pop_data = nc_galaxy_shape_pop_data_new (pop);
+  const gboolean has_sigma           = tmp_pop_data->ldata_get_sigma != NULL;
 
+  nc_galaxy_shape_pop_data_unref (tmp_pop_data);
+
+  if (!has_sigma)
     g_error ("NcGalaxyShapeFactorVarAdd: the variance-add approximation requires a population "
              "supporting nc_galaxy_shape_pop_get_sigma(), got %s.", G_OBJECT_TYPE_NAME (pop));
-  }
 }
 
 static inline void

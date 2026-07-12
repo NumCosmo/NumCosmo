@@ -56,6 +56,7 @@
 #include "ncm/core/ncm_dtuple.h"
 #include "ncm/core/ncm_rng.h"
 #include "ncm/integration/ncm_integral1d_ptr.h"
+#include "ncm/model/ncm_model.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -66,6 +67,12 @@ typedef struct _NcGalaxyRedshiftFactorComposedPrivate
 {
   gdouble zp_min;
   gdouble zp_max;
+
+  /* Cached by prepare(): a hash of the population/observable models' state,
+   * so callers can detect a change without knowing which models are
+   * involved -- see #NcGalaxyShapeFactor's analogous radius/optzs/pop
+   * hashes for the full rationale. */
+  guint64 hash;
 } NcGalaxyRedshiftFactorComposedPrivate;
 
 struct _NcGalaxyRedshiftFactorComposed
@@ -107,6 +114,7 @@ nc_galaxy_redshift_factor_composed_init (NcGalaxyRedshiftFactorComposed *gsdrc)
 
   self->zp_min = 0.0;
   self->zp_max = 0.0;
+  self->hash   = 0;
 }
 
 static void
@@ -162,7 +170,8 @@ _nc_galaxy_redshift_factor_composed_finalize (GObject *object)
 static void _nc_galaxy_redshift_factor_composed_data_init (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data);
 static void _nc_galaxy_redshift_factor_composed_gen (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, NcmRNG *rng);
 static gboolean _nc_galaxy_redshift_factor_composed_gen1 (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, NcmRNG *rng);
-static void _nc_galaxy_redshift_factor_composed_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data);
+static void _nc_galaxy_redshift_factor_composed_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset);
+static guint64 _nc_galaxy_redshift_factor_composed_get_hash (NcGalaxyRedshiftFactor *gsdr);
 static NcGalaxyRedshiftFactorIntegrand *_nc_galaxy_redshift_factor_composed_integ (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, gboolean use_lnp);
 static void _nc_galaxy_redshift_factor_composed_get_integ_lim (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble *z_min, gdouble *z_max);
 static gdouble _nc_galaxy_redshift_factor_composed_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data);
@@ -199,6 +208,7 @@ nc_galaxy_redshift_factor_composed_class_init (NcGalaxyRedshiftFactorComposedCla
   gsdr_class->get_integ_lim    = &_nc_galaxy_redshift_factor_composed_get_integ_lim;
   gsdr_class->norm             = &_nc_galaxy_redshift_factor_composed_norm;
   gsdr_class->make_fixed_nodes = &_nc_galaxy_redshift_factor_composed_make_fixed_nodes;
+  gsdr_class->get_hash         = &_nc_galaxy_redshift_factor_composed_get_hash;
 }
 
 /* Fragment vtable ------------------------------------------------------- */
@@ -301,13 +311,30 @@ _nc_galaxy_redshift_factor_composed_gen1 (NcGalaxyRedshiftFactor *gsdr, NcmMSet 
 }
 
 static void
-_nc_galaxy_redshift_factor_composed_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data)
+_nc_galaxy_redshift_factor_composed_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset)
 {
+  NcGalaxyRedshiftFactorComposed *gsdrc              = NC_GALAXY_REDSHIFT_FACTOR_COMPOSED (gsdr);
+  NcGalaxyRedshiftFactorComposedPrivate * const self = nc_galaxy_redshift_factor_composed_get_instance_private (gsdrc);
   NcGalaxyRedshiftPop *population;
   NcGalaxyRedshiftObs *observable;
 
   /* Validate the required models are present in the mset. */
   _composed_peek_models (mset, &population, &observable);
+
+  /* Neither model's state is otherwise cached (both are always resolved
+   * fresh from mset per-call, per the class doc), so there is nothing else
+   * to refresh here -- just keep the hash current for get_hash(). */
+  self->hash = ncm_model_state_get_pkey (NCM_MODEL (population)) ^
+               (ncm_model_state_get_pkey (NCM_MODEL (observable)) * 31U);
+}
+
+static guint64
+_nc_galaxy_redshift_factor_composed_get_hash (NcGalaxyRedshiftFactor *gsdr)
+{
+  NcGalaxyRedshiftFactorComposed *gsdrc              = NC_GALAXY_REDSHIFT_FACTOR_COMPOSED (gsdr);
+  NcGalaxyRedshiftFactorComposedPrivate * const self = nc_galaxy_redshift_factor_composed_get_instance_private (gsdrc);
+
+  return self->hash;
 }
 
 /* Integrand ------------------------------------------------------------- */

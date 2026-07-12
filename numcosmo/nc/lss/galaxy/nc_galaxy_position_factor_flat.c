@@ -171,7 +171,7 @@ _nc_galaxy_position_factor_flat_finalize (GObject *object)
 
 static void _nc_galaxy_position_factor_flat_data_init (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data);
 static void _nc_galaxy_position_factor_flat_gen (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data, NcmRNG *rng);
-static void _nc_galaxy_position_factor_flat_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data);
+static void _nc_galaxy_position_factor_flat_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset);
 static NcGalaxyPositionFactorIntegrand *_nc_galaxy_position_factor_flat_integ (NcGalaxyPositionFactor *gspf, NcmMSet *mset, gboolean use_lnp);
 
 static void
@@ -265,7 +265,7 @@ _nc_galaxy_position_factor_flat_gen (NcGalaxyPositionFactor *gspf, NcmMSet *mset
 }
 
 static void
-_nc_galaxy_position_factor_flat_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data)
+_nc_galaxy_position_factor_flat_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset)
 {
   /* No models to resolve: the flat scheme's footprint is held configuration. */
 }

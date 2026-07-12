@@ -67,6 +67,7 @@
 #include "nc/lss/halo/nc_halo_density_profile.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
 #include "ncm/stats/ncm_stats_vec.h"
+#include "ncm/model/ncm_model.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
@@ -77,6 +78,33 @@ typedef struct _NcGalaxyShapeFactorPrivate
 {
   NcGalaxyWLObsEllipConv ellip_conv;
   NcmStatsVec *obs_stats;
+
+  /* Cached by nc_galaxy_shape_factor_prepare(), consumed by
+   * update_data_radius/update_data_optzs/update_data_pop: the models
+   * themselves (ref-held, always kept current) and the derived quantities
+   * that are shared across every galaxy and expensive to recompute (only
+   * refreshed when the relevant hash actually changes). See the class doc
+   * and nc_galaxy_shape_factor_prepare()'s own doc comment. */
+  NcHaloPosition *halo_position;
+  NcHaloDensityProfile *density_profile;
+  NcGalaxyShapePop *pop;
+  gdouble pr_prefactor;
+  NcWLSurfaceMassDensityLensCtx lens_ctx;
+  gdouble r_s;
+  gdouble rho_s;
+  guint64 radius_hash;
+  guint64 optzs_hash;
+  guint64 pop_hash;
+
+  /* Cached alongside the above, for the fixed-nodes update functions
+   * (update_data_at_nodes_crit/_sigma): cosmo and surface_mass_density are
+   * already peeked as prepare() locals to compute lens_ctx/pr_prefactor, so
+   * storing them costs nothing extra; z_cl is likewise already computed
+   * there. None of these were needed by the non-nodes update_data_* family,
+   * which is why they weren't cached before now. */
+  NcHICosmo *cosmo;
+  NcWLSurfaceMassDensity *surface_mass_density;
+  gdouble z_cl;
 } NcGalaxyShapeFactorPrivate;
 
 /*
@@ -106,6 +134,7 @@ enum
   PROP_LEN,
 };
 
+G_DEFINE_QUARK (nc - galaxy - shape - factor - error, nc_galaxy_shape_factor_error)
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcGalaxyShapeFactor, nc_galaxy_shape_factor, G_TYPE_OBJECT)
 G_DEFINE_BOXED_TYPE (NcGalaxyShapeFactorData, nc_galaxy_shape_factor_data, nc_galaxy_shape_factor_data_ref, nc_galaxy_shape_factor_data_unref); /* LCOV_EXCL_LINE */
 NCM_UTIL_DEFINE_CALLBACK (NcGalaxyShapeFactorIntegrand,
@@ -120,8 +149,20 @@ nc_galaxy_shape_factor_init (NcGalaxyShapeFactor *gsf)
 {
   NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
 
-  self->ellip_conv = 0;
-  self->obs_stats  = ncm_stats_vec_new (6, NCM_STATS_VEC_COV, FALSE);
+  self->ellip_conv           = 0;
+  self->obs_stats            = ncm_stats_vec_new (6, NCM_STATS_VEC_COV, FALSE);
+  self->halo_position        = NULL;
+  self->density_profile      = NULL;
+  self->pop                  = NULL;
+  self->pr_prefactor         = 0.0;
+  self->r_s                  = 0.0;
+  self->rho_s                = 0.0;
+  self->radius_hash          = 0;
+  self->optzs_hash           = 0;
+  self->pop_hash             = 0;
+  self->cosmo                = NULL;
+  self->surface_mass_density = NULL;
+  self->z_cl                 = 0.0;
 }
 
 static void _nc_galaxy_shape_factor_set_ellip_conv (NcGalaxyShapeFactor *gsf, NcGalaxyWLObsEllipConv ellip_conv);
@@ -169,6 +210,11 @@ _nc_galaxy_shape_factor_dispose (GObject *object)
   NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
 
   ncm_stats_vec_clear (&self->obs_stats);
+  nc_halo_position_clear (&self->halo_position);
+  nc_halo_density_profile_clear (&self->density_profile);
+  nc_galaxy_shape_pop_clear (&self->pop);
+  nc_hicosmo_clear (&self->cosmo);
+  nc_wl_surface_mass_density_clear (&self->surface_mass_density);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_shape_factor_parent_class)->dispose (object);
@@ -207,9 +253,9 @@ _nc_galaxy_shape_factor_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShap
 /* LCOV_EXCL_STOP */
 
 static void
-_nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data)
+_nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
-  /* Default: the evaluation strategy needs no per-galaxy setup. */
+  /* Default: the evaluation strategy needs no additional setup. */
 }
 
 static void
@@ -275,6 +321,258 @@ nc_galaxy_shape_factor_get_ellip_conv (NcGalaxyShapeFactor *gsf)
   NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
 
   return self->ellip_conv;
+}
+
+/**
+ * nc_galaxy_shape_factor_check_obs:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @obs: a #NcGalaxyWLObs
+ * @error: return location for a #GError
+ *
+ * Checks that @obs's ellipticity convention matches @gsf's own
+ * #NcGalaxyWLObsEllipConv. Validation the shape factor owns (it is the one
+ * that knows what convention it expects), not its callers.
+ *
+ * Returns: %TRUE if the conventions match, %FALSE otherwise (with @error set).
+ */
+gboolean
+nc_galaxy_shape_factor_check_obs (NcGalaxyShapeFactor *gsf, NcGalaxyWLObs *obs, GError **error)
+{
+  const NcGalaxyWLObsEllipConv obs_conv = nc_galaxy_wl_obs_get_ellip_conv (obs);
+  const NcGalaxyWLObsEllipConv gsf_conv = nc_galaxy_shape_factor_get_ellip_conv (gsf);
+
+  if (obs_conv != gsf_conv)
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_SHAPE_FACTOR_ERROR, NC_GALAXY_SHAPE_FACTOR_ERROR_ELLIP_CONV_MISMATCH,
+                                "nc_galaxy_shape_factor_check_obs: observation ellipticity convention (%d) "
+                                "does not match the shape factor's (%d).", obs_conv, gsf_conv);
+
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * nc_galaxy_shape_factor_prepare:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @mset: a #NcmMSet
+ *
+ * Factory-level prepare: refreshes the geometry/profile caches shared by
+ * every galaxy (only recomputing whichever half actually went stale, judged
+ * by hashing the models each half depends on), refreshes the cached model
+ * references #NcGalaxyShapeFactor's own per-`Data` updates use
+ * (nc_galaxy_shape_factor_update_data_radius(),
+ * nc_galaxy_shape_factor_update_data_optzs(),
+ * nc_galaxy_shape_factor_update_data_pop()), then calls the subclass's own
+ * `prepare` hook. Cheap/no-op when nothing relevant changed -- safe and
+ * correct to call unconditionally every orchestrator prepare() cycle.
+ */
+void
+nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
+{
+  NcGalaxyShapeFactorClass *klass              = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
+  NcGalaxyShapeFactorPrivate * const self      = nc_galaxy_shape_factor_get_instance_private (gsf);
+  NcHICosmo *cosmo                             = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHaloPosition *halo_position                = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
+  NcWLSurfaceMassDensity *surface_mass_density = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+  NcHaloDensityProfile *density_profile        = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
+  NcGalaxyShapePop *pop                        = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+  NcHaloMassSummary *mass_summary              = nc_halo_density_profile_peek_mass_summary (density_profile);
+  guint64 radius_hash, optzs_hash, pop_hash;
+
+  g_assert_nonnull (cosmo);
+  g_assert_nonnull (halo_position);
+  g_assert_nonnull (surface_mass_density);
+  g_assert_nonnull (density_profile);
+  g_assert_nonnull (mass_summary);
+  g_assert_nonnull (pop);
+
+  nc_halo_position_prepare_if_needed (halo_position, cosmo);
+  nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
+
+  /* density_profile's own top-level pkey does NOT reflect changes to its
+   * NcHaloMassSummary submodel (submodel pkeys only propagate to a parent's
+   * own pkey inside NcmModelCtrl, which this hash scheme deliberately does
+   * not use) -- mass_summary's pkey must be hashed in explicitly, or a mass
+   * change following a previously-visited mass value goes undetected. */
+  radius_hash = ncm_model_state_get_pkey (NCM_MODEL (halo_position)) ^ (ncm_model_state_get_pkey (NCM_MODEL (cosmo)) * 31U);
+
+  /* optzs reads z_cl from halo_position (lens_ctx/r_s/rho_s both depend on
+   * it), so halo_position's pkey must be part of this hash too -- otherwise
+   * changing only the lens redshift leaves them stale, the same bug class
+   * as the mass_summary omission above. */
+  optzs_hash = ncm_model_state_get_pkey (NCM_MODEL (cosmo)) ^
+               (ncm_model_state_get_pkey (NCM_MODEL (density_profile)) * 31U) ^
+               (ncm_model_state_get_pkey (NCM_MODEL (mass_summary)) * 41U) ^
+               (ncm_model_state_get_pkey (NCM_MODEL (surface_mass_density)) * 37U) ^
+               (ncm_model_state_get_pkey (NCM_MODEL (halo_position)) * 43U);
+  pop_hash = ncm_model_state_get_pkey (NCM_MODEL (pop));
+
+  /* Always keep the cached model refs current (cheap ref/unref): avoids a
+   * stale dangling reference if the mset ever swaps a model instance
+   * without that being visible as a pkey change. cosmo/surface_mass_density
+   * are cached here too (alongside z_cl below) purely for the fixed-nodes
+   * update_data_at_nodes_crit/_sigma functions -- they were already peeked
+   * as locals for lens_ctx/pr_prefactor, so caching them costs nothing. */
+  nc_halo_position_clear (&self->halo_position);
+  self->halo_position = nc_halo_position_ref (halo_position);
+
+  nc_halo_density_profile_clear (&self->density_profile);
+  self->density_profile = nc_halo_density_profile_ref (density_profile);
+
+  nc_galaxy_shape_pop_clear (&self->pop);
+  self->pop = nc_galaxy_shape_pop_ref (pop);
+
+  nc_hicosmo_clear (&self->cosmo);
+  self->cosmo = nc_hicosmo_ref (cosmo);
+
+  nc_wl_surface_mass_density_clear (&self->surface_mass_density);
+  self->surface_mass_density = nc_wl_surface_mass_density_ref (surface_mass_density);
+
+  self->z_cl = nc_halo_position_get_redshift (halo_position);
+
+  if (radius_hash != self->radius_hash)
+  {
+    self->pr_prefactor = nc_halo_position_projected_radius_prefactor (halo_position, cosmo);
+    self->radius_hash  = radius_hash;
+  }
+
+  if (optzs_hash != self->optzs_hash)
+  {
+    nc_wl_surface_mass_density_lens_ctx_prep (&self->lens_ctx, surface_mass_density, cosmo, self->z_cl);
+    nc_halo_density_profile_r_s_rho_s (density_profile, cosmo, self->z_cl, &self->r_s, &self->rho_s);
+    self->optzs_hash = optzs_hash;
+  }
+
+  self->pop_hash = pop_hash;
+
+  klass->prepare (gsf, mset);
+}
+
+/**
+ * nc_galaxy_shape_factor_get_radius_hash:
+ * @gsf: a #NcGalaxyShapeFactor
+ *
+ * Returns: the geometry-cache hash computed by the last nc_galaxy_shape_factor_prepare() call.
+ */
+guint64
+nc_galaxy_shape_factor_get_radius_hash (NcGalaxyShapeFactor *gsf)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+
+  return self->radius_hash;
+}
+
+/**
+ * nc_galaxy_shape_factor_get_optzs_hash:
+ * @gsf: a #NcGalaxyShapeFactor
+ *
+ * Returns: the profile-cache hash computed by the last nc_galaxy_shape_factor_prepare() call.
+ */
+guint64
+nc_galaxy_shape_factor_get_optzs_hash (NcGalaxyShapeFactor *gsf)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+
+  return self->optzs_hash;
+}
+
+/**
+ * nc_galaxy_shape_factor_get_pop_hash:
+ * @gsf: a #NcGalaxyShapeFactor
+ *
+ * Returns: the population-model hash computed by the last nc_galaxy_shape_factor_prepare() call.
+ */
+guint64
+nc_galaxy_shape_factor_get_pop_hash (NcGalaxyShapeFactor *gsf)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+
+  return self->pop_hash;
+}
+
+/**
+ * nc_galaxy_shape_factor_update_data_radius:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @data: a #NcGalaxyShapeFactorData
+ *
+ * Refreshes @data's cached projected radius, tangential-frame rotation of
+ * the observed ellipticity, and rotated calibration bias, using the
+ * geometry cache from the last nc_galaxy_shape_factor_prepare() call.
+ * Unconditional: call only when nc_galaxy_shape_factor_get_radius_hash()
+ * actually changed.
+ */
+void
+nc_galaxy_shape_factor_update_data_radius (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
+  const gdouble e1                        = data->epsilon_obs_1;
+  const gdouble e2                        = data->epsilon_obs_2;
+  const gdouble ra                        = data->pos_data->ra;
+  const gdouble dec                       = data->pos_data->dec;
+  const complex double e_o                = e1 + I * e2;
+  complex double e_o_rotated, bias_rotated;
+  gdouble theta, phi;
+
+  nc_halo_position_polar_angles (self->halo_position, ra, dec, &theta, &phi);
+
+  /* Re-express the celestial phi_C in the data frame (phi_E) so the spin-2
+   * rotation e^{-2 i phi} carries the data-frame observed ellipticity into
+   * the tangential/cross frame. See #NcWLEllipticityFrame. */
+  phi = nc_wl_ellipticity_celestial_to_frame_angle (data->coord, phi);
+
+  e_o_rotated  = e_o * cexp (-2.0 * I * phi);
+  bias_rotated = (data->c1 + I * data->c2) * cexp (-2.0 * I * phi);
+
+  cdata->radius        = nc_halo_position_projected_radius_from_prefactor (theta, self->pr_prefactor);
+  cdata->phi           = phi;
+  cdata->epsilon_obs_t = creal (e_o_rotated);
+  cdata->epsilon_obs_x = cimag (e_o_rotated);
+  cdata->c1_rot        = creal (bias_rotated);
+  cdata->c2_rot        = cimag (bias_rotated);
+}
+
+/**
+ * nc_galaxy_shape_factor_update_data_optzs:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @data: a #NcGalaxyShapeFactorData
+ *
+ * Refreshes @data's cached reduced-shear optimization context, using the
+ * profile cache from the last nc_galaxy_shape_factor_prepare() call.
+ * Unconditional: call only when nc_galaxy_shape_factor_get_optzs_hash()
+ * actually changed, and only *after*
+ * nc_galaxy_shape_factor_update_data_radius() in the same cycle if that one
+ * also needs to run -- this assumes @data's cached projected radius is
+ * already current.
+ */
+void
+nc_galaxy_shape_factor_update_data_optzs (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
+
+  nc_wl_surface_mass_density_reduced_shear_optzs_prep_with_lens_ctx (self->density_profile, &self->lens_ctx,
+                                                                     cdata->radius, self->r_s, self->rho_s,
+                                                                     &cdata->optzs);
+}
+
+/**
+ * nc_galaxy_shape_factor_update_data_pop:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @data: a #NcGalaxyShapeFactorData
+ *
+ * Resolves the #NcGalaxyShapePop model's current parameters into @data's
+ * population fragment. Unconditional: call only when
+ * nc_galaxy_shape_factor_get_pop_hash() actually changed.
+ */
+void
+nc_galaxy_shape_factor_update_data_pop (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+
+  nc_galaxy_shape_pop_prepare (self->pop, data->pop_data);
 }
 
 /**
@@ -941,97 +1239,115 @@ nc_galaxy_shape_factor_integ (NcGalaxyShapeFactor *gsf, NcmMSet *mset, gboolean 
  * Prepares the per-galaxy caches used by the integrand: lens geometry
  * (projected radius, tangential-frame rotation of the observed ellipticity and
  * calibration bias) and the reduced-shear optimization cache. Also prepares
- * the population fragments and runs the subclass per-galaxy prepare hook.
+ * the population fragments and runs the subclass prepare hook.
+ *
+ * A thin wrapper kept for existing callers: internally, this is exactly
+ * nc_galaxy_shape_factor_prepare() (which decides for itself, via its own
+ * cached hashes, whether the geometry/profile caches actually need
+ * recomputing) followed by a loop applying
+ * nc_galaxy_shape_factor_update_data_radius()/_optzs()/_pop() -- @update_radius
+ * and @update_optzs here only gate whether *this* call's loop applies the
+ * radius/optzs steps to every @data_array entry, matching this function's
+ * historical per-call semantics; the population step always runs, matching
+ * this function's historical unconditional behaviour.
  *
  * Returns: TRUE if the caches were prepared.
  */
 gboolean
 nc_galaxy_shape_factor_prepare_data_array (NcGalaxyShapeFactor *gsf, NcmMSet *mset, GPtrArray *data_array, gboolean update_radius, gboolean update_optzs)
 {
-  NcGalaxyShapeFactorClass *klass              = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
-  NcHICosmo *cosmo                             = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcHaloPosition *halo_position                = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
-  NcWLSurfaceMassDensity *surface_mass_density = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-  NcHaloDensityProfile *density_profile        = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-  NcGalaxyShapePop *pop                        = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
-  const gdouble z_cl                           = nc_halo_position_get_redshift (halo_position);
-  NcWLSurfaceMassDensityLensCtx lens_ctx;
-  gboolean pr_prefactor_ready = FALSE;
-  gdouble r_s, rho_s, pr_prefactor = 0.0;
   guint i;
 
-  g_assert_nonnull (pop);
-
-  nc_halo_position_prepare_if_needed (halo_position, cosmo);
-  nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
-
-  if (update_radius)
-  {
-    pr_prefactor       = nc_halo_position_projected_radius_prefactor (halo_position, cosmo);
-    pr_prefactor_ready = TRUE;
-  }
-
-  if (update_optzs)
-  {
-    nc_wl_surface_mass_density_lens_ctx_prep (&lens_ctx, surface_mass_density, cosmo, z_cl);
-    nc_halo_density_profile_r_s_rho_s (density_profile, cosmo, z_cl, &r_s, &rho_s);
-  }
+  nc_galaxy_shape_factor_prepare (gsf, mset);
 
   for (i = 0; i < data_array->len; i++)
   {
     NcGalaxyShapeFactorData *data_i   = g_ptr_array_index (data_array, i);
     NcGalaxyShapeFactorCData *cdata_i = (NcGalaxyShapeFactorCData *) data_i->cdata;
 
-    if ((update_radius) || (cdata_i->radius == 0.0))
-    {
-      const gdouble e1   = data_i->epsilon_obs_1;
-      const gdouble e2   = data_i->epsilon_obs_2;
-      const gdouble ra   = data_i->pos_data->ra;
-      const gdouble dec  = data_i->pos_data->dec;
-      complex double e_o = e1 + I * e2;
-      complex double e_o_rotated;
-      complex double bias_rotated;
-      gdouble theta, phi;
-
-      nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
-
-      /* Re-express the celestial phi_C in the data frame (phi_E) so the spin-2
-       * rotation e^{-2 i phi} carries the data-frame observed ellipticity into
-       * the tangential/cross frame. See #NcWLEllipticityFrame. */
-      phi = nc_wl_ellipticity_celestial_to_frame_angle (data_i->coord, phi);
-
-      e_o_rotated  = e_o * cexp (-2.0 * I * phi);
-      bias_rotated = (data_i->c1 + I * data_i->c2) * cexp (-2.0 * I * phi);
-
-      if (!pr_prefactor_ready)
-      {
-        pr_prefactor       = nc_halo_position_projected_radius_prefactor (halo_position, cosmo);
-        pr_prefactor_ready = TRUE;
-      }
-
-      cdata_i->radius        = nc_halo_position_projected_radius_from_prefactor (theta, pr_prefactor);
-      cdata_i->phi           = phi;
-      cdata_i->epsilon_obs_t = creal (e_o_rotated);
-      cdata_i->epsilon_obs_x = cimag (e_o_rotated);
-      cdata_i->c1_rot        = creal (bias_rotated);
-      cdata_i->c2_rot        = cimag (bias_rotated);
-    }
+    if (update_radius || (cdata_i->radius == 0.0))
+      nc_galaxy_shape_factor_update_data_radius (gsf, data_i);
 
     if (update_optzs)
-      nc_wl_surface_mass_density_reduced_shear_optzs_prep_with_lens_ctx (
-        density_profile,
-        &lens_ctx,
-        cdata_i->radius,
-        r_s,
-        rho_s,
-        &cdata_i->optzs
-      );
+      nc_galaxy_shape_factor_update_data_optzs (gsf, data_i);
 
-    nc_galaxy_shape_pop_prepare (pop, data_i->pop_data);
-    klass->prepare (gsf, mset, data_i);
+    nc_galaxy_shape_factor_update_data_pop (gsf, data_i);
   }
 
   return TRUE;
+}
+
+/**
+ * nc_galaxy_shape_factor_update_data_at_nodes_crit:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @data: a #NcGalaxyShapeFactorData
+ * @z_nodes: the z values at each quadrature node
+ *
+ * Refreshes @data's per-node critical surface density cache, using the lens
+ * context cached by the last nc_galaxy_shape_factor_prepare() call. This
+ * cache depends only on `self->lens_ctx`/`self->cosmo`/
+ * `self->surface_mass_density` (not on `density_profile` or the projected
+ * radius), and `lens_ctx` is refreshed whenever
+ * nc_galaxy_shape_factor_get_optzs_hash() changes (see prepare()'s own doc
+ * comment) -- so call this whenever that hash changed, or whenever the node
+ * grid itself was rebuilt (different/resized @z_nodes).
+ */
+void
+nc_galaxy_shape_factor_update_data_at_nodes_crit (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
+  const guint n_nodes                     = ncm_vector_len (z_nodes);
+  guint j;
+
+  if (cdata->crit_cache_len != n_nodes)
+  {
+    g_free (cdata->crit_cache_arr);
+    cdata->crit_cache_arr = g_new0 (NcWLSurfaceMassDensityCritCache, n_nodes);
+    cdata->crit_cache_len = n_nodes;
+  }
+
+  for (j = 0; j < n_nodes; j++)
+  {
+    const gdouble z_j = ncm_vector_get (z_nodes, j);
+
+    nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx (
+      self->surface_mass_density,
+      self->cosmo,
+      &self->lens_ctx,
+      z_j,
+      &cdata->crit_cache_arr[j]
+    );
+  }
+}
+
+/**
+ * nc_galaxy_shape_factor_update_data_at_nodes_sigma:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @data: a #NcGalaxyShapeFactorData
+ *
+ * Refreshes @data's cached surface mass density Sigma(R) used by the
+ * fixed-nodes path, using @data's own cached projected radius as an input.
+ * Unconditional: call only when nc_galaxy_shape_factor_get_radius_hash() or
+ * nc_galaxy_shape_factor_get_optzs_hash() changed, and only *after*
+ * nc_galaxy_shape_factor_update_data_radius() in the same cycle if that one
+ * also needs to run -- this assumes @data's cached projected radius is
+ * already current (same ordering contract as update_data_optzs()).
+ */
+void
+nc_galaxy_shape_factor_update_data_at_nodes_sigma (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
+
+  nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (
+    self->density_profile,
+    self->cosmo,
+    cdata->radius,
+    self->z_cl,
+    self->z_cl,
+    &cdata->sigma_cache
+  );
 }
 
 /**
@@ -1048,126 +1364,42 @@ nc_galaxy_shape_factor_prepare_data_array (NcGalaxyShapeFactor *gsf, NcmMSet *ms
  * quadrature path. This unconditionally (re)computes every per-galaxy node
  * cache: deciding *when* a recompute is needed is the caller's responsibility.
  *
+ * A thin wrapper composing nc_galaxy_shape_factor_prepare() (which refreshes
+ * the shared `pr_prefactor`/`lens_ctx` this relies on) with
+ * nc_galaxy_shape_factor_update_data_radius(),
+ * nc_galaxy_shape_factor_update_data_at_nodes_crit() and
+ * nc_galaxy_shape_factor_update_data_at_nodes_sigma() -- kept for callers
+ * that want everything refreshed unconditionally in one call (e.g. the
+ * standalone factor tests); #NcDataClusterWLFactor instead calls the three
+ * per-galaxy functions directly, each gated by its own independent hash
+ * condition.
+ *
  * Returns: TRUE if successful.
  */
 gboolean
 nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, GPtrArray *data_array, const GPtrArray *z_nodes_per_galaxy, gboolean update_radius, gboolean update_crit, gboolean update_sigma)
 {
-  NcGalaxyShapeFactorClass *klass              = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
-  NcHICosmo *cosmo                             = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcHaloPosition *halo_position                = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
-  NcWLSurfaceMassDensity *surface_mass_density = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-  NcHaloDensityProfile *density_profile        = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-  NcGalaxyShapePop *pop                        = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
-  const gdouble z_cl                           = nc_halo_position_get_redshift (halo_position);
-  gboolean lens_ctx_ready                      = FALSE;
-  gboolean pr_prefactor_ready                  = FALSE;
-  NcWLSurfaceMassDensityLensCtx lens_ctx;
-  gdouble pr_prefactor = 0.0;
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
   guint i;
 
-  g_assert_nonnull (pop);
-
-  nc_halo_position_prepare_if_needed (halo_position, cosmo);
-  nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
-
-  if (update_radius)
-  {
-    pr_prefactor       = nc_halo_position_projected_radius_prefactor (halo_position, cosmo);
-    pr_prefactor_ready = TRUE;
-  }
-
-  if (update_crit)
-  {
-    nc_wl_surface_mass_density_lens_ctx_prep (&lens_ctx, surface_mass_density, cosmo, z_cl);
-    lens_ctx_ready = TRUE;
-  }
+  nc_galaxy_shape_factor_prepare (gsf, mset);
 
   for (i = 0; i < data_array->len; i++)
   {
     NcGalaxyShapeFactorData *data_i   = g_ptr_array_index (data_array, i);
     NcGalaxyShapeFactorCData *cdata_i = (NcGalaxyShapeFactorCData *) data_i->cdata;
     NcmVector *z_nodes_i              = (NcmVector *) g_ptr_array_index ((GPtrArray *) z_nodes_per_galaxy, i);
-    const guint n_nodes               = ncm_vector_len (z_nodes_i);
 
-    if ((update_radius) || (cdata_i->radius == 0.0))
-    {
-      const gdouble e1   = data_i->epsilon_obs_1;
-      const gdouble e2   = data_i->epsilon_obs_2;
-      const gdouble ra   = data_i->pos_data->ra;
-      const gdouble dec  = data_i->pos_data->dec;
-      complex double e_o = e1 + I * e2;
-      complex double e_o_rotated;
-      complex double bias_rotated;
-      gdouble theta, phi;
-
-      nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
-
-      /* Re-express the celestial phi_C in the data frame (phi_E) so the spin-2
-       * rotation e^{-2 i phi} carries the data-frame observed ellipticity into
-       * the tangential/cross frame. See #NcWLEllipticityFrame. */
-      phi = nc_wl_ellipticity_celestial_to_frame_angle (data_i->coord, phi);
-
-      e_o_rotated  = e_o * cexp (-2.0 * I * phi);
-      bias_rotated = (data_i->c1 + I * data_i->c2) * cexp (-2.0 * I * phi);
-
-      if (!pr_prefactor_ready)
-      {
-        pr_prefactor       = nc_halo_position_projected_radius_prefactor (halo_position, cosmo);
-        pr_prefactor_ready = TRUE;
-      }
-
-      cdata_i->radius        = nc_halo_position_projected_radius_from_prefactor (theta, pr_prefactor);
-      cdata_i->phi           = phi;
-      cdata_i->epsilon_obs_t = creal (e_o_rotated);
-      cdata_i->epsilon_obs_x = cimag (e_o_rotated);
-      cdata_i->c1_rot        = creal (bias_rotated);
-      cdata_i->c2_rot        = cimag (bias_rotated);
-    }
+    if (update_radius || (cdata_i->radius == 0.0))
+      nc_galaxy_shape_factor_update_data_radius (gsf, data_i);
 
     if (update_crit || (cdata_i->crit_cache_arr == NULL))
-    {
-      guint j;
-
-      if (!lens_ctx_ready)
-      {
-        nc_wl_surface_mass_density_lens_ctx_prep (&lens_ctx, surface_mass_density, cosmo, z_cl);
-        lens_ctx_ready = TRUE;
-      }
-
-      if (cdata_i->crit_cache_len != n_nodes)
-      {
-        g_free (cdata_i->crit_cache_arr);
-        cdata_i->crit_cache_arr = g_new0 (NcWLSurfaceMassDensityCritCache, n_nodes);
-        cdata_i->crit_cache_len = n_nodes;
-      }
-
-      for (j = 0; j < n_nodes; j++)
-      {
-        const gdouble z_j = ncm_vector_get (z_nodes_i, j);
-
-        nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx (
-          surface_mass_density,
-          cosmo,
-          &lens_ctx,
-          z_j,
-          &cdata_i->crit_cache_arr[j]
-        );
-      }
-    }
+      nc_galaxy_shape_factor_update_data_at_nodes_crit (gsf, data_i, z_nodes_i);
 
     if (update_sigma)
-      nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (
-        density_profile,
-        cosmo,
-        cdata_i->radius,
-        z_cl,
-        z_cl,
-        &cdata_i->sigma_cache
-      );
+      nc_galaxy_shape_factor_update_data_at_nodes_sigma (gsf, data_i);
 
-    nc_galaxy_shape_pop_prepare (pop, data_i->pop_data);
-    klass->prepare (gsf, mset, data_i);
+    nc_galaxy_shape_pop_prepare (self->pop, data_i->pop_data);
   }
 
   return TRUE;

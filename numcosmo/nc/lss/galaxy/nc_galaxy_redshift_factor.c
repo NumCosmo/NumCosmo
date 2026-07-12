@@ -99,12 +99,6 @@ _nc_galaxy_redshift_factor_gen1 (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, Nc
   return FALSE;
 }
 
-static void
-_nc_galaxy_redshift_factor_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data)
-{
-  g_error ("_nc_galaxy_redshift_factor_prepare: method not implemented");
-}
-
 static NcGalaxyRedshiftFactorIntegrand *
 _nc_galaxy_redshift_factor_integ (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, gboolean use_lnp)
 {
@@ -141,6 +135,25 @@ _nc_galaxy_redshift_factor_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMS
 /* LCOV_EXCL_STOP */
 
 static void
+_nc_galaxy_redshift_factor_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset)
+{
+  /* Default: no models to resolve, nothing to cache. */
+}
+
+static guint64
+_nc_galaxy_redshift_factor_get_hash (NcGalaxyRedshiftFactor *gsdr)
+{
+  /* Default: assumed to never change. */
+  return 0;
+}
+
+static void
+_nc_galaxy_redshift_factor_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data)
+{
+  /* Default: nothing cached per-galaxy to refresh. */
+}
+
+static void
 nc_galaxy_redshift_factor_class_init (NcGalaxyRedshiftFactorClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -155,6 +168,8 @@ nc_galaxy_redshift_factor_class_init (NcGalaxyRedshiftFactorClass *klass)
   klass->get_integ_lim    = &_nc_galaxy_redshift_factor_get_integ_lim;
   klass->norm             = &_nc_galaxy_redshift_factor_norm;
   klass->make_fixed_nodes = &_nc_galaxy_redshift_factor_make_fixed_nodes;
+  klass->get_hash         = &_nc_galaxy_redshift_factor_get_hash;
+  klass->update_data      = &_nc_galaxy_redshift_factor_update_data;
 }
 
 /**
@@ -371,16 +386,44 @@ nc_galaxy_redshift_factor_gen1 (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcG
  * nc_galaxy_redshift_factor_prepare:
  * @gsdr: a #NcGalaxyRedshiftFactor
  * @mset: a #NcmMSet supplying the scheme's models
- * @data: a #NcGalaxyRedshiftFactorData
  *
- * Prepares the per-galaxy @data for evaluation/generation (validates the
- * scheme's models in @mset and caches per-galaxy quantities).
+ * Factory-level prepare: validates the scheme's models in @mset and
+ * refreshes whatever it caches for efficient subsequent
+ * nc_galaxy_redshift_factor_update_data() calls.
  *
  */
 void
-nc_galaxy_redshift_factor_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data)
+nc_galaxy_redshift_factor_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset)
 {
-  NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->prepare (gsdr, mset, data);
+  NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->prepare (gsdr, mset);
+}
+
+/**
+ * nc_galaxy_redshift_factor_get_hash:
+ * @gsdr: a #NcGalaxyRedshiftFactor
+ *
+ * Returns: an opaque value that changes whenever the last
+ * nc_galaxy_redshift_factor_prepare() call refreshed something relevant
+ * (default: a constant).
+ */
+guint64
+nc_galaxy_redshift_factor_get_hash (NcGalaxyRedshiftFactor *gsdr)
+{
+  return NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->get_hash (gsdr);
+}
+
+/**
+ * nc_galaxy_redshift_factor_update_data:
+ * @gsdr: a #NcGalaxyRedshiftFactor
+ * @data: a #NcGalaxyRedshiftFactorData
+ *
+ * Unconditionally refreshes @data's cached state from what the last
+ * nc_galaxy_redshift_factor_prepare() call resolved (default: no-op).
+ */
+void
+nc_galaxy_redshift_factor_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data)
+{
+  NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->update_data (gsdr, data);
 }
 
 /**

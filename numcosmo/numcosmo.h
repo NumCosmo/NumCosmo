@@ -231,6 +231,7 @@
 #include <numcosmo/nc/data/nc_data_cluster_ncounts_gauss.h>
 #include <numcosmo/nc/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/nc/data/nc_data_cluster_wl.h>
+#include <numcosmo/nc/data/nc_data_cluster_wl_factor.h>
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich.h>
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich_count.h>
 #include <numcosmo/nc/data/nc_data_planck_lkl.h>

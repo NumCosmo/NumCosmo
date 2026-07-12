@@ -64,11 +64,25 @@ struct _NcGalaxyPositionFactorClass
 
   void (*data_init) (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data);
   void (*gen) (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data, NcmRNG *rng);
-  void (*prepare) (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data);
+  void (*prepare) (NcGalaxyPositionFactor *gspf, NcmMSet *mset);
   NcGalaxyPositionFactorIntegrand *(*integ) (NcGalaxyPositionFactor *gspf, NcmMSet *mset, gboolean use_lnp);
 
+  /* Factory-level change-detection: get_hash() returns an opaque value that
+   * changes whenever prepare() refreshed something relevant (default:
+   * a constant, "never changes"); update_data() unconditionally refreshes
+   * one galaxy's cached state from what the last prepare() call resolved
+   * (default: no-op). Callers (e.g. the cluster-WL orchestrator) call
+   * prepare() once, compare get_hash() against their own last-seen value,
+   * and call update_data() per galaxy only when it changed -- see
+   * #NcGalaxyShapeFactor's analogous (but concrete, since that machinery is
+   * identical across all its subclasses) radius/optzs/pop hashes for the
+   * full rationale. Unlike Shape, these stay virtual: different concrete
+   * Position schemes may cache completely different things. */
+  guint64 (*get_hash) (NcGalaxyPositionFactor *gspf);
+  void (*update_data) (NcGalaxyPositionFactor *gspf, NcGalaxyPositionFactorData *data);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[14];
+  gpointer padding[12];
 };
 
 /*
@@ -102,8 +116,10 @@ void nc_galaxy_position_factor_clear (NcGalaxyPositionFactor **gspf);
 
 NcGalaxyPositionFactorData *nc_galaxy_position_factor_data_new (NcGalaxyPositionFactor *gspf, NcmMSet *mset);
 void nc_galaxy_position_factor_gen (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data, NcmRNG *rng);
-void nc_galaxy_position_factor_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data);
+void nc_galaxy_position_factor_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset);
 NcGalaxyPositionFactorIntegrand *nc_galaxy_position_factor_integ (NcGalaxyPositionFactor *gspf, NcmMSet *mset, gboolean use_lnp);
+guint64 nc_galaxy_position_factor_get_hash (NcGalaxyPositionFactor *gspf);
+void nc_galaxy_position_factor_update_data (NcGalaxyPositionFactor *gspf, NcGalaxyPositionFactorData *data);
 
 #define NC_GALAXY_POSITION_FACTOR_COL_RA "ra"
 #define NC_GALAXY_POSITION_FACTOR_COL_DEC "dec"

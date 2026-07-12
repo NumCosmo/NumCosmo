@@ -65,6 +65,14 @@ void nc_galaxy_shape_intrinsic_mode_find (complex double ( *apply_shear ) (compl
                                           complex double g, complex double eps_obs, gdouble std_noise,
                                           NcGalaxyShapeIntrinsicMode *mode);
 
+void nc_galaxy_shape_intrinsic_mode_find_trace_det (NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data,
+                                                    complex double g, complex double eps_obs, gdouble std_noise,
+                                                    NcGalaxyShapeIntrinsicMode *mode);
+
+void nc_galaxy_shape_intrinsic_mode_find_trace (NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data,
+                                                complex double g, complex double eps_obs, gdouble std_noise,
+                                                NcGalaxyShapeIntrinsicMode *mode);
+
 gdouble nc_galaxy_shape_intrinsic_mode_laplace (const NcGalaxyShapeIntrinsicMode *mode);
 
 #endif /* NUMCOSMO_GIR_SCAN */

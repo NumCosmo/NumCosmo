@@ -92,12 +92,6 @@ _nc_galaxy_position_factor_gen (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcG
   g_error ("_nc_galaxy_position_factor_gen: method not implemented");
 }
 
-static void
-_nc_galaxy_position_factor_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data)
-{
-  g_error ("_nc_galaxy_position_factor_prepare: method not implemented");
-}
-
 static NcGalaxyPositionFactorIntegrand *
 _nc_galaxy_position_factor_integ (NcGalaxyPositionFactor *gspf, NcmMSet *mset, gboolean use_lnp)
 {
@@ -109,16 +103,37 @@ _nc_galaxy_position_factor_integ (NcGalaxyPositionFactor *gspf, NcmMSet *mset, g
 /* LCOV_EXCL_STOP */
 
 static void
+_nc_galaxy_position_factor_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset)
+{
+  /* Default: no models to resolve, nothing to cache. */
+}
+
+static guint64
+_nc_galaxy_position_factor_get_hash (NcGalaxyPositionFactor *gspf)
+{
+  /* Default: assumed to never change. */
+  return 0;
+}
+
+static void
+_nc_galaxy_position_factor_update_data (NcGalaxyPositionFactor *gspf, NcGalaxyPositionFactorData *data)
+{
+  /* Default: nothing cached per-galaxy to refresh. */
+}
+
+static void
 nc_galaxy_position_factor_class_init (NcGalaxyPositionFactorClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = &_nc_galaxy_position_factor_finalize;
 
-  klass->data_init = &_nc_galaxy_position_factor_data_init;
-  klass->gen       = &_nc_galaxy_position_factor_gen;
-  klass->prepare   = &_nc_galaxy_position_factor_prepare;
-  klass->integ     = &_nc_galaxy_position_factor_integ;
+  klass->data_init   = &_nc_galaxy_position_factor_data_init;
+  klass->gen         = &_nc_galaxy_position_factor_gen;
+  klass->prepare     = &_nc_galaxy_position_factor_prepare;
+  klass->integ       = &_nc_galaxy_position_factor_integ;
+  klass->get_hash    = &_nc_galaxy_position_factor_get_hash;
+  klass->update_data = &_nc_galaxy_position_factor_update_data;
 }
 
 /**
@@ -318,17 +333,45 @@ nc_galaxy_position_factor_gen (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGa
  * nc_galaxy_position_factor_prepare:
  * @gspf: a #NcGalaxyPositionFactor
  * @mset: a #NcmMSet supplying the scheme's models
- * @data: a #NcGalaxyPositionFactorData
  *
- * Prepares the per-galaxy @data for evaluation/generation (validates the
- * scheme's models in @mset and caches per-galaxy quantities). A no-op for the
- * flat scheme, which has no models to resolve.
+ * Factory-level prepare: validates the scheme's models in @mset and
+ * refreshes whatever it caches for efficient subsequent
+ * nc_galaxy_position_factor_update_data() calls. Cheap/no-op for the flat
+ * scheme, which has no models to resolve.
  *
  */
 void
-nc_galaxy_position_factor_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data)
+nc_galaxy_position_factor_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset)
 {
-  NC_GALAXY_POSITION_FACTOR_GET_CLASS (gspf)->prepare (gspf, mset, data);
+  NC_GALAXY_POSITION_FACTOR_GET_CLASS (gspf)->prepare (gspf, mset);
+}
+
+/**
+ * nc_galaxy_position_factor_get_hash:
+ * @gspf: a #NcGalaxyPositionFactor
+ *
+ * Returns: an opaque value that changes whenever the last
+ * nc_galaxy_position_factor_prepare() call refreshed something relevant
+ * (default: a constant).
+ */
+guint64
+nc_galaxy_position_factor_get_hash (NcGalaxyPositionFactor *gspf)
+{
+  return NC_GALAXY_POSITION_FACTOR_GET_CLASS (gspf)->get_hash (gspf);
+}
+
+/**
+ * nc_galaxy_position_factor_update_data:
+ * @gspf: a #NcGalaxyPositionFactor
+ * @data: a #NcGalaxyPositionFactorData
+ *
+ * Unconditionally refreshes @data's cached state from what the last
+ * nc_galaxy_position_factor_prepare() call resolved (default: no-op).
+ */
+void
+nc_galaxy_position_factor_update_data (NcGalaxyPositionFactor *gspf, NcGalaxyPositionFactorData *data)
+{
+  NC_GALAXY_POSITION_FACTOR_GET_CLASS (gspf)->update_data (gspf, data);
 }
 
 /**

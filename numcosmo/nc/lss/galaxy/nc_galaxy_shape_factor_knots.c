@@ -249,7 +249,7 @@ _nc_galaxy_shape_factor_knots_data_init (NcGalaxyShapeFactor *gsf, NcmMSet *mset
 }
 
 static void
-_nc_galaxy_shape_factor_knots_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data)
+_nc_galaxy_shape_factor_knots_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
 }
 

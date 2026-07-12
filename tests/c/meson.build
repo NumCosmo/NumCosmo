@@ -39,6 +39,10 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_vector.c'],
     },
     {
+        'name': 'ncm_poly_roots',
+        'sources': ['ncm/algebra/test_ncm_poly_roots.c'],
+    },
+    {
         'name': 'ncm_matrix',
         'sources': ['ncm/algebra/test_ncm_matrix.c'],
     },
@@ -366,6 +370,10 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_sd_shape',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_shape.c'],
+    },
+    {
+        'name': 'nc_galaxy_shape_intrinsic_mode',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_intrinsic_mode.c'],
     },
 ]
 

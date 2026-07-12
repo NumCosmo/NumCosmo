@@ -43,8 +43,22 @@ G_BEGIN_DECLS
 #define NC_TYPE_GALAXY_SHAPE_FACTOR           (nc_galaxy_shape_factor_get_type ())
 #define NC_TYPE_GALAXY_SHAPE_FACTOR_DATA      (nc_galaxy_shape_factor_data_get_type ())
 #define NC_TYPE_GALAXY_SHAPE_FACTOR_INTEGRAND (nc_galaxy_shape_factor_integrand_get_type ())
+#define NC_GALAXY_SHAPE_FACTOR_ERROR          (nc_galaxy_shape_factor_error_quark ())
 
 G_DECLARE_DERIVABLE_TYPE (NcGalaxyShapeFactor, nc_galaxy_shape_factor, NC, GALAXY_SHAPE_FACTOR, GObject)
+
+/**
+ * NcGalaxyShapeFactorError:
+ * @NC_GALAXY_SHAPE_FACTOR_ERROR_ELLIP_CONV_MISMATCH: the observation's ellipticity convention does not match the factor's.
+ *
+ * Error codes returned by #NcGalaxyShapeFactor methods.
+ */
+typedef enum _NcGalaxyShapeFactorError
+{
+  NC_GALAXY_SHAPE_FACTOR_ERROR_ELLIP_CONV_MISMATCH,
+} NcGalaxyShapeFactorError;
+
+GQuark nc_galaxy_shape_factor_error_quark (void);
 
 typedef struct _NcGalaxyShapeFactorData NcGalaxyShapeFactorData;
 
@@ -88,7 +102,7 @@ struct _NcGalaxyShapeFactorClass
   GObjectClass parent_class;
 
   void (*data_init) (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data);
-  void (*prepare) (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data);
+  void (*prepare) (NcGalaxyShapeFactor *gsf, NcmMSet *mset);
   gdouble (*eval_marginal) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
   gdouble (*eval_ln_marginal) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 
@@ -146,6 +160,18 @@ void nc_galaxy_shape_factor_free (NcGalaxyShapeFactor *gsf);
 void nc_galaxy_shape_factor_clear (NcGalaxyShapeFactor **gsf);
 
 NcGalaxyWLObsEllipConv nc_galaxy_shape_factor_get_ellip_conv (NcGalaxyShapeFactor *gsf);
+
+gboolean nc_galaxy_shape_factor_check_obs (NcGalaxyShapeFactor *gsf, NcGalaxyWLObs *obs, GError **error);
+
+void nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset);
+guint64 nc_galaxy_shape_factor_get_radius_hash (NcGalaxyShapeFactor *gsf);
+guint64 nc_galaxy_shape_factor_get_optzs_hash (NcGalaxyShapeFactor *gsf);
+guint64 nc_galaxy_shape_factor_get_pop_hash (NcGalaxyShapeFactor *gsf);
+void nc_galaxy_shape_factor_update_data_radius (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data);
+void nc_galaxy_shape_factor_update_data_optzs (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data);
+void nc_galaxy_shape_factor_update_data_pop (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data);
+void nc_galaxy_shape_factor_update_data_at_nodes_crit (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes);
+void nc_galaxy_shape_factor_update_data_at_nodes_sigma (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data);
 
 void nc_galaxy_shape_factor_apply_shear (NcGalaxyShapeFactor *gsf, const NcmComplex *g, const NcmComplex *E, NcmComplex *E_obs);
 void nc_galaxy_shape_factor_apply_shear_inv (NcGalaxyShapeFactor *gsf, const NcmComplex *g, const NcmComplex *E_obs, NcmComplex *E);
