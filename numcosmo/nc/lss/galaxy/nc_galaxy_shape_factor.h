@@ -89,9 +89,10 @@ NCM_UTIL_DECLARE_CALLBACK (NcGalaxyShapeFactorIntegrand,
  *
  *   P(e_obs | g) = \int_{|chi_I|<1} d^2chi_I P_pop(chi_I) N_2(e_obs - f_g(chi_I); std_noise^2)
  *
- * through eval_marginal / eval_ln_marginal: the evaluation strategy (legacy
- * variance-add approximation, 2D quadrature, Laplace) is the only axis that
- * varies. Both hooks receive the reduced shear g (bias already applied) and
+ * through eval_marginal / eval_ln_marginal: the evaluation strategy
+ * (variance-add approximation, 2D quadrature, Laplace, truncated series) is
+ * the only axis that varies. Both hooks receive the reduced shear g (bias
+ * already applied) and
  * the observed ellipticity in the SAME frame (the tangential/cross frame,
  * where the frame rotation has been handled by the engine); the population
  * model and its per-galaxy fragment come via @pop and @data->pop_data.
@@ -111,9 +112,8 @@ struct _NcGalaxyShapeFactorClass
 };
 
 /*
- * Per-galaxy data. Upstream fragments are held as flat references (the shape
- * factor needs ra/dec for the lens geometry and z at generation time; the
- * legacy S>P>Z chain existed only to give shape transitive access). The
+ * Per-galaxy data. Upstream fragments are held as flat references: the shape
+ * factor needs ra/dec for the lens geometry and z at generation time. The
  * intrinsic-ellipticity fragment @pop_data belongs to the NcGalaxyShapePop
  * resolved from the mset at data_new time. @cdata holds the engine-owned
  * geometry caches (opaque, defined in the .c); @ldata is the

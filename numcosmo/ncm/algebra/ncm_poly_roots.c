@@ -37,13 +37,11 @@
  * polynomial *evaluations* (Horner, $O(\text{degree})$ flops each) plus a
  * safeguarded Newton/bisection per bracket -- never a matrix decomposition.
  *
- * This was built to replace `gsl_poly_complex_solve()` in a hot loop where
- * its general eigenvalue-based approach (full complex root set, balancing,
- * Hessenberg reduction, QR iteration) measured slower overall than the
- * finite-difference method it was meant to speed up; this bracket-based
- * approach, needing only real roots, measured 1.6-1.8x faster than that
- * same baseline. See `nc_galaxy_shape_intrinsic_mode.c` for the physics
- * context this was extracted from.
+ * Needing only real roots, this is 1.6-1.8x faster in a hot loop than
+ * `gsl_poly_complex_solve()`'s general eigenvalue-based approach (full
+ * complex root set, balancing, Hessenberg reduction, QR iteration). See
+ * `nc_galaxy_shape_intrinsic_mode.c` for the physics context this is used
+ * in.
  *
  * Each degree has its own hardcoded (not looped-over-a-runtime-degree)
  * evaluator: these are meant for hot inner loops (called up to ~100 times

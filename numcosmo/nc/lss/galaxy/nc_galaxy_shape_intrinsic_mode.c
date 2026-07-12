@@ -542,14 +542,11 @@ _trace_quartic_coeffs (const gdouble rho, const gdouble lam, const gdouble g, co
   a[0] = x10 * (x0 * x1 - x2 + x8);
 }
 
-/* Real-root-finding itself (bracket-and-bisect on the derivative chain,
- * chosen over gsl_poly_complex_solve()'s general eigenvalue approach after
- * measuring the latter to be *slower* overall than the finite-difference
- * method this quartic was meant to replace) turned out to be fully generic
- * -- no physics content at all -- so it now lives in
- * ncm_poly_roots_real_quartic_or_lower() (numcosmo/ncm/algebra/ncm_poly_roots.c),
- * with its own independent tests. See that file's docs for the derivation
- * and the 1.6-1.8x speedup this bought. */
+/* Real-root-finding itself (bracket-and-bisect on the derivative chain) has
+ * no physics content and lives in ncm_poly_roots_real_quartic_or_lower()
+ * (numcosmo/ncm/algebra/ncm_poly_roots.c), with its own independent tests.
+ * See that file's docs for the derivation; faster than
+ * gsl_poly_complex_solve()'s general eigenvalue approach. */
 
 /* Solve the theta-profile stationarity quartic and return the best
  * theta_hat (in the ROTATED frame, i.e. still needs -alpha applied by the

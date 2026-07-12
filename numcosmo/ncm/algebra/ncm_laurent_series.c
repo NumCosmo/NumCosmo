@@ -29,15 +29,10 @@
  * Complex Laurent-polynomial arithmetic (add/scale/convolve/conjugate) plus
  * the Jacobi-Anger reduction of a truncated Fourier series against a
  * von-Mises-shaped kernel to scaled modified Bessel functions. Generic
- * complex-analysis machinery with no physics content of its own -- extracted
- * from the noise-side shape-factor scheme's own private implementation of
- * the same operations (once shipped as `nc_galaxy_shape_factor_series.c`,
- * since removed; see docs/theory/wl_shape_marginalization_series.qmd for the
- * physics context and derivation) so it can be reused and independently
- * tested by `nc_galaxy_shape_factor_series_lensed.c`, following the same
- * precedent as ncm_poly_roots.c (extracted from
- * nc_galaxy_shape_intrinsic_mode.c once its quartic-root-finder "turned out
- * to be fully generic -- no physics content at all").
+ * complex-analysis machinery with no physics content of its own, used and
+ * independently tested by `nc_galaxy_shape_factor_series_lensed.c` (see
+ * docs/theory/wl_shape_marginalization_series.qmd for the physics context
+ * and derivation).
  *
  * Two parallel calling conventions for every operation, matching
  * nc_wl_ellipticity.h's own introspectable/native dual interface:
@@ -513,11 +508,8 @@ ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries *a)
  * precomputed scaled Bessel values -- no numerical quadrature over $\theta$
  * at all. Verified against direct numerical theta-integration
  * (test_ncm_laurent_series.c); note this includes the overall $2\pi$ factor
- * from the $\theta$-integral itself (Series.c's own historical private copy
- * of this reduction omits it, relying on its caller's separate
- * normalization to compensate -- a correct but non-self-contained
- * convention not repeated here, since this function is meant to be a
- * standalone, independently meaningful primitive).
+ * from the $\theta$-integral itself, so the return value is meaningful on
+ * its own without relying on a caller-side normalization to supply it.
  *
  * Returns: the reduced value
  */

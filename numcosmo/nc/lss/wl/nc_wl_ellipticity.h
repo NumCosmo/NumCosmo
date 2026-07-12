@@ -59,7 +59,7 @@ G_BEGIN_DECLS
  *   when facing the object with their head pointing to the North celestial pole.
  *   The right-hand direction then points East, so the image $x$-axis increases
  *   towards the West (decreasing RA) -- the opposite handedness. This is the
- *   "Euclidean" image-plane view (the legacy name was EUCLIDEAN).
+ *   "Euclidean" image-plane view, the value #NcGalaxyWLObsCoord calls EUCLIDEAN.
  *
  * The two frames differ by a parity (handedness) flip. The position angle
  * reverses sense,

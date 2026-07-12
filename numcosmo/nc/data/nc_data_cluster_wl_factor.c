@@ -26,14 +26,12 @@
 /**
  * NcDataClusterWLFactor:
  *
- * Cluster weak-lensing likelihood built on the new per-galaxy Factor
+ * Cluster weak-lensing likelihood built on the per-galaxy Factor
  * calculators (#NcGalaxyPositionFactor / #NcGalaxyRedshiftFactor /
- * #NcGalaxyShapeFactor), instead of the legacy #NcGalaxySDPosition /
- * #NcGalaxySDObsRedshift / #NcGalaxySDShape classes #NcDataClusterWL is
- * built on. #NcDataClusterWL is left completely untouched: it remains the
- * parity oracle this class is validated against (see the test suite), and
- * this class is the additive sibling proving the new Factor framework can
- * actually be plugged into a fit before any legacy code is reconsidered.
+ * #NcGalaxyShapeFactor). #NcDataClusterWL is the equivalent likelihood
+ * built on #NcGalaxySDPosition / #NcGalaxySDObsRedshift / #NcGalaxySDShape;
+ * the two are numerically independent implementations and the test suite
+ * checks them against each other.
  *
  * The likelihood factor per galaxy is
  * $$P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_I|<1} \mathrm{d}^2\chi_I\,
@@ -45,17 +43,16 @@
  * integrates $z$ itself; the orchestrator integrates this against every
  * other $z$-dependent factor").
  *
- * Implements all three of legacy's redshift-integral methods: `LNINT`
- * (default, adaptive log-domain 1D), `FIXED_NODES` (fixed Gauss-Legendre,
- * with an optional per-galaxy `auto-nodes` calibration -- see
- * nc_data_cluster_wl_factor_set_auto_nodes()) and `CUBATURE` (adaptive
+ * Supports the same three redshift-integral methods as #NcDataClusterWL:
+ * `LNINT` (default, adaptive log-domain 1D), `FIXED_NODES` (fixed
+ * Gauss-Legendre, with an optional per-galaxy `auto-nodes` calibration --
+ * see nc_data_cluster_wl_factor_set_auto_nodes()) and `CUBATURE` (adaptive
  * `NcmIntegralND` over the linear-domain product). All three are
  * mathematically exact, differing only in numerical strategy/cost. No
  * bootstrap, no Fisher-matrix support, no OpenMP parallelism (including for
- * `auto-nodes` calibration, which stays serial for the same reason), no
- * fit-time `r_min`/`r_max` weighting (matching #NcDataClusterWL's own
- * deliberate no-op there -- a previous attempt "introduced bias in the
- * estimates").
+ * `auto-nodes` calibration, which stays serial for the same reason). No
+ * fit-time `r_min`/`r_max` weighting: applying it biases the mass estimate,
+ * matching #NcDataClusterWL's own behavior.
  *
  * Design principle followed throughout: all preparation work happens in
  * prepare() -- resolving models, refreshing each Factor's own caches,
@@ -232,10 +229,10 @@ typedef struct _NcDataClusterWLFactorPrivate
    * set_n_nodes()/set_rule_n() bumps no pkey at all, so without this
    * dedicated tracking fixed_grid_changed would never notice a resize,
    * leaving z_nodes_per_galaxy/fixed_bg_nodes/shape_at_nodes sized to a
-   * stale panel count (found to corrupt the heap via
-   * ncm_integral_fixed_integ_vec_mult on a resized subvector). 0 is not a
-   * valid n_nodes/rule_n (properties are bounded to >= 2/>= 1), so it
-   * forces the first rebuild same as fixed_nodes_zcl's GSL_NAN. */
+   * stale panel count: ncm_integral_fixed_integ_vec_mult() then reads a
+   * resized subvector out of bounds. 0 is not a valid n_nodes/rule_n
+   * (properties are bounded to >= 2/>= 1), so it forces the first rebuild
+   * same as fixed_nodes_zcl's GSL_NAN. */
   guint fixed_nodes_n_nodes_seen;
   guint fixed_nodes_rule_n_seen;
 
@@ -834,15 +831,11 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
    * obs was replaced *this* cycle, and must read that fact through this
    * local -- reading self->obs_changed itself at that point would always
    * see FALSE, silently turning every "self->obs_changed ||" term there
-   * into dead code. Found as a real, pre-existing Phase-1 bug (this
-   * ordering predates the FIXED_NODES work): it was masked for the other
-   * five flags because their own hash fields start at 0, which any real
-   * hash is virtually certain to differ from, so "first ever" was still
-   * caught by the hash comparison alone -- but not masked for
-   * fixed_grid_changed, whose own comparisons (z_cl, n_nodes, rule_n) all
-   * still match their last-seen values after a pure obs swap that changes
-   * no NcmModel at all, so the dead obs_changed term was the only thing
-   * that could have signaled "rebuild anyway." */
+   * into dead code. This matters in particular for fixed_grid_changed: its
+   * own comparisons (z_cl, n_nodes, rule_n) all still match their
+   * last-seen values after a pure obs swap that changes no NcmModel at
+   * all, so obs_was_changed is the only thing that can signal "rebuild
+   * anyway" in that case. */
   const gboolean obs_was_changed = self->obs_changed;
 
   if (obs_was_changed)
@@ -930,9 +923,9 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
    *                      compare, matching legacy's own fixed_nodes_zcl --
    *                      plus n_nodes/rule_n, orchestrator properties (not
    *                      NcmModel parameters) that resize the grid without
-   *                      bumping any pkey at all; missing this crashed via
-   *                      a stale-sized subvector passed to
-   *                      ncm_integral_fixed_integ_vec_mult(). */
+   *                      bumping any pkey at all; a stale-sized subvector
+   *                      passed to ncm_integral_fixed_integ_vec_mult()
+   *                      reads out of bounds. */
   pos_changed    = obs_was_changed || (nc_galaxy_position_factor_get_hash (self->position_factor) != self->pos_hash);
   z_changed      = obs_was_changed || (nc_galaxy_redshift_factor_get_hash (self->redshift_factor) != self->z_hash);
   radius_changed = obs_was_changed || (nc_galaxy_shape_factor_get_radius_hash (self->shape_factor) != self->shape_radius_hash);
@@ -1010,7 +1003,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
      * during which radius_hash/optzs_hash were already kept current for
      * the LNINT path's own needs and so would not, on their own, signal
      * that sigma_cache -- a FIXED_NODES-only cache -- has never actually
-     * been computed). Found via exactly this switch-mid-run scenario. */
+     * been computed). */
     if (fixed_grid_changed || radius_changed || optzs_changed)
       steps[n_steps++] = &_step_fixed_nodes_sigma;
   }

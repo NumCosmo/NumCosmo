@@ -97,11 +97,10 @@ typedef struct _NcGalaxyShapeFactorPrivate
   guint64 pop_hash;
 
   /* Cached alongside the above, for the fixed-nodes update functions
-   * (update_data_at_nodes_crit/_sigma): cosmo and surface_mass_density are
-   * already peeked as prepare() locals to compute lens_ctx/pr_prefactor, so
-   * storing them costs nothing extra; z_cl is likewise already computed
-   * there. None of these were needed by the non-nodes update_data_* family,
-   * which is why they weren't cached before now. */
+   * (update_data_at_nodes_crit/_sigma) only: cosmo and surface_mass_density
+   * are already peeked as prepare() locals to compute lens_ctx/pr_prefactor,
+   * so storing them costs nothing extra; z_cl is likewise already computed
+   * there. The non-nodes update_data_* family does not need any of these. */
   NcHICosmo *cosmo;
   NcWLSurfaceMassDensity *surface_mass_density;
   gdouble z_cl;
@@ -1277,15 +1276,12 @@ nc_galaxy_shape_factor_integ (NcGalaxyShapeFactor *gsf, NcmMSet *mset, gboolean 
  * calibration bias) and the reduced-shear optimization cache. Also prepares
  * the population fragments and runs the subclass prepare hook.
  *
- * A thin wrapper kept for existing callers: internally, this is exactly
- * nc_galaxy_shape_factor_prepare() (which decides for itself, via its own
- * cached hashes, whether the geometry/profile caches actually need
- * recomputing) followed by a loop applying
- * nc_galaxy_shape_factor_update_data_radius()/_optzs()/_pop() -- @update_radius
- * and @update_optzs here only gate whether *this* call's loop applies the
- * radius/optzs steps to every @data_array entry, matching this function's
- * historical per-call semantics; the population step always runs, matching
- * this function's historical unconditional behaviour.
+ * Calls nc_galaxy_shape_factor_prepare() (which decides for itself, via its
+ * own cached hashes, whether the geometry/profile caches actually need
+ * recomputing), then loops over @data_array applying
+ * nc_galaxy_shape_factor_update_data_radius()/_optzs()/_pop(). @update_radius
+ * and @update_optzs gate whether the radius/optzs steps run in that loop for
+ * every @data_array entry; the population step always runs.
  *
  * Returns: TRUE if the caches were prepared.
  */
@@ -1404,9 +1400,9 @@ nc_galaxy_shape_factor_update_data_at_nodes_sigma (NcGalaxyShapeFactor *gsf, NcG
  * the shared `pr_prefactor`/`lens_ctx` this relies on) with
  * nc_galaxy_shape_factor_update_data_radius(),
  * nc_galaxy_shape_factor_update_data_at_nodes_crit() and
- * nc_galaxy_shape_factor_update_data_at_nodes_sigma() -- kept for callers
- * that want everything refreshed unconditionally in one call (e.g. the
- * standalone factor tests); #NcDataClusterWLFactor instead calls the three
+ * nc_galaxy_shape_factor_update_data_at_nodes_sigma() -- for callers that
+ * want everything refreshed unconditionally in one call (e.g. the
+ * standalone factor tests). #NcDataClusterWLFactor instead calls the three
  * per-galaxy functions directly, each gated by its own independent hash
  * condition.
  *
