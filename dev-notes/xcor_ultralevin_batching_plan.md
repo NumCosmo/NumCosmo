@@ -64,6 +64,47 @@ calling `set_ell_range` once per single ℓ, or once per kernel pair, throws awa
 all three reuse axes and pays the full panel-factorization + jℓ-cache cost
 every time.
 
+### 1.3 Interface review: sharing, hard limits, and untested scale
+
+Reviewed the object itself (447 passing unit tests, including `scipy`+
+truth-table accuracy checks up to ℓ=500) before trusting anything built on top
+of it. Verdict: the numerics are solid — reading the panel-selection code
+([ncm_sbessel_integrator_levin.c:934-1031](numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.c#L934-L1031))
+confirms it correctly falls back to a direct ODE solve when `y=kx` falls
+outside the precomputed knot grid, rather than silently extrapolating — the
+§3 bug is entirely in the xcor glue layer, not here. Four interface points
+matter for the batched design, though:
+
+- **Setup cost is kernel-independent but not shareable by construction.**
+  Each `NcmSBesselIntegratorLevin` privately owns its own `NcmSBesselOdeSolver`
+  (`init()`, [ncm_sbessel_integrator_levin.c:134](numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.c#L134)),
+  with no injection hook and no clone/dup constructor. Combined with
+  `NcXcorKernel` giving each kernel its own `integrator` property, N kernels
+  pay the panel/jℓ-cache setup N times today. **Resolved in §5 item 5 below**:
+  inject via `NcmMemoryPool`, not by making the object reentrant.
+- **`ell_cache_max` is a hard, non-catchable `g_error`**, default 1200
+  ([ncm_sbessel_integrator_levin.h:66](numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.h#L66)),
+  enforced the moment `set_ell_range` exceeds it
+  ([ncm_sbessel_integrator_levin.c:850-855](numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.c#L850-L855)).
+  This collides with production defaults already in the repo:
+  `KernelCMBLensingConfig`/`KernelCMBISWConfig` both default `lmax=3000`
+  ([kernels.py:89,122](numcosmo_py/app/xcor/kernels.py#L89)). The new
+  block-planner **must** tile any request into `≤ get_ell_cache_max()` chunks
+  as a hard constraint, not something discovered when a real config crashes
+  the process.
+- **Current xcor batch granularity is far smaller than what the integrator
+  amortizes over**: `MAX_ELL_BLOCK = 64`
+  ([nc_xcor_kernel.c:491](numcosmo/nc/xcor/nc_xcor_kernel.c#L491)) vs. a
+  default cache ceiling of 1200. The new interface's default block size should
+  target close to `ell_cache_max`, not inherit the old constant — 64 leaves
+  most of the amortization on the table.
+- **Untested at production scale.** Everything exercising the Levin
+  integrator today uses toy ℓ ranges (`Ncm.SBesselIntegratorLevin.new(0, 8)`
+  in fixtures/`view.py`; one test up to 1000). Nothing has run it end-to-end
+  near 1200-3000, which production kernel configs already default to. Worth a
+  standalone accuracy+timing check at that scale before assuming large blocks
+  are free (folded into §6).
+
 ## 2. How Xcor currently uses it — and where reuse is being thrown away
 
 `NcXcorKernel` owns one `NcmSBesselIntegrator*`
@@ -170,9 +211,10 @@ NcmVector *nc_xcor_get_cl (NcXcor *xc, guint kernel_id_1, guint kernel_id_2);
 
 `nc_xcor_solve` internally:
 
-1. Computes the union of ℓ-blocks needed across all registered requests
-   (tiling `[ℓmin,ℓmax]` at a configurable batch size, consistent with the
-   existing `ell_batch_size`/`MAX_ELL_BLOCK`/`ell_cache_max` constants).
+1. Computes the union of ℓ-blocks needed across all registered requests,
+   tiling `[ℓmin,ℓmax]` at a block size that must respect
+   `ncm_sbessel_integrator_levin_get_ell_cache_max()` (§1.3) and should default
+   close to it rather than to the old `MAX_ELL_BLOCK = 64`.
 2. For each ℓ-block, in order:
    a. For each *distinct* kernel referenced by a request touching this block,
       build its k-space spline once
@@ -191,6 +233,35 @@ This turns the cost from `O(N_pairs × N_blocks)` kernel-spline builds into
 kernels + one request + solve, for the single-pair case), documented as the
 non-optimal path once more than a couple of kernels are involved.
 
+### 4.3 Integrator injection (the orchestrator decides, Xcor doesn't)
+
+Step 2a above is where per-kernel spline construction happens — the
+embarrassingly-parallel-across-kernels tier of work (§5 item 5). `NcXcor`
+should not hardcode a threading/sharing policy for it. Instead the
+registration/solve API accepts an **integrator source**, supplied by whoever
+is orchestrating the run:
+
+```c
+void nc_xcor_set_integrator        (NcXcor *xc, NcmSBesselIntegrator *sbi);
+void nc_xcor_set_integrator_pool   (NcXcor *xc, NcmMemoryPool *pool);
+```
+
+- `set_integrator`: a single shared instance, used serially across all
+  kernels in a block — today's implicit behavior, and the right default for a
+  one-off script.
+- `set_integrator_pool`: an `NcmMemoryPool` (same idiom already used for GSL
+  workspaces in [ncm_integrate.c:75-88](numcosmo/ncm/integration/ncm_integrate.c#L75-L88))
+  whose `alloc` callback produces a fresh `NcmSBesselIntegratorLevin` already
+  `set_ell_range()`'d to the block currently being solved. Step 2a's
+  per-kernel loop (whatever ends up parallelizing it — most likely OpenMP)
+  borrows an instance via `ncm_memory_pool_get()` per kernel and returns it
+  when that kernel's spline is built. Pool size grows lazily to match actual
+  concurrency — never a hardcoded thread count — and a single-threaded caller
+  degenerates to exactly the `set_integrator` case for free.
+
+Xcor itself stays agnostic to *how much* concurrency exists; it only needs an
+integrator when step 2a needs one, and asks the injected source for it.
+
 ## 5. Decisions needed before implementation starts
 
 | # | Question | Notes |
@@ -199,19 +270,27 @@ non-optimal path once more than a couple of kernels are involved.
 | 2 | Where does the new stateful API live — on `NcXcor` itself, or a new companion object (e.g. `NcXcorSolver`)? | `NcXcor` today is close to stateless per-call; bolting registration/request state onto it changes its contract. A companion object keeps `nc_xcor_compute()`'s existing callers untouched. |
 | 3 | How to tile ℓ-blocks when different pairs need different ℓmin/ℓmax (as `nc_data_xcor.c`'s per-pair `ell_th_cut_off` already implies)? | Union-then-mask (compute the full block, use only the requested sub-range per pair) vs. per-pair block grids. Union-then-mask is simpler but may compute unused ℓ's for some pairs. |
 | 4 | Per-block spline cache lifetime beyond "duration of one `nc_xcor_solve` call"? | Splines depend on the current cosmology, which changes every likelihood/MCMC step, so cross-step caching is not applicable — only cross-pair-within-one-`solve()` caching matters. Confirm no case needs longer-lived caching. |
-| 5 | Threading model for block processing? | Building the `N_kernels` splines within a block are independent of each other and could run in parallel; need to confirm `NcmSBesselIntegratorLevin`/`NcmSBesselOdeSolver` instances are one-per-thread (they hold mutable working arrays, so likely each kernel needs its own integrator instance already — check whether that's already true or whether kernels currently share one integrator). |
+| 5 | Threading model for block processing? | **RESOLVED**: don't make `NcmSBesselIntegratorLevin` reentrant (its scratch state is deeply threaded through the hot path — not worth it). Inject instead: `nc_xcor_set_integrator()` for a single shared instance (serial, today's default) or `nc_xcor_set_integrator_pool()` backed by `NcmMemoryPool` (same idiom as the existing GSL-workspace pool, §4.3) for threaded use. The caller/orchestrator decides which, and how many — Xcor never hardcodes a thread count. Actual degree of parallelism (and whether tier-2 kernel-spline-building or tier-3 pair-integration is the real bottleneck) is a profiling question for after a correct, batched baseline exists — not decided here. |
 | 6 | Migration of `NcDataXcor` | The call site at [nc_data_xcor.c:530-556](numcosmo/nc/data/nc_data_xcor.c#L530-L556) is the one production consumer that benefits; plan its switch to register/request/solve explicitly rather than leaving it on the single-pair path. |
+| 7 | Block size default | **RESOLVED (§1.3, §4.2)**: must stay `≤ ell_cache_max` (hard `g_error` otherwise); default should target close to `ell_cache_max`, not the old `MAX_ELL_BLOCK = 64`. |
 
 ## 6. Suggested order of work (once the above is confirmed)
 
 1. Fix the k-range/domain mismatch (§3); add `KERNEL_GSL`/`KERNEL_CUBATURE`
    regression tests (agreement with each other, convergence to Limber at high
    ℓ, re-run against the CCL comparison currently Limber-only).
-2. Land the companion object / new API (§4) purely as an additive layer,
-   `nc_xcor_compute()` unchanged and re-expressed in terms of it.
-3. Migrate `NcDataXcor` to register/request/solve.
-4. Expose the non-Limber knobs (`integrator`, `l-limber`, `reltol`,
+2. Standalone accuracy+timing check of `NcmSBesselIntegratorLevin` at
+   production ℓ scale (1200-3000, §1.3) — confirm large blocks behave and cost
+   what's expected before the block-planner is built around that assumption.
+3. Land the companion object / new API (§4, including §4.3 integrator
+   injection) purely as an additive layer, `nc_xcor_compute()` unchanged and
+   re-expressed in terms of it.
+4. Migrate `NcDataXcor` to register/request/solve.
+5. Expose the non-Limber knobs (`integrator`, `l-limber`, `reltol`,
    `adaptive-*`) in `numcosmo_py/app/xcor` production config, not just the
    `view.py` debug tool.
-5. Performance pass + docs (theory page for the ODE-solver/Levin combination,
-   `docs/theory/`, once behavior is verified — no page exists today).
+6. Performance pass — profile whether tier-2 (per-kernel spline construction)
+   or tier-3 (per-pair k-integral) dominates wall time at realistic N before
+   deciding actual pool sizing/parallelism (§5 item 5) — plus docs (theory
+   page for the ODE-solver/Levin combination, `docs/theory/`, once behavior is
+   verified — no page exists today).
