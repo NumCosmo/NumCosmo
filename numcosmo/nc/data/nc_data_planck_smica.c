@@ -455,7 +455,7 @@ _nc_data_planck_smica_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVecto
     for (il = 0; il < nell; il++)
     {
       ell = il + s->lmin;
-      const gdouble c = gxt[ell] * twopi / (ell * (ell + 1.0));
+      const gdouble c = gxt[ell - 2] * twopi / (ell * (ell + 1.0)); /* corr_template ell-2 */
       gdouble *pl = s->perl + il * m2;
       for (i = 0; i < m; i++)
         for (j = 0; j < m; j++)
