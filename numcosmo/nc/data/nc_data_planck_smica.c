@@ -405,7 +405,9 @@ _nc_data_planck_smica_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVecto
   {
     const gdouble nrm = 3000.0 * 3001.0 / twopi;
     gdouble ps[9];
-    memset (ps, 0, sizeof (ps));
+    /* clik defaults every ps_A pair to 1; only these four are model params. */
+    for (i = 0; i < 9; i++)
+      ps[i] = 1.0 / nrm;
     ps[0 * m + 0] = p[P_ps_100_100] / nrm;
     ps[1 * m + 1] = p[P_ps_143_143] / nrm;
     ps[1 * m + 2] = ps[2 * m + 1] = p[P_ps_143_217] / nrm;
