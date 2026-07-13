@@ -198,6 +198,7 @@
 #include "nc/lss/galaxy/nc_galaxy_position_factor_flat.h"
 #include "nc/lss/galaxy/nc_galaxy_redshift_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_redshift_factor_composed.h"
+#include "nc/lss/galaxy/nc_galaxy_redshift_factor_spline.h"
 #include "nc/lss/galaxy/nc_galaxy_redshift_obs.h"
 #include "nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_redshift_obs_sel.h"
@@ -868,6 +869,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR_FLAT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_FACTOR);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_FACTOR_COMPOSED);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_FACTOR_SPLINE);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_OBS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_OBS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_OBS_SEL);

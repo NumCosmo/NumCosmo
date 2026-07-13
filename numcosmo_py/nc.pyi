@@ -7518,6 +7518,43 @@ class GalaxyRedshiftFactorIntegrand(GObject.GBoxed):
     def free(self) -> None: ...
     def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
 
+class GalaxyRedshiftFactorSpline(GalaxyRedshiftFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyRedshiftFactorSpline(**properties)
+        new() -> NumCosmo.GalaxyRedshiftFactorSpline
+
+    Object NcGalaxyRedshiftFactorSpline
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    @staticmethod
+    def clear(gsdrs: GalaxyRedshiftFactorSpline) -> None: ...
+    def data_peek(self, data: GalaxyRedshiftFactorData) -> NumCosmoMath.Spline: ...
+    def data_set(
+        self, data: GalaxyRedshiftFactorData, pz: NumCosmoMath.Spline
+    ) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> GalaxyRedshiftFactorSpline: ...
+    def ref(self) -> GalaxyRedshiftFactorSpline: ...
+
+class GalaxyRedshiftFactorSplineClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyRedshiftFactorSplineClass()
+    """
+
+    parent_class: GalaxyRedshiftFactorClass = ...
+
 class GalaxyRedshiftObs(NumCosmoMath.Model):
     r"""
     :Constructors:

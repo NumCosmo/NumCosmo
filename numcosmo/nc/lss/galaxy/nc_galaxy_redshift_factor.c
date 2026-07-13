@@ -32,15 +32,14 @@
  * that produces the per-galaxy JOINT density $p(z_\mathrm{phot}, z \mid I)$ as a
  * function of the true redshift $z$. The calculator never integrates $z$ itself
  * for the likelihood: it hands out an integrand via
- * nc_galaxy_redshift_factor_integ(), and the orchestrator (#NcDataClusterWL)
+ * nc_galaxy_redshift_factor_integ(), and the orchestrator (#NcDataClusterWLFactor)
  * integrates that against every other $z$-dependent factor.
  *
  * Concrete schemes live as subclasses following the #NcPowspecML pattern
  * (abstract base owns the shared machinery once; each scheme owns its observed
- * fragment, engine and sampler). The redshift schemes are the Composed scheme
- * (a #NcGalaxyRedshiftPop slot convolved with a
- * #NcGalaxyRedshiftObs slot) and the Joint scheme (a pre-tabulated
- * $p(z)$ spline).
+ * fragment, engine and sampler). The redshift schemes are #NcGalaxyRedshiftFactorComposed
+ * (a #NcGalaxyRedshiftPop slot convolved with a #NcGalaxyRedshiftObs slot) and
+ * #NcGalaxyRedshiftFactorSpline (a per-galaxy pre-tabulated $p(z)$ spline).
  *
  */
 
