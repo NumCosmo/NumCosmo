@@ -55,14 +55,30 @@
 
 /* SMICA nuisance parameters, in the order NcPlanckFICorTT exposes them (== the
  * clik check_param tail order). Indices into the NcPlanckFI model. */
-typedef enum
+typedef enum _NcDataPlanckSmicaPar
 {
-  P_A_cib_217 = 0, P_cib_index, P_xi_sz_cib, P_A_sz,
-  P_ps_100_100, P_ps_143_143, P_ps_143_217, P_ps_217_217,
-  P_ksz_norm, P_gal545_100, P_gal545_143, P_gal545_143_217, P_gal545_217,
-  P_sbpx_100_100, P_sbpx_143_143, P_sbpx_143_217, P_sbpx_217_217,
-  P_calib_100T, P_calib_217T, P_A_planck, P_LEN,
-} SmicaPar;
+  NC_DATA_PLANCK_SMICA_PAR_A_CIB_217 = 0,
+  NC_DATA_PLANCK_SMICA_PAR_CIB_INDEX,
+  NC_DATA_PLANCK_SMICA_PAR_XI_SZ_CIB,
+  NC_DATA_PLANCK_SMICA_PAR_A_SZ,
+  NC_DATA_PLANCK_SMICA_PAR_PS_100_100,
+  NC_DATA_PLANCK_SMICA_PAR_PS_143_143,
+  NC_DATA_PLANCK_SMICA_PAR_PS_143_217,
+  NC_DATA_PLANCK_SMICA_PAR_PS_217_217,
+  NC_DATA_PLANCK_SMICA_PAR_KSZ_NORM,
+  NC_DATA_PLANCK_SMICA_PAR_GAL545_100,
+  NC_DATA_PLANCK_SMICA_PAR_GAL545_143,
+  NC_DATA_PLANCK_SMICA_PAR_GAL545_143_217,
+  NC_DATA_PLANCK_SMICA_PAR_GAL545_217,
+  NC_DATA_PLANCK_SMICA_PAR_SBPX_100_100,
+  NC_DATA_PLANCK_SMICA_PAR_SBPX_143_143,
+  NC_DATA_PLANCK_SMICA_PAR_SBPX_143_217,
+  NC_DATA_PLANCK_SMICA_PAR_SBPX_217_217,
+  NC_DATA_PLANCK_SMICA_PAR_CALIB_100T,
+  NC_DATA_PLANCK_SMICA_PAR_CALIB_217T,
+  NC_DATA_PLANCK_SMICA_PAR_A_PLANCK,
+  NC_DATA_PLANCK_SMICA_PAR_LEN,
+} NcDataPlanckSmicaPar;
 
 struct _NcDataPlanckSmica
 {
@@ -70,59 +86,91 @@ struct _NcDataPlanckSmica
   NcmDataGaussCov parent_instance;
   NcHIPertBoltzmann *pb;
   guint lmin, lmax, m, nbins;
-  NcmVector *freqs;      /* m: [100,143,217] */
-  NcmVector *a_cmb;      /* m: CMB mixing */
-  NcmVector *sz_color;   /* m: tSZ colour corrections */
-  NcmVector *gcib_conv;  /* m: CIB muK->MJ/sr conversion */
-  NcmVector *gibxsz_conv;/* m: gibXsz conversion (100 zeroed) */
-  NcmVector *bin_lmin;   /* nbins: per-bin ell offset (from lmin) */
-  NcmVector *bin_lmax;   /* nbins */
-  NcmVector *bin_weight; /* flattened per-(bin,ell) weights */
-  NcmVector *quad_idx;   /* np: flat indices into (nbins*m*m) R_q to extract */
+  NcmVector *freqs;       /* m: [100,143,217] */
+  NcmVector *a_cmb;       /* m: CMB mixing */
+  NcmVector *sz_color;    /* m: tSZ colour corrections */
+  NcmVector *gcib_conv;   /* m: CIB muK->MJ/sr conversion */
+  NcmVector *gibxsz_conv; /* m: gibXsz conversion (100 zeroed) */
+  NcmVector *bin_lmin;    /* nbins: per-bin ell offset (from lmin) */
+  NcmVector *bin_lmax;    /* nbins */
+  NcmVector *bin_weight;  /* flattened per-(bin,ell) weights */
+  NcmVector *quad_idx;    /* np: flat indices into (nbins*m*m) R_q to extract */
   /* per-ell templates (converter stores sz/ksz PRE-NORMALIZED at ell=3000) */
-  NcmVector *tmpl_gcib;  /* (10001, m0, m0) 4x4 layout, offset 0 */
-  NcmVector *tmpl_sz;    /* ell 2.. */
-  NcmVector *tmpl_ksz;   /* ell 0.. */
-  NcmVector *tmpl_gibxsz;/* ell 0.. */
-  NcmVector *tmpl_dust;  /* (3001, 12, 12) */
-  NcmVector *tmpl_leak;  /* (3001, 12, 12) */
-  NcmVector *tmpl_sbpx;  /* (3001, 12, 12) */
+  NcmVector *tmpl_gcib;   /* (10001, m0, m0) 4x4 layout, offset 0 */
+  NcmVector *tmpl_sz;     /* ell 2.. */
+  NcmVector *tmpl_ksz;    /* ell 0.. */
+  NcmVector *tmpl_gibxsz; /* ell 0.. */
+  NcmVector *tmpl_dust;   /* (3001, 12, 12) */
+  NcmVector *tmpl_leak;   /* (3001, 12, 12) */
+  NcmVector *tmpl_sbpx;   /* (3001, 12, 12) */
   /* runtime caches (not serialized) */
   NcmVector *cl_TT;
-  gdouble *Rq;           /* nbins*m*m */
-  gdouble *perl;         /* nell*m*m scratch */
-  guint calib_pi;        /* index of A_cib_217 in the NcPlanckFI model */
+  gdouble *Rq;    /* nbins*m*m */
+  gdouble *perl;  /* nell*m*m scratch */
+  guint calib_pi; /* index of A_cib_217 in the NcPlanckFI model */
   gboolean calib_pi_set;
 };
 
 enum
 {
-  PROP_0, PROP_PB, PROP_LMIN, PROP_LMAX, PROP_M, PROP_NBINS,
-  PROP_FREQS, PROP_A_CMB, PROP_SZ_COLOR, PROP_GCIB_CONV, PROP_GIBXSZ_CONV,
-  PROP_BIN_LMIN, PROP_BIN_LMAX, PROP_BIN_WEIGHT, PROP_QUAD_IDX,
-  PROP_TMPL_GCIB, PROP_TMPL_SZ, PROP_TMPL_KSZ, PROP_TMPL_GIBXSZ,
-  PROP_TMPL_DUST, PROP_TMPL_LEAK, PROP_TMPL_SBPX, PROP_SIZE,
+  PROP_0,
+  PROP_PB,
+  PROP_LMIN,
+  PROP_LMAX,
+  PROP_M,
+  PROP_NBINS,
+  PROP_FREQS,
+  PROP_A_CMB,
+  PROP_SZ_COLOR,
+  PROP_GCIB_CONV,
+  PROP_GIBXSZ_CONV,
+  PROP_BIN_LMIN,
+  PROP_BIN_LMAX,
+  PROP_BIN_WEIGHT,
+  PROP_QUAD_IDX,
+  PROP_TMPL_GCIB,
+  PROP_TMPL_SZ,
+  PROP_TMPL_KSZ,
+  PROP_TMPL_GIBXSZ,
+  PROP_TMPL_DUST,
+  PROP_TMPL_LEAK,
+  PROP_TMPL_SBPX,
+  PROP_SIZE,
 };
 
 G_DEFINE_TYPE (NcDataPlanckSmica, nc_data_planck_smica, NCM_TYPE_DATA_GAUSS_COV)
 
-#define GCIB_NF 4     /* gcib/cnoise template frequency dimension */
-#define CN_NF 12      /* cnoise 12x12 (4 freq x 3 TEB), T uses first 3 */
+#define GCIB_NF 4 /* gcib/cnoise template frequency dimension */
+#define CN_NF 12  /* cnoise 12x12 (4 freq x 3 TEB), T uses first 3 */
 
 static void
 nc_data_planck_smica_init (NcDataPlanckSmica *smica)
 {
-  smica->pb = NULL;
-  smica->lmin = smica->lmax = smica->m = smica->nbins = 0;
-  smica->freqs = smica->a_cmb = smica->sz_color = NULL;
-  smica->gcib_conv = smica->gibxsz_conv = NULL;
-  smica->bin_lmin = smica->bin_lmax = smica->bin_weight = smica->quad_idx = NULL;
-  smica->tmpl_gcib = smica->tmpl_sz = smica->tmpl_ksz = smica->tmpl_gibxsz = NULL;
-  smica->tmpl_dust = smica->tmpl_leak = smica->tmpl_sbpx = NULL;
-  smica->cl_TT = NULL;
-  smica->Rq = NULL;
-  smica->perl = NULL;
-  smica->calib_pi = 0;
+  smica->pb           = NULL;
+  smica->lmin         = 0;
+  smica->lmax         = 0;
+  smica->m            = 0;
+  smica->nbins        = 0;
+  smica->freqs        = NULL;
+  smica->a_cmb        = NULL;
+  smica->sz_color     = NULL;
+  smica->gcib_conv    = NULL;
+  smica->gibxsz_conv  = NULL;
+  smica->bin_lmin     = NULL;
+  smica->bin_lmax     = NULL;
+  smica->bin_weight   = NULL;
+  smica->quad_idx     = NULL;
+  smica->tmpl_gcib    = NULL;
+  smica->tmpl_sz      = NULL;
+  smica->tmpl_ksz     = NULL;
+  smica->tmpl_gibxsz  = NULL;
+  smica->tmpl_dust    = NULL;
+  smica->tmpl_leak    = NULL;
+  smica->tmpl_sbpx    = NULL;
+  smica->cl_TT        = NULL;
+  smica->Rq           = NULL;
+  smica->perl         = NULL;
+  smica->calib_pi     = 0;
   smica->calib_pi_set = FALSE;
 }
 
@@ -131,30 +179,76 @@ nc_data_planck_smica_set_property (GObject *object, guint prop_id, const GValue 
 {
   NcDataPlanckSmica *s = NC_DATA_PLANCK_SMICA (object);
 
+  g_return_if_fail (NC_IS_DATA_PLANCK_SMICA (object));
+
   switch (prop_id)
   {
-    case PROP_PB: nc_data_planck_smica_set_hipert_boltzmann (s, g_value_get_object (value)); break;
-    case PROP_LMIN: s->lmin = g_value_get_uint (value); break;
-    case PROP_LMAX: s->lmax = g_value_get_uint (value); break;
-    case PROP_M: s->m = g_value_get_uint (value); break;
-    case PROP_NBINS: s->nbins = g_value_get_uint (value); break;
-    case PROP_FREQS: ncm_vector_substitute (&s->freqs, g_value_get_object (value), TRUE); break;
-    case PROP_A_CMB: ncm_vector_substitute (&s->a_cmb, g_value_get_object (value), TRUE); break;
-    case PROP_SZ_COLOR: ncm_vector_substitute (&s->sz_color, g_value_get_object (value), TRUE); break;
-    case PROP_GCIB_CONV: ncm_vector_substitute (&s->gcib_conv, g_value_get_object (value), TRUE); break;
-    case PROP_GIBXSZ_CONV: ncm_vector_substitute (&s->gibxsz_conv, g_value_get_object (value), TRUE); break;
-    case PROP_BIN_LMIN: ncm_vector_substitute (&s->bin_lmin, g_value_get_object (value), TRUE); break;
-    case PROP_BIN_LMAX: ncm_vector_substitute (&s->bin_lmax, g_value_get_object (value), TRUE); break;
-    case PROP_BIN_WEIGHT: ncm_vector_substitute (&s->bin_weight, g_value_get_object (value), TRUE); break;
-    case PROP_QUAD_IDX: ncm_vector_substitute (&s->quad_idx, g_value_get_object (value), TRUE); break;
-    case PROP_TMPL_GCIB: ncm_vector_substitute (&s->tmpl_gcib, g_value_get_object (value), TRUE); break;
-    case PROP_TMPL_SZ: ncm_vector_substitute (&s->tmpl_sz, g_value_get_object (value), TRUE); break;
-    case PROP_TMPL_KSZ: ncm_vector_substitute (&s->tmpl_ksz, g_value_get_object (value), TRUE); break;
-    case PROP_TMPL_GIBXSZ: ncm_vector_substitute (&s->tmpl_gibxsz, g_value_get_object (value), TRUE); break;
-    case PROP_TMPL_DUST: ncm_vector_substitute (&s->tmpl_dust, g_value_get_object (value), TRUE); break;
-    case PROP_TMPL_LEAK: ncm_vector_substitute (&s->tmpl_leak, g_value_get_object (value), TRUE); break;
-    case PROP_TMPL_SBPX: ncm_vector_substitute (&s->tmpl_sbpx, g_value_get_object (value), TRUE); break;
-    default: G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); break;
+    case PROP_PB:
+      nc_data_planck_smica_set_hipert_boltzmann (s, g_value_get_object (value));
+      break;
+    case PROP_LMIN:
+      s->lmin = g_value_get_uint (value);
+      break;
+    case PROP_LMAX:
+      s->lmax = g_value_get_uint (value);
+      break;
+    case PROP_M:
+      s->m = g_value_get_uint (value);
+      break;
+    case PROP_NBINS:
+      s->nbins = g_value_get_uint (value);
+      break;
+    case PROP_FREQS:
+      ncm_vector_substitute (&s->freqs, g_value_get_object (value), TRUE);
+      break;
+    case PROP_A_CMB:
+      ncm_vector_substitute (&s->a_cmb, g_value_get_object (value), TRUE);
+      break;
+    case PROP_SZ_COLOR:
+      ncm_vector_substitute (&s->sz_color, g_value_get_object (value), TRUE);
+      break;
+    case PROP_GCIB_CONV:
+      ncm_vector_substitute (&s->gcib_conv, g_value_get_object (value), TRUE);
+      break;
+    case PROP_GIBXSZ_CONV:
+      ncm_vector_substitute (&s->gibxsz_conv, g_value_get_object (value), TRUE);
+      break;
+    case PROP_BIN_LMIN:
+      ncm_vector_substitute (&s->bin_lmin, g_value_get_object (value), TRUE);
+      break;
+    case PROP_BIN_LMAX:
+      ncm_vector_substitute (&s->bin_lmax, g_value_get_object (value), TRUE);
+      break;
+    case PROP_BIN_WEIGHT:
+      ncm_vector_substitute (&s->bin_weight, g_value_get_object (value), TRUE);
+      break;
+    case PROP_QUAD_IDX:
+      ncm_vector_substitute (&s->quad_idx, g_value_get_object (value), TRUE);
+      break;
+    case PROP_TMPL_GCIB:
+      ncm_vector_substitute (&s->tmpl_gcib, g_value_get_object (value), TRUE);
+      break;
+    case PROP_TMPL_SZ:
+      ncm_vector_substitute (&s->tmpl_sz, g_value_get_object (value), TRUE);
+      break;
+    case PROP_TMPL_KSZ:
+      ncm_vector_substitute (&s->tmpl_ksz, g_value_get_object (value), TRUE);
+      break;
+    case PROP_TMPL_GIBXSZ:
+      ncm_vector_substitute (&s->tmpl_gibxsz, g_value_get_object (value), TRUE);
+      break;
+    case PROP_TMPL_DUST:
+      ncm_vector_substitute (&s->tmpl_dust, g_value_get_object (value), TRUE);
+      break;
+    case PROP_TMPL_LEAK:
+      ncm_vector_substitute (&s->tmpl_leak, g_value_get_object (value), TRUE);
+      break;
+    case PROP_TMPL_SBPX:
+      ncm_vector_substitute (&s->tmpl_sbpx, g_value_get_object (value), TRUE);
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -163,30 +257,76 @@ nc_data_planck_smica_get_property (GObject *object, guint prop_id, GValue *value
 {
   NcDataPlanckSmica *s = NC_DATA_PLANCK_SMICA (object);
 
+  g_return_if_fail (NC_IS_DATA_PLANCK_SMICA (object));
+
   switch (prop_id)
   {
-    case PROP_PB: g_value_set_object (value, s->pb); break;
-    case PROP_LMIN: g_value_set_uint (value, s->lmin); break;
-    case PROP_LMAX: g_value_set_uint (value, s->lmax); break;
-    case PROP_M: g_value_set_uint (value, s->m); break;
-    case PROP_NBINS: g_value_set_uint (value, s->nbins); break;
-    case PROP_FREQS: g_value_set_object (value, s->freqs); break;
-    case PROP_A_CMB: g_value_set_object (value, s->a_cmb); break;
-    case PROP_SZ_COLOR: g_value_set_object (value, s->sz_color); break;
-    case PROP_GCIB_CONV: g_value_set_object (value, s->gcib_conv); break;
-    case PROP_GIBXSZ_CONV: g_value_set_object (value, s->gibxsz_conv); break;
-    case PROP_BIN_LMIN: g_value_set_object (value, s->bin_lmin); break;
-    case PROP_BIN_LMAX: g_value_set_object (value, s->bin_lmax); break;
-    case PROP_BIN_WEIGHT: g_value_set_object (value, s->bin_weight); break;
-    case PROP_QUAD_IDX: g_value_set_object (value, s->quad_idx); break;
-    case PROP_TMPL_GCIB: g_value_set_object (value, s->tmpl_gcib); break;
-    case PROP_TMPL_SZ: g_value_set_object (value, s->tmpl_sz); break;
-    case PROP_TMPL_KSZ: g_value_set_object (value, s->tmpl_ksz); break;
-    case PROP_TMPL_GIBXSZ: g_value_set_object (value, s->tmpl_gibxsz); break;
-    case PROP_TMPL_DUST: g_value_set_object (value, s->tmpl_dust); break;
-    case PROP_TMPL_LEAK: g_value_set_object (value, s->tmpl_leak); break;
-    case PROP_TMPL_SBPX: g_value_set_object (value, s->tmpl_sbpx); break;
-    default: G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); break;
+    case PROP_PB:
+      g_value_set_object (value, s->pb);
+      break;
+    case PROP_LMIN:
+      g_value_set_uint (value, s->lmin);
+      break;
+    case PROP_LMAX:
+      g_value_set_uint (value, s->lmax);
+      break;
+    case PROP_M:
+      g_value_set_uint (value, s->m);
+      break;
+    case PROP_NBINS:
+      g_value_set_uint (value, s->nbins);
+      break;
+    case PROP_FREQS:
+      g_value_set_object (value, s->freqs);
+      break;
+    case PROP_A_CMB:
+      g_value_set_object (value, s->a_cmb);
+      break;
+    case PROP_SZ_COLOR:
+      g_value_set_object (value, s->sz_color);
+      break;
+    case PROP_GCIB_CONV:
+      g_value_set_object (value, s->gcib_conv);
+      break;
+    case PROP_GIBXSZ_CONV:
+      g_value_set_object (value, s->gibxsz_conv);
+      break;
+    case PROP_BIN_LMIN:
+      g_value_set_object (value, s->bin_lmin);
+      break;
+    case PROP_BIN_LMAX:
+      g_value_set_object (value, s->bin_lmax);
+      break;
+    case PROP_BIN_WEIGHT:
+      g_value_set_object (value, s->bin_weight);
+      break;
+    case PROP_QUAD_IDX:
+      g_value_set_object (value, s->quad_idx);
+      break;
+    case PROP_TMPL_GCIB:
+      g_value_set_object (value, s->tmpl_gcib);
+      break;
+    case PROP_TMPL_SZ:
+      g_value_set_object (value, s->tmpl_sz);
+      break;
+    case PROP_TMPL_KSZ:
+      g_value_set_object (value, s->tmpl_ksz);
+      break;
+    case PROP_TMPL_GIBXSZ:
+      g_value_set_object (value, s->tmpl_gibxsz);
+      break;
+    case PROP_TMPL_DUST:
+      g_value_set_object (value, s->tmpl_dust);
+      break;
+    case PROP_TMPL_LEAK:
+      g_value_set_object (value, s->tmpl_leak);
+      break;
+    case PROP_TMPL_SBPX:
+      g_value_set_object (value, s->tmpl_sbpx);
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
@@ -232,14 +372,6 @@ static void _nc_data_planck_smica_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_planck_smica_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp);
 
 static void
-install_vec (GObjectClass *oc, guint id, const gchar *name)
-{
-  g_object_class_install_property (oc, id,
-                                   g_param_spec_object (name, NULL, name, NCM_TYPE_VECTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-}
-
-static void
 nc_data_planck_smica_class_init (NcDataPlanckSmicaClass *klass)
 {
   GObjectClass *object_class        = G_OBJECT_CLASS (klass);
@@ -251,35 +383,153 @@ nc_data_planck_smica_class_init (NcDataPlanckSmicaClass *klass)
   object_class->dispose      = &nc_data_planck_smica_dispose;
   object_class->finalize     = &nc_data_planck_smica_finalize;
 
-  g_object_class_install_property (object_class, PROP_PB,
-                                   g_param_spec_object ("hipert-boltzmann", NULL, "Cls source",
+  g_object_class_install_property (object_class,
+                                   PROP_PB,
+                                   g_param_spec_object ("hipert-boltzmann",
+                                                        NULL,
+                                                        "Perturbations (Cls source)",
                                                         NC_TYPE_HIPERT_BOLTZMANN,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-#define UINT_PROP(id, name, def) g_object_class_install_property (object_class, id, \
-    g_param_spec_uint (name, NULL, name, 0, G_MAXUINT, def, \
-                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB))
-  UINT_PROP (PROP_LMIN, "lmin", 30);
-  UINT_PROP (PROP_LMAX, "lmax", 2508);
-  UINT_PROP (PROP_M, "m-channels", 3);
-  UINT_PROP (PROP_NBINS, "nbins", 215);
-#undef UINT_PROP
-
-  install_vec (object_class, PROP_FREQS, "freqs");
-  install_vec (object_class, PROP_A_CMB, "a-cmb");
-  install_vec (object_class, PROP_SZ_COLOR, "sz-color");
-  install_vec (object_class, PROP_GCIB_CONV, "gcib-conv");
-  install_vec (object_class, PROP_GIBXSZ_CONV, "gibxsz-conv");
-  install_vec (object_class, PROP_BIN_LMIN, "bin-lmin");
-  install_vec (object_class, PROP_BIN_LMAX, "bin-lmax");
-  install_vec (object_class, PROP_BIN_WEIGHT, "bin-weight");
-  install_vec (object_class, PROP_QUAD_IDX, "quad-idx");
-  install_vec (object_class, PROP_TMPL_GCIB, "tmpl-gcib");
-  install_vec (object_class, PROP_TMPL_SZ, "tmpl-sz");
-  install_vec (object_class, PROP_TMPL_KSZ, "tmpl-ksz");
-  install_vec (object_class, PROP_TMPL_GIBXSZ, "tmpl-gibxsz");
-  install_vec (object_class, PROP_TMPL_DUST, "tmpl-dust");
-  install_vec (object_class, PROP_TMPL_LEAK, "tmpl-leak");
-  install_vec (object_class, PROP_TMPL_SBPX, "tmpl-sbpx");
+  g_object_class_install_property (object_class,
+                                   PROP_LMIN,
+                                   g_param_spec_uint ("lmin",
+                                                      NULL,
+                                                      "Minimum multipole",
+                                                      0, G_MAXUINT, 30,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_LMAX,
+                                   g_param_spec_uint ("lmax",
+                                                      NULL,
+                                                      "Maximum multipole",
+                                                      0, G_MAXUINT, 2508,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_M,
+                                   g_param_spec_uint ("m-channels",
+                                                      NULL,
+                                                      "Number of frequency channels",
+                                                      0, G_MAXUINT, 3,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NBINS,
+                                   g_param_spec_uint ("nbins",
+                                                      NULL,
+                                                      "Number of bandpower bins",
+                                                      0, G_MAXUINT, 215,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_FREQS,
+                                   g_param_spec_object ("freqs",
+                                                        NULL,
+                                                        "Channel frequencies (GHz)",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_A_CMB,
+                                   g_param_spec_object ("a-cmb",
+                                                        NULL,
+                                                        "CMB mixing vector",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SZ_COLOR,
+                                   g_param_spec_object ("sz-color",
+                                                        NULL,
+                                                        "tSZ colour corrections",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_GCIB_CONV,
+                                   g_param_spec_object ("gcib-conv",
+                                                        NULL,
+                                                        "CIB muK->MJ/sr conversion factors",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_GIBXSZ_CONV,
+                                   g_param_spec_object ("gibxsz-conv",
+                                                        NULL,
+                                                        "CIBxtSZ conversion factors",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_BIN_LMIN,
+                                   g_param_spec_object ("bin-lmin",
+                                                        NULL,
+                                                        "Per-bin lower multipole offset",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_BIN_LMAX,
+                                   g_param_spec_object ("bin-lmax",
+                                                        NULL,
+                                                        "Per-bin upper multipole offset",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_BIN_WEIGHT,
+                                   g_param_spec_object ("bin-weight",
+                                                        NULL,
+                                                        "Flattened per-(bin,ell) binning weights",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_QUAD_IDX,
+                                   g_param_spec_object ("quad-idx",
+                                                        NULL,
+                                                        "Flat indices of the masked R_q entries",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TMPL_GCIB,
+                                   g_param_spec_object ("tmpl-gcib",
+                                                        NULL,
+                                                        "Clustered CIB template",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TMPL_SZ,
+                                   g_param_spec_object ("tmpl-sz",
+                                                        NULL,
+                                                        "tSZ template (normalized at ell=3000)",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TMPL_KSZ,
+                                   g_param_spec_object ("tmpl-ksz",
+                                                        NULL,
+                                                        "kSZ template (normalized at ell=3000)",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TMPL_GIBXSZ,
+                                   g_param_spec_object ("tmpl-gibxsz",
+                                                        NULL,
+                                                        "CIBxtSZ correlation template",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TMPL_DUST,
+                                   g_param_spec_object ("tmpl-dust",
+                                                        NULL,
+                                                        "Galactic dust template",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TMPL_LEAK,
+                                   g_param_spec_object ("tmpl-leak",
+                                                        NULL,
+                                                        "Beam leakage template",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TMPL_SBPX,
+                                   g_param_spec_object ("tmpl-sbpx",
+                                                        NULL,
+                                                        "Subpixel effect template",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->prepare    = &_nc_data_planck_smica_prepare;
   gauss_class->mean_func = &_nc_data_planck_smica_mean_func;
@@ -293,6 +543,7 @@ _nc_data_planck_smica_prepare (NcmData *data, NcmMSet *mset)
 
   if (s->pb == NULL)
     g_error ("_nc_data_planck_smica_prepare: no NcHIPertBoltzmann set.");
+
   if (cosmo == NULL)
     g_error ("_nc_data_planck_smica_prepare: no NcHICosmo in mset.");
 
@@ -314,7 +565,7 @@ smica_bin_add (NcDataPlanckSmica *s)
 
     for (il = lo; il <= hi; il++)
     {
-      const gdouble w = ncm_vector_get (s->bin_weight, bb++);
+      const gdouble w   = ncm_vector_get (s->bin_weight, bb++);
       const gdouble *pl = s->perl + il * m2;
 
       for (i = 0; i < m2; i++)
@@ -338,9 +589,9 @@ _nc_data_planck_smica_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVecto
   NcDataPlanckSmica *s = NC_DATA_PLANCK_SMICA (gauss);
   NcPlanckFI *pfi      = NC_PLANCK_FI (ncm_mset_peek (mset, nc_planck_fi_id ()));
   const guint m = s->m, m2 = s->m * s->m, nell = s->lmax - s->lmin + 1;
-  const guint np = ncm_data_gauss_cov_get_size (gauss);
+  const guint np      = ncm_data_gauss_cov_get_size (gauss);
   const gdouble twopi = 2.0 * M_PI;
-  gdouble p[P_LEN];
+  gdouble p[NC_DATA_PLANCK_SMICA_PAR_LEN];
   gdouble fnu[8], fnu_gx[8];
   guint b, il, i, j, k, ell, l;
 
@@ -348,13 +599,15 @@ _nc_data_planck_smica_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVecto
     g_error ("_nc_data_planck_smica_mean_func: need a NcPlanckFI model in mset.");
 
   /* nuisance params (NcPlanckFICorTT order == check_param tail order) */
-  for (i = 0; i < P_LEN; i++)
+  for (i = 0; i < NC_DATA_PLANCK_SMICA_PAR_LEN; i++)
     p[i] = ncm_model_param_get (NCM_MODEL (pfi), i);
 
   if (s->cl_TT == NULL)
     s->cl_TT = ncm_vector_new (s->lmax + 1);
+
   if (s->Rq == NULL)
     s->Rq = g_new (gdouble, s->nbins * m2);
+
   if (s->perl == NULL)
     s->perl = g_new (gdouble, nell * m2);
 
@@ -366,52 +619,63 @@ _nc_data_planck_smica_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVecto
   for (il = 0; il < nell; il++)
   {
     const gdouble cl = ncm_vector_get (s->cl_TT, il + s->lmin);
-    gdouble *pl = s->perl + il * m2;
+    gdouble *pl      = s->perl + il * m2;
 
     for (i = 0; i < m; i++)
       for (j = 0; j < m; j++)
         pl[i * m + j] = cl * ncm_vector_get (s->a_cmb, i) * ncm_vector_get (s->a_cmb, j);
   }
+
   smica_bin_add (s);
 
   /* --- sz: A_sz * 2pi/(l(l+1)) * tmpl[l-2] * fnu_i*fnu_j --- */
   for (i = 0; i < m; i++)
     fnu[i] = sz_spectrum (ncm_vector_get (s->freqs, i)) * ncm_vector_get (s->sz_color, i);
+
   for (il = 0; il < nell; il++)
   {
     ell = il + s->lmin;
-    const gdouble c = p[P_A_sz] * twopi / (ell * (ell + 1.0)) *
+
+    const gdouble c = p[NC_DATA_PLANCK_SMICA_PAR_A_SZ] * twopi / (ell * (ell + 1.0)) *
                       ncm_vector_get (s->tmpl_sz, ell - 2);
     gdouble *pl = s->perl + il * m2;
+
     for (i = 0; i < m; i++)
       for (j = 0; j < m; j++)
         pl[i * m + j] = c * fnu[i] * fnu[j];
   }
+
   smica_bin_add (s);
 
   /* --- ksz: ksz_norm * 2pi/(l(l+1)) * tmpl[l] (freq-independent) --- */
   for (il = 0; il < nell; il++)
   {
     ell = il + s->lmin;
-    const gdouble c = p[P_ksz_norm] * twopi / (ell * (ell + 1.0)) *
+
+    const gdouble c = p[NC_DATA_PLANCK_SMICA_PAR_KSZ_NORM] * twopi / (ell * (ell + 1.0)) *
                       ncm_vector_get (s->tmpl_ksz, ell);
     gdouble *pl = s->perl + il * m2;
+
     for (i = 0; i < m2; i++)
       pl[i] = c;
   }
+
   smica_bin_add (s);
 
   /* --- pointsource: flat, ps_A_{ij}/(3000*3001/2pi); adds to all bins --- */
   {
     const gdouble nrm = 3000.0 * 3001.0 / twopi;
     gdouble ps[9];
+
     /* clik defaults every ps_A pair to 1; only these four are model params. */
     for (i = 0; i < 9; i++)
       ps[i] = 1.0 / nrm;
-    ps[0 * m + 0] = p[P_ps_100_100] / nrm;
-    ps[1 * m + 1] = p[P_ps_143_143] / nrm;
-    ps[1 * m + 2] = ps[2 * m + 1] = p[P_ps_143_217] / nrm;
-    ps[2 * m + 2] = p[P_ps_217_217] / nrm;
+
+    ps[0 * m + 0] = p[NC_DATA_PLANCK_SMICA_PAR_PS_100_100] / nrm;
+    ps[1 * m + 1] = p[NC_DATA_PLANCK_SMICA_PAR_PS_143_143] / nrm;
+    ps[1 * m + 2] = ps[2 * m + 1] = p[NC_DATA_PLANCK_SMICA_PAR_PS_143_217] / nrm;
+    ps[2 * m + 2] = p[NC_DATA_PLANCK_SMICA_PAR_PS_217_217] / nrm;
+
     for (b = 0; b < s->nbins; b++)
       for (i = 0; i < m2; i++)
         s->Rq[b * m2 + i] += ps[i];
@@ -419,27 +683,32 @@ _nc_data_planck_smica_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVecto
 
   /* --- gcib: rigid CIB (template GCIB_NF x GCIB_NF; irigid=217=index 2) --- */
   {
-    const gdouble lp = 3000.0;
-    const gdouble *gt = ncm_vector_data (s->tmpl_gcib);
+    const gdouble lp    = 3000.0;
+    const gdouble *gt   = ncm_vector_data (s->tmpl_gcib);
     const gdouble conv2 = ncm_vector_get (s->gcib_conv, 2);
-    const gdouble tref = gt[(guint) lp * GCIB_NF * GCIB_NF + 2 * GCIB_NF + 2];
+    const gdouble tref  = gt[(guint) lp * GCIB_NF * GCIB_NF + 2 * GCIB_NF + 2];
     gdouble A[9];
+
     for (i = 0; i < m; i++)
       for (j = 0; j < m; j++)
       {
-        A[i * m + j] = (p[P_A_cib_217] / tref *
+        A[i * m + j] = (p[NC_DATA_PLANCK_SMICA_PAR_A_CIB_217] / tref *
                         ncm_vector_get (s->gcib_conv, i) * ncm_vector_get (s->gcib_conv, j) /
                         (conv2 * conv2)) / lp / (lp + 1.0) * twopi;
       }
+
     for (il = 0; il < nell; il++)
     {
       ell = il + s->lmin;
-      const gdouble v = pow (ell / lp, p[P_cib_index] - (-1.3));
-      gdouble *pl = s->perl + il * m2;
+
+      const gdouble v = pow (ell / lp, p[NC_DATA_PLANCK_SMICA_PAR_CIB_INDEX] - (-1.3));
+      gdouble *pl     = s->perl + il * m2;
+
       for (i = 0; i < m; i++)
         for (j = 0; j < m; j++)
           pl[i * m + j] = v * gt[ell * GCIB_NF * GCIB_NF + i * GCIB_NF + j] * A[i * m + j];
     }
+
     smica_bin_add (s);
   }
 
@@ -447,67 +716,78 @@ _nc_data_planck_smica_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVecto
   {
     const gdouble *gxt = ncm_vector_data (s->tmpl_gibxsz);
     gdouble A[9];
+
     for (i = 0; i < m; i++)
       fnu_gx[i] = sz_spectrum (ncm_vector_get (s->freqs, i)) * ncm_vector_get (s->sz_color, i);
+
     for (i = 0; i < m; i++)
       for (j = 0; j < m; j++)
-        A[i * m + j] = -p[P_xi_sz_cib] * sqrt (p[P_A_sz]) *
-                       (sqrt (fnu_gx[i] * p[P_A_cib_217] * ncm_vector_get (s->gibxsz_conv, j)) +
-                        sqrt (fnu_gx[j] * p[P_A_cib_217] * ncm_vector_get (s->gibxsz_conv, i)));
+        A[i * m + j] = -p[NC_DATA_PLANCK_SMICA_PAR_XI_SZ_CIB] * sqrt (p[NC_DATA_PLANCK_SMICA_PAR_A_SZ]) *
+                       (sqrt (fnu_gx[i] * p[NC_DATA_PLANCK_SMICA_PAR_A_CIB_217] * ncm_vector_get (s->gibxsz_conv, j)) +
+                        sqrt (fnu_gx[j] * p[NC_DATA_PLANCK_SMICA_PAR_A_CIB_217] * ncm_vector_get (s->gibxsz_conv, i)));
+
     for (il = 0; il < nell; il++)
     {
       ell = il + s->lmin;
+
       const gdouble c = gxt[ell - 2] * twopi / (ell * (ell + 1.0)); /* corr_template ell-2 */
-      gdouble *pl = s->perl + il * m2;
+      gdouble *pl     = s->perl + il * m2;
+
       for (i = 0; i < m; i++)
         for (j = 0; j < m; j++)
           pl[i * m + j] = A[i * m + j] * c;
     }
+
     smica_bin_add (s);
   }
 
   /* --- cnoise (dust abso=1 lpiv=200; leak/sbpx abso=0). template CN_NF^2 --- */
-#define CNOISE(tmpl, get_amp, abso, lpiv)                                            \
-  do {                                                                              \
-    const gdouble *ct = ncm_vector_data (tmpl);                                     \
-    for (il = 0; il < nell; il++) {                                                 \
-      ell = il + s->lmin;                                                           \
-      gdouble *pl = s->perl + il * m2;                                              \
-      for (i = 0; i < m; i++)                                                       \
-        for (j = 0; j < m; j++) {                                                   \
-          const gdouble v = get_amp;                                                \
-          gdouble a;                                                                \
-          if (abso)                                                                 \
-            a = v / (ct[(lpiv) * CN_NF * CN_NF + i * CN_NF + j] *                    \
-                     (lpiv) * ((lpiv) + 1.0) / twopi);                              \
-          else                                                                      \
-            a = v;                                                                  \
-          pl[i * m + j] = ct[ell * CN_NF * CN_NF + i * CN_NF + j] * a;              \
-        }                                                                           \
-    }                                                                               \
-    smica_bin_add (s);                                                              \
-  } while (0)
+#define CNOISE(tmpl, get_amp, abso, lpiv)                                  \
+        do {                                                               \
+          const gdouble *ct = ncm_vector_data (tmpl);                      \
+          for (il = 0; il < nell; il++)                                    \
+          {                                                                \
+            ell = il + s->lmin;                                            \
+            gdouble *pl = s->perl + il * m2;                               \
+            for (i = 0; i < m; i++)                                        \
+            for (j = 0; j < m; j++)                                        \
+            {                                                              \
+              const gdouble v = get_amp;                                   \
+              gdouble a;                                                   \
+              if (abso)                                                    \
+              a = v / (ct[(lpiv) * CN_NF * CN_NF + i * CN_NF + j] *        \
+                       (lpiv) * ((lpiv) + 1.0) / twopi);                   \
+              else                                                         \
+              a             = v;                                           \
+              pl[i * m + j] = ct[ell * CN_NF * CN_NF + i * CN_NF + j] * a; \
+            }                                                              \
+          }                                                                \
+          smica_bin_add (s);                                               \
+        } while (0)
 
   /* dust (gal545): pairs 00,11,12,22; others 0 */
   {
     gdouble dg[9];
+
     memset (dg, 0, sizeof (dg));
-    dg[0 * m + 0] = p[P_gal545_100];
-    dg[1 * m + 1] = p[P_gal545_143];
-    dg[1 * m + 2] = dg[2 * m + 1] = p[P_gal545_143_217];
-    dg[2 * m + 2] = p[P_gal545_217];
+    dg[0 * m + 0] = p[NC_DATA_PLANCK_SMICA_PAR_GAL545_100];
+    dg[1 * m + 1] = p[NC_DATA_PLANCK_SMICA_PAR_GAL545_143];
+    dg[1 * m + 2] = dg[2 * m + 1] = p[NC_DATA_PLANCK_SMICA_PAR_GAL545_143_217];
+    dg[2 * m + 2] = p[NC_DATA_PLANCK_SMICA_PAR_GAL545_217];
     CNOISE (s->tmpl_dust, dg[i * m + j], 1, 200);
   }
   /* beam leakage: all pairs = 1, abso=0 */
   CNOISE (s->tmpl_leak, 1.0, 0, 0);
+
   /* subpixel: pairs 00,11,12,22 = A_sbpx; abso=0 */
   {
     gdouble sg[9];
+
     memset (sg, 0, sizeof (sg));
-    sg[0 * m + 0] = p[P_sbpx_100_100];
-    sg[1 * m + 1] = p[P_sbpx_143_143];
-    sg[1 * m + 2] = sg[2 * m + 1] = p[P_sbpx_143_217];
-    sg[2 * m + 2] = p[P_sbpx_217_217];
+    sg[0 * m + 0] = p[NC_DATA_PLANCK_SMICA_PAR_SBPX_100_100];
+    sg[1 * m + 1] = p[NC_DATA_PLANCK_SMICA_PAR_SBPX_143_143];
+    sg[1 * m + 2] = sg[2 * m + 1] = p[NC_DATA_PLANCK_SMICA_PAR_SBPX_143_217];
+    sg[2 * m + 2] = p[NC_DATA_PLANCK_SMICA_PAR_SBPX_217_217];
     CNOISE (s->tmpl_sbpx, sg[i * m + j], 0, 0);
   }
 #undef CNOISE
@@ -515,11 +795,14 @@ _nc_data_planck_smica_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVecto
   /* --- icalTP (mult): Rq[i,j] *= 1/sqrt(cal_i)/sqrt(cal_j); 143 = ref --- */
   {
     gdouble cal[3];
-    cal[0] = 1.0 / sqrt (p[P_calib_100T]);
+
+    cal[0] = 1.0 / sqrt (p[NC_DATA_PLANCK_SMICA_PAR_CALIB_100T]);
     cal[1] = 1.0;
-    cal[2] = 1.0 / sqrt (p[P_calib_217T]);
+    cal[2] = 1.0 / sqrt (p[NC_DATA_PLANCK_SMICA_PAR_CALIB_217T]);
+
     /* --- totcal (mult): Rq *= 1/A_planck^2 --- */
-    const gdouble tc = 1.0 / (p[P_A_planck] * p[P_A_planck]);
+    const gdouble tc = 1.0 / (p[NC_DATA_PLANCK_SMICA_PAR_A_PLANCK] * p[NC_DATA_PLANCK_SMICA_PAR_A_PLANCK]);
+
     for (b = 0; b < s->nbins; b++)
       for (i = 0; i < m; i++)
         for (j = 0; j < m; j++)
@@ -560,6 +843,7 @@ void
 nc_data_planck_smica_set_hipert_boltzmann (NcDataPlanckSmica *smica, NcHIPertBoltzmann *pb)
 {
   nc_hipert_boltzmann_clear (&smica->pb);
+
   if (pb != NULL)
     smica->pb = nc_hipert_boltzmann_ref (pb);
 }
@@ -575,3 +859,4 @@ nc_data_planck_smica_peek_hipert_boltzmann (NcDataPlanckSmica *smica)
 {
   return smica->pb;
 }
+
