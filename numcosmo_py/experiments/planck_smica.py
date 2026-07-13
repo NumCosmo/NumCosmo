@@ -34,7 +34,7 @@ import os
 import numpy as np
 from astropy.io import fits
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Ncm, Nc, GLib
 
 PLIK_TT_RELPATH = os.path.join(
     "baseline", "plc_3.0", "hi_l", "plik", "plik_rd12_HM_v22_TT.clik"
@@ -94,7 +94,37 @@ def build_smica_tt(clik_path: str, pb: Nc.HIPertBoltzmann | None = None) -> Nc.D
     leak_t = _arr(lkl, os.path.join("component_7", "template"))
     sbpx_t = _arr(lkl, os.path.join("component_8", "template"))
 
-    smica = Nc.DataPlanckSmica()
+    def vec(a):
+        return Ncm.Vector.new_array([float(x) for x in np.asarray(a).ravel().tolist()])
+
+    def uvar(a):
+        return GLib.Variant("au", [int(x) for x in np.asarray(a).ravel().tolist()])
+
+    # All structural config is construction-only: gather everything, then build
+    # in a single call so NcDataPlanckSmica can validate lengths/bounds up front.
+    smica = Nc.DataPlanckSmica(
+        lmin=lmin,
+        lmax=lmax,
+        m_channels=m,
+        nbins=nq,
+        freqs=vec(FREQS),
+        a_cmb=vec(a_cmb),
+        sz_color=vec(SZ_COLOR),
+        gcib_conv=vec(GCIB_CONV),
+        gibxsz_conv=vec(GIBXSZ_CONV),
+        bin_lmin=uvar(bin_lmin),
+        bin_lmax=uvar(bin_lmax),
+        bin_weight=vec(bin_ws),
+        quad_idx=uvar(quad),
+        tmpl_gcib=vec(gcib_t),
+        tmpl_sz=vec(sz_t),
+        tmpl_ksz=vec(ksz_t),
+        tmpl_gibxsz=vec(gibxsz_t),
+        tmpl_dust=vec(dust_t),
+        tmpl_leak=vec(leak_t),
+        tmpl_sbpx=vec(sbpx_t),
+    )
+
     smica.set_size(npt)
     Ncm.DataGaussCov.replace_mean(smica, Ncm.Vector.new_array(data_mean.tolist()))
     cov_m = Ncm.Matrix.new(npt, npt)
@@ -103,29 +133,6 @@ def build_smica_tt(clik_path: str, pb: Nc.HIPertBoltzmann | None = None) -> Nc.D
             cov_m.set(i, j, cov[i, j])
     Ncm.DataGaussCov.set_cov(smica, cov_m)
 
-    def vec(a):
-        return Ncm.Vector.new_array([float(x) for x in np.asarray(a).ravel().tolist()])
-
-    smica.set_property("lmin", lmin)
-    smica.set_property("lmax", lmax)
-    smica.set_property("m-channels", m)
-    smica.set_property("nbins", nq)
-    smica.set_property("freqs", vec(FREQS))
-    smica.set_property("a-cmb", vec(a_cmb))
-    smica.set_property("sz-color", vec(SZ_COLOR))
-    smica.set_property("gcib-conv", vec(GCIB_CONV))
-    smica.set_property("gibxsz-conv", vec(GIBXSZ_CONV))
-    smica.set_property("bin-lmin", vec(bin_lmin))
-    smica.set_property("bin-lmax", vec(bin_lmax))
-    smica.set_property("bin-weight", vec(bin_ws))
-    smica.set_property("quad-idx", vec(quad))
-    smica.set_property("tmpl-gcib", vec(gcib_t))
-    smica.set_property("tmpl-sz", vec(sz_t))
-    smica.set_property("tmpl-ksz", vec(ksz_t))
-    smica.set_property("tmpl-gibxsz", vec(gibxsz_t))
-    smica.set_property("tmpl-dust", vec(dust_t))
-    smica.set_property("tmpl-leak", vec(leak_t))
-    smica.set_property("tmpl-sbpx", vec(sbpx_t))
     if pb is not None:
         smica.set_hipert_boltzmann(pb)
     smica.set_init(True)

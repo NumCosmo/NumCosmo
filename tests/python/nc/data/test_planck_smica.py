@@ -40,8 +40,13 @@ needs_data = pytest.mark.skipif(
 
 
 def test_type_is_resampleable_gausscov():
-    """The native type is an NcmDataGaussCov (so it inherits resample)."""
-    assert isinstance(Nc.DataPlanckSmica(), Ncm.DataGaussCov)
+    """The native type is an NcmDataGaussCov (so it inherits resample).
+
+    Asserted on the type, not an instance: NcDataPlanckSmica is fully specified
+    at construction (all structural properties are CONSTRUCT_ONLY and validated
+    in constructed()), so it is deliberately not default-constructible.
+    """
+    assert issubclass(Nc.DataPlanckSmica, Ncm.DataGaussCov)
 
 
 @needs_data

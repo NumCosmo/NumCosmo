@@ -39,6 +39,26 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcDataPlanckSmica, nc_data_planck_smica, NC, DATA_PLANCK_SMICA, NcmDataGaussCov)
 
+NcDataPlanckSmica *nc_data_planck_smica_new (guint lmin,
+                                             guint lmax,
+                                             guint m,
+                                             guint nbins,
+                                             NcmVector * freqs,
+                                             NcmVector * a_cmb,
+                                             NcmVector * sz_color,
+                                             NcmVector * gcib_conv,
+                                             NcmVector * gibxsz_conv,
+                                             GArray * bin_lmin,
+                                             GArray * bin_lmax,
+                                             NcmVector * bin_weight,
+                                             GArray * quad_idx,
+                                             NcmVector * tmpl_gcib,
+                                             NcmVector * tmpl_sz,
+                                             NcmVector * tmpl_ksz,
+                                             NcmVector * tmpl_gibxsz,
+                                             NcmVector * tmpl_dust,
+                                             NcmVector * tmpl_leak,
+                                             NcmVector * tmpl_sbpx);
 NcDataPlanckSmica *nc_data_planck_smica_new_from_file (const gchar *filename);
 
 void nc_data_planck_smica_set_hipert_boltzmann (NcDataPlanckSmica *smica, NcHIPertBoltzmann *pb);
@@ -47,3 +67,4 @@ NcHIPertBoltzmann *nc_data_planck_smica_peek_hipert_boltzmann (NcDataPlanckSmica
 G_END_DECLS
 
 #endif /* _NC_DATA_PLANCK_SMICA_H_ */
+
