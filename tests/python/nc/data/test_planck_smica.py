@@ -70,7 +70,7 @@ def test_matches_clik_reference():
 
     Both share one CBE Boltzmann + cosmology + PlanckFICorTT. The native
     reimplementation reproduces the full R_q assembly (CMB + 10 foreground/
-    calibration components); agreement is currently to ~8 significant figures.
+    calibration components) to machine precision.
     """
     # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
@@ -92,7 +92,7 @@ def test_matches_clik_reference():
     m2_ref = ref.m2lnL_val(mset)
     m2_nat = native.m2lnL_val(mset)
 
-    assert m2_nat == pytest.approx(m2_ref, rel=1.0e-6)
+    assert m2_nat == pytest.approx(m2_ref, rel=1.0e-10)
 
     rng = Ncm.RNG.seeded_new(None, 42)
     native.resample(mset, rng)

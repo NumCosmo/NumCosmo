@@ -42,7 +42,11 @@ PLIK_TT_RELPATH = os.path.join(
 FREQS = [100.0, 143.0, 217.0]
 # gcib muK -> MJ/sr conversions (100,143,217); gibXsz conv (100 zeroed by
 # no_szxcib_100); tSZ colour corrections. All from the clik component defaults.
-GCIB_CONV = [4096.68168783e-6, 2690.05218701e-6, 2067.43988919e-6]
+# NOTE: clik stores parameter values as 6-significant-figure strings ("%g"), so
+# these conversion constants are truncated to 6 sig figs before use. We replicate
+# that truncation to match clik to machine precision (the full-precision literals
+# are 4096.68168783e-6, 2690.05218701e-6, 2067.43988919e-6).
+GCIB_CONV = [0.00409668, 0.00269005, 0.00206744]
 GIBXSZ_CONV = [0.0, 0.094, 1.0]
 SZ_COLOR = [0.981, 0.975, 1.0]
 
