@@ -32,6 +32,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -76,6 +77,18 @@ def _build_legacy(variant, zp, sigma0, zp_min, zp_max):
     data = Nc.GalaxySDObsRedshiftData.new(gsdor)
     gsdor.data_set(data, zp, sigma0, sigma0 * (1.0 + zp))
     return gsdor, data
+
+
+def test_serialize_deserialize():
+    """A round trip through NcmSerialize preserves the "zp-lim" property."""
+    composed = Nc.GalaxyRedshiftFactorComposed.new(0.2, 3.5)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    composed2 = duplicate_via_serialization(composed, ser)
+
+    assert isinstance(composed2, Nc.GalaxyRedshiftFactorComposed)
+    assert composed2 is not composed
+    assert_allclose(composed2.get_zp_lim(), composed.get_zp_lim())
 
 
 @pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
@@ -127,6 +140,53 @@ def test_gen_in_window(variant, zp, sigma0, zp_min, zp_max):
     for _ in range(2000):
         composed.gen(mset, data, rng)
         assert z_lo <= data.z <= z_hi
+
+
+@pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
+def test_integrand_copy_matches_original(variant, zp, sigma0, zp_min, zp_max):
+    """A copied integrand evaluates identically to the original (the
+    closure captures the mset-resolved population/observable models, which
+    must survive the copy intact)."""
+    composed, mset, _pop, data = _build_new(variant, zp, sigma0, zp_min, zp_max)
+
+    integ = composed.integ(mset, False)
+    integ_copy = integ.copy()
+
+    zs = np.linspace(max(1.0e-2, zp - 3.0 * sigma0), zp + 3.0 * sigma0, 20)
+    got = np.array([integ_copy.eval(z, data) for z in zs])
+    expected = np.array([integ.eval(z, data) for z in zs])
+    assert_allclose(got, expected, rtol=0.0, atol=0.0)
+
+
+def test_zp_lim_get_matches_new_and_property():
+    """get_zp_lim() and the "zp-lim" property both agree with the window
+    passed to new()."""
+    composed = Nc.GalaxyRedshiftFactorComposed.new(0.2, 3.5)
+
+    zp_min, zp_max = composed.get_zp_lim()
+    assert_allclose([zp_min, zp_max], [0.2, 3.5])
+
+    prop_lim = composed.props.zp_lim
+    assert_allclose([prop_lim.elements[0], prop_lim.elements[1]], [0.2, 3.5])
+
+
+@pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
+def test_gen1_matches_gen_semantics(variant, zp, sigma0, zp_min, zp_max):
+    """gen1() draws the same way as gen() but reports (via its boolean
+    return) whether the drawn zp landed inside the selection window,
+    instead of rejection-sampling until it does."""
+    composed, mset, pop, data = _build_new(variant, zp, sigma0, zp_min, zp_max)
+    z_lo, z_hi = pop.get_lim()
+    rng = Ncm.RNG.seeded_new(None, 77)
+
+    saw_true = False
+
+    for _ in range(2000):
+        accepted = composed.gen1(mset, data, rng)
+        assert z_lo <= data.z <= z_hi
+        saw_true = saw_true or accepted
+
+    assert saw_true
 
 
 if __name__ == "__main__":

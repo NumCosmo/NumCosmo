@@ -48,11 +48,14 @@
  * Gauss-Legendre, with an optional per-galaxy `auto-nodes` calibration --
  * see nc_data_cluster_wl_factor_set_auto_nodes()) and `CUBATURE` (adaptive
  * `NcmIntegralND` over the linear-domain product). All three are
- * mathematically exact, differing only in numerical strategy/cost. No
- * bootstrap, no Fisher-matrix support, no OpenMP parallelism (including for
- * `auto-nodes` calibration, which stays serial for the same reason). No
- * fit-time `r_min`/`r_max` weighting: applying it biases the mass estimate,
- * matching #NcDataClusterWL's own behavior.
+ * mathematically exact, differing only in numerical strategy/cost, and all
+ * three support bootstrap resampling (matching #NcDataClusterWL). No OpenMP
+ * parallelism yet (including for `auto-nodes` calibration, which stays
+ * serial): deferred, since it needs per-thread duplication of the
+ * (currently prepare()-shared, mutable) integrator/integrand state before
+ * it can be added safely -- see the class's own git history for the
+ * planning notes. No fit-time `r_min`/`r_max` weighting: applying it biases
+ * the mass estimate, matching #NcDataClusterWL's own behavior.
  *
  * Design principle followed throughout: all preparation work happens in
  * prepare() -- resolving models, refreshing each Factor's own caches,
@@ -1055,14 +1058,19 @@ static gdouble
 _nc_data_cluster_wl_factor_eval_m2lnP_lnint (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  NcmData *data                             = NCM_DATA (dcwlf);
+  const gboolean use_bootstrap              = ncm_data_bootstrap_enabled (data);
+  NcmBootstrap *bstrap                      = use_bootstrap ? ncm_data_peek_bootstrap (data) : NULL;
+  const guint n_iter                        = use_bootstrap ? ncm_bootstrap_get_bsize (bstrap) : self->shape_data->len;
   gdouble result                            = 0.0;
-  guint gal_i;
+  guint i;
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
 
-  for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
+  for (i = 0; i < n_iter; i++)
   {
+    const guint gal_i               = use_bootstrap ? ncm_bootstrap_get (bstrap, i) : i;
     NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
     gdouble zpi, zpf, m2lnP_gal_i;
 
@@ -1133,10 +1141,14 @@ static gdouble
 _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  NcmData *data                             = NCM_DATA (dcwlf);
+  const gboolean use_bootstrap              = ncm_data_bootstrap_enabled (data);
+  NcmBootstrap *bstrap                      = use_bootstrap ? ncm_data_peek_bootstrap (data) : NULL;
+  const guint n_iter                        = use_bootstrap ? ncm_bootstrap_get_bsize (bstrap) : self->shape_data->len;
   guint max_n_total                         = 0;
   NcmVector *shape_at_nodes;
   gdouble result = 0.0;
-  guint gal_i;
+  guint gal_i, i;
 
   /* Per-galaxy node counts can differ under auto-nodes (and are all equal
    * to the global (n_nodes-1)*rule_n otherwise): size the reusable shape
@@ -1152,8 +1164,10 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
 
-  for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
+  for (i = 0; i < n_iter; i++)
   {
+    gal_i = use_bootstrap ? ncm_bootstrap_get (bstrap, i) : i;
+
     NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
     NcmVector *z_nodes              = (NcmVector *) g_ptr_array_index (self->z_nodes_per_galaxy, gal_i);
     const guint n_total_i           = g_array_index (self->n_total_per_galaxy, guint, gal_i);
@@ -1222,14 +1236,20 @@ static gdouble
 _nc_data_cluster_wl_factor_eval_m2lnP_cubature (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcmVector *m2lnP_gal)
 {
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  NcmData *data                             = NCM_DATA (dcwlf);
+  const gboolean use_bootstrap              = ncm_data_bootstrap_enabled (data);
+  NcmBootstrap *bstrap                      = use_bootstrap ? ncm_data_peek_bootstrap (data) : NULL;
+  const guint n_iter                        = use_bootstrap ? ncm_bootstrap_get_bsize (bstrap) : self->shape_data->len;
   gdouble result                            = 0.0;
-  guint gal_i;
+  guint gal_i, i;
 
   if (m2lnP_gal != NULL)
     g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
 
-  for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
+  for (i = 0; i < n_iter; i++)
   {
+    gal_i = use_bootstrap ? ncm_bootstrap_get (bstrap, i) : i;
+
     NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
     gdouble zpi, zpf, m2lnP_gal_i;
 
@@ -1583,7 +1603,7 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                                       2, G_MAXUINT, 2000,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  data_class->bootstrap  = FALSE; /* deferred to a follow-up, see the class doc */
+  data_class->bootstrap  = TRUE;
   data_class->resample   = &_nc_data_cluster_wl_factor_resample;
   data_class->m2lnL_val  = &_nc_data_cluster_wl_factor_m2lnL_val;
   data_class->get_length = &_nc_data_cluster_wl_factor_get_len;

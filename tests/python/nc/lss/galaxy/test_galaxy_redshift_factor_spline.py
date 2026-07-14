@@ -35,6 +35,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -110,6 +111,19 @@ def _build_spline_scheme(spline):
     gsdrs.data_set(data, spline)
     gsdrs.update_data(data)
     return gsdrs, mset, data
+
+
+def test_serialize_deserialize():
+    """A round trip through NcmSerialize preserves the scheme (it carries
+    no properties of its own -- the spline is per-galaxy data, not
+    construct state)."""
+    gsdrs = Nc.GalaxyRedshiftFactorSpline.new()
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    gsdrs2 = duplicate_via_serialization(gsdrs, ser)
+
+    assert isinstance(gsdrs2, Nc.GalaxyRedshiftFactorSpline)
+    assert gsdrs2 is not gsdrs
 
 
 @pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
@@ -203,6 +217,75 @@ def test_gen_respects_bounds_and_matches_first_moment(
 
     sem = np.std(zs_gen, ddof=1) / np.sqrt(n_rez)
     assert abs(np.mean(zs_gen) - mean_expected) < 5.0 * sem
+
+
+@pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
+def test_data_peek_matches_data_set(variant, zp, sigma0, zp_min, zp_max):
+    """data_peek() returns exactly the spline passed to data_set()."""
+    spline, _zs, _pz = _spline_from_composed(variant, zp, sigma0, zp_min, zp_max)
+    gsdrs, mset, data = _build_spline_scheme(spline)
+
+    assert gsdrs.data_peek(data) == spline
+
+
+@pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
+def test_gen1_returns_true_and_respects_bounds(variant, zp, sigma0, zp_min, zp_max):
+    """gen1() always succeeds (delegates to gen()) and never leaves the
+    spline's support."""
+    spline, _zs, _pz = _spline_from_composed(variant, zp, sigma0, zp_min, zp_max)
+    gsdrs, mset, data = _build_spline_scheme(spline)
+    z_min, z_max = spline.get_bounds()
+
+    rng = Ncm.RNG.seeded_new(None, 4321)
+
+    for _ in range(20):
+        assert gsdrs.gen1(mset, data, rng) is True
+        assert z_min <= data.z <= z_max
+
+
+@pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
+def test_read_row_write_row_round_trip(variant, zp, sigma0, zp_min, zp_max):
+    """The per-galaxy pz survives a read_row()/write_row() round trip
+    through NcGalaxyWLObs's dedicated pz slot."""
+    spline, _zs, _pz = _spline_from_composed(variant, zp, sigma0, zp_min, zp_max)
+    gsdrs = Nc.GalaxyRedshiftFactorSpline.new()
+    mset = Ncm.MSet.empty_new()
+    data = Nc.GalaxyRedshiftFactorData.new(gsdrs, mset)
+
+    assert list(Nc.GalaxyRedshiftFactorData.required_columns(data)) == ["z"]
+
+    wlobs = Nc.GalaxyWLObs.new(
+        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, ["z"]
+    )
+    wlobs.set("z", 0, 0.0)
+    wlobs.set_pz(0, spline)
+
+    data.read_row(wlobs, 0)
+    assert gsdrs.data_peek(data) == wlobs.peek_pz(0)
+
+    other_wlobs = Nc.GalaxyWLObs.new(
+        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, ["z"]
+    )
+    other_wlobs.set("z", 0, 0.0)
+    data.write_row(other_wlobs, 0)
+
+    z_min, z_max = spline.get_bounds()
+    other_z_min, other_z_max = other_wlobs.peek_pz(0).get_bounds()
+    assert_allclose([other_z_min, other_z_max], [z_min, z_max])
+
+
+@pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
+def test_integrand_copy_matches_original(variant, zp, sigma0, zp_min, zp_max):
+    """A copied integrand evaluates identically to the original (no closure
+    payload to lose in the copy)."""
+    spline, zs, pz_vals = _spline_from_composed(variant, zp, sigma0, zp_min, zp_max)
+    gsdrs, mset, data = _build_spline_scheme(spline)
+
+    integ = gsdrs.integ(mset, False)
+    integ_copy = integ.copy()
+
+    got = np.array([integ_copy.eval(z, data) for z in zs[1:-1]])
+    assert_allclose(got, pz_vals[1:-1], rtol=1.0e-8, atol=1.0e-12)
 
 
 if __name__ == "__main__":

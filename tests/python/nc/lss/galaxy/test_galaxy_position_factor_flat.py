@@ -33,6 +33,7 @@ import pytest
 from numpy.testing import assert_allclose
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
 
@@ -130,6 +131,32 @@ def test_ra_dec_lim_roundtrip(ra_min, ra_max, dec_min, dec_max):
     flat.set_dec_lim(3.0, 4.0)
     assert_allclose(flat.get_ra_lim(), (1.0, 2.0))
     assert_allclose(flat.get_dec_lim(), (3.0, 4.0))
+
+
+def test_serialize_deserialize():
+    """A round trip through NcmSerialize preserves the footprint limits."""
+    flat = Nc.GalaxyPositionFactorFlat.new(0.0, 30.0, -10.0, 10.0)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    flat2 = duplicate_via_serialization(flat, ser)
+
+    assert isinstance(flat2, Nc.GalaxyPositionFactorFlat)
+    assert flat2 is not flat
+    assert_allclose(flat2.get_ra_lim(), flat.get_ra_lim())
+    assert_allclose(flat2.get_dec_lim(), flat.get_dec_lim())
+
+
+@pytest.mark.parametrize("ra_min,ra_max,dec_min,dec_max", _CASES)
+def test_integrand_copy_matches_original(ra_min, ra_max, dec_min, dec_max):
+    """A copied integrand evaluates identically to the original."""
+    flat, mset, data = _build_new(ra_min, ra_max, dec_min, dec_max)
+    rng = Ncm.RNG.seeded_new(None, 321)
+    flat.gen(mset, data, rng)
+
+    integ = flat.integ(mset, False)
+    integ_copy = integ.copy()
+
+    assert integ_copy.eval(data) == integ.eval(data)
 
 
 if __name__ == "__main__":
