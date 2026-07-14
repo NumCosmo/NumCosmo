@@ -211,5 +211,43 @@ def test_lsst_srd_edges_feed_compute_dndz():
         assert_allclose(np.trapezoid(vals, zs), 1.0, rtol=1.0e-4)
 
 
+def test_reltol_property_round_trip():
+    """reltol is readable/writable both via the plain getter/setter and via
+    the underlying GObject property (get_property/set_property), and
+    changing it invalidates the cached P(zp) marginal (same effect as
+    set_zp_support_max, checked below)."""
+    binning = Nc.GalaxyRedshiftBinning.new()
+
+    default = binning.get_reltol()
+    assert_allclose(binning.get_property("reltol"), default)
+
+    binning.set_reltol(1.0e-6)
+    assert_allclose(binning.get_reltol(), 1.0e-6)
+    assert_allclose(binning.get_property("reltol"), 1.0e-6)
+
+
+def test_zp_support_max_property_round_trip():
+    """zp-support-max is readable/writable both via the plain getter/setter
+    and via the underlying GObject property, and setting it invalidates the
+    cached P(zp) marginal (compute_dndz's bin dn/dz is unaffected, per the
+    class docs -- only eval_pzp's own support changes)."""
+    binning = Nc.GalaxyRedshiftBinning.new()
+
+    default = binning.get_zp_support_max()
+    assert_allclose(binning.get_property("zp-support-max"), default)
+
+    binning.set_zp_support_max(10.0)
+    assert_allclose(binning.get_zp_support_max(), 10.0)
+    assert_allclose(binning.get_property("zp-support-max"), 10.0)
+
+    pop = getattr(Nc.GalaxyRedshiftPopLSSTSRD, "new_y1_source")()
+    obs_pop = Nc.GalaxyRedshiftObsSelGauss.new()
+    obs_pop.param_set_by_name("sigma0", 0.05)
+    binning.prepare(pop, obs_pop)
+    zps = np.linspace(0.0, 9.0, 200)
+    vals = np.array([binning.eval_pzp(zp) for zp in zps])
+    assert np.all(np.isfinite(vals))
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

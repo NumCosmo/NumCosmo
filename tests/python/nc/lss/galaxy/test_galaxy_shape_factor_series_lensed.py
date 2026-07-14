@@ -449,5 +449,107 @@ def test_constructs_and_evaluates_at_various_orders(ellip_conv, order):
     assert val > 0.0
 
 
+def test_low_order_polynomial_crossing_clamps_to_floor():
+    """A degree-trunc_order polynomial in g_mag is only a LOCAL
+    approximation around g=0: for configurations where the true envelope
+    decreases with g, a low-order fit is guaranteed to eventually cross
+    zero and would otherwise diverge to -Infinity (see the class' own
+    _nc_galaxy_shape_factor_series_lensed_marginal doc comment). This must
+    instead clamp to a tiny positive floor -- checked here at a
+    (sigma_pop, std_noise, eps_obs, order) combination that genuinely
+    crosses zero -- so eval_ln_marginal's log() never sees a non-positive
+    value."""
+    pop = Nc.GalaxyShapePopGauss.new()
+    pop["sigma"] = 0.02
+    mset = _build_mset(pop)
+    gsfsl, data = _make_series_lensed(
+        Nc.GalaxyWLObsEllipConv.TRACE_DET, 2, pop, mset, 0.05
+    )
+
+    val_small_g = gsfsl.eval_marginal(pop, data, 0.01, 0.0, 0.02, 0.0)
+    val_large_g = gsfsl.eval_marginal(pop, data, 0.6, 0.0, 0.02, 0.0)
+
+    assert val_small_g > 1.0  # accurate, well within the polynomial's radius
+    assert 0.0 < val_large_g < 1.0e-250  # clamped to the floor, not negative
+
+    lnp_large_g = gsfsl.eval_ln_marginal(pop, data, 0.6, 0.0, 0.02, 0.0)
+    assert np.isfinite(lnp_large_g)
+    assert_allclose(lnp_large_g, math.log(val_large_g), rtol=1.0e-10)
+
+
+def test_required_columns():
+    """SeriesLensed's ldata carries no per-row data of its own; only the
+    upstream fragments' columns (plus the factor's own fixed columns) are
+    required."""
+    pop = Nc.GalaxyShapePopGauss.new()
+    pop["sigma"] = 0.25
+    mset = _build_mset(pop)
+    gsfsl, data = _make_series_lensed(
+        Nc.GalaxyWLObsEllipConv.TRACE_DET, 4, pop, mset, 0.3
+    )
+
+    cols = data.required_columns()
+    own = [
+        "epsilon_int_1", "epsilon_int_2", "epsilon_obs_1", "epsilon_obs_2",
+        "std_noise", "c1", "c2", "m",
+    ]
+    assert cols[: len(own)] == own
+
+
+def test_trunc_order_n_nodes_gobject_property_round_trip():
+    """trunc-order/n-nodes (CONSTRUCT_ONLY) are reachable through the
+    GObject property system (get_property), not just props.trunc_order /
+    props.n_nodes."""
+    gsfsl = Nc.GalaxyShapeFactorSeriesLensed.new(
+        Nc.GalaxyWLObsEllipConv.TRACE_DET, 6
+    )
+    assert gsfsl.get_property("trunc-order") == 6
+    assert gsfsl.get_property("trunc-order") == gsfsl.props.trunc_order
+    assert gsfsl.get_property("n-nodes") == gsfsl.props.n_nodes
+
+
+def test_read_write_row_round_trip():
+    """SeriesLensed's ldata carries no per-row data of its own (see
+    test_required_columns), so read_row/write_row are pure pass-throughs --
+    exercised here through a real NcGalaxyWLObs catalog row, the path
+    NcDataClusterWLFactor's own set_obs()/prepare() uses, which none of
+    this file's other tests (all built via data_set()) touch."""
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
+    frame = Nc.WLEllipticityFrame.CELESTIAL
+    pop = Nc.GalaxyShapePopGauss.new()
+    pop["sigma"] = 0.25
+    mset = _build_mset(pop)
+    gsfsl, data = _make_series_lensed(ellip_conv, 4, pop, mset, 0.3)
+
+    cols = data.required_columns()
+    obs = Nc.GalaxyWLObs.new(ellip_conv, frame, 1, cols)
+    obs.set("ra", 0, 0.03)
+    obs.set("dec", 0, -0.02)
+    obs.set("z", 0, 0.0)
+    obs.set("zp", 0, 0.6)
+    obs.set("sigma0", 0, 0.03)
+    obs.set("epsilon_int_1", 0, 0.0)
+    obs.set("epsilon_int_2", 0, 0.0)
+    obs.set("epsilon_obs_1", 0, 0.05)
+    obs.set("epsilon_obs_2", 0, -0.02)
+    obs.set("std_noise", 0, 0.03)
+    obs.set("c1", 0, 0.01)
+    obs.set("c2", 0, -0.01)
+    obs.set("m", 0, 0.02)
+
+    data.read_row(obs, 0)
+    assert_allclose(data.epsilon_obs_1, 0.05)
+    assert_allclose(data.epsilon_obs_2, -0.02)
+    assert_allclose(data.std_noise, 0.03)
+    assert_allclose(data.c1, 0.01)
+    assert_allclose(data.c2, -0.01)
+    assert_allclose(data.m, 0.02)
+
+    obs_out = Nc.GalaxyWLObs.new(ellip_conv, frame, 1, cols)
+    data.write_row(obs_out, 0)
+    for col in cols:
+        assert_allclose(obs_out.get(col, 0), obs.get(col, 0))
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

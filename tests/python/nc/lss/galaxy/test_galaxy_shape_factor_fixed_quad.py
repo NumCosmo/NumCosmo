@@ -504,6 +504,70 @@ def test_auto_lens_nodes_off_by_default():
     assert_allclose(gsffq.props.lens_node_reltol, 1.0e-4)
 
 
+def test_auto_lens_nodes_skips_calibration_below_n_lens_5():
+    """_calibrate_n_lens() short-circuits (returns n-lens unchanged) when
+    n-lens<=5 -- too few candidates for the geometric-bracket/bisection
+    search to be worth running at all. Just needs to not crash and to match
+    the (necessarily coarse, n-lens=5) fixed-n_lens result exactly, since
+    both paths use the same n_lens in this regime."""
+    std_noise, R = 0.12, 0.3
+    pop = Nc.GalaxyShapePopGauss.new()
+    pop["sigma"] = 0.28
+    mset = _build_mset(pop)
+
+    gsffq_auto = Nc.GalaxyShapeFactorFixedQuad(
+        ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE_DET, auto_lens_nodes=True, n_lens=5
+    )
+    data_auto, _, _ = _build_factor_data(gsffq_auto, mset)
+    gsffq_auto.data_set(
+        data_auto, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsffq_auto.prepare_data_array(mset, [data_auto], True, True)
+
+    gsffq_fixed = Nc.GalaxyShapeFactorFixedQuad(
+        ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE_DET, auto_lens_nodes=False, n_lens=5
+    )
+    data_fixed, _, _ = _build_factor_data(gsffq_fixed, mset)
+    gsffq_fixed.data_set(
+        data_fixed, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsffq_fixed.prepare_data_array(mset, [data_fixed], True, True)
+
+    val_auto = gsffq_auto.eval_marginal(pop, data_auto, 0.15, 0.0, R, 0.0)
+    val_fixed = gsffq_fixed.eval_marginal(pop, data_fixed, 0.15, 0.0, R, 0.0)
+    assert_allclose(val_auto, val_fixed, rtol=1.0e-12)
+
+
+def test_auto_lens_nodes_falls_back_to_cap_when_reltol_unreachable():
+    """When lens-node-reltol is tighter than any n below the n-lens cap can
+    achieve (relative to the stricter 2*n_lens+1 reference), the geometric
+    bracket search reaches the ceiling without finding a passing candidate
+    and _calibrate_n_lens() falls back to n-lens itself -- must still
+    produce a finite, correct-ish result, not crash or hang."""
+    std_noise, R = 0.12, 0.3
+    pop = Nc.GalaxyShapePopGauss.new()
+    pop["sigma"] = 0.28
+    mset = _build_mset(pop)
+
+    gsffq = Nc.GalaxyShapeFactorFixedQuad(
+        ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        auto_lens_nodes=True,
+        lens_node_reltol=1.0e-14,
+    )
+    data, _, _ = _build_factor_data(gsffq, mset)
+    gsffq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsffq.prepare_data_array(mset, [data], True, True)
+
+    val = gsffq.eval_marginal(pop, data, 0.15, 0.0, R, 0.0)
+    exact = _scipy_exact_marginal(
+        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.15 + 0.0j, R + 0.0j, std_noise
+    )
+    assert np.isfinite(val)
+    assert_allclose(val, exact, rtol=5.0e-3)
+
+
 def test_required_columns():
     pop = Nc.GalaxyShapePopGauss.new()
     pop["sigma"] = 0.3
@@ -517,6 +581,63 @@ def test_required_columns():
         "std_noise", "c1", "c2", "m",
     ]
     assert cols[: len(own)] == own
+
+
+def test_n_radial_n_angular_gobject_property_round_trip():
+    """n-radial/n-angular (CONSTRUCT_ONLY) are reachable through the
+    GObject property system (get_property), not just props.n_radial /
+    props.n_angular."""
+    gsffq = Nc.GalaxyShapeFactorFixedQuad(
+        ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE_DET, n_radial=17, n_angular=9
+    )
+    assert gsffq.get_property("n-radial") == 17
+    assert gsffq.get_property("n-angular") == 9
+    assert gsffq.get_property("n-radial") == gsffq.props.n_radial
+    assert gsffq.get_property("n-angular") == gsffq.props.n_angular
+
+
+def test_read_write_row_round_trip():
+    """FixedQuad's ldata carries no per-row data of its own (see
+    test_required_columns), so read_row/write_row are pure pass-throughs --
+    exercised here through a real NcGalaxyWLObs catalog row, the path
+    NcDataClusterWLFactor's own set_obs()/prepare() uses, which none of this
+    file's other tests (all built via data_set()) touch."""
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
+    frame = Nc.WLEllipticityFrame.CELESTIAL
+    pop = Nc.GalaxyShapePopGauss.new()
+    pop["sigma"] = 0.25
+    mset = _build_mset(pop)
+    gsffq = Nc.GalaxyShapeFactorFixedQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsffq, mset)
+
+    cols = data.required_columns()
+    obs = Nc.GalaxyWLObs.new(ellip_conv, frame, 1, cols)
+    obs.set("ra", 0, 0.03)
+    obs.set("dec", 0, -0.02)
+    obs.set("z", 0, 0.0)
+    obs.set("zp", 0, 0.6)
+    obs.set("sigma0", 0, 0.03)
+    obs.set("epsilon_int_1", 0, 0.0)
+    obs.set("epsilon_int_2", 0, 0.0)
+    obs.set("epsilon_obs_1", 0, 0.05)
+    obs.set("epsilon_obs_2", 0, -0.02)
+    obs.set("std_noise", 0, 0.03)
+    obs.set("c1", 0, 0.01)
+    obs.set("c2", 0, -0.01)
+    obs.set("m", 0, 0.02)
+
+    data.read_row(obs, 0)
+    assert_allclose(data.epsilon_obs_1, 0.05)
+    assert_allclose(data.epsilon_obs_2, -0.02)
+    assert_allclose(data.std_noise, 0.03)
+    assert_allclose(data.c1, 0.01)
+    assert_allclose(data.c2, -0.01)
+    assert_allclose(data.m, 0.02)
+
+    obs_out = Nc.GalaxyWLObs.new(ellip_conv, frame, 1, cols)
+    data.write_row(obs_out, 0)
+    for col in cols:
+        assert_allclose(obs_out.get(col, 0), obs.get(col, 0))
 
 
 if __name__ == "__main__":

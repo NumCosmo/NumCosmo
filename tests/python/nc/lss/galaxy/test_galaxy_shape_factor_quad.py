@@ -368,6 +368,68 @@ def test_bound_reltol_properties():
     assert gsfq.get_reltol() == pytest.approx(1.0e-9)
 
 
+def test_bound_reltol_gobject_property_round_trip():
+    """bound/reltol are also reachable through the GObject property system
+    (get_property/set_property), not just the plain getter/setter wrappers
+    already checked by test_bound_reltol_properties."""
+    gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE)
+
+    assert gsfq.get_property("bound") == gsfq.get_bound()
+    assert gsfq.get_property("reltol") == pytest.approx(gsfq.get_reltol())
+
+    gsfq.set_property("bound", 15.0)
+    gsfq.set_property("reltol", 1.0e-8)
+    assert gsfq.get_bound() == 15.0
+    assert gsfq.get_reltol() == pytest.approx(1.0e-8)
+    assert gsfq.get_property("bound") == 15.0
+    assert gsfq.get_property("reltol") == pytest.approx(1.0e-8)
+
+
+def test_read_write_row_round_trip():
+    """Quad's ldata carries no per-row data of its own (see
+    test_required_columns), so read_row/write_row are pure pass-throughs to
+    the upstream position/redshift/population fragments and the factor's own
+    fixed columns -- exercised here through a real NcGalaxyWLObs catalog row,
+    the path NcDataClusterWLFactor's own set_obs()/prepare() uses, which
+    none of this file's other tests (all built via data_set()) touch."""
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
+    frame = Nc.WLEllipticityFrame.CELESTIAL
+    pop = Nc.GalaxyShapePopGauss.new()
+    pop["sigma"] = 0.25
+    mset = _build_mset(pop)
+    gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsfq, mset)
+
+    cols = data.required_columns()
+    obs = Nc.GalaxyWLObs.new(ellip_conv, frame, 1, cols)
+    obs.set("ra", 0, 0.03)
+    obs.set("dec", 0, -0.02)
+    obs.set("z", 0, 0.0)
+    obs.set("zp", 0, 0.6)
+    obs.set("sigma0", 0, 0.03)
+    obs.set("epsilon_int_1", 0, 0.0)
+    obs.set("epsilon_int_2", 0, 0.0)
+    obs.set("epsilon_obs_1", 0, 0.05)
+    obs.set("epsilon_obs_2", 0, -0.02)
+    obs.set("std_noise", 0, 0.03)
+    obs.set("c1", 0, 0.01)
+    obs.set("c2", 0, -0.01)
+    obs.set("m", 0, 0.02)
+
+    data.read_row(obs, 0)
+    assert_allclose(data.epsilon_obs_1, 0.05)
+    assert_allclose(data.epsilon_obs_2, -0.02)
+    assert_allclose(data.std_noise, 0.03)
+    assert_allclose(data.c1, 0.01)
+    assert_allclose(data.c2, -0.01)
+    assert_allclose(data.m, 0.02)
+
+    obs_out = Nc.GalaxyWLObs.new(ellip_conv, frame, 1, cols)
+    data.write_row(obs_out, 0)
+    for col in cols:
+        assert_allclose(obs_out.get(col, 0), obs.get(col, 0))
+
+
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_converges_to_var_add_as_shear_shrinks(ellip_conv):
     """VarAdd's map-linearization approximation becomes more accurate as the
