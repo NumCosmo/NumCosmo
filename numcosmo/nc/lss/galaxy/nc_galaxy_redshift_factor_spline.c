@@ -91,7 +91,6 @@ _nc_galaxy_redshift_factor_spline_finalize (GObject *object)
 static void _nc_galaxy_redshift_factor_spline_data_init (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data);
 static void _nc_galaxy_redshift_factor_spline_gen (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, NcmRNG *rng);
 static gboolean _nc_galaxy_redshift_factor_spline_gen1 (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, NcmRNG *rng);
-static void _nc_galaxy_redshift_factor_spline_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data);
 static NcGalaxyRedshiftFactorIntegrand *_nc_galaxy_redshift_factor_spline_integ (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, gboolean use_lnp);
 static void _nc_galaxy_redshift_factor_spline_get_integ_lim (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble *z_min, gdouble *z_max);
 static gdouble _nc_galaxy_redshift_factor_spline_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data);
@@ -108,7 +107,6 @@ nc_galaxy_redshift_factor_spline_class_init (NcGalaxyRedshiftFactorSplineClass *
   gsdr_class->data_init        = &_nc_galaxy_redshift_factor_spline_data_init;
   gsdr_class->gen              = &_nc_galaxy_redshift_factor_spline_gen;
   gsdr_class->gen1             = &_nc_galaxy_redshift_factor_spline_gen1;
-  gsdr_class->update_data      = &_nc_galaxy_redshift_factor_spline_update_data;
   gsdr_class->integ            = &_nc_galaxy_redshift_factor_spline_integ;
   gsdr_class->get_integ_lim    = &_nc_galaxy_redshift_factor_spline_get_integ_lim;
   gsdr_class->norm             = &_nc_galaxy_redshift_factor_spline_norm;
@@ -117,7 +115,13 @@ nc_galaxy_redshift_factor_spline_class_init (NcGalaxyRedshiftFactorSplineClass *
   /* prepare/get_hash: base defaults (no-op / constant 0) are exactly right
    * here -- this scheme has no NcmMSet model dependency, so its density
    * only ever changes when the per-galaxy data (the spline itself) does,
-   * which the orchestrator's own obs_changed already covers. */
+   * which the orchestrator's own obs_changed already covers.
+   *
+   * update_data: base default (no-op) is right too -- this scheme's only
+   * per-galaxy cache derived from update_data(), the resample-only
+   * inverse-CDF sampler, is now built lazily inside _gen() itself (see
+   * _nc_galaxy_redshift_factor_spline_ensure_dist()), not eagerly on every
+   * prepare() cycle. */
 }
 
 /* Fragment vtable --------------------------------------------------------- */
@@ -172,40 +176,19 @@ _nc_galaxy_redshift_factor_spline_data_init (NcGalaxyRedshiftFactor *gsdr, NcmMS
 
 /* Sampling ----------------------------------------------------------------- */
 
+/* Builds sldata->dist (an inverse-CDF sampler over @pz) the first time a
+ * galaxy is actually sampled -- resample()-only state, never read by
+ * integ/norm/get_integ_lim/make_fixed_nodes (all of which use sldata->pz
+ * directly), so building it eagerly for every galaxy on every prepare()
+ * cycle (as update_data() used to do) paid its full cost -- dominated by
+ * ncm_stats_dist1d_prepare()'s own inverse-CDF construction -- even for
+ * fits/MCMC runs that never call resample() at all. */
 static void
-_nc_galaxy_redshift_factor_spline_gen (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, NcmRNG *rng)
+_nc_galaxy_redshift_factor_spline_ensure_dist (SplineLData *sldata)
 {
-  SplineLData *sldata = (SplineLData *) data->ldata;
-  gdouble z_min, z_max, z;
+  if (sldata->dist != NULL)
+    return;
 
-  g_assert_nonnull (sldata->dist);
-  ncm_spline_get_bounds (sldata->pz, &z_min, &z_max);
-
-  do {
-    z = ncm_stats_dist1d_gen (sldata->dist, rng);
-  } while ((z < z_min) || (z > z_max));
-
-  data->z = z;
-}
-
-static gboolean
-_nc_galaxy_redshift_factor_spline_gen1 (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, NcmRNG *rng)
-{
-  _nc_galaxy_redshift_factor_spline_gen (gsdr, mset, data, rng);
-
-  return TRUE;
-}
-
-/* Per-galaxy cache: builds the sampler from @pz -------------------------- */
-
-static void
-_nc_galaxy_redshift_factor_spline_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data)
-{
-  SplineLData *sldata = (SplineLData *) data->ldata;
-
-  g_assert_nonnull (sldata->pz);
-
-  if (sldata->dist == NULL)
   {
     NcmVector *xv     = ncm_spline_peek_xv (sldata->pz);
     NcmVector *yv     = ncm_spline_peek_yv (sldata->pz);
@@ -234,6 +217,31 @@ _nc_galaxy_redshift_factor_spline_update_data (NcGalaxyRedshiftFactor *gsdr, NcG
     ncm_spline_free (m2lnp);
     ncm_vector_free (m2lnyv);
   }
+}
+
+static void
+_nc_galaxy_redshift_factor_spline_gen (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, NcmRNG *rng)
+{
+  SplineLData *sldata = (SplineLData *) data->ldata;
+  gdouble z_min, z_max, z;
+
+  g_assert_nonnull (sldata->pz);
+  _nc_galaxy_redshift_factor_spline_ensure_dist (sldata);
+  ncm_spline_get_bounds (sldata->pz, &z_min, &z_max);
+
+  do {
+    z = ncm_stats_dist1d_gen (sldata->dist, rng);
+  } while ((z < z_min) || (z > z_max));
+
+  data->z = z;
+}
+
+static gboolean
+_nc_galaxy_redshift_factor_spline_gen1 (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, NcmRNG *rng)
+{
+  _nc_galaxy_redshift_factor_spline_gen (gsdr, mset, data, rng);
+
+  return TRUE;
 }
 
 /* Integrand ---------------------------------------------------------------- */
