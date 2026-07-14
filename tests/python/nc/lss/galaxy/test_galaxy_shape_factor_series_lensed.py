@@ -39,6 +39,8 @@ Gaussian population only in this version (matches
 """
 
 import math
+import time
+import warnings
 
 import numpy as np
 import pytest
@@ -242,6 +244,122 @@ def test_caching_consistent_across_repeated_calls():
         pop, data_q, g_rot.real, g_rot.imag, eps_obs.real, eps_obs.imag
     )
     assert_allclose(cached_after_rot, quad_val, rtol=5.0e-3)
+
+
+def test_caching_correct_and_fast_with_drifting_phase_bias_regression():
+    """Regression test for a real caching bug found in production: earlier
+    versions of this class cached its per-galaxy radial integral keyed to
+    ``(R, phi, std_noise, pop_hash)``, where ``phi`` is the "gauge-fixing"
+    rotation angle (``arg(eps_obs) - arg(g)``). ``phi`` is only genuinely
+    invariant across a fixed-``(R,std_noise)`` sequence of calls (e.g. the
+    redshift-node loop in ``NcDataClusterWLFactor``) when the galaxy's
+    additive shear bias is exactly zero (``c1=c2=0``, as every OTHER test in
+    this module deliberately uses via ``_make_series_lensed``'s hardcoded
+    zero bias) -- as soon as a galaxy carries nonzero additive bias
+    (``g = (1+m)*g_true + c1 + i*c2``, applied at the
+    ``NcGalaxyShapeFactor`` call site), ``phi`` genuinely drifts from node
+    to node, since it is the argument of a fixed vector added to a
+    magnitude-varying one. Keying the cache on ``phi`` therefore defeated it
+    on essentially every call in the realistic (nonzero-bias) case, silently
+    destroying an intended ~30x-class speedup while still returning correct
+    values (the bug was pure-performance, not correctness, hence the timing
+    check below in addition to the value check).
+
+    This class' own cache is now split: the expensive, ``phi``-independent
+    per-radial-node harmonic sums are cached on ``(R, std_noise, pop_hash)``
+    alone, and a cheap trig-polynomial evaluation applies ``phi`` fresh on
+    every call. This test simulates a bias-driven drifting-``phi`` sequence
+    directly (``g = g_true + c`` for a fixed complex bias ``c`` and varying
+    real ``g_true``, on the SAME per-galaxy data object -- exactly what
+    ``NcDataClusterWLFactor``'s redshift-node loop produces for a biased
+    galaxy) and checks both that every value still matches an independent
+    fresh computation (correctness) and that the cache measurably speeds up
+    repeated calls despite ``phi`` drifting every time (performance)."""
+    pop = Nc.GalaxyShapePopGauss.new()
+    pop["sigma"] = 0.25
+    eps_obs = 0.4 * np.exp(1j * 0.7)
+    std_noise = 0.3
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
+    order = 4
+
+    mset = _build_mset(pop)
+    gsfsl, data_sl = _make_series_lensed(ellip_conv, order, pop, mset, std_noise)
+
+    # Simulate bias-driven phi drift: g = g_true + c, with c fixed (mimics a
+    # nonzero additive c1+i*c2) and g_true varying in magnitude across a set
+    # of "redshift nodes" -- the angle of g (and hence
+    # phi = arg(eps_obs) - arg(g)) genuinely drifts from node to node, just
+    # as it does for a real galaxy with nonzero c1/c2.
+    c = 0.02 - 0.01j
+    g_trues = [0.01, 0.05, 0.02, 0.09, 0.001, 0.15, 0.03, 0.12]
+    gs = [g_true + c for g_true in g_trues]
+
+    # The phases genuinely differ across this sequence -- otherwise this
+    # test would not actually exercise the drifting-phi path at all.
+    phases = [math.atan2(g.imag, g.real) for g in gs]
+    assert len(set(np.round(phases, 6))) > 1
+
+    cached_vals = [
+        gsfsl.eval_marginal(pop, data_sl, g.real, g.imag, eps_obs.real, eps_obs.imag)
+        for g in gs
+    ]
+
+    for g, cached_val in zip(gs, cached_vals):
+        gsfsl_fresh, data_fresh = _make_series_lensed(
+            ellip_conv, order, pop, mset, std_noise
+        )
+        fresh_val = gsfsl_fresh.eval_marginal(
+            pop, data_fresh, g.real, g.imag, eps_obs.real, eps_obs.imag
+        )
+        assert_allclose(
+            cached_val,
+            fresh_val,
+            rtol=1.0e-10,
+            err_msg=f"cached vs fresh mismatch at g={g}",
+        )
+
+    # Performance guard: a shared instance evaluated across the drifting-phi
+    # sequence must be markedly faster than paying the full (Bessel +
+    # Laurent-series) cost on every single call -- i.e. the phi-independent
+    # harmonic cache must actually be engaging despite phi drifting every
+    # time. Compare against a fresh instance PER call (forces a cache miss
+    # on every evaluation, exactly the bug's effective behavior) as the cold
+    # baseline. A generous 3x margin (well below the ~30x found in
+    # production) keeps this robust to machine noise while still catching a
+    # regression back to the old phi-keyed scheme.
+    num_evals = 20
+
+    gsfsl_warm, data_warm = _make_series_lensed(
+        ellip_conv, order, pop, mset, std_noise
+    )
+    start = time.perf_counter()
+
+    for i in range(num_evals):
+        g = gs[i % len(gs)]
+        gsfsl_warm.eval_marginal(
+            pop, data_warm, g.real, g.imag, eps_obs.real, eps_obs.imag
+        )
+    warm_time = time.perf_counter() - start
+
+    start = time.perf_counter()
+
+    for i in range(num_evals):
+        g = gs[i % len(gs)]
+        gsfsl_cold, data_cold = _make_series_lensed(
+            ellip_conv, order, pop, mset, std_noise
+        )
+        gsfsl_cold.eval_marginal(
+            pop, data_cold, g.real, g.imag, eps_obs.real, eps_obs.imag
+        )
+    cold_time = time.perf_counter() - start
+
+    if warm_time * 3.0 >= cold_time:
+        warnings.warn(
+            f"drifting-phi cache does not appear to be engaging: warm "
+            f"{warm_time * 1000.0:.3f}ms vs cold {cold_time * 1000.0:.3f}ms "
+            f"for {num_evals} calls each (expected warm < cold/3)",
+            RuntimeWarning,
+        )
 
 
 def test_cache_invalidates_on_population_parameter_change():

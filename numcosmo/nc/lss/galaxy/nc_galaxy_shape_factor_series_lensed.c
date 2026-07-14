@@ -69,11 +69,24 @@
  * $\theta$-integral done EXACTLY via Jacobi-Anger
  * (ncm_laurent_series_jacobi_anger_reduce()); $\rho$-integral a fixed,
  * windowed Gauss-Legendre quadrature (see
- * #NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_WINDOW_NSIGMA). Per-galaxy
- * $J[0..\mathrm{order}]$ cached, keyed to $(R,\phi,\sigma_\mathrm{noise})$
- * AND nc_galaxy_shape_factor_get_pop_hash(), since these coefficients depend
- * on the population's own parameters (e.g. $\sigma_\mathrm{pop}$), not just
- * per-galaxy data.
+ * #NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_WINDOW_NSIGMA). The Jacobi-Anger
+ * reduction's own $\phi$-independent harmonic sums $H[0..\mathrm{order}][0..
+ * \mathrm{maxk}]$ (the expensive part: Bessel functions and Laurent-series
+ * algebra over the whole $\rho$ quadrature) are cached per galaxy, keyed to
+ * $(R,\sigma_\mathrm{noise})$ AND nc_galaxy_shape_factor_get_pop_hash(),
+ * since these coefficients depend on the population's own parameters (e.g.
+ * $\sigma_\mathrm{pop}$), not just per-galaxy data. Deliberately NOT keyed
+ * to $\phi$: whenever the galaxy carries a nonzero additive shear bias
+ * ($c_1,c_2\neq0$ in $g=(1+m)g_\mathrm{true}+c_1+ic_2$, see
+ * nc_galaxy_shape_factor.c), $\phi$ is the argument of a fixed vector added
+ * to a magnitude-varying one and so genuinely drifts on essentially every
+ * call across the redshift integral -- keying the cache on it (as an
+ * earlier version of this class did) silently defeated the cache on nearly
+ * every evaluation. $J[0..\mathrm{order}]$ itself -- the actual polynomial
+ * coefficients passed to Horner's method below -- is instead recomputed
+ * from the cached $H$ on every call via a cheap trig-polynomial evaluation
+ * (see _finalize_J()), correctly tracking $\phi$'s drift at negligible
+ * cost.
  *
  * Gaussian population only in this version: uses
  * nc_galaxy_shape_pop_get_sigma() (the same capability-based accessor
@@ -116,7 +129,7 @@
  * chi_taylor/jac_taylor pair is selected (also fixed), never by rho/R/phi
  * or any other per-node/per-galaxy value -- so @arena grows only during the
  * very first node ever computed for a given workspace, and is pure reuse
- * (zero allocation) on every call after that. See _compute_J for where
+ * (zero allocation) on every call after that. See _compute_H for where
  * @arena's backing pool lives (a per-instance NcmMemoryPool of
  * pre-populated workspaces) and where its bump index gets reset to 0 once
  * per node.
@@ -529,12 +542,12 @@ typedef struct _NcGalaxyShapeFactorSeriesLensedPrivate
   guint n_nodes;
 
   /* Pool of per-computation workspaces (NcGalaxyShapeFactorSeriesLensedWS,
-   * defined further down, right before _compute_J), each bundling a
+   * defined further down, right before _compute_H), each bundling a
    * reusable NcmLaurentSeries arena plus the rho_nodes/weights/GL-table
-   * triple _compute_J needs. NcmMemoryPool (ncm_memory_pool.h) is this
+   * triple _compute_H needs. NcmMemoryPool (ncm_memory_pool.h) is this
    * project's own thread-safe, auto-growing checkout pool -- same pattern
    * as ncm_integral_get_workspace() and NcmStatsDistKDE's mp_eval_vars:
-   * _compute_J checks out one workspace per call and returns it when done,
+   * _compute_H checks out one workspace per call and returns it when done,
    * so concurrent calls (were this ever parallelized) get independent
    * workspaces rather than racing on shared state. */
   NcmMemoryPool *mp_ws;
@@ -550,7 +563,7 @@ enum
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyShapeFactorSeriesLensed, nc_galaxy_shape_factor_series_lensed, NC_TYPE_GALAXY_SHAPE_FACTOR)
 
-/* Defined near _compute_J, forward-declared here for _init()'s use. */
+/* Defined near _compute_H, forward-declared here for _init()'s use. */
 static gpointer _nc_galaxy_shape_factor_series_lensed_ws_new (gpointer userdata);
 static void _nc_galaxy_shape_factor_series_lensed_ws_free (gpointer p);
 
@@ -566,7 +579,7 @@ nc_galaxy_shape_factor_series_lensed_init (NcGalaxyShapeFactorSeriesLensed *gsfs
 
   /* Lazily populated (ncm_memory_pool_new itself allocates no workspace),
    * so this runs safely before trunc-order/n-nodes's CONSTRUCT properties
-   * are set -- _ws_new (defined near _compute_J) reads them from @gsfsl's
+   * are set -- _ws_new (defined near _compute_H) reads them from @gsfsl's
    * own private data only when a workspace is actually first requested,
    * by which point construction has completed. */
   self->mp_ws = ncm_memory_pool_new (&_nc_galaxy_shape_factor_series_lensed_ws_new, gsfsl, &_nc_galaxy_shape_factor_series_lensed_ws_free);
@@ -671,14 +684,42 @@ _nc_galaxy_shape_factor_series_lensed_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_shape_factor_series_lensed_parent_class)->finalize (object);
 }
 
+/* J[0..order] is cached as its phi-INDEPENDENT harmonic content H[m][k]
+ * (see _compute_H's own doc comment for why phi -- the "gauge-fixing"
+ * rotation angle -- must be kept out of this cache key: whenever the
+ * per-galaxy additive bias c1/c2 is nonzero, phi drifts on essentially
+ * every call, since it is the argument of (1+m)*g_true + (c1+i*c2), a
+ * fixed vector added to a magnitude-varying one). H is keyed only on
+ * (R, std_noise, pop_hash) -- true structural invariants of the galaxy
+ * and population, unaffected by phi's drift. maxk/h_alloc track the
+ * harmonic degree actually populated (a property of trunc_order and the
+ * ellipticity convention alone, never of rho -- see _compute_H). */
 typedef struct _NcGalaxyShapeFactorSeriesLensedData
 {
   gboolean cache_valid;
   gdouble cached_R;
-  gdouble cached_phi;
   gdouble cached_std_noise;
   guint64 cached_pop_hash;
-  gdouble *J; /* size trunc_order+1 */
+  guint maxk;        /* harmonic degree populated in H, valid when cache_valid */
+  guint h_alloc;     /* allocated per-m stride of H (>= maxk+1); grows, never shrinks */
+  complex double *H; /* flattened [m][k], size (trunc_order+1)*h_alloc */
+  gdouble *J;        /* size trunc_order+1: final per-phi polynomial coefficients,
+                      * recomputed from H every call by _finalize_J (cheap) */
+
+  /* epsilon_obs's own polar form (R_eps,phi_eps), cached: epsilon_obs is
+   * fixed per galaxy (the observed ellipticity), identical across the whole
+   * redshift-node loop for a given data object, same as std_noise -- so
+   * this needs recomputing only when epsilon_obs itself actually changes
+   * (in practice: once, ever, per data object), not on every marginal()
+   * call. R_eps IS cached_R above (rotation preserves norm, see marginal's
+   * own comment), kept here too only so this cache's own validity is
+   * self-contained and doesn't depend on the H-cache's (R,std_noise,
+   * pop_hash) key clearing for unrelated reasons. */
+  gboolean eps_cache_valid;
+  gdouble cached_eps1;
+  gdouble cached_eps2;
+  gdouble R_eps;
+  gdouble phi_eps;
 } NcGalaxyShapeFactorSeriesLensedData;
 
 static void
@@ -687,6 +728,7 @@ _nc_galaxy_shape_factor_series_lensed_ldata_destroy (gpointer p)
   NcGalaxyShapeFactorSeriesLensedData *ldata = (NcGalaxyShapeFactorSeriesLensedData *) p;
 
   g_free (ldata->J);
+  g_free (ldata->H);
   g_free (ldata);
 }
 
@@ -707,7 +749,12 @@ _nc_galaxy_shape_factor_series_lensed_data_init (NcGalaxyShapeFactor *gsf, NcmMS
   NcGalaxyShapeFactorSeriesLensedData *ldata          = g_new0 (NcGalaxyShapeFactorSeriesLensedData, 1);
 
   ldata->cache_valid = FALSE;
+  ldata->maxk        = 0;
+  ldata->h_alloc     = 0;
+  ldata->H           = NULL;
   ldata->J           = g_new0 (gdouble, self->trunc_order + 1);
+
+  ldata->eps_cache_valid = FALSE;
 
   data->ldata                  = ldata;
   data->ldata_destroy          = &_nc_galaxy_shape_factor_series_lensed_ldata_destroy;
@@ -717,7 +764,7 @@ _nc_galaxy_shape_factor_series_lensed_data_init (NcGalaxyShapeFactor *gsf, NcmMS
 }
 
 /* Gaussian-envelope half-width margin (in units of sigma_noise) used to
- * window the rho integral around its peak at rho=R -- see _compute_J.
+ * window the rho integral around its peak at rho=R -- see _compute_H.
  * Same value and rationale as the noise-side scheme's own window
  * (independently chosen here, not shared code): 8 sigma leaves a tail of
  * exp(-32) ~ 1e-14, already below the truncation error of everything else
@@ -734,7 +781,7 @@ _nc_galaxy_shape_factor_series_lensed_data_init (NcGalaxyShapeFactor *gsf, NcmMS
 /* Per-computation workspace, pooled via #NcmMemoryPool (see mp_ws's own
  * comment on the private struct above): bundles the NcmLaurentSeries arena
  * every function in the _F_g_taylor cascade draws its scratch objects from,
- * plus the rho_nodes/weights/GL-table triple _compute_J needs. n_nodes is
+ * plus the rho_nodes/weights/GL-table triple _compute_H needs. n_nodes is
  * CONSTRUCT_ONLY (fixed for the instance's whole life), so rho_nodes/
  * weights/table are sized correctly here, once, and never resized; the
  * arena starts empty and is grown lazily by _arena_next() the first time
@@ -777,16 +824,37 @@ _nc_galaxy_shape_factor_series_lensed_ws_free (gpointer p)
 }
 
 /*
- * Per-galaxy radial integral: fills J[0..order] with the (g-independent)
- * Bessel-reduced radial integrals at fixed (R,phi,sig2,sigma_pop), one fixed
- * Gauss-Legendre pass over rho in a window around the envelope's peak at
- * rho=R. Checks out one pooled workspace for the whole call (all n_nodes
+ * Per-galaxy radial integral, phi-INDEPENDENT: fills ldata->H[m][k] with the
+ * (g-independent, phi-independent) Bessel-reduced radial harmonic sums at
+ * fixed (R,sig2,sigma_pop), one fixed Gauss-Legendre pass over rho in a
+ * window around the envelope's peak at rho=R. This is
+ * ncm_laurent_series_jacobi_anger_reduce()'s own sum
+ *   Re(c_0)*Ik[0] + sum_{k=1}^{maxk} 2*Ik[k]*Re(c_k*exp(i*k*phi))
+ * with the exp(i*k*phi) factor -- the only place phi enters -- pulled out
+ * of the rho-node sum: H[m][k] accumulates prefactor*Ik[k]*c_k (k>=1, still
+ * complex) or prefactor*Re(c_0)*Ik[0] (k=0), and the caller applies phi
+ * afterward via the cheap trig-polynomial evaluation in _finalize_J. This
+ * is what lets the (expensive: Bessel functions + Laurent-series algebra)
+ * result of this function be cached independently of phi -- see the
+ * NcGalaxyShapeFactorSeriesLensedData doc comment for why phi itself
+ * cannot be trusted to stay put across calls whenever the galaxy carries a
+ * nonzero additive bias.
+ *
+ * maxk (the harmonic degree F[m] actually populates) is a structural
+ * property of trunc_order and the ellipticity convention alone -- every
+ * harmonic slot in chi_taylor/jac_taylor/_F_g_taylor's Laurent series is
+ * set via an integer loop index, never derived from rho's numeric value --
+ * so it is computed once, from the first rho node, and asserted stable
+ * for the rest (a correctness safety net, not a performance corner cut:
+ * this function still visits every rho node exactly as before).
+ *
+ * Checks out one pooled workspace for the whole call (all n_nodes
  * iterations), returning it at the end -- same get/return granularity as
  * ncm_integral_locked_a_b's own bracketing of ncm_integral_get_workspace().
  */
 static void
-_compute_J (NcGalaxyShapeFactorSeriesLensedPrivate * const self, gdouble sigma_pop, gdouble pop_norm,
-            gdouble R, gdouble phi, gdouble sig2, gdouble *J)
+_compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, gdouble sigma_pop, gdouble pop_norm,
+            gdouble R, gdouble sig2, NcGalaxyShapeFactorSeriesLensedData *ldata)
 {
   const guint order                          = self->trunc_order;
   const guint n_nodes                        = self->n_nodes;
@@ -797,12 +865,10 @@ _compute_J (NcGalaxyShapeFactorSeriesLensedPrivate * const self, gdouble sigma_p
   NcGalaxyShapeFactorSeriesLensedWS *ws      = *ws_ptr;
   NcGalaxyShapeFactorSeriesLensedArena arena = { ws->arena, 0 };
   guint i, m;
+  guint h_stride = ldata->h_alloc;
 
   for (i = 0; i < n_nodes; i++)
     gsl_integration_glfixed_point (rho_lo, rho_hi, i, &ws->rho_nodes[i], &ws->weights[i], ws->table);
-
-  for (m = 0; m <= order; m++)
-    J[m] = 0.0;
 
   for (i = 0; i < n_nodes; i++)
   {
@@ -823,19 +889,86 @@ _compute_J (NcGalaxyShapeFactorSeriesLensedPrivate * const self, gdouble sigma_p
     for (m = 0; m <= order; m++)
       maxk = MAX (maxk, ncm_laurent_series_hmax (F[m]));
 
+    if (i == 0)
+    {
+      const guint needed_stride = (guint) maxk + 1;
+
+      if (ldata->h_alloc < needed_stride)
+      {
+        g_free (ldata->H);
+        ldata->H       = g_new0 (complex double, (order + 1) * needed_stride);
+        ldata->h_alloc = needed_stride;
+      }
+      else
+      {
+        guint idx;
+
+        for (idx = 0; idx < (order + 1) * ldata->h_alloc; idx++)
+          ldata->H[idx] = 0.0;
+      }
+
+      ldata->maxk = (guint) maxk;
+      h_stride    = ldata->h_alloc;
+    }
+    else
+    {
+      /* See this function's own doc comment: maxk must be identical at
+       * every rho node for a given trunc_order/convention. */
+      g_assert_cmpint (maxk, ==, (gint) ldata->maxk);
+    }
+
     Ik = g_new (gdouble, maxk + 1);
 
     for (k = 0; k <= maxk; k++)
       Ik[k] = gsl_sf_bessel_In_scaled (k, z);
 
     for (m = 0; m <= order; m++)
-      J[m] += prefactor * ncm_laurent_series_jacobi_anger_reduce (F[m], phi, Ik, maxk + 1);
+    {
+      complex double *Hm = &ldata->H[m * h_stride];
+
+      Hm[0] += prefactor * creal (ncm_laurent_series_get_c (F[m], 0)) * Ik[0];
+
+      for (k = 1; k <= maxk; k++)
+      {
+        complex double v = ncm_laurent_series_get_c (F[m], k);
+
+        if (v != 0.0)
+          Hm[k] += prefactor * Ik[k] * v;
+      }
+    }
 
     g_free (Ik);
     g_free (F);
   }
 
   ncm_memory_pool_return (ws_ptr);
+}
+
+/* Cheap per-call finalization: applies the phi-dependent trig-polynomial
+ * evaluation ncm_laurent_series_jacobi_anger_reduce() would have done
+ * per-rho-node, but now against the already-rho-summed harmonics in
+ * ldata->H -- exactly reproducing the old (2*pi*(Re(H_0) +
+ * sum_k 2*Re(H_k*exp(i*k*phi)))) result, at a cost of O(order*maxk)
+ * multiply-adds instead of the full Bessel/Laurent-series recomputation.
+ * Run unconditionally on every call (regardless of whether phi drifted
+ * since the last one): this is the whole point of the cache split above. */
+static void
+_finalize_J (NcGalaxyShapeFactorSeriesLensedData *ldata, guint order, gdouble phi)
+{
+  const guint h_stride = ldata->h_alloc;
+  guint m;
+
+  for (m = 0; m <= order; m++)
+  {
+    const complex double *Hm = &ldata->H[m * h_stride];
+    gdouble term             = creal (Hm[0]);
+    guint k;
+
+    for (k = 1; k <= ldata->maxk; k++)
+      term += 2.0 * creal (Hm[k] * cexp (I * (gdouble) k * phi));
+
+    ldata->J[m] = 2.0 * M_PI * term;
+  }
 }
 
 static gdouble
@@ -847,22 +980,33 @@ _nc_galaxy_shape_factor_series_lensed_marginal (NcGalaxyShapeFactorSeriesLensed 
   NcGalaxyShapeFactorSeriesLensedData *ldata          = (NcGalaxyShapeFactorSeriesLensedData *) data->ldata;
   const guint64 pop_hash                              = nc_galaxy_shape_factor_get_pop_hash (NC_GALAXY_SHAPE_FACTOR (gsfsl));
 
-  /* Gauge-fix: rotate (g,eps_obs) together by -arg(g) so g becomes real and
+  /* Gauge-fix: (g,eps_obs) rotated together by -arg(g) so g becomes real and
    * non-negative -- the chi_taylor/jac_taylor closed forms above are
-   * real-g-only. Harmless when g=0. */
+   * real-g-only. Harmless when g=0. Rotation preserves norm and is additive
+   * in angle, so the rotated eps_obs' polar form (R,phi) is obtained
+   * directly from eps_obs' OWN polar form (R_eps,phi_eps) -- fixed for a
+   * given galaxy, cached below -- without ever materializing the rotated
+   * Cartesian components: R=R_eps (a rotation cannot change |eps_obs|) and
+   * phi=phi_eps-phi_g (arg of a product is the sum of args). */
   const gdouble g_mag = hypot (g_1, g_2);
   const gdouble phi_g = (g_mag > 0.0) ? atan2 (g_2, g_1) : 0.0;
-  const gdouble cphi  = cos (phi_g);
-  const gdouble sphi  = sin (phi_g);
-  const gdouble e1r   = cphi * epsilon_obs_1 + sphi * epsilon_obs_2;
-  const gdouble e2r   = -sphi * epsilon_obs_1 + cphi * epsilon_obs_2;
-  const gdouble R     = hypot (e1r, e2r);
-  const gdouble phi   = atan2 (e2r, e1r);
-  const gdouble sig2  = gsl_pow_2 (data->std_noise);
+
+  if (!ldata->eps_cache_valid || (ldata->cached_eps1 != epsilon_obs_1) || (ldata->cached_eps2 != epsilon_obs_2))
+  {
+    ldata->R_eps           = hypot (epsilon_obs_1, epsilon_obs_2);
+    ldata->phi_eps         = atan2 (epsilon_obs_2, epsilon_obs_1);
+    ldata->cached_eps1     = epsilon_obs_1;
+    ldata->cached_eps2     = epsilon_obs_2;
+    ldata->eps_cache_valid = TRUE;
+  }
+
+  const gdouble R    = ldata->R_eps;
+  const gdouble phi  = ldata->phi_eps - phi_g;
+  const gdouble sig2 = gsl_pow_2 (data->std_noise);
   gdouble result;
   gint m;
 
-  if (!ldata->cache_valid || (ldata->cached_R != R) || (ldata->cached_phi != phi) ||
+  if (!ldata->cache_valid || (ldata->cached_R != R) ||
       (ldata->cached_std_noise != data->std_noise) || (ldata->cached_pop_hash != pop_hash))
   {
     const gdouble sigma_pop = nc_galaxy_shape_pop_get_sigma (pop, data->pop_data);
@@ -881,13 +1025,17 @@ _nc_galaxy_shape_factor_series_lensed_marginal (NcGalaxyShapeFactorSeriesLensed 
      * docs). */
     const gdouble pop_norm = nc_galaxy_shape_pop_eval_p_rho2 (pop, data->pop_data, 0.0) / M_PI;
 
-    _compute_J (self, sigma_pop, pop_norm, R, phi, sig2, ldata->J);
+    _compute_H (self, sigma_pop, pop_norm, R, sig2, ldata);
     ldata->cached_R         = R;
-    ldata->cached_phi       = phi;
     ldata->cached_std_noise = data->std_noise;
     ldata->cached_pop_hash  = pop_hash;
     ldata->cache_valid      = TRUE;
   }
+
+  /* Cheap: applies phi to the cached (phi-independent) harmonics every
+   * call, regardless of whether phi drifted since the last one -- see
+   * _finalize_J's own doc comment. */
+  _finalize_J (ldata, self->trunc_order, phi);
 
   result = ldata->J[self->trunc_order];
 
