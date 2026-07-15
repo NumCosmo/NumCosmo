@@ -117,6 +117,28 @@ void ncm_laurent_series_conv_into (NcmLaurentSeries *out, const NcmLaurentSeries
 void ncm_laurent_series_scale_c_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, complex double s);
 void ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries *a);
 
+/*
+ * Bump-allocator pool of reusable #NcmLaurentSeries, backing the `_into`
+ * hot-loop pattern above: a computation that needs many short-lived
+ * #NcmLaurentSeries temporaries checks each one out via
+ * ncm_laurent_series_arena_next() instead of allocating fresh, growing
+ * @pool only the first time it is used and reusing it (zero allocation)
+ * every call after. Caller owns @pool's lifetime (typically one per
+ * reusable workspace, e.g. one slot of an #NcmMemoryPool) and resets @idx
+ * to 0 at the start of each independent computation; @pool itself should
+ * be a #GPtrArray with ncm_laurent_series_free() as its free function.
+ * Originally private to nc_galaxy_shape_factor_series_lensed.c, promoted
+ * here so any g-Taylor-series composition (e.g. #NcGalaxyShapePop's
+ * per-population g-series vfunc) can share the same pattern.
+ */
+typedef struct _NcmLaurentSeriesArena
+{
+  GPtrArray *pool;
+  guint idx;
+} NcmLaurentSeriesArena;
+
+NcmLaurentSeries *ncm_laurent_series_arena_next (NcmLaurentSeriesArena *arena);
+
 #endif /* NUMCOSMO_GIR_SCAN */
 
 G_END_DECLS

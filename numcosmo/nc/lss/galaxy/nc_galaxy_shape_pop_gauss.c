@@ -86,6 +86,9 @@ gdouble _nc_galaxy_shape_pop_gauss_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapeP
 void _nc_galaxy_shape_pop_gauss_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
 static void _nc_galaxy_shape_pop_gauss_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
+static void _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
+                                                             NcmLaurentSeriesArena *arena, NcmLaurentSeries * const *rho2_series,
+                                                             guint order, NcmLaurentSeries **out);
 
 static void
 nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
@@ -115,11 +118,12 @@ nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
 
   ncm_model_class_check_params_info (model_class);
 
-  gsp_class->data_init = &_nc_galaxy_shape_pop_gauss_data_init;
-  gsp_class->prepare   = &_nc_galaxy_shape_pop_gauss_prepare;
-  gsp_class->eval_p    = &_nc_galaxy_shape_pop_gauss_eval_p;
-  gsp_class->gen       = &_nc_galaxy_shape_pop_gauss_gen;
-  gsp_class->e_rms     = &_nc_galaxy_shape_pop_gauss_e_rms;
+  gsp_class->data_init            = &_nc_galaxy_shape_pop_gauss_data_init;
+  gsp_class->prepare              = &_nc_galaxy_shape_pop_gauss_prepare;
+  gsp_class->eval_p               = &_nc_galaxy_shape_pop_gauss_eval_p;
+  gsp_class->gen                  = &_nc_galaxy_shape_pop_gauss_gen;
+  gsp_class->e_rms                = &_nc_galaxy_shape_pop_gauss_e_rms;
+  gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series;
 }
 
 #define VECTOR (NCM_MODEL (gsp))
@@ -216,6 +220,76 @@ _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
   const gdouble mean_x = (1.0 - exp_ml * (1.0 + lambda)) / (lambda * (1.0 - exp_ml));
 
   return sqrt (0.5 * mean_x);
+}
+
+/* P(x) ~ exp(-x/2sigma^2): scale @rho2_series by -1/2sigma^2 to get
+ * exp's own argument series, then apply the standard exp-of-power-series
+ * recursion (g^0 term pulled out as a scalar prefactor first, since
+ * rho2_series[0] = |chi_L|^2 != 0 in general -- see
+ * nc_galaxy_shape_factor_series_lensed.c's own class docs for why). Direct
+ * port of that file's former _exp_series()/_bivar_scale() combination,
+ * using the already-resolved @data->ldata instead of a live parameter
+ * read, matching eval_p()'s own convention. */
+static void
+_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
+                                                 NcmLaurentSeriesArena *arena, NcmLaurentSeries * const *rho2_series,
+                                                 guint order, NcmLaurentSeries **out)
+{
+  NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
+  NcmLaurentSeries **exponent       = g_new0 (NcmLaurentSeries *, order + 1);
+  NcmLaurentSeries **c              = g_new0 (NcmLaurentSeries *, order + 1);
+  complex double a0;
+  complex double prefactor;
+  guint m;
+
+  for (m = 0; m <= order; m++)
+  {
+    NcmLaurentSeries *o = ncm_laurent_series_arena_next (arena);
+
+    ncm_laurent_series_scale_c_into (o, rho2_series[m], -ldata->inv_2sigma2);
+    exponent[m] = o;
+  }
+
+  g_assert_cmpint (ncm_laurent_series_hmin (exponent[0]), ==, 0);
+  g_assert_cmpint (ncm_laurent_series_hmax (exponent[0]), ==, 0);
+
+  a0        = ncm_laurent_series_get_c (exponent[0], 0);
+  prefactor = cexp (a0);
+
+  c[0] = ncm_laurent_series_arena_next (arena);
+  ncm_laurent_series_set_single_into (c[0], 0, 1.0);
+
+  for (m = 1; m <= order; m++)
+  {
+    NcmLaurentSeries *acc = ncm_laurent_series_arena_next (arena);
+    guint k;
+
+    ncm_laurent_series_reset (acc, 0, 0);
+
+    for (k = 1; k <= m; k++)
+    {
+      NcmLaurentSeries *term = ncm_laurent_series_arena_next (arena);
+      NcmLaurentSeries *acc2 = ncm_laurent_series_arena_next (arena);
+
+      ncm_laurent_series_conv_into (term, exponent[k], c[m - k]);
+      ncm_laurent_series_add_into (acc2, acc, term, (gdouble) k);
+      acc = acc2;
+    }
+
+    c[m] = ncm_laurent_series_arena_next (arena);
+    ncm_laurent_series_scale_c_into (c[m], acc, 1.0 / m);
+  }
+
+  for (m = 0; m <= order; m++)
+  {
+    NcmLaurentSeries *o = ncm_laurent_series_arena_next (arena);
+
+    ncm_laurent_series_scale_c_into (o, c[m], prefactor);
+    out[m] = o;
+  }
+
+  g_free (c);
+  g_free (exponent);
 }
 
 /**

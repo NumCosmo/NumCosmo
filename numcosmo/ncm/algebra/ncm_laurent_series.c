@@ -495,6 +495,42 @@ ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries *a)
 }
 
 /**
+ * ncm_laurent_series_arena_next: (skip)
+ * @arena: a #NcmLaurentSeriesArena
+ *
+ * Checks out the next #NcmLaurentSeries from @arena's pool, growing the
+ * pool by one freshly-allocated (zero-initialized, harmonics $[0,0]$)
+ * series the first time this bump index is reached, and simply returning
+ * the already-allocated one on every subsequent call at the same index
+ * (typical use: @arena->idx reset to 0 once per independent computation,
+ * so a workspace's pool grows only during the very first computation and
+ * is pure reuse after). Callers still resize the returned series via
+ * ncm_laurent_series_reset() (directly, or implicitly through one of the
+ * `_into` functions) before writing into it.
+ *
+ * Returns: (transfer none): the next pooled #NcmLaurentSeries
+ */
+NcmLaurentSeries *
+ncm_laurent_series_arena_next (NcmLaurentSeriesArena *arena)
+{
+  NcmLaurentSeries *a;
+
+  if (arena->idx < arena->pool->len)
+  {
+    a = g_ptr_array_index (arena->pool, arena->idx);
+  }
+  else
+  {
+    a = ncm_laurent_series_new (0, 0);
+    g_ptr_array_add (arena->pool, a);
+  }
+
+  arena->idx++;
+
+  return a;
+}
+
+/**
  * ncm_laurent_series_jacobi_anger_reduce:
  * @cm: a #NcmLaurentSeries
  * @phi: the kernel's own phase offset

@@ -27,8 +27,9 @@
  * NcGalaxyShapeFactorSeriesLensed:
  *
  * Lensed-frame series evaluation of the intrinsic-ellipticity marginal, both
- * ellipticity conventions, arbitrary truncation order, Gaussian population
- * only (v1).
+ * ellipticity conventions, arbitrary truncation order, any population model
+ * implementing #NcGalaxyShapePop's eval_p_rho2_g_series vfunc (currently
+ * #NcGalaxyShapePopGauss).
  *
  * Changes to the LENSED frame (same substitution #NcGalaxyShapeFactorQuad
  * uses) and Taylor-expands the *population* term in $g$, keeping the noise
@@ -61,10 +62,13 @@
  *   to machine precision (see dev-notes'
  *   verify_inverse_map_and_jacobian_match_production).
  *
- * $P_\mathrm{pop}=\exp(-|\chi_I|^2/2\sigma_\mathrm{pop}^2)$'s composition
- * with $\chi_I(\chi_L,g)$'s own series uses the standard exp-of-power-series
- * recursion, with the $g^0$ term ($\chi_I(g=0)=\chi_L\neq0$) factored out as
- * a scalar prefactor first.
+ * $P_\mathrm{pop}(\chi_I(\chi_L,g))$'s own $g$-Taylor composition is
+ * dispatched to nc_galaxy_shape_pop_eval_p_rho2_g_series(), given
+ * $|\chi_I(\chi_L,g)|^2$'s series (population-independent, pure shear-map
+ * output) as input -- e.g. #NcGalaxyShapePopGauss composes
+ * $\exp(-|\chi_I|^2/2\sigma_\mathrm{pop}^2)$ via the standard
+ * exp-of-power-series recursion, with the $g^0$ term
+ * ($\chi_I(g=0)=\chi_L\neq0$) factored out as a scalar prefactor first.
  *
  * $\theta$-integral done EXACTLY via Jacobi-Anger
  * (ncm_laurent_series_jacobi_anger_reduce()); $\rho$-integral a fixed,
@@ -81,13 +85,9 @@
  * every call via a cheap trig-polynomial evaluation (_finalize_J()),
  * tracking $\phi$'s drift at negligible cost.
  *
- * Gaussian population only in this version: uses
- * nc_galaxy_shape_pop_get_sigma() (the same capability-based accessor
- * #NcGalaxyShapeFactorVarAdd already relies on), checked once at prepare()
- * time, erroring clearly for any population that doesn't support it.
- * General-population support (Taylor-composing an arbitrary population's own
- * local Taylor series in $x=|\chi_I|^2$ with the closed-form $\chi_I(g)$
- * series) is future work.
+ * A population that does not implement eval_p_rho2_g_series errors clearly
+ * the first time this class actually needs it (base class default), rather
+ * than at prepare() time.
  *
  * See <a href="../../theory/wl_shape_marginalization_series.html">A
  * Small-Shear Series Marginalization for the Shape Likelihood</a> and
@@ -116,61 +116,35 @@
 /* ===========================================================================
  * Generic bivariate (power-series-in-g of Laurent series) helpers. Plain
  * NcmLaurentSeries** arrays of length order+1, every #NcmLaurentSeries drawn
- * from @arena instead of freshly allocated -- see the "arena" struct and
- * _arena_next() below. The exact sequence and sizes requested here are
- * driven purely by @order (fixed for an instance's whole life) and which
- * chi_taylor/jac_taylor pair is selected (also fixed), never by rho/R/phi
- * or any other per-node/per-galaxy value -- so @arena grows only during the
- * very first node ever computed for a given workspace, and is pure reuse
- * (zero allocation) on every call after that. See _compute_H for where
- * @arena's backing pool lives (a per-instance NcmMemoryPool of
- * pre-populated workspaces) and where its bump index gets reset to 0 once
- * per node.
+ * from @arena instead of freshly allocated -- see #NcmLaurentSeriesArena and
+ * ncm_laurent_series_arena_next() (ncm_laurent_series.h). The exact sequence
+ * and sizes requested here are driven purely by @order (fixed for an
+ * instance's whole life) and which chi_taylor/jac_taylor pair is selected
+ * (also fixed), never by rho/R/phi or any other per-node/per-galaxy value --
+ * so @arena grows only during the very first node ever computed for a given
+ * workspace, and is pure reuse (zero allocation) on every call after that.
+ * See _compute_H for where @arena's backing pool lives (a per-instance
+ * NcmMemoryPool of pre-populated workspaces) and where its bump index gets
+ * reset to 0 once per node.
  * ===========================================================================
  */
 
-typedef struct _NcGalaxyShapeFactorSeriesLensedArena
-{
-  GPtrArray *pool; /* NcmLaurentSeries*, persists for the owning workspace's whole life */
-  guint idx;       /* bump index, reset to 0 at the start of each node's computation */
-} NcGalaxyShapeFactorSeriesLensedArena;
-
-static NcmLaurentSeries *
-_arena_next (NcGalaxyShapeFactorSeriesLensedArena *arena)
-{
-  NcmLaurentSeries *a;
-
-  if (arena->idx < arena->pool->len)
-  {
-    a = g_ptr_array_index (arena->pool, arena->idx);
-  }
-  else
-  {
-    a = ncm_laurent_series_new (0, 0);
-    g_ptr_array_add (arena->pool, a);
-  }
-
-  arena->idx++;
-
-  return a;
-}
-
 static void
-_bivar_conv (NcGalaxyShapeFactorSeriesLensedArena *arena, NcmLaurentSeries * const *a, NcmLaurentSeries * const *b, guint order, NcmLaurentSeries **out)
+_bivar_conv (NcmLaurentSeriesArena *arena, NcmLaurentSeries * const *a, NcmLaurentSeries * const *b, guint order, NcmLaurentSeries **out)
 {
   guint m;
 
   for (m = 0; m <= order; m++)
   {
-    NcmLaurentSeries *acc = _arena_next (arena);
+    NcmLaurentSeries *acc = ncm_laurent_series_arena_next (arena);
     guint k;
 
     ncm_laurent_series_reset (acc, 0, 0);
 
     for (k = 0; k <= m; k++)
     {
-      NcmLaurentSeries *term = _arena_next (arena);
-      NcmLaurentSeries *acc2 = _arena_next (arena);
+      NcmLaurentSeries *term = ncm_laurent_series_arena_next (arena);
+      NcmLaurentSeries *acc2 = ncm_laurent_series_arena_next (arena);
 
       ncm_laurent_series_conv_into (term, a[k], b[m - k]);
       ncm_laurent_series_add_into (acc2, acc, term, 1.0);
@@ -182,27 +156,13 @@ _bivar_conv (NcGalaxyShapeFactorSeriesLensedArena *arena, NcmLaurentSeries * con
 }
 
 static void
-_bivar_scale (NcGalaxyShapeFactorSeriesLensedArena *arena, NcmLaurentSeries * const *a, complex double s, guint order, NcmLaurentSeries **out)
+_bivar_conj (NcmLaurentSeriesArena *arena, NcmLaurentSeries * const *a, guint order, NcmLaurentSeries **out)
 {
   guint m;
 
   for (m = 0; m <= order; m++)
   {
-    NcmLaurentSeries *o = _arena_next (arena);
-
-    ncm_laurent_series_scale_c_into (o, a[m], s);
-    out[m] = o;
-  }
-}
-
-static void
-_bivar_conj (NcGalaxyShapeFactorSeriesLensedArena *arena, NcmLaurentSeries * const *a, guint order, NcmLaurentSeries **out)
-{
-  guint m;
-
-  for (m = 0; m <= order; m++)
-  {
-    NcmLaurentSeries *o = _arena_next (arena);
+    NcmLaurentSeries *o = ncm_laurent_series_arena_next (arena);
 
     ncm_laurent_series_conj_into (o, a[m]);
     out[m] = o;
@@ -218,17 +178,17 @@ _bivar_conj (NcGalaxyShapeFactorSeriesLensedArena *arena, NcmLaurentSeries * con
  * ===========================================================================
  */
 
-typedef void (*NcGalaxyShapeFactorSeriesLensedChiTaylorFunc) (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **c);
-typedef void (*NcGalaxyShapeFactorSeriesLensedJacTaylorFunc) (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **jac);
+typedef void (*NcGalaxyShapeFactorSeriesLensedChiTaylorFunc) (NcmLaurentSeriesArena *arena, gdouble rho, guint order, NcmLaurentSeries **c);
+typedef void (*NcGalaxyShapeFactorSeriesLensedJacTaylorFunc) (NcmLaurentSeriesArena *arena, gdouble rho, guint order, NcmLaurentSeries **jac);
 
 /* eps: chi_I(chi_L,g)=(chi_L-g)/(1-g*chi_L), closed form, no recursion:
  * c_0=chi_L={1:rho}; c_k=chi_L^(k-1)*(chi_L^2-1) = rho^(k+1)*w^(k+1) -
  * rho^(k-1)*w^(k-1) for k>=1 -- a 2-term Laurent series at every order. */
 static void
-_chi_taylor_eps (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **c)
+_chi_taylor_eps (NcmLaurentSeriesArena *arena, gdouble rho, guint order, NcmLaurentSeries **c)
 {
   guint k;
-  NcmLaurentSeries *c0 = _arena_next (arena);
+  NcmLaurentSeries *c0 = ncm_laurent_series_arena_next (arena);
 
   ncm_laurent_series_set_single_into (c0, 1, rho);
   c[0] = c0;
@@ -237,7 +197,7 @@ _chi_taylor_eps (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint
   {
     gdouble rho_km1      = pow (rho, (gdouble) (k - 1));
     gdouble rho_kp1      = rho_km1 * rho * rho;
-    NcmLaurentSeries *ck = _arena_next (arena);
+    NcmLaurentSeries *ck = ncm_laurent_series_arena_next (arena);
 
     ncm_laurent_series_reset (ck, (gint) k - 1, (gint) k + 1);
     ncm_laurent_series_set_c (ck, (gint) k - 1, -rho_km1);
@@ -251,7 +211,7 @@ _chi_taylor_eps (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint
  * series, single-term at harmonic n each), times (1-g^2). Jac=|that|^2 is
  * this series convolved with its own bivariate conjugate. */
 static void
-_jac_taylor_eps (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **jac)
+_jac_taylor_eps (NcmLaurentSeriesArena *arena, gdouble rho, guint order, NcmLaurentSeries **jac)
 {
   NcmLaurentSeries **binom      = g_new0 (NcmLaurentSeries *, order + 3);
   NcmLaurentSeries **deriv      = g_new0 (NcmLaurentSeries *, order + 1);
@@ -260,7 +220,7 @@ _jac_taylor_eps (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint
 
   for (n = 0; n <= order + 2; n++)
   {
-    NcmLaurentSeries *b = _arena_next (arena);
+    NcmLaurentSeries *b = ncm_laurent_series_arena_next (arena);
 
     ncm_laurent_series_set_single_into (b, (gint) n, (n + 1.0) * pow (rho, (gdouble) n));
     binom[n] = b;
@@ -270,7 +230,7 @@ _jac_taylor_eps (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint
   {
     if (n >= 2)
     {
-      NcmLaurentSeries *d = _arena_next (arena);
+      NcmLaurentSeries *d = ncm_laurent_series_arena_next (arena);
 
       ncm_laurent_series_add_into (d, binom[n], binom[n - 2], -1.0);
       deriv[n] = d;
@@ -296,12 +256,12 @@ _jac_taylor_eps (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint
  * n_k=0 otherwise, d1=-(chi_L+chibar_L), d2=1 (so the d2 term is just
  * c_{k-2} itself, no convolution needed). */
 static void
-_chi_taylor_chi (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **c)
+_chi_taylor_chi (NcmLaurentSeriesArena *arena, gdouble rho, guint order, NcmLaurentSeries **c)
 {
-  NcmLaurentSeries *chi_L    = _arena_next (arena);
-  NcmLaurentSeries *chibar_L = _arena_next (arena);
-  NcmLaurentSeries *two_s    = _arena_next (arena);
-  NcmLaurentSeries *d1       = _arena_next (arena);
+  NcmLaurentSeries *chi_L    = ncm_laurent_series_arena_next (arena);
+  NcmLaurentSeries *chibar_L = ncm_laurent_series_arena_next (arena);
+  NcmLaurentSeries *two_s    = ncm_laurent_series_arena_next (arena);
+  NcmLaurentSeries *d1       = ncm_laurent_series_arena_next (arena);
   guint k;
 
   ncm_laurent_series_set_single_into (chi_L, 1, rho);
@@ -319,7 +279,7 @@ _chi_taylor_chi (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint
 
     if (k == 1)
     {
-      base = _arena_next (arena);
+      base = ncm_laurent_series_arena_next (arena);
       ncm_laurent_series_set_single_into (base, 0, -2.0);
     }
     else if (k == 2)
@@ -328,19 +288,19 @@ _chi_taylor_chi (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint
     }
     else
     {
-      base = _arena_next (arena);
+      base = ncm_laurent_series_arena_next (arena);
       ncm_laurent_series_reset (base, 0, 0);
     }
 
-    conv_term = _arena_next (arena);
+    conv_term = ncm_laurent_series_arena_next (arena);
     ncm_laurent_series_conv_into (conv_term, d1, c[k - 1]);
 
-    acc = _arena_next (arena);
+    acc = ncm_laurent_series_arena_next (arena);
     ncm_laurent_series_add_into (acc, base, conv_term, -1.0);
 
     if (k >= 2)
     {
-      NcmLaurentSeries *acc2 = _arena_next (arena);
+      NcmLaurentSeries *acc2 = ncm_laurent_series_arena_next (arena);
 
       ncm_laurent_series_add_into (acc2, acc, c[k - 2], -1.0);
       acc = acc2;
@@ -356,12 +316,12 @@ _chi_taylor_chi (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint
  * against the already-shipped nc_wl_ellipticity_lndet_jac_trace_c, see the
  * class docs). */
 static void
-_jac_taylor_chi (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint order, NcmLaurentSeries **jac)
+_jac_taylor_chi (NcmLaurentSeriesArena *arena, gdouble rho, guint order, NcmLaurentSeries **jac)
 {
-  NcmLaurentSeries *chi_L    = _arena_next (arena);
-  NcmLaurentSeries *chibar_L = _arena_next (arena);
-  NcmLaurentSeries *two_s    = _arena_next (arena);
-  NcmLaurentSeries *d1       = _arena_next (arena);
+  NcmLaurentSeries *chi_L    = ncm_laurent_series_arena_next (arena);
+  NcmLaurentSeries *chibar_L = ncm_laurent_series_arena_next (arena);
+  NcmLaurentSeries *two_s    = ncm_laurent_series_arena_next (arena);
+  NcmLaurentSeries *d1       = ncm_laurent_series_arena_next (arena);
   NcmLaurentSeries **r       = g_new0 (NcmLaurentSeries *, order + 1);
   NcmLaurentSeries **r2      = g_new0 (NcmLaurentSeries *, order + 1);
   NcmLaurentSeries **r3      = g_new0 (NcmLaurentSeries *, order + 1);
@@ -374,20 +334,20 @@ _jac_taylor_chi (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint
   ncm_laurent_series_scale_c_into (d1, two_s, -1.0);
 
   /* r = 1/D(g), D(g)=1+d1*g+g^2 (d0=1, d2=1) */
-  r[0] = _arena_next (arena);
+  r[0] = ncm_laurent_series_arena_next (arena);
   ncm_laurent_series_set_single_into (r[0], 0, 1.0);
 
   for (k = 1; k <= order; k++)
   {
-    NcmLaurentSeries *conv_term = _arena_next (arena);
-    NcmLaurentSeries *acc       = _arena_next (arena);
+    NcmLaurentSeries *conv_term = ncm_laurent_series_arena_next (arena);
+    NcmLaurentSeries *acc       = ncm_laurent_series_arena_next (arena);
 
     ncm_laurent_series_conv_into (conv_term, d1, r[k - 1]);
     ncm_laurent_series_scale_c_into (acc, conv_term, -1.0);
 
     if (k >= 2)
     {
-      NcmLaurentSeries *acc2 = _arena_next (arena);
+      NcmLaurentSeries *acc2 = ncm_laurent_series_arena_next (arena);
 
       ncm_laurent_series_add_into (acc2, acc, r[k - 2], -1.0);
       acc = acc2;
@@ -416,7 +376,7 @@ _jac_taylor_chi (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint
     else
       coeff = 0.0;
 
-    n = _arena_next (arena);
+    n = ncm_laurent_series_arena_next (arena);
     ncm_laurent_series_set_single_into (n, 0, coeff);
     num[k] = n;
   }
@@ -430,89 +390,35 @@ _jac_taylor_chi (NcGalaxyShapeFactorSeriesLensedArena *arena, gdouble rho, guint
 }
 
 /* ===========================================================================
- * Population composition (Gaussian only, convention-independent) and the
- * final F_g(chi_L) = P_pop(chi_I(chi_L,g)) * Jac(chi_L,g) product.
+ * Population composition (dispatched to whichever population model is
+ * configured, via NcGalaxyShapePop's own eval_p_rho2_g_series vfunc) and
+ * the final F_g(chi_L) = P_pop(chi_I(chi_L,g)) * Jac(chi_L,g) product.
  * ===========================================================================
  */
 
-/* exp(A(g)) as a g-power series, A possibly having a NONZERO g^0 term
- * (unlike the noise-side scheme's exp(Delta), where Delta(theta,0)=0
- * always) -- pull out exp(a0) as a scalar prefactor, apply the standard
- * c_m recursion to the g>=1 remainder. */
 static void
-_exp_series (NcGalaxyShapeFactorSeriesLensedArena *arena, NcmLaurentSeries * const *A, guint order, NcmLaurentSeries **out)
+_F_g_taylor (NcmLaurentSeriesArena *arena, NcGalaxyShapeFactorSeriesLensedChiTaylorFunc chi_taylor, NcGalaxyShapeFactorSeriesLensedJacTaylorFunc jac_taylor,
+             gdouble rho, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, guint order, NcmLaurentSeries **F)
 {
-  complex double a0 = ncm_laurent_series_get_c (A[0], 0);
-  complex double prefactor;
-  NcmLaurentSeries **c = g_new0 (NcmLaurentSeries *, order + 1);
-  guint m;
-
-  g_assert_cmpint (ncm_laurent_series_hmin (A[0]), ==, 0);
-  g_assert_cmpint (ncm_laurent_series_hmax (A[0]), ==, 0);
-
-  prefactor = cexp (a0);
-
-  c[0] = _arena_next (arena);
-  ncm_laurent_series_set_single_into (c[0], 0, 1.0);
-
-  for (m = 1; m <= order; m++)
-  {
-    NcmLaurentSeries *acc = _arena_next (arena);
-    guint k;
-
-    ncm_laurent_series_reset (acc, 0, 0);
-
-    for (k = 1; k <= m; k++)
-    {
-      NcmLaurentSeries *term = _arena_next (arena);
-      NcmLaurentSeries *acc2 = _arena_next (arena);
-
-      ncm_laurent_series_conv_into (term, A[k], c[m - k]);
-      ncm_laurent_series_add_into (acc2, acc, term, (gdouble) k);
-      acc = acc2;
-    }
-
-    c[m] = _arena_next (arena);
-    ncm_laurent_series_scale_c_into (c[m], acc, 1.0 / m);
-  }
-
-  for (m = 0; m <= order; m++)
-  {
-    NcmLaurentSeries *o = _arena_next (arena);
-
-    ncm_laurent_series_scale_c_into (o, c[m], prefactor);
-    out[m] = o;
-  }
-
-  g_free (c);
-}
-
-static void
-_F_g_taylor (NcGalaxyShapeFactorSeriesLensedArena *arena, NcGalaxyShapeFactorSeriesLensedChiTaylorFunc chi_taylor, NcGalaxyShapeFactorSeriesLensedJacTaylorFunc jac_taylor,
-             gdouble rho, gdouble sigma_pop, guint order, NcmLaurentSeries **F)
-{
-  NcmLaurentSeries **c        = g_new0 (NcmLaurentSeries *, order + 1);
-  NcmLaurentSeries **cbar     = g_new0 (NcmLaurentSeries *, order + 1);
-  NcmLaurentSeries **abs_sq   = g_new0 (NcmLaurentSeries *, order + 1);
-  NcmLaurentSeries **exponent = g_new0 (NcmLaurentSeries *, order + 1);
-  NcmLaurentSeries **pop      = g_new0 (NcmLaurentSeries *, order + 1);
-  NcmLaurentSeries **jac      = g_new0 (NcmLaurentSeries *, order + 1);
+  NcmLaurentSeries **c          = g_new0 (NcmLaurentSeries *, order + 1);
+  NcmLaurentSeries **cbar       = g_new0 (NcmLaurentSeries *, order + 1);
+  NcmLaurentSeries **abs_sq     = g_new0 (NcmLaurentSeries *, order + 1);
+  NcmLaurentSeries **pop_coeffs = g_new0 (NcmLaurentSeries *, order + 1);
+  NcmLaurentSeries **jac        = g_new0 (NcmLaurentSeries *, order + 1);
 
   chi_taylor (arena, rho, order, c);
   _bivar_conj (arena, c, order, cbar);
   _bivar_conv (arena, c, cbar, order, abs_sq);
-  _bivar_scale (arena, abs_sq, -1.0 / (2.0 * sigma_pop * sigma_pop), order, exponent);
-  _exp_series (arena, exponent, order, pop);
+  nc_galaxy_shape_pop_eval_p_rho2_g_series (pop, pop_data, arena, abs_sq, order, pop_coeffs);
 
   jac_taylor (arena, rho, order, jac);
 
-  _bivar_conv (arena, pop, jac, order, F);
+  _bivar_conv (arena, pop_coeffs, jac, order, F);
 
   g_free (c);
   g_free (cbar);
   g_free (abs_sq);
-  g_free (exponent);
-  g_free (pop);
+  g_free (pop_coeffs);
   g_free (jac);
 }
 
@@ -644,24 +550,6 @@ _nc_galaxy_shape_factor_series_lensed_constructed (GObject *object)
   }
 }
 
-/* Gaussian-only guard, checked once here (a property of the pop MODEL,
- * identical for every galaxy sharing it), matching
- * NcGalaxyShapeFactorVarAdd's own prepare() override exactly. */
-static void
-_nc_galaxy_shape_factor_series_lensed_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
-{
-  NcGalaxyShapePop *pop              = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
-  NcGalaxyShapePopData *tmp_pop_data = nc_galaxy_shape_pop_data_new (pop);
-  const gboolean has_sigma           = tmp_pop_data->ldata_get_sigma != NULL;
-
-  nc_galaxy_shape_pop_data_unref (tmp_pop_data);
-
-  if (!has_sigma)
-    g_error ("NcGalaxyShapeFactorSeriesLensed: this scheme's v1 Gaussian-only "
-             "population composition requires a population supporting "
-             "nc_galaxy_shape_pop_get_sigma(), got %s.", G_OBJECT_TYPE_NAME (pop));
-}
-
 static void
 _nc_galaxy_shape_factor_series_lensed_finalize (GObject *object)
 {
@@ -767,7 +655,7 @@ _nc_galaxy_shape_factor_series_lensed_data_init (NcGalaxyShapeFactor *gsf, NcmMS
  * plus the rho_nodes/weights/GL-table triple _compute_H needs. n_nodes is
  * CONSTRUCT_ONLY (fixed for the instance's whole life), so rho_nodes/
  * weights/table are sized correctly here, once, and never resized; the
- * arena starts empty and is grown lazily by _arena_next() the first time
+ * arena starts empty and is grown lazily by ncm_laurent_series_arena_next() the first time
  * this workspace is actually used (see the arena's own comment above --
  * that growth is a one-time, first-node-only event, stable forever after).
  */
@@ -828,7 +716,7 @@ _nc_galaxy_shape_factor_series_lensed_ws_free (gpointer p)
  * ncm_integral_locked_a_b's own bracketing of ncm_integral_get_workspace().
  */
 static void
-_compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, gdouble sigma_pop, gdouble pop_norm,
+_compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, gdouble pop_norm,
             gdouble sig2, NcGalaxyShapeFactorSeriesLensedData *ldata)
 {
   const guint order                          = self->trunc_order;
@@ -839,7 +727,7 @@ _compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, gdouble sigma_p
   const gdouble rho_hi                       = fmin (1.0, R + NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_WINDOW_NSIGMA * sigma_n);
   NcGalaxyShapeFactorSeriesLensedWS **ws_ptr = ncm_memory_pool_get (self->mp_ws);
   NcGalaxyShapeFactorSeriesLensedWS *ws      = *ws_ptr;
-  NcGalaxyShapeFactorSeriesLensedArena arena = { ws->arena, 0 };
+  NcmLaurentSeriesArena arena                = { ws->arena, 0 };
   guint i, m;
   guint h_stride = ldata->h_alloc;
 
@@ -858,7 +746,7 @@ _compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, gdouble sigma_p
     gdouble *Ik;
 
     arena.idx = 0;
-    _F_g_taylor (&arena, self->chi_taylor, self->jac_taylor, rho, sigma_pop, order, F);
+    _F_g_taylor (&arena, self->chi_taylor, self->jac_taylor, rho, pop, pop_data, order, F);
 
     maxk = 0;
 
@@ -973,10 +861,9 @@ _ensure_harmonics_cache (NcGalaxyShapeFactorSeriesLensedPrivate * const self, Nc
     return;
 
   {
-    const gdouble sigma_pop = nc_galaxy_shape_pop_get_sigma (pop, data->pop_data);
-    const gdouble pop_norm  = nc_galaxy_shape_pop_eval_p_rho2 (pop, data->pop_data, 0.0) / M_PI;
+    const gdouble pop_norm = nc_galaxy_shape_pop_eval_p_rho2 (pop, data->pop_data, 0.0) / M_PI;
 
-    _compute_H (self, sigma_pop, pop_norm, sig2, ldata);
+    _compute_H (self, pop, data->pop_data, pop_norm, sig2, ldata);
   }
 
   ldata->cached_std_noise = data->std_noise;
@@ -1082,8 +969,12 @@ nc_galaxy_shape_factor_series_lensed_class_init (NcGalaxyShapeFactorSeriesLensed
                                                       2, G_MAXUINT, 60,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
+  /* prepare: base default (no-op) is right too -- population-composition
+   * capability is now checked by NcGalaxyShapePop's own
+   * eval_p_rho2_g_series vfunc dispatch (see _F_g_taylor), the first time
+   * it is actually invoked, instead of a class-specific Gaussian-only
+   * guard here. */
   gsf_class->data_init        = &_nc_galaxy_shape_factor_series_lensed_data_init;
-  gsf_class->prepare          = &_nc_galaxy_shape_factor_series_lensed_prepare;
   gsf_class->eval_marginal    = &_nc_galaxy_shape_factor_series_lensed_eval_marginal;
   gsf_class->eval_ln_marginal = &_nc_galaxy_shape_factor_series_lensed_eval_ln_marginal;
 }

@@ -115,6 +115,14 @@ _nc_galaxy_shape_pop_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
   return 0.0;
 }
 
+static void
+_nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
+                                           NcmLaurentSeriesArena *arena, NcmLaurentSeries * const *rho2_series,
+                                           guint order, NcmLaurentSeries **out)
+{
+  g_error ("_nc_galaxy_shape_pop_eval_p_rho2_g_series: method not implemented.");
+}
+
 /* LCOV_EXCL_STOP */
 
 /* Real (non-stub) default: substitutes x = rho2/(1+rho2) into eval_p(). Any
@@ -141,12 +149,13 @@ nc_galaxy_shape_pop_class_init (NcGalaxyShapePopClass *klass)
   ncm_mset_model_register_id (model_class, "NcGalaxyShapePop", "Galaxy intrinsic ellipticity distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
-  klass->data_init   = &_nc_galaxy_shape_pop_data_init;
-  klass->prepare     = &_nc_galaxy_shape_pop_prepare;
-  klass->eval_p      = &_nc_galaxy_shape_pop_eval_p;
-  klass->eval_p_rho2 = &_nc_galaxy_shape_pop_eval_p_rho2;
-  klass->gen         = &_nc_galaxy_shape_pop_gen;
-  klass->e_rms       = &_nc_galaxy_shape_pop_e_rms;
+  klass->data_init            = &_nc_galaxy_shape_pop_data_init;
+  klass->prepare              = &_nc_galaxy_shape_pop_prepare;
+  klass->eval_p               = &_nc_galaxy_shape_pop_eval_p;
+  klass->eval_p_rho2          = &_nc_galaxy_shape_pop_eval_p_rho2;
+  klass->gen                  = &_nc_galaxy_shape_pop_gen;
+  klass->e_rms                = &_nc_galaxy_shape_pop_e_rms;
+  klass->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_eval_p_rho2_g_series;
 }
 
 /**
@@ -359,6 +368,33 @@ gdouble
 nc_galaxy_shape_pop_eval_p_rho2 (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble rho2)
 {
   return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_rho2 (gsp, data, rho2);
+}
+
+/**
+ * nc_galaxy_shape_pop_eval_p_rho2_g_series: (skip)
+ * @gsp: a #NcGalaxyShapePop
+ * @data: a resolved #NcGalaxyShapePopData
+ * @arena: an #NcmLaurentSeriesArena backing @out's temporaries
+ * @rho2_series: $\rho^2(g)=|\chi_I(\chi_L,g)|^2$'s own $g$-Taylor
+ * coefficients (length @order+1), population-independent
+ * @order: truncation order in $g$
+ * @out: this population's $P(\rho^2(g))$ composition, as $g$-Taylor
+ * coefficients (length @order+1)
+ *
+ * Taylor-in-$g$ analog of nc_galaxy_shape_pop_eval_p_rho2(): composes this
+ * population's own normalized density with the (already computed,
+ * population-independent) shear-map series $\rho^2(g)$, order by order in
+ * $g$. There is no generic default -- every subclass used with
+ * #NcGalaxyShapeFactorSeriesLensed must provide its own implementation; the
+ * base class errors clearly otherwise. Native #NcmLaurentSeries interface
+ * only, not introspectable.
+ */
+void
+nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
+                                          NcmLaurentSeriesArena *arena, NcmLaurentSeries * const *rho2_series,
+                                          guint order, NcmLaurentSeries **out)
+{
+  NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_rho2_g_series (gsp, data, arena, rho2_series, order, out);
 }
 
 /**

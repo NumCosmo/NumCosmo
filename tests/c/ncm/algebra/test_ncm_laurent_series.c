@@ -470,6 +470,61 @@ test_into_variants_match_returns_new (void)
   ncm_laurent_series_free (expected_conj);
 }
 
+/* ncm_laurent_series_arena_next() is the bump-allocator pool
+ * nc_galaxy_shape_factor_series_lensed.c and NcGalaxyShapePop's own
+ * eval_p_rho2_g_series implementations rely on: the pool grows only the
+ * first time a given bump index is reached; every subsequent call at that
+ * same index (idx reset to 0, matching one independent computation ending
+ * and the next one starting) returns the SAME already-allocated series --
+ * zero allocation on reuse. */
+static void
+test_arena_next_grows_once_then_reuses (void)
+{
+  GPtrArray *pool             = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_laurent_series_free);
+  NcmLaurentSeriesArena arena = {pool, 0};
+  NcmLaurentSeries *first_a, *first_b, *first_c;
+  NcmLaurentSeries *second_a, *second_b, *second_c, *second_d;
+
+  g_assert_cmpuint (pool->len, ==, 0);
+
+  first_a = ncm_laurent_series_arena_next (&arena);
+  first_b = ncm_laurent_series_arena_next (&arena);
+  first_c = ncm_laurent_series_arena_next (&arena);
+
+  g_assert_cmpuint (pool->len, ==, 3);
+  g_assert_cmpuint (arena.idx, ==, 3);
+
+  /* Each checked-out series is independently usable. */
+  ncm_laurent_series_set_single_into (first_a, 0, 1.0);
+  ncm_laurent_series_set_single_into (first_b, 1, 2.0 + I);
+  ncm_laurent_series_set_single_into (first_c, -1, 3.0);
+  g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (first_a, 0) - 1.0), <, 1.0e-13);
+  g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (first_b, 1) - (2.0 + I)), <, 1.0e-13);
+  g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (first_c, -1) - 3.0), <, 1.0e-13);
+
+  /* Reset for a new "computation": must reuse the same three series, in
+   * the same order, with no pool growth. */
+  arena.idx = 0;
+
+  second_a = ncm_laurent_series_arena_next (&arena);
+  second_b = ncm_laurent_series_arena_next (&arena);
+  second_c = ncm_laurent_series_arena_next (&arena);
+
+  g_assert_cmpuint (pool->len, ==, 3);
+  g_assert_true (second_a == first_a);
+  g_assert_true (second_b == first_b);
+  g_assert_true (second_c == first_c);
+
+  /* Requesting one more than any previous computation ever did grows the
+   * pool by exactly one. */
+  second_d = ncm_laurent_series_arena_next (&arena);
+  g_assert_cmpuint (pool->len, ==, 4);
+  g_assert_cmpuint (arena.idx, ==, 4);
+  g_assert_nonnull (second_d);
+
+  g_ptr_array_unref (pool);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -486,6 +541,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/laurent_series/copy_is_independent", &test_copy_is_independent);
   g_test_add_func ("/ncm/laurent_series/reset_grows_only_when_needed", &test_reset_grows_only_when_needed);
   g_test_add_func ("/ncm/laurent_series/into_variants_match_returns_new", &test_into_variants_match_returns_new);
+  g_test_add_func ("/ncm/laurent_series/arena_next_grows_once_then_reuses", &test_arena_next_grows_once_then_reuses);
 
   return g_test_run ();
 }

@@ -33,6 +33,7 @@
 #include <numcosmo/ncm/model/ncm_model.h>
 #include <numcosmo/ncm/model/ncm_mset.h>
 #include <numcosmo/ncm/core/ncm_rng.h>
+#include <numcosmo/ncm/algebra/ncm_laurent_series.h>
 
 G_BEGIN_DECLS
 
@@ -56,8 +57,28 @@ struct _NcGalaxyShapePopClass
   void (*gen) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
   gdouble (*e_rms) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 
-  /* Padding to allow adding up to 12 more virtual functions without breaking ABI. */
-  gpointer padding[12];
+#ifndef NUMCOSMO_GIR_SCAN
+
+  /*
+   * Taylor-in-g analog of eval_p_rho2(): given rho2(g) = |chi_I(chi_L,g)|^2's
+   * own g-Taylor coefficients (population-independent shear-map output,
+   * @rho2_series), returns this population's normalized-density composition
+   * P(rho2(g))'s g-Taylor coefficients. Unlike eval_p_rho2, there is no
+   * sensible generic default (the composition depends entirely on the
+   * population's own functional form), so the base class default just
+   * errors clearly, matching NcGalaxySDShape's direct_estimate idiom for
+   * the same "not every subclass needs this" situation. Consumed by
+   * #NcGalaxyShapeFactorSeriesLensed. Native NcmLaurentSeries types only
+   * (not introspectable), like ncm_laurent_series.h's own native interface
+   * -- hence guarded out of the GIR scan.
+   */
+  void (*eval_p_rho2_g_series) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
+                                NcmLaurentSeriesArena *arena, NcmLaurentSeries * const *rho2_series,
+                                guint order, NcmLaurentSeries **out);
+#endif /* NUMCOSMO_GIR_SCAN */
+
+  /* Padding to allow adding up to 11 more virtual functions without breaking ABI. */
+  gpointer padding[11];
 };
 
 /**
@@ -126,6 +147,13 @@ void nc_galaxy_shape_pop_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
 gdouble nc_galaxy_shape_pop_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 gdouble nc_galaxy_shape_pop_get_sigma (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 gdouble nc_galaxy_shape_pop_get_mode_x (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
+
+#ifndef NUMCOSMO_GIR_SCAN
+void nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
+                                               NcmLaurentSeriesArena *arena, NcmLaurentSeries * const *rho2_series,
+                                               guint order, NcmLaurentSeries **out);
+
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_END_DECLS
 
