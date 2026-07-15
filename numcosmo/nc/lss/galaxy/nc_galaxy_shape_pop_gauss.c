@@ -86,8 +86,8 @@ gdouble _nc_galaxy_shape_pop_gauss_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapeP
 void _nc_galaxy_shape_pop_gauss_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
 static void _nc_galaxy_shape_pop_gauss_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
-static void _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                                             const NcmLaurentSeriesTPS *rho2_series, NcmLaurentSeriesTPS *out);
+void _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
+                                                      const NcmLaurentSeriesTPS *rho2_series, NcmLaurentSeriesTPS *out);
 
 static void
 nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
@@ -232,8 +232,12 @@ _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
  * ncm_laurent_series_tps_conv()'s own fold, for the same reason (add_into
  * forbids @out aliasing an input) -- three fixed scalar buffers, allocated
  * fresh here since this call isn't (yet) part of a persistent, repeatedly-
- * evaluated object the way nc_wl_ellipticity_series.c's evaluators are. */
-static void
+ * evaluated object the way nc_wl_ellipticity_series.c's evaluators are.
+ * Not static: shared with NcGalaxyShapePopGaussLocal (see
+ * nc_galaxy_shape_pop_gauss_private.h), which only differs in where sigma
+ * comes from -- by the time this runs, prepare() has already resolved
+ * data->ldata->inv_2sigma2 either way. */
+void
 _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                                  const NcmLaurentSeriesTPS *rho2_series, NcmLaurentSeriesTPS *out)
 {

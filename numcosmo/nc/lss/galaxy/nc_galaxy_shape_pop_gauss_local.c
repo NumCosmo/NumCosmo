@@ -97,14 +97,16 @@ nc_galaxy_shape_pop_gauss_local_class_init (NcGalaxyShapePopGaussLocalClass *kla
   ncm_model_class_add_params (model_class, 0, 0, PROP_LEN);
   ncm_model_class_check_params_info (model_class);
 
-  /* eval_p and gen are the SAME functions NcGalaxyShapePopGauss uses
-   * (reused directly, not inherited): both only ever touch data->ldata, whose
-   * {norm, inv_2sigma2, sigma} layout and meaning are identical here. */
-  gsp_class->data_init = &_nc_galaxy_shape_pop_gauss_local_data_init;
-  gsp_class->prepare   = &_nc_galaxy_shape_pop_gauss_local_prepare;
-  gsp_class->eval_p    = &_nc_galaxy_shape_pop_gauss_eval_p;
-  gsp_class->gen       = &_nc_galaxy_shape_pop_gauss_gen;
-  gsp_class->e_rms     = &_nc_galaxy_shape_pop_gauss_local_e_rms;
+  /* eval_p, gen and eval_p_rho2_g_series are the SAME functions
+   * NcGalaxyShapePopGauss uses (reused directly, not inherited): all three
+   * only ever touch data->ldata, whose {norm, inv_2sigma2, sigma} layout
+   * and meaning are identical here. */
+  gsp_class->data_init            = &_nc_galaxy_shape_pop_gauss_local_data_init;
+  gsp_class->prepare              = &_nc_galaxy_shape_pop_gauss_local_prepare;
+  gsp_class->eval_p               = &_nc_galaxy_shape_pop_gauss_eval_p;
+  gsp_class->gen                  = &_nc_galaxy_shape_pop_gauss_gen;
+  gsp_class->e_rms                = &_nc_galaxy_shape_pop_gauss_local_e_rms;
+  gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series;
 }
 
 static void

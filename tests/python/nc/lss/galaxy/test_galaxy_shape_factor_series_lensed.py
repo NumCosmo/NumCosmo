@@ -34,8 +34,11 @@ docs/theory/wl_shape_marginalization_series.qmd and
 dev-notes/wl_shape_series_marginalization_derivation.py (sections 9-11) for
 the derivation and symbolic/numeric verification this class mirrors.
 
-Gaussian population only in this version (matches
-``NcGalaxyShapeFactorVarAdd``'s own existing precedent).
+Gaussian-family populations only (``NcGalaxyShapePopGauss`` and
+``NcGalaxyShapePopGaussLocal``, which share one eval_p_rho2_g_series
+implementation): ``NcGalaxyShapePopBeta`` does not implement the
+eval_p_rho2_g_series vfunc this class needs and errors clearly if used
+with it.
 """
 
 import math
@@ -84,9 +87,11 @@ def _build_factor_data(gsf, mset):
     return data, pos_data, z_data
 
 
-def _make_series_lensed(ellip_conv, order, pop, mset, std_noise):
+def _make_series_lensed(ellip_conv, order, pop, mset, std_noise, pop_data_setup=None):
     gsfsl = Nc.GalaxyShapeFactorSeriesLensed.new(ellip_conv, order)
     data, _, _ = _build_factor_data(gsfsl, mset)
+    if pop_data_setup is not None:
+        pop_data_setup(data.pop_data)
     gsfsl.data_set(
         data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
     )
@@ -94,9 +99,11 @@ def _make_series_lensed(ellip_conv, order, pop, mset, std_noise):
     return gsfsl, data
 
 
-def _make_quad(ellip_conv, pop, mset, std_noise):
+def _make_quad(ellip_conv, pop, mset, std_noise, pop_data_setup=None):
     gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
     data, _, _ = _build_factor_data(gsfq, mset)
+    if pop_data_setup is not None:
+        pop_data_setup(data.pop_data)
     gsfq.data_set(
         data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
     )
@@ -104,14 +111,16 @@ def _make_quad(ellip_conv, pop, mset, std_noise):
     return gsfq, data
 
 
-def _eval_both(pop, ellip_conv, order, g, eps_obs, std_noise):
+def _eval_both(pop, ellip_conv, order, g, eps_obs, std_noise, pop_data_setup=None):
     mset = _build_mset(pop)
-    gsfsl, data_sl = _make_series_lensed(ellip_conv, order, pop, mset, std_noise)
+    gsfsl, data_sl = _make_series_lensed(
+        ellip_conv, order, pop, mset, std_noise, pop_data_setup
+    )
     lensed_val = gsfsl.eval_marginal(
         pop, data_sl, g.real, g.imag, eps_obs.real, eps_obs.imag
     )
 
-    gsfq, data_q = _make_quad(ellip_conv, pop, mset, std_noise)
+    gsfq, data_q = _make_quad(ellip_conv, pop, mset, std_noise, pop_data_setup)
     quad_val = gsfq.eval_marginal(
         pop, data_q, g.real, g.imag, eps_obs.real, eps_obs.imag
     )
@@ -131,6 +140,27 @@ def test_marginal_matches_quad_moderate_g_large_noise(ellip_conv):
     eps_obs = 0.4 * np.exp(1j * 0.7)
 
     lensed_val, quad_val = _eval_both(pop, ellip_conv, 4, g, eps_obs, 0.3)
+
+    assert_allclose(lensed_val, quad_val, rtol=2.0e-3)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_marginal_matches_quad_gauss_local(ellip_conv):
+    """NcGalaxyShapePopGaussLocal shares NcGalaxyShapePopGauss's own
+    eval_p_rho2_g_series implementation directly (identical ldata layout,
+    only sigma's source differs) -- same moderate-noise/moderate-g setup as
+    test_marginal_matches_quad_moderate_g_large_noise, just with a
+    per-galaxy e_rms instead of a shared sigma parameter."""
+    pop = Nc.GalaxyShapePopGaussLocal.new()
+    g = 0.09 + 0.0j
+    eps_obs = 0.4 * np.exp(1j * 0.7)
+
+    def _set_e_rms(pop_data):
+        Nc.GalaxyShapePopGaussLocal.data_set(pop, pop_data, 0.28)
+
+    lensed_val, quad_val = _eval_both(
+        pop, ellip_conv, 4, g, eps_obs, 0.3, pop_data_setup=_set_e_rms
+    )
 
     assert_allclose(lensed_val, quad_val, rtol=2.0e-3)
 

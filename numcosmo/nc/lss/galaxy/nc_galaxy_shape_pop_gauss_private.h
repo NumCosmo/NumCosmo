@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h"
+#include "ncm/algebra/ncm_laurent_series.h"
 
 G_BEGIN_DECLS
 
@@ -45,6 +46,8 @@ gdouble _nc_galaxy_shape_pop_gauss_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapeP
 void _nc_galaxy_shape_pop_gauss_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
 void _nc_galaxy_shape_pop_gauss_ldata_set_sigma (NcGalaxyShapePopData *data, const gdouble sigma);
 gdouble _nc_galaxy_shape_pop_gauss_ldata_get_sigma (NcGalaxyShapePopData *data);
+void _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
+                                                      const NcmLaurentSeriesTPS *rho2_series, NcmLaurentSeriesTPS *out);
 
 G_END_DECLS
 
