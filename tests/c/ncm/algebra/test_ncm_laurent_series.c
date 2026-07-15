@@ -111,6 +111,26 @@ test_conj_hand_computed (void)
   ncm_laurent_series_free (ab);
 }
 
+static void
+test_eval_hand_computed (void)
+{
+  /* a(w) = (1+2i) + 3i*w^{-1} - 0.5*w^2, evaluated at w=2-i. */
+  NcmLaurentSeries *a    = ncm_laurent_series_new (-1, 2);
+  const complex double w = 2.0 - I;
+  complex double expected;
+
+  ncm_laurent_series_set_c (a, -1, 3.0 * I);
+  ncm_laurent_series_set_c (a, 0, 1.0 + 2.0 * I);
+  ncm_laurent_series_set_c (a, 1, 0.0);
+  ncm_laurent_series_set_c (a, 2, -0.5);
+
+  expected = (1.0 + 2.0 * I) + 3.0 * I / w - 0.5 * w * w;
+
+  g_assert_cmpfloat (cabs (ncm_laurent_series_eval_c (a, w) - expected), <, 1.0e-12);
+
+  ncm_laurent_series_free (a);
+}
+
 /* Ground truth: direct numerical theta-integration of
  * cm(theta)*exp(z*(cos(theta-phi)-1)), no Jacobi-Anger identity used. */
 struct _ThetaCtx
@@ -285,6 +305,8 @@ test_introspectable_api_matches_native (void)
   NcmComplex *out = ncm_complex_new ();
   NcmLaurentSeries *a, *b, *sum, *conv, *cj, *scl;
 
+  g_assert_true (ncm_laurent_series_get_type () != G_TYPE_INVALID);
+
   ncm_complex_set (va, 2.0, 1.0);
   ncm_complex_set (vb, 3.0, -2.0);
   ncm_complex_set (s, 0.0, 1.0);
@@ -317,6 +339,9 @@ test_introspectable_api_matches_native (void)
   scl = ncm_laurent_series_scale (a, s);
   ncm_laurent_series_get (scl, 1, out);
   g_assert_cmpfloat (cabs (ncm_complex_c (out) - I * (2.0 + I)), <, 1.0e-13);
+
+  ncm_laurent_series_eval (a, s, out);
+  g_assert_cmpfloat (cabs (ncm_complex_c (out) - ncm_laurent_series_eval_c (a, ncm_complex_c (s))), <, 1.0e-13);
 
   ncm_complex_free (va);
   ncm_complex_free (vb);
@@ -470,59 +495,175 @@ test_into_variants_match_returns_new (void)
   ncm_laurent_series_free (expected_conj);
 }
 
-/* ncm_laurent_series_arena_next() is the bump-allocator pool
- * nc_galaxy_shape_factor_series_lensed.c and NcGalaxyShapePop's own
- * eval_p_rho2_g_series implementations rely on: the pool grows only the
- * first time a given bump index is reached; every subsequent call at that
- * same index (idx reset to 0, matching one independent computation ending
- * and the next one starting) returns the SAME already-allocated series --
- * zero allocation on reuse. */
+/* ncm_laurent_series_tps_new() must own order+1 independently-usable,
+ * zero-initialized coefficients and report its own order back -- exactly
+ * the self-describing-length property `NcmLaurentSeries **` plus a
+ * separately-threaded `guint order` never had. */
 static void
-test_arena_next_grows_once_then_reuses (void)
+test_tps_new_owns_coefficients_and_reports_order (void)
 {
-  GPtrArray *pool             = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_laurent_series_free);
-  NcmLaurentSeriesArena arena = {pool, 0};
-  NcmLaurentSeries *first_a, *first_b, *first_c;
-  NcmLaurentSeries *second_a, *second_b, *second_c, *second_d;
+  NcmLaurentSeriesTPS *tps = ncm_laurent_series_tps_new (2);
+  NcmLaurentSeries *slot0, *slot2;
 
-  g_assert_cmpuint (pool->len, ==, 0);
+  g_assert_cmpuint (ncm_laurent_series_tps_order (tps), ==, 2);
 
-  first_a = ncm_laurent_series_arena_next (&arena);
-  first_b = ncm_laurent_series_arena_next (&arena);
-  first_c = ncm_laurent_series_arena_next (&arena);
+  slot0 = ncm_laurent_series_tps_get (tps, 0);
+  slot2 = ncm_laurent_series_tps_get (tps, 2);
+  g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (slot0, 0)), <, 1.0e-13);
 
-  g_assert_cmpuint (pool->len, ==, 3);
-  g_assert_cmpuint (arena.idx, ==, 3);
+  ncm_laurent_series_set_single_into (slot0, 0, 5.0);
+  ncm_laurent_series_set_single_into (slot2, 1, 7.0);
+  g_assert_cmpfloat (fabs (creal (ncm_laurent_series_get_c (ncm_laurent_series_tps_get (tps, 0), 0)) - 5.0), <, 1.0e-13);
+  g_assert_cmpfloat (fabs (creal (ncm_laurent_series_get_c (ncm_laurent_series_tps_get (tps, 2), 1)) - 7.0), <, 1.0e-13);
 
-  /* Each checked-out series is independently usable. */
-  ncm_laurent_series_set_single_into (first_a, 0, 1.0);
-  ncm_laurent_series_set_single_into (first_b, 1, 2.0 + I);
-  ncm_laurent_series_set_single_into (first_c, -1, 3.0);
-  g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (first_a, 0) - 1.0), <, 1.0e-13);
-  g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (first_b, 1) - (2.0 + I)), <, 1.0e-13);
-  g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (first_c, -1) - 3.0), <, 1.0e-13);
+  ncm_laurent_series_tps_unref (tps);
+}
 
-  /* Reset for a new "computation": must reuse the same three series, in
-   * the same order, with no pool growth. */
-  arena.idx = 0;
+/* The boxed "copy" is a ref-count increment (matching NcGalaxySDShapeData
+ * and siblings), not a deep copy: a "copy" shares the same underlying
+ * storage, so mutating through one reference must be visible through the
+ * other. */
+static void
+test_tps_boxed_copy_is_refcount_not_deep_copy (void)
+{
+  NcmLaurentSeriesTPS *tps    = ncm_laurent_series_tps_new (1);
+  NcmLaurentSeriesTPS *shared = (NcmLaurentSeriesTPS *) g_boxed_copy (NCM_TYPE_LAURENT_SERIES_TPS, tps);
 
-  second_a = ncm_laurent_series_arena_next (&arena);
-  second_b = ncm_laurent_series_arena_next (&arena);
-  second_c = ncm_laurent_series_arena_next (&arena);
+  g_assert_true (shared == tps);
 
-  g_assert_cmpuint (pool->len, ==, 3);
-  g_assert_true (second_a == first_a);
-  g_assert_true (second_b == first_b);
-  g_assert_true (second_c == first_c);
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (tps, 0), 0, 3.0);
+  g_assert_cmpfloat (fabs (creal (ncm_laurent_series_get_c (ncm_laurent_series_tps_get (shared, 0), 0)) - 3.0), <, 1.0e-13);
 
-  /* Requesting one more than any previous computation ever did grows the
-   * pool by exactly one. */
-  second_d = ncm_laurent_series_arena_next (&arena);
-  g_assert_cmpuint (pool->len, ==, 4);
-  g_assert_cmpuint (arena.idx, ==, 4);
-  g_assert_nonnull (second_d);
+  g_boxed_free (NCM_TYPE_LAURENT_SERIES_TPS, shared);
+  ncm_laurent_series_tps_unref (tps);
+}
 
-  g_ptr_array_unref (pool);
+/* ncm_laurent_series_tps_conv() must be the truncated Cauchy product
+ * (never extending to deg(a)+deg(b)) and must match plain scalar
+ * convolution when every coefficient is a single-harmonic series. Also
+ * exercises @out being reused as the destination of a second, independent
+ * conv() call, since its private conv scratch must not leak stale state
+ * across calls. */
+static void
+test_tps_conv_is_truncated_cauchy_product (void)
+{
+  const guint order        = 3;
+  NcmLaurentSeriesTPS *a   = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *b   = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *out = ncm_laurent_series_tps_new (order);
+  guint m;
+
+  /* a(g) = 1 + 2g (higher terms zero), b(g) = 3 - g (higher terms zero),
+   * every coefficient a plain real scalar (harmonic 0 only): the product
+   * truncated at order 3 is 3 + 5g - 2g^2, zero above that. */
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (a, 0), 0, 1.0);
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (a, 1), 0, 2.0);
+
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (b, 0), 0, 3.0);
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (b, 1), 0, -1.0);
+
+  ncm_laurent_series_tps_conv (out, a, b);
+
+  {
+    const gdouble expected[4] = {3.0, 5.0, -2.0, 0.0};
+
+    for (m = 0; m <= order; m++)
+      g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (ncm_laurent_series_tps_get (out, m), 0) - expected[m]), <, 1.0e-13);
+  }
+
+  /* Reuse @out for a second, unrelated conv(): a(g)=g, b(g)=g -> g^2. */
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (a, 0), 0, 0.0);
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (a, 1), 0, 1.0);
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (b, 0), 0, 0.0);
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (b, 1), 0, 1.0);
+
+  ncm_laurent_series_tps_conv (out, a, b);
+
+  {
+    const gdouble expected2[4] = {0.0, 0.0, 1.0, 0.0};
+
+    for (m = 0; m <= order; m++)
+      g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (ncm_laurent_series_tps_get (out, m), 0) - expected2[m]), <, 1.0e-13);
+  }
+
+  ncm_laurent_series_tps_unref (a);
+  ncm_laurent_series_tps_unref (b);
+  ncm_laurent_series_tps_unref (out);
+}
+
+/* ncm_laurent_series_tps_conj/_add/_scale() are plain term-by-term
+ * wrappers around the scalar `_into` primitives -- checked directly
+ * against those primitives rather than re-deriving the math. */
+static void
+test_tps_conj_add_scale_match_scalar_ops (void)
+{
+  const guint order              = 1;
+  NcmLaurentSeriesTPS *a         = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *b         = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *conj_out  = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *add_out   = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *scale_out = ncm_laurent_series_tps_new (order);
+  guint m;
+
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (a, 0), 1, 2.0 + 1.0 * I);
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (a, 1), -1, 3.0 - 2.0 * I);
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (b, 0), 1, -1.0 + 0.5 * I);
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (b, 1), -1, 0.25);
+
+  ncm_laurent_series_tps_conj (conj_out, a);
+  ncm_laurent_series_tps_add (add_out, a, b, 2.0);
+  ncm_laurent_series_tps_scale (scale_out, a, I);
+
+  for (m = 0; m <= order; m++)
+  {
+    NcmLaurentSeries *expected_conj  = ncm_laurent_series_conj (ncm_laurent_series_tps_get (a, m));
+    NcmLaurentSeries *expected_add   = ncm_laurent_series_add (ncm_laurent_series_tps_get (a, m), ncm_laurent_series_tps_get (b, m), 2.0);
+    NcmLaurentSeries *expected_scale = ncm_laurent_series_scale_c (ncm_laurent_series_tps_get (a, m), I);
+    gint h;
+
+    for (h = -1; h <= 1; h++)
+    {
+      g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (ncm_laurent_series_tps_get (conj_out, m), h) - ncm_laurent_series_get_c (expected_conj, h)), <, 1.0e-13);
+      g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (ncm_laurent_series_tps_get (add_out, m), h) - ncm_laurent_series_get_c (expected_add, h)), <, 1.0e-13);
+      g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (ncm_laurent_series_tps_get (scale_out, m), h) - ncm_laurent_series_get_c (expected_scale, h)), <, 1.0e-13);
+    }
+
+    ncm_laurent_series_free (expected_conj);
+    ncm_laurent_series_free (expected_add);
+    ncm_laurent_series_free (expected_scale);
+  }
+
+  ncm_laurent_series_tps_unref (a);
+  ncm_laurent_series_tps_unref (b);
+  ncm_laurent_series_tps_unref (conj_out);
+  ncm_laurent_series_tps_unref (add_out);
+  ncm_laurent_series_tps_unref (scale_out);
+}
+
+static void
+test_tps_eval_hand_computed (void)
+{
+  /* tps(w,g) = 1 + 2*w*g + (w+w^{-1})*g^2, evaluated at w=i, g=0.5. */
+  NcmLaurentSeriesTPS *tps = ncm_laurent_series_tps_new (2);
+  const complex double w   = I;
+  const gdouble g          = 0.5;
+  complex double expected;
+
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (tps, 0), 0, 1.0);
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (tps, 1), 1, 2.0);
+  {
+    NcmLaurentSeries *c2 = ncm_laurent_series_tps_get (tps, 2);
+
+    ncm_laurent_series_reset (c2, -1, 1);
+    ncm_laurent_series_set_c (c2, -1, 1.0);
+    ncm_laurent_series_set_c (c2, 1, 1.0);
+  }
+
+  expected = 1.0 + 2.0 * w * g + (w + 1.0 / w) * g * g;
+
+  g_assert_cmpfloat (cabs (ncm_laurent_series_tps_eval_c (tps, w, g) - expected), <, 1.0e-12);
+
+  ncm_laurent_series_tps_unref (tps);
 }
 
 gint
@@ -535,13 +676,18 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/laurent_series/add_scale_hand_computed", &test_add_scale_hand_computed);
   g_test_add_func ("/ncm/laurent_series/conv_hand_computed", &test_conv_hand_computed);
   g_test_add_func ("/ncm/laurent_series/conj_hand_computed", &test_conj_hand_computed);
+  g_test_add_func ("/ncm/laurent_series/eval_hand_computed", &test_eval_hand_computed);
   g_test_add_func ("/ncm/laurent_series/jacobi_anger_matches_direct_integration", &test_jacobi_anger_matches_direct_integration);
   g_test_add_func ("/ncm/laurent_series/chi_taylor_matches_python_reference", &test_chi_taylor_matches_python_reference);
   g_test_add_func ("/ncm/laurent_series/introspectable_api_matches_native", &test_introspectable_api_matches_native);
   g_test_add_func ("/ncm/laurent_series/copy_is_independent", &test_copy_is_independent);
   g_test_add_func ("/ncm/laurent_series/reset_grows_only_when_needed", &test_reset_grows_only_when_needed);
   g_test_add_func ("/ncm/laurent_series/into_variants_match_returns_new", &test_into_variants_match_returns_new);
-  g_test_add_func ("/ncm/laurent_series/arena_next_grows_once_then_reuses", &test_arena_next_grows_once_then_reuses);
+  g_test_add_func ("/ncm/laurent_series/tps_new_owns_coefficients_and_reports_order", &test_tps_new_owns_coefficients_and_reports_order);
+  g_test_add_func ("/ncm/laurent_series/tps_boxed_copy_is_refcount_not_deep_copy", &test_tps_boxed_copy_is_refcount_not_deep_copy);
+  g_test_add_func ("/ncm/laurent_series/tps_conv_is_truncated_cauchy_product", &test_tps_conv_is_truncated_cauchy_product);
+  g_test_add_func ("/ncm/laurent_series/tps_conj_add_scale_match_scalar_ops", &test_tps_conj_add_scale_match_scalar_ops);
+  g_test_add_func ("/ncm/laurent_series/tps_eval_hand_computed", &test_tps_eval_hand_computed);
 
   return g_test_run ();
 }

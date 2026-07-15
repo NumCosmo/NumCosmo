@@ -182,6 +182,7 @@
 #include "nc/lss/wl/nc_reduced_shear_cluster_mass.h"
 #include "nc/lss/wl/nc_reduced_shear_calib.h"
 #include "nc/lss/wl/nc_reduced_shear_calib_wtg.h"
+#include "nc/lss/wl/nc_wl_ellipticity_series.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_position.h"
 #include "nc/lss/galaxy/nc_galaxy_sd_position_flat.h"
@@ -851,6 +852,8 @@ ncm_cfg_register_objects (void)
 
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB);
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
+  ncm_cfg_register_obj (NC_TYPE_WL_ELLIPTICITY_SERIES_TRACE);
+  ncm_cfg_register_obj (NC_TYPE_WL_ELLIPTICITY_SERIES_TRACE_DET);
 
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION);

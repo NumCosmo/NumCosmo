@@ -53,9 +53,9 @@ struct _NcmLaurentSeries
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /* Native, `complex double`-based secondary interface -- what the hot loop in
- * nc_galaxy_shape_factor_series_lensed.c actually calls; direct struct-field
- * access (a->c[h-a->hmin], bounds-checked via ncm_laurent_series_get_c only)
- * is also fine internally within that file. */
+ * nc_wl_ellipticity_series.c actually calls; direct struct-field access
+ * (a->c[h-a->hmin], bounds-checked via ncm_laurent_series_get_c only) is
+ * also fine internally within that file. */
 #ifndef NUMCOSMO_GIR_SCAN
 NcmLaurentSeries *ncm_laurent_series_new_single (gint h, complex double val);
 
@@ -90,6 +90,9 @@ NcmLaurentSeries *ncm_laurent_series_scale (const NcmLaurentSeries *a, const Ncm
 NcmLaurentSeries *ncm_laurent_series_conv (const NcmLaurentSeries *a, const NcmLaurentSeries *b);
 NcmLaurentSeries *ncm_laurent_series_conj (const NcmLaurentSeries *a);
 
+/* Evaluates $a(w)=\sum_h c_h w^h$ at a concrete point @w. */
+void ncm_laurent_series_eval (const NcmLaurentSeries *a, const NcmComplex *w, NcmComplex *out);
+
 /* Jacobi-Anger reduction of Int_0^2pi w^h * exp(z*(cos(theta-phi)-1)) dtheta,
  * summed against @cm's own harmonic content:
  * cm_0*I0(z) + 2*sum_{h>=1} Ih(z)*Re(cm_h*e^{i h phi}). @Ik must hold scaled
@@ -104,40 +107,86 @@ complex double ncm_laurent_series_get_c (const NcmLaurentSeries *a, gint h);
 void ncm_laurent_series_set_c (NcmLaurentSeries *a, gint h, complex double val);
 NcmLaurentSeries *ncm_laurent_series_scale_c (const NcmLaurentSeries *a, complex double s);
 
+complex double ncm_laurent_series_eval_c (const NcmLaurentSeries *a, complex double w);
+
 /* Reuse (no-allocation-in-the-common-case) counterparts of add/conv/
  * scale_c/conj/new_single: write into a caller-supplied @out (which
  * ncm_laurent_series_reset()'s to the correct range internally) instead of
  * allocating a fresh #NcmLaurentSeries. @out must not alias any input.
- * Meant for hot loops that keep a pool of reusable #NcmLaurentSeries around
- * (see nc_galaxy_shape_factor_series_lensed.c) -- the "returns new" siblings
- * above are unaffected and remain the introspectable/general-purpose API. */
+ * Meant for hot loops that keep their own scratch #NcmLaurentSeries around
+ * (see #NcmLaurentSeriesTPS below and nc_wl_ellipticity_series.c) -- the
+ * "returns new" siblings above are unaffected and remain the
+ * introspectable/general-purpose API. */
 void ncm_laurent_series_set_single_into (NcmLaurentSeries *out, gint h, complex double val);
 void ncm_laurent_series_add_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, const NcmLaurentSeries *b, gdouble sb);
 void ncm_laurent_series_conv_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, const NcmLaurentSeries *b);
 void ncm_laurent_series_scale_c_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, complex double s);
 void ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries *a);
 
-/*
- * Bump-allocator pool of reusable #NcmLaurentSeries, backing the `_into`
- * hot-loop pattern above: a computation that needs many short-lived
- * #NcmLaurentSeries temporaries checks each one out via
- * ncm_laurent_series_arena_next() instead of allocating fresh, growing
- * @pool only the first time it is used and reusing it (zero allocation)
- * every call after. Caller owns @pool's lifetime (typically one per
- * reusable workspace, e.g. one slot of an #NcmMemoryPool) and resets @idx
- * to 0 at the start of each independent computation; @pool itself should
- * be a #GPtrArray with ncm_laurent_series_free() as its free function.
- * Originally private to nc_galaxy_shape_factor_series_lensed.c, promoted
- * here so any g-Taylor-series composition (e.g. #NcGalaxyShapePop's
- * per-population g-series vfunc) can share the same pattern.
- */
-typedef struct _NcmLaurentSeriesArena
-{
-  GPtrArray *pool;
-  guint idx;
-} NcmLaurentSeriesArena;
+#endif /* NUMCOSMO_GIR_SCAN */
 
-NcmLaurentSeries *ncm_laurent_series_arena_next (NcmLaurentSeriesArena *arena);
+/**
+ * NcmLaurentSeriesTPS:
+ *
+ * A truncated power series of order $N$,
+ * $\sum_{n=0}^N L_n\,g^n \mod g^{N+1}$, whose coefficients $L_n$ are
+ * themselves #NcmLaurentSeries -- the self-describing-length container that
+ * used to be a bare `NcmLaurentSeries **` plus a separately-threaded `guint
+ * order` at every call site. Order is fixed at construction
+ * (ncm_laurent_series_tps_new()) and the $N+1$ coefficients are owned
+ * directly (no external pool): a #NcmLaurentSeriesTPS is meant to be a
+ * long-lived, repeatedly-refilled object (see nc_wl_ellipticity_series.c),
+ * not a short-lived per-call temporary.
+ *
+ * Boxed with reference-count "copy" (ncm_laurent_series_tps_ref()), not a
+ * deep copy, matching #NcGalaxySDShapeData and siblings: a "copy" shares
+ * the same underlying storage, so later mutations via the owning object's
+ * own eval()/compute step are visible through every outstanding reference.
+ *
+ * Because this is a *truncated* power series, not a polynomial-ring
+ * element, ncm_laurent_series_tps_conv() truncates its product at the
+ * shared order of its operands rather than extending to the naive
+ * deg(a)+deg(b) -- every op below requires @a, @b (if present) and @out to
+ * already share the same order.
+ */
+typedef struct _NcmLaurentSeriesTPS NcmLaurentSeriesTPS;
+
+#define NCM_TYPE_LAURENT_SERIES_TPS (ncm_laurent_series_tps_get_type ())
+
+GType ncm_laurent_series_tps_get_type (void) G_GNUC_CONST;
+
+NcmLaurentSeriesTPS *ncm_laurent_series_tps_new (guint order);
+NcmLaurentSeriesTPS *ncm_laurent_series_tps_ref (NcmLaurentSeriesTPS *tps);
+void ncm_laurent_series_tps_unref (NcmLaurentSeriesTPS *tps);
+void ncm_laurent_series_tps_clear (NcmLaurentSeriesTPS **tps);
+
+guint ncm_laurent_series_tps_order (const NcmLaurentSeriesTPS *tps);
+NcmLaurentSeries *ncm_laurent_series_tps_get (const NcmLaurentSeriesTPS *tps, guint n);
+
+/* Evaluates $\mathrm{tps}(w,g)=\sum_{n=0}^N L_n(w)\,g^n$ at concrete points
+ * @w (the coefficients' own formal variable) and @g (the truncation
+ * variable) -- e.g. a caller mapping @w back to some angle-parameterized
+ * quantity (as nc_wl_ellipticity_series.c's own consumers do via
+ * $w=e^{i\theta}$) does that mapping itself; this function only knows
+ * about the two formal variables, not what they represent. */
+void ncm_laurent_series_tps_eval (const NcmLaurentSeriesTPS *tps, const NcmComplex *w, const NcmComplex *g, NcmComplex *out);
+
+#ifndef NUMCOSMO_GIR_SCAN
+
+/* Native, hot-loop tier (not introspectable: @s below is a native complex
+ * double) -- what nc_wl_ellipticity_series.c's evaluators actually call.
+ * Only conv() needs any scratch beyond @out's own slots (the fold's
+ * ping-pong accumulator, see ncm_laurent_series_tps_new()'s own comment on
+ * @conv_acc/@conv_term); it draws that scratch from @out's own private
+ * fields, never from an external pool, so no pool/workspace parameter
+ * appears anywhere in this API. conj/add/scale write straight into @out's
+ * existing slots via the plain `_into` primitives, no scratch at all. */
+void ncm_laurent_series_tps_conv (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, const NcmLaurentSeriesTPS *b);
+void ncm_laurent_series_tps_conj (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a);
+void ncm_laurent_series_tps_add (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, const NcmLaurentSeriesTPS *b, gdouble sb);
+void ncm_laurent_series_tps_scale (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, complex double s);
+
+complex double ncm_laurent_series_tps_eval_c (const NcmLaurentSeriesTPS *tps, complex double w, complex double g);
 
 #endif /* NUMCOSMO_GIR_SCAN */
 

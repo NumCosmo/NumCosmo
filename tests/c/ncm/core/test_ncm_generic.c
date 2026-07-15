@@ -121,6 +121,9 @@ void test_nc_galaxy_shape_factor_basic (void);
 void test_nc_galaxy_shape_factor_quad_basic (void);
 void test_nc_galaxy_shape_factor_series_lensed_basic (void);
 void test_nc_galaxy_shape_factor_fixed_quad_basic (void);
+void test_nc_galaxy_shape_pop_gauss_basic (void);
+void test_nc_wl_ellipticity_series_trace_basic (void);
+void test_nc_wl_ellipticity_series_trace_det_basic (void);
 void test_nc_data_cluster_wl_factor_basic (void);
 
 gint
@@ -222,6 +225,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/shape_factor_quad/basic", test_nc_galaxy_shape_factor_quad_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_series_lensed/basic", test_nc_galaxy_shape_factor_series_lensed_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_fixed_quad/basic", test_nc_galaxy_shape_factor_fixed_quad_basic);
+  g_test_add_func ("/nc/galaxy/shape_pop_gauss/basic", test_nc_galaxy_shape_pop_gauss_basic);
+  g_test_add_func ("/nc/wl_ellipticity_series/trace/basic", test_nc_wl_ellipticity_series_trace_basic);
+  g_test_add_func ("/nc/wl_ellipticity_series/trace_det/basic", test_nc_wl_ellipticity_series_trace_det_basic);
   g_test_add_func ("/nc/data/cluster_wl_factor/basic", test_nc_data_cluster_wl_factor_basic);
 
   g_test_run ();
@@ -1940,6 +1946,68 @@ test_nc_galaxy_shape_factor_fixed_quad_basic (void)
   g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_FIXED_QUAD (gsffq));
 
   NCM_TEST_FREE (nc_galaxy_shape_factor_fixed_quad_free, gsffq);
+}
+
+void
+test_nc_galaxy_shape_pop_gauss_basic (void)
+{
+  NcGalaxyShapePopGauss *gspg = nc_galaxy_shape_pop_gauss_new ();
+  NcGalaxyShapePopGauss *gspg2;
+
+  g_assert_true (gspg != NULL);
+  g_assert_true (NC_IS_GALAXY_SHAPE_POP_GAUSS (gspg));
+
+  gspg2 = nc_galaxy_shape_pop_gauss_ref (gspg);
+  nc_galaxy_shape_pop_gauss_clear (&gspg2);
+  g_assert_true (gspg2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SHAPE_POP_GAUSS (gspg));
+
+  NCM_TEST_FREE (nc_galaxy_shape_pop_gauss_free, gspg);
+}
+
+void
+test_nc_wl_ellipticity_series_trace_basic (void)
+{
+  NcWLEllipticitySeriesTrace *ser = nc_wl_ellipticity_series_trace_new (4);
+  NcWLEllipticitySeriesTrace *ser2;
+  guint order = 0;
+
+  g_assert_true (ser != NULL);
+  g_assert_true (NC_IS_WL_ELLIPTICITY_SERIES_TRACE (ser));
+
+  g_object_get (ser, "order", &order, NULL);
+  g_assert_cmpuint (order, ==, 4);
+
+  ser2 = nc_wl_ellipticity_series_trace_ref (ser);
+  nc_wl_ellipticity_series_trace_clear (&ser2);
+  g_assert_true (ser2 == NULL);
+
+  g_assert_true (NC_IS_WL_ELLIPTICITY_SERIES_TRACE (ser));
+
+  NCM_TEST_FREE (nc_wl_ellipticity_series_trace_free, ser);
+}
+
+void
+test_nc_wl_ellipticity_series_trace_det_basic (void)
+{
+  NcWLEllipticitySeriesTraceDet *ser = nc_wl_ellipticity_series_trace_det_new (4);
+  NcWLEllipticitySeriesTraceDet *ser2;
+  guint order = 0;
+
+  g_assert_true (ser != NULL);
+  g_assert_true (NC_IS_WL_ELLIPTICITY_SERIES_TRACE_DET (ser));
+
+  g_object_get (ser, "order", &order, NULL);
+  g_assert_cmpuint (order, ==, 4);
+
+  ser2 = nc_wl_ellipticity_series_trace_det_ref (ser);
+  nc_wl_ellipticity_series_trace_det_clear (&ser2);
+  g_assert_true (ser2 == NULL);
+
+  g_assert_true (NC_IS_WL_ELLIPTICITY_SERIES_TRACE_DET (ser));
+
+  NCM_TEST_FREE (nc_wl_ellipticity_series_trace_det_free, ser);
 }
 
 void

@@ -28,14 +28,16 @@
  *
  * Complex Laurent-polynomial arithmetic (add/scale/convolve/conjugate) plus
  * the Jacobi-Anger reduction of a truncated Fourier series against a
- * von-Mises-shaped kernel to scaled modified Bessel functions. Generic
+ * von-Mises-shaped kernel to scaled modified Bessel functions, and
+ * #NcmLaurentSeriesTPS, a truncated power series (in a second, formal
+ * variable) whose coefficients are #NcmLaurentSeries. Generic
  * complex-analysis machinery with no physics content of its own, used and
- * independently tested by `nc_galaxy_shape_factor_series_lensed.c` (see
+ * independently tested by `nc_wl_ellipticity_series.c` (see
  * docs/theory/wl_shape_marginalization_series.qmd for the physics context
  * and derivation).
  *
- * Two parallel calling conventions for every operation, matching
- * nc_wl_ellipticity.h's own introspectable/native dual interface:
+ * Two parallel calling conventions for every #NcmLaurentSeries operation,
+ * matching nc_wl_ellipticity.h's own introspectable/native dual interface:
  *
  * - an introspectable, #NcmComplex-based API (the plain function names),
  *   usable and testable from Python;
@@ -43,20 +45,21 @@
  *   for functions with no complex-valued parameters at all, just direct
  *   struct-field access), declared behind `#ifndef NUMCOSMO_GIR_SCAN` since
  *   C99 complex types are not introspectable -- what the hot loop in
- *   nc_galaxy_shape_factor_series_lensed.c actually uses.
+ *   nc_wl_ellipticity_series.c actually uses.
  *
- * Every #NcmLaurentSeries is independently heap-allocated (no shared arena):
- * callers own whatever they create and must free it themselves (or track a
- * short-lived batch, e.g. a #GPtrArray with ncm_laurent_series_free() as its
- * free function, freed in one sweep at the end of a computation).
+ * Every #NcmLaurentSeries is independently heap-allocated: callers own
+ * whatever they create and must free it themselves (or track a short-lived
+ * batch, e.g. a #GPtrArray with ncm_laurent_series_free() as its free
+ * function, freed in one sweep at the end of a computation).
  *
  * For hot loops that would otherwise allocate and free many of these per
  * call, ncm_laurent_series_reset() plus the `_into`-suffixed counterparts
  * of add/conv/scale_c/conj/new_single write into a caller-supplied,
  * already-allocated #NcmLaurentSeries instead of allocating a new one
  * (grow-only, so a reused instance never reallocates once it reaches its
- * steady-state size) -- see nc_galaxy_shape_factor_series_lensed.c for the
- * intended usage (a per-instance pool of reusable series).
+ * steady-state size) -- #NcmLaurentSeriesTPS's own coefficients and
+ * ncm_laurent_series_tps_conv()'s private scratch are exactly such
+ * long-lived, reused instances.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -495,39 +498,313 @@ ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries *a)
 }
 
 /**
- * ncm_laurent_series_arena_next: (skip)
- * @arena: a #NcmLaurentSeriesArena
+ * ncm_laurent_series_eval_c: (skip)
+ * @a: a #NcmLaurentSeries
+ * @w: the point to evaluate at
  *
- * Checks out the next #NcmLaurentSeries from @arena's pool, growing the
- * pool by one freshly-allocated (zero-initialized, harmonics $[0,0]$)
- * series the first time this bump index is reached, and simply returning
- * the already-allocated one on every subsequent call at the same index
- * (typical use: @arena->idx reset to 0 once per independent computation,
- * so a workspace's pool grows only during the very first computation and
- * is pure reuse after). Callers still resize the returned series via
- * ncm_laurent_series_reset() (directly, or implicitly through one of the
- * `_into` functions) before writing into it.
+ * Returns: $a(w)=\sum_{h=hmin}^{hmax} c_h w^h$
+ */
+complex double
+ncm_laurent_series_eval_c (const NcmLaurentSeries *a, complex double w)
+{
+  complex double result = 0.0;
+  gint h;
+
+  /* Horner over the *shifted*, all-non-negative exponents h-hmin (a plain
+   * Laurent range can start negative, where Horner's scheme doesn't apply
+   * directly); multiplying the shifted result by w^hmin at the end recovers
+   * sum_h c_h w^h exactly. */
+  for (h = a->hmax; h >= a->hmin; h--)
+    result = result * w + ncm_laurent_series_get_c (a, h);
+
+  return result * cpow (w, a->hmin);
+}
+
+/**
+ * ncm_laurent_series_eval:
+ * @a: a #NcmLaurentSeries
+ * @w: the point to evaluate at
+ * @out: (out): $a(w)$
+ */
+void
+ncm_laurent_series_eval (const NcmLaurentSeries *a, const NcmComplex *w, NcmComplex *out)
+{
+  ncm_complex_set_c (out, ncm_laurent_series_eval_c (a, ncm_complex_c (w)));
+}
+
+/* @coeffs: owned directly, length order+1
+ * @conv_acc: private ping-pong scratch for ncm_laurent_series_tps_conv()
+ * when this TPS is the @out of a conv() call -- see that function's own
+ * comment for why exactly two suffice regardless of order
+ * @conv_term: private scratch for ncm_laurent_series_tps_conv() */
+struct _NcmLaurentSeriesTPS
+{
+  GPtrArray *coeffs;
+  NcmLaurentSeries *conv_acc[2];
+  NcmLaurentSeries *conv_term;
+  gatomicrefcount ref_count;
+};
+
+G_DEFINE_BOXED_TYPE (NcmLaurentSeriesTPS, ncm_laurent_series_tps, ncm_laurent_series_tps_ref, ncm_laurent_series_tps_unref)
+
+/**
+ * ncm_laurent_series_tps_new:
+ * @order: the truncation order $N$
  *
- * Returns: (transfer none): the next pooled #NcmLaurentSeries
+ * Creates a new #NcmLaurentSeriesTPS of order @order ($N+1$ zero
+ * coefficients, each an independently owned #NcmLaurentSeries) plus its own
+ * private conv() scratch. Order is immutable for the object's whole life --
+ * meant to be constructed once and refilled many times (see
+ * nc_wl_ellipticity_series.c), not a short-lived per-call temporary.
+ *
+ * Returns: (transfer full): a new #NcmLaurentSeriesTPS
+ */
+NcmLaurentSeriesTPS *
+ncm_laurent_series_tps_new (guint order)
+{
+  NcmLaurentSeriesTPS *tps = g_new (NcmLaurentSeriesTPS, 1);
+  guint i;
+
+  tps->coeffs = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_laurent_series_free);
+
+  for (i = 0; i <= order; i++)
+    g_ptr_array_add (tps->coeffs, ncm_laurent_series_new (0, 0));
+
+  tps->conv_acc[0] = ncm_laurent_series_new (0, 0);
+  tps->conv_acc[1] = ncm_laurent_series_new (0, 0);
+  tps->conv_term   = ncm_laurent_series_new (0, 0);
+
+  g_atomic_ref_count_init (&tps->ref_count);
+
+  return tps;
+}
+
+/**
+ * ncm_laurent_series_tps_ref:
+ * @tps: a #NcmLaurentSeriesTPS
+ *
+ * Increases the reference count of @tps by one. This is the boxed type's
+ * "copy" function: it shares the same underlying storage rather than
+ * deep-copying it (matching #NcGalaxySDShapeData and siblings), so later
+ * mutations through any reference (e.g. the owning evaluator's own compute
+ * step) are visible through every other outstanding reference.
+ *
+ * Returns: (transfer full): @tps
+ */
+NcmLaurentSeriesTPS *
+ncm_laurent_series_tps_ref (NcmLaurentSeriesTPS *tps)
+{
+  g_atomic_ref_count_inc (&tps->ref_count);
+
+  return tps;
+}
+
+/**
+ * ncm_laurent_series_tps_unref:
+ * @tps: a #NcmLaurentSeriesTPS
+ *
+ * Decreases the reference count of @tps by one, freeing it once the count
+ * reaches zero.
+ */
+void
+ncm_laurent_series_tps_unref (NcmLaurentSeriesTPS *tps)
+{
+  if (g_atomic_ref_count_dec (&tps->ref_count))
+  {
+    g_ptr_array_unref (tps->coeffs);
+    ncm_laurent_series_free (tps->conv_acc[0]);
+    ncm_laurent_series_free (tps->conv_acc[1]);
+    ncm_laurent_series_free (tps->conv_term);
+    g_free (tps);
+  }
+}
+
+/**
+ * ncm_laurent_series_tps_clear:
+ * @tps: a #NcmLaurentSeriesTPS
+ *
+ * Unrefs *@tps and sets it to %NULL.
+ */
+void
+ncm_laurent_series_tps_clear (NcmLaurentSeriesTPS **tps)
+{
+  if (*tps != NULL)
+  {
+    ncm_laurent_series_tps_unref (*tps);
+    *tps = NULL;
+  }
+}
+
+/**
+ * ncm_laurent_series_tps_order:
+ * @tps: a #NcmLaurentSeriesTPS
+ *
+ * Returns: @tps's order $N$ (number of coefficients minus one)
+ */
+guint
+ncm_laurent_series_tps_order (const NcmLaurentSeriesTPS *tps)
+{
+  return tps->coeffs->len - 1;
+}
+
+/**
+ * ncm_laurent_series_tps_get:
+ * @tps: a #NcmLaurentSeriesTPS
+ * @n: the coefficient index, $0\le n\le$ @tps's order
+ *
+ * Returns: (transfer none): @tps's coefficient of $g^n$
  */
 NcmLaurentSeries *
-ncm_laurent_series_arena_next (NcmLaurentSeriesArena *arena)
+ncm_laurent_series_tps_get (const NcmLaurentSeriesTPS *tps, guint n)
 {
-  NcmLaurentSeries *a;
+  g_assert_cmpuint (n, <, tps->coeffs->len);
 
-  if (arena->idx < arena->pool->len)
+  return g_ptr_array_index (tps->coeffs, n);
+}
+
+/**
+ * ncm_laurent_series_tps_conv: (skip)
+ * @out: a #NcmLaurentSeriesTPS, same order as @a and @b, must not alias either
+ * @a: a #NcmLaurentSeriesTPS
+ * @b: a #NcmLaurentSeriesTPS, same order as @a
+ *
+ * Truncated Cauchy product $out_m=\sum_{k=0}^m a_k b_{m-k}$ for
+ * $m=0..N$ -- truncated at the shared order $N$, not extended to
+ * $\deg(a)+\deg(b)$ (this is a truncated power series, not a polynomial
+ * ring element). The inner fold only ever needs two non-aliasing
+ * accumulator buffers (ncm_laurent_series_add_into() forbids @out aliasing
+ * an input, so the running sum alternates between them: at step $k$, the
+ * accumulator from step $k-2$ is already fully consumed and free to reuse
+ * for step $k$'s result) plus one transient product buffer -- three fixed
+ * buffers regardless of order, drawn from @out's own private
+ * @conv_acc/@conv_term rather than any external pool.
+ */
+void
+ncm_laurent_series_tps_conv (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, const NcmLaurentSeriesTPS *b)
+{
+  const guint order = ncm_laurent_series_tps_order (a);
+  guint m;
+
+  g_assert_cmpuint (ncm_laurent_series_tps_order (b), ==, order);
+  g_assert_cmpuint (ncm_laurent_series_tps_order (out), ==, order);
+
+  for (m = 0; m <= order; m++)
   {
-    a = g_ptr_array_index (arena->pool, arena->idx);
-  }
-  else
-  {
-    a = ncm_laurent_series_new (0, 0);
-    g_ptr_array_add (arena->pool, a);
-  }
+    NcmLaurentSeries *acc = out->conv_acc[0];
+    guint k;
 
-  arena->idx++;
+    ncm_laurent_series_reset (acc, 0, 0);
 
-  return a;
+    for (k = 0; k <= m; k++)
+    {
+      NcmLaurentSeries *acc2 = out->conv_acc[(k + 1) % 2];
+
+      ncm_laurent_series_conv_into (out->conv_term, ncm_laurent_series_tps_get (a, k), ncm_laurent_series_tps_get (b, m - k));
+      ncm_laurent_series_add_into (acc2, acc, out->conv_term, 1.0);
+      acc = acc2;
+    }
+
+    ncm_laurent_series_scale_c_into (g_ptr_array_index (out->coeffs, m), acc, 1.0);
+  }
+}
+
+/**
+ * ncm_laurent_series_tps_conj: (skip)
+ * @out: a #NcmLaurentSeriesTPS, same order as @a, must not alias @a
+ * @a: a #NcmLaurentSeriesTPS
+ *
+ * Harmonic-by-harmonic conjugate of every coefficient of @a (see
+ * ncm_laurent_series_conj_into()), term by term in $g$. Writes straight
+ * into @out's existing slots, no scratch #NcmLaurentSeries needed.
+ */
+void
+ncm_laurent_series_tps_conj (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a)
+{
+  const guint order = ncm_laurent_series_tps_order (a);
+  guint m;
+
+  g_assert_cmpuint (ncm_laurent_series_tps_order (out), ==, order);
+
+  for (m = 0; m <= order; m++)
+    ncm_laurent_series_conj_into (g_ptr_array_index (out->coeffs, m), ncm_laurent_series_tps_get (a, m));
+}
+
+/**
+ * ncm_laurent_series_tps_add: (skip)
+ * @out: a #NcmLaurentSeriesTPS, same order as @a and @b, must not alias either
+ * @a: a #NcmLaurentSeriesTPS
+ * @b: a #NcmLaurentSeriesTPS, same order as @a
+ * @sb: scale factor applied to @b
+ *
+ * Term-by-term $out_m=a_m+sb\cdot b_m$. Writes straight into @out's
+ * existing slots, no scratch #NcmLaurentSeries needed.
+ */
+void
+ncm_laurent_series_tps_add (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, const NcmLaurentSeriesTPS *b, gdouble sb)
+{
+  const guint order = ncm_laurent_series_tps_order (a);
+  guint m;
+
+  g_assert_cmpuint (ncm_laurent_series_tps_order (b), ==, order);
+  g_assert_cmpuint (ncm_laurent_series_tps_order (out), ==, order);
+
+  for (m = 0; m <= order; m++)
+    ncm_laurent_series_add_into (g_ptr_array_index (out->coeffs, m), ncm_laurent_series_tps_get (a, m), ncm_laurent_series_tps_get (b, m), sb);
+}
+
+/**
+ * ncm_laurent_series_tps_scale: (skip)
+ * @out: a #NcmLaurentSeriesTPS, same order as @a, must not alias @a
+ * @a: a #NcmLaurentSeriesTPS
+ * @s: scale factor
+ *
+ * Term-by-term $out_m=s\cdot a_m$. Writes straight into @out's existing
+ * slots, no scratch #NcmLaurentSeries needed.
+ */
+void
+ncm_laurent_series_tps_scale (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, complex double s)
+{
+  const guint order = ncm_laurent_series_tps_order (a);
+  guint m;
+
+  g_assert_cmpuint (ncm_laurent_series_tps_order (out), ==, order);
+
+  for (m = 0; m <= order; m++)
+    ncm_laurent_series_scale_c_into (g_ptr_array_index (out->coeffs, m), ncm_laurent_series_tps_get (a, m), s);
+}
+
+/**
+ * ncm_laurent_series_tps_eval_c: (skip)
+ * @tps: a #NcmLaurentSeriesTPS
+ * @w: the coefficients' own formal variable, evaluated at this point
+ * @g: the truncation variable, evaluated at this point
+ *
+ * Returns: $\mathrm{tps}(w,g)=\sum_{n=0}^N L_n(w)\,g^n$
+ */
+complex double
+ncm_laurent_series_tps_eval_c (const NcmLaurentSeriesTPS *tps, complex double w, complex double g)
+{
+  const guint order     = ncm_laurent_series_tps_order (tps);
+  complex double result = 0.0;
+  gint n;
+
+  for (n = (gint) order; n >= 0; n--)
+    result = result * g + ncm_laurent_series_eval_c (ncm_laurent_series_tps_get (tps, (guint) n), w);
+
+  return result;
+}
+
+/**
+ * ncm_laurent_series_tps_eval:
+ * @tps: a #NcmLaurentSeriesTPS
+ * @w: the coefficients' own formal variable, evaluated at this point
+ * @g: the truncation variable, evaluated at this point
+ * @out: (out): $\mathrm{tps}(w,g)$
+ */
+void
+ncm_laurent_series_tps_eval (const NcmLaurentSeriesTPS *tps, const NcmComplex *w, const NcmComplex *g, NcmComplex *out)
+{
+  ncm_complex_set_c (out, ncm_laurent_series_tps_eval_c (tps, ncm_complex_c (w), ncm_complex_c (g)));
 }
 
 /**
