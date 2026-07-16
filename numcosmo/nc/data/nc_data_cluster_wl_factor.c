@@ -274,6 +274,7 @@ typedef struct _NcDataClusterWLFactorPrivate
   guint64 z_hash;
   guint64 shape_radius_hash;
   guint64 shape_optzs_hash;
+  guint64 shape_crit_hash;
   guint64 shape_pop_hash;
 
   /* Cached by prepare(), used by m2lnL_val()/resample() -- neither ever
@@ -527,6 +528,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->z_hash            = 0;
   self->shape_radius_hash = 0;
   self->shape_optzs_hash  = 0;
+  self->shape_crit_hash   = 0;
   self->shape_pop_hash    = 0;
 
   self->cosmo         = NULL;
@@ -809,7 +811,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   NcDataClusterWLFactor *dcwlf              = NC_DATA_CLUSTER_WL_FACTOR (data);
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
   GError *error                             = NULL;
-  gboolean pos_changed, z_changed, radius_changed, optzs_changed, pop_changed, fixed_grid_changed;
+  gboolean pos_changed, z_changed, radius_changed, optzs_changed, crit_changed, pop_changed, fixed_grid_changed;
   NcDataClusterWLFactorStep steps[8];
   guint n_steps = 0;
 
@@ -933,6 +935,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   z_changed      = obs_was_changed || (nc_galaxy_redshift_factor_get_hash (self->redshift_factor) != self->z_hash);
   radius_changed = obs_was_changed || (nc_galaxy_shape_factor_get_radius_hash (self->shape_factor) != self->shape_radius_hash);
   optzs_changed  = obs_was_changed || (nc_galaxy_shape_factor_get_optzs_hash (self->shape_factor) != self->shape_optzs_hash);
+  crit_changed   = obs_was_changed || (nc_galaxy_shape_factor_get_crit_hash (self->shape_factor) != self->shape_crit_hash);
   pop_changed    = obs_was_changed || (nc_galaxy_shape_factor_get_pop_hash (self->shape_factor) != self->shape_pop_hash);
 
   fixed_grid_changed = obs_was_changed || z_changed || (self->z_cl != self->fixed_nodes_zcl) ||
@@ -945,9 +948,10 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   self->z_hash            = nc_galaxy_redshift_factor_get_hash (self->redshift_factor);
   self->shape_radius_hash = nc_galaxy_shape_factor_get_radius_hash (self->shape_factor);
   self->shape_optzs_hash  = nc_galaxy_shape_factor_get_optzs_hash (self->shape_factor);
+  self->shape_crit_hash   = nc_galaxy_shape_factor_get_crit_hash (self->shape_factor);
   self->shape_pop_hash    = nc_galaxy_shape_factor_get_pop_hash (self->shape_factor);
 
-  if (!pos_changed && !z_changed && !radius_changed && !optzs_changed && !pop_changed && !fixed_grid_changed)
+  if (!pos_changed && !z_changed && !radius_changed && !optzs_changed && !crit_changed && !pop_changed && !fixed_grid_changed)
     return;  /* nothing to do this cycle */
 
   if ((self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) && fixed_grid_changed)
@@ -996,7 +1000,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     if (fixed_grid_changed)
       steps[n_steps++] = &_step_fixed_nodes_grid;
 
-    if (fixed_grid_changed || optzs_changed)
+    if (fixed_grid_changed || crit_changed)
       steps[n_steps++] = &_step_fixed_nodes_crit;
 
     /* fixed_grid_changed (not just radius_changed/optzs_changed) must gate

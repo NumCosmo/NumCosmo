@@ -94,6 +94,7 @@ typedef struct _NcGalaxyShapeFactorPrivate
   gdouble rho_s;
   guint64 radius_hash;
   guint64 optzs_hash;
+  guint64 crit_hash;
   guint64 pop_hash;
 
   /* Cached alongside the above, for the fixed-nodes update functions
@@ -158,6 +159,7 @@ nc_galaxy_shape_factor_init (NcGalaxyShapeFactor *gsf)
   self->rho_s                = 0.0;
   self->radius_hash          = 0;
   self->optzs_hash           = 0;
+  self->crit_hash            = 0;
   self->pop_hash             = 0;
   self->cosmo                = NULL;
   self->surface_mass_density = NULL;
@@ -378,7 +380,7 @@ nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
   NcHaloDensityProfile *density_profile        = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
   NcGalaxyShapePop *pop                        = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
   NcHaloMassSummary *mass_summary              = nc_halo_density_profile_peek_mass_summary (density_profile);
-  guint64 radius_hash, optzs_hash, pop_hash;
+  guint64 radius_hash, optzs_hash, crit_hash, pop_hash;
 
   g_assert_nonnull (cosmo);
   g_assert_nonnull (halo_position);
@@ -406,6 +408,9 @@ nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
                (ncm_model_state_get_pkey (NCM_MODEL (mass_summary)) * 41U) ^
                (ncm_model_state_get_pkey (NCM_MODEL (surface_mass_density)) * 37U) ^
                (ncm_model_state_get_pkey (NCM_MODEL (halo_position)) * 43U);
+  crit_hash = ncm_model_state_get_pkey (NCM_MODEL (cosmo)) ^
+              (ncm_model_state_get_pkey (NCM_MODEL (surface_mass_density)) * 37U) ^
+              (ncm_model_state_get_pkey (NCM_MODEL (halo_position)) * 43U);
   pop_hash = ncm_model_state_get_pkey (NCM_MODEL (pop));
 
   /* Always keep the cached model refs current (cheap ref/unref): avoids a
@@ -437,9 +442,14 @@ nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
     self->radius_hash  = radius_hash;
   }
 
-  if (optzs_hash != self->optzs_hash)
+  if (crit_hash != self->crit_hash)
   {
     nc_wl_surface_mass_density_lens_ctx_prep (&self->lens_ctx, surface_mass_density, cosmo, self->z_cl);
+    self->crit_hash = crit_hash;
+  }
+
+  if (optzs_hash != self->optzs_hash)
+  {
     nc_halo_density_profile_r_s_rho_s (density_profile, cosmo, self->z_cl, &self->r_s, &self->rho_s);
     self->optzs_hash = optzs_hash;
   }
@@ -475,6 +485,24 @@ nc_galaxy_shape_factor_get_optzs_hash (NcGalaxyShapeFactor *gsf)
   NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
 
   return self->optzs_hash;
+}
+
+/**
+ * nc_galaxy_shape_factor_get_crit_hash:
+ * @gsf: a #NcGalaxyShapeFactor
+ *
+ * Hash of the models the critical surface mass density depends on: the
+ * cosmology, the surface-mass-density model and the lens redshift
+ * (halo_position).
+ *
+ * Returns: the critical-surface-density hash.
+ */
+guint64
+nc_galaxy_shape_factor_get_crit_hash (NcGalaxyShapeFactor *gsf)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+
+  return self->crit_hash;
 }
 
 /**

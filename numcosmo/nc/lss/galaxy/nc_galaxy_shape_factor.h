@@ -166,6 +166,7 @@ gboolean nc_galaxy_shape_factor_check_obs (NcGalaxyShapeFactor *gsf, NcGalaxyWLO
 void nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset);
 guint64 nc_galaxy_shape_factor_get_radius_hash (NcGalaxyShapeFactor *gsf);
 guint64 nc_galaxy_shape_factor_get_optzs_hash (NcGalaxyShapeFactor *gsf);
+guint64 nc_galaxy_shape_factor_get_crit_hash (NcGalaxyShapeFactor *gsf);
 guint64 nc_galaxy_shape_factor_get_pop_hash (NcGalaxyShapeFactor *gsf);
 void nc_galaxy_shape_factor_update_data_radius (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data);
 void nc_galaxy_shape_factor_update_data_optzs (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data);
