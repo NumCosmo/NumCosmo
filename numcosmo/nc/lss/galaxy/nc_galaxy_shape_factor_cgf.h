@@ -45,3 +45,4 @@ void nc_galaxy_shape_factor_cgf_clear (NcGalaxyShapeFactorCGF **gsfcgf);
 G_END_DECLS
 
 #endif /* _NC_GALAXY_SHAPE_FACTOR_CGF_H_ */
+

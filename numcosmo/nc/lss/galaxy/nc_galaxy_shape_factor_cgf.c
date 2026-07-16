@@ -152,8 +152,9 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyShapeFactorCGF, nc_galaxy_shape_factor_cgf, 
 static void
 _nc_galaxy_shape_factor_cgf_response_moments_trace (complex double g, NcGalaxyShapeFactorCGFMoments *out)
 {
-  const gdouble abs_g2    = creal (g * conj (g));
-  const gdouble D0        = 1.0 + abs_g2;
+  const gdouble abs_g2 = creal (g * conj (g));
+  const gdouble D0     = 1.0 + abs_g2;
+
   /* One reciprocal, then multiplies: D0 appears as 1/D0, 1/D0^2 and 1/D0^3,
    * and each spelled-out division is a ~15-20 cycle divsd that does not
    * pipeline. This function is ~8.8% of an MCMC run's self time (it runs once
@@ -165,9 +166,10 @@ _nc_galaxy_shape_factor_cgf_response_moments_trace (complex double g, NcGalaxySh
   const gdouble kappa     = one_m_g2 * inv_D0_2;
   const complex double g2 = g * g;
 
-  out->S0    = 2.0 * g * inv_D0;
-  out->A11   = kappa * (1.0 - creal (g2));
-  out->A12   = -kappa * cimag (g2);
+  out->S0  = 2.0 * g * inv_D0;
+  out->A11 = kappa * (1.0 - creal (g2));
+  out->A12 = -kappa *cimag (g2);
+
   out->A21   = out->A12;
   out->A22   = kappa * (1.0 + creal (g2));
   out->lap_S = -4.0 * g * (one_m_g2 * one_m_g2) * (inv_D0_2 * inv_D0);
@@ -269,9 +271,9 @@ _nc_galaxy_shape_factor_cgf_constructed (GObject *object)
   /* Chain up: start */
   G_OBJECT_CLASS (nc_galaxy_shape_factor_cgf_parent_class)->constructed (object);
   {
-    NcGalaxyShapeFactorCGF *gsfcgf              = NC_GALAXY_SHAPE_FACTOR_CGF (object);
-    NcGalaxyShapeFactorCGFPrivate * const self  = nc_galaxy_shape_factor_cgf_get_instance_private (gsfcgf);
-    const NcGalaxyWLObsEllipConv ellip_conv     = nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (gsfcgf));
+    NcGalaxyShapeFactorCGF *gsfcgf             = NC_GALAXY_SHAPE_FACTOR_CGF (object);
+    NcGalaxyShapeFactorCGFPrivate * const self = nc_galaxy_shape_factor_cgf_get_instance_private (gsfcgf);
+    const NcGalaxyWLObsEllipConv ellip_conv    = nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (gsfcgf));
 
     switch (ellip_conv)
     {
@@ -331,6 +333,7 @@ static void
 _nc_galaxy_shape_factor_cgf_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
   NcGalaxyShapeFactorCGFPrivate * const self = nc_galaxy_shape_factor_cgf_get_instance_private (NC_GALAXY_SHAPE_FACTOR_CGF (gsf));
+
   /* Sigma-support is a property of the pop MODEL, identical for every galaxy
    * sharing it -- checked once here via a throwaway pop_data, not per-galaxy.
    * The CGF moment expansion is a Gaussian-population method, so it gates on
@@ -449,3 +452,4 @@ nc_galaxy_shape_factor_cgf_clear (NcGalaxyShapeFactorCGF **gsfcgf)
 {
   g_clear_object (gsfcgf);
 }
+
