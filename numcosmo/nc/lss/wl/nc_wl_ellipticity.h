@@ -216,12 +216,12 @@ nc_wl_ellipticity_lndet_jac_trace (NcmComplex g, NcmComplex chi_obs)
 NCM_INLINE gdouble
 nc_wl_ellipticity_det_jac_trace (NcmComplex g, NcmComplex chi_obs)
 {
-  const NcmComplex g_conj     = conj (g);
-  const gdouble abs_g2        = creal (g * g_conj);
-  const gdouble den           = fabs (1.0 - 2.0 * creal (g_conj * chi_obs) + abs_g2);
-  const gdouble jac_den       = den * den * den;
-  const gdouble num_base      = (abs_g2 <= 1.0) ? (1.0 - abs_g2) : (abs_g2 - 1.0);
-  const gdouble jac_num       = num_base * num_base * num_base;
+  const NcmComplex g_conj = conj (g);
+  const gdouble abs_g2    = creal (g * g_conj);
+  const gdouble den       = fabs (1.0 - 2.0 * creal (g_conj * chi_obs) + abs_g2);
+  const gdouble jac_den   = den * den * den;
+  const gdouble num_base  = (abs_g2 <= 1.0) ? (1.0 - abs_g2) : (abs_g2 - 1.0);
+  const gdouble jac_num   = num_base * num_base * num_base;
 
   return jac_num / jac_den;
 }
@@ -269,9 +269,9 @@ nc_wl_ellipticity_apply_shear_inv_trace_det (NcmComplex g, NcmComplex e_obs)
 NCM_INLINE gdouble
 nc_wl_ellipticity_lndet_jac_trace_det (NcmComplex g, NcmComplex e_obs)
 {
-  const NcmComplex g_conj         = conj (g);
-  const NcmComplex e_obs_conj     = conj (e_obs);
-  const gdouble abs_g2            = creal (g * g_conj);
+  const NcmComplex g_conj     = conj (g);
+  const NcmComplex e_obs_conj = conj (e_obs);
+  const gdouble abs_g2        = creal (g * g_conj);
 
   if (abs_g2 <= 1.0)
   {
@@ -298,9 +298,9 @@ nc_wl_ellipticity_lndet_jac_trace_det (NcmComplex g, NcmComplex e_obs)
 NCM_INLINE gdouble
 nc_wl_ellipticity_det_jac_trace_det (NcmComplex g, NcmComplex e_obs)
 {
-  const NcmComplex g_conj         = conj (g);
-  const NcmComplex e_obs_conj     = conj (e_obs);
-  const gdouble abs_g2            = creal (g * g_conj);
+  const NcmComplex g_conj     = conj (g);
+  const NcmComplex e_obs_conj = conj (e_obs);
+  const gdouble abs_g2        = creal (g * g_conj);
 
   if (abs_g2 <= 1.0)
   {
