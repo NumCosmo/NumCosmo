@@ -4323,6 +4323,8 @@ class FitMC(GObject.Object):
         Run messages type
       nthreads -> guint: nthreads
         Number of threads to run
+      keep-order -> gboolean: keep-order
+        Whether to keep the catalog in order of sampling under multi-threaded runs
       data-file -> gchararray: data-file
         Data file to be used by the catalog
       function-array -> NcmObjArray: function-array
@@ -4337,6 +4339,7 @@ class FitMC(GObject.Object):
         fiducial: MSet
         fit: Fit
         function_array: ObjArray
+        keep_order: bool
         mtype: FitRunMsgs
         nthreads: int
         rtype: FitMCResampleType
@@ -4348,6 +4351,7 @@ class FitMC(GObject.Object):
         fiducial: MSet = ...,
         fit: Fit = ...,
         function_array: ObjArray = ...,
+        keep_order: bool = ...,
         mtype: FitRunMsgs = ...,
         nthreads: int = ...,
         rtype: FitMCResampleType = ...,
