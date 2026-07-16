@@ -10229,6 +10229,12 @@ class GalaxyShapePop(NumCosmoMath.Model):
     def do_e_rms(self, data: GalaxyShapePopData) -> float: ...
     def do_eval_p(self, data: GalaxyShapePopData, x: float) -> float: ...
     def do_eval_p_rho2(self, data: GalaxyShapePopData, rho2: float) -> float: ...
+    def do_eval_p_rho2_g_series(
+        self,
+        data: GalaxyShapePopData,
+        x_series: NumCosmoMath.LaurentSeriesTPS,
+        out: NumCosmoMath.LaurentSeriesTPS,
+    ) -> None: ...
     def do_gen(
         self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
     ) -> typing.Tuple[float, float]: ...
@@ -10236,6 +10242,12 @@ class GalaxyShapePop(NumCosmoMath.Model):
     def e_rms(self, data: GalaxyShapePopData) -> float: ...
     def eval_p(self, data: GalaxyShapePopData, x: float) -> float: ...
     def eval_p_rho2(self, data: GalaxyShapePopData, rho2: float) -> float: ...
+    def eval_p_rho2_g_series(
+        self,
+        data: GalaxyShapePopData,
+        x_series: NumCosmoMath.LaurentSeriesTPS,
+        out: NumCosmoMath.LaurentSeriesTPS,
+    ) -> None: ...
     def free(self) -> None: ...
     def gen(
         self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
@@ -10357,6 +10369,15 @@ class GalaxyShapePopClass(GObject.GPointer):
         typing.Tuple[float, float],
     ] = ...
     e_rms: typing.Callable[[GalaxyShapePop, GalaxyShapePopData], float] = ...
+    eval_p_rho2_g_series: typing.Callable[
+        [
+            GalaxyShapePop,
+            GalaxyShapePopData,
+            NumCosmoMath.LaurentSeriesTPS,
+            NumCosmoMath.LaurentSeriesTPS,
+        ],
+        None,
+    ] = ...
     padding: list[None] = ...
 
 class GalaxyShapePopData(GObject.GBoxed):
@@ -22791,6 +22812,100 @@ class TransferFuncEHNoBaryonClass(GObject.GPointer):
     """
 
     parent_class: TransferFuncClass = ...
+
+class WLEllipticitySeriesTrace(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        WLEllipticitySeriesTrace(**properties)
+        new(order:int) -> NumCosmo.WLEllipticitySeriesTrace
+
+    Object NcWLEllipticitySeriesTrace
+
+    Properties from NcWLEllipticitySeriesTrace:
+      order -> guint: order
+        Truncation order
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        order: int
+
+    props: Props = ...
+    def __init__(self, order: int = ...) -> None: ...
+    @staticmethod
+    def clear(ser: WLEllipticitySeriesTrace) -> None: ...
+    def eval(self, rho: float) -> None: ...
+    def free(self) -> None: ...
+    def get_abs_sq(self) -> NumCosmoMath.LaurentSeriesTPS: ...
+    def get_chi(self) -> NumCosmoMath.LaurentSeriesTPS: ...
+    def get_jac(self) -> NumCosmoMath.LaurentSeriesTPS: ...
+    def get_order(self) -> int: ...
+    @classmethod
+    def new(cls, order: int) -> WLEllipticitySeriesTrace: ...
+    def ref(self) -> WLEllipticitySeriesTrace: ...
+
+class WLEllipticitySeriesTraceClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        WLEllipticitySeriesTraceClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class WLEllipticitySeriesTraceDet(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        WLEllipticitySeriesTraceDet(**properties)
+        new(order:int) -> NumCosmo.WLEllipticitySeriesTraceDet
+
+    Object NcWLEllipticitySeriesTraceDet
+
+    Properties from NcWLEllipticitySeriesTraceDet:
+      order -> guint: order
+        Truncation order
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        order: int
+
+    props: Props = ...
+    def __init__(self, order: int = ...) -> None: ...
+    @staticmethod
+    def clear(ser: WLEllipticitySeriesTraceDet) -> None: ...
+    def eval(self, rho: float) -> None: ...
+    def free(self) -> None: ...
+    def get_abs_sq(self) -> NumCosmoMath.LaurentSeriesTPS: ...
+    def get_chi(self) -> NumCosmoMath.LaurentSeriesTPS: ...
+    def get_jac(self) -> NumCosmoMath.LaurentSeriesTPS: ...
+    def get_order(self) -> int: ...
+    @classmethod
+    def new(cls, order: int) -> WLEllipticitySeriesTraceDet: ...
+    def ref(self) -> WLEllipticitySeriesTraceDet: ...
+
+class WLEllipticitySeriesTraceDetClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        WLEllipticitySeriesTraceDetClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
 
 class WLSurfaceMassDensity(NumCosmoMath.Model):
     r"""

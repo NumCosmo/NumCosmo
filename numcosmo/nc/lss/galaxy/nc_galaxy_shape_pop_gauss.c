@@ -87,7 +87,7 @@ void _nc_galaxy_shape_pop_gauss_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData
 static void _nc_galaxy_shape_pop_gauss_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 void _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                                      const NcmLaurentSeriesTPS *rho2_series, NcmLaurentSeriesTPS *out);
+                                                      const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
 static void
 nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
@@ -221,11 +221,15 @@ _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
   return sqrt (0.5 * mean_x);
 }
 
-/* P(x) ~ exp(-x/2sigma^2): scale @rho2_series by -1/2sigma^2 to get
- * exp's own argument series, then apply the standard exp-of-power-series
- * recursion (g^0 term pulled out as a scalar prefactor first, since
- * rho2_series's own order-0 term is |chi_L|^2 != 0 in general -- see
- * nc_wl_ellipticity_series.c's own class docs for why), using the
+/* P(x) = norm*exp(-x/2sigma^2) (eval_p()'s own full, normalized form): scale
+ * @x_series by -1/2sigma^2 to get exp's own argument series, then apply
+ * the standard exp-of-power-series recursion (g^0 term pulled out as a
+ * scalar prefactor first, since x_series's own order-0 term is
+ * |chi_L|^2 != 0 in general -- see nc_wl_ellipticity_series.c's own class
+ * docs for why), folding @ldata->norm into that same prefactor so this
+ * composes eval_p(x(g)) exactly (see eval_p_rho2_g_series's own doc comment
+ * in nc_galaxy_shape_pop.h: the vfunc's contract is the full normalized
+ * density, not a shape-only/reference-divided form), using the
  * already-resolved @data->ldata instead of a live parameter read, matching
  * eval_p()'s own convention. The recursion's own fold (each c[m] built from
  * c[0..m-1]) needs the same ping-pong-plus-term scratch as
@@ -239,10 +243,10 @@ _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
  * data->ldata->inv_2sigma2 either way. */
 void
 _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                                 const NcmLaurentSeriesTPS *rho2_series, NcmLaurentSeriesTPS *out)
+                                                 const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out)
 {
   NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
-  const guint order                 = ncm_laurent_series_tps_order (rho2_series);
+  const guint order                 = ncm_laurent_series_tps_order (x_series);
   NcmLaurentSeriesTPS *exponent     = ncm_laurent_series_tps_new (order);
   NcmLaurentSeriesTPS *c            = ncm_laurent_series_tps_new (order);
   NcmLaurentSeries *fold_acc[2]     = {ncm_laurent_series_new (0, 0), ncm_laurent_series_new (0, 0)};
@@ -251,13 +255,13 @@ _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxy
   complex double prefactor;
   guint m;
 
-  ncm_laurent_series_tps_scale (exponent, rho2_series, -ldata->inv_2sigma2);
+  ncm_laurent_series_tps_scale (exponent, x_series, -ldata->inv_2sigma2);
 
   g_assert_cmpint (ncm_laurent_series_hmin (ncm_laurent_series_tps_get (exponent, 0)), ==, 0);
   g_assert_cmpint (ncm_laurent_series_hmax (ncm_laurent_series_tps_get (exponent, 0)), ==, 0);
 
   a0        = ncm_laurent_series_get_c (ncm_laurent_series_tps_get (exponent, 0), 0);
-  prefactor = cexp (a0);
+  prefactor = ldata->norm * cexp (a0);
 
   ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (c, 0), 0, 1.0);
 

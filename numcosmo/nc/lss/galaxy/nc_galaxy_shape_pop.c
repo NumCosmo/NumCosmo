@@ -117,7 +117,7 @@ _nc_galaxy_shape_pop_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 
 static void
 _nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                           const NcmLaurentSeriesTPS *rho2_series, NcmLaurentSeriesTPS *out)
+                                           const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out)
 {
   g_error ("_nc_galaxy_shape_pop_eval_p_rho2_g_series: method not implemented.");
 }
@@ -373,23 +373,23 @@ nc_galaxy_shape_pop_eval_p_rho2 (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *da
  * nc_galaxy_shape_pop_eval_p_rho2_g_series:
  * @gsp: a #NcGalaxyShapePop
  * @data: a resolved #NcGalaxyShapePopData
- * @rho2_series: $\rho^2(g)=|\chi_I(\chi_L,g)|^2$'s own $g$-Taylor
- * coefficients, population-independent
- * @out: this population's $P(\rho^2(g))$ composition, as $g$-Taylor
- * coefficients (same order as @rho2_series)
+ * @x_series: $x(g)=|\chi_I(\chi_L,g)|^2$'s own $g$-Taylor coefficients,
+ * population-independent
+ * @out: this population's $P(x(g))=\mathrm{eval\_p}(x(g))$ composition, as
+ * $g$-Taylor coefficients (same order as @x_series)
  *
- * Taylor-in-$g$ analog of nc_galaxy_shape_pop_eval_p_rho2(): composes this
- * population's own normalized density with the (already computed,
- * population-independent) shear-map series $\rho^2(g)$, order by order in
- * $g$. There is no generic default -- every subclass used with
+ * Taylor-in-$g$ analog of nc_galaxy_shape_pop_eval_p(): composes this
+ * population's own fully normalized density with the (already computed,
+ * population-independent) shear-map series $x(g)$, order by order in $g$.
+ * There is no generic default -- every subclass used with
  * #NcGalaxyShapeFactorSeriesLensed must provide its own implementation; the
  * base class errors clearly otherwise.
  */
 void
 nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                          const NcmLaurentSeriesTPS *rho2_series, NcmLaurentSeriesTPS *out)
+                                          const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out)
 {
-  NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_rho2_g_series (gsp, data, rho2_series, out);
+  NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_rho2_g_series (gsp, data, x_series, out);
 }
 
 /**

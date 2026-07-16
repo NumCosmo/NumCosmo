@@ -49,6 +49,7 @@ struct _NcmLaurentSeries
   gint hmax;
   gint c_cap; /* allocated length of c, >= hmax-hmin+1; see ncm_laurent_series_reset() */
   complex double *c;
+  gatomicrefcount ref_count;
 };
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -62,6 +63,20 @@ NcmLaurentSeries *ncm_laurent_series_new_single (gint h, complex double val);
 #endif /* NUMCOSMO_GIR_SCAN */
 NcmLaurentSeries *ncm_laurent_series_new (gint hmin, gint hmax);
 NcmLaurentSeries *ncm_laurent_series_copy (const NcmLaurentSeries *a);
+
+/* Boxed "copy": a refcount increment (returns the SAME pointer), not
+ * ncm_laurent_series_copy()'s deep copy -- matching #NcmLaurentSeriesTPS
+ * and #NcGalaxySDShapeData. This matters only for objects with an existing
+ * identity a caller elsewhere still depends on: specifically,
+ * ncm_laurent_series_tps_get()'s "(transfer none)" result crossing into
+ * Python, where g_boxed_copy() would otherwise silently deep-copy on
+ * every access and make Python-side mutation of a live TPS slot
+ * impossible (Python never sees the object ncm_laurent_series_tps_conv()
+ * and friends go on writing into). Every native C call site is unaffected
+ * (_new/_free still behave exactly as a single-owner value: refcount
+ * starts at 1, the one _free() call brings it to 0 and destroys it, since
+ * nothing in C aliases these). */
+NcmLaurentSeries *ncm_laurent_series_ref (NcmLaurentSeries *a);
 void ncm_laurent_series_free (NcmLaurentSeries *a);
 void ncm_laurent_series_clear (NcmLaurentSeries **a);
 
@@ -170,6 +185,27 @@ NcmLaurentSeries *ncm_laurent_series_tps_get (const NcmLaurentSeriesTPS *tps, gu
  * $w=e^{i\theta}$) does that mapping itself; this function only knows
  * about the two formal variables, not what they represent. */
 void ncm_laurent_series_tps_eval (const NcmLaurentSeriesTPS *tps, const NcmComplex *w, const NcmComplex *g, NcmComplex *out);
+
+/**
+ * ncm_laurent_series_tps_pow:
+ * @out: a #NcmLaurentSeriesTPS, same order as @a, must not alias @a
+ * @a: a #NcmLaurentSeriesTPS whose order-0 coefficient $a_0=L_0(w=1)$
+ * (a single harmonic-0 term) is nonzero
+ * @p: the (real) exponent
+ *
+ * Raises the truncated power series $a(g)$ to the real power @p:
+ * $out(g)=a(g)^p \mod g^{N+1}$. Only a plain `gdouble` exponent is
+ * supported (not `complex double`): every current use (e.g.
+ * #NcGalaxyShapePopBeta's own $\rho^{2(\alpha-1)}$ composition) only ever
+ * needs a real exponent, and restricting to real keeps this fully
+ * introspectable (no native-only guard needed at all).
+ *
+ * $a$ must have $a_0\ne0$: factor $a(g)=a_0(1+u(g))$ with $u(0)=0$, then
+ * $(1+u)^p=\sum_n c_n g^n$ ($c_0=1$) follows the generalized-binomial
+ * recursion $n c_n=\sum_{k=1}^n[kp-(n-k)]u_k c_{n-k}$ (from differentiating
+ * $F=(1+u)^p$: $(1+u)F'=p u'F$), and $out=a_0^p\,\sum_n c_n g^n$.
+ */
+void ncm_laurent_series_tps_pow (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, gdouble p);
 
 #ifndef NUMCOSMO_GIR_SCAN
 

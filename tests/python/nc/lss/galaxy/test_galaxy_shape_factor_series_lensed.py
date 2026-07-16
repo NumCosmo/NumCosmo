@@ -34,11 +34,12 @@ docs/theory/wl_shape_marginalization_series.qmd and
 dev-notes/wl_shape_series_marginalization_derivation.py (sections 9-11) for
 the derivation and symbolic/numeric verification this class mirrors.
 
-Gaussian-family populations only (``NcGalaxyShapePopGauss`` and
-``NcGalaxyShapePopGaussLocal``, which share one eval_p_rho2_g_series
-implementation): ``NcGalaxyShapePopBeta`` does not implement the
-eval_p_rho2_g_series vfunc this class needs and errors clearly if used
-with it.
+Any population implementing ``eval_p_rho2_g_series`` works: the Gaussian
+family (``NcGalaxyShapePopGauss`` and ``NcGalaxyShapePopGaussLocal``, which
+share one implementation) and ``NcGalaxyShapePopBeta`` (a genuinely
+different, non-Gaussian shape composed via
+``ncm_laurent_series_tps_pow()``'s generalized-binomial recursion). A
+population without an implementation errors clearly if used with this class.
 """
 
 import math
@@ -163,6 +164,49 @@ def test_marginal_matches_quad_gauss_local(ellip_conv):
     )
 
     assert_allclose(lensed_val, quad_val, rtol=2.0e-3)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_marginal_matches_quad_beta(ellip_conv):
+    """NcGalaxyShapePopBeta exercises a genuinely different composition path
+    than the Gaussian family (ncm_laurent_series_tps_pow()'s generalized-
+    binomial recursion, not the exp-of-power-series one) -- same moderate-
+    noise/moderate-g setup as test_marginal_matches_quad_moderate_g_large_noise.
+    mu=0.5, nu=6 (alpha=beta=3, both >1) keeps eval_p smooth on the whole
+    unit interval, including at x=0 -- unlike the default mu/nu (alpha=0.9<1,
+    P(x) ~ x^-0.1 diverges at x=0), which restricts the g-Taylor series' own
+    radius of convergence whenever the rho quadrature approaches rho=0 (see
+    test_marginal_matches_quad_beta_small_g_near_singular below)."""
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["mu"] = 0.5
+    pop["nu"] = 6.0
+    g = 0.09 + 0.0j
+    eps_obs = 0.4 * np.exp(1j * 0.7)
+
+    lensed_val, quad_val = _eval_both(pop, ellip_conv, 4, g, eps_obs, 0.3)
+
+    assert_allclose(lensed_val, quad_val, rtol=2.0e-3)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_marginal_matches_quad_beta_small_g_near_singular(ellip_conv):
+    """Default mu/nu (alpha=mu*nu=0.9<1) makes P(x) ~ x^(alpha-1) diverge at
+    x=0 -- a genuine branch-point singularity, not a numerical artifact
+    (confirmed by raising trunc_order making the mismatch worse at moderate
+    g, the classic signature of evaluating a Taylor series outside its own
+    radius of convergence, rather than better as truncation error alone
+    would predict). g=0 (no truncation at all) matches quad exactly; this
+    checks a small g comfortably inside that radius still works. TRACE's own
+    steeper O(g) response (see test_marginal_matches_quad_moderate_g_large_noise's
+    docstring) shrinks that radius further than TRACE_DET's, hence g=0.003
+    here rather than the smooth case's g=0.09."""
+    pop = Nc.GalaxyShapePopBeta.new()
+    g = 0.003 + 0.0j
+    eps_obs = 0.4 * np.exp(1j * 0.7)
+
+    lensed_val, quad_val = _eval_both(pop, ellip_conv, 4, g, eps_obs, 0.3)
+
+    assert_allclose(lensed_val, quad_val, rtol=1.0e-2)
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)

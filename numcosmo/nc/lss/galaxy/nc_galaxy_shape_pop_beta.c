@@ -53,6 +53,8 @@
 #include <gsl/gsl_sf_gamma.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+#include "ncm/algebra/ncm_laurent_series.h"
+
 struct _NcGalaxyShapePopBeta
 {
   NcGalaxyShapePop parent_instance;
@@ -91,6 +93,8 @@ static gdouble _nc_galaxy_shape_pop_beta_eval_p (NcGalaxyShapePop *gsp, NcGalaxy
 static gdouble _nc_galaxy_shape_pop_beta_eval_p_rho2 (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble rho2);
 static void _nc_galaxy_shape_pop_beta_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
 static gdouble _nc_galaxy_shape_pop_beta_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
+static void _nc_galaxy_shape_pop_beta_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
+                                                            const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
 static void
 nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
@@ -134,12 +138,13 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
 
   ncm_model_class_check_params_info (model_class);
 
-  gsp_class->data_init   = &_nc_galaxy_shape_pop_beta_data_init;
-  gsp_class->prepare     = &_nc_galaxy_shape_pop_beta_prepare;
-  gsp_class->eval_p      = &_nc_galaxy_shape_pop_beta_eval_p;
-  gsp_class->eval_p_rho2 = &_nc_galaxy_shape_pop_beta_eval_p_rho2;
-  gsp_class->gen         = &_nc_galaxy_shape_pop_beta_gen;
-  gsp_class->e_rms       = &_nc_galaxy_shape_pop_beta_e_rms;
+  gsp_class->data_init            = &_nc_galaxy_shape_pop_beta_data_init;
+  gsp_class->prepare              = &_nc_galaxy_shape_pop_beta_prepare;
+  gsp_class->eval_p               = &_nc_galaxy_shape_pop_beta_eval_p;
+  gsp_class->eval_p_rho2          = &_nc_galaxy_shape_pop_beta_eval_p_rho2;
+  gsp_class->gen                  = &_nc_galaxy_shape_pop_beta_gen;
+  gsp_class->e_rms                = &_nc_galaxy_shape_pop_beta_e_rms;
+  gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_beta_eval_p_rho2_g_series;
 }
 
 #define VECTOR (NCM_MODEL (gsp))
@@ -222,6 +227,50 @@ _nc_galaxy_shape_pop_beta_eval_p_rho2 (NcGalaxyShapePop *gsp, NcGalaxyShapePopDa
    * ever forming x or 1-x by subtraction (see the class doc), evaluated in
    * log-space for the same overflow reason as eval_p() above. */
   return exp ((ldata->alpha - 1.0) * log (rho2) - (ldata->alpha + ldata->beta - 2.0) * log1p (rho2) + ldata->lnnorm);
+}
+
+/* eval_p_rho2_g_series composes with x(g)=|chi_I(chi_L,g)|^2 itself -- the
+ * same variable eval_p() takes directly, not the disc-compactified
+ * rho^2=x/(1-x) that eval_p_rho2() uses (see nc_galaxy_shape_pop.h's own
+ * doc comment for the vfunc). This composes P(x) ~ x^(alpha-1) *
+ * (1-x)^(beta-1) (see eval_p()'s own comment):
+ * @x_series via ncm_laurent_series_tps_pow() twice (real, generally
+ * non-integer exponents -- exactly what that function's generalized-
+ * binomial recursion is for) and one ncm_laurent_series_tps_conv(), unlike
+ * NcGalaxyShapePopGauss's single exp-recursion. 1-x(g) is built by scaling
+ * @x_series by -1 and bumping its order-0 term's own constant coefficient by
+ * one (that term is always a plain real scalar -- a single harmonic-0 entry
+ * -- since x(g)=|chi_I(chi_L,g)|^2 is real-valued at every order in g). The
+ * final normalization (exp(lnnorm)) is applied as a separate last step since
+ * tps_scale() cannot write into the same object it reads from (same
+ * restriction as every other `_into`-style op in ncm_laurent_series.h). */
+static void
+_nc_galaxy_shape_pop_beta_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
+                                                const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out)
+{
+  NcGalaxyShapePopBetaLData *ldata  = (NcGalaxyShapePopBetaLData *) data->ldata;
+  const guint order                 = ncm_laurent_series_tps_order (x_series);
+  NcmLaurentSeriesTPS *one_minus_x  = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *num_pow      = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *den_pow      = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *unnormalized = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeries *slot0;
+
+  ncm_laurent_series_tps_scale (one_minus_x, x_series, -1.0);
+  slot0 = ncm_laurent_series_tps_get (one_minus_x, 0);
+  g_assert_cmpint (ncm_laurent_series_hmin (slot0), ==, 0);
+  g_assert_cmpint (ncm_laurent_series_hmax (slot0), ==, 0);
+  ncm_laurent_series_set_c (slot0, 0, ncm_laurent_series_get_c (slot0, 0) + 1.0);
+
+  ncm_laurent_series_tps_pow (num_pow, x_series, ldata->alpha - 1.0);
+  ncm_laurent_series_tps_pow (den_pow, one_minus_x, ldata->beta - 1.0);
+  ncm_laurent_series_tps_conv (unnormalized, num_pow, den_pow);
+  ncm_laurent_series_tps_scale (out, unnormalized, exp (ldata->lnnorm));
+
+  ncm_laurent_series_tps_unref (one_minus_x);
+  ncm_laurent_series_tps_unref (num_pow);
+  ncm_laurent_series_tps_unref (den_pow);
+  ncm_laurent_series_tps_unref (unnormalized);
 }
 
 static void

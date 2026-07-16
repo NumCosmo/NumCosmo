@@ -58,23 +58,28 @@ struct _NcGalaxyShapePopClass
   gdouble (*e_rms) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 
   /*
-   * Taylor-in-g analog of eval_p_rho2(): given rho2(g) = |chi_I(chi_L,g)|^2's
-   * own g-Taylor coefficients (population-independent shear-map output,
-   * @rho2_series, a #NcmLaurentSeriesTPS whose order is this call's
-   * truncation order), returns this population's normalized-density
-   * composition P(rho2(g))'s g-Taylor coefficients in @out (same order as
-   * @rho2_series). Unlike eval_p_rho2, there is no sensible generic default
-   * (the composition depends entirely on the population's own functional
-   * form), so the base class default just errors clearly, matching
-   * NcGalaxySDShape's direct_estimate idiom for the same "not every
-   * subclass needs this" situation. Consumed by
+   * Taylor-in-g analog of eval_p(): given x(g) = |chi_I(chi_L,g)|^2's own
+   * g-Taylor coefficients (population-independent shear-map output,
+   * @x_series, a #NcmLaurentSeriesTPS whose order is this call's truncation
+   * order), returns this population's own fully normalized density
+   * P(x(g)) = eval_p(x(g))'s g-Taylor coefficients in @out (same order as
+   * @x_series) -- i.e. @out's coefficients must reproduce eval_p(x) exactly
+   * when Horner-evaluated at any g inside the truncation radius, including
+   * the population's own normalization constant (no reference-point
+   * division or other rescaling is deferred to the caller: see
+   * #NcGalaxyShapeFactorSeriesLensed's own pop_norm, a fixed, population-
+   * agnostic 1/pi disc-measure factor). Unlike eval_p_rho2, there is no
+   * sensible generic default (the composition depends entirely on the
+   * population's own functional form), so the base class default just
+   * errors clearly, matching NcGalaxySDShape's direct_estimate idiom for
+   * the same "not every subclass needs this" situation. Consumed by
    * #NcGalaxyShapeFactorSeriesLensed. #NcmLaurentSeriesTPS is boxed and
    * introspectable, so this vfunc needs no native-only guard -- subclass
    * implementations are free to use native complex-double machinery
    * internally, but the public contract here is plain introspectable types.
    */
   void (*eval_p_rho2_g_series) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                const NcmLaurentSeriesTPS *rho2_series, NcmLaurentSeriesTPS *out);
+                                const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
   /* Padding to allow adding up to 11 more virtual functions without breaking ABI. */
   gpointer padding[11];
@@ -148,7 +153,7 @@ gdouble nc_galaxy_shape_pop_get_sigma (NcGalaxyShapePop *gsp, NcGalaxyShapePopDa
 gdouble nc_galaxy_shape_pop_get_mode_x (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 
 void nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                               const NcmLaurentSeriesTPS *rho2_series, NcmLaurentSeriesTPS *out);
+                                               const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
 G_END_DECLS
 

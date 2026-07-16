@@ -383,6 +383,10 @@ galaxy_tests = [
         'name': 'nc_galaxy_shape_intrinsic_mode',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_intrinsic_mode.c'],
     },
+    {
+        'name': 'nc_galaxy_shape_pop_series',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c'],
+    },
 ]
 
 # Combine all test arrays

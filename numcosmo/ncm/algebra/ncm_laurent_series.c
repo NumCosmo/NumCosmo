@@ -75,7 +75,7 @@
 #include <string.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-G_DEFINE_BOXED_TYPE (NcmLaurentSeries, ncm_laurent_series, ncm_laurent_series_copy, ncm_laurent_series_free)
+G_DEFINE_BOXED_TYPE (NcmLaurentSeries, ncm_laurent_series, ncm_laurent_series_ref, ncm_laurent_series_free)
 
 /**
  * ncm_laurent_series_new:
@@ -97,6 +97,7 @@ ncm_laurent_series_new (gint hmin, gint hmax)
   a->hmax  = hmax;
   a->c_cap = n;
   a->c     = g_new0 (complex double, n);
+  g_atomic_ref_count_init (&a->ref_count);
 
   return a;
 }
@@ -151,16 +152,37 @@ ncm_laurent_series_copy (const NcmLaurentSeries *a)
 }
 
 /**
+ * ncm_laurent_series_ref:
+ * @a: a #NcmLaurentSeries
+ *
+ * Increases the reference count of @a by one -- also this boxed type's
+ * "copy" function (see the header's own comment on why).
+ *
+ * Returns: (transfer full): @a
+ */
+NcmLaurentSeries *
+ncm_laurent_series_ref (NcmLaurentSeries *a)
+{
+  g_atomic_ref_count_inc (&a->ref_count);
+
+  return a;
+}
+
+/**
  * ncm_laurent_series_free:
  * @a: a #NcmLaurentSeries
  *
- * Frees @a.
+ * Decreases the reference count of @a by one, freeing it once the count
+ * reaches zero.
  */
 void
 ncm_laurent_series_free (NcmLaurentSeries *a)
 {
-  g_free (a->c);
-  g_free (a);
+  if (g_atomic_ref_count_dec (&a->ref_count))
+  {
+    g_free (a->c);
+    g_free (a);
+  }
 }
 
 /**
@@ -805,6 +827,68 @@ void
 ncm_laurent_series_tps_eval (const NcmLaurentSeriesTPS *tps, const NcmComplex *w, const NcmComplex *g, NcmComplex *out)
 {
   ncm_complex_set_c (out, ncm_laurent_series_tps_eval_c (tps, ncm_complex_c (w), ncm_complex_c (g)));
+}
+
+/* See this function's own header doc comment for the recursion. @u holds
+ * a/a_0-1's own coefficients (u_0=0, left untouched: fresh
+ * NcmLaurentSeriesTPS start zero-initialized); @c is built up
+ * self-referentially (c_n depends on c_0..c_{n-1}) before the final a_0^p
+ * rescale into @out. The inner fold (for fixed n, summing k=1..n) needs
+ * the same ping-pong-plus-term scratch as ncm_laurent_series_tps_conv()'s
+ * own fold and for the same reason (add_into forbids @out aliasing an
+ * input) -- three fixed scalar buffers, allocated fresh here since
+ * @a/@out aren't (yet) part of a persistent, repeatedly-evaluated object
+ * the way nc_wl_ellipticity_series.c's evaluators are (matching
+ * NcGalaxyShapePopGauss's own eval_p_rho2_g_series, which is in exactly
+ * the same position). */
+void
+ncm_laurent_series_tps_pow (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, gdouble p)
+{
+  const guint order             = ncm_laurent_series_tps_order (a);
+  NcmLaurentSeriesTPS *u        = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *c        = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeries *fold_acc[2] = {ncm_laurent_series_new (0, 0), ncm_laurent_series_new (0, 0)};
+  NcmLaurentSeries *fold_term   = ncm_laurent_series_new (0, 0);
+  complex double a0;
+  guint n;
+
+  g_assert_cmpuint (ncm_laurent_series_tps_order (out), ==, order);
+
+  a0 = ncm_laurent_series_get_c (ncm_laurent_series_tps_get (a, 0), 0);
+  g_assert (a0 != 0.0);
+
+  for (n = 1; n <= order; n++)
+    ncm_laurent_series_scale_c_into (ncm_laurent_series_tps_get (u, n), ncm_laurent_series_tps_get (a, n), 1.0 / a0);
+
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (c, 0), 0, 1.0);
+
+  for (n = 1; n <= order; n++)
+  {
+    NcmLaurentSeries *acc = fold_acc[0];
+    guint k;
+
+    ncm_laurent_series_reset (acc, 0, 0);
+
+    for (k = 1; k <= n; k++)
+    {
+      NcmLaurentSeries *acc2 = fold_acc[k % 2];
+      const gdouble weight   = (gdouble) k * p - (gdouble) (n - k);
+
+      ncm_laurent_series_conv_into (fold_term, ncm_laurent_series_tps_get (u, k), ncm_laurent_series_tps_get (c, n - k));
+      ncm_laurent_series_add_into (acc2, acc, fold_term, weight);
+      acc = acc2;
+    }
+
+    ncm_laurent_series_scale_c_into (ncm_laurent_series_tps_get (c, n), acc, 1.0 / n);
+  }
+
+  ncm_laurent_series_tps_scale (out, c, cpow (a0, p));
+
+  ncm_laurent_series_tps_unref (u);
+  ncm_laurent_series_tps_unref (c);
+  ncm_laurent_series_free (fold_acc[0]);
+  ncm_laurent_series_free (fold_acc[1]);
+  ncm_laurent_series_free (fold_term);
 }
 
 /**

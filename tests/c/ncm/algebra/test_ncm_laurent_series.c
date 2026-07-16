@@ -666,6 +666,38 @@ test_tps_eval_hand_computed (void)
   ncm_laurent_series_tps_unref (tps);
 }
 
+/* Golden reference: sympy.series((2+0.5*g-0.3*g**2+0.1*g**3)**Rational(27,10), g, 0, 4),
+ * i.e. a real (non-integer) exponent, exactly the case
+ * ncm_laurent_series_tps_pow() exists for (NcGalaxyShapePopBeta's own
+ * rho2^(alpha-1) composition). Every coefficient here is a plain real
+ * scalar (harmonic 0 only), so this only checks the recursion itself, not
+ * any Laurent-series bookkeeping (already covered by
+ * test_tps_conv_is_truncated_cauchy_product() and friends). */
+static void
+test_tps_pow_matches_sympy_reference (void)
+{
+  const guint order         = 3;
+  const gdouble a_coeffs[4] = {2.0, 0.5, -0.3, 0.1};
+  const gdouble p           = 2.7;
+  const gdouble expected[4] = {
+    6.498019170849885, 4.386162940323673, -1.6996381393754232, -0.1868688169367064
+  };
+  NcmLaurentSeriesTPS *a   = ncm_laurent_series_tps_new (order);
+  NcmLaurentSeriesTPS *out = ncm_laurent_series_tps_new (order);
+  guint n;
+
+  for (n = 0; n <= order; n++)
+    ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (a, n), 0, a_coeffs[n]);
+
+  ncm_laurent_series_tps_pow (out, a, p);
+
+  for (n = 0; n <= order; n++)
+    g_assert_cmpfloat (cabs (ncm_laurent_series_get_c (ncm_laurent_series_tps_get (out, n), 0) - expected[n]), <, 1.0e-10);
+
+  ncm_laurent_series_tps_unref (a);
+  ncm_laurent_series_tps_unref (out);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -688,6 +720,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/laurent_series/tps_conv_is_truncated_cauchy_product", &test_tps_conv_is_truncated_cauchy_product);
   g_test_add_func ("/ncm/laurent_series/tps_conj_add_scale_match_scalar_ops", &test_tps_conj_add_scale_match_scalar_ops);
   g_test_add_func ("/ncm/laurent_series/tps_eval_hand_computed", &test_tps_eval_hand_computed);
+  g_test_add_func ("/ncm/laurent_series/tps_pow_matches_sympy_reference", &test_tps_pow_matches_sympy_reference);
 
   return g_test_run ();
 }

@@ -29,7 +29,8 @@
  * Lensed-frame series evaluation of the intrinsic-ellipticity marginal, both
  * ellipticity conventions, arbitrary truncation order, any population model
  * implementing #NcGalaxyShapePop's eval_p_rho2_g_series vfunc (currently
- * #NcGalaxyShapePopGauss).
+ * #NcGalaxyShapePopGauss, #NcGalaxyShapePopGaussLocal and
+ * #NcGalaxyShapePopBeta).
  *
  * Changes to the LENSED frame (same substitution #NcGalaxyShapeFactorQuad
  * uses) and Taylor-expands the *population* term in $g$, keeping the noise
@@ -82,6 +83,19 @@
  * A population that does not implement eval_p_rho2_g_series errors clearly
  * the first time this class actually needs it (base class default), rather
  * than at prepare() time.
+ *
+ * The $g$-Taylor series' own radius of convergence is set by eval_p's
+ * nearest non-analytic point in $x=|\chi_I|^2$: entire for the Gaussian
+ * family (#NcGalaxyShapePopGauss, #NcGalaxyShapePopGaussLocal), so any $g$
+ * this project's own small-shear regime allows works; but
+ * #NcGalaxyShapePopBeta's $P(x)\propto x^{\alpha-1}(1-x)^{\beta-1}$ has a
+ * branch point at $x=0$ (if $\alpha<1$) and/or $x=1$ (if $\beta<1$), so the
+ * series can diverge at even modest $g$ once the $\rho$ quadrature comes
+ * close enough to that point -- confirmed by raising trunc_order making
+ * such cases *worse*, the standard signature of evaluating a Taylor series
+ * outside its own disk of convergence, rather than better as truncation
+ * error alone would predict. $\alpha,\beta>1$ (an interior-peaked,
+ * everywhere-smooth density) has no such restriction.
  *
  * See <a href="../../theory/wl_shape_marginalization_series.html">A
  * Small-Shear Series Marginalization for the Shape Likelihood</a> and
@@ -439,7 +453,7 @@ _compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, NcGalaxyShapePo
     const gdouble z         = R * rho / sig2;
     const gdouble envelope  = exp (-gsl_pow_2 (R - rho) / (2.0 * sig2)) / (2.0 * M_PI * sig2);
     const gdouble prefactor = w * rho * envelope * pop_norm;
-    NcmLaurentSeriesTPS *rho2_series;
+    NcmLaurentSeriesTPS *x_series;
     NcmLaurentSeriesTPS *jac_series;
     gint maxk, k;
     gdouble *Ik;
@@ -447,17 +461,17 @@ _compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, NcGalaxyShapePo
     if (ws->series_trace != NULL)
     {
       nc_wl_ellipticity_series_trace_eval (ws->series_trace, rho);
-      rho2_series = nc_wl_ellipticity_series_trace_get_abs_sq (ws->series_trace);
-      jac_series  = nc_wl_ellipticity_series_trace_get_jac (ws->series_trace);
+      x_series   = nc_wl_ellipticity_series_trace_get_abs_sq (ws->series_trace);
+      jac_series = nc_wl_ellipticity_series_trace_get_jac (ws->series_trace);
     }
     else
     {
       nc_wl_ellipticity_series_trace_det_eval (ws->series_trace_det, rho);
-      rho2_series = nc_wl_ellipticity_series_trace_det_get_abs_sq (ws->series_trace_det);
-      jac_series  = nc_wl_ellipticity_series_trace_det_get_jac (ws->series_trace_det);
+      x_series   = nc_wl_ellipticity_series_trace_det_get_abs_sq (ws->series_trace_det);
+      jac_series = nc_wl_ellipticity_series_trace_det_get_jac (ws->series_trace_det);
     }
 
-    nc_galaxy_shape_pop_eval_p_rho2_g_series (pop, pop_data, rho2_series, ws->pop_coeffs);
+    nc_galaxy_shape_pop_eval_p_rho2_g_series (pop, pop_data, x_series, ws->pop_coeffs);
     ncm_laurent_series_tps_conv (ws->F, ws->pop_coeffs, jac_series);
 
     maxk = 0;
@@ -560,11 +574,11 @@ _ensure_eps_cache (NcGalaxyShapeFactorSeriesLensedData *ldata, gdouble epsilon_o
 }
 
 /* Refreshes the harmonics cache (ldata->H) when (R,std_noise,pop_hash)
- * changed. NcGalaxyShapePopGauss (and its per-galaxy-sigma siblings)
- * normalize their density over the TRUNCATED disc, not the plain
- * exp(-rho^2/2sigma_pop^2) this scheme's Taylor-series composition
- * assumes -- pop_norm is read back from the population object itself
- * (eval_p_rho2 at rho^2=0) instead of hardcoding that formula here. */
+ * changed. pop_norm is a fixed 1/pi disc-measure factor, population-
+ * agnostic: eval_p_rho2_g_series() composes the population's own fully
+ * normalized density P(x(g)) directly (see its doc comment in
+ * nc_galaxy_shape_pop.h), so no population-specific normalization lookup
+ * is needed here. */
 static void
 _ensure_harmonics_cache (NcGalaxyShapeFactorSeriesLensedPrivate * const self, NcGalaxyShapeFactorSeriesLensedData *ldata,
                          NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, guint64 pop_hash, gdouble sig2)
@@ -573,7 +587,7 @@ _ensure_harmonics_cache (NcGalaxyShapeFactorSeriesLensedPrivate * const self, Nc
     return;
 
   {
-    const gdouble pop_norm = nc_galaxy_shape_pop_eval_p_rho2 (pop, data->pop_data, 0.0) / M_PI;
+    const gdouble pop_norm = 1.0 / M_PI;
 
     _compute_H (self, pop, data->pop_data, pop_norm, sig2, ldata);
   }

@@ -47,7 +47,7 @@ void _nc_galaxy_shape_pop_gauss_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData
 void _nc_galaxy_shape_pop_gauss_ldata_set_sigma (NcGalaxyShapePopData *data, const gdouble sigma);
 gdouble _nc_galaxy_shape_pop_gauss_ldata_get_sigma (NcGalaxyShapePopData *data);
 void _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                                      const NcmLaurentSeriesTPS *rho2_series, NcmLaurentSeriesTPS *out);
+                                                      const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
 G_END_DECLS
 
