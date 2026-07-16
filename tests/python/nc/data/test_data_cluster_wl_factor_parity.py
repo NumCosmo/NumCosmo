@@ -420,6 +420,60 @@ def test_fixed_nodes_resample_reuse_matches_lnint():
         assert_allclose(reused_val, lnint_val, rtol=1.0e-5)
 
 
+def test_resample_matches_legacy():
+    """``resample()`` itself -- not just static ``m2lnL_val`` on a fixed
+    catalog -- must generate the *same* realizations as legacy, seed for
+    seed. Both engines call gen() in the identical order (redshift,
+    position, shape -- see ``_nc_data_cluster_wl_factor_resample`` and
+    ``_nc_data_cluster_wl_resample``), and each individual gen() step was
+    already proven bit-parity in isolation (shape:
+    ``test_galaxy_shape_factor_var_add.py::test_gen_parity_legacy``); this
+    is the first check that the *whole* per-galaxy resample pipeline
+    (redshift z draw -> position ra/dec draw+radius rejection -> shape
+    draw, all sharing one RNG stream) reproduces legacy bit-for-bit once
+    composed together in the orchestrator. Compares the raw regenerated
+    columns directly (ra/dec/zp/epsilon_obs_1/2, all identically named on
+    both sides) as well as the resulting -2lnL."""
+    mset, hms = _build_mset()
+    hms.param_set_by_name("log10MDelta", 14.0)
+
+    position_factor, redshift_factor, shape_factor, new_obs = _build_new_obs(mset)
+    legacy_obs = _build_legacy_obs()
+
+    dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf.set_obs(new_obs)
+    dcwlf.set_prec(1.0e-8)
+
+    dcwl = Nc.DataClusterWL.new()
+    dcwl.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
+    dcwl.set_obs(legacy_obs)
+    dcwl.set_prec(1.0e-8)
+
+    n = len(_GALAXIES)
+
+    for seed in (100, 101, 102):
+        rng_new = Ncm.RNG.seeded_new(None, seed)
+        rng_old = Ncm.RNG.seeded_new(None, seed)
+
+        dcwlf.resample(mset, rng_new)
+        dcwl.resample(mset, rng_old)
+
+        for col in ("ra", "dec", "zp", "epsilon_obs_1", "epsilon_obs_2"):
+            new_vals = [new_obs.get(col, i) for i in range(n)]
+            old_vals = [legacy_obs.get(col, i) for i in range(n)]
+            assert_allclose(new_vals, old_vals, rtol=0.0, atol=0.0)
+
+        new_m2lnL = dcwlf.m2lnL_val(mset)
+        old_m2lnL = dcwl.m2lnL_val(mset)
+        assert_allclose(new_m2lnL, old_m2lnL, rtol=1.0e-5)
+
+        new_gal = Ncm.Vector.new(n)
+        old_gal = Ncm.Vector.new(n)
+        dcwlf.eval_m2lnP_gal(mset, new_gal)
+        dcwl.eval_m2lnP_gal(mset, old_gal)
+        assert_allclose(new_gal.dup_array(), old_gal.dup_array(), rtol=1.0e-5)
+
+
 def test_fixed_nodes_correct_after_changing_n_nodes_rule_n_mid_run():
     """`n-nodes`/`rule-n` are orchestrator properties, not NcmModel
     parameters -- changing them bumps no pkey at all, so
