@@ -257,10 +257,10 @@ _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxy
 
   ncm_laurent_series_tps_scale (exponent, x_series, -ldata->inv_2sigma2);
 
-  g_assert_cmpint (ncm_laurent_series_hmin (ncm_laurent_series_tps_get (exponent, 0)), ==, 0);
-  g_assert_cmpint (ncm_laurent_series_hmax (ncm_laurent_series_tps_get (exponent, 0)), ==, 0);
+  g_assert_cmpint (ncm_laurent_series_get_hmin (ncm_laurent_series_tps_get (exponent, 0)), ==, 0);
+  g_assert_cmpint (ncm_laurent_series_get_hmax (ncm_laurent_series_tps_get (exponent, 0)), ==, 0);
 
-  a0        = ncm_laurent_series_get_c (ncm_laurent_series_tps_get (exponent, 0), 0);
+  a0        = ncm_laurent_series_get (ncm_laurent_series_tps_get (exponent, 0), 0);
   prefactor = ldata->norm * cexp (a0);
 
   ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (c, 0), 0, 1.0);
@@ -281,7 +281,7 @@ _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxy
       acc = acc2;
     }
 
-    ncm_laurent_series_scale_c_into (ncm_laurent_series_tps_get (c, m), acc, 1.0 / m);
+    ncm_laurent_series_scale_into (ncm_laurent_series_tps_get (c, m), acc, 1.0 / m);
   }
 
   ncm_laurent_series_tps_scale (out, c, prefactor);

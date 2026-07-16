@@ -36,16 +36,14 @@
  * docs/theory/wl_shape_marginalization_series.qmd for the physics context
  * and derivation).
  *
- * Two parallel calling conventions for every #NcmLaurentSeries operation,
- * matching nc_wl_ellipticity.h's own introspectable/native dual interface:
- *
- * - an introspectable, #NcmComplex-based API (the plain function names),
- *   usable and testable from Python;
- * - a native, `complex double`-based secondary interface (`_c`-suffixed or,
- *   for functions with no complex-valued parameters at all, just direct
- *   struct-field access), declared behind `#ifndef NUMCOSMO_GIR_SCAN` since
- *   C99 complex types are not introspectable -- what the hot loop in
- *   nc_wl_ellipticity_series.c actually uses.
+ * Two calling conventions for operations on a complex value (matching
+ * nc_wl_ellipticity.h's own convention): the plain name takes/returns
+ * #NcmComplex by value -- fast, used internally, `(skip)`-ed from
+ * introspection since C99 complex types are not GObject-introspectable --
+ * and the `_ptr`-suffixed sibling takes/returns it by pointer, which is
+ * introspectable and usable from Python. Functions with no complex-valued
+ * parameter at all (e.g. add/conv/conj, jacobi_anger_reduce) have only one,
+ * fully introspectable, form.
  *
  * Every #NcmLaurentSeries is independently heap-allocated: callers own
  * whatever they create and must free it themselves (or track a short-lived
@@ -54,7 +52,7 @@
  *
  * For hot loops that would otherwise allocate and free many of these per
  * call, ncm_laurent_series_reset() plus the `_into`-suffixed counterparts
- * of add/conv/scale_c/conj/new_single write into a caller-supplied,
+ * of add/conv/scale/conj/new_single write into a caller-supplied,
  * already-allocated #NcmLaurentSeries instead of allocating a new one
  * (grow-only, so a reused instance never reallocates once it reaches its
  * steady-state size) -- #NcmLaurentSeriesTPS's own coefficients and
@@ -70,7 +68,6 @@
 #include "ncm/algebra/ncm_laurent_series.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include <complex.h>
 #include <math.h>
 #include <string.h>
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -96,7 +93,7 @@ ncm_laurent_series_new (gint hmin, gint hmax)
   a->hmin  = hmin;
   a->hmax  = hmax;
   a->c_cap = n;
-  a->c     = g_new0 (complex double, n);
+  a->c     = g_new0 (NcmComplex, n);
   g_atomic_ref_count_init (&a->ref_count);
 
   return a;
@@ -123,11 +120,11 @@ ncm_laurent_series_reset (NcmLaurentSeries *a, gint hmin, gint hmax)
   if (n > a->c_cap)
   {
     g_free (a->c);
-    a->c     = g_new (complex double, n);
+    a->c     = g_new (NcmComplex, n);
     a->c_cap = n;
   }
 
-  memset (a->c, 0, n * sizeof (complex double));
+  memset (a->c, 0, n * sizeof (NcmComplex));
   a->hmin = hmin;
   a->hmax = hmax;
 }
@@ -202,25 +199,25 @@ ncm_laurent_series_clear (NcmLaurentSeries **a)
 }
 
 /**
- * ncm_laurent_series_hmin:
+ * ncm_laurent_series_get_hmin:
  * @a: a #NcmLaurentSeries
  *
  * Returns: @a's lowest harmonic
  */
 gint
-ncm_laurent_series_hmin (const NcmLaurentSeries *a)
+ncm_laurent_series_get_hmin (const NcmLaurentSeries *a)
 {
   return a->hmin;
 }
 
 /**
- * ncm_laurent_series_hmax:
+ * ncm_laurent_series_get_hmax:
  * @a: a #NcmLaurentSeries
  *
  * Returns: @a's highest harmonic
  */
 gint
-ncm_laurent_series_hmax (const NcmLaurentSeries *a)
+ncm_laurent_series_get_hmax (const NcmLaurentSeries *a)
 {
   return a->hmax;
 }
@@ -235,7 +232,7 @@ ncm_laurent_series_hmax (const NcmLaurentSeries *a)
  * Returns: (transfer full): the new series
  */
 NcmLaurentSeries *
-ncm_laurent_series_new_single (gint h, complex double val)
+ncm_laurent_series_new_single (gint h, NcmComplex val)
 {
   NcmLaurentSeries *a = ncm_laurent_series_new (h, h);
 
@@ -254,21 +251,21 @@ ncm_laurent_series_new_single (gint h, complex double val)
  * $[h,h]$ and sets its one coefficient, instead of allocating.
  */
 void
-ncm_laurent_series_set_single_into (NcmLaurentSeries *out, gint h, complex double val)
+ncm_laurent_series_set_single_into (NcmLaurentSeries *out, gint h, NcmComplex val)
 {
   ncm_laurent_series_reset (out, h, h);
   out->c[0] = val;
 }
 
 /**
- * ncm_laurent_series_get_c:
+ * ncm_laurent_series_get: (skip)
  * @a: a #NcmLaurentSeries
  * @h: the harmonic to query
  *
  * Returns: the coefficient of $w^h$ in @a, or 0 if $h$ is outside @a's range
  */
-complex double
-ncm_laurent_series_get_c (const NcmLaurentSeries *a, gint h)
+NcmComplex
+ncm_laurent_series_get (const NcmLaurentSeries *a, gint h)
 {
   if ((h < a->hmin) || (h > a->hmax))
     return 0.0;
@@ -277,13 +274,13 @@ ncm_laurent_series_get_c (const NcmLaurentSeries *a, gint h)
 }
 
 /**
- * ncm_laurent_series_set_c: (skip)
+ * ncm_laurent_series_set: (skip)
  * @a: a #NcmLaurentSeries
  * @h: the harmonic to set, must already be within @a's $[hmin,hmax]$ range
  * @val: the new coefficient of $w^h$
  */
 void
-ncm_laurent_series_set_c (NcmLaurentSeries *a, gint h, complex double val)
+ncm_laurent_series_set (NcmLaurentSeries *a, gint h, NcmComplex val)
 {
   g_assert_cmpint (h, >=, a->hmin);
   g_assert_cmpint (h, <=, a->hmax);
@@ -292,28 +289,28 @@ ncm_laurent_series_set_c (NcmLaurentSeries *a, gint h, complex double val)
 }
 
 /**
- * ncm_laurent_series_get:
+ * ncm_laurent_series_get_ptr:
  * @a: a #NcmLaurentSeries
  * @h: the harmonic to query
  * @out: output #NcmComplex, the coefficient of $w^h$, or 0 if $h$ is
  * outside @a's range
  */
 void
-ncm_laurent_series_get (const NcmLaurentSeries *a, gint h, NcmComplex *out)
+ncm_laurent_series_get_ptr (const NcmLaurentSeries *a, gint h, NcmComplex *out)
 {
-  ncm_complex_set_c (out, ncm_laurent_series_get_c (a, h));
+  ncm_complex_set_c (out, ncm_laurent_series_get (a, h));
 }
 
 /**
- * ncm_laurent_series_set:
+ * ncm_laurent_series_set_ptr:
  * @a: a #NcmLaurentSeries
  * @h: the harmonic to set, must already be within @a's $[hmin,hmax]$ range
  * @val: the new coefficient of $w^h$
  */
 void
-ncm_laurent_series_set (NcmLaurentSeries *a, gint h, const NcmComplex *val)
+ncm_laurent_series_set_ptr (NcmLaurentSeries *a, gint h, const NcmComplex *val)
 {
-  ncm_laurent_series_set_c (a, h, ncm_complex_c (val));
+  ncm_laurent_series_set (a, h, ncm_complex_c (val));
 }
 
 /**
@@ -333,10 +330,10 @@ ncm_laurent_series_add (const NcmLaurentSeries *a, const NcmLaurentSeries *b, gd
   gint h;
 
   for (h = a->hmin; h <= a->hmax; h++)
-    out->c[h - hmin] += ncm_laurent_series_get_c (a, h);
+    out->c[h - hmin] += ncm_laurent_series_get (a, h);
 
   for (h = b->hmin; h <= b->hmax; h++)
-    out->c[h - hmin] += sb * ncm_laurent_series_get_c (b, h);
+    out->c[h - hmin] += sb * ncm_laurent_series_get (b, h);
 
   return out;
 }
@@ -361,21 +358,21 @@ ncm_laurent_series_add_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, c
   ncm_laurent_series_reset (out, hmin, hmax);
 
   for (h = a->hmin; h <= a->hmax; h++)
-    out->c[h - hmin] += ncm_laurent_series_get_c (a, h);
+    out->c[h - hmin] += ncm_laurent_series_get (a, h);
 
   for (h = b->hmin; h <= b->hmax; h++)
-    out->c[h - hmin] += sb * ncm_laurent_series_get_c (b, h);
+    out->c[h - hmin] += sb * ncm_laurent_series_get (b, h);
 }
 
 /**
- * ncm_laurent_series_scale_c: (skip)
+ * ncm_laurent_series_scale: (skip)
  * @a: a #NcmLaurentSeries
  * @s: scale factor
  *
  * Returns: (transfer full): a new series equal to $s\cdot a$
  */
 NcmLaurentSeries *
-ncm_laurent_series_scale_c (const NcmLaurentSeries *a, complex double s)
+ncm_laurent_series_scale (const NcmLaurentSeries *a, NcmComplex s)
 {
   NcmLaurentSeries *out = ncm_laurent_series_new (a->hmin, a->hmax);
   gint i, n             = a->hmax - a->hmin + 1;
@@ -387,16 +384,16 @@ ncm_laurent_series_scale_c (const NcmLaurentSeries *a, complex double s)
 }
 
 /**
- * ncm_laurent_series_scale_c_into: (skip)
+ * ncm_laurent_series_scale_into: (skip)
  * @out: a #NcmLaurentSeries, resized in place, must not alias @a
  * @a: a #NcmLaurentSeries
  * @s: scale factor
  *
- * Reuse counterpart of ncm_laurent_series_scale_c(): writes $s\cdot a$ into
+ * Reuse counterpart of ncm_laurent_series_scale(): writes $s\cdot a$ into
  * @out instead of allocating a new series.
  */
 void
-ncm_laurent_series_scale_c_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, complex double s)
+ncm_laurent_series_scale_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, NcmComplex s)
 {
   gint i, n = a->hmax - a->hmin + 1;
 
@@ -407,16 +404,16 @@ ncm_laurent_series_scale_c_into (NcmLaurentSeries *out, const NcmLaurentSeries *
 }
 
 /**
- * ncm_laurent_series_scale:
+ * ncm_laurent_series_scale_ptr:
  * @a: a #NcmLaurentSeries
  * @s: scale factor
  *
  * Returns: (transfer full): a new series equal to $s\cdot a$
  */
 NcmLaurentSeries *
-ncm_laurent_series_scale (const NcmLaurentSeries *a, const NcmComplex *s)
+ncm_laurent_series_scale_ptr (const NcmLaurentSeries *a, const NcmComplex *s)
 {
-  return ncm_laurent_series_scale_c (a, ncm_complex_c (s));
+  return ncm_laurent_series_scale (a, ncm_complex_c (s));
 }
 
 /**
@@ -437,7 +434,7 @@ ncm_laurent_series_conv (const NcmLaurentSeries *a, const NcmLaurentSeries *b)
 
   for (h1 = a->hmin; h1 <= a->hmax; h1++)
   {
-    complex double v1 = a->c[h1 - a->hmin];
+    NcmComplex v1 = a->c[h1 - a->hmin];
 
     if (v1 == 0.0)
       continue;
@@ -470,7 +467,7 @@ ncm_laurent_series_conv_into (NcmLaurentSeries *out, const NcmLaurentSeries *a, 
 
   for (h1 = a->hmin; h1 <= a->hmax; h1++)
   {
-    complex double v1 = a->c[h1 - a->hmin];
+    NcmComplex v1 = a->c[h1 - a->hmin];
 
     if (v1 == 0.0)
       continue;
@@ -495,7 +492,7 @@ ncm_laurent_series_conj (const NcmLaurentSeries *a)
   gint h;
 
   for (h = a->hmin; h <= a->hmax; h++)
-    out->c[(-h) - out->hmin] = conj (ncm_laurent_series_get_c (a, h));
+    out->c[(-h) - out->hmin] = conj (ncm_laurent_series_get (a, h));
 
   return out;
 }
@@ -516,20 +513,20 @@ ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries *a)
   ncm_laurent_series_reset (out, -a->hmax, -a->hmin);
 
   for (h = a->hmin; h <= a->hmax; h++)
-    out->c[(-h) - out->hmin] = conj (ncm_laurent_series_get_c (a, h));
+    out->c[(-h) - out->hmin] = conj (ncm_laurent_series_get (a, h));
 }
 
 /**
- * ncm_laurent_series_eval_c: (skip)
+ * ncm_laurent_series_eval: (skip)
  * @a: a #NcmLaurentSeries
  * @w: the point to evaluate at
  *
  * Returns: $a(w)=\sum_{h=hmin}^{hmax} c_h w^h$
  */
-complex double
-ncm_laurent_series_eval_c (const NcmLaurentSeries *a, complex double w)
+NcmComplex
+ncm_laurent_series_eval (const NcmLaurentSeries *a, NcmComplex w)
 {
-  complex double result = 0.0;
+  NcmComplex result = 0.0;
   gint h;
 
   /* Horner over the *shifted*, all-non-negative exponents h-hmin (a plain
@@ -537,21 +534,21 @@ ncm_laurent_series_eval_c (const NcmLaurentSeries *a, complex double w)
    * directly); multiplying the shifted result by w^hmin at the end recovers
    * sum_h c_h w^h exactly. */
   for (h = a->hmax; h >= a->hmin; h--)
-    result = result * w + ncm_laurent_series_get_c (a, h);
+    result = result * w + ncm_laurent_series_get (a, h);
 
   return result * cpow (w, a->hmin);
 }
 
 /**
- * ncm_laurent_series_eval:
+ * ncm_laurent_series_eval_ptr:
  * @a: a #NcmLaurentSeries
  * @w: the point to evaluate at
  * @out: (out): $a(w)$
  */
 void
-ncm_laurent_series_eval (const NcmLaurentSeries *a, const NcmComplex *w, NcmComplex *out)
+ncm_laurent_series_eval_ptr (const NcmLaurentSeries *a, const NcmComplex *w, NcmComplex *out)
 {
-  ncm_complex_set_c (out, ncm_laurent_series_eval_c (a, ncm_complex_c (w)));
+  ncm_complex_set_c (out, ncm_laurent_series_eval (a, ncm_complex_c (w)));
 }
 
 /* @coeffs: owned directly, length order+1
@@ -685,7 +682,7 @@ ncm_laurent_series_tps_get (const NcmLaurentSeriesTPS *tps, guint n)
 }
 
 /**
- * ncm_laurent_series_tps_conv: (skip)
+ * ncm_laurent_series_tps_conv:
  * @out: a #NcmLaurentSeriesTPS, same order as @a and @b, must not alias either
  * @a: a #NcmLaurentSeriesTPS
  * @b: a #NcmLaurentSeriesTPS, same order as @a
@@ -726,12 +723,12 @@ ncm_laurent_series_tps_conv (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS
       acc = acc2;
     }
 
-    ncm_laurent_series_scale_c_into (g_ptr_array_index (out->coeffs, m), acc, 1.0);
+    ncm_laurent_series_scale_into (g_ptr_array_index (out->coeffs, m), acc, 1.0);
   }
 }
 
 /**
- * ncm_laurent_series_tps_conj: (skip)
+ * ncm_laurent_series_tps_conj:
  * @out: a #NcmLaurentSeriesTPS, same order as @a, must not alias @a
  * @a: a #NcmLaurentSeriesTPS
  *
@@ -752,7 +749,7 @@ ncm_laurent_series_tps_conj (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS
 }
 
 /**
- * ncm_laurent_series_tps_add: (skip)
+ * ncm_laurent_series_tps_add:
  * @out: a #NcmLaurentSeriesTPS, same order as @a and @b, must not alias either
  * @a: a #NcmLaurentSeriesTPS
  * @b: a #NcmLaurentSeriesTPS, same order as @a
@@ -784,7 +781,7 @@ ncm_laurent_series_tps_add (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS 
  * slots, no scratch #NcmLaurentSeries needed.
  */
 void
-ncm_laurent_series_tps_scale (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, complex double s)
+ncm_laurent_series_tps_scale (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS *a, NcmComplex s)
 {
   const guint order = ncm_laurent_series_tps_order (a);
   guint m;
@@ -792,41 +789,41 @@ ncm_laurent_series_tps_scale (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTP
   g_assert_cmpuint (ncm_laurent_series_tps_order (out), ==, order);
 
   for (m = 0; m <= order; m++)
-    ncm_laurent_series_scale_c_into (g_ptr_array_index (out->coeffs, m), ncm_laurent_series_tps_get (a, m), s);
+    ncm_laurent_series_scale_into (g_ptr_array_index (out->coeffs, m), ncm_laurent_series_tps_get (a, m), s);
 }
 
 /**
- * ncm_laurent_series_tps_eval_c: (skip)
+ * ncm_laurent_series_tps_eval: (skip)
  * @tps: a #NcmLaurentSeriesTPS
  * @w: the coefficients' own formal variable, evaluated at this point
  * @g: the truncation variable, evaluated at this point
  *
  * Returns: $\mathrm{tps}(w,g)=\sum_{n=0}^N L_n(w)\,g^n$
  */
-complex double
-ncm_laurent_series_tps_eval_c (const NcmLaurentSeriesTPS *tps, complex double w, complex double g)
+NcmComplex
+ncm_laurent_series_tps_eval (const NcmLaurentSeriesTPS *tps, NcmComplex w, NcmComplex g)
 {
-  const guint order     = ncm_laurent_series_tps_order (tps);
-  complex double result = 0.0;
+  const guint order = ncm_laurent_series_tps_order (tps);
+  NcmComplex result = 0.0;
   gint n;
 
   for (n = (gint) order; n >= 0; n--)
-    result = result * g + ncm_laurent_series_eval_c (ncm_laurent_series_tps_get (tps, (guint) n), w);
+    result = result * g + ncm_laurent_series_eval (ncm_laurent_series_tps_get (tps, (guint) n), w);
 
   return result;
 }
 
 /**
- * ncm_laurent_series_tps_eval:
+ * ncm_laurent_series_tps_eval_ptr:
  * @tps: a #NcmLaurentSeriesTPS
  * @w: the coefficients' own formal variable, evaluated at this point
  * @g: the truncation variable, evaluated at this point
  * @out: (out): $\mathrm{tps}(w,g)$
  */
 void
-ncm_laurent_series_tps_eval (const NcmLaurentSeriesTPS *tps, const NcmComplex *w, const NcmComplex *g, NcmComplex *out)
+ncm_laurent_series_tps_eval_ptr (const NcmLaurentSeriesTPS *tps, const NcmComplex *w, const NcmComplex *g, NcmComplex *out)
 {
-  ncm_complex_set_c (out, ncm_laurent_series_tps_eval_c (tps, ncm_complex_c (w), ncm_complex_c (g)));
+  ncm_complex_set_c (out, ncm_laurent_series_tps_eval (tps, ncm_complex_c (w), ncm_complex_c (g)));
 }
 
 /* See this function's own header doc comment for the recursion. @u holds
@@ -849,16 +846,16 @@ ncm_laurent_series_tps_pow (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS 
   NcmLaurentSeriesTPS *c        = ncm_laurent_series_tps_new (order);
   NcmLaurentSeries *fold_acc[2] = {ncm_laurent_series_new (0, 0), ncm_laurent_series_new (0, 0)};
   NcmLaurentSeries *fold_term   = ncm_laurent_series_new (0, 0);
-  complex double a0;
+  NcmComplex a0;
   guint n;
 
   g_assert_cmpuint (ncm_laurent_series_tps_order (out), ==, order);
 
-  a0 = ncm_laurent_series_get_c (ncm_laurent_series_tps_get (a, 0), 0);
+  a0 = ncm_laurent_series_get (ncm_laurent_series_tps_get (a, 0), 0);
   g_assert (a0 != 0.0);
 
   for (n = 1; n <= order; n++)
-    ncm_laurent_series_scale_c_into (ncm_laurent_series_tps_get (u, n), ncm_laurent_series_tps_get (a, n), 1.0 / a0);
+    ncm_laurent_series_scale_into (ncm_laurent_series_tps_get (u, n), ncm_laurent_series_tps_get (a, n), 1.0 / a0);
 
   ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (c, 0), 0, 1.0);
 
@@ -879,7 +876,7 @@ ncm_laurent_series_tps_pow (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS 
       acc = acc2;
     }
 
-    ncm_laurent_series_scale_c_into (ncm_laurent_series_tps_get (c, n), acc, 1.0 / n);
+    ncm_laurent_series_scale_into (ncm_laurent_series_tps_get (c, n), acc, 1.0 / n);
   }
 
   ncm_laurent_series_tps_scale (out, c, cpow (a0, p));
@@ -913,12 +910,12 @@ ncm_laurent_series_tps_pow (NcmLaurentSeriesTPS *out, const NcmLaurentSeriesTPS 
 gdouble
 ncm_laurent_series_jacobi_anger_reduce (const NcmLaurentSeries *cm, gdouble phi, const gdouble *Ik, gint n_Ik)
 {
-  gdouble term = creal (ncm_laurent_series_get_c (cm, 0)) * Ik[0];
+  gdouble term = creal (ncm_laurent_series_get (cm, 0)) * Ik[0];
   gint k;
 
   for (k = 1; k < n_Ik; k++)
   {
-    complex double v = ncm_laurent_series_get_c (cm, k);
+    NcmComplex v = ncm_laurent_series_get (cm, k);
 
     if (v != 0.0)
       term += 2.0 * Ik[k] * creal (v * cexp (I * k * phi));

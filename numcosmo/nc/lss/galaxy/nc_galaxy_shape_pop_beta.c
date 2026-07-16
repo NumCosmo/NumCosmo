@@ -258,9 +258,9 @@ _nc_galaxy_shape_pop_beta_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyS
 
   ncm_laurent_series_tps_scale (one_minus_x, x_series, -1.0);
   slot0 = ncm_laurent_series_tps_get (one_minus_x, 0);
-  g_assert_cmpint (ncm_laurent_series_hmin (slot0), ==, 0);
-  g_assert_cmpint (ncm_laurent_series_hmax (slot0), ==, 0);
-  ncm_laurent_series_set_c (slot0, 0, ncm_laurent_series_get_c (slot0, 0) + 1.0);
+  g_assert_cmpint (ncm_laurent_series_get_hmin (slot0), ==, 0);
+  g_assert_cmpint (ncm_laurent_series_get_hmax (slot0), ==, 0);
+  ncm_laurent_series_set (slot0, 0, ncm_laurent_series_get (slot0, 0) + 1.0);
 
   ncm_laurent_series_tps_pow (num_pow, x_series, ldata->alpha - 1.0);
   ncm_laurent_series_tps_pow (den_pow, one_minus_x, ldata->beta - 1.0);

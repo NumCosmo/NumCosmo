@@ -145,7 +145,7 @@ typedef struct _NcGalaxyShapeFactorFixedQuadPrivate
   /* Resolved once at construction, same pattern as Quad/VarAdd. Uses
    * the direct (non-log) Jacobian: this class sums linearly, not in
    * log-space, so exp(lndet_jac(...)) would just be a wasted log+exp
-   * round-trip -- see nc_wl_ellipticity_det_jac_trace_det_c()'s docs. */
+   * round-trip -- see nc_wl_ellipticity_det_jac_trace_det()'s docs. */
   complex double (*apply_shear_inv) (complex double g, complex double chi_L);
 
   gdouble (*det_jac) (complex double g, complex double chi_L);
@@ -267,12 +267,12 @@ _nc_galaxy_shape_factor_fixed_quad_constructed (GObject *object)
     switch (ellip_conv)
     {
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace_c;
-        self->det_jac         = &nc_wl_ellipticity_det_jac_trace_c;
+        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace;
+        self->det_jac         = &nc_wl_ellipticity_det_jac_trace;
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace_det_c;
-        self->det_jac         = &nc_wl_ellipticity_det_jac_trace_det_c;
+        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace_det;
+        self->det_jac         = &nc_wl_ellipticity_det_jac_trace_det;
         break;
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */

@@ -595,10 +595,10 @@ nc_galaxy_shape_factor_apply_shear (NcGalaxyShapeFactor *gsf, const NcmComplex *
   switch (self->ellip_conv)
   {
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-      ncm_complex_set_c (E_obs, nc_wl_ellipticity_apply_shear_trace_c (gn, En));
+      ncm_complex_set_c (E_obs, nc_wl_ellipticity_apply_shear_trace (gn, En));
       break;
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-      ncm_complex_set_c (E_obs, nc_wl_ellipticity_apply_shear_trace_det_c (gn, En));
+      ncm_complex_set_c (E_obs, nc_wl_ellipticity_apply_shear_trace_det (gn, En));
       break;
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
@@ -626,10 +626,10 @@ nc_galaxy_shape_factor_apply_shear_inv (NcGalaxyShapeFactor *gsf, const NcmCompl
   switch (self->ellip_conv)
   {
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-      ncm_complex_set_c (E, nc_wl_ellipticity_apply_shear_inv_trace_c (gn, En_obs));
+      ncm_complex_set_c (E, nc_wl_ellipticity_apply_shear_inv_trace (gn, En_obs));
       break;
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-      ncm_complex_set_c (E, nc_wl_ellipticity_apply_shear_inv_trace_det_c (gn, En_obs));
+      ncm_complex_set_c (E, nc_wl_ellipticity_apply_shear_inv_trace_det (gn, En_obs));
       break;
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
@@ -657,10 +657,10 @@ nc_galaxy_shape_factor_lndet_jac (NcGalaxyShapeFactor *gsf, const NcmComplex *g,
   switch (self->ellip_conv)
   {
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-      return nc_wl_ellipticity_lndet_jac_trace_c (gn, En_obs);
+      return nc_wl_ellipticity_lndet_jac_trace (gn, En_obs);
 
     case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-      return nc_wl_ellipticity_lndet_jac_trace_det_c (gn, En_obs);
+      return nc_wl_ellipticity_lndet_jac_trace_det (gn, En_obs);
 
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
@@ -1022,8 +1022,8 @@ nc_galaxy_shape_factor_gen (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxySha
    * taken to be already expressed in data->coord, so it is added below without
    * any parity flip. See #NcWLEllipticityFrame. */
   phi   = nc_wl_ellipticity_celestial_to_frame_angle (data->coord, phi);
-  e_s   = nc_wl_ellipticity_celestial_to_frame_c (data->coord, e_s);
-  noise = nc_wl_ellipticity_celestial_to_frame_c (data->coord, noise);
+  e_s   = nc_wl_ellipticity_celestial_to_frame (data->coord, e_s);
+  noise = nc_wl_ellipticity_celestial_to_frame (data->coord, noise);
 
   radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
 

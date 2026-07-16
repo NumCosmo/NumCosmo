@@ -190,13 +190,13 @@ _nc_galaxy_shape_factor_laplace_constructed (GObject *object)
     switch (ellip_conv)
     {
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-        self->apply_shear           = &nc_wl_ellipticity_apply_shear_trace_c;
-        self->apply_shear_inv       = &nc_wl_ellipticity_apply_shear_inv_trace_c;
+        self->apply_shear           = &nc_wl_ellipticity_apply_shear_trace;
+        self->apply_shear_inv       = &nc_wl_ellipticity_apply_shear_inv_trace;
         self->use_closed_form_trace = (g_getenv ("NC_TRACE_CLOSED_FORM") != NULL);
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-        self->apply_shear               = &nc_wl_ellipticity_apply_shear_trace_det_c;
-        self->apply_shear_inv           = &nc_wl_ellipticity_apply_shear_inv_trace_det_c;
+        self->apply_shear               = &nc_wl_ellipticity_apply_shear_trace_det;
+        self->apply_shear_inv           = &nc_wl_ellipticity_apply_shear_inv_trace_det;
         self->use_closed_form_trace_det = TRUE;
         break;
       default:                   /* LCOV_EXCL_LINE */

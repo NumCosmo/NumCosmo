@@ -198,7 +198,7 @@ _hessian_at (const ModeCtx *ctx, const gdouble rho, const gdouble theta, NcGalax
 /* --- TRACE_DET closed-form theta-profile and rho-Newton -----------------
  *
  * For the TRACE_DET convention, f_g is the Blaschke/Mobius disk automorphism
- * nc_wl_ellipticity_apply_shear_trace_det_c(g,chi)=(chi+g)/(1+conj(g)chi).
+ * nc_wl_ellipticity_apply_shear_trace_det(g,chi)=(chi+g)/(1+conj(g)chi).
  * As theta ranges over a full turn at fixed rho, f_g(rho e^{i theta}) traces
  * an EXACT circle in the eps_obs plane -- center c(rho), radius r_rho(rho)
  * below (derived by inverting the map and imposing |chi|=rho; verified
@@ -336,11 +336,11 @@ nc_galaxy_shape_intrinsic_mode_find_trace_det (NcGalaxyShapePop *pop, NcGalaxySh
                                                complex double g, complex double eps_obs, gdouble std_noise,
                                                NcGalaxyShapeIntrinsicMode *mode)
 {
-  ModeCtx ctx                      = {&nc_wl_ellipticity_apply_shear_trace_det_c, pop, pop_data, g, eps_obs, gsl_pow_2 (std_noise)};
+  ModeCtx ctx                      = {&nc_wl_ellipticity_apply_shear_trace_det, pop, pop_data, g, eps_obs, gsl_pow_2 (std_noise)};
   const gdouble gamma              = creal (g * conj (g));
   const gdouble beta               = creal (eps_obs * conj (g));
   const gdouble chiO2              = creal (eps_obs * conj (eps_obs));
-  const complex double chi_i_naive = nc_wl_ellipticity_apply_shear_inv_trace_det_c (g, eps_obs);
+  const complex double chi_i_naive = nc_wl_ellipticity_apply_shear_inv_trace_det (g, eps_obs);
   const gdouble rho0               = CLAMP (cabs (chi_i_naive), 1.0e-3, 1.0 - 1.0e-3);
   complex double c, w_star, chi_i_star;
   gdouble mu_rho, r_rho, d;
@@ -355,7 +355,7 @@ nc_galaxy_shape_intrinsic_mode_find_trace_det (NcGalaxyShapePop *pop, NcGalaxySh
   d      = fmax (cabs (eps_obs - c), 1.0e-300);
   w_star = c + r_rho * (eps_obs - c) / d;
 
-  chi_i_star    = nc_wl_ellipticity_apply_shear_inv_trace_det_c (g, w_star);
+  chi_i_star    = nc_wl_ellipticity_apply_shear_inv_trace_det (g, w_star);
   mode->theta   = carg (chi_i_star);
   mode->ln_peak = _ln_integrand (&ctx, mode->rho, mode->theta);
 
@@ -370,7 +370,7 @@ nc_galaxy_shape_intrinsic_mode_find_trace_det (NcGalaxyShapePop *pop, NcGalaxySh
  * closed-form theta-profile here. Two facts still make this closed-form,
  * just via a polynomial root instead of a single formula:
  *
- * 1. Rotation covariance: nc_wl_ellipticity_apply_shear_trace_c(g,chi)
+ * 1. Rotation covariance: nc_wl_ellipticity_apply_shear_trace(g,chi)
  *    satisfies f(chi*e^{i a}, g*e^{i a}) = f(chi,g)*e^{i a} for any real a
  *    (verified numerically). So rotating g to be real and non-negative
  *    (a = -arg(g)) and applying the SAME rotation to eps_obs leaves the
@@ -672,12 +672,12 @@ nc_galaxy_shape_intrinsic_mode_find_trace (NcGalaxyShapePop *pop, NcGalaxyShapeP
                                            complex double g, complex double eps_obs, gdouble std_noise,
                                            NcGalaxyShapeIntrinsicMode *mode)
 {
-  ModeCtx ctx                      = {&nc_wl_ellipticity_apply_shear_trace_c, pop, pop_data, g, eps_obs, gsl_pow_2 (std_noise)};
+  ModeCtx ctx                      = {&nc_wl_ellipticity_apply_shear_trace, pop, pop_data, g, eps_obs, gsl_pow_2 (std_noise)};
   const gdouble alpha              = -carg (g);
   const gdouble g_rot              = cabs (g);
   const complex double eps_obs_rot = eps_obs * cexp (I * alpha);
   const gdouble lam                = 2.0 * carg (eps_obs_rot);
-  const complex double chi_i_naive = nc_wl_ellipticity_apply_shear_inv_trace_c (g, eps_obs);
+  const complex double chi_i_naive = nc_wl_ellipticity_apply_shear_inv_trace (g, eps_obs);
   const gdouble rho0               = CLAMP (cabs (chi_i_naive), 1.0e-3, 1.0 - 1.0e-3);
   gdouble theta_star;
 

@@ -49,7 +49,7 @@
  *   needs the full real $2\times2$ determinant, itself a closed-form
  *   reciprocal-series-cubed construction. Both closed forms match the
  *   already-shipped
- *   nc_wl_ellipticity_apply_shear_inv_trace_c/nc_wl_ellipticity_det_jac_trace_c
+ *   nc_wl_ellipticity_apply_shear_inv_trace/nc_wl_ellipticity_det_jac_trace
  *   to machine precision (see dev-notes'
  *   verify_inverse_map_and_jacobian_match_production and this module's own
  *   test suite, tests/c/nc/lss/wl/test_nc_wl_ellipticity_series.c, which
@@ -301,8 +301,8 @@ nc_wl_ellipticity_series_trace_det_eval (NcWLEllipticitySeriesTraceDet *ser, gdo
     NcmLaurentSeries *ck = ncm_laurent_series_tps_get (self->chi, k);
 
     ncm_laurent_series_reset (ck, (gint) k - 1, (gint) k + 1);
-    ncm_laurent_series_set_c (ck, (gint) k - 1, -rho_km1);
-    ncm_laurent_series_set_c (ck, (gint) k + 1, rho_kp1);
+    ncm_laurent_series_set (ck, (gint) k - 1, -rho_km1);
+    ncm_laurent_series_set (ck, (gint) k + 1, rho_kp1);
   }
 
   ncm_laurent_series_tps_conj (self->chi_conj, self->chi);
@@ -316,7 +316,7 @@ nc_wl_ellipticity_series_trace_det_eval (NcWLEllipticitySeriesTraceDet *ser, gdo
     if (n >= 2)
       ncm_laurent_series_add_into (ncm_laurent_series_tps_get (self->deriv, n), ncm_laurent_series_tps_get (self->binom, n), ncm_laurent_series_tps_get (self->binom, n - 2), -1.0);
     else
-      ncm_laurent_series_scale_c_into (ncm_laurent_series_tps_get (self->deriv, n), ncm_laurent_series_tps_get (self->binom, n), 1.0);
+      ncm_laurent_series_scale_into (ncm_laurent_series_tps_get (self->deriv, n), ncm_laurent_series_tps_get (self->binom, n), 1.0);
   }
 
   ncm_laurent_series_tps_conj (self->deriv_conj, self->deriv);
@@ -658,14 +658,14 @@ _nc_wl_ellipticity_series_trace_fill_chi (NcWLEllipticitySeriesTracePrivate * co
       acc = acc2;
     }
 
-    ncm_laurent_series_scale_c_into (ck, acc, 1.0);
+    ncm_laurent_series_scale_into (ck, acc, 1.0);
   }
 }
 
 /* chi: Jac(chi_L,g) = (1-g^2)^3 / D(g)^3, D(g) the same denominator as
  * _fill_chi above (the chi map is not holomorphic in chi_L, so the full
  * real 2x2 Jacobian is needed -- derived by hand, confirmed to machine
- * precision against the already-shipped nc_wl_ellipticity_det_jac_trace_c,
+ * precision against the already-shipped nc_wl_ellipticity_det_jac_trace,
  * see the class docs). r = 1/D(g), D(g)=1+d1*g+g^2 (d0=1, d2=1); r2=r*r,
  * r3=r2*r via ncm_laurent_series_tps_conv(); num=(1-g^2)^3 was already
  * filled once at construction (order-only-dependent). */
@@ -684,7 +684,7 @@ _nc_wl_ellipticity_series_trace_fill_jac (NcWLEllipticitySeriesTracePrivate * co
     ncm_laurent_series_conv_into (self->scratch_term, self->d1, ncm_laurent_series_tps_get (self->r, k - 1));
 
     acc = self->scratch_acc[0];
-    ncm_laurent_series_scale_c_into (acc, self->scratch_term, -1.0);
+    ncm_laurent_series_scale_into (acc, self->scratch_term, -1.0);
 
     if (k >= 2)
     {
@@ -694,7 +694,7 @@ _nc_wl_ellipticity_series_trace_fill_jac (NcWLEllipticitySeriesTracePrivate * co
       acc = acc2;
     }
 
-    ncm_laurent_series_scale_c_into (ncm_laurent_series_tps_get (self->r, k), acc, 1.0);
+    ncm_laurent_series_scale_into (ncm_laurent_series_tps_get (self->r, k), acc, 1.0);
   }
 
   ncm_laurent_series_tps_conv (self->r2, self->r, self->r);
@@ -724,7 +724,7 @@ nc_wl_ellipticity_series_trace_eval (NcWLEllipticitySeriesTrace *ser, gdouble rh
   ncm_laurent_series_set_single_into (chi_L, 1, rho);
   ncm_laurent_series_set_single_into (self->chibar_L, -1, rho);
   ncm_laurent_series_add_into (self->two_s, chi_L, self->chibar_L, 1.0);
-  ncm_laurent_series_scale_c_into (self->d1, self->two_s, -1.0);
+  ncm_laurent_series_scale_into (self->d1, self->two_s, -1.0);
 
   _nc_wl_ellipticity_series_trace_fill_chi (self);
   _nc_wl_ellipticity_series_trace_fill_jac (self);

@@ -103,8 +103,8 @@ test_closed_form_matches_finite_difference (void)
 
     nc_galaxy_shape_pop_prepare (pop, pop_data);
 
-    nc_galaxy_shape_intrinsic_mode_find (&nc_wl_ellipticity_apply_shear_trace_det_c,
-                                         &nc_wl_ellipticity_apply_shear_inv_trace_det_c,
+    nc_galaxy_shape_intrinsic_mode_find (&nc_wl_ellipticity_apply_shear_trace_det,
+                                         &nc_wl_ellipticity_apply_shear_inv_trace_det,
                                          pop, pop_data, g, eps_obs, std_noise, &mode_old);
     nc_galaxy_shape_intrinsic_mode_find_trace_det (pop, pop_data, g, eps_obs, std_noise, &mode_new);
 
@@ -192,8 +192,8 @@ test_trace_closed_form_never_worse_than_finite_difference (void)
 
     nc_galaxy_shape_pop_prepare (pop, pop_data);
 
-    nc_galaxy_shape_intrinsic_mode_find (&nc_wl_ellipticity_apply_shear_trace_c,
-                                         &nc_wl_ellipticity_apply_shear_inv_trace_c,
+    nc_galaxy_shape_intrinsic_mode_find (&nc_wl_ellipticity_apply_shear_trace,
+                                         &nc_wl_ellipticity_apply_shear_inv_trace,
                                          pop, pop_data, g, eps_obs, std_noise, &mode_old);
     nc_galaxy_shape_intrinsic_mode_find_trace (pop, pop_data, g, eps_obs, std_noise, &mode_new);
 

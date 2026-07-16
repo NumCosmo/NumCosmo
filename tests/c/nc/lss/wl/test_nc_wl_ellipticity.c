@@ -47,17 +47,17 @@ typedef struct _TestShearConv
 /* The two conventions, addressed uniformly so the algebraic identities can be
  * checked with a single body. */
 static const TestShearConv test_conv_trace = {
-  nc_wl_ellipticity_apply_shear_trace_c,
-  nc_wl_ellipticity_apply_shear_inv_trace_c,
-  nc_wl_ellipticity_lndet_jac_trace_c,
-  nc_wl_ellipticity_det_jac_trace_c,
+  nc_wl_ellipticity_apply_shear_trace,
+  nc_wl_ellipticity_apply_shear_inv_trace,
+  nc_wl_ellipticity_lndet_jac_trace,
+  nc_wl_ellipticity_det_jac_trace,
 };
 
 static const TestShearConv test_conv_trace_det = {
-  nc_wl_ellipticity_apply_shear_trace_det_c,
-  nc_wl_ellipticity_apply_shear_inv_trace_det_c,
-  nc_wl_ellipticity_lndet_jac_trace_det_c,
-  nc_wl_ellipticity_det_jac_trace_det_c,
+  nc_wl_ellipticity_apply_shear_trace_det,
+  nc_wl_ellipticity_apply_shear_inv_trace_det,
+  nc_wl_ellipticity_lndet_jac_trace_det,
+  nc_wl_ellipticity_det_jac_trace_det,
 };
 
 /* A spread of reduced shears that exercises both the |g| <= 1 and the |g| > 1
@@ -216,24 +216,24 @@ test_nc_wl_ellipticity_introspectable_wrappers (void)
     ncm_complex_set_c (ce, e);
 
     /* TRACE convention */
-    nc_wl_ellipticity_apply_shear_trace (cg, ce, cout);
-    test_assert_cmplx_close (ncm_complex_c (cout), nc_wl_ellipticity_apply_shear_trace_c (g, e), 1.0e-15);
+    nc_wl_ellipticity_apply_shear_trace_ptr (cg, ce, cout);
+    test_assert_cmplx_close (ncm_complex_c (cout), nc_wl_ellipticity_apply_shear_trace (g, e), 1.0e-15);
 
-    nc_wl_ellipticity_apply_shear_inv_trace (cg, ce, cout);
-    test_assert_cmplx_close (ncm_complex_c (cout), nc_wl_ellipticity_apply_shear_inv_trace_c (g, e), 1.0e-15);
+    nc_wl_ellipticity_apply_shear_inv_trace_ptr (cg, ce, cout);
+    test_assert_cmplx_close (ncm_complex_c (cout), nc_wl_ellipticity_apply_shear_inv_trace (g, e), 1.0e-15);
 
-    g_assert_cmpfloat (fabs (nc_wl_ellipticity_lndet_jac_trace (cg, ce) -
-                             nc_wl_ellipticity_lndet_jac_trace_c (g, e)), <, 1.0e-15);
+    g_assert_cmpfloat (fabs (nc_wl_ellipticity_lndet_jac_trace_ptr (cg, ce) -
+                             nc_wl_ellipticity_lndet_jac_trace (g, e)), <, 1.0e-15);
 
     /* TRACE_DET convention */
-    nc_wl_ellipticity_apply_shear_trace_det (cg, ce, cout);
-    test_assert_cmplx_close (ncm_complex_c (cout), nc_wl_ellipticity_apply_shear_trace_det_c (g, e), 1.0e-15);
+    nc_wl_ellipticity_apply_shear_trace_det_ptr (cg, ce, cout);
+    test_assert_cmplx_close (ncm_complex_c (cout), nc_wl_ellipticity_apply_shear_trace_det (g, e), 1.0e-15);
 
-    nc_wl_ellipticity_apply_shear_inv_trace_det (cg, ce, cout);
-    test_assert_cmplx_close (ncm_complex_c (cout), nc_wl_ellipticity_apply_shear_inv_trace_det_c (g, e), 1.0e-15);
+    nc_wl_ellipticity_apply_shear_inv_trace_det_ptr (cg, ce, cout);
+    test_assert_cmplx_close (ncm_complex_c (cout), nc_wl_ellipticity_apply_shear_inv_trace_det (g, e), 1.0e-15);
 
-    g_assert_cmpfloat (fabs (nc_wl_ellipticity_lndet_jac_trace_det (cg, ce) -
-                             nc_wl_ellipticity_lndet_jac_trace_det_c (g, e)), <, 1.0e-15);
+    g_assert_cmpfloat (fabs (nc_wl_ellipticity_lndet_jac_trace_det_ptr (cg, ce) -
+                             nc_wl_ellipticity_lndet_jac_trace_det (g, e)), <, 1.0e-15);
 
     ncm_complex_free (cg);
     ncm_complex_free (ce);
@@ -262,13 +262,13 @@ test_nc_wl_ellipticity_frame_parity (void)
   {
     const complex double e = test_ellips[j];
 
-    test_assert_cmplx_close (nc_wl_ellipticity_celestial_to_frame_c (NC_WL_ELLIPTICITY_FRAME_CELESTIAL, e), e, 1.0e-15);
-    test_assert_cmplx_close (nc_wl_ellipticity_celestial_to_frame_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e), conj (e), 1.0e-15);
+    test_assert_cmplx_close (nc_wl_ellipticity_celestial_to_frame (NC_WL_ELLIPTICITY_FRAME_CELESTIAL, e), e, 1.0e-15);
+    test_assert_cmplx_close (nc_wl_ellipticity_celestial_to_frame (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e), conj (e), 1.0e-15);
 
     /* involution: applying twice returns the original, in either frame */
     test_assert_cmplx_close (
-      nc_wl_ellipticity_celestial_to_frame_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN,
-                                              nc_wl_ellipticity_celestial_to_frame_c (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e)),
+      nc_wl_ellipticity_celestial_to_frame (NC_WL_ELLIPTICITY_FRAME_CARTESIAN,
+                                              nc_wl_ellipticity_celestial_to_frame (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e)),
       e, 1.0e-15);
   }
 }

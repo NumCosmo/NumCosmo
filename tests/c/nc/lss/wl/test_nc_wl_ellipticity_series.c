@@ -44,11 +44,11 @@
 /* nc_wl_ellipticity_series.c's own series objects work in the formal
  * variable w; theta -> w=exp(i*theta) is this test's own physics-specific
  * reading of that variable, so it stays local to this file rather than
- * living inside ncm_laurent_series_tps_eval_c() itself. */
+ * living inside ncm_laurent_series_tps_eval() itself. */
 static complex double
 _tps_eval (NcmLaurentSeriesTPS *tps, gdouble theta, gdouble g)
 {
-  return ncm_laurent_series_tps_eval_c (tps, cexp (I * theta), g);
+  return ncm_laurent_series_tps_eval (tps, cexp (I * theta), g);
 }
 
 /* A spread of (rho,theta) shear-map points and small real g values well
@@ -114,8 +114,8 @@ test_nc_wl_ellipticity_series_trace_matches_closed_form (void)
         const complex double chi_series = _tps_eval (nc_wl_ellipticity_series_trace_get_chi (ser), theta, g);
         const gdouble jac_series        = creal (_tps_eval (nc_wl_ellipticity_series_trace_get_jac (ser), theta, g));
 
-        const complex double chi_exact = nc_wl_ellipticity_apply_shear_inv_trace_c (g, chiL);
-        const gdouble jac_exact        = nc_wl_ellipticity_det_jac_trace_c (g, chiL);
+        const complex double chi_exact = nc_wl_ellipticity_apply_shear_inv_trace (g, chiL);
+        const gdouble jac_exact        = nc_wl_ellipticity_det_jac_trace (g, chiL);
 
         g_assert_cmpfloat (cabs (chi_series - chi_exact), <, TEST_TOL);
         g_assert_cmpfloat (fabs (jac_series - jac_exact), <, TEST_TOL);
@@ -152,8 +152,8 @@ test_nc_wl_ellipticity_series_trace_det_matches_closed_form (void)
         const complex double chi_series = _tps_eval (nc_wl_ellipticity_series_trace_det_get_chi (ser), theta, g);
         const gdouble jac_series        = creal (_tps_eval (nc_wl_ellipticity_series_trace_det_get_jac (ser), theta, g));
 
-        const complex double chi_exact = nc_wl_ellipticity_apply_shear_inv_trace_det_c (g, chiL);
-        const gdouble jac_exact        = nc_wl_ellipticity_det_jac_trace_det_c (g, chiL);
+        const complex double chi_exact = nc_wl_ellipticity_apply_shear_inv_trace_det (g, chiL);
+        const gdouble jac_exact        = nc_wl_ellipticity_det_jac_trace_det (g, chiL);
 
         g_assert_cmpfloat (cabs (chi_series - chi_exact), <, TEST_TOL);
         g_assert_cmpfloat (fabs (jac_series - jac_exact), <, TEST_TOL);
@@ -228,11 +228,11 @@ test_nc_wl_ellipticity_series_eval_is_reusable (void)
 
     nc_wl_ellipticity_series_trace_eval (trace, rho);
     g_assert_cmpfloat (cabs (_tps_eval (nc_wl_ellipticity_series_trace_get_chi (trace), theta, g) -
-                             nc_wl_ellipticity_apply_shear_inv_trace_c (g, chiL)), <, TEST_TOL);
+                             nc_wl_ellipticity_apply_shear_inv_trace (g, chiL)), <, TEST_TOL);
 
     nc_wl_ellipticity_series_trace_det_eval (tdet, rho);
     g_assert_cmpfloat (cabs (_tps_eval (nc_wl_ellipticity_series_trace_det_get_chi (tdet), theta, g) -
-                             nc_wl_ellipticity_apply_shear_inv_trace_det_c (g, chiL)), <, TEST_TOL);
+                             nc_wl_ellipticity_apply_shear_inv_trace_det (g, chiL)), <, TEST_TOL);
   }
 
   nc_wl_ellipticity_series_trace_free (trace);

@@ -76,7 +76,7 @@ _make_x_series (gdouble r0, gdouble r1, gdouble r2)
 static gdouble
 _eval_real (NcmLaurentSeriesTPS *tps, gdouble g)
 {
-  return creal (ncm_laurent_series_tps_eval_c (tps, 1.0, g));
+  return creal (ncm_laurent_series_tps_eval (tps, 1.0, g));
 }
 
 static const gdouble test_gs[] = {0.0, 0.01, -0.015, 0.02};

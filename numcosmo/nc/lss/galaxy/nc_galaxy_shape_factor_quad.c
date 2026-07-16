@@ -393,14 +393,14 @@ _nc_galaxy_shape_factor_quad_constructed (GObject *object)
     switch (ellip_conv)
     {
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-        self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace_c;
-        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace_c;
-        self->lndet_jac       = &nc_wl_ellipticity_lndet_jac_trace_c;
+        self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace;
+        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace;
+        self->lndet_jac       = &nc_wl_ellipticity_lndet_jac_trace;
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-        self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace_det_c;
-        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace_det_c;
-        self->lndet_jac       = &nc_wl_ellipticity_lndet_jac_trace_det_c;
+        self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace_det;
+        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace_det;
+        self->lndet_jac       = &nc_wl_ellipticity_lndet_jac_trace_det;
         break;
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */

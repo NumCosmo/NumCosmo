@@ -477,7 +477,7 @@ _compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, NcGalaxyShapePo
     maxk = 0;
 
     for (m = 0; m <= order; m++)
-      maxk = MAX (maxk, ncm_laurent_series_hmax (ncm_laurent_series_tps_get (ws->F, m)));
+      maxk = MAX (maxk, ncm_laurent_series_get_hmax (ncm_laurent_series_tps_get (ws->F, m)));
 
     if (i == 0)
     {
@@ -517,11 +517,11 @@ _compute_H (NcGalaxyShapeFactorSeriesLensedPrivate * const self, NcGalaxyShapePo
       complex double *Hm   = &ldata->H[m * h_stride];
       NcmLaurentSeries *Fm = ncm_laurent_series_tps_get (ws->F, m);
 
-      Hm[0] += prefactor * creal (ncm_laurent_series_get_c (Fm, 0)) * Ik[0];
+      Hm[0] += prefactor * creal (ncm_laurent_series_get (Fm, 0)) * Ik[0];
 
       for (k = 1; k <= maxk; k++)
       {
-        complex double v = ncm_laurent_series_get_c (Fm, k);
+        complex double v = ncm_laurent_series_get (Fm, k);
 
         if (v != 0.0)
           Hm[k] += prefactor * Ik[k] * v;
