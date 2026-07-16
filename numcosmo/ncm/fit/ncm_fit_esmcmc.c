@@ -1413,7 +1413,20 @@ _ncm_fit_esmcmc_gen_init_points_interval (NcmFitESMCMC *esmcmc, glong i, glong f
   gboolean mthread                 = (self->nthreads > 1);
   glong k;
 
-  #pragma omp parallel for if (mthread)
+  /* The "ordered" clause below forces the prior sample draw (theta_k) for
+   * loop iteration k to happen in strict k order across all threads, even
+   * though the (retriable) likelihood evaluation that follows still runs
+   * in parallel. Without it, this loop's mutex only serialized ACCESS to
+   * the shared rng -- it did not control WHICH iteration's thread reached
+   * the mutex first, so theta_k ended up seeded from whichever RNG draw
+   * happened to be next when thread scheduling let iteration k's thread
+   * through, not deterministically from k. That silently corrupted the
+   * very first ensemble of walker positions (hence every downstream MCMC
+   * step) under nthreads>1, even with a fixed seed -- found while cross-
+   * checking two independently-implemented but mathematically identical
+   * likelihoods (VarAdd/legacy in the galaxy WL refactor) and noticing
+   * even the SAME engine run twice, same seed, didn't reproduce. */
+  #pragma omp parallel for if (mthread) ordered
 
   for (k = i; k < f; k++)
   {
@@ -1425,9 +1438,10 @@ _ncm_fit_esmcmc_gen_init_points_interval (NcmFitESMCMC *esmcmc, glong i, glong f
     gdouble *m2lnL              = ncm_vector_ptr (full_theta_k, NCM_FIT_ESMCMC_M2LNL_ID);
 
     do {
-      g_mutex_lock (&self->resample_lock);
-      ncm_mset_trans_kern_prior_sample (self->sampler, theta_k, rng);
-      g_mutex_unlock (&self->resample_lock);
+      #pragma omp ordered
+      {
+        ncm_mset_trans_kern_prior_sample (self->sampler, theta_k, rng);
+      }
 
       ncm_mset_fparams_set_vector (mset_k, theta_k);
 
