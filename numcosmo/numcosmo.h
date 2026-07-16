@@ -200,6 +200,7 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_quad.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_var_add.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_cgf.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_laplace.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h>

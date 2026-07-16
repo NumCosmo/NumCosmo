@@ -9789,6 +9789,48 @@ class GalaxyShapeFactor(GObject.Object):
     def update_data_pop(self, data: GalaxyShapeFactorData) -> None: ...
     def update_data_radius(self, data: GalaxyShapeFactorData) -> None: ...
 
+class GalaxyShapeFactorCGF(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorCGF(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorCGF
+
+    Object NcGalaxyShapeFactorCGF
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(self, ellip_conv: GalaxyWLObsEllipConv = ...) -> None: ...
+    @staticmethod
+    def clear(gsfcgf: GalaxyShapeFactorCGF) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorCGF: ...
+    def ref(self) -> GalaxyShapeFactorCGF: ...
+
+class GalaxyShapeFactorCGFClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorCGFClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
 class GalaxyShapeFactorClass(GObject.GPointer):
     r"""
     :Constructors:
