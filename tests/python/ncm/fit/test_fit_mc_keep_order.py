@@ -314,12 +314,14 @@ def test_with_keep_order_resample_order_matches_loop_order():
     _skip_unless_truly_parallel(slots)
 
     n_switches = sum(1 for a, b in zip(slots, slots[1:]) if a != b)
-    assert n_switches == 1, f"expected exactly one contiguous block boundary, got slots={slots}"
+    assert (
+        n_switches == 1
+    ), f"expected exactly one contiguous block boundary, got slots={slots}"
 
     # Within each contiguous block, call_count must be strictly increasing
     # from 0 -- i.e. rows appear in the exact order that thread issued them.
     for block_start in (0, N_PER_CHUNK):
-        block_counts = counts[block_start:block_start + N_PER_CHUNK]
+        block_counts = counts[block_start : block_start + N_PER_CHUNK]
         assert block_counts == list(range(N_PER_CHUNK)), (
             f"expected in-order call_count 0..{N_PER_CHUNK - 1} within the "
             f"block, got {block_counts}"

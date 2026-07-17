@@ -96,7 +96,9 @@ def test_integrand_copy_matches_original():
     """A copied integrand evaluates identically to the original."""
     mset = _build_mset()
     gsf, data = _build_data(mset, Nc.GalaxyWLObsEllipConv.TRACE)
-    gsf.data_set(data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL)
+    gsf.data_set(
+        data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL
+    )
     gsf.prepare(mset)
     gsf.prepare_data_array(mset, [data], True, True)
 
@@ -187,7 +189,9 @@ def test_data_get_matches_data_set():
     mset = _build_mset()
     gsf, data = _build_data(mset, Nc.GalaxyWLObsEllipConv.TRACE)
 
-    gsf.data_set(data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL)
+    gsf.data_set(
+        data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL
+    )
 
     e1, e2, std_noise, c1, c2, m = gsf.data_get(data)
 
@@ -200,7 +204,9 @@ def test_data_get_radius():
     cached by prepare_data_array()."""
     mset = _build_mset()
     gsf, data = _build_data(mset, Nc.GalaxyWLObsEllipConv.TRACE)
-    gsf.data_set(data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL)
+    gsf.data_set(
+        data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL
+    )
 
     gsf.prepare(mset)
     gsf.prepare_data_array(mset, [data], True, True)

@@ -403,9 +403,7 @@ def test_caching_correct_and_fast_with_drifting_phase_bias_regression():
     # regression back to the old phi-keyed scheme.
     num_evals = 20
 
-    gsfsl_warm, data_warm = _make_series_lensed(
-        ellip_conv, order, pop, mset, std_noise
-    )
+    gsfsl_warm, data_warm = _make_series_lensed(ellip_conv, order, pop, mset, std_noise)
     start = time.perf_counter()
 
     for i in range(num_evals):
@@ -564,8 +562,14 @@ def test_required_columns():
 
     cols = data.required_columns()
     own = [
-        "epsilon_int_1", "epsilon_int_2", "epsilon_obs_1", "epsilon_obs_2",
-        "std_noise", "c1", "c2", "m",
+        "epsilon_int_1",
+        "epsilon_int_2",
+        "epsilon_obs_1",
+        "epsilon_obs_2",
+        "std_noise",
+        "c1",
+        "c2",
+        "m",
     ]
     assert cols[: len(own)] == own
 
@@ -574,9 +578,7 @@ def test_trunc_order_n_nodes_gobject_property_round_trip():
     """trunc-order/n-nodes (CONSTRUCT_ONLY) are reachable through the
     GObject property system (get_property), not just props.trunc_order /
     props.n_nodes."""
-    gsfsl = Nc.GalaxyShapeFactorSeriesLensed.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET, 6
-    )
+    gsfsl = Nc.GalaxyShapeFactorSeriesLensed.new(Nc.GalaxyWLObsEllipConv.TRACE_DET, 6)
     assert gsfsl.get_property("trunc-order") == 6
     assert gsfsl.get_property("trunc-order") == gsfsl.props.trunc_order
     assert gsfsl.get_property("n-nodes") == gsfsl.props.n_nodes

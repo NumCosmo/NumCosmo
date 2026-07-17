@@ -200,7 +200,9 @@ def test_eval_at_nodes_matches_integrand(ellip_conv):
     # Offset from the cluster centre: at radius 0 the reduced shear diverges.
     pos_data.ra = 0.03
     pos_data.dec = 0.02
-    gsf.data_set(data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL)
+    gsf.data_set(
+        data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL
+    )
 
     z_nodes = Ncm.Vector.new_array(np.linspace(0.05, 1.5, 25).tolist())
     out = Ncm.Vector.new(z_nodes.len())
@@ -248,7 +250,9 @@ def test_eval_marginal_dispatch(ellip_conv):
     gsf = Nc.GalaxyShapeFactorCGF.new(ellip_conv)
     data, _, _ = _build_factor_data(gsf, mset)
 
-    gsf.data_set(data, 0.04, -0.03, 0.03, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+    gsf.data_set(
+        data, 0.04, -0.03, 0.03, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
     gsf.prepare_data_array(mset, [data], True, True)
 
     p = gsf.eval_marginal(pop, data, 0.02, 0.01, 0.04, -0.03)

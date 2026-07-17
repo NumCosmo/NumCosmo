@@ -268,7 +268,9 @@ def test_fixed_nodes_cache_consistency_across_revisits():
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
 
-    for log10_mdelta, frozen in zip(_CACHE_REVISIT_MASS_SEQ, _CACHE_REVISIT_MASS_FROZEN):
+    for log10_mdelta, frozen in zip(
+        _CACHE_REVISIT_MASS_SEQ, _CACHE_REVISIT_MASS_FROZEN
+    ):
         hms.param_set_by_name("log10MDelta", log10_mdelta)
         assert_allclose(dcwlf.m2lnL_val(mset), frozen, rtol=1.0e-8)
 
@@ -813,18 +815,24 @@ def test_auto_nodes_matches_fixed_and_lnint():
 
     position_factor, redshift_factor, shape_factor, new_obs = _build_new_obs(mset)
 
-    dcwlf_auto = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_auto = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_auto.set_obs(new_obs)
     dcwlf_auto.set_prec(1.0e-8)
     dcwlf_auto.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
     dcwlf_auto.set_auto_nodes(True)
 
-    dcwlf_fixed = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_fixed = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_fixed.set_obs(new_obs)
     dcwlf_fixed.set_prec(1.0e-8)
     dcwlf_fixed.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
 
-    dcwlf_lnint = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_lnint = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_lnint.set_obs(new_obs)
     dcwlf_lnint.set_prec(1.0e-8)
     dcwlf_lnint.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
@@ -853,7 +861,9 @@ def test_auto_nodes_mid_run_property_changes_do_not_corrupt_state():
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
 
-    dcwlf_lnint = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_lnint = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_lnint.set_obs(new_obs)
     dcwlf_lnint.set_prec(1.0e-8)
     dcwlf_lnint.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
@@ -886,17 +896,23 @@ def test_cubature_matches_lnint_and_fixed():
 
     position_factor, redshift_factor, shape_factor, new_obs = _build_new_obs(mset)
 
-    dcwlf_cub = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_cub = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_cub.set_obs(new_obs)
     dcwlf_cub.set_prec(1.0e-8)
     dcwlf_cub.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
 
-    dcwlf_lnint = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_lnint = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_lnint.set_obs(new_obs)
     dcwlf_lnint.set_prec(1.0e-8)
     dcwlf_lnint.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
 
-    dcwlf_fixed = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf_fixed = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    )
     dcwlf_fixed.set_obs(new_obs)
     dcwlf_fixed.set_prec(1.0e-8)
     dcwlf_fixed.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
