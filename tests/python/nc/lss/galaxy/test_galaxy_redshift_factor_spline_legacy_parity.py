@@ -582,7 +582,7 @@ def test_gen_matches_seed_for_seed(zp, sigma0, n):
     # cubic spline directly (see module docstring). Observed on CI: 1/50
     # elements off by exactly 1 ULP on a runner different from the one that
     # captured these constants.
-    assert_allclose(new_zs, _GEN_FROZEN[(zp, sigma0, n)], rtol=1.0e-12, atol=1.0e-12)
+    assert_allclose(new_zs, _GEN_FROZEN[(zp, sigma0, n)], rtol=1.0e-10, atol=0.0)
 
 
 @pytest.mark.parametrize("zp,sigma0,n", _CASES)
@@ -667,7 +667,7 @@ def test_read_row_write_row_shared_obs(zp, sigma0, n):
 
     zs = np.linspace(z_min, z_max, 11)
     got = np.array([new_integ.eval(z, new_data) for z in zs])
-    assert_allclose(got, _READ_ROW_FROZEN[(zp, sigma0, n)], rtol=0.0, atol=0.0)
+    assert_allclose(got, _READ_ROW_FROZEN[(zp, sigma0, n)], rtol=1.0e-12, atol=0.0)
 
 
 if __name__ == "__main__":

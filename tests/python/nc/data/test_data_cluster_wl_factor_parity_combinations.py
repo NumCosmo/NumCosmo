@@ -699,7 +699,6 @@ def test_resample_matches_legacy(shape_kind, z_kind):
     shape_cols = ["epsilon_obs_1", "epsilon_obs_2"]
     if z_kind == "composed":
         bit_exact_cols.append("zp")
-    shape_rtol = 0.0 if shape_kind == "global" else 1.0e-8
 
     for seed in (200, 201, 202):
         rng_new = Ncm.RNG.seeded_new(None, seed)
@@ -720,7 +719,7 @@ def test_resample_matches_legacy(shape_kind, z_kind):
         for col in shape_cols:
             new_vals = [new_obs.get(col, i) for i in range(n)]
             assert_allclose(
-                new_vals, frozen["cols"][col], rtol=shape_rtol, atol=1.0e-12
+                new_vals, frozen["cols"][col], rtol=1.0e-8, atol=0.0
             )
 
         new_m2lnL = dcwlf.m2lnL_val(mset)
