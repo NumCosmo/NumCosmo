@@ -247,37 +247,12 @@ data_tests = [
         'name': 'nc_data_hubble',
         'sources': ['nc/data/test_nc_data_hubble.c'],
     },
-    # The cluster_wl test is one combinatorial 24x6 executable; it is built twice from the
-    # same source (via -D, see the C file) so meson --slice can balance CI wall time. The
-    # cheap property checks are a normal unit test; the heavy MC/fit half is acceptance.
-    {
-        'name': 'nc_data_cluster_wl_prop',
-        'sources': ['nc/data/test_nc_data_cluster_wl.c'],
-        'c_args': ['-DCLUSTER_WL_SPLIT_CHEAP'],
-        'timeout': 0,
-        # m2lnP (the OpenMP-parallel likelihood eval) is in the cheap half, so this exec
-        # also exercises the OpenMP path and stays in the omp lane.
-        'suite': ['c', 'omp'],
-    },
-    {
-        'name': 'nc_data_cluster_wl',
-        'sources': ['nc/data/test_nc_data_cluster_wl.c'],
-        'c_args': ['-DCLUSTER_WL_SPLIT_EXPENSIVE'],
-        'timeout': 0,
-        'suite': ['c-acceptance', 'omp'],
-    },
-    # Truth-table validation of the integration methods: regenerates a curated
-    # sample from a fixed seed (nothing stored) and checks every method against a
-    # recomputed FIXED-320x7 reference. Deterministic and fast.
-    {
-        'name': 'nc_data_cluster_wl_truth',
-        'sources': ['nc/data/test_nc_data_cluster_wl_truth.c'],
-        'suite': ['c', 'omp'],
-    },
-    # Same truth-table idea, for the Factor pipeline (NcDataClusterWLFactor):
-    # self-contained, no legacy NcDataClusterWL comparison at all. Curated
-    # matrix across shape schemes (VarAdd/SeriesLensed/Quad) and populations
-    # (Gauss/Beta), plus a direct SeriesLensed-vs-Quad cross-check.
+    # Truth-table validation of NcDataClusterWLFactor's integration methods:
+    # regenerates a curated sample from a fixed seed (nothing stored) and
+    # checks every method against a recomputed high-node self-converged
+    # reference. Curated matrix across shape schemes (VarAdd/SeriesLensed/
+    # Quad) and populations (Gauss/Beta), plus a direct SeriesLensed-vs-Quad
+    # cross-check. Deterministic and fast.
     {
         'name': 'nc_data_cluster_wl_factor_truth',
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_truth.c'],
@@ -371,22 +346,6 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_wl_obs',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs.c'],
-    },
-    {
-        'name': 'nc_galaxy_sd_position',
-        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_position.c'],
-    },
-    {
-        'name': 'nc_galaxy_sd_true_redshift',
-        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_true_redshift.c'],
-    },
-    {
-        'name': 'nc_galaxy_sd_obs_redshift',
-        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_obs_redshift.c'],
-    },
-    {
-        'name': 'nc_galaxy_sd_shape',
-        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_shape.c'],
     },
     {
         'name': 'nc_galaxy_shape_intrinsic_mode',
