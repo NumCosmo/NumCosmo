@@ -37,7 +37,6 @@ Ncm.cfg_init()
 def test_wl_likelihood() -> None:
     """Example using weak lensing likelihood."""
     seed = 1235
-    use_spec = True
     H0 = 70.0
     Omegab = 0.045
     Omegac = 0.255
@@ -48,7 +47,7 @@ def test_wl_likelihood() -> None:
     cluster_c = 4.0
     cluster_mass = 1.0e14
     n_galaxies = 10000
-    sigma_z = 0.03
+    sigma0 = 0.03
     galaxies_ang_dist = 0.15
     galaxy_shape_sigma = 3.0e-1
     galaxy_shape_std_noise = 1.0e-1
@@ -72,20 +71,18 @@ def test_wl_likelihood() -> None:
     galaxies_dec0 = cluster_dec - galaxies_ang_dist
     galaxies_dec1 = cluster_dec + galaxies_ang_dist
 
-    galaxy_position = Nc.GalaxySDPositionFlat.new(
+    position_factor = Nc.GalaxyPositionFactorFlat.new(
         galaxies_ra0, galaxies_ra1, galaxies_dec0, galaxies_dec1
     )
-    galaxy_redshift_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
-    if use_spec:
-        galaxy_redshift = Nc.GalaxySDObsRedshiftSpec.new(
-            galaxy_redshift_true, 0.01, 6.0
-        )
-    else:
-        galaxy_redshift = Nc.GalaxySDObsRedshiftGauss.new(
-            galaxy_redshift_true, 0.01, 6.0
-        )
+    redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(0.01, 6.0)
+    redshift_pop = Nc.GalaxyRedshiftPopLSSTSRD.new_y1_source()
+    redshift_obs_sel = Nc.GalaxyRedshiftObsGauss.new()
 
-    galaxy_shape = Nc.GalaxySDShapeHSMGaussGlobal.new(Nc.GalaxyWLObsEllipConv.TRACE)
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE
+    ellip_frame = Nc.WLEllipticityFrame.CARTESIAN
+
+    shape_factor = Nc.GalaxyShapeFactorVarAdd.new(ellip_conv)
+    shape_pop = Nc.GalaxyShapePopGauss.new()
 
     cosmo["H0"] = H0
     cosmo["Omegab"] = Omegab
@@ -95,14 +92,11 @@ def test_wl_likelihood() -> None:
     halo_position["ra"] = cluster_ra
     halo_position["dec"] = cluster_dec
     halo_position["z"] = cluster_z
-    galaxy_shape["sigma"] = galaxy_shape_sigma
+    shape_pop["sigma"] = galaxy_shape_sigma
 
     dist.prepare(cosmo)
     halo_position.prepare(cosmo)
     surface_mass_density.prepare(cosmo)
-
-    cluster = Nc.DataClusterWL.new()
-    cluster.set_cut(min_r / cosmo.h(), max_r / cosmo.h())
 
     halo_position.param_set_desc("ra", {"fit": True})
     halo_position.param_set_desc("dec", {"fit": True})
@@ -115,49 +109,40 @@ def test_wl_likelihood() -> None:
             density_profile,
             surface_mass_density,
             halo_position,
-            galaxy_redshift,
-            galaxy_position,
-            galaxy_shape,
+            redshift_pop,
+            redshift_obs_sel,
+            shape_pop,
         ]
     )
+    mset.prepare_fparam_map()
 
     rng = Ncm.RNG.seeded_new("mt19937", seed)
 
-    z_data = Nc.GalaxySDObsRedshiftData.new(galaxy_redshift)
-    p_data = Nc.GalaxySDPositionData.new(galaxy_position, z_data)
-    s_data = Nc.GalaxySDShapeData.new(galaxy_shape, p_data)
+    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
+    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
+    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
+    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
 
-    obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE,
-        Nc.GalaxyWLObsCoord.EUCLIDEAN,
-        n_galaxies,
-        list(s_data.required_columns()),
-    )
+    obs = Nc.GalaxyWLObs.new(ellip_conv, ellip_frame, n_galaxies, cols)
 
     for i in range(n_galaxies):
-        if use_spec:
-            galaxy_redshift.gen1(mset, z_data, rng)
-        else:
-            galaxy_redshift.gen1(mset, z_data, sigma_z, rng)
-
-        galaxy_position.gen(mset, p_data, rng)
+        for c in cols:
+            obs.set(c, i, 0.0)
 
         c1 = rng.gaussian_gen(0.0, 0.01)
         c2 = rng.gaussian_gen(0.0, 0.01)
         m = np.exp(rng.gaussian_gen(0.0, 0.08))
-        std_noise = galaxy_shape_std_noise
-        galaxy_shape.gen(
-            mset,
-            s_data,
-            std_noise,
-            c1,
-            c2,
-            m,
-            Nc.GalaxyWLObsCoord.EUCLIDEAN,
-            rng,
-        )
-        s_data.write_row(obs, i)
+
+        obs.set(Nc.GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, sigma0)
+        obs.set("std_noise", i, galaxy_shape_std_noise)
+        obs.set("c1", i, c1)
+        obs.set("c2", i, c2)
+        obs.set("m", i, m)
+
+    cluster = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    cluster.set_cut(min_r / cosmo.h(), max_r / cosmo.h())
     cluster.set_obs(obs)
+    cluster.resample(mset, rng)
 
     dset = Ncm.Dataset()
     dset.append_data(cluster)
@@ -180,8 +165,12 @@ def test_wl_likelihood() -> None:
     init_sampler.set_cov_from_rescale(1.0)
 
     nwalkers = 300
+    nthreads = 6
+    Ncm.cfg_set_openmp_nthreads(nthreads)
     apes = Ncm.FitESMCMCWalkerAPES.new(nwalkers, mset.fparams_len())
+    apes.set_use_threads(True)
     esmcmc = Ncm.FitESMCMC.new(fit, nwalkers, init_sampler, apes, Ncm.FitRunMsgs.SIMPLE)
+    esmcmc.set_nthreads(nthreads)
 
     esmcmc.set_data_file("example_wl_likelihood.fits")
 

@@ -39,6 +39,7 @@ from numcosmo_py.cosmology import Cosmology
 from .kernels import (
     parse_kernel_spec,
     get_kernel_registry_help_text,
+    LSSTBinType,
     KernelCMBLensingConfig,
     KernelCMBISWConfig,
     KernelTSZConfig,
@@ -533,6 +534,35 @@ class ViewKernel:
 
         return kernel_label, kernel_obj
 
+    def _lsst_srd_bin_dndz(
+        self, bin_type: LSSTBinType, bin_idx: int, survey: str
+    ) -> Ncm.Spline:
+        """Compute the dN/dz spline for one LSST-SRD photo-z bin.
+
+        :param bin_type: LSST year/sample bin type.
+        :param bin_idx: Index of the bin within that type's edges.
+        :param survey: Survey label, used only for the error message.
+        :return: The binned dN/dz spline.
+        """
+        edges, population, observable_population = (
+            Nc.GalaxyRedshiftBinning.lsst_srd_edges(bin_type.genum)
+        )
+        n_bins = edges.len() - 1
+
+        if bin_idx >= n_bins:
+            raise ValueError(
+                f"Bin index {bin_idx} is out of range for survey '{survey}'"
+            )
+
+        binning = Nc.GalaxyRedshiftBinning.new()
+
+        return binning.compute_dndz(
+            population,
+            observable_population,
+            edges.get(bin_idx),
+            edges.get(bin_idx + 1),
+        )
+
     def _create_number_counts_kernels(
         self, config: KernelNumberCountsConfig
     ) -> tuple[str, Nc.XcorKernelGal]:
@@ -543,15 +573,9 @@ class ViewKernel:
         """
         assert isinstance(config, KernelNumberCountsConfig)
 
-        # Get LSST bins
-        bins, _ = Nc.GalaxySDObsRedshiftGauss.new_lsst_srd_bins(config.bin_type.genum)
-        if len(bins) <= config.bin_idx:
-            raise ValueError(
-                f"Bin index {config.bin_idx} is out of "
-                f"range for survey '{config.survey}'"
-            )
-
-        dndz_spline = bins[config.bin_idx].compute_binned_dndz(None)
+        dndz_spline = self._lsst_srd_bin_dndz(
+            config.bin_type, config.bin_idx, config.survey
+        )
 
         # Create primary kernel
         kernel_obj = Nc.XcorKernelGal(
@@ -579,14 +603,9 @@ class ViewKernel:
         """
         assert isinstance(config, KernelWeakLensingConfig)
 
-        # Get LSST bins
-        bins, _ = Nc.GalaxySDObsRedshiftGauss.new_lsst_srd_bins(config.bin_type.genum)
-        if len(bins) <= config.bin_idx:
-            raise ValueError(
-                f"Bin index {config.bin_idx} is out of "
-                f"range for survey '{config.survey}'"
-            )
-        dndz_spline = bins[config.bin_idx].compute_binned_dndz(None)
+        dndz_spline = self._lsst_srd_bin_dndz(
+            config.bin_type, config.bin_idx, config.survey
+        )
 
         # Create primary kernel
         kernel_obj = Nc.XcorKernelWeakLensing(
