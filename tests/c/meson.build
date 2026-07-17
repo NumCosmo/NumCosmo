@@ -39,6 +39,14 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_vector.c'],
     },
     {
+        'name': 'ncm_poly_roots',
+        'sources': ['ncm/algebra/test_ncm_poly_roots.c'],
+    },
+    {
+        'name': 'ncm_laurent_series',
+        'sources': ['ncm/algebra/test_ncm_laurent_series.c'],
+    },
+    {
         'name': 'ncm_matrix',
         'sources': ['ncm/algebra/test_ncm_matrix.c'],
     },
@@ -339,6 +347,10 @@ lss_tests = [
         'name': 'nc_wl_ellipticity',
         'sources': ['nc/lss/wl/test_nc_wl_ellipticity.c'],
     },
+    {
+        'name': 'nc_wl_ellipticity_series',
+        'sources': ['nc/lss/wl/test_nc_wl_ellipticity_series.c'],
+    },
 ]
 
 # Galaxy and weak lensing tests
@@ -366,6 +378,14 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_sd_shape',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_shape.c'],
+    },
+    {
+        'name': 'nc_galaxy_shape_intrinsic_mode',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_intrinsic_mode.c'],
+    },
+    {
+        'name': 'nc_galaxy_shape_pop_series',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c'],
     },
 ]
 

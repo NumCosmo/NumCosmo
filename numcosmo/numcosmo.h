@@ -166,6 +166,7 @@
 #include <numcosmo/nc/lss/cluster/nc_cor_cluster_cmb_lens_limber.h>
 #include <numcosmo/nc/lss/wl/nc_wl_surface_mass_density.h>
 #include <numcosmo/nc/lss/wl/nc_wl_ellipticity.h>
+#include <numcosmo/nc/lss/wl/nc_wl_ellipticity_series.h>
 #include <numcosmo/nc/lss/wl/nc_reduced_shear_cluster_mass.h>
 #include <numcosmo/nc/lss/wl/nc_reduced_shear_calib.h>
 #include <numcosmo/nc/lss/wl/nc_reduced_shear_calib_wtg.h>
@@ -183,9 +184,32 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_hod_zheng07.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_true_redshift.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_pop.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_pop_lsst_srd.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor_composed.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor_spline.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_sel.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_sel_gauss.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_binning.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_position_factor.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_position_factor_flat.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss_global.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_quad.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_var_add.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_cgf.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_laplace.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_beta.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.h>
 
 /* Observable data */
 #include <numcosmo/nc/data/nc_data_snia.h>
@@ -211,6 +235,7 @@
 #include <numcosmo/nc/data/nc_data_cluster_ncounts_gauss.h>
 #include <numcosmo/nc/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/nc/data/nc_data_cluster_wl.h>
+#include <numcosmo/nc/data/nc_data_cluster_wl_factor.h>
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich.h>
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich_count.h>
 #include <numcosmo/nc/data/nc_data_planck_lkl.h>

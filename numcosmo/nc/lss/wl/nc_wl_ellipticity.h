@@ -59,7 +59,7 @@ G_BEGIN_DECLS
  *   when facing the object with their head pointing to the North celestial pole.
  *   The right-hand direction then points East, so the image $x$-axis increases
  *   towards the West (decreasing RA) -- the opposite handedness. This is the
- *   "Euclidean" image-plane view (the legacy name was EUCLIDEAN).
+ *   "Euclidean" image-plane view, the value #NcGalaxyWLObsCoord calls EUCLIDEAN.
  *
  * The two frames differ by a parity (handedness) flip. The position angle
  * reverses sense,
@@ -95,24 +95,36 @@ typedef enum _NcWLEllipticityFrame
  * log of |det J| of the intrinsic -> observed map evaluated at the observed
  * ellipticity.
  *
- * Two flavours of each kernel are provided, following the ncm_complex_set /
- * ncm_complex_set_c convention:
- *
- *   - the plain-named functions take #NcmComplex and are GObject-introspectable
- *     (usable from Python);
- *   - the _c-suffixed functions take native C99 complex double, are inlined,
- *     and are meant for the C hot loops.
+ * Two flavours of each kernel, matching ncm_laurent_series.h's own bare/`_ptr`
+ * convention: the plain name takes/returns #NcmComplex by value and is
+ * inlined for the C hot loops; the `_ptr`-suffixed sibling takes it by
+ * pointer and is GObject-introspectable (usable from Python). Unlike
+ * ncm_laurent_series.h, the plain-name kernels here stay behind
+ * `#ifndef NUMCOSMO_GIR_SCAN` (not just `(skip)`-ed): they are NCM_INLINE,
+ * so their bodies -- which use complex.h's `I`/`conj`/`creal`/`cimag` macros
+ * directly -- live in this header and would otherwise be handed to
+ * g-ir-scanner's own C parser, which chokes on the `I` macro regardless of
+ * any `(skip)` annotation (`(skip)` only suppresses .gir emission after a
+ * successful parse).
  */
 
 /* Introspectable NcmComplex API (TRACE convention: distortion chi). */
-void nc_wl_ellipticity_apply_shear_trace (const NcmComplex *g, const NcmComplex *chi, NcmComplex *chi_obs);
-void nc_wl_ellipticity_apply_shear_inv_trace (const NcmComplex *g, const NcmComplex *chi_obs, NcmComplex *chi);
-gdouble nc_wl_ellipticity_lndet_jac_trace (const NcmComplex *g, const NcmComplex *chi_obs);
+void nc_wl_ellipticity_apply_shear_trace_ptr (const NcmComplex *g, const NcmComplex *chi, NcmComplex *chi_obs);
+void nc_wl_ellipticity_apply_shear_inv_trace_ptr (const NcmComplex *g, const NcmComplex *chi_obs, NcmComplex *chi);
+gdouble nc_wl_ellipticity_lndet_jac_trace_ptr (const NcmComplex *g, const NcmComplex *chi_obs);
 
 /* Introspectable NcmComplex API (TRACE_DET convention: ellipticity epsilon). */
-void nc_wl_ellipticity_apply_shear_trace_det (const NcmComplex *g, const NcmComplex *e, NcmComplex *e_obs);
-void nc_wl_ellipticity_apply_shear_inv_trace_det (const NcmComplex *g, const NcmComplex *e_obs, NcmComplex *e);
-gdouble nc_wl_ellipticity_lndet_jac_trace_det (const NcmComplex *g, const NcmComplex *e_obs);
+void nc_wl_ellipticity_apply_shear_trace_det_ptr (const NcmComplex *g, const NcmComplex *e, NcmComplex *e_obs);
+void nc_wl_ellipticity_apply_shear_inv_trace_det_ptr (const NcmComplex *g, const NcmComplex *e_obs, NcmComplex *e);
+gdouble nc_wl_ellipticity_lndet_jac_trace_det_ptr (const NcmComplex *g, const NcmComplex *e_obs);
+
+/* Re-express the celestial position angle phi_C (as returned by
+ * nc_halo_position_polar_angles) in @frame: CARTESIAN reverses the handedness,
+ * phi_E = pi - phi_C; CELESTIAL leaves it unchanged. Using this angle in the
+ * spin-2 factor e^{2 i phi} is equivalent to conjugating the ellipticity, so it
+ * stays consistent with nc_wl_ellipticity_celestial_to_frame(). No complex
+ * value involved, so unlike its sibling below this is fully introspectable. */
+NCM_INLINE gdouble nc_wl_ellipticity_celestial_to_frame_angle (NcWLEllipticityFrame frame, gdouble phi);
 
 #ifndef NUMCOSMO_GIR_SCAN
 
@@ -120,25 +132,21 @@ gdouble nc_wl_ellipticity_lndet_jac_trace_det (const NcmComplex *g, const NcmCom
  * epsilon_E = conj (epsilon_C) for CARTESIAN, identity for CELESTIAL. The map is
  * its own inverse (a parity flip), so it equally takes a @frame ellipticity back
  * to celestial; a separate frame_to_celestial entry point can be added if a call
- * site needs to read in the opposite direction. */
-NCM_INLINE complex double nc_wl_ellipticity_celestial_to_frame_c (NcWLEllipticityFrame frame, complex double e);
+ * site needs to read in the opposite direction. No `_ptr` sibling exists yet
+ * (nothing calls one). */
+NCM_INLINE NcmComplex nc_wl_ellipticity_celestial_to_frame (NcWLEllipticityFrame frame, NcmComplex e);
 
-/* Re-express the celestial position angle phi_C (as returned by
- * nc_halo_position_polar_angles) in @frame: CARTESIAN reverses the handedness,
- * phi_E = pi - phi_C; CELESTIAL leaves it unchanged. Using this angle in the
- * spin-2 factor e^{2 i phi} is equivalent to conjugating the ellipticity, so it
- * stays consistent with nc_wl_ellipticity_celestial_to_frame_c(). */
-NCM_INLINE gdouble nc_wl_ellipticity_celestial_to_frame_angle (NcWLEllipticityFrame frame, gdouble phi);
+/* Inline complex kernels (TRACE convention: distortion chi). */
+NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_trace (NcmComplex g, NcmComplex chi);
+NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_inv_trace (NcmComplex g, NcmComplex chi_obs);
+NCM_INLINE gdouble nc_wl_ellipticity_lndet_jac_trace (NcmComplex g, NcmComplex chi_obs);
+NCM_INLINE gdouble nc_wl_ellipticity_det_jac_trace (NcmComplex g, NcmComplex chi_obs);
 
-/* Inline complex double kernels (TRACE convention: distortion chi). */
-NCM_INLINE complex double nc_wl_ellipticity_apply_shear_trace_c (complex double g, complex double chi);
-NCM_INLINE complex double nc_wl_ellipticity_apply_shear_inv_trace_c (complex double g, complex double chi_obs);
-NCM_INLINE gdouble nc_wl_ellipticity_lndet_jac_trace_c (complex double g, complex double chi_obs);
-
-/* Inline complex double kernels (TRACE_DET convention: ellipticity epsilon). */
-NCM_INLINE complex double nc_wl_ellipticity_apply_shear_trace_det_c (complex double g, complex double e);
-NCM_INLINE complex double nc_wl_ellipticity_apply_shear_inv_trace_det_c (complex double g, complex double e_obs);
-NCM_INLINE gdouble nc_wl_ellipticity_lndet_jac_trace_det_c (complex double g, complex double e_obs);
+/* Inline complex kernels (TRACE_DET convention: ellipticity epsilon). */
+NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_trace_det (NcmComplex g, NcmComplex e);
+NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_inv_trace_det (NcmComplex g, NcmComplex e_obs);
+NCM_INLINE gdouble nc_wl_ellipticity_lndet_jac_trace_det (NcmComplex g, NcmComplex e_obs);
+NCM_INLINE gdouble nc_wl_ellipticity_det_jac_trace_det (NcmComplex g, NcmComplex e_obs);
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -150,17 +158,8 @@ G_END_DECLS
 #define _NC_WL_ELLIPTICITY_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
 #ifndef __GTK_DOC_IGNORE__
-#ifndef NUMCOSMO_GIR_SCAN
 
 G_BEGIN_DECLS
-
-/* Coordinate-frame handedness (parity). */
-
-NCM_INLINE complex double
-nc_wl_ellipticity_celestial_to_frame_c (NcWLEllipticityFrame frame, complex double e)
-{
-  return (frame == NC_WL_ELLIPTICITY_FRAME_CARTESIAN) ? conj (e) : e;
-}
 
 NCM_INLINE gdouble
 nc_wl_ellipticity_celestial_to_frame_angle (NcWLEllipticityFrame frame, gdouble phi)
@@ -168,26 +167,36 @@ nc_wl_ellipticity_celestial_to_frame_angle (NcWLEllipticityFrame frame, gdouble 
   return (frame == NC_WL_ELLIPTICITY_FRAME_CARTESIAN) ? (M_PI - phi) : phi;
 }
 
+#ifndef NUMCOSMO_GIR_SCAN
+
+/* Coordinate-frame handedness (parity). */
+
+NCM_INLINE NcmComplex
+nc_wl_ellipticity_celestial_to_frame (NcWLEllipticityFrame frame, NcmComplex e)
+{
+  return (frame == NC_WL_ELLIPTICITY_FRAME_CARTESIAN) ? conj (e) : e;
+}
+
 /* TRACE convention (distortion chi). */
 
-NCM_INLINE complex double
-nc_wl_ellipticity_apply_shear_trace_c (complex double g, complex double chi)
+NCM_INLINE NcmComplex
+nc_wl_ellipticity_apply_shear_trace (NcmComplex g, NcmComplex chi)
 {
   return (chi + g * (g * conj (chi) + 2.0)) /
          (1.0 + g * conj (g) + 2.0 * creal (g * conj (chi)));
 }
 
-NCM_INLINE complex double
-nc_wl_ellipticity_apply_shear_inv_trace_c (complex double g, complex double chi_obs)
+NCM_INLINE NcmComplex
+nc_wl_ellipticity_apply_shear_inv_trace (NcmComplex g, NcmComplex chi_obs)
 {
   return (chi_obs + g * (g * conj (chi_obs) - 2.0)) /
          (1.0 + g * conj (g) - 2.0 * creal (g * conj (chi_obs)));
 }
 
 NCM_INLINE gdouble
-nc_wl_ellipticity_lndet_jac_trace_c (complex double g, complex double chi_obs)
+nc_wl_ellipticity_lndet_jac_trace (NcmComplex g, NcmComplex chi_obs)
 {
-  const complex double g_conj = conj (g);
+  const NcmComplex g_conj     = conj (g);
   const gdouble abs_g2        = creal (g * g_conj);
   const gdouble lndet_jac_den = 3.0 * log (fabs (1.0 - 2.0 * creal (g_conj * chi_obs) + abs_g2));
 
@@ -197,32 +206,72 @@ nc_wl_ellipticity_lndet_jac_trace_c (complex double g, complex double chi_obs)
     return 3.0 * log (abs_g2 - 1.0) - lndet_jac_den;
 }
 
-/* TRACE_DET convention (ellipticity epsilon). */
-
-NCM_INLINE complex double
-nc_wl_ellipticity_apply_shear_trace_det_c (complex double g, complex double e)
+/* Same quantity as nc_wl_ellipticity_lndet_jac_trace(), but the linear
+ * (not log) Jacobian directly: exp(lndet_jac_trace(g,chi_obs)) ==
+ * det_jac_trace(g,chi_obs) to machine precision (see
+ * tests/c/nc/lss/wl/test_nc_wl_ellipticity.c), computed WITHOUT the
+ * log1p/log + exp round-trip. Callers that sum the marginal linearly
+ * (rather than in log-space) should use this directly instead of exp()-ing
+ * the log form, to avoid that round-trip. */
+NCM_INLINE gdouble
+nc_wl_ellipticity_det_jac_trace (NcmComplex g, NcmComplex chi_obs)
 {
-  if (cabs (g) <= 1.0)
-    return (e + g) / (1.0 + conj (g) * e);
-  else
-    return (1.0 + g * conj (e)) / (conj (e) + conj (g));
+  const NcmComplex g_conj = conj (g);
+  const gdouble abs_g2    = creal (g * g_conj);
+  const gdouble den       = fabs (1.0 - 2.0 * creal (g_conj * chi_obs) + abs_g2);
+  const gdouble jac_den   = den * den * den;
+  const gdouble num_base  = (abs_g2 <= 1.0) ? (1.0 - abs_g2) : (abs_g2 - 1.0);
+  const gdouble jac_num   = num_base * num_base * num_base;
+
+  return jac_num / jac_den;
 }
 
-NCM_INLINE complex double
-nc_wl_ellipticity_apply_shear_inv_trace_det_c (complex double g, complex double e_obs)
+/* TRACE_DET convention (ellipticity epsilon). */
+
+/* Naive complex division: skips the overflow/underflow guarding libc's
+ * general complex division (__divdc3) does, which is unneeded here since
+ * g/e are always within/near the unit disk. This matters because
+ * nc_galaxy_shape_intrinsic_mode.c's per-galaxy mode search calls
+ * apply_shear/apply_shear_inv repeatedly inside a finite-difference Newton
+ * search, where __divdc3's overflow/underflow guards dominate runtime. */
+static inline NcmComplex
+_nc_wl_ellipticity_cdiv (const NcmComplex a, const NcmComplex b)
 {
-  if (cabs (g) <= 1.0)
-    return (e_obs - g) / (1.0 - conj (g) * e_obs);
+  const gdouble br    = creal (b);
+  const gdouble bi    = cimag (b);
+  const gdouble denom = br * br + bi * bi;
+
+  return ((creal (a) * br + cimag (a) * bi) + I * (cimag (a) * br - creal (a) * bi)) / denom;
+}
+
+NCM_INLINE NcmComplex
+nc_wl_ellipticity_apply_shear_trace_det (NcmComplex g, NcmComplex e)
+{
+  /* cabs(g)<=1.0 compares a square root against 1 -- comparing the squared
+   * magnitude instead is mathematically identical (sqrt is monotonic) and
+   * avoids the sqrt entirely. This branch runs on every call since g
+   * changes every call, unlike quantities that can be cached per galaxy. */
+  if (creal (g) * creal (g) + cimag (g) * cimag (g) <= 1.0)
+    return _nc_wl_ellipticity_cdiv (e + g, 1.0 + conj (g) * e);
   else
-    return (1.0 - g * conj (e_obs)) / (conj (e_obs) - conj (g));
+    return _nc_wl_ellipticity_cdiv (1.0 + g * conj (e), conj (e) + conj (g));
+}
+
+NCM_INLINE NcmComplex
+nc_wl_ellipticity_apply_shear_inv_trace_det (NcmComplex g, NcmComplex e_obs)
+{
+  if (creal (g) * creal (g) + cimag (g) * cimag (g) <= 1.0)
+    return _nc_wl_ellipticity_cdiv (e_obs - g, 1.0 - conj (g) * e_obs);
+  else
+    return _nc_wl_ellipticity_cdiv (1.0 - g * conj (e_obs), conj (e_obs) - conj (g));
 }
 
 NCM_INLINE gdouble
-nc_wl_ellipticity_lndet_jac_trace_det_c (complex double g, complex double e_obs)
+nc_wl_ellipticity_lndet_jac_trace_det (NcmComplex g, NcmComplex e_obs)
 {
-  const complex double g_conj     = conj (g);
-  const complex double e_obs_conj = conj (e_obs);
-  const gdouble abs_g2            = creal (g * g_conj);
+  const NcmComplex g_conj     = conj (g);
+  const NcmComplex e_obs_conj = conj (e_obs);
+  const gdouble abs_g2        = creal (g * g_conj);
 
   if (abs_g2 <= 1.0)
   {
@@ -234,18 +283,47 @@ nc_wl_ellipticity_lndet_jac_trace_det_c (complex double g, complex double e_obs)
   }
   else
   {
-    const complex double e_obs_m_g = e_obs - g;
-    const gdouble abs_e_obs_m_g2   = creal (e_obs_m_g * conj (e_obs_m_g));
-    const gdouble ln_jac_num       = 2.0 * log (abs_g2 - 1.0);
-    const gdouble ln_jac_den       = 2.0 * log (abs_e_obs_m_g2);
+    const NcmComplex e_obs_m_g   = e_obs - g;
+    const gdouble abs_e_obs_m_g2 = creal (e_obs_m_g * conj (e_obs_m_g));
+    const gdouble ln_jac_num     = 2.0 * log (abs_g2 - 1.0);
+    const gdouble ln_jac_den     = 2.0 * log (abs_e_obs_m_g2);
 
     return ln_jac_num - ln_jac_den;
   }
 }
 
-G_END_DECLS
+/* Same quantity as nc_wl_ellipticity_lndet_jac_trace_det(), but the linear
+ * (not log) Jacobian directly -- see nc_wl_ellipticity_det_jac_trace()'s
+ * docs for the rationale. */
+NCM_INLINE gdouble
+nc_wl_ellipticity_det_jac_trace_det (NcmComplex g, NcmComplex e_obs)
+{
+  const NcmComplex g_conj     = conj (g);
+  const NcmComplex e_obs_conj = conj (e_obs);
+  const gdouble abs_g2        = creal (g * g_conj);
+
+  if (abs_g2 <= 1.0)
+  {
+    const gdouble abs_e_obs2 = creal (e_obs * e_obs_conj);
+    const gdouble num_base   = 1.0 - abs_g2;
+    const gdouble den_base   = 1.0 - 2.0 * creal (g_conj * e_obs) + abs_g2 * abs_e_obs2;
+
+    return (num_base * num_base) / (den_base * den_base);
+  }
+  else
+  {
+    const NcmComplex e_obs_m_g   = e_obs - g;
+    const gdouble abs_e_obs_m_g2 = creal (e_obs_m_g * conj (e_obs_m_g));
+    const gdouble num_base       = abs_g2 - 1.0;
+
+    return (num_base * num_base) / (abs_e_obs_m_g2 * abs_e_obs_m_g2);
+  }
+}
 
 #endif /* NUMCOSMO_GIR_SCAN */
+
+G_END_DECLS
+
 #endif /* __GTK_DOC_IGNORE__ */
 #endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_WL_ELLIPTICITY_INLINE_H_ */

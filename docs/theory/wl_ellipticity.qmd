@@ -9,9 +9,13 @@ intrinsic ellipticity is sheared, calibrated, and observed — and the two
 conventions that NumCosmo must keep track of: the *ellipticity convention*
 (how a shape is turned into a complex number) and the *handedness frame* (which
 basis the two ellipticity components are projected onto). The forward model is
-implemented by the shape distributions [[numcosmo|NcGalaxySDShape]] (concretely
-[[numcosmo|NcGalaxySDShapeHSMGauss]] and
-[[numcosmo|NcGalaxySDShapeHSMGaussGlobal]]); the reduced-shear transforms live in
+implemented by the legacy shape distributions [[numcosmo|NcGalaxySDShape]]
+(concretely [[numcosmo|NcGalaxySDShapeHSMGauss]] and
+[[numcosmo|NcGalaxySDShapeHSMGaussGlobal]]) and, in the calculator framework
+that is superseding them, [[numcosmo|NcGalaxyShapeFactor]] (concretely
+[[numcosmo|NcGalaxyShapeFactorVarAdd]] — see the
+[Galaxy Population & WL Framework](galaxy_wl_framework.qmd) page for that
+vocabulary); the reduced-shear transforms live in
 [[numcosmo|NcWLEllipticityFrame]] and the surrounding `nc_wl_ellipticity`
 functions. The reduced shear itself comes from
 [[numcosmo|NcWLSurfaceMassDensity]] (see
@@ -169,13 +173,66 @@ storage frame, is added without any flip.
 
 ## The Shape Likelihood
 
-For inference the model needs $P(\epsilon^{(o)} \mid z, \text{lens})$. The
-observed shape is mapped back to the intrinsic one,
+For inference the model needs $P(\epsilon^{(o)} \mid z, \text{lens})$.
+
+### The Variance-Add Approximation
+
+The exact marginal likelihood is a 2D integral of the (truncated) intrinsic
+density against the noise kernel over the physical unit disc,
+$$
+P(\chi_{\mathrm{obs}} \mid g) =
+\int_{\lvert\chi_I\rvert<1} \mathrm{d}^2\chi_I \;
+P_{\rm pop}(\chi_I)\, \mathcal{N}\!\big(\chi_{\mathrm{obs}} - f_g(\chi_I);\,
+\sigma_{\rm noise}^2\big),
+$$
+with $f_g$ the exact (nonlinear) shear map. The variance-add approximation
+replaces this with something analytically closed-form by making **two**
+independent simplifications, not one:
+
+1. **Linearize the map jointly in $g$ and $\chi_I$.** Expanding the exact
+   Möbius transform to first order in *both* small quantities together
+   collapses it to a plain shift, $\chi^{(o)} \approx \chi^{(s)} + 2g$
+   (dropping the calibration bias for clarity — see the
+   [linearized shear response](#complex-ellipticity-and-the-two-conventions)
+   above), so
+   $$
+   \chi_{\mathrm{obs}} = \chi_{\mathrm{int}} + 2g + n .
+   $$
+   This is exact only when *both* $|g|$ and $|\chi_I|$ (i.e. $\sigma$) are
+   small — dropping only $|g|$ is not enough, since the discarded terms mix
+   the two (e.g. $g^2\chi_I^{*}$).
+2. **Extend the intrinsic integral from the disc to the whole plane.** Once
+   the map is linear, $\chi_{\mathrm{int}}$ and $n$ are independent Gaussians
+   and their sum is Gaussian too — but only if $\chi_{\mathrm{int}}$ is
+   allowed to range over all of $\mathbb{R}^2$ rather than being cut off at
+   $\lvert\chi_I\rvert=1$ as the physical ellipticity requires. Dropping the
+   truncation is what makes the convolution closed-form; keeping it would
+   require an incomplete (disc-restricted) Gaussian integral instead, with no
+   simple closed form.
+
+With both simplifications, marginalizing $\chi_{\mathrm{int}}$ over
+$\mathbb{R}^2$ gives
+$$
+P(\chi_{\mathrm{obs}} \mid g) \propto
+\exp\!\left[-\frac{\lvert\chi_{\mathrm{obs}} - 2g\rvert^2}
+{2\,(\sigma^2 + \sigma_{\rm noise}^2)}\right],
+$$
+i.e. measurement noise does nothing more than replace the intrinsic variance
+by the **added** effective variance
+$\sigma_{\rm tot}^2 = \sigma^2 + \sigma_{\rm noise}^2$ — the origin of the
+name *variance-add*. Both approximations are controlled by the same
+parameter regime the engine targets (weak lensing, $|g| \ll 1$) together with
+$\sigma \ll 1$ (so the disc truncation is negligible), not by anything
+special about $\sigma_{\rm noise}$.
+
+[[numcosmo|NcGalaxyShapeFactorVarAdd]] (and, in the legacy tree,
+[[numcosmo|NcGalaxySDShapeHSMGaussGlobal]] and
+[[numcosmo|NcGalaxySDShapeHSMGauss]]) keeps the *added-variance* result above
+but removes the map-linearization from step 1: the observed shape is mapped
+back to the intrinsic one through the exact inverse map,
 $\epsilon^{(s)} = \texttt{apply\_shear\_inv}\big((1+m)g + c,\ \epsilon^{(o)}\big)$,
-and the intrinsic distribution is evaluated there, weighted by the Jacobian of
-the change of variables. For the Gaussian shape models the intrinsic shape and
-noise combine into a single isotropic Gaussian of total variance
-$\sigma_{\rm tot}^2 = \sigma^2 + \sigma_{\rm noise}^2$, giving
+and the intrinsic density is evaluated there, weighted by the Jacobian of the
+change of variables:
 
 $$
 P\!\left(\epsilon^{(o)} \mid z\right)
@@ -185,6 +242,20 @@ P\!\left(\epsilon^{(o)} \mid z\right)
 + \ln\left\lvert\det\frac{\partial\epsilon^{(s)}}{\partial\epsilon^{(o)}}\right\rvert
 \right].
 $$
+
+Step 2 (plane instead of disc) is **not** removed by this — the exact
+$\sigma_{\rm tot}^2$ combination and the un-truncated Gaussian normalization
+are still used regardless of how exactly the map itself is handled. Pulling
+one point back through an exact nonlinear map and re-weighting it by the
+local Jacobian is also not, in general, the same as integrating the noise
+against the whole nonlinear map: the two operations only commute exactly when
+the map is affine, so this formula remains an approximation for the same
+$\sigma$-truncation reason even though it no longer linearizes $g$. A future
+quadrature- or Laplace-based marginalization scheme would remove both
+approximations by integrating the (truncated) intrinsic distribution over the
+disc against the exact map instead of pulling one point back through it; see
+the [Galaxy Population & WL Framework](galaxy_wl_framework.qmd) page for how
+such a scheme would plug in alongside `VarAdd`.
 
 For the $\epsilon$ convention in the weak regime the log-Jacobian is
 
@@ -209,9 +280,11 @@ source redshift distribution, handled by [[numcosmo|NcDataClusterWL]].
 
 The forward model and the frame machinery are spread over a few classes:
 
-- shape distributions: [[numcosmo|NcGalaxySDShape]],
+- shape distributions (legacy): [[numcosmo|NcGalaxySDShape]],
   [[numcosmo|NcGalaxySDShapeHSMGauss]],
   [[numcosmo|NcGalaxySDShapeHSMGaussGlobal]]
+- shape factor calculator: [[numcosmo|NcGalaxyShapeFactor]],
+  [[numcosmo|NcGalaxyShapeFactorVarAdd]]
 - ellipticity convention and storage frame:
   [[numcosmo|NcGalaxyWLObsEllipConv]], [[numcosmo|NcWLEllipticityFrame]],
   [[numcosmo|NcGalaxyWLObs]]

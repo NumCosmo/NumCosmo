@@ -68,6 +68,7 @@ enum
   PROP_FIDUC,
   PROP_MTYPE,
   PROP_NTHREADS,
+  PROP_KEEP_ORDER,
   PROP_DATA_FILE,
   PROP_FUNC_ARRAY,
 };
@@ -92,6 +93,7 @@ struct _NcmFitMC
   gint cur_sample_id;
   gint first_sample_id;
   gboolean started;
+  gboolean keep_order;
   NcmObjArray *func_oa;
   gchar *func_oa_file;
   guint nadd_vals;
@@ -117,6 +119,7 @@ ncm_fit_mc_init (NcmFitMC *mc)
   mc->cur_sample_id = -1; /* Represents that no samples were calculated yet. */
   mc->write_index   = 0;
   mc->started       = FALSE;
+  mc->keep_order    = FALSE;
   mc->func_oa       = NULL;
   mc->func_oa_file  = NULL;
   mc->nadd_vals     = 0;
@@ -154,6 +157,9 @@ ncm_fit_mc_set_property (GObject *object, guint prop_id, const GValue *value, GP
       break;
     case PROP_NTHREADS:
       ncm_fit_mc_set_nthreads (mc, g_value_get_uint (value));
+      break;
+    case PROP_KEEP_ORDER:
+      ncm_fit_mc_keep_order (mc, g_value_get_boolean (value));
       break;
     case PROP_DATA_FILE:
       ncm_fit_mc_set_data_file (mc, g_value_get_string (value));
@@ -209,6 +215,9 @@ ncm_fit_mc_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
       break;
     case PROP_NTHREADS:
       g_value_set_uint (value, mc->nthreads);
+      break;
+    case PROP_KEEP_ORDER:
+      g_value_set_boolean (value, mc->keep_order);
       break;
     case PROP_DATA_FILE:
       g_value_set_string (value, ncm_mset_catalog_peek_filename (mc->mcat));
@@ -352,6 +361,13 @@ ncm_fit_mc_class_init (NcmFitMCClass *klass)
                                                       "Number of threads to run",
                                                       0, 100, 0,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_KEEP_ORDER,
+                                   g_param_spec_boolean ("keep-order",
+                                                         NULL,
+                                                         "Whether to keep the catalog in order of sampling under multi-threaded runs",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_DATA_FILE,
                                    g_param_spec_string ("data-file",
@@ -569,6 +585,26 @@ void
 ncm_fit_mc_set_nthreads (NcmFitMC *mc, guint nthreads)
 {
   mc->nthreads = nthreads;
+}
+
+/**
+ * ncm_fit_mc_keep_order:
+ * @mc: a #NcmFitMC
+ * @keep_order: whether to keep the catalog in order of sampling
+ *
+ * When running with more than one thread, resample() calls race to claim
+ * the next catalog row, so which physical realization lands in which row
+ * is otherwise scheduling-dependent (not reproducible run to run, even for
+ * the same seed). Setting @keep_order to %TRUE forces the resample step to
+ * execute in strict loop-iteration order across all threads (only the
+ * subsequent, expensive fit still runs in parallel), making the catalog's
+ * row order deterministic and reproducible regardless of thread count.
+ *
+ */
+void
+ncm_fit_mc_keep_order (NcmFitMC *mc, gboolean keep_order)
+{
+  mc->keep_order = keep_order;
 }
 
 /**
@@ -1030,16 +1066,38 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
       ncm_serialize_reset (mc->ser, TRUE);
     }
 
-    #pragma omp for
+    #pragma omp for ordered
 
     for (j = 0; j < n; j++)
     {
       ncm_mset_param_set_vector (mset, mc->bf);
 
-      #pragma omp critical(resample_phase)
+      /* mc->keep_order is fixed for the whole run (set before this parallel
+       * region starts), so every iteration takes the same branch -- this
+       * uniform control flow is required for the "omp ordered" construct's
+       * per-iteration sequencing to be well defined. With keep_order, the
+       * "ordered" region forces resample calls (and thus sample_index
+       * assignment) to happen in strict loop-iteration order across all
+       * threads, regardless of which thread executes which j -- making the
+       * catalog's row order deterministic and reproducible. Without it,
+       * "critical" only serializes access to the shared RNG/counter, so
+       * sample_index ends up in thread-scheduling arrival order instead
+       * (see ncm_fit_mc_keep_order()). */
+      if (mc->keep_order)
       {
-        sample_index = _ncm_fit_mc_resample (mc, fit);
+        #pragma omp ordered
+        {
+          sample_index = _ncm_fit_mc_resample (mc, fit);
+        }
       }
+      else
+      {
+        #pragma omp critical(resample_phase)
+        {
+          sample_index = _ncm_fit_mc_resample (mc, fit);
+        }
+      }
+
       theta = g_ptr_array_index (thetas, sample_index - cur_pos);
 
       /* This is the slow section that we want to parallelize over */
