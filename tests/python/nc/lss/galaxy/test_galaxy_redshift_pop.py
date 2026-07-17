@@ -22,8 +22,20 @@
 These exercise ``NcGalaxyRedshiftPop`` (LSST-SRD variant) in isolation
 from any calculator: the marginal ``P(z|I)`` is validated for normalization over
 ``z``, consistency of ``ln_eval`` with ``eval`` and of ``gen()`` with the pdf, and
-golden parity against the legacy ``NcGalaxySDTrueRedshiftLSSTSRD`` oracle (the two
-share identical math; this pins the parallel-dev copy until the legacy is removed).
+(historically) golden parity against the legacy ``NcGalaxySDTrueRedshiftLSSTSRD``
+oracle -- the two shared identical math.
+
+FROZEN REFERENCE VALUES: the parity documented above was proven by running
+both engines live and is captured, not re-derived, in ``test_parity_eval``/
+``test_parity_gen`` below. Every comparison here was bit-for-bit exact
+(``rtol=0, atol=0``) between the new and legacy engines. Values were
+captured from an actual passing run of this file's original
+legacy-comparison code, at git rev ``77313f22`` (2026-07-16), then legacy
+(``NcGalaxySDTrueRedshiftLSSTSRD``) construction was removed so these tests
+no longer depend on legacy at runtime -- legacy is slated for deletion in a
+follow-up PR. The captured sequences are stored as ``Ncm.Matrix`` binfiles
+(``data/truth_tables/wl/``) rather than inline literals; see
+``_load_eval_golden``/``_load_gen_golden``.
 """
 
 import pytest
@@ -41,11 +53,6 @@ _VARIANTS = ["y1_source", "y1_lens", "y10_source", "y10_lens"]
 def _new(variant):
     """Build a new Population LSST-SRD model for the named parametrization."""
     return getattr(Nc.GalaxyRedshiftPopLSSTSRD, f"new_{variant}")()
-
-
-def _new_legacy(variant):
-    """Build the legacy TrueRedshift LSST-SRD oracle for the same parametrization."""
-    return getattr(Nc.GalaxySDTrueRedshiftLSSTSRD, f"new_{variant}")()
 
 
 @pytest.mark.parametrize("variant", _VARIANTS)
@@ -85,32 +92,63 @@ def test_gen_consistency(variant):
     assert_allclose(s.mean(), mean_z, atol=5.0 * s.std() / np.sqrt(n_samples))
 
 
+_EVAL_GOLDEN_FILE = "truth_tables/wl/nc_galaxy_redshift_pop_eval_parity.bin"
+
+
+def _load_eval_golden() -> np.ndarray:
+    """Load the frozen eval/ln_eval sequences as a (len(_VARIANTS), 2, 1024) array."""
+    path = Ncm.cfg_get_data_filename(_EVAL_GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    matrix = ser.from_binfile(path)
+    assert isinstance(matrix, Ncm.Matrix)
+    return np.array(matrix.dup_array()).reshape(len(_VARIANTS), 2, 1024)
+
+
+_PARITY_EVAL_FROZEN = _load_eval_golden()
+
+
 @pytest.mark.parametrize("variant", _VARIANTS)
 def test_parity_eval(variant):
-    """eval / ln_eval reproduce the legacy TrueRedshift oracle exactly."""
+    """eval / ln_eval are checked against the frozen legacy TrueRedshift
+    oracle (rtol=1e-12: eval/ln_eval call pow()/exp() directly -- not
+    bit-exact across platforms, see module docstring)."""
     model = _new(variant)
-    legacy = _new_legacy(variant)
     z_min, z_max = model.get_lim()
     zs = np.linspace(max(z_min, 1.0e-3), z_max, 1024)
     new_p = np.array([model.eval(z) for z in zs])
-    old_p = np.array([legacy.integ(z) for z in zs])
-    assert_allclose(new_p, old_p, rtol=0.0, atol=0.0)
+    idx = _VARIANTS.index(variant)
+    assert_allclose(new_p, _PARITY_EVAL_FROZEN[idx, 0], rtol=1.0e-12, atol=1.0e-12)
 
     new_ln = np.array([model.ln_eval(z) for z in zs])
-    old_ln = np.array([legacy.ln_integ(z) for z in zs])
-    assert_allclose(new_ln, old_ln, rtol=0.0, atol=0.0)
+    assert_allclose(new_ln, _PARITY_EVAL_FROZEN[idx, 1], rtol=1.0e-12, atol=1.0e-12)
+
+
+_GEN_GOLDEN_FILE = "truth_tables/wl/nc_galaxy_redshift_pop_gen_parity.bin"
+
+
+def _load_gen_golden() -> np.ndarray:
+    """Load the frozen gen() draw sequences as a (len(_VARIANTS), 5000) array."""
+    path = Ncm.cfg_get_data_filename(_GEN_GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    matrix = ser.from_binfile(path)
+    assert isinstance(matrix, Ncm.Matrix)
+    return np.array(matrix.dup_array()).reshape(len(_VARIANTS), 5000)
+
+
+_PARITY_GEN_FROZEN = _load_gen_golden()
 
 
 @pytest.mark.parametrize("variant", _VARIANTS)
 def test_parity_gen(variant):
-    """gen() reproduces the legacy oracle bit-for-bit under a shared seed."""
+    """gen() is checked against the frozen legacy oracle draw sequence,
+    under a shared seed (rtol=1e-12: gen() draws from a GSL gamma-variate
+    sampler, ncm_rng_gamma_gen(), whose rejection loop is not bit-exact
+    across platforms -- see module docstring)."""
     model = _new(variant)
-    legacy = _new_legacy(variant)
     rng_new = Ncm.RNG.seeded_new(None, 99)
-    rng_old = Ncm.RNG.seeded_new(None, 99)
     new_s = np.array([model.gen(rng_new) for _ in range(5000)])
-    old_s = np.array([legacy.gen(rng_old) for _ in range(5000)])
-    assert_allclose(new_s, old_s, rtol=0.0, atol=0.0)
+    idx = _VARIANTS.index(variant)
+    assert_allclose(new_s, _PARITY_GEN_FROZEN[idx], rtol=1.0e-12, atol=1.0e-12)
 
 
 if __name__ == "__main__":

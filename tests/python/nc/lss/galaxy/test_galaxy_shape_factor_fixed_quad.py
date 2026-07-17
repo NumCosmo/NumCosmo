@@ -138,7 +138,12 @@ def test_marginal_matches_scipy_truth_table(ellip_conv, case):
 
     val = gsffq.eval_marginal(pop, data, g_1, g_2, eps_obs_1, eps_obs_2)
     exact = _scipy_exact_marginal(
-        pop, data.pop_data, ellip_conv, g_1 + 1j * g_2, eps_obs_1 + 1j * eps_obs_2, std_noise
+        pop,
+        data.pop_data,
+        ellip_conv,
+        g_1 + 1j * g_2,
+        eps_obs_1 + 1j * eps_obs_2,
+        std_noise,
     )
 
     assert_allclose(val, exact, rtol=2.0e-4)
@@ -200,8 +205,14 @@ def test_extreme_g_stays_accurate(ellip_conv):
         gsf.prepare_data_array(mset, [data], True, True)
 
     for g_1, g_2 in [
-        (0.6, 0.0), (0.8, 0.0), (0.95, 0.0), (0.99, 0.0),
-        (0.3, 0.2), (0.5, -0.3), (0.1, 0.6), (-0.4, 0.4),
+        (0.6, 0.0),
+        (0.8, 0.0),
+        (0.95, 0.0),
+        (0.99, 0.0),
+        (0.3, 0.2),
+        (0.5, -0.3),
+        (0.1, 0.6),
+        (-0.4, 0.4),
     ]:
         fq_val = gsffq.eval_marginal(pop, data_fq, g_1, g_2, eps_obs_1, eps_obs_2)
         q_val = gsfq.eval_marginal(pop, data_q, g_1, g_2, eps_obs_1, eps_obs_2)
@@ -251,7 +262,12 @@ def test_no_artificial_jump_at_old_no_overlap_boundary():
         return -2.0 * math.log(val)
 
     step = 1.0e-4
-    for R in (old_boundary - 2 * step, old_boundary - step, old_boundary, old_boundary + step):
+    for R in (
+        old_boundary - 2 * step,
+        old_boundary - step,
+        old_boundary,
+        old_boundary + step,
+    ):
         delta = abs(m2lnp_at(R + step) - m2lnp_at(R))
         assert delta < 5.0, f"jump too large ({delta}) straddling R={R}"
 
@@ -273,7 +289,12 @@ def test_adaptive_window_accurate_at_small_std_noise():
     std_noise = 0.01
     boundary = 1.0 + 8.0 * std_noise
     exact = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.1 + 0.0j, boundary + 0.0j, std_noise
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        0.1 + 0.0j,
+        boundary + 0.0j,
+        std_noise,
     )
     val = gsffq.eval_marginal(pop, data, 0.1, 0.0, boundary, 0.0)
     assert_allclose(val, exact, rtol=0.2)
@@ -286,7 +307,12 @@ def test_branch_noise_contained_matches_scipy():
 
     val = gsffq.eval_marginal(pop, data, 0.2, 0.1, 0.3, 0.0)
     exact = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.2 + 0.1j, 0.3 + 0.0j, 0.03
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        0.2 + 0.1j,
+        0.3 + 0.0j,
+        0.03,
     )
     assert_allclose(val, exact, rtol=2.0e-4)
 
@@ -298,7 +324,12 @@ def test_branch_unit_contained_matches_scipy():
 
     val = gsffq.eval_marginal(pop, data, 0.1, 0.0, 0.3, 0.0)
     exact = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.1 + 0.0j, 0.3 + 0.0j, 0.2
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        0.1 + 0.0j,
+        0.3 + 0.0j,
+        0.2,
     )
     assert_allclose(val, exact, rtol=2.0e-4)
 
@@ -310,7 +341,12 @@ def test_branch_genuine_lens_matches_scipy():
 
     val = gsffq.eval_marginal(pop, data, 0.2, 0.0, 0.5, 0.0)
     exact = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.2 + 0.0j, 0.5 + 0.0j, 0.1
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        0.2 + 0.0j,
+        0.5 + 0.0j,
+        0.1,
     )
     assert_allclose(val, exact, rtol=2.0e-4)
 
@@ -324,7 +360,12 @@ def test_cache_consistent_across_repeated_g_calls():
     for g_mag in (0.05, 0.3, 0.1, 0.5, 0.02):
         val = gsffq.eval_marginal(pop, data, g_mag, 0.0, 0.3, 0.0)
         exact = _scipy_exact_marginal(
-            pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, g_mag + 0.0j, 0.3 + 0.0j, 0.03
+            pop,
+            data.pop_data,
+            Nc.GalaxyWLObsEllipConv.TRACE_DET,
+            g_mag + 0.0j,
+            0.3 + 0.0j,
+            0.03,
         )
         assert_allclose(val, exact, rtol=2.0e-4)
 
@@ -344,14 +385,17 @@ def test_no_special_handling_needed_when_sigma_pop_changes():
 
     gsffq = Nc.GalaxyShapeFactorFixedQuad.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
     data, _, _ = _build_factor_data(gsffq, mset)
-    gsffq.data_set(
-        data, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
-    )
+    gsffq.data_set(data, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
     gsffq.prepare_data_array(mset, [data], True, True)
 
     val_1 = gsffq.eval_marginal(pop, data, 0.2, 0.0, 0.3, 0.0)
     exact_1 = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.2 + 0.0j, 0.3 + 0.0j, 0.03
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        0.2 + 0.0j,
+        0.3 + 0.0j,
+        0.03,
     )
     assert_allclose(val_1, exact_1, rtol=2.0e-4)
 
@@ -359,7 +403,12 @@ def test_no_special_handling_needed_when_sigma_pop_changes():
     gsffq.prepare_data_array(mset, [data], True, True)
     val_2 = gsffq.eval_marginal(pop, data, 0.2, 0.0, 0.3, 0.0)
     exact_2 = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.2 + 0.0j, 0.3 + 0.0j, 0.03
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        0.2 + 0.0j,
+        0.3 + 0.0j,
+        0.03,
     )
     assert_allclose(val_2, exact_2, rtol=2.0e-4)
     assert abs(val_2 - val_1) / val_1 > 1.0e-3
@@ -375,8 +424,12 @@ def test_narrow_population_is_a_documented_limitation():
 
     val = gsffq.eval_marginal(pop, data, 0.3, 0.0, -0.368837, 0.101348)
     exact = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.3 + 0.0j,
-        -0.368837 + 0.101348j, 0.03,
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        0.3 + 0.0j,
+        -0.368837 + 0.101348j,
+        0.03,
     )
     rel_err = abs(val - exact) / exact
     assert rel_err > 0.5, "expected the known narrow-population blind spot"
@@ -399,7 +452,12 @@ def test_zero_shear_matches_scipy():
 
     val = gsffq.eval_marginal(pop, data, 0.0, 0.0, 0.1, -0.05)
     exact = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.0 + 0.0j, 0.1 - 0.05j, 0.1
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        0.0 + 0.0j,
+        0.1 - 0.05j,
+        0.1,
     )
     assert_allclose(val, exact, rtol=2.0e-4)
 
@@ -455,7 +513,12 @@ def test_auto_lens_nodes_matches_scipy_truth_in_expensive_middle(std_noise, R):
 
     val = gsffq.eval_marginal(pop, data, 0.15, 0.0, R, 0.0)
     exact = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.15 + 0.0j, R + 0.0j, std_noise
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        0.15 + 0.0j,
+        R + 0.0j,
+        std_noise,
     )
     assert_allclose(val, exact, rtol=5.0e-3)
 
@@ -471,8 +534,12 @@ def test_auto_lens_nodes_generalizes_across_g(std_noise, R):
     for g_test in (0.05, 0.25, 0.4):
         val = gsffq.eval_marginal(pop, data, g_test, 0.0, R, 0.0)
         exact = _scipy_exact_marginal(
-            pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET,
-            g_test + 0.0j, R + 0.0j, std_noise,
+            pop,
+            data.pop_data,
+            Nc.GalaxyWLObsEllipConv.TRACE_DET,
+            g_test + 0.0j,
+            R + 0.0j,
+            std_noise,
         )
         assert_allclose(val, exact, rtol=5.0e-3)
 
@@ -491,7 +558,9 @@ def test_auto_lens_nodes_matches_fixed_default_closely():
     )
 
     for g_test in (0.05, 0.15, 0.35):
-        val_fixed = gsffq_fixed.eval_marginal(pop_fixed, data_fixed, g_test, 0.0, R, 0.0)
+        val_fixed = gsffq_fixed.eval_marginal(
+            pop_fixed, data_fixed, g_test, 0.0, R, 0.0
+        )
         val_auto = gsffq_auto.eval_marginal(pop_auto, data_auto, g_test, 0.0, R, 0.0)
         assert_allclose(val_auto, val_fixed, rtol=2.0e-3)
 
@@ -562,7 +631,12 @@ def test_auto_lens_nodes_falls_back_to_cap_when_reltol_unreachable():
 
     val = gsffq.eval_marginal(pop, data, 0.15, 0.0, R, 0.0)
     exact = _scipy_exact_marginal(
-        pop, data.pop_data, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.15 + 0.0j, R + 0.0j, std_noise
+        pop,
+        data.pop_data,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        0.15 + 0.0j,
+        R + 0.0j,
+        std_noise,
     )
     assert np.isfinite(val)
     assert_allclose(val, exact, rtol=5.0e-3)
@@ -577,8 +651,14 @@ def test_required_columns():
 
     cols = Nc.GalaxyShapeFactorData.required_columns(data)
     own = [
-        "epsilon_int_1", "epsilon_int_2", "epsilon_obs_1", "epsilon_obs_2",
-        "std_noise", "c1", "c2", "m",
+        "epsilon_int_1",
+        "epsilon_int_2",
+        "epsilon_obs_1",
+        "epsilon_obs_2",
+        "std_noise",
+        "c1",
+        "c2",
+        "m",
     ]
     assert cols[: len(own)] == own
 

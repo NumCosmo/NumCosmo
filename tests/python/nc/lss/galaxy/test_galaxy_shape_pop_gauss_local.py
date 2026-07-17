@@ -27,6 +27,21 @@ contrasted with ``NcGalaxySDShapeHSMGaussGlobal``'s single ``sigma``
 parameter). These tests check: (1) Global and Local agree when tuned to the
 same population width, and (2) ``NcGalaxyShapeFactorVarAdd`` built on Local
 reproduces the legacy per-galaxy oracle.
+
+FROZEN REFERENCE VALUES: the parity documented in (2) above was proven by
+running both engines live and is captured, not re-derived, in
+``test_integ_parity_legacy_per_galaxy`` below. Values were captured from an
+actual passing run of this file's original legacy-comparison code, at git
+rev ``77313f22`` (2026-07-16), then legacy (``NcGalaxySDShapeHSMGauss``/
+``NcGalaxySDObsRedshiftSpec``/``NcGalaxySDPositionFlat``/
+``NcGalaxySDTrueRedshiftLSSTSRD``) construction was removed so this test no
+longer depends on legacy at runtime -- legacy is slated for deletion in a
+follow-up PR. The comparison keeps the tolerance (``rtol=1e-8``) that the
+original live comparison used -- not bit-identical, since the sigma-from-
+e_rms inversion uses an independent bisection here rather than legacy's
+Newton solve on a differently rearranged (but algebraically equivalent)
+formula. The captured sequence is stored as an ``Ncm.Matrix`` binfile
+(``data/truth_tables/wl/``) rather than inline literals; see ``_load_golden``.
 """
 
 import pytest
@@ -95,19 +110,6 @@ def _build_new(mset, ellip_conv):
     return gsf, data
 
 
-def _build_legacy_local(ellip_conv):
-    """Legacy per-galaxy HSMGauss (non-Global) oracle."""
-    gsdtr = Nc.GalaxySDTrueRedshiftLSSTSRD.new_y1_source()
-    gsdor = Nc.GalaxySDObsRedshiftSpec.new(gsdtr, 0.0, 2.0)
-    sdz_data = Nc.GalaxySDObsRedshiftData.new(gsdor)
-    lpos = Nc.GalaxySDPositionFlat.new(-0.2, 0.2, -0.2, 0.2)
-    sdpos_data = Nc.GalaxySDPositionData.new(lpos, sdz_data)
-
-    lshape = Nc.GalaxySDShapeHSMGauss.new(ellip_conv)
-    data = Nc.GalaxySDShapeData.new(lshape, sdpos_data)
-    return lshape, data, sdpos_data, sdz_data
-
-
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_local_matches_global_at_equal_e_rms(ellip_conv):
     """VarAdd + Local reproduces VarAdd + Global when tuned to the same e_rms."""
@@ -153,44 +155,56 @@ def test_local_matches_global_at_equal_e_rms(ellip_conv):
         assert_allclose(integ_l.eval(z, data_l), integ_g.eval(z, data_g), rtol=1.0e-8)
 
 
+_GOLDEN_FILE = "truth_tables/wl/nc_galaxy_shape_pop_gauss_local_integ_parity.bin"
+_GOLDEN_N = 50
+
+
+def _load_golden() -> np.ndarray:
+    """Load the frozen per-galaxy integ() sequences as a
+    (len(_CONVS), len(_GALAXIES), 2, _GOLDEN_N) array, blocked by ellip_conv
+    (matching _CONVS order), then by galaxy (matching _GALAXIES order), then
+    by use_lnp (False, True)."""
+    path = Ncm.cfg_get_data_filename(_GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    matrix = ser.from_binfile(path)
+    assert isinstance(matrix, Ncm.Matrix)
+    return np.array(matrix.dup_array()).reshape(
+        len(_CONVS), len(_GALAXIES), 2, _GOLDEN_N
+    )
+
+
+_INTEG_PARITY_PER_GALAXY_FROZEN = _load_golden()
+
+
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 @pytest.mark.parametrize("galaxy", _GALAXIES)
 @pytest.mark.parametrize("use_lnp", [False, True])
 def test_integ_parity_legacy_per_galaxy(ellip_conv, galaxy, use_lnp):
-    """VarAdd + Local matches the legacy per-galaxy HSMGauss oracle.
-
-    Not bit-identical: the sigma-from-e_rms inversion uses an independent
-    bisection here rather than legacy's Newton solve on a differently
-    rearranged (but algebraically equivalent) formula.
-    """
+    """VarAdd + Local is checked against the frozen legacy per-galaxy
+    HSMGauss oracle (see module docstring for the tolerance rationale)."""
     ra, dec, z, e1, e2, std_shape, std_noise, c1, c2, m = galaxy
 
     mset = _build_mset(Nc.GalaxyShapePopGaussLocal.new())
     gsf, data = _build_new(mset, ellip_conv)
-    lshape, ls_data, sdpos_data, sdz_data = _build_legacy_local(ellip_conv)
 
     data.pos_data.ra, data.pos_data.dec = ra, dec
     data.z_data.z = z
-    sdpos_data.ra, sdpos_data.dec = ra, dec
-    sdz_data.z = z
 
     gsf.data_set(data, e1, e2, std_noise, c1, c2, m, Nc.WLEllipticityFrame.CELESTIAL)
-    lshape.data_set(ls_data, e1, e2, std_shape, std_noise, c1, c2, m)
 
     pop = mset.peek(Nc.GalaxyShapePop.id())
     Nc.GalaxyShapePopGaussLocal.data_set(pop, data.pop_data, std_shape)
 
     gsf.prepare_data_array(mset, [data], True, True)
-    lshape.prepare_data_array(mset, [ls_data], True, True)
 
     new_integ = gsf.integ(mset, use_lnp)
-    old_integ = lshape.integ(use_lnp)
-    old_integ.prepare(mset)
 
-    for zz in np.linspace(0.05, 1.5, 50):
-        assert_allclose(
-            new_integ.eval(zz, data), old_integ.eval(zz, ls_data), rtol=1.0e-8
-        )
+    frozen = _INTEG_PARITY_PER_GALAXY_FROZEN[
+        _CONVS.index(ellip_conv), _GALAXIES.index(galaxy), int(use_lnp)
+    ]
+    zs = np.linspace(0.05, 1.5, 50)
+    new_vals = [new_integ.eval(zz, data) for zz in zs]
+    assert_allclose(new_vals, frozen, rtol=1.0e-8)
 
 
 if __name__ == "__main__":

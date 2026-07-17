@@ -51,11 +51,23 @@ non-converged MCMC chain; with them excluded, this reproduction landed at
 -20% to -30% (measured from a 300-realization run while writing this test),
 squarely matching the legacy-measured range.
 
-Runs a CI-sized 150-realization MC (a few minutes) rather than the original
-study's full 3k-20k-galaxy sweep across masses, or the 300-realization run
-used to first establish this test's acceptance band -- enough for the
-(excluding-boundary-hits) mean bias to clear the significance bar reliably,
-not to characterize the bias precisely.
+Runs a CI-sized 50-realization MC (under a minute) rather than the
+original study's full 3k-20k-galaxy sweep across masses, or the
+300-realization run used to first establish this test's acceptance band --
+enough for the (excluding-boundary-hits) mean bias to clear the
+significance bar with real margin (verified empirically at 2.2 sigma for
+the committed seed, vs a razor-thin 1.55 sigma at 25 realizations -- see
+session notes), not to characterize the bias precisely. This is a
+from-model MC *acceptance gate* confirming the pipeline still shows the
+known pathology, not a numerical-correctness test -- the tight
+numerical-correctness checks live in the truth-table and frozen-parity
+tests instead, which is why this one stays small. Note this test's
+significance is only verified robust for its own committed seed: a single
+3000-galaxy cluster gives weak enough individual constraints (0.5-1 dex
+realization-to-realization scatter) that other seed choices are not
+guaranteed to clear the bar at any realization count tried, including the
+original 150 -- a pre-existing property of this from-model design, not
+introduced by this shrink.
 """
 
 import numpy as np
@@ -71,7 +83,7 @@ N_GAL = 3000
 SIGMA_INT = 0.28
 STD_NOISE = 0.03
 FIELD_HALF = 0.09  # degrees
-N_REALIZATIONS = 150
+N_REALIZATIONS = 50
 SEED0 = 1000
 
 # The original CLI-driven study found roughly -20% to -32% bias in this mass

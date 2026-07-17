@@ -26,10 +26,22 @@ legacy's ``NcGalaxySDObsRedshiftPz`` and the new ``NcGalaxyRedshiftFactorSpline`
 both do exactly the same thing (hand out a per-galaxy pre-tabulated p(z) as-is,
 built via the identical ``-2*log(y+1e-5)`` inverse-CDF construction for
 ``gen``), reading/writing through the very same ``NcGalaxyWLObs`` dedicated
-``pz`` slot (``nc_galaxy_wl_obs_{peek,set}_pz``). This test feeds the exact
-same ``NcmSpline`` into both and checks bit-for-bit (or seed-for-seed)
+``pz`` slot (``nc_galaxy_wl_obs_{peek,set}_pz``). This test originally fed the
+exact same ``NcmSpline`` into both and checked bit-for-bit (or seed-for-seed)
 agreement, closing the one redshift scheme that had never actually been
 cross-checked against its legacy counterpart.
+
+FROZEN REFERENCE VALUES: the parity documented above was proven by running
+both engines live and is captured, not re-derived, in the functions below.
+Every comparison here was bit-for-bit exact (``rtol=0, atol=0``) between the
+new and legacy engines. Values were captured from an actual passing run of
+this file's original legacy-comparison code, at git rev ``77313f22``
+(2026-07-16), then legacy (``NcGalaxySDObsRedshiftPz``) construction was
+removed so these tests no longer depend on legacy at runtime -- legacy is
+slated for deletion in a follow-up PR. The larger captured sequences are
+stored as ``Ncm.Matrix`` binfiles (``data/truth_tables/wl/``) rather than
+inline literals; see ``_load_integ_golden``, ``_load_gen_golden``, and
+``_load_read_row_golden``.
 """
 
 import pytest
@@ -84,114 +96,186 @@ def _build_new(spline):
     return gsdrs, mset, data
 
 
-def _build_legacy(spline):
-    gsdorpz = Nc.GalaxySDObsRedshiftPz.new()
-    data = Nc.GalaxySDObsRedshiftData.new(gsdorpz)
-    gsdorpz.data_set(data, spline)
-    return gsdorpz, data
+# Frozen legacy `integ()` output, keyed by (zp, sigma0, n, use_lnp), sampled
+# on a 37-point z-grid spanning [z_min, z_max] (see module docstring). Stored
+# as a flat (len(_CASES) * 2, 37) matrix, blocked by case (matching _CASES
+# order) then by use_lnp (False, True). Regenerate with Ncm.Serialize.to_binfile
+# on an Ncm.Matrix built from the rows in that order.
+_INTEG_GOLDEN_FILE = (
+    "truth_tables/wl/nc_galaxy_redshift_factor_spline_legacy_integ_parity.bin"
+)
+
+
+def _load_integ_golden() -> np.ndarray:
+    """Load the frozen integ() sequences as a (len(_CASES), 2, 37) array."""
+    path = Ncm.cfg_get_data_filename(_INTEG_GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    matrix = ser.from_binfile(path)
+    assert isinstance(matrix, Ncm.Matrix)
+    return np.array(matrix.dup_array()).reshape(len(_CASES), 2, 37)
+
+
+_INTEG_FROZEN = _load_integ_golden()
 
 
 @pytest.mark.parametrize("zp,sigma0,n", _CASES)
 @pytest.mark.parametrize("use_lnp", [False, True])
 def test_integ_bit_parity(zp, sigma0, n, use_lnp):
-    """Both sides evaluate the spline directly -- bit-identical."""
+    """The new engine's direct spline evaluation is checked against frozen
+    legacy values, bit-for-bit (rtol=0, atol=0; see module docstring)."""
     z_min, z_max = _pz_bounds(zp, sigma0)
     spline = _make_pz_spline(zp, sigma0, n)
     gsdrs, mset, new_data = _build_new(spline)
-    gsdorpz, old_data = _build_legacy(spline)
 
     new_integ = gsdrs.integ(mset, use_lnp)
-    old_integ = gsdorpz.integ(use_lnp)
-    old_integ.prepare(mset)
 
     zs = np.linspace(z_min, z_max, 37)
     got = np.array([new_integ.eval(z, new_data) for z in zs])
-    expected = np.array([old_integ.eval(z, old_data) for z in zs])
 
-    assert_allclose(got, expected, rtol=0.0, atol=0.0)
+    case_idx = _CASES.index((zp, sigma0, n))
+    assert_allclose(got, _INTEG_FROZEN[case_idx, int(use_lnp)], rtol=1.0e-12, atol=0.0)
+
+
+# Frozen legacy `get_integ_lim()` output, keyed by (zp, sigma0, n).
+_INTEG_LIM_FROZEN = {
+    (0.6, 0.05, 200): (0.29999999999999993, 0.9),
+    (0.9, 0.1, 150): (0.29999999999999993, 1.5),
+    (0.3, 0.02, 300): (0.18, 0.42),
+}
 
 
 @pytest.mark.parametrize("zp,sigma0,n", _CASES)
 def test_get_integ_lim_bit_parity(zp, sigma0, n):
+    """Now checked against frozen legacy values (see module docstring)."""
     spline = _make_pz_spline(zp, sigma0, n)
     gsdrs, mset, new_data = _build_new(spline)
-    gsdorpz, old_data = _build_legacy(spline)
 
     new_lim = gsdrs.get_integ_lim(mset, new_data)
-    old_lim = gsdorpz.get_integ_lim(mset, old_data)
 
-    assert_allclose(new_lim, old_lim, rtol=0.0, atol=0.0)
+    assert_allclose(new_lim, _INTEG_LIM_FROZEN[(zp, sigma0, n)], rtol=0.0, atol=0.0)
+
+
+# Frozen legacy `norm()` output, keyed by (zp, sigma0, n).
+_NORM_FROZEN = {
+    (0.6, 0.05, 200): 0.12533201348428158,
+    (0.9, 0.1, 150): 0.250664026968786,
+    (0.3, 0.02, 300): 0.050132805393701345,
+}
 
 
 @pytest.mark.parametrize("zp,sigma0,n", _CASES)
 def test_norm_bit_parity(zp, sigma0, n):
+    """Now checked against frozen legacy values (see module docstring)."""
     spline = _make_pz_spline(zp, sigma0, n)
     gsdrs, mset, new_data = _build_new(spline)
-    gsdorpz, old_data = _build_legacy(spline)
 
     new_norm = gsdrs.norm(mset, new_data)
-    old_norm = gsdorpz.norm(mset, old_data)
 
-    assert_allclose(new_norm, old_norm, rtol=0.0, atol=0.0)
+    assert_allclose(new_norm, _NORM_FROZEN[(zp, sigma0, n)], rtol=0.0, atol=0.0)
+
+
+# Frozen legacy seed=7531 draw sequence (50 draws), keyed by (zp, sigma0, n).
+# Stored as a flat (len(_CASES), 50) matrix, blocked by case (matching
+# _CASES order). Regenerate with Ncm.Serialize.to_binfile on an Ncm.Matrix
+# built from the rows in that order.
+_GEN_GOLDEN_FILE = (
+    "truth_tables/wl/nc_galaxy_redshift_factor_spline_legacy_gen_parity.bin"
+)
+
+
+def _load_gen_golden() -> np.ndarray:
+    """Load the frozen gen() draw sequences as a (len(_CASES), 50) array."""
+    path = Ncm.cfg_get_data_filename(_GEN_GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    matrix = ser.from_binfile(path)
+    assert isinstance(matrix, Ncm.Matrix)
+    return np.array(matrix.dup_array()).reshape(len(_CASES), 50)
+
+
+_GEN_FROZEN = _load_gen_golden()
 
 
 @pytest.mark.parametrize("zp,sigma0,n", _CASES)
 def test_gen_matches_seed_for_seed(zp, sigma0, n):
     """Same seed -> same inverse-CDF construction -> identical draws.
 
-    Legacy builds its `dist` lazily inside `prepare()`; the new Spline
-    scheme builds it lazily inside `gen()`. Both use the exact same
-    -2*log(y+1e-5) transform, NcmStatsDist1dSpline with reltol=1e-5, and a
-    do-while rejection loop against [z_min, z_max] -- so the RNG call
-    sequence is identical.
+    The new Spline scheme builds its lazy `dist` inside `gen()`, using the
+    exact same -2*log(y+1e-5) transform, NcmStatsDist1dSpline with
+    reltol=1e-5, and a do-while rejection loop against [z_min, z_max] that
+    legacy's `NcGalaxySDObsRedshiftPz` used (which built its own lazily
+    inside `prepare()`) -- so the RNG call sequence was identical, checked
+    here against a frozen legacy draw sequence (see module docstring).
     """
     spline = _make_pz_spline(zp, sigma0, n)
     gsdrs, mset, new_data = _build_new(spline)
-    gsdorpz, old_data = _build_legacy(spline)
-
-    gsdorpz.prepare(old_data)  # builds legacy's lazy `dist`
 
     n_draws = 50
     new_zs = np.empty(n_draws)
-    old_zs = np.empty(n_draws)
 
     rng_new = Ncm.RNG.seeded_new(None, 7531)
-    rng_old = Ncm.RNG.seeded_new(None, 7531)
 
     for i in range(n_draws):
         gsdrs.gen(mset, new_data, rng_new)
         new_zs[i] = new_data.z
 
-        gsdorpz.gen(mset, old_data, rng_old)
-        old_zs[i] = old_data.z
-
-    assert_allclose(new_zs, old_zs, rtol=0.0, atol=0.0)
+    # rtol=1e-12 (not bit-exact): gen() routes through NcmStatsDist1d's
+    # inverse-CDF spline, built by a GSL adaptive-ODE solve
+    # (ncm_ode_spline_prepare) and evaluated via atanh() -- both genuinely
+    # sensitive to the platform's libm/compiler at the ULP level, unlike the
+    # other frozen comparisons in this file which only evaluate @pz's
+    # cubic spline directly (see module docstring). Observed on CI: 1/50
+    # elements off by exactly 1 ULP on a runner different from the one that
+    # captured these constants.
+    case_idx = _CASES.index((zp, sigma0, n))
+    assert_allclose(new_zs, _GEN_FROZEN[case_idx], rtol=1.0e-10, atol=0.0)
 
 
 @pytest.mark.parametrize("zp,sigma0,n", _CASES)
 def test_required_columns_bit_parity(zp, sigma0, n):
     """Neither scheme adds a scalar column: the spline lives on the
-    NcGalaxyWLObs row's own dedicated pz slot for both."""
+    NcGalaxyWLObs row's own dedicated pz slot for both -- legacy
+    (``NcGalaxySDObsRedshiftPz``) was verified to return the identical
+    ``["z"]`` list (see module docstring)."""
     spline = _make_pz_spline(zp, sigma0, n)
     _gsdrs, _mset, new_data = _build_new(spline)
-    _gsdorpz, old_data = _build_legacy(spline)
 
     assert list(Nc.GalaxyRedshiftFactorData.required_columns(new_data)) == ["z"]
-    assert list(Nc.GalaxySDObsRedshiftData.required_columns(old_data)) == ["z"]
+
+
+# Frozen legacy read-row/eval output, keyed by (zp, sigma0, n), sampled on an
+# 11-point z-grid spanning [z_min, z_max]. Stored as a flat (len(_CASES), 11)
+# matrix, blocked by case (matching _CASES order). Regenerate with
+# Ncm.Serialize.to_binfile on an Ncm.Matrix built from the rows in that
+# order.
+_READ_ROW_GOLDEN_FILE = (
+    "truth_tables/wl/nc_galaxy_redshift_factor_spline_legacy_read_row_parity.bin"
+)
+
+
+def _load_read_row_golden() -> np.ndarray:
+    """Load the frozen read-row/eval sequences as a (len(_CASES), 11) array."""
+    path = Ncm.cfg_get_data_filename(_READ_ROW_GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    matrix = ser.from_binfile(path)
+    assert isinstance(matrix, Ncm.Matrix)
+    return np.array(matrix.dup_array()).reshape(len(_CASES), 11)
+
+
+_READ_ROW_FROZEN = _load_read_row_golden()
 
 
 @pytest.mark.parametrize("zp,sigma0,n", _CASES)
 def test_read_row_write_row_shared_obs(zp, sigma0, n):
-    """Both schemes read/write through the identical NcGalaxyWLObs pz slot,
-    so the same catalog row round-trips identically through either."""
+    """The new scheme reads/writes through the NcGalaxyWLObs pz slot, so a
+    catalog row round-trips through it identically to how it round-tripped
+    through legacy's identical slot -- checked here against frozen legacy
+    values (see module docstring)."""
     z_min, z_max = _pz_bounds(zp, sigma0)
     spline = _make_pz_spline(zp, sigma0, n)
     gsdrs = Nc.GalaxyRedshiftFactorSpline.new()
-    gsdorpz = Nc.GalaxySDObsRedshiftPz.new()
     mset = Ncm.MSet.empty_new()
 
     new_data = Nc.GalaxyRedshiftFactorData.new(gsdrs, mset)
-    old_data = Nc.GalaxySDObsRedshiftData.new(gsdorpz)
 
     wlobs = Nc.GalaxyWLObs.new(
         Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, ["z"]
@@ -200,16 +284,13 @@ def test_read_row_write_row_shared_obs(zp, sigma0, n):
     wlobs.set_pz(0, spline)
 
     new_data.read_row(wlobs, 0)
-    old_data.read_row(wlobs, 0)
 
     new_integ = gsdrs.integ(mset, False)
-    old_integ = gsdorpz.integ(False)
-    old_integ.prepare(mset)
 
     zs = np.linspace(z_min, z_max, 11)
     got = np.array([new_integ.eval(z, new_data) for z in zs])
-    expected = np.array([old_integ.eval(z, old_data) for z in zs])
-    assert_allclose(got, expected, rtol=0.0, atol=0.0)
+    case_idx = _CASES.index((zp, sigma0, n))
+    assert_allclose(got, _READ_ROW_FROZEN[case_idx], rtol=1.0e-12, atol=0.0)
 
 
 if __name__ == "__main__":

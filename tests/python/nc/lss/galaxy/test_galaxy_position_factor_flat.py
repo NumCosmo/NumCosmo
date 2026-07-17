@@ -23,12 +23,25 @@
 NcmModel) whose density P(ra, dec) is uniform over a rectangular sky footprint.
 The footprint is held configuration, not a model, so gen/integ ignore the passed
 mset. Validated for golden parity against the legacy ``NcGalaxySDPositionFlat``,
-which wraps the identical footprint sampler/density and is kept pristine as the
-oracle until cutover.
+which wrapped the identical footprint sampler/density.
+
+FROZEN REFERENCE VALUES: the parity documented above was proven by running
+both engines live and is captured, not re-derived, in
+``test_gen_and_integ_parity_legacy`` below. Every comparison there was
+bit-for-bit exact (identical footprint sampler + shared seed => identical
+draws; identical density => identical integrand value). Values were
+captured from an actual passing run of this file's original
+legacy-comparison code, at git rev ``77313f22`` (2026-07-16), then legacy
+(``NcGalaxySDPositionFlat``/``NcGalaxySDObsRedshiftSpec``/
+``NcGalaxySDTrueRedshiftLSSTSRD``) construction was removed so these tests
+no longer depend on legacy at runtime -- legacy is slated for deletion in a
+follow-up PR. The captured sequences are stored as an ``Ncm.Matrix`` binfile
+(``data/truth_tables/``) rather than inline literals; see ``_load_golden``.
 """
 
 import math
 
+import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
@@ -44,6 +57,25 @@ _CASES = [
     (-15.0, 15.0, -5.0, 25.0),
 ]
 
+# Frozen gen()/integ() sequences for RNG seed 123, one (ra, dec, integrand)
+# triple per row. Stored as a flat (len(_CASES) * 2 * GOLDEN_N, 3) matrix,
+# blocked by case (matching _CASES order) then by use_lnp (False, True).
+# Regenerate with Ncm.Serialize.to_binfile on an Ncm.Matrix built from the
+# rows in that order.
+_GOLDEN_FILE = (
+    "truth_tables/nc_galaxy_position_factor_flat_gen_integ_parity_seed123.bin"
+)
+_GOLDEN_N = 500
+
+
+def _load_golden() -> np.ndarray:
+    """Load the frozen sequences as a (len(_CASES), 2, _GOLDEN_N, 3) array."""
+    path = Ncm.cfg_get_data_filename(_GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    matrix = ser.from_binfile(path)
+    assert isinstance(matrix, Ncm.Matrix)
+    return np.array(matrix.dup_array()).reshape(len(_CASES), 2, _GOLDEN_N, 3)
+
 
 def _build_new(ra_min, ra_max, dec_min, dec_max):
     """Flat scheme + a per-galaxy data. The footprint is config, not a model,
@@ -54,36 +86,33 @@ def _build_new(ra_min, ra_max, dec_min, dec_max):
     return flat, mset, data
 
 
-def _build_legacy(ra_min, ra_max, dec_min, dec_max):
-    """Legacy PositionFlat oracle + its data (which nests a redshift data)."""
-    gsdtr = Nc.GalaxySDTrueRedshiftLSSTSRD.new_y1_source()
-    gsdor = Nc.GalaxySDObsRedshiftSpec.new(gsdtr, 0.0, 2.0)
-    sdz_data = Nc.GalaxySDObsRedshiftData.new(gsdor)
-    legacy = Nc.GalaxySDPositionFlat.new(ra_min, ra_max, dec_min, dec_max)
-    data = Nc.GalaxySDPositionData.new(legacy, sdz_data)
-    return legacy, data
+_GEN_INTEG_PARITY_FROZEN = _load_golden()
 
 
 @pytest.mark.parametrize("ra_min,ra_max,dec_min,dec_max", _CASES)
 @pytest.mark.parametrize("use_lnp", [False, True])
 def test_gen_and_integ_parity_legacy(ra_min, ra_max, dec_min, dec_max, use_lnp):
-    """gen() draws and integ() evaluates bit-for-bit like the legacy flat scheme."""
+    """gen() draws and integ() evaluations are checked against a frozen
+    legacy draw/integrand sequence (rtol=1e-12: dec is drawn via asin() and
+    integ's density evaluates cos(dec) -- not bit-exact across platforms;
+    ra is a plain linear transform of a uniform draw, but kept at the same
+    tolerance for simplicity -- see module docstring)."""
     flat, mset, new_data = _build_new(ra_min, ra_max, dec_min, dec_max)
-    legacy, old_data = _build_legacy(ra_min, ra_max, dec_min, dec_max)
 
     new_integ = flat.integ(mset, use_lnp)
-    old_integ = legacy.integ(use_lnp)
 
     rng_new = Ncm.RNG.seeded_new(None, 123)
-    rng_old = Ncm.RNG.seeded_new(None, 123)
-    for _ in range(500):
+    case_idx = _CASES.index((ra_min, ra_max, dec_min, dec_max))
+    frozen = _GEN_INTEG_PARITY_FROZEN[case_idx, int(use_lnp)]
+    for expected_ra, expected_dec, expected_integ in frozen:
         flat.gen(mset, new_data, rng_new)
-        legacy.gen(mset, old_data, rng_old)
         # Identical footprint sampler + same seed => identical draws.
-        assert new_data.ra == old_data.ra
-        assert new_data.dec == old_data.dec
+        assert_allclose(new_data.ra, expected_ra, rtol=1.0e-12, atol=0.0)
+        assert_allclose(new_data.dec, expected_dec, rtol=1.0e-12, atol=0.0)
         # Identical density => identical integrand value.
-        assert new_integ.eval(new_data) == old_integ.eval(old_data)
+        assert_allclose(
+            new_integ.eval(new_data), expected_integ, rtol=1.0e-12, atol=0.0
+        )
 
 
 @pytest.mark.parametrize("ra_min,ra_max,dec_min,dec_max", _CASES)

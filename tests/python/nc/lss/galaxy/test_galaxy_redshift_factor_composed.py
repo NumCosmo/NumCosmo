@@ -22,9 +22,22 @@
 ``NcGalaxyRedshiftFactorComposed`` convolves a population slot
 (``NcGalaxyRedshiftPop``) with a photo-z observable slot
 (``NcGalaxyRedshiftObs``) over a selection window. Its joint integrand,
-integration limits and normalization are validated for golden parity against the
-legacy ``NcGalaxySDObsRedshiftGauss`` (use_true_z), which shares identical math:
-the new engine keeps the legacy pristine as the oracle until cutover.
+integration limits and normalization were validated for golden parity against
+the legacy ``NcGalaxySDObsRedshiftGauss`` (use_true_z), which shares identical
+math.
+
+FROZEN REFERENCE VALUES: the parity documented above was proven by running
+both engines live and is captured, not re-derived, in
+``test_integrand_parity``/``test_get_integ_lim_parity``/``test_norm_parity``
+below. Values were captured from an actual passing run of this file's
+original legacy-comparison code, at git rev ``77313f22`` (2026-07-16), then
+legacy (``NcGalaxySDObsRedshiftGauss``/``NcGalaxySDTrueRedshiftLSSTSRD``)
+construction was removed so these tests no longer depend on legacy at
+runtime -- legacy is slated for deletion in a follow-up PR. Each frozen
+assertion keeps the tolerance (``rtol``/``atol``) that the original live
+comparison used. The integrand sequences are stored as an ``Ncm.Matrix``
+binfile (``data/truth_tables/wl/``) rather than inline literals; see
+``_load_golden``.
 """
 
 import pytest
@@ -70,15 +83,6 @@ def _build_new(variant, zp, sigma0, zp_min, zp_max):
     return composed, mset, pop, data
 
 
-def _build_legacy(variant, zp, sigma0, zp_min, zp_max):
-    """Legacy ObsRedshiftGauss oracle + its data with the same (zp, sigma0)."""
-    sdz = getattr(Nc.GalaxySDTrueRedshiftLSSTSRD, f"new_{variant}")()
-    gsdor = Nc.GalaxySDObsRedshiftGauss.new(sdz, zp_min, zp_max)
-    data = Nc.GalaxySDObsRedshiftData.new(gsdor)
-    gsdor.data_set(data, zp, sigma0, sigma0 * (1.0 + zp))
-    return gsdor, data
-
-
 def test_serialize_deserialize():
     """A round trip through NcmSerialize preserves the "zp-lim" property."""
     composed = Nc.GalaxyRedshiftFactorComposed.new(0.2, 3.5)
@@ -91,44 +95,88 @@ def test_serialize_deserialize():
     assert_allclose(composed2.get_zp_lim(), composed.get_zp_lim())
 
 
+# Frozen legacy integrand output, sampled on a 200-point z-grid (see module
+# docstring). Stored as a flat (len(_CASES) * 2, _GOLDEN_N) matrix, blocked
+# by case (matching _CASES order) then by use_lnp (False, True). Regenerate
+# with Ncm.Serialize.to_binfile on an Ncm.Matrix built from the rows in that
+# order.
+_GOLDEN_FILE = "truth_tables/wl/nc_galaxy_redshift_factor_composed_integrand_parity.bin"
+_GOLDEN_N = 200
+
+
+def _load_golden() -> np.ndarray:
+    """Load the frozen integrand sequences as a (len(_CASES), 2, _GOLDEN_N) array."""
+    path = Ncm.cfg_get_data_filename(_GOLDEN_FILE, True)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    matrix = ser.from_binfile(path)
+    assert isinstance(matrix, Ncm.Matrix)
+    return np.array(matrix.dup_array()).reshape(len(_CASES), 2, _GOLDEN_N)
+
+
+_INTEGRAND_FROZEN = _load_golden()
+
+
 @pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
 @pytest.mark.parametrize("use_lnp", [False, True])
 def test_integrand_parity(variant, zp, sigma0, zp_min, zp_max, use_lnp):
-    """Composed integrand reproduces the legacy gauss integrand pointwise."""
+    """Composed integrand is checked against a frozen legacy gauss
+    integrand, pointwise (see module docstring)."""
     composed, mset, _pop, new_data = _build_new(variant, zp, sigma0, zp_min, zp_max)
-    gsdor, old_data = _build_legacy(variant, zp, sigma0, zp_min, zp_max)
 
     new_integ = composed.integ(mset, use_lnp)
-    old_integ = gsdor.integ(use_lnp)
 
     zs = np.linspace(
         max(1.0e-2, zp - 3.0 * sigma0 * (1.0 + zp)), zp + 3.0 * sigma0 * (1.0 + zp), 200
     )
     new_vals = np.array([new_integ.eval(z, new_data) for z in zs])
-    old_vals = np.array([old_integ.eval(z, old_data) for z in zs])
-    assert_allclose(new_vals, old_vals, rtol=1.0e-12, atol=0.0)
+    case_idx = _CASES.index((variant, zp, sigma0, zp_min, zp_max))
+    frozen = _INTEGRAND_FROZEN[case_idx, int(use_lnp)]
+    assert_allclose(new_vals, frozen, rtol=1.0e-12, atol=0.0)
+
+
+# Frozen legacy integration limits, keyed by (variant, zp, sigma0, zp_min, zp_max).
+_INTEG_LIM_FROZEN = {
+    ("y1_source", 0.6, 0.05, 0.0, 20.0): (0.0, 1.356),
+    ("y1_source", 0.6, 0.05, 0.4, 0.9): (0.0, 1.356),
+    ("y10_lens", 1.2, 0.08, 0.8, 1.7): (0.0, 3.1219200000000003),
+    ("y1_lens", 0.3, 0.03, 0.1, 0.5): (0.0, 0.63033),
+}
 
 
 @pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
 def test_get_integ_lim_parity(variant, zp, sigma0, zp_min, zp_max):
-    """Composed integration limits match the legacy gauss limits exactly."""
+    """Composed integration limits are checked against frozen legacy gauss
+    limits (see module docstring)."""
     composed, mset, _pop, new_data = _build_new(variant, zp, sigma0, zp_min, zp_max)
-    gsdor, old_data = _build_legacy(variant, zp, sigma0, zp_min, zp_max)
 
     new_lim = composed.get_integ_lim(mset, new_data)
-    old_lim = gsdor.get_integ_lim(Ncm.MSet.empty_new(), old_data)
-    assert_allclose(new_lim, old_lim, rtol=0.0, atol=0.0)
+    assert_allclose(
+        new_lim,
+        _INTEG_LIM_FROZEN[(variant, zp, sigma0, zp_min, zp_max)],
+        rtol=0.0,
+        atol=0.0,
+    )
+
+
+# Frozen legacy normalization, keyed by (variant, zp, sigma0, zp_min, zp_max).
+_NORM_FROZEN = {
+    ("y1_source", 0.6, 0.05, 0.0, 20.0): 0.93898291471631,
+    ("y1_source", 0.6, 0.05, 0.4, 0.9): 0.9831355653447833,
+    ("y10_lens", 1.2, 0.08, 0.8, 1.7): 0.5624761192183235,
+    ("y1_lens", 0.3, 0.03, 0.1, 0.5): 0.6376783673976443,
+}
 
 
 @pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
 def test_norm_parity(variant, zp, sigma0, zp_min, zp_max):
-    """Composed normalization matches the legacy gauss normalization."""
+    """Composed normalization is checked against the frozen legacy gauss
+    normalization (see module docstring)."""
     composed, mset, _pop, new_data = _build_new(variant, zp, sigma0, zp_min, zp_max)
-    gsdor, old_data = _build_legacy(variant, zp, sigma0, zp_min, zp_max)
 
     new_norm = composed.norm(mset, new_data)
-    old_norm = gsdor.norm(Ncm.MSet.empty_new(), old_data)
-    assert_allclose(new_norm, old_norm, rtol=1.0e-9)
+    assert_allclose(
+        new_norm, _NORM_FROZEN[(variant, zp, sigma0, zp_min, zp_max)], rtol=1.0e-9
+    )
 
 
 @pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)

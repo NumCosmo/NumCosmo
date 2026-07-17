@@ -274,6 +274,15 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_cluster_wl_truth.c'],
         'suite': ['c', 'omp'],
     },
+    # Same truth-table idea, for the Factor pipeline (NcDataClusterWLFactor):
+    # self-contained, no legacy NcDataClusterWL comparison at all. Curated
+    # matrix across shape schemes (VarAdd/SeriesLensed/Quad) and populations
+    # (Gauss/Beta), plus a direct SeriesLensed-vs-Quad cross-check.
+    {
+        'name': 'nc_data_cluster_wl_factor_truth',
+        'sources': ['nc/data/test_nc_data_cluster_wl_factor_truth.c'],
+        'suite': ['c', 'omp'],
+    },
 ]
 
 # Large-scale structure tests (halos, clusters, bias, transfer, power spectrum, window)
