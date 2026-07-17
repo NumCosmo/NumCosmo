@@ -90,8 +90,7 @@
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-/* Fallback -2lnP for a non-positive fixed-nodes P_gal; matches legacy's own
- * local #define at nc_data_cluster_wl.c:67 (not currently shared). */
+/* Fallback -2lnP for a non-positive fixed-nodes P_gal. */
 #define NC_GALAXY_LOW_PROB 1.0e6
 
 typedef struct _NcDataClusterWLFactorIntArg
@@ -131,8 +130,7 @@ static void _nc_data_cluster_wl_factor_cubature_dim (NcmIntegralND *intnd, guint
 NCM_INTEGRAL_ND_DEFINE_TYPE (NC, DATA_CLUSTER_WL_FACTOR_CUBATURE_INTEGRAND, NcDataClusterWLFactorCubatureIntegrand, nc_data_cluster_wl_factor_cubature_integrand, _nc_data_cluster_wl_factor_cubature_dim, _nc_data_cluster_wl_factor_cubature_integrand, NcDataClusterWLFactorCubatureIntArg);
 
 /* Linear-domain product int_pos*int_z*int_shape at each of the @npoints
- * values of z in @x -- direct translation of legacy's
- * nc_data_cluster_wl_cubature_integrand. */
+ * values of z in @x. */
 static void
 _nc_data_cluster_wl_factor_cubature_integrand (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
 {
@@ -159,8 +157,7 @@ _nc_data_cluster_wl_factor_cubature_dim (NcmIntegralND *intnd, guint *dim, guint
 }
 
 /* gsl_function F(z) = P(z): the photo-z weight baked into the calibrated
- * quadrature nodes. Direct translation of legacy's
- * _nc_data_cluster_wl_calib_pz. */
+ * quadrature nodes. */
 static gdouble
 _nc_data_cluster_wl_factor_calib_pz (gdouble z, gpointer user_data)
 {
@@ -170,8 +167,7 @@ _nc_data_cluster_wl_factor_calib_pz (gdouble z, gpointer user_data)
 }
 
 /* gsl_function G(z) = P(eps_obs|z): the slowly-varying shape factor probed
- * at the candidate nodes. Direct translation of legacy's
- * _nc_data_cluster_wl_calib_shape. */
+ * at the candidate nodes. */
 static gdouble
 _nc_data_cluster_wl_factor_calib_shape (gdouble z, gpointer user_data)
 {
@@ -226,8 +222,7 @@ typedef struct _NcDataClusterWLFactorPrivate
    * whole -- radius_hash/optzs_hash bump on *any* halo_position parameter
    * (e.g. RA/Dec in a miscentering model), which would needlessly rebuild
    * the whole per-galaxy quadrature grid on every fit iteration if used as
-   * the rebuild trigger instead. Compared by plain !=, matching legacy's
-   * own fixed_nodes_zcl. */
+   * the rebuild trigger instead. Compared by plain !=. */
   gdouble fixed_nodes_zcl;
 
   /* Last n_nodes/rule_n the grid was actually built for. n_nodes/rule_n are
@@ -299,8 +294,7 @@ typedef struct _NcDataClusterWLFactorPrivate
   /* CUBATURE-only state: built lazily alongside int1d, reusing
    * integ_pos_lin/integ_z_lin/integ_shape_lin (no re-preparation needed
    * beyond what those three already get every cycle). zpi/zpf/res/err are
-   * length-1 vectors reused across every ncm_integral_nd_eval() call,
-   * matching legacy's own CubatureIntegrator. */
+   * length-1 vectors reused across every ncm_integral_nd_eval() call. */
   NcmIntegralND *cub_intnd;
   NcDataClusterWLFactorCubatureIntArg *cub_arg; /* owned by cub_intnd, not freed separately */
   NcmVector *cub_zpi;
@@ -383,10 +377,9 @@ _step_shape_pop (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGalaxyShap
 }
 
 /* Rebuilds galaxy gal_i's fixed-node grid (anchor at index 0, background
- * Gauss-Legendre nodes after) -- direct translation of legacy's per-galaxy
- * construction body (nc_data_cluster_wl.c:1296-1337). The foreground bulk is
- * carried analytically through fixed_norm, so no quadrature interval ever
- * crosses the non-smooth point at z_cl.
+ * Gauss-Legendre nodes after). The foreground bulk is carried analytically
+ * through fixed_norm, so no quadrature interval ever crosses the
+ * non-smooth point at z_cl.
  *
  * When auto_nodes is on, (n_nodes_i, rule_n_i) are calibrated per galaxy via
  * ncm_integral_fixed_calibrate() instead of using the global (n_nodes,
@@ -928,8 +921,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
    *                      the whole per-galaxy quadrature grid every fit
    *                      iteration even when z_cl itself never moved. Tracked
    *                      instead via the dedicated fixed_nodes_zcl scalar
-   *                      compare, matching legacy's own fixed_nodes_zcl --
-   *                      plus n_nodes/rule_n, orchestrator properties (not
+   *                      compare, plus n_nodes/rule_n, orchestrator properties (not
    *                      NcmModel parameters) that resize the grid without
    *                      bumping any pkey at all; a stale-sized subvector
    *                      passed to ncm_integral_fixed_integ_vec_mult()
@@ -1222,8 +1214,7 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
   return result;
 }
 
-/* One panel of the CUBATURE integral over [zmin, zmax], as -2lnP -- direct
- * translation of legacy's cubature_integrator_integrate. */
+/* One panel of the CUBATURE integral over [zmin, zmax], as -2lnP. */
 static gdouble
 _nc_data_cluster_wl_factor_cubature_integrate (NcDataClusterWLFactorPrivate * const self, gdouble zmin, gdouble zmax)
 {
