@@ -22,7 +22,10 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Test NumCosmo app's Cluster WL module."""
+"""Test NumCosmo app's Cluster WL module.
+
+Targets the ``NcGalaxy*Factor``/``NcDataClusterWLFactor`` pipeline.
+"""
 
 from typing import cast
 from filecmp import cmp
@@ -46,6 +49,7 @@ from numcosmo_py.app import app
 from numcosmo_py.experiments.cluster_wl import (
     GalaxyZGen,
     GalaxyShapeGen,
+    ShapeScheme,
     HaloProfileType,
 )
 
@@ -54,6 +58,11 @@ pytestmark = pytest.mark.app
 runner = CliRunner()
 
 Ncm.cfg_init()
+
+# Columns written by NcDataClusterWLFactor.resample(): NOT the legacy
+# sigma_0/sigma_z spelling -- just sigma0 (a fixed per-galaxy calibration
+# input), no separately-stored sigma_z (it's sigma0*(1+z) internally).
+_VARIANTS = ["y1-source", "y1-lens", "y10-source", "y10-lens"]
 
 
 @pytest.fixture(name="experiment_file")
@@ -73,14 +82,12 @@ def fixture_experiment_file_copy(tmp_path: Path) -> Path:
 @pytest.fixture(name="redshift_dist", params=[e.value for e in GalaxyZGen])
 def fixture_redshift_dist(request) -> tuple[str, dict]:
     """Fixture for the redshift distribution."""
-    if request.param == GalaxyZGen.SPEC:
-        config = {"z_min": uniform(0.1, 0.5), "z_max": uniform(0.6, 10.0)}
-    else:
-        config = {
-            "zp_min": uniform(0.1, 0.5),
-            "zp_max": uniform(0.6, 10.0),
-            "sigma0": uniform(0.01, 0.1),
-        }
+    config = {
+        "variant": choice(_VARIANTS),
+        "zp_min": uniform(0.1, 0.5),
+        "zp_max": uniform(0.6, 10.0),
+        "sigma0": uniform(0.01, 0.1),
+    }
     return request.param, config
 
 
@@ -89,144 +96,59 @@ def fixture_redshift_dist(request) -> tuple[str, dict]:
 )
 def fixture_redshift_dist_bad(request) -> tuple[str, list[dict]]:
     """Fixture for the redshift distribution bad configuration."""
-    config: list[dict]
-    if request.param == GalaxyZGen.SPEC:
-        config = [
-            {"zp_min": 0.1, "zp_max": 0.5, "sigma0": 0.01},
-            {"z_min": 0.1, "z_max": 0.5, "sigma0": 0.01},
-            {"zp_min": 0.1, "zp_max": 0.5},
-            {"z_min": 0.5, "z_max": 0.2},
-            {"z_min": "a"},
-            {"z_max": "b"},
-            {"a": None},
-            {"z_min": -0.1},
-            {"z_max": -0.01},
-        ]
-    elif request.param == GalaxyZGen.GAUSS:
-        config = [
-            {"z_min": 0.1, "z_max": 0.5, "sigma0": 0.01},
-            {"zp_min": 0.5, "zp_max": 0.2},
-            {"zp_min": "a"},
-            {"zp_max": "b"},
-            {"sigma0": "c"},
-            {"a": None},
-            {"zp_min": -0.1},
-            {"zp_max": -0.01},
-            {"sigma0": -0.01},
-        ]
-    else:
-        config = [
-            {"z_min": 0.1, "z_max": 0.6},
-            {"zp_min": 0.1, "zp_max": 0.6, "sigma0": 0.01},
-        ]
+    config: list[dict] = [
+        {"zp_min": 0.5, "zp_max": 0.2, "sigma0": 0.01},
+        {"zp_min": "a"},
+        {"zp_max": "b"},
+        {"sigma0": "c"},
+        {"a": None},
+        {"zp_min": -0.1},
+        {"zp_max": -0.01},
+        {"sigma0": -0.01},
+        {"variant": "bogus"},
+    ]
     return request.param, config
 
 
-@pytest.fixture(name="shape_dist", params=[e.value for e in GalaxyShapeGen])
+@pytest.fixture(name="shape_dist", params=[s.value for s in ShapeScheme])
 def fixture_shape_dist(request) -> tuple[str, dict]:
-    """Fixture for the galaxy shape distribution."""
-    match request.param:
-        case GalaxyShapeGen.HSM_GAUSS:
-            config = {
-                "ellip_conv": choice(["trace", "trace-det"]),
-                "ellip_coord": choice(["celestial", "cartesian"]),
-                "std_shape": uniform(0.2, 0.4),
-                "std_noise": uniform(0.01, 0.1),
-                "std_sigma": uniform(0.01, 0.1),
-                "c1_sigma": uniform(0.01, 0.1),
-                "c2_sigma": uniform(0.01, 0.1),
-                "m_sigma": uniform(0.01, 0.1),
-            }
-        case GalaxyShapeGen.HSM_GAUSS_GLOBAL:
-            config = {
-                "ellip_conv": choice(["trace", "trace-det"]),
-                "ellip_coord": choice(["celestial", "cartesian"]),
-                "sigma": uniform(0.2, 0.4),
-                "std_noise": uniform(0.01, 0.1),
-                "c1_sigma": uniform(0.01, 0.1),
-                "c2_sigma": uniform(0.01, 0.1),
-                "m_sigma": uniform(0.01, 0.1),
-            }
-        case _:  # pragma: no cover
-            config = {}
-    return request.param, config
+    """Fixture for the galaxy shape distribution, sweeping the scheme."""
+    config = {
+        "scheme": request.param,
+        "ellip_conv": choice(["trace", "trace-det"]),
+        "ellip_coord": choice(["celestial", "cartesian"]),
+        "sigma": uniform(0.2, 0.4),
+        "std_noise": uniform(0.01, 0.1),
+        "std_sigma": uniform(0.01, 0.1),
+        "c1_sigma": uniform(0.01, 0.1),
+        "c2_sigma": uniform(0.01, 0.1),
+        "m_sigma": uniform(0.01, 0.1),
+    }
+    return GalaxyShapeGen.FACTOR.value, config
 
 
-@pytest.fixture(
-    name="shape_dist_bad", params=[e.value for e in GalaxyShapeGen] + ["bogus"]
-)
+@pytest.fixture(name="shape_dist_bad", params=[s.value for s in ShapeScheme])
 def fixture_shape_dist_bad(request) -> tuple[str, list[dict]]:
     """Fixture for the galaxy shape distribution bad configuration."""
-    config: list[dict]
-    match request.param:
-        case GalaxyShapeGen.HSM_GAUSS:
-            config = [
-                {
-                    "ellip_conv": "trace",
-                    "ellip_coord": "celestial",
-                    "std_shape": 0.15,
-                    "std_noise": 0.01,
-                    "std_sigma": 0.01,
-                    "c1_sigma": 0.01,
-                    "c2_sigma": 0.01,
-                    "m_sigma": 0.01,
-                    "sigma": 0.15,
-                },
-                {"sigma": 0.15},
-                {"ellip_conv": "a"},
-                {"ellip_coord": "b"},
-                {"std_shape": "c"},
-                {"std_noise": "d"},
-                {"std_sigma": "e"},
-                {"c1_sigma": "f"},
-                {"c2_sigma": "g"},
-                {"m_sigma": "h"},
-                {"a": None},
-                {"std_shape": -0.1},
-                {"std_noise": -0.01},
-                {"std_sigma": -0.01},
-                {"c1_sigma": -0.01},
-                {"c2_sigma": -0.01},
-                {"m_sigma": -0.01},
-            ]
-        case GalaxyShapeGen.HSM_GAUSS_GLOBAL:
-            config = [
-                {
-                    "ellip_conv": "trace",
-                    "ellip_coord": "celestial",
-                    "sigma": 0.15,
-                    "std_noise": 0.01,
-                    "std_shape": 0.2,
-                },
-                {"std_shape": 0.2},
-                {"ellip_conv": "a"},
-                {"ellip_coord": "b"},
-                {"sigma": "c"},
-                {"std_noise": "d"},
-                {"a": None},
-                {"sigma": -0.1},
-                {"std_noise": -0.01},
-            ]
-        case _:  # pragma: no cover
-            config = [
-                {
-                    "ellip_conv": choice(["trace", "trace-det"]),
-                    "ellip_coord": choice(["celestial", "cartesian"]),
-                    "sigma": uniform(0.2, 0.5),
-                    "std_noise": uniform(0.01, 0.1),
-                },
-                {
-                    "ellip_conv": choice(["trace", "trace-det"]),
-                    "ellip_coord": choice(["celestial", "cartesian"]),
-                    "std_shape": uniform(0.2, 0.4),
-                    "std_noise": uniform(0.01, 0.1),
-                    "std_sigma": uniform(0.01, 0.1),
-                    "c1_sigma": uniform(0.01, 0.1),
-                    "c2_sigma": uniform(0.01, 0.1),
-                    "m_sigma": uniform(0.01, 0.1),
-                },
-            ]
-    return request.param, config
+    scheme = request.param
+    config: list[dict] = [
+        {"scheme": scheme, "ellip_conv": "a"},
+        {"scheme": scheme, "ellip_coord": "b"},
+        {"scheme": scheme, "sigma": "c"},
+        {"scheme": scheme, "std_noise": "d"},
+        {"scheme": scheme, "std_sigma": "e"},
+        {"scheme": scheme, "c1_sigma": "f"},
+        {"scheme": scheme, "c2_sigma": "g"},
+        {"scheme": scheme, "m_sigma": "h"},
+        {"scheme": scheme, "a": None},
+        {"scheme": scheme, "sigma": -0.1},
+        {"scheme": scheme, "std_noise": -0.01},
+        {"scheme": scheme, "std_sigma": -0.01},
+        {"scheme": scheme, "c1_sigma": -0.01},
+        {"scheme": scheme, "c2_sigma": -0.01},
+        {"scheme": scheme, "m_sigma": -0.01},
+    ]
+    return GalaxyShapeGen.FACTOR.value, config
 
 
 @pytest.fixture(
@@ -418,10 +340,7 @@ def test_cluster_wl_app_generate_redshift(experiment_file, redshift_dist):
     )
     assert result.exit_code == 0, result.output
 
-    if redshift_dist[0] == GalaxyZGen.SPEC:
-        assert "GalaxyZGenSpec" in result.output
-    else:
-        assert "GalaxyZGenGauss" in result.output
+    assert "GalaxyZGenComposed" in result.output
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
 
@@ -438,16 +357,9 @@ def test_cluster_wl_app_generate_redshift(experiment_file, redshift_dist):
     obs = cluster_data.peek_obs()
 
     for i in range(obs.len()):
-        if redshift_dist[0] == GalaxyZGen.SPEC:
-            assert obs.get("z", i) >= redshift_dist[1]["z_min"]
-            assert obs.get("z", i) <= redshift_dist[1]["z_max"]
-        else:
-            assert obs.get("zp", i) >= redshift_dist[1]["zp_min"]
-            assert obs.get("zp", i) <= redshift_dist[1]["zp_max"]
-            assert obs.get("sigma_0", i) == redshift_dist[1]["sigma0"]
-            assert obs.get("sigma_z", i) == redshift_dist[1]["sigma0"] * (
-                1 + obs.get("z", i)
-            )
+        assert obs.get("zp", i) >= redshift_dist[1]["zp_min"]
+        assert obs.get("zp", i) <= redshift_dist[1]["zp_max"]
+        assert obs.get("sigma0", i) == redshift_dist[1]["sigma0"]
 
 
 def test_cluster_wl_app_generate_redshift_bad(experiment_file, redshift_dist_bad):
@@ -494,13 +406,7 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_dist):
     )
     assert result.exit_code == 0, result.output
 
-    match shape_dist[0]:
-        case GalaxyShapeGen.HSM_GAUSS:
-            assert "GalaxyShapeGenHSMGauss" in result.output
-        case GalaxyShapeGen.HSM_GAUSS_GLOBAL:
-            assert "GalaxyShapeGenHSMGaussGlobal" in result.output
-        case _:  # pragma: no cover
-            pass
+    assert "GalaxyShapeGenFactor" in result.output
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
 
@@ -513,38 +419,30 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_dist):
     dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = cast(Ncm.MSet, experiment.get("model-set"))
-    cluster_data = cast(Nc.DataClusterWL, dataset.get_data(0))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
     obs = cluster_data.peek_obs()
-    s_dist_model = cast(Nc.GalaxySDShape, mset.peek_by_name("NcGalaxySDShape"))
+    s_dist_model = cast(Nc.GalaxyShapePopGauss, mset.peek_by_name("NcGalaxyShapePop"))
+
+    assert s_dist_model["sigma"] == shape_dist[1]["sigma"]
+
+    scheme = shape_dist[1]["scheme"]
+    bound = 1.0 + 6.0 * (
+        shape_dist[1]["sigma"] ** 2 + shape_dist[1]["std_noise"] ** 2
+    ) ** (1 / 2)
 
     for i in range(obs.len()):
-        match shape_dist[0]:
-            case GalaxyShapeGen.HSM_GAUSS:
-                assert abs(obs.get("epsilon_obs_1", i)) <= 1.0 + 6.0 * (
-                    shape_dist[1]["std_shape"] ** 2 + shape_dist[1]["std_noise"] ** 2
-                ) ** (1 / 2)
-                assert abs(obs.get("epsilon_obs_2", i)) <= 1.0 + 6.0 * (
-                    shape_dist[1]["std_shape"] ** 2 + shape_dist[1]["std_noise"] ** 2
-                ) ** (1 / 2)
-                assert obs.get("std_shape", i) <= 0.45
-                assert obs.get("std_noise", i) <= 0.5
-                assert abs(obs.get("c1", i)) <= 6.0 * shape_dist[1]["c1_sigma"]
-                assert abs(obs.get("c2", i)) <= 6.0 * shape_dist[1]["c2_sigma"]
-                assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_dist[1]["m_sigma"]
-            case GalaxyShapeGen.HSM_GAUSS_GLOBAL:
-                assert abs(obs.get("epsilon_obs_1", i)) <= 1.0 + 6.0 * (
-                    shape_dist[1]["sigma"] ** 2 + shape_dist[1]["std_noise"] ** 2
-                ) ** (1 / 2)
-                assert abs(obs.get("epsilon_obs_2", i)) <= 1.0 + 6.0 * (
-                    shape_dist[1]["sigma"] ** 2 + shape_dist[1]["std_noise"] ** 2
-                ) ** (1 / 2)
-                assert s_dist_model["sigma"] == shape_dist[1]["sigma"]
-                assert obs.get("std_noise", i) <= 0.5
-                assert abs(obs.get("c1", i)) <= 6.0 * shape_dist[1]["c1_sigma"]
-                assert abs(obs.get("c2", i)) <= 6.0 * shape_dist[1]["c2_sigma"]
-                assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_dist[1]["m_sigma"]
-            case _:  # pragma: no cover
-                pass
+        assert abs(obs.get("epsilon_obs_1", i)) <= max(bound, 1.5)
+        assert abs(obs.get("epsilon_obs_2", i)) <= max(bound, 1.5)
+        assert obs.get("std_noise", i) <= 0.5
+        assert abs(obs.get("c1", i)) <= 6.0 * shape_dist[1]["c1_sigma"]
+        assert abs(obs.get("c2", i)) <= 6.0 * shape_dist[1]["c2_sigma"]
+        assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_dist[1]["m_sigma"]
+
+        if scheme == ShapeScheme.VAR_ADD.value:
+            # A single global sigma, no per-galaxy intrinsic-width draw, so
+            # the bound above is exact rather than a generous stand-in.
+            assert abs(obs.get("epsilon_obs_1", i)) <= bound
+            assert abs(obs.get("epsilon_obs_2", i)) <= bound
 
 
 def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_dist_bad):
@@ -576,6 +474,34 @@ def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_dist_bad):
         assert (
             not dataset_file.exists()
         ), f"Dataset file {dataset_file} should not exist."
+
+
+def test_cluster_wl_app_generate_shape_dist_bogus_type(experiment_file):
+    """Test the generation of the cluster WL app with an unknown --shape-dist type."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--shape-dist=bogus",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+
+def test_cluster_wl_app_generate_redshift_dist_bogus_type(experiment_file):
+    """Test the generation of the cluster WL app with an unknown --z-dist type."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--z-dist=bogus",
+        ],
+    )
+    assert result.exit_code != 0, result.output
 
 
 def test_cluster_wl_app_generate_halo_profile(experiment_file: Path, halo_profile: str):
@@ -785,7 +711,7 @@ def test_cluster_wl_app_radius(experiment_file, radius):
     dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = cast(Ncm.MSet, experiment.get("model-set"))
-    cluster_data = cast(Nc.DataClusterWL, dataset.get_data(0))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
     obs = cluster_data.peek_obs()
     hp = cast(Nc.HaloPosition, mset.peek_by_name("NcHaloPosition"))
     cosmo = cast(Nc.HICosmo, mset.peek_by_name("NcHICosmo"))
@@ -868,7 +794,9 @@ def test_cluster_wl_app_galaxy_density(experiment_file, halo_position):
     cluster_data = dataset.get_data(0)
     obs = cluster_data.peek_obs()
 
-    assert obs.len() <= n_galaxies
+    # resample() retries each row's position draw until it lands in the
+    # cut -- every requested galaxy is kept, so this is exact.
+    assert obs.len() == n_galaxies
 
 
 def test_cluster_wl_app_galaxy_density_bad(experiment_file, density_bad):

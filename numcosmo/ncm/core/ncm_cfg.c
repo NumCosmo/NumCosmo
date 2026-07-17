@@ -184,17 +184,6 @@
 #include "nc/lss/wl/nc_reduced_shear_calib_wtg.h"
 #include "nc/lss/wl/nc_wl_ellipticity_series.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_position.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_position_flat.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift_spec.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift_gauss.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift_pz.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_true_redshift.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_shape.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss_global.h"
 #include "nc/lss/galaxy/nc_galaxy_position_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_position_factor_flat.h"
 #include "nc/lss/galaxy/nc_galaxy_redshift_factor.h"
@@ -248,7 +237,6 @@
 #include "nc/data/nc_data_cluster_pseudo_counts.h"
 #include "nc/data/nc_data_cluster_ncount.h"
 #include "nc/data/nc_data_cluster_ncounts_gauss.h"
-#include "nc/data/nc_data_cluster_wl.h"
 #include "nc/data/nc_data_cluster_wl_factor.h"
 #include "nc/data/nc_data_cluster_mass_rich.h"
 #include "nc/data/nc_data_cluster_mass_rich_count.h"
@@ -857,18 +845,6 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_WL_ELLIPTICITY_SERIES_TRACE_DET);
 
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_POSITION_FLAT);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_SPEC);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_OBS_REDSHIFT_PZ);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_TRUE_REDSHIFT_LSST_SRD);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_HSM_GAUSS);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SD_SHAPE_HSM_GAUSS_GLOBAL);
-
   ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR_FLAT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_FACTOR);
@@ -937,7 +913,6 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNT);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
-  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL_FACTOR);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_MASS_RICH);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_MASS_RICH_COUNT);

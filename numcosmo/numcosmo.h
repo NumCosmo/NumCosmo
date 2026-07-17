@@ -174,16 +174,8 @@
 
 /* Galaxy / Galaxy sample distributions */
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_position.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_position_flat.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_obs_redshift.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_obs_redshift_spec.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_obs_redshift_gauss.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_obs_redshift_pz.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_hod.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_hod_zheng07.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_true_redshift.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_pop.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_pop_lsst_srd.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor.h>
@@ -194,9 +186,6 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_binning.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_position_factor.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_position_factor_flat.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss_global.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_quad.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_var_add.h>
@@ -234,7 +223,6 @@
 #include <numcosmo/nc/data/nc_data_cluster_ncount.h>
 #include <numcosmo/nc/data/nc_data_cluster_ncounts_gauss.h>
 #include <numcosmo/nc/data/nc_data_cluster_pseudo_counts.h>
-#include <numcosmo/nc/data/nc_data_cluster_wl.h>
 #include <numcosmo/nc/data/nc_data_cluster_wl_factor.h>
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich.h>
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich_count.h>

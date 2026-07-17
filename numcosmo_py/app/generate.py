@@ -532,7 +532,7 @@ class GenerateClusterWL:
             metavar=GalaxyZGen.get_help_metavar(),
             rich_help_panel="Galaxy redshift source distribution",
         ),
-    ] = "gauss zp_min=0.0 zp_max=5.0 sigma0=0.03"
+    ] = "composed variant=y1-source zp_min=0.0 zp_max=5.0 sigma0=0.03"
 
     shape_dist: Annotated[
         str,
@@ -542,7 +542,7 @@ class GenerateClusterWL:
             metavar=GalaxyShapeGen.get_help_metavar(),
             rich_help_panel="Galaxy shape source distribution",
         ),
-    ] = "hsm_gauss ellip_conv=trace-det ellip_coord=celestial std_shape=0.3 std_noise=0.1 c1_sigma=0.05 c2_sigma=0.05 m_sigma=0.05"
+    ] = "factor scheme=var_add ellip_conv=trace-det ellip_coord=celestial sigma=0.3 std_noise=0.1 c1_sigma=0.05 c2_sigma=0.05 m_sigma=0.05"
 
     galaxy_density: Annotated[
         float, typer.Option(help="Galaxy density.", show_default=True)
@@ -584,6 +584,11 @@ class GenerateClusterWL:
         if self.experiment.suffix != ".yaml":
             raise ValueError(
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
+            )
+
+        if self.galaxy_density <= 0:
+            raise typer.BadParameter(
+                f"galaxy_density must be positive, got {self.galaxy_density}"
             )
 
         _z_dist, z_gen = self.parse_z_dist()

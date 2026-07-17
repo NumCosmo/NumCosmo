@@ -52,9 +52,6 @@
 #include "nc/lss/halo/nc_halo_density_profile.h"
 #include "nc/lss/halo/nc_halo_position.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_obs_redshift.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_position.h"
-#include "nc/lss/galaxy/nc_galaxy_sd_shape.h"
 
 
 struct _NcGalaxyWLObs

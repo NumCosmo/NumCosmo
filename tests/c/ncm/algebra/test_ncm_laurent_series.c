@@ -519,7 +519,7 @@ test_tps_new_owns_coefficients_and_reports_order (void)
   ncm_laurent_series_tps_unref (tps);
 }
 
-/* The boxed "copy" is a ref-count increment (matching NcGalaxySDShapeData
+/* The boxed "copy" is a ref-count increment (matching NcGalaxyShapeFactorData
  * and siblings), not a deep copy: a "copy" shares the same underlying
  * storage, so mutating through one reference must be visible through the
  * other. */

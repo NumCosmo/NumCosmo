@@ -92,9 +92,10 @@ void ncm_laurent_series_conj_into (NcmLaurentSeries *out, const NcmLaurentSeries
  * not a short-lived per-call temporary.
  *
  * Boxed with reference-count "copy" (ncm_laurent_series_tps_ref()), not a
- * deep copy, matching #NcGalaxySDShapeData and siblings: a "copy" shares
- * the same underlying storage, so later mutations via the owning object's
- * own eval()/compute step are visible through every outstanding reference.
+ * deep copy, matching #NcGalaxyShapeFactorData and siblings: a "copy"
+ * shares the same underlying storage, so later mutations via the owning
+ * object's own eval()/compute step are visible through every outstanding
+ * reference.
  *
  * Because this is a *truncated* power series, not a polynomial-ring
  * element, ncm_laurent_series_tps_conv() truncates its product at the

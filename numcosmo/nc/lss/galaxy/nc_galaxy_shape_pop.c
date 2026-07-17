@@ -42,8 +42,8 @@
  * disc-compactified plane, e.g. #NcGalaxyShapeFactorQuad); its default
  * implementation just substitutes into eval_p(), but a subclass may override
  * it with a more direct/better-conditioned form when its density happens to
- * have one (see #NcGalaxyShapePopBeta). Following the #NcGalaxySDShape /
- * #NcGalaxySDPosition idiom, the resolved per-galaxy state lives in a
+ * have one (see #NcGalaxyShapePopBeta). Following the #NcGalaxyShapeFactorData /
+ * #NcGalaxyPositionFactorData idiom, the resolved per-galaxy state lives in a
  * #NcGalaxyShapePopData: typed public fields (@e_rms) plus an opaque @ldata
  * holding the subclass-specific, varying/updatable resolved parameters.
  * nc_galaxy_shape_pop_prepare() resolves the model parameters (and any

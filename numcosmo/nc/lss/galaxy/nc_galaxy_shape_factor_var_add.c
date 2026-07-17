@@ -49,8 +49,7 @@
  * implementation removes the map-linearization by using the exact inverse
  * map and its exact Jacobian at a single pulled-back point, but keeps the
  * plane-instead-of-disc approximation (the plain un-truncated Gaussian
- * normalization), matching the legacy implementation's behaviour bit for
- * bit. See the
+ * normalization). See the
  * <a href="../../theory/wl_ellipticity.html#the-variance-add-approximation">Variance-Add Approximation</a>
  * section of the theory page for the full derivation.
  *
@@ -187,7 +186,9 @@ _nc_galaxy_shape_factor_var_add_chi2 (NcGalaxyShapeFactorVarAddPrivate * const s
   const complex double e_s = self->apply_shear_inv (g, e_o);
 
   /* The two components are reduced separately (chi2_1 + chi2_2, not
-   * (e1^2 + e2^2)/var) to stay bit-identical to the legacy implementation. */
+   * (e1^2 + e2^2)/var) to keep this specific floating-point evaluation
+   * order, matching the frozen golden-fixture values in the parity
+   * tests. */
   *total_var = gsl_pow_2 (sigma) + gsl_pow_2 (data->std_noise);
   *chi2      = gsl_pow_2 (creal (e_s)) / *total_var + gsl_pow_2 (cimag (e_s)) / *total_var;
   *lndetjac  = self->lndet_jac (g, e_o);

@@ -71,8 +71,8 @@ struct _NcGalaxyShapePopClass
    * agnostic 1/pi disc-measure factor). Unlike eval_p_rho2, there is no
    * sensible generic default (the composition depends entirely on the
    * population's own functional form), so the base class default just
-   * errors clearly, matching NcGalaxySDShape's direct_estimate idiom for
-   * the same "not every subclass needs this" situation. Consumed by
+   * errors clearly for the "not every subclass needs this" situation.
+   * Consumed by
    * #NcGalaxyShapeFactorSeriesLensed. #NcmLaurentSeriesTPS is boxed and
    * introspectable, so this vfunc needs no native-only guard -- subclass
    * implementations are free to use native complex-double machinery
@@ -91,10 +91,11 @@ struct _NcGalaxyShapePopClass
  *   ignored by global models).
  *
  * Per-galaxy data for the intrinsic ellipticity distribution. Mirrors the
- * #NcGalaxySDShapeData / #NcGalaxySDPositionData idiom: typed public fields plus
- * an opaque @ldata holding the subclass-specific, varying/updatable resolved
- * parameters (filled by nc_galaxy_shape_pop_prepare()). The model is the
- * factory (nc_galaxy_shape_pop_data_new()).
+ * #NcGalaxyShapeFactorData / #NcGalaxyPositionFactorData idiom: typed public
+ * fields plus an opaque @ldata holding the subclass-specific,
+ * varying/updatable resolved parameters (filled by
+ * nc_galaxy_shape_pop_prepare()). The model is the factory
+ * (nc_galaxy_shape_pop_data_new()).
  */
 struct _NcGalaxyShapePopData
 {

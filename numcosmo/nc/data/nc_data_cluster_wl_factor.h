@@ -34,7 +34,6 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/ncm/data/ncm_data.h>
-#include <numcosmo/nc/data/nc_data_cluster_wl.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_position_factor.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor.h>
@@ -46,7 +45,22 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcDataClusterWLFactor, nc_data_cluster_wl_factor, NC, DATA_CLUSTER_WL_FACTOR, NcmData)
 
-NcDataClusterWLFactor *nc_data_cluster_wl_factor_new (NcGalaxyPositionFactor * position_factor, NcGalaxyRedshiftFactor * redshift_factor, NcGalaxyShapeFactor * shape_factor);
+typedef enum _NcDataClusterWLResampleFlag /*< flags,underscore_name=NC_DATA_CLUSTER_WL_RESAMPLE_FLAG >*/
+{
+  NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_POSITION = 1 << 0,
+  NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_REDSHIFT = 1 << 1,
+  NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE    = 1 << 2,
+  NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL      = (1 << 3) - 1,
+} NcDataClusterWLResampleFlag;
+
+typedef enum _NcDataClusterWLIntegMethod /*< enum,underscore_name=NC_DATA_CLUSTER_WL_INTEG_METHOD >*/
+{
+  NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE    = 0,
+  NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT       = 1,
+  NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES = 2,
+} NcDataClusterWLIntegMethod;
+
+NcDataClusterWLFactor *nc_data_cluster_wl_factor_new (NcGalaxyPositionFactor *position_factor, NcGalaxyRedshiftFactor *redshift_factor, NcGalaxyShapeFactor *shape_factor);
 NcDataClusterWLFactor *nc_data_cluster_wl_factor_ref (NcDataClusterWLFactor *dcwlf);
 
 void nc_data_cluster_wl_factor_free (NcDataClusterWLFactor *dcwlf);

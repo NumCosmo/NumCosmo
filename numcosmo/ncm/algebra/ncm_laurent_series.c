@@ -604,7 +604,7 @@ ncm_laurent_series_tps_new (guint order)
  *
  * Increases the reference count of @tps by one. This is the boxed type's
  * "copy" function: it shares the same underlying storage rather than
- * deep-copying it (matching #NcGalaxySDShapeData and siblings), so later
+ * deep-copying it (matching #NcGalaxyShapeFactorData and siblings), so later
  * mutations through any reference (e.g. the owning evaluator's own compute
  * step) are visible through every other outstanding reference.
  *

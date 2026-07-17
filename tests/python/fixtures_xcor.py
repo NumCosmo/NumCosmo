@@ -138,83 +138,45 @@ def fixture_cosmology() -> ncpy.Cosmology:
     return _get_cosmology()
 
 
-@pytest.fixture(name="cosmology_alt", scope="module")
-def fixture_cosmology_alt() -> ncpy.Cosmology:
-    """Create a simple cosmology alternate for testing."""
-    cosmology = _get_cosmology_alt()
-    return cosmology
-
-
 @functools.cache
 def _lsst_y1_lens_bins() -> (
-    tuple[list[Nc.GalaxySDObsRedshiftGauss], Nc.GalaxySDTrueRedshiftLSSTSRD]
+    tuple[Ncm.Vector, Nc.GalaxyRedshiftPop, Nc.GalaxyRedshiftObsSel]
 ):
-    """Create LSST Y1 lens photo-z bins."""
-    bins, gsdtr = Nc.GalaxySDObsRedshiftGauss.new_lsst_srd_bins(
-        Nc.GalaxySDTrueRedshiftLSSTSRDType.Y1_LENS
+    """Create LSST Y1 lens photo-z bin edges and population models."""
+    return Nc.GalaxyRedshiftBinning.lsst_srd_edges(
+        Nc.GalaxyRedshiftPopLSSTSRDType.Y1_LENS
     )
-    return bins, gsdtr
 
 
 @functools.cache
 def _lsst_y1_source_bins() -> (
-    tuple[list[Nc.GalaxySDObsRedshiftGauss], Nc.GalaxySDTrueRedshiftLSSTSRD]
+    tuple[Ncm.Vector, Nc.GalaxyRedshiftPop, Nc.GalaxyRedshiftObsSel]
 ):
-    """Create LSST Y1 source photo-z bins."""
-    bins, gsdtr = Nc.GalaxySDObsRedshiftGauss.new_lsst_srd_bins(
-        Nc.GalaxySDTrueRedshiftLSSTSRDType.Y1_SOURCE
+    """Create LSST Y1 source photo-z bin edges and population models."""
+    return Nc.GalaxyRedshiftBinning.lsst_srd_edges(
+        Nc.GalaxyRedshiftPopLSSTSRDType.Y1_SOURCE
     )
-    return bins, gsdtr
 
 
 @functools.cache
 def _lsst_y1_lens_bins_spec() -> list[tuple[str, int]]:
     """Generate specs for LSST Y1 lens bins."""
-    bins, _ = _lsst_y1_lens_bins()
-    return [(f"lsst_y1_lens_bin{i}", i) for i in range(len(bins))]
+    edges, _, _ = _lsst_y1_lens_bins()
+    return [(f"lsst_y1_lens_bin{i}", i) for i in range(edges.len() - 1)]
 
 
 @functools.cache
 def _lsst_y1_source_bins_spec() -> list[tuple[str, int]]:
     """Generate specs for LSST Y1 source bins."""
-    bins, _ = _lsst_y1_source_bins()
-    return [(f"lsst_y1_source_bin{i}", i) for i in range(len(bins))]
+    edges, _, _ = _lsst_y1_source_bins()
+    return [(f"lsst_y1_source_bin{i}", i) for i in range(edges.len() - 1)]
 
 
-@pytest.fixture(
-    name="lsst_y1_lens_bin", params=_lsst_y1_lens_bins_spec(), scope="module"
-)
-def fixture_lsst_y1_lens_bin(
-    request: pytest.FixtureRequest,
-) -> Nc.GalaxySDObsRedshiftGauss:
-    """Fixture for LSST Y1 lens photo-z bins."""
-    bins, _ = _lsst_y1_lens_bins()
-    return bins[request.param[1]]
-
-
-@pytest.fixture(
-    name="lsst_y1_source_bin", params=_lsst_y1_source_bins_spec(), scope="module"
-)
-def fixture_lsst_y1_source_bin(
-    request: pytest.FixtureRequest,
-) -> Nc.GalaxySDObsRedshiftGauss:
-    """Fixture for LSST Y1 source photo-z bins."""
-    bins, _ = _lsst_y1_source_bins()
-    return bins[request.param[1]]
-
-
-@pytest.fixture(name="lsst_y1_lens_bins", scope="module")
-def fixture_lsst_y1_lens_bins() -> tuple[list, Nc.GalaxySDTrueRedshiftLSSTSRD]:
-    """Create LSST Y1 lens photo-z bins."""
-    bins_array, gsdtr = _lsst_y1_lens_bins()
-    return bins_array, gsdtr
-
-
-@pytest.fixture(name="lsst_y1_source_bins", scope="module")
-def fixture_lsst_y1_source_bins() -> tuple[list, Nc.GalaxySDTrueRedshiftLSSTSRD]:
-    """Create LSST Y1 source photo-z bins."""
-    bins_array, gsdtr = _lsst_y1_source_bins()
-    return bins_array, gsdtr
+@pytest.fixture(name="cosmology_alt", scope="module")
+def fixture_cosmology_alt() -> ncpy.Cosmology:
+    """Create a simple cosmology alternate for testing."""
+    cosmology = _get_cosmology_alt()
+    return cosmology
 
 
 @functools.cache
@@ -317,8 +279,11 @@ def _get_kernel_gal(
     domagbias: bool = True,
 ) -> Nc.XcorKernel:
     """Create XcorKernelGal from LSST photo-z bin."""
-    bins, _ = _lsst_y1_lens_bins()
-    dndz_spline = bins[bin_idx].compute_binned_dndz(None)
+    edges, population, observable_population = _lsst_y1_lens_bins()
+    binning = Nc.GalaxyRedshiftBinning.new()
+    dndz_spline = binning.compute_dndz(
+        population, observable_population, edges.get(bin_idx), edges.get(bin_idx + 1)
+    )
     cosmology = _get_cosmology()
     integrator = _get_integrator()
     kernel_gal = Nc.XcorKernelGal(
@@ -340,8 +305,11 @@ def _get_kernel_wl(
     bin_idx: int, nbar: float = 3.0, intr_shear: float = 7.0
 ) -> Nc.XcorKernel:
     """Create XcorKernelWeakLensing from LSST photo-z bin."""
-    bins, _ = _lsst_y1_source_bins()
-    dndz_spline = bins[bin_idx].compute_binned_dndz(None)
+    edges, population, observable_population = _lsst_y1_source_bins()
+    binning = Nc.GalaxyRedshiftBinning.new()
+    dndz_spline = binning.compute_dndz(
+        population, observable_population, edges.get(bin_idx), edges.get(bin_idx + 1)
+    )
     cosmology = _get_cosmology()
     integrator = _get_integrator()
     nc_wl = Nc.XcorKernelWeakLensing(
