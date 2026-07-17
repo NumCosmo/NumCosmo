@@ -24,9 +24,7 @@
 
 """Test NumCosmo app's Cluster WL module.
 
-Targets the ``NcGalaxy*Factor``/``NcDataClusterWLFactor`` pipeline (the
-legacy ``NcGalaxySD*``/``NcDataClusterWL`` pipeline this used to test has
-been removed).
+Targets the ``NcGalaxy*Factor``/``NcDataClusterWLFactor`` pipeline.
 """
 
 from typing import cast

@@ -666,7 +666,8 @@ specific crash-triggering configuration.
 - Sibling schemes: [[numcosmo|NcGalaxyShapeFactorVarAdd]],
   [[numcosmo|NcGalaxyShapeFactorLaplace]], [[numcosmo|NcGalaxyShapeFactorQuad]],
   [[numcosmo|NcGalaxyShapeFactorFixedQuad]]
-- Shear map: [[numcosmo|nc_galaxy_sd_shape_apply_shear]]
+- Shear map: `nc_wl_ellipticity_apply_shear_trace`/`_trace_det` in
+  `nc_wl_ellipticity.h`
 - Population models: [[numcosmo|NcGalaxyShapePop]],
   [[numcosmo|NcGalaxyShapePopGauss]], [[numcosmo|NcGalaxyShapePopBeta]]
 - Derivation and numerical checks:

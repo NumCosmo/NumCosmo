@@ -23,39 +23,35 @@
  */
 
 /*
- * Deterministic "truth table" for NcDataClusterWLFactor -- the Factor-pipeline
- * counterpart of test_nc_data_cluster_wl_truth.c, self-contained (no legacy
- * NcDataClusterWL involved at all: legacy is slated for deletion). For each
- * (shape scheme, population, redshift scheme, ellip-conv, coord) configuration
- * the test regenerates -- from a fixed seed, so no sample data is stored in the
- * repository -- a curated set of galaxies spanning the hard integrand cases
- * (sources in front of / straddling / behind the reduced-shear kink at the lens
- * redshift z_cl), recomputes a self-converged FIXED_NODES-320x7 golden reference
- * (justified in test_nc_data_cluster_wl_truth.c, and already shown to have full
- * parity with LNINT/CUBATURE for the same integrand family -- see the
- * nc-data-cluster-wl-factor-integ-parity work), and validates the cheaper
- * production configuration (FIXED_NODES-20x5, LNINT, CUBATURE) against it.
+ * Deterministic "truth table" for NcDataClusterWLFactor, self-contained: no
+ * legacy oracle is involved. For each (shape scheme, population, redshift
+ * scheme, ellip-conv, coord) configuration the test regenerates -- from a
+ * fixed seed, so no sample data is stored in the repository -- a curated set
+ * of galaxies spanning the hard integrand cases (sources in front of /
+ * straddling / behind the reduced-shear kink at the lens redshift z_cl),
+ * recomputes a self-converged FIXED_NODES-320x7 golden reference (already
+ * shown to have full parity with LNINT/CUBATURE for the same integrand
+ * family -- see the nc-data-cluster-wl-factor-integ-parity work), and
+ * validates the cheaper production configuration (FIXED_NODES-20x5, LNINT,
+ * CUBATURE) against it.
  *
- * Unlike the legacy pipeline (variance-add/Gaussian only), the Factor pipeline
- * has several independently-coded *exact* intrinsic-ellipticity marginalization
- * schemes (SeriesLensed, Quad, Laplace, FixedQuad) and a non-Gaussian population
- * (Beta) with no legacy oracle at all -- this file is what gives those their own
- * self-contained correctness net before legacy goes away. The matrix below is
- * deliberately curated, not a full cross-product (that is what made the legacy
- * 24-combo file expensive): each shape scheme is exercised against the golden
- * reference at least once, VarAdd+Gauss is kept as the cheap "does the wiring
- * still work" baseline, and SeriesLensed/Beta and Quad/Beta each get one
- * spline-straddle (hardest integrand) case. A final, non-golden test
- * cross-checks SeriesLensed against Quad directly on the identical generated
- * galaxy set: two independently-coded exact schemes for the same physical
- * marginal integral must agree with each other, a check the single-scheme
- * legacy pipeline could never express.
+ * The Factor pipeline has several independently-coded *exact*
+ * intrinsic-ellipticity marginalization schemes (SeriesLensed, Quad,
+ * Laplace, FixedQuad) and a non-Gaussian population (Beta); this file gives
+ * each of them its own self-contained correctness net. The matrix below is
+ * deliberately curated, not a full cross-product: each shape scheme is
+ * exercised against the golden reference at least once, VarAdd+Gauss is
+ * kept as the cheap "does the wiring still work" baseline, and
+ * SeriesLensed/Beta and Quad/Beta each get one spline-straddle (hardest
+ * integrand) case. A final, non-golden test cross-checks SeriesLensed
+ * against Quad directly on the identical generated galaxy set: two
+ * independently-coded exact schemes for the same physical marginal integral
+ * must agree with each other.
  *
- * The Spline redshift scheme's pz is a cubic spline (only C2 at its knots), the
- * hardest case for the adaptive methods, exactly when the photo-z bump straddles
- * z_cl -- see test_nc_data_cluster_wl_truth.c's identical rationale. The
- * Composed scheme's joint density (population x Gaussian photo-z kernel) is
- * smooth, so its tolerance is tighter.
+ * The Spline redshift scheme's pz is a cubic spline (only C2 at its knots),
+ * the hardest case for the adaptive methods, exactly when the photo-z bump
+ * straddles z_cl. The Composed scheme's joint density (population x
+ * Gaussian photo-z kernel) is smooth, so its tolerance is tighter.
  */
 
 #ifdef HAVE_CONFIG_H

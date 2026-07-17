@@ -168,8 +168,7 @@ def test_bootstrap_matches_manual_resum(integ_method):
     """Under bootstrap, m2lnL_val() must equal the sum of the per-galaxy
     m2lnP values (from the un-bootstrapped eval_m2lnP_gal) at the
     bootstrap-drawn indices, each counted with its own multiplicity --
-    exercised for all three integration methods, matching NcDataClusterWL's
-    own bootstrap support."""
+    exercised for all three integration methods."""
     n = 6
     dcwlf, mset = _build_multi_galaxy_setup(n)
     dcwlf.set_integ_method(integ_method)

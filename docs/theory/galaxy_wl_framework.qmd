@@ -39,8 +39,7 @@ than caching it.
 
 **Orchestrators** sit above the calculators and wire a fixed pipeline of
 them together for a specific likelihood or generator (e.g.
-[[numcosmo|NcDataClusterWL]]). This layer is still being built for the new
-framework described here; see [Current Status](#sec-status).
+[[numcosmo|NcDataClusterWLFactor]]); see [Current Status](#sec-status).
 
 Distinguishing calc-vs-model is mostly by *type*, reinforced by naming: a
 bare object name (`NcGalaxyRedshiftFactor`) is a calculator; a name with a
@@ -226,19 +225,12 @@ factor for it with `integ`.
 
 ## Current Status {#sec-status}
 
-As of this writing, the redshift (`Composed` scheme), position (`Flat`
-scheme) and shape (`VarAdd` marginalization scheme) factors are implemented
-and validated bit-for-bit or to tight tolerance against the legacy
-`NcGalaxySDShape*`/`NcGalaxySDObsRedshift*`/`NcGalaxySDPosition*` classes,
-which remain in the tree unmodified as the parity oracle during this
-migration. Two pieces are still open:
-
-- the orchestrator that wires the three factors and runs the single
-  $z$-integral automatically (today a caller threads `pos_data`/`z_data`
-  into the shape factor by hand, as the tutorial shows);
-- additional shape marginalization schemes (a 2D quadrature over the
-  intrinsic-ellipticity disc, and/or a Laplace approximation), of which
-  `VarAdd` is the first and simplest.
+As of this writing, the redshift (`Composed`, `Spline` schemes), position
+(`Flat` scheme), and shape (`VarAdd`, `SeriesLensed`, `Quad`, `FixedQuad`,
+`Laplace` marginalization schemes) factors are implemented, and
+[[numcosmo|NcDataClusterWLFactor]] wires them into a single orchestrator
+that resolves models from an `NcmMSet` and runs the per-galaxy
+$z$-integral automatically.
 
 ## API Reference
 

@@ -9,11 +9,8 @@ intrinsic ellipticity is sheared, calibrated, and observed — and the two
 conventions that NumCosmo must keep track of: the *ellipticity convention*
 (how a shape is turned into a complex number) and the *handedness frame* (which
 basis the two ellipticity components are projected onto). The forward model is
-implemented by the legacy shape distributions [[numcosmo|NcGalaxySDShape]]
-(concretely [[numcosmo|NcGalaxySDShapeHSMGauss]] and
-[[numcosmo|NcGalaxySDShapeHSMGaussGlobal]]) and, in the calculator framework
-that is superseding them, [[numcosmo|NcGalaxyShapeFactor]] (concretely
-[[numcosmo|NcGalaxyShapeFactorVarAdd]] — see the
+implemented by the shape factor calculators, [[numcosmo|NcGalaxyShapeFactor]]
+(concretely [[numcosmo|NcGalaxyShapeFactorVarAdd]] — see the
 [Galaxy Population & WL Framework](galaxy_wl_framework.qmd) page for that
 vocabulary); the reduced-shear transforms live in
 [[numcosmo|NcWLEllipticityFrame]] and the surrounding `nc_wl_ellipticity`
@@ -90,10 +87,10 @@ $$
 
 These are the standard reduced-shear ellipticity transforms (see e.g.
 @Bartelmann2001). They are implemented as inlined kernels (`apply_shear`,
-`apply_shear_inv`) selected once per convention; the public
-introspectable entry points are
-[[numcosmo|nc_galaxy_sd_shape_apply_shear]] and
-[[numcosmo|nc_galaxy_sd_shape_apply_shear_inv]].
+`apply_shear_inv`) selected once per convention in `nc_wl_ellipticity.h`
+(`nc_wl_ellipticity_apply_shear_trace`/`_trace_det` and their `_inv`
+counterparts); the `_ptr`-suffixed siblings are the introspectable
+(Python-usable) entry points.
 
 ### Calibration
 
@@ -225,9 +222,7 @@ parameter regime the engine targets (weak lensing, $|g| \ll 1$) together with
 $\sigma \ll 1$ (so the disc truncation is negligible), not by anything
 special about $\sigma_{\rm noise}$.
 
-[[numcosmo|NcGalaxyShapeFactorVarAdd]] (and, in the legacy tree,
-[[numcosmo|NcGalaxySDShapeHSMGaussGlobal]] and
-[[numcosmo|NcGalaxySDShapeHSMGauss]]) keeps the *added-variance* result above
+[[numcosmo|NcGalaxyShapeFactorVarAdd]] keeps the *added-variance* result above
 but removes the map-linearization from step 1: the observed shape is mapped
 back to the intrinsic one through the exact inverse map,
 $\epsilon^{(s)} = \texttt{apply\_shear\_inv}\big((1+m)g + c,\ \epsilon^{(o)}\big)$,
@@ -266,35 +261,31 @@ $$
 $$
 
 with analogous expressions for the $\chi$ convention and for the strong-lensing
-branch. These are provided by `lndet_jac` (e.g.
-[[numcosmo|nc_galaxy_sd_shape_lndet_jac]]).
+branch. These are provided by the `lndet_jac` kernels in `nc_wl_ellipticity.h`
+(`nc_wl_ellipticity_lndet_jac_trace`/`_trace_det`).
 
 Because the likelihood is rotation invariant, the implementation works in the
 **tangential/cross frame**: the stored observed ellipticity is rotated by
 $e^{-2 i \phi}$ (with $\phi = \phi_E$ in the catalog frame), which makes the
 reduced shear real ($g \to g_t$) and the calibration bias is pre-rotated
 consistently. The full observed likelihood marginalizes this expression over the
-source redshift distribution, handled by [[numcosmo|NcDataClusterWL]].
+source redshift distribution, handled by [[numcosmo|NcDataClusterWLFactor]].
 
 ## API Reference
 
 The forward model and the frame machinery are spread over a few classes:
 
-- shape distributions (legacy): [[numcosmo|NcGalaxySDShape]],
-  [[numcosmo|NcGalaxySDShapeHSMGauss]],
-  [[numcosmo|NcGalaxySDShapeHSMGaussGlobal]]
 - shape factor calculator: [[numcosmo|NcGalaxyShapeFactor]],
   [[numcosmo|NcGalaxyShapeFactorVarAdd]]
 - ellipticity convention and storage frame:
   [[numcosmo|NcGalaxyWLObsEllipConv]], [[numcosmo|NcWLEllipticityFrame]],
   [[numcosmo|NcGalaxyWLObs]]
-- shear transforms and Jacobian:
-  [[numcosmo|nc_galaxy_sd_shape_apply_shear]],
-  [[numcosmo|nc_galaxy_sd_shape_apply_shear_inv]],
-  [[numcosmo|nc_galaxy_sd_shape_lndet_jac]]
+- shear transforms and Jacobian: `nc_wl_ellipticity_apply_shear_trace`/
+  `_trace_det`, their `_inv` counterparts, and
+  `nc_wl_ellipticity_lndet_jac_trace`/`_trace_det` in `nc_wl_ellipticity.h`
 - frame helpers: [[numcosmo|nc_wl_ellipticity_celestial_to_frame_c]],
   [[numcosmo|nc_wl_ellipticity_celestial_to_frame_angle]]
 - lens geometry and reduced shear:
   [[numcosmo|nc_halo_position_polar_angles]],
   [[numcosmo|NcWLSurfaceMassDensity]]
-- the assembled likelihood: [[numcosmo|NcDataClusterWL]]
+- the assembled likelihood: [[numcosmo|NcDataClusterWLFactor]]

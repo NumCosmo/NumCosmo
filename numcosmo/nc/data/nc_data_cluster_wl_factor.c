@@ -31,10 +31,7 @@
  *
  * Cluster weak-lensing likelihood built on the per-galaxy Factor
  * calculators (#NcGalaxyPositionFactor / #NcGalaxyRedshiftFactor /
- * #NcGalaxyShapeFactor). #NcDataClusterWL is the equivalent likelihood
- * built on #NcGalaxySDPosition / #NcGalaxySDObsRedshift / #NcGalaxySDShape;
- * the two are numerically independent implementations and the test suite
- * checks them against each other.
+ * #NcGalaxyShapeFactor).
  *
  * The likelihood factor per galaxy is
  * $$P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_I|<1} \mathrm{d}^2\chi_I\,
@@ -46,19 +43,18 @@
  * integrates $z$ itself; the orchestrator integrates this against every
  * other $z$-dependent factor").
  *
- * Supports the same three redshift-integral methods as #NcDataClusterWL:
- * `LNINT` (default, adaptive log-domain 1D), `FIXED_NODES` (fixed
- * Gauss-Legendre, with an optional per-galaxy `auto-nodes` calibration --
- * see nc_data_cluster_wl_factor_set_auto_nodes()) and `CUBATURE` (adaptive
+ * Supports three redshift-integral methods: `LNINT` (default, adaptive
+ * log-domain 1D), `FIXED_NODES` (fixed Gauss-Legendre, with an optional
+ * per-galaxy `auto-nodes` calibration -- see
+ * nc_data_cluster_wl_factor_set_auto_nodes()) and `CUBATURE` (adaptive
  * `NcmIntegralND` over the linear-domain product). All three are
  * mathematically exact, differing only in numerical strategy/cost, and all
- * three support bootstrap resampling (matching #NcDataClusterWL). No OpenMP
- * parallelism yet (including for `auto-nodes` calibration, which stays
- * serial): deferred, since it needs per-thread duplication of the
- * (currently prepare()-shared, mutable) integrator/integrand state before
- * it can be added safely -- see the class's own git history for the
- * planning notes. No fit-time `r_min`/`r_max` weighting: applying it biases
- * the mass estimate, matching #NcDataClusterWL's own behavior.
+ * three support bootstrap resampling. No OpenMP parallelism yet (including
+ * for `auto-nodes` calibration, which stays serial): deferred, since it
+ * needs per-thread duplication of the (currently prepare()-shared, mutable)
+ * integrator/integrand state before it can be added safely -- see the
+ * class's own git history for the planning notes. No fit-time
+ * `r_min`/`r_max` weighting: applying it biases the mass estimate.
  *
  * Design principle followed throughout: all preparation work happens in
  * prepare() -- resolving models, refreshing each Factor's own caches,
@@ -1025,8 +1021,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
 }
 
 /* Combine two adaptive sub-integrals split at z_cl. Each panel returns
- * -2 ln I_panel; recombine in the linear domain I = I_lo + I_hi -- identical
- * to NcDataClusterWL's own _nc_data_cluster_wl_integ_combine(). */
+ * -2 ln I_panel; recombine in the linear domain I = I_lo + I_hi. */
 static gdouble
 _nc_data_cluster_wl_factor_integ_combine (gdouble m2_lo, gdouble m2_hi)
 {
@@ -1077,9 +1072,8 @@ _nc_data_cluster_wl_factor_eval_m2lnP_lnint (NcDataClusterWLFactor *dcwlf, NcmMS
 
     nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, s_data->z_data, &zpi, &zpf);
 
-    /* Split at z_cl when it falls strictly inside the support (the reduced
-     * shear has a kink there): same reasoning as NcDataClusterWL's own
-     * adaptive-quadrature path. */
+    /* Split at z_cl when it falls strictly inside the support, since the
+     * reduced shear has a kink there. */
     if ((self->z_cl > zpi) && (self->z_cl < zpf))
     {
       const gdouble m2_lo = _nc_data_cluster_wl_factor_integrate (self, zpi, self->z_cl);
@@ -1117,8 +1111,7 @@ _nc_data_cluster_wl_factor_eval_m2lnP_lnint (NcDataClusterWLFactor *dcwlf, NcmMS
  * the anchor value (index 0) and @norm is the exact full-support P(z)
  * normalization -- algebraically exact, and never places a quadrature
  * interval across the non-smooth point at z_cl (the foreground is handled
- * analytically through @norm). Direct translation of NcDataClusterWL's own
- * _nc_data_cluster_wl_fixed_panels_integ. */
+ * analytically through @norm). */
 static gdouble
 _nc_data_cluster_wl_factor_fixed_panels_integ (NcDataClusterWLFactorPrivate * const self, guint gal_i, NcmVector *shape_at_nodes, NcmVector *sub)
 {
@@ -1447,8 +1440,8 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
    * NcDataClusterWLFactor:r-min:
    *
    * Minimum radius of the weak lensing observables, enforced only in
-   * resample()'s position rejection-sampling loop (matching
-   * #NcDataClusterWL's own semantics -- there is no fit-time weighting).
+   * resample()'s position rejection-sampling loop -- there is no fit-time
+   * weighting.
    */
   g_object_class_install_property (object_class,
                                    PROP_R_MIN,
