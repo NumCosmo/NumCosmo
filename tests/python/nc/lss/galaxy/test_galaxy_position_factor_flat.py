@@ -78,7 +78,10 @@ _GEN_INTEG_PARITY_FROZEN = {
 @pytest.mark.parametrize("use_lnp", [False, True])
 def test_gen_and_integ_parity_legacy(ra_min, ra_max, dec_min, dec_max, use_lnp):
     """gen() draws and integ() evaluations are checked against a frozen
-    legacy draw/integrand sequence, bit-for-bit (see module docstring)."""
+    legacy draw/integrand sequence (rtol=1e-12: dec is drawn via asin() and
+    integ's density evaluates cos(dec) -- not bit-exact across platforms;
+    ra is a plain linear transform of a uniform draw, but kept at the same
+    tolerance for simplicity -- see module docstring)."""
     flat, mset, new_data = _build_new(ra_min, ra_max, dec_min, dec_max)
 
     new_integ = flat.integ(mset, use_lnp)
@@ -88,10 +91,10 @@ def test_gen_and_integ_parity_legacy(ra_min, ra_max, dec_min, dec_max, use_lnp):
     for expected_ra, expected_dec, expected_integ in frozen:
         flat.gen(mset, new_data, rng_new)
         # Identical footprint sampler + same seed => identical draws.
-        assert new_data.ra == expected_ra
-        assert new_data.dec == expected_dec
+        assert_allclose(new_data.ra, expected_ra, rtol=1.0e-12, atol=0.0)
+        assert_allclose(new_data.dec, expected_dec, rtol=1.0e-12, atol=0.0)
         # Identical density => identical integrand value.
-        assert new_integ.eval(new_data) == expected_integ
+        assert_allclose(new_integ.eval(new_data), expected_integ, rtol=1.0e-12, atol=0.0)
 
 
 

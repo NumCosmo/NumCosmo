@@ -138,7 +138,8 @@ _INTEG_PARITY_FROZEN = {
 @pytest.mark.parametrize("use_lnp", [False, True])
 def test_integ_parity_legacy(ellip_conv, galaxy, use_lnp):
     """The variance-add integrand is checked against the frozen legacy
-    oracle, bit for bit (see module docstring)."""
+    oracle (rtol=1e-12: the integrand calls exp()/complex division, not
+    bit-exact across platforms -- see module docstring)."""
     mset = _build_mset()
     new = _build_new(mset, ellip_conv)
     gsf, s_data, _, _ = new
@@ -151,7 +152,7 @@ def test_integ_parity_legacy(ellip_conv, galaxy, use_lnp):
 
     frozen = _INTEG_PARITY_FROZEN[(_CONV_NAMES[ellip_conv], galaxy, use_lnp)]
     for z, expected in zip(np.linspace(0.05, 1.5, 100), frozen):
-        assert new_integ.eval(z, s_data) == expected
+        assert_allclose(new_integ.eval(z, s_data), expected, rtol=1.0e-12, atol=1.0e-12)
 
 
 _GEN_PARITY_FROZEN = {
@@ -167,7 +168,9 @@ _GEN_PARITY_FROZEN = {
 @pytest.mark.parametrize("galaxy", _GALAXIES)
 def test_gen_parity_legacy(ellip_conv, galaxy):
     """Same seed => identical intrinsic draws and observed ellipticities,
-    checked against a frozen legacy draw sequence (see module docstring)."""
+    checked against a frozen legacy draw sequence (rtol=1e-12: gen() draws
+    intrinsic noise via ncm_rng_gaussian_gen(), not bit-exact across
+    platforms -- see module docstring)."""
     mset = _build_mset()
     new = _build_new(mset, ellip_conv)
     gsf, s_data, _, _ = new
@@ -179,10 +182,12 @@ def test_gen_parity_legacy(ellip_conv, galaxy):
     frozen = _GEN_PARITY_FROZEN[(_CONV_NAMES[ellip_conv], galaxy)]
     for eps_int_1, eps_int_2, eps_obs_1, eps_obs_2 in frozen:
         gsf.gen(mset, s_data, rng_new)
-        assert s_data.epsilon_int_1 == eps_int_1
-        assert s_data.epsilon_int_2 == eps_int_2
-        assert s_data.epsilon_obs_1 == eps_obs_1
-        assert s_data.epsilon_obs_2 == eps_obs_2
+        assert_allclose(
+            [s_data.epsilon_int_1, s_data.epsilon_int_2, s_data.epsilon_obs_1, s_data.epsilon_obs_2],
+            [eps_int_1, eps_int_2, eps_obs_1, eps_obs_2],
+            rtol=1.0e-12,
+            atol=1.0e-12,
+        )
 
 
 

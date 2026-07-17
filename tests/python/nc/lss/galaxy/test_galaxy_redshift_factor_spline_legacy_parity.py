@@ -191,7 +191,15 @@ def test_gen_matches_seed_for_seed(zp, sigma0, n):
         gsdrs.gen(mset, new_data, rng_new)
         new_zs[i] = new_data.z
 
-    assert_allclose(new_zs, _GEN_FROZEN[(zp, sigma0, n)], rtol=0.0, atol=0.0)
+    # rtol=1e-12 (not bit-exact): gen() routes through NcmStatsDist1d's
+    # inverse-CDF spline, built by a GSL adaptive-ODE solve
+    # (ncm_ode_spline_prepare) and evaluated via atanh() -- both genuinely
+    # sensitive to the platform's libm/compiler at the ULP level, unlike the
+    # other frozen comparisons in this file which only evaluate @pz's
+    # cubic spline directly (see module docstring). Observed on CI: 1/50
+    # elements off by exactly 1 ULP on a runner different from the one that
+    # captured these constants.
+    assert_allclose(new_zs, _GEN_FROZEN[(zp, sigma0, n)], rtol=1.0e-12, atol=1.0e-12)
 
 
 @pytest.mark.parametrize("zp,sigma0,n", _CASES)

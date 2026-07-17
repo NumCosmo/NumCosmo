@@ -602,7 +602,12 @@ def test_resample_matches_legacy():
 
         for col in ("ra", "dec", "zp", "epsilon_obs_1", "epsilon_obs_2"):
             new_vals = [new_obs.get(col, i) for i in range(n)]
-            assert_allclose(new_vals, frozen["cols"][col], rtol=0.0, atol=0.0)
+            # rtol=1e-12 (not bit-exact): these columns are all RNG draws
+            # that route through platform/libm-sensitive transcendentals
+            # (asin() in the sky-footprint sampler, an ODE-spline inverse-CDF
+            # for redshift, ncm_rng_gaussian_gen() for shape noise) -- see
+            # the same reasoning in test_galaxy_redshift_factor_spline_legacy_parity.py.
+            assert_allclose(new_vals, frozen["cols"][col], rtol=1.0e-12, atol=0.0)
 
         new_m2lnL = dcwlf.m2lnL_val(mset)
         assert_allclose(new_m2lnL, frozen["m2lnL"], rtol=1.0e-5)

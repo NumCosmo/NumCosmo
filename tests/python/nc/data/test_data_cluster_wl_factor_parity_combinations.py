@@ -440,8 +440,9 @@ def test_resample_matches_legacy(shape_kind, z_kind):
     a closed-form inversion of an algebraically equivalent but differently
     arranged formula -- the same rtol=1e-8 caveat already established at
     the single-galaxy level (test_galaxy_shape_pop_gauss_local.py). ra/dec
-    (position, shape-independent) and shape=global were exactly bit
-    identical (rtol=0).
+    (position, shape-independent) and shape=global were bit identical when
+    this was captured (rtol=1e-12 kept here only to absorb cross-platform
+    libm/ULP noise in the RNG's transcendental calls, not a real tolerance).
     """
     mset, hms = _build_mset(shape_kind, z_kind)
     hms.param_set_by_name("log10MDelta", 14.0)
@@ -471,7 +472,12 @@ def test_resample_matches_legacy(shape_kind, z_kind):
 
         for col in bit_exact_cols:
             new_vals = [new_obs.get(col, i) for i in range(n)]
-            assert_allclose(new_vals, frozen["cols"][col], rtol=0.0, atol=0.0)
+            # rtol=1e-12 (not bit-exact): ra/dec/zp are RNG draws routed
+            # through platform/libm-sensitive transcendentals (asin() in the
+            # sky-footprint sampler, an ODE-spline inverse-CDF for composed
+            # redshift) -- see the same reasoning in
+            # test_galaxy_redshift_factor_spline_legacy_parity.py.
+            assert_allclose(new_vals, frozen["cols"][col], rtol=1.0e-12, atol=0.0)
 
         for col in shape_cols:
             new_vals = [new_obs.get(col, i) for i in range(n)]
