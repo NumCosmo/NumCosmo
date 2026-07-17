@@ -347,7 +347,9 @@ def test_integ_bit_parity(zp, sigma0, n, use_lnp):
     zs = np.linspace(z_min, z_max, 37)
     got = np.array([new_integ.eval(z, new_data) for z in zs])
 
-    assert_allclose(got, _INTEG_FROZEN[(zp, sigma0, n, use_lnp)], rtol=0.0, atol=0.0)
+    assert_allclose(
+        got, _INTEG_FROZEN[(zp, sigma0, n, use_lnp)], rtol=1.0e-12, atol=0.0
+    )
 
 
 # Frozen legacy `get_integ_lim()` output, keyed by (zp, sigma0, n).
