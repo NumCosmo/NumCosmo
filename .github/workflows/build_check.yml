@@ -192,38 +192,10 @@ jobs:
         shell: bash -el {0}
     steps:
       - uses: actions/checkout@v4
-      - name: Setup miniforge
-        uses: conda-incubator/setup-miniconda@v4
+      - uses: ./.github/actions/setup-miniforge
         with:
-          miniforge-version: latest
           python-version: ${{ matrix.python-version }}
-          activate-environment: ${{ env.CONDA_ENV }}
-      - name: Cache date
-        id: get-date
-        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
-      - name: Cache Conda env
-        uses: actions/cache/restore@v4
-        id: cache
-        with:
-          path: ${{ env.CONDA }}/envs
-          key: conda-${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-${{ matrix.mpi }}-${{ steps.get-date.outputs.today }}-${{ hashFiles('environment.yml') }}-v${{ env.CACHE_VERSION }}
-      - name: Update environment
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
-          which python
-          conda list
-          conda remove -q -v -n numcosmo_developer openmpi
-          conda install -q -v -n numcosmo_developer ${{ matrix.mpi }}
-          conda install -q -v -n numcosmo_developer libfabric-devel
-          conda list
-      - name: Save conda-forge cache
-        if: steps.cache.outputs.cache-hit != 'true'
-        id: cache-primes-save
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ env.CONDA }}/envs
-          key: ${{ steps.cache.outputs.cache-primary-key }}
+          mpi: ${{ matrix.mpi }}
       - name: Setting up NumCosmo
         run: |
           conda activate numcosmo_developer
@@ -266,10 +238,12 @@ jobs:
     runs-on: ${{ matrix.os }}-latest
     strategy:
       # Shards are DERIVED, not hand-labeled (see TESTING.md): the C tests are split by
-      # `meson test --slice K/N` over the tier suites, so they auto-distribute as tests are
-      # added (no per-test shard suite to curate). The Python `pytest` lane is internally
-      # parallel (xdist), so it stays a single shard; the marker-gated py-* subsets are their
-      # own shards because they are opt-in, not for balancing.
+      # test_slicer.py into 3 duration-balanced groups (see the c-1/c-2/c-3 entries and
+      # steps below), so they auto-distribute -- and stay balanced by wall time, not just
+      # count -- as tests are added/changed/removed (no per-test shard suite to curate).
+      # The Python `pytest` lane is internally parallel (xdist), so it stays a single
+      # shard; the marker-gated py-* subsets are their own shards because they are
+      # opt-in, not for balancing.
       matrix:
         include:
           - { os: ubuntu, python-version: "3.12", name: python, args: "--suite python" }
@@ -281,41 +255,52 @@ jobs:
           - { os: ubuntu, python-version: "3.12", name: py-powspec, args: "--suite py-powspec" }
           - { os: ubuntu, python-version: "3.12", name: py-xcor, args: "--suite py-xcor" }
           - { os: ubuntu, python-version: "3.12", name: py-app, args: "--suite py-app" }
-          - { os: ubuntu, python-version: "3.12", name: c-1, args: "--suite c --suite c-acceptance --suite c-statistical --slice 1/3" }
-          - { os: ubuntu, python-version: "3.12", name: c-2, args: "--suite c --suite c-acceptance --suite c-statistical --slice 2/3" }
-          - { os: ubuntu, python-version: "3.12", name: c-3, args: "--suite c --suite c-acceptance --suite c-statistical --slice 3/3" }
+          # c-1/c-2/c-3 no longer use meson's own --slice K/N (count-balanced, not
+          # time-balanced -- see .github/scripts/test_slicer.py); the `slice` field
+          # here selects which duration-aware slice this leg runs, computed at
+          # runtime from cached historical per-test durations. Legs without a
+          # `slice` field (above) are unaffected -- see the steps below.
+          - { os: ubuntu, python-version: "3.12", name: c-1, slice: 1 }
+          - { os: ubuntu, python-version: "3.12", name: c-2, slice: 2 }
+          - { os: ubuntu, python-version: "3.12", name: c-3, slice: 3 }
     defaults:
       run:
         shell: bash -el {0}
     steps:
       - uses: actions/checkout@v4
-      - name: Setup miniforge
-        uses: conda-incubator/setup-miniconda@v4
-        with:
-          miniforge-version: latest
-          python-version: ${{ matrix.python-version }}
-          activate-environment: ${{ env.CONDA_ENV }}
-      - name: Cache date
-        id: get-date
-        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
-      - name: Cache Conda env
+      # Every c-* leg restores ALL THREE slices' historical durations (not just its
+      # own), so each leg independently computes the same duration-balanced 3-way
+      # partition and only picks out its own slice -- no coordinator/merge job
+      # needed. A cold cache (first run, or all entries evicted) just restores
+      # nothing; test_slicer.py's `plan` subcommand degrades to a count-balanced
+      # split in that case, matching meson --slice's old behavior.
+      - name: Restore test duration history (slice 1)
+        if: matrix.slice != ''
         uses: actions/cache/restore@v4
-        id: cache
         with:
-          path: ${{ env.CONDA }}/envs
-          key: conda-${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-${{ steps.get-date.outputs.today }}-${{ hashFiles('environment.yml') }}-v${{ env.CACHE_VERSION }}
-      - name: Update environment
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
-          conda list
-      - name: Save conda-forge cache
-        if: steps.cache.outputs.cache-hit != 'true'
-        id: cache-primes-save
-        uses: actions/cache/save@v4
+          path: durations-slice1.json
+          key: test-durations-c-slice1-${{ github.run_id }}
+          restore-keys: |
+            test-durations-c-slice1-
+      - name: Restore test duration history (slice 2)
+        if: matrix.slice != ''
+        uses: actions/cache/restore@v4
         with:
-          path: ${{ env.CONDA }}/envs
-          key: ${{ steps.cache.outputs.cache-primary-key }}
+          path: durations-slice2.json
+          key: test-durations-c-slice2-${{ github.run_id }}
+          restore-keys: |
+            test-durations-c-slice2-
+      - name: Restore test duration history (slice 3)
+        if: matrix.slice != ''
+        uses: actions/cache/restore@v4
+        with:
+          path: durations-slice3.json
+          key: test-durations-c-slice3-${{ github.run_id }}
+          restore-keys: |
+            test-durations-c-slice3-
+      - uses: ./.github/actions/setup-miniforge
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Setting up NumCosmo
         run: |
           conda activate numcosmo_developer
@@ -323,39 +308,64 @@ jobs:
       - name: Building NumCosmo
         run: |
           meson compile -C build
+      - name: Compute test slice
+        if: matrix.slice != ''
+        run: |
+          python3 .github/scripts/test_slicer.py plan \
+            --build-dir build \
+            --suite c --suite c-acceptance --suite c-statistical \
+            --durations durations-slice1.json durations-slice2.json durations-slice3.json \
+            --num-slices 3 --slice ${{ matrix.slice }} \
+            > slice-tests.txt
       - name: Check and coverage
         # First run to generate the coverage base
         # Second run to generate the coverage for the tests
         # Third run to merge the coverage base and the coverage for the tests
         run: |
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
-          meson test -v -C build --timeout-multiplier 0 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
+          if [ -n "${{ matrix.slice }}" ]; then
+            mapfile -t TEST_ARGS < slice-tests.txt
+            meson test -v -C build --timeout-multiplier 0 --num-processes=$(getconf _NPROCESSORS_ONLN) "${TEST_ARGS[@]}" || (cat build/meson-logs/testlog.txt && exit 1)
+          else
+            meson test -v -C build --timeout-multiplier 0 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
+          fi
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
           lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' --output-file numcosmo-coverage.info
+      - name: Save test slice durations
+        # Feeds the next run's "Compute test slice" step -- keeps the c-* legs
+        # duration-balanced as the test suite changes. Runs even if some tests
+        # failed: testlog.json still has valid per-test durations for whichever
+        # tests actually ran, and a stale/absent duration estimate is worse for
+        # future balancing than a partial one. But if an EARLIER step failed
+        # (e.g. the build itself, or "Compute test slice"), testlog.json may not
+        # exist at all -- extract then produces an empty {}, and caching that
+        # would poison the *next* run's restore (picked up via restore-keys
+        # prefix match regardless of content) with zero real data, silently
+        # degrading it back to a count-balanced split. has_data guards against
+        # that: only cache when there's something real to cache.
+        id: extract_durations
+        if: always() && matrix.slice != ''
+        run: |
+          python3 .github/scripts/test_slicer.py extract --testlog build/meson-logs/testlog.json > durations-slice${{ matrix.slice }}.json
+          if python3 -c "import json, sys; sys.exit(0 if json.load(open('durations-slice${{ matrix.slice }}.json')) else 1)"; then
+            echo "has_data=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_data=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Cache test slice durations
+        if: always() && matrix.slice != '' && steps.extract_durations.outputs.has_data == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: durations-slice${{ matrix.slice }}.json
+          key: test-durations-c-slice${{ matrix.slice }}-${{ github.run_id }}
       - name: Test timing summary
         if: always()
         # Surface the slowest tests of this shard in the job summary so wall-time imbalance
-        # across slices is visible at a glance (meson --slice balances by count, not time).
+        # across slices is visible at a glance. (For c-* legs this is now mostly a sanity
+        # check -- the split itself is duration-balanced by test_slicer.py, not meson --slice.)
         run: |
-          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
-          import json, pathlib
-          log = pathlib.Path("build/meson-logs/testlog.json")
-          rows = []
-          if log.exists():
-              for line in log.read_text().splitlines():
-                  line = line.strip()
-                  if line:
-                      d = json.loads(line)
-                      rows.append((float(d.get("duration", 0.0)), d.get("name", "?")))
-          rows.sort(reverse=True)
-          total = sum(d for d, _ in rows)
-          print("### Test durations — ${{ matrix.name }} (top 25 of %d, total %.1fs)" % (len(rows), total))
-          print("```")
-          for dur, name in rows[:25]:
-              print("%8.2fs  %s" % (dur, name))
-          print("```")
-          PY
+          python3 .github/scripts/test_slicer.py summary --testlog build/meson-logs/testlog.json --title "${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
       - name: CodeCov
         uses: codecov/codecov-action@v4
         with:
