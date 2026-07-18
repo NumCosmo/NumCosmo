@@ -276,8 +276,6 @@ _ncm_fit_esmcmc_constructed (GObject *object)
       ncm_mset_catalog_set_m2lnp_var (self->mcat, 0);
       ncm_mset_catalog_set_run_type (self->mcat, "Ensemble Sampler MCMC");
 
-      ncm_dataset_register_shared (ncm_likelihood_peek_dataset (ncm_fit_peek_likelihood (self->fit)), self->ser);
-
       for (k = 0; k < self->nwalkers; k++)
       {
         NcmVector *full_thetastar_inout_k = ncm_vector_new (theta_len + NCM_FIT_ESMCMC_MPI_IN_LEN + NCM_FIT_ESMCMC_MPI_OUT_LEN);
@@ -1631,6 +1629,8 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
 
   self->started = TRUE;
 
+  ncm_dataset_register_shared (ncm_likelihood_peek_dataset (lh), self->ser);
+
   ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_TIMED);
   ncm_mset_catalog_set_sync_interval (self->mcat, NCM_FIT_ESMCMC_MIN_SYNC_INTERVAL);
 
@@ -1785,6 +1785,12 @@ ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc)
 
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
     ncm_mset_catalog_log_current_stats (self->mcat);
+
+  /* Releases any object(s) register_shared() anchored for this run (not
+   * just the autosave-only entries the per-worker dup's own reset(TRUE)
+   * calls leave alone), so a long-lived esmcmc reused across many runs
+   * doesn't keep a stale shared object alive between them. */
+  ncm_serialize_reset (self->ser, FALSE);
 
   self->started = FALSE;
 }

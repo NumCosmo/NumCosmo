@@ -281,8 +281,6 @@ ncm_fit_mc_constructed (GObject *object)
 
     ncm_mset_catalog_set_m2lnp_var (mc->mcat, 0);
 
-    ncm_dataset_register_shared (ncm_likelihood_peek_dataset (ncm_fit_peek_likelihood (mc->fit)), mc->ser);
-
     ncm_fit_mc_set_rtype (mc, mc->rtype);
     mc->constructed = TRUE;
   }
@@ -804,6 +802,8 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
 
   mc->started = TRUE;
 
+  ncm_dataset_register_shared (dset, mc->ser);
+
   ncm_mset_catalog_set_sync_mode (mc->mcat, NCM_MSET_CATALOG_SYNC_TIMED);
   ncm_mset_catalog_set_sync_interval (mc->mcat, NCM_FIT_MC_MIN_SYNC_INTERVAL);
 
@@ -840,6 +840,12 @@ ncm_fit_mc_end_run (NcmFitMC *mc)
 
   ncm_mset_catalog_sync (mc->mcat, TRUE);
   ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
+
+  /* Releases any object(s) register_shared() anchored for this run (not
+   * just the autosave-only entries dup_fit's own reset(TRUE) calls leave
+   * alone), so a long-lived mc reused across many runs doesn't keep a
+   * stale shared object alive between them. */
+  ncm_serialize_reset (mc->ser, FALSE);
 
   mc->started = FALSE;
 }
