@@ -29,6 +29,14 @@ env:
   # sharded coverage job below, which runs everything. (The omp-suite C tests already run
   # threaded in this subset; only the py-omp lane needs the extra step in build-miniforge.)
   FAST_TEST_ARGS: "--no-suite py-app --no-suite py-acceptance --no-suite py-powspec --no-suite py-xcor --no-suite py-omp --no-suite c-acceptance --no-suite c-statistical"
+  # GitHub-hosted runners on Azure expose a paravirtualized "mana" NIC that advertises
+  # InfiniBand-like RDMA verbs but doesn't actually support the specific operations
+  # (UD QP) OpenMPI's UCX transport tries to use, causing spurious
+  # "Failed to create UCP worker" errors/flakes on MPI test jobs. We don't need real RDMA
+  # performance for correctness testing, so select the ob1 PML (tcp/vader/self BTLs)
+  # directly instead, bypassing UCX entirely. Harmless no-op for mpich (ignores
+  # OMPI_MCA_* vars) and for jobs that never invoke mpiexec.
+  OMPI_MCA_pml: "ob1"
 
 jobs:
 
