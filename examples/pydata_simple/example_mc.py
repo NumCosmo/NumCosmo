@@ -123,7 +123,7 @@ def run_mc() -> None:
     # run.
     #
     mc = Ncm.FitMC.new(fit, Ncm.FitMCResampleType.FROM_MODEL, Ncm.FitRunMsgs.SIMPLE)
-    mc.set_nthreads(2)
+    mc.set_use_threads(True)
 
     #
     # Using `example_mcmc_out.fits' as the catalog file, if there

@@ -171,14 +171,6 @@ class RunMCMC(RunCommonOptions):
         ),
     ] = Parallelization.NONE
 
-    nthreads: Annotated[
-        int,
-        typer.Option(
-            help="Number of threads to use when using multi-threading.",
-            min=2,
-        ),
-    ] = 4
-
     initial_points_sampler: Annotated[
         Optional[IniSampler],
         typer.Option(
@@ -360,8 +352,7 @@ class RunMCMC(RunCommonOptions):
                 self.run_messages.genum,
             )
 
-        if self.parallel == Parallelization.THREADS.value:
-            esmcmc.set_nthreads(self.nthreads)
+        esmcmc.set_use_threads(self.parallel == Parallelization.THREADS.value)
 
         if self.output is not None:
             esmcmc.set_data_file(

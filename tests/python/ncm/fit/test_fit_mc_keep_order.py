@@ -52,8 +52,8 @@ from numcosmo_py import Ncm
 
 Ncm.cfg_init()
 
-# FitMC parallelism is OpenMP; these tests set nthreads>1, so they exercise
-# the OpenMP-parallel path in the dedicated omp lane. See TESTING.md.
+# FitMC parallelism is OpenMP; these tests set use_threads=True, so they
+# exercise the OpenMP-parallel path in the dedicated omp lane. See TESTING.md.
 pytestmark = pytest.mark.omp
 
 MEAN = 1.2543
@@ -94,19 +94,19 @@ def test_keep_order_property_round_trips():
     assert mc.props.keep_order is False
 
 
-def test_keep_order_matches_serial_baseline_regardless_of_nthreads():
+def test_keep_order_matches_serial_baseline_regardless_of_use_threads():
     """With keep_order=True, the catalog is bit-identical between a serial
-    (nthreads=1, trivially ordered) run and a multi-threaded run at the same
-    seed -- this direction is deterministic by construction (the "omp
-    ordered" region forces resample() to execute in loop-iteration order
-    regardless of which thread executes which iteration), so it should
-    never be flaky."""
+    (use_threads=False, trivially ordered) run and a multi-threaded run at
+    the same seed -- this direction is deterministic by construction (the
+    "omp ordered" region forces resample() to execute in loop-iteration
+    order regardless of which thread executes which iteration), so it
+    should never be flaky."""
     n = 40
     seed = 777
 
     mc1 = _build_mvnd_mc(seed)
     mc1.keep_order(True)
-    mc1.set_nthreads(1)
+    mc1.set_use_threads(False)
     mc1.start_run()
     mc1.run(n)
     mc1.end_run()
@@ -115,7 +115,7 @@ def test_keep_order_matches_serial_baseline_regardless_of_nthreads():
 
     mc4 = _build_mvnd_mc(seed)
     mc4.keep_order(True)
-    mc4.set_nthreads(4)
+    mc4.set_use_threads(True)
     mc4.start_run()
     mc4.run(n)
     mc4.end_run()
@@ -211,14 +211,13 @@ def _reset_order_probe_registry():
 
 
 def _build_probe_mc(seed):
-    # ncm_fit_mc_set_nthreads()/mc->nthreads does NOT itself call
-    # omp_set_num_threads() -- the real OpenMP thread count is controlled
-    # only by the OpenMP runtime's own state (env var OMP_NUM_THREADS or an
-    # explicit omp_set_num_threads() call), independent of this property
-    # (see ncm-fit-mc-nthreads-noop). This test needs the ACTUAL thread
-    # count pinned to exactly NTHREADS regardless of the ambient
-    # OMP_NUM_THREADS the test suite happens to run under, so it calls the
-    # real OpenMP setter directly.
+    # mc.set_use_threads(True) only selects the OpenMP-parallel code path --
+    # the real OpenMP thread count is controlled only by the OpenMP
+    # runtime's own state (env var OMP_NUM_THREADS or an explicit
+    # omp_set_num_threads() call), independent of this property. This test
+    # needs the ACTUAL thread count pinned to exactly NTHREADS regardless of
+    # the ambient OMP_NUM_THREADS the test suite happens to run under, so it
+    # calls the real OpenMP setter directly.
     Ncm.cfg_set_openmp_nthreads(NTHREADS)
 
     model_mvnd = Ncm.ModelMVND.new(1)
@@ -235,7 +234,7 @@ def _build_probe_mc(seed):
     )
     mc = Ncm.FitMC.new(fit, Ncm.FitMCResampleType.FROM_MODEL, Ncm.FitRunMsgs.NONE)
     mc.set_rng(Ncm.RNG.seeded_new("mt19937", seed))
-    mc.set_nthreads(NTHREADS)
+    mc.set_use_threads(True)
 
     return mc
 

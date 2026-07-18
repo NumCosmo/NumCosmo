@@ -54,7 +54,7 @@ def create_esmcmc(
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 320,
-    nthreads: int = 4,
+    use_threads: bool = True,
     over_smooth: float = 1.0,
     local_fraction: Optional[float] = None,
     init_sampling_scale: float = 1.0e-1,
@@ -132,8 +132,9 @@ def create_esmcmc(
     # Initialize the ESMCMC object using the objects above.
     esmcmc = Ncm.FitESMCMC.new(fit, nwalkers, init_sampler, walker, message_level)
 
-    # Setting the number of threads to use.
-    esmcmc.set_nthreads(nthreads)
+    # Whether to use OpenMP threads (real thread count is controlled by
+    # OMP_NUM_THREADS).
+    esmcmc.set_use_threads(use_threads)
     # Setting the file name to save the chains.
     filename = f"{prefix}_mcmc_catalog_{sampler}_{nwalkers}.fits"
     esmcmc.set_data_file(filename)

@@ -260,6 +260,10 @@ jobs:
         include:
           - { os: ubuntu, python-version: "3.12", name: python, args: "--suite python" }
           - { os: ubuntu, python-version: "3.12", name: py-acceptance, args: "--suite py-acceptance" }
+          # omp-marked tests are excluded from the plain `python` suite (tests/python/meson.build) so
+          # the fast xdist lane isn't starved by a thread-pinned-to-1 test hogging one worker; they
+          # need their own shard here or the coverage job would silently stop exercising them.
+          - { os: ubuntu, python-version: "3.12", name: py-omp, args: "--suite py-omp" }
           - { os: ubuntu, python-version: "3.12", name: py-powspec, args: "--suite py-powspec" }
           - { os: ubuntu, python-version: "3.12", name: py-xcor, args: "--suite py-xcor" }
           - { os: ubuntu, python-version: "3.12", name: py-app, args: "--suite py-app" }

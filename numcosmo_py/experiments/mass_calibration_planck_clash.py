@@ -150,7 +150,7 @@ def run_example():
     init_sampler.set_mset(mset)
     init_sampler.set_prior_from_mset()
 
-    esmcmc.set_nthreads(NT)
+    esmcmc.set_use_threads(True)
     init_sampler.set_cov_from_scale()
 
     esmcmc.set_data_file("test.fits")

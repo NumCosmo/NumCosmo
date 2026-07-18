@@ -106,7 +106,7 @@ def run_xcdm_nopert_mcmc(
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 2000,
-    nthreads: int = 1,
+    use_threads: bool = False,
     over_smooth: float = 1.1,
     init_sampling_scale: float = 1.0e0,
     flat: bool = False,
@@ -147,7 +147,7 @@ def run_xcdm_nopert_mcmc(
         interpolation_method=interpolation_method,
         interpolation_kernel=interpolation_kernel,
         nwalkers=nwalkers,
-        nthreads=nthreads,
+        use_threads=use_threads,
         over_smooth=over_smooth,
         init_sampling_scale=init_sampling_scale,
     )

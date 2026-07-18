@@ -56,6 +56,10 @@
 #include <gsl/gsl_fit.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif /* _OPENMP */
+
 typedef struct _NcmFitESMCMCPrivate
 {
   NcmFit *fit;
@@ -91,7 +95,7 @@ typedef struct _NcmFitESMCMCPrivate
   gchar *func_oa_file;
   guint nadd_vals;
   guint fparam_len;
-  guint nthreads;
+  gboolean use_threads;
   gboolean use_mpi;
   gboolean has_mpi;
   guint nslaves;
@@ -129,7 +133,7 @@ enum
   PROP_LOG_TIME_INTERVAL,
   PROP_INTERM_LOG,
   PROP_MTYPE,
-  PROP_NTHREADS,
+  PROP_USE_THREADS,
   PROP_USE_MPI,
   PROP_DATA_FILE,
   PROP_FUNC_ARRAY,
@@ -199,7 +203,7 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   self->func_oa      = NULL;
   self->func_oa_file = NULL;
 
-  self->nthreads      = 0;
+  self->use_threads   = FALSE;
   self->use_mpi       = FALSE;
   self->has_mpi       = FALSE;
   self->nslaves       = 0;
@@ -233,6 +237,10 @@ _ncm_fit_esmcmc_constructed (GObject *object)
     guint k;
 
     g_assert_cmpint (self->nwalkers, >, 0);
+
+    if (self->nwalkers % 2 == 1)
+      g_error ("ncm_fit_esmcmc_new: cannot use an odd number of walkers [%u].", self->nwalkers);
+
     self->fparam_len = ncm_mset_fparam_len (mset);
     {
       const guint nfuncs    = (self->func_oa != NULL) ? self->func_oa->len : 0;
@@ -380,8 +388,8 @@ _ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_MTYPE:
       ncm_fit_esmcmc_set_mtype (esmcmc, g_value_get_enum (value));
       break;
-    case PROP_NTHREADS:
-      ncm_fit_esmcmc_set_nthreads (esmcmc, g_value_get_uint (value));
+    case PROP_USE_THREADS:
+      ncm_fit_esmcmc_set_use_threads (esmcmc, g_value_get_boolean (value));
       break;
     case PROP_USE_MPI:
       ncm_fit_esmcmc_use_mpi (esmcmc, g_value_get_boolean (value));
@@ -468,8 +476,8 @@ _ncm_fit_esmcmc_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_MTYPE:
       g_value_set_enum (value, self->mtype);
       break;
-    case PROP_NTHREADS:
-      g_value_set_uint (value, self->nthreads);
+    case PROP_USE_THREADS:
+      g_value_set_boolean (value, self->use_threads);
       break;
     case PROP_USE_MPI:
       g_value_set_uint (value, self->use_mpi);
@@ -660,12 +668,12 @@ ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
                                                       NCM_TYPE_FIT_RUN_MSGS, NCM_FIT_RUN_MSGS_SIMPLE,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_NTHREADS,
-                                   g_param_spec_uint ("nthreads",
-                                                      NULL,
-                                                      "Number of threads to run",
-                                                      0, G_MAXUINT32, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_USE_THREADS,
+                                   g_param_spec_boolean ("use-threads",
+                                                         NULL,
+                                                         "Whether to use OpenMP threads (real thread count is controlled by OMP_NUM_THREADS)",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_USE_MPI,
                                    g_param_spec_boolean ("use-mpi",
@@ -914,29 +922,36 @@ ncm_fit_esmcmc_set_sampler (NcmFitESMCMC *esmcmc, NcmMSetTransKern *tkern)
 }
 
 /**
- * ncm_fit_esmcmc_set_nthreads:
+ * ncm_fit_esmcmc_set_use_threads:
  * @esmcmc: a #NcmFitESMCMC
- * @nthreads: numbers of simultaneous walkers updates
+ * @use_threads: whether to use OpenMP threads
  *
- * If @nthreads is larger than nwalkers / 2, it will be set to
- * nwalkers / 2.
+ * Sets whether @esmcmc should run its walker-evaluation loop through the
+ * OpenMP parallel code path. The real number of threads used is controlled
+ * by the ambient OpenMP runtime state (the OMP_NUM_THREADS environment
+ * variable or an explicit omp_set_num_threads() call), not by this property.
  *
  */
 void
-ncm_fit_esmcmc_set_nthreads (NcmFitESMCMC *esmcmc, guint nthreads)
+ncm_fit_esmcmc_set_use_threads (NcmFitESMCMC *esmcmc, gboolean use_threads)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
 
-  if (nthreads > 0)
-  {
-    if (self->nwalkers % 2 == 1)
-      g_error ("ncm_fit_esmcmc_set_nthreads: cannot parallelize with an odd number of walkers [%u].", self->nwalkers);
+  self->use_threads = use_threads;
+}
 
-    if (nthreads > self->nwalkers / 2)
-      nthreads = self->nwalkers / 2;
-  }
+/**
+ * ncm_fit_esmcmc_get_use_threads:
+ * @esmcmc: a #NcmFitESMCMC
+ *
+ * Returns: whether @esmcmc is set to use OpenMP threads.
+ */
+gboolean
+ncm_fit_esmcmc_get_use_threads (NcmFitESMCMC *esmcmc)
+{
+  NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
 
-  self->nthreads = nthreads;
+  return self->use_threads;
 }
 
 /**
@@ -948,8 +963,8 @@ ncm_fit_esmcmc_set_nthreads (NcmFitESMCMC *esmcmc, guint nthreads)
  * using MPI if any slaves are available. If no slaves are available
  * then it falls back to threads.
  *
- * Note that parallelization will only occur if the number of threads
- * set using ncm_fit_esmcmc_set_nthreads() is larger than one.
+ * Note that parallelization will only occur if threads are enabled via
+ * ncm_fit_esmcmc_set_use_threads().
  *
  */
 void
@@ -1410,7 +1425,7 @@ _ncm_fit_esmcmc_gen_init_points_interval (NcmFitESMCMC *esmcmc, glong i, glong f
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
   NcmRNG *rng                      = ncm_mset_catalog_peek_rng (self->mcat);
-  gboolean mthread                 = (self->nthreads > 1);
+  gboolean mthread                 = self->use_threads;
   glong k;
 
   /* The "ordered" clause below forces the prior sample draw (theta_k) for
@@ -1422,7 +1437,7 @@ _ncm_fit_esmcmc_gen_init_points_interval (NcmFitESMCMC *esmcmc, glong i, glong f
    * happened to be next when thread scheduling let iteration k's thread
    * through, not deterministically from k. That silently corrupted the
    * very first ensemble of walker positions (hence every downstream MCMC
-   * step) under nthreads>1, even with a fixed seed -- found while cross-
+   * step) under use_threads=TRUE, even with a fixed seed -- found while cross-
    * checking two independently-implemented but mathematically identical
    * likelihoods (VarAdd/legacy in the galaxy WL refactor) and noticing
    * even the SAME engine run twice, same seed, didn't reproduce. */
@@ -1561,6 +1576,23 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
   ncm_mset_catalog_sync (self->mcat, FALSE);
 }
 
+static guint
+_ncm_fit_esmcmc_real_nthreads (NcmFitESMCMCPrivate * const self)
+{
+  /* Reports the actual thread count the OMP runtime will use, not just
+   * whether the use_threads gate is on -- the real count always comes from
+   * the ambient OMP_NUM_THREADS/omp_set_num_threads() state. */
+#ifdef _OPENMP
+
+  return self->use_threads ? (guint) omp_get_max_threads () : 1;
+
+#else
+
+  return 1;
+
+#endif /* _OPENMP */
+}
+
 /**
  * ncm_fit_esmcmc_start_run:
  * @esmcmc: a #NcmFitESMCMC
@@ -1589,9 +1621,9 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitESMCMC: Starting Ensemble Sampler Markov Chain Monte Carlo.\n");
       g_message ("#   Number of walkers: %.4d.\n", self->nwalkers);
-      g_message ("#   Number of threads: %.4d.\n", self->nthreads);
+      g_message ("#   Number of threads: %.4d.\n", _ncm_fit_esmcmc_real_nthreads (self));
 
-      if (self->nthreads > 0)
+      if (self->use_threads)
         g_message ("#   Using MPI:         %s.\n", self->use_mpi ? ((self->nslaves > 0) ? "yes" : "no - use MPI enabled but no slaves available") : "no");
 
       ncm_dataset_log_info (ncm_likelihood_peek_dataset (lh));
@@ -1603,9 +1635,9 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitESMCMC: Starting Ensemble Sampler Markov Chain Monte Carlo.\n");
       g_message ("#   Number of walkers: %.4d.\n", self->nwalkers);
-      g_message ("#   Number of threads: %.4d.\n", self->nthreads);
+      g_message ("#   Number of threads: %.4d.\n", _ncm_fit_esmcmc_real_nthreads (self));
 
-      if (self->nthreads > 0)
+      if (self->use_threads)
         g_message ("#   Using MPI:         %s.\n", self->use_mpi ? ((self->nslaves > 0) ? "yes" : "no - use MPI enabled but no slaves available") : "no");
 
       break;
@@ -1997,7 +2029,7 @@ static void
 _ncm_fit_esmcmc_run_interval (NcmFitESMCMC *esmcmc, const glong i, const glong f)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
-  gboolean mthread                 = (self->nthreads > 1);
+  gboolean mthread                 = self->use_threads;
 
   guint k;
 
@@ -2372,7 +2404,7 @@ static void
 _ncm_fit_esmcmc_validate_interval (NcmFitESMCMC *esmcmc, glong i, glong f)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
-  gboolean mthread                 = (self->nthreads > 1);
+  gboolean mthread                 = self->use_threads;
   glong k;
 
   #pragma omp parallel for schedule (dynamic, 1) if (mthread)
