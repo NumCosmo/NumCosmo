@@ -598,6 +598,27 @@ ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
 }
 
 /**
+ * ncm_dataset_register_shared:
+ * @dset: a #NcmDataset
+ * @ser: a #NcmSerialize
+ *
+ * Calls ncm_data_register_shared() on every #NcmData in @dset.
+ *
+ */
+void
+ncm_dataset_register_shared (NcmDataset *dset, NcmSerialize *ser)
+{
+  guint i;
+
+  for (i = 0; i < dset->oa->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+
+    ncm_data_register_shared (data, ser);
+  }
+}
+
+/**
  * ncm_dataset_bootstrap_set:
  * @dset: a #NcmDataset.
  * @bstype: a #NcmDatasetBStrapType.

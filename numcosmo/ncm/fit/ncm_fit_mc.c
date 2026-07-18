@@ -281,6 +281,8 @@ ncm_fit_mc_constructed (GObject *object)
 
     ncm_mset_catalog_set_m2lnp_var (mc->mcat, 0);
 
+    ncm_dataset_register_shared (ncm_likelihood_peek_dataset (ncm_fit_peek_likelihood (mc->fit)), mc->ser);
+
     ncm_fit_mc_set_rtype (mc, mc->rtype);
     mc->constructed = TRUE;
   }

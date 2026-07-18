@@ -276,6 +276,8 @@ _ncm_fit_esmcmc_constructed (GObject *object)
       ncm_mset_catalog_set_m2lnp_var (self->mcat, 0);
       ncm_mset_catalog_set_run_type (self->mcat, "Ensemble Sampler MCMC");
 
+      ncm_dataset_register_shared (ncm_likelihood_peek_dataset (ncm_fit_peek_likelihood (self->fit)), self->ser);
+
       for (k = 0; k < self->nwalkers; k++)
       {
         NcmVector *full_thetastar_inout_k = ncm_vector_new (theta_len + NCM_FIT_ESMCMC_MPI_IN_LEN + NCM_FIT_ESMCMC_MPI_OUT_LEN);
