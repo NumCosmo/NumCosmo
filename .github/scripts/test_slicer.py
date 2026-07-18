@@ -187,7 +187,7 @@ def main() -> None:
     plan = sub.add_parser("plan", help="compute a duration-balanced test slice")
     plan.add_argument("--build-dir", default="build")
     plan.add_argument("--suite", action="append", required=True)
-    plan.add_argument("--durations", action="append", default=[])
+    plan.add_argument("--durations", nargs="+", default=[])
     plan.add_argument("--num-slices", type=int, required=True)
     plan.add_argument("--slice", type=int, required=True)
     plan.set_defaults(func=cmd_plan)
