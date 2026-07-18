@@ -1369,6 +1369,21 @@ _nc_data_cluster_wl_factor_get_len (NcmData *data)
 }
 
 static void
+_nc_data_cluster_wl_factor_register_shared (NcmData *data, NcmSerialize *ser)
+{
+  NcDataClusterWLFactor *dcwlf              = NC_DATA_CLUSTER_WL_FACTOR (data);
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  if (self->obs != NULL)
+  {
+    gchar *name = g_strdup_printf ("dcwlfObs%p", (void *) dcwlf);
+
+    ncm_serialize_set (ser, self->obs, name, FALSE);
+    g_free (name);
+  }
+}
+
+static void
 nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -1594,11 +1609,12 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                                       2, G_MAXUINT, 2000,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  data_class->bootstrap  = TRUE;
-  data_class->resample   = &_nc_data_cluster_wl_factor_resample;
-  data_class->m2lnL_val  = &_nc_data_cluster_wl_factor_m2lnL_val;
-  data_class->get_length = &_nc_data_cluster_wl_factor_get_len;
-  data_class->prepare    = &_nc_data_cluster_wl_factor_prepare;
+  data_class->bootstrap       = TRUE;
+  data_class->resample        = &_nc_data_cluster_wl_factor_resample;
+  data_class->m2lnL_val       = &_nc_data_cluster_wl_factor_m2lnL_val;
+  data_class->get_length      = &_nc_data_cluster_wl_factor_get_len;
+  data_class->prepare         = &_nc_data_cluster_wl_factor_prepare;
+  data_class->register_shared = &_nc_data_cluster_wl_factor_register_shared;
 }
 
 /**

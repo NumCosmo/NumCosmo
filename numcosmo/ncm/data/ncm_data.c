@@ -274,6 +274,8 @@ ncm_data_class_init (NcmDataClass *klass)
 
   data_class->fisher_matrix      = &_ncm_data_fisher_matrix;
   data_class->fisher_matrix_bias = &_ncm_data_fisher_matrix_bias;
+
+  data_class->register_shared = NULL;
 }
 
 typedef struct _NcmDataDiffArg
@@ -681,6 +683,27 @@ ncm_data_is_resampling (NcmData *data)
   NcmDataPrivate * const self = ncm_data_get_instance_private (data);
 
   return self->is_resampling;
+}
+
+/**
+ * ncm_data_register_shared: (virtual register_shared)
+ * @data: a #NcmData
+ * @ser: a #NcmSerialize
+ *
+ * Gives @data the chance to register, via ncm_serialize_set(), any of its
+ * own internal objects it wants shared (as an anchor, not deep-copied) by
+ * every later ncm_serialize_dup_obj()/ncm_serialize_to_variant() call made
+ * through the same @ser -- typically a large, read-only, per-instance
+ * payload that would otherwise be duplicated once per parallel worker.
+ * Subclasses only need to override this when they hold such a payload; the
+ * default implementation does nothing.
+ *
+ */
+void
+ncm_data_register_shared (NcmData *data, NcmSerialize *ser)
+{
+  if (NCM_DATA_GET_CLASS (data)->register_shared != NULL)
+    NCM_DATA_GET_CLASS (data)->register_shared (data, ser);
 }
 
 /**
