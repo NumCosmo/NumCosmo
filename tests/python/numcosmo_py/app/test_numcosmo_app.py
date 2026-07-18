@@ -154,7 +154,7 @@ def test_run_bench(simple_experiment, subcommand):
     result = runner.invoke(app, [*subcommand, filename.as_posix(), "--bench"])
     if result.exit_code != 0:
         raise result.exception
-    assert "Benchmark:" in result.output
+    assert "# Benchmark:" in result.output
     assert "wall time" in result.output
     assert "peak RSS" in result.output
 

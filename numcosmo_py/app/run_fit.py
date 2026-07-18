@@ -144,8 +144,7 @@ class RunCommonOptions(LoadExperiment):
         # ru_maxrss is in bytes on macOS, kibibytes on Linux.
         peak_rss_mib = ru_maxrss / (1024 * 1024 if sys.platform == "darwin" else 1024)
         self.console.print(
-            f"[bold]Benchmark:[/bold] wall time {elapsed:.3f}s, "
-            f"peak RSS {peak_rss_mib:.1f} MiB"
+            f"# Benchmark: wall time {elapsed:.3f}s, peak RSS {peak_rss_mib:.1f} MiB"
         )
 
 
