@@ -147,6 +147,18 @@ def test_run_fit(simple_experiment):
         raise result.exception
 
 
+@pytest.mark.parametrize("subcommand", [["run", "test"], ["run", "fit"]])
+def test_run_bench(simple_experiment, subcommand):
+    """--bench reports wall-clock time and peak RSS at the end of the run."""
+    filename, _ = simple_experiment
+    result = runner.invoke(app, [*subcommand, filename.as_posix(), "--bench"])
+    if result.exit_code != 0:
+        raise result.exception
+    assert "# Benchmark:" in result.output
+    assert "wall time" in result.output
+    assert "peak RSS" in result.output
+
+
 def test_run_fit_runner(simple_experiment, fit_runner):
     """Test run fit."""
     filename, _ = simple_experiment
