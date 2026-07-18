@@ -24,6 +24,9 @@
 """NumCosmo APP subcommand to fit data."""
 
 import dataclasses
+import resource
+import sys
+import time
 from typing import Optional, Annotated, Tuple
 
 import typer
@@ -83,11 +86,22 @@ class RunCommonOptions(LoadExperiment):
         typer.Option(help="Absolute tolerance for -2lnL."),
     ] = None
 
+    bench: Annotated[
+        bool,
+        typer.Option(
+            "--bench",
+            help="Report wall-clock time and peak memory usage (RSS) for this "
+            "run when it finishes.",
+        ),
+    ] = False
+
     def __post_init__(self) -> None:
         """Create common objects for the run command.
 
         Create the fit object and set the logger.
         """
+        self._bench_start = time.perf_counter()
+
         super().__post_init__()
 
         check_runner_algorithm(self.runner, self.algorithm)
@@ -116,6 +130,23 @@ class RunCommonOptions(LoadExperiment):
             fit.set_m2lnL_abstol(self.m2lnl_abstol)
 
         self.fit = fit
+
+    def end_experiment(self) -> None:
+        """End the experiment, reporting benchmark stats first if requested."""
+        if self.bench:
+            self._report_bench()
+        super().end_experiment()
+
+    def _report_bench(self) -> None:
+        """Print wall-clock time and peak RSS since __post_init__ started."""
+        elapsed = time.perf_counter() - self._bench_start
+        ru_maxrss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # ru_maxrss is in bytes on macOS, kibibytes on Linux.
+        peak_rss_mib = ru_maxrss / (1024 * 1024 if sys.platform == "darwin" else 1024)
+        self.console.print(
+            f"[bold]Benchmark:[/bold] wall time {elapsed:.3f}s, "
+            f"peak RSS {peak_rss_mib:.1f} MiB"
+        )
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -177,3 +208,4 @@ class RunTest(RunCommonOptions):
         self.mset.prepare_fparam_map()
         self.fit.log_info()
         self.fit.run(FitRunMessages.SIMPLE.genum)
+        self.end_experiment()
