@@ -394,6 +394,25 @@ test_ncm_fit_esmcmc_properties (TestNcmFitESMCMC *test, gconstpointer pdata)
     g_object_get (G_OBJECT (test->esmcmc), "log-time-interval", &log_time_interval, NULL);
     g_assert_cmpfloat (log_time_interval, ==, 54321.0);
   }
+
+  /* use_threads */
+  ncm_fit_esmcmc_set_use_threads (test->esmcmc, TRUE);
+  g_assert_true (ncm_fit_esmcmc_get_use_threads (test->esmcmc));
+  {
+    gboolean use_threads;
+
+    g_object_get (G_OBJECT (test->esmcmc), "use-threads", &use_threads, NULL);
+    g_assert_true (use_threads);
+  }
+
+  g_object_set (G_OBJECT (test->esmcmc), "use-threads", FALSE, NULL);
+  g_assert_false (ncm_fit_esmcmc_get_use_threads (test->esmcmc));
+  {
+    gboolean use_threads;
+
+    g_object_get (G_OBJECT (test->esmcmc), "use-threads", &use_threads, NULL);
+    g_assert_false (use_threads);
+  }
 }
 
 #define TEST_NCM_FIT_ESMCMC_TOL (2.5e-1)

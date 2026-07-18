@@ -120,6 +120,20 @@ def test_serialize_deserialize(mc: Ncm.FitMC, tmp_path: Path):
     assert mc.props.data_file == mc2.props.data_file
 
 
+def test_use_threads_property_and_getter_round_trip(mc: Ncm.FitMC):
+    """The use-threads property (settable both via the GObject property system
+    and via set_use_threads()) and the get_use_threads() getter agree with
+    each other and default to False."""
+    assert mc.props.use_threads is False
+    assert mc.get_use_threads() is False
+
+    mc.props.use_threads = True
+    assert mc.get_use_threads() is True
+
+    mc.set_use_threads(False)
+    assert mc.props.use_threads is False
+
+
 def test_threaded_vs_serial(capfd, mc: Ncm.FitMC):
     """Test NcmFitMC serial vs threaded."""
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
