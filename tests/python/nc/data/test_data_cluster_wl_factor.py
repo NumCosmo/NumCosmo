@@ -224,6 +224,53 @@ def test_serialize_deserialize():
     assert dcwlf2.get_max_total_nodes() == dcwlf.get_max_total_nodes()
 
 
+def test_register_shared_anchors_obs_across_dups():
+    """register_shared() anchors the obs catalog in the given NcmSerialize
+    under a custom name, so it survives ser.reset(True) (autosave-only
+    cleanup) and every later dup_obj() through that same ser still
+    resolves it to the identical obs object instead of deep-copying it --
+    exactly the sequence NcmFitMC's per-worker loop runs (dup, then
+    reset(True), for every worker) to share a large read-only per-galaxy
+    catalog across parallel workers rather than duplicating it once per
+    worker."""
+    position_factor, redshift_factor, shape_factor, obs = _build_factors_and_obs()
+    dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf.set_obs(obs)
+
+    dset = Ncm.Dataset.new()
+    dset.append_data(dcwlf)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dset.register_shared(ser)
+
+    dup1 = duplicate_via_serialization(dcwlf, ser)
+    ser.reset(True)
+    dup2 = duplicate_via_serialization(dcwlf, ser)
+
+    assert dup1 is not dup2
+    assert dup1.peek_obs() is dup2.peek_obs()
+
+
+def test_without_register_shared_obs_is_deep_copied_across_dups():
+    """Negative control for the test above: skipping register_shared()
+    leaves obs unanchored, so it goes back to being an independent deep
+    copy after each dup_obj()+reset(True) pass -- proving the sharing above
+    is caused by register_shared(), not some other dup_obj()/reset()
+    side effect."""
+    position_factor, redshift_factor, shape_factor, obs = _build_factors_and_obs()
+    dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf.set_obs(obs)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+
+    dup1 = duplicate_via_serialization(dcwlf, ser)
+    ser.reset(True)
+    dup2 = duplicate_via_serialization(dcwlf, ser)
+
+    assert dup1 is not dup2
+    assert dup1.peek_obs() is not dup2.peek_obs()
+
+
 def test_construct_only_properties_readable():
     """The construct-only factor properties round-trip through the property
     system (peek_obs/set_obs cover the "obs" property; these three only

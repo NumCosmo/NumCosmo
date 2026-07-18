@@ -73,8 +73,9 @@ struct _NcmDataClass
 
   NcmDataFisherMatrix fisher_matrix;
   void (*fisher_matrix_bias) (NcmData *data, NcmMSet *mset, NcmVector *f_true, NcmMatrix **IM, NcmVector **delta_theta);
+  void (*register_shared) (NcmData *data, NcmSerialize *ser);
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[6];
+  gpointer padding[5];
 };
 
 NcmData *ncm_data_ref (NcmData *data);
@@ -96,6 +97,8 @@ gchar *ncm_data_get_desc (NcmData *data);
 void ncm_data_prepare (NcmData *data, NcmMSet *mset);
 void ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 gboolean ncm_data_is_resampling (NcmData *data);
+
+void ncm_data_register_shared (NcmData *data, NcmSerialize *ser);
 
 void ncm_data_bootstrap_create (NcmData *data);
 void ncm_data_bootstrap_remove (NcmData *data);
