@@ -69,11 +69,25 @@ if enable_gir and python_for_tests.found()
     # conftest since no --run-* flag is passed. The real timeout bounds a total hang;
     # per-test hangs are dumped by pytest.ini's faulthandler_timeout. The coverage job
     # neutralizes this timeout via `--timeout-multiplier 0`.
+    #
+    # omp-marked tests are also excluded here: this lane pins OMP_NUM_THREADS=1 (see
+    # env above), so an omp-marked test's `#pragma omp parallel` path still runs but with
+    # only one real thread -- i.e. serially, just with extra overhead. When one of these
+    # happens to be one of the slower tests in the suite, xdist dispatches it to a single
+    # worker that then runs alone (starving the rest of the pool, which drains its share
+    # and idles) for the whole duration, wasting the other workers' cores instead of using
+    # them for real thread-level parallelism. omp-marked tests get their real (and only)
+    # exercise in the dedicated pytest-omp lane below, which pins one process and real
+    # OMP_NUM_THREADS instead.
     test(
         'pytest',
         pytest,
         args: pytest_parallel_args
-        + ['-m', 'not statistical and not acceptance', meson.current_source_dir()],
+        + [
+            '-m',
+            'not statistical and not acceptance and not omp',
+            meson.current_source_dir(),
+        ],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env,
         timeout: 1200,
@@ -143,10 +157,12 @@ if enable_gir and python_for_tests.found()
         suite: ['py-app'],
     )
 
-    # OMP lane: re-run the OpenMP-path tests (marked `omp`) with process-level parallelism
-    # OFF (no xdist, pytest_base_args) so the single process owns the machine, and with
-    # env_omp (OMP_NUM_THREADS = cores) so the `#pragma omp parallel` branches that the
-    # default lane (OMP=1) serializes are actually exercised. See TESTING.md.
+    # OMP lane: the OpenMP-path tests (marked `omp`) are excluded from the default lane
+    # above and run here exclusively, with process-level parallelism OFF (no xdist,
+    # pytest_base_args) so the single process owns the machine, and with env_omp
+    # (OMP_NUM_THREADS = cores) so the `#pragma omp parallel` branches are actually
+    # exercised with real thread-level parallelism instead of running serially inside an
+    # xdist worker. See TESTING.md.
     test(
         'pytest-omp',
         pytest,
