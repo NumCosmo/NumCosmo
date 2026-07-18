@@ -25,7 +25,7 @@ floor. This script replaces it: given historical per-test duration data
 (cached from previous CI runs) and today's actual test list, it greedy
 bin-packs the tests into N roughly-equal-wall-time slices.
 
-Two subcommands:
+Three subcommands:
   plan    -- print slice K's test names (one per line), computed from
              today's `meson test --list` output plus 0-or-more merged
              historical duration files. Tests with no historical duration
@@ -35,6 +35,8 @@ Two subcommands:
   extract -- read a meson testlog.json and print a flat {name: duration}
              JSON object, for caching as tomorrow's historical duration
              data (see the `plan` subcommand's --durations).
+  summary -- read a meson testlog.json and print a Markdown top-N slowest
+             durations report (for a CI job summary).
 
 See the `build-miniforge-coverage` job in
 `.github/workflows/build_check.yml` for how these are wired into CI.
@@ -73,6 +75,26 @@ def _current_tests(build_dir: Path, suites: list[str]) -> list[str]:
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def _read_testlog(testlog: Path) -> list[tuple[str, float]]:
+    """Read a meson testlog.json (JSON-lines) into (name, duration) pairs.
+
+    Returns an empty list if the file doesn't exist -- meson never writes
+    it if the build itself failed before any test ran.
+    """
+    entries: list[tuple[str, float]] = []
+
+    if testlog.exists():
+        with testlog.open(encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                entry = json.loads(line)
+                entries.append((entry["name"], float(entry.get("duration", 0.0))))
+
+    return entries
 
 
 def _selector(name: str) -> str:
@@ -136,20 +158,25 @@ def cmd_plan(args: argparse.Namespace) -> None:
 
 def cmd_extract(args: argparse.Namespace) -> None:
     """Print a flat {name: duration} JSON object from a testlog.json."""
-    testlog = Path(args.testlog)
-    durations: dict[str, float] = {}
-
-    if testlog.exists():
-        with testlog.open(encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                entry = json.loads(line)
-                durations[entry["name"]] = float(entry.get("duration", 0.0))
-
+    durations = dict(_read_testlog(Path(args.testlog)))
     json.dump(durations, sys.stdout)
     print()
+
+
+def cmd_summary(args: argparse.Namespace) -> None:
+    """Print a Markdown top-N slowest-durations report from a testlog.json."""
+    rows = sorted(
+        _read_testlog(Path(args.testlog)), key=lambda row: row[1], reverse=True
+    )
+    total = sum(duration for _, duration in rows)
+
+    print(
+        f"### Test durations — {args.title} (top {args.top} of {len(rows)}, total {total:.1f}s)"
+    )
+    print("```")
+    for name, duration in rows[: args.top]:
+        print(f"{duration:8.2f}s  {name}")
+    print("```")
 
 
 def main() -> None:
@@ -170,6 +197,14 @@ def main() -> None:
     )
     extract.add_argument("--testlog", required=True)
     extract.set_defaults(func=cmd_extract)
+
+    summary = sub.add_parser(
+        "summary", help="print a Markdown slowest-durations report"
+    )
+    summary.add_argument("--testlog", required=True)
+    summary.add_argument("--title", required=True)
+    summary.add_argument("--top", type=int, default=25)
+    summary.set_defaults(func=cmd_summary)
 
     args = parser.parse_args()
     args.func(args)

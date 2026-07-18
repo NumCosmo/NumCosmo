@@ -353,24 +353,7 @@ jobs:
         # across slices is visible at a glance. (For c-* legs this is now mostly a sanity
         # check -- the split itself is duration-balanced by test_slicer.py, not meson --slice.)
         run: |
-          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
-          import json, pathlib
-          log = pathlib.Path("build/meson-logs/testlog.json")
-          rows = []
-          if log.exists():
-              for line in log.read_text().splitlines():
-                  line = line.strip()
-                  if line:
-                      d = json.loads(line)
-                      rows.append((float(d.get("duration", 0.0)), d.get("name", "?")))
-          rows.sort(reverse=True)
-          total = sum(d for d, _ in rows)
-          print("### Test durations — ${{ matrix.name }} (top 25 of %d, total %.1fs)" % (len(rows), total))
-          print("```")
-          for dur, name in rows[:25]:
-              print("%8.2fs  %s" % (dur, name))
-          print("```")
-          PY
+          python3 .github/scripts/test_slicer.py summary --testlog build/meson-logs/testlog.json --title "${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
       - name: CodeCov
         uses: codecov/codecov-action@v4
         with:
