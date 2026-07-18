@@ -33,7 +33,6 @@
 #include <numcosmo/ncm/fit/ncm_mset_catalog.h>
 #include <numcosmo/ncm/fit/ncm_mset_trans_kern.h>
 #include <numcosmo/ncm/core/ncm_timer.h>
-#include <numcosmo/ncm/core/ncm_memory_pool.h>
 
 G_BEGIN_DECLS
 
@@ -49,7 +48,6 @@ void ncm_fit_mcmc_set_data_file (NcmFitMCMC *mcmc, const gchar *filename);
 
 void ncm_fit_mcmc_set_mtype (NcmFitMCMC *mcmc, NcmFitRunMsgs mtype);
 void ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern);
-void ncm_fit_mcmc_set_nthreads (NcmFitMCMC *mcmc, guint nthreads);
 void ncm_fit_mcmc_set_fiducial (NcmFitMCMC *mcmc, NcmMSet *fiduc);
 void ncm_fit_mcmc_set_rng (NcmFitMCMC *mcmc, NcmRNG *rng);
 

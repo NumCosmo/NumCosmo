@@ -170,7 +170,7 @@ def test_wl_likelihood() -> None:
     apes = Ncm.FitESMCMCWalkerAPES.new(nwalkers, mset.fparams_len())
     apes.set_use_threads(True)
     esmcmc = Ncm.FitESMCMC.new(fit, nwalkers, init_sampler, apes, Ncm.FitRunMsgs.SIMPLE)
-    esmcmc.set_nthreads(nthreads)
+    esmcmc.set_use_threads(True)
 
     esmcmc.set_data_file("example_wl_likelihood.fits")
 

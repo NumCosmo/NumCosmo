@@ -835,8 +835,8 @@ main (gint argc, gchar *argv[])
     if (de_fit.fiducial != NULL)
       ncm_fit_mc_set_fiducial (mc, fiduc);
 
-    if (de_fit.mc_nthreads > 1)
-      ncm_fit_mc_set_nthreads (mc, de_fit.mc_nthreads);
+    if (de_fit.mc_use_threads)
+      ncm_fit_mc_set_use_threads (mc, TRUE);
 
     if (de_fit.mc_seed > -1)
     {
@@ -898,7 +898,7 @@ main (gint argc, gchar *argv[])
     if (de_fit.mc_data != NULL)
       ncm_fit_mcbs_set_filename (mcbs, de_fit.mc_data);
 
-    ncm_fit_mcbs_run (mcbs, resample_mset, de_fit.mc_ni, de_fit.mc_prerun, de_fit.mcbs_nbootstraps, de_fit.mc_rtype, de_fit.msg_level, de_fit.mc_nthreads);
+    ncm_fit_mcbs_run (mcbs, resample_mset, de_fit.mc_ni, de_fit.mc_prerun, de_fit.mcbs_nbootstraps, de_fit.mc_rtype, de_fit.msg_level, de_fit.mc_use_threads);
 
     {
       NcmMSetCatalog *mcbs_mcat = ncm_fit_mcbs_get_catalog (mcbs);
@@ -1021,8 +1021,8 @@ main (gint argc, gchar *argv[])
     ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
     ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
 
-    if (de_fit.mc_nthreads > 1)
-      ncm_fit_esmcmc_set_nthreads (esmcmc, de_fit.mc_nthreads);
+    if (de_fit.mc_use_threads)
+      ncm_fit_esmcmc_set_use_threads (esmcmc, TRUE);
 
     if (de_fit.fisher)
     {

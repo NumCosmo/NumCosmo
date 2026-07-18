@@ -250,7 +250,7 @@ def test_fit_snia_cov() -> None:
     # esmcmc.set_auto_trim (True)
     # esmcmc.set_auto_trim_div (100)
     # esmcmc.set_max_runs_time (2.0 * 60.0)
-    esmcmc.set_nthreads(4)
+    esmcmc.set_use_threads(True)
     esmcmc.set_data_file(fitscat)
 
     #

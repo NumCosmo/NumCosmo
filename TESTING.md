@@ -134,9 +134,11 @@ NumCosmo has three distinct parallel mechanisms, which must not be confused:
 
 - **OpenMP threads** — `#pragma omp parallel [for]`, governed by `OMP_NUM_THREADS`. Used by
   `ncm_fit_esmcmc`, `ncm_fit_mc`, `nc_data_cluster_wl` (when `enable_parallel`),
-  `ncm_stats_dist`, `ncm_stats_dist_vkde`. Note: ESMCMC's `set_nthreads(N)` only toggles the
-  `if (nthreads > 1)` clause; the *actual* thread count is `OMP_NUM_THREADS`. There is **no**
-  separate NumCosmo thread pool for these — it is OpenMP.
+  `ncm_stats_dist`, `ncm_stats_dist_vkde`. Note: `NcmFitMC`/`NcmFitESMCMC`'s
+  `set_use_threads(bool)` only gates whether the OpenMP-parallel code path runs at all; the
+  *actual* thread count is always `OMP_NUM_THREADS`. There is **no** separate NumCosmo thread
+  pool for these — it is OpenMP. (`NcmFitMCMC` has no threading support at all — it always
+  runs single-threaded.)
 - **MPI** — separate processes via `mpiexec`; some objects in `perturbations/` branch on both
   OMP and MPI.
 - **OpenMP SIMD** — `#pragma omp simd` (e.g. `ncm_sbessel_ode_solver`) is *vectorization*, not

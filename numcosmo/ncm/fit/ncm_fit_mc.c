@@ -67,7 +67,7 @@ enum
   PROP_RTYPE,
   PROP_FIDUC,
   PROP_MTYPE,
-  PROP_NTHREADS,
+  PROP_USE_THREADS,
   PROP_KEEP_ORDER,
   PROP_DATA_FILE,
   PROP_FUNC_ARRAY,
@@ -86,7 +86,7 @@ struct _NcmFitMC
   NcmVector *bf;
   NcmTimer *nt;
   NcmSerialize *ser;
-  guint nthreads;
+  gboolean use_threads;
   guint n;
   NcmMemoryPool *mp;
   gint write_index;
@@ -114,7 +114,7 @@ ncm_fit_mc_init (NcmFitMC *mc)
   mc->bf            = NULL;
   mc->nt            = ncm_timer_new ();
   mc->ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-  mc->nthreads      = 0;
+  mc->use_threads   = FALSE;
   mc->n             = 0;
   mc->cur_sample_id = -1; /* Represents that no samples were calculated yet. */
   mc->write_index   = 0;
@@ -155,8 +155,8 @@ ncm_fit_mc_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_MTYPE:
       ncm_fit_mc_set_mtype (mc, g_value_get_enum (value));
       break;
-    case PROP_NTHREADS:
-      ncm_fit_mc_set_nthreads (mc, g_value_get_uint (value));
+    case PROP_USE_THREADS:
+      ncm_fit_mc_set_use_threads (mc, g_value_get_boolean (value));
       break;
     case PROP_KEEP_ORDER:
       ncm_fit_mc_keep_order (mc, g_value_get_boolean (value));
@@ -213,8 +213,8 @@ ncm_fit_mc_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     case PROP_MTYPE:
       g_value_set_enum (value, mc->mtype);
       break;
-    case PROP_NTHREADS:
-      g_value_set_uint (value, mc->nthreads);
+    case PROP_USE_THREADS:
+      g_value_set_boolean (value, mc->use_threads);
       break;
     case PROP_KEEP_ORDER:
       g_value_set_boolean (value, mc->keep_order);
@@ -355,12 +355,12 @@ ncm_fit_mc_class_init (NcmFitMCClass *klass)
                                                       NCM_TYPE_FIT_RUN_MSGS, NCM_FIT_RUN_MSGS_SIMPLE,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_NTHREADS,
-                                   g_param_spec_uint ("nthreads",
-                                                      NULL,
-                                                      "Number of threads to run",
-                                                      0, 100, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_USE_THREADS,
+                                   g_param_spec_boolean ("use-threads",
+                                                         NULL,
+                                                         "Whether to use OpenMP threads (real thread count is controlled by OMP_NUM_THREADS)",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_KEEP_ORDER,
                                    g_param_spec_boolean ("keep-order",
@@ -574,17 +574,32 @@ ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
 }
 
 /**
- * ncm_fit_mc_set_nthreads:
+ * ncm_fit_mc_set_use_threads:
  * @mc: a #NcmFitMC
- * @nthreads: number of threads
+ * @use_threads: whether to use OpenMP threads
  *
- * Sets the number of threads to be used by @mc to @nthreads.
+ * Sets whether @mc should run its Monte Carlo loop through the OpenMP
+ * parallel code path. The real number of threads used is controlled by the
+ * ambient OpenMP runtime state (the OMP_NUM_THREADS environment variable or
+ * an explicit omp_set_num_threads() call), not by this property.
  *
  */
 void
-ncm_fit_mc_set_nthreads (NcmFitMC *mc, guint nthreads)
+ncm_fit_mc_set_use_threads (NcmFitMC *mc, gboolean use_threads)
 {
-  mc->nthreads = nthreads;
+  mc->use_threads = use_threads;
+}
+
+/**
+ * ncm_fit_mc_get_use_threads:
+ * @mc: a #NcmFitMC
+ *
+ * Returns: whether @mc is set to use OpenMP threads.
+ */
+gboolean
+ncm_fit_mc_get_use_threads (NcmFitMC *mc)
+{
+  return mc->use_threads;
 }
 
 /**
@@ -920,7 +935,7 @@ ncm_fit_mc_set_first_sample_id (NcmFitMC *mc, gint first_sample_id)
 }
 
 static void _ncm_fit_mc_run_single (NcmFitMC *mc);
-static void _ncm_fit_mc_run_mt (NcmFitMC *mc);
+static void _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data);
 
 /**
  * ncm_fit_mc_run:
@@ -979,10 +994,10 @@ ncm_fit_mc_run (NcmFitMC *mc, guint n)
   if (mc->mtype > NCM_FIT_RUN_MSGS_NONE)
     ncm_timer_task_log_start_datetime (mc->nt);
 
-  if (mc->nthreads <= 1)
+  if (!mc->use_threads || (mc->n <= 1))
     _ncm_fit_mc_run_single (mc);
   else
-    _ncm_fit_mc_run_mt (mc);
+    _ncm_fit_mc_mt_eval (0, mc->n, mc);
 
   ncm_timer_task_pause (mc->nt);
 }
@@ -1182,23 +1197,6 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
 
   g_ptr_array_free (thetas, TRUE);
   g_array_free (ready, TRUE);
-}
-
-static void
-_ncm_fit_mc_run_mt (NcmFitMC *mc)
-{
-  const guint nthreads = mc->n > mc->nthreads ? mc->nthreads : (mc->n - 1);
-
-  if (nthreads == 0)
-  {
-    _ncm_fit_mc_run_single (mc);
-
-    return;
-  }
-
-  g_assert_cmpuint (mc->nthreads, >, 1);
-
-  _ncm_fit_mc_mt_eval (0, mc->n, mc);
 }
 
 /**
