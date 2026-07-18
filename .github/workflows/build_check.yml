@@ -337,12 +337,24 @@ jobs:
         # duration-balanced as the test suite changes. Runs even if some tests
         # failed: testlog.json still has valid per-test durations for whichever
         # tests actually ran, and a stale/absent duration estimate is worse for
-        # future balancing than a partial one.
+        # future balancing than a partial one. But if an EARLIER step failed
+        # (e.g. the build itself, or "Compute test slice"), testlog.json may not
+        # exist at all -- extract then produces an empty {}, and caching that
+        # would poison the *next* run's restore (picked up via restore-keys
+        # prefix match regardless of content) with zero real data, silently
+        # degrading it back to a count-balanced split. has_data guards against
+        # that: only cache when there's something real to cache.
+        id: extract_durations
         if: always() && matrix.slice != ''
         run: |
           python3 .github/scripts/test_slicer.py extract --testlog build/meson-logs/testlog.json > durations-slice${{ matrix.slice }}.json
+          if python3 -c "import json, sys; sys.exit(0 if json.load(open('durations-slice${{ matrix.slice }}.json')) else 1)"; then
+            echo "has_data=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_data=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Cache test slice durations
-        if: always() && matrix.slice != ''
+        if: always() && matrix.slice != '' && steps.extract_durations.outputs.has_data == 'true'
         uses: actions/cache/save@v4
         with:
           path: durations-slice${{ matrix.slice }}.json
