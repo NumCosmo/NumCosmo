@@ -45,9 +45,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
-#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* HAVE_FFTW3 */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -242,20 +240,12 @@ ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDest
 NcmVector *
 ncm_vector_new_fftw (guint size)
 {
-#ifdef HAVE_FFTW3
   gdouble *d    = fftw_alloc_real (size);
   NcmVector *cv = ncm_vector_new_full (d, size, 1, d, (GDestroyNotify) fftw_free);
 
   cv->type = NCM_VECTOR_MALLOC;
 
   return cv;
-
-#else
-  g_error ("ncm_vector_new_fftw: fftw3 not available");
-
-  return NULL;
-
-#endif /* HAVE_FFTW3 */
 }
 
 /**

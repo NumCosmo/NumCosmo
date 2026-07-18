@@ -202,9 +202,7 @@ _nc_de_print_fit_list (const gchar *option_name, const gchar *value, gpointer da
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_GSLMM_ALGOS, "Minimization algorithms [gsl-mm]");
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_GSLMMS_ALGOS, "Minimization algorithms [gsl-mms]");
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_LEVMAR_ALGOS, "Minimization algorithms [levmar]");
-#ifdef HAVE_NLOPT
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_NLOPT_ALGORITHM, "Minimization algorithms [nlopt]");
-#endif
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_GRAD_TYPE, "Differentiation methods");
 
   return TRUE;

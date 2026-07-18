@@ -633,13 +633,7 @@ main (gint argc, gchar *argv[])
     fiduc = ncm_mset_ref (mset);
 
   if (de_fit.fit_type == NULL)
-  {
-#ifdef HAVE_NLOPT
     de_fit.fit_type = g_strdup ("nlopt");
-#else
-    de_fit.fit_type = g_strdup ("gsl-mms");
-#endif
-  }
 
   if (de_fit.fit_diff == NULL)
     de_fit.fit_diff = g_strdup ("numdiff-forward");
