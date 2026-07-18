@@ -30,13 +30,19 @@ env:
   # threaded in this subset; only the py-omp lane needs the extra step in build-miniforge.)
   FAST_TEST_ARGS: "--no-suite py-app --no-suite py-acceptance --no-suite py-powspec --no-suite py-xcor --no-suite py-omp --no-suite c-acceptance --no-suite c-statistical"
   # GitHub-hosted runners on Azure expose a paravirtualized "mana" NIC that advertises
-  # InfiniBand-like RDMA verbs but doesn't actually support the specific operations
-  # (UD QP) OpenMPI's UCX transport tries to use, causing spurious
-  # "Failed to create UCP worker" errors/flakes on MPI test jobs. We don't need real RDMA
-  # performance for correctness testing, so select the ob1 PML (tcp/vader/self BTLs)
-  # directly instead, bypassing UCX entirely. Harmless no-op for mpich (ignores
-  # OMPI_MCA_* vars) and for jobs that never invoke mpiexec.
+  # InfiniBand-like RDMA verbs but doesn't actually support the specific operations (UD
+  # QP) that transport needs, causing spurious MPI init/comm failures on both MPI
+  # implementations this repo tests -- OpenMPI ("Failed to create UCP worker") and
+  # MPICH's ch4:ucx netmod ("MPIDI_UCX_init_worker: Address not valid"). We don't need
+  # real RDMA performance for correctness testing. Two knobs, since each implementation
+  # picks its transport a different way:
+  #  - OMPI_MCA_pml=ob1 selects OpenMPI's non-UCX PML (tcp/vader/self BTLs) directly.
+  #  - UCX_TLS restricts UCX itself (read by both OpenMPI's and MPICH's copies of the
+  #    UCX library) to non-RDMA transports, which is what actually fixes the MPICH side
+  #    (OMPI_MCA_* vars are OpenMPI-specific and MPICH silently ignores them).
+  # Harmless no-op for jobs that never invoke mpiexec.
   OMPI_MCA_pml: "ob1"
+  UCX_TLS: "tcp,self,sm"
 
 jobs:
 
