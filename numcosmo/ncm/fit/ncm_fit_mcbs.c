@@ -302,18 +302,18 @@ ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
  * @nbstraps: number of bootstrap samples
  * @rtype: a #NcmFitMCResampleType
  * @mtype: a #NcmFitRunMsgs
- * @bsmt: number of threads to be used in the bootstrap analysis
+ * @bsmt: whether to use OpenMP threads in the bootstrap analysis
  *
  * Runs the Monte Carlo and bootstrap analysis. The results are stored in the catalog
  * of @mcbs. The catalog is cleared before the analysis.
  *
- * Note: Multi-threading for bootstrap analysis (@bsmt > 0) is currently not fully
- * supported and may produce incorrect results. Use @bsmt = 0 for reliable
+ * Note: Multi-threading for bootstrap analysis (@bsmt = TRUE) is currently not fully
+ * supported and may produce incorrect results. Use @bsmt = FALSE for reliable
  * single-threaded execution.
  *
  */
 void
-ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nbstraps, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, guint bsmt)
+ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nbstraps, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, gboolean bsmt)
 {
   NcmRNG *mcat_rng     = ncm_mset_catalog_peek_rng (mcbs->mcat);
   NcmFitState *fstate  = ncm_fit_peek_state (mcbs->fit);
@@ -346,7 +346,7 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
 
   ncm_fit_mc_set_rtype (mcbs->mc_bstrap, rtype);
   ncm_fit_mc_set_mtype (mcbs->mc_bstrap, mtype);
-  ncm_fit_mc_set_nthreads (mcbs->mc_bstrap, bsmt);
+  ncm_fit_mc_set_use_threads (mcbs->mc_bstrap, bsmt);
 
   if (rtype == NCM_FIT_MC_RESAMPLE_FROM_MODEL)
     g_error ("ncm_fit_mcbs_run: the internal run must be a bootstrap: NCM_FIT_MC_RESAMPLE_BOOTSTRAP_*.");

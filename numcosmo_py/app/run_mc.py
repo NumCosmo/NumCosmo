@@ -55,12 +55,13 @@ class RunMC(RunCommonOptions):
         ),
     ] = FitRunMessages.SIMPLE
 
-    nthreads: Annotated[
-        int,
+    use_threads: Annotated[
+        bool,
         typer.Option(
-            help="Number of threads to use for the fit.",
+            help="Use OpenMP threads for the fit. The real thread count is "
+            "controlled by the OMP_NUM_THREADS environment variable.",
         ),
-    ] = 1
+    ] = False
 
     nmc: Annotated[
         int,
@@ -116,7 +117,7 @@ class RunMC(RunCommonOptions):
                 )
             mc.set_fiducial(fiduc)
 
-        mc.set_nthreads(self.nthreads)
+        mc.set_use_threads(self.use_threads)
         mc.set_data_file(self.output.with_suffix(".mc.fits").absolute().as_posix())
 
         if self.seed is not None:

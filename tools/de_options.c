@@ -285,7 +285,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "msg-level",        0, 0, G_OPTION_ARG_INT,          &de_fit->msg_level,        "Fit message level (0: no msg, 1: simple, 2: full)", NULL },
     { "mc-rtype",         0, 0, G_OPTION_ARG_INT,          &de_fit->mc_rtype,         "Resample using rtype method", NULL},
     { "mc-ni",            0, 0, G_OPTION_ARG_INT,          &de_fit->mc_ni,            "Start the 'Monte Carlo' at the ni realization", NULL},
-    { "mc-nthreads",      0, 0, G_OPTION_ARG_INT,          &de_fit->mc_nthreads,      "If larger than one it will run in mc-nthreads threads", NULL},
+    { "mc-use-threads",   0, 0, G_OPTION_ARG_NONE,         &de_fit->mc_use_threads,   "Use OpenMP threads for the MC/MCBS/ESMCMC analysis (real thread count is controlled by OMP_NUM_THREADS)", NULL},
     { "mc-seed",          0, 0, G_OPTION_ARG_INT64,        &de_fit->mc_seed,          "Seed to be used by the Monte Carlo simulation", NULL},
     { "mc-lre",           0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->mc_lre,           "Will run Monte Carlo until largest relative error lre is attained", NULL},
     { "mc-nwalkers",      0, 0, G_OPTION_ARG_INT,          &de_fit->mc_nwalkers,      "Number of walkers to use in the ESMCMC analysis, it must be even for a parallel analysis", NULL},

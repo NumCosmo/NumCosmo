@@ -239,7 +239,7 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
                                NCM_FIT_RUN_MSGS_NONE);
 
   ncm_fit_esmcmc_set_rng (esmcmc, rng);
-  ncm_fit_esmcmc_set_nthreads (esmcmc, 2);
+  ncm_fit_esmcmc_set_use_threads (esmcmc, TRUE);
 
   ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-1, 0.0, NULL, NULL);
   ncm_fit_fisher (fit);
@@ -304,7 +304,7 @@ test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata)
                                 NCM_FIT_RUN_MSGS_NONE);
 
   ncm_fit_esmcmc_set_rng (esmcmc, rng);
-  ncm_fit_esmcmc_set_nthreads (esmcmc, 2);
+  ncm_fit_esmcmc_set_use_threads (esmcmc, TRUE);
 
   ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
   ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
@@ -677,7 +677,7 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
                                                             NCM_FIT_RUN_MSGS_NONE);
 
     ncm_fit_esmcmc_set_rng (esmcmc, ncm_mset_catalog_peek_rng (mcat));
-    ncm_fit_esmcmc_set_nthreads (esmcmc, 2);
+    ncm_fit_esmcmc_set_use_threads (esmcmc, TRUE);
 
     ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
     ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));

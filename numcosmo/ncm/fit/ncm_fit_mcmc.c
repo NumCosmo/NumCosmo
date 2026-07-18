@@ -42,7 +42,6 @@
 
 #include "ncm/fit/ncm_fit_mcmc.h"
 #include "ncm/core/ncm_cfg.h"
-#include "ncm/core/ncm_func_eval.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -55,7 +54,6 @@ enum
   PROP_FIT,
   PROP_SAMPLER,
   PROP_MTYPE,
-  PROP_NTHREADS,
   PROP_DATA_FILE,
 };
 
@@ -71,18 +69,12 @@ struct _NcmFitMCMC
   NcmMSetTransKern *tkern;
   NcmVector *theta;
   NcmVector *thetastar;
-  guint nthreads;
   guint n;
-  NcmMemoryPool *mp;
   gint write_index;
   gint cur_sample_id;
   guint naccepted;
   guint ntotal;
   gboolean started;
-  GMutex dup_fit;
-  GMutex resample_lock;
-  GMutex update_lock;
-  GCond write_cond;
 };
 
 G_DEFINE_TYPE (NcmFitMCMC, ncm_fit_mcmc, G_TYPE_OBJECT)
@@ -97,19 +89,12 @@ ncm_fit_mcmc_init (NcmFitMCMC *mcmc)
   mcmc->ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   mcmc->theta         = NULL;
   mcmc->thetastar     = NULL;
-  mcmc->nthreads      = 0;
   mcmc->n             = 0;
-  mcmc->mp            = NULL;
   mcmc->cur_sample_id = -1; /* Represents that no samples were calculated yet. */
   mcmc->naccepted     = 0;
   mcmc->ntotal        = 0;
   mcmc->write_index   = 0;
   mcmc->started       = FALSE;
-
-  g_mutex_init (&mcmc->dup_fit);
-  g_mutex_init (&mcmc->resample_lock);
-  g_mutex_init (&mcmc->update_lock);
-  g_cond_init (&mcmc->write_cond);
 }
 
 static void _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit);
@@ -131,9 +116,6 @@ ncm_fit_mcmc_set_property (GObject *object, guint prop_id, const GValue *value, 
       break;
     case PROP_MTYPE:
       ncm_fit_mcmc_set_mtype (mcmc, g_value_get_enum (value));
-      break;
-    case PROP_NTHREADS:
-      ncm_fit_mcmc_set_nthreads (mcmc, g_value_get_uint (value));
       break;
     case PROP_DATA_FILE:
       ncm_fit_mcmc_set_data_file (mcmc, g_value_get_string (value));
@@ -162,9 +144,6 @@ ncm_fit_mcmc_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_MTYPE:
       g_value_set_enum (value, mcmc->mtype);
       break;
-    case PROP_NTHREADS:
-      g_value_set_uint (value, mcmc->nthreads);
-      break;
     case PROP_DATA_FILE:
       g_value_set_string (value, ncm_mset_catalog_peek_filename (mcmc->mcat));
       break;
@@ -187,12 +166,6 @@ ncm_fit_mcmc_dispose (GObject *object)
   ncm_vector_clear (&mcmc->theta);
   ncm_vector_clear (&mcmc->thetastar);
 
-  if (mcmc->mp != NULL)
-  {
-    ncm_memory_pool_free (mcmc->mp, TRUE);
-    mcmc->mp = NULL;
-  }
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_mcmc_parent_class)->dispose (object);
 }
@@ -200,13 +173,6 @@ ncm_fit_mcmc_dispose (GObject *object)
 static void
 ncm_fit_mcmc_finalize (GObject *object)
 {
-  NcmFitMCMC *mcmc = NCM_FIT_MCMC (object);
-
-  g_mutex_clear (&mcmc->dup_fit);
-  g_mutex_clear (&mcmc->resample_lock);
-  g_mutex_clear (&mcmc->update_lock);
-  g_cond_clear (&mcmc->write_cond);
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_mcmc_parent_class)->finalize (object);
 }
@@ -242,13 +208,6 @@ ncm_fit_mcmc_class_init (NcmFitMCMCClass *klass)
                                                       NULL,
                                                       "Run messages type",
                                                       NCM_TYPE_FIT_RUN_MSGS, NCM_FIT_RUN_MSGS_SIMPLE,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_NTHREADS,
-                                   g_param_spec_uint ("nthreads",
-                                                      NULL,
-                                                      "Number of threads to run",
-                                                      0, 100, 0,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -375,20 +334,6 @@ ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern)
 
   ncm_mset_catalog_set_run_type (mcmc->mcat, ncm_mset_trans_kern_get_name (tkern));
   ncm_mset_trans_kern_set_mset (tkern, mset);
-}
-
-/**
- * ncm_fit_mcmc_set_nthreads:
- * @mcmc: a #NcmFitMCMC
- * @nthreads: number of threads to run
- *
- * Sets the number of threads to be used during the Markov Chain Monte Carlo run.
- *
- */
-void
-ncm_fit_mcmc_set_nthreads (NcmFitMCMC *mcmc, guint nthreads)
-{
-  mcmc->nthreads = nthreads;
 }
 
 /**
@@ -597,12 +542,6 @@ ncm_fit_mcmc_end_run (NcmFitMCMC *mcmc)
   if (ncm_timer_task_is_running (mcmc->nt))
     ncm_timer_task_end (mcmc->nt);
 
-  if (mcmc->mp != NULL)
-  {
-    ncm_memory_pool_free (mcmc->mp, TRUE);
-    mcmc->mp = NULL;
-  }
-
   ncm_mset_catalog_sync (mcmc->mcat, TRUE);
 
   mcmc->started = FALSE;
@@ -677,7 +616,6 @@ ncm_fit_mcmc_set_first_sample_id (NcmFitMCMC *mcmc, gint first_sample_id)
 }
 
 static void _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc);
-static void _ncm_fit_mcmc_run_mt (NcmFitMCMC *mcmc);
 
 /**
  * ncm_fit_mcmc_run:
@@ -734,10 +672,7 @@ ncm_fit_mcmc_run (NcmFitMCMC *mcmc, guint n)
   if (mcmc->mtype > NCM_FIT_RUN_MSGS_NONE)
     ncm_timer_task_log_start_datetime (mcmc->nt);
 
-  if (mcmc->nthreads <= 1)
-    _ncm_fit_mcmc_run_single (mcmc);
-  else
-    _ncm_fit_mcmc_run_mt (mcmc);
+  _ncm_fit_mcmc_run_single (mcmc);
 
   ncm_timer_task_pause (mcmc->nt);
 }
@@ -787,90 +722,6 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
     _ncm_fit_mcmc_update (mcmc, mcmc->fit);
     mcmc->write_index++;
   }
-}
-
-static gpointer
-_ncm_fit_mcmc_dup_fit (gpointer userdata)
-{
-  NcmFitMCMC *mcmc = NCM_FIT_MCMC (userdata);
-
-  g_mutex_lock (&mcmc->dup_fit);
-  {
-    NcmFit *fit = ncm_fit_dup (mcmc->fit, mcmc->ser);
-
-    ncm_serialize_reset (mcmc->ser, TRUE);
-    g_mutex_unlock (&mcmc->dup_fit);
-
-    return fit;
-  }
-}
-
-static void
-_ncm_fit_mcmc_mt_eval (glong i, glong f, gpointer data)
-{
-  NcmFitMCMC *mcmc = NCM_FIT_MCMC (data);
-  NcmFit **fit_ptr = ncm_memory_pool_get (mcmc->mp);
-  NcmFit *fit      = *fit_ptr;
-  guint j;
-
-  g_assert_not_reached (); /* Multi-threaded MCMC evaluation not yet implemented */
-
-  for (j = i; j < f; j++)
-  {
-    gint sample_index;
-
-/*    ncm_mset_param_set_vector (fit->mset, mcmc->bf); */
-
-    g_mutex_lock (&mcmc->resample_lock);
-/*    sample_index = _ncm_fit_mcmc_resample (mc, fit); */
-    sample_index = 0;
-    g_mutex_unlock (&mcmc->resample_lock);
-
-    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
-
-    g_mutex_lock (&mcmc->update_lock);
-
-    while (mcmc->write_index != sample_index)
-      g_cond_wait (&mcmc->write_cond, &mcmc->update_lock);
-
-    _ncm_fit_mcmc_update (mcmc, fit);
-    mcmc->write_index++;
-    g_cond_broadcast (&mcmc->write_cond);
-
-    g_mutex_unlock (&mcmc->update_lock);
-  }
-
-  ncm_memory_pool_return (fit_ptr);
-}
-
-static void
-_ncm_fit_mcmc_run_mt (NcmFitMCMC *mcmc)
-{
-  const guint nthreads = mcmc->n > mcmc->nthreads ? mcmc->nthreads : (mcmc->n - 1);
-
-  if (nthreads == 0)
-  {
-    _ncm_fit_mcmc_run_single (mcmc);
-
-    return;
-  }
-
-  if (mcmc->mp != NULL)
-    ncm_memory_pool_free (mcmc->mp, TRUE);
-
-  mcmc->mp = ncm_memory_pool_new (&_ncm_fit_mcmc_dup_fit, mcmc,
-                                  (GDestroyNotify) & ncm_fit_free);
-
-  /*
-   * The line below added de main fit object to the pool, but can cause
-   * several race conditions as it is used to make the copies for the other
-   * threads. So, no.
-   */
-  /*ncm_memory_pool_add (mc->mp, mc->fit); */
-
-  g_assert_cmpuint (mcmc->nthreads, >, 1);
-
-  ncm_func_eval_threaded_loop_full (&_ncm_fit_mcmc_mt_eval, 0, mcmc->n, mcmc);
 }
 
 /**

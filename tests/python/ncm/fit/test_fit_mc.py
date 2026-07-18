@@ -36,7 +36,8 @@ from numcosmo_py.helper import duplicate_via_serialization
 Ncm.cfg_init()
 
 # FitMC parallelism is OpenMP (NcmFitMC + `#pragma omp parallel`); these tests set
-# nthreads>1 and so exercise the OpenMP-parallel path in the dedicated omp lane. See TESTING.md.
+# use_threads=True and so exercise the OpenMP-parallel path in the dedicated omp
+# lane. See TESTING.md.
 pytestmark = pytest.mark.omp
 
 MEAN = 1.2543
@@ -80,12 +81,12 @@ def fixture_mc(fit: Ncm.Fit, request) -> Ncm.FitMC:
     return Ncm.FitMC.new(fit, request.param, Ncm.FitRunMsgs.SIMPLE)
 
 
-@pytest.mark.parametrize("nthreads", [1, 4], ids=["threads=1", "threads=4"])
-def test_fit_mc_run(capfd, mc: Ncm.FitMC, nthreads: int):
+@pytest.mark.parametrize("use_threads", [False, True], ids=["serial", "threaded"])
+def test_fit_mc_run(capfd, mc: Ncm.FitMC, use_threads: bool):
     """Test NcmFitMC run."""
     n_runs = 100
 
-    mc.set_nthreads(nthreads)
+    mc.set_use_threads(use_threads)
 
     mc.start_run()
     mc.run(n_runs)
@@ -113,7 +114,7 @@ def test_serialize_deserialize(mc: Ncm.FitMC, tmp_path: Path):
     mc.set_data_file(file.as_posix())
     mc2 = duplicate_via_serialization(mc, ser)
 
-    assert mc.props.nthreads == mc2.props.nthreads
+    assert mc.props.use_threads == mc2.props.use_threads
     assert mc.props.rtype == mc2.props.rtype
     assert mc.props.mtype == mc2.props.mtype
     assert mc.props.data_file == mc2.props.data_file
@@ -126,14 +127,14 @@ def test_threaded_vs_serial(capfd, mc: Ncm.FitMC):
     mc2 = duplicate_via_serialization(mc, ser)
 
     mc.set_mtype(Ncm.FitRunMsgs.NONE)
-    mc.set_nthreads(1)
+    mc.set_use_threads(False)
     mc.set_rng(Ncm.RNG.seeded_new("mt19937", 1234))
     mc.start_run()
     mc.run(100)
     mc.end_run()
 
     mc2.set_mtype(Ncm.FitRunMsgs.NONE)
-    mc2.set_nthreads(4)
+    mc2.set_use_threads(True)
     mc2.set_rng(Ncm.RNG.seeded_new("mt19937", 1234))
     mc2.start_run()
     mc2.run(100)
@@ -174,9 +175,11 @@ class MVNDMean(Ncm.MSetFunc1):
         return [np.mean(mvnd.orig_vparam_get(0, self.index))]
 
 
-@pytest.mark.parametrize("nthreads", [1, 4], ids=["threads=1", "threads=4"])
+@pytest.mark.parametrize("use_threads", [False, True], ids=["serial", "threaded"])
 @pytest.mark.parametrize("rtype", MC_RESAMPLE_TYPES, ids=MC_RESAMPLE_LABELS)
-def test_mc_funcs(fit: Ncm.Fit, rtype: Ncm.FitMCResampleType, nthreads: int) -> None:
+def test_mc_funcs(
+    fit: Ncm.Fit, rtype: Ncm.FitMCResampleType, use_threads: bool
+) -> None:
     """Fixture for NcmFitMC object."""
     funcs_oa = Ncm.ObjArray.new()
 
@@ -188,7 +191,7 @@ def test_mc_funcs(fit: Ncm.Fit, rtype: Ncm.FitMCResampleType, nthreads: int) -> 
 
     mc = Ncm.FitMC.new_funcs_array(fit, rtype, Ncm.FitRunMsgs.NONE, funcs_oa)
 
-    mc.set_nthreads(nthreads)
+    mc.set_use_threads(use_threads)
     n_runs = 100
 
     mc.start_run()
