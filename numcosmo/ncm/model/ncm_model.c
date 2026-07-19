@@ -69,6 +69,17 @@ typedef struct _NcmModelPrivate
   guint64 slkey[NCM_MODEL_MAX_STATES];
   gdouble *params_ptr;
   gboolean constructed;
+
+  /*
+   * Weak backpointer to the host this instance is currently attached to as
+   * a submodel, or unset if it isn't anyone's submodel right now. Set in
+   * _ncm_model_add_submodel() at attach time, cleared there when a
+   * submodel is replaced at the same slot position, and cleared here (via
+   * g_weak_ref_clear()) at dispose. Any future submodel detach/remove API
+   * must clear the departing submodel's host_wr the same way the REPLACE
+   * branch does, or a stale backpointer can outlive the actual attachment.
+   */
+  GWeakRef host_wr;
 } NcmModelPrivate;
 
 enum
@@ -133,6 +144,8 @@ ncm_model_init (NcmModel *model)
   self->submodel_array   = g_ptr_array_new ();
   self->submodel_mid_pos = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, NULL);
   self->constructed      = FALSE;
+
+  g_weak_ref_init (&self->host_wr, NULL);
 
   g_ptr_array_set_free_func (self->submodel_array, (GDestroyNotify) ncm_model_free);
 }
@@ -278,6 +291,8 @@ _ncm_model_dispose (GObject *object)
 
   g_clear_pointer (&self->submodel_array,   g_ptr_array_unref);
   g_clear_pointer (&self->submodel_mid_pos, g_hash_table_unref);
+
+  g_weak_ref_clear (&self->host_wr);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_parent_class)->dispose (object);
@@ -3458,22 +3473,39 @@ _ncm_model_has_submodel_slot_for_type (NcmModelClass *model_class, GType submode
 static void
 _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
 {
-  NcmModelPrivate * const self   = ncm_model_get_instance_private (model);
-  NcmModelClass *model_class     = NCM_MODEL_GET_CLASS (model);
-  NcmModelClass *submodel_class  = NCM_MODEL_GET_CLASS (submodel);
-  const NcmModelID main_model_id = submodel_class->main_model_id;
-  const gboolean is_submodel     = submodel_class->is_submodel;
-  const NcmModelID submodel_mid  = ncm_model_id (submodel);
+  NcmModelPrivate * const self          = ncm_model_get_instance_private (model);
+  NcmModelPrivate * const submodel_self = ncm_model_get_instance_private (submodel);
+  NcmModelClass *model_class            = NCM_MODEL_GET_CLASS (model);
+  NcmModelClass *submodel_class         = NCM_MODEL_GET_CLASS (submodel);
+  const NcmModelID main_model_id        = submodel_class->main_model_id;
+  const gboolean is_submodel            = submodel_class->is_submodel;
+  const NcmModelID submodel_mid         = ncm_model_id (submodel);
+  const gboolean is_slotted             = _ncm_model_has_submodel_slot_for_type (model_class, G_OBJECT_TYPE (submodel));
   gpointer pos_ptr, orig_key;
 
   g_assert (is_submodel);
   g_assert_cmpint (main_model_id, ==, ncm_model_id (model));
 
-  if (self->constructed && _ncm_model_has_submodel_slot_for_type (model_class, G_OBJECT_TYPE (submodel)))
+  if (self->constructed && is_slotted)
     g_error ("_ncm_model_add_submodel: `%s' declares a construction-only typed slot for `%s' submodels -- "
              "it must be provided as a construction property (e.g. `g_object_new()`/constructor kwarg), "
              "not attached after construction.",
              G_OBJECT_TYPE_NAME (model), G_OBJECT_TYPE_NAME (submodel));
+
+  if (is_slotted)
+  {
+    NcmModel *current_host = g_weak_ref_get (&submodel_self->host_wr);
+
+    if ((current_host != NULL) && (current_host != model))
+    {
+      g_object_unref (current_host);
+      g_error ("_ncm_model_add_submodel: `%s' is already attached to a `%s' host -- a submodel with a "
+               "construction-only typed slot can only ever belong to one host for its lifetime.",
+               G_OBJECT_TYPE_NAME (submodel), G_OBJECT_TYPE_NAME (model));
+    }
+
+    g_clear_object (&current_host);
+  }
 
   if (g_hash_table_lookup_extended (self->submodel_mid_pos, GINT_TO_POINTER (submodel_mid), &orig_key, &pos_ptr))
   {
@@ -3482,7 +3514,10 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
     g_assert_cmpint (pos, >, -1);
     g_assert_cmpint (pos, <, self->submodel_array->len);
     {
-      NcmModel *old_submodel = g_ptr_array_index (self->submodel_array, pos);
+      NcmModel *old_submodel                    = g_ptr_array_index (self->submodel_array, pos);
+      NcmModelPrivate * const old_submodel_self = ncm_model_get_instance_private (old_submodel);
+
+      g_weak_ref_set (&old_submodel_self->host_wr, NULL);
 
       g_ptr_array_index (self->submodel_array, pos) = ncm_model_ref (submodel);
       ncm_model_free (old_submodel);
@@ -3496,6 +3531,8 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
     g_ptr_array_add (self->submodel_array, submodel);
     g_hash_table_insert (self->submodel_mid_pos, GINT_TO_POINTER (submodel_mid), GINT_TO_POINTER (pos));
   }
+
+  g_weak_ref_set (&submodel_self->host_wr, model);
 }
 
 /**
@@ -3561,6 +3598,34 @@ ncm_model_peek_submodel_by_mid (NcmModel *model, NcmModelID mid)
   {
     return NULL;
   }
+}
+
+/**
+ * ncm_model_peek_host:
+ * @submodel: a #NcmModel
+ *
+ * If @submodel is currently attached as a submodel of some host #NcmModel
+ * (through ncm_model_add_submodel()), gets that host without increasing
+ * its reference count. This is a pure function of @submodel's own current
+ * attachment state -- it never reaches outside @submodel itself.
+ *
+ * Returns: (transfer none) (nullable): the host #NcmModel, or %NULL if
+ * @submodel is not currently attached to any host.
+ */
+NcmModel *
+ncm_model_peek_host (NcmModel *submodel)
+{
+  NcmModelPrivate * const self = ncm_model_get_instance_private (submodel);
+  NcmModel *host               = g_weak_ref_get (&self->host_wr);
+
+  /* Downgrading transfer-full -> transfer-none is safe here: @submodel is
+   * alive throughout this call, and the host->submodel strong-ref
+   * invariant means a non-NULL host_wr cannot point at a host that is
+   * mid-dispose. */
+  if (host != NULL)
+    g_object_unref (host);
+
+  return host;
 }
 
 /**

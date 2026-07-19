@@ -50,6 +50,11 @@ void test_ncm_model_ctrl_submodel_update (TestNcmModelCtrl *test, gconstpointer 
 void test_ncm_model_ctrl_traps (TestNcmModelCtrl *test, gconstpointer pdata);
 void test_ncm_model_ctrl_invalid_submodel_last_update (TestNcmModelCtrl *test, gconstpointer pdata);
 
+void test_ncm_model_peek_host (TestNcmModelCtrl *test, gconstpointer pdata);
+void test_ncm_model_peek_host_lifecycle (void);
+void test_ncm_model_peek_host_cross_host_traps (void);
+void test_ncm_model_peek_host_cross_host_subprocess (void);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -81,6 +86,15 @@ main (gint argc, gchar *argv[])
               &test_ncm_model_ctrl_new,
               &test_ncm_model_ctrl_invalid_submodel_last_update,
               &test_ncm_model_ctrl_free);
+
+  g_test_add ("/ncm/model/peek_host", TestNcmModelCtrl, NULL,
+              &test_ncm_model_ctrl_new,
+              &test_ncm_model_peek_host,
+              &test_ncm_model_ctrl_free);
+
+  g_test_add_func ("/ncm/model/peek_host/lifecycle", &test_ncm_model_peek_host_lifecycle);
+  g_test_add_func ("/ncm/model/peek_host/cross_host/traps", &test_ncm_model_peek_host_cross_host_traps);
+  g_test_add_func ("/ncm/model/peek_host/cross_host/subprocess", &test_ncm_model_peek_host_cross_host_subprocess);
 
   g_test_run ();
 }
@@ -273,5 +287,58 @@ void
 test_ncm_model_ctrl_invalid_submodel_last_update (TestNcmModelCtrl *test, gconstpointer pdata)
 {
   ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ());
+}
+
+void
+test_ncm_model_peek_host (TestNcmModelCtrl *test, gconstpointer pdata)
+{
+  /* Both submodels were attached to test->model at construction time (see
+   * test_ncm_model_ctrl_new()) -- their host backpointer must reflect that,
+   * while the host itself (not anyone's submodel) has no host of its own. */
+  g_assert_true (ncm_model_peek_host (test->submodel1) == test->model);
+  g_assert_true (ncm_model_peek_host (test->submodel2) == test->model);
+  g_assert_true (ncm_model_peek_host (test->model) == NULL);
+}
+
+void
+test_ncm_model_peek_host_lifecycle (void)
+{
+  NcHIReion *reion     = NC_HIREION (nc_hireion_camb_new ());
+  NcHICosmoLCDM *cosmo = nc_hicosmo_lcdm_new_full (reion, NULL);
+
+  g_assert_true (ncm_model_peek_host (NCM_MODEL (reion)) == NCM_MODEL (cosmo));
+
+  /* reion keeps its own external ref (from nc_hireion_camb_new() above), so
+   * it survives cosmo's disposal -- its host backpointer is a weak ref and
+   * must correctly go stale (peek_host returns NULL), not dangle. */
+  nc_hicosmo_free (NC_HICOSMO (cosmo));
+
+  g_assert_true (ncm_model_peek_host (NCM_MODEL (reion)) == NULL);
+
+  nc_hireion_free (reion);
+}
+
+void
+test_ncm_model_peek_host_cross_host_subprocess (void)
+{
+  NcHIReion *reion   = NC_HIREION (nc_hireion_camb_new ());
+  NcHICosmo *cosmo_a = NC_HICOSMO (nc_hicosmo_lcdm_new_full (reion, NULL));
+  NcHICosmo *cosmo_b;
+
+  /* cosmo_a is still alive (held above), so reion's host backpointer is
+   * live and points elsewhere -- attaching the same slotted-type submodel
+   * instance to a second host must be rejected, not silently reassigned. */
+  cosmo_b = NC_HICOSMO (nc_hicosmo_lcdm_new_full (reion, NULL));
+
+  nc_hicosmo_free (cosmo_a);
+  nc_hicosmo_free (cosmo_b);
+  nc_hireion_free (reion);
+}
+
+void
+test_ncm_model_peek_host_cross_host_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/model/peek_host/cross_host/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
 }
 
