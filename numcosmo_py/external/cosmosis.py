@@ -386,7 +386,7 @@ def convert_cosmology(
                 cosmo.param_set_ftype(pid, Ncm.ParamType.FREE)
 
     if "tau" in params_dict:
-        reion.set_z_from_tau(cosmo, params_dict["tau"])
+        reion.set_z_from_tau(params_dict["tau"])
 
     if "a_s" in params_dict:
         prim.param_set_by_name("ln10e10ASA", math.log(1.0e10 * params_dict["a_s"]))

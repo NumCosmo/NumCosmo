@@ -43,13 +43,16 @@ def test_nc_hireion_camb():
 def test_nc_hireion_camb_z_to_tau():
     """Test NcHICosmoReionCamb z_to_tau."""
     reion = Nc.HIReionCamb()
-    cosmo = Nc.HICosmoDEXcdm()
+    # reion must already be attached to its host cosmology before it can be
+    # reparametrized -- z_to_tau() no longer takes a cosmo argument, it
+    # reaches its own host via ncm_model_peek_host().
+    cosmo = Nc.HICosmoDEXcdm(reion=reion)
     assert reion is not None
     assert isinstance(reion, Nc.HIReionCamb)
     assert isinstance(reion, Nc.HIReion)
     assert isinstance(reion, Ncm.Model)
 
-    reion.z_to_tau(cosmo)
+    reion.z_to_tau()
 
     _ = reion["tau_reion"]
     z_re = reion.orig_param_get_by_name("z_re")

@@ -48,6 +48,23 @@ G_BEGIN_DECLS
 typedef struct _NcHIReionCambClass NcHIReionCambClass;
 typedef struct _NcHIReionCamb NcHIReionCamb;
 
+/**
+ * NcHIReionCambError:
+ * @NC_HIREION_CAMB_ERROR_NO_HOST: The #NcHIReionCamb is not currently
+ * attached to a host #NcHICosmo.
+ *
+ * Error codes returned by the #NcHIReionCamb class.
+ *
+ */
+typedef enum _NcHIReionCambError
+{
+  NC_HIREION_CAMB_ERROR_NO_HOST,
+} NcHIReionCambError;
+
+GQuark nc_hireion_camb_error_quark (void);
+
+#define NC_HIREION_CAMB_ERROR (nc_hireion_camb_error_quark ())
+
 struct _NcHIReionCambClass
 {
   /*< private >*/
@@ -89,8 +106,8 @@ GType nc_hireion_camb_get_type (void) G_GNUC_CONST;
 
 NcHIReionCamb *nc_hireion_camb_new (void);
 gdouble nc_hireion_camb_calc_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, const gdouble tau);
-void nc_hireion_camb_set_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, const gdouble tau);
-void nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, GError **error);
+void nc_hireion_camb_set_z_from_tau (NcHIReionCamb *reion_camb, const gdouble tau, GError **error);
+void nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, GError **error);
 
 #define NC_HIREION_CAMB_DEFAULT_HII_HEII_REION_DELTA (0.5)
 #define NC_HIREION_CAMB_DEFAULT_HEIII_REION_DELTA    (0.5)
