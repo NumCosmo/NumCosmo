@@ -11,6 +11,12 @@ on:
 env:
   CONDA_ENV: numcosmo_developer
   CACHE_VERSION: 0
+  # Bump to force the next run to recompute slice-tests.txt from scratch instead of
+  # restoring cached per-test durations (test_slicer.py degrades gracefully to a
+  # count-balanced split when the durations file is empty/missing -- see the
+  # "has_data" guard on the "Cache test slice durations" step below). Use this when
+  # the duration-aware slicing itself is suspected of dropping or misplacing a test.
+  TEST_DURATION_CACHE_VERSION: 1
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
   # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock, e.g.
   # scipy.linalg.solve in test_sbessel_ode_solver), and the run-alone OpenMP tests
@@ -269,25 +275,25 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: durations-slice1.json
-          key: test-durations-c-slice1-${{ github.run_id }}
+          key: test-durations-c-slice1-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
           restore-keys: |
-            test-durations-c-slice1-
+            test-durations-c-slice1-v${{ env.TEST_DURATION_CACHE_VERSION }}-
       - name: Restore test duration history (slice 2)
         if: matrix.slice != ''
         uses: actions/cache/restore@v4
         with:
           path: durations-slice2.json
-          key: test-durations-c-slice2-${{ github.run_id }}
+          key: test-durations-c-slice2-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
           restore-keys: |
-            test-durations-c-slice2-
+            test-durations-c-slice2-v${{ env.TEST_DURATION_CACHE_VERSION }}-
       - name: Restore test duration history (slice 3)
         if: matrix.slice != ''
         uses: actions/cache/restore@v4
         with:
           path: durations-slice3.json
-          key: test-durations-c-slice3-${{ github.run_id }}
+          key: test-durations-c-slice3-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
           restore-keys: |
-            test-durations-c-slice3-
+            test-durations-c-slice3-v${{ env.TEST_DURATION_CACHE_VERSION }}-
       - uses: ./.github/actions/setup-miniforge
         with:
           python-version: ${{ matrix.python-version }}
@@ -307,6 +313,9 @@ jobs:
             --durations durations-slice1.json durations-slice2.json durations-slice3.json \
             --num-slices 3 --slice ${{ matrix.slice }} \
             > slice-tests.txt
+          echo "::group::slice-tests.txt ($(wc -l < slice-tests.txt) tests)"
+          cat slice-tests.txt
+          echo "::endgroup::"
       - name: Check and coverage
         # First run to generate the coverage base
         # Second run to generate the coverage for the tests
@@ -348,7 +357,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: durations-slice${{ matrix.slice }}.json
-          key: test-durations-c-slice${{ matrix.slice }}-${{ github.run_id }}
+          key: test-durations-c-slice${{ matrix.slice }}-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
       - name: Test timing summary
         if: always()
         # Surface the slowest tests of this shard in the job summary so wall-time imbalance

@@ -244,6 +244,7 @@ guint ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint n
 #define NCM_MSET_CATALOG_RTYPE_UNDEFINED "undefined-run"
 #define NCM_MSET_CATALOG_FSYMB_LABEL "FSYMB"
 #define NCM_MSET_CATALOG_ASYMB_LABEL "ASYMB"
+#define NCM_MSET_CATALOG_MSET_FORMAT_LABEL "MSETFMT"
 #define NCM_MSET_CATALOG_DIST_EST_SD_SCALE (1.0e-3)
 
 G_END_DECLS

@@ -57,6 +57,7 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_func_eval.h"
 #include "ncm/core/ncm_c.h"
+#include "ncm/core/ncm_serialize.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -241,6 +242,7 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
 #ifdef HAVE_CFITSIO
 static void _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat);
 static void _ncm_mset_catalog_flush_file (NcmMSetCatalog *mcat);
+static NcmMSet *_ncm_mset_catalog_load_mset (NcmMSetCatalog *mcat);
 
 #endif /* HAVE_CFITSIO */
 
@@ -314,23 +316,11 @@ _ncm_mset_catalog_constructed (GObject *object)
     {
 #ifdef HAVE_CFITSIO
 
-      if (self->mset_file == NULL)
-        g_error ("_ncm_mset_catalog_constructed: cannot create catalog without mset.");
-
       if (!g_file_test (self->file, G_FILE_TEST_EXISTS))
         g_error ("_ncm_mset_catalog_constructed: cannot create catalog file `%s' not found.",
                  self->file);
 
-      if (!g_file_test (self->mset_file, G_FILE_TEST_EXISTS))
-        g_error ("_ncm_mset_catalog_constructed: cannot create catalog mset file `%s' not found.",
-                 self->mset_file);
-
-      {
-        NcmSerialize *ser = ncm_serialize_global ();
-
-        self->mset = ncm_mset_load (self->mset_file, ser, NULL);
-        ncm_serialize_free (ser);
-      }
+      self->mset = _ncm_mset_catalog_load_mset (mcat);
 
       _ncm_mset_catalog_open_create_file (mcat, TRUE);
       _ncm_mset_catalog_constructed_alloc_chains (mcat);
@@ -524,14 +514,6 @@ _ncm_mset_catalog_dispose (GObject *object)
 {
   NcmMSetCatalog *mcat        = NCM_MSET_CATALOG (object);
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-
-  if ((self->mset != NULL) && (self->mset_file != NULL))
-  {
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-
-    ncm_mset_save (self->mset, ser, self->mset_file, TRUE, NULL);
-    ncm_serialize_free (ser);
-  }
 
   ncm_vector_clear (&self->bestfit_row);
   g_clear_pointer (&self->order_cat, g_ptr_array_unref);
@@ -1123,6 +1105,119 @@ _ncm_mset_catalog_sync_rng (NcmMSetCatalog *mcat)
   }
 }
 
+/*
+ * Writes @mset as a binary GVariant (the same representation used by
+ * ncm_serialize_to_binfile()) into the primary HDU (HDU0) of @fptr, which
+ * must have just been created by fits_create_file() and hold no data yet.
+ * This must happen before any table extension is created, since resizing
+ * the primary HDU later on would require shifting every following HDU.
+ */
+static void
+_ncm_mset_catalog_write_mset_hdu0 (fitsfile *fptr, NcmMSet *mset)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GVariant *var     = ncm_serialize_to_variant (ser, G_OBJECT (mset));
+  glong naxes[1]    = { (glong) g_variant_get_size (var) };
+  gint status       = 0;
+
+  fits_create_img (fptr, BYTE_IMG, 1, naxes, &status);
+  NCM_FITS_ERROR (status);
+
+  fits_write_img (fptr, TBYTE, 1, naxes[0], (gpointer) g_variant_get_data (var), &status);
+  NCM_FITS_ERROR (status);
+
+  fits_write_key_str (fptr, NCM_MSET_CATALOG_MSET_FORMAT_LABEL, "gvariant",
+                      "Format of the NcmMSet stored in this HDU.", &status);
+  NCM_FITS_ERROR (status);
+
+  g_variant_unref (var);
+  ncm_serialize_free (ser);
+}
+
+/*
+ * Reads back an NcmMSet embedded by _ncm_mset_catalog_write_mset_hdu0(), if
+ * any. Returns %NULL for legacy files whose primary HDU is the default empty
+ * one (no data written to HDU0).
+ */
+static NcmMSet *
+_ncm_mset_catalog_read_mset_hdu0 (fitsfile *fptr)
+{
+  gint status    = 0;
+  gint bitpix    = 0;
+  gint naxis     = 0;
+  gint hdutype   = 0;
+  glong naxes[1] = { 0 };
+  NcmMSet *mset  = NULL;
+
+  fits_movabs_hdu (fptr, 1, &hdutype, &status);
+  NCM_FITS_ERROR (status);
+
+  fits_get_img_param (fptr, 1, &bitpix, &naxis, naxes, &status);
+  NCM_FITS_ERROR (status);
+
+  if ((naxis == 1) && (naxes[0] > 0))
+  {
+    const glong len = naxes[0];
+    guint8 *data    = g_malloc (len);
+    gint any_null   = 0;
+    NcmSerialize *ser;
+    GVariant *var;
+
+    fits_read_img (fptr, TBYTE, 1, len, NULL, data, &any_null, &status);
+    NCM_FITS_ERROR (status);
+
+    var = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE),
+                                   data, len, TRUE, g_free, data);
+
+    ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    mset = NCM_MSET (ncm_serialize_from_variant (ser, var));
+    ncm_serialize_free (ser);
+
+    g_variant_unref (var);
+  }
+
+  return mset;
+}
+
+/*
+ * Resolves the NcmMSet for a catalog being loaded from an existing file: the
+ * mset embedded in HDU0 if present, otherwise the legacy `.mset' GKeyFile
+ * sidecar (read-only support; new catalogs no longer write that file).
+ */
+static NcmMSet *
+_ncm_mset_catalog_load_mset (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  NcmMSet *mset               = NULL;
+  fitsfile *fptr              = NULL;
+  gint status                 = 0;
+
+  fits_open_file (&fptr, self->file, READONLY, &status);
+  NCM_FITS_ERROR (status);
+
+  mset = _ncm_mset_catalog_read_mset_hdu0 (fptr);
+
+  fits_close_file (fptr, &status);
+  NCM_FITS_ERROR (status);
+
+  if (mset == NULL)
+  {
+    if ((self->mset_file == NULL) || !g_file_test (self->mset_file, G_FILE_TEST_EXISTS))
+      g_error ("_ncm_mset_catalog_load_mset: catalog file `%s' has no embedded mset "
+               "and no legacy mset file `%s' was found.",
+               self->file, self->mset_file != NULL ? self->mset_file : "(null)");
+
+    {
+      NcmSerialize *ser = ncm_serialize_global ();
+
+      mset = ncm_mset_load (self->mset_file, ser, NULL);
+      ncm_serialize_free (ser);
+    }
+  }
+
+  return mset;
+}
+
 static void
 _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat)
 {
@@ -1438,6 +1533,8 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
     fits_create_file (&self->fptr, self->file, &status);
     NCM_FITS_ERROR (status);
 
+    _ncm_mset_catalog_write_mset_hdu0 (self->fptr, self->mset);
+
     for (i = 0; i < self->nadd_vals; i++)
     {
       const gchar *cname = g_ptr_array_index (self->add_vals_names, i);
@@ -1522,13 +1619,6 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
   {
     fits_flush_file (self->fptr, &status);
     NCM_FITS_ERROR (status);
-  }
-
-  {
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-
-    ncm_mset_save (self->mset, ser, self->mset_file, TRUE, NULL);
-    ncm_serialize_free (ser);
   }
 }
 
