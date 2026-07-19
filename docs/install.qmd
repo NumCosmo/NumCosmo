@@ -105,11 +105,9 @@ The requirements below can be found on most Linux distributions. Click [here](#s
     A library of C and Fortran subroutines for reading and writing data files in FITS (Flexible Image Transport System) data format.
   - [FFTW3](http://www.fftw.org/) >= 3.1.2 --
     Discrete Fourier transform library.
-
-#### Recommended packages
-
   - [NLOpt](http://ab-initio.mit.edu/wiki/index.php/NLopt) -- Several general purpose minimization algorithms.
-  - [libfyaml](https://github.com/pantoniou/libfyaml) -- A fancy 1.2 YAML and JSON parser/writer.
+
+Note: [libfyaml](https://github.com/pantoniou/libfyaml) (used for YAML/JSON (de)serialization) does not need to be installed separately -- NumCosmo bundles the parser/emitter core it needs under `numcosmo/external/libfyaml`.
 
 #### Optional packages
 
@@ -134,7 +132,7 @@ On Debian-like systems, you can install the required packages from the main repo
 ```bash
 sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc \
   gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev \
-  libopenblas-dev libflint-dev libcfitsio-dev libfyaml-dev libnlopt-dev \
+  libopenblas-dev libflint-dev libcfitsio-dev libnlopt-dev \
   libhdf5-dev gtk-doc-tools
 ```
 
@@ -145,7 +143,7 @@ Note: in recent Debian and Ubuntu releases, the package name changed from
 
 For Mac OS users, Homebrew simplifies the installation process. Execute the following command to install the required packages:
 ```bash
-brew install gobject-introspection gsl gmp mpfr fftw cfitsio libfyaml nlopt gfortran \
+brew install gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran \
   gtk-doc glib openblas
 ```
 

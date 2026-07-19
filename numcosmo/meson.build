@@ -18,6 +18,7 @@ subdir('external/toeplitz')
 subdir('external/class')
 subdir('external/plc')
 subdir('external/lintegrate')
+subdir('external/libfyaml')
 
 ncm_sources = files(
     'ncm/specfunc/ncm_binsplit.c',
@@ -750,56 +751,53 @@ nc_enum_types = gnome.mkenums(
     install_dir: numcosmo_includedir,
 )
 
-ncm_fit_nlopt_enum_types = []
-if nlopt_dep.found()
-    message('Generating ncm_fit_nlopt_enum_meta.h')
+message('Generating ncm_fit_nlopt_enum_meta.h')
 
-    process_nlopt_enum = find_program('process_nlopt_enum.py', required: true)
-    glib_mkenums = find_program('glib-mkenums', required: true)
+process_nlopt_enum = find_program('process_nlopt_enum.py', required: true)
+glib_mkenums = find_program('glib-mkenums', required: true)
 
-    nlopt_header_tmp = cc.preprocess(
-        'ncm_fit_nlopt_enum_meta.c',
-        output: 'ncm_fit_nlopt_enum_meta.i',
-        dependencies: nlopt_dep,
-    )
+nlopt_header_tmp = cc.preprocess(
+    'ncm_fit_nlopt_enum_meta.c',
+    output: 'ncm_fit_nlopt_enum_meta.i',
+    dependencies: nlopt_dep,
+)
 
-    nlopt_enum_meta = custom_target(
-        'ncm_fit_nlopt_enum_meta.h',
-        input: nlopt_header_tmp,
-        output: 'ncm_fit_nlopt_enum_meta.h',
-        command: [process_nlopt_enum, '@INPUT@', '@OUTPUT@'],
-    )
+nlopt_enum_meta = custom_target(
+    'ncm_fit_nlopt_enum_meta.h',
+    input: nlopt_header_tmp,
+    output: 'ncm_fit_nlopt_enum_meta.h',
+    command: [process_nlopt_enum, '@INPUT@', '@OUTPUT@'],
+)
 
-    ncm_fit_nlopt_enum_h = custom_target(
-        'ncm_fit_nlopt_enum.h',
-        input: nlopt_enum_meta,
-        output: 'ncm_fit_nlopt_enum.h',
-        command: [
-            glib_mkenums,
-            '--template', meson.current_source_dir() / 'ncm_fit_nlopt_enum.h.template',
-            '@INPUT@',
-        ],
-        capture: true,
-        install: true,
-        install_dir: numcosmo_includedir,
-    )
+ncm_fit_nlopt_enum_h = custom_target(
+    'ncm_fit_nlopt_enum.h',
+    input: nlopt_enum_meta,
+    output: 'ncm_fit_nlopt_enum.h',
+    command: [
+        glib_mkenums,
+        '--template', meson.current_source_dir() / 'ncm_fit_nlopt_enum.h.template',
+        '@INPUT@',
+    ],
+    capture: true,
+    install: true,
+    install_dir: numcosmo_includedir,
+)
 
-    ncm_fit_nlopt_enum_c = custom_target(
-        'ncm_fit_nlopt_enum.c',
-        input: nlopt_enum_meta,
-        output: 'ncm_fit_nlopt_enum.c',
-        command: [
-            glib_mkenums,
-            '--template', meson.current_source_dir() / 'ncm_fit_nlopt_enum.c.template',
-            '@INPUT@',
-        ],
-        capture: true,
-    )
+ncm_fit_nlopt_enum_c = custom_target(
+    'ncm_fit_nlopt_enum.c',
+    input: nlopt_enum_meta,
+    output: 'ncm_fit_nlopt_enum.c',
+    command: [
+        glib_mkenums,
+        '--template', meson.current_source_dir() / 'ncm_fit_nlopt_enum.c.template',
+        '@INPUT@',
+    ],
+    capture: true,
+)
 
-    ncm_fit_nlopt_enum_types += [ncm_fit_nlopt_enum_c, ncm_fit_nlopt_enum_h]
-    ncm_sources += 'ncm/fit/ncm_fit_nlopt.c'
-    ncm_headers += 'ncm/fit/ncm_fit_nlopt.h'
-endif
+ncm_fit_nlopt_enum_types = [ncm_fit_nlopt_enum_c, ncm_fit_nlopt_enum_h]
+ncm_sources += 'ncm/fit/ncm_fit_nlopt.c'
+ncm_headers += 'ncm/fit/ncm_fit_nlopt.h'
 
 install_headers(
     ncm_headers + nc_headers + [
@@ -813,11 +811,11 @@ install_headers(
 sundials_inc = include_directories('external/sundials/include')
 libcuba_inc = include_directories('external/libcuba')
 lintegrate_inc = include_directories('external/lintegrate')
+libfyaml_inc = include_directories('external/libfyaml/include')
 
 libnumcosmo_dep_list = [
     mpi_c_dep,
     cfitsio_dep,
-    libfyaml_dep,
     fftw3_dep,
     fftw3f_dep,
     gio_dep,
@@ -859,12 +857,28 @@ libnumcosmo = library(
     install: true,
     # intl.lib is not compatible with SAFESEH
     link_args: [noseh_link_args],
-    include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc, lintegrate_inc],
+    include_directories: [
+        configinc,
+        sundials_inc,
+        libcuba_inc,
+        plc_inc,
+        lintegrate_inc,
+        libfyaml_inc,
+    ],
     # Planck likelihood code uses dlsym to load the Planck likelihood library
     # components. This requires linking with link_whole to ensure that the
     # symbols are available at runtime.
     link_whole: [libplc],
-    link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass, liblintegrate],
+    link_with: [
+        libsundials,
+        libcuba,
+        liblevmar,
+        libmisc,
+        libtoeplitz,
+        libclass,
+        liblintegrate,
+        libfyaml,
+    ],
     dependencies: libnumcosmo_dep_list,
     c_args: numcosmo_c_args,
 )
@@ -872,11 +886,8 @@ libnumcosmo = library(
 libnumcosmo_dep_sources = [
     ncm_enum_types[1],
     nc_enum_types[1],
+    ncm_fit_nlopt_enum_types[1],
 ]
-
-if nlopt_dep.found()
-    libnumcosmo_dep_sources += ncm_fit_nlopt_enum_types[1]
-endif
 
 libnumcosmo_dep = declare_dependency(
     link_with: libnumcosmo,

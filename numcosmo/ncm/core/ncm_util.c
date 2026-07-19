@@ -51,9 +51,7 @@
 #include <gsl/gsl_sf_hyperg.h>
 
 #include <cvode/cvode.h>
-#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* HAVE_FFTW3 */
 #ifdef HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* HAVE_CFITSIO */

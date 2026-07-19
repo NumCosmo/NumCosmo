@@ -56,12 +56,10 @@ main (void)
   NcSphereMap *omap      = nc_sphere_healpix_read_map (argv[1], NULL);
   NcSphereMap *map       = nc_sphere_map_clone (omap);
 
-#ifdef HAVE_FFTW3
   GTimer *global_bench = g_timer_new ();
   NcSphereMapSHT *mapsht;
   gsl_matrix *cls;
 
-#endif /* HAVE_FFTW3 */
   gint i = 1000;
   gdouble noise;
 
@@ -102,7 +100,6 @@ main (void)
   nc_sphere_mapalm_init (mapalm, 1024);
   printf ("# New mapalm with [%ld] pixels and lmax [%d] took %fs\n", map->npix, mapalm->lmax, g_timer_elapsed (bench, NULL));
 
-#ifdef HAVE_FFTW3
   g_timer_start (bench);
   mapsht = nc_sphere_mapsht_new (map, mapalm, FFTW_ESTIMATE); /*FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
   printf ("# New SHT with [%ld] pixels and lmax [%d] took %fs\n", map->npix, mapalm->lmax, g_timer_elapsed (bench, NULL));
@@ -186,7 +183,6 @@ main (void)
     /*printf ("[%ld] (% .12e, % .12e) = % .12e\n", i, gsl_vector_get (map->theta, i), gsl_vector_get (map->phi, i), map->fmap[i]); */
   }
 
-#endif /* HAVE_FFTW3 */
 #else
   g_error ("chealpix or cfitsio not installed.");
 #endif /* defined HAVE_CHEALPIX && defined HAVE_CFITSIO */
