@@ -84,9 +84,28 @@ _nc_hicosmo_de_jbp_w_de (NcHICosmoDE *cosmo_de, gdouble z)
 NcHICosmoDEJbp *
 nc_hicosmo_de_jbp_new (void)
 {
-  NcHICosmoDEJbp *jbp = g_object_new (NC_TYPE_HICOSMO_DE_JBP, NULL);
+  return nc_hicosmo_de_jbp_new_full (NULL, NULL);
+}
 
-  return jbp;
+/**
+ * nc_hicosmo_de_jbp_new_full:
+ * @reion: (nullable): a #NcHIReion
+ * @prim: (nullable): a #NcHIPrim
+ *
+ * This function instantiates a new object of type #NcHICosmoDEJbp, with
+ * @reion and @prim attached at construction time (submodels are
+ * construction-only and cannot be attached afterward). Either may be
+ * %NULL to leave that slot unset.
+ *
+ * Returns: A new #NcHICosmoDEJbp
+ */
+NcHICosmoDEJbp *
+nc_hicosmo_de_jbp_new_full (NcHIReion *reion, NcHIPrim *prim)
+{
+  return g_object_new (NC_TYPE_HICOSMO_DE_JBP,
+                       "reion", reion,
+                       "prim", prim,
+                       NULL);
 }
 
 enum

@@ -124,9 +124,9 @@ main (gint argc, gchar *argv[])
 void
 test_nc_cluster_abundance_new (TestNcClusterAbundance *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion            = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim              = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim));
   NcDistance *dist            = nc_distance_new (3.0);
   NcTransferFunc *tf          = nc_transfer_func_eh_new ();
   NcPowspecML *ps_ml          = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
@@ -136,9 +136,6 @@ test_nc_cluster_abundance_new (TestNcClusterAbundance *test, gconstpointer pdata
   NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_serialize_global_from_string ("NcClusterMassAscaso"));
   NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_serialize_global_from_string ("NcClusterPhotozGaussGlobal{'pz-min':<0.1>, 'pz-max':<1.0>, 'z-bias':<0.0>, 'sigma0':<1.0e-2>}"));
   NcHaloBias *hbias           = NC_HALO_BIAS (nc_halo_bias_ps_new (mfp));
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
 
   test->cosmo    = nc_hicosmo_ref (cosmo);
   test->cad      = nc_cluster_abundance_new (mfp, hbias);

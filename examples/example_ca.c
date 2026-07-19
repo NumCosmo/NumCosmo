@@ -23,11 +23,6 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
 
   /****************************************************************************
-   * New homogeneous and isotropic cosmological model NcHICosmoDEXcdm.
-   ****************************************************************************/
-  cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-
-  /****************************************************************************
    * New homogeneous and isotropic reionization object.
    ****************************************************************************/
   reion = NC_HIREION (nc_hireion_camb_new ());
@@ -38,10 +33,13 @@ main (gint argc, gchar *argv[])
   prim = NC_HIPRIM (nc_hiprim_power_law_new ());
 
   /****************************************************************************
-   * Adding the submodels to the main cosmology model.
+   * New homogeneous and isotropic cosmological model NcHICosmoDEXcdm, with
+   * the reionization and primordial submodels attached at construction
+   * time -- NcHICosmo declares them as construction-only typed slots, so
+   * they must be provided as constructor properties rather than attached
+   * afterward.
    ****************************************************************************/
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
+  cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim));
 
   /****************************************************************************
    * New cosmological distance objects optimizied to perform calculations

@@ -95,9 +95,9 @@ main (gint argc, gchar *argv[])
 void
 test_nc_data_cluster_ncounts_gauss_new (TestNcClusterNCountsGauss *test, gconstpointer pdata)
 {
-  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
   NcHIReion *reion            = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim              = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim));
   NcDistance *dist            = nc_distance_new (3.0);
   NcTransferFunc *tf          = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncEH"));
   NcPowspecML *ps_ml          = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
@@ -122,10 +122,6 @@ test_nc_data_cluster_ncounts_gauss_new (TestNcClusterNCountsGauss *test, gconstp
       ncm_matrix_set (s, i, j, 2);
     }
   }
-
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
-  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
-
 
   test->z_obs             = ncm_vector_new_data_dup (z_obs_array, 8, 1);
   test->z_obs_params      = ncm_matrix_new0 (7, 7);

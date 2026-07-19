@@ -56,6 +56,7 @@ struct _NcHICosmoLCDM
 GType nc_hicosmo_lcdm_get_type (void) G_GNUC_CONST;
 
 NcHICosmoLCDM *nc_hicosmo_lcdm_new (void);
+NcHICosmoLCDM *nc_hicosmo_lcdm_new_full (NcHIReion *reion, NcHIPrim *prim);
 
 G_END_DECLS
 
