@@ -97,6 +97,8 @@ typedef gdouble (*NcmModelVFunc2) (NcmModel *model, const guint n, const gdouble
  * @NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE: The reparam is incompatible.
  * @NCM_MODEL_ERROR_INVALID_TYPE: The type is invalid.
  * @NCM_MODEL_ERROR_PARAM_CHANGED: The parameter was changed.
+ * @NCM_MODEL_ERROR_PARAM_NAME_AMBIGUOUS: The parameter name matches more
+ * than one attached submodel; a qualified "slot:param" name is required.
  *
  * Error codes returned by the #NcmModel class.
  *
@@ -110,7 +112,8 @@ typedef enum _NcmModelError
   NCM_MODEL_ERROR_ORIG_PARAM_NAME_NOT_FOUND,
   NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE,
   NCM_MODEL_ERROR_INVALID_TYPE,
-  NCM_MODEL_ERROR_PARAM_CHANGED
+  NCM_MODEL_ERROR_PARAM_CHANGED,
+  NCM_MODEL_ERROR_PARAM_NAME_AMBIGUOUS,
 } NcmModelError;
 
 GQuark ncm_model_error_quark (void);
@@ -199,6 +202,7 @@ gboolean ncm_model_params_valid_bounds (NcmModel *model);
 
 gboolean ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i);
 gboolean ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i, GError **error);
+gboolean ncm_model_param_index_from_name_full (NcmModel *model, const gchar *param_name, NcmModel **target, guint *i, GError **error);
 const gchar *ncm_model_orig_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_orig_param_symbol (NcmModel *model, guint n);

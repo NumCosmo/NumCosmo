@@ -43,6 +43,8 @@ void test_nc_hicosmo_lcdm_new_full (void);
 void test_nc_hicosmo_de_cpl_new_full (void);
 void test_nc_hicosmo_de_jbp_new_full (void);
 
+void test_nc_hicosmo_de_param_by_name_submodel (void);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -59,6 +61,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/hicosmo_de/lcdm/new_full", &test_nc_hicosmo_lcdm_new_full);
   g_test_add_func ("/nc/hicosmo_de/cpl/new_full", &test_nc_hicosmo_de_cpl_new_full);
   g_test_add_func ("/nc/hicosmo_de/jbp/new_full", &test_nc_hicosmo_de_jbp_new_full);
+
+  g_test_add_func ("/nc/hicosmo_de/param_by_name/submodel", &test_nc_hicosmo_de_param_by_name_submodel);
 
   g_test_run ();
 }
@@ -208,5 +212,105 @@ test_nc_hicosmo_de_jbp_new_full (void)
   g_assert_true (nc_hicosmo_peek_reion (NC_HICOSMO (cosmo)) == NULL);
   g_assert_true (nc_hicosmo_peek_prim (NC_HICOSMO (cosmo)) == NULL);
   nc_hicosmo_free (NC_HICOSMO (cosmo));
+}
+
+void
+test_nc_hicosmo_de_param_by_name_submodel (void)
+{
+  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim   = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim));
+  NcmModel *model  = NCM_MODEL (cosmo);
+  GError *error    = NULL;
+
+  /* Host's own params are unaffected -- resolved on the host, no fallback
+   * needed. */
+  ncm_assert_cmpdouble_e (ncm_model___getitem__ (model, "H0", &error), ==,
+                          ncm_model_orig_param_get (model, NC_HICOSMO_DE_H0), 1.0e-15, 0.0);
+  g_assert_no_error (error);
+
+  /* Bare name falls back into the (unique) submodel that has it. */
+  g_assert_cmpfloat (ncm_model___getitem__ (model, "z_re", &error), ==, 13.0);
+  g_assert_no_error (error);
+
+  ncm_model___setitem__ (model, "z_re", 11.0, &error);
+  g_assert_no_error (error);
+  g_assert_cmpfloat (ncm_model_orig_param_get (NCM_MODEL (reion), NC_HIREION_CAMB_HII_HEII_Z), ==, 11.0);
+  g_assert_cmpfloat (ncm_model___getitem__ (model, "z_re", &error), ==, 11.0);
+  g_assert_no_error (error);
+
+  g_assert_cmpfloat (ncm_model___getitem__ (model, "n_SA", &error), ==,
+                     ncm_model_orig_param_get (NCM_MODEL (prim), NC_HIPRIM_POWER_LAW_N_SA));
+  g_assert_no_error (error);
+
+  /* Qualified "slot:param" form always works and matches the bare form. */
+  g_assert_cmpfloat (ncm_model___getitem__ (model, "reion:z_re", &error), ==, 11.0);
+  g_assert_no_error (error);
+
+  ncm_model___setitem__ (model, "reion:z_re", 8.5, &error);
+  g_assert_no_error (error);
+  g_assert_cmpfloat (ncm_model___getitem__ (model, "z_re", &error), ==, 8.5);
+  g_assert_no_error (error);
+
+  g_assert_cmpfloat (ncm_model___getitem__ (model, "prim:n_SA", &error), ==,
+                     ncm_model_orig_param_get (NCM_MODEL (prim), NC_HIPRIM_POWER_LAW_N_SA));
+  g_assert_no_error (error);
+
+  /* Unknown parameter name (host and submodels): clear NOT_FOUND error. */
+  {
+    gdouble val = ncm_model___getitem__ (model, "does_not_exist", &error);
+
+    g_assert_true (isnan (val));
+    g_assert_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND);
+    g_clear_error (&error);
+  }
+
+  /* Qualified form with an unknown slot name: clear NOT_FOUND error. */
+  {
+    gdouble val = ncm_model___getitem__ (model, "nosuchslot:something", &error);
+
+    g_assert_true (isnan (val));
+    g_assert_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND);
+    g_clear_error (&error);
+  }
+
+  /* Same behavior through the underlying by-name/desc C API, not just the
+   * dict dunders. */
+  g_assert_cmpfloat (ncm_model_param_get_by_name (model, "z_re", &error), ==, 8.5);
+  g_assert_no_error (error);
+
+  ncm_model_param_set_by_name (model, "z_re", 9.5, &error);
+  g_assert_no_error (error);
+  g_assert_cmpfloat (ncm_model_param_get_by_name (model, "z_re", &error), ==, 9.5);
+  g_assert_no_error (error);
+
+  {
+    GHashTable *desc = ncm_model_param_get_desc (model, "z_re", &error);
+
+    g_assert_no_error (error);
+    g_assert_true (desc != NULL);
+    g_hash_table_unref (desc);
+  }
+
+  /* Also settable via the qualified form. */
+  {
+    GHashTable *set_desc = g_hash_table_new (g_str_hash, g_str_equal);
+    GValue *value        = g_new0 (GValue, 1);
+
+    g_value_init (value, G_TYPE_BOOLEAN);
+    g_value_set_boolean (value, TRUE);
+    g_hash_table_insert (set_desc, "fit", value);
+
+    ncm_model_param_set_desc (model, "reion:z_re", set_desc, &error);
+    g_assert_no_error (error);
+
+    g_hash_table_unref (set_desc);
+    g_value_unset (value);
+    g_free (value);
+  }
+
+  nc_hicosmo_free (cosmo);
+  nc_hireion_free (reion);
+  nc_hiprim_free (prim);
 }
 
