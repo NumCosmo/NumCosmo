@@ -3358,6 +3358,73 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name, GError **error
   }
 }
 
+/*
+ * A submodel is reachable from its host both through the generic
+ * "submodel-array" boxed property every #NcmModel carries (walked and
+ * recursively serialized by ncm_serialize_to_variant() itself, independent
+ * of any typed slot) and as its own, independent top-level NcmMSet entry.
+ * Serializing the host first (see the main loop below) walks that
+ * property and, along the way, fully serializes the submodel -- and
+ * everything reachable from it, at any depth (e.g. an attached "reparam"
+ * property, and that reparam's own "T"/"v" properties, and so on) --
+ * registering each as an already-seen instance in @ser's persistent,
+ * cross-call name table (populated whenever @ser has
+ * NCM_SERIALIZE_OPT_AUTOSAVE_SER set, as ncm_mset_save()'s own @ser
+ * always does). Left alone, each of those objects' own later, independent
+ * top-level serialization would then find itself "already seen" and emit
+ * a bare name-only reference instead of a full definition. Recursively
+ * unregisters @obj and every nested GObject-valued readable property
+ * reachable from it, so later, independent serialization of the same
+ * objects produces full definitions again. ncm_serialize_unset()/
+ * ncm_serialize_remove_ser() are themselves no-ops when @obj was never
+ * registered, so this is safe to call unconditionally on every object
+ * reachable from @obj -- @visited (a caller-owned, pointer-keyed set) is
+ * only there to guard against revisiting the same object twice, not to
+ * decide whether unregistering is needed.
+ */
+static void
+_ncm_mset_serialize_unset_recursive (NcmSerialize *ser, GObject *obj, GHashTable *visited)
+{
+  if (g_hash_table_contains (visited, obj))
+    return;
+
+  g_hash_table_add (visited, obj);
+
+  {
+    GObjectClass *klass = G_OBJECT_GET_CLASS (obj);
+    guint n_properties, i;
+    GParamSpec **props = g_object_class_list_properties (klass, &n_properties);
+
+    for (i = 0; i < n_properties; i++)
+    {
+      GParamSpec *pspec = props[i];
+
+      if (((pspec->flags & G_PARAM_READABLE) == G_PARAM_READABLE) &&
+          g_type_is_a (pspec->value_type, G_TYPE_OBJECT))
+      {
+        GValue val = G_VALUE_INIT;
+
+        g_value_init (&val, pspec->value_type);
+        g_object_get_property (obj, pspec->name, &val);
+
+        {
+          GObject *nested = g_value_get_object (&val);
+
+          if (nested != NULL)
+            _ncm_mset_serialize_unset_recursive (ser, nested, visited);
+        }
+
+        g_value_unset (&val);
+      }
+    }
+
+    g_free (props);
+  }
+
+  ncm_serialize_unset (ser, obj);
+  ncm_serialize_remove_ser (ser, obj);
+}
+
 /**
  * ncm_mset_save:
  * @mset: a #NcmMSet
@@ -3509,12 +3576,18 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
           g_free (model_desc);
         }
 
-        for (j = 0; j < nsubmodels; j++)
+        if (nsubmodels > 0)
         {
-          NcmModel *submodel = ncm_model_peek_submodel (item->model, j);
+          GHashTable *visited = g_hash_table_new (NULL, NULL);
 
-          ncm_serialize_unset (ser, submodel);
-          ncm_serialize_remove_ser (ser, submodel);
+          for (j = 0; j < nsubmodels; j++)
+          {
+            NcmModel *submodel = ncm_model_peek_submodel (item->model, j);
+
+            _ncm_mset_serialize_unset_recursive (ser, G_OBJECT (submodel), visited);
+          }
+
+          g_hash_table_unref (visited);
         }
 
         if (nparams != 0)

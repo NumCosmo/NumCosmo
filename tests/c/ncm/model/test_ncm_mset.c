@@ -27,6 +27,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include <numcosmo/ncm/model/ncm_reparam_linear.h>
 
 #include <math.h>
 #include <glib.h>
@@ -50,6 +51,7 @@ void test_ncm_mset_fparams_validate_all (TestNcmMSet *test, gconstpointer pdata)
 void test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_shallow_copy (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata);
+void test_ncm_mset_saveload_submodel_reparam (void);
 
 void test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_invalid_get (TestNcmMSet *test, gconstpointer pdata);
@@ -101,6 +103,8 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_new,
               &test_ncm_mset_saveload,
               &test_ncm_mset_free);
+
+  g_test_add_func ("/ncm/mset/saveload/submodel_reparam", &test_ncm_mset_saveload_submodel_reparam);
 
   g_test_add ("/ncm/mset/traps", TestNcmMSet, NULL,
               &test_ncm_mset_new,
@@ -597,6 +601,118 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
 
   nc_cluster_mass_free (benson);
   nc_cluster_mass_free (mass);
+}
+
+void
+test_ncm_mset_saveload_submodel_reparam (void)
+{
+  /*
+   * Regression test for a real, pre-existing bug found while testing the
+   * reparam backpointer migration: every NcmModel carries a generic
+   * "submodel-array" boxed property (independent of any typed slot) that
+   * ncm_serialize_to_variant() walks and recursively, fully serializes --
+   * so when a host (cosmo) is serialized, its submodels (e.g. reion) get
+   * fully walked and registered as already-seen instances in @ser's
+   * persistent, cross-call name table (populated by
+   * NCM_SERIALIZE_OPT_AUTOSAVE_SER, which ncm_mset_save()'s own @ser
+   * always sets). Since a submodel is *also* independently serialized as
+   * its own top-level NcmMSet entry, ncm_mset_save() already unregistered
+   * the submodel itself from @ser right after the host's own walk, to
+   * force a full re-serialization instead of a bare name-only reference
+   * -- but didn't recurse into objects NESTED inside the submodel's own
+   * serialization (e.g. an attached NcmReparam, and that reparam's own
+   * "T"/"v" properties), so anything nested came out as an empty,
+   * unusable reference after a save/load round-trip. Fixed in
+   * ncm_mset_save() via a recursive unregistration helper
+   * (_ncm_mset_serialize_unset_recursive()) that walks every
+   * GObject-valued readable property reachable from the submodel, not
+   * just the submodel itself.
+   *
+   * Uses a host-independent NcmReparamLinear here (not
+   * NcHIReionCambReparamTau) specifically to isolate this bug from a
+   * separate, known limitation: ncm_mset_load()'s two-pass reorder builds
+   * every submodel (including setting its "reparam" property) in pass 1,
+   * before pass 2 attaches it to its host in pass 2 -- so a reparam whose
+   * own old2new/new2old needs ncm_model_peek_host() (like the tau reparam)
+   * cannot currently be pre-attached before a save/load round-trip; it
+   * must be (re-)attached via the public API (e.g. z_to_tau()) after
+   * loading, not expected to survive serialization pre-attached.
+   */
+  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_lcdm_new_full (reion, NULL));
+  GError *error    = NULL;
+
+  {
+    NcmMatrix *T = ncm_matrix_new (2, 2);
+    NcmVector *v = ncm_vector_new (2);
+    NcmReparam *rp;
+
+    ncm_matrix_set_identity (T);
+    ncm_vector_set_zero (v);
+
+    rp = NCM_REPARAM (ncm_reparam_linear_new (2, T, v));
+    ncm_model_set_reparam (NCM_MODEL (reion), rp, &error);
+    g_assert_no_error (error);
+    ncm_reparam_free (rp);
+
+    ncm_matrix_free (T);
+    ncm_vector_free (v);
+  }
+
+  ncm_model_param_set (NCM_MODEL (reion), NC_HIREION_CAMB_HII_HEII_Z, 9.5);
+
+  {
+    NcmMSet *mset     = ncm_mset_empty_new ();
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_mset_saved_reparam_XXXXXX", NULL);
+    gchar *filename   = g_strdup_printf ("%s/test_ncm_mset_saved_reparam.mset", tmp_dir);
+    NcmMSet *mset_dup = NULL;
+    NcmModel *cosmo_dup;
+    NcmModel *reion_dup;
+    NcmReparam *reparam_dup;
+
+    ncm_mset_set (mset, NCM_MODEL (cosmo), &error);
+    g_assert_no_error (error);
+
+    ncm_mset_save (mset, ser, filename, TRUE, NULL);
+    mset_dup = ncm_mset_load (filename, ser, &error);
+    g_assert_no_error (error);
+    g_assert_true (mset_dup != NULL);
+
+    g_assert_true (ncm_mset_cmp (mset, mset_dup, TRUE));
+
+    cosmo_dup = ncm_mset_peek (mset_dup, nc_hicosmo_id ());
+    g_assert_true (cosmo_dup != NULL);
+
+    reion_dup = ncm_model_peek_submodel_by_mid (cosmo_dup, nc_hireion_id ());
+    g_assert_true (reion_dup != NULL);
+
+    /* The loaded reion must have its host resolvable again -- the whole
+     * point of the backpointer -- and its reparam must have survived as a
+     * full, working definition, not an empty reference. */
+    g_assert_true (ncm_model_peek_host (reion_dup) == cosmo_dup);
+
+    reparam_dup = ncm_model_peek_reparam (reion_dup);
+    g_assert_true (NCM_IS_REPARAM_LINEAR (reparam_dup));
+    g_assert_cmpuint (ncm_model_len (reion_dup), ==, ncm_model_len (NCM_MODEL (reion)));
+
+    ncm_assert_cmpdouble (ncm_model_param_get (reion_dup, NC_HIREION_CAMB_HII_HEII_Z), ==,
+                          ncm_model_param_get (NCM_MODEL (reion), NC_HIREION_CAMB_HII_HEII_Z));
+
+    ncm_mset_free (mset_dup);
+    ncm_serialize_free (ser);
+
+    g_unlink (filename);
+    g_rmdir (tmp_dir);
+
+    g_free (filename);
+    g_free (tmp_dir);
+
+    ncm_mset_free (mset);
+  }
+
+  nc_hicosmo_free (cosmo);
+  nc_hireion_free (reion);
 }
 
 void
