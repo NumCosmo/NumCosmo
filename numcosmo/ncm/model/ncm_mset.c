@@ -2633,6 +2633,42 @@ ncm_mset_fparams_get_vector_offset (NcmMSet *mset, NcmVector *x, guint offset)
   }
 }
 
+/*
+ * Fires ncm_model_params_update() (hence any attached reparam's new2old)
+ * once for every model in @self->mid_array, after a full batch of raw
+ * values has already been written into every model's own vector (by the
+ * ncm_mset_param_set0() loop that always runs immediately before this).
+ *
+ * Processes non-submodel models first, then submodels -- required so that
+ * a submodel's reparam (if it reads its host via ncm_model_peek_host())
+ * always sees the host's own already-updated state, never a value that's
+ * about to change later in the same batch. mid_array's own order is sorted
+ * by class-registration id, unrelated to the host/submodel relationship,
+ * so this can't be relied on without the explicit two-pass split below.
+ */
+static void
+_ncm_mset_fparams_update_models (NcmMSet *mset)
+{
+  NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
+  guint fpi;
+
+  for (fpi = 0; fpi < self->mid_array->len; fpi++)
+  {
+    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
+
+    if (!ncm_model_is_submodel (model))
+      ncm_model_params_update (model);
+  }
+
+  for (fpi = 0; fpi < self->mid_array->len; fpi++)
+  {
+    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
+
+    if (ncm_model_is_submodel (model))
+      ncm_model_params_update (model);
+  }
+}
+
 /**
  * ncm_mset_fparams_set_vector:
  * @mset: a #NcmMSet
@@ -2656,12 +2692,7 @@ ncm_mset_fparams_set_vector (NcmMSet *mset, const NcmVector *x)
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, ncm_vector_get (x, fpi));
   }
 
-  for (fpi = 0; fpi < self->mid_array->len; fpi++)
-  {
-    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
-
-    ncm_model_params_update (model);
-  }
+  _ncm_mset_fparams_update_models (mset);
 }
 
 /**
@@ -2687,12 +2718,7 @@ ncm_mset_fparams_set_vector_offset (NcmMSet *mset, const NcmVector *x, guint off
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, ncm_vector_get (x, fpi + offset));
   }
 
-  for (fpi = 0; fpi < self->mid_array->len; fpi++)
-  {
-    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
-
-    ncm_model_params_update (model);
-  }
+  _ncm_mset_fparams_update_models (mset);
 }
 
 /**
@@ -2719,12 +2745,7 @@ ncm_mset_fparams_set_array (NcmMSet *mset, const gdouble *x)
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, x[fpi]);
   }
 
-  for (fpi = 0; fpi < self->mid_array->len; fpi++)
-  {
-    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
-
-    ncm_model_params_update (model);
-  }
+  _ncm_mset_fparams_update_models (mset);
 }
 
 /**
@@ -2750,12 +2771,7 @@ ncm_mset_fparams_set_gsl_vector (NcmMSet *mset, const gsl_vector *x)
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, gsl_vector_get (x, fpi));
   }
 
-  for (fpi = 0; fpi < self->mid_array->len; fpi++)
-  {
-    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
-
-    ncm_model_params_update (model);
-  }
+  _ncm_mset_fparams_update_models (mset);
 }
 
 /**
