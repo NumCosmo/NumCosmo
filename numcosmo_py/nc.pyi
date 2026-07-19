@@ -9177,6 +9177,12 @@ class HICosmo(NumCosmoMath.Model):
 
     Object NcHICosmo
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -9211,6 +9217,8 @@ class HICosmo(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
@@ -9223,6 +9231,8 @@ class HICosmo(NumCosmoMath.Model):
     smin: int = ...
     def __init__(
         self,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -9466,6 +9476,12 @@ class HICosmoDE(HICosmo):
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -9527,6 +9543,8 @@ class HICosmoDE(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -9560,6 +9578,8 @@ class HICosmoDE(HICosmo):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -9602,6 +9622,7 @@ class HICosmoDECpl(HICosmoDE):
 
         HICosmoDECpl(**properties)
         new() -> NumCosmo.HICosmoDECpl
+        new_full(reion:NumCosmo.HIReion=None, prim:NumCosmo.HIPrim=None) -> NumCosmo.HICosmoDECpl
 
     Object NcHICosmoDECpl
 
@@ -9671,6 +9692,12 @@ class HICosmoDECpl(HICosmoDE):
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -9736,6 +9763,8 @@ class HICosmoDECpl(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -9772,12 +9801,20 @@ class HICosmoDECpl(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
     def new(cls) -> HICosmoDECpl: ...
+    @classmethod
+    def new_full(
+        cls,
+        reion: typing.Optional[HIReion] = None,
+        prim: typing.Optional[HIPrim] = None,
+    ) -> HICosmoDECpl: ...
 
 class HICosmoDECplClass(GObject.GPointer):
     r"""
@@ -9798,6 +9835,7 @@ class HICosmoDEJbp(HICosmoDE):
 
         HICosmoDEJbp(**properties)
         new() -> NumCosmo.HICosmoDEJbp
+        new_full(reion:NumCosmo.HIReion=None, prim:NumCosmo.HIPrim=None) -> NumCosmo.HICosmoDEJbp
 
     Object NcHICosmoDEJbp
 
@@ -9867,6 +9905,12 @@ class HICosmoDEJbp(HICosmoDE):
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -9932,6 +9976,8 @@ class HICosmoDEJbp(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -9968,12 +10014,20 @@ class HICosmoDEJbp(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
     def new(cls) -> HICosmoDEJbp: ...
+    @classmethod
+    def new_full(
+        cls,
+        reion: typing.Optional[HIReion] = None,
+        prim: typing.Optional[HIPrim] = None,
+    ) -> HICosmoDEJbp: ...
 
 class HICosmoDEJbpClass(GObject.GPointer):
     r"""
@@ -10167,6 +10221,12 @@ class HICosmoDEWSpline(HICosmoDE):
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -10234,6 +10294,8 @@ class HICosmoDEWSpline(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -10273,6 +10335,8 @@ class HICosmoDEWSpline(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -10310,6 +10374,7 @@ class HICosmoDEXcdm(HICosmoDE):
 
         HICosmoDEXcdm(**properties)
         new() -> NumCosmo.HICosmoDEXcdm
+        new_full(reion:NumCosmo.HIReion=None, prim:NumCosmo.HIPrim=None) -> NumCosmo.HICosmoDEXcdm
 
     Object NcHICosmoDEXcdm
 
@@ -10375,6 +10440,12 @@ class HICosmoDEXcdm(HICosmoDE):
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -10438,6 +10509,8 @@ class HICosmoDEXcdm(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -10472,12 +10545,20 @@ class HICosmoDEXcdm(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
     def new(cls) -> HICosmoDEXcdm: ...
+    @classmethod
+    def new_full(
+        cls,
+        reion: typing.Optional[HIReion] = None,
+        prim: typing.Optional[HIPrim] = None,
+    ) -> HICosmoDEXcdm: ...
 
 class HICosmoDEXcdmClass(GObject.GPointer):
     r"""
@@ -10586,6 +10667,12 @@ class HICosmoGCG(HICosmo):
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -10648,6 +10735,8 @@ class HICosmoGCG(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -10682,6 +10771,8 @@ class HICosmoGCG(HICosmo):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -10870,6 +10961,12 @@ class HICosmoIDEM2(HICosmo):
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -10932,6 +11029,8 @@ class HICosmoIDEM2(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -10966,6 +11065,8 @@ class HICosmoIDEM2(HICosmo):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11094,6 +11195,7 @@ class HICosmoLCDM(HICosmo):
 
         HICosmoLCDM(**properties)
         new() -> NumCosmo.HICosmoLCDM
+        new_full(reion:NumCosmo.HIReion=None, prim:NumCosmo.HIPrim=None) -> NumCosmo.HICosmoLCDM
 
     Object NcHICosmoLCDM
 
@@ -11126,6 +11228,12 @@ class HICosmoLCDM(HICosmo):
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
         \Omega_{b0}:fit
+
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -11175,6 +11283,8 @@ class HICosmoLCDM(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11194,12 +11304,20 @@ class HICosmoLCDM(HICosmo):
         Tgamma0_fit: bool = ...,
         Yp: float = ...,
         Yp_fit: bool = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
     def new(cls) -> HICosmoLCDM: ...
+    @classmethod
+    def new_full(
+        cls,
+        reion: typing.Optional[HIReion] = None,
+        prim: typing.Optional[HIPrim] = None,
+    ) -> HICosmoLCDM: ...
 
 class HICosmoLCDMClass(GObject.GPointer):
     r"""
@@ -11249,6 +11367,12 @@ class HICosmoQConst(HICosmo):
       zs-fit -> gboolean: zs-fit
         z_\star:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -11295,6 +11419,8 @@ class HICosmoQConst(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11312,6 +11438,8 @@ class HICosmoQConst(HICosmo):
         q_fit: bool = ...,
         zs: float = ...,
         zs_fit: bool = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11363,6 +11491,12 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
       xb-fit -> gboolean: xb-fit
         x_b:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -11407,6 +11541,8 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11425,6 +11561,8 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
         w_fit: bool = ...,
         xb: float = ...,
         xb_fit: bool = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11472,6 +11610,12 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
       xb-fit -> gboolean: xb-fit
         x_b:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -11514,6 +11658,8 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11528,6 +11674,8 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
         w_fit: bool = ...,
         xb: float = ...,
         xb_fit: bool = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11589,6 +11737,12 @@ class HICosmoQLinear(HICosmo):
       zs-fit -> gboolean: zs-fit
         z_\star:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -11637,6 +11791,8 @@ class HICosmoQLinear(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11656,6 +11812,8 @@ class HICosmoQLinear(HICosmo):
         qp_fit: bool = ...,
         zs: float = ...,
         zs_fit: bool = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11719,6 +11877,12 @@ class HICosmoQRBF(HICosmo):
       ci-fit -> GVariant: ci-fit
         c_i:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -11768,6 +11932,8 @@ class HICosmoQRBF(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11789,6 +11955,8 @@ class HICosmoQRBF(HICosmo):
         xi_fit: GLib.Variant = ...,
         xi_length: int = ...,
         zf: float = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11905,6 +12073,12 @@ class HICosmoQSpline(HICosmo):
       qparam-fit -> GVariant: qparam-fit
         q:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -11951,6 +12125,8 @@ class HICosmoQSpline(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11974,6 +12150,8 @@ class HICosmoQSpline(HICosmo):
         qparam_length: int = ...,
         spline: NumCosmoMath.Spline = ...,
         zf: float = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -12158,6 +12336,12 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
       betaem-fit -> gboolean: betaem-fit
         \beta_\mathrm{em}:fit
 
+    Properties from NcHICosmo:
+      reion -> NcHIReion: reion
+        reion
+      prim -> NcHIPrim: prim
+        prim
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -12213,6 +12397,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        prim: HIPrim
+        reion: HIReion
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -12239,6 +12425,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         sigmaphi_fit: bool = ...,
         xb: float = ...,
         xb_fit: bool = ...,
+        prim: HIPrim = ...,
+        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -16858,6 +17046,8 @@ class HaloDensityProfile(NumCosmoMath.Model):
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
+      mass-summary -> NcHaloMassSummary: mass-summary
+        mass-summary
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -16896,6 +17086,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        mass_summary: HaloMassSummary
 
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
@@ -16903,6 +17094,7 @@ class HaloDensityProfile(NumCosmoMath.Model):
         self,
         lnXf: float = ...,
         lnXi: float = ...,
+        mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -17018,6 +17210,8 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
+      mass-summary -> NcHaloMassSummary: mass-summary
+        mass-summary
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -17061,6 +17255,7 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        mass_summary: HaloMassSummary
 
     props: Props = ...
     parent_instance: HaloDensityProfile = ...
@@ -17075,6 +17270,7 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         rt_fit: bool = ...,
         lnXf: float = ...,
         lnXi: float = ...,
+        mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -17118,6 +17314,8 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
+      mass-summary -> NcHaloMassSummary: mass-summary
+        mass-summary
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -17158,6 +17356,7 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        mass_summary: HaloMassSummary
 
     props: Props = ...
     def __init__(
@@ -17166,6 +17365,7 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         alpha_fit: bool = ...,
         lnXf: float = ...,
         lnXi: float = ...,
+        mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -17203,6 +17403,8 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
+      mass-summary -> NcHaloMassSummary: mass-summary
+        mass-summary
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -17241,12 +17443,14 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        mass_summary: HaloMassSummary
 
     props: Props = ...
     def __init__(
         self,
         lnXf: float = ...,
         lnXi: float = ...,
+        mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -17284,6 +17488,8 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
+      mass-summary -> NcHaloMassSummary: mass-summary
+        mass-summary
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -17322,12 +17528,14 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        mass_summary: HaloMassSummary
 
     props: Props = ...
     def __init__(
         self,
         lnXf: float = ...,
         lnXi: float = ...,
+        mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
