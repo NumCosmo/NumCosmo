@@ -141,7 +141,7 @@ class APES:
             self.fit, nwalkers, init_sampler, walker, msg_level
         )
 
-        self.esmcmc.set_nthreads(1)
+        self.esmcmc.set_use_threads(False)
 
     def run_mcmc(self, initial_sample: np.ndarray, niter: int) -> None:
         """Run the sampler for niter iterations."""

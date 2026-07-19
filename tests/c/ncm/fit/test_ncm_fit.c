@@ -177,7 +177,7 @@ typedef struct _TestNcmFit
                     &test_ncm_fit_sub_fit_set,                                              \
                     &test_ncm_fit_free);                                                    \
                                                                                             \
-        g_test_add ("/ncm/fit/" #lib "/" #algo "/sub_fit/save_mset", TestNcmFit, NULL,     \
+        g_test_add ("/ncm/fit/" #lib "/" #algo "/sub_fit/save_mset", TestNcmFit, NULL,      \
                     &test_ncm_fit_ ## lib ## _ ## algo ## _new,                             \
                     &test_ncm_fit_sub_fit_save_mset,                                        \
                     &test_ncm_fit_free);                                                    \
@@ -299,10 +299,8 @@ typedef struct _TestNcmFit
           g_test_trap_assert_failed ();                                                        \
         }
 
-#ifdef HAVE_NLOPT
 TESTS_NCM_DECL (nlopt, neldermead)
 TESTS_NCM_DECL (nlopt, slsqp)
-#endif /* HAVE_NLOPT */
 
 TESTS_NCM_DECL (gsl, ls)
 
@@ -367,10 +365,8 @@ main (gint argc, gchar *argv[])
 
   /* g_test_set_nonfatal_assertions (); */
 
-#ifdef HAVE_NLOPT
   TESTS_NCM_ADD (nlopt, neldermead)
   TESTS_NCM_ADD (nlopt, slsqp)
-#endif /* HAVE_NLOPT */
 
   TESTS_NCM_ADD (gsl, ls)
 
@@ -389,10 +385,8 @@ main (gint argc, gchar *argv[])
   TESTS_NCM_ADD (levmar, bc_der)
   TESTS_NCM_ADD (levmar, bc_dif)
 
-#ifdef HAVE_NLOPT
   TESTS_NCM_ADD_INVALID (nlopt, neldermead)
   TESTS_NCM_ADD_INVALID (nlopt, slsqp)
-#endif /* HAVE_NLOPT */
 
   TESTS_NCM_ADD_INVALID (gsl, ls)
 
@@ -414,10 +408,8 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-#ifdef HAVE_NLOPT
 TESTS_NCM_NEW (nlopt, neldermead, NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ln-neldermead", TEST_NCM_FIT_DIM, NCM_FIT_DEFAULT_MAXITER)
 TESTS_NCM_NEW (nlopt, slsqp,      NCM_FIT_TYPE_NLOPT, FIT_NLOPT, "ld-slsqp",      TEST_NCM_FIT_DIM, NCM_FIT_DEFAULT_MAXITER)
-#endif /* HAVE_NLOPT */
 
 TESTS_NCM_NEW (gsl, ls, NCM_FIT_TYPE_GSL_LS, FIT_GSL_LS, NULL, TEST_NCM_FIT_DIM, 10000000)
 
@@ -1253,12 +1245,12 @@ test_ncm_fit_sub_fit_save_mset (TestNcmFit *test, gconstpointer pdata)
   ncm_fit_run (test->fit, NCM_FIT_RUN_MSGS_NONE);
 
   {
-    gchar **main_fmap       = ncm_mset_get_fmap (mset);
-    guint main_fparam_len   = ncm_mset_fparam_len (mset);
-    NcmSerialize *ser       = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-    gchar *tmpfile          = g_strdup_printf ("%s/test_ncm_fit_sub_fit_save_mset_XXXXXX.mset",
-                                               g_get_tmp_dir ());
-    gint fd                 = g_mkstemp (tmpfile);
+    gchar **main_fmap     = ncm_mset_get_fmap (mset);
+    guint main_fparam_len = ncm_mset_fparam_len (mset);
+    NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    gchar *tmpfile        = g_strdup_printf ("%s/test_ncm_fit_sub_fit_save_mset_XXXXXX.mset",
+                                             g_get_tmp_dir ());
+    gint fd = g_mkstemp (tmpfile);
     NcmMSet *loaded_mset;
     gchar **loaded_fmap;
     guint loaded_fparam_len;
@@ -1301,7 +1293,6 @@ test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata)
 
   ncm_fit_add_equality_constraint (fit, func, 1.0e-5);
 
-#ifdef HAVE_NLOPT
 
   if (NCM_IS_FIT_NLOPT (fit))
   {
@@ -1346,7 +1337,6 @@ test_ncm_fit_equality_constraints (TestNcmFit *test, gconstpointer pdata)
   ncm_fit_remove_equality_constraints (fit);
   g_assert_true (ncm_fit_equality_constraints_len (fit) == 0);
 
-#endif /* HAVE_NLOPT */
   ncm_mset_func_free (func);
 }
 
@@ -1358,7 +1348,6 @@ test_ncm_fit_inequality_constraints (TestNcmFit *test, gconstpointer pdata)
 
   ncm_fit_add_inequality_constraint (fit, func, 1.0e-5);
 
-#ifdef HAVE_NLOPT
 
   if (NCM_IS_FIT_NLOPT (fit))
   {
@@ -1403,7 +1392,6 @@ test_ncm_fit_inequality_constraints (TestNcmFit *test, gconstpointer pdata)
   ncm_fit_remove_inequality_constraints (fit);
   g_assert_true (ncm_fit_inequality_constraints_len (fit) == 0);
 
-#endif /* HAVE_NLOPT */
   ncm_mset_func_free (func);
 }
 
@@ -1685,10 +1673,8 @@ test_ncm_fit_fisher_bias_gauss (TestNcmFit *test, gconstpointer pdata)
   ncm_vector_free (bias);
 }
 
-#ifdef HAVE_NLOPT
 TESTS_NCM_TRAPS (nlopt, neldermead)
 TESTS_NCM_TRAPS (nlopt, slsqp)
-#endif /* HAVE_NLOPT */
 
 TESTS_NCM_TRAPS (gsl, ls)
 

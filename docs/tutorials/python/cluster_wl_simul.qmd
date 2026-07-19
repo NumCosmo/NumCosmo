@@ -148,14 +148,19 @@ galaxies_dec1 = cluster_dec + galaxies_ang_dist
 galaxy_shape_e_rms = 1.0e-8
 galaxy_shape_e_sigma = 1.0e-8
 
-p_dist = Nc.GalaxySDPositionFlat.new(
+ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
+
+p_dist = Nc.GalaxyPositionFactorFlat.new(
     galaxies_ra0, galaxies_ra1, galaxies_dec0, galaxies_dec1
 )
-z_true = Nc.GalaxySDTrueRedshiftLSSTSRD.new()
-z_dist = Nc.GalaxySDObsRedshiftGauss.new(z_true, 0.1, 2.0)
-s_dist = Nc.GalaxySDShapeHSMGaussGlobal.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
+z_dist = Nc.GalaxyRedshiftFactorComposed.new(0.1, 2.0)
+z_pop = Nc.GalaxyRedshiftPopLSSTSRD.new_y1_source()
+z_obs_sel = Nc.GalaxyRedshiftObsGauss.new()
 
-s_dist["sigma"] = galaxy_shape_e_rms
+s_dist = Nc.GalaxyShapeFactorVarAdd.new(ellip_conv)
+s_pop = Nc.GalaxyShapePopGauss.new()
+
+s_pop["sigma"] = galaxy_shape_e_rms
 
 pass
 ```
@@ -164,12 +169,12 @@ pass
 
 Finally, we define the likelihood model for the weak lensing analysis. 
 
-The `Nc.DataClusterWL` object is used to create a new cluster model, specifying the distribution of the source galaxies, the redshift distribution, and the position distribution. 
+The `Nc.DataClusterWLFactor` object is used to create a new cluster model, specifying the distribution of the source galaxies, the redshift distribution, and the position distribution. 
 We then set the minimum and maximum radii for the weak lensing analysis to focus on the region around the cluster where the lensing effect is most significant and exclude galaxies that are too close to the cluster center.
 
 ```{python}
 min_r, max_r = 0.3, 3.0
-cluster = Nc.DataClusterWL.new()
+cluster = Nc.DataClusterWLFactor.new(p_dist, z_dist, s_dist)
 cluster.set_cut(min_r, max_r)
 ```
 ### Model-Set
@@ -187,9 +192,9 @@ mset = Ncm.MSet.new_array(
         density_profile,
         surface_mass_density,
         halo_position,
-        s_dist,
-        z_dist,
-        p_dist,
+        s_pop,
+        z_pop,
+        z_obs_sel,
     ]
 )
 
@@ -198,7 +203,7 @@ mset.pretty_log()
 
 ## Generating Mock Data
 
-To generate mock weak lensing data, we use the `Nc.DataClusterWL` object created earlier. 
+To generate mock weak lensing data, we use the `Nc.DataClusterWLFactor` object created earlier. 
 We set the number of galaxies to $200$ to focus on a manageable subset of the data for our example.
 
 To ensure reproducibility, we create a random number generator with the seed `1235`. 
@@ -209,40 +214,38 @@ The mock data, consisting of $200$ galaxies around the cluster, is then generate
 ```{python}
 seed = 1235
 n_galaxies = 200
-sigma_z = 0.03
+sigma0 = 0.03
 
 rng = Ncm.RNG.seeded_new("mt19937", seed)
 
-z_data = Nc.GalaxySDObsRedshiftData.new(z_dist)
-p_data = Nc.GalaxySDPositionData.new(p_dist, z_data)
-s_data = Nc.GalaxySDShapeData.new(s_dist, p_data)
+pos_data = Nc.GalaxyPositionFactorData.new(p_dist, mset)
+z_data = Nc.GalaxyRedshiftFactorData.new(z_dist, mset)
+s_data = Nc.GalaxyShapeFactorData.new(s_dist, mset, pos_data, z_data)
+cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
 
 obs = Nc.GalaxyWLObs.new(
-    Nc.GalaxyWLObsEllipConv.TRACE_DET,
+    ellip_conv,
     Nc.WLEllipticityFrame.CELESTIAL,
     n_galaxies,
-    list(s_data.required_columns()),
+    cols,
 )
 
 for i in range(n_galaxies):
+    for c in cols:
+        obs.set(c, i, 0.0)
+
     c1 = rng.gaussian_gen(0.0, 0.005)
     c2 = rng.gaussian_gen(0.0, 0.005)
     m = rng.gaussian_gen(0.1, 0.05)
-    z_dist.gen(mset, z_data, sigma_z, rng)
-    p_dist.gen(mset, p_data, rng)
-    s_dist.gen(
-        mset,
-        s_data,
-        galaxy_shape_e_sigma,
-        c1,
-        c2,
-        m,
-        Nc.WLEllipticityFrame.CELESTIAL,
-        rng,
-    )
-    s_data.write_row(obs, i)
+
+    obs.set(Nc.GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, sigma0)
+    obs.set("std_noise", i, galaxy_shape_e_sigma)
+    obs.set("c1", i, c1)
+    obs.set("c2", i, c2)
+    obs.set("m", i, m)
 
 cluster.set_obs(obs)
+cluster.resample(mset, rng)
 ```
 
 The mock data can be retrieved from the `cluster` object and used for further analysis. 
@@ -353,30 +356,30 @@ def gen_galaxies(halo_ra: float, halo_dec: float, halo_mass: float) -> pd.DataFr
     halo_position.prepare(cosmo)
 
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        ellip_conv,
         Nc.WLEllipticityFrame.CELESTIAL,
         n_galaxies,
-        list(s_data.required_columns()),
+        cols,
     )
 
     for i in range(n_galaxies):
+        for c in cols:
+            obs.set(c, i, 0.0)
+
         std_noise = rng.uniform_gen(0.05, 0.25)
         c1 = rng.gaussian_gen(0.0, 0.005)
         c2 = rng.gaussian_gen(0.0, 0.005)
         m = rng.gaussian_gen(0.1, 0.05)
-        z_dist.gen(mset, z_data, sigma_z, rng)
-        p_dist.gen(mset, p_data, rng)
-        s_dist.gen(
-            mset,
-            s_data,
-            std_noise,
-            c1,
-            c2,
-            m,
-            Nc.WLEllipticityFrame.CELESTIAL,
-            rng,
-        )
-        s_data.write_row(obs, i)
+
+        obs.set(Nc.GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, sigma0)
+        obs.set("std_noise", i, std_noise)
+        obs.set("c1", i, c1)
+        obs.set("c2", i, c2)
+        obs.set("m", i, m)
+
+    cluster.set_obs(obs)
+    cluster.resample(mset, rng)
+    obs = cluster.peek_obs()
 
     columns = obs.peek_columns()
 

@@ -195,12 +195,10 @@ static void test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test
 static void test_ncm_serialize_to_file_from_file (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, gconstpointer pdata);
 
-#ifdef HAVE_LIBFYAML
 static void test_ncm_serialize_to_yaml_from_yaml (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_from_yaml_special_types (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_from_yaml_special_types_block_flow (TestNcmSerialize *test, gconstpointer pdata);
 
-#endif /* HAVE_LIBFYAML */
 
 static void test_ncm_serialize_reset_autosave_only (TestNcmSerialize *test, gconstpointer pdata);
 
@@ -260,7 +258,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_serialize_new_noclean_dup,
               &test_ncm_serialize_to_binfile_from_binfile,
               &test_ncm_serialize_free);
-#ifdef HAVE_LIBFYAML
   g_test_add ("/ncm/serialize/to_yaml/from_yaml", TestNcmSerialize, NULL,
               &test_ncm_serialize_new,
               &test_ncm_serialize_to_yaml_from_yaml,
@@ -274,7 +271,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_serialize_from_yaml_special_types_block_flow,
               &test_ncm_serialize_free);
 
-#endif /* HAVE_LIBFYAML */
 
   g_test_add ("/ncm/serialize/traps", TestNcmSerialize, NULL,
               &test_ncm_serialize_new,
@@ -654,8 +650,6 @@ test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, gconstpointe
   g_free (tmp_dir);
 }
 
-#ifdef HAVE_LIBFYAML
-
 static void
 test_ncm_serialize_to_yaml_from_yaml (TestNcmSerialize *test, gconstpointer pdata)
 {
@@ -794,8 +788,6 @@ test_ncm_serialize_from_yaml_special_types_block_flow (TestNcmSerialize *test, g
     ncm_matrix_free (matrix);
   }
 }
-
-#endif /* HAVE_LIBFYAML */
 
 void
 test_ncm_serialize_traps (TestNcmSerialize *test, gconstpointer pdata)

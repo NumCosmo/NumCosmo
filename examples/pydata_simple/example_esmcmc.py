@@ -168,7 +168,7 @@ def run_esmcmc() -> None:
     # esmcmc.set_auto_trim(True)
     # esmcmc.set_auto_trim_div(100)
     esmcmc.set_max_runs_time(2.0 * 60.0)
-    esmcmc.set_nthreads(2)
+    esmcmc.set_use_threads(True)
 
     #
     # Using `example_esmcmc_out.fits' as the catalog file, if there

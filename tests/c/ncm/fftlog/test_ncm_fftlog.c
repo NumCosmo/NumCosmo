@@ -101,9 +101,9 @@ TestCases fixtures[] = {
   {"gausswin2", &test_ncm_fftlog_gausswin2_new},
   {"sbessel_j", &test_ncm_fftlog_sbessel_j_new},
   {"sbessel_j_q0_5", &test_ncm_fftlog_sbessel_j_q0_5_new},
-#if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
+#ifdef HAVE_ACB_H
   {"sbessel_jljm", &test_ncm_fftlog_sbessel_jljm_new},
-#endif /* defined (HAVE_FFTW3) && defined (HAVE_ACB_H) */
+#endif /* HAVE_ACB_H */
 };
 
 #define NUMINT_RELTOL1 1.0e-3
@@ -152,14 +152,14 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_sbessel_j_traps,
               &test_ncm_fftlog_free);
 
-#if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
+#ifdef HAVE_ACB_H
 
   g_test_add ("/ncm/fftlog/sbessel_jljm/traps", TestNcmFftlog, NULL,
               &test_ncm_fftlog_sbessel_jljm_new,
               &test_ncm_fftlog_sbessel_jljm_traps,
               &test_ncm_fftlog_free);
 
-#endif /* defined (HAVE_FFTW3) && defined (HAVE_ACB_H) */
+#endif /* HAVE_ACB_H */
 
   g_test_add ("/ncm/fftlog/tophatwin2/invalid/st/subprocess", TestNcmFftlog, NULL,
               &test_ncm_fftlog_tophatwin2_new,
@@ -178,9 +178,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_invalid_st,
               &test_ncm_fftlog_free);
 
-#ifdef HAVE_FFTW3
   g_test_run ();
-#endif
 }
 
 #define NTESTS 20

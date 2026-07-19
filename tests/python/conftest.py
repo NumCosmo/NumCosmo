@@ -1,6 +1,9 @@
 """Test fixtures for numcosmo_py."""
 
+import os
+import sys
 import warnings
+import faulthandler
 import pytest
 import numpy as np
 from gi import PyGIDeprecationWarning  # type: ignore
@@ -14,6 +17,56 @@ from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology
 
 Ncm.cfg_init()
+
+# A single slow-test dump only shows one snapshot in time, so there is no way to
+# tell a genuine hang (identical stack next time) from a test that is merely slow
+# but still making progress (advancing line/loop state next time) -- exactly the
+# ambiguity that made a real CI timeout hard to diagnose. pytest's builtin
+# faulthandler_timeout ini option can't help here: _pytest/faulthandler.py calls
+# faulthandler.dump_traceback_later() without repeat=True, so it only ever fires
+# once per test. This hook re-implements the same wrap (dup stderr's fd once so
+# the dump survives pytest's output capturing, exactly as the builtin plugin
+# does) but with repeat=True, so a slow test gets a fresh stack dump every
+# _FAULTHANDLER_INTERVAL seconds for as long as it keeps running.
+_FAULTHANDLER_INTERVAL = 300.0
+
+
+def _stderr_fileno() -> int:
+    try:
+        fileno = sys.stderr.fileno()
+        if fileno == -1:
+            raise AttributeError()
+        return fileno
+    except (AttributeError, ValueError):
+        # pytest-xdist monkeypatches sys.stderr with a non-file object.
+        assert sys.__stderr__ is not None
+        return sys.__stderr__.fileno()
+
+
+def pytest_configure(config):
+    """Dup stderr's fd once so later dumps survive per-test output capturing."""
+    config.stash["faulthandler_dup_fd"] = os.dup(_stderr_fileno())
+
+
+def pytest_unconfigure(config):
+    fd = config.stash.get("faulthandler_dup_fd", None)
+    if fd is not None:
+        os.close(fd)
+
+
+@pytest.hookimpl(wrapper=True, trylast=True)
+def pytest_runtest_protocol(item):
+    """Re-arm a repeating faulthandler dump around every test (see above)."""
+    fd = item.config.stash.get("faulthandler_dup_fd", None)
+    if fd is not None:
+        faulthandler.dump_traceback_later(
+            _FAULTHANDLER_INTERVAL, repeat=True, file=fd, exit=False
+        )
+    try:
+        return (yield)
+    finally:
+        if fd is not None:
+            faulthandler.cancel_dump_traceback_later()
 
 
 def pytest_addoption(parser):

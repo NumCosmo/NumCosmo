@@ -83,9 +83,7 @@
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* HAVE_FFTW3 */
 
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_blas.h>
@@ -130,14 +128,12 @@ struct _NcmStatsVec
   GPtrArray *saved_x;
   GPtrArray *q_array;
 
-#ifdef HAVE_FFTW3
   guint fft_size;
   guint fft_plan_size;
   gdouble *param_data;
   fftw_complex *param_fft;
   fftw_plan param_r2c;
   fftw_plan param_c2r;
-#endif /* HAVE_FFTW3 */
 };
 
 G_DEFINE_TYPE (NcmStatsVec, ncm_stats_vec, G_TYPE_OBJECT)
@@ -170,14 +166,12 @@ ncm_stats_vec_init (NcmStatsVec *svec)
   svec->q_array = g_ptr_array_new ();
   g_ptr_array_set_free_func (svec->q_array, (GDestroyNotify) gsl_rstat_quantile_free);
 
-#ifdef HAVE_FFTW3
   svec->fft_size      = 0;
   svec->fft_plan_size = 0;
   svec->param_data    = NULL;
   svec->param_fft     = NULL;
   svec->param_r2c     = NULL;
   svec->param_c2r     = NULL;
-#endif /* HAVE_FFTW3 */
 }
 
 static void
@@ -211,12 +205,10 @@ _ncm_stats_vec_finalize (GObject *object)
 {
   NcmStatsVec *svec = NCM_STATS_VEC (object);
 
-#ifdef HAVE_FFTW3
   g_clear_pointer (&svec->param_fft,  fftw_free);
   g_clear_pointer (&svec->param_data, fftw_free);
   g_clear_pointer (&svec->param_c2r,  fftw_destroy_plan);
   g_clear_pointer (&svec->param_r2c,  fftw_destroy_plan);
-#endif /* HAVE_FFTW3 */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_vec_parent_class)->finalize (object);
@@ -1005,7 +997,6 @@ ncm_stats_vec_get_quantile_all (NcmStatsVec *svec, guint i)
 static void
 _ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
 {
-#ifdef HAVE_FFTW3
   const guint effsize      = ncm_util_fact_size (2 * size);
   guint fftw_default_flags = ncm_cfg_get_fftw_default_flag ();
 
@@ -1043,14 +1034,11 @@ _ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
     svec->fft_plan_size = effsize;
     /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculated  wisdom %u\n", effsize);*/
   }
-
-#endif /* HAVE_FFTW3 */
 }
 
 static void
 _ncm_stats_vec_get_autocov (NcmStatsVec *svec, guint p, guint subsample, guint pad)
 {
-#ifdef HAVE_FFTW3
   guint eff_nitens = svec->nitens / subsample - pad;
 
   g_assert_cmpuint (svec->nitens / subsample, >, pad);
@@ -1104,7 +1092,6 @@ _ncm_stats_vec_get_autocov (NcmStatsVec *svec, guint p, guint subsample, guint p
 
     fftw_execute (svec->param_c2r);
   }
-#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -1123,7 +1110,6 @@ _ncm_stats_vec_get_autocov (NcmStatsVec *svec, guint p, guint subsample, guint p
 NcmVector *
 ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p)
 {
-#ifdef HAVE_FFTW3
   _ncm_stats_vec_get_autocov (svec, p, 1, 0);
   {
     NcmVector *autocor = ncm_vector_new_data_dup (svec->param_data, svec->nitens, 1);
@@ -1132,12 +1118,6 @@ ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p)
 
     return autocor;
   }
-#else
-  g_error ("ncm_stats_vec_get_autocorr: recompile NumCosmo with fftw support.");
-
-  return NULL;
-
-#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -1157,7 +1137,6 @@ ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p)
 NcmVector *
 ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsample)
 {
-#ifdef HAVE_FFTW3
   _ncm_stats_vec_get_autocov (svec, p, subsample, 0);
   g_assert_cmpuint (svec->nitens, >=, subsample);
   {
@@ -1167,12 +1146,6 @@ ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsampl
 
     return autocor;
   }
-#else
-  g_error ("ncm_stats_vec_get_subsample_autocorr: recompile NumCosmo with fftw support.");
-
-  return NULL;
-
-#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -1194,7 +1167,6 @@ ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsampl
 gboolean
 ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmStatsVecARType ar_crit, NcmVector **rho, NcmVector **pacf, gdouble *ivar, guint *c_order)
 {
-#ifdef HAVE_FFTW3
   _ncm_stats_vec_get_autocov (svec, p, 1, 0);
   {
     const gint aorder          = (order == 0) ? GSL_MIN (GSL_MAX (svec->nitens - 2, 1), floor (10 * log10 (svec->nitens))) : order;
@@ -1365,12 +1337,6 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
 
     return ((guint) aorder == c_order[0]);
   }
-#else
-  g_error ("ncm_stats_vec_get_autocorr: recompile NumCosmo with fftw support.");
-
-  return FALSE;
-
-#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -2127,7 +2093,6 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
 gdouble
 ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, const guint p, const guint max_lag)
 {
-#ifdef HAVE_FFTW3
   guint i;
   gdouble tau          = 0.0;
   const guint Imax_lag = (max_lag == 0) ? svec->nitens / 10 : max_lag;
@@ -2150,13 +2115,6 @@ ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, const guint p, const guint ma
   tau = 1.0 + 2.0 * tau;
 
   return tau;
-
-#else
-  g_error ("ncm_stats_vec_get_autocorr: recompile NumCosmo with fftw support.");
-
-  return 0.0;
-
-#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -2174,7 +2132,6 @@ ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, const guint p, const guint ma
 gdouble
 ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, const guint p, const guint subsample, const guint max_lag)
 {
-#ifdef HAVE_FFTW3
   guint i;
   gdouble tau          = 0.0;
   guint eff_nitens     = svec->nitens / subsample;
@@ -2196,13 +2153,6 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, const guint p, cons
   tau = 1.0 + 2.0 * tau;
 
   return tau;
-
-#else
-  g_error ("ncm_stats_vec_get_autocorr: recompile NumCosmo with fftw support.");
-
-  return 0.0;
-
-#endif /* HAVE_FFTW3 */
 }
 
 /**

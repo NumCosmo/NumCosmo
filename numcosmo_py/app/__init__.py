@@ -40,11 +40,13 @@ from .catalog import (
     VisualHW,
     ParameterEvolution,
     GetBestFit,
+    DumpMset,
 )
 from .generate import (
     GeneratePlanck,
     GenerateJpasForecast,
     GenerateClusterWL,
+    GenerateClusterRichnessCount,
     GenerateQSpline,
     GenerateXCDM,
     GenerateDEWSpline,
@@ -176,6 +178,12 @@ CAT_GET_BEST_FIT_CMD: CMDArg = {
     "help": "Get the best fit from a given catalog.",
 }
 
+CAT_DUMP_MSET_CMD: CMDArg = {
+    "name": "dump-mset",
+    "no_args_is_help": True,
+    "help": "Dump the model-set stored in a catalog file as YAML.",
+}
+
 GEN_PLANCK_CMD: CMDArg = {
     "name": "planck18",
     "no_args_is_help": True,
@@ -192,6 +200,12 @@ GEN_CLUSTER_WL_CMD: CMDArg = {
     "name": "cluster-wl",
     "no_args_is_help": True,
     "help": "Generate cluster weak lensing experiments.",
+}
+
+GEN_CLUSTER_RICHNESS_COUNT_CMD: CMDArg = {
+    "name": "cluster-richness-count",
+    "no_args_is_help": True,
+    "help": "Generate mock cluster mass-richness-count (Poisson-Lognormal) experiments.",
 }
 
 GEN_QSPLINE_CMD: CMDArg = {
@@ -267,11 +281,13 @@ app_cat.command(**CAT_PLOT_CORNER_CMD)(PlotCorner)
 app_cat.command(**CAT_VISUAL_HW_CMD)(VisualHW)
 app_cat.command(**CAT_PARAM_EVOLUTION_CMD)(ParameterEvolution)
 app_cat.command(**CAT_GET_BEST_FIT_CMD)(GetBestFit)
+app_cat.command(**CAT_DUMP_MSET_CMD)(DumpMset)
 # ------------------------------------------------------------------------------
 # Installing experiment generation subcommands
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
 app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
 app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)
+app_generate.command(**GEN_CLUSTER_RICHNESS_COUNT_CMD)(GenerateClusterRichnessCount)
 app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
 app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)
 app_generate.command(**GEN_DEWSPLINE_CMD)(GenerateDEWSpline)

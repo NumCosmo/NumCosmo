@@ -63,9 +63,7 @@
 #include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_math.h>
 #include <complex.h>
-#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* HAVE_FFTW3 */
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -108,7 +106,6 @@ _ncm_fftlog_gausswin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   const gdouble twopi_Lt = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
   const gint Nf          = ncm_fftlog_get_full_size (fftlog);
 
-#ifdef HAVE_FFTW3
   fftw_complex *Ym_base = (fftw_complex *) Ym_0;
   gint i;
 
@@ -126,8 +123,6 @@ _ncm_fftlog_gausswin2_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 
     Ym_base[i] = U;
   }
-
-#endif /* HAVE_FFTW3 */
 }
 
 /**

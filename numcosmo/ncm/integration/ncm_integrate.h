@@ -118,6 +118,7 @@ gdouble ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F);
 gdouble ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol);
 void ncm_integral_fixed_get_nodes (NcmIntegralFixed *intf, NcmVector *nodes);
 gdouble ncm_integral_fixed_integ_vec_mult (NcmIntegralFixed *intf, const NcmVector *f_at_nodes);
+NcmIntegralFixed *ncm_integral_fixed_calibrate (gsl_function *F, gsl_function *G, gdouble xl, gdouble xu, gdouble reltol, gdouble exact_F_integ, gulong max_total_nodes, guint *n_nodes_out, guint *rule_n_out);
 
 #define NCM_INTEGRAL_PARTITION 100000
 #define NCM_INTEGRAL_ALG 6
