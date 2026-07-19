@@ -260,9 +260,7 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
 #include <gio/gio.h>
-#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* HAVE_FFTW3 */
 #include <cuba.h>
 
 #ifdef HAVE_MPI
@@ -435,9 +433,7 @@ _ncm_cfg_exit (void)
   }
 
 #endif /* HAVE_MPI */
-#ifdef HAVE_FFTW3
   fftw_forget_wisdom ();
-#endif /* HAVE_FFTW3 */
 }
 
 /**
@@ -531,14 +527,10 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   if (numcosmo_init)
     return;
 
-#ifdef HAVE_FFTW3
-
   ncm_cfg_set_fftw_default_from_env_str (NUMCOSMO_FFTW_PLAN, -1.0, NULL);
 
   if (sizeof (NcmComplex) != sizeof (fftw_complex))
     g_warning ("NcmComplex is not binary compatible with complex double, expect problems with it!");
-
-#endif /* HAVE_FFTW3 */
 
   home          = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
@@ -562,9 +554,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
   gsl_err = gsl_set_error_handler_off ();
 
-#ifdef HAVE_FFTW3
   fftw_set_timelimit (10.0);
-#endif /* HAVE_FFTW3 */
 #ifdef HAVE_FFTW3F
   fftwf_set_timelimit (10.0);
 #endif /* HAVE_FFTW3F */
@@ -707,9 +697,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MM);
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MMS);
 
-#ifdef HAVE_NLOPT
   ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
-#endif /* HAVE_NLOPT */
 
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
@@ -1905,8 +1893,6 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
   g_type_class_unref (enum_class);
 }
 
-#ifdef HAVE_FFTW3
-
 G_LOCK_DEFINE_STATIC (fftw_saveload_lock);
 
 G_LOCK_DEFINE_STATIC (fftw_plan_lock);
@@ -2092,8 +2078,6 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 
   return TRUE;
 }
-
-#endif /* HAVE_FFTW3 */
 
 /**
  * ncm_cfg_exists:
@@ -2317,8 +2301,6 @@ ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
 
   return g_variant_ref_sink (vvar);
 }
-
-#ifdef HAVE_FFTW3
 
 static guint __fftw_default_flags = FFTW_MEASURE;
 static gdouble __fftw_timelimit   = 60.0;
@@ -2557,11 +2539,6 @@ ncm_cfg_get_fftw_timelimit (void)
 {
   return __fftw_timelimit;
 }
-
-#else
-guint fftw_default_flags = 0;
-
-#endif /* HAVE_FFTW3 */
 
 /**
  * ncm_cfg_get_version:

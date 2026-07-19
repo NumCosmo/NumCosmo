@@ -150,10 +150,8 @@
 
 /* Likelihood object */
 #include <numcosmo/ncm/fit/ncm_fit.h>
-#ifdef NUMCOSMO_HAVE_NLOPT
 #include <numcosmo/ncm/fit/ncm_fit_nlopt.h>
 #include <numcosmo/ncm_fit_nlopt_enum.h>
-#endif /* NUMCOSMO_HAVE_NLOPT */
 #include <numcosmo/ncm/fit/ncm_fit_levmar.h>
 #include <numcosmo/ncm/fit/ncm_fit_gsl_ls.h>
 #include <numcosmo/ncm/fit/ncm_fit_gsl_mm.h>

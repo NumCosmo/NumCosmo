@@ -31,7 +31,6 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/fit/ncm_fit.h>
 
-#ifdef NUMCOSMO_HAVE_NLOPT
 #include <numcosmo/ncm_fit_nlopt_enum.h>
 
 G_BEGIN_DECLS
@@ -50,6 +49,5 @@ NcmFit *ncm_fit_nlopt_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradT
 
 G_END_DECLS
 
-#endif /* NUMCOSMO_HAVE_NLOPT */
 #endif /* _NCM_FIT_NLOPT_H_ */
 

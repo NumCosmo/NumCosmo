@@ -37,8 +37,6 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#ifdef HAVE_NLOPT
-
 #include "ncm/fit/ncm_fit_nlopt.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm_fit_nlopt_enum.h"
@@ -59,12 +57,10 @@ struct _NcmFitNLOpt
 {
   /*< private >*/
   NcmFit parent_instance;
-#ifdef HAVE_NLOPT
   nlopt_opt nlopt;
   nlopt_opt local_nlopt;
   NcmFitNloptAlgorithm nlopt_algo;
   NcmFitNloptAlgorithm local_nlopt_algo;
-#endif /* HAVE_NLOPT */
   NcmVector *lb;
   NcmVector *ub;
   NcmVector *pabs;
@@ -712,6 +708,4 @@ ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, NcmFitNloptAlgorithm algo)
     g_clear_pointer (&fit_nlopt->desc, g_free);
   }
 }
-
-#endif /* HAVE_NLOPT */
 

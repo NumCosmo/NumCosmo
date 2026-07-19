@@ -60,9 +60,7 @@
 #include <gsl/gsl_sf_hyperg.h>
 #include <gsl/gsl_math.h>
 #include <complex.h>
-#ifdef HAVE_FFTW3
 #include <fftw3.h>
-#endif /* HAVE_FFTW3 */
 
 #ifdef HAVE_ACB_H
 #ifdef HAVE_FLINT_ACB_H
@@ -266,7 +264,7 @@ ncm_fftlog_sbessel_jljm_class_init (NcmFftlogSBesselJLJMClass *klass)
   fftlog_class->compute_Ym = &_ncm_fftlog_sbessel_jljm_compute_Ym;
 }
 
-#if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
+#ifdef HAVE_ACB_H
 
 static gint _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_f (sunrealtype x, N_Vector y, N_Vector ydot, gpointer f_data);
 static gint _ncm_fftlog_sbessel_jljm_cpu_integrate_2f1_jac (gdouble x, N_Vector y, N_Vector fy, SUNMatrix Jac, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
@@ -526,14 +524,14 @@ _ncm_fftlog_sbessel_jljm_compute_2f1 (NcmFftlog *fftlog)
   printf ("# RES % 22.15g % 22.15g\n", creal (res), cimag (res));
 }
 
-#endif /* defined (HAVE_FFTW3) && defined (HAVE_ACB_H) */
+#endif /* HAVE_ACB_H */
 
 #define _NCM_FFTLOG_SBESSEL_JLJM_CACHE_FILE "ncm_fftlog_sbessel_j%dj%d_lnw%.14g_L%.14g.fftlog", self->ell, self->ell + self->dell, self->lnw, ncm_fftlog_get_full_length (fftlog)
 
 static void
 _ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
-#if defined (HAVE_FFTW3) && defined (HAVE_ACB_H)
+#ifdef HAVE_ACB_H
   NcmFftlogSBesselJLJM *fftlog_jljm        = NCM_FFTLOG_SBESSEL_JLJM (fftlog);
   NcmFftlogSBesselJLJMPrivate * const self = ncm_fftlog_sbessel_jljm_get_instance_private (fftlog_jljm);
   const guint maxprec                      = 64 * 64;
@@ -824,8 +822,8 @@ _ncm_fftlog_sbessel_jljm_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   }
 
 #else
-  g_error ("_ncm_fftlog_sbessel_jljm_compute_Ym: this object requires both FFTW3 and ARB dependencies.");
-#endif /* HAVE_FFTW3 */
+  g_error ("_ncm_fftlog_sbessel_jljm_compute_Ym: this object requires the ARB dependency.");
+#endif /* HAVE_ACB_H */
 }
 
 /**
