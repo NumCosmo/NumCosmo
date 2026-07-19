@@ -60,8 +60,15 @@ We start by creating a new homogeneous and isotropic cosmological model
 a power-law primordial power spectrum.
 
 ```{python}
-# Create a new cosmological model with one massive neutrino
-cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
+# Create a reionization model
+reion = Nc.HIReionCamb.new()
+
+# Create a power-law primordial power spectrum
+prim = Nc.HIPrimPowerLaw.new()
+
+# Create a new cosmological model with one massive neutrino, attaching the
+# reionization and primordial submodels at construction time
+cosmo = Nc.HICosmoDEXcdm(massnu_length=1, reion=reion, prim=prim)
 # Change the parameterization
 cosmo.omega_x2omega_k()
 
@@ -72,12 +79,6 @@ cosmo["Omegac"] = 0.26580755578
 cosmo["massnu_0"] = 0.06
 cosmo["ENnu"] = 2.0328
 
-# Create a reionization model
-reion = Nc.HIReionCamb.new()
-
-# Create a power-law primordial power spectrum
-prim = Nc.HIPrimPowerLaw.new()
-
 # Set the Hubble constant
 cosmo["H0"] = 67.31
 
@@ -87,10 +88,6 @@ prim["ln10e10ASA"] = 3.0904
 
 # Set the reionization redshift
 reion["z_re"] = 9.9999
-
-# Add submodels to the cosmological model
-cosmo.add_submodel(reion)
-cosmo.add_submodel(prim)
 
 # Print the model parameters
 print("# Model parameters: ", end=" ")

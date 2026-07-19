@@ -63,9 +63,7 @@ def _load_golden_columns() -> dict[str, np.ndarray]:
 
 def _setup():
     """Build cosmology, abundance, models and mset matching the golden test."""
-    cosmo = Nc.HICosmoDEXcdm()
-    cosmo.add_submodel(Nc.HIReionCamb())
-    cosmo.add_submodel(Nc.HIPrimPowerLaw())
+    cosmo = Nc.HICosmoDEXcdm(reion=Nc.HIReionCamb(), prim=Nc.HIPrimPowerLaw())
 
     dist = Nc.Distance.new(2.0)
     psml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())

@@ -91,11 +91,11 @@ class Cosmology:
         halofit_reltol: float = 1.0e-7,
     ) -> "Cosmology":
         """Create a default cosmology."""
-        cosmo = Nc.HICosmoDEXcdm()
+        cosmo = Nc.HICosmoDEXcdm(
+            prim=Nc.HIPrimPowerLaw.new(), reion=Nc.HIReionCamb.new()
+        )
         cosmo.omega_x2omega_k()
         cosmo["Omegak"] = 0.0
-        cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
-        cosmo.add_submodel(Nc.HIReionCamb.new())
         dist = Nc.Distance.new(dist_max_z)
         ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
         ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, halofit_max_z, halofit_reltol)
@@ -105,11 +105,11 @@ class Cosmology:
     @classmethod
     def default_minimal(cls, dist_max_z: float = 10.0) -> "Cosmology":
         """Create a minimal default cosmology."""
-        cosmo = Nc.HICosmoDEXcdm()
+        cosmo = Nc.HICosmoDEXcdm(
+            prim=Nc.HIPrimPowerLaw.new(), reion=Nc.HIReionCamb.new()
+        )
         cosmo.omega_x2omega_k()
         cosmo["Omegak"] = 0.0
-        cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
-        cosmo.add_submodel(Nc.HIReionCamb.new())
         dist = Nc.Distance.new(dist_max_z)
         return cls(cosmo=cosmo, dist=dist)
 
@@ -159,28 +159,6 @@ def create_cosmo(
     prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
 ) -> Nc.HICosmo:
     """Create a cosmology for CMB experiments."""
-    if massive_nu:
-        cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
-    else:
-        cosmo = Nc.HICosmoDEXcdm()
-
-    cosmo.params_set_default_ftype()
-    cosmo.cmb_params()
-    cosmo["H0"] = 70.0
-    cosmo["omegab"] = 0.022
-    cosmo["omegac"] = 0.12
-
-    if massive_nu:
-        cosmo["ENnu"] = 2.0328
-        cosmo["massnu_0"] = 0.06
-        cosmo.param_set_desc("massnu_0", {"fit": True})
-
-    cosmo.param_set_desc("H0", {"fit": True})
-    cosmo.param_set_desc("omegac", {"fit": True})
-    cosmo.param_set_desc("omegab", {"fit": True})
-    cosmo.param_set_desc("Omegak", {"fit": False})
-    cosmo.param_set_desc("w", {"fit": False})
-
     prim: Nc.HIPrim
     match prim_model:
         case HIPrimModel.ATAN:
@@ -206,7 +184,26 @@ def create_cosmo(
     reion = Nc.HIReionCamb.new()
     reion.param_set_desc("z_re", {"fit": True})
 
-    cosmo.add_submodel(prim)
-    cosmo.add_submodel(reion)
+    if massive_nu:
+        cosmo = Nc.HICosmoDEXcdm(massnu_length=1, prim=prim, reion=reion)
+    else:
+        cosmo = Nc.HICosmoDEXcdm(prim=prim, reion=reion)
+
+    cosmo.params_set_default_ftype()
+    cosmo.cmb_params()
+    cosmo["H0"] = 70.0
+    cosmo["omegab"] = 0.022
+    cosmo["omegac"] = 0.12
+
+    if massive_nu:
+        cosmo["ENnu"] = 2.0328
+        cosmo["massnu_0"] = 0.06
+        cosmo.param_set_desc("massnu_0", {"fit": True})
+
+    cosmo.param_set_desc("H0", {"fit": True})
+    cosmo.param_set_desc("omegac", {"fit": True})
+    cosmo.param_set_desc("omegab", {"fit": True})
+    cosmo.param_set_desc("Omegak", {"fit": False})
+    cosmo.param_set_desc("w", {"fit": False})
 
     return cosmo

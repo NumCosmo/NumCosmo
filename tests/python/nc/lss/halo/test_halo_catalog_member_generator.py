@@ -35,9 +35,7 @@ HOST_COLS = ["ra", "dec", "z_true", "lnM_true", "r_Delta"]
 
 def _cosmo_mset():
     """A minimal cosmology and mset for the member generator."""
-    cosmo = Nc.HICosmoDEXcdm()
-    cosmo.add_submodel(Nc.HIReionCamb())
-    cosmo.add_submodel(Nc.HIPrimPowerLaw())
+    cosmo = Nc.HICosmoDEXcdm(reion=Nc.HIReionCamb(), prim=Nc.HIPrimPowerLaw())
     for name, value in (
         ("H0", 70.0),
         ("Omegab", 0.05),

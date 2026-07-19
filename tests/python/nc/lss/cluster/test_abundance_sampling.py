@@ -46,12 +46,10 @@ Ncm.cfg_init()
 @pytest.fixture(name="cosmo_hmf")
 def fixture_cosmo_hmf():
     """Fixture for the halo mass function."""
-    cosmo = Nc.HICosmoDEXcdm()
     reion = Nc.HIReionCamb()
     prim = Nc.HIPrimPowerLaw()
 
-    cosmo.add_submodel(reion)
-    cosmo.add_submodel(prim)
+    cosmo = Nc.HICosmoDEXcdm(reion=reion, prim=prim)
 
     dist = Nc.Distance.new(2.0)
 

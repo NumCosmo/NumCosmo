@@ -66,9 +66,8 @@ def test_eval_z0(Pk: Ncm.Spline) -> None:
     ps = Nc.PowspecMLSpline.new(Pk)
     assert ps is not None
 
-    cosmo = Nc.HICosmoDEXcdm()
     prim = Nc.HIPrimPowerLaw()
-    cosmo.add_submodel(prim)
+    cosmo = Nc.HICosmoDEXcdm(prim=prim)
 
     ps.prepare(cosmo)
 
@@ -85,9 +84,8 @@ def test_eval_vec_z0(Pk: Ncm.Spline) -> None:
     ps = Nc.PowspecMLSpline.new(Pk)
     assert ps is not None
 
-    cosmo = Nc.HICosmoDEXcdm()
     prim = Nc.HIPrimPowerLaw()
-    cosmo.add_submodel(prim)
+    cosmo = Nc.HICosmoDEXcdm(prim=prim)
 
     ps.prepare(cosmo)
 
@@ -107,9 +105,8 @@ def test_eval_za(Pk: Ncm.Spline) -> None:
     ps = Nc.PowspecMLSpline.new(Pk)
     assert ps is not None
 
-    cosmo = Nc.HICosmoDEXcdm()
     prim = Nc.HIPrimPowerLaw()
-    cosmo.add_submodel(prim)
+    cosmo = Nc.HICosmoDEXcdm(prim=prim)
 
     gf = Nc.GrowthFunc()
 
@@ -130,9 +127,8 @@ def test_eval_vec_za(Pk: Ncm.Spline) -> None:
     ps = Nc.PowspecMLSpline.new(Pk)
     assert ps is not None
 
-    cosmo = Nc.HICosmoDEXcdm()
     prim = Nc.HIPrimPowerLaw()
-    cosmo.add_submodel(prim)
+    cosmo = Nc.HICosmoDEXcdm(prim=prim)
 
     gf = Nc.GrowthFunc()
 
@@ -180,9 +176,8 @@ def test_serialization(Pk: Ncm.Spline) -> None:
     assert ps_dup is not None
     assert isinstance(ps_dup, Nc.PowspecMLSpline)
 
-    cosmo = Nc.HICosmoDEXcdm()
     prim = Nc.HIPrimPowerLaw()
-    cosmo.add_submodel(prim)
+    cosmo = Nc.HICosmoDEXcdm(prim=prim)
 
     ps.prepare(cosmo)
     ps_dup.prepare(cosmo)

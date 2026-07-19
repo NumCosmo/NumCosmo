@@ -35,9 +35,7 @@ AREA = 2.0 * (math.pi / 180.0) ** 2
 
 def _setup():
     """Build cosmology, abundance, proxies and mset for the pipeline."""
-    cosmo = Nc.HICosmoDEXcdm()
-    cosmo.add_submodel(Nc.HIReionCamb())
-    cosmo.add_submodel(Nc.HIPrimPowerLaw())
+    cosmo = Nc.HICosmoDEXcdm(reion=Nc.HIReionCamb(), prim=Nc.HIPrimPowerLaw())
 
     dist = Nc.Distance.new(2.0)
     psml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())

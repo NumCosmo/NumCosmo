@@ -121,11 +121,9 @@ def test_create_cosmo_prim_model_power_law(prim_model_cls):
 
 def test_cosmology_missing_dist():
     """Test the Cosmology class with missing dist."""
-    cosmo = Nc.HICosmoDEXcdm()
+    cosmo = Nc.HICosmoDEXcdm(prim=Nc.HIPrimPowerLaw.new(), reion=Nc.HIReionCamb.new())
     cosmo.omega_x2omega_k()
     cosmo["Omegak"] = 0.0
-    cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
-    cosmo.add_submodel(Nc.HIReionCamb.new())
     dist = Nc.Distance.new(10.0)
 
     # Create cosmology and then manually set _dist to None to test the exception
@@ -160,11 +158,9 @@ def test_cosmology_missing_psf(cosmology_minimal: Cosmology):
 def test_cosmology_lazy_dist_preparation():
     """Test that dist property prepares on access."""
     # Create a cosmology without calling prepare()
-    cosmo = Nc.HICosmoDEXcdm()
+    cosmo = Nc.HICosmoDEXcdm(prim=Nc.HIPrimPowerLaw.new(), reion=Nc.HIReionCamb.new())
     cosmo.omega_x2omega_k()
     cosmo["Omegak"] = 0.0
-    cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
-    cosmo.add_submodel(Nc.HIReionCamb.new())
     dist = Nc.Distance.new(10.0)
 
     # Create Cosmology object - but override prepare() to prevent automatic prep
@@ -193,11 +189,9 @@ def test_cosmology_lazy_dist_preparation():
 
 def test_cosmology_lazy_ps_ml_preparation():
     """Test that ps_ml property prepares on access."""
-    cosmo = Nc.HICosmoDEXcdm()
+    cosmo = Nc.HICosmoDEXcdm(prim=Nc.HIPrimPowerLaw.new(), reion=Nc.HIReionCamb.new())
     cosmo.omega_x2omega_k()
     cosmo["Omegak"] = 0.0
-    cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
-    cosmo.add_submodel(Nc.HIReionCamb.new())
     dist = Nc.Distance.new(10.0)
     ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
 
@@ -217,11 +211,9 @@ def test_cosmology_lazy_ps_ml_preparation():
 
 def test_cosmology_lazy_ps_mnl_preparation():
     """Test that ps_mnl property prepares on access."""
-    cosmo = Nc.HICosmoDEXcdm()
+    cosmo = Nc.HICosmoDEXcdm(prim=Nc.HIPrimPowerLaw.new(), reion=Nc.HIReionCamb.new())
     cosmo.omega_x2omega_k()
     cosmo["Omegak"] = 0.0
-    cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
-    cosmo.add_submodel(Nc.HIReionCamb.new())
     dist = Nc.Distance.new(10.0)
     ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
     ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, 5.0, 1.0e-7)
@@ -242,11 +234,9 @@ def test_cosmology_lazy_ps_mnl_preparation():
 
 def test_cosmology_lazy_psf_tophat_preparation():
     """Test that psf_tophat property prepares on access."""
-    cosmo = Nc.HICosmoDEXcdm()
+    cosmo = Nc.HICosmoDEXcdm(prim=Nc.HIPrimPowerLaw.new(), reion=Nc.HIReionCamb.new())
     cosmo.omega_x2omega_k()
     cosmo["Omegak"] = 0.0
-    cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
-    cosmo.add_submodel(Nc.HIReionCamb.new())
     dist = Nc.Distance.new(10.0)
     ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
     psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)

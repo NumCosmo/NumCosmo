@@ -61,9 +61,7 @@ def show_table(table, float_format="%.3f", max_rows=10):
     return HTML(table.to_pandas().to_html(float_format=float_format, max_rows=max_rows))
 
 
-cosmo = Nc.HICosmoDEXcdm.new()
-cosmo.add_submodel(Nc.HIReionCamb.new())
-cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
+cosmo = Nc.HICosmoDEXcdm(reion=Nc.HIReionCamb.new(), prim=Nc.HIPrimPowerLaw.new())
 cosmo["H0"] = 70.0
 cosmo["Omegab"] = 0.05
 cosmo["Omegac"] = 0.25

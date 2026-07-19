@@ -89,9 +89,14 @@ void
 test_ncm_model_ctrl_new (TestNcmModelCtrl *test, gconstpointer pdata)
 {
   test->ctrl      = ncm_model_ctrl_new (NULL);
-  test->model     = NCM_MODEL (nc_hicosmo_lcdm_new ());
   test->submodel1 = NCM_MODEL (nc_hiprim_power_law_new ());
   test->submodel2 = NCM_MODEL (nc_hireion_camb_new ());
+
+  /* NcHICosmo declares construction-only typed slots for prim/reion, so
+   * submodels must be attached at construction time -- not via
+   * ncm_model_add_submodel() afterward. */
+  test->model = NCM_MODEL (nc_hicosmo_lcdm_new_full (NC_HIREION (test->submodel2),
+                                                     NC_HIPRIM (test->submodel1)));
 
   g_assert_true (test->ctrl != NULL);
   g_assert_true (NCM_IS_MODEL_CTRL (test->ctrl));
@@ -126,30 +131,30 @@ test_ncm_model_ctrl_free (TestNcmModelCtrl *test, gconstpointer pdata)
 void
 test_ncm_model_ctrl_model_update (TestNcmModelCtrl *test, gconstpointer pdata)
 {
-  g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
-  g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
-
-  ncm_model_add_submodel (test->model, test->submodel1);
-  g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
-  g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
-
-  ncm_model_add_submodel (test->model, test->submodel2);
+  /* Submodels are attached at construction now (see test_ncm_model_ctrl_new),
+   * so the very first set_model() call already needs to pick up both prim
+   * and reion in one shot -- there is no legal way to attach or replace a
+   * submodel on an already-constructed NcHICosmo anymore, so what remains
+   * testable here is: (1) first-attach detection covering the host and its
+   * pre-existing submodels together, (2) idempotency, and (3) detecting a
+   * genuinely different host object (e.g. swapping between two complete
+   * cosmologies, which is still a legitimate operation). */
   g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
 
   {
-    NcmModel *submodel2 = NCM_MODEL (nc_hireion_camb_new ());
+    NcmModel *other_model = NCM_MODEL (nc_hicosmo_lcdm_new ());
 
-    ncm_model_add_submodel (test->model, submodel2);
-    g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
-    g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
+    g_assert_true (ncm_model_ctrl_set_model (test->ctrl, other_model));
+    g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, other_model));
 
-    ncm_model_add_submodel (test->model, test->submodel2);
-    g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
-    g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
-
-    NCM_TEST_FREE (ncm_model_free, submodel2);
+    NCM_TEST_FREE (ncm_model_free, other_model);
   }
+
+  /* Restore tracking to the fixture's own model -- callers of this helper
+   * (e.g. test_ncm_model_ctrl_update()) assume ctrl is left watching
+   * test->model afterward. */
+  g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
 }
 
 void
@@ -188,46 +193,32 @@ test_ncm_model_ctrl_update (TestNcmModelCtrl *test, gconstpointer pdata)
 void
 test_ncm_model_ctrl_submodel_update (TestNcmModelCtrl *test, gconstpointer pdata)
 {
+  /* Submodels are attached at construction now (see test_ncm_model_ctrl_new),
+   * so the very first update() call already picks up the host together with
+   * both prim and reion -- there is no legal way to attach a submodel to an
+   * already-constructed NcHICosmo anymore. What remains fully testable:
+   * has_submodel() reflecting the construction-time attachment, and each
+   * submodel's own param changes being detected independently of the host's
+   * and of each other.
+   *
+   * Note: on this very first call, ctrl_model != model triggers
+   * ncm_model_ctrl_update()'s internal ncm_model_ctrl_set_model() call,
+   * which itself creates and fully syncs the per-submodel sub-controllers
+   * (pre-existing behaviour of ncm_model_ctrl_update(), not specific to
+   * construction-time attachment) -- so submodel_last_update() is FALSE
+   * right after this first call, even though has_submodel() is already
+   * TRUE. */
   g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
-  g_assert_true (!ncm_model_ctrl_update (test->ctrl, test->model));
-  g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
-
-  ncm_model_orig_param_set (test->model, 0,
-                            ncm_model_orig_param_get (test->model, 0) * 0.999);
-  g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
-  g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
-
-  g_assert_true (!ncm_model_ctrl_model_has_submodel (test->ctrl, nc_hiprim_id ()));
-  g_assert_true (!ncm_model_ctrl_model_has_submodel (test->ctrl, nc_hireion_id ()));
-
-  ncm_model_add_submodel (test->model, test->submodel1);
-  g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
-  g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_model_has_submodel (test->ctrl, nc_hiprim_id ()));
-  g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
+  g_assert_true (ncm_model_ctrl_model_has_submodel (test->ctrl, nc_hireion_id ()));
+  g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
+  g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
 
   g_assert_true (!ncm_model_ctrl_update (test->ctrl, test->model));
   g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
-
-  ncm_model_orig_param_set (test->model, 0,
-                            ncm_model_orig_param_get (test->model, 0) * 0.999);
-  g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
-  g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
-  g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
-
-  ncm_model_orig_param_set (test->submodel1, 0,
-                            ncm_model_orig_param_get (test->submodel1, 0) * 0.999);
-  g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
-  g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
-  g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
-
-  ncm_model_add_submodel (test->model, test->submodel2);
-  g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
-  g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
-  g_assert_true (ncm_model_ctrl_model_has_submodel (test->ctrl, nc_hireion_id ()));
-  g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
+  g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
 
   ncm_model_orig_param_set (test->model, 0,
                             ncm_model_orig_param_get (test->model, 0) * 0.999);
@@ -269,23 +260,6 @@ test_ncm_model_ctrl_submodel_update (TestNcmModelCtrl *test, gconstpointer pdata
   g_assert_true (ncm_model_ctrl_model_last_update (test->ctrl));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
   g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
-
-  {
-    NcmModel *submodel2 = NCM_MODEL (nc_hireion_camb_new ());
-
-    ncm_model_add_submodel (test->model, submodel2);
-
-    g_assert_true (ncm_model_ctrl_update (test->ctrl, test->model));
-    g_assert_true (!ncm_model_ctrl_model_last_update (test->ctrl));
-    g_assert_true (!ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hiprim_id ()));
-    g_assert_true (ncm_model_ctrl_submodel_last_update (test->ctrl, nc_hireion_id ()));
-
-    ncm_model_add_submodel (test->model, test->submodel2);
-    g_assert_true (ncm_model_ctrl_set_model (test->ctrl, test->model));
-    g_assert_true (!ncm_model_ctrl_set_model (test->ctrl, test->model));
-
-    NCM_TEST_FREE (ncm_model_free, submodel2);
-  }
 }
 
 void

@@ -34,12 +34,10 @@ Ncm.cfg_init()
 def create_cosmology() -> Nc.HICosmo:
     """Create a cosmology."""
 
-    cosmo = Nc.HICosmoDEXcdm()
     prim = Nc.HIPrimPowerLaw.new()
     reion = Nc.HIReionCamb.new()
 
-    cosmo.add_submodel(reion)
-    cosmo.add_submodel(prim)
+    cosmo = Nc.HICosmoDEXcdm(prim=prim, reion=reion)
 
     # Cosmological parameters
     cosmo.props.H0 = 70.0

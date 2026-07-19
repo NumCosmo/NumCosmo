@@ -623,7 +623,13 @@ class GalaxyDistributionModel:
 
 def create_cosmo() -> Nc.HICosmo:
     """Create a cosmology for the cluster model."""
-    cosmo = Nc.HICosmoDEXcdm()
+    prim = Nc.HIPrimPowerLaw.new()
+    prim["ln10e10ASA"] = 3.02745
+    prim["n_SA"] = 0.9660
+
+    reion = Nc.HIReionCamb.new()
+
+    cosmo = Nc.HICosmoDEXcdm(prim=prim, reion=reion)
 
     cosmo.params_set_default_ftype()
     cosmo.omega_x2omega_k()
@@ -633,12 +639,6 @@ def create_cosmo() -> Nc.HICosmo:
     cosmo["w"] = -1.0
     cosmo["Omegak"] = 0.00
 
-    prim = Nc.HIPrimPowerLaw.new()
-    prim["ln10e10ASA"] = 3.02745
-    prim["n_SA"] = 0.9660
-
-    reion = Nc.HIReionCamb.new()
-
     cosmo.param_set_desc("H0", {"fit": False})
     cosmo.param_set_desc("Omegac", {"fit": False})
     cosmo.param_set_desc("Omegab", {"fit": False})
@@ -647,9 +647,6 @@ def create_cosmo() -> Nc.HICosmo:
     prim.param_set_desc("ln10e10ASA", {"fit": False})
     prim.param_set_desc("n_SA", {"fit": False})
     reion.param_set_desc("z_re", {"fit": False})
-
-    cosmo.add_submodel(prim)
-    cosmo.add_submodel(reion)
 
     return cosmo
 

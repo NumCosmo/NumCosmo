@@ -68,6 +68,7 @@ typedef struct _NcmModelPrivate
   guint64 skey;
   guint64 slkey[NCM_MODEL_MAX_STATES];
   gdouble *params_ptr;
+  gboolean constructed;
 } NcmModelPrivate;
 
 enum
@@ -131,6 +132,7 @@ ncm_model_init (NcmModel *model)
   self->ptypes           = g_array_new (FALSE, TRUE, sizeof (NcmParamType));
   self->submodel_array   = g_ptr_array_new ();
   self->submodel_mid_pos = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, NULL);
+  self->constructed      = FALSE;
 
   g_ptr_array_set_free_func (self->submodel_array, (GDestroyNotify) ncm_model_free);
 }
@@ -251,6 +253,8 @@ _ncm_model_constructed (GObject *object)
     g_array_set_size (self->ptypes, self->total_len);
     _ncm_model_set_sparams (model);
     ncm_model_params_set_default (model);
+
+    self->constructed = TRUE;
   }
 }
 
@@ -756,14 +760,14 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
 {
   GObjectClass *object_class = G_OBJECT_CLASS (model_class);
 
-  object_class->set_property     = &ncm_model_class_set_property;
-  object_class->get_property     = &ncm_model_class_get_property;
+  object_class->set_property            = &ncm_model_class_set_property;
+  object_class->get_property            = &ncm_model_class_get_property;
   model_class->parent_sparam_len        = model_class->sparam_len;
   model_class->parent_vparam_len        = model_class->vparam_len;
   model_class->parent_submodel_slot_len = model_class->submodel_slot_len;
-  model_class->sparam_len       += sparam_len;
-  model_class->vparam_len       += vparam_len;
-  model_class->nonparam_prop_len = nonparam_prop_len;
+  model_class->sparam_len              += sparam_len;
+  model_class->vparam_len              += vparam_len;
+  model_class->nonparam_prop_len        = nonparam_prop_len;
 
   if (model_class->sparam_len > 0)
   {
@@ -1025,9 +1029,9 @@ ncm_model_class_add_submodels (NcmModelClass *model_class, guint submodel_slot_l
         NcmModelSubmodelSlot *pslot = g_ptr_array_index (model_class->submodel_slot, i);
         NcmModelSubmodelSlot *slot  = g_slice_new0 (NcmModelSubmodelSlot);
 
-        slot->name          = g_strdup (pslot->name);
-        slot->symbol        = g_strdup (pslot->symbol);
-        slot->submodel_type = pslot->submodel_type;
+        slot->name                           = g_strdup (pslot->name);
+        slot->symbol                         = g_strdup (pslot->symbol);
+        slot->submodel_type                  = pslot->submodel_type;
         g_ptr_array_index (submodel_slot, i) = slot;
       }
 
@@ -1056,7 +1060,7 @@ ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id
   const guint base           = model_class->nonparam_prop_len
                                + 2 * (model_class->sparam_len - model_class->parent_sparam_len)
                                + 3 * (model_class->vparam_len - model_class->parent_vparam_len);
-  const guint prop_id        = base + (submodel_slot_id - model_class->parent_submodel_slot_len);
+  const guint prop_id = base + (submodel_slot_id - model_class->parent_submodel_slot_len);
   NcmModelSubmodelSlot *slot;
 
   g_assert (g_type_is_a (submodel_type, NCM_TYPE_MODEL));
@@ -3238,10 +3242,30 @@ ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
   NCM_MODEL_GET_CLASS (model)->add_submodel (model, submodel);
 }
 
+static gboolean
+_ncm_model_has_submodel_slot_for_type (NcmModelClass *model_class, GType submodel_type)
+{
+  guint i;
+
+  if (model_class->submodel_slot == NULL)
+    return FALSE;
+
+  for (i = 0; i < model_class->submodel_slot_len; i++)
+  {
+    NcmModelSubmodelSlot *slot = g_ptr_array_index (model_class->submodel_slot, i);
+
+    if ((slot != NULL) && g_type_is_a (submodel_type, slot->submodel_type))
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
 static void
 _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
 {
   NcmModelPrivate * const self   = ncm_model_get_instance_private (model);
+  NcmModelClass *model_class     = NCM_MODEL_GET_CLASS (model);
   NcmModelClass *submodel_class  = NCM_MODEL_GET_CLASS (submodel);
   const NcmModelID main_model_id = submodel_class->main_model_id;
   const gboolean is_submodel     = submodel_class->is_submodel;
@@ -3250,6 +3274,12 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
 
   g_assert (is_submodel);
   g_assert_cmpint (main_model_id, ==, ncm_model_id (model));
+
+  if (self->constructed && _ncm_model_has_submodel_slot_for_type (model_class, G_OBJECT_TYPE (submodel)))
+    g_error ("_ncm_model_add_submodel: `%s' declares a construction-only typed slot for `%s' submodels -- "
+             "it must be provided as a construction property (e.g. `g_object_new()`/constructor kwarg), "
+             "not attached after construction.",
+             G_OBJECT_TYPE_NAME (model), G_OBJECT_TYPE_NAME (submodel));
 
   if (g_hash_table_lookup_extended (self->submodel_mid_pos, GINT_TO_POINTER (submodel_mid), &orig_key, &pos_ptr))
   {

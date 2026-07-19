@@ -2568,10 +2568,10 @@ def compute_D_ell_twofluid(lmax=2500):
     Bcbe.set_lensed_Cls(True)
 
     # Setup cosmology with two-fluids primordial spectrum
-    cosmo = Nc.HICosmoDEXcdm.new()
-    cosmo.cmb_params()
     reion = Nc.HIReionCamb.new()
     hiprim = Nc.HIPrimTwoFluids(use_default_calib=True)
+    cosmo = Nc.HICosmoDEXcdm(reion=reion, prim=hiprim)
+    cosmo.cmb_params()
 
     # Best-fit parameters for Planck 2018 with two-fluids model
     cosmo["Omegak"] = 0.0
@@ -2582,9 +2582,6 @@ def compute_D_ell_twofluid(lmax=2500):
     hiprim["lnk0"] = -6.251936466867
     hiprim["lnw"] = -12.6152819113359
     reion["z_re"] = 8.35735404822378
-
-    cosmo.add_submodel(reion)
-    cosmo.add_submodel(hiprim)
 
     Bcbe.prepare(cosmo)
 
@@ -2616,10 +2613,10 @@ def compute_D_ell_powerlaw(lmax=2500):
     Bcbe.set_lensed_Cls(True)
 
     # Setup cosmology with power-law primordial spectrum
-    cosmo = Nc.HICosmoDEXcdm.new()
-    cosmo.cmb_params()
     reion = Nc.HIReionCamb.new()
     hiprim = Nc.HIPrimPowerLaw()
+    cosmo = Nc.HICosmoDEXcdm(reion=reion, prim=hiprim)
+    cosmo.cmb_params()
 
     # Best-fit parameters for Planck 2018 with power-law model
     cosmo["Omegak"] = 0.0
@@ -2629,9 +2626,6 @@ def compute_D_ell_powerlaw(lmax=2500):
     hiprim["ln10e10ASA"] = 3.04632994161073
     hiprim["n_SA"] = 0.967382455314431
     reion["z_re"] = 7.79677265563444
-
-    cosmo.add_submodel(reion)
-    cosmo.add_submodel(hiprim)
 
     Bcbe.prepare(cosmo)
 

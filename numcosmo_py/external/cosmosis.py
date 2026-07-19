@@ -368,10 +368,11 @@ def convert_cosmology(
     if "mnu" in params_dict:
         massnu_length = 1
 
-    cosmo = Nc.HICosmoDECpl(massnu_length=massnu_length)
-    cosmo.omega_x2omega_k()
     prim = Nc.HIPrimPowerLaw.new()
     reion = Nc.HIReionCamb.new()
+
+    cosmo = Nc.HICosmoDECpl(massnu_length=massnu_length, prim=prim, reion=reion)
+    cosmo.omega_x2omega_k()
 
     for cosmosis_name, numcosmo_name in COSMO_PARAMETER_CONVERSION.items():
         if cosmosis_name in params_dict:
@@ -389,9 +390,6 @@ def convert_cosmology(
 
     if "a_s" in params_dict:
         prim.param_set_by_name("ln10e10ASA", math.log(1.0e10 * params_dict["a_s"]))
-
-    cosmo.add_submodel(prim)
-    cosmo.add_submodel(reion)
 
     if "sigma_8" in params_dict:
         ps_cbe = Nc.PowspecMLCBE.new()
