@@ -117,25 +117,27 @@ def test_eval_p_rho2_matches_eval_p(name):
 
 
 @pytest.mark.parametrize(
-    "mu,nu", [(0.3, 1.0e4), (0.5, 1.0e3), (0.6, 1.0e4), (0.99, 1.0e3)]
+    "alpha,beta",
+    [(3000.0, 7000.0), (500.0, 500.0), (6000.0, 4000.0), (990.0, 10.0)],
 )
-def test_beta_concentrated_no_overflow(mu, nu):
+def test_beta_concentrated_no_overflow(alpha, beta):
     """eval_p/eval_p_rho2 stay finite and normalized for concentrated Beta
-    populations (large alpha=mu*nu, beta=(1-mu)*nu).
+    populations (large alpha, beta).
 
     Evaluating norm=1/B(alpha,beta) and x**(alpha-1) as separate factors
     overflows/underflows for alpha/beta of a few hundred or more (already
-    reachable within nu's own declared range, e.g. mu=0.5, nu=1e3 pushes
-    -ln B(alpha,beta) to ~695, right at exp()'s overflow edge), silently
-    producing NaN (0*inf). eval_p must instead accumulate in log-space.
+    reachable within the class's own declared range, e.g. alpha=beta=500
+    pushes -ln B(alpha,beta) to ~695, right at exp()'s overflow edge),
+    silently producing NaN (0*inf). eval_p must instead accumulate in
+    log-space.
     """
     model = Nc.GalaxyShapePopBeta.new()
-    model["mu"] = mu
-    model["nu"] = nu
+    model["alpha"] = alpha
+    model["beta"] = beta
     data = Nc.GalaxyShapePopData.new(model)
     model.prepare(data)
 
-    mode = max((mu * nu - 1.0) / (nu - 2.0), 1.0e-6)
+    mode = max((alpha - 1.0) / (alpha + beta - 2.0), 1.0e-6)
     for x in (mode * 0.999, mode, min(mode * 1.001, 1.0 - 1.0e-9)):
         p = model.eval_p(data, x)
         assert np.isfinite(p)

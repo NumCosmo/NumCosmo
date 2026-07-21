@@ -138,9 +138,12 @@ test_nc_galaxy_shape_pop_beta_series_matches_exact (void)
   NcmLaurentSeriesTPS *out   = ncm_laurent_series_tps_new (TEST_ORDER);
   guint i;
 
-  /* mu=0.18, nu=5.0 (defaults) -> alpha=mu*nu=0.9, beta=(1-mu)*nu=4.1: a
-   * non-integer alpha (alpha<1) deliberately exercises the "real,
-   * non-integer exponent" path ncm_laurent_series_tps_pow() exists for. */
+  /* alpha=0.9, beta=4.1 (the class's own pre->=1-bound default, still
+   * directly settable here): a non-integer alpha (alpha<1) deliberately
+   * exercises the "real, non-integer exponent" path
+   * ncm_laurent_series_tps_pow() exists for. */
+  ncm_model_param_set_by_name (NCM_MODEL (pop), "alpha", 0.9, NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (pop), "beta", 4.1, NULL);
   nc_galaxy_shape_pop_prepare (NC_GALAXY_SHAPE_POP (pop), data);
 
   nc_galaxy_shape_pop_eval_p_rho2_g_series (NC_GALAXY_SHAPE_POP (pop), data, x, out);

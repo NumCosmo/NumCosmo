@@ -178,6 +178,87 @@ def test_marginal_matches_quad(ellip_conv):
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_marginal_matches_scipy_truth_table_beta_alpha_below_one(ellip_conv):
+    """NcGalaxyShapePopBeta with alpha<1 (density diverges at x=0, a genuine
+    singularity -- see the class doc): unlike SeriesLensed, whose g-Taylor
+    series loses its radius of convergence here since the population stops
+    being analytic at x=0, FixedQuad's direct lens-domain quadrature has no
+    series expansion to break and stays accurate through the singularity.
+    This is a real fitting regime (NcGalaxyShapePopBeta's own alpha floor is
+    only 0.5001, looser than beta's 1.0, precisely to allow it)."""
+    alpha, beta, std_noise = 0.6, 4.0, 0.03
+    g_1, g_2 = 0.1, 0.05
+    eps_obs_1, eps_obs_2 = 0.15, -0.1
+
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = alpha
+    pop["beta"] = beta
+    mset = _build_mset(pop)
+
+    gsffq = Nc.GalaxyShapeFactorFixedQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsffq, mset)
+    gsffq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsffq.prepare_data_array(mset, [data], True, True)
+
+    val = gsffq.eval_marginal(pop, data, g_1, g_2, eps_obs_1, eps_obs_2)
+    exact = _scipy_exact_marginal(
+        pop,
+        data.pop_data,
+        ellip_conv,
+        g_1 + 1j * g_2,
+        eps_obs_1 + 1j * eps_obs_2,
+        std_noise,
+    )
+
+    assert math.isfinite(val)
+    assert_allclose(val, exact, rtol=2.0e-4)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_marginal_matches_scipy_truth_table_beta_alpha_below_one_g_scan(ellip_conv):
+    """Same alpha<1 Beta population as above, scanned over several shears
+    against the scipy oracle directly.
+
+    NOT cross-checked against Quad here: a real, separate bug was found
+    while writing this test -- NcGalaxyShapeFactorQuad's own adaptive
+    Divonne cubature loses up to ~11% accuracy (verified against this same
+    scipy oracle) in a g~[0.14, 0.19] window for this exact population,
+    while FixedQuad stays within ~0.5% throughout. Quad is not a valid
+    reference for alpha<1 Beta populations until that is fixed -- see
+    test_galaxy_shape_factor_quad.py's own test documenting it.
+    """
+    alpha, beta, std_noise = 0.6, 4.0, 0.03
+    eps_obs_1, eps_obs_2 = 0.15, -0.1
+
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = alpha
+    pop["beta"] = beta
+    mset = _build_mset(pop)
+
+    gsffq = Nc.GalaxyShapeFactorFixedQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsffq, mset)
+    gsffq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsffq.prepare_data_array(mset, [data], True, True)
+
+    for g_mag in (0.05, 0.14, 0.16, 0.18, 0.3, 0.5):
+        fq_val = gsffq.eval_marginal(pop, data, g_mag, 0.0, eps_obs_1, eps_obs_2)
+        exact = _scipy_exact_marginal(
+            pop,
+            data.pop_data,
+            ellip_conv,
+            g_mag + 0j,
+            eps_obs_1 + 1j * eps_obs_2,
+            std_noise,
+        )
+        assert math.isfinite(fq_val)
+        assert_allclose(fq_val, exact, rtol=8.0e-3)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_extreme_g_stays_accurate(ellip_conv):
     """Headline regression: unlike Series/SeriesLensed, this class has no
     truncated polynomial to cross zero -- stays accurate through g=0.99,

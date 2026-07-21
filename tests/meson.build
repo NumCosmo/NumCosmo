@@ -3,16 +3,15 @@
 # Tests run concurrently (is_parallel: true) must pin every threading backend to a
 # single thread, otherwise N concurrent processes x N threads each = N^2
 # oversubscription, which on the mixed OpenBLAS stack can deadlock. Tests that run
-# alone (is_parallel: false) instead get OMP_NUM_THREADS = online cores, so their
-# `#pragma omp parallel` paths are actually exercised inside the normal `meson test`
-# run -- no separate OMP lane or external env vars required. This is selected per
-# test below from the `omp` suite tag (C) / the non-xdist pytest lane (Python).
-getconf_prog = find_program('getconf', required: false)
-if getconf_prog.found()
-    n_omp_threads = run_command(getconf_prog, '_NPROCESSORS_ONLN', check: true).stdout().strip()
-else
-    n_omp_threads = '4'
-endif
+# alone (is_parallel: false) instead get OMP_NUM_THREADS = however many CPUs are
+# actually available right now (see scripts/detect_omp_threads.sh -- run fresh for
+# every `meson test` invocation, not baked in once at `meson setup` time, since a
+# builddir configured on one machine/container can later be run in a differently
+# sized one), so their `#pragma omp parallel` paths are actually exercised inside
+# the normal `meson test` run -- no separate OMP lane or external env vars
+# required. This is selected per test below from the `omp` suite tag (C) / the
+# non-xdist pytest lane (Python).
+omp_thread_wrapper = find_program('scripts/detect_omp_threads.sh')
 
 omp_vars_serial = {
     'OMP_NUM_THREADS': '1',
@@ -22,10 +21,10 @@ omp_vars_serial = {
     'BLIS_NUM_THREADS': '1',
     'MKL_NUM_THREADS': '1',
 }
+# OMP_NUM_THREADS/OMP_THREAD_LIMIT are intentionally absent here: they are set at
+# run time by omp_thread_wrapper, not baked in as a literal.
 omp_vars_threaded = {
-    'OMP_NUM_THREADS': n_omp_threads,
     'OMP_MAX_ACTIVE_LEVELS': '1',
-    'OMP_THREAD_LIMIT': n_omp_threads,
 }
 
 # Reproducibility (see TESTING.md). The default (push-CI) lane pins a fixed g_test seed so

@@ -322,11 +322,14 @@ test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, 
     pop_shape = NC_GALAXY_SHAPE_POP (nc_galaxy_shape_pop_gauss_new ());
     ncm_model_param_set (NCM_MODEL (pop_shape), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, ncm_rng_uniform_gen (rng, 0.05, 0.2));
   }
-  else /* beta: defaults (mu=0.18, nu=5.0) match the population used elsewhere
-        * to exercise the non-integer-exponent path (see
+  else /* beta: alpha=0.9, beta=4.1 (the class's own pre->=1-bound default,
+        * still directly settable here) matches the population used
+        * elsewhere to exercise the non-integer-exponent path (see
         * test_nc_galaxy_shape_pop_series.c). */
   {
     pop_shape = NC_GALAXY_SHAPE_POP (nc_galaxy_shape_pop_beta_new ());
+    ncm_model_param_set_by_name (NCM_MODEL (pop_shape), "alpha", 0.9, NULL);
+    ncm_model_param_set_by_name (NCM_MODEL (pop_shape), "beta", 4.1, NULL);
   }
 
   if (g_strcmp0 (cfg->redshift, "composed") == 0)

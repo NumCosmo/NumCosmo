@@ -53,6 +53,7 @@ void test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpoi
 void test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_parity_serial_vs_threaded (void);
 
 typedef struct _TestNcmFitEsmcmcFunc
 {
@@ -118,6 +119,8 @@ main (gint argc, gchar *argv[])
               &test_ncm_fit_esmcmc_new_stretch,
               &test_ncm_fit_invalid_run,
               &test_ncm_fit_esmcmc_free);
+
+  g_test_add_func ("/ncm/fit/esmcmc/parity/serial_vs_threaded", &test_ncm_fit_esmcmc_parity_serial_vs_threaded);
 
   g_test_run ();
 }
@@ -861,5 +864,93 @@ test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   /*NcmFit *fit = test->fit;*/
   g_assert_not_reached ();
+}
+
+/* Builds a small, fixed (not randomized) Stretch-walker ESMCMC scenario and
+ * runs it a few steps, returning the resulting catalog (transfer full). Used
+ * by test_ncm_fit_esmcmc_parity_serial_vs_threaded() to check that
+ * use_threads TRUE/FALSE draw the exact same sequence of points -- the
+ * guarantee _ncm_fit_esmcmc_gen_init_points_interval()'s serial-draw step is
+ * meant to provide, regardless of thread count. */
+static NcmMSetCatalog *
+_test_ncm_fit_esmcmc_parity_run (gboolean use_threads)
+{
+  const gint dim                      = 2;
+  const gint nwalkers                 = 60;
+  NcmRNG *rng                         = ncm_rng_seeded_new (NULL, 20260721);
+  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 2.0e-2, 0.3, -1.0, 1.0, rng);
+  NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
+  NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd, NULL);
+  NcmLikelihood *lh                   = ncm_likelihood_new (dset);
+  NcmMSet *mset                       = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmMSetTransKernGauss *init_sampler = ncm_mset_trans_kern_gauss_new (0);
+  NcmRNG *esmcmc_rng                  = ncm_rng_seeded_new (NULL, 20260721);
+  NcmFitESMCMCWalkerStretch *stretch;
+  NcmFit *fit;
+  NcmFitESMCMC *esmcmc;
+  NcmMSetCatalog *mcat;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+
+  fit     = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  stretch = ncm_fit_esmcmc_walker_stretch_new (nwalkers, ncm_mset_fparams_len (mset));
+  esmcmc  = ncm_fit_esmcmc_new (fit,
+                                nwalkers,
+                                NCM_MSET_TRANS_KERN (init_sampler),
+                                NCM_FIT_ESMCMC_WALKER (stretch),
+                                NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_fit_esmcmc_set_rng (esmcmc, esmcmc_rng);
+  ncm_fit_esmcmc_set_use_threads (esmcmc, use_threads);
+
+  ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
+  ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 1.0e-2);
+
+  ncm_fit_esmcmc_start_run (esmcmc);
+  ncm_fit_esmcmc_run (esmcmc, 5);
+  ncm_fit_esmcmc_end_run (esmcmc);
+
+  mcat = ncm_mset_catalog_ref (ncm_fit_esmcmc_peek_catalog (esmcmc));
+
+  ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
+  ncm_model_mvnd_clear (&model_mvnd);
+  ncm_dataset_clear (&dset);
+  ncm_likelihood_clear (&lh);
+  ncm_mset_clear (&mset);
+  ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_fit_clear (&fit);
+  ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (stretch));
+  ncm_fit_esmcmc_clear (&esmcmc);
+  ncm_rng_free (rng);
+
+  return mcat;
+}
+
+void
+test_ncm_fit_esmcmc_parity_serial_vs_threaded (void)
+{
+  NcmMSetCatalog *mcat_serial   = _test_ncm_fit_esmcmc_parity_run (FALSE);
+  NcmMSetCatalog *mcat_threaded = _test_ncm_fit_esmcmc_parity_run (TRUE);
+  const guint len               = ncm_mset_catalog_len (mcat_serial);
+  const guint ncols             = ncm_mset_catalog_ncols (mcat_serial);
+  guint i;
+
+  g_assert_cmpuint (len, >, 0);
+  g_assert_cmpuint (len, ==, ncm_mset_catalog_len (mcat_threaded));
+  g_assert_cmpuint (ncols, ==, ncm_mset_catalog_ncols (mcat_threaded));
+
+  for (i = 0; i < len; i++)
+  {
+    NcmVector *row_serial   = ncm_mset_catalog_peek_row (mcat_serial, i);
+    NcmVector *row_threaded = ncm_mset_catalog_peek_row (mcat_threaded, i);
+    guint j;
+
+    for (j = 0; j < ncols; j++)
+      g_assert_cmpfloat (ncm_vector_get (row_serial, j), ==, ncm_vector_get (row_threaded, j));
+  }
+
+  ncm_mset_catalog_clear (&mcat_serial);
+  ncm_mset_catalog_clear (&mcat_threaded);
 }
 

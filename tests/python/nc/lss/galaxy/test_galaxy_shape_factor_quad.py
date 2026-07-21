@@ -250,23 +250,22 @@ def test_marginal_matches_scipy_truth_table_narrow_trace_convention():
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_marginal_matches_scipy_truth_table_beta_peaked_off_center(ellip_conv):
     """Sanity/non-regression test for the Beta mode_x hint: places eps_obs
-    exactly at the forward image of the population's peak ring (mu=0.7,
-    nu=1000 -> mode_x != 0, peak away from chi_I=0), with noise narrow enough
+    exactly at the forward image of the population's peak ring (alpha=700,
+    beta=300 -> mode_x != 0, peak away from chi_I=0), with noise narrow enough
     that landing near the true peak matters. Divonne's own search from the
     two chi_I=0-based hints already resolves this case (verified directly,
     not merely inferred from this test passing); the third, mode_x-based
     hint is a documented safety margin rather than something this specific
     case demonstrates as load-bearing -- see the class doc."""
-    mu, nu, std_noise = 0.7, 1.0e3, 0.02
+    alpha, beta, std_noise = 700.0, 300.0, 0.02
     g = 0.1 + 0.05j
     theta = 0.3
 
     pop = Nc.GalaxyShapePopBeta.new()
-    pop["mu"] = mu
-    pop["nu"] = nu
+    pop["alpha"] = alpha
+    pop["beta"] = beta
     mset = _build_mset(pop)
 
-    alpha, beta = mu * nu, (1.0 - mu) * nu
     mode_x = (alpha - 1.0) / (alpha + beta - 2.0)
     rho_mode = np.sqrt(mode_x)
     chi_i_peak = rho_mode * np.exp(1j * theta)
@@ -292,8 +291,8 @@ def test_marginal_matches_scipy_truth_table_concentrated_beta():
     beyond where the old per-factor pow()/norm evaluation would overflow to
     NaN (see nc_galaxy_shape_pop_beta.c), integrates correctly through Quad."""
     pop = Nc.GalaxyShapePopBeta.new()
-    pop["mu"] = 0.3
-    pop["nu"] = 1.0e3
+    pop["alpha"] = 300.0
+    pop["beta"] = 700.0
     mset = _build_mset(pop)
 
     gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
@@ -309,6 +308,51 @@ def test_marginal_matches_scipy_truth_table_concentrated_beta():
     )
 
     assert_allclose(quad_val, exact_val, rtol=1.0e-4)
+
+
+def test_marginal_alpha_below_one_known_accuracy_bug():
+    """KNOWN BUG, not yet fixed: for a Beta population with alpha<1 (density
+    diverges at x=0, a genuine singularity), Quad's adaptive Divonne
+    cubature loses accuracy in a narrow g window -- up to ~11% relative
+    error against the independent scipy oracle at g~0.18, vs FixedQuad's
+    ~0.2% at the same configuration (see
+    test_galaxy_shape_factor_fixed_quad.py's own
+    test_marginal_matches_scipy_truth_table_beta_alpha_below_one_g_scan,
+    which is the one that should be trusted for this population today).
+    Suspected cause: the singularity isn't resolved by Divonne's adaptive
+    subdivision of the generic box this class integrates over, unlike
+    FixedQuad's fixed lens-domain nodes. This test pins the CURRENT (buggy)
+    behavior with a generous bound so a regression (getting worse) is
+    caught, not to assert the bug is acceptable."""
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = 0.6
+    pop["beta"] = 4.0
+    mset = _build_mset(pop)
+
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
+    std_noise = 0.03
+    eps_obs = 0.15 - 0.1j
+
+    gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsfq, mset)
+    gsfq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsfq.prepare_data_array(mset, [data], True, True)
+
+    g = 0.18 + 0.0j
+    quad_val = gsfq.eval_marginal(pop, data, g.real, g.imag, eps_obs.real, eps_obs.imag)
+    exact_val = _scipy_exact_marginal(
+        pop, data.pop_data, ellip_conv, g, eps_obs, std_noise
+    )
+
+    rel_err = abs(quad_val - exact_val) / exact_val
+    assert rel_err > 0.05, (
+        "Quad's alpha<1 accuracy bug appears fixed -- update/remove this "
+        "test and re-enable Quad as a trusted cross-check for alpha<1 Beta "
+        "populations."
+    )
+    assert rel_err < 0.20, "Quad's alpha<1 accuracy bug got worse, investigate."
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)

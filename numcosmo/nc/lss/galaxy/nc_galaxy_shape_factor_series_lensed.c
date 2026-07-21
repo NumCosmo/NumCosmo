@@ -659,6 +659,18 @@ _nc_galaxy_shape_factor_series_lensed_eval_ln_marginal (NcGalaxyShapeFactor *gsf
   return log (_nc_galaxy_shape_factor_series_lensed_marginal (NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED (gsf), pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2));
 }
 
+static gchar *
+_nc_galaxy_shape_factor_series_lensed_get_desc (NcGalaxyShapeFactor *gsf)
+{
+  NcGalaxyShapeFactorSeriesLensedPrivate * const self = nc_galaxy_shape_factor_series_lensed_get_instance_private (NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED (gsf));
+  gchar *base_desc                                    = NC_GALAXY_SHAPE_FACTOR_CLASS (nc_galaxy_shape_factor_series_lensed_parent_class)->get_desc (gsf);
+  gchar *desc                                         = g_strdup_printf ("%s, trunc_order=%u, n_nodes=%u", base_desc, self->trunc_order, self->n_nodes);
+
+  g_free (base_desc);
+
+  return desc;
+}
+
 static void
 nc_galaxy_shape_factor_series_lensed_class_init (NcGalaxyShapeFactorSeriesLensedClass *klass)
 {
@@ -706,6 +718,7 @@ nc_galaxy_shape_factor_series_lensed_class_init (NcGalaxyShapeFactorSeriesLensed
   gsf_class->data_init        = &_nc_galaxy_shape_factor_series_lensed_data_init;
   gsf_class->eval_marginal    = &_nc_galaxy_shape_factor_series_lensed_eval_marginal;
   gsf_class->eval_ln_marginal = &_nc_galaxy_shape_factor_series_lensed_eval_ln_marginal;
+  gsf_class->get_desc         = &_nc_galaxy_shape_factor_series_lensed_get_desc;
 }
 
 /**

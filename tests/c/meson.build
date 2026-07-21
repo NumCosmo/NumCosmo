@@ -402,8 +402,9 @@ foreach c_test : all_c_tests
     endif
     test(
         c_test['name'],
-        executable_test,
-        args: test_seed_args,
+        test_is_omp ? omp_thread_wrapper : executable_test,
+        args: test_is_omp ? [executable_test.full_path()] + test_seed_args : test_seed_args,
+        depends: test_is_omp ? [executable_test] : [],
         timeout: timeout,
         env: test_env,
         protocol: 'tap',

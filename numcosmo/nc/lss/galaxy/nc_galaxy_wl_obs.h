@@ -105,8 +105,37 @@ typedef enum _NcGalaxyWLObsEllipConv
   NC_GALAXY_WL_OBS_ELLIP_CONV_LEN
 } NcGalaxyWLObsEllipConv;
 
+/**
+ * NcGalaxyWLObsCatalogId:
+ * @NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_002: Subaru HSC-SSP PDR1 cluster field HWL16a-002
+ * @NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_007: Subaru HSC-SSP PDR1 cluster field HWL16a-007
+ * @NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_060: Subaru HSC-SSP PDR1 cluster field HWL16a-060
+ * @NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_064: Subaru HSC-SSP PDR1 cluster field HWL16a-064
+ * @NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_094: Subaru HSC-SSP PDR1 cluster field HWL16a-094
+ *
+ * Identifiers for the curated Subaru HSC-SSP PDR1 weak lensing galaxy
+ * catalogs shipped in the NumCosmo data file release. Each catalog is a
+ * serialized #NcGalaxyWLObs holding one cluster field's background galaxy
+ * shape, calibration and photometric redshift (point estimate plus
+ * per-galaxy $p(z)$ spline) measurements.
+ *
+ */
+typedef enum _NcGalaxyWLObsCatalogId
+{
+  NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_002 = 0,
+  NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_007,
+  NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_060,
+  NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_064,
+  NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_094,
+  /*< private >*/
+  NC_GALAXY_WL_OBS_CATALOG_LEN, /*< skip >*/
+} NcGalaxyWLObsCatalogId;
+
 NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcWLEllipticityFrame coord, guint nrows, GStrv col_names);
 NcGalaxyWLObs *nc_galaxy_wl_obs_ref (NcGalaxyWLObs *obs);
+
+gchar *nc_galaxy_wl_obs_catalog_id_get_filename (NcGalaxyWLObsCatalogId id);
+NcGalaxyWLObs *nc_galaxy_wl_obs_new_from_catalog_id (NcGalaxyWLObsCatalogId id);
 
 void nc_galaxy_wl_obs_free (NcGalaxyWLObs *obs);
 void nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs);

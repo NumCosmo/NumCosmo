@@ -110,8 +110,17 @@ struct _NcGalaxyShapeFactorClass
   gdouble (*eval_marginal) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
   gdouble (*eval_ln_marginal) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 
+  /* Human-readable one-line description of this scheme's own configuration
+   * (default: the concrete type name plus :ellip-conv, the one property
+   * shared by every subclass), same rationale as #NcGalaxyPositionFactor's
+   * analogous vfunc (see there) -- override to append scheme-specific
+   * configuration (e.g. SeriesLensed's truncation order), chaining to the
+   * parent class implementation rather than duplicating the ellip-conv
+   * part. */
+  gchar *(*get_desc) (NcGalaxyShapeFactor *gsf);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[14];
+  gpointer padding[13];
 };
 
 /*
@@ -165,6 +174,8 @@ void nc_galaxy_shape_factor_clear (NcGalaxyShapeFactor **gsf);
 NcGalaxyWLObsEllipConv nc_galaxy_shape_factor_get_ellip_conv (NcGalaxyShapeFactor *gsf);
 
 gboolean nc_galaxy_shape_factor_check_obs (NcGalaxyShapeFactor *gsf, NcGalaxyWLObs *obs, GError **error);
+
+gchar *nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf);
 
 void nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset);
 guint64 nc_galaxy_shape_factor_get_radius_hash (NcGalaxyShapeFactor *gsf);

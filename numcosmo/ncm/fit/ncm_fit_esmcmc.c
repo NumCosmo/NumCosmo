@@ -95,6 +95,7 @@ typedef struct _NcmFitESMCMCPrivate
   gchar *func_oa_file;
   guint nadd_vals;
   guint fparam_len;
+  guint init_max_rounds;
   gboolean use_threads;
   gboolean use_mpi;
   gboolean has_mpi;
@@ -137,6 +138,7 @@ enum
   PROP_USE_MPI,
   PROP_DATA_FILE,
   PROP_FUNC_ARRAY,
+  PROP_INIT_MAX_ROUNDS,
 };
 
 struct _NcmFitESMCMC
@@ -175,6 +177,7 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   self->interm_log        = 0;
   self->nadd_vals         = 0;
   self->fparam_len        = 0;
+  self->init_max_rounds   = 0;
   self->skip_check        = FALSE;
 
   self->m2lnL                = g_ptr_array_new ();
@@ -418,6 +421,9 @@ _ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *valu
 
       break;
     }
+    case PROP_INIT_MAX_ROUNDS:
+      self->init_max_rounds = g_value_get_uint (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -487,6 +493,9 @@ _ncm_fit_esmcmc_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_FUNC_ARRAY:
       g_value_set_boxed (value, self->func_oa);
+      break;
+    case PROP_INIT_MAX_ROUNDS:
+      g_value_set_uint (value, self->init_max_rounds);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -695,6 +704,13 @@ ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
                                                        "Functions array",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_INIT_MAX_ROUNDS,
+                                   g_param_spec_uint ("init-max-rounds",
+                                                      NULL,
+                                                      "Maximum number of redraw rounds when generating initial ensemble points",
+                                                      1, G_MAXUINT, 100,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 typedef struct _NcmFitESMCMCWorker
@@ -1374,77 +1390,127 @@ _ncm_fit_esmcmc_gen_init_points_mpi (NcmFitESMCMC *esmcmc, const glong i, const 
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
   NcmRNG *rng                      = ncm_mset_catalog_peek_rng (self->mcat);
-  GPtrArray *thetastar_in_a        = g_ptr_array_new ();
-  GPtrArray *thetastar_out_a       = g_ptr_array_new ();
-  glong k, j;
+  glong start                      = i;
+  guint round;
 
-  for (k = i; k < f; k++)
+  for (round = 0; round < self->init_max_rounds; round++)
   {
-    NcmVector *thetastar_in_k  = g_ptr_array_index (self->thetastar_in, k);
-    NcmVector *thetastar_out_k = g_ptr_array_index (self->thetastar_out, k);
-    NcmVector *thetastar       = g_ptr_array_index (self->thetastar, k);
+    GPtrArray *thetastar_in_a  = g_ptr_array_new ();
+    GPtrArray *thetastar_out_a = g_ptr_array_new ();
+    glong n_accepted           = 0;
+    glong k, j;
 
-    ncm_mset_trans_kern_prior_sample (self->sampler, thetastar, rng);
-
-    for (j = 0; j < NCM_FIT_ESMCMC_MPI_IN_LEN; j++)
-      ncm_vector_set (thetastar_in_k, self->fparam_len + j, -1.0);
-
-    g_ptr_array_add (thetastar_in_a,  thetastar_in_k);
-    g_ptr_array_add (thetastar_out_a, thetastar_out_k);
-  }
-
-  ncm_mpi_job_run_array_async (self->mj, thetastar_in_a, thetastar_out_a);
-
-  k = i;
-
-  for (j = 0; j < thetastar_out_a->len; j++)
-  {
-    NcmVector *thetastar_out_k = g_ptr_array_index (thetastar_out_a, j);
-
-    if (ncm_vector_get (thetastar_out_k, 0) != 0.0)
+    for (k = start; k < f; k++)
     {
-      NcmVector *full_theta_k     = g_ptr_array_index (self->full_theta, k);
-      NcmVector *full_thetastar_k = g_ptr_array_index (self->full_thetastar, k);
+      if (!g_array_index (self->accepted, gboolean, k))
+      {
+        NcmVector *thetastar_in_k  = g_ptr_array_index (self->thetastar_in, k);
+        NcmVector *thetastar_out_k = g_ptr_array_index (self->thetastar_out, k);
+        NcmVector *thetastar       = g_ptr_array_index (self->thetastar, k);
 
-      ncm_vector_memcpy (full_theta_k, full_thetastar_k);
+        ncm_mset_trans_kern_prior_sample (self->sampler, thetastar, rng);
 
-      g_array_index (self->accepted, gboolean, k) = TRUE;
-      k++;
+        for (j = 0; j < NCM_FIT_ESMCMC_MPI_IN_LEN; j++)
+          ncm_vector_set (thetastar_in_k, self->fparam_len + j, -1.0);
+
+        g_ptr_array_add (thetastar_in_a,  thetastar_in_k);
+        g_ptr_array_add (thetastar_out_a, thetastar_out_k);
+      }
     }
+
+    g_assert_cmpint (thetastar_in_a->len, >, 0);
+    ncm_mpi_job_run_array_async (self->mj, thetastar_in_a, thetastar_out_a);
+
+    j = 0;
+
+    for (k = start; k < f; k++)
+    {
+      if (!g_array_index (self->accepted, gboolean, k))
+      {
+        NcmVector *thetastar_out_k = g_ptr_array_index (thetastar_out_a, j++);
+
+        if (ncm_vector_get (thetastar_out_k, 0) != 0.0)
+        {
+          NcmVector *full_theta_k     = g_ptr_array_index (self->full_theta, k);
+          NcmVector *full_thetastar_k = g_ptr_array_index (self->full_thetastar, k);
+
+          ncm_vector_memcpy (full_theta_k, full_thetastar_k);
+
+          g_array_index (self->accepted, gboolean, k) = TRUE;
+          n_accepted++;
+        }
+      }
+      else
+      {
+        n_accepted++;
+      }
+    }
+
+    g_ptr_array_unref (thetastar_in_a);
+    g_ptr_array_unref (thetastar_out_a);
+
+    if (n_accepted == f - start)
+      return;
   }
 
-  g_ptr_array_unref (thetastar_in_a);
-  g_ptr_array_unref (thetastar_out_a);
+  {
+    NcmMSet *mset = ncm_fit_peek_mset (self->fit);
+    glong k;
 
-  if (k < f)
-    _ncm_fit_esmcmc_gen_init_points_mpi (esmcmc, k, f);
+    for (k = start; k < f; k++)
+    {
+      NcmVector *thetastar_k = g_ptr_array_index (self->thetastar, k);
+
+      ncm_mset_fparams_set_vector (mset, thetastar_k);
+      g_warning ("_ncm_fit_esmcmc_gen_init_points_mpi: "
+                 "walker %ld never reached a valid point, current parameters:", k);
+      ncm_mset_params_log_vals (mset);
+    }
+
+    g_error ("_ncm_fit_esmcmc_gen_init_points_mpi: "
+             "failed to find valid initial points for %ld walker(s) after %u rounds.",
+             f - start, self->init_max_rounds);
+  }
 }
 
+/* Draws a fresh prior sample for every walker index in @pending. Always
+ * serial (never inside an omp parallel region): this is the only place
+ * touching the shared rng, so it is what makes the initial ensemble's RNG
+ * draw order independent of thread count -- not an "ordered" pragma wrapped
+ * around a retriable per-thread region (see _ncm_fit_esmcmc_gen_init_points_interval). */
 static void
-_ncm_fit_esmcmc_gen_init_points_interval (NcmFitESMCMC *esmcmc, glong i, glong f)
+_ncm_fit_esmcmc_draw_pending (NcmFitESMCMC *esmcmc, GArray *pending)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
   NcmRNG *rng                      = ncm_mset_catalog_peek_rng (self->mcat);
-  gboolean mthread                 = self->use_threads;
-  glong k;
+  guint p;
 
-  /* The "ordered" clause below forces the prior sample draw (theta_k) for
-   * loop iteration k to happen in strict k order across all threads, even
-   * though the (retriable) likelihood evaluation that follows still runs
-   * in parallel. Without it, this loop's mutex only serialized ACCESS to
-   * the shared rng -- it did not control WHICH iteration's thread reached
-   * the mutex first, so theta_k ended up seeded from whichever RNG draw
-   * happened to be next when thread scheduling let iteration k's thread
-   * through, not deterministically from k. That silently corrupted the
-   * very first ensemble of walker positions (hence every downstream MCMC
-   * step) under use_threads=TRUE, even with a fixed seed -- found while cross-
-   * checking two independently-implemented but mathematically identical
-   * likelihoods (VarAdd/legacy in the galaxy WL refactor) and noticing
-   * even the SAME engine run twice, same seed, didn't reproduce. */
-  #pragma omp parallel for if (mthread) ordered
-
-  for (k = i; k < f; k++)
+  for (p = 0; p < pending->len; p++)
   {
+    const glong k      = g_array_index (pending, glong, p);
+    NcmVector *theta_k = g_ptr_array_index (self->theta, k);
+
+    ncm_mset_trans_kern_prior_sample (self->sampler, theta_k, rng);
+  }
+}
+
+/* Evaluates m2lnL (and, on success, the extra function array) for every
+ * walker index in @pending, in parallel -- safe because, unlike the draw
+ * step, nothing here touches the shared rng, so no draw-order constraint
+ * applies and no "ordered" region is needed. Marks self->accepted[k] TRUE
+ * for walkers whose m2lnL comes out finite. */
+static void
+_ncm_fit_esmcmc_eval_pending (NcmFitESMCMC *esmcmc, GArray *pending)
+{
+  NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
+  gboolean mthread                 = self->use_threads;
+  guint p;
+
+  #pragma omp parallel for if (mthread)
+
+  for (p = 0; p < pending->len; p++)
+  {
+    const glong k               = g_array_index (pending, glong, p);
     NcmVector *full_theta_k     = g_ptr_array_index (self->full_theta, k);
     NcmVector *theta_k          = g_ptr_array_index (self->theta, k);
     NcmFitESMCMCWorker **fk_ptr = ncm_memory_pool_get (self->walker_pool);
@@ -1452,36 +1518,104 @@ _ncm_fit_esmcmc_gen_init_points_interval (NcmFitESMCMC *esmcmc, glong i, glong f
     NcmMSet *mset_k             = ncm_fit_peek_mset (fit_k);
     gdouble *m2lnL              = ncm_vector_ptr (full_theta_k, NCM_FIT_ESMCMC_M2LNL_ID);
 
-    do {
-      #pragma omp ordered
-      {
-        ncm_mset_trans_kern_prior_sample (self->sampler, theta_k, rng);
-      }
+    ncm_mset_fparams_set_vector (mset_k, theta_k);
 
-      ncm_mset_fparams_set_vector (mset_k, theta_k);
+    if (!ncm_mset_params_valid (mset_k) || !ncm_mset_params_valid_bounds (mset_k))
+      m2lnL[0] = GSL_POSINF;
+    else
+      ncm_fit_m2lnL_val (fit_k, m2lnL);
 
-      if (!ncm_mset_params_valid (mset_k) || !ncm_mset_params_valid_bounds (mset_k))
-        m2lnL[0] = GSL_POSINF;
-      else
-        ncm_fit_m2lnL_val (fit_k, m2lnL);
-    } while (!gsl_finite (m2lnL[0]));
-
-    if (fk_ptr[0]->funcs_array != NULL)
+    if (gsl_finite (m2lnL[0]))
     {
-      guint j;
-
-      for (j = 0; j < fk_ptr[0]->funcs_array->len; j++)
+      if (fk_ptr[0]->funcs_array != NULL)
       {
-        NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (fk_ptr[0]->funcs_array, j));
-        const gdouble a_j = ncm_mset_func_eval0 (func, mset_k);
+        guint j;
 
-        ncm_vector_set (full_theta_k, j + 1, a_j);
+        for (j = 0; j < fk_ptr[0]->funcs_array->len; j++)
+        {
+          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (fk_ptr[0]->funcs_array, j));
+          const gdouble a_j = ncm_mset_func_eval0 (func, mset_k);
+
+          ncm_vector_set (full_theta_k, j + 1, a_j);
+        }
       }
+
+      g_array_index (self->accepted, gboolean, k) = TRUE;
     }
 
-    g_array_index (self->accepted, gboolean, k) = TRUE;
     ncm_memory_pool_return (fk_ptr);
   }
+}
+
+static void
+_ncm_fit_esmcmc_gen_init_points_interval (NcmFitESMCMC *esmcmc, glong i, glong f)
+{
+  NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
+  GArray *pending                  = g_array_new (FALSE, FALSE, sizeof (glong));
+  guint round;
+  glong k;
+
+  for (k = i; k < f; k++)
+    g_array_append_val (pending, k);
+
+  for (round = 0; round < self->init_max_rounds; round++)
+  {
+    GArray *still_pending;
+    guint p;
+
+    /* Round 0 draws every requested walker; later rounds only redraw the
+     * ones that failed last round -- draw and evaluate are always over the
+     * same @pending set. */
+    _ncm_fit_esmcmc_draw_pending (esmcmc, pending);
+    _ncm_fit_esmcmc_eval_pending (esmcmc, pending);
+
+    still_pending = g_array_new (FALSE, FALSE, sizeof (glong));
+
+    for (p = 0; p < pending->len; p++)
+    {
+      const glong pk = g_array_index (pending, glong, p);
+
+      if (!g_array_index (self->accepted, gboolean, pk))
+        g_array_append_val (still_pending, pk);
+    }
+
+    g_array_unref (pending);
+    pending = still_pending;
+
+    if (pending->len == 0)
+      break;
+  }
+
+  if (pending->len > 0)
+  {
+    guint p;
+
+    for (p = 0; p < pending->len; p++)
+    {
+      const glong pk              = g_array_index (pending, glong, p);
+      NcmVector *full_theta_k     = g_ptr_array_index (self->full_theta, pk);
+      const gdouble m2lnL_pk      = ncm_vector_get (full_theta_k, NCM_FIT_ESMCMC_M2LNL_ID);
+      NcmFitESMCMCWorker **fk_ptr = ncm_memory_pool_get (self->walker_pool);
+      NcmMSet *mset_k             = ncm_fit_peek_mset (fk_ptr[0]->fit);
+
+      g_warning ("_ncm_fit_esmcmc_gen_init_points_interval: "
+                 "walker %ld never reached a finite m2lnL (last value % 22.15g), current parameters:",
+                 pk, m2lnL_pk);
+      ncm_mset_params_log_vals (mset_k);
+      ncm_memory_pool_return (fk_ptr);
+    }
+
+    {
+      const guint n_pending = pending->len;
+
+      g_array_unref (pending);
+      g_error ("_ncm_fit_esmcmc_gen_init_points_interval: "
+               "failed to find valid initial points for %u walker(s) after %u rounds.",
+               n_pending, self->init_max_rounds);
+    }
+  }
+
+  g_array_unref (pending);
 }
 
 static gint
@@ -1560,6 +1694,21 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
   ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
 
   len = (guint) (self->cur_sample_id + 1);
+
+  /* self->accepted is reused across the whole run (regular per-step
+   * acceptance also writes it), so it may still hold stale values at these
+   * indices from an earlier trim/resume -- reset explicitly rather than
+   * relying on the array's one-time zero-init at construction. Both init
+   * paths below only ever WRITE TRUE on success, except
+   * _ncm_fit_esmcmc_gen_init_points_interval's round loop, which also READS
+   * it to decide which walkers still need a redraw, so a stale TRUE here
+   * would silently skip drawing/evaluating that walker. */
+  {
+    guint k;
+
+    for (k = len; k < self->nwalkers; k++)
+      g_array_index (self->accepted, gboolean, k) = FALSE;
+  }
 
   ncm_mset_trans_kern_reset (self->sampler);
 
