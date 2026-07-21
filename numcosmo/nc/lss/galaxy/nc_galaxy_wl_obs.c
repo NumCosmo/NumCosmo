@@ -311,7 +311,7 @@ nc_galaxy_wl_obs_catalog_id_get_filename (NcGalaxyWLObsCatalogId id)
 
     if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
     {
-      gchar *url_str = g_strdup_printf ("https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/%s", filename);
+      gchar *url_str   = g_strdup_printf ("https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/%s", filename);
       const gchar *dir = ncm_cfg_get_fullpath_base ();
       gchar *cmd[]     = {"wget", "--tries=3", "--timeout=30", "-O", full_filename, url_str, NULL };
       GError *error    = NULL;
