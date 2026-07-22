@@ -450,11 +450,8 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 
   ncm_fit_esmcmc_set_auto_trim (test->esmcmc, FALSE);
 
-  /* FULL is otherwise never exercised (every other test in this suite uses
-   * NONE): covers start_run()'s FULL-only branch (dataset/mset pretty-log)
-   * for free on the one run this test does anyway. Set right back to NONE
-   * so the (possibly repeated, see the retry loop below) actual statistical
-   * run doesn't pay unnecessary logging overhead. */
+  /* Exercise start_run()'s FULL-only log branch once, then reset to NONE to
+   * avoid overhead on the actual (possibly retried) run. */
   ncm_fit_esmcmc_set_mtype (test->esmcmc, NCM_FIT_RUN_MSGS_FULL);
   ncm_fit_esmcmc_start_run (test->esmcmc);
   ncm_fit_esmcmc_end_run (test->esmcmc);
@@ -466,10 +463,8 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
                                  100, NCM_MSET_CATALOG_TRIM_TYPE_CK, NCM_FIT_RUN_MSGS_NONE);
   ncm_fit_esmcmc_end_run (test->esmcmc);
 
-  /* ncm_fit_esmcmc_validate() otherwise has no coverage anywhere in this
-   * suite: recomputes m2lnL for the rows just produced and cross-checks
-   * against the catalog -- exactly the multithread-evaluation sanity check
-   * its own docstring describes. */
+  /* Only coverage of ncm_fit_esmcmc_validate() in this suite: recomputes
+   * m2lnL and cross-checks against the catalog. */
   g_assert_true (ncm_fit_esmcmc_validate (test->esmcmc, 0, 0));
 
   do {
@@ -891,12 +886,8 @@ test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata)
   g_assert_not_reached ();
 }
 
-/* Builds a small, fixed (not randomized) Stretch-walker ESMCMC scenario and
- * runs it a few steps, returning the resulting catalog (transfer full). Used
- * by test_ncm_fit_esmcmc_parity_serial_vs_threaded() to check that
- * use_threads TRUE/FALSE draw the exact same sequence of points -- the
- * guarantee _ncm_fit_esmcmc_gen_init_points_interval()'s serial-draw step is
- * meant to provide, regardless of thread count. */
+/* Fixed-seed Stretch-walker scenario for parity-checking use_threads
+ * TRUE/FALSE draw the same point sequence. */
 static NcmMSetCatalog *
 _test_ncm_fit_esmcmc_parity_run (gboolean use_threads)
 {

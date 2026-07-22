@@ -324,15 +324,8 @@ test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata
   }
 }
 
-/* Builds a small, fixed (not randomized) Stretch-walker ESMCMC scenario and
- * runs it a few steps, returning the resulting catalog (transfer full). Used
- * by test_ncm_fit_esmcmc_parity_serial_vs_mpi() to check that dispatching
- * walker draws through MPI gives the exact same sequence of points as a
- * plain, non-MPI run -- both this process's rank 0 and the MPI worker
- * rank(s) started alongside it stay alive throughout (worker ranks never
- * reach this function at all; they are diverted into the MPI job dispatch
- * loop by ncm_cfg_init_full_ptr()/the first MPI-enabled NcmFitESMCMC), so
- * building a plain (non-MPI) instance here runs entirely within rank 0. */
+/* Fixed-seed scenario for parity-checking MPI vs. plain draw sequences;
+ * worker ranks never reach here, diverted by ncm_cfg_init_full_ptr(). */
 static NcmMSetCatalog *
 _test_ncm_fit_esmcmc_parity_run (gboolean use_mpi)
 {

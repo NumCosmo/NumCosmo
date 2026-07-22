@@ -792,11 +792,8 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
     assert functions_file.exists(), f"Functions file {functions_file} does not exist."
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    # Shared-object aliases (e.g. NcDistance) span both files -- the dataset
-    # must be read first with the same NcmSerialize instance, exactly as
-    # test_cluster_wl_app_generate_shape does above, or the yaml load aborts
-    # with "object alias `S0' is not saved" (a still-unresolved alias from
-    # the dataset side).
+    # Dataset must be read first with the same NcmSerialize instance --
+    # shared object aliases span both files.
     ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = cast(Ncm.MSet, experiment.get("model-set"))

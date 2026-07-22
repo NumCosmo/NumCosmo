@@ -37,29 +37,12 @@
  * $$P(x(\rho^2)) = \frac{\rho^{2(\alpha-1)}}{B(\alpha,\beta)\,(1+\rho^2)^{\alpha+\beta-2}},$$
  * avoiding forming $1-x$ by subtraction.
  *
- * $\beta$ is bounded to $\ge 1$: below 1 the density diverges at $x=1$ (a
- * genuine singularity, not merely a boundary mode), which is unphysical and
- * a numerical hazard for every consumer of this population.
- * $\alpha$'s own floor is looser ($\ge 0.5001$): $\alpha<1$ still makes the
- * density diverge at $x=0$, but unlike $\beta<1$'s divergence at $x=1$,
- * this endpoint is only a real problem for consumers that Taylor-expand
- * the population in the shear $g$ around $g=0$ (#NcGalaxyShapeFactorSeriesLensed
- * -- the expansion's own radius of convergence shrinks as $\alpha\to1^-$ and
- * below, since the population itself stops being analytic at $x=0$);
- * #NcGalaxyShapeFactorFixedQuad's direct lens-domain quadrature has no such
- * restriction and remains accurate there. Callers pairing this population
- * with SeriesLensed should keep $\alpha\ge1$ in practice even though the
- * class itself permits less. The floor was loosened from the originally
- * stricter $\alpha\ge1$ after a real fit's posterior concentrated its mass
- * right at $\alpha=1$ under FixedQuad: a hard floor sitting exactly where
- * the data want the posterior to be would truncate/bias the inferred
- * $\alpha$ one-sidedly, which is worse than allowing the (FixedQuad-safe)
- * divergent regime the data are actually pointing to.
- * $\alpha=1$ (comfortably allowed either way)
- * still gives a finite density monotonically decreasing from $x=0$ -- the
- * same qualitative shape a truncated-Gaussian population has (see
- * #NcGalaxyShapePopGauss), just without its divergence-free guarantee being
- * an accident of a different functional form.
+ * $\beta$ is bounded to $\ge 1$ and $\alpha$ to $\ge 0.5001$ (density
+ * diverges at $x=1$ resp. $x=0$ below those floors). #NcGalaxyShapeFactorSeriesLensed
+ * callers should still keep $\alpha\ge1$ in practice -- its Taylor expansion's
+ * radius of convergence shrinks below that; #NcGalaxyShapeFactorFixedQuad has
+ * no such restriction. See `docs/theory/wl_shape_factor_history.md` for why
+ * $\alpha$'s floor sits below 1.
  * nc_galaxy_shape_pop_beta_get_mean()/_get_concentration()/_get_std()
  * report the induced $\mathrm{mean}(x)=\alpha/(\alpha+\beta)$,
  * $\mathrm{concentration}=\alpha+\beta$ and standard deviation of $x$ (also
@@ -212,12 +195,8 @@ _nc_galaxy_shape_pop_beta_ldata_get_mode_x (NcGalaxyShapePopData *data)
 {
   NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
 
-  /* Mode of a standard Beta(alpha,beta) density: interior stationary point
-   * when both shape parameters exceed 1 (alpha=1 or beta=1 exactly, allowed
-   * by this class's own >=1 bound, gives a monotone density instead -- see
-   * the class documentation); the mode then sits at a disc boundary -- 0 is
-   * the closest meaningful hint in that case (it is always in-range and
-   * never worse than assuming the Gauss-like default). */
+  /* Interior mode only when alpha,beta > 1; otherwise density is monotone,
+   * so 0 is the closest in-range hint. */
   if ((ldata->alpha > 1.0) && (ldata->beta > 1.0))
     return (ldata->alpha - 1.0) / (ldata->alpha + ldata->beta - 2.0);
   else
@@ -241,12 +220,8 @@ _nc_galaxy_shape_pop_beta_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
 {
   NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
 
-  /* Evaluated in log-space and exponentiated once: for concentrated
-   * populations (large alpha, beta) forming pow(x,alpha-1) and the
-   * normalization 1/B(alpha,beta) as separate factors overflows/underflows
-   * well beyond the model's own declared range (e.g. alpha=beta=500
-   * already pushes -lnbeta past 690, right at exp()'s overflow edge),
-   * silently producing NaN (0*inf) with no diagnostic. */
+  /* Log-space eval avoids overflow/NaN for concentrated populations (large
+   * alpha, beta). */
   return exp ((ldata->alpha - 1.0) * log (x) + (ldata->beta - 1.0) * log1p (-x) + ldata->lnnorm);
 }
 
@@ -471,12 +446,8 @@ _nc_galaxy_shape_pop_beta_flist_std (NcmMSetFuncList *flist, NcmMSet *mset, cons
   res[0] = nc_galaxy_shape_pop_beta_get_std (gspb);
 }
 
-/* Registered exactly like every other model's derived NcmMSetFuncList
- * entries (see e.g. nc_hireion.c/nc_hicosmo_de.c): called once, centrally,
- * from ncm_cfg_register_functions() -- see that function's own call site in
- * ncm_cfg.c for why (lazy, opt-in registration, not GType-driven). Exposed
- * as "NcGalaxyShapePopBeta:mean"/"NcGalaxyShapePopBeta:concentration"/
- * "NcGalaxyShapePopBeta:std" via ncm_mset_func_list_new_ns_name(). */
+/* Called once from ncm_cfg_register_functions(), same convention as other
+ * models' derived NcmMSetFuncList entries. */
 void
 _nc_galaxy_shape_pop_beta_register_functions (void)
 {

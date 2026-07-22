@@ -628,14 +628,8 @@ class GalaxyPopGenGaussLocal(BaseModel):
 
     def write_calib(self, obs: Nc.GalaxyWLObs, i: int, rng: Ncm.RNG) -> None:
         """Draw and write this galaxy's fixed e_rms input into obs."""
-        # e_rms = sqrt(<x>/2) with x restricted to [0, 1] saturates at 0.5 as
-        # sigma -> infinity (nc_galaxy_shape_pop_gauss_local.c's own
-        # _e_rms_of_sigma()/_sigma_from_e_rms()); NOT 1.0 -- an e_rms draw at
-        # or above 0.5 has no finite sigma to invert to and aborts the whole
-        # process via that function's own g_assert_cmpfloat(). Clip well
-        # inside the true (0.5 - 1e-9) ceiling, not at it, since sigma
-        # diverges as e_rms -> 0.5 (bisection there is numerically fragile,
-        # not just technically in-bounds).
+        # e_rms saturates at 0.5 (not 1.0) as sigma->inf; clip below 0.5 or
+        # _sigma_from_e_rms() aborts / bisection gets fragile.
         e_rms = min(np.sqrt(rng.gamma_gen(self._k_e_rms, self._theta_e_rms)), 0.49)
         obs.set(Nc.GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS, i, e_rms)
 
@@ -649,14 +643,8 @@ class GalaxyPopGenBeta(BaseModel):
     """Beta intrinsic-ellipticity population (``NcGalaxyShapePopBeta``).
 
     Global model over $x=|\\chi_I|^2$, parameterized directly by the Beta
-    distribution's own shape parameters ``alpha``/``beta``. ``beta`` is
-    bounded ``>=1`` by the C model itself (the density would otherwise
-    diverge at $x=1$); ``alpha``'s own floor is looser (``>=0.5001``) since
-    an ``alpha<1`` divergence at $x=0$ is only a real problem for shape
-    schemes that Taylor-expand in the shear (SeriesLensed), not for
-    FixedQuad's direct quadrature -- see ``NcGalaxyShapePopBeta``'s own
-    class documentation for the full rationale (in particular: don't let a
-    hard floor sit exactly where a fit's own posterior wants its mass).
+    distribution's own shape parameters ``alpha``/``beta``. ``beta>=1``,
+    ``alpha>=0.5001`` -- see ``NcGalaxyShapePopBeta``'s class documentation.
     Incompatible with shape schemes that linearize around a Gaussian (see
     ``check_shape_pop_compat()``).
 
@@ -669,12 +657,9 @@ class GalaxyPopGenBeta(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    # Lower bounds only -- loose sanity checks matching this class's own
-    # rationale (see the docstring above), not a mirror of the C model's
-    # advisory fit-bounds (which a diagnostic run may legitimately want to
-    # exceed, e.g. testing a concentrated population past its own declared
-    # range -- see test_galaxy_shape_pop.py's own overflow-robustness
-    # tests). Must track nc_galaxy_shape_pop_beta.c's own alpha/beta floors.
+    # Lower-bound sanity checks only, intentionally looser than the C
+    # model's advisory fit-bounds; must track nc_galaxy_shape_pop_beta.c's
+    # alpha/beta floors.
     alpha: Annotated[float, Field(ge=0.5001)] = DEFAULT_POP_BETA_ALPHA
     beta: Annotated[float, Field(ge=1.0)] = DEFAULT_POP_BETA_BETA
 
@@ -1318,13 +1303,9 @@ def load_cluster_wl(
     gal_dec_min = float(dec.min())
     gal_dec_max = float(dec.max())
 
-    # The catalog only carries galaxy positions, not the lensing cluster's own
-    # RA/Dec -- cluster_ra/cluster_dec is an external estimate. Outside the
-    # galaxy window there is no lensing signal to constrain it, so the fit
-    # bounds are exactly that window; reject an estimate that falls outside
-    # it up front, rather than let the fit silently explore uninformative
-    # space (or leave an unreachable initial point for ESMCMC). Report RA and
-    # DEC together so a bad guess on both axes doesn't take two round-trips.
+    # cluster_ra/dec is an external estimate; reject it up front if outside
+    # the galaxy window (fit bounds = that window), reporting both axes
+    # together.
     ra_bad = not (gal_ra_min <= cluster_ra <= gal_ra_max)
     dec_bad = not (gal_dec_min <= cluster_dec <= gal_dec_max)
 

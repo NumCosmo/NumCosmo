@@ -221,13 +221,8 @@ def test_marginal_matches_scipy_truth_table_beta_alpha_below_one_g_scan(ellip_co
     """Same alpha<1 Beta population as above, scanned over several shears
     against the scipy oracle directly.
 
-    NOT cross-checked against Quad here: a real, separate bug was found
-    while writing this test -- NcGalaxyShapeFactorQuad's own adaptive
-    Divonne cubature loses up to ~11% accuracy (verified against this same
-    scipy oracle) in a g~[0.14, 0.19] window for this exact population,
-    while FixedQuad stays within ~0.5% throughout. Quad is not a valid
-    reference for alpha<1 Beta populations until that is fixed -- see
-    test_galaxy_shape_factor_quad.py's own test documenting it.
+    Not cross-checked against Quad: known ~11% accuracy bug for alpha<1 Beta
+    populations near g~0.18 (see test_galaxy_shape_factor_quad.py).
     """
     alpha, beta, std_noise = 0.6, 4.0, 0.03
     eps_obs_1, eps_obs_2 = 0.15, -0.1

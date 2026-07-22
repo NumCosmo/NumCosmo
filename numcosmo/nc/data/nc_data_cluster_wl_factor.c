@@ -1679,15 +1679,8 @@ nc_data_cluster_wl_factor_clear (NcDataClusterWLFactor **dcwlf)
   g_clear_object (dcwlf);
 }
 
-/* Builds a human-readable one-line description of this instance's current
- * configuration -- galaxy count, radial cut, precision, integ-method (+ its
- * FIXED_NODES-only knobs when relevant), and each of the three Factor
- * calculators' own get_desc() (position/redshift/shape, each already
- * reporting its own concrete scheme and configuration -- see their
- * respective classes). Refreshed by every setter below that touches one of
- * these fields, so ncm_data_peek_desc()/get_desc() always reflects the
- * instance's current state instead of the bare "NcDataClusterWLFactor" type
- * name NcmData falls back to when no desc was ever set. */
+/* Builds NcmData's :desc from current config + each Factor's own get_desc();
+ * refreshed by every setter below. */
 static gchar *
 _nc_data_cluster_wl_factor_build_desc (NcDataClusterWLFactor *dcwlf)
 {

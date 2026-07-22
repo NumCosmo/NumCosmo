@@ -249,14 +249,9 @@ def test_marginal_matches_scipy_truth_table_narrow_trace_convention():
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_marginal_matches_scipy_truth_table_beta_peaked_off_center(ellip_conv):
-    """Sanity/non-regression test for the Beta mode_x hint: places eps_obs
-    exactly at the forward image of the population's peak ring (alpha=700,
-    beta=300 -> mode_x != 0, peak away from chi_I=0), with noise narrow enough
-    that landing near the true peak matters. Divonne's own search from the
-    two chi_I=0-based hints already resolves this case (verified directly,
-    not merely inferred from this test passing); the third, mode_x-based
-    hint is a documented safety margin rather than something this specific
-    case demonstrates as load-bearing -- see the class doc."""
+    """Places eps_obs at the population's peak ring (mode_x != 0) to
+    sanity-check the mode_x hint; not itself proof the hint is load-bearing
+    (see class doc)."""
     alpha, beta, std_noise = 700.0, 300.0, 0.02
     g = 0.1 + 0.05j
     theta = 0.3
@@ -311,19 +306,10 @@ def test_marginal_matches_scipy_truth_table_concentrated_beta():
 
 
 def test_marginal_alpha_below_one_known_accuracy_bug():
-    """KNOWN BUG, not yet fixed: for a Beta population with alpha<1 (density
-    diverges at x=0, a genuine singularity), Quad's adaptive Divonne
-    cubature loses accuracy in a narrow g window -- up to ~11% relative
-    error against the independent scipy oracle at g~0.18, vs FixedQuad's
-    ~0.2% at the same configuration (see
-    test_galaxy_shape_factor_fixed_quad.py's own
-    test_marginal_matches_scipy_truth_table_beta_alpha_below_one_g_scan,
-    which is the one that should be trusted for this population today).
-    Suspected cause: the singularity isn't resolved by Divonne's adaptive
-    subdivision of the generic box this class integrates over, unlike
-    FixedQuad's fixed lens-domain nodes. This test pins the CURRENT (buggy)
-    behavior with a generous bound so a regression (getting worse) is
-    caught, not to assert the bug is acceptable."""
+    """Known accuracy bug: Quad loses ~11% vs scipy near g~0.18 for alpha<1
+    Beta populations (FixedQuad stays ~0.2%, see
+    docs/theory/wl_shape_factor_history.md); pins current behavior against
+    regression."""
     pop = Nc.GalaxyShapePopBeta.new()
     pop["alpha"] = 0.6
     pop["beta"] = 4.0

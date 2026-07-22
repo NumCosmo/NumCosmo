@@ -68,15 +68,9 @@ test_ncm_mset_trans_kern_gauss_max_iter_property (void)
 }
 
 /*
- * _ncm_mset_trans_kern_gauss_generate() redraws until the proposal lands
- * within the free parameters' bounds or max-iter rounds are exhausted, in
- * which case it g_warning()s each still-out-of-bounds parameter and
- * g_error()s -- a fatal abort (see g_test_trap_subprocess() below, the
- * established idiom in this test suite for exercising a g_error() path
- * without crashing the outer test process). Forced here with max-iter=1,
- * bounds tightened to a width the huge proposal covariance essentially
- * never lands inside, and a starting theta safely centered in-bounds (only
- * the *proposal* needs to escape).
+ * Forces exhaustion with max-iter=1 and tight bounds vs. a huge proposal
+ * covariance; g_error() abort is exercised via g_test_trap_subprocess()
+ * below.
  */
 void
 test_ncm_mset_trans_kern_gauss_exhaustion (void)

@@ -1473,11 +1473,8 @@ _ncm_fit_esmcmc_gen_init_points_mpi (NcmFitESMCMC *esmcmc, const glong i, const 
   }
 }
 
-/* Draws a fresh prior sample for every walker index in @pending. Always
- * serial (never inside an omp parallel region): this is the only place
- * touching the shared rng, so it is what makes the initial ensemble's RNG
- * draw order independent of thread count -- not an "ordered" pragma wrapped
- * around a retriable per-thread region (see _ncm_fit_esmcmc_gen_init_points_interval). */
+/* Draws a fresh prior sample for each pending walker; always serial since
+ * it's the only spot touching the shared rng. */
 static void
 _ncm_fit_esmcmc_draw_pending (NcmFitESMCMC *esmcmc, GArray *pending)
 {
@@ -1494,11 +1491,8 @@ _ncm_fit_esmcmc_draw_pending (NcmFitESMCMC *esmcmc, GArray *pending)
   }
 }
 
-/* Evaluates m2lnL (and, on success, the extra function array) for every
- * walker index in @pending, in parallel -- safe because, unlike the draw
- * step, nothing here touches the shared rng, so no draw-order constraint
- * applies and no "ordered" region is needed. Marks self->accepted[k] TRUE
- * for walkers whose m2lnL comes out finite. */
+/* Evaluates m2lnL for each pending walker in parallel (no shared-rng access
+ * here); marks accepted[k] TRUE on finite m2lnL. */
 static void
 _ncm_fit_esmcmc_eval_pending (NcmFitESMCMC *esmcmc, GArray *pending)
 {
@@ -1695,14 +1689,9 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
 
   len = (guint) (self->cur_sample_id + 1);
 
-  /* self->accepted is reused across the whole run (regular per-step
-   * acceptance also writes it), so it may still hold stale values at these
-   * indices from an earlier trim/resume -- reset explicitly rather than
-   * relying on the array's one-time zero-init at construction. Both init
-   * paths below only ever WRITE TRUE on success, except
-   * _ncm_fit_esmcmc_gen_init_points_interval's round loop, which also READS
-   * it to decide which walkers still need a redraw, so a stale TRUE here
-   * would silently skip drawing/evaluating that walker. */
+  /* self->accepted is reused across the run and may hold stale TRUE from a
+   * prior trim/resume; reset explicitly since the interval init path reads
+   * it to pick redraws. */
   {
     guint k;
 

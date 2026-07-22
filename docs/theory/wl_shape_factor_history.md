@@ -98,6 +98,33 @@ radial integral per galaxy) + (per-node cheap polynomial evaluation)*.
 Verified against the Python reference to $\sim10^{-12}$ for both
 conventions and several orders before removal.
 
+## `NcGalaxyShapePopBeta`: alpha's floor loosened below 1
+
+$\alpha$'s floor was originally $\ge 1$, matching $\beta$'s (both avoid a
+divergence, at $x=0$ resp. $x=1$). Loosened to $\ge 0.5001$ after a real
+fit's posterior concentrated its mass right at $\alpha=1$ under
+`FixedQuad`: a hard floor sitting exactly where the data want the posterior
+to be would truncate/bias the inferred $\alpha$ one-sidedly, worse than
+allowing the (`FixedQuad`-safe) divergent regime the data are actually
+pointing to. `SeriesLensed` still needs $\alpha\ge1$ in practice — its
+Taylor expansion's radius of convergence shrinks below that, since the
+population stops being analytic at $x=0$ — but that is a `SeriesLensed`
+limitation, not a reason to keep the class-wide floor at 1.
+
+## `NcGalaxyShapeFactorQuad`: known accuracy bug for alpha<1 Beta populations
+
+For a Beta population with $\alpha<1$ (density diverges at $x=0$), `Quad`'s
+adaptive Divonne cubature loses up to ~11% accuracy against an independent
+scipy oracle in a $g\sim[0.14,0.19]$ window, while `FixedQuad` stays within
+~0.5% throughout at the same configuration. Suspected cause: the
+singularity isn't resolved by Divonne's adaptive subdivision of the generic
+box `Quad` integrates over, unlike `FixedQuad`'s fixed lens-domain nodes.
+Not yet fixed; `test_marginal_alpha_below_one_known_accuracy_bug`
+(`test_galaxy_shape_factor_quad.py`) and
+`test_marginal_matches_scipy_truth_table_beta_alpha_below_one_g_scan`
+(`test_galaxy_shape_factor_fixed_quad.py`) pin the current behavior against
+regression. `FixedQuad` is the one to trust for this population today.
+
 ## `NcGalaxyShapeFactorQuad`: rejected implementations
 
 Before settling on Divonne cubature over the lensed frame $\chi_L$ with

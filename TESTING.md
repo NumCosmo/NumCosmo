@@ -161,10 +161,8 @@ and runs them — and the non-xdist `py-omp` pytest lane — through
 to the CPU count available right then (`nproc` on Linux, `sysctl -n hw.ncpu` on macOS, falling
 back to `getconf _NPROCESSORS_ONLN`) before `exec`ing the real test/`pytest`, so the parallel
 branch (thread coordination, `reduction`, scheduling) actually runs. This is deliberately
-evaluated fresh on every `meson test` invocation rather than baked in once at `meson setup`
-time: a builddir configured on one machine/container can later be run in a differently sized
-one (a stale configure-time value previously caused exactly this — a build configured on a
-24-core machine oversubscribing an environment only entitled to a handful of cores). Because
+evaluated fresh on every `meson test` invocation (not baked in at `meson setup` time) so a
+builddir built on one machine can run correctly on a differently-sized one. Because
 these tests run alone, this happens inside the ordinary `meson test` invocation — no
 `--num-processes=1`, no exported `OMP_NUM_THREADS`, no separate lane required. (`mpi` still
 gets its own `mpiexec` lane, pinned to one thread; OpenMP SIMD is unaffected by
