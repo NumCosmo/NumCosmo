@@ -59,6 +59,14 @@ CATALOG_META_CLUSTER_DEC = "cluster_dec"
 CATALOG_META_CLUSTER_Z = "cluster_z"
 CATALOG_META_CLUSTER_C = "cluster_c"
 
+# Outward padding (degrees) on the position_factor footprint built from the
+# catalog's own ra/dec extrema in load_cluster_wl(). ~3.6 uas: far above any
+# floating-point round-trip noise between this bound and the raw ra/dec
+# NcGalaxyPositionFactorFlat reads back per-galaxy at eval time, far below
+# real astrometric precision, so it can never admit a genuinely out-of-field
+# galaxy.
+FOOTPRINT_PAD_DEG = 1.0e-9
+
 
 class EllipConv(GEnum):
     """Ellipticity convention."""
@@ -356,7 +364,9 @@ class GalaxyShapeFactorGenBase(BaseModel):
         return self._factor
 
     def write_calib(self, obs: Nc.GalaxyWLObs, i: int, rng: Ncm.RNG) -> None:
-        """Draw and write this galaxy's fixed measurement-calibration inputs into obs."""
+        """Write calibration inputs to the Data orchestrator.
+
+        Draw and write this galaxy's fixed measurement-calibration inputs into obs."""
         std_noise = min(np.sqrt(rng.gamma_gen(self._k_noise, self._theta_noise)), 0.5)
         c1 = rng.gaussian_gen(0.0, self.c1_sigma)
         c2 = rng.gaussian_gen(0.0, self.c2_sigma)
@@ -686,7 +696,10 @@ class GalaxyPopGenBeta(BaseModel):
         self._pop["beta"] = self.beta
 
     def get_shape_pop(self) -> Nc.GalaxyShapePopBeta:
-        """Return the built NcGalaxyShapePopBeta (e.g. for get_mean()/get_concentration())."""
+        """Return the built NcGalaxyShapePopBeta.
+
+        e.g. for get_mean()/get_concentration().
+        """
         return self._pop
 
     def register_models(self, mset: Ncm.MSet) -> None:
@@ -1291,11 +1304,21 @@ def load_cluster_wl(
 
     columns = list(obs.peek_columns())
     data = obs.peek_data().to_numpy()
+    ra_raw = data[:, columns.index("ra")]
+    dec = data[:, columns.index("dec")]
     # NcHaloPosition's "ra" parameter (and HaloPositionData) are defined over
     # the signed [-180, 180] convention, not the standard [0, 360) RA used by
-    # real survey catalogs -- wrap both the galaxies and the cluster into it.
-    ra = ((data[:, columns.index("ra")] + 180.0) % 360.0) - 180.0
-    dec = data[:, columns.index("dec")]
+    # real survey catalogs -- wrap the cluster and a *separate* copy of the
+    # galaxies into it, used only for HaloPosition's own fit bounds below.
+    # The footprint (position_factor, further down) is built from ra_raw
+    # instead: it must match obs's own stored "ra" column bit-for-bit, since
+    # that is what NcGalaxyPositionFactorFlat reads back at evaluation time
+    # -- reusing the wrapped copy there previously let floating-point
+    # round-trip noise from the wrap (up to ~1 ULP, even where no galaxy
+    # actually crosses the branch cut) push the extremal-RA galaxies just
+    # outside their own defining bounds, silently zeroing their position
+    # likelihood.
+    ra = ((ra_raw + 180.0) % 360.0) - 180.0
     cluster_ra = ((cluster_ra + 180.0) % 360.0) - 180.0
 
     gal_ra_min = float(ra.min())
@@ -1306,8 +1329,12 @@ def load_cluster_wl(
     # cluster_ra/dec is an external estimate; reject it up front if outside
     # the galaxy window (fit bounds = that window), reporting both axes
     # together.
-    ra_bad = not (gal_ra_min <= cluster_ra <= gal_ra_max)
-    dec_bad = not (gal_dec_min <= cluster_dec <= gal_dec_max)
+    ra_bad = not (
+        gal_ra_min <= cluster_ra <= gal_ra_max
+    )  # pylint: disable=superfluous-parens
+    dec_bad = not (
+        gal_dec_min <= cluster_dec <= gal_dec_max
+    )  # pylint: disable=superfluous-parens
 
     if ra_bad or dec_bad:
         raise ValueError(
@@ -1356,7 +1383,10 @@ def load_cluster_wl(
     cluster.halo_position.prepare_if_needed(cosmo)
 
     position_factor = Nc.GalaxyPositionFactorFlat.new(
-        float(ra.min()), float(ra.max()), float(dec.min()), float(dec.max())
+        float(ra_raw.min()) - FOOTPRINT_PAD_DEG,
+        float(ra_raw.max()) + FOOTPRINT_PAD_DEG,
+        float(dec.min()) - FOOTPRINT_PAD_DEG,
+        float(dec.max()) + FOOTPRINT_PAD_DEG,
     )
     redshift_factor = Nc.GalaxyRedshiftFactorSpline.new()
     shape_factor = shape_gen.get_shape_factor()

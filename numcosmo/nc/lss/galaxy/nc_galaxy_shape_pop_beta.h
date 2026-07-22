@@ -57,8 +57,8 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_SHAPE_POP_BETA_PARAMS >*/
 /* mean(x)=0.18, matching the Gaussian convention's 2*sigma^2 at sigma=0.3;
  * alpha kept just above SeriesLensed's practical floor of 1, off the bound's
  * edge. */
-#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA (1.05)
-#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA (4.7833333333333333)
+#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA (0.7)
+#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA (1.6)
 #define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL (0.0)
 
 NcGalaxyShapePopBeta *nc_galaxy_shape_pop_beta_new (void);

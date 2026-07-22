@@ -343,10 +343,28 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcDataClusterWLFactor, nc_data_cluster_wl_factor, NC
  * steps ignore both, kept uniform across all steps for one shared loop. */
 typedef void (*NcDataClusterWLFactorStep) (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGalaxyShapeFactorData *s_data, guint gal_i);
 
+/* Only runs once per galaxy, when obs/position_factor actually change (see
+ * pos_changed's gating at the call site below), never per-fit-iteration:
+ * position_factor's own hash never changes mid-run, so this is the earliest
+ * point every galaxy's position likelihood is known and the right place to
+ * fail loudly on a zero -- a galaxy whose ra/dec falls outside (or exactly
+ * on the boundary of) the configured footprint is a data/configuration
+ * mismatch, not something a fit should silently absorb through
+ * NC_GALAXY_LOW_PROB. */
 static void
 _step_pos (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGalaxyShapeFactorData *s_data, guint gal_i)
 {
   nc_galaxy_position_factor_update_data (self->position_factor, s_data->pos_data);
+
+  if (nc_galaxy_position_factor_integrand_eval (self->integ_pos_lin, s_data->pos_data) <= 0.0)
+  {
+    gchar *desc = nc_galaxy_position_factor_get_desc (self->position_factor);
+
+    g_error ("_step_pos: galaxy %u has zero position likelihood under %s -- "
+             "its ra/dec falls outside (or exactly on the boundary of) the "
+             "configured footprint.", gal_i, desc);
+    g_free (desc);
+  }
 }
 
 static void
