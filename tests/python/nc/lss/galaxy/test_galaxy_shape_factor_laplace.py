@@ -126,16 +126,15 @@ def test_marginal_matches_quad_narrow_gauss(ellip_conv):
 def test_marginal_matches_quad_concentrated_beta_ring():
     """Concentrated, ring-peaked Beta population (mode away from chi_I=0):
     the joint-mode search has to resolve both radius and angle correctly."""
-    mu, nu, std_noise = 0.7, 1.0e3, 0.02
-    alpha, beta = mu * nu, (1.0 - mu) * nu
+    alpha, beta, std_noise = 700.0, 300.0, 0.02
     mode_x = (alpha - 1.0) / (alpha + beta - 2.0)
     rho_mode = np.sqrt(mode_x)
     theta = 0.3
     g = 0.1 + 0.05j
 
     pop = Nc.GalaxyShapePopBeta.new()
-    pop["mu"] = mu
-    pop["nu"] = nu
+    pop["alpha"] = alpha
+    pop["beta"] = beta
 
     chi_i_peak = rho_mode * np.exp(1j * theta)
     eps_obs = _shear_map(Nc.GalaxyWLObsEllipConv.TRACE_DET, g, chi_i_peak)
@@ -153,8 +152,8 @@ def test_marginal_broad_beta_within_documented_tolerance():
     near-flat density) -- this checks it degrades gracefully (percent level),
     not catastrophically."""
     pop = Nc.GalaxyShapePopBeta.new()
-    pop["mu"] = 0.5
-    pop["nu"] = 10.0
+    pop["alpha"] = 5.0
+    pop["beta"] = 5.0
     g = 0.1 - 0.05j
     eps_obs = 0.15 + 0.1j
 
@@ -191,8 +190,8 @@ def test_marginal_nan_for_non_peaked_population():
     found point is not a genuine local maximum (non-positive-definite
     Hessian)."""
     pop = Nc.GalaxyShapePopBeta.new()
-    pop["mu"] = 0.5
-    pop["nu"] = 0.2  # alpha=beta=0.1, both < 1: diverges at x=0 and x=1.
+    pop["alpha"] = 0.1  # both < 1: diverges at x=0 and x=1.
+    pop["beta"] = 0.1
     mset = _build_mset(pop)
 
     gsfl = Nc.GalaxyShapeFactorLaplace.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)

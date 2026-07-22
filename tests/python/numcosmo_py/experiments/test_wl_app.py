@@ -38,6 +38,7 @@ pytest.importorskip("getdist")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position
 
+import numpy as np
 from numpy import sin, cos, pi, log10, deg2rad
 from numpy.random import uniform, choice
 
@@ -48,9 +49,12 @@ from numcosmo_py import (
 from numcosmo_py.app import app
 from numcosmo_py.experiments.cluster_wl import (
     GalaxyZGen,
-    GalaxyShapeGen,
-    ShapeScheme,
+    ShapeFactorGen,
+    GalaxyPopGen,
     HaloProfileType,
+    ClusterModel,
+    HaloPositionData,
+    GalaxyPopGenBeta,
 )
 
 pytestmark = pytest.mark.app
@@ -77,6 +81,90 @@ def fixture_experiment_file_copy(tmp_path: Path) -> Path:
     """Fixture for the experiment file copy."""
     tmp_file = tmp_path / "experiment_copy.yaml"
     return tmp_file
+
+
+def _build_real_wl_obs(tmp_path: Path, filename: str, with_meta: bool) -> Path:
+    """A small synthetic NcGalaxyWLObs, standing in for a real catalog.
+
+    Mirrors the column schema (and per-galaxy pz spline) of the curated
+    Subaru HSC-SSP PDR1 catalogs shipped in the NumCosmo data file release,
+    without requiring network access in tests. If with_meta, also carries the
+    cluster_ra/cluster_dec/cluster_z/cluster_c catalog metadata those real
+    catalogs are expected to ship with.
+    """
+    rng = np.random.default_rng(20260720)
+    n = 20
+    cols = [
+        "epsilon_int_1",
+        "epsilon_int_2",
+        "epsilon_obs_1",
+        "epsilon_obs_2",
+        "std_noise",
+        "c1",
+        "c2",
+        "m",
+        "ra",
+        "dec",
+        "z",
+    ]
+    obs = Nc.GalaxyWLObs.new(
+        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, n, cols
+    )
+    ra = rng.uniform(-0.05, 0.05, n)
+    dec = rng.uniform(-0.05, 0.05, n)
+    z = rng.uniform(0.5, 1.5, n)
+    epsilon_obs_1 = rng.normal(0.0, 0.2, n)
+    epsilon_obs_2 = rng.normal(0.0, 0.2, n)
+    std_noise = rng.uniform(0.1, 0.2, n)
+
+    for i in range(n):
+        obs.set("epsilon_int_1", i, 0.0)
+        obs.set("epsilon_int_2", i, 0.0)
+        obs.set("epsilon_obs_1", i, float(epsilon_obs_1[i]))
+        obs.set("epsilon_obs_2", i, float(epsilon_obs_2[i]))
+        obs.set("std_noise", i, float(std_noise[i]))
+        obs.set("c1", i, 0.0)
+        obs.set("c2", i, 0.0)
+        obs.set("m", i, 0.0)
+        obs.set("ra", i, float(ra[i]))
+        obs.set("dec", i, float(dec[i]))
+        obs.set("z", i, float(z[i]))
+
+        zs = np.linspace(max(z[i] - 0.3, 0.01), z[i] + 0.3, 16)
+        pz_vals = np.exp(-0.5 * ((zs - z[i]) / 0.05) ** 2)
+        spline = Ncm.SplineCubicNotaknot.new()
+        spline.set(
+            Ncm.Vector.new_array(zs.tolist()),
+            Ncm.Vector.new_array(pz_vals.tolist()),
+            True,
+        )
+        obs.set_pz(i, spline)
+
+    if with_meta:
+        meta = Ncm.VarDict.new()
+        meta.set_double("cluster_ra", 0.0)
+        meta.set_double("cluster_dec", 0.0)
+        meta.set_double("cluster_z", 0.8)
+        meta.set_double("cluster_c", 4.0)
+        obs.set_meta(meta)
+
+    obs_file = tmp_path / filename
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.to_binfile(obs, obs_file.absolute().as_posix())
+
+    return obs_file
+
+
+@pytest.fixture(name="real_wl_obs_file")
+def fixture_real_wl_obs_file(tmp_path: Path) -> Path:
+    """A synthetic NcGalaxyWLObs with no catalog metadata."""
+    return _build_real_wl_obs(tmp_path, "real_wl_obs.gvar", with_meta=False)
+
+
+@pytest.fixture(name="real_wl_obs_file_with_meta")
+def fixture_real_wl_obs_file_with_meta(tmp_path: Path) -> Path:
+    """A synthetic NcGalaxyWLObs carrying cluster_ra/dec/z/c metadata."""
+    return _build_real_wl_obs(tmp_path, "real_wl_obs_with_meta.gvar", with_meta=True)
 
 
 @pytest.fixture(name="redshift_dist", params=[e.value for e in GalaxyZGen])
@@ -110,45 +198,52 @@ def fixture_redshift_dist_bad(request) -> tuple[str, list[dict]]:
     return request.param, config
 
 
-@pytest.fixture(name="shape_dist", params=[s.value for s in ShapeScheme])
-def fixture_shape_dist(request) -> tuple[str, dict]:
-    """Fixture for the galaxy shape distribution, sweeping the scheme."""
+@pytest.fixture(name="shape_factor", params=[s.value for s in ShapeFactorGen])
+def fixture_shape_factor(request) -> tuple[str, dict]:
+    """Fixture for the galaxy shape-marginalization factor, sweeping the scheme."""
     config = {
-        "scheme": request.param,
         "ellip_conv": choice(["trace", "trace-det"]),
         "ellip_coord": choice(["celestial", "cartesian"]),
-        "sigma": uniform(0.2, 0.4),
         "std_noise": uniform(0.01, 0.1),
         "std_sigma": uniform(0.01, 0.1),
         "c1_sigma": uniform(0.01, 0.1),
         "c2_sigma": uniform(0.01, 0.1),
         "m_sigma": uniform(0.01, 0.1),
     }
-    return GalaxyShapeGen.FACTOR.value, config
+    return request.param, config
 
 
-@pytest.fixture(name="shape_dist_bad", params=[s.value for s in ShapeScheme])
-def fixture_shape_dist_bad(request) -> tuple[str, list[dict]]:
-    """Fixture for the galaxy shape distribution bad configuration."""
-    scheme = request.param
+@pytest.fixture(name="pop_dist")
+def fixture_pop_dist() -> tuple[str, dict]:
+    """Fixture for the galaxy intrinsic-ellipticity population distribution.
+
+    Every ShapeFactorGen scheme in ``shape_factor`` above is compatible with
+    a Gaussian population (see check_shape_pop_compat()), so this fixture
+    doesn't need to vary with the scheme the way shape_factor does.
+    """
+    config = {"sigma": uniform(0.2, 0.4)}
+    return GalaxyPopGen.GAUSS.value, config
+
+
+@pytest.fixture(name="shape_factor_bad", params=[s.value for s in ShapeFactorGen])
+def fixture_shape_factor_bad(request) -> tuple[str, list[dict]]:
+    """Fixture for the galaxy shape-marginalization factor bad configuration."""
     config: list[dict] = [
-        {"scheme": scheme, "ellip_conv": "a"},
-        {"scheme": scheme, "ellip_coord": "b"},
-        {"scheme": scheme, "sigma": "c"},
-        {"scheme": scheme, "std_noise": "d"},
-        {"scheme": scheme, "std_sigma": "e"},
-        {"scheme": scheme, "c1_sigma": "f"},
-        {"scheme": scheme, "c2_sigma": "g"},
-        {"scheme": scheme, "m_sigma": "h"},
-        {"scheme": scheme, "a": None},
-        {"scheme": scheme, "sigma": -0.1},
-        {"scheme": scheme, "std_noise": -0.01},
-        {"scheme": scheme, "std_sigma": -0.01},
-        {"scheme": scheme, "c1_sigma": -0.01},
-        {"scheme": scheme, "c2_sigma": -0.01},
-        {"scheme": scheme, "m_sigma": -0.01},
+        {"ellip_conv": "a"},
+        {"ellip_coord": "b"},
+        {"std_noise": "d"},
+        {"std_sigma": "e"},
+        {"c1_sigma": "f"},
+        {"c2_sigma": "g"},
+        {"m_sigma": "h"},
+        {"a": None},
+        {"std_noise": -0.01},
+        {"std_sigma": -0.01},
+        {"c1_sigma": -0.01},
+        {"c2_sigma": -0.01},
+        {"m_sigma": -0.01},
     ]
-    return GalaxyShapeGen.FACTOR.value, config
+    return request.param, config
 
 
 @pytest.fixture(
@@ -389,24 +484,29 @@ def test_cluster_wl_app_generate_redshift_bad(experiment_file, redshift_dist_bad
         ), f"Dataset file {dataset_file} should not exist."
 
 
-def test_cluster_wl_app_generate_shape(experiment_file, shape_dist):
-    """Test the generation of the cluster WL app with specific shape distributions."""
-    s_dist = shape_dist[0]
-    for key, value in shape_dist[1].items():
-        s_dist += f" {key}={str(value)}"
+def test_cluster_wl_app_generate_shape(experiment_file, shape_factor, pop_dist):
+    """Test the generation of the cluster WL app with specific shape factors."""
+    s_factor = shape_factor[0]
+    for key, value in shape_factor[1].items():
+        s_factor += f" {key}={str(value)}"
+    p_dist = pop_dist[0]
+    for key, value in pop_dist[1].items():
+        p_dist += f" {key}={str(value)}"
     result = runner.invoke(
         app,
         [
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            f"--shape-dist={s_dist}",
+            f"--shape-factor={s_factor}",
+            f"--pop-dist={p_dist}",
             "--summary",
         ],
     )
     assert result.exit_code == 0, result.output
 
-    assert "GalaxyShapeGenFactor" in result.output
+    scheme = shape_factor[0]
+    assert ShapeFactorGen(scheme).model_cls.__name__ in result.output
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
 
@@ -423,45 +523,44 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_dist):
     obs = cluster_data.peek_obs()
     s_dist_model = cast(Nc.GalaxyShapePopGauss, mset.peek_by_name("NcGalaxyShapePop"))
 
-    assert s_dist_model["sigma"] == shape_dist[1]["sigma"]
+    assert s_dist_model["sigma"] == pop_dist[1]["sigma"]
 
-    scheme = shape_dist[1]["scheme"]
     bound = 1.0 + 6.0 * (
-        shape_dist[1]["sigma"] ** 2 + shape_dist[1]["std_noise"] ** 2
+        pop_dist[1]["sigma"] ** 2 + shape_factor[1]["std_noise"] ** 2
     ) ** (1 / 2)
 
     for i in range(obs.len()):
         assert abs(obs.get("epsilon_obs_1", i)) <= max(bound, 1.5)
         assert abs(obs.get("epsilon_obs_2", i)) <= max(bound, 1.5)
         assert obs.get("std_noise", i) <= 0.5
-        assert abs(obs.get("c1", i)) <= 6.0 * shape_dist[1]["c1_sigma"]
-        assert abs(obs.get("c2", i)) <= 6.0 * shape_dist[1]["c2_sigma"]
-        assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_dist[1]["m_sigma"]
+        assert abs(obs.get("c1", i)) <= 6.0 * shape_factor[1]["c1_sigma"]
+        assert abs(obs.get("c2", i)) <= 6.0 * shape_factor[1]["c2_sigma"]
+        assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_factor[1]["m_sigma"]
 
-        if scheme == ShapeScheme.VAR_ADD.value:
+        if scheme == ShapeFactorGen.VAR_ADD.value:
             # A single global sigma, no per-galaxy intrinsic-width draw, so
             # the bound above is exact rather than a generous stand-in.
             assert abs(obs.get("epsilon_obs_1", i)) <= bound
             assert abs(obs.get("epsilon_obs_2", i)) <= bound
 
 
-def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_dist_bad):
+def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_factor_bad):
     """Test the generation of the cluster WL.
 
-    Test the generation of the cluster WL app with bad shape distribution
+    Test the generation of the cluster WL app with bad shape factor
     configuration.
     """
-    for bad_config in shape_dist_bad[1]:
-        s_dist = shape_dist_bad[0]
+    for bad_config in shape_factor_bad[1]:
+        s_factor = shape_factor_bad[0]
         for key, value in bad_config.items():
-            s_dist += f" {key}={str(value)}"
+            s_factor += f" {key}={str(value)}"
         result = runner.invoke(
             app,
             [
                 "generate",
                 "cluster-wl",
                 experiment_file.as_posix(),
-                f"--shape-dist={s_dist}",
+                f"--shape-factor={s_factor}",
             ],
         )
         assert result.exit_code != 0, result.output
@@ -476,18 +575,242 @@ def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_dist_bad):
         ), f"Dataset file {dataset_file} should not exist."
 
 
-def test_cluster_wl_app_generate_shape_dist_bogus_type(experiment_file):
-    """Test the generation of the cluster WL app with an unknown --shape-dist type."""
+def test_cluster_wl_app_generate_shape_factor_bogus_type(experiment_file):
+    """Test the generation of the cluster WL app with an unknown --shape-factor type."""
     result = runner.invoke(
         app,
         [
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--shape-dist=bogus",
+            "--shape-factor=bogus",
         ],
     )
     assert result.exit_code != 0, result.output
+
+
+@pytest.fixture(name="pop_dist_bad")
+def fixture_pop_dist_bad() -> tuple[str, list[dict]]:
+    """Fixture for the galaxy population distribution bad configuration."""
+    config: list[dict] = [
+        {"sigma": "c"},
+        {"sigma": -0.1},
+        {"a": None},
+    ]
+    return GalaxyPopGen.GAUSS.value, config
+
+
+def test_cluster_wl_app_generate_pop_bad(experiment_file, pop_dist_bad):
+    """Test the generation of the cluster WL app with bad population configuration."""
+    for bad_config in pop_dist_bad[1]:
+        p_dist = pop_dist_bad[0]
+        for key, value in bad_config.items():
+            p_dist += f" {key}={str(value)}"
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                "cluster-wl",
+                experiment_file.as_posix(),
+                f"--pop-dist={p_dist}",
+            ],
+        )
+        assert result.exit_code != 0, result.output
+
+        dataset_file = experiment_file.with_suffix(".dataset.gvar")
+
+        assert (
+            not experiment_file.exists()
+        ), f"Experiment file {experiment_file} should not exist."
+        assert (
+            not dataset_file.exists()
+        ), f"Dataset file {dataset_file} should not exist."
+
+
+def test_cluster_wl_app_generate_pop_dist_bogus_type(experiment_file):
+    """Test the generation of the cluster WL app with an unknown --pop-dist type."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--pop-dist=bogus",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+
+def test_cluster_wl_app_generate_shape_pop_incompatible(experiment_file):
+    """Test that an incompatible scheme/pop_dist combination fails cleanly."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--shape-factor=var_add",
+            "--pop-dist=beta",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+    assert "nc_galaxy_shape_pop_get_sigma" in result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+
+    assert (
+        not experiment_file.exists()
+    ), f"Experiment file {experiment_file} should not exist."
+    assert not dataset_file.exists(), f"Dataset file {dataset_file} should not exist."
+
+
+def test_cluster_model_position_data():
+    """ClusterModel.position_data reports back the position it was built with.
+
+    A plain accessor (reads the internal NcHaloPosition back out as a
+    HaloPositionData), not otherwise exercised by any CLI-level test.
+    """
+    position = HaloPositionData(ra=12.34, dec=-55.123, z=0.2)
+    model = ClusterModel(position=position)
+
+    reported = model.position_data
+
+    assert reported.ra == pytest.approx(position.ra)
+    assert reported.dec == pytest.approx(position.dec)
+    assert reported.z == pytest.approx(position.z)
+
+
+def test_galaxy_pop_gen_beta_get_shape_pop():
+    """GalaxyPopGenBeta.get_shape_pop() returns the live NcGalaxyShapePopBeta
+    it built, with alpha/beta already set -- e.g. for get_mean()/
+    get_concentration() reporting, not otherwise exercised by any CLI-level
+    test (those only inspect the model after a yaml round-trip)."""
+    pop_gen = GalaxyPopGenBeta(alpha=2.0, beta=5.0)
+    pop = pop_gen.get_shape_pop()
+
+    assert isinstance(pop, Nc.GalaxyShapePopBeta)
+    assert pop["alpha"] == 2.0
+    assert pop["beta"] == 5.0
+
+
+def test_cluster_wl_load_app_missing_ra_dec_columns(experiment_file, tmp_path: Path):
+    """load_cluster_wl()'s own guard: a catalog missing 'ra'/'dec' columns
+    must fail cleanly, not proceed into a footprint computation that has
+    nothing to compute from."""
+    obs = Nc.GalaxyWLObs.new(
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        ["epsilon_obs_1", "epsilon_obs_2", "std_noise", "z"],
+    )
+    obs.set("epsilon_obs_1", 0, 0.0)
+    obs.set("epsilon_obs_2", 0, 0.0)
+    obs.set("std_noise", 0, 0.1)
+    obs.set("z", 0, 0.8)
+
+    no_ra_dec_file = tmp_path / "no_ra_dec.gvar"
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.to_binfile(obs, no_ra_dec_file.as_posix())
+
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={no_ra_dec_file.as_posix()}",
+            "--cluster-ra=0.0",
+            "--cluster-dec=0.0",
+            "--cluster-z=0.8",
+            "--cluster-c=4.0",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+    assert "'ra' and 'dec'" in str(result.exception)
+
+
+def test_cluster_wl_app_generate_pop_gauss_local(experiment_file):
+    """Test the generation of the cluster WL app with --pop-dist=gauss_local.
+
+    GaussLocal reads a per-galaxy e_rms catalog column instead of a global
+    model parameter -- the only ``GalaxyPopGen`` branch not otherwise
+    exercised by ``test_cluster_wl_app_generate_shape`` (which only sweeps
+    Gauss). Covers ``GalaxyPopGenGaussLocal``'s constructor/model_post_init/
+    register_models/get_mfuncs/write_calib.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--pop-dist=gauss_local sigma=0.3 std_sigma=0.05",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+    obs = cluster_data.peek_obs()
+
+    for i in range(obs.len()):
+        e_rms = obs.get(Nc.GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS, i)
+        assert 0.0 < e_rms <= 1.0
+
+
+def test_cluster_wl_app_generate_pop_beta(experiment_file):
+    """Test the generation of the cluster WL app with --pop-dist=beta.
+
+    Beta requires a scheme that doesn't linearize around a Gaussian (see
+    ``check_shape_pop_compat()``) -- fixed_quad qualifies. Covers
+    ``GalaxyPopGenBeta``'s get_shape_pop/register_models/get_mfuncs, and
+    ``mfunc_oa.add(func)`` in generate.py's own ``_build_experiment`` (the
+    only ``GalaxyPopGen`` variant with non-empty ``get_mfuncs()``), plus
+    the ``NcGalaxyShapePopBeta:mean``/``:std`` ``NcmMSetFuncList`` entries
+    read back from the written ``.functions.yaml``.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--shape-factor=fixed_quad",
+            "--pop-dist=beta alpha=2.0 beta=5.0",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    functions_file = experiment_file.with_suffix(".functions.yaml")
+    assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
+    assert functions_file.exists(), f"Functions file {functions_file} does not exist."
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    # Dataset must be read first with the same NcmSerialize instance --
+    # shared object aliases span both files.
+    ser.from_binfile(dataset_file.as_posix())
+    experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    pop_model = cast(Nc.GalaxyShapePopBeta, mset.peek_by_name("NcGalaxyShapePop"))
+
+    assert pop_model["alpha"] == 2.0
+    assert pop_model["beta"] == 5.0
+
+    mfunc_oa = cast(Ncm.ObjArray, ser.array_from_yaml_file(functions_file.as_posix()))
+    funcs = [cast(Ncm.MSetFuncList, mfunc_oa.get(i)) for i in range(mfunc_oa.len())]
+    names = {(f.peek_ns(), f.peek_name()) for f in funcs}
+    assert names == {
+        ("NcGalaxyShapePopBeta", "mean"),
+        ("NcGalaxyShapePopBeta", "std"),
+    }
+    for func in funcs:
+        func.eval0(mset)
 
 
 def test_cluster_wl_app_generate_redshift_dist_bogus_type(experiment_file):
@@ -939,3 +1262,204 @@ def test_cluster_wl_app_fit_parameters_bad(experiment_file, fit_parameters_bad):
         not experiment_file.exists()
     ), f"Experiment file {experiment_file} should not exist."
     assert not dataset_file.exists(), f"Dataset file {dataset_file} should not exist."
+
+
+def test_cluster_wl_load_app_data_file(experiment_file, real_wl_obs_file_with_meta):
+    """Test loading a real NcGalaxyWLObs catalog via --data-file.
+
+    cluster_ra/dec/z/c are all taken from the catalog's own metadata --
+    none are given on the command line.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            "--summary",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Number of galaxies" in result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+
+    assert (
+        experiment_file.exists()
+    ), f"Experiment file {experiment_file} does not exist."
+    assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+
+    assert cluster_data.peek_obs().len() == 20
+
+
+def test_cluster_wl_load_app_no_metadata_requires_explicit_values(
+    experiment_file, real_wl_obs_file
+):
+    """Without --cluster-ra/dec/z/c and without catalog metadata, this must
+    fail with a clear error rather than silently using a meaningless value.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+
+def test_cluster_wl_load_app_cli_override_beats_metadata(
+    experiment_file, real_wl_obs_file_with_meta
+):
+    """An explicit --cluster-ra takes precedence over catalog metadata, and
+    is still validated against the catalog's RA/Dec window (there is no
+    lensing signal outside it to fit) even though metadata is present.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--cluster-ra=999",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+
+def test_cluster_wl_load_app_cluster_position_inside_window(
+    experiment_file, real_wl_obs_file
+):
+    """An explicit cluster position inside the catalog's RA/Dec window is
+    accepted (catalog has no metadata, so all four values must be given).
+    """
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file.as_posix()}",
+            "--cluster-ra=0.0",
+            "--cluster-dec=0.0",
+            "--cluster-z=0.8",
+            "--cluster-c=4.0",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_cluster_wl_load_app_catalog(experiment_file):
+    """Test loading a real catalog via --catalog (downloaded and cached from
+    the NumCosmo datafile-release-v1.0.0 GitHub release on first use).
+
+    Uses the smallest curated Subaru HSC-SSP PDR1 field (HWL16a-094, ~3MB,
+    2200 galaxies) to keep the download light; requires network access, same
+    as nc.data.test_snia_cov.test_constructor_catalog_id's own real-download
+    convention. Covers LoadClusterWL._load_obs's --catalog branch and, in the
+    C layer, nc_galaxy_wl_obs_new_from_catalog_id()/
+    nc_galaxy_wl_obs_catalog_id_get_filename() -- otherwise untested (0%
+    coverage), since every other cluster-wl-load test in this file uses
+    --data-file with a small synthetic catalog instead.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            "--catalog=094",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            "--summary",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Number of galaxies" in result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+
+    assert cluster_data.peek_obs().len() == 2200
+
+
+def test_cluster_wl_load_app_catalog_data_file_mutually_exclusive(
+    experiment_file, real_wl_obs_file
+):
+    """--catalog and --data-file cannot be given together."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file.as_posix()}",
+            "--catalog=002",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+
+def test_cluster_wl_load_app_catalog_data_file_neither_given(experiment_file):
+    """Exactly one of --catalog or --data-file is required."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+        ],
+    )
+    assert result.exit_code != 0, result.output
+
+
+def test_cluster_wl_load_app_data_file_wrong_type(experiment_file, tmp_path: Path):
+    """--data-file pointing at a validly-serialized object of the wrong type
+    must fail with a clear error (LoadClusterWL._load_obs's isinstance
+    check), not silently misinterpret it as a NcGalaxyWLObs."""
+    wrong_type_file = tmp_path / "not_a_wl_obs.gvar"
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.to_binfile(Nc.HICosmoDEXcdm.new(), wrong_type_file.as_posix())
+
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={wrong_type_file.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+    assert "NcGalaxyWLObs" in str(result.exception)
+
+
+def test_cluster_wl_load_app_ellip_conv_mismatch(experiment_file, real_wl_obs_file):
+    """--shape-factor ellip_conv/ellip_coord must match the catalog's own."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace-det ellip_coord=celestial",
+        ],
+    )
+    assert result.exit_code != 0, result.output

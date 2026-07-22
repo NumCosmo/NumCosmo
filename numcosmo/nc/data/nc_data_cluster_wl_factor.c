@@ -78,6 +78,7 @@
 #include "nc_enum_types.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/lss/halo/nc_halo_position.h"
+#include "ncm/core/ncm_cfg.h"
 #include "ncm/integration/ncm_integral1d_ptr.h"
 #include "ncm/integration/ncm_integral_nd.h"
 #include "ncm/integration/ncm_integrate.h"
@@ -1678,6 +1679,43 @@ nc_data_cluster_wl_factor_clear (NcDataClusterWLFactor **dcwlf)
   g_clear_object (dcwlf);
 }
 
+/* Builds NcmData's :desc from current config + each Factor's own get_desc();
+ * refreshed by every setter below. */
+static gchar *
+_nc_data_cluster_wl_factor_build_desc (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  const GEnumValue *integ_val               = ncm_cfg_enum_get_value (NC_TYPE_DATA_CLUSTER_WL_INTEG_METHOD, self->integ_method);
+  gchar *pos_desc                           = nc_galaxy_position_factor_get_desc (self->position_factor);
+  gchar *z_desc                             = nc_galaxy_redshift_factor_get_desc (self->redshift_factor);
+  gchar *shape_desc                         = nc_galaxy_shape_factor_get_desc (self->shape_factor);
+  GString *str                              = g_string_new (NULL);
+
+  g_string_append_printf (str,
+                          "NcDataClusterWLFactor: %u galaxies, r in [%.4g, %.4g] Mpc, prec=%.2g. "
+                          "position: %s. redshift: %s. shape: %s. integ_method=%s",
+                          self->len, self->r_min, self->r_max, self->prec,
+                          pos_desc, z_desc, shape_desc, integ_val->value_nick);
+
+  if (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES)
+  {
+    g_string_append_printf (str, " (n_nodes=%u, rule_n=%u, auto_nodes=%s",
+                            self->n_nodes, self->rule_n, self->auto_nodes ? "true" : "false");
+
+    if (self->auto_nodes)
+      g_string_append_printf (str, ", node_reltol=%.2g, max_total_nodes=%u",
+                              self->node_reltol, self->max_total_nodes);
+
+    g_string_append (str, ")");
+  }
+
+  g_free (pos_desc);
+  g_free (z_desc);
+  g_free (shape_desc);
+
+  return g_string_free (str, FALSE);
+}
+
 /**
  * nc_data_cluster_wl_factor_set_prec:
  * @dcwlf: a #NcDataClusterWLFactor
@@ -1691,6 +1729,7 @@ nc_data_cluster_wl_factor_set_prec (NcDataClusterWLFactor *dcwlf, gdouble prec)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   self->prec = prec;
+  ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
 }
 
 /**
@@ -1712,6 +1751,7 @@ nc_data_cluster_wl_factor_set_obs (NcDataClusterWLFactor *dcwlf, NcGalaxyWLObs *
   self->obs_changed = TRUE;
 
   ncm_data_set_init (NCM_DATA (dcwlf), TRUE);
+  ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
 }
 
 /**
@@ -1732,6 +1772,7 @@ nc_data_cluster_wl_factor_set_cut (NcDataClusterWLFactor *dcwlf, const gdouble r
 
   self->r_min = r_min;
   self->r_max = r_max;
+  ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
 }
 
 /**
@@ -1793,6 +1834,7 @@ nc_data_cluster_wl_factor_set_integ_method (NcDataClusterWLFactor *dcwlf, NcData
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   self->integ_method = integ_method;
+  ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
 }
 
 /**
@@ -1823,6 +1865,7 @@ nc_data_cluster_wl_factor_set_n_nodes (NcDataClusterWLFactor *dcwlf, guint n_nod
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   self->n_nodes = n_nodes;
+  ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
 }
 
 /**
@@ -1853,6 +1896,7 @@ nc_data_cluster_wl_factor_set_rule_n (NcDataClusterWLFactor *dcwlf, guint rule_n
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   self->rule_n = rule_n;
+  ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
 }
 
 /**
@@ -1884,6 +1928,7 @@ nc_data_cluster_wl_factor_set_auto_nodes (NcDataClusterWLFactor *dcwlf, gboolean
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   self->auto_nodes = auto_nodes;
+  ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
 }
 
 /**
@@ -1914,6 +1959,7 @@ nc_data_cluster_wl_factor_set_node_reltol (NcDataClusterWLFactor *dcwlf, gdouble
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   self->node_reltol = node_reltol;
+  ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
 }
 
 /**
@@ -1945,6 +1991,7 @@ nc_data_cluster_wl_factor_set_max_total_nodes (NcDataClusterWLFactor *dcwlf, gui
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   self->max_total_nodes = max_total_nodes;
+  ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
 }
 
 /**

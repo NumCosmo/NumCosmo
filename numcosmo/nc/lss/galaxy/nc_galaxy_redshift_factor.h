@@ -82,8 +82,13 @@ struct _NcGalaxyRedshiftFactorClass
   guint64 (*get_hash) (NcGalaxyRedshiftFactor *gsdr);
   void (*update_data) (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data);
 
+  /* Human-readable one-line description of this scheme's own configuration
+   * (default: the concrete type name), same rationale as
+   * #NcGalaxyPositionFactor's analogous vfunc (see there). */
+  gchar *(*get_desc) (NcGalaxyRedshiftFactor *gsdr);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[8];
+  gpointer padding[7];
 };
 
 /*
@@ -125,6 +130,7 @@ gdouble nc_galaxy_redshift_factor_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *m
 NcmIntegralFixed *nc_galaxy_redshift_factor_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
 guint64 nc_galaxy_redshift_factor_get_hash (NcGalaxyRedshiftFactor *gsdr);
 void nc_galaxy_redshift_factor_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data);
+gchar *nc_galaxy_redshift_factor_get_desc (NcGalaxyRedshiftFactor *gsdr);
 
 #define NC_GALAXY_REDSHIFT_FACTOR_COL_Z "z"
 

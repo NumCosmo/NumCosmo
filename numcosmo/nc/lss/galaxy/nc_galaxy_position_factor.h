@@ -84,8 +84,15 @@ struct _NcGalaxyPositionFactorClass
   guint64 (*get_hash) (NcGalaxyPositionFactor *gspf);
   void (*update_data) (NcGalaxyPositionFactor *gspf, NcGalaxyPositionFactorData *data);
 
+  /* Human-readable one-line description of this scheme's own configuration
+   * (default: the concrete type name). Consumed by orchestrators such as
+   * #NcDataClusterWLFactor to build a richer NcmData:desc than the bare
+   * type name -- override to report scheme-specific configuration (e.g.
+   * the sky footprint bounds for the flat scheme). */
+  gchar *(*get_desc) (NcGalaxyPositionFactor *gspf);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[12];
+  gpointer padding[11];
 };
 
 /*
@@ -123,6 +130,7 @@ void nc_galaxy_position_factor_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *m
 NcGalaxyPositionFactorIntegrand *nc_galaxy_position_factor_integ (NcGalaxyPositionFactor *gspf, NcmMSet *mset, gboolean use_lnp);
 guint64 nc_galaxy_position_factor_get_hash (NcGalaxyPositionFactor *gspf);
 void nc_galaxy_position_factor_update_data (NcGalaxyPositionFactor *gspf, NcGalaxyPositionFactorData *data);
+gchar *nc_galaxy_position_factor_get_desc (NcGalaxyPositionFactor *gspf);
 
 #define NC_GALAXY_POSITION_FACTOR_COL_RA "ra"
 #define NC_GALAXY_POSITION_FACTOR_COL_DEC "dec"

@@ -23,7 +23,8 @@
 
 """NumCosmo APP subcommands generate experiment files."""
 
-from typing import Annotated, Optional
+from typing import Annotated, cast
+from abc import ABC, abstractmethod
 from enum import StrEnum, auto
 import dataclasses
 from pathlib import Path
@@ -48,8 +49,19 @@ from numcosmo_py.experiments.jpas_forecast24 import (
 )
 from numcosmo_py.experiments.cluster_wl import (
     generate_lsst_cluster_wl,
-    GalaxyShapeGen,
+    load_cluster_wl,
+    check_shape_pop_compat,
+    GalaxyPopGen,
+    ShapeFactorGen,
     GalaxyZGen,
+    HWLCatalogID,
+    HaloProfileType,
+    IntegMethod,
+    IntegMethodOptions,
+    DEFAULT_INTEG_N_NODES,
+    DEFAULT_INTEG_RULE_N,
+    DEFAULT_INTEG_NODE_RELTOL,
+    DEFAULT_INTEG_MAX_TOTAL_NODES,
 )
 from numcosmo_py.experiments.cluster_richness_count import (
     generate_cluster_richness_count,
@@ -198,7 +210,7 @@ class GeneratePlanck:
     ] = False
 
     include_snia: Annotated[
-        Optional[SNIaID], typer.Option(help="Include SNIa data.", show_default=True)
+        SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
 
     include_des_y3_S8_prior: Annotated[
@@ -284,7 +296,7 @@ class GenerateJpasForecast:
     ]
 
     fitting_sky_cut: Annotated[
-        Optional[JpasSSCType],
+        JpasSSCType | None,
         typer.Option(
             help="Super Sample Covariance method for fitting.", show_default=True
         ),
@@ -336,7 +348,7 @@ class GenerateJpasForecast:
     ] = 8
 
     cluster_redshift_type: Annotated[
-        Optional[ClusterRedshiftType],
+        ClusterRedshiftType | None,
         typer.Option(help="Cluster photoz relation.", show_default=True),
     ] = ClusterRedshiftType.NODIST
 
@@ -377,7 +389,7 @@ class GenerateJpasForecast:
     ] = 2
 
     cluster_mass_type: Annotated[
-        Optional[ClusterMassType],
+        ClusterMassType | None,
         typer.Option(help="Cluster mass-observable relation.", show_default=True),
     ] = ClusterMassType.NODIST
 
@@ -461,24 +473,19 @@ class GenerateJpasForecast:
 
 
 @dataclasses.dataclass(kw_only=True)
-class GenerateClusterWL:
-    """Generate LSST cluster weak lensing experiment."""
+class ClusterWL(ABC):
+    """Common options and orchestration for cluster weak lensing experiments.
+
+    Concrete subclasses build (or load) the experiment's likelihood/model-set
+    via ``_build_experiment()``; this base class handles the experiment file
+    suffix check, freeing --parameter-list entries, and serialization --
+    shared by both the mock generator (GenerateClusterWL) and the real-catalog
+    loader (LoadClusterWL).
+    """
 
     experiment: Annotated[
         Path, typer.Argument(help="Path to the experiment file to fit.")
     ]
-
-    cluster_ra: Annotated[
-        float, typer.Option(help="Cluster right ascension.", show_default=True)
-    ] = 12.34
-
-    cluster_dec: Annotated[
-        float, typer.Option(help="Cluster declination.", show_default=True)
-    ] = -55.123
-
-    cluster_z: Annotated[
-        float, typer.Option(help="Cluster redshift.", show_default=True)
-    ] = 0.2
 
     cluster_mass: Annotated[
         float, typer.Option(help="Cluster mass.", show_default=True)
@@ -492,10 +499,6 @@ class GenerateClusterWL:
         float, typer.Option(help="Maximum cluster mass.", show_default=True)
     ] = 1.0e15
 
-    cluster_c: Annotated[
-        float, typer.Option(help="Cluster concentration.", show_default=True)
-    ] = 4.0
-
     r_min: Annotated[float, typer.Option(help="Minimum radius.", show_default=True)] = (
         0.3 / 0.7
     )
@@ -504,49 +507,32 @@ class GenerateClusterWL:
         3.0 / 0.7
     )
 
-    ra_min: Annotated[
-        float, typer.Option(help="Minimum right ascension.", show_default=True)
-    ] = 12.14
-
-    ra_max: Annotated[
-        float, typer.Option(help="Maximum right ascension.", show_default=True)
-    ] = 12.54
-
-    dec_min: Annotated[
-        float, typer.Option(help="Minimum declination.", show_default=True)
-    ] = -55.323
-
-    dec_max: Annotated[
-        float, typer.Option(help="Maximum declination.", show_default=True)
-    ] = -54.923
-
     profile_type: Annotated[
-        str, typer.Option(help="Cluster profile to use.", show_default=True)
-    ] = "nfw"
+        HaloProfileType, typer.Option(help="Cluster profile to use.", show_default=True)
+    ] = HaloProfileType.NFW
 
-    z_dist: Annotated[
+    shape_factor: Annotated[
         str,
         typer.Option(
-            help=GalaxyZGen.get_help_text(),
+            help=ShapeFactorGen.get_help_text(),
             show_default=True,
-            metavar=GalaxyZGen.get_help_metavar(),
-            rich_help_panel="Galaxy redshift source distribution",
+            metavar=ShapeFactorGen.get_help_metavar(),
+            rich_help_panel="Galaxy shape-marginalization factor",
         ),
-    ] = "composed variant=y1-source zp_min=0.0 zp_max=5.0 sigma0=0.03"
+    ] = (
+        "var_add ellip_conv=trace-det ellip_coord=celestial "
+        "std_noise=0.1 c1_sigma=0.05 c2_sigma=0.05 m_sigma=0.05"
+    )
 
-    shape_dist: Annotated[
+    pop_dist: Annotated[
         str,
         typer.Option(
-            help=GalaxyShapeGen.get_help_text(),
+            help=GalaxyPopGen.get_help_text(),
             show_default=True,
-            metavar=GalaxyShapeGen.get_help_metavar(),
-            rich_help_panel="Galaxy shape source distribution",
+            metavar=GalaxyPopGen.get_help_metavar(),
+            rich_help_panel="Galaxy intrinsic-ellipticity population distribution",
         ),
-    ] = "factor scheme=var_add ellip_conv=trace-det ellip_coord=celestial sigma=0.3 std_noise=0.1 c1_sigma=0.05 c2_sigma=0.05 m_sigma=0.05"
-
-    galaxy_density: Annotated[
-        float, typer.Option(help="Galaxy density.", show_default=True)
-    ] = 18.0
+    ] = "gauss sigma=0.3"
 
     parameter_list: Annotated[
         list[str],
@@ -561,20 +547,83 @@ class GenerateClusterWL:
         ),
     ]
 
-    seed: Annotated[
-        Optional[int], typer.Option(help="Random seed.", show_default=True)
-    ] = None
+    integ_method: Annotated[
+        IntegMethod,
+        typer.Option(
+            help="Redshift-integral method for the cluster WL likelihood.",
+            show_default=True,
+            rich_help_panel="Redshift integration method",
+        ),
+    ] = IntegMethod.LNINT
 
-    use_lnint: Annotated[
-        bool, typer.Option(help="Use log-integration.", show_default=True)
+    auto_nodes: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Calibrate each galaxy's own fixed-node count/rule instead "
+                "of the global --n-nodes/--rule-n (integ-method=fixed_nodes only)."
+            ),
+            show_default=True,
+            rich_help_panel="Redshift integration method",
+        ),
     ] = False
+
+    n_nodes: Annotated[
+        int,
+        typer.Option(
+            help="Number of fixed-quadrature panels (integ-method=fixed_nodes only).",
+            show_default=True,
+            rich_help_panel="Redshift integration method",
+        ),
+    ] = DEFAULT_INTEG_N_NODES
+
+    rule_n: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "Gauss-Legendre rule order per panel (integ-method=fixed_nodes only)."
+            ),
+            show_default=True,
+            rich_help_panel="Redshift integration method",
+        ),
+    ] = DEFAULT_INTEG_RULE_N
+
+    node_reltol: Annotated[
+        float,
+        typer.Option(
+            help="Target relative tolerance for --auto-nodes selection.",
+            show_default=True,
+            rich_help_panel="Redshift integration method",
+        ),
+    ] = DEFAULT_INTEG_NODE_RELTOL
+
+    max_total_nodes: Annotated[
+        int,
+        typer.Option(
+            help="Safety ceiling on the total node count for --auto-nodes.",
+            show_default=True,
+            rich_help_panel="Redshift integration method",
+        ),
+    ] = DEFAULT_INTEG_MAX_TOTAL_NODES
 
     summary: Annotated[
         bool, typer.Option(help="Print experiment summary.", show_default=True)
     ] = False
 
+    @property
+    def integ_options(self) -> IntegMethodOptions:
+        """Return the redshift-integral method options bundle."""
+        return IntegMethodOptions(
+            integ_method=self.integ_method,
+            auto_nodes=self.auto_nodes,
+            n_nodes=self.n_nodes,
+            rule_n=self.rule_n,
+            node_reltol=self.node_reltol,
+            max_total_nodes=self.max_total_nodes,
+        )
+
     def __post_init__(self):
-        """Generate LSST cluster weak lensing experiment.
+        """Generate or load a cluster weak lensing experiment.
 
         Raises:
             ValueError: Invalid experiment file suffix.
@@ -586,36 +635,15 @@ class GenerateClusterWL:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        if self.galaxy_density <= 0:
-            raise typer.BadParameter(
-                f"galaxy_density must be positive, got {self.galaxy_density}"
-            )
+        _shape_factor, shape_gen = self.parse_shape_factor()
+        _pop_dist, pop_gen = self.parse_pop_dist()
 
-        _z_dist, z_gen = self.parse_z_dist()
-        _shape_dist, shape_gen = self.parse_shape_dist()
+        try:
+            check_shape_pop_compat(shape_gen, pop_gen)
+        except ValueError as e:
+            raise typer.BadParameter(e)
 
-        exp = generate_lsst_cluster_wl(
-            cluster_ra=self.cluster_ra,
-            cluster_dec=self.cluster_dec,
-            cluster_z=self.cluster_z,
-            cluster_mass=self.cluster_mass,
-            cluster_c=self.cluster_c,
-            r_min=self.r_min,
-            r_max=self.r_max,
-            cluster_mass_min=self.cluster_mass_min,
-            cluster_mass_max=self.cluster_mass_max,
-            ra_min=self.ra_min,
-            ra_max=self.ra_max,
-            dec_min=self.dec_min,
-            dec_max=self.dec_max,
-            profile_type=self.profile_type,
-            z_gen=z_gen,
-            shape_gen=shape_gen,
-            density=self.galaxy_density,
-            seed=self.seed,
-            use_lnint=self.use_lnint,
-            summary=self.summary,
-        )
+        exp = self._build_experiment(shape_gen, pop_gen)
 
         mset = exp.peek("model-set")
         assert isinstance(mset, Ncm.MSet)
@@ -641,6 +669,112 @@ class GenerateClusterWL:
         )
         ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
 
+        # Derived (nvar=0) NcmMSetFuncList entries the chosen population
+        # wants recorded as extra catalog columns in a later MC/MCMC run
+        # (see LoadExperiment/esmcmc.py/run_mc.py's own .functions.yaml
+        # loading) -- same convention every other generate command in this
+        # CLI uses (e.g. GenerateQSpline's mean_kappa/q_transition).
+        mfunc_oa = Ncm.ObjArray.new()
+        for func in pop_gen.get_mfuncs():
+            mfunc_oa.add(func)
+        ser.array_to_yaml_file(
+            mfunc_oa,
+            self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
+        )
+
+    def parse_shape_factor(self):
+        """Parse the shape_factor string."""
+        shape_factor_list = shlex.split(self.shape_factor)
+        shape_factor_type = shape_factor_list.pop(0)
+        try:
+            shape_factor = ShapeFactorGen(shape_factor_type)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+
+        try:
+            shape_factor_args = shape_factor.model_cls.from_args(shape_factor_list)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+        return shape_factor, shape_factor_args
+
+    def parse_pop_dist(self):
+        """Parse the pop_dist string."""
+        pop_dist_list = shlex.split(self.pop_dist)
+        pop_dist_type = pop_dist_list.pop(0)
+        try:
+            pop_dist = GalaxyPopGen(pop_dist_type)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+
+        try:
+            pop_dist_args = pop_dist.model_cls.from_args(pop_dist_list)
+        except ValueError as e:
+            raise typer.BadParameter(e)
+        return pop_dist, pop_dist_args
+
+    @abstractmethod
+    def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
+        """Build (mock) or load (real data) the experiment's likelihood/model-set."""
+
+
+@dataclasses.dataclass(kw_only=True)
+class GenerateClusterWL(ClusterWL):
+    """Generate a mock LSST-SRD cluster weak lensing experiment.
+
+    Galaxies follow the LSST-SRD redshift distribution, with shapes and
+    positions resampled from the chosen --z-dist/--shape-dist schemes.
+    """
+
+    cluster_ra: Annotated[
+        float, typer.Option(help="Cluster right ascension.", show_default=True)
+    ] = 12.34
+
+    cluster_dec: Annotated[
+        float, typer.Option(help="Cluster declination.", show_default=True)
+    ] = -55.123
+
+    cluster_z: Annotated[
+        float, typer.Option(help="Cluster redshift.", show_default=True)
+    ] = 0.2
+
+    cluster_c: Annotated[
+        float, typer.Option(help="Cluster concentration.", show_default=True)
+    ] = 4.0
+
+    ra_min: Annotated[
+        float, typer.Option(help="Minimum right ascension.", show_default=True)
+    ] = 12.14
+
+    ra_max: Annotated[
+        float, typer.Option(help="Maximum right ascension.", show_default=True)
+    ] = 12.54
+
+    dec_min: Annotated[
+        float, typer.Option(help="Minimum declination.", show_default=True)
+    ] = -55.323
+
+    dec_max: Annotated[
+        float, typer.Option(help="Maximum declination.", show_default=True)
+    ] = -54.923
+
+    z_dist: Annotated[
+        str,
+        typer.Option(
+            help=GalaxyZGen.get_help_text(),
+            show_default=True,
+            metavar=GalaxyZGen.get_help_metavar(),
+            rich_help_panel="Galaxy redshift source distribution",
+        ),
+    ] = "composed variant=y1-source zp_min=0.0 zp_max=5.0 sigma0=0.03"
+
+    galaxy_density: Annotated[
+        float, typer.Option(help="Galaxy density.", show_default=True)
+    ] = 18.0
+
+    seed: Annotated[
+        int | None, typer.Option(help="Random seed.", show_default=True)
+    ] = None
+
     def parse_z_dist(self):
         """Parse the z_dist string."""
         z_dist_list = shlex.split(self.z_dist)
@@ -656,20 +790,159 @@ class GenerateClusterWL:
             raise typer.BadParameter(e)
         return z_dist, z_dist_args
 
-    def parse_shape_dist(self):
-        """Parse the shape_dist string."""
-        shape_dist_list = shlex.split(self.shape_dist)
-        shape_dist_type = shape_dist_list.pop(0)
-        try:
-            shape_dist = GalaxyShapeGen(shape_dist_type)
-        except ValueError as e:
-            raise typer.BadParameter(e)
+    def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
+        """Generate the mock LSST-SRD cluster weak lensing experiment."""
+        if self.galaxy_density <= 0:
+            raise typer.BadParameter(
+                f"galaxy_density must be positive, got {self.galaxy_density}"
+            )
 
-        try:
-            shape_dist_args = shape_dist.model_cls.from_args(shape_dist_list)
-        except ValueError as e:
-            raise typer.BadParameter(e)
-        return shape_dist, shape_dist_args
+        _z_dist, z_gen = self.parse_z_dist()
+
+        return generate_lsst_cluster_wl(
+            cluster_ra=self.cluster_ra,
+            cluster_dec=self.cluster_dec,
+            cluster_z=self.cluster_z,
+            cluster_mass=self.cluster_mass,
+            cluster_c=self.cluster_c,
+            r_min=self.r_min,
+            r_max=self.r_max,
+            cluster_mass_min=self.cluster_mass_min,
+            cluster_mass_max=self.cluster_mass_max,
+            ra_min=self.ra_min,
+            ra_max=self.ra_max,
+            dec_min=self.dec_min,
+            dec_max=self.dec_max,
+            profile_type=self.profile_type,
+            z_gen=z_gen,
+            shape_gen=shape_gen,
+            pop_gen=pop_gen,
+            density=self.galaxy_density,
+            seed=self.seed,
+            integ_options=self.integ_options,
+            summary=self.summary,
+        )
+
+
+@dataclasses.dataclass(kw_only=True)
+class LoadClusterWL(ClusterWL):
+    """Load a cluster weak lensing experiment from a real NcGalaxyWLObs catalog.
+
+    Pairs the observed galaxies -- including their per-galaxy photometric
+    redshift spline -- with the chosen --shape-dist scheme; the redshift
+    scheme is fixed to the catalog's own per-galaxy p(z) spline, and the sky
+    footprint is the bounding box of the catalog's RA/Dec. --shape-dist's
+    ellip_conv/ellip_coord must match the catalog's own convention.
+    """
+
+    catalog: Annotated[
+        HWLCatalogID | None,
+        typer.Option(
+            help=(
+                "Load a curated Subaru HSC-SSP PDR1 catalog from the "
+                "NumCosmo data file release (downloaded and cached on "
+                "first use). Mutually exclusive with --data-file; exactly "
+                "one of the two is required."
+            ),
+            show_default=True,
+        ),
+    ] = None
+
+    data_file: Annotated[
+        Path | None,
+        typer.Option(
+            help=(
+                "Path to a local NcGalaxyWLObs (.gvar) file with real galaxy "
+                "shape/position/redshift data. Mutually exclusive with "
+                "--catalog; exactly one of the two is required."
+            ),
+            exists=True,
+            readable=True,
+        ),
+    ] = None
+
+    # Unlike GenerateClusterWL's mock-oriented required floats, a real catalog
+    # may carry its own cluster_ra/cluster_dec/cluster_z/cluster_c metadata
+    # (see NcmCatalog:meta), so these are optional here and fall back to it --
+    # only an error (from load_cluster_wl) if neither is available.
+    cluster_ra: Annotated[
+        float | None,
+        typer.Option(
+            help="Cluster right ascension. Falls back to catalog metadata.",
+            show_default=True,
+        ),
+    ] = None
+
+    cluster_dec: Annotated[
+        float | None,
+        typer.Option(
+            help="Cluster declination. Falls back to catalog metadata.",
+            show_default=True,
+        ),
+    ] = None
+
+    cluster_z: Annotated[
+        float | None,
+        typer.Option(
+            help="Cluster redshift. Falls back to catalog metadata.",
+            show_default=True,
+        ),
+    ] = None
+
+    cluster_c: Annotated[
+        float | None,
+        typer.Option(
+            help="Cluster concentration. Falls back to catalog metadata.",
+            show_default=True,
+        ),
+    ] = None
+
+    def _load_obs(self) -> Nc.GalaxyWLObs:
+        """Load the real NcGalaxyWLObs catalog from --catalog or --data-file.
+
+        Raises:
+            ValueError: The loaded file does not contain a NcGalaxyWLObs.
+        """
+        if self.catalog is not None:
+            obs = Nc.GalaxyWLObs.new_from_catalog_id(self.catalog.genum)
+        else:
+            assert self.data_file is not None
+            ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            obs = cast(
+                Nc.GalaxyWLObs, ser.from_binfile(self.data_file.absolute().as_posix())
+            )
+
+        if not isinstance(obs, Nc.GalaxyWLObs):
+            raise ValueError(
+                f"File does not contain a NcGalaxyWLObs: {type(obs).__name__}"
+            )
+
+        return obs
+
+    def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
+        """Load the real-data cluster weak lensing experiment."""
+        if (self.catalog is None) == (self.data_file is None):
+            raise typer.BadParameter(
+                "exactly one of --catalog or --data-file is required"
+            )
+
+        return load_cluster_wl(
+            obs=self._load_obs(),
+            cluster_ra=self.cluster_ra,
+            cluster_dec=self.cluster_dec,
+            cluster_z=self.cluster_z,
+            cluster_mass=self.cluster_mass,
+            cluster_mass_min=self.cluster_mass_min,
+            cluster_mass_max=self.cluster_mass_max,
+            cluster_c=self.cluster_c,
+            r_min=self.r_min,
+            r_max=self.r_max,
+            profile_type=self.profile_type,
+            shape_gen=shape_gen,
+            pop_gen=pop_gen,
+            integ_options=self.integ_options,
+            summary=self.summary,
+        )
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -693,7 +966,7 @@ class GenerateClusterRichnessCount:
     ]
 
     data_file: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             help=(
                 "Path to a FITS file with real cluster data (mass, redshift "
@@ -811,7 +1084,7 @@ class GenerateClusterRichnessCount:
     ]
 
     seed: Annotated[
-        Optional[int], typer.Option(help="Random seed.", show_default=True)
+        int | None, typer.Option(help="Random seed.", show_default=True)
     ] = None
 
     summary: Annotated[
@@ -926,15 +1199,15 @@ class GenerateQSpline:
     ] = 2.1
 
     include_snia: Annotated[
-        Optional[SNIaID], typer.Option(help="Include SNIa data.", show_default=True)
+        SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
 
     include_bao: Annotated[
-        Optional[BAOID], typer.Option(help="Include BAO data.", show_default=True)
+        BAOID | None, typer.Option(help="Include BAO data.", show_default=True)
     ] = None
 
     include_hubble: Annotated[
-        Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
+        HID | None, typer.Option(help="Include Hubble data.", show_default=True)
     ] = None
 
     curvature_prior: Annotated[
@@ -1087,15 +1360,15 @@ class GenerateXCDM:
     ] = False
 
     include_snia: Annotated[
-        Optional[SNIaID], typer.Option(help="Include SNIa data.", show_default=True)
+        SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
 
     include_bao: Annotated[
-        Optional[BAOID], typer.Option(help="Include BAO data.", show_default=True)
+        BAOID | None, typer.Option(help="Include BAO data.", show_default=True)
     ] = None
 
     include_hubble: Annotated[
-        Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
+        HID | None, typer.Option(help="Include Hubble data.", show_default=True)
     ] = None
 
     def __post_init__(self):
@@ -1181,15 +1454,15 @@ class GenerateDEWSpline:
     ] = 2.33
 
     include_snia: Annotated[
-        Optional[SNIaID], typer.Option(help="Include SNIa data.", show_default=True)
+        SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
 
     include_bao: Annotated[
-        Optional[BAOID], typer.Option(help="Include BAO data.", show_default=True)
+        BAOID | None, typer.Option(help="Include BAO data.", show_default=True)
     ] = None
 
     include_hubble: Annotated[
-        Optional[HID], typer.Option(help="Include Hubble data.", show_default=True)
+        HID | None, typer.Option(help="Include Hubble data.", show_default=True)
     ] = None
 
     curvature_prior: Annotated[
