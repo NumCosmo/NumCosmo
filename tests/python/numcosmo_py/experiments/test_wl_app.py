@@ -52,6 +52,9 @@ from numcosmo_py.experiments.cluster_wl import (
     ShapeFactorGen,
     GalaxyPopGen,
     HaloProfileType,
+    ClusterModel,
+    HaloPositionData,
+    GalaxyPopGenBeta,
 )
 
 pytestmark = pytest.mark.app
@@ -661,6 +664,158 @@ def test_cluster_wl_app_generate_shape_pop_incompatible(experiment_file):
     assert not dataset_file.exists(), f"Dataset file {dataset_file} should not exist."
 
 
+def test_cluster_model_position_data():
+    """ClusterModel.position_data reports back the position it was built with.
+
+    A plain accessor (reads the internal NcHaloPosition back out as a
+    HaloPositionData), not otherwise exercised by any CLI-level test.
+    """
+    position = HaloPositionData(ra=12.34, dec=-55.123, z=0.2)
+    model = ClusterModel(position=position)
+
+    reported = model.position_data
+
+    assert reported.ra == pytest.approx(position.ra)
+    assert reported.dec == pytest.approx(position.dec)
+    assert reported.z == pytest.approx(position.z)
+
+
+def test_galaxy_pop_gen_beta_get_shape_pop():
+    """GalaxyPopGenBeta.get_shape_pop() returns the live NcGalaxyShapePopBeta
+    it built, with alpha/beta already set -- e.g. for get_mean()/
+    get_concentration() reporting, not otherwise exercised by any CLI-level
+    test (those only inspect the model after a yaml round-trip)."""
+    pop_gen = GalaxyPopGenBeta(alpha=2.0, beta=5.0)
+    pop = pop_gen.get_shape_pop()
+
+    assert isinstance(pop, Nc.GalaxyShapePopBeta)
+    assert pop["alpha"] == 2.0
+    assert pop["beta"] == 5.0
+
+
+def test_cluster_wl_load_app_missing_ra_dec_columns(experiment_file, tmp_path: Path):
+    """load_cluster_wl()'s own guard: a catalog missing 'ra'/'dec' columns
+    must fail cleanly, not proceed into a footprint computation that has
+    nothing to compute from."""
+    obs = Nc.GalaxyWLObs.new(
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        ["epsilon_obs_1", "epsilon_obs_2", "std_noise", "z"],
+    )
+    obs.set("epsilon_obs_1", 0, 0.0)
+    obs.set("epsilon_obs_2", 0, 0.0)
+    obs.set("std_noise", 0, 0.1)
+    obs.set("z", 0, 0.8)
+
+    no_ra_dec_file = tmp_path / "no_ra_dec.gvar"
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.to_binfile(obs, no_ra_dec_file.as_posix())
+
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={no_ra_dec_file.as_posix()}",
+            "--cluster-ra=0.0",
+            "--cluster-dec=0.0",
+            "--cluster-z=0.8",
+            "--cluster-c=4.0",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+    assert "'ra' and 'dec'" in str(result.exception)
+
+
+def test_cluster_wl_app_generate_pop_gauss_local(experiment_file):
+    """Test the generation of the cluster WL app with --pop-dist=gauss_local.
+
+    GaussLocal reads a per-galaxy e_rms catalog column instead of a global
+    model parameter -- the only ``GalaxyPopGen`` branch not otherwise
+    exercised by ``test_cluster_wl_app_generate_shape`` (which only sweeps
+    Gauss). Covers ``GalaxyPopGenGaussLocal``'s constructor/model_post_init/
+    register_models/get_mfuncs/write_calib.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--pop-dist=gauss_local sigma=0.3 std_sigma=0.05",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+    obs = cluster_data.peek_obs()
+
+    for i in range(obs.len()):
+        e_rms = obs.get(Nc.GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS, i)
+        assert 0.0 < e_rms <= 1.0
+
+
+def test_cluster_wl_app_generate_pop_beta(experiment_file):
+    """Test the generation of the cluster WL app with --pop-dist=beta.
+
+    Beta requires a scheme that doesn't linearize around a Gaussian (see
+    ``check_shape_pop_compat()``) -- fixed_quad qualifies. Covers
+    ``GalaxyPopGenBeta``'s get_shape_pop/register_models/get_mfuncs, and
+    ``mfunc_oa.add(func)`` in generate.py's own ``_build_experiment`` (the
+    only ``GalaxyPopGen`` variant with non-empty ``get_mfuncs()``), plus
+    the ``NcGalaxyShapePopBeta:mean``/``:std`` ``NcmMSetFuncList`` entries
+    read back from the written ``.functions.yaml``.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--shape-factor=fixed_quad",
+            "--pop-dist=beta alpha=2.0 beta=5.0",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    functions_file = experiment_file.with_suffix(".functions.yaml")
+    assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
+    assert functions_file.exists(), f"Functions file {functions_file} does not exist."
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    # Shared-object aliases (e.g. NcDistance) span both files -- the dataset
+    # must be read first with the same NcmSerialize instance, exactly as
+    # test_cluster_wl_app_generate_shape does above, or the yaml load aborts
+    # with "object alias `S0' is not saved" (a still-unresolved alias from
+    # the dataset side).
+    ser.from_binfile(dataset_file.as_posix())
+    experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    pop_model = cast(Nc.GalaxyShapePopBeta, mset.peek_by_name("NcGalaxyShapePop"))
+
+    assert pop_model["alpha"] == 2.0
+    assert pop_model["beta"] == 5.0
+
+    mfunc_oa = cast(Ncm.ObjArray, ser.array_from_yaml_file(functions_file.as_posix()))
+    funcs = [cast(Ncm.MSetFuncList, mfunc_oa.get(i)) for i in range(mfunc_oa.len())]
+    names = {(f.peek_ns(), f.peek_name()) for f in funcs}
+    assert names == {
+        ("NcGalaxyShapePopBeta", "mean"),
+        ("NcGalaxyShapePopBeta", "std"),
+    }
+    for func in funcs:
+        func.eval0(mset)
+
+
 def test_cluster_wl_app_generate_redshift_dist_bogus_type(experiment_file):
     """Test the generation of the cluster WL app with an unknown --z-dist type."""
     result = runner.invoke(
@@ -1209,6 +1364,43 @@ def test_cluster_wl_load_app_cluster_position_inside_window(
     assert result.exit_code == 0, result.output
 
 
+def test_cluster_wl_load_app_catalog(experiment_file):
+    """Test loading a real catalog via --catalog (downloaded and cached from
+    the NumCosmo datafile-release-v1.0.0 GitHub release on first use).
+
+    Uses the smallest curated Subaru HSC-SSP PDR1 field (HWL16a-094, ~3MB,
+    2200 galaxies) to keep the download light; requires network access, same
+    as nc.data.test_snia_cov.test_constructor_catalog_id's own real-download
+    convention. Covers LoadClusterWL._load_obs's --catalog branch and, in the
+    C layer, nc_galaxy_wl_obs_new_from_catalog_id()/
+    nc_galaxy_wl_obs_catalog_id_get_filename() -- otherwise untested (0%
+    coverage), since every other cluster-wl-load test in this file uses
+    --data-file with a small synthetic catalog instead.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            "--catalog=094",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            "--summary",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Number of galaxies" in result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+
+    assert cluster_data.peek_obs().len() == 2200
+
+
 def test_cluster_wl_load_app_catalog_data_file_mutually_exclusive(
     experiment_file, real_wl_obs_file
 ):
@@ -1237,6 +1429,28 @@ def test_cluster_wl_load_app_catalog_data_file_neither_given(experiment_file):
         ],
     )
     assert result.exit_code != 0, result.output
+
+
+def test_cluster_wl_load_app_data_file_wrong_type(experiment_file, tmp_path: Path):
+    """--data-file pointing at a validly-serialized object of the wrong type
+    must fail with a clear error (LoadClusterWL._load_obs's isinstance
+    check), not silently misinterpret it as a NcGalaxyWLObs."""
+    wrong_type_file = tmp_path / "not_a_wl_obs.gvar"
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.to_binfile(Nc.HICosmoDEXcdm.new(), wrong_type_file.as_posix())
+
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={wrong_type_file.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+    assert "NcGalaxyWLObs" in str(result.exception)
 
 
 def test_cluster_wl_load_app_ellip_conv_mismatch(experiment_file, real_wl_obs_file):

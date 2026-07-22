@@ -150,6 +150,10 @@ math_tests = [
         'sources': ['ncm/fit/test_ncm_fit_state.c'],
     },
     {
+        'name': 'ncm_mset_trans_kern_gauss',
+        'sources': ['ncm/fit/test_ncm_mset_trans_kern_gauss.c'],
+    },
+    {
         'name': 'ncm_fit_esmcmc',
         'sources': ['ncm/fit/test_ncm_fit_esmcmc.c'],
         'timeout': 0,
@@ -354,6 +358,10 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_shape_pop_series',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c'],
+    },
+    {
+        'name': 'nc_galaxy_position_factor',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_position_factor.c'],
     },
 ]
 

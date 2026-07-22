@@ -628,7 +628,15 @@ class GalaxyPopGenGaussLocal(BaseModel):
 
     def write_calib(self, obs: Nc.GalaxyWLObs, i: int, rng: Ncm.RNG) -> None:
         """Draw and write this galaxy's fixed e_rms input into obs."""
-        e_rms = min(np.sqrt(rng.gamma_gen(self._k_e_rms, self._theta_e_rms)), 1.0)
+        # e_rms = sqrt(<x>/2) with x restricted to [0, 1] saturates at 0.5 as
+        # sigma -> infinity (nc_galaxy_shape_pop_gauss_local.c's own
+        # _e_rms_of_sigma()/_sigma_from_e_rms()); NOT 1.0 -- an e_rms draw at
+        # or above 0.5 has no finite sigma to invert to and aborts the whole
+        # process via that function's own g_assert_cmpfloat(). Clip well
+        # inside the true (0.5 - 1e-9) ceiling, not at it, since sigma
+        # diverges as e_rms -> 0.5 (bisection there is numerically fragile,
+        # not just technically in-bounds).
+        e_rms = min(np.sqrt(rng.gamma_gen(self._k_e_rms, self._theta_e_rms)), 0.49)
         obs.set(Nc.GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS, i, e_rms)
 
     def __repr__(self):
@@ -914,7 +922,6 @@ class ClusterModel(BaseModel):
     @property
     def position_data(self) -> HaloPositionData:
         """Return the cluster position."""
-        # pragma: no cover
         return HaloPositionData(
             ra=self._halo_position["ra"],
             dec=self._halo_position["dec"],

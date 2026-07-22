@@ -269,7 +269,7 @@ _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, 
     {
       const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
       const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
-      const gdouble val = ncm_vector_get (theta, i);
+      const gdouble val = ncm_vector_get (thetastar, i);
       const gchar *name = ncm_mset_fparam_name (mset, i);
 
       if ((val < lb) || (val > ub))

@@ -19,7 +19,7 @@ env:
   # misplacing a test -- e.g. it was bumped 1->2 after mismatched per-slice cache
   # vintages (fixed by merge-test-durations, see its comment) caused ncm_fit_esmcmc
   # and ncm_fit_esmcmc_mpi to be silently dropped from every coverage leg.
-  TEST_DURATION_CACHE_VERSION: 2
+  TEST_DURATION_CACHE_VERSION: 3
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
   # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock, e.g.
   # scipy.linalg.solve in test_sbessel_ode_solver), and the run-alone OpenMP tests

@@ -416,6 +416,15 @@ test_ncm_fit_esmcmc_properties (TestNcmFitESMCMC *test, gconstpointer pdata)
     g_object_get (G_OBJECT (test->esmcmc), "use-threads", &use_threads, NULL);
     g_assert_false (use_threads);
   }
+
+  /* init-max-rounds */
+  g_object_set (G_OBJECT (test->esmcmc), "init-max-rounds", 17u, NULL);
+  {
+    guint init_max_rounds;
+
+    g_object_get (G_OBJECT (test->esmcmc), "init-max-rounds", &init_max_rounds, NULL);
+    g_assert_cmpuint (init_max_rounds, ==, 17);
+  }
 }
 
 #define TEST_NCM_FIT_ESMCMC_TOL (2.5e-1)
@@ -441,11 +450,27 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 
   ncm_fit_esmcmc_set_auto_trim (test->esmcmc, FALSE);
 
+  /* FULL is otherwise never exercised (every other test in this suite uses
+   * NONE): covers start_run()'s FULL-only branch (dataset/mset pretty-log)
+   * for free on the one run this test does anyway. Set right back to NONE
+   * so the (possibly repeated, see the retry loop below) actual statistical
+   * run doesn't pay unnecessary logging overhead. */
+  ncm_fit_esmcmc_set_mtype (test->esmcmc, NCM_FIT_RUN_MSGS_FULL);
+  ncm_fit_esmcmc_start_run (test->esmcmc);
+  ncm_fit_esmcmc_end_run (test->esmcmc);
+  ncm_fit_esmcmc_set_mtype (test->esmcmc, NCM_FIT_RUN_MSGS_NONE);
+
   ncm_fit_esmcmc_start_run (test->esmcmc);
   ncm_fit_esmcmc_run (test->esmcmc, run);
   ncm_mset_catalog_trim_by_type (ncm_fit_esmcmc_peek_catalog (test->esmcmc),
                                  100, NCM_MSET_CATALOG_TRIM_TYPE_CK, NCM_FIT_RUN_MSGS_NONE);
   ncm_fit_esmcmc_end_run (test->esmcmc);
+
+  /* ncm_fit_esmcmc_validate() otherwise has no coverage anywhere in this
+   * suite: recomputes m2lnL for the rows just produced and cross-checks
+   * against the catalog -- exactly the multithread-evaluation sanity check
+   * its own docstring describes. */
+  g_assert_true (ncm_fit_esmcmc_validate (test->esmcmc, 0, 0));
 
   do {
     NcmMatrix *cat_cov = NULL;
