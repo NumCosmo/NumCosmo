@@ -13,10 +13,13 @@ env:
   CACHE_VERSION: 0
   # Bump to force the next run to recompute slice-tests.txt from scratch instead of
   # restoring cached per-test durations (test_slicer.py degrades gracefully to a
-  # count-balanced split when the durations file is empty/missing -- see the
-  # "has_data" guard on the "Cache test slice durations" step below). Use this when
-  # the duration-aware slicing itself is suspected of dropping or misplacing a test.
-  TEST_DURATION_CACHE_VERSION: 1
+  # count-balanced split when the durations bundle is empty/missing -- see the
+  # "has_data" guards in build-miniforge-coverage and merge-test-durations below).
+  # Use this when the duration-aware slicing itself is suspected of dropping or
+  # misplacing a test -- e.g. it was bumped 1->2 after mismatched per-slice cache
+  # vintages (fixed by merge-test-durations, see its comment) caused ncm_fit_esmcmc
+  # and ncm_fit_esmcmc_mpi to be silently dropped from every coverage leg.
+  TEST_DURATION_CACHE_VERSION: 2
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
   # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock, e.g.
   # scipy.linalg.solve in test_sbessel_ode_solver), and the run-alone OpenMP tests
@@ -264,36 +267,29 @@ jobs:
         shell: bash -el {0}
     steps:
       - uses: actions/checkout@v4
-      # Every c-* leg restores ALL THREE slices' historical durations (not just its
-      # own), so each leg independently computes the same duration-balanced 3-way
-      # partition and only picks out its own slice -- no coordinator/merge job
-      # needed. A cold cache (first run, or all entries evicted) just restores
-      # nothing; test_slicer.py's `plan` subcommand degrades to a count-balanced
-      # split in that case, matching meson --slice's old behavior.
-      - name: Restore test duration history (slice 1)
+      # Every c-* leg restores the SAME bundle of all three slices' historical
+      # durations (not just its own), so each leg independently computes the same
+      # duration-balanced 3-way partition and only picks out its own slice. The
+      # bundle is a single cache entry (see the merge-test-durations job below,
+      # which writes it once all three legs finish) precisely so that guarantee
+      # holds: three separate per-slice cache entries used to let a leg restore
+      # slice N from one past run and slice M from a *different* past run (e.g. if
+      # an intervening run's leg failed to save while its siblings succeeded),
+      # silently breaking the "every leg sees the same data" invariant and causing
+      # legs to compute genuinely different partitions -- tests then got dropped
+      # by all three legs or double-run by two, undetected until a coverage report
+      # showed 0% on files whose only tests fell in the gap. A cold cache (first
+      # run, or all entries evicted) just restores nothing; test_slicer.py's
+      # `plan` subcommand degrades to a count-balanced split in that case, matching
+      # meson --slice's old behavior.
+      - name: Restore test duration history
         if: matrix.slice != ''
         uses: actions/cache/restore@v4
         with:
-          path: durations-slice1.json
-          key: test-durations-c-slice1-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
+          path: test-durations
+          key: test-durations-c-bundle-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
           restore-keys: |
-            test-durations-c-slice1-v${{ env.TEST_DURATION_CACHE_VERSION }}-
-      - name: Restore test duration history (slice 2)
-        if: matrix.slice != ''
-        uses: actions/cache/restore@v4
-        with:
-          path: durations-slice2.json
-          key: test-durations-c-slice2-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
-          restore-keys: |
-            test-durations-c-slice2-v${{ env.TEST_DURATION_CACHE_VERSION }}-
-      - name: Restore test duration history (slice 3)
-        if: matrix.slice != ''
-        uses: actions/cache/restore@v4
-        with:
-          path: durations-slice3.json
-          key: test-durations-c-slice3-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
-          restore-keys: |
-            test-durations-c-slice3-v${{ env.TEST_DURATION_CACHE_VERSION }}-
+            test-durations-c-bundle-v${{ env.TEST_DURATION_CACHE_VERSION }}-
       - uses: ./.github/actions/setup-miniforge
         with:
           python-version: ${{ matrix.python-version }}
@@ -310,7 +306,7 @@ jobs:
           python3 .github/scripts/test_slicer.py plan \
             --build-dir build \
             --suite c --suite c-acceptance --suite c-statistical \
-            --durations durations-slice1.json durations-slice2.json durations-slice3.json \
+            --durations test-durations/durations-slice1.json test-durations/durations-slice2.json test-durations/durations-slice3.json \
             --num-slices 3 --slice ${{ matrix.slice }} \
             > slice-tests.txt
           echo "::group::slice-tests.txt ($(wc -l < slice-tests.txt) tests)"
@@ -331,18 +327,16 @@ jobs:
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info
           lcov --config-file .lcovrc --remove numcosmo-coverage-full.info '*/external/*' '*/tools/*' --output-file numcosmo-coverage.info
-      - name: Save test slice durations
+      - name: Extract test slice durations
         # Feeds the next run's "Compute test slice" step -- keeps the c-* legs
         # duration-balanced as the test suite changes. Runs even if some tests
         # failed: testlog.json still has valid per-test durations for whichever
         # tests actually ran, and a stale/absent duration estimate is worse for
         # future balancing than a partial one. But if an EARLIER step failed
         # (e.g. the build itself, or "Compute test slice"), testlog.json may not
-        # exist at all -- extract then produces an empty {}, and caching that
-        # would poison the *next* run's restore (picked up via restore-keys
-        # prefix match regardless of content) with zero real data, silently
-        # degrading it back to a count-balanced split. has_data guards against
-        # that: only cache when there's something real to cache.
+        # exist at all -- extract then produces an empty {}, and uploading that
+        # would poison the merged bundle with zero real data for this slice.
+        # has_data guards against that: only upload when there's something real.
         id: extract_durations
         if: always() && matrix.slice != ''
         run: |
@@ -352,12 +346,17 @@ jobs:
           else
             echo "has_data=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: Cache test slice durations
+      - name: Upload test slice duration artifact
+        # Handed to merge-test-durations (needs: this job, so it runs once all
+        # three legs are done) which bundles all three slices' fresh durations
+        # into ONE cache entry -- see the "Restore test duration history" step
+        # above for why that atomicity matters.
         if: always() && matrix.slice != '' && steps.extract_durations.outputs.has_data == 'true'
-        uses: actions/cache/save@v4
+        uses: actions/upload-artifact@v4
         with:
+          name: test-durations-slice${{ matrix.slice }}
           path: durations-slice${{ matrix.slice }}.json
-          key: test-durations-c-slice${{ matrix.slice }}-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
+          retention-days: 1
       - name: Test timing summary
         if: always()
         # Surface the slowest tests of this shard in the job summary so wall-time imbalance
@@ -384,5 +383,43 @@ jobs:
       #    files: ./numcosmo-coverage.info
       #    format: lcov
       #    github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  merge-test-durations:
+    name: Merge test-duration cache
+    # Runs once all three c-* legs are done (needs: the whole matrix job) and
+    # bundles whatever slice duration files they produced into a SINGLE cache
+    # entry, so the next run's three legs restore either the same complete
+    # snapshot or, if a leg here didn't produce data, the same partial one --
+    # never a per-slice mix of vintages from different past runs (see the
+    # "Restore test duration history" step's comment in build-miniforge-coverage
+    # for the incident this fixes). if: always() so a leg failing upstream
+    # (e.g. a real test failure) doesn't lose the other legs' timing data.
+    needs: build-miniforge-coverage
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download slice duration artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-durations-slice*
+          path: test-durations
+          merge-multiple: true
+        continue-on-error: true
+      - name: Check for data
+        id: check
+        run: |
+          shopt -s nullglob
+          files=(test-durations/durations-slice*.json)
+          if [ ${#files[@]} -gt 0 ]; then
+            echo "has_data=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_data=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Cache merged test durations
+        if: steps.check.outputs.has_data == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: test-durations
+          key: test-durations-c-bundle-v${{ env.TEST_DURATION_CACHE_VERSION }}-${{ github.run_id }}
 
 
