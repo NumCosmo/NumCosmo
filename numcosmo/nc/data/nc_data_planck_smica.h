@@ -29,7 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/ncm/data/ncm_data_gauss_cov.h>
+#include <numcosmo/ncm/data/ncm_data_gauss.h>
 #include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/nc/perturbations/nc_hipert_boltzmann.h>
 
@@ -37,7 +37,7 @@ G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_PLANCK_SMICA (nc_data_planck_smica_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcDataPlanckSmica, nc_data_planck_smica, NC, DATA_PLANCK_SMICA, NcmDataGaussCov)
+G_DECLARE_FINAL_TYPE (NcDataPlanckSmica, nc_data_planck_smica, NC, DATA_PLANCK_SMICA, NcmDataGauss)
 
 NcDataPlanckSmica *nc_data_planck_smica_new (guint lmin,
                                              guint lmax,

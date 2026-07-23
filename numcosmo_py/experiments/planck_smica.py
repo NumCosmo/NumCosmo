@@ -39,6 +39,9 @@ from numcosmo_py import Ncm, Nc, GLib
 PLIK_TT_RELPATH = os.path.join(
     "baseline", "plc_3.0", "hi_l", "plik", "plik_rd12_HM_v22_TT.clik"
 )
+PLIK_TTTEEE_RELPATH = os.path.join(
+    "baseline", "plc_3.0", "hi_l", "plik", "plik_rd12_HM_v22b_TTTEEE.clik"
+)
 FREQS = [100.0, 143.0, 217.0]
 # gcib muK -> MJ/sr conversions (100,143,217); gibXsz conv (100 zeroed by
 # no_szxcib_100); tSZ colour corrections. All from the clik component defaults.
@@ -55,14 +58,16 @@ def _arr(node, key):
     return fits.getdata(os.path.join(node, key)).ravel()
 
 
-def build_smica_tt(clik_path: str, pb: Nc.HIPertBoltzmann | None = None) -> Nc.DataPlanckSmica:
+def build_smica_tt(
+    clik_path: str, pb: Nc.HIPertBoltzmann | None = None
+) -> Nc.DataPlanckSmica:
     """Build a native #NcDataPlanckSmica (TT) from a plik clik file + Cls source."""
     lkl = os.path.join(clik_path, "clik", "lkl_0")
     m, nq = 3, 215
     lmin, lmax = 30, 2508
 
-    rq_hat = _arr(lkl, "Rq_hat")                       # nq*m*m
-    crit = _arr(lkl, "criterion_gauss_mat")            # np*np
+    rq_hat = _arr(lkl, "Rq_hat")  # nq*m*m
+    crit = _arr(lkl, "criterion_gauss_mat")  # np*np
     mask = _arr(lkl, "criterion_gauss_mask").astype(int).reshape(nq, m, m)
     ordering = _arr(lkl, "criterion_gauss_ordering").astype(int).reshape(-1, 2)
     a_cmb = _arr(lkl, "A_cmb")
@@ -81,10 +86,9 @@ def build_smica_tt(clik_path: str, pb: Nc.HIPertBoltzmann | None = None) -> Nc.D
 
     crit = crit.reshape(npt, npt)
     data_mean = rq_hat[quad]
-    cov = np.linalg.inv(crit)
 
     # templates (sz/ksz pre-normalized at ell=3000, matching the clik init)
-    sz_t = _arr(lkl, os.path.join("component_3", "template")).copy()   # ell 2..
+    sz_t = _arr(lkl, os.path.join("component_3", "template")).copy()  # ell 2..
     sz_t /= sz_t[3000 - 2]
     ksz_t = _arr(lkl, os.path.join("component_5", "template")).copy()  # ell 0..
     ksz_t /= ksz_t[3000]
@@ -125,13 +129,111 @@ def build_smica_tt(clik_path: str, pb: Nc.HIPertBoltzmann | None = None) -> Nc.D
         tmpl_sbpx=vec(sbpx_t),
     )
 
+    # clik ships the criterion (inverse covariance) directly; NcmDataGauss uses
+    # it as-is -> the m2lnL quadratic form matches clik to machine precision and
+    # no covariance inversion is needed.
     smica.set_size(npt)
-    Ncm.DataGaussCov.replace_mean(smica, Ncm.Vector.new_array(data_mean.tolist()))
-    cov_m = Ncm.Matrix.new(npt, npt)
-    for i in range(npt):
-        for j in range(npt):
-            cov_m.set(i, j, cov[i, j])
-    Ncm.DataGaussCov.set_cov(smica, cov_m)
+    smica.set_property("mean", Ncm.Vector.new_array(data_mean.tolist()))
+    smica.set_property("inv-cov", Ncm.Matrix.new_array(crit.ravel().tolist(), npt))
+
+    if pb is not None:
+        smica.set_hipert_boltzmann(pb)
+    smica.set_init(True)
+
+    return smica
+
+
+def build_smica_ttteee(
+    clik_path: str, pb: Nc.HIPertBoltzmann | None = None
+) -> Nc.DataPlanckSmica:
+    """Build a native #NcDataPlanckSmica (TTTEEE) from a plik clik file + Cls source.
+
+    Six channels (100/143/217 x T,E); the same #NcDataPlanckSmica class as TT with
+    the polarization construct-properties (field, tmpl-e2e, ical im/w/other) set.
+    """
+    lkl = os.path.join(clik_path, "clik", "lkl_0")
+    m, mt, nq = 6, 3, 215
+    lmin, lmax = 30, 2508
+    field = [0, 0, 0, 1, 1, 1]
+
+    rq_hat = _arr(lkl, "Rq_hat")
+    crit = _arr(lkl, "criterion_gauss_mat")
+    mask = _arr(lkl, "criterion_gauss_mask").astype(int).reshape(nq, m, m)
+    ordering = _arr(lkl, "criterion_gauss_ordering").astype(int).reshape(-1, 2)
+    a_cmb = _arr(lkl, "A_cmb")
+    # binning: TT block == EE == TE (identical relative il); use the first nq
+    bin_lmin = _arr(lkl, "bin_lmin").astype(int)[:nq]
+    bin_lmax = _arr(lkl, "bin_lmax").astype(int)[:nq]
+    bin_ws = _arr(lkl, "bin_ws")[: int((bin_lmax - bin_lmin + 1).sum())]
+
+    quad = []
+    for iv, jv in ordering:
+        for iq in range(nq):
+            if mask[iq, iv, jv]:
+                quad.append(iq * m * m + iv * m + jv)
+    quad = np.array(quad, dtype=int)
+    npt = quad.size
+
+    crit = crit.reshape(npt, npt)
+    data_mean = rq_hat[quad]
+
+    sz_t = _arr(lkl, os.path.join("component_3", "template")).copy()
+    sz_t /= sz_t[3000 - 2]
+    ksz_t = _arr(lkl, os.path.join("component_5", "template")).copy()
+    ksz_t /= ksz_t[3000]
+    gcib_t = _arr(lkl, os.path.join("component_1", "template"))
+    gibxsz_t = _arr(lkl, os.path.join("component_2", "template"))
+    dust_t = _arr(lkl, os.path.join("component_6", "template"))  # dust_TT
+    leak_t = _arr(lkl, os.path.join("component_9", "template"))  # beam_leakage
+    e2e_t = _arr(lkl, os.path.join("component_10", "template"))  # EE_e2e_cnoise
+    sbpx_t = _arr(lkl, os.path.join("component_11", "template"))  # subpixel
+    ical_im = _arr(lkl, os.path.join("component_12", "im"))
+    ical_w = _arr(lkl, os.path.join("component_12", "w"))
+    ical_other = _arr(lkl, os.path.join("component_12", "other"))
+
+    # per-channel config, length m (E entries of the T-only vectors are unused)
+    freqs6 = FREQS + FREQS
+    sz_color6 = SZ_COLOR + [0.0] * mt
+    gcib_conv6 = GCIB_CONV + [0.0] * mt
+    gibxsz_conv6 = GIBXSZ_CONV + [0.0] * mt
+
+    def vec(a):
+        return Ncm.Vector.new_array([float(x) for x in np.asarray(a).ravel().tolist()])
+
+    def uvar(a):
+        return GLib.Variant("au", [int(x) for x in np.asarray(a).ravel().tolist()])
+
+    smica = Nc.DataPlanckSmica(
+        lmin=lmin,
+        lmax=lmax,
+        m_channels=m,
+        nbins=nq,
+        freqs=vec(freqs6),
+        a_cmb=vec(a_cmb),
+        sz_color=vec(sz_color6),
+        gcib_conv=vec(gcib_conv6),
+        gibxsz_conv=vec(gibxsz_conv6),
+        bin_lmin=uvar(bin_lmin),
+        bin_lmax=uvar(bin_lmax),
+        bin_weight=vec(bin_ws),
+        quad_idx=uvar(quad),
+        tmpl_gcib=vec(gcib_t),
+        tmpl_sz=vec(sz_t),
+        tmpl_ksz=vec(ksz_t),
+        tmpl_gibxsz=vec(gibxsz_t),
+        tmpl_dust=vec(dust_t),
+        tmpl_leak=vec(leak_t),
+        tmpl_sbpx=vec(sbpx_t),
+        field=uvar(field),
+        tmpl_e2e=vec(e2e_t),
+        ical_im=uvar(ical_im),
+        ical_w=vec(ical_w),
+        ical_other=uvar(ical_other),
+    )
+
+    smica.set_size(npt)
+    smica.set_property("mean", Ncm.Vector.new_array(data_mean.tolist()))
+    smica.set_property("inv-cov", Ncm.Matrix.new_array(crit.ravel().tolist(), npt))
 
     if pb is not None:
         smica.set_hipert_boltzmann(pb)
