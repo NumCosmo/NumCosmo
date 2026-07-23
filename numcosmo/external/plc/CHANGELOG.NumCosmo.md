@@ -85,3 +85,40 @@ both files and match the fixed clik to machine precision.
   to the Cl → likelihood math; not taken.
 
 - **`cmbonly/plik_cmbonly.f90` (plik_lite)** — unchanged upstream (0 diffs).
+
+---
+
+## Shared-code audit (plc_3.0 vs 16.0b1)
+
+Every difference in the `.c`/`.h` files present in *both* trees was classified.
+The likelihood math in the overlap agrees; the differences are:
+
+1. **Cosmetic** — trailing whitespace, missing final newline upstream, reflowed
+   comments. Harmless.
+
+2. **Local NumCosmo additions** — the two `*_get_check_param()` helpers (see
+   above). Must be preserved on any back-port.
+
+3. **Upstream *additive* options API** — `clik_init_with_options`,
+   `clik_get_options`, the `cdic` / `opdf_*` helpers (`clik_helper.{c,h}`),
+   `clik_lklobject_init_with_options`, `cmblkl_set_options` and the
+   `noptions` / `options_table` fields on `cmblkl` (`lklbs.{c,h}`). These are
+   threaded through the init path but are **inert when no options are supplied**
+   (a `NULL`/absent `options` reproduces the old behavior). They are only needed
+   by options-consuming likelihoods (e.g. SPT3G), which NumCosmo does not build.
+
+4. **Genuine shared-logic differences** — only two spots:
+   - **`clik_lensing.c`** (itype=4 loader) — a real bug in *our* baseline, now
+     reconciled (see the back-port above).
+   - **`clik_dic.c`** — mixed direction, *not* taken:
+     - upstream *added* a `if (pf==NULL) return -1;` guard in the dic accessor
+       (a defensible robustness fix we could adopt later);
+     - upstream also changed `#elif ADD2US` to **`#elseif ADD2US`**, which is not
+       a valid C preprocessor directive. **Our `#elif` is correct**; importing
+       this file verbatim would break the `ADD2US` Fortran name-mangling build.
+
+**Guidance for future imports.** The Cl → likelihood core agrees, so it is a safe
+baseline. When importing a new file that uses `cdic` / `opdf_*` /
+`clik_lklobject_init_with_options` / `cmblkl_set_options`, bring the options
+plumbing (bucket 3) along with it — that is the piece this tree lacks. Do not
+blind-overwrite `clik_dic.c` (it carries the `#elseif` regression).
