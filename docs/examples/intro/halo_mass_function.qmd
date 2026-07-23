@@ -1,0 +1,288 @@
+---
+title: "Halo Mass Function"
+author: "Disrael Camargo Neves da Cunha"
+date: "2026-07-20"
+abstract: |
+  This document demonstrates how to compute the halo mass function and its supporting quantities using
+  the `numcosmo` library. Starting from a dark-energy cosmology, we build the linear growth function, the
+  Eisenstein-Hu transfer function and the resulting linear matter power spectrum, the tophat-filtered
+  variance, and finally the differential halo number counts in mass and redshift for a survey of fixed
+  area.
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+---
+
+{{< include /notes/_numcosmo_py.qmd >}}
+
+## Introduction
+
+The halo mass function quantifies the comoving number density of dark-matter halos as a function of mass
+and redshift. Computing it requires several ingredients: the linear growth factor $D(z)$, the linear
+matter power spectrum $P_m(k)$, the variance $\sigma^2(R)$ of the density field smoothed on a scale $R$,
+and a multiplicity function that maps that variance onto a halo abundance. This example walks through each
+ingredient in turn and then assembles them into the mass function, reproducing the differential counts
+$d^2 n / (dz\, d\ln M)$ and the number of halos per unit redshift over a survey of fixed solid angle.
+
+## Prerequisites
+
+Before running this example, make sure the `numcosmo_py`[^numcosmo_py] package is installed in your
+environment. If it is not already installed, follow the [installation instructions in the NumCosmo documentation](https://numcosmo.readthedocs.io/en/latest/install.html).
+In addition, we are using `numpy` and `matplotlib` for data manipulation and plotting. If you are using
+the [conda installation](https://numcosmo.readthedocs.io/en/latest/install.html#mambaforge-development-environment),
+these packages are already installed.
+
+## Import and Initialize
+
+First, import the required modules and initialize the NumCosmo library. The `Nc` and `Ncm` modules
+provide the core functionality of the NumCosmo library. The call to `Ncm.cfg_init()` initializes the
+library objects.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+from numcosmo_py import Nc, Ncm
+
+# Initialize the library
+Ncm.cfg_init()
+```
+
+## Setting Up the Cosmological Model
+
+We use a homogeneous and isotropic dark-energy model with a constant equation of state
+(`NcHICosmoDEXcdm`). Rather than setting the dark-energy density directly, we switch to the curvature
+parameterization with `omega_x2omega_k()` and fix `Omegak = 0.0`; flatness is then enforced as a
+constraint and the dark-energy density is derived from the closure relation. A reionization model and a
+power-law primordial power spectrum are attached as submodels.
+
+```{python}
+# Dark-energy model with a constant equation of state
+cosmo = Nc.HICosmoDEXcdm()
+
+# Switch to the curvature parameterization and enforce flatness explicitly
+cosmo.omega_x2omega_k()
+cosmo["Omegak"] = 0.0
+
+# Reionization and a power-law primordial spectrum, added as submodels
+reion = Nc.HIReionCamb.new()
+prim = Nc.HIPrimPowerLaw.new()
+cosmo.add_submodel(reion)
+cosmo.add_submodel(prim)
+
+# Cosmological parameters (those left unset keep their default values)
+cosmo["H0"] = 70.0
+cosmo["Omegab"] = 0.05
+cosmo["Omegac"] = 0.25
+cosmo["Tgamma0"] = 2.72
+cosmo["w"] = -1.0
+
+# Print the model parameters
+print("# Model parameters: ", end=" ")
+cosmo.params_log_all()
+```
+
+## Building the Mass-Function Ingredients
+
+The halo mass function object is assembled from three pieces: a comoving-distance object, a
+tophat-filtered linear power spectrum, and a multiplicity function. We build the linear power spectrum
+from the Eisenstein-Hu transfer function, apply a tophat filter (letting NumCosmo tune the output range
+with `set_best_lnr0()`), and use the Tinker multiplicity function with a mean overdensity of
+$\Delta = 200$.
+
+```{python}
+# Comoving-distance object, valid up to z = 2
+dist = Nc.Distance.new(2.0)
+
+# Eisenstein-Hu transfer function
+tf = Nc.TransferFuncEH.new()
+
+# Linear matter power spectrum built from the transfer function
+psml = Nc.PowspecMLTransfer.new(tf)
+psml.require_kmin(1.0e-3)
+psml.require_kmax(1.0e3)
+
+# Tophat-filtered variance, with the output interval tuned automatically
+psf = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
+psf.set_best_lnr0()
+
+# Tinker multiplicity function, mean overdensity Delta = 200
+mulf = Nc.MultiplicityFuncTinker.new()
+mulf.set_mdef(Nc.MultiplicityFuncMassDef.MEAN)
+mulf.set_Delta(200.0)
+
+# Assemble the halo mass function
+mf = Nc.HaloMassFunction.new(dist, psf, mulf)
+
+# Number of sampling points used throughout
+n = 2000
+```
+
+## Growth Function
+
+The linear growth factor $D(z)$ describes how density perturbations grow with time in the linear regime.
+We obtain the growth-function object from the power spectrum, prepare it for the chosen cosmology, and
+evaluate both $D(z)$ and its derivative over the redshift range $[0, 2]$.
+
+```{python}
+gf = psml.peek_gf()
+gf.prepare(cosmo)
+
+z_a = np.linspace(0.0, 2.0, n)
+D_a = np.array([gf.eval(cosmo, z) for z in z_a])
+dD_a = np.array([gf.eval_deriv(cosmo, z) for z in z_a])
+```
+
+```{python}
+# | label: fig-hmf-growth
+# | fig-cap: Linear growth function $D(z)$ and its derivative $dD/dz$.
+# | fig-width: 100%
+# | fig-cap-location: margin
+# | code-fold: true
+
+plt.figure(figsize=(10, 6))
+plt.plot(z_a, D_a, "r", label="$D(z)$")
+plt.plot(z_a, dD_a, "b--", label="$dD/dz$")
+plt.xlabel("$z$")
+plt.title("Growth Function")
+plt.legend(loc="best")
+plt.show()
+```
+
+## Transfer Function and Matter Power Spectrum
+
+Next we evaluate the Eisenstein-Hu transfer function $T(k)$ and the linear matter power spectrum
+$P_m(k)$ at $z = 0$, over the wavenumber range $[10^{-3}, 10^{3}]\,\mathrm{Mpc}^{-1}$.
+
+```{python}
+psml.prepare(cosmo)
+
+k_a = np.geomspace(1.0e-3, 1.0e3, n)
+T_a = np.array([tf.eval(cosmo, k) for k in k_a])
+Pm_a = np.array([psml.eval(cosmo, 0.0, k) for k in k_a])
+```
+
+```{python}
+# | label: fig-hmf-transfer
+# | fig-cap: Eisenstein-Hu transfer function $T(k)$ and linear matter power spectrum $P_m(k)$ at $z = 0$.
+# | fig-width: 100%
+# | fig-cap-location: margin
+# | code-fold: true
+
+plt.figure(figsize=(10, 6))
+plt.plot(k_a, T_a, "r", label="$T(k)$")
+plt.plot(k_a, Pm_a, "b--", label="$P_m(k)$")
+plt.xlabel(r"$k \; [\mathrm{Mpc}^{-1}]$")
+plt.xscale("log")
+plt.yscale("log")
+plt.title("Transfer Function and Linear Matter Power Spectrum")
+plt.legend(loc="best")
+plt.show()
+```
+
+## Filtered Variance
+
+Applying the tophat filter, we compute the variance $\sigma^2(\ln R)$ of the density field smoothed on
+scales $R \in [5, 50]\,\mathrm{Mpc}$ at $z = 0$, together with its logarithmic derivative
+$d\ln\sigma^2 / d\ln R$. This logarithmic slope enters the mass function through the conversion between
+mass and smoothing scale.
+
+```{python}
+psf.prepare(cosmo)
+
+R_a = np.geomspace(5.0, 50.0, n)
+sigma2_a = np.array([psf.eval_var_lnr(0.0, np.log(R)) for R in R_a])
+dlnsigma2_a = np.array([psf.eval_dlnvar_dlnr(0.0, np.log(R)) for R in R_a])
+```
+
+```{python}
+# | label: fig-hmf-variance
+# | fig-cap: "Tophat-filtered variance $\\sigma^2(\\ln R)$ and its logarithmic derivative at $z = 0$."
+# | fig-width: 100%
+# | fig-cap-location: margin
+# | code-fold: true
+
+plt.figure(figsize=(10, 6))
+plt.plot(R_a, sigma2_a, "r", label=r"$\sigma^2(\ln R)$")
+plt.plot(R_a, dlnsigma2_a, "b--", label=r"$d\ln\sigma^2/d\ln R$")
+plt.xlabel(r"$R \; [\mathrm{Mpc}]$")
+plt.title("Variance and its Derivative")
+plt.legend(loc="best")
+plt.show()
+```
+
+## Halo Mass Function
+
+With all ingredients in place, we set the survey solid angle (200 square degrees) and the integration
+limits in mass and redshift, then prepare the mass function. We first evaluate the differential comoving
+number density $d^2 n / (dz\, d\ln M)$ at $z = 0.7$ over the mass range
+$[10^{14}, 10^{16}]\,\mathrm{M}_\odot$.
+
+```{python}
+# Survey solid angle and integration limits
+mf.set_area_sd(200.0)
+mf.set_eval_limits(cosmo, np.log(1.0e14), np.log(1.0e16), 0.0, 2.0)
+mf.prepare(cosmo)
+
+# Differential number density at z = 0.7
+lnM_a = np.log(1.0e14) + np.log(1.0e2) * np.linspace(0.0, 1.0, n)
+dn_dlnM_a = np.array([mf.dn_dlnM(cosmo, lnM, 0.7) for lnM in lnM_a])
+```
+
+```{python}
+# | label: fig-hmf-massfunc
+# | fig-cap: "Halo mass function $d^2 n / (dz\\, d\\ln M)$ at $z = 0.7$."
+# | fig-width: 100%
+# | fig-cap-location: margin
+# | code-fold: true
+
+plt.figure(figsize=(10, 6))
+plt.plot(lnM_a, dn_dlnM_a, "b", label="$z = 0.7$")
+plt.yscale("log")
+plt.xlabel(r"$\ln M \; [\mathrm{M}_\odot]$")
+plt.ylabel(r"$d^2 n / (dz\, d\ln M)$")
+plt.title("Halo Mass Function")
+plt.legend(loc="best")
+plt.show()
+```
+
+Integrating over the mass range gives the number of halos per unit redshift, which we evaluate across
+$z \in [0, 2]$ for the same $200\,\mathrm{deg}^2$ survey.
+
+```{python}
+dndz_a = np.array(
+    [mf.dn_dz(cosmo, np.log(1.0e14), np.log(1.0e16), z, True) for z in z_a]
+)
+```
+
+```{python}
+# | label: fig-hmf-dndz
+# | fig-cap: "Number of halos per unit redshift for $M \\in [10^{14}, 10^{16}]\\,\\mathrm{M}_\\odot$ over a $200\\,\\mathrm{deg}^2$ survey."
+# | fig-width: 100%
+# | fig-cap-location: margin
+# | code-fold: true
+
+plt.figure(figsize=(10, 6))
+plt.plot(
+    z_a,
+    dndz_a,
+    "b",
+    label=r"$M \in [10^{14}, 10^{16}], \; A = 200 \; \mathrm{deg}^2$",
+)
+plt.xlabel(r"$z$")
+plt.ylabel(r"$dN/dz$")
+plt.title("Number of Halos per Redshift")
+plt.legend(loc="best")
+plt.show()
+```
+
+## Conclusion
+
+We built the halo mass function from its constituent pieces: the linear growth factor, the Eisenstein-Hu
+transfer function and matter power spectrum, and the tophat-filtered variance, and used the Tinker
+multiplicity function to compute the differential counts in mass and redshift. This example serves as a
+foundation for cluster-abundance forecasts and for constructing mock halo catalogs.
