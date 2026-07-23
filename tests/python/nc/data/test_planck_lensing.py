@@ -118,3 +118,28 @@ def test_matches_clik_reference(flavor):
     rng = Ncm.RNG.seeded_new(None, 42)
     native.resample(mset, rng)
     assert np.isfinite(native.m2lnL_val(mset))
+
+
+@pytest.mark.app
+def test_prepare_self_configures_boltzmann():
+    """Lensing raises the Boltzmann targets/lmax itself on a bare CBE.
+
+    Unlike plik_lite/smica/commander/simall (which rely on the caller to set the
+    targets and lmax), NcDataPlanckLensing self-configures in prepare(). Drive a
+    fresh CBE that only has the default TT target at a low lmax and check the full
+    file lifts PHIPHI + TT/EE/TE up to its own lmax and still evaluates.
+    """
+    if _clik(LENSING_FULL_RELPATH) is None:
+        pytest.skip(f"lensing baseline data not found ({LENSING_FULL_RELPATH})")
+
+    cbe = Nc.HIPertBoltzmannCBE.new()  # default: TT only, lmax ~30
+    mset = _mset()
+
+    native = build_lensing(_clik(LENSING_FULL_RELPATH), cbe)
+    native.prepare(mset)
+
+    assert cbe.get_PHIPHI_lmax() >= 2500
+    assert cbe.get_TT_lmax() >= 2500
+    assert cbe.get_EE_lmax() >= 2500
+    assert cbe.get_TE_lmax() >= 2500
+    assert np.isfinite(native.m2lnL_val(mset))
