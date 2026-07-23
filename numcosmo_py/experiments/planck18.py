@@ -343,3 +343,122 @@ def generate_planck18_ttteee(
     experiment.set("ps-ml-filter", psf)
 
     return experiment, mfunc_oa
+
+
+def generate_planck18_native(
+    data_type: Planck18Types,
+    massive_nu: bool = False,
+    prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
+    use_lensing_likelihood: bool = False,
+) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
+    """Generate a Planck 2018 experiment from the native (clik-free) likelihoods.
+
+    Builds the low-l EE (simall), low-l TT (commander) and high-l TT/TTTEEE
+    (SMICA) blocks -- plus optional lensing -- from the local Planck clik data via
+    the ``numcosmo_py.experiments`` converters, sharing one CBE. Unlike the legacy
+    ``generate_planck18_*`` (which wraps the clik library through ``DataPlanckLKL``),
+    the native objects embed their data and can resample; the shared Boltzmann is
+    configured here and serialized with the experiment, so the resulting file
+    reloads and fits without the clik data files or the PLC library.
+
+    See ``numcosmo_py/experiments/planck_native_provenance.md`` for the data
+    provenance and the required Planck Collaboration citations.
+    """
+    # pylint: disable=import-outside-toplevel
+    from numcosmo_py.experiments.planck_lite import find_baseline_file
+    from numcosmo_py.experiments.planck_simall import SIMALL_EE_RELPATH, build_simall
+    from numcosmo_py.experiments.planck_commander import (
+        COMMANDER_RELPATH,
+        build_commander,
+    )
+    from numcosmo_py.experiments.planck_smica import (
+        PLIK_TT_RELPATH,
+        PLIK_TTTEEE_RELPATH,
+        build_smica_tt,
+        build_smica_ttteee,
+    )
+    from numcosmo_py.experiments.planck_lensing import (
+        LENSING_FULL_RELPATH,
+        build_lensing,
+    )
+
+    def _need(relpath: str) -> str:
+        path = find_baseline_file(relpath)
+        if path is None:
+            raise FileNotFoundError(
+                f"Planck baseline data not found ({relpath}); the native generator "
+                "still needs the clik data at build time."
+            )
+        return path
+
+    cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
+    if prim_model == HIPrimModel.TWO_FLUIDS:
+        cbe = cbe_boltzmann.peek_cbe()
+        cbe.peek_precision().props.k_per_decade_primordial = 30.0
+
+    # The native classes read Cls from the shared Boltzmann but (unlike
+    # DataPlanckLKL) do not raise its targets/lmax themselves. Configure it once;
+    # target-Cls and the lmaxes are serialized with the CBE, so the reloaded
+    # experiment is self-sufficient.
+    targets = Nc.DataCMBDataType.TT | Nc.DataCMBDataType.EE | Nc.DataCMBDataType.TE
+    if use_lensing_likelihood:
+        targets |= Nc.DataCMBDataType.PHIPHI
+    cbe_boltzmann.set_target_Cls(targets)
+    cbe_boltzmann.set_TT_lmax(2508)
+    cbe_boltzmann.set_EE_lmax(2508)
+    cbe_boltzmann.set_TE_lmax(2508)
+    if use_lensing_likelihood:
+        cbe_boltzmann.set_PHIPHI_lmax(2500)
+
+    lowl_EE = build_simall(_need(SIMALL_EE_RELPATH), cbe_boltzmann)
+    lowl_TT = build_commander(_need(COMMANDER_RELPATH), cbe_boltzmann)
+
+    if data_type == Planck18Types.TT:
+        highl = build_smica_tt(_need(PLIK_TT_RELPATH), cbe_boltzmann)
+        planck_model: Nc.PlanckFI = Nc.PlanckFICorTT()
+    elif data_type == Planck18Types.TTTEEE:
+        highl = build_smica_ttteee(_need(PLIK_TTTEEE_RELPATH), cbe_boltzmann)
+        planck_model = Nc.PlanckFICorTTTEEE()
+    else:
+        raise ValueError(f"Invalid data type: {data_type}")
+
+    blocks = [lowl_EE, lowl_TT, highl]
+    if use_lensing_likelihood:
+        blocks.append(build_lensing(_need(LENSING_FULL_RELPATH), cbe_boltzmann))
+
+    dset = Ncm.Dataset.new_array(blocks)
+    likelihood = Ncm.Likelihood.new(dset)
+
+    if data_type == Planck18Types.TT:
+        Nc.PlanckFICorTT.add_all_default18_priors(likelihood)
+    else:
+        Nc.PlanckFICorTTTEEE.add_all_default18_priors(likelihood)
+
+    planck_model.params_set_default_ftype()
+
+    cosmo = create_cosmo(massive_nu=massive_nu, prim_model=prim_model)
+    mset = Ncm.MSet.new_array([planck_model, cosmo])
+    mset.prepare_fparam_map()
+
+    dist = Nc.Distance.new(10.0)
+
+    cbe = cbe_boltzmann.peek_cbe()
+    psml = Nc.PowspecMLCBE.new_full(cbe=cbe)
+    psml.set_kmin(1.0e-5)
+    psml.set_kmax(1.0e1)
+    psml.require_zi(0.0)
+    psml.require_zf(1.0)
+
+    psf = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
+    psf.set_best_lnr0()
+
+    mfunc_oa = create_mfunc_array_for_cmb(dist, psf)
+
+    experiment = Ncm.ObjDictStr()
+    experiment.set("likelihood", likelihood)
+    experiment.set("model-set", mset)
+    experiment.set("distance", dist)
+    experiment.set("ps-ml", psml)
+    experiment.set("ps-ml-filter", psf)
+
+    return experiment, mfunc_oa

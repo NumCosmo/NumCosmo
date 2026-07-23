@@ -59,6 +59,42 @@ def test_generate_jpas_invalid_suffix(tmp_path: Path):
         _ = gen.GenerateJpasForecast(experiment=exp_file.absolute())
 
 
+# Native Planck
+def test_generate_planck_native(tmp_path: Path):
+    """Native Planck experiment generates all-native, clik-free serialized blocks."""
+    # pylint: disable=import-outside-toplevel
+    from numcosmo_py.experiments.planck_lite import find_baseline_file
+    from numcosmo_py.experiments.planck_commander import COMMANDER_RELPATH
+    from numcosmo_py.experiments.planck18 import Planck18Types
+
+    if find_baseline_file(COMMANDER_RELPATH) is None:
+        pytest.skip("Planck baseline data not found")
+
+    exp_file = tmp_path / "planck_native.yaml"
+    _ = gen.GeneratePlanck(
+        experiment=exp_file.absolute(),
+        native=True,
+        data_type=Planck18Types.TT,
+        include_lens_lkl=True,
+    )
+    assert exp_file.exists()
+
+    dset_file = exp_file.with_suffix(".dataset.gvar")
+    assert dset_file.exists()
+
+    # The serialized dataset must hold only native NumCosmo objects (no clik
+    # DataPlanckLKL), so it reloads without the clik data or the PLC library.
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dset = ser.from_binfile(str(dset_file.absolute()))
+    names = {dset.get_data(i).__class__.__name__ for i in range(dset.get_ndata())}
+    assert names == {
+        "DataPlanckSimall",
+        "DataPlanckCommander",
+        "DataPlanckSmica",
+        "DataPlanckLensing",
+    }
+
+
 # QSpline
 def test_generate_qspline(tmp_path: Path):
     """Test QSpline generation with all data types."""

@@ -39,6 +39,7 @@ from numcosmo_py.experiments.planck18 import (
     HIPrimModel,
     generate_planck18_tt,
     generate_planck18_ttteee,
+    generate_planck18_native,
     mset_set_parameters,
 )
 from numcosmo_py.experiments.jpas_forecast24 import (
@@ -209,6 +210,16 @@ class GeneratePlanck:
         bool, typer.Option(help="Include lensing likelihood.", show_default=True)
     ] = False
 
+    native: Annotated[
+        bool,
+        typer.Option(
+            help="Use the native (clik-free) NumCosmo Planck likelihoods instead "
+            "of the legacy clik wrapper; the experiment then reloads without the "
+            "clik data or the PLC library and can resample.",
+            show_default=True,
+        ),
+    ] = False
+
     include_snia: Annotated[
         SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
@@ -231,7 +242,14 @@ class GeneratePlanck:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        if self.data_type == Planck18Types.TT:
+        if self.native:
+            exp, mfunc_array = generate_planck18_native(
+                data_type=self.data_type,
+                massive_nu=self.massive_nu,
+                prim_model=self.prim_model,
+                use_lensing_likelihood=self.include_lens_lkl,
+            )
+        elif self.data_type == Planck18Types.TT:
             exp, mfunc_array = generate_planck18_tt(
                 massive_nu=self.massive_nu,
                 prim_model=self.prim_model,
