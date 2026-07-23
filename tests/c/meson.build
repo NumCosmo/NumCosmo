@@ -39,6 +39,14 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_vector.c'],
     },
     {
+        'name': 'ncm_poly_roots',
+        'sources': ['ncm/algebra/test_ncm_poly_roots.c'],
+    },
+    {
+        'name': 'ncm_laurent_series',
+        'sources': ['ncm/algebra/test_ncm_laurent_series.c'],
+    },
+    {
         'name': 'ncm_matrix',
         'sources': ['ncm/algebra/test_ncm_matrix.c'],
     },
@@ -142,6 +150,10 @@ math_tests = [
         'sources': ['ncm/fit/test_ncm_fit_state.c'],
     },
     {
+        'name': 'ncm_mset_trans_kern_gauss',
+        'sources': ['ncm/fit/test_ncm_mset_trans_kern_gauss.c'],
+    },
+    {
         'name': 'ncm_fit_esmcmc',
         'sources': ['ncm/fit/test_ncm_fit_esmcmc.c'],
         'timeout': 0,
@@ -239,31 +251,15 @@ data_tests = [
         'name': 'nc_data_hubble',
         'sources': ['nc/data/test_nc_data_hubble.c'],
     },
-    # The cluster_wl test is one combinatorial 24x6 executable; it is built twice from the
-    # same source (via -D, see the C file) so meson --slice can balance CI wall time. The
-    # cheap property checks are a normal unit test; the heavy MC/fit half is acceptance.
+    # Truth-table validation of NcDataClusterWLFactor's integration methods:
+    # regenerates a curated sample from a fixed seed (nothing stored) and
+    # checks every method against a recomputed high-node self-converged
+    # reference. Curated matrix across shape schemes (VarAdd/SeriesLensed/
+    # Quad) and populations (Gauss/Beta), plus a direct SeriesLensed-vs-Quad
+    # cross-check. Deterministic and fast.
     {
-        'name': 'nc_data_cluster_wl_prop',
-        'sources': ['nc/data/test_nc_data_cluster_wl.c'],
-        'c_args': ['-DCLUSTER_WL_SPLIT_CHEAP'],
-        'timeout': 0,
-        # m2lnP (the OpenMP-parallel likelihood eval) is in the cheap half, so this exec
-        # also exercises the OpenMP path and stays in the omp lane.
-        'suite': ['c', 'omp'],
-    },
-    {
-        'name': 'nc_data_cluster_wl',
-        'sources': ['nc/data/test_nc_data_cluster_wl.c'],
-        'c_args': ['-DCLUSTER_WL_SPLIT_EXPENSIVE'],
-        'timeout': 0,
-        'suite': ['c-acceptance', 'omp'],
-    },
-    # Truth-table validation of the integration methods: regenerates a curated
-    # sample from a fixed seed (nothing stored) and checks every method against a
-    # recomputed FIXED-320x7 reference. Deterministic and fast.
-    {
-        'name': 'nc_data_cluster_wl_truth',
-        'sources': ['nc/data/test_nc_data_cluster_wl_truth.c'],
+        'name': 'nc_data_cluster_wl_factor_truth',
+        'sources': ['nc/data/test_nc_data_cluster_wl_factor_truth.c'],
         'suite': ['c', 'omp'],
     },
 ]
@@ -339,6 +335,10 @@ lss_tests = [
         'name': 'nc_wl_ellipticity',
         'sources': ['nc/lss/wl/test_nc_wl_ellipticity.c'],
     },
+    {
+        'name': 'nc_wl_ellipticity_series',
+        'sources': ['nc/lss/wl/test_nc_wl_ellipticity_series.c'],
+    },
 ]
 
 # Galaxy and weak lensing tests
@@ -352,20 +352,16 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs.c'],
     },
     {
-        'name': 'nc_galaxy_sd_position',
-        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_position.c'],
+        'name': 'nc_galaxy_shape_intrinsic_mode',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_intrinsic_mode.c'],
     },
     {
-        'name': 'nc_galaxy_sd_true_redshift',
-        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_true_redshift.c'],
+        'name': 'nc_galaxy_shape_pop_series',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c'],
     },
     {
-        'name': 'nc_galaxy_sd_obs_redshift',
-        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_obs_redshift.c'],
-    },
-    {
-        'name': 'nc_galaxy_sd_shape',
-        'sources': ['nc/lss/galaxy/test_nc_galaxy_sd_shape.c'],
+        'name': 'nc_galaxy_position_factor',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_position_factor.c'],
     },
 ]
 
@@ -414,8 +410,9 @@ foreach c_test : all_c_tests
     endif
     test(
         c_test['name'],
-        executable_test,
-        args: test_seed_args,
+        test_is_omp ? omp_thread_wrapper : executable_test,
+        args: test_is_omp ? [executable_test.full_path()] + test_seed_args : test_seed_args,
+        depends: test_is_omp ? [executable_test] : [],
         timeout: timeout,
         env: test_env,
         protocol: 'tap',

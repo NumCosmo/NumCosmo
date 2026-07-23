@@ -1,0 +1,237 @@
+---
+title: "Simulating a Weak-Lensing Galaxy Catalog"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+---
+
+{{< include /_functions.qmd >}}
+
+## Purpose {#sec-purpose}
+
+This tutorial builds a mock weak-lensing galaxy catalog directly from the
+per-observation *factor* calculators described in
+[The Galaxy Population & Weak-Lensing Framework](../../theory/galaxy_wl_framework.qmd):
+one for the sky position, one for the redshift, one for the shape. Reading
+that page first will make the vocabulary here (`Factor`, `Pop`, `Obs`,
+per-galaxy `Data`) much less cryptic; this page is deliberately about *using*
+the pieces, not about *why* they are shaped this way.
+
+Because the orchestrator that wires the three factors automatically has not
+been built yet (see the framework page's status note), this tutorial threads
+the per-galaxy data between them by hand — which is also the best way to see
+exactly what each factor needs from its neighbors.
+
+## Setting Up the Lens and the Models {#sec-models}
+
+We need a lens (a single NFW halo at a fixed redshift and mass, observed
+through its projected surface mass density) and three *population* models:
+the redshift distribution of the source sample, its photo-$z$ error kernel,
+and the intrinsic-ellipticity distribution of the sources.
+
+```{python}
+import numpy as np
+from IPython.display import HTML
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.catalog import catalog_to_table
+
+Ncm.cfg_init()
+
+
+def show_table(table, float_format="%.4f", max_rows=10):
+    """Render an astropy Table as a compact HTML table."""
+    return HTML(table.to_pandas().to_html(float_format=float_format, max_rows=max_rows))
+
+
+cosmo = Nc.HICosmoDEXcdm.new()
+dist = Nc.Distance.new(100.0)
+
+hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)
+hms.param_set_by_name("log10MDelta", 14.0)
+density_profile = Nc.HaloDensityProfileNFW.new(hms)
+
+halo_position = Nc.HaloPosition.new(dist)
+halo_position.param_set_by_name("z", 0.3)
+halo_position.prepare(cosmo)
+
+surface_mass_density = Nc.WLSurfaceMassDensity.new(dist)
+
+pop_z = Nc.GalaxyRedshiftPopLSSTSRD.new_y1_source()
+obs_z = Nc.GalaxyRedshiftObsGauss.new()
+
+pop_shape = Nc.GalaxyShapePopGauss.new()
+pop_shape["sigma"] = 0.3
+```
+
+All seven models are collected into one [[math|NcmMSet]]: every calculator
+below reads whichever of these it needs by resolving them from this same
+`mset`, rather than holding a reference of its own.
+
+```{python}
+mset = Ncm.MSet.empty_new()
+for model in (cosmo, density_profile, halo_position, surface_mass_density,
+              pop_z, obs_z, pop_shape):
+    mset.set(model)
+```
+
+## Building the Three Factors {#sec-factors}
+
+Each factor is a plain calculator (not a model, not in the `mset`): a flat
+footprint for the position, the composed true-$z \otimes$ photo-$z$ scheme
+for the redshift, and the variance-add marginalization for the shape.
+
+```{python}
+position_factor = Nc.GalaxyPositionFactorFlat.new(-0.2, 0.2, -0.2, 0.2)
+redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0)
+shape_factor = Nc.GalaxyShapeFactorVarAdd.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
+```
+
+Each factor's `data_new` allocates the per-galaxy fragment for that factor.
+The shape factor's fragment is built *from* the position and redshift
+fragments, since the shape likelihood needs the projected radius (from
+`ra`/`dec`) and the source redshift `z` (see the framework page's
+[Z ⇒ P ⇒ S pipeline](../../theory/galaxy_wl_framework.qmd#the-fixed-pipeline-z-p-s)) —
+this one call is the whole "orchestration" this tutorial needs to do by hand:
+
+```{python}
+pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
+z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
+shape_data = Nc.GalaxyShapeFactorData.new(
+    shape_factor, mset, pos_data, z_data
+)
+```
+
+## Generating the Catalog {#sec-generate}
+
+Every factor exposes the columns its fragment needs through
+`required_columns`; concatenating them (skipping repeats) gives exactly the
+columns a storage catalog must provide, with no factor needing to know the
+others' column names:
+
+```{python}
+columns = []
+for cols in (
+    Nc.GalaxyPositionFactorData.required_columns(pos_data),
+    Nc.GalaxyRedshiftFactorData.required_columns(z_data),
+    Nc.GalaxyShapeFactorData.required_columns(shape_data),
+):
+    for col in cols:
+        if col not in columns:
+            columns.append(col)
+
+print(columns)
+```
+
+The storage object is [[numcosmo|NcGalaxyWLObs]] — a plain named-column
+catalog, agnostic to which calculators fill it in.
+
+```{python}
+n_galaxies = 8
+wl_obs = Nc.GalaxyWLObs.new(
+    Nc.GalaxyWLObsEllipConv.TRACE_DET,
+    Nc.WLEllipticityFrame.CELESTIAL,
+    n_galaxies,
+    columns,
+)
+```
+
+For each galaxy we draw a position and a redshift, fix the noise/calibration
+inputs (`std_noise`, `c1`, `c2`, `m` — these stay plain scalars on the shape
+factor's data, not a pluggable model, for now), draw the shape, and write the
+three fragments into their row. `gen` is the same code path `integ` uses
+below for the likelihood — see
+[Generation and Likelihood Share One Engine](../../theory/galaxy_wl_framework.qmd#generation-and-likelihood-share-one-engine).
+
+```{python}
+rng = Ncm.RNG.seeded_new(None, 123)
+
+for i in range(n_galaxies):
+    position_factor.gen(mset, pos_data, rng)
+    redshift_factor.gen(mset, z_data, rng)
+
+    shape_factor.data_set(
+        shape_data, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0,
+        Nc.WLEllipticityFrame.CELESTIAL,
+    )
+    shape_factor.gen(mset, shape_data, rng)
+
+    pos_data.write_row(wl_obs, i)
+    z_data.write_row(wl_obs, i)
+    shape_data.write_row(wl_obs, i)
+```
+
+`NcGalaxyWLObs` derives from [[math|NcmCatalog]], so the generic
+`catalog_to_table` helper (used in the
+[halo/cluster mock tutorial](halo_catalog_mock.qmd)) works here unchanged:
+
+```{python}
+# | label: tbl-mock
+# | tbl-cap: Mock weak-lensing galaxy catalog.
+# | tbl-cap-location: margin
+# | code-fold: true
+show_table(catalog_to_table(wl_obs))
+```
+
+## Reading a Row Back {#sec-roundtrip}
+
+`read_row` is the inverse of `write_row`: it re-populates a fragment from one
+row of the catalog. This is exactly what a likelihood evaluation does when
+loading an observed catalog rather than a freshly generated one — a fragment
+does not care whether the values it is holding were drawn or measured.
+
+```{python}
+pos_data_readback = Nc.GalaxyPositionFactorData.new(position_factor, mset)
+pos_data_readback.read_row(wl_obs, 0)
+
+print(f"row 0: ra={pos_data_readback.ra:.4f}, dec={pos_data_readback.dec:.4f}")
+```
+
+## Evaluating the Shape Likelihood Factor {#sec-likelihood}
+
+The same `shape_factor` that generated the mock also evaluates the
+per-galaxy likelihood factor $p(\epsilon_\mathrm{obs} \mid z)$ as a function
+of the source redshift. `prepare_data_array` resolves the per-galaxy geometry
+caches described on the framework page (projected radius, surface-density
+optimization structs) once, and `integ` returns the reusable integrand
+callback:
+
+```{python}
+shape_factor.prepare_data_array(mset, [shape_data], True, True)
+integrand = shape_factor.integ(mset, False)
+
+z_grid = np.linspace(0.05, 1.5, 5)
+for z in z_grid:
+    print(f"z={z:.2f}  ->  p(eps_obs | z) = {integrand.eval(z, shape_data):.4e}")
+```
+
+In a full likelihood this integrand would be combined with the redshift
+factor's own $p(z_p, z)$ and integrated over $z$ once per galaxy — the single
+outer integral the orchestrator (once built) will perform automatically.
+
+## Summary {#sec-summary}
+
+We built a lens and three population models, wired one factor per
+observable (position, redshift, shape), generated a mock catalog by calling
+each factor's `gen` and writing the results into a shared
+[[numcosmo|NcGalaxyWLObs]], read a row back to confirm the round trip, and
+evaluated the shape factor's own likelihood integrand for the very galaxies
+it had just generated. See
+[The Galaxy Population & Weak-Lensing Framework](../../theory/galaxy_wl_framework.qmd)
+for why the pieces are shaped this way.
+
+## API Reference {#sec-api}
+
+- factors: [[numcosmo|NcGalaxyPositionFactorFlat]],
+  [[numcosmo|NcGalaxyRedshiftFactorComposed]],
+  [[numcosmo|NcGalaxyShapeFactorVarAdd]]
+- population/observable models: [[numcosmo|NcGalaxyRedshiftPopLSSTSRD]],
+  [[numcosmo|NcGalaxyRedshiftObsGauss]], [[numcosmo|NcGalaxyShapePopGauss]]
+- lens: [[numcosmo|NcHaloPosition]], [[numcosmo|NcHaloDensityProfileNFW]],
+  [[numcosmo|NcWLSurfaceMassDensity]]
+- storage: [[numcosmo|NcGalaxyWLObs]], [[math|NcmCatalog]], [[math|NcmMSet]]
+
+The `catalog_to_table` helper lives in the `numcosmo_py.catalog` subpackage.

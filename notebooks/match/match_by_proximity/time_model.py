@@ -35,6 +35,7 @@ GObject.new(GNcPySLineModel)
 NcPySLineModel = GNcPySLineModel.pytype
 GObject.type_register(NcPySLineModel)
 
+
 class PySLineModel(NcPySLineModel):  # type: ignore
     """A simple python example model."""
 
@@ -56,8 +57,6 @@ class PySLineModel(NcPySLineModel):  # type: ignore
     def f_x(self, x):
         """Method to calculate the y(x)."""
         return self.props.alpha * x + self.props.a
-
-
 
 
 class PySLineGauss(Ncm.DataGaussCov):
@@ -136,8 +135,6 @@ class PySLineGauss(Ncm.DataGaussCov):
             vp.set(i, slm.f_x(x))
 
 
-
-
 #
 # Register our new Python class PySLineGauss
 #
@@ -147,5 +144,3 @@ GObject.type_register(PySLineGauss)
 # Register our new Python class PyNcPySLineModel
 #
 GObject.type_register(PySLineModel)
-
-

@@ -538,14 +538,13 @@ gmp_dep = dependency('gmp')
 mpfr_dep = dependency('mpfr')
 
 #######################################################################################
-# Checking for FFTW (optional):
+# Checking for FFTW:
 #######################################################################################
 message('Checking for FFTW')
 
 fftw3_dep = dependency(
   'fftw3',
   version: fftw_req,
-  required: false,
 )
 
 fftw3f_dep = dependency(
@@ -554,17 +553,13 @@ fftw3f_dep = dependency(
   required: false,
 )
 
-if fftw3_dep.found()
-  numcosmo_conf.set('HAVE_FFTW3', true)
-endif
+numcosmo_conf.set('HAVE_FFTW3', true)
 
 if fftw3f_dep.found()
   numcosmo_conf.set('HAVE_FFTW3F', true)
 endif
 
-if fftw3_dep.found() or fftw3f_dep.found()
-  numcosmo_conf.set_quoted('NUMCOSMO_FFTW_PLAN', get_option('fftw-planner'))
-endif
+numcosmo_conf.set_quoted('NUMCOSMO_FFTW_PLAN', get_option('fftw-planner'))
 
 #######################################################################################
 # Checking for cfitsio (optional):
@@ -582,20 +577,6 @@ if cfitsio_dep.found()
 endif
 
 #######################################################################################
-# Checking for libfyaml
-#######################################################################################
-message('Checking for libfyaml')
-
-libfyaml_dep = dependency(
-  'libfyaml',
-  required: false,
-)
-
-if libfyaml_dep.found()
-  numcosmo_conf.set('HAVE_LIBFYAML', true)
-endif
-
-#######################################################################################
 # Using internal libcuba:
 #######################################################################################
 
@@ -609,19 +590,20 @@ numcosmo_conf.set('HAVE_LIBCUBA_4_0', 1)
 numcosmo_conf.set('HAVE_SUNDIALS_ARKODE', 1)
 
 #######################################################################################
-# Checking for NLopt (optional):
+# Using internal libfyaml:
+#######################################################################################
+
+numcosmo_conf.set('HAVE_LIBFYAML', 1)
+
+#######################################################################################
+# Checking for NLopt:
 #######################################################################################
 message('Checking for NLopt')
 
-nlopt_dep = dependency(
-  'nlopt',
-  required: false,
-)
+nlopt_dep = dependency('nlopt')
 
-if nlopt_dep.found()
-  numcosmo_conf.set('HAVE_NLOPT', true)
-  numcosmo_build_cfg.set('have_nlopt_support', '#define NUMCOSMO_HAVE_NLOPT 1')
-endif
+numcosmo_conf.set('HAVE_NLOPT', true)
+numcosmo_build_cfg.set('have_nlopt_support', '#define NUMCOSMO_HAVE_NLOPT 1')
 
 #######################################################################################
 # Checking for Flint (optional):
@@ -942,7 +924,6 @@ dependencies_summary = {
   'gmp': gmp_dep,
   'gsl': gsl_dep,
   'lapack': lapack_dep,
-  'libfyaml': libfyaml_dep,
   'mpfr': mpfr_dep,
   'mpi': mpi_c_dep,
   'nlopt': nlopt_dep,

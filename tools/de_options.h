@@ -144,7 +144,7 @@ struct _NcDEFitEntries
   gint msg_level;
   gint mc_rtype;
   gint mc_ni;
-  gint mc_nthreads;
+  gboolean mc_use_threads;
   glong mc_seed;
   gint mc_nwalkers;
   gint mc_prerun;

@@ -44,6 +44,12 @@
  * This is a pure data container with no cosmological content. It is unrelated to
  * #NcmMSetCatalog, which stores Monte Carlo chains.
  *
+ * A catalog may also carry an optional #NcmVarDict of free-form scalar metadata
+ * (see ncm_catalog_set_meta() / ncm_catalog_peek_meta()), e.g. provenance
+ * information about the whole catalog that does not belong in any single row
+ * (a survey field's known cluster redshift and position, say). It is %NULL
+ * unless explicitly set.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -66,6 +72,7 @@ typedef struct _NcmCatalogPrivate
   GArray *col_types;
   guint ncols;
   guint len;
+  NcmVarDict *meta;
 } NcmCatalogPrivate;
 
 enum
@@ -75,6 +82,7 @@ enum
   PROP_COLUMNS,
   PROP_COL_TYPES,
   PROP_LEN,
+  PROP_META,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmCatalog, ncm_catalog, G_TYPE_OBJECT)
@@ -90,6 +98,7 @@ ncm_catalog_init (NcmCatalog *catalog)
   self->col_types    = NULL;
   self->ncols        = 0;
   self->len          = 0;
+  self->meta         = NULL;
 }
 
 static void _ncm_catalog_set_data (NcmCatalogPrivate *self, NcmMatrix *data);
@@ -126,6 +135,9 @@ _ncm_catalog_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_LEN:
       self->len = g_value_get_uint (value);
       break;
+    case PROP_META:
+      ncm_catalog_set_meta (catalog, g_value_get_boxed (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -151,6 +163,9 @@ _ncm_catalog_get_property (GObject *object, guint prop_id, GValue *value, GParam
       break;
     case PROP_LEN:
       g_value_set_uint (value, ncm_catalog_len (catalog));
+      break;
+    case PROP_META:
+      g_value_set_boxed (value, self->meta);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -215,6 +230,7 @@ _ncm_catalog_dispose (GObject *object)
   g_clear_pointer (&self->columns_hash, g_hash_table_unref);
   g_clear_pointer (&self->columns, g_strfreev);
   g_clear_pointer (&self->col_types, g_array_unref);
+  g_clear_pointer (&self->meta, ncm_var_dict_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_catalog_parent_class)->dispose (object);
@@ -295,6 +311,22 @@ ncm_catalog_class_init (NcmCatalogClass *klass)
                                                       "Number of catalog rows",
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcmCatalog:meta:
+   *
+   * Free-form scalar metadata about the catalog as a whole (e.g. provenance
+   * information that does not belong in any single row). %NULL unless
+   * explicitly set.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_META,
+                                   g_param_spec_boxed ("meta",
+                                                       "Metadata",
+                                                       "Catalog-wide free-form metadata",
+                                                       NCM_TYPE_VAR_DICT,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
 static void
@@ -675,5 +707,41 @@ ncm_catalog_ncols (NcmCatalog *catalog)
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
 
   return self->ncols;
+}
+
+/**
+ * ncm_catalog_set_meta:
+ * @catalog: a #NcmCatalog
+ * @meta: (nullable): a #NcmVarDict
+ *
+ * Sets the catalog-wide metadata to @meta, replacing any previous value.
+ * Passing %NULL clears it.
+ *
+ */
+void
+ncm_catalog_set_meta (NcmCatalog *catalog, NcmVarDict *meta)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+
+  g_clear_pointer (&self->meta, ncm_var_dict_unref);
+
+  if (meta != NULL)
+    self->meta = ncm_var_dict_ref (meta);
+}
+
+/**
+ * ncm_catalog_peek_meta:
+ * @catalog: a #NcmCatalog
+ *
+ * Gets the catalog-wide metadata.
+ *
+ * Returns: (transfer none) (nullable): the #NcmVarDict, or %NULL if unset.
+ */
+NcmVarDict *
+ncm_catalog_peek_meta (NcmCatalog *catalog)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+
+  return self->meta;
 }
 

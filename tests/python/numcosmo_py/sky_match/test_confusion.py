@@ -106,7 +106,10 @@ def test_catalog_metrics_halo() -> None:
 
     catalog = Table()
     catalog["halo_id"] = [1, 5]
-    catalog["parent_id"] = [1, 0]  # row 1 points to its parent (TP); row 2 is a ghost (FP)
+    catalog["parent_id"] = [
+        1,
+        0,
+    ]  # row 1 points to its parent (TP); row 2 is a ghost (FP)
 
     result = calculate_catalog_metrics(catalog, mock, "halo")
     assert result["counts"] == {"TP": 1, "FP": 1, "TN": 2, "FN": 1}

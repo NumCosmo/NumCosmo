@@ -1,0 +1,65 @@
+name: 'Setup Miniforge conda environment'
+description: >-
+  Sets up Miniforge, restores/updates/saves the cached NumCosmo conda
+  environment, optionally swapping in a specific MPI implementation.
+  Shared by build-miniforge and build-miniforge-coverage in
+  build_check.yml -- extracted so the setup logic only needs to be
+  changed in one place.
+
+inputs:
+  python-version:
+    description: 'Python version for the conda environment'
+    required: true
+  mpi:
+    description: >-
+      If set, swap the conda env to use this MPI implementation (openmpi
+      or mpich) instead of environment.yml's default. Also folded into
+      the cache key so different MPI variants get separate caches.
+    required: false
+    default: ''
+
+outputs:
+  cache-hit:
+    description: 'Whether the conda environment cache was restored'
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup miniforge
+      uses: conda-incubator/setup-miniconda@v4
+      with:
+        miniforge-version: latest
+        python-version: ${{ inputs.python-version }}
+        activate-environment: ${{ env.CONDA_ENV }}
+    - name: Cache date
+      id: get-date
+      shell: bash
+      run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
+    - name: Cache Conda env
+      uses: actions/cache/restore@v4
+      id: cache
+      with:
+        path: ${{ env.CONDA }}/envs
+        key: conda-${{ runner.os }}-${{ runner.arch }}-py${{ inputs.python-version }}-${{ inputs.mpi }}-${{ steps.get-date.outputs.today }}-${{ hashFiles('environment.yml') }}-v${{ env.CACHE_VERSION }}
+    - name: Update environment
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash -el {0}
+      run: |
+        conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
+        if [ -n "${{ inputs.mpi }}" ]; then
+          which python
+          conda list
+          conda remove -q -v -n numcosmo_developer openmpi
+          conda install -q -v -n numcosmo_developer ${{ inputs.mpi }}
+          conda install -q -v -n numcosmo_developer libfabric-devel
+          conda list
+        else
+          conda list
+        fi
+    - name: Save conda-forge cache
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ env.CONDA }}/envs
+        key: ${{ steps.cache.outputs.cache-primary-key }}

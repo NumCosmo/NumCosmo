@@ -151,7 +151,6 @@ test_ncm_cfg_misc (TesNcmCfg *test, gconstpointer pdata)
 void
 test_ncm_cfg_fftw_planner (TesNcmCfg *test, gconstpointer pdata)
 {
-#ifdef HAVE_FFTW3
   const gchar *flags[] = {"estimate", "measure", "patient", "exhaustive"};
   GError *error        = NULL;
   guint i;
@@ -192,7 +191,6 @@ test_ncm_cfg_fftw_planner (TesNcmCfg *test, gconstpointer pdata)
 
   /* Restore the build default for the remaining tests. */
   ncm_cfg_set_fftw_default_flag_str ("estimate", 60.0, NULL);
-#endif /* HAVE_FFTW3 */
 }
 
 void

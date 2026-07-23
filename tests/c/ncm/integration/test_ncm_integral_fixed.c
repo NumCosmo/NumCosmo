@@ -44,6 +44,7 @@ typedef struct _TestNcmIntegralFixedConfig
 static void test_ncm_integral_fixed_get_nodes (gconstpointer pdata);
 static void test_ncm_integral_fixed_integ_vec_mult (gconstpointer pdata);
 static void test_ncm_integral_fixed_vec_mult_constant (gconstpointer pdata);
+static void test_ncm_integral_fixed_calibrate (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -79,6 +80,8 @@ main (gint argc, gchar *argv[])
     g_test_add_data_func (path, &configs[i], test_ncm_integral_fixed_vec_mult_constant);
     g_free (path);
   }
+
+  g_test_add_func ("/ncm/integral_fixed/calibrate", test_ncm_integral_fixed_calibrate);
 
   g_test_run ();
 
@@ -224,6 +227,108 @@ test_ncm_integral_fixed_integ_vec_mult (gconstpointer pdata)
   ncm_integral_fixed_free (intf);
   ncm_vector_free (nodes);
   ncm_vector_free (g_at_nodes);
+}
+
+typedef struct _GaussArg
+{
+  gdouble mu;
+  gdouble sigma;
+} GaussArg;
+
+/* A narrow Gaussian weight F(x): the "spiky P(z)" stand-in. */
+static gdouble
+_f_gauss (gdouble x, gpointer userdata)
+{
+  const GaussArg *a = (const GaussArg *) userdata;
+  const gdouble u   = (x - a->mu) / a->sigma;
+
+  return exp (-0.5 * u * u) / (sqrt (2.0 * M_PI) * a->sigma);
+}
+
+/* A smooth, gently tilted probe G(x): the "shape factor" stand-in. */
+static gdouble
+_g_tilt (gdouble x, gpointer userdata)
+{
+  NCM_UNUSED (userdata);
+
+  return 1.0 + 0.3 * x;
+}
+
+/* High-resolution reference (matches the one calibrate uses internally) and the
+ * pass test for a single config, so the test can independently re-check both
+ * acceptance criteria. */
+static gboolean
+_calib_config_passes (gsl_function *F, gsl_function *G, gdouble xl, gdouble xu,
+                      gulong n_nodes, gulong rule_n, gdouble reltol,
+                      gdouble I_ref, gdouble exact_F)
+{
+  NcmIntegralFixed *t = ncm_integral_fixed_new (n_nodes, rule_n, xl, xu);
+  gdouble I_fg, mass;
+
+  ncm_integral_fixed_calc_nodes (t, F);
+  I_fg = ncm_integral_fixed_integ_mult (t, G);
+  mass = ncm_integral_fixed_nodes_eval (t);
+  ncm_integral_fixed_free (t);
+
+  return (fabs (I_fg - I_ref) / fabs (I_ref) < reltol) &&
+         (fabs (mass - exact_F) / fabs (exact_F) < reltol);
+}
+
+/* Calibrates a fixed GL rule to integrate F*G of a narrow Gaussian weight times a
+ * tilted probe. Checks: (i) the selected config integrates F*G to the target
+ * tolerance against an independent ultra-high-res reference; (ii) the missed-mass
+ * guard holds; (iii) the total node count stays under the cap; (iv) bisection
+ * minimality - the next-smaller n_nodes for the chosen rule fails the criteria. */
+static void
+test_ncm_integral_fixed_calibrate (void)
+{
+  const gdouble xl     = -6.0;
+  const gdouble xu     = 6.0;
+  GaussArg garg        = { 0.4, 0.25 };
+  gsl_function F       = {_f_gauss, &garg};
+  gsl_function G       = {_g_tilt, NULL};
+  const gdouble reltol = 1.0e-7;
+  const gulong max_tot = 4000;
+  /* Analytic mass of F over [xl, xu]. */
+  const gdouble exact_F = 0.5 * (erf ((xu - garg.mu) / (M_SQRT2 * garg.sigma)) -
+                                 erf ((xl - garg.mu) / (M_SQRT2 * garg.sigma)));
+  guint n_nodes = 0, rule_n = 0;
+  NcmIntegralFixed *intf;
+  gdouble I_sel, I_truth, mass_sel;
+
+  intf = ncm_integral_fixed_calibrate (&F, &G, xl, xu, reltol, exact_F, max_tot, &n_nodes, &rule_n);
+
+  g_assert_nonnull (intf);
+  g_assert_cmpuint (n_nodes, >=, 2);
+  g_assert_cmpuint (rule_n, >=, 1);
+  g_assert_cmpuint ((n_nodes - 1) * rule_n, <=, max_tot);
+
+  /* Integral of F*G at the selected config. */
+  I_sel = ncm_integral_fixed_integ_mult (intf, &G);
+
+  /* Independent ultra-high-resolution reference. */
+  {
+    NcmIntegralFixed *truth = ncm_integral_fixed_new (1000, 7, xl, xu);
+
+    ncm_integral_fixed_calc_nodes (truth, &F);
+    I_truth = ncm_integral_fixed_integ_mult (truth, &G);
+    ncm_integral_fixed_free (truth);
+  }
+
+  ncm_assert_cmpdouble_e (I_sel, ==, I_truth, 10.0 * reltol, 0.0);
+
+  /* Missed-mass guard: INT F at the selected config matches the analytic mass. */
+  mass_sel = ncm_integral_fixed_nodes_eval (intf);
+  ncm_assert_cmpdouble_e (mass_sel, ==, exact_F, 10.0 * reltol, 0.0);
+
+  /* Bisection minimality: the selected config passes both criteria, while one
+   * fewer node (same rule) does not - so n_nodes is the exact threshold. */
+  g_assert_true (_calib_config_passes (&F, &G, xl, xu, n_nodes, rule_n, reltol, I_truth, exact_F));
+
+  if (n_nodes > 2)
+    g_assert_false (_calib_config_passes (&F, &G, xl, xu, n_nodes - 1, rule_n, reltol, I_truth, exact_F));
+
+  ncm_integral_fixed_free (intf);
 }
 
 /* Trivial sanity: F(x)=1, G(x)=c => integral = c*(xu-xl) */
