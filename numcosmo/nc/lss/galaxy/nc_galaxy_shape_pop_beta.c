@@ -29,14 +29,27 @@
  * Beta intrinsic ellipticity distribution (BetaGlobal).
  *
  * The squared intrinsic ellipticity modulus $x = |\chi_I|^2$ follows a Beta
- * distribution $x \sim \mathrm{Beta}(\alpha,\beta)$ with $\alpha = \mu\nu$ and
- * $\beta = (1-\mu)\nu$, where $\mu$ controls the typical ellipticity and $\nu$
- * the concentration:
+ * distribution $x \sim \mathrm{Beta}(\alpha,\beta)$ directly in its own
+ * shape parameters:
  * $$P(x) = \frac{x^{\alpha-1}(1-x)^{\beta-1}}{B(\alpha,\beta)}, \qquad x\in[0,1].$$
  * eval_p_rho2() overrides the generic default with the equivalent rational
  * form in $\rho^2$, $x=\rho^2/(1+\rho^2)$:
  * $$P(x(\rho^2)) = \frac{\rho^{2(\alpha-1)}}{B(\alpha,\beta)\,(1+\rho^2)^{\alpha+\beta-2}},$$
  * avoiding forming $1-x$ by subtraction.
+ *
+ * $\beta$ is bounded to $\ge 1$ and $\alpha$ to $\ge 0.5001$ (density
+ * diverges at $x=1$ resp. $x=0$ below those floors). #NcGalaxyShapeFactorSeriesLensed
+ * callers should still keep $\alpha\ge1$ in practice -- its Taylor expansion's
+ * radius of convergence shrinks below that; #NcGalaxyShapeFactorFixedQuad has
+ * no such restriction. See `docs/theory/wl_shape_factor_history.md` for why
+ * $\alpha$'s floor sits below 1.
+ * nc_galaxy_shape_pop_beta_get_mean()/_get_concentration()/_get_std()
+ * report the induced $\mathrm{mean}(x)=\alpha/(\alpha+\beta)$,
+ * $\mathrm{concentration}=\alpha+\beta$ and standard deviation of $x$ (also
+ * registered as the `NcGalaxyShapePopBeta:mean`/
+ * `NcGalaxyShapePopBeta:concentration`/`NcGalaxyShapePopBeta:std`
+ * `NcmMSetFuncList` entries) for reporting purposes -- they are not
+ * themselves model parameters.
  *
  */
 
@@ -46,6 +59,7 @@
 #include "build_cfg.h"
 
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_beta.h"
+#include "ncm/model/ncm_mset_func_list.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -63,8 +77,8 @@ struct _NcGalaxyShapePopBeta
 typedef struct _NcGalaxyShapePopBetaLData
 {
   gdouble lnnorm; /* -ln B(alpha, beta) */
-  gdouble alpha;  /* mu nu */
-  gdouble beta;   /* (1 - mu) nu */
+  gdouble alpha;  /* cached copy of the alpha model param */
+  gdouble beta;   /* cached copy of the beta model param */
 } NcGalaxyShapePopBetaLData;
 
 enum
@@ -109,31 +123,33 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
   ncm_model_class_add_params (model_class, NC_GALAXY_SHAPE_POP_BETA_SPARAM_LEN, 0, PROP_LEN);
 
   /**
-   * NcGalaxyShapePopBeta:mu:
+   * NcGalaxyShapePopBeta:alpha:
    *
-   * The mean $\mu = \langle x \rangle$ of the Beta distribution of $x = |\chi_I|^2$.
+   * The shape parameter $\alpha$ of the Beta distribution of $x = |\chi_I|^2$.
+   * Bounded to $\ge 0.5001$ (see the class documentation).
    *
    */
   ncm_model_class_set_sparam (model_class,
-                              NC_GALAXY_SHAPE_POP_BETA_MU,
-                              "\\mu",
-                              "mu", 1.0e-3, 1.0 - 1.0e-3, 1.0e-2,
+                              NC_GALAXY_SHAPE_POP_BETA_ALPHA,
+                              "\\alpha",
+                              "alpha", 0.5001, 1.0e2, 1.0e-1,
                               NC_GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL,
-                              NC_GALAXY_SHAPE_POP_BETA_DEFAULT_MU,
+                              NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
 
   /**
-   * NcGalaxyShapePopBeta:nu:
+   * NcGalaxyShapePopBeta:beta:
    *
-   * The concentration $\nu = \alpha + \beta$ of the Beta distribution.
+   * The shape parameter $\beta$ of the Beta distribution of $x = |\chi_I|^2$.
+   * Bounded to $\ge 1$ (see the class documentation).
    *
    */
   ncm_model_class_set_sparam (model_class,
-                              NC_GALAXY_SHAPE_POP_BETA_NU,
-                              "\\nu",
-                              "nu", 1.0e-2, 1.0e3, 1.0e-1,
+                              NC_GALAXY_SHAPE_POP_BETA_BETA,
+                              "\\beta",
+                              "beta", 1.0, 1.0e2, 1.0e-1,
                               NC_GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL,
-                              NC_GALAXY_SHAPE_POP_BETA_DEFAULT_NU,
+                              NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA,
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_check_params_info (model_class);
@@ -148,8 +164,8 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
 }
 
 #define VECTOR (NCM_MODEL (gsp))
-#define MU     (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SHAPE_POP_BETA_MU))
-#define NU     (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SHAPE_POP_BETA_NU))
+#define ALPHA  (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SHAPE_POP_BETA_ALPHA))
+#define BETA   (ncm_model_orig_param_get (VECTOR, NC_GALAXY_SHAPE_POP_BETA_BETA))
 
 static void
 _nc_galaxy_shape_pop_beta_ldata_noop (NcGalaxyShapePopData *data, NcGalaxyWLObs *obs, const guint i)
@@ -179,11 +195,8 @@ _nc_galaxy_shape_pop_beta_ldata_get_mode_x (NcGalaxyShapePopData *data)
 {
   NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
 
-  /* Mode of a standard Beta(alpha,beta) density: interior stationary point
-   * when both shape parameters exceed 1; otherwise the density is monotone
-   * (or diverges at both ends), and the mode sits at a disc boundary or is
-   * undefined -- 0 is the closest meaningful hint in those cases (it is
-   * always in-range and never worse than assuming the Gauss-like default). */
+  /* Interior mode only when alpha,beta > 1; otherwise density is monotone,
+   * so 0 is the closest in-range hint. */
   if ((ldata->alpha > 1.0) && (ldata->beta > 1.0))
     return (ldata->alpha - 1.0) / (ldata->alpha + ldata->beta - 2.0);
   else
@@ -194,10 +207,8 @@ static void
 _nc_galaxy_shape_pop_beta_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 {
   NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
-  const gdouble mu                 = MU;
-  const gdouble nu                 = NU;
-  const gdouble alpha              = mu * nu;
-  const gdouble beta               = (1.0 - mu) * nu;
+  const gdouble alpha              = ALPHA;
+  const gdouble beta               = BETA;
 
   ldata->lnnorm = -gsl_sf_lnbeta (alpha, beta);
   ldata->alpha  = alpha;
@@ -209,12 +220,8 @@ _nc_galaxy_shape_pop_beta_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
 {
   NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
 
-  /* Evaluated in log-space and exponentiated once: for concentrated
-   * populations (large alpha, beta) forming pow(x,alpha-1) and the
-   * normalization 1/B(alpha,beta) as separate factors overflows/underflows
-   * well within the model's own declared nu range (e.g. mu=0.5, nu=1000
-   * already pushes -lnbeta past 690, right at exp()'s overflow edge),
-   * silently producing NaN (0*inf) with no diagnostic. */
+  /* Log-space eval avoids overflow/NaN for concentrated populations (large
+   * alpha, beta). */
   return exp ((ldata->alpha - 1.0) * log (x) + (ldata->beta - 1.0) * log1p (-x) + ldata->lnnorm);
 }
 
@@ -288,8 +295,11 @@ _nc_galaxy_shape_pop_beta_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data
 static gdouble
 _nc_galaxy_shape_pop_beta_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 {
-  /* <|chi|^2> = <x> = mu, so e_rms = sqrt(mu / 2). */
-  return sqrt (0.5 * MU);
+  /* <|chi|^2> = <x> = alpha/(alpha+beta), so e_rms = sqrt(<x> / 2). */
+  const gdouble alpha = ALPHA;
+  const gdouble beta  = BETA;
+
+  return sqrt (0.5 * alpha / (alpha + beta));
 }
 
 /**
@@ -347,5 +357,108 @@ void
 nc_galaxy_shape_pop_beta_clear (NcGalaxyShapePopBeta **gspb)
 {
   g_clear_object (gspb);
+}
+
+/**
+ * nc_galaxy_shape_pop_beta_get_mean:
+ * @gspb: a #NcGalaxyShapePopBeta
+ *
+ * The induced $\mathrm{mean}(x) = \alpha/(\alpha+\beta)$ -- a reporting
+ * quantity, not itself a model parameter (see the class documentation).
+ *
+ * Returns: the mean of $x = |\chi_I|^2$.
+ */
+gdouble
+nc_galaxy_shape_pop_beta_get_mean (NcGalaxyShapePopBeta *gspb)
+{
+  NcGalaxyShapePop *gsp = NC_GALAXY_SHAPE_POP (gspb);
+  const gdouble alpha   = ALPHA;
+  const gdouble beta    = BETA;
+
+  return alpha / (alpha + beta);
+}
+
+/**
+ * nc_galaxy_shape_pop_beta_get_concentration:
+ * @gspb: a #NcGalaxyShapePopBeta
+ *
+ * The induced concentration $\alpha+\beta$ -- a reporting quantity, not
+ * itself a model parameter (see the class documentation).
+ *
+ * Returns: the concentration $\alpha+\beta$.
+ */
+gdouble
+nc_galaxy_shape_pop_beta_get_concentration (NcGalaxyShapePopBeta *gspb)
+{
+  NcGalaxyShapePop *gsp = NC_GALAXY_SHAPE_POP (gspb);
+
+  return ALPHA + BETA;
+}
+
+/**
+ * nc_galaxy_shape_pop_beta_get_std:
+ * @gspb: a #NcGalaxyShapePopBeta
+ *
+ * The induced standard deviation of $x = |\chi_I|^2$,
+ * $\sqrt{\alpha\beta / [(\alpha+\beta)^2(\alpha+\beta+1)]}$ -- a reporting
+ * quantity, not itself a model parameter (see the class documentation).
+ *
+ * Returns: the standard deviation of $x$.
+ */
+gdouble
+nc_galaxy_shape_pop_beta_get_std (NcGalaxyShapePopBeta *gspb)
+{
+  NcGalaxyShapePop *gsp = NC_GALAXY_SHAPE_POP (gspb);
+  const gdouble alpha   = ALPHA;
+  const gdouble beta    = BETA;
+  const gdouble nu      = alpha + beta;
+
+  return sqrt (alpha * beta / (nu * nu * (nu + 1.0)));
+}
+
+static void
+_nc_galaxy_shape_pop_beta_flist_mean (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  NcGalaxyShapePopBeta *gspb = NC_GALAXY_SHAPE_POP_BETA (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+
+  g_assert (NC_IS_GALAXY_SHAPE_POP_BETA (gspb));
+
+  res[0] = nc_galaxy_shape_pop_beta_get_mean (gspb);
+}
+
+static void
+_nc_galaxy_shape_pop_beta_flist_concentration (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  NcGalaxyShapePopBeta *gspb = NC_GALAXY_SHAPE_POP_BETA (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+
+  g_assert (NC_IS_GALAXY_SHAPE_POP_BETA (gspb));
+
+  res[0] = nc_galaxy_shape_pop_beta_get_concentration (gspb);
+}
+
+static void
+_nc_galaxy_shape_pop_beta_flist_std (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  NcGalaxyShapePopBeta *gspb = NC_GALAXY_SHAPE_POP_BETA (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+
+  g_assert (NC_IS_GALAXY_SHAPE_POP_BETA (gspb));
+
+  res[0] = nc_galaxy_shape_pop_beta_get_std (gspb);
+}
+
+/* Called once from ncm_cfg_register_functions(), same convention as other
+ * models' derived NcmMSetFuncList entries. */
+void
+_nc_galaxy_shape_pop_beta_register_functions (void)
+{
+  ncm_mset_func_list_register ("mean", "\\bar{x}", "NcGalaxyShapePopBeta",
+                               "Mean of x = |chi_I|^2", G_TYPE_NONE,
+                               _nc_galaxy_shape_pop_beta_flist_mean, 0, 1);
+  ncm_mset_func_list_register ("concentration", "\\alpha+\\beta", "NcGalaxyShapePopBeta",
+                               "Concentration alpha + beta", G_TYPE_NONE,
+                               _nc_galaxy_shape_pop_beta_flist_concentration, 0, 1);
+  ncm_mset_func_list_register ("std", "\\sigma_x", "NcGalaxyShapePopBeta",
+                               "Standard deviation of x = |chi_I|^2", G_TYPE_NONE,
+                               _nc_galaxy_shape_pop_beta_flist_std, 0, 1);
 }
 

@@ -69,6 +69,7 @@
 #include "nc/lss/halo/nc_halo_position.h"
 #include "nc/lss/halo/nc_halo_density_profile.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
+#include "ncm/core/ncm_cfg.h"
 #include "ncm/stats/ncm_stats_vec.h"
 #include "ncm/model/ncm_model.h"
 
@@ -262,6 +263,16 @@ _nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
   /* Default: the evaluation strategy needs no additional setup. */
 }
 
+static gchar *
+_nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf)
+{
+  const NcGalaxyWLObsEllipConv ellip_conv = nc_galaxy_shape_factor_get_ellip_conv (gsf);
+  const GEnumValue *ellip_val             = ncm_cfg_enum_get_value (NC_TYPE_GALAXY_WL_OBS_ELLIP_CONV, ellip_conv);
+
+  /* Default: only the property shared by every subclass. */
+  return g_strdup_printf ("%s (ellip_conv=%s)", G_OBJECT_TYPE_NAME (gsf), ellip_val->value_nick);
+}
+
 static void
 nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
 {
@@ -291,6 +302,7 @@ nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
   klass->prepare          = &_nc_galaxy_shape_factor_prepare;
   klass->eval_marginal    = &_nc_galaxy_shape_factor_eval_marginal;
   klass->eval_ln_marginal = &_nc_galaxy_shape_factor_eval_ln_marginal;
+  klass->get_desc         = &_nc_galaxy_shape_factor_get_desc;
 }
 
 static void
@@ -355,6 +367,20 @@ nc_galaxy_shape_factor_check_obs (NcGalaxyShapeFactor *gsf, NcGalaxyWLObs *obs, 
   }
 
   return TRUE;
+}
+
+/**
+ * nc_galaxy_shape_factor_get_desc:
+ * @gsf: a #NcGalaxyShapeFactor
+ *
+ * Returns: (transfer full): a human-readable one-line description of this
+ * scheme's own configuration (default: the concrete type name plus
+ * :ellip-conv).
+ */
+gchar *
+nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf)
+{
+  return NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->get_desc (gsf);
 }
 
 /**

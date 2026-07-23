@@ -87,8 +87,11 @@ test_closed_form_matches_finite_difference (void)
   guint i;
 
   ncm_model_orig_param_set (NCM_MODEL (pop_gauss), 0, 0.28);
-  ncm_model_orig_param_set (NCM_MODEL (pop_beta), 0, 0.35);
-  ncm_model_orig_param_set (NCM_MODEL (pop_beta), 1, 6.0);
+
+  /* alpha=2.1, beta=3.9 (both > 1: interior mode, no boundary divergence) --
+   * was mu=0.35, nu=6.0 under the class's old (mu, nu) parametrization. */
+  ncm_model_orig_param_set (NCM_MODEL (pop_beta), NC_GALAXY_SHAPE_POP_BETA_ALPHA, 2.1);
+  ncm_model_orig_param_set (NCM_MODEL (pop_beta), NC_GALAXY_SHAPE_POP_BETA_BETA, 3.9);
 
   for (i = 0; i < TEST_N_TRIALS; i++)
   {
@@ -176,8 +179,11 @@ test_trace_closed_form_never_worse_than_finite_difference (void)
   guint i;
 
   ncm_model_orig_param_set (NCM_MODEL (pop_gauss), 0, 0.28);
-  ncm_model_orig_param_set (NCM_MODEL (pop_beta), 0, 0.35);
-  ncm_model_orig_param_set (NCM_MODEL (pop_beta), 1, 6.0);
+
+  /* alpha=2.1, beta=3.9 (both > 1: interior mode, no boundary divergence) --
+   * was mu=0.35, nu=6.0 under the class's old (mu, nu) parametrization. */
+  ncm_model_orig_param_set (NCM_MODEL (pop_beta), NC_GALAXY_SHAPE_POP_BETA_ALPHA, 2.1);
+  ncm_model_orig_param_set (NCM_MODEL (pop_beta), NC_GALAXY_SHAPE_POP_BETA_BETA, 3.9);
 
   for (i = 0; i < TEST_N_TRIALS; i++)
   {

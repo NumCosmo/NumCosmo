@@ -165,8 +165,10 @@ if enable_gir and python_for_tests.found()
     # xdist worker. See TESTING.md.
     test(
         'pytest-omp',
-        pytest,
-        args: pytest_base_args + ['-m', 'omp', meson.current_source_dir()],
+        omp_thread_wrapper,
+        args: [pytest.full_path()]
+        + pytest_base_args
+        + ['-m', 'omp', meson.current_source_dir()],
         depends: [numcosmo_gir, numcosmo_math_gir],
         env: env_omp,
         timeout: 0,

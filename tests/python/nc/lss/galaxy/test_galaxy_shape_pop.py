@@ -117,31 +117,79 @@ def test_eval_p_rho2_matches_eval_p(name):
 
 
 @pytest.mark.parametrize(
-    "mu,nu", [(0.3, 1.0e4), (0.5, 1.0e3), (0.6, 1.0e4), (0.99, 1.0e3)]
+    "alpha,beta",
+    [(3000.0, 7000.0), (500.0, 500.0), (6000.0, 4000.0), (990.0, 10.0)],
 )
-def test_beta_concentrated_no_overflow(mu, nu):
+def test_beta_concentrated_no_overflow(alpha, beta):
     """eval_p/eval_p_rho2 stay finite and normalized for concentrated Beta
-    populations (large alpha=mu*nu, beta=(1-mu)*nu).
+    populations (large alpha, beta).
 
     Evaluating norm=1/B(alpha,beta) and x**(alpha-1) as separate factors
     overflows/underflows for alpha/beta of a few hundred or more (already
-    reachable within nu's own declared range, e.g. mu=0.5, nu=1e3 pushes
-    -ln B(alpha,beta) to ~695, right at exp()'s overflow edge), silently
-    producing NaN (0*inf). eval_p must instead accumulate in log-space.
+    reachable within the class's own declared range, e.g. alpha=beta=500
+    pushes -ln B(alpha,beta) to ~695, right at exp()'s overflow edge),
+    silently producing NaN (0*inf). eval_p must instead accumulate in
+    log-space.
     """
     model = Nc.GalaxyShapePopBeta.new()
-    model["mu"] = mu
-    model["nu"] = nu
+    model["alpha"] = alpha
+    model["beta"] = beta
     data = Nc.GalaxyShapePopData.new(model)
     model.prepare(data)
 
-    mode = max((mu * nu - 1.0) / (nu - 2.0), 1.0e-6)
+    mode = max((alpha - 1.0) / (alpha + beta - 2.0), 1.0e-6)
     for x in (mode * 0.999, mode, min(mode * 1.001, 1.0 - 1.0e-9)):
         p = model.eval_p(data, x)
         assert np.isfinite(p)
         assert p >= 0.0
 
     assert_allclose(_moment(model, data, 0), 1.0, rtol=1.0e-5)
+
+
+@pytest.mark.parametrize(
+    "alpha,beta",
+    [(2.0, 3.0), (1.05, 4.7833333333333333), (0.6, 4.0), (50.0, 25.0)],
+)
+def test_beta_mean_concentration_std(alpha, beta):
+    """get_mean/get_concentration/get_std match their closed-form definitions
+    and the first two moments of eval_p itself."""
+    model = Nc.GalaxyShapePopBeta.new()
+    model["alpha"] = alpha
+    model["beta"] = beta
+    data = Nc.GalaxyShapePopData.new(model)
+    model.prepare(data)
+
+    mean = model.get_mean()
+    concentration = model.get_concentration()
+    std = model.get_std()
+
+    assert_allclose(mean, alpha / (alpha + beta))
+    assert_allclose(concentration, alpha + beta)
+    assert_allclose(
+        std, np.sqrt(alpha * beta / ((alpha + beta) ** 2 * (alpha + beta + 1.0)))
+    )
+
+    assert_allclose(mean, _moment(model, data, 1), rtol=1.0e-5)
+    assert_allclose(std, np.sqrt(_moment(model, data, 2) - mean**2), rtol=1.0e-4)
+
+
+def test_beta_mset_func_list():
+    """The NcGalaxyShapePopBeta:mean/concentration/std NcmMSetFuncList entries
+    match the direct get_mean()/get_concentration()/get_std() accessors."""
+    model = Nc.GalaxyShapePopBeta.new()
+    model["alpha"] = 3.0
+    model["beta"] = 7.0
+    mset = Ncm.MSet.new_array([model])
+
+    mean_func = Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mean", None)
+    concentration_func = Ncm.MSetFuncList.new(
+        "NcGalaxyShapePopBeta:concentration", None
+    )
+    std_func = Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:std", None)
+
+    assert_allclose(mean_func.eval0(mset), model.get_mean())
+    assert_allclose(concentration_func.eval0(mset), model.get_concentration())
+    assert_allclose(std_func.eval0(mset), model.get_std())
 
 
 if __name__ == "__main__":

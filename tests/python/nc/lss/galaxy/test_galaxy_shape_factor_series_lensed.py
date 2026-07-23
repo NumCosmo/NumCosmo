@@ -172,14 +172,14 @@ def test_marginal_matches_quad_beta(ellip_conv):
     than the Gaussian family (ncm_laurent_series_tps_pow()'s generalized-
     binomial recursion, not the exp-of-power-series one) -- same moderate-
     noise/moderate-g setup as test_marginal_matches_quad_moderate_g_large_noise.
-    mu=0.5, nu=6 (alpha=beta=3, both >1) keeps eval_p smooth on the whole
-    unit interval, including at x=0 -- unlike the default mu/nu (alpha=0.9<1,
-    P(x) ~ x^-0.1 diverges at x=0), which restricts the g-Taylor series' own
-    radius of convergence whenever the rho quadrature approaches rho=0 (see
-    test_marginal_matches_quad_beta_small_g_near_singular below)."""
+    alpha=beta=3 (both >1) keeps eval_p smooth on the whole unit interval,
+    including at x=0 -- unlike alpha<1 (P(x) ~ x^(alpha-1) diverges at x=0,
+    see test_marginal_matches_quad_beta_small_g_near_singular below), which
+    restricts the g-Taylor series' own radius of convergence whenever the
+    rho quadrature approaches rho=0."""
     pop = Nc.GalaxyShapePopBeta.new()
-    pop["mu"] = 0.5
-    pop["nu"] = 6.0
+    pop["alpha"] = 3.0
+    pop["beta"] = 3.0
     g = 0.09 + 0.0j
     eps_obs = 0.4 * np.exp(1j * 0.7)
 
@@ -190,17 +190,20 @@ def test_marginal_matches_quad_beta(ellip_conv):
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_marginal_matches_quad_beta_small_g_near_singular(ellip_conv):
-    """Default mu/nu (alpha=mu*nu=0.9<1) makes P(x) ~ x^(alpha-1) diverge at
-    x=0 -- a genuine branch-point singularity, not a numerical artifact
-    (confirmed by raising trunc_order making the mismatch worse at moderate
-    g, the classic signature of evaluating a Taylor series outside its own
-    radius of convergence, rather than better as truncation error alone
-    would predict). g=0 (no truncation at all) matches quad exactly; this
-    checks a small g comfortably inside that radius still works. TRACE's own
+    """alpha=0.9<1 (the class's old, pre->=1-bound default, still directly
+    settable here) makes P(x) ~ x^(alpha-1) diverge at x=0 -- a genuine
+    branch-point singularity, not a numerical artifact (confirmed by
+    raising trunc_order making the mismatch worse at moderate g, the
+    classic signature of evaluating a Taylor series outside its own radius
+    of convergence, rather than better as truncation error alone would
+    predict). g=0 (no truncation at all) matches quad exactly; this checks
+    a small g comfortably inside that radius still works. TRACE's own
     steeper O(g) response (see test_marginal_matches_quad_moderate_g_large_noise's
     docstring) shrinks that radius further than TRACE_DET's, hence g=0.003
     here rather than the smooth case's g=0.09."""
     pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = 0.9
+    pop["beta"] = 4.1
     g = 0.003 + 0.0j
     eps_obs = 0.4 * np.exp(1j * 0.7)
 

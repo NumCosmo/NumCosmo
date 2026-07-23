@@ -384,6 +384,7 @@ void _nc_distance_register_functions (void);
 void _nc_planck_fi_cor_tt_register_functions (void);
 void _nc_hicosmo_de_wspline_register_functions (void);
 void _nc_hicosmo_qspline_register_functions (void);
+void _nc_galaxy_shape_pop_beta_register_functions (void);
 
 #ifdef HAVE_MPI
 static void _ncm_cfg_mpi_main_loop (void);
@@ -946,6 +947,7 @@ ncm_cfg_register_functions (void)
     _nc_planck_fi_cor_tt_register_functions ();
     _nc_hicosmo_de_wspline_register_functions ();
     _nc_hicosmo_qspline_register_functions ();
+    _nc_galaxy_shape_pop_beta_register_functions ();
 
     g_once_init_leave (&_functions_initialized, TRUE);
   }
