@@ -299,6 +299,32 @@ _nc_data_planck_plik_lite_prepare (NcmData *data, NcmMSet *mset)
   if (cosmo == NULL)
     g_error ("_nc_data_planck_plik_lite_prepare: cannot prepare without a NcHICosmo object in the NcmMSet.");
 
+  {
+    const guint np         = ncm_data_gauss_cov_get_size (NCM_DATA_GAUSS_COV (plik));
+    NcDataCMBDataType tCls = 0;
+    guint b;
+
+    for (b = 0; b < np; b++)
+    {
+      switch ((guint) ncm_vector_get (plik->spectrum_id, b))
+      {
+        case NC_DATA_PLIK_LITE_SPEC_TT:
+          tCls |= NC_DATA_CMB_TYPE_TT;
+          break;
+        case NC_DATA_PLIK_LITE_SPEC_EE:
+          tCls |= NC_DATA_CMB_TYPE_EE;
+          break;
+        case NC_DATA_PLIK_LITE_SPEC_TE:
+          tCls |= NC_DATA_CMB_TYPE_TE;
+          break;
+        default:
+          break;
+      }
+    }
+
+    nc_hipert_boltzmann_require (plik->pb, tCls, plik->lmax);
+  }
+
   nc_hipert_boltzmann_prepare_if_needed (plik->pb, cosmo);
 }
 
@@ -319,9 +345,9 @@ _nc_data_planck_plik_lite_get_cls (NcDataPlanckPlikLite *plik, NcDataPlikLiteSpe
     case NC_DATA_PLIK_LITE_SPEC_TE:
       nc_hipert_boltzmann_get_TE_Cls (plik->pb, plik->cl_cache[spec]);
       break;
-    default:                                            /* LCOV_EXCL_LINE */
-      g_assert_not_reached ();                          /* LCOV_EXCL_LINE */
-      break;                                            /* LCOV_EXCL_LINE */
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+      break;                   /* LCOV_EXCL_LINE */
   }
 
   return plik->cl_cache[spec];
@@ -330,9 +356,9 @@ _nc_data_planck_plik_lite_get_cls (NcDataPlanckPlikLite *plik, NcDataPlikLiteSpe
 static void
 _nc_data_planck_plik_lite_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp)
 {
-  NcDataPlanckPlikLite *plik = NC_DATA_PLANCK_PLIK_LITE (gauss);
-  NcPlanckFI *pfi            = NC_PLANCK_FI (ncm_mset_peek (mset, nc_planck_fi_id ()));
-  const guint np             = ncm_data_gauss_cov_get_size (gauss);
+  NcDataPlanckPlikLite *plik                = NC_DATA_PLANCK_PLIK_LITE (gauss);
+  NcPlanckFI *pfi                           = NC_PLANCK_FI (ncm_mset_peek (mset, nc_planck_fi_id ()));
+  const guint np                            = ncm_data_gauss_cov_get_size (gauss);
   gboolean need[NC_DATA_PLIK_LITE_SPEC_LEN] = { FALSE, FALSE, FALSE };
   NcmVector *cls[NC_DATA_PLIK_LITE_SPEC_LEN];
   gdouble A_planck, calib2;
@@ -434,3 +460,4 @@ nc_data_planck_plik_lite_peek_hipert_boltzmann (NcDataPlanckPlikLite *plik)
 {
   return plik->pb;
 }
+

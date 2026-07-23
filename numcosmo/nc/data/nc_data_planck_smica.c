@@ -868,6 +868,15 @@ _nc_data_planck_smica_prepare (NcmData *data, NcmMSet *mset)
   if (cosmo == NULL)
     g_error ("_nc_data_planck_smica_prepare: no NcHICosmo in mset.");
 
+  {
+    NcDataCMBDataType tCls = NC_DATA_CMB_TYPE_TT;
+
+    if (s->has_pol)
+      tCls |= NC_DATA_CMB_TYPE_EE | NC_DATA_CMB_TYPE_TE;
+
+    nc_hipert_boltzmann_require (s->pb, tCls, s->lmax);
+  }
+
   nc_hipert_boltzmann_prepare_if_needed (s->pb, cosmo);
 }
 

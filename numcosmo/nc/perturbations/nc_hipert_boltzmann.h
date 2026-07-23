@@ -185,6 +185,8 @@ gboolean nc_hipert_boltzmann_lensed_Cls (NcHIPertBoltzmann *pb);
 void nc_hipert_boltzmann_set_tensor (NcHIPertBoltzmann *pb, gboolean use_tensor);
 gboolean nc_hipert_boltzmann_tensor (NcHIPertBoltzmann *pb);
 
+void nc_hipert_boltzmann_require (NcHIPertBoltzmann *pb, NcDataCMBDataType tCls, guint lmax);
+
 void nc_hipert_boltzmann_set_PHIPHI_lmax (NcHIPertBoltzmann *pb, guint lmax);
 void nc_hipert_boltzmann_set_TT_lmax (NcHIPertBoltzmann *pb, guint lmax);
 void nc_hipert_boltzmann_set_EE_lmax (NcHIPertBoltzmann *pb, guint lmax);

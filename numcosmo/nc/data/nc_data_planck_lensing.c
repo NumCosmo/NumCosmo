@@ -450,6 +450,7 @@ _nc_data_planck_lensing_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataPlanckLensing *lens = NC_DATA_PLANCK_LENSING (data);
   NcHICosmo *cosmo          = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcDataCMBDataType tCls    = NC_DATA_CMB_TYPE_PHIPHI;
   guint k;
 
   if (lens->pb == NULL)
@@ -458,41 +459,12 @@ _nc_data_planck_lensing_prepare (NcmData *data, NcmMSet *mset)
   if (cosmo == NULL)
     g_error ("_nc_data_planck_lensing_prepare: no NcHICosmo in mset.");
 
-  /* Ensure the theory targets and their lmax cover what the model needs.
-   * Idempotent: append is a bit-or, lmax is only grown. */
-  nc_hipert_boltzmann_append_target_Cls (lens->pb, NC_DATA_CMB_TYPE_PHIPHI);
-
-  if (nc_hipert_boltzmann_get_PHIPHI_lmax (lens->pb) < lens->lmax)
-    nc_hipert_boltzmann_set_PHIPHI_lmax (lens->pb, lens->lmax);
-
+  /* Ensure the theory targets and their lmax cover what the model needs
+   * (phi-phi plus the CMB spectra selected for the renormalization). */
   for (k = 0; k < lens->ncmb; k++)
-  {
-    nc_hipert_boltzmann_append_target_Cls (lens->pb, lens->cmb_type[k]);
+    tCls |= lens->cmb_type[k];
 
-    switch (lens->cmb_type[k])
-    {
-      case NC_DATA_CMB_TYPE_TT:
-
-        if (nc_hipert_boltzmann_get_TT_lmax (lens->pb) < lens->lmax)
-          nc_hipert_boltzmann_set_TT_lmax (lens->pb, lens->lmax);
-
-        break;
-      case NC_DATA_CMB_TYPE_EE:
-
-        if (nc_hipert_boltzmann_get_EE_lmax (lens->pb) < lens->lmax)
-          nc_hipert_boltzmann_set_EE_lmax (lens->pb, lens->lmax);
-
-        break;
-      case NC_DATA_CMB_TYPE_TE:
-
-        if (nc_hipert_boltzmann_get_TE_lmax (lens->pb) < lens->lmax)
-          nc_hipert_boltzmann_set_TE_lmax (lens->pb, lens->lmax);
-
-        break;
-      default:
-        break;
-    }
-  }
+  nc_hipert_boltzmann_require (lens->pb, tCls, lens->lmax);
 
   nc_hipert_boltzmann_prepare_if_needed (lens->pb, cosmo);
 }

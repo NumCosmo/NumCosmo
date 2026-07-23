@@ -90,24 +90,9 @@ def _make(name, relpath, builder):
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
     from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 
+    # Each native likelihood self-configures the Boltzmann targets/lmax in
+    # prepare(), so a bare CBE is enough.
     cbe = Nc.HIPertBoltzmannCBE.new()
-    # Unlike NcDataPlanckLensing, the plik_lite/smica/commander/simall classes do
-    # not raise the Boltzmann targets/lmax themselves (in their own tests the clik
-    # wrapper does it); configure the CBE explicitly for a native-only setup.
-    lmax = 2508
-    cbe.set_target_Cls(
-        Nc.DataCMBDataType.TT
-        | Nc.DataCMBDataType.EE
-        | Nc.DataCMBDataType.TE
-        | Nc.DataCMBDataType.BB
-        | Nc.DataCMBDataType.PHIPHI
-    )
-    cbe.set_TT_lmax(lmax)
-    cbe.set_EE_lmax(lmax)
-    cbe.set_TE_lmax(lmax)
-    cbe.set_BB_lmax(lmax)
-    cbe.set_PHIPHI_lmax(lmax)
-
     cosmo = create_cosmo(prim_model=HIPrimModel.POWER_LAW)
 
     if name == "smica_ttteee":

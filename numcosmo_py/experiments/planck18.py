@@ -396,20 +396,9 @@ def generate_planck18_native(
         cbe = cbe_boltzmann.peek_cbe()
         cbe.peek_precision().props.k_per_decade_primordial = 30.0
 
-    # The native classes read Cls from the shared Boltzmann but (unlike
-    # DataPlanckLKL) do not raise its targets/lmax themselves. Configure it once;
-    # target-Cls and the lmaxes are serialized with the CBE, so the reloaded
-    # experiment is self-sufficient.
-    targets = Nc.DataCMBDataType.TT | Nc.DataCMBDataType.EE | Nc.DataCMBDataType.TE
-    if use_lensing_likelihood:
-        targets |= Nc.DataCMBDataType.PHIPHI
-    cbe_boltzmann.set_target_Cls(targets)
-    cbe_boltzmann.set_TT_lmax(2508)
-    cbe_boltzmann.set_EE_lmax(2508)
-    cbe_boltzmann.set_TE_lmax(2508)
-    if use_lensing_likelihood:
-        cbe_boltzmann.set_PHIPHI_lmax(2500)
-
+    # Each native likelihood raises the shared Boltzmann's targets/lmax itself in
+    # prepare() (nc_hipert_boltzmann_require), including after the experiment is
+    # reloaded, so no manual CBE configuration is needed here.
     lowl_EE = build_simall(_need(SIMALL_EE_RELPATH), cbe_boltzmann)
     lowl_TT = build_commander(_need(COMMANDER_RELPATH), cbe_boltzmann)
 

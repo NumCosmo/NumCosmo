@@ -94,6 +94,17 @@ def test_generate_planck_native(tmp_path: Path):
         "DataPlanckLensing",
     }
 
+    # The reloaded blocks self-configure the shared (serialized) Boltzmann and
+    # evaluate, with no clik data or PLC library involved.
+    import numpy as np
+
+    exp = ser.dict_str_from_yaml_file(str(exp_file.absolute()))
+    mset = exp.peek("model-set")
+    assert isinstance(mset, Ncm.MSet)
+    for i in range(dset.get_ndata()):
+        dset.get_data(i).prepare(mset)
+    assert np.isfinite(dset.m2lnL_val(mset))
+
 
 # QSpline
 def test_generate_qspline(tmp_path: Path):

@@ -366,6 +366,21 @@ _nc_data_planck_simall_prepare (NcmData *data, NcmMSet *mset)
   if (cosmo == NULL)
     g_error ("_nc_data_planck_simall_prepare: no NcHICosmo in mset.");
 
+  {
+    NcDataCMBDataType tCls = 0;
+
+    if (simall->ee.prob != NULL)
+      tCls |= NC_DATA_CMB_TYPE_EE;
+
+    if (simall->bb.prob != NULL)
+      tCls |= NC_DATA_CMB_TYPE_BB;
+
+    if (simall->te.prob != NULL)
+      tCls |= NC_DATA_CMB_TYPE_TE;
+
+    nc_hipert_boltzmann_require (simall->pb, tCls, simall->lmax);
+  }
+
   nc_hipert_boltzmann_prepare_if_needed (simall->pb, cosmo);
 }
 

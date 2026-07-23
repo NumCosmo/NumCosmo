@@ -620,6 +620,7 @@ _nc_data_planck_commander_prepare (NcmData *data, NcmMSet *mset)
   if (cosmo == NULL)
     g_error ("_nc_data_planck_commander_prepare: no NcHICosmo in mset.");
 
+  nc_hipert_boltzmann_require (cmd->pb, NC_DATA_CMB_TYPE_TT, cmd->lmax);
   nc_hipert_boltzmann_prepare_if_needed (cmd->pb, cosmo);
 }
 
