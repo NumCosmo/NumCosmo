@@ -350,16 +350,20 @@ def generate_planck18_native(
     massive_nu: bool = False,
     prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
     use_lensing_likelihood: bool = False,
+    from_release: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate a Planck 2018 experiment from the native (clik-free) likelihoods.
 
-    Builds the low-l EE (simall), low-l TT (commander) and high-l TT/TTTEEE
-    (SMICA) blocks -- plus optional lensing -- from the local Planck clik data via
-    the ``numcosmo_py.experiments`` converters, sharing one CBE. Unlike the legacy
+    Assembles the low-l EE (simall), low-l TT (commander) and high-l TT/TTTEEE
+    (SMICA) blocks -- plus optional lensing -- sharing one CBE. Unlike the legacy
     ``generate_planck18_*`` (which wraps the clik library through ``DataPlanckLKL``),
-    the native objects embed their data and can resample; the shared Boltzmann is
-    configured here and serialized with the experiment, so the resulting file
-    reloads and fits without the clik data files or the PLC library.
+    the native objects embed their data and can resample; each self-configures the
+    shared Boltzmann in prepare(), so the resulting file reloads and fits without
+    the clik data files or the PLC library.
+
+    With ``from_release=True`` the blocks are downloaded (and cached) from the
+    NumCosmo native-Planck GitHub release instead of being built from a local
+    ``plc_3.0`` clik tree -- no Planck data or PLC library needed at all.
 
     See ``numcosmo_py/experiments/planck_native_provenance.md`` for the data
     provenance and the required Planck Collaboration citations.
@@ -381,39 +385,50 @@ def generate_planck18_native(
         LENSING_FULL_RELPATH,
         build_lensing,
     )
-
-    def _need(relpath: str) -> str:
-        path = find_baseline_file(relpath)
-        if path is None:
-            raise FileNotFoundError(
-                f"Planck baseline data not found ({relpath}); the native generator "
-                "still needs the clik data at build time."
-            )
-        return path
+    from numcosmo_py.experiments.planck_native_release import (
+        PlanckReleaseId,
+        load_planck_release,
+    )
 
     cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
     if prim_model == HIPrimModel.TWO_FLUIDS:
         cbe = cbe_boltzmann.peek_cbe()
         cbe.peek_precision().props.k_per_decade_primordial = 30.0
 
+    def _block(release_id: PlanckReleaseId, relpath: str, builder) -> Ncm.Data:
+        """Load a block from the release, or build it from the local clik data."""
+        if from_release:
+            return load_planck_release(release_id, cbe_boltzmann)
+        path = find_baseline_file(relpath)
+        if path is None:
+            raise FileNotFoundError(
+                f"Planck baseline data not found ({relpath}); build from the local "
+                "clik data needs it, or pass from_release=True."
+            )
+        return builder(path, cbe_boltzmann)
+
     # Each native likelihood raises the shared Boltzmann's targets/lmax itself in
     # prepare() (nc_hipert_boltzmann_require), including after the experiment is
     # reloaded, so no manual CBE configuration is needed here.
-    lowl_EE = build_simall(_need(SIMALL_EE_RELPATH), cbe_boltzmann)
-    lowl_TT = build_commander(_need(COMMANDER_RELPATH), cbe_boltzmann)
+    lowl_EE = _block(PlanckReleaseId.SIMALL_EE, SIMALL_EE_RELPATH, build_simall)
+    lowl_TT = _block(PlanckReleaseId.COMMANDER, COMMANDER_RELPATH, build_commander)
 
     if data_type == Planck18Types.TT:
-        highl = build_smica_tt(_need(PLIK_TT_RELPATH), cbe_boltzmann)
+        highl = _block(PlanckReleaseId.PLIK_TT, PLIK_TT_RELPATH, build_smica_tt)
         planck_model: Nc.PlanckFI = Nc.PlanckFICorTT()
     elif data_type == Planck18Types.TTTEEE:
-        highl = build_smica_ttteee(_need(PLIK_TTTEEE_RELPATH), cbe_boltzmann)
+        highl = _block(
+            PlanckReleaseId.PLIK_TTTEEE, PLIK_TTTEEE_RELPATH, build_smica_ttteee
+        )
         planck_model = Nc.PlanckFICorTTTEEE()
     else:
         raise ValueError(f"Invalid data type: {data_type}")
 
     blocks = [lowl_EE, lowl_TT, highl]
     if use_lensing_likelihood:
-        blocks.append(build_lensing(_need(LENSING_FULL_RELPATH), cbe_boltzmann))
+        blocks.append(
+            _block(PlanckReleaseId.LENSING, LENSING_FULL_RELPATH, build_lensing)
+        )
 
     dset = Ncm.Dataset.new_array(blocks)
     likelihood = Ncm.Likelihood.new(dset)

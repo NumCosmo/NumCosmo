@@ -44,6 +44,7 @@ from .catalog import (
 )
 from .generate import (
     GeneratePlanck,
+    BuildPlanckRelease,
     GenerateJpasForecast,
     GenerateClusterWL,
     LoadClusterWL,
@@ -191,6 +192,12 @@ GEN_PLANCK_CMD: CMDArg = {
     "help": "Generate Planck 2018 baseline experiments.",
 }
 
+GEN_PLANCK_RELEASE_CMD: CMDArg = {
+    "name": "planck18-release",
+    "no_args_is_help": True,
+    "help": "Rebuild the native Planck likelihood release objects from clik data.",
+}
+
 GEN_JPAS_FORECAST_CMD: CMDArg = {
     "name": "jpas-forecast",
     "no_args_is_help": True,
@@ -292,6 +299,7 @@ app_cat.command(**CAT_DUMP_MSET_CMD)(DumpMset)
 # ------------------------------------------------------------------------------
 # Installing experiment generation subcommands
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
+app_generate.command(**GEN_PLANCK_RELEASE_CMD)(BuildPlanckRelease)
 app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
 app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)
 app_generate.command(**LOAD_CLUSTER_WL_CMD)(LoadClusterWL)

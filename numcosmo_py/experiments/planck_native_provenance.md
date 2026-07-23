@@ -31,9 +31,20 @@ archive:
    `build_smica_ttteee`, `build_lensing`, `build_plik_lite`) or
    `generate_planck18_native`.
 
-Any redistributed serialized objects (see the future data-release loader) should
-ship only these lightweight value-added products, not the raw maps — users
-reproduce them from the PLA with the converters above.
+## Downloadable release (value-added products)
+
+The curated native likelihoods are distributed as self-contained serialized
+objects, mirroring the weak-lensing catalog release
+(`numcosmo_py.experiments.planck_native_release`):
+
+- **Rebuild** the artifacts from a local `plc_3.0` tree with `build_release()` or
+  `numcosmo generate planck18-release <out_dir>` (the data-reduction step).
+- **Consume** them with `load_planck_release(id)` (downloads and caches from the
+  `RELEASE_TAG` GitHub release), or `generate planck18 --native --from-release`.
+
+Only these lightweight value-added `.gvar` products are hosted — never the raw
+maps. Users without the release can always reproduce them from the PLA with the
+converters above.
 
 ## Two clik bugs reproduced by design
 

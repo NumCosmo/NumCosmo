@@ -106,6 +106,22 @@ def test_generate_planck_native(tmp_path: Path):
     assert np.isfinite(dset.m2lnL_val(mset))
 
 
+def test_build_planck_release(tmp_path: Path):
+    """The publish command writes serialized native Planck release objects."""
+    # pylint: disable=import-outside-toplevel
+    from numcosmo_py.experiments.planck_lite import find_baseline_file
+    from numcosmo_py.experiments.planck_commander import COMMANDER_RELPATH
+
+    if find_baseline_file(COMMANDER_RELPATH) is None:
+        pytest.skip("Planck baseline data not found")
+
+    out_dir = tmp_path / "planck_release"
+    _ = gen.BuildPlanckRelease(output_dir=out_dir.absolute())
+
+    written = list(out_dir.glob("planck_native_*.gvar"))
+    assert written
+
+
 # QSpline
 def test_generate_qspline(tmp_path: Path):
     """Test QSpline generation with all data types."""
