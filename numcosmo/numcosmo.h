@@ -231,6 +231,7 @@
 #include <numcosmo/nc/data/nc_data_planck_smica.h>
 #include <numcosmo/nc/data/nc_data_planck_commander.h>
 #include <numcosmo/nc/data/nc_data_planck_simall.h>
+#include <numcosmo/nc/data/nc_data_planck_lensing.h>
 #include <numcosmo/nc/data/nc_data_xcor.h>
 
 /* Cross-correlations */
