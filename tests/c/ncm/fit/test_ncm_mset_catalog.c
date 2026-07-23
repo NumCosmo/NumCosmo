@@ -26,7 +26,11 @@
 #  include "config.h"
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
+#include "build_cfg.h"
 #include <numcosmo/numcosmo.h>
+#ifdef HAVE_CFITSIO
+#include <fitsio.h>
+#endif /* HAVE_CFITSIO */
 
 typedef struct _TestNcmMSetCatalog
 {
@@ -56,6 +60,14 @@ void test_ncm_mset_catalog_calc_param_ensemble_evol (TestNcmMSetCatalog *test, g
 void test_ncm_mset_catalog_calc_add_param_ensemble_evol (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_calc_add_param_ensemble_evol_short (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer pdata);
+
+#ifdef HAVE_CFITSIO
+void test_ncm_mset_catalog_file_hdu0_roundtrip (void);
+void test_ncm_mset_catalog_file_legacy_fallback (void);
+void test_ncm_mset_catalog_file_missing_mset_traps (void);
+void test_ncm_mset_catalog_file_missing_mset_subprocess (void);
+
+#endif /* HAVE_CFITSIO */
 
 typedef struct _TestNcmMSetCatalogTests
 {
@@ -124,6 +136,13 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_catalog_new,
               &test_ncm_mset_catalog_invalid_run,
               &test_ncm_mset_catalog_free);
+
+#ifdef HAVE_CFITSIO
+  g_test_add_func ("/ncm/mset/catalog/file/hdu0_roundtrip", &test_ncm_mset_catalog_file_hdu0_roundtrip);
+  g_test_add_func ("/ncm/mset/catalog/file/legacy_fallback", &test_ncm_mset_catalog_file_legacy_fallback);
+  g_test_add_func ("/ncm/mset/catalog/file/missing_mset/traps", &test_ncm_mset_catalog_file_missing_mset_traps);
+  g_test_add_func ("/ncm/mset/catalog/file/missing_mset/subprocess", &test_ncm_mset_catalog_file_missing_mset_subprocess);
+#endif /* HAVE_CFITSIO */
 
   g_test_run ();
 }
@@ -891,4 +910,155 @@ test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer pdata
 {
   g_assert_not_reached ();
 }
+
+#ifdef HAVE_CFITSIO
+
+/*
+ * Builds a small free-parameter mset, writes a new-style catalog file for it
+ * (mset embedded in HDU0), and returns both. The catalog is not left open.
+ */
+static NcmMSet *
+_test_ncm_mset_catalog_new_file (const gchar *filename)
+{
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (3);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmMSetCatalog *mcat;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE, "m2lnL", "-2\\ln(L)", NULL);
+  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
+  ncm_mset_catalog_set_run_type (mcat, "test-run");
+  ncm_mset_catalog_set_file (mcat, filename);
+
+  {
+    NcmVector *x  = ncm_vector_new (ncm_mset_fparams_len (mset));
+    gdouble ax[1] = { 12.3 };
+
+    ncm_mset_fparams_get_vector (mset, x);
+    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
+    ncm_mset_catalog_sync (mcat, TRUE);
+
+    ncm_vector_clear (&x);
+  }
+
+  ncm_mset_catalog_clear (&mcat);
+  ncm_model_mvnd_clear (&model_mvnd);
+
+  return mset;
+}
+
+/*
+ * Strips the mset embedded by _test_ncm_mset_catalog_new_file() back to an
+ * empty primary HDU, simulating a catalog file written before HDU0 embedding
+ * was introduced.
+ */
+static void
+_test_ncm_mset_catalog_strip_hdu0 (const gchar *filename)
+{
+  fitsfile *fptr = NULL;
+  gint hdutype   = 0;
+  gint status    = 0;
+
+  fits_open_file (&fptr, filename, READWRITE, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_movabs_hdu (fptr, 1, &hdutype, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_resize_img (fptr, 8, 0, NULL, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_close_file (fptr, &status);
+  g_assert_cmpint (status, ==, 0);
+}
+
+void
+test_ncm_mset_catalog_file_hdu0_roundtrip (void)
+{
+  gchar *tmp_dir      = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_hdu0_XXXXXX", NULL);
+  gchar *filename     = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  gchar *mset_sidecar = g_strdup_printf ("%s/cat.mset", tmp_dir);
+  NcmMSet *mset       = _test_ncm_mset_catalog_new_file (filename);
+  NcmMSetCatalog *mcat2;
+  NcmMSet *mset2;
+
+  g_assert_false (g_file_test (mset_sidecar, G_FILE_TEST_EXISTS));
+
+  mcat2 = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  mset2 = ncm_mset_catalog_peek_mset (mcat2);
+
+  g_assert_true (ncm_mset_cmp (mset, mset2, TRUE));
+
+  ncm_mset_catalog_clear (&mcat2);
+  ncm_mset_clear (&mset);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (mset_sidecar);
+  g_free (tmp_dir);
+}
+
+void
+test_ncm_mset_catalog_file_legacy_fallback (void)
+{
+  gchar *tmp_dir      = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_legacy_XXXXXX", NULL);
+  gchar *filename     = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  gchar *mset_sidecar = g_strdup_printf ("%s/cat.mset", tmp_dir);
+  NcmMSet *mset       = _test_ncm_mset_catalog_new_file (filename);
+  NcmMSetCatalog *mcat2;
+  NcmMSet *mset2;
+  NcmSerialize *ser;
+
+  _test_ncm_mset_catalog_strip_hdu0 (filename);
+
+  ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  ncm_mset_save (mset, ser, mset_sidecar, TRUE, NULL);
+  ncm_serialize_clear (&ser);
+
+  mcat2 = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  mset2 = ncm_mset_catalog_peek_mset (mcat2);
+
+  g_assert_true (ncm_mset_cmp (mset, mset2, TRUE));
+
+  ncm_mset_catalog_clear (&mcat2);
+  ncm_mset_clear (&mset);
+
+  g_unlink (mset_sidecar);
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (mset_sidecar);
+  g_free (tmp_dir);
+}
+
+void
+test_ncm_mset_catalog_file_missing_mset_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/catalog/file/missing_mset/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+}
+
+void
+test_ncm_mset_catalog_file_missing_mset_subprocess (void)
+{
+  gchar *tmp_dir  = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_missing_XXXXXX", NULL);
+  gchar *filename = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmMSet *mset   = _test_ncm_mset_catalog_new_file (filename);
+
+  _test_ncm_mset_catalog_strip_hdu0 (filename);
+  ncm_mset_clear (&mset);
+
+  /* Neither an embedded mset (just stripped) nor a `.mset' sidecar (never
+   * written) exists: this must abort with a fatal error. */
+  ncm_mset_catalog_new_from_file_ro (filename, 0);
+
+  g_assert_not_reached ();
+}
+
+#endif /* HAVE_CFITSIO */
 

@@ -247,7 +247,7 @@ class CutAnalyzer:
                 fit, nwalkers, init_sampler, apes_walker, Ncm.FitRunMsgs.NONE
             )
 
-            esmcmc.set_nthreads(12)
+            esmcmc.set_use_threads(True)
             # Set data file if prefix is provided
             if self.file_prefix is not None:
                 mcmc_file = (
@@ -292,7 +292,7 @@ class CutAnalyzer:
             fitmc = Ncm.FitMC.new(
                 fit, Ncm.FitMCResampleType.BOOTSTRAP_NOMIX, Ncm.FitRunMsgs.NONE
             )
-            fitmc.set_nthreads(12)
+            fitmc.set_use_threads(True)
 
             # Set data file if prefix is provided
             if self.file_prefix is not None:

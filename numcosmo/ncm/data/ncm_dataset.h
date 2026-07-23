@@ -79,6 +79,7 @@ NcmObjArray *ncm_dataset_get_data_array (NcmDataset *dset);
 NcmObjArray *ncm_dataset_peek_data_array (NcmDataset *dset);
 
 void ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng);
+void ncm_dataset_register_shared (NcmDataset *dset, NcmSerialize *ser);
 void ncm_dataset_bootstrap_set (NcmDataset *dset, NcmDatasetBStrapType bstype);
 void ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng);
 void ncm_dataset_log_info (NcmDataset *dset);

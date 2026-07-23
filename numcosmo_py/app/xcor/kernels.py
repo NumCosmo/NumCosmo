@@ -56,10 +56,10 @@ class LSSTBinType(GEnum):
     """
 
     # pylint: disable=no-member
-    Y1_LENS = Nc.GalaxySDTrueRedshiftLSSTSRDType.Y1_LENS
-    Y1_SOURCE = Nc.GalaxySDTrueRedshiftLSSTSRDType.Y1_SOURCE
-    Y10_LENS = Nc.GalaxySDTrueRedshiftLSSTSRDType.Y10_LENS
-    Y10_SOURCE = Nc.GalaxySDTrueRedshiftLSSTSRDType.Y10_SOURCE
+    Y1_LENS = Nc.GalaxyRedshiftPopLSSTSRDType.Y1_LENS
+    Y1_SOURCE = Nc.GalaxyRedshiftPopLSSTSRDType.Y1_SOURCE
+    Y10_LENS = Nc.GalaxyRedshiftPopLSSTSRDType.Y10_LENS
+    Y10_SOURCE = Nc.GalaxyRedshiftPopLSSTSRDType.Y10_SOURCE
 
     @classmethod
     def __get_pydantic_core_schema__(

@@ -44,6 +44,7 @@ from ..interpolation.stats_dist import (
 )
 from ..plotting.tools import set_rc_params_article, confidence_ellipse
 from .loading import LoadCatalog
+from .logging import AppLogging
 from ..plotting import mcat_to_catalog_data, plot_mcsamples
 
 
@@ -869,3 +870,50 @@ class GetBestFit(LoadCatalog):
         self.output_dict.add("model-set", self.mset)
 
         self.end_experiment()
+
+
+@dataclasses.dataclass(kw_only=True)
+class DumpMset(AppLogging):
+    """Dump the model-set stored in an MCMC catalog file as YAML.
+
+    Catalog files store their model-set internally (in the primary FITS
+    HDU for new files, or in a legacy `.mset` sidecar file for old ones).
+    This command extracts it as a standalone YAML file, useful for
+    inspection or as a starting point for a new fit.
+    """
+
+    mcmc_file: Annotated[
+        Path,
+        typer.Argument(help="Path to the MCMC catalog file."),
+    ]
+
+    output: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--output",
+            "-o",
+            help="Path to the output YAML file. If not given, prints to the console.",
+        ),
+    ] = None
+
+    def __post_init__(self) -> None:
+        """Load the catalog and dump its model-set as YAML."""
+        super().__post_init__()
+
+        if not self.mcmc_file.exists():
+            raise RuntimeError(f"MCMC file {self.mcmc_file} not found.")
+
+        mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_file_ro(
+            self.mcmc_file.absolute().as_posix(), 0
+        )
+        mset: Ncm.MSet = mcat.peek_mset()
+        assert isinstance(mset, Ncm.MSet)
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+        if self.output is not None:
+            ser.to_yaml_file(mset, self.output.absolute().as_posix())
+            self.console.print(f"Model-set written to {self.output}.")
+        else:
+            self.console.print(ser.to_yaml(mset))
+
+        self.close_logging()

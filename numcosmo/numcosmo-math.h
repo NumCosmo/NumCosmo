@@ -47,6 +47,8 @@
 #include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/ncm/algebra/ncm_matrix.h>
 #include <numcosmo/ncm/algebra/ncm_nnls.h>
+#include <numcosmo/ncm/algebra/ncm_poly_roots.h>
+#include <numcosmo/ncm/algebra/ncm_laurent_series.h>
 #include <numcosmo/ncm/core/ncm_serialize.h>
 #include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/ncm/integration/ncm_integral1d.h>
@@ -148,10 +150,8 @@
 
 /* Likelihood object */
 #include <numcosmo/ncm/fit/ncm_fit.h>
-#ifdef NUMCOSMO_HAVE_NLOPT
 #include <numcosmo/ncm/fit/ncm_fit_nlopt.h>
 #include <numcosmo/ncm_fit_nlopt_enum.h>
-#endif /* NUMCOSMO_HAVE_NLOPT */
 #include <numcosmo/ncm/fit/ncm_fit_levmar.h>
 #include <numcosmo/ncm/fit/ncm_fit_gsl_ls.h>
 #include <numcosmo/ncm/fit/ncm_fit_gsl_mm.h>

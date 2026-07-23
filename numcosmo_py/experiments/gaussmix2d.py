@@ -44,7 +44,7 @@ def run_gaussmix2d_mcmc(
     interpolation_method: InterpolationMethod = InterpolationMethod.VKDE,
     interpolation_kernel: InterpolationKernel = InterpolationKernel.CAUCHY,
     nwalkers: int = 320,
-    nthreads: int = 4,
+    use_threads: bool = True,
     over_smooth: float = 1.1,
     init_sampling_scale: float = 1.0e-1,
 ) -> str:
@@ -74,7 +74,7 @@ def run_gaussmix2d_mcmc(
         interpolation_method=interpolation_method,
         interpolation_kernel=interpolation_kernel,
         nwalkers=nwalkers,
-        nthreads=nthreads,
+        use_threads=use_threads,
         over_smooth=over_smooth,
         init_sampling_scale=init_sampling_scale,
     )

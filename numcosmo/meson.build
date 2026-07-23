@@ -18,6 +18,7 @@ subdir('external/toeplitz')
 subdir('external/class')
 subdir('external/plc')
 subdir('external/lintegrate')
+subdir('external/libfyaml')
 
 ncm_sources = files(
     'ncm/specfunc/ncm_binsplit.c',
@@ -98,6 +99,8 @@ ncm_sources = files(
     'ncm/fit/ncm_mset_trans_kern_flat.c',
     'ncm/fit/ncm_mset_trans_kern_gauss.c',
     'ncm/algebra/ncm_nnls.c',
+    'ncm/algebra/ncm_poly_roots.c',
+    'ncm/algebra/ncm_laurent_series.c',
     'ncm/core/ncm_obj_array.c',
     'ncm/spline/ncm_ode_spline.c',
     'ncm/core/ncm_pln1d.c',
@@ -243,6 +246,8 @@ ncm_headers = files(
     'ncm/fit/ncm_mset_trans_kern_flat.h',
     'ncm/fit/ncm_mset_trans_kern_gauss.h',
     'ncm/algebra/ncm_nnls.h',
+    'ncm/algebra/ncm_poly_roots.h',
+    'ncm/algebra/ncm_laurent_series.h',
     'ncm/core/ncm_obj_array.h',
     'ncm/spline/ncm_ode_spline.h',
     'ncm/core/ncm_pln1d.h',
@@ -336,7 +341,7 @@ nc_headers = files(
     'nc/data/nc_data_cluster_ncount.h',
     'nc/data/nc_data_cluster_ncounts_gauss.h',
     'nc/data/nc_data_cluster_pseudo_counts.h',
-    'nc/data/nc_data_cluster_wl.h',
+    'nc/data/nc_data_cluster_wl_factor.h',
     'nc/data/nc_data_cluster_mass_rich.h',
     'nc/data/nc_data_cluster_mass_rich_count.h',
     'nc/data/nc_data_cmb.h',
@@ -350,19 +355,33 @@ nc_headers = files(
     'nc/data/nc_data_snia_cov.h',
     'nc/data/nc_data_xcor.h',
     'nc/lss/galaxy/nc_galaxy_wl_obs.h',
-    'nc/lss/galaxy/nc_galaxy_sd_position.h',
-    'nc/lss/galaxy/nc_galaxy_sd_position_flat.h',
-    'nc/lss/galaxy/nc_galaxy_sd_obs_redshift.h',
-    'nc/lss/galaxy/nc_galaxy_sd_obs_redshift_spec.h',
-    'nc/lss/galaxy/nc_galaxy_sd_obs_redshift_gauss.h',
-    'nc/lss/galaxy/nc_galaxy_sd_obs_redshift_pz.h',
     'nc/lss/galaxy/nc_galaxy_hod.h',
     'nc/lss/galaxy/nc_galaxy_hod_zheng07.h',
-    'nc/lss/galaxy/nc_galaxy_sd_true_redshift.h',
-    'nc/lss/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.h',
-    'nc/lss/galaxy/nc_galaxy_sd_shape.h',
-    'nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss.h',
-    'nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss_global.h',
+    'nc/lss/galaxy/nc_galaxy_redshift_pop.h',
+    'nc/lss/galaxy/nc_galaxy_redshift_pop_lsst_srd.h',
+    'nc/lss/galaxy/nc_galaxy_redshift_factor.h',
+    'nc/lss/galaxy/nc_galaxy_redshift_factor_composed.h',
+    'nc/lss/galaxy/nc_galaxy_redshift_factor_spline.h',
+    'nc/lss/galaxy/nc_galaxy_redshift_binning.h',
+    'nc/lss/galaxy/nc_galaxy_position_factor.h',
+    'nc/lss/galaxy/nc_galaxy_position_factor_flat.h',
+    'nc/lss/galaxy/nc_galaxy_redshift_obs_sel.h',
+    'nc/lss/galaxy/nc_galaxy_redshift_obs_sel_gauss.h',
+    'nc/lss/galaxy/nc_galaxy_shape_factor.h',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_quad.h',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_var_add.h',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_cgf.h',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_laplace.h',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h',
+    'nc/lss/galaxy/nc_galaxy_shape_intrinsic_mode.h',
+    'nc/lss/galaxy/nc_galaxy_shape_pop.h',
+    'nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h',
+    'nc/lss/galaxy/nc_galaxy_shape_pop_gauss_private.h',
+    'nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h',
+    'nc/lss/galaxy/nc_galaxy_shape_pop_beta.h',
+    'nc/lss/galaxy/nc_galaxy_redshift_obs.h',
+    'nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.h',
     'nc/lss/cluster/nc_cluster_abundance.h',
     'nc/lss/cluster/nc_cluster_mass.h',
     'nc/lss/cluster/nc_cluster_mass_richness.h',
@@ -424,6 +443,7 @@ nc_headers = files(
     'nc/lss/wl/nc_reduced_shear_calib_wtg.h',
     'nc/lss/wl/nc_reduced_shear_cluster_mass.h',
     'nc/lss/wl/nc_wl_ellipticity.h',
+    'nc/lss/wl/nc_wl_ellipticity_series.h',
     'nc/powspec/nc_transfer_func.h',
     'nc/powspec/nc_transfer_func_bbks.h',
     'nc/powspec/nc_transfer_func_camb.h',
@@ -527,7 +547,7 @@ nc_sources = files(
     'nc/data/nc_data_cluster_ncount.c',
     'nc/data/nc_data_cluster_ncounts_gauss.c',
     'nc/data/nc_data_cluster_pseudo_counts.c',
-    'nc/data/nc_data_cluster_wl.c',
+    'nc/data/nc_data_cluster_wl_factor.c',
     'nc/data/nc_data_cluster_mass_rich.c',
     'nc/data/nc_data_cluster_mass_rich_count.c',
     'nc/data/nc_data_cmb.c',
@@ -541,19 +561,32 @@ nc_sources = files(
     'nc/data/nc_data_snia_cov.c',
     'nc/data/nc_data_xcor.c',
     'nc/lss/galaxy/nc_galaxy_wl_obs.c',
-    'nc/lss/galaxy/nc_galaxy_sd_position.c',
-    'nc/lss/galaxy/nc_galaxy_sd_position_flat.c',
-    'nc/lss/galaxy/nc_galaxy_sd_obs_redshift.c',
-    'nc/lss/galaxy/nc_galaxy_sd_obs_redshift_spec.c',
-    'nc/lss/galaxy/nc_galaxy_sd_obs_redshift_gauss.c',
-    'nc/lss/galaxy/nc_galaxy_sd_obs_redshift_pz.c',
     'nc/lss/galaxy/nc_galaxy_hod.c',
     'nc/lss/galaxy/nc_galaxy_hod_zheng07.c',
-    'nc/lss/galaxy/nc_galaxy_sd_true_redshift.c',
-    'nc/lss/galaxy/nc_galaxy_sd_true_redshift_lsst_srd.c',
-    'nc/lss/galaxy/nc_galaxy_sd_shape.c',
-    'nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss.c',
-    'nc/lss/galaxy/nc_galaxy_sd_shape_hsm_gauss_global.c',
+    'nc/lss/galaxy/nc_galaxy_redshift_pop.c',
+    'nc/lss/galaxy/nc_galaxy_redshift_pop_lsst_srd.c',
+    'nc/lss/galaxy/nc_galaxy_redshift_factor.c',
+    'nc/lss/galaxy/nc_galaxy_redshift_factor_composed.c',
+    'nc/lss/galaxy/nc_galaxy_redshift_factor_spline.c',
+    'nc/lss/galaxy/nc_galaxy_redshift_binning.c',
+    'nc/lss/galaxy/nc_galaxy_position_factor.c',
+    'nc/lss/galaxy/nc_galaxy_position_factor_flat.c',
+    'nc/lss/galaxy/nc_galaxy_redshift_obs_sel.c',
+    'nc/lss/galaxy/nc_galaxy_redshift_obs_sel_gauss.c',
+    'nc/lss/galaxy/nc_galaxy_shape_factor.c',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_quad.c',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_var_add.c',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_cgf.c',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_laplace.c',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.c',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.c',
+    'nc/lss/galaxy/nc_galaxy_shape_intrinsic_mode.c',
+    'nc/lss/galaxy/nc_galaxy_shape_pop.c',
+    'nc/lss/galaxy/nc_galaxy_shape_pop_gauss.c',
+    'nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.c',
+    'nc/lss/galaxy/nc_galaxy_shape_pop_beta.c',
+    'nc/lss/galaxy/nc_galaxy_redshift_obs.c',
+    'nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.c',
     'nc/lss/cluster/nc_cluster_abundance.c',
     'nc/lss/cluster/nc_cluster_mass.c',
     'nc/lss/cluster/nc_cluster_mass_richness.c',
@@ -615,6 +648,7 @@ nc_sources = files(
     'nc/lss/wl/nc_reduced_shear_calib_wtg.c',
     'nc/lss/wl/nc_reduced_shear_cluster_mass.c',
     'nc/lss/wl/nc_wl_ellipticity.c',
+    'nc/lss/wl/nc_wl_ellipticity_series.c',
     'nc/powspec/nc_transfer_func.c',
     'nc/powspec/nc_transfer_func_bbks.c',
     'nc/powspec/nc_transfer_func_camb.c',
@@ -721,56 +755,53 @@ nc_enum_types = gnome.mkenums(
     install_dir: numcosmo_includedir,
 )
 
-ncm_fit_nlopt_enum_types = []
-if nlopt_dep.found()
-    message('Generating ncm_fit_nlopt_enum_meta.h')
+message('Generating ncm_fit_nlopt_enum_meta.h')
 
-    process_nlopt_enum = find_program('process_nlopt_enum.py', required: true)
-    glib_mkenums = find_program('glib-mkenums', required: true)
+process_nlopt_enum = find_program('process_nlopt_enum.py', required: true)
+glib_mkenums = find_program('glib-mkenums', required: true)
 
-    nlopt_header_tmp = cc.preprocess(
-        'ncm_fit_nlopt_enum_meta.c',
-        output: 'ncm_fit_nlopt_enum_meta.i',
-        dependencies: nlopt_dep,
-    )
+nlopt_header_tmp = cc.preprocess(
+    'ncm_fit_nlopt_enum_meta.c',
+    output: 'ncm_fit_nlopt_enum_meta.i',
+    dependencies: nlopt_dep,
+)
 
-    nlopt_enum_meta = custom_target(
-        'ncm_fit_nlopt_enum_meta.h',
-        input: nlopt_header_tmp,
-        output: 'ncm_fit_nlopt_enum_meta.h',
-        command: [process_nlopt_enum, '@INPUT@', '@OUTPUT@'],
-    )
+nlopt_enum_meta = custom_target(
+    'ncm_fit_nlopt_enum_meta.h',
+    input: nlopt_header_tmp,
+    output: 'ncm_fit_nlopt_enum_meta.h',
+    command: [process_nlopt_enum, '@INPUT@', '@OUTPUT@'],
+)
 
-    ncm_fit_nlopt_enum_h = custom_target(
-        'ncm_fit_nlopt_enum.h',
-        input: nlopt_enum_meta,
-        output: 'ncm_fit_nlopt_enum.h',
-        command: [
-            glib_mkenums,
-            '--template', meson.current_source_dir() / 'ncm_fit_nlopt_enum.h.template',
-            '@INPUT@',
-        ],
-        capture: true,
-        install: true,
-        install_dir: numcosmo_includedir,
-    )
+ncm_fit_nlopt_enum_h = custom_target(
+    'ncm_fit_nlopt_enum.h',
+    input: nlopt_enum_meta,
+    output: 'ncm_fit_nlopt_enum.h',
+    command: [
+        glib_mkenums,
+        '--template', meson.current_source_dir() / 'ncm_fit_nlopt_enum.h.template',
+        '@INPUT@',
+    ],
+    capture: true,
+    install: true,
+    install_dir: numcosmo_includedir,
+)
 
-    ncm_fit_nlopt_enum_c = custom_target(
-        'ncm_fit_nlopt_enum.c',
-        input: nlopt_enum_meta,
-        output: 'ncm_fit_nlopt_enum.c',
-        command: [
-            glib_mkenums,
-            '--template', meson.current_source_dir() / 'ncm_fit_nlopt_enum.c.template',
-            '@INPUT@',
-        ],
-        capture: true,
-    )
+ncm_fit_nlopt_enum_c = custom_target(
+    'ncm_fit_nlopt_enum.c',
+    input: nlopt_enum_meta,
+    output: 'ncm_fit_nlopt_enum.c',
+    command: [
+        glib_mkenums,
+        '--template', meson.current_source_dir() / 'ncm_fit_nlopt_enum.c.template',
+        '@INPUT@',
+    ],
+    capture: true,
+)
 
-    ncm_fit_nlopt_enum_types += [ncm_fit_nlopt_enum_c, ncm_fit_nlopt_enum_h]
-    ncm_sources += 'ncm/fit/ncm_fit_nlopt.c'
-    ncm_headers += 'ncm/fit/ncm_fit_nlopt.h'
-endif
+ncm_fit_nlopt_enum_types = [ncm_fit_nlopt_enum_c, ncm_fit_nlopt_enum_h]
+ncm_sources += 'ncm/fit/ncm_fit_nlopt.c'
+ncm_headers += 'ncm/fit/ncm_fit_nlopt.h'
 
 install_headers(
     ncm_headers + nc_headers + [
@@ -784,11 +815,11 @@ install_headers(
 sundials_inc = include_directories('external/sundials/include')
 libcuba_inc = include_directories('external/libcuba')
 lintegrate_inc = include_directories('external/lintegrate')
+libfyaml_inc = include_directories('external/libfyaml/include')
 
 libnumcosmo_dep_list = [
     mpi_c_dep,
     cfitsio_dep,
-    libfyaml_dep,
     fftw3_dep,
     fftw3f_dep,
     gio_dep,
@@ -830,12 +861,28 @@ libnumcosmo = library(
     install: true,
     # intl.lib is not compatible with SAFESEH
     link_args: [noseh_link_args],
-    include_directories: [configinc, sundials_inc, libcuba_inc, plc_inc, lintegrate_inc],
+    include_directories: [
+        configinc,
+        sundials_inc,
+        libcuba_inc,
+        plc_inc,
+        lintegrate_inc,
+        libfyaml_inc,
+    ],
     # Planck likelihood code uses dlsym to load the Planck likelihood library
     # components. This requires linking with link_whole to ensure that the
     # symbols are available at runtime.
     link_whole: [libplc],
-    link_with: [libsundials, libcuba, liblevmar, libmisc, libtoeplitz, libclass, liblintegrate],
+    link_with: [
+        libsundials,
+        libcuba,
+        liblevmar,
+        libmisc,
+        libtoeplitz,
+        libclass,
+        liblintegrate,
+        libfyaml,
+    ],
     dependencies: libnumcosmo_dep_list,
     c_args: numcosmo_c_args,
 )
@@ -843,11 +890,8 @@ libnumcosmo = library(
 libnumcosmo_dep_sources = [
     ncm_enum_types[1],
     nc_enum_types[1],
+    ncm_fit_nlopt_enum_types[1],
 ]
-
-if nlopt_dep.found()
-    libnumcosmo_dep_sources += ncm_fit_nlopt_enum_types[1]
-endif
 
 libnumcosmo_dep = declare_dependency(
     link_with: libnumcosmo,

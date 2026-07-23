@@ -134,9 +134,11 @@ NumCosmo has three distinct parallel mechanisms, which must not be confused:
 
 - **OpenMP threads** — `#pragma omp parallel [for]`, governed by `OMP_NUM_THREADS`. Used by
   `ncm_fit_esmcmc`, `ncm_fit_mc`, `nc_data_cluster_wl` (when `enable_parallel`),
-  `ncm_stats_dist`, `ncm_stats_dist_vkde`. Note: ESMCMC's `set_nthreads(N)` only toggles the
-  `if (nthreads > 1)` clause; the *actual* thread count is `OMP_NUM_THREADS`. There is **no**
-  separate NumCosmo thread pool for these — it is OpenMP.
+  `ncm_stats_dist`, `ncm_stats_dist_vkde`. Note: `NcmFitMC`/`NcmFitESMCMC`'s
+  `set_use_threads(bool)` only gates whether the OpenMP-parallel code path runs at all; the
+  *actual* thread count is always `OMP_NUM_THREADS`. There is **no** separate NumCosmo thread
+  pool for these — it is OpenMP. (`NcmFitMCMC` has no threading support at all — it always
+  runs single-threaded.)
 - **MPI** — separate processes via `mpiexec`; some objects in `perturbations/` branch on both
   OMP and MPI.
 - **OpenMP SIMD** — `#pragma omp simd` (e.g. `ncm_sbessel_ode_solver`) is *vectorization*, not
@@ -149,17 +151,22 @@ are exercised in the normal run rather than only on a hand-invoked lane:
 | Test kind | Scheduling | `OMP_NUM_THREADS` |
 |-----------|-----------|-------------------|
 | concurrent (default `is_parallel: true`; pytest `-n auto`) | many at once | `1` |
-| run-alone OpenMP (`omp` suite ⇒ `is_parallel: false`; non-xdist `py-omp` lane) | one at a time, owns the machine | `$(getconf _NPROCESSORS_ONLN)` (all cores) |
+| run-alone OpenMP (`omp` suite ⇒ `is_parallel: false`; non-xdist `py-omp` lane) | one at a time, owns the machine | CPUs available *at test-run time* (all of them) |
 
 Concurrent tests are pinned to a single thread on **every** backend (OMP + OpenBLAS/BLIS/MKL)
 to avoid cores² oversubscription and the mixed-OpenBLAS deadlock. Tests with an
 OpenMP-parallel path carry the **`omp`** suite tag: meson marks the C ones `is_parallel: false`
-and gives them — and the non-xdist `py-omp` pytest lane — `OMP_NUM_THREADS` = online cores
-(read once via `getconf _NPROCESSORS_ONLN` at configure time), so the parallel branch
-(thread coordination, `reduction`, scheduling) actually runs. Because those tests run alone,
-this happens inside the ordinary `meson test` invocation — no `--num-processes=1`, no exported
-`OMP_NUM_THREADS`, no separate lane required. (`mpi` still gets its own `mpiexec` lane, pinned
-to one thread; OpenMP SIMD is unaffected by `OMP_NUM_THREADS`.)
+and runs them — and the non-xdist `py-omp` pytest lane — through
+`tests/scripts/detect_omp_threads.sh`, a wrapper that sets `OMP_NUM_THREADS`/`OMP_THREAD_LIMIT`
+to the CPU count available right then (`nproc` on Linux, `sysctl -n hw.ncpu` on macOS, falling
+back to `getconf _NPROCESSORS_ONLN`) before `exec`ing the real test/`pytest`, so the parallel
+branch (thread coordination, `reduction`, scheduling) actually runs. This is deliberately
+evaluated fresh on every `meson test` invocation (not baked in at `meson setup` time) so a
+builddir built on one machine can run correctly on a differently-sized one. Because
+these tests run alone, this happens inside the ordinary `meson test` invocation — no
+`--num-processes=1`, no exported `OMP_NUM_THREADS`, no separate lane required. (`mpi` still
+gets its own `mpiexec` lane, pinned to one thread; OpenMP SIMD is unaffected by
+`OMP_NUM_THREADS`.)
 
 ### Reproducibility and the `-Dflaky_tests` option
 

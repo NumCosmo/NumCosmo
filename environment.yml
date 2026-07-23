@@ -26,7 +26,6 @@ dependencies:
   - jupyter
   - lcov
   - libflint
-  - libfyaml < 0.9.6
   - matplotlib-base
   - meson
   - mpfr

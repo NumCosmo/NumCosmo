@@ -35,11 +35,11 @@
  * selecting it through object state, so the math can be inlined directly into
  * the weak-lensing hot loops.
  *
- * Each transformation comes in two flavours, following the
- * ncm_complex_set() / ncm_complex_set_c() convention: the plain-named functions
- * documented here take #NcmComplex and are introspectable, while the
- * _c-suffixed counterparts take a native C99 complex double and are inlined.
- *
+ * Each transformation comes in two flavours (matching ncm_laurent_series.h's
+ * own bare/`_ptr` convention): the `_ptr`-suffixed functions documented here
+ * take #NcmComplex by pointer and are introspectable, while their plain-named
+ * counterparts (nc_wl_ellipticity.h) take it by value and are inlined for the
+ * C hot loops.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -54,7 +54,7 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /**
- * nc_wl_ellipticity_apply_shear_trace:
+ * nc_wl_ellipticity_apply_shear_trace_ptr:
  * @g: reduced shear as a #NcmComplex
  * @chi: intrinsic distortion as a #NcmComplex
  * @chi_obs: output observed distortion as a #NcmComplex
@@ -63,13 +63,13 @@
  * (distortion) convention, storing the result in @chi_obs.
  */
 void
-nc_wl_ellipticity_apply_shear_trace (const NcmComplex *g, const NcmComplex *chi, NcmComplex *chi_obs)
+nc_wl_ellipticity_apply_shear_trace_ptr (const NcmComplex *g, const NcmComplex *chi, NcmComplex *chi_obs)
 {
-  ncm_complex_set_c (chi_obs, nc_wl_ellipticity_apply_shear_trace_c (ncm_complex_c (g), ncm_complex_c (chi)));
+  ncm_complex_set_c (chi_obs, nc_wl_ellipticity_apply_shear_trace (ncm_complex_c (g), ncm_complex_c (chi)));
 }
 
 /**
- * nc_wl_ellipticity_apply_shear_inv_trace:
+ * nc_wl_ellipticity_apply_shear_inv_trace_ptr:
  * @g: reduced shear as a #NcmComplex
  * @chi_obs: observed distortion as a #NcmComplex
  * @chi: output intrinsic distortion as a #NcmComplex
@@ -78,13 +78,13 @@ nc_wl_ellipticity_apply_shear_trace (const NcmComplex *g, const NcmComplex *chi,
  * under the reduced shear @g, in the trace (distortion) convention.
  */
 void
-nc_wl_ellipticity_apply_shear_inv_trace (const NcmComplex *g, const NcmComplex *chi_obs, NcmComplex *chi)
+nc_wl_ellipticity_apply_shear_inv_trace_ptr (const NcmComplex *g, const NcmComplex *chi_obs, NcmComplex *chi)
 {
-  ncm_complex_set_c (chi, nc_wl_ellipticity_apply_shear_inv_trace_c (ncm_complex_c (g), ncm_complex_c (chi_obs)));
+  ncm_complex_set_c (chi, nc_wl_ellipticity_apply_shear_inv_trace (ncm_complex_c (g), ncm_complex_c (chi_obs)));
 }
 
 /**
- * nc_wl_ellipticity_lndet_jac_trace:
+ * nc_wl_ellipticity_lndet_jac_trace_ptr:
  * @g: reduced shear as a #NcmComplex
  * @chi_obs: observed distortion as a #NcmComplex
  *
@@ -95,13 +95,13 @@ nc_wl_ellipticity_apply_shear_inv_trace (const NcmComplex *g, const NcmComplex *
  * Returns: the log-determinant of the shear Jacobian.
  */
 gdouble
-nc_wl_ellipticity_lndet_jac_trace (const NcmComplex *g, const NcmComplex *chi_obs)
+nc_wl_ellipticity_lndet_jac_trace_ptr (const NcmComplex *g, const NcmComplex *chi_obs)
 {
-  return nc_wl_ellipticity_lndet_jac_trace_c (ncm_complex_c (g), ncm_complex_c (chi_obs));
+  return nc_wl_ellipticity_lndet_jac_trace (ncm_complex_c (g), ncm_complex_c (chi_obs));
 }
 
 /**
- * nc_wl_ellipticity_apply_shear_trace_det:
+ * nc_wl_ellipticity_apply_shear_trace_det_ptr:
  * @g: reduced shear as a #NcmComplex
  * @e: intrinsic ellipticity as a #NcmComplex
  * @e_obs: output observed ellipticity as a #NcmComplex
@@ -110,13 +110,13 @@ nc_wl_ellipticity_lndet_jac_trace (const NcmComplex *g, const NcmComplex *chi_ob
  * trace-determinant (ellipticity) convention, storing the result in @e_obs.
  */
 void
-nc_wl_ellipticity_apply_shear_trace_det (const NcmComplex *g, const NcmComplex *e, NcmComplex *e_obs)
+nc_wl_ellipticity_apply_shear_trace_det_ptr (const NcmComplex *g, const NcmComplex *e, NcmComplex *e_obs)
 {
-  ncm_complex_set_c (e_obs, nc_wl_ellipticity_apply_shear_trace_det_c (ncm_complex_c (g), ncm_complex_c (e)));
+  ncm_complex_set_c (e_obs, nc_wl_ellipticity_apply_shear_trace_det (ncm_complex_c (g), ncm_complex_c (e)));
 }
 
 /**
- * nc_wl_ellipticity_apply_shear_inv_trace_det:
+ * nc_wl_ellipticity_apply_shear_inv_trace_det_ptr:
  * @g: reduced shear as a #NcmComplex
  * @e_obs: observed ellipticity as a #NcmComplex
  * @e: output intrinsic ellipticity as a #NcmComplex
@@ -126,13 +126,13 @@ nc_wl_ellipticity_apply_shear_trace_det (const NcmComplex *g, const NcmComplex *
  * convention.
  */
 void
-nc_wl_ellipticity_apply_shear_inv_trace_det (const NcmComplex *g, const NcmComplex *e_obs, NcmComplex *e)
+nc_wl_ellipticity_apply_shear_inv_trace_det_ptr (const NcmComplex *g, const NcmComplex *e_obs, NcmComplex *e)
 {
-  ncm_complex_set_c (e, nc_wl_ellipticity_apply_shear_inv_trace_det_c (ncm_complex_c (g), ncm_complex_c (e_obs)));
+  ncm_complex_set_c (e, nc_wl_ellipticity_apply_shear_inv_trace_det (ncm_complex_c (g), ncm_complex_c (e_obs)));
 }
 
 /**
- * nc_wl_ellipticity_lndet_jac_trace_det:
+ * nc_wl_ellipticity_lndet_jac_trace_det_ptr:
  * @g: reduced shear as a #NcmComplex
  * @e_obs: observed ellipticity as a #NcmComplex
  *
@@ -143,8 +143,8 @@ nc_wl_ellipticity_apply_shear_inv_trace_det (const NcmComplex *g, const NcmCompl
  * Returns: the log-determinant of the shear Jacobian.
  */
 gdouble
-nc_wl_ellipticity_lndet_jac_trace_det (const NcmComplex *g, const NcmComplex *e_obs)
+nc_wl_ellipticity_lndet_jac_trace_det_ptr (const NcmComplex *g, const NcmComplex *e_obs)
 {
-  return nc_wl_ellipticity_lndet_jac_trace_det_c (ncm_complex_c (g), ncm_complex_c (e_obs));
+  return nc_wl_ellipticity_lndet_jac_trace_det (ncm_complex_c (g), ncm_complex_c (e_obs));
 }
 
