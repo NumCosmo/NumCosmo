@@ -37,9 +37,9 @@
  * $$ b_i \mathrel{+}= \sum_L R^{\phi}_{iL}\, C_L^{\phi\phi}\,\frac{L^2(L+1)^2}{2\pi}
  *      + \frac{1}{A^2}\sum_X \sum_L R^{X}_{iL}\, C_L^{X}\,\frac{L(L+1)}{2\pi}, $$
  * with $X$ running over the selected CMB spectra (TT, EE, TE, ...) and $A$ the
- * calibration. The CMB-marginalized file has @hascl all zero and @cors %NULL,
- * so $b_i$ depends on $C_L^{\phi\phi}$ alone. Being an #NcmDataGauss it can
- * resample; unlike the clik wrapper it is self-contained.
+ * calibration. The CMB-marginalized file has @hascl all zero, so only the phi
+ * block of @cors survives and $b_i$ depends on $C_L^{\phi\phi}$ alone. Being an
+ * #NcmDataGauss it can resample; unlike the clik wrapper it is self-contained.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -209,16 +209,17 @@ nc_data_planck_lensing_constructed (GObject *object)
 
   lens->nlt = (lens->ncmb > 0) ? (1 + lens->ncmb) * lens->nl : lens->nl;
 
-  /* Bins and cor0 are always present; cors only when CMB spectra are selected. */
+  /* Bins and cor0 are always present. cors (the first-order correction) is
+   * optional but, when shipped, holds the phi block plus one block per selected
+   * CMB spectrum; the CMB-marginalized file carries only the phi block. */
   g_assert_nonnull (lens->bins);
   g_assert_cmpuint (ncm_matrix_nrows (lens->bins), ==, lens->nbins);
   g_assert_cmpuint (ncm_matrix_ncols (lens->bins), ==, lens->nl);
   g_assert_nonnull (lens->cor0);
   g_assert_cmpuint (ncm_vector_len (lens->cor0), ==, lens->nbins);
 
-  if (lens->ncmb > 0)
+  if (lens->cors != NULL)
   {
-    g_assert_nonnull (lens->cors);
     g_assert_cmpuint (ncm_matrix_nrows (lens->cors), ==, lens->nbins);
     g_assert_cmpuint (ncm_matrix_ncols (lens->cors), ==, lens->nlt);
   }

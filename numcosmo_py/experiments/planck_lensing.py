@@ -94,9 +94,11 @@ def build_lensing(
     bins = _read_cldf_array(node, "bins").reshape(nbins, nl)
     cor0 = _read_cldf_array(node, "cor0")
 
-    # The loader ignores the on-disk cors block unless a CMB spectrum is selected.
+    # Read the first-order correction whenever the file ships one (clik bugfix
+    # 44e638b): the CMB-marginalized file also carries a phi (N0) renormalization
+    # block, dropped by the old plc_3.0 loader.
     cors_mat = None
-    if ncmb:
+    if os.path.exists(os.path.join(node, "cors")):
         cors = _read_cldf_array(node, "cors").reshape(nbins, nlt)
         cors_mat = Ncm.Matrix.new_array(cors.ravel().tolist(), nlt)
 
