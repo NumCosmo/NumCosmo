@@ -75,9 +75,10 @@ struct _NcDataPlanckCommander
   gdouble *xa;       /* cached data pointers (stride-1) */
   gdouble *ya;
   gdouble *y2a;
-  gdouble *x;    /* nl scratch */
-  gdouble *d;    /* nl scratch */
-  gint calib_pi; /* resolved calib param index (-1 => unresolved) */
+  gdouble *x;              /* nl scratch */
+  gdouble *d;              /* nl scratch */
+  gint calib_pi;           /* resolved calib param index (-1 => unresolved) */
+  gboolean clik_pi_compat; /* reproduce clik's single-precision pi in Dl */
   NcmVector *cl_TT;
 };
 
@@ -96,6 +97,7 @@ enum
   PROP_MU,
   PROP_COV,
   PROP_MU_SIGMA,
+  PROP_CLIK_PI_COMPAT,
   PROP_SIZE,
 };
 
@@ -104,31 +106,32 @@ G_DEFINE_TYPE (NcDataPlanckCommander, nc_data_planck_commander, NCM_TYPE_DATA)
 static void
 nc_data_planck_commander_init (NcDataPlanckCommander *cmd)
 {
-  cmd->pb         = NULL;
-  cmd->lmin       = 0;
-  cmd->lmax       = 0;
-  cmd->nl         = 0;
-  cmd->nbin       = 0;
-  cmd->delta_l    = 0;
-  cmd->calib_name = NULL;
-  cmd->cl2x_xa    = NULL;
-  cmd->cl2x_ya    = NULL;
-  cmd->cl2x_y2a   = NULL;
-  cmd->mu         = NULL;
-  cmd->cov        = NULL;
-  cmd->mu_sigma   = NULL;
-  cmd->P          = NULL;
-  cmd->cov_ll     = NULL;
-  cmd->offset     = 0.0;
-  cmd->prior_lo   = NULL;
-  cmd->prior_hi   = NULL;
-  cmd->xa         = NULL;
-  cmd->ya         = NULL;
-  cmd->y2a        = NULL;
-  cmd->x          = NULL;
-  cmd->d          = NULL;
-  cmd->calib_pi   = -1;
-  cmd->cl_TT      = NULL;
+  cmd->pb             = NULL;
+  cmd->lmin           = 0;
+  cmd->lmax           = 0;
+  cmd->nl             = 0;
+  cmd->nbin           = 0;
+  cmd->delta_l        = 0;
+  cmd->calib_name     = NULL;
+  cmd->cl2x_xa        = NULL;
+  cmd->cl2x_ya        = NULL;
+  cmd->cl2x_y2a       = NULL;
+  cmd->mu             = NULL;
+  cmd->cov            = NULL;
+  cmd->mu_sigma       = NULL;
+  cmd->P              = NULL;
+  cmd->cov_ll         = NULL;
+  cmd->offset         = 0.0;
+  cmd->prior_lo       = NULL;
+  cmd->prior_hi       = NULL;
+  cmd->xa             = NULL;
+  cmd->ya             = NULL;
+  cmd->y2a            = NULL;
+  cmd->x              = NULL;
+  cmd->d              = NULL;
+  cmd->calib_pi       = -1;
+  cmd->clik_pi_compat = FALSE;
+  cmd->cl_TT          = NULL;
 }
 
 /* Locate klo in [0, n-2] with xa[klo] <= x < xa[klo+1] (clamped). */
@@ -384,6 +387,9 @@ nc_data_planck_commander_set_property (GObject *object, guint prop_id, const GVa
     case PROP_MU_SIGMA:
       ncm_vector_substitute (&cmd->mu_sigma, g_value_get_object (value), TRUE);
       break;
+    case PROP_CLIK_PI_COMPAT:
+      cmd->clik_pi_compat = g_value_get_boolean (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -434,6 +440,9 @@ nc_data_planck_commander_get_property (GObject *object, guint prop_id, GValue *v
       break;
     case PROP_MU_SIGMA:
       g_value_set_object (value, cmd->mu_sigma);
+      break;
+    case PROP_CLIK_PI_COMPAT:
+      g_value_set_boolean (value, cmd->clik_pi_compat);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -577,6 +586,13 @@ nc_data_planck_commander_class_init (NcDataPlanckCommanderClass *klass)
                                                         "Mean sigma_l (Dl) defining the offset normalization",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_CLIK_PI_COMPAT,
+                                   g_param_spec_boolean ("clik-pi-compat",
+                                                         NULL,
+                                                         "Reproduce clik's single-precision pi in the Dl conversion (bit-identical to clik)",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->get_length = &_nc_data_planck_commander_get_length;
   data_class->prepare    = &_nc_data_planck_commander_prepare;
@@ -639,8 +655,21 @@ commander_model_dl (NcDataPlanckCommander *cmd, NcmMSet *mset, gdouble *dl)
     calib2 = cal * cal;
   }
 
-  for (l = cmd->lmin; l <= cmd->lmax; l++)
-    dl[l - cmd->lmin] = ncm_vector_get (cmd->cl_TT, l) / calib2 * (l * (l + 1.0)) / twopi;
+  if (cmd->clik_pi_compat)
+  {
+    /* Reproduce clik's gibbs conversion bit-for-bit: it computes Dl with a
+     * single-precision pi and the exact op order Cl * calib * l(l+1) / 2 / pi. */
+    const gdouble pi32  = (gdouble) (gfloat) M_PI;
+    const gdouble calib = 1.0 / calib2;
+
+    for (l = cmd->lmin; l <= cmd->lmax; l++)
+      dl[l - cmd->lmin] = ncm_vector_get (cmd->cl_TT, l) * calib * (l * (l + 1.0)) / 2.0 / pi32;
+  }
+  else
+  {
+    for (l = cmd->lmin; l <= cmd->lmax; l++)
+      dl[l - cmd->lmin] = ncm_vector_get (cmd->cl_TT, l) / calib2 * (l * (l + 1.0)) / twopi;
+  }
 }
 
 static void

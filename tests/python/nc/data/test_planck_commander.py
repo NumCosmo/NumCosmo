@@ -92,3 +92,31 @@ def test_matches_clik_reference():
     rng = Ncm.RNG.seeded_new(None, 42)
     native.resample(mset, rng)
     assert np.isfinite(native.m2lnL_val(mset))
+
+
+@pytest.mark.app
+@needs_data
+def test_clik_pi_compat_bit_identical():
+    """With clik_pi_compat, the native m2lnL matches clik bit-for-bit.
+
+    clik's gibbs uses a single-precision pi in the Dl = Cl*l(l+1)/2pi conversion;
+    reproducing that removes the ~2e-6 residual of the (more accurate) default.
+    """
+    # pylint: disable=import-outside-toplevel
+    from numcosmo_py.cosmology import create_cosmo, HIPrimModel
+    from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
+
+    cbe = Nc.HIPertBoltzmannCBE.new()
+    cosmo = create_cosmo(prim_model=HIPrimModel.POWER_LAW)
+    planck = Nc.PlanckFICorTT()
+    planck.params_set_default_ftype()
+    mset = Ncm.MSet.new_array([planck, cosmo])
+    mset_set_parameters(mset, Planck18Types.TT, HIPrimModel.POWER_LAW)
+    mset.prepare_fparam_map()
+
+    ref = Nc.DataPlanckLKL.full_new_id(Nc.DataPlanckLKLType.BASELINE_18_LOWL_TT, cbe)
+    native = build_commander(_CLIK, cbe, clik_pi_compat=True)
+
+    ref.prepare(mset)
+    native.prepare(mset)
+    assert native.m2lnL_val(mset) == ref.m2lnL_val(mset)

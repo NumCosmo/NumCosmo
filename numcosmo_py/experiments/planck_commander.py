@@ -41,9 +41,16 @@ COMMANDER_RELPATH = os.path.join(
 
 
 def build_commander(
-    clik_path: str, pb: Nc.HIPertBoltzmann | None = None
+    clik_path: str,
+    pb: Nc.HIPertBoltzmann | None = None,
+    clik_pi_compat: bool = False,
 ) -> Nc.DataPlanckCommander:
-    """Build a native #NcDataPlanckCommander from a commander clik file + Cls source."""
+    """Build a native #NcDataPlanckCommander from a commander clik file + Cls source.
+
+    With ``clik_pi_compat=True`` the Dl conversion uses clik's single-precision pi,
+    reproducing the clik gibbs likelihood bit-for-bit (otherwise full double pi is
+    used, which is more accurate but differs from clik by ~2e-6 in m2lnL).
+    """
     lkl = os.path.join(clik_path, "clik", "lkl_0")
     lmin, lmax, delta_l = 2, 29, 1000
     nl = lmax - lmin + 1
@@ -78,6 +85,7 @@ def build_commander(
         Ncm.Matrix.new_array(cov.ravel().tolist(), nl),
         vec(mu_sigma),
     )
+    cmd.set_property("clik-pi-compat", clik_pi_compat)
 
     if pb is not None:
         cmd.set_hipert_boltzmann(pb)
