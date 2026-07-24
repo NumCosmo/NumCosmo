@@ -652,17 +652,18 @@ class GalaxyPopGenGaussLocal(BaseModel):
 class GalaxyPopGenBeta(BaseModel):
     """Beta intrinsic-ellipticity population (``NcGalaxyShapePopBeta``).
 
-    Global model over $x=|\\chi_I|^2$, parameterized directly by the Beta
-    distribution's own shape parameters ``alpha``/``beta``. ``beta>=1``,
-    ``alpha>=0.5001`` -- see ``NcGalaxyShapePopBeta``'s class documentation.
-    Incompatible with shape schemes that linearize around a Gaussian (see
+    Global model over the ellipticity MODULUS $r=|\\chi_I|$ (not its
+    square), parameterized directly by the Beta distribution's own shape
+    parameters ``alpha``/``beta``. ``alpha>=1``, ``beta>=1`` -- see
+    ``NcGalaxyShapePopBeta``'s class documentation. Incompatible with shape
+    schemes that linearize around a Gaussian (see
     ``check_shape_pop_compat()``).
 
-    ``mean``/``concentration`` (``alpha/(alpha+beta)``/``alpha+beta``) are
-    reporting quantities, not fields here -- read them off a built instance
-    via ``get_shape_pop().get_mean()``/``.get_concentration()``, or from an
-    ``NcmMSetFuncList`` entry (``NcGalaxyShapePopBeta:mean``/
-    ``:concentration``) once the population is registered into an ``NcmMSet``.
+    ``e_rms``/``mode`` (of $x=|\\chi_I|^2$) are reporting quantities, not
+    fields here -- read them off a built instance via
+    ``get_shape_pop().get_e_rms()``/``.get_mode()``, or from an
+    ``NcmMSetFuncList`` entry (``NcGalaxyShapePopBeta:e_rms``/``:mode``) once
+    the population is registered into an ``NcmMSet``.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -670,7 +671,7 @@ class GalaxyPopGenBeta(BaseModel):
     # Lower-bound sanity checks only, intentionally looser than the C
     # model's advisory fit-bounds; must track nc_galaxy_shape_pop_beta.c's
     # alpha/beta floors.
-    alpha: Annotated[float, Field(ge=0.5001)] = DEFAULT_POP_BETA_ALPHA
+    alpha: Annotated[float, Field(ge=1.0)] = DEFAULT_POP_BETA_ALPHA
     beta: Annotated[float, Field(ge=1.0)] = DEFAULT_POP_BETA_BETA
 
     _pop: Nc.GalaxyShapePopBeta = PrivateAttr()
@@ -698,7 +699,7 @@ class GalaxyPopGenBeta(BaseModel):
     def get_shape_pop(self) -> Nc.GalaxyShapePopBeta:
         """Return the built NcGalaxyShapePopBeta.
 
-        e.g. for get_mean()/get_concentration().
+        e.g. for get_e_rms()/get_mode().
         """
         return self._pop
 
@@ -713,16 +714,16 @@ class GalaxyPopGenBeta(BaseModel):
     def get_mfuncs(self) -> list[Ncm.MSetFuncList]:
         """Derived NcmMSetFuncList entries worth recording in an MC/MCMC catalog.
 
-        alpha/beta are the fitted parameters, but mean/std of x = |chi_I|^2
-        are the physically meaningful reported quantities -- recorded as
-        catalog columns via NcmFitESMCMC.new_funcs_array()/an MC run's own
-        equivalent, the same convention every other generate command in this
-        CLI uses for its own derived quantities (see e.g. GenerateQSpline's
-        mean_kappa/q_transition).
+        alpha/beta are the fitted parameters, but e_rms/mode of x =
+        |chi_I|^2 are the physically meaningful reported quantities --
+        recorded as catalog columns via NcmFitESMCMC.new_funcs_array()/an MC
+        run's own equivalent, the same convention every other generate
+        command in this CLI uses for its own derived quantities (see e.g.
+        GenerateQSpline's mean_kappa/q_transition).
         """
         return [
-            Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mean", None),
-            Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:std", None),
+            Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:e_rms", None),
+            Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mode", None),
         ]
 
     def write_calib(self, obs: Nc.GalaxyWLObs, i: int, rng: Ncm.RNG) -> None:

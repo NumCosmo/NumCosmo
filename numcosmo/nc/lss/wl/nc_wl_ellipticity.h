@@ -179,18 +179,30 @@ nc_wl_ellipticity_celestial_to_frame (NcWLEllipticityFrame frame, NcmComplex e)
 
 /* TRACE convention (distortion chi). */
 
+/* Both functions' denominators are 1.0 + |g|^2 (+/-) 2*Re(g*conj(chi)) --
+ * manifestly real (g*conj(g) has an exactly-zero imaginary part in floating
+ * point too, being a-b+b-a in disguise), even though the unreduced
+ * expression is complex-typed. Dividing the complex numerator by that as a
+ * plain gdouble (two independent real divisions) is bit-exact and skips the
+ * general complex/complex division routine (__divdc3) entirely -- see
+ * _nc_wl_ellipticity_cdiv()'s own comment below for the general (genuinely
+ * complex denominator) case this trick does not apply to. */
 NCM_INLINE NcmComplex
 nc_wl_ellipticity_apply_shear_trace (NcmComplex g, NcmComplex chi)
 {
-  return (chi + g * (g * conj (chi) + 2.0)) /
-         (1.0 + g * conj (g) + 2.0 * creal (g * conj (chi)));
+  const NcmComplex num = chi + g * (g * conj (chi) + 2.0);
+  const gdouble den    = 1.0 + creal (g * conj (g)) + 2.0 * creal (g * conj (chi));
+
+  return (creal (num) / den) + I * (cimag (num) / den);
 }
 
 NCM_INLINE NcmComplex
 nc_wl_ellipticity_apply_shear_inv_trace (NcmComplex g, NcmComplex chi_obs)
 {
-  return (chi_obs + g * (g * conj (chi_obs) - 2.0)) /
-         (1.0 + g * conj (g) - 2.0 * creal (g * conj (chi_obs)));
+  const NcmComplex num = chi_obs + g * (g * conj (chi_obs) - 2.0);
+  const gdouble den    = 1.0 + creal (g * conj (g)) - 2.0 * creal (g * conj (chi_obs));
+
+  return (creal (num) / den) + I * (cimag (num) / den);
 }
 
 NCM_INLINE gdouble

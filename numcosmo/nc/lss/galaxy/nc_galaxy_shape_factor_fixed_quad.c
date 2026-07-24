@@ -311,6 +311,9 @@ typedef struct _NcGalaxyShapeFactorFixedQuadData
   guint n_used;
   complex double *chi_L; /* size n_max */
   gdouble *eff_weight;   /* size n_max, = quadrature_weight * noise_value */
+  gdouble *jac;          /* size n_max: |det J_{f_g^-1}| at each node, recomputed every marginal() call */
+  GArray *x_arr;         /* size n_max: x_i = |chi_I(chi_L_i,g)|^2, scratch feeding eval_p_array() */
+  GArray *p_arr;         /* size n_max: eval_p_array()'s output, reused across every g */
 } NcGalaxyShapeFactorFixedQuadData;
 
 static void
@@ -320,6 +323,9 @@ _nc_galaxy_shape_factor_fixed_quad_ldata_destroy (gpointer p)
 
   g_free (ldata->chi_L);
   g_free (ldata->eff_weight);
+  g_free (ldata->jac);
+  g_array_unref (ldata->x_arr);
+  g_array_unref (ldata->p_arr);
   g_free (ldata);
 }
 
@@ -343,6 +349,9 @@ _nc_galaxy_shape_factor_fixed_quad_data_init (NcGalaxyShapeFactor *gsf, NcmMSet 
   ldata->n_used      = 0;
   ldata->chi_L       = g_new (complex double, self->n_max);
   ldata->eff_weight  = g_new (gdouble, self->n_max);
+  ldata->jac         = g_new (gdouble, self->n_max);
+  ldata->x_arr       = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), self->n_max);
+  ldata->p_arr       = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), self->n_max);
 
   data->ldata                  = ldata;
   data->ldata_destroy          = &_nc_galaxy_shape_factor_fixed_quad_ldata_destroy;
@@ -714,15 +723,33 @@ _nc_galaxy_shape_factor_fixed_quad_marginal (NcGalaxyShapeFactorFixedQuad *gsffq
 
   result = 0.0;
 
-  for (i = 0; i < ldata->n_used; i++)
-  {
-    const complex double chi_L = ldata->chi_L[i];
-    const complex double chi_i = self->apply_shear_inv (g, chi_L);
-    const gdouble x_i          = gsl_pow_2 (creal (chi_i)) + gsl_pow_2 (cimag (chi_i));
-    const gdouble p_pop        = nc_galaxy_shape_pop_eval_p (pop, data->pop_data, x_i) / M_PI;
-    const gdouble jac          = self->det_jac (g, chi_L);
+  /* Pass 1: every x_i is known before eval_p() is ever called (the whole
+   * point of a FIXED node count), so batch them through eval_p_array()
+   * instead of n_used one-at-a-time vfunc calls -- see nc_galaxy_shape_pop.h's
+   * eval_p_array doc comment. jac is cheap (unlike p_pop) and stays a plain
+   * per-node computation, stashed here rather than recomputed in pass 2. */
+  g_array_set_size (ldata->x_arr, ldata->n_used);
 
-    result += ldata->eff_weight[i] * p_pop * jac;
+  {
+    gdouble * const x_data = (gdouble *) ldata->x_arr->data;
+
+    for (i = 0; i < ldata->n_used; i++)
+    {
+      const complex double chi_L = ldata->chi_L[i];
+      const complex double chi_i = self->apply_shear_inv (g, chi_L);
+
+      x_data[i]     = gsl_pow_2 (creal (chi_i)) + gsl_pow_2 (cimag (chi_i));
+      ldata->jac[i] = self->det_jac (g, chi_L);
+    }
+  }
+
+  nc_galaxy_shape_pop_eval_p_array (pop, data->pop_data, ldata->x_arr, &ldata->p_arr);
+
+  {
+    const gdouble * const p_data = (const gdouble *) ldata->p_arr->data;
+
+    for (i = 0; i < ldata->n_used; i++)
+      result += ldata->eff_weight[i] * (p_data[i] / M_PI) * ldata->jac[i];
   }
 
   /* Purely the empty-domain / underflow floor -- see the class docs. */
