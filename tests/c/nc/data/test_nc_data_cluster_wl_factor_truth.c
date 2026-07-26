@@ -322,14 +322,18 @@ test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, 
     pop_shape = NC_GALAXY_SHAPE_POP (nc_galaxy_shape_pop_gauss_new ());
     ncm_model_param_set (NCM_MODEL (pop_shape), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, ncm_rng_uniform_gen (rng, 0.05, 0.2));
   }
-  else /* beta: alpha=0.9, beta=4.1 (the class's own pre->=1-bound default,
-        * still directly settable here) matches the population used
-        * elsewhere to exercise the non-integer-exponent path (see
-        * test_nc_galaxy_shape_pop_series.c). */
+  else /* beta: the class's own defaults (alpha=1.4, beta=1.6 on
+        * r=|chi_I|) -- non-integer exponents (exercising the same
+        * fractional-power path as test_nc_galaxy_shape_pop_series.c) but
+        * comfortably above the alpha>=1 floor, unlike that test's
+        * deliberately sub-floor alpha=0.9: this test's Quad config runs a
+        * full 2D adaptive Divonne cubature, which cannot resolve a genuine
+        * x=0 divergence within its evaluation budget (see
+        * docs/theory/wl_shape_factor_history.md's Quad alpha<1 bug entry). */
   {
     pop_shape = NC_GALAXY_SHAPE_POP (nc_galaxy_shape_pop_beta_new ());
-    ncm_model_param_set_by_name (NCM_MODEL (pop_shape), "alpha", 0.9, NULL);
-    ncm_model_param_set_by_name (NCM_MODEL (pop_shape), "beta", 4.1, NULL);
+    ncm_model_param_set_by_name (NCM_MODEL (pop_shape), "alpha", NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA, NULL);
+    ncm_model_param_set_by_name (NCM_MODEL (pop_shape), "beta", NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA, NULL);
   }
 
   if (g_strcmp0 (cfg->redshift, "composed") == 0)

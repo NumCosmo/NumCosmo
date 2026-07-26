@@ -105,9 +105,10 @@ def test_gen_consistency(name):
 
 @pytest.mark.parametrize("name", ["gauss", "beta", "gauss_local"])
 def test_eval_p_rho2_matches_eval_p(name):
-    """eval_p_rho2(rho2) agrees with eval_p(x) at x = rho2/(1+rho2), whether
-    the model overrides eval_p_rho2 (Beta) or inherits the generic default
-    (Gauss, GaussLocal)."""
+    """eval_p_rho2(rho2) agrees with eval_p(x) at x = rho2/(1+rho2) -- every
+    variant here inherits the generic default substitution (Beta included,
+    since its reparametrization to r=|chi_I| no longer has its own more
+    direct rho2 form -- see NcGalaxyShapePopBeta's class documentation)."""
     model, data = _make(name)
     for rho2 in (1.0e-3, 0.1, 1.0, 5.0, 50.0):
         x = rho2 / (1.0 + rho2)
@@ -137,7 +138,8 @@ def test_beta_concentrated_no_overflow(alpha, beta):
     data = Nc.GalaxyShapePopData.new(model)
     model.prepare(data)
 
-    mode = max((alpha - 1.0) / (alpha + beta - 2.0), 1.0e-6)
+    r_mode = (alpha - 2.0) / (alpha + beta - 3.0)
+    mode = max(r_mode * r_mode, 1.0e-6)
     for x in (mode * 0.999, mode, min(mode * 1.001, 1.0 - 1.0e-9)):
         p = model.eval_p(data, x)
         assert np.isfinite(p)
@@ -148,48 +150,47 @@ def test_beta_concentrated_no_overflow(alpha, beta):
 
 @pytest.mark.parametrize(
     "alpha,beta",
-    [(2.0, 3.0), (1.05, 4.7833333333333333), (0.6, 4.0), (50.0, 25.0)],
+    [(2.0, 3.0), (1.05, 4.7833333333333333), (1.4, 1.6), (50.0, 25.0)],
 )
-def test_beta_mean_concentration_std(alpha, beta):
-    """get_mean/get_concentration/get_std match their closed-form definitions
-    and the first two moments of eval_p itself."""
+def test_beta_e_rms_mode(alpha, beta):
+    """get_e_rms matches its closed-form definition (r=|chi_I| ~
+    Beta(alpha,beta), x=r^2) and the first moment of eval_p itself;
+    get_mode matches the natural mode(r) -- deliberately not the argmax of
+    eval_p(x) itself, which is degenerate at x=0 for any alpha<2 (see
+    nc_galaxy_shape_pop_beta_get_mode()'s own doc comment)."""
     model = Nc.GalaxyShapePopBeta.new()
     model["alpha"] = alpha
     model["beta"] = beta
     data = Nc.GalaxyShapePopData.new(model)
     model.prepare(data)
 
-    mean = model.get_mean()
-    concentration = model.get_concentration()
-    std = model.get_std()
+    e_rms = model.get_e_rms()
+    mode = model.get_mode()
 
-    assert_allclose(mean, alpha / (alpha + beta))
-    assert_allclose(concentration, alpha + beta)
-    assert_allclose(
-        std, np.sqrt(alpha * beta / ((alpha + beta) ** 2 * (alpha + beta + 1.0)))
-    )
+    mean_r2 = alpha * (alpha + 1.0) / ((alpha + beta) * (alpha + beta + 1.0))
+    assert_allclose(e_rms, np.sqrt(0.5 * mean_r2))
 
-    assert_allclose(mean, _moment(model, data, 1), rtol=1.0e-5)
-    assert_allclose(std, np.sqrt(_moment(model, data, 2) - mean**2), rtol=1.0e-4)
+    if alpha > 1.0 and beta > 1.0:
+        assert_allclose(mode, (alpha - 1.0) / (alpha + beta - 2.0))
+    else:
+        assert_allclose(mode, 0.0)
+
+    assert_allclose(2.0 * e_rms**2, _moment(model, data, 1), rtol=1.0e-5)
 
 
 def test_beta_mset_func_list():
-    """The NcGalaxyShapePopBeta:mean/concentration/std NcmMSetFuncList entries
-    match the direct get_mean()/get_concentration()/get_std() accessors."""
+    """The NcGalaxyShapePopBeta:e_rms/mode NcmMSetFuncList entries match the
+    direct get_e_rms()/get_mode() accessors."""
     model = Nc.GalaxyShapePopBeta.new()
     model["alpha"] = 3.0
     model["beta"] = 7.0
     mset = Ncm.MSet.new_array([model])
 
-    mean_func = Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mean", None)
-    concentration_func = Ncm.MSetFuncList.new(
-        "NcGalaxyShapePopBeta:concentration", None
-    )
-    std_func = Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:std", None)
+    e_rms_func = Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:e_rms", None)
+    mode_func = Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mode", None)
 
-    assert_allclose(mean_func.eval0(mset), model.get_mean())
-    assert_allclose(concentration_func.eval0(mset), model.get_concentration())
-    assert_allclose(std_func.eval0(mset), model.get_std())
+    assert_allclose(e_rms_func.eval0(mset), model.get_e_rms())
+    assert_allclose(mode_func.eval0(mset), model.get_mode())
 
 
 if __name__ == "__main__":

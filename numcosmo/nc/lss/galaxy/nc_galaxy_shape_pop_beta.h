@@ -39,10 +39,10 @@ G_DECLARE_FINAL_TYPE (NcGalaxyShapePopBeta, nc_galaxy_shape_pop_beta, NC, GALAXY
 
 /**
  * NcGalaxyShapePopBetaParams:
- * @NC_GALAXY_SHAPE_POP_BETA_ALPHA: shape parameter $\alpha$ of the Beta distribution of $x = |\chi_I|^2$.
- * @NC_GALAXY_SHAPE_POP_BETA_BETA: shape parameter $\beta$ of the Beta distribution of $x = |\chi_I|^2$.
+ * @NC_GALAXY_SHAPE_POP_BETA_ALPHA: shape parameter $\alpha$ of the Beta distribution of $r = |\chi_I|$.
+ * @NC_GALAXY_SHAPE_POP_BETA_BETA: shape parameter $\beta$ of the Beta distribution of $r = |\chi_I|$.
  *
- * Beta intrinsic ellipticity model parameters; $\beta\ge1$, $\alpha\ge0.5001$
+ * Beta intrinsic ellipticity model parameters; $\alpha\ge1$, $\beta\ge1$
  * (see the class documentation).
  *
  */
@@ -54,11 +54,12 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_SHAPE_POP_BETA_PARAMS >*/
   NC_GALAXY_SHAPE_POP_BETA_SPARAM_LEN, /*< skip >*/
 } NcGalaxyShapePopBetaParams;
 
-/* mean(x)=0.18, matching the Gaussian convention's 2*sigma^2 at sigma=0.3;
- * alpha kept just above SeriesLensed's practical floor of 1, off the bound's
- * edge. */
-#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA (0.7)
-#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA (1.6)
+/* alpha=2x the pre-reparametrization default (that model's alpha=0.7 on
+ * x=|chi_I|^2 becomes alpha=1.4 on r=|chi_I|, see the class documentation);
+ * beta carries over unchanged (same leading-order tail behavior at r=1
+ * either way). */
+#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA (1.4)
+#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA (2.5)
 #define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL (0.0)
 
 NcGalaxyShapePopBeta *nc_galaxy_shape_pop_beta_new (void);
@@ -67,9 +68,8 @@ NcGalaxyShapePopBeta *nc_galaxy_shape_pop_beta_ref (NcGalaxyShapePopBeta *gspb);
 void nc_galaxy_shape_pop_beta_free (NcGalaxyShapePopBeta *gspb);
 void nc_galaxy_shape_pop_beta_clear (NcGalaxyShapePopBeta **gspb);
 
-gdouble nc_galaxy_shape_pop_beta_get_mean (NcGalaxyShapePopBeta *gspb);
-gdouble nc_galaxy_shape_pop_beta_get_concentration (NcGalaxyShapePopBeta *gspb);
-gdouble nc_galaxy_shape_pop_beta_get_std (NcGalaxyShapePopBeta *gspb);
+gdouble nc_galaxy_shape_pop_beta_get_e_rms (NcGalaxyShapePopBeta *gspb);
+gdouble nc_galaxy_shape_pop_beta_get_mode (NcGalaxyShapePopBeta *gspb);
 
 G_END_DECLS
 

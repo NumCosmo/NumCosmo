@@ -81,8 +81,22 @@ struct _NcGalaxyShapePopClass
   void (*eval_p_rho2_g_series) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                 const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
-  /* Padding to allow adding up to 11 more virtual functions without breaking ABI. */
-  gpointer padding[11];
+  /*
+   * Batched form of eval_p(): evaluates P(x) at every element of @x in one
+   * call, writing into @p (allocating it first if it points to NULL -- see
+   * nc_galaxy_shape_pop_eval_p_array()'s own doc comment). The generic
+   * default just loops calling eval_p(), so every subclass is safely
+   * callable through this vfunc; a subclass whose functional form batches
+   * well (e.g. #NcGalaxyShapePopBeta, whose @data->ldata is invariant across
+   * the whole call) can override it to amortize per-call overhead and let
+   * the compiler vectorize the straight-line loop. Consumed by
+   * #NcGalaxyShapeFactorFixedQuad, whose node positions are all known ahead
+   * of a single call.
+   */
+  void (*eval_p_array) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *x, GArray **p);
+
+  /* Padding to allow adding up to 10 more virtual functions without breaking ABI. */
+  gpointer padding[10];
 };
 
 /**
@@ -155,6 +169,7 @@ gdouble nc_galaxy_shape_pop_get_mode_x (NcGalaxyShapePop *gsp, NcGalaxyShapePopD
 
 void nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                                const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
+void nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *x, GArray **p);
 
 G_END_DECLS
 
