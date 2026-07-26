@@ -155,6 +155,13 @@ _nc_galaxy_redshift_factor_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRe
   /* Default: nothing cached per-galaxy to refresh. */
 }
 
+static gchar *
+_nc_galaxy_redshift_factor_get_desc (NcGalaxyRedshiftFactor *gsdr)
+{
+  /* Default: no scheme-specific configuration to report. */
+  return g_strdup (G_OBJECT_TYPE_NAME (gsdr));
+}
+
 static void
 nc_galaxy_redshift_factor_class_init (NcGalaxyRedshiftFactorClass *klass)
 {
@@ -172,6 +179,7 @@ nc_galaxy_redshift_factor_class_init (NcGalaxyRedshiftFactorClass *klass)
   klass->make_fixed_nodes = &_nc_galaxy_redshift_factor_make_fixed_nodes;
   klass->get_hash         = &_nc_galaxy_redshift_factor_get_hash;
   klass->update_data      = &_nc_galaxy_redshift_factor_update_data;
+  klass->get_desc         = &_nc_galaxy_redshift_factor_get_desc;
 }
 
 /**
@@ -426,6 +434,19 @@ void
 nc_galaxy_redshift_factor_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data)
 {
   NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->update_data (gsdr, data);
+}
+
+/**
+ * nc_galaxy_redshift_factor_get_desc:
+ * @gsdr: a #NcGalaxyRedshiftFactor
+ *
+ * Returns: (transfer full): a human-readable one-line description of this
+ * scheme's own configuration (default: the concrete type name).
+ */
+gchar *
+nc_galaxy_redshift_factor_get_desc (NcGalaxyRedshiftFactor *gsdr)
+{
+  return NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->get_desc (gsdr);
 }
 
 /**

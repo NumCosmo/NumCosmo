@@ -76,6 +76,7 @@ enum
   PROP_0,
   PROP_LEN,
   PROP_COV,
+  PROP_MAX_ITER,
   PROP_SIZE
 };
 
@@ -88,6 +89,7 @@ struct _NcmMSetTransKernGauss
   NcmMatrix *LLT;
   NcmVector *v;
   gboolean init;
+  guint max_iter;
 };
 
 
@@ -96,11 +98,12 @@ G_DEFINE_TYPE (NcmMSetTransKernGauss, ncm_mset_trans_kern_gauss, NCM_TYPE_MSET_T
 static void
 ncm_mset_trans_kern_gauss_init (NcmMSetTransKernGauss *tkerng)
 {
-  tkerng->len  = 0;
-  tkerng->cov  = NULL;
-  tkerng->LLT  = NULL;
-  tkerng->v    = NULL;
-  tkerng->init = FALSE;
+  tkerng->len      = 0;
+  tkerng->cov      = NULL;
+  tkerng->LLT      = NULL;
+  tkerng->v        = NULL;
+  tkerng->init     = FALSE;
+  tkerng->max_iter = 0;
 }
 
 static void
@@ -117,6 +120,9 @@ ncm_mset_trans_kern_gauss_set_property (GObject *object, guint prop_id, const GV
       break;
     case PROP_COV:
       ncm_mset_trans_kern_gauss_set_cov (tkerng, g_value_get_object (value));
+      break;
+    case PROP_MAX_ITER:
+      tkerng->max_iter = g_value_get_uint (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -138,6 +144,9 @@ ncm_mset_trans_kern_gauss_get_property (GObject *object, guint prop_id, GValue *
       break;
     case PROP_COV:
       g_value_set_object (value, tkerng->cov);
+      break;
+    case PROP_MAX_ITER:
+      g_value_set_uint (value, tkerng->max_iter);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -197,6 +206,14 @@ ncm_mset_trans_kern_gauss_class_init (NcmMSetTransKernGaussClass *klass)
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  g_object_class_install_property (object_class,
+                                   PROP_MAX_ITER,
+                                   g_param_spec_uint ("max-iter",
+                                                      NULL,
+                                                      "maximum iterations",
+                                                      1, G_MAXUINT32, 1000,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   tkern_class->set_mset = &_ncm_mset_trans_kern_gauss_set_mset;
   tkern_class->generate = &_ncm_mset_trans_kern_gauss_generate;
   tkern_class->pdf      = &_ncm_mset_trans_kern_gauss_pdf;
@@ -218,11 +235,11 @@ _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, 
   NcmMSet *mset                 = ncm_mset_trans_kern_peek_mset (tkern);
   NcmMSetTransKernGauss *tkerng = NCM_MSET_TRANS_KERN_GAUSS (tkern);
   gint ret;
-  guint i;
+  guint i, iter;
 
   g_assert (tkerng->init);
 
-  while (TRUE)
+  for (iter = 0; iter < tkerng->max_iter; iter++)
   {
     ncm_rng_lock (rng);
 
@@ -242,8 +259,28 @@ _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, 
     ncm_vector_add (thetastar, theta);
 
     if (ncm_mset_fparam_valid_bounds (mset, thetastar))
-      break;
+      return;
   }
+
+  {
+    const guint fparam_len = ncm_mset_fparam_len (mset);
+
+    for (i = 0; i < fparam_len; i++)
+    {
+      const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
+      const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
+      const gdouble val = ncm_vector_get (thetastar, i);
+      const gchar *name = ncm_mset_fparam_name (mset, i);
+
+      if ((val < lb) || (val > ub))
+        g_warning ("_ncm_mset_trans_kern_gauss_generate: "
+                   "parameter %u (%s) is out of bounds [%.16g, %.16g]: %.16g",
+                   i, name, lb, ub, val);
+    }
+  }
+
+  g_error ("_ncm_mset_trans_kern_gauss_generate: "
+           "failed to generate a valid sample after %u iterations.", tkerng->max_iter);
 }
 
 static gdouble

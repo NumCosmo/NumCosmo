@@ -46,6 +46,7 @@ void test_ncm_catalog_ref (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_index (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_set_get (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_types (TestNcmCatalog *test, gconstpointer pdata);
+void test_ncm_catalog_meta (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_serialize (TestNcmCatalog *test, gconstpointer pdata);
 
 void test_ncm_catalog_invalid_get (TestNcmCatalog *test, gconstpointer pdata);
@@ -77,6 +78,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/catalog/types", TestNcmCatalog, NULL,
               &test_ncm_catalog_new,
               &test_ncm_catalog_types,
+              &test_ncm_catalog_free);
+
+  g_test_add ("/ncm/catalog/meta", TestNcmCatalog, NULL,
+              &test_ncm_catalog_new,
+              &test_ncm_catalog_meta,
               &test_ncm_catalog_free);
 
   g_test_add ("/ncm/catalog/serialize", TestNcmCatalog, NULL,
@@ -229,6 +235,33 @@ test_ncm_catalog_types (TestNcmCatalog *test, gconstpointer pdata)
 }
 
 void
+test_ncm_catalog_meta (TestNcmCatalog *test, gconstpointer pdata)
+{
+  NcmVarDict *meta;
+  NcmVarDict *got;
+  gdouble val;
+
+  /* A new catalog carries no metadata. */
+  g_assert_null (ncm_catalog_peek_meta (test->catalog));
+
+  meta = ncm_var_dict_new ();
+  ncm_var_dict_set_double (meta, "cluster_z", 0.234);
+  ncm_catalog_set_meta (test->catalog, meta);
+
+  got = ncm_catalog_peek_meta (test->catalog);
+  g_assert_true (got == meta);
+  g_assert_true (ncm_var_dict_get_double (got, "cluster_z", &val));
+  g_assert_cmpfloat (val, ==, 0.234);
+  g_assert_false (ncm_var_dict_has_key (got, "missing"));
+
+  /* Setting NULL clears it. */
+  ncm_catalog_set_meta (test->catalog, NULL);
+  g_assert_null (ncm_catalog_peek_meta (test->catalog));
+
+  ncm_var_dict_unref (meta);
+}
+
+void
 test_ncm_catalog_serialize (TestNcmCatalog *test, gconstpointer pdata)
 {
   const gchar *col_names[]            = {"id", "flag", NULL};
@@ -238,11 +271,17 @@ test_ncm_catalog_serialize (TestNcmCatalog *test, gconstpointer pdata)
   };
   NcmCatalog *typed = ncm_catalog_new_full (1, (GStrv) col_names, col_types, 2);
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmVarDict *meta  = ncm_var_dict_new ();
   GVariant *var;
   NcmCatalog *dup;
+  NcmVarDict *dup_meta;
+  gdouble val;
 
   ncm_catalog_set_int (typed, "id", 0, 42, NULL);
   ncm_catalog_set_bool (typed, "flag", 0, TRUE, NULL);
+
+  ncm_var_dict_set_double (meta, "cluster_ra", 30.4273);
+  ncm_catalog_set_meta (typed, meta);
 
   var = ncm_serialize_to_variant (ser, G_OBJECT (typed));
   dup = NCM_CATALOG (ncm_serialize_from_variant (ser, var));
@@ -254,8 +293,14 @@ test_ncm_catalog_serialize (TestNcmCatalog *test, gconstpointer pdata)
   g_assert_cmpint (ncm_catalog_get_int (dup, "id", 0, NULL), ==, 42);
   g_assert_true (ncm_catalog_get_bool (dup, "flag", 0, NULL));
 
+  dup_meta = ncm_catalog_peek_meta (dup);
+  g_assert_nonnull (dup_meta);
+  g_assert_true (ncm_var_dict_get_double (dup_meta, "cluster_ra", &val));
+  g_assert_cmpfloat (val, ==, 30.4273);
+
   g_variant_unref (var);
   ncm_serialize_free (ser);
+  ncm_var_dict_unref (meta);
   NCM_TEST_FREE (ncm_catalog_free, typed);
   NCM_TEST_FREE (ncm_catalog_free, dup);
 }
@@ -298,3 +343,4 @@ test_ncm_catalog_invalid_col_type (TestNcmCatalog *test, gconstpointer pdata)
   g_assert_cmpint (ncm_catalog_get_col_type (test->catalog, "missing", &error), ==, NCM_CATALOG_COL_TYPE_INVALID);
   _test_ncm_catalog_assert_column_not_found_error (&error, "missing");
 }
+

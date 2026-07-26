@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/algebra/ncm_matrix.h>
+#include <numcosmo/ncm/core/ncm_obj_array.h>
 
 G_BEGIN_DECLS
 
@@ -113,6 +114,9 @@ NcmMatrix *ncm_catalog_peek_data (NcmCatalog *catalog);
 
 guint ncm_catalog_len (NcmCatalog *catalog);
 guint ncm_catalog_ncols (NcmCatalog *catalog);
+
+void ncm_catalog_set_meta (NcmCatalog *catalog, NcmVarDict *meta);
+NcmVarDict *ncm_catalog_peek_meta (NcmCatalog *catalog);
 
 G_END_DECLS
 

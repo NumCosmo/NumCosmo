@@ -135,6 +135,28 @@ _nc_galaxy_shape_pop_eval_p_rho2 (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
   return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p (gsp, data, x);
 }
 
+/* Real (non-stub) default: plain loop calling eval_p() through the class
+ * pointer once (not nc_galaxy_shape_pop_eval_p(), avoiding one extra level
+ * of GET_CLASS per element). Correct for every subclass, so this is a safe
+ * fallback for populations that do not override eval_p_array(). */
+static void
+_nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *x, GArray **p)
+{
+  NcGalaxyShapePopClass *klass = NC_GALAXY_SHAPE_POP_GET_CLASS (gsp);
+  gdouble *p_data;
+  guint i;
+
+  if (*p == NULL)
+    *p = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), x->len);
+
+  g_array_set_size (*p, x->len);
+
+  p_data = (gdouble *) (*p)->data;
+
+  for (i = 0; i < x->len; i++)
+    p_data[i] = klass->eval_p (gsp, data, g_array_index (x, gdouble, i));
+}
+
 static void
 nc_galaxy_shape_pop_class_init (NcGalaxyShapePopClass *klass)
 {
@@ -155,6 +177,7 @@ nc_galaxy_shape_pop_class_init (NcGalaxyShapePopClass *klass)
   klass->gen                  = &_nc_galaxy_shape_pop_gen;
   klass->e_rms                = &_nc_galaxy_shape_pop_e_rms;
   klass->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_eval_p_rho2_g_series;
+  klass->eval_p_array         = &_nc_galaxy_shape_pop_eval_p_array;
 }
 
 /**
@@ -390,6 +413,39 @@ nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePo
                                           const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out)
 {
   NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_rho2_g_series (gsp, data, x_series, out);
+}
+
+/**
+ * nc_galaxy_shape_pop_eval_p_array: (virtual eval_p_array)
+ * @gsp: a #NcGalaxyShapePop
+ * @data: a resolved #NcGalaxyShapePopData
+ * @x: (element-type gdouble): array of $x=|\chi_I|^2$ values to evaluate
+ * @p: (out callee-allocates) (transfer full) (element-type gdouble): output
+ * array of $P(x)$ values, same length as @x
+ *
+ * Batched form of nc_galaxy_shape_pop_eval_p(): evaluates the population
+ * density at every element of @x in one call.
+ *
+ * The @p parameter supports two usage patterns:
+ *
+ * - **Python/convenience usage**: pass @p pointing to NULL (`*p == NULL`).
+ *   A new #GArray is allocated and returned. The `(out callee-allocates)`
+ *   annotation ensures Python bindings automatically use this mode.
+ *
+ * - **C optimization**: pass @p pointing to a pre-allocated #GArray
+ *   (`*p != NULL`). The existing array is resized and refilled, avoiding
+ *   repeated allocation/deallocation in performance-critical loops (e.g.
+ *   #NcGalaxyShapeFactorFixedQuad, which reuses the same @p across every
+ *   $g$ a fit tries).
+ *
+ * The generic default just loops calling eval_p(), so this is always safe
+ * to call; a subclass may override it to batch the work (see
+ * #NcGalaxyShapePopBeta).
+ */
+void
+nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *x, GArray **p)
+{
+  NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_array (gsp, data, x, p);
 }
 
 /**

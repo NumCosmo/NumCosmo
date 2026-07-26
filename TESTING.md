@@ -151,17 +151,22 @@ are exercised in the normal run rather than only on a hand-invoked lane:
 | Test kind | Scheduling | `OMP_NUM_THREADS` |
 |-----------|-----------|-------------------|
 | concurrent (default `is_parallel: true`; pytest `-n auto`) | many at once | `1` |
-| run-alone OpenMP (`omp` suite ⇒ `is_parallel: false`; non-xdist `py-omp` lane) | one at a time, owns the machine | `$(getconf _NPROCESSORS_ONLN)` (all cores) |
+| run-alone OpenMP (`omp` suite ⇒ `is_parallel: false`; non-xdist `py-omp` lane) | one at a time, owns the machine | CPUs available *at test-run time* (all of them) |
 
 Concurrent tests are pinned to a single thread on **every** backend (OMP + OpenBLAS/BLIS/MKL)
 to avoid cores² oversubscription and the mixed-OpenBLAS deadlock. Tests with an
 OpenMP-parallel path carry the **`omp`** suite tag: meson marks the C ones `is_parallel: false`
-and gives them — and the non-xdist `py-omp` pytest lane — `OMP_NUM_THREADS` = online cores
-(read once via `getconf _NPROCESSORS_ONLN` at configure time), so the parallel branch
-(thread coordination, `reduction`, scheduling) actually runs. Because those tests run alone,
-this happens inside the ordinary `meson test` invocation — no `--num-processes=1`, no exported
-`OMP_NUM_THREADS`, no separate lane required. (`mpi` still gets its own `mpiexec` lane, pinned
-to one thread; OpenMP SIMD is unaffected by `OMP_NUM_THREADS`.)
+and runs them — and the non-xdist `py-omp` pytest lane — through
+`tests/scripts/detect_omp_threads.sh`, a wrapper that sets `OMP_NUM_THREADS`/`OMP_THREAD_LIMIT`
+to the CPU count available right then (`nproc` on Linux, `sysctl -n hw.ncpu` on macOS, falling
+back to `getconf _NPROCESSORS_ONLN`) before `exec`ing the real test/`pytest`, so the parallel
+branch (thread coordination, `reduction`, scheduling) actually runs. This is deliberately
+evaluated fresh on every `meson test` invocation (not baked in at `meson setup` time) so a
+builddir built on one machine can run correctly on a differently-sized one. Because
+these tests run alone, this happens inside the ordinary `meson test` invocation — no
+`--num-processes=1`, no exported `OMP_NUM_THREADS`, no separate lane required. (`mpi` still
+gets its own `mpiexec` lane, pinned to one thread; OpenMP SIMD is unaffected by
+`OMP_NUM_THREADS`.)
 
 ### Reproducibility and the `-Dflaky_tests` option
 

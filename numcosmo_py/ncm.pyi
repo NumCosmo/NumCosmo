@@ -46,6 +46,7 @@ MSET_CATALOG_FSYMB_LABEL: str = r"FSYMB"
 MSET_CATALOG_M2LNL_COLNAME: str = r"NcmFit:m2lnL"
 MSET_CATALOG_M2LNL_SYMBOL: str = r"-2\ln(L)"
 MSET_CATALOG_M2LNP_ID_LABEL: str = r"M2LNP_ID"
+MSET_CATALOG_MSET_FORMAT_LABEL: str = r"MSETFMT"
 MSET_CATALOG_NADDVAL_LABEL: str = r"NADDVAL"
 MSET_CATALOG_NCHAINS_LABEL: str = r"NCHAINS"
 MSET_CATALOG_NROWS_LABEL: str = r"NAXIS2"
@@ -1281,6 +1282,8 @@ class Catalog(GObject.Object):
         Per-column logical types
       len -> guint: Length
         Number of catalog rows
+      meta -> NcmVarDict: Metadata
+        Catalog-wide free-form metadata
 
     Signals from GObject:
       notify (GParam)
@@ -1291,6 +1294,7 @@ class Catalog(GObject.Object):
         columns: list[str]
         data: Matrix
         len: int
+        meta: typing.Optional[VarDict]
 
     props: Props = ...
     parent_instance: GObject.Object = ...
@@ -1300,6 +1304,7 @@ class Catalog(GObject.Object):
         columns: typing.Sequence[str] = ...,
         data: Matrix = ...,
         len: int = ...,
+        meta: typing.Optional[VarDict] = ...,
     ) -> None: ...
     @staticmethod
     def clear(catalog: Catalog) -> None: ...
@@ -1323,10 +1328,12 @@ class Catalog(GObject.Object):
     ) -> Catalog: ...
     def peek_columns(self) -> list[str]: ...
     def peek_data(self) -> Matrix: ...
+    def peek_meta(self) -> typing.Optional[VarDict]: ...
     def ref(self) -> Catalog: ...
     def set(self, col: str, i: int, val: float) -> None: ...
     def set_bool(self, col: str, i: int, val: bool) -> None: ...
     def set_int(self, col: str, i: int, val: int) -> None: ...
+    def set_meta(self, meta: typing.Optional[VarDict] = None) -> None: ...
 
 class CatalogClass(GObject.GPointer):
     r"""
@@ -3366,6 +3373,8 @@ class FitESMCMC(GObject.Object):
         Data filename
       function-array -> NcmObjArray: function-array
         Functions array
+      init-max-rounds -> guint: init-max-rounds
+        Maximum number of redraw rounds when generating initial ensemble points
 
     Signals from GObject:
       notify (GParam)
@@ -3377,6 +3386,7 @@ class FitESMCMC(GObject.Object):
         data_file: str
         fit: Fit
         function_array: ObjArray
+        init_max_rounds: int
         intermediary_log: int
         log_time_interval: float
         lre_step: float
@@ -3399,6 +3409,7 @@ class FitESMCMC(GObject.Object):
         data_file: str = ...,
         fit: Fit = ...,
         function_array: ObjArray = ...,
+        init_max_rounds: int = ...,
         intermediary_log: int = ...,
         log_time_interval: float = ...,
         lre_step: float = ...,
@@ -6821,6 +6832,8 @@ class MSetTransKernGauss(MSetTransKern):
         length
       cov -> NcmMatrix: cov
         covariance
+      max-iter -> guint: max-iter
+        maximum iterations
 
     Properties from NcmMSetTransKern:
       mset -> NcmMSet: mset
@@ -6833,11 +6846,16 @@ class MSetTransKernGauss(MSetTransKern):
     class Props:
         cov: Matrix
         length: int
+        max_iter: int
         mset: MSet
 
     props: Props = ...
     def __init__(
-        self, cov: Matrix = ..., length: int = ..., mset: MSet = ...
+        self,
+        cov: Matrix = ...,
+        length: int = ...,
+        max_iter: int = ...,
+        mset: MSet = ...,
     ) -> None: ...
     def get_cov(self) -> Matrix: ...
     def get_size(self) -> int: ...

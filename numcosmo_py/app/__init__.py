@@ -46,6 +46,7 @@ from .generate import (
     GeneratePlanck,
     GenerateJpasForecast,
     GenerateClusterWL,
+    LoadClusterWL,
     GenerateClusterRichnessCount,
     GenerateQSpline,
     GenerateXCDM,
@@ -199,7 +200,13 @@ GEN_JPAS_FORECAST_CMD: CMDArg = {
 GEN_CLUSTER_WL_CMD: CMDArg = {
     "name": "cluster-wl",
     "no_args_is_help": True,
-    "help": "Generate cluster weak lensing experiments.",
+    "help": "Generate mock cluster weak lensing experiments.",
+}
+
+LOAD_CLUSTER_WL_CMD: CMDArg = {
+    "name": "cluster-wl-load",
+    "no_args_is_help": True,
+    "help": "Load a cluster weak lensing experiment from a real NcGalaxyWLObs catalog.",
 }
 
 GEN_CLUSTER_RICHNESS_COUNT_CMD: CMDArg = {
@@ -287,6 +294,7 @@ app_cat.command(**CAT_DUMP_MSET_CMD)(DumpMset)
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
 app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
 app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)
+app_generate.command(**LOAD_CLUSTER_WL_CMD)(LoadClusterWL)
 app_generate.command(**GEN_CLUSTER_RICHNESS_COUNT_CMD)(GenerateClusterRichnessCount)
 app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
 app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)

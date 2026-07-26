@@ -176,6 +176,7 @@ static void _nc_galaxy_position_factor_flat_data_init (NcGalaxyPositionFactor *g
 static void _nc_galaxy_position_factor_flat_gen (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGalaxyPositionFactorData *data, NcmRNG *rng);
 static void _nc_galaxy_position_factor_flat_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset);
 static NcGalaxyPositionFactorIntegrand *_nc_galaxy_position_factor_flat_integ (NcGalaxyPositionFactor *gspf, NcmMSet *mset, gboolean use_lnp);
+static gchar *_nc_galaxy_position_factor_flat_get_desc (NcGalaxyPositionFactor *gspf);
 
 static void
 nc_galaxy_position_factor_flat_class_init (NcGalaxyPositionFactorFlatClass *klass)
@@ -220,6 +221,20 @@ nc_galaxy_position_factor_flat_class_init (NcGalaxyPositionFactorFlatClass *klas
   position_factor_class->gen       = &_nc_galaxy_position_factor_flat_gen;
   position_factor_class->prepare   = &_nc_galaxy_position_factor_flat_prepare;
   position_factor_class->integ     = &_nc_galaxy_position_factor_flat_integ;
+  position_factor_class->get_desc  = &_nc_galaxy_position_factor_flat_get_desc;
+}
+
+static gchar *
+_nc_galaxy_position_factor_flat_get_desc (NcGalaxyPositionFactor *gspf)
+{
+  NcGalaxyPositionFactorFlat *gspfflat = NC_GALAXY_POSITION_FACTOR_FLAT (gspf);
+  gdouble ra_min, ra_max, dec_min, dec_max;
+
+  nc_galaxy_position_factor_flat_get_ra_lim (gspfflat, &ra_min, &ra_max);
+  nc_galaxy_position_factor_flat_get_dec_lim (gspfflat, &dec_min, &dec_max);
+
+  return g_strdup_printf ("%s (ra=[%.4f, %.4f], dec=[%.4f, %.4f])",
+                          G_OBJECT_TYPE_NAME (gspf), ra_min, ra_max, dec_min, dec_max);
 }
 
 static void

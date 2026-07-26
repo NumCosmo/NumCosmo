@@ -124,6 +124,13 @@ _nc_galaxy_position_factor_update_data (NcGalaxyPositionFactor *gspf, NcGalaxyPo
   /* Default: nothing cached per-galaxy to refresh. */
 }
 
+static gchar *
+_nc_galaxy_position_factor_get_desc (NcGalaxyPositionFactor *gspf)
+{
+  /* Default: no scheme-specific configuration to report. */
+  return g_strdup (G_OBJECT_TYPE_NAME (gspf));
+}
+
 static void
 nc_galaxy_position_factor_class_init (NcGalaxyPositionFactorClass *klass)
 {
@@ -137,6 +144,7 @@ nc_galaxy_position_factor_class_init (NcGalaxyPositionFactorClass *klass)
   klass->integ       = &_nc_galaxy_position_factor_integ;
   klass->get_hash    = &_nc_galaxy_position_factor_get_hash;
   klass->update_data = &_nc_galaxy_position_factor_update_data;
+  klass->get_desc    = &_nc_galaxy_position_factor_get_desc;
 }
 
 /**
@@ -375,6 +383,19 @@ void
 nc_galaxy_position_factor_update_data (NcGalaxyPositionFactor *gspf, NcGalaxyPositionFactorData *data)
 {
   NC_GALAXY_POSITION_FACTOR_GET_CLASS (gspf)->update_data (gspf, data);
+}
+
+/**
+ * nc_galaxy_position_factor_get_desc:
+ * @gspf: a #NcGalaxyPositionFactor
+ *
+ * Returns: (transfer full): a human-readable one-line description of this
+ * scheme's own configuration (default: the concrete type name).
+ */
+gchar *
+nc_galaxy_position_factor_get_desc (NcGalaxyPositionFactor *gspf)
+{
+  return NC_GALAXY_POSITION_FACTOR_GET_CLASS (gspf)->get_desc (gspf);
 }
 
 /**
