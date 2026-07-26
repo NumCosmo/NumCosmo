@@ -249,8 +249,8 @@ def test_marginal_matches_scipy_truth_table_narrow_trace_convention():
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_marginal_matches_scipy_truth_table_beta_peaked_off_center(ellip_conv):
-    """Places eps_obs at the population's peak ring (mode_x != 0) to
-    sanity-check the mode_x hint; not itself proof the hint is load-bearing
+    """Places eps_obs at the population's peak ring (mode(r) != 0) to
+    sanity-check the mode hint; not itself proof the hint is load-bearing
     (see class doc)."""
     alpha, beta, std_noise = 700.0, 300.0, 0.02
     g = 0.1 + 0.05j
@@ -261,8 +261,7 @@ def test_marginal_matches_scipy_truth_table_beta_peaked_off_center(ellip_conv):
     pop["beta"] = beta
     mset = _build_mset(pop)
 
-    mode_x = (alpha - 1.0) / (alpha + beta - 2.0)
-    rho_mode = np.sqrt(mode_x)
+    rho_mode = (alpha - 1.0) / (alpha + beta - 2.0)
     chi_i_peak = rho_mode * np.exp(1j * theta)
     eps_obs = _shear_map(ellip_conv, g, chi_i_peak)
 
@@ -306,12 +305,14 @@ def test_marginal_matches_scipy_truth_table_concentrated_beta():
 
 
 def test_marginal_alpha_below_one_known_accuracy_bug():
-    """Known accuracy bug: Quad loses ~11% vs scipy near g~0.18 for alpha<1
-    Beta populations (FixedQuad stays ~0.2%, see
+    """Known accuracy bug: Quad loses accuracy vs scipy near g~0.18 for
+    alpha<2 Beta populations (P(x) divergent at x=0 -- see the class doc's
+    r=sqrt(x)~Beta(alpha,beta) reparametrization, which makes alpha<2 the
+    relevant threshold, not alpha<1; FixedQuad stays accurate, see
     docs/theory/wl_shape_factor_history.md); pins current behavior against
     regression."""
     pop = Nc.GalaxyShapePopBeta.new()
-    pop["alpha"] = 0.6
+    pop["alpha"] = 1.2
     pop["beta"] = 4.0
     mset = _build_mset(pop)
 

@@ -843,6 +843,24 @@ libnumcosmo_dep_list = [
 ]
 
 numcosmo_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
+# These LTO-only diagnostics come from vendored code and are false positives
+# that only GCC's whole-program analysis at link time can raise, so they can
+# only be suppressed via link_args, not per-file c_args:
+# - lto-type-mismatch: Fortran hidden string-length arguments (implicit
+#   trailing args gfortran adds for CHARACTER dummy arguments) make
+#   BLAS/LAPACK and Planck-likelihood C/Fortran prototypes look mismatched
+#   to LTO's type checker, even though the ABIs are compatible.
+# - alloc-size-larger-than: cross-TU inlining of CLASS's
+#   array_spline_table_columns() lets GCC see a malloc() size derived from an
+#   unchecked table size that it can't prove is positive; the NULL check
+#   right after the call already handles this.
+numcosmo_lib_link_args = [noseh_link_args]
+foreach flag : ['-Wno-lto-type-mismatch', '-Wno-alloc-size-larger-than']
+  if cc.has_link_argument(flag)
+    numcosmo_lib_link_args += [flag]
+  endif
+endforeach
+
 libnumcosmo = library(
     'numcosmo',
     sources: [
@@ -866,7 +884,7 @@ libnumcosmo = library(
     darwin_versions: darwin_versions,
     install: true,
     # intl.lib is not compatible with SAFESEH
-    link_args: [noseh_link_args],
+    link_args: numcosmo_lib_link_args,
     include_directories: [
         configinc,
         sundials_inc,

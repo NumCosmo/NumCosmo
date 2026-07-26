@@ -172,14 +172,16 @@ def test_marginal_matches_quad_beta(ellip_conv):
     than the Gaussian family (ncm_laurent_series_tps_pow()'s generalized-
     binomial recursion, not the exp-of-power-series one) -- same moderate-
     noise/moderate-g setup as test_marginal_matches_quad_moderate_g_large_noise.
-    alpha=beta=3 (both >1) keeps eval_p smooth on the whole unit interval,
-    including at x=0 -- unlike alpha<1 (P(x) ~ x^(alpha-1) diverges at x=0,
-    see test_marginal_matches_quad_beta_small_g_near_singular below), which
-    restricts the g-Taylor series' own radius of convergence whenever the
-    rho quadrature approaches rho=0."""
+    alpha=beta=4 (both >=2) keeps P(x) ~ x^(alpha/2-1)*(1-sqrt(x))^(beta-1)
+    bounded at x=0 -- unlike alpha<2 (P(x) has an actual POLE at x=0, from
+    the r=sqrt(x)~Beta(alpha,beta) reparametrization's Jacobian: see the
+    class doc), which restricts the g-Taylor series' own radius of
+    convergence to nothing usable (see
+    test_marginal_matches_quad_beta_small_g_near_singular below for the
+    alpha->2 boundary case instead)."""
     pop = Nc.GalaxyShapePopBeta.new()
-    pop["alpha"] = 3.0
-    pop["beta"] = 3.0
+    pop["alpha"] = 4.0
+    pop["beta"] = 4.0
     g = 0.09 + 0.0j
     eps_obs = 0.4 * np.exp(1j * 0.7)
 
@@ -190,19 +192,17 @@ def test_marginal_matches_quad_beta(ellip_conv):
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_marginal_matches_quad_beta_small_g_near_singular(ellip_conv):
-    """alpha=0.9<1 (the class's old, pre->=1-bound default, still directly
-    settable here) makes P(x) ~ x^(alpha-1) diverge at x=0 -- a genuine
-    branch-point singularity, not a numerical artifact (confirmed by
-    raising trunc_order making the mismatch worse at moderate g, the
-    classic signature of evaluating a Taylor series outside its own radius
-    of convergence, rather than better as truncation error alone would
-    predict). g=0 (no truncation at all) matches quad exactly; this checks
-    a small g comfortably inside that radius still works. TRACE's own
-    steeper O(g) response (see test_marginal_matches_quad_moderate_g_large_noise's
-    docstring) shrinks that radius further than TRACE_DET's, hence g=0.003
-    here rather than the smooth case's g=0.09."""
+    """alpha=2.05, just above the class's alpha>=2 threshold for P(x) to stay
+    bounded at x=0 (P(x) ~ x^(alpha/2-1)*(1-sqrt(x))^(beta-1) -- see the
+    class doc): close enough to alpha=2 that the g-Taylor series' radius of
+    convergence is small, a genuine branch-point-proximity effect, not a
+    numerical artifact (confirmed by raising trunc_order making the mismatch
+    worse at moderate g, the classic signature of evaluating a Taylor series
+    outside its own radius of convergence, rather than better as truncation
+    error alone would predict). This checks a small g comfortably inside
+    that radius still works."""
     pop = Nc.GalaxyShapePopBeta.new()
-    pop["alpha"] = 0.9
+    pop["alpha"] = 2.05
     pop["beta"] = 4.1
     g = 0.003 + 0.0j
     eps_obs = 0.4 * np.exp(1j * 0.7)

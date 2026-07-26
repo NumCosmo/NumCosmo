@@ -200,11 +200,19 @@ class RunFit(RunCommonOptions):
 class RunTest(RunCommonOptions):
     """Load the experiment file and computes the likelihood once."""
 
+    repeat: Annotated[
+        int,
+        typer.Option(
+            help="Number of times to repeat the likelihood computation.",
+        ),
+    ] = 1
+
     def __post_init__(self) -> None:
         """Load the experiment file and computes the likelihood once."""
         super().__post_init__()
         self.mset.param_set_all_ftype(Ncm.ParamType.FIXED)
         self.mset.prepare_fparam_map()
         self.fit.log_info()
-        self.fit.run(FitRunMessages.SIMPLE.genum)
+        for _ in range(self.repeat):
+            self.fit.run(FitRunMessages.SIMPLE.genum)
         self.end_experiment()
