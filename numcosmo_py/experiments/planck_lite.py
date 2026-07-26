@@ -100,9 +100,7 @@ def _spectra_from_has_cl(clik_path: str) -> list[str]:
     Read from ``clik/lkl_0/has_cl`` = [TT, EE, BB, TE, TB, EB] (plik_cmbonly uses
     has_cl[0]=TT, has_cl[1]=EE, has_cl[3]=TE).
     """
-    has_cl = fits.getdata(
-        os.path.join(clik_path, "clik", "lkl_0", "has_cl")
-    ).ravel()
+    has_cl = fits.getdata(os.path.join(clik_path, "clik", "lkl_0", "has_cl")).ravel()
     spectra = []
     if has_cl[0]:
         spectra.append("TT")
