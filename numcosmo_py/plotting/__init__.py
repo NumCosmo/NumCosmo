@@ -87,6 +87,31 @@ class CatalogData:
             )
             self.params_names[i] = f"asinh_{self.params_names[i]}"
 
+    def add_derived(
+        self,
+        name: str,
+        symbol: str,
+        values: np.ndarray,
+        bestfit_value: float | None = None,
+    ) -> "CatalogData":
+        """Return a copy of this catalog data with an extra derived column."""
+        assert len(values) == len(self.rows)
+
+        new_rows = np.hstack([self.rows, np.asarray(values).reshape(-1, 1)])
+        new_bestfit = None
+        if self.bestfit is not None:
+            new_bestfit = np.append(
+                self.bestfit, bestfit_value if bestfit_value is not None else np.nan
+            )
+
+        return dataclasses.replace(
+            self,
+            rows=new_rows,
+            bestfit=new_bestfit,
+            params_names=self.params_names + [name],
+            params_symbols=self.params_symbols + [symbol],
+        )
+
     def to_mcsamples(self, collapse: bool = False) -> getdist.MCSamples:
         """Convert the catalog data to a getdist.MCSamples object.
 

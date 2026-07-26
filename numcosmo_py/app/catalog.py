@@ -43,9 +43,17 @@ from ..interpolation.stats_dist import (
     InterpolationMethod,
 )
 from ..plotting.tools import set_rc_params_article, confidence_ellipse
+from ..safe_eval import compile_expr, SafeExprError
+from ..catalog_stats import (
+    DerivedStat,
+    parse_variable_bindings,
+    resolve_param,
+    stat_center_and_bounds,
+)
 from .loading import LoadCatalog
 from .logging import AppLogging
 from ..plotting import mcat_to_catalog_data, plot_mcsamples
+from ..plotting.derived import add_derived_column
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -666,10 +674,60 @@ class PlotCorner(LoadCatalog):
         ),
     ] = True
 
+    derived_variable: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            "--derived-variable",
+            help=(
+                "Bind a name usable in --derived-expr to a catalog parameter "
+                "or add-value, as name=parameter (or just parameter, short "
+                "for parameter=parameter). May be given multiple times. "
+                "Requires --derived-expr."
+            ),
+        ),
+    ] = None
+
+    derived_expr: Annotated[
+        Optional[str],
+        typer.Option(
+            help=(
+                "Add an extra corner-plot dimension computed from this "
+                "expression of the --derived-variable bindings, e.g. "
+                "'10**x'. See `catalog derived-error --help` for the "
+                "supported syntax."
+            ),
+        ),
+    ] = None
+
+    derived_symbol: Annotated[
+        Optional[str],
+        typer.Option(
+            help=(
+                "Axis label for --derived-expr. Defaults to the expression " "itself."
+            ),
+        ),
+    ] = None
+
+    derived_name: Annotated[
+        str,
+        typer.Option(
+            help="Internal column name for --derived-expr.",
+        ),
+    ] = "derived"
+
     def __post_init__(self) -> None:
         """Corner plot of the catalog."""
         super().__post_init__()
         mcat = self.mcat
+
+        derived_variable: List[str] = []
+        if self.derived_expr is not None:
+            if not self.derived_variable:
+                raise ValueError(
+                    "--derived-expr requires at least one --derived-variable."
+                )
+            derived_variable = self.derived_variable
+
         if self.plot_name is None:
             self.plot_name = self.mcmc_file.stem
         if self.extra_experiment is None:
@@ -694,6 +752,17 @@ class PlotCorner(LoadCatalog):
             thin = int(np.ceil(mcat.peek_autocorrelation_tau().get_max()))
 
         cd = mcat_to_catalog_data(mcat, self.plot_name, indices=self.indices, thin=thin)
+        if self.derived_expr is not None:
+            cd = add_derived_column(
+                cd,
+                self.mset,
+                self.nadd_vals,
+                mcat,
+                derived_variable,
+                self.derived_expr,
+                self.derived_symbol,
+                self.derived_name,
+            )
         mcsample = cd.to_mcsamples(collapse=True)
 
         mcsamples = [mcsample]
@@ -710,14 +779,24 @@ class PlotCorner(LoadCatalog):
             if self.auto_thin:
                 extra_exp.mcat.estimate_autocorrelation_tau(False)
                 thin = int(np.ceil(extra_exp.mcat.peek_autocorrelation_tau().get_max()))
-            mcsamples.append(
-                mcat_to_catalog_data(
-                    extra_exp.mcat,
-                    extra_experiment.stem,
-                    thin=thin,
-                    indices=extra_exp.indices,
-                ).to_mcsamples(collapse=True)
+            extra_cd = mcat_to_catalog_data(
+                extra_exp.mcat,
+                extra_experiment.stem,
+                thin=thin,
+                indices=extra_exp.indices,
             )
+            if self.derived_expr is not None:
+                extra_cd = add_derived_column(
+                    extra_cd,
+                    extra_exp.mset,
+                    extra_exp.nadd_vals,
+                    extra_exp.mcat,
+                    derived_variable,
+                    self.derived_expr,
+                    self.derived_symbol,
+                    self.derived_name,
+                )
+            mcsamples.append(extra_cd.to_mcsamples(collapse=True))
 
         bestfit = cd.bestfit if self.mark_bestfit else None
         fig = plot_mcsamples(mcsamples, markers=bestfit, title_limit=self.title_limit)
@@ -749,24 +828,8 @@ class ParameterAnalysis(LoadCatalog):
         """Parameter analysis."""
         super().__post_init__()
 
-        pi = self.mset.fparam_get_pi_by_name(self.param_name)
-        if pi is not None:
-            pindex = self.mset.fparam_get_fpi(pi.mid, pi.pid) + self.nadd_vals
-        elif self.param_name.isnumeric():
-            total_len = self.mset.fparams_len() + self.nadd_vals
-            pindex = int(self.param_name)
-            if pindex >= total_len or pindex < 0:
-                raise ValueError(
-                    f'Invalid parameter index "{self.param_name}"=={pindex}.'
-                )
-            if pindex >= self.nadd_vals:
-                pi = self.mset.fparam_get_pi(pindex)
-        else:
-            raise ValueError(f"Parameter {self.param_name} not found.")
-
-        self.pi: Ncm.MSetPIndex = pi
-        self.pindex: int = pindex
-        self.symbol: str = self.mcat.col_symb(pindex)
+        self.pi, self.pindex = resolve_param(self.mset, self.nadd_vals, self.param_name)
+        self.symbol: str = self.mcat.col_symb(self.pindex)
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -847,6 +910,138 @@ class ParameterEvolution(ParameterAnalysis):
         if self.plot_name is not None:
             plt.savefig(self.plot_name, bbox_inches="tight")
         plt.show()
+
+        self.end_experiment()
+
+
+@dataclasses.dataclass(kw_only=True)
+class DerivedQuantityError(LoadCatalog):
+    """Posterior statistic and asymmetric error bars for derived quantities.
+
+    Builds the posterior distribution of one or more arbitrary expressions
+    of catalog parameters (e.g. ``(y / 100)**2 * x``), sharing the same
+    --variable bindings, by evaluating each expression on every sample in
+    the catalog in a single pass. Reports each quantity's median, mode,
+    and/or best-fit value together with 1, 2 and 3-sigma asymmetric error
+    bars in one table.
+    """
+
+    variable: Annotated[
+        List[str],
+        typer.Option(
+            "--variable",
+            "-x",
+            help=(
+                "Bind a name usable in --expr to a catalog parameter or "
+                "add-value, as name=parameter (or just parameter, short for "
+                "parameter=parameter). May be given multiple times, e.g. "
+                "-x x=Omega_m -x y=H0, or -x log10MDelta."
+            ),
+        ),
+    ]
+
+    expr: Annotated[
+        List[str],
+        typer.Option(
+            "--expr",
+            help=(
+                "Mathematical expression combining the bound variables, e.g. "
+                "'(y / 100)**2 * x'. May be given multiple times to report "
+                "several derived quantities in one table, all sharing the "
+                "same --variable bindings. Supports + - * / // % ** and "
+                "unary minus, the constants pi/e, and the functions log, "
+                "log10, log2, exp, sqrt, abs, sin, cos, tan, arcsin, arccos, "
+                "arctan, sinh, cosh, tanh."
+            ),
+        ),
+    ]
+
+    stat: Annotated[
+        Optional[List[DerivedStat]],
+        typer.Option(
+            help=(
+                "Statistic(s) to report. Unlike median/bestfit, mode is NOT "
+                "invariant under a nonlinear --expr: mode(g(x)) != g(mode(x)) "
+                "in general, and can land far from g(median(x))/g(bestfit(x)) "
+                "for a strongly nonlinear g (e.g. 10**x) near a prior bound."
+            ),
+        ),
+    ] = None
+
+    symbol: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            "--symbol",
+            help=(
+                "Display symbol(s) for each --expr, matched by position. "
+                "May be given fewer times than --expr; missing entries "
+                "default to the corresponding --expr string itself."
+            ),
+        ),
+    ] = None
+
+    def __post_init__(self) -> None:
+        """Compute the posterior statistic(s) for the derived quantities."""
+        super().__post_init__()
+
+        if not self.variable:
+            raise ValueError("At least one --variable binding is required.")
+        if not self.expr:
+            raise ValueError("At least one --expr is required.")
+        if not self.stat:
+            self.stat = [DerivedStat.MEDIAN]
+        if self.symbol and len(self.symbol) > len(self.expr):
+            raise ValueError("More --symbol values than --expr values.")
+
+        symbols = self.symbol or []
+        displays = [
+            symbols[i] if i < len(symbols) else self.expr[i]
+            for i in range(len(self.expr))
+        ]
+
+        var_pindex = parse_variable_bindings(
+            self.mset, self.nadd_vals, self.variable, "--variable"
+        )
+
+        try:
+            evaluators = [compile_expr(e, var_pindex.keys()) for e in self.expr]
+        except SafeExprError as exc:
+            raise ValueError(str(exc)) from exc
+
+        mcat = self.mcat
+        epdfs = [Ncm.StatsDist1dEPDF.new(1.0e-3) for _ in self.expr]
+        for i in range(mcat.len()):
+            row = mcat.peek_row(i)
+            values = {name: row.get(pindex) for name, pindex in var_pindex.items()}
+            for epdf, evaluate in zip(epdfs, evaluators):
+                epdf.add_obs(evaluate(values))
+        for epdf in epdfs:
+            epdf.prepare()
+
+        bestfit_row = mcat.get_bestfit_row()
+        bf_values = {
+            name: bestfit_row.get(pindex) for name, pindex in var_pindex.items()
+        }
+
+        bindings_desc = ", ".join(self.variable)
+        table = Table(title=f"Derived quantities (where {bindings_desc})", expand=False)
+        table.add_column("Quantity", justify="left", style="bold bright_cyan")
+        table.add_column("Statistic", justify="left", style="bold bright_cyan")
+        table.add_column("Value", justify="right", style="bold bright_green")
+        for n_sigma in (1, 2, 3):
+            table.add_column(
+                f"{n_sigma}-sigma [-,+]", justify="right", style="bold bright_green"
+            )
+
+        for evaluate, display, sd1 in zip(evaluators, displays, epdfs):
+            bestfit_center = evaluate(bf_values)
+            for stat in self.stat:
+                center, bounds = stat_center_and_bounds(stat, sd1, bestfit_center)
+                row_cells = [display, stat.value, f"{center: .6g}"]
+                row_cells.extend(f"-{lo:.4g} / +{hi:.4g}" for lo, hi in bounds)
+                table.add_row(*row_cells)
+
+        self.console.print(table)
 
         self.end_experiment()
 
