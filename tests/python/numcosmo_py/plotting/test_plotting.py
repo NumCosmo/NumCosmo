@@ -201,3 +201,36 @@ def test_asinh_transform(mcat):
 
     assert cd.params_names[3] == "asinh_mu_2"
     assert cd.params_symbols[3] == r"\mathrm{sinh}^{-1}({\mu}_2)"
+
+
+def test_add_derived(mcat):
+    """Test CatalogData.add_derived()."""
+    cd = mcat_to_catalog_data(mcat, "test")
+    orig_names = list(cd.params_names)
+    orig_symbols = list(cd.params_symbols)
+    values = cd.rows[:, 0] + 1.0
+    bestfit_value = float(cd.bestfit[0] + 1.0) if cd.bestfit is not None else None
+
+    new_cd = cd.add_derived("derived", r"x + 1", values, bestfit_value=bestfit_value)
+
+    # The original CatalogData is not mutated (frozen dataclass).
+    assert cd.params_names == orig_names
+    assert cd.params_symbols == orig_symbols
+    assert cd.rows.shape[1] == len(orig_names)
+
+    assert new_cd.params_names == orig_names + ["derived"]
+    assert new_cd.params_symbols == cd.params_symbols + [r"x + 1"]
+    assert new_cd.rows.shape == (cd.rows.shape[0], cd.rows.shape[1] + 1)
+    assert_allclose(new_cd.rows[:, :-1], cd.rows)
+    assert_allclose(new_cd.rows[:, -1], values)
+
+    if cd.bestfit is not None:
+        assert_allclose(new_cd.bestfit[:-1], cd.bestfit)
+        assert new_cd.bestfit[-1] == pytest.approx(bestfit_value)
+
+
+def test_add_derived_wrong_length(mcat):
+    """Test CatalogData.add_derived() rejects mismatched lengths."""
+    cd = mcat_to_catalog_data(mcat, "test")
+    with pytest.raises(AssertionError):
+        cd.add_derived("derived", "x", cd.rows[:-1, 0])

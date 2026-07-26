@@ -39,6 +39,7 @@ from .catalog import (
     PlotCorner,
     VisualHW,
     ParameterEvolution,
+    DerivedQuantityError,
     GetBestFit,
     DumpMset,
 )
@@ -173,6 +174,35 @@ CAT_PARAM_EVOLUTION_CMD: CMDArg = {
     "help": "Plots the parameter evolution for a given catalog.",
 }
 
+CAT_DERIVED_ERROR_CMD: CMDArg = {
+    "name": "derived-error",
+    "no_args_is_help": True,
+    "help": (
+        "Posterior median/mode/best-fit and asymmetric error bars for one or "
+        "more derived quantities built from expressions of catalog "
+        "parameters.\n\n"
+        "Bind catalog parameters (or add-values) to expression variables "
+        "with --variable/-x, as name=parameter, or just parameter as "
+        "shorthand for parameter=parameter. Combine bound variables with "
+        "--expr; repeat --expr (and, positionally, --symbol) to report "
+        "several quantities sharing the same bindings in one table. Repeat "
+        "--stat to report median/mode/bestfit together.\n\n"
+        "Example: report 10^log10(M) and its asymmetric error bars from a "
+        "halo-mass catalog:\n\n"
+        "  numcosmo catalog derived-error exp.yaml exp.mcmc.fits "
+        "-x log10MDelta --expr '10**log10MDelta' --symbol 'M_Delta'\n\n"
+        "Example: report both the raw parameter and its exponentiated form, "
+        "for median and mode, in one table:\n\n"
+        "  numcosmo catalog derived-error exp.yaml exp.mcmc.fits "
+        "-x log10MDelta --expr log10MDelta --expr '10**log10MDelta' "
+        "--stat median --stat mode\n\n"
+        "Example: combine two parameters, e.g. h = H0 / 100 folded into "
+        "Omega_m*h**2:\n\n"
+        "  numcosmo catalog derived-error exp.yaml exp.mcmc.fits "
+        "-x x=Omega_m -x y=H0 --expr '(y / 100)**2 * x'"
+    ),
+}
+
 CAT_GET_BEST_FIT_CMD: CMDArg = {
     "name": "get-best-fit",
     "no_args_is_help": True,
@@ -287,6 +317,7 @@ app_cat.command(**CAT_CALIBRATE_CMD)(CalibrateCatalog)
 app_cat.command(**CAT_PLOT_CORNER_CMD)(PlotCorner)
 app_cat.command(**CAT_VISUAL_HW_CMD)(VisualHW)
 app_cat.command(**CAT_PARAM_EVOLUTION_CMD)(ParameterEvolution)
+app_cat.command(**CAT_DERIVED_ERROR_CMD)(DerivedQuantityError)
 app_cat.command(**CAT_GET_BEST_FIT_CMD)(GetBestFit)
 app_cat.command(**CAT_DUMP_MSET_CMD)(DumpMset)
 # ------------------------------------------------------------------------------

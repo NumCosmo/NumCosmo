@@ -677,6 +677,23 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
     }
   }
 
+  {
+    /*
+     * gsl_min_fminimizer_set requires a proper bracket: f(x) must be
+     * strictly less than f(x0) and f(x1). For a skewed or prior-bounded
+     * distribution whose true maximum sits at (or numerically at) a domain
+     * edge, the coarse scan above finds x at (or immediately next to) x0 or
+     * x1, and this precondition fails, which would otherwise abort through
+     * NCM_TEST_GSL_RESULT's fatal g_error below. Detect that case here and
+     * return the coarse-grid estimate directly instead.
+     */
+    const gdouble f_x0 = ncm_stats_dist1d_eval_m2lnp (sd1, x0);
+    const gdouble f_x1 = ncm_stats_dist1d_eval_m2lnp (sd1, x1);
+
+    if ((fmin >= f_x0) || (fmin >= f_x1))
+      return x;
+  }
+
   iter = 0;
 
   ret = gsl_min_fminimizer_set (self->fmin, &F, x, x0, x1);
