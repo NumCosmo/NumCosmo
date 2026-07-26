@@ -179,14 +179,16 @@ def test_marginal_matches_quad(ellip_conv):
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_marginal_matches_scipy_truth_table_beta_alpha_below_one(ellip_conv):
-    """NcGalaxyShapePopBeta with alpha<1 (density diverges at x=0, a genuine
-    singularity -- see the class doc): unlike SeriesLensed, whose g-Taylor
-    series loses its radius of convergence here since the population stops
-    being analytic at x=0, FixedQuad's direct lens-domain quadrature has no
-    series expansion to break and stays accurate through the singularity.
-    This is a real fitting regime (NcGalaxyShapePopBeta's own alpha floor is
-    only 0.5001, looser than beta's 1.0, precisely to allow it)."""
-    alpha, beta, std_noise = 0.6, 4.0, 0.03
+    """NcGalaxyShapePopBeta with alpha<2 (P(x) diverges at x=0, a genuine
+    singularity -- see the class doc: the r=sqrt(x)~Beta(alpha,beta)
+    reparametrization's Jacobian makes this the relevant threshold, not
+    alpha<1): unlike SeriesLensed, whose g-Taylor series loses its radius of
+    convergence here since the population stops being analytic at x=0,
+    FixedQuad's direct lens-domain quadrature has no series expansion to
+    break and stays accurate through the singularity. This is a real
+    fitting regime -- alpha=1.2 sits comfortably above the class's own
+    alpha>=1 floor (on r) while still being alpha<2 (divergent in x)."""
+    alpha, beta, std_noise = 1.2, 4.0, 0.03
     g_1, g_2 = 0.1, 0.05
     eps_obs_1, eps_obs_2 = 0.15, -0.1
 
@@ -218,13 +220,14 @@ def test_marginal_matches_scipy_truth_table_beta_alpha_below_one(ellip_conv):
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_marginal_matches_scipy_truth_table_beta_alpha_below_one_g_scan(ellip_conv):
-    """Same alpha<1 Beta population as above, scanned over several shears
+    """Same alpha<2 Beta population as above, scanned over several shears
     against the scipy oracle directly.
 
-    Not cross-checked against Quad: known ~11% accuracy bug for alpha<1 Beta
-    populations near g~0.18 (see test_galaxy_shape_factor_quad.py).
+    Not cross-checked against Quad: known accuracy bug for alpha<2 Beta
+    populations (P(x) divergent at x=0) near g~0.18 (see
+    test_galaxy_shape_factor_quad.py).
     """
-    alpha, beta, std_noise = 0.6, 4.0, 0.03
+    alpha, beta, std_noise = 1.2, 4.0, 0.03
     eps_obs_1, eps_obs_2 = 0.15, -0.1
 
     pop = Nc.GalaxyShapePopBeta.new()
