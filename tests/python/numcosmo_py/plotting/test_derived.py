@@ -130,13 +130,25 @@ def test_add_derived_column_bestfit(mset_mcat):
     assert new_cd.bestfit[-1] == pytest.approx(cd.bestfit[i_x] + cd.bestfit[i_y])
 
 
+def test_add_derived_column_bare_variable_shorthand(mset_mcat):
+    """A bare "parameter" binding is shorthand for "parameter=parameter"."""
+    mset, mcat = mset_mcat
+    nadd_vals = mcat.nadd_vals()
+    cd = mcat_to_catalog_data(mcat, "test")
+
+    new_cd = add_derived_column(cd, mset, nadd_vals, mcat, ["mu_0"], "mu_0", None, "d")
+
+    i_x = cd.params_names.index(mcat.col_name(nadd_vals))
+    assert_allclose(new_cd.rows[:, -1], cd.rows[:, i_x])
+
+
 def test_add_derived_column_invalid_binding_syntax(mset_mcat):
-    """A --derived-variable string missing "=" raises a clear ValueError."""
+    """A --derived-variable string missing a name or a parameter raises ValueError."""
     mset, mcat = mset_mcat
     cd = mcat_to_catalog_data(mcat, "test")
 
     with pytest.raises(ValueError, match="expected name=parameter"):
-        add_derived_column(cd, mset, mcat.nadd_vals(), mcat, ["mu_0"], "x", None, "d")
+        add_derived_column(cd, mset, mcat.nadd_vals(), mcat, ["=mu_0"], "x", None, "d")
 
 
 def test_add_derived_column_unknown_parameter(mset_mcat):
