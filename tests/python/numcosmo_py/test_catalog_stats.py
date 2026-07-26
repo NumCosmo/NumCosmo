@@ -43,6 +43,7 @@ from numcosmo_py.catalog_stats import (
     parse_variable_bindings,
     resolve_param,
     safe_eval_mode,
+    stat_center_and_bounds,
 )
 
 Ncm.cfg_init()
@@ -96,6 +97,10 @@ class _FakeDist(_FakeQuantileDist):
     def eval_pdf(self, x: float) -> float:
         """CDF, i.e. P(X <= x)."""
         return math.sqrt(x)
+
+    def eval_p(self, x: float) -> float:
+        """Density, i.e. d/dx CDF(x). Monotonically decreasing on (0, 1]."""
+        return math.inf if x <= 0.0 else 0.5 / math.sqrt(x)
 
 
 def test_derived_stat_values():
@@ -156,7 +161,17 @@ def test_parse_variable_bindings_basic(mset):
     assert var_pindex == {"x": expected_x, "y": expected_y}
 
 
-@pytest.mark.parametrize("binding", ["mu_0", "=mu_0", "x=", "   =   "])
+def test_parse_variable_bindings_bare_shorthand(mset):
+    """A bare "parameter" binding is shorthand for "parameter=parameter"."""
+    var_pindex = parse_variable_bindings(
+        mset, NADD_VALS, ["mu_0", "y=mu_1"], "--variable"
+    )
+    _, expected_mu0 = resolve_param(mset, NADD_VALS, "mu_0")
+    _, expected_y = resolve_param(mset, NADD_VALS, "mu_1")
+    assert var_pindex == {"mu_0": expected_mu0, "y": expected_y}
+
+
+@pytest.mark.parametrize("binding", ["=mu_0", "x=", "   =   "])
 def test_parse_variable_bindings_invalid_syntax(mset, binding):
     """A binding missing a name or a parameter raises a ValueError."""
     with pytest.raises(ValueError, match="expected name=parameter"):
@@ -166,7 +181,13 @@ def test_parse_variable_bindings_invalid_syntax(mset, binding):
 def test_parse_variable_bindings_error_mentions_option_name(mset):
     """The error message names the CLI option that produced the bad binding."""
     with pytest.raises(ValueError, match="--my-option"):
-        parse_variable_bindings(mset, NADD_VALS, ["bad"], "--my-option")
+        parse_variable_bindings(mset, NADD_VALS, ["=bad"], "--my-option")
+
+
+def test_parse_variable_bindings_bare_unknown_parameter(mset):
+    """A bare binding to a nonexistent parameter still fails via resolve_param."""
+    with pytest.raises(ValueError, match="not found"):
+        parse_variable_bindings(mset, NADD_VALS, ["does_not_exist"], "--variable")
 
 
 def test_median_bounds_asymmetric():
@@ -257,3 +278,33 @@ def test_safe_eval_mode_trivial_domain():
     epdf = _epdf_from_samples([5.0] * 5)
     assert epdf.get_xi() == epdf.get_xf()
     assert safe_eval_mode(epdf) == pytest.approx(epdf.get_xi())
+
+
+def test_stat_center_and_bounds_dispatch():
+    """stat_center_and_bounds() picks the right center/bound-fn per DerivedStat."""
+    fake = _FakeDist()
+    bestfit_center = 0.42
+
+    median_center, median_bnds = stat_center_and_bounds(
+        DerivedStat.MEDIAN, fake, bestfit_center
+    )
+    assert median_center == pytest.approx(fake.eval_inv_pdf(0.5))
+    assert median_bnds == [
+        median_bounds(fake, pa, median_center) for pa in SIGMA_LEVELS
+    ]
+
+    mode_center, mode_bnds = stat_center_and_bounds(
+        DerivedStat.MODE, fake, bestfit_center
+    )
+    assert mode_center == pytest.approx(safe_eval_mode(fake))
+    assert mode_bnds == [
+        asymmetric_bounds(fake, pa, mode_center) for pa in SIGMA_LEVELS
+    ]
+
+    bf_center, bf_bnds = stat_center_and_bounds(
+        DerivedStat.BESTFIT, fake, bestfit_center
+    )
+    assert bf_center == bestfit_center
+    assert bf_bnds == [
+        asymmetric_bounds(fake, pa, bestfit_center) for pa in SIGMA_LEVELS
+    ]

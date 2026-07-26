@@ -46,12 +46,9 @@ from ..plotting.tools import set_rc_params_article, confidence_ellipse
 from ..safe_eval import compile_expr, SafeExprError
 from ..catalog_stats import (
     DerivedStat,
-    SIGMA_LEVELS,
-    asymmetric_bounds,
-    median_bounds,
     parse_variable_bindings,
     resolve_param,
-    safe_eval_mode,
+    stat_center_and_bounds,
 )
 from .loading import LoadCatalog
 from .logging import AppLogging
@@ -683,8 +680,9 @@ class PlotCorner(LoadCatalog):
             "--derived-variable",
             help=(
                 "Bind a name usable in --derived-expr to a catalog parameter "
-                "or add-value, as name=parameter. May be given multiple "
-                "times. Requires --derived-expr."
+                "or add-value, as name=parameter (or just parameter, short "
+                "for parameter=parameter). May be given multiple times. "
+                "Requires --derived-expr."
             ),
         ),
     ] = None
@@ -918,12 +916,14 @@ class ParameterEvolution(ParameterAnalysis):
 
 @dataclasses.dataclass(kw_only=True)
 class DerivedQuantityError(LoadCatalog):
-    """Posterior statistic and asymmetric error bars for a derived quantity.
+    """Posterior statistic and asymmetric error bars for derived quantities.
 
-    Builds the posterior distribution of an arbitrary expression of catalog
-    parameters (e.g. ``(y / 100)**2 * x``) by evaluating the expression on
-    every sample in the catalog, then reports its median, mode, and/or
-    best-fit value together with 1, 2 and 3-sigma asymmetric error bars.
+    Builds the posterior distribution of one or more arbitrary expressions
+    of catalog parameters (e.g. ``(y / 100)**2 * x``), sharing the same
+    --variable bindings, by evaluating each expression on every sample in
+    the catalog in a single pass. Reports each quantity's median, mode,
+    and/or best-fit value together with 1, 2 and 3-sigma asymmetric error
+    bars in one table.
     """
 
     variable: Annotated[
@@ -933,21 +933,25 @@ class DerivedQuantityError(LoadCatalog):
             "-x",
             help=(
                 "Bind a name usable in --expr to a catalog parameter or "
-                "add-value, as name=parameter. May be given multiple times, "
-                "e.g. -x x=Omega_m -x y=H0."
+                "add-value, as name=parameter (or just parameter, short for "
+                "parameter=parameter). May be given multiple times, e.g. "
+                "-x x=Omega_m -x y=H0, or -x log10MDelta."
             ),
         ),
     ]
 
     expr: Annotated[
-        str,
+        List[str],
         typer.Option(
+            "--expr",
             help=(
                 "Mathematical expression combining the bound variables, e.g. "
-                "'(y / 100)**2 * x'. Supports + - * / // % ** and unary minus, "
-                "the constants pi/e, and the functions log, log10, log2, exp, "
-                "sqrt, abs, sin, cos, tan, arcsin, arccos, arctan, sinh, cosh, "
-                "tanh."
+                "'(y / 100)**2 * x'. May be given multiple times to report "
+                "several derived quantities in one table, all sharing the "
+                "same --variable bindings. Supports + - * / // % ** and "
+                "unary minus, the constants pi/e, and the functions log, "
+                "log10, log2, exp, sqrt, abs, sin, cos, tan, arcsin, arccos, "
+                "arctan, sinh, cosh, tanh."
             ),
         ),
     ]
@@ -965,48 +969,63 @@ class DerivedQuantityError(LoadCatalog):
     ] = None
 
     symbol: Annotated[
-        Optional[str],
+        Optional[List[str]],
         typer.Option(
+            "--symbol",
             help=(
-                "Display symbol for the derived quantity, used in the report "
-                "title. Defaults to the --expr string itself."
+                "Display symbol(s) for each --expr, matched by position. "
+                "May be given fewer times than --expr; missing entries "
+                "default to the corresponding --expr string itself."
             ),
         ),
     ] = None
 
     def __post_init__(self) -> None:
-        """Compute the posterior statistic(s) for the derived quantity."""
+        """Compute the posterior statistic(s) for the derived quantities."""
         super().__post_init__()
 
         if not self.variable:
             raise ValueError("At least one --variable binding is required.")
+        if not self.expr:
+            raise ValueError("At least one --expr is required.")
         if not self.stat:
             self.stat = [DerivedStat.MEDIAN]
+        if self.symbol and len(self.symbol) > len(self.expr):
+            raise ValueError("More --symbol values than --expr values.")
+
+        symbols = self.symbol or []
+        displays = [
+            symbols[i] if i < len(symbols) else self.expr[i]
+            for i in range(len(self.expr))
+        ]
 
         var_pindex = parse_variable_bindings(
             self.mset, self.nadd_vals, self.variable, "--variable"
         )
 
         try:
-            evaluate = compile_expr(self.expr, var_pindex.keys())
+            evaluators = [compile_expr(e, var_pindex.keys()) for e in self.expr]
         except SafeExprError as exc:
             raise ValueError(str(exc)) from exc
 
         mcat = self.mcat
-        epdf = Ncm.StatsDist1dEPDF.new(1.0e-3)
+        epdfs = [Ncm.StatsDist1dEPDF.new(1.0e-3) for _ in self.expr]
         for i in range(mcat.len()):
             row = mcat.peek_row(i)
             values = {name: row.get(pindex) for name, pindex in var_pindex.items()}
-            epdf.add_obs(evaluate(values))
-        epdf.prepare()
-        sd1: Ncm.StatsDist1d = epdf
+            for epdf, evaluate in zip(epdfs, evaluators):
+                epdf.add_obs(evaluate(values))
+        for epdf in epdfs:
+            epdf.prepare()
 
-        display = self.symbol if self.symbol is not None else self.expr
+        bestfit_row = mcat.get_bestfit_row()
+        bf_values = {
+            name: bestfit_row.get(pindex) for name, pindex in var_pindex.items()
+        }
+
         bindings_desc = ", ".join(self.variable)
-        table = Table(
-            title=f"Derived quantity: {display}  (where {bindings_desc})",
-            expand=False,
-        )
+        table = Table(title=f"Derived quantities (where {bindings_desc})", expand=False)
+        table.add_column("Quantity", justify="left", style="bold bright_cyan")
         table.add_column("Statistic", justify="left", style="bold bright_cyan")
         table.add_column("Value", justify="right", style="bold bright_green")
         for n_sigma in (1, 2, 3):
@@ -1014,24 +1033,13 @@ class DerivedQuantityError(LoadCatalog):
                 f"{n_sigma}-sigma [-,+]", justify="right", style="bold bright_green"
             )
 
-        for stat in self.stat:
-            if stat == DerivedStat.BESTFIT:
-                bestfit_row = mcat.get_bestfit_row()
-                bf_values = {
-                    name: bestfit_row.get(pindex) for name, pindex in var_pindex.items()
-                }
-                center = evaluate(bf_values)
-                bounds = [asymmetric_bounds(sd1, pa, center) for pa in SIGMA_LEVELS]
-            elif stat == DerivedStat.MODE:
-                center = safe_eval_mode(sd1)
-                bounds = [asymmetric_bounds(sd1, pa, center) for pa in SIGMA_LEVELS]
-            else:
-                center = sd1.eval_inv_pdf(0.5)
-                bounds = [median_bounds(sd1, pa, center) for pa in SIGMA_LEVELS]
-
-            row_cells = [stat.value, f"{center: .6g}"]
-            row_cells.extend(f"-{lo:.4g} / +{hi:.4g}" for lo, hi in bounds)
-            table.add_row(*row_cells)
+        for evaluate, display, sd1 in zip(evaluators, displays, epdfs):
+            bestfit_center = evaluate(bf_values)
+            for stat in self.stat:
+                center, bounds = stat_center_and_bounds(stat, sd1, bestfit_center)
+                row_cells = [display, stat.value, f"{center: .6g}"]
+                row_cells.extend(f"-{lo:.4g} / +{hi:.4g}" for lo, hi in bounds)
+                table.add_row(*row_cells)
 
         self.console.print(table)
 

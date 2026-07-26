@@ -103,7 +103,28 @@ def test_derived_error_median(mcmc_catalog):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "Derived quantity" in result.stdout
+    assert "Derived quantities" in result.stdout
+    assert "median" in result.stdout
+
+
+def test_derived_error_bare_variable_shorthand(mcmc_catalog):
+    """-x mu_0 (no "=") is shorthand for -x mu_0=mu_0."""
+    experiment, catalog = mcmc_catalog
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "derived-error",
+            experiment.as_posix(),
+            catalog.as_posix(),
+            "-x",
+            "mu_0",
+            "--expr",
+            "mu_0",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
     assert "median" in result.stdout
 
 
@@ -157,6 +178,86 @@ def test_derived_error_all_stats(mcmc_catalog):
     assert "median" in result.stdout
     assert "mode" in result.stdout
     assert "bestfit" in result.stdout
+
+
+def test_derived_error_multiple_exprs_in_one_table(mcmc_catalog):
+    """--expr may be repeated to report several quantities in a single table."""
+    experiment, catalog = mcmc_catalog
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "derived-error",
+            experiment.as_posix(),
+            catalog.as_posix(),
+            "-x",
+            "x=mu_0",
+            "--expr",
+            "x",
+            "--expr",
+            "10**x",
+            "--symbol",
+            "raw_x",
+            "--symbol",
+            "pow_x",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "Derived quantities" in result.stdout
+    assert "raw_x" in result.stdout
+    assert "pow_x" in result.stdout
+    # One "median" row per --expr.
+    assert result.stdout.count("median") == 2
+
+
+def test_derived_error_symbols_default_to_expr_when_fewer_than_exprs(mcmc_catalog):
+    """Fewer --symbol values than --expr fall back to the --expr text itself."""
+    experiment, catalog = mcmc_catalog
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "derived-error",
+            experiment.as_posix(),
+            catalog.as_posix(),
+            "-x",
+            "x=mu_0",
+            "--expr",
+            "x",
+            "--expr",
+            "10**x",
+            "--symbol",
+            "raw_x",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "raw_x" in result.stdout
+    assert "10**x" in result.stdout
+
+
+def test_derived_error_too_many_symbols_rejected(mcmc_catalog):
+    """More --symbol values than --expr values is a clear user error."""
+    experiment, catalog = mcmc_catalog
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "derived-error",
+            experiment.as_posix(),
+            catalog.as_posix(),
+            "-x",
+            "x=mu_0",
+            "--expr",
+            "x",
+            "--symbol",
+            "a",
+            "--symbol",
+            "b",
+        ],
+    )
+    assert result.exit_code != 0
 
 
 def test_derived_error_requires_variable(mcmc_catalog):

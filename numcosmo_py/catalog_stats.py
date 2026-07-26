@@ -76,14 +76,23 @@ def resolve_param(
 def parse_variable_bindings(
     mset: Ncm.MSet, nadd_vals: int, bindings: List[str], option_name: str
 ) -> dict[str, int]:
-    """Parse repeated "name=parameter" strings into {name: column index}."""
+    """Parse repeated "name=parameter" (or bare "parameter") bindings.
+
+    A binding without "=" is a shorthand for "parameter=parameter", i.e.
+    binding a variable of the same name as the catalog parameter itself.
+    """
     var_pindex: dict[str, int] = {}
     for binding in bindings:
-        name, _, param = binding.partition("=")
-        name, param = name.strip(), param.strip()
+        if "=" in binding:
+            name, _, param = binding.partition("=")
+            name, param = name.strip(), param.strip()
+        else:
+            name = param = binding.strip()
+
         if not name or not param:
             raise ValueError(
-                f'Invalid {option_name} "{binding}", expected name=parameter.'
+                f'Invalid {option_name} "{binding}", expected name=parameter '
+                f"or a bare parameter name."
             )
         _, pindex = resolve_param(mset, nadd_vals, param)
         var_pindex[name] = pindex
@@ -98,14 +107,19 @@ def safe_eval_mode(sd1: Ncm.StatsDist1d, n_grid: int = 1000) -> float:
     requires the density's maximum to be strictly interior to `[xi, xf]`
     (i.e. above the density at both endpoints). For a skewed or
     prior-bounded posterior whose true maximum sits at (or beyond,
-    numerically, right at) the domain edge, that precondition fails and
-    NumCosmo raises a fatal `g_error`, which aborts the whole process -- not
-    something a Python `try/except` can catch.
+    numerically, right at) the domain edge, that precondition used to fail
+    and abort the whole process via a fatal `g_error` -- not something a
+    Python `try/except` can catch.
 
-    This replicates `eval_mode()`'s own coarse linear pre-scan (same
-    resolution) to detect that edge case first. When the scan's maximiser is
-    strictly interior and above both endpoints, it is safe to delegate to
-    the precise `eval_mode()`. Otherwise, the coarse-grid maximiser is
+    This has since been fixed directly in `ncm_stats_dist1d_eval_mode()`
+    (numcosmo/ncm/stats/ncm_stats_dist1d.c), which now detects the same
+    edge case internally and returns the coarse-grid estimate instead of
+    aborting. This function remains as a cheap, redundant safety net (e.g.
+    if numcosmo_py is ever run against a native libnumcosmo build predating
+    that fix): it replicates `eval_mode()`'s own coarse linear pre-scan
+    (same resolution) to detect the edge case first. When the scan's
+    maximiser is strictly interior and above both endpoints, it delegates
+    to the precise `eval_mode()`. Otherwise, the coarse-grid maximiser is
     returned directly instead of risking the crash.
     """
     xi = sd1.get_xi()
@@ -156,3 +170,27 @@ def asymmetric_bounds(
         hi = sd1.eval_inv_pdf(p_center + pa_2)
 
     return center - lo, hi - center
+
+
+def stat_center_and_bounds(
+    stat: DerivedStat, sd1: Ncm.StatsDist1d, bestfit_center: float
+) -> tuple[float, List[tuple[float, float]]]:
+    """Compute the (center, [(lo, hi) per SIGMA_LEVELS]) reported for `stat`.
+
+    `bestfit_center` is the quantity evaluated at the catalog's best-fit row;
+    it is only used when `stat` is `DerivedStat.BESTFIT`, but is required
+    unconditionally to keep this a single, branch-free entry point for
+    callers that report several statistics for the same distribution.
+    """
+    if stat == DerivedStat.BESTFIT:
+        center = bestfit_center
+        bound_fn = asymmetric_bounds
+    elif stat == DerivedStat.MODE:
+        center = safe_eval_mode(sd1)
+        bound_fn = asymmetric_bounds
+    else:
+        center = sd1.eval_inv_pdf(0.5)
+        bound_fn = median_bounds
+
+    bounds = [bound_fn(sd1, pa, center) for pa in SIGMA_LEVELS]
+    return center, bounds

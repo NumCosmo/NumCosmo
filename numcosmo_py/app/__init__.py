@@ -178,8 +178,28 @@ CAT_DERIVED_ERROR_CMD: CMDArg = {
     "name": "derived-error",
     "no_args_is_help": True,
     "help": (
-        "Posterior median/mode/best-fit and asymmetric error bars for a "
-        "derived quantity built from an expression of catalog parameters."
+        "Posterior median/mode/best-fit and asymmetric error bars for one or "
+        "more derived quantities built from expressions of catalog "
+        "parameters.\n\n"
+        "Bind catalog parameters (or add-values) to expression variables "
+        "with --variable/-x, as name=parameter, or just parameter as "
+        "shorthand for parameter=parameter. Combine bound variables with "
+        "--expr; repeat --expr (and, positionally, --symbol) to report "
+        "several quantities sharing the same bindings in one table. Repeat "
+        "--stat to report median/mode/bestfit together.\n\n"
+        "Example: report 10^log10(M) and its asymmetric error bars from a "
+        "halo-mass catalog:\n\n"
+        "  numcosmo catalog derived-error exp.yaml exp.mcmc.fits "
+        "-x log10MDelta --expr '10**log10MDelta' --symbol 'M_Delta'\n\n"
+        "Example: report both the raw parameter and its exponentiated form, "
+        "for median and mode, in one table:\n\n"
+        "  numcosmo catalog derived-error exp.yaml exp.mcmc.fits "
+        "-x log10MDelta --expr log10MDelta --expr '10**log10MDelta' "
+        "--stat median --stat mode\n\n"
+        "Example: combine two parameters, e.g. h = H0 / 100 folded into "
+        "Omega_m*h**2:\n\n"
+        "  numcosmo catalog derived-error exp.yaml exp.mcmc.fits "
+        "-x x=Omega_m -x y=H0 --expr '(y / 100)**2 * x'"
     ),
 }
 
