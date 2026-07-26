@@ -33,7 +33,7 @@ the corner-plot derived-quantity support in `numcosmo_py.plotting.derived`.
 from __future__ import annotations
 
 import enum
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from . import Ncm
 
@@ -182,6 +182,8 @@ def stat_center_and_bounds(
     unconditionally to keep this a single, branch-free entry point for
     callers that report several statistics for the same distribution.
     """
+    bound_fn: Callable[[Ncm.StatsDist1d, float, float], tuple[float, float]]
+
     if stat == DerivedStat.BESTFIT:
         center = bestfit_center
         bound_fn = asymmetric_bounds
