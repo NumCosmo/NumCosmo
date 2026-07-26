@@ -771,7 +771,7 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
     ``GalaxyPopGenBeta``'s get_shape_pop/register_models/get_mfuncs, and
     ``mfunc_oa.add(func)`` in generate.py's own ``_build_experiment`` (the
     only ``GalaxyPopGen`` variant with non-empty ``get_mfuncs()``), plus
-    the ``NcGalaxyShapePopBeta:mean``/``:std`` ``NcmMSetFuncList`` entries
+    the ``NcGalaxyShapePopBeta:mode``/``:e_rms`` ``NcmMSetFuncList`` entries
     read back from the written ``.functions.yaml``.
     """
     result = runner.invoke(
@@ -806,8 +806,8 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
     funcs = [cast(Ncm.MSetFuncList, mfunc_oa.get(i)) for i in range(mfunc_oa.len())]
     names = {(f.peek_ns(), f.peek_name()) for f in funcs}
     assert names == {
-        ("NcGalaxyShapePopBeta", "mean"),
-        ("NcGalaxyShapePopBeta", "std"),
+        ("NcGalaxyShapePopBeta", "mode"),
+        ("NcGalaxyShapePopBeta", "e_rms"),
     }
     for func in funcs:
         func.eval0(mset)
