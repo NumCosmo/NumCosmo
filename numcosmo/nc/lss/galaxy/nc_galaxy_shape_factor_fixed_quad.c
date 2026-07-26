@@ -153,6 +153,16 @@ typedef struct _NcGalaxyShapeFactorFixedQuadPrivate
 
   gdouble (*det_jac) (complex double g, complex double chi_L);
 
+  /* Resolved once at construction alongside apply_shear_inv/det_jac above.
+   * The per-galaxy hot loop in _nc_galaxy_shape_factor_fixed_quad_marginal()
+   * branches on this ONCE per call (not per node) to pick between two
+   * duplicated loop bodies that call nc_wl_ellipticity.h's direct,
+   * non-pointer _trace/_trace_det kernels -- the per-node
+   * apply_shear_inv/det_jac indirection above was blocking inlining and
+   * vectorization there. apply_shear_inv/det_jac stay as-is for the
+   * (non-hot, calibration-only) _lens_quad_at_n(). */
+  NcGalaxyWLObsEllipConv ellip_conv;
+
   guint n_radial;
   guint n_angular;
   guint n_lens; /* forced odd, see constructed() */
@@ -191,6 +201,7 @@ nc_galaxy_shape_factor_fixed_quad_init (NcGalaxyShapeFactorFixedQuad *gsffq)
 
   self->apply_shear_inv  = NULL;
   self->det_jac          = NULL;
+  self->ellip_conv       = NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE;
   self->n_radial         = 15;
   self->n_angular        = 15;
   self->n_lens           = 41;
@@ -280,6 +291,8 @@ _nc_galaxy_shape_factor_fixed_quad_constructed (GObject *object)
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */
     }
+
+    self->ellip_conv = ellip_conv;
 
     /* Force n_lens odd: guarantees a Gauss-Legendre node lands exactly on
      * the u=0.5 symmetry line, which always passes through the noise-disk
@@ -733,13 +746,30 @@ _nc_galaxy_shape_factor_fixed_quad_marginal (NcGalaxyShapeFactorFixedQuad *gsffq
   {
     gdouble * const x_data = (gdouble *) ldata->x_arr->data;
 
-    for (i = 0; i < ldata->n_used; i++)
+    /* Branch on ellip_conv ONCE per call (it is fixed for the object's
+     * lifetime), not per node: each duplicated loop below calls
+     * nc_wl_ellipticity.h's direct, non-pointer fused *_kernel() (x_i and
+     * jac from a single g_conj/abs_g2/den, no separate apply_shear_inv +
+     * det_jac calls -- see its own docs), letting the compiler inline/
+     * vectorize freely -- the per-node self->apply_shear_inv/self->det_jac
+     * indirection was blocking that. TRACE additionally prepares its
+     * g-only terms once before the loop (measured ~12% faster, see
+     * nc_wl_ellipticity_trace_kernel_prepare()'s docs); TRACE_DET has no
+     * equivalent win and stays a single call per node (see
+     * nc_wl_ellipticity_trace_det_kernel()'s docs). */
+    if (self->ellip_conv == NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE)
     {
-      const complex double chi_L = ldata->chi_L[i];
-      const complex double chi_i = self->apply_shear_inv (g, chi_L);
+      NcWLEllipticityTraceKernelPrep prep;
 
-      x_data[i]     = gsl_pow_2 (creal (chi_i)) + gsl_pow_2 (cimag (chi_i));
-      ldata->jac[i] = self->det_jac (g, chi_L);
+      nc_wl_ellipticity_trace_kernel_prepare (g, &prep);
+
+      for (i = 0; i < ldata->n_used; i++)
+        nc_wl_ellipticity_trace_kernel_apply (&prep, ldata->chi_L[i], &x_data[i], &ldata->jac[i]);
+    }
+    else
+    {
+      for (i = 0; i < ldata->n_used; i++)
+        nc_wl_ellipticity_trace_det_kernel (g, ldata->chi_L[i], &x_data[i], &ldata->jac[i]);
     }
   }
 
