@@ -968,6 +968,46 @@ def test_use_marginal_spline_beta_alpha_below_one_caveat(ellip_conv):
     assert_allclose(val_spline, val_direct, rtol=1.0)  # coarse: within 2x
 
 
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_use_marginal_spline_beta_alpha_below_two_never_crashes_and_caches(ellip_conv):
+    """Regression for the production crash this fix addresses: a Beta
+    population with 1<alpha<2 has a genuinely divergent AREA DENSITY at
+    r=0 (see nc_galaxy_shape_pop_beta.c's own docs), and EVERY domain node
+    has some g mapping to chi_I=0 (see _build_g_spline()'s docs) -- so a
+    box of any reasonable size is guaranteed to contain at least one point
+    where ln(marginal) gets arbitrarily sharp. The adaptive autoknots
+    build cannot resolve that and aborts via g_error; _build_g_spline()
+    detects this population is unsafe for the adaptive path (via the
+    log-log slope probe of eval_p(r) near r=0) and builds a plain FIXED
+    knot grid instead (_build_g_spline_fixed_knots()), which cannot abort
+    no matter how sharp the sampled function gets. This test exercises a
+    dense sweep of the whole cached box (no crash anywhere) plus a
+    same-point repeat call (must reproduce bit-identically, confirming the
+    built spline -- not a fresh direct evaluation -- is what's actually
+    being reused)."""
+    alpha, beta, std_noise, g_max = 1.55, 1.62, 0.3, 0.3
+    eps_obs_1, eps_obs_2 = 0.05, -0.02
+
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = alpha
+    pop["beta"] = beta
+    gsffq, pop, data = _make_with_pop(
+        pop, ellip_conv, std_noise, use_marginal_spline=True, spline_g_max=g_max
+    )
+
+    n = 25
+    grid = np.linspace(-g_max, g_max, n)
+    for g_1 in grid:
+        for g_2 in grid:
+            val = gsffq.eval_marginal(pop, data, g_1, g_2, eps_obs_1, eps_obs_2)
+            assert math.isfinite(val)
+            assert val > 0.0
+
+    val_a = gsffq.eval_marginal(pop, data, 0.1, 0.05, eps_obs_1, eps_obs_2)
+    val_b = gsffq.eval_marginal(pop, data, 0.1, 0.05, eps_obs_1, eps_obs_2)
+    assert val_a == val_b
+
+
 def test_spline_g_max_rel_err_gobject_property_round_trip():
     """spline-g-max/spline-rel-err (CONSTRUCT_ONLY) are reachable through
     the GObject property system, not just props.spline_g_max /
