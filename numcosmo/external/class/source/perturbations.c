@@ -2161,13 +2161,26 @@ int perturb_solve(
 
   /* function pointer to ODE evolver and names of possible evolvers */
 
-  extern int evolver_rk();
-  extern int evolver_ndf15();
-  int (*generic_evolver)();
+  int (*generic_evolver)(int (*derivs)(double x, double *y, double *dy, void *parameters_and_workspace, ErrorMsg error_message),
+                         double x_ini,
+                         double x_final,
+                         double *y_inout,
+                         int *used_in_output,
+                         int neq,
+                         void *parameters_and_workspace_for_derivs,
+                         double rtol,
+                         double minimum_variation,
+                         int (*timescale_and_approximation)(double x, void *parameters_and_workspace, double *timescales, ErrorMsg error_message),
+                         double timestep_over_timescale,
+                         double *t_vec,
+                         int t_res,
+                         int (*output)(double x, double y[], double dy[], int index_x, void *parameters_and_workspace, ErrorMsg error_message),
+                         int (*print_variables)(double x, double y[], double dy[], void *parameters_and_workspace, ErrorMsg error_message),
+                         ErrorMsg error_message);
 
 
   /* Related to the perturbation output */
-  int (*perhaps_print_variables)();
+  int (*perhaps_print_variables)(double tau, double *y, double *dy, void *parameters_and_workspace, ErrorMsg error_message);
   int index_ikout;
 
   /** - initialize indices relevant for back/thermo tables search */
