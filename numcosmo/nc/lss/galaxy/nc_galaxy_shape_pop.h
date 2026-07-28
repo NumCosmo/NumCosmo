@@ -52,23 +52,28 @@ struct _NcGalaxyShapePopClass
 
   void (*data_init) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
   void (*prepare) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
-  gdouble (*eval_p) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble x);
-  gdouble (*eval_p_rho2) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble rho2);
+  gdouble (*eval_p) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
   void (*gen) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
   gdouble (*e_rms) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 
   /*
-   * Taylor-in-g analog of eval_p(): given x(g) = |chi_I(chi_L,g)|^2's own
-   * g-Taylor coefficients (population-independent shear-map output,
-   * @x_series, a #NcmLaurentSeriesTPS whose order is this call's truncation
-   * order), returns this population's own fully normalized density
-   * P(x(g)) = eval_p(x(g))'s g-Taylor coefficients in @out (same order as
-   * @x_series) -- i.e. @out's coefficients must reproduce eval_p(x) exactly
-   * when Horner-evaluated at any g inside the truncation radius, including
-   * the population's own normalization constant (no reference-point
-   * division or other rescaling is deferred to the caller: see
-   * #NcGalaxyShapeFactorSeriesLensed's own pop_norm, a fixed, population-
-   * agnostic 1/pi disc-measure factor). Unlike eval_p_rho2, there is no
+   * Taylor-in-g analog of the OLD x-space density (x=|chi_I|^2, NOT the
+   * same quantity eval_p(r) above returns since the contract change that
+   * collapsed eval_p/eval_p_rho2 into a single r-native vfunc -- this
+   * series vfunc keeps its own, separate, x-space-internal meaning, because
+   * r=sqrt(x) has a branch point at x=0 that breaks the series' own
+   * analyticity there; see nc_galaxy_shape_pop_beta.c's docs for the exact
+   * eval_p(r)/(2r) identity relating the two). Given x(g) =
+   * |chi_I(chi_L,g)|^2's own g-Taylor coefficients (population-independent
+   * shear-map output, @x_series, a #NcmLaurentSeriesTPS whose order is this
+   * call's truncation order), returns this population's own fully
+   * normalized OLD x-space density's g-Taylor coefficients in @out (same
+   * order as @x_series) -- i.e. @out's coefficients must reproduce that
+   * x-space density exactly when Horner-evaluated at any g inside the
+   * truncation radius, including the population's own normalization
+   * constant (no reference-point division or other rescaling is deferred
+   * to the caller: see #NcGalaxyShapeFactorSeriesLensed's own pop_norm, a
+   * fixed, population-agnostic 1/pi disc-measure factor). There is no
    * sensible generic default (the composition depends entirely on the
    * population's own functional form), so the base class default just
    * errors clearly for the "not every subclass needs this" situation.
@@ -82,9 +87,9 @@ struct _NcGalaxyShapePopClass
                                 const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
   /*
-   * Batched form of eval_p(): evaluates P(x) at every element of @x in one
-   * call, writing into @p (allocating it first if it points to NULL -- see
-   * nc_galaxy_shape_pop_eval_p_array()'s own doc comment). The generic
+   * Batched form of eval_p(): evaluates P_pop(r) at every element of @r in
+   * one call, writing into @p (allocating it first if it points to NULL --
+   * see nc_galaxy_shape_pop_eval_p_array()'s own doc comment). The generic
    * default just loops calling eval_p(), so every subclass is safely
    * callable through this vfunc; a subclass whose functional form batches
    * well (e.g. #NcGalaxyShapePopBeta, whose @data->ldata is invariant across
@@ -93,7 +98,7 @@ struct _NcGalaxyShapePopClass
    * #NcGalaxyShapeFactorFixedQuad, whose node positions are all known ahead
    * of a single call.
    */
-  void (*eval_p_array) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *x, GArray **p);
+  void (*eval_p_array) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p);
 
   /* Padding to allow adding up to 10 more virtual functions without breaking ABI. */
   gpointer padding[10];
@@ -132,13 +137,14 @@ struct _NcGalaxyShapePopData
 
   /*
    * Optional capability: NULL means the model is assumed radially symmetric
-   * about chi_I=0 (its own peak, e.g. the Gauss family), i.e. mode_x=0. A
-   * concrete model peaked away from the origin (e.g. NcGalaxyShapePopBeta
-   * with mu far from 0) overrides this with the mode of x=|chi_I|^2. Unlike
-   * ldata_get_sigma, 0 is always a meaningful default here, so consumers
-   * (nc_galaxy_shape_pop_get_mode_x()) never need to error on NULL.
+   * about chi_I=0 (its own peak, e.g. the Gauss family), i.e. mode_r=0. A
+   * concrete model peaked away from the origin (e.g. NcGalaxyShapePopBeta)
+   * overrides this with the mode of r=|chi_I|, i.e. argmax of P_pop(r).
+   * Unlike ldata_get_sigma, 0 is always a meaningful default here, so
+   * consumers (nc_galaxy_shape_pop_get_mode_r()) never need to error on
+   * NULL.
    */
-  gdouble (*ldata_get_mode_x) (NcGalaxyShapePopData *data);
+  gdouble (*ldata_get_mode_r) (NcGalaxyShapePopData *data);
 
   gatomicrefcount ref_count;
 };
@@ -160,16 +166,15 @@ void nc_galaxy_shape_pop_data_write_row (NcGalaxyShapePopData *data, NcGalaxyWLO
 GList *nc_galaxy_shape_pop_data_required_columns (NcGalaxyShapePopData *data);
 
 void nc_galaxy_shape_pop_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
-gdouble nc_galaxy_shape_pop_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble x);
-gdouble nc_galaxy_shape_pop_eval_p_rho2 (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble rho2);
+gdouble nc_galaxy_shape_pop_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
 void nc_galaxy_shape_pop_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
 gdouble nc_galaxy_shape_pop_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 gdouble nc_galaxy_shape_pop_get_sigma (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
-gdouble nc_galaxy_shape_pop_get_mode_x (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
+gdouble nc_galaxy_shape_pop_get_mode_r (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 
 void nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                                const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
-void nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *x, GArray **p);
+void nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p);
 
 G_END_DECLS
 

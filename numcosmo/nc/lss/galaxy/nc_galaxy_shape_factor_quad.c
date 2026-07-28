@@ -55,16 +55,14 @@
  * The point of using $\chi_L$ rather than $\chi_I$ is that the noise kernel
  * $N_2(\epsilon_\mathrm{obs}-\chi_L;\sigma_\mathrm{noise}^2)$ becomes an
  * ordinary Gaussian of EXACTLY known width $\sigma_\mathrm{noise}$ centered at
- * EXACTLY $\epsilon_\mathrm{obs}$ -- no shear map, no approximation. Because
- * the population is evaluated at $\chi_I=f_g^{-1}(\chi_L)$ instead of
- * directly at the substitution point, nc_galaxy_shape_pop_eval_p() is used
- * (not nc_galaxy_shape_pop_eval_p_rho2(), whose $\rho^2$ contract is
- * specifically $\rho^2=u^2+v^2$ for the point being substituted for, which is
- * $\chi_L$ here, not $\chi_I$); $x_I=\lvert\chi_I\rvert^2$ is computed
- * directly from the complex division (a sum of two squares, not itself
- * subtraction-sensitive), only losing the extra conditioning
- * nc_galaxy_shape_pop_eval_p_rho2() offers for the $(1-x)^a$ factor right at
- * $x\to1^-$ (relevant mainly for #NcGalaxyShapePopBeta at the disc boundary).
+ * EXACTLY $\epsilon_\mathrm{obs}$ -- no shear map, no approximation. The
+ * population is evaluated at $\chi_I=f_g^{-1}(\chi_L)$: $x_I=\lvert\chi_I\rvert^2$
+ * is computed directly from the complex division (a sum of two squares, not
+ * itself subtraction-sensitive), then $r_I=\sqrt{x_I}$ before the
+ * nc_galaxy_shape_pop_eval_p() call (see that vfunc's own r-native contract
+ * in nc_galaxy_shape_pop.h), and the returned r-marginal density is
+ * converted to the 2D area density this integrand needs via the explicit
+ * $P_\mathrm{pop}(r_I)/(2\pi r_I)$ factor below.
  *
  * The plane integral is evaluated by the Divonne cubature algorithm from the
  * Cuba library (ncm_integrate_2dim_divonne()), over a FIXED box of
@@ -194,7 +192,8 @@ _nc_galaxy_shape_factor_quad_integrand (gdouble u, gdouble v, gpointer userdata)
   const complex double chi_L = (u + I * v) / sqrt (s2);
   const complex double chi_i = arg->apply_shear_inv (arg->g, chi_L);
   const gdouble x_i          = gsl_pow_2 (creal (chi_i)) + gsl_pow_2 (cimag (chi_i));
-  const gdouble p_pop        = nc_galaxy_shape_pop_eval_p (arg->pop, arg->pop_data, x_i) / M_PI;
+  const gdouble r_i          = sqrt (x_i);
+  const gdouble p_pop        = nc_galaxy_shape_pop_eval_p (arg->pop, arg->pop_data, r_i) / (2.0 * M_PI * r_i);
   const gdouble jac_inv      = exp (arg->lndet_jac (arg->g, chi_L));
   const complex double delta = arg->eps_obs - chi_L;
   const gdouble noise_var    = gsl_pow_2 (arg->std_noise);
@@ -202,7 +201,7 @@ _nc_galaxy_shape_factor_quad_integrand (gdouble u, gdouble v, gpointer userdata)
   const gdouble ret          = p_pop * jac_inv * noise * jac;
 
   /* Some populations have a genuine divergence at a disc point (e.g.
-   * #NcGalaxyShapePopBeta with alpha<1 at x_i=0, which can coincide with a
+   * #NcGalaxyShapePopBeta with alpha<1 at r_i=0, which can coincide with a
    * peak hint); Cuba can segfault outright on a non-finite sample
    * (reproduced directly), so clamp rather than propagate. */
   return isfinite (ret) ? ret : 0.0;
@@ -299,7 +298,7 @@ _nc_galaxy_shape_factor_quad_eval (NcGalaxyShapeFactorQuad *gsfq, NcGalaxyShapeP
   NcGalaxyShapeFactorQuadPrivate * const self = nc_galaxy_shape_factor_quad_get_instance_private (gsfq);
   const complex double g                      = g_1 + I * g_2;
   const complex double eps_obs                = epsilon_obs_1 + I * epsilon_obs_2;
-  const gdouble mode_x                        = nc_galaxy_shape_pop_get_mode_x (pop, data->pop_data);
+  const gdouble mode_r                        = nc_galaxy_shape_pop_get_mode_r (pop, data->pop_data);
   QuadIntArg arg;
   NcmIntegrand2dim integ = {&arg, &_nc_galaxy_shape_factor_quad_integrand};
   gdouble u0, v0, ug, vg, result, error;
@@ -327,10 +326,12 @@ _nc_galaxy_shape_factor_quad_eval (NcGalaxyShapeFactorQuad *gsfq, NcGalaxyShapeP
   /* Third hint, only for a population whose peak is not at chi_I=0 (e.g. a
    * concentrated NcGalaxyShapePopBeta with mu away from 0): the point on the
    * peak ring |chi_I|=rho_mode closest, after the forward map, to eps_obs
-   * (see _nc_galaxy_shape_factor_quad_refine_theta() doc). */
-  if (mode_x > 0.0)
+   * (see _nc_galaxy_shape_factor_quad_refine_theta() doc). rho_mode is
+   * mode_r directly now (no sqrt -- see the eval_p/eval_p_rho2 contract
+   * collapse, get_mode_r() already returns the mode of r=|chi_I| itself). */
+  if (mode_r > 0.0)
   {
-    const gdouble rho_mode           = sqrt (mode_x);
+    const gdouble rho_mode           = mode_r;
     const complex double chi_i_naive = self->apply_shear_inv (g, eps_obs);
     const gdouble theta0             = carg (chi_i_naive);
     const gdouble theta              = _nc_galaxy_shape_factor_quad_refine_theta (self->apply_shear, g, rho_mode, eps_obs, theta0);

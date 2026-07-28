@@ -32,7 +32,7 @@
  * Hessian of its log in Cartesian $\chi_I$ coordinates at that point.
  *
  * The search is nested rather than a blind joint 2D minimization: since
- * $P_\mathrm{pop}(\chi_I)=P_\mathrm{pop}(\rho^2)$ has no $\theta$ dependence,
+ * $P_\mathrm{pop}(\chi_I)=P_\mathrm{pop}(\rho)$ has no $\theta$ dependence,
  * the argmin over $\theta$ at ANY fixed $\rho$ comes entirely from the noise
  * term (a fixed 3-step Newton refinement on
  * $|\epsilon_\mathrm{obs}-f_g(\rho e^{i\theta})|^2$, the same scheme already
@@ -81,8 +81,7 @@ static gdouble
 _ln_integrand (const ModeCtx *ctx, const gdouble rho, const gdouble theta)
 {
   const complex double chi_i    = rho * cexp (I * theta);
-  const gdouble x_i             = rho * rho;
-  const gdouble p_pop           = nc_galaxy_shape_pop_eval_p (ctx->pop, ctx->pop_data, x_i) / M_PI;
+  const gdouble p_pop           = nc_galaxy_shape_pop_eval_p (ctx->pop, ctx->pop_data, rho) / (2.0 * M_PI * rho);
   const complex double eps_true = ctx->apply_shear (ctx->g, chi_i);
   const complex double delta    = ctx->eps_obs - eps_true;
   const gdouble noise           = exp (-(gsl_pow_2 (creal (delta)) + gsl_pow_2 (cimag (delta))) / (2.0 * ctx->noise_var)) / (2.0 * M_PI * ctx->noise_var);
@@ -121,7 +120,7 @@ _theta_hat (const ModeCtx *ctx, const gdouble rho, const gdouble theta0)
   return theta;
 }
 
-/* ln P_pop(rho^2) + ln N(...) profiled over its own theta_hat(rho). */
+/* ln P_pop(rho) + ln N(...) profiled over its own theta_hat(rho). */
 static gdouble
 _profile_h (const ModeCtx *ctx, const gdouble rho, const gdouble theta_seed, gdouble *theta_out)
 {
@@ -265,22 +264,26 @@ _trace_det_Q (const gdouble rho, const gdouble gamma, const gdouble beta, const 
   }
 }
 
-/* ln(P_pop(x)/pi), x=rho^2 -- same normalization _ln_integrand uses for its
+/* ln(P_pop(rho)/(2*pi*rho)) -- same normalization _ln_integrand uses for its
  * own p_pop term, so mode->ln_peak stays exactly consistent with the
  * existing finite-difference path. */
 static gdouble
-_ln_p_pop (const ModeCtx *ctx, const gdouble x)
+_ln_p_pop (const ModeCtx *ctx, const gdouble rho)
 {
-  const gdouble p = nc_galaxy_shape_pop_eval_p (ctx->pop, ctx->pop_data, x) / M_PI;
+  const gdouble p = nc_galaxy_shape_pop_eval_p (ctx->pop, ctx->pop_data, rho) / (2.0 * M_PI * rho);
 
   return (p > 0.0) && isfinite (p) ? log (p) : -G_MAXDOUBLE;
 }
 
 /* Outer 1D Newton search over rho, TRACE_DET closed form: h(rho) =
- * ln P_pop(rho^2) - Q(rho)/(2 sigma_n^2), h'/h'' both closed-form (Q part)
- * plus a finite-difference L'(x)/L''(x) for the population term (a plain
- * scalar special-function call, no apply_shear involved -- cheap either
- * way, and not worth a closed form of its own yet). */
+ * ln P_pop(rho) - Q(rho)/(2 sigma_n^2), h'/h'' both closed-form (Q part)
+ * plus a finite-difference M'(rho)/M''(rho) for the population term (a
+ * plain scalar special-function call, no apply_shear involved -- cheap
+ * either way, and not worth a closed form of its own yet). Finite-
+ * differenced directly in rho (not x=rho^2 then chain-ruled, as an earlier
+ * version of this function did before the eval_p/eval_p_rho2 contract
+ * collapse made eval_p() itself r-native): no chain rule needed at all
+ * once the primary variable matches the search variable. */
 static gdouble
 _rho_hat_trace_det (const ModeCtx *ctx, const gdouble gamma, const gdouble beta, const gdouble chiO2, const gdouble rho0)
 {
@@ -289,19 +292,18 @@ _rho_hat_trace_det (const ModeCtx *ctx, const gdouble gamma, const gdouble beta,
 
   for (i = 0; i < 6; i++)
   {
-    const gdouble x0      = rho * rho;
-    const gdouble hx      = fmin (1.0e-5, 0.5 * x0);
-    const gdouble Lp      = _ln_p_pop (ctx, x0 + hx);
-    const gdouble L0      = _ln_p_pop (ctx, x0);
-    const gdouble Lm      = _ln_p_pop (ctx, x0 - hx);
-    const gdouble Lprime  = (Lp - Lm) / (2.0 * hx);
-    const gdouble Lprime2 = (Lp - 2.0 * L0 + Lm) / gsl_pow_2 (hx);
+    const gdouble h_rho   = fmin (1.0e-5, 0.5 * rho);
+    const gdouble Mp      = _ln_p_pop (ctx, rho + h_rho);
+    const gdouble M0      = _ln_p_pop (ctx, rho);
+    const gdouble Mm      = _ln_p_pop (ctx, rho - h_rho);
+    const gdouble Mprime  = (Mp - Mm) / (2.0 * h_rho);
+    const gdouble Mprime2 = (Mp - 2.0 * M0 + Mm) / gsl_pow_2 (h_rho);
     gdouble Q, Qp, Qpp, hp, hpp;
 
     _trace_det_Q (rho, gamma, beta, chiO2, &Q, &Qp, &Qpp);
 
-    hp  = 2.0 * rho * Lprime - Qp / (2.0 * ctx->noise_var);
-    hpp = 2.0 * Lprime + 4.0 * x0 * Lprime2 - Qpp / (2.0 * ctx->noise_var);
+    hp  = Mprime - Qp / (2.0 * ctx->noise_var);
+    hpp = Mprime2 - Qpp / (2.0 * ctx->noise_var);
 
     if (hpp >= 0.0) /* not concave: not a local max along this direction */
       break;
@@ -609,13 +611,15 @@ _rho_hat_trace (const ModeCtx *ctx,
 
   for (i = 0; i < 6; i++)
   {
-    const gdouble x0        = rho * rho;
-    const gdouble hx        = fmin (1.0e-5, 0.5 * x0);
-    const gdouble Lp        = _ln_p_pop (ctx, x0 + hx);
-    const gdouble L0        = _ln_p_pop (ctx, x0);
-    const gdouble Lm        = _ln_p_pop (ctx, x0 - hx);
-    const gdouble Lprime    = (Lp - Lm) / (2.0 * hx);
-    const gdouble Lprime2   = (Lp - 2.0 * L0 + Lm) / gsl_pow_2 (hx);
+    /* Finite-differenced directly in rho (no chain rule needed once the
+     * primary variable matches the search variable -- see
+     * _rho_hat_trace_det()'s own comment for why). */
+    const gdouble h_rho     = fmin (1.0e-5, 0.5 * rho);
+    const gdouble Mp        = _ln_p_pop (ctx, rho + h_rho);
+    const gdouble M0        = _ln_p_pop (ctx, rho);
+    const gdouble Mm        = _ln_p_pop (ctx, rho - h_rho);
+    const gdouble Mprime    = (Mp - Mm) / (2.0 * h_rho);
+    const gdouble Mprime2   = (Mp - 2.0 * M0 + Mm) / gsl_pow_2 (h_rho);
     const gdouble theta_rot = _trace_theta_hat_rot (rho, lam, g_rot, chiO_mag, chiOr_r, chiOr_i);
     gdouble D2, D2_rho, D2_theta, D2_rr, D2_rt, D2_tt, Qp, Qpp, hp, hpp;
 
@@ -627,8 +631,8 @@ _rho_hat_trace (const ModeCtx *ctx,
     Qp  = D2_rho;
     Qpp = D2_rr - gsl_pow_2 (D2_rt) / D2_tt;
 
-    hp  = 2.0 * rho * Lprime - Qp / (2.0 * ctx->noise_var);
-    hpp = 2.0 * Lprime + 4.0 * x0 * Lprime2 - Qpp / (2.0 * ctx->noise_var);
+    hp  = Mprime - Qp / (2.0 * ctx->noise_var);
+    hpp = Mprime2 - Qpp / (2.0 * ctx->noise_var);
 
     if (hpp >= 0.0)
       break;

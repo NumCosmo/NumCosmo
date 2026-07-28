@@ -118,8 +118,8 @@ GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1: str = r"epsilon_obs_1"
 GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2: str = r"epsilon_obs_2"
 GALAXY_SHAPE_FACTOR_COL_M: str = r"m"
 GALAXY_SHAPE_FACTOR_COL_STD_NOISE: str = r"std_noise"
-GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA: float = 1.4
-GALAXY_SHAPE_POP_BETA_DEFAULT_BETA: float = 1.6
+GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA: float = 1.55
+GALAXY_SHAPE_POP_BETA_DEFAULT_BETA: float = 1.62
 GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL: float = 0.0
 GALAXY_SHAPE_POP_GAUSS_DEFAULT_PARAMS_ABSTOL: float = 0.0
 GALAXY_SHAPE_POP_GAUSS_DEFAULT_SIGMA: float = 0.3
@@ -497,6 +497,9 @@ def wl_ellipticity_lndet_jac_trace_det_ptr(
 def wl_ellipticity_lndet_jac_trace_ptr(
     g: NumCosmoMath.Complex, chi_obs: NumCosmoMath.Complex
 ) -> float: ...
+def wl_ellipticity_trace_kernel_prep_clear(
+    prep: WLEllipticityTraceKernelPrep,
+) -> None: ...
 def xcor_kernel_integrand_clear(integrand: XcorKernelIntegrand) -> None: ...
 
 class CBE(GObject.Object):
@@ -8354,6 +8357,12 @@ class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
         Calibrate a per-galaxy lens-branch node count instead of always using n-lens
       lens-node-reltol -> gdouble: Lens-branch node calibration reltol
         Target relative tolerance for auto-lens-nodes' calibration
+      use-marginal-spline -> gboolean: Use marginal spline
+        Cache the marginal as a function of g instead of recomputing it every call
+      spline-g-max -> gdouble: g-spline cached box half-side
+        Half-side of the square use-marginal-spline's cache covers
+      spline-rel-err -> gdouble: g-spline target relative error
+        Target relative error for use-marginal-spline's autoknots build
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -8369,6 +8378,9 @@ class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
         n_angular: int
         n_lens: int
         n_radial: int
+        spline_g_max: float
+        spline_rel_err: float
+        use_marginal_spline: bool
         ellip_conv: GalaxyWLObsEllipConv
 
     props: Props = ...
@@ -8379,6 +8391,9 @@ class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
         n_angular: int = ...,
         n_lens: int = ...,
         n_radial: int = ...,
+        spline_g_max: float = ...,
+        spline_rel_err: float = ...,
+        use_marginal_spline: bool = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
     ) -> None: ...
     @staticmethod
@@ -8685,13 +8700,12 @@ class GalaxyShapePop(NumCosmoMath.Model):
     def clear(gsp: GalaxyShapePop) -> None: ...
     def do_data_init(self, data: GalaxyShapePopData) -> None: ...
     def do_e_rms(self, data: GalaxyShapePopData) -> float: ...
-    def do_eval_p(self, data: GalaxyShapePopData, x: float) -> float: ...
+    def do_eval_p(self, data: GalaxyShapePopData, r: float) -> float: ...
     def do_eval_p_array(
         self,
         data: GalaxyShapePopData,
-        x: typing.Sequence[float] | npt.NDArray[np.float64],
+        r: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> list[float]: ...
-    def do_eval_p_rho2(self, data: GalaxyShapePopData, rho2: float) -> float: ...
     def do_eval_p_rho2_g_series(
         self,
         data: GalaxyShapePopData,
@@ -8703,13 +8717,12 @@ class GalaxyShapePop(NumCosmoMath.Model):
     ) -> typing.Tuple[float, float]: ...
     def do_prepare(self, data: GalaxyShapePopData) -> None: ...
     def e_rms(self, data: GalaxyShapePopData) -> float: ...
-    def eval_p(self, data: GalaxyShapePopData, x: float) -> float: ...
+    def eval_p(self, data: GalaxyShapePopData, r: float) -> float: ...
     def eval_p_array(
         self,
         data: GalaxyShapePopData,
-        x: typing.Sequence[float] | npt.NDArray[np.float64],
+        r: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> list[float]: ...
-    def eval_p_rho2(self, data: GalaxyShapePopData, rho2: float) -> float: ...
     def eval_p_rho2_g_series(
         self,
         data: GalaxyShapePopData,
@@ -8720,7 +8733,7 @@ class GalaxyShapePop(NumCosmoMath.Model):
     def gen(
         self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
     ) -> typing.Tuple[float, float]: ...
-    def get_mode_x(self, data: GalaxyShapePopData) -> float: ...
+    def get_mode_r(self, data: GalaxyShapePopData) -> float: ...
     def get_sigma(self, data: GalaxyShapePopData) -> float: ...
     @staticmethod
     def id() -> int: ...
@@ -8831,9 +8844,6 @@ class GalaxyShapePopClass(GObject.GPointer):
     data_init: typing.Callable[[GalaxyShapePop, GalaxyShapePopData], None] = ...
     prepare: typing.Callable[[GalaxyShapePop, GalaxyShapePopData], None] = ...
     eval_p: typing.Callable[[GalaxyShapePop, GalaxyShapePopData, float], float] = ...
-    eval_p_rho2: typing.Callable[[GalaxyShapePop, GalaxyShapePopData, float], float] = (
-        ...
-    )
     gen: typing.Callable[
         [GalaxyShapePop, GalaxyShapePopData, NumCosmoMath.RNG],
         typing.Tuple[float, float],
@@ -8875,7 +8885,7 @@ class GalaxyShapePopData(GObject.GBoxed):
     ldata_write_row: typing.Callable[[GalaxyShapePopData, GalaxyWLObs, int], None] = ...
     ldata_required_columns: None = ...
     ldata_get_sigma: typing.Callable[[GalaxyShapePopData], float] = ...
-    ldata_get_mode_x: typing.Callable[[GalaxyShapePopData], float] = ...
+    ldata_get_mode_r: typing.Callable[[GalaxyShapePopData], float] = ...
     ref_count: int = ...
     @classmethod
     def new(cls, gsp: GalaxyShapePop) -> GalaxyShapePopData: ...
@@ -21395,6 +21405,22 @@ class WLEllipticitySeriesTraceDetClass(GObject.GPointer):
     """
 
     parent_class: GObject.ObjectClass = ...
+
+class WLEllipticityTraceKernelPrep(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        new() -> NumCosmo.WLEllipticityTraceKernelPrep
+    """
+
+    @staticmethod
+    def clear(prep: WLEllipticityTraceKernelPrep) -> None: ...
+    def dup(self) -> WLEllipticityTraceKernelPrep: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> WLEllipticityTraceKernelPrep: ...
 
 class WLSurfaceMassDensity(NumCosmoMath.Model):
     r"""

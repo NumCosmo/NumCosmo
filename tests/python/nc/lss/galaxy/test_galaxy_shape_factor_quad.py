@@ -95,7 +95,7 @@ def _scipy_exact_marginal(pop, pop_data, ellip_conv, g, eps_obs, std_noise):
 
     def integrand(r, theta):
         chi = r * np.exp(1j * theta)
-        p_pop = pop.eval_p(pop_data, chi.real**2 + chi.imag**2) / np.pi
+        p_pop = pop.eval_p(pop_data, abs(chi)) / (2.0 * np.pi * abs(chi))
         delta = eps_obs - _shear_map(ellip_conv, g, chi)
         noise = np.exp(-(delta.real**2 + delta.imag**2) / (2 * std_noise**2)) / (
             2 * np.pi * std_noise**2

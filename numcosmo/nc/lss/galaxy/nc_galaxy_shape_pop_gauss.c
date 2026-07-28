@@ -29,8 +29,13 @@
  * Truncated-Gaussian intrinsic ellipticity distribution.
  *
  * The intrinsic ellipticity follows an isotropic Gaussian of width $\sigma$
- * truncated to the unit disk. The induced density of $x = |\chi_I|^2$ is
- * $P(x) \propto \exp(-x / 2\sigma^2)$ on $[0,1]$.
+ * truncated to the unit disk: the 2D area density is
+ * $P_\mathrm{2D}(\chi_I) \propto \exp(-r^2/2\sigma^2)$, $r=|\chi_I|$. The
+ * public r-marginal contract (see #NcGalaxyShapePop's own docs)
+ * is $P_\mathrm{pop}(r) = 2\pi r\,P_\mathrm{2D}(r) \propto r\exp(-r^2/2\sigma^2)$
+ * on $[0,1)$ -- multiplying the natural area-density form by $r$, always
+ * safe (never a pole), unlike populations whose natural form is the
+ * r-marginal itself (see #NcGalaxyShapePopBeta).
  *
  */
 
@@ -82,7 +87,7 @@ _nc_galaxy_shape_pop_gauss_finalize (GObject *object)
  * nc_galaxy_shape_pop_gauss_private.h) so are not static; forward-declared
  * here only to keep definition order readable. */
 void _nc_galaxy_shape_pop_gauss_data_init (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
-gdouble _nc_galaxy_shape_pop_gauss_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble x);
+gdouble _nc_galaxy_shape_pop_gauss_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
 void _nc_galaxy_shape_pop_gauss_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
 static void _nc_galaxy_shape_pop_gauss_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
@@ -165,7 +170,12 @@ _nc_galaxy_shape_pop_gauss_ldata_set_sigma (NcGalaxyShapePopData *data, const gd
   NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
   const gdouble inv_2sigma2         = 0.5 / (sigma * sigma);
 
-  /* P(x) ∝ exp(-x/2σ²) on [0,1]. */
+  /* norm/inv_2sigma2 are the OLD x-space (x=r^2) normalization,
+   * P(x) = norm*exp(-x/2σ²) on [0,1] -- still exactly what
+   * eval_p_rho2_g_series composes internally (untouched by the
+   * eval_p/eval_p_rho2 contract collapse), and what eval_p() above derives
+   * P_pop(r) from via the safe *2r conversion. Not repurposed/renamed to
+   * avoid disturbing the series vfunc's own math. */
   ldata->sigma       = sigma;
   ldata->inv_2sigma2 = inv_2sigma2;
   ldata->norm        = inv_2sigma2 / (-expm1 (-inv_2sigma2));
@@ -178,11 +188,16 @@ _nc_galaxy_shape_pop_gauss_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData 
 }
 
 gdouble
-_nc_galaxy_shape_pop_gauss_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble x)
+_nc_galaxy_shape_pop_gauss_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r)
 {
   NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
 
-  return ldata->norm * exp (-ldata->inv_2sigma2 * x);
+  /* P_pop(r) = 2*pi*r*P_2D(r) = 2*r*norm*exp(-r^2/2sigma^2) -- norm is
+   * unchanged from the area-density form (see _ldata_set_sigma()'s own
+   * docs), the substitution u=r^2 recovers exactly the integral norm's own
+   * definition already satisfies, so no new normalization constant is
+   * needed here. */
+  return 2.0 * r * ldata->norm * exp (-ldata->inv_2sigma2 * r * r);
 }
 
 static complex double

@@ -63,11 +63,14 @@
  * accurate at any physical $g$, real or complex, through $\lvert g\rvert=0.99$.
  *
  * Works for ANY population (not just Gaussian): each node evaluates
- * nc_galaxy_shape_pop_eval_p() directly at $x_i=\lvert\chi_I\rvert^2$, the
- * same convention #NcGalaxyShapeFactorQuad uses (not eval_p_rho2(), whose
- * $\rho^2$ argument is the pre-compactification radius of the $(u,v)$-plane
- * substitution this class does not use), so unlike
- * #NcGalaxyShapeFactorSeriesLensed there is no Gaussian-only guard.
+ * nc_galaxy_shape_pop_eval_p() at $r_i=\lvert\chi_I\rvert$ (this class's own
+ * per-node $x_i=\lvert\chi_I\rvert^2$, computed by the shear-map kernels
+ * below, is sqrt()'d once before the population call -- see
+ * nc_galaxy_shape_pop.h's own eval_p() contract), then converts the
+ * returned r-marginal density to the 2D area density this class's own
+ * quadrature needs via the explicit $P_\mathrm{pop}(r_i)/(2\pi r_i)$
+ * factor, so unlike #NcGalaxyShapeFactorSeriesLensed there is no
+ * Gaussian-only guard.
  *
  * Limitation: a fixed grid cannot resolve a population much narrower than
  * its node spacing ($\sigma_\mathrm{pop}\lesssim0.05$, or a sharply
@@ -92,6 +95,25 @@
  * expensive middle) with no change to shipped behavior unless explicitly
  * enabled -- see _calibrate_n_lens()'s own docs for the calibration
  * strategy.
+ *
+ * Repeated calls at many different g for the SAME galaxy (e.g. a z-integral
+ * over source-redshift quadrature nodes, or many fit/MCMC iterations)
+ * recompute this whole per-node sum from scratch every time.
+ * #NcGalaxyShapeFactorFixedQuad:use-marginal-spline (default %FALSE, opt-in)
+ * instead caches $\ln P(\epsilon_\mathrm{obs}\mid g)$ as a bivariate
+ * function of $g$ over a square
+ * $[-g_\mathrm{max},g_\mathrm{max}]^2$ (#NcGalaxyShapeFactorFixedQuad:spline-g-max,
+ * a caller-chosen box matching the shear range actually explored, NOT this
+ * class' own validated $\lvert g\rvert<0.99$ regime), built lazily once per
+ * galaxy via this codebase's existing "autoknots" 2D spline machinery
+ * (ncm_spline2d_set_function(), the same mechanism
+ * nc_halo_mass_function.c uses) and reused across every subsequent g inside
+ * that square until the domain cache rebuilds or the population's own
+ * parameters change; g outside the square always falls back to the exact
+ * direct computation -- see _build_g_spline()'s own docs, including a
+ * known caveat for alpha<2 Beta populations (the same divergent-density
+ * regime #NcGalaxyShapeFactorQuad's own tests already flag near
+ * $g\sim0.18$: see this class' own test suite).
  */
 
 #ifdef HAVE_CONFIG_H
@@ -101,6 +123,7 @@
 
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h"
 #include "nc/lss/wl/nc_wl_ellipticity.h"
+#include "ncm/spline/ncm_spline2d_bicubic.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
@@ -179,6 +202,13 @@ typedef struct _NcGalaxyShapeFactorFixedQuadPrivate
    * convention for n-lens itself. */
   gboolean auto_lens_nodes;
   gdouble lens_node_reltol;
+
+  /* Opt-in per-galaxy cache of the marginal itself as a function of g (see
+   * the g-spline block below _regen_domain()): CONSTRUCT_ONLY like every
+   * other node-count knob on this class, off by default. */
+  gboolean use_marginal_spline;
+  gdouble spline_g_max;
+  gdouble spline_rel_err;
 } NcGalaxyShapeFactorFixedQuadPrivate;
 
 enum
@@ -189,6 +219,9 @@ enum
   PROP_N_LENS,
   PROP_AUTO_LENS_NODES,
   PROP_LENS_NODE_RELTOL,
+  PROP_USE_MARGINAL_SPLINE,
+  PROP_SPLINE_G_MAX,
+  PROP_SPLINE_REL_ERR,
   PROP_LEN,
 };
 
@@ -208,6 +241,10 @@ nc_galaxy_shape_factor_fixed_quad_init (NcGalaxyShapeFactorFixedQuad *gsffq)
   self->n_max            = 0;
   self->auto_lens_nodes  = FALSE;
   self->lens_node_reltol = 1.0e-4;
+
+  self->use_marginal_spline = FALSE;
+  self->spline_g_max        = 0.3;
+  self->spline_rel_err      = 1.0e-4;
 }
 
 static void
@@ -232,6 +269,15 @@ _nc_galaxy_shape_factor_fixed_quad_set_property (GObject *object, guint prop_id,
       break;
     case PROP_LENS_NODE_RELTOL:
       self->lens_node_reltol = g_value_get_double (value);
+      break;
+    case PROP_USE_MARGINAL_SPLINE:
+      self->use_marginal_spline = g_value_get_boolean (value);
+      break;
+    case PROP_SPLINE_G_MAX:
+      self->spline_g_max = g_value_get_double (value);
+      break;
+    case PROP_SPLINE_REL_ERR:
+      self->spline_rel_err = g_value_get_double (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -261,6 +307,15 @@ _nc_galaxy_shape_factor_fixed_quad_get_property (GObject *object, guint prop_id,
       break;
     case PROP_LENS_NODE_RELTOL:
       g_value_set_double (value, self->lens_node_reltol);
+      break;
+    case PROP_USE_MARGINAL_SPLINE:
+      g_value_set_boolean (value, self->use_marginal_spline);
+      break;
+    case PROP_SPLINE_G_MAX:
+      g_value_set_double (value, self->spline_g_max);
+      break;
+    case PROP_SPLINE_REL_ERR:
+      g_value_set_double (value, self->spline_rel_err);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -325,14 +380,38 @@ typedef struct _NcGalaxyShapeFactorFixedQuadData
   complex double *chi_L; /* size n_max */
   gdouble *eff_weight;   /* size n_max, = quadrature_weight * noise_value */
   gdouble *jac;          /* size n_max: |det J_{f_g^-1}| at each node, recomputed every marginal() call */
-  GArray *x_arr;         /* size n_max: x_i = |chi_I(chi_L_i,g)|^2, scratch feeding eval_p_array() */
-  GArray *p_arr;         /* size n_max: eval_p_array()'s output, reused across every g */
+  GArray *x_arr;         /* size n_max: x_i = |chi_I(chi_L_i,g)|^2 from the kernels, sqrt()'d in place into r_i before feeding eval_p_array() -- see _direct_marginal_at_g()'s own comment */
+  GArray *p_arr;         /* size n_max: eval_p_array()'s output (P_pop(r_i)), reused across every g */
+
+  /* Opt-in marginal-as-function-of-g cache (see :use-marginal-spline).
+   * Invalidated by _regen_domain() itself (same epoch as chi_L/eff_weight
+   * above) plus an independent check against pop's own live pkey -- see
+   * _build_g_spline()'s docs. */
+  gboolean g_spline_valid;
+  guint64 g_spline_pop_pkey;
+  NcmSpline2d *g_spline; /* ln(marginal) over [-spline_g_max,spline_g_max]^2, autoknots-built */
+
+  /* Set by _regen_domain(): FALSE whenever any domain node has |chi_L|>1
+   * (genuine-lens branch only), which would make the g-spline's adaptive
+   * build walk into a real den(g,chi_L)=0 singularity -- see that
+   * function's own docs. Overrides :use-marginal-spline for this domain
+   * epoch: direct evaluation is always used instead, regardless of the
+   * property. */
+  gboolean g_spline_safe;
+
+  /* Set by _build_g_spline(): FALSE whenever pop's own density diverges at
+   * x=0 (e.g. NcGalaxyShapePopBeta with alpha<2) -- see that function's
+   * own docs for why this, not just the domain-node check above, is
+   * required. Checked once per pop-pkey epoch, independent of domain. */
+  gboolean g_spline_pop_safe;
 } NcGalaxyShapeFactorFixedQuadData;
 
 static void
 _nc_galaxy_shape_factor_fixed_quad_ldata_destroy (gpointer p)
 {
   NcGalaxyShapeFactorFixedQuadData *ldata = (NcGalaxyShapeFactorFixedQuadData *) p;
+
+  ncm_spline2d_clear (&ldata->g_spline);
 
   g_free (ldata->chi_L);
   g_free (ldata->eff_weight);
@@ -565,7 +644,8 @@ _lens_quad_at_n (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShape
   {
     const complex double chi_i = self->apply_shear_inv (g, chi_L[i]);
     const gdouble x_i          = gsl_pow_2 (creal (chi_i)) + gsl_pow_2 (cimag (chi_i));
-    const gdouble p_pop        = nc_galaxy_shape_pop_eval_p (pop, data->pop_data, x_i) / M_PI;
+    const gdouble r_i          = sqrt (x_i);
+    const gdouble p_pop        = nc_galaxy_shape_pop_eval_p (pop, data->pop_data, r_i) / (2.0 * M_PI * r_i);
     const gdouble jac          = self->det_jac (g, chi_L[i]);
 
     result += eff_weight[i] * p_pop * jac;
@@ -713,34 +793,76 @@ _regen_domain (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePo
   ldata->cached_epsilon_obs_2 = epsilon_obs_2;
   ldata->cached_std_noise     = std_noise;
   ldata->cache_valid          = TRUE;
+
+  /* The domain just moved (new chi_L/eff_weight), so any previously built
+   * g-spline (see :use-marginal-spline) no longer applies -- this is the
+   * single hook that keeps it correct without duplicating this function's
+   * own epsilon_obs/std_noise change detection. */
+  ldata->g_spline_valid = FALSE;
+
+  /* Safety gate for :use-marginal-spline: any domain node with |chi_L|>1
+   * (only possible in the genuine-lens branch above -- noise-contained and
+   * unit-contained both place nodes with |chi_L|<=1 by construction) makes
+   * the per-node shear-inversion Jacobian's denominator den(g,chi_L) vanish
+   * on a real locus in g-space: solving den=0 for g at fixed chi_L gives
+   * the circle |g-chi_L|^2=|chi_L|^2-1 (TRACE) or the single point
+   * g=1/conj(chi_L) (TRACE_DET) -- both require |chi_L|>1 to have any real
+   * solution at all. If that locus falls near the cached box, the adaptive
+   * autoknots build in _build_g_spline() will correctly detect it cannot
+   * resolve a genuine unbounded singularity there and abort (verified
+   * against a real production catalog, reproduced identically with
+   * OMP_NUM_THREADS=1, ruling out a threading race) -- the direct path
+   * never hits this because it evaluates once per g and returns a
+   * big-but-finite number instead of adaptively bisecting toward the
+   * singularity. Scanning nodes here (not analytically checking whether the
+   * locus actually reaches the box) is deliberately conservative: cheap
+   * relative to the domain build itself, branch-agnostic, and safe by
+   * construction rather than by geometry that would need re-deriving per
+   * ellip-conv. */
+  {
+    gboolean node_beyond_unit_disc = FALSE;
+    guint i;
+
+    for (i = 0; i < ldata->n_used; i++)
+    {
+      if (creal (ldata->chi_L[i] * conj (ldata->chi_L[i])) > 1.0)
+      {
+        node_beyond_unit_disc = TRUE;
+        break;
+      }
+    }
+
+    ldata->g_spline_safe = !node_beyond_unit_disc;
+  }
 }
 
+/* Raw (un-floored) marginal at a single g, given an already-valid domain
+ * cache (ldata->chi_L/eff_weight, see _regen_domain()). Extracted out of
+ * _nc_galaxy_shape_factor_fixed_quad_marginal() so both that function's
+ * direct path AND _build_g_spline()'s per-sample-point evaluations below
+ * share one implementation -- behavior is unchanged from before this
+ * extraction. Mutates ldata's own scratch buffers (x_arr/jac/p_arr), so
+ * repeated calls (as _build_g_spline() makes many of, one per (g_1,g_2)
+ * grid/slice sample) are safe but not reentrant -- same constraint the
+ * un-extracted code always had. */
 static gdouble
-_nc_galaxy_shape_factor_fixed_quad_marginal (NcGalaxyShapeFactorFixedQuad *gsffq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
-                                             const gdouble g_1, const gdouble g_2,
-                                             const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
+_direct_marginal_at_g (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                       NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
 {
-  NcGalaxyShapeFactorFixedQuadPrivate * const self = nc_galaxy_shape_factor_fixed_quad_get_instance_private (gsffq);
-  NcGalaxyShapeFactorFixedQuadData *ldata          = (NcGalaxyShapeFactorFixedQuadData *) data->ldata;
-  const complex double g                           = g_1 + I * g_2;
-  gdouble result;
+  gdouble result = 0.0;
   guint i;
-
-  /* Compares the raw epsilon_obs_1/epsilon_obs_2 directly -- R/phi (and the
-   * hypot/atan2 to compute them) are only needed inside _regen_domain, on
-   * the rare path that actually rebuilds the domain. See that function's
-   * docs. */
-  if (!ldata->cache_valid || (ldata->cached_epsilon_obs_1 != epsilon_obs_1) ||
-      (ldata->cached_epsilon_obs_2 != epsilon_obs_2) || (ldata->cached_std_noise != data->std_noise))
-    _regen_domain (self, pop, data, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
-
-  result = 0.0;
 
   /* Pass 1: every x_i is known before eval_p() is ever called (the whole
    * point of a FIXED node count), so batch them through eval_p_array()
    * instead of n_used one-at-a-time vfunc calls -- see nc_galaxy_shape_pop.h's
    * eval_p_array doc comment. jac is cheap (unlike p_pop) and stays a plain
-   * per-node computation, stashed here rather than recomputed in pass 2. */
+   * per-node computation, stashed here rather than recomputed in pass 2.
+   * ldata->x_arr holds x_i=|chi_I|^2 from the kernels below (the Möbius
+   * algebra naturally produces x, not r), then gets sqrt()'d in place into
+   * r_i before the population call, since nc_galaxy_shape_pop_eval_p_array()
+   * takes r now (see the eval_p/eval_p_rho2 contract collapse) -- nothing
+   * else reads x_arr's contents in between, so the in-place conversion is
+   * safe. */
   g_array_set_size (ldata->x_arr, ldata->n_used);
 
   {
@@ -771,18 +893,216 @@ _nc_galaxy_shape_factor_fixed_quad_marginal (NcGalaxyShapeFactorFixedQuad *gsffq
       for (i = 0; i < ldata->n_used; i++)
         nc_wl_ellipticity_trace_det_kernel (g, ldata->chi_L[i], &x_data[i], &ldata->jac[i]);
     }
+
+    for (i = 0; i < ldata->n_used; i++)
+      x_data[i] = sqrt (x_data[i]);
   }
 
   nc_galaxy_shape_pop_eval_p_array (pop, data->pop_data, ldata->x_arr, &ldata->p_arr);
 
   {
     const gdouble * const p_data = (const gdouble *) ldata->p_arr->data;
+    const gdouble * const r_data = (const gdouble *) ldata->x_arr->data;
 
+    /* p_data[i]=P_pop(r_i); the 2D area density these terms need is
+     * P_pop(r_i)/(2*pi*r_i) -- the same physical division that used to be
+     * folded into the old eval_p(x)'s own exponent, now explicit here
+     * (see the class docs' own note on this being an accepted, deliberate
+     * minor precision cost in exchange for the interface simplification). */
     for (i = 0; i < ldata->n_used; i++)
-      result += ldata->eff_weight[i] * (p_data[i] / M_PI) * ldata->jac[i];
+      result += ldata->eff_weight[i] * (p_data[i] / (2.0 * M_PI * r_data[i])) * ldata->jac[i];
   }
 
-  /* Purely the empty-domain / underflow floor -- see the class docs. */
+  return result;
+}
+
+/* Shared mutable args behind _build_g_spline()'s Fx/Fy gsl_function slices:
+ * the SAME struct backs both (one field toggling which axis is the free
+ * variable and which is held fixed), following ncm_spline2d_set_function()'s
+ * own contract (see its docs) and the exact idiom
+ * _nc_halo_mass_function_generate_2Dspline_knots() (numcosmo/nc/lss/halo/
+ * nc_halo_mass_function.c) already uses for a different 2D function. */
+typedef struct
+{
+  NcGalaxyShapeFactorFixedQuadPrivate *self;
+  NcGalaxyShapePop *pop;
+  NcGalaxyShapeFactorData *data;
+  NcGalaxyShapeFactorFixedQuadData *ldata;
+  gboolean slice_is_g1; /* TRUE: F(g_1) at fixed g_2=0; FALSE: F(g_2) at fixed g_1=0 */
+} GSplineSliceArgs;
+
+static gdouble
+_g_spline_slice_func (gdouble x, gpointer p)
+{
+  GSplineSliceArgs *a    = (GSplineSliceArgs *) p;
+  const complex double g = a->slice_is_g1 ? x : x * I;
+  const gdouble v        = _direct_marginal_at_g (a->self, a->pop, a->data, a->ldata, g);
+
+  return log (fmax (v, NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL));
+}
+
+/* Builds (or rebuilds) ldata's g-spline: ln(marginal), cached as a genuine
+ * bivariate function of (g_1,g_2) over the square
+ * [-spline_g_max,spline_g_max]^2 -- NOT a reduction to fewer variables (an
+ * earlier design tried reducing to (|g|,arg(g)-arg(epsilon_obs)) via a
+ * per-radius real-DFT-in-angle decomposition, exploiting this class' own
+ * exact rotation-covariance -- see nc_wl_ellipticity_apply_shear_inv_trace()/
+ * _trace_det()'s docs for that covariance property, still true and still the
+ * reason this cache needs no knowledge of the per-galaxy m/c1_rot/c2_rot
+ * calibration terms the caller folds into g -- but a small, fixed harmonic
+ * count could not track this function's actual angular sharpness: verified
+ * numerically to blow up by orders of magnitude away from the build nodes,
+ * worst for exactly the alpha<2 Beta populations this class' users care
+ * about most; see the branch history for the failed prototype). Working in
+ * ln-space here is what actually matters: the marginal itself spans many
+ * orders of magnitude over this square (verified: ratios of 1e4-1e10
+ * between nearby points are common), which defeats any polynomial/spline
+ * fit in linear space regardless of node placement.
+ *
+ * Node placement uses this codebase's existing "autoknots" machinery
+ * instead of a fixed grid: ncm_spline2d_set_function() (numcosmo/ncm/
+ * spline/ncm_spline2d.c), the same mechanism
+ * _nc_halo_mass_function_generate_2Dspline_knots() uses for an unrelated 2D
+ * function. It adaptively places knots along each axis from two 1D slices
+ * (_g_spline_slice_func() above, sliced at the OTHER coordinate fixed to 0 --
+ * a natural choice here since it's always inside the square and contains no
+ * special structure that would make it a bad representative) to
+ * spline_rel_err, then this function fills in the TRUE 2D ln(marginal) at
+ * the resulting tensor grid (peek_xv/yv/zm) before calling
+ * ncm_spline2d_prepare() -- so accuracy away from those two representative
+ * slices depends on how well 1D-slice-calibrated knots generalize across
+ * the other axis, which is NOT guaranteed in general (verified: usually
+ * very good, but a known-divergent population can still miss the target
+ * rel_err by orders of magnitude off those slices -- see the class docs'
+ * own alpha<2 Beta caveat). Node count is therefore data-dependent, not a
+ * user-chosen constant: anywhere from tens to (rarely) tens of thousands of
+ * builds depending on how sharply the population's own density varies. */
+static void
+_build_g_spline (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                 NcGalaxyShapeFactorFixedQuadData *ldata)
+{
+  const gdouble g_max     = self->spline_g_max;
+  GSplineSliceArgs args_x = { self, pop, data, ldata, TRUE };
+  GSplineSliceArgs args_y = { self, pop, data, ldata, FALSE };
+  gsl_function Fx         = { &_g_spline_slice_func, &args_x };
+  gsl_function Fy         = { &_g_spline_slice_func, &args_y };
+  NcmVector *xv, *yv;
+  NcmMatrix *zm;
+  guint i, j;
+
+  ldata->g_spline_pop_pkey = ncm_model_state_get_pkey (NCM_MODEL (pop));
+  ldata->g_spline_valid    = TRUE;
+
+  /* Population-divergence guard: eval_p(x=0) is +inf whenever the
+   * population's own density diverges there (e.g. NcGalaxyShapePopBeta
+   * with alpha<2 -- see _nc_galaxy_shape_pop_beta_eval_p()'s
+   * (0.5*alpha-1)*log(x) term, which is (+inf)*(negative)=+inf exactly at
+   * x=0 for alpha<2). This matters here specifically -- not just as the
+   * already-documented direct-quadrature accuracy caveat -- because EVERY
+   * domain node chi_L has some g where the implied intrinsic ellipticity
+   * chi_I(g,chi_L) is exactly 0 (solving apply_shear_inv(g,chi_L)=0 always
+   * has a root), so a population divergent at x=0 turns each of the
+   * (hundreds to thousands of) domain nodes into its own genuine
+   * unbounded spike somewhere in g-space. A box of any reasonable size is
+   * essentially guaranteed to contain at least one, and the adaptive
+   * autoknots build below will correctly detect it cannot resolve a true
+   * singularity and abort via g_error (verified against a real production
+   * catalog crash -- see git history). Checked once per pop-pkey epoch
+   * (population-only, not domain-dependent), not per galaxy, so this never
+   * touches the per-node chi_L scan below unless the population is
+   * actually safe. */
+  if (!gsl_finite (nc_galaxy_shape_pop_eval_p (pop, data->pop_data, 0.0)))
+  {
+    ldata->g_spline_pop_safe = FALSE;
+
+    return;
+  }
+
+  ldata->g_spline_pop_safe = TRUE;
+
+  ncm_spline2d_clear (&ldata->g_spline);
+  ldata->g_spline = NCM_SPLINE2D (ncm_spline2d_bicubic_notaknot_new ());
+
+  ncm_spline2d_set_function (ldata->g_spline, NCM_SPLINE_FUNCTION_SPLINE, &Fx, &Fy,
+                             -g_max, g_max, -g_max, g_max, self->spline_rel_err);
+
+  xv = ncm_spline2d_peek_xv (ldata->g_spline);
+  yv = ncm_spline2d_peek_yv (ldata->g_spline);
+  zm = ncm_spline2d_peek_zm (ldata->g_spline);
+
+  for (i = 0; i < ncm_vector_len (yv); i++)
+  {
+    const gdouble g_2 = ncm_vector_get (yv, i);
+
+    for (j = 0; j < ncm_vector_len (xv); j++)
+    {
+      const gdouble g_1      = ncm_vector_get (xv, j);
+      const complex double g = g_1 + I * g_2;
+      const gdouble v        = _direct_marginal_at_g (self, pop, data, ldata, g);
+
+      ncm_matrix_set (zm, i, j, log (fmax (v, NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL)));
+    }
+  }
+
+  ncm_spline2d_prepare (ldata->g_spline);
+}
+
+/* Dispatch for :use-marginal-spline: falls back to the exact direct
+ * computation outside the cached square (see :spline-g-max's docs),
+ * rebuilds the spline whenever it's not valid or pop's own live pkey moved
+ * on since it was built (_build_g_spline()'s own docs explain why nothing
+ * else needs checking here), and otherwise evaluates the cached
+ * ln(marginal) surface directly. */
+static gdouble
+_eval_marginal_spline (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                       NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
+{
+  const gdouble g_1 = creal (g);
+  const gdouble g_2 = cimag (g);
+
+  if ((fabs (g_1) > self->spline_g_max) || (fabs (g_2) > self->spline_g_max))
+    return _direct_marginal_at_g (self, pop, data, ldata, g);
+
+  {
+    const guint64 pop_pkey = ncm_model_state_get_pkey (NCM_MODEL (pop));
+
+    if (!ldata->g_spline_valid || (ldata->g_spline_pop_pkey != pop_pkey))
+      _build_g_spline (self, pop, data, ldata);
+  }
+
+  /* pop diverges at x=0 for this pkey epoch -- see _build_g_spline()'s own
+   * docs: it returned early without building anything. */
+  if (!ldata->g_spline_pop_safe)
+    return _direct_marginal_at_g (self, pop, data, ldata, g);
+
+  return exp (ncm_spline2d_eval (ldata->g_spline, g_1, g_2));
+}
+
+static gdouble
+_nc_galaxy_shape_factor_fixed_quad_marginal (NcGalaxyShapeFactorFixedQuad *gsffq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                             const gdouble g_1, const gdouble g_2,
+                                             const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
+{
+  NcGalaxyShapeFactorFixedQuadPrivate * const self = nc_galaxy_shape_factor_fixed_quad_get_instance_private (gsffq);
+  NcGalaxyShapeFactorFixedQuadData *ldata          = (NcGalaxyShapeFactorFixedQuadData *) data->ldata;
+  const complex double g                           = g_1 + I * g_2;
+  gdouble result;
+
+  /* Compares the raw epsilon_obs_1/epsilon_obs_2 directly -- R/phi (and the
+   * hypot/atan2 to compute them) are only needed inside _regen_domain, on
+   * the rare path that actually rebuilds the domain. See that function's
+   * docs. */
+  if (!ldata->cache_valid || (ldata->cached_epsilon_obs_1 != epsilon_obs_1) ||
+      (ldata->cached_epsilon_obs_2 != epsilon_obs_2) || (ldata->cached_std_noise != data->std_noise))
+    _regen_domain (self, pop, data, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
+
+  result = (self->use_marginal_spline && ldata->g_spline_safe) ?
+           _eval_marginal_spline (self, pop, data, ldata, g) :
+           _direct_marginal_at_g (self, pop, data, ldata, g);
+
+  /* Purely the empty-domain / underflow floor -- see the class docs. Also
+   * catches the rare small-negative dip a truncated-harmonic reconstruction
+   * of a strictly-positive function can produce near sharp features. */
   if (!(result > 0.0))
     return NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL;
 
@@ -883,6 +1203,65 @@ nc_galaxy_shape_factor_fixed_quad_class_init (NcGalaxyShapeFactorFixedQuadClass 
                                    g_param_spec_double ("lens-node-reltol",
                                                         "Lens-branch node calibration reltol",
                                                         "Target relative tolerance for auto-lens-nodes' calibration",
+                                                        0.0, 1.0, 1.0e-4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorFixedQuad:use-marginal-spline:
+   *
+   * When %TRUE, caches the marginal itself as a function of g, per galaxy:
+   * built once (lazily, on first use), over the square
+   * $[-g_\mathrm{max},g_\mathrm{max}]^2$ set by
+   * #NcGalaxyShapeFactorFixedQuad:spline-g-max, and reused across every
+   * subsequent g request for that galaxy inside that square until the
+   * domain cache rebuilds (epsilon_obs/std_noise change) or the
+   * population's parameters change -- see _build_g_spline()'s own docs. A
+   * request for g outside that square always falls back to the exact
+   * direct computation (never extrapolated), so enabling this can only
+   * trade cache-region accuracy (bounded by
+   * #NcGalaxyShapeFactorFixedQuad:spline-rel-err) for speed, never
+   * correctness outside it. Default %FALSE (zero behavior change unless
+   * explicitly enabled).
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_USE_MARGINAL_SPLINE,
+                                   g_param_spec_boolean ("use-marginal-spline",
+                                                         "Use marginal spline",
+                                                         "Cache the marginal as a function of g instead of recomputing it every call",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorFixedQuad:spline-g-max:
+   *
+   * Half-side of the square $[-g_\mathrm{max},g_\mathrm{max}]^2$
+   * #NcGalaxyShapeFactorFixedQuad:use-marginal-spline's cache covers --
+   * NOT this class' own validated $\lvert g\rvert<0.99$ regime: a much
+   * smaller box matching the shear range a given analysis actually
+   * explores keeps the autoknots build (see _build_g_spline()'s docs)
+   * cheap; g outside the box still gets the exact direct computation.
+   * Default 0.3.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SPLINE_G_MAX,
+                                   g_param_spec_double ("spline-g-max",
+                                                        "g-spline cached box half-side",
+                                                        "Half-side of the square use-marginal-spline's cache covers",
+                                                        0.0, 1.0, 0.3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorFixedQuad:spline-rel-err:
+   *
+   * Target relative error for #NcGalaxyShapeFactorFixedQuad:use-marginal-spline's
+   * autoknots build (passed directly to ncm_spline2d_set_function()).
+   * Default 1e-4.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SPLINE_REL_ERR,
+                                   g_param_spec_double ("spline-rel-err",
+                                                        "g-spline target relative error",
+                                                        "Target relative error for use-marginal-spline's autoknots build",
                                                         0.0, 1.0, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 

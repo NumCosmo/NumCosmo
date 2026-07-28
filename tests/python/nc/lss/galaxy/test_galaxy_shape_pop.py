@@ -20,10 +20,11 @@
 """Standalone unit tests for the intrinsic-ellipticity distribution models.
 
 These exercise ``NcGalaxyShapePop`` (Gauss and Beta variants) in
-isolation from any calculator or likelihood: the distribution of
-``x = |chi_I|^2 in [0, 1]`` is validated for normalization, internal
-consistency of ``e_rms()`` against the pdf, and consistency of ``gen()``
-against the pdf.
+isolation from any calculator or likelihood: ``eval_p(r)`` is each
+model's own r-marginal density, ``r = |chi_I| in [0, 1]``, normalized so
+that ``integral_0^1 eval_p(r) dr = 1``. Validated here for normalization,
+internal consistency of ``e_rms()`` against the pdf, and consistency of
+``gen()`` against the pdf.
 """
 
 import pytest
@@ -55,15 +56,16 @@ def _make(name):
 
 
 def _moment(model, data, power):
-    r"""Integrate ``x**power * eval_p(x)`` over [0, 1] via adaptive quadrature.
+    r"""Compute ``E[x**power]`` with ``x = r**2``, via adaptive quadrature in r.
 
-    ``eval_p`` is each model's own normalized density, evaluated directly (no
-    weight/residual decomposition): QUADPACK's adaptive subdivision handles
-    the mild integrable endpoint behavior Beta can have without needing any
-    special-purpose quadrature.
+    ``eval_p(r)`` is each model's own normalized r-marginal density, so
+    ``E[x**power] = E[r**(2*power)] = integral_0^1 r**(2*power) * eval_p(r) dr``.
+    Evaluated directly (no weight/residual decomposition): QUADPACK's
+    adaptive subdivision handles the mild integrable endpoint behavior Beta
+    can have without needing any special-purpose quadrature.
     """
     result, _ = integrate.quad(
-        lambda x: (x**power) * model.eval_p(data, x),
+        lambda r: (r ** (2 * power)) * model.eval_p(data, r),
         0.0,
         1.0,
         epsabs=1.0e-12,
@@ -74,7 +76,7 @@ def _moment(model, data, power):
 
 @pytest.mark.parametrize("name", ["gauss", "beta", "gauss_local"])
 def test_normalization(name):
-    """eval_p integrates to unity over x in [0, 1]."""
+    """eval_p integrates to unity over r in [0, 1]."""
     model, data = _make(name)
     assert_allclose(_moment(model, data, 0), 1.0, rtol=1.0e-6)
 
@@ -103,29 +105,15 @@ def test_gen_consistency(name):
     assert_allclose(acc / n_samples, mean_x, atol=5.0e-3)
 
 
-@pytest.mark.parametrize("name", ["gauss", "beta", "gauss_local"])
-def test_eval_p_rho2_matches_eval_p(name):
-    """eval_p_rho2(rho2) agrees with eval_p(x) at x = rho2/(1+rho2) -- every
-    variant here inherits the generic default substitution (Beta included,
-    since its reparametrization to r=|chi_I| no longer has its own more
-    direct rho2 form -- see NcGalaxyShapePopBeta's class documentation)."""
-    model, data = _make(name)
-    for rho2 in (1.0e-3, 0.1, 1.0, 5.0, 50.0):
-        x = rho2 / (1.0 + rho2)
-        assert_allclose(
-            model.eval_p_rho2(data, rho2), model.eval_p(data, x), rtol=1.0e-10
-        )
-
-
 @pytest.mark.parametrize(
     "alpha,beta",
     [(3000.0, 7000.0), (500.0, 500.0), (6000.0, 4000.0), (990.0, 10.0)],
 )
 def test_beta_concentrated_no_overflow(alpha, beta):
-    """eval_p/eval_p_rho2 stay finite and normalized for concentrated Beta
-    populations (large alpha, beta).
+    """eval_p stays finite and normalized for concentrated Beta populations
+    (large alpha, beta).
 
-    Evaluating norm=1/B(alpha,beta) and x**(alpha-1) as separate factors
+    Evaluating norm=1/B(alpha,beta) and r**(alpha-1) as separate factors
     overflows/underflows for alpha/beta of a few hundred or more (already
     reachable within the class's own declared range, e.g. alpha=beta=500
     pushes -ln B(alpha,beta) to ~695, right at exp()'s overflow edge),
@@ -138,10 +126,10 @@ def test_beta_concentrated_no_overflow(alpha, beta):
     data = Nc.GalaxyShapePopData.new(model)
     model.prepare(data)
 
-    r_mode = (alpha - 2.0) / (alpha + beta - 3.0)
-    mode = max(r_mode * r_mode, 1.0e-6)
-    for x in (mode * 0.999, mode, min(mode * 1.001, 1.0 - 1.0e-9)):
-        p = model.eval_p(data, x)
+    r_mode = (alpha - 1.0) / (alpha + beta - 2.0)
+    mode = max(r_mode, 1.0e-6)
+    for r in (mode * 0.999, mode, min(mode * 1.001, 1.0 - 1.0e-9)):
+        p = model.eval_p(data, r)
         assert np.isfinite(p)
         assert p >= 0.0
 
@@ -155,9 +143,8 @@ def test_beta_concentrated_no_overflow(alpha, beta):
 def test_beta_e_rms_mode(alpha, beta):
     """get_e_rms matches its closed-form definition (r=|chi_I| ~
     Beta(alpha,beta), x=r^2) and the first moment of eval_p itself;
-    get_mode matches the natural mode(r) -- deliberately not the argmax of
-    eval_p(x) itself, which is degenerate at x=0 for any alpha<2 (see
-    nc_galaxy_shape_pop_beta_get_mode()'s own doc comment)."""
+    get_mode matches the natural mode(r), literally the argmax of
+    eval_p(r) itself under the r-native contract."""
     model = Nc.GalaxyShapePopBeta.new()
     model["alpha"] = alpha
     model["beta"] = beta

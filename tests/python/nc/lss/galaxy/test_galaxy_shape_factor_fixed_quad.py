@@ -91,7 +91,7 @@ def _scipy_exact_marginal(pop, pop_data, ellip_conv, g, eps_obs, std_noise):
 
     def integrand(r, theta):
         chi = r * np.exp(1j * theta)
-        p_pop = pop.eval_p(pop_data, chi.real**2 + chi.imag**2) / np.pi
+        p_pop = pop.eval_p(pop_data, abs(chi)) / (2.0 * np.pi * abs(chi))
         delta = eps_obs - _shear_map(ellip_conv, g, chi)
         noise = np.exp(-(delta.real**2 + delta.imag**2) / (2 * std_noise**2)) / (
             2 * np.pi * std_noise**2
@@ -110,6 +110,21 @@ def _make(ellip_conv, sigma_pop, std_noise):
     mset = _build_mset(pop)
 
     gsffq = Nc.GalaxyShapeFactorFixedQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsffq, mset)
+    gsffq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsffq.prepare_data_array(mset, [data], True, True)
+    return gsffq, pop, data
+
+
+def _make_with_pop(pop, ellip_conv, std_noise, **fixed_quad_kwargs):
+    """Same as _make(), but takes an already-constructed pop (so the caller
+    controls its parameters/type) and forwards extra kwargs (e.g.
+    use_marginal_spline, spline_g_max) to the FixedQuad constructor."""
+    mset = _build_mset(pop)
+
+    gsffq = Nc.GalaxyShapeFactorFixedQuad(ellip_conv=ellip_conv, **fixed_quad_kwargs)
     data, _, _ = _build_factor_data(gsffq, mset)
     gsffq.data_set(
         data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
@@ -797,6 +812,175 @@ def test_read_write_row_round_trip():
     data.write_row(obs_out, 0)
     for col in cols:
         assert_allclose(obs_out.get(col, 0), obs.get(col, 0))
+
+
+def test_use_marginal_spline_off_by_default():
+    """use-marginal-spline defaults False -- a freshly-constructed instance
+    behaves exactly like before this feature existed."""
+    gsffq = Nc.GalaxyShapeFactorFixedQuad.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
+    assert gsffq.props.use_marginal_spline is False
+    assert_allclose(gsffq.props.spline_g_max, 0.3)
+    assert_allclose(gsffq.props.spline_rel_err, 1.0e-4)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_use_marginal_spline_matches_direct_in_box(ellip_conv):
+    """use-marginal-spline's cached ln(marginal) surface must closely match
+    the direct (uncached) path everywhere inside its own box, for
+    populations without a genuine density singularity (Gauss, and a
+    Beta with alpha>=2 -- see the alpha<2 caveat test below for the one
+    known-hard exception)."""
+    rng = np.random.default_rng(11)
+    std_noise, eps_obs_1, eps_obs_2, g_max = 0.25, 0.42, -0.18, 0.15
+
+    for pop_direct, pop_spline in (
+        (Nc.GalaxyShapePopGauss.new(), Nc.GalaxyShapePopGauss.new()),
+        (Nc.GalaxyShapePopBeta.new(), Nc.GalaxyShapePopBeta.new()),
+    ):
+        if isinstance(pop_direct, Nc.GalaxyShapePopGauss):
+            pop_direct["sigma"] = pop_spline["sigma"] = 0.3
+        else:
+            pop_direct["alpha"] = pop_spline["alpha"] = 3.0
+            pop_direct["beta"] = pop_spline["beta"] = 6.0
+
+        gsffq_direct, pop_d, data_direct = _make_with_pop(
+            pop_direct, ellip_conv, std_noise
+        )
+        gsffq_spline, pop_s, data_spline = _make_with_pop(
+            pop_spline,
+            ellip_conv,
+            std_noise,
+            use_marginal_spline=True,
+            spline_g_max=g_max,
+        )
+
+        for _ in range(30):
+            g_1 = rng.uniform(-g_max * 0.95, g_max * 0.95)
+            g_2 = rng.uniform(-g_max * 0.95, g_max * 0.95)
+            val_direct = gsffq_direct.eval_marginal(
+                pop_d, data_direct, g_1, g_2, eps_obs_1, eps_obs_2
+            )
+            val_spline = gsffq_spline.eval_marginal(
+                pop_s, data_spline, g_1, g_2, eps_obs_1, eps_obs_2
+            )
+            assert_allclose(val_spline, val_direct, rtol=5.0e-3)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_use_marginal_spline_falls_back_exactly_outside_box(ellip_conv):
+    """g outside [-spline-g-max,spline-g-max]^2 always uses the exact direct
+    computation (never extrapolated from the cached surface), so it must
+    match the non-spline path to machine precision, not just to the
+    cache's own tolerance."""
+    std_noise, eps_obs_1, eps_obs_2, g_max = 0.25, 0.42, -0.18, 0.15
+    pop_direct = Nc.GalaxyShapePopGauss.new()
+    pop_spline = Nc.GalaxyShapePopGauss.new()
+    pop_direct["sigma"] = pop_spline["sigma"] = 0.3
+
+    gsffq_direct, pop_d, data_direct = _make_with_pop(pop_direct, ellip_conv, std_noise)
+    gsffq_spline, pop_s, data_spline = _make_with_pop(
+        pop_spline, ellip_conv, std_noise, use_marginal_spline=True, spline_g_max=g_max
+    )
+
+    for g_1, g_2 in ((0.2, 0.0), (0.0, -0.25), (0.29, 0.29)):
+        val_direct = gsffq_direct.eval_marginal(
+            pop_d, data_direct, g_1, g_2, eps_obs_1, eps_obs_2
+        )
+        val_spline = gsffq_spline.eval_marginal(
+            pop_s, data_spline, g_1, g_2, eps_obs_1, eps_obs_2
+        )
+        assert_allclose(val_spline, val_direct, rtol=1.0e-12)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_use_marginal_spline_invalidates_on_pop_pkey_change(ellip_conv):
+    """Changing pop's own parameters (and re-preparing, as any caller must
+    do whenever pop's parameters change -- see this class' own prepare
+    protocol) after the g-spline was already built must be picked up on
+    the next call, not silently served from a stale cache built under the
+    old parameters."""
+    std_noise, eps_obs_1, eps_obs_2, g_max = 0.25, 0.42, -0.18, 0.15
+    g_1, g_2 = 0.1, -0.05
+
+    pop_spline = Nc.GalaxyShapePopGauss.new()
+    pop_spline["sigma"] = 0.3
+    mset_spline = _build_mset(pop_spline)
+    gsffq_spline = Nc.GalaxyShapeFactorFixedQuad(
+        ellip_conv=ellip_conv, use_marginal_spline=True, spline_g_max=g_max
+    )
+    data_spline, _, _ = _build_factor_data(gsffq_spline, mset_spline)
+    gsffq_spline.data_set(
+        data_spline, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsffq_spline.prepare_data_array(mset_spline, [data_spline], True, True)
+
+    # First call builds the g-spline under sigma=0.3.
+    gsffq_spline.eval_marginal(pop_spline, data_spline, g_1, g_2, eps_obs_1, eps_obs_2)
+
+    # Changing sigma bumps pop's own pkey; re-preparing must invalidate the
+    # already-built g-spline rather than silently reuse it.
+    pop_spline["sigma"] = 0.15
+    gsffq_spline.prepare_data_array(mset_spline, [data_spline], True, True)
+    val_spline = gsffq_spline.eval_marginal(
+        pop_spline, data_spline, g_1, g_2, eps_obs_1, eps_obs_2
+    )
+
+    pop_direct = Nc.GalaxyShapePopGauss.new()
+    pop_direct["sigma"] = 0.15
+    gsffq_direct, pop_d, data_direct = _make_with_pop(pop_direct, ellip_conv, std_noise)
+    val_direct = gsffq_direct.eval_marginal(
+        pop_d, data_direct, g_1, g_2, eps_obs_1, eps_obs_2
+    )
+
+    assert_allclose(val_spline, val_direct, rtol=5.0e-3)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_use_marginal_spline_beta_alpha_below_one_caveat(ellip_conv):
+    """Known caveat, documented in the class docs: a Beta population with
+    alpha<2 has a genuinely divergent density at x=0 (the same regime
+    test_marginal_matches_scipy_truth_table_beta_alpha_below_one_g_scan
+    documents as a known accuracy issue for NcGalaxyShapeFactorQuad itself,
+    near g~0.18). use-marginal-spline's cache does not hit its usual tight
+    tolerance here -- this test only asserts the result stays finite,
+    positive, and within a coarse factor of the direct path, not that it
+    matches closely."""
+    std_noise, eps_obs_1, eps_obs_2, g_max = 0.03, 0.15, -0.1, 0.15
+    pop_direct = Nc.GalaxyShapePopBeta.new()
+    pop_spline = Nc.GalaxyShapePopBeta.new()
+    pop_direct["alpha"] = pop_spline["alpha"] = 1.2
+    pop_direct["beta"] = pop_spline["beta"] = 4.0
+
+    gsffq_direct, pop_d, data_direct = _make_with_pop(pop_direct, ellip_conv, std_noise)
+    gsffq_spline, pop_s, data_spline = _make_with_pop(
+        pop_spline, ellip_conv, std_noise, use_marginal_spline=True, spline_g_max=g_max
+    )
+
+    g_1, g_2 = 0.09, -0.04
+    val_direct = gsffq_direct.eval_marginal(
+        pop_d, data_direct, g_1, g_2, eps_obs_1, eps_obs_2
+    )
+    val_spline = gsffq_spline.eval_marginal(
+        pop_s, data_spline, g_1, g_2, eps_obs_1, eps_obs_2
+    )
+    assert math.isfinite(val_spline)
+    assert val_spline > 0.0
+    assert_allclose(val_spline, val_direct, rtol=1.0)  # coarse: within 2x
+
+
+def test_spline_g_max_rel_err_gobject_property_round_trip():
+    """spline-g-max/spline-rel-err (CONSTRUCT_ONLY) are reachable through
+    the GObject property system, not just props.spline_g_max /
+    props.spline_rel_err."""
+    gsffq = Nc.GalaxyShapeFactorFixedQuad(
+        ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        spline_g_max=0.2,
+        spline_rel_err=1.0e-3,
+    )
+    assert_allclose(gsffq.get_property("spline-g-max"), 0.2)
+    assert_allclose(gsffq.get_property("spline-rel-err"), 1.0e-3)
+    assert_allclose(gsffq.get_property("spline-g-max"), gsffq.props.spline_g_max)
+    assert_allclose(gsffq.get_property("spline-rel-err"), gsffq.props.spline_rel_err)
 
 
 if __name__ == "__main__":
