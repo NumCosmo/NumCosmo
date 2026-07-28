@@ -442,20 +442,42 @@ class GalaxyShapeFactorGenQuad(GalaxyShapeFactorGenBase):
         return Nc.GalaxyShapeFactorQuad.new(self.ellip_conv.genum)
 
 
+DEFAULT_SHAPE_USE_MARGINAL_SPLINE = False
+DEFAULT_SHAPE_SPLINE_G_MAX = 0.3
+DEFAULT_SHAPE_SPLINE_REL_ERR = 1.0e-4
+
+
 class GalaxyShapeFactorGenFixedQuad(GalaxyShapeFactorGenBase):
     """Fixed lens-domain quadrature (``NcGalaxyShapeFactorFixedQuad``)."""
+
+    use_marginal_spline: Annotated[bool, Field()] = DEFAULT_SHAPE_USE_MARGINAL_SPLINE
+    spline_g_max: Annotated[float, Field(gt=0.0, le=1.0)] = DEFAULT_SHAPE_SPLINE_G_MAX
+    spline_rel_err: Annotated[float, Field(gt=0.0, le=1.0)] = (
+        DEFAULT_SHAPE_SPLINE_REL_ERR
+    )
 
     @staticmethod
     def help_text() -> list[str]:
         """Return the help text for this scheme."""
-        return ["GalaxyShapeFactorGenFixedQuad", _SHARED_SHAPE_FACTOR_HELP]
+        return [
+            "GalaxyShapeFactorGenFixedQuad",
+            f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+            f"use_marginal_spline={DEFAULT_SHAPE_USE_MARGINAL_SPLINE}, "
+            f"spline_g_max={DEFAULT_SHAPE_SPLINE_G_MAX}, "
+            f"spline_rel_err={DEFAULT_SHAPE_SPLINE_REL_ERR}",
+        ]
 
     def requires_sigma(self) -> bool:
         """FixedQuad works with any population (no Gaussian linearization)."""
         return False
 
     def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
-        return Nc.GalaxyShapeFactorFixedQuad.new(self.ellip_conv.genum)
+        return Nc.GalaxyShapeFactorFixedQuad(
+            ellip_conv=self.ellip_conv.genum,
+            use_marginal_spline=self.use_marginal_spline,
+            spline_g_max=self.spline_g_max,
+            spline_rel_err=self.spline_rel_err,
+        )
 
 
 class GalaxyShapeFactorGenLaplace(GalaxyShapeFactorGenBase):

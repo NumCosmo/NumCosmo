@@ -1527,6 +1527,8 @@ nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, N
   const gdouble c2_rot            = cdata->c2_rot;
   const gdouble m                 = data->m;
   const guint n_nodes             = ncm_vector_len (z_nodes);
+  gboolean have_gt0_val           = FALSE;
+  gdouble gt0_val                 = 0.0;
   guint j;
 
   g_assert_nonnull (pop);
@@ -1535,17 +1537,29 @@ nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, N
   for (j = 0; j < n_nodes; j++)
   {
     const gdouble z_j = ncm_vector_get (z_nodes, j);
-    gdouble gt;
 
     if (z_j > z_cl)
-      gt = nc_wl_surface_mass_density_reduced_shear_cache (&cdata->crit_cache_arr[j], &cdata->sigma_cache);
-    else
-      gt = 0.0;
-
     {
+      const gdouble gt       = nc_wl_surface_mass_density_reduced_shear_cache (&cdata->crit_cache_arr[j], &cdata->sigma_cache);
       const complex double g = (1.0 + m) * gt + (c1_rot + I * c2_rot);
 
       ncm_vector_set (out, j, klass->eval_marginal (gsf, pop, data, creal (g), cimag (g), et, ex));
+    }
+    else
+    {
+      /* z_j <= z_cl always maps to the exact same g = c1_rot + I*c2_rot
+       * (gt=0), so this branch's result is identical for every node that
+       * hits it -- memoize the one real eval_marginal() call instead of
+       * repeating it per foreground node. */
+      if (!have_gt0_val)
+      {
+        const complex double g = c1_rot + I * c2_rot;
+
+        gt0_val      = klass->eval_marginal (gsf, pop, data, creal (g), cimag (g), et, ex);
+        have_gt0_val = TRUE;
+      }
+
+      ncm_vector_set (out, j, gt0_val);
     }
   }
 }
