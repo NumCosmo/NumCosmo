@@ -993,15 +993,27 @@ _build_g_spline (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShape
   ldata->g_spline_pop_pkey = ncm_model_state_get_pkey (NCM_MODEL (pop));
   ldata->g_spline_valid    = TRUE;
 
-  /* Population-divergence guard: eval_p(x=0) is +inf whenever the
-   * population's own density diverges there (e.g. NcGalaxyShapePopBeta
-   * with alpha<2 -- see _nc_galaxy_shape_pop_beta_eval_p()'s
-   * (0.5*alpha-1)*log(x) term, which is (+inf)*(negative)=+inf exactly at
-   * x=0 for alpha<2). This matters here specifically -- not just as the
+  /* Population-divergence guard: the AREA DENSITY this class actually
+   * needs, P_pop(r)/(2*pi*r) (see the class doc and _direct_marginal_at_g()
+   * below), diverges at r=0 whenever eval_p(r) vanishes slower than r
+   * itself as r->0 -- e.g. NcGalaxyShapePopBeta with alpha<2, whose
+   * eval_p(r) ~ r^(alpha-1) (see _nc_galaxy_shape_pop_beta_eval_p()).
+   * Testing eval_p AT r=0 directly (as an earlier version of this guard
+   * did, before the eval_p(x)/eval_p_rho2(rho2) contract collapse made
+   * eval_p() itself r-native) can no longer distinguish this: eval_p(0.0)
+   * collapses to exactly 0.0 in floating point for ANY alpha>1, no matter
+   * how close to 1 -- the vanishing ORDER is lost, not just its value.
+   * Instead, probe the local power-law exponent via two small,
+   * well-separated r: eval_p(r) ~ C*r^p near 0 for every population
+   * implemented here (Gauss: p=1 exactly, the safe boundary; Beta: p =
+   * alpha-1), so the area density diverges iff the finite log-log slope
+   * between the two samples is below 1 -- scale-invariant, no new vfunc
+   * needed, and reduces to the same alpha>=2 safety boundary as the old
+   * x-space test. This matters here specifically -- not just as the
    * already-documented direct-quadrature accuracy caveat -- because EVERY
    * domain node chi_L has some g where the implied intrinsic ellipticity
    * chi_I(g,chi_L) is exactly 0 (solving apply_shear_inv(g,chi_L)=0 always
-   * has a root), so a population divergent at x=0 turns each of the
+   * has a root), so a population divergent at r=0 turns each of the
    * (hundreds to thousands of) domain nodes into its own genuine
    * unbounded spike somewhere in g-space. A box of any reasonable size is
    * essentially guaranteed to contain at least one, and the adaptive
@@ -1011,11 +1023,20 @@ _build_g_spline (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShape
    * (population-only, not domain-dependent), not per galaxy, so this never
    * touches the per-node chi_L scan below unless the population is
    * actually safe. */
-  if (!gsl_finite (nc_galaxy_shape_pop_eval_p (pop, data->pop_data, 0.0)))
   {
-    ldata->g_spline_pop_safe = FALSE;
+    const gdouble r1 = 1.0e-6;
+    const gdouble r2 = 1.0e-3;
+    const gdouble p1 = nc_galaxy_shape_pop_eval_p (pop, data->pop_data, r1);
+    const gdouble p2 = nc_galaxy_shape_pop_eval_p (pop, data->pop_data, r2);
+    const gboolean safe = gsl_finite (p1) && gsl_finite (p2) && (p1 > 0.0) && (p2 > 0.0) &&
+                          (log (p2 / p1) / log (r2 / r1) >= 1.0 - 1.0e-4);
 
-    return;
+    if (!safe)
+    {
+      ldata->g_spline_pop_safe = FALSE;
+
+      return;
+    }
   }
 
   ldata->g_spline_pop_safe = TRUE;
