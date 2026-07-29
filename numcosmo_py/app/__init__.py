@@ -42,6 +42,7 @@ from .catalog import (
     DerivedQuantityError,
     GetBestFit,
     DumpMset,
+    CheckM2lnL,
 )
 from .generate import (
     GeneratePlanck,
@@ -215,6 +216,13 @@ CAT_DUMP_MSET_CMD: CMDArg = {
     "help": "Dump the model-set stored in a catalog file as YAML.",
 }
 
+CAT_CHECK_M2LNL_CMD: CMDArg = {
+    "name": "check-m2lnl",
+    "no_args_is_help": True,
+    "help": "Recompute -2ln(L) for every row of a catalog and compare against "
+    "the stored value.",
+}
+
 GEN_PLANCK_CMD: CMDArg = {
     "name": "planck18",
     "no_args_is_help": True,
@@ -320,6 +328,7 @@ app_cat.command(**CAT_PARAM_EVOLUTION_CMD)(ParameterEvolution)
 app_cat.command(**CAT_DERIVED_ERROR_CMD)(DerivedQuantityError)
 app_cat.command(**CAT_GET_BEST_FIT_CMD)(GetBestFit)
 app_cat.command(**CAT_DUMP_MSET_CMD)(DumpMset)
+app_cat.command(**CAT_CHECK_M2LNL_CMD)(CheckM2lnL)
 # ------------------------------------------------------------------------------
 # Installing experiment generation subcommands
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
