@@ -8363,6 +8363,16 @@ class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
         Half-side of the square use-marginal-spline's cache covers
       spline-rel-err -> gdouble: g-spline target relative error
         Target relative error for use-marginal-spline's autoknots build
+      use-pop-correction -> gboolean: Use population-divergence correction
+        Correct for the pointwise P_pop(r)/(2*pi*r) divergence near a domain node's chi_I=0 crossing
+      pop-correction-eps1 -> gdouble: Correction window inner radius
+        Inner radius below which the cached grid's contribution is fully tapered out
+      pop-correction-eps2 -> gdouble: Correction window outer radius
+        Outer radius above which the cached grid gets full weight and below which the correction is nonzero
+      pop-correction-n-radial -> guint: Correction sub-quadrature radial nodes
+        Radial node count for use-pop-correction's local sub-quadrature
+      pop-correction-n-angular -> guint: Correction sub-quadrature angular nodes
+        Angular node count for use-pop-correction's local sub-quadrature
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -8378,9 +8388,14 @@ class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
         n_angular: int
         n_lens: int
         n_radial: int
+        pop_correction_eps1: float
+        pop_correction_eps2: float
+        pop_correction_n_angular: int
+        pop_correction_n_radial: int
         spline_g_max: float
         spline_rel_err: float
         use_marginal_spline: bool
+        use_pop_correction: bool
         ellip_conv: GalaxyWLObsEllipConv
 
     props: Props = ...
@@ -8391,9 +8406,14 @@ class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
         n_angular: int = ...,
         n_lens: int = ...,
         n_radial: int = ...,
+        pop_correction_eps1: float = ...,
+        pop_correction_eps2: float = ...,
+        pop_correction_n_angular: int = ...,
+        pop_correction_n_radial: int = ...,
         spline_g_max: float = ...,
         spline_rel_err: float = ...,
         use_marginal_spline: bool = ...,
+        use_pop_correction: bool = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
     ) -> None: ...
     @staticmethod

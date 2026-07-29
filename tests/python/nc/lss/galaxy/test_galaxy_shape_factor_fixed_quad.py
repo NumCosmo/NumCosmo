@@ -309,9 +309,7 @@ def test_marginal_is_rotation_covariant_for_narrow_beta(ellip_conv):
     for a in (0.0, 0.3, 0.7, 1.2, 2.1, 3.0, -1.5):
         g = gt * np.exp(1j * a)
         eps = eps_mag * np.exp(1j * (eps_arg0 + a))
-        val = gsffq.eval_marginal(
-            pop, data, g.real, g.imag, eps.real, eps.imag
-        )
+        val = gsffq.eval_marginal(pop, data, g.real, g.imag, eps.real, eps.imag)
 
         assert math.isfinite(val)
 
@@ -1071,6 +1069,218 @@ def test_spline_g_max_rel_err_gobject_property_round_trip():
     assert_allclose(gsffq.get_property("spline-rel-err"), 1.0e-3)
     assert_allclose(gsffq.get_property("spline-g-max"), gsffq.props.spline_g_max)
     assert_allclose(gsffq.get_property("spline-rel-err"), gsffq.props.spline_rel_err)
+
+
+def test_pop_correction_off_by_default():
+    """use-pop-correction defaults False -- a freshly-constructed instance
+    behaves exactly like before this feature existed."""
+    gsffq = Nc.GalaxyShapeFactorFixedQuad.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
+    assert gsffq.props.use_pop_correction is False
+    assert_allclose(gsffq.props.pop_correction_eps1, 0.15)
+    assert_allclose(gsffq.props.pop_correction_eps2, 0.35)
+    assert gsffq.props.pop_correction_n_radial == 8
+    assert gsffq.props.pop_correction_n_angular == 16
+
+
+def test_pop_correction_gobject_property_round_trip():
+    """pop-correction-* (CONSTRUCT_ONLY) are reachable through the GObject
+    property system, not just props.pop_correction_*."""
+    gsffq = Nc.GalaxyShapeFactorFixedQuad(
+        ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        use_pop_correction=True,
+        pop_correction_eps1=0.1,
+        pop_correction_eps2=0.4,
+        pop_correction_n_radial=6,
+        pop_correction_n_angular=12,
+    )
+    assert gsffq.get_property("use-pop-correction") is True
+    assert_allclose(gsffq.get_property("pop-correction-eps1"), 0.1)
+    assert_allclose(gsffq.get_property("pop-correction-eps2"), 0.4)
+    assert gsffq.get_property("pop-correction-n-radial") == 6
+    assert gsffq.get_property("pop-correction-n-angular") == 12
+
+
+def test_pop_correction_reduces_error_for_real_hard_case():
+    """Real hard case found via a full-catalog scan (dev session 2026-07-29,
+    galaxy #6897 of a production exp_007_v5-like catalog): a Beta
+    alpha=1.55 population where eps_obs happens to sit close to f_g(0)
+    (the chi_I=0 image) inside the noise-contained branch's densely-sampled
+    region. The pointwise P_pop(r)/(2*pi*r) divergence there -- not a
+    general narrow-population problem, see
+    test_narrow_population_is_a_documented_limitation for that different
+    case -- is what a coarse fixed grid (n_radial=n_angular=15, the class
+    default) cannot resolve: 18.5% off the independent scipy oracle here,
+    vs. a median error of ~1e-9 across the other 10705 galaxies in that same
+    real catalog at the same resolution. use-pop-correction brings this one
+    hard case back down near the class' own usual accuracy without adding
+    more nodes to the (still cached, still cheap) main grid."""
+    alpha, beta = 1.55, 1.62
+    std_noise = 0.09130239486694336
+    g_1, g_2 = 0.15, 0.05
+    eps_obs_1, eps_obs_2 = 0.2183132767677307, -0.04060542210936546
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE
+
+    pop_plain = Nc.GalaxyShapePopBeta.new()
+    pop_plain["alpha"] = alpha
+    pop_plain["beta"] = beta
+    pop_corr = Nc.GalaxyShapePopBeta.new()
+    pop_corr["alpha"] = alpha
+    pop_corr["beta"] = beta
+
+    gsffq_plain, pop_p, data_plain = _make_with_pop(pop_plain, ellip_conv, std_noise)
+    gsffq_corr, pop_c, data_corr = _make_with_pop(
+        pop_corr, ellip_conv, std_noise, use_pop_correction=True
+    )
+
+    exact = _scipy_exact_marginal(
+        pop_p,
+        data_plain.pop_data,
+        ellip_conv,
+        g_1 + 1j * g_2,
+        eps_obs_1 + 1j * eps_obs_2,
+        std_noise,
+    )
+    val_plain = gsffq_plain.eval_marginal(
+        pop_p, data_plain, g_1, g_2, eps_obs_1, eps_obs_2
+    )
+    val_corr = gsffq_corr.eval_marginal(
+        pop_c, data_corr, g_1, g_2, eps_obs_1, eps_obs_2
+    )
+
+    rel_err_plain = abs(val_plain - exact) / exact
+    rel_err_corr = abs(val_corr - exact) / exact
+
+    assert rel_err_plain > 0.1, "expected the known hard-case error without correction"
+    assert_allclose(val_corr, exact, rtol=5.0e-3)
+    assert rel_err_corr < rel_err_plain / 10.0
+
+
+def test_pop_correction_improves_g_spline_accuracy_for_real_hard_case():
+    """use-pop-correction was motivated by exactly this: use-marginal-spline's
+    fixed-knot fallback for alpha<2 Beta populations (see
+    NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_UNSAFE_SPLINE_N_KNOTS's own docs, which
+    document a bounded but real worst-case interpolation error) samples
+    _direct_marginal_at_g() at each knot -- the SAME shared function
+    use-pop-correction fixes, so enabling both together must interpolate a
+    meaningfully more accurate underlying surface, with no extra wiring.
+    Checked directly against the independent scipy oracle at the same real
+    hard-case configuration as test_pop_correction_reduces_error_for_real_
+    hard_case."""
+    alpha, beta = 1.55, 1.62
+    std_noise = 0.09130239486694336
+    g_1, g_2 = 0.15, 0.05
+    eps_obs_1, eps_obs_2 = 0.2183132767677307, -0.04060542210936546
+    g_max = 0.3
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE
+
+    pop_old = Nc.GalaxyShapePopBeta.new()
+    pop_old["alpha"] = alpha
+    pop_old["beta"] = beta
+    gsffq_old, pop_o, data_old = _make_with_pop(
+        pop_old, ellip_conv, std_noise, use_marginal_spline=True, spline_g_max=g_max
+    )
+
+    pop_new = Nc.GalaxyShapePopBeta.new()
+    pop_new["alpha"] = alpha
+    pop_new["beta"] = beta
+    gsffq_new, pop_n, data_new = _make_with_pop(
+        pop_new,
+        ellip_conv,
+        std_noise,
+        use_marginal_spline=True,
+        spline_g_max=g_max,
+        use_pop_correction=True,
+    )
+
+    exact = _scipy_exact_marginal(
+        pop_o,
+        data_old.pop_data,
+        ellip_conv,
+        g_1 + 1j * g_2,
+        eps_obs_1 + 1j * eps_obs_2,
+        std_noise,
+    )
+    val_old = gsffq_old.eval_marginal(pop_o, data_old, g_1, g_2, eps_obs_1, eps_obs_2)
+    val_new = gsffq_new.eval_marginal(pop_n, data_new, g_1, g_2, eps_obs_1, eps_obs_2)
+
+    ln_err_old = abs(math.log(val_old) - math.log(exact))
+    ln_err_new = abs(math.log(val_new) - math.log(exact))
+
+    assert math.isfinite(val_new)
+    assert val_new > 0.0
+    assert ln_err_new < ln_err_old / 5.0
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_pop_correction_is_rotation_covariant(ellip_conv):
+    """Same exact identity as test_marginal_is_rotation_covariant_for_narrow_beta
+    above, now with use-pop-correction enabled: the outer taper depends only
+    on r_i=|chi_I(chi_L_i,g)|, already rotation-covariant via the domain's
+    own phi offset, and the inner correction integrates in native chi_I
+    polar coordinates with no absolute angular reference of its own (unlike
+    the bug that test documents, the population term here has no
+    theta-dependence at all before the shear map is applied) -- verified
+    numerically in a dev session prototype before shipping this, checked
+    here against the real C implementation."""
+    alpha, beta, std_noise = 1.55, 1.62, 0.09130239486694336
+    gt, eps_mag, eps_arg0 = 0.15, 0.2220573959987452, -0.18398692
+
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = alpha
+    pop["beta"] = beta
+
+    gsffq, pop, data = _make_with_pop(
+        pop,
+        ellip_conv,
+        std_noise,
+        use_pop_correction=True,
+        pop_correction_eps1=0.15,
+        pop_correction_eps2=0.35,
+    )
+
+    baseline = None
+
+    for a in (0.0, 0.3, 0.7, 1.2, 2.1, 3.0, -1.5):
+        g = gt * np.exp(1j * a)
+        eps = eps_mag * np.exp(1j * (eps_arg0 + a))
+        val = gsffq.eval_marginal(pop, data, g.real, g.imag, eps.real, eps.imag)
+
+        assert math.isfinite(val)
+
+        if baseline is None:
+            baseline = val
+        else:
+            assert_allclose(val, baseline, rtol=1.0e-7)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_pop_correction_no_regression_for_smooth_population(ellip_conv):
+    """A Gaussian population has no adjustable parameter that makes
+    P_pop(r)/(2*pi*r) diverge at r=0 (unlike Beta's alpha) -- there is
+    nothing for use-pop-correction to fix here, and it must not make an
+    already-accurate result meaningfully worse."""
+    sigma, std_noise = 0.28, 0.03
+    eps_obs_1, eps_obs_2 = -0.368837, 0.101348
+    g_1, g_2 = 0.2, 0.1
+
+    pop_plain = Nc.GalaxyShapePopGauss.new()
+    pop_plain["sigma"] = sigma
+    pop_corr = Nc.GalaxyShapePopGauss.new()
+    pop_corr["sigma"] = sigma
+
+    gsffq_plain, pop_p, data_plain = _make_with_pop(pop_plain, ellip_conv, std_noise)
+    gsffq_corr, pop_c, data_corr = _make_with_pop(
+        pop_corr, ellip_conv, std_noise, use_pop_correction=True
+    )
+
+    val_plain = gsffq_plain.eval_marginal(
+        pop_p, data_plain, g_1, g_2, eps_obs_1, eps_obs_2
+    )
+    val_corr = gsffq_corr.eval_marginal(
+        pop_c, data_corr, g_1, g_2, eps_obs_1, eps_obs_2
+    )
+
+    assert_allclose(val_corr, val_plain, rtol=5.0e-3)
 
 
 if __name__ == "__main__":

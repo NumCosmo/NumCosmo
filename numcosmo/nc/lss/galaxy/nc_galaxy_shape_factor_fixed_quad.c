@@ -231,6 +231,35 @@ typedef struct _NcGalaxyShapeFactorFixedQuadPrivate
   gboolean use_marginal_spline;
   gdouble spline_g_max;
   gdouble spline_rel_err;
+
+  /* Opt-in correction for the pointwise divergence P_2D(r)=P_pop(r)/(2*pi*r)
+   * has as chi_L -> f_g(0) for any population whose P_pop(r) is not ~r near
+   * r=0 (e.g. alpha<2 Beta) -- see _pop_correction_inner()'s own docs and
+   * the class docs above. CONSTRUCT_ONLY like every other node-count knob
+   * on this class, off by default: zero behavior change unless explicitly
+   * enabled. */
+  gboolean use_pop_correction;
+  gdouble pop_correction_eps1;
+  gdouble pop_correction_eps2;
+  guint pop_correction_n_radial;
+  guint pop_correction_n_angular;
+
+  /* Forward shear map chi_I -> chi_L=f_g(chi_I), resolved once at
+   * construction like apply_shear_inv/det_jac above -- needed only by
+   * _pop_correction_inner(), which integrates in native chi_I space and so
+   * (unlike the rest of this class) maps INTRINSIC to OBSERVED, not the
+   * other way around. */
+  complex double (*apply_shear) (complex double g, complex double chi_I);
+
+  /* Precomputed once at construction (pop-correction-eps2/n-radial are both
+   * CONSTRUCT_ONLY, so these never change): radial GL nodes/weights over
+   * [0,pop-correction-eps2], reused for EVERY galaxy and EVERY g -- unlike
+   * the per-galaxy domain cache above, this quadrature depends on nothing
+   * per-galaxy at all, only on the two fixed properties. NULL/unallocated
+   * when use_pop_correction is FALSE. */
+  gdouble *pop_correction_r_w;  /* size pop_correction_n_radial */
+  GArray *pop_correction_r_arr; /* same nodes, boxed for eval_p_array()'s GArray contract */
+  GArray *pop_correction_p_arr; /* eval_p_array()'s output scratch: P_pop(r_i) at the fixed nodes above, recomputed every call since the population's own parameters can change between calls */
 } NcGalaxyShapeFactorFixedQuadPrivate;
 
 enum
@@ -244,6 +273,11 @@ enum
   PROP_USE_MARGINAL_SPLINE,
   PROP_SPLINE_G_MAX,
   PROP_SPLINE_REL_ERR,
+  PROP_USE_POP_CORRECTION,
+  PROP_POP_CORRECTION_EPS1,
+  PROP_POP_CORRECTION_EPS2,
+  PROP_POP_CORRECTION_N_RADIAL,
+  PROP_POP_CORRECTION_N_ANGULAR,
   PROP_LEN,
 };
 
@@ -267,6 +301,16 @@ nc_galaxy_shape_factor_fixed_quad_init (NcGalaxyShapeFactorFixedQuad *gsffq)
   self->use_marginal_spline = FALSE;
   self->spline_g_max        = 0.3;
   self->spline_rel_err      = 1.0e-4;
+
+  self->use_pop_correction       = FALSE;
+  self->pop_correction_eps1      = 0.15;
+  self->pop_correction_eps2      = 0.35;
+  self->pop_correction_n_radial  = 8;
+  self->pop_correction_n_angular = 16;
+  self->apply_shear              = NULL;
+  self->pop_correction_r_w       = NULL;
+  self->pop_correction_r_arr     = NULL;
+  self->pop_correction_p_arr     = NULL;
 }
 
 static void
@@ -300,6 +344,21 @@ _nc_galaxy_shape_factor_fixed_quad_set_property (GObject *object, guint prop_id,
       break;
     case PROP_SPLINE_REL_ERR:
       self->spline_rel_err = g_value_get_double (value);
+      break;
+    case PROP_USE_POP_CORRECTION:
+      self->use_pop_correction = g_value_get_boolean (value);
+      break;
+    case PROP_POP_CORRECTION_EPS1:
+      self->pop_correction_eps1 = g_value_get_double (value);
+      break;
+    case PROP_POP_CORRECTION_EPS2:
+      self->pop_correction_eps2 = g_value_get_double (value);
+      break;
+    case PROP_POP_CORRECTION_N_RADIAL:
+      self->pop_correction_n_radial = g_value_get_uint (value);
+      break;
+    case PROP_POP_CORRECTION_N_ANGULAR:
+      self->pop_correction_n_angular = g_value_get_uint (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -339,6 +398,21 @@ _nc_galaxy_shape_factor_fixed_quad_get_property (GObject *object, guint prop_id,
     case PROP_SPLINE_REL_ERR:
       g_value_set_double (value, self->spline_rel_err);
       break;
+    case PROP_USE_POP_CORRECTION:
+      g_value_set_boolean (value, self->use_pop_correction);
+      break;
+    case PROP_POP_CORRECTION_EPS1:
+      g_value_set_double (value, self->pop_correction_eps1);
+      break;
+    case PROP_POP_CORRECTION_EPS2:
+      g_value_set_double (value, self->pop_correction_eps2);
+      break;
+    case PROP_POP_CORRECTION_N_RADIAL:
+      g_value_set_uint (value, self->pop_correction_n_radial);
+      break;
+    case PROP_POP_CORRECTION_N_ANGULAR:
+      g_value_set_uint (value, self->pop_correction_n_angular);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -360,10 +434,12 @@ _nc_galaxy_shape_factor_fixed_quad_constructed (GObject *object)
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
         self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace;
         self->det_jac         = &nc_wl_ellipticity_det_jac_trace;
+        self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace;
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
         self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace_det;
         self->det_jac         = &nc_wl_ellipticity_det_jac_trace_det;
+        self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace_det;
         break;
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */
@@ -377,12 +453,46 @@ _nc_galaxy_shape_factor_fixed_quad_constructed (GObject *object)
     self->n_lens |= 1;
 
     self->n_max = MAX (self->n_radial * self->n_angular, self->n_lens * self->n_lens);
+
+    /* pop-correction-eps2/n-radial are both CONSTRUCT_ONLY, so the radial
+     * nodes/weights below never change once built -- precompute them here
+     * instead of in _pop_correction_inner() (called every eval_marginal()
+     * call) to avoid a gsl_integration_glfixed_table_alloc()/free() pair on
+     * every single call, unlike the per-galaxy domain tables in
+     * _regen_domain() below, which are rare (cached per galaxy) and so
+     * don't need this. */
+    if (self->use_pop_correction)
+    {
+      gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (self->pop_correction_n_radial);
+      guint i;
+
+      self->pop_correction_r_w   = g_new (gdouble, self->pop_correction_n_radial);
+      self->pop_correction_r_arr = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), self->pop_correction_n_radial);
+      g_array_set_size (self->pop_correction_r_arr, self->pop_correction_n_radial);
+
+      for (i = 0; i < self->pop_correction_n_radial; i++)
+      {
+        gdouble r, wr;
+
+        gsl_integration_glfixed_point (0.0, self->pop_correction_eps2, i, &r, &wr, table);
+        g_array_index (self->pop_correction_r_arr, gdouble, i) = r;
+        self->pop_correction_r_w[i]                            = wr;
+      }
+
+      gsl_integration_glfixed_table_free (table);
+    }
   }
 }
 
 static void
 _nc_galaxy_shape_factor_fixed_quad_finalize (GObject *object)
 {
+  NcGalaxyShapeFactorFixedQuadPrivate * const self = nc_galaxy_shape_factor_fixed_quad_get_instance_private (NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD (object));
+
+  g_clear_pointer (&self->pop_correction_r_w, g_free);
+  g_clear_pointer (&self->pop_correction_r_arr, g_array_unref);
+  g_clear_pointer (&self->pop_correction_p_arr, g_array_unref);
+
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_shape_factor_fixed_quad_parent_class)->finalize (object);
 }
@@ -491,6 +601,47 @@ _noise_val (complex double delta, gdouble sig2)
   const gdouble d2 = gsl_pow_2 (creal (delta)) + gsl_pow_2 (cimag (delta));
 
   return exp (-d2 / (2.0 * sig2)) / (2.0 * M_PI * sig2);
+}
+
+/* Quintic "smootherstep" (Perlin): the unique quintic with S(0)=0, S(1)=1,
+ * and S'=S''=0 at both endpoints, hence C^2 and, crucially, exact compact
+ * support -- S(t)=0 identically for t<=0, S(t)=1 identically for t>=1, not
+ * just numerically close, unlike a sigmoid/tanh-based alternative (see
+ * PROP_USE_POP_CORRECTION's docs for why compact support matters here: it
+ * lets _pop_correction_inner()'s own domain end exactly at pop-correction-
+ * eps2 with zero truncation error). Pure polynomial (no transcendental
+ * call at all) -- deliberately, since this gets evaluated fresh for every
+ * cached domain node on every eval_marginal() call (it depends on g, so it
+ * can't be folded into the cached eff_weight like the noise kernel is):
+ * a tanh^2/sech^2-based partition would be just as safe against
+ * cancellation but ~2x more expensive per node for no accuracy benefit
+ * (verified in a dev session prototype). */
+static inline gdouble
+_smoothstep (gdouble t)
+{
+  t = CLAMP (t, 0.0, 1.0);
+
+  return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+/* w(r): 0 for r<=eps1, 1 for r>=eps2, smooth in between. */
+static inline gdouble
+_pop_correction_window (const NcGalaxyShapeFactorFixedQuadPrivate * const self, gdouble r)
+{
+  return _smoothstep ((r - self->pop_correction_eps1) / (self->pop_correction_eps2 - self->pop_correction_eps1));
+}
+
+/* 1-w(r), evaluated via the exact mirror identity S(t)+S(1-t)=1 rather than
+ * subtracting from 1: near r=eps2, w(r) is within O(delta^3) of 1 (delta=
+ * eps2-r), so a direct "1.0 - _pop_correction_window(...)" would already be
+ * pure floating-point roundoff noise by delta~1e-4, well before the true
+ * value itself gets that small -- verified numerically in a dev session
+ * prototype before shipping this. Evaluating the SAME polynomial mirrored
+ * (swap eps1/eps2) tracks the true value correctly all the way down. */
+static inline gdouble
+_pop_correction_window_complement (const NcGalaxyShapeFactorFixedQuadPrivate * const self, gdouble r)
+{
+  return _smoothstep ((self->pop_correction_eps2 - r) / (self->pop_correction_eps2 - self->pop_correction_eps1));
 }
 
 /* Branch 1: noise disk (radius R2) contained in the unit disc, centered at
@@ -883,6 +1034,76 @@ _regen_domain (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePo
   }
 }
 
+/* Local correction for the pointwise divergence P_2D(r)=P_pop(r)/(2*pi*r)
+ * has as a domain node's mapped chi_I approaches 0 (i.e. chi_L approaches
+ * f_g(0)): integrates in NATIVE chi_I polar coordinates (r,theta) around
+ * the origin instead, where the measure r*dr*dtheta exactly cancels the
+ * 1/r in P_2D(r), leaving the smooth, bounded integrand
+ * P_pop(r)/(2*pi) * noise_kernel(eps_obs-f_g(r*e^{i*theta})) * (1-w(r)) --
+ * no divergence left to resolve, unlike the fixed chi_L-space grid
+ * _direct_marginal_at_g() sums over. (1-w(r)) is
+ * _pop_correction_window_complement() and vanishes identically for
+ * r>=pop_correction_eps2, so this integral's domain genuinely ends there,
+ * not just approximately -- see that function's own docs.
+ *
+ * Uses ldata->cached_epsilon_obs_1/2 and ldata->cached_std_noise (NOT
+ * data->epsilon_obs_1/2/std_noise, which are only guaranteed equal to
+ * these once _nc_galaxy_shape_factor_fixed_quad_marginal()'s cache check
+ * has already passed): those cached values are what the OUTER domain
+ * (ldata->eff_weight, which already has the noise kernel baked in -- see
+ * _regen_domain()) was actually built against, and this correction must
+ * use the exact same noise-kernel center for the two pieces to be a
+ * consistent partition.
+ *
+ * Recomputed fresh every call: unlike the cached chi_L-space domain above,
+ * this integral's center f_g(0) moves with g, so it cannot be cached
+ * per-galaxy. Cheap regardless (pop_correction_n_radial x
+ * pop_correction_n_angular points; the radial nodes/weights/window are
+ * pure polynomial, precomputed once at construction -- see
+ * pop_correction_r_arr's own docs -- so the only per-point transcendental
+ * call is the already-unavoidable eval_p_array() plus one noise-kernel
+ * exp()), and skipped entirely unless self->use_pop_correction is set
+ * (checked by the one caller, _direct_marginal_at_g()). */
+static gdouble
+_pop_correction_inner (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                       NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
+{
+  const complex double eps_obs = ldata->cached_epsilon_obs_1 + I * ldata->cached_epsilon_obs_2;
+  const gdouble sig2           = gsl_pow_2 (ldata->cached_std_noise);
+  const gdouble theta_w        = 2.0 * M_PI / self->pop_correction_n_angular;
+  gdouble result               = 0.0;
+  guint i;
+
+  nc_galaxy_shape_pop_eval_p_array (pop, data->pop_data, self->pop_correction_r_arr, &self->pop_correction_p_arr);
+
+  {
+    const gdouble * const r_data = (const gdouble *) self->pop_correction_r_arr->data;
+    const gdouble * const p_data = (const gdouble *) self->pop_correction_p_arr->data;
+
+    for (i = 0; i < self->pop_correction_n_radial; i++)
+    {
+      const gdouble r       = r_data[i];
+      const gdouble taper_c = _pop_correction_window_complement (self, r);
+      guint j;
+
+      if ((r <= 0.0) || (taper_c <= 0.0))
+        continue;
+
+      for (j = 0; j < self->pop_correction_n_angular; j++)
+      {
+        const gdouble theta        = theta_w * j;
+        const complex double chi_i = r * cexp (I * theta);
+        const complex double chi_l = self->apply_shear (g, chi_i);
+        const complex double delta = eps_obs - chi_l;
+
+        result += self->pop_correction_r_w[i] * theta_w *_noise_val (delta, sig2) * (p_data[i] / (2.0 * M_PI)) * taper_c;
+      }
+    }
+  }
+
+  return result;
+}
+
 /* Raw (un-floored) marginal at a single g, given an already-valid domain
  * cache (ldata->chi_L/eff_weight, see _regen_domain()). Extracted out of
  * _nc_galaxy_shape_factor_fixed_quad_marginal() so both that function's
@@ -955,9 +1176,28 @@ _direct_marginal_at_g (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalax
      * P_pop(r_i)/(2*pi*r_i) -- the same physical division that used to be
      * folded into the old eval_p(x)'s own exponent, now explicit here
      * (see the class docs' own note on this being an accepted, deliberate
-     * minor precision cost in exchange for the interface simplification). */
-    for (i = 0; i < ldata->n_used; i++)
-      result += ldata->eff_weight[i] * (p_data[i] / (2.0 * M_PI * r_data[i])) * ldata->jac[i];
+     * minor precision cost in exchange for the interface simplification).
+     *
+     * Branch ONCE on use_pop_correction (not per node, matching this
+     * function's own established convention above for ellip_conv): when
+     * off (the default), this is byte-identical to the pre-correction sum
+     * -- zero behavior change unless explicitly enabled. When on, taper
+     * each node's contribution smoothly to zero as r_i->0 (see
+     * PROP_USE_POP_CORRECTION's docs) and add the local correction that
+     * covers that region instead, where the divergence is cancelled
+     * exactly rather than approximated by this coarse fixed grid. */
+    if (self->use_pop_correction)
+    {
+      for (i = 0; i < ldata->n_used; i++)
+        result += ldata->eff_weight[i] * (p_data[i] / (2.0 * M_PI * r_data[i])) * ldata->jac[i] * _pop_correction_window (self, r_data[i]);
+
+      result += _pop_correction_inner (self, pop, data, ldata, g);
+    }
+    else
+    {
+      for (i = 0; i < ldata->n_used; i++)
+        result += ldata->eff_weight[i] * (p_data[i] / (2.0 * M_PI * r_data[i])) * ldata->jac[i];
+    }
   }
 
   return result;
@@ -1411,6 +1651,133 @@ nc_galaxy_shape_factor_fixed_quad_class_init (NcGalaxyShapeFactorFixedQuadClass 
                                                         "Target relative error for use-marginal-spline's autoknots build",
                                                         0.0, 1.0, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorFixedQuad:use-pop-correction:
+   *
+   * When %TRUE, corrects for the pointwise divergence
+   * $P_\mathrm{pop}(r)/(2\pi r)$ has as a domain node's $\chi_L$ approaches
+   * $f_g(0)$ (the image of $\chi_I=0$), which any population whose
+   * $P_\mathrm{pop}(r)$ is not $\sim r$ near $r=0$ (e.g. Beta with
+   * $\alpha<2$) exhibits -- see _pop_correction_inner()'s own docs for the
+   * exact mechanism. Splits the domain into two smoothly-blended pieces (a
+   * quintic window, not a hard cutoff, so nothing discontinuous happens in
+   * $g$ as a cached node's mapped $\chi_I$ crosses the blend radius): the
+   * existing cached grid, tapered smoothly to zero for
+   * $r=\lvert\chi_I\rvert<$#NcGalaxyShapeFactorFixedQuad:pop-correction-eps2,
+   * plus a small, cheap, native-$\chi_I$-polar sub-quadrature recomputed
+   * every call (its center $f_g(0)$ moves with $g$, so unlike the main
+   * domain it cannot be cached) that exactly cancels the $1/r$ via the
+   * polar measure $r\,\mathrm{d}r\,\mathrm{d}\theta$ instead of resolving
+   * it. Reduced a real 18% worst-case error (alpha=1.55 Beta population,
+   * $n_\mathrm{radial}=n_\mathrm{angular}=15$) to well under 1% in testing,
+   * with no regression for populations that have nothing to correct (e.g.
+   * Gaussian, or Beta with $\alpha\geq2$). Default %FALSE (zero behavior
+   * change unless explicitly enabled).
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_USE_POP_CORRECTION,
+                                   g_param_spec_boolean ("use-pop-correction",
+                                                         "Use population-divergence correction",
+                                                         "Correct for the pointwise P_pop(r)/(2*pi*r) divergence near a domain node's chi_I=0 crossing",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorFixedQuad:pop-correction-eps1:
+   *
+   * Inner radius (in $r=\lvert\chi_I\rvert$, dimensionless) below which
+   * #NcGalaxyShapeFactorFixedQuad:use-pop-correction's smooth window tapers
+   * the cached grid's contribution fully to zero -- the correction's own
+   * local sub-quadrature covers this region instead. Must be less than
+   * #NcGalaxyShapeFactorFixedQuad:pop-correction-eps2. Default 0.15.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_POP_CORRECTION_EPS1,
+                                   g_param_spec_double ("pop-correction-eps1",
+                                                        "Correction window inner radius",
+                                                        "Inner radius below which the cached grid's contribution is fully tapered out",
+                                                        0.0, 1.0, 0.15,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorFixedQuad:pop-correction-eps2:
+   *
+   * Outer radius (in $r=\lvert\chi_I\rvert$, dimensionless) above which
+   * #NcGalaxyShapeFactorFixedQuad:use-pop-correction's smooth window gives
+   * the cached grid full, unmodified weight, and below which the
+   * correction's own local sub-quadrature is nonzero -- also the outer
+   * radius of that sub-quadrature itself (its integrand vanishes exactly,
+   * not just approximately, at and beyond this radius, since the window
+   * has genuine compact support -- see _pop_correction_inner()'s docs), so
+   * no separate "how far out" knob is needed. Must be greater than
+   * #NcGalaxyShapeFactorFixedQuad:pop-correction-eps1. Default 0.35.
+   *
+   * Do NOT shrink this to shave cost or "since the singularity is only at
+   * r=0": there is no point mass to isolate there. $P_\mathrm{pop}(r)\to0$
+   * (or a finite constant, for $\alpha=1$) as $r\to0$, so the probability
+   * mass in any shrinking neighborhood $[0,\epsilon]$ itself vanishes
+   * smoothly ($\propto\epsilon^\alpha$) -- it is not a Dirac delta hiding at
+   * the origin. What actually needs correcting is a RESOLUTION failure of
+   * the cached grid: its nodes live in $\chi_L$ (lens-plane) space, and once
+   * inverted to $\chi_I$ they are simply too sparse, over an
+   * $O(0.1$--$0.3)$-sized neighborhood of the origin (for the hard case this
+   * was tuned against), to track how fast $P_\mathrm{pop}(r)/(2\pi r)$
+   * actually varies there -- a property of the cached grid's own node
+   * density, not of how sharp the singularity is. Shrinking
+   * pop-correction-eps2 below that scale hands the worst part of that
+   * neighborhood back to the unresolved cached grid and reintroduces the
+   * very error this correction exists to remove: verified directly on the
+   * alpha=1.55 worst case (see #NcGalaxyShapeFactorFixedQuad:use-pop-
+   * correction), relative error rises monotonically from 0.08% at
+   * eps2=0.35 back up to ~9% at eps2=0.001, i.e. most of the way back to
+   * the uncorrected 18% -- while the sub-quadrature's own cost
+   * (pop-correction-n-radial x pop-correction-n-angular) does not change
+   * at all with eps2, so shrinking it buys nothing even in principle.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_POP_CORRECTION_EPS2,
+                                   g_param_spec_double ("pop-correction-eps2",
+                                                        "Correction window outer radius",
+                                                        "Outer radius above which the cached grid gets full weight and below which the correction is nonzero",
+                                                        0.0, 1.0, 0.35,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorFixedQuad:pop-correction-n-radial:
+   *
+   * Radial node count for #NcGalaxyShapeFactorFixedQuad:use-pop-correction's
+   * local native-$\chi_I$-polar sub-quadrature. Unlike
+   * #NcGalaxyShapeFactorFixedQuad:n-radial, this integrand has no
+   * pointwise divergence left to resolve (the polar measure already
+   * cancelled it), so a modest node count suffices -- testing found
+   * n_radial=8/n_angular=16 already within a factor of 2 of a converged
+   * reference across a representative alpha=1.0-2.0 Beta sweep. Default 8.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_POP_CORRECTION_N_RADIAL,
+                                   g_param_spec_uint ("pop-correction-n-radial",
+                                                      "Correction sub-quadrature radial nodes",
+                                                      "Radial node count for use-pop-correction's local sub-quadrature",
+                                                      1, G_MAXUINT, 8,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorFixedQuad:pop-correction-n-angular:
+   *
+   * Angular node count (equally-spaced, matching this class' own
+   * noise-contained branch convention for a smooth $2\pi$-periodic
+   * integrand -- see _regen_noise_contained()'s docs) for
+   * #NcGalaxyShapeFactorFixedQuad:use-pop-correction's local
+   * native-$\chi_I$-polar sub-quadrature. Default 16.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_POP_CORRECTION_N_ANGULAR,
+                                   g_param_spec_uint ("pop-correction-n-angular",
+                                                      "Correction sub-quadrature angular nodes",
+                                                      "Angular node count for use-pop-correction's local sub-quadrature",
+                                                      1, G_MAXUINT, 16,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   gsf_class->data_init        = &_nc_galaxy_shape_factor_fixed_quad_data_init;
   gsf_class->prepare          = &_nc_galaxy_shape_factor_fixed_quad_prepare;
