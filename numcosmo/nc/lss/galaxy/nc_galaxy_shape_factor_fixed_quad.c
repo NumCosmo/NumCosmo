@@ -973,8 +973,8 @@ _g_spline_slice_func (gdouble x, gpointer p)
  * per-radius real-DFT-in-angle decomposition, exploiting this class' own
  * exact rotation-covariance -- see nc_wl_ellipticity_apply_shear_inv_trace()/
  * _trace_det()'s docs for that covariance property, still true and still the
- * reason this cache needs no knowledge of the per-galaxy m/c1_rot/c2_rot
- * calibration terms the caller folds into g -- but a small, fixed harmonic
+ * reason this cache needs no knowledge of the per-galaxy calibration terms
+ * the caller folds into g -- but a small, fixed harmonic
  * count could not track this function's actual angular sharpness: verified
  * numerically to blow up by orders of magnitude away from the build nodes,
  * worst for exactly the alpha<2 Beta populations this class' users care
