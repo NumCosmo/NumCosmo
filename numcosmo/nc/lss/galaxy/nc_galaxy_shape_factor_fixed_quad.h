@@ -32,6 +32,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor.h>
+#include <numcosmo/ncm/algebra/ncm_matrix.h>
 
 G_BEGIN_DECLS
 
@@ -44,6 +45,8 @@ NcGalaxyShapeFactorFixedQuad *nc_galaxy_shape_factor_fixed_quad_ref (NcGalaxySha
 
 void nc_galaxy_shape_factor_fixed_quad_free (NcGalaxyShapeFactorFixedQuad *gsffq);
 void nc_galaxy_shape_factor_fixed_quad_clear (NcGalaxyShapeFactorFixedQuad **gsffq);
+
+NcmMatrix *nc_galaxy_shape_factor_fixed_quad_peek_domain (NcGalaxyShapeFactorFixedQuad *gsffq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, NcmVector **weights);
 
 G_END_DECLS
 

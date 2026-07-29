@@ -1475,3 +1475,61 @@ nc_galaxy_shape_factor_fixed_quad_clear (NcGalaxyShapeFactorFixedQuad **gsffq)
   g_clear_object (gsffq);
 }
 
+/**
+ * nc_galaxy_shape_factor_fixed_quad_peek_domain:
+ * @gsffq: a #NcGalaxyShapeFactorFixedQuad
+ * @pop: a #NcGalaxyShapePop
+ * @data: a #NcGalaxyShapeFactorData
+ * @weights: (out) (transfer full): the matching per-node effective weight
+ * (quadrature weight times the noise-kernel value; does NOT include the
+ * population/Jacobian factor, since those depend on g, not just @data)
+ *
+ * Diagnostic accessor exposing @data's own per-galaxy quadrature domain --
+ * the same chi_L node array eval_marginal()/eval_ln_marginal() build and
+ * cache internally, never otherwise visible outside this class. Rebuilds
+ * the domain first if @data's epsilon_obs/std_noise changed since the last
+ * call (identical cache check to _nc_galaxy_shape_factor_fixed_quad_marginal()'s
+ * own), so this can be called standalone without ever calling eval_marginal()
+ * first. If #NcGalaxyShapeFactorFixedQuad:auto-lens-nodes is on and this
+ * galaxy lands in the genuine-lens branch, the returned domain uses whatever
+ * per-galaxy node count that calibration last chose (the same one
+ * eval_marginal() itself would use) -- not necessarily the configured
+ * #NcGalaxyShapeFactorFixedQuad:n-lens upper bound.
+ *
+ * Never called by any production evaluation path (those go straight through
+ * eval_marginal()/eval_ln_marginal()) -- added for `numcosmo inspect
+ * galaxy-shape-integrand` and similar diagnostics, so a quadrature-design
+ * question can be answered by looking at the actual nodes instead of
+ * reimplementing this class' own branch selection elsewhere and risking a
+ * subtle mismatch.
+ *
+ * Returns: (transfer full): an n_used x 2 #NcmMatrix of chi_L node
+ * positions, column 0 = Re(chi_L), column 1 = Im(chi_L).
+ */
+NcmMatrix *
+nc_galaxy_shape_factor_fixed_quad_peek_domain (NcGalaxyShapeFactorFixedQuad *gsffq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, NcmVector **weights)
+{
+  NcGalaxyShapeFactorFixedQuadPrivate * const self = nc_galaxy_shape_factor_fixed_quad_get_instance_private (gsffq);
+  NcGalaxyShapeFactorFixedQuadData *ldata          = (NcGalaxyShapeFactorFixedQuadData *) data->ldata;
+  const gdouble epsilon_obs_1                      = data->epsilon_obs_1;
+  const gdouble epsilon_obs_2                      = data->epsilon_obs_2;
+  NcmMatrix *chi_L_mat;
+  guint i;
+
+  if (!ldata->cache_valid || (ldata->cached_epsilon_obs_1 != epsilon_obs_1) ||
+      (ldata->cached_epsilon_obs_2 != epsilon_obs_2) || (ldata->cached_std_noise != data->std_noise))
+    _regen_domain (self, pop, data, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
+
+  chi_L_mat = ncm_matrix_new (ldata->n_used, 2);
+  *weights  = ncm_vector_new (ldata->n_used);
+
+  for (i = 0; i < ldata->n_used; i++)
+  {
+    ncm_matrix_set (chi_L_mat, i, 0, creal (ldata->chi_L[i]));
+    ncm_matrix_set (chi_L_mat, i, 1, cimag (ldata->chi_L[i]));
+    ncm_vector_set (*weights, i, ldata->eff_weight[i]);
+  }
+
+  return chi_L_mat;
+}
+

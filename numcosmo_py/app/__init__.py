@@ -55,7 +55,11 @@ from .generate import (
     GenerateDEWSpline,
 )
 from .cluster_richness import RunClusterRichnessAnalysis
-from .inspect import InspectSummary, InspectClusterNCounts
+from .inspect import (
+    InspectSummary,
+    InspectClusterNCounts,
+    InspectGalaxyShapeIntegrand,
+)
 from .xcor import ViewKernel, ListKernels
 
 # Attempt optional import of the Firecrown-NumCosmo connector.
@@ -300,6 +304,15 @@ INSPECT_CLUSTER_NCOUNTS_CMD: CMDArg = {
     "help": "Plot data-vector, covariance/correlation, and optional S_ij diagnostics.",
 }
 
+INSPECT_GALAXY_SHAPE_INTEGRAND_CMD: CMDArg = {
+    "name": "galaxy-shape-integrand",
+    "no_args_is_help": True,
+    "help": (
+        "Plot a heatmap of the shear-marginalization integrand for one "
+        "galaxy, to visualize the noise-kernel vs population-density pull."
+    ),
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -345,6 +358,7 @@ app_analysis.command(**ANALYSIS_CLUSTER_RICHNESS_CMD)(RunClusterRichnessAnalysis
 # Installing inspect subcommands
 app_inspect.command(**INSPECT_SUMMARY_CMD)(InspectSummary)
 app_inspect.command(**INSPECT_CLUSTER_NCOUNTS_CMD)(InspectClusterNCounts)
+app_inspect.command(**INSPECT_GALAXY_SHAPE_INTEGRAND_CMD)(InspectGalaxyShapeIntegrand)
 # Installing xcor kernel subcommands
 app_xcor_kernel.command(**XCOR_KERNEL_VIEW_CMD)(ViewKernel)
 app_xcor_kernel.command(**XCOR_KERNEL_LIST_CMD)(ListKernels)
