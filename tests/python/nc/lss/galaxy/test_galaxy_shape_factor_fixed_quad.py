@@ -272,6 +272,56 @@ def test_marginal_matches_scipy_truth_table_beta_alpha_below_one_g_scan(ellip_co
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_marginal_is_rotation_covariant_for_narrow_beta(ellip_conv):
+    """P(eps_obs*e^{ia} | g*e^{ia}) = P(eps_obs | g) exactly, for any angle
+    a: the shear map is equivariant (f_{g*e^{ia}}(chi*e^{ia}) = f_g(chi)*e^{ia}
+    for both ellip_conv), P_pop depends only on r=|chi_I| (never on its
+    angle), and the noise kernel is isotropic -- see
+    docs/theory/wl_shape_factor_history.md's derivation.
+
+    _regen_noise_contained()/_regen_unit_contained() used to place their
+    theta nodes on an ABSOLUTE grid (no dependence on phi=arg(eps_obs)),
+    unlike _regen_lens()'s own local-frame construction: for a smooth
+    (e.g. Gaussian) population this cost nothing (equally-spaced/
+    Gauss-Legendre sampling of a smooth periodic integrand is offset-
+    insensitive), but for a population near-singular at chi_I=0 it broke
+    this exact identity at the class' default node count -- verified
+    directly (dev session 2026-07-29): swings of up to 96% of the mean
+    across rotations at n_angular=15 for alpha=1.55. Fixed by offsetting
+    both branches' theta grid by phi, matching _regen_lens()."""
+    alpha, beta, std_noise = 1.55, 1.62, 0.3
+    gt, eps_mag, eps_arg0 = 0.15, 0.3, 0.7
+
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = alpha
+    pop["beta"] = beta
+    mset = _build_mset(pop)
+
+    gsffq = Nc.GalaxyShapeFactorFixedQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsffq, mset)
+    gsffq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsffq.prepare_data_array(mset, [data], True, True)
+
+    baseline = None
+
+    for a in (0.0, 0.3, 0.7, 1.2, 2.1, 3.0, -1.5):
+        g = gt * np.exp(1j * a)
+        eps = eps_mag * np.exp(1j * (eps_arg0 + a))
+        val = gsffq.eval_marginal(
+            pop, data, g.real, g.imag, eps.real, eps.imag
+        )
+
+        assert math.isfinite(val)
+
+        if baseline is None:
+            baseline = val
+        else:
+            assert_allclose(val, baseline, rtol=1.0e-9)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_extreme_g_stays_accurate(ellip_conv):
     """Headline regression: unlike Series/SeriesLensed, this class has no
     truncated polynomial to cross zero -- stays accurate through g=0.99,

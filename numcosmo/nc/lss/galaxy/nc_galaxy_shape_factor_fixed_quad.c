@@ -495,13 +495,23 @@ _noise_val (complex double delta, gdouble sig2)
 
 /* Branch 1: noise disk (radius R2) contained in the unit disc, centered at
  * eps_obs -- this project's production regime (std_noise~0.3). Equally-spaced
- * (not Gauss-Legendre) theta nodes: the noise kernel depends on r alone here
- * (radially symmetric about eps_obs), so only the smooth, 2pi-periodic
- * population/Jacobian factor varies with theta, for which equally-spaced
- * sampling is spectrally accurate: n_angular=8-10 already reaches the float
- * floor, comfortably covered by the default 15. */
+ * (not Gauss-Legendre) theta nodes, offset by phi=arg(eps_obs) so the grid is
+ * a rigid rotation of the same canonical pattern for every galaxy (matching
+ * _regen_lens()'s own local-frame convention below): the noise kernel depends
+ * on r alone here (radially symmetric about eps_obs), so only the smooth,
+ * 2pi-periodic population/Jacobian factor varies with theta, for which
+ * equally-spaced sampling is spectrally accurate regardless of the phi
+ * offset: n_angular=8-10 already reaches the float floor for that factor,
+ * comfortably covered by the default 15 -- but ONLY for smooth (e.g.
+ * Gaussian) populations; a population near-singular at chi_I=0 breaks the
+ * "smooth" assumption, and without the phi offset here, swapping which side
+ * of an exact rotational-covariance identity carries a rotation (e.g. this
+ * class' own eval_marginal(g,eps_obs) vs eval_marginal(g*e^{ia},
+ * eps_obs*e^{ia})) would silently sample a DIFFERENT, unrelated point of an
+ * already-coarse grid instead of the same grid rigidly rotated -- see
+ * docs/theory/wl_shape_factor_history.md. */
 static void
-_regen_noise_contained (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double eps_obs, gdouble R2, gdouble sig2,
+_regen_noise_contained (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double eps_obs, gdouble R2, gdouble phi, gdouble sig2,
                         complex double *chi_L, gdouble *eff_weight, guint *n_used)
 {
   gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (self->n_radial);
@@ -516,7 +526,7 @@ _regen_noise_contained (NcGalaxyShapeFactorFixedQuadPrivate * const self, comple
 
     for (j = 0; j < self->n_angular; j++)
     {
-      const gdouble theta       = 2.0 * M_PI * j / self->n_angular;
+      const gdouble theta       = phi + 2.0 * M_PI * j / self->n_angular;
       const complex double disp = r * cexp (I * theta);
 
       chi_L[idx]      = eps_obs + disp;
@@ -534,9 +544,20 @@ _regen_noise_contained (NcGalaxyShapeFactorFixedQuadPrivate * const self, comple
  * the noise disk misses the unit disc entirely (see _regen_domain()'s docs
  * for why both reduce to the same computation). The noise kernel is NOT
  * radially symmetric about the origin (only about eps_obs), so plain
- * Gauss-Legendre in theta. */
+ * Gauss-Legendre in theta -- same phi=arg(eps_obs) offset as Branch 1 above
+ * (added to the raw GL node, harmless for a 2pi-periodic integrand: a
+ * translated Gauss-Legendre rule over a full period integrates the
+ * rotated integrand with the same accuracy, just at rotated node positions)
+ * and for the same reason: with NSIGMA=8, this branch is hit by any galaxy
+ * with std_noise>~0.125 (R2>R1) -- a real, common part of this project's
+ * per-galaxy std_noise distribution (observed range ~0.025-0.47 in a real
+ * production catalog, dev session 2026-07-29), not just an edge case -- and
+ * without the phi offset its absolute (non-rotating) grid made this class
+ * NOT rotation-covariant for narrow/singular populations there: eval_marginal
+ * on a rotated config swung by up to 96% of its mean at the class default
+ * n_angular=15 before this fix. */
 static void
-_regen_unit_contained (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double eps_obs, gdouble sig2,
+_regen_unit_contained (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double eps_obs, gdouble phi, gdouble sig2,
                        complex double *chi_L, gdouble *eff_weight, guint *n_used)
 {
   gsl_integration_glfixed_table *table_r     = gsl_integration_glfixed_table_alloc (self->n_radial);
@@ -551,10 +572,11 @@ _regen_unit_contained (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex
 
     for (j = 0; j < self->n_angular; j++)
     {
-      gdouble theta, wtheta;
+      gdouble theta_raw, theta, wtheta;
       complex double chi;
 
-      gsl_integration_glfixed_point (0.0, 2.0 * M_PI, j, &theta, &wtheta, table_theta);
+      gsl_integration_glfixed_point (0.0, 2.0 * M_PI, j, &theta_raw, &wtheta, table_theta);
+      theta           = theta_raw + phi;
       chi             = r * cexp (I * theta);
       chi_L[idx]      = chi;
       eff_weight[idx] = wr * r * wtheta * _noise_val (eps_obs - chi, sig2);
@@ -779,13 +801,13 @@ _regen_domain (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePo
   {
     /* Noise disk fully inside the unit disc: this project's production
      * regime (std_noise~0.3). */
-    _regen_noise_contained (self, eps_obs, R2, sig2, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
+    _regen_noise_contained (self, eps_obs, R2, phi, sig2, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
   }
   else if (d + R1 <= R2)
   {
     /* Unit disc already fully inside the (fixed-window) noise disk: full
      * disc quadrature's original, validated use case. */
-    _regen_unit_contained (self, eps_obs, sig2, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
+    _regen_unit_contained (self, eps_obs, phi, sig2, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
   }
   else
   {
@@ -802,7 +824,7 @@ _regen_domain (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePo
 
     if (d + R1 <= R2_eff)
     {
-      _regen_unit_contained (self, eps_obs, sig2, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
+      _regen_unit_contained (self, eps_obs, phi, sig2, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
     }
     else
     {
