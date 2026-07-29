@@ -37,6 +37,7 @@ project:
     - tutorials/python/sky_match_id.qmd
     - examples/data_analysis/inspect_data_objects.qmd
     - examples/data_analysis/snia.qmd
+    - examples/data_analysis/rg_snia_bao.qmd
     - examples/intro/epdf.qmd
     - examples/intro/hiprim.qmd
     - examples/intro/hiprim_tensor.qmd
@@ -172,6 +173,8 @@ website:
             contents:
               - href: examples/data_analysis/snia.qmd
                 text: "SN Ia Fitting"
+              - href: examples/data_analysis/rg_snia_bao.qmd
+                text: "SNIa + BAO Confidence Regions"
               - href: examples/data_analysis/inspect_data_objects.qmd
                 text: "Inspect Data Objects"
               - href: examples/intro/epdf.qmd
