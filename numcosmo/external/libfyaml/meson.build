@@ -102,7 +102,8 @@ libfyaml = static_library(
     gnu_symbol_visibility: 'hidden',
     c_args: libfyaml_c_args,
     # Upstream requires C17 (CMAKE_C_STANDARD 17 in their CMakeLists.txt): its
-    # atomics header and use of DBL_DECIMAL_DIG depend on C11-or-later features
-    # that NumCosmo's project-wide '-std=gnu99' default doesn't provide.
+    # atomics header and use of DBL_DECIMAL_DIG depend on C11-or-later
+    # features. Pinned explicitly so it keeps building C17 regardless of
+    # NumCosmo's own project-wide c_std default.
     override_options: ['c_std=gnu17'],
 )
