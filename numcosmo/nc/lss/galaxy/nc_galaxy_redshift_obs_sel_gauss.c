@@ -28,12 +28,11 @@
  *
  * Gaussian population photo-z observable distribution.
  *
- * A #NcGalaxyRedshiftObsSel whose population observable at true
- * redshift $z$ is Gaussian, $\mathrm{obs} \sim \mathcal{N}(z, \sigma_z)$ with
- * $\sigma_z = \sigma_0 (1 + z)$ and a single population-scatter parameter
- * $\sigma_0$. Currently shares the Gaussian-integral math with the per-galaxy
- * #NcGalaxyRedshiftObsGauss, but is a distinct abstraction free to
- * become a scatter mixture as its assumptions diverge.
+ * A #NcGalaxyRedshiftObsSel whose population observable at true redshift $z$ is
+ * Gaussian, $\mathrm{obs} \sim \mathcal{N}(z, \sigma_z)$ with $\sigma_z = \sigma_0 (1
+ * + z)$ and a single population-scatter parameter $\sigma_0$. Currently shares the
+ * Gaussian-integral math with the per-galaxy #NcGalaxyRedshiftObsGauss, but is a
+ * distinct abstraction free to become a scatter mixture as its assumptions diverge.
  *
  */
 

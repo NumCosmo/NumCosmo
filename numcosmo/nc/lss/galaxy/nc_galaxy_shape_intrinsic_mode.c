@@ -277,13 +277,10 @@ _ln_p_pop (const ModeCtx *ctx, const gdouble rho)
 
 /* Outer 1D Newton search over rho, TRACE_DET closed form: h(rho) =
  * ln P_pop(rho) - Q(rho)/(2 sigma_n^2), h'/h'' both closed-form (Q part)
- * plus a finite-difference M'(rho)/M''(rho) for the population term (a
- * plain scalar special-function call, no apply_shear involved -- cheap
- * either way, and not worth a closed form of its own yet). Finite-
- * differenced directly in rho (not x=rho^2 then chain-ruled, as an earlier
- * version of this function did before the eval_p/eval_p_rho2 contract
- * collapse made eval_p() itself r-native): no chain rule needed at all
- * once the primary variable matches the search variable. */
+ * plus a finite-difference M'(rho)/M''(rho) for the population term
+ * (a plain scalar special-function call, cheap enough not to need a
+ * closed form of its own), differenced directly in rho since eval_p() is
+ * itself r-native. */
 static gdouble
 _rho_hat_trace_det (const ModeCtx *ctx, const gdouble gamma, const gdouble beta, const gdouble chiO2, const gdouble rho0)
 {

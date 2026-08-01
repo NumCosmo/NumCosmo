@@ -5,18 +5,11 @@ title: Fixed-Node Quadrature for the Shape Likelihood
 # Fixed-Node Quadrature for the Shape Likelihood
 
 ::: {.callout-note}
-This page documents [[numcosmo|NcGalaxyShapeFactorFixedQuad]], a sibling of
-[[numcosmo|NcGalaxyShapeFactorQuad]] and the series-based schemes described in
-[A Small-Shear Series Marginalization](wl_shape_marginalization_series.qmd):
-same exact integral, no series truncation in $g$ anywhere, but FIXED node
-counts instead of Quad's adaptive Divonne cubature. Unlike
-[[numcosmo|NcGalaxyShapeFactorSeriesLensed]] (which caches a *truncated
-polynomial* approximation to a function that must stay positive, and so is
-guarded against — but not immune to — crossing zero at large $g$), this
-class removes the polynomial altogether. See
+This page documents [[numcosmo|NcGalaxyShapeFactorFixedQuad]]: the same
+exact marginalization integral as [[numcosmo|NcGalaxyShapeFactorQuad]], but
+evaluated with fixed node counts instead of adaptive Divonne cubature. See
 `docs/theory/wl_shape_factor_history.md` for the design history behind this
-class, including an earlier, geometry-branch-based version replaced by the
-design described here.
+class.
 :::
 
 ## Two fixed quadrature schemes, chosen per galaxy
@@ -30,24 +23,20 @@ $$
 is evaluated via one of two schemes, picked from
 $(\epsilon_\mathrm{obs},\sigma_\mathrm{noise})$ alone — never $g$:
 
-- **Two-panel $\psi$**, for a LOCALIZED noise kernel (most galaxies).
-- **Native $\chi_I$-polar**, for a BROAD noise kernel — specifically when the
+- **Two-panel $\psi$**, for a localized noise kernel (most galaxies).
+- **Native $\chi_I$-polar**, for a broad noise kernel — specifically when the
   entire unit disc lies within $N_\sigma\sigma_\mathrm{noise}$ of
-  $\epsilon_\mathrm{obs}$, i.e.
+  $\epsilon_\mathrm{obs}$:
   $$1+|\epsilon_\mathrm{obs}| \le N_\sigma\,\sigma_\mathrm{noise},
   \qquad N_\sigma=8.$$
   ($1+|\epsilon_\mathrm{obs}|$ is the distance from $\epsilon_\mathrm{obs}$
-  to the farthest point of the unit disc — the diametrically opposite
-  boundary point — so this condition says the noise kernel already covers
-  the WHOLE disc, not just a neighborhood of $\epsilon_\mathrm{obs}$.)
+  to the farthest point of the unit disc, so this condition holds exactly
+  when the noise kernel already covers the whole disc.)
 
-Both are exact (no truncation, no linearization); the switch only picks
-which fixed grid resolves a given galaxy's integrand well. Verified over an
-840-case sweep (population shape, $|\epsilon_\mathrm{obs}|$,
-$\sigma_\mathrm{noise}$, $g$, both ellipticity conventions) that using
-EITHER branch alone, unconditionally, produces a 15–17% worst case — always
-in the OTHER branch's own regime — while the switch brings the combined
-worst case down to 2.0%, median error around $10^{-6}$.
+Both schemes are exact (no truncation, no linearization). Validated to a 2.0%
+worst case and $\sim10^{-6}$ median error against an independent scipy
+integral, across population shape, $|\epsilon_\mathrm{obs}|$,
+$\sigma_\mathrm{noise}$, $g$, and both ellipticity conventions.
 
 ## Two-panel $\psi$
 
@@ -57,77 +46,48 @@ exactly, so $\psi=0$ always maps to the noise kernel's own peak. $\psi$ is
 integrated in its own polar coordinates $(\rho,\theta)$, with $\rho$ split
 into two independent Gauss–Legendre panels, $[0,R_\sigma)$ and
 $[R_\sigma,1)$ (`n-radial` nodes each), concentrating resolution where the
-noise kernel's mass actually is instead of spreading one rule uniformly
-across the whole disc. $\theta$ is equally-spaced (`n-angular` nodes,
-spectrally accurate for the smooth $2\pi$-periodic integrand) and offset by
-$\phi=\arg\epsilon_\mathrm{obs}$ so a coarse grid stays exactly
+noise kernel's mass actually is. $\theta$ is equally spaced (`n-angular`
+nodes) and offset by $\phi=\arg\epsilon_\mathrm{obs}$ so a coarse grid stays
 rotation-covariant.
 
-### $R_\sigma$: the exact split radius
+### $R_\sigma$: the split radius
 
-$R_\sigma$ must contain the $\psi$-preimage of the physical noise disc
-$\{\chi_L:|\chi_L-\epsilon_\mathrm{obs}|\le N_\sigma\sigma_\mathrm{noise}\}$.
-An earlier estimate used the map's local derivative at $\psi=0$ — cheap, but
-badly overestimates the reach once $|\epsilon_\mathrm{obs}|$ gets close to
-1, since it ignores the map's curvature entirely (verified: gives a
-nonsensical value past the disc boundary, needing an ad hoc cap, for
-$|\epsilon_\mathrm{obs}|=0.95$). Möbius maps send circles to circles
-EXACTLY, so instead three points on the noise disc's own boundary are
-mapped through $f_h^{-1}$ and circumscribed — recovering the true image
-circle losslessly, no linearization or guessed direction involved:
+$R_\sigma$ is the radius of the $\psi$-preimage of the physical noise disc
+$\{\chi_L:|\chi_L-\epsilon_\mathrm{obs}|\le N_\sigma\sigma_\mathrm{noise}\}$,
+computed exactly (Möbius maps send circles to circles) from three boundary
+points mapped through $f_h^{-1}$ and circumscribed:
 $$
 R_\sigma = \min\!\big(0.98,\ |c|+r\big),
 $$
 $c,r$ the center/radius of the circle through
 $f_h^{-1}(\epsilon_\mathrm{obs}+N_\sigma\sigma_\mathrm{noise}e^{i\theta_k})$
-at $\theta_k=0,\tfrac{2\pi}{3},\tfrac{4\pi}{3}$. The $0.98$ cap only matters
-when the noise disc already reaches the WHOLE unit disc from $\psi$'s own
-side too — exactly the regime the native $\chi_I$ branch exists for instead
-(see below).
+at $\theta_k=0,\tfrac{2\pi}{3},\tfrac{4\pi}{3}$.
 
 ### Puncture correction
 
-Same mechanism as Quad: the integrand only ever evaluates the bracket
+The integrand only ever evaluates the bracket
 $N_2(\epsilon_\mathrm{obs}-\chi_L)-N_0$, $N_0=N_2(\epsilon_\mathrm{obs}-\chi_{L0})$,
-$\chi_{L0}=f_g(0)$ (the population's own peak location under $g$, unrelated
-to $h$), with $N_0$ added back once after the sum via
-$\int P_\mathrm{pop}=1$ exactly. This makes the summed integrand finite
-everywhere unconditionally — including for a [[numcosmo|NcGalaxyShapePopBeta]]
-population with $\alpha<2$, whose area density $P_\mathrm{pop}(r)/(2\pi r)$
-diverges at $r=0$, since EVERY domain node has some $g$ where the implied
+$\chi_{L0}=f_g(0)$, with $N_0$ added back once after the sum via
+$\int P_\mathrm{pop}=1$. This keeps the summed integrand finite everywhere,
+including for a [[numcosmo|NcGalaxyShapePopBeta]] population with
+$\alpha<2$, whose area density $P_\mathrm{pop}(r)/(2\pi r)$ diverges at
+$r=0$ — every domain node has some $g$ where the implied
 $\chi_I(g,\chi_L)$ is exactly $0$.
 
 ## Native $\chi_I$-polar
 
-When the noise kernel is broad enough to cover the whole disc, the
-$\psi$-reparametrization's own Jacobian develops a huge (verified:
-$\sim10^6\times$) dynamic range near the disc boundary, which no fixed
-radial split resolves well. The fix is to not reparametrize at all: integrate
-directly in $\chi_I$'s own polar coordinates instead, with FIXED nodes
+Integrates directly in $\chi_I$'s own polar coordinates, with fixed nodes
 $\chi_I=\rho\,e^{i\theta}$ ($\rho$: Gauss–Legendre on $[0,1)$; $\theta$:
-equally-spaced, same $\phi$ offset as above).
-
-Two simplifications follow, both because this grid is centered on
-$\chi_I=0$ itself (unlike the two-panel grid, whose nodes are unrelated to
-the population's own peak):
+equally spaced, same $\phi$ offset as above). Because this grid is centered
+on $\chi_I=0$ itself:
 
 - **No Jacobian for the population term.** The quadrature measure's own
   $\rho\,\mathrm{d}\rho$ cancels $P_\mathrm{pop}(\rho)/(2\pi\rho)$'s
   $1/\rho$ analytically — the per-node weight is just
-  $w_\rho w_\theta/(2\pi)$ times $P_\mathrm{pop}(\rho)$ directly, no
-  $2\pi\rho$ division anywhere.
+  $w_\rho w_\theta/(2\pi)$ times $P_\mathrm{pop}(\rho)$ directly.
 - **No puncture correction.** The noise kernel
-  $N_2(\epsilon_\mathrm{obs}-f_g(\chi_I))$ is evaluated PLAINLY (never
-  subtracted from a baseline) — a bounded exponential, safe on its own,
-  since there is no unrelated singular point anywhere in this domain to
-  protect against (unlike two-panel's $\chi_{L0}$). This was the surprising
-  finding: dropping the correction entirely still converges cleanly even on
-  the Beta $\alpha=1.55$ case that originally motivated it (0.025% at
-  $n=15\!\times\!15$ down to 0.00008% at $n=100\!\times\!100$) — in
-  hindsight, that correction was only ever needed because an earlier design
-  gridded in $\chi_L$-space and inverted to $\chi_I$, which unevenly
-  sparsified nodes near the singularity; gridding natively in $\chi_I$ from
-  the start never has that problem.
+  $N_2(\epsilon_\mathrm{obs}-f_g(\chi_I))$ is evaluated plainly — a bounded
+  exponential, with no singular point in this domain to protect against.
 
 ## `use-marginal-spline`: caching the marginal as a function of $g$
 
@@ -137,52 +97,24 @@ change, never $g$) and the same opt-in `use-marginal-spline` mechanism:
 $\ln P(\epsilon_\mathrm{obs}\mid g)$ cached as a bivariate function of $g$
 over $[-g_\mathrm{max},g_\mathrm{max}]^2$ (`spline-g-max`), built lazily via
 this codebase's autoknots 2D spline machinery for populations whose area
-density stays bounded at $r=0$, or a plain fixed-knot grid (never adaptive,
-cannot abort) for populations that diverge there — see the class' own C
-docs for why that divergence check only ever matters for the two-panel
-branch, and is (conservatively, not incorrectly) applied regardless of
-which branch a given galaxy actually uses.
-
-## Verified regimes
-
-All checked against both an independent scipy disc integral and the real
-`Quad` C class:
-
-- Real and complex $g$ through $|g|=0.99$ (well past where the series
-  schemes' truncated polynomial crosses zero) — accurate to
-  $\sim10^{-9}$, no crash.
-- $|\epsilon_\mathrm{obs}|$ from near-zero to $0.99$, at every tested
-  $\sigma_\mathrm{noise}$ (both regimes, and the switch boundary between
-  them) — no discontinuity in the likelihood across the branch switch
-  (checked directly: the change in $-2\ln P$ across a $10^{-4}$ step
-  straddling the boundary is an ordinary, small amount, not a jump).
-- Both ellipticity conventions ([[numcosmo|NcGalaxyWLObsEllipConv]]
-  `TRACE` and `TRACE_DET`).
-- Any population (not just Gaussian): each node evaluates
-  `nc_galaxy_shape_pop_eval_p()` directly, the same convention `Quad`
-  uses — unlike `SeriesLensed`, there is no Taylor-composition step
-  requiring an analytic population form, so no Gaussian-only guard.
+density stays bounded at $r=0$, or a plain fixed-knot grid (never adaptive)
+for populations that diverge there.
 
 ## {#sec-limits} Limitation: narrow populations
 
 A fixed grid cannot resolve a population much narrower than its node
-spacing, shared by both branches — the same blind spot an earlier,
-fixed-degree version of `Quad` itself had, which is exactly why `Quad`
-moved to adaptive Divonne cubature with explicit peak hints. Production
-only ever uses a Gaussian population with
-$\sigma_\mathrm{pop}\in(0.2,0.4)$ — comfortably inside the validated
-regime; use `Quad` for narrower or more exotic populations.
+spacing, in either branch. Production only uses a Gaussian population with
+$\sigma_\mathrm{pop}\in(0.2,0.4)$, comfortably inside the validated regime;
+use `Quad` for narrower or more exotic populations.
 
 ## `n-radial`/`n-angular`
 
-Both properties are `CONSTRUCT_ONLY` and size whichever grid is actually
-chosen: `n-radial` nodes PER PANEL for two-panel (so $2\times$`n-radial`
-radial nodes total), or `n-radial` nodes in the one grid for native $\chi_I$.
-Default 15 for both, validated across the regimes above.
+Both properties are `CONSTRUCT_ONLY` and size whichever grid is chosen:
+`n-radial` nodes per panel for two-panel (so $2\times$`n-radial` radial
+nodes total), or `n-radial` nodes in the one grid for native $\chi_I$.
+Default 15 for both.
 
 See `tests/python/nc/lss/galaxy/test_galaxy_shape_factor_fixed_quad.py` for
-the full test suite this page's numbers are drawn from, including
-`nc_galaxy_shape_factor_fixed_quad_eval_two_panel()`/`_eval_chi_i_native()`,
-test-only accessors that force one branch regardless of the switch, used
-there to characterize each branch's own accuracy outside its intended
-regime directly.
+the test suite, including `nc_galaxy_shape_factor_fixed_quad_eval_two_panel()`/
+`_eval_chi_i_native()`, test-only accessors that force one branch regardless
+of the switch.

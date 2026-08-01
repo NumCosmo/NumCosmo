@@ -170,12 +170,9 @@ _nc_galaxy_shape_pop_gauss_ldata_set_sigma (NcGalaxyShapePopData *data, const gd
   NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
   const gdouble inv_2sigma2         = 0.5 / (sigma * sigma);
 
-  /* norm/inv_2sigma2 are the OLD x-space (x=r^2) normalization,
-   * P(x) = norm*exp(-x/2σ²) on [0,1] -- still exactly what
-   * eval_p_rho2_g_series composes internally (untouched by the
-   * eval_p/eval_p_rho2 contract collapse), and what eval_p() above derives
-   * P_pop(r) from via the safe *2r conversion. Not repurposed/renamed to
-   * avoid disturbing the series vfunc's own math. */
+  /* norm/inv_2sigma2 are the x-space (x=r^2) normalization,
+   * P(x) = norm*exp(-x/2σ²) on [0,1]: used directly by
+   * eval_p_rho2_g_series, and by eval_p() below via the *2r conversion. */
   ldata->sigma       = sigma;
   ldata->inv_2sigma2 = inv_2sigma2;
   ldata->norm        = inv_2sigma2 / (-expm1 (-inv_2sigma2));

@@ -30,14 +30,12 @@
  *
  * The intrinsic ellipticity MODULUS $r = |\chi_I|$ follows a Beta
  * distribution $r \sim \mathrm{Beta}(\alpha,\beta)$ directly in its own
- * shape parameters -- the natural coordinate, and (since the
- * eval_p/eval_p_rho2 contract collapse, see #NcGalaxyShapePop's own docs)
- * also exactly the base class's own vfunc contract: essentially every
- * empirical ellipticity distribution in the weak-lensing literature is
- * reported/fit against $|\chi_I|$, and this way $\alpha$/$\beta$ are
- * directly comparable to those fits, and $\mathrm{mode}(r) =
- * (\alpha-1)/(\alpha+\beta-2)$ is literally the "peak ellipticity" number
- * such papers quote:
+ * shape parameters -- the natural coordinate, and exactly the base class's
+ * own vfunc contract (see #NcGalaxyShapePop): essentially every empirical
+ * ellipticity distribution in the weak-lensing literature is reported/fit
+ * against $|\chi_I|$, and this way $\alpha$/$\beta$ are directly comparable
+ * to those fits, and $\mathrm{mode}(r) = (\alpha-1)/(\alpha+\beta-2)$ is
+ * literally the "peak ellipticity" number such papers quote:
  * $$P_\mathrm{pop}(r) = \frac{r^{\alpha-1}(1-r)^{\beta-1}}{B(\alpha,\beta)}, \qquad r\in[0,1).$$
  * eval_p() below returns exactly this -- no change of variables, no
  * Jacobian, a direct transcription of the formula above.
@@ -53,12 +51,11 @@
  * why the exact 2D integral itself stays finite through $r=0$) --
  * `g_spline_pop_safe` guards FixedQuad's cache against exactly this.
  * #NcGalaxyShapeFactorSeriesLensed's $g$-Taylor composition
- * (eval_p_rho2_g_series(), kept x-space-internal and unaffected by the
- * eval_p contract collapse -- see its own doc comment in
- * nc_galaxy_shape_pop.h) needs $\sqrt{x(g)}$, whose branch point at
- * $x(g)=0$ collapses the series' own radius of convergence to unusably
- * small for any $\alpha<2$ -- including this class's own $\alpha=1.4$
- * default. SeriesLensed callers should keep $\alpha\ge2$ in practice (see
+ * (eval_p_rho2_g_series(), see its own doc comment in nc_galaxy_shape_pop.h)
+ * needs $\sqrt{x(g)}$, whose branch point at $x(g)=0$ collapses the
+ * series' own radius of convergence to unusably small for any $\alpha<2$
+ * -- including this class's own $\alpha=1.4$ default. SeriesLensed callers
+ * should keep $\alpha\ge2$ in practice (see
  * `docs/theory/wl_shape_factor_history.md`).
  * nc_galaxy_shape_pop_beta_get_e_rms()/_get_mode() report
  * $e_\mathrm{rms}=\sqrt{\langle x\rangle/2}$ (with $\langle x\rangle=\langle
@@ -95,8 +92,8 @@ struct _NcGalaxyShapePopBeta
 
 typedef struct _NcGalaxyShapePopBetaLData
 {
-  gdouble lnnorm_x; /* -ln(2 B(alpha,beta)) -- OLD x-space normalization, used ONLY by eval_p_rho2_g_series (kept x-space-internal, untouched by the eval_p contract collapse) */
-  gdouble lnnorm_r; /* -ln B(alpha, beta) -- new r-native eval_p()/eval_p_array() normalization, literally P_pop(r)'s own B(alpha,beta) */
+  gdouble lnnorm_x; /* -ln(2 B(alpha,beta)): x-space normalization, used only by eval_p_rho2_g_series */
+  gdouble lnnorm_r; /* -ln B(alpha,beta): eval_p()/eval_p_array()'s own P_pop(r) normalization */
   gdouble alpha;    /* cached copy of the alpha model param */
   gdouble beta;     /* cached copy of the beta model param */
 } NcGalaxyShapePopBetaLData;
@@ -215,10 +212,7 @@ _nc_galaxy_shape_pop_beta_ldata_get_mode_r (NcGalaxyShapePopData *data)
 {
   NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
 
-  /* Literally the argmax of P_pop(r) itself now (see the class doc's own
-   * note on this -- under the OLD x-space contract this had to be
-   * mode(r)^2 with an explanatory caveat about P(x)'s degenerate argmax at
-   * x=0; that caveat no longer applies). */
+  /* The argmax of P_pop(r) itself. */
   if ((ldata->alpha > 1.0) && (ldata->beta > 1.0))
     return (ldata->alpha - 1.0) / (ldata->alpha + ldata->beta - 2.0);
   else
@@ -232,12 +226,10 @@ _nc_galaxy_shape_pop_beta_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *
   const gdouble alpha              = ALPHA;
   const gdouble beta               = BETA;
 
-  /* lnnorm_x: OLD x-space normalization (-ln(2 B(alpha,beta)), the -ln(2)
-   * folding in the r=sqrt(x) change-of-variables Jacobian's constant
-   * factor) -- used ONLY by eval_p_rho2_g_series below, kept x-space
-   * internal and untouched by the eval_p/eval_p_rho2 contract collapse.
-   * lnnorm_r: new r-native normalization, literally -ln B(alpha,beta), the
-   * class doc's own P_pop(r) formula's normalization, no Jacobian at all. */
+  /* lnnorm_x: x-space normalization (-ln(2 B(alpha,beta)), the -ln(2)
+   * folding in the r=sqrt(x) change-of-variables Jacobian), used only by
+   * eval_p_rho2_g_series below. lnnorm_r: -ln B(alpha,beta), the class
+   * doc's own P_pop(r) formula's normalization, no Jacobian at all. */
   ldata->lnnorm_x = -gsl_sf_lnbeta (alpha, beta) - M_LN2;
   ldata->lnnorm_r = -gsl_sf_lnbeta (alpha, beta);
   ldata->alpha    = alpha;
@@ -249,24 +241,18 @@ _nc_galaxy_shape_pop_beta_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
 {
   NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
 
-  /* P_pop(r) = r^(alpha-1) * (1-r)^(beta-1) / B(alpha,beta) -- a direct
-   * transcription of the class doc's own formula, no change of variables.
-   * Log-space eval avoids overflow/NaN for concentrated populations (large
-   * alpha, beta), same convention as before. */
+  /* P_pop(r) = r^(alpha-1) * (1-r)^(beta-1) / B(alpha,beta). Log-space eval
+   * avoids overflow/NaN for concentrated populations (large alpha, beta). */
   return exp ((ldata->alpha - 1.0) * log (r) + (ldata->beta - 1.0) * log1p (-r) + ldata->lnnorm_r);
 }
 
-/* Batched form of eval_p() above: data->ldata (alpha, beta, lnnorm) is
- * invariant across the whole call (nc_galaxy_shape_pop.h's eval_p_array doc
- * comment), so this is a straight-line loop over @x with no per-element
- * branch or vfunc dispatch, unlike eval_p()'s one-node-at-a-time calls
- * through the vfunc pointer (#NcGalaxyShapeFactorFixedQuad's hot path). A
- * three-pass split (separate log(x)/log1p(-x)/exp loops, hoping the
- * compiler could vectorize the log/exp passes via glibc's libmvec even
- * though log1p has no vector kernel) was tried and measured no benefit on
- * this toolchain -- GCC's vectorizer reported "no vectype for stmt" at
- * every one of these calls regardless of splitting, so this stays the
- * simpler single-pass form. */
+/* Batched form of eval_p() above: alpha/beta/lnnorm are invariant across
+ * the whole call, so this is a straight-line loop with no per-element
+ * vfunc dispatch (#NcGalaxyShapeFactorFixedQuad's hot path). A three-pass
+ * split (separate log/log1p/exp loops, to let the compiler vectorize via
+ * libmvec) was tried and measured no benefit on this toolchain -- GCC's
+ * vectorizer found no vectype for these calls regardless -- so this stays
+ * the simpler single-pass form. */
 static void
 _nc_galaxy_shape_pop_beta_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p)
 {
@@ -293,32 +279,21 @@ _nc_galaxy_shape_pop_beta_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopD
     p_data[i] = exp (alpha_m1 * log (r_data[i]) + beta_m1 * log1p (-r_data[i]) + lnnorm_r);
 }
 
-/* eval_p_rho2_g_series composes with x(g)=|chi_I(chi_L,g)|^2 itself, kept
- * x-space-internal and untouched by the eval_p/eval_p_rho2 contract
- * collapse (see nc_galaxy_shape_pop.h's own doc comment for the vfunc):
- * this composes the OLD x-space density P(x) ~ x^(alpha/2-1) *
- * (1-sqrt(x))^(beta-1) (note this is NOT what the now-r-native eval_p()
- * above returns -- see ldata->lnnorm_x's own comment), one extra step ahead
- * of the pre-reparametrization model's x^(alpha-1)*(1-x)^(beta-1): first
- * sqrt_x = @x_series^0.5 via ncm_laurent_series_tps_pow() (same
- * generalized-binomial recursion the fractional alpha/2-1, beta-1 exponents
- * below already rely on), then 1-sqrt(x) is built the same way the
- * pre-reparametrization model built 1-x: scaling sqrt_x by -1 and bumping
- * its order-0 term's own constant coefficient by one (that term is always a
- * plain real scalar -- a single harmonic-0 entry -- since
- * x(g)=|chi_I(chi_L,g)|^2, hence sqrt_x, is real-valued at every order in
- * g). num_pow/den_pow/conv/final normalization otherwise follow the same
- * structure (see tests/c/nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c
- * for the cross-check against the OLD x-space density, eval_p(sqrt(x))/(2*
- * sqrt(x)), at various g).
+/* Composes x(g)=|chi_I(chi_L,g)|^2's own g-Taylor series with this
+ * population's x-space density P(x) ~ x^(alpha/2-1)*(1-sqrt(x))^(beta-1)
+ * (see ldata->lnnorm_x's own comment; NOT what eval_p(r) above returns).
+ * sqrt_x = @x_series^0.5 via ncm_laurent_series_tps_pow() (the same
+ * generalized-binomial recursion the fractional alpha/2-1, beta-1
+ * exponents below rely on); 1-sqrt(x) is built by scaling sqrt_x by -1 and
+ * bumping its order-0 term by one (a single harmonic-0 entry, since
+ * x(g)=|chi_I(chi_L,g)|^2, hence sqrt_x, is real-valued at every order).
+ * See tests/c/nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c for the
+ * cross-check against eval_p(sqrt(x))/(2*sqrt(x)) at various g.
  *
- * UNLIKE the pre-reparametrization model, this sqrt_x step is unconditional
- * -- even at integer alpha (e.g. alpha=4, where the old x^(alpha-1)=x^3 was
- * an entire function with no singularity anywhere), sqrt(x) still has a
- * branch point at x=0, shrinking this series' radius of convergence in g to
- * wherever x(g) first reaches 0 in the complex g-plane. Empirically this
- * collapses to unusably small for any alpha<2 (the OLD x-space density,
- * P(x) ~ x^(alpha/2-1)*(1-sqrt(x))^(beta-1), has an actual pole at x=0
+ * sqrt(x) has a branch point at x=0, unconditionally (even at integer
+ * alpha), shrinking this series' radius of convergence in g to wherever
+ * x(g) first reaches 0 in the complex g-plane. Empirically this collapses
+ * to unusably small for any alpha<2 (P(x) has an actual pole at x=0
  * there, not just a branch point) -- #NcGalaxyShapeFactorSeriesLensed
  * callers should keep alpha>=2 in practice (see
  * docs/theory/wl_shape_factor_history.md). */
@@ -360,8 +335,8 @@ _nc_galaxy_shape_pop_beta_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data
 {
   NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
 
-  /* r=|chi_I| itself is the Beta-distributed variable now, sampled directly
-   * -- no sqrt() needed (see the class doc). */
+  /* r=|chi_I| is the Beta-distributed variable, sampled directly -- no
+   * sqrt() needed (see the class doc). */
   const gdouble r     = ncm_rng_beta_gen (rng, ldata->alpha, ldata->beta);
   const gdouble theta = ncm_rng_uniform_gen (rng, 0.0, 2.0 * M_PI);
 

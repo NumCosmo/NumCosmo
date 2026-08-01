@@ -176,21 +176,8 @@ typedef struct _QuadIntArg
   gdouble N0;
 } QuadIntArg;
 
-/* Divonne integrates psi DIRECTLY in its own polar coordinates
- * (rho,theta)/in[0,1)x[-pi,pi), not through a stereographic (u,v)-plane
- * bijection truncated to a finite box: that map only reaches the disc
- * boundary as (u,v)->infinity, so any finite box necessarily misses a
- * sliver of the disc, by an amount that depends on h's own magnitude.
- * Polar coordinates cover the whole disc exactly at rho=1, with no
- * asymptotic tail to truncate. psi=0 always maps to chi_L=eps_obs exactly
- * (h is built for that, see _nc_galaxy_shape_factor_quad_eval()), so the
- * noise kernel's peak sits at rho=0 by construction -- no box re-centering
- * logic needed. The integrand only ever evaluates the bracket
- * [N(eps_obs-chi_L)-N0]: N0=N(eps_obs-chi_L0) is added back once in
- * _nc_galaxy_shape_factor_quad_eval() after the cubature, using
- * integral(P_pop)=1 exactly (chi_I ranges over the whole disc, with no
- * truncation). This makes the integrand vanish smoothly at chi_I=0 for
- * alpha>=1, letting Divonne converge in far fewer evaluations. */
+/* See this file's class doc for the psi-substitution and puncture
+ * correction this implements. */
 static gdouble
 _nc_galaxy_shape_factor_quad_integrand (gdouble rho, gdouble theta, gpointer userdata)
 {
@@ -209,13 +196,6 @@ _nc_galaxy_shape_factor_quad_integrand (gdouble rho, gdouble theta, gpointer use
   const gdouble delta_ratio  = (arg->d0 - d_i) / (2.0 * arg->noise_var);
   gdouble bracket, ret;
 
-  /* expm1 avoids the cancellation that direct subtraction would suffer
-   * near delta_ratio=0 (i.e. near chi_i=0, exactly where precision matters
-   * most), but for large positive delta_ratio (some psi landing far closer
-   * to eps_obs than chi_L0 is) expm1(x) IS exp(x), with the same overflow;
-   * there's also no cancellation to protect there (the two noise values
-   * aren't close), so fall back to the direct, individually-bounded
-   * evaluation instead of forcing the ill-suited formula through. */
   if (delta_ratio <= NC_GALAXY_SHAPE_FACTOR_QUAD_EXPM1_SAFE_BOUND)
   {
     bracket = arg->N0 * expm1 (delta_ratio);
@@ -229,10 +209,9 @@ _nc_galaxy_shape_factor_quad_integrand (gdouble rho, gdouble theta, gpointer use
 
   ret = p_pop * jac_inv * jac_psi * jac_polar * bracket;
 
-  /* Some populations have a genuine divergence at a disc point (e.g.
-   * #NcGalaxyShapePopBeta with alpha<1 at r_i=0, which can coincide with a
-   * peak hint); Cuba can segfault outright on a non-finite sample
-   * (reproduced directly), so clamp rather than propagate. */
+  /* Cuba can segfault on a non-finite sample, so clamp rather than
+   * propagate (a genuine population divergence, e.g. Beta with alpha<1 at
+   * r_i=0, can coincide with a peak hint). */
   return isfinite (ret) ? ret : 0.0;
 }
 
@@ -263,21 +242,13 @@ _nc_galaxy_shape_factor_quad_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
 }
 
-/* Refines theta, the angle of a candidate chi_I=rho_mode*exp(I*theta) on the
- * ring where a non-radially-symmetric population peaks (rho_mode>0, e.g.
- * NcGalaxyShapePopBeta with mu away from 0), so that its image f_g(chi_I)
- * lands as close as possible to eps_obs. The population density is exactly
- * flat along this ring by construction (it depends only on x=|chi_I|^2), so
- * this is the whole optimization: no population term to weigh in. A fixed
- * handful of Newton steps on d/dtheta |eps_obs-f_g(rho_mode e^{i theta})|^2,
- * with central-difference derivatives through the already-dispatched forward
- * map (convention-agnostic, no per-convention algebra duplicated), seeded at
- * the phase of the naive noiseless intrinsic preimage -- verified numerically
- * to already sit within a few hundredths of a radian of the true optimum,
- * with 3 Newton steps then closing the rest of the gap to floating-point
- * precision. This runs once per _eval() call (the hint, not the integrand),
- * so a handful of extra apply_shear() calls is negligible next to Divonne's
- * own ~100ms/evaluation cost. */
+/* Refines theta so chi_I=rho_mode*exp(I*theta), on the ring where a
+ * non-radially-symmetric population peaks, maps as close as possible to
+ * eps_obs under f_g. The population density is flat along this ring (it
+ * depends only on x=|chi_I|^2), so this is a pure geometric optimization:
+ * 3 Newton steps on d/dtheta |eps_obs-f_g(rho_mode e^{i theta})|^2 with
+ * central-difference derivatives, seeded at the naive noiseless preimage's
+ * phase. */
 static gdouble
 _nc_galaxy_shape_factor_quad_refine_theta (complex double ( *apply_shear ) (complex double, complex double),
                                            const complex double g, const gdouble rho_mode,
@@ -314,16 +285,10 @@ _nc_galaxy_shape_factor_quad_eval (NcGalaxyShapeFactorQuad *gsfq, NcGalaxyShapeP
   const complex double g                      = g_1 + I * g_2;
   const complex double eps_obs                = epsilon_obs_1 + I * epsilon_obs_2;
 
-  /* h re-centers psi so psi=0 maps to chi_L=eps_obs exactly:
-   * apply_shear(h,0)=eps_obs, by construction of shear_at_origin (see
-   * nc_wl_ellipticity.h). chi_L0=f_g(0) is the population's own peak
-   * location under the shear g actually being evaluated -- unrelated to h.
-   * shear_at_origin() requires |eps_obs|<1 strictly (undefined/NaN outside
-   * the unit disc for TRACE, no longer a genuine disc automorphism for
-   * TRACE_DET); unlike FixedQuad, this class has no alternative scheme to
-   * fall back to, so an out-of-disc eps_obs (a legitimate possibility once
-   * measurement noise is added to an unbounded distortion) must fail
-   * loudly here rather than silently return a wrong (uncorrected) answer. */
+  /* shear_at_origin() requires |eps_obs|<1 strictly; unlike FixedQuad, this
+   * class has no fallback for an out-of-disc eps_obs (a real possibility
+   * once noise is added), so fail loudly instead of returning a wrong
+   * answer. */
   if (cabs (eps_obs) >= 1.0)
     g_error ("nc_galaxy_shape_factor_quad: |eps_obs|=% .6g >= 1 at eps_obs=(% .6g,% .6g) -- "
              "outside this class' valid domain; use NcGalaxyShapeFactorFixedQuad instead.",
@@ -342,16 +307,9 @@ _nc_galaxy_shape_factor_quad_eval (NcGalaxyShapeFactorQuad *gsfq, NcGalaxyShapeP
   gdouble xgiven[6];
   gint ngiven;
 
-  /* Two peak hints for Divonne, always, as (rho,theta) pairs: psi~0 (rho
-   * pulled slightly off the coordinate singularity at the exact origin,
-   * where jac_polar=rho vanishes and a hint would waste a sample; by
-   * construction of h this is always the exact noise peak, needing no
-   * computed direction) and the population's own peak chi_L0=f_g(0),
-   * converted from chi_L-space to psi-space via apply_shear(-h,.) (==
-   * apply_shear_inv(h,.), see nc_wl_ellipticity.h's shear_at_origin docs).
-   * ncm_integrate_2dim_divonne() mutates xgiven in place (normalizes it to
-   * the box), so it must be freshly populated on every call; it is a
-   * local, per-call array here, so that is automatic. */
+  /* Two peak hints, as (rho,theta) pairs: psi~0 (the noise peak, nudged off
+   * the rho=0 coordinate singularity) and the population's peak chi_L0,
+   * converted to psi-space via apply_shear(-h,.). */
   xgiven[0] = NC_GALAXY_SHAPE_FACTOR_QUAD_RHO_HINT_EPS;
   xgiven[1] = 0.0;
   {
@@ -362,13 +320,10 @@ _nc_galaxy_shape_factor_quad_eval (NcGalaxyShapeFactorQuad *gsfq, NcGalaxyShapeP
   }
   ngiven = 2;
 
-  /* Third hint, only for a population whose peak is not at chi_I=0 (e.g. a
-   * concentrated NcGalaxyShapePopBeta with mu away from 0): the point on the
-   * peak ring |chi_I|=rho_mode closest, after the forward map, to eps_obs
-   * (see _nc_galaxy_shape_factor_quad_refine_theta() doc), converted to
-   * psi-space the same way. rho_mode is mode_r directly (no sqrt -- see the
-   * eval_p/eval_p_rho2 contract collapse, get_mode_r() already returns the
-   * mode of r=|chi_I| itself). */
+  /* Third hint, only when the population's peak ring is not at chi_I=0: the
+   * point on |chi_I|=rho_mode closest, after the forward map, to eps_obs
+   * (_nc_galaxy_shape_factor_quad_refine_theta()), converted to psi-space
+   * the same way. */
   if (mode_r > 0.0)
   {
     const gdouble rho_mode           = mode_r;

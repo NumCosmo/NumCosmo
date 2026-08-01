@@ -31,12 +31,11 @@
  *
  * Flat (uniform) galaxy sky-position scheme.
  *
- * A #NcGalaxyPositionFactor scheme whose density $P(\mathrm{ra},
- * \mathrm{dec})$ is uniform over a rectangular sky footprint. It carries no
- * fitted parameters: the footprint (survey geometry) is held as configuration
- * via nc_galaxy_position_factor_flat_set_ra_lim() /
- * nc_galaxy_position_factor_flat_set_dec_lim(), not as an #NcmModel in an
- * #NcmMSet.
+ * A #NcGalaxyPositionFactor scheme whose density $P(\mathrm{ra}, \mathrm{dec})$ is
+ * uniform over a rectangular sky footprint. It carries no fitted parameters: the
+ * footprint (survey geometry) is held as configuration via
+ * nc_galaxy_position_factor_flat_set_ra_lim() /
+ * nc_galaxy_position_factor_flat_set_dec_lim(), not as an #NcmModel in an #NcmMSet.
  *
  */
 
@@ -353,8 +352,8 @@ _nc_galaxy_position_factor_flat_integ (NcGalaxyPositionFactor *gspf, NcmMSet *ms
  * @dec_min: minimum declination
  * @dec_max: maximum declination
  *
- * Creates a new #NcGalaxyPositionFactorFlat uniform over the rectangular
- * footprint [@ra_min, @ra_max] x [@dec_min, @dec_max].
+ * Creates a new #NcGalaxyPositionFactorFlat uniform over the rectangular footprint
+ * [@ra_min, @ra_max] x [@dec_min, @dec_max].
  *
  * Returns: (transfer full): a new #NcGalaxyPositionFactorFlat.
  */
@@ -407,8 +406,8 @@ nc_galaxy_position_factor_flat_free (NcGalaxyPositionFactorFlat *gspfflat)
  * nc_galaxy_position_factor_flat_clear:
  * @gspfflat: a #NcGalaxyPositionFactorFlat
  *
- * Decreases the reference count of @gspfflat by one, and sets the pointer
- * *@gspfflat to NULL.
+ * Decreases the reference count of @gspfflat by one, and sets the pointer *@gspfflat
+ * to NULL.
  *
  */
 void

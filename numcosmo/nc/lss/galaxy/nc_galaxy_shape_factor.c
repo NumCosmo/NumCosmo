@@ -83,12 +83,9 @@ typedef struct _NcGalaxyShapeFactorPrivate
   NcGalaxyWLObsEllipConv ellip_conv;
   NcmStatsVec *obs_stats;
 
-  /* Cached by nc_galaxy_shape_factor_prepare(), consumed by
-   * update_data_radius/update_data_optzs/update_data_pop: the models
-   * themselves (ref-held, always kept current) and the derived quantities
-   * that are shared across every galaxy and expensive to recompute (only
-   * refreshed when the relevant hash actually changes). See the class doc
-   * and nc_galaxy_shape_factor_prepare()'s own doc comment. */
+  /* Cached by nc_galaxy_shape_factor_prepare(): models (ref-held) and
+   * derived quantities shared across every galaxy, refreshed only when the
+   * relevant hash changes. See prepare()'s own doc comment. */
   NcHaloPosition *halo_position;
   NcHaloDensityProfile *density_profile;
   NcGalaxyShapePop *pop;
@@ -101,31 +98,20 @@ typedef struct _NcGalaxyShapeFactorPrivate
   guint64 crit_hash;
   guint64 pop_hash;
 
-  /* Cached alongside the above, for the fixed-nodes update functions
-   * (update_data_at_nodes_crit/_sigma) only: cosmo and surface_mass_density
-   * are already peeked as prepare() locals to compute lens_ctx/pr_prefactor,
-   * so storing them costs nothing extra; z_cl is likewise already computed
-   * there. The non-nodes update_data_* family does not need any of these. */
+  /* Used only by the fixed-nodes update functions
+   * (update_data_at_nodes_crit/_sigma); prepare() already has these as
+   * locals, so caching them here is free. */
   NcHICosmo *cosmo;
   NcWLSurfaceMassDensity *surface_mass_density;
   gdouble z_cl;
 } NcGalaxyShapeFactorPrivate;
 
 /*
- * Engine-owned per-galaxy geometry caches. Opaque to both introspection and
- * the integration-method subclasses: the marginal hooks receive the reduced
- * shear rotated INTO the data frame (data->coord) and combined with the
- * (unrotated) calibration bias there, alongside the observed ellipticity
- * exactly as stored (data->epsilon_obs_1/2, never rotated) -- see
- * nc_galaxy_shape_factor_update_data_radius()'s own docs for why: this
- * class' own marginal is exactly rotation-covariant
- * (P(epsilon_obs*e^{ia}|g*e^{ia})=P(epsilon_obs|g) for any a), so rotating
- * the reduced shear (tangential-native, gt+bias) by e^{2i phi} into the data
- * frame gives the identical physical answer as the old convention of
- * rotating epsilon_obs the other way -- but keeps epsilon_obs, a genuine
- * per-galaxy constant, actually constant across every g-value/model-state
- * a fit ever explores. rot_re/rot_im = cos(2phi)/sin(2phi) = Re/Im of
- * e^{2i phi}, precomputed once per radius-update alongside phi itself.
+ * Engine-owned per-galaxy geometry caches, opaque to the integration-method
+ * subclasses. rot_re/rot_im = cos(2phi)/sin(2phi): rotates the
+ * tangential-native reduced shear into data->coord, where the stored
+ * epsilon_obs_1/2 already lives (see docs/theory/wl_shape_factor_history.md
+ * for why the shear rotates and not epsilon_obs).
  */
 typedef struct _NcGalaxyShapeFactorCData
 {
@@ -429,17 +415,13 @@ nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
   nc_halo_position_prepare_if_needed (halo_position, cosmo);
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
 
-  /* density_profile's own top-level pkey does NOT reflect changes to its
-   * NcHaloMassSummary submodel (submodel pkeys only propagate to a parent's
-   * own pkey inside NcmModelCtrl, which this hash scheme deliberately does
-   * not use) -- mass_summary's pkey must be hashed in explicitly, or a mass
-   * change following a previously-visited mass value goes undetected. */
+  /* density_profile's own pkey does not reflect changes to its
+   * NcHaloMassSummary submodel, so mass_summary's pkey must be hashed in
+   * explicitly or a mass change goes undetected. */
   radius_hash = ncm_model_state_get_pkey (NCM_MODEL (halo_position)) ^ (ncm_model_state_get_pkey (NCM_MODEL (cosmo)) * 31U);
 
-  /* optzs reads z_cl from halo_position (lens_ctx/r_s/rho_s both depend on
-   * it), so halo_position's pkey must be part of this hash too -- otherwise
-   * changing only the lens redshift leaves them stale, the same bug class
-   * as the mass_summary omission above. */
+  /* optzs reads z_cl from halo_position, so halo_position's pkey must be
+   * part of this hash too, or a lens-redshift-only change leaves it stale. */
   optzs_hash = ncm_model_state_get_pkey (NCM_MODEL (cosmo)) ^
                (ncm_model_state_get_pkey (NCM_MODEL (density_profile)) * 31U) ^
                (ncm_model_state_get_pkey (NCM_MODEL (mass_summary)) * 41U) ^
@@ -450,12 +432,8 @@ nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
               (ncm_model_state_get_pkey (NCM_MODEL (halo_position)) * 43U);
   pop_hash = ncm_model_state_get_pkey (NCM_MODEL (pop));
 
-  /* Always keep the cached model refs current (cheap ref/unref): avoids a
-   * stale dangling reference if the mset ever swaps a model instance
-   * without that being visible as a pkey change. cosmo/surface_mass_density
-   * are cached here too (alongside z_cl below) purely for the fixed-nodes
-   * update_data_at_nodes_crit/_sigma functions -- they were already peeked
-   * as locals for lens_ctx/pr_prefactor, so caching them costs nothing. */
+  /* Refs kept current unconditionally (cheap): avoids a stale reference if
+   * the mset ever swaps a model instance without a pkey change. */
   nc_halo_position_clear (&self->halo_position);
   self->halo_position = nc_halo_position_ref (halo_position);
 
@@ -578,13 +556,7 @@ nc_galaxy_shape_factor_update_data_radius (NcGalaxyShapeFactor *gsf, NcGalaxySha
 
   nc_halo_position_polar_angles (self->halo_position, ra, dec, &theta, &phi);
 
-  /* Re-express the celestial phi_C in the data frame (phi_E): the reduced
-   * shear (tangential-native: gt along the real axis, by construction) is
-   * rotated by e^{2 i phi} to bring it into that same data frame, where the
-   * stored, never-rotated data->epsilon_obs_1/2 already lives. See
-   * #NcWLEllipticityFrame and this struct's own docs above for why
-   * rotating the shear this way (rather than rotating epsilon_obs the
-   * other way, the old convention) gives the identical physical answer. */
+  /* phi_C -> phi_E, see #NcWLEllipticityFrame. */
   phi = nc_wl_ellipticity_celestial_to_frame_angle (data->coord, phi);
 
   cdata->radius = nc_halo_position_projected_radius_from_prefactor (theta, self->pr_prefactor);
@@ -1070,17 +1042,10 @@ nc_galaxy_shape_factor_gen (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxySha
 
   nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-  /* polar_angles returns the celestial position angle phi_C. The shear, the
-   * intrinsic ellipticity e_s and the noise are all built here in the celestial
-   * frame and then mapped into the data's frame (data->coord) so that the stored
-   * observed ellipticity lands in that frame: the position angle is re-expressed
-   * (phi_C -> phi_E) and the spin-2 quantities are conjugated. Both helpers are
-   * the identity for CELESTIAL. e_s and noise are drawn isotropically, so the
-   * parity flip leaves their distribution unchanged (the generation is
-   * frame-symmetric); it is applied only to keep the deterministic pieces (phi
-   * and the resulting e_o) consistent with data->coord. The additive bias c is
-   * taken to be already expressed in data->coord, so it is added below without
-   * any parity flip. See #NcWLEllipticityFrame. */
+  /* e_s and noise are isotropic, so mapping them celestial -> data->coord
+   * changes nothing statistically; it just keeps phi and e_o consistent
+   * with data->coord. c is already expressed in data->coord, so it is added
+   * below unmapped. See #NcWLEllipticityFrame. */
   phi   = nc_wl_ellipticity_celestial_to_frame_angle (data->coord, phi);
   e_s   = nc_wl_ellipticity_celestial_to_frame (data->coord, e_s);
   noise = nc_wl_ellipticity_celestial_to_frame (data->coord, noise);
@@ -1098,7 +1063,6 @@ nc_galaxy_shape_factor_gen (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxySha
     NcmComplex cplx_E_s = NCM_COMPLEX_INIT (e_s);
     NcmComplex cplx_E_o, cplx_g;
 
-    /* Adding bias */
     g = (1.0 + m) * g + c;
 
     ncm_complex_set_c (&cplx_g, g);
@@ -1121,13 +1085,6 @@ nc_galaxy_shape_factor_gen (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxySha
   cdata->phi          = phi;
   cdata->rot_re       = cos (2.0 * phi);
   cdata->rot_im       = sin (2.0 * phi);
-
-  /* rot_re/rot_im (read by the integrand and fixed-node likelihoods) only
-   * depend on phi, which this function already recomputed above -- no
-   * further per-galaxy state needs refreshing to keep them consistent with
-   * the freshly generated observed ellipticity (unlike the old
-   * tangential-frame epsilon_obs_t/x caches this replaced, which depended
-   * on e_o itself and so needed rebuilding on every resample). */
 }
 
 struct _IntegData
@@ -1215,12 +1172,8 @@ _nc_galaxy_shape_factor_integ_f (gpointer callback_data, const gdouble z, NcGala
   const gdouble z_cl              = nc_halo_position_get_redshift (int_data->halo_position);
   gdouble gt;
 
-  /* gt is tangential-native (real, by construction of the reduced-shear
-   * profile calculation) -- rotate ONLY that term by e^{2i phi}
-   * (cdata->rot_re/rot_im) into the data frame; the calibration bias
-   * (data->c1/c2) is already expressed in that same data frame (see
-   * update_data_radius()'s own docs) and is added afterward, unrotated,
-   * matching the fixed-node eval_at_nodes path. */
+  /* gt is tangential-native and rotates via cdata->rot_re/rot_im; the bias
+   * (data->c1/c2) is already in data->coord and is added unrotated. */
   if (z > z_cl)
   {
     gt = nc_wl_surface_mass_density_reduced_shear_optzs (int_data->surface_mass_density,
@@ -1326,9 +1279,9 @@ nc_galaxy_shape_factor_integ (NcGalaxyShapeFactor *gsf, NcmMSet *mset, gboolean 
  * @update_optzs: whether optzs must be updated
  *
  * Prepares the per-galaxy caches used by the integrand: lens geometry
- * (projected radius, tangential-frame rotation of the observed ellipticity and
- * calibration bias) and the reduced-shear optimization cache. Also prepares
- * the population fragments and runs the subclass prepare hook.
+ * (projected radius and the data-frame shear rotation) and the reduced-shear
+ * optimization cache. Also prepares the population fragments and runs the
+ * subclass prepare hook.
  *
  * Calls nc_galaxy_shape_factor_prepare() (which decides for itself, via its
  * own cached hashes, whether the geometry/profile caches actually need
@@ -1510,10 +1463,8 @@ nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, N
   NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
   NcGalaxyShapeFactorClass *klass         = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
 
-  /* halo_position/pop are already cached (ref-held, kept current by
-   * prepare()) -- read them from there instead of re-peeking mset, which
-   * would otherwise cost a hash-table lookup on every galaxy (this function
-   * runs once per galaxy per eval, not once per prepare() cycle). */
+  /* Read from the cache instead of re-peeking mset: this runs once per
+   * galaxy, not once per prepare() cycle. */
   NcHaloPosition *halo_position   = self->halo_position;
   NcGalaxyShapePop *pop           = self->pop;
   NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
@@ -1543,10 +1494,8 @@ nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, N
     }
     else
     {
-      /* z_j <= z_cl always maps to the exact same g = bias (gt=0), so this
-       * branch's result is identical for every node that hits it --
-       * memoize the one real eval_marginal() call instead of repeating it
-       * per foreground node. */
+      /* z_j <= z_cl always gives g = bias (gt=0): the same eval_marginal()
+       * result for every such node, so compute it once. */
       if (!have_gt0_val)
       {
         const complex double g = bias;
@@ -1615,10 +1564,8 @@ nc_galaxy_shape_factor_direct_estimate (NcGalaxyShapeFactor *gsf, NcmMSet *mset,
 
     nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-    /* Re-express the celestial phi_C in the data frame (phi_E) and rotate the
-     * data-frame observed ellipticity into the tangential/cross frame. The bias
-     * (c1, c2) stays in the data frame and is averaged below without rotation.
-     * See #NcWLEllipticityFrame. */
+    /* Rotate the data-frame observed ellipticity into the tangential/cross
+     * frame; c1/c2 stay in the data frame and are averaged unrotated. */
     phi = nc_wl_ellipticity_celestial_to_frame_angle (data_i->coord, phi);
 
     hat_g = e_o * cexp (-2.0 * I * phi);

@@ -409,6 +409,28 @@ Separately, `nc_wl_ellipticity.c`'s naive complex division
 search — unneeded here since $g$/$\chi$ values are always within or near the
 unit disk.
 
+## `NcGalaxyShapeFactor`: rotate the shear, not the observed ellipticity
+
+The per-galaxy cache used to store `epsilon_obs_t`/`epsilon_obs_x` (the
+observed ellipticity pre-rotated into the tangential/cross frame) and
+`c1_rot`/`c2_rot` (the calibration bias, same rotation). Both were rebuilt
+on every `marginal()` call because the rotation angle $\phi$ depends on the
+cluster's `ra`/`dec` — a free parameter in a real fit — so `epsilon_obs`,
+which should be a fixed per-galaxy datum, silently changed with every model
+state. This forced `FixedQuad`'s marginal-spline cache (keyed on
+`epsilon_obs`) to rebuild from scratch on every evaluation instead of once
+per thread.
+
+Fixed by rotating the reduced shear into the data frame instead: the
+marginal is exactly rotation-covariant
+($P(\epsilon_\mathrm{obs}e^{ia}\mid ge^{ia})=P(\epsilon_\mathrm{obs}\mid g)$),
+so rotating `gt+bias` by $e^{2i\phi}$ gives the identical answer as the old
+convention, while `data->epsilon_obs_1/2` never changes. Verified against
+the frozen legacy-oracle tests (rtol=1e-12), which caught a bug in an
+earlier draft: only `gt` (tangential-native) should rotate — the
+calibration bias is already expressed in `data->coord` and must be added
+unrotated.
+
 ## Mass-recovery sweep: representative numbers
 
 An initial full sweep (`N_\mathrm{gal}\times\text{std\_noise}\times\text{true\_mass}\times\text{method}`),

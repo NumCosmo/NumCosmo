@@ -57,31 +57,22 @@ struct _NcGalaxyShapePopClass
   gdouble (*e_rms) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 
   /*
-   * Taylor-in-g analog of the OLD x-space density (x=|chi_I|^2, NOT the
-   * same quantity eval_p(r) above returns since the contract change that
-   * collapsed eval_p/eval_p_rho2 into a single r-native vfunc -- this
-   * series vfunc keeps its own, separate, x-space-internal meaning, because
-   * r=sqrt(x) has a branch point at x=0 that breaks the series' own
-   * analyticity there; see nc_galaxy_shape_pop_beta.c's docs for the exact
-   * eval_p(r)/(2r) identity relating the two). Given x(g) =
+   * Taylor-in-g x-space density series (x=|chi_I|^2) -- distinct from
+   * eval_p(r) above: r=sqrt(x) has a branch point at x=0 that breaks the
+   * series' own analyticity there (see nc_galaxy_shape_pop_beta.c's docs
+   * for the eval_p(r)/(2r) identity relating the two). Given x(g) =
    * |chi_I(chi_L,g)|^2's own g-Taylor coefficients (population-independent
    * shear-map output, @x_series, a #NcmLaurentSeriesTPS whose order is this
    * call's truncation order), returns this population's own fully
-   * normalized OLD x-space density's g-Taylor coefficients in @out (same
-   * order as @x_series) -- i.e. @out's coefficients must reproduce that
-   * x-space density exactly when Horner-evaluated at any g inside the
-   * truncation radius, including the population's own normalization
-   * constant (no reference-point division or other rescaling is deferred
-   * to the caller: see #NcGalaxyShapeFactorSeriesLensed's own pop_norm, a
-   * fixed, population-agnostic 1/pi disc-measure factor). There is no
-   * sensible generic default (the composition depends entirely on the
-   * population's own functional form), so the base class default just
-   * errors clearly for the "not every subclass needs this" situation.
-   * Consumed by
-   * #NcGalaxyShapeFactorSeriesLensed. #NcmLaurentSeriesTPS is boxed and
-   * introspectable, so this vfunc needs no native-only guard -- subclass
-   * implementations are free to use native complex-double machinery
-   * internally, but the public contract here is plain introspectable types.
+   * normalized x-space density's g-Taylor coefficients in @out (same order
+   * as @x_series, including the population's own normalization constant --
+   * see #NcGalaxyShapeFactorSeriesLensed's own pop_norm for the
+   * population-agnostic disc-measure factor left to the caller). No
+   * sensible generic default exists (the composition depends entirely on
+   * the population's own functional form), so the base class errors
+   * clearly if unimplemented. Consumed by #NcGalaxyShapeFactorSeriesLensed.
+   * #NcmLaurentSeriesTPS is boxed and introspectable, so this vfunc needs
+   * no native-only guard.
    */
   void (*eval_p_rho2_g_series) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                 const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);

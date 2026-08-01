@@ -494,13 +494,9 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
 
         # prepare() resolves the shape factor's cached pop/halo_position
         # references from the current mset; update_data_pop() then syncs
-        # this specific data object's pop_data fragment (e.g. the Beta
-        # population's cached ln-normalization) to that pop's CURRENT
-        # alpha/beta -- skipping either leaves pop_data with whatever
-        # ldata it was default-constructed with (NOT the experiment's
-        # actual population), silently giving a wrong, alpha/beta-blind
-        # eval_p() (caught 2026-07-29: matched 1/(r*(1-r)) exactly instead
-        # of the real Beta(1.55,1.62) density).
+        # pop_data to that pop's current parameters. Skipping either leaves
+        # pop_data at its default-constructed values, not the experiment's
+        # actual population, silently giving a wrong eval_p().
         shape_factor.prepare(self.mset)
 
         posf = dcwlf.props.position_factor
@@ -683,21 +679,14 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
             all_values = [values_and_labels[c][0] for c in order]
             all_concat = np.concatenate(all_values)
             vmax = all_concat.max()
-            # The true min is dominated by the noise term's far corners --
-            # for a small std_noise the kernel falls off so steeply with
-            # distance that most of the disc's AREA (not its probability
-            # mass) sits far below the peak, stretching the shared scale
-            # down to ln(value)~-80+ and washing out the informative region
-            # near the peak. A percentile of pixel values doesn't fix this
-            # (it reflects area, not relevance), so clip to a fixed range
-            # below the peak instead: exp(-40) is already ~4e-18 of the
-            # peak, well past anything visually or physically relevant.
+            # The true min is dominated by the noise term's far corners (a
+            # small std_noise falls off steeply, so most of the disc's area
+            # sits far below the peak), washing out the informative region
+            # under a shared scale. Clip to a fixed range below the peak
+            # instead of a percentile: exp(-40) is already ~4e-18 of it.
             vmin = max(all_concat.min(), vmax - 40.0)
-            # A single shared Normalize instance -- not just equal vmin/vmax
-            # passed to three separate imshow calls -- so that interactively
-            # rescaling the colorbar (e.g. scrolling/zooming on it) mutates
-            # the one norm object all three images reference, instead of
-            # only the first panel's own private norm.
+            # One shared Normalize instance so an interactive colorbar
+            # rescale mutates all three panels, not just the first.
             shared_norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
 
             fig, axes = plt.subplots(

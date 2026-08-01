@@ -32,29 +32,29 @@
  * Fixed-node quadrature evaluation of the intrinsic-ellipticity marginal.
  *
  * Evaluates
- * $$P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_I|<1} \mathrm{d}^2\chi_I\,
+ * $$
+ * P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_I|<1} \mathrm{d}^2\chi_I\,
  *   P_\mathrm{pop}(\chi_I)\, N_2\big(\epsilon_\mathrm{obs} - f_g(\chi_I);
- *   \sigma_\mathrm{noise}^2\big)$$
- * exactly (no series truncation in $g$), like #NcGalaxyShapeFactorQuad, via
- * one of two fixed quadrature schemes chosen from
- * $\epsilon_\mathrm{obs}$/$\sigma_\mathrm{noise}$ alone, never $g$:
+ *   \sigma_\mathrm{noise}^2\big)
+ * $$
+ * exactly (no series truncation in $g$), like #NcGalaxyShapeFactorQuad, via one of two
+ * fixed quadrature schemes chosen from $\epsilon_\mathrm{obs}$/$\sigma_\mathrm{noise}$
+ * alone, never $g$:
  *
  * - **Two-panel $\psi$** (default). Quad's $\psi=f_h^{-1}(\chi_L)$
  *   reparametrization ($h$: $f_h(0)=\epsilon_\mathrm{obs}$), radially split
  *   into $[0,R_\sigma)$/$[R_\sigma,1)$ Gauss-Legendre panels (see
  *   _exact_r_sigma()), with Quad's puncture correction.
- * - **Native $\chi_I$-polar**. Used when
- *   $1+\lvert\epsilon_\mathrm{obs}\rvert\leq N_\sigma\sigma_\mathrm{noise}$
- *   ($N_\sigma=8$, see _use_chi_i_native()): integrates $\chi_I$'s own
- *   polar coordinates directly, no reparametrization, no Jacobian, no
+ * - **Native $\chi_I$-polar**. Used when $1+\lvert\epsilon_\mathrm{obs}\rvert\leq
+ *   N_\sigma\sigma_\mathrm{noise}$ ($N_\sigma=8$, see _use_chi_i_native()): integrates
+ *   $\chi_I$'s own polar coordinates directly, no reparametrization, no Jacobian, no
  *   puncture correction (see _marginal_chi_i_native()).
  *
  * Both are exact; the switch only picks which grid resolves the integrand.
- * #NcGalaxyShapeFactorFixedQuad:n-radial/:n-angular size whichever grid is
- * chosen (two-panel: nodes PER PANEL; native: nodes in the one grid). The
- * per-galaxy domain depends only on
- * $\epsilon_\mathrm{obs}$/$\sigma_\mathrm{noise}$, cached and reused across
- * every $g$.
+ * #NcGalaxyShapeFactorFixedQuad:n-radial/:n-angular size whichever grid is chosen
+ * (two-panel: nodes PER PANEL; native: nodes in the one grid). The per-galaxy domain
+ * depends only on $\epsilon_\mathrm{obs}$/$\sigma_\mathrm{noise}$, cached and reused
+ * across every $g$.
  *
  * Works for any population; a fixed grid cannot resolve one narrower than
  * its node spacing ($\sigma_\mathrm{pop}\lesssim0.05$) -- use Quad instead.
@@ -362,17 +362,17 @@ _noise_val (complex double delta, gdouble sig2)
   return exp (-d2 / (2.0 * sig2)) / (2.0 * M_PI * sig2);
 }
 
-/* TRUE iff the whole unit chi_L-disc lies within NSIGMA*std_noise of
- * eps_obs -- the farthest disc point from eps_obs is the diametrically
- * opposite boundary point, at distance 1+|eps_obs|. Also TRUE whenever
- * |eps_obs|>=1: shear_at_origin() is only defined for a target strictly
- * inside the unit disc (undefined/NaN outside it for TRACE, and no longer
- * a genuine disc automorphism for TRACE_DET), so the two-panel branch is
- * unusable there, while the native branch needs no such precondition --
- * apply_shear(g,chi_I) and the noise kernel are both well-defined for any
- * eps_obs. A noise-corrupted observed distortion/ellipticity CAN legitimately
- * land outside the unit disc (the noise model is not itself disc-bounded),
- * so this is a real input to handle, not just a defensive guard. */
+/* Controls whether we should integrate over chi_I instead of the transformed variable
+ * $\psi$.
+ *
+ * TRUE iff the whole unit chi_L-disc lies within NSIGMA*std_noise of eps_obs -- the
+ * farthest disc point from eps_obs is the diametrically opposite boundary point, at
+ * distance 1+|eps_obs|.
+ *
+ * Also TRUE whenever |eps_obs|>=1. A noise-corrupted observed distortion/ellipticity
+ * CAN legitimately land outside the unit disc (the noise model is not itself
+ * disc-bounded).
+ */
 static inline gboolean
 _use_chi_i_native (complex double eps_obs, gdouble std_noise)
 {
@@ -382,9 +382,9 @@ _use_chi_i_native (complex double eps_obs, gdouble std_noise)
   return (1.0 + cabs (eps_obs)) <= NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA * std_noise;
 }
 
-/* Exact center/radius of the circle through 3 points: Mobius maps send
- * circles to circles exactly, so circumscribing 3 mapped boundary points
- * recovers the true image circle losslessly (see _exact_r_sigma()). */
+/* Exact center/radius of the circle through 3 points: Mobius maps send circles to
+ * circles exactly, so circumscribing 3 mapped boundary points recovers the true image
+ * circle losslessly (see _exact_r_sigma()). */
 static void
 _circumcircle (complex double z0, complex double z1, complex double z2, complex double *center, gdouble *radius)
 {
@@ -399,11 +399,11 @@ _circumcircle (complex double z0, complex double z1, complex double z2, complex 
   *radius = cabs (*center - z0);
 }
 
-/* Radius (centered at psi=0) containing the exact psi-preimage of the
- * physical noise disc {chi_L : |chi_L-eps_obs|<=NSIGMA*std_noise}: three
- * boundary points mapped through f_h^{-1}=apply_shear(-h,.) and
- * circumscribed. Capped at R_SIGMA_MAX so the outer panel keeps positive
- * width. */
+/* Radius (centered at psi=0) containing the exact psi-preimage of the physical noise
+ * disc {chi_L : |chi_L-eps_obs|<=NSIGMA*std_noise}: three boundary points mapped
+ * through f_h^{-1}=apply_shear(-h,.) and circumscribed. Capped at R_SIGMA_MAX so the
+ * outer panel keeps positive width.
+ */
 static gdouble
 _exact_r_sigma (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double eps_obs, gdouble std_noise, complex double h)
 {
@@ -428,11 +428,11 @@ _exact_r_sigma (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double
 }
 
 /* Builds the two-panel psi-polar grid, g-independent: base[i]=f_h(psi_i),
- * weight[i]=quadrature_weight*|det J_{f_h}(psi_i)|. Radial coordinate uses
- * two Gauss-Legendre panels, [0,R_sigma) and [R_sigma,1); angular is
- * equally-spaced, offset by phi=arg(eps_obs) for rotation covariance.
- * Every node has rho<1 strictly, so every chi_L has |chi_L|<1 strictly
- * (f_h is a disc automorphism). */
+ * weight[i]=quadrature_weight*|det J_{f_h}(psi_i)|. Radial coordinate uses two
+ * Gauss-Legendre panels, [0,R_sigma) and [R_sigma,1); angular is equally-spaced,
+ * offset by phi=arg(eps_obs) for rotation covariance. Every node has rho<1 strictly,
+ * so every chi_L has |chi_L|<1 strictly (f_h is a disc automorphism).
+ */
 static void
 _regen_domain_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapeFactorFixedQuadData *ldata,
                          gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise)
@@ -482,12 +482,12 @@ _regen_domain_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGal
   ldata->g_spline_valid       = FALSE;
 }
 
-/* Builds the native chi_I-polar grid: fixed nodes
- * chi_I_i=rho_i*e^{i theta_i}, weight[i]=quadrature_weight/(2*pi) -- NO
- * rho_i factor, since the polar measure's own rho and the population's
- * area density P_pop(rho)/(2*pi*rho) share a rho that cancels analytically
- * (this grid is centered on chi_I=0 itself). r_i is filled into x_arr
- * once, since it is g-independent (no inverse map in this branch). */
+/* Builds the native chi_I-polar grid: fixed nodes chi_I_i=rho_i*e^{i theta_i},
+ * weight[i]=quadrature_weight/(2*pi) -- NO rho_i factor, since the polar measure's own
+ * rho and the population's area density P_pop(rho)/(2*pi*rho) share a rho that cancels
+ * analytically (this grid is centered on chi_I=0 itself). r_i is filled into x_arr
+ * once, since it is g-independent (no inverse map in this branch).
+ */
 static void
 _regen_domain_chi_i_native (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapeFactorFixedQuadData *ldata,
                             gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise)
@@ -534,9 +534,10 @@ _regen_domain_chi_i_native (NcGalaxyShapeFactorFixedQuadPrivate * const self, Nc
 }
 
 /* Auto-switch domain build, used by eval_marginal()/eval_ln_marginal().
- * nc_galaxy_shape_factor_fixed_quad_eval_two_panel()/_eval_chi_i_native()
- * call the two branch-specific builders directly instead, forcing a
- * branch regardless of this switch. */
+ * nc_galaxy_shape_factor_fixed_quad_eval_two_panel()/_eval_chi_i_native() call the two
+ * branch-specific builders directly instead, forcing a branch regardless of this
+ * switch.
+ */
 static void
 _regen_domain (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapeFactorFixedQuadData *ldata,
                gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise)
@@ -549,9 +550,6 @@ _regen_domain (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapeFa
     _regen_domain_two_panel (self, ldata, epsilon_obs_1, epsilon_obs_2, std_noise);
 }
 
-/* _domain_matches_auto() also checks cached_method, not just eps_obs/
- * std_noise: a domain last built by eval_two_panel()/eval_chi_i_native()
- * forcing the OTHER branch must still be detected as stale. */
 static inline gboolean
 _domain_matches_method (NcGalaxyShapeFactorFixedQuadData *ldata, gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise,
                         NcGalaxyShapeFactorFixedQuadMethod method)
@@ -561,6 +559,9 @@ _domain_matches_method (NcGalaxyShapeFactorFixedQuadData *ldata, gdouble epsilon
          (ldata->cached_method == method);
 }
 
+/* Also checks cached_method, not just eps_obs/std_noise: a domain last built by
+ * eval_two_panel()/eval_chi_i_native() forcing the OTHER branch must still be detected
+ * as stale. */
 static inline gboolean
 _domain_matches_auto (NcGalaxyShapeFactorFixedQuadData *ldata, gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise)
 {
@@ -572,11 +573,11 @@ _domain_matches_auto (NcGalaxyShapeFactorFixedQuadData *ldata, gdouble epsilon_o
   return _domain_matches_method (ldata, epsilon_obs_1, epsilon_obs_2, std_noise, method);
 }
 
-/* Raw (un-floored) two-panel marginal, given a valid TWO_PANEL domain.
- * Sums the puncture-correction bracket [N(eps_obs-chi_L)-N0],
- * N0=N(eps_obs-chi_L0), chi_L0=f_g(0), then adds N0 back once via
- * integral(P_pop)=1. Mutates ldata's scratch buffers (x_arr/jac/p_arr):
- * safe for repeated calls, not reentrant. */
+/* Raw (un-floored) two-panel marginal, given a valid TWO_PANEL domain. Sums the
+ * puncture-correction bracket [N(eps_obs-chi_L)-N0], N0=N(eps_obs-chi_L0),
+ * chi_L0=f_g(0), then adds N0 back once via integral(P_pop)=1. Mutates ldata's scratch
+ * buffers (x_arr/jac/p_arr): safe for repeated calls, not reentrant.
+ */
 static gdouble
 _marginal_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
                      NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
@@ -589,9 +590,9 @@ _marginal_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyS
   gdouble corr_sum             = 0.0;
   guint i;
 
-  /* x_i is known for every node before eval_p() is called, so batch
-   * through eval_p_array() instead of one-at-a-time vfunc calls. x_arr
-   * holds x_i=|chi_I|^2 from the kernels, sqrt()'d in place into r_i. */
+  /* x_i is known for every node before eval_p() is called, so batch through
+   * eval_p_array() instead of one-at-a-time vfunc calls. x_arr holds x_i=|chi_I|^2
+   * from the kernels, sqrt()'d in place into r_i. */
   g_array_set_size (ldata->x_arr, ldata->n_used);
 
   {
@@ -632,9 +633,9 @@ _marginal_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyS
       const gdouble p_2d           = p_data[i] / (2.0 * M_PI * r_data[i]);
       gdouble bracket;
 
-      /* expm1 avoids cancellation near delta_ratio=0; falls back to a
-       * direct, individually-bounded difference where expm1 would
-       * overflow instead. */
+      /* expm1 avoids cancellation near delta_ratio=0; falls back to a direct,
+       * individually-bounded difference where expm1 would overflow instead.
+       */
       if (delta_ratio <= NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_EXPM1_SAFE_BOUND)
       {
         bracket = N0 * expm1 (delta_ratio);
@@ -653,10 +654,11 @@ _marginal_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyS
   return N0 + corr_sum;
 }
 
-/* Raw (un-floored) native-chi_I marginal, given a valid CHI_I_NATIVE
- * domain. Plain forward evaluation, no bracket: this grid is centered on
- * chi_I=0, so there is no unrelated singular point to protect against.
- * r_i is g-independent, already filled by _regen_domain_chi_i_native(). */
+/* Raw (un-floored) native-chi_I marginal, given a valid CHI_I_NATIVE domain. Plain
+ * forward evaluation, no bracket: this grid is centered on chi_I=0, so there is no
+ * unrelated singular point to protect against. r_i is g-independent, already filled by
+ * _regen_domain_chi_i_native().
+ */
 static gdouble
 _marginal_chi_i_native (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
                         NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
@@ -683,12 +685,11 @@ _marginal_chi_i_native (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGala
   return total;
 }
 
-/* Ground truth for use-marginal-spline's builders below. A non-finite
- * result is always a bug (invalid input the domain build should have
- * rejected, or a genuine defect) -- never a deep-tail underflow, which
- * shows up as a finite, small/negative value instead (see the
- * MIN_MARGINAL floor at this function's callers) -- so it fails loudly
- * here rather than being silently floored. */
+/* Ground truth for use-marginal-spline's builders below. A non-finite result is always
+ * a bug (invalid input the domain build should have rejected, or a genuine defect) --
+ * never a deep-tail underflow, which shows up as a finite, small/negative value
+ * instead (see the MIN_MARGINAL floor at this function's callers).
+ */
 static gdouble
 _direct_marginal_at_g (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
                        NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
@@ -702,7 +703,7 @@ _direct_marginal_at_g (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalax
       break;
 
     case NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_TWO_PANEL:
-    default: /* LCOV_EXCL_LINE */
+    default:
       result = _marginal_two_panel (self, pop, data, ldata, g);
       break;
   }
