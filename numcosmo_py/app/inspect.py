@@ -25,7 +25,7 @@ import dataclasses
 import math
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Callable
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
@@ -474,13 +474,11 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
             help=(
                 "Overlay NcGalaxyShapeFactorFixedQuad's own quadrature "
                 "domain (nodes + boundary) for this galaxy, when the "
-                "engine is FixedQuad. Replicates _regen_domain()'s branch "
-                "selection and node placement in Python (same "
-                "Gauss-Legendre rule, just via numpy instead of GSL) since "
-                "the engine keeps its per-galaxy node array private; if "
-                "auto-lens-nodes is on, this shows the configured n-lens "
-                "upper bound, not the (possibly smaller) per-galaxy "
-                "calibrated count actually used."
+                "engine is FixedQuad. Fetched directly via peek_domain() "
+                "(the engine's own real nodes at --g1/--g2, mapped to "
+                "chi_L-space -- no Python-side replication), so it also "
+                "shows which of the two-panel psi / native chi_I branches "
+                "the engine's own auto-switch picked for this galaxy."
             ),
         ),
     ] = True
@@ -522,6 +520,10 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
         sig2 = data.std_noise**2
         g_ncm = Ncm.Complex.new()
         g_ncm.set(self.g1, self.g2)
+
+        apply_shear: Callable[[Ncm.Complex, Ncm.Complex, Ncm.Complex], None]
+        apply_shear_inv: Callable[[Ncm.Complex, Ncm.Complex, Ncm.Complex], None]
+        lndet_jac: Callable[[Ncm.Complex, Ncm.Complex], float]
 
         if ellip_conv == Nc.GalaxyWLObsEllipConv.TRACE:
             apply_shear = Nc.wl_ellipticity_apply_shear_trace_ptr
@@ -585,7 +587,9 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
         }
 
         if self.show_nodes and isinstance(shape_factor, Nc.GalaxyShapeFactorFixedQuad):
-            chi_l_mat, node_weights = shape_factor.peek_domain(pop, data)
+            chi_l_mat, node_weights = shape_factor.peek_domain(
+                pop, data, self.g1, self.g2
+            )
             nodes = chi_l_mat.to_numpy()
             node_w = node_weights.to_numpy()
         elif self.show_nodes:
@@ -639,6 +643,9 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
             )
 
             if nodes is not None:
+                assert (
+                    node_w is not None
+                )  # set together with nodes, always both or neither
                 w_max = node_w.max() if node_w.size and node_w.max() > 0 else 1.0
                 ax.scatter(
                     nodes[:, 0],

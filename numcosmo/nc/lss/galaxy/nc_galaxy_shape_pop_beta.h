@@ -55,7 +55,7 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_SHAPE_POP_BETA_PARAMS >*/
 } NcGalaxyShapePopBetaParams;
 
 #define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA (1.55)
-#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA (1.62)
+#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA (1.55)
 #define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL (0.0)
 
 NcGalaxyShapePopBeta *nc_galaxy_shape_pop_beta_new (void);

@@ -46,7 +46,10 @@ NcGalaxyShapeFactorFixedQuad *nc_galaxy_shape_factor_fixed_quad_ref (NcGalaxySha
 void nc_galaxy_shape_factor_fixed_quad_free (NcGalaxyShapeFactorFixedQuad *gsffq);
 void nc_galaxy_shape_factor_fixed_quad_clear (NcGalaxyShapeFactorFixedQuad **gsffq);
 
-NcmMatrix *nc_galaxy_shape_factor_fixed_quad_peek_domain (NcGalaxyShapeFactorFixedQuad *gsffq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, NcmVector **weights);
+gdouble nc_galaxy_shape_factor_fixed_quad_eval_two_panel (NcGalaxyShapeFactorFixedQuad *gsffq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
+gdouble nc_galaxy_shape_factor_fixed_quad_eval_chi_i_native (NcGalaxyShapeFactorFixedQuad *gsffq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
+
+NcmMatrix *nc_galaxy_shape_factor_fixed_quad_peek_domain (NcGalaxyShapeFactorFixedQuad *gsffq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, NcmVector **weights);
 
 G_END_DECLS
 

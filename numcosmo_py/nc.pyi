@@ -497,6 +497,12 @@ def wl_ellipticity_lndet_jac_trace_det_ptr(
 def wl_ellipticity_lndet_jac_trace_ptr(
     g: NumCosmoMath.Complex, chi_obs: NumCosmoMath.Complex
 ) -> float: ...
+def wl_ellipticity_shear_at_origin_trace_det_ptr(
+    target: NumCosmoMath.Complex, g: NumCosmoMath.Complex
+) -> None: ...
+def wl_ellipticity_shear_at_origin_trace_ptr(
+    target: NumCosmoMath.Complex, g: NumCosmoMath.Complex
+) -> None: ...
 def wl_ellipticity_trace_kernel_prep_clear(
     prep: WLEllipticityTraceKernelPrep,
 ) -> None: ...
@@ -8351,28 +8357,12 @@ class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
         Number of fixed Gauss-Legendre nodes in the radial direction
       n-angular -> guint: Number of angular nodes
         Number of angular quadrature nodes
-      n-lens -> guint: Number of lens-branch nodes
-        Number of fixed Gauss-Legendre nodes per axis in the genuine-lens branch
-      auto-lens-nodes -> gboolean: Auto lens-branch nodes
-        Calibrate a per-galaxy lens-branch node count instead of always using n-lens
-      lens-node-reltol -> gdouble: Lens-branch node calibration reltol
-        Target relative tolerance for auto-lens-nodes' calibration
       use-marginal-spline -> gboolean: Use marginal spline
         Cache the marginal as a function of g instead of recomputing it every call
       spline-g-max -> gdouble: g-spline cached box half-side
         Half-side of the square use-marginal-spline's cache covers
       spline-rel-err -> gdouble: g-spline target relative error
         Target relative error for use-marginal-spline's autoknots build
-      use-pop-correction -> gboolean: Use population-divergence correction
-        Correct for the pointwise P_pop(r)/(2*pi*r) divergence near a domain node's chi_I=0 crossing
-      pop-correction-eps1 -> gdouble: Correction window inner radius
-        Inner radius below which the cached grid's contribution is fully tapered out
-      pop-correction-eps2 -> gdouble: Correction window outer radius
-        Outer radius above which the cached grid gets full weight and below which the correction is nonzero
-      pop-correction-n-radial -> guint: Correction sub-quadrature radial nodes
-        Radial node count for use-pop-correction's local sub-quadrature
-      pop-correction-n-angular -> guint: Correction sub-quadrature angular nodes
-        Angular node count for use-pop-correction's local sub-quadrature
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -8383,46 +8373,48 @@ class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
     """
 
     class Props:
-        auto_lens_nodes: bool
-        lens_node_reltol: float
         n_angular: int
-        n_lens: int
         n_radial: int
-        pop_correction_eps1: float
-        pop_correction_eps2: float
-        pop_correction_n_angular: int
-        pop_correction_n_radial: int
         spline_g_max: float
         spline_rel_err: float
         use_marginal_spline: bool
-        use_pop_correction: bool
         ellip_conv: GalaxyWLObsEllipConv
 
     props: Props = ...
     def __init__(
         self,
-        auto_lens_nodes: bool = ...,
-        lens_node_reltol: float = ...,
         n_angular: int = ...,
-        n_lens: int = ...,
         n_radial: int = ...,
-        pop_correction_eps1: float = ...,
-        pop_correction_eps2: float = ...,
-        pop_correction_n_angular: int = ...,
-        pop_correction_n_radial: int = ...,
         spline_g_max: float = ...,
         spline_rel_err: float = ...,
         use_marginal_spline: bool = ...,
-        use_pop_correction: bool = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
     ) -> None: ...
     @staticmethod
     def clear(gsffq: GalaxyShapeFactorFixedQuad) -> None: ...
+    def eval_chi_i_native(
+        self,
+        pop: GalaxyShapePop,
+        data: GalaxyShapeFactorData,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+    ) -> float: ...
+    def eval_two_panel(
+        self,
+        pop: GalaxyShapePop,
+        data: GalaxyShapeFactorData,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+    ) -> float: ...
     def free(self) -> None: ...
     @classmethod
     def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorFixedQuad: ...
     def peek_domain(
-        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData, g_1: float, g_2: float
     ) -> typing.Tuple[NumCosmoMath.Matrix, NumCosmoMath.Vector]: ...
     def ref(self) -> GalaxyShapeFactorFixedQuad: ...
 
@@ -8520,8 +8512,6 @@ class GalaxyShapeFactorQuad(GalaxyShapeFactor):
     Object NcGalaxyShapeFactorQuad
 
     Properties from NcGalaxyShapeFactorQuad:
-      bound -> gdouble: bound
-        Plane-integration box half-width
       reltol -> gdouble: reltol
         Cubature relative tolerance
 
@@ -8534,26 +8524,29 @@ class GalaxyShapeFactorQuad(GalaxyShapeFactor):
     """
 
     class Props:
-        bound: float
         reltol: float
         ellip_conv: GalaxyWLObsEllipConv
 
     props: Props = ...
     def __init__(
-        self,
-        bound: float = ...,
-        reltol: float = ...,
-        ellip_conv: GalaxyWLObsEllipConv = ...,
+        self, reltol: float = ..., ellip_conv: GalaxyWLObsEllipConv = ...
     ) -> None: ...
     @staticmethod
     def clear(gsfq: GalaxyShapeFactorQuad) -> None: ...
+    def eval_direct(
+        self,
+        pop: GalaxyShapePop,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+        std_noise: float,
+    ) -> float: ...
     def free(self) -> None: ...
-    def get_bound(self) -> float: ...
     def get_reltol(self) -> float: ...
     @classmethod
     def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorQuad: ...
     def ref(self) -> GalaxyShapeFactorQuad: ...
-    def set_bound(self, bound: float) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
 
 class GalaxyShapeFactorQuadClass(GObject.GPointer):

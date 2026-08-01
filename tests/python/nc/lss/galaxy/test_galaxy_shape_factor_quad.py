@@ -304,13 +304,13 @@ def test_marginal_matches_scipy_truth_table_concentrated_beta():
     assert_allclose(quad_val, exact_val, rtol=1.0e-4)
 
 
-def test_marginal_alpha_below_one_known_accuracy_bug():
-    """Known accuracy bug: Quad loses accuracy vs scipy near g~0.18 for
-    alpha<2 Beta populations (P(x) divergent at x=0 -- see the class doc's
-    r=sqrt(x)~Beta(alpha,beta) reparametrization, which makes alpha<2 the
-    relevant threshold, not alpha<1; FixedQuad stays accurate, see
-    docs/theory/wl_shape_factor_history.md); pins current behavior against
-    regression."""
+def test_marginal_alpha_below_one_accuracy():
+    """Quad used to lose accuracy vs scipy near g~0.18 for alpha<2 Beta
+    populations (P(x) divergent at x=0 in the old chi_L-plane substitution).
+    The psi-reparametrization + puncture correction (see the class doc)
+    fixed this as a side effect -- it never singles out alpha<2 as a special
+    case, it just makes the integrand finite everywhere. Pins the fix
+    against regression."""
     pop = Nc.GalaxyShapePopBeta.new()
     pop["alpha"] = 1.2
     pop["beta"] = 4.0
@@ -333,13 +333,7 @@ def test_marginal_alpha_below_one_known_accuracy_bug():
         pop, data.pop_data, ellip_conv, g, eps_obs, std_noise
     )
 
-    rel_err = abs(quad_val - exact_val) / exact_val
-    assert rel_err > 0.05, (
-        "Quad's alpha<1 accuracy bug appears fixed -- update/remove this "
-        "test and re-enable Quad as a trusted cross-check for alpha<1 Beta "
-        "populations."
-    )
-    assert rel_err < 0.20, "Quad's alpha<1 accuracy bug got worse, investigate."
+    assert_allclose(quad_val, exact_val, rtol=1.0e-5)
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
@@ -386,33 +380,28 @@ def test_required_columns():
         assert col in cols
 
 
-def test_bound_reltol_properties():
-    """bound/reltol getters and setters round-trip."""
+def test_reltol_property():
+    """reltol getter/setter round-trip. (bound was removed: Quad integrates
+    psi in exact, finite polar coordinates now, with no box to size -- see
+    the class doc.)"""
     gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE)
 
-    assert gsfq.get_bound() == 8.0
     assert gsfq.get_reltol() == pytest.approx(1.0e-7)
 
-    gsfq.set_bound(12.0)
     gsfq.set_reltol(1.0e-9)
-    assert gsfq.get_bound() == 12.0
     assert gsfq.get_reltol() == pytest.approx(1.0e-9)
 
 
-def test_bound_reltol_gobject_property_round_trip():
-    """bound/reltol are also reachable through the GObject property system
-    (get_property/set_property), not just the plain getter/setter wrappers
-    already checked by test_bound_reltol_properties."""
+def test_reltol_gobject_property_round_trip():
+    """reltol is also reachable through the GObject property system
+    (get_property/set_property), not just the plain getter/setter wrapper
+    already checked by test_reltol_property."""
     gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE)
 
-    assert gsfq.get_property("bound") == gsfq.get_bound()
     assert gsfq.get_property("reltol") == pytest.approx(gsfq.get_reltol())
 
-    gsfq.set_property("bound", 15.0)
     gsfq.set_property("reltol", 1.0e-8)
-    assert gsfq.get_bound() == 15.0
     assert gsfq.get_reltol() == pytest.approx(1.0e-8)
-    assert gsfq.get_property("bound") == 15.0
     assert gsfq.get_property("reltol") == pytest.approx(1.0e-8)
 
 

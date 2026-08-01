@@ -433,3 +433,59 @@ match `LNINT` to machine precision) and applying the `auto-lens-nodes` fix
 above brought the full 480-cell sweep to 0 crashed cells across all four
 methods, with `SeriesLensed` the standout cost/accuracy pick (~1.9x
 VarAdd's cost, matching `Laplace`/`FixedQuad`'s accuracy).
+
+## `NcGalaxyShapeFactorFixedQuad`: replaced with a two-branch psi/native-chi_I design (2026)
+
+The domain-intersection design above (three geometry branches: noise-
+contained, unit-contained, genuine-lens, plus the effective-radius boundary
+fix) is superseded. `Quad` was independently redesigned first (same
+session) to integrate $\psi=f_h^{-1}(\chi_L)$ in exact finite polar
+coordinates with a puncture correction, fixing a real `Quad` accuracy bug
+for $\alpha<2$ Beta populations near $g\sim0.18$ (see above). Porting the
+same $\psi$-reparametrization to `FixedQuad` as a single fixed polar grid
+(replacing all three geometry branches) fixed that class' own long-standing
+narrow-population/branch-cost-cliff issues above as a side effect — but
+introduced a NEW failure at $|\epsilon_\mathrm{obs}|$ close to 1 combined
+with broad $\sigma_\mathrm{noise}$ (worst case ~16% at $n=15$), traced to
+the $\psi$-reparametrization's own Jacobian developing a huge
+($\sim10^6\times$) dynamic range near the disc boundary there — a
+structural property of the reparametrization itself, not fixable by more
+radial resolution alone.
+
+A radial two-panel split (exact split radius via a Möbius circumcircle
+construction — three boundary points of the physical noise disc mapped
+through $f_h^{-1}$ and circumscribed, since Möbius maps send circles to
+circles exactly) fully fixed the "far from pop pull" / small-noise regime,
+but not this new one: the difficulty there is the Jacobian itself, not
+where the noise kernel's mass sits within the disc. The fix was a second,
+complementary scheme instead: integrate directly in $\chi_I$'s own polar
+coordinates when the noise kernel is broad enough to cover the whole disc
+($1+|\epsilon_\mathrm{obs}|\le8\sigma_\mathrm{noise}$) — no
+reparametrization, no Jacobian for the population term (the quadrature
+measure's own $r\,\mathrm{d}r$ cancels $P_\mathrm{pop}(r)/(2\pi r)$'s $1/r$
+analytically), and, found while implementing it, no puncture correction
+either: unlike $\psi$-space, this grid is centered on $\chi_I=0$ itself, so
+the noise kernel can be evaluated plainly and safely with no unrelated
+singular point to protect against. Confirmed empirically: the plain
+(uncorrected) form matches the corrected form's accuracy on the very case
+that originally motivated the correction (Beta $\alpha=1.55$), converging
+cleanly with node count — the correction was only ever needed because the
+OLD geometry-branch design gridded in $\chi_L$-space and inverted to
+$\chi_I$, unevenly sparsifying nodes near the singularity; gridding
+natively in $\chi_I$ from the start never has that problem.
+
+An 840-case sweep (7 Beta $\alpha$ values, both ellipticity conventions, 5
+$|\epsilon_\mathrm{obs}|$, 4 $\sigma_\mathrm{noise}$, 3 shears) confirmed
+the two-branch switch closes essentially the whole gap: single-panel and
+two-panel alone both peak at 15–17% error, always in the same
+$|\epsilon_\mathrm{obs}|\approx0.95,\sigma_\mathrm{noise}=0.35$-type
+corner; the switch brings the worst case down to 2.0% (a Beta
+$\alpha=3$/tiny-$\sigma_\mathrm{noise}$ resolution edge, not the puncture
+problem), median error $\sim10^{-6}$. A third candidate (stereographic
+$(u,v)$-plane substitution applied to $\psi$, hypothesized to have its own
+Jacobian cancel the reparametrization's) was tried and rejected: it neither
+fixes the boundary regime cleanly nor preserves the small-noise regime's
+accuracy (up to 600% error on unrelated cases).
+
+See `docs/theory/wl_shape_marginalization_fixed_quad.qmd` for the shipped
+design.
