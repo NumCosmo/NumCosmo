@@ -362,18 +362,6 @@ def test_extreme_g_stays_accurate(ellip_conv):
         assert_allclose(fq_val, q_val, rtol=5.0e-3)
 
 
-def test_deep_tail_underflows_to_floor():
-    """eps_obs far enough outside the unit disc (~50 sigma at this
-    std_noise) that the marginal genuinely underflows double precision --
-    this floor is a defensive underflow guard (see the class docs), not a
-    branch-selection cutoff: both branches integrate the exact same true
-    integral, which is genuinely this small here."""
-    gsffq, pop, data = _make(Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.28, 0.01)
-
-    val = gsffq.eval_marginal(pop, data, 0.1, 0.0, 1.5, 0.0)
-    assert val <= 1.0e-290
-
-
 def test_no_discontinuity_across_the_branch_switch():
     """std_noise=(1+|eps_obs|)/8 is exactly where the class' own auto-switch
     (_use_chi_i_native(), see the class docs) flips from two-panel psi to

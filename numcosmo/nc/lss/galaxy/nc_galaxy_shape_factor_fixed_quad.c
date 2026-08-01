@@ -84,23 +84,9 @@
 #include <complex.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-/* exp(50) ~ 5e21, well under double overflow (~exp(709)): a generous
- * margin, not a tight cutoff -- see _marginal_two_panel(). */
 #define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_EXPM1_SAFE_BOUND (50.0)
-
-/* Underflow floor, not a divergence guard -- the marginal is always a
- * finite integral of a bounded integrand. */
-#define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL (1.0e-300)
-
-/* Branch-switch threshold (_use_chi_i_native()) and two-panel split-radius
- * cap (_exact_r_sigma()). Not user-tunable: properties of where each
- * grid's own resolution breaks down, not a physical parameter. */
 #define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA (8.0)
 #define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_R_SIGMA_MAX (0.98)
-
-/* Fixed knot count for _build_g_spline_fixed_knots(). Raising it only
- * improves accuracy at O(N^2) build cost; no adaptive/abort logic to
- * trip. */
 #define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_UNSAFE_SPLINE_N_KNOTS (33)
 
 /* ===========================================================================
@@ -708,7 +694,7 @@ _direct_marginal_at_g (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalax
       break;
   }
 
-  if (!isfinite (result))
+  if (!isfinite (result) || (result <= 0.0))
     g_error ("nc_galaxy_shape_factor_fixed_quad: non-finite marginal at g=(% .6g,% .6g), "
              "eps_obs=(% .6g,% .6g), std_noise=% .6g, method=%s.",
              creal (g), cimag (g), ldata->cached_epsilon_obs_1, ldata->cached_epsilon_obs_2, ldata->cached_std_noise,
@@ -735,7 +721,7 @@ _g_spline_slice_func (gdouble x, gpointer p)
   const complex double g = a->slice_is_g1 ? x : x * I;
   const gdouble v        = _direct_marginal_at_g (a->self, a->pop, a->data, a->ldata, g);
 
-  return log (fmax (v, NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL));
+  return log (v);
 }
 
 /* Builds ldata's g-spline: ln(marginal) as a bivariate function of
@@ -781,7 +767,7 @@ _build_g_spline_fixed_knots (NcGalaxyShapeFactorFixedQuadPrivate * const self, N
       const complex double g = g_1 + I * g_2;
       const gdouble v        = _direct_marginal_at_g (self, pop, data, ldata, g);
 
-      ncm_matrix_set (zm, i, j, log (fmax (v, NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL)));
+      ncm_matrix_set (zm, i, j, log (v));
     }
   }
 
@@ -869,7 +855,7 @@ _build_g_spline (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShape
       const complex double g = g_1 + I * g_2;
       const gdouble v        = _direct_marginal_at_g (self, pop, data, ldata, g);
 
-      ncm_matrix_set (zm, i, j, log (fmax (v, NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL)));
+      ncm_matrix_set (zm, i, j, log (v));
     }
   }
 
@@ -917,9 +903,6 @@ _nc_galaxy_shape_factor_fixed_quad_marginal (NcGalaxyShapeFactorFixedQuad *gsffq
   result = self->use_marginal_spline ?
            _eval_marginal_spline (self, pop, data, ldata, g) :
            _direct_marginal_at_g (self, pop, data, ldata, g);
-
-  if (!(result > 0.0))
-    return NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL;
 
   return result;
 }
@@ -1109,14 +1092,11 @@ nc_galaxy_shape_factor_fixed_quad_eval_two_panel (NcGalaxyShapeFactorFixedQuad *
   NcGalaxyShapeFactorFixedQuadPrivate * const self = nc_galaxy_shape_factor_fixed_quad_get_instance_private (gsffq);
   NcGalaxyShapeFactorFixedQuadData *ldata          = (NcGalaxyShapeFactorFixedQuadData *) data->ldata;
   const complex double g                           = g_1 + I * g_2;
-  gdouble result;
 
   if (!_domain_matches_method (ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise, NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_TWO_PANEL))
     _regen_domain_two_panel (self, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
 
-  result = _direct_marginal_at_g (self, pop, data, ldata, g);
-
-  return (result > 0.0) ? result : NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL;
+  return _direct_marginal_at_g (self, pop, data, ldata, g);
 }
 
 /**
@@ -1142,14 +1122,11 @@ nc_galaxy_shape_factor_fixed_quad_eval_chi_i_native (NcGalaxyShapeFactorFixedQua
   NcGalaxyShapeFactorFixedQuadPrivate * const self = nc_galaxy_shape_factor_fixed_quad_get_instance_private (gsffq);
   NcGalaxyShapeFactorFixedQuadData *ldata          = (NcGalaxyShapeFactorFixedQuadData *) data->ldata;
   const complex double g                           = g_1 + I * g_2;
-  gdouble result;
 
   if (!_domain_matches_method (ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise, NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE))
     _regen_domain_chi_i_native (self, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
 
-  result = _direct_marginal_at_g (self, pop, data, ldata, g);
-
-  return (result > 0.0) ? result : NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL;
+  return _direct_marginal_at_g (self, pop, data, ldata, g);
 }
 
 /**
