@@ -27,6 +27,9 @@ internal consistency of ``e_rms()`` against the pdf, and consistency of
 ``gen()`` against the pdf.
 """
 
+import subprocess
+import sys
+
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -163,6 +166,45 @@ def test_beta_e_rms_mode(alpha, beta):
         assert_allclose(mode, 0.0)
 
     assert_allclose(2.0 * e_rms**2, _moment(model, data, 1), rtol=1.0e-5)
+
+
+def test_eval_p_array_matches_eval_p():
+    """eval_p_array() batches eval_p() over an array of r values; the GI
+    binding always starts from an unallocated output array (Python has no
+    way to pass a preallocated GArray through the (out callee-allocates)
+    convention), so this also exercises the eval_p_array() default
+    implementation's own allocate-on-first-use branch."""
+    model, data = _make("gauss")
+    rs = [0.05, 0.2, 0.5, 0.9]
+
+    p_array = model.eval_p_array(data, rs)
+    p_single = [model.eval_p(data, r) for r in rs]
+
+    assert_allclose(p_array, p_single, rtol=1.0e-12)
+
+
+def test_get_sigma_raises_for_unsupported_population():
+    """get_sigma() is a per-@data capability, not every model resolves it
+    (e.g. Beta has no Gaussian width): nc_galaxy_shape_pop_get_sigma()
+    reports this with a fatal g_error, a real process abort, so it is
+    checked in a subprocess (see test_galaxy_shape_factor_cgf.py's
+    test_non_gaussian_population_gate for the same pattern)."""
+    script = (
+        "from numcosmo_py import Nc, Ncm\n"
+        "Ncm.cfg_init()\n"
+        "model = Nc.GalaxyShapePopBeta.new()\n"
+        "data = Nc.GalaxyShapePopData.new(model)\n"
+        "model.prepare(data)\n"
+        "model.get_sigma(data)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "does not support a Gaussian width sigma" in result.stderr
 
 
 def test_beta_mset_func_list():

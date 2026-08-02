@@ -665,7 +665,11 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
             return im
 
         suptitle = (
-            f"Galaxy #{self.galaxy_index}: g=({self.g1:+.3f},{self.g2:+.3f}), "
+            # "#" is a raw LaTeX special character (macro-parameter marker):
+            # unescaped, it breaks this title whenever matplotlib is
+            # rendering with text.usetex=True (e.g. after
+            # set_rc_params_article() -- see numcosmo_py/plotting/tools.py).
+            f"Galaxy no. {self.galaxy_index}: g=({self.g1:+.3f},{self.g2:+.3f}), "
             f"eps_obs=({eps_obs.real:+.3f},{eps_obs.imag:+.3f}), "
             f"std_noise={data.std_noise:.3f}"
         )

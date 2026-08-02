@@ -32,6 +32,8 @@ VarAdd's map-linearization approximation becomes exact).
 """
 
 import math
+import subprocess
+import sys
 
 import pytest
 import numpy as np
@@ -484,6 +486,94 @@ def test_converges_to_var_add_as_shear_shrinks(ellip_conv):
     # smallest, and the weak-shear limit must be tight.
     assert rel_diffs[0] > 5.0 * rel_diffs[-1]
     assert rel_diffs[-1] < 1.0e-2
+
+
+def test_refine_theta_handles_non_positive_curvature_seed():
+    """The third peak hint (mode_r != 0) refines its seed theta with 3
+    Newton steps on |eps_obs-f_g(rho_mode e^{i theta})|^2
+    (_nc_galaxy_shape_factor_quad_refine_theta()); when eps_obs sits almost
+    exactly on the naive preimage's phase ambiguity (|eps_obs| tiny relative
+    to rho_mode, off to one side of the ring), the seed can land where the
+    local curvature along theta is non-positive. The refinement must bail
+    out (keep the current estimate) rather than divide by a non-positive
+    Hessian -- the hint is only ever a peak SEED for Divonne, so this
+    doesn't affect correctness, confirmed here against the scipy truth
+    table."""
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = 21.3
+    pop["beta"] = 2.0
+    mset = _build_mset(pop)
+
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
+    gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsfq, mset)
+    std_noise = 0.2
+    gsfq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsfq.prepare_data_array(mset, [data], True, True)
+
+    g = -0.27785970298908774 - 0.20791178352893003j
+    eps_obs = -0.0867183182993671 + 1.4807498901736667e-05j
+
+    quad_val = gsfq.eval_marginal(pop, data, g.real, g.imag, eps_obs.real, eps_obs.imag)
+    exact_val = _scipy_exact_marginal(
+        pop, data.pop_data, ellip_conv, g, eps_obs, std_noise
+    )
+
+    assert_allclose(quad_val, exact_val, rtol=2.0e-4)
+
+
+def test_eval_direct_matches_eval_marginal():
+    """eval_direct() is a self-contained convenience wrapper (builds and
+    prepares its own NcGalaxyShapePopData internally) around the same
+    computation eval_marginal() performs against a caller-supplied,
+    already-prepared one; the two must agree exactly."""
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = 5.0
+    pop["beta"] = 3.0
+    mset = _build_mset(pop)
+
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
+    gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsfq, mset)
+    std_noise = 0.2
+    gsfq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsfq.prepare_data_array(mset, [data], True, True)
+
+    g_1, g_2, eps_obs_1, eps_obs_2 = 0.1, -0.05, 0.15, 0.1
+    val_marginal = gsfq.eval_marginal(pop, data, g_1, g_2, eps_obs_1, eps_obs_2)
+    val_direct = gsfq.eval_direct(pop, g_1, g_2, eps_obs_1, eps_obs_2, std_noise)
+
+    assert_allclose(val_direct, val_marginal, rtol=1.0e-12)
+
+
+def test_eval_marginal_rejects_eps_obs_at_or_beyond_unit_disc():
+    """Unlike FixedQuad, Quad has no fallback for |eps_obs|>=1
+    (shear_at_origin() requires strictly inside the disc): it fails loudly
+    with a fatal g_error rather than returning a wrong answer, so this is
+    checked in a subprocess (see test_galaxy_shape_factor_cgf.py's
+    test_non_gaussian_population_gate for the same pattern)."""
+    script = (
+        "from numcosmo_py import Nc, Ncm\n"
+        "Ncm.cfg_init()\n"
+        "pop = Nc.GalaxyShapePopGauss.new()\n"
+        "pop['sigma'] = 0.2\n"
+        "data = Nc.GalaxyShapePopData.new(pop)\n"
+        "pop.prepare(data)\n"
+        "gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)\n"
+        "gsfq.eval_direct(pop, 0.05, 0.0, 1.2, 0.0, 0.2)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "outside this class' valid domain" in result.stderr
 
 
 if __name__ == "__main__":

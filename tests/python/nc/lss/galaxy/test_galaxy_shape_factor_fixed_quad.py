@@ -32,6 +32,9 @@ isolation.
 """
 
 import math
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 import numpy as np
@@ -1048,3 +1051,103 @@ def test_spline_g_max_rel_err_gobject_property_round_trip():
     assert_allclose(gsffq.get_property("spline-rel-err"), 1.0e-3)
     assert_allclose(gsffq.get_property("spline-g-max"), gsffq.props.spline_g_max)
     assert_allclose(gsffq.get_property("spline-rel-err"), gsffq.props.spline_rel_err)
+
+
+def test_marginal_spline_falls_back_to_direct_when_pop_density_underflows_near_origin():
+    """_build_g_spline()'s own log-log slope probe (r1=1e-6, r2=1e-3) can
+    itself underflow to exactly 0 at r1 for a Beta population concentrated
+    tightly enough near r=1 (alpha=60 here): unlike the alpha<2 case (whose
+    AREA DENSITY genuinely diverges and is handled by the fixed-knots
+    grid), this is p1==0.0 itself, so the probe is not "well defined" and
+    the spline is never built at all (ldata->g_spline_built stays FALSE) --
+    every marginal call for this population instead falls back to
+    _direct_marginal_at_g(), same as use_marginal_spline=False. Picking
+    eps_obs near the population's own peak ring (~0.983) keeps the direct
+    2D integral itself safely away from underflow, isolating this fallback
+    branch from the separate non-finite-marginal hard error."""
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = 60.0
+    pop["beta"] = 2.0
+    std_noise = 0.05
+    eps_obs_1, eps_obs_2 = 0.9, 0.0
+
+    gsffq_spline, pop_s, data_spline = _make_with_pop(
+        pop, Nc.GalaxyWLObsEllipConv.TRACE_DET, std_noise, use_marginal_spline=True
+    )
+    gsffq_direct, pop_d, data_direct = _make_with_pop(
+        pop, Nc.GalaxyWLObsEllipConv.TRACE_DET, std_noise, use_marginal_spline=False
+    )
+    gsffq_spline.data_set(
+        data_spline,
+        0.0,
+        0.0,
+        std_noise,
+        eps_obs_1,
+        eps_obs_2,
+        0.0,
+        Nc.WLEllipticityFrame.CELESTIAL,
+    )
+    gsffq_direct.data_set(
+        data_direct,
+        0.0,
+        0.0,
+        std_noise,
+        eps_obs_1,
+        eps_obs_2,
+        0.0,
+        Nc.WLEllipticityFrame.CELESTIAL,
+    )
+
+    g_1, g_2 = 0.05, 0.02
+    val_spline = gsffq_spline.eval_marginal(
+        pop_s, data_spline, g_1, g_2, eps_obs_1, eps_obs_2
+    )
+    val_direct = gsffq_direct.eval_marginal(
+        pop_d, data_direct, g_1, g_2, eps_obs_1, eps_obs_2
+    )
+
+    assert math.isfinite(val_spline)
+    assert val_spline > 0.0
+    assert val_spline == val_direct
+
+    # A second call at the same point must reuse the same fallback path
+    # (g_spline_valid latches TRUE even though g_spline_built stays FALSE)
+    # and reproduce bit-identically.
+    val_spline_again = gsffq_spline.eval_marginal(
+        pop_s, data_spline, g_1, g_2, eps_obs_1, eps_obs_2
+    )
+    assert val_spline_again == val_spline
+
+
+def test_eval_marginal_aborts_on_non_positive_marginal():
+    """A zero (underflowed) marginal is a hard error (see the class docs):
+    a Beta population this concentrated (alpha=400) combined with an
+    eps_obs far from its peak ring makes the true 2D integral itself
+    underflow to exactly 0 in double precision, which is fatal via
+    g_error, a real process abort, so it is checked in a subprocess (see
+    test_galaxy_shape_factor_cgf.py's test_non_gaussian_population_gate
+    for the same pattern)."""
+    script = (
+        "import sys\n"
+        "sys.path.insert(0, 'tests/python/nc/lss/galaxy')\n"
+        "from numcosmo_py import Nc, Ncm\n"
+        "Ncm.cfg_init()\n"
+        "import test_galaxy_shape_factor_fixed_quad as m\n"
+        "pop = Nc.GalaxyShapePopBeta.new()\n"
+        "pop['alpha'] = 400.0\n"
+        "pop['beta'] = 2.0\n"
+        "gsffq, pop, data = m._make_with_pop(\n"
+        "    pop, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.01,\n"
+        "    use_marginal_spline=False,\n"
+        ")\n"
+        "gsffq.eval_marginal(pop, data, 0.1, 0.05, 0.05, -0.02)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=str(Path(__file__).resolve().parents[5]),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "non-finite marginal" in result.stderr
