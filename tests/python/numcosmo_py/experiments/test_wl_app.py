@@ -813,6 +813,34 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
         func.eval0(mset)
 
 
+def test_cluster_wl_app_generate_fixed_quad_marginal_spline(experiment_file):
+    """fixed_quad's use-marginal-spline/spline-g-max/spline-rel-err
+    (CONSTRUCT_ONLY GObject properties) are reachable through
+    --shape-factor's key=value CLI parsing, not just direct Python/GI
+    construction."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--shape-factor=fixed_quad use_marginal_spline=true "
+            "spline_g_max=0.2 spline_rel_err=1e-3",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+    factor = cast(Nc.GalaxyShapeFactorFixedQuad, cluster_data.props.shape_factor)
+
+    assert factor.props.use_marginal_spline is True
+    assert factor.props.spline_g_max == pytest.approx(0.2)
+    assert factor.props.spline_rel_err == pytest.approx(1e-3)
+
+
 def test_cluster_wl_app_generate_redshift_dist_bogus_type(experiment_file):
     """Test the generation of the cluster WL app with an unknown --z-dist type."""
     result = runner.invoke(
@@ -1296,6 +1324,38 @@ def test_cluster_wl_load_app_data_file(experiment_file, real_wl_obs_file_with_me
     cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
 
     assert cluster_data.peek_obs().len() == 20
+
+
+def test_cluster_wl_load_app_fixed_quad_marginal_spline(
+    experiment_file, real_wl_obs_file_with_meta
+):
+    """Same use-marginal-spline CLI wiring as
+    test_cluster_wl_app_generate_fixed_quad_marginal_spline, but through
+    cluster-wl-load (a real catalog) instead of cluster-wl (mock
+    generation) -- both commands share the same --shape-factor parsing, but
+    this exercises it end to end on the load path too."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=fixed_quad ellip_conv=trace ellip_coord=celestial "
+            "use_marginal_spline=true spline_g_max=0.2 spline_rel_err=1e-3",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+    factor = cast(Nc.GalaxyShapeFactorFixedQuad, cluster_data.props.shape_factor)
+
+    assert factor.props.use_marginal_spline is True
+    assert factor.props.spline_g_max == pytest.approx(0.2)
+    assert factor.props.spline_rel_err == pytest.approx(1e-3)
 
 
 def test_cluster_wl_load_app_no_metadata_requires_explicit_values(

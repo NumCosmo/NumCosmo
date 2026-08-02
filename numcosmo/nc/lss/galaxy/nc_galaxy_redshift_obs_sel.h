@@ -42,8 +42,7 @@ G_DECLARE_DERIVABLE_TYPE (NcGalaxyRedshiftObsSel, nc_galaxy_redshift_obs_sel, NC
  * NcGalaxyRedshiftObsSelClass:
  *
  * The population-level distribution of a photo-z observable across the galaxy
- * population at a given true redshift. Distinct from the per-galaxy conditional
- * #NcGalaxyRedshiftObs: its scatter is a population-level model
+ * population at a given true redshift. Its scatter is a population-level model
  * parameter (not per-galaxy data), and it is conceptually a mixture over the
  * per-galaxy scatter, free to diverge from the single-galaxy kernel. Used by the
  * binning calculator to build P(z | I in W).

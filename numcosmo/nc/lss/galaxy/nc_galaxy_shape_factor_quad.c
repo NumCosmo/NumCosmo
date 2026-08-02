@@ -39,83 +39,70 @@
  * intrinsic population to an untruncated Gaussian (contrast
  * #NcGalaxyShapeFactorVarAdd, which approximates both).
  *
- * The substitution variable is the LENSED (noiseless, pre-noise) ellipticity
- * $\chi_L=f_g(\chi_I)$, not the intrinsic $\chi_I$: change variables in the
- * integral above to $\chi_L$,
- * $$P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_L|<1} \mathrm{d}^2\chi_L\,
- *   P_\mathrm{pop}\big(f_g^{-1}(\chi_L)\big)\,
- *   \left|\det J_{f_g^{-1}}(\chi_L)\right|\,
- *   N_2\big(\epsilon_\mathrm{obs} - \chi_L; \sigma_\mathrm{noise}^2\big),$$
- * where $\det J_{f_g^{-1}}$ is supplied by the existing
- * nc_galaxy_shape_factor_lndet_jac() machinery (already used by `VarAdd`), so
- * no new map algebra is needed. $\chi_L$ is turned into a plane integral by
- * the usual bijection,
- * $$\chi_L(u,v) = (u,v)/\sqrt{1+u^2+v^2}, \qquad
- *   \left|\det\frac{\partial\chi_L}{\partial(u,v)}\right| = \frac{1}{(1+u^2+v^2)^2}.$$
- * The point of using $\chi_L$ rather than $\chi_I$ is that the noise kernel
- * $N_2(\epsilon_\mathrm{obs}-\chi_L;\sigma_\mathrm{noise}^2)$ becomes an
- * ordinary Gaussian of EXACTLY known width $\sigma_\mathrm{noise}$ centered at
- * EXACTLY $\epsilon_\mathrm{obs}$ -- no shear map, no approximation. Because
- * the population is evaluated at $\chi_I=f_g^{-1}(\chi_L)$ instead of
- * directly at the substitution point, nc_galaxy_shape_pop_eval_p() is used
- * (not nc_galaxy_shape_pop_eval_p_rho2(), whose $\rho^2$ contract is
- * specifically $\rho^2=u^2+v^2$ for the point being substituted for, which is
- * $\chi_L$ here, not $\chi_I$); $x_I=\lvert\chi_I\rvert^2$ is computed
- * directly from the complex division (a sum of two squares, not itself
- * subtraction-sensitive), only losing the extra conditioning
- * nc_galaxy_shape_pop_eval_p_rho2() offers for the $(1-x)^a$ factor right at
- * $x\to1^-$ (relevant mainly for #NcGalaxyShapePopBeta at the disc boundary).
+ * **Substitution.** The integration variable is $\psi$, not $\chi_I$ or the
+ * lensed $\chi_L=f_g(\chi_I)$ directly: $\chi_L=f_h(\psi)$, where $h$ is the
+ * shear with $f_h(0)=\epsilon_\mathrm{obs}$ exactly
+ * (nc_wl_ellipticity_shear_at_origin_trace() /
+ * `_trace_det()`). $\psi=0$ therefore always maps to $\chi_L=\epsilon_\mathrm{obs}$,
+ * so the noise kernel's peak sits at the box center by construction, with
+ * no per-call box re-centering. $\chi_I=f_g^{-1}(\chi_L)$ as usual, with
+ * $\det J_{f_g^{-1}}$ from nc_galaxy_shape_factor_lndet_jac()'s sibling
+ * kernels (already used by `VarAdd`). $\psi$ is turned into a plane
+ * integral by the usual bijection,
+ * $$\psi(u,v) = (u,v)/\sqrt{1+u^2+v^2}, \qquad
+ *   \left|\det\frac{\partial\psi}{\partial(u,v)}\right| = \frac{1}{(1+u^2+v^2)^2},$$
+ * so $(u,v)$ ranges over the whole plane and $\chi_I$ correspondingly over
+ * the whole disc, with no truncation. $x_I=\lvert\chi_I\rvert^2$ is
+ * computed directly from the complex division (a sum of two squares, not
+ * itself subtraction-sensitive), then $r_I=\sqrt{x_I}$ before the
+ * nc_galaxy_shape_pop_eval_p() call (see that vfunc's r-native contract in
+ * nc_galaxy_shape_pop.h), and the returned r-marginal density is converted
+ * to the 2D area density this integrand needs via $P_\mathrm{pop}(r_I)/(2\pi r_I)$.
  *
- * The plane integral is evaluated by the Divonne cubature algorithm from the
- * Cuba library (ncm_integrate_2dim_divonne()), over a FIXED box of
- * half-width @bound centered on the exact $(u,v)$ preimage of
- * $\epsilon_\mathrm{obs}$ (no shear map needed: $\chi_L$'s noise kernel peaks
- * exactly there), seeded with two explicit peak hints: that same point (the
- * noise peak, exact) and the preimage of $f_g(0)$ (where $\chi_L$ sits when
- * $\chi_I=0$, i.e. the population's peak location under the common
- * assumption that $P_\mathrm{pop}$ is radially symmetric about $\chi_I=0$,
- * e.g. #NcGalaxyShapePopGauss / #NcGalaxyShapePopGaussLocal -- for a
- * population peaked elsewhere, e.g. #NcGalaxyShapePopBeta with $\mu$ away
- * from 0, this hint is only approximate, but Divonne's own stratified search
- * still reliably finds the true peak from there in every case tested, see
- * below). $f_g(0)$ is convention-dependent -- exactly $g$ in the TRACE_DET
- * (ellipticity) convention, but $2g/(1+\lvert g\rvert^2)$ in the TRACE
- * (distortion) convention -- so it is computed via the actual forward map
- * rather than hardcoded as $g$, since hardcoding it would miss the peak for
- * narrow, off-center TRACE-convention populations.
+ * **Puncture correction.** The integrand evaluates only the bracket
+ * $N_2(\epsilon_\mathrm{obs}-\chi_L)-N_0$, $N_0=N_2(\epsilon_\mathrm{obs}-\chi_{L0})$,
+ * $\chi_{L0}=f_g(0)$ (the population's own peak location under $g$,
+ * unrelated to $h$): $N_0$ is added back once after the cubature, using
+ * $\int P_\mathrm{pop}=1$ exactly (valid because $\chi_I$ ranges over the
+ * whole disc, never a truncated subset). This makes the integrand vanish
+ * smoothly at $\chi_I=0$ for $\alpha\geq1$ populations instead of the raw
+ * integrand's sharp near-divergent peak there, so Divonne needs far fewer
+ * evaluations. The bracket itself is $N_0\,\mathrm{expm1}(\Delta)$,
+ * $\Delta=(d_0-d_i)/(2\sigma_\mathrm{noise}^2)$, whenever $\Delta$ stays
+ * below a generous safety bound (expm1 avoids the cancellation direct
+ * subtraction would suffer near $\Delta=0$); above that bound expm1 would
+ * overflow exactly like $\exp$ would, with no cancellation left to protect
+ * against either, so the bracket falls back to the plain difference of two
+ * individually-bounded noise evaluations instead.
  *
- * Divonne's explicit peak hints matter: a fixed-degree base rule with no
- * explicit hints (e.g. Cuba's Cuhre) has no mechanism to notice an isolated
- * feature it never samples near, and can return a confidently wrong result
- * (off by orders of magnitude, at tight reltol) whenever the population is
- * narrow relative to the integration box and off-center. Because Divonne is
- * told where to look, @bound can be a single generous fixed constant:
- * shrinking it does not help an already-hint-found narrow feature, but does
- * progressively truncate a broad population's disc-spanning support (a few
- * units already covers the disc for any population). Verified against an
- * independent scipy reference across populations from $\sigma=0.30$ down to
- * $\sigma=0.001$, five different $g$/$\epsilon_\mathrm{obs}$/
- * $\sigma_\mathrm{noise}$ geometries (including near the disc boundary), and
- * #NcGalaxyShapePopBeta concentrations up to $\nu=10^5$: every case matches
- * to $\sim\!10^{-6}$ relative accuracy or better. See
- * docs/theory/wl_shape_factor_history.md for earlier implementations of
- * this class that were tried and rejected.
+ * **Cubature.** Divonne (ncm_integrate_2dim_divonne()) integrates $\psi$
+ * directly in its own polar coordinates $(\rho,\theta)\in[0,1)\times[-\pi,\pi)$
+ * -- an exact, finite domain covering the whole disc at $\rho=1$, with no
+ * asymptotic tail to truncate -- seeded with two peak hints: $\psi\approx0$
+ * (trivial, always the exact noise peak) and the $\psi$-preimage of
+ * $\chi_{L0}=f_g(0)$ (the population's peak location under the common
+ * assumption that $P_\mathrm{pop}$ is radially symmetric about $\chi_I=0$;
+ * only approximate otherwise, e.g. #NcGalaxyShapePopBeta with $\mu$ away
+ * from 0, but Divonne's stratified search still finds the true peak from
+ * there). A third hint (the peak-ring point closest to $\epsilon_\mathrm{obs}$)
+ * is added when the population's mode is not at $\chi_I=0$.
  *
  * The integrand clamps any non-finite evaluation to zero before returning:
- * Cuba can segfault outright on a NaN/Inf sample (reproduced directly), and
- * some populations have a genuine, mathematically correct divergence at a
- * disc point (e.g. #NcGalaxyShapePopBeta with $\alpha<1$ diverges at $x=0$,
- * which can coincide with a peak hint).
+ * Cuba can segfault outright on a NaN/Inf sample, and some populations have
+ * a genuine, mathematically correct divergence at a disc point (e.g.
+ * #NcGalaxyShapePopBeta with $\alpha<1$ diverges at $x=0$, which can
+ * coincide with a peak hint).
  *
  * This scheme is exact but substantially more expensive per evaluation than
- * `VarAdd` (a full 2D cubature vs. one closed-form expression): Divonne with
- * two hints typically costs $\sim\!100\,\mathrm{ms}$ per evaluation, rising to several
- * seconds for extremely concentrated populations. It is meant as an accuracy
- * reference / fallback for regimes where the variance-add approximation is
- * not trusted, not as a routine replacement in large-catalog likelihood
- * evaluations. Cuba's own fork()-based internal parallelism is disabled
- * globally by ncm_cfg_init() (`cubacores(0, 0)`), so this is safe to call
- * concurrently from multiple OpenMP threads.
+ * `VarAdd` (a full 2D cubature vs. one closed-form expression). It is meant
+ * as an accuracy reference / fallback for regimes where the variance-add
+ * approximation is not trusted, not as a routine replacement in
+ * large-catalog likelihood evaluations. Cuba's own fork()-based internal
+ * parallelism is disabled globally by ncm_cfg_init() (`cubacores(0, 0)`),
+ * so this is safe to call concurrently from multiple OpenMP threads.
+ *
+ * See docs/theory/wl_shape_factor_history.md for the evidence behind this
+ * design and earlier approaches tried and rejected.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -132,8 +119,16 @@
 #include <complex.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-#define NC_GALAXY_SHAPE_FACTOR_QUAD_DEFAULT_BOUND  8.0
 #define NC_GALAXY_SHAPE_FACTOR_QUAD_DEFAULT_RELTOL 1.0e-7
+
+/* exp(50) ~ 5e21, nowhere near double overflow (~exp(709)) -- generous
+ * margin, not a tight cutoff (see the integrand's own doc). */
+#define NC_GALAXY_SHAPE_FACTOR_QUAD_EXPM1_SAFE_BOUND 50.0
+
+/* rho=0 is a coordinate singularity of the polar (rho,theta) domain
+ * (jac_polar=rho vanishes there); nudged off it so the psi~0 hint lands
+ * where the integrand is actually large instead of exactly zero. */
+#define NC_GALAXY_SHAPE_FACTOR_QUAD_RHO_HINT_EPS 1.0e-6
 
 struct _NcGalaxyShapeFactorQuad
 {
@@ -143,19 +138,13 @@ struct _NcGalaxyShapeFactorQuad
 typedef struct _NcGalaxyShapeFactorQuadPrivate
 {
   /* Convention specialization resolved once at construction (ellip-conv is
-   * CONSTRUCT_ONLY), keeping the switch out of the per-evaluation path.
-   * apply_shear_inv and lndet_jac are evaluated at chi_L (the substitution
-   * point) inside the integrand; no shear-map call is needed for
-   * re-centering the box (see the class doc). apply_shear (forward) is used
-   * only once per evaluation, to place the population-peak hint at the
-   * convention-correct f_g(0) -- this is g exactly for TRACE_DET, but
-   * 2g/(1+|g|^2) for TRACE, so it cannot be hardcoded as g. */
+   * CONSTRUCT_ONLY), keeping the switch out of the per-evaluation path. */
   complex double (*apply_shear) (complex double g, complex double chi_i);
   complex double (*apply_shear_inv) (complex double g, complex double chi_L);
+  complex double (*shear_at_origin) (complex double target);
 
-  gdouble (*lndet_jac) (complex double g, complex double chi_L);
+  gdouble (*det_jac) (complex double g, complex double chi_L);
 
-  gdouble bound;
   gdouble reltol;
 } NcGalaxyShapeFactorQuadPrivate;
 
@@ -164,7 +153,6 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyShapeFactorQuad, nc_galaxy_shape_factor_quad
 enum
 {
   PROP_0,
-  PROP_BOUND,
   PROP_RELTOL,
   PROP_LEN,
 };
@@ -175,36 +163,55 @@ typedef struct _QuadIntArg
 {
   NcGalaxyShapePop *pop;
   NcGalaxyShapePopData *pop_data;
+  complex double (*apply_shear) (complex double g, complex double chi_i);
   complex double (*apply_shear_inv) (complex double g, complex double chi_L);
 
-  gdouble (*lndet_jac) (complex double g, complex double chi_L);
+  gdouble (*det_jac) (complex double g, complex double chi_L);
 
   complex double g;
+  complex double h;
   complex double eps_obs;
-  gdouble std_noise;
+  gdouble noise_var;
+  gdouble d0;
+  gdouble N0;
 } QuadIntArg;
 
+/* See this file's class doc for the psi-substitution and puncture
+ * correction this implements. */
 static gdouble
-_nc_galaxy_shape_factor_quad_integrand (gdouble u, gdouble v, gpointer userdata)
+_nc_galaxy_shape_factor_quad_integrand (gdouble rho, gdouble theta, gpointer userdata)
 {
   QuadIntArg * const arg     = (QuadIntArg *) userdata;
-  const gdouble rho2         = u * u + v * v;
-  const gdouble s2           = 1.0 + rho2;
-  const gdouble jac          = 1.0 / gsl_pow_2 (s2);
-  const complex double chi_L = (u + I * v) / sqrt (s2);
+  const gdouble jac_polar    = rho;
+  const complex double psi   = rho * cexp (I * theta);
+  const complex double chi_L = arg->apply_shear (arg->h, psi);
   const complex double chi_i = arg->apply_shear_inv (arg->g, chi_L);
   const gdouble x_i          = gsl_pow_2 (creal (chi_i)) + gsl_pow_2 (cimag (chi_i));
-  const gdouble p_pop        = nc_galaxy_shape_pop_eval_p (arg->pop, arg->pop_data, x_i) / M_PI;
-  const gdouble jac_inv      = exp (arg->lndet_jac (arg->g, chi_L));
+  const gdouble r_i          = sqrt (x_i);
+  const gdouble p_pop        = nc_galaxy_shape_pop_eval_p (arg->pop, arg->pop_data, r_i) / (2.0 * M_PI * r_i);
+  const gdouble jac_inv      = arg->det_jac (arg->g, chi_L);
+  const gdouble jac_psi      = arg->det_jac (-arg->h, psi);
   const complex double delta = arg->eps_obs - chi_L;
-  const gdouble noise_var    = gsl_pow_2 (arg->std_noise);
-  const gdouble noise        = exp (-(gsl_pow_2 (creal (delta)) + gsl_pow_2 (cimag (delta))) / (2.0 * noise_var)) / (2.0 * M_PI * noise_var);
-  const gdouble ret          = p_pop * jac_inv * noise * jac;
+  const gdouble d_i          = gsl_pow_2 (creal (delta)) + gsl_pow_2 (cimag (delta));
+  const gdouble delta_ratio  = (arg->d0 - d_i) / (2.0 * arg->noise_var);
+  gdouble bracket, ret;
 
-  /* Some populations have a genuine divergence at a disc point (e.g.
-   * #NcGalaxyShapePopBeta with alpha<1 at x_i=0, which can coincide with a
-   * peak hint); Cuba can segfault outright on a non-finite sample
-   * (reproduced directly), so clamp rather than propagate. */
+  if (delta_ratio <= NC_GALAXY_SHAPE_FACTOR_QUAD_EXPM1_SAFE_BOUND)
+  {
+    bracket = arg->N0 * expm1 (delta_ratio);
+  }
+  else
+  {
+    const gdouble noise_i = exp (-d_i / (2.0 * arg->noise_var)) / (2.0 * M_PI * arg->noise_var);
+
+    bracket = noise_i - arg->N0;
+  }
+
+  ret = p_pop * jac_inv * jac_psi * jac_polar * bracket;
+
+  /* Cuba can segfault on a non-finite sample, so clamp rather than
+   * propagate (a genuine population divergence, e.g. Beta with alpha<1 at
+   * r_i=0, can coincide with a peak hint). */
   return isfinite (ret) ? ret : 0.0;
 }
 
@@ -235,35 +242,13 @@ _nc_galaxy_shape_factor_quad_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
 }
 
-/* (u,v) preimage of a disc point chi under the (u,v)->chi bijection, clamped
- * away from |chi|=1 (the disc boundary, where the preimage diverges). */
-static void
-_nc_galaxy_shape_factor_quad_preimage (complex double chi, gdouble *u, gdouble *v)
-{
-  const gdouble abs_chi         = cabs (chi);
-  const gdouble abs_chi_clamped = MIN (abs_chi, 0.999);
-  const complex double centered = (abs_chi > 0.0) ? chi * (abs_chi_clamped / abs_chi) : chi;
-  const gdouble scale           = 1.0 / sqrt (1.0 - gsl_pow_2 (abs_chi_clamped));
-
-  *u = creal (centered) * scale;
-  *v = cimag (centered) * scale;
-}
-
-/* Refines theta, the angle of a candidate chi_I=rho_mode*exp(I*theta) on the
- * ring where a non-radially-symmetric population peaks (rho_mode>0, e.g.
- * NcGalaxyShapePopBeta with mu away from 0), so that its image f_g(chi_I)
- * lands as close as possible to eps_obs. The population density is exactly
- * flat along this ring by construction (it depends only on x=|chi_I|^2), so
- * this is the whole optimization: no population term to weigh in. A fixed
- * handful of Newton steps on d/dtheta |eps_obs-f_g(rho_mode e^{i theta})|^2,
- * with central-difference derivatives through the already-dispatched forward
- * map (convention-agnostic, no per-convention algebra duplicated), seeded at
- * the phase of the naive noiseless intrinsic preimage -- verified numerically
- * to already sit within a few hundredths of a radian of the true optimum,
- * with 3 Newton steps then closing the rest of the gap to floating-point
- * precision. This runs once per _eval() call (the hint, not the integrand),
- * so a handful of extra apply_shear() calls is negligible next to Divonne's
- * own ~100ms/evaluation cost. */
+/* Refines theta so chi_I=rho_mode*exp(I*theta), on the ring where a
+ * non-radially-symmetric population peaks, maps as close as possible to
+ * eps_obs under f_g. The population density is flat along this ring (it
+ * depends only on x=|chi_I|^2), so this is a pure geometric optimization:
+ * 3 Newton steps on d/dtheta |eps_obs-f_g(rho_mode e^{i theta})|^2 with
+ * central-difference derivatives, seeded at the naive noiseless preimage's
+ * phase. */
 static gdouble
 _nc_galaxy_shape_factor_quad_refine_theta (complex double ( *apply_shear ) (complex double, complex double),
                                            const complex double g, const gdouble rho_mode,
@@ -294,79 +279,94 @@ _nc_galaxy_shape_factor_quad_refine_theta (complex double ( *apply_shear ) (comp
 }
 
 static gdouble
-_nc_galaxy_shape_factor_quad_eval (NcGalaxyShapeFactorQuad *gsfq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
+_nc_galaxy_shape_factor_quad_eval (NcGalaxyShapeFactorQuad *gsfq, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, const gdouble std_noise, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
 {
   NcGalaxyShapeFactorQuadPrivate * const self = nc_galaxy_shape_factor_quad_get_instance_private (gsfq);
   const complex double g                      = g_1 + I * g_2;
   const complex double eps_obs                = epsilon_obs_1 + I * epsilon_obs_2;
-  const gdouble mode_x                        = nc_galaxy_shape_pop_get_mode_x (pop, data->pop_data);
+
+  /* shear_at_origin() requires |eps_obs|<1 strictly; unlike FixedQuad, this
+   * class has no fallback for an out-of-disc eps_obs (a real possibility
+   * once noise is added), so fail loudly instead of returning a wrong
+   * answer. */
+  if (cabs (eps_obs) >= 1.0)
+    g_error ("nc_galaxy_shape_factor_quad: |eps_obs|=% .6g >= 1 at eps_obs=(% .6g,% .6g) -- "
+             "outside this class' valid domain; use NcGalaxyShapeFactorFixedQuad instead.",
+             cabs (eps_obs), epsilon_obs_1, epsilon_obs_2);
+
+  const complex double h      = self->shear_at_origin (eps_obs);
+  const complex double chi_L0 = self->apply_shear (g, 0.0);
+  const complex double delta0 = eps_obs - chi_L0;
+  const gdouble noise_var     = gsl_pow_2 (std_noise);
+  const gdouble d0            = gsl_pow_2 (creal (delta0)) + gsl_pow_2 (cimag (delta0));
+  const gdouble N0            = exp (-d0 / (2.0 * noise_var)) / (2.0 * M_PI * noise_var);
+  const gdouble mode_r        = nc_galaxy_shape_pop_get_mode_r (pop, pop_data);
   QuadIntArg arg;
   NcmIntegrand2dim integ = {&arg, &_nc_galaxy_shape_factor_quad_integrand};
-  gdouble u0, v0, ug, vg, result, error;
+  gdouble result, error;
   gdouble xgiven[6];
   gint ngiven;
 
-  /* Two peak hints for Divonne, always: the exact preimage of eps_obs (the
-   * noise kernel's peak, exact -- also the box center) and the preimage of
-   * f_g(0) = self->apply_shear(g, 0) (the population's peak location under
-   * the common radially-symmetric-about-0 assumption; only approximate
-   * otherwise, but sufficient in every case tested -- see the class doc).
-   * f_g(0) is convention-dependent (g exactly for TRACE_DET, 2g/(1+|g|^2)
-   * for TRACE), so it must go through the actual forward map, not be
-   * hardcoded as g. ncm_integrate_2dim_divonne() mutates xgiven in place
-   * (normalizes it to the box), so it must be freshly populated on every
-   * call; it is a local, per-call array here, so that is automatic. */
-  _nc_galaxy_shape_factor_quad_preimage (eps_obs, &u0, &v0);
-  _nc_galaxy_shape_factor_quad_preimage (self->apply_shear (g, 0.0), &ug, &vg);
-  xgiven[0] = ug;
-  xgiven[1] = vg;
-  xgiven[2] = u0;
-  xgiven[3] = v0;
-  ngiven    = 2;
-
-  /* Third hint, only for a population whose peak is not at chi_I=0 (e.g. a
-   * concentrated NcGalaxyShapePopBeta with mu away from 0): the point on the
-   * peak ring |chi_I|=rho_mode closest, after the forward map, to eps_obs
-   * (see _nc_galaxy_shape_factor_quad_refine_theta() doc). */
-  if (mode_x > 0.0)
+  /* Two peak hints, as (rho,theta) pairs: psi~0 (the noise peak, nudged off
+   * the rho=0 coordinate singularity) and the population's peak chi_L0,
+   * converted to psi-space via apply_shear(-h,.). */
+  xgiven[0] = NC_GALAXY_SHAPE_FACTOR_QUAD_RHO_HINT_EPS;
+  xgiven[1] = 0.0;
   {
-    const gdouble rho_mode           = sqrt (mode_x);
+    const complex double psi_pop_peak = self->apply_shear (-h, chi_L0);
+
+    xgiven[2] = cabs (psi_pop_peak);
+    xgiven[3] = carg (psi_pop_peak);
+  }
+  ngiven = 2;
+
+  /* Third hint, only when the population's peak ring is not at chi_I=0: the
+   * point on |chi_I|=rho_mode closest, after the forward map, to eps_obs
+   * (_nc_galaxy_shape_factor_quad_refine_theta()), converted to psi-space
+   * the same way. */
+  if (mode_r > 0.0)
+  {
+    const gdouble rho_mode           = mode_r;
     const complex double chi_i_naive = self->apply_shear_inv (g, eps_obs);
     const gdouble theta0             = carg (chi_i_naive);
     const gdouble theta              = _nc_galaxy_shape_factor_quad_refine_theta (self->apply_shear, g, rho_mode, eps_obs, theta0);
     const complex double chi_i_hint  = rho_mode * cexp (I * theta);
-    gdouble u2, v2;
+    const complex double chi_L_hint  = self->apply_shear (g, chi_i_hint);
+    const complex double psi_hint    = self->apply_shear (-h, chi_L_hint);
 
-    _nc_galaxy_shape_factor_quad_preimage (self->apply_shear (g, chi_i_hint), &u2, &v2);
-    xgiven[4] = u2;
-    xgiven[5] = v2;
+    xgiven[4] = cabs (psi_hint);
+    xgiven[5] = carg (psi_hint);
     ngiven    = 3;
   }
 
   arg.pop             = pop;
-  arg.pop_data        = data->pop_data;
+  arg.pop_data        = pop_data;
+  arg.apply_shear     = self->apply_shear;
   arg.apply_shear_inv = self->apply_shear_inv;
-  arg.lndet_jac       = self->lndet_jac;
+  arg.det_jac         = self->det_jac;
   arg.g               = g;
+  arg.h               = h;
   arg.eps_obs         = eps_obs;
-  arg.std_noise       = data->std_noise;
+  arg.noise_var       = noise_var;
+  arg.d0              = d0;
+  arg.N0              = N0;
 
-  ncm_integrate_2dim_divonne (&integ, u0 - self->bound, v0 - self->bound, u0 + self->bound, v0 + self->bound,
+  ncm_integrate_2dim_divonne (&integ, 0.0, -M_PI, 1.0, M_PI,
                               self->reltol, 0.0, ngiven, 2, xgiven, &result, &error);
 
-  return result;
+  return N0 + result;
 }
 
 static gdouble
 _nc_galaxy_shape_factor_quad_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
 {
-  return _nc_galaxy_shape_factor_quad_eval (NC_GALAXY_SHAPE_FACTOR_QUAD (gsf), pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2);
+  return _nc_galaxy_shape_factor_quad_eval (NC_GALAXY_SHAPE_FACTOR_QUAD (gsf), pop, data->pop_data, data->std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2);
 }
 
 static gdouble
 _nc_galaxy_shape_factor_quad_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
 {
-  return log (_nc_galaxy_shape_factor_quad_eval (NC_GALAXY_SHAPE_FACTOR_QUAD (gsf), pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2));
+  return log (_nc_galaxy_shape_factor_quad_eval (NC_GALAXY_SHAPE_FACTOR_QUAD (gsf), pop, data->pop_data, data->std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2));
 }
 
 /* GObject boilerplate --------------------------------------------------- */
@@ -378,8 +378,8 @@ nc_galaxy_shape_factor_quad_init (NcGalaxyShapeFactorQuad *gsfq)
 
   self->apply_shear     = NULL;
   self->apply_shear_inv = NULL;
-  self->lndet_jac       = NULL;
-  self->bound           = NC_GALAXY_SHAPE_FACTOR_QUAD_DEFAULT_BOUND;
+  self->shear_at_origin = NULL;
+  self->det_jac         = NULL;
   self->reltol          = NC_GALAXY_SHAPE_FACTOR_QUAD_DEFAULT_RELTOL;
 }
 
@@ -398,12 +398,14 @@ _nc_galaxy_shape_factor_quad_constructed (GObject *object)
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
         self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace;
         self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace;
-        self->lndet_jac       = &nc_wl_ellipticity_lndet_jac_trace;
+        self->shear_at_origin = &nc_wl_ellipticity_shear_at_origin_trace;
+        self->det_jac         = &nc_wl_ellipticity_det_jac_trace;
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
         self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace_det;
         self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace_det;
-        self->lndet_jac       = &nc_wl_ellipticity_lndet_jac_trace_det;
+        self->shear_at_origin = &nc_wl_ellipticity_shear_at_origin_trace_det;
+        self->det_jac         = &nc_wl_ellipticity_det_jac_trace_det;
         break;
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */
@@ -420,9 +422,6 @@ _nc_galaxy_shape_factor_quad_set_property (GObject *object, guint prop_id, const
 
   switch (prop_id)
   {
-    case PROP_BOUND:
-      nc_galaxy_shape_factor_quad_set_bound (gsfq, g_value_get_double (value));
-      break;
     case PROP_RELTOL:
       nc_galaxy_shape_factor_quad_set_reltol (gsfq, g_value_get_double (value));
       break;
@@ -441,9 +440,6 @@ _nc_galaxy_shape_factor_quad_get_property (GObject *object, guint prop_id, GValu
 
   switch (prop_id)
   {
-    case PROP_BOUND:
-      g_value_set_double (value, nc_galaxy_shape_factor_quad_get_bound (gsfq));
-      break;
     case PROP_RELTOL:
       g_value_set_double (value, nc_galaxy_shape_factor_quad_get_reltol (gsfq));
       break;
@@ -470,25 +466,6 @@ nc_galaxy_shape_factor_quad_class_init (NcGalaxyShapeFactorQuadClass *klass)
   object_class->set_property = &_nc_galaxy_shape_factor_quad_set_property;
   object_class->get_property = &_nc_galaxy_shape_factor_quad_get_property;
   object_class->finalize     = &_nc_galaxy_shape_factor_quad_finalize;
-
-  /**
-   * NcGalaxyShapeFactorQuad:bound:
-   *
-   * Half-width $B$ of the box $[u_0-B,u_0+B]\times[v_0-B,v_0+B]$ (centered
-   * on the exact preimage $(u_0,v_0)$ of $\epsilon_\mathrm{obs}$, see the
-   * class documentation) over which the plane-substituted integral is
-   * evaluated. Keep this generous: shrinking it does not help Divonne find
-   * an already-hinted narrow feature, but does progressively truncate a
-   * broad population's disc-spanning support; a few units already covers
-   * the disc for any population.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_BOUND,
-                                   g_param_spec_double ("bound",
-                                                        NULL,
-                                                        "Plane-integration box half-width",
-                                                        0.0, G_MAXDOUBLE, NC_GALAXY_SHAPE_FACTOR_QUAD_DEFAULT_BOUND,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcGalaxyShapeFactorQuad:reltol:
@@ -567,38 +544,6 @@ nc_galaxy_shape_factor_quad_clear (NcGalaxyShapeFactorQuad **gsfq)
 }
 
 /**
- * nc_galaxy_shape_factor_quad_set_bound:
- * @gsfq: a #NcGalaxyShapeFactorQuad
- * @bound: the new box half-width $B$
- *
- * Sets the half-width of the $[-B,B]^2$ plane-integration box.
- *
- */
-void
-nc_galaxy_shape_factor_quad_set_bound (NcGalaxyShapeFactorQuad *gsfq, const gdouble bound)
-{
-  NcGalaxyShapeFactorQuadPrivate * const self = nc_galaxy_shape_factor_quad_get_instance_private (gsfq);
-
-  g_assert_cmpfloat (bound, >, 0.0);
-
-  self->bound = bound;
-}
-
-/**
- * nc_galaxy_shape_factor_quad_get_bound:
- * @gsfq: a #NcGalaxyShapeFactorQuad
- *
- * Returns: the box half-width $B$.
- */
-gdouble
-nc_galaxy_shape_factor_quad_get_bound (NcGalaxyShapeFactorQuad *gsfq)
-{
-  NcGalaxyShapeFactorQuadPrivate * const self = nc_galaxy_shape_factor_quad_get_instance_private (gsfq);
-
-  return self->bound;
-}
-
-/**
  * nc_galaxy_shape_factor_quad_set_reltol:
  * @gsfq: a #NcGalaxyShapeFactorQuad
  * @reltol: the new cubature relative tolerance
@@ -628,5 +573,40 @@ nc_galaxy_shape_factor_quad_get_reltol (NcGalaxyShapeFactorQuad *gsfq)
   NcGalaxyShapeFactorQuadPrivate * const self = nc_galaxy_shape_factor_quad_get_instance_private (gsfq);
 
   return self->reltol;
+}
+
+/**
+ * nc_galaxy_shape_factor_quad_eval_direct:
+ * @gsfq: a #NcGalaxyShapeFactorQuad
+ * @pop: a #NcGalaxyShapePop
+ * @g_1: reduced shear, real component
+ * @g_2: reduced shear, imaginary component
+ * @epsilon_obs_1: observed ellipticity/distortion, real component
+ * @epsilon_obs_2: observed ellipticity/distortion, imaginary component
+ * @std_noise: measurement noise standard deviation
+ *
+ * Evaluates the marginal directly from the raw physical parameters,
+ * building and preparing a fresh #NcGalaxyShapePopData internally so a
+ * caller never needs the #NcGalaxyShapeFactorData/#NcmMSet machinery (and
+ * cannot forget to prepare it -- an unprepared #NcGalaxyShapePopData
+ * silently reads back a wrong placeholder density, see
+ * nc_galaxy_shape_pop_prepare()). Intended for tests and standalone
+ * evaluation; nc_galaxy_shape_factor_eval_marginal() is the entry point for
+ * catalog-scale use, which reuses one #NcGalaxyShapePopData per galaxy
+ * across many @g_1/@g_2 evaluations instead of rebuilding it every call.
+ *
+ * Returns: $P(\epsilon_\mathrm{obs} \mid g)$.
+ */
+gdouble
+nc_galaxy_shape_factor_quad_eval_direct (NcGalaxyShapeFactorQuad *gsfq, NcGalaxyShapePop *pop, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble std_noise)
+{
+  NcGalaxyShapePopData *pop_data = nc_galaxy_shape_pop_data_new (pop);
+  gdouble result;
+
+  nc_galaxy_shape_pop_prepare (pop, pop_data);
+  result = _nc_galaxy_shape_factor_quad_eval (gsfq, pop, pop_data, std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2);
+  nc_galaxy_shape_pop_data_unref (pop_data);
+
+  return result;
 }
 

@@ -47,10 +47,10 @@ G_DECLARE_DERIVABLE_TYPE (NcGalaxyPositionFactor, nc_galaxy_position_factor, NC,
 typedef struct _NcGalaxyPositionFactorData NcGalaxyPositionFactorData;
 
 /*
- * Integrand callback: the per-galaxy position density p(ra, dec | I) evaluated
- * at the galaxy's (ra, dec) stored in @data. The position is observed directly
- * (no scatter kernel, no marginalization), so there is no integration variable
- * here — the callback is evaluated at the fixed measured position.
+ * Integrand callback: the per-galaxy position density p(ra, dec | I) evaluated at the
+ * galaxy's (ra, dec) stored in @data. The position is observed directly (no scatter
+ * kernel, no marginalization), so there is no integration variable here — the callback
+ * is evaluated at the fixed measured position.
  */
 NCM_UTIL_DECLARE_CALLBACK (NcGalaxyPositionFactorIntegrand,
                            NC_GALAXY_POSITION_FACTOR_INTEGRAND,
@@ -70,25 +70,15 @@ struct _NcGalaxyPositionFactorClass
   void (*prepare) (NcGalaxyPositionFactor *gspf, NcmMSet *mset);
   NcGalaxyPositionFactorIntegrand *(*integ) (NcGalaxyPositionFactor *gspf, NcmMSet *mset, gboolean use_lnp);
 
-  /* Factory-level change-detection: get_hash() returns an opaque value that
-   * changes whenever prepare() refreshed something relevant (default:
-   * a constant, "never changes"); update_data() unconditionally refreshes
-   * one galaxy's cached state from what the last prepare() call resolved
-   * (default: no-op). Callers (e.g. the cluster-WL orchestrator) call
-   * prepare() once, compare get_hash() against their own last-seen value,
-   * and call update_data() per galaxy only when it changed -- see
-   * #NcGalaxyShapeFactor's analogous (but concrete, since that machinery is
-   * identical across all its subclasses) radius/optzs/pop hashes for the
-   * full rationale. Unlike Shape, these stay virtual: different concrete
-   * Position schemes may cache completely different things. */
+  /* Factory-level change-detection:
+   *
+   * - get_hash() returns an opaque value that changes whenever prepare() refreshed
+   *   something relevant (default: a constant, "never changes");
+   * - update_data() unconditionally refreshes one galaxy's cached state from what the
+   *   last prepare() call resolved (default: no-op).
+   */
   guint64 (*get_hash) (NcGalaxyPositionFactor *gspf);
   void (*update_data) (NcGalaxyPositionFactor *gspf, NcGalaxyPositionFactorData *data);
-
-  /* Human-readable one-line description of this scheme's own configuration
-   * (default: the concrete type name). Consumed by orchestrators such as
-   * #NcDataClusterWLFactor to build a richer NcmData:desc than the bare
-   * type name -- override to report scheme-specific configuration (e.g.
-   * the sky footprint bounds for the flat scheme). */
   gchar *(*get_desc) (NcGalaxyPositionFactor *gspf);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
@@ -96,9 +86,9 @@ struct _NcGalaxyPositionFactorClass
 };
 
 /*
- * Per-galaxy data fragment. `ra`/`dec` are the inline base fields (the measured
- * sky position); `ldata` is the scheme's opaque fragment, packed to / unpacked
- * from an NcGalaxyWLObs via the fragment vtable below.
+ * Per-galaxy data fragment. `ra`/`dec` are the inline base fields (the measured sky
+ * position); `ldata` is the scheme's opaque fragment, packed to / unpacked from an
+ * NcGalaxyWLObs via the fragment vtable below.
  */
 struct _NcGalaxyPositionFactorData
 {
