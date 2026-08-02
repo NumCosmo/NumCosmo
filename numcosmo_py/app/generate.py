@@ -497,7 +497,7 @@ class ClusterWL(ABC):
 
     cluster_mass_max: Annotated[
         float, typer.Option(help="Maximum cluster mass.", show_default=True)
-    ] = 1.0e15
+    ] = 1.0e16
 
     r_min: Annotated[float, typer.Option(help="Minimum radius.", show_default=True)] = (
         0.3 / 0.7
