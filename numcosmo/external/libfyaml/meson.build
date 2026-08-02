@@ -95,6 +95,8 @@ disable_warnings = [
     '-Wno-unused-but-set-parameter',
     '-Wno-type-limits',
     '-Wno-array-bounds',
+    '-Wno-discarded-qualifiers',
+    '-Wno-stringop-overflow',
 ]
 
 foreach flag : disable_warnings
