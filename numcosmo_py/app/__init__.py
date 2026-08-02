@@ -42,6 +42,7 @@ from .catalog import (
     DerivedQuantityError,
     GetBestFit,
     DumpMset,
+    CheckM2lnL,
 )
 from .generate import (
     GeneratePlanck,
@@ -54,7 +55,11 @@ from .generate import (
     GenerateDEWSpline,
 )
 from .cluster_richness import RunClusterRichnessAnalysis
-from .inspect import InspectSummary, InspectClusterNCounts
+from .inspect import (
+    InspectSummary,
+    InspectClusterNCounts,
+    InspectGalaxyShapeIntegrand,
+)
 from .xcor import ViewKernel, ListKernels
 
 # Attempt optional import of the Firecrown-NumCosmo connector.
@@ -215,6 +220,13 @@ CAT_DUMP_MSET_CMD: CMDArg = {
     "help": "Dump the model-set stored in a catalog file as YAML.",
 }
 
+CAT_CHECK_M2LNL_CMD: CMDArg = {
+    "name": "check-m2lnl",
+    "no_args_is_help": True,
+    "help": "Recompute -2ln(L) for every row of a catalog and compare against "
+    "the stored value.",
+}
+
 GEN_PLANCK_CMD: CMDArg = {
     "name": "planck18",
     "no_args_is_help": True,
@@ -292,6 +304,15 @@ INSPECT_CLUSTER_NCOUNTS_CMD: CMDArg = {
     "help": "Plot data-vector, covariance/correlation, and optional S_ij diagnostics.",
 }
 
+INSPECT_GALAXY_SHAPE_INTEGRAND_CMD: CMDArg = {
+    "name": "galaxy-shape-integrand",
+    "no_args_is_help": True,
+    "help": (
+        "Plot a heatmap of the shear-marginalization integrand for one "
+        "galaxy, to visualize the noise-kernel vs population-density pull."
+    ),
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -320,6 +341,7 @@ app_cat.command(**CAT_PARAM_EVOLUTION_CMD)(ParameterEvolution)
 app_cat.command(**CAT_DERIVED_ERROR_CMD)(DerivedQuantityError)
 app_cat.command(**CAT_GET_BEST_FIT_CMD)(GetBestFit)
 app_cat.command(**CAT_DUMP_MSET_CMD)(DumpMset)
+app_cat.command(**CAT_CHECK_M2LNL_CMD)(CheckM2lnL)
 # ------------------------------------------------------------------------------
 # Installing experiment generation subcommands
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
@@ -336,6 +358,7 @@ app_analysis.command(**ANALYSIS_CLUSTER_RICHNESS_CMD)(RunClusterRichnessAnalysis
 # Installing inspect subcommands
 app_inspect.command(**INSPECT_SUMMARY_CMD)(InspectSummary)
 app_inspect.command(**INSPECT_CLUSTER_NCOUNTS_CMD)(InspectClusterNCounts)
+app_inspect.command(**INSPECT_GALAXY_SHAPE_INTEGRAND_CMD)(InspectGalaxyShapeIntegrand)
 # Installing xcor kernel subcommands
 app_xcor_kernel.command(**XCOR_KERNEL_VIEW_CMD)(ViewKernel)
 app_xcor_kernel.command(**XCOR_KERNEL_LIST_CMD)(ListKernels)

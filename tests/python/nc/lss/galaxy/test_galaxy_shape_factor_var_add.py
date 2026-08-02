@@ -247,6 +247,38 @@ def test_eval_at_nodes_matches_integrand(ellip_conv, galaxy):
     assert_allclose(out_new.dup_array(), expected, rtol=1.0e-9)
 
 
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_eval_at_nodes_gt0_memoized_correctly(ellip_conv):
+    """eval_at_nodes() memoizes the z<=z_cl (gt=0) branch's eval_marginal()
+    call instead of repeating it per foreground node (a pure optimization,
+    see nc_galaxy_shape_factor.c's own eval_at_nodes() docs): every node
+    below the cluster's own z=0.2 must produce the exact same value (the
+    memoization property itself), and that value must match what a
+    single-node call gives (confirming the memoized value is the correct
+    one, not just internally consistent)."""
+    mset = _build_mset()
+    new = _build_new(mset, ellip_conv)
+    gsf, s_data, _, _ = new
+
+    _set_galaxy(new, _GALAXIES[2])  # z=0.15, below the cluster's z=0.2
+
+    z_nodes = Ncm.Vector.new_array([0.05, 0.10, 0.15, 0.19])
+    out = Ncm.Vector.new(z_nodes.len())
+
+    gsf.prepare_data_array_at_nodes(mset, [s_data], [z_nodes], True, True, True)
+    gsf.eval_at_nodes(mset, s_data, z_nodes, out)
+
+    vals = out.dup_array()
+    assert_allclose(vals, [vals[0]] * len(vals), rtol=0.0, atol=0.0)
+
+    single_node = Ncm.Vector.new_array([0.05])
+    single_out = Ncm.Vector.new(1)
+    gsf.prepare_data_array_at_nodes(mset, [s_data], [single_node], True, True, True)
+    gsf.eval_at_nodes(mset, s_data, single_node, single_out)
+
+    assert_allclose(vals[0], single_out.get(0), rtol=0.0, atol=0.0)
+
+
 _DIRECT_ESTIMATE_FROZEN = {
     "TRACE": (
         0.0026892385874255896,

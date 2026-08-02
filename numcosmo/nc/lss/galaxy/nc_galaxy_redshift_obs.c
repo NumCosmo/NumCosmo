@@ -29,13 +29,12 @@
  * Abstract model for the photometric-redshift observable model $P(\mathrm{data}|z)$.
  *
  * This small #NcmModel describes the conditional density of a per-galaxy
- * photometric-redshift observation given the true redshift $z$. The whole
- * observation (e.g. the point estimate $z_\mathrm{phot}$ and its scatter
- * $\sigma_0$) is carried per-galaxy in a #NcGalaxyRedshiftObsData; the
- * observation's structure is defined by the observable model itself, so the redshift
- * calculator that convolves this kernel with the true-redshift distribution
- * $P(z|I)$ stays observation-agnostic and only supplies the integration
- * variable $z$.
+ * photometric-redshift observation given the true redshift $z$. The whole observation
+ * (e.g. the point estimate $z_\mathrm{phot}$ and its scatter $\sigma_0$) is carried
+ * per-galaxy in a #NcGalaxyRedshiftObsData; the observation's structure is defined by
+ * the observable model itself, so the redshift calculator that convolves this kernel
+ * with the true-redshift distribution $P(z|I)$ stays observation-agnostic and only
+ * supplies the integration variable $z$.
  *
  */
 
@@ -288,8 +287,8 @@ nc_galaxy_redshift_obs_data_required_columns (NcGalaxyRedshiftObsData *data)
  * @data: a #NcGalaxyRedshiftObsData carrying the per-galaxy observation
  * @z: the true redshift $z$
  *
- * Evaluates the conditional density $P(\mathrm{data}|z)$ of the per-galaxy
- * observation in @data given the true redshift @z.
+ * Evaluates the conditional density $P(\mathrm{data}|z)$ of the per-galaxy observation
+ * in @data given the true redshift @z.
  *
  * Returns: the conditional density $P(\mathrm{data}|z)$.
  */
@@ -306,8 +305,8 @@ nc_galaxy_redshift_obs_eval (NcGalaxyRedshiftObs *gsdre, NcGalaxyRedshiftObsData
  * @z: the true redshift $z$
  * @rng: a #NcmRNG
  *
- * Samples a photometric-redshift observation given the true redshift @z, storing
- * the sampled observable(s) into @data and returning the sampled point estimate.
+ * Samples a photometric-redshift observation given the true redshift @z, storing the
+ * sampled observable(s) into @data and returning the sampled point estimate.
  *
  * Returns: the sampled photometric redshift.
  */
@@ -328,10 +327,10 @@ nc_galaxy_redshift_obs_gen (NcGalaxyRedshiftObs *gsdre, NcGalaxyRedshiftObsData 
  * Computes the probability mass of the observable conditional in the window
  * $[\mathtt{obs\_lo}, \mathtt{obs\_hi}]$ at fixed true redshift @z, i.e.
  * $\int_{\mathtt{obs\_lo}}^{\mathtt{obs\_hi}} P(\mathrm{obs} \mid z)\,
- * \mathrm{d}\,\mathrm{obs}$. This is the selection/normalization factor used by
- * the redshift calculator to condition on a photometric selection window and by
- * the binned $\mathrm{d}n/\mathrm{d}z$; it depends only on @z and the per-galaxy
- * scatter, not on the sampled point estimate.
+ * \mathrm{d}\,\mathrm{obs}$. This is the selection/normalization factor used by the
+ * redshift calculator to condition on a photometric selection window and by the binned
+ * $\mathrm{d}n/\mathrm{d}z$; it depends only on @z and the per-galaxy scatter, not on
+ * the sampled point estimate.
  *
  * Returns: the probability mass in the window.
  */
@@ -349,11 +348,11 @@ nc_galaxy_redshift_obs_window_mass (NcGalaxyRedshiftObs *gsdre, NcGalaxyRedshift
  * @z_max: (out): the upper edge of the effective true-redshift support
  *
  * Returns the range of true redshift $z$ over which this galaxy's observable
- * conditional $P(\mathrm{obs} \mid z)$ is non-negligible (e.g. the Gaussian
- * kernel restricted to a few sigma around the point estimate). The redshift
- * calculator intersects this with the population support to build the effective
- * $z$-integration limits, keeping the adaptive quadrature away from resolving a
- * needle in a haystack. Unclamped: the caller applies the population bounds.
+ * conditional $P(\mathrm{obs} \mid z)$ is non-negligible (e.g. the Gaussian kernel
+ * restricted to a few sigma around the point estimate). The redshift calculator
+ * intersects this with the population support to build the effective $z$-integration
+ * limits, keeping the adaptive quadrature away from resolving a needle in a haystack.
+ * Unclamped: the caller applies the population bounds.
  *
  */
 void

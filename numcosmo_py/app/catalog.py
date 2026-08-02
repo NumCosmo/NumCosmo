@@ -30,6 +30,7 @@ from pathlib import Path
 import typer
 from rich.table import Table
 from rich.text import Text
+from rich.progress import track
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -1065,6 +1066,134 @@ class GetBestFit(LoadCatalog):
         self.output_dict.add("model-set", self.mset)
 
         self.end_experiment()
+
+
+@dataclasses.dataclass(kw_only=True)
+class CheckM2lnL(LoadCatalog):
+    """Recompute -2ln(L) for every row of a catalog and compare against the
+    stored value.
+
+    Loads the experiment file's likelihood (the CURRENT code) and, for each
+    catalog row, sets its free parameters into the experiment's model-set and
+    recomputes -2ln(L), reporting how it compares to the value the catalog
+    already has stored. Useful for validating catalogs produced by an older
+    version of the code against the current one.
+    """
+
+    tolerance: Annotated[
+        float,
+        typer.Option(
+            help="Absolute |delta(-2lnL)| above which a row is flagged as "
+            "mismatched.",
+        ),
+    ] = 1.0e-6
+
+    max_report: Annotated[
+        int,
+        typer.Option(
+            help="Maximum number of mismatching rows to print individually.",
+        ),
+    ] = 20
+
+    stride: Annotated[
+        int,
+        typer.Option(
+            min=1,
+            help="Only check every Nth row (1 = check every row). Each row "
+            "requires a full likelihood recomputation, which can be slow for "
+            "large catalogs -- use this for a quick sanity check instead of "
+            "an exhaustive pass.",
+        ),
+    ] = 1
+
+    max_rows: Annotated[
+        Optional[int],
+        typer.Option(
+            help="Stop after checking this many rows (after --stride). If not "
+            "given, all selected rows are checked.",
+        ),
+    ] = None
+
+    def __post_init__(self) -> None:
+        """Recompute -2ln(L) for every catalog row and report mismatches."""
+        super().__post_init__()
+
+        if self.mset.fparams_len() != self.fparams_len:
+            raise RuntimeError(
+                f"Experiment {self.experiment} has {self.mset.fparams_len()} free "
+                f"parameters but catalog {self.mcmc_file} has {self.fparams_len} -- "
+                f"they are not compatible."
+            )
+
+        found, m2lnl_col = self.mcat.col_by_name(Ncm.MSET_CATALOG_M2LNL_COLNAME)
+        if not found:
+            raise RuntimeError(
+                f"Catalog {self.mcmc_file} has no "
+                f"{Ncm.MSET_CATALOG_M2LNL_COLNAME} column."
+            )
+
+        n_total = self.mcat.len()
+        selected = list(range(0, n_total, self.stride))
+        if self.max_rows is not None:
+            selected = selected[: self.max_rows]
+        n_rows = len(selected)
+
+        self.console.print(
+            f"# Checking {n_rows} of {n_total} row(s) of {self.mcmc_file} "
+            f"against {self.experiment} (stride={self.stride})."
+        )
+
+        stored = np.empty(n_rows)
+        recomputed = np.empty(n_rows)
+
+        for k, i in track(
+            list(enumerate(selected)),
+            description="Recomputing -2ln(L)...",
+            console=self.console,
+        ):
+            row = np.array(self.mcat.peek_row(i).dup_array(), dtype=np.float64)
+            fparams = row[self.nadd_vals :]
+            self.mset.fparams_set_array(fparams)
+            stored[k] = row[m2lnl_col]
+            recomputed[k] = self.likelihood.m2lnL_val(self.mset)
+
+        diffs = recomputed - stored
+        abs_diffs = np.abs(diffs)
+        n_mismatch = int(np.sum(abs_diffs > self.tolerance))
+
+        self.console.print(f"# Checked {n_rows} row(s).")
+        self.console.print(
+            f"# max|delta(-2lnL)| = {abs_diffs.max():.6g}, "
+            f"mean|delta(-2lnL)| = {abs_diffs.mean():.6g}, "
+            f"mismatched rows (tolerance {self.tolerance:.3g}): "
+            f"{n_mismatch}/{n_rows}."
+        )
+
+        if n_mismatch > 0:
+            worst = np.argsort(-abs_diffs)
+            table = Table(title="Worst mismatches")
+            table.add_column("row", justify="right")
+            table.add_column("stored -2lnL", justify="right")
+            table.add_column("recomputed -2lnL", justify="right")
+            table.add_column("delta", justify="right")
+
+            n_shown = 0
+            for k in worst:
+                if abs_diffs[k] <= self.tolerance:
+                    break
+                if n_shown >= self.max_report:
+                    break
+                table.add_row(
+                    str(selected[k]),
+                    f"{stored[k]:.6f}",
+                    f"{recomputed[k]:.6f}",
+                    f"{diffs[k]:.6g}",
+                )
+                n_shown += 1
+
+            self.console.print(table)
+
+        self.close_logging()
 
 
 @dataclasses.dataclass(kw_only=True)

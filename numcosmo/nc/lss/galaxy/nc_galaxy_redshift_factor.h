@@ -48,9 +48,9 @@ G_DECLARE_DERIVABLE_TYPE (NcGalaxyRedshiftFactor, nc_galaxy_redshift_factor, NC,
 typedef struct _NcGalaxyRedshiftFactorData NcGalaxyRedshiftFactorData;
 
 /*
- * Integrand callback: the per-galaxy JOINT density p(z_phot, z | I) as a
- * function of the true redshift z (the calculator NEVER integrates z itself;
- * the orchestrator integrates this against every other z-dependent factor).
+ * Integrand callback: the per-galaxy JOINT density p(z_phot, z | I) as a function of
+ * the true redshift z (the calculator NEVER integrates z itself; the orchestrator
+ * integrates this against every other z-dependent factor).
  */
 NCM_UTIL_DECLARE_CALLBACK (NcGalaxyRedshiftFactorIntegrand,
                            NC_GALAXY_REDSHIFT_FACTOR_INTEGRAND,
@@ -81,10 +81,6 @@ struct _NcGalaxyRedshiftFactorClass
    * (default: no-op). */
   guint64 (*get_hash) (NcGalaxyRedshiftFactor *gsdr);
   void (*update_data) (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data);
-
-  /* Human-readable one-line description of this scheme's own configuration
-   * (default: the concrete type name), same rationale as
-   * #NcGalaxyPositionFactor's analogous vfunc (see there). */
   gchar *(*get_desc) (NcGalaxyRedshiftFactor *gsdr);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
@@ -92,10 +88,10 @@ struct _NcGalaxyRedshiftFactorClass
 };
 
 /*
- * Per-galaxy data fragment. `z` is the inline base field (the true redshift,
- * sampled or the integration variable); `ldata` is the scheme's opaque fragment
- * (embedding the Observable model's own {z_phot, sigma0} fragment for Composed),
- * packed to / unpacked from an NcGalaxyWLObs via the fragment vtable below.
+ * Per-galaxy data fragment. `z` is the inline base field (the true redshift, sampled
+ * or the integration variable); `ldata` is the scheme's opaque fragment (embedding the
+ * Observable model's own {z_phot, sigma0} fragment for Composed), packed to / unpacked
+ * from an NcGalaxyWLObs via the fragment vtable below.
  */
 struct _NcGalaxyRedshiftFactorData
 {
