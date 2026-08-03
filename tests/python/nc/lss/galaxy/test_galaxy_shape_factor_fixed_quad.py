@@ -1226,18 +1226,44 @@ def test_marginal_spline_falls_back_to_direct_when_pop_density_underflows_near_o
     assert val_spline_again == val_spline
 
 
-def test_eval_marginal_aborts_on_non_positive_marginal():
-    """A zero (underflowed) marginal is a hard error (see the class docs):
-    a Beta population this concentrated (alpha=400) combined with an
-    eps_obs far from its peak ring and a std_noise narrow enough (0.001)
-    that even the CLOSEST quadrature node sits ~460 sigma away makes every
-    node's noise value underflow to exactly 0 in double precision (a wider
-    std_noise=0.01, sufficient before the n-radial/n-angular default was
-    raised 15->21, no longer underflows: the extra nodes' closest distance
-    stays inside the ~466-sigma point where exp() still returns a tiny but
-    nonzero double). Fatal via g_error, a real process abort, so it is
-    checked in a subprocess (see test_galaxy_shape_factor_cgf.py's
-    test_non_gaussian_population_gate for the same pattern)."""
+def test_eval_marginal_floors_deep_tail_underflow():
+    """A zero (underflowed) marginal is silently floored to MIN_MARGINAL
+    (1e-300), not a hard error: a Beta population this concentrated
+    (alpha=400) combined with an eps_obs far from its peak ring and a
+    std_noise narrow enough (0.001) that even the CLOSEST quadrature node
+    sits ~460 sigma away makes every node's noise value underflow to
+    exactly 0 in double precision (a wider std_noise=0.01, sufficient
+    before the n-radial/n-angular default was raised 15->21, no longer
+    underflows: the extra nodes' closest distance stays inside the
+    ~466-sigma point where exp() still returns a tiny but nonzero double).
+    _direct_marginal_at_g()'s result is finite here (a sum of exact 0.0
+    terms), so it takes the floor branch, not the !isfinite() g_error
+    branch covered by test_eval_marginal_aborts_on_non_finite_marginal()
+    below."""
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = 400.0
+    pop["beta"] = 2.0
+    gsffq, pop, data = _make_with_pop(
+        pop, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.001, use_marginal_spline=False
+    )
+
+    val = gsffq.eval_marginal(pop, data, -0.9, 0.9, 0.9, 0.9)
+
+    assert math.isfinite(val)
+    assert val == 1.0e-300
+
+
+def test_eval_marginal_aborts_on_non_finite_marginal():
+    """A genuinely non-finite (NaN) marginal is still a hard error: with
+    std_noise=1e-170, sig2=std_noise**2 underflows to exactly 0.0 in
+    double precision, so _noise_val()'s exp(-d2/(2*sig2))/(2*pi*sig2)
+    divides by zero -- 0/0 (NaN) at d2==0, inf/0 (still 0, but 0/(2*pi*0)
+    is 0/0 = NaN) elsewhere -- unlike the deep-tail case above, where
+    every term is a clean, finite 0.0. Forces the chi_i_native branch via
+    eval_chi_i_native() for a deterministic method. Fatal via g_error, a
+    real process abort, so it is checked in a subprocess (see
+    test_galaxy_shape_factor_cgf.py's test_non_gaussian_population_gate
+    for the same pattern)."""
     script = (
         "import sys\n"
         "sys.path.insert(0, 'tests/python/nc/lss/galaxy')\n"
@@ -1245,13 +1271,13 @@ def test_eval_marginal_aborts_on_non_positive_marginal():
         "Ncm.cfg_init()\n"
         "import test_galaxy_shape_factor_fixed_quad as m\n"
         "pop = Nc.GalaxyShapePopBeta.new()\n"
-        "pop['alpha'] = 400.0\n"
+        "pop['alpha'] = 2.0\n"
         "pop['beta'] = 2.0\n"
         "gsffq, pop, data = m._make_with_pop(\n"
-        "    pop, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.001,\n"
+        "    pop, Nc.GalaxyWLObsEllipConv.TRACE_DET, 1e-170,\n"
         "    use_marginal_spline=False,\n"
         ")\n"
-        "gsffq.eval_marginal(pop, data, -0.9, 0.9, 0.9, 0.9)\n"
+        "gsffq.eval_chi_i_native(pop, data, 0.0, 0.0, 0.5, 0.5)\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", script],
@@ -1262,20 +1288,19 @@ def test_eval_marginal_aborts_on_non_positive_marginal():
     )
     assert result.returncode != 0
     assert "non-finite" in result.stderr
+    assert "_marginal_chi_i_native_debug" in result.stderr
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
-def test_eval_two_panel_aborts_on_non_positive_marginal(ellip_conv):
-    """Same underflow as test_eval_marginal_aborts_on_non_positive_marginal(),
+def test_eval_two_panel_aborts_on_non_finite_marginal(ellip_conv):
+    """Same NaN scenario as test_eval_marginal_aborts_on_non_finite_marginal(),
     but forcing the two-panel branch directly via eval_two_panel() instead of
-    going through eval_marginal()'s own chi_i_native/two_panel switch: this
-    is the only way to reach _marginal_two_panel_debug()
-    (_direct_marginal_at_g()'s TWO_PANEL diagnostic dump, the two-panel
-    sibling of _marginal_chi_i_native_debug() already exercised above),
-    since eval_marginal() picks chi_i_native for this eps_obs/std_noise
-    pair. Parametrized over both ellipticity conventions since the debug
-    dump's own kernel choice (TRACE vs TRACE_DET) is a separate branch
-    inside it. Fatal via g_error, checked in a subprocess as above."""
+    the chi_i_native branch: this is the only way to reach
+    _marginal_two_panel_debug() (_direct_marginal_at_g()'s TWO_PANEL
+    diagnostic dump, the two-panel sibling of _marginal_chi_i_native_debug()
+    exercised above). Parametrized over both ellipticity conventions since
+    the debug dump's own kernel choice (TRACE vs TRACE_DET) is a separate
+    branch inside it. Fatal via g_error, checked in a subprocess as above."""
     script = (
         "import sys\n"
         "sys.path.insert(0, 'tests/python/nc/lss/galaxy')\n"
@@ -1283,13 +1308,13 @@ def test_eval_two_panel_aborts_on_non_positive_marginal(ellip_conv):
         "Ncm.cfg_init()\n"
         "import test_galaxy_shape_factor_fixed_quad as m\n"
         "pop = Nc.GalaxyShapePopBeta.new()\n"
-        "pop['alpha'] = 400.0\n"
+        "pop['alpha'] = 2.0\n"
         "pop['beta'] = 2.0\n"
         "gsffq, pop, data = m._make_with_pop(\n"
-        f"    pop, Nc.GalaxyWLObsEllipConv.{ellip_conv.value_nick.upper().replace('-', '_')}, 0.001,\n"
+        f"    pop, Nc.GalaxyWLObsEllipConv.{ellip_conv.value_nick.upper().replace('-', '_')}, 1e-170,\n"
         "    use_marginal_spline=False,\n"
         ")\n"
-        "gsffq.eval_two_panel(pop, data, -0.9, 0.9, 0.9, 0.9)\n"
+        "gsffq.eval_two_panel(pop, data, 0.0, 0.0, 0.5, 0.5)\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", script],
