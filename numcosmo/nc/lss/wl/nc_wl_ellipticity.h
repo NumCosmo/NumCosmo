@@ -261,7 +261,7 @@ nc_wl_ellipticity_shear_at_origin_trace (NcmComplex target)
 {
   const gdouble abs_target = cabs (target);
 
-  return target / (1.0 + sqrt (1.0 - abs_target * abs_target));
+  return target / (1.0 + sqrt ((1.0 - abs_target) * (1.0 + abs_target)));
 }
 
 NCM_INLINE gdouble

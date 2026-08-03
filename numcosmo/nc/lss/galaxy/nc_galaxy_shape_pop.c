@@ -460,6 +460,20 @@ nc_galaxy_shape_pop_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 }
 
 /**
+ * nc_galaxy_shape_pop_exponent_at_origin: (virtual exponent_at_origin)
+ * @gsp: a #NcGalaxyShapePop
+ *
+ * Determines how the population density behaves at the origin.
+ *
+ * Returns: the exponent $\alpha_o$ such that $P_\mathrm{pop}(r) \sim r^{\alpha_o}$ as $r \to 0$.
+ */
+gdouble
+nc_galaxy_shape_pop_exponent_at_origin (NcGalaxyShapePop *gsp)
+{
+  return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->exponent_at_origin (gsp);
+}
+
+/**
  * nc_galaxy_shape_pop_get_sigma:
  * @gsp: a #NcGalaxyShapePop
  * @data: a resolved #NcGalaxyShapePopData
