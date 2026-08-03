@@ -147,8 +147,8 @@ nc_galaxy_shape_factor_fixed_quad_init (NcGalaxyShapeFactorFixedQuad *gsffq)
   self->shear_at_origin = NULL;
   self->det_jac         = NULL;
   self->ellip_conv      = NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE;
-  self->n_radial        = 15;
-  self->n_angular       = 15;
+  self->n_radial        = 0;
+  self->n_angular       = 0;
   self->n_max           = 0;
 
   self->use_marginal_spline = FALSE;
@@ -662,7 +662,7 @@ _marginal_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyS
       corr_sum += ldata->weight[i] * ldata->jac[i] * p_2d * bracket;
     }
 
-    return N0 + corr_sum;
+    return fabs (N0 + corr_sum);
   }
 }
 
@@ -1124,28 +1124,28 @@ nc_galaxy_shape_factor_fixed_quad_class_init (NcGalaxyShapeFactorFixedQuadClass 
    *
    * Number of fixed Gauss-Legendre radial nodes: PER PANEL for the
    * two-panel psi branch, or in the single grid for the native chi_I
-   * branch. Default 15.
+   * branch. Default 21.
    */
   g_object_class_install_property (object_class,
                                    PROP_N_RADIAL,
                                    g_param_spec_uint ("n-radial",
                                                       "Number of radial nodes",
                                                       "Number of fixed Gauss-Legendre nodes in the radial direction",
-                                                      1, G_MAXUINT, 15,
+                                                      1, G_MAXUINT, 21,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   /**
    * NcGalaxyShapeFactorFixedQuad:n-angular:
    *
    * Number of equally-spaced angular nodes of whichever grid is chosen.
-   * Default 15.
+   * Default 21.
    */
   g_object_class_install_property (object_class,
                                    PROP_N_ANGULAR,
                                    g_param_spec_uint ("n-angular",
                                                       "Number of angular nodes",
                                                       "Number of angular quadrature nodes",
-                                                      1, G_MAXUINT, 15,
+                                                      1, G_MAXUINT, 21,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   /**

@@ -109,6 +109,23 @@ def _scipy_exact_marginal(pop, pop_data, ellip_conv, g, eps_obs, std_noise):
     return result
 
 
+def _quad_exact_marginal(
+    pop, mset, ellip_conv, g_1, g_2, eps_obs_1, eps_obs_2, std_noise
+):
+    """Independent oracle using the real adaptive NcGalaxyShapeFactorQuad
+    cubature instead of scipy's dblquad -- orders of magnitude faster (no
+    Python-level integrand callback per node), while already cross-validated
+    against the scipy oracle above by test_marginal_matches_quad and
+    test_extreme_g_stays_accurate."""
+    gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsfq, mset)
+    gsfq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsfq.prepare_data_array(mset, [data], True, True)
+    return gsfq.eval_marginal(pop, data, g_1, g_2, eps_obs_1, eps_obs_2)
+
+
 def _use_chi_i_native(eps_obs, std_noise, nsigma=8.0):
     """Python mirror of the C class' own _use_chi_i_native() switch
     criterion -- used only to document/assert which branch a given test
@@ -207,6 +224,93 @@ def test_marginal_matches_quad(ellip_conv):
         fq_val = gsffq.eval_marginal(pop, data_fq, g_mag, 0.0, eps_obs_1, eps_obs_2)
         q_val = gsfq.eval_marginal(pop, data_q, g_mag, 0.0, eps_obs_1, eps_obs_2)
         assert_allclose(fq_val, q_val, rtol=5.0e-4)
+
+
+# Pinned production debug cases from devel/compare_shape_factor_methods.py,
+# itself built to reproduce every FixedQuad case that failed in a real WL
+# catalog run. (g_1, g_2, eps_obs_1, eps_obs_2, std_noise, alpha, beta,
+# ellip_conv). The script's Gaussian truth-table cases are already covered
+# by _CASES above and are not repeated here.
+_REAL_DATA_DEBUG_CASES = [
+    pytest.param(
+        0.15,
+        0.05,
+        0.2183132767677307,
+        -0.04060542210936546,
+        0.09130239486694336,
+        1.55,
+        1.62,
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        id="beta_alpha_1p55_divergent_hard_case",  # galaxy #6897, exp_007_v5-like catalog
+    ),
+    pytest.param(
+        0.1,
+        0.05,
+        0.12,
+        -0.08,
+        0.15,
+        3.0,
+        2.0,
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        id="beta_alpha_3p0_safe_side_of_boundary",
+    ),
+    pytest.param(
+        -0.000282866646198319,
+        -0.000353319013837193,
+        0.00872796028852463,
+        0.00156980438623577,
+        0.010328422300517538,
+        2.677998528261235,
+        1.620880072781353,
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        id="beta_alpha_2p68_tiny_shear_and_noise",
+    ),
+    pytest.param(
+        -0.000484624097136588,
+        -0.00310900893031676,
+        -0.00650996621698141,
+        -0.00432653771713376,
+        0.015406767837703242,
+        1.861177381982181,
+        1.485017027354532,
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        id="beta_alpha_1p86_tiny_shear_and_noise",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "g_1,g_2,eps_obs_1,eps_obs_2,std_noise,alpha,beta,ellip_conv",
+    _REAL_DATA_DEBUG_CASES,
+)
+def test_marginal_matches_quad_real_data_debug_cases(
+    g_1, g_2, eps_obs_1, eps_obs_2, std_noise, alpha, beta, ellip_conv
+):
+    """Regression for real Beta populations (both sides of the alpha<2
+    divergent-area-density boundary) at their actual production (g, eps_obs,
+    std_noise), pinned from devel/compare_shape_factor_methods.py. Uses the
+    Quad oracle (see _quad_exact_marginal) rather than scipy: much faster,
+    with no accuracy tradeoff since it is already cross-validated against
+    scipy elsewhere in this file."""
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = alpha
+    pop["beta"] = beta
+    mset = _build_mset(pop)
+
+    gsffq = Nc.GalaxyShapeFactorFixedQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsffq, mset)
+    gsffq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsffq.prepare_data_array(mset, [data], True, True)
+
+    val = gsffq.eval_marginal(pop, data, g_1, g_2, eps_obs_1, eps_obs_2)
+    exact = _quad_exact_marginal(
+        pop, mset, ellip_conv, g_1, g_2, eps_obs_1, eps_obs_2, std_noise
+    )
+
+    assert math.isfinite(val)
+    assert_allclose(val, exact, rtol=5.0e-3)
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
@@ -691,8 +795,11 @@ def test_narrow_population_is_a_documented_limitation():
     its node spacing. This asserts the KNOWN large error exists, so a
     future accidental fix to this doesn't go unnoticed, and so this class
     never silently claims parity with Quad in a regime it was never
-    validated for."""
-    gsffq, pop, data = _make(Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.02, 0.03)
+    validated for. sigma=0.02 (which triggered the blind spot at the old
+    n-radial/n-angular default of 15) no longer does at the current default
+    of 21 (rel_err drops to ~12%); 0.015 is narrow enough to still trigger
+    it here."""
+    gsffq, pop, data = _make(Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.015, 0.03)
 
     val = gsffq.eval_marginal(pop, data, 0.3, 0.0, -0.368837, 0.101348)
     exact = _scipy_exact_marginal(
@@ -1122,11 +1229,15 @@ def test_marginal_spline_falls_back_to_direct_when_pop_density_underflows_near_o
 def test_eval_marginal_aborts_on_non_positive_marginal():
     """A zero (underflowed) marginal is a hard error (see the class docs):
     a Beta population this concentrated (alpha=400) combined with an
-    eps_obs far from its peak ring makes the true 2D integral itself
-    underflow to exactly 0 in double precision, which is fatal via
-    g_error, a real process abort, so it is checked in a subprocess (see
-    test_galaxy_shape_factor_cgf.py's test_non_gaussian_population_gate
-    for the same pattern)."""
+    eps_obs far from its peak ring and a std_noise narrow enough (0.001)
+    that even the CLOSEST quadrature node sits ~460 sigma away makes every
+    node's noise value underflow to exactly 0 in double precision (a wider
+    std_noise=0.01, sufficient before the n-radial/n-angular default was
+    raised 15->21, no longer underflows: the extra nodes' closest distance
+    stays inside the ~466-sigma point where exp() still returns a tiny but
+    nonzero double). Fatal via g_error, a real process abort, so it is
+    checked in a subprocess (see test_galaxy_shape_factor_cgf.py's
+    test_non_gaussian_population_gate for the same pattern)."""
     script = (
         "import sys\n"
         "sys.path.insert(0, 'tests/python/nc/lss/galaxy')\n"
@@ -1137,10 +1248,10 @@ def test_eval_marginal_aborts_on_non_positive_marginal():
         "pop['alpha'] = 400.0\n"
         "pop['beta'] = 2.0\n"
         "gsffq, pop, data = m._make_with_pop(\n"
-        "    pop, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.01,\n"
+        "    pop, Nc.GalaxyWLObsEllipConv.TRACE_DET, 0.001,\n"
         "    use_marginal_spline=False,\n"
         ")\n"
-        "gsffq.eval_marginal(pop, data, 0.1, 0.05, 0.05, -0.02)\n"
+        "gsffq.eval_marginal(pop, data, -0.9, 0.9, 0.9, 0.9)\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", script],
@@ -1150,4 +1261,4 @@ def test_eval_marginal_aborts_on_non_positive_marginal():
         check=False,
     )
     assert result.returncode != 0
-    assert "non-finite marginal" in result.stderr
+    assert "non-finite" in result.stderr
