@@ -55,6 +55,7 @@ struct _NcGalaxyShapePopClass
   gdouble (*eval_p) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
   void (*gen) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
   gdouble (*e_rms) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
+  gdouble (*exponent_at_origin) (NcGalaxyShapePop *gsp);
 
   /*
    * Taylor-in-g x-space density series (x=|chi_I|^2) -- distinct from
@@ -160,6 +161,8 @@ void nc_galaxy_shape_pop_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *d
 gdouble nc_galaxy_shape_pop_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
 void nc_galaxy_shape_pop_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
 gdouble nc_galaxy_shape_pop_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
+gdouble nc_galaxy_shape_pop_exponent_at_origin (NcGalaxyShapePop *gsp);
+
 gdouble nc_galaxy_shape_pop_get_sigma (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 gdouble nc_galaxy_shape_pop_get_mode_r (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 
