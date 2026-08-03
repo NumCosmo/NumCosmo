@@ -82,9 +82,10 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_integration.h>
 #include <complex.h>
+#include <stdio.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-#define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_EXPM1_SAFE_BOUND (50.0)
+#define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_EXPM1_SAFE_BOUND (1.0e-1)
 #define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA (8.0)
 #define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_R_SIGMA_MAX (0.98)
 #define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_UNSAFE_SPLINE_N_KNOTS (33)
@@ -423,25 +424,28 @@ static void
 _regen_domain_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapeFactorFixedQuadData *ldata,
                          gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise)
 {
-  const complex double eps_obs         = epsilon_obs_1 + I * epsilon_obs_2;
-  const complex double h               = self->shear_at_origin (eps_obs);
-  const complex double neg_h           = -h;
-  const gdouble phi                    = carg (eps_obs);
-  const gdouble r_sigma                = _exact_r_sigma (self, eps_obs, std_noise, h);
-  const gdouble panel_lo[2]            = { 0.0, r_sigma };
-  const gdouble panel_hi[2]            = { r_sigma, 1.0 };
-  gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (self->n_radial);
-  const gdouble w_theta                = 2.0 * M_PI / self->n_angular;
-  guint idx                            = 0;
+  const complex double eps_obs             = epsilon_obs_1 + I * epsilon_obs_2;
+  const complex double h                   = self->shear_at_origin (eps_obs);
+  const complex double neg_h               = -h;
+  const gdouble phi                        = carg (eps_obs);
+  const gdouble r_sigma                    = _exact_r_sigma (self, eps_obs, std_noise, h);
+  const gdouble panel_lo[2]                = { 0.0, r_sigma };
+  const gdouble panel_hi[2]                = { r_sigma, 1.0 };
+  const guint n_panel_nodes[2]             = { self->n_radial, 5 };
+  gsl_integration_glfixed_table *table1    = gsl_integration_glfixed_table_alloc (n_panel_nodes[0]);
+  gsl_integration_glfixed_table *table2    = gsl_integration_glfixed_table_alloc (n_panel_nodes[1]);
+  gsl_integration_glfixed_table *tables[2] = { table1, table2 };
+  const gdouble w_theta                    = 2.0 * M_PI / self->n_angular;
+  guint idx                                = 0;
   guint panel, i, j;
 
   for (panel = 0; panel < 2; panel++)
   {
-    for (i = 0; i < self->n_radial; i++)
+    for (i = 0; i < n_panel_nodes[panel]; i++)
     {
       gdouble rho, wr;
 
-      gsl_integration_glfixed_point (panel_lo[panel], panel_hi[panel], i, &rho, &wr, table);
+      gsl_integration_glfixed_point (panel_lo[panel], panel_hi[panel], i, &rho, &wr, tables[panel]);
 
       for (j = 0; j < self->n_angular; j++)
       {
@@ -457,7 +461,8 @@ _regen_domain_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGal
     }
   }
 
-  gsl_integration_glfixed_table_free (table);
+  gsl_integration_glfixed_table_free (table1);
+  gsl_integration_glfixed_table_free (table2);
 
   ldata->n_used               = idx;
   ldata->cached_method        = NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_TWO_PANEL;
@@ -570,10 +575,7 @@ _marginal_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyS
 {
   const complex double eps_obs = ldata->cached_epsilon_obs_1 + I * ldata->cached_epsilon_obs_2;
   const gdouble sig2           = gsl_pow_2 (ldata->cached_std_noise);
-  const complex double chi_L0  = self->apply_shear (g, 0.0);
-  const gdouble d0             = gsl_pow_2 (creal (eps_obs - chi_L0)) + gsl_pow_2 (cimag (eps_obs - chi_L0));
-  const gdouble N0             = _noise_val (eps_obs - chi_L0, sig2);
-  gdouble corr_sum             = 0.0;
+  gdouble alpha_o;
   guint i;
 
   /* x_i is known for every node before eval_p() is called, so batch through
@@ -606,10 +608,34 @@ _marginal_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyS
   }
 
   nc_galaxy_shape_pop_eval_p_array (pop, data->pop_data, ldata->x_arr, &ldata->p_arr);
+  alpha_o = nc_galaxy_shape_pop_exponent_at_origin (pop);
 
+  /* Non-divergent case or too narrow noise disk */
+  if ((alpha_o >= 1.0) || (ldata->cached_std_noise < 0.05))
   {
     const gdouble * const p_data = (const gdouble *) ldata->p_arr->data;
     const gdouble * const r_data = (const gdouble *) ldata->x_arr->data;
+    gdouble sum                  = 0.0;
+
+    for (i = 0; i < ldata->n_used; i++)
+    {
+      const complex double delta_i = eps_obs - ldata->base[i];
+      const gdouble p_2d           = p_data[i] / (2.0 * M_PI * r_data[i]);
+      const gdouble noise_i        = _noise_val (delta_i, sig2);
+
+      sum += ldata->weight[i] * ldata->jac[i] * p_2d * noise_i;
+    }
+
+    return sum;
+  }
+  else
+  {
+    const gdouble * const p_data = (const gdouble *) ldata->p_arr->data;
+    const gdouble * const r_data = (const gdouble *) ldata->x_arr->data;
+    const complex double chi_L0  = self->apply_shear (g, 0.0);
+    const gdouble d0             = gsl_pow_2 (creal (eps_obs - chi_L0)) + gsl_pow_2 (cimag (eps_obs - chi_L0));
+    const gdouble N0             = _noise_val (eps_obs - chi_L0, sig2);
+    gdouble corr_sum             = 0.0;
 
     for (i = 0; i < ldata->n_used; i++)
     {
@@ -622,7 +648,7 @@ _marginal_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyS
       /* expm1 avoids cancellation near delta_ratio=0; falls back to a direct,
        * individually-bounded difference where expm1 would overflow instead.
        */
-      if (delta_ratio <= NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_EXPM1_SAFE_BOUND)
+      if ((fabs (delta_ratio) <= NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_EXPM1_SAFE_BOUND))
       {
         bracket = N0 * expm1 (delta_ratio);
       }
@@ -635,7 +661,111 @@ _marginal_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyS
 
       corr_sum += ldata->weight[i] * ldata->jac[i] * p_2d * bracket;
     }
+
+    return N0 + corr_sum;
   }
+}
+
+/* Verbose, node-by-node re-evaluation of _marginal_two_panel(), for
+ * _direct_marginal_at_g()'s failure branch only: dumps every quantity that
+ * feeds the sum (including which expm1/direct branch each node took) to
+ * stderr right before the g_error() abort. Never called on the hot path.
+ */
+static gdouble
+_marginal_two_panel_debug (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                           NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
+{
+  const complex double eps_obs = ldata->cached_epsilon_obs_1 + I * ldata->cached_epsilon_obs_2;
+  const gdouble sig2           = gsl_pow_2 (ldata->cached_std_noise);
+  const complex double chi_L0  = self->apply_shear (g, 0.0);
+  const gdouble d0             = gsl_pow_2 (creal (eps_obs - chi_L0)) + gsl_pow_2 (cimag (eps_obs - chi_L0));
+  const gdouble N0             = _noise_val (eps_obs - chi_L0, sig2);
+  gdouble corr_sum             = 0.0;
+  guint i;
+
+  ncm_model_params_print_all (NCM_MODEL (pop), stdout);
+
+  fprintf (stderr, "---- _marginal_two_panel_debug: eps_obs=(% .15g,% .15g) sig2=% .15g g=(% .15g,% .15g) n_used=%u\n",
+           creal (eps_obs), cimag (eps_obs), sig2, creal (g), cimag (g), ldata->n_used);
+  fprintf (stderr, "     chi_L0=(% .15g,% .15g) d0=% .15g N0=% .15g SNR=% .15g\n", creal (chi_L0), cimag (chi_L0), d0, N0, cabs (eps_obs - chi_L0) / ldata->cached_std_noise);
+
+  g_array_set_size (ldata->x_arr, ldata->n_used);
+
+  {
+    gdouble * const x_data = (gdouble *) ldata->x_arr->data;
+
+    if (self->ellip_conv == NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE)
+    {
+      NcWLEllipticityTraceKernelPrep prep;
+
+      nc_wl_ellipticity_trace_kernel_prepare (g, &prep);
+
+      for (i = 0; i < ldata->n_used; i++)
+        nc_wl_ellipticity_trace_kernel_apply (&prep, ldata->base[i], &x_data[i], &ldata->jac[i]);
+    }
+    else
+    {
+      for (i = 0; i < ldata->n_used; i++)
+        nc_wl_ellipticity_trace_det_kernel (g, ldata->base[i], &x_data[i], &ldata->jac[i]);
+    }
+
+    for (i = 0; i < ldata->n_used; i++)
+      x_data[i] = sqrt (x_data[i]);
+  }
+
+  nc_galaxy_shape_pop_eval_p_array (pop, data->pop_data, ldata->x_arr, &ldata->p_arr);
+
+  {
+    const gdouble * const p_data = (const gdouble *) ldata->p_arr->data;
+    const gdouble * const r_data = (const gdouble *) ldata->x_arr->data;
+
+    for (i = 0; i < ldata->n_used; i++)
+    {
+      const complex double delta_i = eps_obs - ldata->base[i];
+      const gdouble d_i            = gsl_pow_2 (creal (delta_i)) + gsl_pow_2 (cimag (delta_i));
+      const gdouble delta_ratio    = (d0 - d_i) / (2.0 * sig2);
+      const gdouble p_2d           = p_data[i] / (2.0 * M_PI * r_data[i]);
+      const gboolean via_expm1     = (fabs (delta_ratio) <= NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_EXPM1_SAFE_BOUND);
+      gdouble bracket;
+      gdouble contrib;
+
+
+      if (via_expm1)
+      {
+        bracket = N0 * expm1 (delta_ratio);
+      }
+      else
+      {
+        const gdouble noise_i = _noise_val (delta_i, sig2);
+
+        bracket = noise_i - N0;
+      }
+
+      contrib = ldata->weight[i] * ldata->jac[i] * p_2d * bracket;
+
+      fprintf (stderr,
+               "  [%4u] chi_L=(% .15g,% .15g) r=% .15g weight=% .15g jac=% .15g p=% .15g p_2d=% .15g d_i=% .15g "
+               "delta_ratio=% .15g via=%s bracket=% .15g contrib=% .15g running_corr_sum=% .15g\n",
+               i,
+               creal (ldata->base[i]),
+               cimag (ldata->base[i]),
+               r_data[i],
+               ldata->weight[i],
+               ldata->jac[i],
+               p_data[i],
+               p_2d,
+               d_i,
+               delta_ratio,
+               via_expm1 ? "expm1" : "direct",
+               bracket,
+               contrib,
+               corr_sum + contrib);
+
+      corr_sum += contrib;
+    }
+  }
+
+  fprintf (stderr, "---- _marginal_two_panel_debug: N0=% .15g corr_sum=% .15g result=% .15g\n", N0, corr_sum, N0 + corr_sum);
 
   return N0 + corr_sum;
 }
@@ -671,6 +801,50 @@ _marginal_chi_i_native (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGala
   return total;
 }
 
+/* Verbose, node-by-node re-evaluation of _marginal_chi_i_native(), for
+ * _direct_marginal_at_g()'s failure branch only: dumps every quantity that
+ * feeds the sum to stderr right before the g_error() abort. Never called on
+ * the hot path.
+ */
+static gdouble
+_marginal_chi_i_native_debug (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                              NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
+{
+  const complex double eps_obs = ldata->cached_epsilon_obs_1 + I * ldata->cached_epsilon_obs_2;
+  const gdouble sig2           = gsl_pow_2 (ldata->cached_std_noise);
+  gdouble total                = 0.0;
+  guint i;
+
+  fprintf (stderr, "---- _marginal_chi_i_native_debug: eps_obs=(% .15g,% .15g) sig2=% .15g g=(% .15g,% .15g) n_used=%u\n",
+           creal (eps_obs), cimag (eps_obs), sig2, creal (g), cimag (g), ldata->n_used);
+
+  nc_galaxy_shape_pop_eval_p_array (pop, data->pop_data, ldata->x_arr, &ldata->p_arr);
+
+  {
+    const gdouble * const p_data = (const gdouble *) ldata->p_arr->data;
+    const gdouble * const r_data = (const gdouble *) ldata->x_arr->data;
+
+    for (i = 0; i < ldata->n_used; i++)
+    {
+      const complex double chi_L = self->apply_shear (g, ldata->base[i]);
+      const gdouble noise_i      = _noise_val (eps_obs - chi_L, sig2);
+      const gdouble contrib      = ldata->weight[i] * p_data[i] * noise_i;
+
+      fprintf (stderr,
+               "  [%4u] chi_I=(% .15g,% .15g) r=% .15g weight=% .15g p=% .15g chi_L=(% .15g,% .15g) noise=% .15g "
+               "contrib=% .15g running_total=% .15g\n",
+               i, creal (ldata->base[i]), cimag (ldata->base[i]), r_data[i], ldata->weight[i], p_data[i],
+               creal (chi_L), cimag (chi_L), noise_i, contrib, total + contrib);
+
+      total += contrib;
+    }
+  }
+
+  fprintf (stderr, "---- _marginal_chi_i_native_debug: total=% .15g\n", total);
+
+  return total;
+}
+
 /* Ground truth for use-marginal-spline's builders below. A non-finite result is always
  * a bug (invalid input the domain build should have rejected, or a genuine defect) --
  * never a deep-tail underflow, which shows up as a finite, small/negative value
@@ -695,10 +869,25 @@ _direct_marginal_at_g (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalax
   }
 
   if (!isfinite (result) || (result <= 0.0))
-    g_error ("nc_galaxy_shape_factor_fixed_quad: non-finite marginal at g=(% .6g,% .6g), "
-             "eps_obs=(% .6g,% .6g), std_noise=% .6g, method=%s.",
+  {
+    switch (ldata->cached_method)
+    {
+      case NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE:
+        _marginal_chi_i_native_debug (self, pop, data, ldata, g);
+        break;
+
+      case NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_TWO_PANEL:
+      default:
+        _marginal_two_panel_debug (self, pop, data, ldata, g);
+        break;
+    }
+
+    g_error ("nc_galaxy_shape_factor_fixed_quad: non-finite or non-positive marginal at g=(% .6g,% .6g), "
+             "eps_obs=(% .6g,% .6g), std_noise=% .6g, method=%s, result=% .6g.",
              creal (g), cimag (g), ldata->cached_epsilon_obs_1, ldata->cached_epsilon_obs_2, ldata->cached_std_noise,
-             (ldata->cached_method == NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE) ? "chi_i_native" : "two_panel");
+             (ldata->cached_method == NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE) ? "chi_i_native" : "two_panel",
+             result);
+  }
 
   return result;
 }

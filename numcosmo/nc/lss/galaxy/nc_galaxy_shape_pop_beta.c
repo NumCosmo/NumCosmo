@@ -124,6 +124,7 @@ static gdouble _nc_galaxy_shape_pop_beta_eval_p (NcGalaxyShapePop *gsp, NcGalaxy
 static void _nc_galaxy_shape_pop_beta_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p);
 static void _nc_galaxy_shape_pop_beta_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
 static gdouble _nc_galaxy_shape_pop_beta_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
+static gdouble _nc_galaxy_shape_pop_beta_exponent_at_origin (NcGalaxyShapePop *gsp);
 static void _nc_galaxy_shape_pop_beta_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                                             const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
@@ -177,6 +178,7 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
   gsp_class->eval_p_array         = &_nc_galaxy_shape_pop_beta_eval_p_array;
   gsp_class->gen                  = &_nc_galaxy_shape_pop_beta_gen;
   gsp_class->e_rms                = &_nc_galaxy_shape_pop_beta_e_rms;
+  gsp_class->exponent_at_origin   = &_nc_galaxy_shape_pop_beta_exponent_at_origin;
   gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_beta_eval_p_rho2_g_series;
 }
 
@@ -348,6 +350,14 @@ static gdouble
 _nc_galaxy_shape_pop_beta_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 {
   return nc_galaxy_shape_pop_beta_get_e_rms (NC_GALAXY_SHAPE_POP_BETA (gsp));
+}
+
+static gdouble
+_nc_galaxy_shape_pop_beta_exponent_at_origin (NcGalaxyShapePop *gsp)
+{
+  const gdouble alpha = ALPHA;
+
+  return (alpha - 1.0);
 }
 
 /**

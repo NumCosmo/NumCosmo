@@ -83,6 +83,7 @@ _nc_galaxy_shape_pop_gauss_local_finalize (GObject *object)
 static void _nc_galaxy_shape_pop_gauss_local_data_init (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static void _nc_galaxy_shape_pop_gauss_local_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_local_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
+static gdouble _nc_galaxy_shape_pop_gauss_local_exponent_at_origin (NcGalaxyShapePop *gsp);
 
 static void
 nc_galaxy_shape_pop_gauss_local_class_init (NcGalaxyShapePopGaussLocalClass *klass)
@@ -106,6 +107,7 @@ nc_galaxy_shape_pop_gauss_local_class_init (NcGalaxyShapePopGaussLocalClass *kla
   gsp_class->eval_p               = &_nc_galaxy_shape_pop_gauss_eval_p;
   gsp_class->gen                  = &_nc_galaxy_shape_pop_gauss_gen;
   gsp_class->e_rms                = &_nc_galaxy_shape_pop_gauss_local_e_rms;
+  gsp_class->exponent_at_origin   = &_nc_galaxy_shape_pop_gauss_local_exponent_at_origin;
   gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series;
 }
 
@@ -199,6 +201,12 @@ static gdouble
 _nc_galaxy_shape_pop_gauss_local_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 {
   return data->e_rms;
+}
+
+static gdouble
+_nc_galaxy_shape_pop_gauss_local_exponent_at_origin (NcGalaxyShapePop *gsp)
+{
+  return 1.0;
 }
 
 /**
