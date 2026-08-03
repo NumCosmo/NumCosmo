@@ -431,7 +431,7 @@ _regen_domain_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGal
   const gdouble r_sigma                    = _exact_r_sigma (self, eps_obs, std_noise, h);
   const gdouble panel_lo[2]                = { 0.0, r_sigma };
   const gdouble panel_hi[2]                = { r_sigma, 1.0 };
-  const guint n_panel_nodes[2]             = { self->n_radial, 5 };
+  const guint n_panel_nodes[2]             = { self->n_radial, 15 };
   gsl_integration_glfixed_table *table1    = gsl_integration_glfixed_table_alloc (n_panel_nodes[0]);
   gsl_integration_glfixed_table *table2    = gsl_integration_glfixed_table_alloc (n_panel_nodes[1]);
   gsl_integration_glfixed_table *tables[2] = { table1, table2 };
