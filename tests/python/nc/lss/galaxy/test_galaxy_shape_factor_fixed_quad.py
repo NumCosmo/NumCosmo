@@ -1262,3 +1262,42 @@ def test_eval_marginal_aborts_on_non_positive_marginal():
     )
     assert result.returncode != 0
     assert "non-finite" in result.stderr
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+def test_eval_two_panel_aborts_on_non_positive_marginal(ellip_conv):
+    """Same underflow as test_eval_marginal_aborts_on_non_positive_marginal(),
+    but forcing the two-panel branch directly via eval_two_panel() instead of
+    going through eval_marginal()'s own chi_i_native/two_panel switch: this
+    is the only way to reach _marginal_two_panel_debug()
+    (_direct_marginal_at_g()'s TWO_PANEL diagnostic dump, the two-panel
+    sibling of _marginal_chi_i_native_debug() already exercised above),
+    since eval_marginal() picks chi_i_native for this eps_obs/std_noise
+    pair. Parametrized over both ellipticity conventions since the debug
+    dump's own kernel choice (TRACE vs TRACE_DET) is a separate branch
+    inside it. Fatal via g_error, checked in a subprocess as above."""
+    script = (
+        "import sys\n"
+        "sys.path.insert(0, 'tests/python/nc/lss/galaxy')\n"
+        "from numcosmo_py import Nc, Ncm\n"
+        "Ncm.cfg_init()\n"
+        "import test_galaxy_shape_factor_fixed_quad as m\n"
+        "pop = Nc.GalaxyShapePopBeta.new()\n"
+        "pop['alpha'] = 400.0\n"
+        "pop['beta'] = 2.0\n"
+        "gsffq, pop, data = m._make_with_pop(\n"
+        f"    pop, Nc.GalaxyWLObsEllipConv.{ellip_conv.value_nick.upper().replace('-', '_')}, 0.001,\n"
+        "    use_marginal_spline=False,\n"
+        ")\n"
+        "gsffq.eval_two_panel(pop, data, -0.9, 0.9, 0.9, 0.9)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=str(Path(__file__).resolve().parents[5]),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "non-finite" in result.stderr
+    assert "_marginal_two_panel_debug" in result.stderr
