@@ -36,7 +36,7 @@ This module builds ``NcDataClusterWLFactor`` experiments, on the
   ``NcGalaxyRedshiftFactorSpline`` and the chosen ``shape_dist`` scheme.
 """
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Sequence
 from enum import StrEnum, auto
 from dataclasses import dataclass
 import numpy as np
@@ -1253,6 +1253,46 @@ def generate_lsst_cluster_wl(
     return experiment
 
 
+class ResampleFlagChoice(StrEnum):
+    """Which per-galaxy inputs ``ncm_data_resample()`` regenerates.
+
+    Only meaningful for :func:`load_cluster_wl`'s real-catalog experiments:
+    ``POSITION``/``REDSHIFT`` redraw from the (parametric) position/redshift
+    factor, not from the catalog's own empirical footprint/p(z), so leaving
+    them off is what keeps a real catalog's actual spatial/photo-z
+    heterogeneity intact across resamples -- ``SHAPE`` alone conditions on
+    the real per-galaxy (ra, dec, z, noise) and only redraws intrinsic
+    ellipticity, which is the appropriate choice for a real-catalog bias
+    test. ``ALL`` (the default) matches historical/mock-generation
+    behaviour.
+    """
+
+    POSITION = "position"
+    REDSHIFT = "redshift"
+    SHAPE = "shape"
+    ALL = "all"
+
+    @property
+    def genum(self) -> Nc.DataClusterWLResampleFlag:
+        """Return the corresponding NcDataClusterWLResampleFlag bit(s)."""
+        return {
+            ResampleFlagChoice.POSITION: Nc.DataClusterWLResampleFlag.POSITION,
+            ResampleFlagChoice.REDSHIFT: Nc.DataClusterWLResampleFlag.REDSHIFT,
+            ResampleFlagChoice.SHAPE: Nc.DataClusterWLResampleFlag.SHAPE,
+            ResampleFlagChoice.ALL: Nc.DataClusterWLResampleFlag.ALL,
+        }[self]
+
+
+def resolve_resample_flag(
+    choices: Sequence[ResampleFlagChoice],
+) -> Nc.DataClusterWLResampleFlag:
+    """OR a list of ResampleFlagChoice into a single NcDataClusterWLResampleFlag."""
+    flag = 0
+    for choice in choices:
+        flag |= choice.genum
+    return Nc.DataClusterWLResampleFlag(flag)
+
+
 def _resolve_cluster_value(
     obs: Nc.GalaxyWLObs, key: str, override: float | None, human_name: str
 ) -> float:
@@ -1295,6 +1335,7 @@ def load_cluster_wl(
     pop_gen: GalaxyPopGenTypes,
     integ_options: IntegMethodOptions,
     summary: bool,
+    resample_flag: Nc.DataClusterWLResampleFlag = Nc.DataClusterWLResampleFlag.ALL,
 ) -> Ncm.ObjDictStr:
     """Build a cluster weak lensing experiment from a real NcGalaxyWLObs catalog.
 
@@ -1308,6 +1349,11 @@ def load_cluster_wl(
     metadata (see ncm_catalog_peek_meta(), keys ``cluster_ra``/``cluster_dec``/
     ``cluster_z``/``cluster_c``) when not given -- the galaxy catalog itself
     only describes the observed background galaxies, not the lensing cluster.
+
+    ``resample_flag`` is written onto the resulting ``NcDataClusterWLFactor``
+    as-is (default ``ALL``, matching historical behaviour); see
+    ``ResampleFlagChoice`` for why a real-catalog bias test wants ``SHAPE``
+    only.
     """
     if not (obs.has_column("ra") and obs.has_column("dec")):
         raise ValueError("obs must have 'ra' and 'dec' columns")
@@ -1434,6 +1480,7 @@ def load_cluster_wl(
     cluster_data.set_cut(cluster.r_min, cluster.r_max)
     integ_options.apply(cluster_data)
     cluster_data.set_obs(obs)
+    cluster_data.set_resample_flag(resample_flag)
 
     dset = Ncm.Dataset.new_array([cluster_data])
     likelihood = Ncm.Likelihood.new(dset)
