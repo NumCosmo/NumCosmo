@@ -1959,6 +1959,18 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
  *
  * Sets the random number generator.
  *
+ * A non-empty catalog already carries its own persisted RNG state to
+ * continue from (restored automatically on file load, see
+ * ncm_mset_catalog_peek_rng()) -- callers resuming a run must not call this
+ * at all and let that state take over. Calling it anyway (e.g. reusing an
+ * explicit seed on a resumed run) would silently discard the persisted
+ * state and restart the stream from scratch, so every "new" row generated
+ * from the replayed prefix of the stream would exactly duplicate a row
+ * already in the catalog -- a silent data-corruption footgun, not merely a
+ * cosmetic issue, so this aborts instead of warning (see, e.g., a resumed
+ * NcmFitMC run bit-for-bit duplicating its own first N rows into rows
+ * N+1..2N).
+ *
  */
 void
 ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
@@ -1966,8 +1978,10 @@ ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   if (!ncm_mset_catalog_is_empty (mcat))
-    g_warning ("ncm_mset_catalog_set_rng: setting RNG in a non-empty catalog, catalog first id: %d, catalog current id: %d.",
-               self->first_id, self->cur_id);
+    g_error ("ncm_mset_catalog_set_rng: refusing to set RNG in a non-empty catalog (first id: %d, current id: %d) -- "
+             "this would discard the persisted RNG state and replay already-computed rows. "
+             "Do not pass an explicit RNG/seed when resuming; the catalog's own persisted state is used automatically.",
+             self->first_id, self->cur_id);
 
   self->rng = ncm_rng_ref (rng);
 
