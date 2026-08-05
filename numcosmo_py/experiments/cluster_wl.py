@@ -742,7 +742,21 @@ class GalaxyPopGenBeta(BaseModel):
         run's own equivalent, the same convention every other generate
         command in this CLI uses for its own derived quantities (see e.g.
         GenerateQSpline's mean_kappa/q_transition).
+
+        Called after --parameter-list has been applied to the registered
+        NcGalaxyShapePopBeta (see ClusterWL.__post_init__), so self._pop's
+        own fit-type flags reflect it: skipped entirely when both alpha and
+        beta are fixed, since e_rms/mode would then just be the same
+        constant repeated on every catalog row.
         """
+        alpha_beta_free = any(
+            self._pop.param_get_ftype(pid) == Ncm.ParamType.FREE
+            for pid in range(self._pop.len())
+        )
+
+        if not alpha_beta_free:
+            return []
+
         return [
             Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:e_rms", None),
             Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mode", None),
