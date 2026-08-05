@@ -1065,6 +1065,55 @@ def test_run_mc_analyze_single_chain(simple_experiment):
         raise result.exception
 
 
+def test_catalog_dump_mset_round_trips_as_starting_point(simple_experiment, tmp_path):
+    """catalog dump-mset's output must be loadable as a --starting-point.
+
+    Regression test: dump-mset used to write the mset as a bare object
+    dump (ser.to_yaml_file), but --starting-point's loader
+    (_load_saved_mset() in loading.py) reads a dict_str with a "model-set"
+    entry -- the same convention every other model-set writer in this
+    codebase uses (run fit/mc's own --output, catalog get-best-fit). That
+    mismatch made _ncm_serialize_from_node() misread the mset's own first
+    property as if it were itself a nested typed object."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".mc_out.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mc",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            "--nmc",
+            "5",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mc.fits")
+    assert catalog.exists()
+
+    dumped = tmp_path / "dumped_mset.yaml"
+    result = runner.invoke(
+        app, ["catalog", "dump-mset", catalog.as_posix(), "--output", dumped.as_posix()]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dumped_dict = ser.dict_str_from_yaml_file(dumped.as_posix())
+    assert dumped_dict.peek("model-set") is not None
+
+    result = runner.invoke(
+        app,
+        ["run", "test", filename.as_posix(), "--starting-point", dumped.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
 def test_catalog_analyze_missing_file(tmp_path):
     """catalog analyze on a nonexistent file fails with a clean, catchable
     error instead of a traceback."""

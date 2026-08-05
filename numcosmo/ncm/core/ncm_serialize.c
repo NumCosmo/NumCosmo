@@ -1431,7 +1431,13 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
     }
     else
     {
-      g_error ("_ncm_serialize_from_node: object parameters must be a mapping or an alias.");
+      g_error ("_ncm_serialize_from_node: object parameters must be a mapping or an alias.\n"
+               "###Object type: %s\n"
+               "###Node type: %u\n"
+               "###\n%s\n###",
+               fy_node_get_scalar0 (obj_type_str),
+               fy_node_get_type (obj_params),
+               fy_emit_node_to_string (obj_params, FYECF_WIDTH_132 | FYECF_MODE_PRETTY));
     }
 
     if ((anchor_label != NULL) && (ser->opts & NCM_SERIALIZE_OPT_AUTOSAVE_SER))
