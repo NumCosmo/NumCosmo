@@ -86,8 +86,15 @@ def find_numcosmo_data_dir():
 
         NUMCOSMO_SOURCE_DIR=/path/to/NumCosmo
 
-    If this variable is not set, we try to find the repository root
-    by walking upward from the current working directory.
+    This function supports both the current source-tree layout:
+
+        numcosmo/nc/data/
+
+    and the older layout:
+
+        numcosmo/data/
+
+    It also accepts NUMCOSMO_SOURCE_DIR pointing directly to the data directory.
     """
 
     candidates = []
@@ -102,11 +109,22 @@ def find_numcosmo_data_dir():
     for parent in [cwd] + list(cwd.parents):
         candidates.append(parent)
 
-    for candidate in candidates:
-        data_dir = candidate / "numcosmo" / "data"
+    relative_data_dirs = [
+        Path("numcosmo") / "nc" / "data",
+        Path("numcosmo") / "data",
+    ]
 
-        if data_dir.is_dir() and any(data_dir.glob("nc_data*.h")):
-            return data_dir
+    for candidate in candidates:
+        # Allow NUMCOSMO_SOURCE_DIR to point directly to the data directory.
+        if candidate.is_dir() and any(candidate.glob("nc_data*.h")):
+            return candidate
+
+        # Otherwise treat the candidate as a possible repository root.
+        for relative_data_dir in relative_data_dirs:
+            data_dir = candidate / relative_data_dir
+
+            if data_dir.is_dir() and any(data_dir.glob("nc_data*.h")):
+                return data_dir
 
     return None
 
@@ -224,6 +242,8 @@ if data_dir is None:
     print()
     print("For example:")
     print("  export NUMCOSMO_SOURCE_DIR=$HOME/dev/NumCosmo")
+    print("or:")
+    print("  export NUMCOSMO_SOURCE_DIR=$HOME/dev/NumCosmo/numcosmo/nc/data")
 else:
     print("Using NumCosmo data directory:")
     print(f"  {data_dir}")
