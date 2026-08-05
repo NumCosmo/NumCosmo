@@ -92,7 +92,6 @@ typedef struct _NcmFitESMCMCPrivate
   GArray *accepted;
   GArray *offboard;
   NcmObjArray *func_oa;
-  gchar *func_oa_file;
   guint nadd_vals;
   guint fparam_len;
   guint init_max_rounds;
@@ -203,8 +202,7 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   self->accepted = g_array_new (TRUE, TRUE, sizeof (gboolean));
   self->offboard = g_array_new (TRUE, TRUE, sizeof (gboolean));
 
-  self->func_oa      = NULL;
-  self->func_oa_file = NULL;
+  self->func_oa = NULL;
 
   self->use_threads   = FALSE;
   self->use_mpi       = FALSE;
@@ -522,8 +520,6 @@ _ncm_fit_esmcmc_dispose (GObject *object)
   ncm_vector_clear (&self->jumps);
 
   ncm_obj_array_clear (&self->func_oa);
-
-  g_clear_pointer (&self->func_oa_file, g_free);
 
   g_clear_pointer (&self->m2lnL, g_ptr_array_unref);
   g_clear_pointer (&self->theta, g_ptr_array_unref);
@@ -885,20 +881,8 @@ ncm_fit_esmcmc_set_data_file (NcmFitESMCMC *esmcmc, const gchar *filename)
   if ((cur_filename != NULL) && (strcmp (cur_filename, filename) == 0))
     return;
 
+  ncm_mset_catalog_set_functions_array (self->mcat, self->func_oa);
   ncm_mset_catalog_set_file (self->mcat, filename);
-
-  if (self->func_oa != NULL)
-  {
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-    gchar *base_name  = ncm_util_basename_fits (filename);
-
-    self->func_oa_file = g_strdup_printf ("%s.oa", base_name);
-    g_free (base_name);
-
-    ncm_serialize_array_to_key_file (ser, self->func_oa, self->func_oa_file, TRUE);
-
-    ncm_serialize_free (ser);
-  }
 
   if (self->started)
     g_assert_cmpint (self->cur_sample_id, ==, ncm_mset_catalog_get_cur_id (self->mcat));

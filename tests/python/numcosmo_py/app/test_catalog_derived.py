@@ -30,7 +30,6 @@ resolution, safe-expression evaluation, and posterior-statistic reporting)
 through the actual Typer CLI, on a real (small) MCMC catalog.
 """
 
-from typing import Tuple
 from pathlib import Path
 
 import pytest
@@ -51,8 +50,8 @@ Ncm.cfg_init()
 
 
 @pytest.fixture(name="mcmc_catalog")
-def fixture_mcmc_catalog(tmp_path) -> Tuple[Path, Path]:
-    """Run a small MCMC (2-parameter MVN) and return (experiment, catalog) paths."""
+def fixture_mcmc_catalog(tmp_path) -> Path:
+    """Run a small MCMC (2-parameter MVN) and return the catalog path."""
     rng = Ncm.RNG.seeded_new(None, 1234)
     model_mvnd = Ncm.ModelMVND.new(2)
     mset = Ncm.MSet.new_array([model_mvnd])
@@ -80,18 +79,17 @@ def fixture_mcmc_catalog(tmp_path) -> Tuple[Path, Path]:
     catalog = output.absolute().with_suffix(".mcmc.fits")
     assert catalog.exists()
 
-    return experiment, catalog
+    return catalog
 
 
 def test_derived_error_median(mcmc_catalog):
     """catalog derived-error reports a median and 1/2/3-sigma bounds."""
-    experiment, catalog = mcmc_catalog
+    catalog = mcmc_catalog
     result = runner.invoke(
         app,
         [
             "catalog",
             "derived-error",
-            experiment.as_posix(),
             catalog.as_posix(),
             "-x",
             "x=mu_0",
@@ -109,13 +107,12 @@ def test_derived_error_median(mcmc_catalog):
 
 def test_derived_error_bare_variable_shorthand(mcmc_catalog):
     """-x mu_0 (no "=") is shorthand for -x mu_0=mu_0."""
-    experiment, catalog = mcmc_catalog
+    catalog = mcmc_catalog
     result = runner.invoke(
         app,
         [
             "catalog",
             "derived-error",
-            experiment.as_posix(),
             catalog.as_posix(),
             "-x",
             "mu_0",
@@ -130,13 +127,12 @@ def test_derived_error_bare_variable_shorthand(mcmc_catalog):
 
 def test_derived_error_pow10_transform(mcmc_catalog):
     """The motivating use case: reporting 10**log10(M)-style transforms."""
-    experiment, catalog = mcmc_catalog
+    catalog = mcmc_catalog
     result = runner.invoke(
         app,
         [
             "catalog",
             "derived-error",
-            experiment.as_posix(),
             catalog.as_posix(),
             "-x",
             "x=mu_0",
@@ -153,13 +149,12 @@ def test_derived_error_pow10_transform(mcmc_catalog):
 
 def test_derived_error_all_stats(mcmc_catalog):
     """--stat may be repeated to report median, mode, and best-fit together."""
-    experiment, catalog = mcmc_catalog
+    catalog = mcmc_catalog
     result = runner.invoke(
         app,
         [
             "catalog",
             "derived-error",
-            experiment.as_posix(),
             catalog.as_posix(),
             "-x",
             "x=mu_0",
@@ -182,13 +177,12 @@ def test_derived_error_all_stats(mcmc_catalog):
 
 def test_derived_error_multiple_exprs_in_one_table(mcmc_catalog):
     """--expr may be repeated to report several quantities in a single table."""
-    experiment, catalog = mcmc_catalog
+    catalog = mcmc_catalog
     result = runner.invoke(
         app,
         [
             "catalog",
             "derived-error",
-            experiment.as_posix(),
             catalog.as_posix(),
             "-x",
             "x=mu_0",
@@ -213,13 +207,12 @@ def test_derived_error_multiple_exprs_in_one_table(mcmc_catalog):
 
 def test_derived_error_symbols_default_to_expr_when_fewer_than_exprs(mcmc_catalog):
     """Fewer --symbol values than --expr fall back to the --expr text itself."""
-    experiment, catalog = mcmc_catalog
+    catalog = mcmc_catalog
     result = runner.invoke(
         app,
         [
             "catalog",
             "derived-error",
-            experiment.as_posix(),
             catalog.as_posix(),
             "-x",
             "x=mu_0",
@@ -239,13 +232,12 @@ def test_derived_error_symbols_default_to_expr_when_fewer_than_exprs(mcmc_catalo
 
 def test_derived_error_too_many_symbols_rejected(mcmc_catalog):
     """More --symbol values than --expr values is a clear user error."""
-    experiment, catalog = mcmc_catalog
+    catalog = mcmc_catalog
     result = runner.invoke(
         app,
         [
             "catalog",
             "derived-error",
-            experiment.as_posix(),
             catalog.as_posix(),
             "-x",
             "x=mu_0",
@@ -262,13 +254,12 @@ def test_derived_error_too_many_symbols_rejected(mcmc_catalog):
 
 def test_derived_error_requires_variable(mcmc_catalog):
     """--expr without any --variable binding fails with a clear error."""
-    experiment, catalog = mcmc_catalog
+    catalog = mcmc_catalog
     result = runner.invoke(
         app,
         [
             "catalog",
             "derived-error",
-            experiment.as_posix(),
             catalog.as_posix(),
             "--expr",
             "1",
@@ -279,13 +270,12 @@ def test_derived_error_requires_variable(mcmc_catalog):
 
 def test_derived_error_unsafe_expr_rejected(mcmc_catalog):
     """An expression outside the safe-eval whitelist is rejected, not run."""
-    experiment, catalog = mcmc_catalog
+    catalog = mcmc_catalog
     result = runner.invoke(
         app,
         [
             "catalog",
             "derived-error",
-            experiment.as_posix(),
             catalog.as_posix(),
             "-x",
             "x=mu_0",
@@ -296,16 +286,35 @@ def test_derived_error_unsafe_expr_rejected(mcmc_catalog):
     assert result.exit_code != 0
 
 
+def test_derived_error_unknown_parameter_name_rejected(mcmc_catalog):
+    """A --variable binding to a nonexistent parameter fails with a clean,
+    catchable message (typer.BadParameter), not a traceback."""
+    catalog = mcmc_catalog
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "derived-error",
+            catalog.as_posix(),
+            "-x",
+            "x=not_a_real_param",
+            "--expr",
+            "x",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "not found" in result.output
+
+
 def test_plot_corner_with_derived_dimension(mcmc_catalog, tmp_path):
     """plot-corner accepts an extra --derived-* dimension in the triangle plot."""
-    experiment, catalog = mcmc_catalog
+    catalog = mcmc_catalog
     output = tmp_path / "corner_out"
     result = runner.invoke(
         app,
         [
             "catalog",
             "plot-corner",
-            experiment.as_posix(),
             catalog.as_posix(),
             "--no-show",
             "--output",
@@ -329,14 +338,13 @@ def test_plot_corner_with_derived_dimension(mcmc_catalog, tmp_path):
 
 def test_plot_corner_derived_expr_requires_variable(mcmc_catalog, tmp_path):
     """--derived-expr without --derived-variable fails with a clear error."""
-    experiment, catalog = mcmc_catalog
+    catalog = mcmc_catalog
     output = tmp_path / "corner_out"
     result = runner.invoke(
         app,
         [
             "catalog",
             "plot-corner",
-            experiment.as_posix(),
             catalog.as_posix(),
             "--no-show",
             "--output",
