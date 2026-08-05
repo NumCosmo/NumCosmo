@@ -1081,7 +1081,7 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
       mset   = ncm_fit_peek_mset (fit);
       fstate = ncm_fit_peek_state (fit);
 
-      if (mc->func_oa != NULL)
+      if ((mc->func_oa != NULL) && (mc->func_oa->len > 0))
       {
         funcs_array = ncm_serialize_dup_array (mc->ser, mc->func_oa);
         oa_vals     = ncm_vector_new (mc->func_oa->len);
@@ -1127,7 +1127,7 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
       /* This is the slow section that we want to parallelize over */
       ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
 
-      if (mc->func_oa != NULL)
+      if ((mc->func_oa != NULL) && (mc->func_oa->len > 0))
       {
         for (k = 0; k < mc->func_oa->len; k++)
         {
@@ -1145,7 +1145,7 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
         ncm_vector_set (theta, 0, ncm_fit_state_get_m2lnL_curval (fstate));
         ncm_mset_fparams_get_vector_offset (mset, theta, mc->nadd_vals);
 
-        if (mc->func_oa != NULL)
+        if ((mc->func_oa != NULL) && (mc->func_oa->len > 0))
         {
           for (k = 0; k < mc->func_oa->len; k++)
           {
