@@ -224,24 +224,194 @@ class LoadExperiment(AppLogging):
         self.close_logging()
 
 
+def _catalog_indices(
+    mcat: Ncm.MSetCatalog,
+    total_columns: int,
+    include: Optional[list[str]],
+    exclude: Optional[list[str]],
+) -> list[int]:
+    """Resolve the --include/--exclude column selection to a list of indices."""
+    include = include or []
+    exclude = exclude or []
+
+    if not include and not exclude:
+        return list(range(total_columns))
+
+    indices = []
+    if include and exclude:
+        for i in range(total_columns):
+            name = mcat.col_full_name(i)
+            if any(s in name for s in include) and not any(s in name for s in exclude):
+                indices.append(i)
+    elif include:
+        for i in range(total_columns):
+            name = mcat.col_full_name(i)
+            if any(s in name for s in include):
+                indices.append(i)
+    else:
+        for i in range(total_columns):
+            name = mcat.col_full_name(i)
+            if not any(s in name for s in exclude):
+                indices.append(i)
+
+    return indices
+
+
+@dataclasses.dataclass
+class LoadedCatalog:
+    """The contents of an MCMC catalog file, loaded and ready for analysis.
+
+    Catalog files are self-sufficient: their model-set and, if present, the
+    functions that computed their extra columns are embedded in the file
+    itself (FITS HDU0), so no companion experiment file is needed to load
+    one.
+    """
+
+    mcat: Ncm.MSetCatalog
+    mset: Ncm.MSet
+    functions: Optional[Ncm.ObjArray]
+    fparams_len: int
+    nadd_vals: int
+    total_columns: int
+    nchains: int
+    indices: list[int]
+    full_stats: Ncm.StatsVec
+    stats: Ncm.StatsVec
+    nitems: int
+
+
+def _resolve_burnin_rows(mcmc_file: Path, burnin: int, tail: Optional[int]) -> int:
+    """Resolve a --burnin/--tail request (in iterations) to a row count.
+
+    `burnin` discards the first N iterations (ensemble steps); `tail` keeps
+    only the last N instead. Peeks the catalog's row/chain counts first
+    (cheap: a few FITS header keys, no model-set deserialization) to convert
+    iterations to rows and validate the request before the catalog is
+    actually opened.
+    """
+    if tail is not None and burnin != 0:
+        raise typer.BadParameter("Give at most one of --burnin and --tail.")
+
+    if burnin == 0 and tail is None:
+        return 0
+
+    nrows, nchains, _first_id = Ncm.MSetCatalog.peek_info_from_file(
+        mcmc_file.absolute().as_posix()
+    )
+    n_iterations = nrows // nchains
+
+    if tail is not None:
+        if tail < 0:
+            raise typer.BadParameter(f"--tail must be non-negative, got {tail}.")
+        burnin_iterations = max(0, n_iterations - tail)
+    else:
+        burnin_iterations = burnin
+
+    if burnin_iterations > n_iterations:
+        raise typer.BadParameter(
+            f"--burnin of {burnin_iterations} iteration(s) exceeds catalog "
+            f"{mcmc_file}: it only has {n_iterations} iteration(s) "
+            f"({nrows} rows, {nchains} chains)."
+        )
+
+    return burnin_iterations * nchains
+
+
+def load_catalog(
+    mcmc_file: Path,
+    burnin: int = 0,
+    tail: Optional[int] = None,
+    include: Optional[list[str]] = None,
+    exclude: Optional[list[str]] = None,
+) -> LoadedCatalog:
+    """Load an MCMC catalog file and prepare it for analysis.
+
+    `burnin` and `tail` are in iterations (ensemble steps), not raw rows --
+    see _resolve_burnin_rows().
+    """
+    if not mcmc_file.exists():
+        raise typer.BadParameter(f"MCMC file {mcmc_file} not found.")
+
+    burnin_rows = _resolve_burnin_rows(mcmc_file, burnin, tail)
+
+    mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_file_ro(
+        mcmc_file.absolute().as_posix(), burnin_rows
+    )
+    assert isinstance(mcat, Ncm.MSetCatalog)
+
+    mset: Ncm.MSet = mcat.peek_mset()
+    assert isinstance(mset, Ncm.MSet)
+    mset.prepare_fparam_map()
+
+    functions: Optional[Ncm.ObjArray] = mcat.peek_functions_array()
+
+    fparams_len = mset.fparams_len()
+    nadd_vals: int = mcat.nadd_vals()
+    total_columns: int = fparams_len + nadd_vals
+    nchains: int = mcat.nchains()
+
+    indices = _catalog_indices(mcat, total_columns, include, exclude)
+
+    full_stats: Ncm.StatsVec = mcat.peek_pstats()
+    assert isinstance(full_stats, Ncm.StatsVec)
+
+    if nchains > 1:
+        stats: Ncm.StatsVec = mcat.peek_e_mean_stats()
+    else:
+        stats = mcat.peek_pstats()
+    assert isinstance(stats, Ncm.StatsVec)
+
+    nitems: int = stats.nitens()
+
+    return LoadedCatalog(
+        mcat=mcat,
+        mset=mset,
+        functions=functions,
+        fparams_len=fparams_len,
+        nadd_vals=nadd_vals,
+        total_columns=total_columns,
+        nchains=nchains,
+        indices=indices,
+        full_stats=full_stats,
+        stats=stats,
+        nitems=nitems,
+    )
+
+
 @dataclasses.dataclass(kw_only=True)
-class LoadCatalog(LoadExperiment):
-    """Analyzes the results of a MCMC run."""
+class LoadCatalog(AppLogging):
+    """Loads a single MCMC catalog file for analysis.
+
+    No experiment file is needed: the catalog is self-sufficient (see
+    load_catalog()). Commands that need to combine several catalogs (e.g.
+    plot-corner) use load_catalog() directly instead of this class.
+    """
 
     mcmc_file: Annotated[
         Path,
         typer.Argument(
-            help="Path to the MCMC file.",
+            help="Path to the MCMC catalog file.",
         ),
     ]
 
     burnin: Annotated[
         int,
         typer.Option(
-            help="Number of samples to discard as burnin.",
+            help="Number of iterations (ensemble steps) to discard as burnin.",
             min=0,
         ),
     ] = 0
+
+    tail: Annotated[
+        Optional[int],
+        typer.Option(
+            help=(
+                "Keep only the last N iterations (ensemble steps) instead of "
+                "burning in from the start. Give at most one of --burnin/--tail."
+            ),
+            min=0,
+        ),
+    ] = None
 
     include: Annotated[
         Optional[list[str]],
@@ -257,67 +427,43 @@ class LoadCatalog(LoadExperiment):
         ),
     ] = None
 
+    output: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--output",
+            "-o",
+            help="Path to the output file, if given.",
+        ),
+    ] = None
+
+    # These are set in __post_init__ from load_catalog(), not from the CLI.
+    mcat: Ncm.MSetCatalog = dataclasses.field(init=False)
+    mset: Ncm.MSet = dataclasses.field(init=False)
+    functions: Optional[Ncm.ObjArray] = dataclasses.field(init=False)
+    fparams_len: int = dataclasses.field(init=False)
+    nadd_vals: int = dataclasses.field(init=False)
+    total_columns: int = dataclasses.field(init=False)
+    nchains: int = dataclasses.field(init=False)
+    indices: list[int] = dataclasses.field(init=False)
+    full_stats: Ncm.StatsVec = dataclasses.field(init=False)
+    stats: Ncm.StatsVec = dataclasses.field(init=False)
+    nitems: int = dataclasses.field(init=False)
+
     def __post_init__(self) -> None:
         """Load the MCMC file and prepare the catalog."""
         super().__post_init__()
 
-        if not self.mcmc_file.exists():
-            raise RuntimeError(f"MCMC file {self.mcmc_file} not found.")
-
-        self.mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_file_ro(
-            self.mcmc_file.absolute().as_posix(), self.burnin
+        loaded = load_catalog(
+            self.mcmc_file, self.burnin, self.tail, self.include, self.exclude
         )
-        assert isinstance(self.mcat, Ncm.MSetCatalog)
-
-        self.catalog_mset: Ncm.MSet = self.mcat.peek_mset()
-        assert isinstance(self.catalog_mset, Ncm.MSet)
-
-        self.catalog_mset.prepare_fparam_map()
-        self.fparams_len = self.catalog_mset.fparams_len()
-        self.nadd_vals: int = self.mcat.nadd_vals()
-        self.total_columns: int = self.fparams_len + self.nadd_vals
-        self.nchains: int = self.mcat.nchains()
-
-        self._extract_indices()
-
-        self.full_stats: Ncm.StatsVec = self.mcat.peek_pstats()
-        assert isinstance(self.full_stats, Ncm.StatsVec)
-
-        if self.nchains > 1:
-            self.stats: Ncm.StatsVec = self.mcat.peek_e_mean_stats()
-            assert isinstance(self.stats, Ncm.StatsVec)
-        else:
-            self.stats = self.mcat.peek_pstats()
-            assert isinstance(self.stats, Ncm.StatsVec)
-
-        self.nitems: int = self.stats.nitens()
-
-    def _extract_indices(self):
-        """Extract the indices to include in the analysis."""
-        if self.include is None:
-            self.include = []
-        if self.exclude is None:
-            self.exclude = []
-        assert self.include is not None
-        assert self.exclude is not None
-        if not self.include and not self.exclude:
-            self.indices = list(range(self.total_columns))
-        else:
-            self.indices = []
-            if self.include and self.exclude:
-                for i in range(self.total_columns):
-                    name = self.mcat.col_full_name(i)
-                    if any(s in name for s in self.include) and not any(
-                        s in name for s in self.exclude
-                    ):
-                        self.indices.append(i)
-            elif self.include:
-                for i in range(self.total_columns):
-                    name = self.mcat.col_full_name(i)
-                    if any(s in name for s in self.include):
-                        self.indices.append(i)
-            else:
-                for i in range(self.total_columns):
-                    name = self.mcat.col_full_name(i)
-                    if not any(s in name for s in self.exclude):
-                        self.indices.append(i)
+        self.mcat = loaded.mcat
+        self.mset = loaded.mset
+        self.functions = loaded.functions
+        self.fparams_len = loaded.fparams_len
+        self.nadd_vals = loaded.nadd_vals
+        self.total_columns = loaded.total_columns
+        self.nchains = loaded.nchains
+        self.indices = loaded.indices
+        self.full_stats = loaded.full_stats
+        self.stats = loaded.stats
+        self.nitems = loaded.nitems

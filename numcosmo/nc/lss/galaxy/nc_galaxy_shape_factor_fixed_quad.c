@@ -868,7 +868,7 @@ _direct_marginal_at_g (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalax
       break;
   }
 
-  if (!isfinite (result) || (result <= 0.0))
+  if (!isfinite (result))
   {
     switch (ldata->cached_method)
     {
@@ -882,14 +882,14 @@ _direct_marginal_at_g (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalax
         break;
     }
 
-    g_error ("nc_galaxy_shape_factor_fixed_quad: non-finite or non-positive marginal at g=(% .6g,% .6g), "
+    g_error ("nc_galaxy_shape_factor_fixed_quad: non-finite marginal at g=(% .6g,% .6g), "
              "eps_obs=(% .6g,% .6g), std_noise=% .6g, method=%s, result=% .6g.",
              creal (g), cimag (g), ldata->cached_epsilon_obs_1, ldata->cached_epsilon_obs_2, ldata->cached_std_noise,
              (ldata->cached_method == NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE) ? "chi_i_native" : "two_panel",
              result);
   }
 
-  return result;
+  return result > 0.0 ? result : 1.0e-300;
 }
 
 /* Shared args behind _build_g_spline()'s Fx/Fy gsl_function slices,

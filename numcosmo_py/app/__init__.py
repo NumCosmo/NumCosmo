@@ -164,7 +164,12 @@ CAT_CALIBRATE_CMD: CMDArg = {
 CAT_PLOT_CORNER_CMD: CMDArg = {
     "name": "plot-corner",
     "no_args_is_help": True,
-    "help": "Plots the corner plot for a given catalog.",
+    "help": (
+        "Plots the corner plot for one or more catalogs, overlaid if more "
+        "than one is given, e.g.:\n\n"
+        "  numcosmo catalog plot-corner exp_007.mcmc.fits exp_008.mcmc.fits "
+        "--burnin 60"
+    ),
 }
 
 CAT_VISUAL_HW_CMD: CMDArg = {
@@ -194,16 +199,16 @@ CAT_DERIVED_ERROR_CMD: CMDArg = {
         "--stat to report median/mode/bestfit together.\n\n"
         "Example: report 10^log10(M) and its asymmetric error bars from a "
         "halo-mass catalog:\n\n"
-        "  numcosmo catalog derived-error exp.yaml exp.mcmc.fits "
+        "  numcosmo catalog derived-error exp.mcmc.fits "
         "-x log10MDelta --expr '10**log10MDelta' --symbol 'M_Delta'\n\n"
         "Example: report both the raw parameter and its exponentiated form, "
         "for median and mode, in one table:\n\n"
-        "  numcosmo catalog derived-error exp.yaml exp.mcmc.fits "
+        "  numcosmo catalog derived-error exp.mcmc.fits "
         "-x log10MDelta --expr log10MDelta --expr '10**log10MDelta' "
         "--stat median --stat mode\n\n"
         "Example: combine two parameters, e.g. h = H0 / 100 folded into "
         "Omega_m*h**2:\n\n"
-        "  numcosmo catalog derived-error exp.yaml exp.mcmc.fits "
+        "  numcosmo catalog derived-error exp.mcmc.fits "
         "-x x=Omega_m -x y=H0 --expr '(y / 100)**2 * x'"
     ),
 }
