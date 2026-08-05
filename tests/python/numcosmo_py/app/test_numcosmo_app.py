@@ -712,13 +712,101 @@ def test_run_mcmc_apes_analyze(simple_experiment):
         [
             "catalog",
             "analyze",
-            filename.as_posix(),
             output.absolute().with_suffix(".mcmc.fits").as_posix(),
         ],
     )
 
     if result.exit_code != 0:
         raise result.exception
+
+
+def test_run_mcmc_apes_analyze_burnin_iterations(simple_experiment):
+    """--burnin is interpreted in iterations (ensemble steps), not raw rows."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--burnin", "3"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
+    """--burnin larger than the catalog's iteration count fails with a clear,
+    catchable error instead of aborting the process."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--burnin", "1000000"]
+    )
+    assert result.exit_code != 0
+    assert "exceeds catalog" in result.output
+
+
+def test_run_mcmc_apes_analyze_tail(simple_experiment):
+    """--tail keeps only the last N iterations."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--tail", "2"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_analyze_burnin_and_tail_rejected(simple_experiment):
+    """--burnin and --tail are mutually exclusive."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "analyze",
+            catalog.as_posix(),
+            "--burnin",
+            "1",
+            "--tail",
+            "2",
+        ],
+    )
+    assert result.exit_code != 0
 
 
 def test_run_mcmc_apes_plot_corner(simple_experiment):
@@ -739,7 +827,6 @@ def test_run_mcmc_apes_plot_corner(simple_experiment):
         [
             "catalog",
             "plot-corner",
-            filename.as_posix(),
             output.absolute().with_suffix(".mcmc.fits").as_posix(),
             "--no-show",
             "--output",
@@ -771,7 +858,6 @@ def test_run_mcmc_apes_analyze_evidence(simple_experiment):
         [
             "catalog",
             "analyze",
-            filename.as_posix(),
             output.absolute().with_suffix(".mcmc.fits").as_posix(),
             "--evidence",
         ],
@@ -799,7 +885,6 @@ def test_run_mcmc_apes_calibrate(simple_experiment, calibration_method):
         [
             "catalog",
             "calibrate",
-            filename.as_posix(),
             output.absolute().with_suffix(".mcmc.fits").as_posix(),
             "--cv-method",
             calibration_method,

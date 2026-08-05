@@ -119,7 +119,7 @@ GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2: str = r"epsilon_obs_2"
 GALAXY_SHAPE_FACTOR_COL_M: str = r"m"
 GALAXY_SHAPE_FACTOR_COL_STD_NOISE: str = r"std_noise"
 GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA: float = 1.55
-GALAXY_SHAPE_POP_BETA_DEFAULT_BETA: float = 1.62
+GALAXY_SHAPE_POP_BETA_DEFAULT_BETA: float = 1.55
 GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL: float = 0.0
 GALAXY_SHAPE_POP_GAUSS_DEFAULT_PARAMS_ABSTOL: float = 0.0
 GALAXY_SHAPE_POP_GAUSS_DEFAULT_SIGMA: float = 0.3
@@ -8728,6 +8728,7 @@ class GalaxyShapePop(NumCosmoMath.Model):
         x_series: NumCosmoMath.LaurentSeriesTPS,
         out: NumCosmoMath.LaurentSeriesTPS,
     ) -> None: ...
+    def do_exponent_at_origin(self) -> float: ...
     def do_gen(
         self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
     ) -> typing.Tuple[float, float]: ...
@@ -8745,6 +8746,7 @@ class GalaxyShapePop(NumCosmoMath.Model):
         x_series: NumCosmoMath.LaurentSeriesTPS,
         out: NumCosmoMath.LaurentSeriesTPS,
     ) -> None: ...
+    def exponent_at_origin(self) -> float: ...
     def free(self) -> None: ...
     def gen(
         self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
@@ -8865,6 +8867,7 @@ class GalaxyShapePopClass(GObject.GPointer):
         typing.Tuple[float, float],
     ] = ...
     e_rms: typing.Callable[[GalaxyShapePop, GalaxyShapePopData], float] = ...
+    exponent_at_origin: typing.Callable[[GalaxyShapePop], float] = ...
     eval_p_rho2_g_series: typing.Callable[
         [
             GalaxyShapePop,

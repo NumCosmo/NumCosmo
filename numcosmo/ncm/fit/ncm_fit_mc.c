@@ -484,6 +484,7 @@ ncm_fit_mc_set_data_file (NcmFitMC *mc, const gchar *filename)
   if ((cur_filename != NULL) && (strcmp (cur_filename, filename) == 0))
     return;
 
+  ncm_mset_catalog_set_functions_array (mc->mcat, mc->func_oa);
   ncm_mset_catalog_set_file (mc->mcat, filename);
 
   if (mc->started)

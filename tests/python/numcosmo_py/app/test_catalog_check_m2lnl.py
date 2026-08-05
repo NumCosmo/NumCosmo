@@ -258,8 +258,7 @@ def test_check_m2lnl_incompatible_fparams_raises(mcmc_catalog, tmp_path: Path):
     )
 
     assert result.exit_code != 0
-    assert result.exception is not None
-    assert "are not compatible" in str(result.exception)
+    assert "are not compatible" in result.output
 
 
 def test_check_m2lnl_missing_m2lnl_column_raises(
@@ -276,8 +275,7 @@ def test_check_m2lnl_missing_m2lnl_column_raises(
     )
 
     assert result.exit_code != 0
-    assert result.exception is not None
-    assert "has no" in str(result.exception)
+    assert "has no" in result.output
 
 
 if __name__ == "__main__":
