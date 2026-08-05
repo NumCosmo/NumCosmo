@@ -765,9 +765,8 @@ class PlotCorner(AppLogging):
         """Corner plot of one or more catalogs."""
         super().__post_init__()
 
-        if not self.mcmc_file:
-            raise typer.BadParameter("At least one MCMC catalog file is required.")
-
+        # mcmc_file is a required positional argument, so Click already
+        # refuses to run with zero catalogs given.
         derived_variable: List[str] = []
         if self.derived_expr is not None:
             if not self.derived_variable:
@@ -998,10 +997,8 @@ class DerivedQuantityError(LoadCatalog):
         """Compute the posterior statistic(s) for the derived quantities."""
         super().__post_init__()
 
-        if not self.variable:
-            raise typer.BadParameter("At least one --variable binding is required.")
-        if not self.expr:
-            raise typer.BadParameter("At least one --expr is required.")
+        # --variable/--expr are required options, so Click already refuses
+        # to run without at least one of each.
         if not self.stat:
             self.stat = [DerivedStat.MEDIAN]
         if self.symbol and len(self.symbol) > len(self.expr):
