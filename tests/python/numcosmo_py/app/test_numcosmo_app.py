@@ -944,7 +944,11 @@ def test_run_mcmc_apes_plot_corner_too_many_plot_names(simple_experiment):
         ],
     )
     assert result.exit_code != 0
-    assert "More --plot-name values" in result.output
+    # Avoid asserting on a substring straddling "--plot-name": Rich highlights
+    # option-looking tokens and injects ANSI codes between their characters
+    # when color is on (as it is in CI, unlike a plain local terminal), which
+    # would otherwise break a naive substring match.
+    assert "values than catalog files" in result.output
 
 
 def test_run_mcmc_apes_plot_corner_mark_bestfit(simple_experiment):
