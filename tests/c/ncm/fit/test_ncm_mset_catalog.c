@@ -68,6 +68,9 @@ void test_ncm_mset_catalog_file_hdu0_legacy_object_format (void);
 void test_ncm_mset_catalog_file_legacy_fallback (void);
 void test_ncm_mset_catalog_file_missing_mset_traps (void);
 void test_ncm_mset_catalog_file_missing_mset_subprocess (void);
+void test_ncm_mset_catalog_file_peek_info (void);
+void test_ncm_mset_catalog_file_burnin_exceeds_traps (void);
+void test_ncm_mset_catalog_file_burnin_exceeds_subprocess (void);
 
 #endif /* HAVE_CFITSIO */
 
@@ -146,6 +149,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/file/legacy_fallback", &test_ncm_mset_catalog_file_legacy_fallback);
   g_test_add_func ("/ncm/mset/catalog/file/missing_mset/traps", &test_ncm_mset_catalog_file_missing_mset_traps);
   g_test_add_func ("/ncm/mset/catalog/file/missing_mset/subprocess", &test_ncm_mset_catalog_file_missing_mset_subprocess);
+  g_test_add_func ("/ncm/mset/catalog/file/peek_info", &test_ncm_mset_catalog_file_peek_info);
+  g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/traps", &test_ncm_mset_catalog_file_burnin_exceeds_traps);
+  g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/subprocess", &test_ncm_mset_catalog_file_burnin_exceeds_subprocess);
 #endif /* HAVE_CFITSIO */
 
   g_test_run ();
@@ -1188,6 +1194,55 @@ test_ncm_mset_catalog_file_missing_mset_subprocess (void)
   /* Neither an embedded mset (just stripped) nor a `.mset' sidecar (never
    * written) exists: this must abort with a fatal error. */
   ncm_mset_catalog_new_from_file_ro (filename, 0);
+
+  g_assert_not_reached ();
+}
+
+void
+test_ncm_mset_catalog_file_peek_info (void)
+{
+  gchar *tmp_dir  = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_peek_info_XXXXXX", NULL);
+  gchar *filename = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmMSet *mset   = _test_ncm_mset_catalog_new_file (filename);
+  glong nrows     = -1;
+  guint nchains   = 0;
+  gint first_id   = -1;
+
+  ncm_mset_catalog_peek_info_from_file (filename, &nrows, &nchains, &first_id);
+
+  g_assert_cmpint (nrows, ==, 1);
+  g_assert_cmpuint (nchains, ==, 1);
+  g_assert_cmpint (first_id, ==, 0);
+
+  ncm_mset_clear (&mset);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+void
+test_ncm_mset_catalog_file_burnin_exceeds_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/catalog/file/burnin_exceeds/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*exceeds catalog*");
+}
+
+void
+test_ncm_mset_catalog_file_burnin_exceeds_subprocess (void)
+{
+  gchar *tmp_dir  = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_burnin_XXXXXX", NULL);
+  gchar *filename = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmMSet *mset   = _test_ncm_mset_catalog_new_file (filename);
+
+  ncm_mset_clear (&mset);
+
+  /* The file has a single row: any burnin > 1 must abort with a clear,
+   * unit-labeled error message (see _ncm_mset_catalog_open_create_file). */
+  ncm_mset_catalog_new_from_file_ro (filename, 2);
 
   g_assert_not_reached ();
 }

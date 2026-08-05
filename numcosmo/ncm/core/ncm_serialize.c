@@ -1719,17 +1719,47 @@ ncm_serialize_var_dict_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
         struct fy_node *item_key  = fy_node_pair_key (item);
         struct fy_node *item_val  = fy_node_pair_value (item);
         const gchar *key          = fy_node_get_scalar0 (item_key);
-        gchar *value_string       = fy_emit_node_to_string (item_val, FYECF_WIDTH_INF | FYECF_MODE_FLOW_ONELINE);
-        GError *error             = NULL;
-        GVariant *item_val_var    = g_variant_parse (NULL, value_string, NULL, NULL, &error);
 
-        if (error != NULL)
-          g_error ("ncm_serialize_var_dict_from_yaml: cannot parse dictionary element `%s' value `%s': %s.", key, value_string, error->message);
+        /* Objects are emitted as a mapping node, object arrays as a
+         * sequence of mapping nodes (see ncm_serialize_var_dict_to_yaml()):
+         * neither shape is ever produced by the primitive value kinds
+         * below, so it unambiguously identifies them on the way back. */
+        if (fy_node_is_mapping (item_val))
+        {
+          GObject *obj      = _ncm_serialize_from_node (ser, item_val);
+          GVariant *obj_var = ncm_serialize_to_variant (ser, obj);
 
-        ncm_var_dict_set_variant (dict, key, item_val_var);
+          ncm_var_dict_set_variant (dict, key, obj_var);
 
-        g_variant_unref (item_val_var);
-        g_free (value_string);
+          g_variant_unref (obj_var);
+          g_object_unref (obj);
+        }
+        else if (fy_node_is_sequence (item_val) &&
+                 (fy_node_sequence_item_count (item_val) > 0) &&
+                 fy_node_is_mapping (fy_node_sequence_get_by_index (item_val, 0)))
+        {
+          NcmObjArray *array  = _ncm_serialize_array_from_yaml_node (ser, item_val);
+          GVariant *array_var = ncm_serialize_array_to_variant (ser, array);
+
+          ncm_var_dict_set_variant (dict, key, array_var);
+
+          g_variant_unref (array_var);
+          ncm_obj_array_unref (array);
+        }
+        else
+        {
+          gchar *value_string    = fy_emit_node_to_string (item_val, FYECF_WIDTH_INF | FYECF_MODE_FLOW_ONELINE);
+          GError *error          = NULL;
+          GVariant *item_val_var = g_variant_parse (NULL, value_string, NULL, NULL, &error);
+
+          if (error != NULL)
+            g_error ("ncm_serialize_var_dict_from_yaml: cannot parse dictionary element `%s' value `%s': %s.", key, value_string, error->message);
+
+          ncm_var_dict_set_variant (dict, key, item_val_var);
+
+          g_variant_unref (item_val_var);
+          g_free (value_string);
+        }
       }
     }
     else
@@ -3374,9 +3404,36 @@ ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict)
 
   while (g_hash_table_iter_next (&iter, (gpointer *) &key, (gpointer *) &value))
   {
-    fy_node_mapping_append (root,
-                            fy_node_create_scalar_copy (doc, key, FY_NT),
-                            fy_node_build_from_malloc_string (doc, g_variant_print (value, FALSE), FY_NT));
+    struct fy_node *value_node;
+
+    /* Objects and object arrays need a real structured YAML node (mapping
+     * or sequence-of-mappings): their GVariant text form (a tuple, or an
+     * array of tuples) is not valid YAML and would be silently mangled by
+     * a naive text round-trip through the flow emitter/parser below. */
+    if (g_variant_is_of_type (value, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)))
+    {
+      value_node = _ncm_serialize_to_yaml_node (ser, doc, value);
+    }
+    else if (g_variant_is_of_type (value, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_ARRAY_TYPE)))
+    {
+      GVariantIter viter;
+      GVariant *item_var;
+
+      value_node = fy_node_create_sequence (doc);
+      g_variant_iter_init (&viter, value);
+
+      while ((item_var = g_variant_iter_next_value (&viter)) != NULL)
+      {
+        fy_node_sequence_append (value_node, _ncm_serialize_to_yaml_node (ser, doc, item_var));
+        g_variant_unref (item_var);
+      }
+    }
+    else
+    {
+      value_node = fy_node_build_from_malloc_string (doc, g_variant_print (value, FALSE), FY_NT);
+    }
+
+    fy_node_mapping_append (root, fy_node_create_scalar_copy (doc, key, FY_NT), value_node);
   }
 
   fy_document_set_root (doc, root);

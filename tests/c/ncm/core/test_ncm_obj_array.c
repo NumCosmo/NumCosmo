@@ -1526,13 +1526,17 @@ _test_ncm_var_dict_to_from_yaml_file (NcmVarDict *vd)
 void
 test_ncm_var_dict_to_from (TestNcmVarDict *test, gconstpointer pdata)
 {
-  NcmVarDict *vd   = test->vd;
-  GArray *iarr     = g_array_new (FALSE, FALSE, sizeof (gint));
-  GArray *darr     = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *barr     = g_array_new (FALSE, FALSE, sizeof (gboolean));
-  guint n_ints     = g_test_rand_int_range (5, 10);
-  guint n_doubles  = g_test_rand_int_range (5, 10);
-  guint n_booleans = g_test_rand_int_range (5, 10);
+  NcmVarDict *vd    = test->vd;
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GArray *iarr      = g_array_new (FALSE, FALSE, sizeof (gint));
+  GArray *darr      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *barr      = g_array_new (FALSE, FALSE, sizeof (gboolean));
+  NcmVector *v      = ncm_vector_new (3);
+  NcmObjArray *oa   = ncm_obj_array_new ();
+  NcmMatrix *m      = ncm_matrix_new (2, 2);
+  guint n_ints      = g_test_rand_int_range (5, 10);
+  guint n_doubles   = g_test_rand_int_range (5, 10);
+  guint n_booleans  = g_test_rand_int_range (5, 10);
 
   NcmVarDict *(*to_from) (NcmVarDict *) = pdata;
 
@@ -1559,6 +1563,10 @@ test_ncm_var_dict_to_from (TestNcmVarDict *test, gconstpointer pdata)
     g_array_append_val (barr, b);
   }
 
+  ncm_vector_set_all (v, 3.14);
+  ncm_matrix_set_all (m, 2.5);
+  ncm_obj_array_add (oa, G_OBJECT (m));
+
   ncm_var_dict_set_string (vd, "str", "Hello World!");
   ncm_var_dict_set_int (vd, "i", 123);
   ncm_var_dict_set_double (vd, "d", 123.456);
@@ -1566,6 +1574,8 @@ test_ncm_var_dict_to_from (TestNcmVarDict *test, gconstpointer pdata)
   ncm_var_dict_set_int_array (vd, "iarr", iarr);
   ncm_var_dict_set_double_array (vd, "darr", darr);
   ncm_var_dict_set_boolean_array (vd, "barr", barr);
+  ncm_var_dict_set_object (vd, "v", ser, G_OBJECT (v));
+  ncm_var_dict_set_object_array (vd, "oa", ser, oa);
 
   {
     NcmVarDict *vd0 = to_from (vd);
@@ -1581,6 +1591,8 @@ test_ncm_var_dict_to_from (TestNcmVarDict *test, gconstpointer pdata)
     g_assert_true (ncm_var_dict_has_key (vd0, "iarr"));
     g_assert_true (ncm_var_dict_has_key (vd0, "darr"));
     g_assert_true (ncm_var_dict_has_key (vd0, "barr"));
+    g_assert_true (ncm_var_dict_has_key (vd0, "v"));
+    g_assert_true (ncm_var_dict_has_key (vd0, "oa"));
 
     g_assert_false (ncm_var_dict_has_key (vd0, "not_exist"));
     g_assert_false (ncm_var_dict_has_key (vd0, "not_exist_either"));
@@ -1676,12 +1688,38 @@ test_ncm_var_dict_to_from (TestNcmVarDict *test, gconstpointer pdata)
       g_array_unref (barr0);
     }
 
+    {
+      GObject *v0 = NULL;
+
+      g_assert_true (ncm_var_dict_get_object (vd0, "v", ser, &v0));
+      g_assert_true (NCM_IS_VECTOR (v0));
+      g_assert_cmpfloat (ncm_vector_get (NCM_VECTOR (v0), 0), ==, 3.14);
+      g_assert_true (v0 != G_OBJECT (v));
+
+      g_object_unref (v0);
+    }
+
+    {
+      NcmObjArray *oa0 = NULL;
+
+      g_assert_true (ncm_var_dict_get_object_array (vd0, "oa", ser, &oa0));
+      g_assert_cmpuint (ncm_obj_array_len (oa0), ==, ncm_obj_array_len (oa));
+      g_assert_true (NCM_IS_MATRIX (ncm_obj_array_peek (oa0, 0)));
+      g_assert_cmpfloat (ncm_matrix_get (NCM_MATRIX (ncm_obj_array_peek (oa0, 0)), 0, 0), ==, 2.5);
+
+      ncm_obj_array_unref (oa0);
+    }
+
     ncm_var_dict_clear (&vd0);
   }
 
   g_array_free (iarr, TRUE);
   g_array_free (darr, TRUE);
   g_array_free (barr, TRUE);
+  ncm_vector_free (v);
+  ncm_matrix_free (m);
+  ncm_obj_array_unref (oa);
+  ncm_serialize_free (ser);
 }
 
 void

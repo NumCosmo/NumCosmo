@@ -286,6 +286,26 @@ def test_derived_error_unsafe_expr_rejected(mcmc_catalog):
     assert result.exit_code != 0
 
 
+def test_derived_error_unknown_parameter_name_rejected(mcmc_catalog):
+    """A --variable binding to a nonexistent parameter fails with a clean,
+    catchable message (typer.BadParameter), not a traceback."""
+    catalog = mcmc_catalog
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "derived-error",
+            catalog.as_posix(),
+            "-x",
+            "x=not_a_real_param",
+            "--expr",
+            "x",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "not found" in result.output
+
+
 def test_plot_corner_with_derived_dimension(mcmc_catalog, tmp_path):
     """plot-corner accepts an extra --derived-* dimension in the triangle plot."""
     catalog = mcmc_catalog
