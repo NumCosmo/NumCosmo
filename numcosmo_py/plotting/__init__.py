@@ -26,6 +26,7 @@
 import os
 import warnings
 import dataclasses
+from collections.abc import Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -149,7 +150,7 @@ def mcat_to_catalog_data(
     name: str,
     burnin: int = 0,
     thin: int = 1,
-    indices: npt.NDArray[np.int64] | None = None,
+    indices: npt.NDArray[np.int64] | Sequence[int] | None = None,
 ) -> CatalogData:
     """Convert a Ncm.MSetCatalog to a set of numpy arrays."""
     nchains: int = mcat.nchains()

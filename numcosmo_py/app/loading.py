@@ -436,6 +436,19 @@ class LoadCatalog(AppLogging):
         ),
     ] = None
 
+    # These are set in __post_init__ from load_catalog(), not from the CLI.
+    mcat: Ncm.MSetCatalog = dataclasses.field(init=False)
+    mset: Ncm.MSet = dataclasses.field(init=False)
+    functions: Optional[Ncm.ObjArray] = dataclasses.field(init=False)
+    fparams_len: int = dataclasses.field(init=False)
+    nadd_vals: int = dataclasses.field(init=False)
+    total_columns: int = dataclasses.field(init=False)
+    nchains: int = dataclasses.field(init=False)
+    indices: list[int] = dataclasses.field(init=False)
+    full_stats: Ncm.StatsVec = dataclasses.field(init=False)
+    stats: Ncm.StatsVec = dataclasses.field(init=False)
+    nitems: int = dataclasses.field(init=False)
+
     def __post_init__(self) -> None:
         """Load the MCMC file and prepare the catalog."""
         super().__post_init__()
@@ -443,4 +456,14 @@ class LoadCatalog(AppLogging):
         loaded = load_catalog(
             self.mcmc_file, self.burnin, self.tail, self.include, self.exclude
         )
-        self.__dict__.update(vars(loaded))
+        self.mcat = loaded.mcat
+        self.mset = loaded.mset
+        self.functions = loaded.functions
+        self.fparams_len = loaded.fparams_len
+        self.nadd_vals = loaded.nadd_vals
+        self.total_columns = loaded.total_columns
+        self.nchains = loaded.nchains
+        self.indices = loaded.indices
+        self.full_stats = loaded.full_stats
+        self.stats = loaded.stats
+        self.nitems = loaded.nitems
