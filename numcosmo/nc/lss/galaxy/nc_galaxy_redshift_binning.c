@@ -28,38 +28,23 @@
  *
  * Binning calculator: the true-redshift distribution of a photometric bin.
  *
- * A calculator (a plain #GObject, NOT an #NcmModel and NOT held in an #NcmMSet)
- * that produces the true-redshift distribution $\mathrm{d}n/\mathrm{d}z$ of the
- * galaxies selected into a photometric window $[z_{p,\min}, z_{p,\max}]$, from a
- * population model $P(z\mid I)$ (a #NcGalaxyRedshiftPop) and a population photo-z
+ * A calculator that produces the true-redshift distribution $\mathrm{d}n/\mathrm{d}z$
+ * of the galaxies selected into a photometric window $[z_{p,\min}, z_{p,\max}]$, from
+ * a population model $P(z\mid I)$ (a #NcGalaxyRedshiftPop) and a population photo-z
  * observable $P(z_p\mid z)$ (a #NcGalaxyRedshiftObsSel):
- * $$ \frac{\mathrm{d}n}{\mathrm{d}z}(z) \propto P(z\mid I)\,
- *    \frac{W(z; z_{p,\min}, z_{p,\max})}{N(z)}, \qquad
- *    N(z) = \int_0^\infty P(z_p\mid z)\,\mathrm{d}z_p, $$
+ * $$
+ * \frac{\mathrm{d}n}{\mathrm{d}z}(z) \propto P(z\mid I)\, \frac{W(z; z_{p,\min},
+ * z_{p,\max})}{N(z)}, \qquad N(z) = \int_0^\infty P(z_p\mid z)\,\mathrm{d}z_p,
+ * $$
  * where $W$ is the observable's selection mass in the window and $N$ the physical
  * (photo-z $\ge 0$) normalization. Both come from the observable's generic
  * nc_galaxy_redshift_obs_sel_window_mass(), so the calculator is scheme-free (no
  * per-kernel subclass).
  *
- * The photometric window is NOT object state: a single calculator produces
- * $\mathrm{d}n/\mathrm{d}z$ for arbitrarily many bins. The window is an argument
- * to nc_galaxy_redshift_binning_compute_dndz() (and the on-nodes variant), which
- * are pure producers: they return a freshly-built, normalized #NcmSpline on each
- * call and cache nothing, so they do NOT require nc_galaxy_redshift_binning_prepare().
- *
- * nc_galaxy_redshift_binning_prepare() builds only the window-free marginal
- * photo-z density $P(z_p)$ used by nc_galaxy_redshift_binning_eval_pzp() and the
- * equal-area edges nc_galaxy_redshift_binning_compute_equal_area_photoz_bins();
- * those two read the cached marginal and take no models. Re-call prepare after
- * changing the model parameters.
- *
- * Following the #NcDistance convention, the calculator does NOT hold the models:
- * they are consumed only inside the methods that need them and are passed as
- * arguments. The cached marginal is built with an adaptive-knot scheme that
- * guarantees a relative interpolation-error tolerance
- * (#NcGalaxyRedshiftBinning:reltol). Photo-z systematics (shift/stretch) are
- * intentionally NOT here: they belong to a future n(z) model layered on top of
- * this producer.
+ * nc_galaxy_redshift_binning_prepare() builds only the window-free marginal photo-z
+ * density $P(z_p)$ used by nc_galaxy_redshift_binning_eval_pzp() and the equal-area
+ * edges nc_galaxy_redshift_binning_compute_equal_area_photoz_bins(); those two read
+ * the cached marginal and take no models.
  *
  */
 
@@ -247,8 +232,8 @@ _nc_galaxy_redshift_binning_dndz_raw_gsl (gdouble z, gpointer user_data)
   return _nc_galaxy_redshift_binning_dndz_raw ((NcGalaxyRedshiftBinningDndzCtx *) user_data, z);
 }
 
-/* Locate where the integrand drops below @threshold of its peak, so the
- * adaptive spline does not waste knots on the empty tails of the support. */
+/* Locate where the integrand drops below @threshold of its peak, so the adaptive
+ * spline does not waste knots on the empty tails of the support. */
 static void
 _nc_galaxy_redshift_binning_effective_support (gsl_function *F, gdouble z_min, gdouble z_max, gdouble threshold, gdouble *z_min_eff, gdouble *z_max_eff)
 {
@@ -300,8 +285,8 @@ _nc_galaxy_redshift_binning_effective_support (gsl_function *F, gdouble z_min, g
   }
 }
 
-/* Build a fresh, unit-normalized adaptive dn/dz spline for the window
- * [zp_min, zp_max]. No object state is touched; caller owns the result. */
+/* Build a fresh, unit-normalized adaptive dn/dz spline for the window [zp_min,
+ * zp_max]. No object state is touched; caller owns the result. */
 static NcmSpline *
 _nc_galaxy_redshift_binning_build_dndz (NcGalaxyRedshiftBinning *gsdrb, NcGalaxyRedshiftPop *population, NcGalaxyRedshiftObsSel *observable_population, const gdouble zp_min, const gdouble zp_max)
 {
@@ -346,8 +331,8 @@ typedef struct _NcGalaxyRedshiftBinningPzpIntegData
   gdouble z_max;
 } NcGalaxyRedshiftBinningPzpIntegData;
 
-/* Integrand of P(zp) = int P(z) f(zp|z) / N(z) dz over the true redshift z,
- * with N(z) = window_mass(z, 0, inf) the physical zp >= 0 normalization. */
+/* Integrand of P(zp) = int P(z) f(zp|z) / N(z) dz over the true redshift z, with N(z)
+ * = window_mass(z, 0, inf) the physical zp >= 0 normalization. */
 static gdouble
 _nc_galaxy_redshift_binning_pzp_integrand (gpointer user_data, const gdouble z, const gdouble w)
 {
@@ -389,10 +374,7 @@ _nc_galaxy_redshift_binning_assert_pzp_prepared (NcGalaxyRedshiftBinning *gsdrb)
 /**
  * nc_galaxy_redshift_binning_new:
  *
- * Creates a new #NcGalaxyRedshiftBinning. The photometric window is not held by
- * the calculator: it is supplied to each dn/dz method. The population and
- * observable models are likewise not held; they are passed to every method that
- * needs them.
+ * Creates a new #NcGalaxyRedshiftBinning.
  *
  * Returns: (transfer full): a new #NcGalaxyRedshiftBinning.
  */
@@ -485,9 +467,9 @@ nc_galaxy_redshift_binning_get_reltol (NcGalaxyRedshiftBinning *gsdrb)
  * @gsdrb: a #NcGalaxyRedshiftBinning
  * @zp_support_max: the maximum photometric redshift for the P(zp) support
  *
- * Sets the maximum photometric redshift over which the marginal $P(z_p)$ is
- * tabulated and invalidates the cached marginal distribution. Does not affect the
- * bin $\mathrm{d}n/\mathrm{d}z$, which is independent of the P(zp) support.
+ * Sets the maximum photometric redshift over which the marginal $P(z_p)$ is tabulated
+ * and invalidates the cached marginal distribution. Does not affect the bin
+ * $\mathrm{d}n/\mathrm{d}z$, which is independent of the P(zp) support.
  *
  */
 void
@@ -526,8 +508,7 @@ nc_galaxy_redshift_binning_get_zp_support_max (NcGalaxyRedshiftBinning *gsdrb)
  * Builds the normalized bin $\mathrm{d}n/\mathrm{d}z$ for the photometric window
  * [@zp_min, @zp_max] as a fresh adaptive-knot #NcmSpline meeting
  * #NcGalaxyRedshiftBinning:reltol over its effective support, normalized to unit
- * integral. Pure producer: consumes the models on the call, holds nothing, and
- * does NOT require nc_galaxy_redshift_binning_prepare().
+ * integral.
  *
  * Returns: (transfer full): a #NcmSpline of $\mathrm{d}n/\mathrm{d}z$.
  */
@@ -547,9 +528,8 @@ nc_galaxy_redshift_binning_compute_dndz (NcGalaxyRedshiftBinning *gsdrb, NcGalax
  * @z_nodes: the true-redshift nodes to tabulate on
  *
  * As nc_galaxy_redshift_binning_compute_dndz(), but returns the normalized bin
- * $\mathrm{d}n/\mathrm{d}z$ tabulated on the given @z_nodes (0 outside the
- * effective support). Same pure-producer semantics: holds nothing and does NOT
- * require nc_galaxy_redshift_binning_prepare().
+ * $\mathrm{d}n/\mathrm{d}z$ tabulated on the given @z_nodes (0 outside the effective
+ * support).
  *
  * Returns: (transfer full): a #NcmSpline of $\mathrm{d}n/\mathrm{d}z$ on @z_nodes.
  */
@@ -590,13 +570,9 @@ nc_galaxy_redshift_binning_compute_dndz_on_nodes (NcGalaxyRedshiftBinning *gsdrb
  * @population: a #NcGalaxyRedshiftPop
  * @observable_population: a #NcGalaxyRedshiftObsSel
  *
- * Builds the window-free marginal photo-z density $P(z_p)$ over
- * $[0, \mathtt{zp\_support\_max}]$ used by nc_galaxy_redshift_binning_eval_pzp()
- * and nc_galaxy_redshift_binning_compute_equal_area_photoz_bins(). The models are
- * consumed here and NOT retained; re-call this after changing their parameters.
- *
- * The dn/dz producers (nc_galaxy_redshift_binning_compute_dndz() and the on-nodes
- * variant) are stateless and do NOT depend on this preparation.
+ * Builds the window-free marginal photo-z density $P(z_p)$ over $[0,
+ * \mathtt{zp\_support\_max}]$ used by nc_galaxy_redshift_binning_eval_pzp() and
+ * nc_galaxy_redshift_binning_compute_equal_area_photoz_bins().
  *
  */
 void
@@ -640,10 +616,12 @@ nc_galaxy_redshift_binning_prepare (NcGalaxyRedshiftBinning *gsdrb, NcGalaxyReds
  * @zp: the photometric redshift
  *
  * Evaluates the marginal photometric-redshift density
- * $$ P(z_p) = \int P(z\mid I)\,\frac{f(z_p\mid z)}{N(z)}\,\mathrm{d}z, \qquad
- *    N(z) = \int_0^\infty f(z_p'\mid z)\,\mathrm{d}z_p', $$
- * the distribution of photo-z over the whole population (independent of any bin
- * window). Requires a prior nc_galaxy_redshift_binning_prepare().
+ * $$
+ * P(z_p) = \int P(z\mid I)\,\frac{f(z_p\mid z)}{N(z)}\,\mathrm{d}z, \qquad N(z) =
+ * \int_0^\infty f(z_p'\mid z)\,\mathrm{d}z_p',
+ * $$
+ * the distribution of photo-z over the whole population. Requires a prior
+ * nc_galaxy_redshift_binning_prepare().
  *
  * Returns: the marginal density $P(z_p)$ at @zp.
  */
@@ -663,11 +641,11 @@ nc_galaxy_redshift_binning_eval_pzp (NcGalaxyRedshiftBinning *gsdrb, const gdoub
  * @n_bins: the number of bins
  * @zp_max: the maximum photometric redshift to bin up to
  *
- * Computes @n_bins + 1 photometric-redshift edges that split the marginal
- * $P(z_p)$ (see nc_galaxy_redshift_binning_eval_pzp()) into @n_bins slices of
- * equal integrated probability, by inverting its CDF. Suitable for equal-area
- * source binning. Requires a prior nc_galaxy_redshift_binning_prepare(); @zp_max
- * must not exceed #NcGalaxyRedshiftBinning:zp-support-max.
+ * Computes @n_bins + 1 photometric-redshift edges that split the marginal $P(z_p)$
+ * (see nc_galaxy_redshift_binning_eval_pzp()) into @n_bins slices of equal integrated
+ * probability, by inverting its CDF. Suitable for equal-area source binning. Requires
+ * a prior nc_galaxy_redshift_binning_prepare(); @zp_max must not exceed
+ * #NcGalaxyRedshiftBinning:zp-support-max.
  *
  * Returns: (transfer full): a #NcmVector with @n_bins + 1 photo-z edges.
  */
@@ -705,8 +683,8 @@ nc_galaxy_redshift_binning_compute_equal_area_photoz_bins (NcGalaxyRedshiftBinni
  * @observable_population: (out) (transfer full): a Gaussian photo-z observable
  *   with the per-type scatter $\sigma_0$
  *
- * Computes the LSST SRD tomographic photo-z bin edges for @type and hands back
- * the matching population + Gaussian observable models (both configured for
+ * Computes the LSST SRD tomographic photo-z bin edges for @type and hands back the
+ * matching population + Gaussian observable models (both configured for
  * @type) via the out-parameters. The edges follow the LSST DESC SRD recipe:
  *
  * - Lens (Y1, Y10): linearly spaced edges over $[0.2, 1.2]$
@@ -714,9 +692,8 @@ nc_galaxy_redshift_binning_compute_equal_area_photoz_bins (NcGalaxyRedshiftBinni
  * - Source (Y1, Y10): equal-area edges up to $z_p = 3.5$
  *   (5 bins), $\sigma_0 = 0.05$; computed by inverting the marginal $P(z_p)$.
  *
- * The returned edges feed nc_galaxy_redshift_binning_compute_dndz() (per
- * consecutive pair) with the handed-back models. This is a factory: it holds
- * nothing.
+ * The returned edges feed nc_galaxy_redshift_binning_compute_dndz() (per consecutive
+ * pair) with the handed-back models.
  *
  * Returns: (transfer full): a #NcmVector with n_bins + 1 photo-z edges.
  */

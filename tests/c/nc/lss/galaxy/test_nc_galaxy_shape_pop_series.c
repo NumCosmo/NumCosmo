@@ -23,15 +23,16 @@
  */
 
 /* Checks NcGalaxyShapePop's eval_p_rho2_g_series implementations (Gauss and
- * Beta) directly against their own exact, non-series eval_p(): despite its
- * name (shared with the eval_p_rho2/eval_p_rho2 vfunc pair), the series
- * eval_p_rho2_g_series composes with is x(g)=|chi_I(chi_L,g)|^2 itself (see
- * its own doc comment in nc_galaxy_shape_pop.h) -- the same variable eval_p()
- * takes directly, not the disc-compactified rho^2=x/(1-x) that eval_p_rho2()
- * uses. So for a synthetic x(g) truncated power series and small real g
- * inside the truncation radius, eval_p_rho2_g_series(x_series)
- * Horner-evaluated at g must match eval_p(x(g)) to O(g^(order+1)) -- the
- * population composition layer alone, decoupled from the shear-map series
+ * Beta) directly against an exact reference built from eval_p(): despite its
+ * name, the variable eval_p_rho2_g_series composes with is
+ * x(g)=|chi_I(chi_L,g)|^2 itself (see its own doc comment in
+ * nc_galaxy_shape_pop.h) -- the OLD x-space density, decoupled from the now
+ * r-native public eval_p(r)=P_pop(r). The exact identity relating the two is
+ * eval_p_OLD(x) = eval_p(sqrt(x)) / (2*sqrt(x)). So for a synthetic x(g)
+ * truncated power series and small real g inside the truncation radius,
+ * eval_p_rho2_g_series(x_series) Horner-evaluated at g must match
+ * eval_p(sqrt(x(g))) / (2*sqrt(x(g))) to O(g^(order+1)) -- the population
+ * composition layer alone, decoupled from the shear-map series
  * (nc_wl_ellipticity_series.c, checked independently against
  * nc_wl_ellipticity.h in its own test file). */
 
@@ -117,8 +118,9 @@ test_nc_galaxy_shape_pop_gauss_series_matches_exact (void)
   {
     const gdouble g          = test_gs[i];
     const gdouble x_g        = _eval_real (x, g);
+    const gdouble r_g        = sqrt (x_g);
     const gdouble series_val = _eval_real (out, g);
-    const gdouble exact_val  = nc_galaxy_shape_pop_eval_p (NC_GALAXY_SHAPE_POP (pop), data, x_g);
+    const gdouble exact_val  = nc_galaxy_shape_pop_eval_p (NC_GALAXY_SHAPE_POP (pop), data, r_g) / (2.0 * r_g);
 
     g_assert_cmpfloat (fabs (series_val - exact_val), <, TEST_TOL);
   }
@@ -152,8 +154,9 @@ test_nc_galaxy_shape_pop_beta_series_matches_exact (void)
   {
     const gdouble g          = test_gs[i];
     const gdouble x_g        = _eval_real (x, g);
+    const gdouble r_g        = sqrt (x_g);
     const gdouble series_val = _eval_real (out, g);
-    const gdouble exact_val  = nc_galaxy_shape_pop_eval_p (NC_GALAXY_SHAPE_POP (pop), data, x_g);
+    const gdouble exact_val  = nc_galaxy_shape_pop_eval_p (NC_GALAXY_SHAPE_POP (pop), data, r_g) / (2.0 * r_g);
 
     g_assert_cmpfloat (fabs (series_val - exact_val), <, TEST_TOL);
   }

@@ -28,13 +28,13 @@
  *
  * Abstract population-level photo-z observable distribution.
  *
- * Models the distribution of a photo-z observable across the galaxy population at
- * a given true redshift, `P(obs | z)` at the population level. Distinct from the
- * per-galaxy conditional #NcGalaxyRedshiftObs (whose scatter is
- * per-galaxy data): here the scatter is a population-level model parameter, and
- * the distribution is conceptually a mixture over the per-galaxy scatter. It
- * supplies the selection mass `window_mass(z, obs_lo, obs_hi)` that the binning
- * calculator uses to build the binned true-redshift distribution `P(z | I in W)`.
+ * Models the distribution of a photo-z observable across the galaxy population at a
+ * given true redshift, `P(obs | z)` at the population level. Distinct from the
+ * per-galaxy conditional #NcGalaxyRedshiftObs (whose scatter is per-galaxy data): here
+ * the scatter is a population-level model parameter, and the distribution is
+ * conceptually a mixture over the per-galaxy scatter. It supplies the selection mass
+ * `window_mass(z, obs_lo, obs_hi)` that the binning calculator uses to build the
+ * binned true-redshift distribution `P(z | I in W)`.
  *
  */
 
@@ -150,9 +150,9 @@ nc_galaxy_redshift_obs_sel_clear (NcGalaxyRedshiftObsSel **gsdrop)
  * @obs: the observable value
  *
  * Computes the population-level probability density of the observable at value
- * @obs and fixed true redshift @z, i.e. the density whose integral over a window
- * is nc_galaxy_redshift_obs_sel_window_mass(). Used by the binning
- * calculator to build the marginal observable distribution $P(z_p)$.
+ * @obs and fixed true redshift @z, i.e. the density whose integral over a window is
+ * nc_galaxy_redshift_obs_sel_window_mass(). Used by the binning calculator to build
+ * the marginal observable distribution $P(z_p)$.
  *
  * Returns: the population observable density at @obs.
  */
@@ -170,9 +170,9 @@ nc_galaxy_redshift_obs_sel_eval (NcGalaxyRedshiftObsSel *gsdrop, const gdouble z
  * @obs_hi: the upper edge of the observable window
  *
  * Computes the population-level probability mass of the observable in the window
- * $[\mathtt{obs\_lo}, \mathtt{obs\_hi}]$ at fixed true redshift @z, i.e. the
- * fraction of the population at @z whose observable falls in the window. This is
- * the selection/normalization factor used by the binning calculator.
+ * $[\mathtt{obs\_lo}, \mathtt{obs\_hi}]$ at fixed true redshift @z, i.e. the fraction
+ * of the population at @z whose observable falls in the window. This is the
+ * selection/normalization factor used by the binning calculator.
  *
  * Returns: the population probability mass in the window.
  */

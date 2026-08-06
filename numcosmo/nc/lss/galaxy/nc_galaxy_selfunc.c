@@ -26,7 +26,7 @@
 /**
  * NcGalaxySelfunc:
  *
- * Galaxy phenomelogical selection function.
+ * Galaxy phenomenological selection function.
  *
  */
 

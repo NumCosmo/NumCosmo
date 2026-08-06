@@ -29,10 +29,10 @@
  * Gaussian photometric-redshift observable model.
  *
  * The photometric redshift is Gaussian about the true redshift with a
- * redshift-dependent scatter $\sigma_z = \sigma_0 (1 + z)$:
- * $P(z_\mathrm{phot}|z) = \mathcal{N}(z_\mathrm{phot}; z, \sigma_z)$. The
- * per-galaxy observation $(z_\mathrm{phot}, \sigma_0)$ is carried together in
- * the #NcGalaxyRedshiftObsData, read from the "zp" and "sigma0" columns.
+ * redshift-dependent scatter $\sigma_z = \sigma_0 (1 + z)$: $P(z_\mathrm{phot}|z) =
+ * \mathcal{N}(z_\mathrm{phot}; z, \sigma_z)$. The per-galaxy observation
+ * $(z_\mathrm{phot}, \sigma_0)$ is carried together in the #NcGalaxyRedshiftObsData,
+ * read from the "zp" and "sigma0" columns.
  *
  */
 
@@ -176,12 +176,12 @@ static void
 _nc_galaxy_redshift_obs_gauss_get_true_z_lim (NcGalaxyRedshiftObs *gsdre, NcGalaxyRedshiftObsData *data, gdouble *z_min, gdouble *z_max)
 {
   NcGalaxyRedshiftObsGaussLData *ldata = (NcGalaxyRedshiftObsGaussLData *) data->ldata;
+  const gdouble sigma_max              = ldata->sigma0 * ((1.0 + 7.0 * ldata->sigma0) * (1.0 + ldata->zp));
+  const gdouble half_width             = 7.0 * sigma_max;
 
-  /* Effective support around the point estimate zp: outside +-7 sigma the
-   * Gaussian kernel is negligible. sigma_z = sigma0 (1 + z), estimated at the
-   * upper edge z ~ zp + 7 sigma_z so the band comfortably covers the peak. */
-  const gdouble sigma_max  = ldata->sigma0 * ((1.0 + 7.0 * ldata->sigma0) * (1.0 + ldata->zp));
-  const gdouble half_width = 7.0 * sigma_max;
+  /* Effective support around the point estimate zp: outside +-7 sigma the Gaussian
+   * kernel is negligible. sigma_z = sigma0 (1 + z), estimated at the upper edge z ~ zp
+   * + 7 sigma_z so the band comfortably covers the peak. */
 
   *z_min = ldata->zp - half_width;
   *z_max = ldata->zp + half_width;

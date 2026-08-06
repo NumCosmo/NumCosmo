@@ -40,6 +40,10 @@
  * take #NcmComplex by pointer and are introspectable, while their plain-named
  * counterparts (nc_wl_ellipticity.h) take it by value and are inlined for the
  * C hot loops.
+ *
+ * #NcWLEllipticityTraceKernelPrep is a simple #GBoxed struct caching the
+ * g-only terms of the TRACE kernel across many evaluations at the same
+ * shear (see nc_wl_ellipticity_trace_kernel_prepare()'s docs).
  */
 
 #ifdef HAVE_CONFIG_H
@@ -52,6 +56,69 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
 #endif /* NUMCOSMO_GIR_SCAN */
+
+G_DEFINE_BOXED_TYPE (NcWLEllipticityTraceKernelPrep, nc_wl_ellipticity_trace_kernel_prep, nc_wl_ellipticity_trace_kernel_prep_dup, nc_wl_ellipticity_trace_kernel_prep_free)
+
+/**
+ * nc_wl_ellipticity_trace_kernel_prep_new:
+ *
+ * Allocates a new, zeroed #NcWLEllipticityTraceKernelPrep. C hot loops
+ * should prefer stack allocation and nc_wl_ellipticity_trace_kernel_prepare()
+ * directly; this heap-allocating constructor exists for GValue/introspection
+ * use.
+ *
+ * Returns: (transfer full): a new #NcWLEllipticityTraceKernelPrep.
+ */
+NcWLEllipticityTraceKernelPrep *
+nc_wl_ellipticity_trace_kernel_prep_new (void)
+{
+  return g_new0 (NcWLEllipticityTraceKernelPrep, 1);
+}
+
+/**
+ * nc_wl_ellipticity_trace_kernel_prep_dup:
+ * @prep: a #NcWLEllipticityTraceKernelPrep
+ *
+ * Allocates a new #NcWLEllipticityTraceKernelPrep and copies @prep's
+ * contents into it.
+ *
+ * Returns: (transfer full): a new #NcWLEllipticityTraceKernelPrep.
+ */
+NcWLEllipticityTraceKernelPrep *
+nc_wl_ellipticity_trace_kernel_prep_dup (NcWLEllipticityTraceKernelPrep *prep)
+{
+  NcWLEllipticityTraceKernelPrep *prep_dup = nc_wl_ellipticity_trace_kernel_prep_new ();
+
+  *prep_dup = *prep;
+
+  return prep_dup;
+}
+
+/**
+ * nc_wl_ellipticity_trace_kernel_prep_free:
+ * @prep: a #NcWLEllipticityTraceKernelPrep
+ *
+ * Frees @prep, it should not be used on a stack-allocated
+ * #NcWLEllipticityTraceKernelPrep.
+ */
+void
+nc_wl_ellipticity_trace_kernel_prep_free (NcWLEllipticityTraceKernelPrep *prep)
+{
+  g_free (prep);
+}
+
+/**
+ * nc_wl_ellipticity_trace_kernel_prep_clear:
+ * @prep: a #NcWLEllipticityTraceKernelPrep
+ *
+ * Frees *@prep and sets *@prep to %NULL, it should not be used on a
+ * stack-allocated #NcWLEllipticityTraceKernelPrep.
+ */
+void
+nc_wl_ellipticity_trace_kernel_prep_clear (NcWLEllipticityTraceKernelPrep **prep)
+{
+  g_clear_pointer (prep, g_free);
+}
 
 /**
  * nc_wl_ellipticity_apply_shear_trace_ptr:
@@ -81,6 +148,22 @@ void
 nc_wl_ellipticity_apply_shear_inv_trace_ptr (const NcmComplex *g, const NcmComplex *chi_obs, NcmComplex *chi)
 {
   ncm_complex_set_c (chi, nc_wl_ellipticity_apply_shear_inv_trace (ncm_complex_c (g), ncm_complex_c (chi_obs)));
+}
+
+/**
+ * nc_wl_ellipticity_shear_at_origin_trace_ptr:
+ * @target: point in the disc, as a #NcmComplex
+ * @g: output reduced shear as a #NcmComplex
+ *
+ * Computes the reduced shear @g such that
+ * nc_wl_ellipticity_apply_shear_trace_ptr() maps a zero intrinsic
+ * distortion to @target, in the trace (distortion) convention. Requires
+ * $|@target|<1$.
+ */
+void
+nc_wl_ellipticity_shear_at_origin_trace_ptr (const NcmComplex *target, NcmComplex *g)
+{
+  ncm_complex_set_c (g, nc_wl_ellipticity_shear_at_origin_trace (ncm_complex_c (target)));
 }
 
 /**
@@ -129,6 +212,22 @@ void
 nc_wl_ellipticity_apply_shear_inv_trace_det_ptr (const NcmComplex *g, const NcmComplex *e_obs, NcmComplex *e)
 {
   ncm_complex_set_c (e, nc_wl_ellipticity_apply_shear_inv_trace_det (ncm_complex_c (g), ncm_complex_c (e_obs)));
+}
+
+/**
+ * nc_wl_ellipticity_shear_at_origin_trace_det_ptr:
+ * @target: point in the disc, as a #NcmComplex
+ * @g: output reduced shear as a #NcmComplex
+ *
+ * Computes the reduced shear @g such that
+ * nc_wl_ellipticity_apply_shear_trace_det_ptr() maps a zero intrinsic
+ * ellipticity to @target, in the trace-determinant (ellipticity)
+ * convention. Requires $|@target|<1$.
+ */
+void
+nc_wl_ellipticity_shear_at_origin_trace_det_ptr (const NcmComplex *target, NcmComplex *g)
+{
+  ncm_complex_set_c (g, nc_wl_ellipticity_shear_at_origin_trace_det (ncm_complex_c (target)));
 }
 
 /**

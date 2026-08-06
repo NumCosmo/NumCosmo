@@ -65,6 +65,7 @@
 
 #include "ncm/core/ncm_obj_array.h"
 #include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_serialize.h"
 
 G_DEFINE_BOXED_TYPE (NcmObjArray, ncm_obj_array, ncm_obj_array_ref, ncm_obj_array_unref)
 G_DEFINE_BOXED_TYPE (NcmObjDictStr, ncm_obj_dict_str, ncm_obj_dict_str_ref, ncm_obj_dict_str_unref)
@@ -825,6 +826,13 @@ ncm_var_dict_set_boolean_array (NcmVarDict *vd, const gchar *key, GArray *value)
  * - G_VARIANT_TYPE_ARRAY (element-type int)
  * - G_VARIANT_TYPE_ARRAY (element-type double)
  * - G_VARIANT_TYPE_ARRAY (element-type boolean)
+ * - #NCM_SERIALIZE_OBJECT_TYPE (a serialized #GObject, as set by ncm_var_dict_set_object())
+ * - #NCM_SERIALIZE_OBJECT_ARRAY_TYPE (a serialized #NcmObjArray, as set by ncm_var_dict_set_object_array())
+ *
+ * The last two are accepted here (rather than only through their dedicated
+ * setters) so that ncm_serialize_var_dict_from_variant() can reconstruct a
+ * #NcmVarDict containing objects, since it restores every entry through
+ * this function.
  *
  */
 void
@@ -838,6 +846,8 @@ ncm_var_dict_set_variant (NcmVarDict *vd, const gchar *key, GVariant *value)
     G_VARIANT_TYPE ("ai"),
     G_VARIANT_TYPE ("ad"),
     G_VARIANT_TYPE ("ab"),
+    G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE),
+    G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_ARRAY_TYPE),
     NULL
   };
   gboolean is_allowed = FALSE;
@@ -859,6 +869,59 @@ ncm_var_dict_set_variant (NcmVarDict *vd, const gchar *key, GVariant *value)
     g_error ("ncm_var_dict_set_variant: Invalid GVariant type");
 
   g_hash_table_insert ((GHashTable *) vd, g_strdup (key), g_variant_ref_sink (value));
+}
+
+/**
+ * ncm_var_dict_set_object:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @ser: a #NcmSerialize
+ * @obj: a #GObject
+ *
+ * Sets a #GObject to a #NcmVarDict, serializing it through @ser. If there
+ * is already a value with key @key, it is unreferenced.
+ *
+ * Note: @ser is taken as an argument (rather than an internal throwaway
+ * instance) because it carries global serialization state -- named
+ * instances, autosave/autoname behavior -- that callers frequently need
+ * fine-grained control over, e.g. to keep shared sub-objects consistent
+ * across a larger serialization.
+ *
+ */
+void
+ncm_var_dict_set_object (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, GObject *obj)
+{
+  GVariant *var;
+
+  g_assert (key != NULL);
+  g_assert (obj != NULL);
+
+  var = ncm_serialize_to_variant (ser, obj);
+  g_hash_table_insert ((GHashTable *) vd, g_strdup (key), g_variant_ref_sink (var));
+}
+
+/**
+ * ncm_var_dict_set_object_array:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @ser: a #NcmSerialize
+ * @oa: a #NcmObjArray
+ *
+ * Sets a #NcmObjArray to a #NcmVarDict, serializing it through @ser. If
+ * there is already a value with key @key, it is unreferenced. See
+ * ncm_var_dict_set_object() for why @ser is an explicit argument.
+ *
+ */
+void
+ncm_var_dict_set_object_array (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, NcmObjArray *oa)
+{
+  GVariant *var;
+
+  g_assert (key != NULL);
+  g_assert (oa != NULL);
+
+  var = ncm_serialize_array_to_variant (ser, oa);
+  g_hash_table_insert ((GHashTable *) vd, g_strdup (key), g_variant_ref_sink (var));
 }
 
 /**
@@ -1090,6 +1153,62 @@ ncm_var_dict_get_variant (NcmVarDict *vd, const gchar *key, GVariant **value)
   if (v != NULL)
   {
     *value = g_variant_ref_sink (v);
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * ncm_var_dict_get_object:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @ser: a #NcmSerialize
+ * @obj: (out) (transfer full): a #GObject
+ *
+ * Gets a #GObject from a #NcmVarDict with key @key, deserializing it
+ * through @ser. See ncm_var_dict_set_object() for why @ser is an explicit
+ * argument.
+ *
+ * Returns: whether the object with key @key was found.
+ */
+gboolean
+ncm_var_dict_get_object (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, GObject **obj)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if (v != NULL)
+  {
+    *obj = ncm_serialize_from_variant (ser, v);
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * ncm_var_dict_get_object_array:
+ * @vd: a #NcmVarDict
+ * @key: a string
+ * @ser: a #NcmSerialize
+ * @oa: (out) (transfer full): a #NcmObjArray
+ *
+ * Gets a #NcmObjArray from a #NcmVarDict with key @key, deserializing it
+ * through @ser. See ncm_var_dict_set_object() for why @ser is an explicit
+ * argument.
+ *
+ * Returns: whether the object array with key @key was found.
+ */
+gboolean
+ncm_var_dict_get_object_array (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, NcmObjArray **oa)
+{
+  GVariant *v = ncm_var_dict_peek (vd, key);
+
+  if (v != NULL)
+  {
+    *oa = ncm_serialize_array_from_variant (ser, v);
 
     return TRUE;
   }

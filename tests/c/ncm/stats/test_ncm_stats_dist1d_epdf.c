@@ -55,6 +55,8 @@ static void test_ncm_stats_dist1d_epdf_serialize (TestNcmStatsDist1dEPDF *test, 
 static void test_ncm_stats_dist1d_epdf_gen (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 static void test_ncm_stats_dist1d_epdf_free (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 
+static void test_ncm_stats_dist1d_epdf_mode_boundary (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
+
 static void test_ncm_stats_dist1d_epdf_traps (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 static void test_ncm_stats_dist1d_epdf_invalid_neg_weight (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
 static void test_ncm_stats_dist1d_epdf_invalid_infinite_obs (TestNcmStatsDist1dEPDF *test, gconstpointer pdata);
@@ -137,6 +139,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/stats_dist1d/epdf/traps", TestNcmStatsDist1dEPDF, NULL,
               &test_ncm_stats_dist1d_epdf_new,
               &test_ncm_stats_dist1d_epdf_traps,
+              &test_ncm_stats_dist1d_epdf_free);
+
+  g_test_add ("/ncm/stats_dist1d/epdf/mode/boundary", TestNcmStatsDist1dEPDF, NULL,
+              &test_ncm_stats_dist1d_epdf_new,
+              &test_ncm_stats_dist1d_epdf_mode_boundary,
               &test_ncm_stats_dist1d_epdf_free);
 
   g_test_run ();
@@ -242,6 +249,40 @@ test_ncm_stats_dist1d_epdf_gauss (TestNcmStatsDist1dEPDF *test, gconstpointer pd
     ncm_assert_cmpdouble_e (norma, !=, 0.0, TEST_NCM_STATS_DIST1D_EPDF_RELTOL, 0.0);
     ncm_assert_cmpdouble_e (norma, ==, ncm_stats_dist1d_eval_norma (sd1), 1.0e-14, 0.0);
   }
+}
+
+static void
+test_ncm_stats_dist1d_epdf_mode_boundary (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
+{
+  NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (test->sd1);
+  NcmRNG *rng         = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  const guint ntest   = 3000;
+  guint i;
+
+  /*
+   * An exponential sample has a monotonically decreasing density: its true
+   * mode sits at the domain edge, not strictly interior. This used to abort
+   * the whole process (GSL_EINVAL from gsl_min_fminimizer_set's bracketing
+   * precondition, wrapped in a fatal g_error); eval_mode() must now detect
+   * that case and return the edge value instead.
+   */
+  for (i = 0; i < ntest; i++)
+  {
+    const gdouble x = ncm_rng_exponential_gen (rng, 1.0);
+
+    ncm_stats_dist1d_epdf_add_obs (test->sd1, x);
+  }
+
+  ncm_stats_dist1d_prepare (sd1);
+
+  {
+    const gdouble xi   = ncm_stats_dist1d_get_xi (sd1);
+    const gdouble mode = ncm_stats_dist1d_eval_mode (sd1);
+
+    ncm_assert_cmpdouble_e (mode, ==, xi, TEST_NCM_STATS_DIST1D_EPDF_RELTOL, 0.0);
+  }
+
+  NCM_TEST_FREE (ncm_rng_free, rng);
 }
 
 static void

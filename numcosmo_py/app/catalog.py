@@ -30,6 +30,7 @@ from pathlib import Path
 import typer
 from rich.table import Table
 from rich.text import Text
+from rich.progress import track
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -43,9 +44,17 @@ from ..interpolation.stats_dist import (
     InterpolationMethod,
 )
 from ..plotting.tools import set_rc_params_article, confidence_ellipse
-from .loading import LoadCatalog
+from ..safe_eval import compile_expr, SafeExprError
+from ..catalog_stats import (
+    DerivedStat,
+    parse_variable_bindings,
+    resolve_param,
+    stat_center_and_bounds,
+)
+from .loading import LoadCatalog, LoadExperiment, LoadedCatalog, load_catalog
 from .logging import AppLogging
 from ..plotting import mcat_to_catalog_data, plot_mcsamples
+from ..plotting.derived import add_derived_column
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -96,7 +105,7 @@ class AnalyzeMCMC(LoadCatalog):
             self.console.print(main_table)
             self.console.print("#  Empty catalog!")
 
-            self.end_experiment()
+            self.close_logging()
             return
 
         # Global diagnostics
@@ -349,7 +358,7 @@ class AnalyzeMCMC(LoadCatalog):
 
         self.console.print(main_table)
 
-        self.end_experiment()
+        self.close_logging()
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -595,13 +604,79 @@ class CalibrateCatalog(LoadCatalog):
 
 
 @dataclasses.dataclass(kw_only=True)
-class PlotCorner(LoadCatalog):
-    """Plots the corner plot of the catalog."""
+class PlotCorner(AppLogging):
+    """Plots the corner plot of one or more catalogs.
+
+    Each catalog file is self-sufficient (model-set and, if used,
+    --derived-* parameter resolution all come from the file itself), so no
+    experiment file is needed. Give more than one catalog to overlay them
+    in the same corner plot, e.g. to compare two runs.
+    """
+
+    mcmc_file: Annotated[
+        List[Path],
+        typer.Argument(
+            help=(
+                "Path(s) to the MCMC catalog file(s). Give more than one to "
+                "overlay them in the same corner plot."
+            ),
+        ),
+    ]
+
+    burnin: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "Number of iterations (ensemble steps) to discard as burnin, "
+                "applied to every catalog."
+            ),
+            min=0,
+        ),
+    ] = 0
+
+    tail: Annotated[
+        Optional[int],
+        typer.Option(
+            help=(
+                "Keep only the last N iterations (ensemble steps) of every "
+                "catalog instead of burning in from the start. Give at most "
+                "one of --burnin/--tail."
+            ),
+            min=0,
+        ),
+    ] = None
+
+    include: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            help="List of parameters and or model names to include in the analysis.",
+        ),
+    ] = None
+
+    exclude: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            help="List of parameters and or model names to exclude from the analysis.",
+        ),
+    ] = None
+
+    output: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--output",
+            "-o",
+            help="Path to the output file, if given.",
+        ),
+    ] = None
 
     plot_name: Annotated[
-        Optional[str],
+        Optional[List[str]],
         typer.Option(
-            help="Name of the plot file.",
+            help=(
+                "Legend name(s) for each catalog, matched by position. May be "
+                "given fewer times than there are catalogs; missing entries "
+                "default to the corresponding file's stem."
+            ),
         ),
     ] = None
 
@@ -616,7 +691,7 @@ class PlotCorner(LoadCatalog):
     mark_bestfit: Annotated[
         bool,
         typer.Option(
-            help="Mark the best-fit parameters.",
+            help="Mark the best-fit parameters of the first catalog.",
         ),
     ] = False
 
@@ -638,27 +713,6 @@ class PlotCorner(LoadCatalog):
         ),
     ] = True
 
-    extra_experiment: Annotated[
-        Optional[list[Path]],
-        typer.Option(
-            help="Run extra experiment.",
-        ),
-    ] = None
-
-    extra_mcmc_file: Annotated[
-        Optional[list[Path]],
-        typer.Option(
-            help="Extra MCMC files.",
-        ),
-    ] = None
-
-    extra_burnin: Annotated[
-        Optional[list[int]],
-        typer.Option(
-            help="Extra burn-ins.",
-        ),
-    ] = None
-
     show: Annotated[
         bool,
         typer.Option(
@@ -666,60 +720,98 @@ class PlotCorner(LoadCatalog):
         ),
     ] = True
 
+    derived_variable: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            "--derived-variable",
+            help=(
+                "Bind a name usable in --derived-expr to a catalog parameter "
+                "or add-value, as name=parameter (or just parameter, short "
+                "for parameter=parameter). May be given multiple times. "
+                "Requires --derived-expr."
+            ),
+        ),
+    ] = None
+
+    derived_expr: Annotated[
+        Optional[str],
+        typer.Option(
+            help=(
+                "Add an extra corner-plot dimension computed from this "
+                "expression of the --derived-variable bindings, e.g. "
+                "'10**x'. See `catalog derived-error --help` for the "
+                "supported syntax."
+            ),
+        ),
+    ] = None
+
+    derived_symbol: Annotated[
+        Optional[str],
+        typer.Option(
+            help=(
+                "Axis label for --derived-expr. Defaults to the expression " "itself."
+            ),
+        ),
+    ] = None
+
+    derived_name: Annotated[
+        str,
+        typer.Option(
+            help="Internal column name for --derived-expr.",
+        ),
+    ] = "derived"
+
     def __post_init__(self) -> None:
-        """Corner plot of the catalog."""
+        """Corner plot of one or more catalogs."""
         super().__post_init__()
-        mcat = self.mcat
-        if self.plot_name is None:
-            self.plot_name = self.mcmc_file.stem
-        if self.extra_experiment is None:
-            self.extra_experiment = []
-        if self.extra_mcmc_file is None:
-            self.extra_mcmc_file = []
-        if self.extra_burnin is None:
-            self.extra_burnin = []
 
-        if len(self.extra_experiment) != len(self.extra_mcmc_file):
-            raise ValueError(
-                "Extra experiments and MCMC files must have the same length."
+        # mcmc_file is a required positional argument, so Click already
+        # refuses to run with zero catalogs given.
+        derived_variable: List[str] = []
+        if self.derived_expr is not None:
+            if not self.derived_variable:
+                raise typer.BadParameter(
+                    "--derived-expr requires at least one --derived-variable."
+                )
+            derived_variable = self.derived_variable
+
+        plot_names = self.plot_name or []
+        if len(plot_names) > len(self.mcmc_file):
+            raise typer.BadParameter("More --plot-name values than catalog files.")
+
+        mcsamples = []
+        bestfit = None
+        for i, mcmc_file in enumerate(self.mcmc_file):
+            name = plot_names[i] if i < len(plot_names) else mcmc_file.stem
+            loaded = load_catalog(
+                mcmc_file, self.burnin, self.tail, self.include, self.exclude
             )
-        if len(self.extra_experiment) != len(self.extra_burnin):
-            raise ValueError(
-                "Extra experiments and burn-ins must have the same length."
-            )
 
-        thin = 1
-        if self.auto_thin:
-            mcat.estimate_autocorrelation_tau(False)
-            thin = int(np.ceil(mcat.peek_autocorrelation_tau().get_max()))
-
-        cd = mcat_to_catalog_data(mcat, self.plot_name, indices=self.indices, thin=thin)
-        mcsample = cd.to_mcsamples(collapse=True)
-
-        mcsamples = [mcsample]
-        for extra_experiment, extra_mcmc_file, extra_burnin in zip(
-            self.extra_experiment, self.extra_mcmc_file, self.extra_burnin
-        ):
-            extra_exp = LoadCatalog(
-                experiment=extra_experiment,
-                mcmc_file=extra_mcmc_file,
-                burnin=extra_burnin,
-                include=self.include,
-                exclude=self.exclude,
-            )
+            thin = 1
             if self.auto_thin:
-                extra_exp.mcat.estimate_autocorrelation_tau(False)
-                thin = int(np.ceil(extra_exp.mcat.peek_autocorrelation_tau().get_max()))
-            mcsamples.append(
-                mcat_to_catalog_data(
-                    extra_exp.mcat,
-                    extra_experiment.stem,
-                    thin=thin,
-                    indices=extra_exp.indices,
-                ).to_mcsamples(collapse=True)
-            )
+                loaded.mcat.estimate_autocorrelation_tau(False)
+                thin = int(np.ceil(loaded.mcat.peek_autocorrelation_tau().get_max()))
 
-        bestfit = cd.bestfit if self.mark_bestfit else None
+            cd = mcat_to_catalog_data(
+                loaded.mcat, name, indices=loaded.indices, thin=thin
+            )
+            if self.derived_expr is not None:
+                cd = add_derived_column(
+                    cd,
+                    loaded.mset,
+                    loaded.nadd_vals,
+                    loaded.mcat,
+                    derived_variable,
+                    self.derived_expr,
+                    self.derived_symbol,
+                    self.derived_name,
+                )
+
+            if i == 0 and self.mark_bestfit:
+                bestfit = cd.bestfit
+
+            mcsamples.append(cd.to_mcsamples(collapse=True))
+
         fig = plot_mcsamples(mcsamples, markers=bestfit, title_limit=self.title_limit)
         if self.output is not None:
             filename = self.output.with_suffix(".corner.pdf").absolute().as_posix()
@@ -728,7 +820,7 @@ class PlotCorner(LoadCatalog):
         if self.show:
             plt.show()
 
-        self.end_experiment()
+        self.close_logging()
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -749,24 +841,8 @@ class ParameterAnalysis(LoadCatalog):
         """Parameter analysis."""
         super().__post_init__()
 
-        pi = self.mset.fparam_get_pi_by_name(self.param_name)
-        if pi is not None:
-            pindex = self.mset.fparam_get_fpi(pi.mid, pi.pid) + self.nadd_vals
-        elif self.param_name.isnumeric():
-            total_len = self.mset.fparams_len() + self.nadd_vals
-            pindex = int(self.param_name)
-            if pindex >= total_len or pindex < 0:
-                raise ValueError(
-                    f'Invalid parameter index "{self.param_name}"=={pindex}.'
-                )
-            if pindex >= self.nadd_vals:
-                pi = self.mset.fparam_get_pi(pindex)
-        else:
-            raise ValueError(f"Parameter {self.param_name} not found.")
-
-        self.pi: Ncm.MSetPIndex = pi
-        self.pindex: int = pindex
-        self.symbol: str = self.mcat.col_symb(pindex)
+        self.pi, self.pindex = resolve_param(self.mset, self.nadd_vals, self.param_name)
+        self.symbol: str = self.mcat.col_symb(self.pindex)
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -796,7 +872,7 @@ class VisualHW(ParameterAnalysis):
 
         plt.show()
 
-        self.end_experiment()
+        self.close_logging()
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -848,7 +924,140 @@ class ParameterEvolution(ParameterAnalysis):
             plt.savefig(self.plot_name, bbox_inches="tight")
         plt.show()
 
-        self.end_experiment()
+        self.close_logging()
+
+
+@dataclasses.dataclass(kw_only=True)
+class DerivedQuantityError(LoadCatalog):
+    """Posterior statistic and asymmetric error bars for derived quantities.
+
+    Builds the posterior distribution of one or more arbitrary expressions
+    of catalog parameters (e.g. ``(y / 100)**2 * x``), sharing the same
+    --variable bindings, by evaluating each expression on every sample in
+    the catalog in a single pass. Reports each quantity's median, mode,
+    and/or best-fit value together with 1, 2 and 3-sigma asymmetric error
+    bars in one table.
+    """
+
+    variable: Annotated[
+        List[str],
+        typer.Option(
+            "--variable",
+            "-x",
+            help=(
+                "Bind a name usable in --expr to a catalog parameter or "
+                "add-value, as name=parameter (or just parameter, short for "
+                "parameter=parameter). May be given multiple times, e.g. "
+                "-x x=Omega_m -x y=H0, or -x log10MDelta."
+            ),
+        ),
+    ]
+
+    expr: Annotated[
+        List[str],
+        typer.Option(
+            "--expr",
+            help=(
+                "Mathematical expression combining the bound variables, e.g. "
+                "'(y / 100)**2 * x'. May be given multiple times to report "
+                "several derived quantities in one table, all sharing the "
+                "same --variable bindings. Supports + - * / // % ** and "
+                "unary minus, the constants pi/e, and the functions log, "
+                "log10, log2, exp, sqrt, abs, sin, cos, tan, arcsin, arccos, "
+                "arctan, sinh, cosh, tanh."
+            ),
+        ),
+    ]
+
+    stat: Annotated[
+        Optional[List[DerivedStat]],
+        typer.Option(
+            help=(
+                "Statistic(s) to report. Unlike median/bestfit, mode is NOT "
+                "invariant under a nonlinear --expr: mode(g(x)) != g(mode(x)) "
+                "in general, and can land far from g(median(x))/g(bestfit(x)) "
+                "for a strongly nonlinear g (e.g. 10**x) near a prior bound."
+            ),
+        ),
+    ] = None
+
+    symbol: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            "--symbol",
+            help=(
+                "Display symbol(s) for each --expr, matched by position. "
+                "May be given fewer times than --expr; missing entries "
+                "default to the corresponding --expr string itself."
+            ),
+        ),
+    ] = None
+
+    def __post_init__(self) -> None:
+        """Compute the posterior statistic(s) for the derived quantities."""
+        super().__post_init__()
+
+        # --variable/--expr are required options, so Click already refuses
+        # to run without at least one of each.
+        if not self.stat:
+            self.stat = [DerivedStat.MEDIAN]
+        if self.symbol and len(self.symbol) > len(self.expr):
+            raise typer.BadParameter("More --symbol values than --expr values.")
+
+        symbols = self.symbol or []
+        displays = [
+            symbols[i] if i < len(symbols) else self.expr[i]
+            for i in range(len(self.expr))
+        ]
+
+        try:
+            var_pindex = parse_variable_bindings(
+                self.mset, self.nadd_vals, self.variable, "--variable"
+            )
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+
+        try:
+            evaluators = [compile_expr(e, var_pindex.keys()) for e in self.expr]
+        except SafeExprError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+
+        mcat = self.mcat
+        epdfs = [Ncm.StatsDist1dEPDF.new(1.0e-3) for _ in self.expr]
+        for i in range(mcat.len()):
+            row = mcat.peek_row(i)
+            values = {name: row.get(pindex) for name, pindex in var_pindex.items()}
+            for epdf, evaluate in zip(epdfs, evaluators):
+                epdf.add_obs(evaluate(values))
+        for epdf in epdfs:
+            epdf.prepare()
+
+        bestfit_row = mcat.get_bestfit_row()
+        bf_values = {
+            name: bestfit_row.get(pindex) for name, pindex in var_pindex.items()
+        }
+
+        bindings_desc = ", ".join(self.variable)
+        table = Table(title=f"Derived quantities (where {bindings_desc})", expand=False)
+        table.add_column("Quantity", justify="left", style="bold bright_cyan")
+        table.add_column("Statistic", justify="left", style="bold bright_cyan")
+        table.add_column("Value", justify="right", style="bold bright_green")
+        for n_sigma in (1, 2, 3):
+            table.add_column(
+                f"{n_sigma}-sigma [-,+]", justify="right", style="bold bright_green"
+            )
+
+        for evaluate, display, sd1 in zip(evaluators, displays, epdfs):
+            bestfit_center = evaluate(bf_values)
+            for stat in self.stat:
+                center, bounds = stat_center_and_bounds(stat, sd1, bestfit_center)
+                row_cells = [display, stat.value, f"{center: .6g}"]
+                row_cells.extend(f"-{lo:.4g} / +{hi:.4g}" for lo, hi in bounds)
+                table.add_row(*row_cells)
+
+        self.console.print(table)
+
+        self.close_logging()
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -865,11 +1074,172 @@ class GetBestFit(LoadCatalog):
         self.mset.fparams_set_array(best_fit)
 
         if self.output is None:
-            raise ValueError("Output file not defined.")
+            raise typer.BadParameter("Output file not defined.")
 
-        self.output_dict.add("model-set", self.mset)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        output_dict = Ncm.ObjDictStr.new()
+        output_dict.add("model-set", self.mset)
+        ser.dict_str_to_yaml_file(output_dict, self.output.absolute().as_posix())
 
-        self.end_experiment()
+        self.close_logging()
+
+
+@dataclasses.dataclass(kw_only=True)
+class CheckM2lnL(LoadExperiment):
+    """Recompute -2ln(L) for every row of a catalog and compare against the
+    stored value.
+
+    Loads the experiment file's likelihood (the CURRENT code) and, for each
+    catalog row, sets its free parameters into the experiment's model-set and
+    recomputes -2ln(L), reporting how it compares to the value the catalog
+    already has stored. Useful for validating catalogs produced by an older
+    version of the code against the current one.
+
+    Unlike the other `catalog` commands, this one genuinely needs an
+    experiment file: it is the only one that re-evaluates the likelihood
+    rather than just reading what the catalog already stored.
+    """
+
+    mcmc_file: Annotated[
+        Path,
+        typer.Argument(help="Path to the MCMC catalog file."),
+    ]
+
+    burnin: Annotated[
+        int,
+        typer.Option(
+            help="Number of iterations (ensemble steps) to discard as burnin.",
+            min=0,
+        ),
+    ] = 0
+
+    tail: Annotated[
+        Optional[int],
+        typer.Option(
+            help=(
+                "Keep only the last N iterations (ensemble steps) instead of "
+                "burning in from the start. Give at most one of --burnin/--tail."
+            ),
+            min=0,
+        ),
+    ] = None
+
+    tolerance: Annotated[
+        float,
+        typer.Option(
+            help="Absolute |delta(-2lnL)| above which a row is flagged as "
+            "mismatched.",
+        ),
+    ] = 1.0e-6
+
+    max_report: Annotated[
+        int,
+        typer.Option(
+            help="Maximum number of mismatching rows to print individually.",
+        ),
+    ] = 20
+
+    stride: Annotated[
+        int,
+        typer.Option(
+            min=1,
+            help="Only check every Nth row (1 = check every row). Each row "
+            "requires a full likelihood recomputation, which can be slow for "
+            "large catalogs -- use this for a quick sanity check instead of "
+            "an exhaustive pass.",
+        ),
+    ] = 1
+
+    max_rows: Annotated[
+        Optional[int],
+        typer.Option(
+            help="Stop after checking this many rows (after --stride). If not "
+            "given, all selected rows are checked.",
+        ),
+    ] = None
+
+    def __post_init__(self) -> None:
+        """Recompute -2ln(L) for every catalog row and report mismatches."""
+        super().__post_init__()
+
+        loaded: LoadedCatalog = load_catalog(self.mcmc_file, self.burnin, self.tail)
+
+        if self.mset.fparams_len() != loaded.fparams_len:
+            raise typer.BadParameter(
+                f"Experiment {self.experiment} has {self.mset.fparams_len()} free "
+                f"parameters but catalog {self.mcmc_file} has {loaded.fparams_len} "
+                f"-- they are not compatible."
+            )
+
+        found, m2lnl_col = loaded.mcat.col_by_name(Ncm.MSET_CATALOG_M2LNL_COLNAME)
+        if not found:
+            raise typer.BadParameter(
+                f"Catalog {self.mcmc_file} has no "
+                f"{Ncm.MSET_CATALOG_M2LNL_COLNAME} column."
+            )
+
+        n_total = loaded.mcat.len()
+        selected = list(range(0, n_total, self.stride))
+        if self.max_rows is not None:
+            selected = selected[: self.max_rows]
+        n_rows = len(selected)
+
+        self.console.print(
+            f"# Checking {n_rows} of {n_total} row(s) of {self.mcmc_file} "
+            f"against {self.experiment} (stride={self.stride})."
+        )
+
+        stored = np.empty(n_rows)
+        recomputed = np.empty(n_rows)
+
+        for k, i in track(
+            list(enumerate(selected)),
+            description="Recomputing -2ln(L)...",
+            console=self.console,
+        ):
+            row = np.array(loaded.mcat.peek_row(i).dup_array(), dtype=np.float64)
+            fparams = row[loaded.nadd_vals :]
+            self.mset.fparams_set_array(fparams)
+            stored[k] = row[m2lnl_col]
+            recomputed[k] = self.likelihood.m2lnL_val(self.mset)
+
+        diffs = recomputed - stored
+        abs_diffs = np.abs(diffs)
+        n_mismatch = int(np.sum(abs_diffs > self.tolerance))
+
+        self.console.print(f"# Checked {n_rows} row(s).")
+        self.console.print(
+            f"# max|delta(-2lnL)| = {abs_diffs.max():.6g}, "
+            f"mean|delta(-2lnL)| = {abs_diffs.mean():.6g}, "
+            f"mismatched rows (tolerance {self.tolerance:.3g}): "
+            f"{n_mismatch}/{n_rows}."
+        )
+
+        if n_mismatch > 0:
+            worst = np.argsort(-abs_diffs)
+            table = Table(title="Worst mismatches")
+            table.add_column("row", justify="right")
+            table.add_column("stored -2lnL", justify="right")
+            table.add_column("recomputed -2lnL", justify="right")
+            table.add_column("delta", justify="right")
+
+            n_shown = 0
+            for k in worst:
+                if abs_diffs[k] <= self.tolerance:
+                    break
+                if n_shown >= self.max_report:
+                    break
+                table.add_row(
+                    str(selected[k]),
+                    f"{stored[k]:.6f}",
+                    f"{recomputed[k]:.6f}",
+                    f"{diffs[k]:.6g}",
+                )
+                n_shown += 1
+
+            self.console.print(table)
+
+        self.close_logging()
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -879,7 +1249,10 @@ class DumpMset(AppLogging):
     Catalog files store their model-set internally (in the primary FITS
     HDU for new files, or in a legacy `.mset` sidecar file for old ones).
     This command extracts it as a standalone YAML file, useful for
-    inspection or as a starting point for a new fit.
+    inspection or as a `--starting-point` for a new fit -- written as a
+    dict_str with a "model-set" entry (``ncm_serialize_dict_str_*``), the
+    format ``_load_saved_mset()`` (loading.py) actually reads back, not a
+    bare object dump.
     """
 
     mcmc_file: Annotated[
@@ -910,10 +1283,13 @@ class DumpMset(AppLogging):
         assert isinstance(mset, Ncm.MSet)
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+        out_dict = Ncm.ObjDictStr.new()
+        out_dict.set("model-set", mset)
+
         if self.output is not None:
-            ser.to_yaml_file(mset, self.output.absolute().as_posix())
+            ser.dict_str_to_yaml_file(out_dict, self.output.absolute().as_posix())
             self.console.print(f"Model-set written to {self.output}.")
         else:
-            self.console.print(ser.to_yaml(mset))
+            self.console.print(ser.dict_str_to_yaml(out_dict))
 
         self.close_logging()

@@ -29,69 +29,44 @@
 /**
  * NcGalaxyShapeFactorFixedQuad:
  *
- * Fixed-node lens-domain quadrature evaluation of the intrinsic-ellipticity
- * marginal.
+ * Fixed-node quadrature evaluation of the intrinsic-ellipticity marginal.
  *
- * Like #NcGalaxyShapeFactorQuad, evaluates
- * $$P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_L|<1} \mathrm{d}^2\chi_L\,
- *   P_\mathrm{pop}\big(f_g^{-1}(\chi_L)\big)\,
- *   \left|\det J_{f_g^{-1}}(\chi_L)\right|\,
- *   N_2\big(\epsilon_\mathrm{obs} - \chi_L; \sigma_\mathrm{noise}^2\big)
+ * Evaluates
  * $$
- * exactly (no series truncation in $g$), with a FIXED node count over the
- * INTERSECTION of two discs instead of Quad's adaptive Divonne cubature over
- * a generic box: the noise kernel is supported near $\epsilon_\mathrm{obs}$
- * (radius $\sim n_\sigma\sigma_\mathrm{noise}$), $P_\mathrm{pop}\circ f_g^{-1}$
- * only over the unit disc, and their overlap is a two-circle "lens" in
- * general, a plain disc when one contains the other.
+ * P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_I|<1} \mathrm{d}^2\chi_I\,
+ *   P_\mathrm{pop}(\chi_I)\, N_2\big(\epsilon_\mathrm{obs} - f_g(\chi_I);
+ *   \sigma_\mathrm{noise}^2\big)
+ * $$
+ * exactly (no series truncation in $g$), like #NcGalaxyShapeFactorQuad, via one of two
+ * fixed quadrature schemes chosen from $\epsilon_\mathrm{obs}$/$\sigma_\mathrm{noise}$
+ * alone, never $g$:
  *
- * The noise kernel lives in $\chi_L$-space and does not depend on $g$, so
- * the whole quadrature domain (node positions, weights, and the
- * noise-kernel value at each node) is $g$-INDEPENDENT: it depends only on
- * $(R,\phi,\sigma_\mathrm{noise})=(\lvert\epsilon_\mathrm{obs}\rvert,
- * \arg\epsilon_\mathrm{obs},\sigma_\mathrm{noise})$, cached per galaxy and
- * reused across every $g$ a fit tries. Validated end to end against an
- * independent scipy oracle and against #NcGalaxyShapeFactorQuad itself (see
- * the test suite and
- * <a href="../../theory/wl_shape_marginalization_fixed_quad.html">Fixed-Node
- * Lens-Domain Quadrature</a>).
+ * - **Two-panel $\psi$** (default). Quad's $\psi=f_h^{-1}(\chi_L)$
+ *   reparametrization ($h$: $f_h(0)=\epsilon_\mathrm{obs}$), radially split
+ *   into $[0,R_\sigma)$/$[R_\sigma,1)$ Gauss-Legendre panels (see
+ *   _exact_r_sigma()), with Quad's puncture correction.
+ * - **Native $\chi_I$-polar**. Used when $1+\lvert\epsilon_\mathrm{obs}\rvert\leq
+ *   N_\sigma\sigma_\mathrm{noise}$ ($N_\sigma=8$, see _use_chi_i_native()): integrates
+ *   $\chi_I$'s own polar coordinates directly, no reparametrization, no Jacobian, no
+ *   puncture correction (see _marginal_chi_i_native()).
  *
- * Every term summed is manifestly non-negative (quadrature weights,
- * population density, $\lvert\det J\rvert$, and the two-arc domain's
- * Jacobian are all non-negative), so unlike #NcGalaxyShapeFactorSeriesLensed
- * there is no truncated polynomial that can cross zero: this class stays
- * accurate at any physical $g$, real or complex, through $\lvert g\rvert=0.99$.
+ * Both are exact; the switch only picks which grid resolves the integrand.
+ * #NcGalaxyShapeFactorFixedQuad:n-radial/:n-angular size whichever grid is chosen
+ * (two-panel: nodes PER PANEL; native: nodes in the one grid). The per-galaxy domain
+ * depends only on $\epsilon_\mathrm{obs}$/$\sigma_\mathrm{noise}$, cached and reused
+ * across every $g$.
  *
- * Works for ANY population (not just Gaussian): each node evaluates
- * nc_galaxy_shape_pop_eval_p() directly at $x_i=\lvert\chi_I\rvert^2$, the
- * same convention #NcGalaxyShapeFactorQuad uses (not eval_p_rho2(), whose
- * $\rho^2$ argument is the pre-compactification radius of the $(u,v)$-plane
- * substitution this class does not use), so unlike
- * #NcGalaxyShapeFactorSeriesLensed there is no Gaussian-only guard.
+ * Works for any population; a fixed grid cannot resolve one narrower than
+ * its node spacing ($\sigma_\mathrm{pop}\lesssim0.05$) -- use Quad instead.
  *
- * Limitation: a fixed grid cannot resolve a population much narrower than
- * its node spacing ($\sigma_\mathrm{pop}\lesssim0.05$, or a sharply
- * concentrated Beta population); use #NcGalaxyShapeFactorQuad for narrower
- * or more exotic populations. Production only uses Gaussian populations
- * with $\sigma_\mathrm{pop}\in(0.2,0.4)$, comfortably inside this class's
- * validated regime. See docs/theory/wl_shape_factor_history.md for why an
- * adaptive alternative was tried and rejected for the narrow-population
- * case, and for the design history of this class more generally.
+ * #NcGalaxyShapeFactorFixedQuad:use-marginal-spline additionally caches
+ * $\ln P(\epsilon_\mathrm{obs}\mid g)$ over
+ * $[-g_\mathrm{max},g_\mathrm{max}]^2$
+ * (#NcGalaxyShapeFactorFixedQuad:spline-g-max), built lazily via autoknots
+ * 2D splines for populations bounded at $r=0$, or a fixed knot grid
+ * (_build_g_spline_fixed_knots()) for populations that diverge there.
  *
- * Cost cliff: at $\sigma_\mathrm{noise}$ where the noise disk is comparable
- * in size to the unit disc (roughly $\sigma_\mathrm{noise}\in(0.05,0.2)$,
- * see docs/theory/wl_shape_marginalization_fixed_quad.qmd's own "cost
- * cliff" section), nearly every galaxy lands in the genuine-lens branch
- * ($\mathtt{n\_lens}^2$ nodes, 1681 at the default 41) rather than the
- * cheaper contained branches -- expensive, though this project's actual
- * production regime ($\sigma_\mathrm{noise}\sim0.3$) is unaffected either
- * side of it. #NcGalaxyShapeFactorFixedQuad:auto-lens-nodes (default
- * %FALSE, opt-in) calibrates a per-galaxy lens-branch node count instead
- * of always using the configured #NcGalaxyShapeFactorFixedQuad:n-lens,
- * cutting cost in that regime (~2x fewer nodes typical, more in the
- * expensive middle) with no change to shipped behavior unless explicitly
- * enabled -- see _calibrate_n_lens()'s own docs for the calibration
- * strategy.
+ * See docs/theory/wl_shape_factor_history.md for the design rationale.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -101,37 +76,19 @@
 
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h"
 #include "nc/lss/wl/nc_wl_ellipticity.h"
+#include "ncm/spline/ncm_spline2d_bicubic.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_integration.h>
 #include <complex.h>
+#include <stdio.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-/* Window half-width, in units of std_noise, used to size the noise disk
- * (R2 = NSIGMA*std_noise): 8 sigma leaves a Gaussian tail of exp(-32) ~
- * 1e-14. Same convention as NcGalaxyShapeFactorSeriesLensed's own
- * NC_GALAXY_SHAPE_FACTOR_SERIES_LENSED_WINDOW_NSIGMA. */
+#define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_EXPM1_SAFE_BOUND (1.0e-1)
 #define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA (8.0)
-
-/* The genuine-lens (two-circle partial overlap) branch's (u,v) parametrization
- * degenerates at d=R1+R2: both two-arc half-angles (alpha, beta in
- * _regen_lens) go to zero there, collapsing the grid onto a single point
- * regardless of node count -- a parametrization degeneracy, not a resolution
- * one. _regen_domain() therefore grows the noise disk's EFFECTIVE radius
- * (R2_eff, distinct from the fixed NSIGMA window used for branch selection)
- * so the lens branch always has at least NSIGMA_TAIL sigma of noise-kernel
- * tail depth inside the unit disc, keeping d=R1+R2_eff unreachable for any
- * std_noise>0. See docs/theory/wl_shape_factor_history.md for why this
- * (rather than falling back to full-disc quadrature) is the correct fix. */
-#define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA_TAIL (NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA)
-
-/* Defensive floor against double-precision underflow (every branch always
- * has a nonempty domain -- see _regen_domain()), not a divergence guard:
- * every summed term is already manifestly non-negative (see the class docs
- * above). Same role and value as NcGalaxyShapeFactorSeriesLensed's own
- * MIN_MARGINAL constant. */
-#define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL (1.0e-300)
+#define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_R_SIGMA_MAX (0.98)
+#define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_UNSAFE_SPLINE_N_KNOTS (33)
 
 /* ===========================================================================
  * GObject boilerplate
@@ -145,30 +102,27 @@ struct _NcGalaxyShapeFactorFixedQuad
 
 typedef struct _NcGalaxyShapeFactorFixedQuadPrivate
 {
-  /* Resolved once at construction, same pattern as Quad/VarAdd. Uses
-   * the direct (non-log) Jacobian: this class sums linearly, not in
-   * log-space, so exp(lndet_jac(...)) would just be a wasted log+exp
-   * round-trip -- see nc_wl_ellipticity_det_jac_trace_det()'s docs. */
-  complex double (*apply_shear_inv) (complex double g, complex double chi_L);
+  /* det_jac is the direct (non-log) Jacobian: this class sums linearly.
+   * apply_shear builds the two-panel domain (chi_L=f_h(psi)) and the
+   * native domain's per-g chi_L=apply_shear(g,chi_I); shear_at_origin
+   * computes h. No apply_shear_inv pointer: _marginal_two_panel()'s hot
+   * loop calls nc_wl_ellipticity.h's fused, non-pointer _trace/_trace_det
+   * kernels directly, and _exact_r_sigma() gets its inverse from
+   * apply_shear(-h,.) (Mobius inverse identity). */
+  complex double (*apply_shear) (complex double g, complex double chi_i);
+  complex double (*shear_at_origin) (complex double target);
 
   gdouble (*det_jac) (complex double g, complex double chi_L);
 
+  NcGalaxyWLObsEllipConv ellip_conv;
+
   guint n_radial;
   guint n_angular;
-  guint n_lens; /* forced odd, see constructed() */
-  guint n_max;  /* max (n_radial*n_angular, n_lens*n_lens): ldata buffer size */
+  guint n_max; /* 2*n_radial*n_angular: two-panel uses all of it, native chi_I half */
 
-  /* Opt-in per-galaxy lens-branch node-count calibration -- see
-   * _calibrate_n_lens()'s own docs. Off by default: zero behavior change
-   * unless explicitly enabled. CONSTRUCT_ONLY (like n-radial/n-angular/
-   * n-lens above), not mutable mid-run -- this class's per-galaxy cache
-   * (ldata->cache_valid) is invalidated only by epsilon_obs/std_noise
-   * changes, so a mid-run change to either of these would silently reuse
-   * a stale grid built under the old setting; simplest fix is to not allow
-   * that in the first place, matching this class's own existing
-   * convention for n-lens itself. */
-  gboolean auto_lens_nodes;
-  gdouble lens_node_reltol;
+  gboolean use_marginal_spline;
+  gdouble spline_g_max;
+  gdouble spline_rel_err;
 } NcGalaxyShapeFactorFixedQuadPrivate;
 
 enum
@@ -176,9 +130,9 @@ enum
   PROP_0,
   PROP_N_RADIAL,
   PROP_N_ANGULAR,
-  PROP_N_LENS,
-  PROP_AUTO_LENS_NODES,
-  PROP_LENS_NODE_RELTOL,
+  PROP_USE_MARGINAL_SPLINE,
+  PROP_SPLINE_G_MAX,
+  PROP_SPLINE_REL_ERR,
   PROP_LEN,
 };
 
@@ -189,14 +143,17 @@ nc_galaxy_shape_factor_fixed_quad_init (NcGalaxyShapeFactorFixedQuad *gsffq)
 {
   NcGalaxyShapeFactorFixedQuadPrivate * const self = nc_galaxy_shape_factor_fixed_quad_get_instance_private (gsffq);
 
-  self->apply_shear_inv  = NULL;
-  self->det_jac          = NULL;
-  self->n_radial         = 15;
-  self->n_angular        = 15;
-  self->n_lens           = 41;
-  self->n_max            = 0;
-  self->auto_lens_nodes  = FALSE;
-  self->lens_node_reltol = 1.0e-4;
+  self->apply_shear     = NULL;
+  self->shear_at_origin = NULL;
+  self->det_jac         = NULL;
+  self->ellip_conv      = NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE;
+  self->n_radial        = 0;
+  self->n_angular       = 0;
+  self->n_max           = 0;
+
+  self->use_marginal_spline = FALSE;
+  self->spline_g_max        = 0.3;
+  self->spline_rel_err      = 1.0e-4;
 }
 
 static void
@@ -213,14 +170,14 @@ _nc_galaxy_shape_factor_fixed_quad_set_property (GObject *object, guint prop_id,
     case PROP_N_ANGULAR:
       self->n_angular = g_value_get_uint (value);
       break;
-    case PROP_N_LENS:
-      self->n_lens = g_value_get_uint (value);
+    case PROP_USE_MARGINAL_SPLINE:
+      self->use_marginal_spline = g_value_get_boolean (value);
       break;
-    case PROP_AUTO_LENS_NODES:
-      self->auto_lens_nodes = g_value_get_boolean (value);
+    case PROP_SPLINE_G_MAX:
+      self->spline_g_max = g_value_get_double (value);
       break;
-    case PROP_LENS_NODE_RELTOL:
-      self->lens_node_reltol = g_value_get_double (value);
+    case PROP_SPLINE_REL_ERR:
+      self->spline_rel_err = g_value_get_double (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -242,14 +199,14 @@ _nc_galaxy_shape_factor_fixed_quad_get_property (GObject *object, guint prop_id,
     case PROP_N_ANGULAR:
       g_value_set_uint (value, self->n_angular);
       break;
-    case PROP_N_LENS:
-      g_value_set_uint (value, self->n_lens);
+    case PROP_USE_MARGINAL_SPLINE:
+      g_value_set_boolean (value, self->use_marginal_spline);
       break;
-    case PROP_AUTO_LENS_NODES:
-      g_value_set_boolean (value, self->auto_lens_nodes);
+    case PROP_SPLINE_G_MAX:
+      g_value_set_double (value, self->spline_g_max);
       break;
-    case PROP_LENS_NODE_RELTOL:
-      g_value_set_double (value, self->lens_node_reltol);
+    case PROP_SPLINE_REL_ERR:
+      g_value_set_double (value, self->spline_rel_err);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -270,23 +227,21 @@ _nc_galaxy_shape_factor_fixed_quad_constructed (GObject *object)
     switch (ellip_conv)
     {
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace;
+        self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace;
+        self->shear_at_origin = &nc_wl_ellipticity_shear_at_origin_trace;
         self->det_jac         = &nc_wl_ellipticity_det_jac_trace;
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-        self->apply_shear_inv = &nc_wl_ellipticity_apply_shear_inv_trace_det;
+        self->apply_shear     = &nc_wl_ellipticity_apply_shear_trace_det;
+        self->shear_at_origin = &nc_wl_ellipticity_shear_at_origin_trace_det;
         self->det_jac         = &nc_wl_ellipticity_det_jac_trace_det;
         break;
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */
     }
 
-    /* Force n_lens odd: guarantees a Gauss-Legendre node lands exactly on
-     * the u=0.5 symmetry line, which always passes through the noise-disk
-     * center in the genuine-lens branch (see _regen_lens below). */
-    self->n_lens |= 1;
-
-    self->n_max = MAX (self->n_radial * self->n_angular, self->n_lens * self->n_lens);
+    self->ellip_conv = ellip_conv;
+    self->n_max      = 2 * self->n_radial * self->n_angular;
   }
 }
 
@@ -302,15 +257,37 @@ _nc_galaxy_shape_factor_fixed_quad_finalize (GObject *object)
  * ===========================================================================
  */
 
+typedef enum
+{
+  NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_TWO_PANEL,
+  NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE,
+} NcGalaxyShapeFactorFixedQuadMethod;
+
 typedef struct _NcGalaxyShapeFactorFixedQuadData
 {
   gboolean cache_valid;
   gdouble cached_epsilon_obs_1;
   gdouble cached_epsilon_obs_2;
   gdouble cached_std_noise;
+  NcGalaxyShapeFactorFixedQuadMethod cached_method;
+
   guint n_used;
-  complex double *chi_L; /* size n_max */
-  gdouble *eff_weight;   /* size n_max, = quadrature_weight * noise_value */
+  complex double *base; /* two-panel: chi_L=f_h(psi_i); native chi_I: chi_I_i itself */
+  gdouble *weight;      /* two-panel: quadrature_weight*|det J_{f_h}|; native chi_I: quadrature_weight/(2*pi) */
+  gdouble *jac;         /* two-panel only: |det J_{f_g^-1}| per node, recomputed every call */
+  GArray *x_arr;        /* two-panel: r_i, recomputed every call; native chi_I: r_i, fixed, filled once */
+  GArray *p_arr;        /* eval_p_array()'s output, P_pop(r_i) */
+
+  /* :use-marginal-spline cache. Every cached node, either branch, has a
+   * strictly finite image under any g, so there is no singular-node
+   * safety gate to track. */
+  gboolean g_spline_valid;
+  guint64 g_spline_pop_pkey;
+  NcmSpline2d *g_spline; /* ln(marginal) over [-spline_g_max,spline_g_max]^2 */
+
+  /* TRUE iff a spline was actually built for the current pop-pkey epoch;
+   * FALSE only when eval_p() isn't well-defined near r=0. */
+  gboolean g_spline_built;
 } NcGalaxyShapeFactorFixedQuadData;
 
 static void
@@ -318,8 +295,13 @@ _nc_galaxy_shape_factor_fixed_quad_ldata_destroy (gpointer p)
 {
   NcGalaxyShapeFactorFixedQuadData *ldata = (NcGalaxyShapeFactorFixedQuadData *) p;
 
-  g_free (ldata->chi_L);
-  g_free (ldata->eff_weight);
+  ncm_spline2d_clear (&ldata->g_spline);
+
+  g_free (ldata->base);
+  g_free (ldata->weight);
+  g_free (ldata->jac);
+  g_array_unref (ldata->x_arr);
+  g_array_unref (ldata->p_arr);
   g_free (ldata);
 }
 
@@ -341,8 +323,11 @@ _nc_galaxy_shape_factor_fixed_quad_data_init (NcGalaxyShapeFactor *gsf, NcmMSet 
 
   ldata->cache_valid = FALSE;
   ldata->n_used      = 0;
-  ldata->chi_L       = g_new (complex double, self->n_max);
-  ldata->eff_weight  = g_new (gdouble, self->n_max);
+  ldata->base        = g_new (complex double, self->n_max);
+  ldata->weight      = g_new (gdouble, self->n_max);
+  ldata->jac         = g_new (gdouble, self->n_max);
+  ldata->x_arr       = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), self->n_max);
+  ldata->p_arr       = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), self->n_max);
 
   data->ldata                  = ldata;
   data->ldata_destroy          = &_nc_galaxy_shape_factor_fixed_quad_ldata_destroy;
@@ -354,9 +339,6 @@ _nc_galaxy_shape_factor_fixed_quad_data_init (NcGalaxyShapeFactor *gsf, NcmMSet 
 static void
 _nc_galaxy_shape_factor_fixed_quad_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
-  /* No population-capability guard: works for any population, since each
-   * node evaluates nc_galaxy_shape_pop_eval_p() directly (see the
-   * class docs). */
 }
 
 static inline gdouble
@@ -367,330 +349,731 @@ _noise_val (complex double delta, gdouble sig2)
   return exp (-d2 / (2.0 * sig2)) / (2.0 * M_PI * sig2);
 }
 
-/* Branch 1: noise disk (radius R2) contained in the unit disc, centered at
- * eps_obs -- this project's production regime (std_noise~0.3). Equally-spaced
- * (not Gauss-Legendre) theta nodes: the noise kernel depends on r alone here
- * (radially symmetric about eps_obs), so only the smooth, 2pi-periodic
- * population/Jacobian factor varies with theta, for which equally-spaced
- * sampling is spectrally accurate: n_angular=8-10 already reaches the float
- * floor, comfortably covered by the default 15. */
-static void
-_regen_noise_contained (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double eps_obs, gdouble R2, gdouble sig2,
-                        complex double *chi_L, gdouble *eff_weight, guint *n_used)
-{
-  gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (self->n_radial);
-  const gdouble w_theta                = 2.0 * M_PI / self->n_angular;
-  guint i, j, idx = 0;
-
-  for (i = 0; i < self->n_radial; i++)
-  {
-    gdouble r, wr;
-
-    gsl_integration_glfixed_point (0.0, R2, i, &r, &wr, table);
-
-    for (j = 0; j < self->n_angular; j++)
-    {
-      const gdouble theta       = 2.0 * M_PI * j / self->n_angular;
-      const complex double disp = r * cexp (I * theta);
-
-      chi_L[idx]      = eps_obs + disp;
-      eff_weight[idx] = wr * r * w_theta * _noise_val (-disp, sig2);
-      idx++;
-    }
-  }
-
-  gsl_integration_glfixed_table_free (table);
-  *n_used = idx;
-}
-
-/* Branch 2: full-disc quadrature, centered at the origin -- used both when
- * the unit disc is fully inside the noise disk (large std_noise) AND when
- * the noise disk misses the unit disc entirely (see _regen_domain()'s docs
- * for why both reduce to the same computation). The noise kernel is NOT
- * radially symmetric about the origin (only about eps_obs), so plain
- * Gauss-Legendre in theta. */
-static void
-_regen_unit_contained (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double eps_obs, gdouble sig2,
-                       complex double *chi_L, gdouble *eff_weight, guint *n_used)
-{
-  gsl_integration_glfixed_table *table_r     = gsl_integration_glfixed_table_alloc (self->n_radial);
-  gsl_integration_glfixed_table *table_theta = gsl_integration_glfixed_table_alloc (self->n_angular);
-  guint i, j, idx = 0;
-
-  for (i = 0; i < self->n_radial; i++)
-  {
-    gdouble r, wr;
-
-    gsl_integration_glfixed_point (0.0, 1.0, i, &r, &wr, table_r);
-
-    for (j = 0; j < self->n_angular; j++)
-    {
-      gdouble theta, wtheta;
-      complex double chi;
-
-      gsl_integration_glfixed_point (0.0, 2.0 * M_PI, j, &theta, &wtheta, table_theta);
-      chi             = r * cexp (I * theta);
-      chi_L[idx]      = chi;
-      eff_weight[idx] = wr * r * wtheta * _noise_val (eps_obs - chi, sig2);
-      idx++;
-    }
-  }
-
-  gsl_integration_glfixed_table_free (table_r);
-  gsl_integration_glfixed_table_free (table_theta);
-  *n_used = idx;
-}
-
-/* Branch 3: genuine two-circle partial overlap ("lens"). Two-arc Coons-patch
- * blend in the LOCAL frame (real axis along the line joining the disc
- * centers, i.e. along eps_obs), rotated by phi at the end. See
- * dev-notes/wl_fixed_quad_lens_domain_prototype.py's lens_nodes() for the
- * reference Python implementation.
+/* Controls whether we should integrate over chi_I instead of the transformed variable
+ * $\psi$.
  *
- * @n_lens: nodes per axis for THIS call -- normally self->n_lens, but
- * _calibrate_n_lens() also calls this at smaller trial values, and the
- * production call site passes a calibrated value when auto-lens-nodes is
- * on (see _regen_domain). Always odd; callers are responsible for that
- * (self->n_lens is forced odd once in constructed(), and
- * _calibrate_n_lens() only ever tries odd values itself). */
+ * TRUE iff the whole unit chi_L-disc lies within NSIGMA*std_noise of eps_obs -- the
+ * farthest disc point from eps_obs is the diametrically opposite boundary point, at
+ * distance 1+|eps_obs|.
+ *
+ * Also TRUE whenever |eps_obs|>=1. A noise-corrupted observed distortion/ellipticity
+ * CAN legitimately land outside the unit disc (the noise model is not itself
+ * disc-bounded).
+ */
+static inline gboolean
+_use_chi_i_native (complex double eps_obs, gdouble std_noise)
+{
+  if (cabs (eps_obs) >= 1.0)
+    return TRUE;
+
+  return (1.0 + cabs (eps_obs)) <= NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA * std_noise;
+}
+
+/* Exact center/radius of the circle through 3 points: Mobius maps send circles to
+ * circles exactly, so circumscribing 3 mapped boundary points recovers the true image
+ * circle losslessly (see _exact_r_sigma()). */
 static void
-_regen_lens (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double eps_obs, gdouble R2, gdouble d, gdouble phi, gdouble sig2,
-             guint n_lens, complex double *chi_L, gdouble *eff_weight, guint *n_used)
+_circumcircle (complex double z0, complex double z1, complex double z2, complex double *center, gdouble *radius)
 {
-  const gdouble R1                     = 1.0;
-  const gdouble x0                     = (gsl_pow_2 (d) + gsl_pow_2 (R1) - gsl_pow_2 (R2)) / (2.0 * d);
-  const gdouble alpha                  = acos (CLAMP (x0 / R1, -1.0, 1.0));
-  const gdouble beta                   = acos (CLAMP ((d - x0) / R2, -1.0, 1.0));
-  const complex double phase           = cexp (I * phi);
-  gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (n_lens);
-  guint i, j, idx = 0;
+  const gdouble x1 = creal (z0), y1 = cimag (z0);
+  const gdouble x2 = creal (z1), y2 = cimag (z1);
+  const gdouble x3 = creal (z2), y3 = cimag (z2);
+  const gdouble d  = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
+  const gdouble ux = ((x1 * x1 + y1 * y1) * (y2 - y3) + (x2 * x2 + y2 * y2) * (y3 - y1) + (x3 * x3 + y3 * y3) * (y1 - y2)) / d;
+  const gdouble uy = ((x1 * x1 + y1 * y1) * (x3 - x2) + (x2 * x2 + y2 * y2) * (x1 - x3) + (x3 * x3 + y3 * y3) * (x2 - x1)) / d;
 
-  for (i = 0; i < n_lens; i++)
-  {
-    gdouble u, wu;
-    gdouble theta1, theta2, x1, y1, x2, y2, dx1_du, dy1_du, dx2_du, dy2_du;
-
-    gsl_integration_glfixed_point (0.0, 1.0, i, &u, &wu, table);
-
-    theta1 = (2.0 * u - 1.0) * alpha;
-    theta2 = (2.0 * u - 1.0) * beta;
-    x1     = R1 * cos (theta1);
-    y1     = R1 * sin (theta1);
-    x2     = d - R2 * cos (theta2);
-    y2     = R2 * sin (theta2);
-
-    dx1_du = -R1 *sin (theta1) * (2.0 * alpha);
-
-    dy1_du = R1 * cos (theta1) * (2.0 * alpha);
-    dx2_du = R2 * sin (theta2) * (2.0 * beta);
-    dy2_du = R2 * cos (theta2) * (2.0 * beta);
-
-    for (j = 0; j < n_lens; j++)
-    {
-      gdouble v, wv;
-      gdouble x, y, dx_du, dy_du, dx_dv, dy_dv, jac;
-      complex double chi;
-
-      gsl_integration_glfixed_point (0.0, 1.0, j, &v, &wv, table);
-
-      x     = (1.0 - v) * x1 + v * x2;
-      y     = (1.0 - v) * y1 + v * y2;
-      dx_du = (1.0 - v) * dx1_du + v * dx2_du;
-      dy_du = (1.0 - v) * dy1_du + v * dy2_du;
-      dx_dv = x2 - x1;
-      dy_dv = y2 - y1;
-      jac   = fabs (dx_du * dy_dv - dx_dv * dy_du);
-
-      chi             = (x + I * y) * phase; /* rotate local frame into place */
-      chi_L[idx]      = chi;
-      eff_weight[idx] = wu * wv * jac * _noise_val (eps_obs - chi, sig2);
-      idx++;
-    }
-  }
-
-  gsl_integration_glfixed_table_free (table);
-  *n_used = idx;
+  *center = ux + I * uy;
+  *radius = cabs (*center - z0);
 }
 
-/* Fixed, documented calibration shear for _calibrate_n_lens() -- a
- * representative moderate shear, not tied to any particular galaxy's own
- * g. Validated (dev-notes/wl_fixed_quad_lens_nlens_calibration.py) that
- * calibrating the (g-independent) domain's node count at this one g value
- * generalizes across the full g range a fit actually explores; see
- * docs/theory/wl_shape_factor_history.md. */
-#define NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_LENS_CALIB_G (0.15)
-
-/* One-off evaluation of the lens-branch marginal at a trial node count @n,
- * used only by _calibrate_n_lens() below -- never on the per-galaxy
- * production path (which reuses ldata's own persistent buffers via
- * _regen_lens directly). Allocates its own small scratch buffers: this
- * runs at most a handful of times per galaxy (calibration only, not per
- * node/per-g), nowhere near the per-node-per-eval scale the SeriesLensed
- * malloc-churn fix addressed. */
+/* Radius (centered at psi=0) containing the exact psi-preimage of the physical noise
+ * disc {chi_L : |chi_L-eps_obs|<=NSIGMA*std_noise}: three boundary points mapped
+ * through f_h^{-1}=apply_shear(-h,.) and circumscribed. Capped at R_SIGMA_MAX so the
+ * outer panel keeps positive width.
+ */
 static gdouble
-_lens_quad_at_n (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
-                 complex double eps_obs, gdouble R2, gdouble d, gdouble phi, gdouble sig2, guint n, complex double g)
+_exact_r_sigma (NcGalaxyShapeFactorFixedQuadPrivate * const self, complex double eps_obs, gdouble std_noise, complex double h)
 {
-  complex double *chi_L = g_new (complex double, n * n);
-  gdouble *eff_weight   = g_new (gdouble, n * n);
-  gdouble result        = 0.0;
-  guint n_used          = 0;
-  guint i;
+  static const gdouble thetas[3] = { 0.0, 2.0 * M_PI / 3.0, 4.0 * M_PI / 3.0 };
+  const gdouble target           = NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA * std_noise;
+  const complex double neg_h     = -h;
+  complex double psi[3];
+  complex double center;
+  gdouble radius;
+  guint k;
 
-  _regen_lens (self, eps_obs, R2, d, phi, sig2, n, chi_L, eff_weight, &n_used);
-
-  for (i = 0; i < n_used; i++)
+  for (k = 0; k < 3; k++)
   {
-    const complex double chi_i = self->apply_shear_inv (g, chi_L[i]);
-    const gdouble x_i          = gsl_pow_2 (creal (chi_i)) + gsl_pow_2 (cimag (chi_i));
-    const gdouble p_pop        = nc_galaxy_shape_pop_eval_p (pop, data->pop_data, x_i) / M_PI;
-    const gdouble jac          = self->det_jac (g, chi_L[i]);
+    const complex double chi_L = eps_obs + target * cexp (I * thetas[k]);
 
-    result += eff_weight[i] * p_pop * jac;
+    psi[k] = self->apply_shear (neg_h, chi_L);
   }
 
-  g_free (chi_L);
-  g_free (eff_weight);
+  _circumcircle (psi[0], psi[1], psi[2], &center, &radius);
 
-  return result;
+  return fmin (NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_R_SIGMA_MAX, cabs (center) + radius);
 }
 
-/* Calibrates the minimal odd lens-branch node count (per axis, capped at
- * self->n_lens) whose marginal (at the fixed calibration shear above)
- * matches a self-consistent, always-more-accurate reference to
- * self->lens_node_reltol -- same "self-consistent high-resolution
- * reference, no external oracle, geometric bracket then bisection"
- * strategy as ncm_integral_fixed_calibrate() (numcosmo/ncm/integration/
- * ncm_integrate.c), adapted here to this branch's 2D (u,v) grid instead of
- * that function's 1D fixed rule -- the domain shapes genuinely differ, so
- * this is a purpose-built calibration, not a call into the existing one.
- * Reference resolution is 2*self->n_lens+1 (always odd, always stricter
- * than the shipped default), so a calibrated result can never be trusted
- * less than this class's own baseline accuracy. Never returns more than
- * self->n_lens (the search is capped there, matching this property's role
- * as both "the exact count when auto is off" and "the upper bound when
- * auto is on"). */
-static guint
-_calibrate_n_lens (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
-                   complex double eps_obs, gdouble R2, gdouble d, gdouble phi, gdouble sig2)
+/* Builds the two-panel psi-polar grid, g-independent: base[i]=f_h(psi_i),
+ * weight[i]=quadrature_weight*|det J_{f_h}(psi_i)|. Radial coordinate uses two
+ * Gauss-Legendre panels, [0,R_sigma) and [R_sigma,1); angular is equally-spaced,
+ * offset by phi=arg(eps_obs) for rotation covariance. Every node has rho<1 strictly,
+ * so every chi_L has |chi_L|<1 strictly (f_h is a disc automorphism).
+ */
+static void
+_regen_domain_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapeFactorFixedQuadData *ldata,
+                         gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise)
 {
-  const complex double g_calib = NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_LENS_CALIB_G;
-  const guint n_ref            = 2 * self->n_lens + 1;
-  const gdouble I_ref          = _lens_quad_at_n (self, pop, data, eps_obs, R2, d, phi, sig2, n_ref, g_calib);
-  const gdouble denom          = (I_ref != 0.0) ? fabs (I_ref) : 1.0;
-  guint n                      = 5;
-  guint last_fail              = 0;
-  guint hi                     = 0;
+  const complex double eps_obs             = epsilon_obs_1 + I * epsilon_obs_2;
+  const complex double h                   = self->shear_at_origin (eps_obs);
+  const complex double neg_h               = -h;
+  const gdouble phi                        = carg (eps_obs);
+  const gdouble r_sigma                    = _exact_r_sigma (self, eps_obs, std_noise, h);
+  const gdouble panel_lo[2]                = { 0.0, r_sigma };
+  const gdouble panel_hi[2]                = { r_sigma, 1.0 };
+  const guint n_panel_nodes[2]             = { self->n_radial, 15 };
+  gsl_integration_glfixed_table *table1    = gsl_integration_glfixed_table_alloc (n_panel_nodes[0]);
+  gsl_integration_glfixed_table *table2    = gsl_integration_glfixed_table_alloc (n_panel_nodes[1]);
+  gsl_integration_glfixed_table *tables[2] = { table1, table2 };
+  const gdouble w_theta                    = 2.0 * M_PI / self->n_angular;
+  guint idx                                = 0;
+  guint panel, i, j;
 
-  if (self->n_lens <= 5)
-    return self->n_lens;
-
-  while (TRUE)
+  for (panel = 0; panel < 2; panel++)
   {
-    const gboolean at_ceiling = (n >= self->n_lens);
-    const guint n_try         = (at_ceiling ? self->n_lens : n) | 1;
-    const gdouble I_n         = _lens_quad_at_n (self, pop, data, eps_obs, R2, d, phi, sig2, n_try, g_calib);
-    const gdouble err         = fabs (I_n - I_ref) / denom;
-
-    if (err < self->lens_node_reltol)
+    for (i = 0; i < n_panel_nodes[panel]; i++)
     {
-      hi = n_try;
-      break;
-    }
+      gdouble rho, wr;
 
-    last_fail = n_try;
+      gsl_integration_glfixed_point (panel_lo[panel], panel_hi[panel], i, &rho, &wr, tables[panel]);
 
-    if (at_ceiling)
-      return self->n_lens;  /* no passing config below the cap */
-
-    n = (guint) ceil (n * 1.5);
-  }
-
-  {
-    guint lo = (last_fail > 0) ? last_fail : 3;
-
-    while (hi - lo > 2)
-    {
-      guint mid = ((lo + hi) / 2) | 1;
-
-      if (mid <= lo)
-        mid = lo + 2;
-
+      for (j = 0; j < self->n_angular; j++)
       {
-        const gdouble I_mid   = _lens_quad_at_n (self, pop, data, eps_obs, R2, d, phi, sig2, mid, g_calib);
-        const gdouble err_mid = fabs (I_mid - I_ref) / denom;
+        const gdouble theta        = phi + w_theta * j;
+        const complex double psi   = rho * cexp (I * theta);
+        const complex double chi_L = self->apply_shear (h, psi);
+        const gdouble jac_psi      = self->det_jac (neg_h, psi);
 
-        if (err_mid < self->lens_node_reltol)
-          hi = mid;
-        else
-          lo = mid;
+        ldata->base[idx]   = chi_L;
+        ldata->weight[idx] = wr * rho * w_theta * jac_psi;
+        idx++;
       }
     }
   }
 
-  return hi;
-}
+  gsl_integration_glfixed_table_free (table1);
+  gsl_integration_glfixed_table_free (table2);
 
-/* R/phi (and the hypot/atan2 needed to get them) are only needed here, on
- * the path that rebuilds the domain -- the cache-validity check in
- * _marginal() below compares the raw epsilon_obs_1/epsilon_obs_2 doubles
- * directly instead, so a fit that holds a galaxy's observed ellipticity
- * fixed across many g values never pays for hypot/atan2. */
-static void
-_regen_domain (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, NcGalaxyShapeFactorFixedQuadData *ldata,
-               gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise)
-{
-  const gdouble R              = hypot (epsilon_obs_1, epsilon_obs_2);
-  const gdouble phi            = atan2 (epsilon_obs_2, epsilon_obs_1);
-  const gdouble R1             = 1.0;
-  const gdouble R2             = NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA * std_noise;
-  const gdouble d              = R;
-  const gdouble sig2           = gsl_pow_2 (std_noise);
-  const complex double eps_obs = R * cexp (I * phi);
-
-  if ((R2 <= R1) && (d <= R1 - R2))
-  {
-    /* Noise disk fully inside the unit disc: this project's production
-     * regime (std_noise~0.3). */
-    _regen_noise_contained (self, eps_obs, R2, sig2, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
-  }
-  else if (d + R1 <= R2)
-  {
-    /* Unit disc already fully inside the (fixed-window) noise disk: full
-     * disc quadrature's original, validated use case. */
-    _regen_unit_contained (self, eps_obs, sig2, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
-  }
-  else
-  {
-    /* Genuine partial overlap. R2_eff (not the fixed NSIGMA window used for
-     * branch selection above) grows the noise disk's effective radius so
-     * that R1+R2_eff > d always holds for std_noise>0, keeping the lens
-     * branch's d=R1+R2 parametrization degeneracy unreachable (see
-     * NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA_TAIL's docs and
-     * docs/theory/wl_shape_factor_history.md). Guard: if this growth would
-     * itself make R2_eff fully contain the unit disc (only possible for
-     * std_noise comparable to R1/NSIGMA_TAIL), fall through to the
-     * full-disc computation instead. */
-    const gdouble R2_eff = fmax (R2, (d - R1) + NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_NSIGMA_TAIL * std_noise);
-
-    if (d + R1 <= R2_eff)
-    {
-      _regen_unit_contained (self, eps_obs, sig2, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
-    }
-    else
-    {
-      const guint n_lens = self->auto_lens_nodes ?
-                           _calibrate_n_lens (self, pop, data, eps_obs, R2_eff, d, phi, sig2) :
-                           self->n_lens;
-
-      _regen_lens (self, eps_obs, R2_eff, d, phi, sig2, n_lens, ldata->chi_L, ldata->eff_weight, &ldata->n_used);
-    }
-  }
-
+  ldata->n_used               = idx;
+  ldata->cached_method        = NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_TWO_PANEL;
   ldata->cached_epsilon_obs_1 = epsilon_obs_1;
   ldata->cached_epsilon_obs_2 = epsilon_obs_2;
   ldata->cached_std_noise     = std_noise;
   ldata->cache_valid          = TRUE;
+  ldata->g_spline_valid       = FALSE;
+}
+
+/* Builds the native chi_I-polar grid: fixed nodes chi_I_i=rho_i*e^{i theta_i},
+ * weight[i]=quadrature_weight/(2*pi) -- NO rho_i factor, since the polar measure's own
+ * rho and the population's area density P_pop(rho)/(2*pi*rho) share a rho that cancels
+ * analytically (this grid is centered on chi_I=0 itself). r_i is filled into x_arr
+ * once, since it is g-independent (no inverse map in this branch).
+ */
+static void
+_regen_domain_chi_i_native (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapeFactorFixedQuadData *ldata,
+                            gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise)
+{
+  const complex double eps_obs         = epsilon_obs_1 + I * epsilon_obs_2;
+  const gdouble phi                    = carg (eps_obs);
+  gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (self->n_radial);
+  const gdouble w_theta                = 2.0 * M_PI / self->n_angular;
+  guint idx                            = 0;
+  guint i, j;
+
+  g_array_set_size (ldata->x_arr, self->n_radial * self->n_angular);
+
+  {
+    gdouble * const r_data = (gdouble *) ldata->x_arr->data;
+
+    for (i = 0; i < self->n_radial; i++)
+    {
+      gdouble rho, wr;
+
+      gsl_integration_glfixed_point (0.0, 1.0, i, &rho, &wr, table);
+
+      for (j = 0; j < self->n_angular; j++)
+      {
+        const gdouble theta = phi + w_theta * j;
+
+        ldata->base[idx]   = rho * cexp (I * theta);
+        ldata->weight[idx] = wr * w_theta / (2.0 * M_PI);
+        r_data[idx]        = rho;
+        idx++;
+      }
+    }
+  }
+
+  gsl_integration_glfixed_table_free (table);
+
+  ldata->n_used               = idx;
+  ldata->cached_method        = NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE;
+  ldata->cached_epsilon_obs_1 = epsilon_obs_1;
+  ldata->cached_epsilon_obs_2 = epsilon_obs_2;
+  ldata->cached_std_noise     = std_noise;
+  ldata->cache_valid          = TRUE;
+  ldata->g_spline_valid       = FALSE;
+}
+
+/* Auto-switch domain build, used by eval_marginal()/eval_ln_marginal().
+ * nc_galaxy_shape_factor_fixed_quad_eval_two_panel()/_eval_chi_i_native() call the two
+ * branch-specific builders directly instead, forcing a branch regardless of this
+ * switch.
+ */
+static void
+_regen_domain (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapeFactorFixedQuadData *ldata,
+               gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise)
+{
+  const complex double eps_obs = epsilon_obs_1 + I * epsilon_obs_2;
+
+  if (_use_chi_i_native (eps_obs, std_noise))
+    _regen_domain_chi_i_native (self, ldata, epsilon_obs_1, epsilon_obs_2, std_noise);
+  else
+    _regen_domain_two_panel (self, ldata, epsilon_obs_1, epsilon_obs_2, std_noise);
+}
+
+static inline gboolean
+_domain_matches_method (NcGalaxyShapeFactorFixedQuadData *ldata, gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise,
+                        NcGalaxyShapeFactorFixedQuadMethod method)
+{
+  return ldata->cache_valid && (ldata->cached_epsilon_obs_1 == epsilon_obs_1) &&
+         (ldata->cached_epsilon_obs_2 == epsilon_obs_2) && (ldata->cached_std_noise == std_noise) &&
+         (ldata->cached_method == method);
+}
+
+/* Also checks cached_method, not just eps_obs/std_noise: a domain last built by
+ * eval_two_panel()/eval_chi_i_native() forcing the OTHER branch must still be detected
+ * as stale. */
+static inline gboolean
+_domain_matches_auto (NcGalaxyShapeFactorFixedQuadData *ldata, gdouble epsilon_obs_1, gdouble epsilon_obs_2, gdouble std_noise)
+{
+  const complex double eps_obs                    = epsilon_obs_1 + I * epsilon_obs_2;
+  const NcGalaxyShapeFactorFixedQuadMethod method = _use_chi_i_native (eps_obs, std_noise) ?
+                                                    NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE :
+                                                    NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_TWO_PANEL;
+
+  return _domain_matches_method (ldata, epsilon_obs_1, epsilon_obs_2, std_noise, method);
+}
+
+/* Raw (un-floored) two-panel marginal, given a valid TWO_PANEL domain. Sums the
+ * puncture-correction bracket [N(eps_obs-chi_L)-N0], N0=N(eps_obs-chi_L0),
+ * chi_L0=f_g(0), then adds N0 back once via integral(P_pop)=1. Mutates ldata's scratch
+ * buffers (x_arr/jac/p_arr): safe for repeated calls, not reentrant.
+ */
+static gdouble
+_marginal_two_panel (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                     NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
+{
+  const complex double eps_obs = ldata->cached_epsilon_obs_1 + I * ldata->cached_epsilon_obs_2;
+  const gdouble sig2           = gsl_pow_2 (ldata->cached_std_noise);
+  gdouble alpha_o;
+  guint i;
+
+  /* x_i is known for every node before eval_p() is called, so batch through
+   * eval_p_array() instead of one-at-a-time vfunc calls. x_arr holds x_i=|chi_I|^2
+   * from the kernels, sqrt()'d in place into r_i. */
+  g_array_set_size (ldata->x_arr, ldata->n_used);
+
+  {
+    gdouble * const x_data = (gdouble *) ldata->x_arr->data;
+
+    /* Branch on ellip_conv once per call, not per node: each loop calls
+     * nc_wl_ellipticity.h's fused, non-pointer kernel directly. */
+    if (self->ellip_conv == NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE)
+    {
+      NcWLEllipticityTraceKernelPrep prep;
+
+      nc_wl_ellipticity_trace_kernel_prepare (g, &prep);
+
+      for (i = 0; i < ldata->n_used; i++)
+        nc_wl_ellipticity_trace_kernel_apply (&prep, ldata->base[i], &x_data[i], &ldata->jac[i]);
+    }
+    else
+    {
+      for (i = 0; i < ldata->n_used; i++)
+        nc_wl_ellipticity_trace_det_kernel (g, ldata->base[i], &x_data[i], &ldata->jac[i]);
+    }
+
+    for (i = 0; i < ldata->n_used; i++)
+      x_data[i] = sqrt (x_data[i]);
+  }
+
+  nc_galaxy_shape_pop_eval_p_array (pop, data->pop_data, ldata->x_arr, &ldata->p_arr);
+  alpha_o = nc_galaxy_shape_pop_exponent_at_origin (pop);
+
+  /* Non-divergent case or too narrow noise disk */
+  if ((alpha_o >= 1.0) || (ldata->cached_std_noise < 0.05))
+  {
+    const gdouble * const p_data = (const gdouble *) ldata->p_arr->data;
+    const gdouble * const r_data = (const gdouble *) ldata->x_arr->data;
+    gdouble sum                  = 0.0;
+
+    for (i = 0; i < ldata->n_used; i++)
+    {
+      const complex double delta_i = eps_obs - ldata->base[i];
+      const gdouble p_2d           = p_data[i] / (2.0 * M_PI * r_data[i]);
+      const gdouble noise_i        = _noise_val (delta_i, sig2);
+
+      sum += ldata->weight[i] * ldata->jac[i] * p_2d * noise_i;
+    }
+
+    return sum;
+  }
+  else
+  {
+    const gdouble * const p_data = (const gdouble *) ldata->p_arr->data;
+    const gdouble * const r_data = (const gdouble *) ldata->x_arr->data;
+    const complex double chi_L0  = self->apply_shear (g, 0.0);
+    const gdouble d0             = gsl_pow_2 (creal (eps_obs - chi_L0)) + gsl_pow_2 (cimag (eps_obs - chi_L0));
+    const gdouble N0             = _noise_val (eps_obs - chi_L0, sig2);
+    gdouble corr_sum             = 0.0;
+
+    for (i = 0; i < ldata->n_used; i++)
+    {
+      const complex double delta_i = eps_obs - ldata->base[i];
+      const gdouble d_i            = gsl_pow_2 (creal (delta_i)) + gsl_pow_2 (cimag (delta_i));
+      const gdouble delta_ratio    = (d0 - d_i) / (2.0 * sig2);
+      const gdouble p_2d           = p_data[i] / (2.0 * M_PI * r_data[i]);
+      gdouble bracket;
+
+      /* expm1 avoids cancellation near delta_ratio=0; falls back to a direct,
+       * individually-bounded difference where expm1 would overflow instead.
+       */
+      if ((fabs (delta_ratio) <= NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_EXPM1_SAFE_BOUND))
+      {
+        bracket = N0 * expm1 (delta_ratio);
+      }
+      else
+      {
+        const gdouble noise_i = _noise_val (delta_i, sig2);
+
+        bracket = noise_i - N0;
+      }
+
+      corr_sum += ldata->weight[i] * ldata->jac[i] * p_2d * bracket;
+    }
+
+    return fabs (N0 + corr_sum);
+  }
+}
+
+/* Verbose, node-by-node re-evaluation of _marginal_two_panel(), for
+ * _direct_marginal_at_g()'s failure branch only: dumps every quantity that
+ * feeds the sum (including which expm1/direct branch each node took) to
+ * stderr right before the g_error() abort. Never called on the hot path.
+ */
+static gdouble
+_marginal_two_panel_debug (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                           NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
+{
+  const complex double eps_obs = ldata->cached_epsilon_obs_1 + I * ldata->cached_epsilon_obs_2;
+  const gdouble sig2           = gsl_pow_2 (ldata->cached_std_noise);
+  const complex double chi_L0  = self->apply_shear (g, 0.0);
+  const gdouble d0             = gsl_pow_2 (creal (eps_obs - chi_L0)) + gsl_pow_2 (cimag (eps_obs - chi_L0));
+  const gdouble N0             = _noise_val (eps_obs - chi_L0, sig2);
+  gdouble corr_sum             = 0.0;
+  guint i;
+
+  ncm_model_params_print_all (NCM_MODEL (pop), stdout);
+
+  fprintf (stderr, "---- _marginal_two_panel_debug: eps_obs=(% .15g,% .15g) sig2=% .15g g=(% .15g,% .15g) n_used=%u\n",
+           creal (eps_obs), cimag (eps_obs), sig2, creal (g), cimag (g), ldata->n_used);
+  fprintf (stderr, "     chi_L0=(% .15g,% .15g) d0=% .15g N0=% .15g SNR=% .15g\n", creal (chi_L0), cimag (chi_L0), d0, N0, cabs (eps_obs - chi_L0) / ldata->cached_std_noise);
+
+  g_array_set_size (ldata->x_arr, ldata->n_used);
+
+  {
+    gdouble * const x_data = (gdouble *) ldata->x_arr->data;
+
+    if (self->ellip_conv == NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE)
+    {
+      NcWLEllipticityTraceKernelPrep prep;
+
+      nc_wl_ellipticity_trace_kernel_prepare (g, &prep);
+
+      for (i = 0; i < ldata->n_used; i++)
+        nc_wl_ellipticity_trace_kernel_apply (&prep, ldata->base[i], &x_data[i], &ldata->jac[i]);
+    }
+    else
+    {
+      for (i = 0; i < ldata->n_used; i++)
+        nc_wl_ellipticity_trace_det_kernel (g, ldata->base[i], &x_data[i], &ldata->jac[i]);
+    }
+
+    for (i = 0; i < ldata->n_used; i++)
+      x_data[i] = sqrt (x_data[i]);
+  }
+
+  nc_galaxy_shape_pop_eval_p_array (pop, data->pop_data, ldata->x_arr, &ldata->p_arr);
+
+  {
+    const gdouble * const p_data = (const gdouble *) ldata->p_arr->data;
+    const gdouble * const r_data = (const gdouble *) ldata->x_arr->data;
+
+    for (i = 0; i < ldata->n_used; i++)
+    {
+      const complex double delta_i = eps_obs - ldata->base[i];
+      const gdouble d_i            = gsl_pow_2 (creal (delta_i)) + gsl_pow_2 (cimag (delta_i));
+      const gdouble delta_ratio    = (d0 - d_i) / (2.0 * sig2);
+      const gdouble p_2d           = p_data[i] / (2.0 * M_PI * r_data[i]);
+      const gboolean via_expm1     = (fabs (delta_ratio) <= NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_EXPM1_SAFE_BOUND);
+      gdouble bracket;
+      gdouble contrib;
+
+
+      if (via_expm1)
+      {
+        bracket = N0 * expm1 (delta_ratio);
+      }
+      else
+      {
+        const gdouble noise_i = _noise_val (delta_i, sig2);
+
+        bracket = noise_i - N0;
+      }
+
+      contrib = ldata->weight[i] * ldata->jac[i] * p_2d * bracket;
+
+      fprintf (stderr,
+               "  [%4u] chi_L=(% .15g,% .15g) r=% .15g weight=% .15g jac=% .15g p=% .15g p_2d=% .15g d_i=% .15g "
+               "delta_ratio=% .15g via=%s bracket=% .15g contrib=% .15g running_corr_sum=% .15g\n",
+               i,
+               creal (ldata->base[i]),
+               cimag (ldata->base[i]),
+               r_data[i],
+               ldata->weight[i],
+               ldata->jac[i],
+               p_data[i],
+               p_2d,
+               d_i,
+               delta_ratio,
+               via_expm1 ? "expm1" : "direct",
+               bracket,
+               contrib,
+               corr_sum + contrib);
+
+      corr_sum += contrib;
+    }
+  }
+
+  fprintf (stderr, "---- _marginal_two_panel_debug: N0=% .15g corr_sum=% .15g result=% .15g\n", N0, corr_sum, N0 + corr_sum);
+
+  return N0 + corr_sum;
+}
+
+/* Raw (un-floored) native-chi_I marginal, given a valid CHI_I_NATIVE domain. Plain
+ * forward evaluation, no bracket: this grid is centered on chi_I=0, so there is no
+ * unrelated singular point to protect against. r_i is g-independent, already filled by
+ * _regen_domain_chi_i_native().
+ */
+static gdouble
+_marginal_chi_i_native (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                        NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
+{
+  const complex double eps_obs = ldata->cached_epsilon_obs_1 + I * ldata->cached_epsilon_obs_2;
+  const gdouble sig2           = gsl_pow_2 (ldata->cached_std_noise);
+  gdouble total                = 0.0;
+  guint i;
+
+  nc_galaxy_shape_pop_eval_p_array (pop, data->pop_data, ldata->x_arr, &ldata->p_arr);
+
+  {
+    const gdouble * const p_data = (const gdouble *) ldata->p_arr->data;
+
+    for (i = 0; i < ldata->n_used; i++)
+    {
+      const complex double chi_L = self->apply_shear (g, ldata->base[i]);
+      const gdouble noise_i      = _noise_val (eps_obs - chi_L, sig2);
+
+      total += ldata->weight[i] * p_data[i] * noise_i;
+    }
+  }
+
+  return total;
+}
+
+/* Verbose, node-by-node re-evaluation of _marginal_chi_i_native(), for
+ * _direct_marginal_at_g()'s failure branch only: dumps every quantity that
+ * feeds the sum to stderr right before the g_error() abort. Never called on
+ * the hot path.
+ */
+static gdouble
+_marginal_chi_i_native_debug (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                              NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
+{
+  const complex double eps_obs = ldata->cached_epsilon_obs_1 + I * ldata->cached_epsilon_obs_2;
+  const gdouble sig2           = gsl_pow_2 (ldata->cached_std_noise);
+  gdouble total                = 0.0;
+  guint i;
+
+  fprintf (stderr, "---- _marginal_chi_i_native_debug: eps_obs=(% .15g,% .15g) sig2=% .15g g=(% .15g,% .15g) n_used=%u\n",
+           creal (eps_obs), cimag (eps_obs), sig2, creal (g), cimag (g), ldata->n_used);
+
+  nc_galaxy_shape_pop_eval_p_array (pop, data->pop_data, ldata->x_arr, &ldata->p_arr);
+
+  {
+    const gdouble * const p_data = (const gdouble *) ldata->p_arr->data;
+    const gdouble * const r_data = (const gdouble *) ldata->x_arr->data;
+
+    for (i = 0; i < ldata->n_used; i++)
+    {
+      const complex double chi_L = self->apply_shear (g, ldata->base[i]);
+      const gdouble noise_i      = _noise_val (eps_obs - chi_L, sig2);
+      const gdouble contrib      = ldata->weight[i] * p_data[i] * noise_i;
+
+      fprintf (stderr,
+               "  [%4u] chi_I=(% .15g,% .15g) r=% .15g weight=% .15g p=% .15g chi_L=(% .15g,% .15g) noise=% .15g "
+               "contrib=% .15g running_total=% .15g\n",
+               i, creal (ldata->base[i]), cimag (ldata->base[i]), r_data[i], ldata->weight[i], p_data[i],
+               creal (chi_L), cimag (chi_L), noise_i, contrib, total + contrib);
+
+      total += contrib;
+    }
+  }
+
+  fprintf (stderr, "---- _marginal_chi_i_native_debug: total=% .15g\n", total);
+
+  return total;
+}
+
+/* Ground truth for use-marginal-spline's builders below. A non-finite result is always
+ * a bug (invalid input the domain build should have rejected, or a genuine defect) --
+ * never a deep-tail underflow, which shows up as a finite, small/negative value
+ * instead (see the MIN_MARGINAL floor at this function's callers).
+ */
+static gdouble
+_direct_marginal_at_g (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                       NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
+{
+  gdouble result;
+
+  switch (ldata->cached_method)
+  {
+    case NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE:
+      result = _marginal_chi_i_native (self, pop, data, ldata, g);
+      break;
+
+    case NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_TWO_PANEL:
+    default:
+      result = _marginal_two_panel (self, pop, data, ldata, g);
+      break;
+  }
+
+  if (!isfinite (result))
+  {
+    switch (ldata->cached_method)
+    {
+      case NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE:
+        _marginal_chi_i_native_debug (self, pop, data, ldata, g);
+        break;
+
+      case NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_TWO_PANEL:
+      default:
+        _marginal_two_panel_debug (self, pop, data, ldata, g);
+        break;
+    }
+
+    g_error ("nc_galaxy_shape_factor_fixed_quad: non-finite marginal at g=(% .6g,% .6g), "
+             "eps_obs=(% .6g,% .6g), std_noise=% .6g, method=%s, result=% .6g.",
+             creal (g), cimag (g), ldata->cached_epsilon_obs_1, ldata->cached_epsilon_obs_2, ldata->cached_std_noise,
+             (ldata->cached_method == NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE) ? "chi_i_native" : "two_panel",
+             result);
+  }
+
+  return result > 0.0 ? result : 1.0e-300;
+}
+
+/* Shared args behind _build_g_spline()'s Fx/Fy gsl_function slices,
+ * following ncm_spline2d_set_function()'s own contract. */
+typedef struct
+{
+  NcGalaxyShapeFactorFixedQuadPrivate *self;
+  NcGalaxyShapePop *pop;
+  NcGalaxyShapeFactorData *data;
+  NcGalaxyShapeFactorFixedQuadData *ldata;
+  gboolean slice_is_g1; /* TRUE: F(g_1) at fixed g_2=0; FALSE: F(g_2) at fixed g_1=0 */
+} GSplineSliceArgs;
+
+static gdouble
+_g_spline_slice_func (gdouble x, gpointer p)
+{
+  GSplineSliceArgs *a    = (GSplineSliceArgs *) p;
+  const complex double g = a->slice_is_g1 ? x : x * I;
+  const gdouble v        = _direct_marginal_at_g (a->self, a->pop, a->data, a->ldata, g);
+
+  return log (v);
+}
+
+/* Builds ldata's g-spline: ln(marginal) as a bivariate function of
+ * (g_1,g_2) over [-spline_g_max,spline_g_max]^2. Ln-space is required --
+ * the marginal spans many orders of magnitude over this square. Node
+ * placement uses this codebase's "autoknots" 2D spline machinery
+ * (ncm_spline2d_set_function()): knots placed adaptively from two 1D
+ * slices (_g_spline_slice_func(), each at the other coordinate fixed to
+ * 0) to spline_rel_err, then the true 2D surface is filled in at the
+ * resulting tensor grid. Node count is data-dependent.
+ *
+ * The r=0 divergence check below only matters for the TWO_PANEL branch --
+ * the native chi_I branch's per-g function is always smooth by
+ * construction. The check is population-only, so a chi_I-native galaxy
+ * with a divergent population is still (conservatively) routed to the
+ * fixed-knots path. */
+static void
+_build_g_spline_fixed_knots (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                             NcGalaxyShapeFactorFixedQuadData *ldata)
+{
+  const gdouble g_max = self->spline_g_max;
+  const guint n_knots = NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_UNSAFE_SPLINE_N_KNOTS;
+  NcmVector *xv       = ncm_vector_new (n_knots);
+  NcmVector *yv       = ncm_vector_new (n_knots);
+  NcmMatrix *zm       = ncm_matrix_new (n_knots, n_knots);
+  guint i, j;
+
+  for (i = 0; i < n_knots; i++)
+  {
+    const gdouble v = -g_max + (2.0 * g_max) * i / (n_knots - 1.0);
+
+    ncm_vector_set (xv, i, v);
+    ncm_vector_set (yv, i, v);
+  }
+
+  for (i = 0; i < n_knots; i++)
+  {
+    const gdouble g_2 = ncm_vector_get (yv, i);
+
+    for (j = 0; j < n_knots; j++)
+    {
+      const gdouble g_1      = ncm_vector_get (xv, j);
+      const complex double g = g_1 + I * g_2;
+      const gdouble v        = _direct_marginal_at_g (self, pop, data, ldata, g);
+
+      ncm_matrix_set (zm, i, j, log (v));
+    }
+  }
+
+  ncm_spline2d_clear (&ldata->g_spline);
+  ldata->g_spline = NCM_SPLINE2D (ncm_spline2d_bicubic_notaknot_new ());
+  ncm_spline2d_set (ldata->g_spline, xv, yv, zm, TRUE);
+  ncm_spline2d_prepare (ldata->g_spline);
+
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  ncm_matrix_free (zm);
+}
+
+static void
+_build_g_spline (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                 NcGalaxyShapeFactorFixedQuadData *ldata)
+{
+  const gdouble g_max     = self->spline_g_max;
+  GSplineSliceArgs args_x = { self, pop, data, ldata, TRUE };
+  GSplineSliceArgs args_y = { self, pop, data, ldata, FALSE };
+  gsl_function Fx         = { &_g_spline_slice_func, &args_x };
+  gsl_function Fy         = { &_g_spline_slice_func, &args_y };
+  NcmVector *xv, *yv;
+  NcmMatrix *zm;
+  guint i, j;
+
+  ldata->g_spline_pop_pkey = ncm_model_state_get_pkey (NCM_MODEL (pop));
+  ldata->g_spline_valid    = TRUE;
+
+  /* The area density the two-panel branch needs, P_pop(r)/(2*pi*r),
+   * diverges at r=0 whenever eval_p(r) vanishes slower than r itself
+   * (e.g. Beta with alpha<2, eval_p(r)~r^(alpha-1)). eval_p(0.0) cannot
+   * detect this directly (it collapses to exactly 0.0 for any alpha>1),
+   * so probe the local power-law exponent via two small, well-separated
+   * r instead: the area density diverges iff the log-log slope between
+   * them is below 1.
+   *
+   * Every two-panel domain node has some g mapping it to chi_I=0, so a
+   * divergent population turns each node into its own spike in g-space;
+   * the adaptive autoknots build cannot resolve that and aborts via
+   * g_error, so this population gets the fixed-knots grid instead, which
+   * cannot abort. */
+  {
+    const gdouble r1             = 1.0e-6;
+    const gdouble r2             = 1.0e-3;
+    const gdouble p1             = nc_galaxy_shape_pop_eval_p (pop, data->pop_data, r1);
+    const gdouble p2             = nc_galaxy_shape_pop_eval_p (pop, data->pop_data, r2);
+    const gboolean well_defined  = gsl_finite (p1) && gsl_finite (p2) && (p1 > 0.0) && (p2 > 0.0);
+    const gboolean adaptive_safe = well_defined && (log (p2 / p1) / log (r2 / r1) >= 1.0 - 1.0e-4);
+
+    if (!well_defined)
+    {
+      ldata->g_spline_built = FALSE;
+
+      return;
+    }
+
+    ldata->g_spline_built = TRUE;
+
+    if (!adaptive_safe)
+    {
+      _build_g_spline_fixed_knots (self, pop, data, ldata);
+
+      return;
+    }
+  }
+
+  ncm_spline2d_clear (&ldata->g_spline);
+  ldata->g_spline = NCM_SPLINE2D (ncm_spline2d_bicubic_notaknot_new ());
+
+  ncm_spline2d_set_function (ldata->g_spline, NCM_SPLINE_FUNCTION_SPLINE, &Fx, &Fy,
+                             -g_max, g_max, -g_max, g_max, self->spline_rel_err);
+
+  xv = ncm_spline2d_peek_xv (ldata->g_spline);
+  yv = ncm_spline2d_peek_yv (ldata->g_spline);
+  zm = ncm_spline2d_peek_zm (ldata->g_spline);
+
+  for (i = 0; i < ncm_vector_len (yv); i++)
+  {
+    const gdouble g_2 = ncm_vector_get (yv, i);
+
+    for (j = 0; j < ncm_vector_len (xv); j++)
+    {
+      const gdouble g_1      = ncm_vector_get (xv, j);
+      const complex double g = g_1 + I * g_2;
+      const gdouble v        = _direct_marginal_at_g (self, pop, data, ldata, g);
+
+      ncm_matrix_set (zm, i, j, log (v));
+    }
+  }
+
+  ncm_spline2d_prepare (ldata->g_spline);
+}
+
+/* Dispatch for :use-marginal-spline: falls back to direct computation
+ * outside the cached box, rebuilds the spline if invalid or stale. */
+static gdouble
+_eval_marginal_spline (NcGalaxyShapeFactorFixedQuadPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                       NcGalaxyShapeFactorFixedQuadData *ldata, const complex double g)
+{
+  const gdouble g_1 = creal (g);
+  const gdouble g_2 = cimag (g);
+
+  if ((fabs (g_1) > self->spline_g_max) || (fabs (g_2) > self->spline_g_max))
+    return _direct_marginal_at_g (self, pop, data, ldata, g);
+
+  {
+    const guint64 pop_pkey = ncm_model_state_get_pkey (NCM_MODEL (pop));
+
+    if (!ldata->g_spline_valid || (ldata->g_spline_pop_pkey != pop_pkey))
+      _build_g_spline (self, pop, data, ldata);
+  }
+
+  if (!ldata->g_spline_built)
+    return _direct_marginal_at_g (self, pop, data, ldata, g);
+
+  return exp (ncm_spline2d_eval (ldata->g_spline, g_1, g_2));
 }
 
 static gdouble
@@ -702,32 +1085,13 @@ _nc_galaxy_shape_factor_fixed_quad_marginal (NcGalaxyShapeFactorFixedQuad *gsffq
   NcGalaxyShapeFactorFixedQuadData *ldata          = (NcGalaxyShapeFactorFixedQuadData *) data->ldata;
   const complex double g                           = g_1 + I * g_2;
   gdouble result;
-  guint i;
 
-  /* Compares the raw epsilon_obs_1/epsilon_obs_2 directly -- R/phi (and the
-   * hypot/atan2 to compute them) are only needed inside _regen_domain, on
-   * the rare path that actually rebuilds the domain. See that function's
-   * docs. */
-  if (!ldata->cache_valid || (ldata->cached_epsilon_obs_1 != epsilon_obs_1) ||
-      (ldata->cached_epsilon_obs_2 != epsilon_obs_2) || (ldata->cached_std_noise != data->std_noise))
-    _regen_domain (self, pop, data, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
+  if (!_domain_matches_auto (ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise))
+    _regen_domain (self, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
 
-  result = 0.0;
-
-  for (i = 0; i < ldata->n_used; i++)
-  {
-    const complex double chi_L = ldata->chi_L[i];
-    const complex double chi_i = self->apply_shear_inv (g, chi_L);
-    const gdouble x_i          = gsl_pow_2 (creal (chi_i)) + gsl_pow_2 (cimag (chi_i));
-    const gdouble p_pop        = nc_galaxy_shape_pop_eval_p (pop, data->pop_data, x_i) / M_PI;
-    const gdouble jac          = self->det_jac (g, chi_L);
-
-    result += ldata->eff_weight[i] * p_pop * jac;
-  }
-
-  /* Purely the empty-domain / underflow floor -- see the class docs. */
-  if (!(result > 0.0))
-    return NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_MIN_MARGINAL;
+  result = self->use_marginal_spline ?
+           _eval_marginal_spline (self, pop, data, ldata, g) :
+           _direct_marginal_at_g (self, pop, data, ldata, g);
 
   return result;
 }
@@ -758,74 +1122,73 @@ nc_galaxy_shape_factor_fixed_quad_class_init (NcGalaxyShapeFactorFixedQuadClass 
   /**
    * NcGalaxyShapeFactorFixedQuad:n-radial:
    *
-   * Number of fixed Gauss-Legendre nodes in the radial direction (branches
-   * where one disc is contained in the other). Default 15.
+   * Number of fixed Gauss-Legendre radial nodes: PER PANEL for the
+   * two-panel psi branch, or in the single grid for the native chi_I
+   * branch. Default 21.
    */
   g_object_class_install_property (object_class,
                                    PROP_N_RADIAL,
                                    g_param_spec_uint ("n-radial",
                                                       "Number of radial nodes",
                                                       "Number of fixed Gauss-Legendre nodes in the radial direction",
-                                                      1, G_MAXUINT, 15,
+                                                      1, G_MAXUINT, 21,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   /**
    * NcGalaxyShapeFactorFixedQuad:n-angular:
    *
-   * Number of angular nodes (equally-spaced when the noise disk is
-   * contained in the unit disc, Gauss-Legendre otherwise). Default 15.
+   * Number of equally-spaced angular nodes of whichever grid is chosen.
+   * Default 21.
    */
   g_object_class_install_property (object_class,
                                    PROP_N_ANGULAR,
                                    g_param_spec_uint ("n-angular",
                                                       "Number of angular nodes",
                                                       "Number of angular quadrature nodes",
-                                                      1, G_MAXUINT, 15,
+                                                      1, G_MAXUINT, 21,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   /**
-   * NcGalaxyShapeFactorFixedQuad:n-lens:
+   * NcGalaxyShapeFactorFixedQuad:use-marginal-spline:
    *
-   * Number of fixed Gauss-Legendre nodes per axis in the genuine two-circle
-   * "lens" (partial-overlap) branch; always rounded up to the next odd
-   * number (see the class docs for why). Default 41.
+   * When %TRUE, caches the marginal as a function of g, per galaxy, over
+   * $[-g_\mathrm{max},g_\mathrm{max}]^2$
+   * (#NcGalaxyShapeFactorFixedQuad:spline-g-max); g outside the box always
+   * falls back to the exact direct computation. Default %FALSE.
    */
   g_object_class_install_property (object_class,
-                                   PROP_N_LENS,
-                                   g_param_spec_uint ("n-lens",
-                                                      "Number of lens-branch nodes",
-                                                      "Number of fixed Gauss-Legendre nodes per axis in the genuine-lens branch",
-                                                      3, G_MAXUINT, 41,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
-
-  /**
-   * NcGalaxyShapeFactorFixedQuad:auto-lens-nodes:
-   *
-   * When %TRUE, calibrates a per-galaxy lens-branch node count (capped at
-   * #NcGalaxyShapeFactorFixedQuad:n-lens) instead of always using
-   * #NcGalaxyShapeFactorFixedQuad:n-lens for every galaxy -- see
-   * _calibrate_n_lens()'s docs. Default %FALSE (zero behavior change unless
-   * explicitly enabled).
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_AUTO_LENS_NODES,
-                                   g_param_spec_boolean ("auto-lens-nodes",
-                                                         "Auto lens-branch nodes",
-                                                         "Calibrate a per-galaxy lens-branch node count instead of always using n-lens",
+                                   PROP_USE_MARGINAL_SPLINE,
+                                   g_param_spec_boolean ("use-marginal-spline",
+                                                         "Use marginal spline",
+                                                         "Cache the marginal as a function of g instead of recomputing it every call",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   /**
-   * NcGalaxyShapeFactorFixedQuad:lens-node-reltol:
+   * NcGalaxyShapeFactorFixedQuad:spline-g-max:
    *
-   * Target relative tolerance for #NcGalaxyShapeFactorFixedQuad:auto-lens-nodes's
-   * calibration. Default 1e-4.
+   * Half-side of the square #NcGalaxyShapeFactorFixedQuad:use-marginal-spline's
+   * cache covers. Default 0.3.
    */
   g_object_class_install_property (object_class,
-                                   PROP_LENS_NODE_RELTOL,
-                                   g_param_spec_double ("lens-node-reltol",
-                                                        "Lens-branch node calibration reltol",
-                                                        "Target relative tolerance for auto-lens-nodes' calibration",
+                                   PROP_SPLINE_G_MAX,
+                                   g_param_spec_double ("spline-g-max",
+                                                        "g-spline cached box half-side",
+                                                        "Half-side of the square use-marginal-spline's cache covers",
+                                                        0.0, 1.0, 0.3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorFixedQuad:spline-rel-err:
+   *
+   * Target relative error for #NcGalaxyShapeFactorFixedQuad:use-marginal-spline's
+   * autoknots build. Default 1e-4.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SPLINE_REL_ERR,
+                                   g_param_spec_double ("spline-rel-err",
+                                                        "g-spline target relative error",
+                                                        "Target relative error for use-marginal-spline's autoknots build",
                                                         0.0, 1.0, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
@@ -890,5 +1253,135 @@ void
 nc_galaxy_shape_factor_fixed_quad_clear (NcGalaxyShapeFactorFixedQuad **gsffq)
 {
   g_clear_object (gsffq);
+}
+
+/**
+ * nc_galaxy_shape_factor_fixed_quad_eval_two_panel:
+ * @gsffq: a #NcGalaxyShapeFactorFixedQuad
+ * @pop: a #NcGalaxyShapePop
+ * @data: a #NcGalaxyShapeFactorData
+ * @g_1: reduced shear, real component
+ * @g_2: reduced shear, imaginary component
+ * @epsilon_obs_1: observed ellipticity/distortion, real component
+ * @epsilon_obs_2: observed ellipticity/distortion, imaginary component
+ *
+ * Evaluates the marginal using the two-panel psi branch, regardless of
+ * what the class' own switch (_use_chi_i_native()) would pick. Not used
+ * by any production path -- eval_marginal()/eval_ln_marginal() always use
+ * the switch; this and
+ * nc_galaxy_shape_factor_fixed_quad_eval_chi_i_native() exist to test each
+ * branch in isolation.
+ *
+ * Returns: $P(\epsilon_\mathrm{obs} \mid g)$, via the two-panel psi branch.
+ */
+gdouble
+nc_galaxy_shape_factor_fixed_quad_eval_two_panel (NcGalaxyShapeFactorFixedQuad *gsffq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                                  const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
+{
+  NcGalaxyShapeFactorFixedQuadPrivate * const self = nc_galaxy_shape_factor_fixed_quad_get_instance_private (gsffq);
+  NcGalaxyShapeFactorFixedQuadData *ldata          = (NcGalaxyShapeFactorFixedQuadData *) data->ldata;
+  const complex double g                           = g_1 + I * g_2;
+
+  if (!_domain_matches_method (ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise, NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_TWO_PANEL))
+    _regen_domain_two_panel (self, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
+
+  return _direct_marginal_at_g (self, pop, data, ldata, g);
+}
+
+/**
+ * nc_galaxy_shape_factor_fixed_quad_eval_chi_i_native:
+ * @gsffq: a #NcGalaxyShapeFactorFixedQuad
+ * @pop: a #NcGalaxyShapePop
+ * @data: a #NcGalaxyShapeFactorData
+ * @g_1: reduced shear, real component
+ * @g_2: reduced shear, imaginary component
+ * @epsilon_obs_1: observed ellipticity/distortion, real component
+ * @epsilon_obs_2: observed ellipticity/distortion, imaginary component
+ *
+ * Evaluates the marginal using the native chi_I branch, regardless of
+ * what the class' own switch would pick. See
+ * nc_galaxy_shape_factor_fixed_quad_eval_two_panel()'s docs.
+ *
+ * Returns: $P(\epsilon_\mathrm{obs} \mid g)$, via the native chi_I branch.
+ */
+gdouble
+nc_galaxy_shape_factor_fixed_quad_eval_chi_i_native (NcGalaxyShapeFactorFixedQuad *gsffq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                                     const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
+{
+  NcGalaxyShapeFactorFixedQuadPrivate * const self = nc_galaxy_shape_factor_fixed_quad_get_instance_private (gsffq);
+  NcGalaxyShapeFactorFixedQuadData *ldata          = (NcGalaxyShapeFactorFixedQuadData *) data->ldata;
+  const complex double g                           = g_1 + I * g_2;
+
+  if (!_domain_matches_method (ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise, NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE))
+    _regen_domain_chi_i_native (self, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
+
+  return _direct_marginal_at_g (self, pop, data, ldata, g);
+}
+
+/**
+ * nc_galaxy_shape_factor_fixed_quad_peek_domain:
+ * @gsffq: a #NcGalaxyShapeFactorFixedQuad
+ * @pop: a #NcGalaxyShapePop
+ * @data: a #NcGalaxyShapeFactorData
+ * @g_1: reduced shear, real component
+ * @g_2: reduced shear, imaginary component
+ * @weights: (out) (transfer full): per-node quadrature weight times the
+ * noise-kernel value at @g_1/@g_2 -- NOT the node's full contribution to
+ * the marginal (that also needs the population density and, for
+ * two-panel, the inverse-map Jacobian and the puncture-correction
+ * baseline), so summing @weights does not reproduce eval_marginal()'s
+ * result
+ *
+ * Diagnostic accessor exposing @data's own per-galaxy quadrature domain,
+ * mapped to chi_L-space at @g_1/@g_2. Rebuilds the domain first if
+ * @data's epsilon_obs/std_noise changed (same cache check as
+ * eval_marginal()'s own, i.e. the auto-switch, never a forced branch).
+ * Not used by any production evaluation path -- added for `numcosmo
+ * inspect galaxy-shape-integrand` and similar diagnostics.
+ *
+ * The two-panel branch's nodes are already positioned in chi_L-space
+ * (g-independent), so @g_1/@g_2 only affect the returned weight there; the
+ * native chi_I branch's nodes are fixed in chi_I-space, so @g_1/@g_2 are
+ * needed to place them in chi_L-space at all.
+ *
+ * Returns: (transfer full): an n_used x 2 #NcmMatrix of chi_L node
+ * positions, column 0 = Re(chi_L), column 1 = Im(chi_L).
+ */
+NcmMatrix *
+nc_galaxy_shape_factor_fixed_quad_peek_domain (NcGalaxyShapeFactorFixedQuad *gsffq, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                               const gdouble g_1, const gdouble g_2, NcmVector **weights)
+{
+  NcGalaxyShapeFactorFixedQuadPrivate * const self = nc_galaxy_shape_factor_fixed_quad_get_instance_private (gsffq);
+  NcGalaxyShapeFactorFixedQuadData *ldata          = (NcGalaxyShapeFactorFixedQuadData *) data->ldata;
+  const gdouble epsilon_obs_1                      = data->epsilon_obs_1;
+  const gdouble epsilon_obs_2                      = data->epsilon_obs_2;
+  const complex double g                           = g_1 + I * g_2;
+  gboolean chi_i_native;
+  NcmMatrix *chi_L_mat;
+  complex double eps_obs;
+  gdouble sig2;
+  guint i;
+
+  if (!_domain_matches_auto (ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise))
+    _regen_domain (self, ldata, epsilon_obs_1, epsilon_obs_2, data->std_noise);
+
+  eps_obs      = ldata->cached_epsilon_obs_1 + I * ldata->cached_epsilon_obs_2;
+  sig2         = gsl_pow_2 (ldata->cached_std_noise);
+  chi_i_native = (ldata->cached_method == NC_GALAXY_SHAPE_FACTOR_FIXED_QUAD_METHOD_CHI_I_NATIVE);
+
+  chi_L_mat = ncm_matrix_new (ldata->n_used, 2);
+  *weights  = ncm_vector_new (ldata->n_used);
+
+  for (i = 0; i < ldata->n_used; i++)
+  {
+    const complex double chi_L = chi_i_native ? self->apply_shear (g, ldata->base[i]) : ldata->base[i];
+    const gdouble noise_i      = _noise_val (eps_obs - chi_L, sig2);
+
+    ncm_matrix_set (chi_L_mat, i, 0, creal (chi_L));
+    ncm_matrix_set (chi_L_mat, i, 1, cimag (chi_L));
+    ncm_vector_set (*weights, i, ldata->weight[i] * noise_i);
+  }
+
+  return chi_L_mat;
 }
 

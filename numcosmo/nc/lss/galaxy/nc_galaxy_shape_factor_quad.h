@@ -45,11 +45,10 @@ NcGalaxyShapeFactorQuad *nc_galaxy_shape_factor_quad_ref (NcGalaxyShapeFactorQua
 void nc_galaxy_shape_factor_quad_free (NcGalaxyShapeFactorQuad *gsfq);
 void nc_galaxy_shape_factor_quad_clear (NcGalaxyShapeFactorQuad **gsfq);
 
-void nc_galaxy_shape_factor_quad_set_bound (NcGalaxyShapeFactorQuad *gsfq, const gdouble bound);
-gdouble nc_galaxy_shape_factor_quad_get_bound (NcGalaxyShapeFactorQuad *gsfq);
-
 void nc_galaxy_shape_factor_quad_set_reltol (NcGalaxyShapeFactorQuad *gsfq, const gdouble reltol);
 gdouble nc_galaxy_shape_factor_quad_get_reltol (NcGalaxyShapeFactorQuad *gsfq);
+
+gdouble nc_galaxy_shape_factor_quad_eval_direct (NcGalaxyShapeFactorQuad *gsfq, NcGalaxyShapePop *pop, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble std_noise);
 
 G_END_DECLS
 

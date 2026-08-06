@@ -82,6 +82,37 @@ typedef enum _NcWLEllipticityFrame
   NC_WL_ELLIPTICITY_FRAME_CARTESIAN,
 } NcWLEllipticityFrame;
 
+/* g-only terms for the TRACE kernel, resolved once per @g by
+ * nc_wl_ellipticity_trace_kernel_prepare() and reused by
+ * nc_wl_ellipticity_trace_kernel_apply() across every node evaluated at
+ * that g -- see that pair's own docs below for why this earns real cycles
+ * (unlike TRACE_DET, kept single-call: no equivalent win there). A simple
+ * #GBoxed struct, same pattern as #NcmComplex: opaque to introspection (the
+ * NUMCOSMO_GIR_SCAN branch below), a real by-value struct of
+ * #NcmComplex/#gdouble fields otherwise. Stack allocation (as
+ * nc_galaxy_shape_factor_fixed_quad.c's hot loop does) is still the
+ * intended use in C; the boxed registration is for GValue/introspection
+ * interoperability, not a requirement to heap-allocate. */
+#ifndef NUMCOSMO_GIR_SCAN
+typedef struct _NcWLEllipticityTraceKernelPrep
+{
+  NcmComplex g_conj;
+  NcmComplex g2;
+  NcmComplex two_g;
+  gdouble abs_g2;
+  gdouble num_base3;
+} NcWLEllipticityTraceKernelPrep;
+#else /* NUMCOSMO_GIR_SCAN */
+typedef struct _NcWLEllipticityTraceKernelPrepShouldNeverAppear NcWLEllipticityTraceKernelPrep;
+#endif /* NUMCOSMO_GIR_SCAN */
+
+GType nc_wl_ellipticity_trace_kernel_prep_get_type (void) G_GNUC_CONST;
+
+NcWLEllipticityTraceKernelPrep *nc_wl_ellipticity_trace_kernel_prep_new (void);
+NcWLEllipticityTraceKernelPrep *nc_wl_ellipticity_trace_kernel_prep_dup (NcWLEllipticityTraceKernelPrep *prep);
+void nc_wl_ellipticity_trace_kernel_prep_free (NcWLEllipticityTraceKernelPrep *prep);
+void nc_wl_ellipticity_trace_kernel_prep_clear (NcWLEllipticityTraceKernelPrep **prep);
+
 /*
  * Reduced-shear transformations of the complex ellipticity, one set per
  * convention. The convention suffix matches #NcGalaxyWLObsEllipConv:
@@ -111,11 +142,13 @@ typedef enum _NcWLEllipticityFrame
 /* Introspectable NcmComplex API (TRACE convention: distortion chi). */
 void nc_wl_ellipticity_apply_shear_trace_ptr (const NcmComplex *g, const NcmComplex *chi, NcmComplex *chi_obs);
 void nc_wl_ellipticity_apply_shear_inv_trace_ptr (const NcmComplex *g, const NcmComplex *chi_obs, NcmComplex *chi);
+void nc_wl_ellipticity_shear_at_origin_trace_ptr (const NcmComplex *target, NcmComplex *g);
 gdouble nc_wl_ellipticity_lndet_jac_trace_ptr (const NcmComplex *g, const NcmComplex *chi_obs);
 
 /* Introspectable NcmComplex API (TRACE_DET convention: ellipticity epsilon). */
 void nc_wl_ellipticity_apply_shear_trace_det_ptr (const NcmComplex *g, const NcmComplex *e, NcmComplex *e_obs);
 void nc_wl_ellipticity_apply_shear_inv_trace_det_ptr (const NcmComplex *g, const NcmComplex *e_obs, NcmComplex *e);
+void nc_wl_ellipticity_shear_at_origin_trace_det_ptr (const NcmComplex *target, NcmComplex *g);
 gdouble nc_wl_ellipticity_lndet_jac_trace_det_ptr (const NcmComplex *g, const NcmComplex *e_obs);
 
 /* Re-express the celestial position angle phi_C (as returned by
@@ -139,14 +172,20 @@ NCM_INLINE NcmComplex nc_wl_ellipticity_celestial_to_frame (NcWLEllipticityFrame
 /* Inline complex kernels (TRACE convention: distortion chi). */
 NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_trace (NcmComplex g, NcmComplex chi);
 NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_inv_trace (NcmComplex g, NcmComplex chi_obs);
+NCM_INLINE NcmComplex nc_wl_ellipticity_shear_at_origin_trace (NcmComplex target);
 NCM_INLINE gdouble nc_wl_ellipticity_lndet_jac_trace (NcmComplex g, NcmComplex chi_obs);
 NCM_INLINE gdouble nc_wl_ellipticity_det_jac_trace (NcmComplex g, NcmComplex chi_obs);
+NCM_INLINE void nc_wl_ellipticity_trace_kernel (NcmComplex g, NcmComplex chi_obs, gdouble * restrict x_i, gdouble * restrict jac);
+NCM_INLINE void nc_wl_ellipticity_trace_kernel_prepare (NcmComplex g, NcWLEllipticityTraceKernelPrep *prep);
+NCM_INLINE void nc_wl_ellipticity_trace_kernel_apply (const NcWLEllipticityTraceKernelPrep *prep, NcmComplex chi_obs, gdouble * restrict x_i, gdouble * restrict jac);
 
 /* Inline complex kernels (TRACE_DET convention: ellipticity epsilon). */
 NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_trace_det (NcmComplex g, NcmComplex e);
 NCM_INLINE NcmComplex nc_wl_ellipticity_apply_shear_inv_trace_det (NcmComplex g, NcmComplex e_obs);
+NCM_INLINE NcmComplex nc_wl_ellipticity_shear_at_origin_trace_det (NcmComplex target);
 NCM_INLINE gdouble nc_wl_ellipticity_lndet_jac_trace_det (NcmComplex g, NcmComplex e_obs);
 NCM_INLINE gdouble nc_wl_ellipticity_det_jac_trace_det (NcmComplex g, NcmComplex e_obs);
+NCM_INLINE void nc_wl_ellipticity_trace_det_kernel (NcmComplex g, NcmComplex e_obs, gdouble * restrict x_i, gdouble * restrict jac);
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -179,18 +218,50 @@ nc_wl_ellipticity_celestial_to_frame (NcWLEllipticityFrame frame, NcmComplex e)
 
 /* TRACE convention (distortion chi). */
 
+/* Both functions' denominators are 1.0 + |g|^2 (+/-) 2*Re(g*conj(chi)) --
+ * manifestly real (g*conj(g) has an exactly-zero imaginary part in floating
+ * point too, being a-b+b-a in disguise), even though the unreduced
+ * expression is complex-typed. Dividing the complex numerator by that plain
+ * gdouble denominator as a single reciprocal (den_inv) times the complex
+ * numerator -- one division shared by two independent real multiplies,
+ * instead of two divisions by the same den -- skips the general
+ * complex/complex division routine (__divdc3) entirely and measured ~13%
+ * faster (own microbenchmark); not bit-identical to dividing the real/
+ * imaginary parts separately (multiplying by a rounded reciprocal isn't the
+ * same as dividing), but within a couple ULP -- see
+ * _nc_wl_ellipticity_cdiv()'s own comment below for the general (genuinely
+ * complex denominator) case this trick does not apply to. */
 NCM_INLINE NcmComplex
 nc_wl_ellipticity_apply_shear_trace (NcmComplex g, NcmComplex chi)
 {
-  return (chi + g * (g * conj (chi) + 2.0)) /
-         (1.0 + g * conj (g) + 2.0 * creal (g * conj (chi)));
+  const NcmComplex num  = chi + g * (g * conj (chi) + 2.0);
+  const gdouble den     = 1.0 + creal (g * conj (g)) + 2.0 * creal (g * conj (chi));
+  const gdouble den_inv = 1.0 / den;
+
+  return num * den_inv;
 }
 
 NCM_INLINE NcmComplex
 nc_wl_ellipticity_apply_shear_inv_trace (NcmComplex g, NcmComplex chi_obs)
 {
-  return (chi_obs + g * (g * conj (chi_obs) - 2.0)) /
-         (1.0 + g * conj (g) - 2.0 * creal (g * conj (chi_obs)));
+  const NcmComplex num  = chi_obs + g * (g * conj (chi_obs) - 2.0);
+  const gdouble den     = 1.0 + creal (g * conj (g)) - 2.0 * creal (g * conj (chi_obs));
+  const gdouble den_inv = 1.0 / den;
+
+  return num * den_inv;
+}
+
+/* apply_shear_trace(g,0) = 2g/(1+|g|^2) (the distortion of a pure shear g,
+ * not g itself). This is that map's inverse: the g whose own distortion is
+ * @target, i.e. the ordinary ellipticity<->distortion relation
+ * g = target/(1+sqrt(1-|target|^2)). Requires |target|<1; used to
+ * re-center a Mobius disc automorphism at an arbitrary disc point. */
+NCM_INLINE NcmComplex
+nc_wl_ellipticity_shear_at_origin_trace (NcmComplex target)
+{
+  const gdouble abs_target = cabs (target);
+
+  return target / (1.0 + sqrt ((1.0 - abs_target) * (1.0 + abs_target)));
 }
 
 NCM_INLINE gdouble
@@ -224,6 +295,74 @@ nc_wl_ellipticity_det_jac_trace (NcmComplex g, NcmComplex chi_obs)
   const gdouble jac_num   = num_base * num_base * num_base;
 
   return jac_num / jac_den;
+}
+
+/* Fused apply_shear_inv_trace + det_jac_trace: nc_galaxy_shape_factor_fixed_quad.c's
+ * hot loop only ever needs |chi_i|^2 -- never the complex chi_i itself --
+ * together with det_jac at the same node, and the two kernels above already
+ * recompute the same g_conj/abs_g2/den terms independently. Fusing removes
+ * that duplication, and replaces apply_shear_inv_trace's division by den
+ * (then squaring the real/imaginary parts) with a single division of
+ * |num|^2 by den^2 -- not bit-identical to calling the two kernels
+ * separately (division does not distribute over floating-point addition),
+ * but agrees to double-precision accuracy away from the den~0
+ * (strong-lensing critical curve) edge case, where both formulations are
+ * equally ill-conditioned -- see tests/c/nc/lss/wl/test_nc_wl_ellipticity.c.
+ * Keep these as two independent divisions (both depend only on den2): a
+ * single-reciprocal-then-multiply rewrite measured slower (a serialized
+ * div -> mul -> mul chain loses to two divisions that pipeline). */
+NCM_INLINE void
+nc_wl_ellipticity_trace_kernel (NcmComplex g, NcmComplex chi_obs, gdouble * restrict x_i, gdouble * restrict jac)
+{
+  const NcmComplex g_conj = conj (g);
+  const gdouble abs_g2    = creal (g * g_conj);
+  const NcmComplex num    = chi_obs + g * (g * conj (chi_obs) - 2.0);
+  const gdouble den       = 1.0 - 2.0 * creal (g_conj * chi_obs) + abs_g2;
+  const gdouble den2      = den * den;
+  const gdouble num_base  = (abs_g2 <= 1.0) ? (1.0 - abs_g2) : (abs_g2 - 1.0);
+
+  *x_i = (creal (num) * creal (num) + cimag (num) * cimag (num)) / den2;
+  *jac = (num_base * num_base * num_base) / (fabs (den) * den2);
+}
+
+/* g-only half of nc_wl_ellipticity_trace_kernel(), meant to be called ONCE
+ * per g (e.g. once per _nc_galaxy_shape_factor_fixed_quad_marginal() call,
+ * outside its n_used-node loop) and reused by
+ * nc_wl_ellipticity_trace_kernel_apply() at every node: num = chi_obs +
+ * g*(g*conj(chi_obs) - 2.0) algebraically expands to chi_obs +
+ * g^2*conj(chi_obs) - 2*g, so g^2 and 2*g are g-only; precomputing them
+ * drops apply()'s per-node cost from two complex multiplies to one
+ * (measured ~12% faster end to end). g_conj/abs_g2/num_base are also
+ * g-only but need no FP reassociation to hoist, so the compiler already
+ * does that on its own -- caching them here is free, not the reason for
+ * this split (contrast TRACE_DET below, kept single-call: no g^2 hidden in
+ * its num, so no reassociation win, and a prepare/apply split there
+ * measured a wash). Not bit-identical to nc_wl_ellipticity_trace_kernel()
+ * (the g^2 factoring reassociates), but agrees to double-precision
+ * accuracy -- see tests/c/nc/lss/wl/test_nc_wl_ellipticity.c. */
+NCM_INLINE void
+nc_wl_ellipticity_trace_kernel_prepare (NcmComplex g, NcWLEllipticityTraceKernelPrep *prep)
+{
+  const NcmComplex g_conj = conj (g);
+  const gdouble abs_g2    = creal (g * g_conj);
+  const gdouble num_base  = (abs_g2 <= 1.0) ? (1.0 - abs_g2) : (abs_g2 - 1.0);
+
+  prep->g_conj    = g_conj;
+  prep->g2        = g * g;
+  prep->two_g     = 2.0 * g;
+  prep->abs_g2    = abs_g2;
+  prep->num_base3 = num_base * num_base * num_base;
+}
+
+NCM_INLINE void
+nc_wl_ellipticity_trace_kernel_apply (const NcWLEllipticityTraceKernelPrep *prep, NcmComplex chi_obs, gdouble * restrict x_i, gdouble * restrict jac)
+{
+  const NcmComplex num = chi_obs + prep->g2 * conj (chi_obs) - prep->two_g;
+  const gdouble den    = 1.0 - 2.0 * creal (prep->g_conj * chi_obs) + prep->abs_g2;
+  const gdouble den2   = den * den;
+
+  *x_i = (creal (num) * creal (num) + cimag (num) * cimag (num)) / den2;
+  *jac = prep->num_base3 / (fabs (den) * den2);
 }
 
 /* TRACE_DET convention (ellipticity epsilon). */
@@ -264,6 +403,16 @@ nc_wl_ellipticity_apply_shear_inv_trace_det (NcmComplex g, NcmComplex e_obs)
     return _nc_wl_ellipticity_cdiv (e_obs - g, 1.0 - conj (g) * e_obs);
   else
     return _nc_wl_ellipticity_cdiv (1.0 - g * conj (e_obs), conj (e_obs) - conj (g));
+}
+
+/* apply_shear_trace_det(g,0) = g exactly, so this map is its own trivial
+ * inverse: the g whose own ellipticity is @target is target itself. Kept
+ * as a named function (rather than inlined at call sites) so both
+ * conventions expose the same "shear_at_origin" interface. */
+NCM_INLINE NcmComplex
+nc_wl_ellipticity_shear_at_origin_trace_det (NcmComplex target)
+{
+  return target;
 }
 
 NCM_INLINE gdouble
@@ -317,6 +466,46 @@ nc_wl_ellipticity_det_jac_trace_det (NcmComplex g, NcmComplex e_obs)
     const gdouble num_base       = abs_g2 - 1.0;
 
     return (num_base * num_base) / (abs_e_obs_m_g2 * abs_e_obs_m_g2);
+  }
+}
+
+/* Fused apply_shear_inv_trace_det + det_jac_trace_det -- see
+ * nc_wl_ellipticity_trace_kernel()'s docs for the rationale, including why
+ * this keeps two independent divisions per branch (measured faster than a
+ * single reciprocal) and stays single-call rather than a prepare()/apply()
+ * split (no g^2 hidden in num here, so no reassociation win; the compiler
+ * already hoists the plain g-only terms on its own). abs_e_obs2 in the
+ * |g|<=1 branch is det_jac_trace_det's e_obs*conj(e_obs) rewritten as
+ * re^2+im^2 to avoid a redundant conj(); den_base/abs_e_obs_m_g2 are exactly
+ * the |apply_shear_inv_trace_det()|'s complex-division denominator's squared
+ * modulus in each branch, already computed by det_jac_trace_det for its own
+ * purposes, so |chi_i|^2 = |num|^2/den_base (one power lower than jac's
+ * den_base^2) falls out for free. */
+NCM_INLINE void
+nc_wl_ellipticity_trace_det_kernel (NcmComplex g, NcmComplex e_obs, gdouble * restrict x_i, gdouble * restrict jac)
+{
+  const NcmComplex g_conj = conj (g);
+  const gdouble abs_g2    = creal (g * g_conj);
+
+  if (abs_g2 <= 1.0)
+  {
+    const gdouble abs_e_obs2 = creal (e_obs) * creal (e_obs) + cimag (e_obs) * cimag (e_obs);
+    const NcmComplex num     = e_obs - g;
+    const gdouble den_base   = 1.0 - 2.0 * creal (g_conj * e_obs) + abs_g2 * abs_e_obs2;
+    const gdouble num_base   = 1.0 - abs_g2;
+
+    *x_i = (creal (num) * creal (num) + cimag (num) * cimag (num)) / den_base;
+    *jac = (num_base * num_base) / (den_base * den_base);
+  }
+  else
+  {
+    const NcmComplex e_obs_m_g   = e_obs - g;
+    const gdouble abs_e_obs_m_g2 = creal (e_obs_m_g) * creal (e_obs_m_g) + cimag (e_obs_m_g) * cimag (e_obs_m_g);
+    const NcmComplex num         = 1.0 - g * conj (e_obs);
+    const gdouble num_base       = abs_g2 - 1.0;
+
+    *x_i = (creal (num) * creal (num) + cimag (num) * cimag (num)) / abs_e_obs_m_g2;
+    *jac = (num_base * num_base) / (abs_e_obs_m_g2 * abs_e_obs_m_g2);
   }
 }
 

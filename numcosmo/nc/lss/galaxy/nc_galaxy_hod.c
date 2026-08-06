@@ -29,20 +29,18 @@
  * Abstract halo occupation distribution.
  *
  * Base class for halo occupation distribution (HOD) models, describing how many
- * central and satellite galaxies populate a halo of a given mass. Concrete
- * subclasses provide the mean central and satellite occupations as functions of
- * the halo mass (nc_galaxy_hod_mean_n_central() and
- * nc_galaxy_hod_mean_n_satellite()); this base class turns those means into an
- * integer realization in nc_galaxy_hod_gen().
+ * central and satellite galaxies populate a halo of a given mass. Concrete subclasses
+ * provide the mean central and satellite occupations as functions of the halo mass
+ * (nc_galaxy_hod_mean_n_central() and nc_galaxy_hod_mean_n_satellite()); this base
+ * class turns those means into an integer realization in nc_galaxy_hod_gen().
  *
- * The central galaxy is drawn as a Bernoulli trial with probability equal to the
- * mean central occupation (clamped to [0, 1]) when
- * #NcGalaxyHOD:stochastic-central is %TRUE, or placed deterministically when the
- * mean is at least one half otherwise. Satellites are drawn from a Poisson
- * distribution and only when a central is present.
+ * The central galaxy is drawn as a Bernoulli trial with probability equal to the mean
+ * central occupation (clamped to [0, 1]) when #NcGalaxyHOD:stochastic-central is
+ * %TRUE, or placed deterministically when the mean is at least one half otherwise.
+ * Satellites are drawn from a Poisson distribution and only when a central is present.
  *
- * As an #NcmModel its occupation parameters live in the model parameter vector
- * and can be fit; it is meant to be composed by the mock member generators.
+ * As an #NcmModel its occupation parameters live in the model parameter vector and can
+ * be fit; it is meant to be composed by the mock member generators.
  *
  */
 
@@ -154,9 +152,9 @@ nc_galaxy_hod_class_init (NcGalaxyHODClass *klass)
   /**
    * NcGalaxyHOD:stochastic-central:
    *
-   * Whether the central galaxy is a Bernoulli draw with probability equal to the
-   * mean central occupation (%TRUE) or placed deterministically when the mean is
-   * at least one half (%FALSE).
+   * Whether the central galaxy is a Bernoulli draw with probability equal to the mean
+   * central occupation (%TRUE) or placed deterministically when the mean is at least
+   * one half (%FALSE).
    *
    */
   g_object_class_install_property (object_class,
@@ -285,8 +283,8 @@ nc_galaxy_hod_mean_n_satellite (NcGalaxyHOD *hod, const gdouble lnM)
  * @n_central: (out): the realized number of central galaxies (0 or 1)
  * @n_satellite: (out): the realized number of satellite galaxies
  *
- * Draws an integer realization of the central and satellite occupations of a
- * halo of mass $e^{\ln M}$. Satellites are drawn only when a central is present.
+ * Draws an integer realization of the central and satellite occupations of a halo of
+ * mass $e^{\ln M}$. Satellites are drawn only when a central is present.
  *
  */
 void

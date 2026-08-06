@@ -62,6 +62,8 @@ from numcosmo_py.experiments.cluster_wl import (
     DEFAULT_INTEG_RULE_N,
     DEFAULT_INTEG_NODE_RELTOL,
     DEFAULT_INTEG_MAX_TOTAL_NODES,
+    ResampleFlagChoice,
+    resolve_resample_flag,
 )
 from numcosmo_py.experiments.cluster_richness_count import (
     generate_cluster_richness_count,
@@ -497,7 +499,7 @@ class ClusterWL(ABC):
 
     cluster_mass_max: Annotated[
         float, typer.Option(help="Maximum cluster mass.", show_default=True)
-    ] = 1.0e15
+    ] = 1.0e16
 
     r_min: Annotated[float, typer.Option(help="Minimum radius.", show_default=True)] = (
         0.3 / 0.7
@@ -897,6 +899,25 @@ class LoadClusterWL(ClusterWL):
         ),
     ] = None
 
+    resample_flag: Annotated[
+        list[ResampleFlagChoice],
+        typer.Option(
+            help=(
+                "Which per-galaxy inputs a later 'run mc --run-type "
+                "from_model' regenerates. Repeatable. For a real-catalog "
+                "mass-bias test pass 'shape' only: it conditions on the "
+                "catalog's real per-galaxy position/redshift/noise and "
+                "resamples just the intrinsic ellipticity. 'position'/"
+                "'redshift' instead redraw from the fitted parametric "
+                "position/redshift factor, discarding the catalog's own "
+                "empirical footprint/p(z) -- only meaningful for idealized "
+                "checks, not real-catalog bias tests."
+            ),
+            show_default=True,
+            default_factory=lambda: [ResampleFlagChoice.ALL],
+        ),
+    ]
+
     def _load_obs(self) -> Nc.GalaxyWLObs:
         """Load the real NcGalaxyWLObs catalog from --catalog or --data-file.
 
@@ -942,6 +963,7 @@ class LoadClusterWL(ClusterWL):
             pop_gen=pop_gen,
             integ_options=self.integ_options,
             summary=self.summary,
+            resample_flag=resolve_resample_flag(self.resample_flag),
         )
 
 

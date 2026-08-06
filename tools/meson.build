@@ -41,7 +41,6 @@ executable(
 )
 
 python_scripts = [
-    'mcat_plot_corner',
     'numcosmo',
 ]
 
@@ -52,12 +51,6 @@ foreach script : python_scripts
         install_mode: 'rwxr-xr-x',
     )
 endforeach
-
-install_data(
-    'mcat_plot_corner',
-    install_dir: numcosmo_bindir,
-    install_mode: 'rwxr-xr-x',
-)
 
 executable(
     'darkenergy',

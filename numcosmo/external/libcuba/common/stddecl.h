@@ -330,7 +330,10 @@ if( fail == 0 && (t)->statefile && KEEPFILE == 0 ) unlink((t)->statefile)
 #define Extern extern "C"
 #else
 #define Extern extern
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 202311L
+/* C23 and later provide bool/true/false as keywords already. */
 typedef enum { false, true } bool;
+#endif
 #endif
 
 typedef const char cchar;
