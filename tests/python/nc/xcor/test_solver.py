@@ -488,3 +488,216 @@ def test_solve_tier3_duplicated_kernel_shrinking_last_block(
     result = np.array(solver.get_result(0).dup_array())
     assert np.all(np.isfinite(result))
     assert np.all(result > 0.0)  # a weak-lensing auto-spectrum is positive
+
+
+def _tier3_wl_kernel(cosmology: Cosmology, lmin: int, lmax: int) -> Nc.XcorKernel:
+    """A deliberately loose tier-3 weak-lensing kernel, cheap enough to solve."""
+    integrator = Ncm.SBesselIntegratorLevin.new(lmin, lmax)
+    integrator.set_reltol(1.0e-2)
+    integrator.set_cheb_reltol(1.0e-2)
+    integrator.set_max_order(64)
+
+    mu, sigma, z_len = 0.5, 0.08, 1000
+    z_a = np.linspace(max(mu - 8 * sigma, 0.0), mu + 8 * sigma, z_len)
+    nz_a = np.exp(-(((z_a - mu) / sigma) ** 2) / 2.0) / np.sqrt(2.0 * np.pi * sigma**2)
+
+    kernel = Nc.XcorKernelWeakLensing(
+        dist=cosmology.dist,
+        powspec=cosmology.ps_ml,
+        dndz=Ncm.SplineCubicNotaknot.new_full(
+            Ncm.Vector.new_array(z_a), Ncm.Vector.new_array(nz_a), True
+        ),
+        nbar=3.0,
+        intr_shear=7.0,
+        integrator=integrator,
+    )
+    kernel.set_l_limber(-1)
+    kernel.prepare(cosmology.cosmo)
+    return kernel
+
+
+def test_peek_block_integrator_before_and_after_solve(cosmology: Cosmology) -> None:
+    """Blocks acquire their pinned integrator on solve(), not before."""
+    lmin, lmax = 2, 17
+    kernel = _tier3_wl_kernel(cosmology, lmin, lmax)
+
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc.props.reltol = 1.0e-2
+    xc.prepare(cosmology.cosmo)
+
+    solver = Nc.XcorSolver.new()
+    kernel_id = solver.register_kernel(kernel)
+    solver.request_cl(kernel_id, kernel_id, lmin, lmax)
+    solver.plan_blocks(8)
+    assert solver.get_n_blocks() == 2
+
+    # Nothing is pinned until solve() runs, and out-of-range indices are NULL.
+    assert solver.peek_block_integrator(0) is None
+    assert solver.peek_block_integrator(99) is None
+
+    solver.solve(xc, cosmology.cosmo)
+
+    first = [solver.peek_block_integrator(b) for b in range(solver.get_n_blocks())]
+    assert all(isinstance(sbi, Ncm.SBesselIntegrator) for sbi in first)
+
+    # Each integrator is pinned to its own block's multipole range, and the
+    # blocks do not share one.
+    for sbi, b in zip(first, range(solver.get_n_blocks())):
+        block_lmin, block_lmax = solver.get_block(b)
+        ell_min, ell_max = sbi.get_ell_range()
+        assert (ell_min, ell_max) == (block_lmin, block_lmax)
+    assert first[0] is not first[1]
+
+    # A second solve() reuses them rather than rebuilding: that reuse is what
+    # keeps each block's ODE operators' QR factorisation alive across calls.
+    solver.solve(xc, cosmology.cosmo)
+    second = [solver.peek_block_integrator(b) for b in range(solver.get_n_blocks())]
+    assert all(a is b for a, b in zip(first, second))
+
+    # And it is still the same answer.
+    assert_allclose(
+        np.array(solver.get_result(0).dup_array()),
+        np.array(solver.get_result(0).dup_array()),
+        rtol=0.0,
+    )
+
+
+def test_set_integrator_overrides_and_resets_the_cache(cosmology: Cosmology) -> None:
+    """An explicitly set prototype is used, and replacing it drops the cache."""
+    lmin, lmax = 2, 17
+    kernel = _tier3_wl_kernel(cosmology, lmin, lmax)
+
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc.props.reltol = 1.0e-2
+    xc.prepare(cosmology.cosmo)
+
+    solver = Nc.XcorSolver.new()
+    kernel_id = solver.register_kernel(kernel)
+    solver.request_cl(kernel_id, kernel_id, lmin, lmax)
+    solver.plan_blocks(8)
+
+    proto = Ncm.SBesselIntegratorLevin.new(lmin, lmax)
+    proto.set_reltol(1.0e-2)
+    proto.set_cheb_reltol(1.0e-2)
+    proto.set_max_order(64)
+    solver.set_integrator(proto)
+
+    solver.solve(xc, cosmology.cosmo)
+    pinned = solver.peek_block_integrator(0)
+    assert pinned is not None
+    # A clone of the prototype, not the prototype itself: blocks must not share
+    # one integrator's mutable state.
+    assert pinned is not proto
+    assert pinned.get_cheb_reltol() == pytest.approx(proto.get_cheb_reltol())
+
+    # Setting a new prototype invalidates every pinned integrator.
+    solver.set_integrator(proto)
+    assert solver.peek_block_integrator(0) is None
+
+    # Clearing it falls back to a registered kernel's own integrator.
+    solver.set_integrator(None)
+    solver.solve(xc, cosmology.cosmo)
+    assert solver.peek_block_integrator(0) is not None
+
+
+def test_plan_blocks_unions_overlapping_unordered_requests(
+    kernel_tsz: Nc.XcorKernel,
+) -> None:
+    """Requests given out of order and overlapping still tile contiguously."""
+    solver = Nc.XcorSolver.new()
+    kernel_id = solver.register_kernel(kernel_tsz)
+
+    # Deliberately not monotonic, and overlapping, so the boundary list has to
+    # be sorted and de-duplicated rather than consumed as given.
+    solver.request_cl(kernel_id, kernel_id, 40, 55)
+    solver.request_cl(kernel_id, kernel_id, 2, 9)
+    solver.request_cl(kernel_id, kernel_id, 20, 31)
+    solver.request_cl(kernel_id, kernel_id, 6, 25)
+    solver.plan_blocks(8)
+
+    blocks = [solver.get_block(b) for b in range(solver.get_n_blocks())]
+    assert blocks == sorted(blocks)
+    for (_, prev_lmax), (next_lmin, _) in zip(blocks, blocks[1:]):
+        assert next_lmin == prev_lmax + 1
+    assert blocks[0][0] == 2
+    assert blocks[-1][1] == 55
+
+
+def test_solve_accepts_a_kernel_without_a_levin_integrator(
+    cosmology: Cosmology,
+) -> None:
+    """The reltol closure check only applies to Levin integrators.
+
+    A kernel carrying a non-Levin integrator has no Chebyshev closure whose
+    precision could be compared against NcXcor:reltol, so the check must pass
+    it through rather than reject it or read the wrong tolerance off it.
+    """
+    lmin, lmax = 2, 9
+    kernel = Nc.XcorKernelWeakLensing(
+        dist=cosmology.dist,
+        powspec=cosmology.ps_ml,
+        dndz=Ncm.SplineCubicNotaknot.new_full(
+            Ncm.Vector.new_array(np.linspace(0.1, 0.9, 200)),
+            Ncm.Vector.new_array(
+                np.exp(-(((np.linspace(0.1, 0.9, 200) - 0.5) / 0.08) ** 2) / 2.0)
+            ),
+            True,
+        ),
+        nbar=3.0,
+        intr_shear=7.0,
+        integrator=Ncm.SBesselIntegratorGL.new(lmin, lmax),
+    )
+    kernel.set_l_limber(0)  # tier 2: kernel-Limber, no Levin closure involved
+    kernel.prepare(cosmology.cosmo)
+
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc.prepare(cosmology.cosmo)
+
+    solver = Nc.XcorSolver.new()
+    kernel_id = solver.register_kernel(kernel)
+    solver.request_cl(kernel_id, kernel_id, lmin, lmax)
+    solver.plan_blocks(8)
+    solver.solve(xc, cosmology.cosmo)
+
+    result = np.array(solver.get_result(0).dup_array())
+    assert np.all(np.isfinite(result))
+    assert np.all(result > 0.0)
+
+
+def test_plan_blocks_sorts_multiple_l_limber_boundaries(
+    kernel_tsz: Nc.XcorKernel,
+    kernel_cmb_lens: Nc.XcorKernel,
+) -> None:
+    """Several kernels' l_limber thresholds are sorted before tiling.
+
+    Each registered kernel's l_limber forces a block boundary, since the
+    kernel changes evaluation mode there. The thresholds are collected in
+    kernel-registration order, so with more than one of them they have to be
+    sorted before the range can be cut into ascending blocks.
+    """
+    lmin, lmax = 2, 40
+
+    # Registered so that the thresholds arrive in descending order.
+    kernel_tsz.set_l_limber(30)
+    kernel_cmb_lens.set_l_limber(11)
+
+    solver = Nc.XcorSolver.new()
+    id_tsz = solver.register_kernel(kernel_tsz)
+    id_lens = solver.register_kernel(kernel_cmb_lens)
+    solver.request_cl(id_tsz, id_lens, lmin, lmax)
+    solver.plan_blocks(64)  # large enough that only l_limber can split
+
+    blocks = [solver.get_block(b) for b in range(solver.get_n_blocks())]
+
+    assert blocks == sorted(blocks)
+    for (_, prev_lmax), (next_lmin, _) in zip(blocks, blocks[1:]):
+        assert next_lmin == prev_lmax + 1
+    assert blocks[0][0] == lmin
+    assert blocks[-1][1] == lmax
+
+    # Both thresholds start a block, in ascending order regardless of the
+    # order the kernels were registered in.
+    starts = [b[0] for b in blocks]
+    assert 11 in starts
+    assert 30 in starts
+    assert starts.index(11) < starts.index(30)
