@@ -295,7 +295,7 @@ NcXcorKernelClusterTophat *
 nc_xcor_kernel_cluster_tophat_new (NcDistance *dist, NcmPowspec *ps, gdouble z_lower, gdouble z_upper)
 {
   NcXcorKernelClusterTophat *xclkc = g_object_new (NC_TYPE_XCOR_KERNEL_CLUSTER_TOPHAT,
-                                                   "distance", dist,
+                                                   "dist", dist,
                                                    "powspec", ps,
                                                    "z-lower", z_lower,
                                                    "z-upper", z_upper,

@@ -1163,15 +1163,25 @@ ncm_function_sample_set_get_absmaxF_linf_norm (NcmFunctionSampleSet *fss)
  * ncm_function_sample_set_get_absmaxF_min:
  * @fss: a #NcmFunctionSampleSet
  *
- * Computes the minimum of the maximum absolute values across all components:
- * $$\min_{i=0}^{n-1} (\max_x |F_i(x)|)$$
+ * Computes the minimum of the maximum absolute values across all components
+ * that are not identically zero:
+ * $$\min_{i : \max_x |F_i(x)| > 0} (\max_x |F_i(x)|)$$
  *
- * This returns the smallest peak value among all components, which is useful
- * for setting conservative tolerances that ensure even the weakest component
- * is adequately resolved in adaptive refinement algorithms.
+ * This returns the smallest (nonzero) peak value among all components, which
+ * is useful for setting conservative tolerances that ensure even the weakest
+ * component is adequately resolved in adaptive refinement algorithms.
  *
- * Returns: the minimum of the component-wise maximum absolute values, or
- *          GSL_POSINF if there are no components
+ * A component whose peak is exactly zero (e.g. a spin-2 field's ℓ=0,1
+ * multipoles, which vanish identically) is excluded from the minimum: it is
+ * already exactly represented by any spline through zero-valued samples and
+ * needs no tolerance budget, so letting it collapse the tolerance to zero
+ * for every *other*, genuinely nonzero component would be wrong -- that
+ * tolerance would then be unsatisfiable by any finite refinement (see
+ * ncm_function_sample_set_refine()).
+ *
+ * Returns: the minimum of the nonzero component-wise maximum absolute
+ *          values, or 0.0 if every component is identically zero (or there
+ *          are no components)
  */
 gdouble
 ncm_function_sample_set_get_absmaxF_min (NcmFunctionSampleSet *fss)
@@ -1183,10 +1193,11 @@ ncm_function_sample_set_get_absmaxF_min (NcmFunctionSampleSet *fss)
   {
     const gdouble absmaxF_i = g_array_index (fss->absmaxF, gdouble, i);
 
-    min_val = GSL_MIN (min_val, absmaxF_i);
+    if (absmaxF_i > 0.0)
+      min_val = GSL_MIN (min_val, absmaxF_i);
   }
 
-  return min_val;
+  return (min_val == GSL_POSINF) ? 0.0 : min_val;
 }
 
 /**
@@ -1582,7 +1593,7 @@ ncm_function_sample_set_to_spline_vec_old (NcmFunctionSampleSet *fss, NcmSpline 
  * Performs a refinement pass on all NEW points. For each NEW point, this function:
  * 1. Creates a spline using OLD points only
  * 2. Evaluates the spline at the NEW point position
- * 3. Computes the error: ||f(x) - spline_f(x)||_2 < reltol * ||f(x)||_2 + abstol
+ * 3. Computes the error: ||f(x) - spline_f(x)||_2 <= reltol * ||f(x)||_2 + abstol
  * 4. If the test passes, increments interval_ok for both the NEW point and its left neighbor
  * 5. Marks all NEW points as OLD
  *
@@ -1638,8 +1649,11 @@ ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol,
       norm_diff = ncm_vector_dnrm2 (y_spline); /* ||f(x) - spline_f(x)||_2 */
       threshold = reltol * norm_f + abstol;
 
-      /* If test passes, increment interval_ok for this point and its left neighbor */
-      if (norm_diff < threshold)
+      /* If test passes, increment interval_ok for this point and its left neighbor.
+       * Uses <= (not <) so an exactly converged point (norm_diff == threshold == 0,
+       * e.g. every sampled component is identically zero) still passes instead of
+       * failing forever on a strict comparison it can never satisfy. */
+      if (norm_diff <= threshold)
       {
         ncm_function_sample_set_iter_inc_interval_ok (iter);
 

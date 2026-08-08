@@ -23,6 +23,11 @@
 
 """Tests for NcmSpectral."""
 
+import os
+import subprocess
+import sys
+import textwrap
+
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -623,20 +628,39 @@ class TestSpectral:
             assert_allclose(eval_result, expected, rtol=1e-7, atol=1e-8)
 
     def test_adaptive_max_order_limit(self) -> None:
-        """Test that adaptive refinement respects max_order."""
-        spectral = Ncm.Spectral.new_with_max_order(5)  # max N = 2^5+1 = 33
+        """Test that reaching max_order without converging is fatal.
 
-        def f_hard(_user_data, x):
-            # Very oscillatory function that won't converge easily
-            return np.sin(20.0 * x)
+        max_order bounds memory, it is not an alternative stopping condition:
+        tol is what must end the refinement. Runs in a subprocess since the
+        failure is a (non-catchable) g_error.
+        """
+        script = textwrap.dedent("""
+            import numpy as np
+            from numcosmo_py import Ncm
 
-        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
-            f_hard, -1.0, 1.0, 2, 1e-12, None
+            Ncm.cfg_init()
+            spectral = Ncm.Spectral.new_with_max_order(5)  # max N = 2^5+1 = 33
+
+            def f_hard(_user_data, x):
+                # Too oscillatory to resolve on 33 nodes
+                return np.sin(20.0 * x)
+
+            spectral.compute_chebyshev_coeffs_adaptive(f_hard, -1.0, 1.0, 2, 1e-12, None)
+            """)
+        # Other tests in this worker set NCM_* variables in-process to exercise
+        # cfg_init()'s error paths; inheriting those would abort the child for
+        # the wrong reason.
+        env = {k: v for k, v in os.environ.items() if not k.startswith("NCM_FFTW")}
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
         )
-        coeffs = np.array(coeffs_list)
 
-        # Should stop at max_order
-        assert coeffs.size <= 33
+        assert result.returncode != 0, "Unconverged refinement should have aborted"
+        assert "without converging" in result.stderr, result.stderr
 
     def test_adaptive_max_order_limit_higher(self) -> None:
         """Test that adaptive refinement respects max_order."""
@@ -2741,45 +2765,37 @@ class TestSpectral:
             assert_allclose(result_x, result_t, rtol=1e-14)
             assert_allclose(result_x, expected, rtol=1e-8, atol=1e-10)
 
-    def test_adaptive_max_order_bug(self) -> None:
-        """Test that adaptive refinement when hitting max_order.
+    def test_adaptive_returns_last_level_coeffs(self) -> None:
+        """Test that the returned coefficients are the ones from k_final.
 
-        This test specifically checks the bug where reaching max_order would cause
-        the function to return coefficients from k-1 instead of k due to an
-        unconditional swap at the end of the loop. The fix ensures the swap only
-        happens when k < max_order.
+        Guards the bug where an unconditional swap at the end of the refinement
+        loop made the function return the coefficients from k_final - 1.
         """
-        # Create spectral with low max_order
         max_order = 14
         spectral = Ncm.Spectral.new_with_max_order(max_order)
 
-        # Define a function that requires high accuracy
+        # Oscillatory enough to need several refinements, smooth enough to converge
         def f(_user_data, x):
-            """Highly oscillatory function that won't converge easily."""
+            """Oscillatory but analytic function."""
             return np.sin(20.0 * x) * np.exp(-x * x)
 
         a, b = -2.0, 2.0
         k_min = 2
+        tol = 1.0e-13
 
-        # Use unreasonably small tolerance to force reaching max_order
-        tol = 1.0e-16
-
-        # Compute adaptive coefficients - should hit max_order
         k_final, coeffs_adaptive_list = spectral.compute_chebyshev_coeffs_adaptive(
             f, a, b, k_min, tol, None
         )
         coeffs_adaptive = np.array(coeffs_adaptive_list)
 
-        # Verify that we hit max_order
-        assert (
-            k_final == max_order
-        ), f"Expected to reach max_order={max_order}, got k={k_final}"
+        # Several refinements were needed, and the cap was not the reason we stopped
+        assert k_min < k_final < max_order
 
-        # Verify the number of coefficients matches 2^k + 1
-        expected_N = (1 << max_order) + 1  # 2^14 + 1 = 16385
+        # Verify the number of coefficients matches 2^k_final + 1
+        expected_N = (1 << k_final) + 1
         assert len(coeffs_adaptive) == expected_N, (
             f"Length mismatch: got {len(coeffs_adaptive)}, "
-            f"expected 2^{max_order}+1={expected_N}"
+            f"expected 2^{k_final}+1={expected_N}"
         )
 
         # Compute non-adaptive at the same order to verify correctness

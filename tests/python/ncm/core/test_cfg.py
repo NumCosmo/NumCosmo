@@ -185,3 +185,62 @@ def test_check_version() -> None:
         assert Ncm.cfg_version_check(version[1], version[2] - 1, version[3] + 1)
     if version[3] > 0:
         assert Ncm.cfg_version_check(version[1], version[2], version[3] - 1)
+
+
+_WISDOM_CHILD = """
+from numcosmo_py import Ncm
+
+Ncm.cfg_init()
+# Creating this object plans real FFTW transforms, which is what drives the
+# wisdom load/save paths in ncm_cfg.c.
+Ncm.FftlogSBesselJ.new(0, -5.0, 5.0, 2.0, 200)
+print(Ncm.cfg_get_fftw_default_flag_str())
+"""
+
+
+@pytest.mark.skipif(
+    not hasattr(Ncm, "FftlogSBesselJ"), reason="build has no FFTW support"
+)
+def test_fftw_wisdom_round_trips_through_the_cache(tmp_path) -> None:
+    """Wisdom is written once and read back by a later process.
+
+    ncm_cfg's wisdom load/save are variadic, so GObject introspection does not
+    expose them; they are reached only as a side effect of planning a
+    transform. Both are also no-ops under FFTW_ESTIMATE, which is why this
+    runs a child with an explicit planner and its own HOME -- the wisdom file
+    lives in $HOME/.numcosmo, and the loaded-once cache is per process, so the
+    read-an-existing-file path needs a second process to be exercised at all.
+    """
+    import subprocess
+    import sys
+
+    # Other tests in this file leave NCM_FFTW_PLANNER_TIMELIMIT set to a
+    # deliberately invalid value in os.environ, which would abort the child at
+    # startup; drop the whole NCM_FFTW_* group and set only what is needed.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("NCM_FFTW")}
+    env["HOME"] = str(tmp_path)
+    env["NCM_FFTW_PLANNER"] = "measure"
+    env.pop("OMP_NUM_THREADS", None)
+
+    def run_child() -> str:
+        proc = subprocess.run(
+            [sys.executable, "-c", _WISDOM_CHILD],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=600,
+        )
+        assert proc.returncode == 0, proc.stderr
+        return proc.stdout
+
+    wisdom_dir = tmp_path / ".numcosmo"
+
+    # First process: nothing to load, so it plans from scratch and saves.
+    assert "measure" in run_child()
+    written = sorted(p.name for p in wisdom_dir.glob("ncm_cfg_wisdom_rank*"))
+    assert written, f"no wisdom written into {wisdom_dir}"
+
+    # Second process: the files now exist, so this one takes the import path.
+    assert "measure" in run_child()
+    assert sorted(p.name for p in wisdom_dir.glob("ncm_cfg_wisdom_rank*")) == written

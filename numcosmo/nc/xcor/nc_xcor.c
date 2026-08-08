@@ -55,6 +55,8 @@
 #include "ncm/core/ncm_serialize.h"
 #include "ncm/integration/ncm_integral_nd.h"
 #include "nc/xcor/nc_xcor.h"
+#include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
+#include "nc/xcor/nc_xcor_priv.h"
 #include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -502,6 +504,18 @@ nc_xcor_clear (NcXcor **xc)
 }
 
 /**
+ * nc_xcor_get_meth:
+ * @xc: a #NcXcor
+ *
+ * Returns: the #NcXcorMethod used by @xc
+ */
+NcXcorMethod
+nc_xcor_get_meth (NcXcor *xc)
+{
+  return xc->meth;
+}
+
+/**
  * nc_xcor_set_reltol:
  * @xc: a #NcXcor
  * @reltol: a relative tolerance
@@ -631,7 +645,7 @@ _nc_xcor_limber_z_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcH
   xclki.ps    = xc->ps;
   xclki.RH    = xc->RH;
 
-  zmin = zmin ? zmin != 0.0 : 1.0e-6;
+  zmin = (zmin != 0.0) ? zmin : 1.0e-6;
 
   if (isauto)
     F.function = &_xcor_limber_z_gsl_auto_int;
@@ -668,7 +682,7 @@ _nc_xcor_cubature_worker (NcmIntegralND *xcor_int_nd, NcXcorArg *xcor_arg, gdoub
   const gint block   = sqrt (size);
   guint i;
 
-  zmin = zmin ? zmin != 0.0 : 1.0e-6;
+  zmin = (zmin != 0.0) ? zmin : 1.0e-6;
 
   ncm_integral_nd_set_reltol (xcor_int_nd, xcor_arg->xc->reltol);
   ncm_integral_nd_set_abstol (xcor_int_nd, 0.0);
@@ -805,23 +819,28 @@ _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHIC
   for (i = 0; i < nell; i++)
   {
     const guint ell = lmin + i;
-    gdouble k_min, k_max;
-    gdouble k2_min, k2_max, result, err;
+    gdouble k_min, k_max, result, err;
 
-    nc_xcor_kernel_get_k_range (xclk1, cosmo, ell, &k_min, &k_max);
-    nc_xcor_kernel_get_k_range (xclk2, cosmo, ell, &k2_min, &k2_max);
-
-    k_min = GSL_MAX (k_min, k2_min);
-    k_max = GSL_MIN (k_max, k2_max);
+    /* Build the integrand(s) first, then read the outer bound off their own
+     * fitted domain (get_range) -- NOT the independent Limber-band formula
+     * from nc_xcor_kernel_get_k_range(), which has no guarantee of matching
+     * it (see plan doc dev-notes/xcor_ultralevin_batching_plan.md §3). */
+    xclki_array[0] = nc_xcor_kernel_get_eval (xclk1, cosmo, ell);
+    nc_xcor_kernel_integrand_get_range (xclki_array[0], &k_min, &k_max);
 
     if (isauto)
     {
-      xclki_array[0] = nc_xcor_kernel_get_eval (xclk1, cosmo, ell);
+      xclki_array[1] = NULL;
     }
     else
     {
-      xclki_array[0] = nc_xcor_kernel_get_eval (xclk1, cosmo, ell);
+      gdouble k2_min, k2_max;
+
       xclki_array[1] = nc_xcor_kernel_get_eval (xclk2, cosmo, ell);
+      nc_xcor_kernel_integrand_get_range (xclki_array[1], &k2_min, &k2_max);
+
+      k_min = GSL_MAX (k_min, k2_min);
+      k_max = GSL_MIN (k_max, k2_max);
     }
 
     ret = gsl_integration_qag (&F, log (k_min), log (k_max), 0.0, xc->reltol * 1.0e-2, NCM_INTEGRAL_PARTITION, 6, *w, &result, &err);
@@ -830,48 +849,65 @@ _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHIC
       g_error ("_nc_xcor_kernel_gsl: %s.", gsl_strerror (ret));
 
     ncm_vector_set (vp, i, const_factor * result);
+
+    nc_xcor_kernel_integrand_unref (xclki_array[0]);
+
+    if (!isauto)
+      nc_xcor_kernel_integrand_unref (xclki_array[1]);
   }
 
   ncm_memory_pool_return (w);
 }
 
+/*
+ * The outer k-integral cannot resolve the closure more finely than the closure
+ * itself is built. pcubature answers an impossible tolerance by exhausting its
+ * Clenshaw-Curtis levels and reporting failure, far from the cause, so catch
+ * the mismatch here where both numbers are in view.
+ */
+void
+_nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk)
+{
+  NcmSBesselIntegrator *sbi = nc_xcor_kernel_peek_integrator (xclk);
+  gdouble closure_reltol;
+
+  if ((sbi == NULL) || !NCM_IS_SBESSEL_INTEGRATOR_LEVIN (sbi))
+    return;
+
+  {
+    NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
+
+    closure_reltol = GSL_MAX (ncm_sbessel_integrator_levin_get_reltol (sbilv),
+                              ncm_sbessel_integrator_levin_get_cheb_reltol (sbilv));
+  }
+
+  if (xc->reltol < closure_reltol)
+    g_error ("_nc_xcor_check_kernel_tolerance: NcXcor:reltol is %.17g but kernel %s builds "
+             "its k-space closure only to %.17g (the looser of the integrator's reltol and "
+             "cheb-reltol). The outer integral cannot converge to more precision than the "
+             "integrand carries. Loosen NcXcor:reltol to at least %.17g, or construct the "
+             "integrator with tighter tolerances.",
+             xc->reltol, G_OBJECT_TYPE_NAME (xclk), closure_reltol, closure_reltol);
+}
+
 static void
 _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
 {
-  const guint size           = lmax - lmin + 1;
-  const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
-  gdouble k_min, k_max;
-  gdouble k2_min, k2_max;
-  const gint block   = xc->ell_batch_size;
-  GArray *ells_array = g_array_new (FALSE, FALSE, sizeof (gint));
-  guint i;
-
-  /* Get k ranges from both kernels */
-  nc_xcor_kernel_get_k_range (xclk1, cosmo, lmin, &k_min, &k_max);
+  _nc_xcor_check_kernel_tolerance (xc, xclk1);
 
   if (!isauto)
-  {
-    nc_xcor_kernel_get_k_range (xclk2, cosmo, lmin, &k2_min, &k2_max);
-    k_min = GSL_MAX (k_min, k2_min);
-    k_max = GSL_MIN (k_max, k2_max);
-  }
+    _nc_xcor_check_kernel_tolerance (xc, xclk2);
 
-  /* Update k range for the full ell range */
-  for (i = lmin + 1; i <= lmax; i++)
-  {
-    gdouble k_min_i, k_max_i;
+  const guint size           = lmax - lmin + 1;
+  const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
+  const gint block           = xc->ell_batch_size;
+  GArray *ells_array         = g_array_new (FALSE, FALSE, sizeof (gint));
+  guint i;
 
-    nc_xcor_kernel_get_k_range (xclk1, cosmo, i, &k_min_i, &k_max_i);
-    k_min = GSL_MAX (k_min, k_min_i);
-    k_max = GSL_MIN (k_max, k_max_i);
-
-    if (!isauto)
-    {
-      nc_xcor_kernel_get_k_range (xclk2, cosmo, i, &k_min_i, &k_max_i);
-      k_min = GSL_MAX (k_min, k_min_i);
-      k_max = GSL_MIN (k_max, k_max_i);
-    }
-  }
+  /* Outer k-bound is computed per block, after the block's integrand(s) are
+   * built, from their own fitted domain (get_range) -- NOT the independent
+   * Limber-band formula from nc_xcor_kernel_get_k_range() (see plan doc
+   * dev-notes/xcor_ultralevin_batching_plan.md §3). */
 
   g_array_set_size (ells_array, size);
 
@@ -889,9 +925,6 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
     NcmVector *lnk_max                 = ncm_vector_new (1);
     NcmVector *err                     = ncm_vector_new (size);
 
-    ncm_vector_set (lnk_min, 0, log (k_min));
-    ncm_vector_set (lnk_max, 0, log (k_max));
-
     xcor_arg->xc    = xc;
     xcor_arg->dist  = xc->dist;
     xcor_arg->ps    = xc->ps;
@@ -908,18 +941,25 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
     {
       NcmVector *vp_i  = ncm_vector_get_subvector (vp, i, block);
       NcmVector *err_i = ncm_vector_get_subvector (err, i, block);
+      gdouble k_min, k_max;
 
       xcor_arg->ells  = &g_array_index (ells_array, gint, i);
       xcor_arg->nells = block;
 
-      /* Get vectorized kernel integrand for this batch */
+      /* Get vectorized kernel integrand for this batch, then read the outer
+       * bound off its own fitted domain. */
       xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[block - 1]);
       xcor_arg->W1     = g_new (gdouble, block);
+
+      nc_xcor_kernel_integrand_get_range (xcor_arg->xclki1, &k_min, &k_max);
+      ncm_vector_set (lnk_min, 0, log (k_min));
+      ncm_vector_set (lnk_max, 0, log (k_max));
 
       ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
 
       /* Clean up batch resources */
       g_free (xcor_arg->W1);
+      nc_xcor_kernel_integrand_unref (xcor_arg->xclki1);
       xcor_arg->xclki1 = NULL;
       xcor_arg->W1     = NULL;
 
@@ -935,18 +975,25 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
       NcmVector *vp_i       = ncm_vector_get_subvector (vp, i, size - i);
       NcmVector *err_i      = ncm_vector_get_subvector (err, i, size - i);
       const guint remaining = size - i;
+      gdouble k_min, k_max;
 
       xcor_arg->ells  = &g_array_index (ells_array, gint, i);
       xcor_arg->nells = remaining;
 
-      /* Get vectorized kernel integrand for this batch */
+      /* Get vectorized kernel integrand for this batch, then read the outer
+       * bound off its own fitted domain. */
       xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[remaining - 1]);
       xcor_arg->W1     = g_new (gdouble, remaining);
+
+      nc_xcor_kernel_integrand_get_range (xcor_arg->xclki1, &k_min, &k_max);
+      ncm_vector_set (lnk_min, 0, log (k_min));
+      ncm_vector_set (lnk_max, 0, log (k_max));
 
       ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
 
       /* Clean up batch resources */
       g_free (xcor_arg->W1);
+      nc_xcor_kernel_integrand_unref (xcor_arg->xclki1);
       xcor_arg->xclki1 = NULL;
       xcor_arg->W1     = NULL;
 
@@ -971,9 +1018,6 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
     NcmVector *lnk_max                   = ncm_vector_new (1);
     NcmVector *err                       = ncm_vector_new (size);
 
-    ncm_vector_set (lnk_min, 0, log (k_min));
-    ncm_vector_set (lnk_max, 0, log (k_max));
-
     xcor_arg->xc    = xc;
     xcor_arg->dist  = xc->dist;
     xcor_arg->ps    = xc->ps;
@@ -990,21 +1034,30 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
     {
       NcmVector *vp_i  = ncm_vector_get_subvector (vp, i, block);
       NcmVector *err_i = ncm_vector_get_subvector (err, i, block);
+      gdouble k_min, k_max, k2_min, k2_max;
 
       xcor_arg->ells  = &g_array_index (ells_array, gint, i);
       xcor_arg->nells = block;
 
-      /* Get vectorized kernel integrands for this batch */
+      /* Get vectorized kernel integrands for this batch, then read the
+       * outer bound off their own fitted domains (intersection). */
       xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[block - 1]);
       xcor_arg->xclki2 = nc_xcor_kernel_get_eval_vectorized (xclk2, cosmo, xcor_arg->ells[0], xcor_arg->ells[block - 1]);
       xcor_arg->W1     = g_new (gdouble, block);
       xcor_arg->W2     = g_new (gdouble, block);
+
+      nc_xcor_kernel_integrand_get_range (xcor_arg->xclki1, &k_min, &k_max);
+      nc_xcor_kernel_integrand_get_range (xcor_arg->xclki2, &k2_min, &k2_max);
+      ncm_vector_set (lnk_min, 0, log (GSL_MAX (k_min, k2_min)));
+      ncm_vector_set (lnk_max, 0, log (GSL_MIN (k_max, k2_max)));
 
       ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
 
       /* Clean up batch resources */
       g_free (xcor_arg->W1);
       g_free (xcor_arg->W2);
+      nc_xcor_kernel_integrand_unref (xcor_arg->xclki1);
+      nc_xcor_kernel_integrand_unref (xcor_arg->xclki2);
       xcor_arg->xclki1 = NULL;
       xcor_arg->xclki2 = NULL;
       xcor_arg->W1     = NULL;
@@ -1022,21 +1075,30 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
       NcmVector *vp_i       = ncm_vector_get_subvector (vp, i, size - i);
       NcmVector *err_i      = ncm_vector_get_subvector (err, i, size - i);
       const guint remaining = size - i;
+      gdouble k_min, k_max, k2_min, k2_max;
 
       xcor_arg->ells  = &g_array_index (ells_array, gint, i);
       xcor_arg->nells = remaining;
 
-      /* Get vectorized kernel integrands for this batch */
+      /* Get vectorized kernel integrands for this batch, then read the
+       * outer bound off their own fitted domains (intersection). */
       xcor_arg->xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, xcor_arg->ells[0], xcor_arg->ells[remaining - 1]);
       xcor_arg->xclki2 = nc_xcor_kernel_get_eval_vectorized (xclk2, cosmo, xcor_arg->ells[0], xcor_arg->ells[remaining - 1]);
       xcor_arg->W1     = g_new (gdouble, remaining);
       xcor_arg->W2     = g_new (gdouble, remaining);
+
+      nc_xcor_kernel_integrand_get_range (xcor_arg->xclki1, &k_min, &k_max);
+      nc_xcor_kernel_integrand_get_range (xcor_arg->xclki2, &k2_min, &k2_max);
+      ncm_vector_set (lnk_min, 0, log (GSL_MAX (k_min, k2_min)));
+      ncm_vector_set (lnk_max, 0, log (GSL_MIN (k_max, k2_max)));
 
       ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
 
       /* Clean up batch resources */
       g_free (xcor_arg->W1);
       g_free (xcor_arg->W2);
+      nc_xcor_kernel_integrand_unref (xcor_arg->xclki1);
+      nc_xcor_kernel_integrand_unref (xcor_arg->xclki2);
       xcor_arg->xclki1 = NULL;
       xcor_arg->xclki2 = NULL;
       xcor_arg->W1     = NULL;
@@ -1056,6 +1118,121 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
   }
 
   g_array_unref (ells_array);
+}
+
+/*
+ * _nc_xcor_kernel_integrate_block_cubature:
+ * @xc: a #NcXcor
+ * @xclki1: a pre-built #NcXcorKernelIntegrand for the first kernel,
+ * covering multipoles [@lmin, @lmax]
+ * @xclki2: (nullable): a pre-built #NcXcorKernelIntegrand for the second
+ * kernel, covering the same range, or %NULL for an auto-correlation
+ * @lmin: minimum multipole, matching @xclki1's (and @xclki2's) own range
+ * @lmax: maximum multipole, matching @xclki1's (and @xclki2's) own range
+ * @isauto: %TRUE for an auto-correlation (only @xclki1 is used)
+ * @vp: (out): output vector of length (@lmax - @lmin + 1)
+ *
+ * Computes the outer k-integral for one ell-block from integrand(s) the
+ * caller already built, instead of building them internally the way
+ * _nc_xcor_kernel_cubature() does. This is #NcXcorSolver's building block
+ * for sharing one kernel's k-space closure across every request that needs
+ * it in a given block, instead of rebuilding it once per pair (see plan
+ * doc dev-notes/xcor_ultralevin_batching_plan.md §5-§6). Not public: see
+ * nc_xcor_priv.h.
+ *
+ * The caller retains ownership of @xclki1/@xclki2 -- they are not unreffed
+ * here.
+ */
+void
+_nc_xcor_kernel_integrate_block_cubature (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
+{
+  const guint size           = lmax - lmin + 1;
+  const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
+  GArray *ells_array         = g_array_new (FALSE, FALSE, sizeof (gint));
+  NcmVector *lnk_min         = ncm_vector_new (1);
+  NcmVector *lnk_max         = ncm_vector_new (1);
+  NcmVector *err             = ncm_vector_new (size);
+  gdouble k_min, k_max;
+  guint i;
+
+  if (ncm_vector_len (vp) != size)
+    g_error ("_nc_xcor_kernel_integrate_block_cubature: vector size does not match multipole limits");
+
+  g_array_set_size (ells_array, size);
+
+  for (i = 0; i < size; i++)
+  {
+    g_array_index (ells_array, gint, i) = lmin + i;
+  }
+
+  nc_xcor_kernel_integrand_get_range (xclki1, &k_min, &k_max);
+
+  if (!isauto)
+  {
+    gdouble k2_min, k2_max;
+
+    nc_xcor_kernel_integrand_get_range (xclki2, &k2_min, &k2_max);
+    k_min = GSL_MAX (k_min, k2_min);
+    k_max = GSL_MIN (k_max, k2_max);
+  }
+
+  ncm_vector_set (lnk_min, 0, log (k_min));
+  ncm_vector_set (lnk_max, 0, log (k_max));
+
+  if (isauto)
+  {
+    NcXcorKernelAuto *xcor_kernel_auto = g_object_new (nc_xcor_kernel_auto_get_type (), NULL);
+    NcXcorArg *xcor_arg                = &xcor_kernel_auto->data;
+    NcmIntegralND *xcor_int_nd         = NCM_INTEGRAL_ND (xcor_kernel_auto);
+
+    xcor_arg->xc     = xc;
+    xcor_arg->RH     = xc->RH;
+    xcor_arg->ells   = &g_array_index (ells_array, gint, 0);
+    xcor_arg->nells  = size;
+    xcor_arg->xclki1 = xclki1;
+    xcor_arg->W1     = g_new (gdouble, size);
+
+    ncm_integral_nd_set_reltol (xcor_int_nd, xc->reltol);
+    ncm_integral_nd_set_abstol (xcor_int_nd, 0.0);
+    ncm_integral_nd_set_method (xcor_int_nd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
+
+    ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp, err);
+
+    g_free (xcor_arg->W1);
+    g_object_unref (xcor_kernel_auto);
+  }
+  else
+  {
+    NcXcorKernelCross *xcor_kernel_cross = g_object_new (nc_xcor_kernel_cross_get_type (), NULL);
+    NcXcorArg *xcor_arg                  = &xcor_kernel_cross->data;
+    NcmIntegralND *xcor_int_nd           = NCM_INTEGRAL_ND (xcor_kernel_cross);
+
+    xcor_arg->xc     = xc;
+    xcor_arg->RH     = xc->RH;
+    xcor_arg->ells   = &g_array_index (ells_array, gint, 0);
+    xcor_arg->nells  = size;
+    xcor_arg->xclki1 = xclki1;
+    xcor_arg->xclki2 = xclki2;
+    xcor_arg->W1     = g_new (gdouble, size);
+    xcor_arg->W2     = g_new (gdouble, size);
+
+    ncm_integral_nd_set_reltol (xcor_int_nd, xc->reltol);
+    ncm_integral_nd_set_abstol (xcor_int_nd, 0.0);
+    ncm_integral_nd_set_method (xcor_int_nd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
+
+    ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp, err);
+
+    g_free (xcor_arg->W1);
+    g_free (xcor_arg->W2);
+    g_object_unref (xcor_kernel_cross);
+  }
+
+  ncm_vector_scale (vp, const_factor);
+
+  g_array_unref (ells_array);
+  ncm_vector_free (lnk_min);
+  ncm_vector_free (lnk_max);
+  ncm_vector_free (err);
 }
 
 /**

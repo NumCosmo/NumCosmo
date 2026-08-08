@@ -3,6 +3,7 @@ Coveralls/
 Debug/
 Intel/
 Optimized/
+BenchNative/
 Profiling/
 numcosmo_py.egg-info/
 .vscode
