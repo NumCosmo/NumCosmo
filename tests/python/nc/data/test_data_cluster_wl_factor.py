@@ -29,6 +29,7 @@ import pathlib
 import subprocess
 import sys
 
+import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
@@ -419,6 +420,12 @@ def test_eval_m2lnP_gal_matches_m2lnL_val():
 # background-mass split that keeps P_gal from going negative in the first place.
 # ---------------------------------------------------------------------------
 
+_ALL_METHODS = [
+    Nc.DataClusterWLIntegMethod.LNINT,
+    Nc.DataClusterWLIntegMethod.FIXED_NODES,
+    Nc.DataClusterWLIntegMethod.CUBATURE,
+]
+
 # Well-separated galaxies with plausible ellipticities: no galaxy's marginal
 # should come anywhere near underflowing.
 _HEALTHY_GALAXIES = [
@@ -426,6 +433,11 @@ _HEALTHY_GALAXIES = [
     (-0.10, 0.15, 0.90, 0.040, -0.04, 0.01, 0.05),
     (0.08, 0.05, 1.50, 0.050, 0.03, -0.01, 0.04),
 ]
+
+# One galaxy whose observed ellipticity is flatly incompatible with any model
+# prediction at this noise level, so its marginal underflows to exactly 0 in
+# double precision and the NC_GALAXY_LOW_PROB fallback is substituted.
+_UNDERFLOWING_GALAXY = (0.03, 0.02, 0.60, 0.030, 0.9, 0.0, 0.01)
 
 
 def _build_probe_setup(galaxies, *, z_cl=0.2, sigma_int=0.3, log10m=14.0):
@@ -480,6 +492,132 @@ def _build_probe_setup(galaxies, *, z_cl=0.2, sigma_int=0.3, log10m=14.0):
     return dcwlf, mset, redshift_factor, obs
 
 
+@pytest.mark.parametrize("integ_method", _ALL_METHODS)
+def test_low_prob_count_zero_on_healthy_eval(integ_method):
+    """On a catalog where every galaxy has a comfortably positive marginal, no
+    NC_GALAXY_LOW_PROB substitution happens, under any integration method."""
+    dcwlf, mset, _, _ = _build_probe_setup(_HEALTHY_GALAXIES)
+    dcwlf.set_integ_method(integ_method)
+
+    m2lnL = dcwlf.m2lnL_val(mset)
+
+    assert dcwlf.get_low_prob_count() == 0
+    assert m2lnL < 1.0e5  # nowhere near the 1e6 flat fallback
+
+
+@pytest.mark.parametrize(
+    "integ_method",
+    [Nc.DataClusterWLIntegMethod.FIXED_NODES, Nc.DataClusterWLIntegMethod.CUBATURE],
+)
+def test_low_prob_count_counts_underflowing_galaxies(integ_method):
+    """When a galaxy's marginal really does evaluate non-positive -- here by
+    honest floating-point underflow, an ellipticity no model can produce at
+    this noise level -- the flat fallback is substituted AND counted.
+
+    LNINT is excluded on purpose: it does not substitute, it skips the galaxy
+    and stores NaN (see test_low_prob_count_resets_between_methods)."""
+    dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
+    dcwlf.set_integ_method(integ_method)
+
+    m2lnL = dcwlf.m2lnL_val(mset)
+
+    assert dcwlf.get_low_prob_count() >= 1
+    assert m2lnL > 1.0e5  # the flat NC_GALAXY_LOW_PROB wall, ~1e6
+
+
+def test_low_prob_count_resets_between_methods():
+    """get_low_prob_count() describes the LAST evaluation, always.
+
+    LNINT never substitutes NC_GALAXY_LOW_PROB, so its answer is legitimately
+    zero -- but it must still clear the counter, or it would keep reporting a
+    stale count left behind by an earlier FIXED_NODES/CUBATURE evaluation on
+    the same object."""
+    dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
+
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
+    dcwlf.m2lnL_val(mset)
+    assert dcwlf.get_low_prob_count() >= 1  # counter is now dirty
+
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
+    dcwlf.m2lnL_val(mset)
+    assert dcwlf.get_low_prob_count() == 0
+
+    # And back again, so the reset is not a one-way latch.
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.m2lnL_val(mset)
+    assert dcwlf.get_low_prob_count() >= 1
+
+
+def test_foreground_only_galaxy_has_no_background_quadrature():
+    """A galaxy whose whole photo-z support lies in FRONT of the lens gets no
+    background quadrature at all (no NcmIntegralFixed, zero background P(z)
+    mass), and its marginal is the pure foreground term p_a * norm.
+
+    The support is what decides this, not the point estimate: at z_cl = 0.2 a
+    galaxy with zp = 0.15, sigma0 = 0.02 still integrates over [0.0, 0.334] and
+    IS partly behind the lens. zp = 0.10, sigma0 = 0.01 gives [0.018, 0.182],
+    which genuinely is not."""
+    z_cl = 0.2
+    foreground = (0.03, 0.02, 0.10, 0.010, 0.05, -0.02, 0.03)
+
+    dcwlf, mset, redshift_factor, obs = _build_probe_setup([foreground], z_cl=z_cl)
+
+    # Verify the premise rather than trusting it.
+    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
+    z_data.read_row(obs, 0)
+    z_lo, z_hi = redshift_factor.get_integ_lim(mset, z_data)
+    assert z_hi <= z_cl, f"galaxy is not fully in the foreground: [{z_lo}, {z_hi}]"
+
+    results = {}
+    for integ_method in _ALL_METHODS:
+        dcwlf.set_integ_method(integ_method)
+        results[integ_method] = dcwlf.m2lnL_val(mset)
+        assert dcwlf.get_low_prob_count() == 0
+
+    # The foreground-only path must reach the same answer as the adaptive
+    # schemes, which take no such shortcut.
+    assert_allclose(
+        results[Nc.DataClusterWLIntegMethod.FIXED_NODES],
+        results[Nc.DataClusterWLIntegMethod.LNINT],
+        rtol=1.0e-6,
+    )
+    assert_allclose(
+        results[Nc.DataClusterWLIntegMethod.CUBATURE],
+        results[Nc.DataClusterWLIntegMethod.LNINT],
+        rtol=1.0e-6,
+    )
+
+
+def test_foreground_and_background_galaxies_mix():
+    """Both branches of the has_bg split in the same catalog and the same
+    prepare() -- the per-galaxy arrays (fixed_bg_nodes, fixed_bg_norm,
+    n_total_per_galaxy) must stay correctly aligned when entry 0 has no
+    background quadrature and entries 1..n do."""
+    galaxies = [(0.03, 0.02, 0.10, 0.010, 0.05, -0.02, 0.03), *_HEALTHY_GALAXIES]
+
+    dcwlf, mset, _, _ = _build_probe_setup(galaxies)
+
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
+    lnint_gal = Ncm.Vector.new(len(galaxies))
+    dcwlf.eval_m2lnP_gal(mset, lnint_gal)
+
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+
+    # Checked in both fixed-node configurations, since they lay the per-galaxy
+    # arrays out differently: with auto-nodes off every background galaxy shares
+    # the global grid, while with it on each gets its own size -- the case where
+    # a misalignment between fixed_bg_nodes/fixed_bg_norm/n_total_per_galaxy and
+    # the foreground entry would actually bite. The tolerances differ only
+    # because auto-nodes targets node-reltol (1e-2 by default), not because the
+    # claim differs.
+    for auto_nodes, rtol in ((False, 1.0e-5), (True, 1.0e-2)):
+        dcwlf.set_auto_nodes(auto_nodes)
+        fixed_gal = Ncm.Vector.new(len(galaxies))
+        dcwlf.eval_m2lnP_gal(mset, fixed_gal)
+
+        assert_allclose(fixed_gal.dup_array(), lnint_gal.dup_array(), rtol=rtol)
+
+
 def test_auto_node_calibration_warns_once_per_prepare():
     """auto-node calibration that cannot reach node-reltol must warn ONCE per
     prepare(), naming how many galaxies missed and the worst error -- not once
@@ -523,3 +661,39 @@ def test_auto_node_calibration_warns_once_per_prepare():
     # And the per-call warning inside ncm_integral_fixed_calibrate() stayed
     # suppressed -- that is what passing a non-NULL relerr_out buys.
     assert "did not reach reltol" not in result.stderr
+
+
+# A galaxy whose photo-z support runs far past the lens, so nearly all of its
+# P(z) mass is background: the fixed-node quadrature of that mass, W_bg, is then
+# competing with the exact full-support normalization, and on a coarse grid it
+# OVERSHOOTS it.
+_MOSTLY_BACKGROUND_GALAXY = (0.03, 0.02, 2.00, 0.300, 0.05, -0.02, 0.03)
+
+
+@pytest.mark.parametrize("n_nodes,rule_n", [(2, 1), (4, 2), (6, 3)])
+def test_foreground_weight_is_clamped_at_zero(n_nodes, rule_n):
+    """The foreground weight (norm - W_bg) is clamped at zero, and must be.
+
+    W_bg is a QUADRATURE estimate of the background P(z) mass while norm is the
+    EXACT full-support normalization, so on a coarse grid nothing stops W_bg
+    from exceeding norm. Measured on this galaxy at (n_nodes, rule_n) = (2, 1):
+    norm = 0.1077 against W_bg = 0.2339, a 117% overshoot. Unclamped that would
+    make the foreground term p_a * (norm - W_bg) large and NEGATIVE -- the
+    second way (besides a signed correction term) that P_gal could go negative
+    and trip the NC_GALAXY_LOW_PROB wall.
+
+    The clamp is therefore load-bearing, not decoration: this test asserts the
+    positivity guarantee survives grids far too coarse to resolve the
+    integrand, which is exactly the claim the split form is making.
+    """
+    dcwlf, mset, _, _ = _build_probe_setup([_MOSTLY_BACKGROUND_GALAXY])
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
+    dcwlf.set_n_nodes(n_nodes)
+    dcwlf.set_rule_n(rule_n)
+
+    m2lnL = dcwlf.m2lnL_val(mset)
+
+    assert dcwlf.get_low_prob_count() == 0
+    assert np.isfinite(m2lnL)
+    assert m2lnL < 1.0e5  # not the flat 1e6 fallback
