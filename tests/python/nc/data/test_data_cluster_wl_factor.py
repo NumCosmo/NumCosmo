@@ -25,6 +25,10 @@ end-to-end; this file covers what those never touch: the GObject property
 get/set round trip and the plain getter/setter/``ref`` wrappers.
 """
 
+import pathlib
+import subprocess
+import sys
+
 import pytest
 from numpy.testing import assert_allclose
 
@@ -408,3 +412,114 @@ def test_eval_m2lnP_gal_matches_m2lnL_val():
         total = dcwlf.m2lnL_val(mset)
 
         assert m2lnP_gal.get(0) == total
+
+
+# ---------------------------------------------------------------------------
+# NC_GALAXY_LOW_PROB accounting (get_low_prob_count) and the FIXED_NODES
+# background-mass split that keeps P_gal from going negative in the first place.
+# ---------------------------------------------------------------------------
+
+# Well-separated galaxies with plausible ellipticities: no galaxy's marginal
+# should come anywhere near underflowing.
+_HEALTHY_GALAXIES = [
+    (0.03, 0.02, 0.60, 0.030, 0.05, -0.02, 0.03),
+    (-0.10, 0.15, 0.90, 0.040, -0.04, 0.01, 0.05),
+    (0.08, 0.05, 1.50, 0.050, 0.03, -0.01, 0.04),
+]
+
+
+def _build_probe_setup(galaxies, *, z_cl=0.2, sigma_int=0.3, log10m=14.0):
+    """A catalog built from explicit (ra, dec, zp, sigma0, e1, e2, std_noise)
+    rows, so a test can place a galaxy exactly where it needs one -- fully in
+    front of the lens, or far out in the tail of the shape likelihood."""
+    cosmo = Nc.HICosmoDEXcdm.new()
+    dist = Nc.Distance.new(100.0)
+    hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)
+    hms.param_set_by_name("log10MDelta", log10m)
+    dp = Nc.HaloDensityProfileNFW.new(hms)
+    hp = Nc.HaloPosition.new(dist)
+    smd = Nc.WLSurfaceMassDensity.new(dist)
+    hp.param_set_by_name("z", z_cl)
+    hp.prepare(cosmo)
+
+    pop_shape = Nc.GalaxyShapePopGauss.new()
+    pop_shape.param_set_by_name("sigma", sigma_int)
+    pop_z = Nc.GalaxyRedshiftPopLSSTSRD.new_y1_source()
+    obs_z = Nc.GalaxyRedshiftObsGauss.new()
+
+    mset = Ncm.MSet.empty_new()
+    for model in (cosmo, dp, hp, smd, pop_shape, pop_z, obs_z):
+        mset.set(model)
+    mset.prepare_fparam_map()
+
+    position_factor = Nc.GalaxyPositionFactorFlat.new(-0.2, 0.2, -0.2, 0.2)
+    redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(ZP_MIN, ZP_MAX)
+    shape_factor = Nc.GalaxyShapeFactorVarAdd.new(ELLIP_CONV)
+
+    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
+    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
+    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
+    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+
+    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(galaxies), cols)
+    for i, (ra, dec, zp, sigma0, e1, e2, std_noise) in enumerate(galaxies):
+        for col in cols:
+            obs.set(col, i, 0.0)
+        obs.set("ra", i, ra)
+        obs.set("dec", i, dec)
+        obs.set("zp", i, zp)
+        obs.set("sigma0", i, sigma0)
+        obs.set("epsilon_obs_1", i, e1)
+        obs.set("epsilon_obs_2", i, e2)
+        obs.set("std_noise", i, std_noise)
+
+    dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf.set_obs(obs)
+    dcwlf.set_prec(1.0e-8)
+
+    return dcwlf, mset, redshift_factor, obs
+
+
+def test_auto_node_calibration_warns_once_per_prepare():
+    """auto-node calibration that cannot reach node-reltol must warn ONCE per
+    prepare(), naming how many galaxies missed and the worst error -- not once
+    per galaxy.
+
+    That aggregation is the whole point: ncm_integral_fixed_calibrate() is
+    called per galaxy, and a realistic cluster produced thousands of
+    near-identical warnings, which is neither readable nor actionable. Run in a
+    subprocess because g_warning goes to stderr, not through the Python warnings
+    machinery.
+    """
+    script = (
+        "from numcosmo_py import Ncm, Nc\n"
+        "Ncm.cfg_init()\n"
+        "import sys; sys.path.insert(0, %r)\n"
+        "from test_data_cluster_wl_factor import _build_probe_setup, _HEALTHY_GALAXIES\n"
+        "dcwlf, mset, _, _ = _build_probe_setup(_HEALTHY_GALAXIES)\n"
+        "dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)\n"
+        "dcwlf.set_auto_nodes(True)\n"
+        "dcwlf.set_node_reltol(1.0e-14)\n"  # unreachable
+        "dcwlf.set_max_total_nodes(30)\n"  # within a tiny node budget
+        "dcwlf.m2lnL_val(mset)\n" % str(pathlib.Path(__file__).parent)
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "auto-node calibration did not reach" in result.stderr
+
+    # Once per prepare(), not once per galaxy: exactly one aggregate line, and
+    # it accounts for all three galaxies rather than reporting one of them.
+    assert result.stderr.count("auto-node calibration did not reach") == 1
+    assert f"for {len(_HEALTHY_GALAXIES)} of {len(_HEALTHY_GALAXIES)} galaxies" in (
+        result.stderr
+    )
+
+    # And the per-call warning inside ncm_integral_fixed_calibrate() stayed
+    # suppressed -- that is what passing a non-NULL relerr_out buys.
+    assert "did not reach reltol" not in result.stderr

@@ -200,6 +200,11 @@ typedef struct _NcDataClusterWLFactorPrivate
   gdouble node_reltol;
   guint max_total_nodes;
 
+  /* Auto-node calibration outcome for the LAST grid rebuild: how many galaxies
+   * failed to reach node_reltol, and the worst relative error among them. */
+  guint calib_unconverged;
+  gdouble calib_worst_relerr;
+
   /* Per-galaxy fixed-node grid: index i pairs with shape_data's element i.
    * fixed_bg_nodes[i] is NULL when galaxy i's redshift support lies entirely
    * in front of the lens (no background quadrature needed, see
@@ -418,7 +423,15 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
       gsl_function F                          = { &_nc_data_cluster_wl_factor_calib_pz, &calib_arg };
       gsl_function G                          = { &_nc_data_cluster_wl_factor_calib_shape, &calib_arg };
       const gdouble exact_bg_norm             = (z_lo >= self->z_cl) ? norm : GSL_NAN;
-      NcmIntegralFixed *cal                   = ncm_integral_fixed_calibrate (&F, &G, bg_lo, z_hi, self->node_reltol, exact_bg_norm, self->max_total_nodes, &n_nodes_i, &rule_n_i, NULL);
+      gdouble relerr                          = 0.0;
+      NcmIntegralFixed *cal                   = ncm_integral_fixed_calibrate (&F, &G, bg_lo, z_hi, self->node_reltol, exact_bg_norm, self->max_total_nodes, &n_nodes_i, &rule_n_i, &relerr);
+
+      /* Accumulate rather than warn: summarised once per prepare() below. */
+      if (relerr > self->node_reltol)
+      {
+        self->calib_unconverged++;
+        self->calib_worst_relerr = MAX (self->calib_worst_relerr, relerr);
+      }
 
       ncm_integral_fixed_free (cal);
     }
@@ -1010,6 +1023,9 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   {
     guint gal_i;
 
+    self->calib_unconverged  = 0;
+    self->calib_worst_relerr = 0.0;
+
     for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
     {
       NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
@@ -1019,6 +1035,15 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
         steps[j](self, mset, s_data, gal_i);
     }
   }
+
+  /* One line per prepare() instead of one per galaxy. */
+  if (self->calib_unconverged > 0)
+    g_warning ("nc_data_cluster_wl_factor: auto-node calibration did not reach "
+               "node-reltol %g for %u of %u galaxies (worst relative error %g). "
+               "Raise max-total-nodes, or loosen node-reltol to a value this "
+               "integrand can actually reach.",
+               self->node_reltol, self->calib_unconverged,
+               self->shape_data->len, self->calib_worst_relerr);
 }
 
 /* Combine two adaptive sub-integrals split at z_cl. Each panel returns
