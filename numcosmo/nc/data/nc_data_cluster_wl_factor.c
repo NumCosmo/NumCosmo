@@ -194,8 +194,7 @@ typedef struct _NcDataClusterWLFactorPrivate
   /* Per-galaxy auto-nodes calibration (FIXED_NODES only): instead of every
    * galaxy using the global (n_nodes, rule_n), calibrate each galaxy's own
    * minimal fixed Gauss-Legendre configuration reaching node_reltol, via
-   * ncm_integral_fixed_calibrate(). Opt-in, default off (matches every
-   * other orchestrator knob's own opt-in convention). */
+   * ncm_integral_fixed_calibrate(). */
   gboolean auto_nodes;
   gdouble node_reltol;
   guint max_total_nodes;
@@ -574,8 +573,8 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->integ_method    = NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT;
   self->n_nodes         = 10;
   self->rule_n          = 5;
-  self->auto_nodes      = FALSE;
-  self->node_reltol     = 1.0e-4;
+  self->auto_nodes      = TRUE;
+  self->node_reltol     = 1.0e-2;
   self->max_total_nodes = 2000;
   self->low_prob_count  = 0;
 
@@ -1659,7 +1658,7 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                    g_param_spec_boolean ("auto-nodes",
                                                          NULL,
                                                          "Automatically select the per-galaxy fixed-node configuration (FIXED_NODES only)",
-                                                         FALSE,
+                                                         TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -1673,7 +1672,7 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                    g_param_spec_double ("node-reltol",
                                                         NULL,
                                                         "Target relative tolerance for the per-galaxy fixed-node selection",
-                                                        0.0, G_MAXDOUBLE, 1.0e-4,
+                                                        0.0, G_MAXDOUBLE, 1.0e-2,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**

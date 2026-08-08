@@ -219,6 +219,7 @@ def test_m2lnL_parity_fixed_nodes(log10_mdelta):
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
 
     new_m2lnL = dcwlf.m2lnL_val(mset)
 
@@ -241,6 +242,7 @@ def test_m2lnL_fixed_nodes_matches_lnint():
     dcwlf_fixed.set_obs(new_obs)
     dcwlf_fixed.set_prec(1.0e-8)
     dcwlf_fixed.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf_fixed.set_auto_nodes(False)
 
     dcwlf_lnint = Nc.DataClusterWLFactor.new(
         position_factor, redshift_factor, shape_factor
@@ -287,6 +289,7 @@ def test_fixed_nodes_cache_consistency_across_revisits():
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
 
     for log10_mdelta, frozen in zip(
         _CACHE_REVISIT_MASS_SEQ, _CACHE_REVISIT_MASS_FROZEN
@@ -332,6 +335,7 @@ def test_fixed_nodes_correct_under_angular_only_changes():
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
 
     hp = mset.peek(Nc.HaloPosition.id())
     cosmo = mset.peek(Nc.HICosmo.id())
@@ -369,6 +373,7 @@ def test_fixed_nodes_correct_after_switching_integ_method_mid_run():
     dcwlf.m2lnL_val(mset)  # idempotent second call, nothing changed
 
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
     new_m2lnL = dcwlf.m2lnL_val(mset)
 
     # Frozen legacy FIXED_NODES value at log10MDelta=14.0, z_cl=0.2 (matches
@@ -416,6 +421,7 @@ def test_fixed_nodes_resample_reuse_matches_lnint():
     # integ-method set to FIXED_NODES *before* the first resample() -- the
     # exact ordering that used to poison the grid with pre-resample data.
     dcwlf_reused.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf_reused.set_auto_nodes(False)
 
     dcwlf_lnint = Nc.DataClusterWLFactor.new(
         position_factor, redshift_factor, shape_factor
@@ -684,6 +690,7 @@ def test_fixed_nodes_correct_after_changing_n_nodes_rule_n_mid_run():
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
     dcwlf.set_n_nodes(10)
     dcwlf.set_rule_n(5)
     dcwlf.m2lnL_val(mset)
@@ -727,6 +734,7 @@ def test_fixed_nodes_correct_after_swapping_obs_to_different_sized_catalog():
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
 
     original_val = dcwlf.m2lnL_val(mset)
 
@@ -764,6 +772,7 @@ def test_fixed_nodes_correct_after_swapping_obs_to_different_sized_catalog():
     dcwlf_fresh.set_obs(small_obs)
     dcwlf_fresh.set_prec(1.0e-8)
     dcwlf_fresh.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf_fresh.set_auto_nodes(False)
     fresh_val = dcwlf_fresh.m2lnL_val(mset)
 
     assert_allclose(swapped_val, fresh_val, rtol=1.0e-8)
@@ -924,6 +933,7 @@ def test_auto_nodes_matches_fixed_and_lnint():
     dcwlf_fixed.set_obs(new_obs)
     dcwlf_fixed.set_prec(1.0e-8)
     dcwlf_fixed.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf_fixed.set_auto_nodes(False)
 
     dcwlf_lnint = Nc.DataClusterWLFactor.new(
         position_factor, redshift_factor, shape_factor
@@ -955,6 +965,7 @@ def test_auto_nodes_mid_run_property_changes_do_not_corrupt_state():
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
 
     dcwlf_lnint = Nc.DataClusterWLFactor.new(
         position_factor, redshift_factor, shape_factor
@@ -964,13 +975,21 @@ def test_auto_nodes_mid_run_property_changes_do_not_corrupt_state():
     dcwlf_lnint.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
     lnint_m2lnL = dcwlf_lnint.m2lnL_val(mset)
 
-    dcwlf.m2lnL_val(mset)  # first cycle, auto-nodes off
+    dcwlf.m2lnL_val(mset)  # first cycle, auto-nodes explicitly off
 
+    # Each row must differ from its predecessor in at least one knob, and the
+    # sequence must isolate each of the three grid-rebuild gates in turn
+    # (fixed_nodes_auto_nodes_seen / _node_reltol_seen / _max_total_nodes_seen):
+    # row 1 flips auto-nodes only, row 2 changes reltol only, row 3
+    # max-total-nodes only, row 4 flips auto-nodes back off, row 5 returns to a
+    # previously-visited configuration (the revisit case that catches a stale
+    # grid).
     for auto_nodes, node_reltol, max_total_nodes in (
+        (True, 1.0e-2, 2000),
         (True, 1.0e-3, 2000),
-        (True, 1.0e-5, 500),
-        (False, 1.0e-4, 2000),
-        (True, 1.0e-4, 2000),
+        (True, 1.0e-3, 300),
+        (False, 1.0e-3, 300),
+        (True, 1.0e-2, 2000),
     ):
         dcwlf.set_auto_nodes(auto_nodes)
         dcwlf.set_node_reltol(node_reltol)
@@ -1011,6 +1030,7 @@ def test_cubature_matches_lnint_and_fixed():
     dcwlf_fixed.set_obs(new_obs)
     dcwlf_fixed.set_prec(1.0e-8)
     dcwlf_fixed.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf_fixed.set_auto_nodes(False)
 
     cub_m2lnL = dcwlf_cub.m2lnL_val(mset)
     lnint_m2lnL = dcwlf_lnint.m2lnL_val(mset)
