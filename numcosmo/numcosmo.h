@@ -237,9 +237,11 @@
 #include <numcosmo/nc/xcor/nc_xcor_kernel_gal.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_cluster.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_cluster_tophat.h>
+#include <numcosmo/nc/xcor/nc_xcor_kernel_cmb_isw.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_CMB_lensing.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_weak_lensing.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_tSZ.h>
+#include <numcosmo/nc/xcor/nc_xcor_lensing_efficiency.h>
 #include <numcosmo/nc/xcor/nc_xcor_solver.h>
 
 #endif /* _NUMCOSMO_H */
