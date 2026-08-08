@@ -170,7 +170,9 @@ ncm_spectral_class_init (NcmSpectralClass *klass)
    * NcmSpectral:max-order:
    *
    * Maximum refinement level k for adaptive computations. The maximum
-   * number of nodes is N_max = 2^max_order + 1.
+   * number of nodes is N_max = 2^max_order + 1. This bounds memory only:
+   * adaptive computations stop on their tolerance, and reaching this level
+   * without converging is a fatal error.
    */
   g_object_class_install_property (object_class,
                                    PROP_MAX_ORDER,
@@ -624,7 +626,7 @@ _ncm_spectral_normalize_coeffs (gdouble *coeffs_work, GArray *coeffs, guint N)
 }
 
 static gboolean
-_ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble tol)
+_ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble tol, gdouble abstol)
 {
   const gdouble *coeffs_2N_data = (gdouble *) coeffs_2N->data;
   const gdouble *coeffs_N_data  = (gdouble *) coeffs_N->data;
@@ -641,7 +643,7 @@ _ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble to
     norm2_2N   += coeffs_2N_data[i] * coeffs_2N_data[i];
   }
 
-  if (norm2_diff < tol * tol * norm2_2N + 1.0e-100)
+  if (norm2_diff < MAX (tol * tol * norm2_2N, abstol * abstol) + 1.0e-100)
     return TRUE;
 
   return FALSE;
@@ -650,11 +652,14 @@ _ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble to
 static guint
 _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral, NcmSpectralF F,
                                                           gdouble a, gdouble b, guint k_min,
-                                                          gdouble tol, GArray **coeffs, gpointer user_data,
+                                                          gdouble tol, gdouble abstol,
+                                                          GArray **coeffs, gpointer user_data,
                                                           _NcmSpectralEvaluateFunc evaluate_func,
-                                                          _NcmSpectralRefineFunc refine_func)
+                                                          _NcmSpectralRefineFunc refine_func,
+                                                          gboolean require_convergence)
 {
-  guint k = k_min;
+  guint k            = k_min;
+  gboolean converged = FALSE;
   GArray *c_previous, *c_current;
 
   g_assert (k_min <= spectral->max_order);
@@ -702,8 +707,11 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
     }
 
     /* Check convergence using pre-computed e_total */
-    if (_ncm_spectral_check_convergence (c_current, c_previous, tol))
+    if (_ncm_spectral_check_convergence (c_current, c_previous, tol, abstol))
+    {
+      converged = TRUE;
       break;
+    }
 
     /* Swap c_previous and c_current for next iteration */
     if (k < spectral->max_order)
@@ -714,6 +722,23 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
       c_current  = tmp;
     }
   }
+
+  /* max-order is a memory guard, not a stopping condition: tol is what must
+   * end the refinement. Falling out of the loop means the coefficients are
+   * unconverged, so fail instead of returning them silently.
+   *
+   * Not enforced for the weighted variant: its integrand carries the
+   * sqrt(1-t^2) factor, whose Chebyshev coefficients decay only as 1/k^2, so
+   * this criterion is unreachable for any F and the refinement always runs to
+   * max-order. The quantity that variant is used for (coeffs[0], the
+   * Clenshaw-Curtis integral) converges long before that; fixing the criterion
+   * there is a separate change. */
+  if (require_convergence && !converged)
+    g_error ("_ncm_spectral_compute_chebyshev_coeffs_adaptive_internal: "
+             "reached max-order %u (N = %u) without converging to tol = %.17g "
+             "(abstol = %.17g). Raise max-order, relax tol, or supply an "
+             "absolute scale.",
+             spectral->max_order, (1 << k) + 1, tol, abstol);
 
   if (c_current != *coeffs)
   {
@@ -738,10 +763,11 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
  *
  * Computes Chebyshev coefficients of $f(x)$ on $[a,b]$ adaptively, starting at
  * level @k_min and doubling the nested Chebyshev–Lobatto grid until the
- * coefficients converge to @tol or `max-order` is reached. Only the new odd
- * nodes are evaluated at each refinement. See the
- * <a href="../../theory/spectral.html">Spectral Methods</a> page for the nested
- * grids and convergence criterion.
+ * coefficients converge to @tol. Only the new odd nodes are evaluated at each
+ * refinement. Reaching `max-order` without converging is a fatal error:
+ * `max-order` bounds memory, it is not an alternative stopping condition. See
+ * the <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * nested grids and convergence criterion.
  *
  * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
  * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
@@ -754,9 +780,47 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
                                                 gdouble tol, GArray **coeffs, gpointer user_data)
 {
   return _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (spectral, F, a, b, k_min,
-                                                                   tol, coeffs, user_data,
+                                                                   tol, 0.0, coeffs, user_data,
                                                                    _ncm_spectral_evaluate_all_nodes,
-                                                                   _ncm_spectral_refine_to_k);
+                                                                   _ncm_spectral_refine_to_k,
+                                                                   TRUE);
+}
+
+/**
+ * ncm_spectral_compute_chebyshev_coeffs_adaptive_full:
+ * @spectral: a #NcmSpectral
+ * @F: (scope call): function to evaluate, receives x in [a,b]
+ * @a: left endpoint of the interval
+ * @b: right endpoint of the interval
+ * @k_min: minimum refinement level (N_min = 2^@k_min + 1)
+ * @reltol: relative spectral convergence tolerance
+ * @abstol: absolute floor on the coefficient increment, or 0.0 for none
+ * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
+ * @user_data: user data for @F
+ *
+ * Same as ncm_spectral_compute_chebyshev_coeffs_adaptive(), but stops once the
+ * coefficient increment falls below @abstol even if the @reltol criterion is
+ * not met. Use this when $f$ is known to be negligible on $[a,b]$ compared to
+ * some larger quantity it contributes to: refining a term that cannot affect
+ * the result to full relative accuracy is pure cost, and for a sharply varying
+ * $f$ it can exhaust `max-order`.
+ *
+ * @abstol is measured in the same units as the coefficients themselves. Passing
+ * 0.0 reproduces ncm_spectral_compute_chebyshev_coeffs_adaptive() exactly.
+ *
+ * Returns: the final refinement level k used (N = 2^k + 1)
+ */
+guint
+ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmSpectralF F,
+                                                     gdouble a, gdouble b, guint k_min,
+                                                     gdouble reltol, gdouble abstol,
+                                                     GArray **coeffs, gpointer user_data)
+{
+  return _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (spectral, F, a, b, k_min,
+                                                                   reltol, abstol, coeffs, user_data,
+                                                                   _ncm_spectral_evaluate_all_nodes,
+                                                                   _ncm_spectral_refine_to_k,
+                                                                   TRUE);
 }
 
 /**
@@ -779,6 +843,11 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
  * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
  * derivation.
  *
+ * Unlike ncm_spectral_compute_chebyshev_coeffs_adaptive(), reaching
+ * `max-order` without converging to @tol is not an error here: the
+ * $\sqrt{1-t^2}$ weight has algebraically decaying Chebyshev coefficients, so
+ * the refinement always runs to `max-order` regardless of @F.
+ *
  * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
  * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
  *
@@ -790,9 +859,10 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted (NcmSpectral *spectral, 
                                                          gdouble tol, GArray **coeffs, gpointer user_data)
 {
   return _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (spectral, F, a, b, k_min,
-                                                                   tol, coeffs, user_data,
+                                                                   tol, 0.0, coeffs, user_data,
                                                                    _ncm_spectral_evaluate_all_nodes_weighted,
-                                                                   _ncm_spectral_refine_to_k_weighted);
+                                                                   _ncm_spectral_refine_to_k_weighted,
+                                                                   FALSE);
 }
 
 /**

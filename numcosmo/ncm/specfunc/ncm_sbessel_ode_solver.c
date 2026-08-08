@@ -449,7 +449,13 @@ _ensure_operator_size (NcmSBesselOdeOperator *op, gsize required_order)
 
     if (op->c != NULL)
     {
-      memcpy (new_c, op->c, old_c_size);
+      /* old_c_size is padded by ROWS_TO_ROTATE * op->n_ell using n_ell as of
+       * the *previous* resize; if a ncm_sbessel_ode_operator_reset() call
+       * shrank n_ell since then, that padding term shrinks too, and
+       * old_c_size can end up larger than new_c_size even though this is
+       * the grow branch (required_size, unpadded, is still what triggered
+       * it) -- clamp to avoid writing past the freshly allocated new_c. */
+      memcpy (new_c, op->c, GSL_MIN (old_c_size, new_c_size));
       free (op->c);
     }
 
@@ -1054,8 +1060,6 @@ _ncm_sbessel_create_row_batched (NcmSBesselOdeOperator *op, NcmSBesselOdeSolverR
       break;
   }
 }
-
-__attribute__ ((optimize ("no-math-errno", "no-trapping-math")))
 
 static inline gdouble
 _compute_inv_hypot (gdouble a, gdouble b)

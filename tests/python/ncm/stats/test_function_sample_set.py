@@ -1493,6 +1493,37 @@ def test_absmaxF_min_single_component() -> None:
     assert abs(linf_norm - 7.0) < 1e-10
 
 
+def test_absmaxF_min_ignores_exact_zero_component() -> None:
+    """A component that is identically zero must not collapse the min to 0.0.
+
+    Regression test: ncm_function_sample_set_get_absmaxF_min used to take a
+    plain min over all components, so one exactly-zero component (e.g. a
+    spin-2 field's ell=0,1 multipoles) silently zeroed out the tolerance for
+    every other, genuinely nonzero component -- which could then never
+    converge (see test_adaptive_midpoint_mixed_zero_and_nonzero_terminates).
+    """
+    fss = Ncm.FunctionSampleSet.new(2)
+
+    # Component 0 is identically zero; component 1 peaks at 4.0.
+    for x, y1 in [(0.0, 1.0), (1.0, 4.0), (2.0, 2.0)]:
+        y = Ncm.Vector.new_array([0.0, y1])
+        fss.add(x, y)
+
+    min_absF = fss.get_absmaxF_min()
+    assert abs(min_absF - 4.0) < 1e-10
+
+
+def test_absmaxF_min_all_components_zero() -> None:
+    """When every component is identically zero, the min falls back to 0.0."""
+    fss = Ncm.FunctionSampleSet.new(2)
+
+    for x in [0.0, 1.0, 2.0]:
+        y = Ncm.Vector.new_array([0.0, 0.0])
+        fss.add(x, y)
+
+    assert fss.get_absmaxF_min() == 0.0
+
+
 def test_combined_tracking_comprehensive(
     sample_set_dim3: Ncm.FunctionSampleSet,
 ) -> None:
@@ -2369,3 +2400,117 @@ def test_expand_domain_both_limits_with_slow_decay() -> None:
     # Both boundaries should reach hard limits
     assert abs(fss.get_x_min() - x_min_hard) < 1e-10
     assert abs(fss.get_x_max() - x_max_hard) < 1e-10
+
+
+# ============================================================================
+# Regression tests: exact-zero components must converge, not run away.
+#
+# Found while benchmarking NcXcorKernelWeakLensing: its spin-2 prefactor
+# vanishes identically at ell=0,1. With abstol derived from
+# get_absmaxF_min() (as NcXcorKernel does), that made abstol exactly 0.0,
+# and refine()'s old strict '<' comparison meant a perfectly converged,
+# identically-zero point could never pass (0.0 < 0.0 is false). Every
+# interval then kept getting bisected every outer iteration instead of just
+# the one(s) with a real discontinuity -- exponential growth in sample
+# count (doubling per iteration) instead of the expected linear growth,
+# exhausting memory well before max_iter was reached.
+# ============================================================================
+
+
+def test_refine_exact_zero_function_passes() -> None:
+    """A perfectly-converged, identically-zero point must pass refine().
+
+    Direct regression test for the norm_diff < threshold -> norm_diff <=
+    threshold fix: with abstol=0.0 and a function that is exactly zero
+    everywhere, norm_diff and threshold are both exactly 0.0.
+    """
+
+    def flat_zero(x: float, y: Ncm.Vector) -> None:
+        y.set(0, 0.0)
+
+    fss = Ncm.FunctionSampleSet.new(1)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]:
+        fss.add_func(x, flat_zero)
+
+    fss.mark_all_old()
+
+    # Insert a new midpoint the same way adaptive_midpoint's inner loop does.
+    it = fss.iter_begin()
+    _ = fss.iter_insert_after_func(it, 0.5, flat_zero)
+
+    fss.refine(1e-4, 0.0, base_spline)
+
+    it = fss.iter_begin()
+    assert it.get_interval_ok() >= 1
+
+
+def test_adaptive_midpoint_exact_zero_component_terminates_quickly() -> None:
+    """A flat-zero function must converge immediately, not blow up exponentially.
+
+    max_iter is kept deliberately small so that a *regression* of this fix
+    still fails fast and safely (bounded sample growth) instead of
+    exhausting memory the way the original bug did.
+    """
+
+    def flat_zero(x: float, y: Ncm.Vector) -> None:
+        y.set(0, 0.0)
+
+    fss = Ncm.FunctionSampleSet.new(1)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(0.0, 10.0, 6):
+        fss.add_func(x, flat_zero)
+
+    fss.mark_all_old()
+    # Mirrors NcXcorKernel's own abstol formula (get_absmaxF_min() * reltol).
+    abstol = fss.get_absmaxF_min() * 1e-4
+    assert abstol == 0.0  # the exact degenerate case this test targets
+
+    max_iter = 10
+    fss.adaptive_midpoint(flat_zero, 1e-4, abstol, max_iter, 1, base_spline)
+
+    assert fss.all_intervals_ok(1)
+    # With the fix this converges on the first pass; well under the
+    # exponential blow-up (2**10 = 1024) max_iter=10 alone would otherwise
+    # permit -- the bound below is generous, not tight.
+    assert fss.get_nsamples() < 20
+
+
+def test_adaptive_midpoint_mixed_zero_and_nonzero_terminates() -> None:
+    """A block mixing an identically-zero component with a real one converges,
+    and the real component is still resolved accurately.
+
+    Mirrors the actual production scenario: a weak-lensing kernel's
+    ell-block spanning ell=0 (prefactor exactly zero) alongside ell>=2
+    (nonzero), evaluated together as one vector-valued function.
+    """
+
+    def mixed(x: float, y: Ncm.Vector) -> None:
+        y.set(0, 0.0)  # e.g. weak-lensing ell=0: identically zero
+        y.set(1, math.sin(x))  # e.g. weak-lensing ell=2: genuinely varies
+
+    fss = Ncm.FunctionSampleSet.new(2)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(0.0, 2.0 * math.pi, 6):
+        fss.add_func(x, mixed)
+
+    fss.mark_all_old()
+    reltol = 1e-6
+    abstol = fss.get_absmaxF_min() * 1e-4
+
+    # The zero component must not have collapsed the tolerance to zero.
+    assert abstol > 0.0
+
+    fss.adaptive_midpoint(mixed, reltol, abstol, 100, 1, base_spline)
+
+    assert fss.all_intervals_ok(1)
+
+    sv = fss.to_spline_vec(base_spline)
+    threshold = reltol * 1.0 + abstol  # sin(x) peaks at 1.0
+    for x in np.linspace(0.1, 2.0 * math.pi - 0.1, 20):
+        y_spline = sv.eval_array(x)
+        assert abs(y_spline[0] - 0.0) < 1e-10
+        assert abs(y_spline[1] - math.sin(x)) < threshold * 10

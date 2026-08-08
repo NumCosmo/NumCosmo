@@ -918,6 +918,14 @@ ncm_spline_prepare_base (NcmSpline *s)
  * @s: a constant #NcmSpline
  * @x: x-coordinate value
  *
+ * Evaluates the spline at @x. This is one of the hottest functions in the
+ * library and performs no range check: outside [x[0], x[n-1]] it silently
+ * extrapolates, evaluating the boundary interval's polynomial at a @x it was
+ * never fitted to. A cubic extrapolated even slightly past a knot can be off
+ * by orders of magnitude with no diagnostic, so callers whose domain is not
+ * statically known must clamp or check @x themselves against the first and
+ * last entries of ncm_spline_peek_xv().
+ *
  * Returns: The interpolated value of a function computed at @x.
  */
 
