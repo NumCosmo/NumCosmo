@@ -368,6 +368,175 @@ nc_xcor_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoint
   }
 }
 
+static gint
+_nc_xcor_gdouble_cmp (gconstpointer a, gconstpointer b)
+{
+  const gdouble da = *(const gdouble *) a;
+  const gdouble db = *(const gdouble *) b;
+
+  return (da > db) - (da < db);
+}
+
+/*
+ * Evaluates the outer k-integral, splitting it at the points where the
+ * integrand is discontinuous.
+ *
+ * Limber collapses the line-of-sight integral to the single point
+ * xi = (l + 1/2) / k, so a kernel whose support ends at xi_max without
+ * vanishing there turns that edge into a step in k, at a different k for every
+ * multipole in the batch. The p-adaptive cubature raises the polynomial order
+ * on a fixed interval, which cannot fit a step: it exhausts its Clenshaw-Curtis
+ * levels and reports failure. The step locations are known analytically, so
+ * integrate between them and sum -- every piece is then smooth for every
+ * multipole, including those still identically zero over it.
+ *
+ * A smooth integrand reports no breakpoints and takes the single-interval path
+ * unchanged.
+ */
+/* Fraction of the largest conceivable value of the outer k-integral below
+ * which a piece of it cannot matter. Mirrors NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC
+ * on the Levin side: splitting at the discontinuities creates sub-intervals
+ * where some multipoles contribute nothing at all, and a purely relative
+ * tolerance on a value of zero is unsatisfiable however far the quadrature
+ * refines. */
+#define NC_XCOR_KERNEL_CUBATURE_ABSTOL_FRAC 1.0e-16
+
+/* Points used to size the integrand before integrating it. The estimate only
+ * has to be right to an order of magnitude -- it scales a 1e-16 floor -- and
+ * this costs a few dozen spline evaluations against a quadrature that will do
+ * far more. */
+#define NC_XCOR_KERNEL_CUBATURE_ABSTOL_NPT 64
+
+/*
+ * Sizes the outer k-integral of k^3 W1 W2 by sampling it, so a fraction of the
+ * result is a floor no piece needs to resolve below.
+ *
+ * Bounding it analytically by k_max^3 max|W|^2 is useless: |W| peaks at small k
+ * while k^3 peaks at large k, so the product overshoots the true integral by
+ * orders of magnitude and the floor swallows the answer.
+ */
+static gdouble
+_nc_xcor_kernel_cubature_abstol (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2,
+                                 gdouble k_min, gdouble k_max)
+{
+  const guint len       = nc_xcor_kernel_integrand_get_len (xclki1);
+  const gdouble ln_lo   = log (k_min);
+  const gdouble ln_hi   = log (k_max);
+  const gdouble width   = ln_hi - ln_lo;
+  gdouble *W1           = g_new (gdouble, len);
+  gdouble *W2           = (xclki2 != NULL) ? g_new (gdouble, len) : NULL;
+  gdouble max_integrand = 0.0;
+  guint i, j;
+
+  for (i = 0; i < NC_XCOR_KERNEL_CUBATURE_ABSTOL_NPT; i++)
+  {
+    const gdouble lnk = ln_lo + width * i / (NC_XCOR_KERNEL_CUBATURE_ABSTOL_NPT - 1.0);
+    const gdouble k   = exp (lnk);
+    const gdouble k3  = gsl_pow_3 (k);
+
+    nc_xcor_kernel_integrand_eval (xclki1, k, W1);
+
+    if (W2 != NULL)
+      nc_xcor_kernel_integrand_eval (xclki2, k, W2);
+
+    for (j = 0; j < len; j++)
+    {
+      const gdouble f = k3 * W1[j] * ((W2 != NULL) ? W2[j] : W1[j]);
+
+      max_integrand = GSL_MAX (max_integrand, fabs (f));
+    }
+  }
+
+  g_free (W1);
+  g_free (W2);
+
+  {
+    const gdouble bound = max_integrand * width;
+
+    if (!gsl_finite (bound) || (bound <= 0.0))
+      return 0.0;
+
+    return NC_XCOR_KERNEL_CUBATURE_ABSTOL_FRAC * bound;
+  }
+}
+
+static void
+_nc_xcor_kernel_eval_split (NcmIntegralND *xcor_int_nd,
+                            NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2,
+                            gdouble k_min, gdouble k_max,
+                            NcmVector *vp, NcmVector *err)
+{
+  GArray *edges     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmVector *lnk_lo = ncm_vector_new (1);
+  NcmVector *lnk_hi = ncm_vector_new (1);
+  guint i;
+
+  ncm_integral_nd_set_abstol (xcor_int_nd,
+                              _nc_xcor_kernel_cubature_abstol (xclki1, xclki2, k_min, k_max));
+
+  {
+    NcXcorKernelIntegrand *sources[2] = {xclki1, xclki2};
+    guint si;
+
+    for (si = 0; si < 2; si++)
+    {
+      GArray *bps = (sources[si] != NULL) ? nc_xcor_kernel_integrand_peek_breakpoints (sources[si]) : NULL;
+
+      if (bps == NULL)
+        continue;
+
+      for (i = 0; i < bps->len; i++)
+      {
+        const gdouble bp = g_array_index (bps, gdouble, i);
+
+        if ((bp > k_min) && (bp < k_max))
+          g_array_append_val (edges, bp);
+      }
+    }
+  }
+
+  if (edges->len == 0)
+  {
+    ncm_vector_set (lnk_lo, 0, log (k_min));
+    ncm_vector_set (lnk_hi, 0, log (k_max));
+    ncm_integral_nd_eval (xcor_int_nd, lnk_lo, lnk_hi, vp, err);
+  }
+  else
+  {
+    NcmVector *vp_piece  = ncm_vector_new (ncm_vector_len (vp));
+    NcmVector *err_piece = ncm_vector_new (ncm_vector_len (err));
+    gdouble lo           = k_min;
+
+    g_array_sort (edges, _nc_xcor_gdouble_cmp);
+    ncm_vector_set_zero (vp);
+    ncm_vector_set_zero (err);
+
+    for (i = 0; i <= edges->len; i++)
+    {
+      const gdouble hi = (i < edges->len) ? g_array_index (edges, gdouble, i) : k_max;
+
+      if (hi > lo)
+      {
+        ncm_vector_set (lnk_lo, 0, log (lo));
+        ncm_vector_set (lnk_hi, 0, log (hi));
+        ncm_integral_nd_eval (xcor_int_nd, lnk_lo, lnk_hi, vp_piece, err_piece);
+
+        ncm_vector_add (vp, vp_piece);
+        ncm_vector_add (err, err_piece);
+      }
+
+      lo = hi;
+    }
+
+    ncm_vector_free (vp_piece);
+    ncm_vector_free (err_piece);
+  }
+
+  ncm_vector_free (lnk_lo);
+  ncm_vector_free (lnk_hi);
+  g_array_unref (edges);
+}
+
 static void
 nc_xcor_kernel_auto_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 {
@@ -955,7 +1124,7 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
       ncm_vector_set (lnk_min, 0, log (k_min));
       ncm_vector_set (lnk_max, 0, log (k_max));
 
-      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
+      _nc_xcor_kernel_eval_split (xcor_int_nd, xcor_arg->xclki1, xcor_arg->xclki2, k_min, k_max, vp_i, err_i);
 
       /* Clean up batch resources */
       g_free (xcor_arg->W1);
@@ -989,7 +1158,7 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
       ncm_vector_set (lnk_min, 0, log (k_min));
       ncm_vector_set (lnk_max, 0, log (k_max));
 
-      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
+      _nc_xcor_kernel_eval_split (xcor_int_nd, xcor_arg->xclki1, xcor_arg->xclki2, k_min, k_max, vp_i, err_i);
 
       /* Clean up batch resources */
       g_free (xcor_arg->W1);
@@ -1051,7 +1220,7 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
       ncm_vector_set (lnk_min, 0, log (GSL_MAX (k_min, k2_min)));
       ncm_vector_set (lnk_max, 0, log (GSL_MIN (k_max, k2_max)));
 
-      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
+      _nc_xcor_kernel_eval_split (xcor_int_nd, xcor_arg->xclki1, xcor_arg->xclki2, k_min, k_max, vp_i, err_i);
 
       /* Clean up batch resources */
       g_free (xcor_arg->W1);
@@ -1092,7 +1261,7 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
       ncm_vector_set (lnk_min, 0, log (GSL_MAX (k_min, k2_min)));
       ncm_vector_set (lnk_max, 0, log (GSL_MIN (k_max, k2_max)));
 
-      ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp_i, err_i);
+      _nc_xcor_kernel_eval_split (xcor_int_nd, xcor_arg->xclki1, xcor_arg->xclki2, k_min, k_max, vp_i, err_i);
 
       /* Clean up batch resources */
       g_free (xcor_arg->W1);
@@ -1196,7 +1365,7 @@ _nc_xcor_kernel_integrate_block_cubature (NcXcor *xc, NcXcorKernelIntegrand *xcl
     ncm_integral_nd_set_abstol (xcor_int_nd, 0.0);
     ncm_integral_nd_set_method (xcor_int_nd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
 
-    ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp, err);
+    _nc_xcor_kernel_eval_split (xcor_int_nd, xclki1, isauto ? NULL : xclki2, k_min, k_max, vp, err);
 
     g_free (xcor_arg->W1);
     g_object_unref (xcor_kernel_auto);
@@ -1220,7 +1389,7 @@ _nc_xcor_kernel_integrate_block_cubature (NcXcor *xc, NcXcorKernelIntegrand *xcl
     ncm_integral_nd_set_abstol (xcor_int_nd, 0.0);
     ncm_integral_nd_set_method (xcor_int_nd, NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
 
-    ncm_integral_nd_eval (xcor_int_nd, lnk_min, lnk_max, vp, err);
+    _nc_xcor_kernel_eval_split (xcor_int_nd, xclki1, isauto ? NULL : xclki2, k_min, k_max, vp, err);
 
     g_free (xcor_arg->W1);
     g_free (xcor_arg->W2);

@@ -799,6 +799,26 @@ _component_states_compute_k_seeds (ComponentStates *comp_states, GArray *k_seeds
 
 #define DECAY_RATE 1.0e10
 
+/* exp (-x^2) is still a normal double at x = 26 (~1e-294) and subnormal beyond,
+ * where its relative error -- and even its sign -- is meaningless. With
+ * DECAY_RATE = 1e10 the cutoff is reached within delta_k/k ~ 1e-9, so every
+ * evaluation past this point is noise standing in for zero; return zero
+ * instead. Feeding that noise to the outer quadrature is fatal, because a
+ * relative tolerance on a component whose true value is zero can never be met.
+ */
+#define DECAY_ARG_MAX 26.0
+
+static inline gdouble
+_nc_xcor_kernel_edge_decay (const gdouble delta_k, const gdouble k_edge)
+{
+  const gdouble arg = DECAY_RATE * delta_k / k_edge;
+
+  if (arg >= DECAY_ARG_MAX)
+    return 0.0;
+
+  return exp (-gsl_pow_2 (arg));
+}
+
 static void
 _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer user_data)
 {
@@ -968,18 +988,16 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
         if (k < state->k_min_limber_ell[i])
         {
           /* Left extrapolation */
-          const gdouble delta_k    = state->k_min_limber_ell[i] - k;
-          const gdouble decay_rate = DECAY_RATE;
-          const gdouble decay      = exp (-gsl_pow_2 (decay_rate * delta_k / state->k_min_limber_ell[i]));
+          const gdouble delta_k = state->k_min_limber_ell[i] - k;
+          const gdouble decay   = _nc_xcor_kernel_edge_decay (delta_k, state->k_min_limber_ell[i]);
 
           kernel_out[ci][i] = state->last_values_left[i] * decay;
         }
         else /* k > state->k_max_limber_ell[i] */
         {
           /* Right extrapolation */
-          const gdouble delta_k    = k - state->k_max_limber_ell[i];
-          const gdouble decay_rate = DECAY_RATE;
-          const gdouble decay      = exp (-gsl_pow_2 (decay_rate * delta_k / state->k_max_limber_ell[i]));
+          const gdouble delta_k = k - state->k_max_limber_ell[i];
+          const gdouble decay   = _nc_xcor_kernel_edge_decay (delta_k, state->k_max_limber_ell[i]);
 
           kernel_out[ci][i] = state->last_values_right[i] * decay;
         }
@@ -1020,6 +1038,7 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
     NcmFunctionSampleSet *fss = ncm_function_sample_set_new (n_l);
     NcmSpline *spline         = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
     GArray *k_seeds           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    gdouble absmax;
     guint i;
 
     /* Compute k-seeds for initial sampling. Local to the call, not kernel
@@ -1063,6 +1082,7 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
       );
     }
 
+    absmax           = ncm_function_sample_set_get_absmaxF_linf_norm (fss);
     sid->spline_vec  = ncm_function_sample_set_to_spline_vec (fss, spline);
     sid->k_min       = ncm_function_sample_set_get_x_min (fss);
     sid->k_max       = ncm_function_sample_set_get_x_max (fss);
@@ -1075,12 +1095,104 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
     ncm_function_sample_set_clear (&fss);
     ncm_spline_free (spline);
 
-    return nc_xcor_kernel_integrand_new (n_l,
-                                         _spline_integrand_eval,
-                                         _spline_integrand_get_range,
-                                         sid,
-                                         _spline_integrand_data_free);
+    {
+      NcXcorKernelIntegrand *integrand = nc_xcor_kernel_integrand_new (n_l,
+                                                                       _spline_integrand_eval,
+                                                                       _spline_integrand_get_range,
+                                                                       sid,
+                                                                       _spline_integrand_data_free);
+
+      integrand->absmax = absmax;
+
+      return integrand;
+    }
   }
+}
+
+/* A boundary counts as a discontinuity only when the kernel does not vanish
+ * there. A weak-lensing efficiency goes to zero at its support edge, so its
+ * boundary values are ~1e-25 of the kernel scale and the Limber integrand is
+ * continuous; the ISW kernel is still at its plateau when the integration is
+ * truncated at recombination, so its edge is a genuine step. Twenty orders of
+ * magnitude separate the two, so this threshold needs no tuning. */
+#define NC_XCOR_KERNEL_BREAKPOINT_REL 1.0e-10
+
+static gint
+_nc_xcor_kernel_gdouble_cmp (gconstpointer a, gconstpointer b)
+{
+  const gdouble da = *(const gdouble *) a;
+  const gdouble db = *(const gdouble *) b;
+
+  return (da > db) - (da < db);
+}
+
+/*
+ * Collects the k values at which the Limber integrand steps, so the outer
+ * integral can be split there instead of asking a p-adaptive cubature to fit a
+ * discontinuity with a global polynomial.
+ */
+static GArray *
+_component_states_collect_breakpoints (ComponentStates *comp_states)
+{
+  GArray *breakpoints = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gdouble scale       = 0.0;
+  guint ci, j;
+
+  for (ci = 0; ci < comp_states->n_comp; ci++)
+  {
+    ComponentState *state = &comp_states->states[ci];
+
+    for (j = 0; j < comp_states->n_l; j++)
+    {
+      scale = GSL_MAX (scale, fabs (state->last_values_left[j]));
+      scale = GSL_MAX (scale, fabs (state->last_values_right[j]));
+    }
+  }
+
+  if (scale > 0.0)
+  {
+    const gdouble floor_val = NC_XCOR_KERNEL_BREAKPOINT_REL * scale;
+
+    for (ci = 0; ci < comp_states->n_comp; ci++)
+    {
+      ComponentState *state = &comp_states->states[ci];
+
+      for (j = 0; j < comp_states->n_l; j++)
+      {
+        if (fabs (state->last_values_left[j]) > floor_val)
+          g_array_append_val (breakpoints, state->k_min_limber_ell[j]);
+
+        if (fabs (state->last_values_right[j]) > floor_val)
+          g_array_append_val (breakpoints, state->k_max_limber_ell[j]);
+      }
+    }
+  }
+
+  g_array_sort (breakpoints, _nc_xcor_kernel_gdouble_cmp);
+
+  {
+    guint i = 1;
+
+    while (i < breakpoints->len)
+    {
+      const gdouble prev = g_array_index (breakpoints, gdouble, i - 1);
+      const gdouble cur  = g_array_index (breakpoints, gdouble, i);
+
+      if (cur == prev)
+        g_array_remove_index (breakpoints, i);
+      else
+        i++;
+    }
+  }
+
+  if (breakpoints->len == 0)
+  {
+    g_array_unref (breakpoints);
+
+    return NULL;
+  }
+
+  return breakpoints;
 }
 
 static NcXcorKernelIntegrand *
@@ -1097,12 +1209,19 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
   {
     ComponentStates comp_states = _component_states_init_limber (xclk, lmin, n_l, comp_list, cosmo);
 
+    NcXcorKernelIntegrand *integrand;
+
     g_ptr_array_unref (comp_list);
 
-    return _nc_xcor_kernel_build_spline_integrand (xclk, cosmo, lmin, lmax,
-                                                   &comp_states,
-                                                   _component_states_compute_limber,
-                                                   self->reltol, self->scaled_abstol);
+    integrand = _nc_xcor_kernel_build_spline_integrand (xclk, cosmo, lmin, lmax,
+                                                        &comp_states,
+                                                        _component_states_compute_limber,
+                                                        self->reltol, self->scaled_abstol);
+
+    if (integrand != NULL)
+      integrand->breakpoints = _component_states_collect_breakpoints (&comp_states);
+
+    return integrand;
   }
 }
 
@@ -1217,6 +1336,43 @@ nc_xcor_kinetic_free (NcXcorKinetic *xck)
 }
 
 /**
+ * nc_xcor_kernel_integrand_peek_breakpoints:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * The k values at which this integrand is discontinuous, ascending and unique.
+ * The outer integral must be split there: they are the multipole-dependent
+ * edges of the Limber validity range, and a spectral quadrature cannot fit a
+ * step across them.
+ *
+ * Returns: (transfer none) (element-type gdouble) (nullable): the breakpoints,
+ * or %NULL when the integrand is smooth over its whole range.
+ */
+GArray *
+nc_xcor_kernel_integrand_peek_breakpoints (NcXcorKernelIntegrand *integrand)
+{
+  g_return_val_if_fail (integrand != NULL, NULL);
+
+  return integrand->breakpoints;
+}
+
+/**
+ * nc_xcor_kernel_integrand_get_absmax:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * The largest |W| seen while fitting @integrand, across every component and
+ * sample. Callers use it to convert a relative tolerance into an absolute one.
+ *
+ * Returns: the largest absolute integrand value, or 0.0 if unknown.
+ */
+gdouble
+nc_xcor_kernel_integrand_get_absmax (NcXcorKernelIntegrand *integrand)
+{
+  g_return_val_if_fail (integrand != NULL, 0.0);
+
+  return integrand->absmax;
+}
+
+/**
  * nc_xcor_kernel_integrand_new:
  * @len: number of components in the integrand
  * @eval: (scope async): function to evaluate the integrand
@@ -1239,6 +1395,8 @@ nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdoubl
   integrand->get_range_func = get_range;
   integrand->data           = data;
   integrand->data_free      = data_free;
+  integrand->breakpoints    = NULL;
+  integrand->absmax         = 0.0;
 
   return integrand;
 }
@@ -1275,6 +1433,9 @@ nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand)
   {
     if (integrand->data_free != NULL)
       integrand->data_free (integrand->data);
+
+    if (integrand->breakpoints != NULL)
+      g_array_unref (integrand->breakpoints);
 
     g_free (integrand);
   }

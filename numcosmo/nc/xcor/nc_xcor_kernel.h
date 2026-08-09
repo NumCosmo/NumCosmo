@@ -110,6 +110,19 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandGetRange get_range_func;
   gpointer data;
   GDestroyNotify data_free;
+
+  /* Ascending, unique k values where the integrand is discontinuous, or NULL
+   * when it is smooth throughout. Limber evaluates the line-of-sight integral
+   * at the single point xi = (l + 1/2) / k, so a kernel whose support ends at
+   * xi_max with a non-vanishing value turns that edge into a step in k at
+   * (l + 1/2) / xi_max, one per multipole. */
+  GArray *breakpoints;
+
+  /* Largest |W| seen while fitting this integrand, over every component and
+   * sample. The outer k-integral uses it to size an absolute floor, because a
+   * purely relative criterion is unsatisfiable on a sub-interval where a
+   * component contributes nothing. */
+  gdouble absmax;
 };
 
 struct _NcXcorKernelClass
@@ -221,6 +234,8 @@ void nc_xcor_kernel_log_all_models (void);
 
 GType nc_xcor_kernel_integrand_get_type (void) G_GNUC_CONST;
 
+GArray *nc_xcor_kernel_integrand_peek_breakpoints (NcXcorKernelIntegrand *integrand);
+gdouble nc_xcor_kernel_integrand_get_absmax (NcXcorKernelIntegrand *integrand);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_new (guint len, NcXcorKernelIntegrandEval eval, NcXcorKernelIntegrandGetRange get_range, gpointer data, GDestroyNotify data_free);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand);
