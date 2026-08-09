@@ -361,6 +361,54 @@ class ViewKernel:
         ),
     ] = True
 
+    l_limber: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "Limber threshold for the primary evaluation "
+                "(-1: never [true non-Limber], 0: always [kernel-Limber], "
+                "N>0: Limber for ell>=N). See dev-notes/"
+                "xcor_ultralevin_batching_plan.md for tier semantics."
+            ),
+            show_default=True,
+        ),
+    ] = -1
+
+    integrator_reltol: Annotated[
+        Optional[float],
+        typer.Option(
+            help=(
+                "NcmSBesselIntegratorLevin relative tolerance "
+                "(library default: 1e-13, near machine precision). "
+                "This is the dominant cost/precision knob for tier 3 -- "
+                "see dev-notes/xcor_ultralevin_batching_plan.md sec 9.4. "
+                "Leave unset to keep the library default."
+            ),
+        ),
+    ] = None
+
+    integrator_cheb_reltol: Annotated[
+        Optional[float],
+        typer.Option(
+            help=(
+                "NcmSBesselIntegratorLevin Chebyshev-fit relative tolerance "
+                "(library default: 1e-8). Leave unset to keep the library "
+                "default."
+            ),
+        ),
+    ] = None
+
+    integrator_max_order: Annotated[
+        Optional[int],
+        typer.Option(
+            help=(
+                "NcmSBesselIntegratorLevin maximum spectral order "
+                "(library default: 16384). Leave unset to keep the library "
+                "default."
+            ),
+        ),
+    ] = None
+
     def __post_init__(self) -> None:
         """Execute the kernel view command.
 
@@ -392,7 +440,17 @@ class ViewKernel:
         # Create integrator (matching fixtures pattern)
         print("Creating integrator...")
         self.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
-        print("  ✓ Levin integrator created")
+        if self.integrator_reltol is not None:
+            self.integrator.set_reltol(self.integrator_reltol)
+        if self.integrator_cheb_reltol is not None:
+            self.integrator.set_cheb_reltol(self.integrator_cheb_reltol)
+        if self.integrator_max_order is not None:
+            self.integrator.set_max_order(self.integrator_max_order)
+        print(
+            f"  ✓ Levin integrator created (reltol={self.integrator.get_reltol():.1e}, "
+            f"cheb_reltol={self.integrator.get_cheb_reltol():.1e}, "
+            f"max_order={self.integrator.get_max_order()})"
+        )
         print()
 
         print("Parsing kernel specification...")
@@ -664,13 +722,21 @@ class ViewKernel:
             print(f"Evaluating kernels at ell = {self.ell}...")
 
         RH_Mpc = self.cosmo.RH_Mpc()
-        # Default: always use non-Limber for primary evaluation
-        kernel_obj.set_l_limber(-1)
+        kernel_obj.set_l_limber(self.l_limber)
         eval_kernel = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
 
+        primary_method = (
+            "Non-Limber"
+            if self.l_limber < 0
+            else (
+                "Kernel-Limber"
+                if self.l_limber == 0
+                else f"Limber(ell>={self.l_limber})"
+            )
+        )
         kernel_eval = KernelEvaluation(
             name=kernel_label,
-            method="Non-Limber",
+            method=primary_method,
             kernel=kernel_obj,
             evaluator=eval_kernel,
             RH_Mpc=RH_Mpc,

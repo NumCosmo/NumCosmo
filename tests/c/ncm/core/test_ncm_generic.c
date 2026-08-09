@@ -93,6 +93,7 @@ void test_nc_cluster_mass_ascaso_basic (void);
 void test_nc_cluster_mass_selection_basic (void);
 void test_nc_cluster_photoz_gauss_basic (void);
 void test_nc_xcor_basic (void);
+void test_nc_xcor_solver_basic (void);
 
 void test_nc_galaxy_position_factor_flat_basic (void);
 void test_nc_galaxy_redshift_factor_composed_basic (void);
@@ -179,6 +180,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/cluster_photoz_gauss/basic", test_nc_cluster_photoz_gauss_basic);
 
   g_test_add_func ("/nc/xcor/basic", test_nc_xcor_basic);
+  g_test_add_func ("/nc/xcor/solver/basic", test_nc_xcor_solver_basic);
 
   g_test_add_func ("/nc/galaxy/position_factor_flat/basic", test_nc_galaxy_position_factor_flat_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_composed/basic", test_nc_galaxy_redshift_factor_composed_basic);
@@ -1145,6 +1147,28 @@ test_nc_xcor_basic (void)
   nc_distance_clear (&dist);
 
   NCM_TEST_FREE (nc_xcor_free, xc);
+}
+
+void
+test_nc_xcor_solver_basic (void)
+{
+  NcXcorSolver *solver = nc_xcor_solver_new ();
+  NcXcorSolver *solver2;
+
+  g_assert_true (solver != NULL);
+  g_assert_true (NC_IS_XCOR_SOLVER (solver));
+
+  solver2 = nc_xcor_solver_ref (solver);
+  nc_xcor_solver_clear (&solver2);
+  g_assert_true (solver2 == NULL);
+
+  g_assert_true (NC_IS_XCOR_SOLVER (solver));
+
+  g_assert_cmpuint (nc_xcor_solver_get_n_kernels (solver), ==, 0);
+  g_assert_cmpuint (nc_xcor_solver_get_n_requests (solver), ==, 0);
+  g_assert_null (nc_xcor_solver_peek_block_integrator (solver, 0));
+
+  NCM_TEST_FREE (nc_xcor_solver_free, solver);
 }
 
 void

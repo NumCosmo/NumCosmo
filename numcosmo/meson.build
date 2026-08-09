@@ -322,6 +322,7 @@ ncm_headers_internal = files(
     'ncm/stats/ncm_stats_dist_private.h',
     'ncm/stats/ncm_stats_dist_vkde_private.h',
     'nc/perturbations/nc_hipert_private.h',
+    'nc/xcor/nc_xcor_priv.h',
 )
 
 nc_headers = files(
@@ -491,6 +492,7 @@ nc_headers = files(
     'nc/perturbations/nc_hipert_two_fluids.h',
     'nc/xcor/nc_xcor.h',
     'nc/xcor/nc_xcor_AB.h',
+    'nc/xcor/nc_xcor_solver.h',
     'nc/xcor/nc_xcor_kernel.h',
     'nc/xcor/nc_xcor_kernel_component.h',
     'nc/xcor/nc_xcor_kernel_cmb_isw.h',
@@ -694,6 +696,7 @@ nc_sources = files(
     'nc/perturbations/nc_hipert_two_fluids.c',
     'nc/xcor/nc_xcor.c',
     'nc/xcor/nc_xcor_AB.c',
+    'nc/xcor/nc_xcor_solver.c',
     'nc/xcor/nc_xcor_kernel.c',
     'nc/xcor/nc_xcor_kernel_component.c',
     'nc/xcor/nc_xcor_kernel_cmb_isw.c',

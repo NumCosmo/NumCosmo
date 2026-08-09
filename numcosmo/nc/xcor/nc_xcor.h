@@ -73,6 +73,8 @@ NcXcor *nc_xcor_ref (NcXcor *xc);
 void nc_xcor_free (NcXcor *xc);
 void nc_xcor_clear (NcXcor **xc);
 
+NcXcorMethod nc_xcor_get_meth (NcXcor *xc);
+
 void nc_xcor_set_reltol (NcXcor *xc, const gdouble reltol);
 gdouble nc_xcor_get_reltol (NcXcor *xc);
 

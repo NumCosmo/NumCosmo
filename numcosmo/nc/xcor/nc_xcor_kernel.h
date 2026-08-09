@@ -50,6 +50,18 @@ G_BEGIN_DECLS
 #define NC_TYPE_XCOR_KERNEL (nc_xcor_kernel_get_type ())
 #define NC_TYPE_XCOR_KERNEL_INTEGRAND (nc_xcor_kernel_integrand_get_type ())
 
+/**
+ * NC_XCOR_KERNEL_MAX_ELL_BLOCK:
+ *
+ * Hard cap on the number of multipoles in a single get_eval_vectorized()
+ * call: #NcXcorKernel's internal per-block state uses fixed-size stack
+ * arrays sized by this constant (not just the Levin integrator's own,
+ * larger ell_cache_max). Exceeding it is a fatal, non-catchable g_error.
+ * Public so callers planning ℓ-block tilings (e.g. #NcXcorSolver) can
+ * respect it without duplicating the number.
+ */
+#define NC_XCOR_KERNEL_MAX_ELL_BLOCK 64
+
 G_DECLARE_DERIVABLE_TYPE (NcXcorKernel, nc_xcor_kernel, NC, XCOR_KERNEL, NcmModel);
 
 typedef struct _NcXcorKinetic NcXcorKinetic;
@@ -194,6 +206,7 @@ void nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zma
 void nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
 NcXcorKernelIntegrand *nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 NcXcorKernelIntegrand *nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax);
+NcXcorKernelIntegrand *nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi);
 
 gdouble nc_xcor_kernel_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 gdouble nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
