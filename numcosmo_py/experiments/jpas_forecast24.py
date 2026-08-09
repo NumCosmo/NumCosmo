@@ -55,6 +55,13 @@ class JpasSSCType(StrEnum):
     """No Super Sample Covariance is included in the covariance matrix."""
     FULLSKY = auto()
     """Uses a full-sky approximation for the SSC matrix $S_{ij}$."""
+    FULLSKY_FSKY = auto()
+    """Uses a full-sky $S_{ij}$ approximation corrected by the requested survey area.
+
+    This implements the same full-sky kernel integration as `FULLSKY`, but rescales the
+    resulting matrix by an area-driven $f_{\rm sky}$ correction factor to mimic the
+    enhancement expected in a finite footprint.
+    """
     FULL = auto()
     """Uses the HEALPix mask for the full J-PAS sky coverage for SSC."""
     GUARANTEED = auto()
@@ -148,10 +155,10 @@ def create_lnM_obs_bins(
     lnM_obs_max: float = np.log(10.0) * 15.0,
     nknots: int = 2,
 ) -> np.ndarray:
-    """Create the log-observable mass bins for the J-Pas 2024 forecast.
+    r"""Create the log-observable mass bins for the J-Pas 2024 forecast.
 
     The mass variable is typically $ln M$ (log-base-e of $M_{200c}$) in units of
-    $h^{-1} M_\\odot$. These bins are defined in terms of the observed proxy (e.g.,
+    $h^{-1} M_\odot$. These bins are defined in terms of the observed proxy (e.g.,
     richness).
 
     :param lnM_obs_min: Minimum log-mass-observable knot boundary.
@@ -165,7 +172,7 @@ def create_lnM_obs_bins(
 
 
 def survey_area(sky_cut: JpasSSCType) -> float:
-    """Survey area in square degrees ($\text{sqd}$) for the J-Pas 2024 forecast.
+    r"""Survey area in square degrees ($\text{sqd}$) for the J-Pas 2024 forecast.
 
     :param sky_cut: The type of sky coverage assumed.
     :raises ValueError: If the sky cut type is not FULLSKY or a masked type.
@@ -427,6 +434,46 @@ def create_covariance_S_fullsky(
     return S_fullsky
 
 
+def create_covariance_S_fullsky_fsky(
+    kernel_z: np.ndarray,
+    kernels_T: np.ndarray,
+    cosmo: Nc.HICosmo,
+    area: float,
+) -> Ncm.Matrix:
+    r"""Create a full-sky covariance matrix with an $f_{\rm sky}$ correction.
+
+    The base computation is the same isotropic `PySSC.Sij` template as
+    `create_covariance_S_fullsky()`, but the returned matrix is rescaled by the
+    finite-area factor
+
+        $f_{\rm sky}^{-2} = (4\pi / \Omega) $
+
+    with `area` expressed in square degrees and stored in a solid angle `Omega`.
+
+    :param kernel_z: Redshift values for kernel evaluation.
+    :param kernels_T: The kernel matrix $T_i(z)$.
+    :param cosmo: The fiducial cosmology model.
+    :param area: Survey area in square degrees used for the $f_{\rm sky}$ correction.
+    :return: The area-corrected $S_{ij}$ matrix as a NumCosmo.Matrix object.
+    """
+    sqd_fullsky = 4.0 * np.pi * (180.0 / np.pi) ** 2
+    if not 0.0 < area < sqd_fullsky:
+        raise ValueError(
+            f"Fullsky-fsky area must lie in (0, {sqd_fullsky:.1f}) sq. degrees, got {area}."
+        )
+
+    S_fullsky_array = PySSC.Sij(kernel_z, kernels_T, cosmo)
+    omega = area * (np.pi / 180.0) ** 2
+    fsky2 = omega / (4.0 * np.pi)
+    S_fullsky_fsky_array = S_fullsky_array / fsky2
+
+    S_fullsky_fsky = Ncm.Matrix.new_array(
+        S_fullsky_fsky_array.flatten(), S_fullsky_fsky_array.shape[1]
+    )
+
+    return S_fullsky_fsky
+
+
 def create_covariance_S_cap(
     kernel_z: np.ndarray, kernels_T: np.ndarray, cosmo: Nc.HICosmo, area: float
 ) -> Ncm.Matrix:
@@ -516,6 +563,12 @@ def create_covariance_S(
     """
     if sky_cut == JpasSSCType.FULLSKY:
         S = create_covariance_S_fullsky(kernel_z, kernels_T, cosmo)
+    elif sky_cut == JpasSSCType.FULLSKY_FSKY:
+        if area is None:
+            raise ValueError(
+                "Sij calculation for a full-sky fsky correction requires an area."
+            )
+        S = create_covariance_S_fullsky_fsky(kernel_z, kernels_T, cosmo, area)
     elif sky_cut == JpasSSCType.FULL:
         S = create_covariance_S_full(kernel_z, kernels_T, cosmo)
     elif sky_cut == JpasSSCType.GUARANTEED:
