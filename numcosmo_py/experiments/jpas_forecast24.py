@@ -55,10 +55,24 @@ class JpasSSCType(StrEnum):
     """No Super Sample Covariance is included in the covariance matrix."""
     FULLSKY = auto()
     """Uses a full-sky approximation for the SSC matrix $S_{ij}$."""
+    FULLSKY_FSKY = auto()
+    """Uses a full-sky $S_{ij}$ approximation corrected by the requested survey area.
+
+    This implements the same full-sky kernel integration as `FULLSKY`, but rescales the
+    resulting matrix by an area-driven $f_{\rm sky}$ correction factor to mimic the
+    enhancement expected in a finite footprint.
+    """
     FULL = auto()
     """Uses the HEALPix mask for the full J-PAS sky coverage for SSC."""
     GUARANTEED = auto()
     """Uses the HEALPix mask for the guaranteed J-PAS sky coverage for SSC."""
+    CAP = auto()
+    """Uses a circular cap of the requested survey area for SSC.
+
+    Unlike FULLSKY, which is area independent, this option builds the $S_{ij}$ matrix
+    from a compact footprint whose solid angle matches the survey area, and therefore
+    captures the enhancement of the super-survey variance in a finite footprint.
+    """
 
 
 class ClusterMassType(StrEnum):
@@ -141,10 +155,10 @@ def create_lnM_obs_bins(
     lnM_obs_max: float = np.log(10.0) * 15.0,
     nknots: int = 2,
 ) -> np.ndarray:
-    """Create the log-observable mass bins for the J-Pas 2024 forecast.
+    r"""Create the log-observable mass bins for the J-Pas 2024 forecast.
 
     The mass variable is typically $ln M$ (log-base-e of $M_{200c}$) in units of
-    $h^{-1} M_\\odot$. These bins are defined in terms of the observed proxy (e.g.,
+    $h^{-1} M_\odot$. These bins are defined in terms of the observed proxy (e.g.,
     richness).
 
     :param lnM_obs_min: Minimum log-mass-observable knot boundary.
@@ -158,7 +172,7 @@ def create_lnM_obs_bins(
 
 
 def survey_area(sky_cut: JpasSSCType) -> float:
-    """Survey area in square degrees ($\text{sqd}$) for the J-Pas 2024 forecast.
+    r"""Survey area in square degrees ($\text{sqd}$) for the J-Pas 2024 forecast.
 
     :param sky_cut: The type of sky coverage assumed.
     :raises ValueError: If the sky cut type is not FULLSKY or a masked type.
@@ -178,6 +192,35 @@ def survey_area(sky_cut: JpasSSCType) -> float:
             raise ValueError(f"Invalid sky cut type for area calculation: {sky_cut}")
 
     return survey_area0
+
+
+def create_mask_cap(area: float, nside: int = 512) -> np.ndarray:
+    """Create the HEALPix mask for a circular cap of the requested area.
+
+    The cap is centred on the north pole; since the $S_{ij}$ matrix depends on the mask
+    only through its angular power spectrum, its position on the sphere is irrelevant.
+
+    :param area: The solid angle of the cap in square degrees.
+    :param nside: The HEALPix resolution parameter.
+    :return: A numpy array representing the pixel mask (1=in survey, 0=out).
+    """
+    sqd_fullsky = 4.0 * np.pi * (180.0 / np.pi) ** 2
+    if not 0.0 < area < sqd_fullsky:
+        raise ValueError(
+            f"Cap area must lie in (0, {sqd_fullsky:.1f}) sq. degrees, got {area}."
+        )
+
+    # Solid angle of a cap of half-angle theta_c is 2 pi (1 - cos theta_c)
+    cos_theta_c = 1.0 - 2.0 * area / sqd_fullsky
+
+    smap = Ncm.SphereMap.new(nside)
+    npix = smap.get_npix()
+    angles = np.array([smap.pix2ang_ring(i) for i in range(npix)])
+
+    mask_cap = np.zeros(npix)
+    mask_cap[np.cos(angles[:, 0]) >= cos_theta_c] = 1.0
+
+    return mask_cap
 
 
 def create_mask_guaranteed(nside: int = 512) -> np.ndarray:
@@ -391,6 +434,68 @@ def create_covariance_S_fullsky(
     return S_fullsky
 
 
+def create_covariance_S_fullsky_fsky(
+    kernel_z: np.ndarray,
+    kernels_T: np.ndarray,
+    cosmo: Nc.HICosmo,
+    area: float,
+) -> Ncm.Matrix:
+    r"""Create a full-sky covariance matrix with an $f_{\rm sky}$ correction.
+
+    The base computation is the same isotropic `PySSC.Sij` template as
+    `create_covariance_S_fullsky()`, but the returned matrix is rescaled by the
+    finite-area factor
+
+        $f_{\rm sky}^{-2} = (4\pi / \Omega) $
+
+    with `area` expressed in square degrees and stored in a solid angle `Omega`.
+
+    :param kernel_z: Redshift values for kernel evaluation.
+    :param kernels_T: The kernel matrix $T_i(z)$.
+    :param cosmo: The fiducial cosmology model.
+    :param area: Survey area in square degrees used for the $f_{\rm sky}$ correction.
+    :return: The area-corrected $S_{ij}$ matrix as a NumCosmo.Matrix object.
+    """
+    sqd_fullsky = 4.0 * np.pi * (180.0 / np.pi) ** 2
+    if not 0.0 < area < sqd_fullsky:
+        raise ValueError(
+            f"Fullsky-fsky area must lie in (0, {sqd_fullsky:.1f}) sq. degrees, got {area}."
+        )
+
+    S_fullsky_array = PySSC.Sij(kernel_z, kernels_T, cosmo)
+    omega = area * (np.pi / 180.0) ** 2
+    fsky2 = omega / (4.0 * np.pi)
+    S_fullsky_fsky_array = S_fullsky_array / fsky2
+
+    S_fullsky_fsky = Ncm.Matrix.new_array(
+        S_fullsky_fsky_array.flatten(), S_fullsky_fsky_array.shape[1]
+    )
+
+    return S_fullsky_fsky
+
+
+def create_covariance_S_cap(
+    kernel_z: np.ndarray, kernels_T: np.ndarray, cosmo: Nc.HICosmo, area: float
+) -> Ncm.Matrix:
+    """Create the base SSC covariance matrix $S_{ij}$ for a circular cap footprint.
+
+    Uses the PySSC function $text{Sij_psky}$ with a cap mask of the requested area.
+
+    :param kernel_z: Redshift values for kernel evaluation.
+    :param kernels_T: The kernel matrix $T_i(z)$.
+    :param cosmo: The fiducial cosmology model.
+    :param area: The solid angle of the cap in square degrees.
+    :return: The $S_{ij}$ matrix (NumCosmo.Matrix).
+    """
+    mask = create_mask_cap(area)
+
+    S_cap_array = PySSC.Sij_psky(kernel_z, kernels_T, cosmo, mask=mask)
+
+    S_cap = Ncm.Matrix.new_array(S_cap_array.flatten(), S_cap_array.shape[1])
+
+    return S_cap
+
+
 def create_covariance_S_guaranteed(
     kernel_z: np.ndarray, kernels_T: np.ndarray, cosmo: Nc.HICosmo
 ) -> Ncm.Matrix:
@@ -440,6 +545,7 @@ def create_covariance_S(
     kernels_T: np.ndarray,
     sky_cut: JpasSSCType,
     cosmo: Nc.HICosmo,
+    area: float | None = None,
 ) -> Ncm.Matrix:
     """Create the base SSC covariance matrix $S_{ij}$ based on the sky cut type.
 
@@ -449,15 +555,28 @@ def create_covariance_S(
     :param kernels_T: The kernel matrix $T_i(z)$.
     :param sky_cut: The type of sky coverage to use for $S_{ij}$ calculation.
     :param cosmo: The fiducial cosmology model.
-    :raises ValueError: If the sky cut type is invalid (e.g., NO_SSC is passed).
+    :param area: The survey area in square degrees, required by CAP and ignored by the
+        remaining sky cut types, whose footprints are fixed.
+    :raises ValueError: If the sky cut type is invalid (e.g., NO_SSC is passed), or if
+        CAP is requested without an area.
     :return: The $S_{ij}$ matrix (NumCosmo.Matrix).
     """
     if sky_cut == JpasSSCType.FULLSKY:
         S = create_covariance_S_fullsky(kernel_z, kernels_T, cosmo)
+    elif sky_cut == JpasSSCType.FULLSKY_FSKY:
+        if area is None:
+            raise ValueError(
+                "Sij calculation for a full-sky fsky correction requires an area."
+            )
+        S = create_covariance_S_fullsky_fsky(kernel_z, kernels_T, cosmo, area)
     elif sky_cut == JpasSSCType.FULL:
         S = create_covariance_S_full(kernel_z, kernels_T, cosmo)
     elif sky_cut == JpasSSCType.GUARANTEED:
         S = create_covariance_S_guaranteed(kernel_z, kernels_T, cosmo)
+    elif sky_cut == JpasSSCType.CAP:
+        if area is None:
+            raise ValueError("Sij calculation for a cap footprint requires an area.")
+        S = create_covariance_S_cap(kernel_z, kernels_T, cosmo, area)
     else:
         raise ValueError(f"Invalid sky cut type for Sij calculation: {sky_cut}")
 
@@ -700,7 +819,9 @@ def generate_jpas_forecast_2024(
         print(f"Computing fitting SSC matrix ({fitting_Sij_type})...", flush=True)
         t_fit_ssc_start = time.time()
         _set_mset_params(mset, fitting_model)
-        fitting_S_ij = create_covariance_S(kernel_z, kernels_T, fitting_Sij_type, cosmo)
+        fitting_S_ij = create_covariance_S(
+            kernel_z, kernels_T, fitting_Sij_type, cosmo, area=area
+        )
         ncounts_gauss.set_s_matrix(fitting_S_ij)
         print(f"Fitting SSC matrix computed in {time.time() - t_fit_ssc_start:.2f}s")
 
@@ -710,7 +831,7 @@ def generate_jpas_forecast_2024(
         t_resamp_ssc_start = time.time()
         _set_mset_params(mset, resample_model)
         resample_S_ij = create_covariance_S(
-            kernel_z, kernels_T, resample_Sij_type, cosmo
+            kernel_z, kernels_T, resample_Sij_type, cosmo, area=area
         )
         ncounts_gauss.set_resample_s_matrix(resample_S_ij)
         print(
