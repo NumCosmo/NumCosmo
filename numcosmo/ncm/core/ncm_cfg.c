@@ -254,6 +254,7 @@
 #include "nc/xcor/nc_xcor_kernel_gal.h"
 #include "nc/xcor/nc_xcor_kernel_cluster.h"
 #include "nc/xcor/nc_xcor_kernel_cluster_tophat.h"
+#include "nc/xcor/nc_xcor_kernel_cmb_isw.h"
 #include "nc/xcor/nc_xcor_kernel_CMB_lensing.h"
 #include "nc/xcor/nc_xcor_kernel_weak_lensing.h"
 #include "nc/xcor/nc_xcor_kernel_tSZ.h"
@@ -919,6 +920,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER_TOPHAT);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_TSZ);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CMB_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CMB_ISW);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
