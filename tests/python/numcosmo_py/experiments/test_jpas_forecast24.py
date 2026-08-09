@@ -47,8 +47,10 @@ class TestEnums:
         """Test JpasSSCType enum values."""
         assert jpas.JpasSSCType.NO_SSC == "no_ssc"
         assert jpas.JpasSSCType.FULLSKY == "fullsky"
+        assert jpas.JpasSSCType.FULLSKY_FSKY == "fullsky_fsky"
         assert jpas.JpasSSCType.FULL == "full"
         assert jpas.JpasSSCType.GUARANTEED == "guaranteed"
+        assert jpas.JpasSSCType.CAP == "cap"
 
     def test_cluster_mass_type_values(self):
         """Test ClusterMassType enum values."""
@@ -151,6 +153,24 @@ class TestSurveyArea:
 
 class TestMasks:
     """Test HEALPix mask creation."""
+
+    def test_create_mask_cap(self):
+        """Test cap-mask creation for the CAP footprint path."""
+        area = 100.0
+        mask = jpas.create_mask_cap(area, nside=16)
+
+        assert len(mask) == 12 * 16 * 16
+        assert np.all((mask == 0) | (mask == 1))
+        assert np.sum(mask) > 0
+        assert np.sum(mask) < len(mask)
+
+    def test_create_mask_cap_invalid(self):
+        """Test cap-mask rejects invalid area inputs."""
+        with pytest.raises(ValueError, match="Cap area must lie"):
+            jpas.create_mask_cap(0.0, nside=16)
+
+        with pytest.raises(ValueError, match="Cap area must lie"):
+            jpas.create_mask_cap(4.0 * np.pi * (180.0 / np.pi) ** 2, nside=16)
 
     def test_create_mask_guaranteed(self):
         """Test guaranteed mask creation."""
@@ -338,6 +358,58 @@ class TestCovarianceMatrices:
         )
 
         assert isinstance(S, Ncm.Matrix)
+
+    def test_create_covariance_S_router_fullsky_fsky(self, setup_for_covariance):
+        """Test covariance router for the new FULLSKY_FSKY path."""
+        kernel_z, kernels_T, cosmo = setup_for_covariance
+
+        S = jpas.create_covariance_S(
+            kernel_z,
+            kernels_T,
+            jpas.JpasSSCType.FULLSKY_FSKY,
+            cosmo,
+            area=2959.1,
+        )
+
+        assert isinstance(S, Ncm.Matrix)
+
+    def test_create_covariance_S_fullsky_fsky_requires_area(self, setup_for_covariance):
+        """Test FULLSKY_FSKY rejects a missing area argument."""
+        kernel_z, kernels_T, cosmo = setup_for_covariance
+
+        with pytest.raises(ValueError, match="requires an area"):
+            jpas.create_covariance_S(
+                kernel_z,
+                kernels_T,
+                jpas.JpasSSCType.FULLSKY_FSKY,
+                cosmo,
+            )
+
+    def test_create_covariance_S_router_cap(self, setup_for_covariance):
+        """Test covariance router for CAP using an explicit area."""
+        kernel_z, kernels_T, cosmo = setup_for_covariance
+
+        S = jpas.create_covariance_S(
+            kernel_z,
+            kernels_T,
+            jpas.JpasSSCType.CAP,
+            cosmo,
+            area=100.0,
+        )
+
+        assert isinstance(S, Ncm.Matrix)
+
+    def test_create_covariance_S_cap_requires_area(self, setup_for_covariance):
+        """Test cap-SSC router fails without the area dependency."""
+        kernel_z, kernels_T, cosmo = setup_for_covariance
+
+        with pytest.raises(ValueError, match="requires an area"):
+            jpas.create_covariance_S(
+                kernel_z,
+                kernels_T,
+                jpas.JpasSSCType.CAP,
+                cosmo,
+            )
 
     def test_create_covariance_S_invalid(self, setup_for_covariance):
         """Test covariance router raises error for NO_SSC."""
