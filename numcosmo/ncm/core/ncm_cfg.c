@@ -248,11 +248,13 @@
 #include "nc/data/nc_data_planck_lkl.h"
 #include "nc/xcor/nc_xcor.h"
 #include "nc/xcor/nc_xcor_AB.h"
+#include "nc/xcor/nc_xcor_solver.h"
 #include "nc/xcor/nc_xcor_kernel.h"
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor_kernel_gal.h"
 #include "nc/xcor/nc_xcor_kernel_cluster.h"
 #include "nc/xcor/nc_xcor_kernel_cluster_tophat.h"
+#include "nc/xcor/nc_xcor_kernel_cmb_isw.h"
 #include "nc/xcor/nc_xcor_kernel_CMB_lensing.h"
 #include "nc/xcor/nc_xcor_kernel_weak_lensing.h"
 #include "nc/xcor/nc_xcor_kernel_tSZ.h"
@@ -910,6 +912,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
 
   ncm_cfg_register_obj (NC_TYPE_XCOR);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_SOLVER);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_COMPONENT);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_GAL);
@@ -917,6 +920,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER_TOPHAT);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_TSZ);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CMB_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CMB_ISW);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
@@ -1899,6 +1903,19 @@ G_LOCK_DEFINE_STATIC (fftw_saveload_lock);
 
 G_LOCK_DEFINE_STATIC (fftw_plan_lock);
 
+/* Every ncm_cfg_load_fftw_wisdom()/ncm_cfg_save_fftw_wisdom() call reads
+ * and writes the *same* file regardless of the @filename argument (see
+ * "overwrite, unifying wisdom" below) -- so within one process, re-loading
+ * it after the first successful load is a pure no-op (FFTW's wisdom
+ * registry is global and cumulative; parsing the same file content again
+ * teaches it nothing new), and re-saving is only useful if new wisdom was
+ * actually learned since the last save. Both guards are protected by
+ * fftw_saveload_lock, held for the whole body of both functions. */
+static gboolean _wisdom_loaded_d = FALSE;
+static gboolean _wisdom_loaded_f = FALSE;
+static gchar *_wisdom_saved_d    = NULL;
+static gchar *_wisdom_saved_f    = NULL;
+
 /**
  * ncm_cfg_lock_plan_fftw:
  *
@@ -1948,6 +1965,16 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 
   G_LOCK (fftw_saveload_lock);
 
+  if (_wisdom_loaded_d && _wisdom_loaded_f)
+  {
+    /* Already loaded once this process -- FFTW's wisdom registry is
+     * global and cumulative, so re-parsing the same file again would
+     * teach it nothing new. */
+    G_UNLOCK (fftw_saveload_lock);
+
+    return TRUE;
+  }
+
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
@@ -1958,10 +1985,15 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
-  if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
+  if (!_wisdom_loaded_d)
   {
-    fftw_import_wisdom_from_filename (full_filename);
-    ret = TRUE;
+    if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
+    {
+      fftw_import_wisdom_from_filename (full_filename);
+      ret = TRUE;
+    }
+
+    _wisdom_loaded_d = TRUE;
   }
 
 #ifdef HAVE_FFTW3F
@@ -1971,12 +2003,19 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   file_ext      = g_strdup_printf ("%s.fftw3f", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
-  if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
+  if (!_wisdom_loaded_f)
   {
-    fftwf_import_wisdom_from_filename (full_filename);
-    ret = TRUE;
+    if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
+    {
+      fftwf_import_wisdom_from_filename (full_filename);
+      ret = TRUE;
+    }
+
+    _wisdom_loaded_f = TRUE;
   }
 
+#else
+  _wisdom_loaded_f = TRUE; /* no single-precision FFTW3 build, nothing to load */
 #endif
 
   g_free (file);
@@ -2027,18 +2066,27 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 
     if (wisdom_str != NULL)
     {
-      gssize len  = strlen (wisdom_str);
-      gboolean OK = FALSE;
+      if ((_wisdom_saved_d != NULL) && g_str_equal (_wisdom_saved_d, wisdom_str))
+      {
+        /* Nothing learned since the last save -- skip the rewrite. */
+        g_free (wisdom_str);
+      }
+      else
+      {
+        gssize len  = strlen (wisdom_str);
+        gboolean OK = FALSE;
 
 #if GLIB_CHECK_VERSION (2, 66, 0)
-      OK = g_file_set_contents_full (full_filename, wisdom_str, len,
-                                     G_FILE_SET_CONTENTS_CONSISTENT,
-                                     0666, NULL);
+        OK = g_file_set_contents_full (full_filename, wisdom_str, len,
+                                       G_FILE_SET_CONTENTS_CONSISTENT,
+                                       0666, NULL);
 #else /* GLIB_CHECK_VERSION (2, 66, 0) */
-      OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
+        OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
 #endif /* GLIB_CHECK_VERSION (2, 66, 0) */
-      g_assert (OK);
-      g_free (wisdom_str);
+        g_assert (OK);
+        g_free (_wisdom_saved_d);
+        _wisdom_saved_d = wisdom_str; /* keep as the new comparison baseline */
+      }
     }
   }
 
@@ -2054,20 +2102,28 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 
     if (wisdom_str != NULL)
     {
-      gssize len  = strlen (wisdom_str);
-      gboolean OK = FALSE;
+      if ((_wisdom_saved_f != NULL) && g_str_equal (_wisdom_saved_f, wisdom_str))
+      {
+        /* Nothing learned since the last save -- skip the rewrite. */
+        g_free (wisdom_str);
+      }
+      else
+      {
+        gssize len  = strlen (wisdom_str);
+        gboolean OK = FALSE;
 
 #if GLIB_CHECK_VERSION (2, 66, 0)
-      OK = g_file_set_contents_full (full_filename, wisdom_str, len,
-                                     G_FILE_SET_CONTENTS_CONSISTENT,
-                                     0666, NULL);
+        OK = g_file_set_contents_full (full_filename, wisdom_str, len,
+                                       G_FILE_SET_CONTENTS_CONSISTENT,
+                                       0666, NULL);
 #else /* GLIB_CHECK_VERSION (2, 66, 0) */
-      OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
+        OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
 #endif /* GLIB_CHECK_VERSION (2, 66, 0) */
 
-      g_assert (OK);
-
-      g_free (wisdom_str);
+        g_assert (OK);
+        g_free (_wisdom_saved_f);
+        _wisdom_saved_f = wisdom_str; /* keep as the new comparison baseline */
+      }
     }
   }
 #endif

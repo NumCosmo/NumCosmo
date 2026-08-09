@@ -45,6 +45,7 @@ typedef struct _NcmSBesselIntegratorPrivate
 {
   guint ell_min;
   guint ell_max;
+  gdouble abstol;
 } NcmSBesselIntegratorPrivate;
 
 enum
@@ -63,6 +64,7 @@ ncm_sbessel_integrator_init (NcmSBesselIntegrator *sbi)
 
   self->ell_min = 0;
   self->ell_max = 0;
+  self->abstol  = 0.0;
 }
 
 static void
@@ -299,6 +301,52 @@ void
 ncm_sbessel_integrator_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, guint ell_max)
 {
   NCM_SBESSEL_INTEGRATOR_GET_CLASS (sbi)->set_ell_range (sbi, ell_min, ell_max);
+}
+
+/**
+ * ncm_sbessel_integrator_set_abstol:
+ * @sbi: a #NcmSBesselIntegrator
+ * @abstol: absolute tolerance on the integral, or 0.0 for none
+ *
+ * Sets the absolute accuracy the caller needs from the next
+ * ncm_sbessel_integrator_integrate() calls. Implementations may stop refining
+ * once the remaining error is below @abstol even if their own relative
+ * criterion is not met.
+ *
+ * This exists because the caller, not the integrator, knows the scale the
+ * result feeds into. An integral that comes out many orders of magnitude below
+ * the largest one in the same batch cannot affect the sum it belongs to, and
+ * pursuing full relative accuracy on it is wasted -- worse, an integrand with
+ * an unresolvable feature may never reach the relative criterion at all.
+ *
+ * Applies until changed. The default, 0.0, means the pure relative criterion.
+ *
+ */
+void
+ncm_sbessel_integrator_set_abstol (NcmSBesselIntegrator *sbi, gdouble abstol)
+{
+  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
+
+  g_return_if_fail (NCM_IS_SBESSEL_INTEGRATOR (sbi));
+  g_return_if_fail (abstol >= 0.0);
+
+  self->abstol = abstol;
+}
+
+/**
+ * ncm_sbessel_integrator_get_abstol:
+ * @sbi: a #NcmSBesselIntegrator
+ *
+ * Returns: the absolute tolerance set by ncm_sbessel_integrator_set_abstol(), or 0.0
+ */
+gdouble
+ncm_sbessel_integrator_get_abstol (NcmSBesselIntegrator *sbi)
+{
+  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
+
+  g_return_val_if_fail (NCM_IS_SBESSEL_INTEGRATOR (sbi), 0.0);
+
+  return self->abstol;
 }
 
 /**

@@ -1249,7 +1249,10 @@ class DumpMset(AppLogging):
     Catalog files store their model-set internally (in the primary FITS
     HDU for new files, or in a legacy `.mset` sidecar file for old ones).
     This command extracts it as a standalone YAML file, useful for
-    inspection or as a starting point for a new fit.
+    inspection or as a `--starting-point` for a new fit -- written as a
+    dict_str with a "model-set" entry (``ncm_serialize_dict_str_*``), the
+    format ``_load_saved_mset()`` (loading.py) actually reads back, not a
+    bare object dump.
     """
 
     mcmc_file: Annotated[
@@ -1280,10 +1283,13 @@ class DumpMset(AppLogging):
         assert isinstance(mset, Ncm.MSet)
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+        out_dict = Ncm.ObjDictStr.new()
+        out_dict.set("model-set", mset)
+
         if self.output is not None:
-            ser.to_yaml_file(mset, self.output.absolute().as_posix())
+            ser.dict_str_to_yaml_file(out_dict, self.output.absolute().as_posix())
             self.console.print(f"Model-set written to {self.output}.")
         else:
-            self.console.print(ser.to_yaml(mset))
+            self.console.print(ser.dict_str_to_yaml(out_dict))
 
         self.close_logging()

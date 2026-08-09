@@ -498,6 +498,28 @@ _ncm_integral_nd_cubature_vint (unsigned ndim, size_t npt, const double *x, void
   return 0;
 }
 
+static const gchar *
+_ncm_integral_nd_method_name (NcmIntegralNDMethod method)
+{
+  switch (method)
+  {
+    case NCM_INTEGRAL_ND_METHOD_CUBATURE_H:
+      return "hcubature";
+
+    case NCM_INTEGRAL_ND_METHOD_CUBATURE_P:
+      return "pcubature";
+
+    case NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V:
+      return "hcubature_v";
+
+    case NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V:
+      return "pcubature_v";
+
+    default:                   /* LCOV_EXCL_LINE */
+      return "unknown method"; /* LCOV_EXCL_LINE */
+  }
+}
+
 /**
  * ncm_integral_nd_eval:
  * @intnd: a #NcmIntegralND
@@ -620,6 +642,29 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
       break;
   }
 
-  g_assert_cmpint (ret, ==, 0);
+  if (ret != 0)
+  {
+    GString *bounds = g_string_new (NULL);
+    guint i;
+
+    for (i = 0; i < dim; i++)
+      g_string_append_printf (bounds, "%s[% 22.15g, % 22.15g]", (i > 0) ? ", " : "",
+                              ncm_vector_get (xi, i), ncm_vector_get (xf, i));
+
+    g_error ("ncm_integral_nd_eval: %s failed (%d) on %s integrating %u dimension(s) "
+             "over %s to %u component(s), reltol %.17g, abstol %.17g, maxeval %u. "
+             "%s",
+             _ncm_integral_nd_method_name (self->method), ret,
+             G_OBJECT_TYPE_NAME (intnd), dim, bounds->str, fdim,
+             self->reltol, self->abstol, self->maxeval,
+             ((self->method == NCM_INTEGRAL_ND_METHOD_CUBATURE_P) ||
+              (self->method == NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V)) ?
+             "The p-adaptive methods report failure when they run out of "
+             "Clenshaw-Curtis levels before reaching the requested tolerance, which is "
+             "what happens when the integrand is not accurate or smooth enough to "
+             "support the tolerance asked of it." : "");
+
+    g_string_free (bounds, TRUE);
+  }
 }
 

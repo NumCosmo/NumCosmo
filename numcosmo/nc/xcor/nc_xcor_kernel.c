@@ -71,7 +71,6 @@ typedef struct _NcXcorKernelPrivate
   NcDistance *dist;
   NcmPowspec *ps;
   NcmSBesselIntegrator *sbi;
-  GArray *k_seeds;
   guint lmax;
   gint l_limber;
   gdouble adaptive_epsilon;
@@ -115,7 +114,6 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
   self->dist                    = NULL;
   self->ps                      = NULL;
   self->sbi                     = NULL;
-  self->k_seeds                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->lmax                    = 0;
   self->l_limber                = 0;
   self->adaptive_epsilon        = 0.0;
@@ -137,7 +135,6 @@ _nc_xcor_kernel_dispose (GObject *object)
   nc_distance_clear (&self->dist);
   ncm_powspec_clear (&self->ps);
   ncm_sbessel_integrator_clear (&self->sbi);
-  g_clear_pointer (&self->k_seeds, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_parent_class)->dispose (object);
@@ -488,8 +485,12 @@ _nc_xcor_kernel_component_kernel_integ (gpointer params, gdouble x, gdouble k)
   return kernel / (k * sqrt (k));
 }
 
-#define MAX_ELL_BLOCK 64
+#define MAX_ELL_BLOCK NC_XCOR_KERNEL_MAX_ELL_BLOCK
 #define MAX_COMP_BLOCK 6
+
+/* Fraction of a component's largest spherical-Bessel integral, over all k,
+ * below which a further integral cannot affect the k-spline built from them. */
+#define NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC 1.0e-16
 
 typedef struct _ComponentState
 {
@@ -505,6 +506,7 @@ typedef struct _ComponentState
   gdouble last_values_right[MAX_ELL_BLOCK];
   guint left_boundary_found;
   guint right_boundary_found;
+  gdouble integ_max;                       /* Running max |integrator output| over k, pre-prefactor */
   gdouble k_min_limber_ell[MAX_ELL_BLOCK]; /* Per-ell minimum k for Limber */
   gdouble k_max_limber_ell[MAX_ELL_BLOCK]; /* Per-ell maximum k for Limber */
   ComponentParams params;
@@ -514,6 +516,7 @@ typedef struct _ComponentStates
 {
   ComponentState states[MAX_COMP_BLOCK];
   NcXcorKernel *xclk;
+  NcmSBesselIntegrator *sbi; /* Integrator for this call; not owned */
   gdouble k_min_hard;
   gdouble k_max_hard;
   gdouble l2_norm;
@@ -533,6 +536,7 @@ _component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint
   state->last_k_right         = 0.0;
   state->left_boundary_found  = 0;
   state->right_boundary_found = 0;
+  state->integ_max            = 0.0;
   state->params.comp          = comp;
   state->params.cosmo         = cosmo;
 
@@ -578,12 +582,14 @@ _nc_xcor_kernel_validate_component_list (NcXcorKernel *xclk, guint n_l)
 
 static ComponentStates
 _component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
-                                   GPtrArray *comp_list, NcHICosmo *cosmo)
+                                   GPtrArray *comp_list, NcHICosmo *cosmo,
+                                   NcmSBesselIntegrator *sbi)
 {
   NcXcorKernelPrivate *self   = nc_xcor_kernel_get_instance_private (xclk);
   const guint n_comp          = comp_list->len;
   ComponentStates comp_states = {
     .xclk                    = xclk,
+    .sbi                     = sbi,
     .k_min_hard              = 0.0,
     .k_max_hard              = G_MAXDOUBLE,
     .l2_norm                 = 0.0,
@@ -818,13 +824,21 @@ _component_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer us
 
       /* Exact integration within boundaries */
       {
-        NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (comp_states->xclk);
+        /* The integrator cannot know the scale its result feeds into: this
+         * component's kernel over all k. Below a k-independent floor tied to
+         * that scale the result cannot move the k-spline built from it, and
+         * chasing relative accuracy there is both wasted and, where the
+         * integrand has an unresolvable feature, unattainable. */
+        ncm_sbessel_integrator_set_abstol (comp_states->sbi, NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC * state->integ_max);
 
         ncm_sbessel_integrator_integrate (
-          self->sbi, _nc_xcor_kernel_component_kernel_integ,
+          comp_states->sbi, _nc_xcor_kernel_component_kernel_integ,
           state->xi_min, state->xi_max, k, integ_result, &state->params
         );
       }
+
+      for (i = 0; i < comp_states->n_l; i++)
+        state->integ_max = GSL_MAX (state->integ_max, fabs (kernel_out[ci][i]));
 
       for (i = 0; i < comp_states->n_l; i++)
       {
@@ -1005,18 +1019,23 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
   {
     NcmFunctionSampleSet *fss = ncm_function_sample_set_new (n_l);
     NcmSpline *spline         = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+    GArray *k_seeds           = g_array_new (FALSE, FALSE, sizeof (gdouble));
     guint i;
 
-    /* Compute k-seeds for initial sampling */
-    _component_states_compute_k_seeds (comp_states, self->k_seeds);
+    /* Compute k-seeds for initial sampling. Local to the call, not kernel
+     * state: one kernel may be evaluated concurrently for different ell
+     * blocks, each with its own integrator. */
+    _component_states_compute_k_seeds (comp_states, k_seeds);
 
     /* Add all k-seeds as initial sampling points */
-    for (i = 0; i < self->k_seeds->len; i++)
+    for (i = 0; i < k_seeds->len; i++)
     {
-      const gdouble k_seed = g_array_index (self->k_seeds, gdouble, i);
+      const gdouble k_seed = g_array_index (k_seeds, gdouble, i);
 
       ncm_function_sample_set_add_old_func (fss, k_seed, compute_func, comp_states);
     }
+
+    g_array_unref (k_seeds);
 
     {
       /* Domain expansion */
@@ -1088,7 +1107,7 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 }
 
 static NcXcorKernelIntegrand *
-_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
+_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
   const guint n_l           = lmax - lmin + 1;
@@ -1097,21 +1116,22 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
   if (comp_list == NULL)
     return NULL;
 
-  if (self->sbi == NULL)
+  if (sbi == NULL)
   {
     g_ptr_array_unref (comp_list);
-    g_error ("_nc_xcor_kernel_build_non_limber_integrand: integrator property was not set for kernel %s. "
-             "The 'integrator' property must be provided to build the non-Limber integrand.",
+    g_error ("_nc_xcor_kernel_build_non_limber_integrand: no integrator for kernel %s. "
+             "Either set the 'integrator' property or pass one to "
+             "nc_xcor_kernel_get_eval_vectorized_full().",
              G_OBJECT_TYPE_NAME (xclk));
 
     return NULL;
   }
 
-  ncm_sbessel_integrator_set_ell_range (self->sbi, lmin, lmax);
+  ncm_sbessel_integrator_set_ell_range (sbi, lmin, lmax);
 
   /* Initialize with standard (non-Limber) limits */
   {
-    ComponentStates comp_states = _component_states_init_non_limber (xclk, lmin, n_l, comp_list, cosmo);
+    ComponentStates comp_states = _component_states_init_non_limber (xclk, lmin, n_l, comp_list, cosmo, sbi);
 
     g_ptr_array_unref (comp_list);
 
@@ -1471,10 +1491,41 @@ nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
+  return nc_xcor_kernel_get_eval_vectorized_full (xclk, cosmo, lmin, lmax, self->sbi);
+}
+
+/**
+ * nc_xcor_kernel_get_eval_vectorized_full:
+ * @xclk: a #NcXcorKernel
+ * @cosmo: a #NcHICosmo
+ * @lmin: minimum multipole
+ * @lmax: maximum multipole
+ * @sbi: (nullable): the #NcmSBesselIntegrator to use, or %NULL for @xclk's own
+ *
+ * Same as nc_xcor_kernel_get_eval_vectorized(), but integrates with @sbi
+ * instead of the kernel's `integrator` property.
+ *
+ * A #NcmSBesselIntegratorLevin holds reusable state tied to one multipole
+ * range, so a caller computing several ell blocks does better keeping one
+ * integrator per block and passing it in here than letting every kernel carry
+ * its own. Passing the integrator rather than storing it also keeps @xclk free
+ * of per-call state, so one kernel can be evaluated for several blocks at once
+ * as long as each gets its own @sbi.
+ *
+ * @sbi is unused below the kernel's l-limber threshold, where no spherical
+ * Bessel integral is performed.
+ *
+ * Returns: (transfer full): the kernel integrand over [@lmin, @lmax]
+ */
+NcXcorKernelIntegrand *
+nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
   if ((self->l_limber == 0) || ((self->l_limber > 0) && (lmin >= self->l_limber)))
     return _nc_xcor_kernel_build_limber_integrand (xclk, cosmo, lmin, lmax);
   else
-    return _nc_xcor_kernel_build_non_limber_integrand (xclk, cosmo, lmin, lmax);
+    return _nc_xcor_kernel_build_non_limber_integrand (xclk, cosmo, lmin, lmax, sbi);
 }
 
 /**

@@ -44,6 +44,9 @@ formula. The captured sequence is stored as an ``Ncm.Matrix`` binfile
 (``data/truth_tables/wl/``) rather than inline literals; see ``_load_golden``.
 """
 
+import subprocess
+import sys
+
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -205,6 +208,82 @@ def test_integ_parity_legacy_per_galaxy(ellip_conv, galaxy, use_lnp):
     zs = np.linspace(0.05, 1.5, 50)
     new_vals = [new_integ.eval(zz, data) for zz in zs]
     assert_allclose(new_vals, frozen, rtol=1.0e-8)
+
+
+def test_ldata_read_row_native_e_rms():
+    """A catalog with the current 'e_rms' column reads it directly -- no
+    legacy fallback, no warning."""
+    obs = Nc.GalaxyWLObs.new(
+        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1, ["e_rms"]
+    )
+    obs.set("e_rms", 0, 0.31)
+
+    pop = Nc.GalaxyShapePopGaussLocal.new()
+    data = Nc.GalaxyShapePopData.new(pop)
+    data.read_row(obs, 0)
+
+    assert data.e_rms == 0.31
+
+
+def test_ldata_read_row_legacy_std_shape_fallback():
+    """A catalog with only the pre-rename 'std_shape' column (no 'e_rms')
+    falls back to it -- same value, plus a one-time warning naming both
+    columns and the cache path to delete for a redownload. Checked in a
+    subprocess: the fallback's own warning-once guard is a process-lifetime
+    static, so a fresh process is the only way to reliably observe it fire
+    (see nc_galaxy_shape_pop_gauss_local.c's
+    _nc_galaxy_shape_pop_gauss_local_ldata_read_row)."""
+    script = (
+        "from numcosmo_py import Nc, Ncm\n"
+        "Ncm.cfg_init()\n"
+        "obs = Nc.GalaxyWLObs.new(\n"
+        "    Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1,\n"
+        "    ['std_shape'],\n"
+        ")\n"
+        "obs.set('std_shape', 0, 0.28)\n"
+        "pop = Nc.GalaxyShapePopGaussLocal.new()\n"
+        "data = Nc.GalaxyShapePopData.new(pop)\n"
+        "data.read_row(obs, 0)\n"
+        "assert data.e_rms == 0.28, data.e_rms\n"
+        "print('OK')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "OK" in result.stdout
+    assert "no 'e_rms' column" in result.stderr
+    assert "'std_shape'" in result.stderr
+
+
+def test_ldata_read_row_no_e_rms_or_legacy_column_errors():
+    """Neither 'e_rms' nor the legacy 'std_shape' present: falls through to
+    the original (pre-fallback) behaviour -- a fatal, real process abort
+    from ncm_catalog_get()'s column lookup, not a silently wrong value.
+    Checked in a subprocess as above."""
+    script = (
+        "from numcosmo_py import Nc, Ncm\n"
+        "Ncm.cfg_init()\n"
+        "obs = Nc.GalaxyWLObs.new(\n"
+        "    Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1,\n"
+        "    ['ra'],\n"
+        ")\n"
+        "obs.set('ra', 0, 0.0)\n"
+        "pop = Nc.GalaxyShapePopGaussLocal.new()\n"
+        "data = Nc.GalaxyShapePopData.new(pop)\n"
+        "data.read_row(obs, 0)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "Column 'e_rms' not found" in result.stderr
 
 
 if __name__ == "__main__":

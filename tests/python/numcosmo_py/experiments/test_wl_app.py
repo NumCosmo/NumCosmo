@@ -764,7 +764,8 @@ def test_cluster_wl_app_generate_pop_gauss_local(experiment_file):
 
 
 def test_cluster_wl_app_generate_pop_beta(experiment_file):
-    """Test the generation of the cluster WL app with --pop-dist=beta.
+    """Test the generation of the cluster WL app with --pop-dist=beta,
+    alpha/beta free.
 
     Beta requires a scheme that doesn't linearize around a Gaussian (see
     ``check_shape_pop_compat()``) -- fixed_quad qualifies. Covers
@@ -772,7 +773,9 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
     ``mfunc_oa.add(func)`` in generate.py's own ``_build_experiment`` (the
     only ``GalaxyPopGen`` variant with non-empty ``get_mfuncs()``), plus
     the ``NcGalaxyShapePopBeta:mode``/``:e_rms`` ``NcmMSetFuncList`` entries
-    read back from the written ``.functions.yaml``.
+    read back from the written ``.functions.yaml`` -- present because alpha
+    and beta are explicitly freed here (see the fixed-alpha/beta sibling
+    test below for the empty-list case).
     """
     result = runner.invoke(
         app,
@@ -782,6 +785,8 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
             experiment_file.as_posix(),
             "--shape-factor=fixed_quad",
             "--pop-dist=beta alpha=2.0 beta=5.0",
+            "--parameter-list=NcGalaxyShapePop:alpha",
+            "--parameter-list=NcGalaxyShapePop:beta",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -811,6 +816,31 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
     }
     for func in funcs:
         func.eval0(mset)
+
+
+def test_cluster_wl_app_generate_pop_beta_fixed_no_mfuncs(experiment_file):
+    """--pop-dist=beta with alpha/beta both fixed (the default
+    --parameter-list doesn't mention them) must skip mode/e_rms entirely:
+    with alpha/beta fixed those would just be the same constant repeated on
+    every catalog row of a later MC/MCMC run."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--shape-factor=fixed_quad",
+            "--pop-dist=beta alpha=2.0 beta=5.0",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    functions_file = experiment_file.with_suffix(".functions.yaml")
+    assert functions_file.exists(), f"Functions file {functions_file} does not exist."
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    mfunc_oa = cast(Ncm.ObjArray, ser.array_from_yaml_file(functions_file.as_posix()))
+    assert mfunc_oa.len() == 0
 
 
 def test_cluster_wl_app_generate_fixed_quad_marginal_spline(experiment_file):

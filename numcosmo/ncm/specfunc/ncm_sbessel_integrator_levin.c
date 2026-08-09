@@ -95,6 +95,7 @@ struct _NcmSBesselIntegratorLevin
   GArray *knots;                              /* Log-spaced knots array */
   gdouble *jl_knots;                          /* Precomputed j_l at knots: [n_knots * (ell_cache_max + 1)] */
   GPtrArray *operators;                       /* Operators for each panel between consecutive knots */
+  gdouble panel_abstol;                       /* Absolute coefficient floor for the current panel's RHS (0 = relative only) */
   NcmSBesselOdeOperator *ode_operator_temp_a; /* Temporary operator for [a, smallest_knot > a] */
   NcmSBesselOdeOperator *ode_operator_temp_b; /* Temporary operator for [largest_knot < b, b] */
 };
@@ -135,6 +136,7 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
   sbilv->ode_operator     = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, 2, 2);
   sbilv->sba              = ncm_sf_sbessel_array_new ();
   sbilv->alloc_max_order  = 0;
+  sbilv->panel_abstol     = 0.0;
   sbilv->alloc_ell_min    = -1;
   sbilv->alloc_ell_max    = -1;
   sbilv->cheb_coeffs      = NULL;
@@ -654,10 +656,11 @@ _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv,
 {
   NcmSBesselIntegratorLevinWrapper wrapper = {F, k, user_data};
 
-  ncm_spectral_compute_chebyshev_coeffs_adaptive (
+  ncm_spectral_compute_chebyshev_coeffs_adaptive_full (
     spectral,
     &_ncm_sbessel_integrator_levin_wrapper_func,
-    a, b, sbilv->cheb_min_order, sbilv->cheb_reltol, &sbilv->cheb_coeffs, &wrapper);
+    a, b, sbilv->cheb_min_order, sbilv->cheb_reltol, sbilv->panel_abstol,
+    &sbilv->cheb_coeffs, &wrapper);
 
   ncm_spectral_chebT_to_gegenbauer_alpha2 (sbilv->cheb_coeffs, &sbilv->gegen_coeffs);
   g_array_set_size (sbilv->rhs, sbilv->gegen_coeffs->len + 2);
@@ -742,6 +745,66 @@ _ncm_sbessel_integrator_levin_get_panel_resources (NcmSBesselIntegratorLevin *sb
   return op;
 }
 
+/* Relative level below which a panel cannot move the accumulated result. */
+#define NCM_SBESSEL_LEVIN_PANEL_ABSTOL_EPS 1.0e-16
+
+/*
+ * Absolute floor for the next panel's Chebyshev RHS. Two independent scales
+ * feed it, and the looser one wins:
+ *
+ *  - what the caller declared via ncm_sbessel_integrator_set_abstol(): an
+ *    absolute error it can tolerate in this integral, because it knows the
+ *    larger quantity the integral feeds into. This is the only scale available
+ *    when the integral itself is numerically zero;
+ *  - what the result already holds: a panel that cannot move any ell's
+ *    accumulated value needs no further refinement.
+ *
+ * One RHS is shared by every ell in the batch, so the smallest accumulated
+ * |result| over the batch sets the second scale. The panel contribution is
+ * b_p * j_ell(b_p) * u'(b_p) - a_p * j_ell(a_p) * u'(a_p), so
+ * max (b_p * |j_ell(b_p)|, a_p * |j_ell(a_p)|), maximized over the batch,
+ * converts a bound on the result into a bound on the coefficients. Bounding
+ * that scale by b_p alone (|j_ell| <= 1) costs many orders of magnitude where
+ * the panel sits below the ell-th Bessel turning point: there j_ell is
+ * evanescent, the panel cannot move the result whatever the RHS looks like,
+ * and demanding a relative fit of the integrand there is both futile and
+ * expensive. The scale used here is never larger than b_p, so the floor is
+ * never tighter than the |j_ell| <= 1 one.
+ *
+ * Without either scale this returns 0.0 -- the pure relative criterion.
+ */
+static gdouble
+_ncm_sbessel_integrator_levin_panel_abstol (NcmSBesselIntegratorLevin *sbilv,
+                                            const gdouble *result_data,
+                                            const gdouble *j_a_p, const gdouble *j_b_p,
+                                            gdouble a_p, gdouble b_p,
+                                            guint ell_min, guint ell_max)
+{
+  const gdouble caller_abstol = ncm_sbessel_integrator_get_abstol (NCM_SBESSEL_INTEGRATOR (sbilv));
+  gdouble min_abs             = G_MAXDOUBLE;
+  gdouble max_scale           = 0.0;
+  gdouble abstol_result;
+  guint ell;
+
+  for (ell = ell_min; ell <= ell_max; ell++)
+  {
+    const gdouble abs_ell   = fabs (result_data[ell - ell_min]);
+    const gdouble scale_ell = MAX (b_p * fabs (j_b_p[ell]), a_p * fabs (j_a_p[ell]));
+
+    min_abs   = MIN (min_abs, abs_ell);
+    max_scale = MAX (max_scale, scale_ell);
+  }
+
+  abstol_result = MAX (NCM_SBESSEL_LEVIN_PANEL_ABSTOL_EPS * min_abs, caller_abstol);
+
+  /* j_ell underflowed to zero for the whole batch: the panel contributes
+   * exactly nothing, so any RHS will do. */
+  if (max_scale == 0.0)
+    return G_MAXDOUBLE;
+
+  return abstol_result / max_scale;
+}
+
 /**
  * _ncm_sbessel_integrator_levin_solve_and_accumulate:
  * @sbilv: a #NcmSBesselIntegratorLevin
@@ -774,6 +837,10 @@ _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *s
                                                     gpointer user_data)
 {
   guint ell;
+
+  sbilv->panel_abstol = _ncm_sbessel_integrator_levin_panel_abstol (sbilv, result_data,
+                                                                    j_a_p, j_b_p, a_p, b_p,
+                                                                    ell_min, ell_max);
 
   _ncm_sbessel_integrator_levin_compute_rhs (sbilv, spectral, F, a_p, b_p, k, user_data);
   ncm_sbessel_ode_operator_solve_endpoints (operator, sbilv->rhs, &sbilv->endpoints_result);
@@ -1200,7 +1267,18 @@ ncm_sbessel_integrator_levin_get_max_order (NcmSBesselIntegratorLevin *sbilv)
  * @sbilv: a #NcmSBesselIntegratorLevin
  * @reltol: relative tolerance
  *
- * Sets the relative tolerance for convergence.
+ * Sets the relative tolerance used to build ODE operators from here on.
+ *
+ * Operators take the tolerance in force when they are created and keep it for
+ * their whole life, so this does not reach operators that already exist. Since
+ * the panel operators are built as soon as the multipole range is known, an
+ * integrator constructed and then given a tolerance keeps the tolerance it was
+ * constructed with. Pass @reltol at construction --
+ * ncm_sbessel_integrator_levin_new_full() or the `reltol` property -- to have
+ * it apply to every operator.
+ *
+ * This is deliberate: an operator's accuracy is fixed when it is built, so it
+ * cannot be changed underneath a computation that is already using it.
  */
 void
 ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble reltol)
