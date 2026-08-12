@@ -410,6 +410,7 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                         "Relative tolerance for adaptive midpoint refinement",
                                                         0.0, 1.0, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcXcorKernel:scaled-abstol:
    *
@@ -501,6 +502,7 @@ typedef struct _SplineIntegrandData
   NcmVector *eval_result;
   gdouble k_min;
   gdouble k_max;
+
   /* Per-component support. Components of a joint (multi-kernel) integrand
    * share one knot set but not one domain, and NcmSpline does not range-check
    * on evaluation, so each component's own support has to be carried
@@ -1372,13 +1374,13 @@ nc_xcor_kernel_get_eval_vectorized_joint (GPtrArray *kernels, NcHICosmo *cosmo, 
   const guint n_l       = lmax - lmin + 1;
   JointComputeData joint;
   SplineIntegrandData *sid;
-  gdouble reltol             = GSL_POSINF;
-  gdouble scaled_abstol      = GSL_POSINF;
-  gdouble expansion_factor   = GSL_POSINF;
+  gdouble reltol              = GSL_POSINF;
+  gdouble scaled_abstol       = GSL_POSINF;
+  gdouble expansion_factor    = GSL_POSINF;
   guint max_border_expansions = 0;
-  guint max_iter             = 0;
-  gdouble k_min_hard         = GSL_POSINF;
-  gdouble k_max_hard         = 0.0;
+  guint max_iter              = 0;
+  gdouble k_min_hard          = GSL_POSINF;
+  gdouble k_max_hard          = 0.0;
   guint ik;
 
   g_assert_cmpuint (n_kernels, >, 0);

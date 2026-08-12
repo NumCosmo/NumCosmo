@@ -798,11 +798,11 @@ nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo)
 
       for (b = 0; b < n_blocks; b++)
       {
-        NcXcorSolverBlock *block      = &g_array_index (blocks, NcXcorSolverBlock, b);
-        NcmSBesselIntegrator *sbi     = g_ptr_array_index (block_sbis, b);
-        const guint block_n_l         = block->lmax - block->lmin + 1;
-        NcXcorKernelIntegrand *joint  = nc_xcor_kernel_get_eval_vectorized_joint (kernels, cosmo, block->lmin, block->lmax, sbi);
-        NcmVector *block_vp           = ncm_vector_new (block_n_l);
+        NcXcorSolverBlock *block     = &g_array_index (blocks, NcXcorSolverBlock, b);
+        NcmSBesselIntegrator *sbi    = g_ptr_array_index (block_sbis, b);
+        const guint block_n_l        = block->lmax - block->lmin + 1;
+        NcXcorKernelIntegrand *joint = nc_xcor_kernel_get_eval_vectorized_joint (kernels, cosmo, block->lmin, block->lmax, sbi);
+        NcmVector *block_vp          = ncm_vector_new (block_n_l);
         guint r_local;
 
         for (r_local = 0; r_local < requests->len; r_local++)
