@@ -639,25 +639,6 @@ nc_xcor_solver_get_block (NcXcorSolver *solver, guint block_index, guint *lmin, 
   *lmax = block->lmax;
 }
 
-static gboolean
-_nc_xcor_solver_z_ranges_overlap (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboolean isauto)
-{
-  gdouble zmin, zmax, zmid;
-
-  nc_xcor_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
-
-  if (!isauto)
-  {
-    gdouble zmin_2, zmax_2, zmid_2;
-
-    nc_xcor_kernel_get_z_range (xclk2, &zmin_2, &zmax_2, &zmid_2);
-    zmin = MAX (zmin, zmin_2);
-    zmax = MIN (zmax, zmax_2);
-  }
-
-  return zmin < zmax;
-}
-
 /*
  * Computes and stitches in one request's contribution from one block,
  * using an already-built (or freshly cached) pair of integrands. Shared by
@@ -689,9 +670,10 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
   if (!isauto)
     _nc_xcor_check_kernel_tolerance (xc, k2);
 
-  if (!_nc_xcor_solver_z_ranges_overlap (k1, k2, isauto))
-    return;  /* zero contribution, result vector already zeroed */
-
+  /* No redshift-overlap short-circuit here: this path is KERNEL_CUBATURE only,
+   * where the two kernels couple through the outer k integral rather than a
+   * shared z integral, so kernels over disjoint redshift ranges still have a
+   * non-zero cross spectrum (see nc_xcor_compute()). */
   xclki1 = g_hash_table_lookup (integrands, k1);
 
   if (xclki1 == NULL)
@@ -788,6 +770,66 @@ nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo)
 
     ncm_vector_set_zero (vp);
     g_ptr_array_add (solver->results, vp);
+  }
+
+  if (nc_xcor_get_meth (xc) == NC_XCOR_METHOD_KERNEL_FIXED)
+  {
+    const guint n_blocks  = solver->blocks->len;
+    GArray *requests      = solver->requests;
+    GArray *blocks        = solver->blocks;
+    GPtrArray *kernels    = solver->kernels;
+    GPtrArray *results    = solver->results;
+    GPtrArray *block_sbis = solver->block_integrators;
+    guint k;
+
+    for (k = 0; k < kernels->len; k++)
+      nc_xcor_kernel_prepare (g_ptr_array_index (kernels, k), cosmo);
+
+    _nc_xcor_solver_prepare_block_integrators (solver);
+
+    /* One joint build per block covers every registered kernel at once, so the
+     * per-pair cost collapses to reading two components out of it: N kernel
+     * samplings instead of N(N+1)/2 pair-wise ones. */
+    #pragma omp parallel shared (xc, cosmo, n_blocks, requests, blocks, kernels, results, block_sbis)
+    {
+      guint b;
+
+      #pragma omp for schedule (dynamic)
+
+      for (b = 0; b < n_blocks; b++)
+      {
+        NcXcorSolverBlock *block      = &g_array_index (blocks, NcXcorSolverBlock, b);
+        NcmSBesselIntegrator *sbi     = g_ptr_array_index (block_sbis, b);
+        const guint block_n_l         = block->lmax - block->lmin + 1;
+        NcXcorKernelIntegrand *joint  = nc_xcor_kernel_get_eval_vectorized_joint (kernels, cosmo, block->lmin, block->lmax, sbi);
+        NcmVector *block_vp           = ncm_vector_new (block_n_l);
+        guint r_local;
+
+        for (r_local = 0; r_local < requests->len; r_local++)
+        {
+          NcXcorSolverRequest *req = &g_array_index (requests, NcXcorSolverRequest, r_local);
+          NcmVector *vp;
+          guint lo, hi, i;
+
+          if ((req->lmax < block->lmin) || (req->lmin > block->lmax))
+            continue;
+
+          _nc_xcor_kernel_fixed_assemble (xc, joint, req->kernel_id_1, req->kernel_id_2, block_vp);
+
+          vp = g_ptr_array_index (results, r_local);
+          lo = MAX (req->lmin, block->lmin);
+          hi = MIN (req->lmax, block->lmax);
+
+          for (i = lo; i <= hi; i++)
+            ncm_vector_set (vp, i - req->lmin, ncm_vector_get (block_vp, i - block->lmin));
+        }
+
+        ncm_vector_free (block_vp);
+        nc_xcor_kernel_integrand_unref (joint);
+      }
+    }
+
+    return;
   }
 
   if (nc_xcor_get_meth (xc) != NC_XCOR_METHOD_KERNEL_CUBATURE)

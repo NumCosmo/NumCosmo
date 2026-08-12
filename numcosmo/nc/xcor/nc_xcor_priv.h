@@ -39,6 +39,15 @@ G_BEGIN_DECLS
  */
 void _nc_xcor_kernel_integrate_block_cubature (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp);
 
+/*
+ * Assembles one pair's Cl block from a joint integrand covering several
+ * kernels on a shared knot set, by exact 5-node Gauss-Legendre over the knot
+ * panels. Component (kernel_id, il) lives at kernel_id * nell + il, with nell
+ * taken from @vp. Lets NcXcorSolver build one joint integrand per ell block and
+ * read every requested pair out of it, instead of one build per pair.
+ */
+void _nc_xcor_kernel_fixed_assemble (NcXcor *xc, NcXcorKernelIntegrand *xclki, guint kernel_id_1, guint kernel_id_2, NcmVector *vp);
+
 /* Fails loudly when NcXcor:reltol asks for more than the kernel's closure carries. */
 void _nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk);
 

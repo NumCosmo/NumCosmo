@@ -792,6 +792,140 @@ _xcor_kernel_gsl_auto_int (gdouble lnk, gpointer ptr)
   return gsl_pow_3 (k) * W[0] * W[0];
 }
 
+/*
+ * Five-node Gauss-Legendre rule on [-1, 1]. Exact through degree 9, which is
+ * one more than the degree-8 polynomial the outer integrand k^2 W_i W_j is on
+ * each knot panel of a cubic spline: 2 from k^2 plus 3 from each spline.
+ */
+#define NC_XCOR_GL5_N 5
+
+static const gdouble _nc_xcor_gl5_x[NC_XCOR_GL5_N] = {
+  -0.9061798459386640, -0.5384693101056831, 0.0,
+  0.5384693101056831, 0.9061798459386640
+};
+
+static const gdouble _nc_xcor_gl5_w[NC_XCOR_GL5_N] = {
+  0.2369268850561891, 0.4786286704993665, 0.5688888888888889,
+  0.4786286704993665, 0.2369268850561891
+};
+
+/*
+ * Exact outer quadrature on the joint knot set.
+ *
+ * Both kernels are sampled onto one shared abscissa, so a single sweep of the
+ * knot panels serves every multipole of the block: the integrand is evaluated
+ * once per node and accumulated into every ell whose own support contains that
+ * node. Each component is masked to its own support
+ * (nc_xcor_kernel_integrand_get_component_range()) because NcmSpline does not
+ * range-check, and an out-of-support evaluation returns extrapolation rather
+ * than a small number.
+ */
+void
+_nc_xcor_kernel_fixed_assemble (NcXcor *xc, NcXcorKernelIntegrand *xclki, guint kernel_id_1, guint kernel_id_2, NcmVector *vp)
+{
+  const guint nell           = ncm_vector_len (vp);
+  const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
+  NcmVector *knots           = nc_xcor_kernel_integrand_peek_knots (xclki);
+  const guint n_knots        = ncm_vector_len (knots);
+  const guint off1           = kernel_id_1 * nell;
+  const guint off2           = kernel_id_2 * nell;
+  gdouble *sum, *W, *k_lo, *k_hi;
+  guint il, ik, ig;
+
+  sum  = g_new0 (gdouble, nell);
+  W    = g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki));
+  k_lo = g_new0 (gdouble, nell);
+  k_hi = g_new0 (gdouble, nell);
+
+  /* Per-multipole bounds: the intersection of the two components' supports. */
+  for (il = 0; il < nell; il++)
+  {
+    gdouble k_min1, k_max1, k_min2, k_max2;
+    const gboolean ok1 = nc_xcor_kernel_integrand_get_component_range (xclki, off1 + il, &k_min1, &k_max1);
+    const gboolean ok2 = nc_xcor_kernel_integrand_get_component_range (xclki, off2 + il, &k_min2, &k_max2);
+
+    if (ok1 && ok2)
+    {
+      k_lo[il] = GSL_MAX (k_min1, k_min2);
+      k_hi[il] = GSL_MIN (k_max1, k_max2);
+    }
+    else
+    {
+      k_lo[il] = 1.0;
+      k_hi[il] = 0.0; /* empty */
+    }
+  }
+
+  for (ik = 0; ik + 1 < n_knots; ik++)
+  {
+    const gdouble panel_lo = ncm_vector_get (knots, ik);
+    const gdouble panel_hi = ncm_vector_get (knots, ik + 1);
+    const gdouble mid      = 0.5 * (panel_lo + panel_hi);
+    const gdouble half     = 0.5 * (panel_hi - panel_lo);
+
+    if (half <= 0.0)
+      continue;
+
+    for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
+    {
+      const gdouble k = mid + half * _nc_xcor_gl5_x[ig];
+      gboolean needed = FALSE;
+
+      for (il = 0; il < nell; il++)
+      {
+        if ((k >= k_lo[il]) && (k <= k_hi[il]))
+        {
+          needed = TRUE;
+          break;
+        }
+      }
+
+      if (!needed)
+        continue;
+
+      nc_xcor_kernel_integrand_eval (xclki, k, W);
+
+      for (il = 0; il < nell; il++)
+      {
+        if ((k >= k_lo[il]) && (k <= k_hi[il]))
+          sum[il] += half * _nc_xcor_gl5_w[ig] * k * k * W[off1 + il] * W[off2 + il];
+      }
+    }
+  }
+
+  for (il = 0; il < nell; il++)
+    ncm_vector_set (vp, il, const_factor * sum[il]);
+
+  g_free (sum);
+  g_free (W);
+  g_free (k_lo);
+  g_free (k_hi);
+}
+
+static void
+_nc_xcor_kernel_fixed (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
+{
+  const guint nell          = ncm_vector_len (vp);
+  GPtrArray *kernels        = g_ptr_array_new ();
+  NcmSBesselIntegrator *sbi = nc_xcor_kernel_peek_integrator (xclk1);
+  NcXcorKernelIntegrand *xclki;
+
+  if (nell != lmax - lmin + 1)
+    g_error ("_nc_xcor_kernel_fixed: vector size does not match multipole limits");
+
+  g_ptr_array_add (kernels, xclk1);
+
+  if (!isauto)
+    g_ptr_array_add (kernels, xclk2);
+
+  xclki = nc_xcor_kernel_get_eval_vectorized_joint (kernels, cosmo, lmin, lmax, sbi);
+  g_ptr_array_unref (kernels);
+
+  _nc_xcor_kernel_fixed_assemble (xc, xclki, 0, isauto ? 0 : 1, vp);
+
+  nc_xcor_kernel_integrand_unref (xclki);
+}
+
 void
 _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
 {
@@ -1263,6 +1397,37 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
   if (nell != lmax - lmin + 1)
     g_error ("nc_xcor_compute: vector size does not match multipole limits");
 
+  if (isauto)
+    xclk2 = xclk1;
+
+  /* The kernel-space (non-Limber) methods perform each kernel's radial
+   * integral separately and couple the two only through the outer k integral,
+   * so two kernels with disjoint redshift support still have a non-zero cross
+   * spectrum -- two disjoint radial shells are correlated through the same 3D
+   * field. The z-overlap short-circuit below is therefore specific to the
+   * Limber-z tier, whose C_l is a single integral over the common support, and
+   * must not be applied here. */
+  switch (xc->meth)
+  {
+    case NC_XCOR_METHOD_KERNEL_GSL:
+      _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+
+      return;
+
+    case NC_XCOR_METHOD_KERNEL_CUBATURE:
+      _nc_xcor_kernel_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+
+      return;
+
+    case NC_XCOR_METHOD_KERNEL_FIXED:
+      _nc_xcor_kernel_fixed (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+
+      return;
+
+    default:
+      break;
+  }
+
   nc_xcor_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
 
   if (!isauto)
@@ -1272,10 +1437,6 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
     nc_xcor_kernel_get_z_range (xclk2, &zmin_2, &zmax_2, &zmid_2);
     zmin = GSL_MAX (zmin, zmin_2);
     zmax = GSL_MIN (zmax, zmax_2);
-  }
-  else
-  {
-    xclk2 = xclk1;
   }
 
   if (zmin < zmax)
@@ -1287,18 +1448,6 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
         break;
       case NC_XCOR_METHOD_LIMBER_Z_CUBATURE:
         _nc_xcor_limber_z_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
-        break;
-      case NC_XCOR_METHOD_KERNEL_GSL:
-        _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-
-        return;
-
-        break;
-      case NC_XCOR_METHOD_KERNEL_CUBATURE:
-        _nc_xcor_kernel_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-
-        return;
-
         break;
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */

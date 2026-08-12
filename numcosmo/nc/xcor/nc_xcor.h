@@ -52,8 +52,16 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
  * @NC_XCOR_METHOD_LIMBER_Z_CUBATURE: Use cubature numerical integration
  * @NC_XCOR_METHOD_KERNEL_GSL: Use GSL numerical integration over kernel variables
  * @NC_XCOR_METHOD_KERNEL_CUBATURE: Use cubature numerical integration over kernel variables
+ * @NC_XCOR_METHOD_KERNEL_FIXED: Use fixed-knot Gauss-Legendre over kernel variables
  *
  * Methods to compute integrals.
+ *
+ * %NC_XCOR_METHOD_KERNEL_FIXED needs no tolerance and cannot fail to converge:
+ * the kernels are sampled jointly onto one knot set, on which each component is
+ * a cubic spline in $k$, so the outer integrand $k^2 W_i W_j$ is a degree-8
+ * polynomial on every knot panel and a 5-node Gauss-Legendre rule integrates it
+ * exactly. The adaptive alternatives target a tolerance the integrand may not
+ * be able to support, and abort when they cannot reach it.
  *
  */
 typedef enum _NcXcorMethod
@@ -62,6 +70,7 @@ typedef enum _NcXcorMethod
   NC_XCOR_METHOD_LIMBER_Z_CUBATURE,
   NC_XCOR_METHOD_KERNEL_GSL,
   NC_XCOR_METHOD_KERNEL_CUBATURE,
+  NC_XCOR_METHOD_KERNEL_FIXED,
 } NcXcorMethod;
 
 #define NC_XCOR_PRECISION (1.0e-6)

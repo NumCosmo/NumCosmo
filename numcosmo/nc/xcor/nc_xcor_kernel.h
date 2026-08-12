@@ -88,12 +88,25 @@ typedef void (*NcXcorKernelIntegrandEval) (gpointer data, gdouble k, gdouble *W)
 typedef void (*NcXcorKernelIntegrandGetRange) (gpointer data, gdouble *k_min, gdouble *k_max);
 
 /**
+ * NcXcorKernelIntegrandGetKnots:
+ * @data: user data
+ *
+ * Function type for getting the knots the integrand is represented on, when it
+ * is spline-backed. See nc_xcor_kernel_integrand_peek_knots().
+ *
+ * Returns: (transfer none): the knot vector.
+ */
+typedef NcmVector *(*NcXcorKernelIntegrandGetKnots) (gpointer data);
+
+/**
  * NcXcorKernelIntegrand:
  * @refcount: atomic reference count
  * @len: number of components in the integrand
  * @eval_func: function to evaluate the integrand at @k, filling @W[@len]
  * @get_range_func: function to get the valid k range for this integrand
- * @data: user data passed to @eval_func and @get_range_func
+ * @get_knots_func: function to get the integrand's knots, or %NULL when it is
+ *   not spline-backed
+ * @data: user data passed to @eval_func, @get_range_func and @get_knots_func
  * @data_free: function to free @data, or %NULL if no cleanup needed
  *
  * A reference-counted closure for computing kernel integrands.
@@ -110,6 +123,7 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandGetRange get_range_func;
   gpointer data;
   GDestroyNotify data_free;
+  NcXcorKernelIntegrandGetKnots get_knots_func;
 };
 
 struct _NcXcorKernelClass
@@ -207,6 +221,7 @@ void nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, g
 NcXcorKernelIntegrand *nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
 NcXcorKernelIntegrand *nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax);
 NcXcorKernelIntegrand *nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi);
+NcXcorKernelIntegrand *nc_xcor_kernel_get_eval_vectorized_joint (GPtrArray *kernels, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi);
 
 gdouble nc_xcor_kernel_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 gdouble nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
@@ -222,6 +237,9 @@ void nc_xcor_kernel_log_all_models (void);
 GType nc_xcor_kernel_integrand_get_type (void) G_GNUC_CONST;
 
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_new (guint len, NcXcorKernelIntegrandEval eval, NcXcorKernelIntegrandGetRange get_range, gpointer data, GDestroyNotify data_free);
+void nc_xcor_kernel_integrand_set_get_knots (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetKnots get_knots);
+NcmVector *nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand);
+gboolean nc_xcor_kernel_integrand_get_component_range (NcXcorKernelIntegrand *integrand, guint component, gdouble *k_min, gdouble *k_max);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_clear (NcXcorKernelIntegrand **integrand);
