@@ -10,7 +10,7 @@ on:
 
 env:
   CONDA_ENV: numcosmo_developer
-  CACHE_VERSION: 0
+  CACHE_VERSION: 3
   # Bump to force recomputing slice-tests.txt from scratch instead of restoring cached durations.
   TEST_DURATION_CACHE_VERSION: 3
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests

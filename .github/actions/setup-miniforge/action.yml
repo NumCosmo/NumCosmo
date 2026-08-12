@@ -46,7 +46,8 @@ runs:
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash -el {0}
       run: |
-        conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment.yml
+        python .github/scripts/update_ci.py "${{ inputs.python-version }}"
+        conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment-ci.yml
         if [ -n "${{ inputs.mpi }}" ]; then
           which python
           conda list
