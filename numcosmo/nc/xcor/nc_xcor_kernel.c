@@ -642,8 +642,20 @@ _nc_xcor_kernel_validate_component_list (NcXcorKernel *xclk, guint n_l)
     return NULL;
   }
 
-  g_assert_cmpuint (n_l, <=, MAX_ELL_BLOCK);
-  g_assert_cmpuint (comp_list->len, <=, MAX_COMP_BLOCK);
+  /* Hard errors rather than g_assert(): both bound writes into fixed-size
+   * stack arrays (ComponentStates::last_values_*, kernel_out[][]), and asserts
+   * compile out under -Dnumcosmo_assert=false, which would turn an
+   * out-of-range block into a stack overflow instead of a clean abort. */
+  if (n_l > MAX_ELL_BLOCK)
+    g_error ("_nc_xcor_kernel_validate_component_list: kernel %s asked for %u multipoles "
+             "in a single block, but at most %d fit (NC_XCOR_KERNEL_MAX_ELL_BLOCK). "
+             "Split the range into blocks.",
+             G_OBJECT_TYPE_NAME (xclk), n_l, MAX_ELL_BLOCK);
+
+  if (comp_list->len > MAX_COMP_BLOCK)
+    g_error ("_nc_xcor_kernel_validate_component_list: kernel %s has %u components, "
+             "but at most %d fit in a single block.",
+             G_OBJECT_TYPE_NAME (xclk), comp_list->len, MAX_COMP_BLOCK);
 
   return comp_list; /* Caller must unref */
 }

@@ -280,14 +280,16 @@ nc_xcor_class_init (NcXcorClass *klass)
   /**
    * NcXcor:ell-batch-size:
    *
-   * This property keeps the multipole batch size for cubature methods.
+   * This property keeps the multipole batch size for the kernel-space block
+   * methods. Tuned for 8 or 16; #NC_XCOR_KERNEL_MAX_ELL_BLOCK is only a hard
+   * safety cap. See nc_xcor_set_ell_batch_size().
    */
   g_object_class_install_property (object_class,
                                    PROP_ELL_BATCH_SIZE,
                                    g_param_spec_uint ("ell-batch-size",
                                                       NULL,
-                                                      "Multipole batch size for cubature methods.",
-                                                      1, 64, 8,
+                                                      "Multipole batch size for the kernel-space block methods.",
+                                                      1, NC_XCOR_KERNEL_MAX_ELL_BLOCK, 8,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -546,12 +548,22 @@ nc_xcor_get_reltol (NcXcor *xc)
  * @xc: a #NcXcor
  * @ell_batch_size: multipole batch size
  *
- * Sets the multipole batch size for cubature methods.
+ * Sets the multipole batch size used by the kernel-space block methods
+ * (%NC_XCOR_METHOD_KERNEL_CUBATURE and %NC_XCOR_METHOD_KERNEL_FIXED): each
+ * batch builds one k-space closure per kernel and shares it across the whole
+ * batch.
+ *
+ * The Levin machinery is tuned for 8 (the default) or 16; wider batches are
+ * counterproductive, not faster. #NC_XCOR_KERNEL_MAX_ELL_BLOCK is a hard
+ * safety cap on a single nc_xcor_kernel_get_eval_vectorized() call, not a
+ * setting to aim for.
  *
  */
 void
 nc_xcor_set_ell_batch_size (NcXcor *xc, const guint ell_batch_size)
 {
+  g_return_if_fail ((ell_batch_size > 0) && (ell_batch_size <= (guint) NC_XCOR_KERNEL_MAX_ELL_BLOCK));
+
   xc->ell_batch_size = ell_batch_size;
 }
 
@@ -977,7 +989,7 @@ _nc_xcor_kernel_integrate_block_fixed (NcXcor *xc, NcXcorKernelIntegrand *xclki1
 }
 
 gboolean
-_nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboolean isauto, guint lmin)
+_nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboolean isauto, guint *l_zero)
 {
   gdouble zmin, zmax, zmid, zmin_2, zmax_2, zmid_2;
   gint l_limber_1, l_limber_2;
@@ -988,16 +1000,37 @@ _nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboo
   l_limber_1 = nc_xcor_kernel_get_l_limber (xclk1);
   l_limber_2 = nc_xcor_kernel_get_l_limber (xclk2);
 
-  if (!((l_limber_1 == 0) || ((l_limber_1 > 0) && ((gint) lmin >= l_limber_1))))
-    return FALSE;
-
-  if (!((l_limber_2 == 0) || ((l_limber_2 > 0) && ((gint) lmin >= l_limber_2))))
+  /* A negative l_limber pins the kernel to the non-Limber tier at every
+   * multipole, so no threshold exists. */
+  if ((l_limber_1 < 0) || (l_limber_2 < 0))
     return FALSE;
 
   nc_xcor_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
   nc_xcor_kernel_get_z_range (xclk2, &zmin_2, &zmax_2, &zmid_2);
 
-  return GSL_MAX (zmin, zmin_2) >= GSL_MIN (zmax, zmax_2);
+  if (GSL_MAX (zmin, zmin_2) < GSL_MIN (zmax, zmax_2))
+    return FALSE;
+
+  /* Both kernels are in the Limber tier from the larger of the two thresholds
+   * up; below it at least one is still non-Limber and the pair correlates. */
+  *l_zero = (guint) GSL_MAX (l_limber_1, l_limber_2);
+
+  return TRUE;
+}
+
+static gboolean
+_nc_xcor_meth_is_kernel_space (NcXcorMethod meth)
+{
+  switch (meth)
+  {
+    case NC_XCOR_METHOD_KERNEL_GSL:
+    case NC_XCOR_METHOD_KERNEL_CUBATURE:
+    case NC_XCOR_METHOD_KERNEL_FIXED:
+      return TRUE;
+
+    default:
+      return FALSE;
+  }
 }
 
 static void
@@ -1005,8 +1038,14 @@ _nc_xcor_kernel_fixed (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcH
 {
   NcmSBesselIntegrator *sbi1 = nc_xcor_kernel_peek_integrator (xclk1);
   NcmSBesselIntegrator *sbi2 = nc_xcor_kernel_peek_integrator (xclk2);
-  NcXcorKernelIntegrand *xclki1;
-  NcXcorKernelIntegrand *xclki2;
+  const guint size           = lmax - lmin + 1;
+  const guint block          = xc->ell_batch_size;
+  guint i;
+
+  _nc_xcor_check_kernel_tolerance (xc, xclk1);
+
+  if (!isauto)
+    _nc_xcor_check_kernel_tolerance (xc, xclk2);
 
   /* Either kernel's integrator serves a kernel that carries none of its own. */
   if (sbi1 == NULL)
@@ -1015,15 +1054,32 @@ _nc_xcor_kernel_fixed (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcH
   if (sbi2 == NULL)
     sbi2 = sbi1;
 
-  xclki1 = nc_xcor_kernel_get_eval_vectorized_full (xclk1, cosmo, lmin, lmax, sbi1);
-  xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized_full (xclk2, cosmo, lmin, lmax, sbi2);
+  /* Batched by NcXcor:ell-batch-size exactly like _nc_xcor_kernel_cubature():
+   * one k-space closure per kernel per batch. The batching is not merely an
+   * optimization here -- a single closure spanning more than
+   * NC_XCOR_KERNEL_MAX_ELL_BLOCK multipoles is a hard error in
+   * nc_xcor_kernel_get_eval_vectorized_full(), so an unbatched sweep aborted on
+   * any range wider than that. */
+  for (i = 0; i < size; i += block)
+  {
+    const guint block_lmin = lmin + i;
+    const guint block_lmax = MIN (block_lmin + block - 1, lmax);
+    NcmVector *vp_i        = ncm_vector_get_subvector (vp, i, block_lmax - block_lmin + 1);
+    NcXcorKernelIntegrand *xclki1;
+    NcXcorKernelIntegrand *xclki2;
 
-  _nc_xcor_kernel_integrate_block_fixed (xc, xclki1, isauto ? xclki1 : xclki2, lmin, lmax, isauto, vp);
+    xclki1 = nc_xcor_kernel_get_eval_vectorized_full (xclk1, cosmo, block_lmin, block_lmax, sbi1);
+    xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized_full (xclk2, cosmo, block_lmin, block_lmax, sbi2);
 
-  nc_xcor_kernel_integrand_unref (xclki1);
+    _nc_xcor_kernel_integrate_block_fixed (xc, xclki1, isauto ? xclki1 : xclki2, block_lmin, block_lmax, isauto, vp_i);
 
-  if (xclki2 != NULL)
-    nc_xcor_kernel_integrand_unref (xclki2);
+    nc_xcor_kernel_integrand_unref (xclki1);
+
+    if (xclki2 != NULL)
+      nc_xcor_kernel_integrand_unref (xclki2);
+
+    ncm_vector_free (vp_i);
+  }
 }
 
 void
@@ -1469,6 +1525,34 @@ _nc_xcor_kernel_integrate_block_cubature (NcXcor *xc, NcXcorKernelIntegrand *xcl
   ncm_vector_free (err);
 }
 
+/*
+ * Dispatches one contiguous multipole range to the configured kernel-space
+ * method. Split out so nc_xcor_compute() can drive it for a sub-range without
+ * duplicating the switch, which is what a range straddling a Limber threshold
+ * needs.
+ */
+static void
+_nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
+{
+  switch (xc->meth)
+  {
+    case NC_XCOR_METHOD_KERNEL_GSL:
+      _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+      break;
+
+    case NC_XCOR_METHOD_KERNEL_CUBATURE:
+      _nc_xcor_kernel_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+      break;
+
+    case NC_XCOR_METHOD_KERNEL_FIXED:
+      _nc_xcor_kernel_fixed (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+      break;
+
+    default:
+      g_assert_not_reached ();
+  }
+}
+
 /**
  * nc_xcor_compute:
  * @xc: a #NcXcor
@@ -1513,42 +1597,33 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
    * disjoint bins have disjoint support, and the Cl is zero. Integrating it
    * anyway multiplies the two exponential extrapolation tails, which is a
    * numerical smoothing device rather than physics, and yields a large
-   * spurious cross spectrum. */
-  if (_nc_xcor_kernels_limber_disjoint (xclk1, xclk2, isauto, lmin))
+   * spurious cross spectrum.
+   *
+   * The tier is chosen per multipole, so a range straddling the threshold is
+   * split: the tail from l_zero up is zeroed, the head below it is integrated
+   * normally. */
+  if (_nc_xcor_meth_is_kernel_space (xc->meth))
   {
-    switch (xc->meth)
+    guint l_zero = 0;
+
+    if (_nc_xcor_kernels_limber_disjoint (xclk1, xclk2, isauto, &l_zero) && (l_zero <= lmax))
     {
-      case NC_XCOR_METHOD_KERNEL_GSL:
-      case NC_XCOR_METHOD_KERNEL_CUBATURE:
-      case NC_XCOR_METHOD_KERNEL_FIXED:
-        ncm_vector_set_zero (vp);
+      ncm_vector_set_zero (vp);
 
-        return;
+      if (l_zero > lmin)
+      {
+        NcmVector *vp_head = ncm_vector_get_subvector (vp, 0, l_zero - lmin);
 
-      default:
-        break;
+        _nc_xcor_kernel_space_compute (xc, xclk1, xclk2, cosmo, lmin, l_zero - 1, isauto, vp_head);
+        ncm_vector_free (vp_head);
+      }
     }
-  }
+    else
+    {
+      _nc_xcor_kernel_space_compute (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+    }
 
-  switch (xc->meth)
-  {
-    case NC_XCOR_METHOD_KERNEL_GSL:
-      _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-
-      return;
-
-    case NC_XCOR_METHOD_KERNEL_CUBATURE:
-      _nc_xcor_kernel_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-
-      return;
-
-    case NC_XCOR_METHOD_KERNEL_FIXED:
-      _nc_xcor_kernel_fixed (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-
-      return;
-
-    default:
-      break;
+    return;
   }
 
   nc_xcor_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);

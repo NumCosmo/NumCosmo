@@ -201,6 +201,41 @@ def test_kernel_fixed_over_ell_block(cosmology: Cosmology) -> None:
     )
 
 
+def test_kernel_fixed_batches_wide_ell_range(cosmology: Cosmology) -> None:
+    """KERNEL_FIXED batches a range wider than NC_XCOR_KERNEL_MAX_ELL_BLOCK.
+
+    A single k-space closure is capped at 64 multipoles, so an unbatched sweep
+    aborted the process on any wider request -- while KERNEL_CUBATURE, which the
+    two are meant to be interchangeable through, sliced the range into
+    NcXcor:ell-batch-size sub-blocks and handled it. The batching is what makes
+    the request legal, so the result must also be independent of where the
+    batch boundaries fall.
+    """
+    kernel = _kernels(cosmology)[0]
+    cosmo = cosmology.cosmo
+    lmax = 70  # > NC_XCOR_KERNEL_MAX_ELL_BLOCK
+
+    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED)
+    fixed.prepare(cosmo)
+
+    whole = Ncm.Vector.new(lmax + 1)
+    fixed.compute(kernel, kernel, cosmo, 0, lmax, whole)
+    values = np.array(whole.dup_array())
+
+    assert np.all(np.isfinite(values))
+    assert np.all(values > 0.0)
+
+    # Batches share no state, so a sub-range computed on its own reproduces the
+    # corresponding slice of the wide run exactly.
+    for lo, hi in [(0, 7), (8, 15), (64, 70)]:
+        part = Ncm.Vector.new(hi - lo + 1)
+        fixed.compute(kernel, kernel, cosmo, lo, hi, part)
+
+        assert_allclose(
+            np.array(part.dup_array()), values[lo : hi + 1], rtol=1.0e-9, atol=1.0e-50
+        )
+
+
 def test_kernel_fixed_through_solver(cosmology: Cosmology) -> None:
     """The solver drives KERNEL_FIXED consistently with nc_xcor_compute().
 

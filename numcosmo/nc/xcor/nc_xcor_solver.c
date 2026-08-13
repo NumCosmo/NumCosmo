@@ -674,9 +674,17 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
    * kernel-space only, where the two kernels couple through the outer k
    * integral rather than a shared z integral, so kernels over disjoint
    * redshift ranges still have a non-zero cross spectrum. Kernels that are
-   * themselves in the Limber tier are the exception -- see nc_xcor_compute(). */
-  if (_nc_xcor_kernels_limber_disjoint (k1, k2, isauto, block->lmin))
-    return;  /* zero contribution, result vector already zeroed */
+   * themselves in the Limber tier are the exception -- see nc_xcor_compute().
+   *
+   * Testing the block's lmin alone settles the whole block: plan_blocks()
+   * forces a block boundary at every registered kernel's l_limber, so no block
+   * straddles the threshold and every multipole in it is on the same side. */
+  {
+    guint l_zero = 0;
+
+    if (_nc_xcor_kernels_limber_disjoint (k1, k2, isauto, &l_zero) && (l_zero <= block->lmin))
+      return;  /* zero contribution, result vector already zeroed */
+  }
 
   xclki1 = g_hash_table_lookup (integrands, k1);
 

@@ -190,6 +190,68 @@ def test_kernel_space_limber_disjoint_is_zero(
     assert np.all(np.array(auto.dup_array()) > 0.0)
 
 
+@pytest.mark.parametrize(
+    "method",
+    [
+        Nc.XcorMethod.KERNEL_GSL,
+        Nc.XcorMethod.KERNEL_CUBATURE,
+        Nc.XcorMethod.KERNEL_FIXED,
+    ],
+)
+def test_kernel_space_limber_disjoint_splits_at_threshold(
+    cosmology: Cosmology, method: Nc.XcorMethod
+) -> None:
+    """A range straddling l_limber is zeroed only above the threshold.
+
+    The tier is chosen per multipole, so a request spanning l_limber has a
+    non-Limber head and a Limber tail. Deciding the short-circuit once, at the
+    request's lmin, got both halves wrong at once: the head was correct only
+    because the guard declined to fire, and the tail then integrated the
+    disjoint Limber kernels' extrapolation tails into a large spurious cross
+    spectrum -- exactly what the guard exists to prevent.
+    """
+    l_limber = 6
+    lmax = 9
+    kernels = _make_kernels(cosmology)
+
+    for kernel in kernels:
+        kernel.set_l_limber(l_limber)
+        kernel.prepare(cosmology.cosmo)
+
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, method)
+    # See test_disjoint_bins_cross_is_nonzero: KERNEL_GSL aborts on GSL roundoff
+    # at the default reltol for this large-cancellation residual.
+    if method == Nc.XcorMethod.KERNEL_GSL:
+        xcor.set_reltol(1.0e-4)
+
+    xcor.prepare(cosmology.cosmo)
+
+    straddling = Ncm.Vector.new(lmax + 1)
+    xcor.compute(kernels[0], kernels[1], cosmology.cosmo, 0, lmax, straddling)
+    values = np.array(straddling.dup_array())
+
+    # The Limber tail vanishes identically.
+    assert_allclose(values[l_limber:], 0.0, atol=0.0)
+
+    # The non-Limber head does not, and matches a request that stops short of
+    # the threshold -- the split must not perturb the multipoles below it.
+    assert np.all(np.isfinite(values[:l_limber]))
+    assert np.any(values[:l_limber] != 0.0)
+
+    head = Ncm.Vector.new(l_limber)
+    xcor.compute(kernels[0], kernels[1], cosmology.cosmo, 0, l_limber - 1, head)
+
+    assert_allclose(
+        values[:l_limber], np.array(head.dup_array()), rtol=1.0e-9, atol=1.0e-50
+    )
+
+    # A request lying entirely at or above the threshold is zero throughout.
+    tail = Ncm.Vector.new(lmax - l_limber + 1)
+    xcor.compute(kernels[0], kernels[1], cosmology.cosmo, l_limber, lmax, tail)
+
+    assert_allclose(np.array(tail.dup_array()), 0.0, atol=0.0)
+
+
 def test_limber_z_keeps_disjoint_short_circuit(cosmology: Cosmology) -> None:
     """The Limber-z tier still returns zero for disjoint bins, as it must."""
     k1, k2 = _make_kernels(cosmology)

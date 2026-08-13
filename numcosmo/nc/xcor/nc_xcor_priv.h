@@ -51,9 +51,12 @@ void _nc_xcor_kernel_integrate_block_fixed (NcXcor *xc, NcXcorKernelIntegrand *x
 void _nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk);
 
 /*
- * TRUE when both kernels run in the Limber tier over a block starting at @lmin
- * and their redshift supports do not overlap, in which case their Cl vanishes
- * identically and the kernel-space methods must not integrate it.
+ * TRUE when there is a multipole at or above which both kernels run in the
+ * Limber tier while their redshift supports do not overlap, so that their Cl
+ * vanishes identically from there up and the kernel-space methods must not
+ * integrate it; the lowest such multipole is written to @l_zero. FALSE when no
+ * such multipole exists -- the supports overlap, or at least one kernel never
+ * enters the Limber tier -- and @l_zero is then left untouched.
  *
  * A Limber kernel is supported only where xi = (l + 1/2) / k lies inside its
  * own radial range, so two disjoint bins have disjoint support in k and their
@@ -61,8 +64,14 @@ void _nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk);
  * The non-Limber tier is the opposite case: there the two kernels couple only
  * through the outer k integral and disjoint bins do correlate, which is why
  * this must be asked per tier and not once per method.
+ *
+ * The tier is chosen per multipole, so this reports a threshold rather than a
+ * bare yes/no: a caller whose range straddles @l_zero must zero only the tail
+ * and integrate the head normally. Callers whose ranges never straddle a
+ * kernel's l_limber (NcXcorSolver, whose plan_blocks() forces a block boundary
+ * there) may simply compare @l_zero against the range's lmin.
  */
-gboolean _nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboolean isauto, guint lmin);
+gboolean _nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboolean isauto, guint *l_zero);
 
 G_END_DECLS
 
