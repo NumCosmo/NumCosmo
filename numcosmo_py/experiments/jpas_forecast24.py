@@ -42,7 +42,7 @@ import time
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
-from numcosmo_py.ssc import SijCalculator
+from numcosmo_py.ssc import SijCalculator, find_lmax, mask_angular_power_spectrum
 
 
 class JpasSSCType(StrEnum):
@@ -661,6 +661,63 @@ def _set_mset_params(mset: Ncm.MSet, params: tuple[float, float, float]) -> None
     prim["ln10e10ASA"] = np.log(1.0e10 * A_s_fid * fact)
 
 
+def create_ssc_sij_calculator(
+    z_bins_knots: np.ndarray,
+    sky_cut: JpasSSCType,
+    area: float | None = None,
+) -> Nc.XcorSSCSij:
+    """Create a cosmology-dependent $S_{ij}$ calculator for the same footprint.
+
+    The C-side counterpart of :func:`create_covariance_S`: instead of a matrix
+    frozen at a fiducial cosmology, it returns a #NcXcorSSCSij that
+    #NcDataClusterNCountsGauss recomputes at every likelihood step.
+
+    It deliberately borrows the distance and power spectrum objects of the
+    :class:`~numcosmo_py.ssc.SijCalculator` used by :func:`create_covariance_S`,
+    so a fixed and a varying run differ only in whether $S_{ij}$ follows the
+    cosmology -- not in how it is computed.
+
+    :param z_bins_knots: Redshift bin boundaries.
+    :param sky_cut: The type of sky coverage to use for the $S_{ij}$ calculation.
+    :param area: The survey area in square degrees, required by CAP and
+        FULLSKY_FSKY and ignored by the remaining sky cut types.
+    :raises ValueError: If the sky cut type is invalid, or an area is missing.
+    :return: The configured #NcXcorSSCSij.
+    """
+    reference = _sij_calculator(z_bins_knots)
+    ssc_sij = Nc.XcorSSCSij.new(
+        reference.dist,
+        reference.powspec,
+        Ncm.Vector.new_array([float(z) for z in z_bins_knots]),
+    )
+
+    def _set_mask(mask: np.ndarray) -> None:
+        cl_mask, _fsky = mask_angular_power_spectrum(mask)
+        lmax = find_lmax(cl_mask)
+        ssc_sij.set_mask_cl(Ncm.Vector.new_array(cl_mask[: lmax + 1].tolist()))
+
+    if sky_cut == JpasSSCType.FULLSKY:
+        pass
+    elif sky_cut == JpasSSCType.FULLSKY_FSKY:
+        if area is None:
+            raise ValueError(
+                "Sij calculation for a full-sky fsky correction requires an area."
+            )
+        ssc_sij.set_area(area)
+    elif sky_cut == JpasSSCType.FULL:
+        _set_mask(create_mask_full())
+    elif sky_cut == JpasSSCType.GUARANTEED:
+        _set_mask(create_mask_guaranteed())
+    elif sky_cut == JpasSSCType.CAP:
+        if area is None:
+            raise ValueError("Sij calculation for a cap footprint requires an area.")
+        _set_mask(create_mask_cap(area))
+    else:
+        raise ValueError(f"Invalid sky cut type for Sij calculation: {sky_cut}")
+
+    return ssc_sij
+
+
 def generate_jpas_forecast_2024(
     area: float = 2959.1,
     z_min: float = 0.1,
@@ -678,6 +735,7 @@ def generate_jpas_forecast_2024(
     resample_seed: int = 1234,
     fitting_Sij_type: JpasSSCType = JpasSSCType.FULLSKY,
     resample_Sij_type: JpasSSCType = JpasSSCType.NO_SSC,
+    vary_fitting_Sij: bool = False,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate J-Pas 2024 cluster abundance forecast experiment dictionary.
 
@@ -703,6 +761,10 @@ def generate_jpas_forecast_2024(
     :param resample_model: $(Omega_c, w, sigma_8)$ for the model used to **generate the
         mock data vector**.
     :param resample_seed: Seed for the random number generator used for mock data.
+    :param vary_fitting_Sij: If True, the fitting $S_{ij}$ is recomputed at every
+        likelihood step for the current cosmology, instead of being frozen at the
+        fitting model. The resampling matrix stays frozen either way, so the mock
+        is unchanged.
     :param fitting_Sij_type: The type of SSC matrix $S_{ij}$ to use for the fitting
         (theoretical) covariance.
     :param resample_Sij_type: The type of SSC matrix $S_{ij}$ to use for generating the
@@ -800,6 +862,15 @@ def generate_jpas_forecast_2024(
         )
         ncounts_gauss.set_s_matrix(fitting_S_ij)
         print(f"Fitting SSC matrix computed in {time.time() - t_fit_ssc_start:.2f}s")
+
+        # The fixed matrix above stays set, so the two runs start from exactly
+        # the same covariance at the fitting model; the calculator then takes
+        # over whenever the cosmology moves.
+        if vary_fitting_Sij:
+            ncounts_gauss.set_ssc_sij(
+                create_ssc_sij_calculator(z_bins_knots, fitting_Sij_type, area=area)
+            )
+            print("Fitting SSC matrix will vary with cosmology.")
 
     # Set resampling (mock data) SSC matrix
     if resample_Sij_type != JpasSSCType.NO_SSC:

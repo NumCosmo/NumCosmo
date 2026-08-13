@@ -315,6 +315,35 @@ nc_xcor_kernel_cluster_tophat_new (NcDistance *dist, NcmPowspec *ps, gdouble z_l
   return xclkc;
 }
 
+/**
+ * nc_xcor_kernel_cluster_tophat_new_full:
+ * @dist: a #NcDistance
+ * @ps: a #NcmPowspec
+ * @z_lower: lower redshift bound
+ * @z_upper: upper redshift bound
+ * @sbi: a #NcmSBesselIntegrator
+ *
+ * Creates a new #NcXcorKernelClusterTophat carrying @sbi, as
+ * nc_xcor_kernel_cluster_tophat_new() does not. A #NcXcorKernel only accepts
+ * the non-Limber modes of nc_xcor_kernel_set_l_limber() once it holds an
+ * integrator, so this is the constructor to use for them.
+ *
+ * Returns: (transfer full): a new #NcXcorKernelClusterTophat
+ */
+NcXcorKernelClusterTophat *
+nc_xcor_kernel_cluster_tophat_new_full (NcDistance *dist, NcmPowspec *ps, gdouble z_lower, gdouble z_upper, NcmSBesselIntegrator *sbi)
+{
+  NcXcorKernelClusterTophat *xclkc = g_object_new (NC_TYPE_XCOR_KERNEL_CLUSTER_TOPHAT,
+                                                   "dist", dist,
+                                                   "powspec", ps,
+                                                   "z-lower", z_lower,
+                                                   "z-upper", z_upper,
+                                                   "integrator", sbi,
+                                                   NULL);
+
+  return xclkc;
+}
+
 /*
  * Old Limber interface implementation
  */
