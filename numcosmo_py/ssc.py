@@ -57,15 +57,13 @@ inactive while `scaled_abstol` binds. #NcXcorKernel defaults to
 `scaled_abstol = 1e-4`, and at that value tightening `reltol` changes nothing at
 all. Measured against a converged independent quadrature, for seven J-PAS bins:
 
-===================  =========  =========  =========  ==========  =======
-`scaled_abstol`      $S_{00}$   $S_{01}$   $S_{04}$   $S_{06}$    time
-====================  =========  =========  =========  ==========  =======
-`scaled_abstol`       $S_{00}$   $S_{01}$   $S_{04}$   $S_{06}$    time
-====================  =========  =========  =========  ==========  =======
-`1e-4` (NcXcorKernel)   -0.07%     -0.59%    -19.6%      -59.1%     0.04 s
-`1e-6` (used here)       0.006%    -0.014%     0.28%      -5.2%     0.13 s
-`1e-8`                   0.001%    -0.003%     0.02%      -0.06%    0.36 s
-====================  =========  =========  =========  ==========  =======
+=====================  =========  =========  =========  =========  =======
+`scaled_abstol`        $S_{00}$   $S_{01}$   $S_{04}$   $S_{06}$   time
+=====================  =========  =========  =========  =========  =======
+`1e-4` (NcXcorKernel)     -0.07%     -0.59%     -19.6%     -59.1%   0.04 s
+`1e-6` (used here)        0.006%    -0.014%      0.28%      -5.2%   0.13 s
+`1e-8`                    0.001%    -0.003%      0.02%     -0.06%   0.36 s
+=====================  =========  =========  =========  =========  =======
 
 `1e-8` is the accurate setting and its residual `0.06%` is consistent with the
 reference's own convergence rather than a NumCosmo error, but it currently

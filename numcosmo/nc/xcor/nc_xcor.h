@@ -56,12 +56,19 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
  *
  * Methods to compute integrals.
  *
- * %NC_XCOR_METHOD_KERNEL_FIXED needs no tolerance and cannot fail to converge:
- * the kernels are sampled jointly onto one knot set, on which each component is
- * a cubic spline in $k$, so the outer integrand $k^2 W_i W_j$ is a degree-8
- * polynomial on every knot panel and a 5-node Gauss-Legendre rule integrates it
- * exactly. The adaptive alternatives target a tolerance the integrand may not
- * be able to support, and abort when they cannot reach it.
+ * %NC_XCOR_METHOD_KERNEL_FIXED needs no tolerance and cannot fail to converge.
+ * It uses the same per-kernel closures as %NC_XCOR_METHOD_KERNEL_CUBATURE and
+ * differs only in the outer quadrature: each kernel's $W(k)$ is a cubic spline,
+ * so on the common refinement of a pair's two knot sets the outer integrand
+ * $k^2 W_i W_j$ is a degree-8 polynomial on every panel, and a 5-node
+ * Gauss-Legendre rule integrates it exactly. The adaptive alternatives target a
+ * tolerance the integrand may not be able to support, and abort when they
+ * cannot reach it.
+ *
+ * Measured over 28 pairs of 7 top-hat bins it is also slightly faster than
+ * %NC_XCOR_METHOD_KERNEL_CUBATURE (1.05x at $\ell = 0$, 1.18x over
+ * $\ell = 0\dots26$), since the exact rule replaces adaptive refinement on
+ * splines that have already been built.
  *
  */
 typedef enum _NcXcorMethod

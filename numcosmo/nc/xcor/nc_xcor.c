@@ -810,143 +810,124 @@ static const gdouble _nc_xcor_gl5_w[NC_XCOR_GL5_N] = {
 };
 
 /*
- * Exact outer quadrature on the joint knot set, for every requested pair at
- * once.
+ * Exact outer quadrature for one pair, on the union of the two kernels' own
+ * knot sets.
  *
- * All kernels of the block are sampled onto one shared abscissa, so one sweep
- * of the knot panels serves every pair and every multipole: the joint
- * integrand is evaluated once per node -- filling all its components -- and
- * that one evaluation is accumulated into every (pair, ell) whose support
- * contains the node. This is the $U^\top W U$ the shared knot set exists to
- * make possible. Sweeping per pair instead would re-evaluate all
- * n_kernels * nell splines at every node once for each of the N(N+1)/2 pairs,
- * which is where the method's cost used to go.
+ * Each kernel is sampled independently -- the same per-kernel closures
+ * KERNEL_CUBATURE builds and NcXcorSolver caches -- so the two splines live on
+ * different abscissas. On the common refinement of those abscissas each spline
+ * is still a single cubic piece per panel, so k^2 W_i W_j is a degree-8
+ * polynomial there and GL(5) integrates it exactly. Merging two knot sets is
+ * all the coupling the exactness argument needs; a shared abscissa built by
+ * sampling the kernels jointly is not required, and costs about twice as much
+ * to produce.
  *
- * Each component is masked to its own support
- * (nc_xcor_kernel_integrand_get_component_range()) because NcmSpline does not
- * range-check, and an out-of-support evaluation returns extrapolation rather
- * than a small number. Those bounds are knots of this same set and the GL
- * nodes are interior to their panel, so a panel is either wholly inside a
- * given pair's support or wholly outside it -- the mask is resolved once per
- * panel rather than once per node.
+ * The range is the intersection of the two integrands' fitted domains, exactly
+ * as _nc_xcor_kernel_integrate_block_cubature() uses, because NcmSpline does
+ * not range-check and an out-of-domain evaluation returns extrapolation rather
+ * than a small number.
  */
 void
-_nc_xcor_kernel_fixed_assemble (NcXcor *xc, NcXcorKernelIntegrand *xclki, const guint *kernel_id_1, const guint *kernel_id_2, guint n_pairs, NcmVector **vp)
+_nc_xcor_kernel_integrate_block_fixed (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
 {
-  const guint len            = nc_xcor_kernel_integrand_get_len (xclki);
-  const guint nell           = ncm_vector_len (vp[0]);
-  const guint n_out          = n_pairs * nell;
+  const guint nell           = lmax - lmin + 1;
   const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
-  NcmVector *knots           = nc_xcor_kernel_integrand_peek_knots (xclki);
-  const guint n_knots        = ncm_vector_len (knots);
-  gdouble *supp_lo, *supp_hi, *pair_lo, *pair_hi, *sum, *W;
-  guint *c1, *c2, *active;
-  guint ic, ip, il, ik, ig, ia, n_active;
+  NcmVector *knots1          = nc_xcor_kernel_integrand_peek_knots (xclki1);
+  NcmVector *knots2          = isauto ? knots1 : nc_xcor_kernel_integrand_peek_knots (xclki2);
+  gdouble k_min1, k_max1, k_min2, k_max2, k_min, k_max;
+  gdouble *sum, *W1, *W2;
+  GArray *edges;
+  guint i1, i2, ie, ig, il;
 
-  g_assert_cmpuint (n_pairs, >, 0);
+  if (ncm_vector_len (vp) != nell)
+    g_error ("_nc_xcor_kernel_integrate_block_fixed: vector size does not match multipole limits");
 
-  supp_lo = g_new (gdouble, len);
-  supp_hi = g_new (gdouble, len);
-  pair_lo = g_new (gdouble, n_out);
-  pair_hi = g_new (gdouble, n_out);
-  sum     = g_new0 (gdouble, n_out);
-  W       = g_new0 (gdouble, len);
-  c1      = g_new (guint, n_out);
-  c2      = g_new (guint, n_out);
-  active  = g_new (guint, n_out);
+  if ((knots1 == NULL) || (knots2 == NULL))
+    g_error ("_nc_xcor_kernel_integrate_block_fixed: %s method requires spline-backed "
+             "integrands, which report their knots.", "NC_XCOR_METHOD_KERNEL_FIXED");
 
-  /* Component supports, resolved once for the whole block rather than once
-   * per pair. An empty support becomes an empty interval, so every
-   * intersection containing it is empty too. */
-  for (ic = 0; ic < len; ic++)
+  nc_xcor_kernel_integrand_get_range (xclki1, &k_min1, &k_max1);
+  nc_xcor_kernel_integrand_get_range (xclki2, &k_min2, &k_max2);
+
+  k_min = GSL_MAX (k_min1, k_min2);
+  k_max = GSL_MIN (k_max1, k_max2);
+
+  ncm_vector_set_zero (vp);
+
+  if (k_min >= k_max)
+    return;
+
+  /* Common refinement of the two knot sets, clipped to the shared domain.
+   * Both are sorted, so this is a linear merge; duplicates are dropped so no
+   * zero-width panel survives. */
+  edges = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  i1    = 0;
+  i2    = 0;
+
+  while ((i1 < ncm_vector_len (knots1)) || (i2 < ncm_vector_len (knots2)))
   {
-    gdouble k_min, k_max;
+    const gdouble x1 = (i1 < ncm_vector_len (knots1)) ? ncm_vector_get (knots1, i1) : GSL_POSINF;
+    const gdouble x2 = (i2 < ncm_vector_len (knots2)) ? ncm_vector_get (knots2, i2) : GSL_POSINF;
+    const gdouble x  = GSL_MIN (x1, x2);
 
-    if (nc_xcor_kernel_integrand_get_component_range (xclki, ic, &k_min, &k_max))
-    {
-      supp_lo[ic] = k_min;
-      supp_hi[ic] = k_max;
-    }
-    else
-    {
-      supp_lo[ic] = GSL_POSINF;
-      supp_hi[ic] = GSL_NEGINF;
-    }
+    if (x1 <= x2)
+      i1++;
+
+    if (x2 <= x1)
+      i2++;
+
+    if ((x < k_min) || (x > k_max))
+      continue;
+
+    if ((edges->len > 0) && (x <= g_array_index (edges, gdouble, edges->len - 1)))
+      continue;
+
+    g_array_append_val (edges, x);
   }
 
-  for (ip = 0; ip < n_pairs; ip++)
+  if (edges->len < 2)
   {
-    const guint off1 = kernel_id_1[ip] * nell;
-    const guint off2 = kernel_id_2[ip] * nell;
+    g_array_unref (edges);
 
-    g_assert_cmpuint (ncm_vector_len (vp[ip]), ==, nell);
-    g_assert_cmpuint (off1 + nell, <=, len);
-    g_assert_cmpuint (off2 + nell, <=, len);
-
-    for (il = 0; il < nell; il++)
-    {
-      const guint idx = ip * nell + il;
-
-      c1[idx]      = off1 + il;
-      c2[idx]      = off2 + il;
-      pair_lo[idx] = GSL_MAX (supp_lo[c1[idx]], supp_lo[c2[idx]]);
-      pair_hi[idx] = GSL_MIN (supp_hi[c1[idx]], supp_hi[c2[idx]]);
-    }
+    return;
   }
 
-  for (ik = 0; ik + 1 < n_knots; ik++)
+  sum = g_new0 (gdouble, nell);
+  W1  = g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki1));
+  W2  = isauto ? W1 : g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki2));
+
+  for (ie = 0; ie + 1 < edges->len; ie++)
   {
-    const gdouble panel_lo = ncm_vector_get (knots, ik);
-    const gdouble panel_hi = ncm_vector_get (knots, ik + 1);
+    const gdouble panel_lo = g_array_index (edges, gdouble, ie);
+    const gdouble panel_hi = g_array_index (edges, gdouble, ie + 1);
     const gdouble mid      = 0.5 * (panel_lo + panel_hi);
     const gdouble half     = 0.5 * (panel_hi - panel_lo);
-
-    if (half <= 0.0)
-      continue;
-
-    n_active = 0;
-
-    for (ia = 0; ia < n_out; ia++)
-    {
-      if ((panel_lo >= pair_lo[ia]) && (panel_hi <= pair_hi[ia]))
-        active[n_active++] = ia;
-    }
-
-    if (n_active == 0)
-      continue;
 
     for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
     {
       const gdouble k = mid + half * _nc_xcor_gl5_x[ig];
       const gdouble w = half * _nc_xcor_gl5_w[ig] * k * k;
-      guint j;
 
-      nc_xcor_kernel_integrand_eval (xclki, k, W);
+      nc_xcor_kernel_integrand_eval (xclki1, k, W1);
 
-      for (j = 0; j < n_active; j++)
-      {
-        const guint idx = active[j];
+      if (!isauto)
+        nc_xcor_kernel_integrand_eval (xclki2, k, W2);
 
-        sum[idx] += w * W[c1[idx]] * W[c2[idx]];
-      }
+      for (il = 0; il < nell; il++)
+        sum[il] += w * W1[il] * W2[il];
     }
   }
 
-  for (ip = 0; ip < n_pairs; ip++)
-  {
-    for (il = 0; il < nell; il++)
-      ncm_vector_set (vp[ip], il, const_factor * sum[ip * nell + il]);
-  }
+  for (il = 0; il < nell; il++)
+    ncm_vector_set (vp, il, const_factor * sum[il]);
 
-  g_free (supp_lo);
-  g_free (supp_hi);
-  g_free (pair_lo);
-  g_free (pair_hi);
   g_free (sum);
-  g_free (W);
-  g_free (c1);
-  g_free (c2);
-  g_free (active);
+  g_free (W1);
+
+  if (!isauto)
+    g_free (W2);
+
+  g_array_unref (edges);
 }
 
 gboolean
@@ -976,35 +957,27 @@ _nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboo
 static void
 _nc_xcor_kernel_fixed (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
 {
-  const guint nell          = ncm_vector_len (vp);
-  GPtrArray *kernels        = g_ptr_array_new ();
-  NcmSBesselIntegrator *sbi = nc_xcor_kernel_peek_integrator (xclk1);
-  NcXcorKernelIntegrand *xclki;
+  NcmSBesselIntegrator *sbi1 = nc_xcor_kernel_peek_integrator (xclk1);
+  NcmSBesselIntegrator *sbi2 = nc_xcor_kernel_peek_integrator (xclk2);
+  NcXcorKernelIntegrand *xclki1;
+  NcXcorKernelIntegrand *xclki2;
 
-  /* Either kernel's integrator serves the joint build, which pins the ell
-   * range itself, so only one of the pair needs to carry one. */
-  if (sbi == NULL)
-    sbi = nc_xcor_kernel_peek_integrator (xclk2);
+  /* Either kernel's integrator serves a kernel that carries none of its own. */
+  if (sbi1 == NULL)
+    sbi1 = sbi2;
 
-  if (nell != lmax - lmin + 1)
-    g_error ("_nc_xcor_kernel_fixed: vector size does not match multipole limits");
+  if (sbi2 == NULL)
+    sbi2 = sbi1;
 
-  g_ptr_array_add (kernels, xclk1);
+  xclki1 = nc_xcor_kernel_get_eval_vectorized_full (xclk1, cosmo, lmin, lmax, sbi1);
+  xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized_full (xclk2, cosmo, lmin, lmax, sbi2);
 
-  if (!isauto)
-    g_ptr_array_add (kernels, xclk2);
+  _nc_xcor_kernel_integrate_block_fixed (xc, xclki1, isauto ? xclki1 : xclki2, lmin, lmax, isauto, vp);
 
-  xclki = nc_xcor_kernel_get_eval_vectorized_joint (kernels, cosmo, lmin, lmax, sbi);
-  g_ptr_array_unref (kernels);
+  nc_xcor_kernel_integrand_unref (xclki1);
 
-  {
-    const guint kernel_id_1 = 0;
-    const guint kernel_id_2 = isauto ? 0 : 1;
-
-    _nc_xcor_kernel_fixed_assemble (xc, xclki, &kernel_id_1, &kernel_id_2, 1, &vp);
-  }
-
-  nc_xcor_kernel_integrand_unref (xclki);
+  if (xclki2 != NULL)
+    nc_xcor_kernel_integrand_unref (xclki2);
 }
 
 void

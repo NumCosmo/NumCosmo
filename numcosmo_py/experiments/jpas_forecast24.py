@@ -37,6 +37,7 @@ It includes:
 
 from typing import cast
 from enum import StrEnum, auto
+import functools
 import time
 import numpy as np
 
@@ -413,13 +414,30 @@ def create_mfunc_array(psml: Nc.PowspecML) -> Ncm.ObjArray:
     return mfunc_oa
 
 
-def _sij_calculator(z_bins_knots: np.ndarray) -> SijCalculator:
+@functools.lru_cache(maxsize=4)
+def _sij_calculator_cached(z_bins_knots: tuple[float, ...]) -> SijCalculator:
     """Build the $S_{ij}$ calculator for a set of redshift bin edges.
+
+    :param z_bins_knots: Redshift bin boundaries, as a hashable tuple.
+    :return: A :class:`numcosmo_py.ssc.SijCalculator` over those bins.
+    """
+    return SijCalculator(np.asarray(z_bins_knots, dtype=np.float64))
+
+
+def _sij_calculator(z_bins_knots: np.ndarray) -> SijCalculator:
+    """Return the $S_{ij}$ calculator for a set of redshift bin edges.
+
+    Reused across calls with the same bin edges. A forecast asks for a fitting
+    and a resample $S_{ij}$ from identical bins, and the calculator caches its
+    mask power spectrum -- which is cosmology-independent, so recomputing it
+    would mean a second spherical harmonic transform for nothing. The kernels
+    it holds are re-prepared against the cosmology on every compute, so sharing
+    one across cosmologies is safe.
 
     :param z_bins_knots: Redshift bin boundaries.
     :return: A :class:`numcosmo_py.ssc.SijCalculator` over those bins.
     """
-    return SijCalculator(z_bins_knots)
+    return _sij_calculator_cached(tuple(float(z) for z in z_bins_knots))
 
 
 def _as_matrix(sij: np.ndarray) -> Ncm.Matrix:
