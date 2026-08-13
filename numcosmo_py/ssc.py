@@ -481,4 +481,9 @@ class SijCalculator:
         cl = self.compute_cl(cosmo, 0, lmax, progress=progress)
         weights = (2.0 * ell + 1.0) * cl_mask
 
-        return np.tensordot(cl, weights, axes=([2], [0])) / (4.0 * np.pi * fsky) ** 2
+        sij = np.tensordot(cl, weights, axes=([2], [0])) / (4.0 * np.pi * fsky) ** 2
+
+        # np.tensordot is typed as returning floating[Any] whatever it is given,
+        # so the dtype has to be restated rather than inferred. Both operands
+        # are float64 already, making this a no-op at runtime.
+        return np.asarray(sij, dtype=np.float64)
