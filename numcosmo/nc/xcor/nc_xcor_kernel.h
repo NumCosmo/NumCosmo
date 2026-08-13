@@ -110,6 +110,19 @@ typedef NcmVector *(*NcXcorKernelIntegrandGetKnots) (gpointer data);
  * @data_free: function to free @data, or %NULL if no cleanup needed
  *
  * A reference-counted closure for computing kernel integrands.
+ *
+ * **One integrand must be evaluated by one thread at a time.** A spline-backed
+ * integrand keeps a scratch vector for the result of each evaluation, so
+ * concurrent nc_xcor_kernel_integrand_eval() calls on the *same* integrand
+ * would race on it.
+ *
+ * #NcXcorSolver satisfies this by construction rather than by convention: an
+ * integrand is built for one (kernel, ell-block) pair, and the ell block is
+ * the unit of parallelism -- one integrator per block, blocks distributed
+ * across the OpenMP team, kernels shared and read-only throughout. No two
+ * threads ever hold the same integrand. Anything that made kernel *pairs* the
+ * unit of parallelism instead would share integrands across threads and would
+ * need per-thread evaluation scratch.
  * The @eval_func function should fill @len values in the @W array
  * for the given wavenumber @k.
  */

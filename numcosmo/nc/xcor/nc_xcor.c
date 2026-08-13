@@ -810,6 +810,63 @@ static const gdouble _nc_xcor_gl5_w[NC_XCOR_GL5_N] = {
 };
 
 /*
+ * The two GL(5) sweeps over a pair's merged panels. Auto and cross differ only
+ * in whether the second integrand is evaluated at all, which is fixed for the
+ * whole sweep -- so they are separate functions and the inner loops carry no
+ * branch. Each is a flat loop over panel x node x multipole.
+ */
+static void
+_nc_xcor_gl5_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, guint nell, gdouble *W, gdouble *sum)
+{
+  guint ie, ig, il;
+
+  for (ie = 0; ie + 1 < edges->len; ie++)
+  {
+    const gdouble panel_lo = g_array_index (edges, gdouble, ie);
+    const gdouble panel_hi = g_array_index (edges, gdouble, ie + 1);
+    const gdouble mid      = 0.5 * (panel_lo + panel_hi);
+    const gdouble half     = 0.5 * (panel_hi - panel_lo);
+
+    for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
+    {
+      const gdouble k = mid + half * _nc_xcor_gl5_x[ig];
+      const gdouble w = half * _nc_xcor_gl5_w[ig] * k * k;
+
+      nc_xcor_kernel_integrand_eval (xclki, k, W);
+
+      for (il = 0; il < nell; il++)
+        sum[il] += w * W[il] * W[il];
+    }
+  }
+}
+
+static void
+_nc_xcor_gl5_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, GArray *edges, guint nell, gdouble *W1, gdouble *W2, gdouble *sum)
+{
+  guint ie, ig, il;
+
+  for (ie = 0; ie + 1 < edges->len; ie++)
+  {
+    const gdouble panel_lo = g_array_index (edges, gdouble, ie);
+    const gdouble panel_hi = g_array_index (edges, gdouble, ie + 1);
+    const gdouble mid      = 0.5 * (panel_lo + panel_hi);
+    const gdouble half     = 0.5 * (panel_hi - panel_lo);
+
+    for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
+    {
+      const gdouble k = mid + half * _nc_xcor_gl5_x[ig];
+      const gdouble w = half * _nc_xcor_gl5_w[ig] * k * k;
+
+      nc_xcor_kernel_integrand_eval (xclki1, k, W1);
+      nc_xcor_kernel_integrand_eval (xclki2, k, W2);
+
+      for (il = 0; il < nell; il++)
+        sum[il] += w * W1[il] * W2[il];
+    }
+  }
+}
+
+/*
  * Exact outer quadrature for one pair, on the union of the two kernels' own
  * knot sets.
  *
@@ -837,7 +894,7 @@ _nc_xcor_kernel_integrate_block_fixed (NcXcor *xc, NcXcorKernelIntegrand *xclki1
   gdouble k_min1, k_max1, k_min2, k_max2, k_min, k_max;
   gdouble *sum, *W1, *W2;
   GArray *edges;
-  guint i1, i2, ie, ig, il;
+  guint i1, i2, il;
 
   if (ncm_vector_len (vp) != nell)
     g_error ("_nc_xcor_kernel_integrate_block_fixed: vector size does not match multipole limits");
@@ -860,9 +917,13 @@ _nc_xcor_kernel_integrate_block_fixed (NcXcor *xc, NcXcorKernelIntegrand *xclki1
   /* Common refinement of the two knot sets, clipped to the shared domain.
    * Both are sorted, so this is a linear merge; duplicates are dropped so no
    * zero-width panel survives. */
-  edges = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  i1    = 0;
-  i2    = 0;
+  /* Pre-sized to the exact upper bound of a merge, so the append loop below
+   * never reallocates: the union of two sorted sets cannot exceed their
+   * combined length. */
+  edges = g_array_sized_new (FALSE, FALSE, sizeof (gdouble),
+                             ncm_vector_len (knots1) + ncm_vector_len (knots2));
+  i1 = 0;
+  i2 = 0;
 
   while ((i1 < ncm_vector_len (knots1)) || (i2 < ncm_vector_len (knots2)))
   {
@@ -896,27 +957,12 @@ _nc_xcor_kernel_integrate_block_fixed (NcXcor *xc, NcXcorKernelIntegrand *xclki1
   W1  = g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki1));
   W2  = isauto ? W1 : g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki2));
 
-  for (ie = 0; ie + 1 < edges->len; ie++)
-  {
-    const gdouble panel_lo = g_array_index (edges, gdouble, ie);
-    const gdouble panel_hi = g_array_index (edges, gdouble, ie + 1);
-    const gdouble mid      = 0.5 * (panel_lo + panel_hi);
-    const gdouble half     = 0.5 * (panel_hi - panel_lo);
-
-    for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
-    {
-      const gdouble k = mid + half * _nc_xcor_gl5_x[ig];
-      const gdouble w = half * _nc_xcor_gl5_w[ig] * k * k;
-
-      nc_xcor_kernel_integrand_eval (xclki1, k, W1);
-
-      if (!isauto)
-        nc_xcor_kernel_integrand_eval (xclki2, k, W2);
-
-      for (il = 0; il < nell; il++)
-        sum[il] += w * W1[il] * W2[il];
-    }
-  }
+  /* The auto/cross distinction is fixed for the whole sweep, so it is resolved
+   * once here rather than tested at every quadrature node. */
+  if (isauto)
+    _nc_xcor_gl5_sweep_auto (xclki1, edges, nell, W1, sum);
+  else
+    _nc_xcor_gl5_sweep_cross (xclki1, xclki2, edges, nell, W1, W2, sum);
 
   for (il = 0; il < nell; il++)
     ncm_vector_set (vp, il, const_factor * sum[il]);
