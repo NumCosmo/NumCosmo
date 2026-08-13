@@ -670,10 +670,14 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
   if (!isauto)
     _nc_xcor_check_kernel_tolerance (xc, k2);
 
-  /* No redshift-overlap short-circuit here: this path is KERNEL_CUBATURE only,
-   * where the two kernels couple through the outer k integral rather than a
-   * shared z integral, so kernels over disjoint redshift ranges still have a
-   * non-zero cross spectrum (see nc_xcor_compute()). */
+  /* No blanket redshift-overlap short-circuit here: this path is
+   * KERNEL_CUBATURE only, where the two kernels couple through the outer k
+   * integral rather than a shared z integral, so kernels over disjoint
+   * redshift ranges still have a non-zero cross spectrum. Kernels that are
+   * themselves in the Limber tier are the exception -- see nc_xcor_compute(). */
+  if (_nc_xcor_kernels_limber_disjoint (k1, k2, isauto, block->lmin))
+    return;  /* zero contribution, result vector already zeroed */
+
   xclki1 = g_hash_table_lookup (integrands, k1);
 
   if (xclki1 == NULL)
@@ -787,9 +791,10 @@ nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo)
 
     _nc_xcor_solver_prepare_block_integrators (solver);
 
-    /* One joint build per block covers every registered kernel at once, so the
-     * per-pair cost collapses to reading two components out of it: N kernel
-     * samplings instead of N(N+1)/2 pair-wise ones. */
+    /* One joint build per block covers every registered kernel at once, and
+     * one sweep of its knot panels then yields every requested pair, so both
+     * the sampling and the outer integration are done once per block rather
+     * than once per pair. */
     #pragma omp parallel shared (xc, cosmo, n_blocks, requests, blocks, kernels, results, block_sbis)
     {
       guint b;
@@ -798,34 +803,77 @@ nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo)
 
       for (b = 0; b < n_blocks; b++)
       {
-        NcXcorSolverBlock *block     = &g_array_index (blocks, NcXcorSolverBlock, b);
-        NcmSBesselIntegrator *sbi    = g_ptr_array_index (block_sbis, b);
-        const guint block_n_l        = block->lmax - block->lmin + 1;
-        NcXcorKernelIntegrand *joint = nc_xcor_kernel_get_eval_vectorized_joint (kernels, cosmo, block->lmin, block->lmax, sbi);
-        NcmVector *block_vp          = ncm_vector_new (block_n_l);
-        guint r_local;
+        NcXcorSolverBlock *block  = &g_array_index (blocks, NcXcorSolverBlock, b);
+        NcmSBesselIntegrator *sbi = g_ptr_array_index (block_sbis, b);
+        const guint block_n_l     = block->lmax - block->lmin + 1;
+        const guint n_req         = requests->len;
+        NcXcorKernelIntegrand *joint;
+        NcmVector **block_vp;
+        guint *pair_k1, *pair_k2, *pair_req;
+        guint n_pairs = 0;
+        guint r_local, ip;
 
-        for (r_local = 0; r_local < requests->len; r_local++)
+        pair_k1  = g_new (guint, n_req);
+        pair_k2  = g_new (guint, n_req);
+        pair_req = g_new (guint, n_req);
+        block_vp = g_new (NcmVector *, n_req);
+
+        /* Gather every request this block contributes to, so the panels can be
+         * swept once for all of them instead of once per request. */
+        for (r_local = 0; r_local < n_req; r_local++)
         {
           NcXcorSolverRequest *req = &g_array_index (requests, NcXcorSolverRequest, r_local);
-          NcmVector *vp;
-          guint lo, hi, i;
+          NcXcorKernel *k1         = g_ptr_array_index (kernels, req->kernel_id_1);
+          NcXcorKernel *k2         = g_ptr_array_index (kernels, req->kernel_id_2);
 
           if ((req->lmax < block->lmin) || (req->lmin > block->lmax))
             continue;
 
-          _nc_xcor_kernel_fixed_assemble (xc, joint, req->kernel_id_1, req->kernel_id_2, block_vp);
+          /* Zero by construction, and skipping it keeps it out of the sweep
+           * (see nc_xcor_compute()). */
+          if (_nc_xcor_kernels_limber_disjoint (k1, k2, (k1 == k2), block->lmin))
+            continue;
 
-          vp = g_ptr_array_index (results, r_local);
-          lo = MAX (req->lmin, block->lmin);
-          hi = MIN (req->lmax, block->lmax);
-
-          for (i = lo; i <= hi; i++)
-            ncm_vector_set (vp, i - req->lmin, ncm_vector_get (block_vp, i - block->lmin));
+          pair_k1[n_pairs]  = req->kernel_id_1;
+          pair_k2[n_pairs]  = req->kernel_id_2;
+          pair_req[n_pairs] = r_local;
+          block_vp[n_pairs] = ncm_vector_new (block_n_l);
+          n_pairs++;
         }
 
-        ncm_vector_free (block_vp);
+        if (n_pairs == 0)
+        {
+          g_free (pair_k1);
+          g_free (pair_k2);
+          g_free (pair_req);
+          g_free (block_vp);
+
+          continue;
+        }
+
+        joint = nc_xcor_kernel_get_eval_vectorized_joint (kernels, cosmo, block->lmin, block->lmax, sbi);
+
+        _nc_xcor_kernel_fixed_assemble (xc, joint, pair_k1, pair_k2, n_pairs, block_vp);
+
+        for (ip = 0; ip < n_pairs; ip++)
+        {
+          NcXcorSolverRequest *req = &g_array_index (requests, NcXcorSolverRequest, pair_req[ip]);
+          NcmVector *vp            = g_ptr_array_index (results, pair_req[ip]);
+          const guint lo           = MAX (req->lmin, block->lmin);
+          const guint hi           = MIN (req->lmax, block->lmax);
+          guint i;
+
+          for (i = lo; i <= hi; i++)
+            ncm_vector_set (vp, i - req->lmin, ncm_vector_get (block_vp[ip], i - block->lmin));
+
+          ncm_vector_free (block_vp[ip]);
+        }
+
         nc_xcor_kernel_integrand_unref (joint);
+        g_free (pair_k1);
+        g_free (pair_k2);
+        g_free (pair_req);
+        g_free (block_vp);
       }
     }
 

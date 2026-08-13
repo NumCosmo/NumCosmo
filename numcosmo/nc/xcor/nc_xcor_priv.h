@@ -40,16 +40,37 @@ G_BEGIN_DECLS
 void _nc_xcor_kernel_integrate_block_cubature (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp);
 
 /*
- * Assembles one pair's Cl block from a joint integrand covering several
- * kernels on a shared knot set, by exact 5-node Gauss-Legendre over the knot
- * panels. Component (kernel_id, il) lives at kernel_id * nell + il, with nell
- * taken from @vp. Lets NcXcorSolver build one joint integrand per ell block and
- * read every requested pair out of it, instead of one build per pair.
+ * Assembles @n_pairs Cl blocks from a joint integrand covering several kernels
+ * on a shared knot set, by exact 5-node Gauss-Legendre over the knot panels.
+ * Component (kernel_id, il) lives at kernel_id * nell + il, with nell taken
+ * from @vp[0]; every @vp must have that same length. Pair @ip reads kernels
+ * @kernel_id_1[@ip] and @kernel_id_2[@ip] and is written to @vp[@ip].
+ *
+ * Taking every pair in one call is the point: the panels are swept once and
+ * each node's evaluation of the joint integrand -- which fills all its
+ * components regardless -- serves all pairs, so the outer integration costs
+ * one sweep per ell block rather than one per pair. Lets NcXcorSolver build
+ * one joint integrand per ell block and read every requested pair out of it in
+ * a single pass.
  */
-void _nc_xcor_kernel_fixed_assemble (NcXcor *xc, NcXcorKernelIntegrand *xclki, guint kernel_id_1, guint kernel_id_2, NcmVector *vp);
+void _nc_xcor_kernel_fixed_assemble (NcXcor *xc, NcXcorKernelIntegrand *xclki, const guint *kernel_id_1, const guint *kernel_id_2, guint n_pairs, NcmVector **vp);
 
 /* Fails loudly when NcXcor:reltol asks for more than the kernel's closure carries. */
 void _nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk);
+
+/*
+ * TRUE when both kernels run in the Limber tier over a block starting at @lmin
+ * and their redshift supports do not overlap, in which case their Cl vanishes
+ * identically and the kernel-space methods must not integrate it.
+ *
+ * A Limber kernel is supported only where xi = (l + 1/2) / k lies inside its
+ * own radial range, so two disjoint bins have disjoint support in k and their
+ * product is zero -- the same statement as the Limber-z tier's overlap test.
+ * The non-Limber tier is the opposite case: there the two kernels couple only
+ * through the outer k integral and disjoint bins do correlate, which is why
+ * this must be asked per tier and not once per method.
+ */
+gboolean _nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboolean isauto, guint lmin);
 
 G_END_DECLS
 

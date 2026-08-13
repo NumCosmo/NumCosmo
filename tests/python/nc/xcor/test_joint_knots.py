@@ -281,6 +281,95 @@ def test_kernel_fixed_through_solver(cosmology: Cosmology) -> None:
         )
 
 
+def _limber_kernels(cosmology: Cosmology, l_limber: list[int]) -> list[Nc.XcorKernel]:
+    """Build overlapping top-hat kernels with the given per-kernel l_limber."""
+    out = []
+
+    for (z_lower, z_upper), l_lim in zip([(0.1, 0.3), (0.2, 0.4)], l_limber):
+        kernel = Nc.XcorKernelClusterTophat(
+            dist=cosmology.dist,
+            powspec=cosmology.ps_ml,
+            z_lower=z_lower,
+            z_upper=z_upper,
+            integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+        )
+        kernel.set_l_limber(l_lim)
+        kernel.prepare(cosmology.cosmo)
+        out.append(kernel)
+
+    return out
+
+
+@pytest.mark.parametrize("l_limber", [[0, 0], [0, -1], [-1, 0]])
+def test_kernel_fixed_respects_l_limber(
+    cosmology: Cosmology, l_limber: list[int]
+) -> None:
+    """Each kernel of a joint block is evaluated in its own l_limber tier.
+
+    The joint sampler shares the abscissa across kernels, not the
+    approximation: a Limber kernel must stay Limber. Building every component
+    non-Limber regardless is silently a different quantity -- for these bins at
+    ell = 10 it was wrong by a factor of 5000.
+    """
+    k1, k2 = _limber_kernels(cosmology, l_limber)
+    cosmo = cosmology.cosmo
+
+    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED)
+    fixed.prepare(cosmo)
+    cubature = Nc.Xcor.new(
+        cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE
+    )
+    cubature.prepare(cosmo)
+
+    got, expected = Ncm.Vector.new(1), Ncm.Vector.new(1)
+    for ell in (10, 200):
+        fixed.compute(k1, k2, cosmo, ell, ell, got)
+        cubature.compute(k1, k2, cosmo, ell, ell, expected)
+
+        assert expected.get(0) != 0.0
+        assert_allclose(got.get(0), expected.get(0), rtol=5.0e-3)
+
+
+def test_joint_needs_no_integrator_when_all_limber(cosmology: Cosmology) -> None:
+    """An all-Limber block performs no Bessel integral, so it needs no integrator."""
+    kernels = _limber_kernels(cosmology, [0, 0])
+
+    joint = Nc.XcorKernel.get_eval_vectorized_joint(
+        kernels, cosmology.cosmo, 10, 10, None
+    )
+
+    assert joint.get_len() == len(kernels)
+    assert np.all(np.isfinite(joint.eval_array(np.sqrt(np.prod(joint.get_range())))))
+
+
+def test_kernel_fixed_through_solver_all_limber(cosmology: Cosmology) -> None:
+    """The solver drives an all-Limber KERNEL_FIXED block without an integrator.
+
+    The solver only builds a per-block integrator for blocks that need one, so
+    an all-Limber block hands NULL to the joint builder; that used to abort.
+    """
+    kernels = _limber_kernels(cosmology, [0, 0])
+    cosmo = cosmology.cosmo
+
+    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED)
+    fixed.prepare(cosmo)
+
+    solver = Nc.XcorSolver.new()
+    ids = [solver.register_kernel(k) for k in kernels]
+    solver.request_cl(ids[0], ids[1], 10, 13)
+    solver.plan_blocks(8)
+    solver.solve(fixed, cosmo)
+
+    expected = Ncm.Vector.new(4)
+    fixed.compute(kernels[0], kernels[1], cosmo, 10, 13, expected)
+
+    assert_allclose(
+        np.array(solver.get_result(0).dup_array()),
+        np.array(expected.dup_array()),
+        rtol=5.0e-3,
+    )
+
+
 def test_joint_covers_ell_block(cosmology: Cosmology) -> None:
     """A joint integrand over an ell block is ordered kernel-major."""
     kernels = _kernels(cosmology)

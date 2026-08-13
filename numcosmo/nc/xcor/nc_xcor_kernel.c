@@ -358,24 +358,21 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
   /**
    * NcXcorKernel:adaptive-epsilon:
    *
-   * Convergence threshold for the adaptive $k$-range determination: sampling
-   * stops extending outwards once $\Vert W\Vert$ falls below this fraction of
-   * its running maximum, for #NcXcorKernel:adaptive-boundary-tries consecutive
-   * steps.
+   * Convergence threshold for the adaptive $k$-range determination: sampling stops
+   * extending outwards once $\Vert W\Vert$ falls below this fraction of its running
+   * maximum, for #NcXcorKernel:adaptive-boundary-tries consecutive steps.
    *
-   * **Tightening this is not free, and not monotonic in usefulness.** The test
-   * is on an amplitude relative to a peak, so on a tail decaying as $k^{-p}$ it
-   * truncates around $(1/\epsilon)^{1/p}$ times the peak location. Kernels with
-   * compact support in $z$ -- a top-hat redshift bin, for instance -- have a
-   * transform that *rings*, decaying as a slow power law rather than
-   * exponentially, so a smaller $\epsilon$ buys a great deal of extra range in
-   * a region that is purely oscillatory. Measured on a top-hat bin at
-   * $\ell = 0$: 71% of the knots lay beyond the point at which 99.9% of the
-   * $C_\ell$ integral had already accumulated.
+   * The criterion is based on the amplitude of $W$ relative to its peak. For a tail
+   * decaying as $k^{-p}$, the resulting range scales approximately as
+   * $(1/\epsilon)^{1/p}$ times the peak location. Consequently, tightening $\epsilon$
+   * can substantially increase the sampled range without a corresponding increase in
+   * the contribution to the $C_\ell$ integral.
    *
-   * Smooth kernels (galaxy, weak lensing, CMB lensing, tSZ) do not show this:
-   * their amplitude and their contribution to the integral fall off together,
-   * so the criterion cuts where it should.
+   * This is particularly relevant for kernels with compact support in $z$, such as
+   * top-hat redshift bins, whose transforms exhibit slowly decaying oscillatory tails.
+   * Smooth kernels (galaxy, weak lensing, CMB lensing, tSZ) have amplitude and
+   * integral contributions that fall off together, making the criterion a more direct
+   * indication of the relevant integration range.
    */
   g_object_class_install_property (object_class,
                                    PROP_ADAPTIVE_EPSILON,
@@ -398,10 +395,11 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    *
    * Relative tolerance for the adaptive refinement of the $W_i(k)$ spline.
    *
-   * Only active where #NcXcorKernel:scaled-abstol does not bind, which for
-   * realistic settings is most of the domain -- so this is usually *not* the
-   * knob that governs accuracy. See #NcXcorKernel:scaled-abstol before
-   * adjusting either.
+   * The tolerance is applied only where #NcXcorKernel:scaled-abstol does not bind. For
+   * typical settings, the scaled absolute tolerance controls most of the refinement,
+   * so this parameter primarily affects regions where the spline amplitude is
+   * sufficiently large for relative accuracy to be relevant. See
+   * #NcXcorKernel:scaled-abstol for the complementary criterion.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
@@ -414,38 +412,29 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
   /**
    * NcXcorKernel:scaled-abstol:
    *
-   * Absolute floor for the adaptive refinement of the $W_i(k)$ spline, in units
-   * of the peak of the sampled integrand: the refinement stops subdividing an
-   * interval once its error falls below
-   * `scaled-abstol` $\times \max\vert F\vert$.
+   * Absolute tolerance for the adaptive refinement of the $W_i(k)$ spline, expressed
+   * as a fraction of the peak sampled integrand. An interval is accepted once its
+   * estimated interpolation error falls below `scaled-abstol` $\times \max\vert
+   * F\vert$.
    *
-   * **This, not #NcXcorKernel:reltol, is what limits the accuracy of the
-   * resulting $C_\ell$.** While this floor binds, tightening `reltol` changes
-   * nothing at all. Because the floor is absolute, it produces a roughly
-   * constant absolute error on every $C_\ell$ of a block, so entries that are
-   * themselves small carry a correspondingly large *relative* error --
-   * generally on exactly the pairs that contribute least.
+   * This criterion sets the absolute accuracy of the spline where it binds. Tightening
+   * #NcXcorKernel:reltol has no effect in those regions. Since the tolerance is
+   * absolute, the corresponding relative error can become large where the resulting
+   * $C_\ell$ is small; these contributions are typically dominated by cancellation and
+   * have little impact on the total signal.
    *
-   * **Do not tighten it reflexively.** Two effects bite, in order:
+   * Tightening this tolerance can substantially increase the number of spline knots,
+   * particularly for kernels with slowly decaying oscillatory tails (see
+   * #NcXcorKernel:adaptive-epsilon). The resulting increase in resolution can also
+   * make the outer $k$ integral more difficult to evaluate, since the spline may
+   * resolve oscillations that contribute negligibly to the integral.
    *
-   * 1. The knot count grows steeply, since refinement chases the oscillatory
-   *    tail described under #NcXcorKernel:adaptive-epsilon. Measured on seven
-   *    top-hat bins at $\ell = 32$: 493 knots per kernel at `1e-4`, 2367 at
-   *    `1e-6`, 4573 at `1e-7`, ~8759 at `1e-8`.
-   * 2. The *outer* $k$ integral then has a genuinely oscillatory integrand to
-   *    handle over several decades, and adaptive quadrature stops converging:
-   *    in the same test %NC_XCOR_METHOD_KERNEL_CUBATURE succeeds through `1e-7`
-   *    and aborts at `1e-8`. The abort is a true report about the integrand, and
-   *    the integrand was made difficult by the refinement, not by the physics.
-   *
-   * There is also a hard floor below which the request is meaningless. The
-   * radial integral is computed to an absolute tolerance of
-   * %NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC times its own running maximum, so where
-   * $\vert W\vert$ has fallen far below its peak its *relative* accuracy is
-   * already poor -- the value there is a small residual of a strongly
-   * cancelling oscillatory integral. Asking the spline to resolve that region
-   * to a tighter relative precision than the radial integral can deliver
-   * subdivides against round-off, buying knots and no information.
+   * The useful precision is ultimately limited by the radial integration used to
+   * compute $W_i(k)$. This integral is evaluated to an absolute tolerance given by
+   * %NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC times its running maximum. Where $\vert W\vert$
+   * is much smaller than its peak, its relative accuracy is therefore limited by the
+   * accuracy of the radial integral. Refining the spline beyond this level does not
+   * add reliable information.
    */
   g_object_class_install_property (object_class,
                                    PROP_SCALED_ABSTOL,
@@ -503,10 +492,10 @@ typedef struct _SplineIntegrandData
   gdouble k_min;
   gdouble k_max;
 
-  /* Per-component support. Components of a joint (multi-kernel) integrand
-   * share one knot set but not one domain, and NcmSpline does not range-check
-   * on evaluation, so each component's own support has to be carried
-   * alongside. See nc_xcor_kernel_integrand_get_component_range(). */
+  /* Per-component support. Components of a joint (multi-kernel) integrand share one
+   * knot set but not one domain, and NcmSpline does not range-check on evaluation, so
+   * each component's own support has to be carried alongside. See
+   * nc_xcor_kernel_integrand_get_component_range(). */
   gdouble *supp_k_min;
   gdouble *supp_k_max;
 } SplineIntegrandData;
@@ -516,8 +505,8 @@ _spline_integrand_get_knots (gpointer data)
 {
   SplineIntegrandData *sid = (SplineIntegrandData *) data;
 
-  /* Every component of the spline vec is sampled on the same abscissa, so the
-   * first component's knots are the knots of the whole block. */
+  /* Every component of the spline vec is sampled on the same abscissa, so the first
+   * component's knots are the knots of the whole block. */
   return ncm_spline_peek_xv (ncm_spline_vec_peek_spline (sid->spline_vec, 0));
 }
 
@@ -559,14 +548,13 @@ _spline_integrand_data_free (gpointer data)
 }
 
 /*
- * Records, for each component, the outermost knots at which it still carries
- * signal: the first and last knot where |y| >= epsilon * max|y| over the
- * component. Outside that the component contributed nothing to the sampling
- * and its spline holds only whatever the cubic does between negligible
- * values -- which, weighted by k^2 in the outer integral, is not negligible at
- * all. This is the same criterion the per-kernel adaptive boundary search
- * converges to, applied after the fact to the sampled data so that it does not
- * depend on the order in which the sampler explored.
+ * Records, for each component, the outermost knots at which it still carries signal:
+ * the first and last knot where |y| >= epsilon * max|y| over the component. Outside
+ * that the component contributed nothing to the sampling and its spline holds only
+ * whatever the cubic does between negligible values -- which, weighted by k^2 in the
+ * outer integral, is not negligible at all. This is the same criterion the per-kernel
+ * adaptive boundary search converges to, applied after the fact to the sampled data so
+ * that it does not depend on the order in which the sampler explored.
  */
 static void
 _spline_integrand_compute_supports (SplineIntegrandData *sid, const gdouble epsilon)
@@ -1174,12 +1162,13 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
 typedef struct _JointComputeData
 {
   ComponentStates *per_kernel;
+  gboolean *limber; /* Per-kernel tier, decided exactly as get_eval_vectorized_full() does */
   guint n_kernels;
   guint n_l;
 } JointComputeData;
 
 static void
-_joint_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer user_data)
+_joint_states_compute (const gdouble k, NcmVector *y, gpointer user_data)
 {
   JointComputeData *joint = (JointComputeData *) user_data;
   guint ik;
@@ -1190,7 +1179,15 @@ _joint_states_compute_non_limber (const gdouble k, NcmVector *y, gpointer user_d
   {
     NcmVector *sub = ncm_vector_get_subvector (y, ik * joint->n_l, joint->n_l);
 
-    _component_states_compute_non_limber (k, sub, &joint->per_kernel[ik]);
+    /* Each kernel is evaluated in its own tier: sharing the abscissa does not
+     * mean sharing the approximation. A Limber component is simply a different
+     * function of k on the same knots, and both tiers are defined for every k
+     * (the Limber one extrapolates outside its per-ell band), so a block may
+     * mix the two exactly as a KERNEL_CUBATURE pair can. */
+    if (joint->limber[ik])
+      _component_states_compute_limber (k, sub, &joint->per_kernel[ik]);
+    else
+      _component_states_compute_non_limber (k, sub, &joint->per_kernel[ik]);
 
     ncm_vector_free (sub);
   }
@@ -1346,7 +1343,8 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
  * @cosmo: a #NcHICosmo
  * @lmin: minimum multipole
  * @lmax: maximum multipole
- * @sbi: a #NcmSBesselIntegrator
+ * @sbi: (nullable): the #NcmSBesselIntegrator to use, required unless every
+ *   kernel of @kernels is below its l-limber threshold over [@lmin, @lmax]
  *
  * Builds one integrand carrying every kernel of @kernels over
  * [@lmin, @lmax], represented on a *single shared knot set*. The returned
@@ -1365,6 +1363,11 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
  * The joint refinement uses the strictest tolerances of the kernels involved,
  * so no kernel is sampled more loosely than it would have been on its own.
  *
+ * Each kernel is evaluated in the tier its own #NcXcorKernel:l-limber selects
+ * over [@lmin, @lmax], exactly as nc_xcor_kernel_get_eval_vectorized_full()
+ * does, so a block may mix Limber and non-Limber kernels. Sharing the abscissa
+ * is not sharing the approximation.
+ *
  * Returns: (transfer full): the joint integrand.
  */
 NcXcorKernelIntegrand *
@@ -1374,30 +1377,51 @@ nc_xcor_kernel_get_eval_vectorized_joint (GPtrArray *kernels, NcHICosmo *cosmo, 
   const guint n_l       = lmax - lmin + 1;
   JointComputeData joint;
   SplineIntegrandData *sid;
-  gdouble reltol              = GSL_POSINF;
-  gdouble scaled_abstol       = GSL_POSINF;
-  gdouble expansion_factor    = GSL_POSINF;
-  guint max_border_expansions = 0;
-  guint max_iter              = 0;
-  gdouble k_min_hard          = GSL_POSINF;
-  gdouble k_max_hard          = 0.0;
+  gdouble reltol                = GSL_POSINF;
+  gdouble scaled_abstol         = GSL_POSINF;
+  gdouble expansion_factor      = GSL_POSINF;
+  guint max_border_expansions   = 0;
+  guint max_iter                = 0;
+  gdouble k_min_hard            = GSL_POSINF;
+  gdouble k_max_hard            = 0.0;
+  gdouble epsilon               = GSL_POSINF;
+  guint adaptive_boundary_tries = 0;
+  gboolean any_non_limber       = FALSE;
   guint ik;
 
   g_assert_cmpuint (n_kernels, >, 0);
   g_assert_cmpint (lmax, >=, lmin);
 
-  if (sbi == NULL)
-    g_error ("nc_xcor_kernel_get_eval_vectorized_joint: no integrator given.");
-
   if (n_l > NC_XCOR_KERNEL_MAX_ELL_BLOCK)
     g_error ("nc_xcor_kernel_get_eval_vectorized_joint: ell block %u exceeds the "
              "maximum %d.", n_l, NC_XCOR_KERNEL_MAX_ELL_BLOCK);
 
-  ncm_sbessel_integrator_set_ell_range (sbi, lmin, lmax);
-
   joint.per_kernel = g_new0 (ComponentStates, n_kernels);
+  joint.limber     = g_new0 (gboolean, n_kernels);
   joint.n_kernels  = n_kernels;
   joint.n_l        = n_l;
+
+  /* Decide the tiers before touching @sbi: it is only needed if some kernel
+   * actually performs a spherical Bessel integral. */
+  for (ik = 0; ik < n_kernels; ik++)
+  {
+    NcXcorKernel *xclk        = NC_XCOR_KERNEL (g_ptr_array_index (kernels, ik));
+    NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+    joint.limber[ik] = (self->l_limber == 0) || ((self->l_limber > 0) && (lmin >= self->l_limber));
+    any_non_limber   = any_non_limber || !joint.limber[ik];
+  }
+
+  if (any_non_limber)
+  {
+    if (sbi == NULL)
+      g_error ("nc_xcor_kernel_get_eval_vectorized_joint: no integrator given, and "
+               "at least one kernel is non-Limber over [%d, %d]. Either pass one, "
+               "set the 'integrator' property on a kernel, or put every kernel "
+               "below its l-limber threshold.", lmin, lmax);
+
+    ncm_sbessel_integrator_set_ell_range (sbi, lmin, lmax);
+  }
 
   for (ik = 0; ik < n_kernels; ik++)
   {
@@ -1413,7 +1437,9 @@ nc_xcor_kernel_get_eval_vectorized_joint (GPtrArray *kernels, NcHICosmo *cosmo, 
       /* Struct assignment is unavailable: ComponentStates carries const
        * members, so it can only be initialized, never assigned. The
        * destination is freshly allocated storage, not a const object. */
-      ComponentStates cs = _component_states_init_non_limber (xclk, lmin, n_l, comp_list, cosmo, sbi);
+      ComponentStates cs = joint.limber[ik] ?
+                           _component_states_init_limber (xclk, lmin, n_l, comp_list, cosmo) :
+                           _component_states_init_non_limber (xclk, lmin, n_l, comp_list, cosmo, sbi);
 
       memcpy (&joint.per_kernel[ik], &cs, sizeof (ComponentStates));
     }
@@ -1421,12 +1447,18 @@ nc_xcor_kernel_get_eval_vectorized_joint (GPtrArray *kernels, NcHICosmo *cosmo, 
     g_ptr_array_unref (comp_list);
 
     /* Strictest tolerance across the group: joint sampling must never relax
-     * what any single kernel would have demanded of itself. */
-    reltol                = GSL_MIN (reltol, self->reltol);
-    scaled_abstol         = GSL_MIN (scaled_abstol, self->scaled_abstol);
-    expansion_factor      = GSL_MIN (expansion_factor, self->expansion_factor);
-    max_border_expansions = GSL_MAX (max_border_expansions, self->max_border_expansions);
-    max_iter              = GSL_MAX (max_iter, self->max_iter);
+     * what any single kernel would have demanded of itself. A smaller epsilon
+     * cuts the domain later and keeps a wider per-component support, and more
+     * boundary tries makes the cut more conservative, so those go MIN and MAX
+     * respectively. Each kernel keeps its own copy in its ComponentStates for
+     * its own extrapolation tracking; these are the group-level values. */
+    reltol                  = GSL_MIN (reltol, self->reltol);
+    scaled_abstol           = GSL_MIN (scaled_abstol, self->scaled_abstol);
+    expansion_factor        = GSL_MIN (expansion_factor, self->expansion_factor);
+    max_border_expansions   = GSL_MAX (max_border_expansions, self->max_border_expansions);
+    max_iter                = GSL_MAX (max_iter, self->max_iter);
+    epsilon                 = GSL_MIN (epsilon, self->adaptive_epsilon);
+    adaptive_boundary_tries = GSL_MAX (adaptive_boundary_tries, self->adaptive_boundary_tries);
 
     /* The shared domain is the union: a component contributing nothing over
      * part of it is represented there anyway, at negligible cost, rather than
@@ -1466,20 +1498,20 @@ nc_xcor_kernel_get_eval_vectorized_joint (GPtrArray *kernels, NcHICosmo *cosmo, 
     {
       const gdouble k_seed = g_array_index (k_seeds, gdouble, i);
 
-      ncm_function_sample_set_add_old_func (fss, k_seed, _joint_states_compute_non_limber, &joint);
+      ncm_function_sample_set_add_old_func (fss, k_seed, _joint_states_compute, &joint);
     }
 
     g_array_unref (k_seeds);
 
     ncm_function_sample_set_expand_domain (
       fss,
-      _joint_states_compute_non_limber,
+      _joint_states_compute,
       k_min_hard,
       k_max_hard,
       expansion_factor,
-      joint.per_kernel[0].epsilon,
+      epsilon,
       max_border_expansions,
-      joint.per_kernel[0].adaptive_boundary_tries,
+      adaptive_boundary_tries,
       &joint
     );
 
@@ -1494,7 +1526,7 @@ nc_xcor_kernel_get_eval_vectorized_joint (GPtrArray *kernels, NcHICosmo *cosmo, 
       const gdouble max_absF_total = ncm_function_sample_set_get_absmaxF_min (fss);
 
       ncm_function_sample_set_adaptive_midpoint (
-        fss, _joint_states_compute_non_limber,
+        fss, _joint_states_compute,
         reltol, max_absF_total * scaled_abstol, max_iter, 1,
         spline, &joint
       );
@@ -1509,13 +1541,14 @@ nc_xcor_kernel_get_eval_vectorized_joint (GPtrArray *kernels, NcHICosmo *cosmo, 
     sid->cosmo       = nc_hicosmo_ref (cosmo);
     sid->eval_result = ncm_vector_new (n_kernels * n_l);
 
-    _spline_integrand_compute_supports (sid, joint.per_kernel[0].epsilon);
+    _spline_integrand_compute_supports (sid, epsilon);
 
     ncm_function_sample_set_clear (&fss);
     ncm_spline_free (spline);
   }
 
   g_free (joint.per_kernel);
+  g_free (joint.limber);
 
   {
     NcXcorKernelIntegrand *integrand = nc_xcor_kernel_integrand_new (n_kernels * n_l,

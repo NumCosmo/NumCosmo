@@ -810,49 +810,87 @@ static const gdouble _nc_xcor_gl5_w[NC_XCOR_GL5_N] = {
 };
 
 /*
- * Exact outer quadrature on the joint knot set.
+ * Exact outer quadrature on the joint knot set, for every requested pair at
+ * once.
  *
- * Both kernels are sampled onto one shared abscissa, so a single sweep of the
- * knot panels serves every multipole of the block: the integrand is evaluated
- * once per node and accumulated into every ell whose own support contains that
- * node. Each component is masked to its own support
+ * All kernels of the block are sampled onto one shared abscissa, so one sweep
+ * of the knot panels serves every pair and every multipole: the joint
+ * integrand is evaluated once per node -- filling all its components -- and
+ * that one evaluation is accumulated into every (pair, ell) whose support
+ * contains the node. This is the $U^\top W U$ the shared knot set exists to
+ * make possible. Sweeping per pair instead would re-evaluate all
+ * n_kernels * nell splines at every node once for each of the N(N+1)/2 pairs,
+ * which is where the method's cost used to go.
+ *
+ * Each component is masked to its own support
  * (nc_xcor_kernel_integrand_get_component_range()) because NcmSpline does not
  * range-check, and an out-of-support evaluation returns extrapolation rather
- * than a small number.
+ * than a small number. Those bounds are knots of this same set and the GL
+ * nodes are interior to their panel, so a panel is either wholly inside a
+ * given pair's support or wholly outside it -- the mask is resolved once per
+ * panel rather than once per node.
  */
 void
-_nc_xcor_kernel_fixed_assemble (NcXcor *xc, NcXcorKernelIntegrand *xclki, guint kernel_id_1, guint kernel_id_2, NcmVector *vp)
+_nc_xcor_kernel_fixed_assemble (NcXcor *xc, NcXcorKernelIntegrand *xclki, const guint *kernel_id_1, const guint *kernel_id_2, guint n_pairs, NcmVector **vp)
 {
-  const guint nell           = ncm_vector_len (vp);
+  const guint len            = nc_xcor_kernel_integrand_get_len (xclki);
+  const guint nell           = ncm_vector_len (vp[0]);
+  const guint n_out          = n_pairs * nell;
   const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
   NcmVector *knots           = nc_xcor_kernel_integrand_peek_knots (xclki);
   const guint n_knots        = ncm_vector_len (knots);
-  const guint off1           = kernel_id_1 * nell;
-  const guint off2           = kernel_id_2 * nell;
-  gdouble *sum, *W, *k_lo, *k_hi;
-  guint il, ik, ig;
+  gdouble *supp_lo, *supp_hi, *pair_lo, *pair_hi, *sum, *W;
+  guint *c1, *c2, *active;
+  guint ic, ip, il, ik, ig, ia, n_active;
 
-  sum  = g_new0 (gdouble, nell);
-  W    = g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki));
-  k_lo = g_new0 (gdouble, nell);
-  k_hi = g_new0 (gdouble, nell);
+  g_assert_cmpuint (n_pairs, >, 0);
 
-  /* Per-multipole bounds: the intersection of the two components' supports. */
-  for (il = 0; il < nell; il++)
+  supp_lo = g_new (gdouble, len);
+  supp_hi = g_new (gdouble, len);
+  pair_lo = g_new (gdouble, n_out);
+  pair_hi = g_new (gdouble, n_out);
+  sum     = g_new0 (gdouble, n_out);
+  W       = g_new0 (gdouble, len);
+  c1      = g_new (guint, n_out);
+  c2      = g_new (guint, n_out);
+  active  = g_new (guint, n_out);
+
+  /* Component supports, resolved once for the whole block rather than once
+   * per pair. An empty support becomes an empty interval, so every
+   * intersection containing it is empty too. */
+  for (ic = 0; ic < len; ic++)
   {
-    gdouble k_min1, k_max1, k_min2, k_max2;
-    const gboolean ok1 = nc_xcor_kernel_integrand_get_component_range (xclki, off1 + il, &k_min1, &k_max1);
-    const gboolean ok2 = nc_xcor_kernel_integrand_get_component_range (xclki, off2 + il, &k_min2, &k_max2);
+    gdouble k_min, k_max;
 
-    if (ok1 && ok2)
+    if (nc_xcor_kernel_integrand_get_component_range (xclki, ic, &k_min, &k_max))
     {
-      k_lo[il] = GSL_MAX (k_min1, k_min2);
-      k_hi[il] = GSL_MIN (k_max1, k_max2);
+      supp_lo[ic] = k_min;
+      supp_hi[ic] = k_max;
     }
     else
     {
-      k_lo[il] = 1.0;
-      k_hi[il] = 0.0; /* empty */
+      supp_lo[ic] = GSL_POSINF;
+      supp_hi[ic] = GSL_NEGINF;
+    }
+  }
+
+  for (ip = 0; ip < n_pairs; ip++)
+  {
+    const guint off1 = kernel_id_1[ip] * nell;
+    const guint off2 = kernel_id_2[ip] * nell;
+
+    g_assert_cmpuint (ncm_vector_len (vp[ip]), ==, nell);
+    g_assert_cmpuint (off1 + nell, <=, len);
+    g_assert_cmpuint (off2 + nell, <=, len);
+
+    for (il = 0; il < nell; il++)
+    {
+      const guint idx = ip * nell + il;
+
+      c1[idx]      = off1 + il;
+      c2[idx]      = off2 + il;
+      pair_lo[idx] = GSL_MAX (supp_lo[c1[idx]], supp_lo[c2[idx]]);
+      pair_hi[idx] = GSL_MIN (supp_hi[c1[idx]], supp_hi[c2[idx]]);
     }
   }
 
@@ -866,40 +904,73 @@ _nc_xcor_kernel_fixed_assemble (NcXcor *xc, NcXcorKernelIntegrand *xclki, guint 
     if (half <= 0.0)
       continue;
 
+    n_active = 0;
+
+    for (ia = 0; ia < n_out; ia++)
+    {
+      if ((panel_lo >= pair_lo[ia]) && (panel_hi <= pair_hi[ia]))
+        active[n_active++] = ia;
+    }
+
+    if (n_active == 0)
+      continue;
+
     for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
     {
       const gdouble k = mid + half * _nc_xcor_gl5_x[ig];
-      gboolean needed = FALSE;
-
-      for (il = 0; il < nell; il++)
-      {
-        if ((k >= k_lo[il]) && (k <= k_hi[il]))
-        {
-          needed = TRUE;
-          break;
-        }
-      }
-
-      if (!needed)
-        continue;
+      const gdouble w = half * _nc_xcor_gl5_w[ig] * k * k;
+      guint j;
 
       nc_xcor_kernel_integrand_eval (xclki, k, W);
 
-      for (il = 0; il < nell; il++)
+      for (j = 0; j < n_active; j++)
       {
-        if ((k >= k_lo[il]) && (k <= k_hi[il]))
-          sum[il] += half * _nc_xcor_gl5_w[ig] * k * k * W[off1 + il] * W[off2 + il];
+        const guint idx = active[j];
+
+        sum[idx] += w * W[c1[idx]] * W[c2[idx]];
       }
     }
   }
 
-  for (il = 0; il < nell; il++)
-    ncm_vector_set (vp, il, const_factor * sum[il]);
+  for (ip = 0; ip < n_pairs; ip++)
+  {
+    for (il = 0; il < nell; il++)
+      ncm_vector_set (vp[ip], il, const_factor * sum[ip * nell + il]);
+  }
 
+  g_free (supp_lo);
+  g_free (supp_hi);
+  g_free (pair_lo);
+  g_free (pair_hi);
   g_free (sum);
   g_free (W);
-  g_free (k_lo);
-  g_free (k_hi);
+  g_free (c1);
+  g_free (c2);
+  g_free (active);
+}
+
+gboolean
+_nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboolean isauto, guint lmin)
+{
+  gdouble zmin, zmax, zmid, zmin_2, zmax_2, zmid_2;
+  gint l_limber_1, l_limber_2;
+
+  if (isauto)
+    return FALSE;  /* A kernel always overlaps itself. */
+
+  l_limber_1 = nc_xcor_kernel_get_l_limber (xclk1);
+  l_limber_2 = nc_xcor_kernel_get_l_limber (xclk2);
+
+  if (!((l_limber_1 == 0) || ((l_limber_1 > 0) && ((gint) lmin >= l_limber_1))))
+    return FALSE;
+
+  if (!((l_limber_2 == 0) || ((l_limber_2 > 0) && ((gint) lmin >= l_limber_2))))
+    return FALSE;
+
+  nc_xcor_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
+  nc_xcor_kernel_get_z_range (xclk2, &zmin_2, &zmax_2, &zmid_2);
+
+  return GSL_MAX (zmin, zmin_2) >= GSL_MIN (zmax, zmax_2);
 }
 
 static void
@@ -909,6 +980,11 @@ _nc_xcor_kernel_fixed (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcH
   GPtrArray *kernels        = g_ptr_array_new ();
   NcmSBesselIntegrator *sbi = nc_xcor_kernel_peek_integrator (xclk1);
   NcXcorKernelIntegrand *xclki;
+
+  /* Either kernel's integrator serves the joint build, which pins the ell
+   * range itself, so only one of the pair needs to carry one. */
+  if (sbi == NULL)
+    sbi = nc_xcor_kernel_peek_integrator (xclk2);
 
   if (nell != lmax - lmin + 1)
     g_error ("_nc_xcor_kernel_fixed: vector size does not match multipole limits");
@@ -921,7 +997,12 @@ _nc_xcor_kernel_fixed (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcH
   xclki = nc_xcor_kernel_get_eval_vectorized_joint (kernels, cosmo, lmin, lmax, sbi);
   g_ptr_array_unref (kernels);
 
-  _nc_xcor_kernel_fixed_assemble (xc, xclki, 0, isauto ? 0 : 1, vp);
+  {
+    const guint kernel_id_1 = 0;
+    const guint kernel_id_2 = isauto ? 0 : 1;
+
+    _nc_xcor_kernel_fixed_assemble (xc, xclki, &kernel_id_1, &kernel_id_2, 1, &vp);
+  }
 
   nc_xcor_kernel_integrand_unref (xclki);
 }
@@ -1406,7 +1487,30 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
    * spectrum -- two disjoint radial shells are correlated through the same 3D
    * field. The z-overlap short-circuit below is therefore specific to the
    * Limber-z tier, whose C_l is a single integral over the common support, and
-   * must not be applied here. */
+   * must not be applied here.
+   *
+   * The exception is a kernel-space method running kernels that are themselves
+   * in the Limber tier: there W(k) is supported only on its own per-ell band,
+   * disjoint bins have disjoint support, and the Cl is zero. Integrating it
+   * anyway multiplies the two exponential extrapolation tails, which is a
+   * numerical smoothing device rather than physics, and yields a large
+   * spurious cross spectrum. */
+  if (_nc_xcor_kernels_limber_disjoint (xclk1, xclk2, isauto, lmin))
+  {
+    switch (xc->meth)
+    {
+      case NC_XCOR_METHOD_KERNEL_GSL:
+      case NC_XCOR_METHOD_KERNEL_CUBATURE:
+      case NC_XCOR_METHOD_KERNEL_FIXED:
+        ncm_vector_set_zero (vp);
+
+        return;
+
+      default:
+        break;
+    }
+  }
+
   switch (xc->meth)
   {
     case NC_XCOR_METHOD_KERNEL_GSL:

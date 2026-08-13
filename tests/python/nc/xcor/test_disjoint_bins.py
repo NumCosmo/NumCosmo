@@ -140,6 +140,56 @@ def test_disjoint_bins_cross_matches_solver(cosmology: Cosmology) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "method",
+    [
+        Nc.XcorMethod.KERNEL_GSL,
+        Nc.XcorMethod.KERNEL_CUBATURE,
+        Nc.XcorMethod.KERNEL_FIXED,
+    ],
+)
+def test_kernel_space_limber_disjoint_is_zero(
+    cosmology: Cosmology, method: Nc.XcorMethod
+) -> None:
+    """Kernel-space methods still vanish for disjoint bins in the Limber tier.
+
+    A Limber kernel is supported only where xi = (l + 1/2) / k lies inside its
+    own radial range, so disjoint bins have disjoint support in k. Dropping the
+    overlap short-circuit for every kernel-space method left this integrating
+    the product of the two exponential extrapolation tails -- a numerical
+    smoothing device, not physics -- which returned up to -48% of the auto
+    spectrum instead of zero. The tier, not the method, decides.
+    """
+    kernels = []
+
+    for z_lower, z_upper in Z_BINS:
+        kernel = Nc.XcorKernelClusterTophat(
+            dist=cosmology.dist,
+            powspec=cosmology.ps_ml,
+            z_lower=z_lower,
+            z_upper=z_upper,
+            integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+        )
+        kernel.set_l_limber(0)  # Limber everywhere, the class default
+        kernel.prepare(cosmology.cosmo)
+        kernels.append(kernel)
+
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, method)
+    xcor.prepare(cosmology.cosmo)
+
+    cross = Ncm.Vector.new(3)
+    xcor.compute(kernels[0], kernels[1], cosmology.cosmo, 10, 12, cross)
+
+    assert_allclose(np.array(cross.dup_array()), 0.0, atol=0.0)
+
+    # The auto spectrum of the same kernel is emphatically not zero, so this is
+    # a real short-circuit and not an all-zero configuration.
+    auto = Ncm.Vector.new(3)
+    xcor.compute(kernels[0], kernels[0], cosmology.cosmo, 10, 12, auto)
+
+    assert np.all(np.array(auto.dup_array()) > 0.0)
+
+
 def test_limber_z_keeps_disjoint_short_circuit(cosmology: Cosmology) -> None:
     """The Limber-z tier still returns zero for disjoint bins, as it must."""
     k1, k2 = _make_kernels(cosmology)
