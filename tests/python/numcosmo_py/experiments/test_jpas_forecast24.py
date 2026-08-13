@@ -29,12 +29,6 @@ import pytest
 
 from numcosmo_py import Ncm, Nc
 
-pytest.importorskip("healpy")
-pytest.importorskip("numcosmo_py.external.pyssc")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
-
-# Import module under test
 from numcosmo_py.experiments import jpas_forecast24 as jpas
 
 Ncm.cfg_init()
@@ -293,79 +287,74 @@ class TestCovarianceMatrices:
 
     @pytest.fixture
     def setup_for_covariance(self):
-        """Setup kernel and cosmology for covariance tests."""
-        kernel_z, kernels_T, _ = jpas.create_zbins_kernels(nknots=4, kernel_nknots=50)
+        """Build redshift bin edges and cosmology for covariance tests."""
+        _, _, z_bins_knots = jpas.create_zbins_kernels(nknots=4, kernel_nknots=50)
         cosmo = jpas.create_cosmo()
-        return kernel_z, kernels_T, cosmo
+        return z_bins_knots, cosmo
 
     def test_create_covariance_S_fullsky(self, setup_for_covariance):
         """Test fullsky SSC covariance matrix creation."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
-        S = jpas.create_covariance_S_fullsky(kernel_z, kernels_T, cosmo)
+        S = jpas.create_covariance_S_fullsky(z_bins_knots, cosmo)
 
         assert isinstance(S, Ncm.Matrix)
-        n_bins = kernels_T.shape[0]
+        n_bins = len(z_bins_knots) - 1
         assert S.nrows() == n_bins
         assert S.ncols() == n_bins
 
     def test_create_covariance_S_guaranteed(self, setup_for_covariance):
         """Test guaranteed mask SSC covariance matrix creation."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
-        S = jpas.create_covariance_S_guaranteed(kernel_z, kernels_T, cosmo)
+        S = jpas.create_covariance_S_guaranteed(z_bins_knots, cosmo)
 
         assert isinstance(S, Ncm.Matrix)
-        n_bins = kernels_T.shape[0]
+        n_bins = len(z_bins_knots) - 1
         assert S.nrows() == n_bins
         assert S.ncols() == n_bins
 
     def test_create_covariance_S_full(self, setup_for_covariance):
         """Test full mask SSC covariance matrix creation."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
-        S = jpas.create_covariance_S_full(kernel_z, kernels_T, cosmo)
+        S = jpas.create_covariance_S_full(z_bins_knots, cosmo)
 
         assert isinstance(S, Ncm.Matrix)
-        n_bins = kernels_T.shape[0]
+        n_bins = len(z_bins_knots) - 1
         assert S.nrows() == n_bins
         assert S.ncols() == n_bins
 
     def test_create_covariance_S_router_fullsky(self, setup_for_covariance):
         """Test covariance router for FULLSKY."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
-        S = jpas.create_covariance_S(
-            kernel_z, kernels_T, jpas.JpasSSCType.FULLSKY, cosmo
-        )
+        S = jpas.create_covariance_S(z_bins_knots, jpas.JpasSSCType.FULLSKY, cosmo)
 
         assert isinstance(S, Ncm.Matrix)
 
     def test_create_covariance_S_router_full(self, setup_for_covariance):
         """Test covariance router for FULL."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
-        S = jpas.create_covariance_S(kernel_z, kernels_T, jpas.JpasSSCType.FULL, cosmo)
+        S = jpas.create_covariance_S(z_bins_knots, jpas.JpasSSCType.FULL, cosmo)
 
         assert isinstance(S, Ncm.Matrix)
 
     def test_create_covariance_S_router_guaranteed(self, setup_for_covariance):
         """Test covariance router for GUARANTEED."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
-        S = jpas.create_covariance_S(
-            kernel_z, kernels_T, jpas.JpasSSCType.GUARANTEED, cosmo
-        )
+        S = jpas.create_covariance_S(z_bins_knots, jpas.JpasSSCType.GUARANTEED, cosmo)
 
         assert isinstance(S, Ncm.Matrix)
 
     def test_create_covariance_S_router_fullsky_fsky(self, setup_for_covariance):
         """Test covariance router for the new FULLSKY_FSKY path."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
         S = jpas.create_covariance_S(
-            kernel_z,
-            kernels_T,
+            z_bins_knots,
             jpas.JpasSSCType.FULLSKY_FSKY,
             cosmo,
             area=2959.1,
@@ -375,23 +364,21 @@ class TestCovarianceMatrices:
 
     def test_create_covariance_S_fullsky_fsky_requires_area(self, setup_for_covariance):
         """Test FULLSKY_FSKY rejects a missing area argument."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
         with pytest.raises(ValueError, match="requires an area"):
             jpas.create_covariance_S(
-                kernel_z,
-                kernels_T,
+                z_bins_knots,
                 jpas.JpasSSCType.FULLSKY_FSKY,
                 cosmo,
             )
 
     def test_create_covariance_S_router_cap(self, setup_for_covariance):
         """Test covariance router for CAP using an explicit area."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
         S = jpas.create_covariance_S(
-            kernel_z,
-            kernels_T,
+            z_bins_knots,
             jpas.JpasSSCType.CAP,
             cosmo,
             area=100.0,
@@ -401,24 +388,21 @@ class TestCovarianceMatrices:
 
     def test_create_covariance_S_cap_requires_area(self, setup_for_covariance):
         """Test cap-SSC router fails without the area dependency."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
         with pytest.raises(ValueError, match="requires an area"):
             jpas.create_covariance_S(
-                kernel_z,
-                kernels_T,
+                z_bins_knots,
                 jpas.JpasSSCType.CAP,
                 cosmo,
             )
 
     def test_create_covariance_S_invalid(self, setup_for_covariance):
         """Test covariance router raises error for NO_SSC."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
         with pytest.raises(ValueError, match="Invalid sky cut type"):
-            jpas.create_covariance_S(
-                kernel_z, kernels_T, jpas.JpasSSCType.NO_SSC, cosmo
-            )
+            jpas.create_covariance_S(z_bins_knots, jpas.JpasSSCType.NO_SSC, cosmo)
 
 
 class TestClusterModels:
