@@ -162,6 +162,19 @@ def mask_angular_power_spectrum(
     :return: A tuple `(cl_mask, fsky)` with `cl_mask` of length `lmax + 1`.
     """
     nside = _nside_from_npix(mask.size)
+
+    # Validated before any set_map(): NcmSphereMap asserts the map length
+    # against its own npix, so a mismatch there aborts the process rather than
+    # raising.
+    if mask2 is not None:
+        nside2 = _nside_from_npix(mask2.size)
+
+        if nside2 != nside:
+            raise ValueError(
+                f"mask and mask2 must have the same nside, got {nside} and "
+                f"{nside2}."
+            )
+
     smap = Ncm.SphereMap.new(nside)
     smap.set_map(mask)
 
@@ -175,15 +188,8 @@ def mask_angular_power_spectrum(
     if mask2 is None:
         cl_mask = np.array([smap.get_Cl(ell) for ell in range(lmax + 1)])
     else:
-        smap2 = Ncm.SphereMap.new(1)
+        smap2 = Ncm.SphereMap.new(nside)
         smap2.set_map(mask2)
-
-        if smap2.get_nside() != nside:
-            raise ValueError(
-                f"mask and mask2 must have the same nside, got {nside} and "
-                f"{smap2.get_nside()}."
-            )
-
         smap2.set_lmax(lmax)
         smap2.set_iter(iter_n)
         smap2.prepare_alm()

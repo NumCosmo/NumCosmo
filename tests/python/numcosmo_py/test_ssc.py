@@ -136,6 +136,32 @@ def test_mask_spectrum_and_fsky() -> None:
     assert_allclose(fsky, np.sqrt(cl_mask[0] / (4.0 * np.pi)), rtol=1.0e-12)
 
 
+def test_mask_cross_spectrum() -> None:
+    """A cross mask spectrum reduces to the auto one when both masks agree."""
+    mask = _cap_mask(2000.0, nside=32)
+    cl_auto, fsky_auto = mask_angular_power_spectrum(mask)
+    cl_cross, fsky_cross = mask_angular_power_spectrum(mask, mask2=mask)
+
+    assert_allclose(cl_cross, cl_auto, rtol=1.0e-10)
+    assert_allclose(fsky_cross, fsky_auto, rtol=1.0e-12)
+
+    # A wider cap contains the narrower one, so the cross spectrum sits between
+    # the two autos at ell = 0.
+    wide = _cap_mask(6000.0, nside=32)
+    cl_wide, _ = mask_angular_power_spectrum(wide)
+    cl_mixed, _ = mask_angular_power_spectrum(mask, mask2=wide)
+
+    assert cl_auto[0] < cl_mixed[0] < cl_wide[0]
+
+
+def test_mask_cross_spectrum_rejects_nside_mismatch() -> None:
+    """Mismatched resolutions raise instead of aborting inside NcmSphereMap."""
+    with pytest.raises(ValueError, match="same nside"):
+        mask_angular_power_spectrum(
+            _cap_mask(2000.0, nside=32), mask2=_cap_mask(2000.0, nside=64)
+        )
+
+
 def test_find_lmax_truncation() -> None:
     """find_lmax picks the smallest truncation recovering the mask variance."""
     cl_mask, _ = mask_angular_power_spectrum(_cap_mask(2000.0, nside=64))
