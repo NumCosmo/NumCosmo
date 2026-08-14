@@ -52,7 +52,7 @@
 
 typedef struct _NcMultiplicityFuncPrivate
 {
-  gint place_holder;
+  NcmPowspecFilter *psf;
 } NcMultiplicityFuncPrivate;
 
 enum
@@ -60,6 +60,7 @@ enum
   PROP_0,
   PROP_MDEF,
   PROP_DELTA,
+  PROP_PSF,
   PROP_SIZE,
 };
 
@@ -70,7 +71,7 @@ nc_multiplicity_func_init (NcMultiplicityFunc *mulf)
 {
   NcMultiplicityFuncPrivate * const self = nc_multiplicity_func_get_instance_private (mulf);
 
-  self->place_holder = 0;
+  self->psf = NULL;
 }
 
 static void
@@ -89,6 +90,9 @@ _nc_multiplicity_func_set_property (GObject *object, guint prop_id, const GValue
       break;
     case PROP_DELTA:
       NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->set_Delta (mulf, g_value_get_double (value));
+      break;
+    case PROP_PSF:
+      nc_multiplicity_func_set_psf (mulf, g_value_get_object (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -113,10 +117,25 @@ _nc_multiplicity_func_get_property (GObject *object, guint prop_id, GValue *valu
     case PROP_DELTA:
       g_value_set_double (value, nc_multiplicity_func_get_Delta (mulf));
       break;
+    case PROP_PSF:
+      g_value_set_object (value, nc_multiplicity_func_peek_psf (mulf));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
   }
+}
+
+static void
+_nc_multiplicity_func_dispose (GObject *object)
+{
+  NcMultiplicityFunc *mulf               = NC_MULTIPLICITY_FUNC (object);
+  NcMultiplicityFuncPrivate * const self = nc_multiplicity_func_get_instance_private (mulf);
+
+  ncm_powspec_filter_clear (&self->psf);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_multiplicity_func_parent_class)->dispose (object);
 }
 
 static void
@@ -157,7 +176,7 @@ _nc_multiplicity_func_get_Delta (NcMultiplicityFunc *mulf)
 static gdouble _nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble z);
 
 static gdouble
-_nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z)
 {
   g_error ("method eval not implemented by %s.", G_OBJECT_TYPE_NAME (mulf));
 
@@ -181,6 +200,7 @@ nc_multiplicity_func_class_init (NcMultiplicityFuncClass *klass)
 
   object_class->set_property = &_nc_multiplicity_func_set_property;
   object_class->get_property = &_nc_multiplicity_func_get_property;
+  object_class->dispose      = &_nc_multiplicity_func_dispose;
   object_class->finalize     = &_nc_multiplicity_func_finalize;
 
   /**
@@ -215,7 +235,24 @@ nc_multiplicity_func_class_init (NcMultiplicityFuncClass *klass)
                                                         1.0, G_MAXDOUBLE, 200.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-
+  /**
+   * NcMultiplicityFunc:powerspectrum-filtered:
+   *
+   * The filtered power spectrum used to obtain quantities beyond $\sigma_R$ itself,
+   * such as the slope $\mathrm{d}\ln\sigma_R/\mathrm{d}\ln R$ required by non-universal
+   * multiplicity functions. Universal models leave it unset.
+   *
+   * When the multiplicity function is used inside a #NcHaloMassFunction, the latter
+   * injects its own filter here, so that both evaluate the same $\sigma_R$.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_PSF,
+                                   g_param_spec_object ("powerspectrum-filtered",
+                                                        NULL,
+                                                        "Filtered power spectrum",
+                                                        NCM_TYPE_POWSPEC_FILTER,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   klass->set_mdef              = &_nc_multiplicity_func_set_mdef;
   klass->set_Delta             = &_nc_multiplicity_func_set_Delta;
@@ -389,21 +426,69 @@ nc_multiplicity_func_get_matter_Delta (NcMultiplicityFunc *mulf, NcHICosmo *cosm
 }
 
 /**
+ * nc_multiplicity_func_set_psf:
+ * @mulf: a #NcMultiplicityFunc
+ * @psf: (nullable): a #NcmPowspecFilter
+ *
+ * Sets the filtered power spectrum used by non-universal multiplicity functions.
+ * It must be the same filter that provides the @sigma passed to
+ * nc_multiplicity_func_eval(), otherwise the two are evaluated on inconsistent
+ * power spectra.
+ *
+ */
+void
+nc_multiplicity_func_set_psf (NcMultiplicityFunc *mulf, NcmPowspecFilter *psf)
+{
+  NcMultiplicityFuncPrivate * const self = nc_multiplicity_func_get_instance_private (mulf);
+
+  g_return_if_fail (NC_IS_MULTIPLICITY_FUNC (mulf));
+  g_return_if_fail ((psf == NULL) || NCM_IS_POWSPEC_FILTER (psf));
+
+  if (self->psf != psf)
+  {
+    ncm_powspec_filter_clear (&self->psf);
+
+    if (psf != NULL)
+      self->psf = ncm_powspec_filter_ref (psf);
+  }
+}
+
+/**
+ * nc_multiplicity_func_peek_psf:
+ * @mulf: a #NcMultiplicityFunc
+ *
+ * Gets the filtered power spectrum, or %NULL when none was set.
+ *
+ * Returns: (transfer none) (nullable): the #NcmPowspecFilter
+ */
+NcmPowspecFilter *
+nc_multiplicity_func_peek_psf (NcMultiplicityFunc *mulf)
+{
+  NcMultiplicityFuncPrivate * const self = nc_multiplicity_func_get_instance_private (mulf);
+
+  return self->psf;
+}
+
+/**
  * nc_multiplicity_func_eval: (virtual eval)
  * @mulf: a #NcMultiplicityFunc
  * @cosmo: a #NcHICosmo
  * @sigma: standard fluctuation of the matter density contrast
+ * @lnR: logarithm base e of the filter radius $\ln R$
  * @z: redshift
  *
  * Evaluates the multiplicity function $f(\sigma, z)$ at the given
- * variance @sigma and redshift @z.
+ * variance @sigma and redshift @z. The filter radius @lnR identifies the
+ * scale at which @sigma was evaluated; non-universal models use it to query
+ * further properties of the filtered power spectrum, such as the slope
+ * $\mathrm{d}\ln\sigma_R/\mathrm{d}\ln R$. Universal models ignore it.
  *
  * Returns: the value of the multiplicity function
  */
 gdouble
-nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z)
 {
-  return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->eval (mulf, cosmo, sigma, z);
+  return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->eval (mulf, cosmo, sigma, lnR, z);
 }
 
 /**

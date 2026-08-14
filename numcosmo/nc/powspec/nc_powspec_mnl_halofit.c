@@ -136,6 +136,8 @@ _nc_powspec_mnl_halofit_set_property (GObject *object, guint prop_id, const GVal
     case PROP_PSML:
       self->psml       = g_value_dup_object (value);
       self->psml_gauss = ncm_powspec_filter_new (NCM_POWSPEC (self->psml), NCM_POWSPEC_FILTER_TYPE_GAUSS);
+      /* The spectral curvature C needs the second log-derivative of the variance. */
+      ncm_powspec_filter_require_nderivs (self->psml_gauss, 2);
       break;
     case PROP_ZMAXNL:
       self->zmaxnl = g_value_get_double (value);

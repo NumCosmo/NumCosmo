@@ -78,6 +78,10 @@ void ncm_powspec_filter_set_zf (NcmPowspecFilter *psf, gdouble zf);
 void ncm_powspec_filter_require_zi (NcmPowspecFilter *psf, gdouble zi);
 void ncm_powspec_filter_require_zf (NcmPowspecFilter *psf, gdouble zf);
 
+void ncm_powspec_filter_set_nderivs (NcmPowspecFilter *psf, guint nderivs);
+void ncm_powspec_filter_require_nderivs (NcmPowspecFilter *psf, guint nderivs);
+guint ncm_powspec_filter_get_nderivs (NcmPowspecFilter *psf);
+
 NcmPowspecFilterType ncm_powspec_filter_get_filter_type (NcmPowspecFilter *psf);
 
 gdouble ncm_powspec_filter_get_reltol (NcmPowspecFilter *psf);

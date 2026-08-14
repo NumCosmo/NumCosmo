@@ -152,6 +152,7 @@
 #include "nc/lss/halo/nc_multiplicity_func_tinker_mean_normalized.h"
 #include "nc/lss/halo/nc_multiplicity_func_crocce.h"
 #include "nc/lss/halo/nc_multiplicity_func_bocquet.h"
+#include "nc/lss/halo/nc_multiplicity_func_castro.h"
 #include "nc/lss/halo/nc_multiplicity_func_despali.h"
 #include "nc/lss/halo/nc_multiplicity_func_watson.h"
 #include "nc/lss/halo/nc_multiplicity_func_bhattacharya.h"
@@ -170,6 +171,7 @@
 #include "nc/lss/cluster/nc_cluster_redshift_nodist.h"
 #include "nc/lss/cluster/nc_cluster_photoz_gauss_global.h"
 #include "nc/lss/cluster/nc_cluster_photoz_gauss.h"
+#include "nc/lss/halo/nc_halo_bias_castro.h"
 #include "nc/lss/halo/nc_halo_bias_despali.h"
 #include "nc/lss/halo/nc_halo_bias_ps.h"
 #include "nc/lss/halo/nc_halo_bias_st_ellip.h"
@@ -791,6 +793,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BOCQUET);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CASTRO);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_WATSON);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA);
@@ -815,6 +818,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_CASTRO);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_PS);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_ELLIP);

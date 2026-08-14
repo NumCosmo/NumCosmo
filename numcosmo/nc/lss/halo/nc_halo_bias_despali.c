@@ -65,10 +65,10 @@ enum
   PROP_SIZE
 };
 
-static gdouble _nc_halo_bias_despali_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
-static gdouble _nc_halo_bias_despali_virial_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
-static gdouble _nc_halo_bias_despali_mean_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
-static gdouble _nc_halo_bias_despali_crit_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_halo_bias_despali_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z);
+static gdouble _nc_halo_bias_despali_virial_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z);
+static gdouble _nc_halo_bias_despali_mean_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z);
+static gdouble _nc_halo_bias_despali_crit_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z);
 
 static void
 nc_halo_bias_despali_init (NcHaloBiasDespali *biasf_despali)
@@ -236,10 +236,10 @@ nc_halo_bias_despali_clear (NcHaloBiasDespali **biasf_despali)
 }
 
 static gdouble
-_nc_halo_bias_despali_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_halo_bias_despali_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z)
 {
   /* NcHaloBiasDespali *biasf_despali = NC_HALO_BIAS_DESPALI (biasf); */
-  NcMultiplicityFunc *mulf       = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
+  NcMultiplicityFunc *mulf       = nc_halo_mass_function_peek_multiplicity_function (nc_halo_bias_peek_mass_function (biasf));
   NcMultiplicityFuncMassDef mdef = nc_multiplicity_func_get_mdef (mulf);
 
   gdouble eval = 0.0;
@@ -247,13 +247,13 @@ _nc_halo_bias_despali_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, 
   switch (mdef)
   {
     case NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN:
-      eval = _nc_halo_bias_despali_mean_eval (biasf, cosmo, sigma, z);
+      eval = _nc_halo_bias_despali_mean_eval (biasf, cosmo, sigma, lnM, z);
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL:
-      eval = _nc_halo_bias_despali_crit_eval (biasf, cosmo, sigma, z);
+      eval = _nc_halo_bias_despali_crit_eval (biasf, cosmo, sigma, lnM, z);
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL:
-      eval = _nc_halo_bias_despali_virial_eval (biasf, cosmo, sigma, z);
+      eval = _nc_halo_bias_despali_virial_eval (biasf, cosmo, sigma, lnM, z);
       break;
     case NC_MULTIPLICITY_FUNC_MASS_DEF_FOF:
       g_error ("NcHaloBiasDespali does not support fof mass def");
@@ -267,7 +267,7 @@ _nc_halo_bias_despali_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, 
 }
 
 static gdouble
-_nc_halo_bias_despali_virial_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_halo_bias_despali_virial_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z)
 {
   NcHaloBiasDespali *biasf_despali = NC_HALO_BIAS_DESPALI (biasf);
   gdouble bias_Despali_virial      = 0;
@@ -311,10 +311,10 @@ _nc_halo_bias_despali_virial_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble 
 }
 
 static gdouble
-_nc_halo_bias_despali_mean_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_halo_bias_despali_mean_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z)
 {
   NcHaloBiasDespali *biasf_despali = NC_HALO_BIAS_DESPALI (biasf);
-  NcMultiplicityFunc *mulf         = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
+  NcMultiplicityFunc *mulf         = nc_halo_mass_function_peek_multiplicity_function (nc_halo_bias_peek_mass_function (biasf));
 
 
   gdouble bias_Despali_mean = 0;
@@ -373,10 +373,10 @@ _nc_halo_bias_despali_mean_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble si
 }
 
 static gdouble
-_nc_halo_bias_despali_crit_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_halo_bias_despali_crit_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z)
 {
   NcHaloBiasDespali *biasf_despali = NC_HALO_BIAS_DESPALI (biasf);
-  NcMultiplicityFunc *mulf         = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
+  NcMultiplicityFunc *mulf         = nc_halo_mass_function_peek_multiplicity_function (nc_halo_bias_peek_mass_function (biasf));
 
   gdouble bias_Despali_crit = 0;
   const gdouble delta_c     = nc_halo_bias_despali_delta_c (biasf_despali, cosmo, z);

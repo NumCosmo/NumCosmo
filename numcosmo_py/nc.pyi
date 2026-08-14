@@ -15679,14 +15679,96 @@ class HaloBias(GObject.Object):
 
     props: Props = ...
     parent_instance: GObject.Object = ...
-    mfp: HaloMassFunction = ...
     def __init__(self, mass_function: HaloMassFunction = ...) -> None: ...
     @staticmethod
     def clear(bias: HaloBias) -> None: ...
-    def do_eval(self, cosmo: HICosmo, sigma: float, z: float) -> float: ...
-    def eval(self, cosmo: HICosmo, sigma: float, z: float) -> float: ...
+    def do_eval(self, cosmo: HICosmo, sigma: float, lnM: float, z: float) -> float: ...
+    def eval(self, cosmo: HICosmo, sigma: float, lnM: float, z: float) -> float: ...
     def free(self) -> None: ...
     def integrand(self, cosmo: HICosmo, lnM: float, z: float) -> float: ...
+    def peek_mass_function(self) -> HaloMassFunction: ...
+
+class HaloBiasCastro(HaloBias):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloBiasCastro(**properties)
+        new(mfp:NumCosmo.HaloMassFunction) -> NumCosmo.HaloBiasCastro
+
+    Object NcHaloBiasCastro
+
+    Properties from NcHaloBiasCastro:
+      A0 -> gdouble: A0
+        Correction amplitude
+      a1 -> gdouble: a1
+        Omega_m(z) coefficient
+      b1 -> gdouble: b1
+        Linear slope coefficient
+      b2 -> gdouble: b2
+        Quadratic slope coefficient
+      c1 -> gdouble: c1
+        S8 coefficient
+
+    Properties from NcHaloBias:
+      mass-function -> NcHaloMassFunction: mass-function
+        Mass Function.
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        A0: float
+        a1: float
+        b1: float
+        b2: float
+        c1: float
+        mass_function: HaloMassFunction
+
+    props: Props = ...
+    def __init__(
+        self,
+        A0: float = ...,
+        a1: float = ...,
+        b1: float = ...,
+        b2: float = ...,
+        c1: float = ...,
+        mass_function: HaloMassFunction = ...,
+    ) -> None: ...
+    def S8(self, cosmo: HICosmo) -> float: ...
+    @staticmethod
+    def clear(biasf: HaloBiasCastro) -> None: ...
+    def correction(self, cosmo: HICosmo, dlnsigma_dlnR: float, z: float) -> float: ...
+    def free(self) -> None: ...
+    def get_A0(self) -> float: ...
+    def get_a1(self) -> float: ...
+    def get_b1(self) -> float: ...
+    def get_b2(self) -> float: ...
+    def get_c1(self) -> float: ...
+    @classmethod
+    def new(cls, mfp: HaloMassFunction) -> HaloBiasCastro: ...
+    def pbs(
+        self, cosmo: HICosmo, sigma: float, dlnsigma_dlnR: float, z: float
+    ) -> float: ...
+    def ref(self) -> HaloBiasCastro: ...
+    def set_A0(self, A0: float) -> None: ...
+    def set_a1(self, a1: float) -> None: ...
+    def set_b1(self, b1: float) -> None: ...
+    def set_b2(self, b2: float) -> None: ...
+    def set_c1(self, c1: float) -> None: ...
+
+class HaloBiasCastroClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HaloBiasCastroClass()
+    """
+
+    parent_class: HaloBiasClass = ...
 
 class HaloBiasClass(GObject.GPointer):
     r"""
@@ -15698,7 +15780,8 @@ class HaloBiasClass(GObject.GPointer):
     """
 
     parent_class: GObject.ObjectClass = ...
-    eval: typing.Callable[[HaloBias, HICosmo, float, float], float] = ...
+    eval: typing.Callable[[HaloBias, HICosmo, float, float, float], float] = ...
+    padding: list[None] = ...
 
 class HaloBiasDespali(HaloBias):
     r"""
@@ -17772,6 +17855,8 @@ class MultiplicityFunc(GObject.Object):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -17780,11 +17865,15 @@ class MultiplicityFunc(GObject.Object):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
-        self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...
+        self,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(mulf: MultiplicityFunc) -> None: ...
@@ -17794,21 +17883,25 @@ class MultiplicityFunc(GObject.Object):
     def do_correction_factor(
         self, cosmo: HICosmo, sigma: float, z: float, lnM: float
     ) -> float: ...
-    def do_eval(self, cosmo: HICosmo, sigma: float, z: float) -> float: ...
+    def do_eval(self, cosmo: HICosmo, sigma: float, lnR: float, z: float) -> float: ...
     def do_get_Delta(self) -> float: ...
     def do_get_matter_Delta(self, cosmo: HICosmo, z: float) -> float: ...
     def do_get_mdef(self) -> MultiplicityFuncMassDef: ...
     def do_has_correction_factor(self) -> bool: ...
     def do_set_Delta(self, Delta: float) -> None: ...
     def do_set_mdef(self, mdef: MultiplicityFuncMassDef) -> None: ...
-    def eval(self, cosmo: HICosmo, sigma: float, z: float) -> float: ...
+    def eval(self, cosmo: HICosmo, sigma: float, lnR: float, z: float) -> float: ...
     def free(self) -> None: ...
     def get_Delta(self) -> float: ...
     def get_matter_Delta(self, cosmo: HICosmo, z: float) -> float: ...
     def get_mdef(self) -> MultiplicityFuncMassDef: ...
     def has_correction_factor(self) -> bool: ...
+    def peek_psf(self) -> typing.Optional[NumCosmoMath.PowspecFilter]: ...
     def set_Delta(self, Delta: float) -> None: ...
     def set_mdef(self, mdef: MultiplicityFuncMassDef) -> None: ...
+    def set_psf(
+        self, psf: typing.Optional[NumCosmoMath.PowspecFilter] = None
+    ) -> None: ...
 
 class MultiplicityFuncBhattacharya(MultiplicityFunc):
     r"""
@@ -17841,6 +17934,8 @@ class MultiplicityFuncBhattacharya(MultiplicityFunc):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -17855,6 +17950,7 @@ class MultiplicityFuncBhattacharya(MultiplicityFunc):
         q: float
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     def __init__(
@@ -17867,6 +17963,7 @@ class MultiplicityFuncBhattacharya(MultiplicityFunc):
         q: float = ...,
         Delta: float = ...,
         mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(mbt: MultiplicityFuncBhattacharya) -> None: ...
@@ -17925,6 +18022,8 @@ class MultiplicityFuncBocquet(MultiplicityFunc):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -17934,6 +18033,7 @@ class MultiplicityFuncBocquet(MultiplicityFunc):
         sim: MultiplicityFuncBocquetSim
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     def __init__(
@@ -17941,6 +18041,7 @@ class MultiplicityFuncBocquet(MultiplicityFunc):
         sim: MultiplicityFuncBocquetSim = ...,
         Delta: float = ...,
         mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(mb: MultiplicityFuncBocquet) -> None: ...
@@ -17969,6 +18070,90 @@ class MultiplicityFuncBocquetClass(GObject.GPointer):
 
     parent_class: MultiplicityFuncClass = ...
 
+class MultiplicityFuncCastro(MultiplicityFunc):
+    r"""
+    :Constructors:
+
+    ::
+
+        MultiplicityFuncCastro(**properties)
+        new() -> NumCosmo.MultiplicityFuncCastro
+        new_full(model:NumCosmo.MultiplicityFuncCastroModel, halo_finder:NumCosmo.MultiplicityFuncCastroHaloFinder) -> NumCosmo.MultiplicityFuncCastro
+
+    Object NcMultiplicityFuncCastro
+
+    Properties from NcMultiplicityFuncCastro:
+      model -> NcMultiplicityFuncCastroModel: model
+        Castro calibration
+      halo-finder -> NcMultiplicityFuncCastroHaloFinder: halo-finder
+        Halo finder calibration
+
+    Properties from NcMultiplicityFunc:
+      mass-def -> NcMultiplicityFuncMassDef: mass-def
+        Mass definition
+      Delta -> gdouble: Delta
+        Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        halo_finder: MultiplicityFuncCastroHaloFinder
+        model: MultiplicityFuncCastroModel
+        Delta: float
+        mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
+
+    props: Props = ...
+    def __init__(
+        self,
+        halo_finder: MultiplicityFuncCastroHaloFinder = ...,
+        model: MultiplicityFuncCastroModel = ...,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(mc: MultiplicityFuncCastro) -> None: ...
+    def delta_c(self, cosmo: HICosmo, z: float) -> float: ...
+    def eval_full(
+        self, cosmo: HICosmo, sigma: float, dlnsigma_dlnR: float, z: float
+    ) -> float: ...
+    def eval_lnf(
+        self, cosmo: HICosmo, sigma: float, dlnsigma_dlnR: float, z: float
+    ) -> float: ...
+    def free(self) -> None: ...
+    def get_halo_finder(self) -> MultiplicityFuncCastroHaloFinder: ...
+    def get_model(self) -> MultiplicityFuncCastroModel: ...
+    @classmethod
+    def new(cls) -> MultiplicityFuncCastro: ...
+    @classmethod
+    def new_full(
+        cls,
+        model: MultiplicityFuncCastroModel,
+        halo_finder: MultiplicityFuncCastroHaloFinder,
+    ) -> MultiplicityFuncCastro: ...
+    def ref(self) -> MultiplicityFuncCastro: ...
+    def set_halo_finder(
+        self, halo_finder: MultiplicityFuncCastroHaloFinder
+    ) -> None: ...
+    def set_model(self, model: MultiplicityFuncCastroModel) -> None: ...
+    def z_ta(self, z: float) -> float: ...
+
+class MultiplicityFuncCastroClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        MultiplicityFuncCastroClass()
+    """
+
+    parent_class: MultiplicityFuncClass = ...
+
 class MultiplicityFuncClass(GObject.GPointer):
     r"""
     :Constructors:
@@ -17984,7 +18169,7 @@ class MultiplicityFuncClass(GObject.GPointer):
     get_Delta: typing.Callable[[MultiplicityFunc], float] = ...
     get_matter_Delta: typing.Callable[[MultiplicityFunc, HICosmo, float], float] = ...
     get_mdef: typing.Callable[[MultiplicityFunc], MultiplicityFuncMassDef] = ...
-    eval: typing.Callable[[MultiplicityFunc, HICosmo, float, float], float] = ...
+    eval: typing.Callable[[MultiplicityFunc, HICosmo, float, float, float], float] = ...
     has_correction_factor: typing.Callable[[MultiplicityFunc], bool] = ...
     correction_factor: typing.Callable[
         [MultiplicityFunc, HICosmo, float, float, float], float
@@ -18007,6 +18192,8 @@ class MultiplicityFuncCrocce(MultiplicityFunc):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -18015,10 +18202,14 @@ class MultiplicityFuncCrocce(MultiplicityFunc):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     def __init__(
-        self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...
+        self,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(mc: MultiplicityFuncCrocce) -> None: ...
@@ -18061,6 +18252,8 @@ class MultiplicityFuncDespali(MultiplicityFunc):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -18071,6 +18264,7 @@ class MultiplicityFuncDespali(MultiplicityFunc):
         E0: bool
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     def __init__(
@@ -18079,6 +18273,7 @@ class MultiplicityFuncDespali(MultiplicityFunc):
         E0: bool = ...,
         Delta: float = ...,
         mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(md: MultiplicityFuncDespali) -> None: ...
@@ -18124,6 +18319,8 @@ class MultiplicityFuncJenkins(MultiplicityFunc):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -18132,10 +18329,14 @@ class MultiplicityFuncJenkins(MultiplicityFunc):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     def __init__(
-        self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...
+        self,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(mj: MultiplicityFuncJenkins) -> None: ...
@@ -18175,6 +18376,8 @@ class MultiplicityFuncPS(MultiplicityFunc):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -18184,6 +18387,7 @@ class MultiplicityFuncPS(MultiplicityFunc):
         critical_delta: float
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     def __init__(
@@ -18191,6 +18395,7 @@ class MultiplicityFuncPS(MultiplicityFunc):
         critical_delta: float = ...,
         Delta: float = ...,
         mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(mps: MultiplicityFuncPS) -> None: ...
@@ -18238,6 +18443,8 @@ class MultiplicityFuncST(MultiplicityFunc):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -18250,6 +18457,7 @@ class MultiplicityFuncST(MultiplicityFunc):
         p: float
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     def __init__(
@@ -18260,6 +18468,7 @@ class MultiplicityFuncST(MultiplicityFunc):
         p: float = ...,
         Delta: float = ...,
         mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(mst: MultiplicityFuncST) -> None: ...
@@ -18308,6 +18517,8 @@ class MultiplicityFuncTinker(MultiplicityFunc):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -18317,6 +18528,7 @@ class MultiplicityFuncTinker(MultiplicityFunc):
         linear_interp: bool
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     def __init__(
@@ -18324,6 +18536,7 @@ class MultiplicityFuncTinker(MultiplicityFunc):
         linear_interp: bool = ...,
         Delta: float = ...,
         mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(mt: MultiplicityFuncTinker) -> None: ...
@@ -18364,6 +18577,8 @@ class MultiplicityFuncTinkerMeanNormalized(MultiplicityFunc):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -18372,10 +18587,14 @@ class MultiplicityFuncTinkerMeanNormalized(MultiplicityFunc):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     def __init__(
-        self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...
+        self,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(mt10: MultiplicityFuncTinkerMeanNormalized) -> None: ...
@@ -18411,6 +18630,8 @@ class MultiplicityFuncWarren(MultiplicityFunc):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -18419,10 +18640,14 @@ class MultiplicityFuncWarren(MultiplicityFunc):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     def __init__(
-        self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...
+        self,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(mw: MultiplicityFuncWarren) -> None: ...
@@ -18458,6 +18683,8 @@ class MultiplicityFuncWatson(MultiplicityFunc):
         Mass definition
       Delta -> gdouble: Delta
         Delta
+      powerspectrum-filtered -> NcmPowspecFilter: powerspectrum-filtered
+        Filtered power spectrum
 
     Signals from GObject:
       notify (GParam)
@@ -18466,10 +18693,14 @@ class MultiplicityFuncWatson(MultiplicityFunc):
     class Props:
         Delta: float
         mass_def: MultiplicityFuncMassDef
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter
 
     props: Props = ...
     def __init__(
-        self, Delta: float = ..., mass_def: MultiplicityFuncMassDef = ...
+        self,
+        Delta: float = ...,
+        mass_def: MultiplicityFuncMassDef = ...,
+        powerspectrum_filtered: NumCosmoMath.PowspecFilter = ...,
     ) -> None: ...
     @staticmethod
     def clear(mwat: MultiplicityFuncWatson) -> None: ...
@@ -25309,6 +25540,38 @@ class MultiplicityFuncBhattacharyaConvention(GObject.GEnum):
 class MultiplicityFuncBocquetSim(GObject.GEnum):
     DM: MultiplicityFuncBocquetSim = ...
     HYDRO: MultiplicityFuncBocquetSim = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class MultiplicityFuncCastroHaloFinder(GObject.GEnum):
+    AHF: MultiplicityFuncCastroHaloFinder = ...
+    ROCKSTAR: MultiplicityFuncCastroHaloFinder = ...
+    SUBFIND: MultiplicityFuncCastroHaloFinder = ...
+    VELOCIRAPTOR: MultiplicityFuncCastroHaloFinder = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class MultiplicityFuncCastroModel(GObject.GEnum):
+    C23: MultiplicityFuncCastroModel = ...
+    C25: MultiplicityFuncCastroModel = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

@@ -1233,7 +1233,7 @@ test_nc_multiplicity_func_bhattacharya_basic (void)
   g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_q (mbt), ==, 1.7);
   g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_delta_c (mbt), ==, 1.686);
 
-  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf, cosmo, 1.0, 0.5), >, 0.0);
+  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf, cosmo, 1.0, 0.0, 0.5), >, 0.0);
 
   nc_hicosmo_clear (&cosmo);
 
@@ -1253,14 +1253,14 @@ test_nc_multiplicity_func_bhattacharya_convention (void)
   g_assert_cmpint (nc_multiplicity_func_bhattacharya_get_convention (mbt_h), ==, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019);
 
   /* The two conventions agree at z = 0 and differ for z > 0. */
-  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 0.0), ==,
-                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 0.0), 1.0e-15, 0.0);
-  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 1.0), !=,
-                     nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 1.0));
+  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 0.0, 0.0), ==,
+                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 0.0, 0.0), 1.0e-15, 0.0);
+  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 0.0, 1.0), !=,
+                     nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 0.0, 1.0));
 
   nc_multiplicity_func_bhattacharya_set_convention (mbt_h, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011);
-  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 1.0), ==,
-                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 1.0), 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 0.0, 1.0), ==,
+                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 0.0, 1.0), 1.0e-15, 0.0);
 
   nc_hicosmo_clear (&cosmo);
   nc_multiplicity_func_bhattacharya_free (mbt_b);
