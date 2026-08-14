@@ -23,6 +23,7 @@ project:
     - theory/halo_density_profile.qmd
     - theory/fftlog.qmd
     - theory/spectral.qmd
+    - theory/ssc.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd

@@ -5429,6 +5429,8 @@ class DataClusterNCountsGauss(NumCosmoMath.DataGaussCov):
         Whether use super sample covariance
       s-matrix -> NcmMatrix: s-matrix
         Super sample covariance matrix
+      ssc-sij -> NcXcorSSCSij: ssc-sij
+        Super sample covariance calculator, recomputing s-matrix per cosmology
       resample-s-matrix -> NcmMatrix: resample-s-matrix
         Super sample covariance resample matrix
       fix-cov -> gboolean: fix-cov
@@ -5468,6 +5470,7 @@ class DataClusterNCountsGauss(NumCosmoMath.DataGaussCov):
         lnM_obs_params: NumCosmoMath.Matrix
         resample_s_matrix: NumCosmoMath.Matrix
         s_matrix: NumCosmoMath.Matrix
+        ssc_sij: typing.Optional[XcorSSCSij]
         z_obs: NumCosmoMath.Vector
         z_obs_params: NumCosmoMath.Matrix
         cov: NumCosmoMath.Matrix
@@ -5490,6 +5493,7 @@ class DataClusterNCountsGauss(NumCosmoMath.DataGaussCov):
         lnM_obs_params: NumCosmoMath.Matrix = ...,
         resample_s_matrix: NumCosmoMath.Matrix = ...,
         s_matrix: NumCosmoMath.Matrix = ...,
+        ssc_sij: typing.Optional[XcorSSCSij] = ...,
         z_obs: NumCosmoMath.Vector = ...,
         z_obs_params: NumCosmoMath.Matrix = ...,
         cov: NumCosmoMath.Matrix = ...,
@@ -5508,6 +5512,7 @@ class DataClusterNCountsGauss(NumCosmoMath.DataGaussCov):
     def get_lnM_obs_params(self) -> NumCosmoMath.Matrix: ...
     def get_resample_s_matrix(self) -> NumCosmoMath.Matrix: ...
     def get_s_matrix(self) -> NumCosmoMath.Matrix: ...
+    def get_ssc_sij(self) -> typing.Optional[XcorSSCSij]: ...
     def get_z_obs(self) -> NumCosmoMath.Vector: ...
     def get_z_obs_params(self) -> NumCosmoMath.Matrix: ...
     @classmethod
@@ -5518,6 +5523,7 @@ class DataClusterNCountsGauss(NumCosmoMath.DataGaussCov):
     def set_lnM_obs_params(self, lnM_obs_params: NumCosmoMath.Matrix) -> None: ...
     def set_resample_s_matrix(self, s_matrix: NumCosmoMath.Matrix) -> None: ...
     def set_s_matrix(self, s_matrix: NumCosmoMath.Matrix) -> None: ...
+    def set_ssc_sij(self, ssc_sij: typing.Optional[XcorSSCSij] = None) -> None: ...
     def set_z_obs(self, z_obs: NumCosmoMath.Vector) -> None: ...
     def set_z_obs_params(self, z_obs_params: NumCosmoMath.Matrix) -> None: ...
 
@@ -21838,7 +21844,7 @@ class Xcor(GObject.Object):
       reltol -> gdouble: reltol
         Relative tolerance.
       ell-batch-size -> guint: ell-batch-size
-        Multipole batch size for cubature methods.
+        Multipole batch size for the kernel-space block methods.
 
     Signals from GObject:
       notify (GParam)
@@ -22578,6 +22584,7 @@ class XcorKernelClusterTophat(XcorKernelCluster):
 
         XcorKernelClusterTophat(**properties)
         new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, z_lower:float, z_upper:float) -> NumCosmo.XcorKernelClusterTophat
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, z_lower:float, z_upper:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelClusterTophat
 
     Object NcXcorKernelClusterTophat
 
@@ -22686,6 +22693,15 @@ class XcorKernelClusterTophat(XcorKernelCluster):
     @classmethod
     def new(
         cls, dist: Distance, ps: NumCosmoMath.Powspec, z_lower: float, z_upper: float
+    ) -> XcorKernelClusterTophat: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        z_lower: float,
+        z_upper: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
     ) -> XcorKernelClusterTophat: ...
 
 class XcorKernelClusterTophatClass(GObject.GPointer):
@@ -23334,6 +23350,108 @@ class XcorLensingEfficiencyClass(GObject.GPointer):
         [XcorLensingEfficiency], typing.Tuple[float, float]
     ] = ...
     padding: list[None] = ...
+
+class XcorSSCSij(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorSSCSij(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, z_edges:NumCosmoMath.Vector) -> NumCosmo.XcorSSCSij
+
+    Object NcXcorSSCSij
+
+    Properties from NcXcorSSCSij:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Linear matter power spectrum
+      z-edges -> NcmVector: z-edges
+        Redshift bin edges
+      mask-cl -> NcmVector: mask-cl
+        Angular power spectrum of the survey mask
+      area -> gdouble: area
+        Survey area in square degrees for the f_sky rescaling, 0 to disable
+      method -> NcXcorMethod: method
+        Quadrature method used for the angular power spectra
+      block-size -> guint: block-size
+        Multipole block size for the solver
+      reltol -> gdouble: reltol
+        Relative tolerance of the kernel spline and the outer k integral
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute floor of the adaptive refinement of the U_i(k) spline
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        area: float
+        block_size: int
+        dist: Distance
+        mask_cl: typing.Optional[NumCosmoMath.Vector]
+        method: XcorMethod
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        z_edges: NumCosmoMath.Vector
+
+    props: Props = ...
+    def __init__(
+        self,
+        area: float = ...,
+        block_size: int = ...,
+        dist: Distance = ...,
+        mask_cl: typing.Optional[NumCosmoMath.Vector] = ...,
+        method: XcorMethod = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        z_edges: NumCosmoMath.Vector = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(ssc_sij: XcorSSCSij) -> None: ...
+    def eval(self, cosmo: HICosmo) -> NumCosmoMath.Matrix: ...
+    def free(self) -> None: ...
+    def get_area(self) -> float: ...
+    def get_block_size(self) -> int: ...
+    def get_fsky(self) -> float: ...
+    def get_lmax(self) -> int: ...
+    def get_method(self) -> XcorMethod: ...
+    def get_nbins(self) -> int: ...
+    def get_reltol(self) -> float: ...
+    def get_scaled_abstol(self) -> float: ...
+    @staticmethod
+    def mask_cl_fullsky() -> NumCosmoMath.Vector: ...
+    @classmethod
+    def new(
+        cls, dist: Distance, ps: NumCosmoMath.Powspec, z_edges: NumCosmoMath.Vector
+    ) -> XcorSSCSij: ...
+    def peek_mask_cl(self) -> NumCosmoMath.Vector: ...
+    def peek_matrix(self) -> NumCosmoMath.Matrix: ...
+    def prepare(self, cosmo: HICosmo) -> None: ...
+    def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
+    def ref(self) -> XcorSSCSij: ...
+    def set_area(self, area: float) -> None: ...
+    def set_block_size(self, block_size: int) -> None: ...
+    def set_mask_cl(
+        self, mask_cl: typing.Optional[NumCosmoMath.Vector] = None
+    ) -> None: ...
+    def set_method(self, method: XcorMethod) -> None: ...
+    def set_reltol(self, reltol: float) -> None: ...
+    def set_scaled_abstol(self, scaled_abstol: float) -> None: ...
+
+class XcorSSCSijClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorSSCSijClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
 
 class XcorSolver(GObject.Object):
     r"""

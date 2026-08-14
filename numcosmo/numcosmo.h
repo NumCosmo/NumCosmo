@@ -243,6 +243,7 @@
 #include <numcosmo/nc/xcor/nc_xcor_kernel_tSZ.h>
 #include <numcosmo/nc/xcor/nc_xcor_lensing_efficiency.h>
 #include <numcosmo/nc/xcor/nc_xcor_solver.h>
+#include <numcosmo/nc/xcor/nc_xcor_ssc_sij.h>
 
 #endif /* _NUMCOSMO_H */
 

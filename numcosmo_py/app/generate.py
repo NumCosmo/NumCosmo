@@ -334,6 +334,18 @@ class GenerateJpasForecast:
         bool, typer.Option(help="Use fixed covariance matrix.", show_default=True)
     ] = False
 
+    vary_fitting_sij: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Recompute the fitting Sij at every likelihood step instead of "
+                "freezing it at the fitting model. The resampling Sij stays "
+                "frozen, so the mock is unchanged."
+            ),
+            show_default=True,
+        ),
+    ] = False
+
     z_min: Annotated[
         float,
         typer.Option(help="Jpas minimum redshift.", show_default=True, min=0),
@@ -446,6 +458,7 @@ class GenerateJpasForecast:
             resample_model=self.resample_model,
             resample_seed=self.resample_seed,
             fitting_model=self.fitting_model,
+            vary_fitting_Sij=self.vary_fitting_sij,
         )
 
         mset = exp.peek("model-set")
