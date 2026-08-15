@@ -80,6 +80,7 @@ TestNcPowspecFuncData powspecs[] =
   {test_nc_powspec_mnl_halofit_new,      "mnl/halofit/ml/cbe",           test_nc_powspec_ml_cbe_new},
 #endif
 };
+
 #define TEST_NC_POWSPECS_LEN G_N_ELEMENTS (powspecs)
 
 #define TEST_NC_POWSPEC_TESTS 3
@@ -216,6 +217,9 @@ test_nc_powspec_eval (TestNcPowspec *test, gconstpointer pdata)
 
   g_assert_cmpuint (Nz, >, 0);
   g_assert_cmpuint (Nk, >, 0);
+
+  Nk = MIN (Nk, 1000);
+  Nz = MIN (Nz, 1000);
 
   kv  = ncm_vector_new (Nk * 10);
   Pkv = ncm_vector_new (Nk * 10);

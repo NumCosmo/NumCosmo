@@ -84,7 +84,9 @@ void test_nc_halo_cm_diemer15_basic (void);
 void test_nc_halo_cm_prada12_basic (void);
 void test_nc_halo_cm_dutton14_basic (void);
 void test_nc_halo_bias_despali_basic (void);
+void test_nc_halo_bias_castro_basic (void);
 void test_nc_multiplicity_func_bhattacharya_basic (void);
+void test_nc_multiplicity_func_castro_basic (void);
 void test_nc_multiplicity_func_bhattacharya_convention (void);
 void test_nc_multiplicity_func_bhattacharya_mean_mdef (void);
 void test_nc_multiplicity_func_bhattacharya_critical_mdef (void);
@@ -168,7 +170,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/halo_cm_dutton14/basic", test_nc_halo_cm_dutton14_basic);
 
   g_test_add_func ("/nc/halo_bias_despali/basic", test_nc_halo_bias_despali_basic);
+  g_test_add_func ("/nc/halo_bias_castro/basic", test_nc_halo_bias_castro_basic);
 
+  g_test_add_func ("/nc/multiplicity_func_castro/basic", test_nc_multiplicity_func_castro_basic);
   g_test_add_func ("/nc/multiplicity_func_bhattacharya/basic", test_nc_multiplicity_func_bhattacharya_basic);
   g_test_add_func ("/nc/multiplicity_func_bhattacharya/convention", test_nc_multiplicity_func_bhattacharya_convention);
   g_test_add_func ("/nc/multiplicity_func_bhattacharya/mean_mdef", test_nc_multiplicity_func_bhattacharya_mean_mdef);
@@ -1200,6 +1204,87 @@ test_nc_halo_bias_despali_basic (void)
   nc_halo_mass_function_clear (&hmf);
 
   NCM_TEST_FREE (nc_halo_bias_despali_free, hbd);
+}
+
+void
+test_nc_halo_bias_castro_basic (void)
+{
+  NcDistance *dist        = nc_distance_new (1100.0);
+  NcTransferFunc *tf      = nc_transfer_func_eh_new ();
+  NcPowspecML *ps_ml      = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+  NcmPowspecFilter *psf   = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
+  NcMultiplicityFunc *mf  = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_castro_new ());
+  NcHaloMassFunction *hmf = nc_halo_mass_function_new (dist, psf, mf);
+  NcHaloBiasCastro *hbc   = nc_halo_bias_castro_new (hmf);
+  NcHaloBiasCastro *hbc2;
+
+  g_assert_true (hbc != NULL);
+  g_assert_true (NC_IS_HALO_BIAS_CASTRO (hbc));
+
+  hbc2 = nc_halo_bias_castro_ref (hbc);
+  nc_halo_bias_castro_clear (&hbc2);
+  g_assert_true (hbc2 == NULL);
+
+  g_assert_true (NC_IS_HALO_BIAS_CASTRO (hbc));
+
+  /* The mass function is the one it was built on, and the slope-running term of
+   * the total derivative raised the filter to second order at construction. */
+  g_assert_true (nc_halo_bias_peek_mass_function (NC_HALO_BIAS (hbc)) == hmf);
+  g_assert_cmpuint (ncm_powspec_filter_get_nderivs (psf), >=, 2);
+
+  nc_halo_bias_castro_set_A0 (hbc, 1.1);
+  nc_halo_bias_castro_set_a1 (hbc, 0.09);
+  nc_halo_bias_castro_set_b1 (hbc, 0.25);
+  nc_halo_bias_castro_set_b2 (hbc, 0.17);
+  nc_halo_bias_castro_set_c1 (hbc, -0.03);
+
+  g_assert_cmpfloat (nc_halo_bias_castro_get_A0 (hbc), ==, 1.1);
+  g_assert_cmpfloat (nc_halo_bias_castro_get_a1 (hbc), ==, 0.09);
+  g_assert_cmpfloat (nc_halo_bias_castro_get_b1 (hbc), ==, 0.25);
+  g_assert_cmpfloat (nc_halo_bias_castro_get_b2 (hbc), ==, 0.17);
+  g_assert_cmpfloat (nc_halo_bias_castro_get_c1 (hbc), ==, -0.03);
+
+  nc_distance_clear (&dist);
+  nc_transfer_func_clear (&tf);
+  nc_powspec_ml_clear (&ps_ml);
+  ncm_powspec_filter_clear (&psf);
+  nc_multiplicity_func_clear (&mf);
+  nc_halo_mass_function_clear (&hmf);
+
+  NCM_TEST_FREE (nc_halo_bias_castro_free, hbc);
+}
+
+void
+test_nc_multiplicity_func_castro_basic (void)
+{
+  NcMultiplicityFuncCastro *mc = nc_multiplicity_func_castro_new ();
+  NcMultiplicityFunc *mulf     = NC_MULTIPLICITY_FUNC (mc);
+  NcMultiplicityFuncCastro *mc2;
+
+  g_assert_true (mc != NULL);
+  g_assert_true (NC_IS_MULTIPLICITY_FUNC_CASTRO (mc));
+
+  mc2 = nc_multiplicity_func_castro_ref (mc);
+  nc_multiplicity_func_castro_clear (&mc2);
+  g_assert_true (mc2 == NULL);
+
+  g_assert_true (NC_IS_MULTIPLICITY_FUNC_CASTRO (mc));
+
+  /* Castro is calibrated on virial masses only. */
+  g_assert_cmpint (nc_multiplicity_func_get_mdef (mulf), ==, NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL);
+  g_assert_cmpint (nc_multiplicity_func_castro_get_model (mc), ==, NC_MULTIPLICITY_FUNC_CASTRO_MODEL_C23);
+  g_assert_cmpint (nc_multiplicity_func_castro_get_halo_finder (mc), ==, NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_ROCKSTAR);
+
+  /* Universal models leave it unset; Castro gets one from a NcHaloMassFunction. */
+  g_assert_null (nc_multiplicity_func_peek_psf (mulf));
+
+  nc_multiplicity_func_castro_set_model (mc, NC_MULTIPLICITY_FUNC_CASTRO_MODEL_C25);
+  nc_multiplicity_func_castro_set_halo_finder (mc, NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_SUBFIND);
+
+  g_assert_cmpint (nc_multiplicity_func_castro_get_model (mc), ==, NC_MULTIPLICITY_FUNC_CASTRO_MODEL_C25);
+  g_assert_cmpint (nc_multiplicity_func_castro_get_halo_finder (mc), ==, NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_SUBFIND);
+
+  NCM_TEST_FREE (nc_multiplicity_func_castro_free, mc);
 }
 
 void

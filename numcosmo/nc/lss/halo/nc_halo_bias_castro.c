@@ -399,7 +399,13 @@ _nc_halo_bias_castro_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, g
   const gdouble lnf_am  = nc_multiplicity_func_castro_eval_lnf (mc, cosmo, sigma, s - h, z);
   const gdouble dlnf_ds = (lnf_ap - lnf_am) / (2.0 * h);
 
-  const gdouble ds_dlnR  = 0.5 * ncm_powspec_filter_eval_dnlnvar_dlnrn (psf, z, lnR, 2);
+  const gdouble ds_dlnR = 0.5 * ncm_powspec_filter_eval_dnlnvar_dlnrn (psf, z, lnR, 2);
+
+  /*
+   * A flat variance carries no mass direction to run along: nu is stationary in R,
+   * so the slope-running term drops out of the total derivative rather than
+   * diverging. Taking the ratio there would give 0/0.
+   */
   const gdouble ds_dlnnu = (s != 0.0) ? -ds_dlnR / s : 0.0;
 
   const gdouble dlnf_dlnnu = dlnf_dlnnu_partial + dlnf_ds * ds_dlnnu;

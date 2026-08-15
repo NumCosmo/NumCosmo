@@ -44,8 +44,8 @@ struct _NcHaloBiasClass
 
   gdouble (*eval) (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z);
 
-  /* Padding to allow adding up to 10 more virtual functions without breaking ABI. */
-  gpointer padding[10];
+  /* Padding to allow adding up to 17 more virtual functions without breaking ABI. */
+  gpointer padding[17];
 };
 
 gdouble nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z);

@@ -24,6 +24,13 @@ import pytest
 
 from numcosmo_py import Ncm, Nc
 
+# Required for this file to run at all: conftest.py skips anything whose keywords
+# contain "powspec" -- which the directory name alone supplies -- unless
+# --run-powspec is given, while the py-powspec lane selects with `-m powspec`,
+# which matches markers only. Without this the file is skipped in one lane and
+# deselected in the other.
+pytestmark = pytest.mark.powspec
+
 Ncm.cfg_init()
 
 # A power law is the one case with a closed-form answer: for P(k) = A k^n the
@@ -83,6 +90,40 @@ def test_require_nderivs_never_lowers() -> None:
     assert psf.get_nderivs() == 3
 
 
+def test_set_nderivs_lowers_and_stays_usable() -> None:
+    """set_nderivs may lower the order, discarding the tables above it.
+
+    This is the one way down: require_nderivs is a ratchet. The discarded
+    orders must actually be released and the filter must still evaluate the
+    orders it kept, after re-preparing.
+    """
+    cosmo = Nc.HICosmoLCDM.new()
+    psf = _power_law_filter(-1.5, Ncm.PowspecFilterType.TOPHAT, 3)
+    assert psf.get_nderivs() == 3
+
+    lnr = np.log(5.0)
+    var_before = psf.eval_dnvar_dlnrn(0.0, lnr, 0)
+
+    psf.set_nderivs(1)
+    assert psf.get_nderivs() == 1
+
+    # Lowering invalidates the calibration, so the filter must be prepared again.
+    psf.prepare(cosmo)
+
+    assert psf.eval_dnvar_dlnrn(0.0, lnr, 0) == pytest.approx(var_before, rel=1.0e-12)
+    assert psf.eval_dnlnvar_dlnrn(0.0, lnr, 1) == pytest.approx(-1.5, abs=1.0e-4)
+
+
+def test_nderivs_property_round_trip() -> None:
+    """The order is readable and writable through the GObject property."""
+    psf = _power_law_filter(-1.5, Ncm.PowspecFilterType.TOPHAT, 1)
+    assert psf.props.nderivs == 1
+
+    psf.props.nderivs = 2
+    assert psf.props.nderivs == 2
+    assert psf.get_nderivs() == 2
+
+
 @pytest.mark.parametrize("ftype", FILTER_TYPES)
 @pytest.mark.parametrize("n_index", POWER_LAW_INDICES)
 def test_power_law_first_log_derivative(
@@ -119,6 +160,131 @@ def test_power_law_second_log_derivative(
     np.testing.assert_allclose(
         d2, 0.0, atol=1.0e-4, err_msg=f"filter {ftype}, n = {n_index}"
     )
+
+
+def test_eval_r_forms_match_lnr_forms() -> None:
+    """The r-argument evaluators are the lnr ones at the same point."""
+    psf = _power_law_filter(-1.5, Ncm.PowspecFilterType.TOPHAT, 2)
+
+    for r in (0.5, 2.0, 9.0):
+        lnr = np.log(r)
+
+        assert psf.eval_var(0.0, r) == pytest.approx(
+            psf.eval_var_lnr(0.0, lnr), rel=1.0e-14
+        )
+        assert psf.eval_sigma(0.0, r) == pytest.approx(
+            psf.eval_sigma_lnr(0.0, lnr), rel=1.0e-14
+        )
+        assert psf.eval_lnvar_lnr(0.0, lnr) == pytest.approx(
+            np.log(psf.eval_var_lnr(0.0, lnr)), rel=1.0e-14
+        )
+        # sigma is the square root of the variance, by definition.
+        assert psf.eval_sigma_lnr(0.0, lnr) == pytest.approx(
+            np.sqrt(psf.eval_var_lnr(0.0, lnr)), rel=1.0e-14
+        )
+
+
+def test_dvar_and_dlnvar_relations() -> None:
+    """The raw, log and per-r derivative forms are consistent at a point."""
+    psf = _power_law_filter(-1.5, Ncm.PowspecFilterType.TOPHAT, 2)
+
+    for r in (0.7, 3.0, 11.0):
+        lnr = np.log(r)
+        var = psf.eval_var_lnr(0.0, lnr)
+        dvar = psf.eval_dvar_dlnr(0.0, lnr)
+
+        assert dvar == pytest.approx(psf.eval_dnvar_dlnrn(0.0, lnr, 1), rel=1.0e-14)
+        assert psf.eval_dlnvar_dlnr(0.0, lnr) == pytest.approx(dvar / var, rel=1.0e-14)
+        # d/dr = (1/r) d/dlnr.
+        assert psf.eval_dlnvar_dr(0.0, lnr) == pytest.approx(
+            psf.eval_dlnvar_dlnr(0.0, lnr) / r, rel=1.0e-14
+        )
+        # n = 0 of the log-derivative ladder is ln(var) itself.
+        assert psf.eval_dnlnvar_dlnrn(0.0, lnr, 0) == pytest.approx(
+            np.log(var), rel=1.0e-14
+        )
+
+
+@pytest.mark.parametrize("ftype", FILTER_TYPES)
+def test_volume_rm3_is_filter_specific(ftype: Ncm.PowspecFilterType) -> None:
+    """Each window has its own V/r^3, positive and independent of the spectrum."""
+    psf = _power_law_filter(-1.5, ftype, 1)
+
+    volume = psf.volume_rm3()
+    assert volume > 0.0
+
+    other = _power_law_filter(-2.0, ftype, 1).volume_rm3()
+    assert volume == pytest.approx(other, rel=1.0e-14)
+
+
+def test_volume_rm3_differs_between_filters() -> None:
+    """A top-hat and a Gaussian of the same radius enclose different volumes."""
+    tophat = _power_law_filter(-1.5, Ncm.PowspecFilterType.TOPHAT, 1).volume_rm3()
+    gauss = _power_law_filter(-1.5, Ncm.PowspecFilterType.GAUSS, 1).volume_rm3()
+
+    assert tophat != pytest.approx(gauss, rel=1.0e-6)
+
+
+def test_peek_powspec_returns_the_source() -> None:
+    """The filter hands back the spectrum it was built on."""
+    psf = _power_law_filter(-1.5, Ncm.PowspecFilterType.TOPHAT, 1)
+
+    ps = psf.peek_powspec()
+    assert isinstance(ps, Ncm.Powspec)
+    assert psf.get_filter_type() == Ncm.PowspecFilterType.TOPHAT
+
+
+def test_reltol_accessors_round_trip() -> None:
+    """Both calibration tolerances are settable and readable."""
+    psf = _power_law_filter(-1.5, Ncm.PowspecFilterType.TOPHAT, 1)
+
+    psf.set_reltol(1.0e-8)
+    psf.set_reltol_z(1.0e-7)
+
+    assert psf.get_reltol() == pytest.approx(1.0e-8)
+    assert psf.get_reltol_z() == pytest.approx(1.0e-7)
+
+
+def test_zi_zf_require_is_a_ratchet() -> None:
+    """require_zi/require_zf widen the range and never narrow it."""
+    psf = _power_law_filter(-1.5, Ncm.PowspecFilterType.TOPHAT, 1)
+
+    psf.set_zi(0.5)
+    psf.set_zf(3.0)
+    assert psf.props.zi == pytest.approx(0.5)
+    assert psf.props.zf == pytest.approx(3.0)
+
+    # Widening in either direction takes effect.
+    psf.require_zi(0.1)
+    psf.require_zf(6.0)
+    assert psf.props.zi == pytest.approx(0.1)
+    assert psf.props.zf == pytest.approx(6.0)
+
+    # Narrowing requests are ignored, so a shared filter stays usable.
+    psf.require_zi(2.0)
+    psf.require_zf(1.0)
+    assert psf.props.zi == pytest.approx(0.1)
+    assert psf.props.zf == pytest.approx(6.0)
+
+
+def test_lnr0_moves_the_output_range() -> None:
+    """Re-centring the output shifts the r range it can be evaluated on."""
+    psf = _power_law_filter(-1.5, Ncm.PowspecFilterType.TOPHAT, 1)
+
+    r_min_before, r_max_before = psf.get_r_min(), psf.get_r_max()
+    assert 0.0 < r_min_before < r_max_before
+
+    psf.set_lnr0(psf.props.lnr0 + np.log(10.0))
+
+    assert psf.props.lnr0 == pytest.approx(
+        np.log(10.0) + np.log(r_min_before * r_max_before) / 2.0, rel=1.0e-6
+    )
+    assert psf.get_r_min() == pytest.approx(10.0 * r_min_before, rel=1.0e-10)
+    assert psf.get_r_max() == pytest.approx(10.0 * r_max_before, rel=1.0e-10)
+
+    # set_best_lnr0 puts it back on the range the spectrum actually supports.
+    psf.set_best_lnr0()
+    assert psf.get_r_min() == pytest.approx(r_min_before, rel=1.0e-10)
 
 
 @pytest.mark.parametrize("ftype", FILTER_TYPES)
