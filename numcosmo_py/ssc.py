@@ -65,12 +65,35 @@ all. Measured against a converged independent quadrature, for seven J-PAS bins:
 `1e-8`                    0.001%    -0.003%      0.02%     -0.06%   0.36 s
 =====================  =========  =========  =========  =========  =======
 
-`1e-8` is the accurate setting and its residual `0.06%` is consistent with the
-reference's own convergence rather than a NumCosmo error, but it currently
-trips a hard `g_error` abort in `ncm_integral_nd_eval` ("p-adaptive methods
-report failure when they run out of Clenshaw-Curtis levels") on masked runs,
-which would kill a chain mid-flight. Until that failure degrades gracefully the
-default here is `1e-6`; pass `scaled_abstol=1e-8` explicitly for full-sky work.
+Read that table for what it is: a *relative* error on elements that are
+themselves four orders of magnitude below $S_{00}$. It is the wrong quantity to
+tune against, because those elements contribute to the covariance in absolute
+terms, not relative ones, and `-59.1%` of a negligible number is still
+negligible. The quantity that matters is what reaches the parameter
+uncertainties. Measured on a cap footprint, $z \in [0.1, 0.8]$, seven bins,
+18000 deg$^2$, against the `1e-8` result:
+
+=====================  ============  ===============  ================  =======
+`scaled_abstol`        max |dS/S|    max |dS|/S_{00}  max |dsigma/sigma| time
+=====================  ============  ===============  ================  =======
+`1e-4` (NcXcorKernel)      8.1e-03          2.8e-04            0.03%    10.2 s
+`1e-6` (used here)         7.0e-05          7.9e-07           0.0001%   10.9 s
+`1e-8`                           0                0                 0   13.0 s
+=====================  ============  ===============  ================  =======
+
+`sigma` is the Fisher uncertainty on $(\Omega_c, w, \ln 10^{10}A_s)$ for the
+full forecast likelihood. Tightening past `1e-6` buys nothing measurable, and
+even `1e-4` would shift the reported errors by less than `0.03%`. `1e-6` is
+therefore the default because it is already converged for every quantity the
+forecast reports, not as a compromise --- do not raise it chasing the
+off-diagonal percentages in the first table.
+
+A p-adaptive `g_error` abort in `ncm_integral_nd_eval` ("p-adaptive methods
+report failure when they run out of Clenshaw-Curtis levels") used to be the
+binding constraint here, since it could kill a chain mid-flight on masked runs.
+That failure now falls back to h-adaptive subdivision, so it no longer
+constrains this choice.
+
 `adaptive_epsilon` was verified not to bind at any of these settings, and
 `reltol` is inert while `scaled_abstol` binds.
 """
