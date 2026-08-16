@@ -520,6 +520,114 @@ _ncm_integral_nd_method_name (NcmIntegralNDMethod method)
   }
 }
 
+/*
+ * Evaluation budget for the h-adaptive retry when the caller asked for an
+ * unlimited one. Large enough that a merely awkward integrand still converges,
+ * small enough that a hopeless one fails in seconds instead of exhausting
+ * memory.
+ */
+#define NCM_INTEGRAL_ND_RETRY_MAXEVAL (10000000)
+
+static gboolean
+_ncm_integral_nd_method_is_p (NcmIntegralNDMethod method)
+{
+  return (method == NCM_INTEGRAL_ND_METHOD_CUBATURE_P) ||
+         (method == NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V);
+}
+
+static NcmIntegralNDMethod
+_ncm_integral_nd_method_h_of_p (NcmIntegralNDMethod method)
+{
+  return (method == NCM_INTEGRAL_ND_METHOD_CUBATURE_P) ?
+         NCM_INTEGRAL_ND_METHOD_CUBATURE_H :
+         NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V;
+}
+
+/*
+ * Runs one cubature method. Split out of ncm_integral_nd_eval so the same
+ * integral can be attempted with a second method without duplicating the
+ * dispatch.
+ */
+static gint
+_ncm_integral_nd_run (NcmIntegralND *intnd, NcmIntegralNDMethod method, guint maxeval, guint dim, guint fdim, gint error, const NcmVector *xi, const NcmVector *xf, NcmVector *res, NcmVector *err)
+{
+  NcmIntegralNDPrivate * const self = ncm_integral_nd_get_instance_private (intnd);
+  gint ret                          = 0;
+
+  switch (method)
+  {
+    case NCM_INTEGRAL_ND_METHOD_CUBATURE_H:
+      ret = hcubature (
+        fdim,
+        _ncm_integral_nd_cubature_int,
+        intnd,
+        dim,
+        ncm_vector_const_data (xi),
+        ncm_vector_const_data (xf),
+        maxeval,
+        self->abstol,
+        self->reltol,
+        error,
+        ncm_vector_data (res),
+        ncm_vector_data (err)
+                      );
+      break;
+    case NCM_INTEGRAL_ND_METHOD_CUBATURE_P:
+      ret = pcubature (
+        fdim,
+        _ncm_integral_nd_cubature_int,
+        intnd,
+        dim,
+        ncm_vector_const_data (xi),
+        ncm_vector_const_data (xf),
+        maxeval,
+        self->abstol,
+        self->reltol,
+        error,
+        ncm_vector_data (res),
+        ncm_vector_data (err)
+                      );
+      break;
+    case NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V:
+      ret = hcubature_v (
+        fdim,
+        _ncm_integral_nd_cubature_vint,
+        intnd,
+        dim,
+        ncm_vector_const_data (xi),
+        ncm_vector_const_data (xf),
+        maxeval,
+        self->abstol,
+        self->reltol,
+        error,
+        ncm_vector_data (res),
+        ncm_vector_data (err)
+                        );
+      break;
+    case NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V:
+      ret = pcubature_v (
+        fdim,
+        _ncm_integral_nd_cubature_vint,
+        intnd,
+        dim,
+        ncm_vector_const_data (xi),
+        ncm_vector_const_data (xf),
+        maxeval,
+        self->abstol,
+        self->reltol,
+        error,
+        ncm_vector_data (res),
+        ncm_vector_data (err)
+                        );
+      break;
+    default:                                                           /* LCOV_EXCL_LINE */
+      g_error ("ncm_integral_nd_eval: invalid method: `%d`.", method);  /* LCOV_EXCL_LINE */
+      break;                                                           /* LCOV_EXCL_LINE */
+  }
+
+  return ret;
+}
+
 /**
  * ncm_integral_nd_eval:
  * @intnd: a #NcmIntegralND
@@ -571,75 +679,33 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
   }
 
 
-  switch (self->method)
+  ret = _ncm_integral_nd_run (intnd, self->method, self->maxeval, dim, fdim, error, xi, xf, res, err);
+
+  /*
+   * A p-adaptive failure means the integrand could not carry the requested
+   * tolerance, not that the integral is ill-posed: the method runs out of
+   * Clenshaw-Curtis levels while refining a global rule. h-adaptive
+   * subdivision converges on exactly that kind of integrand, so retry there
+   * instead of aborting, which would otherwise kill a running chain over an
+   * integrand that is merely awkward on part of its domain.
+   *
+   * The retry must be given a finite budget. h-adaptive subdivision never
+   * reports "cannot converge": with maxeval unlimited it keeps bisecting and
+   * growing its region heap until the process dies, turning a clean abort into
+   * an out-of-memory crash. Bounding it lets the retry fail cleanly and reach
+   * the diagnostic below.
+   */
+  if ((ret != 0) && _ncm_integral_nd_method_is_p (self->method))
   {
-    case NCM_INTEGRAL_ND_METHOD_CUBATURE_H:
-      ret = hcubature (
-        fdim,
-        _ncm_integral_nd_cubature_int,
-        intnd,
-        dim,
-        ncm_vector_const_data (xi),
-        ncm_vector_const_data (xf),
-        self->maxeval,
-        self->abstol,
-        self->reltol,
-        error,
-        ncm_vector_data (res),
-        ncm_vector_data (err)
-      );
-      break;
-    case NCM_INTEGRAL_ND_METHOD_CUBATURE_P:
-      ret = pcubature (
-        fdim,
-        _ncm_integral_nd_cubature_int,
-        intnd,
-        dim,
-        ncm_vector_const_data (xi),
-        ncm_vector_const_data (xf),
-        self->maxeval,
-        self->abstol,
-        self->reltol,
-        error,
-        ncm_vector_data (res),
-        ncm_vector_data (err)
-      );
-      break;
-    case NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V:
-      ret = hcubature_v (
-        fdim,
-        _ncm_integral_nd_cubature_vint,
-        intnd,
-        dim,
-        ncm_vector_const_data (xi),
-        ncm_vector_const_data (xf),
-        self->maxeval,
-        self->abstol,
-        self->reltol,
-        error,
-        ncm_vector_data (res),
-        ncm_vector_data (err)
-      );
-      break;
-    case NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V:
-      ret = pcubature_v (
-        fdim,
-        _ncm_integral_nd_cubature_vint,
-        intnd,
-        dim,
-        ncm_vector_const_data (xi),
-        ncm_vector_const_data (xf),
-        self->maxeval,
-        self->abstol,
-        self->reltol,
-        error,
-        ncm_vector_data (res),
-        ncm_vector_data (err)
-      );
-      break;
-    default:
-      g_error ("ncm_integral_nd_eval: invalid method: `%d`.", self->method);
-      break;
+    const NcmIntegralNDMethod fallback = _ncm_integral_nd_method_h_of_p (self->method);
+    const guint retry_maxeval          = (self->maxeval == 0) ? NCM_INTEGRAL_ND_RETRY_MAXEVAL : self->maxeval;
+
+    g_debug ("ncm_integral_nd_eval: %s failed (%d) on %s, retrying with %s (maxeval %u).",
+             _ncm_integral_nd_method_name (self->method), ret,
+             G_OBJECT_TYPE_NAME (intnd), _ncm_integral_nd_method_name (fallback),
+             retry_maxeval);
+
+    ret = _ncm_integral_nd_run (intnd, fallback, retry_maxeval, dim, fdim, error, xi, xf, res, err);
   }
 
   if (ret != 0)
@@ -657,12 +723,12 @@ ncm_integral_nd_eval (NcmIntegralND *intnd, const NcmVector *xi, const NcmVector
              _ncm_integral_nd_method_name (self->method), ret,
              G_OBJECT_TYPE_NAME (intnd), dim, bounds->str, fdim,
              self->reltol, self->abstol, self->maxeval,
-             ((self->method == NCM_INTEGRAL_ND_METHOD_CUBATURE_P) ||
-              (self->method == NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V)) ?
-             "The p-adaptive methods report failure when they run out of "
-             "Clenshaw-Curtis levels before reaching the requested tolerance, which is "
-             "what happens when the integrand is not accurate or smooth enough to "
-             "support the tolerance asked of it." : "");
+             _ncm_integral_nd_method_is_p (self->method) ?
+             "The p-adaptive method ran out of Clenshaw-Curtis levels before reaching "
+             "the requested tolerance, which is what happens when the integrand is not "
+             "accurate or smooth enough to support the tolerance asked of it, and the "
+             "h-adaptive retry did not converge either. Loosen reltol to match the "
+             "accuracy the integrand actually carries." : "");
 
     g_string_free (bounds, TRUE);
   }

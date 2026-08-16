@@ -428,6 +428,28 @@ class GenerateJpasForecast:
         ),
     ] = 1234
 
+    omega_c_min: Annotated[
+        float,
+        typer.Option(
+            help=(
+                "Lower bound of the Omega_c prior. A model outside the bounds "
+                "cannot be analysed at all, so widen these when displacing the "
+                "mock far from the fiducial."
+            ),
+            show_default=True,
+            min=0,
+        ),
+    ] = 0.1
+
+    omega_c_max: Annotated[
+        float,
+        typer.Option(
+            help="Upper bound of the Omega_c prior.",
+            show_default=True,
+            min=0,
+        ),
+    ] = 0.3
+
     def __post_init__(self):
         """Generate JPAS 2024 forecast experiment.
 
@@ -459,6 +481,8 @@ class GenerateJpasForecast:
             resample_seed=self.resample_seed,
             fitting_model=self.fitting_model,
             vary_fitting_Sij=self.vary_fitting_sij,
+            omega_c_min=self.omega_c_min,
+            omega_c_max=self.omega_c_max,
         )
 
         mset = exp.peek("model-set")
