@@ -570,7 +570,7 @@ _ncm_integral_nd_run (NcmIntegralND *intnd, NcmIntegralNDMethod method, guint ma
         error,
         ncm_vector_data (res),
         ncm_vector_data (err)
-                      );
+      );
       break;
     case NCM_INTEGRAL_ND_METHOD_CUBATURE_P:
       ret = pcubature (
@@ -586,7 +586,7 @@ _ncm_integral_nd_run (NcmIntegralND *intnd, NcmIntegralNDMethod method, guint ma
         error,
         ncm_vector_data (res),
         ncm_vector_data (err)
-                      );
+      );
       break;
     case NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V:
       ret = hcubature_v (
@@ -602,7 +602,7 @@ _ncm_integral_nd_run (NcmIntegralND *intnd, NcmIntegralNDMethod method, guint ma
         error,
         ncm_vector_data (res),
         ncm_vector_data (err)
-                        );
+      );
       break;
     case NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V:
       ret = pcubature_v (
@@ -618,10 +618,10 @@ _ncm_integral_nd_run (NcmIntegralND *intnd, NcmIntegralNDMethod method, guint ma
         error,
         ncm_vector_data (res),
         ncm_vector_data (err)
-                        );
+      );
       break;
     default:                                                           /* LCOV_EXCL_LINE */
-      g_error ("ncm_integral_nd_eval: invalid method: `%d`.", method);  /* LCOV_EXCL_LINE */
+      g_error ("ncm_integral_nd_eval: invalid method: `%d`.", method); /* LCOV_EXCL_LINE */
       break;                                                           /* LCOV_EXCL_LINE */
   }
 
