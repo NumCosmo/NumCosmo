@@ -11,7 +11,7 @@ on:
 env:
   CONDA_ENV: numcosmo_developer
   # Bump to force recomputing slice-tests.txt from scratch instead of restoring cached durations.
-  TEST_DURATION_CACHE_VERSION: 3
+  TEST_DURATION_CACHE_VERSION: 0
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
   # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock, e.g.
   # scipy.linalg.solve in test_sbessel_ode_solver), and the run-alone OpenMP tests

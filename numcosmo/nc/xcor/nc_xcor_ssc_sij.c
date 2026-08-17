@@ -86,11 +86,22 @@
  * dev-notes/xcor_ultralevin_batching_plan.md section 1.3. */
 #define NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE (8)
 
-/* Two orders tighter than #NcXcorKernel's own 1.0e-4 default. This, not
+/* One order tighter than #NcXcorKernel's own 1.0e-4 default. This, not
  * `reltol`, is what limits the accuracy of the off-diagonal S_ij: they are a
  * small residual of a large cancellation, four orders of magnitude below the
- * diagonal for well-separated bins. */
-#define NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL (1.0e-6)
+ * diagonal for well-separated bins.
+ *
+ * Deliberately different from NC_XCOR_SSC_SIJ_DEFAULT_RELTOL below. Equal
+ * values are the one setting that makes the p-adaptive cubature run out of
+ * Clenshaw-Curtis levels, because the refinement then stops exactly at the
+ * level the outer rule is trying to resolve. The offset is taken upwards
+ * because this object rebuilds S at every likelihood step, where tightening
+ * costs ~2x per rebuild for accuracy no forecast can use.
+ *
+ * Must be kept equal to DEFAULT_SCALED_ABSTOL in numcosmo_py/ssc.py, which is
+ * what the frozen path uses: the two are documented to differ only in whether
+ * S_ij follows the cosmology, not in how it is computed. */
+#define NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL (1.0e-5)
 
 #define NC_XCOR_SSC_SIJ_DEFAULT_RELTOL (1.0e-6)
 

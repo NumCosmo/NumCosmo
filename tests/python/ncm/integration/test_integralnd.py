@@ -74,6 +74,66 @@ class IntegralND(Ncm.IntegralND):
         fval_vec.set_array(fval.flatten())
 
 
+class DiscontinuousIntegrand(Ncm.IntegralND):
+    """Test class for IntegralND with a discontinuous integrand."""
+
+    # pylint: disable-next=arguments-differ
+    def do_get_dimensions(self) -> tuple[int, int]:
+        """Get number of dimensions."""
+        return 1, 1
+
+    # pylint: disable-next=arguments-differ
+    def do_integrand(
+        self,
+        x_vec: Ncm.Vector,
+        dim: int,
+        npoints: int,
+        _fdim: int,
+        fval_vec: Ncm.Vector,
+    ) -> None:
+        """Integrand function."""
+        x = np.asarray(x_vec.dup_array()).reshape((npoints, dim))
+        fval = np.floor(x)
+
+        fval_vec.set_array(fval.flatten())
+
+
+def test_integral_nd_discontinuous(capfd: pytest.CaptureFixture[str]) -> None:
+    """Example computing cosmological distances."""
+    test_f = DiscontinuousIntegrand(method=Ncm.IntegralNDMethod.H_V)
+
+    res = Ncm.Vector.new(1)
+    err = Ncm.Vector.new(1)
+
+    test_f.set_method(Ncm.IntegralNDMethod.P_V)
+    assert test_f.get_method() == Ncm.IntegralNDMethod.P_V
+    test_f.set_abstol(0.0)
+    test_f.set_reltol(1.0e-10)
+
+    test_f.eval(
+        Ncm.Vector.new_array([0.0]),
+        Ncm.Vector.new_array([5.0]),
+        res,
+        err,
+    )
+    assert "retrying with hcubature_v " in capfd.readouterr().out
+    assert_almost_equal(res.dup_array(), [10.0])
+
+    test_f.set_method(Ncm.IntegralNDMethod.P)
+    assert test_f.get_method() == Ncm.IntegralNDMethod.P
+    test_f.set_abstol(0.0)
+    test_f.set_reltol(1.0e-10)
+
+    test_f.eval(
+        Ncm.Vector.new_array([0.0]),
+        Ncm.Vector.new_array([5.0]),
+        res,
+        err,
+    )
+    assert "retrying with hcubature " in capfd.readouterr().out
+    assert_almost_equal(res.dup_array(), [10.0])
+
+
 def test_integral_nd() -> None:
     """Example computing cosmological distances."""
     test_f = IntegralND(

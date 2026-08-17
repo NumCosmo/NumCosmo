@@ -320,14 +320,29 @@ def create_mask_full(nside: int = 512) -> np.ndarray:
     return mask_full
 
 
-def create_cosmo() -> Nc.HICosmo:
+def create_cosmo(
+    omega_c_min: float = 0.1,
+    omega_c_max: float = 0.3,
+) -> Nc.HICosmo:
     """Create a fiducial flat wCDM cosmology model for J-Pas 2024 forecast.
 
     Uses an $text{Nc.HICosmoDEXcdm}$ model (Flat $Lambda$CDM extension).
     Sets fiducial values and specifies which parameters are free to be fitted.
 
+    The $Omega_c$ bounds are adjustable because a model outside them cannot be
+    analysed at all: the starting point is rejected, `run fit` reports
+    inconsistent parameters, and the sampler then fails to draw a valid initial
+    ensemble.
+
+    :param omega_c_min: Lower bound of the $Omega_c$ prior.
+    :param omega_c_max: Upper bound of the $Omega_c$ prior.
     :return: An initialized NumCosmo HICosmoDEXcdm model.
     """
+    if omega_c_min >= omega_c_max:
+        raise ValueError(
+            f"omega_c_min ({omega_c_min}) must be below omega_c_max ({omega_c_max})."
+        )
+
     cosmo = Nc.HICosmoDEXcdm()
 
     # Set default fitting types (typically linear scale, fixed tolerance)
@@ -348,8 +363,8 @@ def create_cosmo() -> Nc.HICosmo:
     cosmo.param_set_desc(
         "Omegac",
         {
-            "lower-bound": 0.1,
-            "upper-bound": 0.3,
+            "lower-bound": omega_c_min,
+            "upper-bound": omega_c_max,
             "scale": 1.0e-2,
             "abstol": 1.0e-50,
             "fit": True,
@@ -736,6 +751,8 @@ def generate_jpas_forecast_2024(
     fitting_Sij_type: JpasSSCType = JpasSSCType.FULLSKY,
     resample_Sij_type: JpasSSCType = JpasSSCType.NO_SSC,
     vary_fitting_Sij: bool = False,
+    omega_c_min: float = 0.1,
+    omega_c_max: float = 0.3,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate J-Pas 2024 cluster abundance forecast experiment dictionary.
 
@@ -765,6 +782,10 @@ def generate_jpas_forecast_2024(
         likelihood step for the current cosmology, instead of being frozen at the
         fitting model. The resampling matrix stays frozen either way, so the mock
         is unchanged.
+    :param omega_c_min: Lower bound of the $Omega_c$ prior. A resample model outside
+        the bounds cannot be analysed, so widen these when displacing the mock far
+        from the fiducial.
+    :param omega_c_max: Upper bound of the $Omega_c$ prior.
     :param fitting_Sij_type: The type of SSC matrix $S_{ij}$ to use for the fitting
         (theoretical) covariance.
     :param resample_Sij_type: The type of SSC matrix $S_{ij}$ to use for generating the
@@ -816,7 +837,7 @@ def generate_jpas_forecast_2024(
     cluster_z = create_cluster_redshift(
         cluster_redshift_type, sigma0=cluster_redshift_sigma0
     )
-    cosmo = create_cosmo()
+    cosmo = create_cosmo(omega_c_min=omega_c_min, omega_c_max=omega_c_max)
 
     # Use defaults if not specified
     if lnM_obs_min is None:

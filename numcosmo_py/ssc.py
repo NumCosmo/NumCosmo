@@ -65,12 +65,89 @@ all. Measured against a converged independent quadrature, for seven J-PAS bins:
 `1e-8`                    0.001%    -0.003%      0.02%     -0.06%   0.36 s
 =====================  =========  =========  =========  =========  =======
 
-`1e-8` is the accurate setting and its residual `0.06%` is consistent with the
-reference's own convergence rather than a NumCosmo error, but it currently
-trips a hard `g_error` abort in `ncm_integral_nd_eval` ("p-adaptive methods
-report failure when they run out of Clenshaw-Curtis levels") on masked runs,
-which would kill a chain mid-flight. Until that failure degrades gracefully the
-default here is `1e-6`; pass `scaled_abstol=1e-8` explicitly for full-sky work.
+Read that table for what it is: a *relative* error on elements that are
+themselves four orders of magnitude below $S_{00}$. It is the wrong quantity to
+tune against, because those elements contribute to the covariance in absolute
+terms, not relative ones, and `-59.1%` of a negligible number is still
+negligible. The quantity that matters is what reaches the parameter
+uncertainties. Measured on a cap footprint, $z \in [0.1, 0.8]$, seven bins,
+18000 deg$^2$, against the `1e-8` result:
+
+=====================  ============  ===============  ==================
+`scaled_abstol`        max |dS/S|    max |dS|/S_{00}  max |dsigma/sigma|
+=====================  ============  ===============  ==================
+`1e-4` (NcXcorKernel)      1.4e-02          3.0e-04              0.028%
+`1e-5` (used here)         1.7e-03          1.2e-04              0.009%
+`1e-6`                     8.7e-05          1.4e-06              0.0001%
+=====================  ============  ===============  ==================
+
+`sigma` is the Fisher uncertainty on $(\Omega_c, w, \ln 10^{10}A_s)$ for the
+full forecast likelihood, measured against `1e-7`. Every setting in the table
+is converged for anything the forecast reports: the effects it studies are
+5--50%, so even `1e-4` has three orders of magnitude of margin. Do not tighten
+this chasing the off-diagonal percentages in the first table.
+
+What does move with `scaled_abstol` is cost, and it matters in one place. With
+a frozen $S_{ij}$ the matrix is built once per experiment and the choice is
+irrelevant (a second either way). With `--vary-fitting-sij` it is rebuilt at
+every likelihood step, so it sits directly on the chain's critical path. One
+rebuild, cap, 18000 deg$^2$, seven bins:
+
+=====================  ==========  ====================
+`scaled_abstol`        S rebuild   relative to `1e-6`
+=====================  ==========  ====================
+`1e-4`                    0.28 s   3.8x faster
+`1e-5` (used here)        0.51 s   2.1x faster
+`1e-6`                    1.06 s   ---
+`1e-7`                    2.03 s   1.9x slower
+=====================  ==========  ====================
+
+Hence `1e-5`: accurate to `0.009%` on the reported uncertainties, and twice as
+cheap as `1e-6` in the varying case. The accuracy that `1e-6` and below buy is
+real but unusable, and in the varying case it is paid for on every step.
+
+Keep `scaled_abstol` away from `reltol`
+--------------------------------------
+
+`scaled_abstol` must not equal the outer $k$-integral's `reltol`. The p-adaptive
+`g_error` in `ncm_integral_nd_eval` ("p-adaptive methods report failure when
+they run out of Clenshaw-Curtis levels") is not monotonic in `scaled_abstol`:
+it fires at that one coincidence and nowhere near it. Generating the
+configuration that first hit it (15 knots, cap, 3000 deg$^2$, $w = -0.8$, with
+`reltol = 1e-6`) at each floor:
+
+=====================  ====  ====  ====  ====  ====  ====  ====
+`scaled_abstol`        1e-4  1e-5  3e-6  1e-6  3e-7  1e-7  1e-8
+=====================  ====  ====  ====  ====  ====  ====  ====
+p-adaptive failures       0     0     0     1     0     0     0
+=====================  ====  ====  ====  ====  ====  ====  ====
+
+The refinement stops exactly at the level the outer rule is trying to resolve,
+so the non-smoothness it leaves behind sits precisely at `pcubature`'s
+convergence threshold; a factor of three either way breaks the tie. This is the
+mismatch `_nc_xcor_check_kernel_tolerance` describes, but that guard compares
+`reltol` against the *Levin* tolerances, not against `scaled_abstol`, so it
+does not catch it.
+
+So the offset from `reltol` is deliberate, and it is taken in the cheap
+direction: `DEFAULT_SCALED_ABSTOL = 1e-5` against `DEFAULT_RELTOL = 1e-6`.
+Moving the other way, to `1e-7`, would clear the coincidence just as well but
+cost 1.9x per rebuild for accuracy that is already unusable. Do not "tidy" the
+two constants to the same value.
+
+The C-side counterpart must move with it. `NcXcorSSCSij` carries its own
+`NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL` (`nc_xcor_ssc_sij.c`) and pushes it onto
+the kernels it builds, so it is what the varying path actually uses --- not this
+constant. The two are kept equal on purpose: `create_ssc_sij_calculator()`
+promises that a fixed and a varying run "differ only in whether $S_{ij}$ follows
+the cosmology, not in how it is computed", and comment 15 of the covariance
+paper is precisely the comparison between them. Changing one alone silently
+breaks that.
+
+The failure is not fatal in any case: it falls back to h-adaptive subdivision,
+which is what let the affected run finish. The offset removes the retry rather
+than the crash.
+
 `adaptive_epsilon` was verified not to bind at any of these settings, and
 `reltol` is inert while `scaled_abstol` binds.
 """
@@ -104,13 +181,17 @@ DEFAULT_BLOCK_SIZE = 8
 #: levels on the cross integrand for `l > 0` and aborts.
 DEFAULT_RELTOL = 1.0e-6
 
-#: Absolute floor for the adaptive refinement of the `U_i(k)` spline. Two orders
-#: tighter than #NcXcorKernel's own `1e-4` default, which is the binding
-#: constraint on off-diagonal accuracy -- see the module docstring. `1e-8` is
-#: better still and is safe for full-sky ($\ell = 0$) runs, but currently trips
-#: a hard abort in the p-adaptive cubature on masked runs, so it is not the
-#: default.
-DEFAULT_SCALED_ABSTOL = 1.0e-6
+#: Absolute floor for the adaptive refinement of the `U_i(k)` spline. One order
+#: tighter than #NcXcorKernel's own `1e-4` default, and the knob that limits
+#: off-diagonal accuracy -- see the module docstring. Deliberately offset from
+#: `DEFAULT_RELTOL`: making the two equal is the one setting that trips the
+#: p-adaptive cubature, and the offset is taken upwards because tightening costs
+#: ~2x per rebuild when `--vary-fitting-sij` puts S on the likelihood's critical
+#: path, for accuracy already far below anything a forecast reports.
+#:
+#: Must be kept equal to `NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL`
+#: (`nc_xcor_ssc_sij.c`), which is what the varying path actually uses.
+DEFAULT_SCALED_ABSTOL = 1.0e-5
 
 
 def print_progress(done: int, total: int, elapsed: float, message: str) -> None:
