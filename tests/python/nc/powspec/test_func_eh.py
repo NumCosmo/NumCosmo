@@ -27,7 +27,11 @@
 import numpy as np
 from numpy.testing import assert_allclose
 
+import pytest
+
 from numcosmo_py import Ncm, Nc
+
+pytestmark = pytest.mark.powspec
 
 Ncm.cfg_init()
 
