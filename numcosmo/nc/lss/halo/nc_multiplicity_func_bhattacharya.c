@@ -178,7 +178,7 @@ static void _nc_multiplicity_func_bhattacharya_set_mdef (NcMultiplicityFunc *mul
 static void _nc_multiplicity_func_bhattacharya_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_bhattacharya_get_mdef (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_bhattacharya_get_Delta (NcMultiplicityFunc *mulf);
-static gdouble _nc_multiplicity_func_bhattacharya_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_multiplicity_func_bhattacharya_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z);
 
 static void
 nc_multiplicity_func_bhattacharya_class_init (NcMultiplicityFuncBhattacharyaClass *klass)
@@ -335,7 +335,7 @@ _nc_multiplicity_func_bhattacharya_get_Delta (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_bhattacharya_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* f(\sigma) - Bhattacharya */
+_nc_multiplicity_func_bhattacharya_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* f(\sigma) - Bhattacharya */
 {
   NcMultiplicityFuncBhattacharya *mba                = NC_MULTIPLICITY_FUNC_BHATTACHARYA (mulf);
   NcMultiplicityFuncBhattacharyaPrivate * const self = nc_multiplicity_func_bhattacharya_get_instance_private (mba);

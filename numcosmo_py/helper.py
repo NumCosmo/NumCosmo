@@ -1,6 +1,6 @@
 """Helper functions for numcosmo_py."""
 
-from typing import Sequence, Type, TypeVar, cast
+from typing import Iterable, Sequence, Type, TypeVar, cast
 import numpy as np
 import numpy.typing as npt
 
@@ -9,6 +9,9 @@ from . import Ncm, GObject
 
 # Type variable for generic object duplication
 T = TypeVar("T")
+
+# Type variable for GEnum subtypes
+E = TypeVar("E", bound=GObject.GEnum)
 
 
 def npa_to_seq(npa: npt.NDArray[np.float64]) -> Sequence[float]:
@@ -54,6 +57,30 @@ def duplicate_via_serialization(obj: T, ser: Ncm.Serialize | None = None) -> T:
     # even though the GObject introspection doesn't provide this info
     assert isinstance(obj, GObject.GObject)
     return cast(T, ser.dup_obj(obj))
+
+
+def enum_values(enum_type: Type[E]) -> list[E]:
+    """List all values of a GEnum type, sorted by numerical value.
+
+    PyGObject only exposes GEnum types as Python enums (and thus as iterables)
+    since version 3.52, older versions raise TypeError on ``list(EnumType)``.
+
+    Parameters
+    ----------
+    enum_type : Type[E]
+        GEnum type to enumerate, e.g. ``Nc.HIPertITwoFluidsObs``.
+
+    Returns
+    -------
+    list[E]
+        Values of ``enum_type`` sorted by numerical value.
+    """
+    if isinstance(enum_type, Iterable):
+        return sorted(cast(Iterable[E], enum_type), key=int)
+
+    # PyGObject < 3.52: not iterable, but maps values to instances.
+    values = cast(dict[int, E], getattr(enum_type, "__enum_values__"))
+    return [values[key] for key in sorted(values)]
 
 
 def register_model_class(mb: Ncm.ModelBuilder) -> Type:

@@ -66,7 +66,7 @@ enum
   PROP_SIZE
 };
 
-static gdouble _nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z);
 
 static void
 nc_halo_bias_tinker_init (NcHaloBiasTinker *biasf_tinker)
@@ -248,10 +248,10 @@ nc_halo_bias_tinker_new_full (NcHaloMassFunction *mfp, gdouble delta_c, gdouble 
  * appropriate matter density definition. This needs a better justification.
  */
 static gdouble
-_nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z)
 {
   NcHaloBiasTinker *bias_tinker = NC_HALO_BIAS_TINKER (biasf);
-  NcMultiplicityFunc *mulf      = nc_halo_mass_function_peek_multiplicity_function (biasf->mfp);
+  NcMultiplicityFunc *mulf      = nc_halo_mass_function_peek_multiplicity_function (nc_halo_bias_peek_mass_function (biasf));
   const gdouble E2              = nc_hicosmo_E2 (cosmo, z);
   const gdouble Omega_m         = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
   const gdouble Delta           = nc_multiplicity_func_get_Delta (mulf) / Omega_m;

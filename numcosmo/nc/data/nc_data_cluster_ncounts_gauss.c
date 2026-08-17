@@ -40,6 +40,7 @@
 
 #include "nc/data/nc_data_cluster_ncounts_gauss.h"
 #include "nc/reion/nc_hireion.h"
+#include "nc/xcor/nc_xcor_ssc_sij.h"
 
 #include "ncm/core/ncm_func_eval.h"
 #include "ncm/core/ncm_serialize.h"
@@ -68,6 +69,7 @@ enum
   PROP_CAD,
   PROP_HAS_SSC,
   PROP_S_MATRIX,
+  PROP_SSC_SIJ,
   PROP_RESAMPLE_S_MATRIX,
   PROP_FIX_COV,
   PROP_SIZE,
@@ -82,6 +84,7 @@ typedef struct _NcDataClusterNCountsGaussPrivate
   NcClusterAbundance *cad;
   gboolean has_ssc;
   NcmMatrix *s_matrix;
+  NcXcorSSCSij *ssc_sij;
   NcmMatrix *resample_s_matrix;
   gboolean fix_cov;
   GArray *index_map;
@@ -119,6 +122,7 @@ nc_data_cluster_ncounts_gauss_init (NcDataClusterNCountsGauss *ncounts_gauss)
   self->cad               = NULL;
   self->has_ssc           = FALSE;
   self->s_matrix          = NULL;
+  self->ssc_sij           = NULL;
   self->resample_s_matrix = NULL;
   self->index_map         = g_array_new (FALSE, FALSE, sizeof (NcDataClusterNCountsGaussIndex));
   self->fix_cov           = FALSE;
@@ -155,6 +159,9 @@ _nc_data_cluster_ncounts_gauss_set_property (GObject *object, guint prop_id, con
       break;
     case PROP_S_MATRIX:
       nc_data_cluster_ncounts_gauss_set_s_matrix (ncounts_gauss,  g_value_get_object (value));
+      break;
+    case PROP_SSC_SIJ:
+      nc_data_cluster_ncounts_gauss_set_ssc_sij (ncounts_gauss, g_value_get_object (value));
       break;
     case PROP_RESAMPLE_S_MATRIX:
       nc_data_cluster_ncounts_gauss_set_resample_s_matrix (ncounts_gauss,  g_value_get_object (value));
@@ -199,6 +206,9 @@ _nc_data_cluster_ncounts_gauss_get_property (GObject *object, guint prop_id, GVa
     case PROP_S_MATRIX:
       g_value_set_object (value, self->s_matrix);
       break;
+    case PROP_SSC_SIJ:
+      g_value_set_object (value, self->ssc_sij);
+      break;
     case PROP_RESAMPLE_S_MATRIX:
       g_value_set_object (value, self->resample_s_matrix);
       break;
@@ -223,6 +233,7 @@ _nc_data_cluster_ncounts_gauss_dispose (GObject *object)
   ncm_matrix_clear (&self->lnM_obs_params);
   nc_cluster_abundance_clear (&self->cad);
   ncm_matrix_clear (&self->s_matrix);
+  nc_xcor_ssc_sij_clear (&self->ssc_sij);
   ncm_matrix_clear (&self->resample_s_matrix);
 
   g_clear_pointer (&self->index_map, g_array_unref);
@@ -306,6 +317,13 @@ nc_data_cluster_ncounts_gauss_class_init (NcDataClusterNCountsGaussClass *klass)
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
+                                   PROP_SSC_SIJ,
+                                   g_param_spec_object ("ssc-sij",
+                                                        NULL,
+                                                        "Super sample covariance calculator, recomputing s-matrix per cosmology",
+                                                        NC_TYPE_XCOR_SSC_SIJ,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
                                    PROP_RESAMPLE_S_MATRIX,
                                    g_param_spec_object ("resample-s-matrix",
                                                         NULL,
@@ -338,6 +356,26 @@ _nc_data_cluster_ncounts_gauss_begin (NcmData *data)
   const gint nlnM                               = ncm_vector_len (self->lnM_obs) - 1;
 
   g_assert_cmpint (np, ==, nz * nlnM);
+
+  if (self->ssc_sij != NULL)
+  {
+    const guint sij_nbins = nc_xcor_ssc_sij_get_nbins (self->ssc_sij);
+    gboolean use_norma;
+
+    if (sij_nbins != (guint) nz)
+      g_error ("_nc_data_cluster_ncounts_gauss_begin: the ssc-sij calculator has %u redshift "
+               "bins but the data has %d; they must share the same binning.", sij_nbins, nz);
+
+    /* With a cosmology dependent covariance the log-determinant term is not a
+     * constant, and dropping it biases the posterior towards high variance
+     * cosmologies -- exactly the direction a varying S_ij moves. */
+    g_object_get (gauss_cov, "use-norma", &use_norma, NULL);
+
+    if (!use_norma)
+      g_error ("_nc_data_cluster_ncounts_gauss_begin: ssc-sij makes the covariance cosmology "
+               "dependent, so use-norma must be TRUE, otherwise the normalization term is "
+               "dropped and the posterior is biased.");
+  }
 
   g_array_set_size (self->index_map, 0);
 
@@ -379,6 +417,14 @@ _nc_data_cluster_ncounts_gauss_prepare (NcmData *data, NcmMSet *mset)
   g_assert ((cosmo != NULL) && (clusterz != NULL) && (clusterm != NULL));
 
   nc_cluster_abundance_prepare_if_needed (self->cad, cosmo, clusterz, clusterm);
+
+  /* The SSC matrix depends on cosmology like the rest of the covariance.
+   * Recomputing it here, instead of holding it at its fiducial value, is what
+   * lets the whole covariance vary along the chain. It is done in prepare()
+   * rather than in the covariance function because the latter is called from
+   * several places per likelihood evaluation. */
+  if (self->ssc_sij != NULL)
+    nc_xcor_ssc_sij_prepare_if_needed (self->ssc_sij, cosmo);
 }
 
 /**
@@ -466,8 +512,12 @@ _nc_data_cluster_ncounts_gauss_cov_func (NcmDataGaussCov *gauss_cov, NcmMSet *ms
     NcmMatrix *s_matrix;
     guint i, j;
 
+    /* Resampling keeps its own frozen matrix, so a run whose fitting covariance
+     * varies can still be compared against a mock drawn at the fiducial one. */
     if (ncm_data_is_resampling (NCM_DATA (gauss_cov)) && (self->resample_s_matrix != NULL))
       s_matrix = self->resample_s_matrix;
+    else if (self->ssc_sij != NULL)
+      s_matrix = nc_xcor_ssc_sij_peek_matrix (self->ssc_sij);
     else
       s_matrix = self->s_matrix;
 
@@ -687,6 +737,55 @@ nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncounts_g
 
   ncm_matrix_clear (&self->s_matrix);
   self->s_matrix = ncm_matrix_ref (s_matrix);
+}
+
+/**
+ * nc_data_cluster_ncounts_gauss_set_ssc_sij:
+ * @ncounts_gauss: a #NcDataClusterNCountsGauss
+ * @ssc_sij: (nullable): a #NcXcorSSCSij, or %NULL
+ *
+ * Sets a #NcXcorSSCSij that recomputes the super sample covariance matrix for
+ * the current cosmology at every nc_data_cluster_ncounts_gauss prepare, in
+ * place of the fixed matrix given by
+ * nc_data_cluster_ncounts_gauss_set_s_matrix(). The calculator must have one
+ * redshift bin per redshift bin of the data, and `use-norma` must be TRUE,
+ * both checked when the data begins.
+ *
+ * The matrix used while resampling is unaffected: it stays the one set by
+ * nc_data_cluster_ncounts_gauss_set_resample_s_matrix(), so a mock realization
+ * remains tied to a single fiducial covariance.
+ *
+ * Passing %NULL restores the fixed matrix.
+ *
+ */
+void
+nc_data_cluster_ncounts_gauss_set_ssc_sij (NcDataClusterNCountsGauss *ncounts_gauss, NcXcorSSCSij *ssc_sij)
+{
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
+
+  nc_xcor_ssc_sij_clear (&self->ssc_sij);
+
+  if (ssc_sij != NULL)
+    self->ssc_sij = nc_xcor_ssc_sij_ref (ssc_sij);
+}
+
+/**
+ * nc_data_cluster_ncounts_gauss_get_ssc_sij:
+ * @ncounts_gauss: a #NcDataClusterNCountsGauss
+ *
+ * Gets the super sample covariance calculator, if any.
+ *
+ * Returns: (transfer full) (nullable): the #NcXcorSSCSij in use, or %NULL
+ */
+NcXcorSSCSij *
+nc_data_cluster_ncounts_gauss_get_ssc_sij (NcDataClusterNCountsGauss *ncounts_gauss)
+{
+  NcDataClusterNCountsGaussPrivate * const self = nc_data_cluster_ncounts_gauss_get_instance_private (ncounts_gauss);
+
+  if (self->ssc_sij != NULL)
+    return nc_xcor_ssc_sij_ref (self->ssc_sij);
+  else
+    return NULL;
 }
 
 /**

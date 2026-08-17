@@ -32,20 +32,29 @@
  * where all mass-dependent factors are assumed constant within the redshift bin
  * and are absorbed into an overall normalization.
  *
- * The kernel is given by:
+ * The radial window is a top-hat in the comoving volume element, normalized to
+ * unit integral in comoving distance $\xi$:
  * \begin{equation}
- *   K(z,k) = \Theta(z; z_{\rm lower}, z_{\rm upper}) \sqrt{P(k,z)}
+ *   W(\xi) = \frac{\xi^2}{\Delta V}
+ *   \Theta(z; z_{\rm lower}, z_{\rm upper}), \qquad
+ *   \Delta V = \int_{\xi_{\rm lower}}^{\xi_{\rm upper}} \xi^2 \mathrm{d}\xi,
  * \end{equation}
  *
- * where $\Theta(z; z_{\rm lower}, z_{\rm upper})$ is a normalized top-hat function:
+ * so that $\int W(\xi) \mathrm{d}\xi = 1$ and the kernel entering the radial
+ * integral is
  * \begin{equation}
- *   \Theta(z; z_{\rm lower}, z_{\rm upper}) = \begin{cases}
- *     \frac{1}{z_{\rm upper} - z_{\rm lower}} & \text{if } z_{\rm lower} \le z \le z_{\rm upper} \\
- *     0 & \text{otherwise}
- *   \end{cases}
+ *   K(\xi,k) = W(\xi) \sqrt{P(k,z(\xi))} ,
  * \end{equation}
  *
- * and $P(k,z)$ is the matter power spectrum.
+ * where $P(k,z)$ is the matter power spectrum. With this normalization the
+ * resulting $C_\ell$ is the angular power spectrum of the volume-averaged
+ * matter density contrast over the bin, which is the quantity entering the
+ * super-sample covariance matrix $S_{ij}$.
+ *
+ * Note that $\Theta$ here is the indicator function of the bin (unit-valued
+ * inside, zero outside): the whole normalization is carried by $1/\Delta V$.
+ * Dividing additionally by $z_{\rm upper} - z_{\rm lower}$ would double-count
+ * it.
  *
  */
 
@@ -197,10 +206,12 @@ static void _nc_xcor_kernel_cluster_tophat_get_z_range (NcXcorKernel *xclk, gdou
 static GPtrArray *_nc_xcor_kernel_cluster_tophat_get_component_list (NcXcorKernel *xclk);
 
 static gdouble
-_nc_xcor_kernel_cluster_tophat_dndz (NcXcorKernelClusterTophat *xclkc, gdouble z)
+_nc_xcor_kernel_cluster_tophat_window (NcXcorKernelClusterTophat *xclkc, gdouble z)
 {
-  /* The boundary should always be respected */
-  return 1.0 / (xclkc->z_upper - xclkc->z_lower);
+  /* Indicator function of the bin; the boundary should always be respected by
+   * the caller, so no explicit range check is needed here. The normalization
+   * is carried entirely by the 1/(V_upper - V_lower) prefactor. */
+  return 1.0;
 }
 
 static void
@@ -304,6 +315,35 @@ nc_xcor_kernel_cluster_tophat_new (NcDistance *dist, NcmPowspec *ps, gdouble z_l
   return xclkc;
 }
 
+/**
+ * nc_xcor_kernel_cluster_tophat_new_full:
+ * @dist: a #NcDistance
+ * @ps: a #NcmPowspec
+ * @z_lower: lower redshift bound
+ * @z_upper: upper redshift bound
+ * @sbi: a #NcmSBesselIntegrator
+ *
+ * Creates a new #NcXcorKernelClusterTophat carrying @sbi, as
+ * nc_xcor_kernel_cluster_tophat_new() does not. A #NcXcorKernel only accepts
+ * the non-Limber modes of nc_xcor_kernel_set_l_limber() once it holds an
+ * integrator, so this is the constructor to use for them.
+ *
+ * Returns: (transfer full): a new #NcXcorKernelClusterTophat
+ */
+NcXcorKernelClusterTophat *
+nc_xcor_kernel_cluster_tophat_new_full (NcDistance *dist, NcmPowspec *ps, gdouble z_lower, gdouble z_upper, NcmSBesselIntegrator *sbi)
+{
+  NcXcorKernelClusterTophat *xclkc = g_object_new (NC_TYPE_XCOR_KERNEL_CLUSTER_TOPHAT,
+                                                   "dist", dist,
+                                                   "powspec", ps,
+                                                   "z-lower", z_lower,
+                                                   "z-upper", z_upper,
+                                                   "integrator", sbi,
+                                                   NULL);
+
+  return xclkc;
+}
+
 /*
  * Old Limber interface implementation
  */
@@ -322,10 +362,10 @@ static gdouble
 _nc_xcor_kernel_cluster_tophat_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorKernelClusterTophat *xclkc = NC_XCOR_KERNEL_CLUSTER_TOPHAT (xclk);
-  const gdouble dndz               = _nc_xcor_kernel_cluster_tophat_dndz (xclkc, z);
+  const gdouble window             = _nc_xcor_kernel_cluster_tophat_window (xclkc, z);
   const gdouble xi_t               = nc_distance_transverse (xclkc->dist, cosmo, z);
 
-  return xi_t * xi_t * dndz;
+  return xi_t * xi_t * window;
 }
 
 static gdouble
@@ -398,9 +438,9 @@ _clustering_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo
   ClusteringComponentData *data = _NC_XCOR_KERNEL_COMPONENT_CLUSTER_TOPHAT_GET_DATA (comp);
   const gdouble z               = nc_distance_inv_comoving (data->dist, cosmo, xi);
   const gdouble powspec         = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k / nc_hicosmo_RH_Mpc (cosmo));
-  const gdouble tophat          = _nc_xcor_kernel_cluster_tophat_dndz (data->xclkc, z);
+  const gdouble window          = _nc_xcor_kernel_cluster_tophat_window (data->xclkc, z);
 
-  return xi * xi * tophat * sqrt (powspec);
+  return xi * xi * window * sqrt (powspec);
 }
 
 static gdouble

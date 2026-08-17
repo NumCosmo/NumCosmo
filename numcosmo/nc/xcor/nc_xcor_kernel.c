@@ -355,6 +355,25 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                      -1, G_MAXINT, 0,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcXcorKernel:adaptive-epsilon:
+   *
+   * Convergence threshold for the adaptive $k$-range determination: sampling stops
+   * extending outwards once $\Vert W\Vert$ falls below this fraction of its running
+   * maximum, for #NcXcorKernel:adaptive-boundary-tries consecutive steps.
+   *
+   * The criterion is based on the amplitude of $W$ relative to its peak. For a tail
+   * decaying as $k^{-p}$, the resulting range scales approximately as
+   * $(1/\epsilon)^{1/p}$ times the peak location. Consequently, tightening $\epsilon$
+   * can substantially increase the sampled range without a corresponding increase in
+   * the contribution to the $C_\ell$ integral.
+   *
+   * This is particularly relevant for kernels with compact support in $z$, such as
+   * top-hat redshift bins, whose transforms exhibit slowly decaying oscillatory tails.
+   * Smooth kernels (galaxy, weak lensing, CMB lensing, tSZ) have amplitude and
+   * integral contributions that fall off together, making the criterion a more direct
+   * indication of the relevant integration range.
+   */
   g_object_class_install_property (object_class,
                                    PROP_ADAPTIVE_EPSILON,
                                    g_param_spec_double ("adaptive-epsilon",
@@ -371,6 +390,17 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                       1, G_MAXUINT, 5,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcXcorKernel:reltol:
+   *
+   * Relative tolerance for the adaptive refinement of the $W_i(k)$ spline.
+   *
+   * The tolerance is applied only where #NcXcorKernel:scaled-abstol does not bind. For
+   * typical settings, the scaled absolute tolerance controls most of the refinement,
+   * so this parameter primarily affects regions where the spline amplitude is
+   * sufficiently large for relative accuracy to be relevant. See
+   * #NcXcorKernel:scaled-abstol for the complementary criterion.
+   */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
@@ -378,6 +408,34 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                         "Relative tolerance for adaptive midpoint refinement",
                                                         0.0, 1.0, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcXcorKernel:scaled-abstol:
+   *
+   * Absolute tolerance for the adaptive refinement of the $W_i(k)$ spline, expressed
+   * as a fraction of the peak sampled integrand. An interval is accepted once its
+   * estimated interpolation error falls below `scaled-abstol` $\times \max\vert
+   * F\vert$.
+   *
+   * This criterion sets the absolute accuracy of the spline where it binds. Tightening
+   * #NcXcorKernel:reltol has no effect in those regions. Since the tolerance is
+   * absolute, the corresponding relative error can become large where the resulting
+   * $C_\ell$ is small; these contributions are typically dominated by cancellation and
+   * have little impact on the total signal.
+   *
+   * Tightening this tolerance can substantially increase the number of spline knots,
+   * particularly for kernels with slowly decaying oscillatory tails (see
+   * #NcXcorKernel:adaptive-epsilon). The resulting increase in resolution can also
+   * make the outer $k$ integral more difficult to evaluate, since the spline may
+   * resolve oscillations that contribute negligibly to the integral.
+   *
+   * The useful precision is ultimately limited by the radial integration used to
+   * compute $W_i(k)$. This integral is evaluated to an absolute tolerance given by
+   * %NC_XCOR_KERNEL_INTEG_ABSTOL_FRAC times its running maximum. Where $\vert W\vert$
+   * is much smaller than its peak, its relative accuracy is therefore limited by the
+   * accuracy of the radial integral. Refining the spline beyond this level does not
+   * add reliable information.
+   */
   g_object_class_install_property (object_class,
                                    PROP_SCALED_ABSTOL,
                                    g_param_spec_double ("scaled-abstol",
@@ -434,6 +492,16 @@ typedef struct _SplineIntegrandData
   gdouble k_min;
   gdouble k_max;
 } SplineIntegrandData;
+
+static NcmVector *
+_spline_integrand_get_knots (gpointer data)
+{
+  SplineIntegrandData *sid = (SplineIntegrandData *) data;
+
+  /* Every component of the spline vec is sampled on the same abscissa, so the first
+   * component's knots are the knots of the whole block. */
+  return ncm_spline_peek_xv (ncm_spline_vec_peek_spline (sid->spline_vec, 0));
+}
 
 static void
 _spline_integrand_eval (gpointer data, gdouble k, gdouble *W)
@@ -574,8 +642,20 @@ _nc_xcor_kernel_validate_component_list (NcXcorKernel *xclk, guint n_l)
     return NULL;
   }
 
-  g_assert_cmpuint (n_l, <=, MAX_ELL_BLOCK);
-  g_assert_cmpuint (comp_list->len, <=, MAX_COMP_BLOCK);
+  /* Hard errors rather than g_assert(): both bound writes into fixed-size
+   * stack arrays (ComponentStates::last_values_*, kernel_out[][]), and asserts
+   * compile out under -Dnumcosmo_assert=false, which would turn an
+   * out-of-range block into a stack overflow instead of a clean abort. */
+  if (n_l > MAX_ELL_BLOCK)
+    g_error ("_nc_xcor_kernel_validate_component_list: kernel %s asked for %u multipoles "
+             "in a single block, but at most %d fit (NC_XCOR_KERNEL_MAX_ELL_BLOCK). "
+             "Split the range into blocks.",
+             G_OBJECT_TYPE_NAME (xclk), n_l, MAX_ELL_BLOCK);
+
+  if (comp_list->len > MAX_COMP_BLOCK)
+    g_error ("_nc_xcor_kernel_validate_component_list: kernel %s has %u components, "
+             "but at most %d fit in a single block.",
+             G_OBJECT_TYPE_NAME (xclk), comp_list->len, MAX_COMP_BLOCK);
 
   return comp_list; /* Caller must unref */
 }
@@ -1075,11 +1155,17 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
     ncm_function_sample_set_clear (&fss);
     ncm_spline_free (spline);
 
-    return nc_xcor_kernel_integrand_new (n_l,
-                                         _spline_integrand_eval,
-                                         _spline_integrand_get_range,
-                                         sid,
-                                         _spline_integrand_data_free);
+    {
+      NcXcorKernelIntegrand *integrand = nc_xcor_kernel_integrand_new (n_l,
+                                                                       _spline_integrand_eval,
+                                                                       _spline_integrand_get_range,
+                                                                       sid,
+                                                                       _spline_integrand_data_free);
+
+      nc_xcor_kernel_integrand_set_get_knots (integrand, _spline_integrand_get_knots);
+
+      return integrand;
+    }
   }
 }
 
@@ -1239,8 +1325,59 @@ nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdoubl
   integrand->get_range_func = get_range;
   integrand->data           = data;
   integrand->data_free      = data_free;
+  integrand->get_knots_func = NULL;
 
   return integrand;
+}
+
+/**
+ * nc_xcor_kernel_integrand_set_get_knots: (skip)
+ * @integrand: a #NcXcorKernelIntegrand
+ * @get_knots: (scope async): function returning @integrand's knots
+ *
+ * Declares @integrand as spline-backed, by installing the accessor returning
+ * the knots its components are represented on. Left unset by
+ * nc_xcor_kernel_integrand_new(), so integrands that are not spline-backed
+ * report no knots.
+ *
+ */
+void
+nc_xcor_kernel_integrand_set_get_knots (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetKnots get_knots)
+{
+  integrand->get_knots_func = get_knots;
+}
+
+/**
+ * nc_xcor_kernel_integrand_peek_knots:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * Peeks the knots @integrand's components are represented on, shared by every
+ * component (multipole) it carries, or %NULL when @integrand is not
+ * spline-backed.
+ *
+ * These knots are what makes the outer $k$ integral exactly integrable, and
+ * are why %NC_XCOR_METHOD_KERNEL_FIXED needs no tolerance. Each component is a
+ * cubic spline in $k$, so on any interval over which both members of a pair
+ * are a single cubic piece, the product $k^2 W_i(k) W_j(k)$ entering $C_\ell$
+ * is a polynomial of degree $8$ and a $5$-node Gauss-Legendre rule integrates
+ * it exactly.
+ *
+ * Two kernels are sampled independently and so do not share an abscissa: the
+ * intervals with that property are the panels of the *common refinement* of
+ * the two knot sets. Merging two sorted knot vectors is all the coupling the
+ * argument needs -- sampling the kernels jointly onto one shared abscissa
+ * would also work but costs about twice as much to produce, and forces every
+ * pair to carry every kernel's knots.
+ *
+ * Returns: (transfer none) (nullable): the knot vector, or %NULL.
+ */
+NcmVector *
+nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand)
+{
+  if (integrand->get_knots_func == NULL)
+    return NULL;
+
+  return integrand->get_knots_func (integrand->data);
 }
 
 /**

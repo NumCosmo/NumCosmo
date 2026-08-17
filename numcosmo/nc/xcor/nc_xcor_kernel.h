@@ -88,15 +88,41 @@ typedef void (*NcXcorKernelIntegrandEval) (gpointer data, gdouble k, gdouble *W)
 typedef void (*NcXcorKernelIntegrandGetRange) (gpointer data, gdouble *k_min, gdouble *k_max);
 
 /**
+ * NcXcorKernelIntegrandGetKnots:
+ * @data: user data
+ *
+ * Function type for getting the knots the integrand is represented on, when it
+ * is spline-backed. See nc_xcor_kernel_integrand_peek_knots().
+ *
+ * Returns: (transfer none): the knot vector.
+ */
+typedef NcmVector *(*NcXcorKernelIntegrandGetKnots) (gpointer data);
+
+/**
  * NcXcorKernelIntegrand:
  * @refcount: atomic reference count
  * @len: number of components in the integrand
  * @eval_func: function to evaluate the integrand at @k, filling @W[@len]
  * @get_range_func: function to get the valid k range for this integrand
- * @data: user data passed to @eval_func and @get_range_func
+ * @get_knots_func: function to get the integrand's knots, or %NULL when it is
+ *   not spline-backed
+ * @data: user data passed to @eval_func, @get_range_func and @get_knots_func
  * @data_free: function to free @data, or %NULL if no cleanup needed
  *
  * A reference-counted closure for computing kernel integrands.
+ *
+ * **One integrand must be evaluated by one thread at a time.** A spline-backed
+ * integrand keeps a scratch vector for the result of each evaluation, so
+ * concurrent nc_xcor_kernel_integrand_eval() calls on the *same* integrand
+ * would race on it.
+ *
+ * #NcXcorSolver satisfies this by construction rather than by convention: an
+ * integrand is built for one (kernel, ell-block) pair, and the ell block is
+ * the unit of parallelism -- one integrator per block, blocks distributed
+ * across the OpenMP team, kernels shared and read-only throughout. No two
+ * threads ever hold the same integrand. Anything that made kernel *pairs* the
+ * unit of parallelism instead would share integrands across threads and would
+ * need per-thread evaluation scratch.
  * The @eval_func function should fill @len values in the @W array
  * for the given wavenumber @k.
  */
@@ -110,6 +136,7 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandGetRange get_range_func;
   gpointer data;
   GDestroyNotify data_free;
+  NcXcorKernelIntegrandGetKnots get_knots_func;
 };
 
 struct _NcXcorKernelClass
@@ -222,6 +249,8 @@ void nc_xcor_kernel_log_all_models (void);
 GType nc_xcor_kernel_integrand_get_type (void) G_GNUC_CONST;
 
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_new (guint len, NcXcorKernelIntegrandEval eval, NcXcorKernelIntegrandGetRange get_range, gpointer data, GDestroyNotify data_free);
+void nc_xcor_kernel_integrand_set_get_knots (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetKnots get_knots);
+NcmVector *nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_clear (NcXcorKernelIntegrand **integrand);

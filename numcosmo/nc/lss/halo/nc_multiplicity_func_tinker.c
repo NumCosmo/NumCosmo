@@ -46,7 +46,7 @@ typedef struct _NcMultiplicityFuncTinkerPrivate
 {
   NcMultiplicityFuncMassDef mdef;
 
-  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z);
 
   gdouble A0;
   gdouble a0;
@@ -76,7 +76,7 @@ struct _NcMultiplicityFuncTinker
 G_DEFINE_TYPE_WITH_PRIVATE (NcMultiplicityFuncTinker, nc_multiplicity_func_tinker, NC_TYPE_MULTIPLICITY_FUNC)
 
 static gdouble
-_nc_multiplicity_func_tinker_eval_error (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+_nc_multiplicity_func_tinker_eval_error (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z)
 {
   g_error ("method eval not correctly initialized by %s.", G_OBJECT_TYPE_NAME (mulf));
 
@@ -175,7 +175,7 @@ static void _nc_multiplicity_func_tinker_set_mdef (NcMultiplicityFunc *mulf, NcM
 static void _nc_multiplicity_func_tinker_set_Delta (NcMultiplicityFunc *mulf, gdouble Delta);
 static NcMultiplicityFuncMassDef _nc_multiplicity_func_tinker_get_mdef (NcMultiplicityFunc *mulf);
 static gdouble _nc_multiplicity_func_tinker_get_Delta (NcMultiplicityFunc *mulf);
-static gdouble _nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+static gdouble _nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z);
 
 static void
 nc_multiplicity_func_tinker_class_init (NcMultiplicityFuncTinkerClass *klass)
@@ -204,7 +204,7 @@ nc_multiplicity_func_tinker_class_init (NcMultiplicityFuncTinkerClass *klass)
 }
 
 static gdouble
-_nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
+_nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (mulf);
   NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
@@ -222,7 +222,7 @@ _nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
 }
 
 static gdouble
-_nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
+_nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (mulf);
   NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
@@ -305,12 +305,12 @@ _nc_multiplicity_func_tinker_get_mdef (NcMultiplicityFunc *mulf)
 }
 
 static gdouble
-_nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z) /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
+_nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble lnR, gdouble z) /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncTinker *mt                 = NC_MULTIPLICITY_FUNC_TINKER (mulf);
   NcMultiplicityFuncTinkerPrivate * const self = nc_multiplicity_func_tinker_get_instance_private (mt);
 
-  return self->eval (mulf, cosmo, sigma, z);
+  return self->eval (mulf, cosmo, sigma, lnR, z);
 }
 
 /**

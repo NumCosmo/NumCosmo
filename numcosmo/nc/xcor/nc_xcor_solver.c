@@ -639,25 +639,6 @@ nc_xcor_solver_get_block (NcXcorSolver *solver, guint block_index, guint *lmin, 
   *lmax = block->lmax;
 }
 
-static gboolean
-_nc_xcor_solver_z_ranges_overlap (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboolean isauto)
-{
-  gdouble zmin, zmax, zmid;
-
-  nc_xcor_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
-
-  if (!isauto)
-  {
-    gdouble zmin_2, zmax_2, zmid_2;
-
-    nc_xcor_kernel_get_z_range (xclk2, &zmin_2, &zmax_2, &zmid_2);
-    zmin = MAX (zmin, zmin_2);
-    zmax = MIN (zmax, zmax_2);
-  }
-
-  return zmin < zmax;
-}
-
 /*
  * Computes and stitches in one request's contribution from one block,
  * using an already-built (or freshly cached) pair of integrands. Shared by
@@ -689,8 +670,21 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
   if (!isauto)
     _nc_xcor_check_kernel_tolerance (xc, k2);
 
-  if (!_nc_xcor_solver_z_ranges_overlap (k1, k2, isauto))
-    return;  /* zero contribution, result vector already zeroed */
+  /* No blanket redshift-overlap short-circuit here: this path is
+   * kernel-space only, where the two kernels couple through the outer k
+   * integral rather than a shared z integral, so kernels over disjoint
+   * redshift ranges still have a non-zero cross spectrum. Kernels that are
+   * themselves in the Limber tier are the exception -- see nc_xcor_compute().
+   *
+   * Testing the block's lmin alone settles the whole block: plan_blocks()
+   * forces a block boundary at every registered kernel's l_limber, so no block
+   * straddles the threshold and every multipole in it is on the same side. */
+  {
+    guint l_zero = 0;
+
+    if (_nc_xcor_kernels_limber_disjoint (k1, k2, isauto, &l_zero) && (l_zero <= block->lmin))
+      return;  /* zero contribution, result vector already zeroed */
+  }
 
   xclki1 = g_hash_table_lookup (integrands, k1);
 
@@ -716,7 +710,13 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
   }
 
   block_vp = ncm_vector_new (block->lmax - block->lmin + 1);
-  _nc_xcor_kernel_integrate_block_cubature (xc, xclki1, xclki2, block->lmin, block->lmax, isauto, block_vp);
+
+  /* The two kernel-space block methods share everything except the outer
+   * quadrature: same per-kernel closures, same per-block caching. */
+  if (nc_xcor_get_meth (xc) == NC_XCOR_METHOD_KERNEL_FIXED)
+    _nc_xcor_kernel_integrate_block_fixed (xc, xclki1, xclki2 != NULL ? xclki2 : xclki1, block->lmin, block->lmax, isauto, block_vp);
+  else
+    _nc_xcor_kernel_integrate_block_cubature (xc, xclki1, xclki2, block->lmin, block->lmax, isauto, block_vp);
 
   vp = g_ptr_array_index (results, result_index);
   lo = MAX (req->lmin, block->lmin);
@@ -738,7 +738,8 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
  * to have been called first. Replaces any results from a previous
  * nc_xcor_solver_solve() call.
  *
- * When @xc's method is %NC_XCOR_METHOD_KERNEL_CUBATURE, each distinct
+ * When @xc's method is %NC_XCOR_METHOD_KERNEL_CUBATURE or
+ * %NC_XCOR_METHOD_KERNEL_FIXED, each distinct
  * kernel's k-space closure (nc_xcor_kernel_get_eval_vectorized()) is built
  * once per ℓ-block and shared across every request needing it in that
  * block, instead of rebuilding it once per pair the way nc_xcor_compute()
@@ -746,11 +747,15 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
  * Different ℓ-blocks share no reusable operator state with each other (a
  * fresh #NcmSBesselIntegratorLevin ℓ-range rebuild is required regardless),
  * so blocks are additionally processed in parallel across an OpenMP team
- * (plan doc §6.3) -- each thread works from its own private clone of every
- * registered kernel (via #NcmSerialize duplication, one clone set built up
- * front, re-prepared against @cosmo), never touching another thread's
- * kernel/integrator state, so no locking is needed inside the per-block
- * work itself.
+ * (plan doc §6.3). The registered kernels are *shared* by the team and are
+ * prepared against @cosmo before it starts, so they are only ever read inside
+ * it; what is private to each thread is the per-block integrator and the
+ * integrand cache built from it. No thread touches another's integrand or
+ * integrator state, so no locking is needed inside the per-block work itself.
+ *
+ * The two share that whole path and differ only in the outer quadrature --
+ * adaptive cubature against exact Gauss-Legendre over the common refinement
+ * of each pair's knot sets -- so neither needs a solve loop of its own.
  *
  * Every other method (%NC_XCOR_METHOD_LIMBER_Z_GSL,
  * %NC_XCOR_METHOD_LIMBER_Z_CUBATURE, %NC_XCOR_METHOD_KERNEL_GSL) has no
@@ -790,7 +795,8 @@ nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo)
     g_ptr_array_add (solver->results, vp);
   }
 
-  if (nc_xcor_get_meth (xc) != NC_XCOR_METHOD_KERNEL_CUBATURE)
+  if ((nc_xcor_get_meth (xc) != NC_XCOR_METHOD_KERNEL_CUBATURE) &&
+      (nc_xcor_get_meth (xc) != NC_XCOR_METHOD_KERNEL_FIXED))
   {
     for (r = 0; r < n_requests; r++)
     {
