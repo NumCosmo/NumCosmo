@@ -1,10 +1,11 @@
 name: 'Setup Miniforge conda environment'
 description: >-
-  Sets up Miniforge, restores/updates/saves the cached NumCosmo conda
-  environment, optionally swapping in a specific MPI implementation.
-  Shared by build-miniforge and build-miniforge-coverage in
-  build_check.yml -- extracted so the setup logic only needs to be
-  changed in one place.
+  Sets up Miniforge and builds the NumCosmo conda environment from the
+  committed lock file for this runner (no solving), falling back to solving
+  environment.yml when there is none. Shared by build-miniforge and
+  build-miniforge-coverage in build_check.yml and by the docs job -- extracted
+  so the setup logic only needs to be changed in one place. See
+  CONTRIBUTING.md, section "CI conda environment".
 
 inputs:
   python-version:
@@ -12,16 +13,11 @@ inputs:
     required: true
   mpi:
     description: >-
-      If set, swap the conda env to use this MPI implementation (openmpi
-      or mpich) instead of environment.yml's default. Also folded into
-      the cache key so different MPI variants get separate caches.
+      If set, use this MPI implementation (openmpi or mpich) instead of
+      environment.yml's default. Selects the lock file and, on the fallback
+      path, is swapped into the solved environment.
     required: false
     default: ''
-
-outputs:
-  cache-hit:
-    description: 'Whether the conda environment cache was restored'
-    value: ${{ steps.cache.outputs.cache-hit }}
 
 runs:
   using: composite
@@ -32,35 +28,46 @@ runs:
         miniforge-version: latest
         python-version: ${{ inputs.python-version }}
         activate-environment: ${{ env.CONDA_ENV }}
-    - name: Cache date
-      id: get-date
+    - name: Select lock file
+      # A lock file is used only if it exists for this runner AND was solved
+      # from the current environment.yml; otherwise we warn and solve (the
+      # check-conda-locks job is what fails loudly on a stale lock).
+      id: lock
       shell: bash
-      run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
-    - name: Cache Conda env
-      uses: actions/cache/restore@v4
-      id: cache
-      with:
-        path: ${{ env.CONDA }}/envs
-        key: conda-${{ runner.os }}-${{ runner.arch }}-py${{ inputs.python-version }}-${{ inputs.mpi }}-${{ steps.get-date.outputs.today }}-${{ hashFiles('environment.yml') }}-v${{ env.CACHE_VERSION }}
-    - name: Update environment
-      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        set -eu
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          Linux-X64)   subdir=linux-64  ;;
+          macOS-ARM64) subdir=osx-arm64 ;;
+          macOS-X64)   subdir=osx-64    ;;
+          *)           subdir=unknown   ;;
+        esac
+        mpi="${{ inputs.mpi }}"
+        lock=".github/locks/conda-${subdir}-py${{ inputs.python-version }}-${mpi:-openmpi}.lock"
+        env_sha=$(shasum -a 256 environment.yml | cut -d' ' -f1)
+        if [ -f "$lock" ] && grep -qxF "# environment.yml sha256: ${env_sha}" "$lock"; then
+          echo "Using lock file ${lock}"
+          echo "file=${lock}" >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning title=Conda lock not used::No lock file matching the current environment.yml for ${subdir}/py${{ inputs.python-version }}/${mpi:-openmpi}; solving instead (slow, occasionally times out)."
+          echo "file=" >> "$GITHUB_OUTPUT"
+        fi
+    - name: Create environment from lock file
+      if: steps.lock.outputs.file != ''
+      shell: bash -el {0}
+      run: |
+        conda deactivate
+        conda env remove -y -n ${{ env.CONDA_ENV }}
+        conda create -y -n ${{ env.CONDA_ENV }} --file ${{ steps.lock.outputs.file }}
+        conda list -n ${{ env.CONDA_ENV }}
+    - name: Update environment (solving)
+      if: steps.lock.outputs.file == ''
       shell: bash -el {0}
       run: |
         python .github/scripts/update_ci.py "${{ inputs.python-version }}"
-        conda env update -q -v -n ${{ env.CONDA_ENV }} -f environment-ci.yml
+        conda env update -q -n ${{ env.CONDA_ENV }} -f environment-ci.yml
         if [ -n "${{ inputs.mpi }}" ]; then
-          which python
-          conda list
-          conda remove -q -v -n numcosmo_developer openmpi
-          conda install -q -v -n numcosmo_developer ${{ inputs.mpi }}
-          conda install -q -v -n numcosmo_developer libfabric-devel
-          conda list
-        else
-          conda list
+          conda remove -q -y -n ${{ env.CONDA_ENV }} openmpi
+          conda install -q -y -n ${{ env.CONDA_ENV }} ${{ inputs.mpi }} libfabric-devel
         fi
-    - name: Save conda-forge cache
-      if: steps.cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: ${{ env.CONDA }}/envs
-        key: ${{ steps.cache.outputs.cache-primary-key }}
+        conda list -n ${{ env.CONDA_ENV }}

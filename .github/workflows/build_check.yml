@@ -10,7 +10,6 @@ on:
 
 env:
   CONDA_ENV: numcosmo_developer
-  CACHE_VERSION: 3
   # Bump to force recomputing slice-tests.txt from scratch instead of restoring cached durations.
   TEST_DURATION_CACHE_VERSION: 3
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
@@ -47,6 +46,17 @@ env:
   UCX_TLS: "tcp,self,sm"
 
 jobs:
+
+  check-conda-locks:
+    name: (conda lock files)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    # Fails when environment.yml was changed without regenerating
+    # .github/locks/*.lock. The conda jobs below don't fail on a stale lock,
+    # they fall back to solving it (slow), so this job is what makes the
+    # mismatch visible. See CONTRIBUTING.md, section "CI conda environment".
+    - run: python3 .github/scripts/conda_locks.py check
 
   build-gcc-ubuntu:
     name: (ubuntu, apt, pip)

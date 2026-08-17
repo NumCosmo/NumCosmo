@@ -132,6 +132,71 @@ provided configuration `numcosmo_uncrustify.cfg`. Formatting is checked in CI.
 Python code is checked with the configured `flake8`, `pylint`, and `mypy`
 settings (see `.flake8`, `.pylintrc`, `.mypy.ini`).
 
+## CI conda environment
+
+The conda jobs in `.github/workflows/build_check.yml` do not solve
+`environment.yml`. They install a committed lock file — an explicit list of
+package URLs, already solved — so no solver runs on the runner:
+
+```
+.github/locks/conda-<subdir>-py<version>-<mpi>.lock
+```
+
+One file per CI target (`linux-64`/`osx-arm64`, python version, `openmpi`/`mpich`);
+the target list lives in `TARGETS` in `.github/scripts/conda_locks.py` and must
+match the `build-miniforge` matrices. Each lock is `environment.yml` with python
+pinned, the MPI package swapped, and `libfabric-devel` added — the same
+environment the jobs used to build by solving.
+
+The `setup-miniforge` action picks the lock matching the runner and the job's
+`python-version`/`mpi` inputs, and uses it only if its recorded
+`environment.yml` sha256 still matches. Otherwise it warns and solves, so a
+missing or stale lock is slow, never broken.
+
+The environment is no longer cached between runs: installing a lock is a
+download and link of a fixed package list, comparable to restoring a
+multi-gigabyte cache entry, and dropping it leaves the repository's cache quota
+to the test-duration caches.
+
+### Changing dependencies
+
+Editing `environment.yml` invalidates every lock, and the `check-conda-locks`
+job fails until they are regenerated:
+
+```bash
+pip install conda-lock          # or conda install -c conda-forge conda-lock
+python .github/scripts/conda_locks.py generate
+python .github/scripts/conda_locks.py check
+git add environment.yml .github/locks
+```
+
+`generate` solves every target from the local machine — conda-lock solves for
+other platforms too, macOS included — one process per target, since the solver
+itself (libsolv) is single-threaded. All three take well under a minute.
+`--platform`, `--mpi` and `--jobs` restrict or serialize the run. Never
+hand-edit a lock file: the sha256 comment on its second line records the
+`environment.yml` it came from and is what `check` compares.
+
+If a solve suddenly takes minutes rather than seconds, suspect a version
+conflict the solver is backtracking around rather than a slow machine. The
+`c-compiler`/`fortran-compiler` pins in `environment.yml` exist for exactly
+that reason: `pyccl` pulls in `camb`, which needs the gcc 14 toolchain, and
+letting the compilers float to 15 turned a 20-second solve into an
+hours-long one. `mamba create --dry-run` on the same specs prints the
+conflict.
+
+### Keeping them current
+
+`.github/workflows/conda_lock_update.yml` regenerates all locks weekly (and on
+`workflow_dispatch`), smoke-installs the linux ones, and opens a pull request
+with the diff. Because pull requests opened by `GITHUB_TOKEN` do not start
+workflows, close and reopen that PR to run the build matrix against the new
+environments before merging. Merging it is the only thing that moves the CI
+environment forward — locks never drift on their own.
+
+Local development environments are unaffected: `conda env create -f
+environment.yml` still solves normally (see [docs/install.qmd](docs/install.qmd)).
+
 ## Submitting contributions
 
 1. Fork the repository (skip if you are on the development team).

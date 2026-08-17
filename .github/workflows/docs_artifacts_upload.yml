@@ -10,6 +10,8 @@ on:
 
 env:
   ARTIFACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  # Read by .github/actions/setup-miniforge.
+  CONDA_ENV: numcosmo_developer
 
 jobs:
   docs-artifacts:
@@ -26,12 +28,11 @@ jobs:
           ref: ${{ env.ARTIFACT_SHA }}
 
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v4
+        # Same lock-file-first environment as the build jobs, instead of
+        # solving environment.yml on every run.
+        uses: ./.github/actions/setup-miniforge
         with:
-          activate-environment: numcosmo_developer
-          environment-file: environment.yml
-          auto-activate-base: false
-          auto-update-conda: true
+          python-version: '3.13'
       - name: Install LaTeX
         run: |
           sudo apt-get update
