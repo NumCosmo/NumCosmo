@@ -394,8 +394,8 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
 {
   integrand_data_2h_mass2 *int_data = (integrand_data_2h_mass2 *) userdata;
 
-  const gdouble lnR                  = nc_halo_mass_function_lnM_to_lnR (int_data->hbf->mfp, int_data->cosmo, lnM);
-  const gdouble V                    = ncm_powspec_filter_volume_rm3 (nc_halo_mass_function_peek_psf (int_data->hbf->mfp)) * exp (3.0 * lnR);
+  const gdouble lnR                  = nc_halo_mass_function_lnM_to_lnR (nc_halo_bias_peek_mass_function (int_data->hbf), int_data->cosmo, lnM);
+  const gdouble V                    = ncm_powspec_filter_volume_rm3 (nc_halo_mass_function_peek_psf (nc_halo_bias_peek_mass_function (int_data->hbf))) * exp (3.0 * lnR);
   const gdouble dn_dlnM_times_b      = nc_halo_bias_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
   const gdouble integrand_powspec_2h = V * dn_dlnM_times_b;
 
@@ -430,7 +430,7 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
   gboolean conv2     = FALSE;
   const gdouble step = 2.0;
 
-  nc_halo_mass_function_prepare_if_needed (int_data.hbf->mfp, cosmo);
+  nc_halo_mass_function_prepare_if_needed (nc_halo_bias_peek_mass_function (int_data.hbf), cosmo);
 
   int_data.cccll = cccll;
   int_data.cad   = cad;
@@ -468,7 +468,7 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
   ncm_memory_pool_return (w);
 
   {
-    NcmPowspec *ps = ncm_powspec_filter_peek_powspec (nc_halo_mass_function_peek_psf (cad->mbiasf->mfp));
+    NcmPowspec *ps = ncm_powspec_filter_peek_powspec (nc_halo_mass_function_peek_psf (nc_halo_bias_peek_mass_function (cad->mbiasf)));
 
     ps_2h_mm = int_powspec_mm_2h * int_powspec_mm_2h * ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k);
   }
@@ -561,7 +561,7 @@ static gdouble
 _integrand_redshift_2h (gdouble z, gpointer userdata)
 {
   integrand_data_2hz *int_data = (integrand_data_2hz *) userdata;
-  NcmPowspec *ps               = ncm_powspec_filter_peek_powspec (nc_halo_mass_function_peek_psf (int_data->hbf->mfp));
+  NcmPowspec *ps               = ncm_powspec_filter_peek_powspec (nc_halo_mass_function_peek_psf (nc_halo_bias_peek_mass_function (int_data->hbf)));
   const gdouble dc_z           = nc_distance_comoving (int_data->dist, int_data->cosmo, z);
   const gdouble dcdec_m_dc     = int_data->dc_zdec - dc_z;
   const gdouble ds             = dc_z * dcdec_m_dc / int_data->dc_zdec;
@@ -622,7 +622,7 @@ nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcCl
   int_data.dp    = dp;
   int_data.l     = l;
 
-  nc_halo_mass_function_prepare_if_needed (int_data.hbf->mfp, cosmo);
+  nc_halo_mass_function_prepare_if_needed (nc_halo_bias_peek_mass_function (int_data.hbf), cosmo);
 
   F.function = &_integrand_redshift_2h;
   F.params   = &int_data;

@@ -112,6 +112,14 @@ _nc_halo_mass_function_constructed (GObject *object)
     ncm_powspec_filter_require_zi (self->psf, self->zi);
     ncm_powspec_filter_require_zf (self->psf, self->zf);
 
+    /*
+     * Non-universal multiplicity functions query the filter directly for
+     * quantities beyond sigma_R. Inject ours so that both sides are guaranteed
+     * to describe the same filtered power spectrum, instead of relying on the
+     * caller to set the same object in two places.
+     */
+    nc_multiplicity_func_set_psf (self->mulf, self->psf);
+
     self->constructed = TRUE;
   }
 }
@@ -546,7 +554,7 @@ nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdoubl
   const gdouble V                        = ncm_powspec_filter_volume_rm3 (self->psf) * exp (3.0 * lnR);
   const gdouble sigma                    = ncm_powspec_filter_eval_sigma_lnr (self->psf, z, lnR);
   const gdouble dlnvar_dlnR              = ncm_powspec_filter_eval_dlnvar_dlnr (self->psf, z, lnR);
-  const gdouble f                        = nc_multiplicity_func_eval (self->mulf, cosmo, sigma, z);
+  const gdouble f                        = nc_multiplicity_func_eval (self->mulf, cosmo, sigma, lnR, z);
   const gdouble dn_dlnR                  = -(1.0 / V) * f * 0.5 * dlnvar_dlnR;
 
   if (nc_multiplicity_func_has_correction_factor (self->mulf))
