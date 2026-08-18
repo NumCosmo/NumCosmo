@@ -39,8 +39,39 @@ G_BEGIN_DECLS
  */
 void _nc_xcor_kernel_integrate_block_cubature (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp);
 
+/*
+ * Same for %NC_XCOR_METHOD_KERNEL_FIXED: exact 5-node Gauss-Legendre over the
+ * common refinement of the two integrands' own knot sets. Takes the same
+ * arguments as the cubature version above and is interchangeable with it, so
+ * NcXcorSolver drives both methods through one cached-integrand path.
+ */
+void _nc_xcor_kernel_integrate_block_fixed (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp);
+
 /* Fails loudly when NcXcor:reltol asks for more than the kernel's closure carries. */
 void _nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk);
+
+/*
+ * TRUE when there is a multipole at or above which both kernels run in the
+ * Limber tier while their redshift supports do not overlap, so that their Cl
+ * vanishes identically from there up and the kernel-space methods must not
+ * integrate it; the lowest such multipole is written to @l_zero. FALSE when no
+ * such multipole exists -- the supports overlap, or at least one kernel never
+ * enters the Limber tier -- and @l_zero is then left untouched.
+ *
+ * A Limber kernel is supported only where xi = (l + 1/2) / k lies inside its
+ * own radial range, so two disjoint bins have disjoint support in k and their
+ * product is zero -- the same statement as the Limber-z tier's overlap test.
+ * The non-Limber tier is the opposite case: there the two kernels couple only
+ * through the outer k integral and disjoint bins do correlate, which is why
+ * this must be asked per tier and not once per method.
+ *
+ * The tier is chosen per multipole, so this reports a threshold rather than a
+ * bare yes/no: a caller whose range straddles @l_zero must zero only the tail
+ * and integrate the head normally. Callers whose ranges never straddle a
+ * kernel's l_limber (NcXcorSolver, whose plan_blocks() forces a block boundary
+ * there) may simply compare @l_zero against the range's lmin.
+ */
+gboolean _nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboolean isauto, guint *l_zero);
 
 G_END_DECLS
 

@@ -128,6 +128,34 @@ Capability is orthogonal to tier: a test can be `unit` *and* `ccl`. **All marker
 declared once in `tests/python/pytest.ini`** (the single source); `conftest.py` only wires
 the `--run-*` options and their skip logic — it must not re-declare markers.
 
+### Declare the marker; the directory name is not one
+
+The two halves of an opt-in capability gate read **different things**, and a file can fall
+between them:
+
+- `conftest.py` skips on `"<cap>" in item.keywords`. `item.keywords` carries the name of
+  every parent node — **including the directory** — so a file under a directory named after
+  a capability is treated as gated whether or not it declares anything.
+- The capability lane selects with `-m <cap>`, and `-m` evaluates **declared markers only**.
+  A directory name is not a marker.
+
+So a file placed in a capability-named directory *without* the marker is skipped in the
+default lane (keyword matched, no `--run-*` flag) **and** deselected in the capability lane
+(no marker): it runs nowhere. Nothing fails — it reports as an ordinary skip — so this is
+silent unless someone looks.
+
+Always declare it at module top, next to the imports:
+
+```python
+pytestmark = pytest.mark.powspec
+```
+
+To confirm a new file is actually selected by its lane:
+
+```sh
+pytest --collect-only -q -m powspec tests/python/<path>   # must list the tests
+```
+
 ### Parallelism and the `OMP_NUM_THREADS` pin
 
 NumCosmo has three distinct parallel mechanisms, which must not be confused:
@@ -197,7 +225,77 @@ executables must be **split** into multiple executables first (one cost class ea
 
 ---
 
-## 5. Naming
+## 5. Running the suite locally
+
+Plain `meson test -C <builddir>` is the normal case and needs no arguments: meson already
+pins the concurrent tests to one thread and runs the `omp` ones alone with the machine
+(see §3).
+
+Pick `--num-processes` to match the **physical** core count, not the logical one. The
+concurrent tests are each pinned to a single thread, so one process per physical core
+saturates the machine; going past that (e.g. using the hyperthread count, which is what
+`getconf _NPROCESSORS_ONLN` and `nproc --all` report) oversubscribes the real execution
+units and loses throughput on this CPU-bound floating-point work. The same physical-core
+count the `omp` wrapper computes is available with:
+
+```sh
+awk '/^physical id/ { p = $NF } /^core id/ { print p "," $NF }' /proc/cpuinfo | sort -u | wc -l
+```
+
+### Reproducing the CI coverage job
+
+Configure a coverage builddir with the same options CI uses, then capture with `lcov`
+driven by `.lcovrc` (which carries the `g_error`/`g_assert*`/`G_OBJECT_WARN` exclusions —
+reading raw `gcov` instead ignores them and overstates the gap):
+
+```sh
+meson setup Coverage -Dbuildtype=debug -Db_coverage=true -Dnumcosmo_py=true \
+      -Dfftw-planner=estimate -Dnumcosmo_debug=disabled
+meson compile -C Coverage
+
+lcov --config-file .lcovrc --no-external --capture --initial \
+     --directory Coverage --directory numcosmo --directory tests \
+     --base-directory "$PWD/Coverage" --output-file cov-base.info
+
+# One lane at a time -- see the warning below.
+for s in c c-acceptance c-statistical python py-acceptance py-omp py-powspec py-xcor py-app; do
+    meson test -C Coverage --timeout-multiplier 0 --num-processes=<physical-cores> --suite "$s"
+done
+
+lcov --config-file .lcovrc --no-external --capture \
+     --directory Coverage --directory numcosmo --directory tests \
+     --base-directory "$PWD/Coverage" --output-file cov-tests.info
+lcov --config-file .lcovrc --add-tracefile cov-base.info --add-tracefile cov-tests.info \
+     --output-file cov-full.info
+lcov --config-file .lcovrc --remove cov-full.info '*/external/*' '*/tools/*' \
+     --output-file numcosmo-coverage.info
+```
+
+`.gcda` counters accumulate across runs inside one builddir, so running the lanes in
+sequence and capturing once at the end is equivalent to CI's per-job tracefile merge.
+Delete stale `.gcda` (`find Coverage -name '*.gcda' -delete`) before a fresh measurement;
+editing a source file mid-run regenerates its `.gcno` and makes `lcov` fail that file with
+`stamp mismatch with notes file`.
+
+**Run the lanes one at a time.** CI gives each lane its own runner. Every `py-*` lane is a
+*single* meson test that internally spawns `pytest -n auto`, so passing several `--suite`
+flags to one `meson test` lets meson start multiple lanes concurrently, each with a full set
+of xdist workers holding a NumCosmo instance — enough to exhaust memory on a workstation.
+
+### Selecting a subset
+
+Tests are selected by `--suite`, not by test name. Opt-in capability lanes additionally need
+their `--run-*` flag when invoked through `pytest` directly:
+
+```sh
+meson test -C <builddir> --suite c              # C lane
+meson test -C <builddir> --suite python         # default (fast) python lane
+pytest --run-powspec -m powspec tests/python    # one capability lane, directly
+```
+
+---
+
+## 6. Naming
 
 - Files: `test_<source_object_or_feature>.{c,py}`, mirroring the source object
   (`ncm_spline.c` → `test_ncm_spline.c` / `test_ncm_spline.py`).
@@ -206,7 +304,7 @@ executables must be **split** into multiple executables first (one cost class ea
   fixtures; top-level `tests/python/conftest.py` for cosmo/mset/rng builders). Do not
   copy-paste setup between files.
 
-## 6. Determinism & golden data
+## 7. Determinism & golden data
 
 - Statistical tests pin an explicit **seeded** RNG (a shared fixture), not the implicit
   global GSL seed. Tolerances are pinned to that seed.
@@ -214,11 +312,14 @@ executables must be **split** into multiple executables first (one cost class ea
   `Ncm.cfg_get_data_filename` and compared with `np.testing.assert_allclose`. No byte-hash
   snapshots, no large hardcoded value arrays.
 
-## 7. Adding a test (checklist)
+## 8. Adding a test (checklist)
 
 1. Put it in the directory of the module it covers (create the dir if missing).
 2. Default is **unit** — keep it fast and deterministic. If it is random, make it
    `statistical` with a seeded RNG; if it is full integration, make it `acceptance`.
 3. If it needs an optional dependency, add the matching capability marker and `--run-*`
    gate; declare any new marker in `pytest.ini`.
-4. Do **not** add a CI-shard suite. Reuse fixtures from `conftest.py`.
+4. If the file lives under a capability-named directory, declare `pytestmark` for that
+   capability — the directory name alone gates it without selecting it, and the file then
+   runs in no lane at all. Verify with `pytest --collect-only -m <cap>`.
+5. Do **not** add a CI-shard suite. Reuse fixtures from `conftest.py`.

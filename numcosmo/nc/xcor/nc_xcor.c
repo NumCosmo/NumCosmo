@@ -280,14 +280,16 @@ nc_xcor_class_init (NcXcorClass *klass)
   /**
    * NcXcor:ell-batch-size:
    *
-   * This property keeps the multipole batch size for cubature methods.
+   * This property keeps the multipole batch size for the kernel-space block
+   * methods. Tuned for 8 or 16; #NC_XCOR_KERNEL_MAX_ELL_BLOCK is only a hard
+   * safety cap. See nc_xcor_set_ell_batch_size().
    */
   g_object_class_install_property (object_class,
                                    PROP_ELL_BATCH_SIZE,
                                    g_param_spec_uint ("ell-batch-size",
                                                       NULL,
-                                                      "Multipole batch size for cubature methods.",
-                                                      1, 64, 8,
+                                                      "Multipole batch size for the kernel-space block methods.",
+                                                      1, NC_XCOR_KERNEL_MAX_ELL_BLOCK, 8,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -546,12 +548,22 @@ nc_xcor_get_reltol (NcXcor *xc)
  * @xc: a #NcXcor
  * @ell_batch_size: multipole batch size
  *
- * Sets the multipole batch size for cubature methods.
+ * Sets the multipole batch size used by the kernel-space block methods
+ * (%NC_XCOR_METHOD_KERNEL_CUBATURE and %NC_XCOR_METHOD_KERNEL_FIXED): each
+ * batch builds one k-space closure per kernel and shares it across the whole
+ * batch.
+ *
+ * The Levin machinery is tuned for 8 (the default) or 16; wider batches are
+ * counterproductive, not faster. #NC_XCOR_KERNEL_MAX_ELL_BLOCK is a hard
+ * safety cap on a single nc_xcor_kernel_get_eval_vectorized() call, not a
+ * setting to aim for.
  *
  */
 void
 nc_xcor_set_ell_batch_size (NcXcor *xc, const guint ell_batch_size)
 {
+  g_return_if_fail ((ell_batch_size > 0) && (ell_batch_size <= (guint) NC_XCOR_KERNEL_MAX_ELL_BLOCK));
+
   xc->ell_batch_size = ell_batch_size;
 }
 
@@ -790,6 +802,284 @@ _xcor_kernel_gsl_auto_int (gdouble lnk, gpointer ptr)
   nc_xcor_kernel_integrand_eval (xclki[0], k, W);
 
   return gsl_pow_3 (k) * W[0] * W[0];
+}
+
+/*
+ * Five-node Gauss-Legendre rule on [-1, 1]. Exact through degree 9, which is
+ * one more than the degree-8 polynomial the outer integrand k^2 W_i W_j is on
+ * each knot panel of a cubic spline: 2 from k^2 plus 3 from each spline.
+ */
+#define NC_XCOR_GL5_N 5
+
+static const gdouble _nc_xcor_gl5_x[NC_XCOR_GL5_N] = {
+  -0.9061798459386640, -0.5384693101056831, 0.0,
+  0.5384693101056831, 0.9061798459386640
+};
+
+static const gdouble _nc_xcor_gl5_w[NC_XCOR_GL5_N] = {
+  0.2369268850561891, 0.4786286704993665, 0.5688888888888889,
+  0.4786286704993665, 0.2369268850561891
+};
+
+/*
+ * The two GL(5) sweeps over a pair's merged panels. Auto and cross differ only
+ * in whether the second integrand is evaluated at all, which is fixed for the
+ * whole sweep -- so they are separate functions and the inner loops carry no
+ * branch. Each is a flat loop over panel x node x multipole.
+ */
+static void
+_nc_xcor_gl5_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, guint nell, gdouble *W, gdouble *sum)
+{
+  guint ie, ig, il;
+
+  for (ie = 0; ie + 1 < edges->len; ie++)
+  {
+    const gdouble panel_lo = g_array_index (edges, gdouble, ie);
+    const gdouble panel_hi = g_array_index (edges, gdouble, ie + 1);
+    const gdouble mid      = 0.5 * (panel_lo + panel_hi);
+    const gdouble half     = 0.5 * (panel_hi - panel_lo);
+
+    for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
+    {
+      const gdouble k = mid + half * _nc_xcor_gl5_x[ig];
+      const gdouble w = half * _nc_xcor_gl5_w[ig] * k * k;
+
+      nc_xcor_kernel_integrand_eval (xclki, k, W);
+
+      for (il = 0; il < nell; il++)
+        sum[il] += w * W[il] * W[il];
+    }
+  }
+}
+
+static void
+_nc_xcor_gl5_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, GArray *edges, guint nell, gdouble *W1, gdouble *W2, gdouble *sum)
+{
+  guint ie, ig, il;
+
+  for (ie = 0; ie + 1 < edges->len; ie++)
+  {
+    const gdouble panel_lo = g_array_index (edges, gdouble, ie);
+    const gdouble panel_hi = g_array_index (edges, gdouble, ie + 1);
+    const gdouble mid      = 0.5 * (panel_lo + panel_hi);
+    const gdouble half     = 0.5 * (panel_hi - panel_lo);
+
+    for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
+    {
+      const gdouble k = mid + half * _nc_xcor_gl5_x[ig];
+      const gdouble w = half * _nc_xcor_gl5_w[ig] * k * k;
+
+      nc_xcor_kernel_integrand_eval (xclki1, k, W1);
+      nc_xcor_kernel_integrand_eval (xclki2, k, W2);
+
+      for (il = 0; il < nell; il++)
+        sum[il] += w * W1[il] * W2[il];
+    }
+  }
+}
+
+/*
+ * Exact outer quadrature for one pair, on the union of the two kernels' own
+ * knot sets.
+ *
+ * Each kernel is sampled independently -- the same per-kernel closures
+ * KERNEL_CUBATURE builds and NcXcorSolver caches -- so the two splines live on
+ * different abscissas. On the common refinement of those abscissas each spline
+ * is still a single cubic piece per panel, so k^2 W_i W_j is a degree-8
+ * polynomial there and GL(5) integrates it exactly. Merging two knot sets is
+ * all the coupling the exactness argument needs; a shared abscissa built by
+ * sampling the kernels jointly is not required, and costs about twice as much
+ * to produce.
+ *
+ * The range is the intersection of the two integrands' fitted domains, exactly
+ * as _nc_xcor_kernel_integrate_block_cubature() uses, because NcmSpline does
+ * not range-check and an out-of-domain evaluation returns extrapolation rather
+ * than a small number.
+ */
+void
+_nc_xcor_kernel_integrate_block_fixed (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
+{
+  const guint nell           = lmax - lmin + 1;
+  const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
+  NcmVector *knots1          = nc_xcor_kernel_integrand_peek_knots (xclki1);
+  NcmVector *knots2          = isauto ? knots1 : nc_xcor_kernel_integrand_peek_knots (xclki2);
+  gdouble k_min1, k_max1, k_min2, k_max2, k_min, k_max;
+  gdouble *sum, *W1, *W2;
+  GArray *edges;
+  guint i1, i2, il;
+
+  if (ncm_vector_len (vp) != nell)
+    g_error ("_nc_xcor_kernel_integrate_block_fixed: vector size does not match multipole limits");
+
+  if ((knots1 == NULL) || (knots2 == NULL))
+    g_error ("_nc_xcor_kernel_integrate_block_fixed: %s method requires spline-backed "
+             "integrands, which report their knots.", "NC_XCOR_METHOD_KERNEL_FIXED");
+
+  nc_xcor_kernel_integrand_get_range (xclki1, &k_min1, &k_max1);
+  nc_xcor_kernel_integrand_get_range (xclki2, &k_min2, &k_max2);
+
+  k_min = GSL_MAX (k_min1, k_min2);
+  k_max = GSL_MIN (k_max1, k_max2);
+
+  ncm_vector_set_zero (vp);
+
+  if (k_min >= k_max)
+    return;
+
+  /* Common refinement of the two knot sets, clipped to the shared domain.
+   * Both are sorted, so this is a linear merge; duplicates are dropped so no
+   * zero-width panel survives. */
+  /* Pre-sized to the exact upper bound of a merge, so the append loop below
+   * never reallocates: the union of two sorted sets cannot exceed their
+   * combined length. */
+  edges = g_array_sized_new (FALSE, FALSE, sizeof (gdouble),
+                             ncm_vector_len (knots1) + ncm_vector_len (knots2));
+  i1 = 0;
+  i2 = 0;
+
+  while ((i1 < ncm_vector_len (knots1)) || (i2 < ncm_vector_len (knots2)))
+  {
+    const gdouble x1 = (i1 < ncm_vector_len (knots1)) ? ncm_vector_get (knots1, i1) : GSL_POSINF;
+    const gdouble x2 = (i2 < ncm_vector_len (knots2)) ? ncm_vector_get (knots2, i2) : GSL_POSINF;
+    const gdouble x  = GSL_MIN (x1, x2);
+
+    if (x1 <= x2)
+      i1++;
+
+    if (x2 <= x1)
+      i2++;
+
+    if ((x < k_min) || (x > k_max))
+      continue;
+
+    if ((edges->len > 0) && (x <= g_array_index (edges, gdouble, edges->len - 1)))
+      continue;
+
+    g_array_append_val (edges, x);
+  }
+
+  if (edges->len < 2)
+  {
+    g_array_unref (edges);
+
+    return;
+  }
+
+  sum = g_new0 (gdouble, nell);
+  W1  = g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki1));
+  W2  = isauto ? W1 : g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki2));
+
+  /* The auto/cross distinction is fixed for the whole sweep, so it is resolved
+   * once here rather than tested at every quadrature node. */
+  if (isauto)
+    _nc_xcor_gl5_sweep_auto (xclki1, edges, nell, W1, sum);
+  else
+    _nc_xcor_gl5_sweep_cross (xclki1, xclki2, edges, nell, W1, W2, sum);
+
+  for (il = 0; il < nell; il++)
+    ncm_vector_set (vp, il, const_factor * sum[il]);
+
+  g_free (sum);
+  g_free (W1);
+
+  if (!isauto)
+    g_free (W2);
+
+  g_array_unref (edges);
+}
+
+gboolean
+_nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboolean isauto, guint *l_zero)
+{
+  gdouble zmin, zmax, zmid, zmin_2, zmax_2, zmid_2;
+  gint l_limber_1, l_limber_2;
+
+  if (isauto)
+    return FALSE;  /* A kernel always overlaps itself. */
+
+  l_limber_1 = nc_xcor_kernel_get_l_limber (xclk1);
+  l_limber_2 = nc_xcor_kernel_get_l_limber (xclk2);
+
+  /* A negative l_limber pins the kernel to the non-Limber tier at every
+   * multipole, so no threshold exists. */
+  if ((l_limber_1 < 0) || (l_limber_2 < 0))
+    return FALSE;
+
+  nc_xcor_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
+  nc_xcor_kernel_get_z_range (xclk2, &zmin_2, &zmax_2, &zmid_2);
+
+  if (GSL_MAX (zmin, zmin_2) < GSL_MIN (zmax, zmax_2))
+    return FALSE;
+
+  /* Both kernels are in the Limber tier from the larger of the two thresholds
+   * up; below it at least one is still non-Limber and the pair correlates. */
+  *l_zero = (guint) GSL_MAX (l_limber_1, l_limber_2);
+
+  return TRUE;
+}
+
+static gboolean
+_nc_xcor_meth_is_kernel_space (NcXcorMethod meth)
+{
+  switch (meth)
+  {
+    case NC_XCOR_METHOD_KERNEL_GSL:
+    case NC_XCOR_METHOD_KERNEL_CUBATURE:
+    case NC_XCOR_METHOD_KERNEL_FIXED:
+      return TRUE;
+
+    default:
+      return FALSE;
+  }
+}
+
+static void
+_nc_xcor_kernel_fixed (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
+{
+  NcmSBesselIntegrator *sbi1 = nc_xcor_kernel_peek_integrator (xclk1);
+  NcmSBesselIntegrator *sbi2 = nc_xcor_kernel_peek_integrator (xclk2);
+  const guint size           = lmax - lmin + 1;
+  const guint block          = xc->ell_batch_size;
+  guint i;
+
+  _nc_xcor_check_kernel_tolerance (xc, xclk1);
+
+  if (!isauto)
+    _nc_xcor_check_kernel_tolerance (xc, xclk2);
+
+  /* Either kernel's integrator serves a kernel that carries none of its own. */
+  if (sbi1 == NULL)
+    sbi1 = sbi2;
+
+  if (sbi2 == NULL)
+    sbi2 = sbi1;
+
+  /* Batched by NcXcor:ell-batch-size exactly like _nc_xcor_kernel_cubature():
+   * one k-space closure per kernel per batch. The batching is not merely an
+   * optimization here -- a single closure spanning more than
+   * NC_XCOR_KERNEL_MAX_ELL_BLOCK multipoles is a hard error in
+   * nc_xcor_kernel_get_eval_vectorized_full(), so an unbatched sweep aborted on
+   * any range wider than that. */
+  for (i = 0; i < size; i += block)
+  {
+    const guint block_lmin = lmin + i;
+    const guint block_lmax = MIN (block_lmin + block - 1, lmax);
+    NcmVector *vp_i        = ncm_vector_get_subvector (vp, i, block_lmax - block_lmin + 1);
+    NcXcorKernelIntegrand *xclki1;
+    NcXcorKernelIntegrand *xclki2;
+
+    xclki1 = nc_xcor_kernel_get_eval_vectorized_full (xclk1, cosmo, block_lmin, block_lmax, sbi1);
+    xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized_full (xclk2, cosmo, block_lmin, block_lmax, sbi2);
+
+    _nc_xcor_kernel_integrate_block_fixed (xc, xclki1, isauto ? xclki1 : xclki2, block_lmin, block_lmax, isauto, vp_i);
+
+    nc_xcor_kernel_integrand_unref (xclki1);
+
+    if (xclki2 != NULL)
+      nc_xcor_kernel_integrand_unref (xclki2);
+
+    ncm_vector_free (vp_i);
+  }
 }
 
 void
@@ -1235,6 +1525,34 @@ _nc_xcor_kernel_integrate_block_cubature (NcXcor *xc, NcXcorKernelIntegrand *xcl
   ncm_vector_free (err);
 }
 
+/*
+ * Dispatches one contiguous multipole range to the configured kernel-space
+ * method. Split out so nc_xcor_compute() can drive it for a sub-range without
+ * duplicating the switch, which is what a range straddling a Limber threshold
+ * needs.
+ */
+static void
+_nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp)
+{
+  switch (xc->meth)
+  {
+    case NC_XCOR_METHOD_KERNEL_GSL:
+      _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+      break;
+
+    case NC_XCOR_METHOD_KERNEL_CUBATURE:
+      _nc_xcor_kernel_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+      break;
+
+    case NC_XCOR_METHOD_KERNEL_FIXED:
+      _nc_xcor_kernel_fixed (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+      break;
+
+    default:
+      g_assert_not_reached ();
+  }
+}
+
 /**
  * nc_xcor_compute:
  * @xc: a #NcXcor
@@ -1263,6 +1581,51 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
   if (nell != lmax - lmin + 1)
     g_error ("nc_xcor_compute: vector size does not match multipole limits");
 
+  if (isauto)
+    xclk2 = xclk1;
+
+  /* The kernel-space (non-Limber) methods perform each kernel's radial
+   * integral separately and couple the two only through the outer k integral,
+   * so two kernels with disjoint redshift support still have a non-zero cross
+   * spectrum -- two disjoint radial shells are correlated through the same 3D
+   * field. The z-overlap short-circuit below is therefore specific to the
+   * Limber-z tier, whose C_l is a single integral over the common support, and
+   * must not be applied here.
+   *
+   * The exception is a kernel-space method running kernels that are themselves
+   * in the Limber tier: there W(k) is supported only on its own per-ell band,
+   * disjoint bins have disjoint support, and the Cl is zero. Integrating it
+   * anyway multiplies the two exponential extrapolation tails, which is a
+   * numerical smoothing device rather than physics, and yields a large
+   * spurious cross spectrum.
+   *
+   * The tier is chosen per multipole, so a range straddling the threshold is
+   * split: the tail from l_zero up is zeroed, the head below it is integrated
+   * normally. */
+  if (_nc_xcor_meth_is_kernel_space (xc->meth))
+  {
+    guint l_zero = 0;
+
+    if (_nc_xcor_kernels_limber_disjoint (xclk1, xclk2, isauto, &l_zero) && (l_zero <= lmax))
+    {
+      ncm_vector_set_zero (vp);
+
+      if (l_zero > lmin)
+      {
+        NcmVector *vp_head = ncm_vector_get_subvector (vp, 0, l_zero - lmin);
+
+        _nc_xcor_kernel_space_compute (xc, xclk1, xclk2, cosmo, lmin, l_zero - 1, isauto, vp_head);
+        ncm_vector_free (vp_head);
+      }
+    }
+    else
+    {
+      _nc_xcor_kernel_space_compute (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+    }
+
+    return;
+  }
+
   nc_xcor_kernel_get_z_range (xclk1, &zmin, &zmax, &zmid);
 
   if (!isauto)
@@ -1272,10 +1635,6 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
     nc_xcor_kernel_get_z_range (xclk2, &zmin_2, &zmax_2, &zmid_2);
     zmin = GSL_MAX (zmin, zmin_2);
     zmax = GSL_MIN (zmax, zmax_2);
-  }
-  else
-  {
-    xclk2 = xclk1;
   }
 
   if (zmin < zmax)
@@ -1287,18 +1646,6 @@ nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo
         break;
       case NC_XCOR_METHOD_LIMBER_Z_CUBATURE:
         _nc_xcor_limber_z_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
-        break;
-      case NC_XCOR_METHOD_KERNEL_GSL:
-        _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-
-        return;
-
-        break;
-      case NC_XCOR_METHOD_KERNEL_CUBATURE:
-        _nc_xcor_kernel_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-
-        return;
-
         break;
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */

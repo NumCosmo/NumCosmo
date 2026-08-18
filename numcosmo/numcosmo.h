@@ -137,10 +137,12 @@
 #include <numcosmo/nc/lss/halo/nc_multiplicity_func_crocce.h>
 #include <numcosmo/nc/lss/halo/nc_multiplicity_func_bocquet.h>
 #include <numcosmo/nc/lss/halo/nc_multiplicity_func_bhattacharya.h>
+#include <numcosmo/nc/lss/halo/nc_multiplicity_func_castro.h>
 #include <numcosmo/nc/lss/halo/nc_multiplicity_func_despali.h>
 #include <numcosmo/nc/lss/halo/nc_multiplicity_func_watson.h>
 #include <numcosmo/nc/lss/halo/nc_halo_mass_function.h>
 #include <numcosmo/nc/lss/halo/nc_halo_bias.h>
+#include <numcosmo/nc/lss/halo/nc_halo_bias_castro.h>
 #include <numcosmo/nc/lss/halo/nc_halo_bias_despali.h>
 #include <numcosmo/nc/lss/halo/nc_halo_bias_ps.h>
 #include <numcosmo/nc/lss/halo/nc_halo_bias_st_spher.h>
@@ -243,6 +245,7 @@
 #include <numcosmo/nc/xcor/nc_xcor_kernel_tSZ.h>
 #include <numcosmo/nc/xcor/nc_xcor_lensing_efficiency.h>
 #include <numcosmo/nc/xcor/nc_xcor_solver.h>
+#include <numcosmo/nc/xcor/nc_xcor_ssc_sij.h>
 
 #endif /* _NUMCOSMO_H */
 

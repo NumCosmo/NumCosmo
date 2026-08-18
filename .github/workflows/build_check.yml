@@ -10,9 +10,8 @@ on:
 
 env:
   CONDA_ENV: numcosmo_developer
-  CACHE_VERSION: 0
   # Bump to force recomputing slice-tests.txt from scratch instead of restoring cached durations.
-  TEST_DURATION_CACHE_VERSION: 3
+  TEST_DURATION_CACHE_VERSION: 0
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
   # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock, e.g.
   # scipy.linalg.solve in test_sbessel_ode_solver), and the run-alone OpenMP tests
@@ -48,6 +47,17 @@ env:
 
 jobs:
 
+  check-conda-locks:
+    name: (conda lock files)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    # Fails when environment.yml was changed without regenerating
+    # .github/locks/*.lock. The conda jobs below don't fail on a stale lock,
+    # they fall back to solving it (slow), so this job is what makes the
+    # mismatch visible. See CONTRIBUTING.md, section "CI conda environment".
+    - run: python3 .github/scripts/conda_locks.py check
+
   build-gcc-ubuntu:
     name: (ubuntu, apt, pip)
     runs-on: ubuntu-24.04
@@ -55,7 +65,7 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v6
       with:
-        python-version: '3.12'
+        python-version: '3.13'
     - name: Install pre-requisites
       run: |
         sudo apt-get update
@@ -174,7 +184,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu", "macos"]
-        python-version: ["3.12"]
+        python-version: ["3.13"]
         mpi: ["openmpi", "mpich"]
         exclude:
           - os: "macos"
@@ -238,23 +248,23 @@ jobs:
       # opt-in, not for balancing.
       matrix:
         include:
-          - { os: ubuntu, python-version: "3.12", name: python, args: "--suite python" }
-          - { os: ubuntu, python-version: "3.12", name: py-acceptance, args: "--suite py-acceptance" }
+          - { os: ubuntu, python-version: "3.13", name: python, args: "--suite python" }
+          - { os: ubuntu, python-version: "3.13", name: py-acceptance, args: "--suite py-acceptance" }
           # omp-marked tests are excluded from the plain `python` suite (tests/python/meson.build) so
           # the fast xdist lane isn't starved by a thread-pinned-to-1 test hogging one worker; they
           # need their own shard here or the coverage job would silently stop exercising them.
-          - { os: ubuntu, python-version: "3.12", name: py-omp, args: "--suite py-omp" }
-          - { os: ubuntu, python-version: "3.12", name: py-powspec, args: "--suite py-powspec" }
-          - { os: ubuntu, python-version: "3.12", name: py-xcor, args: "--suite py-xcor" }
-          - { os: ubuntu, python-version: "3.12", name: py-app, args: "--suite py-app" }
+          - { os: ubuntu, python-version: "3.13", name: py-omp, args: "--suite py-omp" }
+          - { os: ubuntu, python-version: "3.13", name: py-powspec, args: "--suite py-powspec" }
+          - { os: ubuntu, python-version: "3.13", name: py-xcor, args: "--suite py-xcor" }
+          - { os: ubuntu, python-version: "3.13", name: py-app, args: "--suite py-app" }
           # c-1/c-2/c-3 no longer use meson's own --slice K/N (count-balanced, not
           # time-balanced -- see .github/scripts/test_slicer.py); the `slice` field
           # here selects which duration-aware slice this leg runs, computed at
           # runtime from cached historical per-test durations. Legs without a
           # `slice` field (above) are unaffected -- see the steps below.
-          - { os: ubuntu, python-version: "3.12", name: c-1, slice: 1 }
-          - { os: ubuntu, python-version: "3.12", name: c-2, slice: 2 }
-          - { os: ubuntu, python-version: "3.12", name: c-3, slice: 3 }
+          - { os: ubuntu, python-version: "3.13", name: c-1, slice: 1 }
+          - { os: ubuntu, python-version: "3.13", name: c-2, slice: 2 }
+          - { os: ubuntu, python-version: "3.13", name: c-3, slice: 3 }
     defaults:
       run:
         shell: bash -el {0}

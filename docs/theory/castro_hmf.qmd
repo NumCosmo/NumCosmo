@@ -1,0 +1,204 @@
+---
+title: Castro Halo Mass Function and Bias
+---
+
+# Castro Halo Mass Function and Bias
+
+This page collects the expressions behind [[numcosmo|NcMultiplicityFuncCastro]]
+and [[numcosmo|NcHaloBiasCastro]]: two calibrations of the halo multiplicity
+function on spherical-overdensity virial masses, and the linear halo bias fitted
+alongside them.
+
+## Why this one is not universal
+
+Most fitting formulae assume the multiplicity function depends on the matter
+field only through $\sigma_R$, so that a single curve $f(\sigma)$ describes every
+cosmology and every redshift. The Castro calibrations drop that assumption: their
+shape parameters depend also on the local slope of the variance,
+$$
+s \equiv \frac{\mathrm{d}\ln\sigma_R}{\mathrm{d}\ln R},
+$$
+and on the matter density parameter $\Omega_m(z)$. Two cosmologies that happen to
+share $\sigma_R$ at a given scale therefore need not share $f$.
+
+This has a consequence for the interface. A universal model can be evaluated from
+$\sigma_R$ alone, but here the object must also know *where* on the variance
+curve it sits, which is why [[numcosmo|nc_multiplicity_func_eval]] carries $\ln R$
+and why [[numcosmo|NcMultiplicityFunc]] holds a
+[[numcosmo-math|NcmPowspecFilter]]. A [[numcosmo|NcHaloMassFunction]] injects its
+own filter into the multiplicity function it was built with, so the two cannot
+end up describing different power spectra.
+
+## Conventions
+
+The multiplicity function is defined by
+$$
+\frac{\mathrm{d}n}{\mathrm{d}\ln M}
+= \frac{\rho_m}{M}\,f(\sigma_R)\,
+  \left|\frac{\mathrm{d}\ln\sigma_R}{\mathrm{d}\ln M}\right| ,
+$$
+which is the convention NumCosmo uses throughout, and coincides with what the
+Castro papers write as $\nu f(\nu)$. The peak height is
+$$
+\nu = \frac{\delta_c(\Omega_m(z))}{\sigma_R},
+$$
+with the linear collapse threshold taken from the Kitayama & Suto fit,
+$$
+\delta_c(\Omega_m) = \frac{3}{20}\,(12\pi)^{2/3}
+  \left(1 + 0.012299\,\log_{10}\Omega_m\right).
+$$
+Masses are spherical-overdensity virial masses. Both calibrations are exactly
+normalised,
+$$
+\int_0^\infty f(\nu)\,\frac{\mathrm{d}\nu}{\nu} = 1,
+$$
+a property the unit tests exploit as an absolute check on the amplitude, since it
+holds analytically and needs no reference data.
+
+## Shared coefficients
+
+Both models build their shape parameters the same way from $s$ and $\Omega_m(z)$:
+$$
+\begin{aligned}
+a_R &= a_1 + a_2\,(s + 0.6125)^2, &\qquad a &= a_R\,\Omega_m(z)^{a_z}, \\
+p   &= p_1 + p_2\,(s + 0.5),      &\qquad
+q_R &= q_1 + q_2\,(s + 0.5),      \\
+    & &\qquad q &= q_R\,\Omega_m(z)^{q_z}.
+\end{aligned}
+$$
+The two calibrations differ in what they do with these, and in the values of the
+free parameters.
+
+## Castro et al. (2023)
+
+The $\Lambda(\nu)$CDM calibration [@Castro2023] writes
+$$
+f(\nu) = A(p,q)\,\sqrt{\frac{2\,a\nu^2}{\pi}}\;
+  e^{-a\nu^2/2}\,
+  \left[1 + (a\nu^2)^{-p}\right]
+  \left(\nu\sqrt{a}\right)^{q-1},
+$$
+with the normalisation fixed in closed form by
+$$
+A(p,q) = \left[
+  \frac{2^{-1/2 - p + q/2}}{\sqrt{\pi}}
+  \left(2^{p}\,\Gamma\!\left(\tfrac{q}{2}\right)
+        + \Gamma\!\left(\tfrac{q}{2} - p\right)\right)
+\right]^{-1}.
+$$
+It provides four parameter sets, one per halo finder — ROCKSTAR, AHF, SUBFIND and
+VELOCIraptor — selected through the `halo-finder` property of
+[[numcosmo|NcMultiplicityFuncCastro]]. They differ from one another by
+up to $\sim 20\%$ over the cluster range.
+
+## Castro et al. (2025)
+
+The dynamical dark energy calibration [@Castro2025] adds a third shape parameter
+$r$ and a dark-energy correction. Several coefficients are tied to the free ones,
+$$
+\begin{aligned}
+q_2 &= 1.0020\,p_2 + 0.7363, &\qquad r_1 &= -0.9917\,q_1 + 0.5560, \\
+r_2 &= -1.1159\,q_2 - 0.1189, &\qquad \nu_p &= 1.0667\,q_1 + 1.7577, \\
+\alpha_p &= 4.7686\,\alpha_a + 0.0051, &\qquad r &= r_1 + r_2\,(s + 0.5),
+\end{aligned}
+$$
+and the dark energy enters through its density and equation of state at
+turn-around,
+$$
+q_{\mathrm{de}} = \tfrac{3}{2}\left(1 + w_{\mathrm{de}}(z_{\rm ta})\right)
+  \Omega_{\mathrm{de}}(z_{\rm ta}),
+\qquad
+a \to a\,(1 + \alpha_a q_{\mathrm{de}}),
+\qquad
+p \to p\,(1 + \alpha_p q_{\mathrm{de}}),
+$$
+with the turn-around redshift taken in the Einstein–de Sitter approximation,
+$1 + z_{\rm ta} = (1+z)\,2^{2/3}$. Writing $\nu_{\rm st} = \nu\sqrt{a}$, the
+multiplicity function is
+$$
+f(\nu) = 2\,A(p,q,r)\,
+  \left[\nu_{\rm st}^{\,r}
+        + \left(\frac{\nu_p}{\nu_{\rm st}}\right)^{2p}\right]
+  \sqrt{\frac{\nu_{\rm st}^2}{2\pi}}\;
+  e^{-\nu_{\rm st}^2/2}\,
+  \nu_{\rm st}^{\,q-1},
+$$
+again with a closed-form normalisation $A(p,q,r)$.
+
+Because it needs $\Omega_{\mathrm{de}}$ and $w_{\mathrm{de}}$ at turn-around, this
+model requires a [[numcosmo|NcHICosmoDE]]. Given anything else it raises an error
+rather than quietly evaluating a different model, which would be hard to detect
+inside a fit.
+
+::: {.callout-note}
+The 2025 calibration does **not** reduce to the 2023 one when the dark-energy
+term vanishes. At $w = -1$ the two still differ, typically by a few percent and by
+up to $\sim 24\%$ over the cluster range, because the 2025 form carries the extra
+$r$ and $\nu_p$ terms and was fitted independently. They are siblings, not nested
+models.
+:::
+
+## Linear halo bias
+
+The bias [@Castro2024] starts from the peak-background split prediction obtained
+from the same multiplicity function,
+$$
+b_{\mathrm{PBS}} = 1 - \frac{1}{\delta_c}\frac{\mathrm{d}\ln f}{\mathrm{d}\ln\nu},
+$$
+and multiplies it by a calibrated correction depending on $\Omega_m(z)$, the slope
+$s$, and the clustering amplitude $S_8 = \sigma_8\sqrt{\Omega_{m,0}/0.3}$:
+$$
+b = b_{\mathrm{PBS}}\;A_0\,
+  \left(1 + a_1\Omega_m(z)\right)
+  \left(1 + b_1 s + b_2 s^2\right)
+  \left(1 + c_1 S_8\right),
+$$
+with $A_0 = 1.150$, $a_1 = 0.0929$, $b_1 = 0.256$, $b_2 = 0.173$ and
+$c_1 = -0.0372$. Each is exposed as a property so it can be varied or refitted.
+
+### Which derivative
+
+The derivative above is the **total** one along the mass direction. This matters:
+since $a$, $p$ and $q$ all depend on $s$, and $s$ itself varies with $R$ for any
+realistic spectrum, the total and partial derivatives differ,
+$$
+\frac{\mathrm{d}\ln f}{\mathrm{d}\ln\nu}
+= \left.\frac{\partial\ln f}{\partial\ln\nu}\right|_{s}
++ \frac{\partial\ln f}{\partial s}\,\frac{\mathrm{d}s}{\mathrm{d}\ln\nu},
+\qquad
+\frac{\mathrm{d}s}{\mathrm{d}\ln\nu} = -\frac{1}{s}\frac{\mathrm{d}s}{\mathrm{d}\ln R}.
+$$
+The correction coefficients were calibrated against the total derivative, so that
+is what [[numcosmo|nc_halo_bias_eval]] computes.
+
+Neither partial derivative is obtained by differentiating an interpolation. The
+model is closed-form in $\sigma_R$ and $s$, so both are taken by perturbing plain
+numbers through [[numcosmo|nc_multiplicity_func_castro_eval_full]], and the chain
+rule closes with
+$$
+\frac{\mathrm{d}s}{\mathrm{d}\ln R}
+= \frac{1}{2}\frac{\mathrm{d}^2\ln\sigma^2_R}{\mathrm{d}(\ln R)^2},
+$$
+which [[numcosmo-math|NcmPowspecFilter]] obtains from the transform itself once
+order two has been requested with
+[[numcosmo-math|ncm_powspec_filter_require_nderivs]]. For a scale-free spectrum
+$\mathrm{d}s/\mathrm{d}\ln R$ vanishes identically and the total derivative
+collapses onto the partial one, which the unit tests use as a check that the extra
+term is wired correctly.
+
+::: {.callout-tip}
+## On reproducing the reference implementation
+
+The reference implementation takes this derivative with `numpy.gradient` over a
+mass grid. That is second-order accurate and converges only to $\sim 6\times
+10^{-5}$ even at 128 points per decade, and is off by around a percent at the
+sampling its interface invites. The stored reference values use complex-step
+differentiation instead, $\mathrm{d}\ln f/\mathrm{d}\ln\nu =
+\mathrm{Im}\,[f(\nu(1 + ih))]/(h\,f)$ with $h = 10^{-20}$, which has no
+subtractive cancellation and is exact to round-off.
+:::
+
+## References
+
+::: {#refs}
+:::

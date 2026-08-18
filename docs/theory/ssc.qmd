@@ -1,0 +1,167 @@
+---
+title: Super-Sample Covariance
+---
+
+# Super-Sample Covariance
+
+This page describes the super-sample covariance (SSC) matrix $S_{ij}$ computed by
+[[numcosmo|NcXcorSSCSij]], and how it enters the Gaussian cluster number-count
+likelihood [[numcosmo|NcDataClusterNCountsGauss]].
+
+## The effect
+
+A survey measures a finite volume, so density modes with wavelengths longer than
+the footprint are not observable. They are not harmless: they shift the mean
+density inside the volume away from the cosmic mean, and every count drawn from
+that volume responds to the shift. Writing $\delta_{\mathrm{b},i}$ for the mean
+matter density contrast over redshift bin $i$, the expected counts respond
+linearly through the halo bias $b_i$,
+$$
+N_i = \bar{N}_i \left(1 + b_i\,\delta_{\mathrm{b},i}\right),
+$$
+and since $\delta_{\mathrm{b},i}$ is itself a random variable the counts acquire
+a covariance beyond the Poisson one,
+$$
+\mathrm{Cov}(N_i, N_j) = \bar{N}_i\,\delta_{ij} + b_i b_j\,S_{ij},
+\qquad
+S_{ij} \equiv \left\langle \delta_{\mathrm{b},i}\,\delta_{\mathrm{b},j} \right\rangle .
+$$
+The first term is the shot noise; the second is the super-sample term. Because
+the same long-wavelength modes cover every bin, $S_{ij}$ is not diagonal: it
+correlates bins that do not overlap in redshift at all. See
+@TakadaHu2013 and @LacasaGrain2019 for the derivation of the effect
+and of the estimator used here.
+
+## $S_{ij}$ as an angular power spectrum
+
+The bin-averaged contrast $\delta_{\mathrm{b},i}$ is the matter contrast smoothed
+by the survey window: a top hat in the radial direction over bin $i$, and the
+survey footprint on the sky. Separating the two, $S_{ij}$ becomes a sum over
+multipoles of the angular power spectrum $C^{ij}_\ell$ of the radially averaged
+contrast.
+
+Define the radial window of bin $i$ to be a top hat normalized to unit integral
+in comoving volume, so that $\delta_{\mathrm{b},i}$ is a plain volume average and
+not a weighted one. Then, for a full-sky survey, only the monopole survives,
+$$
+S_{ij} = \frac{C^{ij}_0}{4\pi} .
+$$
+
+For a real footprint, described by a mask $W(\hat{n})$ with angular power
+spectrum $C^{\mathrm{mask}}_\ell$ and sky fraction
+$f_{\mathrm{sky}} = \sqrt{C^{\mathrm{mask}}_0 / 4\pi}$, the mask couples
+multipoles and the estimator becomes
+$$
+S_{ij} = \frac{1}{\left(4\pi f_{\mathrm{sky}}\right)^2}
+  \sum_{\ell=0}^{\ell_{\max}} (2\ell+1)\,C^{\mathrm{mask}}_\ell\,C^{ij}_\ell .
+$$
+
+Substituting $f_{\mathrm{sky}}^2 = C^{\mathrm{mask}}_0 / 4\pi$ removes the square
+root and gives the form actually evaluated,
+$$
+S_{ij} = \frac{1}{4\pi\,C^{\mathrm{mask}}_0}
+  \sum_{\ell=0}^{\ell_{\max}} (2\ell+1)\,C^{\mathrm{mask}}_\ell\,C^{ij}_\ell .
+$$
+
+The full-sky case is not a separate branch of this expression but the special
+value $C^{\mathrm{mask}}_\ell = 4\pi\,\delta_{\ell 0}$, for which the sum
+collapses to $C^{ij}_0 / 4\pi$. [[numcosmo|NcXcorSSCSij]] uses that spectrum as
+its default footprint, so full sky and masked runs share one code path.
+
+### Finite area, and a trap
+
+Between the two extremes sits the estimator an analysis quoting only a survey
+area uses: the full-sky matrix rescaled by the sky fraction,
+$$
+S_{ij} = \frac{S^{\rm fullsky}_{ij}}{f_{\rm sky}},
+\qquad f_{\rm sky} = \frac{\Omega}{4\pi} .
+$$
+It is a crude correction rather than a mask deconvolution — it knows the solid
+angle of the footprint but nothing about its shape — yet it captures the effect
+that actually dominates: a smaller volume samples fewer long-wavelength modes,
+so the background density fluctuates more. It costs a single multipole, like the
+full-sky case. `nc_xcor_ssc_sij_set_area()` selects it.
+
+**Using the plain full-sky $S_{ij}$ for a survey that does not cover the full
+sky is a mistake, not a conservative approximation.** With
+$f_{\rm sky} < 1$ the rescaling only ever increases $S_{ij}$, so omitting it
+understates the super-sample variance, and the resulting parameter constraints
+come out too tight. The size of the error is $1/f_{\rm sky}$ — a factor of
+about $2.3$ for $18\,000\ \mathrm{deg}^2$, and about $14$ for
+$3\,000\ \mathrm{deg}^2$. A finite survey needs either an area or a mask.
+
+The truncation $\ell_{\max}$ is set by how much of the mask variance
+$\sum_\ell (2\ell+1) C^{\mathrm{mask}}_\ell / 4\pi$ must be recovered; the
+`find_lmax` helper in `numcosmo_py.ssc` picks the smallest value meeting a
+requested tolerance.
+
+## Why the Limber approximation cannot be used
+
+The Limber approximation replaces the spherical Bessel functions in the radial
+integral by a delta function, which is accurate only when the window is broad
+compared with the oscillation scale — that is, at high $\ell$. Here the sum is
+dominated by the very lowest multipoles, $\ell = 0$ for a full-sky survey, where
+Limber is meaningless. Worse, it makes the cross spectrum of two bins with
+disjoint redshift support vanish identically, whereas the true $C^{ij}_\ell$ is
+non-zero: two disjoint shells are windows on the same three-dimensional field,
+and the non-Limber calculation couples them through the outer $k$ integral rather
+than through a shared $z$ integral.
+
+[[numcosmo|NcXcorSSCSij]] therefore puts every kernel in permanent non-Limber
+mode, and the radial integrals are done with the spherical-Bessel machinery of
+[[numcosmo|NcXcorSolver]].
+
+## Numerical accuracy
+
+The off-diagonal $S_{ij}$ of well-separated bins are a small residual of a large
+cancellation: for seven top-hat bins over $z \in [0.1, 0.8]$, $|S_{06}|$ is four
+orders of magnitude below $S_{00}$. Their accuracy is set by `scaled-abstol`, the
+absolute floor of the adaptive refinement building the $U_i(k)$ spline, and
+**not** by `reltol`, which is inactive while `scaled-abstol` binds. Measured
+against a converged independent quadrature:
+
+| `scaled-abstol`               | $S_{00}$ | $S_{01}$ | $S_{04}$ | $S_{06}$ |
+|-------------------------------|---------:|---------:|---------:|---------:|
+| $10^{-4}$ ([[numcosmo\|NcXcorKernel]] default) |  $-0.07\%$ |  $-0.59\%$ | $-19.6\%$ | $-59.1\%$ |
+| $10^{-6}$ ([[numcosmo\|NcXcorSSCSij]] default) | $0.006\%$ | $-0.014\%$ |  $0.28\%$ |  $-5.2\%$ |
+| $10^{-8}$                     | $0.001\%$ | $-0.003\%$ |  $0.02\%$ | $-0.06\%$ |
+
+The residual at $10^{-8}$ is consistent with the reference's own convergence
+rather than with a NumCosmo error. It is not the default because the adaptive
+cubature can run out of Clenshaw–Curtis levels at that setting on masked runs and
+abort, which is fatal inside a Monte Carlo chain. For the same reason the default
+quadrature is `NC_XCOR_METHOD_KERNEL_FIXED`, an exact Gauss–Legendre rule on the
+union of the pair's spline knots: it targets no tolerance, so it cannot fail to
+reach one.
+
+## Varying $S_{ij}$ along a chain
+
+$S_{ij}$ depends on cosmology, like every other part of the covariance. A
+reference analysis may still hold it at a fiducial value and vary only the mean
+and the Poisson term, which is much cheaper: recomputing $S_{ij}$ per likelihood
+step costs about $+60\%$ over the rest of the evaluation for a full-sky or
+area-rescaled footprint, and roughly a factor of six for a masked one, where
+every multipole up to $\ell_{\max}$ must be solved.
+
+Setting [[numcosmo|NcDataClusterNCountsGauss]]:ssc-sij replaces the fixed matrix
+by a calculator invoked at every prepare, which is what justifies the frozen
+approximation rather than assuming it: run both and compare the posteriors.
+
+Two conditions make that comparison meaningful.
+
+**The normalization must be kept.** For a Gaussian likelihood,
+$$
+-2\ln L = \left(N - \bar{N}\right)^\mathsf{T} C^{-1} \left(N - \bar{N}\right)
+        + \ln \det C + n \ln 2\pi ,
+$$
+and the $\ln \det C$ term is constant only while $C$ is. Once the covariance
+varies with cosmology, dropping it biases the posterior towards high-variance
+cosmologies — exactly the direction in which a varying $S_{ij}$ moves. The
+`use-norma` property of [[numcosmo-math|NcmDataGaussCov]] controls that term, and
+[[numcosmo|NcDataClusterNCountsGauss]] refuses to begin with a varying $S_{ij}$
+unless it is set.
+
+**The mock must not move.** Only the fitting covariance may follow the
+cosmology; the matrix used while resampling stays the one given to
+`nc_data_cluster_ncounts_gauss_set_resample_s_matrix()`, so the fixed and varying
+analyses fit the same realization and differ only in what is being tested.
