@@ -190,6 +190,23 @@
 #define TOTAL_BANDWIDTH (LOWER_BANDWIDTH + UPPER_BANDWIDTH + 1)
 #define ROWS_TO_ROTATE (LOWER_BANDWIDTH + NUMBER_OF_BOUNDARY_CONDITIONS)
 
+/*
+ * Minimum number of spectral columns for a panel of half-length @half_len.
+ *
+ * The solution on a panel [a,b] oscillates about (b-a)/pi times, and a Chebyshev
+ * expansion needs of order two coefficients per oscillation to represent that. The
+ * adaptive QR is therefore not allowed to declare convergence below this count: on a
+ * panel whose spectral content only appears at high order, the leading coefficients
+ * are small and flat, and the decay test would otherwise stop on them.
+ */
+static inline glong
+_ncm_sbessel_min_cols (const gdouble half_len)
+{
+  const gdouble n_osc = 2.0 * half_len / M_PI;
+
+  return (glong) ceil (2.0 * n_osc);
+}
+
 #define ALIGNMENT 64 /* 64-byte alignment for cache lines */
 
 #define ROW_CORE_SIZE \
@@ -243,6 +260,10 @@ struct _NcmSBesselOdeOperator
   gint ell_max;      /* Maximum angular momentum in batch */
   guint n_ell;       /* Number of angular momentum values: n_ell = ell_max - ell_min + 1 */
   gdouble tolerance; /* Convergence tolerance for adaptive QR factorization */
+  glong min_cols;    /* Resolution floor: the decay test may not fire below this many
+                      * columns. A panel [a,b] carries about (b-a)/pi oscillations of
+                      * the solution, so fewer columns than that cannot represent it,
+                      * however quiet the leading coefficients happen to look. */
 
   /* Matrix storage */
   NcmSBesselOdeSolverRow *matrix_rows; /* Aligned array of NcmSBesselOdeSolverRow */
@@ -636,6 +657,7 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
   op->b         = b;
   op->half_len  = (b - a) / 2.0;
   op->mid_point = (a + b) / 2.0;
+  op->min_cols  = _ncm_sbessel_min_cols (op->half_len);
   op->ell_min   = ell_min;
   op->ell_max   = ell_max;
   op->n_ell     = (guint) (ell_max - ell_min + 1);
@@ -764,6 +786,7 @@ ncm_sbessel_ode_operator_reset (NcmSBesselOdeOperator *op, gdouble a, gdouble b,
   op->b         = b;
   op->half_len  = (b - a) / 2.0;
   op->mid_point = (a + b) / 2.0;
+  op->min_cols  = _ncm_sbessel_min_cols (op->half_len);
   op->ell_min   = ell_min;
   op->ell_max   = ell_max;
   op->n_ell     = (guint) (ell_max - ell_min + 1);
@@ -1218,7 +1241,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
       *quiet_cols = 0;
   }
 
-  return (*quiet_cols >= ROWS_TO_ROTATE + 1);
+  return (*quiet_cols >= ROWS_TO_ROTATE + 1) && (col + 1 >= op->min_cols);
 }
 
 /**
@@ -1296,7 +1319,7 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
       *quiet_cols = 0;
   }
 
-  return (*quiet_cols >= ROWS_TO_ROTATE + 1);
+  return (*quiet_cols >= ROWS_TO_ROTATE + 1) && (col + 1 >= op->min_cols);
 }
 
 /**
