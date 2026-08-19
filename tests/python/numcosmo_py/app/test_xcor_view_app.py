@@ -105,3 +105,59 @@ def test_view_kernel_defaults_leave_library_precision_alone() -> None:
     assert result.exit_code == 0, result.output
     assert "reltol=1.0e-13" in result.output
     assert "cheb_reltol=1.0e-08" in result.output
+
+
+def test_view_kernel_cls_single() -> None:
+    """--cls computes the auto-spectrum of a single kernel."""
+    result = _view("--cls")
+
+    assert result.exit_code == 0, result.output
+    assert "Computing C_ell (non-Limber)" in result.output
+    assert "1 kernel(s), 1 spectra" in result.output
+
+
+def test_view_kernel_cls_pairs() -> None:
+    """Every auto- and cross-pair of the requested kernels is computed."""
+    result = runner.invoke(
+        app,
+        [
+            "xcor",
+            "kernel",
+            "view",
+            "--kernel",
+            KERNEL,
+            "--kernel",
+            "number-counts survey=LSST-Y1 bin_idx=0 bias=1.5",
+            "--ell",
+            "2",
+            "--n-ell",
+            "2",
+            "--no-show-plot",
+            "--cls",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "2 kernel(s), 3 spectra" in result.output
+
+
+def test_view_kernel_cls_compare_limber() -> None:
+    """--compare-limber adds a second, Limber, C_ell computation.
+
+    The kernels are left in Limber mode by the k-space evaluation step, so this
+    also covers that the Limber mode is set explicitly before each solve rather
+    than inherited from whatever ran last.
+    """
+    result = _view("--cls", "--compare-limber")
+
+    assert result.exit_code == 0, result.output
+    assert "Computing C_ell (non-Limber)" in result.output
+    assert "Computing C_ell (Limber)" in result.output
+
+
+def test_view_kernel_cls_fixed_method() -> None:
+    """The fixed-knot quadrature is reachable for the C_ell computation."""
+    result = _view("--cls", "--cls-method", "fixed")
+
+    assert result.exit_code == 0, result.output
+    assert "method=fixed" in result.output
