@@ -161,3 +161,41 @@ def test_view_kernel_cls_fixed_method() -> None:
 
     assert result.exit_code == 0, result.output
     assert "method=fixed" in result.output
+
+
+def test_integrator_tolerance_must_be_set_at_construction() -> None:
+    """Guards the construction pattern the view command depends on.
+
+    An ODE operator keeps the tolerance in force when it was built, so setting a
+    tolerance on an already-constructed integrator leaves the result at the
+    quality it was constructed with. The view command therefore builds its
+    integrator with ``new_full``. If that regressed to ``new()`` followed by
+    ``set_reltol()``, ``--integrator-reltol`` would silently do nothing -- which
+    the reported-value assertions above cannot catch, since the getter agrees
+    either way.
+    """
+    args = (5.0, 1.0, 0.1, 10.0, 50.0, 2)
+
+    def build(tol: float) -> float:
+        sbi = Ncm.SBesselIntegratorLevin.new_full(
+            2, 2, 1e-4, 1e6, 21, 1200, tol, 2, tol
+        )
+        return sbi.integrate_gaussian_ell(*args)
+
+    loose, tight = build(1e-4), build(1e-12)
+
+    # Construction-time tolerance reaches the computation, and matters a lot here.
+    assert abs(loose / tight - 1.0) > 1.0
+
+    # Setting a tighter tolerance afterwards does not buy the tighter answer:
+    # the result stays with the tolerance the operators were built at.
+    relaxed = Ncm.SBesselIntegratorLevin.new_full(
+        2, 2, 1e-4, 1e6, 21, 1200, 1e-4, 2, 1e-4
+    )
+    relaxed.set_reltol(1e-12)
+    relaxed.set_cheb_reltol(1e-12)
+    after = relaxed.integrate_gaussian_ell(*args)
+
+    assert relaxed.get_reltol() == 1e-12  # the getter reports the new value ...
+    assert abs(after / loose - 1.0) < 1e-6  # ... but the answer is the loose one
+    assert abs(after / tight - 1.0) > 1.0

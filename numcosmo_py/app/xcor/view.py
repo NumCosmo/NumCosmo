@@ -498,13 +498,36 @@ class ViewKernel:
         print(f"  ✓ Maximum redshift: {dist_max_z}")
         print()
 
-        # Create integrator (matching fixtures pattern)
+        # Create integrator.
+        #
+        # The tolerances must be passed at CONSTRUCTION. An ODE operator takes the
+        # tolerance in force when it is built and keeps it for its whole life, and
+        # the panel operators are built as soon as the multipole range is known --
+        # so ncm_sbessel_integrator_levin_set_reltol() on an already-constructed
+        # integrator updates the getter but never reaches the computation. Building
+        # first and then setting, which is what this command used to do, silently
+        # ignored --integrator-reltol and --integrator-cheb-reltol.
         print("Creating integrator...")
-        self.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
-        if self.integrator_reltol is not None:
-            self.integrator.set_reltol(self.integrator_reltol)
-        if self.integrator_cheb_reltol is not None:
-            self.integrator.set_cheb_reltol(self.integrator_cheb_reltol)
+        defaults = Ncm.SBesselIntegratorLevin.new(0, 8)
+        self.integrator = Ncm.SBesselIntegratorLevin.new_full(
+            0,
+            8,
+            defaults.get_y_knots_min(),
+            defaults.get_y_knots_max(),
+            defaults.get_n_knots(),
+            defaults.get_ell_cache_max(),
+            (
+                self.integrator_reltol
+                if self.integrator_reltol is not None
+                else defaults.get_reltol()
+            ),
+            defaults.get_cheb_min_order(),
+            (
+                self.integrator_cheb_reltol
+                if self.integrator_cheb_reltol is not None
+                else defaults.get_cheb_reltol()
+            ),
+        )
         if self.integrator_max_order is not None:
             self.integrator.set_max_order(self.integrator_max_order)
         print(
