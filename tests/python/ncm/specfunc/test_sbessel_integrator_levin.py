@@ -685,3 +685,82 @@ class TestOscillatoryResolutionFloor:
 
         for looser, tighter in zip(errors, errors[1:]):
             assert tighter <= looser * 1.1
+
+
+class TestPanelRecording:
+    """Per-panel diagnostics.
+
+    The integral is a sum of per-panel boundary terms. Their individual sizes are
+    not recoverable from the result, so measuring how much they cancel -- and
+    whether a single panel's own accuracy is the limit -- needs them recorded.
+    """
+
+    @staticmethod
+    def _integrator(ell, record):
+        defaults = Ncm.SBesselIntegratorLevin.new(ell, ell)
+        sbi = Ncm.SBesselIntegratorLevin.new_full(
+            ell,
+            ell,
+            defaults.get_y_knots_min(),
+            defaults.get_y_knots_max(),
+            defaults.get_n_knots(),
+            defaults.get_ell_cache_max(),
+            1.0e-12,
+            defaults.get_cheb_min_order(),
+            1.0e-12,
+        )
+        sbi.set_record_panels(record)
+        return sbi
+
+    def test_recording_is_off_by_default(self):
+        """Recording must be opt-in: it is a diagnostic, not a feature."""
+        sbi = Ncm.SBesselIntegratorLevin.new(2, 2)
+
+        assert not sbi.get_record_panels()
+        assert sbi.get_n_panel_records() == 0
+
+    def test_contributions_sum_to_the_result(self):
+        """The recorded panels must account for the integral exactly."""
+        sbi = self._integrator(2, True)
+        result = sbi.integrate_gaussian_ell(5.0, 1.0, 0.1, 10.0, 50.0, 2)
+
+        n = sbi.get_n_panel_records()
+        assert n > 1, "expected the range to be split into several panels"
+
+        # Summing the records in Python adds in a different order from the
+        # internal accumulation, so a few ulps of difference are expected.
+        total = sum(sbi.get_panel_contrib(i) for i in range(n))
+        assert_allclose(total, result, rtol=1.0e-12)
+
+    def test_panels_tile_the_range_in_order(self):
+        """Recorded panels must abut and cover [k*a, k*b]."""
+        k, a, b, ell = 50.0, 0.1, 10.0, 2
+        sbi = self._integrator(ell, True)
+        sbi.integrate_gaussian_ell(5.0, 1.0, a, b, k, ell)
+
+        n = sbi.get_n_panel_records()
+        bounds = [(sbi.get_panel_a(i), sbi.get_panel_b(i)) for i in range(n)]
+
+        assert_allclose(bounds[0][0], k * a, rtol=1.0e-12)
+        assert_allclose(bounds[-1][1], k * b, rtol=1.0e-12)
+        for (_, prev_b), (next_a, _) in zip(bounds, bounds[1:]):
+            assert_allclose(next_a, prev_b, rtol=1.0e-12)
+        for i in range(n):
+            assert sbi.get_panel_ell(i) == ell
+
+    def test_records_are_cleared_between_integrations(self):
+        """Records describe the most recent call, not an accumulation."""
+        sbi = self._integrator(2, True)
+        sbi.integrate_gaussian_ell(5.0, 1.0, 0.1, 10.0, 50.0, 2)
+        first = sbi.get_n_panel_records()
+        sbi.integrate_gaussian_ell(5.0, 1.0, 0.1, 10.0, 50.0, 2)
+
+        assert sbi.get_n_panel_records() == first
+
+    def test_disabling_recording_releases_the_records(self):
+        sbi = self._integrator(2, True)
+        sbi.integrate_gaussian_ell(5.0, 1.0, 0.1, 10.0, 50.0, 2)
+        assert sbi.get_n_panel_records() > 0
+
+        sbi.set_record_panels(False)
+        assert sbi.get_n_panel_records() == 0
