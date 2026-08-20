@@ -55,6 +55,7 @@ void test_ncm_mpi_job_test_basic (void);
 void test_ncm_mpi_job_fit_basic (void);
 void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
+void test_ncm_spline_bspline_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 void test_ncm_pln1d_basic (void);
 
@@ -141,6 +142,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_fit/basic", test_ncm_mpi_job_fit_basic);
   g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
+  g_test_add_func ("/ncm/spline_bspline/basic", test_ncm_spline_bspline_basic);
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
   g_test_add_func ("/ncm/pln1d/basic", test_ncm_pln1d_basic);
 
@@ -612,6 +614,28 @@ test_ncm_mpi_job_feval_basic (void)
   NCM_TEST_FREE (ncm_dataset_free, dset);
   NCM_TEST_FREE (ncm_data_free, data);
   NCM_TEST_FREE (ncm_mset_free, mset);
+}
+
+void
+test_ncm_spline_bspline_basic (void)
+{
+  NcmSplineBSpline *sbs = ncm_spline_bspline_new (NCM_SPLINE_BSPLINE_DEFAULT_ORDER);
+  NcmSplineBSpline *sbs2;
+
+  g_assert_true (sbs != NULL);
+  g_assert_true (NCM_IS_SPLINE_BSPLINE (sbs));
+  g_assert_cmpuint (ncm_spline_bspline_get_order (sbs), ==, NCM_SPLINE_BSPLINE_DEFAULT_ORDER);
+
+  ncm_spline_bspline_set_order (sbs, 6);
+  g_assert_cmpuint (ncm_spline_bspline_get_order (sbs), ==, 6);
+
+  sbs2 = NCM_SPLINE_BSPLINE (ncm_spline_ref (NCM_SPLINE (sbs)));
+  ncm_spline_clear ((NcmSpline **) &sbs2);
+  g_assert_true (sbs2 == NULL);
+
+  g_assert_true (NCM_IS_SPLINE_BSPLINE (sbs));
+
+  NCM_TEST_FREE (ncm_spline_free, NCM_SPLINE (sbs));
 }
 
 void

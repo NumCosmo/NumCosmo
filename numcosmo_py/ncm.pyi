@@ -106,6 +106,8 @@ SPLINE2D_BICUBIC_F: int = 0
 SPLINE2D_BICUBIC_FX: int = 1
 SPLINE2D_BICUBIC_FXY: int = 3
 SPLINE2D_BICUBIC_FY: int = 2
+SPLINE_BSPLINE_DEFAULT_ORDER: int = 8
+SPLINE_BSPLINE_MAX_ORDER: int = 10
 SPLINE_FUNC_DEFAULT_MAX_NODES: int = 10000000
 SPLINE_KNOT_DIFF_TOL: int = 0
 THREAD_POOL_MAX: int = 5
@@ -11269,6 +11271,64 @@ class Spline2dSplineClass(GObject.GPointer):
     """
 
     parent_class: Spline2dClass = ...
+
+class SplineBSpline(Spline):
+    r"""
+    :Constructors:
+
+    ::
+
+        SplineBSpline(**properties)
+        new(order:int) -> NumCosmoMath.SplineBSpline
+        new_full(order:int, xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.SplineBSpline
+
+    Object NcmSplineBSpline
+
+    Properties from NcmSplineBSpline:
+      order -> guint: order
+        B-spline order (degree + 1)
+
+    Properties from NcmSpline:
+      length -> guint: length
+        Spline length
+      x -> NcmVector: x
+        Spline knots
+      y -> NcmVector: y
+        Spline values
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        order: int
+        length: int
+        x: Vector
+        y: Vector
+
+    props: Props = ...
+    def __init__(
+        self, order: int = ..., length: int = ..., x: Vector = ..., y: Vector = ...
+    ) -> None: ...
+    def get_order(self) -> int: ...
+    @classmethod
+    def new(cls, order: int) -> SplineBSpline: ...
+    @classmethod
+    def new_full(
+        cls, order: int, xv: Vector, yv: Vector, init: bool
+    ) -> SplineBSpline: ...
+    def set_order(self, order: int) -> None: ...
+
+class SplineBSplineClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SplineBSplineClass()
+    """
+
+    parent_class: SplineClass = ...
 
 class SplineClass(GObject.GPointer):
     r"""
