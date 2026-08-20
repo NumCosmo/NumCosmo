@@ -34,8 +34,11 @@ matplotlib.use("Agg")
 # flake8: noqa: E402
 # pylint: disable=wrong-import-position
 
+import numpy as np
+
 from numcosmo_py import Ncm
 from numcosmo_py.app import app
+from numcosmo_py.app.xcor import view
 
 pytestmark = pytest.mark.app
 runner = CliRunner()
@@ -163,16 +166,14 @@ def test_view_kernel_cls_fixed_method() -> None:
     assert "method=fixed" in result.output
 
 
-def test_integrator_tolerance_must_be_set_at_construction() -> None:
-    """Guards the construction pattern the view command depends on.
+def test_integrator_tolerance_is_fixed_at_construction() -> None:
+    """The library semantics that make ``--integrator-reltol`` easy to get wrong.
 
-    An ODE operator keeps the tolerance in force when it was built, so setting a
-    tolerance on an already-constructed integrator leaves the result at the
-    quality it was constructed with. The view command therefore builds its
-    integrator with ``new_full``. If that regressed to ``new()`` followed by
-    ``set_reltol()``, ``--integrator-reltol`` would silently do nothing -- which
-    the reported-value assertions above cannot catch, since the getter agrees
-    either way.
+    An ODE operator keeps the tolerance in force when it was built, so a tolerance
+    set on an already-constructed integrator does not buy the answer that
+    constructing at that tolerance would have given. This states the library
+    behaviour only; that the view command actually relies on it is covered by
+    ``test_view_kernel_integrator_reltol_reaches_the_computation``.
     """
     args = (5.0, 1.0, 0.1, 10.0, 50.0, 2)
 
@@ -184,8 +185,11 @@ def test_integrator_tolerance_must_be_set_at_construction() -> None:
 
     loose, tight = build(1e-4), build(1e-12)
 
-    # Construction-time tolerance reaches the computation, and matters a lot here.
-    assert abs(loose / tight - 1.0) > 1.0
+    # The construction-time tolerance reaches the computation. How large the gap
+    # is depends on how accurate the solver is at loose tolerances, which is not
+    # a fixed property: the resolution floors shrank this case from ~1e2 to ~4e-2.
+    # The threshold therefore only has to clear the loose-regime spread.
+    assert abs(loose / tight - 1.0) > 1e-3
 
     # Setting a tighter tolerance afterwards does not buy the tighter answer:
     # the result stays with the tolerance the operators were built at.
@@ -198,4 +202,40 @@ def test_integrator_tolerance_must_be_set_at_construction() -> None:
 
     assert relaxed.get_reltol() == 1e-12  # the getter reports the new value ...
     assert abs(after / loose - 1.0) < 1e-6  # ... but the answer is the loose one
-    assert abs(after / tight - 1.0) > 1.0
+    assert abs(after / tight - 1.0) > 1e-3
+
+
+def test_view_kernel_integrator_reltol_reaches_the_computation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``--integrator-reltol`` must change the numbers, not just the report.
+
+    The command has to hand the tolerance to ``new_full``; building the integrator
+    first and applying the tolerance with setters afterwards leaves the
+    computation at the quality it was constructed with, while ``get_reltol()``
+    still reports the requested value. The reported-value assertions above cannot
+    tell those two spellings apart, so compare the evaluated kernel itself.
+    """
+    captured: list[np.ndarray] = []
+    evaluate = view.KernelEvaluation.evaluate
+
+    def spy(self: view.KernelEvaluation, k_Mpc: np.ndarray) -> np.ndarray:
+        values = evaluate(self, k_Mpc)
+        captured.append(np.asarray(values, dtype=float).copy())
+        return values
+
+    monkeypatch.setattr(view.KernelEvaluation, "evaluate", spy)
+
+    for reltol in ("1e-4", "1e-12"):
+        result = _view(
+            "--integrator-reltol", reltol, "--integrator-cheb-reltol", reltol
+        )
+        assert result.exit_code == 0, result.output
+
+    loose, tight = captured
+    assert loose.shape == tight.shape
+
+    # Built at the requested tolerances the two runs differ by ~9e-5 here. Were
+    # the tolerance applied after construction instead, both runs would compute
+    # at the library default and agree to ~1e-9.
+    assert np.abs(loose / tight - 1.0).max() > 1e-6
