@@ -190,6 +190,35 @@
 #define TOTAL_BANDWIDTH (LOWER_BANDWIDTH + UPPER_BANDWIDTH + 1)
 #define ROWS_TO_ROTATE (LOWER_BANDWIDTH + NUMBER_OF_BOUNDARY_CONDITIONS)
 
+/*
+ * Minimum number of spectral columns for the panel [@a, @b] at multipole @ell_min.
+ *
+ * The solution oscillates only beyond the turning point y ~ sqrt(ell(ell+1)); below it
+ * the spherical Bessel functions are evanescent and the solution is smooth, so few
+ * coefficients suffice. Only the oscillatory part of the panel sets a resolution
+ * requirement: it carries about (b - y_turn)/pi oscillations, and a Chebyshev
+ * expansion needs of order two coefficients per oscillation.
+ *
+ * The adaptive QR may not declare convergence below this count. On a panel whose
+ * spectral content only appears at high order the leading coefficients are small and
+ * nearly flat, and the decay test would otherwise stop on them.
+ *
+ * For a batch the smallest ell gives the lowest turning point, hence the widest
+ * oscillatory span and the safe (largest) floor for every member.
+ */
+static inline glong
+_ncm_sbessel_min_cols (const gdouble a, const gdouble b, const gint ell_min)
+{
+  const gdouble y_turn   = sqrt (ell_min * (ell_min + 1.0));
+  const gdouble osc_from = GSL_MAX (a, y_turn);
+  const gdouble osc_span = b - osc_from;
+
+  if (osc_span <= 0.0)
+    return 0;
+
+  return (glong) ceil (2.0 * osc_span / M_PI);
+}
+
 #define ALIGNMENT 64 /* 64-byte alignment for cache lines */
 
 #define ROW_CORE_SIZE \
@@ -243,6 +272,11 @@ struct _NcmSBesselOdeOperator
   gint ell_max;      /* Maximum angular momentum in batch */
   guint n_ell;       /* Number of angular momentum values: n_ell = ell_max - ell_min + 1 */
   gdouble tolerance; /* Convergence tolerance for adaptive QR factorization */
+  glong min_cols;    /* Resolution floor: the decay test may not fire below this many
+                      * columns. Set from the oscillatory part of the panel, i.e. the
+                      * span beyond the turning point; fewer columns than that cannot
+                      * represent the solution however quiet the leading coefficients
+                      * happen to look. See _ncm_sbessel_min_cols(). */
 
   /* Matrix storage */
   NcmSBesselOdeSolverRow *matrix_rows; /* Aligned array of NcmSBesselOdeSolverRow */
@@ -639,6 +673,7 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
   op->ell_min   = ell_min;
   op->ell_max   = ell_max;
   op->n_ell     = (guint) (ell_max - ell_min + 1);
+  op->min_cols  = _ncm_sbessel_min_cols (a, b, ell_min);
   op->tolerance = self->tolerance; /* Copy tolerance from solver */
 
   g_assert_cmpuint (op->n_ell, >, 0);
@@ -767,6 +802,7 @@ ncm_sbessel_ode_operator_reset (NcmSBesselOdeOperator *op, gdouble a, gdouble b,
   op->ell_min   = ell_min;
   op->ell_max   = ell_max;
   op->n_ell     = (guint) (ell_max - ell_min + 1);
+  op->min_cols  = _ncm_sbessel_min_cols (a, b, ell_min);
 
   g_assert_cmpuint (op->n_ell, >, 0);
   g_assert_cmpuint (op->n_ell, <, UINT_MAX / 2); /* Prevent overflow in capacity calculations */
@@ -1218,7 +1254,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
       *quiet_cols = 0;
   }
 
-  return (*quiet_cols >= ROWS_TO_ROTATE + 1);
+  return (*quiet_cols >= ROWS_TO_ROTATE + 1) && (col + 1 >= op->min_cols);
 }
 
 /**
@@ -1296,7 +1332,7 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
       *quiet_cols = 0;
   }
 
-  return (*quiet_cols >= ROWS_TO_ROTATE + 1);
+  return (*quiet_cols >= ROWS_TO_ROTATE + 1) && (col + 1 >= op->min_cols);
 }
 
 /**

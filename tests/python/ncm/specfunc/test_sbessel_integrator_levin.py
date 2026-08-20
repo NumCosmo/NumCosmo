@@ -624,3 +624,64 @@ class TestPanelAbstolEvanescent:
             limit=5000,
         )
         assert_allclose(result.get(0), expected, rtol=1.0e-8, atol=1.0e-15)
+
+
+class TestOscillatoryResolutionFloor:
+    """The decay test must not converge below a panel's oscillation count.
+
+    A panel [a, b] in y = kx carries about (b - a) / pi oscillations of the
+    solution. On such a panel the leading Chebyshev coefficients are small and
+    nearly flat, so the adaptive QR's decay test used to fire on them and declare
+    convergence at a tiny order -- a panel spanning 2162 in y was "converged"
+    with 19 columns instead of the ~1200 it needs.
+
+    Because panel contributions cancel heavily, the visible symptom was
+    non-monotonic: at a loose tolerance every panel was under-resolved and the
+    errors partly cancelled, while at an intermediate tolerance some panels
+    resolved and others did not, destroying the cancellation. Requesting 1e-8 was
+    then ~50x worse than requesting 1e-6.
+    """
+
+    @staticmethod
+    def _gaussian_integral(reltol):
+        """Strongly oscillatory Gaussian integral at a requested tolerance."""
+        ell, k, a, b = 2, 500.0, 0.1, 10.0
+        defaults = Ncm.SBesselIntegratorLevin.new(ell, ell)
+        integrator = Ncm.SBesselIntegratorLevin.new_full(
+            ell,
+            ell,
+            defaults.get_y_knots_min(),
+            defaults.get_y_knots_max(),
+            defaults.get_n_knots(),
+            defaults.get_ell_cache_max(),
+            reltol,
+            defaults.get_cheb_min_order(),
+            reltol,
+        )
+        return integrator.integrate_gaussian_ell(5.0, 1.0, a, b, k, ell)
+
+    def test_loose_tolerances_agree_with_the_converged_result(self):
+        """No requested tolerance may be catastrophically wrong.
+
+        Pre-fix the 1e-8 request returned +6.10e-06 against a converged
+        -1.19e-07: wrong sign and ~50x too large.
+        """
+        converged = self._gaussian_integral(1.0e-12)
+
+        for reltol in (1.0e-4, 1.0e-6, 1.0e-8, 1.0e-10):
+            result = self._gaussian_integral(reltol)
+            assert_allclose(result, converged, rtol=1.0e-2, atol=0.0)
+
+    def test_accuracy_is_monotonic_in_the_requested_tolerance(self):
+        """Tightening the request must never make the answer worse.
+
+        Pre-fix the error rose from 9.3e-01 at 1e-6 to 5.2e+01 at 1e-8.
+        """
+        converged = self._gaussian_integral(1.0e-12)
+        errors = [
+            abs(self._gaussian_integral(reltol) / converged - 1.0)
+            for reltol in (1.0e-4, 1.0e-6, 1.0e-8, 1.0e-10)
+        ]
+
+        for looser, tighter in zip(errors, errors[1:]):
+            assert tighter <= looser * 1.1
