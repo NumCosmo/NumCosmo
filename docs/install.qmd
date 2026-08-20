@@ -91,7 +91,7 @@ The requirements below can be found on most Linux distributions. Click [here](#s
   - Fortran compiler (gfortran, ifort, etc)
   - [Glib](http://www.gtk.org/) >= 2.44.0 --
     Data structures, threads, portability, memory allocation, etc.
-  - [GSL](http://www.gnu.org/software/gsl/)  >= 2.4 --
+  - [GSL](http://www.gnu.org/software/gsl/)  >= 2.8 --
     Several computational tools.
   - [GMP](http://gmplib.org/)  >= 4.3.2 --
     Big integers library.
@@ -131,7 +131,7 @@ To streamline the installation process, we provide instructions for installing p
 On Debian-like systems, you can install the required packages from the main repositories using the following command:
 ```bash
 sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc \
-  gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev \
+  gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl-dev libfftw3-dev \
   libopenblas-dev libflint-dev libcfitsio-dev libnlopt-dev \
   libhdf5-dev gtk-doc-tools
 ```

@@ -60,7 +60,9 @@ jobs:
 
   build-gcc-ubuntu:
     name: (ubuntu, apt, pip)
-    runs-on: ubuntu-24.04
+    # Pinned to 26.04, not ubuntu-latest: NumCosmo needs GSL >= 2.8 and 24.04
+    # ships 2.7.1. Revisit once ubuntu-latest has moved to 26.04.
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v6
@@ -69,7 +71,7 @@ jobs:
     - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt-get install gobject-introspection gir1.2-glib-2.0 gir1.2-glib-2.0-dev libgirepository-2.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libnlopt-dev libhdf5-dev libopenmpi-dev libcairo2-dev uncrustify
+        sudo apt-get install gobject-introspection gir1.2-glib-2.0 gir1.2-glib-2.0-dev libgirepository-2.0-dev gcc gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl-dev libfftw3-dev libopenblas-dev libflint-dev libcfitsio-dev libnlopt-dev libhdf5-dev libopenmpi-dev libcairo2-dev uncrustify
         pip install -e ".[test]" meson ninja --break-system-packages
     - name: Ensure clear Jupyter Notebooks
       uses: ResearchSoftwareActions/EnsureCleanNotebooksAction@1.1
