@@ -64,6 +64,23 @@
 #include <fftw3.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
+/*
+ * Per-panel diagnostic record. Off by default and zero cost when off.
+ *
+ * The integral is assembled as a sum of per-panel boundary terms that cancel
+ * heavily, so the attainable relative accuracy is bounded by the cancellation
+ * ratio sum|contrib| / |total| times the machine epsilon. That ratio cannot be
+ * inferred from the result; recording the individual contributions is the only
+ * way to measure it.
+ */
+typedef struct _NcmSBesselIntegratorLevinPanelRec
+{
+  gdouble a;
+  gdouble b;
+  gint ell;
+  gdouble contrib;
+} NcmSBesselIntegratorLevinPanelRec;
+
 struct _NcmSBesselIntegratorLevin
 {
   /*< private >*/
@@ -87,6 +104,8 @@ struct _NcmSBesselIntegratorLevin
   gdouble *j_array_b;
   GArray *endpoints_result;
   gdouble *jl_arr;
+  gboolean record_panels; /* Diagnostic panel recording (off by default) */
+  GArray *panel_records;  /* NcmSBesselIntegratorLevinPanelRec, valid when recording */
   /* Knots-based paneling */
   gdouble y_knots_min;
   gdouble y_knots_max;
@@ -147,6 +166,8 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
   sbilv->endpoints_result = NULL;
   sbilv->jl_arr           = NULL;
   sbilv->constructed      = FALSE;
+  sbilv->record_panels    = FALSE;
+  sbilv->panel_records    = g_array_new (FALSE, FALSE, sizeof (NcmSBesselIntegratorLevinPanelRec));
   /* Knots-based paneling */
   sbilv->y_knots_min         = 0.0;
   sbilv->y_knots_max         = 0.0;
@@ -167,6 +188,7 @@ _ncm_sbessel_integrator_levin_dispose (GObject *object)
   ncm_sbessel_ode_solver_clear (&sbilv->ode_solver);
   ncm_sbessel_ode_operator_clear (&sbilv->ode_operator);
   ncm_sf_sbessel_array_clear (&sbilv->sba);
+  g_clear_pointer (&sbilv->panel_records, g_array_unref);
   g_clear_pointer (&sbilv->cheb_coeffs, g_array_unref);
   g_clear_pointer (&sbilv->gegen_coeffs, g_array_unref);
   g_clear_pointer (&sbilv->rhs, g_array_unref);
@@ -855,6 +877,13 @@ _ncm_sbessel_integrator_levin_solve_and_accumulate (NcmSBesselIntegratorLevin *s
     const gdouble contrib   = b_p * j_l_b * y_prime_b - a_p * j_l_a * y_prime_a;
 
     result_data[ell_idx] += contrib;
+
+    if (G_UNLIKELY (sbilv->record_panels))
+    {
+      const NcmSBesselIntegratorLevinPanelRec rec = {a_p, b_p, (gint) ell, contrib};
+
+      g_array_append_val (sbilv->panel_records, rec);
+    }
   }
 }
 
@@ -1115,6 +1144,9 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
   n_ell         = ell_max - ell_min + 1;
   ell_threshold = _ncm_sbessel_integrator_levin_get_ell_threshold (sbilv, y_min, y_max);
 
+  if (G_UNLIKELY (sbilv->record_panels))
+    g_array_set_size (sbilv->panel_records, 0);
+
   g_assert_cmpuint (ncm_vector_len (result), >=, n_ell);
 
   /* Ensure resources are allocated */
@@ -1125,6 +1157,133 @@ _ncm_sbessel_integrator_levin_integrate (NcmSBesselIntegrator *sbi,
     _ncm_sbessel_integrator_levin_integrate_direct (sbilv, ell_min, ell_max, F, a, b, k, result, user_data);
   else
     _ncm_sbessel_integrator_levin_integrate_levin (sbilv, ell_min, ell_max, F, a, b, k, result, user_data);
+}
+
+/**
+ * ncm_sbessel_integrator_levin_set_record_panels:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @record: whether to record per-panel diagnostics
+ *
+ * Enables or disables recording of the individual panel contributions.
+ *
+ * The integral is assembled as a sum of per-panel boundary terms which cancel
+ * heavily, so the attainable relative accuracy is bounded by the cancellation
+ * ratio $\sum_p |I_p| / |\sum_p I_p|$ times the machine epsilon. That ratio cannot
+ * be recovered from the result alone. With recording enabled the contributions are
+ * kept and can be read back with
+ * ncm_sbessel_integrator_levin_get_panel_contrib().
+ *
+ * Recording is off by default and costs nothing when off. The records are cleared
+ * at the start of every ncm_sbessel_integrator_integrate() call, so they always
+ * describe the most recent one.
+ */
+void
+ncm_sbessel_integrator_levin_set_record_panels (NcmSBesselIntegratorLevin *sbilv, gboolean record)
+{
+  sbilv->record_panels = record;
+
+  if (!record)
+    g_array_set_size (sbilv->panel_records, 0);
+}
+
+/**
+ * ncm_sbessel_integrator_levin_get_record_panels:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ *
+ * Gets whether per-panel diagnostics are being recorded.
+ *
+ * Returns: TRUE if recording is enabled.
+ */
+gboolean
+ncm_sbessel_integrator_levin_get_record_panels (NcmSBesselIntegratorLevin *sbilv)
+{
+  return sbilv->record_panels;
+}
+
+/**
+ * ncm_sbessel_integrator_levin_get_n_panel_records:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ *
+ * Gets the number of panel records from the most recent integration. One record is
+ * produced per (panel, multipole) pair.
+ *
+ * Returns: the number of records.
+ */
+guint
+ncm_sbessel_integrator_levin_get_n_panel_records (NcmSBesselIntegratorLevin *sbilv)
+{
+  return sbilv->panel_records->len;
+}
+
+#define _NCM_SBILV_REC(sbilv, i) (&g_array_index ((sbilv)->panel_records, NcmSBesselIntegratorLevinPanelRec, (i)))
+
+/**
+ * ncm_sbessel_integrator_levin_get_panel_a:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @i: record index
+ *
+ * Gets the lower bound, in $y = kx$, of the panel of record @i.
+ *
+ * Returns: the panel lower bound.
+ */
+gdouble
+ncm_sbessel_integrator_levin_get_panel_a (NcmSBesselIntegratorLevin *sbilv, guint i)
+{
+  g_assert_cmpuint (i, <, sbilv->panel_records->len);
+
+  return _NCM_SBILV_REC (sbilv, i)->a;
+}
+
+/**
+ * ncm_sbessel_integrator_levin_get_panel_b:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @i: record index
+ *
+ * Gets the upper bound, in $y = kx$, of the panel of record @i.
+ *
+ * Returns: the panel upper bound.
+ */
+gdouble
+ncm_sbessel_integrator_levin_get_panel_b (NcmSBesselIntegratorLevin *sbilv, guint i)
+{
+  g_assert_cmpuint (i, <, sbilv->panel_records->len);
+
+  return _NCM_SBILV_REC (sbilv, i)->b;
+}
+
+/**
+ * ncm_sbessel_integrator_levin_get_panel_ell:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @i: record index
+ *
+ * Gets the multipole of record @i.
+ *
+ * Returns: the multipole.
+ */
+gint
+ncm_sbessel_integrator_levin_get_panel_ell (NcmSBesselIntegratorLevin *sbilv, guint i)
+{
+  g_assert_cmpuint (i, <, sbilv->panel_records->len);
+
+  return _NCM_SBILV_REC (sbilv, i)->ell;
+}
+
+/**
+ * ncm_sbessel_integrator_levin_get_panel_contrib:
+ * @sbilv: a #NcmSBesselIntegratorLevin
+ * @i: record index
+ *
+ * Gets the contribution of record @i to the total integral. The sum of the
+ * contributions over all records with the same multipole is that multipole's result.
+ *
+ * Returns: the panel contribution.
+ */
+gdouble
+ncm_sbessel_integrator_levin_get_panel_contrib (NcmSBesselIntegratorLevin *sbilv, guint i)
+{
+  g_assert_cmpuint (i, <, sbilv->panel_records->len);
+
+  return _NCM_SBILV_REC (sbilv, i)->contrib;
 }
 
 /**
