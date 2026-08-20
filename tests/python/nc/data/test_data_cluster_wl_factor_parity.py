@@ -50,6 +50,7 @@ tolerance") is still being checked, just against a constant instead of a
 second live engine.
 """
 
+import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
@@ -113,8 +114,14 @@ def _build_mset():
     return mset, hms
 
 
-def _build_new_obs(mset):
-    """New-engine Factor objects + one NcGalaxyWLObs built via required_columns."""
+def _build_new_obs(mset, scale=1.0):
+    """New-engine Factor objects + one NcGalaxyWLObs built via required_columns.
+
+    @scale multiplies every galaxy's angular offset from the lens centre, so a
+    test can move the whole sample to smaller radii (and hence larger reduced
+    shear) without inventing a second catalog. scale=1.0 reproduces _GALAXIES
+    exactly, which is what every frozen value in this file was captured at.
+    """
     position_factor = Nc.GalaxyPositionFactorFlat.new(-0.2, 0.2, -0.2, 0.2)
     redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(ZP_MIN, ZP_MAX)
     shape_factor = Nc.GalaxyShapeFactorVarAdd.new(ELLIP_CONV)
@@ -127,8 +134,8 @@ def _build_new_obs(mset):
     obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(_GALAXIES), cols)
 
     for i, (ra, dec, zp, sigma0, e1, e2, std_noise, c1, c2, m) in enumerate(_GALAXIES):
-        obs.set("ra", i, ra)
-        obs.set("dec", i, dec)
+        obs.set("ra", i, ra * scale)
+        obs.set("dec", i, dec * scale)
         obs.set("z", i, 0.0)  # true z: latent, unread by the likelihood
         obs.set("zp", i, zp)
         obs.set("sigma0", i, sigma0)
@@ -173,12 +180,25 @@ def test_m2lnL_parity(log10_mdelta):
     assert_allclose(new_m2lnL, _M2LNL_LNINT_FROZEN[log10_mdelta], rtol=1.0e-5)
 
 
-# Frozen legacy (default FIXED_NODES) -2lnL values, keyed by log10_mdelta.
+# Frozen FIXED_NODES -2lnL values, keyed by log10_mdelta.
+#
+# RE-FROZEN when _fixed_panels_integ switched from the signed control-variate
+# form  P = p_a*norm + Q[P(z)*(P(e_o,z) - p_a)]  to the split non-negative form
+# P = p_a*(norm - W_bg) + Q[P(z)*P(e_o,z)]  (see the FIXED_NODES branch of
+# nc_data_cluster_wl_factor.c). The two are algebraically identical but not
+# numerically: the control variate subtracts the anchor before quadrature and so
+# integrates a much flatter function, which at a FIXED node count is markedly
+# more accurate. Measured against LNINT on this sample at (n_nodes, rule_n) =
+# (10, 5): relative error 5.5e-11 with the old form, 5.7e-8 with the new one.
+# The tolerances below are unchanged -- they still pin the same claim, against a
+# constant recaptured on the new form. Guaranteed positivity is what was bought
+# with those digits, and the auto-nodes default (node-reltol 1e-2, per-galaxy
+# calibrated grid) is what pays for them in production.
 _M2LNL_FIXED_NODES_FROZEN = {
-    13.5: -18.165656396162543,
-    14.0: -18.160408925652295,
-    14.5: -18.144406477942447,
-    15.0: -18.094430546800766,
+    13.5: -18.165657431791136,
+    14.0: -18.160409961744307,
+    14.5: -18.144407515569362,
+    15.0: -18.09443158959249,
 }
 
 
@@ -199,6 +219,7 @@ def test_m2lnL_parity_fixed_nodes(log10_mdelta):
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
 
     new_m2lnL = dcwlf.m2lnL_val(mset)
 
@@ -221,6 +242,7 @@ def test_m2lnL_fixed_nodes_matches_lnint():
     dcwlf_fixed.set_obs(new_obs)
     dcwlf_fixed.set_prec(1.0e-8)
     dcwlf_fixed.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf_fixed.set_auto_nodes(False)
 
     dcwlf_lnint = Nc.DataClusterWLFactor.new(
         position_factor, redshift_factor, shape_factor
@@ -240,17 +262,17 @@ def test_m2lnL_fixed_nodes_matches_lnint():
 # (log10_mdelta,)/(z_cl,) sequences iterated in the test.
 _CACHE_REVISIT_MASS_SEQ = (13.5, 14.5, 13.5, 15.0, 14.5)
 _CACHE_REVISIT_MASS_FROZEN = [
-    -18.165656396162543,
-    -18.144406477942447,
-    -18.165656396162543,
-    -18.094430546800766,
-    -18.144406477942447,
+    -18.165657431791136,
+    -18.144407515569362,
+    -18.165657431791136,
+    -18.09443158959249,
+    -18.144407515569362,
 ]
 _CACHE_REVISIT_ZCL_SEQ = (0.2, 0.35, 0.2, 0.5)
 _CACHE_REVISIT_ZCL_FROZEN = [
-    -18.160408925652295,
-    -18.16466857347916,
-    -18.160408925652295,
+    -18.160409961744307,
+    -18.164668573479158,
+    -18.160409961744307,
     -18.16670389900757,
 ]
 
@@ -267,6 +289,7 @@ def test_fixed_nodes_cache_consistency_across_revisits():
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
 
     for log10_mdelta, frozen in zip(
         _CACHE_REVISIT_MASS_SEQ, _CACHE_REVISIT_MASS_FROZEN
@@ -289,10 +312,10 @@ def test_fixed_nodes_cache_consistency_across_revisits():
 # `ra` sequence iterated in the test.
 _ANGULAR_ONLY_RA_SEQ = (0.0, 0.05, -0.03, 0.05)
 _ANGULAR_ONLY_FROZEN = [
-    -18.160408925652295,
-    -18.16212591226027,
-    -18.150993979018196,
-    -18.16212591226027,
+    -18.160409961744307,
+    -18.16212694841824,
+    -18.150995015791906,
+    -18.16212694841824,
 ]
 
 
@@ -312,6 +335,7 @@ def test_fixed_nodes_correct_under_angular_only_changes():
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
 
     hp = mset.peek(Nc.HaloPosition.id())
     cosmo = mset.peek(Nc.HICosmo.id())
@@ -349,11 +373,12 @@ def test_fixed_nodes_correct_after_switching_integ_method_mid_run():
     dcwlf.m2lnL_val(mset)  # idempotent second call, nothing changed
 
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
     new_m2lnL = dcwlf.m2lnL_val(mset)
 
     # Frozen legacy FIXED_NODES value at log10MDelta=14.0, z_cl=0.2 (matches
     # _M2LNL_FIXED_NODES_FROZEN[14.0]; see module docstring for provenance).
-    frozen_fixed_nodes = -18.160408925652295
+    frozen_fixed_nodes = -18.160409961744307
     assert_allclose(new_m2lnL, frozen_fixed_nodes, rtol=1.0e-8)
 
     # And switching back to LNINT must still match the value just obtained
@@ -396,6 +421,7 @@ def test_fixed_nodes_resample_reuse_matches_lnint():
     # integ-method set to FIXED_NODES *before* the first resample() -- the
     # exact ordering that used to poison the grid with pre-resample data.
     dcwlf_reused.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf_reused.set_auto_nodes(False)
 
     dcwlf_lnint = Nc.DataClusterWLFactor.new(
         position_factor, redshift_factor, shape_factor
@@ -619,13 +645,26 @@ def test_resample_matches_legacy():
         assert_allclose(new_gal.dup_array(), frozen["gal"], rtol=1.0e-5)
 
 
-# Frozen legacy FIXED_NODES -2lnL values, keyed by (n_nodes, rule_n) (see
-# module docstring for provenance).
+# Frozen FIXED_NODES -2lnL values, keyed by (n_nodes, rule_n). Fingerprints of
+# the grid actually in use -- the point is that changing n-nodes/rule-n mid-run
+# is DETECTED and rebuilds the grid, so what matters is that the four values are
+# mutually distinct and reproducible, not that any of them is accurate.
+#
+# Re-frozen on the split non-negative integ form (see _M2LNL_FIXED_NODES_FROZEN
+# for the full rationale). This sequence is where the accuracy cost of dropping
+# the control variate is most visible, since it deliberately includes
+# starved grids; relative error vs LNINT, old form -> new form:
+#     (6, 3)  = 15 nodes:  2.3e-06 -> 2.9e-03
+#     (12, 7) = 77 nodes:  3.1e-15 -> 3.1e-15   (converged; both forms exact)
+#     (2, 1)  =  1 node:   1.7e-03 -> 6.5e-01   (degenerate by construction)
+#     (10, 5) = 45 nodes:  5.5e-11 -> 5.7e-08
+# Converged grids are unaffected; starved ones degrade, which is precisely the
+# regime the auto-nodes default now keeps production out of.
 _N_NODES_RULE_N_FROZEN = {
-    (6, 3): -18.16036639525873,
+    (6, 3): -18.21246188257942,
     (12, 7): -18.160408926654412,
-    (2, 1): -18.130207439694868,
-    (10, 5): -18.160408925652295,
+    (2, 1): -29.926518916622115,
+    (10, 5): -18.160409961744307,
 }
 
 
@@ -651,6 +690,7 @@ def test_fixed_nodes_correct_after_changing_n_nodes_rule_n_mid_run():
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
     dcwlf.set_n_nodes(10)
     dcwlf.set_rule_n(5)
     dcwlf.m2lnL_val(mset)
@@ -694,6 +734,7 @@ def test_fixed_nodes_correct_after_swapping_obs_to_different_sized_catalog():
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
 
     original_val = dcwlf.m2lnL_val(mset)
 
@@ -731,6 +772,7 @@ def test_fixed_nodes_correct_after_swapping_obs_to_different_sized_catalog():
     dcwlf_fresh.set_obs(small_obs)
     dcwlf_fresh.set_prec(1.0e-8)
     dcwlf_fresh.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf_fresh.set_auto_nodes(False)
     fresh_val = dcwlf_fresh.m2lnL_val(mset)
 
     assert_allclose(swapped_val, fresh_val, rtol=1.0e-8)
@@ -805,6 +847,68 @@ def test_prepare_reacts_to_mass_change():
     assert m2lnL_a != m2lnL_b
 
 
+# Radial squeeze applied to the sample below. Pulling every galaxy 33x closer to
+# the lens centre is what produces reduced shears large enough to expose the
+# pathology this test guards; at the unscaled radii the old code was fine.
+_WALL_SCALE = 0.03
+_WALL_LOG10M_GRID = (15.0, 15.2, 15.4, 15.6, 15.8, 16.0, 16.2)
+
+
+def test_no_low_prob_wall_at_high_mass():
+    """Regression test for the NC_GALAXY_LOW_PROB wall (the fix_negative_lk bug).
+
+    The old FIXED_NODES form integrated each galaxy's redshift marginal as a
+    SIGNED control variate, P = p_a*norm + Q[P(z)*(P(e_o,z) - p_a)]. At large
+    reduced shear the quadrature error on the correction term could exceed
+    p_a*norm and drive P_gal negative, even though the exact integral of a
+    strictly positive density cannot be. The caller then substituted the flat
+    NC_GALAXY_LOW_PROB = 1e6 into -2lnL, roughly 1e5 x a typical value: a hard,
+    data-dependent repulsive wall that confined the optimizer and truncated
+    high-mass fits low.
+
+    The split form P = p_a*(norm - W_bg) + Q[P(z)*P(e_o,z)] has two individually
+    non-negative terms, so it cannot produce a negative P_gal at any resolution.
+
+    THIS TEST IS NOT VACUOUS: on this exact configuration the pre-fix code was
+    measured producing m2lnL = +1999995.34 with low_prob_count = 2 at
+    log10MDelta = 16.0, between finite neighbours of -9.73 (15.8) and -8.52
+    (16.2). Auto-nodes is deliberately off and the grid deliberately coarse --
+    the point is that positivity now holds regardless of resolution, which is a
+    stronger claim than "a fine enough grid avoids it".
+    """
+    mset, hms = _build_mset()
+    position_factor, redshift_factor, shape_factor, new_obs = _build_new_obs(
+        mset, scale=_WALL_SCALE
+    )
+
+    dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf.set_obs(new_obs)
+    dcwlf.set_prec(1.0e-8)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
+    dcwlf.set_n_nodes(6)
+    dcwlf.set_rule_n(3)
+
+    values = []
+    for log10_mdelta in _WALL_LOG10M_GRID:
+        hms.param_set_by_name("log10MDelta", log10_mdelta)
+        m2lnL = dcwlf.m2lnL_val(mset)
+
+        assert (
+            dcwlf.get_low_prob_count() == 0
+        ), f"NC_GALAXY_LOW_PROB substituted at log10MDelta={log10_mdelta}"
+        assert np.isfinite(m2lnL)
+        # Nowhere near the 1e6 flat fallback -- one galaxy hitting it would
+        # dominate this 5-galaxy total by five orders of magnitude.
+        assert abs(m2lnL) < 1.0e4
+        values.append(m2lnL)
+
+    # No isolated spike: the wall showed up as a single mass step jumping by
+    # ~1e6 and coming straight back down.
+    steps = np.abs(np.diff(values))
+    assert steps.max() < 1.0e3, f"discontinuous -2lnL across the mass grid: {values}"
+
+
 def test_auto_nodes_matches_fixed_and_lnint():
     """auto-nodes calibrates a per-galaxy fixed-node configuration instead of
     using the global (n-nodes, rule-n) for every galaxy -- it must still
@@ -829,6 +933,7 @@ def test_auto_nodes_matches_fixed_and_lnint():
     dcwlf_fixed.set_obs(new_obs)
     dcwlf_fixed.set_prec(1.0e-8)
     dcwlf_fixed.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf_fixed.set_auto_nodes(False)
 
     dcwlf_lnint = Nc.DataClusterWLFactor.new(
         position_factor, redshift_factor, shape_factor
@@ -860,6 +965,7 @@ def test_auto_nodes_mid_run_property_changes_do_not_corrupt_state():
     dcwlf.set_obs(new_obs)
     dcwlf.set_prec(1.0e-8)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
 
     dcwlf_lnint = Nc.DataClusterWLFactor.new(
         position_factor, redshift_factor, shape_factor
@@ -869,13 +975,21 @@ def test_auto_nodes_mid_run_property_changes_do_not_corrupt_state():
     dcwlf_lnint.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
     lnint_m2lnL = dcwlf_lnint.m2lnL_val(mset)
 
-    dcwlf.m2lnL_val(mset)  # first cycle, auto-nodes off
+    dcwlf.m2lnL_val(mset)  # first cycle, auto-nodes explicitly off
 
+    # Each row must differ from its predecessor in at least one knob, and the
+    # sequence must isolate each of the three grid-rebuild gates in turn
+    # (fixed_nodes_auto_nodes_seen / _node_reltol_seen / _max_total_nodes_seen):
+    # row 1 flips auto-nodes only, row 2 changes reltol only, row 3
+    # max-total-nodes only, row 4 flips auto-nodes back off, row 5 returns to a
+    # previously-visited configuration (the revisit case that catches a stale
+    # grid).
     for auto_nodes, node_reltol, max_total_nodes in (
+        (True, 1.0e-2, 2000),
         (True, 1.0e-3, 2000),
-        (True, 1.0e-5, 500),
-        (False, 1.0e-4, 2000),
-        (True, 1.0e-4, 2000),
+        (True, 1.0e-3, 300),
+        (False, 1.0e-3, 300),
+        (True, 1.0e-2, 2000),
     ):
         dcwlf.set_auto_nodes(auto_nodes)
         dcwlf.set_node_reltol(node_reltol)
@@ -916,6 +1030,7 @@ def test_cubature_matches_lnint_and_fixed():
     dcwlf_fixed.set_obs(new_obs)
     dcwlf_fixed.set_prec(1.0e-8)
     dcwlf_fixed.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf_fixed.set_auto_nodes(False)
 
     cub_m2lnL = dcwlf_cub.m2lnL_val(mset)
     lnint_m2lnL = dcwlf_lnint.m2lnL_val(mset)

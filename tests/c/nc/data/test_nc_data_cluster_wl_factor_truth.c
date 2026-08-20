@@ -184,9 +184,26 @@ _truth_eval (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, guint nrows, NcDataClu
 {
   NcmVector *v = ncm_vector_new (nrows);
 
+  nc_data_cluster_wl_factor_set_auto_nodes (dcwlf, FALSE);
   nc_data_cluster_wl_factor_set_n_nodes (dcwlf, n_nodes);
   nc_data_cluster_wl_factor_set_rule_n (dcwlf, rule_n);
   nc_data_cluster_wl_factor_set_integ_method (dcwlf, method);
+  nc_data_cluster_wl_factor_eval_m2lnP_gal (dcwlf, mset, v);
+
+  return v;
+}
+
+/* The shipped default: FIXED_NODES with auto-nodes on, each galaxy getting its
+ * own calibrated (n_nodes, rule_n) at node-reltol. Pinning _truth_eval off
+ * above would otherwise leave this matrix -- the repo's strongest cross-method
+ * check -- never touching the configuration users actually get. */
+static NcmVector *
+_truth_eval_auto (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, guint nrows)
+{
+  NcmVector *v = ncm_vector_new (nrows);
+
+  nc_data_cluster_wl_factor_set_auto_nodes (dcwlf, TRUE);
+  nc_data_cluster_wl_factor_set_integ_method (dcwlf, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
   nc_data_cluster_wl_factor_eval_m2lnP_gal (dcwlf, mset, v);
 
   return v;
@@ -503,14 +520,23 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
   NcmVector *vF            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
   NcmVector *vL            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
   NcmVector *vC            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+  NcmVector *vA            = _truth_eval_auto (test->dcwlf, test->mset, test->nrows);
 
   _truth_cmp ("FIXED vs golden", vF, test->golden, 1.0e-6, abstol);
   _truth_cmp ("LNINT vs golden", vL, test->golden, 1.0e-6, abstol);
   _truth_cmp ("CUBATURE vs golden", vC, test->golden, 1.0e-6, abstol);
 
+  /* Auto-nodes -- the shipped default -- targets the node-reltol default of
+   * 1e-2 per galaxy, so it is held to a bar set by that tolerance, not by the
+   * 1e-6 the three pinned arms above meet. It is here to prove the default
+   * configuration integrates the right thing at all, not to re-prove
+   * convergence. */
+  _truth_cmp ("AUTO_NODES vs golden", vA, test->golden, 5.0e-2, GSL_MAX (abstol, 1.0e-3));
+
   ncm_vector_free (vF);
   ncm_vector_free (vL);
   ncm_vector_free (vC);
+  ncm_vector_free (vA);
 }
 
 /* Direct shape-scheme-vs-shape-scheme cross-check: SeriesLensed (truncated

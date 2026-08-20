@@ -848,9 +848,10 @@ class IntegMethod(GEnum):
     CUBATURE = Nc.DataClusterWLIntegMethod.CUBATURE
 
 
+DEFAULT_INTEG_AUTO_NODES = True
 DEFAULT_INTEG_N_NODES = 10
 DEFAULT_INTEG_RULE_N = 5
-DEFAULT_INTEG_NODE_RELTOL = 1.0e-4
+DEFAULT_INTEG_NODE_RELTOL = 1.0e-2
 DEFAULT_INTEG_MAX_TOTAL_NODES = 2000
 
 
@@ -861,10 +862,16 @@ class IntegMethodOptions:
     ``n_nodes``/``rule_n``/``auto_nodes``/``node_reltol``/``max_total_nodes``
     are plain ``NcDataClusterWLFactor`` properties that only affect
     FIXED_NODES; setting them under LNINT/CUBATURE is harmless (ignored).
+
+    ``apply()`` sets every knob unconditionally, so these defaults -- not the
+    C-side property defaults -- are what an app-driven run gets. They are kept
+    equal to the C defaults on purpose: ``auto_nodes`` with a reachable
+    ``node_reltol`` is what keeps the FIXED_NODES marginal converged, and a
+    divergence here would silently give CLI runs the pre-fix behaviour.
     """
 
     integ_method: IntegMethod = IntegMethod.LNINT
-    auto_nodes: bool = False
+    auto_nodes: bool = DEFAULT_INTEG_AUTO_NODES
     n_nodes: int = DEFAULT_INTEG_N_NODES
     rule_n: int = DEFAULT_INTEG_RULE_N
     node_reltol: float = DEFAULT_INTEG_NODE_RELTOL

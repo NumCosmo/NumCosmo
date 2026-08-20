@@ -58,6 +58,7 @@ from numcosmo_py.experiments.cluster_wl import (
     HaloProfileType,
     IntegMethod,
     IntegMethodOptions,
+    DEFAULT_INTEG_AUTO_NODES,
     DEFAULT_INTEG_N_NODES,
     DEFAULT_INTEG_RULE_N,
     DEFAULT_INTEG_NODE_RELTOL,
@@ -605,7 +606,7 @@ class ClusterWL(ABC):
             show_default=True,
             rich_help_panel="Redshift integration method",
         ),
-    ] = False
+    ] = DEFAULT_INTEG_AUTO_NODES
 
     n_nodes: Annotated[
         int,
