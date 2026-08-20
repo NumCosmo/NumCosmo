@@ -269,12 +269,21 @@ def angular_cl(
     :param n_k: floor on the number of wavenumbers in the outer integral.
     :param n_osc: samples per oscillation of Delta_l(k) in the outer integral.
     :param block_size: number of consecutive multipoles sharing a factorisation.
+        Clamped to what the solver will honour: NC_XCOR_KERNEL_MAX_ELL_BLOCK and the
+        integrator's ell_cache_max. Wider is not better -- the truncation order is a
+        max-reduction across the block, so every member pays the hardest member's
+        order, and one k-grid must span the block's whole range. Measured on eight
+        consecutive multipoles at fixed accuracy, the cost turns over at four:
+        1 -> 214.5 s, 2 -> 128.0 s, 4 -> 98.9 s, 8 -> 117.1 s.
     """
     ps_lin = cosmology.ps_ml
     cosmo = cosmology.cosmo
     ps_lin.prepare_if_needed(cosmo)
     ells = np.atleast_1d(np.asarray(ells, dtype=int))
     out = np.zeros(len(ells), dtype=float)
+
+    cache_max = Ncm.SBesselIntegratorLevin.new(0, 0).get_ell_cache_max()
+    block_size = max(1, min(block_size, Nc.XCOR_KERNEL_MAX_ELL_BLOCK, cache_max))
 
     chi_a, comps, _ = tracer_components(tracer1, cosmology, reltol=reltol)
     w_abs = np.abs(sum(comps))
