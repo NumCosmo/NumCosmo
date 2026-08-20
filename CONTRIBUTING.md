@@ -38,8 +38,10 @@ its concrete subclasses. Vendored third-party code is quarantined under
    subdirectory header directly.
 
 4. **Register the type** for serialization. Include the header in
-   `numcosmo/ncm/core/ncm_cfg.h` and register the object in `ncm_cfg.c` with
-   `ncm_cfg_register_obj (NCM_TYPE_MY_OBJECT);`.
+   `numcosmo/ncm/core/ncm_cfg.c`, next to the other headers of its family, and
+   register the object in `ncm_cfg_register_objects ()` with
+   `ncm_cfg_register_obj (NCM_TYPE_MY_OBJECT);`. (`ncm_cfg.h` includes only what its
+   own public API needs — do not add registration includes there.)
 
 ## Unit testing
 
@@ -47,11 +49,20 @@ Tests follow their sources as a hard invariant: a class in
 `numcosmo/<ns>/<area>/` is tested in the mirrored `tests/c/<ns>/<area>/` and/or
 `tests/python/<ns>/<area>/`. All new code must have at least minimal testing.
 
-1. Add the test under the mirrored path (`tests/c/...` for C, prefixed
-   `test_`; `tests/python/...` for Python, prefixed `test_py_`).
-2. Register it in the corresponding `tests/c/meson.build` or
-   `tests/python/meson.build`.
-3. Run the affected suite with `meson test -v -C build`.
+1. Add the test under the mirrored path, prefixed `test_`: `tests/c/<ns>/<area>/`
+   for C, `tests/python/<ns>/<area>/` for Python.
+2. **C tests must be registered** in `tests/c/meson.build`: add an entry giving the
+   test `name` and its `sources`, since each C test is built as its own executable.
+   Coverage of a class's ref/free/clear methods goes in the existing
+   `tests/c/ncm/core/test_ncm_generic.c` rather than in a new file.
+3. **Python tests are collected automatically** — the suites run `pytest` over
+   `tests/python/`, so a new file needs no `meson.build` entry. Selection between
+   lanes is by *marker*, not by path: a file with no marker joins the default lane,
+   and one belonging to a dedicated shard (`xcor`, `powspec`, `app`, `omp`,
+   `sphere_map`, `acceptance`) must declare a module-level
+   `pytestmark = pytest.mark.<name>`.
+4. Run the affected suite with `meson test -v -C build`, or a single file directly
+   with `python -m pytest tests/python/<path> -q`.
 
 ## Documentation
 
