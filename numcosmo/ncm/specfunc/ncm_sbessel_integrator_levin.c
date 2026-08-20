@@ -32,9 +32,21 @@
  * functions using a Levin-type method for low multipoles and vector cubature
  * integration for high multipoles.
  *
- * For low ell values, the method solves the differential equation $x^2 y''(x) + 2x y'(x) + (x^2 -
- * \ell(\ell+1)) y(x) = f(x)$ with boundary conditions $y(x_n) = 0 = y(x_{n+1})$. The
- * integral is then given by $I_n = j_\ell(x_{n+1}) y'(x_{n+1}) - j_\ell(x_n) y'(x_n)$.
+ * The integral is written in the dimensionless variable $y = k x$, so that
+ * $\int K(x, k) j_\ell(k x) \mathrm{d}x = \int F(y) j_\ell(y) \mathrm{d}y$ with
+ * $F(y) = K(y / k, k) / k$. This is what allows one panel set to serve every $k$.
+ *
+ * For low ell values, the contribution of a panel $[a, b]$ is obtained by solving
+ * $y^2 w''(y) + 2 y w'(y) + (y^2 - \ell(\ell+1)) w(y) = F(y)$ with boundary conditions
+ * $w(a) = w(b) = 0$. Since $j_\ell$ solves the homogeneous equation, the combination
+ * $y^2 (w' j_\ell - j_\ell' w)$ has derivative $F j_\ell$, so the panel integral is
+ * the boundary term $b^2 w'(b) j_\ell(b) - a^2 w'(a) j_\ell(a)$.
+ *
+ * In practice the equation is solved for $u = y w$, which removes the first-derivative
+ * term and yields $y^2 u'' + (y^2 - \ell(\ell+1)) u = y F(y)$ --- the forcing handed to
+ * #NcmSBesselOdeSolver is the weighted $y F(y)$. Because $w$ vanishes at the endpoints,
+ * $u'(a) = a w'(a)$ and $u'(b) = b w'(b)$ there, and the panel contribution actually
+ * evaluated is $b j_\ell(b) u'(b) - a j_\ell(a) u'(a)$.
  *
  * For high ell values, it uses vector cubature integration where the integrand evaluates
  * $f(x)$ and all $j_\ell(x)$ values simultaneously for efficiency.
