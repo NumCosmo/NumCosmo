@@ -38,9 +38,11 @@ G_DECLARE_FINAL_TYPE (NcmSplineBSpline, ncm_spline_bspline, NCM, SPLINE_BSPLINE,
 
 NcmSplineBSpline *ncm_spline_bspline_new (guint order);
 NcmSplineBSpline *ncm_spline_bspline_new_full (guint order, NcmVector *xv, NcmVector *yv, gboolean init);
+NcmSplineBSpline *ncm_spline_bspline_new_tol (gdouble reltol, gdouble abstol);
 
 void ncm_spline_bspline_set_order (NcmSplineBSpline *sbs, guint order);
 guint ncm_spline_bspline_get_order (NcmSplineBSpline *sbs);
+gdouble ncm_spline_bspline_get_achieved_error (NcmSplineBSpline *sbs);
 
 /**
  * NCM_SPLINE_BSPLINE_DEFAULT_ORDER:

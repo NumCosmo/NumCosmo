@@ -11281,12 +11281,17 @@ class SplineBSpline(Spline):
         SplineBSpline(**properties)
         new(order:int) -> NumCosmoMath.SplineBSpline
         new_full(order:int, xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.SplineBSpline
+        new_tol(reltol:float, abstol:float) -> NumCosmoMath.SplineBSpline
 
     Object NcmSplineBSpline
 
     Properties from NcmSplineBSpline:
       order -> guint: order
         B-spline order (degree + 1)
+      reltol -> gdouble: reltol
+        Requested relative interpolation error, 0 to select the order manually
+      abstol -> gdouble: abstol
+        Absolute floor for the automatic order selection
 
     Properties from NcmSpline:
       length -> guint: length
@@ -11301,15 +11306,24 @@ class SplineBSpline(Spline):
     """
 
     class Props:
+        abstol: float
         order: int
+        reltol: float
         length: int
         x: Vector
         y: Vector
 
     props: Props = ...
     def __init__(
-        self, order: int = ..., length: int = ..., x: Vector = ..., y: Vector = ...
+        self,
+        abstol: float = ...,
+        order: int = ...,
+        reltol: float = ...,
+        length: int = ...,
+        x: Vector = ...,
+        y: Vector = ...,
     ) -> None: ...
+    def get_achieved_error(self) -> float: ...
     def get_order(self) -> int: ...
     @classmethod
     def new(cls, order: int) -> SplineBSpline: ...
@@ -11317,6 +11331,8 @@ class SplineBSpline(Spline):
     def new_full(
         cls, order: int, xv: Vector, yv: Vector, init: bool
     ) -> SplineBSpline: ...
+    @classmethod
+    def new_tol(cls, reltol: float, abstol: float) -> SplineBSpline: ...
     def set_order(self, order: int) -> None: ...
 
 class SplineBSplineClass(GObject.GPointer):

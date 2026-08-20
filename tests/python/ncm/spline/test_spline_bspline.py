@@ -1,6 +1,8 @@
 """Tests for NcmSplineBSpline."""
 
 import math
+import subprocess
+import sys
 
 import numpy as np
 import pytest
@@ -142,3 +144,79 @@ def test_serialization_round_trip():
     assert isinstance(dup, Ncm.SplineBSpline)
     assert dup.get_order() == 6
     assert dup.eval(1234.5) == pytest.approx(sp.eval(1234.5), rel=1.0e-14)
+
+
+@pytest.mark.parametrize(
+    "n,tol,expected_order",
+    [
+        (100, 1.0e-06, 4),
+        (100, 1.0e-08, 6),
+        (100, 1.0e-10, 8),
+        (500, 1.0e-06, 4),
+        (500, 1.0e-10, 6),
+        (2000, 1.0e-06, 4),
+        (2000, 1.0e-14, 6),
+    ],
+)
+def test_order_derived_from_tolerance(n, tol, expected_order):
+    """The order is an output: the lowest one that meets the request, not a default."""
+    xs = np.linspace(0.0, 2400.0, n)
+    sp = Ncm.SplineBSpline.new_tol(tol, 0.0)
+    sp.set_array(xs.tolist(), _gauss(xs).tolist(), True)
+
+    assert sp.get_order() == expected_order
+
+
+@pytest.mark.parametrize("n,tol", [(100, 1.0e-06), (500, 1.0e-10), (2000, 1.0e-14)])
+def test_achieved_error_is_honest(n, tol):
+    """The reported estimate matches the true interpolation error, and meets the request.
+
+    Callers use this to predict their own accuracy: an integral of the spline inherits
+    roughly this error times its cancellation ratio.
+    """
+    xs = np.linspace(0.0, 2400.0, n)
+    sp = Ncm.SplineBSpline.new_tol(tol, 0.0)
+    sp.set_array(xs.tolist(), _gauss(xs).tolist(), True)
+
+    true_err = _max_midpoint_error(xs, sp)
+    assert true_err <= tol
+    assert sp.get_achieved_error() == pytest.approx(true_err, rel=0.5)
+
+
+def test_impossible_request_fails_loudly():
+    """A request the samples cannot support must abort, never silently return worse.
+
+    100 samples top out near 2.7e-11; asking for 1e-13 has no valid answer, and quietly
+    returning a 100x worse spline would hide the one fact the caller needs.
+    """
+    xs = np.linspace(0.0, 2400.0, 100)
+    ys = _gauss(xs)
+    code = (
+        "import numpy as np\n"
+        "from numcosmo_py import Ncm\n"
+        "Ncm.cfg_init()\n"
+        f"xs = np.linspace(0.0, 2400.0, {len(xs)})\n"
+        "ys = np.exp(-0.5*((xs-1200.0)/300.0)**2)\n"
+        "sp = Ncm.SplineBSpline.new_tol(1.0e-13, 0.0)\n"
+        "sp.set_array(xs.tolist(), ys.tolist(), True)\n"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False
+    )
+
+    assert proc.returncode != 0
+    assert "cannot support a requested interpolation error" in proc.stderr
+
+
+def test_manual_order_is_not_overridden():
+    """reltol = 0 (the default) leaves the explicitly chosen order alone."""
+    xs = np.linspace(0.0, 2400.0, 2000)
+    sp = Ncm.SplineBSpline.new_full(
+        10,
+        Ncm.Vector.new_array(xs.tolist()),
+        Ncm.Vector.new_array(_gauss(xs).tolist()),
+        True,
+    )
+
+    assert sp.get_order() == 10
+    assert sp.get_achieved_error() == 0.0
