@@ -42,6 +42,39 @@ pytest_plugins = ["python.fixtures_xcor"]
 RELTOL = 1.0e-7
 SCALED_ABSTOL = 1.0e-4
 
+# The tests below that build non-Limber closures run the Levin ODE over
+# y = k xi, and its cost -- both time and the spectral order the panels must
+# carry -- is linear in the top of that range. The kernels' own domain rule
+# stops around k = 147 Mpc^-1 with the fixture power spectrum, which for a
+# multipole block of 16 means panels holding ~2e5 oscillations and gigabytes of
+# operator storage, none of which makes the comparison below any sharper: it
+# checks Limber against non-Limber pointwise in k, so a shorter domain compares
+# fewer points, each unchanged. Capping the power spectrum at 10 Mpc^-1 for
+# these tests costs 12x less memory and 5x less time at the same knot density
+# (2711 knots against 2739). The unbounded range belongs in a stress test, not
+# in a unit test.
+NON_LIMBER_KMAX = 10.0
+
+
+@pytest.fixture(name="capped_powspec")
+def fixture_capped_powspec(cosmology: Cosmology):
+    """Cap the fixture power spectrum for one test, then restore it.
+
+    Function-scoped on purpose: the power spectrum is shared with every other
+    xcor test through the cached cosmology, so the cap must not outlive the
+    test that asks for it.
+    """
+    ps_ml = cosmology.ps_ml
+    original_kmax = ps_ml.get_kmax()
+
+    ps_ml.set_kmax(NON_LIMBER_KMAX)
+    ps_ml.prepare(cosmology.cosmo)
+
+    yield ps_ml
+
+    ps_ml.set_kmax(original_kmax)
+    ps_ml.prepare(cosmology.cosmo)
+
 
 def test_limber_vs_limber_z(kernel: Nc.XcorKernel, cosmology: Cosmology) -> None:
     """Test that limber and limber_z give consistent results."""
@@ -184,7 +217,9 @@ def test_limber_vs_limber_z_vectorized(
 
 
 def test_limber_vs_non_limber(
-    kernel_case: tuple[str, Nc.XcorKernel], cosmology: Cosmology
+    kernel_case: tuple[str, Nc.XcorKernel],
+    cosmology: Cosmology,
+    capped_powspec: Ncm.Powspec,
 ) -> None:
     """Test Limber approximation accuracy against exact non-Limber calculation.
 
@@ -263,7 +298,9 @@ def test_limber_vs_non_limber(
 
 
 def test_k_projection_limber_vs_non_limber(
-    kernel_case: tuple[str, Nc.XcorKernel], cosmology: Cosmology
+    kernel_case: tuple[str, Nc.XcorKernel],
+    cosmology: Cosmology,
+    capped_powspec: Ncm.Powspec,
 ) -> None:
     """Test k-space projection integral agreement between Limber and non-Limber.
 
@@ -350,7 +387,9 @@ def test_k_projection_limber_vs_non_limber(
 
 
 def test_limber_vs_non_limber_vectorized(
-    kernel_case: tuple[str, Nc.XcorKernel], cosmology: Cosmology
+    kernel_case: tuple[str, Nc.XcorKernel],
+    cosmology: Cosmology,
+    capped_powspec: Ncm.Powspec,
 ) -> None:
     """Test Limber vs non-Limber using vectorized evaluation with blocks of ells.
 
@@ -427,7 +466,9 @@ def test_limber_vs_non_limber_vectorized(
 
 
 def test_k_projection_limber_vs_non_limber_vectorized(
-    kernel_case: tuple[str, Nc.XcorKernel], cosmology: Cosmology
+    kernel_case: tuple[str, Nc.XcorKernel],
+    cosmology: Cosmology,
+    capped_powspec: Ncm.Powspec,
 ) -> None:
     """Test k-space projection with vectorized evaluation for blocks of ells.
 
