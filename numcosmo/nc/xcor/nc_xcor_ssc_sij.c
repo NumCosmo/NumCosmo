@@ -776,6 +776,12 @@ nc_xcor_ssc_sij_get_reltol (NcXcorSSCSij *ssc_sij)
  * to the `1.0e-6` used here moves $S_{06}$ by tens of percent for J-PAS-like
  * bins while barely moving $S_{00}$.
  *
+ * `1.0e-6` is the end of that road, not a waypoint. The floor is a fraction of
+ * the peak of $W_i(k)$ while the integrand is $k^2 W_i W_j$, so it enters
+ * squared: `1.0e-6` is already `1.0e-12` there. Below it
+ * nc_xcor_kernel_set_scaled_abstol() warns and the accuracy is not recoverable
+ * at any cost -- see %NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL.
+ *
  */
 void
 nc_xcor_ssc_sij_set_scaled_abstol (NcXcorSSCSij *ssc_sij, gdouble scaled_abstol)

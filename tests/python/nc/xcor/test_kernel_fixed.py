@@ -64,7 +64,12 @@ def _kernels(cosmology: Cosmology, l_limber: int = -1) -> list[Nc.XcorKernel]:
             integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
         )
         kernel.set_l_limber(l_limber)
-        kernel.set_scaled_abstol(1.0e-8)
+        # Library default scaled-abstol, deliberately: this used to override it
+        # to 1e-8 and no assertion here needed it. scaled-abstol floors W(k)
+        # against its own peak, but the C_ell integrand is k^2 W_a W_b, so the
+        # floor enters squared -- the 1e-4 default is already 1e-12 there. Every
+        # test in this file passes at 1e-8 (14.3 s), 1e-6 (5.5 s) and the
+        # default (1.5 s), so the override bought nothing and cost 10x.
         kernel.prepare(cosmology.cosmo)
         out.append(kernel)
 

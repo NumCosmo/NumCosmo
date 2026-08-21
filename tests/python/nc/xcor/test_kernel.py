@@ -580,12 +580,15 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
     original_scaled_abstol = kernel.get_scaled_abstol()
     assert original_scaled_abstol == kernel.props.scaled_abstol
 
-    kernel.set_scaled_abstol(1.0e-8)
-    assert kernel.get_scaled_abstol() == 1.0e-8
-    assert kernel.props.scaled_abstol == 1.0e-8
+    # Values only exercise the accessor, but stay at or above 1e-6: the floor
+    # enters the C_ell integrand squared, so 1e-6 is already 1e-12 there and
+    # nothing in the library should model going below it.
+    kernel.set_scaled_abstol(1.0e-6)
+    assert kernel.get_scaled_abstol() == 1.0e-6
+    assert kernel.props.scaled_abstol == 1.0e-6
 
-    kernel.props.scaled_abstol = 5.0e-7
-    assert kernel.get_scaled_abstol() == 5.0e-7
+    kernel.props.scaled_abstol = 5.0e-6
+    assert kernel.get_scaled_abstol() == 5.0e-6
 
     # Restore original
     kernel.set_scaled_abstol(original_scaled_abstol)

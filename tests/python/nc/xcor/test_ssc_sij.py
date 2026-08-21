@@ -413,7 +413,10 @@ def test_serialization_round_trip(cosmology: Cosmology) -> None:
     ssc_sij = _make_ssc_sij(cosmology)
     ssc_sij.set_mask_cl(Ncm.Vector.new_array(cl_mask[: lmax + 1].tolist()))
     ssc_sij.set_reltol(1.0e-7)
-    ssc_sij.set_scaled_abstol(1.0e-7)
+    # Non-default marker for the round trip, kept at or above 1e-6 and away from
+    # reltol -- the floor enters the S_ij integrand squared, and ssc.py warns
+    # against letting the two tolerances coincide.
+    ssc_sij.set_scaled_abstol(3.0e-6)
     ssc_sij.set_block_size(4)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
