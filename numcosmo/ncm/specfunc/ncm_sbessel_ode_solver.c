@@ -1547,6 +1547,19 @@ _ncm_sbessel_ode_solver_setup_initial_rows (NcmSBesselOdeOperator *op, GArray *r
   }
 }
 
+/*
+ * Initial column count for a solve. The decay test may not fire below
+ * op->min_cols, so that many columns get built whatever the coefficients look
+ * like; starting below it only makes _ncm_sbessel_check_storage() double its
+ * way up, copying at every step and overshooting the count actually used by up
+ * to a factor two.
+ */
+static inline guint
+_ncm_sbessel_initial_solution_order (NcmSBesselOdeOperator *op, guint rhs_len)
+{
+  return MAX (rhs_len * 2, (guint) op->min_cols + ROWS_TO_ROTATE + 2);
+}
+
 /**
  * _ncm_sbessel_ode_operator_diagonalize:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
@@ -1563,7 +1576,7 @@ static glong
 _ncm_sbessel_ode_operator_diagonalize (NcmSBesselOdeOperator *op, GArray *rhs)
 {
   const guint rhs_len            = rhs->len;
-  guint solution_order           = rhs_len * 2;
+  guint solution_order           = _ncm_sbessel_initial_solution_order (op, rhs_len);
   const guint max_solution_order = 1 << 24;
   const gdouble *rhs_data        = (gdouble *) rhs->data;
   gboolean converged             = FALSE;
@@ -1924,7 +1937,7 @@ static glong
 _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const guint n_ell, GArray *rhs)
 {
   const guint rhs_len            = rhs->len;
-  guint solution_order           = rhs_len * 2;
+  guint solution_order           = _ncm_sbessel_initial_solution_order (op, rhs_len);
   const guint max_solution_order = 1 << 24;
   const gint ell_min             = op->ell_min;
   const gdouble *rhs_data        = (gdouble *) rhs->data;
