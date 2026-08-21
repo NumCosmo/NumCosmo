@@ -1,6 +1,7 @@
 """Tests for NcmSplineBSpline."""
 
 import math
+import os
 import subprocess
 import sys
 
@@ -200,8 +201,16 @@ def test_impossible_request_fails_loudly():
         "sp = Ncm.SplineBSpline.new_tol(1.0e-13, 0.0)\n"
         "sp.set_array(xs.tolist(), ys.tolist(), True)\n"
     )
+    # Don't inherit NCM_FFTW_*: a test that sets an invalid planner value
+    # during the session would otherwise abort this child at init, before it
+    # reaches the code under test.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("NCM_FFTW")}
     proc = subprocess.run(
-        [sys.executable, "-c", code], capture_output=True, text=True, check=False
+        [sys.executable, "-c", code],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
     assert proc.returncode != 0
