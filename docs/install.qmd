@@ -91,7 +91,7 @@ The requirements below can be found on most Linux distributions. Click [here](#s
   - Fortran compiler (gfortran, ifort, etc)
   - [Glib](http://www.gtk.org/) >= 2.44.0 --
     Data structures, threads, portability, memory allocation, etc.
-  - [GSL](http://www.gnu.org/software/gsl/)  >= 2.4 --
+  - [GSL](http://www.gnu.org/software/gsl/)  >= 2.8 --
     Several computational tools.
   - [GMP](http://gmplib.org/)  >= 4.3.2 --
     Big integers library.
@@ -130,11 +130,21 @@ To streamline the installation process, we provide instructions for installing p
 
 On Debian-like systems, you can install the required packages from the main repositories using the following command:
 ```bash
-sudo apt-get install gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev gcc \
-  gfortran pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev \
-  libopenblas-dev libflint-dev libcfitsio-dev libnlopt-dev \
-  libhdf5-dev gtk-doc-tools
+sudo apt-get install gcc gfortran pkg-config libglib2.0-dev \
+  gobject-introspection gir1.2-glib-2.0 gir1.2-glib-2.0-dev \
+  libgirepository-2.0-dev libcairo2-dev libgsl-dev libgmp3-dev libmpfr-dev \
+  libflint-dev libfftw3-dev libopenblas-dev libnlopt-dev libcfitsio-dev \
+  libhdf5-dev libopenmpi-dev
 ```
+
+This is the same set the CI builds against; see `.github/actions/apt-deps`.
+Two packages are needed only for particular tasks and are left out above:
+`gtk-doc-tools` to build the API documentation, and `uncrustify` to run the
+indentation check before contributing.
+
+Note: GSL must be 2.8 or newer. Ubuntu 24.04 LTS ships 2.7.1, so it cannot
+build NumCosmo from distro packages -- use 25.10 or later, or the conda
+installation described at the top of this page.
 
 Note: in recent Debian and Ubuntu releases, the package name changed from
 `libflint-arb-dev` to `libflint-dev`.
@@ -143,9 +153,12 @@ Note: in recent Debian and Ubuntu releases, the package name changed from
 
 For Mac OS users, Homebrew simplifies the installation process. Execute the following command to install the required packages:
 ```bash
-brew install gobject-introspection gsl gmp mpfr fftw cfitsio nlopt gfortran \
-  gtk-doc glib openblas
+brew install gfortran glib gobject-introspection pygobject3 \
+  gsl gmp mpfr fftw openblas nlopt cfitsio gtk-doc
 ```
+
+Installing `pygobject3` from Homebrew avoids pip having to build PyGObject
+from source against Homebrew's interpreter.
 
 #### Python packages using pip
 

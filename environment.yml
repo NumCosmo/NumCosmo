@@ -24,7 +24,7 @@ dependencies:
   - glib-tools
   - gmp
   - gobject-introspection
-  - gsl
+  - gsl>=2.8
   - hdf5
   - healpy
   - jupyter
