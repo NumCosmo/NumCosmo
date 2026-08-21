@@ -432,6 +432,7 @@ WINDOW_VOLUME_TOPHAT: int = 0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL: float = 0.0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PCC: float = 0.8
 WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF: float = 1.0
+XCOR_KERNEL_ANALYTIC_MAX_COMPS: int = 6
 XCOR_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON: float = 0.0
@@ -22396,6 +22397,869 @@ class XcorKernel(NumCosmoMath.Model):
     def set_max_iter(self, max_iter: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_scaled_abstol(self, scaled_abstol: float) -> None: ...
+
+class XcorKernelAnalytic(XcorKernel):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalytic(**properties)
+
+    Object NcXcorKernelAnalytic
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: XcorKernel = ...
+    def __init__(
+        self,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def do_eval_W_comp(self, comp: int, chi: float) -> float: ...
+    def do_get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
+    def do_get_n_comps(self) -> int: ...
+    def eval_W(self, chi: float) -> float: ...
+    def eval_W_comp(self, comp: int, chi: float) -> float: ...
+    def get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
+    def get_n_comps(self) -> int: ...
+    def get_support(self) -> typing.Tuple[float, float]: ...
+    def peek_kdep(self) -> typing.Optional[XcorKernelAnalyticKDep]: ...
+
+class XcorKernelAnalyticClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticClass()
+    """
+
+    parent_class: XcorKernelClass = ...
+    get_n_comps: typing.Callable[[XcorKernelAnalytic], int] = ...
+    eval_W_comp: typing.Callable[[XcorKernelAnalytic, int, float], float] = ...
+    get_comp_support: typing.Callable[
+        [XcorKernelAnalytic, int], typing.Tuple[float, float]
+    ] = ...
+    padding: list[None] = ...
+
+class XcorKernelAnalyticGauss(XcorKernelAnalytic):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticGauss(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:float, chi_sigma:float, n_sigma:float) -> NumCosmo.XcorKernelAnalyticGauss
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:float, chi_sigma:float, n_sigma:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelAnalyticGauss
+
+    Object NcXcorKernelAnalyticGauss
+
+    Properties from NcXcorKernelAnalyticGauss:
+      chi-mean -> gdouble: chi-mean
+        Window centre in Mpc
+      chi-sigma -> gdouble: chi-sigma
+        Window standard deviation in Mpc
+      n-sigma -> gdouble: n-sigma
+        Truncation half-width in units of sigma
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        chi_mean: float
+        chi_sigma: float
+        n_sigma: float
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        chi_mean: float = ...,
+        chi_sigma: float = ...,
+        n_sigma: float = ...,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_chi_mean(self) -> float: ...
+    def get_chi_sigma(self) -> float: ...
+    def get_n_sigma(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: float,
+        chi_sigma: float,
+        n_sigma: float,
+    ) -> XcorKernelAnalyticGauss: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: float,
+        chi_sigma: float,
+        n_sigma: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelAnalyticGauss: ...
+
+class XcorKernelAnalyticGaussClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticGaussClass()
+    """
+
+    parent_class: XcorKernelAnalyticClass = ...
+
+class XcorKernelAnalyticKDep(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticKDep(**properties)
+
+    Object NcXcorKernelAnalyticKDep
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    parent_instance: GObject.Object = ...
+    @staticmethod
+    def clear(kdep: XcorKernelAnalyticKDep) -> None: ...
+    def do_eval(self, chi: float, k: float) -> float: ...
+    def eval(self, chi: float, k: float) -> float: ...
+    def free(self) -> None: ...
+    def ref(self) -> XcorKernelAnalyticKDep: ...
+
+class XcorKernelAnalyticKDepClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticKDepClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+    eval: typing.Callable[[XcorKernelAnalyticKDep, float, float], float] = ...
+    padding: list[None] = ...
+
+class XcorKernelAnalyticKDepGrowth(XcorKernelAnalyticKDep):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticKDepGrowth(**properties)
+        new(amplitude:float, k_transition:float, chi_ref:float) -> NumCosmo.XcorKernelAnalyticKDepGrowth
+
+    Object NcXcorKernelAnalyticKDepGrowth
+
+    Properties from NcXcorKernelAnalyticKDepGrowth:
+      amplitude -> gdouble: amplitude
+        Saturated suppression
+      k-transition -> gdouble: k-transition
+        Transition wavenumber in 1/Mpc
+      chi-ref -> gdouble: chi-ref
+        Reference comoving distance in Mpc
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        amplitude: float
+        chi_ref: float
+        k_transition: float
+
+    props: Props = ...
+    def __init__(
+        self, amplitude: float = ..., chi_ref: float = ..., k_transition: float = ...
+    ) -> None: ...
+    def get_amplitude(self) -> float: ...
+    def get_chi_ref(self) -> float: ...
+    def get_k_transition(self) -> float: ...
+    @classmethod
+    def new(
+        cls, amplitude: float, k_transition: float, chi_ref: float
+    ) -> XcorKernelAnalyticKDepGrowth: ...
+
+class XcorKernelAnalyticKDepGrowthClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticKDepGrowthClass()
+    """
+
+    parent_class: XcorKernelAnalyticKDepClass = ...
+
+class XcorKernelAnalyticMulti(XcorKernelAnalytic):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticMulti(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:NumCosmoMath.Vector, chi_sigma:NumCosmoMath.Vector, weight:NumCosmoMath.Vector, n_sigma:float) -> NumCosmo.XcorKernelAnalyticMulti
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:NumCosmoMath.Vector, chi_sigma:NumCosmoMath.Vector, weight:NumCosmoMath.Vector, n_sigma:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelAnalyticMulti
+
+    Object NcXcorKernelAnalyticMulti
+
+    Properties from NcXcorKernelAnalyticMulti:
+      chi-mean -> NcmVector: chi-mean
+        Bump centres in Mpc
+      chi-sigma -> NcmVector: chi-sigma
+        Bump standard deviations in Mpc
+      weight -> NcmVector: weight
+        Relative bump weights
+      n-sigma -> gdouble: n-sigma
+        Truncation half-width in units of sigma
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        chi_mean: NumCosmoMath.Vector
+        chi_sigma: NumCosmoMath.Vector
+        n_sigma: float
+        weight: NumCosmoMath.Vector
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        chi_mean: NumCosmoMath.Vector = ...,
+        chi_sigma: NumCosmoMath.Vector = ...,
+        n_sigma: float = ...,
+        weight: NumCosmoMath.Vector = ...,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_n_bumps(self) -> int: ...
+    def get_n_sigma(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: NumCosmoMath.Vector,
+        chi_sigma: NumCosmoMath.Vector,
+        weight: NumCosmoMath.Vector,
+        n_sigma: float,
+    ) -> XcorKernelAnalyticMulti: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: NumCosmoMath.Vector,
+        chi_sigma: NumCosmoMath.Vector,
+        weight: NumCosmoMath.Vector,
+        n_sigma: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelAnalyticMulti: ...
+    def peek_chi_mean(self) -> NumCosmoMath.Vector: ...
+    def peek_chi_sigma(self) -> NumCosmoMath.Vector: ...
+    def peek_weight(self) -> NumCosmoMath.Vector: ...
+
+class XcorKernelAnalyticMultiClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticMultiClass()
+    """
+
+    parent_class: XcorKernelAnalyticClass = ...
+
+class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticStudentT(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:float, chi_scale:float, nu:float, n_scale:float) -> NumCosmo.XcorKernelAnalyticStudentT
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:float, chi_scale:float, nu:float, n_scale:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelAnalyticStudentT
+
+    Object NcXcorKernelAnalyticStudentT
+
+    Properties from NcXcorKernelAnalyticStudentT:
+      chi-mean -> gdouble: chi-mean
+        Window centre in Mpc
+      chi-scale -> gdouble: chi-scale
+        Window scale in Mpc
+      nu -> gdouble: nu
+        Degrees of freedom
+      n-scale -> gdouble: n-scale
+        Truncation half-width in units of the scale
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        chi_mean: float
+        chi_scale: float
+        n_scale: float
+        nu: float
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        chi_mean: float = ...,
+        chi_scale: float = ...,
+        n_scale: float = ...,
+        nu: float = ...,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_chi_mean(self) -> float: ...
+    def get_chi_scale(self) -> float: ...
+    def get_n_scale(self) -> float: ...
+    def get_nu(self) -> float: ...
+    def get_tail_mass(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: float,
+        chi_scale: float,
+        nu: float,
+        n_scale: float,
+    ) -> XcorKernelAnalyticStudentT: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: float,
+        chi_scale: float,
+        nu: float,
+        n_scale: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelAnalyticStudentT: ...
+
+class XcorKernelAnalyticStudentTClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticStudentTClass()
+    """
+
+    parent_class: XcorKernelAnalyticClass = ...
+
+class XcorKernelAnalyticTophat(XcorKernelAnalytic):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticTophat(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_lower:float, chi_upper:float) -> NumCosmo.XcorKernelAnalyticTophat
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_lower:float, chi_upper:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelAnalyticTophat
+
+    Object NcXcorKernelAnalyticTophat
+
+    Properties from NcXcorKernelAnalyticTophat:
+      chi-lower -> gdouble: chi-lower
+        Lower edge in Mpc
+      chi-upper -> gdouble: chi-upper
+        Upper edge in Mpc
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        chi_lower: float
+        chi_upper: float
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        chi_lower: float = ...,
+        chi_upper: float = ...,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_chi_lower(self) -> float: ...
+    def get_chi_upper(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_lower: float,
+        chi_upper: float,
+    ) -> XcorKernelAnalyticTophat: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_lower: float,
+        chi_upper: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelAnalyticTophat: ...
+
+class XcorKernelAnalyticTophatClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticTophatClass()
+    """
+
+    parent_class: XcorKernelAnalyticClass = ...
 
 class XcorKernelCMBISW(XcorKernel):
     r"""
