@@ -491,6 +491,8 @@ typedef struct _SplineIntegrandData
   NcmVector *eval_result;
   gdouble k_min;
   gdouble k_max;
+  gdouble *k_min_comp;
+  gdouble *k_max_comp;
 } SplineIntegrandData;
 
 static NcmVector *
@@ -517,6 +519,27 @@ _spline_integrand_eval (gpointer data, gdouble k, gdouble *W)
   }
 }
 
+/*
+ * The components of a block share one abscissa, so one index lookup serves the
+ * whole run -- the same saving ncm_spline_vec_eval() makes over the whole
+ * vector, restricted to the components the caller is integrating.
+ */
+static void
+_spline_integrand_eval_comps (gpointer data, gdouble k, guint offset, guint len, gdouble *W)
+{
+  SplineIntegrandData *sid = (SplineIntegrandData *) data;
+  NcmSpline *spline_0      = ncm_spline_vec_peek_spline (sid->spline_vec, 0);
+  const gsize idx          = ncm_spline_get_index (spline_0, k);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    NcmSpline *spline_i = ncm_spline_vec_peek_spline (sid->spline_vec, offset + i);
+
+    W[offset + i] = ncm_spline_eval_idx (spline_i, k, idx);
+  }
+}
+
 static void
 _spline_integrand_get_range (gpointer data, gdouble *kmin, gdouble *kmax)
 {
@@ -524,6 +547,22 @@ _spline_integrand_get_range (gpointer data, gdouble *kmin, gdouble *kmax)
 
   *kmin = sid->k_min;
   *kmax = sid->k_max;
+}
+
+/*
+ * Under the Limber approximation a multipole's window is supported only on its
+ * own band in k, so the shared domain of an ell block carries one step per
+ * multipole. Reporting the per-component support lets the outer integral put
+ * each step on an integration limit, where it is not a discontinuity of the
+ * integrand at all.
+ */
+static void
+_spline_integrand_get_range_comp (gpointer data, guint i, gdouble *kmin, gdouble *kmax)
+{
+  SplineIntegrandData *sid = (SplineIntegrandData *) data;
+
+  *kmin = sid->k_min_comp[i];
+  *kmax = sid->k_max_comp[i];
 }
 
 static void
@@ -535,6 +574,8 @@ _spline_integrand_data_free (gpointer data)
   ncm_spline_vec_clear (&sid->spline_vec);
   ncm_vector_clear (&sid->eval_result);
 
+  g_free (sid->k_min_comp);
+  g_free (sid->k_max_comp);
   g_free (data);
 }
 
@@ -593,6 +634,7 @@ typedef struct _ComponentStates
   const guint n_l;
   const gdouble epsilon;
   const guint adaptive_boundary_tries;
+  const gboolean is_limber; /* k_min_limber_ell/k_max_limber_ell are set only then */
 } ComponentStates;
 
 static void
@@ -677,7 +719,8 @@ _component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
     .lmin                    = lmin,
     .n_l                     = n_l,
     .epsilon                 = self->adaptive_epsilon,
-    .adaptive_boundary_tries = self->adaptive_boundary_tries
+    .adaptive_boundary_tries = self->adaptive_boundary_tries,
+    .is_limber               = FALSE
   };
   guint i;
 
@@ -713,7 +756,8 @@ _component_states_init_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
     .lmin                    = lmin,
     .n_l                     = n_l,
     .epsilon                 = self->adaptive_epsilon,
-    .adaptive_boundary_tries = self->adaptive_boundary_tries
+    .adaptive_boundary_tries = self->adaptive_boundary_tries,
+    .is_limber               = TRUE
   };
   gdouble k_min_union = G_MAXDOUBLE; /* For union of Limber bounds */
   gdouble k_max_union = 0.0;         /* For union of Limber bounds */
@@ -1143,9 +1187,47 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
       );
     }
 
-    sid->spline_vec  = ncm_function_sample_set_to_spline_vec (fss, spline);
-    sid->k_min       = ncm_function_sample_set_get_x_min (fss);
-    sid->k_max       = ncm_function_sample_set_get_x_max (fss);
+    sid->spline_vec = ncm_function_sample_set_to_spline_vec (fss, spline);
+    sid->k_min      = ncm_function_sample_set_get_x_min (fss);
+    sid->k_max      = ncm_function_sample_set_get_x_max (fss);
+    sid->k_min_comp = g_new (gdouble, n_l);
+    sid->k_max_comp = g_new (gdouble, n_l);
+
+    /* Per-multipole support within the block's shared domain. Only the Limber
+     * branch confines a multipole to a band of its own; outside it the window
+     * is zero, so the band edge falling inside the shared domain is a step.
+     * The band is taken over all components, since the window is their sum. */
+    for (i = 0; i < n_l; i++)
+    {
+      gdouble k_min_i = sid->k_min;
+      gdouble k_max_i = sid->k_max;
+
+      if (comp_states->is_limber)
+      {
+        gdouble band_min = G_MAXDOUBLE;
+        gdouble band_max = 0.0;
+        guint ci;
+
+        for (ci = 0; ci < comp_states->n_comp; ci++)
+        {
+          band_min = GSL_MIN (band_min, comp_states->states[ci].k_min_limber_ell[i]);
+          band_max = GSL_MAX (band_max, comp_states->states[ci].k_max_limber_ell[i]);
+        }
+
+        k_min_i = GSL_MAX (k_min_i, band_min);
+        k_max_i = GSL_MIN (k_max_i, band_max);
+
+        /* A band disjoint from the fitted domain leaves nothing to integrate;
+         * report the empty range as the domain's lower edge rather than an
+         * inverted one. */
+        if (k_min_i >= k_max_i)
+          k_min_i = k_max_i = sid->k_min;
+      }
+
+      sid->k_min_comp[i] = k_min_i;
+      sid->k_max_comp[i] = k_max_i;
+    }
+
     sid->lmin        = lmin;
     sid->len         = n_l;
     sid->RH_Mpc      = nc_hicosmo_RH_Mpc (cosmo);
@@ -1163,6 +1245,8 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
                                                                        _spline_integrand_data_free);
 
       nc_xcor_kernel_integrand_set_get_knots (integrand, _spline_integrand_get_knots);
+      nc_xcor_kernel_integrand_set_get_range_comp (integrand, _spline_integrand_get_range_comp);
+      nc_xcor_kernel_integrand_set_eval_comps (integrand, _spline_integrand_eval_comps);
 
       return integrand;
     }
@@ -1327,6 +1411,9 @@ nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdoubl
   integrand->data_free      = data_free;
   integrand->get_knots_func = NULL;
 
+  integrand->get_range_comp_func = NULL;
+  integrand->eval_comps_func     = NULL;
+
   return integrand;
 }
 
@@ -1345,6 +1432,39 @@ void
 nc_xcor_kernel_integrand_set_get_knots (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetKnots get_knots)
 {
   integrand->get_knots_func = get_knots;
+}
+
+/**
+ * nc_xcor_kernel_integrand_set_get_range_comp: (skip)
+ * @integrand: a #NcXcorKernelIntegrand
+ * @get_range_comp: (scope async): function returning one component's k range
+ *
+ * Installs the accessor returning the k range a single component of @integrand
+ * is supported on. Left unset by nc_xcor_kernel_integrand_new(), in which case
+ * every component reports the whole range.
+ *
+ */
+void
+nc_xcor_kernel_integrand_set_get_range_comp (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetRangeComp get_range_comp)
+{
+  integrand->get_range_comp_func = get_range_comp;
+}
+
+/**
+ * nc_xcor_kernel_integrand_set_eval_comps: (skip)
+ * @integrand: a #NcXcorKernelIntegrand
+ * @eval_comps: (scope async): function evaluating a run of components
+ *
+ * Installs the accessor evaluating a contiguous run of @integrand's
+ * components, for callers that integrate the run on its own. Left unset by
+ * nc_xcor_kernel_integrand_new(), in which case a run is served by evaluating
+ * every component.
+ *
+ */
+void
+nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandEvalComps eval_comps)
+{
+  integrand->eval_comps_func = eval_comps;
 }
 
 /**
@@ -2147,6 +2267,36 @@ nc_xcor_kernel_log_all_models (void)
  * @k_max: (out): maximum k value
  *
  * Gets the valid k range for this integrand.
+ */
+/**
+ * nc_xcor_kernel_integrand_get_range_comp:
+ * @integrand: a #NcXcorKernelIntegrand
+ * @i: component index
+ * @k_min: (out): minimum k value
+ * @k_max: (out): maximum k value
+ *
+ * Gets the k range component @i is supported on, which can be a part of the
+ * range nc_xcor_kernel_integrand_get_range() reports for the whole integrand:
+ * a block of multipoles shares one domain, and under the Limber approximation
+ * each of them vanishes outside its own band within it. Integrating a
+ * component over its own range keeps that band edge on an integration limit
+ * instead of leaving a step inside the interval.
+ *
+ * Falls back to the whole range for integrands that do not distinguish their
+ * components.
+ */
+/**
+ * nc_xcor_kernel_integrand_eval_comps: (skip)
+ * @integrand: a #NcXcorKernelIntegrand
+ * @k: wavenumber
+ * @offset: index of the first component to evaluate
+ * @len: number of components to evaluate
+ * @W: (array) (out caller-allocates): full-length array to store results in
+ *
+ * Evaluates components [@offset, @offset + @len) at wavenumber @k, writing
+ * them at their own indices in @W. Integrands that can only evaluate every
+ * component at once do so, filling the whole of @W; either way the entries
+ * the caller asked for are valid.
  */
 /**
  * nc_xcor_kernel_integrand_eval: (skip)

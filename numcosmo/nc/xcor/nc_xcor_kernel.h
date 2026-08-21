@@ -88,6 +88,36 @@ typedef void (*NcXcorKernelIntegrandEval) (gpointer data, gdouble k, gdouble *W)
 typedef void (*NcXcorKernelIntegrandGetRange) (gpointer data, gdouble *k_min, gdouble *k_max);
 
 /**
+ * NcXcorKernelIntegrandGetRangeComp:
+ * @data: user data
+ * @i: component index
+ * @k_min: (out): minimum wavenumber
+ * @k_max: (out): maximum wavenumber
+ *
+ * Function type for getting the valid k range of a single component. A block
+ * of multipoles shares one k-domain, but each multipole may be supported on
+ * only part of it -- under the Limber approximation a multipole's window
+ * vanishes outside $[\nu/\xi_\mathrm{max}, \nu/\xi_\mathrm{min}]$, and the
+ * edge of that band is a step in the shared domain. See
+ * nc_xcor_kernel_integrand_get_range_comp().
+ */
+typedef void (*NcXcorKernelIntegrandGetRangeComp) (gpointer data, guint i, gdouble *k_min, gdouble *k_max);
+
+/**
+ * NcXcorKernelIntegrandEvalComps:
+ * @data: user data
+ * @k: wavenumber
+ * @offset: index of the first component to evaluate
+ * @len: number of components to evaluate
+ * @W: (array): full-length buffer, of which only
+ *   [@offset, @offset + @len) need be filled
+ *
+ * Function type for evaluating a contiguous run of components, leaving the
+ * rest of @W untouched. See nc_xcor_kernel_integrand_eval_comps().
+ */
+typedef void (*NcXcorKernelIntegrandEvalComps) (gpointer data, gdouble k, guint offset, guint len, gdouble *W);
+
+/**
  * NcXcorKernelIntegrandGetKnots:
  * @data: user data
  *
@@ -106,6 +136,10 @@ typedef NcmVector *(*NcXcorKernelIntegrandGetKnots) (gpointer data);
  * @get_range_func: function to get the valid k range for this integrand
  * @get_knots_func: function to get the integrand's knots, or %NULL when it is
  *   not spline-backed
+ * @get_range_comp_func: function to get the valid k range of one component, or
+ *   %NULL when every component covers the whole range
+ * @eval_comps_func: function to evaluate a run of components, or %NULL when
+ *   only the whole vector can be evaluated at once
  * @data: user data passed to @eval_func, @get_range_func and @get_knots_func
  * @data_free: function to free @data, or %NULL if no cleanup needed
  *
@@ -137,6 +171,8 @@ struct _NcXcorKernelIntegrand
   gpointer data;
   GDestroyNotify data_free;
   NcXcorKernelIntegrandGetKnots get_knots_func;
+  NcXcorKernelIntegrandGetRangeComp get_range_comp_func;
+  NcXcorKernelIntegrandEvalComps eval_comps_func;
 };
 
 struct _NcXcorKernelClass
@@ -250,6 +286,8 @@ GType nc_xcor_kernel_integrand_get_type (void) G_GNUC_CONST;
 
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_new (guint len, NcXcorKernelIntegrandEval eval, NcXcorKernelIntegrandGetRange get_range, gpointer data, GDestroyNotify data_free);
 void nc_xcor_kernel_integrand_set_get_knots (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetKnots get_knots);
+void nc_xcor_kernel_integrand_set_get_range_comp (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetRangeComp get_range_comp);
+void nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandEvalComps eval_comps);
 NcmVector *nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand);
@@ -258,6 +296,8 @@ void nc_xcor_kernel_integrand_clear (NcXcorKernelIntegrand **integrand);
 NCM_INLINE guint nc_xcor_kernel_integrand_get_len (NcXcorKernelIntegrand *integrand);
 NCM_INLINE void nc_xcor_kernel_integrand_eval (NcXcorKernelIntegrand *integrand, gdouble k, gdouble *W);
 NCM_INLINE void nc_xcor_kernel_integrand_get_range (NcXcorKernelIntegrand *integrand, gdouble *k_min, gdouble *k_max);
+NCM_INLINE void nc_xcor_kernel_integrand_get_range_comp (NcXcorKernelIntegrand *integrand, guint i, gdouble *k_min, gdouble *k_max);
+NCM_INLINE void nc_xcor_kernel_integrand_eval_comps (NcXcorKernelIntegrand *integrand, gdouble k, guint offset, guint len, gdouble *W);
 NCM_INLINE GArray *nc_xcor_kernel_integrand_eval_array (NcXcorKernelIntegrand *integrand, gdouble k);
 
 G_END_DECLS
@@ -289,6 +329,27 @@ NCM_INLINE void
 nc_xcor_kernel_integrand_get_range (NcXcorKernelIntegrand *integrand, gdouble *k_min, gdouble *k_max)
 {
   integrand->get_range_func (integrand->data, k_min, k_max);
+}
+
+NCM_INLINE void
+nc_xcor_kernel_integrand_get_range_comp (NcXcorKernelIntegrand *integrand, guint i, gdouble *k_min, gdouble *k_max)
+{
+  if (integrand->get_range_comp_func != NULL)
+    integrand->get_range_comp_func (integrand->data, i, k_min, k_max);
+  else
+    integrand->get_range_func (integrand->data, k_min, k_max);
+}
+
+/* Fills only W[offset, offset + len) when the integrand can evaluate a run of
+ * components on its own, and the whole of W when it cannot -- either way those
+ * entries are what the caller reads. */
+NCM_INLINE void
+nc_xcor_kernel_integrand_eval_comps (NcXcorKernelIntegrand *integrand, gdouble k, guint offset, guint len, gdouble *W)
+{
+  if (integrand->eval_comps_func != NULL)
+    integrand->eval_comps_func (integrand->data, k, offset, len, W);
+  else
+    integrand->eval_func (integrand->data, k, W);
 }
 
 NCM_INLINE GArray *
