@@ -194,7 +194,7 @@ def bessel_transform_block(
         sp = Ncm.SplineBSpline.new_tol(reltol, 0.0)
         sp.set_array(chi_a.tolist(), comp.tolist(), True)
         # ell-dependent scalars, reapplied after the batched solve
-        f_ell = np.array([tracer.get_f_ell(float(l)) for l in ells]).reshape(
+        f_ell = np.array([tracer.get_f_ell(float(ell)) for ell in ells]).reshape(
             len(ells), -1
         )
         f_c = f_ell[:, 0] if f_ell.shape[1] == 1 else f_ell[:, 0]
