@@ -14,6 +14,7 @@ Purpose: Refactored from test_py_xcor.py for better organization
 from typing import cast
 
 import numpy as np
+import numpy.typing as npt
 import pytest
 from numpy.testing import assert_allclose
 
@@ -133,25 +134,14 @@ def test_xcor_compute_methods(
     assert_allclose(vp_gsl_a, vp_cub_a, rtol=1.0e-5, atol=1.0e-50)
 
 
-# kernel_cmb_isw aborts the process for both kernel-space methods -- two
-# separate, pre-existing robustness gaps, both newly visible only because
-# neither method had ever been exercised against ISW in any test before, and
-# both unrelated to the §3 fix itself (it supplies a valid, sensible range in
-# every case; wl/gal/cmb_lens/tsz all work fine with both methods):
-#   - KERNEL_CUBATURE: fatal g_assert in ncm_integral_nd_eval ("assertion
-#     failed (ret == 0)") at every ell tier.
-#   - KERNEL_GSL: fatal g_error ("roundoff error") from GSL's qag hitting
-#     GSL_EROUND at tier 3 (true non-Limber) specifically -- _nc_xcor_kernel_gsl
-#     treats any non-GSL_SUCCESS status as fatal, which is itself fragile
-#     (GSL_EROUND often just means the result can't be formally certified to
-#     the requested tolerance, not that it's wrong).
-# Both are process aborts, not catchable exceptions, so they must be skipped
-# rather than xfailed (xfail would still execute them and crash the whole
-# test session).
-# TODO: root-cause both failures for ISW's kernel shape; reconsider whether
-# _nc_xcor_kernel_gsl should tolerate GSL_EROUND instead of aborting on it.
-_CUBATURE_BROKEN_KERNELS = {"kernel_cmb_isw"}
-_TIER3_GSL_BROKEN_KERNELS = {"kernel_cmb_isw"}
+# The Limber approximation is not a usable reference for the CMB ISW
+# auto-spectrum at these multipoles: its kernel is broad and peaks at low k,
+# where the same-chi-peak assumption fails outright. Measured at ell 20-27,
+# every kernel-space method agrees with every other to ~1e-8 while sitting a
+# factor 3.3-4.2 below tier 1. Comparing the two is a statement about Limber,
+# not about the quadrature, so tier 3 checks the methods against each other
+# for this kernel and not against tier 1.
+_TIER3_LIMBER_INVALID_KERNELS = {"kernel_cmb_isw"}
 
 
 @pytest.mark.parametrize(
@@ -186,9 +176,9 @@ def test_xcor_kernel_methods(
     to LIMBER_Z_CUBATURE (tier 1) at moderate/high ell -- exactly, for tier 2
     (mathematically the same Limber approximation, just computed via k-space
     instead of z-space); within known Limber-approximation error, for tier 3.
-    KERNEL_CUBATURE is skipped (not run) for kernel_cmb_isw at every tier;
-    KERNEL_GSL is additionally skipped for it at tier 3 -- see
-    _CUBATURE_BROKEN_KERNELS / _TIER3_GSL_BROKEN_KERNELS above.
+    The tier-3 comparison against tier 1 is dropped for the ISW
+    auto-spectrum, where Limber itself is not valid at these multipoles --
+    see _TIER3_LIMBER_INVALID_KERNELS above.
 
     Kernel fixtures are module-cached and shared with other tests, so
     l_limber is restored to its default afterward.
@@ -196,11 +186,7 @@ def test_xcor_kernel_methods(
     k1 = cast(Nc.XcorKernel, request.getfixturevalue(k1_name))
     k2 = cast(Nc.XcorKernel, request.getfixturevalue(k2_name))
     involved = {k1_name, k2_name}
-    skip_cubature = bool(involved & _CUBATURE_BROKEN_KERNELS)
-    skip_gsl = l_limber == -1 and bool(involved & _TIER3_GSL_BROKEN_KERNELS)
-
-    if skip_gsl and skip_cubature:
-        pytest.skip("both KERNEL_GSL and KERNEL_CUBATURE are known-broken here")
+    check_tier1 = not (l_limber == -1 and involved <= _TIER3_LIMBER_INVALID_KERNELS)
 
     lmin = 20
     lmax = 27  # small, moderate-ell block: away from the ell=0,1 edge case
@@ -248,41 +234,75 @@ def test_xcor_kernel_methods(
         # 15-27-orders-of-magnitude bug this test guards against.
         tier1_rtol = 1.0e-3 if l_limber == 0 else 1.0e-1
 
-        kernel_gsl = None
+        # ISW cross-spectra need more room at tier 2, for a reason that is not
+        # numerical slack. A kernel's k-space closure is fitted only out to
+        # where its own amplitude falls below NcXcorKernel:adaptive-epsilon, a
+        # criterion each kernel applies to itself. An auto spectrum never pays
+        # for that truncation -- its integrand carries W squared, so the cut
+        # sits where the contribution is doubly suppressed -- while a cross
+        # spectrum is suppressed there only once, by one kernel's tail against
+        # the other kernel's un-suppressed values.
+        #
+        # Measured for CMB lensing x ISW at ell 20-27: 1.05e-3 low against
+        # tier 1, flat under refinement of the spline tolerance (1e-4 through
+        # 1e-6, so it is the domain and not the sampling), and collapsing to
+        # 1.5e-6 once adaptive-epsilon is tightened to 1e-8. No per-kernel
+        # criterion can do better in principle, since a closure is built
+        # without knowing what it will be paired with. The scale that makes
+        # this harmless is the pair's own: these two are 7% correlated here,
+        # so 1.05e-3 of C_x is 7e-5 of sqrt(C_isw C_lens), the amplitude that
+        # sets the cross spectrum's sample variance.
+        if (l_limber == 0) and (involved & {"kernel_cmb_isw"}) and (k1_name != k2_name):
+            tier1_rtol = 2.0e-3
 
-        if not skip_gsl:
-            vp_kernel_gsl = Ncm.Vector.new(n)
-            xcor_kg = Nc.Xcor.new(
-                cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_GSL
-            )
-            xcor_kg.prepare(cosmology.cosmo)
-            xcor_kg.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_gsl)
-            kernel_gsl = np.array(vp_kernel_gsl.dup_array())
+        vp_kernel_gsl = Ncm.Vector.new(n)
+        xcor_kg = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_GSL)
+        xcor_kg.prepare(cosmology.cosmo)
+        xcor_kg.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_gsl)
+        kernel_gsl = np.array(vp_kernel_gsl.dup_array())
 
+        if check_tier1:
             assert_allclose(kernel_gsl, limber_z, rtol=tier1_rtol, atol=1.0e-50)
 
-        if skip_cubature:
-            return
+        def kernel_cubature(ell_batch_size: int) -> npt.NDArray[np.float64]:
+            vp_kernel_cub = Ncm.Vector.new(n)
+            xcor_kc = Nc.Xcor.new(
+                cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE
+            )
+            xcor_kc.props.ell_batch_size = ell_batch_size
+            xcor_kc.prepare(cosmology.cosmo)
+            xcor_kc.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_cub)
 
-        vp_kernel_cub = Ncm.Vector.new(n)
-        xcor_kc = Nc.Xcor.new(
-            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE
+            return np.array(vp_kernel_cub.dup_array())
+
+        kernel_cub = kernel_cubature(4)
+
+        if check_tier1:
+            assert_allclose(kernel_cub, limber_z, rtol=tier1_rtol, atol=1.0e-50)
+
+        # Two independent quadratures on one integrand: KERNEL_GSL builds a
+        # closure per multipole, so the comparison is against cubature blocked
+        # the same way. Blocked differently the two do not share an integrand
+        # at all -- the k-spline's refinement floor is a reduction over the
+        # block, so a multipole's closure depends on its neighbours (measured
+        # for CMB lensing x ISW at tier 3: 2.3e-2 at the default spline
+        # tolerance, 1.5e-3 at 1e-6, i.e. converging).
+        assert_allclose(kernel_gsl, kernel_cubature(1), rtol=1.0e-5, atol=1.0e-50)
+
+        # The blocked path against the exact quadrature on the same closures:
+        # KERNEL_FIXED integrates the spline on its own knots, where GL(5) is
+        # exact, so any difference here is the adaptive rule's alone.
+        vp_kernel_fixed = Ncm.Vector.new(n)
+        xcor_kf = Nc.Xcor.new(
+            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED
         )
-        xcor_kc.props.ell_batch_size = 4
-        xcor_kc.prepare(cosmology.cosmo)
-        xcor_kc.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_cub)
+        xcor_kf.props.ell_batch_size = 4
+        xcor_kf.prepare(cosmology.cosmo)
+        xcor_kf.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_fixed)
 
-        kernel_cub = np.array(vp_kernel_cub.dup_array())
-
-        assert_allclose(kernel_cub, limber_z, rtol=tier1_rtol, atol=1.0e-50)
-
-        if kernel_gsl is None:
-            return
-
-        # GSL and cubature must agree with each other regardless of tier --
-        # same integrand, same (now-correct) bound, two independent
-        # quadrature methods.
-        assert_allclose(kernel_gsl, kernel_cub, rtol=1.0e-3, atol=1.0e-50)
+        assert_allclose(
+            kernel_cub, np.array(vp_kernel_fixed.dup_array()), rtol=1.0e-5, atol=1.0e-50
+        )
     finally:
         k1.set_l_limber(original_l_limber[k1_name])
         k2.set_l_limber(original_l_limber[k2_name])
