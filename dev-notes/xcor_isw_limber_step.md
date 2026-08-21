@@ -156,3 +156,76 @@ Three things to check before building it:
 - GH #297, #298 remain open. **#298 has not been touched** -- it reports
   `roundoff error` from `KERNEL_GSL`, a different path, and may or may not share
   this root cause. Measure before assuming.
+
+## 8. Resolution (branch `xcor-isw-integration-fixes`)
+
+Built as §6 prescribes, and its three checks came out as follows.
+
+**#297.** `NcXcorKernelIntegrand` now reports a per-component range
+(`nc_xcor_kernel_integrand_get_range_comp()`): for a Limber closure, the
+multipole's own band taken over the kernel's components and clipped to the
+fitted domain; for a non-Limber one, the fitted domain itself. The cubature
+driver integrates *runs* of consecutive multipoles that share a range, so the
+non-Limber case is still one call over the whole block and only Limber blocks
+split. A run evaluates only its own components -- one index lookup on the
+shared abscissa, then `ncm_spline_eval_idx` per component -- which is what
+keeps the split from costing anything.
+
+Measured on the issue's own reproducer (ISW auto, tier 2, l = 20..27,
+`ell_batch_size = 4`), for l = 22:
+
+| lower limit | value | reported error | true error | evaluations |
+| --- | --- | --- | --- | --- |
+| shared | 7.94006 | 2.1e-07 | 1.4e-02 | 1048952 |
+| its own | 8.05126 | 2.4e-07 | 3.9e-08 | 257 |
+
+The old failure was never only the abort: after PR #307 gave
+`ncm_integral_nd_eval()` an h-adaptive retry, `hcubature` converged *by its own
+estimator* while missing part of the spike -- a region whose nodes all land
+where the component vanishes reports no error and is never subdivided.
+
+Check 1 (the `k_max_l = nu/xi_min` clip): clips to the spline's `k_max`, which
+is where every non-Limber component already sits, so it introduces no edge.
+Check 2 (cost), l = 2..1025: ISW tier 2 at block 16 went 8.056 s -> 3.135 s,
+i.e. from 2.6x `KERNEL_FIXED` to level with it; CMB lensing at block 64 went
+0.227 s -> 0.235 s. Check 3 (WL bit-identical) was wrong as stated: a block's
+fitted domain starts at its *lowest* multipole's band edge, so every higher
+multipole in the block has a band edge of its own and splits too. CMB lensing
+moves in its last two digits (7.7917110410e-08 -> 7.7917110417e-08), both
+converged.
+
+**#298 does not share the cause.** `KERNEL_GSL` builds a closure per multipole,
+so it never sees the comb. Its integrand is a cubic spline over ~380 knots:
+C^2, with a jump in the third derivative at every knot. A Gauss-Kronrod rule
+spanning several knots applies a smooth-function error model to a function that
+is not, and its estimate stops falling under bisection -- which is exactly what
+QUADPACK reports as roundoff. Measured for ISW tier 3, l = 20, at the failing
+`reltol * 1e-2` request:
+
+- 159 subintervals, each claiming 4-5e-9 of error whether it contributes 7.5e-2
+  or 1.6e-5 to the integral -- an estimate uncorrelated with the contribution.
+- Total claimed 1.8e-7 against a true error of 3.2e-9.
+- One 4-knot subinterval claims 75-88x more error whole than split on its knots.
+- The whole range, panel by panel: claimed 2.3e-14, exact to every digit.
+
+So `_nc_xcor_kernel_gsl()` now integrates with `gsl_integration_qagp()` on the
+merged knots of the pair when both integrands report knots, leaving every
+subinterval a single cubic piece: machine precision (3e-15 against the exact
+quadrature) instead of a stall near 1e-6, for about twice the evaluations of an
+outer integral that costs nothing next to the per-multipole closure build. The
+`reltol * 1e-2` margin is gone from that path -- measured, it only moved the
+stall -- and a non-success status is fatal only when the achieved error misses
+NcXcor:reltol.
+
+**A third defect, newly visible.** With both methods working, the tier-2
+CMB lensing x ISW cross sits 1.05e-3 below tier 1, flat under refinement of the
+spline tolerance and collapsing to 1.5e-6 when `NcXcorKernel:adaptive-epsilon`
+is tightened to 1e-8. The closure is fitted only out to where *its own*
+amplitude dies; an auto spectrum never pays for that (its integrand carries W
+squared) but a cross pays once. No per-kernel criterion can fix it, since a
+closure is built without knowing what it will be paired with; a criterion
+relative to the kernel's own peak would at least bound the loss by
+eps * max|W_1| * max|W_2|, i.e. relative to sqrt(C_1 C_2) -- the amplitude that
+sets the cross spectrum's sample variance -- rather than relative to C_x. Here
+the two are 7% correlated, so the 1.05e-3 is 7e-5 of that scale. Recorded in
+`test_xcor_kernel_methods`, not fixed.
