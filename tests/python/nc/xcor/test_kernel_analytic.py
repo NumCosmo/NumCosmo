@@ -891,3 +891,83 @@ def test_lensing_is_broad_and_peaks_in_front_of_its_sources(
         kernel.eval_W(LENS_SRC_LOWER + eps),
         rtol=1.0e-6,
     )
+
+
+# --- the spec a kernel reports back ----------------------------------------
+
+
+def test_every_shape_reports_the_spec_it_was_built_from(cosmology: Cosmology) -> None:
+    """Each accessor returns exactly what construction was given.
+
+    Not bookkeeping: these accessors are how a benchmark specification is read
+    back off a kernel, so a value that does not survive construction would make
+    a recorded spec disagree with the object that produced the numbers.
+    """
+    gauss = _gauss(cosmology)
+    assert (gauss.get_chi_mean(), gauss.get_chi_sigma(), gauss.get_n_sigma()) == (
+        CHI_MEAN,
+        CHI_SIGMA,
+        N_SIGMA,
+    )
+
+    tophat = _tophat(cosmology)
+    assert (tophat.get_chi_lower(), tophat.get_chi_upper()) == (CHI_LOWER, CHI_UPPER)
+
+    student = _student_t(cosmology)
+    assert (
+        student.get_chi_mean(),
+        student.get_chi_scale(),
+        student.get_nu(),
+        student.get_n_scale(),
+    ) == (ST_MEAN, ST_SCALE, ST_NU, ST_NSCALE)
+
+    power = _power_exp(cosmology)
+    assert (power.get_chi_scale(), power.get_alpha(), power.get_beta()) == (
+        PE_SCALE,
+        PE_ALPHA,
+        PE_BETA,
+    )
+
+    smooth = _tophat_smooth(cosmology)
+    assert (
+        smooth.get_chi_lower(),
+        smooth.get_chi_upper(),
+        smooth.get_chi_sigma(),
+    ) == (TS_LOWER, TS_UPPER, TS_SIGMA)
+
+    lensing = _lensing(cosmology)
+    assert (
+        lensing.get_chi_source_lower(),
+        lensing.get_chi_source_upper(),
+    ) == (LENS_SRC_LOWER, LENS_SRC_UPPER)
+
+
+def test_multi_reports_its_bumps(cosmology: Cosmology) -> None:
+    """The bump vectors survive construction, and n_bumps is not n_comps.
+
+    The distinction matters: overlapping bumps share a component, so a spec
+    that read the component count back as the bump count would be wrong.
+    """
+    kernel = _multi(cosmology, MULTI_MEAN, MULTI_SIGMA)
+
+    assert kernel.get_n_bumps() == len(MULTI_MEAN)
+    assert kernel.get_n_sigma() == MULTI_NSIGMA
+    assert kernel.get_n_bumps() != kernel.get_n_comps()  # these two overlap
+
+    for peeked, expected in (
+        (kernel.peek_chi_mean(), MULTI_MEAN),
+        (kernel.peek_chi_sigma(), MULTI_SIGMA),
+        (kernel.peek_weight(), MULTI_WEIGHT),
+    ):
+        assert_allclose([peeked.get(i) for i in range(peeked.len())], expected)
+
+
+def test_kdep_reports_its_parameters() -> None:
+    """The scale dependence is part of the spec too."""
+    kdep = Nc.XcorKernelAnalyticKDepGrowth.new(0.3, 0.05, 1500.0)
+
+    assert (
+        kdep.get_amplitude(),
+        kdep.get_k_transition(),
+        kdep.get_chi_ref(),
+    ) == (0.3, 0.05, 1500.0)
