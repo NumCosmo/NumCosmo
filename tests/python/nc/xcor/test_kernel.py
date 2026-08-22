@@ -634,3 +634,28 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
 
     # Restore original
     kernel.set_expansion_factor(original_expansion_factor)
+
+
+def test_scaled_abstol_below_the_floor_warns(
+    cosmology: Cosmology, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """Asking for less than 1e-6 is accepted, and said to be useless.
+
+    The tolerance is a fraction of the peak of W(k) while the C_ell integrand
+    is k^2 W_a W_b, so it enters squared: 1e-8 here is 1e-16 there, below double
+    precision. The library warns rather than clamps, so the value must still be
+    the one that was asked for.
+    """
+    kernel = Nc.XcorKernelAnalyticTophat.new(
+        cosmology.dist, cosmology.ps_ml, 500.0, 2500.0
+    )
+
+    kernel.set_scaled_abstol(1.0e-8)
+
+    assert "below the useful floor" in capfd.readouterr().err
+    assert kernel.get_scaled_abstol() == 1.0e-8
+
+    kernel.set_scaled_abstol(1.0e-6)
+
+    assert "below the useful floor" not in capfd.readouterr().err
+    assert kernel.get_scaled_abstol() == 1.0e-6

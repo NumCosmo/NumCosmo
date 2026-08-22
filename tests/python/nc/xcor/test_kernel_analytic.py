@@ -76,13 +76,8 @@ def _integrator() -> Ncm.SBesselIntegrator:
 
 def _gauss(cosmology: Cosmology, l_limber: int = -1) -> Nc.XcorKernelAnalyticGauss:
     """Gaussian window, prepared and in the requested Limber tier."""
-    kernel = Nc.XcorKernelAnalyticGauss(
-        dist=cosmology.dist,
-        powspec=cosmology.ps_ml,
-        chi_mean=CHI_MEAN,
-        chi_sigma=CHI_SIGMA,
-        n_sigma=N_SIGMA,
-        integrator=_integrator(),
+    kernel = Nc.XcorKernelAnalyticGauss.new_full(
+        cosmology.dist, cosmology.ps_ml, CHI_MEAN, CHI_SIGMA, N_SIGMA, _integrator()
     )
     kernel.set_l_limber(l_limber)
     kernel.prepare(cosmology.cosmo)
@@ -92,12 +87,8 @@ def _gauss(cosmology: Cosmology, l_limber: int = -1) -> Nc.XcorKernelAnalyticGau
 
 def _tophat(cosmology: Cosmology, l_limber: int = -1) -> Nc.XcorKernelAnalyticTophat:
     """Top-hat window, prepared and in the requested Limber tier."""
-    kernel = Nc.XcorKernelAnalyticTophat(
-        dist=cosmology.dist,
-        powspec=cosmology.ps_ml,
-        chi_lower=CHI_LOWER,
-        chi_upper=CHI_UPPER,
-        integrator=_integrator(),
+    kernel = Nc.XcorKernelAnalyticTophat.new_full(
+        cosmology.dist, cosmology.ps_ml, CHI_LOWER, CHI_UPPER, _integrator()
     )
     kernel.set_l_limber(l_limber)
     kernel.prepare(cosmology.cosmo)
@@ -109,14 +100,14 @@ def _student_t(
     cosmology: Cosmology, l_limber: int = -1
 ) -> Nc.XcorKernelAnalyticStudentT:
     """Power-law-tailed window, prepared and in the requested Limber tier."""
-    kernel = Nc.XcorKernelAnalyticStudentT(
-        dist=cosmology.dist,
-        powspec=cosmology.ps_ml,
-        chi_mean=ST_MEAN,
-        chi_scale=ST_SCALE,
-        nu=ST_NU,
-        n_scale=ST_NSCALE,
-        integrator=_integrator(),
+    kernel = Nc.XcorKernelAnalyticStudentT.new_full(
+        cosmology.dist,
+        cosmology.ps_ml,
+        ST_MEAN,
+        ST_SCALE,
+        ST_NU,
+        ST_NSCALE,
+        _integrator(),
     )
     kernel.set_l_limber(l_limber)
     kernel.prepare(cosmology.cosmo)
@@ -131,14 +122,14 @@ def _multi(
     l_limber: int = -1,
 ) -> Nc.XcorKernelAnalyticMulti:
     """Multimodal window, prepared and in the requested Limber tier."""
-    kernel = Nc.XcorKernelAnalyticMulti(
-        dist=cosmology.dist,
-        powspec=cosmology.ps_ml,
-        chi_mean=Ncm.Vector.new_array(means),
-        chi_sigma=Ncm.Vector.new_array(sigmas),
-        weight=Ncm.Vector.new_array(MULTI_WEIGHT),
-        n_sigma=MULTI_NSIGMA,
-        integrator=_integrator(),
+    kernel = Nc.XcorKernelAnalyticMulti.new_full(
+        cosmology.dist,
+        cosmology.ps_ml,
+        Ncm.Vector.new_array(means),
+        Ncm.Vector.new_array(sigmas),
+        Ncm.Vector.new_array(MULTI_WEIGHT),
+        MULTI_NSIGMA,
+        _integrator(),
     )
     kernel.set_l_limber(l_limber)
     kernel.prepare(cosmology.cosmo)
@@ -150,15 +141,15 @@ def _power_exp(
     cosmology: Cosmology, l_limber: int = -1
 ) -> Nc.XcorKernelAnalyticPowerExp:
     """Power-law rise, stretched-exponential fall: the dn/dz family."""
-    kernel = Nc.XcorKernelAnalyticPowerExp(
-        dist=cosmology.dist,
-        powspec=cosmology.ps_ml,
-        chi_scale=PE_SCALE,
-        alpha=PE_ALPHA,
-        beta=PE_BETA,
-        chi_lower=PE_LOWER,
-        chi_upper=PE_UPPER,
-        integrator=_integrator(),
+    kernel = Nc.XcorKernelAnalyticPowerExp.new_full(
+        cosmology.dist,
+        cosmology.ps_ml,
+        PE_SCALE,
+        PE_ALPHA,
+        PE_BETA,
+        PE_LOWER,
+        PE_UPPER,
+        _integrator(),
     )
     kernel.set_l_limber(l_limber)
     kernel.prepare(cosmology.cosmo)
@@ -170,14 +161,14 @@ def _tophat_smooth(
     cosmology: Cosmology, chi_sigma: float = TS_SIGMA, l_limber: int = -1
 ) -> Nc.XcorKernelAnalyticTophatSmooth:
     """Top-hat convolved with a Gaussian: a real tomographic bin."""
-    kernel = Nc.XcorKernelAnalyticTophatSmooth(
-        dist=cosmology.dist,
-        powspec=cosmology.ps_ml,
-        chi_lower=TS_LOWER,
-        chi_upper=TS_UPPER,
-        chi_sigma=chi_sigma,
-        n_sigma=TS_NSIGMA,
-        integrator=_integrator(),
+    kernel = Nc.XcorKernelAnalyticTophatSmooth.new_full(
+        cosmology.dist,
+        cosmology.ps_ml,
+        TS_LOWER,
+        TS_UPPER,
+        chi_sigma,
+        TS_NSIGMA,
+        _integrator(),
     )
     kernel.set_l_limber(l_limber)
     kernel.prepare(cosmology.cosmo)
@@ -187,13 +178,13 @@ def _tophat_smooth(
 
 def _lensing(cosmology: Cosmology, l_limber: int = -1) -> Nc.XcorKernelAnalyticLensing:
     """Lensing efficiency of a top-hat source bin."""
-    kernel = Nc.XcorKernelAnalyticLensing(
-        dist=cosmology.dist,
-        powspec=cosmology.ps_ml,
-        chi_lower=LENS_LOWER,
-        chi_source_lower=LENS_SRC_LOWER,
-        chi_source_upper=LENS_SRC_UPPER,
-        integrator=_integrator(),
+    kernel = Nc.XcorKernelAnalyticLensing.new_full(
+        cosmology.dist,
+        cosmology.ps_ml,
+        LENS_LOWER,
+        LENS_SRC_LOWER,
+        LENS_SRC_UPPER,
+        _integrator(),
     )
     kernel.set_l_limber(l_limber)
     kernel.prepare(cosmology.cosmo)
@@ -265,15 +256,33 @@ def test_gauss_window_matches_closed_form(cosmology: Cosmology) -> None:
     assert_allclose(got, expected, rtol=1.0e-14)
 
 
-def test_gauss_window_vanishes_outside_support(cosmology: Cosmology) -> None:
-    """The truncation is part of the definition, not a tolerance."""
-    kernel = _gauss(cosmology)
+@pytest.mark.parametrize(
+    "shape",
+    ["gauss", "tophat", "student_t", "power_exp", "tophat_smooth", "lensing", "multi"],
+)
+def test_window_vanishes_outside_support(cosmology: Cosmology, shape: str) -> None:
+    """The truncation is part of the definition, not a tolerance.
+
+    Every shape guards its support with its own expression of it -- a pair of
+    limits, a mean plus a width, a smoothed interval -- so the check runs per
+    shape rather than on a representative one. Inside, the window is alive
+    right up to the lower edge. The upper edge has one exception: the lensing
+    efficiency of a source bin is geometrically zero at the far edge of that
+    bin, since nothing behind it is being lensed.
+    """
+    kernel = _any_shape(cosmology, shape)
     chi_min, chi_max = kernel.get_support()
 
     assert kernel.eval_W(chi_min - 1.0e-3) == 0.0
     assert kernel.eval_W(chi_max + 1.0e-3) == 0.0
+
     assert kernel.eval_W(chi_min) > 0.0
-    assert kernel.eval_W(chi_max) > 0.0
+    assert kernel.eval_W(0.5 * (chi_min + chi_max)) > 0.0
+
+    if shape == "lensing":
+        assert kernel.eval_W(chi_max) == 0.0
+    else:
+        assert kernel.eval_W(chi_max) > 0.0
 
 
 @pytest.mark.parametrize("shape", ["gauss", "tophat"])
@@ -334,6 +343,75 @@ def test_serialization_roundtrip(cosmology: Cosmology, shape: str) -> None:
     assert_allclose(
         [dup.eval_W(c) for c in np.linspace(*kernel.get_support(), 32)],
         [kernel.eval_W(c) for c in np.linspace(*kernel.get_support(), 32)],
+        rtol=1.0e-15,
+    )
+
+
+def _ctor_args(cosmology: Cosmology, shape: str) -> tuple[typing.Any, tuple]:
+    """The class of a shape and the leading arguments both its constructors take."""
+    head: tuple = (cosmology.dist, cosmology.ps_ml)
+    cls, tail = {
+        "gauss": (Nc.XcorKernelAnalyticGauss, (CHI_MEAN, CHI_SIGMA, N_SIGMA)),
+        "tophat": (Nc.XcorKernelAnalyticTophat, (CHI_LOWER, CHI_UPPER)),
+        "student_t": (
+            Nc.XcorKernelAnalyticStudentT,
+            (ST_MEAN, ST_SCALE, ST_NU, ST_NSCALE),
+        ),
+        "power_exp": (
+            Nc.XcorKernelAnalyticPowerExp,
+            (PE_SCALE, PE_ALPHA, PE_BETA, PE_LOWER, PE_UPPER),
+        ),
+        "tophat_smooth": (
+            Nc.XcorKernelAnalyticTophatSmooth,
+            (TS_LOWER, TS_UPPER, TS_SIGMA, TS_NSIGMA),
+        ),
+        "lensing": (
+            Nc.XcorKernelAnalyticLensing,
+            (LENS_LOWER, LENS_SRC_LOWER, LENS_SRC_UPPER),
+        ),
+        "multi": (
+            Nc.XcorKernelAnalyticMulti,
+            (
+                Ncm.Vector.new_array(MULTI_MEAN),
+                Ncm.Vector.new_array(MULTI_SIGMA),
+                Ncm.Vector.new_array(MULTI_WEIGHT),
+                MULTI_NSIGMA,
+            ),
+        ),
+    }[shape]
+
+    return cls, head + tail
+
+
+@pytest.mark.parametrize(
+    "shape",
+    ["gauss", "tophat", "student_t", "power_exp", "tophat_smooth", "lensing", "multi"],
+)
+def test_the_two_constructors_differ_only_by_the_integrator(
+    cosmology: Cosmology, shape: str
+) -> None:
+    """`new` is the Limber-only constructor, `new_full` the one that carries an sbi.
+
+    The builders above all use `new_full`, since a kernel only accepts the
+    non-Limber tiers once it holds an integrator. `new` must otherwise describe
+    the same window, so the two are compared shape by shape.
+    """
+    cls, args = _ctor_args(cosmology, shape)
+
+    plain = cls.new(*args)
+    full = cls.new_full(*args, _integrator())
+
+    for kernel in (plain, full):
+        kernel.prepare(cosmology.cosmo)
+
+    assert plain.peek_integrator() is None
+    assert full.peek_integrator() is not None
+
+    assert plain.get_support() == full.get_support()
+    chis = np.linspace(*plain.get_support(), 32)
+    assert_allclose(
+        [plain.eval_W(chi) for chi in chis],
+        [full.eval_W(chi) for chi in chis],
         rtol=1.0e-15,
     )
 
@@ -982,13 +1060,23 @@ def test_multi_reports_its_bumps(cosmology: Cosmology) -> None:
 
 
 def test_kdep_reports_its_parameters() -> None:
-    """The scale dependence is part of the spec too."""
+    """The scale dependence is part of the spec too.
+
+    Through the accessors and through the GObject properties: serialization
+    reads the latter, so the two have to agree.
+    """
     kdep = Nc.XcorKernelAnalyticKDepGrowth.new(0.3, 0.05, 1500.0)
 
     assert (
         kdep.get_amplitude(),
         kdep.get_k_transition(),
         kdep.get_chi_ref(),
+    ) == (0.3, 0.05, 1500.0)
+
+    assert (
+        kdep.props.amplitude,
+        kdep.props.k_transition,
+        kdep.props.chi_ref,
     ) == (0.3, 0.05, 1500.0)
 
 
@@ -1003,3 +1091,52 @@ def test_a_kernel_reports_the_scale_dependence_it_carries(cosmology: Cosmology) 
 
     assert _gauss_with_kdep(cosmology, None).peek_kdep() is None
     assert _gauss_with_kdep(cosmology, kdep).peek_kdep() is not None
+
+
+@pytest.mark.parametrize("shape", ["gauss", "tophat", "multi_disjoint"])
+def test_limber_z_is_the_window_in_hubble_radius_units(
+    cosmology: Cosmology, shape: str
+) -> None:
+    """The Limber-in-z path evaluates the same window, per unit Hubble radius.
+
+    That path integrates over z rather than chi, so it carries the R_H factor
+    of the change of variable and no ell-dependent prefactor. It also has one
+    shared domain for the whole kernel, unlike the non-Limber path: the gap of
+    a disjoint multimodal window is zero there only if each component refuses
+    to contribute outside its own interval, so that shape is included.
+    """
+    if shape == "multi_disjoint":
+        kernel = _multi(cosmology, MULTI_DISJOINT_MEAN, MULTI_DISJOINT_SIGMA)
+    else:
+        kernel = _any_shape(cosmology, shape)
+
+    cosmo = cosmology.cosmo
+    rh = cosmo.RH_Mpc()
+    zmin, zmax, _ = kernel.get_z_range()
+
+    for z in np.linspace(zmin, zmax, 16):
+        chi = cosmology.dist.comoving(cosmo, z) * rh
+        got = kernel.eval_limber_z_full(cosmo, z, cosmology.dist, 8)
+
+        assert_allclose(got, rh * kernel.eval_W(chi), rtol=1.0e-12)
+
+    assert kernel.eval_limber_z_prefactor(cosmo, 8) == 1.0
+
+
+def test_an_analytic_kernel_is_a_window_not_a_survey(cosmology: Cosmology) -> None:
+    """It has one observable, no observable parameters, and no noise.
+
+    A kernel defined by a formula has no survey behind it, so the noise it adds
+    to a spectrum is nothing at all.
+    """
+    kernel = _gauss(cosmology)
+
+    assert kernel.obs_len() == 1
+    assert kernel.obs_params_len() == 0
+
+    cl = [1.0, 2.0, 3.0, 4.0]
+    cl_noisy = Ncm.Vector.new_array(cl)
+
+    kernel.add_noise(Ncm.Vector.new_array(cl), cl_noisy, 0)
+
+    assert_allclose(cl_noisy.dup_array(), cl)
