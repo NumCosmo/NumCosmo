@@ -38,7 +38,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from scipy.integrate import quad
-from scipy.special import spherical_jn
+from scipy.special import erf, spherical_jn  # pylint: disable=no-name-in-module
 from scipy.stats import t as student_t
 
 from numcosmo_py import Nc, Ncm
@@ -56,6 +56,9 @@ ST_MEAN, ST_SCALE, ST_NU, ST_NSCALE = 1500.0, 200.0, 2.0, 6.0
 MULTI_MEAN, MULTI_SIGMA, MULTI_WEIGHT = [1000.0, 1600.0], [300.0, 300.0], [1.0, 0.6]
 MULTI_NSIGMA = 4.0
 MULTI_DISJOINT_MEAN, MULTI_DISJOINT_SIGMA = [600.0, 2600.0], [100.0, 150.0]
+PE_SCALE, PE_ALPHA, PE_BETA, PE_LOWER, PE_UPPER = 1200.0, 2.0, 1.5, 50.0, 4000.0
+TS_LOWER, TS_UPPER, TS_SIGMA, TS_NSIGMA = 1000.0, 2000.0, 150.0, 6.0
+LENS_LOWER, LENS_SRC_LOWER, LENS_SRC_UPPER = 50.0, 2000.0, 3000.0
 
 
 def _integrator() -> Ncm.SBesselIntegrator:
@@ -141,6 +144,74 @@ def _multi(
     kernel.prepare(cosmology.cosmo)
 
     return kernel
+
+
+def _power_exp(
+    cosmology: Cosmology, l_limber: int = -1
+) -> Nc.XcorKernelAnalyticPowerExp:
+    """Power-law rise, stretched-exponential fall: the dn/dz family."""
+    kernel = Nc.XcorKernelAnalyticPowerExp(
+        dist=cosmology.dist,
+        powspec=cosmology.ps_ml,
+        chi_scale=PE_SCALE,
+        alpha=PE_ALPHA,
+        beta=PE_BETA,
+        chi_lower=PE_LOWER,
+        chi_upper=PE_UPPER,
+        integrator=_integrator(),
+    )
+    kernel.set_l_limber(l_limber)
+    kernel.prepare(cosmology.cosmo)
+
+    return kernel
+
+
+def _tophat_smooth(
+    cosmology: Cosmology, chi_sigma: float = TS_SIGMA, l_limber: int = -1
+) -> Nc.XcorKernelAnalyticTophatSmooth:
+    """Top-hat convolved with a Gaussian: a real tomographic bin."""
+    kernel = Nc.XcorKernelAnalyticTophatSmooth(
+        dist=cosmology.dist,
+        powspec=cosmology.ps_ml,
+        chi_lower=TS_LOWER,
+        chi_upper=TS_UPPER,
+        chi_sigma=chi_sigma,
+        n_sigma=TS_NSIGMA,
+        integrator=_integrator(),
+    )
+    kernel.set_l_limber(l_limber)
+    kernel.prepare(cosmology.cosmo)
+
+    return kernel
+
+
+def _lensing(cosmology: Cosmology, l_limber: int = -1) -> Nc.XcorKernelAnalyticLensing:
+    """Lensing efficiency of a top-hat source bin."""
+    kernel = Nc.XcorKernelAnalyticLensing(
+        dist=cosmology.dist,
+        powspec=cosmology.ps_ml,
+        chi_lower=LENS_LOWER,
+        chi_source_lower=LENS_SRC_LOWER,
+        chi_source_upper=LENS_SRC_UPPER,
+        integrator=_integrator(),
+    )
+    kernel.set_l_limber(l_limber)
+    kernel.prepare(cosmology.cosmo)
+
+    return kernel
+
+
+def _lensing_shape(chi: float) -> float:
+    """The unnormalized efficiency, written here from the geometry."""
+    a, b = LENS_SRC_LOWER, LENS_SRC_UPPER
+
+    if chi >= b:
+        return 0.0
+
+    if chi <= a:
+        return chi * ((b - a) - chi * math.log(b / a)) / (b - a)
+
+    return chi * ((b - chi) - chi * math.log(b / chi)) / (b - a)
 
 
 def test_gauss_support_is_the_truncation() -> None:
@@ -293,7 +364,13 @@ def _gauss_with_kdep(
 
 def _cl_kernel(cosmology: Cosmology, shape: str) -> Nc.XcorKernelAnalytic:
     """The kernel a C_ell case names."""
-    builder = {"gauss": _gauss, "tophat": _tophat, "student_t": _student_t}[shape]
+    builder = {
+        "gauss": _gauss,
+        "tophat": _tophat,
+        "student_t": _student_t,
+        "power_exp": _power_exp,
+        "lensing": _lensing,
+    }[shape]
 
     return builder(cosmology)
 
@@ -308,6 +385,39 @@ def _window(shape: str) -> typing.Callable[[np.ndarray], np.ndarray]:
         return lambda chi: np.where(
             (chi >= CHI_LOWER) & (chi <= CHI_UPPER), 1.0 / (CHI_UPPER - CHI_LOWER), 0.0
         )
+
+    if shape == "power_exp":
+        norm = quad(
+            lambda c: (c / PE_SCALE) ** PE_ALPHA * np.exp(-((c / PE_SCALE) ** PE_BETA)),
+            PE_LOWER,
+            PE_UPPER,
+            limit=600,
+        )[0]
+
+        def power_exp_window(chi: np.ndarray) -> np.ndarray:
+            x = chi / PE_SCALE
+
+            return np.where(
+                (chi >= PE_LOWER) & (chi <= PE_UPPER),
+                x**PE_ALPHA * np.exp(-(x**PE_BETA)) / norm,
+                0.0,
+            )
+
+        return power_exp_window
+
+    if shape == "lensing":
+        norm = (
+            quad(_lensing_shape, LENS_LOWER, LENS_SRC_LOWER, limit=400)[0]
+            + quad(_lensing_shape, LENS_SRC_LOWER, LENS_SRC_UPPER, limit=400)[0]
+        )
+
+        def lensing_window(chi: np.ndarray) -> np.ndarray:
+            flat = np.ravel(chi)
+            out = np.array([_lensing_shape(float(c)) for c in flat]) / norm
+
+            return out.reshape(np.shape(chi))
+
+        return lensing_window
 
     if shape == "student_t":
         lo = max(0.0, ST_MEAN - ST_NSCALE * ST_SCALE)
@@ -379,18 +489,30 @@ def _cl_reference(
     return 2.0 / np.pi * np.trapezoid(k**3 * pk * radial_sq, lnk)
 
 
-# (shape, ell, rtol). The Gaussian reference is converged -- it does not move
-# between (n_k, per_lobe) = (512, 2) and (1024, 3) -- so the budget there is the
-# library's own tolerance. The top-hat's discontinuous window makes I_ell(k)
-# decay only like 1/k, so the reference's outer trapezoid is the loose end, and
-# its non-Limber solve costs ~20x the Gaussian's at the same ell; it is checked
-# at ell = 2 rather than swept.
+# (shape, ell, rtol), at the library's default tolerances.
+#
+# The tolerances differ per shape because the achieved accuracy does, and by two
+# orders of magnitude. scaled-abstol floors W(k) against its own *peak*, so how
+# much of the contributing k-range it discards depends on how broad the window
+# is. Measured at ell = 8 against the quadrature below:
+#
+#     shape      support (Mpc)   floor 1e-4   1e-5      1e-6
+#     gauss      300-2700        -4.3e-06     -2.1e-07  +5.2e-08
+#     lensing    50-3000         -5.6e-05     -1.7e-06  -1.4e-06
+#     power_exp  50-4000         -6.1e-04     -2.4e-05  +1.4e-06
+#
+# Nothing is wrong with the solver: a broad window carries weight over more of
+# the k-range, so the same peak-relative floor throws away more of it. The
+# numbers below are what the default delivers, not a target -- tightening the
+# floor moves them, at the cost documented in NcXcorKernel:scaled-abstol.
 CL_CASES = [
     ("gauss", 2, 1.0e-5),
     ("gauss", 8, 1.0e-5),
     ("gauss", 32, 1.0e-5),
     ("student_t", 2, 1.0e-4),
     ("student_t", 8, 1.0e-4),
+    ("lensing", 8, 1.0e-4),
+    ("power_exp", 8, 1.0e-3),
     ("tophat", 2, 1.0e-3),
 ]
 
@@ -654,3 +776,118 @@ def test_kdep_makes_the_integrand_non_separable(cosmology: Cosmology) -> None:
 
     assert np.all(ratio != 1.0)
     assert ratio.max() / ratio.min() - 1.0 > 1.0e-3  # not an overall rescaling
+
+
+# --- the remaining physically motivated shapes ------------------------------
+
+
+def test_power_exp_matches_its_closed_form(cosmology: Cosmology) -> None:
+    """The dn/dz family: power-law rise, stretched-exponential fall.
+
+    The normalization is an incomplete gamma rather than a quadrature, so this
+    also checks that substitution against numerical integration of the same
+    unnormalized shape.
+    """
+    kernel = _power_exp(cosmology)
+    chi = np.linspace(*kernel.get_support(), 401)
+
+    assert_allclose(
+        [kernel.eval_W(c) for c in chi], _window("power_exp")(chi), rtol=1.0e-11
+    )
+    assert_allclose(
+        quad(kernel.eval_W, *kernel.get_support(), limit=600)[0], 1.0, rtol=1.0e-11
+    )
+
+
+def test_power_exp_is_skewed(cosmology: Cosmology) -> None:
+    """It is not a Gaussian in disguise: the peak sits left of the mean.
+
+    Skewness is the point of the shape -- a real redshift distribution rises as
+    a power law and falls as a stretched exponential, and a symmetric window
+    does not exercise the same thing.
+    """
+    kernel = _power_exp(cosmology)
+    chi = np.linspace(*kernel.get_support(), 4001)
+    w = np.array([kernel.eval_W(c) for c in chi])
+
+    peak = chi[np.argmax(w)]
+    mean = np.trapezoid(chi * w, chi)
+
+    assert peak < mean
+
+
+def test_tophat_smooth_matches_its_closed_form(cosmology: Cosmology) -> None:
+    """A difference of error functions, normalized in closed form."""
+    kernel = _tophat_smooth(cosmology)
+    chi_min, chi_max = kernel.get_support()
+    chi = np.linspace(chi_min, chi_max, 401)
+    s2 = np.sqrt(2.0) * TS_SIGMA
+
+    unnormalized = erf((TS_UPPER - chi) / s2) - erf((TS_LOWER - chi) / s2)
+    norm = quad(
+        lambda c: erf((TS_UPPER - c) / s2) - erf((TS_LOWER - c) / s2),
+        chi_min,
+        chi_max,
+        limit=600,
+    )[0]
+
+    assert_allclose([kernel.eval_W(c) for c in chi], unnormalized / norm, rtol=1.0e-12)
+    assert_allclose(
+        quad(kernel.eval_W, chi_min, chi_max, limit=600)[0], 1.0, rtol=1.0e-12
+    )
+
+
+def test_tophat_smooth_becomes_the_tophat(cosmology: Cosmology) -> None:
+    """As sigma shrinks it reproduces the sharp bin, height and all.
+
+    The two shapes bracket the interesting regime, so the smoothed one has to
+    reduce to the sharp one rather than merely resemble it.
+    """
+    sharp = _tophat_smooth(cosmology, chi_sigma=1.0e-3)
+
+    assert_allclose(sharp.eval_W(1500.0), 1.0 / (TS_UPPER - TS_LOWER), rtol=1.0e-9)
+
+
+def test_lensing_matches_its_closed_form(cosmology: Cosmology) -> None:
+    """Efficiency of a top-hat source bin, against the geometry written here."""
+    kernel = _lensing(cosmology)
+    chi_min, chi_max = kernel.get_support()
+    chi = np.linspace(chi_min, chi_max, 4001)[:-1]  # both vanish at the far edge
+
+    assert_allclose(
+        [kernel.eval_W(c) for c in chi], _window("lensing")(chi), rtol=1.0e-11
+    )
+
+    # Split at the kink: the piecewise form changes where the lens enters the
+    # source bin, and a single quadrature would be judging its own resolution.
+    total = (
+        quad(kernel.eval_W, chi_min, LENS_SRC_LOWER, limit=400)[0]
+        + quad(kernel.eval_W, LENS_SRC_LOWER, chi_max, limit=400)[0]
+    )
+
+    assert_allclose(total, 1.0, rtol=1.0e-12)
+
+
+def test_lensing_is_broad_and_peaks_in_front_of_its_sources(
+    cosmology: Cosmology,
+) -> None:
+    """An integral of the source window, so it is smooth and displaced.
+
+    This is what makes the shape worth having: it peaks around half the source
+    distance, is continuous where the source distribution has hard edges, and
+    vanishes at the far edge -- none of which a bin-like window does.
+    """
+    kernel = _lensing(cosmology)
+    chi = np.linspace(*kernel.get_support(), 4001)
+    w = np.array([kernel.eval_W(c) for c in chi])
+
+    assert kernel.eval_W(LENS_SRC_UPPER) == 0.0
+    assert chi[np.argmax(w)] < LENS_SRC_LOWER  # peaks in front of the sources
+
+    # Continuous across the kink where the lens enters the source bin.
+    eps = 1.0e-4
+    assert_allclose(
+        kernel.eval_W(LENS_SRC_LOWER - eps),
+        kernel.eval_W(LENS_SRC_LOWER + eps),
+        rtol=1.0e-6,
+    )

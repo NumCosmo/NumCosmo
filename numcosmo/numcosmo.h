@@ -242,6 +242,9 @@
 #include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_tophat.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_multi.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_student_t.h>
+#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_power_exp.h>
+#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_tophat_smooth.h>
+#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_lensing.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_gal.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_cluster.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_cluster_tophat.h>
