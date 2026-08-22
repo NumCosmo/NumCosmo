@@ -97,6 +97,7 @@ void test_nc_cluster_mass_selection_basic (void);
 void test_nc_cluster_photoz_gauss_basic (void);
 void test_nc_xcor_basic (void);
 void test_nc_xcor_solver_basic (void);
+void test_nc_xcor_kernel_analytic_kdep_growth_basic (void);
 
 void test_nc_galaxy_position_factor_flat_basic (void);
 void test_nc_galaxy_redshift_factor_composed_basic (void);
@@ -187,6 +188,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/nc/xcor/basic", test_nc_xcor_basic);
   g_test_add_func ("/nc/xcor/solver/basic", test_nc_xcor_solver_basic);
+  g_test_add_func ("/nc/xcor/kernel_analytic_kdep_growth/basic", test_nc_xcor_kernel_analytic_kdep_growth_basic);
 
   g_test_add_func ("/nc/galaxy/position_factor_flat/basic", test_nc_galaxy_position_factor_flat_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_composed/basic", test_nc_galaxy_redshift_factor_composed_basic);
@@ -1197,6 +1199,25 @@ test_nc_xcor_solver_basic (void)
   g_assert_null (nc_xcor_solver_peek_block_integrator (solver, 0));
 
   NCM_TEST_FREE (nc_xcor_solver_free, solver);
+}
+
+void
+test_nc_xcor_kernel_analytic_kdep_growth_basic (void)
+{
+  NcXcorKernelAnalyticKDepGrowth *kdepg = nc_xcor_kernel_analytic_kdep_growth_new (0.3, 0.05, 1500.0);
+  NcXcorKernelAnalyticKDep *kdep        = NC_XCOR_KERNEL_ANALYTIC_KDEP (kdepg);
+  NcXcorKernelAnalyticKDep *kdep2;
+
+  g_assert_true (kdep != NULL);
+  g_assert_true (NC_IS_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH (kdep));
+
+  kdep2 = nc_xcor_kernel_analytic_kdep_ref (kdep);
+  nc_xcor_kernel_analytic_kdep_clear (&kdep2);
+  g_assert_true (kdep2 == NULL);
+
+  g_assert_true (NC_IS_XCOR_KERNEL_ANALYTIC_KDEP (kdep));
+
+  NCM_TEST_FREE (nc_xcor_kernel_analytic_kdep_free, kdep);
 }
 
 void

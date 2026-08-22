@@ -580,12 +580,15 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
     original_scaled_abstol = kernel.get_scaled_abstol()
     assert original_scaled_abstol == kernel.props.scaled_abstol
 
-    kernel.set_scaled_abstol(1.0e-8)
-    assert kernel.get_scaled_abstol() == 1.0e-8
-    assert kernel.props.scaled_abstol == 1.0e-8
+    # Values only exercise the accessor, but stay at or above 1e-6: the floor
+    # enters the C_ell integrand squared, so 1e-6 is already 1e-12 there and
+    # nothing in the library should model going below it.
+    kernel.set_scaled_abstol(1.0e-6)
+    assert kernel.get_scaled_abstol() == 1.0e-6
+    assert kernel.props.scaled_abstol == 1.0e-6
 
-    kernel.props.scaled_abstol = 5.0e-7
-    assert kernel.get_scaled_abstol() == 5.0e-7
+    kernel.props.scaled_abstol = 5.0e-6
+    assert kernel.get_scaled_abstol() == 5.0e-6
 
     # Restore original
     kernel.set_scaled_abstol(original_scaled_abstol)
@@ -631,3 +634,28 @@ def test_kernel_properties(kernel: Nc.XcorKernel) -> None:
 
     # Restore original
     kernel.set_expansion_factor(original_expansion_factor)
+
+
+def test_scaled_abstol_below_the_floor_warns(
+    cosmology: Cosmology, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """Asking for less than 1e-6 is accepted, and said to be useless.
+
+    The tolerance is a fraction of the peak of W(k) while the C_ell integrand
+    is k^2 W_a W_b, so it enters squared: 1e-8 here is 1e-16 there, below double
+    precision. The library warns rather than clamps, so the value must still be
+    the one that was asked for.
+    """
+    kernel = Nc.XcorKernelAnalyticTophat.new(
+        cosmology.dist, cosmology.ps_ml, 500.0, 2500.0
+    )
+
+    kernel.set_scaled_abstol(1.0e-8)
+
+    assert "below the useful floor" in capfd.readouterr().err
+    assert kernel.get_scaled_abstol() == 1.0e-8
+
+    kernel.set_scaled_abstol(1.0e-6)
+
+    assert "below the useful floor" not in capfd.readouterr().err
+    assert kernel.get_scaled_abstol() == 1.0e-6

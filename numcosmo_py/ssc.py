@@ -106,6 +106,15 @@ Hence `1e-5`: accurate to `0.009%` on the reported uncertainties, and twice as
 cheap as `1e-6` in the varying case. The accuracy that `1e-6` and below buy is
 real but unusable, and in the varying case it is paid for on every step.
 
+There is a floor under all of this, and `1e-6` is it. `scaled_abstol` is a
+fraction of the peak of `W(k)`, but the quantity integrated is `k^2 W_i W_j`,
+so it enters *squared*: `1e-6` here is `1e-12` on the integrand, already past
+what the outer integral carries, and `1e-8` would be `1e-16`, below double
+precision. Below `1e-6` there is nothing left to buy at any price --
+`nc_xcor_kernel_set_scaled_abstol` warns there, see
+`NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL`. The `1e-7` and `1e-8` columns in the
+tables above are measurements of that, not options.
+
 Keep `scaled_abstol` away from `reltol`
 --------------------------------------
 

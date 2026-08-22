@@ -62,6 +62,17 @@ G_BEGIN_DECLS
  */
 #define NC_XCOR_KERNEL_MAX_ELL_BLOCK 64
 
+/**
+ * NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL:
+ *
+ * Smallest #NcXcorKernel:scaled-abstol worth asking for. The tolerance is a
+ * fraction of the peak of $W_i(k)$, but the quantity integrated to form
+ * $C_\ell$ is $k^2 W_i W_j$, so it enters *squared*: this floor is $10^{-12}$
+ * on the integrand, already past what the outer $k$ integral carries. Below it
+ * nc_xcor_kernel_set_scaled_abstol() warns.
+ */
+#define NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL (1.0e-6)
+
 G_DECLARE_DERIVABLE_TYPE (NcXcorKernel, nc_xcor_kernel, NC, XCOR_KERNEL, NcmModel);
 
 typedef struct _NcXcorKinetic NcXcorKinetic;
