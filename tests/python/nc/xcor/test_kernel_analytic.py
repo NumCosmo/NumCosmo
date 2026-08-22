@@ -313,10 +313,18 @@ def test_z_range_is_the_support_in_redshift(cosmology: Cosmology) -> None:
     assert_allclose(got, [chi_min, chi_max, 0.5 * (chi_min + chi_max)], rtol=1.0e-9)
 
 
-@pytest.mark.parametrize("shape", ["gauss", "tophat"])
+@pytest.mark.parametrize(
+    "shape",
+    ["gauss", "tophat", "student_t", "power_exp", "tophat_smooth", "lensing", "multi"],
+)
 def test_serialization_roundtrip(cosmology: Cosmology, shape: str) -> None:
-    """The kernel is a registered, serializable object: a spec survives a file."""
-    kernel = _gauss(cosmology) if shape == "gauss" else _tophat(cosmology)
+    """The kernel is a registered, serializable object: a spec survives a file.
+
+    Every shape, not a representative pair: a benchmark specification is stored
+    by serializing the kernel, so a shape whose properties did not round-trip
+    would silently produce a spec that does not describe the run.
+    """
+    kernel = _any_shape(cosmology, shape)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
 
     dup = ser.dup_obj(kernel)
@@ -360,6 +368,17 @@ def _gauss_with_kdep(
     kernel.prepare(cosmology.cosmo)
 
     return kernel
+
+
+def _any_shape(cosmology: Cosmology, shape: str) -> Nc.XcorKernelAnalytic:
+    """Any shape by name, including the ones the C_ell cases do not cover."""
+    if shape == "multi":
+        return _multi(cosmology, MULTI_MEAN, MULTI_SIGMA)
+
+    if shape == "tophat_smooth":
+        return _tophat_smooth(cosmology)
+
+    return _cl_kernel(cosmology, shape)
 
 
 def _cl_kernel(cosmology: Cosmology, shape: str) -> Nc.XcorKernelAnalytic:
@@ -971,3 +990,16 @@ def test_kdep_reports_its_parameters() -> None:
         kdep.get_k_transition(),
         kdep.get_chi_ref(),
     ) == (0.3, 0.05, 1500.0)
+
+
+def test_a_kernel_reports_the_scale_dependence_it_carries(cosmology: Cosmology) -> None:
+    """peek_kdep returns the attached factor, or None when there is none.
+
+    The distinction is part of the spec: no factor at all and a factor that
+    evaluates to one are different states, and a reader of a stored kernel has
+    to be able to tell them apart.
+    """
+    kdep = Nc.XcorKernelAnalyticKDepGrowth.new(0.3, 0.05, 1500.0)
+
+    assert _gauss_with_kdep(cosmology, None).peek_kdep() is None
+    assert _gauss_with_kdep(cosmology, kdep).peek_kdep() is not None
