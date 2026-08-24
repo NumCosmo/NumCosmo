@@ -26,139 +26,39 @@
 /**
  * NcmSBesselOdeSolver:
  *
- * Spectral ODE solver for the spherical Bessel equation in polynomial form using
- * ultraspherical methods.
+ * Ultraspherical coefficient solver for the spherical-Bessel operator.
  *
- * This class provides a pure spectral engine for solving two-point boundary value
- * problems arising from modified spherical Bessel ordinary differential equations. It
- * acts as a factory and configuration manager that creates #NcmSBesselOdeOperator
- * instances, each encapsulating a specific problem configuration defined by an
- * interval $[a,b]$ and an angular momentum range $[\ell_{\min}, \ell_{\max}]$.
- *
- * The equation is assumed to be written in the polynomial form
+ * For each $\ell$, the solver computes the Dirichlet boundary-value problem
  * $$
- * x^2 y'' + 2x y' + (x^2 - \ell(\ell+1)) y = f(x),
+ * x^2 u''(x) + [x^2 - \ell(\ell+1)]u(x) = x f(x),
  * $$
- * which avoids rational coefficients and preserves banded structure under spectral
- * discretization.
- *
- * # Scope and Abstraction Boundary
- *
- * This solver is a low-level spectral discretization engine. It:
- * - Constructs banded linear systems from the ODE using ultraspherical spectral collocation
- * - Performs adaptive QR factorization to determine spectral truncation order
- * - Solves the resulting banded triangular systems via back-substitution
- * - Supports batched solution of multiple angular momentum values for efficiency
- *
- * This solver does NOT:
- * - Perform regime switching (e.g., asymptotic expansions, direct quadrature)
- * - Subdivide the $\ell$-range or interval $[a,b]$ based on convergence heuristics
- * - Make policy decisions about when to apply spectral vs. other methods
- * - Handle interval selection, domain decomposition, or integration strategies
- *
- * Such higher-level integration logic is the responsibility of the caller.
- *
- * # Problem Formulation
- *
- * The solver addresses the spherical Bessel ODE written in polynomial form for the
- * auxiliary function $u(x) = x \cdot j_\ell(x)$ (or equivalently $u(x) = x \cdot
- * y_\ell(x)$), mapped to the canonical Chebyshev domain $[-1,1]$. Given a physical
- * interval $[a,b]$, the affine coordinate transformation is
+ * on $x \in [a,b]$. With $x=m+ht$, $m=(a+b)/2$ and $h=(b-a)/2$, this becomes
  * $$
- * x = m + h\xi, \quad m = \frac{a+b}{2}, \quad h = \frac{b-a}{2}, \quad \xi \in [-1,1].
+ * \frac{(m+ht)^2}{h^2}u_{tt}
+ * + [(m+ht)^2-\ell(\ell+1)]u = (m+ht)f(m+ht),
  * $$
- *
- * The transformed ODE is
- * $$
- * \frac{(m + h\xi)^2}{h^2} \frac{d^2 u}{d\xi^2} + \left[(m+h\xi)^2 - \ell(\ell+1)\right] u =
- * (m + h\xi)f(\xi).
- * $$
- *
- * The problem is posed with Dirichlet boundary conditions at the endpoints
- * $\xi = \pm 1$. The endpoint values are not fixed a priori: they are
- * specified by the caller through the first two entries of the right-hand
- * side (RHS) vector passed to ncm_sbessel_ode_operator_solve().
- *
- * In particular:
- * - RHS[0] sets $u(-1)$,
- * - RHS[1] sets $u(+1)$.
- *
- * From RHS[2] onward, the entries correspond to the Gegenbauer-basis coefficients of
- * the weighted forcing term $(m + h\xi) f(\xi)$.
- *
- * Homogeneous Dirichlet conditions are obtained by setting RHS[0] = RHS[1] = 0.
- *
- * By solving for $u = x \cdot j_\ell(x)$ rather than $j_\ell(x)$ directly, the first-order
- * derivative term is eliminated, yielding a more symmetric and numerically stable formulation.
- * The physical solution $j_\ell(x)$ is recovered by dividing: $j_\ell(x) = u(x)/x$.
+ * for $t \in [-1,1]$.
  *
  * # Spectral Discretization Method
  *
- * The numerical approach employs an adaptive ultraspherical spectral collocation scheme:
+ * The unknown is represented by Chebyshev coefficients, while the equation is
+ * represented in the $C^{(2)}$ ultraspherical coefficient basis. Polynomial
+ * multiplication keeps the matrix banded. The first two RHS entries are $u(a)$ and
+ * $u(b)$; subsequent entries are the $C^{(2)}$ coefficients of $x f(x)$. Zero endpoint
+ * entries therefore impose homogeneous Dirichlet data.
  *
- * - The solution $u(\xi)$ is expanded in Chebyshev polynomials of the first kind:
- *   $u(\xi) = \sum_{n=0}^N c_n T_n(\xi)$
- * - The second derivative operator is represented in the ultraspherical (Gegenbauer)
- *   basis $C_k^{(2)}$ with parameter $\lambda=2$
- * - Multiplication operators corresponding to $(m+h\xi)^2$ and $\ell(\ell+1)$ are
- *   constructed via exact polynomial recurrence relations
- * - Boundary conditions are enforced by replacing the first two rows of the discrete
- *   system with endpoint evaluation constraints, fixing $u(-1) =$ RHS[0] and $u(+1) =$
- *   RHS[1]
- * - Adaptive QR decomposition determines the truncation order $N$ required to satisfy
- *   the specified tolerance
+ * Rows are triangularized incrementally with Givens rotations. Truncation stops after
+ * a resolution floor and a run of transformed solution coefficients smaller than the
+ * configured tolerance relative to the largest coefficient seen. This coefficient
+ * decay criterion is not a rigorous solution-error bound. In a batch, every multipole
+ * must satisfy the criterion.
  *
- * The resulting discrete system is a banded linear system with bandwidth independent
- * of $N$, enabling linear complexity in $N$ per angular momentum value once factored.
- * The method achieves exponential (spectral) convergence provided the weighted forcing
- * term $(m + h\xi) f(\xi)$ is smooth on $[-1,1]$. The additional factor of $x$
- * improves regularity near $x=0$ in applications where $f(x)$ has mild singular
- * behavior.
- *
- * # Performance and Memory Scaling
- *
- * Computational and memory costs are determined by two factors:
- *
- * **Batched Operators ($n_\ell$ angular momentum values):**
- *
- * The operator may solve simultaneously for
- * $$
- * n_\ell = \ell_{\max} - \ell_{\min} + 1
- * $$
- * angular momentum values. Both memory usage and factorization cost scale
- * approximately linearly with $n_\ell$.
- *
- * The implementation provides specialized optimized kernels for batch sizes
- * $$
- *   n_\ell = 2, 4, 8, 16, 32, 64.
- * $$
- * These sizes typically provide the best performance due to improved vectorization and
- * cache utilization. Other batch sizes are supported through a generic internal
- * implementation, which may be less efficient.
- *
- * Larger batches increase memory footprint and may reduce cache efficiency depending
- * on the architecture.
- *
- * **Spectral Truncation Order ($N$):**
- * The required truncation order $N$ depends on:
- * - Interval length $b-a$: larger intervals generally require higher $N$ for fixed tolerance
- * - Angular momentum $\ell$: higher $\ell$ increases oscillatory behavior, requiring larger $N$
- * - Smoothness of $f(\xi)$: singular or highly oscillatory forcing may require substantially higher $N$
- *
- * Both memory ($O(N n_\ell)$) and factorization cost ($O(N n_\ell)$) scale linearly
- * with $N$ and $n_\ell$. Back-substitution for a single solve costs $O(N n_\ell)$. For
- * repeated solves with the same operator parameters, the factorization is reused,
- * making additional solves inexpensive.
- *
- * # Typical Usage
- *
- * 1. Create a solver instance: ncm_sbessel_ode_solver_new()
- * 2. Configure tolerance: ncm_sbessel_ode_solver_set_tolerance()
- * 3. Allocate an operator for given $[a,b]$ and $[\ell_{\min}, \ell_{\max}]$: ncm_sbessel_ode_solver_create_operator()
- * 4. Solve one or more problems: ncm_sbessel_ode_operator_solve() or ncm_sbessel_ode_operator_solve_endpoints()
- * 5. Reuse or reconfigure: ncm_sbessel_ode_operator_reset(), or deallocate: ncm_sbessel_ode_operator_unref()
- *
- * Multiple operators can coexist, each configured for a different interval or $\ell$-range.
+ * A #NcmSBesselOdeOperator stores the matrix and rotations for one interval and one
+ * multipole range. Repeated solves reuse those rotations and extend the factorization
+ * only when the new RHS needs more columns. The solver tolerance is copied into an
+ * operator when it is created; changing the solver later does not alter existing
+ * operators. ncm_sbessel_ode_operator_reset() invalidates the factorization while
+ * retaining allocated storage and the copied tolerance.
  *
  */
 
@@ -168,18 +68,15 @@
 #include "build_cfg.h"
 
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
-#include "ncm/specfunc/ncm_sf_sbessel.h"
-#include "ncm/core/ncm_dtuple.h"
 #include "ncm/algebra/ncm_lapack.h"
-#include "ncm_enum_types.h"
-#include "ncm/core/ncm_cfg.h"
 
+#include <float.h>
+#include <limits.h>
 #include <math.h>
+#include <stdlib.h>
+#include <string.h>
 #ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_blas.h>
 #include <gsl/gsl_math.h>
-#include <gsl/gsl_sf_bessel.h>
-#include <fftw3.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /* Operator bandwidth */
@@ -221,12 +118,8 @@ _ncm_sbessel_min_cols (const gdouble a, const gdouble b, const gint ell_min)
 
 #define ALIGNMENT 64 /* 64-byte alignment for cache lines */
 
-#define ROW_CORE_SIZE \
-        (sizeof (gdouble) * (TOTAL_BANDWIDTH + 2) + sizeof (glong))
-
 #define PADDED_BANDWIDTH \
         ((TOTAL_BANDWIDTH + 7) & ~7) /* round up to multiple of 8 */
-#define OPERATOR_EXPONENT 1
 
 /* Rotation parameter accessors for interleaved cos/sin storage */
 #define ROTATION_COS(ptr) (ptr)[0]
@@ -249,14 +142,9 @@ typedef struct _NcmSBesselOdeSolverRow
 /**
  * _NcmSBesselOdeOperator:
  *
- * Opaque structure representing a configured spectral operator for modified spherical Bessel ODEs.
- *
- * Encapsulates all problem-specific parameters, matrix storage, and factorization state required
- * to solve the boundary value problem over a fixed interval $[a,b]$ and angular momentum range
- * $[\ell_{\min}, \ell_{\max}]$. Supports both single and batched (multiple $\ell$) solution modes.
- *
- * Memory is managed via reference counting. The operator can be reused for multiple right-hand sides
- * with the same structural parameters, or reconfigured via ncm_sbessel_ode_operator_reset().
+ * Reference-counted operator for one interval and one contiguous multipole range.
+ * It owns the banded rows, reusable Givens rotations, transformed RHS, and scratch
+ * storage used by scalar and batched solves.
  */
 struct _NcmSBesselOdeOperator
 {
@@ -271,7 +159,7 @@ struct _NcmSBesselOdeOperator
   gint ell_min;      /* Minimum angular momentum in batch */
   gint ell_max;      /* Maximum angular momentum in batch */
   guint n_ell;       /* Number of angular momentum values: n_ell = ell_max - ell_min + 1 */
-  gdouble tolerance; /* Convergence tolerance for adaptive QR factorization */
+  gdouble tolerance; /* Relative coefficient-decay tolerance */
   glong min_cols;    /* Resolution floor: the decay test may not fire below this many
                       * columns. Set from the oscillatory part of the panel, i.e. the
                       * span beyond the turning point; fewer columns than that cannot
@@ -313,20 +201,17 @@ struct _NcmSBesselOdeOperator
   gdouble *acc_bc_at_m1;           /* Aligned array of gdouble for boundary condition accumulators at -1 */
   gdouble *acc_bc_at_p1;           /* Aligned array of gdouble for boundary condition accumulators at +1 */
   gsize acc_bc_capacity;           /* Allocated capacity of acc_bc_at_m1 and acc_bc_at_p1 */
+
+  /* Per-ell adaptive convergence state. */
+  gdouble *max_c_A_batched;
+  guint *quiet_cols_batched;
+  gsize convergence_capacity;
 };
 
 typedef struct _NcmSBesselOdeSolverPrivate
 {
-  gdouble tolerance; /* Convergence tolerance for adaptive QR */
-
-  /* Solution */
-  NcmVector *solution; /* Result vector */
-
-  /* Spectral methods context */
+  gdouble tolerance; /* Default copied into newly created operators */
   NcmSpectral *spectral;
-
-  /* Spherical Bessel array with cutoff */
-  NcmSFSBesselArray *sba;
 } NcmSBesselOdeSolverPrivate;
 
 enum
@@ -366,8 +251,6 @@ ncm_sbessel_ode_solver_init (NcmSBesselOdeSolver *solver)
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
   self->tolerance = 0.0;
-  self->solution  = NULL;
-  self->sba       = ncm_sf_sbessel_array_new ();
   self->spectral  = ncm_spectral_new ();
 }
 
@@ -414,19 +297,10 @@ _ncm_sbessel_ode_solver_dispose (GObject *object)
   NcmSBesselOdeSolver *solver             = NCM_SBESSEL_ODE_SOLVER (object);
   NcmSBesselOdeSolverPrivate * const self = ncm_sbessel_ode_solver_get_instance_private (solver);
 
-  ncm_vector_clear (&self->solution);
   ncm_spectral_clear (&self->spectral);
-  ncm_sf_sbessel_array_clear (&self->sba);
 
   /* Chain up */
   G_OBJECT_CLASS (ncm_sbessel_ode_solver_parent_class)->dispose (object);
-}
-
-static void
-_ncm_sbessel_ode_solver_finalize (GObject *object)
-{
-  /* Chain up */
-  G_OBJECT_CLASS (ncm_sbessel_ode_solver_parent_class)->finalize (object);
 }
 
 /* Helper functions for aligned memory management in operators */
@@ -558,6 +432,17 @@ _ensure_acc_bc_capacity (NcmSBesselOdeOperator *op, gsize required_capacity)
 }
 
 static void
+_ensure_convergence_capacity (NcmSBesselOdeOperator *op, gsize required_capacity)
+{
+  if (required_capacity > op->convergence_capacity)
+  {
+    op->max_c_A_batched    = g_renew (gdouble, op->max_c_A_batched, required_capacity);
+    op->quiet_cols_batched = g_renew (guint, op->quiet_cols_batched, required_capacity);
+    op->convergence_capacity = required_capacity;
+  }
+}
+
+static void
 ncm_sbessel_ode_solver_class_init (NcmSBesselOdeSolverClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -565,12 +450,11 @@ ncm_sbessel_ode_solver_class_init (NcmSBesselOdeSolverClass *klass)
   object_class->set_property = &_ncm_sbessel_ode_solver_set_property;
   object_class->get_property = &_ncm_sbessel_ode_solver_get_property;
   object_class->dispose      = &_ncm_sbessel_ode_solver_dispose;
-  object_class->finalize     = &_ncm_sbessel_ode_solver_finalize;
 
   /**
    * NcmSBesselOdeSolver:tolerance:
    *
-   * Convergence tolerance for adaptive QR decomposition.
+   * Relative coefficient-decay tolerance copied into new operators.
    */
   g_object_class_install_property (object_class,
                                    PROP_TOLERANCE,
@@ -692,6 +576,9 @@ ncm_sbessel_ode_solver_create_operator (NcmSBesselOdeSolver *solver, gdouble a, 
   op->acc_bc_at_m1              = NULL;
   op->acc_bc_at_p1              = NULL;
   op->acc_bc_capacity           = 0;
+  op->max_c_A_batched           = NULL;
+  op->quiet_cols_batched        = NULL;
+  op->convergence_capacity      = 0;
 
   return op;
 }
@@ -750,6 +637,9 @@ ncm_sbessel_ode_operator_unref (NcmSBesselOdeOperator *op)
 
     if (op->acc_bc_at_p1 != NULL)
       free (op->acc_bc_at_p1);
+
+    g_free (op->max_c_A_batched);
+    g_free (op->quiet_cols_batched);
 
     /* Free the operator itself */
     g_free (op);
@@ -819,7 +709,8 @@ ncm_sbessel_ode_operator_reset (NcmSBesselOdeOperator *op, gdouble a, gdouble b,
  * @solver: a #NcmSBesselOdeSolver
  * @tol: convergence tolerance
  *
- * Sets the convergence tolerance for adaptive QR.
+ * Sets the relative coefficient-decay tolerance copied into subsequently created
+ * operators. Existing operators retain their current tolerance.
  */
 void
 ncm_sbessel_ode_solver_set_tolerance (NcmSBesselOdeSolver *solver, gdouble tol)
@@ -892,14 +783,10 @@ _ncm_sbessel_create_row_bc_at_p1 (NcmSBesselOdeOperator *op, NcmSBesselOdeSolver
  * @row: output row
  * @row_index: row index (0-based, corresponding to k in the Gegenbauer basis)
  *
- * Creates differential operator row for the given index k in the Gegenbauer $C^{(2)}_k$ basis.
- * Builds the full ODE operator using the formula:
- * $$\langle C^{(2)}_k, L[f] \rangle$$ where
- * $$L = \frac{(m+hx)^2}{h^2} \frac{d^2}{dx^2} + \frac{2(m+hx)}{h} \frac{d}{dx} +
- * (m+hx)^2 - \ell(\ell+1)$$
- *
- * The operator functions handle all special cases for low k values internally,
- * so this single function works for all k.
+ * Creates row @row_index of the mapped operator
+ * $$L = \frac{(m+ht)^2}{h^2}\frac{d^2}{dt^2}
+ *       +(m+ht)^2-\ell(\ell+1)$$
+ * in the $C^{(2)}$ coefficient basis.
  */
 static void
 _ncm_sbessel_create_row_operator (NcmSBesselOdeOperator *op, NcmSBesselOdeSolverRow *row, glong row_index)
@@ -924,14 +811,8 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeOperator *op, NcmSBesselOdeSolver
   ncm_spectral_compute_x_d2_row (row_data, k, offset, 2.0 * m / h);
   ncm_spectral_compute_x2_d2_row (row_data, k, offset, 1.0);
 
-  /* First derivative term: (1.0 - o_e) * ((2m/h) d + 2 x d) */
-#if OPERATOR_EXPONENT != 1
-  ncm_spectral_compute_d_row (row_data, offset, 2.0 * (1.0 - OPERATOR_EXPONENT) * m / h);
-  ncm_spectral_compute_x_d_row (row_data, k, offset, 2.0 * (1.0 - OPERATOR_EXPONENT));
-#endif /* OPERATOR_EXPONENT != 1 */
-
-  /* Identity term: (m^2 - ell(ell+1)) I + 2m h x + h^2 x^2 + o_e * (o_e - 1) */
-  ncm_spectral_compute_proj_row (row_data, k, offset, m2 - llp1 + (OPERATOR_EXPONENT - 1.0) * OPERATOR_EXPONENT);
+  /* Identity term: (m^2 - ell(ell+1)) I + 2m h t + h^2 t^2 */
+  ncm_spectral_compute_proj_row (row_data, k, offset, m2 - llp1);
   ncm_spectral_compute_x_row (row_data, k, offset, 2.0 * m * h);
   ncm_spectral_compute_x2_row (row_data, k, offset, h2);
 }
@@ -948,7 +829,7 @@ _ncm_sbessel_create_row_operator (NcmSBesselOdeOperator *op, NcmSBesselOdeSolver
  * incremental algorithm. The key insight is that operator rows for consecutive ell values
  * differ only in the ell(ell+1) term:
  *
- * - All derivative operators (d², x d², x² d², d, x d) are ell-independent
+ * - All derivative operators (d², t d², t² d²) are ell-independent
  * - Identity terms (x, x²) are ell-independent
  * - Only the projection term m² - ell(ell+1) depends on ell
  *
@@ -984,12 +865,6 @@ _ncm_sbessel_create_row_operator_batched (NcmSBesselOdeOperator *op, NcmSBesselO
   ncm_spectral_compute_x_d2_row (row[0].data, k, offset, 2.0 * m / h);
   ncm_spectral_compute_x2_d2_row (row[0].data, k, offset, 1.0);
 
-  /* First derivative term: (2m/h) d + 2 x d - ell-independent */
-#if OPERATOR_EXPONENT != 1
-  ncm_spectral_compute_d_row (row[0].data, offset, 2.0 * (1.0 - OPERATOR_EXPONENT) * m / h);
-  ncm_spectral_compute_x_d_row (row[0].data, k, offset, 2.0 * (1.0 - OPERATOR_EXPONENT));
-#endif /* OPERATOR_EXPONENT != 1 */
-
   /* Identity term: 2m h x + h^2 x^2 - ell-independent part */
   ncm_spectral_compute_x_row (row[0].data, k, offset, 2.0 * m * h);
   ncm_spectral_compute_x2_row (row[0].data, k, offset, h2);
@@ -1007,7 +882,7 @@ _ncm_sbessel_create_row_operator_batched (NcmSBesselOdeOperator *op, NcmSBesselO
     const gdouble value_0 = 1.0 / (2.0 * (kd + 1.0));
     const gdouble value_1 = -1.0 * (kd + 2.0) / ((kd + 1.0) * (kd + 3.0));
     const gdouble value_2 = 1.0 / (2.0 * (kd + 3.0));
-    gdouble coeff         = m2 - ell * (ell + 1.0) + (OPERATOR_EXPONENT - 1.0) * OPERATOR_EXPONENT;
+    gdouble coeff         = m2 - ell * (ell + 1.0);
 
     for (i = 0; i < n_ell; i++)
     {
@@ -1291,21 +1166,21 @@ _ncm_sbessel_check_storage (NcmSBesselOdeOperator *op, glong col,
  * @op: a #NcmSBesselOdeOperator
  * @col: current column being processed
  * @n_ell: number of ell values
- * @max_c_A: (inout): maximum coefficient-to-diagonal ratio
- * @quiet_cols: (inout): count of consecutive columns with small coefficients
+ * @max_c_A: (array length=n_ell) (inout): per-ell maximum coefficient-to-diagonal ratios
+ * @quiet_cols: (array length=n_ell) (inout): per-ell counts of consecutive small coefficients
  *
- * Checks convergence across all ell values.
+ * Checks convergence independently for every ell value.
  *
- * Returns: TRUE if converged, FALSE otherwise
+ * Returns: TRUE if every ell value has converged, FALSE otherwise
  */
 static inline gboolean
 _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, guint n_ell,
                                         gdouble *max_c_A, guint *quiet_cols)
 {
-  gdouble max_Acol = 0.0;
+  guint converged_lanes = 0;
   guint l_idx;
 
-  #pragma omp simd
+  #pragma omp simd reduction(+: converged_lanes)
 
   for (l_idx = 0; l_idx < n_ell; l_idx++)
   {
@@ -1315,24 +1190,25 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
     const gdouble c_col         = op->c[row_idx];
     const gdouble Acol          = fabs (c_col / diag);
 
-    if (Acol > max_Acol)
-      max_Acol = Acol;
-  }
-
-  if (max_Acol > *max_c_A)
-  {
-    *max_c_A    = max_Acol;
-    *quiet_cols = 0;
-  }
-  else
-  {
-    if (max_Acol / (*max_c_A) < op->tolerance)
-      (*quiet_cols)++;
+    if (Acol > max_c_A[l_idx])
+    {
+      max_c_A[l_idx]    = Acol;
+      quiet_cols[l_idx] = 0;
+    }
+    else if ((max_c_A[l_idx] > 0.0) && (Acol / max_c_A[l_idx] < op->tolerance))
+    {
+      quiet_cols[l_idx]++;
+    }
     else
-      *quiet_cols = 0;
+    {
+      quiet_cols[l_idx] = 0;
+    }
+
+    if (quiet_cols[l_idx] >= ROWS_TO_ROTATE + 1)
+      converged_lanes++;
   }
 
-  return (*quiet_cols >= ROWS_TO_ROTATE + 1) && (col + 1 >= op->min_cols);
+  return (converged_lanes == n_ell) && (col + 1 >= op->min_cols);
 }
 
 /**
@@ -1524,7 +1400,7 @@ _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArr
 /**
  * _ncm_sbessel_ode_solver_setup_initial_rows:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  * @solution_order: initial solution order
  *
  * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) and initializes
@@ -1564,7 +1440,7 @@ _ncm_sbessel_initial_solution_order (NcmSBesselOdeOperator *op, guint rhs_len)
 /**
  * _ncm_sbessel_ode_operator_diagonalize:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
- * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  *
  * Diagonalizes the operator using adaptive QR decomposition.
  * This function applies Givens rotations to transform the system into upper triangular form
@@ -1856,8 +1732,6 @@ _ncm_sbessel_apply_rotations_batched (NcmSBesselOdeOperator *op, glong col, guin
   glong i;
   guint l_idx;
 
-  #pragma omp simd
-
   for (i = ROWS_TO_ROTATE; i > 0; i--)
   {
     const glong r1_index = col + i - 1;
@@ -1886,7 +1760,7 @@ _ncm_sbessel_apply_rotations_batched (NcmSBesselOdeOperator *op, glong col, guin
  * _ncm_sbessel_ode_operator_setup_initial_rows_batched:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @n_ell: number of ell values to process
- * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  * @solution_order: initial solution order
  *
  * Sets up the first ROWS_TO_ROTATE rows (boundary conditions) for all ell values
@@ -1925,7 +1799,7 @@ _ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op,
  * _ncm_sbessel_ode_operator_diagonalize_batched:
  * @op: a #NcmSBesselOdeOperator (for matrix and RHS storage)
  * @n_ell: number of ell values to process
- * @rhs: (element-type gdouble): right-hand side vector (Chebyshev coefficients of f(x))
+ * @rhs: (element-type gdouble): endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  *
  * Diagonalizes the operator using adaptive QR decomposition for multiple ell values.
  * This function applies Givens rotations to transform the system into upper triangular form
@@ -1944,8 +1818,8 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
   const gint ell_min             = op->ell_min;
   const gdouble *rhs_data        = (gdouble *) rhs->data;
   glong col                      = 0;
-  gdouble max_c_A                = 0.0;
-  guint quiet_cols               = 0;
+  gdouble *max_c_A;
+  guint *quiet_cols;
   const guint first_loop_len     = rhs_len - ROWS_TO_ROTATE;
   gboolean converged             = FALSE;
   guint l_idx;
@@ -1953,10 +1827,16 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
   g_assert_cmpuint (n_ell, >, 0);
   g_assert_cmpuint (rhs_len, >, ROWS_TO_ROTATE);
 
+  _ensure_convergence_capacity (op, n_ell);
+  max_c_A   = op->max_c_A_batched;
+  quiet_cols = op->quiet_cols_batched;
+  memset (max_c_A, 0, n_ell * sizeof (gdouble));
+  memset (quiet_cols, 0, n_ell * sizeof (guint));
+
   /* Try stored rotations if available */
   if (op->last_n_cols > 0)
   {
-    col = _ncm_sbessel_apply_all_stored_rotations_batched (op, rhs, op->last_n_cols, n_ell, &max_c_A, &quiet_cols);
+    col = _ncm_sbessel_apply_all_stored_rotations_batched (op, rhs, op->last_n_cols, n_ell, max_c_A, quiet_cols);
 
     if (col >= 0)
       return col;
@@ -1993,7 +1873,7 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
     _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
 
     /* Check convergence across all ell values */
-    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols))
+    if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, max_c_A, quiet_cols))
     {
       converged = TRUE;
       col++;
@@ -2002,8 +1882,21 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
   }
 
   /* Zero RHS: zero solution */
-  if (max_c_A == 0.0)
-    return col;
+  {
+    gboolean zero_rhs = TRUE;
+
+    for (l_idx = 0; l_idx < n_ell; l_idx++)
+    {
+      if (max_c_A[l_idx] != 0.0)
+      {
+        zero_rhs = FALSE;
+        break;
+      }
+    }
+
+    if (zero_rhs)
+      return col;
+  }
 
   if (!converged)
   {
@@ -2028,8 +1921,9 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
       _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
 
       /* Check convergence across all ell values */
-      if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, &max_c_A, &quiet_cols))
+      if (_ncm_sbessel_check_convergence_batched (op, col, n_ell, max_c_A, quiet_cols))
       {
+        converged = TRUE;
         col++;
         break; /* SAFE early stop */
       }
@@ -2037,11 +1931,21 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
   }
 
   /* Warn if we exhausted max_solution_order without convergence */
-  if ((solution_order >= max_solution_order) && (quiet_cols < ROWS_TO_ROTATE + 1))
+  if ((solution_order >= max_solution_order) && !converged)
+  {
+    guint unconverged_lanes = 0;
+
+    for (l_idx = 0; l_idx < n_ell; l_idx++)
+    {
+      if (quiet_cols[l_idx] < ROWS_TO_ROTATE + 1)
+        unconverged_lanes++;
+    }
+
     g_warning ("_ncm_sbessel_ode_operator_diagonalize_batched: "
-               "reached max_solution_order=%u without convergence (quiet_cols=%u, needed %d). "
+               "reached max_solution_order=%u with %u of %u ell lanes unconverged. "
                "Results may be inaccurate.",
-               max_solution_order, quiet_cols, ROWS_TO_ROTATE + 1);
+               max_solution_order, unconverged_lanes, n_ell);
+  }
 
   op->last_n_cols = col;
 
@@ -2394,7 +2298,7 @@ _ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
 /**
  * _ncm_sbessel_ode_operator_solve_batched_internal:
  * @op: a #NcmSBesselOdeOperator
- * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  * @n_ell: number of ell values to solve for (ell = ell_min, ell_min+1, ..., ell_min+n_ell-1)
  * @solutions: array of solution matrices, one per ell value
  *
@@ -2420,7 +2324,7 @@ _ncm_sbessel_ode_operator_solve_batched_internal (NcmSBesselOdeOperator *op, GAr
 /**
  * _ncm_sbessel_ode_operator_solve_endpoints_batched_internal:
  * @op: a #NcmSBesselOdeOperator
- * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  * @n_ell: number of ell values to solve for (ell = ell_min, ell_min+1, ..., ell_min+n_ell-1)
  * @solutions: array of solution matrices, one per ell value
  *
@@ -2593,7 +2497,7 @@ ncm_sbessel_ode_operator_get_ell_range (NcmSBesselOdeOperator *op, gint *ell_min
  * ncm_sbessel_ode_operator_get_tolerance:
  * @op: a #NcmSBesselOdeOperator
  *
- * Gets the convergence tolerance used by the operator for adaptive QR decomposition.
+ * Gets the operator's relative coefficient-decay tolerance.
  *
  * Returns: the convergence tolerance
  */
@@ -2645,12 +2549,12 @@ ncm_sbessel_ode_operator_get_operator_size (NcmSBesselOdeOperator *op)
 /**
  * ncm_sbessel_ode_operator_solve:
  * @op: a #NcmSBesselOdeOperator
- * @rhs: (element-type gdouble): right-hand side vector (Chebyshev coefficients of f(x))
+ * @rhs: (element-type gdouble): endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  * @solution: (out callee-allocates) (transfer full) (element-type gdouble): solution vector (Chebyshev coefficients)
  * @solution_len: (out): length of solution per ell value
  *
- * Solves the ODE using adaptive QR decomposition with ultraspherical spectral methods.
- * The algorithm grows the matrix size until convergence is achieved (error < tolerance).
+ * Solves the ODE by adaptive QR in ultraspherical coefficient space. The matrix grows
+ * until the relative coefficient-decay criterion described by #NcmSBesselOdeSolver is met.
  *
  * For operators with a single ell value, the @solution array has length @solution_len.
  * For operators with multiple ell values (n_ell), the @solution array has length @solution_len * n_ell,
@@ -2721,7 +2625,7 @@ ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray *
 /**
  * ncm_sbessel_ode_operator_solve_endpoints:
  * @op: a #NcmSBesselOdeOperator
- * @rhs: (element-type gdouble): right-hand side vector (Chebyshev coefficients of f(x))
+ * @rhs: (element-type gdouble): endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  * @endpoints: (out callee-allocates) (transfer full) (element-type gdouble): array with 3*n_ell elements storing [u'(a), u'(b), error] for each ell value
  *
  * Efficiently computes only the endpoint derivatives u'(a) and u'(b)
@@ -3008,7 +2912,7 @@ ncm_sbessel_ode_solver_get_operator_matrix_colmajor (NcmSBesselOdeSolver *solver
  * @a: left endpoint
  * @b: right endpoint
  * @ell: $\ell$ multipole order
- * @rhs: right-hand side vector (Chebyshev coefficients of f(x))
+ * @rhs: endpoint data followed by $C^{(2)}$ coefficients of $x f(x)$
  * @nrows: size of the truncated system to solve
  *
  * Solves the ODE using a dense matrix representation with standard linear algebra.
@@ -3083,4 +2987,3 @@ ncm_sbessel_ode_solver_peek_spectral (NcmSBesselOdeSolver *solver)
 
   return self->spectral;
 }
-

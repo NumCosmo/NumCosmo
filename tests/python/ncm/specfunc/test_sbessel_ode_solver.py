@@ -79,14 +79,20 @@ class TestSBesselOperators:
         # Individual solves
         for i, ell in enumerate(range(lmin, lmax + 1)):
             op_single = solver.create_operator(a, b, ell, ell)
-            sol_single, _sol_len_single = op_single.solve(rhs)
+            sol_single, sol_len_single = op_single.solve(rhs)
             sol_single_np = np.array(sol_single)
 
+            assert sol_len >= sol_len_single, (
+                f"Batched solve stopped at {sol_len} columns before the "
+                f"single-ell solve for ell={ell} stopped at {sol_len_single}"
+            )
+
             max_coeff_single = np.max(np.abs(sol_single_np))
-            min_len = min(len(sol_single_np), sol_len)
+            sol_single_padded = np.zeros(sol_len)
+            sol_single_padded[:sol_len_single] = sol_single_np
             assert_allclose(
-                solutions_batched_np[i, :min_len],
-                sol_single_np[:min_len],
+                solutions_batched_np[i],
+                sol_single_padded,
                 rtol=rtol,
                 atol=atol_factor * max_coeff_single,
                 err_msg=err_msg_template.format(ell=ell),
@@ -175,6 +181,65 @@ class TestSBesselOperators:
         endpoints = np.array(op.solve_endpoints(rhs)).reshape(n_ell, 3)
         assert_allclose(endpoint_values[:, 1], endpoints[:, 0], rtol=2.0e-11)
         assert_allclose(endpoint_values[:, 3], endpoints[:, 1], rtol=2.0e-11)
+
+    @pytest.mark.parametrize("n_ell", [1, 2, 3, 4, 7, 8, 16, 32, 64])
+    def test_batched_convergence_tracks_each_ell(self, n_ell: int) -> None:
+        """A batch resolves every ell lane, including cached fused solves."""
+        a, b = 0.1, 10.0
+        x0, x1 = 1.3, 8.7
+        tolerance = 1.0e-10
+        rhs = np.zeros(65)
+        rhs[2] = 1.0
+
+        solver = Ncm.SBesselOdeSolver.new()
+        solver.set_tolerance(tolerance)
+        op = solver.create_operator(a, b, 0, n_ell - 1)
+
+        solutions, solution_len = op.solve(rhs)
+        solution_matrix = np.asarray(solutions).reshape(n_ell, solution_len)
+
+        for ell in range(n_ell):
+            single_op = solver.create_operator(a, b, ell, ell)
+            single_solution, single_len = single_op.solve(rhs)
+            single_solution = np.asarray(single_solution)
+
+            assert solution_len >= single_len
+            scale = np.max(np.abs(single_solution))
+            padded = np.zeros(solution_len)
+            padded[:single_len] = single_solution
+            assert_allclose(
+                solution_matrix[ell],
+                padded,
+                rtol=5.0e-8,
+                atol=5.0e-8 * scale,
+            )
+
+        values = np.asarray(op.solve_values(rhs, x0, x1)).reshape(n_ell, 4)
+        endpoints = np.asarray(op.solve_endpoints(rhs)).reshape(n_ell, 3)
+        t0 = (2.0 * x0 - a - b) / (b - a)
+        t1 = (2.0 * x1 - a - b) / (b - a)
+
+        for ell, coeffs in enumerate(solution_matrix):
+            expected_values = [
+                Ncm.Spectral.chebyshev_eval(coeffs, t0),
+                Ncm.Spectral.chebyshev_deriv_x(coeffs, a, b, x0),
+                Ncm.Spectral.chebyshev_eval(coeffs, t1),
+                Ncm.Spectral.chebyshev_deriv_x(coeffs, a, b, x1),
+            ]
+            expected_derivatives = [
+                Ncm.Spectral.chebyshev_deriv_x(coeffs, a, b, a),
+                Ncm.Spectral.chebyshev_deriv_x(coeffs, a, b, b),
+            ]
+
+            assert_allclose(values[ell], expected_values, rtol=2.0e-11, atol=2.0e-13)
+            assert_allclose(
+                endpoints[ell, :2],
+                expected_derivatives,
+                rtol=2.0e-11,
+                atol=2.0e-13,
+            )
+
+        assert op.get_n_cols() == solution_len
 
     @pytest.mark.parametrize("l_val", list(range(21)))
     def test_spherical_bessel_ode(self, l_val: int) -> None:

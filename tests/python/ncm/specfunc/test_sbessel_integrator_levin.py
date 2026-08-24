@@ -265,6 +265,80 @@ class TestSBesselIntegratorLevin:
             )
             assert_allclose(result.to_numpy(), expected, rtol=1.0e-8, atol=1.0e-13)
 
+    def test_accepted_edge_fits_rhs_once(self) -> None:
+        """A smooth edge is fitted once before using its fixed-cell operator."""
+        integrator = Ncm.SBesselIntegratorLevin.new_full(
+            0, 7, 1.0, 1.0e4, 9, 500, 1.0e-10, 2, 1.0e-11
+        )
+        result = Ncm.Vector.new(8)
+        calls = 0
+
+        def constant(_x: float, _k: float) -> float:
+            nonlocal calls
+            calls += 1
+            return 1.0
+
+        # The first knot is exactly the left endpoint, leaving one right edge.
+        integrator.integrate(constant, 1.0, 2.0, 1.0, result)
+
+        expected = np.array(
+            [
+                quad(
+                    lambda x, ell=ell: spherical_jn(ell, x),
+                    1.0,
+                    2.0,
+                    epsabs=1.0e-13,
+                    epsrel=1.0e-13,
+                )[0]
+                for ell in range(8)
+            ]
+        )
+        assert calls == 9
+        assert_allclose(result.to_numpy(), expected, rtol=1.0e-9, atol=1.0e-14)
+
+    def test_rejected_edge_reuses_fitted_rhs(self) -> None:
+        """Rejected extrapolation must not evaluate the kernel a second time."""
+        integrator = Ncm.SBesselIntegratorLevin.new_full(
+            0, 7, 1.0, 1.0e4, 9, 500, 1.0e-10, 2, 1.0e-11
+        )
+        result = Ncm.Vector.new(8)
+        calls = 0
+        frequency = 500.0
+
+        def oscillatory(x: float, _k: float) -> float:
+            nonlocal calls
+            calls += 1
+            return np.cos(frequency * x)
+
+        integrator.integrate(oscillatory, 1.0, 2.0, 1.0, result)
+
+        expected, _ = quad(
+            lambda x: np.cos(frequency * x) * spherical_jn(0, x),
+            1.0,
+            2.0,
+            epsabs=1.0e-13,
+            epsrel=1.0e-13,
+            limit=1000,
+        )
+        assert calls == 1025
+        assert_allclose(result.get(0), expected, rtol=1.0e-8, atol=1.0e-13)
+
+    def test_zero_bessel_batch_skips_rhs(self) -> None:
+        """A panel with an identically zero Bessel batch never calls the kernel."""
+        integrator = Ncm.SBesselIntegratorLevin.new(500, 500)
+        result = Ncm.Vector.new(1)
+        calls = 0
+
+        def kernel(_x: float, _k: float) -> float:
+            nonlocal calls
+            calls += 1
+            return 1.0
+
+        integrator.integrate(kernel, 1.0, 2.0, 1.0, result)
+
+        assert calls == 0
+        assert result.get(0) == 0.0
+
     @pytest.mark.parametrize(
         "func_type,filename",
         [
