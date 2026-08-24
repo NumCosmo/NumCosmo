@@ -99,6 +99,7 @@
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator_gl.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator_levin.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_ode_solver.h>
+#include <numcosmo/ncm/specfunc/ncm_sbessel_ode_solver_ivp.h>
 #include <numcosmo/ncm/specfunc/ncm_sf_spherical_harmonics.h>
 #include <numcosmo/ncm/specfunc/ncm_mpsf_0F1.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog.h>
@@ -184,4 +185,3 @@
 #include <numcosmo/ncm/sphere/ncm_sphere_nn.h>
 
 #endif /* _NUMCOSMO_MATH_H */
-

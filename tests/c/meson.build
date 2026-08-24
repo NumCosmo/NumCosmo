@@ -102,6 +102,10 @@ math_tests = [
         'sources': ['ncm/specfunc/test_ncm_sf_sbessel.c'],
     },
     {
+        'name': 'ncm_sbessel_ode_solver_ivp',
+        'sources': ['ncm/specfunc/test_ncm_sbessel_ode_solver_ivp.c'],
+    },
+    {
         'name': 'ncm_mpsf_0F1',
         'sources': ['ncm/specfunc/test_ncm_mpsf_0F1.c'],
     },
