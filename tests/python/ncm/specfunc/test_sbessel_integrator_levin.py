@@ -231,6 +231,40 @@ class TestSBesselIntegratorLevin:
             err_msg="integrate doesn't match individual integrate_ell calls",
         )
 
+    def test_moving_edge_panels_stay_inside_callback_domain(self) -> None:
+        """Moving edge cells are reusable without sampling outside [a, b]."""
+        ell_min, ell_max = 0, 7
+        integrator = Ncm.SBesselIntegratorLevin.new_full(
+            ell_min, ell_max, 1.0, 1.0e4, 9, 500, 1.0e-9, 2, 1.0e-10
+        )
+        result = Ncm.Vector.new(ell_max - ell_min + 1)
+
+        for a, b in [(5.0, 50.0), (6.7, 43.0), (9.5, 32.0), (10.5, 96.0)]:
+            sampled = [np.inf, -np.inf]
+
+            def f_domain(x: float, _k: float) -> float:
+                sampled[0] = min(sampled[0], x)
+                sampled[1] = max(sampled[1], x)
+                return np.exp(-0.03 * x)
+
+            integrator.integrate(f_domain, a, b, 1.0, result)
+            assert sampled[0] >= np.nextafter(a, -np.inf)
+            assert sampled[1] <= np.nextafter(b, np.inf)
+
+            expected = np.array(
+                [
+                    quad(
+                        lambda x, ell=ell: np.exp(-0.03 * x) * spherical_jn(ell, x),
+                        a,
+                        b,
+                        epsabs=1.0e-12,
+                        epsrel=1.0e-12,
+                    )[0]
+                    for ell in range(ell_min, ell_max + 1)
+                ]
+            )
+            assert_allclose(result.to_numpy(), expected, rtol=1.0e-8, atol=1.0e-13)
+
     @pytest.mark.parametrize(
         "func_type,filename",
         [

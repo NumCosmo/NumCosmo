@@ -142,6 +142,40 @@ class TestSBesselOperators:
                 err_msg=err_msg_template.format(ell=ell),
             )
 
+    @pytest.mark.parametrize("n_ell", [1, 8])
+    def test_solve_values_vs_full_solution(self, n_ell: int) -> None:
+        """Fused two-point evaluation matches the full Chebyshev solutions."""
+        a, b = 1.0, 20.0
+        ell_min = 3
+        solver = Ncm.SBesselOdeSolver.new()
+        op = solver.create_operator(a, b, ell_min, ell_min + n_ell - 1)
+        rhs = np.zeros(65)
+        rhs[2:7] = [1.0, -0.2, 0.05, 0.03, -0.01]
+
+        solutions, solution_len = op.solve(rhs)
+        solution_matrix = np.array(solutions).reshape(n_ell, solution_len)
+
+        for x0, x1 in [(3.7, 14.2), (a, b)]:
+            values = np.array(op.solve_values(rhs, x0, x1)).reshape(n_ell, 4)
+            t0 = (2.0 * x0 - a - b) / (b - a)
+            t1 = (2.0 * x1 - a - b) / (b - a)
+            expected = np.empty_like(values)
+
+            for ell_idx, coeffs in enumerate(solution_matrix):
+                expected[ell_idx] = [
+                    Ncm.Spectral.chebyshev_eval(coeffs, t0),
+                    Ncm.Spectral.chebyshev_deriv_x(coeffs, a, b, x0),
+                    Ncm.Spectral.chebyshev_eval(coeffs, t1),
+                    Ncm.Spectral.chebyshev_deriv_x(coeffs, a, b, x1),
+                ]
+
+            assert_allclose(values, expected, rtol=2.0e-11, atol=2.0e-12)
+
+        endpoint_values = np.array(op.solve_values(rhs, a, b)).reshape(n_ell, 4)
+        endpoints = np.array(op.solve_endpoints(rhs)).reshape(n_ell, 3)
+        assert_allclose(endpoint_values[:, 1], endpoints[:, 0], rtol=2.0e-11)
+        assert_allclose(endpoint_values[:, 3], endpoints[:, 1], rtol=2.0e-11)
+
     @pytest.mark.parametrize("l_val", list(range(21)))
     def test_spherical_bessel_ode(self, l_val: int) -> None:
         """Test solving modified spherical Bessel ODE with non-zero Dirichlet BCs.
@@ -394,7 +428,7 @@ class TestSBesselOperators:
         op = bvp_solver.create_operator(a, b, l_val, l_val)
         du_a_bvp, du_b_bvp, _error = op.solve_endpoints(rhs_np)
 
-        j_a, dj_a = spherical_jn(l_val, a), spherical_jn(l_val, a, derivative=True)
+        j_a = spherical_jn(l_val, a)
         j_b, dj_b = spherical_jn(l_val, b), spherical_jn(l_val, b, derivative=True)
 
         bvp_integral = b * j_b * du_b_bvp - a * j_a * du_a_bvp

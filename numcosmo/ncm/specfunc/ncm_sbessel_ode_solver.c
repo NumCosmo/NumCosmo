@@ -1248,7 +1248,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
   }
   else
   {
-    if (Acol / (*max_c_A) <  op->tolerance)
+    if (Acol / (*max_c_A) < op->tolerance)
       (*quiet_cols)++;
     else
       *quiet_cols = 0;
@@ -1326,7 +1326,7 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
   }
   else
   {
-    if (max_Acol / (*max_c_A) <  op->tolerance)
+    if (max_Acol / (*max_c_A) < op->tolerance)
       (*quiet_cols)++;
     else
       *quiet_cols = 0;
@@ -1442,7 +1442,8 @@ _ncm_sbessel_apply_all_stored_rotations (NcmSBesselOdeOperator *op, GArray *rhs,
  *
  * Returns: column where converged, or -1 if needs extension
  */
-static glong
+static inline __attribute__ ((always_inline)) glong
+
 _ncm_sbessel_apply_all_stored_rotations_batched (NcmSBesselOdeOperator *op, GArray *rhs, glong max_col, guint n_ell, gdouble *max_c_A, guint *quiet_cols)
 {
   const gdouble *rhs_data = (gdouble *) rhs->data;
@@ -1933,7 +1934,8 @@ _ncm_sbessel_ode_operator_setup_initial_rows_batched (NcmSBesselOdeOperator *op,
  *
  * Returns: the effective number of columns used (may be less than rhs_len due to convergence)
  */
-static glong
+static inline __attribute__ ((always_inline)) glong
+
 _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const guint n_ell, GArray *rhs)
 {
   const guint rhs_len            = rhs->len;
@@ -1987,7 +1989,6 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
     }
 
     _ncm_sbessel_apply_rotations_batched (op, col, n_ell);
-
     /* Check storage */
     _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
 
@@ -2023,7 +2024,6 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
       }
 
       _ncm_sbessel_apply_rotations_batched (op, col, n_ell);
-
       /* Check storage */
       _ncm_sbessel_check_storage (op, col, &solution_order, max_solution_order);
 
@@ -2061,7 +2061,8 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
  *
  * Returns: (transfer full): solution matrix where each row is the solution for one ell value
  */
-static void
+static inline __attribute__ ((always_inline)) void
+
 _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glong n_cols, guint n_ell, GArray *solutions)
 {
   gdouble * restrict sol_data;
@@ -2150,7 +2151,8 @@ _ncm_sbessel_ode_operator_build_solution_batched (NcmSBesselOdeOperator *op, glo
  *
  * Returns: (transfer full): matrix with 3 columns per ell: [u'(a), u'(b), error]
  */
-static void
+static inline __attribute__ ((always_inline)) void
+
 _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, glong n_cols, const guint n_ell, GArray *endpoints)
 {
   const gdouble h = op->half_len;
@@ -2264,6 +2266,131 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
   }
 }
 
+static inline __attribute__ ((always_inline)) void
+
+_ncm_sbessel_ode_operator_compute_values_batched (NcmSBesselOdeOperator *op,
+                                                  glong n_cols, const guint n_ell,
+                                                  gdouble t0, gdouble t1,
+                                                  GArray *values)
+{
+  const gdouble h       = op->half_len;
+  const gsize ring_size = TOTAL_BANDWIDTH * n_ell;
+  gdouble *weights;
+  gdouble *value_data;
+  glong row;
+  guint l_idx;
+
+  g_assert_cmpint (n_cols, >, 0);
+  g_assert_cmpuint (n_ell, >, 0);
+  g_assert_cmpuint (ring_size, <=, G_MAXSIZE - 4 * (gsize) n_cols);
+
+  /* The first ring_size entries hold the circular back-substitution buffer;
+   * the remaining entries hold [T_k(t0), T'_k(t0), T_k(t1), T'_k(t1)]. */
+  _ensure_solution_batched_capacity (op, ring_size + 4 * (gsize) n_cols);
+  memset (op->solution_batched, 0, ring_size * sizeof (gdouble));
+  weights = op->solution_batched + ring_size;
+
+  weights[0] = 1.0;
+  weights[1] = 0.0;
+  weights[2] = 1.0;
+  weights[3] = 0.0;
+
+  if (n_cols > 1)
+  {
+    weights[4] = t0;
+    weights[5] = 1.0;
+    weights[6] = t1;
+    weights[7] = 1.0;
+  }
+
+  for (row = 2; row < n_cols; row++)
+  {
+    const gsize i   = 4 * (gsize) row;
+    const gsize im1 = i - 4;
+    const gsize im2 = i - 8;
+
+    weights[i + 0] = 2.0 * t0 * weights[im1 + 0] - weights[im2 + 0];
+    weights[i + 1] = 2.0 * weights[im1 + 0] + 2.0 * t0 * weights[im1 + 1] - weights[im2 + 1];
+    weights[i + 2] = 2.0 * t1 * weights[im1 + 2] - weights[im2 + 2];
+    weights[i + 3] = 2.0 * weights[im1 + 2] + 2.0 * t1 * weights[im1 + 3] - weights[im2 + 3];
+  }
+
+  g_array_set_size (values, 4 * n_ell);
+  value_data = (gdouble *) values->data;
+  memset (value_data, 0, 4 * n_ell * sizeof (gdouble));
+
+  _ensure_acc_bc_capacity (op, n_ell);
+
+  #pragma omp simd
+
+  for (l_idx = 0; l_idx < n_ell; l_idx++)
+  {
+    op->acc_bc_at_m1[l_idx] = 0.0;
+    op->acc_bc_at_p1[l_idx] = 0.0;
+  }
+
+  for (row = n_cols - 1; row >= 0; row--)
+  {
+    const glong row_base_idx = row * n_ell;
+    const gdouble row_sign   = (row % 2) == 0 ? 1.0 : -1.0;
+    const glong buffer_pos   = row % TOTAL_BANDWIDTH;
+    const glong buf_pos_1    = (row + 1) % TOTAL_BANDWIDTH;
+    const glong buf_pos_2    = (row + 2) % TOTAL_BANDWIDTH;
+    const glong buf_pos_3    = (row + 3) % TOTAL_BANDWIDTH;
+    const glong buf_pos_4    = (row + 4) % TOTAL_BANDWIDTH;
+    const glong buf_pos_5    = (row + 5) % TOTAL_BANDWIDTH;
+    const glong buf_pos_6    = (row + 6) % TOTAL_BANDWIDTH;
+    const glong buf_pos_7    = (row + 7) % TOTAL_BANDWIDTH;
+    const glong buf_pos_8    = (row + 8) % TOTAL_BANDWIDTH;
+    const gdouble w0         = weights[4 * row + 0];
+    const gdouble dw0        = weights[4 * row + 1];
+    const gdouble w1         = weights[4 * row + 2];
+    const gdouble dw1        = weights[4 * row + 3];
+
+    #pragma omp simd
+
+    for (l_idx = 0; l_idx < n_ell; l_idx++)
+    {
+      const glong row_idx                       = row_base_idx + l_idx;
+      const NcmSBesselOdeSolverRow * restrict r = &op->matrix_rows[row_idx];
+      const gdouble * restrict r_data           = r->data;
+      gdouble sum                               = op->c[row_idx];
+      const gdouble diag                        = r_data[0] + _ncm_sbessel_bc_row ((NcmSBesselOdeSolverRow *) r, row);
+      gdouble c_k;
+
+      g_assert_cmpuint (r->col_index, ==, row);
+
+      sum -= r_data[1] * op->solution_batched[buf_pos_1 * n_ell + l_idx];
+      sum -= r_data[2] * op->solution_batched[buf_pos_2 * n_ell + l_idx];
+      sum -= r_data[3] * op->solution_batched[buf_pos_3 * n_ell + l_idx];
+      sum -= r_data[4] * op->solution_batched[buf_pos_4 * n_ell + l_idx];
+      sum -= r_data[5] * op->solution_batched[buf_pos_5 * n_ell + l_idx];
+      sum -= r_data[6] * op->solution_batched[buf_pos_6 * n_ell + l_idx];
+      sum -= r_data[7] * op->solution_batched[buf_pos_7 * n_ell + l_idx];
+      sum -= r_data[8] * op->solution_batched[buf_pos_8 * n_ell + l_idx];
+      sum -= op->acc_bc_at_m1[l_idx] * r->bc_at_m1;
+      sum -= op->acc_bc_at_p1[l_idx] * r->bc_at_p1;
+
+      c_k                                              = sum / diag;
+      op->solution_batched[buffer_pos * n_ell + l_idx] = c_k;
+      op->acc_bc_at_m1[l_idx]                         += row_sign * c_k;
+      op->acc_bc_at_p1[l_idx]                         += c_k;
+      value_data[4 * l_idx + 0]                       += w0 * c_k;
+      value_data[4 * l_idx + 1]                       += dw0 * c_k;
+      value_data[4 * l_idx + 2]                       += w1 * c_k;
+      value_data[4 * l_idx + 3]                       += dw1 * c_k;
+    }
+  }
+
+  #pragma omp simd
+
+  for (l_idx = 0; l_idx < n_ell; l_idx++)
+  {
+    value_data[4 * l_idx + 1] /= h;
+    value_data[4 * l_idx + 3] /= h;
+  }
+}
+
 /**
  * _ncm_sbessel_ode_operator_solve_batched_internal:
  * @op: a #NcmSBesselOdeOperator
@@ -2279,7 +2406,8 @@ _ncm_sbessel_ode_operator_compute_endpoints_batched (NcmSBesselOdeOperator *op, 
  *
  * Returns: (transfer full): solution matrix where each row is the solution for one ell value
  */
-void
+static inline __attribute__ ((always_inline)) void
+
 _ncm_sbessel_ode_operator_solve_batched_internal (NcmSBesselOdeOperator *op, GArray *rhs, const guint n_ell, GArray *solutions)
 {
   /* Step 1: Diagonalize the operator using QR decomposition */
@@ -2300,7 +2428,8 @@ _ncm_sbessel_ode_operator_solve_batched_internal (NcmSBesselOdeOperator *op, GAr
  * endpoint derivatives and error estimates without building the full solution matrix.
  * Returns: (transfer full): matrix with 3 columns per ell: [u'(a), u'(b), error]
  */
-void
+static inline __attribute__ ((always_inline)) void
+
 _ncm_sbessel_ode_operator_solve_endpoints_batched_internal (NcmSBesselOdeOperator *op, GArray *rhs, const guint n_ell, GArray *solutions)
 {
   /* Step 1: Diagonalize the operator using QR decomposition */
@@ -2308,6 +2437,18 @@ _ncm_sbessel_ode_operator_solve_endpoints_batched_internal (NcmSBesselOdeOperato
 
   /* Step 2: Compute endpoint derivatives and error estimates directly from diagonalized system */
   _ncm_sbessel_ode_operator_compute_endpoints_batched (op, n_cols, n_ell, solutions);
+}
+
+static inline __attribute__ ((always_inline)) void
+
+_ncm_sbessel_ode_operator_solve_values_batched_internal (NcmSBesselOdeOperator *op,
+                                                         GArray *rhs, const guint n_ell,
+                                                         gdouble t0, gdouble t1,
+                                                         GArray *values)
+{
+  const glong n_cols = _ncm_sbessel_ode_operator_diagonalize_batched (op, n_ell, rhs);
+
+  _ncm_sbessel_ode_operator_compute_values_batched (op, n_cols, n_ell, t0, t1, values);
 }
 
 /* Specialized batched solvers for common sizes - enables better compiler optimizations */
@@ -2377,6 +2518,38 @@ static void
 _ncm_sbessel_ode_operator_solve_endpoints_batched_32 (NcmSBesselOdeOperator *op, GArray *rhs, GArray *solutions)
 {
   _ncm_sbessel_ode_operator_solve_endpoints_batched_internal (op, rhs, 32, solutions);
+}
+
+/* Arbitrary-point computations */
+
+static void
+_ncm_sbessel_ode_operator_solve_values_batched_2 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble t0, gdouble t1, GArray *values)
+{
+  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 2, t0, t1, values);
+}
+
+static void
+_ncm_sbessel_ode_operator_solve_values_batched_4 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble t0, gdouble t1, GArray *values)
+{
+  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 4, t0, t1, values);
+}
+
+static void
+_ncm_sbessel_ode_operator_solve_values_batched_8 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble t0, gdouble t1, GArray *values)
+{
+  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 8, t0, t1, values);
+}
+
+static void
+_ncm_sbessel_ode_operator_solve_values_batched_16 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble t0, gdouble t1, GArray *values)
+{
+  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 16, t0, t1, values);
+}
+
+static void
+_ncm_sbessel_ode_operator_solve_values_batched_32 (NcmSBesselOdeOperator *op, GArray *rhs, gdouble t0, gdouble t1, GArray *values)
+{
+  _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, 32, t0, t1, values);
 }
 
 /**
@@ -2620,6 +2793,62 @@ ncm_sbessel_ode_operator_solve_endpoints (NcmSBesselOdeOperator *op, GArray *rhs
         _ncm_sbessel_ode_operator_solve_endpoints_batched_internal (op, rhs, op->n_ell, *endpoints);
         break;
     }
+  }
+}
+
+/**
+ * ncm_sbessel_ode_operator_solve_values:
+ * @op: a #NcmSBesselOdeOperator
+ * @rhs: (element-type gdouble): right-hand side vector
+ * @x0: first evaluation point in the operator interval
+ * @x1: second evaluation point in the operator interval
+ * @values: (out callee-allocates) (transfer full) (element-type gdouble): values and derivatives at @x0 and @x1
+ *
+ * Solves the ODE and evaluates the solution and its physical-coordinate
+ * derivative at two points without constructing the complete Chebyshev
+ * coefficient vectors. For each multipole the output contains
+ * `[u(x0), u'(x0), u(x1), u'(x1)]`.
+ */
+void
+ncm_sbessel_ode_operator_solve_values (NcmSBesselOdeOperator *op, GArray *rhs,
+                                       gdouble x0, gdouble x1, GArray **values)
+{
+  const gdouble t0 = (x0 - op->mid_point) / op->half_len;
+  const gdouble t1 = (x1 - op->mid_point) / op->half_len;
+
+  g_assert_cmpfloat (x0, >=, op->a);
+  g_assert_cmpfloat (x0, <=, op->b);
+  g_assert_cmpfloat (x1, >=, op->a);
+  g_assert_cmpfloat (x1, <=, op->b);
+
+  if (*values == NULL)
+    *values = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  switch (op->n_ell)
+  {
+    case 2:
+      _ncm_sbessel_ode_operator_solve_values_batched_2 (op, rhs, t0, t1, *values);
+      break;
+
+    case 4:
+      _ncm_sbessel_ode_operator_solve_values_batched_4 (op, rhs, t0, t1, *values);
+      break;
+
+    case 8:
+      _ncm_sbessel_ode_operator_solve_values_batched_8 (op, rhs, t0, t1, *values);
+      break;
+
+    case 16:
+      _ncm_sbessel_ode_operator_solve_values_batched_16 (op, rhs, t0, t1, *values);
+      break;
+
+    case 32:
+      _ncm_sbessel_ode_operator_solve_values_batched_32 (op, rhs, t0, t1, *values);
+      break;
+
+    default:
+      _ncm_sbessel_ode_operator_solve_values_batched_internal (op, rhs, op->n_ell, t0, t1, *values);
+      break;
   }
 }
 

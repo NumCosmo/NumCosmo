@@ -107,6 +107,7 @@ gsize ncm_sbessel_ode_operator_get_operator_size (NcmSBesselOdeOperator *op);
 
 void ncm_sbessel_ode_operator_solve (NcmSBesselOdeOperator *op, GArray *rhs, GArray **solution, gsize *solution_len);
 void ncm_sbessel_ode_operator_solve_endpoints (NcmSBesselOdeOperator *op, GArray *rhs, GArray **endpoints);
+void ncm_sbessel_ode_operator_solve_values (NcmSBesselOdeOperator *op, GArray *rhs, gdouble x0, gdouble x1, GArray **values);
 
 
 G_END_DECLS
