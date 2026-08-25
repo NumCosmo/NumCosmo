@@ -69,6 +69,8 @@ guint ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted (NcmSpectral *spec
 void ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g);
 void ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g);
 
+gdouble ncm_spectral_chebyshev_rebase (NcmSpectral *spectral, GArray *c, guint len, gdouble a_in, gdouble b_in, gdouble a_out, gdouble b_out, GArray **rebased);
+
 gdouble ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble t);
 gdouble ncm_spectral_gegenbauer_alpha1_eval_x (GArray *c, gdouble a, gdouble b, gdouble x);
 gdouble ncm_spectral_gegenbauer_alpha2_eval (GArray *c, gdouble t);

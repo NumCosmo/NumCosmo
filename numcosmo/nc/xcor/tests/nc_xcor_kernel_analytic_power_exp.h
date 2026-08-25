@@ -29,7 +29,7 @@
 #include <glib-object.h>
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic.h>
 
 G_BEGIN_DECLS
 

@@ -9658,11 +9658,11 @@ class SBesselIntegratorLevin(SBesselIntegrator):
       max-order -> guint: max-order
         Maximum Chebyshev order
       reltol -> gdouble: reltol
-        Relative tolerance
+        ODE solve relative tolerance
       cheb-min-order -> guint: cheb-min-order
         Minimum Chebyshev order for RHS
       cheb-reltol -> gdouble: cheb-reltol
-        Chebyshev decomposition relative tolerance
+        Integrand Chebyshev fit relative tolerance
       y-knots-min -> gdouble: y-knots-min
         Minimum knot value
       y-knots-max -> gdouble: y-knots-max
@@ -9769,6 +9769,12 @@ class SBesselOdeOperator(GObject.GBoxed):
     ) -> typing.Tuple[list[float], int]: ...
     def solve_endpoints(
         self, rhs: typing.Sequence[float] | npt.NDArray[np.float64]
+    ) -> list[float]: ...
+    def solve_values(
+        self,
+        rhs: typing.Sequence[float] | npt.NDArray[np.float64],
+        x0: float,
+        x1: float,
     ) -> list[float]: ...
     def unref(self) -> None: ...
 
@@ -10479,6 +10485,15 @@ class Spectral(GObject.Object):
         b: float,
         x: float,
     ) -> float: ...
+    def chebyshev_rebase(
+        self,
+        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        len: int,
+        a_in: float,
+        b_in: float,
+        a_out: float,
+        b_out: float,
+    ) -> typing.Tuple[float, list[float]]: ...
     @staticmethod
     def clear(spectral: Spectral) -> None: ...
     def compute_chebyshev_coeffs(

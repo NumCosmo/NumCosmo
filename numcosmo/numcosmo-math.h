@@ -49,6 +49,7 @@
 #include <numcosmo/ncm/algebra/ncm_nnls.h>
 #include <numcosmo/ncm/algebra/ncm_poly_roots.h>
 #include <numcosmo/ncm/algebra/ncm_laurent_series.h>
+#include <numcosmo/ncm/algebra/ncm_spectral.h>
 #include <numcosmo/ncm/core/ncm_serialize.h>
 #include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/ncm/integration/ncm_integral1d.h>
@@ -106,7 +107,6 @@
 #include <numcosmo/ncm/fftlog/ncm_fftlog_sbessel_jljm.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog_tophatwin2.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog_gausswin2.h>
-#include <numcosmo/ncm/sphere/ncm_spectral.h>
 #include <numcosmo/ncm/model/ncm_sparam.h>
 #include <numcosmo/ncm/model/ncm_vparam.h>
 #include <numcosmo/ncm/model/ncm_reparam.h>

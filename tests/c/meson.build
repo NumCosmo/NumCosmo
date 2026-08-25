@@ -411,7 +411,8 @@ foreach c_test : all_c_tests
     test(
         c_test['name'],
         test_is_omp ? omp_thread_wrapper : executable_test,
-        args: test_is_omp ? [executable_test.full_path()] + test_seed_args : test_seed_args,
+        args: test_is_omp ? [executable_test.full_path()]
+        + test_seed_args : test_seed_args,
         depends: test_is_omp ? [executable_test] : [],
         timeout: timeout,
         env: test_env,

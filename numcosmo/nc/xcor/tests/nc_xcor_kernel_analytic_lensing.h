@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_xcor_kernel_analytic_gauss.h
+ *            nc_xcor_kernel_analytic_lensing.h
  *
  *  Thu August 21 12:00:00 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
@@ -23,28 +23,27 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_XCOR_KERNEL_ANALYTIC_GAUSS_H_
-#define _NC_XCOR_KERNEL_ANALYTIC_GAUSS_H_
+#ifndef _NC_XCOR_KERNEL_ANALYTIC_LENSING_H_
+#define _NC_XCOR_KERNEL_ANALYTIC_LENSING_H_
 
 #include <glib-object.h>
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_XCOR_KERNEL_ANALYTIC_GAUSS (nc_xcor_kernel_analytic_gauss_get_type ())
+#define NC_TYPE_XCOR_KERNEL_ANALYTIC_LENSING (nc_xcor_kernel_analytic_lensing_get_type ())
 
-G_DECLARE_FINAL_TYPE (NcXcorKernelAnalyticGauss, nc_xcor_kernel_analytic_gauss, NC, XCOR_KERNEL_ANALYTIC_GAUSS, NcXcorKernelAnalytic)
+G_DECLARE_FINAL_TYPE (NcXcorKernelAnalyticLensing, nc_xcor_kernel_analytic_lensing, NC, XCOR_KERNEL_ANALYTIC_LENSING, NcXcorKernelAnalytic)
 
-NcXcorKernelAnalyticGauss *nc_xcor_kernel_analytic_gauss_new (NcDistance * dist, NcmPowspec * ps, gdouble chi_mean, gdouble chi_sigma, gdouble n_sigma);
-NcXcorKernelAnalyticGauss *nc_xcor_kernel_analytic_gauss_new_full (NcDistance *dist, NcmPowspec *ps, gdouble chi_mean, gdouble chi_sigma, gdouble n_sigma, NcmSBesselIntegrator *sbi);
+NcXcorKernelAnalyticLensing *nc_xcor_kernel_analytic_lensing_new (NcDistance * dist, NcmPowspec * ps, gdouble chi_lower, gdouble chi_source_lower, gdouble chi_source_upper);
+NcXcorKernelAnalyticLensing *nc_xcor_kernel_analytic_lensing_new_full (NcDistance *dist, NcmPowspec *ps, gdouble chi_lower, gdouble chi_source_lower, gdouble chi_source_upper, NcmSBesselIntegrator *sbi);
 
-gdouble nc_xcor_kernel_analytic_gauss_get_chi_mean (NcXcorKernelAnalyticGauss *xckag);
-gdouble nc_xcor_kernel_analytic_gauss_get_chi_sigma (NcXcorKernelAnalyticGauss *xckag);
-gdouble nc_xcor_kernel_analytic_gauss_get_n_sigma (NcXcorKernelAnalyticGauss *xckag);
+gdouble nc_xcor_kernel_analytic_lensing_get_chi_source_lower (NcXcorKernelAnalyticLensing *xckal);
+gdouble nc_xcor_kernel_analytic_lensing_get_chi_source_upper (NcXcorKernelAnalyticLensing *xckal);
 
 G_END_DECLS
 
-#endif /* _NC_XCOR_KERNEL_ANALYTIC_GAUSS_H_ */
+#endif /* _NC_XCOR_KERNEL_ANALYTIC_LENSING_H_ */
 

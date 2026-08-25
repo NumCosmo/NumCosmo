@@ -44,7 +44,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "ncm/sphere/ncm_spectral.h"
+#include "ncm/algebra/ncm_spectral.h"
 #include "ncm/core/ncm_cfg.h"
 
 #include <math.h>
@@ -73,6 +73,10 @@ struct _NcmSpectral
   GPtrArray *sin_arrays; /* Precomputed sines for each k level */
   GPtrArray *fftw_plans; /* FFTW plans for each k level */
 
+  /* Scratch for the interval rebase: three coefficient rows */
+  gdouble *rebase_work;
+  gsize rebase_work_len;
+
   /* Legacy fields (backward compatibility) */
   guint cheb_N_cached;     /* Cached N value */
   gdouble *cheb_f_vals;    /* Cached function values array */
@@ -94,6 +98,9 @@ ncm_spectral_init (NcmSpectral *spectral)
   spectral->sin_arrays  = NULL;
   spectral->fftw_plans  = NULL;
 
+  spectral->rebase_work     = NULL;
+  spectral->rebase_work_len = 0;
+
   spectral->cheb_N_cached = 0;
   spectral->cheb_f_vals   = NULL;
   spectral->cheb_cos_vals = NULL;
@@ -113,6 +120,7 @@ ncm_spectral_finalize (GObject *object)
   g_clear_pointer (&spectral->f_vals_tmp, fftw_free);
   g_clear_pointer (&spectral->coeffs_work, fftw_free);
   g_clear_pointer (&spectral->coeffs, g_array_unref);
+  g_clear_pointer (&spectral->rebase_work, g_free);
 
   g_clear_pointer (&spectral->cheb_plan_r2r, fftw_destroy_plan);
   g_clear_pointer (&spectral->cheb_f_vals, fftw_free);
@@ -976,6 +984,132 @@ ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g)
       g_data[k] = gk;
     }
   }
+}
+
+/**
+ * ncm_spectral_chebyshev_rebase:
+ * @spectral: a #NcmSpectral
+ * @c: (element-type gdouble): Chebyshev coefficients on [@a_in, @b_in]
+ * @len: how many leading coefficients of @c to use, 0 for all of them
+ * @a_in: left endpoint of the interval @c is expressed on
+ * @b_in: right endpoint of the interval @c is expressed on
+ * @a_out: left endpoint of the target interval
+ * @b_out: right endpoint of the target interval
+ * @rebased: (out callee-allocates) (transfer full) (element-type gdouble): the
+ *   coefficients on [@a_out, @b_out]
+ *
+ * Re-expresses a Chebyshev series on a different interval, without touching the
+ * function it came from. Writing $s$ for the argument on [@a_in, @b_in] and $t$
+ * for the one on [@a_out, @b_out], $s = \alpha t + \beta$ is affine, so each
+ * $T_k(s)$ expands in the $T_j(t)$ by the Chebyshev recurrence.
+ *
+ * The target interval need not be contained in the source one: outside it the
+ * result is the polynomial's own continuation, which is what makes this usable
+ * as a smooth extension. That continuation is only as trustworthy as the
+ * series is short, since $T_k$ grows like $(|s| + \sqrt{s^2 - 1})^k$ once
+ * $|s| > 1$ -- hence the returned norm, which bounds $|f|$ over the whole
+ * target interval and is the cheapest way to tell an extension apart from
+ * amplified roundoff.
+ *
+ * Costs $O(n^2)$ in the number of coefficients used.
+ *
+ * If @rebased points to NULL a new #GArray is allocated. Through bindings,
+ * @rebased always receives NULL.
+ *
+ * Returns: $\sum_j |b_j|$ over the rebased coefficients, or infinity if any of
+ *   them is not finite
+ */
+gdouble
+ncm_spectral_chebyshev_rebase (NcmSpectral *spectral, GArray *c, guint len,
+                               gdouble a_in, gdouble b_in,
+                               gdouble a_out, gdouble b_out,
+                               GArray **rebased)
+{
+  const guint n       = (len == 0) ? c->len : len;
+  const gdouble alpha = (b_out - a_out) / (b_in - a_in);
+  const gdouble beta  = (b_out + a_out - b_in - a_in) / (b_in - a_in);
+  const gdouble *a    = (const gdouble *) c->data;
+  gdouble *previous, *current, *next, *b;
+  gdouble norm = 0.0;
+  guint degree, i;
+
+  g_assert_cmpuint (len, <=, c->len);
+  g_assert_cmpfloat (b_in, >, a_in);
+  g_assert_cmpfloat (b_out, >, a_out);
+
+  if (*rebased == NULL)
+    *rebased = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n);
+
+  g_array_set_size (*rebased, n);
+
+  if (n == 0)
+    return 0.0;
+
+  if (spectral->rebase_work_len < 3 * n)
+  {
+    spectral->rebase_work     = g_realloc_n (spectral->rebase_work, 3 * n, sizeof (gdouble));
+    spectral->rebase_work_len = 3 * n;
+  }
+
+  previous = spectral->rebase_work;
+  current  = previous + n;
+  next     = current + n;
+  memset (spectral->rebase_work, 0, 3 * n * sizeof (gdouble));
+
+  b = (gdouble *) (*rebased)->data;
+  memset (b, 0, n * sizeof (gdouble));
+
+  previous[0] = 1.0;
+  b[0]        = a[0];
+
+  if (n > 1)
+  {
+    current[0] = beta;
+    current[1] = alpha;
+    b[0]      += a[1] * beta;
+    b[1]      += a[1] * alpha;
+  }
+
+  /* Recursively form T_degree(alpha t + beta) in the T_k(t) basis. */
+  for (degree = 1; degree + 1 < n; degree++)
+  {
+    gdouble *tmp;
+
+    memset (next, 0, n * sizeof (gdouble));
+
+    for (i = 0; i <= degree; i++)
+    {
+      next[i] += 2.0 * beta * current[i] - previous[i];
+
+      if (i == 0)
+      {
+        next[1] += 2.0 * alpha * current[0];
+      }
+      else
+      {
+        next[i - 1] += alpha * current[i];
+        next[i + 1] += alpha * current[i];
+      }
+    }
+
+    for (i = 0; i <= degree + 1; i++)
+      b[i] += a[degree + 1] * next[i];
+
+    tmp      = previous;
+    previous = current;
+    current  = next;
+    next     = tmp;
+  }
+
+  for (i = 0; i < n; i++)
+  {
+    if (!isfinite (b[i]))
+      return HUGE_VAL;
+
+    norm += fabs (b[i]);
+  }
+
+  return norm;
 }
 
 /**

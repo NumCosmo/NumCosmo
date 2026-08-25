@@ -401,8 +401,10 @@ class ViewKernel:
     integrator_reltol: Annotated[
         Optional[float],
         typer.Option(
+            min=0.0,
+            max=1.0,
             help=(
-                "NcmSBesselIntegratorLevin relative tolerance "
+                "NcmSBesselIntegratorLevin ODE solve relative tolerance "
                 "(library default: 1e-13, near machine precision). "
                 "This is the dominant cost/precision knob for tier 3 -- "
                 "see dev-notes/xcor_ultralevin_batching_plan.md sec 9.4. "
@@ -414,10 +416,13 @@ class ViewKernel:
     integrator_cheb_reltol: Annotated[
         Optional[float],
         typer.Option(
+            min=0.0,
+            max=1.0,
             help=(
-                "NcmSBesselIntegratorLevin Chebyshev-fit relative tolerance "
-                "(library default: 1e-8). Leave unset to keep the library "
-                "default."
+                "NcmSBesselIntegratorLevin integrand Chebyshev-fit relative "
+                "tolerance (library default: 1e-8). The looser of this and "
+                "--integrator-reltol bounds the result. Leave unset to keep "
+                "the library default."
             ),
         ),
     ] = None
@@ -485,6 +490,14 @@ class ViewKernel:
             if self.k_range[0] >= self.k_range[1]:
                 raise ValueError("k range min must be less than max")
 
+        # typer's min is inclusive, but zero tolerance aborts in the library.
+        for name, tol in (
+            ("--integrator-reltol", self.integrator_reltol),
+            ("--integrator-cheb-reltol", self.integrator_cheb_reltol),
+        ):
+            if tol is not None and tol <= 0.0:
+                raise typer.BadParameter(f"{name} must be positive, got {tol}.")
+
         # Create cosmology with appropriate maximum redshift
         # Always use larger dist_max_z for non-Limber calculations (default behavior)
         print("Creating cosmology...")
@@ -500,13 +513,8 @@ class ViewKernel:
 
         # Create integrator.
         #
-        # The tolerances must be passed at CONSTRUCTION. An ODE operator takes the
-        # tolerance in force when it is built and keeps it for its whole life, and
-        # the panel operators are built as soon as the multipole range is known --
-        # so ncm_sbessel_integrator_levin_set_reltol() on an already-constructed
-        # integrator updates the getter but never reaches the computation. Building
-        # first and then setting, which is what this command used to do, silently
-        # ignored --integrator-reltol and --integrator-cheb-reltol.
+        # Pass the tolerances at construction: set_reltol() would rebuild every
+        # operator to apply them, which is pure waste when nothing has run yet.
         print("Creating integrator...")
         defaults = Ncm.SBesselIntegratorLevin.new(0, 8)
         self.integrator = Ncm.SBesselIntegratorLevin.new_full(

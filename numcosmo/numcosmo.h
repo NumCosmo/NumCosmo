@@ -236,15 +236,6 @@
 #include <numcosmo/nc/xcor/nc_xcor_AB.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_component.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_kdep.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_gauss.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_tophat.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_multi.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_student_t.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_power_exp.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_tophat_smooth.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_lensing.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_gal.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_cluster.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_cluster_tophat.h>
@@ -255,6 +246,15 @@
 #include <numcosmo/nc/xcor/nc_xcor_lensing_efficiency.h>
 #include <numcosmo/nc/xcor/nc_xcor_solver.h>
 #include <numcosmo/nc/xcor/nc_xcor_ssc_sij.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_kdep.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_gauss.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_tophat.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_multi.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_student_t.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_power_exp.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_tophat_smooth.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_lensing.h>
 
 #endif /* _NUMCOSMO_H */
 

@@ -30,7 +30,7 @@
 #include <glib.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel.h>
-#include <numcosmo/nc/xcor/nc_xcor_kernel_analytic_kdep.h>
+#include <numcosmo/nc/xcor/tests/nc_xcor_kernel_analytic_kdep.h>
 
 G_BEGIN_DECLS
 
