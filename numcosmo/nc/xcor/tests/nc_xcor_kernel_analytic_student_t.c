@@ -63,7 +63,7 @@
 #include "build_cfg.h"
 
 #include "ncm/core/ncm_cfg.h"
-#include "nc/xcor/nc_xcor_kernel_analytic_student_t.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_student_t.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>

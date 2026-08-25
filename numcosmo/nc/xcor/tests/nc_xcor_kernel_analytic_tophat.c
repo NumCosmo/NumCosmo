@@ -47,7 +47,7 @@
 #include "build_cfg.h"
 
 #include "ncm/core/ncm_cfg.h"
-#include "nc/xcor/nc_xcor_kernel_analytic_tophat.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_tophat.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
