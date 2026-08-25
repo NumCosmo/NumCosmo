@@ -436,8 +436,8 @@ _ensure_convergence_capacity (NcmSBesselOdeOperator *op, gsize required_capacity
 {
   if (required_capacity > op->convergence_capacity)
   {
-    op->max_c_A_batched    = g_renew (gdouble, op->max_c_A_batched, required_capacity);
-    op->quiet_cols_batched = g_renew (guint, op->quiet_cols_batched, required_capacity);
+    op->max_c_A_batched      = g_renew (gdouble, op->max_c_A_batched, required_capacity);
+    op->quiet_cols_batched   = g_renew (guint, op->quiet_cols_batched, required_capacity);
     op->convergence_capacity = required_capacity;
   }
 }
@@ -1820,15 +1820,15 @@ _ncm_sbessel_ode_operator_diagonalize_batched (NcmSBesselOdeOperator *op, const 
   glong col                      = 0;
   gdouble *max_c_A;
   guint *quiet_cols;
-  const guint first_loop_len     = rhs_len - ROWS_TO_ROTATE;
-  gboolean converged             = FALSE;
+  const guint first_loop_len = rhs_len - ROWS_TO_ROTATE;
+  gboolean converged         = FALSE;
   guint l_idx;
 
   g_assert_cmpuint (n_ell, >, 0);
   g_assert_cmpuint (rhs_len, >, ROWS_TO_ROTATE);
 
   _ensure_convergence_capacity (op, n_ell);
-  max_c_A   = op->max_c_A_batched;
+  max_c_A    = op->max_c_A_batched;
   quiet_cols = op->quiet_cols_batched;
   memset (max_c_A, 0, n_ell * sizeof (gdouble));
   memset (quiet_cols, 0, n_ell * sizeof (guint));
@@ -2987,3 +2987,4 @@ ncm_sbessel_ode_solver_peek_spectral (NcmSBesselOdeSolver *solver)
 
   return self->spectral;
 }
+
