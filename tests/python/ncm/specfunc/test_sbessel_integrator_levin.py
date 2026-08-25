@@ -885,9 +885,16 @@ class TestOscillatoryResolutionFloor:
             assert_allclose(result, converged, rtol=1.0e-2, atol=0.0)
 
     def test_accuracy_is_monotonic_in_the_requested_tolerance(self):
-        """Tightening the request must never make the answer worse.
+        """Tightening the request must never make the answer much worse.
 
-        Pre-fix the error rose from 9.3e-01 at 1e-6 to 5.2e+01 at 1e-8.
+        Pre-fix the error rose from 9.3e-01 at 1e-6 to 5.2e+01 at 1e-8, a 56x
+        reversal. The bound only has to stay well under that.
+
+        It cannot be tight: cancellation across the oscillation panels floors
+        the error near 1e-7, and both of the last two requests land on that
+        floor, so which one comes out lower is decided by roundoff. The 1e-11
+        request gives 1.3e-08 here but 8.5e-08 on Ubuntu/pip and 1.1e-07 on
+        macOS, against 7.6e-08 for the 1e-8 request.
         """
         converged = self._gaussian_integral(1.0e-12)
         errors = [
@@ -896,7 +903,7 @@ class TestOscillatoryResolutionFloor:
         ]
 
         for looser, tighter in zip(errors, errors[1:]):
-            assert tighter <= looser * 1.1
+            assert tighter <= looser * 3.0
 
 
 class TestPanelRecording:
