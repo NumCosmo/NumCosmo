@@ -199,14 +199,7 @@ def test_integrator_tolerance_setting() -> None:
 def test_view_kernel_integrator_reltol_reaches_the_computation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``--integrator-reltol`` must change the numbers, not just the report.
-
-    The command has to hand the tolerance to ``new_full``; building the integrator
-    first and applying the tolerance with setters afterwards leaves the
-    computation at the quality it was constructed with, while ``get_reltol()``
-    still reports the requested value. The reported-value assertions above cannot
-    tell those two spellings apart, so compare the evaluated kernel itself.
-    """
+    """Test ``--integrator-reltol`` option."""
     captured: list[np.ndarray] = []
     evaluate = view.KernelEvaluation.evaluate
 
@@ -223,7 +216,8 @@ def test_view_kernel_integrator_reltol_reaches_the_computation(
         )
         assert result.exit_code == 0, result.output
 
-    loose, tight = captured
+    assert len(captured) == 2
+    loose, tight = captured[0], captured[1]
     assert loose.shape == tight.shape
 
     # Built at the requested tolerances the two runs differ by ~9e-5 here. Were
