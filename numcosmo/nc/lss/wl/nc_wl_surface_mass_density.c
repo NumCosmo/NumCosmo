@@ -281,7 +281,6 @@ void
 nc_wl_surface_mass_density_prepare (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo)
 {
   nc_distance_prepare_if_needed (smd->dist, cosmo);
-  ncm_model_ctrl_update (smd->ctrl_cosmo, NCM_MODEL (cosmo));
 }
 
 /**
