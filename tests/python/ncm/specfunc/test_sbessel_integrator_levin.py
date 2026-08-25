@@ -27,6 +27,8 @@
 from pathlib import Path
 import gzip
 import json
+import subprocess
+import sys
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -341,6 +343,105 @@ class TestSBesselIntegratorLevin:
 
         assert calls == 0
         assert result.get(0) == 0.0
+
+    def test_set_reltol_rebuilds_the_operators(self) -> None:
+        """A tolerance set after construction must reach the operators.
+
+        The operators are built when the multipole range is known, so a later
+        tolerance can only take effect by replacing them. Tightening it must
+        therefore improve an edge-panel result that starts out under-resolved.
+
+        ``cheb_reltol`` is set tight and left alone so that the operator
+        tolerance is the only thing limiting the result.
+        """
+        ell_min, ell_max = 0, 7
+        a, b = 999.9372447268345, 1018.1249616674683
+
+        def kernel(x: float, _k: float) -> float:
+            return np.exp(-0.003 * x)
+
+        expected = np.array(
+            [
+                quad(
+                    lambda x, ell=ell: np.exp(-0.003 * x) * spherical_jn(ell, x),
+                    a,
+                    b,
+                    epsabs=1.0e-16,
+                    epsrel=1.0e-12,
+                    limit=400,
+                )[0]
+                for ell in range(ell_min, ell_max + 1)
+            ]
+        )
+        scale = np.max(np.abs(expected))
+
+        integrator = Ncm.SBesselIntegratorLevin.new_full(
+            ell_min, ell_max, 1.0e-4, 1.0e6, 21, 1200, 1.0e-4, 2, 1.0e-12
+        )
+        result = Ncm.Vector.new(ell_max - ell_min + 1)
+
+        integrator.integrate(kernel, a, b, 1.0, result)
+        loose = np.max(np.abs(result.to_numpy() - expected)) / scale
+
+        integrator.set_reltol(1.0e-11)
+        assert integrator.get_reltol() == 1.0e-11
+
+        integrator.integrate(kernel, a, b, 1.0, result)
+        tight = np.max(np.abs(result.to_numpy() - expected)) / scale
+
+        assert tight < loose
+        assert tight < 1.0e-9
+
+    @pytest.mark.parametrize("setter", ["set_reltol", "set_cheb_reltol"])
+    @pytest.mark.parametrize("value", ["0.0", "-1.0e-8"])
+    def test_non_positive_tolerance_is_rejected(self, setter: str, value: str) -> None:
+        """Neither tolerance is meaningful at or below zero.
+
+        Runs in a subprocess since the assertion aborts rather than raises.
+        """
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from numcosmo_py import Ncm\n"
+                "Ncm.cfg_init()\n"
+                "sbi = Ncm.SBesselIntegratorLevin.new(0, 3)\n"
+                f"sbi.{setter}({value})\n",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert proc.returncode != 0
+        assert "assertion failed" in proc.stderr
+
+    def test_repeated_set_reltol_keeps_working(self) -> None:
+        """Rebuilding the operators repeatedly must stay correct."""
+        integrator = Ncm.SBesselIntegratorLevin.new(0, 5)
+        result = Ncm.Vector.new(6)
+
+        def kernel(x: float, _k: float) -> float:
+            return np.exp(-0.01 * x)
+
+        expected = np.array(
+            [
+                quad(
+                    lambda x, ell=ell: np.exp(-0.01 * x) * spherical_jn(ell, x),
+                    12.0,
+                    47.0,
+                    epsabs=1.0e-16,
+                    epsrel=1.0e-12,
+                    limit=400,
+                )[0]
+                for ell in range(6)
+            ]
+        )
+
+        for i in range(8):
+            integrator.set_reltol(1.0e-9 * (1.0 + 0.1 * i))
+            integrator.integrate(kernel, 12.0, 47.0, 1.0, result)
+            assert_allclose(result.to_numpy(), expected, rtol=1.0e-7, atol=1.0e-14)
 
     @pytest.mark.parametrize(
         "func_type,filename",

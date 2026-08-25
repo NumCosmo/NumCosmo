@@ -2828,3 +2828,125 @@ class TestSpectral:
                 atol=1.0e-14,
                 err_msg=f"Evaluation mismatch at x={x}",
             )
+
+
+class TestChebyshevRebase:
+    """Tests for ncm_spectral_chebyshev_rebase."""
+
+    @pytest.fixture(name="spectral")
+    def fixture_spectral(self) -> Ncm.Spectral:
+        """Create a spectral object."""
+        return Ncm.Spectral.new()
+
+    @staticmethod
+    def _to_t(a: float, b: float, x):
+        return (2.0 * np.asarray(x) - (a + b)) / (b - a)
+
+    def test_known_expansion(self, spectral: Ncm.Spectral) -> None:
+        """f(x) = x^2 rebased from [0, 1] to [0, 2], against the hand expansion.
+
+        On [0, 1], x^2 = 3/8 + T_1/2 + T_2/8; on [0, 2] it is 3/2 + 2T_1 + T_2/2.
+        """
+        coeffs = np.array([0.375, 0.5, 0.125])
+
+        norm, out = spectral.chebyshev_rebase(coeffs, 0, 0.0, 1.0, 0.0, 2.0)
+
+        assert_allclose(np.array(out), [1.5, 2.0, 0.5], rtol=1.0e-14, atol=ATOL)
+        assert norm == pytest.approx(4.0, rel=1.0e-14)
+
+    def test_same_interval_is_the_identity(self, spectral: Ncm.Spectral) -> None:
+        """Rebasing onto the source interval changes nothing."""
+        rng = np.random.default_rng(42)
+        coeffs = rng.normal(size=12)
+
+        _, out = spectral.chebyshev_rebase(coeffs, 0, -3.0, 7.0, -3.0, 7.0)
+
+        assert_allclose(np.array(out), coeffs, rtol=1.0e-12, atol=ATOL)
+
+    @pytest.mark.parametrize(
+        "a_out,b_out",
+        [
+            (1.0, 2.0),  # contained
+            (0.0, 4.0),  # wider on both sides
+            (3.0, 6.0),  # entirely outside the source
+            (-2.0, 0.5),  # outside on the other side
+        ],
+    )
+    def test_describes_the_same_polynomial(
+        self, spectral: Ncm.Spectral, a_out: float, b_out: float
+    ) -> None:
+        """The rebased series is the same polynomial, continuation included.
+
+        The target interval is deliberately allowed to leave the source one:
+        outside it the series is its own polynomial continuation, which is what
+        makes this usable as a smooth extension.
+        """
+        rng = np.random.default_rng(7)
+        coeffs = rng.normal(size=9)
+        a_in, b_in = 0.0, 3.0
+
+        _, out = spectral.chebyshev_rebase(coeffs, 0, a_in, b_in, a_out, b_out)
+
+        x = np.linspace(a_out, b_out, 40)
+        expected = chebval(self._to_t(a_in, b_in, x), coeffs)
+        obtained = chebval(self._to_t(a_out, b_out, x), np.array(out))
+
+        assert_allclose(obtained, expected, rtol=1.0e-11, atol=1.0e-11)
+
+    def test_len_truncates_the_input(self, spectral: Ncm.Spectral) -> None:
+        """@len uses only the leading coefficients, ignoring the tail."""
+        coeffs = np.array([1.0, 2.0, 3.0, 1.0e6, 1.0e6])
+
+        _, truncated = spectral.chebyshev_rebase(coeffs, 3, 0.0, 1.0, 0.0, 2.0)
+        _, explicit = spectral.chebyshev_rebase(coeffs[:3], 0, 0.0, 1.0, 0.0, 2.0)
+
+        assert len(truncated) == 3
+        assert_allclose(np.array(truncated), np.array(explicit), rtol=1.0e-14)
+
+    def test_norm_bounds_the_function_on_the_target(
+        self, spectral: Ncm.Spectral
+    ) -> None:
+        """The returned norm is an upper bound for |f| over the target interval.
+
+        This is what makes it usable as a conditioning gate: unlike sampling,
+        it cannot miss a spike between probe points.
+        """
+        rng = np.random.default_rng(11)
+        coeffs = rng.normal(size=10)
+        a_out, b_out = 4.0, 9.0
+
+        norm, out = spectral.chebyshev_rebase(coeffs, 0, 0.0, 3.0, a_out, b_out)
+
+        x = np.linspace(a_out, b_out, 500)
+        values = chebval(self._to_t(a_out, b_out, x), np.array(out))
+
+        assert np.max(np.abs(values)) <= norm * (1.0 + 1.0e-12)
+        assert norm == pytest.approx(np.sum(np.abs(np.array(out))), rel=1.0e-14)
+
+    def test_extrapolation_grows_the_norm(self, spectral: Ncm.Spectral) -> None:
+        """Reaching further outside the source interval costs conditioning."""
+        rng = np.random.default_rng(3)
+        coeffs = rng.normal(size=16)
+
+        norms = [
+            spectral.chebyshev_rebase(coeffs, 0, 0.0, 1.0, 0.0, width)[0]
+            for width in (1.0, 1.5, 2.0, 3.0)
+        ]
+
+        for narrow, wide in zip(norms, norms[1:]):
+            assert wide > narrow
+
+    def test_overflow_reports_infinity(self, spectral: Ncm.Spectral) -> None:
+        """A continuation that overflows is reported, not returned as garbage."""
+        coeffs = np.full(400, 1.0e100)
+
+        norm, _ = spectral.chebyshev_rebase(coeffs, 0, 0.0, 1.0, 0.0, 1.0e3)
+
+        assert np.isinf(norm)
+
+    def test_empty_input(self, spectral: Ncm.Spectral) -> None:
+        """An empty series rebases to an empty series."""
+        norm, out = spectral.chebyshev_rebase(np.zeros(0), 0, 0.0, 1.0, 0.0, 2.0)
+
+        assert norm == 0.0
+        assert len(out) == 0

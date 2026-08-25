@@ -111,8 +111,6 @@ struct _NcmSBesselIntegratorLevin
   /* Pre-allocated working arrays */
   GArray *cheb_coeffs;
   GArray *edge_cheb_coeffs;
-  gdouble *edge_transform_work;
-  gsize edge_transform_work_len;
   GArray *gegen_coeffs;
   GArray *rhs;
   GArray *values_result;
@@ -174,31 +172,29 @@ G_DEFINE_TYPE (NcmSBesselIntegratorLevin, ncm_sbessel_integrator_levin, NCM_TYPE
 static void
 ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
 {
-  sbilv->max_order               = 0;
-  sbilv->reltol                  = 0.0;
-  sbilv->cheb_min_order          = 0;
-  sbilv->cheb_reltol             = 0.0;
-  sbilv->ode_solver              = ncm_sbessel_ode_solver_new ();
-  sbilv->ode_operator            = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, 2, 2);
-  sbilv->sba                     = ncm_sf_sbessel_array_new ();
-  sbilv->alloc_max_order         = 0;
-  sbilv->panel_abstol            = 0.0;
-  sbilv->alloc_ell_min           = -1;
-  sbilv->alloc_ell_max           = -1;
-  sbilv->cheb_coeffs             = NULL;
-  sbilv->edge_cheb_coeffs        = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  sbilv->edge_transform_work     = NULL;
-  sbilv->edge_transform_work_len = 0;
-  sbilv->gegen_coeffs            = NULL;
-  sbilv->rhs                     = NULL;
-  sbilv->values_result           = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  sbilv->j_array_a               = NULL;
-  sbilv->j_array_b               = NULL;
-  sbilv->endpoints_result        = NULL;
-  sbilv->jl_arr                  = NULL;
-  sbilv->constructed             = FALSE;
-  sbilv->record_panels           = FALSE;
-  sbilv->panel_records           = g_array_new (FALSE, FALSE, sizeof (NcmSBesselIntegratorLevinPanelRec));
+  sbilv->max_order        = 0;
+  sbilv->reltol           = 0.0;
+  sbilv->cheb_min_order   = 0;
+  sbilv->cheb_reltol      = 0.0;
+  sbilv->ode_solver       = ncm_sbessel_ode_solver_new ();
+  sbilv->ode_operator     = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, 2, 2);
+  sbilv->sba              = ncm_sf_sbessel_array_new ();
+  sbilv->alloc_max_order  = 0;
+  sbilv->panel_abstol     = 0.0;
+  sbilv->alloc_ell_min    = -1;
+  sbilv->alloc_ell_max    = -1;
+  sbilv->cheb_coeffs      = NULL;
+  sbilv->edge_cheb_coeffs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  sbilv->gegen_coeffs     = NULL;
+  sbilv->rhs              = NULL;
+  sbilv->values_result    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  sbilv->j_array_a        = NULL;
+  sbilv->j_array_b        = NULL;
+  sbilv->endpoints_result = NULL;
+  sbilv->jl_arr           = NULL;
+  sbilv->constructed      = FALSE;
+  sbilv->record_panels    = FALSE;
+  sbilv->panel_records    = g_array_new (FALSE, FALSE, sizeof (NcmSBesselIntegratorLevinPanelRec));
   /* Knots-based paneling */
   sbilv->y_knots_min    = 0.0;
   sbilv->y_knots_max    = 0.0;
@@ -226,7 +222,6 @@ _ncm_sbessel_integrator_levin_dispose (GObject *object)
   g_clear_pointer (&sbilv->panel_records, g_array_unref);
   g_clear_pointer (&sbilv->cheb_coeffs, g_array_unref);
   g_clear_pointer (&sbilv->edge_cheb_coeffs, g_array_unref);
-  g_clear_pointer (&sbilv->edge_transform_work, g_free);
   g_clear_pointer (&sbilv->gegen_coeffs, g_array_unref);
   g_clear_pointer (&sbilv->rhs, g_array_unref);
   g_clear_pointer (&sbilv->endpoints_result, g_array_unref);
@@ -411,13 +406,14 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
   /**
    * NcmSBesselIntegratorLevin:reltol:
    *
-   * Relative tolerance for convergence.
+   * Relative tolerance of the ODE solve. Bounds the result together with
+   * #NcmSBesselIntegratorLevin:cheb-reltol; the looser of the two wins.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
                                                         NULL,
-                                                        "Relative tolerance",
+                                                        "ODE solve relative tolerance",
                                                         0.0, 1.0, 1.0e-7,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -438,14 +434,15 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
   /**
    * NcmSBesselIntegratorLevin:cheb-reltol:
    *
-   * Relative tolerance for Chebyshev decomposition of the integrand when computing
-   * the RHS for the Levin method.
+   * Relative tolerance of the integrand's Chebyshev fit, which forms the RHS.
+   * Bounds the result together with #NcmSBesselIntegratorLevin:reltol; the
+   * looser of the two wins.
    */
   g_object_class_install_property (object_class,
                                    PROP_CHEB_RELTOL,
                                    g_param_spec_double ("cheb-reltol",
                                                         NULL,
-                                                        "Chebyshev decomposition relative tolerance",
+                                                        "Integrand Chebyshev fit relative tolerance",
                                                         0.0, 1.0, 1.0e-8,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -652,6 +649,11 @@ _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin
         g_ptr_array_add (sbilv->operators, op);
       }
 
+      /* set_reltol() re-enters this branch to rebuild every operator, so the
+       * previous temporaries must go before the new ones take their place. */
+      ncm_sbessel_ode_operator_clear (&sbilv->ode_operator_temp_a);
+      ncm_sbessel_ode_operator_clear (&sbilv->ode_operator_temp_b);
+
       sbilv->ode_operator_temp_a       = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, ell_min, ell_max);
       sbilv->ode_operator_temp_b       = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, ell_min, ell_max);
       sbilv->ode_operator_temp_a_valid = FALSE;
@@ -848,6 +850,9 @@ _ncm_sbessel_integrator_levin_get_panel_resources (NcmSBesselIntegratorLevin *sb
 /* Relative level below which a panel cannot move the accumulated result. */
 #define NCM_SBESSEL_LEVIN_PANEL_ABSTOL_EPS 1.0e-16
 
+/* Largest extension growth an edge cell may show and still be used. */
+#define NCM_SBESSEL_LEVIN_EDGE_GROWTH_MAX 1.0e4
+
 /*
  * Absolute floor for the next panel's Chebyshev RHS. Two independent scales
  * feed it, and the looser one wins:
@@ -1031,108 +1036,52 @@ _ncm_sbessel_integrator_levin_get_edge_operator (NcmSBesselIntegratorLevin *sbil
   }
 }
 
-typedef struct _NcmSBesselIntegratorLevinEdgeExtension
-{
-  GArray *coeffs;
-  guint len;
-  gdouble a;
-  gdouble b;
-} NcmSBesselIntegratorLevinEdgeExtension;
-
+/*
+ * Largest value the extension may reach, in units of the fit's own scale.
+ *
+ * W_a and W_b are evaluated at the true bounds but built from a solution that
+ * lives on the whole cell, so an extension larger than the fit by a factor G
+ * costs G times the double-precision noise in their difference.  Keeping
+ * G * GSL_DBL_EPSILON under the requested accuracy is what stops a poorly
+ * conditioned cell from consuming the whole error budget; the constant caps
+ * G for the loose tolerances, where cancellation is not the binding limit.
+ */
 static gdouble
-_ncm_sbessel_integrator_levin_edge_extension_func (gpointer data, gdouble y)
+_ncm_sbessel_integrator_levin_edge_growth_limit (NcmSBesselIntegratorLevin *sbilv,
+                                                 gdouble                   reference_scale)
 {
-  NcmSBesselIntegratorLevinEdgeExtension *extension = data;
-  GArray coeffs                                     = {extension->coeffs->data, extension->len};
+  const gdouble growth = MIN (NCM_SBESSEL_LEVIN_EDGE_GROWTH_MAX, sbilv->reltol / GSL_DBL_EPSILON);
 
-  return ncm_spectral_chebyshev_eval_x (&coeffs, extension->a, extension->b, y);
+  return growth * MAX (reference_scale, G_MINDOUBLE);
 }
 
+/* Rebase the edge fit onto the fixed cell, rejecting an ill-conditioned one. */
 static gboolean
 _ncm_sbessel_integrator_levin_transform_edge_coeffs (NcmSBesselIntegratorLevin *sbilv,
+                                                     NcmSpectral *spectral,
                                                      gdouble panel_a, gdouble panel_b,
                                                      gdouble integral_a, gdouble integral_b,
                                                      gdouble reference_scale,
                                                      guint effective_len)
 {
-  const guint n = effective_len;
   /* Two boundary rows make three coefficients the solver's safe minimum. */
   const guint output_len = MAX (effective_len, 3u);
-  const gdouble alpha    = (panel_b - panel_a) / (integral_b - integral_a);
-  const gdouble beta     = (panel_b + panel_a - integral_b - integral_a) / (integral_b - integral_a);
-  const gdouble *a       = (gdouble *) sbilv->edge_cheb_coeffs->data;
-  gdouble *previous;
-  gdouble *current;
-  gdouble *next;
-  gdouble *b;
-  gdouble transformed_scale = 0.0;
-  guint degree, i;
+  const gdouble norm     = ncm_spectral_chebyshev_rebase (spectral, sbilv->edge_cheb_coeffs,
+                                                          effective_len,
+                                                          integral_a, integral_b,
+                                                          panel_a, panel_b,
+                                                          &sbilv->cheb_coeffs);
 
-  if (sbilv->edge_transform_work_len < 3 * n)
+  if (sbilv->cheb_coeffs->len < output_len)
   {
-    sbilv->edge_transform_work     = g_realloc_n (sbilv->edge_transform_work, 3 * n, sizeof (gdouble));
-    sbilv->edge_transform_work_len = 3 * n;
+    const guint padded_from = sbilv->cheb_coeffs->len;
+
+    g_array_set_size (sbilv->cheb_coeffs, output_len);
+    memset (&g_array_index (sbilv->cheb_coeffs, gdouble, padded_from), 0,
+            (output_len - padded_from) * sizeof (gdouble));
   }
 
-  previous = sbilv->edge_transform_work;
-  current  = previous + n;
-  next     = current + n;
-  memset (sbilv->edge_transform_work, 0, 3 * n * sizeof (gdouble));
-  g_array_set_size (sbilv->cheb_coeffs, output_len);
-  b = (gdouble *) sbilv->cheb_coeffs->data;
-  memset (b, 0, output_len * sizeof (gdouble));
-
-  previous[0] = 1.0;
-  b[0]        = a[0];
-
-  if (n > 1)
-  {
-    current[0] = beta;
-    current[1] = alpha;
-    b[0]      += a[1] * beta;
-    b[1]      += a[1] * alpha;
-  }
-
-  /* Recursively form T_degree(alpha t + beta) in the T_k(t) basis. */
-  for (degree = 1; degree + 1 < n; degree++)
-  {
-    gdouble *tmp;
-
-    memset (next, 0, n * sizeof (gdouble));
-
-    for (i = 0; i <= degree; i++)
-    {
-      next[i] += 2.0 * beta * current[i] - previous[i];
-
-      if (i == 0)
-      {
-        next[1] += 2.0 * alpha * current[0];
-      }
-      else
-      {
-        next[i - 1] += alpha * current[i];
-        next[i + 1] += alpha * current[i];
-      }
-    }
-
-    for (i = 0; i <= degree + 1; i++)
-      b[i] += a[degree + 1] * next[i];
-
-    tmp      = previous;
-    previous = current;
-    current  = next;
-    next     = tmp;
-  }
-
-  for (i = 0; i < output_len; i++)
-  {
-    if (!isfinite (b[i]))
-      return FALSE;
-
-    transformed_scale += fabs (b[i]);
-  }
-
-  return transformed_scale <= 1.0e4 * MAX (reference_scale, G_MINDOUBLE);
+  return norm <= _ncm_sbessel_integrator_levin_edge_growth_limit (sbilv, reference_scale);
 }
 
 static void
@@ -1154,9 +1103,8 @@ _ncm_sbessel_integrator_levin_prepare_extended_rhs (NcmSBesselIntegratorLevin *s
                                                     gdouble k, gpointer user_data)
 {
   NcmSBesselIntegratorLevinWrapper wrapper = {F, k, user_data};
-  NcmSBesselIntegratorLevinEdgeExtension extension;
-  gdouble reference_scale = 0.0;
-  gdouble discarded_scale = 0.0;
+  gdouble reference_scale                  = 0.0;
+  gdouble discarded_scale                  = 0.0;
   gdouble discard_limit;
   guint effective_len;
   guint i;
@@ -1197,27 +1145,9 @@ _ncm_sbessel_integrator_levin_prepare_extended_rhs (NcmSBesselIntegratorLevin *s
     return FALSE;
   }
 
-  extension.coeffs = sbilv->edge_cheb_coeffs;
-  extension.len    = effective_len;
-  extension.a      = integral_a;
-  extension.b      = integral_b;
-
   /* Extrapolated high-order noise can grow exponentially outside [-1, 1].
    * Reject such a cell and use the moving-panel solver instead. */
-  for (i = 0; i <= 8; i++)
-  {
-    const gdouble y     = panel_a + (panel_b - panel_a) * i / 8.0;
-    const gdouble value = _ncm_sbessel_integrator_levin_edge_extension_func (&extension, y);
-
-    if (!isfinite (value) || (fabs (value) > 1.0e4 * MAX (reference_scale, G_MINDOUBLE)))
-    {
-      _ncm_sbessel_integrator_levin_prepare_extended_rhs_fallback (sbilv);
-
-      return FALSE;
-    }
-  }
-
-  if (!_ncm_sbessel_integrator_levin_transform_edge_coeffs (sbilv,
+  if (!_ncm_sbessel_integrator_levin_transform_edge_coeffs (sbilv, spectral,
                                                             panel_a, panel_b, integral_a, integral_b,
                                                             reference_scale, effective_len))
   {
@@ -1910,26 +1840,25 @@ ncm_sbessel_integrator_levin_get_max_order (NcmSBesselIntegratorLevin *sbilv)
  * @sbilv: a #NcmSBesselIntegratorLevin
  * @reltol: relative tolerance
  *
- * Sets the relative tolerance used to build ODE operators from here on.
+ * Sets the ODE solve tolerance. An operator's accuracy is fixed when it is
+ * built, so this discards every panel operator, cached edge cell and
+ * moving-edge temporary and rebuilds them. Setting the current value is a
+ * no-op.
  *
- * Operators take the tolerance in force when they are created and keep it for
- * their whole life, so this does not reach operators that already exist. Since
- * the panel operators are built as soon as the multipole range is known, an
- * integrator constructed and then given a tolerance keeps the tolerance it was
- * constructed with. Pass @reltol at construction --
- * ncm_sbessel_integrator_levin_new_full() or the `reltol` property -- to have
- * it apply to every operator.
+ * The rebuild is expensive and invalidates factorizations in use: prefer
+ * ncm_sbessel_integrator_levin_new_full() or the `reltol` property.
  *
- * This is deliberate: an operator's accuracy is fixed when it is built, so it
- * cannot be changed underneath a computation that is already using it.
+ * The integrand fit has a separate tolerance,
+ * ncm_sbessel_integrator_levin_set_cheb_reltol(). The looser of the two
+ * bounds the result.
  */
 void
 ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble reltol)
 {
+  g_assert_cmpfloat (reltol, >, 0.0);
+
   if (sbilv->reltol == reltol)
     return;
-
-  g_assert_cmpfloat (reltol, >, 0.0);
 
   sbilv->reltol = reltol;
   ncm_sbessel_ode_solver_set_tolerance (sbilv->ode_solver, reltol);
@@ -1947,9 +1876,9 @@ ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdoub
  * ncm_sbessel_integrator_levin_get_reltol:
  * @sbilv: a #NcmSBesselIntegratorLevin
  *
- * Gets the relative tolerance.
+ * Gets the ODE solve tolerance.
  *
- * Returns: the relative tolerance
+ * Returns: the ODE solve relative tolerance
  */
 gdouble
 ncm_sbessel_integrator_levin_get_reltol (NcmSBesselIntegratorLevin *sbilv)
@@ -1989,11 +1918,16 @@ ncm_sbessel_integrator_levin_get_cheb_min_order (NcmSBesselIntegratorLevin *sbil
  * @sbilv: a #NcmSBesselIntegratorLevin
  * @cheb_reltol: Chebyshev decomposition relative tolerance
  *
- * Sets the relative tolerance for Chebyshev decomposition of the integrand.
+ * Sets the tolerance of the integrand's Chebyshev fit. The fit is redone per
+ * panel, so this applies from the next integration and rebuilds nothing,
+ * unlike ncm_sbessel_integrator_levin_set_reltol(). The looser of the two
+ * bounds the result.
  */
 void
 ncm_sbessel_integrator_levin_set_cheb_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble cheb_reltol)
 {
+  g_assert_cmpfloat (cheb_reltol, >, 0.0);
+
   sbilv->cheb_reltol = cheb_reltol;
 }
 
@@ -2001,9 +1935,9 @@ ncm_sbessel_integrator_levin_set_cheb_reltol (NcmSBesselIntegratorLevin *sbilv, 
  * ncm_sbessel_integrator_levin_get_cheb_reltol:
  * @sbilv: a #NcmSBesselIntegratorLevin
  *
- * Gets the relative tolerance for Chebyshev decomposition.
+ * Gets the tolerance of the integrand's Chebyshev fit.
  *
- * Returns: the Chebyshev decomposition relative tolerance
+ * Returns: the Chebyshev fit relative tolerance
  */
 gdouble
 ncm_sbessel_integrator_levin_get_cheb_reltol (NcmSBesselIntegratorLevin *sbilv)

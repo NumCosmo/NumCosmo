@@ -101,6 +101,16 @@ def test_view_kernel_integrator_precision_options() -> None:
     assert "max_order=64" in result.output
 
 
+@pytest.mark.parametrize("option", ["--integrator-reltol", "--integrator-cheb-reltol"])
+@pytest.mark.parametrize("value", ["0", "-1e-8", "2.0"])
+def test_view_kernel_rejects_out_of_range_tolerance(option: str, value: str) -> None:
+    """Neither tolerance is usable outside (0, 1]; the library would abort."""
+    result = _view("--l-limber", "-1", option, value)
+
+    assert result.exit_code != 0
+    assert "Kernel evaluation complete" not in result.output
+
+
 def test_view_kernel_defaults_leave_library_precision_alone() -> None:
     """Without the options the integrator keeps its own defaults."""
     result = _view("--l-limber", "0")
