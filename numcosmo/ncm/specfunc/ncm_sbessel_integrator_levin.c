@@ -60,7 +60,7 @@
 
 #include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
-#include "ncm/sphere/ncm_spectral.h"
+#include "ncm/algebra/ncm_spectral.h"
 #include "ncm/specfunc/ncm_sf_sbessel.h"
 #include "ncm/algebra/ncm_lapack.h"
 #include "ncm/core/ncm_c.h"

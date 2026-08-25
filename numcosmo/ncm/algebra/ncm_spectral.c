@@ -44,7 +44,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "ncm/sphere/ncm_spectral.h"
+#include "ncm/algebra/ncm_spectral.h"
 #include "ncm/core/ncm_cfg.h"
 
 #include <math.h>

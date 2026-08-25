@@ -97,7 +97,7 @@
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
 #include "ncm/fftlog/ncm_fftlog_sbessel_j.h"
 #include "ncm/fftlog/ncm_fftlog_sbessel_jljm.h"
-#include "ncm/sphere/ncm_spectral.h"
+#include "ncm/algebra/ncm_spectral.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/cmb/nc_cbe_precision.h"
 #include "nc/background/nc_hicosmo_qconst.h"

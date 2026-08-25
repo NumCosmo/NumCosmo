@@ -31,7 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/ncm/algebra/ncm_matrix.h>
-#include <numcosmo/ncm/sphere/ncm_spectral.h>
+#include <numcosmo/ncm/algebra/ncm_spectral.h>
 
 G_BEGIN_DECLS
 
