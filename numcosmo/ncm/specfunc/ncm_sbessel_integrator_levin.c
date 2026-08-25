@@ -60,8 +60,8 @@
 
 #include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
-#include "ncm/algebra/ncm_spectral.h"
 #include "ncm/specfunc/ncm_sf_sbessel.h"
+#include "ncm/algebra/ncm_spectral.h"
 #include "ncm/algebra/ncm_lapack.h"
 #include "ncm/core/ncm_c.h"
 #include "ncm/integration/ncm_integral_nd.h"
@@ -640,6 +640,7 @@ _ncm_sbessel_integrator_levin_prepare_knots_operators (NcmSBesselIntegratorLevin
     if (need_create)
     {
       sbilv->operators = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_sbessel_ode_operator_unref);
+      g_hash_table_remove_all (sbilv->edge_operators);
 
       for (i = 0; i < sbilv->n_knots - 1; i++)
       {
@@ -1932,6 +1933,14 @@ ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdoub
 
   sbilv->reltol = reltol;
   ncm_sbessel_ode_solver_set_tolerance (sbilv->ode_solver, reltol);
+
+  if (sbilv->operators != NULL)
+  {
+    g_ptr_array_unref (sbilv->operators);
+    sbilv->operators = NULL;
+  }
+
+  _ncm_sbessel_integrator_levin_prepare_knots_operators (sbilv, sbilv->alloc_ell_min, sbilv->alloc_ell_max);
 }
 
 /**

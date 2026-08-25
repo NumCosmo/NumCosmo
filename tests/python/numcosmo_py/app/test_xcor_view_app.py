@@ -166,15 +166,8 @@ def test_view_kernel_cls_fixed_method() -> None:
     assert "method=fixed" in result.output
 
 
-def test_integrator_tolerance_is_fixed_at_construction() -> None:
-    """The library semantics that make ``--integrator-reltol`` easy to get wrong.
-
-    An ODE operator keeps the tolerance in force when it was built, so a tolerance
-    set on an already-constructed integrator does not buy the answer that
-    constructing at that tolerance would have given. This states the library
-    behaviour only; that the view command actually relies on it is covered by
-    ``test_view_kernel_integrator_reltol_reaches_the_computation``.
-    """
+def test_integrator_tolerance_setting() -> None:
+    """Test the setting of integrator tolerances."""
     args = (5.0, 1.0, 0.1, 10.0, 50.0, 2)
 
     def build(tol: float) -> float:
@@ -184,25 +177,23 @@ def test_integrator_tolerance_is_fixed_at_construction() -> None:
         return sbi.integrate_gaussian_ell(*args)
 
     loose, tight = build(1e-4), build(1e-12)
-
-    # The construction-time tolerance reaches the computation. How large the gap
-    # is depends on how accurate the solver is at loose tolerances, which is not
-    # a fixed property: the resolution floors shrank this case from ~1e2 to ~4e-2.
-    # The threshold therefore only has to clear the loose-regime spread.
     assert abs(loose / tight - 1.0) > 1e-3
 
-    # Setting a tighter tolerance afterwards does not buy the tighter answer:
-    # the result stays with the tolerance the operators were built at.
-    relaxed = Ncm.SBesselIntegratorLevin.new_full(
-        2, 2, 1e-4, 1e6, 21, 1200, 1e-4, 2, 1e-4
-    )
-    relaxed.set_reltol(1e-12)
-    relaxed.set_cheb_reltol(1e-12)
-    after = relaxed.integrate_gaussian_ell(*args)
+    sbi = Ncm.SBesselIntegratorLevin.new_full(2, 2, 1e-4, 1e6, 21, 1200, 1e-3, 2, 1e-3)
+    sbi.set_reltol(1e-4)
+    sbi.set_cheb_reltol(1e-4)
+    assert sbi.get_reltol() == 1e-4
+    assert sbi.get_cheb_reltol() == 1e-4
+    loose_after = sbi.integrate_gaussian_ell(*args)
 
-    assert relaxed.get_reltol() == 1e-12  # the getter reports the new value ...
-    assert abs(after / loose - 1.0) < 1e-6  # ... but the answer is the loose one
-    assert abs(after / tight - 1.0) > 1e-3
+    sbi.set_reltol(1e-12)
+    sbi.set_cheb_reltol(1e-12)
+    assert sbi.get_reltol() == 1e-12
+    assert sbi.get_cheb_reltol() == 1e-12
+    tight_after = sbi.integrate_gaussian_ell(*args)
+
+    assert abs(loose_after / loose - 1.0) < 1e-11
+    assert abs(tight_after / tight - 1.0) < 1e-11
 
 
 def test_view_kernel_integrator_reltol_reaches_the_computation(
