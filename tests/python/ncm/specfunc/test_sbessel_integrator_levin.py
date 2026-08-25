@@ -242,10 +242,13 @@ class TestSBesselIntegratorLevin:
         for a, b in [(5.0, 50.0), (6.7, 43.0), (9.5, 32.0), (10.5, 96.0)]:
             sampled = [np.inf, -np.inf]
 
+            # pylint: disable=cell-var-from-loop
             def f_domain(x: float, _k: float) -> float:
                 sampled[0] = min(sampled[0], x)
                 sampled[1] = max(sampled[1], x)
                 return np.exp(-0.03 * x)
+
+            # pylint: enable=cell-var-from-loop
 
             integrator.integrate(f_domain, a, b, 1.0, result)
             assert sampled[0] >= np.nextafter(a, -np.inf)
@@ -710,7 +713,7 @@ class TestPanelAbstolEvanescent:
         assert np.isfinite(result.get(0))
 
     def test_still_accurate_where_the_panel_does_matter(self) -> None:
-        """The floor is a relaxation, never a licence to under-resolve.
+        """The floor is a relaxation, never a license to under-resolve.
 
         Same caller abstol, but an ell whose turning point is inside the range,
         against a smooth integrand with a known answer: the result must still be
@@ -856,7 +859,7 @@ class TestPanelRecording:
         for i in range(n):
             assert sbi.get_panel_ell(i) == ell
 
-    def test_records_are_cleared_between_integrations(self):
+    def test_records_are_cleared_between_integrations(self) -> None:
         """Records describe the most recent call, not an accumulation."""
         sbi = self._integrator(2, True)
         sbi.integrate_gaussian_ell(5.0, 1.0, 0.1, 10.0, 50.0, 2)
@@ -865,7 +868,8 @@ class TestPanelRecording:
 
         assert sbi.get_n_panel_records() == first
 
-    def test_disabling_recording_releases_the_records(self):
+    def test_disabling_recording_releases_the_records(self) -> None:
+        """Disabling recording must clear the records."""
         sbi = self._integrator(2, True)
         sbi.integrate_gaussian_ell(5.0, 1.0, 0.1, 10.0, 50.0, 2)
         assert sbi.get_n_panel_records() > 0
