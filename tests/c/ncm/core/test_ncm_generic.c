@@ -43,7 +43,6 @@ void test_ncm_fftlog_basic (void);
 void test_ncm_sphere_nn (void);
 void test_ncm_timer_basic (void);
 void test_ncm_sbessel_ode_solver_basic (void);
-void test_ncm_sbessel_ode_solver_ivp_basic (void);
 void test_ncm_sbessel_integrator_gl_basic (void);
 void test_ncm_sbessel_integrator_fftl_basic (void);
 void test_ncm_sbessel_integrator_levin_basic (void);
@@ -132,7 +131,6 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sphere/nn", test_ncm_sphere_nn);
   g_test_add_func ("/ncm/timer/basic", test_ncm_timer_basic);
   g_test_add_func ("/ncm/sbessel_ode_solver/basic", test_ncm_sbessel_ode_solver_basic);
-  g_test_add_func ("/ncm/sbessel_ode_solver_ivp/basic", test_ncm_sbessel_ode_solver_ivp_basic);
   g_test_add_func ("/ncm/sbessel_integrator_gl/basic", test_ncm_sbessel_integrator_gl_basic);
   g_test_add_func ("/ncm/sbessel_integrator_fftl/basic", test_ncm_sbessel_integrator_fftl_basic);
   g_test_add_func ("/ncm/sbessel_integrator_levin/basic", test_ncm_sbessel_integrator_levin_basic);
@@ -243,24 +241,6 @@ test_ncm_sbessel_ode_solver_basic (void)
   g_assert_true (NCM_IS_SBESSEL_ODE_SOLVER (solver));
 
   NCM_TEST_FREE (ncm_sbessel_ode_solver_free, solver);
-}
-
-void
-test_ncm_sbessel_ode_solver_ivp_basic (void)
-{
-  NcmSBesselOdeSolverIVP *solver = ncm_sbessel_ode_solver_ivp_new ();
-  NcmSBesselOdeSolverIVP *solver2;
-
-  g_assert_true (solver != NULL);
-  g_assert_true (NCM_IS_SBESSEL_ODE_SOLVER_IVP (solver));
-
-  solver2 = ncm_sbessel_ode_solver_ivp_ref (solver);
-  ncm_sbessel_ode_solver_ivp_clear (&solver2);
-  g_assert_null (solver2);
-
-  g_assert_true (NCM_IS_SBESSEL_ODE_SOLVER_IVP (solver));
-
-  NCM_TEST_FREE (ncm_sbessel_ode_solver_ivp_free, solver);
 }
 
 void

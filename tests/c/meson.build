@@ -102,10 +102,6 @@ math_tests = [
         'sources': ['ncm/specfunc/test_ncm_sf_sbessel.c'],
     },
     {
-        'name': 'ncm_sbessel_ode_solver_ivp',
-        'sources': ['ncm/specfunc/test_ncm_sbessel_ode_solver_ivp.c'],
-    },
-    {
         'name': 'ncm_mpsf_0F1',
         'sources': ['ncm/specfunc/test_ncm_mpsf_0F1.c'],
     },
@@ -415,7 +411,8 @@ foreach c_test : all_c_tests
     test(
         c_test['name'],
         test_is_omp ? omp_thread_wrapper : executable_test,
-        args: test_is_omp ? [executable_test.full_path()] + test_seed_args : test_seed_args,
+        args: test_is_omp ? [executable_test.full_path()]
+        + test_seed_args : test_seed_args,
         depends: test_is_omp ? [executable_test] : [],
         timeout: timeout,
         env: test_env,
