@@ -269,6 +269,7 @@ nc_halo_position_prepare (NcHaloPosition *hp, NcHICosmo *cosmo)
   NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
 
   nc_distance_prepare_if_needed (self->dist, cosmo);
+  ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo));
 }
 
 /**
