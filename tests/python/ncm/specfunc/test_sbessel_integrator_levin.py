@@ -885,25 +885,30 @@ class TestOscillatoryResolutionFloor:
             assert_allclose(result, converged, rtol=1.0e-2, atol=0.0)
 
     def test_accuracy_is_monotonic_in_the_requested_tolerance(self):
-        """Tightening the request must never make the answer much worse.
+        """Tightening the request must not make the answer wholesale worse.
 
         Pre-fix the error rose from 9.3e-01 at 1e-6 to 5.2e+01 at 1e-8, a 56x
-        reversal. The bound only has to stay well under that.
+        reversal.
 
-        It cannot be tight: cancellation across the oscillation panels floors
-        the error near 1e-7, and both of the last two requests land on that
-        floor, so which one comes out lower is decided by roundoff. The 1e-11
-        request gives 1.3e-08 here but 8.5e-08 on Ubuntu/pip and 1.1e-07 on
-        macOS, against 7.6e-08 for the 1e-8 request.
+        Only the loose half can be compared step by step. From about 1e-7 the
+        adaptive refinement lands on discrete levels, so the delivered error
+        bounces inside a ~1e-7 band rather than falling: sweeping reltol on one
+        machine gives 4.4e-09 at 1e-8.25 against 1.8e-07 at 1e-8.50, and the
+        request does not actually converge until past 1e-11. Which level a
+        given request lands on also shifts with the BLAS kernel, so CI has
+        produced 8.5e-08, 1.1e-07 and 3.0e-07 at 1e-11 where this machine
+        gives 1.3e-08. The tight end therefore gets an absolute bound, not a
+        comparison.
         """
         converged = self._gaussian_integral(1.0e-12)
-        errors = [
-            abs(self._gaussian_integral(reltol) / converged - 1.0)
+        errors = {
+            reltol: abs(self._gaussian_integral(reltol) / converged - 1.0)
             for reltol in (1.0e-4, 1.0e-6, 1.0e-8, 1.0e-11)
-        ]
+        }
 
-        for looser, tighter in zip(errors, errors[1:]):
-            assert tighter <= looser * 3.0
+        assert errors[1.0e-6] <= errors[1.0e-4] * 3.0
+        assert errors[1.0e-8] <= errors[1.0e-6] * 3.0
+        assert errors[1.0e-11] < 1.0e-5
 
 
 class TestPanelRecording:
