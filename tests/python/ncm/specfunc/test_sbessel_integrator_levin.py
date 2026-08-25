@@ -791,7 +791,7 @@ class TestOscillatoryResolutionFloor:
         converged = self._gaussian_integral(1.0e-12)
         errors = [
             abs(self._gaussian_integral(reltol) / converged - 1.0)
-            for reltol in (1.0e-4, 1.0e-6, 1.0e-8, 1.0e-10)
+            for reltol in (1.0e-4, 1.0e-6, 1.0e-8, 1.0e-11)
         ]
 
         for looser, tighter in zip(errors, errors[1:]):
