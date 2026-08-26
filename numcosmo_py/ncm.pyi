@@ -8199,6 +8199,131 @@ class Powspec(GObject.Object):
         self, model: typing.Optional[Model], reltol: float, z: float, R: float
     ) -> float: ...
 
+class PowspecAnalytic(Powspec):
+    r"""
+    :Constructors:
+
+    ::
+
+        PowspecAnalytic(**properties)
+        new(shape:NumCosmoMath.PowspecAnalyticShape, growth:NumCosmoMath.PowspecAnalyticGrowth) -> NumCosmoMath.PowspecAnalytic
+        new_full(shape:NumCosmoMath.PowspecAnalyticShape, growth:NumCosmoMath.PowspecAnalyticGrowth, amplitude:float, n_s:float, k_eq:float, Omega_m:float) -> NumCosmoMath.PowspecAnalytic
+
+    Object NcmPowspecAnalytic
+
+    Properties from NcmPowspecAnalytic:
+      shape -> NcmPowspecAnalyticShape: shape
+        Transfer function shape
+      growth -> NcmPowspecAnalyticGrowth: growth
+        Growth factor shape
+      amplitude -> gdouble: amplitude
+        Overall amplitude
+      n-s -> gdouble: n-s
+        Spectral index
+      k-eq -> gdouble: k-eq
+        Transfer function scale in 1/Mpc
+      Omega-m -> gdouble: Omega-m
+        Matter fraction, growth factor only
+      a-t -> gdouble: a-t
+        Growth transition scale factor
+      bao-amplitude -> gdouble: bao-amplitude
+        Amplitude of the oscillatory factor
+      bao-rd -> gdouble: bao-rd
+        Oscillation scale in Mpc
+      bao-sigma -> gdouble: bao-sigma
+        Oscillation damping scale in Mpc
+
+    Properties from NcmPowspec:
+      zi -> gdouble: zi
+        Initial time
+      zf -> gdouble: zf
+        Final time
+      kmin -> gdouble: kmin
+        Minimum mode value
+      kmax -> gdouble: kmax
+        Maximum mode value
+      reltol -> gdouble: reltol
+        Relative tolerance on the interpolation error
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        Omega_m: float
+        a_t: float
+        amplitude: float
+        bao_amplitude: float
+        bao_rd: float
+        bao_sigma: float
+        growth: PowspecAnalyticGrowth
+        k_eq: float
+        n_s: float
+        shape: PowspecAnalyticShape
+        kmax: float
+        kmin: float
+        reltol: float
+        zf: float
+        zi: float
+
+    props: Props = ...
+    def __init__(
+        self,
+        Omega_m: float = ...,
+        a_t: float = ...,
+        amplitude: float = ...,
+        bao_amplitude: float = ...,
+        bao_rd: float = ...,
+        bao_sigma: float = ...,
+        growth: PowspecAnalyticGrowth = ...,
+        k_eq: float = ...,
+        n_s: float = ...,
+        shape: PowspecAnalyticShape = ...,
+        kmax: float = ...,
+        kmin: float = ...,
+        reltol: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(psa: PowspecAnalytic) -> None: ...
+    def eval_bao(self, k: float) -> float: ...
+    def eval_growth(self, z: float) -> float: ...
+    def eval_transfer(self, k: float) -> float: ...
+    def free(self) -> None: ...
+    def get_Omega_m(self) -> float: ...
+    def get_amplitude(self) -> float: ...
+    def get_growth(self) -> PowspecAnalyticGrowth: ...
+    def get_k_eq(self) -> float: ...
+    def get_n_s(self) -> float: ...
+    def get_shape(self) -> PowspecAnalyticShape: ...
+    @classmethod
+    def new(
+        cls, shape: PowspecAnalyticShape, growth: PowspecAnalyticGrowth
+    ) -> PowspecAnalytic: ...
+    @classmethod
+    def new_full(
+        cls,
+        shape: PowspecAnalyticShape,
+        growth: PowspecAnalyticGrowth,
+        amplitude: float,
+        n_s: float,
+        k_eq: float,
+        Omega_m: float,
+    ) -> PowspecAnalytic: ...
+    def ref(self) -> PowspecAnalytic: ...
+
+class PowspecAnalyticClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        PowspecAnalyticClass()
+    """
+
+    parent_class: PowspecClass = ...
+
 class PowspecClass(GObject.GPointer):
     r"""
     :Constructors:
@@ -14003,6 +14128,38 @@ class NNLSUMethod(GObject.GEnum):
 class ParamType(GObject.GEnum):
     FIXED: ParamType = ...
     FREE: ParamType = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class PowspecAnalyticGrowth(GObject.GEnum):
+    LCDM: PowspecAnalyticGrowth = ...
+    NONE: PowspecAnalyticGrowth = ...
+    RATIONAL: PowspecAnalyticGrowth = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class PowspecAnalyticShape(GObject.GEnum):
+    BBKS: PowspecAnalyticShape = ...
+    POWER_LAW: PowspecAnalyticShape = ...
+    RATIONAL: PowspecAnalyticShape = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

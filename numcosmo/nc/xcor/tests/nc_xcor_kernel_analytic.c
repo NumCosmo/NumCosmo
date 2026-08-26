@@ -368,6 +368,14 @@ nc_xcor_kernel_analytic_get_comp_support (NcXcorKernelAnalytic *xcka, guint comp
  * Evaluates the whole radial window, the sum of its components, normalized to unit
  * integral over its support and zero outside it.
  *
+ * The cut-off is a step, not a taper: a truncated shape is finite at its own edge
+ * and this returns exactly zero one ulp beyond it. Handing this function
+ * straight to a quadrature over $[\chi_\mathrm{min}, \chi_\mathrm{max}]$ is
+ * therefore a trap -- a node placed a hair outside by rounding sees the step,
+ * and a spectral rule cannot fit it: #NcmSBesselIntegratorLevin aborts on
+ * max-order rather than converge. Clamp $\chi$ into the support first, which is
+ * what this class does internally on every integration path.
+ *
  * Returns: the value of $W(\chi)$, in $\mathrm{Mpc}^{-1}$.
  */
 gdouble
