@@ -632,6 +632,15 @@ _ncm_powspec_analytic_growth (NcmPowspecAnalytic *psa, const gdouble z)
 {
   const gdouble a = 1.0 / (1.0 + z);
 
+  /* D is normalized to D(0) = 1, so z = 0 is exactly one and needs no special
+   * function. Worth the branch: every Tier A evaluation is at z = 0 by
+   * construction (the analytic xcor kernels fold all evolution into the window
+   * and call ncm_powspec_eval() with z = 0.0), and the LCDM branch below costs
+   * a gsl_sf_hyperg_2F1 per call -- measured at 29% of an xcor solve driven by
+   * this object, all of it spent returning 1.0. */
+  if (z == 0.0)
+    return 1.0;
+
   switch (psa->growth)
   {
     case NCM_POWSPEC_ANALYTIC_GROWTH_NONE:
