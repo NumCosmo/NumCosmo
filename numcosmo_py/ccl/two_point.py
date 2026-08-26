@@ -250,6 +250,7 @@ def angular_cl(
     n_k: int = 512,
     n_osc: int = 8,
     block_size: int = 8,
+    support_tol: float = 1.0e-6,
 ) -> np.ndarray:
     r"""Non-Limber angular power spectrum of two CCL tracers, solved by NumCosmo.
 
@@ -268,6 +269,14 @@ def angular_cl(
     :param reltol: requested relative accuracy of the oscillatory solve.
     :param n_k: floor on the number of wavenumbers in the outer integral.
     :param n_osc: samples per oscillation of Delta_l(k) in the outer integral.
+    :param support_tol: fraction of the kernel's peak below which its tail is
+        treated as outside the support. This is the dominant cost control, not a
+        safety margin: the grid's upper end is ``k_hi = 8 nu / chi_lo``, so
+        shrinking ``chi_lo`` raises ``k_hi`` and the point count with it. On the
+        Gaussian test tracer at ell = 32, 1e-10 (the old value) admits tail down
+        to chi = 16.7 Mpc and needs 180,720 wavenumbers for 293 s; 1e-6 needs
+        3,945 for 2.4 s, and the two C_ell agree to 2.6e-9. Tighten it only with
+        a measurement in hand.
     :param block_size: number of consecutive multipoles sharing a factorisation.
         Clamped to what the solver will honour: NC_XCOR_KERNEL_MAX_ELL_BLOCK and the
         integrator's ell_cache_max. Wider is not better -- the truncation order is a
@@ -287,7 +296,8 @@ def angular_cl(
 
     chi_a, comps, _ = tracer_components(tracer1, cosmology, reltol=reltol)
     w_abs = np.abs(sum(comps))
-    keep = np.nonzero(w_abs > 1.0e-10 * w_abs.max())[0]
+    # See support_tol: chi_lo sets k_hi, so this threshold sets the grid size.
+    keep = np.nonzero(w_abs > support_tol * w_abs.max())[0]
     chi_lo, chi_hi = float(chi_a[keep[0]]), float(chi_a[keep[-1]])
 
     for start_i in range(0, len(ells), block_size):
