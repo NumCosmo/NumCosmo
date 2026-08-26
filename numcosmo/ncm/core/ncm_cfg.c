@@ -63,6 +63,7 @@
 #include "ncm/powspec/ncm_powspec_filter.h"
 #include "ncm/powspec/ncm_powspec_sphere_proj.h"
 #include "ncm/powspec/ncm_powspec_spline2d.h"
+#include "ncm/powspec/tests/ncm_powspec_analytic.h"
 #include "ncm/powspec/ncm_powspec.h"
 #include "ncm/model/ncm_model.h"
 #include "ncm/model/ncm_model_ctrl.h"
@@ -684,6 +685,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_ANALYTIC);
 
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);

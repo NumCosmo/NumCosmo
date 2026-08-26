@@ -57,6 +57,7 @@ void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
 void test_ncm_spline_bspline_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
+void test_ncm_powspec_analytic_basic (void);
 void test_ncm_pln1d_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
@@ -145,6 +146,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
   g_test_add_func ("/ncm/spline_bspline/basic", test_ncm_spline_bspline_basic);
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
+  g_test_add_func ("/ncm/powspec_analytic/basic", test_ncm_powspec_analytic_basic);
   g_test_add_func ("/ncm/pln1d/basic", test_ncm_pln1d_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
@@ -638,6 +640,34 @@ test_ncm_spline_bspline_basic (void)
   g_assert_true (NCM_IS_SPLINE_BSPLINE (sbs));
 
   NCM_TEST_FREE (ncm_spline_free, NCM_SPLINE (sbs));
+}
+
+void
+test_ncm_powspec_analytic_basic (void)
+{
+  NcmPowspecAnalytic *psa = ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                      NCM_POWSPEC_ANALYTIC_GROWTH_LCDM);
+  NcmPowspecAnalytic *psa2;
+
+  g_assert_true (psa != NULL);
+  g_assert_true (NCM_IS_POWSPEC_ANALYTIC (psa));
+
+  psa2 = ncm_powspec_analytic_ref (psa);
+  ncm_powspec_analytic_clear (&psa2);
+  g_assert_true (psa2 == NULL);
+
+  g_assert_true (NCM_IS_POWSPEC_ANALYTIC (psa));
+
+  ncm_powspec_analytic_free (psa);
+
+  {
+    NcmPowspecAnalytic *full = ncm_powspec_analytic_new_full (NCM_POWSPEC_ANALYTIC_SHAPE_RATIONAL,
+                                                              NCM_POWSPEC_ANALYTIC_GROWTH_RATIONAL,
+                                                              1.0e7, 0.96, 0.1, 0.3);
+
+    g_assert_true (NCM_IS_POWSPEC_ANALYTIC (full));
+    ncm_powspec_analytic_free (full);
+  }
 }
 
 void

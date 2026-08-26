@@ -51,6 +51,33 @@
  * For high ell values, it uses vector cubature integration where the integrand evaluates
  * $f(x)$ and all $j_\ell(x)$ values simultaneously for efficiency.
  *
+ * ## Accuracy limit from panel placement
+ *
+ * Panel edges come from the fixed $y$-knot grid
+ * (#NcmSBesselIntegratorLevin:y-knots-min, :y-knots-max, :n-knots), which is what lets
+ * one panel set serve every $k$. They therefore fall where that grid says rather than
+ * where the integrand would prefer, and adjacent panels can nearly cancel: for a
+ * $4\sigma$-truncated Gaussian at $\ell = 50$, $k = 8247$, two panels contribute
+ * $-1.71\times10^{-4}$ and $+1.75\times10^{-4}$ against a total of $8.4\times10^{-9}$.
+ *
+ * The relative error there reaches $7\times10^{-5}$, against $\sim10^{-9}$ for
+ * #NcmSBesselIntegratorGL on the same integrand, so it is not the conditioning of the
+ * integral. It is not a tolerance either: #NcmSBesselIntegratorLevin:cheb-reltol from
+ * $10^{-8}$ to $10^{-14}$ changes nothing. Scaling the whole knot grid moves the error
+ * by four orders in either direction, and no offset is good for every $k$.
+ *
+ * What makes it tolerable is that it is bounded in absolute terms. It appears only where
+ * the integral is $10^{-7}$ to $10^{-9}$ of its own peak over $k$ -- the deep oscillatory
+ * tail, $y \gg \ell$ -- and the worst absolute error measured is $2\times10^{-11}$ of
+ * that peak; near the peak the same scan gives $4\times10^{-11}$ relative. Every consumer
+ * in the library reaches this class through #NcXcorKernel, whose
+ * #NcXcorKernel:scaled-abstol floors the $k$-spline at $10^{-4}$ of the peak ($10^{-5}$
+ * for #NcXcorSSCSij) and refuses to go below $10^{-6}$, leaving the panel error at least
+ * four orders under a floor that is applied anyway.
+ *
+ * Use #NcmSBesselIntegratorGL where a small value has to be accurate in its own right
+ * rather than as part of a larger integral.
+ *
  */
 
 #ifdef HAVE_CONFIG_H

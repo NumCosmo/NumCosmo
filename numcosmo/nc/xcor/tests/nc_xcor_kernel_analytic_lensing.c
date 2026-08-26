@@ -148,6 +148,48 @@ nc_xcor_kernel_analytic_lensing_get_property (GObject *object, guint prop_id, GV
 }
 
 /* Unnormalized efficiency: chi times the source integral. */
+
+/*
+ * u - log1p (u), accurate down to u = 0.
+ *
+ * The upper branch below is chi (u - log1p (u)) with u = (b - chi)/chi, whose
+ * value goes as u^2/2 as chi approaches b. Taking that difference directly
+ * cancels: against an arbitrary-precision reference it carries 4.8e-5 relative
+ * error at u = 1e-12, and one ulp inside the edge it is off by ninety times
+ * with the wrong sign. Below the crossover the series is used instead,
+ *
+ *   u - log1p (u) = u^2 sum_{n >= 0} (-u)^n / (n + 2) .
+ *
+ * The crossover balances the two: direct evaluation carries about 2 eps / u,
+ * the truncated series about 2 u^N / (N + 2). At N = 12 they meet near
+ * u = 0.08, and the hybrid was measured against mpmath at 5.0e-16 or better
+ * below it and 8.8e-16 or better above.
+ *
+ * The branch costs nothing that matters here: this is a test-support window,
+ * evaluated point by point by the radial sampler rather than in a vectorized
+ * inner loop, and the shape already branches twice on chi.
+ */
+#define NC_XCOR_LENSING_SERIES_N 12
+#define NC_XCOR_LENSING_SERIES_U 0.08
+
+static gdouble
+_u_minus_log1p (const gdouble u)
+{
+  const gdouble v = -u;
+  gdouble s;
+  gint n;
+
+  if (fabs (u) >= NC_XCOR_LENSING_SERIES_U)
+    return u - log1p (u);
+
+  s = 1.0 / (NC_XCOR_LENSING_SERIES_N + 2.0);
+
+  for (n = NC_XCOR_LENSING_SERIES_N - 1; n >= 0; n--)
+    s = 1.0 / (n + 2.0) + v * s;
+
+  return u * u * s;
+}
+
 static gdouble
 _lensing_shape (NcXcorKernelAnalyticLensing *xckal, gdouble chi)
 {
@@ -157,10 +199,12 @@ _lensing_shape (NcXcorKernelAnalyticLensing *xckal, gdouble chi)
   if (chi >= b)
     return 0.0;
 
+  /* b/a is a constant here and bounded away from one, so the difference is
+   * well conditioned on this branch and needs no rewriting. */
   if (chi <= a)
     return chi * ((b - a) - chi * log (b / a)) / (b - a);
 
-  return chi * ((b - chi) - chi * log (b / chi)) / (b - a);
+  return chi * chi * _u_minus_log1p ((b - chi) / chi) / (b - a);
 }
 
 static void

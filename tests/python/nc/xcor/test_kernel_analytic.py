@@ -33,6 +33,7 @@ definition.
 
 import math
 import typing
+from decimal import Decimal, localcontext
 
 import numpy as np
 import pytest
@@ -193,16 +194,32 @@ def _lensing(cosmology: Cosmology, l_limber: int = -1) -> Nc.XcorKernelAnalyticL
 
 
 def _lensing_shape(chi: float) -> float:
-    """The unnormalized efficiency, written here from the geometry."""
+    """The unnormalized efficiency, written here from the geometry.
+
+    Evaluated in ``decimal`` rather than ``math``: on the upper branch the true
+    value goes as ``(b - chi)^2 / 2chi`` as chi approaches b, so the difference
+    ``(b - chi) - chi log (b/chi)`` cancels away every significant digit near
+    the edge -- in float it is wrong by a factor of ninety, with the wrong sign,
+    one ulp inside. The library evaluates that branch through a stable
+    rearrangement; a reference written the naive way would be the inaccurate
+    side of the comparison. ``Decimal.ln`` is correctly rounded and in the
+    standard library, so this stays an independent check rather than a copy of
+    the library's own rearrangement.
+    """
     a, b = LENS_SRC_LOWER, LENS_SRC_UPPER
 
     if chi >= b:
         return 0.0
 
-    if chi <= a:
-        return chi * ((b - a) - chi * math.log(b / a)) / (b - a)
+    with localcontext() as ctx:
+        ctx.prec = 50
+        chi_d = Decimal(repr(chi))
+        b_d = Decimal(repr(b))
+        m_d = Decimal(repr(a)) if chi <= a else chi_d
 
-    return chi * ((b - chi) - chi * math.log(b / chi)) / (b - a)
+        return float(
+            chi_d * ((b_d - m_d) - chi_d * (b_d / m_d).ln()) / (b_d - Decimal(repr(a)))
+        )
 
 
 def test_gauss_support_is_the_truncation() -> None:

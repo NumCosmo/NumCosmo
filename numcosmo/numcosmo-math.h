@@ -87,6 +87,7 @@
 #include <numcosmo/ncm/spline/ncm_spline2d_bicubic.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_corr3d.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_filter.h>
+#include <numcosmo/ncm/powspec/tests/ncm_powspec_analytic.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_sphere_proj.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_spline2d.h>
 #include <numcosmo/ncm/powspec/ncm_powspec.h>
