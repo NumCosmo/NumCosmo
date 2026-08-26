@@ -70,8 +70,8 @@ HALO_FINDERS = [
     Nc.MultiplicityFuncCastroHaloFinder.VELOCIRAPTOR,
 ]
 
-_C23_TABLE = "truth_tables/nc_multiplicity_func_castro_c23.bin"
-_C25_TABLE = "truth_tables/nc_multiplicity_func_castro_c25.bin"
+_C23_TABLE = "truth_tables/halo/nc_multiplicity_func_castro_c23.bin"
+_C25_TABLE = "truth_tables/halo/nc_multiplicity_func_castro_c25.bin"
 
 # eval_full takes the slope directly, leaving only round-off.
 RTOL = 1.0e-13
