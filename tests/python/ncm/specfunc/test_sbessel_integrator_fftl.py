@@ -168,7 +168,7 @@ class TestSBesselIntegratorFFTL:
         min_k_ratio = 1.2
 
         truth_table_path = Path(
-            Ncm.cfg_get_data_filename(f"truth_tables/{filename}", True)
+            Ncm.cfg_get_data_filename(f"truth_tables/sbessel/{filename}", True)
         )
         with gzip.open(truth_table_path, "rt") as f:
             truth_table = json.load(f)

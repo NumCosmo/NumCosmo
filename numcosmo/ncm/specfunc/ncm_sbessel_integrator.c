@@ -406,7 +406,7 @@ _ncm_sbessel_integrator_gaussian_func (gpointer user_data, gdouble x, gdouble k)
   NcmSBesselIntegratorGaussianData *data = (NcmSBesselIntegratorGaussianData *) user_data;
   const gdouble z                        = (x - data->center) / data->std;
 
-  return k * exp (-0.5 * z * z);
+  return exp (-0.5 * z * z);
 }
 
 /**
@@ -478,7 +478,7 @@ _ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble x, gdouble k)
   const gdouble denom                    = 1.0 + z * z;
   const gdouble denom_cubed              = denom * denom * denom;
 
-  return x * x * k / denom_cubed;
+  return x * x / denom_cubed;
 }
 
 /**

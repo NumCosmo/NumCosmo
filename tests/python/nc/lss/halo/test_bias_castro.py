@@ -21,7 +21,7 @@
 
 How the truth table was produced
 --------------------------------
-``data/truth_tables/nc_halo_bias_castro_pbs.bin`` holds
+``data/truth_tables/halo/nc_halo_bias_castro_pbs.bin`` holds
 ``[slope, z, sigma, b_pbs]``, with ``b_pbs`` obtained from CCToolkit's
 ``multiplicity_function_castro23`` by **complex-step differentiation**:
 ``dlnf/dlnnu = Im[f(nu(1 + ih))]/h / f(nu)`` with ``h = 1e-20``.
@@ -50,7 +50,7 @@ from numcosmo_py import Ncm, Nc
 
 Ncm.cfg_init()
 
-_PBS_TABLE = "truth_tables/nc_halo_bias_castro_pbs.bin"
+_PBS_TABLE = "truth_tables/halo/nc_halo_bias_castro_pbs.bin"
 
 # Central differences on the closed-form model, against an exact reference.
 RTOL_PBS = 1.0e-9
