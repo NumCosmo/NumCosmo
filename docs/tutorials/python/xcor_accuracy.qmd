@@ -13,13 +13,24 @@ format-links: [ipynb]
 
 ## Purpose {#sec-purpose}
 
-The non-Limber angular power spectrum
+The non-Limber angular power spectrum is
 
-$$ C_\ell^{AB} = \frac{2}{\pi} \int \mathrm{d}k\, k^2\, P(k,0)\, W^A_\ell(k)\, W^B_\ell(k) $$
+$$ C_\ell^{AB} = \frac{2}{\pi} \int \mathrm{d}k\, k^2\, W^A_\ell(k)\, W^B_\ell(k), $$
 
-is computed from two *closures* $W_\ell(k)$, each a spline fitted to a radial
-integral that NumCosmo solves once per knot. Two tolerances control that fit,
-and they behave very differently. This tutorial is about choosing them.
+where each *closure* is the radial integral
+
+$$ W_\ell(k) = \int \mathrm{d}\chi\, K(k, \chi)\, j_\ell(k\chi),
+   \qquad K(k,\chi) \propto \chi^2\, W\!\left(z(\chi)\right)
+   \sqrt{P\!\left(k, z(\chi)\right)}. $$
+
+Note there is no separate power spectrum in the outer integral: $\sqrt{P}$ sits
+inside $K$, at the redshift of each shell, so the growth is carried through the
+radial integral rather than factored out of it. The outer integrand is exactly
+$k^2 W^A W^B$ — a fact the rest of this page depends on.
+
+NumCosmo evaluates $W_\ell(k)$ once per knot of a spline and integrates that
+spline. Two tolerances control the fit, and they behave very differently. This
+tutorial is about choosing them.
 
 There is a reason this is a tutorial and not an automatic setting. The accuracy
 a $C_\ell$ needs depends on the amplitude it carries in whatever you are
