@@ -51,8 +51,9 @@ project:
     - ./ipynb_to_py.sh
 
 execute:
-  error: true
+  error: false
   freeze: auto
+  warning: false
 
 website:
   title: "The Numerical Cosmology Library"

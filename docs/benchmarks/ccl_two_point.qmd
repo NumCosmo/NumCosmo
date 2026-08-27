@@ -14,10 +14,6 @@ format:
 
 format-links: [ipynb]
 
-execute:
-  warning: true
-  error: true
-
 ---
 
 ## Introduction
