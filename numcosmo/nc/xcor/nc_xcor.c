@@ -1720,11 +1720,14 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  * rather than the tolerance it was asked for, which
  * NcmFunctionSampleSet does not currently report.
  *
- * Those figures are a **worst case**, and deliberately so: a cluster top-hat is
- * discontinuous at its bin edges, so its $W_\ell(k)$ decays only as $1/k$ and is
- * the hardest closure in the library to fit. On the same comoving shells a
- * smooth kernel needs 161 knots against the top-hat's 541, and its cross
- * spectrum is accurate to 7.7e-4 rather than 0.13 -- a factor of 165.
+ * Those figures are a **worst case**, and deliberately so: a cluster top-hat has
+ * a sharp edge in $\xi$, which gives $W_\ell(k)$ a $1/k$ tail instead of an
+ * exponential one. Nothing integrates across that edge -- it is declared through
+ * the component's limits, see #NcXcorKernelComponent -- but the tail keeps far
+ * more of k-space above the closure's floor, so the fit costs more and is
+ * worse. On the same comoving shells a smooth kernel needs 161 knots against
+ * the top-hat's 541, and its cross spectrum is accurate to 7.7e-4 rather than
+ * 0.13 -- a factor of 165.
  *
  * That comparison also bounds what @vp_err can do. It reported 4.5 and 2.4 for
  * those two pairs, whose true errors differ by that factor of 165: it is
