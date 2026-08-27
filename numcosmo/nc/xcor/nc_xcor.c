@@ -1701,12 +1701,34 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  * does so only where both closures sit on their floors at once; wherever just
  * one does, it is linear in $a$ and weighted by the other's real amplitude.
  *
- * Everything above is a bound on the *criterion*, which the refinement stops at
- * rather than beats, so @vp_err is conservative by construction. One thing
- * pushes the other way: the criterion is an $L^2$ norm over the whole multipole
- * block at each $k$, not over one multipole, so a multipole that is
- * sub-dominant within its block is held only to the block's norm. For those,
- * $\epsilon \vert W_\ell \vert$ understates the fit error.
+ * ## How conservative, measured
+ *
+ * Everything above bounds the *criterion*, which the refinement stops at rather
+ * than beats, so @vp_err is an upper bound and not an estimate. Against a
+ * reference built at reltol $10^{-10}$, cluster top-hat bins over
+ * $\ell = 2 \dots 9$ at the library defaults:
+ *
+ * | pair | true relative error | @vp_err | ratio |
+ * |---|---|---|---|
+ * | auto | 4e-6 to 1.3e-4 | 1.5e-3 to 3.7e-3 | 12-860 |
+ * | cross, adjacent bins | 7e-4 to 0.13 | 0.2 to 4.5 | 35-320 |
+ * | cross, separated bins | 0.07 to 17 | 6 to 96 | 4-160 |
+ *
+ * So read it as a ceiling: a small @vp_err is a strong statement, a large one
+ * warrants checking rather than despair. It is loosest exactly where the answer
+ * is healthiest. Tightening it needs the refinement's *achieved* residual
+ * rather than the tolerance it was asked for, which
+ * NcmFunctionSampleSet does not currently report.
+ *
+ * Note also that the true errors above are themselves large where it matters:
+ * an adjacent-bin cross spectrum really does carry 13% at $\ell = 9$ with the
+ * default tolerances.
+ *
+ * One thing pushes the other way, against the conservatism: the criterion is an
+ * $L^2$ norm over the whole multipole block at each $k$, not over one
+ * multipole, so a multipole that is sub-dominant within its block is held only
+ * to the block's norm. For those, $\epsilon \vert W_\ell \vert$ understates the
+ * fit error.
  *
  * **What it does not cover**, and it is the same classification again -- the
  * other kernel-building error, which is a range rather than a residual. The
