@@ -1720,9 +1720,17 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  * rather than the tolerance it was asked for, which
  * NcmFunctionSampleSet does not currently report.
  *
- * Note also that the true errors above are themselves large where it matters:
- * an adjacent-bin cross spectrum really does carry 13% at $\ell = 9$ with the
- * default tolerances.
+ * Those figures are a **worst case**, and deliberately so: a cluster top-hat is
+ * discontinuous at its bin edges, so its $W_\ell(k)$ decays only as $1/k$ and is
+ * the hardest closure in the library to fit. On the same comoving shells a
+ * smooth kernel needs 161 knots against the top-hat's 541, and its cross
+ * spectrum is accurate to 7.7e-4 rather than 0.13 -- a factor of 165.
+ *
+ * That comparison also bounds what @vp_err can do. It reported 4.5 and 2.4 for
+ * those two pairs, whose true errors differ by that factor of 165: it is
+ * tracking the pair's cancellation, which is similar for both, and not the fit
+ * quality, which is not. Read it as a conditioning flag rather than an accuracy
+ * figure. Discriminating between them needs the *achieved* residual, as above.
  *
  * One thing pushes the other way, against the conservatism: the criterion is an
  * $L^2$ norm over the whole multipole block at each $k$, not over one
