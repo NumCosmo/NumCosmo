@@ -1735,6 +1735,20 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  * quality, which is not. Read it as a conditioning flag rather than an accuracy
  * figure. Discriminating between them needs the *achieved* residual, as above.
  *
+ * ## And read them against the tolerances an application actually sets
+ *
+ * The table uses #NcXcorKernel's bare defaults, which exist to be cheap. A
+ * caller that cares sets its own: #NcXcorSSCSij uses reltol $10^{-6}$ with
+ * scaled-abstol $10^{-5}$, deliberately offset from each other -- the rationale
+ * lives at that object's defaults, and is worth reading before changing either
+ * here. At those, on the same top-hat bins, the diagonal is accurate to 5.9e-6
+ * rather than 1.3e-4, and the adjacent-bin cross to 2.8e-3 rather than 0.13.
+ *
+ * The separated-bin cross stays poor in *relative* terms, but that is the wrong
+ * measure for it: it is 2.4e-4 of the diagonal, so what it contributes to
+ * anything built from these is far below the diagonal's own error. Judge a
+ * @vp_err against the amplitude its term carries, never on its own.
+ *
  * One thing pushes the other way, against the conservatism: the criterion is an
  * $L^2$ norm over the whole multipole block at each $k$, not over one
  * multipole, so a multipole that is sub-dominant within its block is held only
