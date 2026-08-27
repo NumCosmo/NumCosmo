@@ -1503,6 +1503,12 @@ _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHIC
  * itself is built. pcubature answers an impossible tolerance by exhausting its
  * Clenshaw-Curtis levels and reporting failure, far from the cause, so catch
  * the mismatch here where both numbers are in view.
+ *
+ * That reasoning is about %NC_XCOR_METHOD_KERNEL_CUBATURE. This is also called
+ * from the exact path, where NcXcor:reltol governs nothing -- GL(5) on the knot
+ * union carries no tolerance and cannot fail to converge -- so there the check
+ * is a consistency guard on the caller's stated intent rather than a failure it
+ * is preventing.
  */
 void
 _nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk)
