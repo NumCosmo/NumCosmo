@@ -122,19 +122,24 @@ fails to build, builds but is unreachable, or is reachable only from the
 sidebar:
 
 1. **`docs/<area>/meson.build`** — add the filename to the `files(...)` list, or
-   it is never copied into the build tree.
+   it is never copied into the build tree. A brand-new subdirectory also needs
+   its own `meson.build` and a `subdir('<name>')` line in the parent.
 2. **`docs/_quarto.yml.in`, the render list** — the top-level list of pages to
    render (near `- tutorials/index.qmd`).
 3. **`docs/_quarto.yml.in`, the sidebar** — the `contents:` entry under the
    right `section:`, with an `href:` and a short `text:` label.
-4. **The index page for its area** — `docs/examples/index.qmd` lists the Python
-   tutorials and worked examples, `docs/theory/index.qmd` the theory pages, and
-   `docs/tutorials/index.qmd` the C tutorials. The sidebar and the index are
-   separate; adding a page to the sidebar alone leaves it off the landing page
-   a reader actually browses.
+4. **The index page for its area** — `docs/tutorials/index.qmd`,
+   `docs/examples/index.qmd`, or `docs/theory/index.qmd`. The sidebar and the
+   index are separate; adding a page to the sidebar alone leaves it off the
+   landing page a reader actually browses.
 
 Keep the section names in 2-4 consistent: if a page needs a new section, add it
 to both the sidebar and the index.
+
+Tutorial or example? A **tutorial** walks through a complete workflow and
+explains every step, and is read start to finish; it goes in `docs/tutorials/`.
+An **example** is a short self-contained script showing one part of the API in
+use, read as reference; it goes in `docs/examples/`.
 
 Match an existing page's front matter (`format: html` plus `ipynb`, and
 `{{< include /_functions.qmd >}}`) so the notebook download link is generated.

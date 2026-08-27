@@ -16,7 +16,7 @@ format-links: [ipynb]
 ## Introduction
 
 In this example, we show how to inspect observational data objects available in
-NumCosmo. This is useful before building a likelihood or adapting an existing fitting
+NumCosmo through the `numcosmo_py`[^numcosmo_py] package. This is useful before building a likelihood or adapting an existing fitting
 example to a different dataset.
 
 A pure Python companion script is also provided with this example as
