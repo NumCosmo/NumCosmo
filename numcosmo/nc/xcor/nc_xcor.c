@@ -856,8 +856,23 @@ static const gdouble _nc_xcor_gl5_w[NC_XCOR_GL5_N] = {
  * whole sweep -- so they are separate functions and the inner loops carry no
  * branch. Each is a flat loop over panel x node x multipole.
  */
+/*
+ * Everything the error estimate of _nc_xcor_kernel_integrate_block_exact ()
+ * needs, accumulated in the same pass as the integral itself. The peaks enter
+ * only as multipliers of the accumulated integrals, so a running maximum is
+ * enough and no second sweep is required.
+ */
+typedef struct _NcXcorGL5Err
+{
+  gdouble *prod;  /* int k^2 |W1 W2| */
+  gdouble *abs1;  /* int k^2 |W1|    */
+  gdouble *abs2;  /* int k^2 |W2|    */
+  gdouble *peak1; /* max |W1|        */
+  gdouble *peak2; /* max |W2|        */
+} NcXcorGL5Err;
+
 static void
-_nc_xcor_gl5_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, guint nell, gdouble *W, gdouble *sum, gdouble *sum_abs)
+_nc_xcor_gl5_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, guint nell, gdouble *W, gdouble *sum, NcXcorGL5Err *err)
 {
   guint ie, ig, il;
 
@@ -881,15 +896,19 @@ _nc_xcor_gl5_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, guint nell
 
         sum[il] += term;
 
-        if (sum_abs != NULL)
-          sum_abs[il] += fabs (term);
+        if (err != NULL)
+        {
+          err->prod[il] += fabs (term);
+          err->abs1[il] += fabs (w * W[il]);
+          err->peak1[il] = GSL_MAX (err->peak1[il], fabs (W[il]));
+        }
       }
     }
   }
 }
 
 static void
-_nc_xcor_gl5_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, GArray *edges, guint nell, gdouble *W1, gdouble *W2, gdouble *sum, gdouble *sum_abs)
+_nc_xcor_gl5_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, GArray *edges, guint nell, gdouble *W1, gdouble *W2, gdouble *sum, NcXcorGL5Err *err)
 {
   guint ie, ig, il;
 
@@ -914,8 +933,14 @@ _nc_xcor_gl5_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *
 
         sum[il] += term;
 
-        if (sum_abs != NULL)
-          sum_abs[il] += fabs (term);
+        if (err != NULL)
+        {
+          err->prod[il] += fabs (term);
+          err->abs1[il] += fabs (w * W1[il]);
+          err->abs2[il] += fabs (w * W2[il]);
+          err->peak1[il] = GSL_MAX (err->peak1[il], fabs (W1[il]));
+          err->peak2[il] = GSL_MAX (err->peak2[il], fabs (W2[il]));
+        }
       }
     }
   }
@@ -1007,10 +1032,13 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
   const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
   NcmVector *knots1          = nc_xcor_kernel_integrand_peek_knots (xclki1);
   NcmVector *knots2          = isauto ? knots1 : nc_xcor_kernel_integrand_peek_knots (xclki2);
-  const gdouble eps_repr     = GSL_MAX (nc_xcor_kernel_integrand_get_reltol (xclki1),
-                                        nc_xcor_kernel_integrand_get_reltol (xclki2));
+  const gdouble reltol1      = nc_xcor_kernel_integrand_get_reltol (xclki1);
+  const gdouble reltol2      = nc_xcor_kernel_integrand_get_reltol (xclki2);
+  const gdouble sabs1        = nc_xcor_kernel_integrand_get_scaled_abstol (xclki1);
+  const gdouble sabs2        = nc_xcor_kernel_integrand_get_scaled_abstol (xclki2);
   gdouble k_min1, k_max1, k_min2, k_max2, k_min, k_max;
-  gdouble *sum, *sum_abs, *W1, *W2;
+  NcXcorGL5Err err_acc, *err = NULL;
+  gdouble *sum, *W1, *W2;
   GArray *edges;
   guint il;
 
@@ -1047,30 +1075,59 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
     return;
   }
 
-  sum     = g_new0 (gdouble, nell);
-  sum_abs = (vp_err != NULL) ? g_new0 (gdouble, nell) : NULL;
-  W1      = g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki1));
-  W2      = isauto ? W1 : g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki2));
+  sum = g_new0 (gdouble, nell);
+  W1  = g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki1));
+  W2  = isauto ? W1 : g_new0 (gdouble, nc_xcor_kernel_integrand_get_len (xclki2));
+
+  if (vp_err != NULL)
+  {
+    err_acc.prod  = g_new0 (gdouble, nell);
+    err_acc.abs1  = g_new0 (gdouble, nell);
+    err_acc.abs2  = isauto ? err_acc.abs1 : g_new0 (gdouble, nell);
+    err_acc.peak1 = g_new0 (gdouble, nell);
+    err_acc.peak2 = isauto ? err_acc.peak1 : g_new0 (gdouble, nell);
+    err           = &err_acc;
+  }
 
   /* The auto/cross distinction is fixed for the whole sweep, so it is resolved
    * once here rather than tested at every quadrature node. */
   if (isauto)
-    _nc_xcor_gl5_sweep_auto (xclki1, edges, nell, W1, sum, sum_abs);
+    _nc_xcor_gl5_sweep_auto (xclki1, edges, nell, W1, sum, err);
   else
-    _nc_xcor_gl5_sweep_cross (xclki1, xclki2, edges, nell, W1, W2, sum, sum_abs);
+    _nc_xcor_gl5_sweep_cross (xclki1, xclki2, edges, nell, W1, W2, sum, err);
 
   for (il = 0; il < nell; il++)
     ncm_vector_set (vp, il, const_factor * sum[il]);
 
-  /* The quadrature is exact, so the only error is the closures' own, carried
-   * through the integral of the absolute integrand. Where the signed integral
-   * cancels, that is much larger than eps_repr * |C_ell|. */
+  /* The quadrature is exact, so the only error is the closures' own, propagated
+   * through d(W1 W2) = |W1| dW2 + |W2| dW1 with dWi the fit criterion of
+   * nc_xcor_kernel_integrand_set_tolerances (). Its two halves separate: the
+   * relative one rides on the product, the peak-scaled floor on each closure
+   * against the other's peak -- which is how a floor set per closure ends up
+   * squared where both of them sit on it. */
   if (vp_err != NULL)
+  {
     for (il = 0; il < nell; il++)
-      ncm_vector_set (vp_err, il, const_factor * eps_repr * sum_abs[il]);
+    {
+      const gdouble rel_term   = (reltol1 + reltol2) * err->prod[il];
+      const gdouble floor_term = sabs1 * err->peak1[il] * err->abs2[il] +
+                                 sabs2 * err->peak2[il] * err->abs1[il];
+
+      ncm_vector_set (vp_err, il, const_factor * (rel_term + floor_term));
+    }
+
+    g_free (err->prod);
+    g_free (err->abs1);
+    g_free (err->peak1);
+
+    if (!isauto)
+    {
+      g_free (err->abs2);
+      g_free (err->peak2);
+    }
+  }
 
   g_free (sum);
-  g_free (sum_abs);
   g_free (W1);
 
   if (!isauto)
@@ -1624,31 +1681,32 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  * **kernel-building** error -- how well nc_xcor_kernel_get_eval_vectorized_full()
  * fitted $W_\ell(k)$ -- propagated through the conditioning of this particular
  * pair. The quadrature's only contribution is the amplification factor, which
- * is also the one thing that cannot be known before the pair is formed:
+ * is also the one thing that cannot be known before the pair is formed.
  *
- * $$ \sigma_\ell \simeq \epsilon \int \mathrm{d}k\, k^2 \vert W^A_\ell W^B_\ell \vert $$
+ * Propagating $\delta (W^A W^B) = \vert W^A \vert \delta W^B + \vert W^B
+ * \vert \delta W^A$ with the fit criterion of
+ * nc_xcor_kernel_integrand_set_tolerances(), $\delta W^i \le \epsilon_i \vert
+ * W^i \vert + a_i W^i_\mathrm{max}$, splits into two terms:
  *
- * with $\epsilon$ the closures' NcXcorKernel:reltol, the relative half of the
- * fit criterion.
+ * $$ \sigma_\ell \simeq (\epsilon_A + \epsilon_B) \int \mathrm{d}k\, k^2 \vert W^A_\ell W^B_\ell \vert
+ *    + a_A W^A_{\ell,\mathrm{max}} \int \mathrm{d}k\, k^2 \vert W^B_\ell \vert
+ *    + a_B W^B_{\ell,\mathrm{max}} \int \mathrm{d}k\, k^2 \vert W^A_\ell \vert $$
  *
- * The other half, NcXcorKernel:scaled-abstol, is **not** included, and must not
- * be folded in as if it were a relative tolerance. It is a floor on $\vert W
- * \vert$ measured against that closure's own peak, so it reaches $C_\ell$
- * through the product of two closures: where both sit on their floors its
- * contribution goes as scaled-abstol *squared*, and where only one does it is
- * linear in it but weighted by the other's true size. The faithful term is
+ * The first rides on the product, so it is the one the pair's cancellation
+ * amplifies. The second and third are each closure's peak-scaled floor weighted
+ * by the *other* closure's true size, and they are usually the larger of the
+ * two: for cluster top-hat bins at the library defaults they dominate the
+ * relative term by one to two orders. That is worth stating plainly, because a
+ * floor set per closure is often assumed to reach $C_\ell$ only squared. It
+ * does so only where both closures sit on their floors at once; wherever just
+ * one does, it is linear in $a$ and weighted by the other's real amplitude.
  *
- * $$ \int \mathrm{d}k\, k^2 \left( \vert W^A \vert \delta W^B + \vert W^B \vert \delta W^A \right),
- *    \quad \delta W^i = \max (\epsilon \vert W^i \vert, a \, W^i_\mathrm{max}) $$
- *
- * which needs each closure's peak $W^i_\mathrm{max}$. An integrand does not
- * report that yet, so the floor's share is currently missing from @vp_err
- * rather than approximated. Where the signed
- * integral cancels this is far larger than $\epsilon \vert C_\ell \vert$, which
- * is the point: cross spectra of well-separated bins are built from tail
- * against tail, and reach cancellations of $10^4$ and beyond. That regime is
- * invisible to @vp alone. An auto spectrum has a positive integrand and no
- * cancellation, so there @vp_err simply reports $\epsilon \vert C_\ell \vert$.
+ * Everything above is a bound on the *criterion*, which the refinement stops at
+ * rather than beats, so @vp_err is conservative by construction. One thing
+ * pushes the other way: the criterion is an $L^2$ norm over the whole multipole
+ * block at each $k$, not over one multipole, so a multipole that is
+ * sub-dominant within its block is held only to the block's norm. For those,
+ * $\epsilon \vert W_\ell \vert$ understates the fit error.
  *
  * **What it does not cover**, and it is the same classification again -- the
  * other kernel-building error, which is a range rather than a residual. The

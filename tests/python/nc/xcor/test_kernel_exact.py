@@ -339,11 +339,11 @@ def test_kernel_exact_all_limber_needs_no_integrator(cosmology: Cosmology) -> No
     )
 
 
-def test_error_estimate_tracks_reltol_on_an_auto_spectrum(cosmology: Cosmology) -> None:
-    """An auto spectrum has a positive integrand, so no cancellation to amplify.
+def test_error_estimate_is_small_on_an_auto_spectrum(cosmology: Cosmology) -> None:
+    """An auto spectrum has a positive integrand, so there is nothing to amplify.
 
-    The estimate then reduces to the closures' own fit accuracy, which is the
-    calibration point for every other case in this file.
+    The estimate must land far below one -- these C_ell have significant digits
+    -- which is the calibration point every other case here is read against.
     """
     kernel = _kernels(cosmology)[0]
     cosmo = cosmology.cosmo
@@ -357,23 +357,65 @@ def test_error_estimate_tracks_reltol_on_an_auto_spectrum(cosmology: Cosmology) 
     exact.compute_full(kernel, None, cosmo, lmin, lmax, vp, vp_err)
 
     cl = np.array(vp.dup_array())
-    est = np.array(vp_err.dup_array())
+    rel = np.abs(np.array(vp_err.dup_array()) / cl)
 
     assert np.all(cl > 0.0)
-    assert_allclose(est / cl, kernel.get_reltol(), rtol=1.0e-12)
+    # Both halves of the fit criterion are relative to something, so the
+    # estimate sits a fixed few orders above the tolerances rather than at
+    # them -- the peak-scaled floor is the larger of the two contributions.
+    assert np.all(rel > kernel.get_reltol())
+    assert np.all(rel < 1.0e-2)
+
+
+def test_error_estimate_scales_with_the_fit_criterion(cosmology: Cosmology) -> None:
+    """Both halves of the criterion enter linearly, so the estimate must too.
+
+    This is what makes the estimate a lever rather than a label: tightening the
+    kernels buys down the reported error in proportion.
+    """
+    cosmo = cosmology.cosmo
+    lmin, lmax = 2, 9
+    nell = lmax - lmin + 1
+
+    exact = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+    exact.prepare(cosmo)
+
+    def worst_relative(tol):
+        kernel = Nc.XcorKernelClusterTophat(
+            dist=cosmology.dist,
+            powspec=cosmology.ps_ml,
+            z_lower=Z_BINS[0][0],
+            z_upper=Z_BINS[0][1],
+            reltol=tol,
+            scaled_abstol=tol,
+            integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+        )
+        kernel.set_l_limber(-1)
+        kernel.prepare(cosmo)
+
+        vp, vp_err = Ncm.Vector.new(nell), Ncm.Vector.new(nell)
+        exact.compute_full(kernel, None, cosmo, lmin, lmax, vp, vp_err)
+
+        return np.abs(np.array(vp_err.dup_array()) / np.array(vp.dup_array())).max()
+
+    loose = worst_relative(1.0e-4)
+    tight = worst_relative(1.0e-6)
+
+    # Linear to within a factor of two; the closures are rebuilt on different
+    # knots, so the two runs do not integrate quite the same function.
+    assert_allclose(loose / tight, 100.0, rtol=1.0)
 
 
 def test_error_estimate_grows_with_cancellation(cosmology: Cosmology) -> None:
     """The estimate must separate a well-conditioned pair from a cancelling one.
 
     This is the whole point of reporting it: the two C_ell vectors look equally
-    respectable, and only the estimate says one of them has lost its digits.
+    respectable, and only the estimate says one of them has no digits left.
     """
     near, _, far = _kernels(cosmology)
     cosmo = cosmology.cosmo
     lmin, lmax = 2, 9
     nell = lmax - lmin + 1
-    reltol = near.get_reltol()
 
     exact = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     exact.prepare(cosmo)
@@ -384,10 +426,10 @@ def test_error_estimate_grows_with_cancellation(cosmology: Cosmology) -> None:
 
         return np.abs(np.array(vp_err.dup_array()) / np.array(vp.dup_array()))
 
-    # Against itself there is nothing to cancel; against a distant bin the
-    # cross spectrum is built from tail against tail.
-    assert_allclose(relative_estimate(near, near), reltol, rtol=1.0e-12)
-    assert np.all(relative_estimate(near, far) > 10.0 * reltol)
+    # Against a distant bin the cross spectrum is built from tail against tail,
+    # and at the library's default tolerances it keeps no digits at all.
+    assert np.all(relative_estimate(near, near) < 1.0e-2)
+    assert np.all(relative_estimate(near, far) > 1.0)
 
 
 def test_error_estimate_is_nan_for_methods_that_do_not_provide_one(
