@@ -111,12 +111,14 @@ enum
 {
   PROP_0,
   PROP_LEN,
+  PROP_TRACK_RESIDUAL,
 };
 
 typedef struct _NcmFunctionSamplePoint
 {
   gdouble x;
   NcmVector *y;
+  NcmVector *residual;
   gint interval_ok;
   gboolean new_point;
 } NcmFunctionSamplePoint;
@@ -133,6 +135,7 @@ struct _NcmFunctionSampleSet
   GArray *absmaxF_x; /* The x position of the maximum absolute value for each component */
   gdouble x_min;
   gdouble x_max;
+  gboolean track_residual;
 };
 
 G_DEFINE_TYPE (NcmFunctionSampleSet, ncm_function_sample_set, G_TYPE_OBJECT)
@@ -143,6 +146,7 @@ _ncm_function_sample_point_free (gpointer data)
   NcmFunctionSamplePoint *sp = (NcmFunctionSamplePoint *) data;
 
   ncm_vector_clear (&sp->y);
+  ncm_vector_clear (&sp->residual);
   g_slice_free (NcmFunctionSamplePoint, sp);
 }
 
@@ -153,6 +157,7 @@ _ncm_function_sample_point_new (const gdouble x, NcmVector *y)
 
   sp->x           = x;
   sp->y           = ncm_vector_ref (y);
+  sp->residual    = NULL;
   sp->interval_ok = 0;
   sp->new_point   = TRUE;
 
@@ -166,6 +171,7 @@ _ncm_function_sample_point_new_old (const gdouble x, NcmVector *y)
 
   sp->x           = x;
   sp->y           = ncm_vector_ref (y);
+  sp->residual    = NULL;
   sp->interval_ok = 0;
   sp->new_point   = FALSE;
 
@@ -197,6 +203,7 @@ ncm_function_sample_set_init (NcmFunctionSampleSet *fss)
   fss->absmaxF_x      = NULL;
   fss->x_min          = GSL_POSINF;
   fss->x_max          = GSL_NEGINF;
+  fss->track_residual = FALSE;
 }
 
 static void
@@ -234,6 +241,9 @@ _ncm_function_sample_set_set_property (GObject *object, guint prop_id, const GVa
     case PROP_LEN:
       fss->len = g_value_get_uint (value);
       break;
+    case PROP_TRACK_RESIDUAL:
+      ncm_function_sample_set_set_track_residual (fss, g_value_get_boolean (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -251,6 +261,9 @@ _ncm_function_sample_set_get_property (GObject *object, guint prop_id, GValue *v
   {
     case PROP_LEN:
       g_value_set_uint (value, fss->len);
+      break;
+    case PROP_TRACK_RESIDUAL:
+      g_value_set_boolean (value, ncm_function_sample_set_get_track_residual (fss));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -311,6 +324,24 @@ ncm_function_sample_set_class_init (NcmFunctionSampleSetClass *klass)
                                                       "Vector dimension",
                                                       1, G_MAXUINT, 1,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFunctionSampleSet:track-residual:
+   *
+   * Whether ncm_function_sample_set_refine() records the residual it actually
+   * achieved on each interval, instead of only the pass/fail bit counted by
+   * interval_ok. Off by default: the record costs one extra vector of length
+   * #NcmFunctionSampleSet:len per sample, and only a caller that reports an
+   * error estimate needs it. See ncm_function_sample_set_get_residuals().
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_TRACK_RESIDUAL,
+                                   g_param_spec_boolean ("track-residual",
+                                                         NULL,
+                                                         "Whether to record the achieved refinement residual",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -613,6 +644,27 @@ ncm_function_sample_set_iter_get_interval_ok (NcmFunctionSampleSetIter *iter)
   sp = (NcmFunctionSamplePoint *) iter->node->data;
 
   return sp->interval_ok;
+}
+
+/**
+ * ncm_function_sample_set_iter_get_residual:
+ * @iter: a #NcmFunctionSampleSetIter
+ *
+ * Gets the residual recorded for the interval running from the sample pointed
+ * to by @iter to the next one, or %NULL when that interval carries no record.
+ * See ncm_function_sample_set_get_residuals() for what the value means.
+ *
+ * Returns: (transfer none) (nullable): the residual vector
+ */
+NcmVector *
+ncm_function_sample_set_iter_get_residual (NcmFunctionSampleSetIter *iter)
+{
+  NcmFunctionSamplePoint *sp;
+
+  g_assert (iter->node != NULL);
+  sp = (NcmFunctionSamplePoint *) iter->node->data;
+
+  return sp->residual;
 }
 
 /**
@@ -1035,6 +1087,35 @@ guint
 ncm_function_sample_set_get_len (NcmFunctionSampleSet *fss)
 {
   return fss->len;
+}
+
+/**
+ * ncm_function_sample_set_set_track_residual:
+ * @fss: a #NcmFunctionSampleSet
+ * @track_residual: whether to record the achieved residual
+ *
+ * Sets #NcmFunctionSampleSet:track-residual. Set it before refining: only the
+ * passes that run while it is on leave a record behind.
+ *
+ */
+void
+ncm_function_sample_set_set_track_residual (NcmFunctionSampleSet *fss, const gboolean track_residual)
+{
+  fss->track_residual = track_residual;
+}
+
+/**
+ * ncm_function_sample_set_get_track_residual:
+ * @fss: a #NcmFunctionSampleSet
+ *
+ * Gets #NcmFunctionSampleSet:track-residual.
+ *
+ * Returns: whether the achieved residual is being recorded
+ */
+gboolean
+ncm_function_sample_set_get_track_residual (NcmFunctionSampleSet *fss)
+{
+  return fss->track_residual;
 }
 
 /**
@@ -1583,6 +1664,88 @@ ncm_function_sample_set_to_spline_vec_old (NcmFunctionSampleSet *fss, NcmSpline 
   }
 }
 
+/*
+ * Records @diff as the residual of the interval owned by @sp, keeping the
+ * larger of the two whenever an interval is measured more than once. What is
+ * stored is the componentwise |f - spline| of the pass that accepted the
+ * interval, so it describes the interval as it stood *before* its own
+ * subdivision -- see the note in ncm_function_sample_set_get_residuals().
+ */
+static void
+_ncm_function_sample_point_update_residual (NcmFunctionSamplePoint *sp, NcmVector *diff, const guint len)
+{
+  guint j;
+
+  if (sp->residual == NULL)
+  {
+    sp->residual = ncm_vector_new (len);
+    ncm_vector_set_all (sp->residual, 0.0);
+  }
+
+  for (j = 0; j < len; j++)
+  {
+    const gdouble d = fabs (ncm_vector_get (diff, j));
+
+    if (d > ncm_vector_get (sp->residual, j))
+      ncm_vector_set (sp->residual, j, d);
+  }
+}
+
+/**
+ * ncm_function_sample_set_get_residuals:
+ * @fss: a #NcmFunctionSampleSet
+ *
+ * Builds the per-interval residuals recorded while
+ * #NcmFunctionSampleSet:track-residual was on, as a matrix with one row per
+ * sample, in ascending $x$ order, and one column per component. Row $i$ holds
+ * the residual of the interval $[x_i, x_{i+1}]$, matching the convention
+ * ncm_function_sample_set_iter_get_interval_ok() uses; the last row is the
+ * trailing edge and is always NaN.
+ *
+ * An entry is the componentwise $|f - \tilde f|$ measured by
+ * ncm_function_sample_set_refine() on the pass that accepted the interval, not
+ * the tolerance that pass was asked for -- refinement usually beats its own
+ * threshold by orders, and by an amount that varies with the function. An
+ * interval that was never accepted (refinement stopped at
+ * @max_iter, or tracking was off for the pass that accepted it) reads NaN, and
+ * the caller has to decide what to do with it.
+ *
+ * Two limits worth stating. The measurement is a *midpoint sample*, not a
+ * supremum over the interval. And it is taken before the interval is split, so
+ * for a cubic base spline it overstates each half by roughly $2^4$.
+ *
+ * Returns: (transfer full) (nullable): a #NcmMatrix of residuals, or %NULL if
+ * nothing was recorded
+ */
+NcmMatrix *
+ncm_function_sample_set_get_residuals (NcmFunctionSampleSet *fss)
+{
+  const guint nsamples = g_list_length (fss->samples);
+  NcmMatrix *residuals;
+  GList *node;
+  guint i;
+
+  if ((nsamples == 0) || !fss->track_residual)
+    return NULL;
+
+  residuals = ncm_matrix_new (nsamples, fss->len);
+
+  for (node = fss->samples, i = 0; node != NULL; node = node->next, i++)
+  {
+    const NcmFunctionSamplePoint *sp = (const NcmFunctionSamplePoint *) node->data;
+    guint j;
+
+    for (j = 0; j < fss->len; j++)
+      ncm_matrix_set (residuals, i, j, (sp->residual != NULL) ? ncm_vector_get (sp->residual, j) : GSL_NAN);
+  }
+
+  /* The last sample owns no interval to its right. */
+  for (i = 0; i < fss->len; i++)
+    ncm_matrix_set (residuals, nsamples - 1, i, GSL_NAN);
+
+  return residuals;
+}
+
 /**
  * ncm_function_sample_set_refine:
  * @fss: a #NcmFunctionSampleSet
@@ -1596,6 +1759,10 @@ ncm_function_sample_set_to_spline_vec_old (NcmFunctionSampleSet *fss, NcmSpline 
  * 3. Computes the error: ||f(x) - spline_f(x)||_2 <= reltol * ||f(x)||_2 + abstol
  * 4. If the test passes, increments interval_ok for both the NEW point and its left neighbor
  * 5. Marks all NEW points as OLD
+ *
+ * When #NcmFunctionSampleSet:track-residual is set, step 4 also records the
+ * residual it just measured on both intervals, retrievable afterwards with
+ * ncm_function_sample_set_get_residuals().
  *
  * The interval_ok counter at node i indicates how many times the interval [i, i+1] has
  * passed the refinement test. After refinement, all points are marked as OLD for the
@@ -1657,6 +1824,9 @@ ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol,
       {
         ncm_function_sample_set_iter_inc_interval_ok (iter);
 
+        if (fss->track_residual)
+          _ncm_function_sample_point_update_residual ((NcmFunctionSamplePoint *) iter->node->data, y_spline, fss->len);
+
         /* Also increment left neighbor if it exists */
         if (ncm_function_sample_set_iter_has_prev (iter))
         {
@@ -1664,6 +1834,11 @@ ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol,
 
           ncm_function_sample_set_iter_prev (&prev);
           ncm_function_sample_set_iter_inc_interval_ok (&prev);
+
+          /* Both halves of the interval this point just split are covered by
+           * the one measurement taken at the point itself. */
+          if (fss->track_residual)
+            _ncm_function_sample_point_update_residual ((NcmFunctionSamplePoint *) prev.node->data, y_spline, fss->len);
         }
       }
     }

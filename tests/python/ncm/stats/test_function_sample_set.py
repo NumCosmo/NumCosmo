@@ -2514,3 +2514,120 @@ def test_adaptive_midpoint_mixed_zero_and_nonzero_terminates() -> None:
         y_spline = sv.eval_array(x)
         assert abs(y_spline[0] - 0.0) < 1e-10
         assert abs(y_spline[1] - math.sin(x)) < threshold * 10
+
+
+# ============================================================================
+# Tests for the achieved refinement residual
+# ============================================================================
+
+
+def _trig_pair(x: float, y: Ncm.Vector) -> None:
+    """A dominant component and one four orders below it."""
+    y.set(0, math.sin(x))
+    y.set(1, 1.0e-4 * math.cos(3.0 * x))
+
+
+def _refined(track: bool, reltol: float = 1e-6, abstol: float = 1e-10):
+    fss = Ncm.FunctionSampleSet.new(2)
+    fss.set_track_residual(track)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(0.0, 2.0 * math.pi, 6):
+        fss.add_func(x, _trig_pair)
+
+    fss.mark_all_old()
+    fss.adaptive_midpoint(_trig_pair, reltol, abstol, 100, 1, base_spline)
+
+    return fss, base_spline
+
+
+def test_residual_tracking_is_off_by_default() -> None:
+    """The record costs memory, so a caller has to ask for it."""
+    fss = Ncm.FunctionSampleSet.new(2)
+
+    assert not fss.get_track_residual()
+    assert fss.get_residuals() is None
+
+    fss.set_track_residual(True)
+    assert fss.get_track_residual()
+
+
+def test_residuals_are_recorded_per_interval() -> None:
+    """The matrix is one row per sample, one column per component.
+
+    Row i owns the interval [x_i, x_i+1], matching interval_ok's convention, so
+    the last row is the trailing edge and holds no interval.
+    """
+    fss, _ = _refined(True)
+
+    residuals = fss.get_residuals()
+    assert residuals is not None
+    assert residuals.nrows() == fss.get_nsamples()
+    assert residuals.ncols() == 2
+
+    values = np.array(residuals.dup_array()).reshape(residuals.nrows(), -1)
+
+    assert np.all(np.isnan(values[-1]))
+    assert np.all(np.isfinite(values[:-1]))
+    assert np.all(values[:-1] >= 0.0)
+
+
+def test_recorded_residual_bounds_the_spline_error() -> None:
+    """The record has to cover the error the finished spline actually carries.
+
+    It is measured before the interval it describes is split, so for a cubic it
+    overstates each half by roughly 2^4 -- conservative, which is the direction
+    an error estimate has to err in.
+    """
+    fss, base_spline = _refined(True)
+
+    values = np.array(fss.get_residuals().dup_array()).reshape(fss.get_nsamples(), -1)[
+        :-1
+    ]
+
+    sv = fss.to_spline_vec(base_spline)
+    xs = np.linspace(1.0e-3, 2.0 * math.pi - 1.0e-3, 2000)
+    true_err = np.array(
+        [
+            np.abs(
+                np.array(sv.eval_array(x)) - [math.sin(x), 1.0e-4 * math.cos(3.0 * x)]
+            )
+            for x in xs
+        ]
+    ).max(axis=0)
+
+    assert np.all(true_err < values.max(axis=0))
+
+    # And it is an achieved residual, not the tolerance echoed back: the
+    # sub-dominant component is held only to the block's L2 norm, so the
+    # criterion allows it 1e-6 while the fit actually delivers far better.
+    assert values[:, 1].max() < 1.0e-8
+
+
+def test_residuals_track_the_tolerance_they_were_refined_at() -> None:
+    """Tightening the criterion tightens what the record reports."""
+    loose = np.array(
+        np.array(_refined(True, reltol=1e-5)[0].get_residuals().dup_array())
+    )
+    tight = np.array(
+        np.array(_refined(True, reltol=1e-8)[0].get_residuals().dup_array())
+    )
+
+    assert np.nanmax(tight) < np.nanmax(loose)
+
+
+def test_iter_reports_the_residual_of_its_own_interval() -> None:
+    """The iterator exposes the same record one interval at a time."""
+    fss, _ = _refined(True)
+
+    it = fss.iter_begin()
+    first = it.get_residual()
+
+    assert first is not None
+    assert first.len() == 2
+
+    fresh = Ncm.FunctionSampleSet.new(2)
+    fresh.set_track_residual(True)
+    fresh.add_func(0.0, _trig_pair)
+
+    assert fresh.iter_begin().get_residual() is None

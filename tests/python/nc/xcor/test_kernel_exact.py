@@ -426,10 +426,18 @@ def test_error_estimate_grows_with_cancellation(cosmology: Cosmology) -> None:
 
         return np.abs(np.array(vp_err.dup_array()) / np.array(vp.dup_array()))
 
-    # Against a distant bin the cross spectrum is built from tail against tail,
-    # and at the library's default tolerances it keeps no digits at all.
-    assert np.all(relative_estimate(near, near) < 1.0e-2)
-    assert np.all(relative_estimate(near, far) > 1.0)
+    auto = relative_estimate(near, near)
+    cross = relative_estimate(near, far)
+
+    # Against a distant bin the cross spectrum is built from tail against tail.
+    # The separation is what is asserted: every multipole of the cross is two
+    # orders worse than the worst of the auto, and the worst of them has no
+    # digits left at all. A cellwise floor is deliberately not asserted -- the
+    # achieved-residual estimate puts the two lowest multipoles at 0.36 and
+    # 0.78, where the tolerance-only ceiling it replaced said 12 and 25.
+    assert np.all(auto < 1.0e-2)
+    assert np.all(cross > 100.0 * auto.max())
+    assert cross.max() > 1.0
 
 
 def test_error_estimate_is_nan_for_methods_that_do_not_provide_one(
@@ -472,3 +480,120 @@ def test_compute_full_without_an_error_vector_matches_compute(
 
     assert_allclose(np.array(with_err.dup_array()), np.array(plain.dup_array()))
     assert_allclose(np.array(discarded.dup_array()), np.array(plain.dup_array()))
+
+
+def test_closure_records_the_residual_it_achieved(cosmology: Cosmology) -> None:
+    """The closure reports the fit error it reached, per knot interval.
+
+    This is what the error estimate is built on. The record is a matrix aligned
+    with the knots -- row i owns the interval [k_i, k_i+1], so the last row is
+    the trailing edge and carries no interval.
+    """
+    kernel = _kernels(cosmology)[0]
+    integrand = kernel.get_eval_vectorized_full(
+        cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8)
+    )
+
+    residuals = integrand.peek_residuals()
+    assert residuals is not None
+
+    knots = _knots(integrand)
+    assert residuals.nrows() == knots.size
+    assert residuals.ncols() == 8
+
+    values = np.array(residuals.dup_array()).reshape(residuals.nrows(), -1)
+    assert np.all(np.isnan(values[-1]))
+    assert np.all(np.isfinite(values[:-1]))
+    assert np.all(values[:-1] >= 0.0)
+
+    # It must be an achieved residual, not the tolerance that was requested.
+    # The criterion refinement stops at is reltol * ||W(k)||_2 + a * W_max, so
+    # the worst interval sits just under it -- that is where refinement quit --
+    # while the typical one is orders below. A record echoing the tolerance
+    # back would be flat instead.
+    window = np.array([integrand.eval_array(k) for k in knots])
+    criterion = kernel.get_reltol() * np.linalg.norm(window, axis=1).max()
+    criterion += kernel.get_scaled_abstol() * np.abs(window).max()
+
+    assert values[:-1].max() < criterion
+    assert np.median(values[:-1]) < 0.05 * criterion
+
+
+def test_tracking_off_leaves_no_record_and_a_looser_estimate(
+    cosmology: Cosmology,
+) -> None:
+    """Turning the record off falls back to the tolerance-only ceiling."""
+    cosmo = cosmology.cosmo
+    lmin, lmax = 2, 9
+    nell = lmax - lmin + 1
+
+    exact = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+    exact.prepare(cosmo)
+
+    def estimate(track):
+        kernel = _kernels(cosmology)[0]
+        kernel.set_track_fit_residual(track)
+        kernel.prepare(cosmo)
+
+        integrand = kernel.get_eval_vectorized_full(
+            cosmo, lmin, lmax, Ncm.SBesselIntegratorLevin.new(0, 8)
+        )
+        assert (integrand.peek_residuals() is not None) == track
+
+        vp, vp_err = Ncm.Vector.new(nell), Ncm.Vector.new(nell)
+        exact.compute_full(kernel, None, cosmo, lmin, lmax, vp, vp_err)
+
+        return np.abs(np.array(vp_err.dup_array()) / np.array(vp.dup_array()))
+
+    assert _kernels(cosmology)[0].get_track_fit_residual(), "on by default"
+
+    achieved = estimate(True)
+    ceiling = estimate(False)
+
+    # Measured 12-858x against a reltol=1e-10 reference for this pair, against
+    # 1.2-50x for the achieved residual. Asserted loosely: the point is that
+    # the two are different objects, not the exact factor.
+    assert np.all(achieved < ceiling)
+    assert np.all(ceiling / achieved > 5.0)
+
+
+def test_achieved_residual_estimate_still_bounds_the_true_error(
+    cosmology: Cosmology,
+) -> None:
+    """Sharper must not mean wrong: the estimate still has to cover the truth.
+
+    Measured against a closure built two orders tighter, which is the only
+    reference available for a fit error -- the quadrature above it is exact.
+    """
+    cosmo = cosmology.cosmo
+    lmin, lmax = 2, 9
+    nell = lmax - lmin + 1
+
+    exact = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+    exact.prepare(cosmo)
+
+    def auto_spectrum(reltol, scaled_abstol):
+        kernel = Nc.XcorKernelClusterTophat(
+            dist=cosmology.dist,
+            powspec=cosmology.ps_ml,
+            z_lower=Z_BINS[0][0],
+            z_upper=Z_BINS[0][1],
+            reltol=reltol,
+            scaled_abstol=scaled_abstol,
+            integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+        )
+        kernel.set_l_limber(-1)
+        kernel.prepare(cosmo)
+
+        vp, vp_err = Ncm.Vector.new(nell), Ncm.Vector.new(nell)
+        exact.compute_full(kernel, None, cosmo, lmin, lmax, vp, vp_err)
+
+        return np.array(vp.dup_array()), np.array(vp_err.dup_array())
+
+    cl_ref, _ = auto_spectrum(1.0e-8, 1.0e-6)
+    cl, err = auto_spectrum(1.0e-4, 1.0e-4)
+
+    true_rel = np.abs(cl - cl_ref) / np.abs(cl_ref)
+    est_rel = np.abs(err / cl)
+
+    assert np.all(est_rel > true_rel)

@@ -41,6 +41,7 @@
 #include <numcosmo/ncm/powspec/ncm_powspec.h>
 #include <numcosmo/ncm/specfunc/ncm_sbessel_integrator.h>
 #include <numcosmo/ncm/core/ncm_util.h>
+#include <numcosmo/ncm/algebra/ncm_matrix.h>
 #include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/nc/background/nc_distance.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
@@ -188,6 +189,7 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandGetKnots get_knots_func;
   NcXcorKernelIntegrandGetRangeComp get_range_comp_func;
   NcXcorKernelIntegrandEvalComps eval_comps_func;
+  NcmMatrix *residuals;
   gdouble reltol;
   gdouble scaled_abstol;
 };
@@ -277,6 +279,8 @@ void nc_xcor_kernel_set_max_iter (NcXcorKernel *xclk, guint max_iter);
 
 gdouble nc_xcor_kernel_get_expansion_factor (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_expansion_factor (NcXcorKernel *xclk, gdouble expansion_factor);
+gboolean nc_xcor_kernel_get_track_fit_residual (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_track_fit_residual (NcXcorKernel *xclk, gboolean track_fit_residual);
 
 NcDistance *nc_xcor_kernel_peek_dist (NcXcorKernel *xclk);
 NcmPowspec *nc_xcor_kernel_peek_powspec (NcXcorKernel *xclk);
@@ -309,6 +313,8 @@ NcmVector *nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand
 void nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble scaled_abstol);
 gdouble nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand);
 gdouble nc_xcor_kernel_integrand_get_scaled_abstol (NcXcorKernelIntegrand *integrand);
+void nc_xcor_kernel_integrand_set_residuals (NcXcorKernelIntegrand *integrand, NcmMatrix *residuals);
+NcmMatrix *nc_xcor_kernel_integrand_peek_residuals (NcXcorKernelIntegrand *integrand);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_clear (NcXcorKernelIntegrand **integrand);

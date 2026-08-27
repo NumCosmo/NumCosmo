@@ -858,18 +858,97 @@ static const gdouble _nc_xcor_gl5_w[NC_XCOR_GL5_N] = {
  */
 /*
  * Everything the error estimate of _nc_xcor_kernel_integrate_block_exact ()
- * needs, accumulated in the same pass as the integral itself. The peaks enter
- * only as multipliers of the accumulated integrals, so a running maximum is
- * enough and no second sweep is required.
+ * needs, accumulated in the same pass as the integral itself.
+ *
+ * The estimate propagates d(W1 W2) = |W1| dW2 + |W2| dW1 with dW_i the closure
+ * fit's own error, so what it needs from the sweep is that product integrated
+ * against k^2. Where the closure recorded the residual it *achieved* on a
+ * panel (nc_xcor_kernel_integrand_peek_residuals()), dW_i is that residual and
+ * the term lands in @res. Where it did not -- tracking off, or a panel
+ * refinement never accepted -- the panel lands in @unk_i instead, to be closed
+ * afterwards with the tolerance the fit was *asked* for, times the peak. The
+ * masks are per panel, so the inner loop multiplies rather than branches.
+ *
+ * The peaks enter only as multipliers of the accumulated integrals, so a
+ * running maximum is enough and no second sweep is required.
  */
 typedef struct _NcXcorGL5Err
 {
-  gdouble *prod;  /* int k^2 |W1 W2| */
-  gdouble *abs1;  /* int k^2 |W1|    */
-  gdouble *abs2;  /* int k^2 |W2|    */
-  gdouble *peak1; /* max |W1|        */
-  gdouble *peak2; /* max |W2|        */
+  gdouble *res;          /* int k^2 (|W1| dW2 + |W2| dW1), panels with a record  */
+  gdouble *unk1;         /* int k^2 |W2|    over panels where W1 has no record   */
+  gdouble *unk2;         /* int k^2 |W1|    over panels where W2 has no record   */
+  gdouble *prod1;        /* int k^2 |W1 W2| over panels where W1 has no record   */
+  gdouble *prod2;        /* int k^2 |W1 W2| over panels where W2 has no record   */
+  gdouble *peak1;        /* max |W1|                                             */
+  gdouble *peak2;        /* max |W2|                                             */
+  NcmMatrix *residuals1; /* achieved residuals, or NULL                   */
+  NcmMatrix *residuals2;
+  GArray *rows1; /* panel -> row of @residuals1 (guint)                  */
+  GArray *rows2;
+  gdouble *dW1; /* per-panel scratch: residual, or 0 where unknown      */
+  gdouble *dW2;
+  gdouble *m1; /* per-panel scratch: 1.0 where unknown, else 0.0       */
+  gdouble *m2;
 } NcXcorGL5Err;
+
+/*
+ * Fills the per-panel dW/mask scratch for one side from its recorded
+ * residuals. A NaN entry means the interval was never accepted, and is treated
+ * exactly as no record at all.
+ */
+static void
+_nc_xcor_gl5_panel_residual (NcmMatrix *residuals, GArray *rows, const guint ie, const guint nell, gdouble *dW, gdouble *m)
+{
+  guint il;
+
+  if (residuals == NULL)
+  {
+    for (il = 0; il < nell; il++)
+    {
+      dW[il] = 0.0;
+      m[il]  = 1.0;
+    }
+
+    return;
+  }
+
+  {
+    const guint row = g_array_index (rows, guint, ie);
+
+    for (il = 0; il < nell; il++)
+    {
+      const gdouble d = ncm_matrix_get (residuals, row, il);
+
+      dW[il] = gsl_finite (d) ? d : 0.0;
+      m[il]  = gsl_finite (d) ? 0.0 : 1.0;
+    }
+  }
+}
+
+/*
+ * Maps each panel of @edges onto the interval of @knots that contains it. Both
+ * are sorted and every edge is a knot of one side or the other, so a single
+ * marching index does it.
+ */
+static GArray *
+_nc_xcor_gl5_panel_rows (NcmVector *knots, GArray *edges)
+{
+  const guint nknots = ncm_vector_len (knots);
+  GArray *rows       = g_array_sized_new (FALSE, FALSE, sizeof (guint), edges->len);
+  guint ie, j = 0;
+
+  for (ie = 0; ie + 1 < edges->len; ie++)
+  {
+    const gdouble panel_lo = g_array_index (edges, gdouble, ie);
+
+    while ((j + 2 < nknots) && (ncm_vector_get (knots, j + 1) <= panel_lo))
+      j++;
+
+    g_array_append_val (rows, j);
+  }
+
+  return rows;
+}
 
 static void
 _nc_xcor_gl5_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, guint nell, gdouble *W, gdouble *sum, NcXcorGL5Err *err)
@@ -882,6 +961,9 @@ _nc_xcor_gl5_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, guint nell
     const gdouble panel_hi = g_array_index (edges, gdouble, ie + 1);
     const gdouble mid      = 0.5 * (panel_lo + panel_hi);
     const gdouble half     = 0.5 * (panel_hi - panel_lo);
+
+    if (err != NULL)
+      _nc_xcor_gl5_panel_residual (err->residuals1, err->rows1, ie, nell, err->dW1, err->m1);
 
     for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
     {
@@ -898,9 +980,14 @@ _nc_xcor_gl5_sweep_auto (NcXcorKernelIntegrand *xclki, GArray *edges, guint nell
 
         if (err != NULL)
         {
-          err->prod[il] += fabs (term);
-          err->abs1[il] += fabs (w * W[il]);
-          err->peak1[il] = GSL_MAX (err->peak1[il], fabs (W[il]));
+          const gdouble absW = fabs (W[il]);
+
+          /* d(W^2) = 2 |W| dW, and the aliased unk2/peak2 supply the second
+           * half of the unknown-panel term the same way. */
+          err->res[il]   += 2.0 * w * absW * err->dW1[il];
+          err->unk1[il]  += w * absW * err->m1[il];
+          err->prod1[il] += fabs (term) * err->m1[il];
+          err->peak1[il]  = GSL_MAX (err->peak1[il], absW);
         }
       }
     }
@@ -919,6 +1006,12 @@ _nc_xcor_gl5_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *
     const gdouble mid      = 0.5 * (panel_lo + panel_hi);
     const gdouble half     = 0.5 * (panel_hi - panel_lo);
 
+    if (err != NULL)
+    {
+      _nc_xcor_gl5_panel_residual (err->residuals1, err->rows1, ie, nell, err->dW1, err->m1);
+      _nc_xcor_gl5_panel_residual (err->residuals2, err->rows2, ie, nell, err->dW2, err->m2);
+    }
+
     for (ig = 0; ig < NC_XCOR_GL5_N; ig++)
     {
       const gdouble k = mid + half * _nc_xcor_gl5_x[ig];
@@ -935,11 +1028,16 @@ _nc_xcor_gl5_sweep_cross (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *
 
         if (err != NULL)
         {
-          err->prod[il] += fabs (term);
-          err->abs1[il] += fabs (w * W1[il]);
-          err->abs2[il] += fabs (w * W2[il]);
-          err->peak1[il] = GSL_MAX (err->peak1[il], fabs (W1[il]));
-          err->peak2[il] = GSL_MAX (err->peak2[il], fabs (W2[il]));
+          const gdouble absW1 = fabs (W1[il]);
+          const gdouble absW2 = fabs (W2[il]);
+
+          err->res[il]   += w * (absW1 * err->dW2[il] + absW2 * err->dW1[il]);
+          err->unk1[il]  += w * absW2 * err->m1[il];
+          err->unk2[il]  += w * absW1 * err->m2[il];
+          err->prod1[il] += fabs (term) * err->m1[il];
+          err->prod2[il] += fabs (term) * err->m2[il];
+          err->peak1[il]  = GSL_MAX (err->peak1[il], absW1);
+          err->peak2[il]  = GSL_MAX (err->peak2[il], absW2);
         }
       }
     }
@@ -1081,12 +1179,26 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
 
   if (vp_err != NULL)
   {
-    err_acc.prod  = g_new0 (gdouble, nell);
-    err_acc.abs1  = g_new0 (gdouble, nell);
-    err_acc.abs2  = isauto ? err_acc.abs1 : g_new0 (gdouble, nell);
+    err_acc.res   = g_new0 (gdouble, nell);
+    err_acc.unk1  = g_new0 (gdouble, nell);
+    err_acc.unk2  = isauto ? err_acc.unk1 : g_new0 (gdouble, nell);
+    err_acc.prod1 = g_new0 (gdouble, nell);
+    err_acc.prod2 = isauto ? err_acc.prod1 : g_new0 (gdouble, nell);
     err_acc.peak1 = g_new0 (gdouble, nell);
     err_acc.peak2 = isauto ? err_acc.peak1 : g_new0 (gdouble, nell);
-    err           = &err_acc;
+
+    err_acc.residuals1 = nc_xcor_kernel_integrand_peek_residuals (xclki1);
+    err_acc.residuals2 = isauto ? err_acc.residuals1 : nc_xcor_kernel_integrand_peek_residuals (xclki2);
+    err_acc.rows1      = (err_acc.residuals1 != NULL) ? _nc_xcor_gl5_panel_rows (knots1, edges) : NULL;
+    err_acc.rows2      = isauto ? err_acc.rows1 :
+                         ((err_acc.residuals2 != NULL) ? _nc_xcor_gl5_panel_rows (knots2, edges) : NULL);
+
+    err_acc.dW1 = g_new0 (gdouble, nell);
+    err_acc.dW2 = isauto ? err_acc.dW1 : g_new0 (gdouble, nell);
+    err_acc.m1  = g_new0 (gdouble, nell);
+    err_acc.m2  = isauto ? err_acc.m1 : g_new0 (gdouble, nell);
+
+    err = &err_acc;
   }
 
   /* The auto/cross distinction is fixed for the whole sweep, so it is resolved
@@ -1100,30 +1212,40 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
     ncm_vector_set (vp, il, const_factor * sum[il]);
 
   /* The quadrature is exact, so the only error is the closures' own, propagated
-   * through d(W1 W2) = |W1| dW2 + |W2| dW1 with dWi the fit criterion of
-   * nc_xcor_kernel_integrand_set_tolerances (). Its two halves separate: the
-   * relative one rides on the product, the peak-scaled floor on each closure
-   * against the other's peak -- which is how a floor set per closure ends up
-   * squared where both of them sit on it. */
+   * through d(W1 W2) = |W1| dW2 + |W2| dW1. Where a closure recorded what its
+   * fit achieved, the sweep has already integrated that; what is left is to
+   * close the panels that carry no record with the tolerance the fit was asked
+   * for. That fallback keeps the two halves of the criterion apart the way the
+   * criterion does -- the relative one riding on the product, the peak-scaled
+   * floor against the other closure's amplitude -- so with
+   * #NcXcorKernel:track-fit-residual off it is the whole estimate, and is then
+   * exactly the tolerance-only bound. */
   if (vp_err != NULL)
   {
     for (il = 0; il < nell; il++)
     {
-      const gdouble rel_term   = (reltol1 + reltol2) * err->prod[il];
-      const gdouble floor_term = sabs1 * err->peak1[il] * err->abs2[il] +
-                                 sabs2 * err->peak2[il] * err->abs1[il];
+      const gdouble unk_term = reltol1 * err->prod1[il] + sabs1 * err->peak1[il] * err->unk1[il] +
+                               reltol2 * err->prod2[il] + sabs2 * err->peak2[il] * err->unk2[il];
 
-      ncm_vector_set (vp_err, il, const_factor * (rel_term + floor_term));
+      ncm_vector_set (vp_err, il, const_factor * (err->res[il] + unk_term));
     }
 
-    g_free (err->prod);
-    g_free (err->abs1);
+    g_free (err->res);
+    g_free (err->unk1);
+    g_free (err->prod1);
     g_free (err->peak1);
+    g_free (err->dW1);
+    g_free (err->m1);
+    g_clear_pointer (&err->rows1, g_array_unref);
 
     if (!isauto)
     {
-      g_free (err->abs2);
+      g_free (err->unk2);
+      g_free (err->prod2);
       g_free (err->peak2);
+      g_free (err->dW2);
+      g_free (err->m2);
+      g_clear_pointer (&err->rows2, g_array_unref);
     }
   }
 
@@ -1684,9 +1806,20 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  * is also the one thing that cannot be known before the pair is formed.
  *
  * Propagating $\delta (W^A W^B) = \vert W^A \vert \delta W^B + \vert W^B
- * \vert \delta W^A$ with the fit criterion of
- * nc_xcor_kernel_integrand_set_tolerances(), $\delta W^i \le \epsilon_i \vert
- * W^i \vert + a_i W^i_\mathrm{max}$, splits into two terms:
+ * \vert \delta W^A$ gives
+ *
+ * $$ \sigma_\ell \simeq \int \mathrm{d}k\, k^2 \left( \vert W^A_\ell \vert\, \delta W^B_\ell
+ *    + \vert W^B_\ell \vert\, \delta W^A_\ell \right) $$
+ *
+ * with $\delta W^i$ the residual the closure's fit **achieved**, recorded per
+ * knot interval while #NcXcorKernel:track-fit-residual is on -- which it is by
+ * default. See nc_xcor_kernel_integrand_peek_residuals().
+ *
+ * With tracking off, or on an interval whose refinement was never accepted,
+ * $\delta W^i$ falls back to the criterion the fit was *asked* for,
+ * nc_xcor_kernel_integrand_set_tolerances()'s $\delta W^i \le \epsilon_i \vert
+ * W^i \vert + a_i W^i_\mathrm{max}$, and the same propagation gives the older
+ * three-term form:
  *
  * $$ \sigma_\ell \simeq (\epsilon_A + \epsilon_B) \int \mathrm{d}k\, k^2 \vert W^A_\ell W^B_\ell \vert
  *    + a_A W^A_{\ell,\mathrm{max}} \int \mathrm{d}k\, k^2 \vert W^B_\ell \vert
@@ -1703,22 +1836,30 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  *
  * ## How conservative, measured
  *
- * Everything above bounds the *criterion*, which the refinement stops at rather
- * than beats, so @vp_err is an upper bound and not an estimate. Against a
- * reference built at reltol $10^{-10}$, cluster top-hat bins over
- * $\ell = 2 \dots 9$ at the library defaults:
+ * Refinement beats the tolerance it was given by one to three orders, and by
+ * an amount that depends on the kernel, so the fallback form above is a ceiling
+ * rather than an estimate. Measured against a reference built at reltol
+ * $10^{-10}$, over $\ell = 2 \dots 9$ at the library defaults, worst ratio of
+ * estimate to true relative error:
  *
- * | pair | true relative error | @vp_err | ratio |
+ * | pair | true relative error | achieved | tolerance-only |
  * |---|---|---|---|
- * | auto | 4e-6 to 1.3e-4 | 1.5e-3 to 3.7e-3 | 12-860 |
- * | cross, adjacent bins | 7e-4 to 0.13 | 0.2 to 4.5 | 35-320 |
- * | cross, separated bins | 0.07 to 17 | 6 to 96 | 4-160 |
+ * | top-hat, auto | 4.3e-6 to 1.3e-4 | 1.2-50x | 12-858x |
+ * | top-hat, cross adjacent | 6.7e-4 to 0.13 | 2.9-16x | 35-320x |
+ * | top-hat, cross separated | 0.07 to 8993 | 3.7e-4-11x | 5.1e-3-161x |
+ * | Gaussian, auto | 6.5e-8 to 9.6e-7 | 68-630x | 537-7949x |
+ * | Gaussian, cross separated | 5.0e-4 to 1.2 | 237-1467x | 6440-50487x |
  *
- * So read it as a ceiling: a small @vp_err is a strong statement, a large one
- * warrants checking rather than despair. It is loosest exactly where the answer
- * is healthiest. Tightening it needs the refinement's *achieved* residual
- * rather than the tolerance it was asked for, which
- * NcmFunctionSampleSet does not currently report.
+ * Using the achieved residual is worth a uniform 13 to 34 times across all
+ * five, at no measurable cost -- the record is one double per knot per
+ * multipole, and building it does not slow the closure down.
+ *
+ * Read the result as a ceiling still: a small @vp_err is a strong statement, a
+ * large one warrants checking rather than despair. Both rows where the ratio
+ * drops below one are separated top-hat bins whose $C_\ell$ has no digits left
+ * at all, and where the estimate says so -- over the three pairs, three
+ * thresholds and both forms, there is no cell where @vp_err calls a $C_\ell$
+ * good that is not.
  *
  * Those figures are a **worst case**, and deliberately so: a cluster top-hat has
  * a sharp edge in $\xi$, which gives $W_\ell(k)$ a $1/k$ tail instead of an
@@ -1729,11 +1870,14 @@ _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xc
  * the top-hat's 541, and its cross spectrum is accurate to 7.7e-4 rather than
  * 0.13 -- a factor of 165.
  *
- * That comparison also bounds what @vp_err can do. It reported 4.5 and 2.4 for
- * those two pairs, whose true errors differ by that factor of 165: it is
- * tracking the pair's cancellation, which is similar for both, and not the fit
- * quality, which is not. Read it as a conditioning flag rather than an accuracy
- * figure. Discriminating between them needs the *achieved* residual, as above.
+ * That comparison also bounds what @vp_err can do, and the achieved residual
+ * only half fixes it. The table above still runs from 2.9x over-conservative on
+ * a top-hat cross to 1467x on a Gaussian one, because a second mechanism is
+ * left: a spline's error alternates sign from panel to panel, and an estimate
+ * built on $\vert \cdot \vert$ adds what the integral cancels. That
+ * cancellation is near-total for a smoothly fitted kernel and partial for a
+ * ragged one, which is exactly the direction of the spread. Closing it needs a
+ * signed error model, not a better residual.
  *
  * ## And read them against the tolerances an application actually sets
  *
