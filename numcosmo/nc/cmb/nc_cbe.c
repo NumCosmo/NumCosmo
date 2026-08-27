@@ -1861,6 +1861,9 @@ nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHICosmo *cosmo)
 
   _nc_cbe_call_thermo (cbe, cosmo);
   cbe->thermodyn_prepared = TRUE;
+
+  ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo));
+  ncm_model_ctrl_force_update (cbe->ctrl_prim);
 }
 
 /**
@@ -1875,10 +1878,7 @@ void
 nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo)
 {
   if (ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo)))
-  {
     nc_cbe_thermodyn_prepare (cbe, cosmo);
-    ncm_model_ctrl_force_update (cbe->ctrl_prim);
-  }
 }
 
 /**

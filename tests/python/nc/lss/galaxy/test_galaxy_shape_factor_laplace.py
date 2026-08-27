@@ -127,8 +127,7 @@ def test_marginal_matches_quad_concentrated_beta_ring():
     """Concentrated, ring-peaked Beta population (mode away from chi_I=0):
     the joint-mode search has to resolve both radius and angle correctly."""
     alpha, beta, std_noise = 700.0, 300.0, 0.02
-    mode_x = (alpha - 1.0) / (alpha + beta - 2.0)
-    rho_mode = np.sqrt(mode_x)
+    rho_mode = (alpha - 1.0) / (alpha + beta - 2.0)
     theta = 0.3
     g = 0.1 + 0.05j
 

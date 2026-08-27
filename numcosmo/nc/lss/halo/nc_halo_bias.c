@@ -78,7 +78,12 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_util.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcHaloBias, nc_halo_bias, G_TYPE_OBJECT)
+typedef struct _NcHaloBiasPrivate
+{
+  NcHaloMassFunction *mfp;
+} NcHaloBiasPrivate;
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcHaloBias, nc_halo_bias, G_TYPE_OBJECT)
 
 enum
 {
@@ -90,15 +95,18 @@ enum
 static void
 nc_halo_bias_init (NcHaloBias *bias)
 {
-  bias->mfp = NULL;
+  NcHaloBiasPrivate * const self = nc_halo_bias_get_instance_private (bias);
+
+  self->mfp = NULL;
 }
 
 static void
 _nc_halo_bias_dispose (GObject *object)
 {
-  NcHaloBias *bias = NC_HALO_BIAS   (object);
+  NcHaloBias *bias               = NC_HALO_BIAS (object);
+  NcHaloBiasPrivate * const self = nc_halo_bias_get_instance_private (bias);
 
-  nc_halo_mass_function_clear (&bias->mfp);
+  nc_halo_mass_function_clear (&self->mfp);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_bias_parent_class)->dispose (object);
@@ -114,15 +122,16 @@ _nc_halo_bias_finalize (GObject *object)
 static void
 _nc_halo_bias_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHaloBias *bias = NC_HALO_BIAS (object);
+  NcHaloBias *bias               = NC_HALO_BIAS (object);
+  NcHaloBiasPrivate * const self = nc_halo_bias_get_instance_private (bias);
 
   g_return_if_fail (NC_IS_HALO_BIAS (object));
 
   switch (prop_id)
   {
     case PROP_MASS_FUNCTION:
-      bias->mfp = g_value_dup_object (value);
-      g_assert (bias->mfp != NULL);
+      self->mfp = g_value_dup_object (value);
+      g_assert (self->mfp != NULL);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -140,7 +149,7 @@ _nc_halo_bias_get_property (GObject *object, guint prop_id, GValue *value, GPara
   switch (prop_id)
   {
     case PROP_MASS_FUNCTION:
-      g_value_set_object (value, bias->mfp);
+      g_value_set_object (value, nc_halo_bias_peek_mass_function (bias));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -179,16 +188,20 @@ nc_halo_bias_class_init (NcHaloBiasClass *klass)
  * @bias: a #NcHaloBias
  * @cosmo: a #NcHICosmo
  * @sigma: density constrast variance
+ * @lnM: logarithm base e of the mass $\ln M$
  * @z: redshift
  *
- * Computes the Halo Bias at a given redshift.
+ * Computes the Halo Bias at a given redshift. The mass @lnM identifies the scale
+ * at which @sigma was evaluated; non-universal models use it to query further
+ * properties of the filtered power spectrum through the mass function. Universal
+ * models ignore it.
  *
  * Returns: a double, the halo bias.
  */
 gdouble
-nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z)
+nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z)
 {
-  return NC_HALO_BIAS_GET_CLASS (bias)->eval (bias, cosmo, sigma, z);
+  return NC_HALO_BIAS_GET_CLASS (bias)->eval (bias, cosmo, sigma, lnM, z);
 }
 
 /**
@@ -220,6 +233,22 @@ nc_halo_bias_clear (NcHaloBias **bias)
 }
 
 /**
+ * nc_halo_bias_peek_mass_function:
+ * @bias: a #NcHaloBias
+ *
+ * Gets the mass function this bias was built on.
+ *
+ * Returns: (transfer none): the #NcHaloMassFunction
+ */
+NcHaloMassFunction *
+nc_halo_bias_peek_mass_function (NcHaloBias *bias)
+{
+  NcHaloBiasPrivate * const self = nc_halo_bias_get_instance_private (bias);
+
+  return self->mfp;
+}
+
+/**
  * nc_halo_bias_integrand:
  * @mbiasf: a #NcHaloBias
  * @cosmo: a #NcHICosmo
@@ -237,9 +266,10 @@ nc_halo_bias_clear (NcHaloBias **bias)
 gdouble
 nc_halo_bias_integrand (NcHaloBias *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  const gdouble d2n_dzdlnM = nc_halo_mass_function_d2n_dzdlnM (mbiasf->mfp, cosmo, lnM, z);
-  const gdouble sigma      = nc_halo_mass_function_sigma_lnM (mbiasf->mfp, cosmo, lnM, z);
-  const gdouble bias       = nc_halo_bias_eval (mbiasf, cosmo, sigma, z);
+  NcHaloMassFunction *mfp  = nc_halo_bias_peek_mass_function (mbiasf);
+  const gdouble d2n_dzdlnM = nc_halo_mass_function_d2n_dzdlnM (mfp, cosmo, lnM, z);
+  const gdouble sigma      = nc_halo_mass_function_sigma_lnM (mfp, cosmo, lnM, z);
+  const gdouble bias       = nc_halo_bias_eval (mbiasf, cosmo, sigma, lnM, z);
 
   return d2n_dzdlnM * bias;
 }

@@ -24,7 +24,7 @@
 """Factory functions for J-Pas 2024 cluster abundance forecasting.
 
 This module provides functions to construct a complete cluster number counts
-forecast experiment using the NumCosmo and PySSC libraries, tailored for
+forecast experiment using the NumCosmo library, tailored for
 the J-PAS survey.
 
 It includes:
@@ -37,11 +37,12 @@ It includes:
 
 from typing import cast
 from enum import StrEnum, auto
+import functools
 import time
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
-from numcosmo_py.external.pyssc import pyssc as PySSC
+from numcosmo_py.ssc import SijCalculator, find_lmax, mask_angular_power_spectrum
 
 
 class JpasSSCType(StrEnum):
@@ -55,10 +56,24 @@ class JpasSSCType(StrEnum):
     """No Super Sample Covariance is included in the covariance matrix."""
     FULLSKY = auto()
     """Uses a full-sky approximation for the SSC matrix $S_{ij}$."""
+    FULLSKY_FSKY = auto()
+    """Uses a full-sky $S_{ij}$ approximation corrected by the requested survey area.
+
+    This implements the same full-sky kernel integration as `FULLSKY`, but rescales the
+    resulting matrix by an area-driven $f_{\rm sky}$ correction factor to mimic the
+    enhancement expected in a finite footprint.
+    """
     FULL = auto()
     """Uses the HEALPix mask for the full J-PAS sky coverage for SSC."""
     GUARANTEED = auto()
     """Uses the HEALPix mask for the guaranteed J-PAS sky coverage for SSC."""
+    CAP = auto()
+    """Uses a circular cap of the requested survey area for SSC.
+
+    Unlike FULLSKY, which is area independent, this option builds the $S_{ij}$ matrix
+    from a compact footprint whose solid angle matches the survey area, and therefore
+    captures the enhancement of the super-survey variance in a finite footprint.
+    """
 
 
 class ClusterMassType(StrEnum):
@@ -141,10 +156,10 @@ def create_lnM_obs_bins(
     lnM_obs_max: float = np.log(10.0) * 15.0,
     nknots: int = 2,
 ) -> np.ndarray:
-    """Create the log-observable mass bins for the J-Pas 2024 forecast.
+    r"""Create the log-observable mass bins for the J-Pas 2024 forecast.
 
     The mass variable is typically $ln M$ (log-base-e of $M_{200c}$) in units of
-    $h^{-1} M_\\odot$. These bins are defined in terms of the observed proxy (e.g.,
+    $h^{-1} M_\odot$. These bins are defined in terms of the observed proxy (e.g.,
     richness).
 
     :param lnM_obs_min: Minimum log-mass-observable knot boundary.
@@ -158,7 +173,7 @@ def create_lnM_obs_bins(
 
 
 def survey_area(sky_cut: JpasSSCType) -> float:
-    """Survey area in square degrees ($\text{sqd}$) for the J-Pas 2024 forecast.
+    r"""Survey area in square degrees ($\text{sqd}$) for the J-Pas 2024 forecast.
 
     :param sky_cut: The type of sky coverage assumed.
     :raises ValueError: If the sky cut type is not FULLSKY or a masked type.
@@ -178,6 +193,35 @@ def survey_area(sky_cut: JpasSSCType) -> float:
             raise ValueError(f"Invalid sky cut type for area calculation: {sky_cut}")
 
     return survey_area0
+
+
+def create_mask_cap(area: float, nside: int = 512) -> np.ndarray:
+    """Create the HEALPix mask for a circular cap of the requested area.
+
+    The cap is centred on the north pole; since the $S_{ij}$ matrix depends on the mask
+    only through its angular power spectrum, its position on the sphere is irrelevant.
+
+    :param area: The solid angle of the cap in square degrees.
+    :param nside: The HEALPix resolution parameter.
+    :return: A numpy array representing the pixel mask (1=in survey, 0=out).
+    """
+    sqd_fullsky = 4.0 * np.pi * (180.0 / np.pi) ** 2
+    if not 0.0 < area < sqd_fullsky:
+        raise ValueError(
+            f"Cap area must lie in (0, {sqd_fullsky:.1f}) sq. degrees, got {area}."
+        )
+
+    # Solid angle of a cap of half-angle theta_c is 2 pi (1 - cos theta_c)
+    cos_theta_c = 1.0 - 2.0 * area / sqd_fullsky
+
+    smap = Ncm.SphereMap.new(nside)
+    npix = smap.get_npix()
+    angles = np.array([smap.pix2ang_ring(i) for i in range(npix)])
+
+    mask_cap = np.zeros(npix)
+    mask_cap[np.cos(angles[:, 0]) >= cos_theta_c] = 1.0
+
+    return mask_cap
 
 
 def create_mask_guaranteed(nside: int = 512) -> np.ndarray:
@@ -276,14 +320,29 @@ def create_mask_full(nside: int = 512) -> np.ndarray:
     return mask_full
 
 
-def create_cosmo() -> Nc.HICosmo:
+def create_cosmo(
+    omega_c_min: float = 0.1,
+    omega_c_max: float = 0.3,
+) -> Nc.HICosmo:
     """Create a fiducial flat wCDM cosmology model for J-Pas 2024 forecast.
 
     Uses an $text{Nc.HICosmoDEXcdm}$ model (Flat $Lambda$CDM extension).
     Sets fiducial values and specifies which parameters are free to be fitted.
 
+    The $Omega_c$ bounds are adjustable because a model outside them cannot be
+    analysed at all: the starting point is rejected, `run fit` reports
+    inconsistent parameters, and the sampler then fails to draw a valid initial
+    ensemble.
+
+    :param omega_c_min: Lower bound of the $Omega_c$ prior.
+    :param omega_c_max: Upper bound of the $Omega_c$ prior.
     :return: An initialized NumCosmo HICosmoDEXcdm model.
     """
+    if omega_c_min >= omega_c_max:
+        raise ValueError(
+            f"omega_c_min ({omega_c_min}) must be below omega_c_max ({omega_c_max})."
+        )
+
     cosmo = Nc.HICosmoDEXcdm()
 
     # Set default fitting types (typically linear scale, fixed tolerance)
@@ -304,8 +363,8 @@ def create_cosmo() -> Nc.HICosmo:
     cosmo.param_set_desc(
         "Omegac",
         {
-            "lower-bound": 0.1,
-            "upper-bound": 0.3,
+            "lower-bound": omega_c_min,
+            "upper-bound": omega_c_max,
             "scale": 1.0e-2,
             "abstol": 1.0e-50,
             "fit": True,
@@ -370,94 +429,147 @@ def create_mfunc_array(psml: Nc.PowspecML) -> Ncm.ObjArray:
     return mfunc_oa
 
 
+@functools.lru_cache(maxsize=4)
+def _sij_calculator_cached(z_bins_knots: tuple[float, ...]) -> SijCalculator:
+    """Build the $S_{ij}$ calculator for a set of redshift bin edges.
+
+    :param z_bins_knots: Redshift bin boundaries, as a hashable tuple.
+    :return: A :class:`numcosmo_py.ssc.SijCalculator` over those bins.
+    """
+    return SijCalculator(np.asarray(z_bins_knots, dtype=np.float64))
+
+
+def _sij_calculator(z_bins_knots: np.ndarray) -> SijCalculator:
+    """Return the $S_{ij}$ calculator for a set of redshift bin edges.
+
+    Reused across calls with the same bin edges. A forecast asks for a fitting
+    and a resample $S_{ij}$ from identical bins, and the calculator caches its
+    mask power spectrum -- which is cosmology-independent, so recomputing it
+    would mean a second spherical harmonic transform for nothing. The kernels
+    it holds are re-prepared against the cosmology on every compute, so sharing
+    one across cosmologies is safe.
+
+    :param z_bins_knots: Redshift bin boundaries.
+    :return: A :class:`numcosmo_py.ssc.SijCalculator` over those bins.
+    """
+    return _sij_calculator_cached(tuple(float(z) for z in z_bins_knots))
+
+
+def _as_matrix(sij: np.ndarray) -> Ncm.Matrix:
+    """Wrap a square numpy $S_{ij}$ array in an Ncm.Matrix.
+
+    :param sij: The $S_{ij}$ array.
+    :return: The same matrix as a NumCosmo object.
+    """
+    return Ncm.Matrix.new_array(sij.flatten(), sij.shape[1])
+
+
 def create_covariance_S_fullsky(
-    kernel_z: np.ndarray, kernels_T: np.ndarray, cosmo: Nc.HICosmo
+    z_bins_knots: np.ndarray, cosmo: Nc.HICosmo
 ) -> Ncm.Matrix:
-    """Create the base SSC covariance matrix $S_{ij}$ based on the full sky (isotropic).
+    r"""Create the base SSC covariance matrix $S_{ij}$ for the full sky (isotropic).
 
-    Uses the PySSC function $text{Sij}$, which does not require a mask.
-
-    :param kernel_z: Redshift values for kernel evaluation.
-    :param kernels_T: The kernel matrix $T_i(z)$.
+    :param z_bins_knots: Redshift bin boundaries.
     :param cosmo: The fiducial cosmology model.
     :return: The $S_{ij}$ matrix as a NumCosmo.Matrix object.
     """
-    S_fullsky_array = PySSC.Sij(kernel_z, kernels_T, cosmo)
+    return _as_matrix(_sij_calculator(z_bins_knots).fullsky(cosmo))
 
-    S_fullsky = Ncm.Matrix.new_array(
-        S_fullsky_array.flatten(), S_fullsky_array.shape[1]
-    )
 
-    return S_fullsky
+def create_covariance_S_fullsky_fsky(
+    z_bins_knots: np.ndarray, cosmo: Nc.HICosmo, area: float
+) -> Ncm.Matrix:
+    r"""Create a full-sky covariance matrix with an $f_{\rm sky}$ correction.
+
+    The base computation is the same isotropic full-sky $S_{ij}$ as
+    `create_covariance_S_fullsky()`, rescaled by the finite-area factor
+    $f_{\rm sky}^{-1} = 4\pi / \Omega$, with `area` expressed in square degrees.
+
+    :param z_bins_knots: Redshift bin boundaries.
+    :param cosmo: The fiducial cosmology model.
+    :param area: Survey area in square degrees used for the $f_{\rm sky}$ correction.
+    :return: The area-corrected $S_{ij}$ matrix as a NumCosmo.Matrix object.
+    """
+    return _as_matrix(_sij_calculator(z_bins_knots).fullsky_fsky(cosmo, area))
+
+
+def create_covariance_S_cap(
+    z_bins_knots: np.ndarray, cosmo: Nc.HICosmo, area: float
+) -> Ncm.Matrix:
+    """Create the base SSC covariance matrix $S_{ij}$ for a circular cap footprint.
+
+    :param z_bins_knots: Redshift bin boundaries.
+    :param cosmo: The fiducial cosmology model.
+    :param area: The solid angle of the cap in square degrees.
+    :return: The $S_{ij}$ matrix (NumCosmo.Matrix).
+    """
+    calculator = _sij_calculator(z_bins_knots)
+
+    return _as_matrix(calculator.partial_sky(cosmo, create_mask_cap(area)))
 
 
 def create_covariance_S_guaranteed(
-    kernel_z: np.ndarray, kernels_T: np.ndarray, cosmo: Nc.HICosmo
+    z_bins_knots: np.ndarray, cosmo: Nc.HICosmo
 ) -> Ncm.Matrix:
     """Create the base SSC covariance matrix $S_{ij}$ for the guaranteed mask.
 
-    Uses the PySSC function $text{Sij_psky}$ with the generated HEALPix mask.
-
-    :param kernel_z: Redshift values for kernel evaluation.
-    :param kernels_T: The kernel matrix $T_i(z)$.
+    :param z_bins_knots: Redshift bin boundaries.
     :param cosmo: The fiducial cosmology model.
     :return: The $S_{ij}$ matrix (NumCosmo.Matrix).
     """
-    mask = create_mask_guaranteed()
+    calculator = _sij_calculator(z_bins_knots)
 
-    S_guaranteed_array = PySSC.Sij_psky(kernel_z, kernels_T, cosmo, mask=mask)
-
-    S_guaranteed = Ncm.Matrix.new_array(
-        S_guaranteed_array.flatten(), S_guaranteed_array.shape[1]
-    )
-
-    return S_guaranteed
+    return _as_matrix(calculator.partial_sky(cosmo, create_mask_guaranteed()))
 
 
-def create_covariance_S_full(
-    kernel_z: np.ndarray, kernels_T: np.ndarray, cosmo: Nc.HICosmo
-) -> Ncm.Matrix:
+def create_covariance_S_full(z_bins_knots: np.ndarray, cosmo: Nc.HICosmo) -> Ncm.Matrix:
     """Create the base SSC covariance matrix $S_{ij}$ for the full mask.
 
-    Uses the PySSC function $text{Sij_psky}$ with the generated HEALPix mask.
-
-    :param kernel_z: Redshift values for kernel evaluation.
-    :param kernels_T: The kernel matrix $T_i(z)$.
+    :param z_bins_knots: Redshift bin boundaries.
     :param cosmo: The fiducial cosmology model.
     :return: The $S_{ij}$ matrix (NumCosmo.Matrix).
     """
-    mask = create_mask_full()
+    calculator = _sij_calculator(z_bins_knots)
 
-    S_full_array = PySSC.Sij_psky(kernel_z, kernels_T, cosmo, mask=mask)
-
-    S_full = Ncm.Matrix.new_array(S_full_array.flatten(), S_full_array.shape[1])
-
-    return S_full
+    return _as_matrix(calculator.partial_sky(cosmo, create_mask_full()))
 
 
 def create_covariance_S(
-    kernel_z: np.ndarray,
-    kernels_T: np.ndarray,
+    z_bins_knots: np.ndarray,
     sky_cut: JpasSSCType,
     cosmo: Nc.HICosmo,
+    area: float | None = None,
 ) -> Ncm.Matrix:
     """Create the base SSC covariance matrix $S_{ij}$ based on the sky cut type.
 
     This acts as a router to the appropriate $S_{ij}$ calculation function.
 
-    :param kernel_z: Redshift values for kernel evaluation.
-    :param kernels_T: The kernel matrix $T_i(z)$.
+    :param z_bins_knots: Redshift bin boundaries.
     :param sky_cut: The type of sky coverage to use for $S_{ij}$ calculation.
     :param cosmo: The fiducial cosmology model.
-    :raises ValueError: If the sky cut type is invalid (e.g., NO_SSC is passed).
+    :param area: The survey area in square degrees, required by CAP and
+        FULLSKY_FSKY and ignored by the remaining sky cut types, whose footprints
+        are fixed.
+    :raises ValueError: If the sky cut type is invalid (e.g., NO_SSC is passed), or if
+        CAP is requested without an area.
     :return: The $S_{ij}$ matrix (NumCosmo.Matrix).
     """
     if sky_cut == JpasSSCType.FULLSKY:
-        S = create_covariance_S_fullsky(kernel_z, kernels_T, cosmo)
+        S = create_covariance_S_fullsky(z_bins_knots, cosmo)
+    elif sky_cut == JpasSSCType.FULLSKY_FSKY:
+        if area is None:
+            raise ValueError(
+                "Sij calculation for a full-sky fsky correction requires an area."
+            )
+        S = create_covariance_S_fullsky_fsky(z_bins_knots, cosmo, area)
     elif sky_cut == JpasSSCType.FULL:
-        S = create_covariance_S_full(kernel_z, kernels_T, cosmo)
+        S = create_covariance_S_full(z_bins_knots, cosmo)
     elif sky_cut == JpasSSCType.GUARANTEED:
-        S = create_covariance_S_guaranteed(kernel_z, kernels_T, cosmo)
+        S = create_covariance_S_guaranteed(z_bins_knots, cosmo)
+    elif sky_cut == JpasSSCType.CAP:
+        if area is None:
+            raise ValueError("Sij calculation for a cap footprint requires an area.")
+        S = create_covariance_S_cap(z_bins_knots, cosmo, area)
     else:
         raise ValueError(f"Invalid sky cut type for Sij calculation: {sky_cut}")
 
@@ -564,6 +676,63 @@ def _set_mset_params(mset: Ncm.MSet, params: tuple[float, float, float]) -> None
     prim["ln10e10ASA"] = np.log(1.0e10 * A_s_fid * fact)
 
 
+def create_ssc_sij_calculator(
+    z_bins_knots: np.ndarray,
+    sky_cut: JpasSSCType,
+    area: float | None = None,
+) -> Nc.XcorSSCSij:
+    """Create a cosmology-dependent $S_{ij}$ calculator for the same footprint.
+
+    The C-side counterpart of :func:`create_covariance_S`: instead of a matrix
+    frozen at a fiducial cosmology, it returns a #NcXcorSSCSij that
+    #NcDataClusterNCountsGauss recomputes at every likelihood step.
+
+    It deliberately borrows the distance and power spectrum objects of the
+    :class:`~numcosmo_py.ssc.SijCalculator` used by :func:`create_covariance_S`,
+    so a fixed and a varying run differ only in whether $S_{ij}$ follows the
+    cosmology -- not in how it is computed.
+
+    :param z_bins_knots: Redshift bin boundaries.
+    :param sky_cut: The type of sky coverage to use for the $S_{ij}$ calculation.
+    :param area: The survey area in square degrees, required by CAP and
+        FULLSKY_FSKY and ignored by the remaining sky cut types.
+    :raises ValueError: If the sky cut type is invalid, or an area is missing.
+    :return: The configured #NcXcorSSCSij.
+    """
+    reference = _sij_calculator(z_bins_knots)
+    ssc_sij = Nc.XcorSSCSij.new(
+        reference.dist,
+        reference.powspec,
+        Ncm.Vector.new_array([float(z) for z in z_bins_knots]),
+    )
+
+    def _set_mask(mask: np.ndarray) -> None:
+        cl_mask, _fsky = mask_angular_power_spectrum(mask)
+        lmax = find_lmax(cl_mask)
+        ssc_sij.set_mask_cl(Ncm.Vector.new_array(cl_mask[: lmax + 1].tolist()))
+
+    if sky_cut == JpasSSCType.FULLSKY:
+        pass
+    elif sky_cut == JpasSSCType.FULLSKY_FSKY:
+        if area is None:
+            raise ValueError(
+                "Sij calculation for a full-sky fsky correction requires an area."
+            )
+        ssc_sij.set_area(area)
+    elif sky_cut == JpasSSCType.FULL:
+        _set_mask(create_mask_full())
+    elif sky_cut == JpasSSCType.GUARANTEED:
+        _set_mask(create_mask_guaranteed())
+    elif sky_cut == JpasSSCType.CAP:
+        if area is None:
+            raise ValueError("Sij calculation for a cap footprint requires an area.")
+        _set_mask(create_mask_cap(area))
+    else:
+        raise ValueError(f"Invalid sky cut type for Sij calculation: {sky_cut}")
+
+    return ssc_sij
+
+
 def generate_jpas_forecast_2024(
     area: float = 2959.1,
     z_min: float = 0.1,
@@ -581,6 +750,9 @@ def generate_jpas_forecast_2024(
     resample_seed: int = 1234,
     fitting_Sij_type: JpasSSCType = JpasSSCType.FULLSKY,
     resample_Sij_type: JpasSSCType = JpasSSCType.NO_SSC,
+    vary_fitting_Sij: bool = False,
+    omega_c_min: float = 0.1,
+    omega_c_max: float = 0.3,
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Generate J-Pas 2024 cluster abundance forecast experiment dictionary.
 
@@ -606,6 +778,14 @@ def generate_jpas_forecast_2024(
     :param resample_model: $(Omega_c, w, sigma_8)$ for the model used to **generate the
         mock data vector**.
     :param resample_seed: Seed for the random number generator used for mock data.
+    :param vary_fitting_Sij: If True, the fitting $S_{ij}$ is recomputed at every
+        likelihood step for the current cosmology, instead of being frozen at the
+        fitting model. The resampling matrix stays frozen either way, so the mock
+        is unchanged.
+    :param omega_c_min: Lower bound of the $Omega_c$ prior. A resample model outside
+        the bounds cannot be analysed, so widen these when displacing the mock far
+        from the fiducial.
+    :param omega_c_max: Upper bound of the $Omega_c$ prior.
     :param fitting_Sij_type: The type of SSC matrix $S_{ij}$ to use for the fitting
         (theoretical) covariance.
     :param resample_Sij_type: The type of SSC matrix $S_{ij}$ to use for generating the
@@ -632,7 +812,7 @@ def generate_jpas_forecast_2024(
             f"corresponding survey area = {area:.2f} sqd. "
         )
 
-    # --- Setup Core NumCosmo/PySSC Tools ---
+    # --- Setup Core NumCosmo Tools ---
     t_setup_start = time.time()
     dist = Nc.Distance.new(2.0)
     tf = Nc.TransferFuncEH()
@@ -657,7 +837,7 @@ def generate_jpas_forecast_2024(
     cluster_z = create_cluster_redshift(
         cluster_redshift_type, sigma0=cluster_redshift_sigma0
     )
-    cosmo = create_cosmo()
+    cosmo = create_cosmo(omega_c_min=omega_c_min, omega_c_max=omega_c_max)
 
     # Use defaults if not specified
     if lnM_obs_min is None:
@@ -670,9 +850,7 @@ def generate_jpas_forecast_2024(
     print(f"Model setup completed in {time.time() - t_setup_start:.2f}s")
 
     # --- Define Bins and Kernels ---
-    kernel_z, kernels_T, z_bins_knots = create_zbins_kernels(
-        z_min=z_min, z_max=z_max, nknots=znknots
-    )
+    _, _, z_bins_knots = create_zbins_kernels(z_min=z_min, z_max=z_max, nknots=znknots)
     lnM_bins_obs_knots = create_lnM_obs_bins(
         lnM_obs_min=lnM_obs_min, lnM_obs_max=lnM_obs_max, nknots=lnMobsnknots
     )
@@ -700,9 +878,20 @@ def generate_jpas_forecast_2024(
         print(f"Computing fitting SSC matrix ({fitting_Sij_type})...", flush=True)
         t_fit_ssc_start = time.time()
         _set_mset_params(mset, fitting_model)
-        fitting_S_ij = create_covariance_S(kernel_z, kernels_T, fitting_Sij_type, cosmo)
+        fitting_S_ij = create_covariance_S(
+            z_bins_knots, fitting_Sij_type, cosmo, area=area
+        )
         ncounts_gauss.set_s_matrix(fitting_S_ij)
         print(f"Fitting SSC matrix computed in {time.time() - t_fit_ssc_start:.2f}s")
+
+        # The fixed matrix above stays set, so the two runs start from exactly
+        # the same covariance at the fitting model; the calculator then takes
+        # over whenever the cosmology moves.
+        if vary_fitting_Sij:
+            ncounts_gauss.set_ssc_sij(
+                create_ssc_sij_calculator(z_bins_knots, fitting_Sij_type, area=area)
+            )
+            print("Fitting SSC matrix will vary with cosmology.")
 
     # Set resampling (mock data) SSC matrix
     if resample_Sij_type != JpasSSCType.NO_SSC:
@@ -710,7 +899,7 @@ def generate_jpas_forecast_2024(
         t_resamp_ssc_start = time.time()
         _set_mset_params(mset, resample_model)
         resample_S_ij = create_covariance_S(
-            kernel_z, kernels_T, resample_Sij_type, cosmo
+            z_bins_knots, resample_Sij_type, cosmo, area=area
         )
         ncounts_gauss.set_resample_s_matrix(resample_S_ij)
         print(

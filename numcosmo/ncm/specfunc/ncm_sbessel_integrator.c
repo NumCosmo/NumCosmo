@@ -45,6 +45,7 @@ typedef struct _NcmSBesselIntegratorPrivate
 {
   guint ell_min;
   guint ell_max;
+  gdouble abstol;
 } NcmSBesselIntegratorPrivate;
 
 enum
@@ -63,6 +64,7 @@ ncm_sbessel_integrator_init (NcmSBesselIntegrator *sbi)
 
   self->ell_min = 0;
   self->ell_max = 0;
+  self->abstol  = 0.0;
 }
 
 static void
@@ -302,6 +304,52 @@ ncm_sbessel_integrator_set_ell_range (NcmSBesselIntegrator *sbi, guint ell_min, 
 }
 
 /**
+ * ncm_sbessel_integrator_set_abstol:
+ * @sbi: a #NcmSBesselIntegrator
+ * @abstol: absolute tolerance on the integral, or 0.0 for none
+ *
+ * Sets the absolute accuracy the caller needs from the next
+ * ncm_sbessel_integrator_integrate() calls. Implementations may stop refining
+ * once the remaining error is below @abstol even if their own relative
+ * criterion is not met.
+ *
+ * This exists because the caller, not the integrator, knows the scale the
+ * result feeds into. An integral that comes out many orders of magnitude below
+ * the largest one in the same batch cannot affect the sum it belongs to, and
+ * pursuing full relative accuracy on it is wasted -- worse, an integrand with
+ * an unresolvable feature may never reach the relative criterion at all.
+ *
+ * Applies until changed. The default, 0.0, means the pure relative criterion.
+ *
+ */
+void
+ncm_sbessel_integrator_set_abstol (NcmSBesselIntegrator *sbi, gdouble abstol)
+{
+  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
+
+  g_return_if_fail (NCM_IS_SBESSEL_INTEGRATOR (sbi));
+  g_return_if_fail (abstol >= 0.0);
+
+  self->abstol = abstol;
+}
+
+/**
+ * ncm_sbessel_integrator_get_abstol:
+ * @sbi: a #NcmSBesselIntegrator
+ *
+ * Returns: the absolute tolerance set by ncm_sbessel_integrator_set_abstol(), or 0.0
+ */
+gdouble
+ncm_sbessel_integrator_get_abstol (NcmSBesselIntegrator *sbi)
+{
+  NcmSBesselIntegratorPrivate *self = ncm_sbessel_integrator_get_instance_private (sbi);
+
+  g_return_val_if_fail (NCM_IS_SBESSEL_INTEGRATOR (sbi), 0.0);
+
+  return self->abstol;
+}
+
+/**
  * ncm_sbessel_integrator_integrate_ell: (virtual integrate_ell)
  * @sbi: a #NcmSBesselIntegrator
  * @F: (scope call) (closure user_data): function to integrate
@@ -358,7 +406,7 @@ _ncm_sbessel_integrator_gaussian_func (gpointer user_data, gdouble x, gdouble k)
   NcmSBesselIntegratorGaussianData *data = (NcmSBesselIntegratorGaussianData *) user_data;
   const gdouble z                        = (x - data->center) / data->std;
 
-  return k * exp (-0.5 * z * z);
+  return exp (-0.5 * z * z);
 }
 
 /**
@@ -430,7 +478,7 @@ _ncm_sbessel_integrator_rational_func (gpointer user_data, gdouble x, gdouble k)
   const gdouble denom                    = 1.0 + z * z;
   const gdouble denom_cubed              = denom * denom * denom;
 
-  return x * x * k / denom_cubed;
+  return x * x / denom_cubed;
 }
 
 /**

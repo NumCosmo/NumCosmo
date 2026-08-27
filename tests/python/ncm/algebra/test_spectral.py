@@ -23,6 +23,11 @@
 
 """Tests for NcmSpectral."""
 
+import os
+import subprocess
+import sys
+import textwrap
+
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -623,20 +628,39 @@ class TestSpectral:
             assert_allclose(eval_result, expected, rtol=1e-7, atol=1e-8)
 
     def test_adaptive_max_order_limit(self) -> None:
-        """Test that adaptive refinement respects max_order."""
-        spectral = Ncm.Spectral.new_with_max_order(5)  # max N = 2^5+1 = 33
+        """Test that reaching max_order without converging is fatal.
 
-        def f_hard(_user_data, x):
-            # Very oscillatory function that won't converge easily
-            return np.sin(20.0 * x)
+        max_order bounds memory, it is not an alternative stopping condition:
+        tol is what must end the refinement. Runs in a subprocess since the
+        failure is a (non-catchable) g_error.
+        """
+        script = textwrap.dedent("""
+            import numpy as np
+            from numcosmo_py import Ncm
 
-        _k_adaptive, coeffs_list = spectral.compute_chebyshev_coeffs_adaptive(
-            f_hard, -1.0, 1.0, 2, 1e-12, None
+            Ncm.cfg_init()
+            spectral = Ncm.Spectral.new_with_max_order(5)  # max N = 2^5+1 = 33
+
+            def f_hard(_user_data, x):
+                # Too oscillatory to resolve on 33 nodes
+                return np.sin(20.0 * x)
+
+            spectral.compute_chebyshev_coeffs_adaptive(f_hard, -1.0, 1.0, 2, 1e-12, None)
+            """)
+        # Other tests in this worker set NCM_* variables in-process to exercise
+        # cfg_init()'s error paths; inheriting those would abort the child for
+        # the wrong reason.
+        env = {k: v for k, v in os.environ.items() if not k.startswith("NCM_FFTW")}
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
         )
-        coeffs = np.array(coeffs_list)
 
-        # Should stop at max_order
-        assert coeffs.size <= 33
+        assert result.returncode != 0, "Unconverged refinement should have aborted"
+        assert "without converging" in result.stderr, result.stderr
 
     def test_adaptive_max_order_limit_higher(self) -> None:
         """Test that adaptive refinement respects max_order."""
@@ -2741,45 +2765,37 @@ class TestSpectral:
             assert_allclose(result_x, result_t, rtol=1e-14)
             assert_allclose(result_x, expected, rtol=1e-8, atol=1e-10)
 
-    def test_adaptive_max_order_bug(self) -> None:
-        """Test that adaptive refinement when hitting max_order.
+    def test_adaptive_returns_last_level_coeffs(self) -> None:
+        """Test that the returned coefficients are the ones from k_final.
 
-        This test specifically checks the bug where reaching max_order would cause
-        the function to return coefficients from k-1 instead of k due to an
-        unconditional swap at the end of the loop. The fix ensures the swap only
-        happens when k < max_order.
+        Guards the bug where an unconditional swap at the end of the refinement
+        loop made the function return the coefficients from k_final - 1.
         """
-        # Create spectral with low max_order
         max_order = 14
         spectral = Ncm.Spectral.new_with_max_order(max_order)
 
-        # Define a function that requires high accuracy
+        # Oscillatory enough to need several refinements, smooth enough to converge
         def f(_user_data, x):
-            """Highly oscillatory function that won't converge easily."""
+            """Oscillatory but analytic function."""
             return np.sin(20.0 * x) * np.exp(-x * x)
 
         a, b = -2.0, 2.0
         k_min = 2
+        tol = 1.0e-13
 
-        # Use unreasonably small tolerance to force reaching max_order
-        tol = 1.0e-16
-
-        # Compute adaptive coefficients - should hit max_order
         k_final, coeffs_adaptive_list = spectral.compute_chebyshev_coeffs_adaptive(
             f, a, b, k_min, tol, None
         )
         coeffs_adaptive = np.array(coeffs_adaptive_list)
 
-        # Verify that we hit max_order
-        assert (
-            k_final == max_order
-        ), f"Expected to reach max_order={max_order}, got k={k_final}"
+        # Several refinements were needed, and the cap was not the reason we stopped
+        assert k_min < k_final < max_order
 
-        # Verify the number of coefficients matches 2^k + 1
-        expected_N = (1 << max_order) + 1  # 2^14 + 1 = 16385
+        # Verify the number of coefficients matches 2^k_final + 1
+        expected_N = (1 << k_final) + 1
         assert len(coeffs_adaptive) == expected_N, (
             f"Length mismatch: got {len(coeffs_adaptive)}, "
-            f"expected 2^{max_order}+1={expected_N}"
+            f"expected 2^{k_final}+1={expected_N}"
         )
 
         # Compute non-adaptive at the same order to verify correctness
@@ -2812,3 +2828,125 @@ class TestSpectral:
                 atol=1.0e-14,
                 err_msg=f"Evaluation mismatch at x={x}",
             )
+
+
+class TestChebyshevRebase:
+    """Tests for ncm_spectral_chebyshev_rebase."""
+
+    @pytest.fixture(name="spectral")
+    def fixture_spectral(self) -> Ncm.Spectral:
+        """Create a spectral object."""
+        return Ncm.Spectral.new()
+
+    @staticmethod
+    def _to_t(a: float, b: float, x):
+        return (2.0 * np.asarray(x) - (a + b)) / (b - a)
+
+    def test_known_expansion(self, spectral: Ncm.Spectral) -> None:
+        """f(x) = x^2 rebased from [0, 1] to [0, 2], against the hand expansion.
+
+        On [0, 1], x^2 = 3/8 + T_1/2 + T_2/8; on [0, 2] it is 3/2 + 2T_1 + T_2/2.
+        """
+        coeffs = np.array([0.375, 0.5, 0.125])
+
+        norm, out = spectral.chebyshev_rebase(coeffs, 0, 0.0, 1.0, 0.0, 2.0)
+
+        assert_allclose(np.array(out), [1.5, 2.0, 0.5], rtol=1.0e-14, atol=ATOL)
+        assert norm == pytest.approx(4.0, rel=1.0e-14)
+
+    def test_same_interval_is_the_identity(self, spectral: Ncm.Spectral) -> None:
+        """Rebasing onto the source interval changes nothing."""
+        rng = np.random.default_rng(42)
+        coeffs = rng.normal(size=12)
+
+        _, out = spectral.chebyshev_rebase(coeffs, 0, -3.0, 7.0, -3.0, 7.0)
+
+        assert_allclose(np.array(out), coeffs, rtol=1.0e-12, atol=ATOL)
+
+    @pytest.mark.parametrize(
+        "a_out,b_out",
+        [
+            (1.0, 2.0),  # contained
+            (0.0, 4.0),  # wider on both sides
+            (3.0, 6.0),  # entirely outside the source
+            (-2.0, 0.5),  # outside on the other side
+        ],
+    )
+    def test_describes_the_same_polynomial(
+        self, spectral: Ncm.Spectral, a_out: float, b_out: float
+    ) -> None:
+        """The rebased series is the same polynomial, continuation included.
+
+        The target interval is deliberately allowed to leave the source one:
+        outside it the series is its own polynomial continuation, which is what
+        makes this usable as a smooth extension.
+        """
+        rng = np.random.default_rng(7)
+        coeffs = rng.normal(size=9)
+        a_in, b_in = 0.0, 3.0
+
+        _, out = spectral.chebyshev_rebase(coeffs, 0, a_in, b_in, a_out, b_out)
+
+        x = np.linspace(a_out, b_out, 40)
+        expected = chebval(self._to_t(a_in, b_in, x), coeffs)
+        obtained = chebval(self._to_t(a_out, b_out, x), np.array(out))
+
+        assert_allclose(obtained, expected, rtol=1.0e-11, atol=1.0e-11)
+
+    def test_len_truncates_the_input(self, spectral: Ncm.Spectral) -> None:
+        """@len uses only the leading coefficients, ignoring the tail."""
+        coeffs = np.array([1.0, 2.0, 3.0, 1.0e6, 1.0e6])
+
+        _, truncated = spectral.chebyshev_rebase(coeffs, 3, 0.0, 1.0, 0.0, 2.0)
+        _, explicit = spectral.chebyshev_rebase(coeffs[:3], 0, 0.0, 1.0, 0.0, 2.0)
+
+        assert len(truncated) == 3
+        assert_allclose(np.array(truncated), np.array(explicit), rtol=1.0e-14)
+
+    def test_norm_bounds_the_function_on_the_target(
+        self, spectral: Ncm.Spectral
+    ) -> None:
+        """The returned norm is an upper bound for |f| over the target interval.
+
+        This is what makes it usable as a conditioning gate: unlike sampling,
+        it cannot miss a spike between probe points.
+        """
+        rng = np.random.default_rng(11)
+        coeffs = rng.normal(size=10)
+        a_out, b_out = 4.0, 9.0
+
+        norm, out = spectral.chebyshev_rebase(coeffs, 0, 0.0, 3.0, a_out, b_out)
+
+        x = np.linspace(a_out, b_out, 500)
+        values = chebval(self._to_t(a_out, b_out, x), np.array(out))
+
+        assert np.max(np.abs(values)) <= norm * (1.0 + 1.0e-12)
+        assert norm == pytest.approx(np.sum(np.abs(np.array(out))), rel=1.0e-14)
+
+    def test_extrapolation_grows_the_norm(self, spectral: Ncm.Spectral) -> None:
+        """Reaching further outside the source interval costs conditioning."""
+        rng = np.random.default_rng(3)
+        coeffs = rng.normal(size=16)
+
+        norms = [
+            spectral.chebyshev_rebase(coeffs, 0, 0.0, 1.0, 0.0, width)[0]
+            for width in (1.0, 1.5, 2.0, 3.0)
+        ]
+
+        for narrow, wide in zip(norms, norms[1:]):
+            assert wide > narrow
+
+    def test_overflow_reports_infinity(self, spectral: Ncm.Spectral) -> None:
+        """A continuation that overflows is reported, not returned as garbage."""
+        coeffs = np.full(400, 1.0e100)
+
+        norm, _ = spectral.chebyshev_rebase(coeffs, 0, 0.0, 1.0, 0.0, 1.0e3)
+
+        assert np.isinf(norm)
+
+    def test_empty_input(self, spectral: Ncm.Spectral) -> None:
+        """An empty series rebases to an empty series."""
+        norm, out = spectral.chebyshev_rebase(np.zeros(0), 0, 0.0, 1.0, 0.0, 2.0)
+
+        assert norm == 0.0
+        assert len(out) == 0

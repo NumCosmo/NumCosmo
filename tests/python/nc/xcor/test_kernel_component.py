@@ -1043,3 +1043,37 @@ def test_component_chebyshev_decomposition(
                 f"max_order_k={max_order_k}"
             ),
         )
+
+
+def test_weak_lensing_kernel_decays_to_zero_at_xi_max(
+    kernel_wl: Nc.XcorKernel,
+    cosmology: Cosmology,
+) -> None:
+    """The lensing kernel must vanish toward xi_max, not turn around at it.
+
+    The lensing efficiency g(z) is an ODE solution splined from mz_ini =
+    -z_max + dz, dz = z_max * sqrt(DBL_EPSILON). Evaluating the spline at
+    z >= z_max asks it for a point below its first knot, and
+    ncm_spline_eval() answers by extending the boundary interval's cubic
+    rather than refusing, which turned a quantity heading to zero
+    quadratically into a floor ~ten orders of magnitude above it. That is a
+    kink exactly at the endpoint of the last Levin panel, where no Chebyshev
+    series converges relatively.
+    """
+    cosmo = cosmology.cosmo
+    kernel_wl.prepare(cosmo)
+    component = kernel_wl.get_component_list()[0]
+    _, xi_max, _, _ = component.get_limits(cosmo)
+
+    # Straddles the first spline knot: dz/z_max is 1.5e-8, so the last two
+    # points sit inside the interval the spline says nothing about.
+    fracs = [1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-10, 0.0]
+    values = [component.eval_kernel(cosmo, xi_max * (1.0 - f), 1.0) for f in fracs]
+
+    assert all(np.isfinite(v) for v in values)
+    assert all(v >= 0.0 for v in values)
+    for near, nearer, f_near, f_nearer in zip(values, values[1:], fracs, fracs[1:]):
+        assert nearer <= near, (
+            f"kernel grows toward xi_max: {nearer:.6e} at 1-xi/xi_max="
+            f"{f_nearer:.1e} exceeds {near:.6e} at {f_near:.1e}"
+        )

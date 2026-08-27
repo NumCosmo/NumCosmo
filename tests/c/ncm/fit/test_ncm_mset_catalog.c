@@ -63,9 +63,14 @@ void test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer 
 
 #ifdef HAVE_CFITSIO
 void test_ncm_mset_catalog_file_hdu0_roundtrip (void);
+void test_ncm_mset_catalog_file_functions_array_roundtrip (void);
+void test_ncm_mset_catalog_file_hdu0_legacy_object_format (void);
 void test_ncm_mset_catalog_file_legacy_fallback (void);
 void test_ncm_mset_catalog_file_missing_mset_traps (void);
 void test_ncm_mset_catalog_file_missing_mset_subprocess (void);
+void test_ncm_mset_catalog_file_peek_info (void);
+void test_ncm_mset_catalog_file_burnin_exceeds_traps (void);
+void test_ncm_mset_catalog_file_burnin_exceeds_subprocess (void);
 
 #endif /* HAVE_CFITSIO */
 
@@ -139,9 +144,14 @@ main (gint argc, gchar *argv[])
 
 #ifdef HAVE_CFITSIO
   g_test_add_func ("/ncm/mset/catalog/file/hdu0_roundtrip", &test_ncm_mset_catalog_file_hdu0_roundtrip);
+  g_test_add_func ("/ncm/mset/catalog/file/functions_array_roundtrip", &test_ncm_mset_catalog_file_functions_array_roundtrip);
+  g_test_add_func ("/ncm/mset/catalog/file/hdu0_legacy_object_format", &test_ncm_mset_catalog_file_hdu0_legacy_object_format);
   g_test_add_func ("/ncm/mset/catalog/file/legacy_fallback", &test_ncm_mset_catalog_file_legacy_fallback);
   g_test_add_func ("/ncm/mset/catalog/file/missing_mset/traps", &test_ncm_mset_catalog_file_missing_mset_traps);
   g_test_add_func ("/ncm/mset/catalog/file/missing_mset/subprocess", &test_ncm_mset_catalog_file_missing_mset_subprocess);
+  g_test_add_func ("/ncm/mset/catalog/file/peek_info", &test_ncm_mset_catalog_file_peek_info);
+  g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/traps", &test_ncm_mset_catalog_file_burnin_exceeds_traps);
+  g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/subprocess", &test_ncm_mset_catalog_file_burnin_exceeds_subprocess);
 #endif /* HAVE_CFITSIO */
 
   g_test_run ();
@@ -950,6 +960,45 @@ _test_ncm_mset_catalog_new_file (const gchar *filename)
 }
 
 /*
+ * Rewrites HDU0 in the pre-vardict format (a bare serialized #NcmMSet
+ * object, format label "gvariant", no functions entry), simulating a
+ * catalog file written before the vardict envelope was introduced, to
+ * check that it is still read correctly.
+ */
+static void
+_test_ncm_mset_catalog_rewrite_hdu0_legacy_object (const gchar *filename, NcmMSet *mset)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GVariant *var     = ncm_serialize_to_variant (ser, G_OBJECT (mset));
+  glong naxes[1]    = { (glong) g_variant_get_size (var) };
+  fitsfile *fptr    = NULL;
+  gint hdutype      = 0;
+  gint status       = 0;
+
+  fits_open_file (&fptr, filename, READWRITE, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_movabs_hdu (fptr, 1, &hdutype, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_resize_img (fptr, BYTE_IMG, 1, naxes, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_write_img (fptr, TBYTE, 1, naxes[0], (gpointer) g_variant_get_data (var), &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_update_key_str (fptr, NCM_MSET_CATALOG_MSET_FORMAT_LABEL, NCM_MSET_CATALOG_MSET_FORMAT_OBJECT,
+                       "Format of the data stored in this HDU.", &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_close_file (fptr, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  g_variant_unref (var);
+  ncm_serialize_free (ser);
+}
+
+/*
  * Strips the mset embedded by _test_ncm_mset_catalog_new_file() back to an
  * empty primary HDU, simulating a catalog file written before HDU0 embedding
  * was introduced.
@@ -999,6 +1048,95 @@ test_ncm_mset_catalog_file_hdu0_roundtrip (void)
 
   g_free (filename);
   g_free (mset_sidecar);
+  g_free (tmp_dir);
+}
+
+void
+test_ncm_mset_catalog_file_functions_array_roundtrip (void)
+{
+  gchar *tmp_dir           = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_functions_XXXXXX", NULL);
+  gchar *filename          = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (3);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmObjArray *functions   = ncm_obj_array_new ();
+  NcmVector *v             = ncm_vector_new (2);
+  NcmMSetCatalog *mcat;
+  NcmMSetCatalog *mcat2;
+  NcmObjArray *functions2;
+
+  ncm_vector_set_all (v, 7.0);
+  ncm_obj_array_add (functions, G_OBJECT (v));
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE, "m2lnL", "-2\\ln(L)", NULL);
+  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
+  ncm_mset_catalog_set_run_type (mcat, "test-run");
+  ncm_mset_catalog_set_functions_array (mcat, functions);
+  ncm_mset_catalog_set_file (mcat, filename);
+
+  g_assert_true (ncm_mset_catalog_peek_functions_array (mcat) == functions);
+
+  {
+    NcmVector *x  = ncm_vector_new (ncm_mset_fparams_len (mset));
+    gdouble ax[1] = { 12.3 };
+
+    ncm_mset_fparams_get_vector (mset, x);
+    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
+    ncm_mset_catalog_sync (mcat, TRUE);
+
+    ncm_vector_clear (&x);
+  }
+
+  ncm_mset_catalog_clear (&mcat);
+
+  mcat2      = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  functions2 = ncm_mset_catalog_peek_functions_array (mcat2);
+
+  g_assert_nonnull (functions2);
+  g_assert_cmpuint (ncm_obj_array_len (functions2), ==, 1);
+  g_assert_true (NCM_IS_VECTOR (ncm_obj_array_peek (functions2, 0)));
+  g_assert_cmpfloat (ncm_vector_get (NCM_VECTOR (ncm_obj_array_peek (functions2, 0)), 0), ==, 7.0);
+  g_assert_true (ncm_obj_array_peek (functions2, 0) != G_OBJECT (v));
+
+  ncm_mset_catalog_clear (&mcat2);
+  ncm_obj_array_unref (functions);
+  ncm_vector_free (v);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+void
+test_ncm_mset_catalog_file_hdu0_legacy_object_format (void)
+{
+  gchar *tmp_dir  = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_legacy_obj_XXXXXX", NULL);
+  gchar *filename = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmMSet *mset   = _test_ncm_mset_catalog_new_file (filename);
+  NcmMSetCatalog *mcat2;
+  NcmMSet *mset2;
+
+  _test_ncm_mset_catalog_rewrite_hdu0_legacy_object (filename, mset);
+
+  mcat2 = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  mset2 = ncm_mset_catalog_peek_mset (mcat2);
+
+  g_assert_true (ncm_mset_cmp (mset, mset2, TRUE));
+  g_assert_null (ncm_mset_catalog_peek_functions_array (mcat2));
+
+  ncm_mset_catalog_clear (&mcat2);
+  ncm_mset_clear (&mset);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
   g_free (tmp_dir);
 }
 
@@ -1056,6 +1194,55 @@ test_ncm_mset_catalog_file_missing_mset_subprocess (void)
   /* Neither an embedded mset (just stripped) nor a `.mset' sidecar (never
    * written) exists: this must abort with a fatal error. */
   ncm_mset_catalog_new_from_file_ro (filename, 0);
+
+  g_assert_not_reached ();
+}
+
+void
+test_ncm_mset_catalog_file_peek_info (void)
+{
+  gchar *tmp_dir  = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_peek_info_XXXXXX", NULL);
+  gchar *filename = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmMSet *mset   = _test_ncm_mset_catalog_new_file (filename);
+  glong nrows     = -1;
+  guint nchains   = 0;
+  gint first_id   = -1;
+
+  ncm_mset_catalog_peek_info_from_file (filename, &nrows, &nchains, &first_id);
+
+  g_assert_cmpint (nrows, ==, 1);
+  g_assert_cmpuint (nchains, ==, 1);
+  g_assert_cmpint (first_id, ==, 0);
+
+  ncm_mset_clear (&mset);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+void
+test_ncm_mset_catalog_file_burnin_exceeds_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/catalog/file/burnin_exceeds/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*exceeds catalog*");
+}
+
+void
+test_ncm_mset_catalog_file_burnin_exceeds_subprocess (void)
+{
+  gchar *tmp_dir  = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_burnin_XXXXXX", NULL);
+  gchar *filename = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmMSet *mset   = _test_ncm_mset_catalog_new_file (filename);
+
+  ncm_mset_clear (&mset);
+
+  /* The file has a single row: any burnin > 1 must abort with a clear,
+   * unit-labeled error message (see _ncm_mset_catalog_open_create_file). */
+  ncm_mset_catalog_new_from_file_ro (filename, 2);
 
   g_assert_not_reached ();
 }

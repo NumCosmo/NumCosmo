@@ -44,7 +44,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "ncm/sphere/ncm_spectral.h"
+#include "ncm/algebra/ncm_spectral.h"
 #include "ncm/core/ncm_cfg.h"
 
 #include <math.h>
@@ -73,6 +73,10 @@ struct _NcmSpectral
   GPtrArray *sin_arrays; /* Precomputed sines for each k level */
   GPtrArray *fftw_plans; /* FFTW plans for each k level */
 
+  /* Scratch for the interval rebase: three coefficient rows */
+  gdouble *rebase_work;
+  gsize rebase_work_len;
+
   /* Legacy fields (backward compatibility) */
   guint cheb_N_cached;     /* Cached N value */
   gdouble *cheb_f_vals;    /* Cached function values array */
@@ -94,6 +98,9 @@ ncm_spectral_init (NcmSpectral *spectral)
   spectral->sin_arrays  = NULL;
   spectral->fftw_plans  = NULL;
 
+  spectral->rebase_work     = NULL;
+  spectral->rebase_work_len = 0;
+
   spectral->cheb_N_cached = 0;
   spectral->cheb_f_vals   = NULL;
   spectral->cheb_cos_vals = NULL;
@@ -113,6 +120,7 @@ ncm_spectral_finalize (GObject *object)
   g_clear_pointer (&spectral->f_vals_tmp, fftw_free);
   g_clear_pointer (&spectral->coeffs_work, fftw_free);
   g_clear_pointer (&spectral->coeffs, g_array_unref);
+  g_clear_pointer (&spectral->rebase_work, g_free);
 
   g_clear_pointer (&spectral->cheb_plan_r2r, fftw_destroy_plan);
   g_clear_pointer (&spectral->cheb_f_vals, fftw_free);
@@ -170,7 +178,9 @@ ncm_spectral_class_init (NcmSpectralClass *klass)
    * NcmSpectral:max-order:
    *
    * Maximum refinement level k for adaptive computations. The maximum
-   * number of nodes is N_max = 2^max_order + 1.
+   * number of nodes is N_max = 2^max_order + 1. This bounds memory only:
+   * adaptive computations stop on their tolerance, and reaching this level
+   * without converging is a fatal error.
    */
   g_object_class_install_property (object_class,
                                    PROP_MAX_ORDER,
@@ -624,7 +634,7 @@ _ncm_spectral_normalize_coeffs (gdouble *coeffs_work, GArray *coeffs, guint N)
 }
 
 static gboolean
-_ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble tol)
+_ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble tol, gdouble abstol)
 {
   const gdouble *coeffs_2N_data = (gdouble *) coeffs_2N->data;
   const gdouble *coeffs_N_data  = (gdouble *) coeffs_N->data;
@@ -641,7 +651,7 @@ _ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble to
     norm2_2N   += coeffs_2N_data[i] * coeffs_2N_data[i];
   }
 
-  if (norm2_diff < tol * tol * norm2_2N + 1.0e-100)
+  if (norm2_diff < MAX (tol * tol * norm2_2N, abstol * abstol) + 1.0e-100)
     return TRUE;
 
   return FALSE;
@@ -650,11 +660,14 @@ _ncm_spectral_check_convergence (GArray *coeffs_2N, GArray *coeffs_N, gdouble to
 static guint
 _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral, NcmSpectralF F,
                                                           gdouble a, gdouble b, guint k_min,
-                                                          gdouble tol, GArray **coeffs, gpointer user_data,
+                                                          gdouble tol, gdouble abstol,
+                                                          GArray **coeffs, gpointer user_data,
                                                           _NcmSpectralEvaluateFunc evaluate_func,
-                                                          _NcmSpectralRefineFunc refine_func)
+                                                          _NcmSpectralRefineFunc refine_func,
+                                                          gboolean require_convergence)
 {
-  guint k = k_min;
+  guint k            = k_min;
+  gboolean converged = FALSE;
   GArray *c_previous, *c_current;
 
   g_assert (k_min <= spectral->max_order);
@@ -702,8 +715,11 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
     }
 
     /* Check convergence using pre-computed e_total */
-    if (_ncm_spectral_check_convergence (c_current, c_previous, tol))
+    if (_ncm_spectral_check_convergence (c_current, c_previous, tol, abstol))
+    {
+      converged = TRUE;
       break;
+    }
 
     /* Swap c_previous and c_current for next iteration */
     if (k < spectral->max_order)
@@ -714,6 +730,23 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
       c_current  = tmp;
     }
   }
+
+  /* max-order is a memory guard, not a stopping condition: tol is what must
+   * end the refinement. Falling out of the loop means the coefficients are
+   * unconverged, so fail instead of returning them silently.
+   *
+   * Not enforced for the weighted variant: its integrand carries the
+   * sqrt(1-t^2) factor, whose Chebyshev coefficients decay only as 1/k^2, so
+   * this criterion is unreachable for any F and the refinement always runs to
+   * max-order. The quantity that variant is used for (coeffs[0], the
+   * Clenshaw-Curtis integral) converges long before that; fixing the criterion
+   * there is a separate change. */
+  if (require_convergence && !converged)
+    g_error ("_ncm_spectral_compute_chebyshev_coeffs_adaptive_internal: "
+             "reached max-order %u (N = %u) without converging to tol = %.17g "
+             "(abstol = %.17g). Raise max-order, relax tol, or supply an "
+             "absolute scale.",
+             spectral->max_order, (1 << k) + 1, tol, abstol);
 
   if (c_current != *coeffs)
   {
@@ -738,10 +771,11 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
  *
  * Computes Chebyshev coefficients of $f(x)$ on $[a,b]$ adaptively, starting at
  * level @k_min and doubling the nested Chebyshev–Lobatto grid until the
- * coefficients converge to @tol or `max-order` is reached. Only the new odd
- * nodes are evaluated at each refinement. See the
- * <a href="../../theory/spectral.html">Spectral Methods</a> page for the nested
- * grids and convergence criterion.
+ * coefficients converge to @tol. Only the new odd nodes are evaluated at each
+ * refinement. Reaching `max-order` without converging is a fatal error:
+ * `max-order` bounds memory, it is not an alternative stopping condition. See
+ * the <a href="../../theory/spectral.html">Spectral Methods</a> page for the
+ * nested grids and convergence criterion.
  *
  * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
  * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
@@ -754,9 +788,47 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
                                                 gdouble tol, GArray **coeffs, gpointer user_data)
 {
   return _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (spectral, F, a, b, k_min,
-                                                                   tol, coeffs, user_data,
+                                                                   tol, 0.0, coeffs, user_data,
                                                                    _ncm_spectral_evaluate_all_nodes,
-                                                                   _ncm_spectral_refine_to_k);
+                                                                   _ncm_spectral_refine_to_k,
+                                                                   TRUE);
+}
+
+/**
+ * ncm_spectral_compute_chebyshev_coeffs_adaptive_full:
+ * @spectral: a #NcmSpectral
+ * @F: (scope call): function to evaluate, receives x in [a,b]
+ * @a: left endpoint of the interval
+ * @b: right endpoint of the interval
+ * @k_min: minimum refinement level (N_min = 2^@k_min + 1)
+ * @reltol: relative spectral convergence tolerance
+ * @abstol: absolute floor on the coefficient increment, or 0.0 for none
+ * @coeffs: (out callee-allocates) (transfer full) (element-type gdouble): output array of coefficients
+ * @user_data: user data for @F
+ *
+ * Same as ncm_spectral_compute_chebyshev_coeffs_adaptive(), but stops once the
+ * coefficient increment falls below @abstol even if the @reltol criterion is
+ * not met. Use this when $f$ is known to be negligible on $[a,b]$ compared to
+ * some larger quantity it contributes to: refining a term that cannot affect
+ * the result to full relative accuracy is pure cost, and for a sharply varying
+ * $f$ it can exhaust `max-order`.
+ *
+ * @abstol is measured in the same units as the coefficients themselves. Passing
+ * 0.0 reproduces ncm_spectral_compute_chebyshev_coeffs_adaptive() exactly.
+ *
+ * Returns: the final refinement level k used (N = 2^k + 1)
+ */
+guint
+ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmSpectralF F,
+                                                     gdouble a, gdouble b, guint k_min,
+                                                     gdouble reltol, gdouble abstol,
+                                                     GArray **coeffs, gpointer user_data)
+{
+  return _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (spectral, F, a, b, k_min,
+                                                                   reltol, abstol, coeffs, user_data,
+                                                                   _ncm_spectral_evaluate_all_nodes,
+                                                                   _ncm_spectral_refine_to_k,
+                                                                   TRUE);
 }
 
 /**
@@ -779,6 +851,11 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectr
  * <a href="../../theory/spectral.html">Spectral Methods</a> page for the
  * derivation.
  *
+ * Unlike ncm_spectral_compute_chebyshev_coeffs_adaptive(), reaching
+ * `max-order` without converging to @tol is not an error here: the
+ * $\sqrt{1-t^2}$ weight has algebraically decaying Chebyshev coefficients, so
+ * the refinement always runs to `max-order` regardless of @F.
+ *
  * If @coeffs points to NULL, allocates a new GArray. If @coeffs points to an existing
  * GArray, resizes it as needed. Through bindings, @coeffs always receives NULL.
  *
@@ -790,9 +867,10 @@ ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted (NcmSpectral *spectral, 
                                                          gdouble tol, GArray **coeffs, gpointer user_data)
 {
   return _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (spectral, F, a, b, k_min,
-                                                                   tol, coeffs, user_data,
+                                                                   tol, 0.0, coeffs, user_data,
                                                                    _ncm_spectral_evaluate_all_nodes_weighted,
-                                                                   _ncm_spectral_refine_to_k_weighted);
+                                                                   _ncm_spectral_refine_to_k_weighted,
+                                                                   FALSE);
 }
 
 /**
@@ -906,6 +984,132 @@ ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g)
       g_data[k] = gk;
     }
   }
+}
+
+/**
+ * ncm_spectral_chebyshev_rebase:
+ * @spectral: a #NcmSpectral
+ * @c: (element-type gdouble): Chebyshev coefficients on [@a_in, @b_in]
+ * @len: how many leading coefficients of @c to use, 0 for all of them
+ * @a_in: left endpoint of the interval @c is expressed on
+ * @b_in: right endpoint of the interval @c is expressed on
+ * @a_out: left endpoint of the target interval
+ * @b_out: right endpoint of the target interval
+ * @rebased: (out callee-allocates) (transfer full) (element-type gdouble): the
+ *   coefficients on [@a_out, @b_out]
+ *
+ * Re-expresses a Chebyshev series on a different interval, without touching the
+ * function it came from. Writing $s$ for the argument on [@a_in, @b_in] and $t$
+ * for the one on [@a_out, @b_out], $s = \alpha t + \beta$ is affine, so each
+ * $T_k(s)$ expands in the $T_j(t)$ by the Chebyshev recurrence.
+ *
+ * The target interval need not be contained in the source one: outside it the
+ * result is the polynomial's own continuation, which is what makes this usable
+ * as a smooth extension. That continuation is only as trustworthy as the
+ * series is short, since $T_k$ grows like $(|s| + \sqrt{s^2 - 1})^k$ once
+ * $|s| > 1$ -- hence the returned norm, which bounds $|f|$ over the whole
+ * target interval and is the cheapest way to tell an extension apart from
+ * amplified roundoff.
+ *
+ * Costs $O(n^2)$ in the number of coefficients used.
+ *
+ * If @rebased points to NULL a new #GArray is allocated. Through bindings,
+ * @rebased always receives NULL.
+ *
+ * Returns: $\sum_j |b_j|$ over the rebased coefficients, or infinity if any of
+ *   them is not finite
+ */
+gdouble
+ncm_spectral_chebyshev_rebase (NcmSpectral *spectral, GArray *c, guint len,
+                               gdouble a_in, gdouble b_in,
+                               gdouble a_out, gdouble b_out,
+                               GArray **rebased)
+{
+  const guint n       = (len == 0) ? c->len : len;
+  const gdouble alpha = (b_out - a_out) / (b_in - a_in);
+  const gdouble beta  = (b_out + a_out - b_in - a_in) / (b_in - a_in);
+  const gdouble *a    = (const gdouble *) c->data;
+  gdouble *previous, *current, *next, *b;
+  gdouble norm = 0.0;
+  guint degree, i;
+
+  g_assert_cmpuint (len, <=, c->len);
+  g_assert_cmpfloat (b_in, >, a_in);
+  g_assert_cmpfloat (b_out, >, a_out);
+
+  if (*rebased == NULL)
+    *rebased = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n);
+
+  g_array_set_size (*rebased, n);
+
+  if (n == 0)
+    return 0.0;
+
+  if (spectral->rebase_work_len < 3 * n)
+  {
+    spectral->rebase_work     = g_realloc_n (spectral->rebase_work, 3 * n, sizeof (gdouble));
+    spectral->rebase_work_len = 3 * n;
+  }
+
+  previous = spectral->rebase_work;
+  current  = previous + n;
+  next     = current + n;
+  memset (spectral->rebase_work, 0, 3 * n * sizeof (gdouble));
+
+  b = (gdouble *) (*rebased)->data;
+  memset (b, 0, n * sizeof (gdouble));
+
+  previous[0] = 1.0;
+  b[0]        = a[0];
+
+  if (n > 1)
+  {
+    current[0] = beta;
+    current[1] = alpha;
+    b[0]      += a[1] * beta;
+    b[1]      += a[1] * alpha;
+  }
+
+  /* Recursively form T_degree(alpha t + beta) in the T_k(t) basis. */
+  for (degree = 1; degree + 1 < n; degree++)
+  {
+    gdouble *tmp;
+
+    memset (next, 0, n * sizeof (gdouble));
+
+    for (i = 0; i <= degree; i++)
+    {
+      next[i] += 2.0 * beta * current[i] - previous[i];
+
+      if (i == 0)
+      {
+        next[1] += 2.0 * alpha * current[0];
+      }
+      else
+      {
+        next[i - 1] += alpha * current[i];
+        next[i + 1] += alpha * current[i];
+      }
+    }
+
+    for (i = 0; i <= degree + 1; i++)
+      b[i] += a[degree + 1] * next[i];
+
+    tmp      = previous;
+    previous = current;
+    current  = next;
+    next     = tmp;
+  }
+
+  for (i = 0; i < n; i++)
+  {
+    if (!isfinite (b[i]))
+      return HUGE_VAL;
+
+    norm += fabs (b[i]);
+  }
+
+  return norm;
 }
 
 /**

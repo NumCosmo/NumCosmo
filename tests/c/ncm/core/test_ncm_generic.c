@@ -55,7 +55,9 @@ void test_ncm_mpi_job_test_basic (void);
 void test_ncm_mpi_job_fit_basic (void);
 void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
+void test_ncm_spline_bspline_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
+void test_ncm_powspec_analytic_basic (void);
 void test_ncm_pln1d_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
@@ -84,7 +86,9 @@ void test_nc_halo_cm_diemer15_basic (void);
 void test_nc_halo_cm_prada12_basic (void);
 void test_nc_halo_cm_dutton14_basic (void);
 void test_nc_halo_bias_despali_basic (void);
+void test_nc_halo_bias_castro_basic (void);
 void test_nc_multiplicity_func_bhattacharya_basic (void);
+void test_nc_multiplicity_func_castro_basic (void);
 void test_nc_multiplicity_func_bhattacharya_convention (void);
 void test_nc_multiplicity_func_bhattacharya_mean_mdef (void);
 void test_nc_multiplicity_func_bhattacharya_critical_mdef (void);
@@ -93,6 +97,8 @@ void test_nc_cluster_mass_ascaso_basic (void);
 void test_nc_cluster_mass_selection_basic (void);
 void test_nc_cluster_photoz_gauss_basic (void);
 void test_nc_xcor_basic (void);
+void test_nc_xcor_solver_basic (void);
+void test_nc_xcor_kernel_analytic_kdep_growth_basic (void);
 
 void test_nc_galaxy_position_factor_flat_basic (void);
 void test_nc_galaxy_redshift_factor_composed_basic (void);
@@ -138,7 +144,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_fit/basic", test_ncm_mpi_job_fit_basic);
   g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
+  g_test_add_func ("/ncm/spline_bspline/basic", test_ncm_spline_bspline_basic);
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
+  g_test_add_func ("/ncm/powspec_analytic/basic", test_ncm_powspec_analytic_basic);
   g_test_add_func ("/ncm/pln1d/basic", test_ncm_pln1d_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
@@ -167,7 +175,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/halo_cm_dutton14/basic", test_nc_halo_cm_dutton14_basic);
 
   g_test_add_func ("/nc/halo_bias_despali/basic", test_nc_halo_bias_despali_basic);
+  g_test_add_func ("/nc/halo_bias_castro/basic", test_nc_halo_bias_castro_basic);
 
+  g_test_add_func ("/nc/multiplicity_func_castro/basic", test_nc_multiplicity_func_castro_basic);
   g_test_add_func ("/nc/multiplicity_func_bhattacharya/basic", test_nc_multiplicity_func_bhattacharya_basic);
   g_test_add_func ("/nc/multiplicity_func_bhattacharya/convention", test_nc_multiplicity_func_bhattacharya_convention);
   g_test_add_func ("/nc/multiplicity_func_bhattacharya/mean_mdef", test_nc_multiplicity_func_bhattacharya_mean_mdef);
@@ -179,6 +189,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/cluster_photoz_gauss/basic", test_nc_cluster_photoz_gauss_basic);
 
   g_test_add_func ("/nc/xcor/basic", test_nc_xcor_basic);
+  g_test_add_func ("/nc/xcor/solver/basic", test_nc_xcor_solver_basic);
+  g_test_add_func ("/nc/xcor/kernel_analytic_kdep_growth/basic", test_nc_xcor_kernel_analytic_kdep_growth_basic);
 
   g_test_add_func ("/nc/galaxy/position_factor_flat/basic", test_nc_galaxy_position_factor_flat_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_composed/basic", test_nc_galaxy_redshift_factor_composed_basic);
@@ -606,6 +618,56 @@ test_ncm_mpi_job_feval_basic (void)
   NCM_TEST_FREE (ncm_dataset_free, dset);
   NCM_TEST_FREE (ncm_data_free, data);
   NCM_TEST_FREE (ncm_mset_free, mset);
+}
+
+void
+test_ncm_spline_bspline_basic (void)
+{
+  NcmSplineBSpline *sbs = ncm_spline_bspline_new (NCM_SPLINE_BSPLINE_DEFAULT_ORDER);
+  NcmSplineBSpline *sbs2;
+
+  g_assert_true (sbs != NULL);
+  g_assert_true (NCM_IS_SPLINE_BSPLINE (sbs));
+  g_assert_cmpuint (ncm_spline_bspline_get_order (sbs), ==, NCM_SPLINE_BSPLINE_DEFAULT_ORDER);
+
+  ncm_spline_bspline_set_order (sbs, 6);
+  g_assert_cmpuint (ncm_spline_bspline_get_order (sbs), ==, 6);
+
+  sbs2 = NCM_SPLINE_BSPLINE (ncm_spline_ref (NCM_SPLINE (sbs)));
+  ncm_spline_clear ((NcmSpline **) &sbs2);
+  g_assert_true (sbs2 == NULL);
+
+  g_assert_true (NCM_IS_SPLINE_BSPLINE (sbs));
+
+  NCM_TEST_FREE (ncm_spline_free, NCM_SPLINE (sbs));
+}
+
+void
+test_ncm_powspec_analytic_basic (void)
+{
+  NcmPowspecAnalytic *psa = ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                      NCM_POWSPEC_ANALYTIC_GROWTH_LCDM);
+  NcmPowspecAnalytic *psa2;
+
+  g_assert_true (psa != NULL);
+  g_assert_true (NCM_IS_POWSPEC_ANALYTIC (psa));
+
+  psa2 = ncm_powspec_analytic_ref (psa);
+  ncm_powspec_analytic_clear (&psa2);
+  g_assert_true (psa2 == NULL);
+
+  g_assert_true (NCM_IS_POWSPEC_ANALYTIC (psa));
+
+  ncm_powspec_analytic_free (psa);
+
+  {
+    NcmPowspecAnalytic *full = ncm_powspec_analytic_new_full (NCM_POWSPEC_ANALYTIC_SHAPE_RATIONAL,
+                                                              NCM_POWSPEC_ANALYTIC_GROWTH_RATIONAL,
+                                                              1.0e7, 0.96, 0.1, 0.3);
+
+    g_assert_true (NCM_IS_POWSPEC_ANALYTIC (full));
+    ncm_powspec_analytic_free (full);
+  }
 }
 
 void
@@ -1148,6 +1210,47 @@ test_nc_xcor_basic (void)
 }
 
 void
+test_nc_xcor_solver_basic (void)
+{
+  NcXcorSolver *solver = nc_xcor_solver_new ();
+  NcXcorSolver *solver2;
+
+  g_assert_true (solver != NULL);
+  g_assert_true (NC_IS_XCOR_SOLVER (solver));
+
+  solver2 = nc_xcor_solver_ref (solver);
+  nc_xcor_solver_clear (&solver2);
+  g_assert_true (solver2 == NULL);
+
+  g_assert_true (NC_IS_XCOR_SOLVER (solver));
+
+  g_assert_cmpuint (nc_xcor_solver_get_n_kernels (solver), ==, 0);
+  g_assert_cmpuint (nc_xcor_solver_get_n_requests (solver), ==, 0);
+  g_assert_null (nc_xcor_solver_peek_block_integrator (solver, 0));
+
+  NCM_TEST_FREE (nc_xcor_solver_free, solver);
+}
+
+void
+test_nc_xcor_kernel_analytic_kdep_growth_basic (void)
+{
+  NcXcorKernelAnalyticKDepGrowth *kdepg = nc_xcor_kernel_analytic_kdep_growth_new (0.3, 0.05, 1500.0);
+  NcXcorKernelAnalyticKDep *kdep        = NC_XCOR_KERNEL_ANALYTIC_KDEP (kdepg);
+  NcXcorKernelAnalyticKDep *kdep2;
+
+  g_assert_true (kdep != NULL);
+  g_assert_true (NC_IS_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH (kdep));
+
+  kdep2 = nc_xcor_kernel_analytic_kdep_ref (kdep);
+  nc_xcor_kernel_analytic_kdep_clear (&kdep2);
+  g_assert_true (kdep2 == NULL);
+
+  g_assert_true (NC_IS_XCOR_KERNEL_ANALYTIC_KDEP (kdep));
+
+  NCM_TEST_FREE (nc_xcor_kernel_analytic_kdep_free, kdep);
+}
+
+void
 test_nc_halo_bias_despali_basic (void)
 {
   NcDistance *dist        = nc_distance_new (1100.0);
@@ -1176,6 +1279,87 @@ test_nc_halo_bias_despali_basic (void)
   nc_halo_mass_function_clear (&hmf);
 
   NCM_TEST_FREE (nc_halo_bias_despali_free, hbd);
+}
+
+void
+test_nc_halo_bias_castro_basic (void)
+{
+  NcDistance *dist        = nc_distance_new (1100.0);
+  NcTransferFunc *tf      = nc_transfer_func_eh_new ();
+  NcPowspecML *ps_ml      = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+  NcmPowspecFilter *psf   = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
+  NcMultiplicityFunc *mf  = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_castro_new ());
+  NcHaloMassFunction *hmf = nc_halo_mass_function_new (dist, psf, mf);
+  NcHaloBiasCastro *hbc   = nc_halo_bias_castro_new (hmf);
+  NcHaloBiasCastro *hbc2;
+
+  g_assert_true (hbc != NULL);
+  g_assert_true (NC_IS_HALO_BIAS_CASTRO (hbc));
+
+  hbc2 = nc_halo_bias_castro_ref (hbc);
+  nc_halo_bias_castro_clear (&hbc2);
+  g_assert_true (hbc2 == NULL);
+
+  g_assert_true (NC_IS_HALO_BIAS_CASTRO (hbc));
+
+  /* The mass function is the one it was built on, and the slope-running term of
+   * the total derivative raised the filter to second order at construction. */
+  g_assert_true (nc_halo_bias_peek_mass_function (NC_HALO_BIAS (hbc)) == hmf);
+  g_assert_cmpuint (ncm_powspec_filter_get_nderivs (psf), >=, 2);
+
+  nc_halo_bias_castro_set_A0 (hbc, 1.1);
+  nc_halo_bias_castro_set_a1 (hbc, 0.09);
+  nc_halo_bias_castro_set_b1 (hbc, 0.25);
+  nc_halo_bias_castro_set_b2 (hbc, 0.17);
+  nc_halo_bias_castro_set_c1 (hbc, -0.03);
+
+  g_assert_cmpfloat (nc_halo_bias_castro_get_A0 (hbc), ==, 1.1);
+  g_assert_cmpfloat (nc_halo_bias_castro_get_a1 (hbc), ==, 0.09);
+  g_assert_cmpfloat (nc_halo_bias_castro_get_b1 (hbc), ==, 0.25);
+  g_assert_cmpfloat (nc_halo_bias_castro_get_b2 (hbc), ==, 0.17);
+  g_assert_cmpfloat (nc_halo_bias_castro_get_c1 (hbc), ==, -0.03);
+
+  nc_distance_clear (&dist);
+  nc_transfer_func_clear (&tf);
+  nc_powspec_ml_clear (&ps_ml);
+  ncm_powspec_filter_clear (&psf);
+  nc_multiplicity_func_clear (&mf);
+  nc_halo_mass_function_clear (&hmf);
+
+  NCM_TEST_FREE (nc_halo_bias_castro_free, hbc);
+}
+
+void
+test_nc_multiplicity_func_castro_basic (void)
+{
+  NcMultiplicityFuncCastro *mc = nc_multiplicity_func_castro_new ();
+  NcMultiplicityFunc *mulf     = NC_MULTIPLICITY_FUNC (mc);
+  NcMultiplicityFuncCastro *mc2;
+
+  g_assert_true (mc != NULL);
+  g_assert_true (NC_IS_MULTIPLICITY_FUNC_CASTRO (mc));
+
+  mc2 = nc_multiplicity_func_castro_ref (mc);
+  nc_multiplicity_func_castro_clear (&mc2);
+  g_assert_true (mc2 == NULL);
+
+  g_assert_true (NC_IS_MULTIPLICITY_FUNC_CASTRO (mc));
+
+  /* Castro is calibrated on virial masses only. */
+  g_assert_cmpint (nc_multiplicity_func_get_mdef (mulf), ==, NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL);
+  g_assert_cmpint (nc_multiplicity_func_castro_get_model (mc), ==, NC_MULTIPLICITY_FUNC_CASTRO_MODEL_C23);
+  g_assert_cmpint (nc_multiplicity_func_castro_get_halo_finder (mc), ==, NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_ROCKSTAR);
+
+  /* Universal models leave it unset; Castro gets one from a NcHaloMassFunction. */
+  g_assert_null (nc_multiplicity_func_peek_psf (mulf));
+
+  nc_multiplicity_func_castro_set_model (mc, NC_MULTIPLICITY_FUNC_CASTRO_MODEL_C25);
+  nc_multiplicity_func_castro_set_halo_finder (mc, NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_SUBFIND);
+
+  g_assert_cmpint (nc_multiplicity_func_castro_get_model (mc), ==, NC_MULTIPLICITY_FUNC_CASTRO_MODEL_C25);
+  g_assert_cmpint (nc_multiplicity_func_castro_get_halo_finder (mc), ==, NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_SUBFIND);
+
+  NCM_TEST_FREE (nc_multiplicity_func_castro_free, mc);
 }
 
 void
@@ -1209,7 +1393,7 @@ test_nc_multiplicity_func_bhattacharya_basic (void)
   g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_q (mbt), ==, 1.7);
   g_assert_cmpfloat (nc_multiplicity_func_bhattacharya_get_delta_c (mbt), ==, 1.686);
 
-  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf, cosmo, 1.0, 0.5), >, 0.0);
+  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf, cosmo, 1.0, 0.0, 0.5), >, 0.0);
 
   nc_hicosmo_clear (&cosmo);
 
@@ -1229,14 +1413,14 @@ test_nc_multiplicity_func_bhattacharya_convention (void)
   g_assert_cmpint (nc_multiplicity_func_bhattacharya_get_convention (mbt_h), ==, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019);
 
   /* The two conventions agree at z = 0 and differ for z > 0. */
-  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 0.0), ==,
-                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 0.0), 1.0e-15, 0.0);
-  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 1.0), !=,
-                     nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 1.0));
+  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 0.0, 0.0), ==,
+                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 0.0, 0.0), 1.0e-15, 0.0);
+  g_assert_cmpfloat (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 0.0, 1.0), !=,
+                     nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 0.0, 1.0));
 
   nc_multiplicity_func_bhattacharya_set_convention (mbt_h, NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011);
-  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 1.0), ==,
-                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 1.0), 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (nc_multiplicity_func_eval (mulf_b, cosmo, 1.0, 0.0, 1.0), ==,
+                          nc_multiplicity_func_eval (mulf_h, cosmo, 1.0, 0.0, 1.0), 1.0e-15, 0.0);
 
   nc_hicosmo_clear (&cosmo);
   nc_multiplicity_func_bhattacharya_free (mbt_b);

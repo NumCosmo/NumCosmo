@@ -567,7 +567,9 @@ def test_multiplicity_bhattacharya(
 
     sigma_arr = np.geomspace(0.2, 5.0, 64)
     for z in np.linspace(0.0, 2.0, 5):
-        nc_f = np.array([mulf.eval(cosmo_nc.cosmo, sigma, z) for sigma in sigma_arr])
+        nc_f = np.array(
+            [mulf.eval(cosmo_nc.cosmo, sigma, 0.0, z) for sigma in sigma_arr]
+        )
         ref_f = bhattacharya_f_sigma(
             sigma_arr, z, delta_c=mulf.get_delta_c(), a_z_exp=a_z_exp
         )
@@ -593,18 +595,18 @@ def test_multiplicity_bhattacharya_default_convention(
     sigma_arr = np.geomspace(0.2, 5.0, 64)
     # Conventions agree at z = 0 and differ for z > 0.
     f0_default = np.array(
-        [mulf_default.eval(cosmo_nc.cosmo, s, 0.0) for s in sigma_arr]
+        [mulf_default.eval(cosmo_nc.cosmo, s, 0.0, 0.0) for s in sigma_arr]
     )
     f0_heitmann = np.array(
-        [mulf_heitmann.eval(cosmo_nc.cosmo, s, 0.0) for s in sigma_arr]
+        [mulf_heitmann.eval(cosmo_nc.cosmo, s, 0.0, 0.0) for s in sigma_arr]
     )
     assert_allclose(f0_default, f0_heitmann, rtol=1.0e-14)
 
     f1_default = np.array(
-        [mulf_default.eval(cosmo_nc.cosmo, s, 1.0) for s in sigma_arr]
+        [mulf_default.eval(cosmo_nc.cosmo, s, 0.0, 1.0) for s in sigma_arr]
     )
     f1_heitmann = np.array(
-        [mulf_heitmann.eval(cosmo_nc.cosmo, s, 1.0) for s in sigma_arr]
+        [mulf_heitmann.eval(cosmo_nc.cosmo, s, 0.0, 1.0) for s in sigma_arr]
     )
     assert not np.allclose(f1_default, f1_heitmann, rtol=1.0e-6)
 
@@ -630,7 +632,9 @@ def test_multiplicity_bhattacharya_setters(
 
     sigma_arr = np.geomspace(0.2, 5.0, 64)
     for z in np.linspace(0.0, 2.0, 5):
-        nc_f = np.array([mulf.eval(cosmo_nc.cosmo, sigma, z) for sigma in sigma_arr])
+        nc_f = np.array(
+            [mulf.eval(cosmo_nc.cosmo, sigma, 0.0, z) for sigma in sigma_arr]
+        )
         ref_f = bhattacharya_f_sigma(
             sigma_arr, z, A0=0.35, a0=0.8, p=0.9, q=1.7, delta_c=1.686
         )
@@ -662,9 +666,11 @@ def test_multiplicity_bhattacharya_dup(
     sigma_arr = np.geomspace(0.2, 5.0, 64)
     for z in np.linspace(0.0, 2.0, 5):
         nc_f_orig = np.array(
-            [mulf_orig.eval(cosmo_nc.cosmo, sigma, z) for sigma in sigma_arr]
+            [mulf_orig.eval(cosmo_nc.cosmo, sigma, 0.0, z) for sigma in sigma_arr]
         )
-        nc_f = np.array([mulf.eval(cosmo_nc.cosmo, sigma, z) for sigma in sigma_arr])
+        nc_f = np.array(
+            [mulf.eval(cosmo_nc.cosmo, sigma, 0.0, z) for sigma in sigma_arr]
+        )
 
         assert_allclose(nc_f, nc_f_orig, rtol=1.0e-14)
 

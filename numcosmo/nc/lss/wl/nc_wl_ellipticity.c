@@ -151,6 +151,22 @@ nc_wl_ellipticity_apply_shear_inv_trace_ptr (const NcmComplex *g, const NcmCompl
 }
 
 /**
+ * nc_wl_ellipticity_shear_at_origin_trace_ptr:
+ * @target: point in the disc, as a #NcmComplex
+ * @g: output reduced shear as a #NcmComplex
+ *
+ * Computes the reduced shear @g such that
+ * nc_wl_ellipticity_apply_shear_trace_ptr() maps a zero intrinsic
+ * distortion to @target, in the trace (distortion) convention. Requires
+ * $|@target|<1$.
+ */
+void
+nc_wl_ellipticity_shear_at_origin_trace_ptr (const NcmComplex *target, NcmComplex *g)
+{
+  ncm_complex_set_c (g, nc_wl_ellipticity_shear_at_origin_trace (ncm_complex_c (target)));
+}
+
+/**
  * nc_wl_ellipticity_lndet_jac_trace_ptr:
  * @g: reduced shear as a #NcmComplex
  * @chi_obs: observed distortion as a #NcmComplex
@@ -196,6 +212,22 @@ void
 nc_wl_ellipticity_apply_shear_inv_trace_det_ptr (const NcmComplex *g, const NcmComplex *e_obs, NcmComplex *e)
 {
   ncm_complex_set_c (e, nc_wl_ellipticity_apply_shear_inv_trace_det (ncm_complex_c (g), ncm_complex_c (e_obs)));
+}
+
+/**
+ * nc_wl_ellipticity_shear_at_origin_trace_det_ptr:
+ * @target: point in the disc, as a #NcmComplex
+ * @g: output reduced shear as a #NcmComplex
+ *
+ * Computes the reduced shear @g such that
+ * nc_wl_ellipticity_apply_shear_trace_det_ptr() maps a zero intrinsic
+ * ellipticity to @target, in the trace-determinant (ellipticity)
+ * convention. Requires $|@target|<1$.
+ */
+void
+nc_wl_ellipticity_shear_at_origin_trace_det_ptr (const NcmComplex *target, NcmComplex *g)
+{
+  ncm_complex_set_c (g, nc_wl_ellipticity_shear_at_origin_trace_det (ncm_complex_c (target)));
 }
 
 /**

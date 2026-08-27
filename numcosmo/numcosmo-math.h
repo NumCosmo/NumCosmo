@@ -49,6 +49,7 @@
 #include <numcosmo/ncm/algebra/ncm_nnls.h>
 #include <numcosmo/ncm/algebra/ncm_poly_roots.h>
 #include <numcosmo/ncm/algebra/ncm_laurent_series.h>
+#include <numcosmo/ncm/algebra/ncm_spectral.h>
 #include <numcosmo/ncm/core/ncm_serialize.h>
 #include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/ncm/integration/ncm_integral1d.h>
@@ -72,6 +73,7 @@
 #include <numcosmo/ncm/spline/ncm_spline.h>
 #include <numcosmo/ncm/spline/ncm_spline_func.h>
 #include <numcosmo/ncm/spline/ncm_spline_func_test.h>
+#include <numcosmo/ncm/spline/ncm_spline_bspline.h>
 #include <numcosmo/ncm/spline/ncm_spline_gsl.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic_notaknot.h>
@@ -85,6 +87,7 @@
 #include <numcosmo/ncm/spline/ncm_spline2d_bicubic.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_corr3d.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_filter.h>
+#include <numcosmo/ncm/powspec/tests/ncm_powspec_analytic.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_sphere_proj.h>
 #include <numcosmo/ncm/powspec/ncm_powspec_spline2d.h>
 #include <numcosmo/ncm/powspec/ncm_powspec.h>
@@ -105,7 +108,6 @@
 #include <numcosmo/ncm/fftlog/ncm_fftlog_sbessel_jljm.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog_tophatwin2.h>
 #include <numcosmo/ncm/fftlog/ncm_fftlog_gausswin2.h>
-#include <numcosmo/ncm/sphere/ncm_spectral.h>
 #include <numcosmo/ncm/model/ncm_sparam.h>
 #include <numcosmo/ncm/model/ncm_vparam.h>
 #include <numcosmo/ncm/model/ncm_reparam.h>

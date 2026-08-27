@@ -7,7 +7,7 @@ project(
   default_options: [
     'buildtype=debugoptimized',
     'warning_level=2',
-    'c_std=gnu99',
+    'c_std=gnu17',
   ],
 )
 
@@ -39,6 +39,30 @@ foreach warn : global_warn_suppress
     add_global_arguments(warn, language: 'c')
   endif
 endforeach
+
+# GSL picks its gsl_complex representation based on __STDC_VERSION__ and on
+# whether <complex.h> has already been included (which defines the `complex`,
+# `I` and `_Complex_I` macros it probes for). NumCosmo's own headers include
+# <complex.h> before some GSL headers, so under C11 or newer GSL switches
+# gsl_complex to a native `double _Complex` scalar. GSL's own inline
+# accessors (e.g. gsl_vector_complex_get) still initialize it with the
+# struct-style `{{0, 0}}`, which is invalid for a scalar type and fails to
+# compile. Forcing the legacy struct-based representation sidesteps this
+# upstream inconsistency regardless of include order or C standard; NumCosmo
+# never relies on native complex arithmetic on gsl_complex.
+add_project_arguments('-DGSL_COMPLEX_LEGACY=1', language: 'c')
+
+# M_PI and friends (M_E, M_LN2, ...) are a POSIX/XSI <math.h> extension, not
+# ISO C, and select()/fd_set/mkstemp()/getloadavg() (used by libcuba's
+# fork-based parallel sampler) are POSIX/BSD, not ISO C either. glibc hides
+# all of these under a strict -std=cNN (which sets __STRICT_ANSI__), unlike
+# -std=gnuNN which exposes them by default. _DEFAULT_SOURCE restores exactly
+# that default (POSIX+BSD) exposure regardless of -std=, without pulling in
+# GNU-only extensions (those still require __USE_GNU / _GNU_SOURCE, which
+# NumCosmo deliberately avoids -- see config_extra.h's sincos()/exp10()
+# fallbacks). M_PI alone is used across ~100 first-party files, so this is
+# not something worth working around function-by-function.
+add_project_arguments('-D_DEFAULT_SOURCE', language: 'c')
 
 cc_can_run = meson.can_run_host_binaries()
 
@@ -393,7 +417,7 @@ dl_dep = dependency('dl', method: 'auto')
 #######################################################################################
 
 glib_req = '>= 2.54.0'
-gsl_req = '>= 2.4'
+gsl_req = '>= 2.8'
 fftw_req = '>= 3.1.2'
 cfitsio_req = '>= 3.25'
 flint_req = '>= 3.0'

@@ -63,10 +63,13 @@ guint ncm_spectral_get_max_order (NcmSpectral *spectral);
 
 void ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint order, GArray **coeffs, gpointer user_data);
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, GArray **coeffs, gpointer user_data);
+guint ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble reltol, gdouble abstol, GArray **coeffs, gpointer user_data);
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, GArray **coeffs, gpointer user_data);
 
 void ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g);
 void ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g);
+
+gdouble ncm_spectral_chebyshev_rebase (NcmSpectral *spectral, GArray *c, guint len, gdouble a_in, gdouble b_in, gdouble a_out, gdouble b_out, GArray **rebased);
 
 gdouble ncm_spectral_gegenbauer_alpha1_eval (GArray *c, gdouble t);
 gdouble ncm_spectral_gegenbauer_alpha1_eval_x (GArray *c, gdouble a, gdouble b, gdouble x);

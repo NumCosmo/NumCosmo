@@ -63,7 +63,7 @@ _CASES = [
 # Regenerate with Ncm.Serialize.to_binfile on an Ncm.Matrix built from the
 # rows in that order.
 _GOLDEN_FILE = (
-    "truth_tables/nc_galaxy_position_factor_flat_gen_integ_parity_seed123.bin"
+    "truth_tables/wl/nc_galaxy_position_factor_flat_gen_integ_parity_seed123.bin"
 )
 _GOLDEN_N = 500
 

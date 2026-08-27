@@ -31,6 +31,7 @@ from numpy.testing import assert_allclose
 import numpy as np
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.helper import enum_values
 
 Ncm.cfg_init()
 
@@ -190,7 +191,7 @@ def test_evol_mode_and_state_interp(
 
         for mode, obs in it.product(
             [Nc.HIPertITwoFluidsObsMode.ONE, Nc.HIPertITwoFluidsObsMode.TWO],
-            list(Nc.HIPertITwoFluidsObs),
+            enum_values(Nc.HIPertITwoFluidsObs),
         ):
             val_c = state.eval_mode(mode, obs)
             assert isinstance(val_c, Ncm.Complex)
@@ -198,7 +199,7 @@ def test_evol_mode_and_state_interp(
             assert np.isfinite(val_c.Im())
 
         for obs1, obs2 in it.combinations_with_replacement(
-            list(Nc.HIPertITwoFluidsObs), 2
+            enum_values(Nc.HIPertITwoFluidsObs), 2
         ):
             val1 = state.eval_obs(Nc.HIPertITwoFluidsObsMode.ONE, obs1, obs2)
             val2 = state.eval_obs(Nc.HIPertITwoFluidsObsMode.TWO, obs1, obs2)

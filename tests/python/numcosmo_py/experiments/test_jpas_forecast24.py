@@ -29,12 +29,6 @@ import pytest
 
 from numcosmo_py import Ncm, Nc
 
-pytest.importorskip("healpy")
-pytest.importorskip("numcosmo_py.external.pyssc")
-# flake8: noqa: E402
-# pylint: disable=wrong-import-position
-
-# Import module under test
 from numcosmo_py.experiments import jpas_forecast24 as jpas
 
 Ncm.cfg_init()
@@ -47,8 +41,10 @@ class TestEnums:
         """Test JpasSSCType enum values."""
         assert jpas.JpasSSCType.NO_SSC == "no_ssc"
         assert jpas.JpasSSCType.FULLSKY == "fullsky"
+        assert jpas.JpasSSCType.FULLSKY_FSKY == "fullsky_fsky"
         assert jpas.JpasSSCType.FULL == "full"
         assert jpas.JpasSSCType.GUARANTEED == "guaranteed"
+        assert jpas.JpasSSCType.CAP == "cap"
 
     def test_cluster_mass_type_values(self):
         """Test ClusterMassType enum values."""
@@ -151,6 +147,24 @@ class TestSurveyArea:
 
 class TestMasks:
     """Test HEALPix mask creation."""
+
+    def test_create_mask_cap(self):
+        """Test cap-mask creation for the CAP footprint path."""
+        area = 100.0
+        mask = jpas.create_mask_cap(area, nside=16)
+
+        assert len(mask) == 12 * 16 * 16
+        assert np.all((mask == 0) | (mask == 1))
+        assert np.sum(mask) > 0
+        assert np.sum(mask) < len(mask)
+
+    def test_create_mask_cap_invalid(self):
+        """Test cap-mask rejects invalid area inputs."""
+        with pytest.raises(ValueError, match="Cap area must lie"):
+            jpas.create_mask_cap(0.0, nside=16)
+
+        with pytest.raises(ValueError, match="Cap area must lie"):
+            jpas.create_mask_cap(4.0 * np.pi * (180.0 / np.pi) ** 2, nside=16)
 
     def test_create_mask_guaranteed(self):
         """Test guaranteed mask creation."""
@@ -273,80 +287,122 @@ class TestCovarianceMatrices:
 
     @pytest.fixture
     def setup_for_covariance(self):
-        """Setup kernel and cosmology for covariance tests."""
-        kernel_z, kernels_T, _ = jpas.create_zbins_kernels(nknots=4, kernel_nknots=50)
+        """Build redshift bin edges and cosmology for covariance tests."""
+        _, _, z_bins_knots = jpas.create_zbins_kernels(nknots=4, kernel_nknots=50)
         cosmo = jpas.create_cosmo()
-        return kernel_z, kernels_T, cosmo
+        return z_bins_knots, cosmo
 
     def test_create_covariance_S_fullsky(self, setup_for_covariance):
         """Test fullsky SSC covariance matrix creation."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
-        S = jpas.create_covariance_S_fullsky(kernel_z, kernels_T, cosmo)
+        S = jpas.create_covariance_S_fullsky(z_bins_knots, cosmo)
 
         assert isinstance(S, Ncm.Matrix)
-        n_bins = kernels_T.shape[0]
+        n_bins = len(z_bins_knots) - 1
         assert S.nrows() == n_bins
         assert S.ncols() == n_bins
 
     def test_create_covariance_S_guaranteed(self, setup_for_covariance):
         """Test guaranteed mask SSC covariance matrix creation."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
-        S = jpas.create_covariance_S_guaranteed(kernel_z, kernels_T, cosmo)
+        S = jpas.create_covariance_S_guaranteed(z_bins_knots, cosmo)
 
         assert isinstance(S, Ncm.Matrix)
-        n_bins = kernels_T.shape[0]
+        n_bins = len(z_bins_knots) - 1
         assert S.nrows() == n_bins
         assert S.ncols() == n_bins
 
     def test_create_covariance_S_full(self, setup_for_covariance):
         """Test full mask SSC covariance matrix creation."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
-        S = jpas.create_covariance_S_full(kernel_z, kernels_T, cosmo)
+        S = jpas.create_covariance_S_full(z_bins_knots, cosmo)
 
         assert isinstance(S, Ncm.Matrix)
-        n_bins = kernels_T.shape[0]
+        n_bins = len(z_bins_knots) - 1
         assert S.nrows() == n_bins
         assert S.ncols() == n_bins
 
     def test_create_covariance_S_router_fullsky(self, setup_for_covariance):
         """Test covariance router for FULLSKY."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
-        S = jpas.create_covariance_S(
-            kernel_z, kernels_T, jpas.JpasSSCType.FULLSKY, cosmo
-        )
+        S = jpas.create_covariance_S(z_bins_knots, jpas.JpasSSCType.FULLSKY, cosmo)
 
         assert isinstance(S, Ncm.Matrix)
 
     def test_create_covariance_S_router_full(self, setup_for_covariance):
         """Test covariance router for FULL."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
-        S = jpas.create_covariance_S(kernel_z, kernels_T, jpas.JpasSSCType.FULL, cosmo)
+        S = jpas.create_covariance_S(z_bins_knots, jpas.JpasSSCType.FULL, cosmo)
 
         assert isinstance(S, Ncm.Matrix)
 
     def test_create_covariance_S_router_guaranteed(self, setup_for_covariance):
         """Test covariance router for GUARANTEED."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
+
+        S = jpas.create_covariance_S(z_bins_knots, jpas.JpasSSCType.GUARANTEED, cosmo)
+
+        assert isinstance(S, Ncm.Matrix)
+
+    def test_create_covariance_S_router_fullsky_fsky(self, setup_for_covariance):
+        """Test covariance router for the new FULLSKY_FSKY path."""
+        z_bins_knots, cosmo = setup_for_covariance
 
         S = jpas.create_covariance_S(
-            kernel_z, kernels_T, jpas.JpasSSCType.GUARANTEED, cosmo
+            z_bins_knots,
+            jpas.JpasSSCType.FULLSKY_FSKY,
+            cosmo,
+            area=2959.1,
         )
 
         assert isinstance(S, Ncm.Matrix)
 
+    def test_create_covariance_S_fullsky_fsky_requires_area(self, setup_for_covariance):
+        """Test FULLSKY_FSKY rejects a missing area argument."""
+        z_bins_knots, cosmo = setup_for_covariance
+
+        with pytest.raises(ValueError, match="requires an area"):
+            jpas.create_covariance_S(
+                z_bins_knots,
+                jpas.JpasSSCType.FULLSKY_FSKY,
+                cosmo,
+            )
+
+    def test_create_covariance_S_router_cap(self, setup_for_covariance):
+        """Test covariance router for CAP using an explicit area."""
+        z_bins_knots, cosmo = setup_for_covariance
+
+        S = jpas.create_covariance_S(
+            z_bins_knots,
+            jpas.JpasSSCType.CAP,
+            cosmo,
+            area=100.0,
+        )
+
+        assert isinstance(S, Ncm.Matrix)
+
+    def test_create_covariance_S_cap_requires_area(self, setup_for_covariance):
+        """Test cap-SSC router fails without the area dependency."""
+        z_bins_knots, cosmo = setup_for_covariance
+
+        with pytest.raises(ValueError, match="requires an area"):
+            jpas.create_covariance_S(
+                z_bins_knots,
+                jpas.JpasSSCType.CAP,
+                cosmo,
+            )
+
     def test_create_covariance_S_invalid(self, setup_for_covariance):
         """Test covariance router raises error for NO_SSC."""
-        kernel_z, kernels_T, cosmo = setup_for_covariance
+        z_bins_knots, cosmo = setup_for_covariance
 
         with pytest.raises(ValueError, match="Invalid sky cut type"):
-            jpas.create_covariance_S(
-                kernel_z, kernels_T, jpas.JpasSSCType.NO_SSC, cosmo
-            )
+            jpas.create_covariance_S(z_bins_knots, jpas.JpasSSCType.NO_SSC, cosmo)
 
 
 class TestClusterModels:
@@ -402,6 +458,104 @@ class TestClusterModels:
 
 
 @pytest.mark.acceptance
+class TestSSCSijCalculator:
+    """Test the cosmology-dependent S_ij calculator.
+
+    `create_ssc_sij_calculator` is the #NcXcorSSCSij counterpart of
+    `create_covariance_S`: same footprints, but recomputed at every likelihood
+    step instead of frozen at a fiducial cosmology.
+    """
+
+    @pytest.fixture
+    def z_bins_knots(self):
+        """Redshift bin edges for the calculator tests."""
+        _, _, z_bins_knots = jpas.create_zbins_kernels(nknots=4, kernel_nknots=50)
+        return z_bins_knots
+
+    def test_fullsky(self, z_bins_knots):
+        """FULLSKY needs no area and stays on the monopole alone."""
+        ssc_sij = jpas.create_ssc_sij_calculator(z_bins_knots, jpas.JpasSSCType.FULLSKY)
+
+        assert isinstance(ssc_sij, Nc.XcorSSCSij)
+        assert ssc_sij.get_nbins() == len(z_bins_knots) - 1
+        assert ssc_sij.get_area() == 0.0
+        assert ssc_sij.get_lmax() == 0
+
+    def test_fullsky_fsky(self, z_bins_knots):
+        """FULLSKY_FSKY carries the area through to the rescaling."""
+        ssc_sij = jpas.create_ssc_sij_calculator(
+            z_bins_knots, jpas.JpasSSCType.FULLSKY_FSKY, area=3000.0
+        )
+
+        assert ssc_sij.get_area() == pytest.approx(3000.0)
+        assert ssc_sij.get_lmax() == 0
+        assert ssc_sij.get_fsky() < 1.0
+
+    def test_fullsky_fsky_requires_area(self, z_bins_knots):
+        """FULLSKY_FSKY without an area is an error, as for create_covariance_S."""
+        with pytest.raises(ValueError, match="requires an area"):
+            jpas.create_ssc_sij_calculator(z_bins_knots, jpas.JpasSSCType.FULLSKY_FSKY)
+
+    def test_cap(self, z_bins_knots):
+        """CAP builds a mask, so the sum runs past the monopole."""
+        ssc_sij = jpas.create_ssc_sij_calculator(
+            z_bins_knots, jpas.JpasSSCType.CAP, area=3000.0
+        )
+
+        assert ssc_sij.get_area() == 0.0
+        assert ssc_sij.get_lmax() > 0
+        assert ssc_sij.get_fsky() < 1.0
+
+    def test_cap_requires_area(self, z_bins_knots):
+        """CAP without an area is an error."""
+        with pytest.raises(ValueError, match="requires an area"):
+            jpas.create_ssc_sij_calculator(z_bins_knots, jpas.JpasSSCType.CAP)
+
+    def test_guaranteed(self, z_bins_knots):
+        """GUARANTEED uses its own HEALPix mask and ignores any area."""
+        ssc_sij = jpas.create_ssc_sij_calculator(
+            z_bins_knots, jpas.JpasSSCType.GUARANTEED
+        )
+
+        assert ssc_sij.get_lmax() > 0
+        assert ssc_sij.get_fsky() < 1.0
+
+    def test_full(self, z_bins_knots):
+        """FULL uses the full J-PAS mask."""
+        ssc_sij = jpas.create_ssc_sij_calculator(z_bins_knots, jpas.JpasSSCType.FULL)
+
+        assert ssc_sij.get_lmax() > 0
+        assert ssc_sij.get_fsky() < 1.0
+
+    def test_invalid_sky_cut(self, z_bins_knots):
+        """NO_SSC has no calculator, matching create_covariance_S."""
+        with pytest.raises(ValueError, match="Invalid sky cut type"):
+            jpas.create_ssc_sij_calculator(z_bins_knots, jpas.JpasSSCType.NO_SSC)
+
+    def test_matches_the_fixed_matrix_at_the_fiducial(self, z_bins_knots):
+        """At the fiducial cosmology the calculator reproduces the frozen matrix.
+
+        The two paths must agree there, otherwise a fixed and a varying run
+        would differ for reasons other than the cosmology dependence they are
+        meant to isolate.
+        """
+        cosmo = jpas.create_cosmo()
+
+        fixed = jpas.create_covariance_S(
+            z_bins_knots, jpas.JpasSSCType.FULLSKY_FSKY, cosmo, area=3000.0
+        )
+        varying = jpas.create_ssc_sij_calculator(
+            z_bins_knots, jpas.JpasSSCType.FULLSKY_FSKY, area=3000.0
+        ).eval(cosmo)
+
+        for i in range(fixed.nrows()):
+            for j in range(fixed.ncols()):
+                assert varying.get(i, j) == pytest.approx(
+                    fixed.get(i, j), rel=1.0e-5, abs=1.0e-14
+                )
+
+
+@pytest.mark.acceptance
 class TestGenerateJpasForecast:
     """Test main experiment generation function."""
 
@@ -430,6 +584,45 @@ class TestGenerateJpasForecast:
         )
 
         assert isinstance(experiment, Ncm.ObjDictStr)
+
+    def test_generate_jpas_forecast_2024_varying_sij(self):
+        """Generation with a cosmology-dependent fitting S_ij.
+
+        The calculator has to reach the data object, and the resampling matrix
+        has to stay frozen: both runs of a fixed/varying comparison must fit
+        the same mock.
+        """
+        experiment, _ = jpas.generate_jpas_forecast_2024(
+            znknots=3,
+            lnMobsnknots=2,
+            fitting_Sij_type=jpas.JpasSSCType.FULLSKY_FSKY,
+            resample_Sij_type=jpas.JpasSSCType.FULLSKY_FSKY,
+            vary_fitting_Sij=True,
+        )
+
+        likelihood = experiment.get("likelihood")
+        data = likelihood.peek_dataset().peek_data(0)
+
+        ssc_sij = data.get_ssc_sij()
+        assert isinstance(ssc_sij, Nc.XcorSSCSij)
+        assert ssc_sij.get_nbins() == 2
+
+        # The fixed matrix and the frozen resampling matrix are both still set.
+        assert data.get_s_matrix() is not None
+        assert data.get_resample_s_matrix() is not None
+
+    def test_generate_jpas_forecast_2024_without_varying_sij(self):
+        """Without the flag the data carries no calculator."""
+        experiment, _ = jpas.generate_jpas_forecast_2024(
+            znknots=3,
+            lnMobsnknots=2,
+            fitting_Sij_type=jpas.JpasSSCType.FULLSKY_FSKY,
+        )
+
+        likelihood = experiment.get("likelihood")
+        data = likelihood.peek_dataset().peek_data(0)
+
+        assert data.get_ssc_sij() is None
 
     def test_generate_jpas_forecast_2024_with_ssc_guaranteed(self):
         """Test generation with GUARANTEED SSC for fitting."""

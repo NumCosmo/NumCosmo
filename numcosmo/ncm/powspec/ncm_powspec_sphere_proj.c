@@ -708,6 +708,8 @@ ncm_powspec_sphere_proj_prepare (NcmPowspecSphereProj *psp, NcmModel *model)
 
     ncm_vector_free (w_v);
   }
+
+  ncm_model_ctrl_update (self->ctrl, model);
 }
 
 /**

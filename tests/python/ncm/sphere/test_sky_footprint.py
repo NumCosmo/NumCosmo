@@ -33,7 +33,7 @@ Ncm.cfg_init()
 # drift of the asin equal-area transform across libm/GSL builds while still
 # catching real changes in the sampling. Regenerate with Ncm.Serialize.to_binfile
 # on Ncm.Matrix.new_array(<ra,dec interleaved>, 2).
-GOLDEN_FILE = "truth_tables/ncm_sky_footprint_rect_seed123.bin"
+GOLDEN_FILE = "truth_tables/sphere/ncm_sky_footprint_rect_seed123.bin"
 GOLDEN_RTOL = 1.0e-9
 GOLDEN_ATOL = 1.0e-12
 GOLDEN_N = 5000
