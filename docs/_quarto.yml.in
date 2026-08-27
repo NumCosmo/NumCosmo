@@ -37,6 +37,7 @@ project:
     - tutorials/python/halo_catalog_mock.qmd
     - tutorials/python/sky_match.qmd
     - tutorials/python/sky_match_id.qmd
+    - tutorials/python/xcor_accuracy.qmd
     - examples/data_analysis/inspect_data_objects.qmd
     - examples/data_analysis/snia.qmd
     - examples/intro/epdf.qmd
@@ -172,6 +173,10 @@ website:
                 text: "Sky Match"
               - href: tutorials/python/sky_match_id.qmd
                 text: "Sky Match by Membership"
+          - section: "Cross-Correlations"
+            contents:
+              - href: tutorials/python/xcor_accuracy.qmd
+                text: "Angular Power Spectrum Accuracy"
           - section: "Data & Statistics"
             contents:
               - href: examples/data_analysis/snia.qmd
