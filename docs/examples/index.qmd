@@ -30,6 +30,10 @@ here? Start with [Getting Started](../index.qmd) and the
 - [Galaxy WL Mock Catalog](../tutorials/python/galaxy_wl_mock.qmd) — generating a mock weak-lensing galaxy catalog with the position/redshift/shape factors.
 - [Halo Catalog Mock](../tutorials/python/halo_catalog_mock.qmd) — generating a mock halo catalog.
 
+## Cross-Correlations
+
+- [Angular Power Spectrum Accuracy](../tutorials/python/xcor_accuracy.qmd) — choosing the tolerances that control a non-Limber $C_\ell$, and reading the error it reports.
+
 ## Catalogs & Matching
 
 - [Sky Match](../tutorials/python/sky_match.qmd) — matching catalogs by sky position.
