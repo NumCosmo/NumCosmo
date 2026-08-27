@@ -1747,6 +1747,81 @@ ncm_function_sample_set_get_residuals (NcmFunctionSampleSet *fss)
 }
 
 /**
+ * ncm_function_sample_set_estimate_residuals:
+ * @fss: a #NcmFunctionSampleSet
+ * @base_spline: the #NcmSpline whose error is wanted
+ * @ref_spline: a higher-order #NcmSpline to measure it against
+ *
+ * Estimates @base_spline's interpolation error from the samples already held,
+ * **without evaluating the function anywhere**: both splines are fitted to the
+ * same data and differenced at each interval's midpoint, which is where the
+ * samples say least. An embedded pair, in the sense a Runge-Kutta pair is one.
+ *
+ * The layout matches ncm_function_sample_set_get_residuals(): one row per
+ * sample in ascending $x$ order, one column per component, row $i$ owning the
+ * interval $[x_i, x_{i+1}]$, and a trailing row of NaN.
+ *
+ * The two differ in what they measure, and it is worth being clear which is
+ * wanted. get_residuals() reports what refinement *observed*, against the true
+ * function, but before the interval was split and at a point that then became a
+ * knot -- so it describes the parent interval and overstates the final grid.
+ * This reports the error of the finished fit on the final intervals, and costs
+ * one extra banded solve rather than one function evaluation per interval.
+ *
+ * It inherits the usual embedded-pair assumption: the estimate is only as good
+ * as @ref_spline being the better fit. Where that fails the difference measures
+ * @ref_spline's error instead, which overstates rather than hides.
+ *
+ * Returns: (transfer full) (nullable): a #NcmMatrix of estimates, or %NULL if
+ * there are too few samples
+ */
+NcmMatrix *
+ncm_function_sample_set_estimate_residuals (NcmFunctionSampleSet *fss, NcmSpline *base_spline, NcmSpline *ref_spline)
+{
+  const guint nsamples = g_list_length (fss->samples);
+  NcmSplineVec *sv_base, *sv_ref;
+  NcmVector *y_base, *y_ref;
+  NcmMatrix *residuals;
+  GList *node;
+  guint i;
+
+  if (nsamples < 2)
+    return NULL;
+
+  sv_base = ncm_function_sample_set_to_spline_vec (fss, base_spline);
+  sv_ref  = ncm_function_sample_set_to_spline_vec (fss, ref_spline);
+
+  residuals = ncm_matrix_new (nsamples, fss->len);
+  y_base    = ncm_vector_new (fss->len);
+  y_ref     = ncm_vector_new (fss->len);
+
+  for (node = fss->samples, i = 0; node->next != NULL; node = node->next, i++)
+  {
+    const NcmFunctionSamplePoint *sp   = (const NcmFunctionSamplePoint *) node->data;
+    const NcmFunctionSamplePoint *next = (const NcmFunctionSamplePoint *) node->next->data;
+    const gdouble xm                   = 0.5 * (sp->x + next->x);
+    guint j;
+
+    ncm_spline_vec_eval (sv_base, xm, y_base);
+    ncm_spline_vec_eval (sv_ref, xm, y_ref);
+
+    for (j = 0; j < fss->len; j++)
+      ncm_matrix_set (residuals, i, j, fabs (ncm_vector_get (y_base, j) - ncm_vector_get (y_ref, j)));
+  }
+
+  /* The last sample owns no interval to its right. */
+  for (i = 0; i < fss->len; i++)
+    ncm_matrix_set (residuals, nsamples - 1, i, GSL_NAN);
+
+  ncm_vector_free (y_base);
+  ncm_vector_free (y_ref);
+  ncm_spline_vec_free (sv_base);
+  ncm_spline_vec_free (sv_ref);
+
+  return residuals;
+}
+
+/**
  * ncm_function_sample_set_refine:
  * @fss: a #NcmFunctionSampleSet
  * @reltol: relative tolerance for refinement test

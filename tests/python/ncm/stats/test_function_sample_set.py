@@ -2631,3 +2631,65 @@ def test_iter_reports_the_residual_of_its_own_interval() -> None:
     fresh.add_func(0.0, _trig_pair)
 
     assert fresh.iter_begin().get_residual() is None
+
+
+def test_estimate_residuals_needs_no_function_evaluations() -> None:
+    """The embedded pair estimates the fit error from the samples already held.
+
+    Two fits of the same data at different orders, differenced where the samples
+    say least. Nothing calls the function, so the estimate costs a banded solve
+    rather than one evaluation per interval.
+    """
+    fss, base_spline = _refined(True)
+    ref_spline = Ncm.SplineBSpline.new(6)
+
+    estimated = fss.estimate_residuals(base_spline, ref_spline)
+    assert estimated is not None
+    assert estimated.nrows() == fss.get_nsamples()
+    assert estimated.ncols() == 2
+
+    values = np.array(estimated.dup_array()).reshape(estimated.nrows(), -1)
+    assert np.all(np.isnan(values[-1]))
+    assert np.all(np.isfinite(values[:-1]))
+    assert np.all(values[:-1] >= 0.0)
+
+
+def test_estimate_residuals_is_sharper_than_the_observed_one() -> None:
+    """It describes the finished fit, where the observed residual describes the
+    interval's parent and so overstates it."""
+    fss, base_spline = _refined(True)
+    ref_spline = Ncm.SplineBSpline.new(6)
+
+    observed = np.array(fss.get_residuals().dup_array()).reshape(
+        fss.get_nsamples(), -1
+    )[:-1]
+    estimated = np.array(
+        fss.estimate_residuals(base_spline, ref_spline).dup_array()
+    ).reshape(fss.get_nsamples(), -1)[:-1]
+
+    sv = fss.to_spline_vec(base_spline)
+    xs = np.linspace(1.0e-3, 2.0 * math.pi - 1.0e-3, 2000)
+    true_err = np.array(
+        [
+            np.abs(
+                np.array(sv.eval_array(x)) - [math.sin(x), 1.0e-4 * math.cos(3.0 * x)]
+            )
+            for x in xs
+        ]
+    ).max(axis=0)
+
+    # Both cover the truth; the embedded one does so far less loosely.
+    assert np.all(true_err < observed.max(axis=0))
+    assert np.all(true_err < estimated.max(axis=0) * 10.0)
+    assert estimated[:, 0].max() < observed[:, 0].max()
+
+
+def test_estimate_residuals_returns_none_when_there_is_nothing_to_fit() -> None:
+    """A single sample spans no interval."""
+    fss = Ncm.FunctionSampleSet.new(2)
+    fss.add_func(1.0, _trig_pair)
+
+    assert (
+        fss.estimate_residuals(Ncm.SplineCubicNotaknot.new(), Ncm.SplineBSpline.new(6))
+        is None
+    )

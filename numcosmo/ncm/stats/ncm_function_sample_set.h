@@ -90,6 +90,7 @@ guint ncm_function_sample_set_get_len (NcmFunctionSampleSet *fss);
 void ncm_function_sample_set_set_track_residual (NcmFunctionSampleSet *fss, const gboolean track_residual);
 gboolean ncm_function_sample_set_get_track_residual (NcmFunctionSampleSet *fss);
 NcmMatrix *ncm_function_sample_set_get_residuals (NcmFunctionSampleSet *fss);
+NcmMatrix *ncm_function_sample_set_estimate_residuals (NcmFunctionSampleSet *fss, NcmSpline *base_spline, NcmSpline *ref_spline);
 guint ncm_function_sample_set_get_nsamples (NcmFunctionSampleSet *fss);
 gdouble ncm_function_sample_set_get_x_min (NcmFunctionSampleSet *fss);
 gdouble ncm_function_sample_set_get_x_max (NcmFunctionSampleSet *fss);
