@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# test_kernel_fixed.py
+# test_kernel_exact.py
 #
 # Mon Aug 11 2026
 # Copyright  2026  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# test_kernel_fixed.py
+# test_kernel_exact.py
 # Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""NC_XCOR_METHOD_KERNEL_FIXED: exact GL(5) on per-pair knot unions.
+"""NC_XCOR_METHOD_KERNEL_EXACT: exact GL(5) on per-pair knot unions.
 
 Each kernel is sampled independently -- the same closures KERNEL_CUBATURE
 builds and NcXcorSolver caches -- so a pair's two splines live on different
@@ -129,7 +129,7 @@ def test_union_gl5_matches_compute(cosmology: Cosmology) -> None:
     igs = [k.get_eval(cosmo, 0) for k in kernels]
     edges = [_knots(ig) for ig in igs]
 
-    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED)
+    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     fixed.prepare(cosmo)
     const = 2.0 / (np.pi * cosmo.RH_Mpc() ** 3)
 
@@ -155,13 +155,13 @@ def test_union_gl5_matches_compute(cosmology: Cosmology) -> None:
             assert_allclose(got, result.get(0), rtol=1.0e-6)
 
 
-def test_kernel_fixed_matches_adaptive_methods(cosmology: Cosmology) -> None:
-    """KERNEL_FIXED reproduces the adaptive kernel-space methods, with no tolerance."""
+def test_kernel_exact_matches_adaptive_methods(cosmology: Cosmology) -> None:
+    """KERNEL_EXACT reproduces the adaptive kernel-space methods, with no tolerance."""
     kernels = _kernels(cosmology)
     cosmo = cosmology.cosmo
     nbins = len(kernels)
 
-    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED)
+    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     fixed.prepare(cosmo)
     cubature = Nc.Xcor.new(
         cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE
@@ -177,8 +177,8 @@ def test_kernel_fixed_matches_adaptive_methods(cosmology: Cosmology) -> None:
             assert_allclose(got.get(0), expected.get(0), rtol=1.0e-4)
 
 
-def test_kernel_fixed_over_ell_block(cosmology: Cosmology) -> None:
-    """KERNEL_FIXED handles a multipole block, on the same range as cubature.
+def test_kernel_exact_over_ell_block(cosmology: Cosmology) -> None:
+    """KERNEL_EXACT handles a multipole block, on the same range as cubature.
 
     Both methods now intersect the two integrands' fitted domains, so the
     separated-bin cross spectrum agrees far into the tail -- unlike the earlier
@@ -190,7 +190,7 @@ def test_kernel_fixed_over_ell_block(cosmology: Cosmology) -> None:
     lmin, lmax = 2, 5
     n_l = lmax - lmin + 1
 
-    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED)
+    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     fixed.prepare(cosmo)
     cubature = Nc.Xcor.new(
         cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE
@@ -206,8 +206,8 @@ def test_kernel_fixed_over_ell_block(cosmology: Cosmology) -> None:
     )
 
 
-def test_kernel_fixed_batches_wide_ell_range(cosmology: Cosmology) -> None:
-    """KERNEL_FIXED batches a range wider than NC_XCOR_KERNEL_MAX_ELL_BLOCK.
+def test_kernel_exact_batches_wide_ell_range(cosmology: Cosmology) -> None:
+    """KERNEL_EXACT batches a range wider than NC_XCOR_KERNEL_MAX_ELL_BLOCK.
 
     A single k-space closure is capped at 64 multipoles, so an unbatched sweep
     aborted the process on any wider request -- while KERNEL_CUBATURE, which the
@@ -220,7 +220,7 @@ def test_kernel_fixed_batches_wide_ell_range(cosmology: Cosmology) -> None:
     cosmo = cosmology.cosmo
     lmax = 70  # > NC_XCOR_KERNEL_MAX_ELL_BLOCK
 
-    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED)
+    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     fixed.prepare(cosmo)
 
     whole = Ncm.Vector.new(lmax + 1)
@@ -241,8 +241,8 @@ def test_kernel_fixed_batches_wide_ell_range(cosmology: Cosmology) -> None:
         )
 
 
-def test_kernel_fixed_through_solver(cosmology: Cosmology) -> None:
-    """The solver drives KERNEL_FIXED consistently with nc_xcor_compute().
+def test_kernel_exact_through_solver(cosmology: Cosmology) -> None:
+    """The solver drives KERNEL_EXACT consistently with nc_xcor_compute().
 
     Both go through the same per-kernel closures, so this is exact agreement
     rather than agreement to sampling accuracy.
@@ -250,7 +250,7 @@ def test_kernel_fixed_through_solver(cosmology: Cosmology) -> None:
     kernels = _kernels(cosmology)
     cosmo = cosmology.cosmo
 
-    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED)
+    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     fixed.prepare(cosmo)
 
     solver = Nc.XcorSolver.new()
@@ -292,14 +292,14 @@ def _limber_pair(cosmology: Cosmology, l_limber: list[int]) -> list[Nc.XcorKerne
 
 
 @pytest.mark.parametrize("l_limber", [[0, 0], [0, -1], [-1, 0]])
-def test_kernel_fixed_respects_l_limber(
+def test_kernel_exact_respects_l_limber(
     cosmology: Cosmology, l_limber: list[int]
 ) -> None:
     """Each kernel is evaluated in its own l_limber tier."""
     k1, k2 = _limber_pair(cosmology, l_limber)
     cosmo = cosmology.cosmo
 
-    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED)
+    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     fixed.prepare(cosmo)
     cubature = Nc.Xcor.new(
         cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE
@@ -315,12 +315,12 @@ def test_kernel_fixed_respects_l_limber(
         assert_allclose(got.get(0), expected.get(0), rtol=5.0e-3)
 
 
-def test_kernel_fixed_all_limber_needs_no_integrator(cosmology: Cosmology) -> None:
+def test_kernel_exact_all_limber_needs_no_integrator(cosmology: Cosmology) -> None:
     """An all-Limber block performs no Bessel integral, so it needs no integrator."""
     kernels = _limber_pair(cosmology, [0, 0])
     cosmo = cosmology.cosmo
 
-    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED)
+    fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     fixed.prepare(cosmo)
 
     solver = Nc.XcorSolver.new()
@@ -337,3 +337,96 @@ def test_kernel_fixed_all_limber_needs_no_integrator(cosmology: Cosmology) -> No
         np.array(expected.dup_array()),
         rtol=1.0e-9,
     )
+
+
+def test_error_estimate_tracks_reltol_on_an_auto_spectrum(cosmology: Cosmology) -> None:
+    """An auto spectrum has a positive integrand, so no cancellation to amplify.
+
+    The estimate then reduces to the closures' own fit accuracy, which is the
+    calibration point for every other case in this file.
+    """
+    kernel = _kernels(cosmology)[0]
+    cosmo = cosmology.cosmo
+    lmin, lmax = 2, 9
+    nell = lmax - lmin + 1
+
+    exact = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+    exact.prepare(cosmo)
+
+    vp, vp_err = Ncm.Vector.new(nell), Ncm.Vector.new(nell)
+    exact.compute_full(kernel, None, cosmo, lmin, lmax, vp, vp_err)
+
+    cl = np.array(vp.dup_array())
+    est = np.array(vp_err.dup_array())
+
+    assert np.all(cl > 0.0)
+    assert_allclose(est / cl, kernel.get_reltol(), rtol=1.0e-12)
+
+
+def test_error_estimate_grows_with_cancellation(cosmology: Cosmology) -> None:
+    """The estimate must separate a well-conditioned pair from a cancelling one.
+
+    This is the whole point of reporting it: the two C_ell vectors look equally
+    respectable, and only the estimate says one of them has lost its digits.
+    """
+    near, _, far = _kernels(cosmology)
+    cosmo = cosmology.cosmo
+    lmin, lmax = 2, 9
+    nell = lmax - lmin + 1
+    reltol = near.get_reltol()
+
+    exact = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+    exact.prepare(cosmo)
+
+    def relative_estimate(k1, k2):
+        vp, vp_err = Ncm.Vector.new(nell), Ncm.Vector.new(nell)
+        exact.compute_full(k1, k2, cosmo, lmin, lmax, vp, vp_err)
+
+        return np.abs(np.array(vp_err.dup_array()) / np.array(vp.dup_array()))
+
+    # Against itself there is nothing to cancel; against a distant bin the
+    # cross spectrum is built from tail against tail.
+    assert_allclose(relative_estimate(near, near), reltol, rtol=1.0e-12)
+    assert np.all(relative_estimate(near, far) > 10.0 * reltol)
+
+
+def test_error_estimate_is_nan_for_methods_that_do_not_provide_one(
+    cosmology: Cosmology,
+) -> None:
+    """A method with no estimate must say so, not report zero error."""
+    kernel = _kernels(cosmology)[0]
+    cosmo = cosmology.cosmo
+    nell = 3
+
+    for method in (
+        Nc.XcorMethod.KERNEL_CUBATURE,
+        Nc.XcorMethod.KERNEL_GSL,
+        Nc.XcorMethod.LIMBER_Z_CUBATURE,
+    ):
+        xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, method)
+        xcor.prepare(cosmo)
+
+        vp, vp_err = Ncm.Vector.new(nell), Ncm.Vector.new(nell)
+        xcor.compute_full(kernel, None, cosmo, 2, 4, vp, vp_err)
+
+        assert np.all(np.isnan(np.array(vp_err.dup_array()))), method
+
+
+def test_compute_full_without_an_error_vector_matches_compute(
+    cosmology: Cosmology,
+) -> None:
+    """The estimate is opt-in, and asking for it must not perturb the C_ell."""
+    k1, k2 = _kernels(cosmology)[:2]
+    cosmo = cosmology.cosmo
+    nell = 4
+
+    exact = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+    exact.prepare(cosmo)
+
+    plain, with_err, discarded = (Ncm.Vector.new(nell) for _ in range(3))
+    exact.compute(k1, k2, cosmo, 2, 5, plain)
+    exact.compute_full(k1, k2, cosmo, 2, 5, with_err, None)
+    exact.compute_full(k1, k2, cosmo, 2, 5, discarded, Ncm.Vector.new(nell))
+
+    assert_allclose(np.array(with_err.dup_array()), np.array(plain.dup_array()))
+    assert_allclose(np.array(discarded.dup_array()), np.array(plain.dup_array()))

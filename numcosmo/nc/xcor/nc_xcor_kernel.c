@@ -1277,6 +1277,12 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
       nc_xcor_kernel_integrand_set_get_range_comp (integrand, _spline_integrand_get_range_comp);
       nc_xcor_kernel_integrand_set_eval_comps (integrand, _spline_integrand_eval_comps);
 
+      /* Only the relative half of the fit criterion travels as a relative
+       * accuracy. The companion floor, @abs_reltol, is scaled to the closure's
+       * own peak, so it reaches C_ell through the *product* of two closures and
+       * is not a relative tolerance on it -- see nc_xcor_compute_full(). */
+      nc_xcor_kernel_integrand_set_reltol (integrand, reltol);
+
       return integrand;
     }
   }
@@ -1505,7 +1511,7 @@ nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXco
  * spline-backed.
  *
  * These knots are what makes the outer $k$ integral exactly integrable, and
- * are why %NC_XCOR_METHOD_KERNEL_FIXED needs no tolerance. Each component is a
+ * are why %NC_XCOR_METHOD_KERNEL_EXACT needs no tolerance. Each component is a
  * cubic spline in $k$, so on any interval over which both members of a pair
  * are a single cubic piece, the product $k^2 W_i(k) W_j(k)$ entering $C_\ell$
  * is a polynomial of degree $8$ and a $5$-node Gauss-Legendre rule integrates
@@ -1520,6 +1526,44 @@ nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXco
  *
  * Returns: (transfer none) (nullable): the knot vector, or %NULL.
  */
+
+/**
+ * nc_xcor_kernel_integrand_set_reltol:
+ * @integrand: a #NcXcorKernelIntegrand
+ * @reltol: the relative accuracy of the representation, or 0.0 if exact
+ *
+ * Records how accurately @integrand represents the function it stands for.
+ *
+ * A spline-backed integrand is a fit, not the function, and the quadratures
+ * that consume it cannot see that. %NC_XCOR_METHOD_KERNEL_EXACT integrates the
+ * fit *exactly*, so this is the whole of its error budget -- see
+ * nc_xcor_compute_full(), which turns it into a per-multipole error estimate.
+ *
+ */
+void
+nc_xcor_kernel_integrand_set_reltol (NcXcorKernelIntegrand *integrand, gdouble reltol)
+{
+  g_return_if_fail (integrand != NULL);
+  g_return_if_fail (reltol >= 0.0);
+
+  integrand->reltol = reltol;
+}
+
+/**
+ * nc_xcor_kernel_integrand_get_reltol:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * Returns: the relative accuracy of the representation, or 0.0 when exact or
+ * unknown. See nc_xcor_kernel_integrand_set_reltol().
+ */
+gdouble
+nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand)
+{
+  g_return_val_if_fail (integrand != NULL, 0.0);
+
+  return integrand->reltol;
+}
+
 NcmVector *
 nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand)
 {

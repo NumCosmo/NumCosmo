@@ -151,6 +151,8 @@ typedef NcmVector *(*NcXcorKernelIntegrandGetKnots) (gpointer data);
  *   %NULL when every component covers the whole range
  * @eval_comps_func: function to evaluate a run of components, or %NULL when
  *   only the whole vector can be evaluated at once
+ * @reltol: the relative accuracy this integrand represents its function to, or
+ *   0.0 when it is exact or unknown
  * @data: user data passed to @eval_func, @get_range_func and @get_knots_func
  * @data_free: function to free @data, or %NULL if no cleanup needed
  *
@@ -184,6 +186,7 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandGetKnots get_knots_func;
   NcXcorKernelIntegrandGetRangeComp get_range_comp_func;
   NcXcorKernelIntegrandEvalComps eval_comps_func;
+  gdouble reltol;
 };
 
 struct _NcXcorKernelClass
@@ -300,6 +303,8 @@ void nc_xcor_kernel_integrand_set_get_knots (NcXcorKernelIntegrand *integrand, N
 void nc_xcor_kernel_integrand_set_get_range_comp (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetRangeComp get_range_comp);
 void nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandEvalComps eval_comps);
 NcmVector *nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand);
+void nc_xcor_kernel_integrand_set_reltol (NcXcorKernelIntegrand *integrand, gdouble reltol);
+gdouble nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand);
 NcXcorKernelIntegrand *nc_xcor_kernel_integrand_ref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_clear (NcXcorKernelIntegrand **integrand);
