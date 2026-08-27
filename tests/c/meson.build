@@ -139,9 +139,44 @@ math_tests = [
         'name': 'ncm_serialize',
         'sources': ['ncm/core/test_ncm_serialize.c'],
     },
+    # test_ncm_fit.c builds once per optimizer group rather than as one binary.
+    # `meson test --num-processes` cannot split a single executable, so as one
+    # target these took 177 s and set the whole C suite's wall clock on their
+    # own. The groups are independent and the source gates on TEST_FIT_* -- see
+    # the top of main() there. Undefined means all, so a hand build still runs
+    # everything.
     {
-        'name': 'ncm_fit',
+        'name': 'ncm_fit_nlopt',
         'sources': ['ncm/fit/test_ncm_fit.c'],
+        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_NLOPT'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_gsl_ls',
+        'sources': ['ncm/fit/test_ncm_fit.c'],
+        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_GSL_LS'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_gsl_mm',
+        'sources': ['ncm/fit/test_ncm_fit.c'],
+        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_GSL_MM'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_gsl_simplex',
+        'sources': ['ncm/fit/test_ncm_fit.c'],
+        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_GSL_SIMPLEX'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_levmar',
+        'sources': ['ncm/fit/test_ncm_fit.c'],
+        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_LEVMAR'],
         'priority': 6,
         'timeout': 0,
     },
