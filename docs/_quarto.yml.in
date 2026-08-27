@@ -51,7 +51,7 @@ project:
     - ./ipynb_to_py.sh
 
 execute:
-  error: false
+  error: true
   freeze: auto
 
 website:
