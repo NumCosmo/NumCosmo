@@ -408,15 +408,22 @@ nc_xcor_kernel_analytic_lensing_get_chi_source_upper (NcXcorKernelAnalyticLensin
 static guint
 _nc_xcor_kernel_analytic_lensing_get_n_comps (NcXcorKernelAnalytic *xcka)
 {
-  return 1;
+  /* One per branch of _lensing_shape (). The branches meet at chi_source_lower
+   * with a kink, and a Chebyshev fit spanning it converges algebraically: over
+   * the whole support the radial integral loses four orders, 1e-13 -> 2e-9 of
+   * the peak, worst at low ell where a panel covers the kink. */
+  return 2;
 }
 
 static gdouble
 _nc_xcor_kernel_analytic_lensing_eval_W_comp (NcXcorKernelAnalytic *xcka, guint comp, gdouble chi)
 {
   NcXcorKernelAnalyticLensing *xckal = NC_XCOR_KERNEL_ANALYTIC_LENSING (xcka);
+  gdouble chi_min, chi_max;
 
-  if ((chi < xckal->chi_lower) || (chi > xckal->chi_source_upper))
+  _nc_xcor_kernel_analytic_lensing_get_comp_support (xcka, comp, &chi_min, &chi_max);
+
+  if ((chi < chi_min) || (chi > chi_max))
     return 0.0;
 
   return _lensing_shape (xckal, chi) / xckal->norm;
@@ -427,7 +434,9 @@ _nc_xcor_kernel_analytic_lensing_get_comp_support (NcXcorKernelAnalytic *xcka, g
 {
   NcXcorKernelAnalyticLensing *xckal = NC_XCOR_KERNEL_ANALYTIC_LENSING (xcka);
 
-  *chi_min = xckal->chi_lower;
-  *chi_max = xckal->chi_source_upper;
+  g_assert_cmpuint (comp, <, 2);
+
+  *chi_min = (comp == 0) ? xckal->chi_lower : xckal->chi_source_lower;
+  *chi_max = (comp == 0) ? xckal->chi_source_lower : xckal->chi_source_upper;
 }
 
