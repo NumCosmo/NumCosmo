@@ -81,6 +81,7 @@ typedef struct _NcXcorKernelPrivate
   guint max_iter;
   gdouble expansion_factor;
   gboolean track_fit_residual;
+  gboolean tolerance_balance_warned;
   gboolean constructed;
 } NcXcorKernelPrivate;
 
@@ -113,20 +114,21 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->dist                    = NULL;
-  self->ps                      = NULL;
-  self->sbi                     = NULL;
-  self->lmax                    = 0;
-  self->l_limber                = 0;
-  self->adaptive_epsilon        = 0.0;
-  self->adaptive_boundary_tries = 0;
-  self->reltol                  = 0.0;
-  self->scaled_abstol           = 0.0;
-  self->max_border_expansions   = 0;
-  self->max_iter                = 0;
-  self->expansion_factor        = 0.0;
-  self->track_fit_residual      = FALSE;
-  self->constructed             = FALSE;
+  self->dist                     = NULL;
+  self->ps                       = NULL;
+  self->sbi                      = NULL;
+  self->lmax                     = 0;
+  self->l_limber                 = 0;
+  self->adaptive_epsilon         = 0.0;
+  self->adaptive_boundary_tries  = 0;
+  self->reltol                   = 0.0;
+  self->scaled_abstol            = 0.0;
+  self->max_border_expansions    = 0;
+  self->max_iter                 = 0;
+  self->expansion_factor         = 0.0;
+  self->track_fit_residual       = FALSE;
+  self->tolerance_balance_warned = FALSE;
+  self->constructed              = FALSE;
 }
 
 static void
@@ -409,6 +411,31 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * so this parameter primarily affects regions where the spline amplitude is
    * sufficiently large for relative accuracy to be relevant. See
    * #NcXcorKernel:scaled-abstol for the complementary criterion.
+   *
+   * ## The two tolerances gate each other -- move them together
+   *
+   * Refinement accepts an interval when
+   * $\Vert f - \tilde f \Vert_2 \le \mathrm{reltol} \Vert f \Vert_2 + a \Vert f
+   * \Vert_2^\mathrm{max}$, a **sum**. Whichever term is larger decides where
+   * refinement stops, so tightening the other one alone changes nothing at all.
+   * Measured on a Gaussian kernel, accuracy gained over the 1e-4/1e-4 defaults:
+   *
+   * | | a = 1e-4 | a = 1e-5 | a = 1e-6 |
+   * |---|---|---|---|
+   * | reltol 1e-4 | 1x | 1.0x | 1.0x |
+   * | reltol 1e-6 | 1.2x | 15x | 25x |
+   * | reltol 1e-8 | 1.2x | 21x | 280x |
+   *
+   * The first column and the first row are flat: one knob alone buys nothing,
+   * whichever one it is. Tightening reltol is cheap -- a hundredfold costs about
+   * 2% in knots -- but cheap and inert, and the knots are still paid for. A
+   * kernel built with the two more than two orders apart says so on stderr.
+   *
+   * The defaults are equal for that reason: equal terms means neither is wasted.
+   * They are a *cheap* balanced pair, not an accurate one. Moving both to
+   * reltol 1e-6 with @a 1e-5 -- what #NcXcorSSCSij sets for itself -- is worth
+   * 15-46x in accuracy for 1.6x the solve on smooth kernels and 3.0x on cluster
+   * top-hats, whose fit is floor-driven and gains nothing from reltol at all.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
@@ -1193,6 +1220,43 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
     comp_states->l2_norm = l2_norm;
 }
 
+/*
+ * The refinement criterion is reltol * ||f||_2 + a * ||f||_2^max, a *sum*, so
+ * the larger of the two terms sets what refinement stops at and the smaller one
+ * is inert. Setting one far tighter than the other therefore buys nothing while
+ * still being paid for in knots, and nothing else reports it.
+ *
+ * The two terms are not compared directly -- one is scaled to the block's norm
+ * and the other to its peak, a factor of order sqrt(n_l) apart -- so the
+ * threshold is deliberately loose at two orders, firing only where the
+ * imbalance cannot be anything else. Once per kernel: closures are built per
+ * ell block, and the tolerances do not change between them.
+ */
+static void
+_nc_xcor_kernel_check_tolerance_balance (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+  const gdouble ratio       = self->reltol / self->scaled_abstol;
+
+  if (self->tolerance_balance_warned)
+    return;
+
+  if ((ratio > 1.0e2) || (ratio < 1.0e-2))
+  {
+    const gboolean reltol_inert = (ratio < 1.0e-2);
+
+    self->tolerance_balance_warned = TRUE;
+
+    g_warning ("_nc_xcor_kernel_check_tolerance_balance: %s has reltol %.3e and "
+               "scaled-abstol %.3e, %.0f orders apart. The refinement criterion adds "
+               "the two, so the looser one decides where refinement stops and %s is "
+               "inert -- tightening it alone cannot improve the result, and it is "
+               "still paid for in spline knots. Move them together.",
+               G_OBJECT_TYPE_NAME (xclk), self->reltol, self->scaled_abstol,
+               fabs (log10 (ratio)), reltol_inert ? "reltol" : "scaled-abstol");
+  }
+}
+
 static NcXcorKernelIntegrand *
 _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax,
                                         ComponentStates *comp_states,
@@ -1210,6 +1274,7 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
     NcmMatrix *residuals      = NULL;
     guint i;
 
+    _nc_xcor_kernel_check_tolerance_balance (xclk);
     ncm_function_sample_set_set_track_residual (fss, self->track_fit_residual);
 
     /* Compute k-seeds for initial sampling. Local to the call, not kernel
