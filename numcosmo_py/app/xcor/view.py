@@ -72,7 +72,7 @@ class XcorMethodOption(str, enum.Enum):
             case XcorMethodOption.GSL:
                 return Nc.XcorMethod.KERNEL_GSL
             case XcorMethodOption.FIXED:
-                return Nc.XcorMethod.KERNEL_FIXED
+                return Nc.XcorMethod.KERNEL_EXACT
         raise ValueError(f"Unknown method: {self}")
 
 

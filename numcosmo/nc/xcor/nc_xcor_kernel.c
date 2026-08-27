@@ -1277,6 +1277,8 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
       nc_xcor_kernel_integrand_set_get_range_comp (integrand, _spline_integrand_get_range_comp);
       nc_xcor_kernel_integrand_set_eval_comps (integrand, _spline_integrand_eval_comps);
 
+      nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, abs_reltol);
+
       return integrand;
     }
   }
@@ -1505,7 +1507,7 @@ nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXco
  * spline-backed.
  *
  * These knots are what makes the outer $k$ integral exactly integrable, and
- * are why %NC_XCOR_METHOD_KERNEL_FIXED needs no tolerance. Each component is a
+ * are why %NC_XCOR_METHOD_KERNEL_EXACT needs no tolerance. Each component is a
  * cubic spline in $k$, so on any interval over which both members of a pair
  * are a single cubic piece, the product $k^2 W_i(k) W_j(k)$ entering $C_\ell$
  * is a polynomial of degree $8$ and a $5$-node Gauss-Legendre rule integrates
@@ -1520,6 +1522,72 @@ nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXco
  *
  * Returns: (transfer none) (nullable): the knot vector, or %NULL.
  */
+
+/**
+ * nc_xcor_kernel_integrand_set_tolerances:
+ * @integrand: a #NcXcorKernelIntegrand
+ * @reltol: the relative half of the fit criterion
+ * @scaled_abstol: its floor, as a fraction of the fitted function's own peak
+ *
+ * Records the criterion @integrand was fitted to, in the two parts it actually
+ * has. ncm_function_sample_set_refine() accepts a point when
+ *
+ * $$ \Vert f - \tilde f \Vert_2 \le \mathrm{reltol} \Vert f \Vert_2 + a \Vert f \Vert_2^\mathrm{max} $$
+ *
+ * so the two govern different regions: the floor is *added*, not maxed, and is
+ * scaled to the peak, which leaves @reltol biting only where the function is
+ * within a few orders of that peak. Keeping them apart matters downstream --
+ * they reach a $C_\ell$ differently, the floor through the product of two
+ * closures. See nc_xcor_compute_full().
+ *
+ * A spline-backed integrand is a fit, not the function, and the quadratures
+ * that consume it have no other way to learn how good a fit.
+ * %NC_XCOR_METHOD_KERNEL_EXACT integrates it *exactly*, so this is the whole of
+ * its error budget.
+ *
+ */
+void
+nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble scaled_abstol)
+{
+  g_return_if_fail (integrand != NULL);
+  g_return_if_fail (reltol >= 0.0);
+  g_return_if_fail (scaled_abstol >= 0.0);
+
+  integrand->reltol        = reltol;
+  integrand->scaled_abstol = scaled_abstol;
+}
+
+/**
+ * nc_xcor_kernel_integrand_get_reltol:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * Returns: the relative half of the fit criterion, or 0.0 when exact or
+ * unknown. See nc_xcor_kernel_integrand_set_tolerances().
+ */
+gdouble
+nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand)
+{
+  g_return_val_if_fail (integrand != NULL, 0.0);
+
+  return integrand->reltol;
+}
+
+/**
+ * nc_xcor_kernel_integrand_get_scaled_abstol:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * Returns: the floor of the fit criterion as a fraction of the fitted
+ * function's own peak, or 0.0 when there was none. See
+ * nc_xcor_kernel_integrand_set_tolerances().
+ */
+gdouble
+nc_xcor_kernel_integrand_get_scaled_abstol (NcXcorKernelIntegrand *integrand)
+{
+  g_return_val_if_fail (integrand != NULL, 0.0);
+
+  return integrand->scaled_abstol;
+}
+
 NcmVector *
 nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand)
 {

@@ -52,7 +52,7 @@
  * Limber approximation is meaningless at the low multipoles that dominate
  * $S_{ij}$, and it makes the cross spectrum of two disjoint bins vanish.
  *
- * The default quadrature is %NC_XCOR_METHOD_KERNEL_FIXED, which needs no
+ * The default quadrature is %NC_XCOR_METHOD_KERNEL_EXACT, which needs no
  * tolerance and cannot fail to converge. The adaptive alternatives target a
  * tolerance the integrand may not support and abort when they cannot reach it,
  * which would kill a Monte Carlo chain mid-flight.
@@ -168,7 +168,7 @@ nc_xcor_ssc_sij_init (NcXcorSSCSij *ssc_sij)
   ssc_sij->mask_cl = NULL;
   ssc_sij->area    = 0.0;
 
-  ssc_sij->method        = NC_XCOR_METHOD_KERNEL_FIXED;
+  ssc_sij->method        = NC_XCOR_METHOD_KERNEL_EXACT;
   ssc_sij->block_size    = NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE;
   ssc_sij->reltol        = NC_XCOR_SSC_SIJ_DEFAULT_RELTOL;
   ssc_sij->scaled_abstol = NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL;
@@ -436,7 +436,7 @@ nc_xcor_ssc_sij_class_init (NcXcorSSCSijClass *klass)
                                                       NULL,
                                                       "Quadrature method used for the angular power spectra",
                                                       NC_TYPE_XCOR_METHOD,
-                                                      NC_XCOR_METHOD_KERNEL_FIXED,
+                                                      NC_XCOR_METHOD_KERNEL_EXACT,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_BLOCK_SIZE,
@@ -814,7 +814,7 @@ nc_xcor_ssc_sij_get_scaled_abstol (NcXcorSSCSij *ssc_sij)
  * @method: a #NcXcorMethod
  *
  * Sets the quadrature method used for the angular power spectra. The default,
- * %NC_XCOR_METHOD_KERNEL_FIXED, needs no tolerance and cannot fail to
+ * %NC_XCOR_METHOD_KERNEL_EXACT, needs no tolerance and cannot fail to
  * converge; the adaptive alternatives abort when they cannot reach their
  * target tolerance, which is fatal inside a Monte Carlo chain.
  *

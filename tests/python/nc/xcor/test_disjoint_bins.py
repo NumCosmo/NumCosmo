@@ -145,7 +145,7 @@ def test_disjoint_bins_cross_matches_solver(cosmology: Cosmology) -> None:
     [
         Nc.XcorMethod.KERNEL_GSL,
         Nc.XcorMethod.KERNEL_CUBATURE,
-        Nc.XcorMethod.KERNEL_FIXED,
+        Nc.XcorMethod.KERNEL_EXACT,
     ],
 )
 def test_kernel_space_limber_disjoint_is_zero(
@@ -195,7 +195,7 @@ def test_kernel_space_limber_disjoint_is_zero(
     [
         Nc.XcorMethod.KERNEL_GSL,
         Nc.XcorMethod.KERNEL_CUBATURE,
-        Nc.XcorMethod.KERNEL_FIXED,
+        Nc.XcorMethod.KERNEL_EXACT,
     ],
 )
 def test_kernel_space_limber_disjoint_splits_at_threshold(

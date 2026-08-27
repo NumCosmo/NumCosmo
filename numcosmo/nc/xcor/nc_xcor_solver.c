@@ -713,8 +713,8 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
 
   /* The two kernel-space block methods share everything except the outer
    * quadrature: same per-kernel closures, same per-block caching. */
-  if (nc_xcor_get_meth (xc) == NC_XCOR_METHOD_KERNEL_FIXED)
-    _nc_xcor_kernel_integrate_block_fixed (xc, xclki1, xclki2 != NULL ? xclki2 : xclki1, block->lmin, block->lmax, isauto, block_vp);
+  if (nc_xcor_get_meth (xc) == NC_XCOR_METHOD_KERNEL_EXACT)
+    _nc_xcor_kernel_integrate_block_exact (xc, xclki1, xclki2 != NULL ? xclki2 : xclki1, block->lmin, block->lmax, isauto, block_vp, NULL);
   else
     _nc_xcor_kernel_integrate_block_cubature (xc, xclki1, xclki2, block->lmin, block->lmax, isauto, block_vp);
 
@@ -739,7 +739,7 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
  * nc_xcor_solver_solve() call.
  *
  * When @xc's method is %NC_XCOR_METHOD_KERNEL_CUBATURE or
- * %NC_XCOR_METHOD_KERNEL_FIXED, each distinct
+ * %NC_XCOR_METHOD_KERNEL_EXACT, each distinct
  * kernel's k-space closure (nc_xcor_kernel_get_eval_vectorized()) is built
  * once per ℓ-block and shared across every request needing it in that
  * block, instead of rebuilding it once per pair the way nc_xcor_compute()
@@ -796,7 +796,7 @@ nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo)
   }
 
   if ((nc_xcor_get_meth (xc) != NC_XCOR_METHOD_KERNEL_CUBATURE) &&
-      (nc_xcor_get_meth (xc) != NC_XCOR_METHOD_KERNEL_FIXED))
+      (nc_xcor_get_meth (xc) != NC_XCOR_METHOD_KERNEL_EXACT))
   {
     for (r = 0; r < n_requests; r++)
     {
