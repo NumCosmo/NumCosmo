@@ -59,6 +59,7 @@
 #include "nc/background/nc_distance.h"
 #include "nc/xcor/nc_xcor_kernel.h"
 #include "ncm/algebra/ncm_spectral.h"
+#include "ncm/core/ncm_memory_pool.h"
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor.h"
 #include "nc_enum_types.h"
@@ -82,7 +83,6 @@ typedef struct _NcXcorKernelPrivate
   guint max_iter;
   gdouble expansion_factor;
   NcXcorKernelClosure closure_type;
-  NcmSpectral *spectral;
   gboolean track_fit_residual;
   gboolean tolerance_balance_warned;
   gboolean constructed;
@@ -131,7 +131,6 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
   self->max_iter                 = 0;
   self->expansion_factor         = 0.0;
   self->closure_type             = NC_XCOR_KERNEL_CLOSURE_SPLINE;
-  self->spectral                 = NULL;
   self->track_fit_residual       = FALSE;
   self->tolerance_balance_warned = FALSE;
   self->constructed              = FALSE;
@@ -143,7 +142,6 @@ _nc_xcor_kernel_dispose (GObject *object)
   NcXcorKernel *xclk        = NC_XCOR_KERNEL (object);
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  ncm_spectral_clear (&self->spectral);
   nc_distance_clear (&self->dist);
   ncm_powspec_clear (&self->ps);
   ncm_sbessel_integrator_clear (&self->sbi);
@@ -696,6 +694,44 @@ _spline_integrand_data_free (gpointer data)
  * same per-component ranges, same sampled function -- and differs only in
  * carrying coefficients instead of a spline.
  */
+static gpointer
+_nc_xcor_spectral_alloc (gpointer userdata)
+{
+  return ncm_spectral_new ();
+}
+
+static void
+_nc_xcor_spectral_free (gpointer p)
+{
+  ncm_spectral_free (NCM_SPECTRAL (p));
+}
+
+/*
+ * A borrowed NcmSpectral. It carries sampling buffers, coefficient scratch and
+ * cached FFTW plans, none of which can be shared: one kernel is evaluated
+ * concurrently for different ell blocks, and one closure is restricted
+ * concurrently for different pairs. Pooled rather than created per call so the
+ * plans stay warm -- planning dominates a cold expansion.
+ *
+ * Return it with ncm_memory_pool_return().
+ */
+static NcmSpectral **
+_nc_xcor_spectral_get (void)
+{
+  G_LOCK_DEFINE_STATIC (create_lock);
+
+  static NcmMemoryPool *mp = NULL;
+
+  G_LOCK (create_lock);
+
+  if (mp == NULL)
+    mp = ncm_memory_pool_new (_nc_xcor_spectral_alloc, NULL, _nc_xcor_spectral_free);
+
+  G_UNLOCK (create_lock);
+
+  return (NcmSpectral **) ncm_memory_pool_get (mp);
+}
+
 typedef struct _ChebPanel
 {
   gdouble a;
@@ -706,7 +742,6 @@ typedef struct _ChebPanel
 
 typedef struct _ChebIntegrandData
 {
-  NcmSpectral *spectral; /* for rebasing a panel onto a subinterval */
   NcHICosmo *cosmo;
   gdouble RH_Mpc;
   gint lmin;
@@ -867,12 +902,14 @@ _cheb_integrand_restrict (gpointer data, gdouble a, gdouble b, NcmMatrix **coeff
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
   const ChebPanel *panel = _cheb_integrand_find_panel (cid, 0.5 * (a + b));
   GArray *row            = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), panel->N);
+  NcmSpectral **spectral = _nc_xcor_spectral_get ();
   GArray *out            = NULL;
   guint c, i;
 
   if ((a < panel->a) || (b > panel->b))
   {
     g_array_unref (row);
+    ncm_memory_pool_return (spectral);
 
     return FALSE;
   }
@@ -887,7 +924,7 @@ _cheb_integrand_restrict (gpointer data, gdouble a, gdouble b, NcmMatrix **coeff
     for (i = 0; i < panel->N; i++)
       g_array_index (row, gdouble, i) = ncm_matrix_get (panel->coeffs, c, i);
 
-    ncm_spectral_chebyshev_rebase (cid->spectral, row, panel->N,
+    ncm_spectral_chebyshev_rebase (*spectral, row, panel->N,
                                    panel->a, panel->b, a, b, &out);
 
     for (i = 0; i < panel->N; i++)
@@ -896,6 +933,7 @@ _cheb_integrand_restrict (gpointer data, gdouble a, gdouble b, NcmMatrix **coeff
 
   g_array_unref (row);
   g_clear_pointer (&out, g_array_unref);
+  ncm_memory_pool_return (spectral);
 
   return TRUE;
 }
@@ -907,7 +945,6 @@ _cheb_integrand_data_free (gpointer data)
   guint i;
 
   nc_hicosmo_clear (&cid->cosmo);
-  ncm_spectral_clear (&cid->spectral);
 
   for (i = 0; i < cid->panels->len; i++)
     ncm_matrix_clear (&g_array_index (cid->panels, ChebPanel, i).coeffs);
@@ -1665,15 +1702,18 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
 
     ncm_function_sample_set_clear (&fss);
 
-    if (self->spectral == NULL)
-      self->spectral = ncm_spectral_new ();
-
     cid->panels = g_array_new (FALSE, FALSE, sizeof (ChebPanel));
     cid->edges  = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
-    _nc_xcor_kernel_cheb_split (self->spectral, &sampler, n_l,
-                                cid->k_min, cid->k_max, reltol, abstol,
-                                cid->panels);
+    {
+      NcmSpectral **spectral = _nc_xcor_spectral_get ();
+
+      _nc_xcor_kernel_cheb_split (*spectral, &sampler, n_l,
+                                  cid->k_min, cid->k_max, reltol, abstol,
+                                  cid->panels);
+
+      ncm_memory_pool_return (spectral);
+    }
 
     {
       const gdouble first = g_array_index (cid->panels, ChebPanel, 0).a;
@@ -1715,11 +1755,10 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
       cid->k_max_comp[i] = k_max_i;
     }
 
-    cid->lmin     = lmin;
-    cid->len      = n_l;
-    cid->RH_Mpc   = nc_hicosmo_RH_Mpc (cosmo);
-    cid->cosmo    = nc_hicosmo_ref (cosmo);
-    cid->spectral = ncm_spectral_ref (self->spectral);
+    cid->lmin   = lmin;
+    cid->len    = n_l;
+    cid->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
+    cid->cosmo  = nc_hicosmo_ref (cosmo);
 
     {
       NcXcorKernelIntegrand *integrand = nc_xcor_kernel_integrand_new (n_l,
