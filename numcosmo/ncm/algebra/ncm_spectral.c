@@ -629,9 +629,15 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, Ncm
 
     /* Copied out rather than handed back as a submatrix: a submatrix would
      * keep the whole max-order buffer alive behind a result that is usually a
-     * small fraction of it. */
-    ncm_matrix_clear (coeffs);
-    *coeffs = ncm_matrix_new (n_comp, N);
+     * small fraction of it. A matrix already of the right shape is reused, as
+     * the scalar path reuses its array -- Python always passes NULL here and so
+     * always gets a fresh one. */
+    if ((*coeffs != NULL) &&
+        ((ncm_matrix_nrows (*coeffs) != n_comp) || (ncm_matrix_ncols (*coeffs) != N)))
+      ncm_matrix_clear (coeffs);
+
+    if (*coeffs == NULL)
+      *coeffs = ncm_matrix_new (n_comp, N);
 
     for (c = 0; c < n_comp; c++)
       for (i = 0; i < N; i++)
