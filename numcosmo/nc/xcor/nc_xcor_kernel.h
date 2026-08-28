@@ -142,6 +142,19 @@ typedef guint (*NcXcorKernelIntegrandGetPanels) (gpointer data);
 typedef void (*NcXcorKernelIntegrandPeekPanel) (gpointer data, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b);
 
 /**
+ * NcXcorKernelIntegrandRestrict:
+ * @data: user data
+ * @a: lower edge of the target interval
+ * @b: upper edge of the target interval
+ * @coeffs: (out) (transfer full): coefficients on [@a, @b]
+ *
+ * Function type producing coefficients on a subinterval of one panel.
+ *
+ * Returns: %TRUE on success
+ */
+typedef gboolean (*NcXcorKernelIntegrandRestrict) (gpointer data, gdouble a, gdouble b, NcmMatrix **coeffs);
+
+/**
  * NcXcorKernelIntegrandEval:
  * @data: user data
  * @k: wavenumber
@@ -254,6 +267,7 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandGetSpectral get_spectral_func;
   NcXcorKernelIntegrandGetPanels get_panels_func;
   NcXcorKernelIntegrandPeekPanel peek_panel_func;
+  NcXcorKernelIntegrandRestrict restrict_func;
   NcmMatrix *residuals;
   gdouble reltol;
   gdouble scaled_abstol;
@@ -382,6 +396,8 @@ gboolean nc_xcor_kernel_integrand_peek_spectral (NcXcorKernelIntegrand *integran
 void nc_xcor_kernel_integrand_set_panel_accessors (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetPanels get_panels, NcXcorKernelIntegrandPeekPanel peek_panel);
 guint nc_xcor_kernel_integrand_get_n_panels (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_peek_panel (NcXcorKernelIntegrand *integrand, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b);
+void nc_xcor_kernel_integrand_set_restrict (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandRestrict restrict_func);
+gboolean nc_xcor_kernel_integrand_restrict (NcXcorKernelIntegrand *integrand, gdouble a, gdouble b, NcmMatrix **coeffs);
 void nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble scaled_abstol);
 gdouble nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand);
 gdouble nc_xcor_kernel_integrand_get_scaled_abstol (NcXcorKernelIntegrand *integrand);

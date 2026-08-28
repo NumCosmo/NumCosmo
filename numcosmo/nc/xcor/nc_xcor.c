@@ -1123,6 +1123,205 @@ _nc_xcor_merge_knots (NcmVector *knots1, NcmVector *knots2, gdouble k_min, gdoub
  * reach. Here the knots *are* the panel edges, so the kinks fall between
  * panels and never enter a rule's smoothness assumption.
  */
+static gint
+_nc_xcor_cmp_edge (gconstpointer a, gconstpointer b)
+{
+  const gdouble x = *(const gdouble *) a;
+  const gdouble y = *(const gdouble *) b;
+
+  return (x < y) ? -1 : ((x > y) ? 1 : 0);
+}
+
+/*
+ * Merges two panel edge sets over [k_min, k_max]. The result is the common
+ * refinement, on each cell of which both closures are a single polynomial --
+ * the same argument the merged knot sets make for splines, one level up.
+ */
+static GArray *
+_nc_xcor_merge_panel_edges (NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2,
+                            gboolean isauto, gdouble k_min, gdouble k_max)
+{
+  GArray *edges  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  const guint n1 = nc_xcor_kernel_integrand_get_n_panels (xclki1);
+  const guint n2 = isauto ? 0 : nc_xcor_kernel_integrand_get_n_panels (xclki2);
+  guint i;
+
+  g_array_append_val (edges, k_min);
+
+  for (i = 0; i < n1 + n2; i++)
+  {
+    NcmMatrix *ignored = NULL;
+    gdouble a, b, edge;
+
+    if (i < n1)
+      nc_xcor_kernel_integrand_peek_panel (xclki1, i, &ignored, &a, &b);
+    else
+      nc_xcor_kernel_integrand_peek_panel (xclki2, i - n1, &ignored, &a, &b);
+
+    edge = b;
+
+    if ((edge > k_min) && (edge < k_max))
+      g_array_append_val (edges, edge);
+  }
+
+  g_array_sort (edges, _nc_xcor_cmp_edge);
+  g_array_append_val (edges, k_max);
+
+  /* Drop duplicates: two closures often break at the same place. */
+  {
+    guint w = 1;
+
+    for (i = 1; i < edges->len; i++)
+      if (g_array_index (edges, gdouble, i) > g_array_index (edges, gdouble, w - 1))
+        g_array_index (edges, gdouble, w++) = g_array_index (edges, gdouble, i);
+
+    g_array_set_size (edges, w);
+  }
+
+  return edges;
+}
+
+/*
+ * INT_{-1}^{1} T_i T_j dt, from T_i T_j = (T_{i+j} + T_{|i-j|}) / 2 and
+ * INT T_n dt = 2 / (1 - n^2) for even n, zero for odd.
+ */
+static inline gdouble
+_nc_xcor_cheb_TT_integral (const guint i, const guint j)
+{
+  const guint sum  = i + j;
+  const guint diff = (i > j) ? i - j : j - i;
+
+  if (sum % 2 != 0)
+    return 0.0;
+
+  return 1.0 / (1.0 - (gdouble) (sum * sum)) + 1.0 / (1.0 - (gdouble) (diff * diff));
+}
+
+/*
+ * Exact outer integral for a pair of spectral closures.
+ *
+ * On each cell of the common refinement of the two panel edge sets both
+ * closures are a single polynomial over the same interval, so k^2 W_i W_j is a
+ * polynomial there and its integral is a fixed bilinear form in the two
+ * coefficient sets -- no nodes, no adaptivity, no tolerance. The k^2 weight is
+ * itself degree two in the cell's own variable and is folded into one side.
+ *
+ * This is what a Chebyshev closure buys over feeding it to an adaptive rule:
+ * the quadrature stops rediscovering per pair what the closure already knows.
+ */
+static void
+_nc_xcor_kernel_integrate_block_spectral (NcXcor *xc, NcXcorKernelIntegrand *xclki1,
+                                          NcXcorKernelIntegrand *xclki2, guint lmin,
+                                          guint lmax, gboolean isauto, NcmVector *vp)
+{
+  const guint nell           = lmax - lmin + 1;
+  const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
+  gdouble k_min1, k_max1, k_min2, k_max2, k_min, k_max;
+  GArray *edges;
+  gdouble *sum;
+  guint ie, il;
+
+  nc_xcor_kernel_integrand_get_range (xclki1, &k_min1, &k_max1);
+  nc_xcor_kernel_integrand_get_range (isauto ? xclki1 : xclki2, &k_min2, &k_max2);
+
+  k_min = GSL_MAX (k_min1, k_min2);
+  k_max = GSL_MIN (k_max1, k_max2);
+
+  ncm_vector_set_zero (vp);
+
+  if (k_min >= k_max)
+    return;
+
+  edges = _nc_xcor_merge_panel_edges (xclki1, xclki2, isauto, k_min, k_max);
+  sum   = g_new0 (gdouble, nell);
+
+  for (ie = 0; ie + 1 < edges->len; ie++)
+  {
+    const gdouble a    = g_array_index (edges, gdouble, ie);
+    const gdouble b    = g_array_index (edges, gdouble, ie + 1);
+    const gdouble mid  = 0.5 * (a + b);
+    const gdouble half = 0.5 * (b - a);
+    NcmMatrix *c1      = NULL;
+    NcmMatrix *c2      = NULL;
+
+    if (!nc_xcor_kernel_integrand_restrict (xclki1, a, b, &c1))
+      continue;
+
+    if (isauto)
+    {
+      c2 = ncm_matrix_ref (c1);
+    }
+    else if (!nc_xcor_kernel_integrand_restrict (xclki2, a, b, &c2))
+    {
+      ncm_matrix_clear (&c1);
+      continue;
+    }
+
+    {
+      /* k^2 in the cell's variable: k = mid + half t. */
+      const gdouble w0 = mid * mid + 0.5 * half * half;
+      const gdouble w1 = 2.0 * mid * half;
+      const gdouble w2 = 0.5 * half * half;
+      const guint n1   = ncm_matrix_ncols (c1);
+      const guint n2   = ncm_matrix_ncols (c2);
+      gdouble *folded  = g_new0 (gdouble, n2 + 2);
+
+      for (il = 0; il < nell; il++)
+      {
+        guint i, j;
+
+        /* Fold k^2 into the second factor, once per multipole. */
+        for (j = 0; j < n2 + 2; j++)
+          folded[j] = 0.0;
+
+        for (j = 0; j < n2; j++)
+        {
+          const gdouble bj = ncm_matrix_get (c2, il, j);
+
+          folded[j]     += w0 * bj;
+          folded[j + 1] += 0.5 * w1 * bj;
+          folded[j + 2] += 0.5 * w2 * bj;
+
+          if (j >= 1)
+            folded[j - 1] += 0.5 * w1 * bj;
+          else
+            folded[1] += 0.5 * w1 * bj;
+
+          if (j >= 2)
+            folded[j - 2] += 0.5 * w2 * bj;
+          else
+            folded[2 - j] += 0.5 * w2 * bj;
+        }
+
+        for (i = 0; i < n1; i++)
+        {
+          const gdouble ai = ncm_matrix_get (c1, il, i);
+          gdouble acc      = 0.0;
+
+          if (ai == 0.0)
+            continue;
+
+          for (j = 0; j < n2 + 2; j++)
+            acc += folded[j] * _nc_xcor_cheb_TT_integral (i, j);
+
+          sum[il] += half * ai * acc;
+        }
+      }
+
+      g_free (folded);
+    }
+
+    ncm_matrix_clear (&c1);
+    ncm_matrix_clear (&c2);
+  }
+
+  for (il = 0; il < nell; il++)
+    ncm_vector_set (vp, il, const_factor * sum[il]);
+
+  g_free (sum);
+  g_array_unref (edges);
+}
+
 void
 _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err)
 {
@@ -1342,7 +1541,23 @@ _nc_xcor_kernel_exact (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcH
     xclki1 = nc_xcor_kernel_get_eval_vectorized_full (xclk1, cosmo, block_lmin, block_lmax, sbi1);
     xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized_full (xclk2, cosmo, block_lmin, block_lmax, sbi2);
 
-    _nc_xcor_kernel_integrate_block_exact (xc, xclki1, isauto ? xclki1 : xclki2, block_lmin, block_lmax, isauto, vp_i, vp_err_i);
+    /* A spectral pair is integrated on the common refinement of its panels,
+     * where the product is a polynomial and the integral is exact in closed
+     * form. Splines take the merged-knot GL(5) route below. Either way the
+     * method integrates the closures it is given exactly. */
+    if ((nc_xcor_kernel_integrand_get_n_panels (xclki1) > 0) &&
+        (nc_xcor_kernel_integrand_get_n_panels (isauto ? xclki1 : xclki2) > 0))
+    {
+      _nc_xcor_kernel_integrate_block_spectral (xc, xclki1, isauto ? xclki1 : xclki2,
+                                                block_lmin, block_lmax, isauto, vp_i);
+
+      if (vp_err_i != NULL)
+        ncm_vector_set_all (vp_err_i, GSL_NAN);
+    }
+    else
+    {
+      _nc_xcor_kernel_integrate_block_exact (xc, xclki1, isauto ? xclki1 : xclki2, block_lmin, block_lmax, isauto, vp_i, vp_err_i);
+    }
 
     nc_xcor_kernel_integrand_unref (xclki1);
 
