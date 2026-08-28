@@ -1339,6 +1339,25 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
   GArray *edges;
   guint il;
 
+  /* Chosen here rather than by the callers: NcXcorSolver and
+   * _nc_xcor_kernel_space_compute() both enter through this function, and a
+   * choice made in one of them is a choice the other silently misses. A
+   * spectral pair goes to the common refinement of its panels, where the
+   * product is a polynomial and the integral is exact in closed form; splines
+   * take the merged-knot GL(5) sweep below. Either way the method integrates
+   * the closures it is handed exactly. */
+  if ((nc_xcor_kernel_integrand_get_n_panels (xclki1) > 0) &&
+      (nc_xcor_kernel_integrand_get_n_panels (isauto ? xclki1 : xclki2) > 0))
+  {
+    _nc_xcor_kernel_integrate_block_spectral (xc, xclki1, isauto ? xclki1 : xclki2,
+                                              lmin, lmax, isauto, vp);
+
+    if (vp_err != NULL)
+      ncm_vector_set_all (vp_err, GSL_NAN);
+
+    return;
+  }
+
   if (ncm_vector_len (vp) != nell)
     g_error ("_nc_xcor_kernel_integrate_block_exact: vector size does not match multipole limits");
 
@@ -1541,23 +1560,7 @@ _nc_xcor_kernel_exact (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcH
     xclki1 = nc_xcor_kernel_get_eval_vectorized_full (xclk1, cosmo, block_lmin, block_lmax, sbi1);
     xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized_full (xclk2, cosmo, block_lmin, block_lmax, sbi2);
 
-    /* A spectral pair is integrated on the common refinement of its panels,
-     * where the product is a polynomial and the integral is exact in closed
-     * form. Splines take the merged-knot GL(5) route below. Either way the
-     * method integrates the closures it is given exactly. */
-    if ((nc_xcor_kernel_integrand_get_n_panels (xclki1) > 0) &&
-        (nc_xcor_kernel_integrand_get_n_panels (isauto ? xclki1 : xclki2) > 0))
-    {
-      _nc_xcor_kernel_integrate_block_spectral (xc, xclki1, isauto ? xclki1 : xclki2,
-                                                block_lmin, block_lmax, isauto, vp_i);
-
-      if (vp_err_i != NULL)
-        ncm_vector_set_all (vp_err_i, GSL_NAN);
-    }
-    else
-    {
-      _nc_xcor_kernel_integrate_block_exact (xc, xclki1, isauto ? xclki1 : xclki2, block_lmin, block_lmax, isauto, vp_i, vp_err_i);
-    }
+    _nc_xcor_kernel_integrate_block_exact (xc, xclki1, isauto ? xclki1 : xclki2, block_lmin, block_lmax, isauto, vp_i, vp_err_i);
 
     nc_xcor_kernel_integrand_unref (xclki1);
 
