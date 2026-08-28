@@ -706,6 +706,7 @@ typedef struct _ChebPanel
 
 typedef struct _ChebIntegrandData
 {
+  NcmSpectral *spectral; /* for rebasing a panel onto a subinterval */
   NcHICosmo *cosmo;
   gdouble RH_Mpc;
   gint lmin;
@@ -853,6 +854,52 @@ _cheb_integrand_peek_panel (gpointer data, guint i, NcmMatrix **coeffs, gdouble 
   *b      = panel->b;
 }
 
+/*
+ * Coefficients on [a, b], which must lie inside one panel. A polynomial
+ * restricted to a subinterval is still a polynomial of the same degree, so this
+ * is an exact change of basis and not a refit -- and at panel orders it costs
+ * O(N^2) with N <= 129, against N radial solves to sample the subinterval
+ * afresh.
+ */
+static gboolean
+_cheb_integrand_restrict (gpointer data, gdouble a, gdouble b, NcmMatrix **coeffs)
+{
+  ChebIntegrandData *cid = (ChebIntegrandData *) data;
+  const ChebPanel *panel = _cheb_integrand_find_panel (cid, 0.5 * (a + b));
+  GArray *row            = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), panel->N);
+  GArray *out            = NULL;
+  guint c, i;
+
+  if ((a < panel->a) || (b > panel->b))
+  {
+    g_array_unref (row);
+
+    return FALSE;
+  }
+
+  ncm_matrix_clear (coeffs);
+  *coeffs = ncm_matrix_new (cid->len, panel->N);
+
+  g_array_set_size (row, panel->N);
+
+  for (c = 0; c < cid->len; c++)
+  {
+    for (i = 0; i < panel->N; i++)
+      g_array_index (row, gdouble, i) = ncm_matrix_get (panel->coeffs, c, i);
+
+    ncm_spectral_chebyshev_rebase (cid->spectral, row, panel->N,
+                                   panel->a, panel->b, a, b, &out);
+
+    for (i = 0; i < panel->N; i++)
+      ncm_matrix_set (*coeffs, c, i, g_array_index (out, gdouble, i));
+  }
+
+  g_array_unref (row);
+  g_clear_pointer (&out, g_array_unref);
+
+  return TRUE;
+}
+
 static void
 _cheb_integrand_data_free (gpointer data)
 {
@@ -860,6 +907,7 @@ _cheb_integrand_data_free (gpointer data)
   guint i;
 
   nc_hicosmo_clear (&cid->cosmo);
+  ncm_spectral_clear (&cid->spectral);
 
   for (i = 0; i < cid->panels->len; i++)
     ncm_matrix_clear (&g_array_index (cid->panels, ChebPanel, i).coeffs);
@@ -1667,10 +1715,11 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
       cid->k_max_comp[i] = k_max_i;
     }
 
-    cid->lmin   = lmin;
-    cid->len    = n_l;
-    cid->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-    cid->cosmo  = nc_hicosmo_ref (cosmo);
+    cid->lmin     = lmin;
+    cid->len      = n_l;
+    cid->RH_Mpc   = nc_hicosmo_RH_Mpc (cosmo);
+    cid->cosmo    = nc_hicosmo_ref (cosmo);
+    cid->spectral = ncm_spectral_ref (self->spectral);
 
     {
       NcXcorKernelIntegrand *integrand = nc_xcor_kernel_integrand_new (n_l,
@@ -1685,6 +1734,7 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
       nc_xcor_kernel_integrand_set_panel_accessors (integrand,
                                                     _cheb_integrand_get_panels,
                                                     _cheb_integrand_peek_panel);
+      nc_xcor_kernel_integrand_set_restrict (integrand, _cheb_integrand_restrict);
       nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, abs_reltol);
 
       return integrand;
@@ -2001,6 +2051,7 @@ nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdoubl
   integrand->get_spectral_func   = NULL;
   integrand->get_panels_func     = NULL;
   integrand->peek_panel_func     = NULL;
+  integrand->restrict_func       = NULL;
 
   integrand->residuals     = NULL;
   integrand->reltol        = 0.0;
@@ -2082,6 +2133,47 @@ nc_xcor_kernel_integrand_set_panel_accessors (NcXcorKernelIntegrand *integrand, 
 {
   integrand->get_panels_func = get_panels;
   integrand->peek_panel_func = peek_panel;
+}
+
+/**
+ * nc_xcor_kernel_integrand_set_restrict: (skip)
+ * @integrand: a #NcXcorKernelIntegrand
+ * @restrict_func: (scope async): function restricting a panel to a subinterval
+ *
+ * Installs the accessor producing coefficients on a subinterval of a panel.
+ *
+ */
+void
+nc_xcor_kernel_integrand_set_restrict (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandRestrict restrict_func)
+{
+  integrand->restrict_func = restrict_func;
+}
+
+/**
+ * nc_xcor_kernel_integrand_restrict:
+ * @integrand: a #NcXcorKernelIntegrand
+ * @a: lower edge of the target interval
+ * @b: upper edge of the target interval
+ * @coeffs: (out) (transfer full): coefficients on [@a, @b], one row per component
+ *
+ * Produces @integrand's coefficients on [@a, @b], which has to lie inside a
+ * single panel.
+ *
+ * This is what lets a pair of spectral closures be integrated on the common
+ * refinement of their panel edges: on each merged panel both are polynomials
+ * over the same interval, so the product is exact and needs no quadrature.
+ * Restricting is a change of basis rather than a refit, so it costs arithmetic
+ * at panel order rather than fresh radial solves.
+ *
+ * Returns: %TRUE when @integrand could produce them
+ */
+gboolean
+nc_xcor_kernel_integrand_restrict (NcXcorKernelIntegrand *integrand, gdouble a, gdouble b, NcmMatrix **coeffs)
+{
+  if (integrand->restrict_func == NULL)
+    return FALSE;
+
+  return integrand->restrict_func (integrand->data, a, b, coeffs);
 }
 
 /**
