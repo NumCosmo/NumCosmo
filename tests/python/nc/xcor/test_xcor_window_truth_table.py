@@ -206,3 +206,81 @@ def test_radial_integral_matches_arb(
             atol=ATOL_FRAC * peak,
             err_msg=f"{shape} at ell = {ell}",
         )
+
+
+# Worst deviation measured per shape, closure at reltol = scaled-abstol = 1e-6,
+# with roughly a factor of three of headroom. The spread is the result, not an
+# inconvenience: a Chebyshev closure is within 1e-8 of certified values on the
+# windows with hard edges or heavy tails, and only ~1e-4 on a plain Gaussian,
+# where the sampling rather than the fit is what limits it.
+CLOSURE_TOL = {
+    "gauss": 4.0e-4,
+    "tophat": 5.0e-8,
+    "student_t": 3.0e-7,
+    "power_exp": 2.0e-7,
+    "lensing": 7.0e-6,
+    "multi": 4.0e-4,
+}
+
+
+@pytest.mark.parametrize("shape", sorted(CLOSURE_TOL))
+def test_chebyshev_closure_matches_arb(
+    shape: str, truth_table: dict, cosmo_bits: tuple
+) -> None:
+    """The closure itself against Arb, not just the radial integral under it.
+
+    A closure holds C * sqrt(P(k)) * I_ell(k) for a constant C, so dividing the
+    certified I_ell and sqrt(P) out has to leave a constant. How far that ratio
+    wanders across k is the closure's own fitting error, measured against values
+    with proven radii rather than against another of NumCosmo's paths.
+
+    ``tophat_smooth`` is absent because building a non-Limber closure for it
+    aborts inside the Levin integrator's spectral expansion, at every tolerance
+    and for either closure type. That predates the Chebyshev representation.
+    """
+    cosmo, dist, ps = cosmo_bits
+    entry = truth_table["shapes"][shape]
+    RH = Nc.HICosmo.RH_Mpc(cosmo)
+
+    worst = 0.0
+    compared = 0
+
+    for index, ell in enumerate(truth_table["ells"]):
+        kernel = _make_kernel(
+            shape, dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
+        )
+        kernel.set_l_limber(-1)
+        kernel.set_property("closure-type", Nc.XcorKernelClosure.CHEBYSHEV)
+        kernel.set_property("reltol", 1.0e-6)
+        kernel.set_property("scaled-abstol", 1.0e-6)
+        kernel.prepare(cosmo)
+
+        integrand = kernel.get_eval_vectorized_full(
+            cosmo, ell, ell, Ncm.SBesselIntegratorLevin.new(ell, ell)
+        )
+        k_min, k_max = integrand.get_range()
+
+        expected = np.array([float(value) for value in entry["table"][index]])
+        peak = np.abs(expected).max()
+
+        ratios = [
+            integrand.eval_array(k * RH)[0] / (value * np.sqrt(ps.eval(cosmo, 0.0, k)))
+            for k, value in zip(entry["kvals"][index], expected)
+            # Outside the fitted domain the closure extrapolates, and where
+            # I_ell is a thousandth of its peak the ratio is dominated by the
+            # certified value's own smallness rather than by the fit.
+            if k_min < k * RH < k_max and abs(value) > 1.0e-3 * peak
+        ]
+
+        if len(ratios) < 3:
+            continue
+
+        ratios = np.array(ratios)
+        worst = max(worst, np.abs(ratios / np.median(ratios) - 1.0).max())
+        compared += len(ratios)
+
+    assert compared > 0, f"{shape} shared no k with the closure's fitted range"
+    assert worst < CLOSURE_TOL[shape], (
+        f"{shape}: closure wanders by {worst:.3e} against Arb over "
+        f"{compared} points, above the measured {CLOSURE_TOL[shape]:.1e}"
+    )
