@@ -754,3 +754,79 @@ def test_limber_multipoles_keep_the_spline_closure(cosmology: Cosmology) -> None
     lo, hi = spline.get_range()
     for k in np.geomspace(lo * 1.001, hi * 0.999, 32):
         assert_allclose(cheb.eval_array(k), spline.eval_array(k), rtol=1.0e-14)
+
+
+def test_spectral_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
+    """KERNEL_EXACT integrates Chebyshev closures on their merged panel edges.
+
+    Two closures on the common refinement of their panels are each a single
+    polynomial per cell, so the outer integral is a bilinear form in the
+    coefficients rather than a quadrature. That is a second, independent route
+    to the same C_ell as feeding the same closures to an adaptive rule, which
+    is what makes the agreement below worth asserting: different arithmetic,
+    same answer.
+    """
+    cosmo = cosmology.cosmo
+    lmin, lmax = 2, 9
+    nell = lmax - lmin + 1
+
+    def kernels(closure_type, tol=1.0e-4):
+        out = []
+        for z_lower, z_upper in Z_BINS[:2]:
+            kernel = Nc.XcorKernelClusterTophat(
+                dist=cosmology.dist,
+                powspec=cosmology.ps_ml,
+                z_lower=z_lower,
+                z_upper=z_upper,
+                integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+                reltol=tol,
+                scaled_abstol=tol,
+                closure_type=closure_type,
+            )
+            kernel.set_l_limber(-1)
+            kernel.prepare(cosmo)
+            out.append(kernel)
+        return out
+
+    def compute(method, ks, auto):
+        xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, method)
+        xcor.prepare(cosmo)
+        vp = Ncm.Vector.new(nell)
+        xcor.compute(ks[0], None if auto else ks[1], cosmo, lmin, lmax, vp)
+        return np.array(vp.dup_array())
+
+    cheb = kernels(Nc.XcorKernelClosure.CHEBYSHEV)
+    spline = kernels(Nc.XcorKernelClosure.SPLINE)
+    reference = kernels(Nc.XcorKernelClosure.SPLINE, 1.0e-6)
+
+    for auto in (True, False):
+        exact = compute(Nc.XcorMethod.KERNEL_EXACT, cheb, auto)
+        cubature = compute(Nc.XcorMethod.KERNEL_CUBATURE, cheb, auto)
+
+        assert np.all(np.isfinite(exact))
+
+        # Same closures, unrelated arithmetic: a coefficient-space bilinear
+        # form against an adaptive rule in k. The agreement is limited by
+        # cubature, not by the exact route -- NcXcor:reltol is 1e-6, and the
+        # worst multipole here lands at 1.1e-6, on the smallest and most
+        # strongly cancelling C_ell of the block.
+        assert_allclose(exact, cubature, rtol=1.0e-5)
+
+        # And it is the closer of the two to a spline closure built two orders
+        # tighter. Comparing against the spline at *this* tolerance would be
+        # comparing against the less accurate answer: on a cancelling cross
+        # spectrum the spline at 1e-4 is 8% out by l = 9, which is the error
+        # this representation exists to remove.
+        truth = compute(Nc.XcorMethod.KERNEL_EXACT, reference, auto)
+        err_exact = np.abs(exact / truth - 1.0)
+        err_spline = np.abs(
+            compute(Nc.XcorMethod.KERNEL_EXACT, spline, auto) / truth - 1.0
+        )
+
+        # Measured against a spline closure at 1e-8: at this tolerance the
+        # Chebyshev route is 11x closer on the auto spectrum and 3.6x on the
+        # cross, and at 1e-6 it is 5400x and 15x. No absolute bound is asserted
+        # on the cross -- at 1e-4 the cancellation dominates for both routes,
+        # putting them at 3.5e-2 and 1.3e-1 respectively, so a threshold there
+        # would be testing the tolerance rather than the representation.
+        assert err_exact.max() < err_spline.max()
