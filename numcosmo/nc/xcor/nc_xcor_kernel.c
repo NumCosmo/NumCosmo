@@ -1590,7 +1590,7 @@ _cheb_sampler_call (gpointer user_data, gdouble k, NcmVector *y)
  * once and cost almost nothing, and the resolution concentrates where the
  * oscillation is.
  */
-#define NC_XCOR_KERNEL_CHEB_PANEL_K_CAP (7)
+#define NC_XCOR_KERNEL_CHEB_PANEL_K_CAP (5)
 #define NC_XCOR_KERNEL_CHEB_MIN_PANEL_FRAC (1.0e-6)
 
 /*
