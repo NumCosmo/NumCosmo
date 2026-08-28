@@ -22272,6 +22272,8 @@ class XcorKernel(NumCosmoMath.Model):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22310,6 +22312,7 @@ class XcorKernel(NumCosmoMath.Model):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -22336,6 +22339,7 @@ class XcorKernel(NumCosmoMath.Model):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -22387,6 +22391,7 @@ class XcorKernel(NumCosmoMath.Model):
     def get_max_iter(self) -> int: ...
     def get_reltol(self) -> float: ...
     def get_scaled_abstol(self) -> float: ...
+    def get_track_fit_residual(self) -> bool: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
     @staticmethod
     def id() -> int: ...
@@ -22408,6 +22413,7 @@ class XcorKernel(NumCosmoMath.Model):
     def set_max_iter(self, max_iter: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_scaled_abstol(self, scaled_abstol: float) -> None: ...
+    def set_track_fit_residual(self, track_fit_residual: bool) -> None: ...
 
 class XcorKernelAnalytic(XcorKernel):
     r"""
@@ -22448,6 +22454,8 @@ class XcorKernelAnalytic(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22487,6 +22495,7 @@ class XcorKernelAnalytic(XcorKernel):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -22514,6 +22523,7 @@ class XcorKernelAnalytic(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -22594,6 +22604,8 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22636,6 +22648,7 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -22665,6 +22678,7 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -22838,6 +22852,8 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22880,6 +22896,7 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -22909,6 +22926,7 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -22997,6 +23015,8 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23040,6 +23060,7 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23070,6 +23091,7 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23165,6 +23187,8 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23209,6 +23233,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23240,6 +23265,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23333,6 +23359,8 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23376,6 +23404,7 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23406,6 +23435,7 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23495,6 +23525,8 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23536,6 +23568,7 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23564,6 +23597,7 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23650,6 +23684,8 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23693,6 +23729,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23723,6 +23760,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23805,6 +23843,8 @@ class XcorKernelCMBISW(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23845,6 +23885,7 @@ class XcorKernelCMBISW(XcorKernel):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23872,6 +23913,7 @@ class XcorKernelCMBISW(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23943,6 +23985,8 @@ class XcorKernelCMBLensing(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23983,6 +24027,7 @@ class XcorKernelCMBLensing(XcorKernel):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24010,6 +24055,7 @@ class XcorKernelCMBLensing(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24092,6 +24138,8 @@ class XcorKernelCluster(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24130,6 +24178,7 @@ class XcorKernelCluster(XcorKernel):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24156,6 +24205,7 @@ class XcorKernelCluster(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24216,6 +24266,8 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24256,6 +24308,7 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24283,6 +24336,7 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24455,6 +24509,8 @@ class XcorKernelGal(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24504,6 +24560,7 @@ class XcorKernelGal(XcorKernel):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24540,6 +24597,7 @@ class XcorKernelGal(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24591,6 +24649,7 @@ class XcorKernelIntegrand(GObject.GBoxed):
     eval_comps_func: typing.Callable[
         [None, float, int, int, typing.Sequence[float] | npt.NDArray[np.float64]], None
     ] = ...
+    residuals: NumCosmoMath.Matrix = ...
     reltol: float = ...
     scaled_abstol: float = ...
     @staticmethod
@@ -24610,7 +24669,11 @@ class XcorKernelIntegrand(GObject.GBoxed):
         *data: typing.Any,
     ) -> XcorKernelIntegrand: ...
     def peek_knots(self) -> typing.Optional[NumCosmoMath.Vector]: ...
+    def peek_residuals(self) -> typing.Optional[NumCosmoMath.Matrix]: ...
     def ref(self) -> XcorKernelIntegrand: ...
+    def set_residuals(
+        self, residuals: typing.Optional[NumCosmoMath.Matrix] = None
+    ) -> None: ...
     def set_tolerances(self, reltol: float, scaled_abstol: float) -> None: ...
     def unref(self) -> None: ...
 
@@ -24658,6 +24721,8 @@ class XcorKernelWeakLensing(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24699,6 +24764,7 @@ class XcorKernelWeakLensing(XcorKernel):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24727,6 +24793,7 @@ class XcorKernelWeakLensing(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24794,6 +24861,8 @@ class XcorKerneltSZ(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24834,6 +24903,7 @@ class XcorKerneltSZ(XcorKernel):
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24861,6 +24931,7 @@ class XcorKerneltSZ(XcorKernel):
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,

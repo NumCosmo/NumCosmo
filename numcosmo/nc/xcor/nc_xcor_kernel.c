@@ -80,6 +80,8 @@ typedef struct _NcXcorKernelPrivate
   guint max_border_expansions;
   guint max_iter;
   gdouble expansion_factor;
+  gboolean track_fit_residual;
+  gboolean tolerance_balance_warned;
   gboolean constructed;
 } NcXcorKernelPrivate;
 
@@ -98,6 +100,7 @@ enum
   PROP_MAX_BORDER_EXPANSIONS,
   PROP_MAX_ITER,
   PROP_EXPANSION_FACTOR,
+  PROP_TRACK_FIT_RESIDUAL,
   PROP_SIZE,
 };
 
@@ -111,19 +114,21 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->dist                    = NULL;
-  self->ps                      = NULL;
-  self->sbi                     = NULL;
-  self->lmax                    = 0;
-  self->l_limber                = 0;
-  self->adaptive_epsilon        = 0.0;
-  self->adaptive_boundary_tries = 0;
-  self->reltol                  = 0.0;
-  self->scaled_abstol           = 0.0;
-  self->max_border_expansions   = 0;
-  self->max_iter                = 0;
-  self->expansion_factor        = 0.0;
-  self->constructed             = FALSE;
+  self->dist                     = NULL;
+  self->ps                       = NULL;
+  self->sbi                      = NULL;
+  self->lmax                     = 0;
+  self->l_limber                 = 0;
+  self->adaptive_epsilon         = 0.0;
+  self->adaptive_boundary_tries  = 0;
+  self->reltol                   = 0.0;
+  self->scaled_abstol            = 0.0;
+  self->max_border_expansions    = 0;
+  self->max_iter                 = 0;
+  self->expansion_factor         = 0.0;
+  self->track_fit_residual       = FALSE;
+  self->tolerance_balance_warned = FALSE;
+  self->constructed              = FALSE;
 }
 
 static void
@@ -227,6 +232,9 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_EXPANSION_FACTOR:
       nc_xcor_kernel_set_expansion_factor (xclk, g_value_get_double (value));
       break;
+    case PROP_TRACK_FIT_RESIDUAL:
+      nc_xcor_kernel_set_track_fit_residual (xclk, g_value_get_boolean (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -278,6 +286,9 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_EXPANSION_FACTOR:
       g_value_set_double (value, nc_xcor_kernel_get_expansion_factor (xclk));
+      break;
+    case PROP_TRACK_FIT_RESIDUAL:
+      g_value_set_boolean (value, nc_xcor_kernel_get_track_fit_residual (xclk));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -400,6 +411,31 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * so this parameter primarily affects regions where the spline amplitude is
    * sufficiently large for relative accuracy to be relevant. See
    * #NcXcorKernel:scaled-abstol for the complementary criterion.
+   *
+   * ## The two tolerances gate each other -- move them together
+   *
+   * Refinement accepts an interval when
+   * $\Vert f - \tilde f \Vert_2 \le \mathrm{reltol} \Vert f \Vert_2 + a \Vert f
+   * \Vert_2^\mathrm{max}$, a **sum**. Whichever term is larger decides where
+   * refinement stops, so tightening the other one alone changes nothing at all.
+   * Measured on a Gaussian kernel, accuracy gained over the 1e-4/1e-4 defaults:
+   *
+   * | | a = 1e-4 | a = 1e-5 | a = 1e-6 |
+   * |---|---|---|---|
+   * | reltol 1e-4 | 1x | 1.0x | 1.0x |
+   * | reltol 1e-6 | 1.2x | 15x | 25x |
+   * | reltol 1e-8 | 1.2x | 21x | 280x |
+   *
+   * The first column and the first row are flat: one knob alone buys nothing,
+   * whichever one it is. Tightening reltol is cheap -- a hundredfold costs about
+   * 2% in knots -- but cheap and inert, and the knots are still paid for. A
+   * kernel built with the two more than two orders apart says so on stderr.
+   *
+   * The defaults are equal for that reason: equal terms means neither is wasted.
+   * They are a *cheap* balanced pair, not an accurate one. Moving both to
+   * reltol 1e-6 with @a 1e-5 -- what #NcXcorSSCSij sets for itself -- is worth
+   * 15-46x in accuracy for 1.6x the solve on smooth kernels and 3.0x on cluster
+   * top-hats, whose fit is floor-driven and gains nothing from reltol at all.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
@@ -471,6 +507,31 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                       "Maximum number of adaptive midpoint refinement iterations",
                                                       1, G_MAXUINT, 10000,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcXcorKernel:track-fit-residual:
+   *
+   * Whether the closure records the residual its fit actually achieved on each
+   * knot interval, which is what nc_xcor_compute_full() turns into an error
+   * estimate. On by default: without it the estimate has only
+   * #NcXcorKernel:reltol and #NcXcorKernel:scaled-abstol to work from -- the
+   * tolerances the fit was asked for, which it beats by 12 to 3100 times
+   * depending on the kernel, so the resulting bound tracks the pair's
+   * cancellation rather than its accuracy.
+   *
+   * The record costs one double per knot per multipole in the block, about
+   * what the closure's own spline data costs, and #NcXcorSolver holds one
+   * closure per kernel per $\ell$ block. Turn it off to get that memory back
+   * from a run that never asks for an error.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_TRACK_FIT_RESIDUAL,
+                                   g_param_spec_boolean ("track-fit-residual",
+                                                         NULL,
+                                                         "Whether to record the residual the closure fit achieved",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_EXPANSION_FACTOR,
@@ -1159,6 +1220,43 @@ _component_states_compute_limber (const gdouble k, NcmVector *y, gpointer user_d
     comp_states->l2_norm = l2_norm;
 }
 
+/*
+ * The refinement criterion is reltol * ||f||_2 + a * ||f||_2^max, a *sum*, so
+ * the larger of the two terms sets what refinement stops at and the smaller one
+ * is inert. Setting one far tighter than the other therefore buys nothing while
+ * still being paid for in knots, and nothing else reports it.
+ *
+ * The two terms are not compared directly -- one is scaled to the block's norm
+ * and the other to its peak, a factor of order sqrt(n_l) apart -- so the
+ * threshold is deliberately loose at two orders, firing only where the
+ * imbalance cannot be anything else. Once per kernel: closures are built per
+ * ell block, and the tolerances do not change between them.
+ */
+static void
+_nc_xcor_kernel_check_tolerance_balance (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+  const gdouble ratio       = self->reltol / self->scaled_abstol;
+
+  if (self->tolerance_balance_warned)
+    return;
+
+  if ((ratio > 1.0e2) || (ratio < 1.0e-2))
+  {
+    const gboolean reltol_inert = (ratio < 1.0e-2);
+
+    self->tolerance_balance_warned = TRUE;
+
+    g_warning ("_nc_xcor_kernel_check_tolerance_balance: %s has reltol %.3e and "
+               "scaled-abstol %.3e, %.0f orders apart. The refinement criterion adds "
+               "the two, so the looser one decides where refinement stops and %s is "
+               "inert -- tightening it alone cannot improve the result, and it is "
+               "still paid for in spline knots. Move them together.",
+               G_OBJECT_TYPE_NAME (xclk), self->reltol, self->scaled_abstol,
+               fabs (log10 (ratio)), reltol_inert ? "reltol" : "scaled-abstol");
+  }
+}
+
 static NcXcorKernelIntegrand *
 _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax,
                                         ComponentStates *comp_states,
@@ -1173,7 +1271,11 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
     NcmFunctionSampleSet *fss = ncm_function_sample_set_new (n_l);
     NcmSpline *spline         = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
     GArray *k_seeds           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    NcmMatrix *residuals      = NULL;
     guint i;
+
+    _nc_xcor_kernel_check_tolerance_balance (xclk);
+    ncm_function_sample_set_set_track_residual (fss, self->track_fit_residual);
 
     /* Compute k-seeds for initial sampling. Local to the call, not kernel
      * state: one kernel may be evaluated concurrently for different ell
@@ -1216,6 +1318,7 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
       );
     }
 
+    residuals       = ncm_function_sample_set_get_residuals (fss);
     sid->spline_vec = ncm_function_sample_set_to_spline_vec (fss, spline);
     sid->k_min      = ncm_function_sample_set_get_x_min (fss);
     sid->k_max      = ncm_function_sample_set_get_x_max (fss);
@@ -1278,6 +1381,8 @@ _nc_xcor_kernel_build_spline_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
       nc_xcor_kernel_integrand_set_eval_comps (integrand, _spline_integrand_eval_comps);
 
       nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, abs_reltol);
+      nc_xcor_kernel_integrand_set_residuals (integrand, residuals);
+      ncm_matrix_clear (&residuals);
 
       return integrand;
     }
@@ -1445,6 +1550,10 @@ nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdoubl
   integrand->get_range_comp_func = NULL;
   integrand->eval_comps_func     = NULL;
 
+  integrand->residuals     = NULL;
+  integrand->reltol        = 0.0;
+  integrand->scaled_abstol = 0.0;
+
   return integrand;
 }
 
@@ -1588,6 +1697,54 @@ nc_xcor_kernel_integrand_get_scaled_abstol (NcXcorKernelIntegrand *integrand)
   return integrand->scaled_abstol;
 }
 
+/**
+ * nc_xcor_kernel_integrand_set_residuals:
+ * @integrand: a #NcXcorKernelIntegrand
+ * @residuals: (nullable): the achieved fit residuals, or %NULL
+ *
+ * Records the residual the fit *achieved* on each knot interval, one row per
+ * knot of nc_xcor_kernel_integrand_peek_knots() and one column per component,
+ * as produced by ncm_function_sample_set_get_residuals().
+ *
+ * This is the sharper half of the pair with
+ * nc_xcor_kernel_integrand_set_tolerances(): the tolerances say what the fit
+ * was *asked* for, and refinement beats its own request by orders -- by 12 to
+ * 3100 depending on the kernel, which is enough for an error built from the
+ * tolerances alone to be unable to tell a well-fitted pair from a badly
+ * fitted one. Where these residuals are present %NC_XCOR_METHOD_KERNEL_EXACT
+ * uses them and falls back to the tolerances only on intervals that carry no
+ * record (NaN). See nc_xcor_compute_full().
+ *
+ */
+void
+nc_xcor_kernel_integrand_set_residuals (NcXcorKernelIntegrand *integrand, NcmMatrix *residuals)
+{
+  g_return_if_fail (integrand != NULL);
+
+  ncm_matrix_clear (&integrand->residuals);
+
+  if (residuals != NULL)
+    integrand->residuals = ncm_matrix_ref (residuals);
+}
+
+/**
+ * nc_xcor_kernel_integrand_peek_residuals:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * Peeks the achieved fit residuals, or %NULL when the closure was built
+ * without residual tracking. See
+ * nc_xcor_kernel_integrand_set_residuals().
+ *
+ * Returns: (transfer none) (nullable): the residual matrix, or %NULL
+ */
+NcmMatrix *
+nc_xcor_kernel_integrand_peek_residuals (NcXcorKernelIntegrand *integrand)
+{
+  g_return_val_if_fail (integrand != NULL, NULL);
+
+  return integrand->residuals;
+}
+
 NcmVector *
 nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand)
 {
@@ -1629,6 +1786,8 @@ nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand)
   {
     if (integrand->data_free != NULL)
       integrand->data_free (integrand->data);
+
+    ncm_matrix_clear (&integrand->residuals);
 
     g_free (integrand);
   }
@@ -2220,6 +2379,38 @@ nc_xcor_kernel_set_expansion_factor (NcXcorKernel *xclk, gdouble expansion_facto
 
   g_assert (expansion_factor > 0.0 && expansion_factor < 1.0);
   self->expansion_factor = expansion_factor;
+}
+
+/**
+ * nc_xcor_kernel_get_track_fit_residual:
+ * @xclk: a #NcXcorKernel
+ *
+ * Returns: whether the closure records the residual its fit achieved. See
+ * #NcXcorKernel:track-fit-residual.
+ */
+gboolean
+nc_xcor_kernel_get_track_fit_residual (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  return self->track_fit_residual;
+}
+
+/**
+ * nc_xcor_kernel_set_track_fit_residual:
+ * @xclk: a #NcXcorKernel
+ * @track_fit_residual: whether to record the achieved residual
+ *
+ * Sets #NcXcorKernel:track-fit-residual. It is read when a closure is built,
+ * so a closure already built keeps whatever it was built with.
+ *
+ */
+void
+nc_xcor_kernel_set_track_fit_residual (NcXcorKernel *xclk, gboolean track_fit_residual)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  self->track_fit_residual = track_fit_residual;
 }
 
 /**

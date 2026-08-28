@@ -177,6 +177,7 @@ static void _ncm_spline_bspline_reset (NcmSpline *s);
 static void _ncm_spline_bspline_prepare (NcmSpline *s);
 static gsize _ncm_spline_bspline_min_size (const NcmSpline *s);
 static gdouble _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x);
+static gdouble _ncm_spline_bspline_eval_idx (const NcmSpline *s, const gdouble x, const gsize i);
 static gdouble _ncm_spline_bspline_deriv (const NcmSpline *s, const gdouble x);
 static gdouble _ncm_spline_bspline_deriv2 (const NcmSpline *s, const gdouble x);
 static gdouble _ncm_spline_bspline_deriv_nmax (const NcmSpline *s, const gdouble x);
@@ -244,6 +245,7 @@ ncm_spline_bspline_class_init (NcmSplineBSplineClass *klass)
   s_class->name         = &_ncm_spline_bspline_name;
   s_class->reset        = &_ncm_spline_bspline_reset;
   s_class->prepare      = &_ncm_spline_bspline_prepare;
+  s_class->eval_idx     = &_ncm_spline_bspline_eval_idx;
   s_class->prepare_base = NULL;
   s_class->min_size     = &_ncm_spline_bspline_min_size;
   s_class->eval         = &_ncm_spline_bspline_eval;
@@ -457,6 +459,19 @@ _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
   gsl_bspline_calc (x, sbs->c, &res, sbs->w);
 
   return res;
+}
+
+/*
+ * @i is a hint, letting callers that already know the interval skip a binary
+ * search. gsl_bspline_calc() locates the span itself and takes no index, so the
+ * hint is dropped and this is a plain evaluation -- correct, but carrying none
+ * of the saving the fast path exists for. Callers that lean on it, such as
+ * ncm_spline_vec_eval() over a shared abscissa, pay full lookup per component.
+ */
+static gdouble
+_ncm_spline_bspline_eval_idx (const NcmSpline *s, const gdouble x, const gsize i)
+{
+  return _ncm_spline_bspline_eval (s, x);
 }
 
 static gdouble
