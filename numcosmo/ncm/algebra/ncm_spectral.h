@@ -47,6 +47,21 @@ G_BEGIN_DECLS
  */
 typedef gdouble (*NcmSpectralF) (gpointer user_data, gdouble x);
 
+/**
+ * NcmSpectralFBatch:
+ * @user_data: user data
+ * @x: point to evaluate in the interval [a, b]
+ * @y: vector to be filled with the components at @x
+ *
+ * Vector-valued counterpart of #NcmSpectralF, for a set of functions sharing
+ * one abscissa. All components are produced by a single call, which is what
+ * makes the batch worth having: where evaluating is the dominant cost and one
+ * evaluation yields every component, fitting them separately multiplies that
+ * cost by the number of components.
+ *
+ */
+typedef void (*NcmSpectralFBatch) (gpointer user_data, gdouble x, NcmVector *y);
+
 #define NCM_TYPE_SPECTRAL (ncm_spectral_get_type ())
 
 G_DECLARE_FINAL_TYPE (NcmSpectral, ncm_spectral, NCM, SPECTRAL, GObject)
@@ -65,6 +80,8 @@ void ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF 
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, GArray **coeffs, gpointer user_data);
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble reltol, gdouble abstol, GArray **coeffs, gpointer user_data);
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive_weighted (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint k_min, gdouble tol, GArray **coeffs, gpointer user_data);
+
+guint ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, NcmSpectralFBatch F, guint n_comp, gdouble a, gdouble b, guint k_min, gdouble reltol, gdouble abstol, NcmMatrix **coeffs, gpointer user_data);
 
 void ncm_spectral_chebT_to_gegenbauer_alpha1 (GArray *c, GArray **g);
 void ncm_spectral_chebT_to_gegenbauer_alpha2 (GArray *c, GArray **g);

@@ -4883,6 +4883,9 @@ class FunctionSampleSet(GObject.Object):
     def all_intervals_ok(self, threshold: int) -> bool: ...
     @staticmethod
     def clear(fss: FunctionSampleSet) -> None: ...
+    def estimate_residuals(
+        self, base_spline: Spline, ref_spline: Spline
+    ) -> typing.Optional[Matrix]: ...
     def expand_domain(
         self,
         f: typing.Callable[..., None],
@@ -10664,6 +10667,17 @@ class Spectral(GObject.Object):
         tol: float,
         *user_data: typing.Any,
     ) -> typing.Tuple[int, list[float]]: ...
+    def compute_chebyshev_coeffs_batch_adaptive(
+        self,
+        F: typing.Callable[..., None],
+        n_comp: int,
+        a: float,
+        b: float,
+        k_min: int,
+        reltol: float,
+        abstol: float,
+        *user_data: typing.Any,
+    ) -> typing.Tuple[int, Matrix]: ...
     @staticmethod
     def compute_d2_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     @staticmethod
