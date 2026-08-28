@@ -255,13 +255,16 @@ def test_chebyshev_closure_matches_arb(
             shape, dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
         )
         kernel.set_l_limber(-1)
-        kernel.set_property("closure-type", Nc.XcorKernelClosure.CHEBYSHEV)
         kernel.set_property("reltol", 1.0e-6)
         kernel.set_property("scaled-abstol", 1.0e-6)
         kernel.prepare(cosmo)
 
         integrand = kernel.get_eval_vectorized_full(
-            cosmo, ell, ell, Ncm.SBesselIntegratorLevin.new(ell, ell)
+            cosmo,
+            ell,
+            ell,
+            Ncm.SBesselIntegratorLevin.new(ell, ell),
+            Nc.XcorKernelClosure.CHEBYSHEV,
         )
         k_min, k_max = integrand.get_range()
 

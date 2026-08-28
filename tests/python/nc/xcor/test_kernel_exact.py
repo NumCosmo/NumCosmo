@@ -86,7 +86,7 @@ def _knots(integrand: Nc.XcorKernelIntegrand) -> np.ndarray:
 def test_integrand_exposes_knots(cosmology: Cosmology) -> None:
     """A spline-backed integrand reports the knots it is represented on."""
     kernel = _kernels(cosmology)[0]
-    integrand = kernel.get_eval(cosmology.cosmo, 0)
+    integrand = kernel.get_eval(cosmology.cosmo, 0, Nc.XcorKernelClosure.SPLINE)
 
     knots = _knots(integrand)
     k_min, k_max = integrand.get_range()
@@ -104,7 +104,10 @@ def test_kernels_keep_their_own_knot_sets(cosmology: Cosmology) -> None:
     the pair has to be integrated on the merged set rather than on either one.
     """
     kernels = _kernels(cosmology)
-    sets = [_knots(k.get_eval(cosmology.cosmo, 0)) for k in kernels]
+    sets = [
+        _knots(k.get_eval(cosmology.cosmo, 0, Nc.XcorKernelClosure.SPLINE))
+        for k in kernels
+    ]
 
     for i in range(len(sets)):
         for j in range(i + 1, len(sets)):
@@ -126,7 +129,7 @@ def test_union_gl5_matches_compute(cosmology: Cosmology) -> None:
     cosmo = cosmology.cosmo
     nbins = len(kernels)
 
-    igs = [k.get_eval(cosmo, 0) for k in kernels]
+    igs = [k.get_eval(cosmo, 0, Nc.XcorKernelClosure.SPLINE) for k in kernels]
     edges = [_knots(ig) for ig in igs]
 
     fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
@@ -491,7 +494,11 @@ def test_closure_records_the_residual_it_achieved(cosmology: Cosmology) -> None:
     """
     kernel = _kernels(cosmology)[0]
     integrand = kernel.get_eval_vectorized_full(
-        cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8)
+        cosmology.cosmo,
+        2,
+        9,
+        Ncm.SBesselIntegratorLevin.new(0, 8),
+        Nc.XcorKernelClosure.SPLINE,
     )
 
     residuals = integrand.peek_residuals()
@@ -536,7 +543,11 @@ def test_tracking_off_leaves_no_record_and_a_looser_estimate(
         kernel.prepare(cosmo)
 
         integrand = kernel.get_eval_vectorized_full(
-            cosmo, lmin, lmax, Ncm.SBesselIntegratorLevin.new(0, 8)
+            cosmo,
+            lmin,
+            lmax,
+            Ncm.SBesselIntegratorLevin.new(0, 8),
+            Nc.XcorKernelClosure.SPLINE,
         )
         assert (integrand.peek_residuals() is not None) == track
 
@@ -609,13 +620,12 @@ def _closure(cosmology: Cosmology, closure_type, reltol=1.0e-4, scaled_abstol=1.
         integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
         reltol=reltol,
         scaled_abstol=scaled_abstol,
-        closure_type=closure_type,
     )
     kernel.set_l_limber(-1)
     kernel.prepare(cosmology.cosmo)
 
     return kernel.get_eval_vectorized_full(
-        cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8)
+        cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8), closure_type
     )
 
 
@@ -701,10 +711,19 @@ def test_chebyshev_closure_agrees_with_the_spline_one(cosmology: Cosmology) -> N
 
 
 def test_spline_closure_is_the_default(cosmology: Cosmology) -> None:
-    """The representation every method is calibrated against stays the default."""
-    kernel = _kernels(cosmology)[0]
+    """The representation every method is calibrated against stays the default.
 
-    assert kernel.get_closure_type() == Nc.XcorKernelClosure.SPLINE
+    The choice belongs to NcXcor rather than to a kernel: KERNEL_EXACT
+    integrates a pair on the common refinement of the two closures' panels and
+    needs both to be of the same kind, so one setting governs every kernel in a
+    computation and a mixed pair cannot be expressed.
+    """
+    xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+
+    assert xcor.get_closure_type() == Nc.XcorKernelClosure.SPLINE
+
+    xcor.set_closure_type(Nc.XcorKernelClosure.CHEBYSHEV)
+    assert xcor.get_closure_type() == Nc.XcorKernelClosure.CHEBYSHEV
 
 
 def test_limber_multipoles_keep_the_spline_closure(cosmology: Cosmology) -> None:
@@ -731,7 +750,6 @@ def test_limber_multipoles_keep_the_spline_closure(cosmology: Cosmology) -> None
             integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
             reltol=1.0e-4,
             scaled_abstol=1.0e-4,
-            closure_type=closure_type,
         )
         # Every multipole in the block falls on the Limber side.
         kernel.set_l_limber(0)
@@ -739,7 +757,11 @@ def test_limber_multipoles_keep_the_spline_closure(cosmology: Cosmology) -> None
 
         integrands.append(
             kernel.get_eval_vectorized_full(
-                cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8)
+                cosmology.cosmo,
+                2,
+                9,
+                Ncm.SBesselIntegratorLevin.new(0, 8),
+                closure_type,
             )
         )
 
@@ -770,7 +792,7 @@ def test_spectral_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
     lmin, lmax = 2, 9
     nell = lmax - lmin + 1
 
-    def kernels(closure_type, tol=1.0e-4):
+    def kernels(tol=1.0e-4):
         out = []
         for z_lower, z_upper in Z_BINS[:2]:
             kernel = Nc.XcorKernelClusterTophat(
@@ -781,27 +803,30 @@ def test_spectral_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
                 integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
                 reltol=tol,
                 scaled_abstol=tol,
-                closure_type=closure_type,
             )
             kernel.set_l_limber(-1)
             kernel.prepare(cosmo)
             out.append(kernel)
         return out
 
-    def compute(method, ks, auto):
+    def compute(method, ks, auto, closure_type):
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, method)
+        xcor.set_closure_type(closure_type)
         xcor.prepare(cosmo)
         vp = Ncm.Vector.new(nell)
         xcor.compute(ks[0], None if auto else ks[1], cosmo, lmin, lmax, vp)
         return np.array(vp.dup_array())
 
-    cheb = kernels(Nc.XcorKernelClosure.CHEBYSHEV)
-    spline = kernels(Nc.XcorKernelClosure.SPLINE)
-    reference = kernels(Nc.XcorKernelClosure.SPLINE, 1.0e-6)
+    # One set of kernels: the representation is now the computation's choice,
+    # so the same kernels serve both routes.
+    ks = kernels()
+    reference = kernels(1.0e-6)
+    cheb_t = Nc.XcorKernelClosure.CHEBYSHEV
+    spline_t = Nc.XcorKernelClosure.SPLINE
 
     for auto in (True, False):
-        exact = compute(Nc.XcorMethod.KERNEL_EXACT, cheb, auto)
-        cubature = compute(Nc.XcorMethod.KERNEL_CUBATURE, cheb, auto)
+        exact = compute(Nc.XcorMethod.KERNEL_EXACT, ks, auto, cheb_t)
+        cubature = compute(Nc.XcorMethod.KERNEL_CUBATURE, ks, auto, cheb_t)
 
         assert np.all(np.isfinite(exact))
 
@@ -817,10 +842,10 @@ def test_spectral_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
         # comparing against the less accurate answer: on a cancelling cross
         # spectrum the spline at 1e-4 is 8% out by l = 9, which is the error
         # this representation exists to remove.
-        truth = compute(Nc.XcorMethod.KERNEL_EXACT, reference, auto)
+        truth = compute(Nc.XcorMethod.KERNEL_EXACT, reference, auto, spline_t)
         err_exact = np.abs(exact / truth - 1.0)
         err_spline = np.abs(
-            compute(Nc.XcorMethod.KERNEL_EXACT, spline, auto) / truth - 1.0
+            compute(Nc.XcorMethod.KERNEL_EXACT, ks, auto, spline_t) / truth - 1.0
         )
 
         # Measured against a spline closure at 1e-8: at this tolerance the
@@ -850,14 +875,17 @@ def test_panel_order_cap_is_tunable(cosmology: Cosmology) -> None:
             integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
             reltol=1.0e-4,
             scaled_abstol=1.0e-4,
-            closure_type=Nc.XcorKernelClosure.CHEBYSHEV,
             panel_order_cap=cap,
         )
         kernel.set_l_limber(-1)
         kernel.prepare(cosmology.cosmo)
 
         return kernel, kernel.get_eval_vectorized_full(
-            cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8)
+            cosmology.cosmo,
+            2,
+            9,
+            Ncm.SBesselIntegratorLevin.new(0, 8),
+            Nc.XcorKernelClosure.CHEBYSHEV,
         )
 
     default_kernel, default_closure = closure(0)

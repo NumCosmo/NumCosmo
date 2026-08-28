@@ -824,7 +824,9 @@ class ViewKernel:
 
         RH_Mpc = self.cosmo.RH_Mpc()
         kernel_obj.set_l_limber(self.l_limber)
-        eval_kernel = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
+        eval_kernel = kernel_obj.get_eval_vectorized(
+            self.cosmo, self.ell, lmax, Nc.XcorKernelClosure.SPLINE
+        )
 
         primary_method = (
             "Non-Limber"
@@ -852,7 +854,9 @@ class ViewKernel:
         if self.compare_limber:
             # Also evaluate with Limber approximation for comparison
             kernel_obj.set_l_limber(0)
-            eval_limber = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
+            eval_limber = kernel_obj.get_eval_vectorized(
+                self.cosmo, self.ell, lmax, Nc.XcorKernelClosure.SPLINE
+            )
             kernel_eval_limber = KernelEvaluation(
                 name=kernel_label,
                 kernel=kernel_obj,

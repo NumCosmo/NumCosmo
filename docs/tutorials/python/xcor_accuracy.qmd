@@ -97,7 +97,11 @@ def make_kernel(z_lower, z_upper, reltol, scaled_abstol):
 def knot_count(kernel):
     """How many radial solves this closure cost."""
     integrand = kernel.get_eval_vectorized_full(
-        cosmo, LMIN, LMAX, Ncm.SBesselIntegratorLevin.new(LMIN, LMAX)
+        cosmo,
+        LMIN,
+        LMAX,
+        Ncm.SBesselIntegratorLevin.new(LMIN, LMAX),
+        Nc.XcorKernelClosure.SPLINE,
     )
 
     return len(np.array(integrand.peek_knots().dup_array()))
@@ -284,7 +288,11 @@ for label, kernel in shapes.items():
         kernel.prepare(cosmo)
 
     integrand = kernel.get_eval_vectorized_full(
-        cosmo, LMIN, LMAX, Ncm.SBesselIntegratorLevin.new(LMIN, LMAX)
+        cosmo,
+        LMIN,
+        LMAX,
+        Ncm.SBesselIntegratorLevin.new(LMIN, LMAX),
+        Nc.XcorKernelClosure.SPLINE,
     )
     k = np.array(integrand.peek_knots().dup_array())
     print(f"{label:<22} {len(k):>7} {f'{k[0]:.3g} to {k[-1]:.3g}':>22}")

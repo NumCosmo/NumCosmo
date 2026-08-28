@@ -690,7 +690,7 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
 
   if (xclki1 == NULL)
   {
-    xclki1 = nc_xcor_kernel_get_eval_vectorized_full (k1, cosmo, block->lmin, block->lmax, sbi);
+    xclki1 = nc_xcor_kernel_get_eval_vectorized_full (k1, cosmo, block->lmin, block->lmax, sbi, nc_xcor_get_closure_type (xc));
     g_hash_table_insert (integrands, k1, xclki1);
   }
 
@@ -704,7 +704,7 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
 
     if (xclki2 == NULL)
     {
-      xclki2 = nc_xcor_kernel_get_eval_vectorized_full (k2, cosmo, block->lmin, block->lmax, sbi);
+      xclki2 = nc_xcor_kernel_get_eval_vectorized_full (k2, cosmo, block->lmin, block->lmax, sbi, nc_xcor_get_closure_type (xc));
       g_hash_table_insert (integrands, k2, xclki2);
     }
   }

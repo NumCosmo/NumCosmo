@@ -727,7 +727,6 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
                 integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
                 reltol=1.0e-4,
                 scaled_abstol=1.0e-4,
-                closure_type=closure_type,
             )
             kernel.set_l_limber(-1)
             kernel.prepare(cosmo)
@@ -741,6 +740,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
         solver.set_integrator(Ncm.SBesselIntegratorLevin.new(0, 8))
 
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+        xcor.set_closure_type(closure_type)
         xcor.prepare(cosmo)
         solver.solve(xcor, cosmo)
 
@@ -761,13 +761,13 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
                 integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
                 reltol=1.0e-4,
                 scaled_abstol=1.0e-4,
-                closure_type=closure_type,
             )
             kernel.set_l_limber(-1)
             kernel.prepare(cosmo)
             kernels.append(kernel)
 
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+        xcor.set_closure_type(closure_type)
         xcor.prepare(cosmo)
 
         out = []

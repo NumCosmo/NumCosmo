@@ -70,6 +70,7 @@ struct _NcXcor
   NcmPowspec *ps;
   gdouble RH;
   NcXcorMethod meth;
+  NcXcorKernelClosure closure_type;
   gdouble reltol;
   guint ell_batch_size;
 };
@@ -80,6 +81,7 @@ enum
   PROP_DISTANCE,
   PROP_MATTER_POWER_SPECTRUM,
   PROP_METH,
+  PROP_CLOSURE_TYPE,
   PROP_RELTOL,
   PROP_ELL_BATCH_SIZE,
 };
@@ -129,6 +131,7 @@ nc_xcor_init (NcXcor *xc)
   xc->dist           = NULL;
   xc->RH             = 0.0;
   xc->meth           = NC_XCOR_METHOD_LIMBER_Z_GSL;
+  xc->closure_type   = NC_XCOR_KERNEL_CLOSURE_SPLINE;
   xc->ell_batch_size = 8;
 }
 
@@ -151,6 +154,9 @@ _nc_xcor_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       break;
     case PROP_METH:
       xc->meth = g_value_get_enum (value);
+      break;
+    case PROP_CLOSURE_TYPE:
+      nc_xcor_set_closure_type (xc, g_value_get_enum (value));
       break;
     case PROP_RELTOL:
       nc_xcor_set_reltol (xc, g_value_get_double (value));
@@ -181,6 +187,9 @@ _nc_xcor_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       break;
     case PROP_METH:
       g_value_set_enum (value, xc->meth);
+      break;
+    case PROP_CLOSURE_TYPE:
+      g_value_set_enum (value, nc_xcor_get_closure_type (xc));
       break;
     case PROP_RELTOL:
       g_value_set_double (value, nc_xcor_get_reltol (xc));
@@ -263,6 +272,42 @@ nc_xcor_class_init (NcXcorClass *klass)
                                                       "Method.",
                                                       NC_TYPE_XCOR_METHOD,
                                                       NC_XCOR_METHOD_LIMBER_Z_GSL,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcXcor:closure-type:
+   *
+   * How each kernel represents its sampled $W_\ell(k)$. See
+   * #NcXcorKernelClosure.
+   *
+   * The choice is made here rather than on #NcXcorKernel because it is the
+   * pair, not the kernel, that constrains it. %NC_XCOR_METHOD_KERNEL_EXACT
+   * integrates a pair on the common refinement of the two closures' panels,
+   * which requires both to be of the same kind; a per-kernel setting could
+   * express a mixed pair the exact method cannot integrate at all. The
+   * pointwise methods are indifferent to it, but they read the same property,
+   * so no computation mixes the two representations.
+   *
+   * The spline default is what every method has been calibrated against.
+   * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV samples the same function over the same
+   * domain and differs only in what is fitted to it, so a computation can be
+   * switched over and the two compared directly.
+   *
+   * It applies to the non-Limber closure only. Under Limber each multipole is
+   * supported on its own band and zero outside it, so the block's window
+   * carries a step per multipole; a Chebyshev series converges on the
+   * non-Limber kernel because $W_\ell(k)$ is entire in $k$, and a step is not.
+   * Multipoles taken under Limber keep the spline closure whatever this is set
+   * to.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_CLOSURE_TYPE,
+                                   g_param_spec_enum ("closure-type",
+                                                      NULL,
+                                                      "Representation used for the k-space closures.",
+                                                      NC_TYPE_XCOR_KERNEL_CLOSURE,
+                                                      NC_XCOR_KERNEL_CLOSURE_SPLINE,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -521,6 +566,34 @@ NcXcorMethod
 nc_xcor_get_meth (NcXcor *xc)
 {
   return xc->meth;
+}
+
+/**
+ * nc_xcor_set_closure_type:
+ * @xc: a #NcXcor
+ * @closure_type: a #NcXcorKernelClosure
+ *
+ * Sets #NcXcor:closure-type. Read when a closure is built, so one already built
+ * keeps the representation it was built with.
+ *
+ */
+void
+nc_xcor_set_closure_type (NcXcor *xc, NcXcorKernelClosure closure_type)
+{
+  xc->closure_type = closure_type;
+}
+
+/**
+ * nc_xcor_get_closure_type:
+ * @xc: a #NcXcor
+ *
+ * Returns: the representation used for the k-space closures. See
+ * #NcXcor:closure-type.
+ */
+NcXcorKernelClosure
+nc_xcor_get_closure_type (NcXcor *xc)
+{
+  return xc->closure_type;
 }
 
 /**
@@ -1244,18 +1317,20 @@ _nc_xcor_kernel_integrate_block_spectral (NcXcor *xc, NcXcorKernelIntegrand *xcl
     NcmMatrix *c1      = NULL;
     NcmMatrix *c2      = NULL;
 
+    /* Every cell of the common refinement lies inside one panel of each
+     * closure -- its edges are the panels' own, so the containment test in
+     * restrict() compares identical doubles. A failure here would mean the
+     * refinement and the panels disagree, and dropping the cell would return a
+     * quietly wrong C_ell. */
     if (!nc_xcor_kernel_integrand_restrict (xclki1, a, b, &c1))
-      continue;
+      g_error ("_nc_xcor_kernel_integrate_block_spectral: cell [%.17g, %.17g] "
+               "is not inside a single panel of the first closure.", a, b);
 
     if (isauto)
-    {
       c2 = ncm_matrix_ref (c1);
-    }
     else if (!nc_xcor_kernel_integrand_restrict (xclki2, a, b, &c2))
-    {
-      ncm_matrix_clear (&c1);
-      continue;
-    }
+      g_error ("_nc_xcor_kernel_integrate_block_spectral: cell [%.17g, %.17g] "
+               "is not inside a single panel of the second closure.", a, b);
 
     {
       /* k^2 in the cell's variable: k = mid + half t. */
@@ -1557,8 +1632,8 @@ _nc_xcor_kernel_exact (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcH
     NcXcorKernelIntegrand *xclki1;
     NcXcorKernelIntegrand *xclki2;
 
-    xclki1 = nc_xcor_kernel_get_eval_vectorized_full (xclk1, cosmo, block_lmin, block_lmax, sbi1);
-    xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized_full (xclk2, cosmo, block_lmin, block_lmax, sbi2);
+    xclki1 = nc_xcor_kernel_get_eval_vectorized_full (xclk1, cosmo, block_lmin, block_lmax, sbi1, xc->closure_type);
+    xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized_full (xclk2, cosmo, block_lmin, block_lmax, sbi2, xc->closure_type);
 
     _nc_xcor_kernel_integrate_block_exact (xc, xclki1, isauto ? xclki1 : xclki2, block_lmin, block_lmax, isauto, vp_i, vp_err_i);
 
@@ -1662,7 +1737,7 @@ _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHIC
      * fitted domain (get_range) -- NOT the independent Limber-band formula
      * from nc_xcor_kernel_get_k_range(), which has no guarantee of matching
      * it (see plan doc dev-notes/xcor_ultralevin_batching_plan.md §3). */
-    xclki_array[0] = nc_xcor_kernel_get_eval (xclk1, cosmo, ell);
+    xclki_array[0] = nc_xcor_kernel_get_eval (xclk1, cosmo, ell, xc->closure_type);
     nc_xcor_kernel_integrand_get_range (xclki_array[0], &k_min, &k_max);
 
     if (isauto)
@@ -1673,7 +1748,7 @@ _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHIC
     {
       gdouble k2_min, k2_max;
 
-      xclki_array[1] = nc_xcor_kernel_get_eval (xclk2, cosmo, ell);
+      xclki_array[1] = nc_xcor_kernel_get_eval (xclk2, cosmo, ell, xc->closure_type);
       nc_xcor_kernel_integrand_get_range (xclki_array[1], &k2_min, &k2_max);
 
       k_min = GSL_MAX (k_min, k2_min);
@@ -1878,8 +1953,8 @@ _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, 
     NcXcorKernelIntegrand *xclki1;
     NcXcorKernelIntegrand *xclki2;
 
-    xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, block_lmin, block_lmax);
-    xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized (xclk2, cosmo, block_lmin, block_lmax);
+    xclki1 = nc_xcor_kernel_get_eval_vectorized (xclk1, cosmo, block_lmin, block_lmax, xc->closure_type);
+    xclki2 = isauto ? NULL : nc_xcor_kernel_get_eval_vectorized (xclk2, cosmo, block_lmin, block_lmax, xc->closure_type);
 
     _nc_xcor_kernel_integrate_block_cubature (xc, xclki1, xclki2, block_lmin, block_lmax, isauto, vp_i);
 

@@ -95,6 +95,9 @@ void nc_xcor_clear (NcXcor **xc);
 
 NcXcorMethod nc_xcor_get_meth (NcXcor *xc);
 
+void nc_xcor_set_closure_type (NcXcor *xc, NcXcorKernelClosure closure_type);
+NcXcorKernelClosure nc_xcor_get_closure_type (NcXcor *xc);
+
 void nc_xcor_set_reltol (NcXcor *xc, const gdouble reltol);
 gdouble nc_xcor_get_reltol (NcXcor *xc);
 
