@@ -80,6 +80,46 @@ typedef struct _NcXcorKinetic NcXcorKinetic;
 typedef struct _NcXcorKernelIntegrand NcXcorKernelIntegrand;
 
 /**
+ * NcXcorKernelClosure:
+ * @NC_XCOR_KERNEL_CLOSURE_SPLINE: cubic spline on an adaptively refined grid
+ * @NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV: Chebyshev series on a Chebyshev-Lobatto grid
+ *
+ * How a kernel represents $W_\ell(k)$ once it has been sampled.
+ *
+ * %NC_XCOR_KERNEL_CLOSURE_SPLINE discovers its grid: it bisects until the fit
+ * meets a tolerance, so the sample count grows as $\epsilon^{-1/4}$ and the
+ * spacing it arrives at is ragged.
+ *
+ * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV prescribes it. $W_\ell(k)$ is an integral
+ * of a compactly supported window against $j_\ell(k\chi)$, which is entire in
+ * $k$, so $W_\ell$ is entire in $k$ whatever the window is -- and a Chebyshev
+ * series converges geometrically on it. The order is then set by the total
+ * phase $k_\mathrm{max}\chi_\mathrm{max}$ rather than discovered, and below
+ * the order that resolves that phase the expansion carries nothing while above
+ * it accuracy is nearly free.
+ *
+ */
+typedef enum _NcXcorKernelClosure
+{
+  NC_XCOR_KERNEL_CLOSURE_SPLINE = 0,
+  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV,
+} NcXcorKernelClosure;
+
+/**
+ * NcXcorKernelIntegrandGetSpectral:
+ * @data: user data
+ * @coeffs: (out) (transfer none): the coefficient matrix, one row per component
+ * @k_min: (out): lower end of the expansion interval
+ * @k_max: (out): upper end of the expansion interval
+ *
+ * Function type reporting a spectral representation of the integrand, when it
+ * has one.
+ *
+ * Returns: %TRUE when @data carries a Chebyshev expansion
+ */
+typedef gboolean (*NcXcorKernelIntegrandGetSpectral) (gpointer data, NcmMatrix **coeffs, gdouble *k_min, gdouble *k_max);
+
+/**
  * NcXcorKernelIntegrandEval:
  * @data: user data
  * @k: wavenumber
@@ -189,6 +229,7 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandGetKnots get_knots_func;
   NcXcorKernelIntegrandGetRangeComp get_range_comp_func;
   NcXcorKernelIntegrandEvalComps eval_comps_func;
+  NcXcorKernelIntegrandGetSpectral get_spectral_func;
   NcmMatrix *residuals;
   gdouble reltol;
   gdouble scaled_abstol;
@@ -279,6 +320,8 @@ void nc_xcor_kernel_set_max_iter (NcXcorKernel *xclk, guint max_iter);
 
 gdouble nc_xcor_kernel_get_expansion_factor (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_expansion_factor (NcXcorKernel *xclk, gdouble expansion_factor);
+NcXcorKernelClosure nc_xcor_kernel_get_closure_type (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_closure_type (NcXcorKernel *xclk, NcXcorKernelClosure closure_type);
 gboolean nc_xcor_kernel_get_track_fit_residual (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_track_fit_residual (NcXcorKernel *xclk, gboolean track_fit_residual);
 
@@ -310,6 +353,8 @@ void nc_xcor_kernel_integrand_set_get_knots (NcXcorKernelIntegrand *integrand, N
 void nc_xcor_kernel_integrand_set_get_range_comp (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetRangeComp get_range_comp);
 void nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandEvalComps eval_comps);
 NcmVector *nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand);
+void nc_xcor_kernel_integrand_set_get_spectral (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetSpectral get_spectral);
+gboolean nc_xcor_kernel_integrand_peek_spectral (NcXcorKernelIntegrand *integrand, NcmMatrix **coeffs, gdouble *k_min, gdouble *k_max);
 void nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble scaled_abstol);
 gdouble nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand);
 gdouble nc_xcor_kernel_integrand_get_scaled_abstol (NcXcorKernelIntegrand *integrand);

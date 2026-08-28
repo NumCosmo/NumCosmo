@@ -22274,6 +22274,8 @@ class XcorKernel(NumCosmoMath.Model):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22302,6 +22304,7 @@ class XcorKernel(NumCosmoMath.Model):
     class Props:
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -22329,6 +22332,7 @@ class XcorKernel(NumCosmoMath.Model):
         self,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -22371,6 +22375,7 @@ class XcorKernel(NumCosmoMath.Model):
     def free(self) -> None: ...
     def get_adaptive_boundary_tries(self) -> int: ...
     def get_adaptive_epsilon(self) -> float: ...
+    def get_closure_type(self) -> XcorKernelClosure: ...
     def get_component_list(self) -> list[XcorKernelComponent]: ...
     def get_eval(self, cosmo: HICosmo, l: int) -> XcorKernelIntegrand: ...
     def get_eval_vectorized(
@@ -22406,6 +22411,7 @@ class XcorKernel(NumCosmoMath.Model):
     def ref(self) -> XcorKernel: ...
     def set_adaptive_boundary_tries(self, adaptive_boundary_tries: int) -> None: ...
     def set_adaptive_epsilon(self, adaptive_epsilon: float) -> None: ...
+    def set_closure_type(self, closure_type: XcorKernelClosure) -> None: ...
     def set_expansion_factor(self, expansion_factor: float) -> None: ...
     def set_l_limber(self, l_limber: int) -> None: ...
     def set_lmax(self, lmax: int) -> None: ...
@@ -22456,6 +22462,8 @@ class XcorKernelAnalytic(XcorKernel):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22485,6 +22493,7 @@ class XcorKernelAnalytic(XcorKernel):
         scale_dependence: XcorKernelAnalyticKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -22513,6 +22522,7 @@ class XcorKernelAnalytic(XcorKernel):
         scale_dependence: XcorKernelAnalyticKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -22606,6 +22616,8 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22638,6 +22650,7 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -22668,6 +22681,7 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -22854,6 +22868,8 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22886,6 +22902,7 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -22916,6 +22933,7 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -23017,6 +23035,8 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23050,6 +23070,7 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -23081,6 +23102,7 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -23189,6 +23211,8 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23223,6 +23247,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -23255,6 +23280,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -23361,6 +23387,8 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23394,6 +23422,7 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -23425,6 +23454,7 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -23527,6 +23557,8 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23558,6 +23590,7 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -23587,6 +23620,7 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -23686,6 +23720,8 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23719,6 +23755,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -23750,6 +23787,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         scale_dependence: XcorKernelAnalyticKDep = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -23845,6 +23883,8 @@ class XcorKernelCMBISW(XcorKernel):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23875,6 +23915,7 @@ class XcorKernelCMBISW(XcorKernel):
         recomb: Recomb
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -23903,6 +23944,7 @@ class XcorKernelCMBISW(XcorKernel):
         recomb: Recomb = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -23987,6 +24029,8 @@ class XcorKernelCMBLensing(XcorKernel):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24017,6 +24061,7 @@ class XcorKernelCMBLensing(XcorKernel):
         recomb: Recomb
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -24045,6 +24090,7 @@ class XcorKernelCMBLensing(XcorKernel):
         recomb: Recomb = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -24140,6 +24186,8 @@ class XcorKernelCluster(XcorKernel):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24168,6 +24216,7 @@ class XcorKernelCluster(XcorKernel):
     class Props:
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -24195,6 +24244,7 @@ class XcorKernelCluster(XcorKernel):
         self,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -24268,6 +24318,8 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24298,6 +24350,7 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         z_upper: float
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -24326,6 +24379,7 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         z_upper: float = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -24511,6 +24565,8 @@ class XcorKernelGal(XcorKernel):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24550,6 +24606,7 @@ class XcorKernelGal(XcorKernel):
         noise_bias_fit: bool
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -24587,6 +24644,7 @@ class XcorKernelGal(XcorKernel):
         noise_bias_fit: bool = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -24649,6 +24707,9 @@ class XcorKernelIntegrand(GObject.GBoxed):
     eval_comps_func: typing.Callable[
         [None, float, int, int, typing.Sequence[float] | npt.NDArray[np.float64]], None
     ] = ...
+    get_spectral_func: typing.Callable[
+        [None], typing.Tuple[bool, NumCosmoMath.Matrix, float, float]
+    ] = ...
     residuals: NumCosmoMath.Matrix = ...
     reltol: float = ...
     scaled_abstol: float = ...
@@ -24670,6 +24731,9 @@ class XcorKernelIntegrand(GObject.GBoxed):
     ) -> XcorKernelIntegrand: ...
     def peek_knots(self) -> typing.Optional[NumCosmoMath.Vector]: ...
     def peek_residuals(self) -> typing.Optional[NumCosmoMath.Matrix]: ...
+    def peek_spectral(
+        self,
+    ) -> typing.Tuple[bool, NumCosmoMath.Matrix, float, float]: ...
     def ref(self) -> XcorKernelIntegrand: ...
     def set_residuals(
         self, residuals: typing.Optional[NumCosmoMath.Matrix] = None
@@ -24723,6 +24787,8 @@ class XcorKernelWeakLensing(XcorKernel):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24754,6 +24820,7 @@ class XcorKernelWeakLensing(XcorKernel):
         nbar: float
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -24783,6 +24850,7 @@ class XcorKernelWeakLensing(XcorKernel):
         nbar: float = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -24863,6 +24931,8 @@ class XcorKerneltSZ(XcorKernel):
         Expansion factor for domain extension
       track-fit-residual -> gboolean: track-fit-residual
         Whether to record the residual the closure fit achieved
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closure
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24893,6 +24963,7 @@ class XcorKerneltSZ(XcorKernel):
         zmax: float
         adaptive_boundary_tries: int
         adaptive_epsilon: float
+        closure_type: XcorKernelClosure
         dist: Distance
         expansion_factor: float
         integrator: NumCosmoMath.SBesselIntegrator
@@ -24921,6 +24992,7 @@ class XcorKerneltSZ(XcorKernel):
         zmax: float = ...,
         adaptive_boundary_tries: int = ...,
         adaptive_epsilon: float = ...,
+        closure_type: XcorKernelClosure = ...,
         dist: Distance = ...,
         expansion_factor: float = ...,
         integrator: NumCosmoMath.SBesselIntegrator = ...,
@@ -27299,6 +27371,21 @@ class WLSurfaceMassDensityParams(GObject.GEnum):
 
 class XcorKernelCMBLensingSParams(GObject.GEnum):
     LEN: XcorKernelCMBLensingSParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class XcorKernelClosure(GObject.GEnum):
+    CHEBYSHEV: XcorKernelClosure = ...
+    SPLINE: XcorKernelClosure = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

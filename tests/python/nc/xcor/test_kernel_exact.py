@@ -597,3 +597,83 @@ def test_achieved_residual_estimate_still_bounds_the_true_error(
     est_rel = np.abs(err / cl)
 
     assert np.all(est_rel > true_rel)
+
+
+def _closure(cosmology: Cosmology, closure_type, reltol=1.0e-4, scaled_abstol=1.0e-4):
+    """A cluster top-hat closure in the requested representation."""
+    kernel = Nc.XcorKernelClusterTophat(
+        dist=cosmology.dist,
+        powspec=cosmology.ps_ml,
+        z_lower=Z_BINS[0][0],
+        z_upper=Z_BINS[0][1],
+        integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+        reltol=reltol,
+        scaled_abstol=scaled_abstol,
+        closure_type=closure_type,
+    )
+    kernel.set_l_limber(-1)
+    kernel.prepare(cosmology.cosmo)
+
+    return kernel.get_eval_vectorized_full(
+        cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8)
+    )
+
+
+def test_chebyshev_closure_reports_a_spectral_representation(
+    cosmology: Cosmology,
+) -> None:
+    """A Chebyshev closure carries coefficients; a spline one does not.
+
+    The two are siblings rather than a replacement: each reports what it has,
+    and a caller that wants coefficients asks for them.
+    """
+    cheb = _closure(cosmology, Nc.XcorKernelClosure.CHEBYSHEV)
+    spline = _closure(cosmology, Nc.XcorKernelClosure.SPLINE)
+
+    ok, coeffs, k_min, k_max = cheb.peek_spectral()
+    assert ok
+    assert coeffs.nrows() == 8
+    assert coeffs.ncols() > 8
+    assert (k_min, k_max) == cheb.get_range()
+
+    # A spline closure reports knots and no expansion; the Chebyshev one the
+    # reverse. Neither is asked to pretend it has the other.
+    assert cheb.peek_knots() is None
+    assert spline.peek_knots() is not None
+    assert not spline.peek_spectral()[0]
+
+
+def test_chebyshev_closure_agrees_with_the_spline_one(cosmology: Cosmology) -> None:
+    """Same sampled function, same domain, so the two must describe one W.
+
+    Both are compared against a spline closure built six orders tighter, which
+    is the only reference either can be graded against. The Chebyshev one is
+    the more accurate of the two at equal requested tolerance -- measured here
+    at ~1e-9 per component against the spline's ~1e-4 -- so the assertion is
+    one-sided on purpose.
+    """
+    cheb = _closure(cosmology, Nc.XcorKernelClosure.CHEBYSHEV)
+    spline = _closure(cosmology, Nc.XcorKernelClosure.SPLINE)
+    ref = _closure(cosmology, Nc.XcorKernelClosure.SPLINE, 1.0e-10, 1.0e-7)
+
+    lo = max(c.get_range()[0] for c in (cheb, spline, ref)) * 1.001
+    hi = min(c.get_range()[1] for c in (cheb, spline, ref)) * 0.999
+    ks = np.geomspace(lo, hi, 400)
+
+    truth = np.array([ref.eval_array(k) for k in ks])
+    got_cheb = np.array([cheb.eval_array(k) for k in ks])
+    got_spline = np.array([spline.eval_array(k) for k in ks])
+    peak = np.abs(truth).max(axis=0)
+
+    err_cheb = np.abs(got_cheb - truth).max(axis=0) / peak
+    err_spline = np.abs(got_spline - truth).max(axis=0) / peak
+
+    assert np.all(err_cheb < 1.0e-6)
+    assert np.all(err_cheb < err_spline)
+
+
+def test_spline_closure_is_the_default(cosmology: Cosmology) -> None:
+    """The representation every method is calibrated against stays the default."""
+    kernel = _kernels(cosmology)[0]
+
+    assert kernel.get_closure_type() == Nc.XcorKernelClosure.SPLINE
