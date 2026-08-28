@@ -690,14 +690,22 @@ _spline_integrand_data_free (gpointer data)
  * same per-component ranges, same sampled function -- and differs only in
  * carrying coefficients instead of a spline.
  */
+typedef struct _ChebPanel
+{
+  gdouble a;
+  gdouble b;
+  NcmMatrix *coeffs; /* len x N, one row per multipole */
+  guint N;
+} ChebPanel;
+
 typedef struct _ChebIntegrandData
 {
   NcHICosmo *cosmo;
   gdouble RH_Mpc;
   gint lmin;
   guint len;
-  NcmMatrix *coeffs; /* len x N, one row per multipole */
-  guint N;
+  GArray *panels; /* ChebPanel, ascending and contiguous */
+  GArray *edges;  /* gdouble, panels->len + 1 entries, for the lookup */
   gdouble k_min;
   gdouble k_max;
   gdouble *k_min_comp;
@@ -705,49 +713,76 @@ typedef struct _ChebIntegrandData
 } ChebIntegrandData;
 
 /*
+ * Which panel holds @k. Panels are contiguous and ascending, so this is a
+ * bisection over the edges -- the same lookup a spline does over its knots,
+ * against far fewer of them.
+ */
+static const ChebPanel *
+_cheb_integrand_find_panel (const ChebIntegrandData *cid, const gdouble k)
+{
+  const gdouble *edges = (const gdouble *) cid->edges->data;
+  guint lo             = 0;
+  guint hi             = cid->panels->len - 1;
+
+  while (lo < hi)
+  {
+    const guint mid = (lo + hi + 1) / 2;
+
+    if (k >= edges[mid])
+      lo = mid;
+    else
+      hi = mid - 1;
+  }
+
+  return &g_array_index (cid->panels, ChebPanel, lo);
+}
+
+/*
  * Clenshaw, one component. O(N) against a spline's O(1), which is the price of
  * the representation for callers that evaluate pointwise; the exact method does
  * not evaluate at all, it works on the coefficients.
  */
 static gdouble
-_cheb_integrand_eval_one (const ChebIntegrandData *cid, guint comp, const gdouble t)
+_cheb_panel_eval_one (const ChebPanel *panel, guint comp, const gdouble t)
 {
   const gdouble two_t = 2.0 * t;
   gdouble b_1         = 0.0;
   gdouble b_2         = 0.0;
   gint n;
 
-  for (n = (gint) cid->N - 1; n >= 1; n--)
+  for (n = (gint) panel->N - 1; n >= 1; n--)
   {
-    const gdouble b_0 = two_t * b_1 - b_2 + ncm_matrix_get (cid->coeffs, comp, n);
+    const gdouble b_0 = two_t * b_1 - b_2 + ncm_matrix_get (panel->coeffs, comp, n);
 
     b_2 = b_1;
     b_1 = b_0;
   }
 
-  return t * b_1 - b_2 + ncm_matrix_get (cid->coeffs, comp, 0);
+  return t * b_1 - b_2 + ncm_matrix_get (panel->coeffs, comp, 0);
 }
 
 static void
 _cheb_integrand_eval (gpointer data, gdouble k, gdouble *W)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
-  const gdouble t        = ncm_spectral_x_to_t (cid->k_min, cid->k_max, k);
+  const ChebPanel *panel = _cheb_integrand_find_panel (cid, k);
+  const gdouble t        = ncm_spectral_x_to_t (panel->a, panel->b, k);
   guint i;
 
   for (i = 0; i < cid->len; i++)
-    W[i] = _cheb_integrand_eval_one (cid, i, t);
+    W[i] = _cheb_panel_eval_one (panel, i, t);
 }
 
 static void
 _cheb_integrand_eval_comps (gpointer data, gdouble k, guint offset, guint len, gdouble *W)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
-  const gdouble t        = ncm_spectral_x_to_t (cid->k_min, cid->k_max, k);
+  const ChebPanel *panel = _cheb_integrand_find_panel (cid, k);
+  const gdouble t        = ncm_spectral_x_to_t (panel->a, panel->b, k);
   guint i;
 
   for (i = 0; i < len; i++)
-    W[offset + i] = _cheb_integrand_eval_one (cid, offset + i, t);
+    W[offset + i] = _cheb_panel_eval_one (panel, offset + i, t);
 }
 
 static void
@@ -768,25 +803,63 @@ _cheb_integrand_get_range_comp (gpointer data, guint i, gdouble *kmin, gdouble *
   *kmax = cid->k_max_comp[i];
 }
 
+/*
+ * Reports the expansion only when there is a single panel, since that is the
+ * case a caller working on coefficients can use directly. With several panels
+ * the closure is still exactly evaluable through eval(), which is what the
+ * quadratures use.
+ */
 static gboolean
 _cheb_integrand_get_spectral (gpointer data, NcmMatrix **coeffs, gdouble *k_min, gdouble *k_max)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
 
-  *coeffs = cid->coeffs;
-  *k_min  = cid->k_min;
-  *k_max  = cid->k_max;
+  if (cid->panels->len != 1)
+    return FALSE;
+
+  {
+    const ChebPanel *panel = &g_array_index (cid->panels, ChebPanel, 0);
+
+    *coeffs = panel->coeffs;
+    *k_min  = panel->a;
+    *k_max  = panel->b;
+  }
 
   return TRUE;
+}
+
+static guint
+_cheb_integrand_get_panels (gpointer data)
+{
+  ChebIntegrandData *cid = (ChebIntegrandData *) data;
+
+  return cid->panels->len;
+}
+
+static void
+_cheb_integrand_peek_panel (gpointer data, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b)
+{
+  ChebIntegrandData *cid = (ChebIntegrandData *) data;
+  const ChebPanel *panel = &g_array_index (cid->panels, ChebPanel, i);
+
+  *coeffs = panel->coeffs;
+  *a      = panel->a;
+  *b      = panel->b;
 }
 
 static void
 _cheb_integrand_data_free (gpointer data)
 {
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
+  guint i;
 
   nc_hicosmo_clear (&cid->cosmo);
-  ncm_matrix_clear (&cid->coeffs);
+
+  for (i = 0; i < cid->panels->len; i++)
+    ncm_matrix_clear (&g_array_index (cid->panels, ChebPanel, i).coeffs);
+
+  g_array_unref (cid->panels);
+  g_array_unref (cid->edges);
 
   g_free (cid->k_min_comp);
   g_free (cid->k_max_comp);
@@ -1418,6 +1491,64 @@ _cheb_sampler_call (gpointer user_data, gdouble k, NcmVector *y)
 }
 
 /*
+ * Highest order tried on one panel before splitting it. A single global panel
+ * has to resolve the whole domain uniformly in phase, which at high multipole
+ * is mostly domain where W is negligible -- the spline's adaptive knots go
+ * where the window actually lives and a global expansion cannot. Capping the
+ * order and bisecting recovers that: panels over the quiet region converge at
+ * once and cost almost nothing, and the resolution concentrates where the
+ * oscillation is.
+ */
+#define NC_XCOR_KERNEL_CHEB_PANEL_K_CAP (7)
+#define NC_XCOR_KERNEL_CHEB_MIN_PANEL_FRAC (1.0e-6)
+
+/*
+ * Expands on [a, b], bisecting where the capped order does not converge.
+ * Panels are appended in ascending order, so the result is contiguous.
+ */
+static void
+_nc_xcor_kernel_cheb_split (NcmSpectral *spectral, gpointer sampler, guint n_l,
+                            gdouble a, gdouble b, gdouble reltol, gdouble abstol,
+                            GArray *panels)
+{
+  NcmMatrix *coeffs = NULL;
+  const guint k_ord = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
+    spectral, _cheb_sampler_call, n_l, a, b, 3,
+    NC_XCOR_KERNEL_CHEB_PANEL_K_CAP, reltol, abstol, FALSE, &coeffs, sampler);
+
+  if (k_ord > 0)
+  {
+    ChebPanel panel = { a, b, coeffs, (1u << k_ord) + 1u };
+
+    g_array_append_val (panels, panel);
+
+    return;
+  }
+
+  {
+    const gdouble mid = 0.5 * (a + b);
+
+    /* A panel that will not converge however far it is split is not a
+     * resolution problem; refusing to bisect past a fraction of the domain
+     * turns a hang into a diagnosable expansion. */
+    if ((b - a) < NC_XCOR_KERNEL_CHEB_MIN_PANEL_FRAC * b)
+    {
+      const guint k_forced = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
+        spectral, _cheb_sampler_call, n_l, a, b, 3,
+        NC_XCOR_KERNEL_CHEB_PANEL_K_CAP, reltol, abstol, TRUE, &coeffs, sampler);
+      ChebPanel panel = { a, b, coeffs, (1u << k_forced) + 1u };
+
+      g_array_append_val (panels, panel);
+
+      return;
+    }
+
+    _nc_xcor_kernel_cheb_split (spectral, sampler, n_l, a, mid, reltol, abstol, panels);
+    _nc_xcor_kernel_cheb_split (spectral, sampler, n_l, mid, b, reltol, abstol, panels);
+  }
+}
+
+/*
  * Builds the closure as a Chebyshev series rather than a refined spline.
  *
  * The domain is found exactly as the spline path finds it -- the seeds and
@@ -1483,14 +1614,20 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     if (self->spectral == NULL)
       self->spectral = ncm_spectral_new ();
 
-    {
-      NcmMatrix *coeffs = NULL;
-      const guint k_ord = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (
-        self->spectral, _cheb_sampler_call, n_l, cid->k_min, cid->k_max,
-        3, reltol, abstol, &coeffs, &sampler);
+    cid->panels = g_array_new (FALSE, FALSE, sizeof (ChebPanel));
+    cid->edges  = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
-      cid->coeffs = coeffs;
-      cid->N      = (1 << k_ord) + 1;
+    _nc_xcor_kernel_cheb_split (self->spectral, &sampler, n_l,
+                                cid->k_min, cid->k_max, reltol, abstol,
+                                cid->panels);
+
+    {
+      const gdouble first = g_array_index (cid->panels, ChebPanel, 0).a;
+
+      g_array_append_val (cid->edges, first);
+
+      for (i = 0; i < cid->panels->len; i++)
+        g_array_append_val (cid->edges, g_array_index (cid->panels, ChebPanel, i).b);
     }
 
     cid->k_min_comp = g_new (gdouble, n_l);
@@ -1539,6 +1676,9 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
       nc_xcor_kernel_integrand_set_get_range_comp (integrand, _cheb_integrand_get_range_comp);
       nc_xcor_kernel_integrand_set_eval_comps (integrand, _cheb_integrand_eval_comps);
       nc_xcor_kernel_integrand_set_get_spectral (integrand, _cheb_integrand_get_spectral);
+      nc_xcor_kernel_integrand_set_panel_accessors (integrand,
+                                                    _cheb_integrand_get_panels,
+                                                    _cheb_integrand_peek_panel);
       nc_xcor_kernel_integrand_set_tolerances (integrand, reltol, abs_reltol);
 
       return integrand;
@@ -1850,6 +1990,9 @@ nc_xcor_kernel_integrand_new (guint len, void (*eval) (gpointer, gdouble, gdoubl
 
   integrand->get_range_comp_func = NULL;
   integrand->eval_comps_func     = NULL;
+  integrand->get_spectral_func   = NULL;
+  integrand->get_panels_func     = NULL;
+  integrand->peek_panel_func     = NULL;
 
   integrand->residuals     = NULL;
   integrand->reltol        = 0.0;
@@ -1914,6 +2057,60 @@ nc_xcor_kernel_integrand_peek_spectral (NcXcorKernelIntegrand *integrand, NcmMat
     return FALSE;
 
   return integrand->get_spectral_func (integrand->data, coeffs, k_min, k_max);
+}
+
+/**
+ * nc_xcor_kernel_integrand_set_panel_accessors: (skip)
+ * @integrand: a #NcXcorKernelIntegrand
+ * @get_panels: (scope async): function reporting the panel count
+ * @peek_panel: (scope async): function reporting one panel
+ *
+ * Installs the accessors enumerating @integrand's panels, for a spectral
+ * representation split into more than one.
+ *
+ */
+void
+nc_xcor_kernel_integrand_set_panel_accessors (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetPanels get_panels, NcXcorKernelIntegrandPeekPanel peek_panel)
+{
+  integrand->get_panels_func = get_panels;
+  integrand->peek_panel_func = peek_panel;
+}
+
+/**
+ * nc_xcor_kernel_integrand_get_n_panels:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * Returns: how many panels @integrand is split into, or 0 when it carries no
+ * spectral representation
+ */
+guint
+nc_xcor_kernel_integrand_get_n_panels (NcXcorKernelIntegrand *integrand)
+{
+  if (integrand->get_panels_func == NULL)
+    return 0;
+
+  return integrand->get_panels_func (integrand->data);
+}
+
+/**
+ * nc_xcor_kernel_integrand_peek_panel:
+ * @integrand: a #NcXcorKernelIntegrand
+ * @i: panel index, below nc_xcor_kernel_integrand_get_n_panels()
+ * @coeffs: (out) (transfer none): the panel's coefficients, one row per component
+ * @a: (out): the panel's lower edge
+ * @b: (out): the panel's upper edge
+ *
+ * Peeks one panel. Panels are contiguous and ascending, so panel @i ends where
+ * panel @i + 1 begins.
+ *
+ */
+void
+nc_xcor_kernel_integrand_peek_panel (NcXcorKernelIntegrand *integrand, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b)
+{
+  g_assert (integrand->peek_panel_func != NULL);
+  g_assert_cmpuint (i, <, nc_xcor_kernel_integrand_get_n_panels (integrand));
+
+  integrand->peek_panel_func (integrand->data, i, coeffs, a, b);
 }
 
 /**

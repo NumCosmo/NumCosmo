@@ -630,27 +630,41 @@ def test_chebyshev_closure_reports_a_spectral_representation(
     cheb = _closure(cosmology, Nc.XcorKernelClosure.CHEBYSHEV)
     spline = _closure(cosmology, Nc.XcorKernelClosure.SPLINE)
 
-    ok, coeffs, k_min, k_max = cheb.peek_spectral()
-    assert ok
-    assert coeffs.nrows() == 8
-    assert coeffs.ncols() > 8
-    assert (k_min, k_max) == cheb.get_range()
+    n_panels = cheb.get_n_panels()
+    assert n_panels > 0
+
+    # Panels are contiguous and ascending, and together they tile the range.
+    lo, hi = cheb.get_range()
+    prev_b = lo
+    for i in range(n_panels):
+        coeffs, a, b = cheb.peek_panel(i)
+        assert coeffs.nrows() == 8
+        assert coeffs.ncols() > 1
+        assert a == pytest.approx(prev_b)
+        assert b > a
+        prev_b = b
+    assert prev_b == pytest.approx(hi)
+
+    # The single-expansion accessor answers only when there is one panel, since
+    # that is the case a caller working on coefficients can use directly.
+    assert cheb.peek_spectral()[0] == (n_panels == 1)
 
     # A spline closure reports knots and no expansion; the Chebyshev one the
     # reverse. Neither is asked to pretend it has the other.
     assert cheb.peek_knots() is None
     assert spline.peek_knots() is not None
     assert not spline.peek_spectral()[0]
+    assert spline.get_n_panels() == 0
 
 
 def test_chebyshev_closure_agrees_with_the_spline_one(cosmology: Cosmology) -> None:
     """Same sampled function, same domain, so the two must describe one W.
 
-    Both are compared against a spline closure built six orders tighter, which
-    is the only reference either can be graded against. The Chebyshev one is
-    the more accurate of the two at equal requested tolerance -- measured here
-    at ~1e-9 per component against the spline's ~1e-4 -- so the assertion is
-    one-sided on purpose.
+    Both are graded against a spline closure built six orders tighter. At equal
+    *requested* tolerance the two land in the same place -- panels converge to
+    what was asked and no further, so the Chebyshev closure is comparable here
+    rather than better. Where it wins is samples for that accuracy, and how
+    cheaply it tightens: spectral convergence rather than h^4.
     """
     cheb = _closure(cosmology, Nc.XcorKernelClosure.CHEBYSHEV)
     spline = _closure(cosmology, Nc.XcorKernelClosure.SPLINE)
@@ -668,8 +682,22 @@ def test_chebyshev_closure_agrees_with_the_spline_one(cosmology: Cosmology) -> N
     err_cheb = np.abs(got_cheb - truth).max(axis=0) / peak
     err_spline = np.abs(got_spline - truth).max(axis=0) / peak
 
-    assert np.all(err_cheb < 1.0e-6)
-    assert np.all(err_cheb < err_spline)
+    # Both meet the tolerance they were asked for, on every multipole.
+    assert np.all(err_cheb < 1.0e-3)
+    assert np.all(err_spline < 1.0e-3)
+
+    # And they describe the same function: the gap between them is no larger
+    # than either one's own distance from the reference.
+    assert np.all(
+        np.abs(got_cheb - got_spline).max(axis=0) / peak
+        < 10.0 * np.maximum(err_cheb, err_spline)
+    )
+
+    # The Chebyshev closure reaches that on fewer samples than the spline needs
+    # knots -- the accuracy per evaluation is the point, evaluations being
+    # radial solves.
+    n_cheb = sum(cheb.peek_panel(i)[0].ncols() for i in range(cheb.get_n_panels()))
+    assert n_cheb < spline.peek_knots().len()
 
 
 def test_spline_closure_is_the_default(cosmology: Cosmology) -> None:

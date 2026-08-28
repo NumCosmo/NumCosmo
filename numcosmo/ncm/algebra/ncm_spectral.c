@@ -561,12 +561,54 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, Ncm
                                                       guint k_min, gdouble reltol, gdouble abstol,
                                                       NcmMatrix **coeffs, gpointer user_data)
 {
+  return ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, F, n_comp, a, b,
+                                                                   k_min, spectral->max_order,
+                                                                   reltol, abstol, TRUE,
+                                                                   coeffs, user_data);
+}
+
+/**
+ * ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap:
+ * @spectral: a #NcmSpectral
+ * @F: (scope call): vector-valued function to expand
+ * @n_comp: number of components @F returns
+ * @a: interval lower bound
+ * @b: interval upper bound
+ * @k_min: starting refinement level
+ * @k_cap: highest refinement level to try, capped at #NcmSpectral:max-order
+ * @reltol: relative tolerance on the coefficients
+ * @abstol: absolute tolerance on the coefficients
+ * @fatal: whether failing to converge by @k_cap is an error
+ * @coeffs: (out) (transfer full): an @n_comp by $N$ #NcmMatrix of coefficients
+ * @user_data: user data for @F
+ *
+ * As ncm_spectral_compute_chebyshev_coeffs_batch_adaptive(), with a ceiling on
+ * the order and a choice about what failing to reach it means.
+ *
+ * A caller that subdivides its interval wants a modest @k_cap and @fatal
+ * %FALSE: not converging on a panel is how it learns to split, not a failure.
+ * A caller expanding on one interval wants @fatal %TRUE, since for it the cap
+ * is a memory guard rather than a stopping rule.
+ *
+ * Returns: the level reached, or 0 when @fatal is %FALSE and @k_cap was not
+ * enough, in which case @coeffs is left alone
+ */
+guint
+ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral, NcmSpectralFBatch F,
+                                                          guint n_comp, gdouble a, gdouble b,
+                                                          guint k_min, guint k_cap,
+                                                          gdouble reltol, gdouble abstol,
+                                                          gboolean fatal,
+                                                          NcmMatrix **coeffs, gpointer user_data)
+{
   guint k            = k_min;
   gboolean converged = FALSE;
   NcmMatrix *c_previous, *c_current;
   NcmVector *y;
 
-  g_assert (k_min <= spectral->max_order);
+  k_cap = MIN (k_cap, spectral->max_order);
+
+  g_assert (k_min <= k_cap);
   g_assert_cmpuint (n_comp, >, 0);
 
   _ncm_spectral_batch_prepare_buffers (spectral, n_comp);
@@ -585,7 +627,7 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, Ncm
     _ncm_spectral_batch_normalize_coeffs (spectral, c_previous, N);
   }
 
-  while (k < spectral->max_order)
+  while (k < k_cap)
   {
     const guint N_prev = (1 << k) + 1;
     guint N;
@@ -615,13 +657,22 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, Ncm
     }
   }
 
-  if (!converged)
+  if (!converged && fatal)
     g_error ("ncm_spectral_compute_chebyshev_coeffs_batch_adaptive: reached the "
              "maximum order %u (N = %u) without converging to reltol %.3e, "
              "abstol %.3e. max-order is a memory guard, not a stopping rule: "
              "either the tolerances are past what the sampled function carries, "
              "or the interval needs splitting.",
-             spectral->max_order, (1 << spectral->max_order) + 1, reltol, abstol);
+             k_cap, (1 << k_cap) + 1, reltol, abstol);
+
+  if (!converged)
+  {
+    ncm_matrix_free (c_previous);
+    ncm_matrix_free (c_current);
+    ncm_vector_free (y);
+
+    return 0;
+  }
 
   {
     const guint N = (1 << k) + 1;

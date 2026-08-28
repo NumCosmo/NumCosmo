@@ -120,6 +120,28 @@ typedef enum _NcXcorKernelClosure
 typedef gboolean (*NcXcorKernelIntegrandGetSpectral) (gpointer data, NcmMatrix **coeffs, gdouble *k_min, gdouble *k_max);
 
 /**
+ * NcXcorKernelIntegrandGetPanels:
+ * @data: user data
+ *
+ * Function type reporting how many panels a spectral integrand is split into.
+ *
+ * Returns: the panel count, or 0 when @data has no spectral representation
+ */
+typedef guint (*NcXcorKernelIntegrandGetPanels) (gpointer data);
+
+/**
+ * NcXcorKernelIntegrandPeekPanel:
+ * @data: user data
+ * @i: panel index
+ * @coeffs: (out) (transfer none): the panel's coefficients, one row per component
+ * @a: (out): the panel's lower edge
+ * @b: (out): the panel's upper edge
+ *
+ * Function type reporting one panel of a spectral integrand.
+ */
+typedef void (*NcXcorKernelIntegrandPeekPanel) (gpointer data, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b);
+
+/**
  * NcXcorKernelIntegrandEval:
  * @data: user data
  * @k: wavenumber
@@ -230,6 +252,8 @@ struct _NcXcorKernelIntegrand
   NcXcorKernelIntegrandGetRangeComp get_range_comp_func;
   NcXcorKernelIntegrandEvalComps eval_comps_func;
   NcXcorKernelIntegrandGetSpectral get_spectral_func;
+  NcXcorKernelIntegrandGetPanels get_panels_func;
+  NcXcorKernelIntegrandPeekPanel peek_panel_func;
   NcmMatrix *residuals;
   gdouble reltol;
   gdouble scaled_abstol;
@@ -355,6 +379,9 @@ void nc_xcor_kernel_integrand_set_eval_comps (NcXcorKernelIntegrand *integrand, 
 NcmVector *nc_xcor_kernel_integrand_peek_knots (NcXcorKernelIntegrand *integrand);
 void nc_xcor_kernel_integrand_set_get_spectral (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetSpectral get_spectral);
 gboolean nc_xcor_kernel_integrand_peek_spectral (NcXcorKernelIntegrand *integrand, NcmMatrix **coeffs, gdouble *k_min, gdouble *k_max);
+void nc_xcor_kernel_integrand_set_panel_accessors (NcXcorKernelIntegrand *integrand, NcXcorKernelIntegrandGetPanels get_panels, NcXcorKernelIntegrandPeekPanel peek_panel);
+guint nc_xcor_kernel_integrand_get_n_panels (NcXcorKernelIntegrand *integrand);
+void nc_xcor_kernel_integrand_peek_panel (NcXcorKernelIntegrand *integrand, guint i, NcmMatrix **coeffs, gdouble *a, gdouble *b);
 void nc_xcor_kernel_integrand_set_tolerances (NcXcorKernelIntegrand *integrand, gdouble reltol, gdouble scaled_abstol);
 gdouble nc_xcor_kernel_integrand_get_reltol (NcXcorKernelIntegrand *integrand);
 gdouble nc_xcor_kernel_integrand_get_scaled_abstol (NcXcorKernelIntegrand *integrand);
