@@ -556,6 +556,12 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * domain and differs only in what is fitted to it, so a kernel can be
    * switched over and the two compared directly.
    *
+   * It applies to the non-Limber closure only. Under Limber each multipole is
+   * supported on its own band and zero outside it, so the block's window
+   * carries a step per multipole; a Chebyshev series converges here because
+   * $W_\\ell(k)$ is entire in $k$, and a step is not. Multipoles taken under
+   * Limber keep the spline closure whatever this is set to.
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_CLOSURE_TYPE,
@@ -1834,12 +1840,14 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 
     g_ptr_array_unref (comp_list);
 
-    if (self->closure_type == NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV)
-      return _nc_xcor_kernel_build_cheb_integrand (xclk, cosmo, lmin, lmax,
-                                                   &comp_states,
-                                                   _component_states_compute_limber,
-                                                   self->reltol, self->scaled_abstol);
-
+    /* Always the spline here, whatever #NcXcorKernel:closure-type asks for.
+     * Under Limber a multipole's window is supported only on its own band in k
+     * and is zero outside it, so the block's shared domain carries one step per
+     * multipole -- see _spline_integrand_get_range_comp(). A Chebyshev series
+     * converges on this kernel because W_l(k) is entire in k, and a step is
+     * not: the expansion would never converge and the panel splitter would
+     * bisect until it gave up. The Limber closure is also the cheap one, so
+     * there is nothing to win by trying. */
     return _nc_xcor_kernel_build_spline_integrand (xclk, cosmo, lmin, lmax,
                                                    &comp_states,
                                                    _component_states_compute_limber,

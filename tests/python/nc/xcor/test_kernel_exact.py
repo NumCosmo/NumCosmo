@@ -705,3 +705,52 @@ def test_spline_closure_is_the_default(cosmology: Cosmology) -> None:
     kernel = _kernels(cosmology)[0]
 
     assert kernel.get_closure_type() == Nc.XcorKernelClosure.SPLINE
+
+
+def test_limber_multipoles_keep_the_spline_closure(cosmology: Cosmology) -> None:
+    """Chebyshev is refused where the window is not entire in k.
+
+    Under Limber a multipole is supported on its own band and zero outside it,
+    so the block's window carries a step per multipole. A Chebyshev series
+    converges on this kernel because W_l(k) is entire in k; a step is not, so
+    the expansion cannot converge and a panel splitter would bisect until it
+    gave up -- which is exactly what this did before the closure builder
+    started refusing.
+    """
+    integrands = []
+
+    for closure_type in (
+        Nc.XcorKernelClosure.SPLINE,
+        Nc.XcorKernelClosure.CHEBYSHEV,
+    ):
+        kernel = Nc.XcorKernelClusterTophat(
+            dist=cosmology.dist,
+            powspec=cosmology.ps_ml,
+            z_lower=Z_BINS[0][0],
+            z_upper=Z_BINS[0][1],
+            integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+            reltol=1.0e-4,
+            scaled_abstol=1.0e-4,
+            closure_type=closure_type,
+        )
+        # Every multipole in the block falls on the Limber side.
+        kernel.set_l_limber(0)
+        kernel.prepare(cosmology.cosmo)
+
+        integrands.append(
+            kernel.get_eval_vectorized_full(
+                cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8)
+            )
+        )
+
+    for integrand in integrands:
+        assert integrand.peek_knots() is not None, "expected a spline closure"
+        assert integrand.get_n_panels() == 0
+
+    # The same closure either way, not merely the same kind of closure.
+    spline, cheb = integrands
+    assert spline.get_range() == cheb.get_range()
+
+    lo, hi = spline.get_range()
+    for k in np.geomspace(lo * 1.001, hi * 0.999, 32):
+        assert_allclose(cheb.eval_array(k), spline.eval_array(k), rtol=1.0e-14)
