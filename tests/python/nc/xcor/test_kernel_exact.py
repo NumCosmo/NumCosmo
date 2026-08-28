@@ -830,3 +830,60 @@ def test_spectral_pair_is_integrated_exactly(cosmology: Cosmology) -> None:
         # putting them at 3.5e-2 and 1.3e-1 respectively, so a threshold there
         # would be testing the tolerance rather than the representation.
         assert err_exact.max() < err_spline.max()
+
+
+def test_panel_order_cap_is_tunable(cosmology: Cosmology) -> None:
+    """The cap is a fitted heuristic, so a caller has to be able to sweep it.
+
+    Its default came from a sweep on two kernel families at one multipole range;
+    the optimum depends on how a window's phase is spread over its domain, which
+    belongs to the kernel rather than to the library. It is a property and not a
+    compile-time constant precisely so that assumption can be tested.
+    """
+
+    def closure(cap):
+        kernel = Nc.XcorKernelClusterTophat(
+            dist=cosmology.dist,
+            powspec=cosmology.ps_ml,
+            z_lower=Z_BINS[0][0],
+            z_upper=Z_BINS[0][1],
+            integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+            reltol=1.0e-4,
+            scaled_abstol=1.0e-4,
+            closure_type=Nc.XcorKernelClosure.CHEBYSHEV,
+            panel_order_cap=cap,
+        )
+        kernel.set_l_limber(-1)
+        kernel.prepare(cosmology.cosmo)
+
+        return kernel, kernel.get_eval_vectorized_full(
+            cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8)
+        )
+
+    default_kernel, default_closure = closure(0)
+    assert default_kernel.get_panel_order_cap() == 0
+
+    # Zero selects the default, so it must land exactly where naming it does.
+    _, explicit = closure(5)
+    assert default_closure.get_n_panels() == explicit.get_n_panels()
+
+    # A lower cap gives more, smaller panels; a higher one fewer, larger.
+    _, coarse = closure(7)
+    _, fine = closure(4)
+    assert fine.get_n_panels() > default_closure.get_n_panels()
+    assert coarse.get_n_panels() < default_closure.get_n_panels()
+
+    for i in range(coarse.get_n_panels()):
+        assert coarse.peek_panel(i)[0].ncols() <= (1 << 7) + 1
+
+    # And they describe one function: the cap changes how the domain is carved,
+    # not what is being fitted. Compared against the block's own peak rather
+    # than pointwise -- in the tail both are near zero and a relative
+    # comparison there measures the smaller of two small numbers.
+    lo, hi = default_closure.get_range()
+    ks = np.geomspace(lo * 1.001, hi * 0.999, 64)
+    got_fine = np.array([fine.eval_array(k) for k in ks])
+    got_coarse = np.array([coarse.eval_array(k) for k in ks])
+    peak = np.abs(got_fine).max()
+
+    assert np.abs(got_fine - got_coarse).max() < 1.0e-4 * peak

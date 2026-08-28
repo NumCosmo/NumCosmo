@@ -83,6 +83,7 @@ typedef struct _NcXcorKernelPrivate
   guint max_iter;
   gdouble expansion_factor;
   NcXcorKernelClosure closure_type;
+  guint panel_order_cap;
   gboolean track_fit_residual;
   gboolean tolerance_balance_warned;
   gboolean constructed;
@@ -105,6 +106,7 @@ enum
   PROP_EXPANSION_FACTOR,
   PROP_TRACK_FIT_RESIDUAL,
   PROP_CLOSURE_TYPE,
+  PROP_PANEL_ORDER_CAP,
   PROP_SIZE,
 };
 
@@ -131,6 +133,7 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
   self->max_iter                 = 0;
   self->expansion_factor         = 0.0;
   self->closure_type             = NC_XCOR_KERNEL_CLOSURE_SPLINE;
+  self->panel_order_cap          = 0;
   self->track_fit_residual       = FALSE;
   self->tolerance_balance_warned = FALSE;
   self->constructed              = FALSE;
@@ -243,6 +246,9 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_CLOSURE_TYPE:
       nc_xcor_kernel_set_closure_type (xclk, g_value_get_enum (value));
       break;
+    case PROP_PANEL_ORDER_CAP:
+      nc_xcor_kernel_set_panel_order_cap (xclk, g_value_get_uint (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -300,6 +306,9 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_CLOSURE_TYPE:
       g_value_set_enum (value, nc_xcor_kernel_get_closure_type (xclk));
+      break;
+    case PROP_PANEL_ORDER_CAP:
+      g_value_set_uint (value, nc_xcor_kernel_get_panel_order_cap (xclk));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -561,6 +570,43 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
    * Limber keep the spline closure whatever this is set to.
    *
    */
+  /**
+   * NcXcorKernel:panel-order-cap:
+   *
+   * Highest Chebyshev order tried on one panel before it is bisected, as
+   * $N = 2^\\mathrm{cap} + 1$ coefficients.
+   *
+   * **This is a heuristic, and the default is fitted rather than derived.** The
+   * cap trades waste against panel count: a panel that fails to converge at it
+   * discards its whole grid before splitting, so a high cap wastes more per
+   * failure while a low one fails more often. Neither side has a closed form,
+   * so 5 comes from a sweep on two kernel families, solve time:
+   *
+   * | cap | $N \\le$ | galaxy + weak lensing | cluster top-hat |
+   * |---|---|---|---|
+   * | 5 | 33 | 1.97 s | 2.00 s |
+   * | 6 | 65 | 2.64 s | 2.04 s |
+   * | 7 | 129 | 3.73 s | 2.19 s |
+   * | 8 | 257 | 5.74 s | 2.56 s |
+   *
+   * Uniformly best at 5 there, and accuracy did not move with it. But those are
+   * two kernel families at one multipole range on one machine, and the optimum
+   * depends on how a window's phase is distributed across its domain -- which
+   * is a property of the kernel, not of the library. **A caller with a
+   * different kernel should sweep this rather than assume 5 transfers**, and it
+   * is a property rather than a compile-time constant so that they can.
+   *
+   * Zero selects the default.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_PANEL_ORDER_CAP,
+                                   g_param_spec_uint ("panel-order-cap",
+                                                      NULL,
+                                                      "Highest Chebyshev order tried per panel before bisecting",
+                                                      0, 12, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   g_object_class_install_property (object_class,
                                    PROP_CLOSURE_TYPE,
                                    g_param_spec_enum ("closure-type",
@@ -1582,13 +1628,13 @@ _cheb_sampler_call (gpointer user_data, gdouble k, NcmVector *y)
 }
 
 /*
- * Highest order tried on one panel before splitting it. A single global panel
- * has to resolve the whole domain uniformly in phase, which at high multipole
- * is mostly domain where W is negligible -- the spline's adaptive knots go
- * where the window actually lives and a global expansion cannot. Capping the
- * order and bisecting recovers that: panels over the quiet region converge at
- * once and cost almost nothing, and the resolution concentrates where the
- * oscillation is.
+ * Default for #NcXcorKernel:panel-order-cap, which is where the reasoning and
+ * the sweep behind the value live. A single global panel has to resolve the
+ * whole domain uniformly in phase, which at high multipole is mostly domain
+ * where W is negligible -- the spline's adaptive knots go where the window
+ * actually lives and a global expansion cannot. Capping the order and bisecting
+ * recovers that: panels over the quiet region converge at once and cost almost
+ * nothing, and the resolution concentrates where the oscillation is.
  */
 #define NC_XCOR_KERNEL_CHEB_PANEL_K_CAP (5)
 #define NC_XCOR_KERNEL_CHEB_MIN_PANEL_FRAC (1.0e-6)
@@ -1600,12 +1646,12 @@ _cheb_sampler_call (gpointer user_data, gdouble k, NcmVector *y)
 static void
 _nc_xcor_kernel_cheb_split (NcmSpectral *spectral, gpointer sampler, guint n_l,
                             gdouble a, gdouble b, gdouble reltol, gdouble abstol,
-                            GArray *panels)
+                            guint k_cap, GArray *panels)
 {
   NcmMatrix *coeffs = NULL;
   const guint k_ord = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
     spectral, _cheb_sampler_call, n_l, a, b, 3,
-    NC_XCOR_KERNEL_CHEB_PANEL_K_CAP, reltol, abstol, FALSE, &coeffs, sampler);
+    k_cap, reltol, abstol, FALSE, &coeffs, sampler);
 
   if (k_ord > 0)
   {
@@ -1626,7 +1672,7 @@ _nc_xcor_kernel_cheb_split (NcmSpectral *spectral, gpointer sampler, guint n_l,
     {
       const guint k_forced = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
         spectral, _cheb_sampler_call, n_l, a, b, 3,
-        NC_XCOR_KERNEL_CHEB_PANEL_K_CAP, reltol, abstol, TRUE, &coeffs, sampler);
+        k_cap, reltol, abstol, TRUE, &coeffs, sampler);
       ChebPanel panel = { a, b, coeffs, (1u << k_forced) + 1u };
 
       g_array_append_val (panels, panel);
@@ -1634,8 +1680,8 @@ _nc_xcor_kernel_cheb_split (NcmSpectral *spectral, gpointer sampler, guint n_l,
       return;
     }
 
-    _nc_xcor_kernel_cheb_split (spectral, sampler, n_l, a, mid, reltol, abstol, panels);
-    _nc_xcor_kernel_cheb_split (spectral, sampler, n_l, mid, b, reltol, abstol, panels);
+    _nc_xcor_kernel_cheb_split (spectral, sampler, n_l, a, mid, reltol, abstol, k_cap, panels);
+    _nc_xcor_kernel_cheb_split (spectral, sampler, n_l, mid, b, reltol, abstol, k_cap, panels);
   }
 }
 
@@ -1710,6 +1756,8 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
 
       _nc_xcor_kernel_cheb_split (*spectral, &sampler, n_l,
                                   cid->k_min, cid->k_max, reltol, abstol,
+                                  (self->panel_order_cap == 0) ?
+                                  NC_XCOR_KERNEL_CHEB_PANEL_K_CAP : self->panel_order_cap,
                                   cid->panels);
 
       ncm_memory_pool_return (spectral);
@@ -3089,6 +3137,38 @@ nc_xcor_kernel_set_closure_type (NcXcorKernel *xclk, NcXcorKernelClosure closure
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   self->closure_type = closure_type;
+}
+
+/**
+ * nc_xcor_kernel_get_panel_order_cap:
+ * @xclk: a #NcXcorKernel
+ *
+ * Returns: the panel order cap, or 0 for the default. See
+ * #NcXcorKernel:panel-order-cap.
+ */
+guint
+nc_xcor_kernel_get_panel_order_cap (NcXcorKernel *xclk)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  return self->panel_order_cap;
+}
+
+/**
+ * nc_xcor_kernel_set_panel_order_cap:
+ * @xclk: a #NcXcorKernel
+ * @panel_order_cap: the cap, or 0 for the default
+ *
+ * Sets #NcXcorKernel:panel-order-cap. Read when a closure is built, so one
+ * already built keeps the panels it was built with.
+ *
+ */
+void
+nc_xcor_kernel_set_panel_order_cap (NcXcorKernel *xclk, guint panel_order_cap)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
+  self->panel_order_cap = panel_order_cap;
 }
 
 /**

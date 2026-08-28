@@ -22276,6 +22276,8 @@ class XcorKernel(NumCosmoMath.Model):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22312,6 +22314,7 @@ class XcorKernel(NumCosmoMath.Model):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -22340,6 +22343,7 @@ class XcorKernel(NumCosmoMath.Model):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -22394,6 +22398,7 @@ class XcorKernel(NumCosmoMath.Model):
     def get_lmax(self) -> int: ...
     def get_max_border_expansions(self) -> int: ...
     def get_max_iter(self) -> int: ...
+    def get_panel_order_cap(self) -> int: ...
     def get_reltol(self) -> float: ...
     def get_scaled_abstol(self) -> float: ...
     def get_track_fit_residual(self) -> bool: ...
@@ -22417,6 +22422,7 @@ class XcorKernel(NumCosmoMath.Model):
     def set_lmax(self, lmax: int) -> None: ...
     def set_max_border_expansions(self, max_border_expansions: int) -> None: ...
     def set_max_iter(self, max_iter: int) -> None: ...
+    def set_panel_order_cap(self, panel_order_cap: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_scaled_abstol(self, scaled_abstol: float) -> None: ...
     def set_track_fit_residual(self, track_fit_residual: bool) -> None: ...
@@ -22464,6 +22470,8 @@ class XcorKernelAnalytic(XcorKernel):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22501,6 +22509,7 @@ class XcorKernelAnalytic(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -22530,6 +22539,7 @@ class XcorKernelAnalytic(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -22618,6 +22628,8 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22658,6 +22670,7 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -22689,6 +22702,7 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -22870,6 +22884,8 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22910,6 +22926,7 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -22941,6 +22958,7 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -23037,6 +23055,8 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23078,6 +23098,7 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -23110,6 +23131,7 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -23213,6 +23235,8 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23255,6 +23279,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -23288,6 +23313,7 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -23389,6 +23415,8 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23430,6 +23458,7 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -23462,6 +23491,7 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -23559,6 +23589,8 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23598,6 +23630,7 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -23628,6 +23661,7 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -23722,6 +23756,8 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23763,6 +23799,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -23795,6 +23832,7 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -23885,6 +23923,8 @@ class XcorKernelCMBISW(XcorKernel):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23923,6 +23963,7 @@ class XcorKernelCMBISW(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -23952,6 +23993,7 @@ class XcorKernelCMBISW(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -24031,6 +24073,8 @@ class XcorKernelCMBLensing(XcorKernel):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24069,6 +24113,7 @@ class XcorKernelCMBLensing(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -24098,6 +24143,7 @@ class XcorKernelCMBLensing(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -24188,6 +24234,8 @@ class XcorKernelCluster(XcorKernel):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24224,6 +24272,7 @@ class XcorKernelCluster(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -24252,6 +24301,7 @@ class XcorKernelCluster(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -24320,6 +24370,8 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24358,6 +24410,7 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -24387,6 +24440,7 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -24567,6 +24621,8 @@ class XcorKernelGal(XcorKernel):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24614,6 +24670,7 @@ class XcorKernelGal(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -24652,6 +24709,7 @@ class XcorKernelGal(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -24801,6 +24859,8 @@ class XcorKernelWeakLensing(XcorKernel):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24840,6 +24900,7 @@ class XcorKernelWeakLensing(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -24870,6 +24931,7 @@ class XcorKernelWeakLensing(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
@@ -24945,6 +25007,8 @@ class XcorKerneltSZ(XcorKernel):
         Whether to record the residual the closure fit achieved
       closure-type -> NcXcorKernelClosure: closure-type
         Representation used for the k-space closure
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24983,6 +25047,7 @@ class XcorKerneltSZ(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
@@ -25012,6 +25077,7 @@ class XcorKerneltSZ(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,

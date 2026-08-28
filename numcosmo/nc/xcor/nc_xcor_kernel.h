@@ -360,6 +360,8 @@ gdouble nc_xcor_kernel_get_expansion_factor (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_expansion_factor (NcXcorKernel *xclk, gdouble expansion_factor);
 NcXcorKernelClosure nc_xcor_kernel_get_closure_type (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_closure_type (NcXcorKernel *xclk, NcXcorKernelClosure closure_type);
+guint nc_xcor_kernel_get_panel_order_cap (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_panel_order_cap (NcXcorKernel *xclk, guint panel_order_cap);
 gboolean nc_xcor_kernel_get_track_fit_residual (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_track_fit_residual (NcXcorKernel *xclk, gboolean track_fit_residual);
 
