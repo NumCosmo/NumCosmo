@@ -91,7 +91,7 @@ def test_limber_vs_limber_z(kernel: Nc.XcorKernel, cosmology: Cosmology) -> None
 
     # Get vectorized evaluation functions
     for ell in ell_array:
-        limber_func = kernel.get_eval(cosmo, ell)
+        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
         nu = ell + 0.5
 
         # Evaluate both methods
@@ -148,7 +148,9 @@ def test_limber_vs_limber_z_vectorized(
     ell_end = ell_start + 8  # 9 elements total
 
     # Get vectorized evaluation function for ell range
-    limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+    limber_func = kernel.get_eval_vectorized(
+        cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+    )
     kmin, kmax = limber_func.get_range()
 
     # Test at multiple k values
@@ -267,7 +269,7 @@ def test_limber_vs_non_limber(
         rtol = kernel_tol.get(kernel_id, {}).get(ell, default_rtol)
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval(cosmo, ell)
+        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result (this is the "exact" reference)
@@ -275,7 +277,7 @@ def test_limber_vs_non_limber(
         kernel.prepare(cosmo)
 
         for _ in range(1):
-            non_limber_func = kernel.get_eval(cosmo, ell)
+            non_limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
 
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
         kmin = max(kmin_limber, kmin_non_limber)
@@ -347,13 +349,13 @@ def test_k_projection_limber_vs_non_limber(
         rtol = kernel_tol.get(kernel_id, {}).get(ell, default_rtol)
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval(cosmo, ell)
+        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result (this is the "exact" reference)
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
-        non_limber_func = kernel.get_eval(cosmo, ell)
+        non_limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
 
         kmin = max(kmin_limber, kmin_non_limber)
@@ -434,13 +436,17 @@ def test_limber_vs_non_limber_vectorized(
         # Get limber result with vectorized evaluation
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        limber_func = kernel.get_eval_vectorized(
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+        )
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result with vectorized evaluation
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
-        non_limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        non_limber_func = kernel.get_eval_vectorized(
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+        )
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
 
         kmin = max(kmin_limber, kmin_non_limber)
@@ -514,13 +520,17 @@ def test_k_projection_limber_vs_non_limber_vectorized(
         # Get limber result with vectorized evaluation
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        limber_func = kernel.get_eval_vectorized(
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+        )
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result with vectorized evaluation
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
-        non_limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        non_limber_func = kernel.get_eval_vectorized(
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+        )
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
 
         kmin = max(kmin_limber, kmin_non_limber)
@@ -690,7 +700,11 @@ def test_tolerances_more_than_two_orders_apart_warn(
         # must not repeat.
         for lmin, lmax in ((2, 9), (10, 17)):
             kernel.get_eval_vectorized_full(
-                cosmology.cosmo, lmin, lmax, Ncm.SBesselIntegratorLevin.new(0, 8)
+                cosmology.cosmo,
+                lmin,
+                lmax,
+                Ncm.SBesselIntegratorLevin.new(0, 8),
+                Nc.XcorKernelClosure.SPLINE,
             )
 
         return capfd.readouterr().err

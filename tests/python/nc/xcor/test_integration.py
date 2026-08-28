@@ -347,8 +347,8 @@ def test_kernel_integrator_types(cosmology: Cosmology) -> None:
     kernel_levin.prepare(cosmo)
 
     # Verify both integrators work
-    eval_limber = kernel_limber.get_eval(cosmo, 200)
-    eval_levin = kernel_levin.get_eval(cosmo, 200)
+    eval_limber = kernel_limber.get_eval(cosmo, 200, Nc.XcorKernelClosure.SPLINE)
+    eval_levin = kernel_levin.get_eval(cosmo, 200, Nc.XcorKernelClosure.SPLINE)
 
     result_limber = eval_limber.eval_array(1.0e2)
     result_levin = eval_levin.eval_array(1.0e2)

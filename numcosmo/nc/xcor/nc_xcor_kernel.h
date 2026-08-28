@@ -84,7 +84,9 @@ typedef struct _NcXcorKernelIntegrand NcXcorKernelIntegrand;
  * @NC_XCOR_KERNEL_CLOSURE_SPLINE: cubic spline on an adaptively refined grid
  * @NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV: Chebyshev series on a Chebyshev-Lobatto grid
  *
- * How a kernel represents $W_\ell(k)$ once it has been sampled.
+ * How a kernel represents $W_\ell(k)$ once it has been sampled. Selected by
+ * #NcXcor:closure-type, which applies it to every kernel in a computation --
+ * see that property for why the choice is not per kernel.
  *
  * %NC_XCOR_KERNEL_CLOSURE_SPLINE discovers its grid: it bisects until the fit
  * meets a tolerance, so the sample count grows as $\epsilon^{-1/4}$ and the
@@ -358,8 +360,8 @@ void nc_xcor_kernel_set_max_iter (NcXcorKernel *xclk, guint max_iter);
 
 gdouble nc_xcor_kernel_get_expansion_factor (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_expansion_factor (NcXcorKernel *xclk, gdouble expansion_factor);
-NcXcorKernelClosure nc_xcor_kernel_get_closure_type (NcXcorKernel *xclk);
-void nc_xcor_kernel_set_closure_type (NcXcorKernel *xclk, NcXcorKernelClosure closure_type);
+guint nc_xcor_kernel_get_panel_order_cap (NcXcorKernel *xclk);
+void nc_xcor_kernel_set_panel_order_cap (NcXcorKernel *xclk, guint panel_order_cap);
 gboolean nc_xcor_kernel_get_track_fit_residual (NcXcorKernel *xclk);
 void nc_xcor_kernel_set_track_fit_residual (NcXcorKernel *xclk, gboolean track_fit_residual);
 
@@ -369,9 +371,9 @@ NcmSBesselIntegrator *nc_xcor_kernel_peek_integrator (NcXcorKernel *xclk);
 
 void nc_xcor_kernel_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdouble *zmax, gdouble *zmid);
 void nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdouble *kmin, gdouble *kmax);
-NcXcorKernelIntegrand *nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);
-NcXcorKernelIntegrand *nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax);
-NcXcorKernelIntegrand *nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi);
+NcXcorKernelIntegrand *nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, NcXcorKernelClosure closure_type);
+NcXcorKernelIntegrand *nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcXcorKernelClosure closure_type);
+NcXcorKernelIntegrand *nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi, NcXcorKernelClosure closure_type);
 
 gdouble nc_xcor_kernel_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 gdouble nc_xcor_kernel_eval_limber_z_prefactor (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l);

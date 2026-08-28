@@ -209,15 +209,20 @@ def test_radial_integral_matches_arb(
 
 
 # Worst deviation measured per shape, closure at reltol = scaled-abstol = 1e-6,
-# with roughly a factor of three of headroom. The spread is the result, not an
-# inconvenience: a Chebyshev closure is within 1e-8 of certified values on the
-# windows with hard edges or heavy tails, and only ~1e-4 on a plain Gaussian,
-# where the sampling rather than the fit is what limits it.
+# with roughly a factor of three of headroom. Re-measure these after changing
+# NC_XCOR_KERNEL_CHEB_PANEL_K_CAP: a smaller cap makes more, lower-order panels,
+# which converge to the requested tolerance by a different route.
+#
+# Read the spread against the spline's, not on its own -- against Arb the spline
+# reaches 2.5e-4, 6.2e-5, 7.4e-4, 8.6e-3, 3.1e-5, 1.2e-4 on these same shapes.
+# Where a number here is large it is the *sampling* that binds, not the fit:
+# per multipole the closure sits on the sampling floor wherever the convergence
+# criterion lets it reach, which a worst-over-ell figure like this cannot show.
 CLOSURE_TOL = {
-    "gauss": 4.0e-4,
-    "tophat": 5.0e-8,
-    "student_t": 3.0e-7,
-    "power_exp": 2.0e-7,
+    "gauss": 9.0e-4,
+    "tophat": 7.0e-7,
+    "student_t": 2.0e-8,
+    "power_exp": 2.0e-6,
     "lensing": 7.0e-6,
     "multi": 4.0e-4,
 }
@@ -250,13 +255,16 @@ def test_chebyshev_closure_matches_arb(
             shape, dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), entry["ctor"]
         )
         kernel.set_l_limber(-1)
-        kernel.set_property("closure-type", Nc.XcorKernelClosure.CHEBYSHEV)
         kernel.set_property("reltol", 1.0e-6)
         kernel.set_property("scaled-abstol", 1.0e-6)
         kernel.prepare(cosmo)
 
         integrand = kernel.get_eval_vectorized_full(
-            cosmo, ell, ell, Ncm.SBesselIntegratorLevin.new(ell, ell)
+            cosmo,
+            ell,
+            ell,
+            Ncm.SBesselIntegratorLevin.new(ell, ell),
+            Nc.XcorKernelClosure.CHEBYSHEV,
         )
         k_min, k_max = integrand.get_range()
 

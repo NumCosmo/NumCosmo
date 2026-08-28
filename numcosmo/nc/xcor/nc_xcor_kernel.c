@@ -59,6 +59,7 @@
 #include "nc/background/nc_distance.h"
 #include "nc/xcor/nc_xcor_kernel.h"
 #include "ncm/algebra/ncm_spectral.h"
+#include "ncm/core/ncm_memory_pool.h"
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor.h"
 #include "nc_enum_types.h"
@@ -81,8 +82,7 @@ typedef struct _NcXcorKernelPrivate
   guint max_border_expansions;
   guint max_iter;
   gdouble expansion_factor;
-  NcXcorKernelClosure closure_type;
-  NcmSpectral *spectral;
+  guint panel_order_cap;
   gboolean track_fit_residual;
   gboolean tolerance_balance_warned;
   gboolean constructed;
@@ -104,7 +104,7 @@ enum
   PROP_MAX_ITER,
   PROP_EXPANSION_FACTOR,
   PROP_TRACK_FIT_RESIDUAL,
-  PROP_CLOSURE_TYPE,
+  PROP_PANEL_ORDER_CAP,
   PROP_SIZE,
 };
 
@@ -130,8 +130,7 @@ nc_xcor_kernel_init (NcXcorKernel *xclk)
   self->max_border_expansions    = 0;
   self->max_iter                 = 0;
   self->expansion_factor         = 0.0;
-  self->closure_type             = NC_XCOR_KERNEL_CLOSURE_SPLINE;
-  self->spectral                 = NULL;
+  self->panel_order_cap          = 0;
   self->track_fit_residual       = FALSE;
   self->tolerance_balance_warned = FALSE;
   self->constructed              = FALSE;
@@ -143,7 +142,6 @@ _nc_xcor_kernel_dispose (GObject *object)
   NcXcorKernel *xclk        = NC_XCOR_KERNEL (object);
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  ncm_spectral_clear (&self->spectral);
   nc_distance_clear (&self->dist);
   ncm_powspec_clear (&self->ps);
   ncm_sbessel_integrator_clear (&self->sbi);
@@ -242,8 +240,8 @@ _nc_xcor_kernel_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_TRACK_FIT_RESIDUAL:
       nc_xcor_kernel_set_track_fit_residual (xclk, g_value_get_boolean (value));
       break;
-    case PROP_CLOSURE_TYPE:
-      nc_xcor_kernel_set_closure_type (xclk, g_value_get_enum (value));
+    case PROP_PANEL_ORDER_CAP:
+      nc_xcor_kernel_set_panel_order_cap (xclk, g_value_get_uint (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -300,8 +298,8 @@ _nc_xcor_kernel_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_TRACK_FIT_RESIDUAL:
       g_value_set_boolean (value, nc_xcor_kernel_get_track_fit_residual (xclk));
       break;
-    case PROP_CLOSURE_TYPE:
-      g_value_set_enum (value, nc_xcor_kernel_get_closure_type (xclk));
+    case PROP_PANEL_ORDER_CAP:
+      g_value_set_uint (value, nc_xcor_kernel_get_panel_order_cap (xclk));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -547,29 +545,40 @@ nc_xcor_kernel_class_init (NcXcorKernelClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcXcorKernel:closure-type:
+   * NcXcorKernel:panel-order-cap:
    *
-   * How the sampled $W_\ell(k)$ is represented. See #NcXcorKernelClosure.
+   * Highest Chebyshev order tried on one panel before it is bisected, as
+   * $N = 2^\\mathrm{cap} + 1$ coefficients.
    *
-   * The spline default is what every method has been calibrated against.
-   * %NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV samples the same function over the same
-   * domain and differs only in what is fitted to it, so a kernel can be
-   * switched over and the two compared directly.
+   * **This is a heuristic, and the default is fitted rather than derived.** The
+   * cap trades waste against panel count: a panel that fails to converge at it
+   * discards its whole grid before splitting, so a high cap wastes more per
+   * failure while a low one fails more often. Neither side has a closed form,
+   * so 5 comes from a sweep on two kernel families, solve time:
    *
-   * It applies to the non-Limber closure only. Under Limber each multipole is
-   * supported on its own band and zero outside it, so the block's window
-   * carries a step per multipole; a Chebyshev series converges here because
-   * $W_\\ell(k)$ is entire in $k$, and a step is not. Multipoles taken under
-   * Limber keep the spline closure whatever this is set to.
+   * | cap | $N \\le$ | galaxy + weak lensing | cluster top-hat |
+   * |---|---|---|---|
+   * | 5 | 33 | 1.97 s | 2.00 s |
+   * | 6 | 65 | 2.64 s | 2.04 s |
+   * | 7 | 129 | 3.73 s | 2.19 s |
+   * | 8 | 257 | 5.74 s | 2.56 s |
+   *
+   * Uniformly best at 5 there, and accuracy did not move with it. But those are
+   * two kernel families at one multipole range on one machine, and the optimum
+   * depends on how a window's phase is distributed across its domain -- which
+   * is a property of the kernel, not of the library. **A caller with a
+   * different kernel should sweep this rather than assume 5 transfers**, and it
+   * is a property rather than a compile-time constant so that they can.
+   *
+   * Zero selects the default.
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_CLOSURE_TYPE,
-                                   g_param_spec_enum ("closure-type",
+                                   PROP_PANEL_ORDER_CAP,
+                                   g_param_spec_uint ("panel-order-cap",
                                                       NULL,
-                                                      "Representation used for the k-space closure",
-                                                      NC_TYPE_XCOR_KERNEL_CLOSURE,
-                                                      NC_XCOR_KERNEL_CLOSURE_SPLINE,
+                                                      "Highest Chebyshev order tried per panel before bisecting",
+                                                      0, 12, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
@@ -696,6 +705,44 @@ _spline_integrand_data_free (gpointer data)
  * same per-component ranges, same sampled function -- and differs only in
  * carrying coefficients instead of a spline.
  */
+static gpointer
+_nc_xcor_spectral_alloc (gpointer userdata)
+{
+  return ncm_spectral_new ();
+}
+
+static void
+_nc_xcor_spectral_free (gpointer p)
+{
+  ncm_spectral_free (NCM_SPECTRAL (p));
+}
+
+/*
+ * A borrowed NcmSpectral. It carries sampling buffers, coefficient scratch and
+ * cached FFTW plans, none of which can be shared: one kernel is evaluated
+ * concurrently for different ell blocks, and one closure is restricted
+ * concurrently for different pairs. Pooled rather than created per call so the
+ * plans stay warm -- planning dominates a cold expansion.
+ *
+ * Return it with ncm_memory_pool_return().
+ */
+static NcmSpectral **
+_nc_xcor_spectral_get (void)
+{
+  G_LOCK_DEFINE_STATIC (create_lock);
+
+  static NcmMemoryPool *mp = NULL;
+
+  G_LOCK (create_lock);
+
+  if (mp == NULL)
+    mp = ncm_memory_pool_new (_nc_xcor_spectral_alloc, NULL, _nc_xcor_spectral_free);
+
+  G_UNLOCK (create_lock);
+
+  return (NcmSpectral **) ncm_memory_pool_get (mp);
+}
+
 typedef struct _ChebPanel
 {
   gdouble a;
@@ -706,7 +753,6 @@ typedef struct _ChebPanel
 
 typedef struct _ChebIntegrandData
 {
-  NcmSpectral *spectral; /* for rebasing a panel onto a subinterval */
   NcHICosmo *cosmo;
   gdouble RH_Mpc;
   gint lmin;
@@ -857,9 +903,9 @@ _cheb_integrand_peek_panel (gpointer data, guint i, NcmMatrix **coeffs, gdouble 
 /*
  * Coefficients on [a, b], which must lie inside one panel. A polynomial
  * restricted to a subinterval is still a polynomial of the same degree, so this
- * is an exact change of basis and not a refit -- and at panel orders it costs
- * O(N^2) with N <= 129, against N radial solves to sample the subinterval
- * afresh.
+ * is an exact change of basis and not a refit -- and it costs O(N^2) in the
+ * panel's coefficient count, bounded by #NcXcorKernel:panel-order-cap, against
+ * N radial solves to sample the subinterval afresh.
  */
 static gboolean
 _cheb_integrand_restrict (gpointer data, gdouble a, gdouble b, NcmMatrix **coeffs)
@@ -867,12 +913,14 @@ _cheb_integrand_restrict (gpointer data, gdouble a, gdouble b, NcmMatrix **coeff
   ChebIntegrandData *cid = (ChebIntegrandData *) data;
   const ChebPanel *panel = _cheb_integrand_find_panel (cid, 0.5 * (a + b));
   GArray *row            = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), panel->N);
+  NcmSpectral **spectral = _nc_xcor_spectral_get ();
   GArray *out            = NULL;
   guint c, i;
 
   if ((a < panel->a) || (b > panel->b))
   {
     g_array_unref (row);
+    ncm_memory_pool_return (spectral);
 
     return FALSE;
   }
@@ -887,7 +935,7 @@ _cheb_integrand_restrict (gpointer data, gdouble a, gdouble b, NcmMatrix **coeff
     for (i = 0; i < panel->N; i++)
       g_array_index (row, gdouble, i) = ncm_matrix_get (panel->coeffs, c, i);
 
-    ncm_spectral_chebyshev_rebase (cid->spectral, row, panel->N,
+    ncm_spectral_chebyshev_rebase (*spectral, row, panel->N,
                                    panel->a, panel->b, a, b, &out);
 
     for (i = 0; i < panel->N; i++)
@@ -896,6 +944,7 @@ _cheb_integrand_restrict (gpointer data, gdouble a, gdouble b, NcmMatrix **coeff
 
   g_array_unref (row);
   g_clear_pointer (&out, g_array_unref);
+  ncm_memory_pool_return (spectral);
 
   return TRUE;
 }
@@ -907,7 +956,6 @@ _cheb_integrand_data_free (gpointer data)
   guint i;
 
   nc_hicosmo_clear (&cid->cosmo);
-  ncm_spectral_clear (&cid->spectral);
 
   for (i = 0; i < cid->panels->len; i++)
     ncm_matrix_clear (&g_array_index (cid->panels, ChebPanel, i).coeffs);
@@ -1545,15 +1593,15 @@ _cheb_sampler_call (gpointer user_data, gdouble k, NcmVector *y)
 }
 
 /*
- * Highest order tried on one panel before splitting it. A single global panel
- * has to resolve the whole domain uniformly in phase, which at high multipole
- * is mostly domain where W is negligible -- the spline's adaptive knots go
- * where the window actually lives and a global expansion cannot. Capping the
- * order and bisecting recovers that: panels over the quiet region converge at
- * once and cost almost nothing, and the resolution concentrates where the
- * oscillation is.
+ * Default for #NcXcorKernel:panel-order-cap, which is where the reasoning and
+ * the sweep behind the value live. A single global panel has to resolve the
+ * whole domain uniformly in phase, which at high multipole is mostly domain
+ * where W is negligible -- the spline's adaptive knots go where the window
+ * actually lives and a global expansion cannot. Capping the order and bisecting
+ * recovers that: panels over the quiet region converge at once and cost almost
+ * nothing, and the resolution concentrates where the oscillation is.
  */
-#define NC_XCOR_KERNEL_CHEB_PANEL_K_CAP (7)
+#define NC_XCOR_KERNEL_CHEB_PANEL_K_CAP (5)
 #define NC_XCOR_KERNEL_CHEB_MIN_PANEL_FRAC (1.0e-6)
 
 /*
@@ -1563,12 +1611,12 @@ _cheb_sampler_call (gpointer user_data, gdouble k, NcmVector *y)
 static void
 _nc_xcor_kernel_cheb_split (NcmSpectral *spectral, gpointer sampler, guint n_l,
                             gdouble a, gdouble b, gdouble reltol, gdouble abstol,
-                            GArray *panels)
+                            guint k_cap, GArray *panels)
 {
   NcmMatrix *coeffs = NULL;
   const guint k_ord = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
     spectral, _cheb_sampler_call, n_l, a, b, 3,
-    NC_XCOR_KERNEL_CHEB_PANEL_K_CAP, reltol, abstol, FALSE, &coeffs, sampler);
+    k_cap, reltol, abstol, FALSE, &coeffs, sampler);
 
   if (k_ord > 0)
   {
@@ -1589,7 +1637,7 @@ _nc_xcor_kernel_cheb_split (NcmSpectral *spectral, gpointer sampler, guint n_l,
     {
       const guint k_forced = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (
         spectral, _cheb_sampler_call, n_l, a, b, 3,
-        NC_XCOR_KERNEL_CHEB_PANEL_K_CAP, reltol, abstol, TRUE, &coeffs, sampler);
+        k_cap, reltol, abstol, TRUE, &coeffs, sampler);
       ChebPanel panel = { a, b, coeffs, (1u << k_forced) + 1u };
 
       g_array_append_val (panels, panel);
@@ -1597,8 +1645,8 @@ _nc_xcor_kernel_cheb_split (NcmSpectral *spectral, gpointer sampler, guint n_l,
       return;
     }
 
-    _nc_xcor_kernel_cheb_split (spectral, sampler, n_l, a, mid, reltol, abstol, panels);
-    _nc_xcor_kernel_cheb_split (spectral, sampler, n_l, mid, b, reltol, abstol, panels);
+    _nc_xcor_kernel_cheb_split (spectral, sampler, n_l, a, mid, reltol, abstol, k_cap, panels);
+    _nc_xcor_kernel_cheb_split (spectral, sampler, n_l, mid, b, reltol, abstol, k_cap, panels);
   }
 }
 
@@ -1665,15 +1713,20 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
 
     ncm_function_sample_set_clear (&fss);
 
-    if (self->spectral == NULL)
-      self->spectral = ncm_spectral_new ();
-
     cid->panels = g_array_new (FALSE, FALSE, sizeof (ChebPanel));
     cid->edges  = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
-    _nc_xcor_kernel_cheb_split (self->spectral, &sampler, n_l,
-                                cid->k_min, cid->k_max, reltol, abstol,
-                                cid->panels);
+    {
+      NcmSpectral **spectral = _nc_xcor_spectral_get ();
+
+      _nc_xcor_kernel_cheb_split (*spectral, &sampler, n_l,
+                                  cid->k_min, cid->k_max, reltol, abstol,
+                                  (self->panel_order_cap == 0) ?
+                                  NC_XCOR_KERNEL_CHEB_PANEL_K_CAP : self->panel_order_cap,
+                                  cid->panels);
+
+      ncm_memory_pool_return (spectral);
+    }
 
     {
       const gdouble first = g_array_index (cid->panels, ChebPanel, 0).a;
@@ -1715,11 +1768,10 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
       cid->k_max_comp[i] = k_max_i;
     }
 
-    cid->lmin     = lmin;
-    cid->len      = n_l;
-    cid->RH_Mpc   = nc_hicosmo_RH_Mpc (cosmo);
-    cid->cosmo    = nc_hicosmo_ref (cosmo);
-    cid->spectral = ncm_spectral_ref (self->spectral);
+    cid->lmin   = lmin;
+    cid->len    = n_l;
+    cid->RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
+    cid->cosmo  = nc_hicosmo_ref (cosmo);
 
     {
       NcXcorKernelIntegrand *integrand = nc_xcor_kernel_integrand_new (n_l,
@@ -1890,7 +1942,7 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 
     g_ptr_array_unref (comp_list);
 
-    /* Always the spline here, whatever #NcXcorKernel:closure-type asks for.
+    /* Always the spline here, whatever #NcXcor:closure-type asks for.
      * Under Limber a multipole's window is supported only on its own band in k
      * and is zero outside it, so the block's shared domain carries one step per
      * multipole -- see _spline_integrand_get_range_comp(). A Chebyshev series
@@ -1906,7 +1958,7 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 }
 
 static NcXcorKernelIntegrand *
-_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi)
+_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi, NcXcorKernelClosure closure_type)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
   const guint n_l           = lmax - lmin + 1;
@@ -1934,7 +1986,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
 
     g_ptr_array_unref (comp_list);
 
-    if (self->closure_type == NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV)
+    if (closure_type == NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV)
       return _nc_xcor_kernel_build_cheb_integrand (xclk, cosmo, lmin, lmax,
                                                    &comp_states,
                                                    _component_states_compute_non_limber,
@@ -2608,6 +2660,7 @@ nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdoubl
  * @xclk: a #NcXcorKernel
  * @cosmo: a #NcHICosmo
  * @l: multipole
+ * @closure_type: how to represent the sampled window, see #NcXcor:closure-type
  *
  * Gets an evaluation function for the kernel at multipole @l.
  * Convenience wrapper around nc_xcor_kernel_get_eval_vectorized() for a single multipole.
@@ -2615,9 +2668,9 @@ nc_xcor_kernel_get_k_range (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, gdoubl
  * Returns: (transfer full): the evaluation function for the kernel.
  */
 NcXcorKernelIntegrand *
-nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
+nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l, NcXcorKernelClosure closure_type)
 {
-  return nc_xcor_kernel_get_eval_vectorized (xclk, cosmo, l, l);
+  return nc_xcor_kernel_get_eval_vectorized (xclk, cosmo, l, l, closure_type);
 }
 
 /**
@@ -2626,6 +2679,7 @@ nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
  * @cosmo: a #NcHICosmo
  * @lmin: minimum multipole
  * @lmax: maximum multipole
+ * @closure_type: how to represent the sampled window, see #NcXcor:closure-type
  *
  * Gets a vectorized evaluation function for the kernel over a range of multipoles.
  * The returned integrand will have len = lmax - lmin + 1, and will evaluate all
@@ -2639,11 +2693,11 @@ nc_xcor_kernel_get_eval (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l)
  * Returns: (transfer full): the vectorized evaluation function for the kernel.
  */
 NcXcorKernelIntegrand *
-nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax)
+nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcXcorKernelClosure closure_type)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  return nc_xcor_kernel_get_eval_vectorized_full (xclk, cosmo, lmin, lmax, self->sbi);
+  return nc_xcor_kernel_get_eval_vectorized_full (xclk, cosmo, lmin, lmax, self->sbi, closure_type);
 }
 
 /**
@@ -2653,6 +2707,7 @@ nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l
  * @lmin: minimum multipole
  * @lmax: maximum multipole
  * @sbi: (nullable): the #NcmSBesselIntegrator to use, or %NULL for @xclk's own
+ * @closure_type: how to represent the sampled window, see #NcXcor:closure-type
  *
  * Same as nc_xcor_kernel_get_eval_vectorized(), but integrates with @sbi
  * instead of the kernel's `integrator` property.
@@ -2665,19 +2720,21 @@ nc_xcor_kernel_get_eval_vectorized (NcXcorKernel *xclk, NcHICosmo *cosmo, gint l
  * as long as each gets its own @sbi.
  *
  * @sbi is unused below the kernel's l-limber threshold, where no spherical
- * Bessel integral is performed.
+ * Bessel integral is performed. @closure_type is likewise unused there: a
+ * Limber window carries a step per multipole and only the spline closure
+ * represents that.
  *
  * Returns: (transfer full): the kernel integrand over [@lmin, @lmax]
  */
 NcXcorKernelIntegrand *
-nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi)
+nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi, NcXcorKernelClosure closure_type)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
   if ((self->l_limber == 0) || ((self->l_limber > 0) && (lmin >= self->l_limber)))
     return _nc_xcor_kernel_build_limber_integrand (xclk, cosmo, lmin, lmax);
   else
-    return _nc_xcor_kernel_build_non_limber_integrand (xclk, cosmo, lmin, lmax, sbi);
+    return _nc_xcor_kernel_build_non_limber_integrand (xclk, cosmo, lmin, lmax, sbi, closure_type);
 }
 
 /**
@@ -3021,35 +3078,35 @@ nc_xcor_kernel_set_expansion_factor (NcXcorKernel *xclk, gdouble expansion_facto
 }
 
 /**
- * nc_xcor_kernel_get_closure_type:
+ * nc_xcor_kernel_get_panel_order_cap:
  * @xclk: a #NcXcorKernel
  *
- * Returns: the representation used for the k-space closure. See
- * #NcXcorKernel:closure-type.
+ * Returns: the panel order cap, or 0 for the default. See
+ * #NcXcorKernel:panel-order-cap.
  */
-NcXcorKernelClosure
-nc_xcor_kernel_get_closure_type (NcXcorKernel *xclk)
+guint
+nc_xcor_kernel_get_panel_order_cap (NcXcorKernel *xclk)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  return self->closure_type;
+  return self->panel_order_cap;
 }
 
 /**
- * nc_xcor_kernel_set_closure_type:
+ * nc_xcor_kernel_set_panel_order_cap:
  * @xclk: a #NcXcorKernel
- * @closure_type: a #NcXcorKernelClosure
+ * @panel_order_cap: the cap, or 0 for the default
  *
- * Sets #NcXcorKernel:closure-type. Read when a closure is built, so one already
- * built keeps the representation it was built with.
+ * Sets #NcXcorKernel:panel-order-cap. Read when a closure is built, so one
+ * already built keeps the panels it was built with.
  *
  */
 void
-nc_xcor_kernel_set_closure_type (NcXcorKernel *xclk, NcXcorKernelClosure closure_type)
+nc_xcor_kernel_set_panel_order_cap (NcXcorKernel *xclk, guint panel_order_cap)
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
-  self->closure_type = closure_type;
+  self->panel_order_cap = panel_order_cap;
 }
 
 /**

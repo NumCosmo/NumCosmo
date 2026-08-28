@@ -582,7 +582,7 @@ def _cl_reference(
     """
     cosmo, powspec = cosmology.cosmo, cosmology.ps_ml
     chi_min, chi_max = kernel.get_support()
-    k_min, k_max = kernel.get_eval(cosmo, ell).get_range()
+    k_min, k_max = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE).get_range()
     rh = cosmo.RH_Mpc()
     window = _window(shape)
 

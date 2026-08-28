@@ -120,6 +120,22 @@ def test_view_kernel_defaults_leave_library_precision_alone() -> None:
     assert "cheb_reltol=1.0e-08" in result.output
 
 
+@pytest.mark.parametrize("closure_type", ["spline", "chebyshev"])
+def test_view_kernel_plots_either_closure(closure_type: str) -> None:
+    """Both representations are reachable from the command line.
+
+    The viewer holds no NcXcor when it builds a closure for the plot, so the
+    representation has to come from its own option rather than from the
+    computation -- and the C_ell path has to pass the same one on to NcXcor,
+    or a plot and the spectrum beside it would be showing different fits.
+    """
+    result = _view("--l-limber", "-1", "--closure-type", closure_type, "--cls")
+
+    assert result.exit_code == 0, result.output
+    assert "Kernel evaluation complete" in result.output
+    assert f"closure={closure_type}" in result.output
+
+
 def test_view_kernel_cls_single() -> None:
     """--cls computes the auto-spectrum of a single kernel."""
     result = _view("--cls")
@@ -166,6 +182,33 @@ def test_view_kernel_cls_compare_limber() -> None:
     assert result.exit_code == 0, result.output
     assert "Computing C_ell (non-Limber)" in result.output
     assert "Computing C_ell (Limber)" in result.output
+
+
+def test_view_kernel_compare_closure() -> None:
+    """--compare-closure draws the other representation beside the chosen one.
+
+    The two closures fit the same sampled window over the same domain, so the
+    comparison is of the fits and not of the physics -- both C_ell runs stay on
+    the same Limber tier, and only the representation differs between them.
+    """
+    result = _view(
+        "--l-limber", "-1", "--closure-type", "spline", "--compare-closure", "--cls"
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Chebyshev kernel k range" in result.output
+    assert "closure=spline" in result.output
+    assert "closure=chebyshev" in result.output
+    # Both spectra are non-Limber: the tier is not what is being compared.
+    assert "Computing C_ell (Limber)" not in result.output
+
+
+def test_view_kernel_rejects_both_comparisons() -> None:
+    """There is one alternative curve, so only one thing can occupy it."""
+    result = _view("--compare-limber", "--compare-closure")
+
+    assert result.exit_code != 0
+    assert "Kernel evaluation complete" not in result.output
 
 
 def test_view_kernel_cls_fixed_method() -> None:
