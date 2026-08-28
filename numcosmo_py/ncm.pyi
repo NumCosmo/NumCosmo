@@ -10678,6 +10678,19 @@ class Spectral(GObject.Object):
         abstol: float,
         *user_data: typing.Any,
     ) -> typing.Tuple[int, Matrix]: ...
+    def compute_chebyshev_coeffs_batch_adaptive_cap(
+        self,
+        F: typing.Callable[..., None],
+        n_comp: int,
+        a: float,
+        b: float,
+        k_min: int,
+        k_cap: int,
+        reltol: float,
+        abstol: float,
+        fatal: bool,
+        *user_data: typing.Any,
+    ) -> typing.Tuple[int, Matrix]: ...
     @staticmethod
     def compute_d2_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     @staticmethod

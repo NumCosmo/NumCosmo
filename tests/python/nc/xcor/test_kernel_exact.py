@@ -597,3 +597,111 @@ def test_achieved_residual_estimate_still_bounds_the_true_error(
     est_rel = np.abs(err / cl)
 
     assert np.all(est_rel > true_rel)
+
+
+def _closure(cosmology: Cosmology, closure_type, reltol=1.0e-4, scaled_abstol=1.0e-4):
+    """A cluster top-hat closure in the requested representation."""
+    kernel = Nc.XcorKernelClusterTophat(
+        dist=cosmology.dist,
+        powspec=cosmology.ps_ml,
+        z_lower=Z_BINS[0][0],
+        z_upper=Z_BINS[0][1],
+        integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+        reltol=reltol,
+        scaled_abstol=scaled_abstol,
+        closure_type=closure_type,
+    )
+    kernel.set_l_limber(-1)
+    kernel.prepare(cosmology.cosmo)
+
+    return kernel.get_eval_vectorized_full(
+        cosmology.cosmo, 2, 9, Ncm.SBesselIntegratorLevin.new(0, 8)
+    )
+
+
+def test_chebyshev_closure_reports_a_spectral_representation(
+    cosmology: Cosmology,
+) -> None:
+    """A Chebyshev closure carries coefficients; a spline one does not.
+
+    The two are siblings rather than a replacement: each reports what it has,
+    and a caller that wants coefficients asks for them.
+    """
+    cheb = _closure(cosmology, Nc.XcorKernelClosure.CHEBYSHEV)
+    spline = _closure(cosmology, Nc.XcorKernelClosure.SPLINE)
+
+    n_panels = cheb.get_n_panels()
+    assert n_panels > 0
+
+    # Panels are contiguous and ascending, and together they tile the range.
+    lo, hi = cheb.get_range()
+    prev_b = lo
+    for i in range(n_panels):
+        coeffs, a, b = cheb.peek_panel(i)
+        assert coeffs.nrows() == 8
+        assert coeffs.ncols() > 1
+        assert a == pytest.approx(prev_b)
+        assert b > a
+        prev_b = b
+    assert prev_b == pytest.approx(hi)
+
+    # The single-expansion accessor answers only when there is one panel, since
+    # that is the case a caller working on coefficients can use directly.
+    assert cheb.peek_spectral()[0] == (n_panels == 1)
+
+    # A spline closure reports knots and no expansion; the Chebyshev one the
+    # reverse. Neither is asked to pretend it has the other.
+    assert cheb.peek_knots() is None
+    assert spline.peek_knots() is not None
+    assert not spline.peek_spectral()[0]
+    assert spline.get_n_panels() == 0
+
+
+def test_chebyshev_closure_agrees_with_the_spline_one(cosmology: Cosmology) -> None:
+    """Same sampled function, same domain, so the two must describe one W.
+
+    Both are graded against a spline closure built six orders tighter. At equal
+    *requested* tolerance the two land in the same place -- panels converge to
+    what was asked and no further, so the Chebyshev closure is comparable here
+    rather than better. Where it wins is samples for that accuracy, and how
+    cheaply it tightens: spectral convergence rather than h^4.
+    """
+    cheb = _closure(cosmology, Nc.XcorKernelClosure.CHEBYSHEV)
+    spline = _closure(cosmology, Nc.XcorKernelClosure.SPLINE)
+    ref = _closure(cosmology, Nc.XcorKernelClosure.SPLINE, 1.0e-10, 1.0e-7)
+
+    lo = max(c.get_range()[0] for c in (cheb, spline, ref)) * 1.001
+    hi = min(c.get_range()[1] for c in (cheb, spline, ref)) * 0.999
+    ks = np.geomspace(lo, hi, 400)
+
+    truth = np.array([ref.eval_array(k) for k in ks])
+    got_cheb = np.array([cheb.eval_array(k) for k in ks])
+    got_spline = np.array([spline.eval_array(k) for k in ks])
+    peak = np.abs(truth).max(axis=0)
+
+    err_cheb = np.abs(got_cheb - truth).max(axis=0) / peak
+    err_spline = np.abs(got_spline - truth).max(axis=0) / peak
+
+    # Both meet the tolerance they were asked for, on every multipole.
+    assert np.all(err_cheb < 1.0e-3)
+    assert np.all(err_spline < 1.0e-3)
+
+    # And they describe the same function: the gap between them is no larger
+    # than either one's own distance from the reference.
+    assert np.all(
+        np.abs(got_cheb - got_spline).max(axis=0) / peak
+        < 10.0 * np.maximum(err_cheb, err_spline)
+    )
+
+    # The Chebyshev closure reaches that on fewer samples than the spline needs
+    # knots -- the accuracy per evaluation is the point, evaluations being
+    # radial solves.
+    n_cheb = sum(cheb.peek_panel(i)[0].ncols() for i in range(cheb.get_n_panels()))
+    assert n_cheb < spline.peek_knots().len()
+
+
+def test_spline_closure_is_the_default(cosmology: Cosmology) -> None:
+    """The representation every method is calibrated against stays the default."""
+    kernel = _kernels(cosmology)[0]
+
+    assert kernel.get_closure_type() == Nc.XcorKernelClosure.SPLINE
