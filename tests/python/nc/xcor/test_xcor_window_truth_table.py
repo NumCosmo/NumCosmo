@@ -214,7 +214,8 @@ def test_radial_integral_matches_arb(
 # which converge to the requested tolerance by a different route.
 #
 # Read the spread against the spline's, not on its own -- against Arb the spline
-# reaches 2.5e-4, 6.2e-5, 7.4e-4, 8.6e-3, 3.1e-5, 1.2e-4 on these same shapes.
+# reaches 2.5e-4, 6.2e-5, 7.4e-4, 8.6e-3, 3.1e-5, 1.2e-4, 1.5e-5 on these same
+# shapes.
 # Where a number here is large it is the *sampling* that binds, not the fit:
 # per multipole the closure sits on the sampling floor wherever the convergence
 # criterion lets it reach, which a worst-over-ell figure like this cannot show.
@@ -225,6 +226,7 @@ CLOSURE_TOL = {
     "power_exp": 2.0e-6,
     "lensing": 7.0e-6,
     "multi": 4.0e-4,
+    "tophat_smooth": 4.0e-8,
 }
 
 
@@ -239,9 +241,6 @@ def test_chebyshev_closure_matches_arb(
     wanders across k is the closure's own fitting error, measured against values
     with proven radii rather than against another of NumCosmo's paths.
 
-    ``tophat_smooth`` is absent because building a non-Limber closure for it
-    aborts inside the Levin integrator's spectral expansion, at every tolerance
-    and for either closure type. That predates the Chebyshev representation.
     """
     cosmo, dist, ps = cosmo_bits
     entry = truth_table["shapes"][shape]
