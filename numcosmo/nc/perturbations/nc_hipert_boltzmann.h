@@ -185,6 +185,22 @@ gboolean nc_hipert_boltzmann_lensed_Cls (NcHIPertBoltzmann *pb);
 void nc_hipert_boltzmann_set_tensor (NcHIPertBoltzmann *pb, gboolean use_tensor);
 gboolean nc_hipert_boltzmann_tensor (NcHIPertBoltzmann *pb);
 
+/**
+ * NC_HIPERT_BOLTZMANN_REQUIRE_LMIN:
+ *
+ * Smallest multipole nc_hipert_boltzmann_require() will ask the Boltzmann code
+ * for. The lensing convolution mixes multipoles and the transfer sampling
+ * coarsens when the requested range is small, so a Boltzmann code needs
+ * headroom above the last $\ell$ used. #NcCBE already adds its own margin
+ * (CLASS `delta_l_max`), which alone does not converge a low-$\ell$-only
+ * request: a standalone low-$\ell$ likelihood asking for $\ell_{max} = 29$
+ * lands $\sim 0.01$ away in $-2\ln L$ from the value reached once a few
+ * hundred multipoles are requested.
+ */
+#define NC_HIPERT_BOLTZMANN_REQUIRE_LMIN (300)
+
+void nc_hipert_boltzmann_require (NcHIPertBoltzmann *pb, NcDataCMBDataType tCls, guint lmax);
+
 void nc_hipert_boltzmann_set_PHIPHI_lmax (NcHIPertBoltzmann *pb, guint lmax);
 void nc_hipert_boltzmann_set_TT_lmax (NcHIPertBoltzmann *pb, guint lmax);
 void nc_hipert_boltzmann_set_EE_lmax (NcHIPertBoltzmann *pb, guint lmax);

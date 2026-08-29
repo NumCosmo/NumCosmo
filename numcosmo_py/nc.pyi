@@ -6057,6 +6057,133 @@ class DataHubbleClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
+class DataPlanckCommander(NumCosmoMath.Data):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckCommander(**properties)
+        new(lmin:int, lmax:int, nbin:int, delta_l:int, cl2x_xa:NumCosmoMath.Vector, cl2x_ya:NumCosmoMath.Vector, cl2x_y2a:NumCosmoMath.Vector, mu:NumCosmoMath.Vector, cov:NumCosmoMath.Matrix, mu_sigma:NumCosmoMath.Vector) -> NumCosmo.DataPlanckCommander
+        new_from_file(filename:str) -> NumCosmo.DataPlanckCommander
+
+    Object NcDataPlanckCommander
+
+    Properties from NcDataPlanckCommander:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+      nbin -> guint: nbin
+        Number of spline nodes per multipole
+      delta-l -> guint: delta-l
+        Covariance band-limit width
+      calib-name -> gchararray: calib-name
+        Free-calibration parameter name (NULL => none)
+      cl2x-xa -> NcmVector: cl2x-xa
+        Per-ell spline Dl abscissa (flattened nl*nbin)
+      cl2x-ya -> NcmVector: cl2x-ya
+        Per-ell spline x ordinate (flattened nl*nbin)
+      cl2x-y2a -> NcmVector: cl2x-y2a
+        Per-ell spline second derivatives (flattened nl*nbin)
+      mu -> NcmVector: mu
+        Gaussianized mean vector
+      cov -> NcmMatrix: cov
+        Covariance matrix (band-limited and inverted internally)
+      mu-sigma -> NcmVector: mu-sigma
+        Mean sigma_l (Dl) defining the offset normalization
+      clik-pi-compat -> gboolean: clik-pi-compat
+        Reproduce clik's single-precision pi in the Dl conversion (bit-identical to clik)
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        calib_name: str
+        cl2x_xa: NumCosmoMath.Vector
+        cl2x_y2a: NumCosmoMath.Vector
+        cl2x_ya: NumCosmoMath.Vector
+        clik_pi_compat: bool
+        cov: NumCosmoMath.Matrix
+        delta_l: int
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        lmin: int
+        mu: NumCosmoMath.Vector
+        mu_sigma: NumCosmoMath.Vector
+        nbin: int
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        calib_name: str = ...,
+        cl2x_xa: NumCosmoMath.Vector = ...,
+        cl2x_y2a: NumCosmoMath.Vector = ...,
+        cl2x_ya: NumCosmoMath.Vector = ...,
+        clik_pi_compat: bool = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        delta_l: int = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        lmin: int = ...,
+        mu: NumCosmoMath.Vector = ...,
+        mu_sigma: NumCosmoMath.Vector = ...,
+        nbin: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmin: int,
+        lmax: int,
+        nbin: int,
+        delta_l: int,
+        cl2x_xa: NumCosmoMath.Vector,
+        cl2x_ya: NumCosmoMath.Vector,
+        cl2x_y2a: NumCosmoMath.Vector,
+        mu: NumCosmoMath.Vector,
+        cov: NumCosmoMath.Matrix,
+        mu_sigma: NumCosmoMath.Vector,
+    ) -> DataPlanckCommander: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckCommander: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckCommanderClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckCommanderClass()
+    """
+
+    parent_class: NumCosmoMath.DataClass = ...
+
 class DataPlanckLKL(NumCosmoMath.Data):
     r"""
     :Constructors:
@@ -6144,6 +6271,550 @@ class DataPlanckLKLClass(GObject.GPointer):
     """
 
     parent_class: NumCosmoMath.DataClass = ...
+
+class DataPlanckLensing(NumCosmoMath.DataGauss):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckLensing(**properties)
+        new(lmax:int, nbins:int, has_calib:bool, hascl:list, bins:NumCosmoMath.Matrix, cor0:NumCosmoMath.Vector, cors:NumCosmoMath.Matrix=None) -> NumCosmo.DataPlanckLensing
+        new_from_file(filename:str) -> NumCosmo.DataPlanckLensing
+
+    Object NcDataPlanckLensing
+
+    Properties from NcDataPlanckLensing:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmax -> guint: lmax
+        Maximum multipole
+      nbins -> guint: nbins
+        Number of band-power bins
+      has-calib -> gboolean: has-calib
+        Whether a calibration parameter scales the CMB renormalization
+      calib-name -> gchararray: calib-name
+        Calibration parameter name
+      hascl -> GVariant: hascl
+        CMB spectra selection flags [TT,EE,BB,TE,TB,EB]
+      bins -> NcmMatrix: bins
+        Binning matrix (nbins x lmax+1)
+      cor0 -> NcmVector: cor0
+        Per-bin constant renormalization offset (nbins)
+      cors -> NcmMatrix: cors
+        Renormalization response matrix (nbins x nlt), or NULL
+
+    Properties from NcmDataGauss:
+      n-points -> guint: n-points
+        Data sample size
+      mean -> NcmVector: mean
+        Data mean
+      inv-cov -> NcmMatrix: inv-cov
+        Data covariance inverse
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        bins: NumCosmoMath.Matrix
+        calib_name: str
+        cor0: NumCosmoMath.Vector
+        cors: NumCosmoMath.Matrix
+        has_calib: bool
+        hascl: GLib.Variant
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        nbins: int
+        inv_cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        bins: NumCosmoMath.Matrix = ...,
+        calib_name: str = ...,
+        cor0: NumCosmoMath.Vector = ...,
+        cors: NumCosmoMath.Matrix = ...,
+        has_calib: bool = ...,
+        hascl: GLib.Variant = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        nbins: int = ...,
+        inv_cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmax: int,
+        nbins: int,
+        has_calib: bool,
+        hascl: typing.Sequence[int],
+        bins: NumCosmoMath.Matrix,
+        cor0: NumCosmoMath.Vector,
+        cors: typing.Optional[NumCosmoMath.Matrix] = None,
+    ) -> DataPlanckLensing: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckLensing: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckLensingClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckLensingClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussClass = ...
+
+class DataPlanckPlikLite(NumCosmoMath.DataGaussCov):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckPlikLite(**properties)
+        new_from_file(filename:str) -> NumCosmo.DataPlanckPlikLite
+
+    Object NcDataPlanckPlikLite
+
+    Properties from NcDataPlanckPlikLite:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      bin-lmin -> NcmVector: bin-lmin
+        Per-bin lower multipole (absolute ell)
+      bin-lmax -> NcmVector: bin-lmax
+        Per-bin upper multipole (absolute ell)
+      bin-weight -> NcmVector: bin-weight
+        Flattened per-bin averaging weights
+      spectrum-id -> NcmVector: spectrum-id
+        Per-bin spectrum tag (0=TT,1=EE,2=TE)
+      lmax -> guint: lmax
+        Maximum multipole required from the Boltzmann code
+      calib-name -> gchararray: calib-name
+        Nuisance parameter name for the absolute calibration
+
+    Properties from NcmDataGaussCov:
+      n-points -> guint: n-points
+        Data sample size
+      use-norma -> gboolean: use-norma
+        Use the likelihood normalization to calculate -2lnL
+      mean -> NcmVector: mean
+        Data mean
+      cov -> NcmMatrix: cov
+        Data covariance
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        bin_lmax: NumCosmoMath.Vector
+        bin_lmin: NumCosmoMath.Vector
+        bin_weight: NumCosmoMath.Vector
+        calib_name: str
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        spectrum_id: NumCosmoMath.Vector
+        cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        use_norma: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        bin_lmax: NumCosmoMath.Vector = ...,
+        bin_lmin: NumCosmoMath.Vector = ...,
+        bin_weight: NumCosmoMath.Vector = ...,
+        calib_name: str = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        spectrum_id: NumCosmoMath.Vector = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckPlikLite: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckPlikLiteClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckPlikLiteClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussCovClass = ...
+
+class DataPlanckSimall(NumCosmoMath.Data):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSimall(**properties)
+        new(lmin:int, lmax:int, step_ee:float, prob_ee:NumCosmoMath.Vector=None, step_bb:float, prob_bb:NumCosmoMath.Vector=None, step_te:float, prob_te:NumCosmoMath.Vector=None) -> NumCosmo.DataPlanckSimall
+        new_from_file(filename:str) -> NumCosmo.DataPlanckSimall
+
+    Object NcDataPlanckSimall
+
+    Properties from NcDataPlanckSimall:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+      calib-name -> gchararray: calib-name
+        Free-calibration parameter name (NULL => none)
+      step-ee -> gdouble: step-ee
+        EE table Dl step
+      prob-ee -> NcmVector: prob-ee
+        EE log-probability table (flattened nell*nsteps)
+      step-bb -> gdouble: step-bb
+        BB table Dl step
+      prob-bb -> NcmVector: prob-bb
+        BB log-probability table (flattened nell*nsteps)
+      step-te -> gdouble: step-te
+        TE table Dl step
+      prob-te -> NcmVector: prob-te
+        TE log-probability table (flattened nell*nsteps)
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        calib_name: str
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        lmin: int
+        prob_bb: NumCosmoMath.Vector
+        prob_ee: NumCosmoMath.Vector
+        prob_te: NumCosmoMath.Vector
+        step_bb: float
+        step_ee: float
+        step_te: float
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        calib_name: str = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        lmin: int = ...,
+        prob_bb: NumCosmoMath.Vector = ...,
+        prob_ee: NumCosmoMath.Vector = ...,
+        prob_te: NumCosmoMath.Vector = ...,
+        step_bb: float = ...,
+        step_ee: float = ...,
+        step_te: float = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmin: int,
+        lmax: int,
+        step_ee: float,
+        prob_ee: typing.Optional[NumCosmoMath.Vector],
+        step_bb: float,
+        prob_bb: typing.Optional[NumCosmoMath.Vector],
+        step_te: float,
+        prob_te: typing.Optional[NumCosmoMath.Vector] = None,
+    ) -> DataPlanckSimall: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckSimall: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckSimallClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSimallClass()
+    """
+
+    parent_class: NumCosmoMath.DataClass = ...
+
+class DataPlanckSmica(NumCosmoMath.DataGauss):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSmica(**properties)
+        new(lmin:int, lmax:int, m:int, nbins:int, freqs:NumCosmoMath.Vector, a_cmb:NumCosmoMath.Vector, sz_color:NumCosmoMath.Vector, gcib_conv:NumCosmoMath.Vector, gibxsz_conv:NumCosmoMath.Vector, bin_lmin:list, bin_lmax:list, bin_weight:NumCosmoMath.Vector, quad_idx:list, tmpl_gcib:NumCosmoMath.Vector, tmpl_sz:NumCosmoMath.Vector, tmpl_ksz:NumCosmoMath.Vector, tmpl_gibxsz:NumCosmoMath.Vector, tmpl_dust:NumCosmoMath.Vector, tmpl_leak:NumCosmoMath.Vector, tmpl_sbpx:NumCosmoMath.Vector) -> NumCosmo.DataPlanckSmica
+        new_from_file(filename:str) -> NumCosmo.DataPlanckSmica
+
+    Object NcDataPlanckSmica
+
+    Properties from NcDataPlanckSmica:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+      m-channels -> guint: m-channels
+        Number of frequency channels
+      nbins -> guint: nbins
+        Number of bandpower bins
+      freqs -> NcmVector: freqs
+        Channel frequencies (GHz)
+      a-cmb -> NcmVector: a-cmb
+        CMB mixing vector
+      sz-color -> NcmVector: sz-color
+        tSZ colour corrections
+      gcib-conv -> NcmVector: gcib-conv
+        CIB muK->MJ/sr conversion factors
+      gibxsz-conv -> NcmVector: gibxsz-conv
+        CIBxtSZ conversion factors
+      bin-lmin -> GVariant: bin-lmin
+        Per-bin lower multipole offset
+      bin-lmax -> GVariant: bin-lmax
+        Per-bin upper multipole offset
+      bin-weight -> NcmVector: bin-weight
+        Flattened per-(bin,ell) binning weights
+      quad-idx -> GVariant: quad-idx
+        Flat indices of the masked R_q entries
+      tmpl-gcib -> NcmVector: tmpl-gcib
+        Clustered CIB template
+      tmpl-sz -> NcmVector: tmpl-sz
+        tSZ template (normalized at ell=3000)
+      tmpl-ksz -> NcmVector: tmpl-ksz
+        kSZ template (normalized at ell=3000)
+      tmpl-gibxsz -> NcmVector: tmpl-gibxsz
+        CIBxtSZ correlation template
+      tmpl-dust -> NcmVector: tmpl-dust
+        Galactic dust template
+      tmpl-leak -> NcmVector: tmpl-leak
+        Beam leakage template
+      tmpl-sbpx -> NcmVector: tmpl-sbpx
+        Subpixel effect template
+      field -> GVariant: field
+        Per-channel field type (0=T, 1=E); empty => all T
+      tmpl-e2e -> NcmVector: tmpl-e2e
+        EE end-to-end correlated-noise template (polarization)
+      ical-im -> GVariant: ical-im
+        icalTP calibrated-map indices (polarization)
+      ical-w -> NcmVector: ical-w
+        icalTP calibration mixing weights, length m*m*2 (polarization)
+      ical-other -> GVariant: ical-other
+        icalTP mixing other-map indices, length m*m*2 (polarization)
+
+    Properties from NcmDataGauss:
+      n-points -> guint: n-points
+        Data sample size
+      mean -> NcmVector: mean
+        Data mean
+      inv-cov -> NcmMatrix: inv-cov
+        Data covariance inverse
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        a_cmb: NumCosmoMath.Vector
+        bin_lmax: GLib.Variant
+        bin_lmin: GLib.Variant
+        bin_weight: NumCosmoMath.Vector
+        field: GLib.Variant
+        freqs: NumCosmoMath.Vector
+        gcib_conv: NumCosmoMath.Vector
+        gibxsz_conv: NumCosmoMath.Vector
+        hipert_boltzmann: HIPertBoltzmann
+        ical_im: GLib.Variant
+        ical_other: GLib.Variant
+        ical_w: NumCosmoMath.Vector
+        lmax: int
+        lmin: int
+        m_channels: int
+        nbins: int
+        quad_idx: GLib.Variant
+        sz_color: NumCosmoMath.Vector
+        tmpl_dust: NumCosmoMath.Vector
+        tmpl_e2e: NumCosmoMath.Vector
+        tmpl_gcib: NumCosmoMath.Vector
+        tmpl_gibxsz: NumCosmoMath.Vector
+        tmpl_ksz: NumCosmoMath.Vector
+        tmpl_leak: NumCosmoMath.Vector
+        tmpl_sbpx: NumCosmoMath.Vector
+        tmpl_sz: NumCosmoMath.Vector
+        inv_cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        a_cmb: NumCosmoMath.Vector = ...,
+        bin_lmax: GLib.Variant = ...,
+        bin_lmin: GLib.Variant = ...,
+        bin_weight: NumCosmoMath.Vector = ...,
+        field: GLib.Variant = ...,
+        freqs: NumCosmoMath.Vector = ...,
+        gcib_conv: NumCosmoMath.Vector = ...,
+        gibxsz_conv: NumCosmoMath.Vector = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        ical_im: GLib.Variant = ...,
+        ical_other: GLib.Variant = ...,
+        ical_w: NumCosmoMath.Vector = ...,
+        lmax: int = ...,
+        lmin: int = ...,
+        m_channels: int = ...,
+        nbins: int = ...,
+        quad_idx: GLib.Variant = ...,
+        sz_color: NumCosmoMath.Vector = ...,
+        tmpl_dust: NumCosmoMath.Vector = ...,
+        tmpl_e2e: NumCosmoMath.Vector = ...,
+        tmpl_gcib: NumCosmoMath.Vector = ...,
+        tmpl_gibxsz: NumCosmoMath.Vector = ...,
+        tmpl_ksz: NumCosmoMath.Vector = ...,
+        tmpl_leak: NumCosmoMath.Vector = ...,
+        tmpl_sbpx: NumCosmoMath.Vector = ...,
+        tmpl_sz: NumCosmoMath.Vector = ...,
+        inv_cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmin: int,
+        lmax: int,
+        m: int,
+        nbins: int,
+        freqs: NumCosmoMath.Vector,
+        a_cmb: NumCosmoMath.Vector,
+        sz_color: NumCosmoMath.Vector,
+        gcib_conv: NumCosmoMath.Vector,
+        gibxsz_conv: NumCosmoMath.Vector,
+        bin_lmin: typing.Sequence[int],
+        bin_lmax: typing.Sequence[int],
+        bin_weight: NumCosmoMath.Vector,
+        quad_idx: typing.Sequence[int],
+        tmpl_gcib: NumCosmoMath.Vector,
+        tmpl_sz: NumCosmoMath.Vector,
+        tmpl_ksz: NumCosmoMath.Vector,
+        tmpl_gibxsz: NumCosmoMath.Vector,
+        tmpl_dust: NumCosmoMath.Vector,
+        tmpl_leak: NumCosmoMath.Vector,
+        tmpl_sbpx: NumCosmoMath.Vector,
+    ) -> DataPlanckSmica: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckSmica: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckSmicaClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSmicaClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussClass = ...
 
 class DataSNIACov(NumCosmoMath.DataGaussCov):
     r"""
@@ -12819,6 +13490,7 @@ class HIPertBoltzmann(HIPert):
     def prepare(self, cosmo: HICosmo) -> None: ...
     def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> HIPertBoltzmann: ...
+    def require(self, tCls: DataCMBDataType, lmax: int) -> None: ...
     def set_BB_lmax(self, lmax: int) -> None: ...
     def set_EB_lmax(self, lmax: int) -> None: ...
     def set_EE_lmax(self, lmax: int) -> None: ...

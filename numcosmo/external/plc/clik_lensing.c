@@ -393,14 +393,19 @@ clik_lensing_object* _clik_lensing_init(char *fpath, error **err) {
       
     }
     
+    nlt += lmax+1; // add size of lensing Cl
+
+    /* Upstream fix (clik 44e638b, "Correct a nasty bug in lensing.c"): read the
+     * first-order correction whenever the file ships one, instead of gating on
+     * hascl. Without this the CMB-marginalized file dropped the phi (N0)
+     * renormalization, making it inconsistent with the full file. */
     cors = NULL;
-    if (nlt!=0) {
-      nlt += lmax+1;
+    hk = cldf_haskey(df,"clik_lensing/cors",err);
+    forwardError(*err,__LINE__,NULL);
+    if (hk==1) {
       sz = nlt*nbins;
       cors = cldf_readfloatarray(df,"clik_lensing/cors",&sz,err);
       forwardError(*err,__LINE__,NULL);
-    } else {
-      nlt = lmax + 1;
     }
 
     sz = nlt;

@@ -21,7 +21,15 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Factory functions to generate Planck18 likelihood and models."""
+"""Factory functions to generate Planck18 likelihood and models.
+
+NumCosmo provides independent reimplementations of the Planck likelihoods,
+including support for alternative resampled representations. The underlying
+likelihood methodology and original data products are due to the Planck
+Collaboration. Analyses using these likelihoods should cite the corresponding
+Planck publications in addition to NumCosmo; see ``planck_native_provenance.md``
+for the source data and the reference list.
+"""
 
 from typing import Any, cast
 from enum import StrEnum
@@ -336,6 +344,129 @@ def generate_planck18_ttteee(
 
     experiment = Ncm.ObjDictStr()
 
+    experiment.set("likelihood", likelihood)
+    experiment.set("model-set", mset)
+    experiment.set("distance", dist)
+    experiment.set("ps-ml", psml)
+    experiment.set("ps-ml-filter", psf)
+
+    return experiment, mfunc_oa
+
+
+def generate_planck18_native(
+    data_type: Planck18Types,
+    massive_nu: bool = False,
+    prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
+    use_lensing_likelihood: bool = False,
+    from_release: bool = False,
+) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
+    """Generate a Planck 2018 experiment from the native (clik-free) likelihoods.
+
+    Assembles the low-l EE (simall), low-l TT (commander) and high-l TT/TTTEEE
+    (SMICA) blocks -- plus optional lensing -- sharing one CBE. Unlike the legacy
+    ``generate_planck18_*`` (which wraps the clik library through ``DataPlanckLKL``),
+    the native objects embed their data and can resample; each self-configures the
+    shared Boltzmann in prepare(), so the resulting file reloads and fits without
+    the clik data files or the PLC library.
+
+    With ``from_release=True`` the blocks are downloaded (and cached) from the
+    NumCosmo native-Planck GitHub release instead of being built from a local
+    ``plc_3.0`` clik tree -- no Planck data or PLC library needed at all.
+
+    See ``numcosmo_py/experiments/planck_native_provenance.md`` for the data
+    provenance and the required Planck Collaboration citations.
+    """
+    # pylint: disable=import-outside-toplevel
+    from numcosmo_py.experiments.planck_lite import find_baseline_file
+    from numcosmo_py.experiments.planck_simall import SIMALL_EE_RELPATH, build_simall
+    from numcosmo_py.experiments.planck_commander import (
+        COMMANDER_RELPATH,
+        build_commander,
+    )
+    from numcosmo_py.experiments.planck_smica import (
+        PLIK_TT_RELPATH,
+        PLIK_TTTEEE_RELPATH,
+        build_smica_tt,
+        build_smica_ttteee,
+    )
+    from numcosmo_py.experiments.planck_lensing import (
+        LENSING_FULL_RELPATH,
+        build_lensing,
+    )
+    from numcosmo_py.experiments.planck_native_release import (
+        PlanckReleaseId,
+        load_planck_release,
+    )
+
+    cbe_boltzmann = Nc.HIPertBoltzmannCBE.new()
+    if prim_model == HIPrimModel.TWO_FLUIDS:
+        cbe = cbe_boltzmann.peek_cbe()
+        cbe.peek_precision().props.k_per_decade_primordial = 30.0
+
+    def _block(release_id: PlanckReleaseId, relpath: str, builder) -> Ncm.Data:
+        """Load a block from the release, or build it from the local clik data."""
+        if from_release:
+            return load_planck_release(release_id, cbe_boltzmann)
+        path = find_baseline_file(relpath)
+        if path is None:
+            raise FileNotFoundError(
+                f"Planck baseline data not found ({relpath}); build from the local "
+                "clik data needs it, or pass from_release=True."
+            )
+        return builder(path, cbe_boltzmann)
+
+    # Each native likelihood raises the shared Boltzmann's targets/lmax itself in
+    # prepare() (nc_hipert_boltzmann_require), including after the experiment is
+    # reloaded, so no manual CBE configuration is needed here.
+    lowl_EE = _block(PlanckReleaseId.PR3_SIMALL_EE, SIMALL_EE_RELPATH, build_simall)
+    lowl_TT = _block(PlanckReleaseId.PR3_COMMANDER, COMMANDER_RELPATH, build_commander)
+
+    if data_type == Planck18Types.TT:
+        highl = _block(PlanckReleaseId.PR3_PLIK_TT, PLIK_TT_RELPATH, build_smica_tt)
+        planck_model: Nc.PlanckFI = Nc.PlanckFICorTT()
+    elif data_type == Planck18Types.TTTEEE:
+        highl = _block(
+            PlanckReleaseId.PR3_PLIK_TTTEEE, PLIK_TTTEEE_RELPATH, build_smica_ttteee
+        )
+        planck_model = Nc.PlanckFICorTTTEEE()
+    else:
+        raise ValueError(f"Invalid data type: {data_type}")
+
+    blocks = [lowl_EE, lowl_TT, highl]
+    if use_lensing_likelihood:
+        blocks.append(
+            _block(PlanckReleaseId.PR3_LENSING, LENSING_FULL_RELPATH, build_lensing)
+        )
+
+    dset = Ncm.Dataset.new_array(blocks)
+    likelihood = Ncm.Likelihood.new(dset)
+
+    if data_type == Planck18Types.TT:
+        Nc.PlanckFICorTT.add_all_default18_priors(likelihood)
+    else:
+        Nc.PlanckFICorTTTEEE.add_all_default18_priors(likelihood)
+
+    planck_model.params_set_default_ftype()
+
+    cosmo = create_cosmo(massive_nu=massive_nu, prim_model=prim_model)
+    mset = Ncm.MSet.new_array([planck_model, cosmo])
+    mset.prepare_fparam_map()
+
+    dist = Nc.Distance.new(10.0)
+
+    cbe = cbe_boltzmann.peek_cbe()
+    psml = Nc.PowspecMLCBE.new_full(cbe=cbe)
+    psml.set_kmin(1.0e-5)
+    psml.set_kmax(1.0e1)
+    psml.require_zi(0.0)
+    psml.require_zf(1.0)
+
+    psf = Ncm.PowspecFilter.new(psml, Ncm.PowspecFilterType.TOPHAT)
+    psf.set_best_lnr0()
+
+    mfunc_oa = create_mfunc_array_for_cmb(dist, psf)
+
+    experiment = Ncm.ObjDictStr()
     experiment.set("likelihood", likelihood)
     experiment.set("model-set", mset)
     experiment.set("distance", dist)
