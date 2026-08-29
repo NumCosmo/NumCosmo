@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Tests on NcHICosmoidem2 reionlogical model."""
+"""Tests on the reionization models."""
 
 from numpy.testing import assert_allclose
 

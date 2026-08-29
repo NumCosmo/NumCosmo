@@ -106,8 +106,6 @@
 #include "nc/background/nc_hicosmo_qspline.h"
 #include "nc/background/nc_hicosmo_qrbf.h"
 #include "nc/background/nc_hicosmo_lcdm.h"
-#include "nc/background/nc_hicosmo_gcg.h"
-#include "nc/background/nc_hicosmo_idem2.h"
 #include "nc/background/nc_hicosmo_de_xcdm.h"
 #include "nc/background/nc_hicosmo_de_wspline.h"
 #include "nc/background/nc_hicosmo_de_cpl.h"
@@ -744,8 +742,6 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QRBF);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_LCDM);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_WSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
@@ -757,11 +753,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_CMB);
 
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_OK);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_CMB);
 
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_OK);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_CMB);
 
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_BPL);

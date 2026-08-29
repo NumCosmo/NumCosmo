@@ -75,8 +75,6 @@
 
 /* Model implementations */
 #include <numcosmo/nc/quantum/nc_de_cont.h>
-#include <numcosmo/nc/background/nc_hicosmo_idem2.h>
-#include <numcosmo/nc/background/nc_hicosmo_gcg.h>
 #include <numcosmo/nc/background/nc_hicosmo_de.h>
 #include <numcosmo/nc/background/nc_hicosmo_de_reparam_ok.h>
 #include <numcosmo/nc/background/nc_hicosmo_de_reparam_cmb.h>
