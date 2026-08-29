@@ -32,6 +32,70 @@
 G_BEGIN_DECLS
 
 /*
+ * #NcXcor's instance struct and the argument block its integrands carry. Not
+ * public API: shared between nc_xcor.c and the two internal translation units
+ * it was split into, nc_xcor_limber_z.c and nc_xcor_kquad.c.
+ */
+struct _NcXcor
+{
+  /*< private > */
+  GObject parent_instance;
+  NcDistance *dist;
+  NcmPowspec *ps;
+  gdouble RH;
+  NcXcorMethod meth;
+  NcXcorKernelClosure closure_type;
+  gdouble reltol;
+  guint ell_batch_size;
+};
+
+typedef struct _NcXcorArg
+{
+  NcXcor *xc;
+  NcHICosmo *cosmo;
+  NcDistance *dist;
+  NcmPowspec *ps;
+
+  NcXcorKernel *xclk1;
+  NcXcorKernel *xclk2;
+  gint *ells;
+  guint nells;
+  guint comp_offset; /* index of the block component the first output maps to */
+
+  /* Vectorized kernel integrands (for kernel cubature methods) */
+  NcXcorKernelIntegrand *xclki1;
+  NcXcorKernelIntegrand *xclki2;
+  gdouble *W1;
+  gdouble *W2;
+
+  gdouble RH;
+} NcXcorArg;
+
+/*
+ * The redshift-space Limber tier, nc_xcor_limber_z.c. Both take an explicit
+ * [@zmin, @zmax] because nc_xcor_compute() narrows it to the kernels' common
+ * support before calling.
+ */
+void _nc_xcor_limber_z_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector *vp);
+void _nc_xcor_limber_z_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector *vp);
+
+/*
+ * The kernel-space tier, nc_xcor_kquad.c: one entry point per method, each
+ * building its own closures per multipole batch. Only the exact method reports
+ * an error estimate, and @vp_err is nullable there.
+ */
+void _nc_xcor_kernel_gsl (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp);
+void _nc_xcor_kernel_cubature (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp);
+void _nc_xcor_kernel_exact (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err);
+
+/*
+ * QUADPACK's status is a statement about certification, not about the answer,
+ * so both GSL methods judge it against the error they achieved. Defined in
+ * nc_xcor.c because both tiers use it.
+ */
+void _nc_xcor_check_qag_status (const gchar *where, gint ret, gdouble reltol, gdouble result, gdouble err);
+
+/*
  * Not public API: shared only between nc_xcor.c and nc_xcor_solver.c, so
  * NcXcorSolver can reuse nc_xcor.c's KERNEL_CUBATURE outer-integral
  * machinery with integrand(s) it built and cached itself, instead of

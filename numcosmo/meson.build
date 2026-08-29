@@ -722,6 +722,8 @@ nc_sources = files(
     'nc/perturbations/nc_hipert_itwo_fluids.c',
     'nc/perturbations/nc_hipert_two_fluids.c',
     'nc/xcor/nc_xcor.c',
+    'nc/xcor/nc_xcor_limber_z.c',
+    'nc/xcor/nc_xcor_kquad.c',
     'nc/xcor/nc_xcor_AB.c',
     'nc/xcor/nc_xcor_solver.c',
     'nc/xcor/nc_xcor_ssc_sij.c',
