@@ -27,6 +27,8 @@
 from pathlib import Path
 import gzip
 import json
+import subprocess
+import sys
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -231,6 +233,216 @@ class TestSBesselIntegratorLevin:
             err_msg="integrate doesn't match individual integrate_ell calls",
         )
 
+    def test_moving_edge_panels_stay_inside_callback_domain(self) -> None:
+        """Moving edge cells are reusable without sampling outside [a, b]."""
+        ell_min, ell_max = 0, 7
+        integrator = Ncm.SBesselIntegratorLevin.new_full(
+            ell_min, ell_max, 1.0, 1.0e4, 9, 500, 1.0e-9, 2, 1.0e-10
+        )
+        result = Ncm.Vector.new(ell_max - ell_min + 1)
+
+        for a, b in [(5.0, 50.0), (6.7, 43.0), (9.5, 32.0), (10.5, 96.0)]:
+            sampled = [np.inf, -np.inf]
+
+            # pylint: disable=cell-var-from-loop
+            def f_domain(x: float, _k: float) -> float:
+                sampled[0] = min(sampled[0], x)
+                sampled[1] = max(sampled[1], x)
+                return np.exp(-0.03 * x)
+
+            # pylint: enable=cell-var-from-loop
+
+            integrator.integrate(f_domain, a, b, 1.0, result)
+            assert sampled[0] >= np.nextafter(a, -np.inf)
+            assert sampled[1] <= np.nextafter(b, np.inf)
+
+            expected = np.array(
+                [
+                    quad(
+                        lambda x, ell=ell: np.exp(-0.03 * x) * spherical_jn(ell, x),
+                        a,
+                        b,
+                        epsabs=1.0e-12,
+                        epsrel=1.0e-12,
+                    )[0]
+                    for ell in range(ell_min, ell_max + 1)
+                ]
+            )
+            assert_allclose(result.to_numpy(), expected, rtol=1.0e-8, atol=1.0e-13)
+
+    def test_accepted_edge_fits_rhs_once(self) -> None:
+        """A smooth edge is fitted once before using its fixed-cell operator."""
+        integrator = Ncm.SBesselIntegratorLevin.new_full(
+            0, 7, 1.0, 1.0e4, 9, 500, 1.0e-10, 2, 1.0e-11
+        )
+        result = Ncm.Vector.new(8)
+        calls = 0
+
+        def constant(_x: float, _k: float) -> float:
+            nonlocal calls
+            calls += 1
+            return 1.0
+
+        # The first knot is exactly the left endpoint, leaving one right edge.
+        integrator.integrate(constant, 1.0, 2.0, 1.0, result)
+
+        expected = np.array(
+            [
+                quad(
+                    lambda x, ell=ell: spherical_jn(ell, x),
+                    1.0,
+                    2.0,
+                    epsabs=1.0e-13,
+                    epsrel=1.0e-13,
+                )[0]
+                for ell in range(8)
+            ]
+        )
+        assert calls == 9
+        assert_allclose(result.to_numpy(), expected, rtol=1.0e-9, atol=1.0e-14)
+
+    def test_rejected_edge_reuses_fitted_rhs(self) -> None:
+        """Rejected extrapolation must not evaluate the kernel a second time."""
+        integrator = Ncm.SBesselIntegratorLevin.new_full(
+            0, 7, 1.0, 1.0e4, 9, 500, 1.0e-10, 2, 1.0e-11
+        )
+        result = Ncm.Vector.new(8)
+        calls = 0
+        frequency = 500.0
+
+        def oscillatory(x: float, _k: float) -> float:
+            nonlocal calls
+            calls += 1
+            return np.cos(frequency * x)
+
+        integrator.integrate(oscillatory, 1.0, 2.0, 1.0, result)
+
+        expected, _ = quad(
+            lambda x: np.cos(frequency * x) * spherical_jn(0, x),
+            1.0,
+            2.0,
+            epsabs=1.0e-13,
+            epsrel=1.0e-13,
+            limit=1000,
+        )
+        assert calls == 1025
+        assert_allclose(result.get(0), expected, rtol=1.0e-8, atol=1.0e-13)
+
+    def test_zero_bessel_batch_skips_rhs(self) -> None:
+        """A panel with an identically zero Bessel batch never calls the kernel."""
+        integrator = Ncm.SBesselIntegratorLevin.new(500, 500)
+        result = Ncm.Vector.new(1)
+        calls = 0
+
+        def kernel(_x: float, _k: float) -> float:
+            nonlocal calls
+            calls += 1
+            return 1.0
+
+        integrator.integrate(kernel, 1.0, 2.0, 1.0, result)
+
+        assert calls == 0
+        assert result.get(0) == 0.0
+
+    def test_set_reltol_rebuilds_the_operators(self) -> None:
+        """A tolerance set after construction must reach the operators.
+
+        The operators are built when the multipole range is known, so a later
+        tolerance can only take effect by replacing them. Tightening it must
+        therefore improve an edge-panel result that starts out under-resolved.
+
+        ``cheb_reltol`` is set tight and left alone so that the operator
+        tolerance is the only thing limiting the result.
+        """
+        ell_min, ell_max = 0, 7
+        a, b = 999.9372447268345, 1018.1249616674683
+
+        def kernel(x: float, _k: float) -> float:
+            return np.exp(-0.003 * x)
+
+        expected = np.array(
+            [
+                quad(
+                    lambda x, ell=ell: np.exp(-0.003 * x) * spherical_jn(ell, x),
+                    a,
+                    b,
+                    epsabs=1.0e-16,
+                    epsrel=1.0e-12,
+                    limit=400,
+                )[0]
+                for ell in range(ell_min, ell_max + 1)
+            ]
+        )
+        scale = np.max(np.abs(expected))
+
+        integrator = Ncm.SBesselIntegratorLevin.new_full(
+            ell_min, ell_max, 1.0e-4, 1.0e6, 21, 1200, 1.0e-4, 2, 1.0e-12
+        )
+        result = Ncm.Vector.new(ell_max - ell_min + 1)
+
+        integrator.integrate(kernel, a, b, 1.0, result)
+        loose = np.max(np.abs(result.to_numpy() - expected)) / scale
+
+        integrator.set_reltol(1.0e-11)
+        assert integrator.get_reltol() == 1.0e-11
+
+        integrator.integrate(kernel, a, b, 1.0, result)
+        tight = np.max(np.abs(result.to_numpy() - expected)) / scale
+
+        assert tight < loose
+        assert tight < 1.0e-9
+
+    @pytest.mark.parametrize("setter", ["set_reltol", "set_cheb_reltol"])
+    @pytest.mark.parametrize("value", ["0.0", "-1.0e-8"])
+    def test_non_positive_tolerance_is_rejected(self, setter: str, value: str) -> None:
+        """Neither tolerance is meaningful at or below zero.
+
+        Runs in a subprocess since the assertion aborts rather than raises.
+        """
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from numcosmo_py import Ncm\n"
+                "Ncm.cfg_init()\n"
+                "sbi = Ncm.SBesselIntegratorLevin.new(0, 3)\n"
+                f"sbi.{setter}({value})\n",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert proc.returncode != 0
+        assert "assertion failed" in proc.stderr
+
+    def test_repeated_set_reltol_keeps_working(self) -> None:
+        """Rebuilding the operators repeatedly must stay correct."""
+        integrator = Ncm.SBesselIntegratorLevin.new(0, 5)
+        result = Ncm.Vector.new(6)
+
+        def kernel(x: float, _k: float) -> float:
+            return np.exp(-0.01 * x)
+
+        expected = np.array(
+            [
+                quad(
+                    lambda x, ell=ell: np.exp(-0.01 * x) * spherical_jn(ell, x),
+                    12.0,
+                    47.0,
+                    epsabs=1.0e-16,
+                    epsrel=1.0e-12,
+                    limit=400,
+                )[0]
+                for ell in range(6)
+            ]
+        )
+
+        for i in range(8):
+            integrator.set_reltol(1.0e-9 * (1.0 + 0.1 * i))
+            integrator.integrate(kernel, 12.0, 47.0, 1.0, result)
+            assert_allclose(result.to_numpy(), expected, rtol=1.0e-7, atol=1.0e-14)
+
     @pytest.mark.parametrize(
         "func_type,filename",
         [
@@ -254,7 +466,7 @@ class TestSBesselIntegratorLevin:
         min_k_ratio = 2.8
 
         truth_table_path = Path(
-            Ncm.cfg_get_data_filename(f"truth_tables/{filename}", True)
+            Ncm.cfg_get_data_filename(f"truth_tables/sbessel/{filename}", True)
         )
         with gzip.open(truth_table_path, "rt") as f:
             truth_table = json.load(f)
@@ -559,3 +771,221 @@ class TestSBesselIntegratorLevin:
             atol=1.0e-15,
             err_msg=f"Oscillatory regime failed for k={k}, ell={ell}",
         )
+
+
+class TestPanelAbstolEvanescent:
+    """An unresolvable integrand must not be fatal where the panel cannot matter.
+
+    The Levin panel's contribution to each multipole is
+    ``b_p j_l(b_p) u'(b_p) - a_p j_l(a_p) u'(a_p)``, so the caller's absolute
+    error budget converts into a bound on the panel's Chebyshev coefficients by
+    dividing by ``max(b_p |j_l(b_p)|, a_p |j_l(a_p)|)``. Bounding that scale by
+    ``b_p`` alone (``|j_l| <= 1``) throws away every order of magnitude by which
+    ``j_l`` is evanescent below its turning point: the panel provably cannot move
+    the result, yet the integrand still had to be fitted to ``cheb_reltol``, and
+    failing to do so aborted the process once max-order became fatal.
+
+    A regression here aborts rather than failing: the max-order breach is a
+    ``g_error``, so the interpreter dies instead of reporting an assertion.
+    """
+
+    XMAX = 101.13342580488548
+
+    @staticmethod
+    def _unresolvable(_params, x: float, _k: float) -> float:
+        """Quadratic decay carrying an oscillation no Chebyshev order resolves."""
+        return (1.0 - x / TestPanelAbstolEvanescent.XMAX) ** 2 + 1.0e-10 * np.sin(
+            1.0e9 * x
+        )
+
+    @pytest.mark.parametrize("ell", [210, 260])
+    @pytest.mark.parametrize("abstol", [1.0e-20, 1.0e-30])
+    def test_unresolvable_integrand_below_turning_point(
+        self, ell: int, abstol: float
+    ) -> None:
+        """Whole range below the turning point: must return, not abort."""
+        integrator = Ncm.SBesselIntegratorLevin.new(ell, ell)
+        integrator.set_abstol(abstol)
+        result = Ncm.Vector.new(1)
+
+        # y_max = k * b = XMAX, far below the ell-th turning point at y ~ ell.
+        integrator.integrate(self._unresolvable, 1.0, self.XMAX, 1.0, result, None)
+
+        assert np.isfinite(result.get(0))
+
+    def test_still_accurate_where_the_panel_does_matter(self) -> None:
+        """The floor is a relaxation, never a license to under-resolve.
+
+        Same caller abstol, but an ell whose turning point is inside the range,
+        against a smooth integrand with a known answer: the result must still be
+        correct, i.e. the abstol path did not loosen a panel that carries weight.
+        """
+        ell, k, a, b = 10, 1.0, 1.0, 50.0
+
+        integrator = Ncm.SBesselIntegratorLevin.new(ell, ell)
+        integrator.set_abstol(1.0e-20)
+        result = Ncm.Vector.new(1)
+        integrator.integrate(lambda _p, x, _k: np.exp(-0.01 * x), a, b, k, result, None)
+
+        expected, _ = quad(
+            lambda x: np.exp(-0.01 * x) * spherical_jn(ell, k * x),
+            a,
+            b,
+            epsabs=1.0e-13,
+            epsrel=1.0e-13,
+            limit=5000,
+        )
+        assert_allclose(result.get(0), expected, rtol=1.0e-8, atol=1.0e-15)
+
+
+class TestOscillatoryResolutionFloor:
+    """The decay test must not converge below a panel's oscillation count.
+
+    A panel [a, b] in y = kx carries about (b - a) / pi oscillations of the
+    solution. On such a panel the leading Chebyshev coefficients are small and
+    nearly flat, so the adaptive QR's decay test used to fire on them and declare
+    convergence at a tiny order -- a panel spanning 2162 in y was "converged"
+    with 19 columns instead of the ~1200 it needs.
+
+    Because panel contributions cancel heavily, the visible symptom was
+    non-monotonic: at a loose tolerance every panel was under-resolved and the
+    errors partly cancelled, while at an intermediate tolerance some panels
+    resolved and others did not, destroying the cancellation. Requesting 1e-8 was
+    then ~50x worse than requesting 1e-6.
+    """
+
+    @staticmethod
+    def _gaussian_integral(reltol):
+        """Strongly oscillatory Gaussian integral at a requested tolerance."""
+        ell, k, a, b = 2, 500.0, 0.1, 10.0
+        defaults = Ncm.SBesselIntegratorLevin.new(ell, ell)
+        integrator = Ncm.SBesselIntegratorLevin.new_full(
+            ell,
+            ell,
+            defaults.get_y_knots_min(),
+            defaults.get_y_knots_max(),
+            defaults.get_n_knots(),
+            defaults.get_ell_cache_max(),
+            reltol,
+            defaults.get_cheb_min_order(),
+            reltol,
+        )
+        return integrator.integrate_gaussian_ell(5.0, 1.0, a, b, k, ell)
+
+    def test_loose_tolerances_agree_with_the_converged_result(self):
+        """No requested tolerance may be catastrophically wrong.
+
+        Pre-fix the 1e-8 request returned +6.10e-06 against a converged
+        -1.19e-07: wrong sign and ~50x too large.
+        """
+        converged = self._gaussian_integral(1.0e-12)
+
+        for reltol in (1.0e-4, 1.0e-6, 1.0e-8, 1.0e-10):
+            result = self._gaussian_integral(reltol)
+            assert_allclose(result, converged, rtol=1.0e-2, atol=0.0)
+
+    def test_accuracy_is_monotonic_in_the_requested_tolerance(self):
+        """Tightening the request must not make the answer wholesale worse.
+
+        Pre-fix the error rose from 9.3e-01 at 1e-6 to 5.2e+01 at 1e-8, a 56x
+        reversal.
+
+        Only the loose half can be compared step by step. From about 1e-7 the
+        adaptive refinement lands on discrete levels, so the delivered error
+        bounces inside a ~1e-7 band rather than falling: sweeping reltol on one
+        machine gives 4.4e-09 at 1e-8.25 against 1.8e-07 at 1e-8.50, and the
+        request does not actually converge until past 1e-11. Which level a
+        given request lands on also shifts with the BLAS kernel, so CI has
+        produced 8.5e-08, 1.1e-07 and 3.0e-07 at 1e-11 where this machine
+        gives 1.3e-08. The tight end therefore gets an absolute bound, not a
+        comparison.
+        """
+        converged = self._gaussian_integral(1.0e-12)
+        errors = {
+            reltol: abs(self._gaussian_integral(reltol) / converged - 1.0)
+            for reltol in (1.0e-4, 1.0e-6, 1.0e-8, 1.0e-11)
+        }
+
+        assert errors[1.0e-6] <= errors[1.0e-4] * 3.0
+        assert errors[1.0e-8] <= errors[1.0e-6] * 3.0
+        assert errors[1.0e-11] < 1.0e-5
+
+
+class TestPanelRecording:
+    """Per-panel diagnostics.
+
+    The integral is a sum of per-panel boundary terms. Their individual sizes are
+    not recoverable from the result, so measuring how much they cancel -- and
+    whether a single panel's own accuracy is the limit -- needs them recorded.
+    """
+
+    @staticmethod
+    def _integrator(ell, record):
+        defaults = Ncm.SBesselIntegratorLevin.new(ell, ell)
+        sbi = Ncm.SBesselIntegratorLevin.new_full(
+            ell,
+            ell,
+            defaults.get_y_knots_min(),
+            defaults.get_y_knots_max(),
+            defaults.get_n_knots(),
+            defaults.get_ell_cache_max(),
+            1.0e-12,
+            defaults.get_cheb_min_order(),
+            1.0e-12,
+        )
+        sbi.set_record_panels(record)
+        return sbi
+
+    def test_recording_is_off_by_default(self):
+        """Recording must be opt-in: it is a diagnostic, not a feature."""
+        sbi = Ncm.SBesselIntegratorLevin.new(2, 2)
+
+        assert not sbi.get_record_panels()
+        assert sbi.get_n_panel_records() == 0
+
+    def test_contributions_sum_to_the_result(self):
+        """The recorded panels must account for the integral exactly."""
+        sbi = self._integrator(2, True)
+        result = sbi.integrate_gaussian_ell(5.0, 1.0, 0.1, 10.0, 50.0, 2)
+
+        n = sbi.get_n_panel_records()
+        assert n > 1, "expected the range to be split into several panels"
+
+        # Summing the records in Python adds in a different order from the
+        # internal accumulation, so a few ulps of difference are expected.
+        total = sum(sbi.get_panel_contrib(i) for i in range(n))
+        assert_allclose(total, result, rtol=1.0e-12)
+
+    def test_panels_tile_the_range_in_order(self):
+        """Recorded panels must abut and cover [k*a, k*b]."""
+        k, a, b, ell = 50.0, 0.1, 10.0, 2
+        sbi = self._integrator(ell, True)
+        sbi.integrate_gaussian_ell(5.0, 1.0, a, b, k, ell)
+
+        n = sbi.get_n_panel_records()
+        bounds = [(sbi.get_panel_a(i), sbi.get_panel_b(i)) for i in range(n)]
+
+        assert_allclose(bounds[0][0], k * a, rtol=1.0e-12)
+        assert_allclose(bounds[-1][1], k * b, rtol=1.0e-12)
+        for (_, prev_b), (next_a, _) in zip(bounds, bounds[1:]):
+            assert_allclose(next_a, prev_b, rtol=1.0e-12)
+        for i in range(n):
+            assert sbi.get_panel_ell(i) == ell
+
+    def test_records_are_cleared_between_integrations(self) -> None:
+        """Records describe the most recent call, not an accumulation."""
+        sbi = self._integrator(2, True)
+        sbi.integrate_gaussian_ell(5.0, 1.0, 0.1, 10.0, 50.0, 2)
+        first = sbi.get_n_panel_records()
+        sbi.integrate_gaussian_ell(5.0, 1.0, 0.1, 10.0, 50.0, 2)
+
+        assert sbi.get_n_panel_records() == first
+
+    def test_disabling_recording_releases_the_records(self) -> None:
+        """Disabling recording must clear the records."""
+        sbi = self._integrator(2, True)
+        sbi.integrate_gaussian_ell(5.0, 1.0, 0.1, 10.0, 50.0, 2)
+        assert sbi.get_n_panel_records() > 0
+
+        sbi.set_record_panels(False)
+        assert sbi.get_n_panel_records() == 0

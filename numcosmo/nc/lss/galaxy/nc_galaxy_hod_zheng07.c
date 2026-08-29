@@ -28,13 +28,19 @@
  *
  * Zheng et al. (2007) halo occupation distribution.
  *
- * Concrete #NcGalaxyHOD with the five-parameter occupation of Zheng et al.
- * (2007). The mean central occupation is
- * $$\langle N_\mathrm{cen} \rangle = \frac{1}{2}\left[1 + \mathrm{erf}\left(
- * \frac{\log_{10} M - \log_{10} M_\mathrm{min}}{\sigma_{\log M}}\right)\right],$$
+ * Concrete #NcGalaxyHOD with the five-parameter occupation of Zheng et al. (2007).
+ *
+ * The mean central occupation is
+ * $$
+ * \langle N_\mathrm{cen} \rangle = \frac{1}{2}\left[1
+ * + \mathrm{erf}\left( \frac{\log_{10} M - \log_{10} M_\mathrm{min}}{\sigma_{\log
+ *   M}}\right)\right],
+ * $$
  * and the mean satellite occupation is
- * $$\langle N_\mathrm{sat} \rangle = \left(\frac{\max(0, M - M_0)}{M_1}
- * \right)^{\alpha},$$
+ * $$
+ * \langle N_\mathrm{sat} \rangle = \left(\frac{\max(0, M - M_0)}{M_1}
+ * \right)^{\alpha},
+ * $$
  * with $M_0 = 10^{\log_{10} M_0}$ and $M_1 = 10^{\log_{10} M_1}$.
  *
  */
@@ -184,8 +190,7 @@ _nc_galaxy_hod_zheng07_mean_n_satellite (NcGalaxyHOD *hod, const gdouble lnM)
 /**
  * nc_galaxy_hod_zheng07_new:
  *
- * Creates a new #NcGalaxyHODZheng07 with the default Zheng et al. (2007)
- * parameters.
+ * Creates a new #NcGalaxyHODZheng07 with the default Zheng et al. (2007) parameters.
  *
  * Returns: (transfer full): a new #NcGalaxyHODZheng07.
  */

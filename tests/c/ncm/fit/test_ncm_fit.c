@@ -365,45 +365,71 @@ main (gint argc, gchar *argv[])
 
   /* g_test_set_nonfatal_assertions (); */
 
+  /* One source, several binaries. Every algorithm pair below is independent, so
+   * the registrations are gated on a group symbol and meson builds one
+   * executable per group -- see tests/c/meson.build. Undefined means "all", so
+   * building this file by hand still runs everything.
+   *
+   * The point is wall clock: as a single binary these took 177 s, which is 37%
+   * of all C test work and more than `meson test --num-processes` can divide,
+   * because it cannot split one executable. */
+#if !defined (TEST_FIT_GROUP)
+#define TEST_FIT_NLOPT
+#define TEST_FIT_GSL_LS
+#define TEST_FIT_GSL_MM
+#define TEST_FIT_GSL_SIMPLEX
+#define TEST_FIT_LEVMAR
+#endif
+
+#ifdef TEST_FIT_NLOPT
   TESTS_NCM_ADD (nlopt, neldermead)
   TESTS_NCM_ADD (nlopt, slsqp)
 
+  TESTS_NCM_ADD_INVALID (nlopt, neldermead)
+  TESTS_NCM_ADD_INVALID (nlopt, slsqp)
+#endif /* TEST_FIT_NLOPT */
+
+#ifdef TEST_FIT_GSL_LS
   TESTS_NCM_ADD (gsl, ls)
 
+  TESTS_NCM_ADD_INVALID (gsl, ls)
+#endif /* TEST_FIT_GSL_LS */
+
+#ifdef TEST_FIT_GSL_MM
   TESTS_NCM_ADD (gsl, mm_conjugate_fr)
   TESTS_NCM_ADD (gsl, mm_conjugate_pr)
   TESTS_NCM_ADD (gsl, mm_vector_bfgs)
   TESTS_NCM_ADD (gsl, mm_vector_bfgs2)
   TESTS_NCM_ADD (gsl, mm_steepest_descent)
 
-  TESTS_NCM_ADD (gsl, nmsimplex)
-  TESTS_NCM_ADD (gsl, nmsimplex2)
-  TESTS_NCM_ADD (gsl, nmsimplex2rand)
-
-  TESTS_NCM_ADD (levmar, der)
-  TESTS_NCM_ADD (levmar, dif)
-  TESTS_NCM_ADD (levmar, bc_der)
-  TESTS_NCM_ADD (levmar, bc_dif)
-
-  TESTS_NCM_ADD_INVALID (nlopt, neldermead)
-  TESTS_NCM_ADD_INVALID (nlopt, slsqp)
-
-  TESTS_NCM_ADD_INVALID (gsl, ls)
-
   TESTS_NCM_ADD_INVALID (gsl, mm_conjugate_fr)
   TESTS_NCM_ADD_INVALID (gsl, mm_conjugate_pr)
   TESTS_NCM_ADD_INVALID (gsl, mm_vector_bfgs)
   TESTS_NCM_ADD_INVALID (gsl, mm_vector_bfgs2)
   TESTS_NCM_ADD_INVALID (gsl, mm_steepest_descent)
+#endif /* TEST_FIT_GSL_MM */
+
+#ifdef TEST_FIT_GSL_SIMPLEX
+  TESTS_NCM_ADD (gsl, nmsimplex)
+  TESTS_NCM_ADD (gsl, nmsimplex2)
+  TESTS_NCM_ADD (gsl, nmsimplex2rand)
 
   TESTS_NCM_ADD_INVALID (gsl, nmsimplex)
   TESTS_NCM_ADD_INVALID (gsl, nmsimplex2)
   TESTS_NCM_ADD_INVALID (gsl, nmsimplex2rand)
+#endif /* TEST_FIT_GSL_SIMPLEX */
+
+#ifdef TEST_FIT_LEVMAR
+  TESTS_NCM_ADD (levmar, der)
+  TESTS_NCM_ADD (levmar, dif)
+  TESTS_NCM_ADD (levmar, bc_der)
+  TESTS_NCM_ADD (levmar, bc_dif)
 
   TESTS_NCM_ADD_INVALID (levmar, der)
   TESTS_NCM_ADD_INVALID (levmar, dif)
   TESTS_NCM_ADD_INVALID (levmar, bc_der)
   TESTS_NCM_ADD_INVALID (levmar, bc_dif)
+#endif /* TEST_FIT_LEVMAR */
 
   g_test_run ();
 }

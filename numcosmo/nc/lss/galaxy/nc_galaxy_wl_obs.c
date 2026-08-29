@@ -52,6 +52,8 @@
 #include "nc/lss/halo/nc_halo_density_profile.h"
 #include "nc/lss/halo/nc_halo_position.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_serialize.h"
 
 
 struct _NcGalaxyWLObs
@@ -274,6 +276,85 @@ nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcWLEllipticityFrame co
                        "coord", coord,
                        "len", nrows,
                        NULL);
+}
+
+/* Filenames of the curated Subaru HSC-SSP PDR1 catalogs in the NumCosmo
+ * datafile-release-v1.0.0 GitHub release, indexed by #NcGalaxyWLObsCatalogId. */
+static const gchar *_nc_galaxy_wl_obs_catalog_files[] = {
+  "wl_obs_HWL16a-002.gvar",
+  "wl_obs_HWL16a-007.gvar",
+  "wl_obs_HWL16a-060.gvar",
+  "wl_obs_HWL16a-064.gvar",
+  "wl_obs_HWL16a-094.gvar",
+};
+
+/**
+ * nc_galaxy_wl_obs_catalog_id_get_filename:
+ * @id: a #NcGalaxyWLObsCatalogId
+ *
+ * Downloads (if not already cached) and returns the local filename of the
+ * catalog identified by @id. The file is fetched from the NumCosmo
+ * datafile-release-v1.0.0 GitHub release into the NumCosmo data directory
+ * (see ncm_cfg_get_fullpath_base()) the first time it is requested; later
+ * calls reuse the cached copy.
+ *
+ * Returns: (transfer full): Full path for the catalog file.
+ */
+gchar *
+nc_galaxy_wl_obs_catalog_id_get_filename (NcGalaxyWLObsCatalogId id)
+{
+  g_return_val_if_fail (id < NC_GALAXY_WL_OBS_CATALOG_LEN, NULL);
+
+  {
+    const gchar *filename = _nc_galaxy_wl_obs_catalog_files[id];
+    gchar *full_filename  = ncm_cfg_get_fullpath (filename);
+
+    if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
+    {
+      gchar *url_str   = g_strdup_printf ("https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/%s", filename);
+      const gchar *dir = ncm_cfg_get_fullpath_base ();
+      gchar *cmd[]     = {"wget", "--tries=3", "--timeout=30", "-O", full_filename, url_str, NULL };
+      GError *error    = NULL;
+
+      ncm_message ("# Downloading file [%s]...\n", url_str);
+
+      if (!g_spawn_sync (dir, cmd, NULL,
+                         G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+                         NULL, NULL, NULL, NULL, NULL, &error))
+        g_error ("nc_galaxy_wl_obs_catalog_id_get_filename: cannot download file: %s. Error: %s. "
+                 "Please download the file manually from %s and extract it to %s.",
+                 filename, error->message,
+                 url_str, dir);
+
+      g_free (url_str);
+    }
+
+    return full_filename;
+  }
+}
+
+/**
+ * nc_galaxy_wl_obs_new_from_catalog_id: (constructor)
+ * @id: a #NcGalaxyWLObsCatalogId
+ *
+ * Downloads (if necessary) and loads the catalog identified by @id.
+ *
+ * Returns: (transfer full): a new #NcGalaxyWLObs object.
+ */
+NcGalaxyWLObs *
+nc_galaxy_wl_obs_new_from_catalog_id (NcGalaxyWLObsCatalogId id)
+{
+  gchar *full_filename = nc_galaxy_wl_obs_catalog_id_get_filename (id);
+  NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  GObject *obj         = ncm_serialize_from_binfile (ser, full_filename);
+
+  g_free (full_filename);
+  ncm_serialize_free (ser);
+
+  if (!NC_IS_GALAXY_WL_OBS (obj))
+    g_error ("nc_galaxy_wl_obs_new_from_catalog_id: file for catalog id %d does not contain a NcGalaxyWLObs.", id);
+
+  return NC_GALAXY_WL_OBS (obj);
 }
 
 /**

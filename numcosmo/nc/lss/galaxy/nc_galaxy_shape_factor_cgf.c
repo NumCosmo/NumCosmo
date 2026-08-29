@@ -32,45 +32,45 @@
  * CGF-expansion evaluation of the intrinsic-ellipticity marginal.
  *
  * Approximates
- * $$P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_I|<1} \mathrm{d}^2\chi_I\,
+ * $$
+ * P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_I|<1} \mathrm{d}^2\chi_I\,
  *   P_\mathrm{pop}(\chi_I)\, N_2\big(\epsilon_\mathrm{obs} - f_g(\chi_I);
- *   \sigma_\mathrm{noise}^2\big)$$
+ *   \sigma_\mathrm{noise}^2\big)
+ * $$
  * by a single Gaussian in $\epsilon_\mathrm{obs}$ obtained from a
- * cumulant-generating-function (moment) expansion of the pushforward of the
- * intrinsic distribution through the forward shear map $S(g,\cdot) \equiv f_g$.
- * Writing the analytic low-order response moments of $S$ around $\chi_I=0$ —
- * the value $S_0 = S(g,0)$, the (real $2\times2$) Jacobian $A = \partial S/
- * \partial\chi_I|_0$, and the Laplacian $\nabla^2 S|_0$ — the observed
- * ellipticity is modelled as $\mathcal{N}(\mu, C)$ with
- * $$\mu = S_0 + \tfrac12 V\,\nabla^2 S|_0, \qquad
- *   C = V\,A A^{\mathsf T} + \sigma_\mathrm{noise}^2\, I_2,$$
- * where $V$ is the per-component variance of the intrinsic ellipticity.
+ * cumulant-generating-function (moment) expansion of the pushforward of the intrinsic
+ * distribution through the forward shear map $S(g,\cdot) \equiv f_g$. Writing the
+ * analytic low-order response moments of $S$ around $\chi_I=0$ — the value $S_0 =
+ * S(g,0)$, the (real $2\times2$) Jacobian $A = \partial S/ \partial\chi_I|_0$, and the
+ * Laplacian $\nabla^2 S|_0$ — the observed ellipticity is modelled as
+ * $\mathcal{N}(\mu, C)$ with $$\mu = S_0 + \tfrac12 V\,\nabla^2 S|_0, \qquad C = V\,A
+ * A^{\mathsf T} + \sigma_\mathrm{noise}^2\, I_2,$$ where $V$ is the per-component
+ * variance of the intrinsic ellipticity.
  *
- * Unlike #NcGalaxyShapeFactorVarAdd (which pulls $\epsilon_\mathrm{obs}$ back
- * through the inverse map and adds scalar variances), CGF keeps the map's
- * curvature: the mean picks up the Laplacian correction and the covariance is
- * the full $A A^{\mathsf T}$ pushforward of the intrinsic variance, not an
- * isotropic sum. It is therefore more accurate than VarAdd, while remaining a
- * single closed-form arithmetic evaluation — cheaper than
- * #NcGalaxyShapeFactorLaplace, which needs a per-galaxy Newton mode search and
- * a Hessian.
+ * Unlike #NcGalaxyShapeFactorVarAdd (which pulls $\epsilon_\mathrm{obs}$ back through
+ * the inverse map and adds scalar variances), CGF keeps the map's curvature: the mean
+ * picks up the Laplacian correction and the covariance is the full $A A^{\mathsf T}$
+ * pushforward of the intrinsic variance, not an isotropic sum. It is therefore more
+ * accurate than VarAdd, while remaining a single closed-form arithmetic evaluation —
+ * cheaper than #NcGalaxyShapeFactorLaplace, which needs a per-galaxy Newton mode
+ * search and a Hessian.
  *
- * The variance $V$ used here is the *truncated* per-component second moment of
- * the intrinsic ellipticity, i.e. $V = e_\mathrm{rms}^2$ with $e_\mathrm{rms}$
- * from nc_galaxy_shape_pop_e_rms(), NOT the square of the untruncated Gaussian
- * width nc_galaxy_shape_pop_get_sigma() (which always exceeds it and would bias
- * the recovered shear high).
+ * The variance $V$ used here is the *truncated* per-component second moment of the
+ * intrinsic ellipticity, i.e. $V = e_\mathrm{rms}^2$ with $e_\mathrm{rms}$ from
+ * nc_galaxy_shape_pop_e_rms(), NOT the square of the untruncated Gaussian width
+ * nc_galaxy_shape_pop_get_sigma() (which always exceeds it and would bias the
+ * recovered shear high).
  *
  * The moment expansion keeps only the intrinsic second moment, so it is a
  * Gaussian-population method: like #NcGalaxyShapeFactorVarAdd it requires the
- * population resolved from the #NcmMSet to support
- * nc_galaxy_shape_pop_get_sigma() (currently #NcGalaxyShapePopGauss or
- * #NcGalaxyShapePopGaussLocal, Global or per-galaxy).
+ * population resolved from the #NcmMSet to support nc_galaxy_shape_pop_get_sigma()
+ * (currently #NcGalaxyShapePopGauss or #NcGalaxyShapePopGaussLocal, Global or
+ * per-galaxy).
  *
- * The approximation is exact in the doubly-linear ($g\to0$ or $V\to0$) limit
- * and degrades as the reduced shear or the intrinsic width grows (the dropped
- * higher moments and higher map derivatives then matter). See the accuracy
- * envelope measured in tests/python/nc/lss/galaxy/test_galaxy_shape_factor_cgf.py.
+ * The approximation is exact in the doubly-linear ($g\to0$ or $V\to0$) limit and
+ * degrades as the reduced shear or the intrinsic width grows (the dropped higher
+ * moments and higher map derivatives then matter). See the accuracy envelope measured
+ * in tests/python/nc/lss/galaxy/test_galaxy_shape_factor_cgf.py.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -86,21 +86,19 @@
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /*
- * Analytic response moments of the forward shear map S(g,chi_I) at chi_I=0.
- * S(g,.) is exactly nc_wl_ellipticity_apply_shear_*(). Derived in closed form
- * per ellipticity convention:
+ * Analytic response moments of the forward shear map S(g,chi_I) at chi_I=0. S(g,.) is
+ * exactly nc_wl_ellipticity_apply_shear_*(). Derived in closed form per ellipticity
+ * convention:
  *
- * TRACE_DET (epsilon convention), |g|<=1: S is holomorphic in chi_I (no
- * conj(chi_I) dependence), so S(g,0)=g, the Jacobian is the real scalar
- * (1-|g|^2) times the identity, and S is harmonic, so its Laplacian vanishes.
- * |g|>1: S depends on chi_I only through conj(chi_I) (anti-holomorphic),
- * S(g,0)=g/|g|^2, Jacobian is a reflection built from beta=(|g|^2-1)/conj(g)^2,
- * and the Laplacian still vanishes.
+ * TRACE_DET (epsilon convention), |g|<=1: S is holomorphic in chi_I (no conj(chi_I)
+ * dependence), so S(g,0)=g, the Jacobian is the real scalar (1-|g|^2) times the
+ * identity, and S is harmonic, so its Laplacian vanishes. |g|>1: S depends on chi_I
+ * only through conj(chi_I) (anti-holomorphic), S(g,0)=g/|g|^2, Jacobian is a
+ * reflection built from beta=(|g|^2-1)/conj(g)^2, and the Laplacian still vanishes.
  *
- * TRACE (chi/distortion convention): S depends on both chi_I and conj(chi_I),
- * so neither holomorphicity shortcut applies; Jacobian and Laplacian were
- * obtained by direct Wirtinger-calculus differentiation of the Möbius-style
- * map.
+ * TRACE (chi/distortion convention): S depends on both chi_I and conj(chi_I), so
+ * neither holomorphicity shortcut applies; Jacobian and Laplacian were obtained by
+ * direct Wirtinger-calculus differentiation of the Möbius-style map.
  *
  * The |g|>1 (strong-lensing) branches are outside this project's shear range.
  */
@@ -122,26 +120,25 @@ typedef struct _NcGalaxyShapeFactorCGFPrivate
    * CONSTRUCT_ONLY), keeping the switch out of the per-evaluation path. */
   void (*response_moments) (complex double g, NcGalaxyShapeFactorCGFMoments *out);
 
-  /* Population generation, refreshed in prepare(). The per-galaxy V cache
-   * (see NcGalaxyShapeFactorCGFLData) is keyed on it. Held here rather than
-   * re-read through nc_galaxy_shape_factor_get_pop_hash() per evaluation
-   * because the eval hooks already load this private struct, making the
-   * cache check two derefs and a compare -- cheaper than the vfunc dispatch
-   * it replaces. The base sets its own pop_hash before invoking
-   * klass->prepare(), so reading it here always sees the current value. */
+  /* Population generation, refreshed in prepare(). The per-galaxy V cache (see
+   * NcGalaxyShapeFactorCGFLData) is keyed on it. Held here rather than re-read through
+   * nc_galaxy_shape_factor_get_pop_hash() per evaluation because the eval hooks
+   * already load this private struct, making the cache check two derefs and a compare
+   * -- cheaper than the vfunc dispatch it replaces. The base sets its own pop_hash
+   * before invoking klass->prepare(), so reading it here always sees the current
+   * value. */
   guint64 pop_hash;
 } NcGalaxyShapeFactorCGFPrivate;
 
 /*
- * Per-galaxy scratch: the intrinsic per-component variance V = e_rms^2.
- * V is constant across a galaxy's z-nodes, but eval_marginal() is invoked once
- * per node by nc_galaxy_shape_factor_eval_at_nodes(), so fetching it through
- * nc_galaxy_shape_pop_e_rms()'s vfunc every time cost ~1% of an MCMC run.
- * Invalidated on two independent axes: @pop_hash_seen catches a change in the
- * population MODEL (e.g. a fitted NcGalaxyShapePopGauss:sigma), while
- * ldata_read_row() clears @valid because a per-galaxy population
- * (NcGalaxyShapePopGaussLocal) takes e_rms from the catalog row -- data, which
- * moves with no model pkey bump at all.
+ * Per-galaxy scratch: the intrinsic per-component variance V = e_rms^2. V is constant
+ * across a galaxy's z-nodes, but eval_marginal() is invoked once per node by
+ * nc_galaxy_shape_factor_eval_at_nodes(), so fetching it through
+ * nc_galaxy_shape_pop_e_rms()'s vfunc every time cost ~1% of an MCMC run. Invalidated
+ * on two independent axes: @pop_hash_seen catches a change in the population MODEL
+ * (e.g. a fitted NcGalaxyShapePopGauss:sigma), while ldata_read_row() clears @valid
+ * because a per-galaxy population (NcGalaxyShapePopGaussLocal) takes e_rms from the
+ * catalog row -- data, which moves with no model pkey bump at all.
  */
 typedef struct _NcGalaxyShapeFactorCGFLData
 {
@@ -155,19 +152,19 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyShapeFactorCGF, nc_galaxy_shape_factor_cgf, 
 static void
 _nc_galaxy_shape_factor_cgf_response_moments_trace (complex double g, NcGalaxyShapeFactorCGFMoments *out)
 {
-  const gdouble abs_g2 = creal (g * conj (g));
-  const gdouble D0     = 1.0 + abs_g2;
-
-  /* One reciprocal, then multiplies: D0 appears as 1/D0, 1/D0^2 and 1/D0^3,
-   * and each spelled-out division is a ~15-20 cycle divsd that does not
-   * pipeline. This function is ~8.8% of an MCMC run's self time (it runs once
-   * per galaxy per z-node), so the four divisions it used to issue were worth
-   * removing. */
+  const gdouble abs_g2    = creal (g * conj (g));
+  const gdouble D0        = 1.0 + abs_g2;
   const gdouble inv_D0    = 1.0 / D0;
   const gdouble inv_D0_2  = inv_D0 * inv_D0;
   const gdouble one_m_g2  = 1.0 - abs_g2;
   const gdouble kappa     = one_m_g2 * inv_D0_2;
   const complex double g2 = g * g;
+
+  /* One reciprocal, then multiplies: D0 appears as 1/D0, 1/D0^2 and 1/D0^3, and each
+   * spelled-out division is a ~15-20 cycle divsd that does not pipeline. This function
+   * is ~8.8% of an MCMC run's self time (it runs once per galaxy per z-node), so the
+   * four divisions it used to issue were worth removing. */
+
 
   out->S0  = 2.0 * g * inv_D0;
   out->A11 = kappa * (1.0 - creal (g2));
@@ -207,9 +204,9 @@ _nc_galaxy_shape_factor_cgf_response_moments_trace_det (complex double g, NcGala
 }
 
 /*
- * Evaluate the 2D Gaussian N(mu, C) at e_o, where mu and C are built from the
- * response moments and the intrinsic variance V:
- *   mu = S0 + 0.5 * V * lap_S,   C = V * A A^T + sigma_noise^2 * I_2.
+ * Evaluate the 2D Gaussian N(mu, C) at e_o, where mu and C are built from the response
+ * moments and the intrinsic variance V: mu = S0 + 0.5 * V * lap_S,   C = V * A A^T +
+ * sigma_noise^2 * I_2.
  */
 static gdouble
 _nc_galaxy_shape_factor_cgf_eval (const NcGalaxyShapeFactorCGFMoments *mom, complex double e_o, const gdouble V, const gdouble sigma_noise, const gboolean want_log)
@@ -230,20 +227,20 @@ _nc_galaxy_shape_factor_cgf_eval (const NcGalaxyShapeFactorCGFMoments *mom, comp
   /* C^-1 = (1/det) [[Cyy,-Cxy],[-Cxy,Cxx]] */
   chi2 = (Cyy * dx * dx - 2.0 * Cxy * dx * dy + Cxx * dy * dy) / det;
 
-  /* The linear branch is the hot one -- FIXED_NODES evaluates through
-   * eval_at_nodes(), i.e. want_log = FALSE, once per galaxy per z-node -- so it
-   * avoids log(det) entirely: exp(-chi2/2) / (2 pi sqrt(det)) is the same
-   * quantity as exp(-chi2/2 - log(2 pi) - log(det)/2) but trades a ~40-60 cycle
-   * log for a ~15-20 cycle sqrt. (log(2 pi) is constant-folded by the compiler
-   * in either spelling, so only log(det) was ever actually at stake.) */
+  /* The linear branch is the hot one -- FIXED_NODES evaluates through eval_at_nodes(),
+   * i.e. want_log = FALSE, once per galaxy per z-node -- so it avoids log(det)
+   * entirely: exp(-chi2/2) / (2 pi sqrt(det)) is the same quantity as exp(-chi2/2 -
+   * log(2 pi) - log(det)/2) but trades a ~40-60 cycle log for a ~15-20 cycle sqrt.
+   * (log(2 pi) is constant-folded by the compiler in either spelling, so only log(det)
+   * was ever actually at stake.) */
   if (want_log)
     return -0.5 * chi2 - log (2.0 * M_PI) - 0.5 * log (det);
   else
     return exp (-0.5 * chi2) / (2.0 * M_PI * sqrt (det));
 }
 
-/* Cached V = e_rms^2; recomputed only when the population model generation
- * moves or a new catalog row was read into @data. */
+/* Cached V = e_rms^2; recomputed only when the population model generation moves or a
+ * new catalog row was read into @data. */
 static inline gdouble
 _nc_galaxy_shape_factor_cgf_peek_V (NcGalaxyShapeFactorCGFPrivate * const self, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data)
 {
@@ -304,8 +301,8 @@ _nc_galaxy_shape_factor_cgf_ldata_noop (NcGalaxyShapeFactorData *data, NcGalaxyW
 {
 }
 
-/* A per-galaxy population reads e_rms straight from the catalog row, so a new
- * row invalidates the cached V without any model pkey moving. */
+/* A per-galaxy population reads e_rms straight from the catalog row, so a new row
+ * invalidates the cached V without any model pkey moving. */
 static void
 _nc_galaxy_shape_factor_cgf_ldata_read_row (NcGalaxyShapeFactorData *data, NcGalaxyWLObs *obs, const guint i)
 {
@@ -323,8 +320,8 @@ static void
 _nc_galaxy_shape_factor_cgf_data_init (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data)
 {
   /* Per-galaxy scratch holding the cached intrinsic variance V (see
-   * NcGalaxyShapeFactorCGFLData); g_new0 leaves it invalid, so the first
-   * evaluation populates it. */
+   * NcGalaxyShapeFactorCGFLData); g_new0 leaves it invalid, so the first evaluation
+   * populates it. */
   data->ldata                  = g_new0 (NcGalaxyShapeFactorCGFLData, 1);
   data->ldata_destroy          = &g_free;
   data->ldata_read_row         = &_nc_galaxy_shape_factor_cgf_ldata_read_row;
@@ -336,14 +333,14 @@ static void
 _nc_galaxy_shape_factor_cgf_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
   NcGalaxyShapeFactorCGFPrivate * const self = nc_galaxy_shape_factor_cgf_get_instance_private (NC_GALAXY_SHAPE_FACTOR_CGF (gsf));
+  NcGalaxyShapePop *pop                      = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+  NcGalaxyShapePopData *tmp_pop_data         = nc_galaxy_shape_pop_data_new (pop);
+  const gboolean has_sigma                   = tmp_pop_data->ldata_get_sigma != NULL;
 
-  /* Sigma-support is a property of the pop MODEL, identical for every galaxy
-   * sharing it -- checked once here via a throwaway pop_data, not per-galaxy.
-   * The CGF moment expansion is a Gaussian-population method, so it gates on
-   * the same capability as VarAdd (even though V itself comes from e_rms). */
-  NcGalaxyShapePop *pop              = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
-  NcGalaxyShapePopData *tmp_pop_data = nc_galaxy_shape_pop_data_new (pop);
-  const gboolean has_sigma           = tmp_pop_data->ldata_get_sigma != NULL;
+  /* Sigma-support is a property of the pop MODEL, identical for every galaxy sharing
+   * it -- checked once here via a throwaway pop_data, not per-galaxy. The CGF moment
+   * expansion is a Gaussian-population method, so it gates on the same capability as
+   * VarAdd (even though V itself comes from e_rms). */
 
   nc_galaxy_shape_pop_data_unref (tmp_pop_data);
 
@@ -446,8 +443,8 @@ nc_galaxy_shape_factor_cgf_free (NcGalaxyShapeFactorCGF *gsfcgf)
  * nc_galaxy_shape_factor_cgf_clear:
  * @gsfcgf: a #NcGalaxyShapeFactorCGF
  *
- * Decreases the reference count of *@gsfcgf by one, and sets the pointer
- * *@gsfcgf to NULL.
+ * Decreases the reference count of *@gsfcgf by one, and sets the pointer *@gsfcgf to
+ * NULL.
  *
  */
 void

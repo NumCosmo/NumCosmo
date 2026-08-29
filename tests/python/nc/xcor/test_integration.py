@@ -14,6 +14,7 @@ Purpose: Refactored from test_py_xcor.py for better organization
 from typing import cast
 
 import numpy as np
+import numpy.typing as npt
 import pytest
 from numpy.testing import assert_allclose
 
@@ -133,6 +134,182 @@ def test_xcor_compute_methods(
     assert_allclose(vp_gsl_a, vp_cub_a, rtol=1.0e-5, atol=1.0e-50)
 
 
+# The Limber approximation is not a usable reference for the CMB ISW
+# auto-spectrum at these multipoles: its kernel is broad and peaks at low k,
+# where the same-chi-peak assumption fails outright. Measured at ell 20-27,
+# every kernel-space method agrees with every other to ~1e-8 while sitting a
+# factor 3.3-4.2 below tier 1. Comparing the two is a statement about Limber,
+# not about the quadrature, so tier 3 checks the methods against each other
+# for this kernel and not against tier 1.
+_TIER3_LIMBER_INVALID_KERNELS = {"kernel_cmb_isw"}
+
+
+@pytest.mark.parametrize(
+    "k1_name,k2_name",
+    [
+        ("kernel_cmb_lens", "kernel_cmb_lens"),
+        ("kernel_cmb_isw", "kernel_cmb_isw"),
+        ("kernel_tsz", "kernel_tsz"),
+        ("kernel_gal_bin0", "kernel_gal_bin0"),
+        ("kernel_wl_bin0", "kernel_wl_bin0"),
+        ("kernel_cmb_lens", "kernel_cmb_isw"),  # Cross-correlation
+        ("kernel_gal_bin0", "kernel_wl_bin0"),  # Galaxy-WL cross
+    ],
+)
+@pytest.mark.parametrize(
+    "l_limber", [0, -1], ids=["tier2_kernel_limber", "tier3_non_limber"]
+)
+def test_xcor_kernel_methods(
+    cosmology: Cosmology,
+    k1_name: str,
+    k2_name: str,
+    l_limber: int,
+    request: pytest.FixtureRequest,
+) -> None:
+    """Regression test for the §3 outer-k-bound fix (KERNEL_GSL/KERNEL_CUBATURE).
+
+    Before the fix, these methods were wrong by 15-27 orders of magnitude and
+    disagreed with each other by ell-dependent factors (evaluating the fitted
+    k-space spline far outside its domain). Checks, for both tier 2
+    (l_limber=0, kernel-Limber) and tier 3 (l_limber=-1, true non-Limber):
+    KERNEL_GSL and KERNEL_CUBATURE agree with each other, and both converge
+    to LIMBER_Z_CUBATURE (tier 1) at moderate/high ell -- exactly, for tier 2
+    (mathematically the same Limber approximation, just computed via k-space
+    instead of z-space); within known Limber-approximation error, for tier 3.
+    The tier-3 comparison against tier 1 is dropped for the ISW
+    auto-spectrum, where Limber itself is not valid at these multipoles --
+    see _TIER3_LIMBER_INVALID_KERNELS above.
+
+    Kernel fixtures are module-cached and shared with other tests, so
+    l_limber is restored to its default afterward.
+    """
+    k1 = cast(Nc.XcorKernel, request.getfixturevalue(k1_name))
+    k2 = cast(Nc.XcorKernel, request.getfixturevalue(k2_name))
+    involved = {k1_name, k2_name}
+    check_tier1 = not (l_limber == -1 and involved <= _TIER3_LIMBER_INVALID_KERNELS)
+
+    lmin = 20
+    lmax = 27  # small, moderate-ell block: away from the ell=0,1 edge case
+    # (weak lensing's exactly-zero spin-2 prefactor there) and cheap for
+    # tier 3's real Levin/ODE-solve cost.
+
+    # Kernel fixtures share ONE session-wide NcmSBesselIntegratorLevin
+    # (fixtures_xcor.py's _get_integrator(), functools.cache'd across every
+    # test file). This test is the first to exercise l_limber=-1 (tier 3,
+    # real Levin/ODE-solve) against it; doing so left it in a state that
+    # crashed a later, unrelated test in a different file
+    # (ncm_function_sample_set_expand_domain -> malloc corruption, only
+    # reproducible with the full test directory or test_kernel.py run after
+    # this one). Swap in dedicated, test-local integrators instead of
+    # touching the shared one, restoring the originals afterward.
+    original_l_limber = {k1_name: k1.get_l_limber(), k2_name: k2.get_l_limber()}
+    original_integrator = {k1_name: k1.peek_integrator(), k2_name: k2.peek_integrator()}
+
+    try:
+        k1.props.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
+        k2.props.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
+        k1.set_l_limber(l_limber)
+        k2.set_l_limber(l_limber)
+        k1.prepare(cosmology.cosmo)
+        k2.prepare(cosmology.cosmo)
+
+        n = lmax - lmin + 1
+        vp_limber_z = Ncm.Vector.new(n)
+
+        xcor_lz = Nc.Xcor.new(
+            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE
+        )
+        xcor_lz.prepare(cosmology.cosmo)
+        xcor_lz.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_limber_z)
+        limber_z = np.array(vp_limber_z.dup_array())
+
+        # Convergence to tier 1: near-exact for tier 2, Limber-error-sized
+        # for tier 3. "Near-exact" allows a little numerical slack (observed
+        # up to ~3e-4 depending on kernel shape), not literal bit-agreement.
+        # Tier 3's bound is loose enough to cover cross-correlations between
+        # differently-shaped kernels (observed ~4% for galaxy-counts x weak-
+        # lensing at ell~20-27 -- Limber's same-chi-peak assumption is more
+        # violated for cross-correlations between different tracers than for
+        # auto-correlations), while still trivially catching the original
+        # 15-27-orders-of-magnitude bug this test guards against.
+        tier1_rtol = 1.0e-3 if l_limber == 0 else 1.0e-1
+
+        # ISW cross-spectra need more room at tier 2, for a reason that is not
+        # numerical slack. A kernel's k-space closure is fitted only out to
+        # where its own amplitude falls below NcXcorKernel:adaptive-epsilon, a
+        # criterion each kernel applies to itself. An auto spectrum never pays
+        # for that truncation -- its integrand carries W squared, so the cut
+        # sits where the contribution is doubly suppressed -- while a cross
+        # spectrum is suppressed there only once, by one kernel's tail against
+        # the other kernel's un-suppressed values.
+        #
+        # Measured for CMB lensing x ISW at ell 20-27: 1.05e-3 low against
+        # tier 1, flat under refinement of the spline tolerance (1e-4 through
+        # 1e-6, so it is the domain and not the sampling), and collapsing to
+        # 1.5e-6 once adaptive-epsilon is tightened to 1e-8. No per-kernel
+        # criterion can do better in principle, since a closure is built
+        # without knowing what it will be paired with. The scale that makes
+        # this harmless is the pair's own: these two are 7% correlated here,
+        # so 1.05e-3 of C_x is 7e-5 of sqrt(C_isw C_lens), the amplitude that
+        # sets the cross spectrum's sample variance.
+        if (l_limber == 0) and (involved & {"kernel_cmb_isw"}) and (k1_name != k2_name):
+            tier1_rtol = 2.0e-3
+
+        vp_kernel_gsl = Ncm.Vector.new(n)
+        xcor_kg = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_GSL)
+        xcor_kg.prepare(cosmology.cosmo)
+        xcor_kg.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_gsl)
+        kernel_gsl = np.array(vp_kernel_gsl.dup_array())
+
+        if check_tier1:
+            assert_allclose(kernel_gsl, limber_z, rtol=tier1_rtol, atol=1.0e-50)
+
+        def kernel_cubature(ell_batch_size: int) -> npt.NDArray[np.float64]:
+            vp_kernel_cub = Ncm.Vector.new(n)
+            xcor_kc = Nc.Xcor.new(
+                cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE
+            )
+            xcor_kc.props.ell_batch_size = ell_batch_size
+            xcor_kc.prepare(cosmology.cosmo)
+            xcor_kc.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_cub)
+
+            return np.array(vp_kernel_cub.dup_array())
+
+        kernel_cub = kernel_cubature(4)
+
+        if check_tier1:
+            assert_allclose(kernel_cub, limber_z, rtol=tier1_rtol, atol=1.0e-50)
+
+        # Two independent quadratures on one integrand: KERNEL_GSL builds a
+        # closure per multipole, so the comparison is against cubature blocked
+        # the same way. Blocked differently the two do not share an integrand
+        # at all -- the k-spline's refinement floor is a reduction over the
+        # block, so a multipole's closure depends on its neighbours (measured
+        # for CMB lensing x ISW at tier 3: 2.3e-2 at the default spline
+        # tolerance, 1.5e-3 at 1e-6, i.e. converging).
+        assert_allclose(kernel_gsl, kernel_cubature(1), rtol=1.0e-5, atol=1.0e-50)
+
+        # The blocked path against the exact quadrature on the same closures:
+        # KERNEL_EXACT integrates the spline on its own knots, where GL(5) is
+        # exact, so any difference here is the adaptive rule's alone.
+        vp_kernel_exact = Ncm.Vector.new(n)
+        xcor_kf = Nc.Xcor.new(
+            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT
+        )
+        xcor_kf.props.ell_batch_size = 4
+        xcor_kf.prepare(cosmology.cosmo)
+        xcor_kf.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_exact)
+
+        assert_allclose(
+            kernel_cub, np.array(vp_kernel_exact.dup_array()), rtol=1.0e-5, atol=1.0e-50
+        )
+    finally:
+        k1.set_l_limber(original_l_limber[k1_name])
+        k2.set_l_limber(original_l_limber[k2_name])
+        k1.props.integrator = original_integrator[k1_name]
+        k2.props.integrator = original_integrator[k2_name]
+
+
 # Kernel-Level Integrator Tests
 
 
@@ -170,8 +347,8 @@ def test_kernel_integrator_types(cosmology: Cosmology) -> None:
     kernel_levin.prepare(cosmo)
 
     # Verify both integrators work
-    eval_limber = kernel_limber.get_eval(cosmo, 200)
-    eval_levin = kernel_levin.get_eval(cosmo, 200)
+    eval_limber = kernel_limber.get_eval(cosmo, 200, Nc.XcorKernelClosure.SPLINE)
+    eval_levin = kernel_levin.get_eval(cosmo, 200, Nc.XcorKernelClosure.SPLINE)
 
     result_limber = eval_limber.eval_array(1.0e2)
     result_levin = eval_levin.eval_array(1.0e2)

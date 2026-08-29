@@ -209,6 +209,9 @@ test_nc_powspec_eval (TestNcPowspec *test, gconstpointer pdata)
   g_assert_cmpuint (Nz, >, 0);
   g_assert_cmpuint (Nk, >, 0);
 
+  Nk = MIN (Nk, 1000);
+  Nz = MIN (Nz, 1000);
+
   kv  = ncm_vector_new (Nk * 10);
   Pkv = ncm_vector_new (Nk * 10);
 

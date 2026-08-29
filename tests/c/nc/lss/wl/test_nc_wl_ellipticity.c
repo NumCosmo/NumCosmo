@@ -34,6 +34,9 @@
 #include <glib-object.h>
 
 typedef complex double (*ShearMap) (complex double g, complex double z);
+typedef void (*ShearKernel) (complex double g, complex double z_obs, gdouble *x_i, gdouble *jac);
+
+typedef complex double (*OriginShear) (complex double target);
 
 typedef struct _TestShearConv
 {
@@ -42,6 +45,9 @@ typedef struct _TestShearConv
 
   gdouble (*lndet_jac) (complex double g, complex double z_obs);
   gdouble (*det_jac) (complex double g, complex double z_obs);
+
+  ShearKernel kernel;
+  OriginShear shear_at_origin;
 } TestShearConv;
 
 /* The two conventions, addressed uniformly so the algebraic identities can be
@@ -51,6 +57,8 @@ static const TestShearConv test_conv_trace = {
   nc_wl_ellipticity_apply_shear_inv_trace,
   nc_wl_ellipticity_lndet_jac_trace,
   nc_wl_ellipticity_det_jac_trace,
+  nc_wl_ellipticity_trace_kernel,
+  nc_wl_ellipticity_shear_at_origin_trace,
 };
 
 static const TestShearConv test_conv_trace_det = {
@@ -58,6 +66,8 @@ static const TestShearConv test_conv_trace_det = {
   nc_wl_ellipticity_apply_shear_inv_trace_det,
   nc_wl_ellipticity_lndet_jac_trace_det,
   nc_wl_ellipticity_det_jac_trace_det,
+  nc_wl_ellipticity_trace_det_kernel,
+  nc_wl_ellipticity_shear_at_origin_trace_det,
 };
 
 /* A spread of reduced shears that exercises both the |g| <= 1 and the |g| > 1
@@ -77,6 +87,16 @@ static const complex double test_ellips[] = {
   0.20 + 0.10 * I,
   -0.15 + 0.25 * I,
   0.30 - 0.22 * I,
+};
+
+/* Disc points to re-center on, including near the |target|=1 boundary. */
+static const complex double test_targets[] = {
+  0.00 + 0.00 * I,
+  0.05 + 0.03 * I,
+  0.50 - 0.20 * I,
+  -0.30 + 0.10 * I,
+  0.90757 + 0.28074 * I,
+  0.999 * (0.45314 + 0.89032 * I),
 };
 
 /* Numerical log|det J| of @map (with @g held fixed) at the point @z0, by central
@@ -177,6 +197,116 @@ test_nc_wl_ellipticity_det_jac_matches_log_form (gconstpointer pdata)
   }
 }
 
+/* nc_galaxy_shape_factor_fixed_quad.c's hot loop calls the fused *_kernel()
+ * instead of apply_inv()+det_jac() separately (see nc_wl_ellipticity.h's
+ * docs on why); kernel()'s x_i/jac must agree with |apply_inv()|^2 and
+ * det_jac() computed independently, to double-precision accuracy (not
+ * bit-identical -- the fused form reassociates the division, see the
+ * *_kernel() docstrings). */
+static void
+test_nc_wl_ellipticity_kernel_matches_separate (gconstpointer pdata)
+{
+  const TestShearConv *conv = pdata;
+  guint i, j;
+
+  for (i = 0; i < G_N_ELEMENTS (test_shears); i++)
+  {
+    const complex double g = test_shears[i];
+
+    for (j = 0; j < G_N_ELEMENTS (test_ellips); j++)
+    {
+      const complex double z_obs = test_ellips[j];
+      const complex double z_int = conv->apply_inv (g, z_obs);
+      const gdouble x_i_ref      = creal (z_int) * creal (z_int) + cimag (z_int) * cimag (z_int);
+      const gdouble jac_ref      = conv->det_jac (g, z_obs);
+      gdouble x_i_kernel, jac_kernel;
+
+      conv->kernel (g, z_obs, &x_i_kernel, &jac_kernel);
+
+      g_assert_cmpfloat (fabs (x_i_kernel - x_i_ref), <, 1.0e-9 * fabs (x_i_ref) + 1.0e-12);
+      g_assert_cmpfloat (fabs (jac_kernel - jac_ref), <, 1.0e-9 * fabs (jac_ref) + 1.0e-300);
+    }
+  }
+}
+
+/* nc_galaxy_shape_factor_fixed_quad.c's hot loop calls
+ * nc_wl_ellipticity_trace_kernel_prepare() once per g and
+ * nc_wl_ellipticity_trace_kernel_apply() once per node instead of
+ * nc_wl_ellipticity_trace_kernel() per node (measured ~12% faster, see its
+ * docs); prepare()+apply() must agree with the single-call kernel() to
+ * double-precision accuracy (not bit-identical -- prepare() factors out a
+ * g^2 term, reassociating the sum). TRACE_DET has no prepare/apply split
+ * (see nc_wl_ellipticity_trace_det_kernel()'s docs for why), so this test
+ * only covers TRACE. */
+static void
+test_nc_wl_ellipticity_trace_kernel_prepare_matches_plain (void)
+{
+  guint i, j;
+
+  for (i = 0; i < G_N_ELEMENTS (test_shears); i++)
+  {
+    const complex double g = test_shears[i];
+    NcWLEllipticityTraceKernelPrep prep;
+
+    nc_wl_ellipticity_trace_kernel_prepare (g, &prep);
+
+    for (j = 0; j < G_N_ELEMENTS (test_ellips); j++)
+    {
+      const complex double chi_obs = test_ellips[j];
+      gdouble x_i_ref, jac_ref, x_i_prep, jac_prep;
+
+      nc_wl_ellipticity_trace_kernel (g, chi_obs, &x_i_ref, &jac_ref);
+      nc_wl_ellipticity_trace_kernel_apply (&prep, chi_obs, &x_i_prep, &jac_prep);
+
+      g_assert_cmpfloat (fabs (x_i_prep - x_i_ref), <, 1.0e-9 * fabs (x_i_ref) + 1.0e-12);
+      g_assert_cmpfloat (fabs (jac_prep - jac_ref), <, 1.0e-9 * fabs (jac_ref) + 1.0e-300);
+    }
+  }
+}
+
+/* #NcWLEllipticityTraceKernelPrep is a simple #GBoxed struct (get_type/new/
+ * dup/free/clear, same pattern as #NcmComplex): the GType/g_boxed_copy()/
+ * g_boxed_free() path must work like any other boxed type, and a
+ * heap-allocated prep must drive nc_wl_ellipticity_trace_kernel_apply() to
+ * the same result as a stack-allocated one (the hot-loop path exercised by
+ * the tests above). */
+static void
+test_nc_wl_ellipticity_trace_kernel_prep_boxed (void)
+{
+  const complex double g       = 0.10 + 0.05 * I;
+  const complex double chi_obs = 0.20 + 0.10 * I;
+  GType t                      = nc_wl_ellipticity_trace_kernel_prep_get_type ();
+  NcWLEllipticityTraceKernelPrep *prep, *prep_dup;
+  gdouble x_i_ref, jac_ref, x_i_dup, jac_dup;
+
+  g_assert_true (G_TYPE_IS_BOXED (t));
+
+  prep = nc_wl_ellipticity_trace_kernel_prep_new ();
+  nc_wl_ellipticity_trace_kernel_prepare (g, prep);
+  nc_wl_ellipticity_trace_kernel_apply (prep, chi_obs, &x_i_ref, &jac_ref);
+
+  prep_dup = nc_wl_ellipticity_trace_kernel_prep_dup (prep);
+  nc_wl_ellipticity_trace_kernel_apply (prep_dup, chi_obs, &x_i_dup, &jac_dup);
+
+  g_assert_cmpfloat (x_i_dup, ==, x_i_ref);
+  g_assert_cmpfloat (jac_dup, ==, jac_ref);
+
+  {
+    NcWLEllipticityTraceKernelPrep *prep_boxed = g_boxed_copy (t, prep);
+    gdouble x_i_boxed, jac_boxed;
+
+    nc_wl_ellipticity_trace_kernel_apply (prep_boxed, chi_obs, &x_i_boxed, &jac_boxed);
+    g_assert_cmpfloat (x_i_boxed, ==, x_i_ref);
+    g_assert_cmpfloat (jac_boxed, ==, jac_ref);
+
+    g_boxed_free (t, prep_boxed);
+  }
+
+  nc_wl_ellipticity_trace_kernel_prep_free (prep_dup);
+  nc_wl_ellipticity_trace_kernel_prep_clear (&prep);
+  g_assert_null (prep);
+}
+
 /* The g = 0 limit must be the identity, with a unit Jacobian. */
 static void
 test_nc_wl_ellipticity_zero_shear (gconstpointer pdata)
@@ -192,6 +322,25 @@ test_nc_wl_ellipticity_zero_shear (gconstpointer pdata)
     test_assert_cmplx_close (conv->apply (g, z), z, 1.0e-15);
     test_assert_cmplx_close (conv->apply_inv (g, z), z, 1.0e-15);
     g_assert_cmpfloat (fabs (conv->lndet_jac (g, z)), <, 1.0e-12);
+  }
+}
+
+/* shear_at_origin(target) must be the shear that maps 0 to target: applying
+ * it to 0 must recover target exactly, for every target including near the
+ * |target|=1 boundary. */
+static void
+test_nc_wl_ellipticity_shear_at_origin_round_trip (gconstpointer pdata)
+{
+  const TestShearConv *conv = pdata;
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (test_targets); i++)
+  {
+    const complex double target = test_targets[i];
+    const complex double g      = conv->shear_at_origin (target);
+    const complex double back   = conv->apply (g, 0.0);
+
+    test_assert_cmplx_close (back, target, 1.0e-12);
   }
 }
 
@@ -225,6 +374,9 @@ test_nc_wl_ellipticity_introspectable_wrappers (void)
     g_assert_cmpfloat (fabs (nc_wl_ellipticity_lndet_jac_trace_ptr (cg, ce) -
                              nc_wl_ellipticity_lndet_jac_trace (g, e)), <, 1.0e-15);
 
+    nc_wl_ellipticity_shear_at_origin_trace_ptr (ce, cout);
+    test_assert_cmplx_close (ncm_complex_c (cout), nc_wl_ellipticity_shear_at_origin_trace (e), 1.0e-15);
+
     /* TRACE_DET convention */
     nc_wl_ellipticity_apply_shear_trace_det_ptr (cg, ce, cout);
     test_assert_cmplx_close (ncm_complex_c (cout), nc_wl_ellipticity_apply_shear_trace_det (g, e), 1.0e-15);
@@ -234,6 +386,9 @@ test_nc_wl_ellipticity_introspectable_wrappers (void)
 
     g_assert_cmpfloat (fabs (nc_wl_ellipticity_lndet_jac_trace_det_ptr (cg, ce) -
                              nc_wl_ellipticity_lndet_jac_trace_det (g, e)), <, 1.0e-15);
+
+    nc_wl_ellipticity_shear_at_origin_trace_det_ptr (ce, cout);
+    test_assert_cmplx_close (ncm_complex_c (cout), nc_wl_ellipticity_shear_at_origin_trace_det (e), 1.0e-15);
 
     ncm_complex_free (cg);
     ncm_complex_free (ce);
@@ -268,7 +423,7 @@ test_nc_wl_ellipticity_frame_parity (void)
     /* involution: applying twice returns the original, in either frame */
     test_assert_cmplx_close (
       nc_wl_ellipticity_celestial_to_frame (NC_WL_ELLIPTICITY_FRAME_CARTESIAN,
-                                              nc_wl_ellipticity_celestial_to_frame (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e)),
+                                            nc_wl_ellipticity_celestial_to_frame (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e)),
       e, 1.0e-15);
   }
 }
@@ -288,6 +443,14 @@ main (gint argc, gchar *argv[])
                         &test_conv_trace, &test_nc_wl_ellipticity_det_jac_matches_log_form);
   g_test_add_data_func ("/nc/wl_ellipticity/trace/zero_shear",
                         &test_conv_trace, &test_nc_wl_ellipticity_zero_shear);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace/kernel_matches_separate",
+                        &test_conv_trace, &test_nc_wl_ellipticity_kernel_matches_separate);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace/shear_at_origin_round_trip",
+                        &test_conv_trace, &test_nc_wl_ellipticity_shear_at_origin_round_trip);
+  g_test_add_func ("/nc/wl_ellipticity/trace/kernel_prepare_matches_plain",
+                   &test_nc_wl_ellipticity_trace_kernel_prepare_matches_plain);
+  g_test_add_func ("/nc/wl_ellipticity/trace/kernel_prep_boxed",
+                   &test_nc_wl_ellipticity_trace_kernel_prep_boxed);
 
   g_test_add_data_func ("/nc/wl_ellipticity/trace_det/round_trip",
                         &test_conv_trace_det, &test_nc_wl_ellipticity_round_trip);
@@ -297,6 +460,10 @@ main (gint argc, gchar *argv[])
                         &test_conv_trace_det, &test_nc_wl_ellipticity_det_jac_matches_log_form);
   g_test_add_data_func ("/nc/wl_ellipticity/trace_det/zero_shear",
                         &test_conv_trace_det, &test_nc_wl_ellipticity_zero_shear);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/kernel_matches_separate",
+                        &test_conv_trace_det, &test_nc_wl_ellipticity_kernel_matches_separate);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/shear_at_origin_round_trip",
+                        &test_conv_trace_det, &test_nc_wl_ellipticity_shear_at_origin_round_trip);
 
   g_test_add_func ("/nc/wl_ellipticity/introspectable_wrappers",
                    &test_nc_wl_ellipticity_introspectable_wrappers);

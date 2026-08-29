@@ -34,6 +34,8 @@ from numcosmo_py import Ncm, Nc
 from numcosmo_py.helper import duplicate_via_serialization
 from numcosmo_py.helper import npa_to_seq
 
+pytestmark = pytest.mark.powspec
+
 Ncm.cfg_init()
 
 

@@ -98,6 +98,84 @@ radial integral per galaxy) + (per-node cheap polynomial evaluation)*.
 Verified against the Python reference to $\sim10^{-12}$ for both
 conventions and several orders before removal.
 
+## `NcGalaxyShapePopBeta`: alpha's floor loosened below 1
+
+$\alpha$'s floor was originally $\ge 1$, matching $\beta$'s (both avoid a
+divergence, at $x=0$ resp. $x=1$). Loosened to $\ge 0.5001$ after a real
+fit's posterior concentrated its mass right at $\alpha=1$ under
+`FixedQuad`: a hard floor sitting exactly where the data want the posterior
+to be would truncate/bias the inferred $\alpha$ one-sidedly, worse than
+allowing the (`FixedQuad`-safe) divergent regime the data are actually
+pointing to. `SeriesLensed` still needs $\alpha\ge1$ in practice — its
+Taylor expansion's radius of convergence shrinks below that, since the
+population stops being analytic at $x=0$ — but that is a `SeriesLensed`
+limitation, not a reason to keep the class-wide floor at 1.
+
+## `NcGalaxyShapePopBeta`: reparametrized to $r=|\chi_I|$ (2026)
+
+Switched the model's own variable from $x=|\chi_I|^2\sim\mathrm{Beta}(\alpha,\beta)$
+to $r=|\chi_I|\sim\mathrm{Beta}(\alpha,\beta)$ directly. Motivation: nearly
+every weak-lensing paper reporting/fitting an ellipticity distribution does
+so against $|\chi_I|$, not its square, so this way $\alpha$/$\beta$ are
+directly comparable to those fits and $\mathrm{mode}(r)=(\alpha-1)/(\alpha+\beta-2)$
+is literally the "peak ellipticity" number such papers quote — and a real
+fit's posterior wanting $\alpha_\mathrm{old}<1$ (see the section above) was
+itself a symptom of fitting the wrong (squared) coordinate: under the new
+parametrization that same population lands at
+$\alpha_\mathrm{new}\approx2\alpha_\mathrm{old}\ge1$ (this class's own
+default moved $0.7\to1.4$ accordingly), inside $r$-space's ordinary,
+non-divergent region.
+
+`eval_p(x)` still reports the density w.r.t. $x$ (the base class's vfunc
+contract), composing $P(r)$ with the $r=\sqrt{x}$ Jacobian:
+$P(x)=x^{\alpha/2-1}(1-\sqrt{x})^{\beta-1}/[2B(\alpha,\beta)]$. Two
+consequences worth recording, both found only by testing against a
+brute-force/numerical cross-check rather than trusting the derivation on
+its face (see `verify-closed-form-derivations-numerically` house rule):
+
+- **The $x$-divergence threshold moved from $\alpha<1$ to $\alpha<2$.**
+  $P(r)$ itself is non-divergent for $\alpha\ge1$ (why the floor could go
+  back to the clean, symmetric $\alpha,\beta\ge1$, no more loosening below
+  1), but the extra $x^{-1/2}$ Jacobian factor means $P(x)$ — what
+  `eval_p()`/every numerical consumer actually integrates — still has a
+  genuine pole at $x=0$ for any $\alpha<2$. This is not a wider bug surface
+  than before (the *same* previously-divergent populations, e.g. old
+  $\alpha=0.7$, are still exactly the ones divergent now, at
+  $\alpha_\mathrm{new}=1.4$) — it only looks wider if the raw threshold
+  numbers are compared without rescaling.
+- **`SeriesLensed`'s usable range shrank from $\alpha\ge1$ (practical
+  guidance) to $\alpha\ge2$ (much stronger).** `eval_p_rho2_g_series()`
+  needs $\sqrt{x(g)}$ unconditionally now, even at integer $\alpha$ where
+  the old $x^{\alpha-1}$ term was an entire function with no singularity at
+  all (e.g. $\alpha=4$ used to compose to arbitrary order with no issue).
+  $\sqrt{\cdot}$'s branch point at $x=0$ shrinks the $g$-Taylor series'
+  radius of convergence to wherever $x(g)$ first reaches 0 in the complex
+  $g$-plane, which empirically collapses to unusably small for any
+  $\alpha<2$ — increasing `trunc_order` makes a previously-passing
+  regression test (`alpha=beta=3`, chosen specifically as a "safe, no
+  branch point" case pre-reparametrization) diverge by 16 orders of
+  magnitude rather than converge, the classic non-roundoff
+  outside-the-radius-of-convergence signature. This class's own default
+  ($\alpha=1.4$) is now *inside* the broken region for `SeriesLensed` —
+  `FixedQuad`/`Quad` have no such restriction (no series in $g$, or an
+  entire-function exponent respectively) and remain the ones to trust for
+  $\alpha<2$ Beta populations with this shape factor.
+
+## `NcGalaxyShapeFactorQuad`: known accuracy bug for alpha<2 Beta populations
+
+For a Beta population with $\alpha<2$ ($P(x)$ diverges at $x=0$ — see the
+reparametrization entry above for why the threshold is 2, not 1), `Quad`'s
+adaptive Divonne cubature loses accuracy against an independent scipy
+oracle in a $g\sim[0.14,0.19]$ window, while `FixedQuad` stays accurate
+throughout at the same configuration. Suspected cause: the singularity
+isn't resolved by Divonne's adaptive subdivision of the generic box `Quad`
+integrates over, unlike `FixedQuad`'s fixed lens-domain nodes. Not yet
+fixed; `test_marginal_alpha_below_one_known_accuracy_bug`
+(`test_galaxy_shape_factor_quad.py`) and
+`test_marginal_matches_scipy_truth_table_beta_alpha_below_one_g_scan`
+(`test_galaxy_shape_factor_fixed_quad.py`) pin the current behavior against
+regression. `FixedQuad` is the one to trust for this population today.
+
 ## `NcGalaxyShapeFactorQuad`: rejected implementations
 
 Before settling on Divonne cubature over the lensed frame $\chi_L$ with
@@ -331,6 +409,28 @@ Separately, `nc_wl_ellipticity.c`'s naive complex division
 search — unneeded here since $g$/$\chi$ values are always within or near the
 unit disk.
 
+## `NcGalaxyShapeFactor`: rotate the shear, not the observed ellipticity
+
+The per-galaxy cache used to store `epsilon_obs_t`/`epsilon_obs_x` (the
+observed ellipticity pre-rotated into the tangential/cross frame) and
+`c1_rot`/`c2_rot` (the calibration bias, same rotation). Both were rebuilt
+on every `marginal()` call because the rotation angle $\phi$ depends on the
+cluster's `ra`/`dec` — a free parameter in a real fit — so `epsilon_obs`,
+which should be a fixed per-galaxy datum, silently changed with every model
+state. This forced `FixedQuad`'s marginal-spline cache (keyed on
+`epsilon_obs`) to rebuild from scratch on every evaluation instead of once
+per thread.
+
+Fixed by rotating the reduced shear into the data frame instead: the
+marginal is exactly rotation-covariant
+($P(\epsilon_\mathrm{obs}e^{ia}\mid ge^{ia})=P(\epsilon_\mathrm{obs}\mid g)$),
+so rotating `gt+bias` by $e^{2i\phi}$ gives the identical answer as the old
+convention, while `data->epsilon_obs_1/2` never changes. Verified against
+the frozen legacy-oracle tests (rtol=1e-12), which caught a bug in an
+earlier draft: only `gt` (tangential-native) should rotate — the
+calibration bias is already expressed in `data->coord` and must be added
+unrotated.
+
 ## Mass-recovery sweep: representative numbers
 
 An initial full sweep (`N_\mathrm{gal}\times\text{std\_noise}\times\text{true\_mass}\times\text{method}`),
@@ -355,3 +455,59 @@ match `LNINT` to machine precision) and applying the `auto-lens-nodes` fix
 above brought the full 480-cell sweep to 0 crashed cells across all four
 methods, with `SeriesLensed` the standout cost/accuracy pick (~1.9x
 VarAdd's cost, matching `Laplace`/`FixedQuad`'s accuracy).
+
+## `NcGalaxyShapeFactorFixedQuad`: replaced with a two-branch psi/native-chi_I design (2026)
+
+The domain-intersection design above (three geometry branches: noise-
+contained, unit-contained, genuine-lens, plus the effective-radius boundary
+fix) is superseded. `Quad` was independently redesigned first (same
+session) to integrate $\psi=f_h^{-1}(\chi_L)$ in exact finite polar
+coordinates with a puncture correction, fixing a real `Quad` accuracy bug
+for $\alpha<2$ Beta populations near $g\sim0.18$ (see above). Porting the
+same $\psi$-reparametrization to `FixedQuad` as a single fixed polar grid
+(replacing all three geometry branches) fixed that class' own long-standing
+narrow-population/branch-cost-cliff issues above as a side effect — but
+introduced a NEW failure at $|\epsilon_\mathrm{obs}|$ close to 1 combined
+with broad $\sigma_\mathrm{noise}$ (worst case ~16% at $n=15$), traced to
+the $\psi$-reparametrization's own Jacobian developing a huge
+($\sim10^6\times$) dynamic range near the disc boundary there — a
+structural property of the reparametrization itself, not fixable by more
+radial resolution alone.
+
+A radial two-panel split (exact split radius via a Möbius circumcircle
+construction — three boundary points of the physical noise disc mapped
+through $f_h^{-1}$ and circumscribed, since Möbius maps send circles to
+circles exactly) fully fixed the "far from pop pull" / small-noise regime,
+but not this new one: the difficulty there is the Jacobian itself, not
+where the noise kernel's mass sits within the disc. The fix was a second,
+complementary scheme instead: integrate directly in $\chi_I$'s own polar
+coordinates when the noise kernel is broad enough to cover the whole disc
+($1+|\epsilon_\mathrm{obs}|\le8\sigma_\mathrm{noise}$) — no
+reparametrization, no Jacobian for the population term (the quadrature
+measure's own $r\,\mathrm{d}r$ cancels $P_\mathrm{pop}(r)/(2\pi r)$'s $1/r$
+analytically), and, found while implementing it, no puncture correction
+either: unlike $\psi$-space, this grid is centered on $\chi_I=0$ itself, so
+the noise kernel can be evaluated plainly and safely with no unrelated
+singular point to protect against. Confirmed empirically: the plain
+(uncorrected) form matches the corrected form's accuracy on the very case
+that originally motivated the correction (Beta $\alpha=1.55$), converging
+cleanly with node count — the correction was only ever needed because the
+OLD geometry-branch design gridded in $\chi_L$-space and inverted to
+$\chi_I$, unevenly sparsifying nodes near the singularity; gridding
+natively in $\chi_I$ from the start never has that problem.
+
+An 840-case sweep (7 Beta $\alpha$ values, both ellipticity conventions, 5
+$|\epsilon_\mathrm{obs}|$, 4 $\sigma_\mathrm{noise}$, 3 shears) confirmed
+the two-branch switch closes essentially the whole gap: single-panel and
+two-panel alone both peak at 15–17% error, always in the same
+$|\epsilon_\mathrm{obs}|\approx0.95,\sigma_\mathrm{noise}=0.35$-type
+corner; the switch brings the worst case down to 2.0% (a Beta
+$\alpha=3$/tiny-$\sigma_\mathrm{noise}$ resolution edge, not the puncture
+problem), median error $\sim10^{-6}$. A third candidate (stereographic
+$(u,v)$-plane substitution applied to $\psi$, hypothesized to have its own
+Jacobian cancel the reparametrization's) was tried and rejected: it neither
+fixes the boundary regime cleanly nor preserves the small-noise regime's
+accuracy (up to 600% error on unrelated cases).
+
+See `docs/theory/wl_shape_marginalization_fixed_quad.qmd` for the shipped
+design.

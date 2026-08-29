@@ -1493,6 +1493,37 @@ def test_absmaxF_min_single_component() -> None:
     assert abs(linf_norm - 7.0) < 1e-10
 
 
+def test_absmaxF_min_ignores_exact_zero_component() -> None:
+    """A component that is identically zero must not collapse the min to 0.0.
+
+    Regression test: ncm_function_sample_set_get_absmaxF_min used to take a
+    plain min over all components, so one exactly-zero component (e.g. a
+    spin-2 field's ell=0,1 multipoles) silently zeroed out the tolerance for
+    every other, genuinely nonzero component -- which could then never
+    converge (see test_adaptive_midpoint_mixed_zero_and_nonzero_terminates).
+    """
+    fss = Ncm.FunctionSampleSet.new(2)
+
+    # Component 0 is identically zero; component 1 peaks at 4.0.
+    for x, y1 in [(0.0, 1.0), (1.0, 4.0), (2.0, 2.0)]:
+        y = Ncm.Vector.new_array([0.0, y1])
+        fss.add(x, y)
+
+    min_absF = fss.get_absmaxF_min()
+    assert abs(min_absF - 4.0) < 1e-10
+
+
+def test_absmaxF_min_all_components_zero() -> None:
+    """When every component is identically zero, the min falls back to 0.0."""
+    fss = Ncm.FunctionSampleSet.new(2)
+
+    for x in [0.0, 1.0, 2.0]:
+        y = Ncm.Vector.new_array([0.0, 0.0])
+        fss.add(x, y)
+
+    assert fss.get_absmaxF_min() == 0.0
+
+
 def test_combined_tracking_comprehensive(
     sample_set_dim3: Ncm.FunctionSampleSet,
 ) -> None:
@@ -2369,3 +2400,296 @@ def test_expand_domain_both_limits_with_slow_decay() -> None:
     # Both boundaries should reach hard limits
     assert abs(fss.get_x_min() - x_min_hard) < 1e-10
     assert abs(fss.get_x_max() - x_max_hard) < 1e-10
+
+
+# ============================================================================
+# Regression tests: exact-zero components must converge, not run away.
+#
+# Found while benchmarking NcXcorKernelWeakLensing: its spin-2 prefactor
+# vanishes identically at ell=0,1. With abstol derived from
+# get_absmaxF_min() (as NcXcorKernel does), that made abstol exactly 0.0,
+# and refine()'s old strict '<' comparison meant a perfectly converged,
+# identically-zero point could never pass (0.0 < 0.0 is false). Every
+# interval then kept getting bisected every outer iteration instead of just
+# the one(s) with a real discontinuity -- exponential growth in sample
+# count (doubling per iteration) instead of the expected linear growth,
+# exhausting memory well before max_iter was reached.
+# ============================================================================
+
+
+def test_refine_exact_zero_function_passes() -> None:
+    """A perfectly-converged, identically-zero point must pass refine().
+
+    Direct regression test for the norm_diff < threshold -> norm_diff <=
+    threshold fix: with abstol=0.0 and a function that is exactly zero
+    everywhere, norm_diff and threshold are both exactly 0.0.
+    """
+
+    def flat_zero(x: float, y: Ncm.Vector) -> None:
+        y.set(0, 0.0)
+
+    fss = Ncm.FunctionSampleSet.new(1)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]:
+        fss.add_func(x, flat_zero)
+
+    fss.mark_all_old()
+
+    # Insert a new midpoint the same way adaptive_midpoint's inner loop does.
+    it = fss.iter_begin()
+    _ = fss.iter_insert_after_func(it, 0.5, flat_zero)
+
+    fss.refine(1e-4, 0.0, base_spline)
+
+    it = fss.iter_begin()
+    assert it.get_interval_ok() >= 1
+
+
+def test_adaptive_midpoint_exact_zero_component_terminates_quickly() -> None:
+    """A flat-zero function must converge immediately, not blow up exponentially.
+
+    max_iter is kept deliberately small so that a *regression* of this fix
+    still fails fast and safely (bounded sample growth) instead of
+    exhausting memory the way the original bug did.
+    """
+
+    def flat_zero(x: float, y: Ncm.Vector) -> None:
+        y.set(0, 0.0)
+
+    fss = Ncm.FunctionSampleSet.new(1)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(0.0, 10.0, 6):
+        fss.add_func(x, flat_zero)
+
+    fss.mark_all_old()
+    # Mirrors NcXcorKernel's own abstol formula (get_absmaxF_min() * reltol).
+    abstol = fss.get_absmaxF_min() * 1e-4
+    assert abstol == 0.0  # the exact degenerate case this test targets
+
+    max_iter = 10
+    fss.adaptive_midpoint(flat_zero, 1e-4, abstol, max_iter, 1, base_spline)
+
+    assert fss.all_intervals_ok(1)
+    # With the fix this converges on the first pass; well under the
+    # exponential blow-up (2**10 = 1024) max_iter=10 alone would otherwise
+    # permit -- the bound below is generous, not tight.
+    assert fss.get_nsamples() < 20
+
+
+def test_adaptive_midpoint_mixed_zero_and_nonzero_terminates() -> None:
+    """A block mixing an identically-zero component with a real one converges,
+    and the real component is still resolved accurately.
+
+    Mirrors the actual production scenario: a weak-lensing kernel's
+    ell-block spanning ell=0 (prefactor exactly zero) alongside ell>=2
+    (nonzero), evaluated together as one vector-valued function.
+    """
+
+    def mixed(x: float, y: Ncm.Vector) -> None:
+        y.set(0, 0.0)  # e.g. weak-lensing ell=0: identically zero
+        y.set(1, math.sin(x))  # e.g. weak-lensing ell=2: genuinely varies
+
+    fss = Ncm.FunctionSampleSet.new(2)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(0.0, 2.0 * math.pi, 6):
+        fss.add_func(x, mixed)
+
+    fss.mark_all_old()
+    reltol = 1e-6
+    abstol = fss.get_absmaxF_min() * 1e-4
+
+    # The zero component must not have collapsed the tolerance to zero.
+    assert abstol > 0.0
+
+    fss.adaptive_midpoint(mixed, reltol, abstol, 100, 1, base_spline)
+
+    assert fss.all_intervals_ok(1)
+
+    sv = fss.to_spline_vec(base_spline)
+    threshold = reltol * 1.0 + abstol  # sin(x) peaks at 1.0
+    for x in np.linspace(0.1, 2.0 * math.pi - 0.1, 20):
+        y_spline = sv.eval_array(x)
+        assert abs(y_spline[0] - 0.0) < 1e-10
+        assert abs(y_spline[1] - math.sin(x)) < threshold * 10
+
+
+# ============================================================================
+# Tests for the achieved refinement residual
+# ============================================================================
+
+
+def _trig_pair(x: float, y: Ncm.Vector) -> None:
+    """A dominant component and one four orders below it."""
+    y.set(0, math.sin(x))
+    y.set(1, 1.0e-4 * math.cos(3.0 * x))
+
+
+def _refined(track: bool, reltol: float = 1e-6, abstol: float = 1e-10):
+    fss = Ncm.FunctionSampleSet.new(2)
+    fss.set_track_residual(track)
+    base_spline = Ncm.SplineCubicNotaknot.new()
+
+    for x in np.linspace(0.0, 2.0 * math.pi, 6):
+        fss.add_func(x, _trig_pair)
+
+    fss.mark_all_old()
+    fss.adaptive_midpoint(_trig_pair, reltol, abstol, 100, 1, base_spline)
+
+    return fss, base_spline
+
+
+def test_residual_tracking_is_off_by_default() -> None:
+    """The record costs memory, so a caller has to ask for it."""
+    fss = Ncm.FunctionSampleSet.new(2)
+
+    assert not fss.get_track_residual()
+    assert fss.get_residuals() is None
+
+    fss.set_track_residual(True)
+    assert fss.get_track_residual()
+
+
+def test_residuals_are_recorded_per_interval() -> None:
+    """The matrix is one row per sample, one column per component.
+
+    Row i owns the interval [x_i, x_i+1], matching interval_ok's convention, so
+    the last row is the trailing edge and holds no interval.
+    """
+    fss, _ = _refined(True)
+
+    residuals = fss.get_residuals()
+    assert residuals is not None
+    assert residuals.nrows() == fss.get_nsamples()
+    assert residuals.ncols() == 2
+
+    values = np.array(residuals.dup_array()).reshape(residuals.nrows(), -1)
+
+    assert np.all(np.isnan(values[-1]))
+    assert np.all(np.isfinite(values[:-1]))
+    assert np.all(values[:-1] >= 0.0)
+
+
+def test_recorded_residual_bounds_the_spline_error() -> None:
+    """The record has to cover the error the finished spline actually carries.
+
+    It is measured before the interval it describes is split, so for a cubic it
+    overstates each half by roughly 2^4 -- conservative, which is the direction
+    an error estimate has to err in.
+    """
+    fss, base_spline = _refined(True)
+
+    values = np.array(fss.get_residuals().dup_array()).reshape(fss.get_nsamples(), -1)[
+        :-1
+    ]
+
+    sv = fss.to_spline_vec(base_spline)
+    xs = np.linspace(1.0e-3, 2.0 * math.pi - 1.0e-3, 2000)
+    true_err = np.array(
+        [
+            np.abs(
+                np.array(sv.eval_array(x)) - [math.sin(x), 1.0e-4 * math.cos(3.0 * x)]
+            )
+            for x in xs
+        ]
+    ).max(axis=0)
+
+    assert np.all(true_err < values.max(axis=0))
+
+    # And it is an achieved residual, not the tolerance echoed back: the
+    # sub-dominant component is held only to the block's L2 norm, so the
+    # criterion allows it 1e-6 while the fit actually delivers far better.
+    assert values[:, 1].max() < 1.0e-8
+
+
+def test_residuals_track_the_tolerance_they_were_refined_at() -> None:
+    """Tightening the criterion tightens what the record reports."""
+    loose = np.array(
+        np.array(_refined(True, reltol=1e-5)[0].get_residuals().dup_array())
+    )
+    tight = np.array(
+        np.array(_refined(True, reltol=1e-8)[0].get_residuals().dup_array())
+    )
+
+    assert np.nanmax(tight) < np.nanmax(loose)
+
+
+def test_iter_reports_the_residual_of_its_own_interval() -> None:
+    """The iterator exposes the same record one interval at a time."""
+    fss, _ = _refined(True)
+
+    it = fss.iter_begin()
+    first = it.get_residual()
+
+    assert first is not None
+    assert first.len() == 2
+
+    fresh = Ncm.FunctionSampleSet.new(2)
+    fresh.set_track_residual(True)
+    fresh.add_func(0.0, _trig_pair)
+
+    assert fresh.iter_begin().get_residual() is None
+
+
+def test_estimate_residuals_needs_no_function_evaluations() -> None:
+    """The embedded pair estimates the fit error from the samples already held.
+
+    Two fits of the same data at different orders, differenced where the samples
+    say least. Nothing calls the function, so the estimate costs a banded solve
+    rather than one evaluation per interval.
+    """
+    fss, base_spline = _refined(True)
+    ref_spline = Ncm.SplineBSpline.new(6)
+
+    estimated = fss.estimate_residuals(base_spline, ref_spline)
+    assert estimated is not None
+    assert estimated.nrows() == fss.get_nsamples()
+    assert estimated.ncols() == 2
+
+    values = np.array(estimated.dup_array()).reshape(estimated.nrows(), -1)
+    assert np.all(np.isnan(values[-1]))
+    assert np.all(np.isfinite(values[:-1]))
+    assert np.all(values[:-1] >= 0.0)
+
+
+def test_estimate_residuals_is_sharper_than_the_observed_one() -> None:
+    """It describes the finished fit, where the observed residual describes the
+    interval's parent and so overstates it."""
+    fss, base_spline = _refined(True)
+    ref_spline = Ncm.SplineBSpline.new(6)
+
+    observed = np.array(fss.get_residuals().dup_array()).reshape(
+        fss.get_nsamples(), -1
+    )[:-1]
+    estimated = np.array(
+        fss.estimate_residuals(base_spline, ref_spline).dup_array()
+    ).reshape(fss.get_nsamples(), -1)[:-1]
+
+    sv = fss.to_spline_vec(base_spline)
+    xs = np.linspace(1.0e-3, 2.0 * math.pi - 1.0e-3, 2000)
+    true_err = np.array(
+        [
+            np.abs(
+                np.array(sv.eval_array(x)) - [math.sin(x), 1.0e-4 * math.cos(3.0 * x)]
+            )
+            for x in xs
+        ]
+    ).max(axis=0)
+
+    # Both cover the truth; the embedded one does so far less loosely.
+    assert np.all(true_err < observed.max(axis=0))
+    assert np.all(true_err < estimated.max(axis=0) * 10.0)
+    assert estimated[:, 0].max() < observed[:, 0].max()
+
+
+def test_estimate_residuals_returns_none_when_there_is_nothing_to_fit() -> None:
+    """A single sample spans no interval."""
+    fss = Ncm.FunctionSampleSet.new(2)
+    fss.add_func(1.0, _trig_pair)
+
+    assert (
+        fss.estimate_residuals(Ncm.SplineCubicNotaknot.new(), Ncm.SplineBSpline.new(6))
+        is None
+    )

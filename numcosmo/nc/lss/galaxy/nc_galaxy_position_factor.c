@@ -31,21 +31,12 @@
  *
  * Abstract calculator for the galaxy sky-position distribution.
  *
- * A calculator (a plain #GObject, NOT an #NcmModel and NOT held in an #NcmMSet)
- * that produces the per-galaxy position density $p(\mathrm{ra}, \mathrm{dec}
- * \mid I)$. The galaxy position is observed directly — there is no
- * true-vs-observed scatter split and (for the flat scheme) no fitted
- * parameters — so, unlike #NcGalaxyRedshiftFactor, the position collapses to a
- * single distribution with no companion #NcmModel: the scheme carries its own
- * survey geometry as configuration.
+ * A calculator that produces the per-galaxy position density $p(\mathrm{ra},
+ * \mathrm{dec} \mid I)$.
  *
- * Concrete schemes live as subclasses following the #NcPowspecML pattern (the
- * abstract base owns the shared machinery once; each scheme owns its observed
- * fragment, engine and sampler). The only scheme today is the flat scheme
- * (#NcGalaxyPositionFactorFlat, uniform over a sky footprint); a future
- * clustered scheme would gain fitted parameters and read a cosmology/halo model
- * from @mset, which is why @mset is threaded through the vtable even though the
- * flat scheme ignores it.
+ * Concrete schemes live as subclasses each scheme owns its observed fragment, engine
+ * and sampler). The only scheme today is the flat scheme (#NcGalaxyPositionFactorFlat,
+ * uniform over a sky footprint).
  *
  */
 
@@ -124,6 +115,13 @@ _nc_galaxy_position_factor_update_data (NcGalaxyPositionFactor *gspf, NcGalaxyPo
   /* Default: nothing cached per-galaxy to refresh. */
 }
 
+static gchar *
+_nc_galaxy_position_factor_get_desc (NcGalaxyPositionFactor *gspf)
+{
+  /* Default: no scheme-specific configuration to report. */
+  return g_strdup (G_OBJECT_TYPE_NAME (gspf));
+}
+
 static void
 nc_galaxy_position_factor_class_init (NcGalaxyPositionFactorClass *klass)
 {
@@ -137,6 +135,7 @@ nc_galaxy_position_factor_class_init (NcGalaxyPositionFactorClass *klass)
   klass->integ       = &_nc_galaxy_position_factor_integ;
   klass->get_hash    = &_nc_galaxy_position_factor_get_hash;
   klass->update_data = &_nc_galaxy_position_factor_update_data;
+  klass->get_desc    = &_nc_galaxy_position_factor_get_desc;
 }
 
 /**
@@ -159,8 +158,8 @@ nc_galaxy_position_factor_data_ref (NcGalaxyPositionFactorData *data)
  * nc_galaxy_position_factor_data_unref:
  * @data: a #NcGalaxyPositionFactorData
  *
- * Decreases the reference count of @data by one. If the reference count reaches
- * 0, the data is freed.
+ * Decreases the reference count of @data by one. If the reference count reaches 0, the
+ * data is freed.
  */
 void
 nc_galaxy_position_factor_data_unref (NcGalaxyPositionFactorData *data)
@@ -211,7 +210,8 @@ nc_galaxy_position_factor_data_write_row (NcGalaxyPositionFactorData *data, NcGa
  * nc_galaxy_position_factor_data_required_columns:
  * @data: a #NcGalaxyPositionFactorData
  *
- * Returns: (element-type utf8) (transfer full): the required columns for the galaxy position data.
+ * Returns: (element-type utf8) (transfer full): the required columns for the galaxy
+ * position data.
  */
 GList *
 nc_galaxy_position_factor_data_required_columns (NcGalaxyPositionFactorData *data)
@@ -234,8 +234,8 @@ nc_galaxy_position_factor_data_required_columns (NcGalaxyPositionFactorData *dat
  * @callback_data: a gpointer
  *
  * Creates a new integrand for the galaxy position data. The integrand takes the
- * per-galaxy @data and returns the position density (or its natural logarithm)
- * at the galaxy's stored (ra, dec).
+ * per-galaxy @data and returns the position density (or its natural logarithm) at the
+ * galaxy's stored (ra, dec).
  *
  * Returns: (transfer full): a new #NcGalaxyPositionFactorIntegrand object.
  */
@@ -337,10 +337,9 @@ nc_galaxy_position_factor_gen (NcGalaxyPositionFactor *gspf, NcmMSet *mset, NcGa
  * @gspf: a #NcGalaxyPositionFactor
  * @mset: a #NcmMSet supplying the scheme's models
  *
- * Factory-level prepare: validates the scheme's models in @mset and
- * refreshes whatever it caches for efficient subsequent
- * nc_galaxy_position_factor_update_data() calls. Cheap/no-op for the flat
- * scheme, which has no models to resolve.
+ * Factory-level prepare: validates the scheme's models in @mset and refreshes whatever
+ * it caches for efficient subsequent nc_galaxy_position_factor_update_data() calls.
+ * Cheap/no-op for the flat scheme, which has no models to resolve.
  *
  */
 void
@@ -354,8 +353,8 @@ nc_galaxy_position_factor_prepare (NcGalaxyPositionFactor *gspf, NcmMSet *mset)
  * @gspf: a #NcGalaxyPositionFactor
  *
  * Returns: an opaque value that changes whenever the last
- * nc_galaxy_position_factor_prepare() call refreshed something relevant
- * (default: a constant).
+ * nc_galaxy_position_factor_prepare() call refreshed something relevant (default: a
+ * constant).
  */
 guint64
 nc_galaxy_position_factor_get_hash (NcGalaxyPositionFactor *gspf)
@@ -378,15 +377,27 @@ nc_galaxy_position_factor_update_data (NcGalaxyPositionFactor *gspf, NcGalaxyPos
 }
 
 /**
+ * nc_galaxy_position_factor_get_desc:
+ * @gspf: a #NcGalaxyPositionFactor
+ *
+ * Returns: (transfer full): a human-readable one-line description of this scheme's own
+ * configuration (default: the concrete type name).
+ */
+gchar *
+nc_galaxy_position_factor_get_desc (NcGalaxyPositionFactor *gspf)
+{
+  return NC_GALAXY_POSITION_FACTOR_GET_CLASS (gspf)->get_desc (gspf);
+}
+
+/**
  * nc_galaxy_position_factor_integ:
  * @gspf: a #NcGalaxyPositionFactor
  * @mset: a #NcmMSet supplying the scheme's models
  * @use_lnp: if %TRUE the integrand returns the natural logarithm of the density
  *
- * Builds the per-galaxy position density $p(\mathrm{ra}, \mathrm{dec} \mid I)$
- * as a callback evaluated at the galaxy's stored position. The position is not
- * integrated (it is observed directly); the callback is a fixed-position
- * evaluation.
+ * Builds the per-galaxy position density $p(\mathrm{ra}, \mathrm{dec} \mid I)$ as a
+ * callback evaluated at the galaxy's stored position. The position is not integrated
+ * (it is observed directly); the callback is a fixed-position evaluation.
  *
  * Returns: (transfer full): a new #NcGalaxyPositionFactorIntegrand.
  */

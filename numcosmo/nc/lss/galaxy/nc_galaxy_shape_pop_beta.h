@@ -39,23 +39,23 @@ G_DECLARE_FINAL_TYPE (NcGalaxyShapePopBeta, nc_galaxy_shape_pop_beta, NC, GALAXY
 
 /**
  * NcGalaxyShapePopBetaParams:
- * @NC_GALAXY_SHAPE_POP_BETA_MU: mean of $x = |\chi_I|^2$ (controls typical ellipticity).
- * @NC_GALAXY_SHAPE_POP_BETA_NU: concentration of the Beta distribution.
+ * @NC_GALAXY_SHAPE_POP_BETA_ALPHA: shape parameter $\alpha$ of the Beta distribution of $r = |\chi_I|$.
+ * @NC_GALAXY_SHAPE_POP_BETA_BETA: shape parameter $\beta$ of the Beta distribution of $r = |\chi_I|$.
  *
- * Beta intrinsic ellipticity model parameters, with $\alpha = \mu\nu$ and
- * $\beta = (1-\mu)\nu$.
+ * Beta intrinsic ellipticity model parameters; $\alpha\ge1$, $\beta\ge1$
+ * (see the class documentation).
  *
  */
 typedef enum /*< enum,underscore_name=NC_GALAXY_SHAPE_POP_BETA_PARAMS >*/
 {
-  NC_GALAXY_SHAPE_POP_BETA_MU = 0,
-  NC_GALAXY_SHAPE_POP_BETA_NU,
+  NC_GALAXY_SHAPE_POP_BETA_ALPHA = 0,
+  NC_GALAXY_SHAPE_POP_BETA_BETA,
   /* < private > */
   NC_GALAXY_SHAPE_POP_BETA_SPARAM_LEN, /*< skip >*/
 } NcGalaxyShapePopBetaParams;
 
-#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_MU (0.18)
-#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_NU (5.0)
+#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA (1.55)
+#define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA (1.55)
 #define NC_GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL (0.0)
 
 NcGalaxyShapePopBeta *nc_galaxy_shape_pop_beta_new (void);
@@ -63,6 +63,9 @@ NcGalaxyShapePopBeta *nc_galaxy_shape_pop_beta_ref (NcGalaxyShapePopBeta *gspb);
 
 void nc_galaxy_shape_pop_beta_free (NcGalaxyShapePopBeta *gspb);
 void nc_galaxy_shape_pop_beta_clear (NcGalaxyShapePopBeta **gspb);
+
+gdouble nc_galaxy_shape_pop_beta_get_e_rms (NcGalaxyShapePopBeta *gspb);
+gdouble nc_galaxy_shape_pop_beta_get_mode (NcGalaxyShapePopBeta *gspb);
 
 G_END_DECLS
 

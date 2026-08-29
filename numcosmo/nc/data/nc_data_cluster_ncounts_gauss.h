@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/data/ncm_data_gauss_cov.h>
 #include <numcosmo/nc/lss/cluster/nc_cluster_abundance.h>
+#include <numcosmo/nc/xcor/nc_xcor_ssc_sij.h>
 
 G_BEGIN_DECLS
 
@@ -49,6 +50,7 @@ void nc_data_cluster_ncounts_gauss_set_lnM_obs (NcDataClusterNCountsGauss *ncoun
 void nc_data_cluster_ncounts_gauss_set_lnM_obs_params (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *lnM_obs_params);
 void nc_data_cluster_ncounts_gauss_set_has_ssc (NcDataClusterNCountsGauss *ncounts_gauss, gboolean on);
 void nc_data_cluster_ncounts_gauss_set_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *s_matrix);
+void nc_data_cluster_ncounts_gauss_set_ssc_sij (NcDataClusterNCountsGauss *ncounts_gauss, NcXcorSSCSij *ssc_sij);
 void nc_data_cluster_ncounts_gauss_set_resample_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss, NcmMatrix *s_matrix);
 void nc_data_cluster_ncounts_gauss_set_fix_cov (NcDataClusterNCountsGauss *ncounts_gauss, gboolean on);
 
@@ -59,6 +61,7 @@ NcmVector *nc_data_cluster_ncounts_gauss_get_lnM_obs (NcDataClusterNCountsGauss 
 NcmMatrix *nc_data_cluster_ncounts_gauss_get_lnM_obs_params (NcDataClusterNCountsGauss *ncounts_gauss);
 NcmMatrix *nc_data_cluster_ncounts_gauss_get_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss);
 NcmMatrix *nc_data_cluster_ncounts_gauss_get_resample_s_matrix (NcDataClusterNCountsGauss *ncounts_gauss);
+NcXcorSSCSij *nc_data_cluster_ncounts_gauss_get_ssc_sij (NcDataClusterNCountsGauss *ncounts_gauss);
 gboolean nc_data_cluster_ncounts_gauss_get_has_ssc (NcDataClusterNCountsGauss *ncounts_gauss);
 gboolean nc_data_cluster_ncounts_gauss_get_fix_cov (NcDataClusterNCountsGauss *ncounts_gauss);
 

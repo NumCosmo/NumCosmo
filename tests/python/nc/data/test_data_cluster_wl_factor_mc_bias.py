@@ -74,6 +74,11 @@ import numpy as np
 import pytest
 from numcosmo_py import Nc, Ncm
 
+# From-model MC recovery over N_REALIZATIONS full fits: acceptance by tier, as the
+# module docstring states. Unmarked it would run in the default lane, where it is by
+# far the longest test and so sets that lane's floor on its own.
+pytestmark = pytest.mark.acceptance
+
 Ncm.cfg_init()
 
 TRUE_LOG10M = 14.0

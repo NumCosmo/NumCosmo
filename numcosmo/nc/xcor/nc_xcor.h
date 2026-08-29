@@ -52,8 +52,27 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
  * @NC_XCOR_METHOD_LIMBER_Z_CUBATURE: Use cubature numerical integration
  * @NC_XCOR_METHOD_KERNEL_GSL: Use GSL numerical integration over kernel variables
  * @NC_XCOR_METHOD_KERNEL_CUBATURE: Use cubature numerical integration over kernel variables
+ * @NC_XCOR_METHOD_KERNEL_EXACT: Integrate the kernel closures exactly, on the
+ *   union of their own knots
  *
  * Methods to compute integrals.
+ *
+ * %NC_XCOR_METHOD_KERNEL_EXACT needs no tolerance and cannot fail to converge.
+ * The name is meant literally rather than as "fixed-order": on the closures it
+ * is handed, the quadrature carries no error at all, and refining its panels
+ * changes nothing beyond rounding.
+ * It uses the same per-kernel closures as %NC_XCOR_METHOD_KERNEL_CUBATURE and
+ * differs only in the outer quadrature: each kernel's $W(k)$ is a cubic spline,
+ * so on the common refinement of a pair's two knot sets the outer integrand
+ * $k^2 W_i W_j$ is a degree-8 polynomial on every panel, and a 5-node
+ * Gauss-Legendre rule integrates it exactly. The adaptive alternatives target a
+ * tolerance the integrand may not be able to support, and abort when they
+ * cannot reach it.
+ *
+ * Measured over 28 pairs of 7 top-hat bins it is also slightly faster than
+ * %NC_XCOR_METHOD_KERNEL_CUBATURE (1.05x at $\ell = 0$, 1.18x over
+ * $\ell = 0\dots26$), since the exact rule replaces adaptive refinement on
+ * splines that have already been built.
  *
  */
 typedef enum _NcXcorMethod
@@ -62,6 +81,7 @@ typedef enum _NcXcorMethod
   NC_XCOR_METHOD_LIMBER_Z_CUBATURE,
   NC_XCOR_METHOD_KERNEL_GSL,
   NC_XCOR_METHOD_KERNEL_CUBATURE,
+  NC_XCOR_METHOD_KERNEL_EXACT,
 } NcXcorMethod;
 
 #define NC_XCOR_PRECISION (1.0e-6)
@@ -73,6 +93,11 @@ NcXcor *nc_xcor_ref (NcXcor *xc);
 void nc_xcor_free (NcXcor *xc);
 void nc_xcor_clear (NcXcor **xc);
 
+NcXcorMethod nc_xcor_get_meth (NcXcor *xc);
+
+void nc_xcor_set_closure_type (NcXcor *xc, NcXcorKernelClosure closure_type);
+NcXcorKernelClosure nc_xcor_get_closure_type (NcXcor *xc);
+
 void nc_xcor_set_reltol (NcXcor *xc, const gdouble reltol);
 gdouble nc_xcor_get_reltol (NcXcor *xc);
 
@@ -82,6 +107,7 @@ guint nc_xcor_get_ell_batch_size (NcXcor *xc);
 void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo);
 
 void nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);
+void nc_xcor_compute_full (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp, NcmVector *vp_err);
 
 G_END_DECLS
 

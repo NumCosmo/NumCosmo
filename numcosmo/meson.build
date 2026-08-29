@@ -109,6 +109,7 @@ ncm_sources = files(
     'ncm/powspec/ncm_powspec_filter.c',
     'ncm/powspec/ncm_powspec_sphere_proj.c',
     'ncm/powspec/ncm_powspec_spline2d.c',
+    'ncm/powspec/tests/ncm_powspec_analytic.c',
     'ncm/fit/ncm_prior.c',
     'ncm/fit/ncm_prior_flat.c',
     'ncm/fit/ncm_prior_flat_func.c',
@@ -117,6 +118,7 @@ ncm_sources = files(
     'ncm/fit/ncm_prior_gauss_func.c',
     'ncm/fit/ncm_prior_gauss_param.c',
     'ncm/algebra/ncm_quaternion.c',
+    'ncm/algebra/ncm_spectral.c',
     'ncm/model/ncm_reparam.c',
     'ncm/model/ncm_reparam_linear.c',
     'ncm/core/ncm_rng.c',
@@ -129,7 +131,6 @@ ncm_sources = files(
     'ncm/specfunc/ncm_sf_sbessel.c',
     'ncm/specfunc/ncm_sf_spherical_harmonics.c',
     'ncm/model/ncm_sparam.c',
-    'ncm/sphere/ncm_spectral.c',
     'ncm/sphere/ncm_sphere_map.c',
     'ncm/sphere/ncm_sphere_nn.c',
     'ncm/spline/ncm_spline.c',
@@ -142,6 +143,7 @@ ncm_sources = files(
     'ncm/spline/ncm_spline_cubic_notaknot.c',
     'ncm/spline/ncm_spline_func.c',
     'ncm/spline/ncm_spline_func_test.c',
+    'ncm/spline/ncm_spline_bspline.c',
     'ncm/spline/ncm_spline_gsl.c',
     'ncm/spline/ncm_spline_rbf.c',
     'ncm/spline/ncm_spline_vec.c',
@@ -256,6 +258,7 @@ ncm_headers = files(
     'ncm/powspec/ncm_powspec_filter.h',
     'ncm/powspec/ncm_powspec_sphere_proj.h',
     'ncm/powspec/ncm_powspec_spline2d.h',
+    'ncm/powspec/tests/ncm_powspec_analytic.h',
     'ncm/fit/ncm_prior.h',
     'ncm/fit/ncm_prior_flat.h',
     'ncm/fit/ncm_prior_flat_func.h',
@@ -264,6 +267,7 @@ ncm_headers = files(
     'ncm/fit/ncm_prior_gauss_func.h',
     'ncm/fit/ncm_prior_gauss_param.h',
     'ncm/algebra/ncm_quaternion.h',
+    'ncm/algebra/ncm_spectral.h',
     'ncm/model/ncm_reparam.h',
     'ncm/model/ncm_reparam_linear.h',
     'ncm/core/ncm_rng.h',
@@ -276,7 +280,6 @@ ncm_headers = files(
     'ncm/specfunc/ncm_sf_sbessel.h',
     'ncm/specfunc/ncm_sf_spherical_harmonics.h',
     'ncm/model/ncm_sparam.h',
-    'ncm/sphere/ncm_spectral.h',
     'ncm/sphere/ncm_sphere_map.h',
     'ncm/sphere/ncm_sphere_nn.h',
     'ncm/spline/ncm_spline.h',
@@ -289,6 +292,7 @@ ncm_headers = files(
     'ncm/spline/ncm_spline_cubic_notaknot.h',
     'ncm/spline/ncm_spline_func.h',
     'ncm/spline/ncm_spline_func_test.h',
+    'ncm/spline/ncm_spline_bspline.h',
     'ncm/spline/ncm_spline_gsl.h',
     'ncm/spline/ncm_spline_rbf.h',
     'ncm/spline/ncm_spline_vec.h',
@@ -322,6 +326,7 @@ ncm_headers_internal = files(
     'ncm/stats/ncm_stats_dist_private.h',
     'ncm/stats/ncm_stats_dist_vkde_private.h',
     'nc/perturbations/nc_hipert_private.h',
+    'nc/xcor/nc_xcor_priv.h',
 )
 
 nc_headers = files(
@@ -402,6 +407,7 @@ nc_headers = files(
     'nc/lss/galaxy/nc_galaxy_selfunc.h',
     'nc/powspec/nc_growth_func.h',
     'nc/lss/halo/nc_halo_bias.h',
+    'nc/lss/halo/nc_halo_bias_castro.h',
     'nc/lss/halo/nc_halo_bias_despali.h',
     'nc/lss/halo/nc_halo_bias_ps.h',
     'nc/lss/halo/nc_halo_bias_st_ellip.h',
@@ -428,6 +434,7 @@ nc_headers = files(
     'nc/lss/halo/nc_multiplicity_func.h',
     'nc/lss/halo/nc_multiplicity_func_bhattacharya.h',
     'nc/lss/halo/nc_multiplicity_func_bocquet.h',
+    'nc/lss/halo/nc_multiplicity_func_castro.h',
     'nc/lss/halo/nc_multiplicity_func_crocce.h',
     'nc/lss/halo/nc_multiplicity_func_despali.h',
     'nc/lss/halo/nc_multiplicity_func_jenkins.h',
@@ -491,6 +498,8 @@ nc_headers = files(
     'nc/perturbations/nc_hipert_two_fluids.h',
     'nc/xcor/nc_xcor.h',
     'nc/xcor/nc_xcor_AB.h',
+    'nc/xcor/nc_xcor_solver.h',
+    'nc/xcor/nc_xcor_ssc_sij.h',
     'nc/xcor/nc_xcor_kernel.h',
     'nc/xcor/nc_xcor_kernel_component.h',
     'nc/xcor/nc_xcor_kernel_cmb_isw.h',
@@ -501,6 +510,15 @@ nc_headers = files(
     'nc/xcor/nc_xcor_kernel_cluster.h',
     'nc/xcor/nc_xcor_kernel_cluster_tophat.h',
     'nc/xcor/nc_xcor_lensing_efficiency.h',
+    'nc/xcor/tests/nc_xcor_kernel_analytic.h',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_kdep.h',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_gauss.h',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_tophat.h',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_multi.h',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_student_t.h',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_power_exp.h',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_tophat_smooth.h',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_lensing.h',
     'nc/cmb/nc_cbe.h',
     'nc/cmb/nc_cbe_precision.h',
     'nc/quantum/nc_de_cont.h',
@@ -605,6 +623,7 @@ nc_sources = files(
     'nc/lss/galaxy/nc_galaxy_selfunc.c',
     'nc/powspec/nc_growth_func.c',
     'nc/lss/halo/nc_halo_bias.c',
+    'nc/lss/halo/nc_halo_bias_castro.c',
     'nc/lss/halo/nc_halo_bias_despali.c',
     'nc/lss/halo/nc_halo_bias_ps.c',
     'nc/lss/halo/nc_halo_bias_st_ellip.c',
@@ -631,6 +650,7 @@ nc_sources = files(
     'nc/lss/halo/nc_multiplicity_func.c',
     'nc/lss/halo/nc_multiplicity_func_bhattacharya.c',
     'nc/lss/halo/nc_multiplicity_func_bocquet.c',
+    'nc/lss/halo/nc_multiplicity_func_castro.c',
     'nc/lss/halo/nc_multiplicity_func_crocce.c',
     'nc/lss/halo/nc_multiplicity_func_despali.c',
     'nc/lss/halo/nc_multiplicity_func_jenkins.c',
@@ -694,6 +714,8 @@ nc_sources = files(
     'nc/perturbations/nc_hipert_two_fluids.c',
     'nc/xcor/nc_xcor.c',
     'nc/xcor/nc_xcor_AB.c',
+    'nc/xcor/nc_xcor_solver.c',
+    'nc/xcor/nc_xcor_ssc_sij.c',
     'nc/xcor/nc_xcor_kernel.c',
     'nc/xcor/nc_xcor_kernel_component.c',
     'nc/xcor/nc_xcor_kernel_cmb_isw.c',
@@ -704,6 +726,15 @@ nc_sources = files(
     'nc/xcor/nc_xcor_kernel_cluster.c',
     'nc/xcor/nc_xcor_kernel_cluster_tophat.c',
     'nc/xcor/nc_xcor_lensing_efficiency.c',
+    'nc/xcor/tests/nc_xcor_kernel_analytic.c',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_kdep.c',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_gauss.c',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_tophat.c',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_multi.c',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_student_t.c',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_power_exp.c',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_tophat_smooth.c',
+    'nc/xcor/tests/nc_xcor_kernel_analytic_lensing.c',
     'nc/cmb/nc_cbe.c',
     'nc/cmb/nc_cbe_precision.c',
     'nc/quantum/nc_de_cont.c',
@@ -833,6 +864,24 @@ libnumcosmo_dep_list = [
 ]
 
 numcosmo_c_args = ['-DG_LOG_DOMAIN="NUMCOSMO"', '-DHAVE_CONFIG_H']
+# These LTO-only diagnostics come from vendored code and are false positives
+# that only GCC's whole-program analysis at link time can raise, so they can
+# only be suppressed via link_args, not per-file c_args:
+# - lto-type-mismatch: Fortran hidden string-length arguments (implicit
+#   trailing args gfortran adds for CHARACTER dummy arguments) make
+#   BLAS/LAPACK and Planck-likelihood C/Fortran prototypes look mismatched
+#   to LTO's type checker, even though the ABIs are compatible.
+# - alloc-size-larger-than: cross-TU inlining of CLASS's
+#   array_spline_table_columns() lets GCC see a malloc() size derived from an
+#   unchecked table size that it can't prove is positive; the NULL check
+#   right after the call already handles this.
+numcosmo_lib_link_args = [noseh_link_args]
+foreach flag : ['-Wno-lto-type-mismatch', '-Wno-alloc-size-larger-than']
+  if cc.has_link_argument(flag)
+    numcosmo_lib_link_args += [flag]
+  endif
+endforeach
+
 libnumcosmo = library(
     'numcosmo',
     sources: [
@@ -856,7 +905,7 @@ libnumcosmo = library(
     darwin_versions: darwin_versions,
     install: true,
     # intl.lib is not compatible with SAFESEH
-    link_args: [noseh_link_args],
+    link_args: numcosmo_lib_link_args,
     include_directories: [
         configinc,
         sundials_inc,

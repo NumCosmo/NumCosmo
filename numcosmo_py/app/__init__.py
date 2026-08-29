@@ -39,20 +39,27 @@ from .catalog import (
     PlotCorner,
     VisualHW,
     ParameterEvolution,
+    DerivedQuantityError,
     GetBestFit,
     DumpMset,
+    CheckM2lnL,
 )
 from .generate import (
     GeneratePlanck,
     GenerateJpasForecast,
     GenerateClusterWL,
+    LoadClusterWL,
     GenerateClusterRichnessCount,
     GenerateQSpline,
     GenerateXCDM,
     GenerateDEWSpline,
 )
 from .cluster_richness import RunClusterRichnessAnalysis
-from .inspect import InspectSummary, InspectClusterNCounts
+from .inspect import (
+    InspectSummary,
+    InspectClusterNCounts,
+    InspectGalaxyShapeIntegrand,
+)
 from .xcor import ViewKernel, ListKernels
 
 # Attempt optional import of the Firecrown-NumCosmo connector.
@@ -157,7 +164,12 @@ CAT_CALIBRATE_CMD: CMDArg = {
 CAT_PLOT_CORNER_CMD: CMDArg = {
     "name": "plot-corner",
     "no_args_is_help": True,
-    "help": "Plots the corner plot for a given catalog.",
+    "help": (
+        "Plots the corner plot for one or more catalogs, overlaid if more "
+        "than one is given, e.g.:\n\n"
+        "  numcosmo catalog plot-corner exp_007.mcmc.fits exp_008.mcmc.fits "
+        "--burnin 60"
+    ),
 }
 
 CAT_VISUAL_HW_CMD: CMDArg = {
@@ -172,6 +184,35 @@ CAT_PARAM_EVOLUTION_CMD: CMDArg = {
     "help": "Plots the parameter evolution for a given catalog.",
 }
 
+CAT_DERIVED_ERROR_CMD: CMDArg = {
+    "name": "derived-error",
+    "no_args_is_help": True,
+    "help": (
+        "Posterior median/mode/best-fit and asymmetric error bars for one or "
+        "more derived quantities built from expressions of catalog "
+        "parameters.\n\n"
+        "Bind catalog parameters (or add-values) to expression variables "
+        "with --variable/-x, as name=parameter, or just parameter as "
+        "shorthand for parameter=parameter. Combine bound variables with "
+        "--expr; repeat --expr (and, positionally, --symbol) to report "
+        "several quantities sharing the same bindings in one table. Repeat "
+        "--stat to report median/mode/bestfit together.\n\n"
+        "Example: report 10^log10(M) and its asymmetric error bars from a "
+        "halo-mass catalog:\n\n"
+        "  numcosmo catalog derived-error exp.mcmc.fits "
+        "-x log10MDelta --expr '10**log10MDelta' --symbol 'M_Delta'\n\n"
+        "Example: report both the raw parameter and its exponentiated form, "
+        "for median and mode, in one table:\n\n"
+        "  numcosmo catalog derived-error exp.mcmc.fits "
+        "-x log10MDelta --expr log10MDelta --expr '10**log10MDelta' "
+        "--stat median --stat mode\n\n"
+        "Example: combine two parameters, e.g. h = H0 / 100 folded into "
+        "Omega_m*h**2:\n\n"
+        "  numcosmo catalog derived-error exp.mcmc.fits "
+        "-x x=Omega_m -x y=H0 --expr '(y / 100)**2 * x'"
+    ),
+}
+
 CAT_GET_BEST_FIT_CMD: CMDArg = {
     "name": "get-best-fit",
     "no_args_is_help": True,
@@ -182,6 +223,13 @@ CAT_DUMP_MSET_CMD: CMDArg = {
     "name": "dump-mset",
     "no_args_is_help": True,
     "help": "Dump the model-set stored in a catalog file as YAML.",
+}
+
+CAT_CHECK_M2LNL_CMD: CMDArg = {
+    "name": "check-m2lnl",
+    "no_args_is_help": True,
+    "help": "Recompute -2ln(L) for every row of a catalog and compare against "
+    "the stored value.",
 }
 
 GEN_PLANCK_CMD: CMDArg = {
@@ -199,7 +247,13 @@ GEN_JPAS_FORECAST_CMD: CMDArg = {
 GEN_CLUSTER_WL_CMD: CMDArg = {
     "name": "cluster-wl",
     "no_args_is_help": True,
-    "help": "Generate cluster weak lensing experiments.",
+    "help": "Generate mock cluster weak lensing experiments.",
+}
+
+LOAD_CLUSTER_WL_CMD: CMDArg = {
+    "name": "cluster-wl-load",
+    "no_args_is_help": True,
+    "help": "Load a cluster weak lensing experiment from a real NcGalaxyWLObs catalog.",
 }
 
 GEN_CLUSTER_RICHNESS_COUNT_CMD: CMDArg = {
@@ -255,6 +309,15 @@ INSPECT_CLUSTER_NCOUNTS_CMD: CMDArg = {
     "help": "Plot data-vector, covariance/correlation, and optional S_ij diagnostics.",
 }
 
+INSPECT_GALAXY_SHAPE_INTEGRAND_CMD: CMDArg = {
+    "name": "galaxy-shape-integrand",
+    "no_args_is_help": True,
+    "help": (
+        "Plot a heatmap of the shear-marginalization integrand for one "
+        "galaxy, to visualize the noise-kernel vs population-density pull."
+    ),
+}
+
 # ------------------------------------------------------------------------------
 # Installing from-cosmosis command if COSMOSIS is installed and
 # all prerequisites are met.
@@ -280,13 +343,16 @@ app_cat.command(**CAT_CALIBRATE_CMD)(CalibrateCatalog)
 app_cat.command(**CAT_PLOT_CORNER_CMD)(PlotCorner)
 app_cat.command(**CAT_VISUAL_HW_CMD)(VisualHW)
 app_cat.command(**CAT_PARAM_EVOLUTION_CMD)(ParameterEvolution)
+app_cat.command(**CAT_DERIVED_ERROR_CMD)(DerivedQuantityError)
 app_cat.command(**CAT_GET_BEST_FIT_CMD)(GetBestFit)
 app_cat.command(**CAT_DUMP_MSET_CMD)(DumpMset)
+app_cat.command(**CAT_CHECK_M2LNL_CMD)(CheckM2lnL)
 # ------------------------------------------------------------------------------
 # Installing experiment generation subcommands
 app_generate.command(**GEN_PLANCK_CMD)(GeneratePlanck)
 app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
 app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)
+app_generate.command(**LOAD_CLUSTER_WL_CMD)(LoadClusterWL)
 app_generate.command(**GEN_CLUSTER_RICHNESS_COUNT_CMD)(GenerateClusterRichnessCount)
 app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
 app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)
@@ -297,6 +363,7 @@ app_analysis.command(**ANALYSIS_CLUSTER_RICHNESS_CMD)(RunClusterRichnessAnalysis
 # Installing inspect subcommands
 app_inspect.command(**INSPECT_SUMMARY_CMD)(InspectSummary)
 app_inspect.command(**INSPECT_CLUSTER_NCOUNTS_CMD)(InspectClusterNCounts)
+app_inspect.command(**INSPECT_GALAXY_SHAPE_INTEGRAND_CMD)(InspectGalaxyShapeIntegrand)
 # Installing xcor kernel subcommands
 app_xcor_kernel.command(**XCOR_KERNEL_VIEW_CMD)(ViewKernel)
 app_xcor_kernel.command(**XCOR_KERNEL_LIST_CMD)(ListKernels)

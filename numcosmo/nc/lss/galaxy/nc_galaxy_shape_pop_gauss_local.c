@@ -52,9 +52,17 @@
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss_private.h"
 
+#include "ncm/core/ncm_cfg.h"
+
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
+
+/* Pre-refactor NcGalaxySDShapeHSMGauss wrote this same per-galaxy intrinsic
+ * RMS under this name; the curated Subaru catalogs released before the
+ * rename still carry it instead of "e_rms". Remove once every released
+ * catalog has been rebuilt with a native "e_rms" column. */
+#define NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS_LEGACY "std_shape"
 
 struct _NcGalaxyShapePopGaussLocal
 {
@@ -83,6 +91,7 @@ _nc_galaxy_shape_pop_gauss_local_finalize (GObject *object)
 static void _nc_galaxy_shape_pop_gauss_local_data_init (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static void _nc_galaxy_shape_pop_gauss_local_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_local_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
+static gdouble _nc_galaxy_shape_pop_gauss_local_exponent_at_origin (NcGalaxyShapePop *gsp);
 
 static void
 nc_galaxy_shape_pop_gauss_local_class_init (NcGalaxyShapePopGaussLocalClass *klass)
@@ -106,12 +115,34 @@ nc_galaxy_shape_pop_gauss_local_class_init (NcGalaxyShapePopGaussLocalClass *kla
   gsp_class->eval_p               = &_nc_galaxy_shape_pop_gauss_eval_p;
   gsp_class->gen                  = &_nc_galaxy_shape_pop_gauss_gen;
   gsp_class->e_rms                = &_nc_galaxy_shape_pop_gauss_local_e_rms;
+  gsp_class->exponent_at_origin   = &_nc_galaxy_shape_pop_gauss_local_exponent_at_origin;
   gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series;
 }
 
 static void
 _nc_galaxy_shape_pop_gauss_local_ldata_read_row (NcGalaxyShapePopData *data, NcGalaxyWLObs *obs, const guint i)
 {
+  if (!ncm_catalog_has_column (NCM_CATALOG (obs), NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS) &&
+      ncm_catalog_has_column (NCM_CATALOG (obs), NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS_LEGACY))
+  {
+    static gboolean warned = FALSE;
+
+    if (!warned)
+    {
+      g_warning ("NcGalaxyShapePopGaussLocal: catalog has no '%s' column, falling back to the "
+                 "legacy '%s' column (same quantity, pre-rename name). Please redownload this "
+                 "catalog once an updated data release is available -- delete the cached file "
+                 "under %s and rerun.",
+                 NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS, NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS_LEGACY,
+                 ncm_cfg_get_fullpath_base ());
+      warned = TRUE;
+    }
+
+    data->e_rms = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS_LEGACY, i, NULL);
+
+    return;
+  }
+
   data->e_rms = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS, i, NULL);
 }
 
@@ -199,6 +230,12 @@ static gdouble
 _nc_galaxy_shape_pop_gauss_local_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 {
   return data->e_rms;
+}
+
+static gdouble
+_nc_galaxy_shape_pop_gauss_local_exponent_at_origin (NcGalaxyShapePop *gsp)
+{
+  return 1.0;
 }
 
 /**

@@ -139,15 +139,54 @@ math_tests = [
         'name': 'ncm_serialize',
         'sources': ['ncm/core/test_ncm_serialize.c'],
     },
+    # test_ncm_fit.c builds once per optimizer group rather than as one binary.
+    # `meson test --num-processes` cannot split a single executable, so as one
+    # target these took 177 s and set the whole C suite's wall clock on their
+    # own. The groups are independent and the source gates on TEST_FIT_* -- see
+    # the top of main() there. Undefined means all, so a hand build still runs
+    # everything.
     {
-        'name': 'ncm_fit',
+        'name': 'ncm_fit_nlopt',
         'sources': ['ncm/fit/test_ncm_fit.c'],
+        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_NLOPT'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_gsl_ls',
+        'sources': ['ncm/fit/test_ncm_fit.c'],
+        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_GSL_LS'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_gsl_mm',
+        'sources': ['ncm/fit/test_ncm_fit.c'],
+        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_GSL_MM'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_gsl_simplex',
+        'sources': ['ncm/fit/test_ncm_fit.c'],
+        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_GSL_SIMPLEX'],
+        'priority': 6,
+        'timeout': 0,
+    },
+    {
+        'name': 'ncm_fit_levmar',
+        'sources': ['ncm/fit/test_ncm_fit.c'],
+        'c_args': ['-DTEST_FIT_GROUP', '-DTEST_FIT_LEVMAR'],
         'priority': 6,
         'timeout': 0,
     },
     {
         'name': 'ncm_fit_state',
         'sources': ['ncm/fit/test_ncm_fit_state.c'],
+    },
+    {
+        'name': 'ncm_mset_trans_kern_gauss',
+        'sources': ['ncm/fit/test_ncm_mset_trans_kern_gauss.c'],
     },
     {
         'name': 'ncm_fit_esmcmc',
@@ -355,6 +394,10 @@ galaxy_tests = [
         'name': 'nc_galaxy_shape_pop_series',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c'],
     },
+    {
+        'name': 'nc_galaxy_position_factor',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_position_factor.c'],
+    },
 ]
 
 # Combine all test arrays
@@ -402,8 +445,10 @@ foreach c_test : all_c_tests
     endif
     test(
         c_test['name'],
-        executable_test,
-        args: test_seed_args,
+        test_is_omp ? omp_thread_wrapper : executable_test,
+        args: test_is_omp ? [executable_test.full_path()]
+        + test_seed_args : test_seed_args,
+        depends: test_is_omp ? [executable_test] : [],
         timeout: timeout,
         env: test_env,
         protocol: 'tap',

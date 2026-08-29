@@ -31,18 +31,16 @@
  *
  * Abstract calculator for the galaxy joint redshift distribution.
  *
- * A calculator (a plain #GObject, NOT an #NcmModel and NOT held in an #NcmMSet)
- * that produces the per-galaxy JOINT density $p(z_\mathrm{phot}, z \mid I)$ as a
- * function of the true redshift $z$. The calculator never integrates $z$ itself
- * for the likelihood: it hands out an integrand via
+ * A calculator that produces the per-galaxy JOINT density $p(z_\mathrm{phot}, z \mid
+ * I)$ as a function of the true redshift $z$. The calculator never integrates $z$
+ * itself for the likelihood: it hands out an integrand via
  * nc_galaxy_redshift_factor_integ(), and the orchestrator (#NcDataClusterWLFactor)
  * integrates that against every other $z$-dependent factor.
  *
- * Concrete schemes live as subclasses following the #NcPowspecML pattern
- * (abstract base owns the shared machinery once; each scheme owns its observed
- * fragment, engine and sampler). The redshift schemes are #NcGalaxyRedshiftFactorComposed
- * (a #NcGalaxyRedshiftPop slot convolved with a #NcGalaxyRedshiftObs slot) and
- * #NcGalaxyRedshiftFactorSpline (a per-galaxy pre-tabulated $p(z)$ spline).
+ * Concrete schemes live as subclasses. The redshift schemes are
+ * #NcGalaxyRedshiftFactorComposed (a #NcGalaxyRedshiftPop slot convolved with a
+ * #NcGalaxyRedshiftObs slot) and #NcGalaxyRedshiftFactorSpline (a per-galaxy
+ * pre-tabulated $p(z)$ spline).
  *
  */
 
@@ -155,6 +153,13 @@ _nc_galaxy_redshift_factor_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRe
   /* Default: nothing cached per-galaxy to refresh. */
 }
 
+static gchar *
+_nc_galaxy_redshift_factor_get_desc (NcGalaxyRedshiftFactor *gsdr)
+{
+  /* Default: no scheme-specific configuration to report. */
+  return g_strdup (G_OBJECT_TYPE_NAME (gsdr));
+}
+
 static void
 nc_galaxy_redshift_factor_class_init (NcGalaxyRedshiftFactorClass *klass)
 {
@@ -172,6 +177,7 @@ nc_galaxy_redshift_factor_class_init (NcGalaxyRedshiftFactorClass *klass)
   klass->make_fixed_nodes = &_nc_galaxy_redshift_factor_make_fixed_nodes;
   klass->get_hash         = &_nc_galaxy_redshift_factor_get_hash;
   klass->update_data      = &_nc_galaxy_redshift_factor_update_data;
+  klass->get_desc         = &_nc_galaxy_redshift_factor_get_desc;
 }
 
 /**
@@ -244,7 +250,8 @@ nc_galaxy_redshift_factor_data_write_row (NcGalaxyRedshiftFactorData *data, NcGa
  * nc_galaxy_redshift_factor_data_required_columns:
  * @data: a #NcGalaxyRedshiftFactorData
  *
- * Returns: (element-type utf8) (transfer full): the required columns for the galaxy redshift data.
+ * Returns: (element-type utf8) (transfer full): the required columns for the galaxy
+ * redshift data.
  */
 GList *
 nc_galaxy_redshift_factor_data_required_columns (NcGalaxyRedshiftFactorData *data)
@@ -265,9 +272,9 @@ nc_galaxy_redshift_factor_data_required_columns (NcGalaxyRedshiftFactorData *dat
  * @callback_data_prepare: (scope async) (closure callback_data): a #NcGalaxyRedshiftFactorIntegrandPrepareData
  * @callback_data: a gpointer
  *
- * Creates a new integrand for the galaxy redshift data. The integrand takes the
- * true redshift @z and the per-galaxy @data and returns the joint density (or
- * its natural logarithm) at @z.
+ * Creates a new integrand for the galaxy redshift data. The integrand takes the true
+ * redshift @z and the per-galaxy @data and returns the joint density (or its natural
+ * logarithm) at @z.
  *
  * Returns: (transfer full): a new #NcGalaxyRedshiftFactorIntegrand object.
  */
@@ -319,8 +326,8 @@ nc_galaxy_redshift_factor_clear (NcGalaxyRedshiftFactor **gsdr)
  * @mset: a #NcmMSet supplying the scheme's models
  *
  * Creates a new per-galaxy #NcGalaxyRedshiftFactorData for the scheme @gsdr,
- * delegating fragment allocation to the scheme via its data_init vfunc (which
- * reads the required models from @mset).
+ * delegating fragment allocation to the scheme via its data_init vfunc (which reads
+ * the required models from @mset).
  *
  * Returns: (transfer full): a new #NcGalaxyRedshiftFactorData.
  */
@@ -354,8 +361,8 @@ nc_galaxy_redshift_factor_data_new (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset)
  * @data: a #NcGalaxyRedshiftFactorData
  * @rng: a #NcmRNG
  *
- * Generates a new galaxy redshift sample into @data (draws the true redshift and
- * the redshift observation) using the models in @mset. The @data object must be
+ * Generates a new galaxy redshift sample into @data (draws the true redshift and the
+ * redshift observation) using the models in @mset. The @data object must be
  * initialized beforehand.
  *
  */
@@ -389,9 +396,8 @@ nc_galaxy_redshift_factor_gen1 (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcG
  * @gsdr: a #NcGalaxyRedshiftFactor
  * @mset: a #NcmMSet supplying the scheme's models
  *
- * Factory-level prepare: validates the scheme's models in @mset and
- * refreshes whatever it caches for efficient subsequent
- * nc_galaxy_redshift_factor_update_data() calls.
+ * Factory-level prepare: validates the scheme's models in @mset and refreshes whatever
+ * it caches for efficient subsequent nc_galaxy_redshift_factor_update_data() calls.
  *
  */
 void
@@ -405,8 +411,8 @@ nc_galaxy_redshift_factor_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset)
  * @gsdr: a #NcGalaxyRedshiftFactor
  *
  * Returns: an opaque value that changes whenever the last
- * nc_galaxy_redshift_factor_prepare() call refreshed something relevant
- * (default: a constant).
+ * nc_galaxy_redshift_factor_prepare() call refreshed something relevant (default: a
+ * constant).
  */
 guint64
 nc_galaxy_redshift_factor_get_hash (NcGalaxyRedshiftFactor *gsdr)
@@ -429,15 +435,26 @@ nc_galaxy_redshift_factor_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRed
 }
 
 /**
+ * nc_galaxy_redshift_factor_get_desc:
+ * @gsdr: a #NcGalaxyRedshiftFactor
+ *
+ * Returns: (transfer full): a human-readable one-line description of this scheme's own
+ * configuration (default: the concrete type name).
+ */
+gchar *
+nc_galaxy_redshift_factor_get_desc (NcGalaxyRedshiftFactor *gsdr)
+{
+  return NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->get_desc (gsdr);
+}
+
+/**
  * nc_galaxy_redshift_factor_integ:
  * @gsdr: a #NcGalaxyRedshiftFactor
  * @mset: a #NcmMSet supplying the scheme's models
  * @use_lnp: if %TRUE the integrand returns the natural logarithm of the density
  *
- * Builds the per-galaxy joint integrand $p(z_\mathrm{phot}, z \mid I)$ as a
- * function of the true redshift $z$, resolving the scheme's models from @mset.
- * The calculator does not integrate $z$: the returned integrand is consumed by
- * the orchestrator's single $z$-integral.
+ * Builds the per-galaxy joint integrand $p(z_\mathrm{phot}, z \mid I)$ as a function
+ * of the true redshift $z$, resolving the scheme's models from @mset.
  *
  * Returns: (transfer full): a new #NcGalaxyRedshiftFactorIntegrand.
  */
@@ -455,9 +472,9 @@ nc_galaxy_redshift_factor_integ (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, gb
  * @z_min: (out): the minimum redshift for integration
  * @z_max: (out): the maximum redshift for integration
  *
- * Gets the effective redshift integration support for @data: the range over
- * which the per-galaxy $p(z)$ factor is non-negligible. This is the domain used
- * by both the fixed-node and adaptive quadratures.
+ * Gets the effective redshift integration support for @data: the range over which the
+ * per-galaxy $p(z)$ factor is non-negligible. This is the domain used by both the
+ * fixed-node and adaptive quadratures.
  *
  */
 void
@@ -472,9 +489,9 @@ nc_galaxy_redshift_factor_get_integ_lim (NcGalaxyRedshiftFactor *gsdr, NcmMSet *
  * @mset: a #NcmMSet
  * @data: a #NcGalaxyRedshiftFactorData
  *
- * Computes the normalization $\int p(z_\mathrm{phot}, z \mid I)\, \mathrm{d}z$
- * over the integration support (standalone/population facet, not the per-galaxy
- * likelihood path).
+ * Computes the normalization $\int p(z_\mathrm{phot}, z \mid I)\, \mathrm{d}z$ over
+ * the integration support (standalone/population facet, not the per-galaxy likelihood
+ * path).
  *
  * Returns: the normalization integral.
  */
@@ -494,8 +511,8 @@ nc_galaxy_redshift_factor_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcG
  * @n_nodes: the number of sub-intervals
  * @rule_n: the fixed rule order per sub-interval
  *
- * Builds the fixed integration nodes over [@z_lo, @z_hi] used to marginalize the
- * true redshift.
+ * Builds the fixed integration nodes over [@z_lo, @z_hi] used to marginalize the true
+ * redshift.
  *
  * Returns: (transfer full): a new #NcmIntegralFixed.
  */

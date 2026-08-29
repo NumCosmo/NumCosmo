@@ -32,6 +32,8 @@ VarAdd's map-linearization approximation becomes exact).
 """
 
 import math
+import subprocess
+import sys
 
 import pytest
 import numpy as np
@@ -95,7 +97,7 @@ def _scipy_exact_marginal(pop, pop_data, ellip_conv, g, eps_obs, std_noise):
 
     def integrand(r, theta):
         chi = r * np.exp(1j * theta)
-        p_pop = pop.eval_p(pop_data, chi.real**2 + chi.imag**2) / np.pi
+        p_pop = pop.eval_p(pop_data, abs(chi)) / (2.0 * np.pi * abs(chi))
         delta = eps_obs - _shear_map(ellip_conv, g, chi)
         noise = np.exp(-(delta.real**2 + delta.imag**2) / (2 * std_noise**2)) / (
             2 * np.pi * std_noise**2
@@ -249,26 +251,19 @@ def test_marginal_matches_scipy_truth_table_narrow_trace_convention():
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_marginal_matches_scipy_truth_table_beta_peaked_off_center(ellip_conv):
-    """Sanity/non-regression test for the Beta mode_x hint: places eps_obs
-    exactly at the forward image of the population's peak ring (mu=0.7,
-    nu=1000 -> mode_x != 0, peak away from chi_I=0), with noise narrow enough
-    that landing near the true peak matters. Divonne's own search from the
-    two chi_I=0-based hints already resolves this case (verified directly,
-    not merely inferred from this test passing); the third, mode_x-based
-    hint is a documented safety margin rather than something this specific
-    case demonstrates as load-bearing -- see the class doc."""
-    mu, nu, std_noise = 0.7, 1.0e3, 0.02
+    """Places eps_obs at the population's peak ring (mode(r) != 0) to
+    sanity-check the mode hint; not itself proof the hint is load-bearing
+    (see class doc)."""
+    alpha, beta, std_noise = 700.0, 300.0, 0.02
     g = 0.1 + 0.05j
     theta = 0.3
 
     pop = Nc.GalaxyShapePopBeta.new()
-    pop["mu"] = mu
-    pop["nu"] = nu
+    pop["alpha"] = alpha
+    pop["beta"] = beta
     mset = _build_mset(pop)
 
-    alpha, beta = mu * nu, (1.0 - mu) * nu
-    mode_x = (alpha - 1.0) / (alpha + beta - 2.0)
-    rho_mode = np.sqrt(mode_x)
+    rho_mode = (alpha - 1.0) / (alpha + beta - 2.0)
     chi_i_peak = rho_mode * np.exp(1j * theta)
     eps_obs = _shear_map(ellip_conv, g, chi_i_peak)
 
@@ -292,8 +287,8 @@ def test_marginal_matches_scipy_truth_table_concentrated_beta():
     beyond where the old per-factor pow()/norm evaluation would overflow to
     NaN (see nc_galaxy_shape_pop_beta.c), integrates correctly through Quad."""
     pop = Nc.GalaxyShapePopBeta.new()
-    pop["mu"] = 0.3
-    pop["nu"] = 1.0e3
+    pop["alpha"] = 300.0
+    pop["beta"] = 700.0
     mset = _build_mset(pop)
 
     gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
@@ -309,6 +304,38 @@ def test_marginal_matches_scipy_truth_table_concentrated_beta():
     )
 
     assert_allclose(quad_val, exact_val, rtol=1.0e-4)
+
+
+def test_marginal_alpha_below_one_accuracy():
+    """Quad used to lose accuracy vs scipy near g~0.18 for alpha<2 Beta
+    populations (P(x) divergent at x=0 in the old chi_L-plane substitution).
+    The psi-reparametrization + puncture correction (see the class doc)
+    fixed this as a side effect -- it never singles out alpha<2 as a special
+    case, it just makes the integrand finite everywhere. Pins the fix
+    against regression."""
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = 1.2
+    pop["beta"] = 4.0
+    mset = _build_mset(pop)
+
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
+    std_noise = 0.03
+    eps_obs = 0.15 - 0.1j
+
+    gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsfq, mset)
+    gsfq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsfq.prepare_data_array(mset, [data], True, True)
+
+    g = 0.18 + 0.0j
+    quad_val = gsfq.eval_marginal(pop, data, g.real, g.imag, eps_obs.real, eps_obs.imag)
+    exact_val = _scipy_exact_marginal(
+        pop, data.pop_data, ellip_conv, g, eps_obs, std_noise
+    )
+
+    assert_allclose(quad_val, exact_val, rtol=1.0e-5)
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
@@ -355,33 +382,28 @@ def test_required_columns():
         assert col in cols
 
 
-def test_bound_reltol_properties():
-    """bound/reltol getters and setters round-trip."""
+def test_reltol_property():
+    """reltol getter/setter round-trip. (bound was removed: Quad integrates
+    psi in exact, finite polar coordinates now, with no box to size -- see
+    the class doc.)"""
     gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE)
 
-    assert gsfq.get_bound() == 8.0
     assert gsfq.get_reltol() == pytest.approx(1.0e-7)
 
-    gsfq.set_bound(12.0)
     gsfq.set_reltol(1.0e-9)
-    assert gsfq.get_bound() == 12.0
     assert gsfq.get_reltol() == pytest.approx(1.0e-9)
 
 
-def test_bound_reltol_gobject_property_round_trip():
-    """bound/reltol are also reachable through the GObject property system
-    (get_property/set_property), not just the plain getter/setter wrappers
-    already checked by test_bound_reltol_properties."""
+def test_reltol_gobject_property_round_trip():
+    """reltol is also reachable through the GObject property system
+    (get_property/set_property), not just the plain getter/setter wrapper
+    already checked by test_reltol_property."""
     gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE)
 
-    assert gsfq.get_property("bound") == gsfq.get_bound()
     assert gsfq.get_property("reltol") == pytest.approx(gsfq.get_reltol())
 
-    gsfq.set_property("bound", 15.0)
     gsfq.set_property("reltol", 1.0e-8)
-    assert gsfq.get_bound() == 15.0
     assert gsfq.get_reltol() == pytest.approx(1.0e-8)
-    assert gsfq.get_property("bound") == 15.0
     assert gsfq.get_property("reltol") == pytest.approx(1.0e-8)
 
 
@@ -464,6 +486,94 @@ def test_converges_to_var_add_as_shear_shrinks(ellip_conv):
     # smallest, and the weak-shear limit must be tight.
     assert rel_diffs[0] > 5.0 * rel_diffs[-1]
     assert rel_diffs[-1] < 1.0e-2
+
+
+def test_refine_theta_handles_non_positive_curvature_seed():
+    """The third peak hint (mode_r != 0) refines its seed theta with 3
+    Newton steps on |eps_obs-f_g(rho_mode e^{i theta})|^2
+    (_nc_galaxy_shape_factor_quad_refine_theta()); when eps_obs sits almost
+    exactly on the naive preimage's phase ambiguity (|eps_obs| tiny relative
+    to rho_mode, off to one side of the ring), the seed can land where the
+    local curvature along theta is non-positive. The refinement must bail
+    out (keep the current estimate) rather than divide by a non-positive
+    Hessian -- the hint is only ever a peak SEED for Divonne, so this
+    doesn't affect correctness, confirmed here against the scipy truth
+    table."""
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = 21.3
+    pop["beta"] = 2.0
+    mset = _build_mset(pop)
+
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
+    gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsfq, mset)
+    std_noise = 0.2
+    gsfq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsfq.prepare_data_array(mset, [data], True, True)
+
+    g = -0.27785970298908774 - 0.20791178352893003j
+    eps_obs = -0.0867183182993671 + 1.4807498901736667e-05j
+
+    quad_val = gsfq.eval_marginal(pop, data, g.real, g.imag, eps_obs.real, eps_obs.imag)
+    exact_val = _scipy_exact_marginal(
+        pop, data.pop_data, ellip_conv, g, eps_obs, std_noise
+    )
+
+    assert_allclose(quad_val, exact_val, rtol=2.0e-4)
+
+
+def test_eval_direct_matches_eval_marginal():
+    """eval_direct() is a self-contained convenience wrapper (builds and
+    prepares its own NcGalaxyShapePopData internally) around the same
+    computation eval_marginal() performs against a caller-supplied,
+    already-prepared one; the two must agree exactly."""
+    pop = Nc.GalaxyShapePopBeta.new()
+    pop["alpha"] = 5.0
+    pop["beta"] = 3.0
+    mset = _build_mset(pop)
+
+    ellip_conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
+    gsfq = Nc.GalaxyShapeFactorQuad.new(ellip_conv)
+    data, _, _ = _build_factor_data(gsfq, mset)
+    std_noise = 0.2
+    gsfq.data_set(
+        data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    gsfq.prepare_data_array(mset, [data], True, True)
+
+    g_1, g_2, eps_obs_1, eps_obs_2 = 0.1, -0.05, 0.15, 0.1
+    val_marginal = gsfq.eval_marginal(pop, data, g_1, g_2, eps_obs_1, eps_obs_2)
+    val_direct = gsfq.eval_direct(pop, g_1, g_2, eps_obs_1, eps_obs_2, std_noise)
+
+    assert_allclose(val_direct, val_marginal, rtol=1.0e-12)
+
+
+def test_eval_marginal_rejects_eps_obs_at_or_beyond_unit_disc():
+    """Unlike FixedQuad, Quad has no fallback for |eps_obs|>=1
+    (shear_at_origin() requires strictly inside the disc): it fails loudly
+    with a fatal g_error rather than returning a wrong answer, so this is
+    checked in a subprocess (see test_galaxy_shape_factor_cgf.py's
+    test_non_gaussian_population_gate for the same pattern)."""
+    script = (
+        "from numcosmo_py import Nc, Ncm\n"
+        "Ncm.cfg_init()\n"
+        "pop = Nc.GalaxyShapePopGauss.new()\n"
+        "pop['sigma'] = 0.2\n"
+        "data = Nc.GalaxyShapePopData.new(pop)\n"
+        "pop.prepare(data)\n"
+        "gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)\n"
+        "gsfq.eval_direct(pop, 0.05, 0.0, 1.2, 0.0, 0.2)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "outside this class' valid domain" in result.stderr
 
 
 if __name__ == "__main__":

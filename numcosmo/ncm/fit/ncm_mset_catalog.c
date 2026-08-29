@@ -76,6 +76,7 @@
 typedef struct _NcmMSetCatalogPrivate
 {
   NcmMSet *mset;
+  NcmObjArray *functions;
   guint nadd_vals;
   gint m2lnp_var;
   NcmVector *bestfit_row;
@@ -180,6 +181,7 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   self->mset           = NULL;
+  self->functions      = NULL;
   self->nadd_vals      = 0;
   self->m2lnp_var      = -1;
   self->bestfit_row    = NULL;
@@ -519,6 +521,7 @@ _ncm_mset_catalog_dispose (GObject *object)
   g_clear_pointer (&self->order_cat, g_ptr_array_unref);
 
   ncm_mset_clear (&self->mset);
+  ncm_obj_array_clear (&self->functions);
   ncm_rng_clear (&self->rng);
   ncm_stats_vec_clear (&self->pstats);
   ncm_vector_clear (&self->params_max);
@@ -847,6 +850,54 @@ ncm_mset_catalog_new_from_file_ro (const gchar *filename, glong burnin)
 }
 
 /**
+ * ncm_mset_catalog_peek_info_from_file:
+ * @filename: filename of the catalog fits
+ * @nrows: (out): number of rows (samples) currently in the catalog
+ * @nchains: (out): number of chains (walkers) in the catalog
+ * @first_id: (out): id of the first element in the catalog
+ *
+ * Peeks basic bookkeeping information from @filename without fully loading
+ * it: no model-set deserialization and no per-chain stats allocation
+ * happen, only a few FITS header keys are read. Useful to translate a
+ * burnin/tail request from iterations to rows -- see
+ * ncm_mset_catalog_set_burnin() -- before paying the cost of actually
+ * opening the catalog with ncm_mset_catalog_new_from_file_ro().
+ *
+ */
+void
+ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint *nchains, gint *first_id)
+{
+#ifdef HAVE_CFITSIO
+  fitsfile *fptr = NULL;
+  gint status    = 0;
+  gint nchains_i = 0;
+
+  fits_open_file (&fptr, filename, READONLY, &status);
+  NCM_FITS_ERROR (status);
+
+  fits_movnam_hdu (fptr, BINARY_TBL, NCM_MSET_CATALOG_EXTNAME, 0, &status);
+  NCM_FITS_ERROR (status);
+
+  fits_read_key (fptr, TINT, NCM_MSET_CATALOG_FIRST_ID_LABEL, first_id, NULL, &status);
+  NCM_FITS_ERROR (status);
+
+  fits_read_key (fptr, TINT, NCM_MSET_CATALOG_NCHAINS_LABEL, &nchains_i, NULL, &status);
+  NCM_FITS_ERROR (status);
+  g_assert_cmpint (nchains_i, >, 0);
+  *nchains = (guint) nchains_i;
+
+  fits_get_num_rows (fptr, nrows, &status);
+  NCM_FITS_ERROR (status);
+
+  fits_close_file (fptr, &status);
+  NCM_FITS_ERROR (status);
+
+#else
+  g_error ("ncm_mset_catalog_peek_info_from_file: cannot read file without cfitsio.");
+#endif /* HAVE_CFITSIO */
+}
+
+/**
  * ncm_mset_catalog_ref:
  * @mcat: a #NcmMSetCatalog
  *
@@ -1106,19 +1157,34 @@ _ncm_mset_catalog_sync_rng (NcmMSetCatalog *mcat)
 }
 
 /*
- * Writes @mset as a binary GVariant (the same representation used by
- * ncm_serialize_to_binfile()) into the primary HDU (HDU0) of @fptr, which
- * must have just been created by fits_create_file() and hold no data yet.
- * This must happen before any table extension is created, since resizing
- * the primary HDU later on would require shifting every following HDU.
+ * Writes @mset (and, if non-%NULL, @functions) into the primary HDU (HDU0)
+ * of @fptr, which must have just been created by fits_create_file() and
+ * hold no data yet. This must happen before any table extension is
+ * created, since resizing the primary HDU later on would require shifting
+ * every following HDU.
+ *
+ * The envelope is a #NcmVarDict with a "model-set" entry (always) and a
+ * "functions" entry (only when @functions is given), so the catalog file
+ * is self-sufficient: it carries both the model-set and, when applicable,
+ * the #NcmMSetFunc array that computed its extra columns, with no need for
+ * a companion experiment or functions file to make sense of it.
  */
 static void
-_ncm_mset_catalog_write_mset_hdu0 (fitsfile *fptr, NcmMSet *mset)
+_ncm_mset_catalog_write_hdu0 (fitsfile *fptr, NcmMSet *mset, NcmObjArray *functions)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  GVariant *var     = ncm_serialize_to_variant (ser, G_OBJECT (mset));
-  glong naxes[1]    = { (glong) g_variant_get_size (var) };
-  gint status       = 0;
+  NcmVarDict *vd    = ncm_var_dict_new ();
+  GVariant *var;
+  glong naxes[1];
+  gint status = 0;
+
+  ncm_var_dict_set_object (vd, NCM_MSET_CATALOG_HDU0_MSET_KEY, ser, G_OBJECT (mset));
+
+  if (functions != NULL)
+    ncm_var_dict_set_object_array (vd, NCM_MSET_CATALOG_HDU0_FUNCTIONS_KEY, ser, functions);
+
+  var      = ncm_serialize_var_dict_to_variant (ser, vd);
+  naxes[0] = (glong) g_variant_get_size (var);
 
   fits_create_img (fptr, BYTE_IMG, 1, naxes, &status);
   NCM_FITS_ERROR (status);
@@ -1126,28 +1192,34 @@ _ncm_mset_catalog_write_mset_hdu0 (fitsfile *fptr, NcmMSet *mset)
   fits_write_img (fptr, TBYTE, 1, naxes[0], (gpointer) g_variant_get_data (var), &status);
   NCM_FITS_ERROR (status);
 
-  fits_write_key_str (fptr, NCM_MSET_CATALOG_MSET_FORMAT_LABEL, "gvariant",
-                      "Format of the NcmMSet stored in this HDU.", &status);
+  fits_write_key_str (fptr, NCM_MSET_CATALOG_MSET_FORMAT_LABEL, NCM_MSET_CATALOG_MSET_FORMAT_VARDICT,
+                      "Format of the data stored in this HDU.", &status);
   NCM_FITS_ERROR (status);
 
   g_variant_unref (var);
+  ncm_var_dict_unref (vd);
   ncm_serialize_free (ser);
 }
 
 /*
- * Reads back an NcmMSet embedded by _ncm_mset_catalog_write_mset_hdu0(), if
- * any. Returns %NULL for legacy files whose primary HDU is the default empty
- * one (no data written to HDU0).
+ * Reads back the NcmMSet (and, if present, the functions array) embedded
+ * by _ncm_mset_catalog_write_hdu0(), if any. Leaves both out parameters
+ * %NULL for legacy files whose primary HDU is the default empty one (no
+ * data written to HDU0). Understands both the current vardict format and
+ * the older bare-mset-object format (pre-existing catalogs that only ever
+ * embedded the model-set).
  */
-static NcmMSet *
-_ncm_mset_catalog_read_mset_hdu0 (fitsfile *fptr)
+static void
+_ncm_mset_catalog_read_hdu0 (fitsfile *fptr, NcmMSet **mset, NcmObjArray **functions)
 {
   gint status    = 0;
   gint bitpix    = 0;
   gint naxis     = 0;
   gint hdutype   = 0;
   glong naxes[1] = { 0 };
-  NcmMSet *mset  = NULL;
+
+  *mset      = NULL;
+  *functions = NULL;
 
   fits_movabs_hdu (fptr, 1, &hdutype, &status);
   NCM_FITS_ERROR (status);
@@ -1160,42 +1232,80 @@ _ncm_mset_catalog_read_mset_hdu0 (fitsfile *fptr)
     const glong len = naxes[0];
     guint8 *data    = g_malloc (len);
     gint any_null   = 0;
+    gchar format[FLEN_VALUE];
     NcmSerialize *ser;
-    GVariant *var;
 
     fits_read_img (fptr, TBYTE, 1, len, NULL, data, &any_null, &status);
     NCM_FITS_ERROR (status);
 
-    var = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE),
-                                   data, len, TRUE, g_free, data);
+    fits_read_key (fptr, TSTRING, NCM_MSET_CATALOG_MSET_FORMAT_LABEL, format, NULL, &status);
 
-    ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-    mset = NCM_MSET (ncm_serialize_from_variant (ser, var));
+    if (status == KEY_NO_EXIST)
+    {
+      status = 0;
+      g_strlcpy (format, NCM_MSET_CATALOG_MSET_FORMAT_OBJECT, sizeof (format));
+    }
+
+    NCM_FITS_ERROR (status);
+
+    ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+
+    if (strcmp (format, NCM_MSET_CATALOG_MSET_FORMAT_VARDICT) == 0)
+    {
+      GVariant *var = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE),
+                                               data, len, TRUE, g_free, data);
+      NcmVarDict *vd    = ncm_serialize_var_dict_from_variant (ser, var);
+      GObject *mset_obj = NULL;
+
+      if (!ncm_var_dict_get_object (vd, NCM_MSET_CATALOG_HDU0_MSET_KEY, ser, &mset_obj))
+        g_error ("_ncm_mset_catalog_read_hdu0: HDU0 vardict has no `%s' entry.",
+                 NCM_MSET_CATALOG_HDU0_MSET_KEY);
+
+      g_assert (NCM_IS_MSET (mset_obj));
+      *mset = NCM_MSET (mset_obj);
+      ncm_var_dict_get_object_array (vd, NCM_MSET_CATALOG_HDU0_FUNCTIONS_KEY, ser, functions);
+
+      ncm_var_dict_unref (vd);
+      g_variant_unref (var);
+    }
+    else if (strcmp (format, NCM_MSET_CATALOG_MSET_FORMAT_OBJECT) == 0)
+    {
+      GVariant *var = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE),
+                                               data, len, TRUE, g_free, data);
+      GObject *mset_obj = ncm_serialize_from_variant (ser, var);
+
+      g_assert (NCM_IS_MSET (mset_obj));
+      *mset = NCM_MSET (mset_obj);
+      g_variant_unref (var);
+    }
+    else
+    {
+      g_error ("_ncm_mset_catalog_read_hdu0: unknown HDU0 format `%s'.", format);
+    }
+
     ncm_serialize_free (ser);
-
-    g_variant_unref (var);
   }
-
-  return mset;
 }
 
 /*
- * Resolves the NcmMSet for a catalog being loaded from an existing file: the
- * mset embedded in HDU0 if present, otherwise the legacy `.mset' GKeyFile
- * sidecar (read-only support; new catalogs no longer write that file).
+ * Resolves the NcmMSet (and functions array, if any) for a catalog being
+ * loaded from an existing file: the ones embedded in HDU0 if present,
+ * otherwise the legacy `.mset' GKeyFile sidecar for the mset (read-only
+ * support; new catalogs no longer write that file) and no functions.
  */
 static NcmMSet *
 _ncm_mset_catalog_load_mset (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   NcmMSet *mset               = NULL;
+  NcmObjArray *functions      = NULL;
   fitsfile *fptr              = NULL;
   gint status                 = 0;
 
   fits_open_file (&fptr, self->file, READONLY, &status);
   NCM_FITS_ERROR (status);
 
-  mset = _ncm_mset_catalog_read_mset_hdu0 (fptr);
+  _ncm_mset_catalog_read_hdu0 (fptr, &mset, &functions);
 
   fits_close_file (fptr, &status);
   NCM_FITS_ERROR (status);
@@ -1214,6 +1324,9 @@ _ncm_mset_catalog_load_mset (NcmMSetCatalog *mcat)
       ncm_serialize_free (ser);
     }
   }
+
+  ncm_obj_array_clear (&self->functions);
+  self->functions = functions;
 
   return mset;
 }
@@ -1324,8 +1437,9 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
     NCM_FITS_ERROR (status);
 
     if (nrows < self->burnin)
-      g_error ("_ncm_mset_catalog_open_create_file: burnin larger than the catalogue size %ld <=> %ld",
-               self->burnin, nrows);
+      g_error ("_ncm_mset_catalog_open_create_file: burnin of %ld row(s) exceeds "
+               "catalog `%s' (%ld row(s), %u chain(s), i.e. %ld iteration(s)).",
+               self->burnin, self->file, nrows, self->nchains, nrows / self->nchains);
     else
       nrows -= self->burnin;
 
@@ -1533,7 +1647,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
     fits_create_file (&self->fptr, self->file, &status);
     NCM_FITS_ERROR (status);
 
-    _ncm_mset_catalog_write_mset_hdu0 (self->fptr, self->mset);
+    _ncm_mset_catalog_write_hdu0 (self->fptr, self->mset, self->functions);
 
     for (i = 0; i < self->nadd_vals; i++)
     {
@@ -1845,6 +1959,18 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
  *
  * Sets the random number generator.
  *
+ * A non-empty catalog already carries its own persisted RNG state to
+ * continue from (restored automatically on file load, see
+ * ncm_mset_catalog_peek_rng()) -- callers resuming a run must not call this
+ * at all and let that state take over. Calling it anyway (e.g. reusing an
+ * explicit seed on a resumed run) would silently discard the persisted
+ * state and restart the stream from scratch, so every "new" row generated
+ * from the replayed prefix of the stream would exactly duplicate a row
+ * already in the catalog -- a silent data-corruption footgun, not merely a
+ * cosmetic issue, so this aborts instead of warning (see, e.g., a resumed
+ * NcmFitMC run bit-for-bit duplicating its own first N rows into rows
+ * N+1..2N).
+ *
  */
 void
 ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
@@ -1852,8 +1978,10 @@ ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   if (!ncm_mset_catalog_is_empty (mcat))
-    g_warning ("ncm_mset_catalog_set_rng: setting RNG in a non-empty catalog, catalog first id: %d, catalog current id: %d.",
-               self->first_id, self->cur_id);
+    g_error ("ncm_mset_catalog_set_rng: refusing to set RNG in a non-empty catalog (first id: %d, current id: %d) -- "
+             "this would discard the persisted RNG state and replay already-computed rows. "
+             "Do not pass an explicit RNG/seed when resuming; the catalog's own persisted state is used automatically.",
+             self->first_id, self->cur_id);
 
   self->rng = ncm_rng_ref (rng);
 
@@ -3110,6 +3238,47 @@ ncm_mset_catalog_peek_mset (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   return self->mset;
+}
+
+/**
+ * ncm_mset_catalog_set_functions_array:
+ * @mcat: a #NcmMSetCatalog
+ * @functions: (nullable): a #NcmObjArray of #NcmMSetFunc computing @mcat's extra columns
+ *
+ * Sets the array of functions used to compute @mcat's extra columns, so it is
+ * embedded alongside the model-set the next time @mcat's primary HDU is
+ * written, making the catalog file self-sufficient (no companion functions
+ * file needed to know what those columns mean). Must be called before
+ * ncm_mset_catalog_set_file() creates a new catalog file.
+ *
+ */
+void
+ncm_mset_catalog_set_functions_array (NcmMSetCatalog *mcat, NcmObjArray *functions)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  ncm_obj_array_clear (&self->functions);
+
+  if (functions != NULL)
+    self->functions = ncm_obj_array_ref (functions);
+}
+
+/**
+ * ncm_mset_catalog_peek_functions_array:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Gets the array of functions used to compute @mcat's extra columns, either
+ * set through ncm_mset_catalog_set_functions_array() or read back from the
+ * catalog file's primary HDU.
+ *
+ * Returns: (transfer none) (nullable): the #NcmObjArray of #NcmMSetFunc, or %NULL if none.
+ */
+NcmObjArray *
+ncm_mset_catalog_peek_functions_array (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  return self->functions;
 }
 
 /**

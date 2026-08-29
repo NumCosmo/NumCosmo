@@ -46,6 +46,7 @@
 #include "ncm/mpi/ncm_mpi_job_mcmc.h"
 #include "ncm/mpi/ncm_mpi_job_feval.h"
 #include "ncm/algebra/ncm_vector.h"
+#include "ncm/spline/ncm_spline_bspline.h"
 #include "ncm/spline/ncm_spline_gsl.h"
 #include "ncm/spline/ncm_spline_cubic.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
@@ -62,6 +63,7 @@
 #include "ncm/powspec/ncm_powspec_filter.h"
 #include "ncm/powspec/ncm_powspec_sphere_proj.h"
 #include "ncm/powspec/ncm_powspec_spline2d.h"
+#include "ncm/powspec/tests/ncm_powspec_analytic.h"
 #include "ncm/powspec/ncm_powspec.h"
 #include "ncm/model/ncm_model.h"
 #include "ncm/model/ncm_model_ctrl.h"
@@ -96,7 +98,7 @@
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
 #include "ncm/fftlog/ncm_fftlog_sbessel_j.h"
 #include "ncm/fftlog/ncm_fftlog_sbessel_jljm.h"
-#include "ncm/sphere/ncm_spectral.h"
+#include "ncm/algebra/ncm_spectral.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/cmb/nc_cbe_precision.h"
 #include "nc/background/nc_hicosmo_qconst.h"
@@ -152,6 +154,7 @@
 #include "nc/lss/halo/nc_multiplicity_func_tinker_mean_normalized.h"
 #include "nc/lss/halo/nc_multiplicity_func_crocce.h"
 #include "nc/lss/halo/nc_multiplicity_func_bocquet.h"
+#include "nc/lss/halo/nc_multiplicity_func_castro.h"
 #include "nc/lss/halo/nc_multiplicity_func_despali.h"
 #include "nc/lss/halo/nc_multiplicity_func_watson.h"
 #include "nc/lss/halo/nc_multiplicity_func_bhattacharya.h"
@@ -170,6 +173,7 @@
 #include "nc/lss/cluster/nc_cluster_redshift_nodist.h"
 #include "nc/lss/cluster/nc_cluster_photoz_gauss_global.h"
 #include "nc/lss/cluster/nc_cluster_photoz_gauss.h"
+#include "nc/lss/halo/nc_halo_bias_castro.h"
 #include "nc/lss/halo/nc_halo_bias_despali.h"
 #include "nc/lss/halo/nc_halo_bias_ps.h"
 #include "nc/lss/halo/nc_halo_bias_st_ellip.h"
@@ -248,14 +252,26 @@
 #include "nc/data/nc_data_planck_lkl.h"
 #include "nc/xcor/nc_xcor.h"
 #include "nc/xcor/nc_xcor_AB.h"
+#include "nc/xcor/nc_xcor_solver.h"
+#include "nc/xcor/nc_xcor_ssc_sij.h"
 #include "nc/xcor/nc_xcor_kernel.h"
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor_kernel_gal.h"
 #include "nc/xcor/nc_xcor_kernel_cluster.h"
 #include "nc/xcor/nc_xcor_kernel_cluster_tophat.h"
+#include "nc/xcor/nc_xcor_kernel_cmb_isw.h"
 #include "nc/xcor/nc_xcor_kernel_CMB_lensing.h"
 #include "nc/xcor/nc_xcor_kernel_weak_lensing.h"
 #include "nc/xcor/nc_xcor_kernel_tSZ.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_kdep.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_gauss.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_tophat.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_multi.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_student_t.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_power_exp.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_tophat_smooth.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_lensing.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
@@ -384,6 +400,7 @@ void _nc_distance_register_functions (void);
 void _nc_planck_fi_cor_tt_register_functions (void);
 void _nc_hicosmo_de_wspline_register_functions (void);
 void _nc_hicosmo_qspline_register_functions (void);
+void _nc_galaxy_shape_pop_beta_register_functions (void);
 
 #ifdef HAVE_MPI
 static void _ncm_cfg_mpi_main_loop (void);
@@ -641,6 +658,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_D2);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE_BSPLINE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_GSL);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_VEC);
   ncm_cfg_register_obj (NCM_TYPE_FUNCTION_SAMPLE_SET);
@@ -667,6 +685,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_ANALYTIC);
 
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);
@@ -787,6 +806,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BOCQUET);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CASTRO);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_WATSON);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_BHATTACHARYA);
@@ -811,6 +831,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
 
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_CASTRO);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_DESPALI);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_PS);
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_ST_ELLIP);
@@ -909,13 +930,26 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
 
   ncm_cfg_register_obj (NC_TYPE_XCOR);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_SOLVER);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_SSC_SIJ);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_COMPONENT);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_KDEP);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_TOPHAT);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_MULTI);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_STUDENT_T);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_POWER_EXP);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_TOPHAT_SMOOTH);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_LENSING);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_GAL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER_TOPHAT);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_TSZ);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CMB_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CMB_ISW);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
@@ -946,6 +980,7 @@ ncm_cfg_register_functions (void)
     _nc_planck_fi_cor_tt_register_functions ();
     _nc_hicosmo_de_wspline_register_functions ();
     _nc_hicosmo_qspline_register_functions ();
+    _nc_galaxy_shape_pop_beta_register_functions ();
 
     g_once_init_leave (&_functions_initialized, TRUE);
   }
@@ -1897,6 +1932,19 @@ G_LOCK_DEFINE_STATIC (fftw_saveload_lock);
 
 G_LOCK_DEFINE_STATIC (fftw_plan_lock);
 
+/* Every ncm_cfg_load_fftw_wisdom()/ncm_cfg_save_fftw_wisdom() call reads
+ * and writes the *same* file regardless of the @filename argument (see
+ * "overwrite, unifying wisdom" below) -- so within one process, re-loading
+ * it after the first successful load is a pure no-op (FFTW's wisdom
+ * registry is global and cumulative; parsing the same file content again
+ * teaches it nothing new), and re-saving is only useful if new wisdom was
+ * actually learned since the last save. Both guards are protected by
+ * fftw_saveload_lock, held for the whole body of both functions. */
+static gboolean _wisdom_loaded_d = FALSE;
+static gboolean _wisdom_loaded_f = FALSE;
+static gchar *_wisdom_saved_d    = NULL;
+static gchar *_wisdom_saved_f    = NULL;
+
 /**
  * ncm_cfg_lock_plan_fftw:
  *
@@ -1946,6 +1994,16 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 
   G_LOCK (fftw_saveload_lock);
 
+  if (_wisdom_loaded_d && _wisdom_loaded_f)
+  {
+    /* Already loaded once this process -- FFTW's wisdom registry is
+     * global and cumulative, so re-parsing the same file again would
+     * teach it nothing new. */
+    G_UNLOCK (fftw_saveload_lock);
+
+    return TRUE;
+  }
+
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
@@ -1956,10 +2014,15 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
-  if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
+  if (!_wisdom_loaded_d)
   {
-    fftw_import_wisdom_from_filename (full_filename);
-    ret = TRUE;
+    if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
+    {
+      fftw_import_wisdom_from_filename (full_filename);
+      ret = TRUE;
+    }
+
+    _wisdom_loaded_d = TRUE;
   }
 
 #ifdef HAVE_FFTW3F
@@ -1969,12 +2032,19 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   file_ext      = g_strdup_printf ("%s.fftw3f", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
-  if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
+  if (!_wisdom_loaded_f)
   {
-    fftwf_import_wisdom_from_filename (full_filename);
-    ret = TRUE;
+    if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
+    {
+      fftwf_import_wisdom_from_filename (full_filename);
+      ret = TRUE;
+    }
+
+    _wisdom_loaded_f = TRUE;
   }
 
+#else
+  _wisdom_loaded_f = TRUE; /* no single-precision FFTW3 build, nothing to load */
 #endif
 
   g_free (file);
@@ -2025,18 +2095,27 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 
     if (wisdom_str != NULL)
     {
-      gssize len  = strlen (wisdom_str);
-      gboolean OK = FALSE;
+      if ((_wisdom_saved_d != NULL) && g_str_equal (_wisdom_saved_d, wisdom_str))
+      {
+        /* Nothing learned since the last save -- skip the rewrite. */
+        g_free (wisdom_str);
+      }
+      else
+      {
+        gssize len  = strlen (wisdom_str);
+        gboolean OK = FALSE;
 
 #if GLIB_CHECK_VERSION (2, 66, 0)
-      OK = g_file_set_contents_full (full_filename, wisdom_str, len,
-                                     G_FILE_SET_CONTENTS_CONSISTENT,
-                                     0666, NULL);
+        OK = g_file_set_contents_full (full_filename, wisdom_str, len,
+                                       G_FILE_SET_CONTENTS_CONSISTENT,
+                                       0666, NULL);
 #else /* GLIB_CHECK_VERSION (2, 66, 0) */
-      OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
+        OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
 #endif /* GLIB_CHECK_VERSION (2, 66, 0) */
-      g_assert (OK);
-      g_free (wisdom_str);
+        g_assert (OK);
+        g_free (_wisdom_saved_d);
+        _wisdom_saved_d = wisdom_str; /* keep as the new comparison baseline */
+      }
     }
   }
 
@@ -2052,20 +2131,28 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 
     if (wisdom_str != NULL)
     {
-      gssize len  = strlen (wisdom_str);
-      gboolean OK = FALSE;
+      if ((_wisdom_saved_f != NULL) && g_str_equal (_wisdom_saved_f, wisdom_str))
+      {
+        /* Nothing learned since the last save -- skip the rewrite. */
+        g_free (wisdom_str);
+      }
+      else
+      {
+        gssize len  = strlen (wisdom_str);
+        gboolean OK = FALSE;
 
 #if GLIB_CHECK_VERSION (2, 66, 0)
-      OK = g_file_set_contents_full (full_filename, wisdom_str, len,
-                                     G_FILE_SET_CONTENTS_CONSISTENT,
-                                     0666, NULL);
+        OK = g_file_set_contents_full (full_filename, wisdom_str, len,
+                                       G_FILE_SET_CONTENTS_CONSISTENT,
+                                       0666, NULL);
 #else /* GLIB_CHECK_VERSION (2, 66, 0) */
-      OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
+        OK = g_file_set_contents (full_filename, wisdom_str, len, NULL);
 #endif /* GLIB_CHECK_VERSION (2, 66, 0) */
 
-      g_assert (OK);
-
-      g_free (wisdom_str);
+        g_assert (OK);
+        g_free (_wisdom_saved_f);
+        _wisdom_saved_f = wisdom_str; /* keep as the new comparison baseline */
+      }
     }
   }
 #endif

@@ -48,9 +48,9 @@ G_DECLARE_DERIVABLE_TYPE (NcGalaxyRedshiftFactor, nc_galaxy_redshift_factor, NC,
 typedef struct _NcGalaxyRedshiftFactorData NcGalaxyRedshiftFactorData;
 
 /*
- * Integrand callback: the per-galaxy JOINT density p(z_phot, z | I) as a
- * function of the true redshift z (the calculator NEVER integrates z itself;
- * the orchestrator integrates this against every other z-dependent factor).
+ * Integrand callback: the per-galaxy JOINT density p(z_phot, z | I) as a function of
+ * the true redshift z (the calculator NEVER integrates z itself; the orchestrator
+ * integrates this against every other z-dependent factor).
  */
 NCM_UTIL_DECLARE_CALLBACK (NcGalaxyRedshiftFactorIntegrand,
                            NC_GALAXY_REDSHIFT_FACTOR_INTEGRAND,
@@ -81,16 +81,17 @@ struct _NcGalaxyRedshiftFactorClass
    * (default: no-op). */
   guint64 (*get_hash) (NcGalaxyRedshiftFactor *gsdr);
   void (*update_data) (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data);
+  gchar *(*get_desc) (NcGalaxyRedshiftFactor *gsdr);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[8];
+  gpointer padding[7];
 };
 
 /*
- * Per-galaxy data fragment. `z` is the inline base field (the true redshift,
- * sampled or the integration variable); `ldata` is the scheme's opaque fragment
- * (embedding the Observable model's own {z_phot, sigma0} fragment for Composed),
- * packed to / unpacked from an NcGalaxyWLObs via the fragment vtable below.
+ * Per-galaxy data fragment. `z` is the inline base field (the true redshift, sampled
+ * or the integration variable); `ldata` is the scheme's opaque fragment (embedding the
+ * Observable model's own {z_phot, sigma0} fragment for Composed), packed to / unpacked
+ * from an NcGalaxyWLObs via the fragment vtable below.
  */
 struct _NcGalaxyRedshiftFactorData
 {
@@ -125,6 +126,7 @@ gdouble nc_galaxy_redshift_factor_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *m
 NcmIntegralFixed *nc_galaxy_redshift_factor_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
 guint64 nc_galaxy_redshift_factor_get_hash (NcGalaxyRedshiftFactor *gsdr);
 void nc_galaxy_redshift_factor_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data);
+gchar *nc_galaxy_redshift_factor_get_desc (NcGalaxyRedshiftFactor *gsdr);
 
 #define NC_GALAXY_REDSHIFT_FACTOR_COL_Z "z"
 
