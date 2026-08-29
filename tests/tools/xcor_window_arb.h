@@ -347,40 +347,72 @@ kdep_growth (acb_t out, const acb_t chi, const Par *p, slong prec)
 }
 
 /*
- * j_ell (z) = sqrt (pi) / 2^(ell+1) * z^ell * 0F1~ (; ell + 3/2; -z^2/4),
- * with 0F1~ the regularized confluent limit.
+ * j_ell (z), by whichever form is well conditioned at this z.
  *
- * Not the textbook sqrt (pi / 2z) J_{ell+1/2} (z): that form has a removable
- * singularity at z = 0, and a window whose support reaches the observer puts
- * z = 0 inside the domain, where the ball arithmetic sees 1/0 and subdivides
- * without end. This form is entire.
+ * Near the origin: the entire form
  *
- * It pays for that with cancellation: the series needs about z^2/4 terms and
- * loses about that many bits, so a caller reaching z ~ 300 needs far more than
- * 128 bits of working precision. That is what `certified` below is for, and
- * omitting it looks exactly like the method diverging.
+ *   j_ell (z) = sqrt (pi) / 2^(ell+1) * z^ell * 0F1~ (; ell + 3/2; -z^2/4)
+ *
+ * The textbook sqrt (pi / 2z) J_{ell+1/2} (z) has a removable singularity at
+ * z = 0, and a window whose support reaches the observer puts z = 0 inside the
+ * domain, where the ball arithmetic sees 1/0 and subdivides without end.
+ *
+ * Away from it: the textbook form. The 0F1 series needs about z^2/4 terms and
+ * loses about that many bits to cancellation, which is affordable at z ~ 100
+ * and is not a method at all beyond it -- the C_ell integrand reaches
+ * z = k chi ~ 4400 at ell = 200, where it would want 5 million bits. Arb
+ * evaluates J_nu by asymptotic expansion out there, at no precision penalty.
+ *
+ * The switch is on a certified lower bound of |z|, so a ball that straddles
+ * the threshold takes the entire form and stays correct either way.
  */
 static void
 sph_bessel (acb_t out, const acb_t z, long ell, slong prec)
 {
   acb_t nu, J, t;
+  arb_t az;
+  arf_t lb;
+  int far;
+
+  arb_init (az);
+  arf_init (lb);
+  acb_abs (az, z, prec);
+  arb_get_lbound_arf (lb, az, prec);
+  far = arf_cmp_d (lb, 4.0) > 0;
+  arb_clear (az);
+  arf_clear (lb);
 
   acb_init (nu);
   acb_init (J);
   acb_init (t);
 
-  acb_set_si (nu, 2 * ell + 3);
-  acb_div_si (nu, nu, 2, prec); /* ell + 3/2 */
-  acb_sqr (J, z, prec);
-  acb_div_si (J, J, -4, prec); /* -z^2/4 */
-  acb_hypgeom_0f1 (J, nu, J, 1, prec);
-  acb_pow_ui (t, z, (ulong) ell, prec);
-  acb_mul (J, J, t, prec);
-  acb_const_pi (t, prec);
-  acb_sqrt (t, t, prec);
-  acb_mul (J, J, t, prec);
-  acb_mul_2exp_si (J, J, -(ell + 1));
-  acb_set (out, J);
+  if (far)
+  {
+    /* sqrt (pi / (2 z)) J_{ell + 1/2} (z) */
+    acb_set_si (nu, 2 * ell + 1);
+    acb_div_si (nu, nu, 2, prec);
+    acb_hypgeom_bessel_j (J, nu, z, prec);
+    acb_const_pi (t, prec);
+    acb_div (t, t, z, prec);
+    acb_div_si (t, t, 2, prec);
+    acb_sqrt (t, t, prec);
+    acb_mul (out, J, t, prec);
+  }
+  else
+  {
+    acb_set_si (nu, 2 * ell + 3);
+    acb_div_si (nu, nu, 2, prec); /* ell + 3/2 */
+    acb_sqr (J, z, prec);
+    acb_div_si (J, J, -4, prec); /* -z^2/4 */
+    acb_hypgeom_0f1 (J, nu, J, 1, prec);
+    acb_pow_ui (t, z, (ulong) ell, prec);
+    acb_mul (J, J, t, prec);
+    acb_const_pi (t, prec);
+    acb_sqrt (t, t, prec);
+    acb_mul (J, J, t, prec);
+    acb_mul_2exp_si (J, J, -(ell + 1));
+    acb_set (out, J);
+  }
 
   acb_clear (nu);
   acb_clear (J);
