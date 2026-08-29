@@ -791,6 +791,38 @@
     "nick": "slice",
     "type": "Ncm.VectorInternal"
   },
+  "NC_BBN_IMPL_DH": {
+    "nick": "dh",
+    "type": "Nc.BBNImpl"
+  },
+  "NC_BBN_IMPL_He3H": {
+    "nick": "he3h",
+    "type": "Nc.BBNImpl"
+  },
+  "NC_BBN_IMPL_Li7H": {
+    "nick": "li7h",
+    "type": "Nc.BBNImpl"
+  },
+  "NC_BBN_IMPL_Yp_4He": {
+    "nick": "yp-4he",
+    "type": "Nc.BBNImpl"
+  },
+  "NC_BBN_IMPL_get_domain": {
+    "nick": "get-domain",
+    "type": "Nc.BBNImpl"
+  },
+  "NC_BBN_PARTHENOPE_TABLE_LEGACY": {
+    "nick": "legacy",
+    "type": "Nc.BBNParthenopeTable"
+  },
+  "NC_BBN_PARTHENOPE_TABLE_PLANCK2017": {
+    "nick": "planck2017",
+    "type": "Nc.BBNParthenopeTable"
+  },
+  "NC_BBN_PARTHENOPE_TABLE_PLANCK2017_MARCUCCI": {
+    "nick": "planck2017-marcucci",
+    "type": "Nc.BBNParthenopeTable"
+  },
   "NC_CLUSTER_MASS_ASCASO_MU_P0": {
     "nick": "mu-p0",
     "type": "Nc.ClusterMassAscasoSParams"
