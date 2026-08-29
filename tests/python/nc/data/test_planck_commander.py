@@ -29,6 +29,7 @@ import pytest
 
 from python.fixtures_planck import (
     COMMANDER_NL,
+    FixedClBoltzmann,
     commander_tables,
     make_commander_cldf,
     planck_mset,
@@ -65,7 +66,7 @@ def test_construct_and_serialize_roundtrip():
     assert cmd2.get_length() == 28
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data
 def test_matches_clik_reference():
     """Native commander m2lnL agrees with the clik low-ell TT reference.
@@ -101,7 +102,7 @@ def test_matches_clik_reference():
     assert np.isfinite(native.m2lnL_val(mset))
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data
 def test_clik_pi_compat_matches_clik():
     """clik_pi_compat lands the native m2lnL on clik, to the last few ULP.
@@ -165,18 +166,18 @@ def test_synthetic_matches_closed_form(tmp_path):
     covariance inversion and the A_planck rescaling.
     """
     clik = make_commander_cldf(tmp_path)
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     calib = 1.003
     mset, _ = planck_mset(A_planck=calib)
 
-    cmd = build_commander(clik, cbe)
+    cmd = build_commander(clik, pb)
     assert cmd.get_length() == COMMANDER_NL
 
     cmd.prepare(mset)
 
     xa, ya, _, mu, cov, mu_sigma = commander_tables()
     ell = np.arange(2, 2 + COMMANDER_NL)
-    cl = theory_cls(cbe, "TT", 1 + COMMANDER_NL)[2:]
+    cl = theory_cls(pb, "TT", 1 + COMMANDER_NL)[2:]
     dl = cl / calib**2 * ell * (ell + 1.0) / (2.0 * np.pi)
 
     expected = -2.0 * (
@@ -188,11 +189,11 @@ def test_synthetic_matches_closed_form(tmp_path):
 def test_synthetic_clik_pi_compat_shifts_result(tmp_path):
     """clik_pi_compat changes the Dl conversion, and so the answer, slightly."""
     clik = make_commander_cldf(tmp_path)
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     mset, _ = planck_mset()
 
-    exact = build_commander(clik, cbe)
-    compat = build_commander(clik, cbe, clik_pi_compat=True)
+    exact = build_commander(clik, pb)
+    compat = build_commander(clik, pb, clik_pi_compat=True)
     assert compat.get_property("clik-pi-compat")
     assert not exact.get_property("clik-pi-compat")
 
@@ -208,11 +209,11 @@ def test_synthetic_clik_pi_compat_shifts_result(tmp_path):
 def test_synthetic_out_of_prior_range(tmp_path):
     """A theory Dl outside the tabulated range is rejected, not extrapolated."""
     clik = make_commander_cldf(tmp_path)
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     # A tiny calibration blows Dl = Cl/A^2 * l(l+1)/2pi past the table's top end.
     mset, _ = planck_mset(A_planck=0.01)
 
-    cmd = build_commander(clik, cbe)
+    cmd = build_commander(clik, pb)
     cmd.prepare(mset)
 
     assert cmd.m2lnL_val(mset) == 1.0e30
@@ -221,10 +222,10 @@ def test_synthetic_out_of_prior_range(tmp_path):
 def test_synthetic_serialize_roundtrip(tmp_path):
     """A synthetic commander survives a serialization round trip unchanged."""
     clik = make_commander_cldf(tmp_path)
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     mset, _ = planck_mset()
 
-    cmd = build_commander(clik, cbe)
+    cmd = build_commander(clik, pb)
     cmd.prepare(mset)
     m2lnl = cmd.m2lnL_val(mset)
 
@@ -232,7 +233,7 @@ def test_synthetic_serialize_roundtrip(tmp_path):
     cmd2 = ser.from_variant(ser.to_variant(cmd))
     assert isinstance(cmd2, Nc.DataPlanckCommander)
 
-    cmd2.set_hipert_boltzmann(cbe)
+    cmd2.set_hipert_boltzmann(pb)
     cmd2.prepare(mset)
     assert cmd2.m2lnL_val(mset) == m2lnl
 

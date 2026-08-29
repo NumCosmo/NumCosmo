@@ -29,6 +29,7 @@ import pytest
 
 from python.fixtures_planck import (
     PLIK_LITE_LMAX,
+    FixedClBoltzmann,
     make_plik_lite_cldf,
     model_vector,
     planck_mset,
@@ -92,7 +93,7 @@ def test_construct_and_serialize_roundtrip():
             assert cov2.get(i, j) == cov.get(i, j)
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data
 def test_matches_clik_reference():
     """Native m2lnL equals the clik plik_lite reference on a CLASS cosmology.
@@ -153,13 +154,13 @@ def test_matches_clik_reference():
 _NBIN = {"TT": NBIN_TT, "TE": NBIN_TE, "EE": NBIN_EE}
 
 
-def _expected_bandpowers(cbe, spectra, calib):
+def _expected_bandpowers(pb, spectra, calib):
     """Closed-form bandpower model: binned raw Cl over each bin / A_planck^2."""
     _, _, blmin, blmax, bweight = plik_lite_tables()
     expected = []
     for name in spectra:
         nbin = _NBIN[name]
-        cl = theory_cls(cbe, name, PLIK_LITE_LMAX)
+        cl = theory_cls(pb, name, PLIK_LITE_LMAX)
         for b in range(nbin):
             lo, hi = int(blmin[b]), int(blmax[b])
             window = bweight[lo : hi + 1]
@@ -177,42 +178,42 @@ def test_synthetic_matches_closed_form(tmp_path, spectra):
     ``has_cl``, and the native mean_func must bin the matching theory spectrum.
     """
     clik = make_plik_lite_cldf(tmp_path, spectra=spectra)
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     calib = 1.004
     mset, _ = planck_mset(A_planck=calib)
 
-    plik = build_plik_lite(clik, cbe, lmax=PLIK_LITE_LMAX)
+    plik = build_plik_lite(clik, pb, lmax=PLIK_LITE_LMAX)
     assert plik.get_size() == sum(_NBIN[name] for name in spectra)
 
     plik.prepare(mset)
 
     assert model_vector(plik, mset) == pytest.approx(
-        _expected_bandpowers(cbe, spectra, calib), rel=1.0e-13
+        _expected_bandpowers(pb, spectra, calib), rel=1.0e-13
     )
 
 
 def test_synthetic_spectra_override(tmp_path):
     """An explicit @spectra list overrides the file's has_cl selection."""
     clik = make_plik_lite_cldf(tmp_path, spectra=["TT", "TE", "EE"])
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     mset, _ = planck_mset()
 
-    plik = build_plik_lite(clik, cbe, spectra=["EE"], lmax=PLIK_LITE_LMAX)
+    plik = build_plik_lite(clik, pb, spectra=["EE"], lmax=PLIK_LITE_LMAX)
     assert plik.get_size() == NBIN_EE
 
     plik.prepare(mset)
     assert model_vector(plik, mset) == pytest.approx(
-        _expected_bandpowers(cbe, ["EE"], 1.0), rel=1.0e-13
+        _expected_bandpowers(pb, ["EE"], 1.0), rel=1.0e-13
     )
 
 
 def test_synthetic_tt_helper_and_resample(tmp_path):
     """build_plik_lite_tt selects TT only, and the result resamples."""
     clik = make_plik_lite_cldf(tmp_path, spectra=["TT", "TE", "EE"])
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     mset, _ = planck_mset()
 
-    plik = build_plik_lite_tt(clik, cbe, lmax=PLIK_LITE_LMAX)
+    plik = build_plik_lite_tt(clik, pb, lmax=PLIK_LITE_LMAX)
     assert plik.get_size() == NBIN_TT
 
     plik.prepare(mset)
@@ -226,10 +227,10 @@ def test_synthetic_tt_helper_and_resample(tmp_path):
 def test_synthetic_serialize_roundtrip(tmp_path):
     """A synthetic plik_lite survives a serialization round trip unchanged."""
     clik = make_plik_lite_cldf(tmp_path)
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     mset, _ = planck_mset()
 
-    plik = build_plik_lite(clik, cbe, lmax=PLIK_LITE_LMAX)
+    plik = build_plik_lite(clik, pb, lmax=PLIK_LITE_LMAX)
     plik.prepare(mset)
     m2lnl = plik.m2lnL_val(mset)
 

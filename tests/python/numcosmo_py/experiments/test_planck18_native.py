@@ -26,15 +26,17 @@
 
 ``generate_planck18_native`` glues the four native likelihood blocks onto one
 shared CBE. The blocks themselves are covered by the per-likelihood tests; here
-they are stood in for by synthetic ones (see tests/python/fixtures_planck.py) so
-the assembly, the priors and the derived-function wiring are exercised without a
-local ``plc_3.0`` tree.
+they are stood in for by synthetic ones (see tests/python/fixtures_planck.py),
+driven by a fixed-spectra Boltzmann, so the assembly, the priors and the
+derived-function wiring are exercised without a local ``plc_3.0`` tree and
+without a Boltzmann solve.
 """
 
 import numpy as np
 import pytest
 
 from python.fixtures_planck import (
+    FixedClBoltzmann,
     make_commander_cldf,
     make_lensing_cldf,
     make_simall_cldf,
@@ -56,11 +58,11 @@ from numcosmo_py.experiments.planck_smica import build_smica_tt, build_smica_ttt
 Ncm.cfg_init()
 
 
-@pytest.fixture(name="synthetic_blocks", scope="module")
-def fixture_synthetic_blocks(tmp_path_factory):
-    """Builders for the synthetic stand-ins, keyed by release id."""
+@pytest.fixture(name="synthetic_trees", scope="module")
+def fixture_synthetic_trees(tmp_path_factory):
+    """The synthetic cldf trees and their builders, keyed by release id."""
     root = tmp_path_factory.mktemp("planck_native")
-    trees = {
+    return {
         pnr.PlanckReleaseId.PR3_SIMALL_EE: (make_simall_cldf(root), build_simall),
         pnr.PlanckReleaseId.PR3_COMMANDER: (make_commander_cldf(root), build_commander),
         pnr.PlanckReleaseId.PR3_PLIK_TT: (make_smica_cldf(root), build_smica_tt),
@@ -71,12 +73,32 @@ def fixture_synthetic_blocks(tmp_path_factory):
         pnr.PlanckReleaseId.PR3_LENSING: (make_lensing_cldf(root), build_lensing),
     }
 
+
+def _release_loader(trees, boltzmann=None):
+    """Stand in for ``load_planck_release``, optionally overriding the Boltzmann.
+
+    @boltzmann replaces the CBE the experiment assembles, so the blocks read
+    stored spectra and nothing is solved; None keeps the experiment's own CBE.
+    """
+
     def load(rid, pb=None, cache_dir=None):  # signature of load_planck_release
         del cache_dir
         clik, builder = trees[rid]
-        return builder(clik, pb)
+        return builder(clik, pb if boltzmann is None else boltzmann)
 
     return load
+
+
+@pytest.fixture(name="synthetic_blocks", scope="module")
+def fixture_synthetic_blocks(synthetic_trees):
+    """Release loader whose blocks are driven by #FixedClBoltzmann.
+
+    The assembly, the priors and the derived-function wiring are what these tests
+    check; a Boltzmann solve at Planck precision would dominate their runtime
+    without covering any of it. The coupling to CLASS is covered separately by
+    ``test_generate_native_evaluates_on_cbe``.
+    """
+    return _release_loader(synthetic_trees, FixedClBoltzmann())
 
 
 @pytest.mark.parametrize(
@@ -121,6 +143,33 @@ def test_generate_native_from_release(
     assert mfunc_array.len() == 4
 
     mset_set_parameters(mset, data_type, HIPrimModel.POWER_LAW)
+    mset.prepare_fparam_map()
+    for i in range(dset.get_ndata()):
+        dset.get_data(i).prepare(mset)
+    assert np.isfinite(dset.m2lnL_val(mset))
+
+
+@pytest.mark.acceptance
+def test_generate_native_evaluates_on_cbe(monkeypatch, synthetic_trees):
+    """The assembled experiment evaluates against a real CBE.
+
+    The cases above swap the Boltzmann out, so this is what covers the blocks
+    self-configuring the shared CBE (targets and lmax) and the resulting solve
+    feeding a finite $-2\\ln L$. One combination is enough: the block-by-block
+    self-configuration is covered by the per-likelihood tests.
+    """
+    monkeypatch.setattr(pnr, "load_planck_release", _release_loader(synthetic_trees))
+
+    experiment, _ = generate_planck18_native(
+        data_type=Planck18Types.TT,
+        use_lensing_likelihood=True,
+        from_release=True,
+    )
+
+    mset = experiment.peek("model-set")
+    dset = experiment.peek("likelihood").peek_dataset()
+
+    mset_set_parameters(mset, Planck18Types.TT, HIPrimModel.POWER_LAW)
     mset.prepare_fparam_map()
     for i in range(dset.get_ndata()):
         dset.get_data(i).prepare(mset)

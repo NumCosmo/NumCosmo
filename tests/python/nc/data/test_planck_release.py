@@ -30,7 +30,11 @@ import shutil
 import numpy as np
 import pytest
 
-from python.fixtures_planck import make_commander_cldf, planck_mset
+from python.fixtures_planck import (
+    FixedClBoltzmann,
+    make_commander_cldf,
+    planck_mset,
+)
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.experiments.planck_lite import find_baseline_file
 from numcosmo_py.experiments.planck_commander import COMMANDER_RELPATH, build_commander
@@ -63,7 +67,7 @@ _EXPECTED_TYPE = {
 }
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data
 def test_build_release_and_load(tmp_path):
     """build_release writes serialized objects that reload to the right types."""
@@ -79,7 +83,7 @@ def test_build_release_and_load(tmp_path):
         assert data.__class__.__name__ == _EXPECTED_TYPE[rid]
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data
 def test_release_block_evaluates(tmp_path):
     """A block loaded from the release self-configures its CBE and evaluates."""
@@ -139,10 +143,10 @@ def test_load_from_cache_without_download(tmp_path, monkeypatch):
 
     monkeypatch.setattr(pnr.urllib.request, "urlretrieve", _no_network)
 
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     mset, _ = planck_mset()
     data = load_planck_release(
-        PlanckReleaseId.PR3_COMMANDER, cbe, cache_dir=str(tmp_path)
+        PlanckReleaseId.PR3_COMMANDER, pb, cache_dir=str(tmp_path)
     )
 
     assert isinstance(data, Nc.DataPlanckCommander)

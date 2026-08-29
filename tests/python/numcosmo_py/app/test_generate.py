@@ -60,6 +60,7 @@ def test_generate_jpas_invalid_suffix(tmp_path: Path):
 
 
 # Native Planck
+@pytest.mark.planck_data
 def test_generate_planck_native(tmp_path: Path):
     """Native Planck experiment generates all-native, clik-free serialized blocks."""
     # pylint: disable=import-outside-toplevel
@@ -106,6 +107,7 @@ def test_generate_planck_native(tmp_path: Path):
     assert np.isfinite(dset.m2lnL_val(mset))
 
 
+@pytest.mark.planck_data
 def test_build_planck_release(tmp_path: Path):
     """The publish command writes serialized native Planck release objects."""
     # pylint: disable=import-outside-toplevel
