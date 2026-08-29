@@ -45,6 +45,10 @@ spectrum -- one no method meets and none needs to, because that entry
 contributes nothing to any likelihood.
 """
 
+import gzip
+import json
+import pathlib
+
 import numpy as np
 import pytest
 
@@ -330,3 +334,130 @@ def test_reltol_is_not_what_moves_the_narrow_shell() -> None:
     tight = solve(1.0e-8)
 
     assert np.abs(tight - loose).max() / np.abs(loose).max() < 1.0e-2
+
+
+# ---------------------------------------------------------------- Level 2 ---
+#
+# Against certified Arb values rather than against a reference of our own. The
+# table is data/truth_tables/xcor/xcor_kquad.json.gz, generated offline by
+# tests/tools/nc_xcor_kquad_arb.c; only regeneration needs FLINT.
+#
+# Deviations are measured against each pair's own scale -- its largest
+# certified |C_ell| over the multipoles in the table -- not pointwise. A
+# far-separated pair reaches |C_ell| = 7e-20 at ell = 50, fifteen orders below
+# the auto-spectrum scale, and a pointwise relative error there reads 2e+09
+# while meaning nothing.
+
+TRUTH_TABLE = "truth_tables/xcor/xcor_kquad.json.gz"
+
+# Measured over the 43 certified entries, with headroom. These are loose
+# because one regime is genuinely bad and the table says so rather than hiding
+# it: on the far-separated pair at ell = 2 the spline closure is wrong by 435%
+# of the pair's own scale. The tight statement is the comparative test below.
+CERTIFIED_TOLERANCE = {"spline": 1.5e1, "chebyshev": 1.0e-1}
+
+
+@pytest.fixture(name="certified", scope="module")
+def fixture_certified() -> dict:
+    """The certified C_ell table, loaded once."""
+    path = pathlib.Path(Ncm.cfg_get_data_filename(TRUTH_TABLE, True))
+
+    with gzip.open(path, "rt") as handle:
+        return json.load(handle)
+
+
+def _pair_scale(table: dict) -> dict:
+    """Each pair's largest certified |C_ell| over the multipoles present."""
+    scale: dict[str, float] = {}
+
+    for entry in table["cases"].values():
+        value = abs(float(entry["value"]))
+        scale[entry["case"]] = max(scale.get(entry["case"], 0.0), value)
+
+    return scale
+
+
+def _library_cl(case: str, ell: int, closure: str) -> float:
+    """What the library returns for one entry, by its exact method."""
+    pair = cases.PAIRS_BY_CASE[case]
+    settings = cases.Settings(closure=CLOSURES[closure])
+    cosmo, dist, ps = cases.make_cosmo_bits()
+
+    kernel_a = cases.build_kernel(pair.kernel_a, cosmo, dist, ps, settings)
+    kernel_b = (
+        kernel_a
+        if pair.isauto
+        else cases.build_kernel(pair.kernel_b, cosmo, dist, ps, settings)
+    )
+
+    xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
+    xcor.set_closure_type(settings.closure)
+    xcor.set_ell_batch_size(1)
+    xcor.set_reltol(settings.reltol)
+    xcor.prepare(cosmo)
+
+    vp = Ncm.Vector.new(1)
+    xcor.compute(kernel_a, kernel_b, cosmo, ell, ell, vp)
+
+    return vp.get(0)
+
+
+def test_certified_table_is_certified(certified: dict) -> None:
+    """The reference has to be a reference: its own radius cannot matter.
+
+    Guards a regeneration that quietly lowered the precision target -- every
+    assertion below would still pass while checking nothing.
+    """
+    worst = max(
+        entry["radius"] / abs(float(entry["value"]))
+        for entry in certified["cases"].values()
+    )
+
+    assert certified["cases"]
+    assert worst < 1.0e-8
+
+
+@pytest.mark.parametrize("closure", sorted(CLOSURES))
+def test_closure_matches_certified_c_ell(certified: dict, closure: str) -> None:
+    """Both closures against Arb, over every entry the table certifies."""
+    scale = _pair_scale(certified)
+    worst, worst_at = 0.0, ""
+
+    for entry in certified["cases"].values():
+        got = _library_cl(entry["case"], entry["ell"], closure)
+        deviation = abs(got - float(entry["value"])) / scale[entry["case"]]
+
+        if deviation > worst:
+            worst, worst_at = deviation, f"{entry['case']} ell={entry['ell']}"
+
+    assert worst < CERTIFIED_TOLERANCE[closure], (
+        f"{closure} deviates from the certified C_ell by {worst:.3e} of the "
+        f"pair's scale at {worst_at}"
+    )
+
+
+def test_spectral_closure_is_closer_to_certified_truth(certified: dict) -> None:
+    """The reason two closure types exist, measured against proven values.
+
+    Level 1 cannot state this: it compares each method to a reference built on
+    the closure under test, so a closure that is wrong in the same way as its
+    reference looks right. Only a certified value separates them.
+    """
+    scale = _pair_scale(certified)
+    spline, chebyshev = [], []
+
+    for entry in certified["cases"].values():
+        truth = float(entry["value"])
+        norm = scale[entry["case"]]
+        spline.append(
+            abs(_library_cl(entry["case"], entry["ell"], "spline") - truth) / norm
+        )
+        chebyshev.append(
+            abs(_library_cl(entry["case"], entry["ell"], "chebyshev") - truth) / norm
+        )
+
+    closer = sum(1 for s, c in zip(spline, chebyshev) if c < s)
+
+    # Measured: closer in 34 of 43, median 9.0e-6 against 5.9e-5.
+    assert closer >= 0.7 * len(spline)
+    assert np.median(chebyshev) < 0.5 * np.median(spline)

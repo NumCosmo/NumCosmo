@@ -159,6 +159,22 @@ def run_one(
             "stderr": out.stderr[-400:],
         }
 
+    value = float(rows[0][1])
+    radius = float(rows[0][2])
+
+    # Exiting cleanly is not the same as certifying. A run that ends with the
+    # enclosure straddling zero has produced no significant digit, and recorded
+    # as a value it would be a wrong entry in a table whose whole purpose is to
+    # be trustworthy. Rejected as loudly as a timeout.
+    if not value or radius > 1.0e-8 * abs(value):
+        return {
+            "case": pair.case,
+            "ell": ell,
+            "failed": f"radius {radius:.2e} against value {value:.4e}",
+            "k_lo": k_lo,
+            "k_hi": k_hi,
+        }
+
     return {
         "case": pair.case,
         "ell": ell,
@@ -168,7 +184,7 @@ def run_one(
         "k_lo": k_lo,
         "k_hi": k_hi,
         "value": rows[0][1],
-        "radius": float(rows[0][2]),
+        "radius": radius,
         "prec": int(rows[0][3]),
         "seconds": time.perf_counter() - start,
     }
