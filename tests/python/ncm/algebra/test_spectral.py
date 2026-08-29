@@ -2950,3 +2950,149 @@ class TestChebyshevRebase:
 
         assert norm == 0.0
         assert len(out) == 0
+
+
+class TestSpectralBatch:
+    """Tests for the batched, vector-valued Chebyshev expansion."""
+
+    @staticmethod
+    def _components(x: float) -> list[float]:
+        """Three components of deliberately different difficulty."""
+        return [
+            1.0 + 2.0 * x,
+            float(np.exp(-((x - 2.0) ** 2))),
+            1.0e-6 * float(np.cos(30.0 * x)),
+        ]
+
+    @classmethod
+    def _batch(cls, counter: dict) -> object:
+        def f_batch(_user_data, x, y):
+            counter["n"] += 1
+            for i, v in enumerate(cls._components(x)):
+                y.set(i, v)
+
+        return f_batch
+
+    def test_each_node_is_evaluated_once(self) -> None:
+        """The Lobatto grid nests, so doubling must not re-evaluate.
+
+        This is the entire economy of the batch: it exists for functions whose
+        evaluation is the dominant cost, so both re-sampling on refinement and
+        expanding the components separately have to be avoided.
+        """
+        spectral = Ncm.Spectral.new()
+        counter = {"n": 0}
+
+        k, coeffs = spectral.compute_chebyshev_coeffs_batch_adaptive(
+            self._batch(counter), 3, 0.3, 4.7, 3, 1.0e-12, 1.0e-14, None
+        )
+
+        n_nodes = (1 << k) + 1
+        assert counter["n"] == n_nodes
+        assert coeffs.nrows() == 3
+        assert coeffs.ncols() == n_nodes
+
+    def test_every_component_converges_on_its_own_terms(self) -> None:
+        """A component far below the block's scale must still be resolved.
+
+        Convergence is judged per component rather than pooled, so the third
+        component here -- six orders below the others -- cannot ride on its
+        neighbours' norm.
+        """
+        spectral = Ncm.Spectral.new()
+        a, b = 0.3, 4.7
+
+        _, coeffs = spectral.compute_chebyshev_coeffs_batch_adaptive(
+            self._batch({"n": 0}), 3, a, b, 3, 1.0e-12, 1.0e-14, None
+        )
+        c = np.array(coeffs.dup_array()).reshape(coeffs.nrows(), coeffs.ncols())
+
+        xs = np.linspace(a + 1.0e-6, b - 1.0e-6, 500)
+        t = (2.0 * xs - (a + b)) / (b - a)
+        truth = np.array([self._components(x) for x in xs]).T
+
+        for i in range(3):
+            assert_allclose(chebval(t, c[i]), truth[i], atol=1.0e-13)
+
+        # The linear component is exactly representable: everything above
+        # degree one is zero, which also pins the coefficient normalisation.
+        assert np.abs(c[0][2:]).max() < 1.0e-14
+
+    def test_batch_matches_the_scalar_path(self) -> None:
+        """One component through the batch equals the scalar expansion of it."""
+        spectral = Ncm.Spectral.new()
+        a, b = 0.3, 4.7
+
+        def scalar(_user_data, x):
+            return float(np.exp(-((x - 2.0) ** 2)))
+
+        def batch(_user_data, x, y):
+            y.set(0, float(np.exp(-((x - 2.0) ** 2))))
+
+        k_b, coeffs_b = spectral.compute_chebyshev_coeffs_batch_adaptive(
+            batch, 1, a, b, 3, 1.0e-12, 1.0e-14, None
+        )
+        k_s, coeffs_s = Ncm.Spectral.new().compute_chebyshev_coeffs_adaptive_full(
+            scalar, a, b, 3, 1.0e-12, 1.0e-14, None
+        )
+
+        assert k_b == k_s
+        c_b = np.array(coeffs_b.dup_array())
+        assert_allclose(c_b, np.array(coeffs_s), atol=1.0e-15)
+
+    def test_component_count_may_change_between_calls(self) -> None:
+        """Buffers and plans are sized per n_comp, so a change must re-plan."""
+        spectral = Ncm.Spectral.new()
+
+        def one(_user_data, x, y):
+            y.set(0, float(np.exp(-((x - 2.0) ** 2))))
+
+        def two(_user_data, x, y):
+            y.set(0, float(np.exp(-((x - 2.0) ** 2))))
+            y.set(1, float(np.sin(x)))
+
+        _, first = spectral.compute_chebyshev_coeffs_batch_adaptive(
+            one, 1, 0.3, 4.7, 3, 1.0e-12, 1.0e-14, None
+        )
+        _, second = spectral.compute_chebyshev_coeffs_batch_adaptive(
+            two, 2, 0.3, 4.7, 3, 1.0e-12, 1.0e-14, None
+        )
+        _, third = spectral.compute_chebyshev_coeffs_batch_adaptive(
+            one, 1, 0.3, 4.7, 3, 1.0e-12, 1.0e-14, None
+        )
+
+        assert first.nrows() == 1
+        assert second.nrows() == 2
+        assert third.nrows() == 1
+        assert_allclose(
+            np.array(first.dup_array()), np.array(third.dup_array()), atol=1.0e-15
+        )
+
+    def test_batch_coefficients_match_the_closed_form(self) -> None:
+        """Validate the batch against known coefficients, not against itself.
+
+        The Chebyshev coefficients of exp(alpha x) on [-1, 1] are c_0 =
+        I_0(alpha) and c_n = 2 I_n(alpha). Three components with different
+        alpha in one call pin the normalisation, the node placement and the
+        interleaved layout at once -- none of which a round trip through the
+        same transform could catch.
+        """
+        alphas = [1.0, 2.0, 0.5]
+
+        def batch(_user_data, x, y):
+            for i, alpha in enumerate(alphas):
+                y.set(i, float(np.exp(alpha * x)))
+
+        k, coeffs = Ncm.Spectral.new().compute_chebyshev_coeffs_batch_adaptive(
+            batch, len(alphas), -1.0, 1.0, 3, 1.0e-14, 1.0e-16, None
+        )
+        c = np.array(coeffs.dup_array()).reshape(coeffs.nrows(), coeffs.ncols())
+        n = (1 << k) + 1
+
+        for i, alpha in enumerate(alphas):
+            expected = np.array(
+                [iv(0, alpha)] + [2.0 * iv(m, alpha) for m in range(1, n)]
+            )
+            # Coefficients decay to nothing well before the last mode, so the
+            # comparison is absolute against the leading scale.
+            assert_allclose(c[i], expected, atol=1.0e-14)

@@ -115,13 +115,53 @@ to run this automatically. If you use a reference manager such as JabRef, treat
 its output as a draft and re-tidy before committing; the local `file`, `owner`,
 `timestamp`, and `__markedentry` fields are stripped from the repo copy.
 
+### Adding a page
+
+A new `.qmd` has to be registered in **four** places. Miss one and it either
+fails to build, builds but is unreachable, or is reachable only from the
+sidebar:
+
+1. **`docs/<area>/meson.build`** — add the filename to the `files(...)` list, or
+   it is never copied into the build tree. A brand-new subdirectory also needs
+   its own `meson.build` and a `subdir('<name>')` line in the parent.
+2. **`docs/_quarto.yml.in`, the render list** — the top-level list of pages to
+   render (near `- tutorials/index.qmd`).
+3. **`docs/_quarto.yml.in`, the sidebar** — the `contents:` entry under the
+   right `section:`, with an `href:` and a short `text:` label.
+4. **The index page for its area** — `docs/tutorials/index.qmd`,
+   `docs/examples/index.qmd`, or `docs/theory/index.qmd`. The sidebar and the
+   index are separate; adding a page to the sidebar alone leaves it off the
+   landing page a reader actually browses.
+
+Keep the section names in 2-4 consistent: if a page needs a new section, add it
+to both the sidebar and the index.
+
+Tutorial or example? A **tutorial** walks through a complete workflow and
+explains every step, and is read start to finish; it goes in `docs/tutorials/`.
+An **example** is a short self-contained script showing one part of the API in
+use, read as reference; it goes in `docs/examples/`.
+
+Match an existing page's front matter (`format: html` plus `ipynb`, and
+`{{< include /_functions.qmd >}}`) so the notebook download link is generated.
+
 ### Building the documentation
 
-Build the site with a documentation-enabled build directory:
+Build the site with a documentation-enabled build directory. `BDocs` is the
+conventional name, and the one CI uses:
 
 ```bash
-meson compile -C <builddir> numcosmo-site
+meson setup BDocs -Ddocumentation=true
+meson compile -C BDocs numcosmo-site
 ```
+
+The rendered site lands in `BDocs/docs/numcosmo-site/`, with each executable
+page as `.html`, `.ipynb` and `.py`. Build this before pushing a `.qmd`: the
+page's code chunks run during the build, so a broken chunk is a build failure.
+
+Do not invoke `quarto render` on a page directly. `_quarto.yml` is generated
+from `_quarto.yml.in` by meson and is absent from a clean checkout, so the
+`{{< include /_functions.qmd >}}` directive fails to resolve, and a hand-run
+render also appends to `docs/.gitignore`.
 
 Note: when you change **only** a `.c`/`.h` doc comment (no `.qmd`/`_quarto`
 change), the site bundle may not re-render because the `numcosmo-site` target
@@ -134,6 +174,20 @@ meson compile -C <builddir> numcosmo-site
 
 This affects only local incremental builds; CI and Read the Docs build from
 clean, so the published site is unaffected.
+
+### The Read the Docs PR check
+
+Read the Docs does not build the documentation — building it there was too slow.
+The `docs-artifacts` GitHub Actions job builds the site and uploads it as
+`numcosmo-site-<SHA>`, then restarts the RTD build, and RTD merely downloads
+that artifact (`docs/download_docs_site.py`).
+
+So `docs/readthedocs.org:numcosmo` **fails on every PR at first**: RTD's own
+webhook fires on the push and looks for an artifact that does not exist yet. It
+goes green once `docs-artifacts` finishes and restarts it, and RTD then serves a
+per-PR preview. Judge documentation health from `docs-artifacts`, and do not
+compare against merged PRs — those are green because their artifact landed long
+ago.
 
 ## Code formatting
 

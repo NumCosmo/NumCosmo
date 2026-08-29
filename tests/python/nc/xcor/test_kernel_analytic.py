@@ -582,7 +582,7 @@ def _cl_reference(
     """
     cosmo, powspec = cosmology.cosmo, cosmology.ps_ml
     chi_min, chi_max = kernel.get_support()
-    k_min, k_max = kernel.get_eval(cosmo, ell).get_range()
+    k_min, k_max = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE).get_range()
     rh = cosmo.RH_Mpc()
     window = _window(shape)
 
@@ -650,7 +650,7 @@ def test_cl_matches_quadrature_from_the_definition(
     solver.request_cl(kernel_id, kernel_id, ell, ell)
     solver.plan_blocks(64)
     solver.solve(
-        Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED),
+        Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT),
         cosmology.cosmo,
     )
     got = solver.get_result(0).get(0)
@@ -680,7 +680,7 @@ def test_limber_and_non_limber_agree_at_high_ell(cosmology: Cosmology) -> None:
         solver.request_cl(kernel_id, kernel_id, lmin, lmax)
         solver.plan_blocks(64)
         solver.solve(
-            Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED),
+            Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT),
             cosmology.cosmo,
         )
         out[tier] = np.array(solver.get_result(0).dup_array())
@@ -850,7 +850,7 @@ def test_zero_amplitude_kdep_changes_nothing(cosmology: Cosmology) -> None:
         solver.request_cl(kernel_id, kernel_id, lmin, lmax)
         solver.plan_blocks(64)
         solver.solve(
-            Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED),
+            Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT),
             cosmology.cosmo,
         )
         out[label] = np.array(solver.get_result(0).dup_array())
@@ -881,7 +881,7 @@ def test_kdep_makes_the_integrand_non_separable(cosmology: Cosmology) -> None:
         solver.request_cl(kernel_id, kernel_id, lmin, lmax)
         solver.plan_blocks(64)
         solver.solve(
-            Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED),
+            Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT),
             cosmology.cosmo,
         )
         out[label] = np.array(solver.get_result(0).dup_array())

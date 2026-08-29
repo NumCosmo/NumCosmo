@@ -701,3 +701,103 @@ def test_plan_blocks_sorts_multiple_l_limber_boundaries(
     assert 11 in starts
     assert 30 in starts
     assert starts.index(11) < starts.index(30)
+
+
+def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
+    """The solver reaches the block integrator by its own route.
+
+    NcXcorSolver calls _nc_xcor_kernel_integrate_block_exact() directly rather
+    than through nc_xcor_compute(), so a representation wired up only in the
+    latter is invisible here -- which is exactly how the spectral path shipped
+    broken for the solver at first. Same spectra either way is the assertion.
+    """
+    cosmo = cosmology.cosmo
+    z_bins = [(0.1, 0.2), (0.3, 0.4)]
+
+    def solve(closure_type):
+        solver = Nc.XcorSolver.new()
+        ids = []
+
+        for z_lower, z_upper in z_bins:
+            kernel = Nc.XcorKernelClusterTophat(
+                dist=cosmology.dist,
+                powspec=cosmology.ps_ml,
+                z_lower=z_lower,
+                z_upper=z_upper,
+                integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+                reltol=1.0e-4,
+                scaled_abstol=1.0e-4,
+            )
+            kernel.set_l_limber(-1)
+            kernel.prepare(cosmo)
+            ids.append(solver.register_kernel(kernel))
+
+        for i, id_i in enumerate(ids):
+            for id_j in ids[i:]:
+                solver.request_cl(id_i, id_j, 2, 17)
+
+        solver.plan_blocks(8)
+        solver.set_integrator(Ncm.SBesselIntegratorLevin.new(0, 8))
+
+        xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+        xcor.set_closure_type(closure_type)
+        xcor.prepare(cosmo)
+        solver.solve(xcor, cosmo)
+
+        return [
+            np.array(solver.get_result(r).dup_array())
+            for r in range(solver.get_n_requests())
+        ]
+
+    def compute_directly(closure_type):
+        kernels = []
+
+        for z_lower, z_upper in z_bins:
+            kernel = Nc.XcorKernelClusterTophat(
+                dist=cosmology.dist,
+                powspec=cosmology.ps_ml,
+                z_lower=z_lower,
+                z_upper=z_upper,
+                integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+                reltol=1.0e-4,
+                scaled_abstol=1.0e-4,
+            )
+            kernel.set_l_limber(-1)
+            kernel.prepare(cosmo)
+            kernels.append(kernel)
+
+        xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+        xcor.set_closure_type(closure_type)
+        xcor.prepare(cosmo)
+
+        out = []
+        for i in range(len(kernels)):
+            for j in range(i, len(kernels)):
+                vp = Ncm.Vector.new(16)
+                xcor.compute(
+                    kernels[i],
+                    None if i == j else kernels[j],
+                    cosmo,
+                    2,
+                    17,
+                    vp,
+                )
+                out.append(np.array(vp.dup_array()))
+        return out
+
+    for closure_type in (
+        Nc.XcorKernelClosure.CHEBYSHEV,
+        Nc.XcorKernelClosure.SPLINE,
+    ):
+        through_solver = solve(closure_type)
+        direct = compute_directly(closure_type)
+
+        assert len(through_solver) == 3
+
+        # The two entry points must reach the same integrator. Asserting the two
+        # *representations* agree instead would be asserting the wrong thing:
+        # on the cross request at l ~ 17 the spline is several hundred percent
+        # out, which is the error this representation exists to remove.
+        for got, expected in zip(through_solver, direct):
+            assert np.all(np.isfinite(got))
+            assert_allclose(got, expected, rtol=1.0e-10)

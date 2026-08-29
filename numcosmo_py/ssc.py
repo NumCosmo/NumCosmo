@@ -115,8 +115,15 @@ precision. Below `1e-6` there is nothing left to buy at any price --
 `NC_XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL`. The `1e-7` and `1e-8` columns in the
 tables above are measurements of that, not options.
 
-Keep `scaled_abstol` away from `reltol`
---------------------------------------
+Keep `scaled_abstol` away from `reltol` --- on this path
+--------------------------------------------------------
+
+This section is about `KERNEL_CUBATURE`, which is what `SSCSijCalculator` builds
+below. The hazard needs an *adaptive outer rule*, so it does not apply to
+`KERNEL_EXACT`: that method integrates the closure's own knot panels with GL(5),
+carries no outer tolerance, and has no refinement that can run out of levels.
+`NcXcorSSCSij`, the varying path, defaults to `KERNEL_EXACT` and is therefore
+free of everything below --- equal values would be safe there, merely dearer.
 
 `scaled_abstol` must not equal the outer $k$-integral's `reltol`. The p-adaptive
 `g_error` in `ncm_integral_nd_eval` ("p-adaptive methods report failure when
@@ -153,6 +160,11 @@ the cosmology, not in how it is computed", and comment 15 of the covariance
 paper is precisely the comparison between them. Changing one alone silently
 breaks that.
 
+That promise is already imperfect on an axis the constants cannot fix: this path
+builds its `NcXcor` with `KERNEL_CUBATURE` while `NcXcorSSCSij` defaults to
+`KERNEL_EXACT`, so the two differ in quadrature as well as in whether $S_{ij}$
+varies. Worth settling before the comparison is quoted again.
+
 The failure is not fatal in any case: it falls back to h-adaptive subdivision,
 which is what let the affected run finish. The offset removes the retry rather
 than the crash.
@@ -186,15 +198,17 @@ DEFAULT_BLOCK_SIZE = 8
 
 #: Relative tolerance for the `U_i(k)` spline and the outer `k` integral. Not the
 #: knob that limits accuracy (see `DEFAULT_SCALED_ABSTOL`), and it cannot be
-#: tightened much: at `1e-7` the p-adaptive cubature runs out of Clenshaw-Curtis
-#: levels on the cross integrand for `l > 0` and aborts.
+#: tightened much *on this path*: at `1e-7` the p-adaptive cubature runs out of
+#: Clenshaw-Curtis levels on the cross integrand for `l > 0` and aborts. That
+#: ceiling belongs to `KERNEL_CUBATURE`, not to `KERNEL_EXACT`.
 DEFAULT_RELTOL = 1.0e-6
 
 #: Absolute floor for the adaptive refinement of the `U_i(k)` spline. One order
 #: tighter than #NcXcorKernel's own `1e-4` default, and the knob that limits
 #: off-diagonal accuracy -- see the module docstring. Deliberately offset from
 #: `DEFAULT_RELTOL`: making the two equal is the one setting that trips the
-#: p-adaptive cubature, and the offset is taken upwards because tightening costs
+#: p-adaptive cubature used here (`KERNEL_EXACT` is immune, having no adaptive
+#: outer step), and the offset is taken upwards because tightening costs
 #: ~2x per rebuild when `--vary-fitting-sij` puts S on the likelihood's critical
 #: path, for accuracy already far below anything a forecast reports.
 #:

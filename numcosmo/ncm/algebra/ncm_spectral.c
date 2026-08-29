@@ -77,6 +77,18 @@ struct _NcmSpectral
   gdouble *rebase_work;
   gsize rebase_work_len;
 
+  /* Batch refinement: n_comp functions on one shared abscissa. Kept apart from
+   * the scalar buffers above rather than generalising them, so the scalar path
+   * -- which the Levin integrator runs on -- is untouched. Values are stored
+   * node-major, f_vals[j * n_comp + c], so one evaluation writes a contiguous
+   * block and each component is a stride-n_comp vector the batched plan reads
+   * directly. */
+  guint batch_n_comp;
+  gdouble *batch_f_vals;
+  gdouble *batch_f_vals_tmp;
+  gdouble *batch_coeffs_work;
+  GPtrArray *batch_fftw_plans;
+
   /* Legacy fields (backward compatibility) */
   guint cheb_N_cached;     /* Cached N value */
   gdouble *cheb_f_vals;    /* Cached function values array */
@@ -97,6 +109,12 @@ ncm_spectral_init (NcmSpectral *spectral)
   spectral->cos_arrays  = NULL;
   spectral->sin_arrays  = NULL;
   spectral->fftw_plans  = NULL;
+
+  spectral->batch_n_comp      = 0;
+  spectral->batch_f_vals      = NULL;
+  spectral->batch_f_vals_tmp  = NULL;
+  spectral->batch_coeffs_work = NULL;
+  spectral->batch_fftw_plans  = NULL;
 
   spectral->rebase_work     = NULL;
   spectral->rebase_work_len = 0;
@@ -121,6 +139,11 @@ ncm_spectral_finalize (GObject *object)
   g_clear_pointer (&spectral->coeffs_work, fftw_free);
   g_clear_pointer (&spectral->coeffs, g_array_unref);
   g_clear_pointer (&spectral->rebase_work, g_free);
+
+  g_clear_pointer (&spectral->batch_fftw_plans, g_ptr_array_unref);
+  g_clear_pointer (&spectral->batch_f_vals, fftw_free);
+  g_clear_pointer (&spectral->batch_f_vals_tmp, fftw_free);
+  g_clear_pointer (&spectral->batch_coeffs_work, fftw_free);
 
   g_clear_pointer (&spectral->cheb_plan_r2r, fftw_destroy_plan);
   g_clear_pointer (&spectral->cheb_f_vals, fftw_free);
@@ -315,6 +338,368 @@ ncm_spectral_get_max_order (NcmSpectral *spectral)
   g_return_val_if_fail (NCM_IS_SPECTRAL (spectral), 0);
 
   return spectral->max_order;
+}
+
+static void _ncm_spectral_prepare_plan_for_k (NcmSpectral *spectral, guint k);
+
+/*
+ * Buffers and plans for @n_comp components. Sized once per n_comp: changing it
+ * invalidates every batched plan, since howmany is baked into the plan.
+ */
+static void
+_ncm_spectral_batch_prepare_buffers (NcmSpectral *spectral, guint n_comp)
+{
+  const guint N_max = (1 << spectral->max_order) + 1;
+
+  if (spectral->batch_n_comp == n_comp)
+    return;
+
+  g_clear_pointer (&spectral->batch_fftw_plans, g_ptr_array_unref);
+  g_clear_pointer (&spectral->batch_f_vals, fftw_free);
+  g_clear_pointer (&spectral->batch_f_vals_tmp, fftw_free);
+  g_clear_pointer (&spectral->batch_coeffs_work, fftw_free);
+
+  spectral->batch_n_comp      = n_comp;
+  spectral->batch_f_vals      = fftw_malloc (sizeof (gdouble) * N_max * n_comp);
+  spectral->batch_f_vals_tmp  = fftw_malloc (sizeof (gdouble) * N_max * n_comp);
+  spectral->batch_coeffs_work = fftw_malloc (sizeof (gdouble) * N_max * n_comp);
+  spectral->batch_fftw_plans  = g_ptr_array_new_with_free_func ((GDestroyNotify) fftw_destroy_plan);
+}
+
+/*
+ * One batched DCT-I over the n_comp interleaved components. The node-major
+ * layout makes each component a stride-n_comp vector, which fftw_plan_many_r2r
+ * takes directly, so the whole block is one plan and one execution.
+ */
+static void
+_ncm_spectral_batch_prepare_plan_for_k (NcmSpectral *spectral, guint k)
+{
+  const guint N      = (1 << k) + 1;
+  const guint n_comp = spectral->batch_n_comp;
+
+  if ((k < spectral->batch_fftw_plans->len) &&
+      (g_ptr_array_index (spectral->batch_fftw_plans, k) != NULL))
+    return;
+
+  /* The cosine tables are shared with the scalar path, which owns them. */
+  _ncm_spectral_prepare_plan_for_k (spectral, k);
+
+  while (spectral->batch_fftw_plans->len <= k)
+    g_ptr_array_add (spectral->batch_fftw_plans, NULL);
+
+  {
+    const fftw_r2r_kind kind[] = { FFTW_REDFT00 };
+    const gint n[]             = { (gint) N };
+    fftw_plan plan;
+
+    memcpy (spectral->batch_f_vals_tmp, spectral->batch_f_vals,
+            sizeof (gdouble) * N * n_comp);
+
+    ncm_cfg_load_fftw_wisdom ("ncm_spectral");
+    ncm_cfg_lock_plan_fftw ();
+
+    plan = fftw_plan_many_r2r (1, n, (gint) n_comp,
+                               spectral->batch_f_vals, NULL, (gint) n_comp, 1,
+                               spectral->batch_coeffs_work, NULL, (gint) n_comp, 1,
+                               kind, ncm_cfg_get_fftw_default_flag ());
+
+    ncm_cfg_unlock_plan_fftw ();
+    ncm_cfg_save_fftw_wisdom ("ncm_spectral");
+
+    memcpy (spectral->batch_f_vals, spectral->batch_f_vals_tmp,
+            sizeof (gdouble) * N * n_comp);
+
+    g_ptr_array_index (spectral->batch_fftw_plans, k) = plan;
+  }
+}
+
+static void
+_ncm_spectral_batch_evaluate_all_nodes (NcmSpectral *spectral, NcmSpectralFBatch F,
+                                        NcmVector *y, gdouble a, gdouble b, guint k,
+                                        gpointer user_data)
+{
+  const guint N           = (1 << k) + 1;
+  const guint n_comp      = spectral->batch_n_comp;
+  const gdouble mid       = 0.5 * (a + b);
+  const gdouble half_h    = 0.5 * (b - a);
+  const gdouble *cos_vals = g_ptr_array_index (spectral->cos_arrays, k);
+  guint j, c;
+
+  for (j = 0; j < N; j++)
+  {
+    const gdouble x = mid + half_h * cos_vals[j];
+
+    F (user_data, x, y);
+
+    for (c = 0; c < n_comp; c++)
+      spectral->batch_f_vals[j * n_comp + c] = ncm_vector_get (y, c);
+  }
+}
+
+/*
+ * Doubling reuses every node already evaluated: the Lobatto grid at k + 1
+ * contains the grid at k, so the existing blocks move to even positions and
+ * only the odd ones are new. That is the whole economy of the adaptive loop
+ * when an evaluation is expensive.
+ */
+static void
+_ncm_spectral_batch_refine_to_k (NcmSpectral *spectral, NcmSpectralFBatch F,
+                                 NcmVector *y, gdouble a, gdouble b,
+                                 guint k_old, guint k_new, gpointer user_data)
+{
+  const guint N_old       = (1 << k_old) + 1;
+  const guint N_new       = (1 << k_new) + 1;
+  const guint n_comp      = spectral->batch_n_comp;
+  const gdouble mid       = 0.5 * (a + b);
+  const gdouble half_h    = 0.5 * (b - a);
+  const gdouble *cos_vals = g_ptr_array_index (spectral->cos_arrays, k_new);
+  gint j;
+  guint jj, c;
+
+  g_assert (k_new == k_old + 1);
+
+  for (j = (gint) N_old - 1; j >= 0; j--)
+    memmove (&spectral->batch_f_vals[2 * j * n_comp],
+             &spectral->batch_f_vals[j * n_comp],
+             sizeof (gdouble) * n_comp);
+
+  for (jj = 1; jj < N_new; jj += 2)
+  {
+    const gdouble x = mid + half_h * cos_vals[jj];
+
+    F (user_data, x, y);
+
+    for (c = 0; c < n_comp; c++)
+      spectral->batch_f_vals[jj * n_comp + c] = ncm_vector_get (y, c);
+  }
+}
+
+static void
+_ncm_spectral_batch_normalize_coeffs (NcmSpectral *spectral, NcmMatrix *coeffs, guint N)
+{
+  const guint n_comp     = spectral->batch_n_comp;
+  const gdouble inv_2Nm1 = 1.0 / (2.0 * (N - 1.0));
+  const gdouble inv_Nm1  = 2.0 * inv_2Nm1;
+  guint i, c;
+
+  for (c = 0; c < n_comp; c++)
+  {
+    ncm_matrix_set (coeffs, c, 0, spectral->batch_coeffs_work[c] * inv_2Nm1);
+    ncm_matrix_set (coeffs, c, N - 1,
+                    spectral->batch_coeffs_work[(N - 1) * n_comp + c] * inv_2Nm1);
+
+    for (i = 1; i < N - 1; i++)
+      ncm_matrix_set (coeffs, c, i, spectral->batch_coeffs_work[i * n_comp + c] * inv_Nm1);
+  }
+}
+
+/*
+ * Every component must pass, so the worst decides the order. Component-wise
+ * rather than pooled: a component far below the block's norm would otherwise
+ * ride on its neighbours and never be resolved. The tolerance pair is a max
+ * and not a sum, so neither term can go inert against the other.
+ */
+static gboolean
+_ncm_spectral_batch_check_convergence (NcmMatrix *c_2N, NcmMatrix *c_N, guint N,
+                                       guint n_comp, gdouble reltol, gdouble abstol)
+{
+  guint i, c;
+
+  for (c = 0; c < n_comp; c++)
+  {
+    gdouble norm2_diff = 0.0;
+    gdouble norm2_2N   = 0.0;
+
+    for (i = 0; i < N; i++)
+    {
+      const gdouble diff = ncm_matrix_get (c_2N, c, i) - ncm_matrix_get (c_N, c, i);
+
+      norm2_diff += diff * diff;
+      norm2_2N   += ncm_matrix_get (c_2N, c, i) * ncm_matrix_get (c_2N, c, i);
+    }
+
+    if (!(norm2_diff < MAX (reltol * reltol * norm2_2N, abstol * abstol) + 1.0e-100))
+      return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * ncm_spectral_compute_chebyshev_coeffs_batch_adaptive:
+ * @spectral: a #NcmSpectral
+ * @F: (scope call): vector-valued function to expand
+ * @n_comp: number of components @F returns
+ * @a: interval lower bound
+ * @b: interval upper bound
+ * @k_min: starting refinement level, $N = 2^{k_\mathrm{min}} + 1$
+ * @reltol: relative tolerance on the coefficients
+ * @abstol: absolute tolerance on the coefficients
+ * @coeffs: (out) (transfer full): an @n_comp by $N$ #NcmMatrix of coefficients
+ * @user_data: user data for @F
+ *
+ * Expands @n_comp functions in Chebyshev series on one shared Chebyshev-Lobatto
+ * grid, doubling the order until every component converges.
+ *
+ * The batch exists for the case where evaluating is what costs and one
+ * evaluation yields every component -- expanding them one at a time would then
+ * repeat that evaluation @n_comp times. Here each node is visited once, the
+ * grid nests under doubling so refinement pays only for genuinely new nodes,
+ * and the transform is a single batched DCT-I over the interleaved components.
+ *
+ * Convergence is judged per component against the previous level, so the
+ * component needing the highest order sets it. The order is shared because the
+ * grid is: that is what makes the coefficients of different components directly
+ * combinable afterwards.
+ *
+ * Returns: the refinement level reached, $N = 2^k + 1$ coefficients per
+ * component
+ */
+guint
+ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (NcmSpectral *spectral, NcmSpectralFBatch F,
+                                                      guint n_comp, gdouble a, gdouble b,
+                                                      guint k_min, gdouble reltol, gdouble abstol,
+                                                      NcmMatrix **coeffs, gpointer user_data)
+{
+  return ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, F, n_comp, a, b,
+                                                                   k_min, spectral->max_order,
+                                                                   reltol, abstol, TRUE,
+                                                                   coeffs, user_data);
+}
+
+/**
+ * ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap:
+ * @spectral: a #NcmSpectral
+ * @F: (scope call): vector-valued function to expand
+ * @n_comp: number of components @F returns
+ * @a: interval lower bound
+ * @b: interval upper bound
+ * @k_min: starting refinement level
+ * @k_cap: highest refinement level to try, capped at #NcmSpectral:max-order
+ * @reltol: relative tolerance on the coefficients
+ * @abstol: absolute tolerance on the coefficients
+ * @fatal: whether failing to converge by @k_cap is an error
+ * @coeffs: (out) (transfer full): an @n_comp by $N$ #NcmMatrix of coefficients
+ * @user_data: user data for @F
+ *
+ * As ncm_spectral_compute_chebyshev_coeffs_batch_adaptive(), with a ceiling on
+ * the order and a choice about what failing to reach it means.
+ *
+ * A caller that subdivides its interval wants a modest @k_cap and @fatal
+ * %FALSE: not converging on a panel is how it learns to split, not a failure.
+ * A caller expanding on one interval wants @fatal %TRUE, since for it the cap
+ * is a memory guard rather than a stopping rule.
+ *
+ * Returns: the level reached, or 0 when @fatal is %FALSE and @k_cap was not
+ * enough, in which case @coeffs is left alone
+ */
+guint
+ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral, NcmSpectralFBatch F,
+                                                          guint n_comp, gdouble a, gdouble b,
+                                                          guint k_min, guint k_cap,
+                                                          gdouble reltol, gdouble abstol,
+                                                          gboolean fatal,
+                                                          NcmMatrix **coeffs, gpointer user_data)
+{
+  guint k            = k_min;
+  gboolean converged = FALSE;
+  NcmMatrix *c_previous, *c_current;
+  NcmVector *y;
+
+  k_cap = MIN (k_cap, spectral->max_order);
+
+  g_assert (k_min <= k_cap);
+  g_assert_cmpuint (n_comp, >, 0);
+
+  _ncm_spectral_batch_prepare_buffers (spectral, n_comp);
+
+  y          = ncm_vector_new (n_comp);
+  c_previous = ncm_matrix_new (n_comp, (1 << spectral->max_order) + 1);
+  c_current  = ncm_matrix_new (n_comp, (1 << spectral->max_order) + 1);
+
+  _ncm_spectral_batch_prepare_plan_for_k (spectral, k);
+  _ncm_spectral_batch_evaluate_all_nodes (spectral, F, y, a, b, k, user_data);
+
+  {
+    const guint N = (1 << k) + 1;
+
+    fftw_execute (g_ptr_array_index (spectral->batch_fftw_plans, k));
+    _ncm_spectral_batch_normalize_coeffs (spectral, c_previous, N);
+  }
+
+  while (k < k_cap)
+  {
+    const guint N_prev = (1 << k) + 1;
+    guint N;
+
+    _ncm_spectral_batch_prepare_plan_for_k (spectral, k + 1);
+    _ncm_spectral_batch_refine_to_k (spectral, F, y, a, b, k, k + 1, user_data);
+    k++;
+    N = (1 << k) + 1;
+
+    fftw_execute (g_ptr_array_index (spectral->batch_fftw_plans, k));
+    _ncm_spectral_batch_normalize_coeffs (spectral, c_current, N);
+
+    /* Compared over the coarser level's coefficients, which is where both
+     * expansions carry the same modes. */
+    if (_ncm_spectral_batch_check_convergence (c_current, c_previous, N_prev,
+                                               n_comp, reltol, abstol))
+    {
+      converged = TRUE;
+      break;
+    }
+
+    {
+      NcmMatrix *tmp = c_previous;
+
+      c_previous = c_current;
+      c_current  = tmp;
+    }
+  }
+
+  if (!converged && fatal)
+    g_error ("ncm_spectral_compute_chebyshev_coeffs_batch_adaptive: reached the "
+             "maximum order %u (N = %u) without converging to reltol %.3e, "
+             "abstol %.3e. max-order is a memory guard, not a stopping rule: "
+             "either the tolerances are past what the sampled function carries, "
+             "or the interval needs splitting.",
+             k_cap, (1 << k_cap) + 1, reltol, abstol);
+
+  if (!converged)
+  {
+    ncm_matrix_free (c_previous);
+    ncm_matrix_free (c_current);
+    ncm_vector_free (y);
+
+    return 0;
+  }
+
+  {
+    const guint N = (1 << k) + 1;
+    guint c, i;
+
+    /* Copied out rather than handed back as a submatrix: a submatrix would
+     * keep the whole max-order buffer alive behind a result that is usually a
+     * small fraction of it. A matrix already of the right shape is reused, as
+     * the scalar path reuses its array -- Python always passes NULL here and so
+     * always gets a fresh one. */
+    if ((*coeffs != NULL) &&
+        ((ncm_matrix_nrows (*coeffs) != n_comp) || (ncm_matrix_ncols (*coeffs) != N)))
+      ncm_matrix_clear (coeffs);
+
+    if (*coeffs == NULL)
+      *coeffs = ncm_matrix_new (n_comp, N);
+
+    for (c = 0; c < n_comp; c++)
+      for (i = 0; i < N; i++)
+        ncm_matrix_set (*coeffs, c, i, ncm_matrix_get (c_current, c, i));
+  }
+
+  ncm_matrix_free (c_previous);
+  ncm_matrix_free (c_current);
+  ncm_vector_free (y);
+
+  return k;
 }
 
 /**

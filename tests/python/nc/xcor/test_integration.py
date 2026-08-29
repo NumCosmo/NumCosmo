@@ -290,18 +290,18 @@ def test_xcor_kernel_methods(
         assert_allclose(kernel_gsl, kernel_cubature(1), rtol=1.0e-5, atol=1.0e-50)
 
         # The blocked path against the exact quadrature on the same closures:
-        # KERNEL_FIXED integrates the spline on its own knots, where GL(5) is
+        # KERNEL_EXACT integrates the spline on its own knots, where GL(5) is
         # exact, so any difference here is the adaptive rule's alone.
-        vp_kernel_fixed = Ncm.Vector.new(n)
+        vp_kernel_exact = Ncm.Vector.new(n)
         xcor_kf = Nc.Xcor.new(
-            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_FIXED
+            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT
         )
         xcor_kf.props.ell_batch_size = 4
         xcor_kf.prepare(cosmology.cosmo)
-        xcor_kf.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_fixed)
+        xcor_kf.compute(k1, k2, cosmology.cosmo, lmin, lmax, vp_kernel_exact)
 
         assert_allclose(
-            kernel_cub, np.array(vp_kernel_fixed.dup_array()), rtol=1.0e-5, atol=1.0e-50
+            kernel_cub, np.array(vp_kernel_exact.dup_array()), rtol=1.0e-5, atol=1.0e-50
         )
     finally:
         k1.set_l_limber(original_l_limber[k1_name])
@@ -347,8 +347,8 @@ def test_kernel_integrator_types(cosmology: Cosmology) -> None:
     kernel_levin.prepare(cosmo)
 
     # Verify both integrators work
-    eval_limber = kernel_limber.get_eval(cosmo, 200)
-    eval_levin = kernel_levin.get_eval(cosmo, 200)
+    eval_limber = kernel_limber.get_eval(cosmo, 200, Nc.XcorKernelClosure.SPLINE)
+    eval_levin = kernel_levin.get_eval(cosmo, 200, Nc.XcorKernelClosure.SPLINE)
 
     result_limber = eval_limber.eval_array(1.0e2)
     result_levin = eval_levin.eval_array(1.0e2)

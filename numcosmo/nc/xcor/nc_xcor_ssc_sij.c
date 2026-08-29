@@ -52,7 +52,7 @@
  * Limber approximation is meaningless at the low multipoles that dominate
  * $S_{ij}$, and it makes the cross spectrum of two disjoint bins vanish.
  *
- * The default quadrature is %NC_XCOR_METHOD_KERNEL_FIXED, which needs no
+ * The default quadrature is %NC_XCOR_METHOD_KERNEL_EXACT, which needs no
  * tolerance and cannot fail to converge. The adaptive alternatives target a
  * tolerance the integrand may not support and abort when they cannot reach it,
  * which would kill a Monte Carlo chain mid-flight.
@@ -91,16 +91,25 @@
  * small residual of a large cancellation, four orders of magnitude below the
  * diagonal for well-separated bins.
  *
- * Deliberately different from NC_XCOR_SSC_SIJ_DEFAULT_RELTOL below. Equal
- * values are the one setting that makes the p-adaptive cubature run out of
- * Clenshaw-Curtis levels, because the refinement then stops exactly at the
- * level the outer rule is trying to resolve. The offset is taken upwards
- * because this object rebuilds S at every likelihood step, where tightening
- * costs ~2x per rebuild for accuracy no forecast can use.
+ * Offset from NC_XCOR_SSC_SIJ_DEFAULT_RELTOL below, upwards, because this
+ * object rebuilds S at every likelihood step, where tightening costs ~2x per
+ * rebuild for accuracy no forecast can use. That cost argument is the whole
+ * reason for the value.
+ *
+ * It is *not* offset to dodge the p-adaptive cubature failure that
+ * numcosmo_py/ssc.py documents at length, and which equal values are the one
+ * setting to trigger. That failure needs an adaptive outer rule refining
+ * against a tolerance the closure's own fit error puts out of reach; this
+ * object defaults to %NC_XCOR_METHOD_KERNEL_EXACT, which has no outer tolerance
+ * and no adaptive step, so it cannot occur here. Equal values would be safe --
+ * they would just cost more.
  *
  * Must be kept equal to DEFAULT_SCALED_ABSTOL in numcosmo_py/ssc.py, which is
  * what the frozen path uses: the two are documented to differ only in whether
- * S_ij follows the cosmology, not in how it is computed. */
+ * S_ij follows the cosmology, not in how it is computed. Note that this promise
+ * is already imperfect on a second axis -- that path builds its NcXcor with
+ * %NC_XCOR_METHOD_KERNEL_CUBATURE while this one defaults to
+ * %NC_XCOR_METHOD_KERNEL_EXACT. */
 #define NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL (1.0e-5)
 
 #define NC_XCOR_SSC_SIJ_DEFAULT_RELTOL (1.0e-6)
@@ -168,7 +177,7 @@ nc_xcor_ssc_sij_init (NcXcorSSCSij *ssc_sij)
   ssc_sij->mask_cl = NULL;
   ssc_sij->area    = 0.0;
 
-  ssc_sij->method        = NC_XCOR_METHOD_KERNEL_FIXED;
+  ssc_sij->method        = NC_XCOR_METHOD_KERNEL_EXACT;
   ssc_sij->block_size    = NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE;
   ssc_sij->reltol        = NC_XCOR_SSC_SIJ_DEFAULT_RELTOL;
   ssc_sij->scaled_abstol = NC_XCOR_SSC_SIJ_DEFAULT_SCALED_ABSTOL;
@@ -436,7 +445,7 @@ nc_xcor_ssc_sij_class_init (NcXcorSSCSijClass *klass)
                                                       NULL,
                                                       "Quadrature method used for the angular power spectra",
                                                       NC_TYPE_XCOR_METHOD,
-                                                      NC_XCOR_METHOD_KERNEL_FIXED,
+                                                      NC_XCOR_METHOD_KERNEL_EXACT,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_BLOCK_SIZE,
@@ -814,7 +823,7 @@ nc_xcor_ssc_sij_get_scaled_abstol (NcXcorSSCSij *ssc_sij)
  * @method: a #NcXcorMethod
  *
  * Sets the quadrature method used for the angular power spectra. The default,
- * %NC_XCOR_METHOD_KERNEL_FIXED, needs no tolerance and cannot fail to
+ * %NC_XCOR_METHOD_KERNEL_EXACT, needs no tolerance and cannot fail to
  * converge; the adaptive alternatives abort when they cannot reach their
  * target tolerance, which is fatal inside a Monte Carlo chain.
  *

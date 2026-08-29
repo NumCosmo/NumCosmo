@@ -22746,6 +22746,8 @@ class Xcor(GObject.Object):
         Matter power spectrum.
       meth -> NcXcorMethod: meth
         Method.
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closures.
       reltol -> gdouble: reltol
         Relative tolerance.
       ell-batch-size -> guint: ell-batch-size
@@ -22756,6 +22758,7 @@ class Xcor(GObject.Object):
     """
 
     class Props:
+        closure_type: XcorKernelClosure
         distance: Distance
         ell_batch_size: int
         meth: XcorMethod
@@ -22765,6 +22768,7 @@ class Xcor(GObject.Object):
     props: Props = ...
     def __init__(
         self,
+        closure_type: XcorKernelClosure = ...,
         distance: Distance = ...,
         ell_batch_size: int = ...,
         meth: XcorMethod = ...,
@@ -22776,13 +22780,24 @@ class Xcor(GObject.Object):
     def compute(
         self,
         xclk1: XcorKernel,
-        xclk2: XcorKernel,
+        xclk2: typing.Optional[XcorKernel],
         cosmo: HICosmo,
         lmin: int,
         lmax: int,
         vp: NumCosmoMath.Vector,
     ) -> None: ...
+    def compute_full(
+        self,
+        xclk1: XcorKernel,
+        xclk2: typing.Optional[XcorKernel],
+        cosmo: HICosmo,
+        lmin: int,
+        lmax: int,
+        vp: NumCosmoMath.Vector,
+        vp_err: typing.Optional[NumCosmoMath.Vector] = None,
+    ) -> None: ...
     def free(self) -> None: ...
+    def get_closure_type(self) -> XcorKernelClosure: ...
     def get_ell_batch_size(self) -> int: ...
     def get_meth(self) -> XcorMethod: ...
     def get_reltol(self) -> float: ...
@@ -22792,6 +22807,7 @@ class Xcor(GObject.Object):
     ) -> Xcor: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> Xcor: ...
+    def set_closure_type(self, closure_type: XcorKernelClosure) -> None: ...
     def set_ell_batch_size(self, ell_batch_size: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
 
@@ -22934,6 +22950,10 @@ class XcorKernel(NumCosmoMath.Model):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22969,9 +22989,11 @@ class XcorKernel(NumCosmoMath.Model):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -22995,9 +23017,11 @@ class XcorKernel(NumCosmoMath.Model):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23030,16 +23054,19 @@ class XcorKernel(NumCosmoMath.Model):
     def get_adaptive_boundary_tries(self) -> int: ...
     def get_adaptive_epsilon(self) -> float: ...
     def get_component_list(self) -> list[XcorKernelComponent]: ...
-    def get_eval(self, cosmo: HICosmo, l: int) -> XcorKernelIntegrand: ...
+    def get_eval(
+        self, cosmo: HICosmo, l: int, closure_type: XcorKernelClosure
+    ) -> XcorKernelIntegrand: ...
     def get_eval_vectorized(
-        self, cosmo: HICosmo, lmin: int, lmax: int
+        self, cosmo: HICosmo, lmin: int, lmax: int, closure_type: XcorKernelClosure
     ) -> XcorKernelIntegrand: ...
     def get_eval_vectorized_full(
         self,
         cosmo: HICosmo,
         lmin: int,
         lmax: int,
-        sbi: typing.Optional[NumCosmoMath.SBesselIntegrator] = None,
+        sbi: typing.Optional[NumCosmoMath.SBesselIntegrator],
+        closure_type: XcorKernelClosure,
     ) -> XcorKernelIntegrand: ...
     def get_expansion_factor(self) -> float: ...
     def get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
@@ -23047,8 +23074,10 @@ class XcorKernel(NumCosmoMath.Model):
     def get_lmax(self) -> int: ...
     def get_max_border_expansions(self) -> int: ...
     def get_max_iter(self) -> int: ...
+    def get_panel_order_cap(self) -> int: ...
     def get_reltol(self) -> float: ...
     def get_scaled_abstol(self) -> float: ...
+    def get_track_fit_residual(self) -> bool: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
     @staticmethod
     def id() -> int: ...
@@ -23068,8 +23097,10 @@ class XcorKernel(NumCosmoMath.Model):
     def set_lmax(self, lmax: int) -> None: ...
     def set_max_border_expansions(self, max_border_expansions: int) -> None: ...
     def set_max_iter(self, max_iter: int) -> None: ...
+    def set_panel_order_cap(self, panel_order_cap: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_scaled_abstol(self, scaled_abstol: float) -> None: ...
+    def set_track_fit_residual(self, track_fit_residual: bool) -> None: ...
 
 class XcorKernelAnalytic(XcorKernel):
     r"""
@@ -23110,6 +23141,10 @@ class XcorKernelAnalytic(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23146,9 +23181,11 @@ class XcorKernelAnalytic(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23173,9 +23210,11 @@ class XcorKernelAnalytic(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23256,6 +23295,10 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23295,9 +23338,11 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23324,9 +23369,11 @@ class XcorKernelAnalyticGauss(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23500,6 +23547,10 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23539,9 +23590,11 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23568,9 +23621,11 @@ class XcorKernelAnalyticLensing(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23659,6 +23714,10 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23699,9 +23758,11 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23729,9 +23790,11 @@ class XcorKernelAnalyticMulti(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23827,6 +23890,10 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23868,9 +23935,11 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23899,9 +23968,11 @@ class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23995,6 +24066,10 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24035,9 +24110,11 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24065,9 +24142,11 @@ class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24157,6 +24236,10 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24195,9 +24278,11 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24223,9 +24308,11 @@ class XcorKernelAnalyticTophat(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24312,6 +24399,10 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24352,9 +24443,11 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24382,9 +24475,11 @@ class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24467,6 +24562,10 @@ class XcorKernelCMBISW(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24504,9 +24603,11 @@ class XcorKernelCMBISW(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24531,9 +24632,11 @@ class XcorKernelCMBISW(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24605,6 +24708,10 @@ class XcorKernelCMBLensing(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24642,9 +24749,11 @@ class XcorKernelCMBLensing(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24669,9 +24778,11 @@ class XcorKernelCMBLensing(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24754,6 +24865,10 @@ class XcorKernelCluster(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24789,9 +24904,11 @@ class XcorKernelCluster(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24815,9 +24932,11 @@ class XcorKernelCluster(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -24878,6 +24997,10 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -24915,9 +25038,11 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -24942,9 +25067,11 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25117,6 +25244,10 @@ class XcorKernelGal(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -25163,9 +25294,11 @@ class XcorKernelGal(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -25199,9 +25332,11 @@ class XcorKernelGal(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25253,12 +25388,28 @@ class XcorKernelIntegrand(GObject.GBoxed):
     eval_comps_func: typing.Callable[
         [None, float, int, int, typing.Sequence[float] | npt.NDArray[np.float64]], None
     ] = ...
+    get_spectral_func: typing.Callable[
+        [None], typing.Tuple[bool, NumCosmoMath.Matrix, float, float]
+    ] = ...
+    get_panels_func: typing.Callable[[None], int] = ...
+    peek_panel_func: typing.Callable[
+        [None, int], typing.Tuple[NumCosmoMath.Matrix, float, float]
+    ] = ...
+    restrict_func: typing.Callable[
+        [None, float, float], typing.Tuple[bool, NumCosmoMath.Matrix]
+    ] = ...
+    residuals: NumCosmoMath.Matrix = ...
+    reltol: float = ...
+    scaled_abstol: float = ...
     @staticmethod
     def clear(integrand: XcorKernelIntegrand) -> None: ...
     def eval_array(self, k: float) -> list[float]: ...
     def get_len(self) -> int: ...
+    def get_n_panels(self) -> int: ...
     def get_range(self) -> typing.Tuple[float, float]: ...
     def get_range_comp(self, i: int) -> typing.Tuple[float, float]: ...
+    def get_reltol(self) -> float: ...
+    def get_scaled_abstol(self) -> float: ...
     @classmethod
     def new(
         cls,
@@ -25268,7 +25419,19 @@ class XcorKernelIntegrand(GObject.GBoxed):
         *data: typing.Any,
     ) -> XcorKernelIntegrand: ...
     def peek_knots(self) -> typing.Optional[NumCosmoMath.Vector]: ...
+    def peek_panel(self, i: int) -> typing.Tuple[NumCosmoMath.Matrix, float, float]: ...
+    def peek_residuals(self) -> typing.Optional[NumCosmoMath.Matrix]: ...
+    def peek_spectral(
+        self,
+    ) -> typing.Tuple[bool, NumCosmoMath.Matrix, float, float]: ...
     def ref(self) -> XcorKernelIntegrand: ...
+    def restrict(
+        self, a: float, b: float
+    ) -> typing.Tuple[bool, NumCosmoMath.Matrix]: ...
+    def set_residuals(
+        self, residuals: typing.Optional[NumCosmoMath.Matrix] = None
+    ) -> None: ...
+    def set_tolerances(self, reltol: float, scaled_abstol: float) -> None: ...
     def unref(self) -> None: ...
 
 class XcorKernelWeakLensing(XcorKernel):
@@ -25315,6 +25478,10 @@ class XcorKernelWeakLensing(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -25353,9 +25520,11 @@ class XcorKernelWeakLensing(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -25381,9 +25550,11 @@ class XcorKernelWeakLensing(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -25451,6 +25622,10 @@ class XcorKerneltSZ(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -25488,9 +25663,11 @@ class XcorKerneltSZ(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -25515,9 +25692,11 @@ class XcorKerneltSZ(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -27897,6 +28076,21 @@ class XcorKernelCMBLensingSParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class XcorKernelClosure(GObject.GEnum):
+    CHEBYSHEV: XcorKernelClosure = ...
+    SPLINE: XcorKernelClosure = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class XcorKernelGalSParams(GObject.GEnum):
     MAG_BIAS: XcorKernelGalSParams = ...
     NOISE_BIAS: XcorKernelGalSParams = ...
@@ -27986,7 +28180,7 @@ class XcorKerneltSZSParams(GObject.GEnum):
 
 class XcorMethod(GObject.GEnum):
     KERNEL_CUBATURE: XcorMethod = ...
-    KERNEL_FIXED: XcorMethod = ...
+    KERNEL_EXACT: XcorMethod = ...
     KERNEL_GSL: XcorMethod = ...
     LIMBER_Z_CUBATURE: XcorMethod = ...
     LIMBER_Z_GSL: XcorMethod = ...

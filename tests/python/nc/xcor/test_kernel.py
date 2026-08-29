@@ -91,7 +91,7 @@ def test_limber_vs_limber_z(kernel: Nc.XcorKernel, cosmology: Cosmology) -> None
 
     # Get vectorized evaluation functions
     for ell in ell_array:
-        limber_func = kernel.get_eval(cosmo, ell)
+        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
         nu = ell + 0.5
 
         # Evaluate both methods
@@ -148,7 +148,9 @@ def test_limber_vs_limber_z_vectorized(
     ell_end = ell_start + 8  # 9 elements total
 
     # Get vectorized evaluation function for ell range
-    limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+    limber_func = kernel.get_eval_vectorized(
+        cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+    )
     kmin, kmax = limber_func.get_range()
 
     # Test at multiple k values
@@ -267,7 +269,7 @@ def test_limber_vs_non_limber(
         rtol = kernel_tol.get(kernel_id, {}).get(ell, default_rtol)
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval(cosmo, ell)
+        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result (this is the "exact" reference)
@@ -275,7 +277,7 @@ def test_limber_vs_non_limber(
         kernel.prepare(cosmo)
 
         for _ in range(1):
-            non_limber_func = kernel.get_eval(cosmo, ell)
+            non_limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
 
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
         kmin = max(kmin_limber, kmin_non_limber)
@@ -347,13 +349,13 @@ def test_k_projection_limber_vs_non_limber(
         rtol = kernel_tol.get(kernel_id, {}).get(ell, default_rtol)
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval(cosmo, ell)
+        limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result (this is the "exact" reference)
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
-        non_limber_func = kernel.get_eval(cosmo, ell)
+        non_limber_func = kernel.get_eval(cosmo, ell, Nc.XcorKernelClosure.SPLINE)
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
 
         kmin = max(kmin_limber, kmin_non_limber)
@@ -434,13 +436,17 @@ def test_limber_vs_non_limber_vectorized(
         # Get limber result with vectorized evaluation
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        limber_func = kernel.get_eval_vectorized(
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+        )
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result with vectorized evaluation
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
-        non_limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        non_limber_func = kernel.get_eval_vectorized(
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+        )
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
 
         kmin = max(kmin_limber, kmin_non_limber)
@@ -514,13 +520,17 @@ def test_k_projection_limber_vs_non_limber_vectorized(
         # Get limber result with vectorized evaluation
         kernel.set_l_limber(0)
         kernel.prepare(cosmo)
-        limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        limber_func = kernel.get_eval_vectorized(
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+        )
         kmin_limber, kmax_limber = limber_func.get_range()
 
         # Get non-limber result with vectorized evaluation
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
-        non_limber_func = kernel.get_eval_vectorized(cosmo, ell_start, ell_end)
+        non_limber_func = kernel.get_eval_vectorized(
+            cosmo, ell_start, ell_end, Nc.XcorKernelClosure.SPLINE
+        )
         kmin_non_limber, kmax_non_limber = non_limber_func.get_range()
 
         kmin = max(kmin_limber, kmin_non_limber)
@@ -659,3 +669,53 @@ def test_scaled_abstol_below_the_floor_warns(
 
     assert "below the useful floor" not in capfd.readouterr().err
     assert kernel.get_scaled_abstol() == 1.0e-6
+
+
+def test_tolerances_more_than_two_orders_apart_warn(
+    cosmology: Cosmology, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """An inert tolerance is worth saying out loud.
+
+    Refinement stops at reltol * ||f||_2 + a * ||f||_2^max, a sum, so the looser
+    term decides and the tighter one changes nothing while still being paid for
+    in knots. Measured on a Gaussian: reltol 1e-8 against a = 1e-4 is worth 1.2x
+    over the 1e-4/1e-4 defaults, where moving both to 1e-6/1e-5 is worth 15x.
+    """
+
+    def build(reltol: float, scaled_abstol: float) -> str:
+        kernel = Nc.XcorKernelAnalyticGauss(
+            dist=cosmology.dist,
+            powspec=cosmology.ps_ml,
+            chi_mean=1500.0,
+            chi_sigma=300.0,
+            integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+            reltol=reltol,
+            scaled_abstol=scaled_abstol,
+        )
+        kernel.set_l_limber(-1)
+        kernel.prepare(cosmology.cosmo)
+        capfd.readouterr()
+
+        # Two blocks: the tolerances cannot change between them, so the warning
+        # must not repeat.
+        for lmin, lmax in ((2, 9), (10, 17)):
+            kernel.get_eval_vectorized_full(
+                cosmology.cosmo,
+                lmin,
+                lmax,
+                Ncm.SBesselIntegratorLevin.new(0, 8),
+                Nc.XcorKernelClosure.SPLINE,
+            )
+
+        return capfd.readouterr().err
+
+    assert "orders apart" not in build(1.0e-4, 1.0e-4), "the balanced default"
+    assert "orders apart" not in build(1.0e-6, 1.0e-5), "the pair NcXcorSSCSij uses"
+
+    inert_reltol = build(1.0e-8, 1.0e-4)
+    assert inert_reltol.count("orders apart") == 1
+    assert "and reltol is inert" in inert_reltol
+
+    inert_floor = build(1.0e-4, 1.0e-8)
+    assert inert_floor.count("orders apart") == 1
+    assert "and scaled-abstol is inert" in inert_floor

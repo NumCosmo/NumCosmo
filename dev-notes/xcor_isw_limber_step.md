@@ -187,7 +187,7 @@ where the component vanishes reports no error and is never subdivided.
 Check 1 (the `k_max_l = nu/xi_min` clip): clips to the spline's `k_max`, which
 is where every non-Limber component already sits, so it introduces no edge.
 Check 2 (cost), l = 2..1025: ISW tier 2 at block 16 went 8.056 s -> 3.135 s,
-i.e. from 2.6x `KERNEL_FIXED` to level with it; CMB lensing at block 64 went
+i.e. from 2.6x `KERNEL_EXACT` to level with it; CMB lensing at block 64 went
 0.227 s -> 0.235 s. Check 3 (WL bit-identical) was wrong as stated: a block's
 fitted domain starts at its *lowest* multipole's band edge, so every higher
 multipole in the block has a band edge of its own and splits too. CMB lensing
