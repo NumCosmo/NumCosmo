@@ -398,11 +398,22 @@ _nc_xcor_kernel_analytic_tophat_smooth_eval_W_comp (NcXcorKernelAnalytic *xcka, 
 {
   NcXcorKernelAnalyticTophatSmooth *xckats = NC_XCOR_KERNEL_ANALYTIC_TOPHAT_SMOOTH (xcka);
   const gdouble s2                         = M_SQRT2 * xckats->chi_sigma;
+  const gdouble tu                         = (xckats->chi_upper - chi) / s2;
+  const gdouble tl                         = (xckats->chi_lower - chi) / s2;
 
   if ((chi < xckats->chi_min) || (chi > xckats->chi_max))
     return 0.0;
 
-  return (erf ((xckats->chi_upper - chi) / s2) - erf ((xckats->chi_lower - chi) / s2)) / xckats->norm;
+  /* erf (tu) - erf (tl) with tu > tl. Both erf values approach the same
+   * limit in either tail, so the difference cancels to the window's own size
+   * -- 1e-8 relative at 6 sigma, which no relative tolerance can see past.
+   * erfc keeps the small quantity small throughout. */
+  if ((tu >= 0.0) && (tl >= 0.0))
+    return (erfc (tl) - erfc (tu)) / xckats->norm;
+  else if ((tu <= 0.0) && (tl <= 0.0))
+    return (erfc (-tu) - erfc (-tl)) / xckats->norm;
+  else
+    return (erf (tu) - erf (tl)) / xckats->norm;
 }
 
 static void
