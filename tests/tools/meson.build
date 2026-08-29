@@ -16,7 +16,7 @@ if arb_dep.found()
     # (compare_powspec_analytic_arb.py) compiles its own copy through
     # pkg-config so it can run against an installed NumCosmo; this target
     # exists so a compile break is caught wherever FLINT is available.
-    foreach tool : ['ncm_powspec_analytic_arb', 'nc_xcor_kernel_analytic_arb']
+    foreach tool : ['ncm_powspec_analytic_arb', 'nc_xcor_kernel_analytic_arb', 'nc_xcor_kquad_arb']
         executable(
             tool,
             tool + '.c',
