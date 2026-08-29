@@ -34,35 +34,25 @@
 G_BEGIN_DECLS
 
 #define NC_TYPE_HALO_BIAS             (nc_halo_bias_get_type ())
-#define NC_HALO_BIAS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HALO_BIAS, NcHaloBias))
-#define NC_HALO_BIAS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HALO_BIAS, NcHaloBiasClass))
-#define NC_IS_HALO_BIAS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HALO_BIAS))
-#define NC_IS_HALO_BIAS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HALO_BIAS))
-#define NC_HALO_BIAS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HALO_BIAS, NcHaloBiasClass))
 
-typedef struct _NcHaloBiasClass NcHaloBiasClass;
-typedef struct _NcHaloBias NcHaloBias;
+G_DECLARE_DERIVABLE_TYPE (NcHaloBias, nc_halo_bias, NC, HALO_BIAS, GObject)
 
 struct _NcHaloBiasClass
 {
   /*< private >*/
   GObjectClass parent_class;
 
-  gdouble (*eval) (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+  gdouble (*eval) (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z);
+
+  /* Padding to allow adding up to 17 more virtual functions without breaking ABI. */
+  gpointer padding[17];
 };
 
-struct _NcHaloBias
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcHaloMassFunction *mfp;
-};
-
-GType nc_halo_bias_get_type (void) G_GNUC_CONST;
-
-gdouble nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble z);
+gdouble nc_halo_bias_eval (NcHaloBias *bias, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z);
 void nc_halo_bias_free (NcHaloBias *bias);
 void nc_halo_bias_clear (NcHaloBias **bias);
+
+NcHaloMassFunction *nc_halo_bias_peek_mass_function (NcHaloBias *bias);
 
 gdouble nc_halo_bias_integrand (NcHaloBias *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdouble z);
 

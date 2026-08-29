@@ -33,6 +33,11 @@
 
 G_BEGIN_DECLS
 
+/* Forward declaration: ncm_serialize.h includes this header (for NcmObjArray
+ * et al.), so it cannot be included back here without a cycle. The object
+ * (de)serializing accessors below only need the pointer type. */
+typedef struct _NcmSerialize NcmSerialize;
+
 #define NCM_TYPE_OBJ_ARRAY (ncm_obj_array_get_type ())
 #define NCM_TYPE_OBJ_DICT_STR (ncm_obj_dict_str_get_type ())
 #define NCM_TYPE_OBJ_DICT_INT (ncm_obj_dict_int_get_type ())
@@ -123,6 +128,8 @@ void ncm_var_dict_set_int_array (NcmVarDict *vd, const gchar *key, GArray *value
 void ncm_var_dict_set_double_array (NcmVarDict *vd, const gchar *key, GArray *value);
 void ncm_var_dict_set_boolean_array (NcmVarDict *vd, const gchar *key, GArray *value);
 void ncm_var_dict_set_variant (NcmVarDict *vd, const gchar *key, GVariant *value);
+void ncm_var_dict_set_object (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, GObject *obj);
+void ncm_var_dict_set_object_array (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, NcmObjArray *oa);
 
 gboolean ncm_var_dict_has_key (NcmVarDict *vd, const gchar *key);
 gboolean ncm_var_dict_get_string (NcmVarDict *vd, const gchar *key, gchar **value);
@@ -133,6 +140,8 @@ gboolean ncm_var_dict_get_int_array (NcmVarDict *vd, const gchar *key, GArray **
 gboolean ncm_var_dict_get_double_array (NcmVarDict *vd, const gchar *key, GArray **value);
 gboolean ncm_var_dict_get_boolean_array (NcmVarDict *vd, const gchar *key, GArray **value);
 gboolean ncm_var_dict_get_variant (NcmVarDict *vd, const gchar *key, GVariant **value);
+gboolean ncm_var_dict_get_object (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, GObject **obj);
+gboolean ncm_var_dict_get_object_array (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, NcmObjArray **oa);
 
 guint ncm_var_dict_len (NcmVarDict *vd);
 GStrv ncm_var_dict_keys (NcmVarDict *vd);

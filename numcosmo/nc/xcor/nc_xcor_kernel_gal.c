@@ -644,7 +644,14 @@ _clustering_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo,
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
-  *xi_min = nc_distance_comoving (dist, cosmo, 1.0e-6);
+  /* Bounded by the dn_dz support, mirroring xi_max. Below dn_dz_zmin this
+   * component only carries _nc_xcor_kernel_gal_dndz()'s Gaussian taper, which
+   * is far narrower (alpha = 1e-2 in z) than one Levin panel and so cannot be
+   * resolved by a panel-level spectral expansion; it then underflows to zero,
+   * leaving an unresolvable edge inside a panel. The magnification-bias
+   * component below is different -- a lensing efficiency is non-zero all the
+   * way down to z ~ 0 -- and keeps the z ~ 0 lower limit. */
+  *xi_min = nc_distance_comoving (dist, cosmo, MAX (xclkg->dn_dz_zmin, 1.0e-6));
   *xi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
   *k_min  = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
   *k_max  = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);

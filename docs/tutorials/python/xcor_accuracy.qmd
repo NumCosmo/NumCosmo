@@ -1,0 +1,338 @@
+---
+title: "Accuracy Control for Angular Power Spectra"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+---
+
+{{< include /_functions.qmd >}}
+
+## Purpose {#sec-purpose}
+
+The non-Limber angular power spectrum is
+
+$$ C_\ell^{AB} = \frac{2}{\pi} \int \mathrm{d}k\, k^2\, W^A_\ell(k)\, W^B_\ell(k), $$
+
+where each *closure* is the radial integral
+
+$$ W_\ell(k) = \int \mathrm{d}\chi\, K(k, \chi)\, j_\ell(k\chi),
+   \qquad K(k,\chi) \propto \chi^2\, W\!\left(z(\chi)\right)
+   \sqrt{P\!\left(k, z(\chi)\right)}. $$
+
+Note there is no separate power spectrum in the outer integral: $\sqrt{P}$ sits
+inside $K$, at the redshift of each shell, so the growth is carried through the
+radial integral rather than factored out of it. The outer integrand is exactly
+$k^2 W^A W^B$ — a fact the rest of this page depends on.
+
+NumCosmo evaluates $W_\ell(k)$ once per knot of a spline and integrates that
+spline. Two tolerances control the fit, and they behave very differently. This
+tutorial is about choosing them.
+
+There is a reason this is a tutorial and not an automatic setting. The accuracy
+a $C_\ell$ needs depends on the amplitude it carries in whatever you are
+building — a covariance element, a likelihood term — and that weighting lives in
+your analysis, not in the library. We will end on a worked case where a
+$C_\ell$ whose reported error is many times its own value is entirely fine —
+and knowing why is the point of the whole exercise.
+
+```{python}
+import numpy as np
+import matplotlib.pyplot as plt
+
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.cosmology import Cosmology
+
+Ncm.cfg_init()
+
+cosmology = Cosmology.default()
+cosmo, dist, ps = cosmology.cosmo, cosmology.dist, cosmology.ps_ml
+
+LMIN, LMAX = 2, 9
+NELL = LMAX - LMIN + 1
+```
+
+## The two tolerances {#sec-tolerances}
+
+A closure is accepted when
+
+$$ \Vert f - \tilde f \Vert_2 \le \mathrm{reltol} \cdot \Vert f \Vert_2
+   + a \cdot \Vert f \Vert_2^{\mathrm{max}} $$
+
+with $a$ the `scaled-abstol` property. Three consequences follow, and each one
+is easy to get wrong:
+
+The two terms are **added**, not maxed. The second is an unconditional floor
+measured against the closure's own peak, so `reltol` only bites where the
+closure is within a few orders of that peak — it is, in effect, the tolerance
+*around the peak*. Far out in the tail, the floor is what governs.
+
+That makes **`scaled-abstol` the lever and `reltol` nearly free.** Below we
+tighten each in turn and count knots, since one knot is one radial solve and
+therefore the honest unit of cost.
+
+```{python}
+def make_kernel(z_lower, z_upper, reltol, scaled_abstol):
+    """One cluster top-hat bin, at a chosen accuracy."""
+    kernel = Nc.XcorKernelClusterTophat(
+        dist=dist,
+        powspec=ps,
+        z_lower=z_lower,
+        z_upper=z_upper,
+        reltol=reltol,
+        scaled_abstol=scaled_abstol,
+        integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+    )
+    # The Limber approximation is meaningless at the low multipoles that
+    # dominate here, and makes the cross spectrum of two disjoint bins vanish.
+    kernel.set_l_limber(-1)
+    kernel.prepare(cosmo)
+
+    return kernel
+
+
+def knot_count(kernel):
+    """How many radial solves this closure cost."""
+    integrand = kernel.get_eval_vectorized_full(
+        cosmo,
+        LMIN,
+        LMAX,
+        Ncm.SBesselIntegratorLevin.new(LMIN, LMAX),
+        Nc.XcorKernelClosure.SPLINE,
+    )
+
+    return len(np.array(integrand.peek_knots().dup_array()))
+
+
+print(f"{'reltol':>8} {'scaled-abstol':>14} {'knots':>7}")
+for reltol, scaled_abstol in [
+    (1.0e-6, 1.0e-5),
+    (1.0e-8, 1.0e-5),  # reltol tightened 100x, floor unchanged
+    (1.0e-6, 1.0e-6),  # floor tightened 10x instead
+]:
+    n = knot_count(make_kernel(0.1, 0.2, reltol, scaled_abstol))
+    print(f"{reltol:>8.0e} {scaled_abstol:>14.0e} {n:>7}")
+```
+
+Tightening `reltol` a hundredfold barely moves the cost; tightening the floor
+tenfold moves it a great deal. The knot count scales as
+$a^{-1/4}$ — textbook cubic-spline convergence, since halving the error four
+times over needs twice the knots.
+
+::: {.callout-warning}
+## Do not set the two equal, and do not go below $10^{-10}$
+
+Equal values are the one setting that starves the $p$-adaptive cubature of
+Clenshaw–Curtis levels: refinement then stops exactly at the level the outer
+rule is trying to resolve. `NcXcorSSCSij` offsets them deliberately, upwards.
+
+Below $a \simeq 10^{-10}$ the refinement starts resolving the radial
+integrator's own numerical noise rather than the function, and the knot count
+explodes. That is a real out-of-memory risk, not a slow run.
+:::
+
+## Asking what the error is {#sec-error}
+
+`compute_full` fills an optional second vector with a per-multipole error
+estimate. It is worth being precise about what that number is, because it is
+not what most people expect.
+
+The outer quadrature contributes **nothing**: on the merged knots of a pair of
+closures the integrand $k^2 W^A W^B$ is a degree-8 polynomial per panel, and
+the default `KERNEL_EXACT` method integrates it exactly. So the entire error is
+the closures' *fit*, propagated through how much the pair cancels.
+
+```{python}
+xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
+xcor.prepare(cosmo)
+
+RELTOL, SCALED_ABSTOL = 1.0e-6, 1.0e-5  # the NcXcorSSCSij defaults
+bins = {
+    "0.1 < z < 0.2": make_kernel(0.1, 0.2, RELTOL, SCALED_ABSTOL),
+    "0.3 < z < 0.4": make_kernel(0.3, 0.4, RELTOL, SCALED_ABSTOL),
+    "0.6 < z < 0.7": make_kernel(0.6, 0.7, RELTOL, SCALED_ABSTOL),
+}
+names = list(bins)
+
+
+def spectrum(kernel_a, kernel_b=None):
+    """Return (C_ell, error estimate) over LMIN..LMAX."""
+    cl, cl_err = Ncm.Vector.new(NELL), Ncm.Vector.new(NELL)
+    xcor.compute_full(kernel_a, kernel_b, cosmo, LMIN, LMAX, cl, cl_err)
+
+    return np.array(cl.dup_array()), np.array(cl_err.dup_array())
+
+
+auto, auto_err = spectrum(bins[names[0]])
+adjacent, adjacent_err = spectrum(bins[names[0]], bins[names[1]])
+separated, separated_err = spectrum(bins[names[0]], bins[names[2]])
+
+print(f"{'pair':<24} {'|C_l|':>11} {'estimate':>11} {'relative':>10}")
+for label, cl, err in [
+    ("auto, bin 0", auto, auto_err),
+    ("cross, adjacent bins", adjacent, adjacent_err),
+    ("cross, separated bins", separated, separated_err),
+]:
+    worst = np.abs(err / cl).max()
+    print(f"{label:<24} {np.abs(cl).max():>11.3e} {np.abs(err).max():>11.3e} {worst:>10.1e}")
+```
+
+The auto spectrum is reported at roughly the tolerance the closures were built
+to. The cross spectra are not — and the separated pair comes back with a
+relative estimate far above one, meaning the estimate cannot vouch for a single
+digit of it.
+
+## Why cancellation, not the quadrature {#sec-cancellation}
+
+An auto spectrum integrates $k^2 W^2$, which is positive: nothing cancels, so a
+fit error of $\epsilon$ gives a $C_\ell$ error of $\epsilon$. A cross spectrum
+of two separated bins is built from one closure's tail against the other's, with
+the product changing sign. The integral of the absolute integrand can then be
+thousands of times the integral itself, and the fit error is amplified by
+exactly that ratio.
+
+```{python}
+fig, ax = plt.subplots(figsize=(7.0, 4.2))
+ells = np.arange(LMIN, LMAX + 1)
+
+for label, cl, err, color in [
+    ("auto, bin 0", auto, auto_err, "#1b4965"),
+    ("cross, adjacent", adjacent, adjacent_err, "#5fa8d3"),
+    ("cross, separated", separated, separated_err, "#bc4749"),
+]:
+    ax.errorbar(ells, np.abs(cl), yerr=np.abs(err), label=label,
+                color=color, marker="o", capsize=3, lw=1.6)
+
+ax.set_yscale("log")
+ax.set_xlabel(r"$\ell$")
+ax.set_ylabel(r"$|C_\ell|$, with the reported estimate")
+ax.set_title("The estimate grows with the pair's cancellation, not with $\\ell$")
+ax.legend(frameon=False)
+fig.tight_layout()
+plt.show()
+```
+
+## The rule that matters {#sec-rule}
+
+A relative error is meaningless on its own. The separated-bin cross spectrum is
+a small number, and what it contributes to anything built from these spectra is
+its error *times its amplitude*.
+
+```{python}
+diagonal = np.abs(auto).max()
+
+print(f"{'pair':<24} {'|C_l|/diagonal':>15} {'error/diagonal':>16}")
+for label, cl, err in [
+    ("auto, bin 0", auto, auto_err),
+    ("cross, adjacent bins", adjacent, adjacent_err),
+    ("cross, separated bins", separated, separated_err),
+]:
+    print(f"{label:<24} {np.abs(cl).max() / diagonal:>15.2e} "
+          f"{np.abs(err).max() / diagonal:>16.2e}")
+```
+
+Read the last column rather than the relative error. The separated pair's
+estimate, measured against the diagonal, is *smaller* than the diagonal's own —
+the worst-conditioned spectrum here contributes less absolute uncertainty than
+the best-conditioned one, because it is orders of magnitude smaller to begin
+with. For a cluster covariance these are off-diagonal terms that have been
+measured as irrelevant; a large estimate on one is not a problem to fix.
+
+::: {.callout-important}
+## Read an estimate against the amplitude its term carries
+
+Never against itself. A large estimate on a term that is $10^{-4}$ of the
+diagonal is telling you the term is badly conditioned, not that your result is
+wrong. A small estimate on the diagonal is the statement worth having.
+:::
+
+Two further limits are worth knowing. The estimate bounds the *criterion* the
+refinement was asked for, not the fit it achieved, and the refinement routinely
+beats its own threshold — so it is a ceiling, typically by one to three orders,
+and loosest where the answer is healthiest. And it cannot see domain
+truncation: the outer integral runs over the intersection of the two closures'
+fitted $k$ ranges, and what that intersection discards is invisible to it.
+
+## Kernel shape sets the cost {#sec-shape}
+
+Not every kernel is equally hard. A cluster top-hat has a sharp edge in
+$\chi$, which gives $W_\ell(k)$ a $1/k$ tail rather than an exponential one.
+Nothing is integrated across that edge — it is declared through the component's
+limits — but the tail keeps far more of $k$-space above the closure's floor.
+
+```{python}
+RH = cosmo.RH_Mpc()
+chi_lower = dist.comoving(cosmo, 0.1) * RH
+chi_upper = dist.comoving(cosmo, 0.2) * RH
+mid, half = 0.5 * (chi_lower + chi_upper), 0.5 * (chi_upper - chi_lower)
+
+# The same comoving shell, with edges of differing sharpness.
+shapes = {
+    "top-hat (sharp edge)": bins[names[0]],
+    "smoothed top-hat": Nc.XcorKernelAnalyticTophatSmooth.new_full(
+        dist, ps, chi_lower, chi_upper, half / 3.0, 6.0,
+        Ncm.SBesselIntegratorLevin.new(0, 8),
+    ),
+    "Gaussian": Nc.XcorKernelAnalyticGauss.new_full(
+        dist, ps, mid, half / 2.0, 4.0, Ncm.SBesselIntegratorLevin.new(0, 8),
+    ),
+}
+
+print(f"{'kernel':<22} {'knots':>7} {'k range':>22}")
+for label, kernel in shapes.items():
+    if label != "top-hat (sharp edge)":
+        kernel.set_l_limber(-1)
+        kernel.prepare(cosmo)
+
+    integrand = kernel.get_eval_vectorized_full(
+        cosmo,
+        LMIN,
+        LMAX,
+        Ncm.SBesselIntegratorLevin.new(LMIN, LMAX),
+        Nc.XcorKernelClosure.SPLINE,
+    )
+    k = np.array(integrand.peek_knots().dup_array())
+    print(f"{label:<22} {len(k):>7} {f'{k[0]:.3g} to {k[-1]:.3g}':>22}")
+```
+
+A whole extra decade of $k$, and a denser grid within each decade. That is
+intrinsic to the shape, so a top-hat's cost and accuracy should not be read as
+typical of a galaxy or lensing kernel.
+
+## A ladder to start from {#sec-presets}
+
+These are measured on the top-hat bins above, so treat them as an upper bound
+on what a smoother kernel will cost.
+
+| setting | `reltol` | `scaled-abstol` | knots | diagonal accuracy |
+|---|---|---|---|---|
+| `NcXcorKernel` default | $10^{-4}$ | $10^{-4}$ | 541 | $1.3 \times 10^{-4}$ |
+| `NcXcorSSCSij` default | $10^{-6}$ | $10^{-5}$ | 1241 | $5.8 \times 10^{-6}$ |
+| validation | $10^{-8}$ | $10^{-7}$ | 4363 | $3.7 \times 10^{-9}$ |
+
+Each rung costs two to three times the knots and buys one to three orders.
+
+::: {.callout-note}
+## Accuracy is not monotonic in the tolerance
+
+Loosening the floor to $10^{-3}$ at `reltol` $10^{-4}$ gives 295 knots and a
+diagonal accurate to $7.8 \times 10^{-5}$ — *fewer* knots and a *better* answer
+than the default's 541 and $1.3 \times 10^{-4}$. The floor does not only set how
+many knots there are, it changes where they land. Verify a setting on your own
+configuration rather than assuming a tighter one is safer.
+:::
+
+## Summary {#sec-summary}
+
+- `scaled-abstol` is the lever; `reltol` is close to free. Keep them offset, and
+  keep the floor above $10^{-10}$.
+- With `KERNEL_EXACT` the quadrature contributes no error at all. What
+  `compute_full` reports is the closure fit, amplified by the pair's
+  cancellation.
+- Weigh that estimate against the amplitude its term carries. A badly
+  conditioned off-diagonal is usually not a problem.
+- Treat the estimate as a ceiling and as a conditioning flag, not as a
+  measurement of the error.

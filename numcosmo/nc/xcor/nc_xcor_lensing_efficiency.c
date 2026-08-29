@@ -95,6 +95,12 @@ typedef struct _NcXcorLensingEfficiencyPrivate
   /* Output: the g(z) function stored as g(-z) */
   NcmSpline *g_mz;
 
+  /* Analytic head: g_mz starts one ODE step inside z_max, so g(z) =
+   * head_c2 * (head_zmax - z)^2 covers [head_zmax - head_dz, head_zmax]. */
+  gdouble head_zmax;
+  gdouble head_dz;
+  gdouble head_c2;
+
   /* Control */
   NcmModelCtrl *ctrl_cosmo;
 } NcXcorLensingEfficiencyPrivate;
@@ -126,6 +132,9 @@ nc_xcor_lensing_efficiency_init (NcXcorLensingEfficiency *lens_eff)
   self->abstol     = NC_XCOR_LENSING_EFFICIENCY_DEFAULT_ABSTOL;
   self->dist       = NULL;
   self->g_mz       = NULL;
+  self->head_zmax  = 0.0;
+  self->head_dz    = 0.0;
+  self->head_c2    = 0.0;
   self->ctrl_cosmo = ncm_model_ctrl_new (NULL);
 
   NCM_CVODE_CHECK ((gpointer) self->A, "SUNDenseMatrix", 0, );
@@ -528,6 +537,13 @@ nc_xcor_lensing_efficiency_prepare (NcXcorLensingEfficiency *lens_eff, NcHICosmo
       NV_Ith_S (self->yv, 1) = g;
 
       mz_ini += dz;
+
+      /* Same expansion, kept for nc_xcor_lensing_efficiency_eval(): the spline
+       * built below starts at mz_ini, so it has nothing to say about the last
+       * dz of the range. */
+      self->head_zmax = zmax;
+      self->head_dz   = dz;
+      self->head_c2   = f / gsl_pow_2 (dz);
     }
 
     if (self->cvode == NULL)
@@ -613,6 +629,15 @@ gdouble
 nc_xcor_lensing_efficiency_eval (NcXcorLensingEfficiency *lens_eff, gdouble z)
 {
   NcXcorLensingEfficiencyPrivate *self = nc_xcor_lensing_efficiency_get_instance_private (lens_eff);
+
+  /* The ODE starts one step inside z_max, so the spline's first knot sits at
+   * z_max - dz. Below it, use the second-order expansion the initial condition
+   * was built from -- it agrees with the spline at that knot by construction.
+   * Extrapolating the spline instead returns the wrong order of magnitude. */
+  if (z >= self->head_zmax)
+    return 0.0;
+  else if (z > self->head_zmax - self->head_dz)
+    return self->head_c2 * gsl_pow_2 (self->head_zmax - z);
 
   return ncm_spline_eval (self->g_mz, -z);
 }

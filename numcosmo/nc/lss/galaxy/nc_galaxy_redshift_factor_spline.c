@@ -32,14 +32,10 @@
  * Spline redshift calculator scheme: a per-galaxy pre-tabulated $p(z)$.
  *
  * Each galaxy carries its own $p(z)$ as an #NcmSpline (set via
- * nc_galaxy_redshift_factor_spline_data_set(), stored on the #NcGalaxyWLObs
- * row via nc_galaxy_wl_obs_set_pz()/nc_galaxy_wl_obs_peek_pz()); the joint
- * density this scheme hands out is exactly that spline, evaluated (or its
- * natural logarithm taken) at the true redshift $z$. Unlike
- * #NcGalaxyRedshiftFactorComposed, no #NcmMSet model is involved: the
- * spline is per-galaxy data, not a fitted population/observable pair, so
- * this scheme's density never changes except when the underlying data
- * (i.e. the spline itself) changes.
+ * nc_galaxy_redshift_factor_spline_data_set(), stored on the #NcGalaxyWLObs row via
+ * nc_galaxy_wl_obs_set_pz()/nc_galaxy_wl_obs_peek_pz()); the joint density this scheme
+ * hands out is exactly that spline, evaluated (or its natural logarithm taken) at the
+ * true redshift $z$.
  *
  * Sampling draws from an #NcmStatsDist1dSpline built from @pz (lazily, on
  * the first nc_galaxy_redshift_factor_update_data() call after a fresh
@@ -72,8 +68,8 @@ struct _NcGalaxyRedshiftFactorSpline
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftFactorSpline, nc_galaxy_redshift_factor_spline, NC_TYPE_GALAXY_REDSHIFT_FACTOR);
 
-/* Per-galaxy fragment: the spline itself, plus the sampler built from it
- * (NULL until the first update_data() call after @pz is set). */
+/* Per-galaxy fragment: the spline itself, plus the sampler built from it (NULL until
+ * the first update_data() call after @pz is set). */
 typedef struct _SplineLData
 {
   NcmSpline *pz;
@@ -161,8 +157,8 @@ _spline_ldata_write_row (NcGalaxyRedshiftFactorData *data, NcGalaxyWLObs *obs, c
 static void
 _spline_ldata_required_columns (NcGalaxyRedshiftFactorData *data, GList **columns)
 {
-  /* The spline is carried on the NcGalaxyWLObs row's own dedicated pz slot,
-   * not a regular scalar column. */
+  /* The spline is carried on the NcGalaxyWLObs row's own dedicated pz slot, not a
+   * regular scalar column. */
 }
 
 static void
@@ -179,13 +175,14 @@ _nc_galaxy_redshift_factor_spline_data_init (NcGalaxyRedshiftFactor *gsdr, NcmMS
 
 /* Sampling ----------------------------------------------------------------- */
 
-/* Builds sldata->dist (an inverse-CDF sampler over @pz) the first time a
- * galaxy is actually sampled -- resample()-only state, never read by
- * integ/norm/get_integ_lim/make_fixed_nodes (all of which use sldata->pz
- * directly), so building it eagerly for every galaxy on every prepare()
- * cycle (as update_data() used to do) paid its full cost -- dominated by
- * ncm_stats_dist1d_prepare()'s own inverse-CDF construction -- even for
- * fits/MCMC runs that never call resample() at all. */
+/* Builds sldata->dist (an inverse-CDF sampler over @pz) the first time a galaxy is
+ * actually sampled -- resample()-only state, never read by
+ * integ/norm/get_integ_lim/make_fixed_nodes (all of which use sldata->pz directly), so
+ * building it eagerly for every galaxy on every prepare() cycle (as update_data() used
+ * to do) paid its full cost -- dominated by ncm_stats_dist1d_prepare()'s own
+ * inverse-CDF construction -- even for fits/MCMC runs that never call resample() at
+ * all.
+ */
 static void
 _nc_galaxy_redshift_factor_spline_ensure_dist (SplineLData *sldata)
 {
@@ -265,11 +262,7 @@ _spline_ln_integ_f (gpointer callback_data, const gdouble z, NcGalaxyRedshiftFac
   return log (ncm_spline_eval (sldata->pz, z));
 }
 
-/* No closure payload needed: the integrand reads the density straight from
- * @data->ldata at eval time, unlike Composed which must capture the
- * mset-resolved population/observable. callback_data stays NULL throughout;
- * these two just satisfy the callback machinery's non-NULL requirement on
- * the free/copy function pointers themselves. */
+/* No closure payload needed. */
 static gpointer
 _spline_integ_data_copy (gpointer callback_data)
 {

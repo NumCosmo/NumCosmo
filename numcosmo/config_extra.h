@@ -29,12 +29,22 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 
-#ifndef HAVE_EXP10
-#define exp10(x) (exp ((x) * M_LN10))
-#endif /* HAVE_EXP10 */
-
-#ifndef HAVE_SINCOS
 #include <math.h>
+
+/* glibc only declares exp10() in <math.h> under __USE_GNU (_GNU_SOURCE) or
+ * in C23 mode; HAVE_EXP10 (a link-level check) does not guarantee the
+ * declaration is visible. NumCosmo does not require _GNU_SOURCE, so provide
+ * the fallback whenever the real declaration isn't in scope. */
+#if !defined (__USE_GNU) && (!defined (__STDC_VERSION__) || __STDC_VERSION__ < 202311L)
+#define exp10(x) (exp ((x) * M_LN10))
+#endif
+
+/* sincos() is a glibc/BSD extension only declared under __USE_GNU (i.e. with
+ * _GNU_SOURCE), independently of the C standard version and of HAVE_SINCOS
+ * (a link-level check that doesn't guarantee the declaration is visible).
+ * NumCosmo does not require _GNU_SOURCE, so provide the portable fallback
+ * whenever the real declaration isn't in scope. */
+#ifndef __USE_GNU
 
 static inline void
 sincos (double x, double *s, double *c)
@@ -43,7 +53,7 @@ sincos (double x, double *s, double *c)
   c[0] = cos (x);
 }
 
-#endif /* HAVE_SINCOS */
+#endif /* __USE_GNU */
 
 #if HAVE_DECL_LGAMMA_R == 0
 double lgamma_r (double x, int *signp);

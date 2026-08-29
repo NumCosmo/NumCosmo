@@ -28,6 +28,7 @@ from typing import Tuple
 from pathlib import Path
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 pytest.importorskip("astropy")
@@ -36,7 +37,8 @@ pytest.importorskip("getdist")
 # pylint: disable=wrong-import-position
 
 
-from numcosmo_py import Ncm
+from numcosmo_py import Ncm, Nc
+from numcosmo_py.app.loading import load_catalog
 from numcosmo_py.app import app
 from numcosmo_py.app.esmcmc import IniSampler, Parallelization
 from numcosmo_py.app.generate import Planck18Types
@@ -712,13 +714,478 @@ def test_run_mcmc_apes_analyze(simple_experiment):
         [
             "catalog",
             "analyze",
-            filename.as_posix(),
             output.absolute().with_suffix(".mcmc.fits").as_posix(),
         ],
     )
 
     if result.exit_code != 0:
         raise result.exception
+
+
+def test_run_mcmc_apes_analyze_burnin_iterations(simple_experiment):
+    """--burnin is interpreted in iterations (ensemble steps), not raw rows."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--burnin", "3"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
+    """--burnin larger than the catalog's iteration count fails with a clear,
+    catchable error instead of aborting the process."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--burnin", "1000000"]
+    )
+    assert result.exit_code != 0
+    assert "exceeds catalog" in result.output
+
+
+def test_run_mcmc_apes_analyze_tail(simple_experiment):
+    """--tail keeps only the last N iterations."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--tail", "2"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mcmc_apes_analyze_burnin_and_tail_rejected(simple_experiment):
+    """--burnin and --tail are mutually exclusive."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "analyze",
+            catalog.as_posix(),
+            "--burnin",
+            "1",
+            "--tail",
+            "2",
+        ],
+    )
+    assert result.exit_code != 0
+
+
+def test_run_mcmc_apes_analyze_exclude_only(simple_experiment):
+    """--exclude alone drops only matching columns."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    result = runner.invoke(
+        app,
+        ["catalog", "analyze", catalog.as_posix(), "--exclude", "mu_4"],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "mu_0" in result.output
+    assert "mu_4" not in result.output
+
+
+def test_run_mcmc_apes_analyze_include_only(simple_experiment):
+    """--include alone selects only matching columns."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "analyze",
+            catalog.as_posix(),
+            "--include",
+            "mu_0",
+            "--include",
+            "mu_1",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "mu_0" in result.output
+    assert "mu_1" in result.output
+    assert "mu_2" not in result.output
+
+
+def test_run_mcmc_apes_analyze_include_and_exclude(simple_experiment):
+    """--include and --exclude combined narrow the selection further."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "analyze",
+            catalog.as_posix(),
+            "--include",
+            "mu",
+            "--exclude",
+            "mu_4",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "mu_0" in result.output
+    assert "mu_4" not in result.output
+
+
+def test_run_mcmc_apes_analyze_empty_catalog(simple_experiment):
+    """--burnin consuming the whole catalog leaves an empty catalog, handled
+    cleanly instead of crashing."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    nrows, nchains, _first_id = Ncm.MSetCatalog.peek_info_from_file(catalog.as_posix())
+    n_iterations = nrows // nchains
+
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--burnin", str(n_iterations)]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "Empty catalog" in result.output
+
+
+def test_run_mcmc_apes_plot_corner_too_many_plot_names(simple_experiment):
+    """More --plot-name values than catalogs is a clean, catchable error."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "plot-corner",
+            catalog.as_posix(),
+            "--plot-name",
+            "A",
+            "--plot-name",
+            "B",
+            "--no-show",
+        ],
+    )
+    assert result.exit_code != 0
+    # Avoid asserting on a substring straddling "--plot-name": Rich highlights
+    # option-looking tokens and injects ANSI codes between their characters
+    # when color is on (as it is in CI, unlike a plain local terminal), which
+    # would otherwise break a naive substring match.
+    assert "values than catalog files" in result.output
+
+
+def test_run_mcmc_apes_plot_corner_mark_bestfit(simple_experiment):
+    """--mark-bestfit marks the first catalog's best-fit point."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "plot-corner",
+            catalog.as_posix(),
+            "--mark-bestfit",
+            "--no-show",
+            "--output",
+            output.as_posix(),
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert output.with_suffix(".corner.pdf").exists()
+
+
+def test_catalog_visual_hw(simple_experiment, monkeypatch):
+    """catalog visual-hw runs end-to-end.
+
+    VisualHW has no --no-show option (unlike plot-corner) and calls
+    plt.show() unconditionally, so it's stubbed out here to keep the test
+    from blocking on a display.
+    """
+    monkeypatch.setattr("matplotlib.pyplot.show", lambda *args, **kwargs: None)
+
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    result = runner.invoke(
+        app, ["catalog", "visual-hw", catalog.as_posix(), "--param-name", "mu_0"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_catalog_param_evolution(simple_experiment, monkeypatch):
+    """catalog param-evolution runs end-to-end. See test_catalog_visual_hw
+    for why plt.show() is stubbed out."""
+    monkeypatch.setattr("matplotlib.pyplot.show", lambda *args, **kwargs: None)
+
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "param-evolution",
+            catalog.as_posix(),
+            "--param-name",
+            "mu_0",
+            "--grid-size",
+            "20",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_run_mc_analyze_single_chain(simple_experiment):
+    """catalog analyze on a single-chain (run mc) catalog exercises the
+    nchains == 1 branch of load_catalog()'s stats selection."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".mc_out.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mc",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            "--nmc",
+            "20",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mc.fits")
+    assert catalog.exists()
+
+    result = runner.invoke(app, ["catalog", "analyze", catalog.as_posix()])
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_catalog_dump_mset_round_trips_as_starting_point(simple_experiment, tmp_path):
+    """catalog dump-mset's output must be loadable as a --starting-point.
+
+    Regression test: dump-mset used to write the mset as a bare object
+    dump (ser.to_yaml_file), but --starting-point's loader
+    (_load_saved_mset() in loading.py) reads a dict_str with a "model-set"
+    entry -- the same convention every other model-set writer in this
+    codebase uses (run fit/mc's own --output, catalog get-best-fit). That
+    mismatch made _ncm_serialize_from_node() misread the mset's own first
+    property as if it were itself a nested typed object."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".mc_out.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mc",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            "--nmc",
+            "5",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mc.fits")
+    assert catalog.exists()
+
+    dumped = tmp_path / "dumped_mset.yaml"
+    result = runner.invoke(
+        app, ["catalog", "dump-mset", catalog.as_posix(), "--output", dumped.as_posix()]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dumped_dict = ser.dict_str_from_yaml_file(dumped.as_posix())
+    assert dumped_dict.peek("model-set") is not None
+
+    result = runner.invoke(
+        app,
+        ["run", "test", filename.as_posix(), "--starting-point", dumped.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+
+def test_catalog_analyze_missing_file(tmp_path):
+    """catalog analyze on a nonexistent file fails with a clean, catchable
+    error instead of a traceback."""
+    result = runner.invoke(
+        app, ["catalog", "analyze", (tmp_path / "does_not_exist.fits").as_posix()]
+    )
+    assert result.exit_code != 0
+    assert "not found" in result.output
+
+
+def test_load_catalog_negative_tail_rejected(simple_experiment):
+    """load_catalog()'s --tail validation rejects a negative value. Only
+    reachable via a direct call: the CLI's own min=0 constraint on --tail
+    blocks this before load_catalog() is ever invoked."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    with pytest.raises(typer.BadParameter):
+        load_catalog(catalog, tail=-1)
+
+
+def test_run_mcmc_apes_embeds_functions_array(tmp_path):
+    """A run's --functions (extra columns) end up embedded in the catalog
+    file's HDU0, readable back with no companion .functions.yaml needed."""
+    cosmo = Nc.HICosmoDEXcdm.new()
+    cosmo.param_set_by_name("H0", 70.0)
+    cosmo.param_set_ftype(cosmo.param_index_from_name("H0")[1], Ncm.ParamType.FREE)
+    mset = Ncm.MSet.new_array([cosmo])
+    mset.prepare_fparam_map()
+
+    data = Nc.DataHubble.new_from_id(Nc.DataHubbleId.SIMON2005)
+    likelihood = Ncm.Likelihood.new(dset=Ncm.Dataset.new_array([data]))
+
+    experiment = tmp_path / "exp.yaml"
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    experiment_dict = Ncm.ObjDictStr.new()
+    experiment_dict.add("model-set", mset)
+    experiment_dict.add("likelihood", likelihood)
+    ser.dict_str_to_yaml_file(experiment_dict, experiment.as_posix())
+
+    # A constant (nvar=0) derived quantity, the kind --functions is for.
+    func = Ncm.MSetFuncList.new("NcHICosmoDE:wDE", None)
+    funcs_oa = Ncm.ObjArray.new()
+    funcs_oa.add(func)
+    ser.reset(True)
+    ser.array_to_yaml_file(
+        funcs_oa, experiment.with_suffix(".functions.yaml").as_posix()
+    )
+
+    output = experiment.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", experiment.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    mcat = Ncm.MSetCatalog.new_from_file_ro(catalog.as_posix(), 0)
+    functions = mcat.peek_functions_array()
+
+    assert functions is not None
+    assert functions.len() == 1
+    assert "wDE" in [mcat.col_name(i) for i in range(mcat.ncols())]
 
 
 def test_run_mcmc_apes_plot_corner(simple_experiment):
@@ -739,7 +1206,6 @@ def test_run_mcmc_apes_plot_corner(simple_experiment):
         [
             "catalog",
             "plot-corner",
-            filename.as_posix(),
             output.absolute().with_suffix(".mcmc.fits").as_posix(),
             "--no-show",
             "--output",
@@ -751,6 +1217,53 @@ def test_run_mcmc_apes_plot_corner(simple_experiment):
 
     if result.exit_code != 0:
         raise result.exception
+
+
+def test_run_mcmc_apes_plot_corner_multi_catalog(simple_experiment):
+    """plot-corner overlays multiple catalogs given positionally, with
+    --plot-name controlling each one's legend entry."""
+    filename, _ = simple_experiment
+
+    catalogs = []
+    for name in ("a", "b"):
+        output = filename.with_suffix(f".out_{name}.yaml")
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                "mcmc",
+                "apes",
+                filename.as_posix(),
+                "--output",
+                output.as_posix(),
+            ],
+        )
+        if result.exit_code != 0:
+            raise result.exception
+        catalogs.append(output.absolute().with_suffix(".mcmc.fits"))
+        assert catalogs[-1].exists()
+
+    plot_output = filename.with_suffix(".corner_multi")
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "plot-corner",
+            catalogs[0].as_posix(),
+            catalogs[1].as_posix(),
+            "--plot-name",
+            "Run A",
+            "--plot-name",
+            "Run B",
+            "--no-show",
+            "--output",
+            plot_output.as_posix(),
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    assert plot_output.with_suffix(".corner.pdf").exists()
 
 
 def test_run_mcmc_apes_analyze_evidence(simple_experiment):
@@ -771,7 +1284,6 @@ def test_run_mcmc_apes_analyze_evidence(simple_experiment):
         [
             "catalog",
             "analyze",
-            filename.as_posix(),
             output.absolute().with_suffix(".mcmc.fits").as_posix(),
             "--evidence",
         ],
@@ -799,7 +1311,6 @@ def test_run_mcmc_apes_calibrate(simple_experiment, calibration_method):
         [
             "catalog",
             "calibrate",
-            filename.as_posix(),
             output.absolute().with_suffix(".mcmc.fits").as_posix(),
             "--cv-method",
             calibration_method,
@@ -808,6 +1319,60 @@ def test_run_mcmc_apes_calibrate(simple_experiment, calibration_method):
 
     if result.exit_code != 0:
         raise result.exception
+
+
+def test_run_mcmc_apes_get_best_fit(simple_experiment):
+    """get-best-fit writes the catalog's best-fit parameters as a
+    model-set yaml, dict-wrapped so it can be used as --starting-point."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    best_fit_output = filename.with_suffix(".best_fit.yaml")
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "get-best-fit",
+            catalog.as_posix(),
+            "--output",
+            best_fit_output.as_posix(),
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    assert best_fit_output.exists()
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    saved = ser.dict_str_from_yaml_file(best_fit_output.absolute().as_posix())
+    mset = saved.get("model-set")
+    assert isinstance(mset, Ncm.MSet)
+
+
+def test_run_mcmc_apes_get_best_fit_requires_output(simple_experiment):
+    """get-best-fit without --output fails with a clean, catchable error."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    result = runner.invoke(app, ["catalog", "get-best-fit", catalog.as_posix()])
+    assert result.exit_code != 0
+    assert "Output file not defined" in result.output
 
 
 def test_generate_planck(tmp_path, planck18_type):

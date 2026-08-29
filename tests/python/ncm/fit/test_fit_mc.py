@@ -223,3 +223,36 @@ def test_mc_funcs(
             row[1 + fparam_len : 1 + 2 * fparam_len],
             rtol=1.0e-11,
         )
+
+
+@pytest.mark.parametrize("use_threads", [False, True], ids=["serial", "threaded"])
+@pytest.mark.parametrize("rtype", MC_RESAMPLE_TYPES, ids=MC_RESAMPLE_LABELS)
+def test_mc_empty_funcs_array(
+    fit: Ncm.Fit, rtype: Ncm.FitMCResampleType, use_threads: bool
+) -> None:
+    """A non-NULL but zero-length funcs_array (e.g. a population whose
+    derived quantities are skipped because its parameters are all fixed --
+    see GalaxyPopGenBeta.get_mfuncs()) must not crash, threaded or not.
+
+    Regression test for ncm_fit_mc.c's threaded path: it used to guard each
+    funcs_array access with `!= NULL` only, so an empty-but-non-NULL array
+    still reached `ncm_vector_new (mc->func_oa->len)` with len == 0, and a
+    zero-length NcmVector construction hit a hard assertion
+    (`ncm_vector_new_full: assertion failed: (d != NULL)`), aborting the
+    process -- 100% reproducible under --use-threads, never under serial
+    (which never allocates that vector).
+    """
+    funcs_oa = Ncm.ObjArray.new()
+
+    mc = Ncm.FitMC.new_funcs_array(fit, rtype, Ncm.FitRunMsgs.NONE, funcs_oa)
+
+    mc.set_use_threads(use_threads)
+    n_runs = 4
+
+    mc.start_run()
+    mc.run(n_runs)
+    mc.end_run()
+
+    mcat = mc.peek_catalog()
+    assert mcat.nchains() == 1
+    assert mcat.len() == n_runs

@@ -29,20 +29,29 @@
  * Abstract model for the intrinsic galaxy ellipticity distribution.
  *
  * This small #NcmModel describes the probability density of the intrinsic
- * ellipticity modulus squared $x = |\chi_I|^2 \in [0,1]$. It is a pure
- * parametric law for which the shape calculator (#NcGalaxyWLShapeCalc) performs
- * the exact marginalization over the intrinsic ellipticity.
+ * ellipticity modulus $r = |\chi_I| \in [0,1)$, i.e. its own natural
+ * r-marginal density $P_\mathrm{pop}(r)$, normalized so
+ * $\int_0^1 P_\mathrm{pop}(r)\,\mathrm{d}r=1$. It is a pure parametric law
+ * for which the shape calculator (#NcGalaxyWLShapeCalc) performs the exact
+ * marginalization over the intrinsic ellipticity.
+ *
+ * $P_\mathrm{pop}(r)$ is NOT a 2D area density: a consumer needing the
+ * density with respect to $\mathrm{d}^2\chi_I$ (e.g. #NcGalaxyShapeFactorFixedQuad,
+ * #NcGalaxyShapeFactorQuad) computes $P_\mathrm{pop}(r)/(2\pi r)$ itself --
+ * a genuine, unavoidable pointwise divergence at $r=0$ for any population
+ * whose $P_\mathrm{pop}(r)$ does not vanish at least linearly there (e.g.
+ * #NcGalaxyShapePopBeta with $\alpha<2$), but a property of those
+ * consumers' own (non-polar-in-$\chi_I$) quadrature, not of
+ * $P_\mathrm{pop}(r)$ itself (always bounded), nor of the exact 2D
+ * integral (stays finite through $r=0$: an integrable singularity,
+ * manifestly so in genuine polar coordinates, where the $r$ in
+ * $r\,\mathrm{d}r\,\mathrm{d}\theta$ cancels it exactly).
  *
  * Each concrete model implements its density directly through the
  * nc_galaxy_shape_pop_eval_p() virtual: there is no shared factorization or
  * quadrature scheme imposed at this level, each subclass is simply
- * responsible for its own normalized $P(x)$. nc_galaxy_shape_pop_eval_p_rho2()
- * is the same density parameterized by $\rho^2$ instead of $x$ (related by
- * $x=\rho^2/(1+\rho^2)$, useful for calculators working in a
- * disc-compactified plane, e.g. #NcGalaxyShapeFactorQuad); its default
- * implementation just substitutes into eval_p(), but a subclass may override
- * it with a more direct/better-conditioned form when its density happens to
- * have one (see #NcGalaxyShapePopBeta). Following the #NcGalaxyShapeFactorData /
+ * responsible for its own normalized $P_\mathrm{pop}(r)$. Following the
+ * #NcGalaxyShapeFactorData /
  * #NcGalaxyPositionFactorData idiom, the resolved per-galaxy state lives in a
  * #NcGalaxyShapePopData: typed public fields (@e_rms) plus an opaque @ldata
  * holding the subclass-specific, varying/updatable resolved parameters.
@@ -94,7 +103,7 @@ _nc_galaxy_shape_pop_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 }
 
 static gdouble
-_nc_galaxy_shape_pop_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble x)
+_nc_galaxy_shape_pop_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r)
 {
   g_error ("_nc_galaxy_shape_pop_eval_p: method not implemented.");
 
@@ -124,37 +133,26 @@ _nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapeP
 
 /* LCOV_EXCL_STOP */
 
-/* Real (non-stub) default: substitutes x = rho2/(1+rho2) into eval_p(). Any
- * subclass whose density has a more direct/better-conditioned form in rho2
- * (e.g. #NcGalaxyShapePopBeta) may override this instead of inheriting it. */
-static gdouble
-_nc_galaxy_shape_pop_eval_p_rho2 (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble rho2)
-{
-  const gdouble x = rho2 / (1.0 + rho2);
-
-  return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p (gsp, data, x);
-}
-
 /* Real (non-stub) default: plain loop calling eval_p() through the class
  * pointer once (not nc_galaxy_shape_pop_eval_p(), avoiding one extra level
  * of GET_CLASS per element). Correct for every subclass, so this is a safe
  * fallback for populations that do not override eval_p_array(). */
 static void
-_nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *x, GArray **p)
+_nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p)
 {
   NcGalaxyShapePopClass *klass = NC_GALAXY_SHAPE_POP_GET_CLASS (gsp);
   gdouble *p_data;
   guint i;
 
   if (*p == NULL)
-    *p = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), x->len);
+    *p = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), r->len);
 
-  g_array_set_size (*p, x->len);
+  g_array_set_size (*p, r->len);
 
   p_data = (gdouble *) (*p)->data;
 
-  for (i = 0; i < x->len; i++)
-    p_data[i] = klass->eval_p (gsp, data, g_array_index (x, gdouble, i));
+  for (i = 0; i < r->len; i++)
+    p_data[i] = klass->eval_p (gsp, data, g_array_index (r, gdouble, i));
 }
 
 static void
@@ -173,7 +171,6 @@ nc_galaxy_shape_pop_class_init (NcGalaxyShapePopClass *klass)
   klass->data_init            = &_nc_galaxy_shape_pop_data_init;
   klass->prepare              = &_nc_galaxy_shape_pop_prepare;
   klass->eval_p               = &_nc_galaxy_shape_pop_eval_p;
-  klass->eval_p_rho2          = &_nc_galaxy_shape_pop_eval_p_rho2;
   klass->gen                  = &_nc_galaxy_shape_pop_gen;
   klass->e_rms                = &_nc_galaxy_shape_pop_e_rms;
   klass->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_eval_p_rho2_g_series;
@@ -241,7 +238,7 @@ nc_galaxy_shape_pop_data_new (NcGalaxyShapePop *gsp)
   data->ldata_write_row        = NULL;
   data->ldata_required_columns = NULL;
   data->ldata_get_sigma        = NULL;
-  data->ldata_get_mode_x       = NULL;
+  data->ldata_get_mode_r       = NULL;
 
   g_atomic_ref_count_init (&data->ref_count);
   NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->data_init (gsp, data);
@@ -341,7 +338,7 @@ nc_galaxy_shape_pop_data_required_columns (NcGalaxyShapePopData *data)
  *
  * Resolves the model parameters (and the per-galaxy @data->e_rms, for per-galaxy
  * models) into @data: the subclass-specific parameters stored in @data->ldata
- * that nc_galaxy_shape_pop_eval_p() / nc_galaxy_shape_pop_eval_p_rho2() read.
+ * that nc_galaxy_shape_pop_eval_p() reads.
  *
  */
 void
@@ -354,42 +351,23 @@ nc_galaxy_shape_pop_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
  * nc_galaxy_shape_pop_eval_p: (virtual eval_p)
  * @gsp: a #NcGalaxyShapePop
  * @data: a resolved #NcGalaxyShapePopData
- * @x: the squared ellipticity modulus $x = |\chi_I|^2 \in [0,1]$
+ * @r: the ellipticity modulus $r = |\chi_I| \in [0,1)$
  *
- * Evaluates the normalized density $P(x)$ of the squared intrinsic
- * ellipticity modulus, reading the resolved parameters from @data (no live
- * parameter access).
+ * Evaluates the population's own natural r-marginal density
+ * $P_\mathrm{pop}(r)$, normalized so $\int_0^1 P_\mathrm{pop}(r)\,\mathrm{d}r=1$,
+ * reading the resolved parameters from @data (no live parameter access).
+ * This is NOT a 2D area density -- a consumer needing the density with
+ * respect to $\mathrm{d}^2\chi_I$ computes $P_\mathrm{pop}(r)/(2\pi r)$
+ * itself (see the class docs for why that division, not this vfunc, is
+ * where any $r=0$ divergence for a population like #NcGalaxyShapePopBeta
+ * with $\alpha<2$ actually lives).
  *
- * Returns: the density $P(x)$.
+ * Returns: the density $P_\mathrm{pop}(r)$.
  */
 gdouble
-nc_galaxy_shape_pop_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble x)
+nc_galaxy_shape_pop_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r)
 {
-  return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p (gsp, data, x);
-}
-
-/**
- * nc_galaxy_shape_pop_eval_p_rho2: (virtual eval_p_rho2)
- * @gsp: a #NcGalaxyShapePop
- * @data: a resolved #NcGalaxyShapePopData
- * @rho2: $\rho^2 = u^2+v^2 \geq 0$, related to $x=|\chi_I|^2$ by $x = \rho^2/(1+\rho^2)$
- *
- * Evaluates the same density as nc_galaxy_shape_pop_eval_p(), but parameterized
- * directly by $\rho^2$ instead of $x$. The default implementation just
- * substitutes $x=\rho^2/(1+\rho^2)$ into eval_p(); a subclass overrides it
- * only when its density has a genuinely more direct or better-conditioned
- * form in $\rho^2$ (see #NcGalaxyShapePopBeta, whose density is a rational
- * power of $\rho^2$ with no need to ever form $1-x$ by subtraction).
- * Intended for calculators that already work in $(u,v)$ via a
- * disc-compactifying substitution (e.g. #NcGalaxyShapeFactorQuad), where
- * $\rho^2$ is the natural coordinate.
- *
- * Returns: the density $P(x)$.
- */
-gdouble
-nc_galaxy_shape_pop_eval_p_rho2 (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble rho2)
-{
-  return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_rho2 (gsp, data, rho2);
+  return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p (gsp, data, r);
 }
 
 /**
@@ -419,12 +397,12 @@ nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePo
  * nc_galaxy_shape_pop_eval_p_array: (virtual eval_p_array)
  * @gsp: a #NcGalaxyShapePop
  * @data: a resolved #NcGalaxyShapePopData
- * @x: (element-type gdouble): array of $x=|\chi_I|^2$ values to evaluate
+ * @r: (element-type gdouble): array of $r=|\chi_I|$ values to evaluate
  * @p: (out callee-allocates) (transfer full) (element-type gdouble): output
- * array of $P(x)$ values, same length as @x
+ * array of $P_\mathrm{pop}(r)$ values, same length as @r
  *
  * Batched form of nc_galaxy_shape_pop_eval_p(): evaluates the population
- * density at every element of @x in one call.
+ * density at every element of @r in one call.
  *
  * The @p parameter supports two usage patterns:
  *
@@ -443,9 +421,9 @@ nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePo
  * #NcGalaxyShapePopBeta).
  */
 void
-nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *x, GArray **p)
+nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p)
 {
-  NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_array (gsp, data, x, p);
+  NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_array (gsp, data, r, p);
 }
 
 /**
@@ -482,6 +460,20 @@ nc_galaxy_shape_pop_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 }
 
 /**
+ * nc_galaxy_shape_pop_exponent_at_origin: (virtual exponent_at_origin)
+ * @gsp: a #NcGalaxyShapePop
+ *
+ * Determines how the population density behaves at the origin.
+ *
+ * Returns: the exponent $\alpha_o$ such that $P_\mathrm{pop}(r) \sim r^{\alpha_o}$ as $r \to 0$.
+ */
+gdouble
+nc_galaxy_shape_pop_exponent_at_origin (NcGalaxyShapePop *gsp)
+{
+  return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->exponent_at_origin (gsp);
+}
+
+/**
  * nc_galaxy_shape_pop_get_sigma:
  * @gsp: a #NcGalaxyShapePop
  * @data: a resolved #NcGalaxyShapePopData
@@ -506,22 +498,22 @@ nc_galaxy_shape_pop_get_sigma (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data
 }
 
 /**
- * nc_galaxy_shape_pop_get_mode_x:
+ * nc_galaxy_shape_pop_get_mode_r:
  * @gsp: a #NcGalaxyShapePop
  * @data: a resolved #NcGalaxyShapePopData
  *
- * Gets the mode of $x=|\chi_I|^2$ for this galaxy's resolved population
- * density, i.e. where $P(x)$ peaks. This is a per-@data capability
- * (@data->ldata_get_mode_x), not a virtual method, mirroring
+ * Gets the mode of $r=|\chi_I|$ for this galaxy's resolved population
+ * density, i.e. where $P_\mathrm{pop}(r)$ peaks. This is a per-@data
+ * capability (@data->ldata_get_mode_r), not a virtual method, mirroring
  * nc_galaxy_shape_pop_get_sigma(); unlike that capability, 0 is always a
  * meaningful default (the model is assumed radially symmetric about
  * $\chi_I=0$ unless it says otherwise), so this never errors.
  *
- * Returns: the mode of $x$, or 0 if the model does not override it.
+ * Returns: the mode of $r$, or 0 if the model does not override it.
  */
 gdouble
-nc_galaxy_shape_pop_get_mode_x (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
+nc_galaxy_shape_pop_get_mode_r (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 {
-  return (data->ldata_get_mode_x != NULL) ? data->ldata_get_mode_x (data) : 0.0;
+  return (data->ldata_get_mode_r != NULL) ? data->ldata_get_mode_r (data) : 0.0;
 }
 

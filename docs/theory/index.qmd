@@ -21,6 +21,8 @@ classes and methods.
 
 - [Halo Density Profiles](halo_density_profile.qmd) — NFW, Einasto, and Hernquist profiles and their projected quantities.
 - [Weak-Lensing Surface Mass Density](wl_surface_mass_density.qmd) — projected surface density, convergence, and shear.
+- [Castro Halo Mass Function and Bias](castro_hmf.qmd) — the non-universal $f(\sigma)$ calibrations and the linear bias fitted alongside them.
+- [Super-Sample Covariance](ssc.qmd) — the $S_{ij}$ matrix of long-wavelength modes, and its role in the cluster number-count likelihood.
 
 ## Galaxy Population & Weak Lensing
 

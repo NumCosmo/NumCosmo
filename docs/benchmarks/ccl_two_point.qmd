@@ -14,10 +14,6 @@ format:
 
 format-links: [ipynb]
 
-execute:
-  warning: true
-  error: true
-
 ---
 
 ## Introduction
@@ -27,6 +23,20 @@ Our goal is to evaluate the consistency and accuracy of these functions by analy
 
 To this end, we define a set of cosmological models with fixed and variable parameters, then implement functions to compute and visualize the power spectra and their relative differences. 
 The results are presented through tables and plots.
+
+### Scope of the comparison
+
+Both libraries are run in the **Limber approximation** throughout this page.
+NumCosmo uses `Nc.XcorMethod.LIMBER_Z_CUBATURE`, the redshift-space Limber
+integral, as the closest counterpart to CCL's own `angular_cl` path. Every
+difference reported below is therefore between two Limber implementations, not
+between an approximate and an exact calculation. NumCosmo's non-Limber solvers
+(the `KERNEL_*` methods, which integrate the kernel closures against
+$j_\ell(k\chi)$ directly) are not exercised here.
+
+Both codes also run at their default precision settings: `setup_models` is
+called with `high_precision=False`, so CCL's `CCLParams.set_high_prec_params()`
+is not applied. Tightening it improves the agreement at the cost of runtime.
 
 ```{python}
 import sys
@@ -206,7 +216,7 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 ```
 
 
-The CCL calculations show marginal agreement with those from NumCosmo. This discrepancy stems from CCL’s reduced accuracy in computing the growth function and growth factor at high redshifts ($z \gtrsim 10$). While this limitation does not significantly impact cross-correlations involving the ISW kernel when combined with probes anchored at lower redshifts, it introduces pronounced errors in the ISW autocorrelation, which depends on precise integration over the full redshift range up to $\z_\mathrm{lss}$.  
+The CCL calculations show marginal agreement with those from NumCosmo. This discrepancy stems from CCL’s reduced accuracy in computing the growth function and growth factor at high redshifts ($z \gtrsim 10$). While this limitation does not significantly impact cross-correlations involving the ISW kernel when combined with probes anchored at lower redshifts, it introduces pronounced errors in the ISW autocorrelation, which depends on precise integration over the full redshift range up to $z_\mathrm{lss}$.  
 
 As illustrated in the ISW kernel plot, the results exhibit strong agreement up to $z \sim 10$, beyond which discrepancies grow increasingly pronounced, reflecting the cumulative effect of inaccuracies in CCL’s high-$z$ growth calculations.  
 
@@ -394,8 +404,19 @@ The results are in very good agreement with the results from NumCosmo. Note the 
 
 ## Time Comparison
 
-The following code compares the time measurements between CCL and NumCosmo.
+Timing a library fairly here takes some care, because the two codes cache
+different things. CCL stores its background splines and the `Pk2D` object on the
+`Cosmology`, so a repeated call re-uses most of that work; NumCosmo builds a
+fresh kernel and `Xcor` object and re-runs `prepare()` each time. Timing a
+lambda that constructs everything therefore charges NumCosmo for setup that CCL
+has already amortized away.
 
+We report both stages instead. **Setup + $C_\ell$** builds the tracer/kernel and
+computes the spectrum, as a cold call would; **$C_\ell$ only** re-uses objects
+that have already been prepared, which is what an inner loop over $\ell$ or a
+repeated evaluation at fixed cosmology actually costs. Neither number is
+accuracy-matched: both codes run at the default settings described above, so
+these are runtimes at each library's default precision, not at equal error.
 
 ```{python}
 # Lets first get a simple dndz function. We use 1000 knots and a width of 0.1.
@@ -407,26 +428,27 @@ bias = 3.0
 mbias = 1.234
 
 
-def compute_wl_using_ccl(
+def setup_wl_using_ccl(
     ccl_cosmo: pyccl.Cosmology, z_a: np.ndarray, nz_a: np.ndarray, ells: np.ndarray
 ):
+    """Build the CCL weak-lensing tracer; return a closure computing its C_ell."""
     ccl_wl = pyccl.WeakLensingTracer(ccl_cosmo, dndz=(z_a, nz_a))
     psp = ccl_cosmo.get_linear_power()
-    ccl_wl_auto = pyccl.angular_cl(
+
+    return lambda: pyccl.angular_cl(
         ccl_cosmo, ccl_wl, ccl_wl, ells, p_of_k_a_lin=psp, p_of_k_a=psp
     )
 
-    return ccl_wl_auto
 
-
-def compute_nc_using_ccl(
+def setup_nc_using_ccl(
     ccl_cosmo: pyccl.Cosmology,
     z_a: np.ndarray,
     nz_a: np.ndarray,
     ells: np.ndarray,
     bias: float,
     mbias: float,
-) -> np.ndarray:
+):
+    """Build the CCL number-counts tracer; return a closure computing its C_ell."""
     ccl_gal = pyccl.NumberCountsTracer(
         ccl_cosmo,
         has_rsd=False,
@@ -434,85 +456,108 @@ def compute_nc_using_ccl(
         bias=(z_a, np.ones_like(z_a) * bias),
         mag_bias=(z_a, np.ones_like(z_a) * mbias),
     )
-
     psp = ccl_cosmo.get_linear_power()
-    ccl_gal_auto = pyccl.angular_cl(
+
+    return lambda: pyccl.angular_cl(
         ccl_cosmo, ccl_gal, ccl_gal, ells, p_of_k_a_lin=psp, p_of_k_a=psp
     )
 
-    return ccl_gal_auto
 
-
-def compute_wl_using_nc(
+def setup_wl_using_nc(
     cosmology: ncc.Cosmology,
     dndz: Ncm.Spline,
     ells: np.ndarray,
     nc_wl_auto_v: Ncm.Vector,
 ):
-    nc_wl = Nc.XcorKernelWeakLensing.new(
-        cosmology.dist, cosmology.ps_ml, dndz, 3.0, 7.0
-    )
+    """Build the NumCosmo WL kernel; return a closure computing its C_ell."""
+    ell_min, ell_max = int(ells[0]), int(ells[-1])
+    nc_wl = Nc.XcorKernelWeakLensing.new(cosmology.dist, cosmology.ps_ml, dndz, 3.0, 7.0)
     xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     xcor.prepare(cosmology.cosmo)
     nc_wl.prepare(cosmology.cosmo)
-    xcor.compute(nc_wl, nc_wl, cosmology.cosmo, 2, lmax, nc_wl_auto_v)
 
-    return np.array(nc_wl_auto_v.dup_array())
+    return lambda: xcor.compute(
+        nc_wl, nc_wl, cosmology.cosmo, ell_min, ell_max, nc_wl_auto_v
+    )
 
 
-def compute_nc_using_nc(
+def setup_nc_using_nc(
     cosmology: ncc.Cosmology,
     dndz: Ncm.Spline,
     ells: np.ndarray,
     bias: float,
     mbias: float,
     nc_wl_auto_v: Ncm.Vector,
-) -> np.ndarray:
+):
+    """Build the NumCosmo galaxy kernel; return a closure computing its C_ell."""
+    ell_min, ell_max = int(ells[0]), int(ells[-1])
     nc_gal = Nc.XcorKernelGal.new(cosmology.dist, cosmology.ps_ml, 1, 3.0, dndz, True)
     nc_gal["mag_bias"] = mbias
     nc_gal["bparam_0"] = bias
     xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE)
     nc_gal.prepare(cosmology.cosmo)
     xcor.prepare(cosmology.cosmo)
-    xcor.compute(nc_gal, nc_gal, cosmology.cosmo, 2, lmax, nc_wl_auto_v)
 
-    return np.array(nc_wl_auto_v.dup_array())
+    return lambda: xcor.compute(
+        nc_gal, nc_gal, cosmology.cosmo, ell_min, ell_max, nc_wl_auto_v
+    )
+```
 
+Each entry is timed twice: once as `setup(...)()`, which pays the construction
+cost on every repetition, and once as the closure alone, with construction
+hoisted out of the timed region.
 
-table = [
-    ["Galaxy Weak Lensing", "CCL"]
-    + nc_cmp.compute_times(
-        lambda: compute_wl_using_ccl(models[0]["CCL"], z_a, nz_a, ells),
-        repeat=5,
-        number=10,
+```{python}
+# | label: tbl-ccl-vs-nc-times
+# | tbl-cap: Runtime at each library's default precision, by stage
+# | tbl-colwidths: [22, 12, 33, 33]
+# | code-fold: true
+
+benchmarks = [
+    (
+        "Galaxy Weak Lensing",
+        "CCL",
+        lambda: setup_wl_using_ccl(models[0]["CCL"], z_a, nz_a, ells),
     ),
-    ["Galaxy Weak Lensing", "NumCosmo"]
-    + nc_cmp.compute_times(
-        lambda: compute_wl_using_nc(models[0]["NC"], dndz, ells, nc_wl_auto_v),
-        repeat=5,
-        number=10,
+    (
+        "Galaxy Weak Lensing",
+        "NumCosmo",
+        lambda: setup_wl_using_nc(models[0]["NC"], dndz, ells, nc_wl_auto_v),
     ),
-    ["Galaxy Number Counts", "CCL"]
-    + nc_cmp.compute_times(
-        lambda: compute_nc_using_ccl(models[1]["CCL"], z_a, nz_a, ells, bias, mbias),
-        repeat=5,
-        number=10,
+    (
+        "Galaxy Number Counts",
+        "CCL",
+        lambda: setup_nc_using_ccl(models[1]["CCL"], z_a, nz_a, ells, bias, mbias),
     ),
-    ["Galaxy Number Counts", "NumCosmo"]
-    + nc_cmp.compute_times(
-        lambda: compute_nc_using_nc(
+    (
+        "Galaxy Number Counts",
+        "NumCosmo",
+        lambda: setup_nc_using_nc(
             models[1]["NC"], dndz, ells, bias, mbias, nc_wl_auto_v
         ),
-        repeat=5,
-        number=10,
     ),
 ]
 
-columns = ["Quantity", "Library", "Mean Time", "Standard Deviation"]
+
+def timed(mean_std):
+    """Render a (mean, std) pair from compute_times."""
+    return f"{format_time(mean_std[0])} ± {format_time(mean_std[1])}"
+
+
+table = []
+for quantity, library, setup in benchmarks:
+    full = nc_cmp.compute_times(lambda: setup()(), repeat=5, number=10)
+    compute_only = nc_cmp.compute_times(setup(), repeat=5, number=10)
+    table.append([quantity, library, timed(full), timed(compute_only)])
+
+columns = [
+    "Quantity",
+    "Library",
+    r"Setup + $C_\ell$",
+    r"$C_\ell$ only",
+]
 
 df = pd.DataFrame(table, columns=columns)
-df["Mean Time"] = df["Mean Time"].apply(format_time)
-df["Standard Deviation"] = df["Standard Deviation"].apply(format_time)
 
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
 ```
@@ -523,4 +568,11 @@ In summary, the two frameworks demonstrate strong agreement across most calculat
 Additionally, the ISW computation in CCL exhibits large deviations at high redshifts ($z \gtrsim 10$), stemming from inaccuracies in the growth function and growth factor. While these errors do not significantly impact cross-correlations with low-redshift probes, they become critical in the ISW autocorrelation, which depends on precise integration over the full redshift range up to $z_\mathrm{lss}$.  
 
 The Limber integration errors in CCL further manifest as spikes in random values of $\ell$, particularly, when there is good agreement between the two frameworks they 
-become more noticeable. 
+become more noticeable.
+
+On runtime, the two-stage table separates construction from evaluation. Both
+libraries pay a real setup cost, but only CCL's is amortized by caching on the
+`Cosmology` object, so a single-stage measurement that constructs inside the
+timed region flatters CCL and penalizes NumCosmo. The gap between the two codes
+is genuine either way; the $C_\ell$-only column is the one to read when
+comparing the integrators themselves. 

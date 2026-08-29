@@ -35,18 +35,15 @@
  * distribution $P(z \mid I)$ (a #NcGalaxyRedshiftPop) and a photo-z observable
  * conditional $P(\mathrm{obs} \mid z)$ (a #NcGalaxyRedshiftObs), conditioned on
  * a photometric selection window $[z_{p,\min}, z_{p,\max}]$:
- * $$ p(\mathrm{obs}, z \mid I) = P(z \mid I)\,
- *    \frac{P(\mathrm{obs} \mid z)}{\int_{z_{p,\min}}^{z_{p,\max}}
- *    P(\mathrm{obs}' \mid z)\,\mathrm{d}\,\mathrm{obs}'}. $$
+ * $$
+ * p(\mathrm{obs}, z \mid I) = P(z \mid I)\, \frac{P(\mathrm{obs} \mid
+ *    z)}{\int_{z_{p,\min}}^{z_{p,\max}} P(\mathrm{obs}' \mid
+ *    z)\,\mathrm{d}\,\mathrm{obs}'}.
+ * $$
  * The window normalization is the observable's own selection mass
  * (nc_galaxy_redshift_obs_window_mass()), so the scheme never depends on the
- * observable's kernel shape. The scheme hands out this joint as an integrand;
- * the orchestrator performs the single $z$-integral.
- *
- * Following the calculator convention, the scheme does NOT hold the population
- * and observable models: they are resolved from the #NcmMSet passed to each
- * method (both are MAIN models), so a fitter varying them is seen immediately.
- * Only the selection window is scheme configuration.
+ * observable's kernel shape. The scheme hands out this joint as an integrand; the
+ * orchestrator performs the single $z$-integral.
  *
  */
 
@@ -71,10 +68,10 @@ typedef struct _NcGalaxyRedshiftFactorComposedPrivate
   gdouble zp_min;
   gdouble zp_max;
 
-  /* Cached by prepare(): a hash of the population/observable models' state,
-   * so callers can detect a change without knowing which models are
-   * involved -- see #NcGalaxyShapeFactor's analogous radius/optzs/pop
-   * hashes for the full rationale. */
+  /* Cached by prepare(): a hash of the population/observable models' state, so callers
+   * can detect a change without knowing which models are involved -- see
+   * #NcGalaxyShapeFactor's analogous radius/optzs/pop hashes for the full rationale.
+   * */
   guint64 hash;
 } NcGalaxyRedshiftFactorComposedPrivate;
 
@@ -98,8 +95,6 @@ typedef struct _ComposedLData
   NcGalaxyRedshiftObsData *obs_data;
 } ComposedLData;
 
-/* The population and observable are never held; they are resolved from the mset
- * (both MAIN models) each time a method needs them. */
 static void
 _composed_peek_models (NcmMSet *mset, NcGalaxyRedshiftPop **population, NcGalaxyRedshiftObs **observable)
 {
@@ -324,9 +319,9 @@ _nc_galaxy_redshift_factor_composed_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMS
   /* Validate the required models are present in the mset. */
   _composed_peek_models (mset, &population, &observable);
 
-  /* Neither model's state is otherwise cached (both are always resolved
-   * fresh from mset per-call, per the class doc), so there is nothing else
-   * to refresh here -- just keep the hash current for get_hash(). */
+  /* Neither model's state is otherwise cached (both are always resolved fresh from
+   * mset per-call, per the class doc), so there is nothing else to refresh here --
+   * just keep the hash current for get_hash(). */
   self->hash = ncm_model_state_get_pkey (NCM_MODEL (population)) ^
                (ncm_model_state_get_pkey (NCM_MODEL (observable)) * 31U);
 }
@@ -349,7 +344,6 @@ struct _IntegData
   NcGalaxyRedshiftObs *observable;
 };
 
-/* LCOV_EXCL_START */
 static gpointer
 _integ_data_copy (gpointer idata)
 {
@@ -359,8 +353,6 @@ _integ_data_copy (gpointer idata)
 
   return new_idata;
 }
-
-/* LCOV_EXCL_STOP */
 
 static void
 _integ_data_free (gpointer idata)
@@ -503,9 +495,8 @@ _nc_galaxy_redshift_factor_composed_make_fixed_nodes (NcGalaxyRedshiftFactor *gs
  * @zp_min: the minimum photometric redshift of the selection window
  * @zp_max: the maximum photometric redshift of the selection window
  *
- * Creates a new #NcGalaxyRedshiftFactorComposed calculator scheme over the
- * selection window [@zp_min, @zp_max]. The population and observable models are
- * not held; they are resolved from the #NcmMSet passed to each method.
+ * Creates a new #NcGalaxyRedshiftFactorComposed calculator scheme over the selection
+ * window [@zp_min, @zp_max].
  *
  * Returns: (transfer full): a new #NcGalaxyRedshiftFactorComposed.
  */
@@ -551,8 +542,8 @@ nc_galaxy_redshift_factor_composed_free (NcGalaxyRedshiftFactorComposed *gsdrc)
  * nc_galaxy_redshift_factor_composed_clear:
  * @gsdrc: a #NcGalaxyRedshiftFactorComposed
  *
- * Decreases the reference count of @gsdrc by one, and sets the pointer *@gsdrc
- * to NULL.
+ * Decreases the reference count of @gsdrc by one, and sets the pointer *@gsdrc to
+ * NULL.
  *
  */
 void
