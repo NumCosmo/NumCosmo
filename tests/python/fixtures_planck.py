@@ -45,6 +45,8 @@ import struct
 import numpy as np
 from astropy.io import fits
 
+from numcosmo_py import Nc
+
 # ---------------------------------------------------------------------------
 # cldf primitives
 # ---------------------------------------------------------------------------
@@ -555,3 +557,96 @@ def model_vector(data, mset) -> np.ndarray:
     data.mean_vector(mset, vec)
 
     return np.array([vec.get(i) for i in range(size)])
+
+
+# ---------------------------------------------------------------------------
+# a Boltzmann source with no Boltzmann code behind it
+# ---------------------------------------------------------------------------
+
+# Smooth, strictly deterministic stand-ins for the theory spectra, given as
+# D_ell = C_ell l(l+1)/2pi. The scales are the ones the synthetic likelihoods are
+# posed for: TT inside the commander spline's tabulated range, EE/BB inside the
+# simall probability tables, TE free to change sign.
+_FIXED_DL = {
+    "TT": lambda l: 1.0e3 * (1.0 + 0.5 * np.cos(l / 50.0)),
+    "EE": lambda l: 5.0e-2 * (1.0 + 0.5 * np.sin(l / 30.0)),
+    "BB": lambda l: 1.0e-2 * (1.0 + 0.5 * np.cos(l / 40.0)),
+    "TE": lambda l: 5.0 * np.sin(l / 60.0),
+    "TB": lambda l: np.zeros_like(l, dtype=float),
+    "EB": lambda l: np.zeros_like(l, dtype=float),
+}
+FIXED_CL_LMAX = 3000
+
+
+def fixed_spectra(lmax: int = FIXED_CL_LMAX) -> dict:
+    """Return the stand-in $C_\\ell$ of every spectrum, indexed by multipole."""
+    ell = np.arange(lmax + 1, dtype=float)
+    norm = np.zeros(lmax + 1)
+    norm[2:] = 2.0 * np.pi / (ell[2:] * (ell[2:] + 1.0))
+
+    spectra = {name: dl(ell) * norm for name, dl in _FIXED_DL.items()}
+    # phi-phi is given directly as C_ell^phiphi, scaled so the synthetic lensing
+    # band-powers land on the same order as its observed ones.
+    phi = np.zeros(lmax + 1)
+    phi[2:] = 1.0e-13 * (1.0 + 0.5 * np.cos(ell[2:] / 70.0))
+    spectra["PHIPHI"] = phi
+
+    return spectra
+
+
+class FixedClBoltzmann(Nc.HIPertBoltzmann):
+    """A #NcHIPertBoltzmann that hands out stored spectra, ignoring the cosmology.
+
+    Removes the Boltzmann solve from the loop, so a likelihood's $-2\\ln L$ becomes
+    a pure function of the stored spectra and the nuisance parameters. That is what
+    lets a golden reference be exact everywhere: with CLASS in the loop the value
+    also tracks the Boltzmann code's grids and the compiler's floating-point
+    choices, which is what forced the real-data golden's tolerance up to 2e-2.
+    """
+
+    def __init__(self, spectra=None, **kwargs):
+        super().__init__(**kwargs)
+        self.spectra = fixed_spectra() if spectra is None else spectra
+
+    def _fill(self, name, cls_vec):
+        stored = self.spectra[name]
+        n = min(cls_vec.len(), stored.size)
+        for i in range(n):
+            cls_vec.set(i, stored[i])
+        for i in range(n, cls_vec.len()):  # beyond the table: no power
+            cls_vec.set(i, 0.0)
+
+    # The Boltzmann is already "prepared" -- the spectra are fixed.
+    def do_prepare(self, cosmo):
+        """Nothing to solve."""
+
+    def do_prepare_if_needed(self, cosmo):
+        """Nothing to solve."""
+
+    def do_get_TT_Cls(self, cls_vec):
+        """Fill @cls_vec with the stored TT spectrum."""
+        self._fill("TT", cls_vec)
+
+    def do_get_EE_Cls(self, cls_vec):
+        """Fill @cls_vec with the stored EE spectrum."""
+        self._fill("EE", cls_vec)
+
+    def do_get_BB_Cls(self, cls_vec):
+        """Fill @cls_vec with the stored BB spectrum."""
+        self._fill("BB", cls_vec)
+
+    def do_get_TE_Cls(self, cls_vec):
+        """Fill @cls_vec with the stored TE spectrum."""
+        self._fill("TE", cls_vec)
+
+    def do_get_TB_Cls(self, cls_vec):
+        """Fill @cls_vec with the stored TB spectrum."""
+        self._fill("TB", cls_vec)
+
+    def do_get_EB_Cls(self, cls_vec):
+        """Fill @cls_vec with the stored EB spectrum."""
+        self._fill("EB", cls_vec)
+
+    def do_get_PHIPHI_Cls(self, cls_vec):
+        """Fill @cls_vec with the stored phi-phi spectrum."""
+        self._fill("PHIPHI", cls_vec)
