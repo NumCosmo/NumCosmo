@@ -115,11 +115,31 @@ class Settings:
 
 @dataclasses.dataclass(frozen=True)
 class KernelSpec:
-    """One analytic window, as data: what to build and what it stresses."""
+    """One analytic window, as data: what to build and what it stresses.
+
+    ``shape`` and ``params`` are the window itself, kept as plain data because
+    two independent implementations are driven from them -- the library, via
+    ``builder``, and the Arb reference generator, via its command line. A
+    window defined twice is a window that can drift.
+    """
 
     name: str
     builder: typing.Callable[..., Nc.XcorKernelAnalytic]
     stresses: str
+    shape: str = ""
+    params: typing.Mapping[str, typing.Any] = dataclasses.field(default_factory=dict)
+
+    def arb_args(self, side: str) -> list[str]:
+        """This window as arguments to ``nc_xcor_kquad_arb``."""
+        out = [f"--{side}:shape={self.shape}"]
+
+        for key, value in self.params.items():
+            if isinstance(value, (list, tuple)):
+                value = ",".join(repr(float(v)) for v in value)
+
+            out.append(f"--{side}:{key}={value}")
+
+        return out
 
 
 def _gauss(chi_mean: float, chi_sigma: float, n_sigma: float = 4.0):
@@ -222,40 +242,138 @@ def _gauss_kdep(
 KERNELS: typing.Final[dict[str, KernelSpec]] = {
     spec.name: spec
     for spec in (
-        KernelSpec("gauss_mid", _gauss(1500.0, 300.0), "baseline"),
-        KernelSpec("gauss_thin", _gauss(1500.0, 50.0), "thin bin"),
-        KernelSpec("gauss_thin_shift", _gauss(1650.0, 50.0), "thin bin, displaced"),
-        KernelSpec("gauss_near", _gauss(1800.0, 300.0), "overlapping bin"),
-        KernelSpec("gauss_low", _gauss(600.0, 100.0), "near bin"),
-        KernelSpec("gauss_high", _gauss(3500.0, 150.0), "far bin"),
-        KernelSpec("tophat", _tophat(500.0, 2500.0), "hard edges, 2000 Mpc wide"),
+        KernelSpec(
+            "gauss_mid",
+            _gauss(1500.0, 300.0),
+            "baseline",
+            "gauss",
+            {"chi-mean": 1500.0, "chi-sigma": 300.0, "n-sigma": 4.0},
+        ),
+        KernelSpec(
+            "gauss_thin",
+            _gauss(1500.0, 50.0),
+            "thin bin",
+            "gauss",
+            {"chi-mean": 1500.0, "chi-sigma": 50.0, "n-sigma": 4.0},
+        ),
+        KernelSpec(
+            "gauss_thin_shift",
+            _gauss(1650.0, 50.0),
+            "thin bin, displaced",
+            "gauss",
+            {"chi-mean": 1650.0, "chi-sigma": 50.0, "n-sigma": 4.0},
+        ),
+        KernelSpec(
+            "gauss_near",
+            _gauss(1800.0, 300.0),
+            "overlapping bin",
+            "gauss",
+            {"chi-mean": 1800.0, "chi-sigma": 300.0, "n-sigma": 4.0},
+        ),
+        KernelSpec(
+            "gauss_low",
+            _gauss(600.0, 100.0),
+            "near bin",
+            "gauss",
+            {"chi-mean": 600.0, "chi-sigma": 100.0, "n-sigma": 4.0},
+        ),
+        KernelSpec(
+            "gauss_high",
+            _gauss(3500.0, 150.0),
+            "far bin",
+            "gauss",
+            {"chi-mean": 3500.0, "chi-sigma": 150.0, "n-sigma": 4.0},
+        ),
+        KernelSpec(
+            "tophat",
+            _tophat(500.0, 2500.0),
+            "hard edges, 2000 Mpc wide",
+            "tophat",
+            {"chi-lower": 500.0, "chi-upper": 2500.0},
+        ),
         # The regime the Chebyshev closure exists for. On a shell this narrow
-        # the adaptive spline closure does not converge: tightening its
-        # tolerance from 1e-6 to 1e-8 makes it worse, and it never beats ~1e-4.
-        # That is a failure of the representation on a hard edge, not a
-        # tolerance that was set too loose, and no case built from wide bins
+        # the adaptive spline closure's accuracy is capped by scaled-abstol at
+        # the library's own documented floor, where it sits at ~2e-5 while the
+        # spectral closure reaches machine zero. No case built from wide bins
         # reaches it.
-        KernelSpec("shell_narrow", _tophat(1000.0, 1056.0), "56 Mpc hard shell"),
-        KernelSpec("shell_wide", _tophat(1100.0, 1500.0), "400 Mpc hard shell"),
+        KernelSpec(
+            "shell_narrow",
+            _tophat(1000.0, 1056.0),
+            "56 Mpc hard shell",
+            "tophat",
+            {"chi-lower": 1000.0, "chi-upper": 1056.0},
+        ),
+        KernelSpec(
+            "shell_wide",
+            _tophat(1100.0, 1500.0),
+            "400 Mpc hard shell",
+            "tophat",
+            {"chi-lower": 1100.0, "chi-upper": 1500.0},
+        ),
         KernelSpec(
             "tophat_smooth",
             _tophat_smooth(1000.0, 2000.0, 150.0, 6.0),
             "a real tomographic bin",
+            "tophat_smooth",
+            {
+                "chi-lower": 1000.0,
+                "chi-upper": 2000.0,
+                "chi-sigma": 150.0,
+                "n-sigma": 6.0,
+            },
         ),
-        KernelSpec("student_t", _student_t(1500.0, 200.0, 2.0, 6.0), "power-law tail"),
+        KernelSpec(
+            "student_t",
+            _student_t(1500.0, 200.0, 2.0, 6.0),
+            "power-law tail",
+            "student_t",
+            {"chi-mean": 1500.0, "chi-scale": 200.0, "nu": 2.0, "n-scale": 6.0},
+        ),
         KernelSpec(
             "multi_disjoint",
             _multi([600.0, 2600.0], [100.0, 150.0], [1.0, 1.0], 4.0),
             "disconnected support",
+            "multi",
+            {
+                "mu": [600.0, 2600.0],
+                "sigma": [100.0, 150.0],
+                "weight": [1.0, 1.0],
+                "n-sigma": 4.0,
+            },
         ),
         KernelSpec(
-            "power_exp", _power_exp(1200.0, 2.0, 1.5, 50.0, 4000.0), "skewed and broad"
+            "power_exp",
+            _power_exp(1200.0, 2.0, 1.5, 50.0, 4000.0),
+            "skewed and broad",
+            "power_exp",
+            {
+                "chi-scale": 1200.0,
+                "alpha": 2.0,
+                "beta": 1.5,
+                "chi-lower": 50.0,
+                "chi-upper": 4000.0,
+            },
         ),
-        KernelSpec("lensing", _lensing(50.0, 2000.0, 3000.0), "broad, smoothed source"),
+        KernelSpec(
+            "lensing",
+            _lensing(50.0, 2000.0, 3000.0),
+            "broad, smoothed source",
+            "lensing",
+            {"chi-lower": 50.0, "chi-source-lower": 2000.0, "chi-source-upper": 3000.0},
+        ),
         KernelSpec(
             "kdep",
             _gauss_kdep(1500.0, 300.0, 4.0, 0.3, 0.05, 3000.0),
             "non-separable W: sqrt(P) no longer factors out",
+            "gauss",
+            {
+                "chi-mean": 1500.0,
+                "chi-sigma": 300.0,
+                "n-sigma": 4.0,
+                "kdep-amplitude": 0.3,
+                "kdep-k-transition": 0.05,
+                "kdep-chi-ref": 3000.0,
+            },
         ),
     )
 }

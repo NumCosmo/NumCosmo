@@ -54,7 +54,15 @@
  *    about z^2/4 bits to cancellation and z = k chi reaches the hundreds. At
  *    512 bits those same panels certify to 1e-39.
  *
- * Emits one TSV row per multipole: ell value radius prec_max.
+ * The radius covers the integrated range [k_lo, k_hi] and nothing outside it.
+ * The truncation is NOT bounded: the obvious bound from |j_ell| <= 1, which
+ * makes the remainder INT k^2 P dk, is useless here -- k^2 P ~ k^-1 ln^2 k
+ * decays too slowly, and the bound comes out at 6e3 against a C_ell of 2e-5,
+ * barely improving as k_hi grows. So k_hi is a stated truncation, chosen where
+ * the windows have decayed, and it is emitted with every row for the caller to
+ * judge rather than folded into a radius that would not deserve the name.
+ *
+ * Emits one TSV row per multipole: ell value radius prec_max n_eval k_lo k_hi.
  *
  * Build (standalone):
  *   gcc -O2 -o xcor_kquad_arb nc_xcor_kquad_arb.c \
@@ -202,70 +210,6 @@ kquad_integrand (acb_ptr out, const acb_t k, void *param, slong order, slong pre
   acb_clear (t);
 
   return 0;
-}
-
-/*
- * A certified bound on everything above @k_hi, without integrating it.
- *
- * |j_ell| <= 1 and every window here is normalized to unit integral, so
- * |I_ell(k)| <= 1 for all k and all ell. The whole tail is therefore bounded
- * by INT_{k_hi}^{k_end} k^2 P(k) dk, a smooth one-dimensional integral with no
- * Bessel function in it -- and k^2 P ~ k^(n_s - 2) ln^2 k, so it converges and
- * costs nothing.
- *
- * This is what the far tail is for. Integrating it honestly meant 2048-bit
- * arithmetic to confirm that exp (-780) is zero: the 0F1 cancellation is worst
- * exactly where the answer matters least.
- */
-static int
-tail_integrand (acb_ptr out, const acb_t k, void *param, slong order, slong prec)
-{
-  Powspec *ps = (Powspec *) param;
-  acb_t P, t;
-
-  if (order > 1)
-    return 0;
-
-  acb_init (P);
-  acb_init (t);
-  powspec_eval (P, k, ps, prec);
-  acb_sqr (t, k, prec);
-  acb_mul (out, t, P, prec);
-  acb_clear (P);
-  acb_clear (t);
-
-  return 0;
-}
-
-static void
-tail_bound (acb_t res, Powspec *ps, double k_hi, double k_end, slong prec)
-{
-  acb_calc_integrate_opt_t opt;
-  acb_t A, B;
-  mag_t tol;
-
-  acb_init (A);
-  acb_init (B);
-  mag_init (tol);
-  acb_calc_integrate_opt_init (opt);
-  acb_set_d (A, k_hi);
-  acb_set_d (B, k_end);
-  mag_set_ui_2exp_si (tol, 1, -prec / 2);
-  acb_calc_integrate (res, tail_integrand, ps, A, B, prec, tol, opt, prec);
-
-  /* The bound is two-sided: the true tail lies in [-T, T]. */
-  {
-    arb_t r;
-
-    arb_init (r);
-    arb_get_abs_ubound_arf (arb_midref (acb_realref (res)), acb_realref (res), prec);
-    arb_zero (acb_realref (res));
-    arb_clear (r);
-  }
-
-  acb_clear (A);
-  acb_clear (B);
-  mag_clear (tol);
 }
 
 /*
@@ -423,7 +367,7 @@ main (int argc, char **argv)
   Par a, b;
   Pair pr;
   Powspec ps = { .amplitude = 2.08e7, .n_s = 0.9875, .k_eq = 0.10594 };
-  double k_lo = 1.0e-6, k_hi = 10.0, k_end = 1.0e4, target = 1.0e-20;
+  double k_lo = 1.0e-6, k_hi = 10.0, target = 1.0e-20;
   slong prec_max = 4096, eval_limit = 2000;
   long ells[64];
   int n_ells = 0, i, isauto = 1, verbose = 0, negligible = 0;
@@ -484,10 +428,6 @@ main (int argc, char **argv)
     {
       k_hi = atof (s + 7);
     }
-    else if (!strncmp (s, "--k-end=", 8))
-    {
-      k_end = atof (s + 8);
-    }
     else if (!strncmp (s, "--target-rel=", 13))
     {
       target = atof (s + 13);
@@ -547,7 +487,7 @@ main (int argc, char **argv)
 
   window_eval_limit = eval_limit;
 
-  printf ("# ell\tvalue\tradius\tprec_max\tn_eval\n");
+  printf ("# ell\tvalue\tradius\tprec_max\tn_eval\tk_lo\tk_hi\n");
 
   for (i = 0; i < n_ells; i++)
   {
@@ -665,9 +605,9 @@ main (int argc, char **argv)
     acb_mul_2exp_si (total, total, 1);
 
     str = arb_get_str (acb_realref (total), 30, ARB_STR_NO_RADIUS);
-    printf ("%ld\t%s\t%.6e\t%ld\t%ld\n", ells[i], str,
+    printf ("%ld\t%s\t%.6e\t%ld\t%ld\t%.17g\t%.17g\n", ells[i], str,
             mag_get_d (arb_radref (acb_realref (total))),
-            (long) prec_used, pr.n_eval);
+            (long) prec_used, pr.n_eval, k_lo, k_hi);
     flint_free (str);
 
     acb_clear (total);
