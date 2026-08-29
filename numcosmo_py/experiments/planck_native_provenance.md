@@ -1,5 +1,11 @@
 # Native Planck 2018 likelihoods — provenance & attribution
 
+NumCosmo provides independent reimplementations of the Planck likelihoods,
+including support for alternative resampled representations. The underlying
+likelihood methodology and original data products are due to the Planck
+Collaboration. Analyses using these likelihoods should cite the corresponding
+Planck publications in addition to NumCosmo.
+
 The `numcosmo_py.experiments.planck_{commander,simall,smica,lite,lensing}`
 converters and `generate_planck18_native` produce NumCosmo-native Planck 2018
 likelihood objects. They are **value-added subsets** derived from the public
@@ -34,7 +40,11 @@ archive:
 ## Downloadable release (value-added products)
 
 The curated native likelihoods are distributed as self-contained serialized
-objects, mirroring the weak-lensing catalog release
+objects (`planck_native_pr3_<block>.gvar` -- `pr3` is the Planck data release
+they are reduced from, the 2018 `plc_3.0`/`R3.00` package, so a set built from
+another release sits alongside them), hosted on the shared NumCosmo data-asset
+release `datafile-release-v1.0.0` alongside the weak-lensing catalogs, the SNIa
+covariances and the Planck clik baseline tarball
 (`numcosmo_py.experiments.planck_native_release`):
 
 - **Rebuild** the artifacts from a local `plc_3.0` tree with `build_release()` or
@@ -59,8 +69,10 @@ artifacts (documented in `numcosmo/external/plc/CHANGELOG.NumCosmo.md`):
 
 ## Required attribution
 
-Any use or redistribution must cite the Planck Collaboration and the relevant
-release papers, e.g.:
+The reimplementations here are NumCosmo's own; the likelihood methodology and
+the original data products they are built from are the Planck Collaboration's.
+Any use or redistribution must therefore cite the Planck Collaboration and the
+relevant release papers *in addition to* NumCosmo:
 
 - Planck Collaboration, *Planck 2018 results. V. CMB power spectra and
   likelihoods*, A&A 641, A5 (2020).

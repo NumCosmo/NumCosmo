@@ -24,8 +24,20 @@
 
 """Tests on the native NcDataPlanckSimall (low-ell SimAll) likelihood."""
 
-import pytest
+import os
 
+import numpy as np
+import pytest
+from astropy.io import fits
+
+from python.fixtures_planck import (
+    SIMALL_LMIN,
+    SIMALL_LMAX,
+    SIMALL_STEP,
+    make_simall_cldf,
+    planck_mset,
+    theory_cls,
+)
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.experiments.planck_simall import (
     SIMALL_EE_RELPATH,
@@ -97,3 +109,120 @@ def test_matches_clik_reference(relpath, enum, length):
     ref.prepare(mset)
     native.prepare(mset)
     assert native.m2lnL_val(mset) == pytest.approx(ref.m2lnL_val(mset), rel=1.0e-13)
+
+
+# -----------------------------------------------------------------------------
+# Synthetic-data tests: no plc_3.0 tree needed, so they also run where the real
+# Planck data is absent (CI included). See tests/python/fixtures_planck.py.
+# -----------------------------------------------------------------------------
+
+
+def test_synthetic_matches_table_lookup(tmp_path):
+    """The native m2lnL is the tabulated log-probability sum, to the last bit.
+
+    Builds a synthetic simall cldf tree, runs it through the production
+    converter and checks the whole chain (mdb/has_cl parsing, table layout,
+    Dl conversion, calibration and floor indexing) against a direct numpy
+    lookup in the same table.
+    """
+    clik = make_simall_cldf(tmp_path, spectra=("EE", "BB"))
+    cbe = Nc.HIPertBoltzmannCBE.new()
+    calib = 1.003
+    mset, _ = planck_mset(A_planck=calib)
+
+    simall = build_simall(clik, cbe)
+    assert simall.get_length() == 2 * (SIMALL_LMAX - SIMALL_LMIN + 1)
+
+    simall.prepare(mset)
+
+    ell = np.arange(SIMALL_LMIN, SIMALL_LMAX + 1)
+    nell = ell.size
+    lnl = 0.0
+    for tag in ("EE", "BB"):
+        table = fits.getdata(os.path.join(clik, "clik", "lkl_0", f"prob{tag}"))
+        cl = theory_cls(cbe, tag, SIMALL_LMAX)[SIMALL_LMIN:]
+        dl = cl / calib**2 * ell * (ell + 1.0) / (2.0 * np.pi)
+        position = (dl / SIMALL_STEP).astype(int)
+        assert np.all((position >= 0) & (position < table.shape[1]))
+        lnl += np.sum(table[np.arange(nell), position])
+
+    assert simall.m2lnL_val(mset) == -2.0 * lnl
+
+
+def test_synthetic_out_of_range_table(tmp_path):
+    """A theory Dl past the end of the table returns the rejected-point value."""
+    # One step of 1e-12 puts every low-l EE bandpower beyond the last column.
+    clik = make_simall_cldf(tmp_path, spectra=("EE",), nsteps=4, step=1.0e-12)
+    cbe = Nc.HIPertBoltzmannCBE.new()
+    mset, _ = planck_mset()
+
+    simall = build_simall(clik, cbe)
+    simall.prepare(mset)
+
+    assert simall.m2lnL_val(mset) == 1.0e30
+
+
+def test_synthetic_te_spectrum(tmp_path):
+    """A file with a TE table is read and evaluated through the TE code path."""
+    clik = make_simall_cldf(tmp_path, spectra=("EE", "TE"))
+    cbe = Nc.HIPertBoltzmannCBE.new()
+    mset, _ = planck_mset()
+
+    simall = build_simall(clik, cbe)
+    assert simall.get_property("step-te") == SIMALL_STEP
+    assert simall.get_property("prob-te") is not None
+
+    simall.prepare(mset)
+    # Low-l TE is negative, i.e. below the tabulated range: the likelihood must
+    # reject the point rather than index the table out of bounds.
+    assert simall.m2lnL_val(mset) == 1.0e30
+
+
+def test_synthetic_serialize_roundtrip(tmp_path):
+    """A synthetic simall survives a serialization round trip unchanged."""
+    clik = make_simall_cldf(tmp_path, spectra=("EE", "BB"))
+    cbe = Nc.HIPertBoltzmannCBE.new()
+    mset, _ = planck_mset()
+
+    simall = build_simall(clik, cbe)
+    simall.prepare(mset)
+    m2lnl = simall.m2lnL_val(mset)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    simall2 = ser.from_variant(ser.to_variant(simall))
+    assert isinstance(simall2, Nc.DataPlanckSimall)
+    assert simall2.get_length() == simall.get_length()
+
+    simall2.set_hipert_boltzmann(cbe)
+    simall2.prepare(mset)
+    assert simall2.m2lnL_val(mset) == m2lnl
+
+
+def test_synthetic_data_only_build(tmp_path):
+    """Built without a Cls source, the object holds the data and no Boltzmann.
+
+    This is the form the release artifacts are serialized in; the Boltzmann is
+    attached when the block is loaded into an experiment.
+    """
+    clik = make_simall_cldf(tmp_path)
+    simall = build_simall(clik)
+
+    assert simall.peek_hipert_boltzmann() is None
+    assert simall.get_length() == SIMALL_LMAX - SIMALL_LMIN + 1
+
+
+def test_synthetic_new_from_file(tmp_path):
+    """The `new_from_file` loader reads back a serialized simall.
+
+    Only the compact likelihoods are checked this way: the loader is shared
+    across all five, and the text serialization of the high-l blocks is large.
+    """
+    clik = make_simall_cldf(tmp_path)
+    data = build_simall(clik)
+
+    path = str(tmp_path / "simall.obj")
+    Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).to_file(data, path)
+
+    loaded = Nc.DataPlanckSimall.new_from_file(path)
+    assert isinstance(loaded, Nc.DataPlanckSimall)
+    assert loaded.get_length() == data.get_length()

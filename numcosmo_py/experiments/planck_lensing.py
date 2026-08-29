@@ -34,7 +34,7 @@ import os
 
 import numpy as np
 
-from numcosmo_py import Ncm, Nc, GLib
+from numcosmo_py import Ncm, Nc
 
 LENSING_FULL_RELPATH = os.path.join(
     "baseline",
@@ -106,14 +106,14 @@ def build_lensing(
         cors_mat = Ncm.Matrix.new_array(cors.ravel().tolist(), nlt)
 
     assert cors_mat is not None
-    lens = Nc.DataPlanckLensing(
-        lmax=lmax,
-        nbins=nbins,
-        has_calib=has_calib,
-        hascl=GLib.Variant("au", [int(x) for x in hascl.tolist()]),
-        bins=Ncm.Matrix.new_array(bins.ravel().tolist(), nl),
-        cor0=Ncm.Vector.new_array(cor0.tolist()),
-        cors=cors_mat,
+    lens = Nc.DataPlanckLensing.new(
+        lmax,
+        nbins,
+        has_calib,
+        [int(x) for x in hascl.tolist()],
+        Ncm.Matrix.new_array(bins.ravel().tolist(), nl),
+        Ncm.Vector.new_array(cor0.tolist()),
+        cors_mat,
     )
 
     lens.set_property("mean", Ncm.Vector.new_array(pp_hat.tolist()))

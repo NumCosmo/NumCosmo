@@ -250,6 +250,11 @@
 #include "nc/data/nc_data_snia_cov.h"
 #include "nc/data/nc_data_xcor.h"
 #include "nc/data/nc_data_planck_lkl.h"
+#include "nc/data/nc_data_planck_commander.h"
+#include "nc/data/nc_data_planck_lensing.h"
+#include "nc/data/nc_data_planck_plik_lite.h"
+#include "nc/data/nc_data_planck_simall.h"
+#include "nc/data/nc_data_planck_smica.h"
 #include "nc/xcor/nc_xcor.h"
 #include "nc/xcor/nc_xcor_AB.h"
 #include "nc/xcor/nc_xcor_solver.h"
@@ -955,6 +960,11 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_LKL);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_COMMANDER);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_PLIK_LITE);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_SIMALL);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_SMICA);
 
   return;
 }

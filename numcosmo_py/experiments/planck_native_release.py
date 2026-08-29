@@ -32,7 +32,12 @@ lightweight value-added products are hosted on a NumCosmo GitHub release;
 users can assemble native Planck experiments with **no clik data and no PLC
 library**.
 
-See ``planck_native_provenance.md`` for the source data and required citations.
+NumCosmo provides independent reimplementations of the Planck likelihoods,
+including support for alternative resampled representations. The underlying
+likelihood methodology and original data products are due to the Planck
+Collaboration. Analyses using these likelihoods should cite the corresponding
+Planck publications in addition to NumCosmo; see
+``planck_native_provenance.md`` for the source data and the reference list.
 
 Maintainers rebuild the release artifacts with :func:`build_release` and upload
 them to the ``RELEASE_TAG`` GitHub release.
@@ -70,43 +75,56 @@ from numcosmo_py.experiments.planck_lensing import (
     build_lensing,
 )
 
-RELEASE_TAG = "planck-native-release-v1.0.0"
+# The shared NumCosmo data-asset release, the same one the SNIa covariances, the
+# weak-lensing catalogs and the Planck clik baseline tarball are served from
+# (see nc_data_snia_cov.c, nc_galaxy_wl_obs.c and nc_data_planck_lkl.c).
+RELEASE_TAG = "datafile-release-v1.0.0"
 RELEASE_URL = f"https://github.com/NumCosmo/NumCosmo/releases/download/{RELEASE_TAG}"
 
 
 class PlanckReleaseId(StrEnum):
-    """Identifier of a curated native Planck 2018 likelihood object."""
+    """Identifier of a curated native Planck likelihood object.
 
-    COMMANDER = "commander"
-    SIMALL_EE = "simall_ee"
-    SIMALL_BB = "simall_bb"
-    SIMALL_EEBB = "simall_eebb"
-    PLIK_TT = "plik_tt"
-    PLIK_TTTEEE = "plik_ttteee"
-    PLIK_LITE_TT = "plik_lite_tt"
-    PLIK_LITE_TTTEEE = "plik_lite_ttteee"
-    LENSING = "lensing"
-    LENSING_MARGED = "lensing_marged"
+    The value carries the Planck data release the object was reduced from
+    (``pr3`` = the 2018 ``plc_3.0`` package, the ``R3.00`` tarball on the same
+    GitHub release), so a set built from another release lives alongside it
+    instead of colliding with it.
+    """
+
+    PR3_COMMANDER = "pr3_commander"
+    PR3_SIMALL_EE = "pr3_simall_ee"
+    PR3_SIMALL_BB = "pr3_simall_bb"
+    PR3_SIMALL_EEBB = "pr3_simall_eebb"
+    PR3_PLIK_TT = "pr3_plik_tt"
+    PR3_PLIK_TTTEEE = "pr3_plik_ttteee"
+    PR3_PLIK_LITE_TT = "pr3_plik_lite_tt"
+    PR3_PLIK_LITE_TTTEEE = "pr3_plik_lite_ttteee"
+    PR3_LENSING = "pr3_lensing"
+    PR3_LENSING_MARGED = "pr3_lensing_marged"
 
 
 # id -> (source clik relpath, builder(clik_path, pb) -> NcmData). The builder is
 # always called with pb=None here so the serialized object is data-only.
 _REGISTRY: dict[PlanckReleaseId, tuple[str, Callable]] = {
-    PlanckReleaseId.COMMANDER: (COMMANDER_RELPATH, build_commander),
-    PlanckReleaseId.SIMALL_EE: (SIMALL_EE_RELPATH, build_simall),
-    PlanckReleaseId.SIMALL_BB: (SIMALL_BB_RELPATH, build_simall),
-    PlanckReleaseId.SIMALL_EEBB: (SIMALL_EEBB_RELPATH, build_simall),
-    PlanckReleaseId.PLIK_TT: (PLIK_TT_RELPATH, build_smica_tt),
-    PlanckReleaseId.PLIK_TTTEEE: (PLIK_TTTEEE_RELPATH, build_smica_ttteee),
-    PlanckReleaseId.PLIK_LITE_TT: (PLIK_LITE_TT_RELPATH, build_plik_lite_tt),
-    PlanckReleaseId.PLIK_LITE_TTTEEE: (PLIK_LITE_TTTEEE_RELPATH, build_plik_lite),
-    PlanckReleaseId.LENSING: (LENSING_FULL_RELPATH, build_lensing),
-    PlanckReleaseId.LENSING_MARGED: (LENSING_MARGED_RELPATH, build_lensing),
+    PlanckReleaseId.PR3_COMMANDER: (COMMANDER_RELPATH, build_commander),
+    PlanckReleaseId.PR3_SIMALL_EE: (SIMALL_EE_RELPATH, build_simall),
+    PlanckReleaseId.PR3_SIMALL_BB: (SIMALL_BB_RELPATH, build_simall),
+    PlanckReleaseId.PR3_SIMALL_EEBB: (SIMALL_EEBB_RELPATH, build_simall),
+    PlanckReleaseId.PR3_PLIK_TT: (PLIK_TT_RELPATH, build_smica_tt),
+    PlanckReleaseId.PR3_PLIK_TTTEEE: (PLIK_TTTEEE_RELPATH, build_smica_ttteee),
+    PlanckReleaseId.PR3_PLIK_LITE_TT: (PLIK_LITE_TT_RELPATH, build_plik_lite_tt),
+    PlanckReleaseId.PR3_PLIK_LITE_TTTEEE: (PLIK_LITE_TTTEEE_RELPATH, build_plik_lite),
+    PlanckReleaseId.PR3_LENSING: (LENSING_FULL_RELPATH, build_lensing),
+    PlanckReleaseId.PR3_LENSING_MARGED: (LENSING_MARGED_RELPATH, build_lensing),
 }
 
 
 def release_filename(rid: PlanckReleaseId) -> str:
-    """Release/cache filename for a given id."""
+    """Release/cache filename for a given id.
+
+    The id already carries the Planck data release (``pr3_...``), so the name is
+    unique across releases: ``planck_native_pr3_commander.gvar``.
+    """
     return f"planck_native_{rid.value}.gvar"
 
 

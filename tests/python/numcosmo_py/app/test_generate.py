@@ -357,3 +357,99 @@ def test_generate_dewspline_invalid_suffix(tmp_path: Path):
     bao_id = hicosmo.BAOID.ALL_COMBINED_JUN_2025
     with pytest.raises(ValueError, match="Invalid experiment file suffix: .txt"):
         _ = gen.GenerateDEWSpline(experiment=exp_file.absolute(), include_bao=bao_id)
+
+
+# Native Planck: paths that need no local plc_3.0 tree (see fixtures_planck.py).
+def test_generate_planck_from_release_requires_native(tmp_path: Path):
+    """--from-release only makes sense together with --native."""
+    # pylint: disable=import-outside-toplevel
+    from numcosmo_py.experiments.planck18 import Planck18Types
+
+    exp_file = tmp_path / "planck.yaml"
+    with pytest.raises(ValueError, match="--from-release requires --native"):
+        _ = gen.GeneratePlanck(
+            experiment=exp_file.absolute(),
+            data_type=Planck18Types.TT,
+            from_release=True,
+        )
+
+
+def test_build_planck_release_without_data(tmp_path: Path, monkeypatch):
+    """Rebuilding the release with no clik tree present is an explicit error."""
+    # pylint: disable=import-outside-toplevel
+    import numcosmo_py.experiments.planck_native_release as pnr
+
+    monkeypatch.setattr(pnr, "find_baseline_file", lambda relpath: None)
+
+    with pytest.raises(ValueError, match="No Planck clik data found"):
+        _ = gen.BuildPlanckRelease(output_dir=(tmp_path / "release").absolute())
+
+
+def test_build_planck_release_writes_available_ids(tmp_path: Path, monkeypatch):
+    """The publish command writes the ids whose source data it can find."""
+    # pylint: disable=import-outside-toplevel
+    import numcosmo_py.experiments.planck_native_release as pnr
+    from numcosmo_py.experiments.planck_commander import COMMANDER_RELPATH
+    from python.fixtures_planck import make_commander_cldf
+
+    clik = make_commander_cldf(tmp_path)
+    monkeypatch.setattr(
+        pnr,
+        "find_baseline_file",
+        lambda relpath: clik if relpath == COMMANDER_RELPATH else None,
+    )
+
+    out_dir = tmp_path / "release"
+    _ = gen.BuildPlanckRelease(output_dir=out_dir.absolute())
+
+    assert [p.name for p in out_dir.glob("planck_native_*.gvar")] == [
+        "planck_native_pr3_commander.gvar"
+    ]
+
+
+def test_generate_planck_native_from_release(tmp_path: Path, monkeypatch):
+    """--native --from-release writes an experiment holding only native blocks."""
+    # pylint: disable=import-outside-toplevel
+    import numcosmo_py.experiments.planck_native_release as pnr
+    from numcosmo_py.experiments.planck18 import Planck18Types
+    from numcosmo_py.experiments.planck_commander import build_commander
+    from numcosmo_py.experiments.planck_simall import build_simall
+    from numcosmo_py.experiments.planck_smica import build_smica_tt
+    from python.fixtures_planck import (
+        make_commander_cldf,
+        make_simall_cldf,
+        make_smica_cldf,
+    )
+
+    trees = {
+        pnr.PlanckReleaseId.PR3_SIMALL_EE: (make_simall_cldf(tmp_path), build_simall),
+        pnr.PlanckReleaseId.PR3_COMMANDER: (
+            make_commander_cldf(tmp_path),
+            build_commander,
+        ),
+        pnr.PlanckReleaseId.PR3_PLIK_TT: (make_smica_cldf(tmp_path), build_smica_tt),
+    }
+
+    def _load(rid, pb=None, cache_dir=None):
+        del cache_dir
+        clik, builder = trees[rid]
+        return builder(clik, pb)
+
+    monkeypatch.setattr(pnr, "load_planck_release", _load)
+
+    exp_file = tmp_path / "planck_native_release.yaml"
+    _ = gen.GeneratePlanck(
+        experiment=exp_file.absolute(),
+        native=True,
+        from_release=True,
+        data_type=Planck18Types.TT,
+    )
+
+    assert exp_file.exists()
+    dset_file = exp_file.with_suffix(".dataset.gvar")
+    assert dset_file.exists()
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dset = ser.from_binfile(str(dset_file.absolute()))
+    names = {dset.get_data(i).__class__.__name__ for i in range(dset.get_ndata())}
+    assert names == {"DataPlanckSimall", "DataPlanckCommander", "DataPlanckSmica"}

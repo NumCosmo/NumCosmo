@@ -21,7 +21,15 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Factory functions to generate Planck18 likelihood and models."""
+"""Factory functions to generate Planck18 likelihood and models.
+
+NumCosmo provides independent reimplementations of the Planck likelihoods,
+including support for alternative resampled representations. The underlying
+likelihood methodology and original data products are due to the Planck
+Collaboration. Analyses using these likelihoods should cite the corresponding
+Planck publications in addition to NumCosmo; see ``planck_native_provenance.md``
+for the source data and the reference list.
+"""
 
 from typing import Any, cast
 from enum import StrEnum
@@ -410,15 +418,15 @@ def generate_planck18_native(
     # Each native likelihood raises the shared Boltzmann's targets/lmax itself in
     # prepare() (nc_hipert_boltzmann_require), including after the experiment is
     # reloaded, so no manual CBE configuration is needed here.
-    lowl_EE = _block(PlanckReleaseId.SIMALL_EE, SIMALL_EE_RELPATH, build_simall)
-    lowl_TT = _block(PlanckReleaseId.COMMANDER, COMMANDER_RELPATH, build_commander)
+    lowl_EE = _block(PlanckReleaseId.PR3_SIMALL_EE, SIMALL_EE_RELPATH, build_simall)
+    lowl_TT = _block(PlanckReleaseId.PR3_COMMANDER, COMMANDER_RELPATH, build_commander)
 
     if data_type == Planck18Types.TT:
-        highl = _block(PlanckReleaseId.PLIK_TT, PLIK_TT_RELPATH, build_smica_tt)
+        highl = _block(PlanckReleaseId.PR3_PLIK_TT, PLIK_TT_RELPATH, build_smica_tt)
         planck_model: Nc.PlanckFI = Nc.PlanckFICorTT()
     elif data_type == Planck18Types.TTTEEE:
         highl = _block(
-            PlanckReleaseId.PLIK_TTTEEE, PLIK_TTTEEE_RELPATH, build_smica_ttteee
+            PlanckReleaseId.PR3_PLIK_TTTEEE, PLIK_TTTEEE_RELPATH, build_smica_ttteee
         )
         planck_model = Nc.PlanckFICorTTTEEE()
     else:
@@ -427,7 +435,7 @@ def generate_planck18_native(
     blocks = [lowl_EE, lowl_TT, highl]
     if use_lensing_likelihood:
         blocks.append(
-            _block(PlanckReleaseId.LENSING, LENSING_FULL_RELPATH, build_lensing)
+            _block(PlanckReleaseId.PR3_LENSING, LENSING_FULL_RELPATH, build_lensing)
         )
 
     dset = Ncm.Dataset.new_array(blocks)

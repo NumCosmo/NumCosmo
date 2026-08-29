@@ -27,6 +27,15 @@
 import numpy as np
 import pytest
 
+from python.fixtures_planck import (
+    LENSING_LMAX,
+    LENSING_NBINS,
+    lensing_tables,
+    make_lensing_cldf,
+    model_vector,
+    planck_mset,
+    theory_cls,
+)
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.experiments.planck_lensing import (
     LENSING_FULL_RELPATH,
@@ -143,3 +152,129 @@ def test_prepare_self_configures_boltzmann():
     assert cbe.get_EE_lmax() >= 2500
     assert cbe.get_TE_lmax() >= 2500
     assert np.isfinite(native.m2lnL_val(mset))
+
+
+# -----------------------------------------------------------------------------
+# Synthetic-data tests: no plc_3.0 tree needed, so they also run where the real
+# Planck data is absent (CI included). See tests/python/fixtures_planck.py.
+# -----------------------------------------------------------------------------
+
+
+def _expected_bandpowers(cbe, marged, calib, has_calib=True):
+    """Closed-form band-power model of the synthetic lensing file."""
+    hascl, bins, cor0, cors, _, _ = lensing_tables(marged)
+    nl = LENSING_LMAX + 1
+    ell = np.arange(nl)
+    w_pp = ell**2 * (ell + 1.0) ** 2 / (2.0 * np.pi)
+    w_cmb = ell * (ell + 1.0) / (2.0 * np.pi)
+
+    phi = theory_cls(cbe, "PHIPHI", LENSING_LMAX)
+    expected = bins @ (phi * w_pp) - cor0 + cors[:, :nl] @ (phi * w_pp)
+
+    # hascl flags [TT, EE, BB, TE, TB, EB]; blocks follow in that order, each
+    # rescaled by 1/A_planck^2 when the file declares a calibration.
+    scale = 1.0 / calib**2 if has_calib else 1.0
+    names = [n for n, f in zip(("TT", "EE", "BB", "TE", "TB", "EB"), hascl) if f]
+    for k, name in enumerate(names):
+        block = cors[:, (k + 1) * nl : (k + 2) * nl]
+        expected += block @ (theory_cls(cbe, name, LENSING_LMAX) * w_cmb) * scale
+
+    return expected
+
+
+@pytest.mark.parametrize("marged", [False, True])
+def test_synthetic_matches_closed_form(tmp_path, marged):
+    """The assembled band-powers match the closed-form projection.
+
+    Covers both flavors: the full file renormalizes with the CMB spectra its
+    ``hascl`` selects (scaled by the calibration), the CMB-marginalized one
+    carries the phi block alone.
+    """
+    clik = make_lensing_cldf(tmp_path, marged=marged)
+    cbe = Nc.HIPertBoltzmannCBE.new()
+    calib = 1.0  # exercised separately below
+    mset, _ = planck_mset(A_planck=calib)
+
+    lens = build_lensing(clik, cbe)
+    assert lens.get_length() == LENSING_NBINS
+
+    lens.prepare(mset)
+    model = model_vector(lens, mset)
+
+    assert model == pytest.approx(_expected_bandpowers(cbe, marged, calib), rel=1.0e-12)
+
+
+def test_synthetic_calibration_scales_cmb_block(tmp_path):
+    """A_planck rescales the CMB renormalization block, not the phi projection."""
+    clik = make_lensing_cldf(tmp_path)
+    cbe = Nc.HIPertBoltzmannCBE.new()
+
+    mset_one, _ = planck_mset(A_planck=1.0)
+    mset_cal, _ = planck_mset(A_planck=1.05)
+
+    lens = build_lensing(clik, cbe)
+    lens.prepare(mset_one)
+    model_one = model_vector(lens, mset_one)
+    model_cal = model_vector(lens, mset_cal)
+
+    assert model_cal != pytest.approx(model_one, rel=1.0e-10)
+    assert model_cal == pytest.approx(
+        _expected_bandpowers(cbe, False, 1.05), rel=1.0e-12
+    )
+
+
+def test_synthetic_no_calibration(tmp_path):
+    """With has_calib off the CMB block is not rescaled by A_planck."""
+    clik = make_lensing_cldf(tmp_path, has_calib=False)
+    cbe = Nc.HIPertBoltzmannCBE.new()
+
+    lens = build_lensing(clik, cbe)
+    assert not lens.get_property("has-calib")
+
+    mset_one, _ = planck_mset(A_planck=1.0)
+    mset_cal, _ = planck_mset(A_planck=1.05)
+    lens.prepare(mset_one)
+
+    assert model_vector(lens, mset_cal) == pytest.approx(
+        model_vector(lens, mset_one), rel=1.0e-14
+    )
+
+
+def test_synthetic_resample_and_serialize(tmp_path):
+    """A synthetic lensing block resamples and survives serialization."""
+    clik = make_lensing_cldf(tmp_path)
+    cbe = Nc.HIPertBoltzmannCBE.new()
+    mset, _ = planck_mset()
+
+    lens = build_lensing(clik, cbe)
+    lens.prepare(mset)
+    assert np.isfinite(lens.m2lnL_val(mset))
+
+    rng = Ncm.RNG.seeded_new(None, 321)
+    lens.resample(mset, rng)
+    assert np.isfinite(lens.m2lnL_val(mset))
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    lens2 = ser.from_variant(ser.to_variant(lens))
+    assert isinstance(lens2, Nc.DataPlanckLensing)
+
+    lens2.set_hipert_boltzmann(cbe)
+    lens2.prepare(mset)
+    assert lens2.m2lnL_val(mset) == lens.m2lnL_val(mset)
+
+
+def test_synthetic_new_from_file(tmp_path):
+    """The `new_from_file` loader reads back a serialized lensing.
+
+    Only the compact likelihoods are checked this way: the loader is shared
+    across all five, and the text serialization of the high-l blocks is large.
+    """
+    clik = make_lensing_cldf(tmp_path)
+    data = build_lensing(clik)
+
+    path = str(tmp_path / "lensing.obj")
+    Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).to_file(data, path)
+
+    loaded = Nc.DataPlanckLensing.new_from_file(path)
+    assert isinstance(loaded, Nc.DataPlanckLensing)
+    assert loaded.get_length() == data.get_length()
