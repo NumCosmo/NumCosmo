@@ -72,6 +72,9 @@
 #include "xcor_window_arb.h"
 
 /* NcmPowspecAnalytic BBKS, matching ncm_powspec_analytic.c's defaults. */
+/* Panel width in oscillation periods of the integrand. */
+#define K_PANEL_PERIODS 4.0
+
 #define BBKS_C1 2.34
 #define BBKS_C2 3.89
 #define BBKS_C3 16.1
@@ -150,6 +153,33 @@ powspec_eval (acb_t out, const acb_t k, const Powspec *ps, slong prec)
   acb_clear (u);
   acb_clear (M);
   acb_clear (L);
+}
+
+#define MAX_K_PANELS 4096
+
+/*
+ * The right edge of the panel starting at @lo.
+ *
+ * A factor of two, but never more than a few oscillations of the integrand.
+ * The integrand oscillates in k with period 2 pi / chi_max, so an octave at
+ * high k spans hundreds of periods and acb_calc_integrate bisects its way down
+ * through every one of them -- the measured inner-integration count per panel
+ * climbs 2, 38, 98, 236, 704, 944 across the octaves, and the cost of a case
+ * tracks k_hi chi_max / 2 pi almost exactly: 28 oscillations is 5.6 s, 178 is
+ * 735 s, 1393 is 3888 s, and 783 never finished at all.
+ *
+ * Splitting on the oscillation scale does not reduce the total work, but it
+ * stops the integrator rediscovering the structure by bisection, and lets each
+ * panel settle at its own precision.
+ */
+static double
+next_edge (double lo, double k_hi, double chi_max)
+{
+  const double by_octave = lo * 2.0;
+  const double by_phase  = lo + K_PANEL_PERIODS * 2.0 * M_PI / chi_max;
+  double hi              = by_octave < by_phase ? by_octave : by_phase;
+
+  return hi > k_hi ? k_hi : hi;
 }
 
 typedef struct
@@ -367,7 +397,7 @@ main (int argc, char **argv)
   Par a, b;
   Pair pr;
   Powspec ps = { .amplitude = 2.08e7, .n_s = 0.9875, .k_eq = 0.10594 };
-  double k_lo = 1.0e-6, k_hi = 10.0, target = 1.0e-20;
+  double k_lo = 1.0e-6, k_hi = 10.0, target = 1.0e-20, chi_max;
   slong prec_max = 4096, eval_limit = 2000;
   long ells[64];
   int n_ells = 0, i, isauto = 1, verbose = 0, negligible = 0;
@@ -505,20 +535,24 @@ main (int argc, char **argv)
     acb_init (part);
     acb_init (pi);
 
+    chi_max = a.chi_max > pr.b->chi_max ? a.chi_max : pr.b->chi_max;
+
     /* Two passes: the first learns the magnitude of the integral and of each
      * k-panel, the second certifies against it. A panel's own size is the wrong
      * scale -- deep in the tail it is orders below the total, and certifying it
      * to a relative target costs precision for nothing. */
     {
-      double mag[128];
+      double mag[MAX_K_PANELS], edges[MAX_K_PANELS];
       int n_oct = 0, j, spent = 0, j_peak = 0;
 
       /* Pass 1, cheap: 256 bits, no escalation. */
       acb_zero (total);
 
-      for (lo = k_lo; lo < k_hi && n_oct < 128; lo *= 2.0)
+      for (lo = k_lo; lo < k_hi && n_oct < MAX_K_PANELS; lo = edges[n_oct - 1])
       {
-        double hi = lo * 2.0 > k_hi ? k_hi : lo * 2.0;
+        double hi = next_edge (lo, k_hi, chi_max);
+
+        edges[n_oct] = hi;
 
         double mid, rad;
 
@@ -552,9 +586,9 @@ main (int argc, char **argv)
       prec_used = 0;
       lo        = k_lo;
 
-      for (j = 0; j < n_oct; j++, lo *= 2.0)
+      for (j = 0, lo = k_lo; j < n_oct; j++, lo = edges[j - 1])
       {
-        double hi = lo * 2.0 > k_hi ? k_hi : lo * 2.0;
+        double hi = edges[j];
 
         /* Only a panel that pass 1 actually resolved may be called small.
          * mag[j] == 0 means pass 1 got no significant digit there, which is

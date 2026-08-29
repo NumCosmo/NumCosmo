@@ -68,6 +68,11 @@
 #define MAX_BUMPS 8
 #define MAX_PANELS 16
 
+/* Inner panels: how many oscillation periods of j_ell (k chi) each spans, and
+ * the ceiling on how many that may produce. */
+#define WINDOW_PANEL_PERIODS 4.0
+#define MAX_CHI_PANELS 8192
+
 typedef enum
 {
   SHAPE_GAUSS,
@@ -474,7 +479,7 @@ static slong window_eval_limit = 0;
 static void
 integrate_panels (acb_t res, Par *p, slong prec)
 {
-  double edges[MAX_PANELS + 2];
+  double edges[MAX_CHI_PANELS];
   acb_calc_integrate_opt_t opt;
   acb_t A, B, part;
   mag_t tol;
@@ -487,6 +492,62 @@ integrate_panels (acb_t res, Par *p, slong prec)
       edges[n++] = p->breaks[i];
 
   edges[n++] = p->chi_max;
+
+  /*
+   * Subdivide on the oscillation scale of j_ell (k chi), which is 2 pi / k in
+   * chi. Handed a single interval spanning hundreds of periods, the integrator
+   * finds them by bisection and the cost of the whole nested integral grows as
+   * the square of the phase k chi_max -- 3e4 for a Gaussian at ell = 2 against
+   * 2.4e7 for a broad lensing window at ell = 10, which is the difference
+   * between five seconds and not finishing.
+   *
+   * Only the width matters, so this is a refinement of the edge list above and
+   * leaves the shape's own breakpoints where they are.
+   */
+  if (p->with_bessel)
+  {
+    arb_t ak;
+    arf_t kub;
+    double kmax;
+
+    arb_init (ak);
+    arf_init (kub);
+    acb_abs (ak, p->k, prec);
+    arb_get_ubound_arf (kub, ak, prec);
+    kmax = arf_get_d (kub, ARF_RND_UP);
+    arb_clear (ak);
+    arf_clear (kub);
+
+    if ((kmax > 0.0) && isfinite (kmax))
+    {
+      const double width = WINDOW_PANEL_PERIODS * 2.0 * M_PI / kmax;
+      double refined[MAX_CHI_PANELS];
+      int m = 0, j;
+
+      for (j = 0; j + 1 < n && m + 2 < MAX_CHI_PANELS; j++)
+      {
+        double x = edges[j];
+
+        refined[m++] = x;
+
+        while ((edges[j + 1] - x > width) && (m + 2 < MAX_CHI_PANELS))
+        {
+          x           += width;
+          refined[m++] = x;
+        }
+      }
+
+      refined[m++] = edges[n - 1];
+
+      if (m <= MAX_CHI_PANELS)
+      {
+        for (j = 0; j < m; j++)
+          edges[j] = refined[j];
+
+        n = m;
+      }
+    }
+  }
 
   acb_calc_integrate_opt_init (opt);
   opt->eval_limit = window_eval_limit;

@@ -200,6 +200,9 @@ def main() -> None:
     parser.add_argument("--target-rel", type=float, default=1.0e-10)
     parser.add_argument("--timeout", type=float, default=3600.0)
     parser.add_argument("--jobs", type=int, default=6)
+    parser.add_argument(
+        "--resume", action="store_true", help="skip entries already in --out"
+    )
     args = parser.parse_args()
 
     pairs = (
@@ -210,7 +213,23 @@ def main() -> None:
 
     entries: dict[str, dict] = {}
     failed: list[str] = []
-    tasks = [(pair, ell) for pair in pairs for ell in args.ells]
+
+    # Resuming matters here: an entry is up to hours of arbitrary-precision
+    # arithmetic, and the expensive ones are exactly the ones a first pass
+    # fails to finish. Without this, extending the time limit means recomputing
+    # everything that already succeeded.
+    if args.resume and args.out.exists():
+        with gzip.open(args.out, "rt") as handle:
+            entries = json.load(handle)["cases"]
+
+        print(f"resuming: {len(entries)} entries already certified", flush=True)
+
+    tasks = [
+        (pair, ell)
+        for pair in pairs
+        for ell in args.ells
+        if f"{pair.case}_l{ell}" not in entries
+    ]
 
     print(f"{len(tasks)} tasks over {len(pairs)} pairs", flush=True)
 
