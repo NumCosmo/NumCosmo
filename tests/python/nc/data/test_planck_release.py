@@ -63,7 +63,7 @@ _EXPECTED_TYPE = {
 }
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data
 def test_build_release_and_load(tmp_path):
     """build_release writes serialized objects that reload to the right types."""
@@ -79,7 +79,7 @@ def test_build_release_and_load(tmp_path):
         assert data.__class__.__name__ == _EXPECTED_TYPE[rid]
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data
 def test_release_block_evaluates(tmp_path):
     """A block loaded from the release self-configures its CBE and evaluates."""

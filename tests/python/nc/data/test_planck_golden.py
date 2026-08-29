@@ -125,7 +125,7 @@ def _compute_all():
     return values
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 def test_planck_m2lnl_golden():
     """Native Planck m2lnL values match the stored fixed-cosmology reference."""
     for name, relpath, _ in _CASES:

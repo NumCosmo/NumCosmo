@@ -72,7 +72,7 @@ def test_construct_and_serialize_roundtrip():
     assert simall2.get_length() == 28
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @pytest.mark.parametrize(
     "relpath,enum,length",
     [

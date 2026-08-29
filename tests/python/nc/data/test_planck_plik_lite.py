@@ -92,7 +92,7 @@ def test_construct_and_serialize_roundtrip():
             assert cov2.get(i, j) == cov.get(i, j)
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data
 def test_matches_clik_reference():
     """Native m2lnL equals the clik plik_lite reference on a CLASS cosmology.

@@ -90,7 +90,7 @@ def test_construct_and_serialize_roundtrip():
         assert mean2.get(i) == mean.get(i)
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data
 def test_matches_clik_reference():
     """Native SMICA m2lnL agrees with the clik plik TT reference on a CLASS cosmology.
@@ -145,7 +145,7 @@ def test_ttteee_construct_and_serialize_roundtrip():
         assert mean2.get(i) == mean.get(i)
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data_ttteee
 def test_ttteee_matches_clik_reference():
     """Native TTTEEE (m=6) SMICA m2lnL agrees with the clik reference.

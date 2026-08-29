@@ -100,7 +100,7 @@ def test_construct_and_serialize_roundtrip(flavor):
     assert lens2.get_length() == 9
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @pytest.mark.parametrize("flavor", list(_FLAVORS))
 def test_matches_clik_reference(flavor):
     """Native lensing m2lnL agrees with the clik lensing reference.
@@ -129,7 +129,7 @@ def test_matches_clik_reference(flavor):
     assert np.isfinite(native.m2lnL_val(mset))
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 def test_prepare_self_configures_boltzmann():
     """Lensing raises the Boltzmann targets/lmax itself on a bare CBE.
 

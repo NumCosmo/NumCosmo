@@ -65,7 +65,7 @@ def test_construct_and_serialize_roundtrip():
     assert cmd2.get_length() == 28
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data
 def test_matches_clik_reference():
     """Native commander m2lnL agrees with the clik low-ell TT reference.
@@ -101,7 +101,7 @@ def test_matches_clik_reference():
     assert np.isfinite(native.m2lnL_val(mset))
 
 
-@pytest.mark.app
+@pytest.mark.planck_data
 @needs_data
 def test_clik_pi_compat_matches_clik():
     """clik_pi_compat lands the native m2lnL on clik, to the last few ULP.
