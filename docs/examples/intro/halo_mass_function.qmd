@@ -6,8 +6,8 @@ abstract: |
   This document demonstrates how to compute the halo mass function and its supporting quantities using
   the `numcosmo` library. Starting from a dark-energy cosmology, we build the linear growth function, the
   Eisenstein-Hu transfer function and the resulting linear matter power spectrum, the tophat-filtered
-  variance, and finally the differential halo number counts in mass and redshift for a survey of fixed
-  area.
+  variance, and finally the comoving halo number density per logarithmic mass interval and the halo
+  counts per unit redshift for a survey of fixed area.
 
 format:
   html: default
@@ -25,8 +25,8 @@ The halo mass function quantifies the comoving number density of dark-matter hal
 and redshift. Computing it requires several ingredients: the linear growth factor $D(z)$, the linear
 matter power spectrum $P_m(k)$, the variance $\sigma^2(R)$ of the density field smoothed on a scale $R$,
 and a multiplicity function that maps that variance onto a halo abundance. This example walks through each
-ingredient in turn and then assembles them into the mass function, reproducing the differential counts
-$d^2 n / (dz\, d\ln M)$ and the number of halos per unit redshift over a survey of fixed solid angle.
+ingredient in turn and then assembles them into the mass function, reproducing the comoving number
+density $dn / d\ln M$ and the number of halos per unit redshift over a survey of fixed solid angle.
 
 ## Prerequisites
 
@@ -58,7 +58,12 @@ We use a homogeneous and isotropic dark-energy model with a constant equation of
 (`NcHICosmoDEXcdm`). Rather than setting the dark-energy density directly, we switch to the curvature
 parameterization with `omega_x2omega_k()` and fix `Omegak = 0.0`; flatness is then enforced as a
 constraint and the dark-energy density is derived from the closure relation. A reionization model and a
-power-law primordial power spectrum are attached as submodels.
+power-law primordial power spectrum are attached as submodels. We set the primordial amplitude and
+spectral index explicitly: the amplitude fixes the normalization of the matter power spectrum, and
+through it the overall scale of the mass function. Reionization, by contrast, enters none of the
+quantities computed below — it shapes CMB observables, not the $z = 0$ linear matter power spectrum —
+and every result here is unchanged if it is omitted; we carry it so the cosmology is complete and
+ready to be reused for CMB-based calculations.
 
 ```{python}
 # Dark-energy model with a constant equation of state
@@ -71,6 +76,14 @@ cosmo["Omegak"] = 0.0
 # Reionization and a power-law primordial spectrum, added as submodels
 reion = Nc.HIReionCamb.new()
 prim = Nc.HIPrimPowerLaw.new()
+
+# Set the primordial power spectrum parameters
+prim["n_SA"] = 0.9658
+prim["ln10e10ASA"] = 3.0904
+
+# Set the reionization redshift
+reion["z_re"] = 10.0
+
 cosmo.add_submodel(reion)
 cosmo.add_submodel(prim)
 
@@ -81,9 +94,12 @@ cosmo["Omegac"] = 0.25
 cosmo["Tgamma0"] = 2.72
 cosmo["w"] = -1.0
 
-# Print the model parameters
-print("# Model parameters: ", end=" ")
-cosmo.params_log_all()
+# Log all parameters
+print("# Model parameters: ")
+params = cosmo.param_names()
+
+for param in params:
+    print(f"{param} = {cosmo[param]}")
 ```
 
 ## Building the Mass-Function Ingredients
@@ -117,9 +133,6 @@ mulf.set_Delta(200.0)
 
 # Assemble the halo mass function
 mf = Nc.HaloMassFunction.new(dist, psf, mulf)
-
-# Number of sampling points used throughout
-n = 2000
 ```
 
 ## Growth Function
@@ -131,6 +144,9 @@ evaluate both $D(z)$ and its derivative over the redshift range $[0, 2]$.
 ```{python}
 gf = psml.peek_gf()
 gf.prepare(cosmo)
+
+# Number of sampling points used throughout
+n = 2000
 
 z_a = np.linspace(0.0, 2.0, n)
 D_a = np.array([gf.eval(cosmo, z) for z in z_a])
@@ -189,10 +205,15 @@ plt.show()
 Applying the tophat filter, we compute the variance $\sigma^2(\ln R)$ of the density field smoothed on
 scales $R \in [5, 50]\,\mathrm{Mpc}$ at $z = 0$, together with its logarithmic derivative
 $d\ln\sigma^2 / d\ln R$. This logarithmic slope enters the mass function through the conversion between
-mass and smoothing scale.
+mass and smoothing scale. We also print $\sigma_8$, the RMS density fluctuation on a scale of
+$8\,h^{-1}\,\mathrm{Mpc}$, which is the number a mass-function normalization is usually read against;
+`sigma8()` computes it directly from the filtered spectrum.
 
 ```{python}
 psf.prepare(cosmo)
+
+# Normalization benchmark: RMS fluctuation on 8 Mpc/h at z = 0
+print(f"# sigma8 = {cosmo.sigma8(psf): .4f}")
 
 R_a = np.geomspace(5.0, 50.0, n)
 sigma2_a = np.array([psf.eval_var_lnr(0.0, np.log(R)) for R in R_a])
@@ -218,8 +239,8 @@ plt.show()
 ## Halo Mass Function
 
 With all ingredients in place, we set the survey solid angle (200 square degrees) and the integration
-limits in mass and redshift, then prepare the mass function. We first evaluate the differential comoving
-number density $d^2 n / (dz\, d\ln M)$ at $z = 0.7$ over the mass range
+limits in mass and redshift, then prepare the mass function. We first evaluate the comoving number
+density per logarithmic mass interval $dn / d\ln M$ at $z = 0.7$ over the mass range
 $[10^{14}, 10^{16}]\,\mathrm{M}_\odot$.
 
 ```{python}
@@ -228,30 +249,35 @@ mf.set_area_sd(200.0)
 mf.set_eval_limits(cosmo, np.log(1.0e14), np.log(1.0e16), 0.0, 2.0)
 mf.prepare(cosmo)
 
-# Differential number density at z = 0.7
+# Comoving number density at z = 0.7
 lnM_a = np.log(1.0e14) + np.log(1.0e2) * np.linspace(0.0, 1.0, n)
 dn_dlnM_a = np.array([mf.dn_dlnM(cosmo, lnM, 0.7) for lnM in lnM_a])
+
+# NumCosmo takes masses as ln M; plot against log10(M), as the library's own
+# log10MDelta parameters do
+log10M_a = lnM_a / np.log(10.0)
 ```
 
 ```{python}
 # | label: fig-hmf-massfunc
-# | fig-cap: "Halo mass function $d^2 n / (dz\\, d\\ln M)$ at $z = 0.7$."
+# | fig-cap: "Halo mass function $dn / d\\ln M$ at $z = 0.7$."
 # | fig-width: 100%
 # | fig-cap-location: margin
 # | code-fold: true
 
 plt.figure(figsize=(10, 6))
-plt.plot(lnM_a, dn_dlnM_a, "b", label="$z = 0.7$")
+plt.plot(log10M_a, dn_dlnM_a, "b", label="$z = 0.7$")
 plt.yscale("log")
-plt.xlabel(r"$\ln M \; [\mathrm{M}_\odot]$")
-plt.ylabel(r"$d^2 n / (dz\, d\ln M)$")
+plt.xlabel(r"$\log_{10}(M / \mathrm{M}_\odot)$")
+plt.ylabel(r"$dn / d\ln M$")
 plt.title("Halo Mass Function")
 plt.legend(loc="best")
 plt.show()
 ```
 
 Integrating over the mass range gives the number of halos per unit redshift, which we evaluate across
-$z \in [0, 2]$ for the same $200\,\mathrm{deg}^2$ survey.
+$z \in [0, 2]$ for the same $200\,\mathrm{deg}^2$ survey. The final argument requests an intermediary
+spline for the mass integration, which is the faster choice when evaluating many redshifts in sequence.
 
 ```{python}
 dndz_a = np.array(
@@ -284,5 +310,6 @@ plt.show()
 
 We built the halo mass function from its constituent pieces: the linear growth factor, the Eisenstein-Hu
 transfer function and matter power spectrum, and the tophat-filtered variance, and used the Tinker
-multiplicity function to compute the differential counts in mass and redshift. This example serves as a
-foundation for cluster-abundance forecasts and for constructing mock halo catalogs.
+multiplicity function to compute the comoving number density $dn / d\ln M$ and the halo counts per unit
+redshift. This example serves as a foundation for cluster-abundance forecasts and for constructing mock
+halo catalogs.

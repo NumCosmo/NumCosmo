@@ -18,6 +18,7 @@ New here? Start with the [Simple Example](intro/simple.qmd).
 ## Large-Scale Structure
 
 - [Matter Power Spectrum](intro/power_spectrum.qmd) — linear and nonlinear power spectra.
+- [Halo Mass Function](intro/halo_mass_function.qmd) — halo abundance from the filtered power spectrum.
 
 ## Primordial
 
