@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcmFitGSLMM, ncm_fit_gsl_mm, NCM, FIT_GSL_MM, NcmFit)
  * GSL Multidimensional minimization algorithms
  *
  */
-typedef enum _NcmFitGSLMMAlgos
+typedef enum _NcmFitGSLMMAlgos /*< prefix=NCM_FIT_GSL_MM >*/
 {
   NCM_FIT_GSL_MM_CONJUGATE_FR = 0,
   NCM_FIT_GSL_MM_CONJUGATE_PR,

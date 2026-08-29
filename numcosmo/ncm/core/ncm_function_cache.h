@@ -44,7 +44,7 @@ G_DECLARE_FINAL_TYPE (NcmFunctionCache, ncm_function_cache, NCM, FUNCTION_CACHE,
  *
  * Cache search direction.
  */
-typedef enum _NcmFunctionCacheSearchType
+typedef enum _NcmFunctionCacheSearchType /*< prefix=NCM_FUNCTION_CACHE_SEARCH >*/
 {
   NCM_FUNCTION_CACHE_SEARCH_BOTH = 0,
   NCM_FUNCTION_CACHE_SEARCH_GT,

@@ -63,7 +63,7 @@ struct _NcRecombSeagerClass
  * Options for the Seager recombination model.
  *
  */
-typedef enum _NcRecombSeagerOpt
+typedef enum _NcRecombSeagerOpt /*< prefix=NC_RECOM_SEAGER_OPT >*/
 {
   NC_RECOM_SEAGER_OPT_HII_FUDGE             = 1 << 0,
   NC_RECOM_SEAGER_OPT_HII_FUDGE_GAUSS_COR   = 1 << 1,

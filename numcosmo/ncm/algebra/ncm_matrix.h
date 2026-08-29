@@ -54,7 +54,7 @@ G_DECLARE_FINAL_TYPE (NcmMatrix, ncm_matrix, NCM, MATRIX, GObject)
  * This enumerator is only used internally. Only by developers.
  *
  */
-typedef enum _NcmMatrixInternal
+typedef enum _NcmMatrixInternal /*< prefix=NCM_MATRIX >*/
 {
   NCM_MATRIX_SLICE = 0,
   NCM_MATRIX_GSL_MATRIX,

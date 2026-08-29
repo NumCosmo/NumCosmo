@@ -49,7 +49,7 @@ G_DECLARE_FINAL_TYPE (NcXcorKernelGal, nc_xcor_kernel_gal, NC, XCOR_KERNEL_GAL, 
  * @NC_XCOR_KERNEL_GAL_NOISE_BIAS: noise bias parameter
  *
  */
-typedef enum _NcXcorKernelGalSParams
+typedef enum _NcXcorKernelGalSParams /*< prefix=NC_XCOR_KERNEL_GAL >*/
 {
   NC_XCOR_KERNEL_GAL_MAG_BIAS = 0,
   NC_XCOR_KERNEL_GAL_NOISE_BIAS,
@@ -62,7 +62,7 @@ typedef enum _NcXcorKernelGalSParams
  * @NC_XCOR_KERNEL_GAL_BIAS: large-scale clustering bias $b(z)$
  *
  */
-typedef enum _NcXcorKernelGalVParams
+typedef enum _NcXcorKernelGalVParams /*< prefix=NC_XCOR_KERNEL_GAL >*/
 {
   NC_XCOR_KERNEL_GAL_BIAS,
   /* < private > */

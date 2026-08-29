@@ -71,7 +71,7 @@ struct _NcClusterRedshiftClass
  * the observable cluster redshift to compute the normalization of the cluster redshift distribution.
  *
  */
-typedef enum _NcClusterRedshiftImpl
+typedef enum _NcClusterRedshiftImpl /*< prefix=NC_CLUSTER_REDSHIFT >*/
 {
   NC_CLUSTER_REDSHIFT_P = 0,
   NC_CLUSTER_REDSHIFT_INTP,

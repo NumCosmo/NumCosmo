@@ -56,7 +56,7 @@ G_DECLARE_DERIVABLE_TYPE (NcGalaxyShapeFactor, nc_galaxy_shape_factor, NC, GALAX
  *
  * Error codes returned by #NcGalaxyShapeFactor methods.
  */
-typedef enum _NcGalaxyShapeFactorError
+typedef enum _NcGalaxyShapeFactorError /*< prefix=NC_GALAXY_SHAPE_FACTOR_ERROR_ELLIP_CONV >*/
 {
   NC_GALAXY_SHAPE_FACTOR_ERROR_ELLIP_CONV_MISMATCH,
 } NcGalaxyShapeFactorError;

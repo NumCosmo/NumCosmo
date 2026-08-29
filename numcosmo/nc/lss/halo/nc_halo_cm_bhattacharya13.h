@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMBhattacharya13, nc_halo_cm_bhattacharya13, NC, HAL
  * Bhattacharya et al. (2013) concentration-mass relation.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HALO_CM_BHATTACHARYA13_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HALO_CM_BHATTACHARYA13_SPARAMS,prefix=NC_HALO_CM_BHATTACHARYA13_LOG10M >*/
 {
   NC_HALO_CM_BHATTACHARYA13_LOG10M_DELTA,
   /* < private > */

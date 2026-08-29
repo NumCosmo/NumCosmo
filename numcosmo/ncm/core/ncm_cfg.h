@@ -54,7 +54,7 @@ GQuark ncm_cfg_error_quark (void);
  * Error codes for the ncm_cfg namespace.
  *
  */
-typedef enum _NcmCfgError
+typedef enum _NcmCfgError /*< prefix=NCM_CFG_ERROR_INVALID_FFTW >*/
 {
   NCM_CFG_ERROR_INVALID_FFTW_FLAG,
   NCM_CFG_ERROR_INVALID_FFTW_FLAG_STRING,

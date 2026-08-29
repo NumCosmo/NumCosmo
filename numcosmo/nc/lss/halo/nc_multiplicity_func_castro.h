@@ -51,7 +51,7 @@ G_DECLARE_FINAL_TYPE (NcMultiplicityFuncCastro, nc_multiplicity_func_castro, NC,
  * [Castro et al. (2025)](https://arxiv.org/abs/2504.07608).
  *
  */
-typedef enum _NcMultiplicityFuncCastroModel
+typedef enum _NcMultiplicityFuncCastroModel /*< prefix=NC_MULTIPLICITY_FUNC_CASTRO_MODEL >*/
 {
   NC_MULTIPLICITY_FUNC_CASTRO_MODEL_C23 = 0,
   NC_MULTIPLICITY_FUNC_CASTRO_MODEL_C25,
@@ -71,7 +71,7 @@ typedef enum _NcMultiplicityFuncCastroModel
  * calibration provides a single parameter set and ignores this property.
  *
  */
-typedef enum _NcMultiplicityFuncCastroHaloFinder
+typedef enum _NcMultiplicityFuncCastroHaloFinder /*< prefix=NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER >*/
 {
   NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_ROCKSTAR = 0,
   NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_AHF,

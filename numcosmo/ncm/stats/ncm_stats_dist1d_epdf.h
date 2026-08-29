@@ -47,7 +47,7 @@ G_DECLARE_FINAL_TYPE (NcmStatsDist1dEPDF, ncm_stats_dist1d_epdf, NCM, STATS_DIST
  * Gaussian kernel bandwidth type.
  *
  */
-typedef enum _NcmStatsDist1dEPDFBw
+typedef enum _NcmStatsDist1dEPDFBw /*< prefix=NCM_STATS_DIST1D_EPDF_BW >*/
 {
   NCM_STATS_DIST1D_EPDF_BW_FIXED = 0,
   NCM_STATS_DIST1D_EPDF_BW_RoT,

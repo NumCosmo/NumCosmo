@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcmMSetTransKernCat, ncm_mset_trans_kern_cat, NCM, MSET_TR
  * Sampling methods.
  *
  */
-typedef enum _NcmMSetTransKernCatSampling
+typedef enum _NcmMSetTransKernCatSampling /*< prefix=NCM_MSET_TRANS_KERN_CAT_SAMPLING >*/
 {
   NCM_MSET_TRANS_KERN_CAT_SAMPLING_CHOOSE = 0,
   NCM_MSET_TRANS_KERN_CAT_SAMPLING_RBF_INTERP,

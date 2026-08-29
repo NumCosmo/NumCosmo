@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcmNNLS, ncm_nnls, NCM, NNLS, GObject)
  *
  * Method used to solve the intermediate unconstrained least-squares.
  */
-typedef enum _NcmNNLSUMethod /*< enum,underscore_name=NCM_NNLS_UMETHOD >*/
+typedef enum _NcmNNLSUMethod /*< enum,underscore_name=NCM_NNLS_UMETHOD,prefix=NCM_NNLS_UMETHOD >*/
 {
   NCM_NNLS_UMETHOD_NORMAL,
   NCM_NNLS_UMETHOD_NORMAL_LU,

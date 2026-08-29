@@ -46,7 +46,7 @@ G_DECLARE_FINAL_TYPE (NcGalaxyShapePopBeta, nc_galaxy_shape_pop_beta, NC, GALAXY
  * (see the class documentation).
  *
  */
-typedef enum /*< enum,underscore_name=NC_GALAXY_SHAPE_POP_BETA_PARAMS >*/
+typedef enum /*< enum,underscore_name=NC_GALAXY_SHAPE_POP_BETA_PARAMS,prefix=NC_GALAXY_SHAPE_POP_BETA >*/
 {
   NC_GALAXY_SHAPE_POP_BETA_ALPHA = 0,
   NC_GALAXY_SHAPE_POP_BETA_BETA,

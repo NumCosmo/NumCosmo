@@ -52,7 +52,7 @@ typedef struct _NcHICosmoQLinear NcHICosmoQLinear;
  * @NC_HICOSMO_QLINEAR_Z1: initial redshift
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_QLINEAR_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QLINEAR_SPARAMS,prefix=NC_HICOSMO_QLINEAR >*/
 {
   NC_HICOSMO_QLINEAR_H0 = 0,
   NC_HICOSMO_QLINEAR_OMEGA_T,

@@ -139,7 +139,7 @@ typedef struct _NcPlanckFICorTTTEEE NcPlanckFICorTTTEEE;
  * [Planck 2018 results V (2019)](https://arxiv.org/abs/1907.12875)).
  *
  */
-typedef enum /*< enum,underscore_name=NC_PLANCK_FI_COR_TTTEEE_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_PLANCK_FI_COR_TTTEEE_SPARAMS,prefix=NC_PLANCK_FI_COR_TTTEEE >*/
 {
   NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100 = NC_PLANCK_FI_COR_TT_SPARAM_LEN,
   NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_143,

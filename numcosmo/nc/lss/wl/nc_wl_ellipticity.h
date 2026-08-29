@@ -76,7 +76,7 @@ G_BEGIN_DECLS
  * unchanged.
  *
  */
-typedef enum _NcWLEllipticityFrame
+typedef enum _NcWLEllipticityFrame /*< prefix=NC_WL_ELLIPTICITY_FRAME >*/
 {
   NC_WL_ELLIPTICITY_FRAME_CELESTIAL = 0,
   NC_WL_ELLIPTICITY_FRAME_CARTESIAN,

@@ -69,7 +69,7 @@ struct _NcHaloMassFunction
  * Options for optimizing spline interpolation in halo mass function calculations.
  *
  */
-typedef enum _NcHaloMassFunctionSplineOptimize
+typedef enum _NcHaloMassFunctionSplineOptimize /*< prefix=NC_HALO_MASS_FUNCTION_SPLINE >*/
 {
   NC_HALO_MASS_FUNCTION_SPLINE_NONE = 0,
   NC_HALO_MASS_FUNCTION_SPLINE_LNM,

@@ -44,7 +44,7 @@ G_DECLARE_FINAL_TYPE (NcmSParam, ncm_sparam, NCM, SPARAM, GObject)
  * or if it remains fixed, @NCM_PARAM_TYPE_FIXED, when a statistical analysis is
  * carried out.
  */
-typedef enum _NcmParamType
+typedef enum _NcmParamType /*< prefix=NCM_PARAM_TYPE >*/
 {
   NCM_PARAM_TYPE_FREE = 0,
   NCM_PARAM_TYPE_FIXED,

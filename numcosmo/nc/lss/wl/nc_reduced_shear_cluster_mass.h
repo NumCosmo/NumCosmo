@@ -77,7 +77,7 @@ typedef struct _NcReducedShearClusterMass NcReducedShearClusterMass;
  * See [Applegate (2014)](https://arxiv.org/abs/1208.0605).
  *
  */
-typedef enum _NcReducedShearClusterMassParams
+typedef enum _NcReducedShearClusterMassParams /*< prefix=NC_REDUCED_SHEAR_CLUSTER_MASS >*/
 {
   NC_REDUCED_SHEAR_CLUSTER_MASS_A = 0,
   NC_REDUCED_SHEAR_CLUSTER_MASS_B,

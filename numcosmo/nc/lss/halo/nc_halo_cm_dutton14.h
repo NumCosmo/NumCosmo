@@ -45,7 +45,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMDutton14, nc_halo_cm_dutton14, NC, HALO_CM_DUTTON1
  * Dutton & Macciò (2014) concentration-mass relation.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HALO_CM_DUTTON14_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HALO_CM_DUTTON14_SPARAMS,prefix=NC_HALO_CM_DUTTON14_LOG10M >*/
 {
   NC_HALO_CM_DUTTON14_LOG10M_DELTA,
   /* < private > */

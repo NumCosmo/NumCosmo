@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcXcorKernelWeakLensing, nc_xcor_kernel_weak_lensing, NC, 
  * @NC_XCOR_KERNEL_WEAK_LENSING_SPARAM_LEN: number of scalar parameters
  *
  */
-typedef enum _NcXcorKernelWeakLensingSParams
+typedef enum _NcXcorKernelWeakLensingSParams /*< prefix=NC_XCOR_KERNEL_WEAK_LENSING_SPARAM >*/
 {
   NC_XCOR_KERNEL_WEAK_LENSING_SPARAM_LEN,
 } NcXcorKernelWeakLensingSParams;
@@ -58,7 +58,7 @@ typedef enum _NcXcorKernelWeakLensingSParams
  * @NC_XCOR_KERNEL_WEAK_LENSING_VPARAM_LEN: number of vector parameters
  *
  */
-typedef enum _NcXcorKernelWeakLensingVParams
+typedef enum _NcXcorKernelWeakLensingVParams /*< prefix=NC_XCOR_KERNEL_WEAK_LENSING_VPARAM >*/
 {
   NC_XCOR_KERNEL_WEAK_LENSING_VPARAM_LEN,
 } NcXcorKernelWeakLensingVParams;

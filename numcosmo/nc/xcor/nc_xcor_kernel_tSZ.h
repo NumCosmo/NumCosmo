@@ -49,7 +49,7 @@ G_DECLARE_FINAL_TYPE (NcXcorKerneltSZ, nc_xcor_kernel_tsz, NC, XCOR_KERNEL_TSZ, 
  * Enum values for the tSZ kernel parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_XCOR_KERNEL_TSZ_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_XCOR_KERNEL_TSZ_SPARAMS,prefix=NC_XCOR_KERNEL_TSZ_SPARAM >*/
 {
   NC_XCOR_KERNEL_TSZ_SPARAM_LEN
 } NcXcorKerneltSZSParams;

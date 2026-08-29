@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcGalaxyHODZheng07, nc_galaxy_hod_zheng07, NC, GALAXY_HOD_
  * Zheng et al. (2007) HOD parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_GALAXY_HOD_ZHENG07_PARAMS >*/
+typedef enum /*< enum,underscore_name=NC_GALAXY_HOD_ZHENG07_PARAMS,prefix=NC_GALAXY_HOD_ZHENG07 >*/
 {
   NC_GALAXY_HOD_ZHENG07_LOG_MMIN = 0,
   NC_GALAXY_HOD_ZHENG07_SIGMA_LOG_M,

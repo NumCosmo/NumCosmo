@@ -59,7 +59,7 @@ G_BEGIN_DECLS
  * but denser where high-$z$ data are sparse).
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_SPLINE_KNOTS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_SPLINE_KNOTS,prefix=NC_HICOSMO_SPLINE_KNOTS >*/
 {
   NC_HICOSMO_SPLINE_KNOTS_UNIFORM = 0,
   NC_HICOSMO_SPLINE_KNOTS_CHEBYSHEV,
@@ -109,7 +109,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_SPLINE_KNOTS >*/
  * Flags defining the implementation options of the NcHICosmo abstract object.
  *
  */
-typedef enum /*< flags,underscore_name=NC_HICOSMO_IMPL >*/
+typedef enum /*< flags,underscore_name=NC_HICOSMO_IMPL,prefix=NC_HICOSMO_IMPL >*/
 {
   NC_HICOSMO_IMPL_H0 = 0,
   NC_HICOSMO_IMPL_Omega_b0,

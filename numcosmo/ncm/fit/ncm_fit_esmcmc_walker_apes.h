@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcmFitESMCMCWalkerAPES, ncm_fit_esmcmc_walker_apes, NCM, F
  * Posterior estimation method.
  *
  */
-typedef enum _NcmFitESMCMCWalkerAPESMethod
+typedef enum _NcmFitESMCMCWalkerAPESMethod /*< prefix=NCM_FIT_ESMCMC_WALKER_APES_METHOD >*/
 {
   NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE = 0,
   NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE,
@@ -65,7 +65,7 @@ typedef enum _NcmFitESMCMCWalkerAPESMethod
  * Kernel used to build the approximate posterior.
  *
  */
-typedef enum _NcmFitESMCMCWalkerAPESKType /*< enum,underscore_name=NCM_FIT_ESMCMC_WALKER_APES_KTYPE >*/
+typedef enum _NcmFitESMCMCWalkerAPESKType /*< enum,underscore_name=NCM_FIT_ESMCMC_WALKER_APES_KTYPE,prefix=NCM_FIT_ESMCMC_WALKER_APES_KTYPE >*/
 {
   NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY = 0,
   NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3,
