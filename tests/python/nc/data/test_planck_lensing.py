@@ -30,6 +30,7 @@ import pytest
 from python.fixtures_planck import (
     LENSING_LMAX,
     LENSING_NBINS,
+    FixedClBoltzmann,
     lensing_tables,
     make_lensing_cldf,
     model_vector,
@@ -160,7 +161,7 @@ def test_prepare_self_configures_boltzmann():
 # -----------------------------------------------------------------------------
 
 
-def _expected_bandpowers(cbe, marged, calib, has_calib=True):
+def _expected_bandpowers(pb, marged, calib, has_calib=True):
     """Closed-form band-power model of the synthetic lensing file."""
     hascl, bins, cor0, cors, _, _ = lensing_tables(marged)
     nl = LENSING_LMAX + 1
@@ -168,7 +169,7 @@ def _expected_bandpowers(cbe, marged, calib, has_calib=True):
     w_pp = ell**2 * (ell + 1.0) ** 2 / (2.0 * np.pi)
     w_cmb = ell * (ell + 1.0) / (2.0 * np.pi)
 
-    phi = theory_cls(cbe, "PHIPHI", LENSING_LMAX)
+    phi = theory_cls(pb, "PHIPHI", LENSING_LMAX)
     expected = bins @ (phi * w_pp) - cor0 + cors[:, :nl] @ (phi * w_pp)
 
     # hascl flags [TT, EE, BB, TE, TB, EB]; blocks follow in that order, each
@@ -177,7 +178,7 @@ def _expected_bandpowers(cbe, marged, calib, has_calib=True):
     names = [n for n, f in zip(("TT", "EE", "BB", "TE", "TB", "EB"), hascl) if f]
     for k, name in enumerate(names):
         block = cors[:, (k + 1) * nl : (k + 2) * nl]
-        expected += block @ (theory_cls(cbe, name, LENSING_LMAX) * w_cmb) * scale
+        expected += block @ (theory_cls(pb, name, LENSING_LMAX) * w_cmb) * scale
 
     return expected
 
@@ -191,44 +192,68 @@ def test_synthetic_matches_closed_form(tmp_path, marged):
     carries the phi block alone.
     """
     clik = make_lensing_cldf(tmp_path, marged=marged)
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     calib = 1.0  # exercised separately below
     mset, _ = planck_mset(A_planck=calib)
 
-    lens = build_lensing(clik, cbe)
+    lens = build_lensing(clik, pb)
     assert lens.get_length() == LENSING_NBINS
 
     lens.prepare(mset)
     model = model_vector(lens, mset)
 
-    assert model == pytest.approx(_expected_bandpowers(cbe, marged, calib), rel=1.0e-12)
+    assert model == pytest.approx(_expected_bandpowers(pb, marged, calib), rel=1.0e-12)
+
+
+def test_synthetic_prepare_self_configures_boltzmann(tmp_path):
+    """Lensing raises the Boltzmann targets and lmax itself, on synthetic data.
+
+    The data-backed twin of this (test_prepare_self_configures_boltzmann) needs a
+    local plc_3.0 tree, so it only runs on a dev machine. The self-configuration
+    is base-class #NcHIPertBoltzmann state, so a fixed-spectra Boltzmann drives
+    the same code path here -- and, since nothing is solved, for free.
+    """
+    clik = make_lensing_cldf(tmp_path)
+    pb = FixedClBoltzmann()
+    pb.set_target_Cls(Nc.DataCMBDataType.TT)  # bare: TT only, no phi-phi
+    for name in ("TT", "EE", "TE", "PHIPHI"):
+        getattr(pb, f"set_{name}_lmax")(30)
+    mset, _ = planck_mset()
+
+    lens = build_lensing(clik, pb)
+    lens.prepare(mset)
+
+    target = pb.get_target_Cls()
+    assert target & Nc.DataCMBDataType.PHIPHI
+    for name in ("TT", "EE", "TE", "PHIPHI"):
+        assert getattr(pb, f"get_{name}_lmax")() >= LENSING_LMAX
 
 
 def test_synthetic_calibration_scales_cmb_block(tmp_path):
     """A_planck rescales the CMB renormalization block, not the phi projection."""
     clik = make_lensing_cldf(tmp_path)
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
 
     mset_one, _ = planck_mset(A_planck=1.0)
     mset_cal, _ = planck_mset(A_planck=1.05)
 
-    lens = build_lensing(clik, cbe)
+    lens = build_lensing(clik, pb)
     lens.prepare(mset_one)
     model_one = model_vector(lens, mset_one)
     model_cal = model_vector(lens, mset_cal)
 
     assert model_cal != pytest.approx(model_one, rel=1.0e-10)
     assert model_cal == pytest.approx(
-        _expected_bandpowers(cbe, False, 1.05), rel=1.0e-12
+        _expected_bandpowers(pb, False, 1.05), rel=1.0e-12
     )
 
 
 def test_synthetic_no_calibration(tmp_path):
     """With has_calib off the CMB block is not rescaled by A_planck."""
     clik = make_lensing_cldf(tmp_path, has_calib=False)
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
 
-    lens = build_lensing(clik, cbe)
+    lens = build_lensing(clik, pb)
     assert not lens.get_property("has-calib")
 
     mset_one, _ = planck_mset(A_planck=1.0)
@@ -243,10 +268,10 @@ def test_synthetic_no_calibration(tmp_path):
 def test_synthetic_resample_and_serialize(tmp_path):
     """A synthetic lensing block resamples and survives serialization."""
     clik = make_lensing_cldf(tmp_path)
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     mset, _ = planck_mset()
 
-    lens = build_lensing(clik, cbe)
+    lens = build_lensing(clik, pb)
     lens.prepare(mset)
     assert np.isfinite(lens.m2lnL_val(mset))
 
@@ -258,7 +283,7 @@ def test_synthetic_resample_and_serialize(tmp_path):
     lens2 = ser.from_variant(ser.to_variant(lens))
     assert isinstance(lens2, Nc.DataPlanckLensing)
 
-    lens2.set_hipert_boltzmann(cbe)
+    lens2.set_hipert_boltzmann(pb)
     lens2.prepare(mset)
     assert lens2.m2lnL_val(mset) == lens.m2lnL_val(mset)
 

@@ -31,6 +31,7 @@ from python.fixtures_planck import (
     SMICA_LMIN,
     SMICA_LMAX,
     SMICA_NBINS,
+    FixedClBoltzmann,
     make_smica_cldf,
     model_vector,
     planck_mset,
@@ -189,10 +190,14 @@ def test_ttteee_matches_clik_reference():
 # -----------------------------------------------------------------------------
 
 
-@pytest.fixture(name="synthetic_cbe", scope="module")
-def fixture_synthetic_cbe():
-    """One CBE shared by the synthetic tests (they all use the same cosmology)."""
-    return Nc.HIPertBoltzmannCBE.new()
+@pytest.fixture(name="synthetic_pb", scope="module")
+def fixture_synthetic_pb():
+    """One fixed-spectra Boltzmann shared by the synthetic tests.
+
+    They all read the same stored spectra, so nothing is solved and the closed
+    forms below are exact functions of the committed inputs.
+    """
+    return FixedClBoltzmann()
 
 
 @pytest.fixture(name="synthetic_tt_clik", scope="module")
@@ -236,12 +241,12 @@ _CMB_ONLY = {
 }
 
 
-def _expected_cmb_only(cbe, m):
+def _expected_cmb_only(pb, m):
     """Closed-form R_q with every foreground off: binned CMB plus point sources."""
     bin_lmin, bin_lmax, _ = smica_binning()
     _, _, quad = smica_mask_and_ordering(m)
 
-    cl = theory_cls(cbe, "TT", SMICA_LMAX)
+    cl = theory_cls(pb, "TT", SMICA_LMAX)
     band = np.array(
         [
             np.mean(cl[SMICA_LMIN + lo : SMICA_LMIN + hi + 1])
@@ -260,7 +265,7 @@ def _expected_cmb_only(cbe, m):
     return (band[:, None, None] + ps[None, :, :]).ravel()[quad]
 
 
-def test_synthetic_cmb_only_closed_form(synthetic_tt_clik, synthetic_cbe):
+def test_synthetic_cmb_only_closed_form(synthetic_tt_clik, synthetic_pb):
     """With every foreground off, R_q reduces to the binned CMB plus point sources.
 
     This pins the parts of the assembly that have a closed form -- the CMB
@@ -268,27 +273,27 @@ def test_synthetic_cmb_only_closed_form(synthetic_tt_clik, synthetic_cbe):
     calibration factors and the masked-entry extraction -- to machine precision,
     which the real (opaque) plik data cannot do.
     """
-    clik, cbe = synthetic_tt_clik, synthetic_cbe
+    clik, pb = synthetic_tt_clik, synthetic_pb
     mset, _ = planck_mset(**_CMB_ONLY)
 
-    smica = build_smica_tt(clik, cbe)
+    smica = build_smica_tt(clik, pb)
     smica.prepare(mset)
 
     assert model_vector(smica, mset) == pytest.approx(
-        _expected_cmb_only(cbe, 3), rel=1.0e-13
+        _expected_cmb_only(pb, 3), rel=1.0e-13
     )
 
 
-def test_synthetic_calibration_rescales_model(synthetic_tt_clik, synthetic_cbe):
+def test_synthetic_calibration_rescales_model(synthetic_tt_clik, synthetic_pb):
     """calib_100T/calib_217T/A_planck rescale R_q by the documented factors.
 
     R_q[i,j] *= cal_i cal_j / A_planck^2 with cal = 1/sqrt(calib_fT) (143 is the
     reference channel), applied after the whole component assembly.
     """
-    clik, cbe = synthetic_tt_clik, synthetic_cbe
+    clik, pb = synthetic_tt_clik, synthetic_pb
     mset, _ = planck_mset(**_CMB_ONLY)
 
-    smica = build_smica_tt(clik, cbe)
+    smica = build_smica_tt(clik, pb)
     smica.prepare(mset)
     plain = model_vector(smica, mset)
 
@@ -313,14 +318,14 @@ def test_synthetic_calibration_rescales_model(synthetic_tt_clik, synthetic_cbe):
     assert scaled == pytest.approx(plain * per_entry, rel=1.0e-13)
 
 
-def test_synthetic_all_foregrounds_evaluate(synthetic_tt_clik, synthetic_cbe):
+def test_synthetic_all_foregrounds_evaluate(synthetic_tt_clik, synthetic_pb):
     """With every foreground amplitude on, the full assembly stays finite.
 
     Drives the components with no closed form here (CIB, tSZ, kSZ, CIBxtSZ,
     galactic dust with its pivot normalization, subpixel and beam leakage) and
     checks they actually move the model.
     """
-    clik, cbe = synthetic_tt_clik, synthetic_cbe
+    clik, pb = synthetic_tt_clik, synthetic_pb
 
     mset_off, _ = planck_mset(**_CMB_ONLY)
     mset_on, _ = planck_mset(
@@ -342,7 +347,7 @@ def test_synthetic_all_foregrounds_evaluate(synthetic_tt_clik, synthetic_cbe):
         )
     )
 
-    smica = build_smica_tt(clik, cbe)
+    smica = build_smica_tt(clik, pb)
     smica.prepare(mset_off)
 
     model_off = model_vector(smica, mset_off)
@@ -353,17 +358,17 @@ def test_synthetic_all_foregrounds_evaluate(synthetic_tt_clik, synthetic_cbe):
     assert np.isfinite(smica.m2lnL_val(mset_on))
 
 
-def test_synthetic_ttteee(synthetic_ttteee_clik, synthetic_cbe):
+def test_synthetic_ttteee(synthetic_ttteee_clik, synthetic_pb):
     """The TTTEEE (six-channel) build evaluates, resamples and serializes.
 
     Covers the polarization-only paths: the T/E field map, the TE/EE CMB mixing,
     the galactic power-law dust components, the end-to-end EE correlated noise
     and the two-term icalTP calibration mixing.
     """
-    clik, cbe = synthetic_ttteee_clik, synthetic_cbe
+    clik, pb = synthetic_ttteee_clik, synthetic_pb
     mset, _ = planck_mset(pol=True)
 
-    smica = build_smica_ttteee(clik, cbe)
+    smica = build_smica_ttteee(clik, pb)
     assert smica.get_length() == len(smica_mask_and_ordering(6)[2])
 
     smica.prepare(mset)
@@ -382,12 +387,12 @@ def test_synthetic_ttteee(synthetic_ttteee_clik, synthetic_cbe):
     assert smica2.get_length() == smica.get_length()
 
 
-def test_synthetic_serialize_roundtrip(synthetic_tt_clik, synthetic_cbe):
+def test_synthetic_serialize_roundtrip(synthetic_tt_clik, synthetic_pb):
     """A synthetic TT SMICA survives a serialization round trip unchanged."""
-    clik, cbe = synthetic_tt_clik, synthetic_cbe
+    clik, pb = synthetic_tt_clik, synthetic_pb
     mset, _ = planck_mset()
 
-    smica = build_smica_tt(clik, cbe)
+    smica = build_smica_tt(clik, pb)
     smica.prepare(mset)
     m2lnl = smica.m2lnL_val(mset)
 

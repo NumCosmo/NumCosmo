@@ -34,6 +34,8 @@ from python.fixtures_planck import (
     SIMALL_LMIN,
     SIMALL_LMAX,
     SIMALL_STEP,
+    FixedClBoltzmann,
+    fixed_spectra,
     make_simall_cldf,
     planck_mset,
     theory_cls,
@@ -126,11 +128,11 @@ def test_synthetic_matches_table_lookup(tmp_path):
     lookup in the same table.
     """
     clik = make_simall_cldf(tmp_path, spectra=("EE", "BB"))
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     calib = 1.003
     mset, _ = planck_mset(A_planck=calib)
 
-    simall = build_simall(clik, cbe)
+    simall = build_simall(clik, pb)
     assert simall.get_length() == 2 * (SIMALL_LMAX - SIMALL_LMIN + 1)
 
     simall.prepare(mset)
@@ -140,11 +142,17 @@ def test_synthetic_matches_table_lookup(tmp_path):
     lnl = 0.0
     for tag in ("EE", "BB"):
         table = fits.getdata(os.path.join(clik, "clik", "lkl_0", f"prob{tag}"))
-        cl = theory_cls(cbe, tag, SIMALL_LMAX)[SIMALL_LMIN:]
+        cl = theory_cls(pb, tag, SIMALL_LMAX)[SIMALL_LMIN:]
         dl = cl / calib**2 * ell * (ell + 1.0) / (2.0 * np.pi)
         position = (dl / SIMALL_STEP).astype(int)
         assert np.all((position >= 0) & (position < table.shape[1]))
-        lnl += np.sum(table[np.arange(nell), position])
+        # Accumulate the way the C does -- one running sum per spectrum, then
+        # added together -- so "to the last bit" holds by construction instead
+        # of depending on numpy's pairwise summation order.
+        res = 0.0
+        for i in range(nell):
+            res += float(table[i, position[i]])
+        lnl += res
 
     assert simall.m2lnL_val(mset) == -2.0 * lnl
 
@@ -153,10 +161,10 @@ def test_synthetic_out_of_range_table(tmp_path):
     """A theory Dl past the end of the table returns the rejected-point value."""
     # One step of 1e-12 puts every low-l EE bandpower beyond the last column.
     clik = make_simall_cldf(tmp_path, spectra=("EE",), nsteps=4, step=1.0e-12)
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     mset, _ = planck_mset()
 
-    simall = build_simall(clik, cbe)
+    simall = build_simall(clik, pb)
     simall.prepare(mset)
 
     assert simall.m2lnL_val(mset) == 1.0e30
@@ -165,26 +173,30 @@ def test_synthetic_out_of_range_table(tmp_path):
 def test_synthetic_te_spectrum(tmp_path):
     """A file with a TE table is read and evaluated through the TE code path."""
     clik = make_simall_cldf(tmp_path, spectra=("EE", "TE"))
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    # The rejection below needs a TE that is below the tabulated range; ask for
+    # it explicitly rather than relying on the stand-in spectrum's sign.
+    spectra = fixed_spectra()
+    spectra["TE"] = -np.abs(spectra["TE"]) - 1.0e-12
+    pb = FixedClBoltzmann(spectra)
     mset, _ = planck_mset()
 
-    simall = build_simall(clik, cbe)
+    simall = build_simall(clik, pb)
     assert simall.get_property("step-te") == SIMALL_STEP
     assert simall.get_property("prob-te") is not None
 
     simall.prepare(mset)
-    # Low-l TE is negative, i.e. below the tabulated range: the likelihood must
-    # reject the point rather than index the table out of bounds.
+    # A negative TE is below the tabulated range: the likelihood must reject
+    # the point rather than index the table out of bounds.
     assert simall.m2lnL_val(mset) == 1.0e30
 
 
 def test_synthetic_serialize_roundtrip(tmp_path):
     """A synthetic simall survives a serialization round trip unchanged."""
     clik = make_simall_cldf(tmp_path, spectra=("EE", "BB"))
-    cbe = Nc.HIPertBoltzmannCBE.new()
+    pb = FixedClBoltzmann()
     mset, _ = planck_mset()
 
-    simall = build_simall(clik, cbe)
+    simall = build_simall(clik, pb)
     simall.prepare(mset)
     m2lnl = simall.m2lnL_val(mset)
 
@@ -193,7 +205,7 @@ def test_synthetic_serialize_roundtrip(tmp_path):
     assert isinstance(simall2, Nc.DataPlanckSimall)
     assert simall2.get_length() == simall.get_length()
 
-    simall2.set_hipert_boltzmann(cbe)
+    simall2.set_hipert_boltzmann(pb)
     simall2.prepare(mset)
     assert simall2.m2lnL_val(mset) == m2lnl
 
