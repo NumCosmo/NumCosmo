@@ -103,11 +103,15 @@ def test_matches_clik_reference():
 
 @pytest.mark.app
 @needs_data
-def test_clik_pi_compat_bit_identical():
-    """With clik_pi_compat, the native m2lnL matches clik bit-for-bit.
+def test_clik_pi_compat_matches_clik():
+    """clik_pi_compat lands the native m2lnL on clik, to the last few ULP.
 
-    clik's gibbs uses a single-precision pi in the Dl = Cl*l(l+1)/2pi conversion;
-    reproducing that removes the ~2e-6 residual of the (more accurate) default.
+    clik's gibbs uses a single-precision pi in the Dl = Cl*l(l+1)/2pi conversion.
+    Reproducing it closes the ~1e-7 gap the (more accurate) default leaves: the
+    compat path agrees with clik to ~5e-15, five orders of magnitude closer, which
+    is what this pins. Equality is not asserted -- the two implementations reach
+    the same value by different floating-point routes, so the last bits are a
+    property of the build, not of the code.
     """
     # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
@@ -126,7 +130,14 @@ def test_clik_pi_compat_bit_identical():
 
     ref.prepare(mset)
     native.prepare(mset)
-    assert native.m2lnL_val(mset) == ref.m2lnL_val(mset)
+
+    m2_ref = ref.m2lnL_val(mset)
+    m2_default = build_commander(_CLIK, cbe).m2lnL_val(mset)
+
+    assert native.m2lnL_val(mset) == pytest.approx(m2_ref, rel=1.0e-12)
+    # The default (double-pi) path stays measurably further out, so the tolerance
+    # above cannot be passing merely by being loose.
+    assert abs(m2_default / m2_ref - 1.0) > 1.0e-9
 
 
 # -----------------------------------------------------------------------------

@@ -494,10 +494,16 @@ nc_hipert_boltzmann_append_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType 
  * convenience for data objects that need given spectra up to a given multipole
  * from the Boltzmann source and must configure it themselves.
  *
+ * The requested lmax is floored at %NC_HIPERT_BOLTZMANN_REQUIRE_LMIN: a Boltzmann
+ * code needs multipole headroom above the last $\ell$ actually used, and for a
+ * low-$\ell$-only request the headroom #NcCBE adds on its own is not enough.
+ *
  */
 void
 nc_hipert_boltzmann_require (NcHIPertBoltzmann *pb, NcDataCMBDataType tCls, guint lmax)
 {
+  lmax = MAX (lmax, NC_HIPERT_BOLTZMANN_REQUIRE_LMIN);
+
   nc_hipert_boltzmann_append_target_Cls (pb, tCls);
 
   if ((tCls & NC_DATA_CMB_TYPE_TT) && (nc_hipert_boltzmann_get_TT_lmax (pb) < lmax))
