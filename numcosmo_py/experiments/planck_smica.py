@@ -76,12 +76,12 @@ def build_smica_tt(
     bin_ws = _arr(lkl, "bin_ws")
 
     # masked-vector index list: order = ordering pairs x bins (matches crit_cor)
-    quad = []
+    quad_list = []
     for iv, jv in ordering:
         for iq in range(nq):
             if mask[iq, iv, jv]:
-                quad.append(iq * m * m + iv * m + jv)
-    quad = np.array(quad, dtype=int)
+                quad_list.append(iq * m * m + iv * m + jv)
+    quad = np.array(quad_list, dtype=int)
     npt = quad.size
 
     crit = crit.reshape(npt, npt)
@@ -166,12 +166,12 @@ def build_smica_ttteee(
     bin_lmax = _arr(lkl, "bin_lmax").astype(int)[:nq]
     bin_ws = _arr(lkl, "bin_ws")[: int((bin_lmax - bin_lmin + 1).sum())]
 
-    quad = []
+    quad_list = []
     for iv, jv in ordering:
         for iq in range(nq):
             if mask[iq, iv, jv]:
-                quad.append(iq * m * m + iv * m + jv)
-    quad = np.array(quad, dtype=int)
+                quad_list.append(iq * m * m + iv * m + jv)
+    quad = np.array(quad_list, dtype=int)
     npt = quad.size
 
     crit = crit.reshape(npt, npt)

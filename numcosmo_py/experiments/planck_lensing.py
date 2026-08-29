@@ -65,7 +65,10 @@ def _read_cldf_array(node_path: str, key: str) -> np.ndarray:
     from astropy.io import fits  # pylint: disable=import-outside-toplevel
 
     with fits.open(os.path.join(node_path, key)) as h:
-        return np.array(h[0].data, dtype=np.float64).ravel()
+        hdu0 = next(iter(h))
+        assert hdu0 is not None, f"{node_path}/{key} has no HDU0"
+        assert isinstance(hdu0, fits.PrimaryHDU)
+        return np.array(hdu0.data, dtype=np.float64).ravel()
 
 
 def build_lensing(
@@ -102,6 +105,7 @@ def build_lensing(
         cors = _read_cldf_array(node, "cors").reshape(nbins, nlt)
         cors_mat = Ncm.Matrix.new_array(cors.ravel().tolist(), nlt)
 
+    assert cors_mat is not None
     lens = Nc.DataPlanckLensing(
         lmax=lmax,
         nbins=nbins,

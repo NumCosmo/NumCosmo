@@ -38,6 +38,7 @@ Maintainers rebuild the release artifacts with :func:`build_release` and upload
 them to the ``RELEASE_TAG`` GitHub release.
 """
 
+from typing import Callable
 import os
 import urllib.request
 from enum import StrEnum
@@ -90,7 +91,7 @@ class PlanckReleaseId(StrEnum):
 
 # id -> (source clik relpath, builder(clik_path, pb) -> NcmData). The builder is
 # always called with pb=None here so the serialized object is data-only.
-_REGISTRY: dict[PlanckReleaseId, tuple[str, object]] = {
+_REGISTRY: dict[PlanckReleaseId, tuple[str, Callable]] = {
     PlanckReleaseId.COMMANDER: (COMMANDER_RELPATH, build_commander),
     PlanckReleaseId.SIMALL_EE: (SIMALL_EE_RELPATH, build_simall),
     PlanckReleaseId.SIMALL_BB: (SIMALL_BB_RELPATH, build_simall),
@@ -147,6 +148,15 @@ def load_planck_release(
     path = _ensure_downloaded(rid, cache_dir)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     data = ser.from_binfile(path)
+    assert isinstance(
+        data,
+        Nc.DataPlanckCommander
+        | Nc.DataPlanckLensing
+        | Nc.DataPlanckLKL
+        | Nc.DataPlanckPlikLite
+        | Nc.DataPlanckSimall
+        | Nc.DataPlanckSmica,
+    )
 
     if pb is not None:
         data.set_hipert_boltzmann(pb)
