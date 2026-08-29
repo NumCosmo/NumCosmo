@@ -120,7 +120,7 @@ typedef enum _NcGalaxyWLObsEllipConv /*< prefix=NC_GALAXY_WL_OBS_ELLIP_CONV >*/
  * per-galaxy $p(z)$ spline) measurements.
  *
  */
-typedef enum _NcGalaxyWLObsCatalogId /*< prefix=NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A >*/
+typedef enum _NcGalaxyWLObsCatalogId /*< prefix=NC_GALAXY_WL_OBS_CATALOG >*/
 {
   NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_002 = 0,
   NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_007,

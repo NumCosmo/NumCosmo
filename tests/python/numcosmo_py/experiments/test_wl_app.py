@@ -1470,7 +1470,7 @@ def test_cluster_wl_load_app_catalog(experiment_file):
             "generate",
             "cluster-wl-load",
             experiment_file.as_posix(),
-            "--catalog=094",
+            "--catalog=hsc-pdr1-hwl16a-094",
             "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
             "--summary",
         ],
@@ -1499,7 +1499,7 @@ def test_cluster_wl_load_app_catalog_data_file_mutually_exclusive(
             "cluster-wl-load",
             experiment_file.as_posix(),
             f"--data-file={real_wl_obs_file.as_posix()}",
-            "--catalog=002",
+            "--catalog=hsc-pdr1-hwl16a-002",
         ],
     )
     assert result.exit_code != 0, result.output

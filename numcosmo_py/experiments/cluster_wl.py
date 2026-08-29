@@ -159,11 +159,11 @@ class HWLCatalogID(GEnum):
     """Curated Subaru HSC-SSP PDR1 weak lensing catalog (NumCosmo data release)."""
 
     # pylint: disable=no-member
-    HWL16A_002 = Nc.GalaxyWLObsCatalogId(0)
-    HWL16A_007 = Nc.GalaxyWLObsCatalogId(1)
-    HWL16A_060 = Nc.GalaxyWLObsCatalogId(2)
-    HWL16A_064 = Nc.GalaxyWLObsCatalogId(3)
-    HWL16A_094 = Nc.GalaxyWLObsCatalogId(4)
+    HSC_PDR1_HWL16A_002 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_002
+    HSC_PDR1_HWL16A_007 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_007
+    HSC_PDR1_HWL16A_060 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_060
+    HSC_PDR1_HWL16A_064 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_064
+    HSC_PDR1_HWL16A_094 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_094
 
     @classmethod
     def __get_pydantic_core_schema__(
