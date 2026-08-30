@@ -31,6 +31,8 @@ import sys
 import pytest
 from numpy.testing import assert_allclose
 
+from gi.repository import GLib
+
 from numcosmo_py import Nc, Ncm
 
 Ncm.cfg_init()
@@ -149,3 +151,41 @@ def test_a_new_cosmology_does_not_serialize_yp():
     cosmo = Nc.HICosmoDEXcdm.new()
 
     assert "'Yp'" not in ser.to_string(cosmo, True)
+
+
+def test_a_stale_reparam_still_attaches():
+    """A reparametrization written before Yp left is one slot too long.
+
+    NcHICosmoDE went from eight scalar parameters to seven, so every stored
+    NcHICosmoDEReparamOk says length = 8. It carries no parameter *values* --
+    only its length, its descriptors and its compatible type -- so the model
+    rebuilds it at its own length instead of adopting a vector one too long,
+    which used to abort inside ncm_vector_memcpy().
+    """
+    cosmo = Nc.HICosmoDEXcdm.new()
+
+    assert cosmo.len() == 7
+
+    cosmo.set_reparam(Nc.HICosmoDEReparamOk.new(8))
+
+    assert cosmo.param_name(Nc.HICosmoDESParams.OMEGA_X) == "Omegak"
+    assert cosmo.len() == 7
+
+
+def test_a_reparam_of_a_gone_parameter_fails_loudly():
+    """Resizing is only safe while the descriptors still fit.
+
+    A descriptor pointing past the end of the model means the parameter it
+    reparametrizes is gone, which no rebuild can repair -- so it must raise
+    rather than abort or silently reparametrize the wrong slot.
+    """
+    cosmo = Nc.HICosmoDEXcdm.new()
+    reparam = Nc.HICosmoDEReparamOk.new(8)
+
+    # Slot 7 existed while the cosmology had eight parameters and does not now.
+    reparam.set_param_desc_full(
+        7, "Bogus", "B", 0.0, 1.0, 0.1, 0.0, 0.5, Ncm.ParamType.FIXED
+    )
+
+    with pytest.raises(GLib.Error, match="no longer exists"):
+        cosmo.set_reparam(reparam)
