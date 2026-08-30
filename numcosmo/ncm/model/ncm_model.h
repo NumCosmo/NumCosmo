@@ -70,6 +70,9 @@ struct _NcmModelClass
   guint parent_vparam_len;
   GPtrArray *sparam;
   GPtrArray *vparam;
+  guint submodel_slot_len;
+  guint parent_submodel_slot_len;
+  GPtrArray *submodel_slot;
 };
 
 #define NCM_MODEL_MAX_STATES (10)
@@ -94,6 +97,8 @@ typedef gdouble (*NcmModelVFunc2) (NcmModel *model, const guint n, const gdouble
  * @NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE: The reparam is incompatible.
  * @NCM_MODEL_ERROR_INVALID_TYPE: The type is invalid.
  * @NCM_MODEL_ERROR_PARAM_CHANGED: The parameter was changed.
+ * @NCM_MODEL_ERROR_PARAM_NAME_AMBIGUOUS: The parameter name matches more
+ * than one attached submodel; a qualified "slot:param" name is required.
  *
  * Error codes returned by the #NcmModel class.
  *
@@ -107,7 +112,8 @@ typedef enum _NcmModelError /*< prefix=NCM_MODEL_ERROR >*/
   NCM_MODEL_ERROR_ORIG_PARAM_NAME_NOT_FOUND,
   NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE,
   NCM_MODEL_ERROR_INVALID_TYPE,
-  NCM_MODEL_ERROR_PARAM_CHANGED
+  NCM_MODEL_ERROR_PARAM_CHANGED,
+  NCM_MODEL_ERROR_PARAM_NAME_AMBIGUOUS,
 } NcmModelError;
 
 GQuark ncm_model_error_quark (void);
@@ -122,6 +128,9 @@ void ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id
 
 void ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
 void ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint default_length, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
+
+void ncm_model_class_add_submodels (NcmModelClass *model_class, guint submodel_slot_len);
+void ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id, const gchar *name, const gchar *symbol, GType submodel_type);
 
 void ncm_model_class_check_params_info (NcmModelClass *model_class);
 
@@ -193,6 +202,7 @@ gboolean ncm_model_params_valid_bounds (NcmModel *model);
 
 gboolean ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i);
 gboolean ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i, GError **error);
+gboolean ncm_model_param_index_from_name_full (NcmModel *model, const gchar *param_name, NcmModel **target, guint *i, GError **error);
 const gchar *ncm_model_orig_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_orig_param_symbol (NcmModel *model, guint n);
@@ -233,6 +243,7 @@ guint ncm_model_get_submodel_len (NcmModel *model);
 NcmModel *ncm_model_peek_submodel (NcmModel *model, guint i);
 NcmModel *ncm_model_peek_submodel_by_mid (NcmModel *model, NcmModelID mid);
 gint ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid);
+NcmModel *ncm_model_peek_host (NcmModel *submodel);
 
 gboolean ncm_model_type_is_submodel (GType model_type);
 NcmModelID ncm_model_type_main_model (GType model_type);

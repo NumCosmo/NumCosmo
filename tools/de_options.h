@@ -85,7 +85,7 @@ struct _NcDEDataSimpleEntries
   gchar **data_files;
 };
 
-#define NC_DE_DATA_SIMPLE_ENTRIES {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, FALSE, FALSE, FALSE, NULL}
+#define NC_DE_DATA_SIMPLE_ENTRIES {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, FALSE, FALSE, NULL}
 
 typedef struct _NcDEDataClusterEntries NcDEDataClusterEntries;
 

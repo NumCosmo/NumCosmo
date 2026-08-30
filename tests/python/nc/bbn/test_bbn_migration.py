@@ -25,6 +25,8 @@
 """Tests that cosmologies written before NcBBN existed still load correctly."""
 
 import json
+import subprocess
+import sys
 
 import pytest
 from numpy.testing import assert_allclose
@@ -36,14 +38,16 @@ Ncm.cfg_init()
 # Yp used to be a parameter of the cosmology, with its fit type doubling as the
 # switch between "use this value" and "predict it from BBN". The fixtures in
 # data/truth_tables/bbn were written by that code; golden.json records what each
-# one evaluated to then. Loading one now has to land on the equivalent NcBBN.
+# one evaluated to then. The compat properties are inert sinks now: a fixed-Yp
+# file lands on the default NcBBNParthenope (the same physics its fit type
+# meant), while a free-Yp file requests a removed mode and must fail loudly --
+# never load with silently different physics.
 #
 # Only lcdm_yp changes value, and deliberately: NcHICosmoLCDM had no BBN branch
 # at all, so a fixed Yp was taken at face value. It now gets the same PArthENoPE
 # prediction as everything else, which is the point of the migration.
 EXPECTED = {
     "de_xcdm_yp_fixed": ("NcBBNParthenope", None),
-    "de_xcdm_yp_free": ("NcBBNParametrized", None),
     "lcdm_yp": ("NcBBNParthenope", 0.2452620852),
     "mset_de_xcdm": ("NcBBNParthenope", None),
 }
@@ -104,14 +108,28 @@ def test_old_file_still_evaluates_the_same(name, fmt):
 
 
 @pytest.mark.parametrize("fmt", FORMATS)
-def test_a_free_yp_stays_free(fmt):
-    """The parameter keeps its value and its fit type through the move."""
-    golden = load_golden()["de_xcdm_yp_free"]
-    cosmo = read_fixture("de_xcdm_yp_free", fmt)
-    bbn = cosmo.peek_bbn()
+def test_a_free_yp_file_fails_loudly(fmt):
+    """The sampled-Yp compat mode was removed: loading such a file is fatal.
 
-    assert_allclose(bbn.orig_param_get_by_name("Yp"), golden["Yp_param"])
-    assert bbn.param_get_ftype(0) == Ncm.ParamType.FREE
+    The refusal is a g_error (the property setter has no error channel), so it
+    has to be observed from a subprocess.
+    """
+    filename = Ncm.cfg_get_data_filename(
+        f"truth_tables/bbn/de_xcdm_yp_free.{fmt}", True
+    )
+    script = (
+        "from numcosmo_py import Ncm\n"
+        "Ncm.cfg_init()\n"
+        "ser = Ncm.Serialize.new(0)\n"
+        f"readers = {{'obj': ser.from_file, 'bin': ser.from_binfile, 'yaml': ser.from_yaml_file}}\n"
+        f"readers[{fmt!r}]({filename!r})\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=False
+    )
+
+    assert result.returncode != 0
+    assert "removed sampled-Yp" in result.stderr
 
 
 @pytest.mark.parametrize("fmt", FORMATS)

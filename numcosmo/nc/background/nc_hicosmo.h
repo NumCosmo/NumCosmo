@@ -265,8 +265,6 @@ struct _NcHICosmo
   NcHIPrim *prim;
   NcHIReion *reion;
   NcBBN *bbn;
-  gdouble compat_Yp;
-  gboolean compat_Yp_fit;
   const gsl_root_fsolver_type *T;
   gsl_root_fsolver *s;
   const gsl_min_fminimizer_type *Tmin;

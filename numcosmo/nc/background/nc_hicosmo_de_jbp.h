@@ -77,6 +77,7 @@ struct _NcHICosmoDEJbp
 GType nc_hicosmo_de_jbp_get_type (void) G_GNUC_CONST;
 
 NcHICosmoDEJbp *nc_hicosmo_de_jbp_new (void);
+NcHICosmoDEJbp *nc_hicosmo_de_jbp_new_full (NcHIReion *reion, NcHIPrim *prim, NcBBN *bbn);
 
 G_END_DECLS
 

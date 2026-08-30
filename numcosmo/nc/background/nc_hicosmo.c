@@ -60,12 +60,10 @@ nc_hicosmo_init (NcHICosmo *cosmo)
   cosmo->reion = NULL;
   cosmo->bbn   = NULL;
 
-  cosmo->compat_Yp     = NC_BBN_PARAMETRIZED_DEFAULT_YP_4HE;
-  cosmo->compat_Yp_fit = FALSE;
-  cosmo->T             = gsl_root_fsolver_brent;
-  cosmo->s             = gsl_root_fsolver_alloc (cosmo->T);
-  cosmo->Tmin          = gsl_min_fminimizer_brent;
-  cosmo->smin          = gsl_min_fminimizer_alloc (cosmo->Tmin);
+  cosmo->T    = gsl_root_fsolver_brent;
+  cosmo->s    = gsl_root_fsolver_alloc (cosmo->T);
+  cosmo->Tmin = gsl_min_fminimizer_brent;
+  cosmo->smin = gsl_min_fminimizer_alloc (cosmo->Tmin);
 }
 
 enum
@@ -78,53 +76,36 @@ enum
 
 /*
  * Yp used to be a parameter of NcHICosmoDE and NcHICosmoLCDM, with its fit type
- * doubling as the switch between "use this value" and "predict it from BBN".
- * It is a parameter of NcBBNParametrized now, so these two only exist to keep
- * reading files written before the move: they are write-only, and
- * ncm_serialize only writes properties that are both readable and writable, so
- * nothing saved from here on carries them.
+ * doubling as the switch between "predict Yp from BBN" and "sample Yp". Both
+ * jobs belong to the NcBBN submodel now. The two properties below are inert
+ * sinks kept only so files written before the move still deserialize: the old
+ * fixed-Yp mode is physically identical to the default #NcBBNParthenope, so
+ * the value is ignored; the old sampled-Yp mode was removed, so requesting it
+ * is a fatal, actionable error. Both properties are dropped entirely in 1.0.
  *
  * Deliberately not flagged G_PARAM_DEPRECATED. Under G_ENABLE_DIAGNOSTIC that
  * flag makes every load of an old file emit a GLib warning, PyGObject turns it
  * into a Python warning, and pytest-xdist cannot unserialize that warning
- * across workers -- it kills the worker and takes the run down with it. The
- * flag buys a generic message almost nobody sees; it is not worth breaking a
- * test suite that happens to read an old file.
+ * across workers -- it kills the worker and takes the run down with it.
  */
-static void
-_nc_hicosmo_apply_compat_Yp (NcHICosmo *cosmo)
-{
-  if (!cosmo->compat_Yp_fit)
-    return;
-
-  {
-    NcBBNParametrized *bbn_par = nc_bbn_parametrized_new ();
-    NcmModel *bbn_model        = NCM_MODEL (bbn_par);
-
-    ncm_model_orig_param_set (bbn_model, NC_BBN_PARAMETRIZED_YP_4HE, cosmo->compat_Yp);
-    ncm_model_param_set_ftype (bbn_model, NC_BBN_PARAMETRIZED_YP_4HE, NCM_PARAM_TYPE_FREE);
-
-    ncm_model_add_submodel (NCM_MODEL (cosmo), bbn_model);
-    nc_bbn_parametrized_free (bbn_par);
-  }
-}
 
 static void
 _nc_hicosmo_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHICosmo *cosmo = NC_HICOSMO (object);
-
   g_return_if_fail (NC_IS_HICOSMO (object));
 
   switch (prop_id)
   {
     case PROP_YP:
-      cosmo->compat_Yp = g_value_get_double (value);
-      _nc_hicosmo_apply_compat_Yp (cosmo);
+      /* Inert: the old fixed-Yp mode is the default NcBBNParthenope. */
       break;
     case PROP_YP_FIT:
-      cosmo->compat_Yp_fit = g_value_get_boolean (value);
-      _nc_hicosmo_apply_compat_Yp (cosmo);
+
+      if (g_value_get_boolean (value))
+        g_error ("NcHICosmo:Yp-fit: this file requests the removed sampled-Yp "
+                 "compatibility mode; attach an NcBBNParametrized with a free "
+                 "Yp to the cosmology's `bbn' slot explicitly.");
+
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -139,18 +120,10 @@ _nc_hicosmo_set_property (GObject *object, guint prop_id, const GValue *value, G
 static void
 _nc_hicosmo_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHICosmo *cosmo = NC_HICOSMO (object);
-
   g_return_if_fail (NC_IS_HICOSMO (object));
 
   switch (prop_id)
   {
-    case PROP_YP:
-      g_value_set_double (value, cosmo->compat_Yp);
-      break;
-    case PROP_YP_FIT:
-      g_value_set_boolean (value, cosmo->compat_Yp_fit);
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -160,17 +133,18 @@ _nc_hicosmo_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 static void
 nc_hicosmo_constructed (GObject *object)
 {
-  /* Chain up : start */
-  G_OBJECT_CLASS (nc_hicosmo_parent_class)->constructed (object);
   {
     NcmModel *model = NCM_MODEL (object);
 
     /*
      * Give every cosmology a nucleosynthesis model, so that Yp has an answer
-     * without the caller having to know it needs one. Guarded rather than
-     * unconditional: NcmModel:submodel-array is G_PARAM_CONSTRUCT and so is
-     * already applied by the time we get here, and overwriting it would
-     * silently discard the NcBBN a deserialized file carried.
+     * without the caller having to know it needs one. Guarded: construct
+     * properties (the "bbn" typed slot and a deserialized submodel-array)
+     * are applied before constructed() runs, so a
+     * caller-provided NcBBN is already attached here and must not be
+     * overwritten. This block must stay before the chain-up: NcmModel's
+     * constructed() marks the model constructed, and "bbn" is a typed slot,
+     * fixed at construction from then on.
      */
     if (ncm_model_peek_submodel_by_mid (model, nc_bbn_id ()) == NULL)
     {
@@ -180,6 +154,8 @@ nc_hicosmo_constructed (GObject *object)
       nc_bbn_parthenope_free (bbn_pn);
     }
   }
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_hicosmo_parent_class)->constructed (object);
 }
 
 static void
@@ -281,7 +257,7 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
                                    PROP_YP,
                                    g_param_spec_double ("Yp",
                                                         NULL,
-                                                        "Deprecated: primordial Helium, now NcBBNParametrized:Yp",
+                                                        "Removed: ignored, Yp now comes from the bbn submodel",
                                                         0.0, 1.0, NC_BBN_PARAMETRIZED_DEFAULT_YP_4HE,
                                                         G_PARAM_WRITABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -289,9 +265,14 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
                                    PROP_YP_FIT,
                                    g_param_spec_boolean ("Yp-fit",
                                                          NULL,
-                                                         "Deprecated: whether Yp was free, now selects NcBBNParametrized",
+                                                         "Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error",
                                                          FALSE,
                                                          G_PARAM_WRITABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  ncm_model_class_add_submodels (model_class, 3);
+  ncm_model_class_set_submodel (model_class, 0, "reion", "reion", NC_TYPE_HIREION);
+  ncm_model_class_set_submodel (model_class, 1, "prim", "prim", NC_TYPE_HIPRIM);
+  ncm_model_class_set_submodel (model_class, 2, "bbn", "bbn", NC_TYPE_BBN);
 
   ncm_mset_model_register_id (model_class,
                               "NcHICosmo",

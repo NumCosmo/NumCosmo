@@ -77,6 +77,7 @@ struct _NcHICosmoDECpl
 GType nc_hicosmo_de_cpl_get_type (void) G_GNUC_CONST;
 
 NcHICosmoDECpl *nc_hicosmo_de_cpl_new (void);
+NcHICosmoDECpl *nc_hicosmo_de_cpl_new_full (NcHIReion *reion, NcHIPrim *prim, NcBBN *bbn);
 
 G_END_DECLS
 

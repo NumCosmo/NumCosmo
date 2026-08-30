@@ -75,6 +75,7 @@ struct _NcHICosmoDEXcdm
 GType nc_hicosmo_de_xcdm_get_type (void) G_GNUC_CONST;
 
 NcHICosmoDEXcdm *nc_hicosmo_de_xcdm_new (void);
+NcHICosmoDEXcdm *nc_hicosmo_de_xcdm_new_full (NcHIReion *reion, NcHIPrim *prim, NcBBN *bbn);
 
 G_END_DECLS
 

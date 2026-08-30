@@ -54,9 +54,8 @@ The recombination evolution is calculated using the `RecombSeager` object. We se
 precision to $10^{-7}$ and the initial redshift to $10^9$.
 
 ```{python}
-cosmo = Nc.HICosmoDEXcdm()
 reion = Nc.HIReionCamb.new()
-cosmo.add_submodel(reion)
+cosmo = Nc.HICosmoDEXcdm(reion=reion)
 
 recomb = Nc.RecombSeager(prec=1.0e-7, zi=1.0e9)
 

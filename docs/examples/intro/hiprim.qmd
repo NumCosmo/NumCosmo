@@ -246,21 +246,19 @@ Bcbe.set_lensed_Cls(True)
 ### Set Up the Cosmological Model
 
 ```{python}
-# Create a new homogeneous and isotropic cosmological model (NcHICosmoDEXcdm)
-cosmo = Nc.HICosmoDEXcdm.new()
+# Create a new reionization object
+reion = Nc.HIReionCamb.new()
+
+# Create a new homogeneous and isotropic cosmological model (NcHICosmoDEXcdm),
+# attaching the reionization and primordial spectrum submodels at
+# construction time
+cosmo = Nc.HICosmoDEXcdm(reion=reion, prim=prim)
 
 # Convert curvature density parameter to omega_k
 cosmo.omega_x2omega_k()
 
 # Set the curvature density parameter to zero (flat universe)
 cosmo.param_set_by_name("Omegak", 0.0)
-
-# Create a new reionization object
-reion = Nc.HIReionCamb.new()
-
-# Add submodels (reionization and primordial spectrum) to the cosmological model
-cosmo.add_submodel(reion)
-cosmo.add_submodel(prim)
 ```
 
 ### Compute the Power Spectrum

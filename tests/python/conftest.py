@@ -160,16 +160,13 @@ def fixture_cosmo(prim: Nc.HIPrim, reion: Nc.HIReion) -> Nc.HICosmo:
 
     Configures a flat LCDM cosmology with w = -1.
     """
-    cosmo = Nc.HICosmoDEXcdm()
+    cosmo = Nc.HICosmoDEXcdm(prim=prim, reion=reion)
     cosmo.omega_x2omega_k()
     cosmo["Omegak"] = 0.0
     cosmo["H0"] = 71
     cosmo["Omegab"] = 0.0406
     cosmo["Omegac"] = 0.22
     cosmo["w"] = -1.0
-
-    cosmo.add_submodel(prim)
-    cosmo.add_submodel(reion)
 
     return cosmo
 
