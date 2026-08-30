@@ -193,6 +193,7 @@ typedef void (*NcHICosmoFuncMassNuInfo) (NcHICosmo *cosmo, const guint nu_i, gdo
 #ifndef __GTK_DOC_IGNORE__
 typedef struct _NcHIPrim NcHIPrim;
 typedef struct _NcHIReion NcHIReion;
+typedef struct _NcBBN NcBBN;
 typedef struct _NcHIPertBGVar NcHIPertBGVar;
 #endif
 
@@ -263,6 +264,7 @@ struct _NcHICosmo
   gboolean is_eternal;
   NcHIPrim *prim;
   NcHIReion *reion;
+  NcBBN *bbn;
   const gsl_root_fsolver_type *T;
   gsl_root_fsolver *s;
   const gsl_min_fminimizer_type *Tmin;
@@ -411,6 +413,7 @@ NCM_INLINE gdouble nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha);
 
 NCM_INLINE NcHIPrim *nc_hicosmo_peek_prim (NcHICosmo *cosmo);
 NCM_INLINE NcHIReion *nc_hicosmo_peek_reion (NcHICosmo *cosmo);
+NCM_INLINE NcBBN *nc_hicosmo_peek_bbn (NcHICosmo *cosmo);
 
 gdouble nc_hicosmo_sigma8 (NcHICosmo *cosmo, NcmPowspecFilter *psf);
 
@@ -757,6 +760,12 @@ NCM_INLINE NcHIReion *
 nc_hicosmo_peek_reion (NcHICosmo *cosmo)
 {
   return cosmo->reion;
+}
+
+NCM_INLINE NcBBN *
+nc_hicosmo_peek_bbn (NcHICosmo *cosmo)
+{
+  return cosmo->bbn;
 }
 
 G_END_DECLS

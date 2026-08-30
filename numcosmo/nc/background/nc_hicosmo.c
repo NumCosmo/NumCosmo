@@ -37,6 +37,8 @@
 #include "build_cfg.h"
 
 #include "nc/background/nc_hicosmo.h"
+#include "nc/bbn/nc_bbn.h"
+#include "nc/bbn/nc_bbn_parthenope.h"
 #include "nc/primordial/nc_hiprim.h"
 #include "nc/reion/nc_hireion.h"
 #include "ncm/core/ncm_serialize.h"
@@ -55,10 +57,36 @@ nc_hicosmo_init (NcHICosmo *cosmo)
 {
   cosmo->prim  = NULL;
   cosmo->reion = NULL;
+  cosmo->bbn   = NULL;
   cosmo->T     = gsl_root_fsolver_brent;
   cosmo->s     = gsl_root_fsolver_alloc (cosmo->T);
   cosmo->Tmin  = gsl_min_fminimizer_brent;
   cosmo->smin  = gsl_min_fminimizer_alloc (cosmo->Tmin);
+}
+
+static void
+nc_hicosmo_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (nc_hicosmo_parent_class)->constructed (object);
+  {
+    NcmModel *model = NCM_MODEL (object);
+
+    /*
+     * Give every cosmology a nucleosynthesis model, so that Yp has an answer
+     * without the caller having to know it needs one. Guarded rather than
+     * unconditional: NcmModel:submodel-array is G_PARAM_CONSTRUCT and so is
+     * already applied by the time we get here, and overwriting it would
+     * silently discard the NcBBN a deserialized file carried.
+     */
+    if (ncm_model_peek_submodel_by_mid (model, nc_bbn_id ()) == NULL)
+    {
+      NcBBNParthenope *bbn_pn = nc_bbn_parthenope_new ();
+
+      ncm_model_add_submodel (model, NCM_MODEL (bbn_pn));
+      nc_bbn_parthenope_free (bbn_pn);
+    }
+  }
 }
 
 static void
@@ -68,6 +96,7 @@ nc_hicosmo_dispose (GObject *object)
 
   nc_hiprim_clear (&cosmo->prim);
   nc_hireion_clear (&cosmo->reion);
+  nc_bbn_clear (&cosmo->bbn);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_parent_class)->dispose (object);
@@ -146,8 +175,9 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->dispose  = &nc_hicosmo_dispose;
-  object_class->finalize = &nc_hicosmo_finalize;
+  object_class->constructed = &nc_hicosmo_constructed;
+  object_class->dispose     = &nc_hicosmo_dispose;
+  object_class->finalize    = &nc_hicosmo_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Abstract class for HI cosmological models.", "NcHICosmo");
   ncm_model_class_add_params (model_class, 0, 0, 1);
@@ -283,9 +313,16 @@ _nc_hicosmo_T_gamma0 (NcHICosmo *cosmo)
 static gdouble
 _nc_hicosmo_Yp_4He (NcHICosmo *cosmo)
 {
-  g_error ("nc_hicosmo_Yp_4He: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo));
+  /*
+   * Every cosmology carries a nucleosynthesis submodel, created by default in
+   * nc_hicosmo_constructed(), so Yp is answered here once for all of them
+   * rather than reimplemented per background model.
+   */
+  NcBBN *bbn = nc_hicosmo_peek_bbn (cosmo);
 
-  return 0.0;
+  g_assert (bbn != NULL);
+
+  return nc_bbn_Yp_4He (bbn, cosmo);
 }
 
 static gdouble
@@ -521,6 +558,11 @@ _nc_hicosmo_add_submodel (NcmModel *model, NcmModel *submodel)
     {
       nc_hireion_clear (&cosmo->reion);
       cosmo->reion = nc_hireion_ref (NC_HIREION (submodel));
+    }
+    else if (ncm_model_id (submodel) == nc_bbn_id ())
+    {
+      nc_bbn_clear (&cosmo->bbn);
+      cosmo->bbn = nc_bbn_ref (NC_BBN (submodel));
     }
   }
 }
@@ -2006,6 +2048,17 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * Gets the reionization submodel without increasing its reference count.
  *
  * Returns: (transfer none): the #NcHIReion submodel.
+ */
+
+/**
+ * nc_hicosmo_peek_bbn:
+ * @cosmo: a #NcHICosmo
+ *
+ * Gets the primordial nucleosynthesis submodel without increasing its
+ * reference count. Never %NULL: a default #NcBBNParthenope is created with the
+ * cosmology unless one was supplied.
+ *
+ * Returns: (transfer none): the #NcBBN submodel.
  */
 
 /*
