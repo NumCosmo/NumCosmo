@@ -100,6 +100,9 @@
 #include "ncm/fftlog/ncm_fftlog_sbessel_jljm.h"
 #include "ncm/algebra/ncm_spectral.h"
 #include "nc/background/nc_hicosmo.h"
+#include "nc/bbn/nc_bbn.h"
+#include "nc/bbn/nc_bbn_parametrized.h"
+#include "nc/bbn/nc_bbn_parthenope.h"
 #include "nc/cmb/nc_cbe_precision.h"
 #include "nc/background/nc_hicosmo_qconst.h"
 #include "nc/background/nc_hicosmo_qlinear.h"
@@ -879,6 +882,10 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_RECOMB);
   ncm_cfg_register_obj (NC_TYPE_RECOMB_CBE);
   ncm_cfg_register_obj (NC_TYPE_RECOMB_SEAGER);
+
+  ncm_cfg_register_obj (NC_TYPE_BBN);
+  ncm_cfg_register_obj (NC_TYPE_BBN_PARAMETRIZED);
+  ncm_cfg_register_obj (NC_TYPE_BBN_PARTHENOPE);
 
   ncm_cfg_register_obj (NC_TYPE_HIREION);
   ncm_cfg_register_obj (NC_TYPE_HIREION_CAMB);

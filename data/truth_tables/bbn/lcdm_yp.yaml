@@ -1,0 +1,17 @@
+NcHICosmoLCDM:
+  sparam-array: {}
+  submodel-array: []
+  H0: 70.0
+  Omegac: 0.25679999999999997
+  Omegax: 0.69999999999999996
+  Tgamma0: 2.7244999999999999
+  Yp: 0.24779999999999999
+  ENnu: 3.0459999999999998
+  Omegab: 0.044999999999999998
+  H0-fit: false
+  Omegac-fit: false
+  Omegax-fit: false
+  Tgamma0-fit: false
+  Yp-fit: false
+  ENnu-fit: false
+  Omegab-fit: false

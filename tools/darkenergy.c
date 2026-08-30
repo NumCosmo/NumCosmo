@@ -562,9 +562,6 @@ main (gint argc, gchar *argv[])
     }
   }
 
-  if (de_data_simple.BBN)
-    nc_hicosmo_de_new_add_bbn (lh);
-
   if (de_data_simple.BBN_Ob)
   {
     NcmMSetFunc *Omega_b0h2 = NCM_MSET_FUNC (ncm_mset_func_list_new ("NcHICosmo:Omega_b0h2", NULL));

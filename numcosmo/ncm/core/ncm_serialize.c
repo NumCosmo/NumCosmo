@@ -1122,7 +1122,13 @@ _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
             {
               GParamSpec *pspec = prop[j];
 
-              if ((pspec->flags & G_PARAM_READWRITE) != G_PARAM_READWRITE)
+              /*
+               * Setting a property only needs it writable. Requiring it to be
+               * readable as well -- which the writer below does need -- would
+               * reject write-only properties that the GVariant paths accept,
+               * such as the deprecated ones kept around to read old files.
+               */
+              if ((pspec->flags & G_PARAM_WRITABLE) == 0)
                 continue;
 
               if (strcmp (pspec->name, names[i]) == 0)
