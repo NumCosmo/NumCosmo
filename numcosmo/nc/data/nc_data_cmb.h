@@ -51,7 +51,7 @@ G_BEGIN_DECLS
  * The last option `ALL' selects all data listed above.
  *
  */
-typedef enum _NcDataCMBDataType
+typedef enum _NcDataCMBDataType /*< prefix=NC_DATA_CMB_TYPE >*/
 {
   NC_DATA_CMB_TYPE_TT     = 1 << 0,
   NC_DATA_CMB_TYPE_EE     = 1 << 1,
@@ -85,7 +85,7 @@ typedef enum _NcDataCMBDataType
  * $r_s(z_\star)$ is the sound horizon size.
  *
  */
-typedef enum _NcDataCMBId
+typedef enum _NcDataCMBId /*< prefix=NC_DATA_CMB >*/
 {
   NC_DATA_CMB_SHIFT_PARAM_WMAP3 = 0,
   NC_DATA_CMB_SHIFT_PARAM_WMAP5,

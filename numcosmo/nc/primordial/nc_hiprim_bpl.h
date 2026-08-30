@@ -58,7 +58,7 @@ typedef struct _NcHIPrimBPL NcHIPrimBPL;
  * useful for modeling features in the inflationary potential.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPRIM_BPL_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HIPRIM_BPL_SPARAMS,prefix=NC_HIPRIM_BPL >*/
 {
   NC_HIPRIM_BPL_LN10E10ASA,
   NC_HIPRIM_BPL_N_SA,

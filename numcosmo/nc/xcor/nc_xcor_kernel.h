@@ -101,7 +101,7 @@ typedef struct _NcXcorKernelIntegrand NcXcorKernelIntegrand;
  * it accuracy is nearly free.
  *
  */
-typedef enum _NcXcorKernelClosure
+typedef enum _NcXcorKernelClosure /*< prefix=NC_XCOR_KERNEL_CLOSURE >*/
 {
   NC_XCOR_KERNEL_CLOSURE_SPLINE = 0,
   NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV,
@@ -298,7 +298,7 @@ struct _NcXcorKernelClass
  * @NC_XCOR_KERNEL_IMPL_ADD_NOISE: implementation flag for noise addition method
  *
  */
-typedef enum _NcXcorKernelImpl
+typedef enum _NcXcorKernelImpl /*< prefix=NC_XCOR_KERNEL_IMPL >*/
 {
   NC_XCOR_KERNEL_IMPL_EVAL_RADIAL_WEIGHT = 0,
   NC_XCOR_KERNEL_IMPL_PREPARE,

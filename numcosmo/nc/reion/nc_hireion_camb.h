@@ -62,7 +62,7 @@ struct _NcHIReionCambClass
  * CAMB-like reionization model parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIREION_CAMB_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HIREION_CAMB_SPARAMS,prefix=NC_HIREION_CAMB >*/
 {
   NC_HIREION_CAMB_HII_HEII_Z = 0,
   NC_HIREION_CAMB_HEIII_Z,

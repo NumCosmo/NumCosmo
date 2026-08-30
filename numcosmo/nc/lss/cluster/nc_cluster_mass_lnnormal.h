@@ -50,7 +50,7 @@ typedef struct _NcClusterMassLnnormal NcClusterMassLnnormal;
  *
  * Parameters for the log-normal cluster mass-observable relation.
  */
-typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_LNNORMAL_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_LNNORMAL_SPARAMS,prefix=NC_CLUSTER_MASS_LNNORMAL >*/
 {
   NC_CLUSTER_MASS_LNNORMAL_BIAS = 0,
   NC_CLUSTER_MASS_LNNORMAL_SIGMA,

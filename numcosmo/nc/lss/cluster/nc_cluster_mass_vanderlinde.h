@@ -52,7 +52,7 @@ typedef struct _NcClusterMassVanderlinde NcClusterMassVanderlinde;
  *
  * Parameters for the Vanderlinde cluster mass-SZ relation.
  */
-typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_VANDERLINDE_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_VANDERLINDE_SPARAMS,prefix=NC_CLUSTER_MASS_VANDERLINDE >*/
 {
   NC_CLUSTER_MASS_VANDERLINDE_A_SZ = 0,
   NC_CLUSTER_MASS_VANDERLINDE_B_SZ,

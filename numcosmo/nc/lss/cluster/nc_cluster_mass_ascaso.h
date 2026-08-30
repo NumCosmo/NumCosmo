@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcClusterMassAscaso, nc_cluster_mass_ascaso, NC, CLUSTER_M
  *
  * Parameters for the Ascaso cluster mass-richness relation.
  */
-typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_ASCASO_SPARAMS,prefix=NC_CLUSTER_MASS_ASCASO >*/
 {
   NC_CLUSTER_MASS_ASCASO_MU_P0 = NC_CLUSTER_MASS_RICHNESS_SPARAM_LEN,
   NC_CLUSTER_MASS_ASCASO_MU_P1,

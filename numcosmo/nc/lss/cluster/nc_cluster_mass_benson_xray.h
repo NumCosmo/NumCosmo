@@ -52,7 +52,7 @@ typedef struct _NcClusterMassBensonXRay NcClusterMassBensonXRay;
  *
  * Parameters for the Benson cluster mass-X-ray relation.
  */
-typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_BENSON_XRAY_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_BENSON_XRAY_SPARAMS,prefix=NC_CLUSTER_MASS_BENSON_XRAY >*/
 {
   NC_CLUSTER_MASS_BENSON_XRAY_A_X = NC_CLUSTER_MASS_BENSON_SPARAM_LEN,
   NC_CLUSTER_MASS_BENSON_XRAY_B_X,

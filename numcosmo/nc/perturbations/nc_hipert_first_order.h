@@ -67,7 +67,7 @@ struct _NcHIPertFirstOrder
  * ODE integrators.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPERT_FIRST_ORDER_INTEG >*/
+typedef enum /*< enum,underscore_name=NC_HIPERT_FIRST_ORDER_INTEG,prefix=NC_HIPERT_FIRST_ORDER_INTEG >*/
 {
   NC_HIPERT_FIRST_ORDER_INTEG_CVODE,
   NC_HIPERT_FIRST_ORDER_INTEG_ARKODE,

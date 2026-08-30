@@ -75,7 +75,7 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
  * splines that have already been built.
  *
  */
-typedef enum _NcXcorMethod
+typedef enum _NcXcorMethod /*< prefix=NC_XCOR_METHOD >*/
 {
   NC_XCOR_METHOD_LIMBER_Z_GSL = 0,
   NC_XCOR_METHOD_LIMBER_Z_CUBATURE,

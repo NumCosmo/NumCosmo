@@ -109,7 +109,7 @@ struct _NcHIPertBoltzmannClass
  *
  * Variables for the Boltzmann perturbation equations.
  */
-typedef enum /*< enum,underscore_name=NC_HIPERT_BOLTZMANN_VARS  >*/
+typedef enum /*< enum,underscore_name=NC_HIPERT_BOLTZMANN_VARS,prefix=NC_HIPERT_BOLTZMANN >*/
 {
   NC_HIPERT_BOLTZMANN_B0 = 0,
   NC_HIPERT_BOLTZMANN_THETA0,

@@ -49,7 +49,7 @@ G_DECLARE_FINAL_TYPE (NcClusterMassExt, nc_cluster_mass_ext, NC, CLUSTER_MASS_EX
  *
  * Parameters for the extended cluster mass-richness relation.
  */
-typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_EXT_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_EXT_SPARAMS,prefix=NC_CLUSTER_MASS_EXT >*/
 {
   NC_CLUSTER_MASS_EXT_MU_P0 = NC_CLUSTER_MASS_RICHNESS_SPARAM_LEN,
   NC_CLUSTER_MASS_EXT_MU_P1,

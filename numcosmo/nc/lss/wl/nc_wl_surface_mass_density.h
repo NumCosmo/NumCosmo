@@ -58,7 +58,7 @@ typedef struct _NcWLSurfaceMassDensityLensCtx NcWLSurfaceMassDensityLensCtx;
  *
  * Weak lensing surface mass density model parameters.
  */
-typedef enum _NcWLSurfaceMassDensityParams
+typedef enum _NcWLSurfaceMassDensityParams /*< prefix=NC_WL_SURFACE_MASS_DENSITY >*/
 {
   NC_WL_SURFACE_MASS_DENSITY_PCC = 0,
   NC_WL_SURFACE_MASS_DENSITY_ROFF,

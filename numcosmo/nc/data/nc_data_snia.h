@@ -57,7 +57,7 @@ G_BEGIN_DECLS
  * Supernovae data sets.
  *
  */
-typedef enum _NcDataSNIAId
+typedef enum _NcDataSNIAId /*< prefix=NC_DATA_SNIA >*/
 {
   NC_DATA_SNIA_SIMPLE_GOLD_157 = 0,
   NC_DATA_SNIA_SIMPLE_GOLD_182,

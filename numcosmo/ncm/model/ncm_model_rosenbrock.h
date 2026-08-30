@@ -46,7 +46,7 @@ G_DECLARE_FINAL_TYPE (NcmModelRosenbrock, ncm_model_rosenbrock, NCM, MODEL_ROSEN
  * Rosenbrock model parameters
  *
  */
-typedef enum _NcmModelRosenbrockSParams
+typedef enum _NcmModelRosenbrockSParams /*< prefix=NCM_MODEL_ROSENBROCK >*/
 {
   NCM_MODEL_ROSENBROCK_X1,
   NCM_MODEL_ROSENBROCK_X2,

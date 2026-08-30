@@ -60,7 +60,7 @@ struct _NcHaloPositionClass
  * Halo center model parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HALO_POSITION_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HALO_POSITION_SPARAMS,prefix=NC_HALO_POSITION >*/
 {
   NC_HALO_POSITION_RA,
   NC_HALO_POSITION_DEC,

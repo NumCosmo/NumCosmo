@@ -55,7 +55,7 @@ typedef struct _NcHIPrimTwoFluids NcHIPrimTwoFluids;
  * Parameters for the two fluids primordial power spectrum.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPRIM_TWO_FLUIDS_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HIPRIM_TWO_FLUIDS_SPARAMS,prefix=NC_HIPRIM_TWO_FLUIDS >*/
 {
   NC_HIPRIM_TWO_FLUIDS_LN10E10ASA,
   NC_HIPRIM_TWO_FLUIDS_T_SA_RATIO,

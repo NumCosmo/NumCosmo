@@ -62,7 +62,7 @@ struct _NcHaloDensityProfileDK14Class
  * profile, whereas the outer profile is parametrized br $b_e$ and $s_e$.
  *
  */
-typedef enum _NcHaloDensityProfileDK14Params
+typedef enum _NcHaloDensityProfileDK14Params /*< prefix=NC_HALO_DENSITY_PROFILE_DK14 >*/
 {
   NC_HALO_DENSITY_PROFILE_DK14_RT,
   NC_HALO_DENSITY_PROFILE_DK14_BETA,
@@ -81,7 +81,7 @@ typedef enum _NcHaloDensityProfileDK14Params
  * Methods for parametrizing the DK14 halo density profile.
  *
  */
-typedef enum _NcHaloDensityProfileDK14MethodParams
+typedef enum _NcHaloDensityProfileDK14MethodParams /*< prefix=NC_HALO_DENSITY_PROFILE_DK14 >*/
 {
   NC_HALO_DENSITY_PROFILE_DK14_MC2RHOSRS = 0,
   NC_HALO_DENSITY_PROFILE_DK14_DIRECT_RHOSRS,

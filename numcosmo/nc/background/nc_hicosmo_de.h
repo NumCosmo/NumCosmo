@@ -57,7 +57,7 @@ typedef struct _NcHICosmoDEPrivate NcHICosmoDEPrivate;
  * methods are implemented by a specific dark energy model subclass.
  *
  */
-typedef enum /*< flags,underscore_name=NC_HICOSMO_DE_IMPL >*/
+typedef enum /*< flags,underscore_name=NC_HICOSMO_DE_IMPL,prefix=NC_HICOSMO_DE_IMPL >*/
 {
   NC_HICOSMO_DE_IMPL_E2Omega_de = NC_HICOSMO_IMPL_LAST,
   NC_HICOSMO_DE_IMPL_dE2Omega_de_dz,
@@ -83,7 +83,7 @@ typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
  * cosmological parameters extended to include dark energy contributions.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS,prefix=NC_HICOSMO_DE >*/
 {
   NC_HICOSMO_DE_H0 = 0,
   NC_HICOSMO_DE_OMEGA_C,
@@ -108,7 +108,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS >*/
  * different masses and temperatures.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_VPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_VPARAMS,prefix=NC_HICOSMO_DE_MASSNU >*/
 {
   NC_HICOSMO_DE_MASSNU_M = 0,
   NC_HICOSMO_DE_MASSNU_T,

@@ -99,7 +99,7 @@ struct _NcmIntegralNDClass
  * The type of the method used to perform the integral.
  *
  */
-typedef enum _NcmIntegralNDMethod
+typedef enum _NcmIntegralNDMethod /*< prefix=NCM_INTEGRAL_ND_METHOD_CUBATURE >*/
 {
   NCM_INTEGRAL_ND_METHOD_CUBATURE_H,
   NCM_INTEGRAL_ND_METHOD_CUBATURE_P,
@@ -120,7 +120,7 @@ typedef enum _NcmIntegralNDMethod
  * The type of the error estimation used to perform the integral.
  *
  */
-typedef enum _NcmIntegralNDError
+typedef enum _NcmIntegralNDError /*< prefix=NCM_INTEGRAL_ND_ERROR >*/
 {
   NCM_INTEGRAL_ND_ERROR_INDIVIDUAL,
   NCM_INTEGRAL_ND_ERROR_PAIRWISE,

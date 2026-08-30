@@ -51,7 +51,7 @@ G_DECLARE_DERIVABLE_TYPE (NcmSpline, ncm_spline, NCM, SPLINE, GObject)
  * ncm_spline_curvature_lp_norm() and ncm_spline_curvature_max().
  *
  */
-typedef enum _NcmSplineCurvatureType
+typedef enum _NcmSplineCurvatureType /*< prefix=NCM_SPLINE_CURVATURE >*/
 {
   NCM_SPLINE_CURVATURE_D2,
   NCM_SPLINE_CURVATURE_GEOMETRIC,
