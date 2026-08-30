@@ -37,6 +37,8 @@ pytest.importorskip("getdist")
 # pylint: disable=wrong-import-position
 
 
+from numcosmo_py.experiments.planck_commander import COMMANDER_RELPATH
+from numcosmo_py.experiments.planck_lite import find_baseline_file
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.app.loading import load_catalog
 from numcosmo_py.app import app
@@ -1375,6 +1377,19 @@ def test_run_mcmc_apes_get_best_fit_requires_output(simple_experiment):
     assert "Output file not defined" in result.output
 
 
+# `numcosmo generate planck18` assembles the real Planck 2018 likelihoods, so it
+# needs the plc_3.0 clik tree -- large, not redistributable, and absent from CI.
+# The data-backed tests under tests/python/nc/data skip on exactly this
+# condition; these two did not, so on a machine without the tree the CLI reached
+# _nc_data_planck_lkl_set_filename(), which g_error()s on a missing file and
+# takes the xdist worker down with it.
+needs_planck_data = pytest.mark.skipif(
+    find_baseline_file(COMMANDER_RELPATH) is None,
+    reason="Planck baseline (plc_3.0) clik data not found",
+)
+
+
+@needs_planck_data
 def test_generate_planck(tmp_path, planck18_type):
     """Test run theory vector."""
     tmp_file = tmp_path / "planck_generated1.yaml"
@@ -1388,6 +1403,7 @@ def test_generate_planck(tmp_path, planck18_type):
         raise result.exception
 
 
+@needs_planck_data
 def test_generate_planck_test(tmp_path, planck18_type):
     """Test run theory vector."""
     tmp_file = tmp_path / "planck_generated2.yaml"
