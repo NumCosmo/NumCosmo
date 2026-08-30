@@ -44,6 +44,13 @@ import pytest
 # 310 bytes, same release and same code path as the multi-megabyte catalogs.
 TINY_ASSET = "jla_snls3_sdss_sys_stat.fits.sig"
 
+_REPAIR = """
+from numcosmo_py import Nc, Ncm
+
+Ncm.cfg_init()
+Nc.DataPlanckLKL.download_baseline(Ncm.cfg_get_fullpath_base())
+"""
+
 _FETCH = """
 import sys
 from numcosmo_py import Nc, Ncm
@@ -126,3 +133,34 @@ def test_a_failed_download_leaves_nothing_behind(tmp_path):
 
     assert not list(tmp_path.rglob("this-asset-does-not-exist.fits"))
     assert not list(tmp_path.rglob("*.part"))
+
+
+def test_a_partial_tree_is_replaced(tmp_path):
+    """An interrupted extraction must not look finished.
+
+    A tarball unpacked half-way leaves its first files present and its last
+    missing. Keying "already done" on any one of them -- or on the tree
+    existing at all -- makes every later run skip the repair and fail on
+    whichever file did not make it, which is how a run died on a plik
+    component while commander sat right beside it. Only a marker written after
+    the rename can mean complete.
+    """
+    commander = (
+        tmp_path
+        / ".numcosmo/baseline/plc_3.0/low_l/commander/commander_dx12_v3_2_29.clik"
+    )
+    commander.parent.mkdir(parents=True)
+    commander.touch()
+
+    result = run_isolated(_REPAIR, tmp_path)
+
+    assert result.returncode == 0, result.stderr
+
+    missing = (
+        tmp_path / ".numcosmo/baseline/plc_3.0/hi_l/plik"
+        "/plik_rd12_HM_v22b_TTTEEE.clik/clik/lkl_0/component_1/_mdb"
+    )
+
+    assert missing.exists(), "the partial tree was left unrepaired"
+    assert (tmp_path / ".numcosmo/baseline/.numcosmo-complete").exists()
+    assert not list(tmp_path.glob(".numcosmo/baseline.*"))

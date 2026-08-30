@@ -42,10 +42,10 @@
 #include <unistd.h>
 
 gboolean
-_nc_data_download_lock (const gchar *path, gint max_wait_s, gchar **lockdir)
+_nc_data_download_lock (const gchar *lockpath, const gchar *readypath, gint max_wait_s, gchar **lockdir)
 {
   gint waited = 0;
-  gchar *dir  = g_path_get_dirname (path);
+  gchar *dir  = g_path_get_dirname (lockpath);
 
   /* The lock sits beside the target, whose directory may not exist yet on a
    * fresh install -- mkdir would then fail with ENOENT and the caller would
@@ -60,7 +60,7 @@ _nc_data_download_lock (const gchar *path, gint max_wait_s, gchar **lockdir)
 
   g_free (dir);
 
-  *lockdir = g_strdup_printf ("%s.lock", path);
+  *lockdir = g_strdup_printf ("%s.lock", lockpath);
 
   while (g_mkdir (*lockdir, 0755) != 0)
   {
@@ -72,7 +72,7 @@ _nc_data_download_lock (const gchar *path, gint max_wait_s, gchar **lockdir)
     }
 
     /* Whoever holds it may be finishing the very download we want. */
-    if (g_file_test (path, G_FILE_TEST_EXISTS))
+    if (g_file_test (readypath, G_FILE_TEST_EXISTS))
     {
       g_clear_pointer (lockdir, g_free);
 
@@ -86,7 +86,7 @@ _nc_data_download_lock (const gchar *path, gint max_wait_s, gchar **lockdir)
     waited++;
   }
 
-  if (g_file_test (path, G_FILE_TEST_EXISTS))
+  if (g_file_test (readypath, G_FILE_TEST_EXISTS))
   {
     _nc_data_download_unlock (*lockdir);
     *lockdir = NULL;

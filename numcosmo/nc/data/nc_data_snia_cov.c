@@ -4008,7 +4008,7 @@ nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
     /* Serialize with any other process fetching the same catalog: wget used to
      * write straight to full_filename, so a concurrent reader could open a
      * half-written FITS ("tried to move past end of file"). */
-    if (_nc_data_download_lock (full_filename, 900, &lockdir))
+    if (_nc_data_download_lock (full_filename, full_filename, 900, &lockdir))
     {
       _nc_data_download_file (url_str, full_filename, filename);
       _nc_data_download_unlock (lockdir);

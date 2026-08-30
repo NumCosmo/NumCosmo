@@ -41,16 +41,21 @@ G_BEGIN_DECLS
  */
 
 /*
- * Serializes every process fetching @path. Returns TRUE when the caller owns
- * the lock and must pass @lockdir to _nc_data_download_unlock(); FALSE when
- * @path already exists, which is the common case once one of N workers has
- * finished, and then there is nothing to do.
+ * Serializes on @lockpath and reports whether there is work to do. Returns
+ * TRUE when the caller owns the lock and must pass @lockdir to
+ * _nc_data_download_unlock(); FALSE when @readypath already exists, which is
+ * the common case once one of N workers has finished.
+ *
+ * The two are separate because "done" is not always "the destination exists".
+ * An extracted tree is only complete when a marker inside it says so -- a
+ * half-unpacked one has its first files and not its last -- and that marker
+ * cannot double as the lock, since the tree it lives in gets replaced.
  *
  * A lock *directory* rather than a lock file: mkdir() is atomic everywhere
  * this runs, NFS included. A lock left by a killed process is taken over
  * after @max_wait_s rather than waited on forever.
  */
-gboolean _nc_data_download_lock (const gchar *path, gint max_wait_s, gchar **lockdir);
+gboolean _nc_data_download_lock (const gchar *lockpath, const gchar *readypath, gint max_wait_s, gchar **lockdir);
 
 void _nc_data_download_unlock (gchar *lockdir);
 

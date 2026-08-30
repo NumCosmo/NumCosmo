@@ -988,28 +988,73 @@ nc_data_planck_lkl_set_hipert_boltzmann (NcDataPlanckLKL *plik, NcHIPertBoltzman
  *
  */
 
+/* Recursive delete: staging directories and superseded trees are ours alone. */
+static void
+_nc_data_planck_lkl_rm_rf (const gchar *path)
+{
+  GDir *d = g_dir_open (path, 0, NULL);
+
+  if (d != NULL)
+  {
+    const gchar *name;
+
+    while ((name = g_dir_read_name (d)) != NULL)
+    {
+      gchar *child = g_build_filename (path, name, NULL);
+
+      if (g_file_test (child, G_FILE_TEST_IS_DIR) && !g_file_test (child, G_FILE_TEST_IS_SYMLINK))
+        _nc_data_planck_lkl_rm_rf (child);
+      else
+        g_unlink (child);
+
+      g_free (child);
+    }
+
+    g_dir_close (d);
+  }
+
+  g_rmdir (path);
+}
+
 void
 nc_data_planck_lkl_download_baseline (const gchar *dir)
 {
   const gchar *file    = "COM_Likelihood_Data-baseline_R3.00.tar.gz";
   const gchar *url_str = "https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/COM_Likelihood_Data-baseline_R3.00.tar.gz";
-  gchar *marker        = ncm_cfg_get_fullpath (_nc_data_planck_lkl_files[0]);
-  gchar *full_filename = g_build_filename (dir, file, NULL);
-  gchar *lockdir       = NULL;
-  GError *error        = NULL;
+  gchar *tree          = g_build_filename (dir, "baseline", NULL);
 
-  /* The lock is on the extracted data, not on the tarball: two processes must
-   * not unpack into the same tree at once, and once one of them has finished
-   * the others have nothing to do. */
-  if (!_nc_data_download_lock (marker, 900, &lockdir))
+  /* Written last, inside the tree: a half-unpacked tree has its first files
+   * and not this one, so its presence -- not the tree's -- means complete. */
+  gchar *ready    = g_build_filename (tree, ".numcosmo-complete", NULL);
+  gchar *lockpath = g_build_filename (dir, "planck-baseline", NULL);
+  gchar *staging  = g_strdup_printf ("%s.%d.tmp", tree, (gint) getpid ());
+  gchar *tarball  = g_build_filename (staging, file, NULL);
+  gchar *lockdir  = NULL;
+  GError *error   = NULL;
+
+  /* The lock is on the extracted tree. Note it is *not* enough to look for one
+   * file inside it: an interrupted extraction leaves the first files present
+   * and the rest missing, which is how a run died on a plik component while
+   * commander sat right there. The tree only appears when it is complete --
+   * see the rename below -- so its presence is the whole answer. */
+  if (!_nc_data_download_lock (lockpath, ready, 900, &lockdir))
   {
-    g_free (marker);
-    g_free (full_filename);
+    g_free (tree);
+    g_free (ready);
+    g_free (lockpath);
+    g_free (staging);
+    g_free (tarball);
 
     return;
   }
 
-  _nc_data_download_file (url_str, full_filename, "Planck baseline data");
+  if (g_mkdir_with_parents (staging, 0755) != 0)
+  {
+    _nc_data_download_unlock (lockdir);
+    g_error ("nc_data_planck_lkl_download_baseline: cannot create %s.", staging);
+  }
+
+  _nc_data_download_file (url_str, tarball, "Planck baseline data");
 
   ncm_message ("# Extracting file [%s]...\n", file);
 
@@ -1017,11 +1062,13 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
     gchar *cmd[] = { "tar", "xzf", (gchar *) file, NULL };
     gint status  = 0;
 
-    if (!g_spawn_sync (dir, cmd, NULL,
+    /* Unpacked into the staging directory, so a failure part-way leaves a
+     * mess nobody will ever look at rather than a half-populated tree that
+     * every later run mistakes for good data. */
+    if (!g_spawn_sync (staging, cmd, NULL,
                        G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
                        NULL, NULL, NULL, NULL, &status, &error))
     {
-      g_unlink (full_filename);
       _nc_data_download_unlock (lockdir);
       g_error ("nc_data_planck_lkl_download_baseline: cannot run tar for %s. Error: %s",
                file, error->message);
@@ -1029,18 +1076,57 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
 
     if (status != 0)
     {
-      g_unlink (full_filename);
       _nc_data_download_unlock (lockdir);
       g_error ("nc_data_planck_lkl_download_baseline: tar failed (status %d) extracting %s. "
                "The download may be truncated; remove %s and retry.",
-               status, file, dir);
+               status, file, staging);
     }
   }
 
-  g_unlink (full_filename);
-  g_free (full_filename);
-  g_free (marker);
+  g_unlink (tarball);
+
+  /* An earlier run may have left a partial tree; it is worthless, and it is in
+   * the way of the rename that makes this one visible. */
+  {
+    gchar *unpacked = g_build_filename (staging, "baseline", NULL);
+
+    if (g_file_test (tree, G_FILE_TEST_EXISTS))
+    {
+      gchar *condemned = g_strdup_printf ("%s.%d.old", tree, (gint) getpid ());
+
+      g_rename (tree, condemned);
+      _nc_data_planck_lkl_rm_rf (condemned);
+      g_free (condemned);
+    }
+
+    if (g_rename (unpacked, tree) != 0)
+    {
+      g_free (unpacked);
+      _nc_data_download_unlock (lockdir);
+      g_error ("nc_data_planck_lkl_download_baseline: cannot move the extracted "
+               "data into place at %s.", tree);
+    }
+
+    g_free (unpacked);
+  }
+
+  /* Last, so that nothing before this point can be mistaken for a finished
+   * tree -- including one left by a version that had no marker at all. */
+  if (!g_file_set_contents (ready, "", 0, &error))
+  {
+    _nc_data_download_unlock (lockdir);
+    g_error ("nc_data_planck_lkl_download_baseline: cannot mark %s complete: %s.",
+             tree, error->message);
+  }
+
+  _nc_data_planck_lkl_rm_rf (staging);
   _nc_data_download_unlock (lockdir);
+
+  g_free (tree);
+  g_free (ready);
+  g_free (lockpath);
+  g_free (staging);
+  g_free (tarball);
 
   ncm_message ("# Baseline data successfully downloaded and extracted.\n");
 
