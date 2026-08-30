@@ -3140,11 +3140,10 @@ ncm_model_param_index_from_name_full (NcmModel *model, const gchar *param_name, 
         return FALSE;
       }
 
-      g_free (slot_name);
-
       if (ncm_model_param_index_from_name (submodel, bare_name, i, error))
       {
         *target = submodel;
+        g_free (slot_name);
 
         return TRUE;
       }
@@ -3155,6 +3154,7 @@ ncm_model_param_index_from_name_full (NcmModel *model, const gchar *param_name, 
                                     "`%s' does not have a parameter called `%s'.",
                                     slot_name, G_OBJECT_TYPE_NAME (model), bare_name);
 
+      g_free (slot_name);
 
       return FALSE;
     }
