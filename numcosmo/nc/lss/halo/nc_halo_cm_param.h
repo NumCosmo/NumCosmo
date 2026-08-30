@@ -46,7 +46,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMParam, nc_halo_cm_param, NC, HALO_CM_PARAM, NcHalo
  * Both mass and concentration are parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HALO_CM_PARAM_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HALO_CM_PARAM_SPARAMS,prefix=NC_HALO_CM_PARAM >*/
 {
   NC_HALO_CM_PARAM_C_DELTA,
   NC_HALO_CM_PARAM_LOG10M_DELTA,

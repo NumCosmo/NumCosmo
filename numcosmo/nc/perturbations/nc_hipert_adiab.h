@@ -73,7 +73,7 @@ struct _NcHIPertIAdiabInterface
  * Perturbation variables enumerator.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPERT_ADIAB_VARS  >*/
+typedef enum /*< enum,underscore_name=NC_HIPERT_ADIAB_VARS,prefix=NC_HIPERT_ADIAB >*/
 {
   NC_HIPERT_ADIAB_RE_ZETA = 0,
   NC_HIPERT_ADIAB_IM_ZETA,

@@ -45,7 +45,7 @@ G_DECLARE_DERIVABLE_TYPE (NcmDataPoisson, ncm_data_poisson, NCM, DATA_POISSON, N
  * Types of Poisson-distributed data.
  * These specify the data format for Poisson likelihood calculations.
  */
-typedef enum _NcmDataPoissonType
+typedef enum _NcmDataPoissonType /*< prefix=NCM_DATA_POISSON >*/
 {
   NCM_DATA_POISSON_INT,
 } NcmDataPoissonType;

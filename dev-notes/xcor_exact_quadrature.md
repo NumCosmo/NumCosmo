@@ -1,6 +1,6 @@
 # Exact outer quadrature for NcXcor
 
-Status: `NC_XCOR_METHOD_KERNEL_FIXED` computes the outer `k` integral exactly,
+Status: `NC_XCOR_METHOD_KERNEL_EXACT` computes the outer `k` integral exactly,
 by GL(5) over the **common refinement of each pair's own knot sets**. An earlier
 implementation instead sampled all kernels jointly onto one shared abscissa;
 that was slower and less accurate and has been removed. Sections 1-7 record why,
@@ -31,7 +31,7 @@ in `e^u`, not in `u`, and GL is no longer exact. This also explains why a linear
 Two kernels sampled independently do not share an abscissa, so the panels with
 the property §1 needs are the panels of the **union of the two knot vectors**.
 Both are sorted, so this is a linear merge, done per pair inside
-`_nc_xcor_kernel_integrate_block_fixed()`.
+`_nc_xcor_kernel_integrate_block_exact()`.
 
 **An earlier version of this note argued the union was useless**, on the
 measurement that `union / sum-of-separate = 1.000` — independently adapted
@@ -61,15 +61,15 @@ is what the joint design did.
 
 ## 4. Result
 
-`KERNEL_FIXED` reuses the per-kernel closures `KERNEL_CUBATURE` already builds —
+`KERNEL_EXACT` reuses the per-kernel closures `KERNEL_CUBATURE` already builds —
 and which `NcXcorSolver` already caches once per kernel per ell block — and
 differs from it *only* in the outer-integration call. Measured over 28 pairs of
 7 bins:
 
 | | l = 0 | l = 0..26 | agreement vs CUBATURE |
 |---|-------|-----------|------------------------|
-| `KERNEL_FIXED`, joint abscissa (removed) | 0.271 s | 4.53 s | 7.5e-5 |
-| `KERNEL_FIXED`, per-pair union (current) | **0.099 s** | **1.96 s** | **2.4e-8** |
+| `KERNEL_EXACT`, joint abscissa (removed) | 0.271 s | 4.53 s | 7.5e-5 |
+| `KERNEL_EXACT`, per-pair union (current) | **0.099 s** | **1.96 s** | **2.4e-8** |
 | `KERNEL_CUBATURE` | 0.104 s | 2.32 s | — |
 
 So the exact method is now slightly *faster* than the adaptive one, and agrees
@@ -103,7 +103,7 @@ block's count: ~160k evaluations for 9 blocks versus 66k for separate sets,
 ~2.4x worse. Sharing across ell blocks was never done. Sharing across kernels
 within a block was tried, and §3 is why it was undone.
 
-## 7. What KERNEL_FIXED is for
+## 7. What KERNEL_EXACT is for
 
 - **no tolerance parameter**, and no adaptive outer step that can fail;
 - **deterministic cost**, set by the knot count rather than by how hard the

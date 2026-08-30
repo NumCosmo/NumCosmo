@@ -54,7 +54,7 @@ G_DECLARE_FINAL_TYPE (NcmVector, ncm_vector, NCM, VECTOR, GObject)
  * This enumerator is only used internally. Only by developers.
  *
  */
-typedef enum _NcmVectorInternal
+typedef enum _NcmVectorInternal /*< prefix=NCM_VECTOR >*/
 {
   NCM_VECTOR_SLICE = 0,
   NCM_VECTOR_GSL_VECTOR,

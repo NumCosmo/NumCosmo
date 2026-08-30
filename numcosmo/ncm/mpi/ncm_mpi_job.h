@@ -104,7 +104,7 @@ typedef struct _NcmMPIJobCtrl
  * Control messages from master to slave. All messages have the same size, specifying tag #NCM_MPI_CTRL_TAG_CMD.
  *
  */
-typedef enum _NcmMPIJobCtrlMsg
+typedef enum _NcmMPIJobCtrlMsg /*< prefix=NCM_MPI_CTRL_SLAVE >*/
 {
   NCM_MPI_CTRL_SLAVE_INIT = 0,
   NCM_MPI_CTRL_SLAVE_FREE,
@@ -136,7 +136,7 @@ typedef enum _NcmMPIJobCtrlMsg
  *   - After #NCM_MPI_CTRL_SLAVE_WORK, the slave sends @NCM_MPI_CTRL_TAG_WORK_RETURN with the serialized return.
  *
  */
-typedef enum _NcmMPIJobCtrlTag
+typedef enum _NcmMPIJobCtrlTag /*< prefix=NCM_MPI_CTRL_TAG >*/
 {
   NCM_MPI_CTRL_TAG_CMD = 0,
   NCM_MPI_CTRL_TAG_JOB,

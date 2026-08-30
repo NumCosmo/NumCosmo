@@ -130,7 +130,7 @@ The residual at $10^{-8}$ is consistent with the reference's own convergence
 rather than with a NumCosmo error. It is not the default because the adaptive
 cubature can run out of Clenshaw–Curtis levels at that setting on masked runs and
 abort, which is fatal inside a Monte Carlo chain. For the same reason the default
-quadrature is `NC_XCOR_METHOD_KERNEL_FIXED`, an exact Gauss–Legendre rule on the
+quadrature is `NC_XCOR_METHOD_KERNEL_EXACT`, an exact Gauss–Legendre rule on the
 union of the pair's spline knots: it targets no tolerance, so it cannot fail to
 reach one.
 

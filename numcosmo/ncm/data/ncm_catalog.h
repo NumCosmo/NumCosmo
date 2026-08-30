@@ -59,7 +59,7 @@ struct _NcmCatalogClass
  * intended dtype when converting to/from external table formats.
  *
  */
-typedef enum _NcmCatalogColType
+typedef enum _NcmCatalogColType /*< prefix=NCM_CATALOG_COL_TYPE >*/
 {
   NCM_CATALOG_COL_TYPE_INVALID = -1,
   NCM_CATALOG_COL_TYPE_DOUBLE  = 0,

@@ -39,6 +39,7 @@ from numcosmo_py.experiments.planck18 import (
     HIPrimModel,
     generate_planck18_tt,
     generate_planck18_ttteee,
+    generate_planck18_native,
     mset_set_parameters,
 )
 from numcosmo_py.experiments.jpas_forecast24 import (
@@ -54,7 +55,7 @@ from numcosmo_py.experiments.cluster_wl import (
     GalaxyPopGen,
     ShapeFactorGen,
     GalaxyZGen,
-    HWLCatalogID,
+    WLCatalogID,
     HaloProfileType,
     IntegMethod,
     IntegMethodOptions,
@@ -212,6 +213,26 @@ class GeneratePlanck:
         bool, typer.Option(help="Include lensing likelihood.", show_default=True)
     ] = False
 
+    native: Annotated[
+        bool,
+        typer.Option(
+            help="Use the native (clik-free) NumCosmo Planck likelihoods instead "
+            "of the legacy clik wrapper; the experiment then reloads without the "
+            "clik data or the PLC library and can resample.",
+            show_default=True,
+        ),
+    ] = False
+
+    from_release: Annotated[
+        bool,
+        typer.Option(
+            help="With --native, download the native likelihood blocks from the "
+            "NumCosmo Planck release instead of building them from a local clik "
+            "tree (no Planck data or PLC library needed).",
+            show_default=True,
+        ),
+    ] = False
+
     include_snia: Annotated[
         SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
@@ -234,7 +255,17 @@ class GeneratePlanck:
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        if self.data_type == Planck18Types.TT:
+        if self.native:
+            exp, mfunc_array = generate_planck18_native(
+                data_type=self.data_type,
+                massive_nu=self.massive_nu,
+                prim_model=self.prim_model,
+                use_lensing_likelihood=self.include_lens_lkl,
+                from_release=self.from_release,
+            )
+        elif self.from_release:
+            raise ValueError("--from-release requires --native.")
+        elif self.data_type == Planck18Types.TT:
             exp, mfunc_array = generate_planck18_tt(
                 massive_nu=self.massive_nu,
                 prim_model=self.prim_model,
@@ -288,6 +319,40 @@ class GeneratePlanck:
             mfunc_array,
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
+
+
+@dataclasses.dataclass(kw_only=True)
+class BuildPlanckRelease:
+    """Rebuild the native Planck likelihood release artifacts from local clik data.
+
+    Data-reduction step: reads the local ``plc_3.0`` clik tree and writes the
+    self-contained serialized native likelihoods (``planck_native_*.gvar``) to be
+    uploaded to the NumCosmo Planck release. Ids whose source clik data is missing
+    are skipped.
+    """
+
+    output_dir: Annotated[
+        Path,
+        typer.Argument(help="Directory to write the serialized release objects to."),
+    ]
+
+    def __post_init__(self) -> None:
+        """Build and serialize all available native Planck likelihoods."""
+        # pylint: disable=import-outside-toplevel
+        from numcosmo_py.experiments.planck_native_release import build_release
+
+        Ncm.cfg_init()
+
+        written = build_release(out_dir=self.output_dir.absolute().as_posix())
+
+        if not written:
+            raise ValueError(
+                "No Planck clik data found; nothing to build. Ensure the plc_3.0 "
+                "baseline tree is available."
+            )
+
+        for path in written:
+            print(f"wrote {path}")
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -876,7 +941,7 @@ class LoadClusterWL(ClusterWL):
     """
 
     catalog: Annotated[
-        HWLCatalogID | None,
+        WLCatalogID | None,
         typer.Option(
             help=(
                 "Load a curated Subaru HSC-SSP PDR1 catalog from the "

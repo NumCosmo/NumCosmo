@@ -715,6 +715,8 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
     for (nd = 0; nd <= psf->nderivs; nd++)
       ncm_spline2d_prepare (_ncm_powspec_filter_peek_dnvar (psf, nd));
   }
+
+  ncm_model_ctrl_update (psf->ctrl, model);
 }
 
 /**

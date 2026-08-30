@@ -46,6 +46,7 @@
 #include "ncm/mpi/ncm_mpi_job_mcmc.h"
 #include "ncm/mpi/ncm_mpi_job_feval.h"
 #include "ncm/algebra/ncm_vector.h"
+#include "ncm/spline/ncm_spline_bspline.h"
 #include "ncm/spline/ncm_spline_gsl.h"
 #include "ncm/spline/ncm_spline_cubic.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
@@ -62,6 +63,7 @@
 #include "ncm/powspec/ncm_powspec_filter.h"
 #include "ncm/powspec/ncm_powspec_sphere_proj.h"
 #include "ncm/powspec/ncm_powspec_spline2d.h"
+#include "ncm/powspec/tests/ncm_powspec_analytic.h"
 #include "ncm/powspec/ncm_powspec.h"
 #include "ncm/model/ncm_model.h"
 #include "ncm/model/ncm_model_ctrl.h"
@@ -96,16 +98,17 @@
 #include "ncm/specfunc/ncm_sbessel_ode_solver.h"
 #include "ncm/fftlog/ncm_fftlog_sbessel_j.h"
 #include "ncm/fftlog/ncm_fftlog_sbessel_jljm.h"
-#include "ncm/sphere/ncm_spectral.h"
+#include "ncm/algebra/ncm_spectral.h"
 #include "nc/background/nc_hicosmo.h"
+#include "nc/bbn/nc_bbn.h"
+#include "nc/bbn/nc_bbn_parametrized.h"
+#include "nc/bbn/nc_bbn_parthenope.h"
 #include "nc/cmb/nc_cbe_precision.h"
 #include "nc/background/nc_hicosmo_qconst.h"
 #include "nc/background/nc_hicosmo_qlinear.h"
 #include "nc/background/nc_hicosmo_qspline.h"
 #include "nc/background/nc_hicosmo_qrbf.h"
 #include "nc/background/nc_hicosmo_lcdm.h"
-#include "nc/background/nc_hicosmo_gcg.h"
-#include "nc/background/nc_hicosmo_idem2.h"
 #include "nc/background/nc_hicosmo_de_xcdm.h"
 #include "nc/background/nc_hicosmo_de_wspline.h"
 #include "nc/background/nc_hicosmo_de_cpl.h"
@@ -248,6 +251,11 @@
 #include "nc/data/nc_data_snia_cov.h"
 #include "nc/data/nc_data_xcor.h"
 #include "nc/data/nc_data_planck_lkl.h"
+#include "nc/data/nc_data_planck_commander.h"
+#include "nc/data/nc_data_planck_lensing.h"
+#include "nc/data/nc_data_planck_plik_lite.h"
+#include "nc/data/nc_data_planck_simall.h"
+#include "nc/data/nc_data_planck_smica.h"
 #include "nc/xcor/nc_xcor.h"
 #include "nc/xcor/nc_xcor_AB.h"
 #include "nc/xcor/nc_xcor_solver.h"
@@ -261,6 +269,15 @@
 #include "nc/xcor/nc_xcor_kernel_CMB_lensing.h"
 #include "nc/xcor/nc_xcor_kernel_weak_lensing.h"
 #include "nc/xcor/nc_xcor_kernel_tSZ.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_kdep.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_gauss.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_tophat.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_multi.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_student_t.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_power_exp.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_tophat_smooth.h"
+#include "nc/xcor/tests/nc_xcor_kernel_analytic_lensing.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <stdlib.h>
@@ -647,6 +664,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_D2);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE_BSPLINE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_GSL);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_VEC);
   ncm_cfg_register_obj (NCM_TYPE_FUNCTION_SAMPLE_SET);
@@ -673,6 +691,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_SPHERE_PROJ);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_ANALYTIC);
 
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);
@@ -726,8 +745,6 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QRBF);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_LCDM);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_WSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
@@ -739,11 +756,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_CMB);
 
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_OK);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_CMB);
 
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_OK);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_CMB);
 
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_BPL);
@@ -870,6 +883,10 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_RECOMB_CBE);
   ncm_cfg_register_obj (NC_TYPE_RECOMB_SEAGER);
 
+  ncm_cfg_register_obj (NC_TYPE_BBN);
+  ncm_cfg_register_obj (NC_TYPE_BBN_PARAMETRIZED);
+  ncm_cfg_register_obj (NC_TYPE_BBN_PARTHENOPE);
+
   ncm_cfg_register_obj (NC_TYPE_HIREION);
   ncm_cfg_register_obj (NC_TYPE_HIREION_CAMB);
 
@@ -921,6 +938,16 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR_SSC_SIJ);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_COMPONENT);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_KDEP);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_TOPHAT);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_MULTI);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_STUDENT_T);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_POWER_EXP);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_TOPHAT_SMOOTH);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_ANALYTIC_LENSING);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_GAL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_CLUSTER_TOPHAT);
@@ -932,6 +959,11 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_LKL);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_COMMANDER);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_PLIK_LITE);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_SIMALL);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_SMICA);
 
   return;
 }

@@ -40,12 +40,12 @@ G_BEGIN_DECLS
 void _nc_xcor_kernel_integrate_block_cubature (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp);
 
 /*
- * Same for %NC_XCOR_METHOD_KERNEL_FIXED: exact 5-node Gauss-Legendre over the
+ * Same for %NC_XCOR_METHOD_KERNEL_EXACT: exact 5-node Gauss-Legendre over the
  * common refinement of the two integrands' own knot sets. Takes the same
  * arguments as the cubature version above and is interchangeable with it, so
  * NcXcorSolver drives both methods through one cached-integrand path.
  */
-void _nc_xcor_kernel_integrate_block_fixed (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp);
+void _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err);
 
 /* Fails loudly when NcXcor:reltol asks for more than the kernel's closure carries. */
 void _nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk);

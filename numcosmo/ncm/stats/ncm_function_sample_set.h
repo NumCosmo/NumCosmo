@@ -28,6 +28,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/ncm/algebra/ncm_matrix.h>
 #include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/ncm/spline/ncm_spline.h>
 #include <numcosmo/ncm/spline/ncm_spline_vec.h>
@@ -86,6 +87,10 @@ void ncm_function_sample_set_add_old_func (NcmFunctionSampleSet *fss, const gdou
 
 /* Container-level properties */
 guint ncm_function_sample_set_get_len (NcmFunctionSampleSet *fss);
+void ncm_function_sample_set_set_track_residual (NcmFunctionSampleSet *fss, const gboolean track_residual);
+gboolean ncm_function_sample_set_get_track_residual (NcmFunctionSampleSet *fss);
+NcmMatrix *ncm_function_sample_set_get_residuals (NcmFunctionSampleSet *fss);
+NcmMatrix *ncm_function_sample_set_estimate_residuals (NcmFunctionSampleSet *fss, NcmSpline *base_spline, NcmSpline *ref_spline);
 guint ncm_function_sample_set_get_nsamples (NcmFunctionSampleSet *fss);
 gdouble ncm_function_sample_set_get_x_min (NcmFunctionSampleSet *fss);
 gdouble ncm_function_sample_set_get_x_max (NcmFunctionSampleSet *fss);
@@ -151,6 +156,7 @@ void ncm_function_sample_set_iter_prev (NcmFunctionSampleSetIter *iter);
 gdouble ncm_function_sample_set_iter_get_x (NcmFunctionSampleSetIter *iter);
 NcmVector *ncm_function_sample_set_iter_get_y (NcmFunctionSampleSetIter *iter);
 gint ncm_function_sample_set_iter_get_interval_ok (NcmFunctionSampleSetIter *iter);
+NcmVector *ncm_function_sample_set_iter_get_residual (NcmFunctionSampleSetIter *iter);
 gboolean ncm_function_sample_set_iter_get_new_point (NcmFunctionSampleSetIter *iter);
 
 /* Iterator mutators */

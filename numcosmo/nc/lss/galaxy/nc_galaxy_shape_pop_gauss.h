@@ -44,7 +44,7 @@ G_DECLARE_FINAL_TYPE (NcGalaxyShapePopGauss, nc_galaxy_shape_pop_gauss, NC, GALA
  * Truncated-Gaussian intrinsic ellipticity model parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_GALAXY_SHAPE_POP_GAUSS_PARAMS >*/
+typedef enum /*< enum,underscore_name=NC_GALAXY_SHAPE_POP_GAUSS_PARAMS,prefix=NC_GALAXY_SHAPE_POP_GAUSS >*/
 {
   NC_GALAXY_SHAPE_POP_GAUSS_SIGMA = 0,
   /* < private > */

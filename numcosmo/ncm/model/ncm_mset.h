@@ -107,7 +107,7 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
  * Error codes returned by the #NcmMSet class.
  *
  */
-typedef enum _NcmMSetError
+typedef enum _NcmMSetError /*< prefix=NCM_MSET_ERROR >*/
 {
   NCM_MSET_ERROR_NAMESPACE_NOT_FOUND,
   NCM_MSET_ERROR_NAMESPACE_INVALID,

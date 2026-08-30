@@ -97,7 +97,7 @@ typedef NcWLEllipticityFrame NcGalaxyWLObsCoord;
  * which corresponds to the complex ellipticity based on axis ratio.
  *
  */
-typedef enum _NcGalaxyWLObsEllipConv
+typedef enum _NcGalaxyWLObsEllipConv /*< prefix=NC_GALAXY_WL_OBS_ELLIP_CONV >*/
 {
   NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE,
   NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET,
@@ -120,7 +120,7 @@ typedef enum _NcGalaxyWLObsEllipConv
  * per-galaxy $p(z)$ spline) measurements.
  *
  */
-typedef enum _NcGalaxyWLObsCatalogId
+typedef enum _NcGalaxyWLObsCatalogId /*< prefix=NC_GALAXY_WL_OBS_CATALOG >*/
 {
   NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_002 = 0,
   NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_007,

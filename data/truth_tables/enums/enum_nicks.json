@@ -1,0 +1,3522 @@
+{
+  "NCM_CATALOG_COL_TYPE_BOOL": {
+    "nick": "bool",
+    "type": "Ncm.CatalogColType"
+  },
+  "NCM_CATALOG_COL_TYPE_DOUBLE": {
+    "nick": "double",
+    "type": "Ncm.CatalogColType"
+  },
+  "NCM_CATALOG_COL_TYPE_INT": {
+    "nick": "int",
+    "type": "Ncm.CatalogColType"
+  },
+  "NCM_CATALOG_COL_TYPE_INVALID": {
+    "nick": "invalid",
+    "type": "Ncm.CatalogColType"
+  },
+  "NCM_CATALOG_ERROR_COLUMN_NOT_FOUND": {
+    "nick": "column-not-found",
+    "type": "Ncm.CatalogError"
+  },
+  "NCM_CFG_ERROR_INVALID_FFTW_FLAG": {
+    "nick": "flag",
+    "type": "Ncm.CfgError"
+  },
+  "NCM_CFG_ERROR_INVALID_FFTW_FLAG_STRING": {
+    "nick": "flag-string",
+    "type": "Ncm.CfgError"
+  },
+  "NCM_CFG_ERROR_INVALID_FFTW_TIMELIMIT": {
+    "nick": "timelimit",
+    "type": "Ncm.CfgError"
+  },
+  "NCM_CSQ1D_EVOL_STATE_ADIABATIC": {
+    "nick": "adiabatic",
+    "type": "Ncm.CSQ1DEvolState"
+  },
+  "NCM_CSQ1D_EVOL_STATE_INVALID": {
+    "nick": "invalid",
+    "type": "Ncm.CSQ1DEvolState"
+  },
+  "NCM_CSQ1D_EVOL_STATE_UM": {
+    "nick": "um",
+    "type": "Ncm.CSQ1DEvolState"
+  },
+  "NCM_CSQ1D_EVOL_STATE_UP": {
+    "nick": "up",
+    "type": "Ncm.CSQ1DEvolState"
+  },
+  "NCM_CSQ1D_FRAME_ADIAB1": {
+    "nick": "adiab1",
+    "type": "Ncm.CSQ1DFrame"
+  },
+  "NCM_CSQ1D_FRAME_ADIAB2": {
+    "nick": "adiab2",
+    "type": "Ncm.CSQ1DFrame"
+  },
+  "NCM_CSQ1D_FRAME_NONADIAB1": {
+    "nick": "nonadiab1",
+    "type": "Ncm.CSQ1DFrame"
+  },
+  "NCM_CSQ1D_FRAME_NONADIAB2": {
+    "nick": "nonadiab2",
+    "type": "Ncm.CSQ1DFrame"
+  },
+  "NCM_CSQ1D_FRAME_ORIG": {
+    "nick": "orig",
+    "type": "Ncm.CSQ1DFrame"
+  },
+  "NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2": {
+    "nick": "adiabatic2",
+    "type": "Ncm.CSQ1DInitialStateType"
+  },
+  "NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC4": {
+    "nick": "adiabatic4",
+    "type": "Ncm.CSQ1DInitialStateType"
+  },
+  "NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC": {
+    "nick": "ad-hoc",
+    "type": "Ncm.CSQ1DInitialStateType"
+  },
+  "NCM_CSQ1D_INITIAL_CONDITION_TYPE_NONADIABATIC2": {
+    "nick": "nonadiabatic2",
+    "type": "Ncm.CSQ1DInitialStateType"
+  },
+  "NCM_DATASET_BSTRAP_DISABLE": {
+    "nick": "disable",
+    "type": "Ncm.DatasetBStrapType"
+  },
+  "NCM_DATASET_BSTRAP_PARTIAL": {
+    "nick": "partial",
+    "type": "Ncm.DatasetBStrapType"
+  },
+  "NCM_DATASET_BSTRAP_TOTAL": {
+    "nick": "total",
+    "type": "Ncm.DatasetBStrapType"
+  },
+  "NCM_DATA_POISSON_INT": {
+    "nick": "int",
+    "type": "Ncm.DataPoissonType"
+  },
+  "NCM_FIT_ESMCMC_WALKER_APES_KTYPE_CAUCHY": {
+    "nick": "cauchy",
+    "type": "Ncm.FitESMCMCWalkerAPESKType"
+  },
+  "NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS": {
+    "nick": "gauss",
+    "type": "Ncm.FitESMCMCWalkerAPESKType"
+  },
+  "NCM_FIT_ESMCMC_WALKER_APES_KTYPE_ST3": {
+    "nick": "st3",
+    "type": "Ncm.FitESMCMCWalkerAPESKType"
+  },
+  "NCM_FIT_ESMCMC_WALKER_APES_METHOD_KDE": {
+    "nick": "kde",
+    "type": "Ncm.FitESMCMCWalkerAPESMethod"
+  },
+  "NCM_FIT_ESMCMC_WALKER_APES_METHOD_VKDE": {
+    "nick": "vkde",
+    "type": "Ncm.FitESMCMCWalkerAPESMethod"
+  },
+  "NCM_FIT_GRAD_NUMDIFF_ACCURATE": {
+    "nick": "numdiff-accurate",
+    "type": "Ncm.FitGradType"
+  },
+  "NCM_FIT_GRAD_NUMDIFF_CENTRAL": {
+    "nick": "numdiff-central",
+    "type": "Ncm.FitGradType"
+  },
+  "NCM_FIT_GRAD_NUMDIFF_FORWARD": {
+    "nick": "numdiff-forward",
+    "type": "Ncm.FitGradType"
+  },
+  "NCM_FIT_GSL_MMS_NMSIMPLEX": {
+    "nick": "nmsimplex",
+    "type": "Ncm.FitGSLMMSAlgos"
+  },
+  "NCM_FIT_GSL_MMS_NMSIMPLEX2": {
+    "nick": "nmsimplex2",
+    "type": "Ncm.FitGSLMMSAlgos"
+  },
+  "NCM_FIT_GSL_MMS_NMSIMPLEX2RAND": {
+    "nick": "nmsimplex2rand",
+    "type": "Ncm.FitGSLMMSAlgos"
+  },
+  "NCM_FIT_GSL_MM_CONJUGATE_FR": {
+    "nick": "conjugate-fr",
+    "type": "Ncm.FitGSLMMAlgos"
+  },
+  "NCM_FIT_GSL_MM_CONJUGATE_PR": {
+    "nick": "conjugate-pr",
+    "type": "Ncm.FitGSLMMAlgos"
+  },
+  "NCM_FIT_GSL_MM_STEEPEST_DESCENT": {
+    "nick": "steepest-descent",
+    "type": "Ncm.FitGSLMMAlgos"
+  },
+  "NCM_FIT_GSL_MM_VECTOR_BFGS": {
+    "nick": "vector-bfgs",
+    "type": "Ncm.FitGSLMMAlgos"
+  },
+  "NCM_FIT_GSL_MM_VECTOR_BFGS2": {
+    "nick": "vector-bfgs2",
+    "type": "Ncm.FitGSLMMAlgos"
+  },
+  "NCM_FIT_LEVMAR_BC_DER": {
+    "nick": "bc-der",
+    "type": "Ncm.FitLevmarAlgos"
+  },
+  "NCM_FIT_LEVMAR_BC_DIF": {
+    "nick": "bc-dif",
+    "type": "Ncm.FitLevmarAlgos"
+  },
+  "NCM_FIT_LEVMAR_DER": {
+    "nick": "der",
+    "type": "Ncm.FitLevmarAlgos"
+  },
+  "NCM_FIT_LEVMAR_DIF": {
+    "nick": "dif",
+    "type": "Ncm.FitLevmarAlgos"
+  },
+  "NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX": {
+    "nick": "bootstrap-mix",
+    "type": "Ncm.FitMCResampleType"
+  },
+  "NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX": {
+    "nick": "bootstrap-nomix",
+    "type": "Ncm.FitMCResampleType"
+  },
+  "NCM_FIT_MC_RESAMPLE_FROM_MODEL": {
+    "nick": "from-model",
+    "type": "Ncm.FitMCResampleType"
+  },
+  "NCM_FIT_RUN_MSGS_FULL": {
+    "nick": "full",
+    "type": "Ncm.FitRunMsgs"
+  },
+  "NCM_FIT_RUN_MSGS_NONE": {
+    "nick": "none",
+    "type": "Ncm.FitRunMsgs"
+  },
+  "NCM_FIT_RUN_MSGS_SIMPLE": {
+    "nick": "simple",
+    "type": "Ncm.FitRunMsgs"
+  },
+  "NCM_FIT_TYPE_GSL_LS": {
+    "nick": "gsl-ls",
+    "type": "Ncm.FitType"
+  },
+  "NCM_FIT_TYPE_GSL_MM": {
+    "nick": "gsl-mm",
+    "type": "Ncm.FitType"
+  },
+  "NCM_FIT_TYPE_GSL_MMS": {
+    "nick": "gsl-mms",
+    "type": "Ncm.FitType"
+  },
+  "NCM_FIT_TYPE_LEVMAR": {
+    "nick": "levmar",
+    "type": "Ncm.FitType"
+  },
+  "NCM_FIT_TYPE_NLOPT": {
+    "nick": "nlopt",
+    "type": "Ncm.FitType"
+  },
+  "NCM_FUNCTION_CACHE_SEARCH_BOTH": {
+    "nick": "both",
+    "type": "Ncm.FunctionCacheSearchType"
+  },
+  "NCM_FUNCTION_CACHE_SEARCH_GT": {
+    "nick": "gt",
+    "type": "Ncm.FunctionCacheSearchType"
+  },
+  "NCM_FUNCTION_CACHE_SEARCH_LT": {
+    "nick": "lt",
+    "type": "Ncm.FunctionCacheSearchType"
+  },
+  "NCM_INTEGRAL_ND_ERROR_INDIVIDUAL": {
+    "nick": "individual",
+    "type": "Ncm.IntegralNDError"
+  },
+  "NCM_INTEGRAL_ND_ERROR_L1": {
+    "nick": "l1",
+    "type": "Ncm.IntegralNDError"
+  },
+  "NCM_INTEGRAL_ND_ERROR_L2": {
+    "nick": "l2",
+    "type": "Ncm.IntegralNDError"
+  },
+  "NCM_INTEGRAL_ND_ERROR_LINF": {
+    "nick": "linf",
+    "type": "Ncm.IntegralNDError"
+  },
+  "NCM_INTEGRAL_ND_ERROR_PAIRWISE": {
+    "nick": "pairwise",
+    "type": "Ncm.IntegralNDError"
+  },
+  "NCM_INTEGRAL_ND_METHOD_CUBATURE_H": {
+    "nick": "h",
+    "type": "Ncm.IntegralNDMethod"
+  },
+  "NCM_INTEGRAL_ND_METHOD_CUBATURE_H_V": {
+    "nick": "h-v",
+    "type": "Ncm.IntegralNDMethod"
+  },
+  "NCM_INTEGRAL_ND_METHOD_CUBATURE_P": {
+    "nick": "p",
+    "type": "Ncm.IntegralNDMethod"
+  },
+  "NCM_INTEGRAL_ND_METHOD_CUBATURE_P_V": {
+    "nick": "p-v",
+    "type": "Ncm.IntegralNDMethod"
+  },
+  "NCM_LH_RATIO1D_ROOT_BRACKET": {
+    "nick": "bracket",
+    "type": "Ncm.LHRatio1dRoot"
+  },
+  "NCM_LH_RATIO1D_ROOT_NUMDIFF": {
+    "nick": "numdiff",
+    "type": "Ncm.LHRatio1dRoot"
+  },
+  "NCM_LH_RATIO2D_ROOT_BRACKET": {
+    "nick": "bracket",
+    "type": "Ncm.LHRatio2dRoot"
+  },
+  "NCM_LH_RATIO2D_ROOT_NUMDIFF": {
+    "nick": "numdiff",
+    "type": "Ncm.LHRatio2dRoot"
+  },
+  "NCM_MATRIX_DERIVED": {
+    "nick": "derived",
+    "type": "Ncm.MatrixInternal"
+  },
+  "NCM_MATRIX_GARRAY": {
+    "nick": "garray",
+    "type": "Ncm.MatrixInternal"
+  },
+  "NCM_MATRIX_GSL_MATRIX": {
+    "nick": "gsl-matrix",
+    "type": "Ncm.MatrixInternal"
+  },
+  "NCM_MATRIX_MALLOC": {
+    "nick": "malloc",
+    "type": "Ncm.MatrixInternal"
+  },
+  "NCM_MATRIX_SLICE": {
+    "nick": "slice",
+    "type": "Ncm.MatrixInternal"
+  },
+  "NCM_MODEL_ERROR_INVALID_TYPE": {
+    "nick": "invalid-type",
+    "type": "Ncm.ModelError"
+  },
+  "NCM_MODEL_ERROR_ORIG_PARAM_NAME_NOT_FOUND": {
+    "nick": "orig-param-name-not-found",
+    "type": "Ncm.ModelError"
+  },
+  "NCM_MODEL_ERROR_PARAM_CHANGED": {
+    "nick": "param-changed",
+    "type": "Ncm.ModelError"
+  },
+  "NCM_MODEL_ERROR_PARAM_ID_OUT_OF_RANGE": {
+    "nick": "param-id-out-of-range",
+    "type": "Ncm.ModelError"
+  },
+  "NCM_MODEL_ERROR_PARAM_INVALID_KEY": {
+    "nick": "param-invalid-key",
+    "type": "Ncm.ModelError"
+  },
+  "NCM_MODEL_ERROR_PARAM_INVALID_TYPE": {
+    "nick": "param-invalid-type",
+    "type": "Ncm.ModelError"
+  },
+  "NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND": {
+    "nick": "param-name-not-found",
+    "type": "Ncm.ModelError"
+  },
+  "NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE": {
+    "nick": "reparam-incompatible",
+    "type": "Ncm.ModelError"
+  },
+  "NCM_MODEL_FUNNEL_NU": {
+    "nick": "nu",
+    "type": "Ncm.ModelFunnelSParams"
+  },
+  "NCM_MODEL_FUNNEL_X": {
+    "nick": "x",
+    "type": "Ncm.ModelFunnelVParams"
+  },
+  "NCM_MODEL_MVND_MEAN": {
+    "nick": "mean",
+    "type": "Ncm.ModelMVNDVParams"
+  },
+  "NCM_MODEL_ROSENBROCK_X1": {
+    "nick": "x1",
+    "type": "Ncm.ModelRosenbrockSParams"
+  },
+  "NCM_MODEL_ROSENBROCK_X2": {
+    "nick": "x2",
+    "type": "Ncm.ModelRosenbrockSParams"
+  },
+  "NCM_MPI_CTRL_SLAVE_FREE": {
+    "nick": "free",
+    "type": "Ncm.MPIJobCtrlMsg"
+  },
+  "NCM_MPI_CTRL_SLAVE_INIT": {
+    "nick": "init",
+    "type": "Ncm.MPIJobCtrlMsg"
+  },
+  "NCM_MPI_CTRL_SLAVE_KILL": {
+    "nick": "kill",
+    "type": "Ncm.MPIJobCtrlMsg"
+  },
+  "NCM_MPI_CTRL_SLAVE_WORK": {
+    "nick": "work",
+    "type": "Ncm.MPIJobCtrlMsg"
+  },
+  "NCM_MPI_CTRL_TAG_CMD": {
+    "nick": "cmd",
+    "type": "Ncm.MPIJobCtrlTag"
+  },
+  "NCM_MPI_CTRL_TAG_JOB": {
+    "nick": "job",
+    "type": "Ncm.MPIJobCtrlTag"
+  },
+  "NCM_MPI_CTRL_TAG_WORK_INPUT": {
+    "nick": "work-input",
+    "type": "Ncm.MPIJobCtrlTag"
+  },
+  "NCM_MPI_CTRL_TAG_WORK_RETURN": {
+    "nick": "work-return",
+    "type": "Ncm.MPIJobCtrlTag"
+  },
+  "NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID": {
+    "nick": "ellipsoid",
+    "type": "Ncm.MSetCatalogPostNormMethod"
+  },
+  "NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX": {
+    "nick": "hyperbox",
+    "type": "Ncm.MSetCatalogPostNormMethod"
+  },
+  "NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS": {
+    "nick": "hyperbox-bs",
+    "type": "Ncm.MSetCatalogPostNormMethod"
+  },
+  "NCM_MSET_CATALOG_SYNC_AUTO": {
+    "nick": "auto",
+    "type": "Ncm.MSetCatalogSync"
+  },
+  "NCM_MSET_CATALOG_SYNC_DISABLE": {
+    "nick": "disable",
+    "type": "Ncm.MSetCatalogSync"
+  },
+  "NCM_MSET_CATALOG_SYNC_TIMED": {
+    "nick": "timed",
+    "type": "Ncm.MSetCatalogSync"
+  },
+  "NCM_MSET_CATALOG_TAU_METHOD_ACOR": {
+    "nick": "acor",
+    "type": "Ncm.MSetCatalogTauMethod"
+  },
+  "NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL": {
+    "nick": "ar-model",
+    "type": "Ncm.MSetCatalogTauMethod"
+  },
+  "NCM_MSET_CATALOG_TRIM_TYPE_ALL": {
+    "nick": "all",
+    "type": "Ncm.MSetCatalogTrimType"
+  },
+  "NCM_MSET_CATALOG_TRIM_TYPE_CK": {
+    "nick": "ck",
+    "type": "Ncm.MSetCatalogTrimType"
+  },
+  "NCM_MSET_CATALOG_TRIM_TYPE_ESS": {
+    "nick": "ess",
+    "type": "Ncm.MSetCatalogTrimType"
+  },
+  "NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL": {
+    "nick": "heidel",
+    "type": "Ncm.MSetCatalogTrimType"
+  },
+  "NCM_MSET_ERROR_FULLNAME_INVALID": {
+    "nick": "fullname-invalid",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_FULLNAME_NOT_FOUND": {
+    "nick": "fullname-not-found",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_KEY_FILE_INVALID": {
+    "nick": "key-file-invalid",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_MAIN_MODEL_NOT_FOUND": {
+    "nick": "main-model-not-found",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_MODEL_ALREADY_SET": {
+    "nick": "model-already-set",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_MODEL_ID_MISMATCH": {
+    "nick": "model-id-mismatch",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_MODEL_INVALID_ID": {
+    "nick": "model-invalid-id",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_MODEL_NOT_SET": {
+    "nick": "model-not-set",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_MODEL_NOT_STACKABLE": {
+    "nick": "model-not-stackable",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_MODEL_PROPERTY_NOT_FOUND": {
+    "nick": "model-property-not-found",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_NAMESPACE_INVALID": {
+    "nick": "namespace-invalid",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_NAMESPACE_NOT_FOUND": {
+    "nick": "namespace-not-found",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_PARAM_NAME_AMBIGUOUS": {
+    "nick": "param-name-ambiguous",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_ERROR_SUBMODEL": {
+    "nick": "submodel",
+    "type": "Ncm.MSetError"
+  },
+  "NCM_MSET_TRANS_KERN_CAT_SAMPLING_CHOOSE": {
+    "nick": "choose",
+    "type": "Ncm.MSetTransKernCatSampling"
+  },
+  "NCM_MSET_TRANS_KERN_CAT_SAMPLING_KDE": {
+    "nick": "kde",
+    "type": "Ncm.MSetTransKernCatSampling"
+  },
+  "NCM_MSET_TRANS_KERN_CAT_SAMPLING_RBF_INTERP": {
+    "nick": "rbf-interp",
+    "type": "Ncm.MSetTransKernCatSampling"
+  },
+  "NCM_NNLS_UMETHOD_DGELSD": {
+    "nick": "dgelsd",
+    "type": "Ncm.NNLSUMethod"
+  },
+  "NCM_NNLS_UMETHOD_GSL": {
+    "nick": "gsl",
+    "type": "Ncm.NNLSUMethod"
+  },
+  "NCM_NNLS_UMETHOD_NORMAL": {
+    "nick": "normal",
+    "type": "Ncm.NNLSUMethod"
+  },
+  "NCM_NNLS_UMETHOD_NORMAL_LU": {
+    "nick": "normal-lu",
+    "type": "Ncm.NNLSUMethod"
+  },
+  "NCM_NNLS_UMETHOD_QR": {
+    "nick": "qr",
+    "type": "Ncm.NNLSUMethod"
+  },
+  "NCM_PARAM_TYPE_FIXED": {
+    "nick": "fixed",
+    "type": "Ncm.ParamType"
+  },
+  "NCM_PARAM_TYPE_FREE": {
+    "nick": "free",
+    "type": "Ncm.ParamType"
+  },
+  "NCM_POWSPEC_ANALYTIC_GROWTH_LCDM": {
+    "nick": "lcdm",
+    "type": "Ncm.PowspecAnalyticGrowth"
+  },
+  "NCM_POWSPEC_ANALYTIC_GROWTH_NONE": {
+    "nick": "none",
+    "type": "Ncm.PowspecAnalyticGrowth"
+  },
+  "NCM_POWSPEC_ANALYTIC_GROWTH_RATIONAL": {
+    "nick": "rational",
+    "type": "Ncm.PowspecAnalyticGrowth"
+  },
+  "NCM_POWSPEC_ANALYTIC_SHAPE_BBKS": {
+    "nick": "bbks",
+    "type": "Ncm.PowspecAnalyticShape"
+  },
+  "NCM_POWSPEC_ANALYTIC_SHAPE_POWER_LAW": {
+    "nick": "power-law",
+    "type": "Ncm.PowspecAnalyticShape"
+  },
+  "NCM_POWSPEC_ANALYTIC_SHAPE_RATIONAL": {
+    "nick": "rational",
+    "type": "Ncm.PowspecAnalyticShape"
+  },
+  "NCM_POWSPEC_FILTER_TYPE_GAUSS": {
+    "nick": "gauss",
+    "type": "Ncm.PowspecFilterType"
+  },
+  "NCM_POWSPEC_FILTER_TYPE_TOPHAT": {
+    "nick": "tophat",
+    "type": "Ncm.PowspecFilterType"
+  },
+  "NCM_SERIALIZE_OPT_AUTONAME_SER": {
+    "nick": "autoname-ser",
+    "type": "Ncm.SerializeOpt"
+  },
+  "NCM_SERIALIZE_OPT_AUTOSAVE_SER": {
+    "nick": "autosave-ser",
+    "type": "Ncm.SerializeOpt"
+  },
+  "NCM_SERIALIZE_OPT_CLEAN_DUP": {
+    "nick": "clean-dup",
+    "type": "Ncm.SerializeOpt"
+  },
+  "NCM_SERIALIZE_OPT_NONE": {
+    "nick": "none",
+    "type": "Ncm.SerializeOpt"
+  },
+  "NCM_SPHERE_MAP_COORD_SYS_CELESTIAL": {
+    "nick": "celestial",
+    "type": "Ncm.SphereMapCoordSys"
+  },
+  "NCM_SPHERE_MAP_COORD_SYS_ECLIPTIC": {
+    "nick": "ecliptic",
+    "type": "Ncm.SphereMapCoordSys"
+  },
+  "NCM_SPHERE_MAP_COORD_SYS_GALACTIC": {
+    "nick": "galactic",
+    "type": "Ncm.SphereMapCoordSys"
+  },
+  "NCM_SPHERE_MAP_ORDER_NEST": {
+    "nick": "nest",
+    "type": "Ncm.SphereMapOrder"
+  },
+  "NCM_SPHERE_MAP_ORDER_RING": {
+    "nick": "ring",
+    "type": "Ncm.SphereMapOrder"
+  },
+  "NCM_SPLINE_CURVATURE_D2": {
+    "nick": "d2",
+    "type": "Ncm.SplineCurvatureType"
+  },
+  "NCM_SPLINE_CURVATURE_GEOMETRIC": {
+    "nick": "geometric",
+    "type": "Ncm.SplineCurvatureType"
+  },
+  "NCM_SPLINE_FUNCTION_4POINTS": {
+    "nick": "function-4points",
+    "type": "Ncm.SplineFuncType"
+  },
+  "NCM_SPLINE_FUNCTION_SPLINE": {
+    "nick": "function-spline",
+    "type": "Ncm.SplineFuncType"
+  },
+  "NCM_SPLINE_FUNCTION_SPLINE_LNKNOT": {
+    "nick": "function-spline-lnknot",
+    "type": "Ncm.SplineFuncType"
+  },
+  "NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT": {
+    "nick": "function-spline-sinhknot",
+    "type": "Ncm.SplineFuncType"
+  },
+  "NCM_SPLINE_FUNC_GRID_LINEAR": {
+    "nick": "func-grid-linear",
+    "type": "Ncm.SplineFuncType"
+  },
+  "NCM_SPLINE_FUNC_GRID_LOG": {
+    "nick": "func-grid-log",
+    "type": "Ncm.SplineFuncType"
+  },
+  "NCM_SPLINE_FUNC_TEST_TYPE_COSINE": {
+    "nick": "cosine",
+    "type": "Ncm.SplineFuncTestType"
+  },
+  "NCM_SPLINE_FUNC_TEST_TYPE_EXP_SINC": {
+    "nick": "exp-sinc",
+    "type": "Ncm.SplineFuncTestType"
+  },
+  "NCM_SPLINE_FUNC_TEST_TYPE_PDF_FLAT": {
+    "nick": "flat",
+    "type": "Ncm.SplineFuncTestTypePDF"
+  },
+  "NCM_SPLINE_FUNC_TEST_TYPE_PDF_NORMAL": {
+    "nick": "normal",
+    "type": "Ncm.SplineFuncTestTypePDF"
+  },
+  "NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL": {
+    "nick": "polynomial",
+    "type": "Ncm.SplineFuncTestType"
+  },
+  "NCM_SPLINE_FUNC_TEST_TYPE_POLYNOMIAL_POS": {
+    "nick": "polynomial-pos",
+    "type": "Ncm.SplineFuncTestType"
+  },
+  "NCM_SPLINE_FUNC_TEST_TYPE_RBF": {
+    "nick": "rbf",
+    "type": "Ncm.SplineFuncTestType"
+  },
+  "NCM_SPLINE_FUNC_TEST_TYPE_USER": {
+    "nick": "user",
+    "type": "Ncm.SplineFuncTestType"
+  },
+  "NCM_SPLINE_GSL_AKIMA": {
+    "nick": "akima",
+    "type": "Ncm.SplineGslType"
+  },
+  "NCM_SPLINE_GSL_AKIMA_PERIODIC": {
+    "nick": "akima-periodic",
+    "type": "Ncm.SplineGslType"
+  },
+  "NCM_SPLINE_GSL_CSPLINE": {
+    "nick": "cspline",
+    "type": "Ncm.SplineGslType"
+  },
+  "NCM_SPLINE_GSL_CSPLINE_PERIODIC": {
+    "nick": "cspline-periodic",
+    "type": "Ncm.SplineGslType"
+  },
+  "NCM_SPLINE_GSL_LINEAR": {
+    "nick": "linear",
+    "type": "Ncm.SplineGslType"
+  },
+  "NCM_SPLINE_GSL_POLYNOMIAL": {
+    "nick": "polynomial",
+    "type": "Ncm.SplineGslType"
+  },
+  "NCM_SPLINE_RBF_TYPE_GAUSS": {
+    "nick": "gauss",
+    "type": "Ncm.SplineRBFType"
+  },
+  "NCM_SPLINE_RBF_TYPE_POSDEF_GAUSS": {
+    "nick": "posdef-gauss",
+    "type": "Ncm.SplineRBFType"
+  },
+  "NCM_STATS_DIST1D_EPDF_BW_AUTO": {
+    "nick": "auto",
+    "type": "Ncm.StatsDist1dEPDFBw"
+  },
+  "NCM_STATS_DIST1D_EPDF_BW_FIXED": {
+    "nick": "fixed",
+    "type": "Ncm.StatsDist1dEPDFBw"
+  },
+  "NCM_STATS_DIST1D_EPDF_BW_RoT": {
+    "nick": "rot",
+    "type": "Ncm.StatsDist1dEPDFBw"
+  },
+  "NCM_STATS_DIST_CV_LOO": {
+    "nick": "loo",
+    "type": "Ncm.StatsDistCV"
+  },
+  "NCM_STATS_DIST_CV_NONE": {
+    "nick": "none",
+    "type": "Ncm.StatsDistCV"
+  },
+  "NCM_STATS_DIST_CV_SPLIT": {
+    "nick": "split",
+    "type": "Ncm.StatsDistCV"
+  },
+  "NCM_STATS_DIST_CV_SPLIT_NOFIT": {
+    "nick": "split-nofit",
+    "type": "Ncm.StatsDistCV"
+  },
+  "NCM_STATS_DIST_KDE_COV_TYPE_FIXED": {
+    "nick": "fixed",
+    "type": "Ncm.StatsDistKDECovType"
+  },
+  "NCM_STATS_DIST_KDE_COV_TYPE_ROBUST": {
+    "nick": "robust",
+    "type": "Ncm.StatsDistKDECovType"
+  },
+  "NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG": {
+    "nick": "robust-diag",
+    "type": "Ncm.StatsDistKDECovType"
+  },
+  "NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE": {
+    "nick": "sample",
+    "type": "Ncm.StatsDistKDECovType"
+  },
+  "NCM_STATS_VEC_AR_AIC": {
+    "nick": "aic",
+    "type": "Ncm.StatsVecARType"
+  },
+  "NCM_STATS_VEC_AR_AICC": {
+    "nick": "aicc",
+    "type": "Ncm.StatsVecARType"
+  },
+  "NCM_STATS_VEC_AR_FPE": {
+    "nick": "fpe",
+    "type": "Ncm.StatsVecARType"
+  },
+  "NCM_STATS_VEC_AR_NONE": {
+    "nick": "none",
+    "type": "Ncm.StatsVecARType"
+  },
+  "NCM_STATS_VEC_COV": {
+    "nick": "cov",
+    "type": "Ncm.StatsVecType"
+  },
+  "NCM_STATS_VEC_MEAN": {
+    "nick": "mean",
+    "type": "Ncm.StatsVecType"
+  },
+  "NCM_STATS_VEC_VAR": {
+    "nick": "var",
+    "type": "Ncm.StatsVecType"
+  },
+  "NCM_VECTOR_ARRAY": {
+    "nick": "array",
+    "type": "Ncm.VectorInternal"
+  },
+  "NCM_VECTOR_DERIVED": {
+    "nick": "derived",
+    "type": "Ncm.VectorInternal"
+  },
+  "NCM_VECTOR_GSL_VECTOR": {
+    "nick": "gsl-vector",
+    "type": "Ncm.VectorInternal"
+  },
+  "NCM_VECTOR_MALLOC": {
+    "nick": "malloc",
+    "type": "Ncm.VectorInternal"
+  },
+  "NCM_VECTOR_SLICE": {
+    "nick": "slice",
+    "type": "Ncm.VectorInternal"
+  },
+  "NC_BBN_IMPL_DH": {
+    "nick": "dh",
+    "type": "Nc.BBNImpl"
+  },
+  "NC_BBN_IMPL_He3H": {
+    "nick": "he3h",
+    "type": "Nc.BBNImpl"
+  },
+  "NC_BBN_IMPL_Li7H": {
+    "nick": "li7h",
+    "type": "Nc.BBNImpl"
+  },
+  "NC_BBN_IMPL_Yp_4He": {
+    "nick": "yp-4he",
+    "type": "Nc.BBNImpl"
+  },
+  "NC_BBN_IMPL_get_domain": {
+    "nick": "get-domain",
+    "type": "Nc.BBNImpl"
+  },
+  "NC_BBN_PARAMETRIZED_YP_4HE": {
+    "nick": "yp-4he",
+    "type": "Nc.BBNParametrizedSParams"
+  },
+  "NC_BBN_PARTHENOPE_TABLE_LEGACY": {
+    "nick": "legacy",
+    "type": "Nc.BBNParthenopeTable"
+  },
+  "NC_BBN_PARTHENOPE_TABLE_PLANCK2017": {
+    "nick": "planck2017",
+    "type": "Nc.BBNParthenopeTable"
+  },
+  "NC_BBN_PARTHENOPE_TABLE_PLANCK2017_MARCUCCI": {
+    "nick": "planck2017-marcucci",
+    "type": "Nc.BBNParthenopeTable"
+  },
+  "NC_CLUSTER_MASS_ASCASO_MU_P0": {
+    "nick": "mu-p0",
+    "type": "Nc.ClusterMassAscasoSParams"
+  },
+  "NC_CLUSTER_MASS_ASCASO_MU_P1": {
+    "nick": "mu-p1",
+    "type": "Nc.ClusterMassAscasoSParams"
+  },
+  "NC_CLUSTER_MASS_ASCASO_MU_P2": {
+    "nick": "mu-p2",
+    "type": "Nc.ClusterMassAscasoSParams"
+  },
+  "NC_CLUSTER_MASS_ASCASO_SIGMA_P0": {
+    "nick": "sigma-p0",
+    "type": "Nc.ClusterMassAscasoSParams"
+  },
+  "NC_CLUSTER_MASS_ASCASO_SIGMA_P1": {
+    "nick": "sigma-p1",
+    "type": "Nc.ClusterMassAscasoSParams"
+  },
+  "NC_CLUSTER_MASS_ASCASO_SIGMA_P2": {
+    "nick": "sigma-p2",
+    "type": "Nc.ClusterMassAscasoSParams"
+  },
+  "NC_CLUSTER_MASS_BENSON_A_SZ": {
+    "nick": "a-sz",
+    "type": "Nc.ClusterMassBensonSParams"
+  },
+  "NC_CLUSTER_MASS_BENSON_B_SZ": {
+    "nick": "b-sz",
+    "type": "Nc.ClusterMassBensonSParams"
+  },
+  "NC_CLUSTER_MASS_BENSON_C_SZ": {
+    "nick": "c-sz",
+    "type": "Nc.ClusterMassBensonSParams"
+  },
+  "NC_CLUSTER_MASS_BENSON_D_SZ": {
+    "nick": "d-sz",
+    "type": "Nc.ClusterMassBensonSParams"
+  },
+  "NC_CLUSTER_MASS_BENSON_XRAY_A_X": {
+    "nick": "a-x",
+    "type": "Nc.ClusterMassBensonXRaySParams"
+  },
+  "NC_CLUSTER_MASS_BENSON_XRAY_B_X": {
+    "nick": "b-x",
+    "type": "Nc.ClusterMassBensonXRaySParams"
+  },
+  "NC_CLUSTER_MASS_BENSON_XRAY_C_X": {
+    "nick": "c-x",
+    "type": "Nc.ClusterMassBensonXRaySParams"
+  },
+  "NC_CLUSTER_MASS_BENSON_XRAY_D_X": {
+    "nick": "d-x",
+    "type": "Nc.ClusterMassBensonXRaySParams"
+  },
+  "NC_CLUSTER_MASS_EXT_MU_P0": {
+    "nick": "mu-p0",
+    "type": "Nc.ClusterMassExtSParams"
+  },
+  "NC_CLUSTER_MASS_EXT_MU_P1": {
+    "nick": "mu-p1",
+    "type": "Nc.ClusterMassExtSParams"
+  },
+  "NC_CLUSTER_MASS_EXT_MU_P2": {
+    "nick": "mu-p2",
+    "type": "Nc.ClusterMassExtSParams"
+  },
+  "NC_CLUSTER_MASS_EXT_MU_P3": {
+    "nick": "mu-p3",
+    "type": "Nc.ClusterMassExtSParams"
+  },
+  "NC_CLUSTER_MASS_EXT_SIGMA_P0": {
+    "nick": "sigma-p0",
+    "type": "Nc.ClusterMassExtSParams"
+  },
+  "NC_CLUSTER_MASS_EXT_SIGMA_P1": {
+    "nick": "sigma-p1",
+    "type": "Nc.ClusterMassExtSParams"
+  },
+  "NC_CLUSTER_MASS_EXT_SIGMA_P2": {
+    "nick": "sigma-p2",
+    "type": "Nc.ClusterMassExtSParams"
+  },
+  "NC_CLUSTER_MASS_INTP": {
+    "nick": "intp",
+    "type": "Nc.ClusterMassImpl"
+  },
+  "NC_CLUSTER_MASS_LNNORMAL_BIAS": {
+    "nick": "bias",
+    "type": "Nc.ClusterMassLnnormalSParams"
+  },
+  "NC_CLUSTER_MASS_LNNORMAL_SIGMA": {
+    "nick": "sigma",
+    "type": "Nc.ClusterMassLnnormalSParams"
+  },
+  "NC_CLUSTER_MASS_N_LIMITS": {
+    "nick": "n-limits",
+    "type": "Nc.ClusterMassImpl"
+  },
+  "NC_CLUSTER_MASS_P": {
+    "nick": "p",
+    "type": "Nc.ClusterMassImpl"
+  },
+  "NC_CLUSTER_MASS_PLCL_A_L": {
+    "nick": "a-l",
+    "type": "Nc.ClusterMassPlCLSParams"
+  },
+  "NC_CLUSTER_MASS_PLCL_A_SZ": {
+    "nick": "a-sz",
+    "type": "Nc.ClusterMassPlCLSParams"
+  },
+  "NC_CLUSTER_MASS_PLCL_B_L": {
+    "nick": "b-l",
+    "type": "Nc.ClusterMassPlCLSParams"
+  },
+  "NC_CLUSTER_MASS_PLCL_B_SZ": {
+    "nick": "b-sz",
+    "type": "Nc.ClusterMassPlCLSParams"
+  },
+  "NC_CLUSTER_MASS_PLCL_COR": {
+    "nick": "cor",
+    "type": "Nc.ClusterMassPlCLSParams"
+  },
+  "NC_CLUSTER_MASS_PLCL_SD_L": {
+    "nick": "sd-l",
+    "type": "Nc.ClusterMassPlCLSParams"
+  },
+  "NC_CLUSTER_MASS_PLCL_SD_SZ": {
+    "nick": "sd-sz",
+    "type": "Nc.ClusterMassPlCLSParams"
+  },
+  "NC_CLUSTER_MASS_P_LIMITS": {
+    "nick": "p-limits",
+    "type": "Nc.ClusterMassImpl"
+  },
+  "NC_CLUSTER_MASS_RESAMPLE": {
+    "nick": "resample",
+    "type": "Nc.ClusterMassImpl"
+  },
+  "NC_CLUSTER_MASS_RICHNESS_CUT": {
+    "nick": "cut",
+    "type": "Nc.ClusterMassRichnessSParams"
+  },
+  "NC_CLUSTER_MASS_SELECTION_CUT": {
+    "nick": "cut",
+    "type": "Nc.ClusterMassSelectionSParams"
+  },
+  "NC_CLUSTER_MASS_SELECTION_MU_P0": {
+    "nick": "mu-p0",
+    "type": "Nc.ClusterMassSelectionSParams"
+  },
+  "NC_CLUSTER_MASS_SELECTION_MU_P1": {
+    "nick": "mu-p1",
+    "type": "Nc.ClusterMassSelectionSParams"
+  },
+  "NC_CLUSTER_MASS_SELECTION_MU_P2": {
+    "nick": "mu-p2",
+    "type": "Nc.ClusterMassSelectionSParams"
+  },
+  "NC_CLUSTER_MASS_SELECTION_SIGMA_P0": {
+    "nick": "sigma-p0",
+    "type": "Nc.ClusterMassSelectionSParams"
+  },
+  "NC_CLUSTER_MASS_SELECTION_SIGMA_P1": {
+    "nick": "sigma-p1",
+    "type": "Nc.ClusterMassSelectionSParams"
+  },
+  "NC_CLUSTER_MASS_SELECTION_SIGMA_P2": {
+    "nick": "sigma-p2",
+    "type": "Nc.ClusterMassSelectionSParams"
+  },
+  "NC_CLUSTER_MASS_VANDERLINDE_A_SZ": {
+    "nick": "a-sz",
+    "type": "Nc.ClusterMassVanderlindeSParams"
+  },
+  "NC_CLUSTER_MASS_VANDERLINDE_B_SZ": {
+    "nick": "b-sz",
+    "type": "Nc.ClusterMassVanderlindeSParams"
+  },
+  "NC_CLUSTER_MASS_VANDERLINDE_C_SZ": {
+    "nick": "c-sz",
+    "type": "Nc.ClusterMassVanderlindeSParams"
+  },
+  "NC_CLUSTER_MASS_VANDERLINDE_D_SZ": {
+    "nick": "d-sz",
+    "type": "Nc.ClusterMassVanderlindeSParams"
+  },
+  "NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0": {
+    "nick": "sigma0",
+    "type": "Nc.ClusterPhotozGaussGlobalSParams"
+  },
+  "NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS": {
+    "nick": "z-bias",
+    "type": "Nc.ClusterPhotozGaussGlobalSParams"
+  },
+  "NC_CLUSTER_PSEUDO_COUNTS_DELTAZ": {
+    "nick": "deltaz",
+    "type": "Nc.ClusterPseudoCountsSParams"
+  },
+  "NC_CLUSTER_PSEUDO_COUNTS_LNMCUT": {
+    "nick": "lnmcut",
+    "type": "Nc.ClusterPseudoCountsSParams"
+  },
+  "NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT": {
+    "nick": "sd-mcut",
+    "type": "Nc.ClusterPseudoCountsSParams"
+  },
+  "NC_CLUSTER_PSEUDO_COUNTS_ZMIN": {
+    "nick": "zmin",
+    "type": "Nc.ClusterPseudoCountsSParams"
+  },
+  "NC_CLUSTER_REDSHIFT_INTP": {
+    "nick": "intp",
+    "type": "Nc.ClusterRedshiftImpl"
+  },
+  "NC_CLUSTER_REDSHIFT_N_LIMTS": {
+    "nick": "n-limts",
+    "type": "Nc.ClusterRedshiftImpl"
+  },
+  "NC_CLUSTER_REDSHIFT_P": {
+    "nick": "p",
+    "type": "Nc.ClusterRedshiftImpl"
+  },
+  "NC_CLUSTER_REDSHIFT_P_LIMITS": {
+    "nick": "p-limits",
+    "type": "Nc.ClusterRedshiftImpl"
+  },
+  "NC_CLUSTER_REDSHIFT_RESAMPLE": {
+    "nick": "resample",
+    "type": "Nc.ClusterRedshiftImpl"
+  },
+  "NC_DATA_BAO_A_EISENSTEIN2005": {
+    "nick": "a-eisenstein2005",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015": {
+    "nick": "dhr-dar-sdss-dr11-2015",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015_LYAF_AUTO_CROSS": {
+    "nick": "dhr-dar-sdss-dr11-2015-lyaf-auto-cross",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DMR_HR_SDSS_DR12_2016": {
+    "nick": "dmr-hr-sdss-dr12-2016",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DTR_DHR_DESI_DR1_LYA_2025": {
+    "nick": "dtr-dhr-desi-dr1-lya-2025",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE": {
+    "nick": "dtr-dhr-sdss-dr12-2016-dr16-compatible",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DTR_DHR_SDSS_DR16_LRG_2021": {
+    "nick": "dtr-dhr-sdss-dr16-lrg-2021",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DTR_DHR_SDSS_DR16_QSO_2021": {
+    "nick": "dtr-dhr-sdss-dr16-qso-2021",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DVDV_PERCIVAL2007": {
+    "nick": "dvdv-percival2007",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DVDV_PERCIVAL2010": {
+    "nick": "dvdv-percival2010",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DVR_DTDH_DESI_DR1_2024": {
+    "nick": "dvr-dtdh-desi-dr1-2024",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DVR_DTDH_DESI_DR2_2025": {
+    "nick": "dvr-dtdh-desi-dr2-2025",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_DV_EISENSTEIN2005": {
+    "nick": "dv-eisenstein2005",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_EMPIRICAL_FIT_1D_SDSS_DR16_ELG_2021": {
+    "nick": "empirical-fit-1d-sdss-dr16-elg-2021",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_EMPIRICAL_FIT_2D_BAUTISTA2017": {
+    "nick": "empirical-fit-2d-bautista2017",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_EMPIRICAL_FIT_2D_SDSS_DR16_LYAUTO_2021": {
+    "nick": "empirical-fit-2d-sdss-dr16-lyauto-2021",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_EMPIRICAL_FIT_2D_SDSS_DR16_LYXQSO_2021": {
+    "nick": "empirical-fit-2d-sdss-dr16-lyxqso-2021",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015": {
+    "nick": "empirical-fit-ross2015",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_RDV_ANDERSON2012": {
+    "nick": "rdv-anderson2012",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_RDV_BEUTLER2011": {
+    "nick": "rdv-beutler2011",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_RDV_BLAKE2012": {
+    "nick": "rdv-blake2012",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_RDV_BOSS_QSO_ATA2017": {
+    "nick": "rdv-boss-qso-ata2017",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_RDV_DESI_DR1_BGS_QSO_2024": {
+    "nick": "rdv-desi-dr1-bgs-qso-2024",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_RDV_DESI_DR2_BGS_2025": {
+    "nick": "rdv-desi-dr2-bgs-2025",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_RDV_KAZIN2014": {
+    "nick": "rdv-kazin2014",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_RDV_PADMANABHAN2012": {
+    "nick": "rdv-padmanabhan2012",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_RDV_PERCIVAL2007": {
+    "nick": "rdv-percival2007",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_BAO_RDV_PERCIVAL2010": {
+    "nick": "rdv-percival2010",
+    "type": "Nc.DataBaoId"
+  },
+  "NC_DATA_CLUSTER_ABUNDANCE_FIT": {
+    "nick": "fit",
+    "type": "Nc.DataClusterAbundanceId"
+  },
+  "NC_DATA_CLUSTER_ABUNDANCE_SAMPLING": {
+    "nick": "sampling",
+    "type": "Nc.DataClusterAbundanceId"
+  },
+  "NC_DATA_CLUSTER_ABUNDANCE_TXT": {
+    "nick": "txt",
+    "type": "Nc.DataClusterAbundanceId"
+  },
+  "NC_DATA_CLUSTER_PSEUDO_COUNTS_MCL": {
+    "nick": "mcl",
+    "type": "Nc.DataClusterPseudoCountsObs"
+  },
+  "NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL": {
+    "nick": "mpl",
+    "type": "Nc.DataClusterPseudoCountsObs"
+  },
+  "NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL": {
+    "nick": "sd-mcl",
+    "type": "Nc.DataClusterPseudoCountsObs"
+  },
+  "NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL": {
+    "nick": "sd-mpl",
+    "type": "Nc.DataClusterPseudoCountsObs"
+  },
+  "NC_DATA_CLUSTER_PSEUDO_COUNTS_Z": {
+    "nick": "z",
+    "type": "Nc.DataClusterPseudoCountsObs"
+  },
+  "NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE": {
+    "nick": "cubature",
+    "type": "Nc.DataClusterWLIntegMethod"
+  },
+  "NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES": {
+    "nick": "fixed-nodes",
+    "type": "Nc.DataClusterWLIntegMethod"
+  },
+  "NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT": {
+    "nick": "lnint",
+    "type": "Nc.DataClusterWLIntegMethod"
+  },
+  "NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL": {
+    "nick": "all",
+    "type": "Nc.DataClusterWLResampleFlag"
+  },
+  "NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_POSITION": {
+    "nick": "position",
+    "type": "Nc.DataClusterWLResampleFlag"
+  },
+  "NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_REDSHIFT": {
+    "nick": "redshift",
+    "type": "Nc.DataClusterWLResampleFlag"
+  },
+  "NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE": {
+    "nick": "shape",
+    "type": "Nc.DataClusterWLResampleFlag"
+  },
+  "NC_DATA_CMB_DIST_PRIORS_WMAP5": {
+    "nick": "dist-priors-wmap5",
+    "type": "Nc.DataCMBId"
+  },
+  "NC_DATA_CMB_DIST_PRIORS_WMAP7": {
+    "nick": "dist-priors-wmap7",
+    "type": "Nc.DataCMBId"
+  },
+  "NC_DATA_CMB_DIST_PRIORS_WMAP9": {
+    "nick": "dist-priors-wmap9",
+    "type": "Nc.DataCMBId"
+  },
+  "NC_DATA_CMB_SHIFT_PARAM_WMAP3": {
+    "nick": "shift-param-wmap3",
+    "type": "Nc.DataCMBId"
+  },
+  "NC_DATA_CMB_SHIFT_PARAM_WMAP5": {
+    "nick": "shift-param-wmap5",
+    "type": "Nc.DataCMBId"
+  },
+  "NC_DATA_CMB_SHIFT_PARAM_WMAP7": {
+    "nick": "shift-param-wmap7",
+    "type": "Nc.DataCMBId"
+  },
+  "NC_DATA_CMB_TYPE_ALL": {
+    "nick": "all",
+    "type": "Nc.DataCMBDataType"
+  },
+  "NC_DATA_CMB_TYPE_BB": {
+    "nick": "bb",
+    "type": "Nc.DataCMBDataType"
+  },
+  "NC_DATA_CMB_TYPE_EB": {
+    "nick": "eb",
+    "type": "Nc.DataCMBDataType"
+  },
+  "NC_DATA_CMB_TYPE_EE": {
+    "nick": "ee",
+    "type": "Nc.DataCMBDataType"
+  },
+  "NC_DATA_CMB_TYPE_PHIPHI": {
+    "nick": "phiphi",
+    "type": "Nc.DataCMBDataType"
+  },
+  "NC_DATA_CMB_TYPE_TB": {
+    "nick": "tb",
+    "type": "Nc.DataCMBDataType"
+  },
+  "NC_DATA_CMB_TYPE_TE": {
+    "nick": "te",
+    "type": "Nc.DataCMBDataType"
+  },
+  "NC_DATA_CMB_TYPE_TT": {
+    "nick": "tt",
+    "type": "Nc.DataCMBDataType"
+  },
+  "NC_DATA_HUBBLE_BAO_BUSCA2013": {
+    "nick": "busca2013",
+    "type": "Nc.DataHubbleBaoId"
+  },
+  "NC_DATA_HUBBLE_BORGHI2022": {
+    "nick": "borghi2022",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP": {
+    "nick": "busca2013-bao-wmap",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_CABRE": {
+    "nick": "cabre",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018": {
+    "nick": "gomez-valent-comp2018",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_JIAO2023": {
+    "nick": "jiao2023",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_JIMENEZ2023": {
+    "nick": "jimenez2023",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_MORESCO2012_BC03": {
+    "nick": "moresco2012-bc03",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_MORESCO2012_MASTRO": {
+    "nick": "moresco2012-mastro",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_MORESCO2015": {
+    "nick": "moresco2015",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_MORESCO2016_DR9_BC03": {
+    "nick": "moresco2016-dr9-bc03",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_MORESCO2016_DR9_MASTRO": {
+    "nick": "moresco2016-dr9-mastro",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_RATSIMBAZAFY2017": {
+    "nick": "ratsimbazafy2017",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_RIESS2008_HST": {
+    "nick": "riess2008-hst",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_RIESS2016_HST_WFC3": {
+    "nick": "riess2016-hst-wfc3",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_RIESS2018": {
+    "nick": "riess2018",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_SIMON2005": {
+    "nick": "simon2005",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_STERN2009": {
+    "nick": "stern2009",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_TOMASETTI2023": {
+    "nick": "tomasetti2023",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_HUBBLE_ZHANG2012": {
+    "nick": "zhang2012",
+    "type": "Nc.DataHubbleId"
+  },
+  "NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TT": {
+    "nick": "baseline-18-highl-tt",
+    "type": "Nc.DataPlanckLKLType"
+  },
+  "NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TTTEEE": {
+    "nick": "baseline-18-highl-ttteee",
+    "type": "Nc.DataPlanckLKLType"
+  },
+  "NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TTTEEE_LITE": {
+    "nick": "baseline-18-highl-ttteee-lite",
+    "type": "Nc.DataPlanckLKLType"
+  },
+  "NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_HIGHL_TT_LITE": {
+    "nick": "baseline-18-highl-tt-lite",
+    "type": "Nc.DataPlanckLKLType"
+  },
+  "NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LENSING": {
+    "nick": "baseline-18-lensing",
+    "type": "Nc.DataPlanckLKLType"
+  },
+  "NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LENSING_CMB_MARGINALIZED": {
+    "nick": "baseline-18-lensing-cmb-marginalized",
+    "type": "Nc.DataPlanckLKLType"
+  },
+  "NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_BB": {
+    "nick": "baseline-18-lowl-bb",
+    "type": "Nc.DataPlanckLKLType"
+  },
+  "NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_EE": {
+    "nick": "baseline-18-lowl-ee",
+    "type": "Nc.DataPlanckLKLType"
+  },
+  "NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_EEBB": {
+    "nick": "baseline-18-lowl-eebb",
+    "type": "Nc.DataPlanckLKLType"
+  },
+  "NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_TT": {
+    "nick": "baseline-18-lowl-tt",
+    "type": "Nc.DataPlanckLKLType"
+  },
+  "NC_DATA_PLANCK_LKL_TYPE_LENGTH": {
+    "nick": "length",
+    "type": "Nc.DataPlanckLKLType"
+  },
+  "NC_DATA_SNIA_COV_DES_Y5_STATONLY": {
+    "nick": "cov-des-y5-statonly",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_DES_Y5_STAT_SYS": {
+    "nick": "cov-des-y5-stat-sys",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_ERROR_ID_NOT_FOUND": {
+    "nick": "id-not-found",
+    "type": "Nc.DataSNIACovError"
+  },
+  "NC_DATA_SNIA_COV_ERROR_INVALID_ID": {
+    "nick": "invalid-id",
+    "type": "Nc.DataSNIACovError"
+  },
+  "NC_DATA_SNIA_COV_ERROR_INVALID_SAMPLE": {
+    "nick": "invalid-sample",
+    "type": "Nc.DataSNIACovError"
+  },
+  "NC_DATA_SNIA_COV_ERROR_UNAVAILABLE_RESAMPLE": {
+    "nick": "unavailable-resample",
+    "type": "Nc.DataSNIACovError"
+  },
+  "NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT": {
+    "nick": "cov-jla-snls3-sdss-sys-stat",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL": {
+    "nick": "cov-jla-snls3-sdss-sys-stat-cmpl",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_ORDER_COLOUR_COLOUR": {
+    "nick": "colour-colour",
+    "type": "Nc.DataSNIACovOrder"
+  },
+  "NC_DATA_SNIA_COV_ORDER_MAG_COLOUR": {
+    "nick": "mag-colour",
+    "type": "Nc.DataSNIACovOrder"
+  },
+  "NC_DATA_SNIA_COV_ORDER_MAG_MAG": {
+    "nick": "mag-mag",
+    "type": "Nc.DataSNIACovOrder"
+  },
+  "NC_DATA_SNIA_COV_ORDER_MAG_WIDTH": {
+    "nick": "mag-width",
+    "type": "Nc.DataSNIACovOrder"
+  },
+  "NC_DATA_SNIA_COV_ORDER_WIDTH_COLOUR": {
+    "nick": "width-colour",
+    "type": "Nc.DataSNIACovOrder"
+  },
+  "NC_DATA_SNIA_COV_ORDER_WIDTH_WIDTH": {
+    "nick": "width-width",
+    "type": "Nc.DataSNIACovOrder"
+  },
+  "NC_DATA_SNIA_COV_PANTHEON": {
+    "nick": "cov-pantheon",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT": {
+    "nick": "cov-pantheon-plus-sh0es-stat",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_SYS_STAT": {
+    "nick": "cov-pantheon-plus-sh0es-sys-stat",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_RESAMPLE_AUTO": {
+    "nick": "auto",
+    "type": "Nc.DataSNIACovResample"
+  },
+  "NC_DATA_SNIA_COV_RESAMPLE_FROM_COV": {
+    "nick": "from-cov",
+    "type": "Nc.DataSNIACovResample"
+  },
+  "NC_DATA_SNIA_COV_RESAMPLE_FROM_LIGHTCURVE": {
+    "nick": "from-lightcurve",
+    "type": "Nc.DataSNIACovResample"
+  },
+  "NC_DATA_SNIA_COV_SNLS3_STAT_ONLY": {
+    "nick": "cov-snls3-stat-only",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_SNLS3_SYS_STAT": {
+    "nick": "cov-snls3-sys-stat",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_SIMPLE_CfA3": {
+    "nick": "simple-cfa3",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_SIMPLE_ESSENCE": {
+    "nick": "simple-essence",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_SIMPLE_GOLD_157": {
+    "nick": "simple-gold-157",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_SIMPLE_GOLD_182": {
+    "nick": "simple-gold-182",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_SIMPLE_GOLD_182_FULL": {
+    "nick": "simple-gold-182-full",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_SIMPLE_LEGACY": {
+    "nick": "simple-legacy",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_SIMPLE_SDSS_EMILLE": {
+    "nick": "simple-sdss-emille",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_SIMPLE_UNION": {
+    "nick": "simple-union",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_SIMPLE_UNION2": {
+    "nick": "simple-union2",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_SIMPLE_UNION2_1": {
+    "nick": "simple-union2-1",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DISTANCE_COMOVING_METHOD_FROM_MODEL": {
+    "nick": "from-model",
+    "type": "Nc.DistanceComovingMethod"
+  },
+  "NC_DISTANCE_COMOVING_METHOD_INT_E": {
+    "nick": "int-e",
+    "type": "Nc.DistanceComovingMethod"
+  },
+  "NC_GALAXY_HOD_ZHENG07_ALPHA": {
+    "nick": "alpha",
+    "type": "Nc.GalaxyHODZheng07SParams"
+  },
+  "NC_GALAXY_HOD_ZHENG07_LOG_M0": {
+    "nick": "log-m0",
+    "type": "Nc.GalaxyHODZheng07SParams"
+  },
+  "NC_GALAXY_HOD_ZHENG07_LOG_M1": {
+    "nick": "log-m1",
+    "type": "Nc.GalaxyHODZheng07SParams"
+  },
+  "NC_GALAXY_HOD_ZHENG07_LOG_MMIN": {
+    "nick": "log-mmin",
+    "type": "Nc.GalaxyHODZheng07SParams"
+  },
+  "NC_GALAXY_HOD_ZHENG07_SIGMA_LOG_M": {
+    "nick": "sigma-log-m",
+    "type": "Nc.GalaxyHODZheng07SParams"
+  },
+  "NC_GALAXY_REDSHIFT_OBS_SEL_GAUSS_SIGMA0": {
+    "nick": "sigma0",
+    "type": "Nc.GalaxyRedshiftObsSelGaussSParams"
+  },
+  "NC_GALAXY_REDSHIFT_POP_LSST_SRD_ALPHA": {
+    "nick": "alpha",
+    "type": "Nc.GalaxyRedshiftPopLSSTSRDSParams"
+  },
+  "NC_GALAXY_REDSHIFT_POP_LSST_SRD_BETA": {
+    "nick": "beta",
+    "type": "Nc.GalaxyRedshiftPopLSSTSRDSParams"
+  },
+  "NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_LENS": {
+    "nick": "y10-lens",
+    "type": "Nc.GalaxyRedshiftPopLSSTSRDType"
+  },
+  "NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y10_SOURCE": {
+    "nick": "y10-source",
+    "type": "Nc.GalaxyRedshiftPopLSSTSRDType"
+  },
+  "NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_LENS": {
+    "nick": "y1-lens",
+    "type": "Nc.GalaxyRedshiftPopLSSTSRDType"
+  },
+  "NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_SOURCE": {
+    "nick": "y1-source",
+    "type": "Nc.GalaxyRedshiftPopLSSTSRDType"
+  },
+  "NC_GALAXY_REDSHIFT_POP_LSST_SRD_Z0": {
+    "nick": "z0",
+    "type": "Nc.GalaxyRedshiftPopLSSTSRDSParams"
+  },
+  "NC_GALAXY_SHAPE_FACTOR_ERROR_ELLIP_CONV_MISMATCH": {
+    "nick": "mismatch",
+    "type": "Nc.GalaxyShapeFactorError"
+  },
+  "NC_GALAXY_SHAPE_POP_BETA_ALPHA": {
+    "nick": "alpha",
+    "type": "Nc.GalaxyShapePopBetaParams"
+  },
+  "NC_GALAXY_SHAPE_POP_BETA_BETA": {
+    "nick": "beta",
+    "type": "Nc.GalaxyShapePopBetaParams"
+  },
+  "NC_GALAXY_SHAPE_POP_GAUSS_SIGMA": {
+    "nick": "sigma",
+    "type": "Nc.GalaxyShapePopGaussParams"
+  },
+  "NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_002": {
+    "nick": "hsc-pdr1-hwl16a-002",
+    "type": "Nc.GalaxyWLObsCatalogId"
+  },
+  "NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_007": {
+    "nick": "hsc-pdr1-hwl16a-007",
+    "type": "Nc.GalaxyWLObsCatalogId"
+  },
+  "NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_060": {
+    "nick": "hsc-pdr1-hwl16a-060",
+    "type": "Nc.GalaxyWLObsCatalogId"
+  },
+  "NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_064": {
+    "nick": "hsc-pdr1-hwl16a-064",
+    "type": "Nc.GalaxyWLObsCatalogId"
+  },
+  "NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_094": {
+    "nick": "hsc-pdr1-hwl16a-094",
+    "type": "Nc.GalaxyWLObsCatalogId"
+  },
+  "NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE": {
+    "nick": "trace",
+    "type": "Nc.GalaxyWLObsEllipConv"
+  },
+  "NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET": {
+    "nick": "trace-det",
+    "type": "Nc.GalaxyWLObsEllipConv"
+  },
+  "NC_HALO_CATALOG_ERROR_NO_LINKAGE": {
+    "nick": "no-linkage",
+    "type": "Nc.HaloCatalogError"
+  },
+  "NC_HALO_CATALOG_KIND_CLUSTER": {
+    "nick": "cluster",
+    "type": "Nc.HaloCatalogKind"
+  },
+  "NC_HALO_CATALOG_KIND_HALO": {
+    "nick": "halo",
+    "type": "Nc.HaloCatalogKind"
+  },
+  "NC_HALO_CATALOG_KIND_MEMBER": {
+    "nick": "member",
+    "type": "Nc.HaloCatalogKind"
+  },
+  "NC_HALO_CATALOG_MEMBER_GENERATOR_ERROR_MISSING_COLUMN": {
+    "nick": "missing-column",
+    "type": "Nc.HaloCatalogMemberGeneratorError"
+  },
+  "NC_HALO_CM_BHATTACHARYA13_LOG10M_DELTA": {
+    "nick": "delta",
+    "type": "Nc.HaloCMBhattacharya13SParams"
+  },
+  "NC_HALO_CM_DIEMER15_LOG10M_DELTA": {
+    "nick": "delta",
+    "type": "Nc.HaloCMDiemer15SParams"
+  },
+  "NC_HALO_CM_DUFFY08_LOG10M_DELTA": {
+    "nick": "delta",
+    "type": "Nc.HaloCMDuffy08SParams"
+  },
+  "NC_HALO_CM_DUTTON14_LOG10M_DELTA": {
+    "nick": "delta",
+    "type": "Nc.HaloCMDutton14SParams"
+  },
+  "NC_HALO_CM_KLYPIN11_LOG10M_DELTA": {
+    "nick": "delta",
+    "type": "Nc.HaloCMKlypin11SParams"
+  },
+  "NC_HALO_CM_PARAM_C_DELTA": {
+    "nick": "c-delta",
+    "type": "Nc.HaloCMParamSParams"
+  },
+  "NC_HALO_CM_PARAM_LOG10M_DELTA": {
+    "nick": "log10m-delta",
+    "type": "Nc.HaloCMParamSParams"
+  },
+  "NC_HALO_CM_PRADA12_LOG10M_DELTA": {
+    "nick": "delta",
+    "type": "Nc.HaloCMPrada12SParams"
+  },
+  "NC_HALO_DENSITY_PROFILE_DK14_BE": {
+    "nick": "be",
+    "type": "Nc.HaloDensityProfileDK14Params"
+  },
+  "NC_HALO_DENSITY_PROFILE_DK14_BETA": {
+    "nick": "beta",
+    "type": "Nc.HaloDensityProfileDK14Params"
+  },
+  "NC_HALO_DENSITY_PROFILE_DK14_DIRECT_RHOSRS": {
+    "nick": "direct-rhosrs",
+    "type": "Nc.HaloDensityProfileDK14MethodParams"
+  },
+  "NC_HALO_DENSITY_PROFILE_DK14_GAMMA": {
+    "nick": "gamma",
+    "type": "Nc.HaloDensityProfileDK14Params"
+  },
+  "NC_HALO_DENSITY_PROFILE_DK14_MC2RHOSRS": {
+    "nick": "mc2rhosrs",
+    "type": "Nc.HaloDensityProfileDK14MethodParams"
+  },
+  "NC_HALO_DENSITY_PROFILE_DK14_RT": {
+    "nick": "rt",
+    "type": "Nc.HaloDensityProfileDK14Params"
+  },
+  "NC_HALO_DENSITY_PROFILE_DK14_SE": {
+    "nick": "se",
+    "type": "Nc.HaloDensityProfileDK14Params"
+  },
+  "NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA": {
+    "nick": "alpha",
+    "type": "Nc.HaloDensityProfileEinastoParams"
+  },
+  "NC_HALO_MASS_FUNCTION_SPLINE_LNM": {
+    "nick": "lnm",
+    "type": "Nc.HaloMassFunctionSplineOptimize"
+  },
+  "NC_HALO_MASS_FUNCTION_SPLINE_NONE": {
+    "nick": "none",
+    "type": "Nc.HaloMassFunctionSplineOptimize"
+  },
+  "NC_HALO_MASS_FUNCTION_SPLINE_Z": {
+    "nick": "z",
+    "type": "Nc.HaloMassFunctionSplineOptimize"
+  },
+  "NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL": {
+    "nick": "critical",
+    "type": "Nc.HaloMassSummaryMassDef"
+  },
+  "NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN": {
+    "nick": "mean",
+    "type": "Nc.HaloMassSummaryMassDef"
+  },
+  "NC_HALO_MASS_SUMMARY_MASS_DEF_VIRIAL": {
+    "nick": "virial",
+    "type": "Nc.HaloMassSummaryMassDef"
+  },
+  "NC_HALO_POSITION_DEC": {
+    "nick": "dec",
+    "type": "Nc.HaloPositionSParams"
+  },
+  "NC_HALO_POSITION_RA": {
+    "nick": "ra",
+    "type": "Nc.HaloPositionSParams"
+  },
+  "NC_HALO_POSITION_Z": {
+    "nick": "z",
+    "type": "Nc.HaloPositionSParams"
+  },
+  "NC_HICOSMO_DE_CPL_W0": {
+    "nick": "w0",
+    "type": "Nc.HICosmoDECplSParams"
+  },
+  "NC_HICOSMO_DE_CPL_W1": {
+    "nick": "w1",
+    "type": "Nc.HICosmoDECplSParams"
+  },
+  "NC_HICOSMO_DE_ENNU": {
+    "nick": "ennu",
+    "type": "Nc.HICosmoDESParams"
+  },
+  "NC_HICOSMO_DE_H0": {
+    "nick": "h0",
+    "type": "Nc.HICosmoDESParams"
+  },
+  "NC_HICOSMO_DE_IMPL_E2Omega_de": {
+    "nick": "e2omega-de",
+    "type": "Nc.HICosmoDEImpl"
+  },
+  "NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2": {
+    "nick": "d2e2omega-de-dz2",
+    "type": "Nc.HICosmoDEImpl"
+  },
+  "NC_HICOSMO_DE_IMPL_dE2Omega_de_dz": {
+    "nick": "de2omega-de-dz",
+    "type": "Nc.HICosmoDEImpl"
+  },
+  "NC_HICOSMO_DE_IMPL_w_de": {
+    "nick": "w-de",
+    "type": "Nc.HICosmoDEImpl"
+  },
+  "NC_HICOSMO_DE_JBP_W0": {
+    "nick": "w0",
+    "type": "Nc.HICosmoDEJbpSParams"
+  },
+  "NC_HICOSMO_DE_JBP_W1": {
+    "nick": "w1",
+    "type": "Nc.HICosmoDEJbpSParams"
+  },
+  "NC_HICOSMO_DE_MASSNU_G": {
+    "nick": "g",
+    "type": "Nc.HICosmoDEVParams"
+  },
+  "NC_HICOSMO_DE_MASSNU_M": {
+    "nick": "m",
+    "type": "Nc.HICosmoDEVParams"
+  },
+  "NC_HICOSMO_DE_MASSNU_MU": {
+    "nick": "mu",
+    "type": "Nc.HICosmoDEVParams"
+  },
+  "NC_HICOSMO_DE_MASSNU_T": {
+    "nick": "t",
+    "type": "Nc.HICosmoDEVParams"
+  },
+  "NC_HICOSMO_DE_OMEGA_B": {
+    "nick": "omega-b",
+    "type": "Nc.HICosmoDESParams"
+  },
+  "NC_HICOSMO_DE_OMEGA_C": {
+    "nick": "omega-c",
+    "type": "Nc.HICosmoDESParams"
+  },
+  "NC_HICOSMO_DE_OMEGA_X": {
+    "nick": "omega-x",
+    "type": "Nc.HICosmoDESParams"
+  },
+  "NC_HICOSMO_DE_T_GAMMA0": {
+    "nick": "t-gamma0",
+    "type": "Nc.HICosmoDESParams"
+  },
+  "NC_HICOSMO_DE_WSPLINE_W": {
+    "nick": "w",
+    "type": "Nc.HICosmoDEWSplineVParams"
+  },
+  "NC_HICOSMO_DE_XCDM_W": {
+    "nick": "w",
+    "type": "Nc.HICosmoDEXCDMSParams"
+  },
+  "NC_HICOSMO_IMPL_Dc": {
+    "nick": "dc",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2": {
+    "nick": "e2",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2Omega_b": {
+    "nick": "e2omega-b",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2Omega_c": {
+    "nick": "e2omega-c",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2Omega_g": {
+    "nick": "e2omega-g",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2Omega_m": {
+    "nick": "e2omega-m",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2Omega_mnu": {
+    "nick": "e2omega-mnu",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2Omega_mnu_n": {
+    "nick": "e2omega-mnu-n",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2Omega_nu": {
+    "nick": "e2omega-nu",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2Omega_r": {
+    "nick": "e2omega-r",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2Omega_t": {
+    "nick": "e2omega-t",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2Press_mnu": {
+    "nick": "e2press-mnu",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_E2Press_mnu_n": {
+    "nick": "e2press-mnu-n",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_H0": {
+    "nick": "h0",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_MassNuInfo": {
+    "nick": "massnuinfo",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_NMassNu": {
+    "nick": "nmassnu",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Omega_b0": {
+    "nick": "omega-b0",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Omega_c0": {
+    "nick": "omega-c0",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Omega_g0": {
+    "nick": "omega-g0",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Omega_m0": {
+    "nick": "omega-m0",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Omega_mnu0": {
+    "nick": "omega-mnu0",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Omega_mnu0_n": {
+    "nick": "omega-mnu0-n",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Omega_nu0": {
+    "nick": "omega-nu0",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Omega_r0": {
+    "nick": "omega-r0",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Omega_t0": {
+    "nick": "omega-t0",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Press_mnu0": {
+    "nick": "press-mnu0",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Press_mnu0_n": {
+    "nick": "press-mnu0-n",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_T_gamma0": {
+    "nick": "t-gamma0",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_Yp_4He": {
+    "nick": "yp-4he",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_as_drag": {
+    "nick": "as-drag",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_bgp_cs2": {
+    "nick": "bgp-cs2",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_d2E2_dz2": {
+    "nick": "d2e2-dz2",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_dE2_dz": {
+    "nick": "de2-dz",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_get_bg_var": {
+    "nick": "get-bg-var",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_xb": {
+    "nick": "xb",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_IMPL_z_lss": {
+    "nick": "z-lss",
+    "type": "Nc.HICosmoImpl"
+  },
+  "NC_HICOSMO_QCONST_CD": {
+    "nick": "cd",
+    "type": "Nc.HICosmoQConstSParams"
+  },
+  "NC_HICOSMO_QCONST_E": {
+    "nick": "e",
+    "type": "Nc.HICosmoQConstSParams"
+  },
+  "NC_HICOSMO_QCONST_H0": {
+    "nick": "h0",
+    "type": "Nc.HICosmoQConstSParams"
+  },
+  "NC_HICOSMO_QCONST_OMEGA_T": {
+    "nick": "omega-t",
+    "type": "Nc.HICosmoQConstSParams"
+  },
+  "NC_HICOSMO_QCONST_Q": {
+    "nick": "q",
+    "type": "Nc.HICosmoQConstSParams"
+  },
+  "NC_HICOSMO_QCONST_Z1": {
+    "nick": "z1",
+    "type": "Nc.HICosmoQConstSParams"
+  },
+  "NC_HICOSMO_QGRW_H0": {
+    "nick": "h0",
+    "type": "Nc.HICosmoQGRWSParams"
+  },
+  "NC_HICOSMO_QGRW_OMEGA_R": {
+    "nick": "omega-r",
+    "type": "Nc.HICosmoQGRWSParams"
+  },
+  "NC_HICOSMO_QGRW_OMEGA_W": {
+    "nick": "omega-w",
+    "type": "Nc.HICosmoQGRWSParams"
+  },
+  "NC_HICOSMO_QGRW_W": {
+    "nick": "w",
+    "type": "Nc.HICosmoQGRWSParams"
+  },
+  "NC_HICOSMO_QGRW_X_B": {
+    "nick": "x-b",
+    "type": "Nc.HICosmoQGRWSParams"
+  },
+  "NC_HICOSMO_QGW_H0": {
+    "nick": "h0",
+    "type": "Nc.HICosmoQGWSParams"
+  },
+  "NC_HICOSMO_QGW_OMEGA_W": {
+    "nick": "omega-w",
+    "type": "Nc.HICosmoQGWSParams"
+  },
+  "NC_HICOSMO_QGW_W": {
+    "nick": "w",
+    "type": "Nc.HICosmoQGWSParams"
+  },
+  "NC_HICOSMO_QGW_X_B": {
+    "nick": "x-b",
+    "type": "Nc.HICosmoQGWSParams"
+  },
+  "NC_HICOSMO_QLINEAR_CD": {
+    "nick": "cd",
+    "type": "Nc.HICosmoQLinearSParams"
+  },
+  "NC_HICOSMO_QLINEAR_E": {
+    "nick": "e",
+    "type": "Nc.HICosmoQLinearSParams"
+  },
+  "NC_HICOSMO_QLINEAR_H0": {
+    "nick": "h0",
+    "type": "Nc.HICosmoQLinearSParams"
+  },
+  "NC_HICOSMO_QLINEAR_OMEGA_T": {
+    "nick": "omega-t",
+    "type": "Nc.HICosmoQLinearSParams"
+  },
+  "NC_HICOSMO_QLINEAR_Q": {
+    "nick": "q",
+    "type": "Nc.HICosmoQLinearSParams"
+  },
+  "NC_HICOSMO_QLINEAR_QP": {
+    "nick": "qp",
+    "type": "Nc.HICosmoQLinearSParams"
+  },
+  "NC_HICOSMO_QLINEAR_Z1": {
+    "nick": "z1",
+    "type": "Nc.HICosmoQLinearSParams"
+  },
+  "NC_HICOSMO_QRBF_AS_DRAG": {
+    "nick": "as-drag",
+    "type": "Nc.HICosmoQRBFSParams"
+  },
+  "NC_HICOSMO_QRBF_H0": {
+    "nick": "h0",
+    "type": "Nc.HICosmoQRBFSParams"
+  },
+  "NC_HICOSMO_QRBF_OMEGA_T": {
+    "nick": "omega-t",
+    "type": "Nc.HICosmoQRBFSParams"
+  },
+  "NC_HICOSMO_QRBF_RBF_CENTERS": {
+    "nick": "centers",
+    "type": "Nc.HICosmoQRBFVParams"
+  },
+  "NC_HICOSMO_QRBF_RBF_COEFFS": {
+    "nick": "coeffs",
+    "type": "Nc.HICosmoQRBFVParams"
+  },
+  "NC_HICOSMO_QRBF_RBF_H": {
+    "nick": "rbf-h",
+    "type": "Nc.HICosmoQRBFSParams"
+  },
+  "NC_HICOSMO_QSPLINE_AS_DRAG": {
+    "nick": "as-drag",
+    "type": "Nc.HICosmoQSplineSParams"
+  },
+  "NC_HICOSMO_QSPLINE_H0": {
+    "nick": "h0",
+    "type": "Nc.HICosmoQSplineSParams"
+  },
+  "NC_HICOSMO_QSPLINE_OMEGA_T": {
+    "nick": "omega-t",
+    "type": "Nc.HICosmoQSplineSParams"
+  },
+  "NC_HICOSMO_QSPLINE_Q": {
+    "nick": "q",
+    "type": "Nc.HICosmoQSplineVParams"
+  },
+  "NC_HICOSMO_SPLINE_KNOTS_CHEBYSHEV": {
+    "nick": "chebyshev",
+    "type": "Nc.HICosmoSplineKnots"
+  },
+  "NC_HICOSMO_SPLINE_KNOTS_UNIFORM": {
+    "nick": "uniform",
+    "type": "Nc.HICosmoSplineKnots"
+  },
+  "NC_HICOSMO_VEXP_ALPHA_B": {
+    "nick": "alpha-b",
+    "type": "Nc.HICosmoVexpSParams"
+  },
+  "NC_HICOSMO_VEXP_D_PHI": {
+    "nick": "d-phi",
+    "type": "Nc.HICosmoVexpSParams"
+  },
+  "NC_HICOSMO_VEXP_EM_ALPHA": {
+    "nick": "em-alpha",
+    "type": "Nc.HICosmoVexpSParams"
+  },
+  "NC_HICOSMO_VEXP_EM_BETA": {
+    "nick": "em-beta",
+    "type": "Nc.HICosmoVexpSParams"
+  },
+  "NC_HICOSMO_VEXP_EM_COUPLING_CAUCHY": {
+    "nick": "cauchy",
+    "type": "Nc.HICosmoVexpEMCoupling"
+  },
+  "NC_HICOSMO_VEXP_EM_COUPLING_GAUSS": {
+    "nick": "gauss",
+    "type": "Nc.HICosmoVexpEMCoupling"
+  },
+  "NC_HICOSMO_VEXP_EM_COUPLING_INVALID": {
+    "nick": "invalid",
+    "type": "Nc.HICosmoVexpEMCoupling"
+  },
+  "NC_HICOSMO_VEXP_EM_COUPLING_NONE": {
+    "nick": "none",
+    "type": "Nc.HICosmoVexpEMCoupling"
+  },
+  "NC_HICOSMO_VEXP_H0": {
+    "nick": "h0",
+    "type": "Nc.HICosmoVexpSParams"
+  },
+  "NC_HICOSMO_VEXP_OMEGA_C": {
+    "nick": "omega-c",
+    "type": "Nc.HICosmoVexpSParams"
+  },
+  "NC_HICOSMO_VEXP_OMEGA_L": {
+    "nick": "omega-l",
+    "type": "Nc.HICosmoVexpSParams"
+  },
+  "NC_HICOSMO_VEXP_SIGMA_PHI": {
+    "nick": "sigma-phi",
+    "type": "Nc.HICosmoVexpSParams"
+  },
+  "NC_HICOSMO_VEXP_X_B": {
+    "nick": "x-b",
+    "type": "Nc.HICosmoVexpSParams"
+  },
+  "NC_HIPERT_ADIAB_IM_PZETA": {
+    "nick": "im-pzeta",
+    "type": "Nc.HIPertAdiabVars"
+  },
+  "NC_HIPERT_ADIAB_IM_ZETA": {
+    "nick": "im-zeta",
+    "type": "Nc.HIPertAdiabVars"
+  },
+  "NC_HIPERT_ADIAB_RE_PZETA": {
+    "nick": "re-pzeta",
+    "type": "Nc.HIPertAdiabVars"
+  },
+  "NC_HIPERT_ADIAB_RE_ZETA": {
+    "nick": "re-zeta",
+    "type": "Nc.HIPertAdiabVars"
+  },
+  "NC_HIPERT_BOLTZMANN_B0": {
+    "nick": "b0",
+    "type": "Nc.HIPertBoltzmannVars"
+  },
+  "NC_HIPERT_BOLTZMANN_B1": {
+    "nick": "b1",
+    "type": "Nc.HIPertBoltzmannVars"
+  },
+  "NC_HIPERT_BOLTZMANN_C0": {
+    "nick": "c0",
+    "type": "Nc.HIPertBoltzmannVars"
+  },
+  "NC_HIPERT_BOLTZMANN_C1": {
+    "nick": "c1",
+    "type": "Nc.HIPertBoltzmannVars"
+  },
+  "NC_HIPERT_BOLTZMANN_PHI": {
+    "nick": "phi",
+    "type": "Nc.HIPertBoltzmannVars"
+  },
+  "NC_HIPERT_BOLTZMANN_THETA0": {
+    "nick": "theta0",
+    "type": "Nc.HIPertBoltzmannVars"
+  },
+  "NC_HIPERT_BOLTZMANN_THETA1": {
+    "nick": "theta1",
+    "type": "Nc.HIPertBoltzmannVars"
+  },
+  "NC_HIPERT_BOLTZMANN_THETA2": {
+    "nick": "theta2",
+    "type": "Nc.HIPertBoltzmannVars"
+  },
+  "NC_HIPERT_BOLTZMANN_THETA_P0": {
+    "nick": "theta-p0",
+    "type": "Nc.HIPertBoltzmannVars"
+  },
+  "NC_HIPERT_BOLTZMANN_THETA_P1": {
+    "nick": "theta-p1",
+    "type": "Nc.HIPertBoltzmannVars"
+  },
+  "NC_HIPERT_BOLTZMANN_THETA_P2": {
+    "nick": "theta-p2",
+    "type": "Nc.HIPertBoltzmannVars"
+  },
+  "NC_HIPERT_COMP_PB_VAR_DELTA_B": {
+    "nick": "delta-b",
+    "type": "Nc.HIPertCompPBVar"
+  },
+  "NC_HIPERT_COMP_PB_VAR_DELTA_G": {
+    "nick": "delta-g",
+    "type": "Nc.HIPertCompPBVar"
+  },
+  "NC_HIPERT_COMP_PB_VAR_F_G3": {
+    "nick": "f-g3",
+    "type": "Nc.HIPertCompPBVar"
+  },
+  "NC_HIPERT_COMP_PB_VAR_THETA_G": {
+    "nick": "theta-g",
+    "type": "Nc.HIPertCompPBVar"
+  },
+  "NC_HIPERT_COMP_PB_VAR_V_B": {
+    "nick": "v-b",
+    "type": "Nc.HIPertCompPBVar"
+  },
+  "NC_HIPERT_COMP_PB_VAR_V_G": {
+    "nick": "v-g",
+    "type": "Nc.HIPertCompPBVar"
+  },
+  "NC_HIPERT_EM_IM_H": {
+    "nick": "im-h",
+    "type": "Nc.HIPertEMVars"
+  },
+  "NC_HIPERT_EM_IM_PH": {
+    "nick": "im-ph",
+    "type": "Nc.HIPertEMVars"
+  },
+  "NC_HIPERT_EM_RE_H": {
+    "nick": "re-h",
+    "type": "Nc.HIPertEMVars"
+  },
+  "NC_HIPERT_EM_RE_PH": {
+    "nick": "re-ph",
+    "type": "Nc.HIPertEMVars"
+  },
+  "NC_HIPERT_FIRST_ORDER_INTEG_ARKODE": {
+    "nick": "arkode",
+    "type": "Nc.HIPertFirstOrderInteg"
+  },
+  "NC_HIPERT_FIRST_ORDER_INTEG_CVODE": {
+    "nick": "cvode",
+    "type": "Nc.HIPertFirstOrderInteg"
+  },
+  "NC_HIPERT_GRAV_GAUGE_CONST_CURV": {
+    "nick": "const-curv",
+    "type": "Nc.HIPertGravGauge"
+  },
+  "NC_HIPERT_GRAV_GAUGE_CONST_EXP": {
+    "nick": "const-exp",
+    "type": "Nc.HIPertGravGauge"
+  },
+  "NC_HIPERT_GRAV_GAUGE_NEWTONIAN": {
+    "nick": "newtonian",
+    "type": "Nc.HIPertGravGauge"
+  },
+  "NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS": {
+    "nick": "synchronous",
+    "type": "Nc.HIPertGravGauge"
+  },
+  "NC_HIPERT_GRAV_SELEM_DOTPSI": {
+    "nick": "dotpsi",
+    "type": "Nc.HIPertGravSElem"
+  },
+  "NC_HIPERT_GRAV_SELEM_DP": {
+    "nick": "dp",
+    "type": "Nc.HIPertGravSElem"
+  },
+  "NC_HIPERT_GRAV_SELEM_DPI": {
+    "nick": "dpi",
+    "type": "Nc.HIPertGravSElem"
+  },
+  "NC_HIPERT_GRAV_SELEM_DRHO": {
+    "nick": "drho",
+    "type": "Nc.HIPertGravSElem"
+  },
+  "NC_HIPERT_GRAV_SELEM_DSIGMA": {
+    "nick": "dsigma",
+    "type": "Nc.HIPertGravSElem"
+  },
+  "NC_HIPERT_GRAV_SELEM_PHI": {
+    "nick": "phi",
+    "type": "Nc.HIPertGravSElem"
+  },
+  "NC_HIPERT_GRAV_SELEM_PSI": {
+    "nick": "psi",
+    "type": "Nc.HIPertGravSElem"
+  },
+  "NC_HIPERT_GRAV_SELEM_RHOPPV": {
+    "nick": "rhoppv",
+    "type": "Nc.HIPertGravSElem"
+  },
+  "NC_HIPERT_GW_IM_H": {
+    "nick": "im-h",
+    "type": "Nc.HIPertGWVars"
+  },
+  "NC_HIPERT_GW_IM_PH": {
+    "nick": "im-ph",
+    "type": "Nc.HIPertGWVars"
+  },
+  "NC_HIPERT_GW_RE_H": {
+    "nick": "re-h",
+    "type": "Nc.HIPertGWVars"
+  },
+  "NC_HIPERT_GW_RE_PH": {
+    "nick": "re-ph",
+    "type": "Nc.HIPertGWVars"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_DIFF": {
+    "nick": "delta-diff",
+    "type": "Nc.HIPertITwoFluidsObs"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_R": {
+    "nick": "delta-r",
+    "type": "Nc.HIPertITwoFluidsObs"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_TOT": {
+    "nick": "delta-tot",
+    "type": "Nc.HIPertITwoFluidsObs"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_DELTA_W": {
+    "nick": "delta-w",
+    "type": "Nc.HIPertITwoFluidsObs"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_FKU_DIFF": {
+    "nick": "fku-diff",
+    "type": "Nc.HIPertITwoFluidsObs"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_FKU_R": {
+    "nick": "fku-r",
+    "type": "Nc.HIPertITwoFluidsObs"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_FKU_TOT": {
+    "nick": "fku-tot",
+    "type": "Nc.HIPertITwoFluidsObs"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_FKU_W": {
+    "nick": "fku-w",
+    "type": "Nc.HIPertITwoFluidsObs"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_MODE_BOTH": {
+    "nick": "both",
+    "type": "Nc.HIPertITwoFluidsObsMode"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_MODE_ONE": {
+    "nick": "one",
+    "type": "Nc.HIPertITwoFluidsObsMode"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_MODE_TWO": {
+    "nick": "two",
+    "type": "Nc.HIPertITwoFluidsObsMode"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_PZETA": {
+    "nick": "pzeta",
+    "type": "Nc.HIPertITwoFluidsObs"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_ZETA": {
+    "nick": "zeta",
+    "type": "Nc.HIPertITwoFluidsObs"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_OBS_ZETA_DIFF": {
+    "nick": "zeta-diff",
+    "type": "Nc.HIPertITwoFluidsObs"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_VARS_PS_I": {
+    "nick": "ps-i",
+    "type": "Nc.HIPertITwoFluidsVars"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_VARS_PS_R": {
+    "nick": "ps-r",
+    "type": "Nc.HIPertITwoFluidsVars"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I": {
+    "nick": "pzeta-i",
+    "type": "Nc.HIPertITwoFluidsVars"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_R": {
+    "nick": "pzeta-r",
+    "type": "Nc.HIPertITwoFluidsVars"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_VARS_S_I": {
+    "nick": "s-i",
+    "type": "Nc.HIPertITwoFluidsVars"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_VARS_S_R": {
+    "nick": "s-r",
+    "type": "Nc.HIPertITwoFluidsVars"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_I": {
+    "nick": "zeta-i",
+    "type": "Nc.HIPertITwoFluidsVars"
+  },
+  "NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R": {
+    "nick": "zeta-r",
+    "type": "Nc.HIPertITwoFluidsVars"
+  },
+  "NC_HIPERT_TWO_FLUIDS_ERROR_INVALID_MODE": {
+    "nick": "mode",
+    "type": "Nc.HIPertTwoFluidsError"
+  },
+  "NC_HIPRIM_ATAN_C2": {
+    "nick": "c2",
+    "type": "Nc.HIPrimAtanSParams"
+  },
+  "NC_HIPRIM_ATAN_C3": {
+    "nick": "c3",
+    "type": "Nc.HIPrimAtanSParams"
+  },
+  "NC_HIPRIM_ATAN_LAMBDA": {
+    "nick": "lambda",
+    "type": "Nc.HIPrimAtanSParams"
+  },
+  "NC_HIPRIM_ATAN_LN10E10ASA": {
+    "nick": "ln10e10asa",
+    "type": "Nc.HIPrimAtanSParams"
+  },
+  "NC_HIPRIM_ATAN_LNKC": {
+    "nick": "lnkc",
+    "type": "Nc.HIPrimAtanSParams"
+  },
+  "NC_HIPRIM_ATAN_N_SA": {
+    "nick": "n-sa",
+    "type": "Nc.HIPrimAtanSParams"
+  },
+  "NC_HIPRIM_ATAN_N_T": {
+    "nick": "n-t",
+    "type": "Nc.HIPrimAtanSParams"
+  },
+  "NC_HIPRIM_ATAN_T_SA_RATIO": {
+    "nick": "t-sa-ratio",
+    "type": "Nc.HIPrimAtanSParams"
+  },
+  "NC_HIPRIM_BPL_DELTA": {
+    "nick": "delta",
+    "type": "Nc.HIPrimBPLSParams"
+  },
+  "NC_HIPRIM_BPL_LN10E10ASA": {
+    "nick": "ln10e10asa",
+    "type": "Nc.HIPrimBPLSParams"
+  },
+  "NC_HIPRIM_BPL_LNKB": {
+    "nick": "lnkb",
+    "type": "Nc.HIPrimBPLSParams"
+  },
+  "NC_HIPRIM_BPL_N_SA": {
+    "nick": "n-sa",
+    "type": "Nc.HIPrimBPLSParams"
+  },
+  "NC_HIPRIM_BPL_N_T": {
+    "nick": "n-t",
+    "type": "Nc.HIPrimBPLSParams"
+  },
+  "NC_HIPRIM_BPL_T_SA_RATIO": {
+    "nick": "t-sa-ratio",
+    "type": "Nc.HIPrimBPLSParams"
+  },
+  "NC_HIPRIM_EXPC_C": {
+    "nick": "c",
+    "type": "Nc.HIPrimExpcSParams"
+  },
+  "NC_HIPRIM_EXPC_LAMBDAC": {
+    "nick": "lambdac",
+    "type": "Nc.HIPrimExpcSParams"
+  },
+  "NC_HIPRIM_EXPC_LN10E10ASA": {
+    "nick": "ln10e10asa",
+    "type": "Nc.HIPrimExpcSParams"
+  },
+  "NC_HIPRIM_EXPC_LNKC": {
+    "nick": "lnkc",
+    "type": "Nc.HIPrimExpcSParams"
+  },
+  "NC_HIPRIM_EXPC_N_SA": {
+    "nick": "n-sa",
+    "type": "Nc.HIPrimExpcSParams"
+  },
+  "NC_HIPRIM_EXPC_N_T": {
+    "nick": "n-t",
+    "type": "Nc.HIPrimExpcSParams"
+  },
+  "NC_HIPRIM_EXPC_T_SA_RATIO": {
+    "nick": "t-sa-ratio",
+    "type": "Nc.HIPrimExpcSParams"
+  },
+  "NC_HIPRIM_IMPL_lnSA_powspec_lnk": {
+    "nick": "lnsa-powspec-lnk",
+    "type": "Nc.HIPrimImpl"
+  },
+  "NC_HIPRIM_IMPL_lnT_powspec_lnk": {
+    "nick": "lnt-powspec-lnk",
+    "type": "Nc.HIPrimImpl"
+  },
+  "NC_HIPRIM_POWER_LAW_LN10E10ASA": {
+    "nick": "ln10e10asa",
+    "type": "Nc.HIPrimPowerLawSParams"
+  },
+  "NC_HIPRIM_POWER_LAW_N_SA": {
+    "nick": "n-sa",
+    "type": "Nc.HIPrimPowerLawSParams"
+  },
+  "NC_HIPRIM_POWER_LAW_N_T": {
+    "nick": "n-t",
+    "type": "Nc.HIPrimPowerLawSParams"
+  },
+  "NC_HIPRIM_POWER_LAW_T_SA_RATIO": {
+    "nick": "t-sa-ratio",
+    "type": "Nc.HIPrimPowerLawSParams"
+  },
+  "NC_HIPRIM_SBPL_DELTA": {
+    "nick": "delta",
+    "type": "Nc.HIPrimSBPLSParams"
+  },
+  "NC_HIPRIM_SBPL_LAMBDA": {
+    "nick": "lambda",
+    "type": "Nc.HIPrimSBPLSParams"
+  },
+  "NC_HIPRIM_SBPL_LN10E10ASA": {
+    "nick": "ln10e10asa",
+    "type": "Nc.HIPrimSBPLSParams"
+  },
+  "NC_HIPRIM_SBPL_LNKB": {
+    "nick": "lnkb",
+    "type": "Nc.HIPrimSBPLSParams"
+  },
+  "NC_HIPRIM_SBPL_N_SA": {
+    "nick": "n-sa",
+    "type": "Nc.HIPrimSBPLSParams"
+  },
+  "NC_HIPRIM_SBPL_N_T": {
+    "nick": "n-t",
+    "type": "Nc.HIPrimSBPLSParams"
+  },
+  "NC_HIPRIM_SBPL_RA": {
+    "nick": "ra",
+    "type": "Nc.HIPrimSBPLSParams"
+  },
+  "NC_HIPRIM_SBPL_T_SA_RATIO": {
+    "nick": "t-sa-ratio",
+    "type": "Nc.HIPrimSBPLSParams"
+  },
+  "NC_HIPRIM_TWO_FLUIDS_LN10E10ASA": {
+    "nick": "ln10e10asa",
+    "type": "Nc.HIPrimTwoFluidsSParams"
+  },
+  "NC_HIPRIM_TWO_FLUIDS_LNK0": {
+    "nick": "lnk0",
+    "type": "Nc.HIPrimTwoFluidsSParams"
+  },
+  "NC_HIPRIM_TWO_FLUIDS_LNW": {
+    "nick": "lnw",
+    "type": "Nc.HIPrimTwoFluidsSParams"
+  },
+  "NC_HIPRIM_TWO_FLUIDS_N_T": {
+    "nick": "n-t",
+    "type": "Nc.HIPrimTwoFluidsSParams"
+  },
+  "NC_HIPRIM_TWO_FLUIDS_T_SA_RATIO": {
+    "nick": "t-sa-ratio",
+    "type": "Nc.HIPrimTwoFluidsSParams"
+  },
+  "NC_HIREION_CAMB_HEIII_Z": {
+    "nick": "heiii-z",
+    "type": "Nc.HIReionCambSParams"
+  },
+  "NC_HIREION_CAMB_HII_HEII_Z": {
+    "nick": "hii-heii-z",
+    "type": "Nc.HIReionCambSParams"
+  },
+  "NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011": {
+    "nick": "bhattacharya2011",
+    "type": "Nc.MultiplicityFuncBhattacharyaConvention"
+  },
+  "NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019": {
+    "nick": "heitmann2019",
+    "type": "Nc.MultiplicityFuncBhattacharyaConvention"
+  },
+  "NC_MULTIPLICITY_FUNC_BOCQUET_SIM_DM": {
+    "nick": "dm",
+    "type": "Nc.MultiplicityFuncBocquetSim"
+  },
+  "NC_MULTIPLICITY_FUNC_BOCQUET_SIM_HYDRO": {
+    "nick": "hydro",
+    "type": "Nc.MultiplicityFuncBocquetSim"
+  },
+  "NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_AHF": {
+    "nick": "ahf",
+    "type": "Nc.MultiplicityFuncCastroHaloFinder"
+  },
+  "NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_ROCKSTAR": {
+    "nick": "rockstar",
+    "type": "Nc.MultiplicityFuncCastroHaloFinder"
+  },
+  "NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_SUBFIND": {
+    "nick": "subfind",
+    "type": "Nc.MultiplicityFuncCastroHaloFinder"
+  },
+  "NC_MULTIPLICITY_FUNC_CASTRO_HALO_FINDER_VELOCIRAPTOR": {
+    "nick": "velociraptor",
+    "type": "Nc.MultiplicityFuncCastroHaloFinder"
+  },
+  "NC_MULTIPLICITY_FUNC_CASTRO_MODEL_C23": {
+    "nick": "c23",
+    "type": "Nc.MultiplicityFuncCastroModel"
+  },
+  "NC_MULTIPLICITY_FUNC_CASTRO_MODEL_C25": {
+    "nick": "c25",
+    "type": "Nc.MultiplicityFuncCastroModel"
+  },
+  "NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL": {
+    "nick": "critical",
+    "type": "Nc.MultiplicityFuncMassDef"
+  },
+  "NC_MULTIPLICITY_FUNC_MASS_DEF_FOF": {
+    "nick": "fof",
+    "type": "Nc.MultiplicityFuncMassDef"
+  },
+  "NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN": {
+    "nick": "mean",
+    "type": "Nc.MultiplicityFuncMassDef"
+  },
+  "NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL": {
+    "nick": "virial",
+    "type": "Nc.MultiplicityFuncMassDef"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_100_100_EE": {
+    "nick": "a-cnoise-e2e-100-100-ee",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_143_143_EE": {
+    "nick": "a-cnoise-e2e-143-143-ee",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_217_217_EE": {
+    "nick": "a-cnoise-e2e-217-217-ee",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_A_pol": {
+    "nick": "a-pol",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_100_EE": {
+    "nick": "a-sbpx-100-100-ee",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_143_EE": {
+    "nick": "a-sbpx-100-143-ee",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_A_sbpx_100_217_EE": {
+    "nick": "a-sbpx-100-217-ee",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_A_sbpx_143_143_EE": {
+    "nick": "a-sbpx-143-143-ee",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_A_sbpx_143_217_EE": {
+    "nick": "a-sbpx-143-217-ee",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_A_sbpx_217_217_EE": {
+    "nick": "a-sbpx-217-217-ee",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_0E_0E": {
+    "nick": "bleak-epsilon-0-0e-0e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_0E_1E": {
+    "nick": "bleak-epsilon-0-0e-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_0E_2E": {
+    "nick": "bleak-epsilon-0-0e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_0T_0E": {
+    "nick": "bleak-epsilon-0-0t-0e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_0T_1E": {
+    "nick": "bleak-epsilon-0-0t-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_0T_2E": {
+    "nick": "bleak-epsilon-0-0t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_1E_1E": {
+    "nick": "bleak-epsilon-0-1e-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_1E_2E": {
+    "nick": "bleak-epsilon-0-1e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_1T_1E": {
+    "nick": "bleak-epsilon-0-1t-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_1T_2E": {
+    "nick": "bleak-epsilon-0-1t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_2E_2E": {
+    "nick": "bleak-epsilon-0-2e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_0_2T_2E": {
+    "nick": "bleak-epsilon-0-2t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_0E_0E": {
+    "nick": "bleak-epsilon-1-0e-0e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_0E_1E": {
+    "nick": "bleak-epsilon-1-0e-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_0E_2E": {
+    "nick": "bleak-epsilon-1-0e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_0T_0E": {
+    "nick": "bleak-epsilon-1-0t-0e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_0T_1E": {
+    "nick": "bleak-epsilon-1-0t-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_0T_2E": {
+    "nick": "bleak-epsilon-1-0t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_1E_1E": {
+    "nick": "bleak-epsilon-1-1e-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_1E_2E": {
+    "nick": "bleak-epsilon-1-1e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_1T_1E": {
+    "nick": "bleak-epsilon-1-1t-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_1T_2E": {
+    "nick": "bleak-epsilon-1-1t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_2E_2E": {
+    "nick": "bleak-epsilon-1-2e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_1_2T_2E": {
+    "nick": "bleak-epsilon-1-2t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_0E_0E": {
+    "nick": "bleak-epsilon-2-0e-0e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_0E_1E": {
+    "nick": "bleak-epsilon-2-0e-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_0E_2E": {
+    "nick": "bleak-epsilon-2-0e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_0T_0E": {
+    "nick": "bleak-epsilon-2-0t-0e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_0T_1E": {
+    "nick": "bleak-epsilon-2-0t-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_0T_2E": {
+    "nick": "bleak-epsilon-2-0t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_1E_1E": {
+    "nick": "bleak-epsilon-2-1e-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_1E_2E": {
+    "nick": "bleak-epsilon-2-1e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_1T_1E": {
+    "nick": "bleak-epsilon-2-1t-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_1T_2E": {
+    "nick": "bleak-epsilon-2-1t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_2E_2E": {
+    "nick": "bleak-epsilon-2-2e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_2_2T_2E": {
+    "nick": "bleak-epsilon-2-2t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_0E_0E": {
+    "nick": "bleak-epsilon-3-0e-0e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_0E_1E": {
+    "nick": "bleak-epsilon-3-0e-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_0E_2E": {
+    "nick": "bleak-epsilon-3-0e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_0T_0E": {
+    "nick": "bleak-epsilon-3-0t-0e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_0T_1E": {
+    "nick": "bleak-epsilon-3-0t-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_0T_2E": {
+    "nick": "bleak-epsilon-3-0t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_1E_1E": {
+    "nick": "bleak-epsilon-3-1e-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_1E_2E": {
+    "nick": "bleak-epsilon-3-1e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_1T_1E": {
+    "nick": "bleak-epsilon-3-1t-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_1T_2E": {
+    "nick": "bleak-epsilon-3-1t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_2E_2E": {
+    "nick": "bleak-epsilon-3-2e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_3_2T_2E": {
+    "nick": "bleak-epsilon-3-2t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_0E_0E": {
+    "nick": "bleak-epsilon-4-0e-0e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_0E_1E": {
+    "nick": "bleak-epsilon-4-0e-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_0E_2E": {
+    "nick": "bleak-epsilon-4-0e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_0T_0E": {
+    "nick": "bleak-epsilon-4-0t-0e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_0T_1E": {
+    "nick": "bleak-epsilon-4-0t-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_0T_2E": {
+    "nick": "bleak-epsilon-4-0t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_1E_1E": {
+    "nick": "bleak-epsilon-4-1e-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_1E_2E": {
+    "nick": "bleak-epsilon-4-1e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_1T_1E": {
+    "nick": "bleak-epsilon-4-1t-1e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_1T_2E": {
+    "nick": "bleak-epsilon-4-1t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_2E_2E": {
+    "nick": "bleak-epsilon-4-2e-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_bleak_epsilon_4_2T_2E": {
+    "nick": "bleak-epsilon-4-2t-2e",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_calib_100P": {
+    "nick": "calib-100p",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_calib_143P": {
+    "nick": "calib-143p",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_calib_217P": {
+    "nick": "calib-217p",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100": {
+    "nick": "galf-ee-a-100",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_143": {
+    "nick": "galf-ee-a-100-143",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_217": {
+    "nick": "galf-ee-a-100-217",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_143": {
+    "nick": "galf-ee-a-143",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_143_217": {
+    "nick": "galf-ee-a-143-217",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_217": {
+    "nick": "galf-ee-a-217",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_EE_index": {
+    "nick": "galf-ee-index",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100": {
+    "nick": "galf-te-a-100",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100_143": {
+    "nick": "galf-te-a-100-143",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100_217": {
+    "nick": "galf-te-a-100-217",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_143": {
+    "nick": "galf-te-a-143",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_143_217": {
+    "nick": "galf-te-a-143-217",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_217": {
+    "nick": "galf-te-a-217",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TTTEEE_galf_TE_index": {
+    "nick": "galf-te-index",
+    "type": "Nc.PlanckFICorTTTEEESParams"
+  },
+  "NC_PLANCK_FI_COR_TT_A_cib_217": {
+    "nick": "a-cib-217",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_A_planck": {
+    "nick": "a-planck",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_A_sbpx_100_100_TT": {
+    "nick": "a-sbpx-100-100-tt",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_A_sbpx_143_143_TT": {
+    "nick": "a-sbpx-143-143-tt",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_A_sbpx_143_217_TT": {
+    "nick": "a-sbpx-143-217-tt",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_A_sbpx_217_217_TT": {
+    "nick": "a-sbpx-217-217-tt",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_A_sz": {
+    "nick": "a-sz",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_calib_100T": {
+    "nick": "calib-100t",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_calib_217T": {
+    "nick": "calib-217t",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_cib_index": {
+    "nick": "cib-index",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_gal545_A_100": {
+    "nick": "gal545-a-100",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_gal545_A_143": {
+    "nick": "gal545-a-143",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_gal545_A_143_217": {
+    "nick": "gal545-a-143-217",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_gal545_A_217": {
+    "nick": "gal545-a-217",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_ksz_norm": {
+    "nick": "ksz-norm",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_ps_A_100_100": {
+    "nick": "ps-a-100-100",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_ps_A_143_143": {
+    "nick": "ps-a-143-143",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_ps_A_143_217": {
+    "nick": "ps-a-143-217",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_ps_A_217_217": {
+    "nick": "ps-a-217-217",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_PLANCK_FI_COR_TT_xi_sz_cib": {
+    "nick": "xi-sz-cib",
+    "type": "Nc.PlanckFICorTTSParams"
+  },
+  "NC_RECOM_SEAGER_OPT_ALL": {
+    "nick": "all",
+    "type": "Nc.RecombSeagerOpt"
+  },
+  "NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1": {
+    "nick": "heii-sobolev-1p1",
+    "type": "Nc.RecombSeagerOpt"
+  },
+  "NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1_CO": {
+    "nick": "heii-sobolev-1p1-co",
+    "type": "Nc.RecombSeagerOpt"
+  },
+  "NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012": {
+    "nick": "heii-sobolev-3p012",
+    "type": "Nc.RecombSeagerOpt"
+  },
+  "NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO": {
+    "nick": "heii-sobolev-3p012-co",
+    "type": "Nc.RecombSeagerOpt"
+  },
+  "NC_RECOM_SEAGER_OPT_HII_FUDGE": {
+    "nick": "hii-fudge",
+    "type": "Nc.RecombSeagerOpt"
+  },
+  "NC_RECOM_SEAGER_OPT_HII_FUDGE_GAUSS_COR": {
+    "nick": "hii-fudge-gauss-cor",
+    "type": "Nc.RecombSeagerOpt"
+  },
+  "NC_REDUCED_SHEAR_CALIB_WTG_C": {
+    "nick": "c",
+    "type": "Nc.ReducedShearCalibWtgSParams"
+  },
+  "NC_REDUCED_SHEAR_CALIB_WTG_MB": {
+    "nick": "mb",
+    "type": "Nc.ReducedShearCalibWtgSParams"
+  },
+  "NC_REDUCED_SHEAR_CALIB_WTG_MSLOPE": {
+    "nick": "mslope",
+    "type": "Nc.ReducedShearCalibWtgSParams"
+  },
+  "NC_REDUCED_SHEAR_CALIB_WTG_SIZE_RATIO": {
+    "nick": "size-ratio",
+    "type": "Nc.ReducedShearCalibWtgSParams"
+  },
+  "NC_REDUCED_SHEAR_CLUSTER_MASS_A": {
+    "nick": "a",
+    "type": "Nc.ReducedShearClusterMassParams"
+  },
+  "NC_REDUCED_SHEAR_CLUSTER_MASS_B": {
+    "nick": "b",
+    "type": "Nc.ReducedShearClusterMassParams"
+  },
+  "NC_REDUCED_SHEAR_CLUSTER_MASS_C": {
+    "nick": "c",
+    "type": "Nc.ReducedShearClusterMassParams"
+  },
+  "NC_REDUCED_SHEAR_CLUSTER_MASS_VGAMMA": {
+    "nick": "vgamma",
+    "type": "Nc.ReducedShearClusterMassParams"
+  },
+  "NC_REDUCED_SHEAR_CLUSTER_MASS_VSIGMA": {
+    "nick": "vsigma",
+    "type": "Nc.ReducedShearClusterMassParams"
+  },
+  "NC_REDUCED_SHEAR_CLUSTER_MASS_XP": {
+    "nick": "xp",
+    "type": "Nc.ReducedShearClusterMassParams"
+  },
+  "NC_SNIA_DIST_COV_ALPHA": {
+    "nick": "alpha",
+    "type": "Nc.SNIADistCovSParams"
+  },
+  "NC_SNIA_DIST_COV_BETA": {
+    "nick": "beta",
+    "type": "Nc.SNIADistCovSParams"
+  },
+  "NC_SNIA_DIST_COV_LNSIGMA_INT": {
+    "nick": "lnsigma-int",
+    "type": "Nc.SNIADistCovVParams"
+  },
+  "NC_SNIA_DIST_COV_LNSIGMA_LENS": {
+    "nick": "lnsigma-lens",
+    "type": "Nc.SNIADistCovSParams"
+  },
+  "NC_SNIA_DIST_COV_LNSIGMA_PECZ": {
+    "nick": "lnsigma-pecz",
+    "type": "Nc.SNIADistCovSParams"
+  },
+  "NC_SNIA_DIST_COV_M1": {
+    "nick": "m1",
+    "type": "Nc.SNIADistCovSParams"
+  },
+  "NC_SNIA_DIST_COV_M2": {
+    "nick": "m2",
+    "type": "Nc.SNIADistCovSParams"
+  },
+  "NC_SNIA_DIST_COV_MU": {
+    "nick": "mu",
+    "type": "Nc.SNIADistCovVParams"
+  },
+  "NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS": {
+    "nick": "baryons",
+    "type": "Nc.TransferFuncBBKSType"
+  },
+  "NC_TRANSFER_FUNC_BBKS_TYPE_CCL": {
+    "nick": "ccl",
+    "type": "Nc.TransferFuncBBKSType"
+  },
+  "NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS": {
+    "nick": "nobaryons",
+    "type": "Nc.TransferFuncBBKSType"
+  },
+  "NC_WL_ELLIPTICITY_FRAME_CARTESIAN": {
+    "nick": "cartesian",
+    "type": "Nc.WLEllipticityFrame"
+  },
+  "NC_WL_ELLIPTICITY_FRAME_CELESTIAL": {
+    "nick": "celestial",
+    "type": "Nc.WLEllipticityFrame"
+  },
+  "NC_WL_SURFACE_MASS_DENSITY_PCC": {
+    "nick": "pcc",
+    "type": "Nc.WLSurfaceMassDensityParams"
+  },
+  "NC_WL_SURFACE_MASS_DENSITY_ROFF": {
+    "nick": "roff",
+    "type": "Nc.WLSurfaceMassDensityParams"
+  },
+  "NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV": {
+    "nick": "chebyshev",
+    "type": "Nc.XcorKernelClosure"
+  },
+  "NC_XCOR_KERNEL_CLOSURE_SPLINE": {
+    "nick": "spline",
+    "type": "Nc.XcorKernelClosure"
+  },
+  "NC_XCOR_KERNEL_CMB_LENSING_SPARAM_LEN": {
+    "nick": "len",
+    "type": "Nc.XcorKernelCMBLensingSParams"
+  },
+  "NC_XCOR_KERNEL_GAL_BIAS": {
+    "nick": "bias",
+    "type": "Nc.XcorKernelGalVParams"
+  },
+  "NC_XCOR_KERNEL_GAL_MAG_BIAS": {
+    "nick": "mag-bias",
+    "type": "Nc.XcorKernelGalSParams"
+  },
+  "NC_XCOR_KERNEL_GAL_NOISE_BIAS": {
+    "nick": "noise-bias",
+    "type": "Nc.XcorKernelGalSParams"
+  },
+  "NC_XCOR_KERNEL_IMPL_ADD_NOISE": {
+    "nick": "add-noise",
+    "type": "Nc.XcorKernelImpl"
+  },
+  "NC_XCOR_KERNEL_IMPL_EVAL_RADIAL_WEIGHT": {
+    "nick": "eval-radial-weight",
+    "type": "Nc.XcorKernelImpl"
+  },
+  "NC_XCOR_KERNEL_IMPL_PREPARE": {
+    "nick": "prepare",
+    "type": "Nc.XcorKernelImpl"
+  },
+  "NC_XCOR_KERNEL_TSZ_SPARAM_LEN": {
+    "nick": "len",
+    "type": "Nc.XcorKerneltSZSParams"
+  },
+  "NC_XCOR_KERNEL_WEAK_LENSING_SPARAM_LEN": {
+    "nick": "len",
+    "type": "Nc.XcorKernelWeakLensingSParams"
+  },
+  "NC_XCOR_KERNEL_WEAK_LENSING_VPARAM_LEN": {
+    "nick": "len",
+    "type": "Nc.XcorKernelWeakLensingVParams"
+  },
+  "NC_XCOR_METHOD_KERNEL_CUBATURE": {
+    "nick": "kernel-cubature",
+    "type": "Nc.XcorMethod"
+  },
+  "NC_XCOR_METHOD_KERNEL_EXACT": {
+    "nick": "kernel-exact",
+    "type": "Nc.XcorMethod"
+  },
+  "NC_XCOR_METHOD_KERNEL_GSL": {
+    "nick": "kernel-gsl",
+    "type": "Nc.XcorMethod"
+  },
+  "NC_XCOR_METHOD_LIMBER_Z_CUBATURE": {
+    "nick": "limber-z-cubature",
+    "type": "Nc.XcorMethod"
+  },
+  "NC_XCOR_METHOD_LIMBER_Z_GSL": {
+    "nick": "limber-z-gsl",
+    "type": "Nc.XcorMethod"
+  },
+  "NLOPT_AUGLAG": {
+    "nick": "auglag",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_AUGLAG_EQ": {
+    "nick": "auglag-eq",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_FAILURE": {
+    "nick": "failure",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_FORCED_STOP": {
+    "nick": "forced-stop",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_FTOL_REACHED": {
+    "nick": "ftol-reached",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_GD_MLSL": {
+    "nick": "gd-mlsl",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GD_MLSL_LDS": {
+    "nick": "gd-mlsl-lds",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GD_STOGO": {
+    "nick": "gd-stogo",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GD_STOGO_RAND": {
+    "nick": "gd-stogo-rand",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_AGS": {
+    "nick": "gn-ags",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_CRS2_LM": {
+    "nick": "gn-crs2-lm",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_DIRECT": {
+    "nick": "gn-direct",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_DIRECT_L": {
+    "nick": "gn-direct-l",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_DIRECT_L_NOSCAL": {
+    "nick": "gn-direct-l-noscal",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_DIRECT_L_RAND": {
+    "nick": "gn-direct-l-rand",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_DIRECT_L_RAND_NOSCAL": {
+    "nick": "gn-direct-l-rand-noscal",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_DIRECT_NOSCAL": {
+    "nick": "gn-direct-noscal",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_ESCH": {
+    "nick": "gn-esch",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_ISRES": {
+    "nick": "gn-isres",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_MLSL": {
+    "nick": "gn-mlsl",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_MLSL_LDS": {
+    "nick": "gn-mlsl-lds",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_ORIG_DIRECT": {
+    "nick": "gn-orig-direct",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_GN_ORIG_DIRECT_L": {
+    "nick": "gn-orig-direct-l",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_G_MLSL": {
+    "nick": "g-mlsl",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_G_MLSL_LDS": {
+    "nick": "g-mlsl-lds",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_INVALID_ARGS": {
+    "nick": "invalid-args",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_LD_AUGLAG": {
+    "nick": "ld-auglag",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_AUGLAG_EQ": {
+    "nick": "ld-auglag-eq",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_CCSAQ": {
+    "nick": "ld-ccsaq",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_LBFGS": {
+    "nick": "ld-lbfgs",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_LBFGS_NOCEDAL": {
+    "nick": "ld-lbfgs-nocedal",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_MMA": {
+    "nick": "ld-mma",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_SLSQP": {
+    "nick": "ld-slsqp",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_TNEWTON": {
+    "nick": "ld-tnewton",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_TNEWTON_PRECOND": {
+    "nick": "ld-tnewton-precond",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_TNEWTON_PRECOND_RESTART": {
+    "nick": "ld-tnewton-precond-restart",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_TNEWTON_RESTART": {
+    "nick": "ld-tnewton-restart",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_VAR1": {
+    "nick": "ld-var1",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LD_VAR2": {
+    "nick": "ld-var2",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LN_AUGLAG": {
+    "nick": "ln-auglag",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LN_AUGLAG_EQ": {
+    "nick": "ln-auglag-eq",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LN_BOBYQA": {
+    "nick": "ln-bobyqa",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LN_COBYLA": {
+    "nick": "ln-cobyla",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LN_NELDERMEAD": {
+    "nick": "ln-neldermead",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LN_NEWUOA": {
+    "nick": "ln-newuoa",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LN_NEWUOA_BOUND": {
+    "nick": "ln-newuoa-bound",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LN_PRAXIS": {
+    "nick": "ln-praxis",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_LN_SBPLX": {
+    "nick": "ln-sbplx",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_MAXEVAL_REACHED": {
+    "nick": "maxeval-reached",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_MAXTIME_REACHED": {
+    "nick": "maxtime-reached",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_NUM_ALGORITHMS": {
+    "nick": "num-algorithms",
+    "type": "Ncm.FitNloptAlgorithm"
+  },
+  "NLOPT_NUM_FAILURES": {
+    "nick": "num-failures",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_NUM_RESULTS": {
+    "nick": "num-results",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_OUT_OF_MEMORY": {
+    "nick": "out-of-memory",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_ROUNDOFF_LIMITED": {
+    "nick": "roundoff-limited",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_STOPVAL_REACHED": {
+    "nick": "stopval-reached",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_SUCCESS": {
+    "nick": "success",
+    "type": "Ncm.FitNloptResult"
+  },
+  "NLOPT_XTOL_REACHED": {
+    "nick": "xtol-reached",
+    "type": "Ncm.FitNloptResult"
+  }
+}

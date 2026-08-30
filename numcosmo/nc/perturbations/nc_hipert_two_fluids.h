@@ -62,7 +62,7 @@ struct _NcHIPertTwoFluidsStateInterp
  * Error domain for #NcHIPertTwoFluids.
  *
  */
-typedef enum _NcHIPertTwoFluidsError
+typedef enum _NcHIPertTwoFluidsError /*< prefix=NC_HIPERT_TWO_FLUIDS_ERROR_INVALID >*/
 {
   NC_HIPERT_TWO_FLUIDS_ERROR_INVALID_MODE,
 } NcHIPertTwoFluidsError;

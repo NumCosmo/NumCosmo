@@ -74,7 +74,7 @@ struct _NcmStatsDistClass
  * Cross-validation method to be applied.
  *
  */
-typedef enum _NcmStatsDistCV
+typedef enum _NcmStatsDistCV /*< prefix=NCM_STATS_DIST_CV >*/
 {
   NCM_STATS_DIST_CV_NONE,
   NCM_STATS_DIST_CV_SPLIT,

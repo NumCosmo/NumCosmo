@@ -72,7 +72,7 @@ G_BEGIN_DECLS
  * and publication referenced in the parameter documentation above.
  *
  */
-typedef enum _NcDataBaoId
+typedef enum _NcDataBaoId /*< prefix=NC_DATA_BAO >*/
 {
   NC_DATA_BAO_A_EISENSTEIN2005 = 0,
   NC_DATA_BAO_DV_EISENSTEIN2005,

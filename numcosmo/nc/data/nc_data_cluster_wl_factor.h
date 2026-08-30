@@ -45,7 +45,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcDataClusterWLFactor, nc_data_cluster_wl_factor, NC, DATA_CLUSTER_WL_FACTOR, NcmData)
 
-typedef enum _NcDataClusterWLResampleFlag /*< flags,underscore_name=NC_DATA_CLUSTER_WL_RESAMPLE_FLAG >*/
+typedef enum _NcDataClusterWLResampleFlag /*< flags,underscore_name=NC_DATA_CLUSTER_WL_RESAMPLE_FLAG,prefix=NC_DATA_CLUSTER_WL_RESAMPLE_FLAG >*/
 {
   NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_POSITION = 1 << 0,
   NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_REDSHIFT = 1 << 1,
@@ -53,7 +53,7 @@ typedef enum _NcDataClusterWLResampleFlag /*< flags,underscore_name=NC_DATA_CLUS
   NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_ALL      = (1 << 3) - 1,
 } NcDataClusterWLResampleFlag;
 
-typedef enum _NcDataClusterWLIntegMethod /*< enum,underscore_name=NC_DATA_CLUSTER_WL_INTEG_METHOD >*/
+typedef enum _NcDataClusterWLIntegMethod /*< enum,underscore_name=NC_DATA_CLUSTER_WL_INTEG_METHOD,prefix=NC_DATA_CLUSTER_WL_INTEG_METHOD >*/
 {
   NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE    = 0,
   NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT       = 1,

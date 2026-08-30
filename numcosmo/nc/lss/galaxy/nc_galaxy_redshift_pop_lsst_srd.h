@@ -50,7 +50,7 @@ G_DECLARE_FINAL_TYPE (NcGalaxyRedshiftPopLSSTSRD, nc_galaxy_redshift_pop_lsst_sr
  * LSST SRD galaxy redshift distribution model parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_GALAXY_REDSHIFT_POP_LSST_SRD_PARAMS >*/
+typedef enum /*< enum,underscore_name=NC_GALAXY_REDSHIFT_POP_LSST_SRD_PARAMS,prefix=NC_GALAXY_REDSHIFT_POP_LSST_SRD >*/
 {
   NC_GALAXY_REDSHIFT_POP_LSST_SRD_ALPHA = 0,
   NC_GALAXY_REDSHIFT_POP_LSST_SRD_BETA,
@@ -69,7 +69,7 @@ typedef enum /*< enum,underscore_name=NC_GALAXY_REDSHIFT_POP_LSST_SRD_PARAMS >*/
  * LSST SRD galaxy redshift distribution types.
  *
  */
-typedef enum /*< enum,underscore_name=NC_GALAXY_REDSHIFT_POP_LSST_SRD_TYPE >*/
+typedef enum /*< enum,underscore_name=NC_GALAXY_REDSHIFT_POP_LSST_SRD_TYPE,prefix=NC_GALAXY_REDSHIFT_POP_LSST_SRD >*/
 {
   NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_SOURCE = 0,
   NC_GALAXY_REDSHIFT_POP_LSST_SRD_Y1_LENS,

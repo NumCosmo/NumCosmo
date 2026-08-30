@@ -49,7 +49,7 @@ typedef struct _NcClusterPhotozGaussGlobal NcClusterPhotozGaussGlobal;
  *
  * Parameters for the global Gaussian photometric redshift distribution.
  */
-typedef enum /*< enum,underscore_name=NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SPARAMS,prefix=NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL >*/
 {
   NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS = 0,
   NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0,

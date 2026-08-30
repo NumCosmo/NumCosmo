@@ -55,7 +55,9 @@ void test_ncm_mpi_job_test_basic (void);
 void test_ncm_mpi_job_fit_basic (void);
 void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
+void test_ncm_spline_bspline_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
+void test_ncm_powspec_analytic_basic (void);
 void test_ncm_pln1d_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
@@ -96,6 +98,7 @@ void test_nc_cluster_mass_selection_basic (void);
 void test_nc_cluster_photoz_gauss_basic (void);
 void test_nc_xcor_basic (void);
 void test_nc_xcor_solver_basic (void);
+void test_nc_xcor_kernel_analytic_kdep_growth_basic (void);
 
 void test_nc_galaxy_position_factor_flat_basic (void);
 void test_nc_galaxy_redshift_factor_composed_basic (void);
@@ -141,7 +144,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_fit/basic", test_ncm_mpi_job_fit_basic);
   g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
+  g_test_add_func ("/ncm/spline_bspline/basic", test_ncm_spline_bspline_basic);
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
+  g_test_add_func ("/ncm/powspec_analytic/basic", test_ncm_powspec_analytic_basic);
   g_test_add_func ("/ncm/pln1d/basic", test_ncm_pln1d_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
@@ -185,6 +190,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/nc/xcor/basic", test_nc_xcor_basic);
   g_test_add_func ("/nc/xcor/solver/basic", test_nc_xcor_solver_basic);
+  g_test_add_func ("/nc/xcor/kernel_analytic_kdep_growth/basic", test_nc_xcor_kernel_analytic_kdep_growth_basic);
 
   g_test_add_func ("/nc/galaxy/position_factor_flat/basic", test_nc_galaxy_position_factor_flat_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_composed/basic", test_nc_galaxy_redshift_factor_composed_basic);
@@ -612,6 +618,56 @@ test_ncm_mpi_job_feval_basic (void)
   NCM_TEST_FREE (ncm_dataset_free, dset);
   NCM_TEST_FREE (ncm_data_free, data);
   NCM_TEST_FREE (ncm_mset_free, mset);
+}
+
+void
+test_ncm_spline_bspline_basic (void)
+{
+  NcmSplineBSpline *sbs = ncm_spline_bspline_new (NCM_SPLINE_BSPLINE_DEFAULT_ORDER);
+  NcmSplineBSpline *sbs2;
+
+  g_assert_true (sbs != NULL);
+  g_assert_true (NCM_IS_SPLINE_BSPLINE (sbs));
+  g_assert_cmpuint (ncm_spline_bspline_get_order (sbs), ==, NCM_SPLINE_BSPLINE_DEFAULT_ORDER);
+
+  ncm_spline_bspline_set_order (sbs, 6);
+  g_assert_cmpuint (ncm_spline_bspline_get_order (sbs), ==, 6);
+
+  sbs2 = NCM_SPLINE_BSPLINE (ncm_spline_ref (NCM_SPLINE (sbs)));
+  ncm_spline_clear ((NcmSpline **) &sbs2);
+  g_assert_true (sbs2 == NULL);
+
+  g_assert_true (NCM_IS_SPLINE_BSPLINE (sbs));
+
+  NCM_TEST_FREE (ncm_spline_free, NCM_SPLINE (sbs));
+}
+
+void
+test_ncm_powspec_analytic_basic (void)
+{
+  NcmPowspecAnalytic *psa = ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                      NCM_POWSPEC_ANALYTIC_GROWTH_LCDM);
+  NcmPowspecAnalytic *psa2;
+
+  g_assert_true (psa != NULL);
+  g_assert_true (NCM_IS_POWSPEC_ANALYTIC (psa));
+
+  psa2 = ncm_powspec_analytic_ref (psa);
+  ncm_powspec_analytic_clear (&psa2);
+  g_assert_true (psa2 == NULL);
+
+  g_assert_true (NCM_IS_POWSPEC_ANALYTIC (psa));
+
+  ncm_powspec_analytic_free (psa);
+
+  {
+    NcmPowspecAnalytic *full = ncm_powspec_analytic_new_full (NCM_POWSPEC_ANALYTIC_SHAPE_RATIONAL,
+                                                              NCM_POWSPEC_ANALYTIC_GROWTH_RATIONAL,
+                                                              1.0e7, 0.96, 0.1, 0.3);
+
+    g_assert_true (NCM_IS_POWSPEC_ANALYTIC (full));
+    ncm_powspec_analytic_free (full);
+  }
 }
 
 void
@@ -1173,6 +1229,25 @@ test_nc_xcor_solver_basic (void)
   g_assert_null (nc_xcor_solver_peek_block_integrator (solver, 0));
 
   NCM_TEST_FREE (nc_xcor_solver_free, solver);
+}
+
+void
+test_nc_xcor_kernel_analytic_kdep_growth_basic (void)
+{
+  NcXcorKernelAnalyticKDepGrowth *kdepg = nc_xcor_kernel_analytic_kdep_growth_new (0.3, 0.05, 1500.0);
+  NcXcorKernelAnalyticKDep *kdep        = NC_XCOR_KERNEL_ANALYTIC_KDEP (kdepg);
+  NcXcorKernelAnalyticKDep *kdep2;
+
+  g_assert_true (kdep != NULL);
+  g_assert_true (NC_IS_XCOR_KERNEL_ANALYTIC_KDEP_GROWTH (kdep));
+
+  kdep2 = nc_xcor_kernel_analytic_kdep_ref (kdep);
+  nc_xcor_kernel_analytic_kdep_clear (&kdep2);
+  g_assert_true (kdep2 == NULL);
+
+  g_assert_true (NC_IS_XCOR_KERNEL_ANALYTIC_KDEP (kdep));
+
+  NCM_TEST_FREE (nc_xcor_kernel_analytic_kdep_free, kdep);
 }
 
 void

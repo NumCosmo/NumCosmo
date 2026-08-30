@@ -50,7 +50,7 @@ G_DECLARE_FINAL_TYPE (NcMultiplicityFuncBhattacharya, nc_multiplicity_func_bhatt
  * and arXiv:1904.11970 (Heitmann et al. 2019).
  *
  */
-typedef enum _NcMultiplicityFuncBhattacharyaConvention
+typedef enum _NcMultiplicityFuncBhattacharyaConvention /*< prefix=NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION >*/
 {
   NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_BHATTACHARYA2011 = 0,
   NC_MULTIPLICITY_FUNC_BHATTACHARYA_CONVENTION_HEITMANN2019,

@@ -61,7 +61,7 @@ struct _NcDataClusterPseudoCountsClass
  * @NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL: CLASH mass error
  *
  */
-typedef enum _NcDataClusterPseudoCountsObs
+typedef enum _NcDataClusterPseudoCountsObs /*< prefix=NC_DATA_CLUSTER_PSEUDO_COUNTS >*/
 {
   NC_DATA_CLUSTER_PSEUDO_COUNTS_Z = 0,
   NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL,

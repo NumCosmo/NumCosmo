@@ -24,6 +24,8 @@
 """CLI command for viewing cross-correlation kernels."""
 
 import dataclasses
+import enum
+import time
 from typing import Annotated, Optional
 from pathlib import Path
 
@@ -50,6 +52,47 @@ from .kernels import (
 )
 
 Ncm.cfg_init()
+
+
+class XcorMethodOption(str, enum.Enum):
+    """Quadrature methods available for the C_ell computation."""
+
+    CUBATURE = "cubature"
+    GSL = "gsl"
+    FIXED = "fixed"
+
+    def to_nc(self) -> Nc.XcorMethod:
+        """Convert to the corresponding #NcXcorMethod value.
+
+        :return: The NumCosmo enumeration value.
+        """
+        match self:
+            case XcorMethodOption.CUBATURE:
+                return Nc.XcorMethod.KERNEL_CUBATURE
+            case XcorMethodOption.GSL:
+                return Nc.XcorMethod.KERNEL_GSL
+            case XcorMethodOption.FIXED:
+                return Nc.XcorMethod.KERNEL_EXACT
+        raise ValueError(f"Unknown method: {self}")
+
+
+class XcorClosureOption(str, enum.Enum):
+    """Representations available for the k-space closure."""
+
+    SPLINE = "spline"
+    CHEBYSHEV = "chebyshev"
+
+    def to_nc(self) -> Nc.XcorKernelClosure:
+        """Convert to the corresponding #NcXcorKernelClosure value.
+
+        :return: The NumCosmo enumeration value.
+        """
+        match self:
+            case XcorClosureOption.SPLINE:
+                return Nc.XcorKernelClosure.SPLINE
+            case XcorClosureOption.CHEBYSHEV:
+                return Nc.XcorKernelClosure.CHEBYSHEV
+        raise ValueError(f"Unknown closure type: {self}")
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -336,6 +379,20 @@ class ViewKernel:
         ),
     ] = False
 
+    compare_closure: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Also show the other closure representation for comparison "
+                "(with thinner dashed lines). Mutually exclusive with "
+                "--compare-limber: there is one alternative curve. Under Limber "
+                "both representations are the spline, so pair this with "
+                "--l-limber -1 for it to show anything."
+            ),
+            show_default=True,
+        ),
+    ] = False
+
     n_points: Annotated[
         int,
         typer.Option(
@@ -377,8 +434,10 @@ class ViewKernel:
     integrator_reltol: Annotated[
         Optional[float],
         typer.Option(
+            min=0.0,
+            max=1.0,
             help=(
-                "NcmSBesselIntegratorLevin relative tolerance "
+                "NcmSBesselIntegratorLevin ODE solve relative tolerance "
                 "(library default: 1e-13, near machine precision). "
                 "This is the dominant cost/precision knob for tier 3 -- "
                 "see dev-notes/xcor_ultralevin_batching_plan.md sec 9.4. "
@@ -390,10 +449,13 @@ class ViewKernel:
     integrator_cheb_reltol: Annotated[
         Optional[float],
         typer.Option(
+            min=0.0,
+            max=1.0,
             help=(
-                "NcmSBesselIntegratorLevin Chebyshev-fit relative tolerance "
-                "(library default: 1e-8). Leave unset to keep the library "
-                "default."
+                "NcmSBesselIntegratorLevin integrand Chebyshev-fit relative "
+                "tolerance (library default: 1e-8). The looser of this and "
+                "--integrator-reltol bounds the result. Leave unset to keep "
+                "the library default."
             ),
         ),
     ] = None
@@ -409,6 +471,57 @@ class ViewKernel:
         ),
     ] = None
 
+    cls: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Also compute and plot the angular power spectra C_ell for every "
+                "auto- and cross-pair of the requested kernels, over the multipole "
+                "range set by --ell/--n-ell."
+            ),
+            show_default=True,
+        ),
+    ] = False
+
+    cls_method: Annotated[
+        XcorMethodOption,
+        typer.Option(
+            help=(
+                "Quadrature used for the C_ell computation. 'cubature' and 'gsl' "
+                "target a tolerance and abort if they cannot reach it; 'fixed' "
+                "needs no tolerance and cannot fail to converge."
+            ),
+            show_default=True,
+        ),
+    ] = XcorMethodOption.CUBATURE
+
+    closure_type: Annotated[
+        XcorClosureOption,
+        typer.Option(
+            help=(
+                "Representation fitted to the sampled kernel. 'spline' bisects "
+                "until it meets a tolerance; 'chebyshev' expands on panels of a "
+                "prescribed order. Both plot and both compute C_ell, so the two "
+                "can be compared directly. Limber multipoles keep the spline "
+                "whatever this is set to."
+            ),
+            show_default=True,
+        ),
+    ] = XcorClosureOption.SPLINE
+
+    cls_block_size: Annotated[
+        int,
+        typer.Option(
+            min=1,
+            help=(
+                "Multipole block size handed to NcXcorSolver.plan_blocks(). "
+                "Eight is the empirical sweet spot; see "
+                "dev-notes/xcor_ultralevin_batching_plan.md section 1.3."
+            ),
+            show_default=True,
+        ),
+    ] = 8
+
     def __post_init__(self) -> None:
         """Execute the kernel view command.
 
@@ -418,11 +531,26 @@ class ViewKernel:
         :raises ValueError: If the kernel specification is invalid.
         :raises RuntimeError: If kernel evaluation fails.
         """
+        # One alternative curve, so one thing to compare against.
+        if self.compare_limber and self.compare_closure:
+            raise ValueError(
+                "--compare-limber and --compare-closure both draw the "
+                "alternative curve; pick one."
+            )
+
         if self.k_range is not None:
             if self.k_range[0] <= 0 or self.k_range[1] <= 0:
                 raise ValueError("k range values must be positive")
             if self.k_range[0] >= self.k_range[1]:
                 raise ValueError("k range min must be less than max")
+
+        # typer's min is inclusive, but zero tolerance aborts in the library.
+        for name, tol in (
+            ("--integrator-reltol", self.integrator_reltol),
+            ("--integrator-cheb-reltol", self.integrator_cheb_reltol),
+        ):
+            if tol is not None and tol <= 0.0:
+                raise typer.BadParameter(f"{name} must be positive, got {tol}.")
 
         # Create cosmology with appropriate maximum redshift
         # Always use larger dist_max_z for non-Limber calculations (default behavior)
@@ -437,13 +565,31 @@ class ViewKernel:
         print(f"  ✓ Maximum redshift: {dist_max_z}")
         print()
 
-        # Create integrator (matching fixtures pattern)
+        # Create integrator.
+        #
+        # Pass the tolerances at construction: set_reltol() would rebuild every
+        # operator to apply them, which is pure waste when nothing has run yet.
         print("Creating integrator...")
-        self.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
-        if self.integrator_reltol is not None:
-            self.integrator.set_reltol(self.integrator_reltol)
-        if self.integrator_cheb_reltol is not None:
-            self.integrator.set_cheb_reltol(self.integrator_cheb_reltol)
+        defaults = Ncm.SBesselIntegratorLevin.new(0, 8)
+        self.integrator = Ncm.SBesselIntegratorLevin.new_full(
+            0,
+            8,
+            defaults.get_y_knots_min(),
+            defaults.get_y_knots_max(),
+            defaults.get_n_knots(),
+            defaults.get_ell_cache_max(),
+            (
+                self.integrator_reltol
+                if self.integrator_reltol is not None
+                else defaults.get_reltol()
+            ),
+            defaults.get_cheb_min_order(),
+            (
+                self.integrator_cheb_reltol
+                if self.integrator_cheb_reltol is not None
+                else defaults.get_cheb_reltol()
+            ),
+        )
         if self.integrator_max_order is not None:
             self.integrator.set_max_order(self.integrator_max_order)
         print(
@@ -463,6 +609,7 @@ class ViewKernel:
             print(f"  ✓ Evaluating single multipole: ell = {self.ell}")
         print()
         kernel_evals = []
+        kernel_objs: list[tuple[str, Nc.XcorKernel]] = []
         for k0 in self.kernel:
             kernel_name, kernel_config = parse_kernel_spec(k0)
             print(f"  ✓ Kernel type: {kernel_name}")
@@ -471,6 +618,7 @@ class ViewKernel:
 
             # Create kernel(s)
             kernel_label, kernel_obj = self._create_kernels(kernel_config)
+            kernel_objs.append((kernel_label, kernel_obj))
 
             # Evaluate kernels
             kernel_evals += self._evaluate_kernels(kernel_label, kernel_obj)
@@ -478,8 +626,54 @@ class ViewKernel:
         # Plot results
         self._plot_results(kernel_evals)
 
+        if self.cls:
+            cls_main = self._compute_cls(kernel_objs, self.l_limber, self.closure_type)
+            cls_alt = None
+            if self.compare_limber:
+                cls_alt = self._compute_cls(kernel_objs, 0, self.closure_type)
+            elif self.compare_closure:
+                cls_alt = self._compute_cls(
+                    kernel_objs, self.l_limber, self._alt_closure_type
+                )
+            self._plot_cls(kernel_objs, cls_main, cls_alt)
+
         print()
         print("✓ Kernel visualization complete!")
+
+    @property
+    def _alt_closure_type(self) -> XcorClosureOption:
+        """The representation the comparison curve uses.
+
+        :return: The option other than the one --closure-type selected.
+        """
+        if self.closure_type is XcorClosureOption.SPLINE:
+            return XcorClosureOption.CHEBYSHEV
+        return XcorClosureOption.SPLINE
+
+    @property
+    def _comparing(self) -> bool:
+        """Whether a second, alternative curve is drawn beside the main one.
+
+        :return: True when either comparison mode is on.
+        """
+        return self.compare_limber or self.compare_closure
+
+    @property
+    def _curve_labels(self) -> tuple[str, str]:
+        """Names for the main and the alternative curve, for titles and axes.
+
+        :return: Tuple of (main label, alternative label).
+        """
+        if self.compare_closure:
+            return self.closure_type.value.capitalize(), (
+                self._alt_closure_type.value.capitalize()
+            )
+        main = (
+            "Non-Limber"
+            if self.l_limber < 0
+            else ("Kernel-Limber" if self.l_limber == 0 else "Limber")
+        )
+        return main, "Limber"
 
     def _create_kernels(
         self, kernel_config: KernelConfigTypes
@@ -723,7 +917,9 @@ class ViewKernel:
 
         RH_Mpc = self.cosmo.RH_Mpc()
         kernel_obj.set_l_limber(self.l_limber)
-        eval_kernel = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
+        eval_kernel = kernel_obj.get_eval_vectorized(
+            self.cosmo, self.ell, lmax, self.closure_type.to_nc()
+        )
 
         primary_method = (
             "Non-Limber"
@@ -747,30 +943,177 @@ class ViewKernel:
 
         print(f"  Non-Limber kernel k range: [{k_min:.2e}, {k_max:.2e}] Mpc^-1")
 
-        kernel_eval_limber: KernelEvaluation | None = None
-        if self.compare_limber:
-            # Also evaluate with Limber approximation for comparison
-            kernel_obj.set_l_limber(0)
-            eval_limber = kernel_obj.get_eval_vectorized(self.cosmo, self.ell, lmax)
-            kernel_eval_limber = KernelEvaluation(
+        kernel_eval_alt: KernelEvaluation | None = None
+        if self._comparing:
+            _, alt_label = self._curve_labels
+
+            if self.compare_limber:
+                # Same representation, the Limber approximation instead.
+                kernel_obj.set_l_limber(0)
+                alt_closure = self.closure_type
+            else:
+                # Same evaluation tier, the other representation of it.
+                alt_closure = self._alt_closure_type
+
+            eval_alt = kernel_obj.get_eval_vectorized(
+                self.cosmo, self.ell, lmax, alt_closure.to_nc()
+            )
+            kernel_eval_alt = KernelEvaluation(
                 name=kernel_label,
                 kernel=kernel_obj,
-                method="Limber",
-                evaluator=eval_limber,
+                method=alt_label,
+                evaluator=eval_alt,
                 RH_Mpc=RH_Mpc,
                 lmin=self.ell,
             )
-            k_min_limber, k_max_limber = kernel_eval_limber.range()
+            k_min_alt, k_max_alt = kernel_eval_alt.range()
 
             print(
-                f"  Limber kernel k range: [{k_min_limber:.2e}, "
-                f"{k_max_limber:.2e}] Mpc^-1"
+                f"  {alt_label} kernel k range: [{k_min_alt:.2e}, "
+                f"{k_max_alt:.2e}] Mpc^-1"
             )
 
         print("  ✓ Kernel evaluation complete")
         print()
 
-        return [KernelVariants(main=kernel_eval, alternative=kernel_eval_limber)]
+        return [KernelVariants(main=kernel_eval, alternative=kernel_eval_alt)]
+
+    def _compute_cls(
+        self,
+        kernels: list[tuple[str, Nc.XcorKernel]],
+        l_limber: int,
+        closure_type: XcorClosureOption,
+    ) -> dict[tuple[int, int], np.ndarray]:
+        """Compute C_ell for every auto- and cross-pair of the given kernels.
+
+        The multipole range is the one set by ``--ell``/``--n-ell``. Every kernel is
+        put in the requested Limber mode first: :meth:`_evaluate_kernels` leaves the
+        kernels in Limber mode when ``--compare-limber`` is used, so the mode must be
+        set explicitly here rather than assumed.
+
+        :param kernels: List of (label, kernel object) pairs.
+        :param l_limber: Limber threshold to apply to every kernel.
+        :param closure_type: Representation to fit to every kernel.
+        :return: Mapping from (i, j) kernel index pair to the C_ell array.
+        """
+        lmin = self.ell
+        lmax = self.ell + self.n_ell - 1
+        method_label = (
+            "non-Limber"
+            if l_limber < 0
+            else ("Limber" if l_limber == 0 else f"Limber(ell>={l_limber})")
+        )
+        n_kernels = len(kernels)
+        pairs = [(i, j) for i in range(n_kernels) for j in range(i, n_kernels)]
+
+        print(f"Computing C_ell ({method_label}) for ell = {lmin} to {lmax}...")
+        print(
+            f"  {n_kernels} kernel(s), {len(pairs)} spectra, "
+            f"method={self.cls_method.value}, closure={closure_type.value}, "
+            f"block size={self.cls_block_size}"
+        )
+
+        self.dist.prepare_if_needed(self.cosmo)
+        self.ps_ml.prepare_if_needed(self.cosmo)
+
+        for _, kernel_obj in kernels:
+            kernel_obj.set_l_limber(l_limber)
+
+        xcor = Nc.Xcor.new(self.dist, self.ps_ml, self.cls_method.to_nc())
+        xcor.set_closure_type(closure_type.to_nc())
+
+        solver = Nc.XcorSolver.new()
+        ids = [solver.register_kernel(kernel_obj) for _, kernel_obj in kernels]
+        for i, j in pairs:
+            solver.request_cl(ids[i], ids[j], lmin, lmax)
+        solver.plan_blocks(self.cls_block_size)
+
+        start = time.monotonic()
+        solver.solve(xcor, self.cosmo)
+        elapsed = time.monotonic() - start
+
+        result = {
+            (i, j): np.array(solver.get_result(request).dup_array())
+            for request, (i, j) in enumerate(pairs)
+        }
+
+        print(
+            f"  ✓ {len(pairs)} spectra in {elapsed:.2f} s "
+            f"({solver.get_n_blocks()} multipole block(s))"
+        )
+        print()
+
+        return result
+
+    def _plot_cls(
+        self,
+        kernels: list[tuple[str, Nc.XcorKernel]],
+        cls_main: dict[tuple[int, int], np.ndarray],
+        cls_alt: dict[tuple[int, int], np.ndarray] | None,
+    ) -> None:
+        """Plot the angular power spectra, optionally against the alternative.
+
+        :param kernels: List of (label, kernel object) pairs.
+        :param cls_main: C_ell computed with the primary mode and representation.
+        :param cls_alt: C_ell from the comparison run, or None.
+        """
+        print("Plotting C_ell...")
+
+        ells = np.arange(self.ell, self.ell + self.n_ell)
+        colors = plt.cm.tab10.colors  # type: ignore # pylint: disable=no-member
+        ax1: plt.Axes
+
+        if cls_alt is not None:
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
+        else:
+            fig, ax1 = plt.subplots(1, 1, figsize=(10, 6))
+            ax2 = None
+
+        for idx, ((i, j), cl) in enumerate(cls_main.items()):
+            color = colors[idx % len(colors)]
+            label = kernels[i][0] if i == j else f"{kernels[i][0]} x {kernels[j][0]}"
+            ax1.plot(ells, np.abs(cl), color=color, label=label)
+            if cls_alt is not None and ax2 is not None:
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    ratio = np.where(cl != 0.0, cls_alt[(i, j)] / cl - 1.0, np.nan)
+                ax2.plot(ells, ratio, color=color, label=label)
+
+        ax1.set_ylabel(r"$|C_\ell|$")
+        ax1.set_yscale("log")
+        if self.n_ell > 1:
+            ax1.set_xscale("log")
+        ax1.grid(True, alpha=0.3)
+        ax1.legend(fontsize=8)
+        ax1.set_title("Angular power spectra", fontweight="bold")
+
+        if ax2 is not None:
+            ax2.axhline(0.0, color="black", lw=0.8)
+            main_label, alt_label = self._curve_labels
+            ax2.set_ylabel(
+                rf"$C_\ell^{{\rm {alt_label}}}/C_\ell^{{\rm {main_label}}} - 1$"
+            )
+            ax2.set_xlabel(r"$\ell$")
+            if self.n_ell > 1:
+                ax2.set_xscale("log")
+            ax2.grid(True, alpha=0.3)
+        else:
+            ax1.set_xlabel(r"$\ell$")
+
+        fig.tight_layout()
+
+        if self.output is not None:
+            cls_output = self.output.with_name(
+                f"{self.output.stem}_cls{self.output.suffix}"
+            )
+            fig.savefig(cls_output, dpi=150, bbox_inches="tight")
+            print(f"  ✓ Saved to {cls_output}")
+
+        if self.show_plot:
+            plt.show()
+        else:
+            plt.close(fig)
+
+        print()
 
     def _plot_results(self, kernel_vars: list[KernelVariants]) -> None:
         """Plot kernel evaluation results.
@@ -784,16 +1127,17 @@ class ViewKernel:
         ax1: plt.Axes
         ax2: plt.Axes
 
-        if self.compare_limber:
+        if self._comparing:
             # Create figure with two subplots for comparison
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), sharex=True)
             if self.n_ell > 1:
                 ell_range = f"$\\ell = {self.ell}$ to ${self.ell + self.n_ell - 1}$"
             else:
                 ell_range = f"$\\ell = {self.ell}$"
+            main_label, alt_label = self._curve_labels
             fig.suptitle(
                 f"Kernel Comparison at {ell_range}\n"
-                "(solid = Non-Limber; dashed/thin = Limber, same color)",
+                f"(solid = {main_label}; dashed/thin = {alt_label}, same color)",
                 fontsize=14,
                 fontweight="bold",
             )
@@ -802,14 +1146,14 @@ class ViewKernel:
             legend_labels = []
 
             for idx, kernel_var in enumerate(kernel_vars):
-                main_kernel = kernel_var.main  # Non-Limber
-                alt_kernel = kernel_var.alternative  # Limber
+                main_kernel = kernel_var.main
+                alt_kernel = kernel_var.alternative
 
                 assert alt_kernel is not None
 
                 color = colors[idx % len(colors)]
 
-                # Plot Non-Limber with full solid lines
+                # Plot the main curve with full solid lines
                 label_main = main_kernel.plot(
                     ax1,
                     n_points=self.n_points,
@@ -819,7 +1163,7 @@ class ViewKernel:
                     alpha=1.0,
                     k_range=self.k_range,
                 )
-                # Plot Limber with thinner dashed lines and reduced opacity
+                # Plot the alternative with thinner dashed lines, reduced opacity
                 alt_kernel.plot(
                     ax1,
                     n_points=self.n_points,
@@ -830,7 +1174,7 @@ class ViewKernel:
                     k_range=self.k_range,
                 )
 
-                # Plot comparison (Non-Limber vs Limber)
+                # Plot the relative difference between the two
                 main_kernel.plot_comparison(
                     alt_kernel, ax2, color=color, linestyle="-", k_range=self.k_range
                 )
@@ -851,8 +1195,10 @@ class ViewKernel:
             # Configure second subplot
             ax2.axhline(y=0.0, color="k", linestyle="-", alpha=0.5, linewidth=0.8)
             ax2.set_xlabel("$k$ [Mpc$^{-1}$]", fontsize=12)
-            ax2.set_ylabel("Relative Difference (Limber/Non-Limber - 1)", fontsize=12)
-            ax2.set_title("Limber vs Non-Limber Comparison", fontsize=11)
+            ax2.set_ylabel(
+                f"Relative Difference ({alt_label}/{main_label} - 1)", fontsize=12
+            )
+            ax2.set_title(f"{alt_label} vs {main_label} Comparison", fontsize=11)
             ax2.grid(True, alpha=0.3)
         else:
             # Create single plot

@@ -77,7 +77,7 @@ struct _NcmCSQ1DClass
  * the variables $(\chi,\, U_+)$ and $(\chi,\, U_-)$ to compute the evolution, respectively.
  *
  */
-typedef enum _NcmCSQ1DEvolState
+typedef enum _NcmCSQ1DEvolState /*< prefix=NCM_CSQ1D_EVOL_STATE >*/
 {
   NCM_CSQ1D_EVOL_STATE_INVALID = 0,
   NCM_CSQ1D_EVOL_STATE_ADIABATIC,
@@ -103,7 +103,7 @@ typedef enum _NcmCSQ1DEvolState
  * the initial condition must be set using the function family ncm_csq1d_set_init_cond*.
  *
  */
-typedef enum _NcmCSQ1DInitialStateType /*< enum,underscore_name=NCM_CSQ1D_INITIAL_CONDITION_TYPE >*/
+typedef enum _NcmCSQ1DInitialStateType /*< enum,underscore_name=NCM_CSQ1D_INITIAL_CONDITION_TYPE,prefix=NCM_CSQ1D_INITIAL_CONDITION_TYPE >*/
 {
   NCM_CSQ1D_INITIAL_CONDITION_TYPE_AD_HOC = 0,
   NCM_CSQ1D_INITIAL_CONDITION_TYPE_ADIABATIC2,
@@ -125,7 +125,7 @@ typedef enum _NcmCSQ1DInitialStateType /*< enum,underscore_name=NCM_CSQ1D_INITIA
  * Frames for the system.
  *
  */
-typedef enum _NcmCSQ1DFrame
+typedef enum _NcmCSQ1DFrame /*< prefix=NCM_CSQ1D_FRAME >*/
 {
   NCM_CSQ1D_FRAME_ORIG = 0,
   NCM_CSQ1D_FRAME_ADIAB1,

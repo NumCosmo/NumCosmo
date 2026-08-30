@@ -9,6 +9,8 @@ from . import ncm as NumCosmoMath
 
 T = typing.TypeVar("T")
 
+BBN_DEFAULT_PARAMS_ABSTOL: float = 0.0
+BBN_PARAMETRIZED_DEFAULT_YP_4HE: float = 0.24
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P0: float = 3.19
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P1: int = 0
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P2: int = 0
@@ -153,9 +155,8 @@ HICOSMO_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HICOSMO_DEFAULT_PARAMS_RELTOL: float = 0.0
 HICOSMO_DE_CPL_DEFAULT_W0: float = 1.0
 HICOSMO_DE_CPL_DEFAULT_W1: float = 0.0
-HICOSMO_DE_CPL_N: int = 9
+HICOSMO_DE_CPL_N: int = 8
 HICOSMO_DE_DEFAULT_ENNU: float = 3.046
-HICOSMO_DE_DEFAULT_HE_YP: float = 0.24
 HICOSMO_DE_DEFAULT_NU_G: float = 1.0
 HICOSMO_DE_DEFAULT_NU_MASS: float = 1e-05
 HICOSMO_DE_DEFAULT_NU_MU: float = 0.0
@@ -169,29 +170,7 @@ HICOSMO_DE_JBP_DEFAULT_W1: float = 0.0
 HICOSMO_DE_WSPLINE_DEFAULT_W0: float = 1.0
 HICOSMO_DE_WSPLINE_N: int = 5
 HICOSMO_DE_XCDM_DEFAULT_W0: float = 1.0
-HICOSMO_DE_XCDM_N: int = 8
-HICOSMO_GCG_DEFAULT_ENNU: float = 3.046
-HICOSMO_GCG_DEFAULT_GAMMA: float = 0.0
-HICOSMO_GCG_DEFAULT_HE_YP: float = 0.24
-HICOSMO_GCG_DEFAULT_NU_G: float = 1.0
-HICOSMO_GCG_DEFAULT_NU_MASS: float = 1e-05
-HICOSMO_GCG_DEFAULT_NU_MU: float = 0.0
-HICOSMO_GCG_DEFAULT_NU_T: float = 0.71611
-HICOSMO_GCG_DEFAULT_OMEGA_B: float = 0.0432
-HICOSMO_GCG_DEFAULT_OMEGA_C: float = 0.2568
-HICOSMO_GCG_DEFAULT_OMEGA_X: float = 0.7
-HICOSMO_GCG_DEFAULT_T_GAMMA0: float = 2.7245
-HICOSMO_IDEM2_DEFAULT_ENNU: float = 3.046
-HICOSMO_IDEM2_DEFAULT_GAMMA: float = 0.0
-HICOSMO_IDEM2_DEFAULT_HE_YP: float = 0.24
-HICOSMO_IDEM2_DEFAULT_NU_G: float = 1.0
-HICOSMO_IDEM2_DEFAULT_NU_MASS: float = 1e-05
-HICOSMO_IDEM2_DEFAULT_NU_MU: float = 0.0
-HICOSMO_IDEM2_DEFAULT_NU_T: float = 0.71611
-HICOSMO_IDEM2_DEFAULT_OMEGA_B: float = 0.0432
-HICOSMO_IDEM2_DEFAULT_OMEGA_C: float = 0.2568
-HICOSMO_IDEM2_DEFAULT_OMEGA_X: float = 0.7
-HICOSMO_IDEM2_DEFAULT_T_GAMMA0: float = 2.7245
+HICOSMO_DE_XCDM_N: int = 7
 HICOSMO_OMEGA_K0_LIMIT: float = 0.0
 HICOSMO_QCONST_DEFAULT_CD: float = 0.0
 HICOSMO_QCONST_DEFAULT_E: float = 1.0
@@ -238,6 +217,7 @@ HICOSMO_VEXP_DEFAULT_SIGMA_PHI: float = 0.4
 HICOSMO_VEXP_DEFAULT_X_B: float = 1e30
 HIPERT_BG_VAR_DEFAULT_ZF: float = 1000000000.0
 HIPERT_BOLTZMANN_BASE_SIZE: int = 8
+HIPERT_BOLTZMANN_REQUIRE_LMIN: int = 300
 HIPRIM_ATAN_DEFAULT_C2: float = 0.5
 HIPRIM_ATAN_DEFAULT_C3: float = 1.0
 HIPRIM_ATAN_DEFAULT_LAMBDA: float = 1.0
@@ -432,6 +412,7 @@ WINDOW_VOLUME_TOPHAT: int = 0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PARAMS_ABSTOL: float = 0.0
 WL_SURFACE_MASS_DENSITY_DEFAULT_PCC: float = 0.8
 WL_SURFACE_MASS_DENSITY_DEFAULT_ROFF: float = 1.0
+XCOR_KERNEL_ANALYTIC_MAX_COMPS: int = 6
 XCOR_KERNEL_CMB_ISW_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_COMPONENT_DEFAULT_EPSILON: float = 0.0
@@ -442,6 +423,7 @@ XCOR_KERNEL_GAL_DEFAULT_NOISE_BIAS: float = 0.0
 XCOR_KERNEL_GAL_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_KERNEL_GAL_G_FUNC_LEN: int = 200
 XCOR_KERNEL_MAX_ELL_BLOCK: int = 64
+XCOR_KERNEL_MIN_USEFUL_SCALED_ABSTOL: float = 1e-06
 XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_LENSING_EFFICIENCY_DEFAULT_ABSTOL: float = 0.0
 XCOR_LENSING_EFFICIENCY_DEFAULT_RELTOL: float = 0.0
@@ -508,6 +490,257 @@ def wl_ellipticity_trace_kernel_prep_clear(
     prep: WLEllipticityTraceKernelPrep,
 ) -> None: ...
 def xcor_kernel_integrand_clear(integrand: XcorKernelIntegrand) -> None: ...
+
+class BBN(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBN(**properties)
+
+    Object NcBBN
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: NumCosmoMath.Model = ...
+    def __init__(
+        self,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def DH(self, cosmo: HICosmo) -> float: ...
+    def He3H(self, cosmo: HICosmo) -> float: ...
+    def Li7H(self, cosmo: HICosmo) -> float: ...
+    def Yp_4He(self, cosmo: HICosmo) -> float: ...
+    def check_domain(self, wb: float, DNeff: float) -> None: ...
+    @staticmethod
+    def clear(bbn: BBN) -> None: ...
+    def do_DH(self, cosmo: HICosmo) -> float: ...
+    def do_He3H(self, cosmo: HICosmo) -> float: ...
+    def do_Li7H(self, cosmo: HICosmo) -> float: ...
+    def do_Yp_4He(self, cosmo: HICosmo) -> float: ...
+    def do_get_domain(self) -> typing.Tuple[float, float, float, float]: ...
+    def free(self) -> None: ...
+    def get_domain(self) -> typing.Tuple[float, float, float, float]: ...
+    @staticmethod
+    def id() -> int: ...
+    def ref(self) -> BBN: ...
+
+class BBNClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBNClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
+    Yp_4He: typing.Callable[[BBN, HICosmo], float] = ...
+    get_domain: typing.Callable[[BBN], typing.Tuple[float, float, float, float]] = ...
+    DH: typing.Callable[[BBN, HICosmo], float] = ...
+    He3H: typing.Callable[[BBN, HICosmo], float] = ...
+    Li7H: typing.Callable[[BBN, HICosmo], float] = ...
+    padding: list[None] = ...
+
+class BBNParametrized(BBN):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBNParametrized(**properties)
+        new() -> NumCosmo.BBNParametrized
+
+    Object NcBBNParametrized
+
+    Properties from NcBBNParametrized:
+      Yp -> gdouble: Yp
+        Y_p
+      Yp-fit -> gboolean: Yp-fit
+        Y_p:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        Yp: float
+        Yp_fit: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(bbn_par: BBNParametrized) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> BBNParametrized: ...
+    def ref(self) -> BBNParametrized: ...
+
+class BBNParametrizedClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBNParametrizedClass()
+    """
+
+    parent_class: BBNClass = ...
+
+class BBNParthenope(BBN):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBNParthenope(**properties)
+        new() -> NumCosmo.BBNParthenope
+        new_from_table(table:NumCosmo.BBNParthenopeTable) -> NumCosmo.BBNParthenope
+
+    Object NcBBNParthenope
+
+    Properties from NcBBNParthenope:
+      table -> NcBBNParthenopeTable: table
+        PArthENoPE tabulation of Yp
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        table: BBNParthenopeTable
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        table: BBNParthenopeTable = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(bbn_pn: BBNParthenope) -> None: ...
+    def free(self) -> None: ...
+    def get_table(self) -> BBNParthenopeTable: ...
+    @classmethod
+    def new(cls) -> BBNParthenope: ...
+    @classmethod
+    def new_from_table(cls, table: BBNParthenopeTable) -> BBNParthenope: ...
+    def ref(self) -> BBNParthenope: ...
+    def set_table(self, table: BBNParthenopeTable) -> None: ...
+
+class BBNParthenopeClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBNParthenopeClass()
+    """
+
+    parent_class: BBNClass = ...
 
 class CBE(GObject.Object):
     r"""
@@ -710,7 +943,7 @@ class CBEPrecision(GObject.Object):
       tol-tau-eq -> gdouble: tol-tau-eq
         parameter controlling precision with which tau_eq (conformal time at radiation/matter equality) is found (units: Mpc)
       sBBN-file -> gchararray: sBBN-file
-        SBBN filename
+        SBBN filename (unused: NumCosmo always supplies YHe)
       recfast-z-initial -> gdouble: recfast-z-initial
         initial redshift in recfast
       recfast-Nz0 -> gint: recfast-Nz0
@@ -6055,6 +6288,133 @@ class DataHubbleClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
+class DataPlanckCommander(NumCosmoMath.Data):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckCommander(**properties)
+        new(lmin:int, lmax:int, nbin:int, delta_l:int, cl2x_xa:NumCosmoMath.Vector, cl2x_ya:NumCosmoMath.Vector, cl2x_y2a:NumCosmoMath.Vector, mu:NumCosmoMath.Vector, cov:NumCosmoMath.Matrix, mu_sigma:NumCosmoMath.Vector) -> NumCosmo.DataPlanckCommander
+        new_from_file(filename:str) -> NumCosmo.DataPlanckCommander
+
+    Object NcDataPlanckCommander
+
+    Properties from NcDataPlanckCommander:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+      nbin -> guint: nbin
+        Number of spline nodes per multipole
+      delta-l -> guint: delta-l
+        Covariance band-limit width
+      calib-name -> gchararray: calib-name
+        Free-calibration parameter name (NULL => none)
+      cl2x-xa -> NcmVector: cl2x-xa
+        Per-ell spline Dl abscissa (flattened nl*nbin)
+      cl2x-ya -> NcmVector: cl2x-ya
+        Per-ell spline x ordinate (flattened nl*nbin)
+      cl2x-y2a -> NcmVector: cl2x-y2a
+        Per-ell spline second derivatives (flattened nl*nbin)
+      mu -> NcmVector: mu
+        Gaussianized mean vector
+      cov -> NcmMatrix: cov
+        Covariance matrix (band-limited and inverted internally)
+      mu-sigma -> NcmVector: mu-sigma
+        Mean sigma_l (Dl) defining the offset normalization
+      clik-pi-compat -> gboolean: clik-pi-compat
+        Reproduce clik's single-precision pi in the Dl conversion (bit-identical to clik)
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        calib_name: str
+        cl2x_xa: NumCosmoMath.Vector
+        cl2x_y2a: NumCosmoMath.Vector
+        cl2x_ya: NumCosmoMath.Vector
+        clik_pi_compat: bool
+        cov: NumCosmoMath.Matrix
+        delta_l: int
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        lmin: int
+        mu: NumCosmoMath.Vector
+        mu_sigma: NumCosmoMath.Vector
+        nbin: int
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        calib_name: str = ...,
+        cl2x_xa: NumCosmoMath.Vector = ...,
+        cl2x_y2a: NumCosmoMath.Vector = ...,
+        cl2x_ya: NumCosmoMath.Vector = ...,
+        clik_pi_compat: bool = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        delta_l: int = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        lmin: int = ...,
+        mu: NumCosmoMath.Vector = ...,
+        mu_sigma: NumCosmoMath.Vector = ...,
+        nbin: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmin: int,
+        lmax: int,
+        nbin: int,
+        delta_l: int,
+        cl2x_xa: NumCosmoMath.Vector,
+        cl2x_ya: NumCosmoMath.Vector,
+        cl2x_y2a: NumCosmoMath.Vector,
+        mu: NumCosmoMath.Vector,
+        cov: NumCosmoMath.Matrix,
+        mu_sigma: NumCosmoMath.Vector,
+    ) -> DataPlanckCommander: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckCommander: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckCommanderClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckCommanderClass()
+    """
+
+    parent_class: NumCosmoMath.DataClass = ...
+
 class DataPlanckLKL(NumCosmoMath.Data):
     r"""
     :Constructors:
@@ -6142,6 +6502,550 @@ class DataPlanckLKLClass(GObject.GPointer):
     """
 
     parent_class: NumCosmoMath.DataClass = ...
+
+class DataPlanckLensing(NumCosmoMath.DataGauss):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckLensing(**properties)
+        new(lmax:int, nbins:int, has_calib:bool, hascl:list, bins:NumCosmoMath.Matrix, cor0:NumCosmoMath.Vector, cors:NumCosmoMath.Matrix=None) -> NumCosmo.DataPlanckLensing
+        new_from_file(filename:str) -> NumCosmo.DataPlanckLensing
+
+    Object NcDataPlanckLensing
+
+    Properties from NcDataPlanckLensing:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmax -> guint: lmax
+        Maximum multipole
+      nbins -> guint: nbins
+        Number of band-power bins
+      has-calib -> gboolean: has-calib
+        Whether a calibration parameter scales the CMB renormalization
+      calib-name -> gchararray: calib-name
+        Calibration parameter name
+      hascl -> GVariant: hascl
+        CMB spectra selection flags [TT,EE,BB,TE,TB,EB]
+      bins -> NcmMatrix: bins
+        Binning matrix (nbins x lmax+1)
+      cor0 -> NcmVector: cor0
+        Per-bin constant renormalization offset (nbins)
+      cors -> NcmMatrix: cors
+        Renormalization response matrix (nbins x nlt), or NULL
+
+    Properties from NcmDataGauss:
+      n-points -> guint: n-points
+        Data sample size
+      mean -> NcmVector: mean
+        Data mean
+      inv-cov -> NcmMatrix: inv-cov
+        Data covariance inverse
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        bins: NumCosmoMath.Matrix
+        calib_name: str
+        cor0: NumCosmoMath.Vector
+        cors: NumCosmoMath.Matrix
+        has_calib: bool
+        hascl: GLib.Variant
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        nbins: int
+        inv_cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        bins: NumCosmoMath.Matrix = ...,
+        calib_name: str = ...,
+        cor0: NumCosmoMath.Vector = ...,
+        cors: NumCosmoMath.Matrix = ...,
+        has_calib: bool = ...,
+        hascl: GLib.Variant = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        nbins: int = ...,
+        inv_cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmax: int,
+        nbins: int,
+        has_calib: bool,
+        hascl: typing.Sequence[int],
+        bins: NumCosmoMath.Matrix,
+        cor0: NumCosmoMath.Vector,
+        cors: typing.Optional[NumCosmoMath.Matrix] = None,
+    ) -> DataPlanckLensing: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckLensing: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckLensingClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckLensingClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussClass = ...
+
+class DataPlanckPlikLite(NumCosmoMath.DataGaussCov):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckPlikLite(**properties)
+        new_from_file(filename:str) -> NumCosmo.DataPlanckPlikLite
+
+    Object NcDataPlanckPlikLite
+
+    Properties from NcDataPlanckPlikLite:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      bin-lmin -> NcmVector: bin-lmin
+        Per-bin lower multipole (absolute ell)
+      bin-lmax -> NcmVector: bin-lmax
+        Per-bin upper multipole (absolute ell)
+      bin-weight -> NcmVector: bin-weight
+        Flattened per-bin averaging weights
+      spectrum-id -> NcmVector: spectrum-id
+        Per-bin spectrum tag (0=TT,1=EE,2=TE)
+      lmax -> guint: lmax
+        Maximum multipole required from the Boltzmann code
+      calib-name -> gchararray: calib-name
+        Nuisance parameter name for the absolute calibration
+
+    Properties from NcmDataGaussCov:
+      n-points -> guint: n-points
+        Data sample size
+      use-norma -> gboolean: use-norma
+        Use the likelihood normalization to calculate -2lnL
+      mean -> NcmVector: mean
+        Data mean
+      cov -> NcmMatrix: cov
+        Data covariance
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        bin_lmax: NumCosmoMath.Vector
+        bin_lmin: NumCosmoMath.Vector
+        bin_weight: NumCosmoMath.Vector
+        calib_name: str
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        spectrum_id: NumCosmoMath.Vector
+        cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        use_norma: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        bin_lmax: NumCosmoMath.Vector = ...,
+        bin_lmin: NumCosmoMath.Vector = ...,
+        bin_weight: NumCosmoMath.Vector = ...,
+        calib_name: str = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        spectrum_id: NumCosmoMath.Vector = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckPlikLite: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckPlikLiteClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckPlikLiteClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussCovClass = ...
+
+class DataPlanckSimall(NumCosmoMath.Data):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSimall(**properties)
+        new(lmin:int, lmax:int, step_ee:float, prob_ee:NumCosmoMath.Vector=None, step_bb:float, prob_bb:NumCosmoMath.Vector=None, step_te:float, prob_te:NumCosmoMath.Vector=None) -> NumCosmo.DataPlanckSimall
+        new_from_file(filename:str) -> NumCosmo.DataPlanckSimall
+
+    Object NcDataPlanckSimall
+
+    Properties from NcDataPlanckSimall:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+      calib-name -> gchararray: calib-name
+        Free-calibration parameter name (NULL => none)
+      step-ee -> gdouble: step-ee
+        EE table Dl step
+      prob-ee -> NcmVector: prob-ee
+        EE log-probability table (flattened nell*nsteps)
+      step-bb -> gdouble: step-bb
+        BB table Dl step
+      prob-bb -> NcmVector: prob-bb
+        BB log-probability table (flattened nell*nsteps)
+      step-te -> gdouble: step-te
+        TE table Dl step
+      prob-te -> NcmVector: prob-te
+        TE log-probability table (flattened nell*nsteps)
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        calib_name: str
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        lmin: int
+        prob_bb: NumCosmoMath.Vector
+        prob_ee: NumCosmoMath.Vector
+        prob_te: NumCosmoMath.Vector
+        step_bb: float
+        step_ee: float
+        step_te: float
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        calib_name: str = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        lmin: int = ...,
+        prob_bb: NumCosmoMath.Vector = ...,
+        prob_ee: NumCosmoMath.Vector = ...,
+        prob_te: NumCosmoMath.Vector = ...,
+        step_bb: float = ...,
+        step_ee: float = ...,
+        step_te: float = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmin: int,
+        lmax: int,
+        step_ee: float,
+        prob_ee: typing.Optional[NumCosmoMath.Vector],
+        step_bb: float,
+        prob_bb: typing.Optional[NumCosmoMath.Vector],
+        step_te: float,
+        prob_te: typing.Optional[NumCosmoMath.Vector] = None,
+    ) -> DataPlanckSimall: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckSimall: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckSimallClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSimallClass()
+    """
+
+    parent_class: NumCosmoMath.DataClass = ...
+
+class DataPlanckSmica(NumCosmoMath.DataGauss):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSmica(**properties)
+        new(lmin:int, lmax:int, m:int, nbins:int, freqs:NumCosmoMath.Vector, a_cmb:NumCosmoMath.Vector, sz_color:NumCosmoMath.Vector, gcib_conv:NumCosmoMath.Vector, gibxsz_conv:NumCosmoMath.Vector, bin_lmin:list, bin_lmax:list, bin_weight:NumCosmoMath.Vector, quad_idx:list, tmpl_gcib:NumCosmoMath.Vector, tmpl_sz:NumCosmoMath.Vector, tmpl_ksz:NumCosmoMath.Vector, tmpl_gibxsz:NumCosmoMath.Vector, tmpl_dust:NumCosmoMath.Vector, tmpl_leak:NumCosmoMath.Vector, tmpl_sbpx:NumCosmoMath.Vector) -> NumCosmo.DataPlanckSmica
+        new_from_file(filename:str) -> NumCosmo.DataPlanckSmica
+
+    Object NcDataPlanckSmica
+
+    Properties from NcDataPlanckSmica:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+      m-channels -> guint: m-channels
+        Number of frequency channels
+      nbins -> guint: nbins
+        Number of bandpower bins
+      freqs -> NcmVector: freqs
+        Channel frequencies (GHz)
+      a-cmb -> NcmVector: a-cmb
+        CMB mixing vector
+      sz-color -> NcmVector: sz-color
+        tSZ colour corrections
+      gcib-conv -> NcmVector: gcib-conv
+        CIB muK->MJ/sr conversion factors
+      gibxsz-conv -> NcmVector: gibxsz-conv
+        CIBxtSZ conversion factors
+      bin-lmin -> GVariant: bin-lmin
+        Per-bin lower multipole offset
+      bin-lmax -> GVariant: bin-lmax
+        Per-bin upper multipole offset
+      bin-weight -> NcmVector: bin-weight
+        Flattened per-(bin,ell) binning weights
+      quad-idx -> GVariant: quad-idx
+        Flat indices of the masked R_q entries
+      tmpl-gcib -> NcmVector: tmpl-gcib
+        Clustered CIB template
+      tmpl-sz -> NcmVector: tmpl-sz
+        tSZ template (normalized at ell=3000)
+      tmpl-ksz -> NcmVector: tmpl-ksz
+        kSZ template (normalized at ell=3000)
+      tmpl-gibxsz -> NcmVector: tmpl-gibxsz
+        CIBxtSZ correlation template
+      tmpl-dust -> NcmVector: tmpl-dust
+        Galactic dust template
+      tmpl-leak -> NcmVector: tmpl-leak
+        Beam leakage template
+      tmpl-sbpx -> NcmVector: tmpl-sbpx
+        Subpixel effect template
+      field -> GVariant: field
+        Per-channel field type (0=T, 1=E); empty => all T
+      tmpl-e2e -> NcmVector: tmpl-e2e
+        EE end-to-end correlated-noise template (polarization)
+      ical-im -> GVariant: ical-im
+        icalTP calibrated-map indices (polarization)
+      ical-w -> NcmVector: ical-w
+        icalTP calibration mixing weights, length m*m*2 (polarization)
+      ical-other -> GVariant: ical-other
+        icalTP mixing other-map indices, length m*m*2 (polarization)
+
+    Properties from NcmDataGauss:
+      n-points -> guint: n-points
+        Data sample size
+      mean -> NcmVector: mean
+        Data mean
+      inv-cov -> NcmMatrix: inv-cov
+        Data covariance inverse
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        a_cmb: NumCosmoMath.Vector
+        bin_lmax: GLib.Variant
+        bin_lmin: GLib.Variant
+        bin_weight: NumCosmoMath.Vector
+        field: GLib.Variant
+        freqs: NumCosmoMath.Vector
+        gcib_conv: NumCosmoMath.Vector
+        gibxsz_conv: NumCosmoMath.Vector
+        hipert_boltzmann: HIPertBoltzmann
+        ical_im: GLib.Variant
+        ical_other: GLib.Variant
+        ical_w: NumCosmoMath.Vector
+        lmax: int
+        lmin: int
+        m_channels: int
+        nbins: int
+        quad_idx: GLib.Variant
+        sz_color: NumCosmoMath.Vector
+        tmpl_dust: NumCosmoMath.Vector
+        tmpl_e2e: NumCosmoMath.Vector
+        tmpl_gcib: NumCosmoMath.Vector
+        tmpl_gibxsz: NumCosmoMath.Vector
+        tmpl_ksz: NumCosmoMath.Vector
+        tmpl_leak: NumCosmoMath.Vector
+        tmpl_sbpx: NumCosmoMath.Vector
+        tmpl_sz: NumCosmoMath.Vector
+        inv_cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        a_cmb: NumCosmoMath.Vector = ...,
+        bin_lmax: GLib.Variant = ...,
+        bin_lmin: GLib.Variant = ...,
+        bin_weight: NumCosmoMath.Vector = ...,
+        field: GLib.Variant = ...,
+        freqs: NumCosmoMath.Vector = ...,
+        gcib_conv: NumCosmoMath.Vector = ...,
+        gibxsz_conv: NumCosmoMath.Vector = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        ical_im: GLib.Variant = ...,
+        ical_other: GLib.Variant = ...,
+        ical_w: NumCosmoMath.Vector = ...,
+        lmax: int = ...,
+        lmin: int = ...,
+        m_channels: int = ...,
+        nbins: int = ...,
+        quad_idx: GLib.Variant = ...,
+        sz_color: NumCosmoMath.Vector = ...,
+        tmpl_dust: NumCosmoMath.Vector = ...,
+        tmpl_e2e: NumCosmoMath.Vector = ...,
+        tmpl_gcib: NumCosmoMath.Vector = ...,
+        tmpl_gibxsz: NumCosmoMath.Vector = ...,
+        tmpl_ksz: NumCosmoMath.Vector = ...,
+        tmpl_leak: NumCosmoMath.Vector = ...,
+        tmpl_sbpx: NumCosmoMath.Vector = ...,
+        tmpl_sz: NumCosmoMath.Vector = ...,
+        inv_cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmin: int,
+        lmax: int,
+        m: int,
+        nbins: int,
+        freqs: NumCosmoMath.Vector,
+        a_cmb: NumCosmoMath.Vector,
+        sz_color: NumCosmoMath.Vector,
+        gcib_conv: NumCosmoMath.Vector,
+        gibxsz_conv: NumCosmoMath.Vector,
+        bin_lmin: typing.Sequence[int],
+        bin_lmax: typing.Sequence[int],
+        bin_weight: NumCosmoMath.Vector,
+        quad_idx: typing.Sequence[int],
+        tmpl_gcib: NumCosmoMath.Vector,
+        tmpl_sz: NumCosmoMath.Vector,
+        tmpl_ksz: NumCosmoMath.Vector,
+        tmpl_gibxsz: NumCosmoMath.Vector,
+        tmpl_dust: NumCosmoMath.Vector,
+        tmpl_leak: NumCosmoMath.Vector,
+        tmpl_sbpx: NumCosmoMath.Vector,
+    ) -> DataPlanckSmica: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckSmica: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckSmicaClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSmicaClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussClass = ...
 
 class DataSNIACov(NumCosmoMath.DataGaussCov):
     r"""
@@ -9250,6 +10154,12 @@ class HICosmo(NumCosmoMath.Model):
 
     Object NcHICosmo
 
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -9284,18 +10194,25 @@ class HICosmo(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     is_eternal: bool = ...
     prim: HIPrim = ...
     reion: HIReion = ...
+    bbn: BBN = ...
+    compat_Yp: float = ...
+    compat_Yp_fit: bool = ...
     T: int = ...
     s: int = ...
     Tmin: int = ...
     smin: int = ...
     def __init__(
         self,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -9409,6 +10326,7 @@ class HICosmo(NumCosmoMath.Model):
     def mqE2(self, z: float) -> float: ...
     def mqE2_max(self, z_max: float) -> typing.Tuple[float, float]: ...
     def nec(self, z: float) -> float: ...
+    def peek_bbn(self) -> BBN: ...
     def peek_prim(self) -> HIPrim: ...
     def peek_reion(self) -> HIReion: ...
     @staticmethod
@@ -9494,8 +10412,6 @@ class HICosmoDE(HICosmo):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -9524,8 +10440,6 @@ class HICosmoDE(HICosmo):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
@@ -9538,6 +10452,12 @@ class HICosmoDE(HICosmo):
         \mu_{\nu}:fit
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
+
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -9580,8 +10500,6 @@ class HICosmoDE(HICosmo):
         Tnu: NumCosmoMath.Vector
         Tnu_fit: GLib.Variant
         Tnu_length: int
-        Yp: float
-        Yp_fit: bool
         gnu: NumCosmoMath.Vector
         gnu_fit: GLib.Variant
         gnu_length: int
@@ -9600,6 +10518,8 @@ class HICosmoDE(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -9622,8 +10542,6 @@ class HICosmoDE(HICosmo):
         Tnu: NumCosmoMath.Vector = ...,
         Tnu_fit: GLib.Variant = ...,
         Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
         gnu: NumCosmoMath.Vector = ...,
         gnu_fit: GLib.Variant = ...,
         gnu_length: int = ...,
@@ -9633,6 +10551,8 @@ class HICosmoDE(HICosmo):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -9646,8 +10566,6 @@ class HICosmoDE(HICosmo):
     def do_d2E2Omega_de_dz2(self, z: float) -> float: ...
     def do_dE2Omega_de_dz(self, z: float) -> float: ...
     def do_w_de(self, z: float) -> float: ...
-    @staticmethod
-    def new_add_bbn(lh: NumCosmoMath.Likelihood) -> None: ...
     def omega_x2omega_k(self) -> None: ...
     def set_wmap5_params(self) -> None: ...
     def w_de(self, z: float) -> float: ...
@@ -9699,8 +10617,6 @@ class HICosmoDECpl(HICosmoDE):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -9729,8 +10645,6 @@ class HICosmoDECpl(HICosmoDE):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
@@ -9743,6 +10657,12 @@ class HICosmoDECpl(HICosmoDE):
         \mu_{\nu}:fit
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
+
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -9789,8 +10709,6 @@ class HICosmoDECpl(HICosmoDE):
         Tnu: NumCosmoMath.Vector
         Tnu_fit: GLib.Variant
         Tnu_length: int
-        Yp: float
-        Yp_fit: bool
         gnu: NumCosmoMath.Vector
         gnu_fit: GLib.Variant
         gnu_length: int
@@ -9809,6 +10727,8 @@ class HICosmoDECpl(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -9834,8 +10754,6 @@ class HICosmoDECpl(HICosmoDE):
         Tnu: NumCosmoMath.Vector = ...,
         Tnu_fit: GLib.Variant = ...,
         Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
         gnu: NumCosmoMath.Vector = ...,
         gnu_fit: GLib.Variant = ...,
         gnu_length: int = ...,
@@ -9845,6 +10763,8 @@ class HICosmoDECpl(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -9895,8 +10815,6 @@ class HICosmoDEJbp(HICosmoDE):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -9925,8 +10843,6 @@ class HICosmoDEJbp(HICosmoDE):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
@@ -9939,6 +10855,12 @@ class HICosmoDEJbp(HICosmoDE):
         \mu_{\nu}:fit
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
+
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -9985,8 +10907,6 @@ class HICosmoDEJbp(HICosmoDE):
         Tnu: NumCosmoMath.Vector
         Tnu_fit: GLib.Variant
         Tnu_length: int
-        Yp: float
-        Yp_fit: bool
         gnu: NumCosmoMath.Vector
         gnu_fit: GLib.Variant
         gnu_length: int
@@ -10005,6 +10925,8 @@ class HICosmoDEJbp(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -10030,8 +10952,6 @@ class HICosmoDEJbp(HICosmoDE):
         Tnu: NumCosmoMath.Vector = ...,
         Tnu_fit: GLib.Variant = ...,
         Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
         gnu: NumCosmoMath.Vector = ...,
         gnu_fit: GLib.Variant = ...,
         gnu_length: int = ...,
@@ -10041,6 +10961,8 @@ class HICosmoDEJbp(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -10195,8 +11117,6 @@ class HICosmoDEWSpline(HICosmoDE):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -10225,8 +11145,6 @@ class HICosmoDEWSpline(HICosmoDE):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
@@ -10239,6 +11157,12 @@ class HICosmoDEWSpline(HICosmoDE):
         \mu_{\nu}:fit
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
+
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -10287,8 +11211,6 @@ class HICosmoDEWSpline(HICosmoDE):
         Tnu: NumCosmoMath.Vector
         Tnu_fit: GLib.Variant
         Tnu_length: int
-        Yp: float
-        Yp_fit: bool
         gnu: NumCosmoMath.Vector
         gnu_fit: GLib.Variant
         gnu_length: int
@@ -10307,6 +11229,8 @@ class HICosmoDEWSpline(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -10335,8 +11259,6 @@ class HICosmoDEWSpline(HICosmoDE):
         Tnu: NumCosmoMath.Vector = ...,
         Tnu_fit: GLib.Variant = ...,
         Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
         gnu: NumCosmoMath.Vector = ...,
         gnu_fit: GLib.Variant = ...,
         gnu_length: int = ...,
@@ -10346,6 +11268,8 @@ class HICosmoDEWSpline(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -10403,8 +11327,6 @@ class HICosmoDEXcdm(HICosmoDE):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -10433,8 +11355,6 @@ class HICosmoDEXcdm(HICosmoDE):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
@@ -10447,6 +11367,12 @@ class HICosmoDEXcdm(HICosmoDE):
         \mu_{\nu}:fit
       gnu-fit -> GVariant: gnu-fit
         g_{\nu}:fit
+
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -10491,8 +11417,6 @@ class HICosmoDEXcdm(HICosmoDE):
         Tnu: NumCosmoMath.Vector
         Tnu_fit: GLib.Variant
         Tnu_length: int
-        Yp: float
-        Yp_fit: bool
         gnu: NumCosmoMath.Vector
         gnu_fit: GLib.Variant
         gnu_length: int
@@ -10511,6 +11435,8 @@ class HICosmoDEXcdm(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -10534,8 +11460,6 @@ class HICosmoDEXcdm(HICosmoDE):
         Tnu: NumCosmoMath.Vector = ...,
         Tnu_fit: GLib.Variant = ...,
         Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
         gnu: NumCosmoMath.Vector = ...,
         gnu_fit: GLib.Variant = ...,
         gnu_length: int = ...,
@@ -10545,6 +11469,8 @@ class HICosmoDEXcdm(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -10591,574 +11517,6 @@ class HICosmoFuncZ(GObject.GPointer):
     f: typing.Callable[[HICosmo, float], float] = ...
     impl: HICosmoImpl = ...
 
-class HICosmoGCG(HICosmo):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCG(**properties)
-
-    Object NcHICosmoGCG
-
-    Properties from NcHICosmoGCG:
-      H0 -> gdouble: H0
-        H_0
-      Omegac -> gdouble: Omegac
-        \Omega_{c0}
-      Omegax -> gdouble: Omegax
-        \Omega_{x0}
-      Tgamma0 -> gdouble: Tgamma0
-        T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
-      ENnu -> gdouble: ENnu
-        N_\nu
-      Omegab -> gdouble: Omegab
-        \Omega_{b0}
-      gamma -> gdouble: gamma
-        \gamma
-      massnu -> NcmVector: massnu
-        m_\nu
-      Tnu -> NcmVector: Tnu
-        T_{\nu0}
-      munu -> NcmVector: munu
-        \mu_{\nu}
-      gnu -> NcmVector: gnu
-        g_{\nu}
-      massnu-length -> guint: massnu-length
-        m_\nu:length
-      Tnu-length -> guint: Tnu-length
-        T_{\nu0}:length
-      munu-length -> guint: munu-length
-        \mu_{\nu}:length
-      gnu-length -> guint: gnu-length
-        g_{\nu}:length
-      H0-fit -> gboolean: H0-fit
-        H_0:fit
-      Omegac-fit -> gboolean: Omegac-fit
-        \Omega_{c0}:fit
-      Omegax-fit -> gboolean: Omegax-fit
-        \Omega_{x0}:fit
-      Tgamma0-fit -> gboolean: Tgamma0-fit
-        T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
-      ENnu-fit -> gboolean: ENnu-fit
-        N_\nu:fit
-      Omegab-fit -> gboolean: Omegab-fit
-        \Omega_{b0}:fit
-      gamma-fit -> gboolean: gamma-fit
-        \gamma:fit
-      massnu-fit -> GVariant: massnu-fit
-        m_\nu:fit
-      Tnu-fit -> GVariant: Tnu-fit
-        T_{\nu0}:fit
-      munu-fit -> GVariant: munu-fit
-        \mu_{\nu}:fit
-      gnu-fit -> GVariant: gnu-fit
-        g_{\nu}:fit
-
-    Properties from NcmModel:
-      name -> gchararray: name
-        Model's name
-      nick -> gchararray: nick
-        Model's nick
-      scalar-params-len -> guint: scalar-params-len
-        Number of scalar parameters
-      vector-params-len -> guint: vector-params-len
-        Number of vector parameters
-      implementation -> guint64: implementation
-        Bitwise specification of functions implementation
-      sparam-array -> NcmObjDictInt: sparam-array
-        NcmModel array of NcmSParam
-      params-types -> GArray: params-types
-        Parameters' types
-      reparam -> NcmReparam: reparam
-        Model reparametrization
-      submodel-array -> NcmObjArray: submodel-array
-        NcmModel array of submodels
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        ENnu: float
-        ENnu_fit: bool
-        H0: float
-        H0_fit: bool
-        Omegab: float
-        Omegab_fit: bool
-        Omegac: float
-        Omegac_fit: bool
-        Omegax: float
-        Omegax_fit: bool
-        Tgamma0: float
-        Tgamma0_fit: bool
-        Tnu: NumCosmoMath.Vector
-        Tnu_fit: GLib.Variant
-        Tnu_length: int
-        Yp: float
-        Yp_fit: bool
-        gamma: float
-        gamma_fit: bool
-        gnu: NumCosmoMath.Vector
-        gnu_fit: GLib.Variant
-        gnu_length: int
-        massnu: NumCosmoMath.Vector
-        massnu_fit: GLib.Variant
-        massnu_length: int
-        munu: NumCosmoMath.Vector
-        munu_fit: GLib.Variant
-        munu_length: int
-        implementation: int
-        name: str
-        nick: str
-        params_types: list[None]
-        reparam: NumCosmoMath.Reparam
-        scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjDictInt
-        submodel_array: NumCosmoMath.ObjArray
-        vector_params_len: int
-
-    props: Props = ...
-    parent_instance: HICosmo = ...
-    priv: HICosmoGCGPrivate = ...
-    def __init__(
-        self,
-        ENnu: float = ...,
-        ENnu_fit: bool = ...,
-        H0: float = ...,
-        H0_fit: bool = ...,
-        Omegab: float = ...,
-        Omegab_fit: bool = ...,
-        Omegac: float = ...,
-        Omegac_fit: bool = ...,
-        Omegax: float = ...,
-        Omegax_fit: bool = ...,
-        Tgamma0: float = ...,
-        Tgamma0_fit: bool = ...,
-        Tnu: NumCosmoMath.Vector = ...,
-        Tnu_fit: GLib.Variant = ...,
-        Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
-        gamma: float = ...,
-        gamma_fit: bool = ...,
-        gnu: NumCosmoMath.Vector = ...,
-        gnu_fit: GLib.Variant = ...,
-        gnu_length: int = ...,
-        massnu: NumCosmoMath.Vector = ...,
-        massnu_fit: GLib.Variant = ...,
-        massnu_length: int = ...,
-        munu: NumCosmoMath.Vector = ...,
-        munu_fit: GLib.Variant = ...,
-        munu_length: int = ...,
-        reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjDictInt = ...,
-        submodel_array: NumCosmoMath.ObjArray = ...,
-    ) -> None: ...
-    def cmb_params(self) -> None: ...
-    def omega_x2omega_k(self) -> None: ...
-
-class HICosmoGCGClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCGClass()
-    """
-
-    parent_class: HICosmoClass = ...
-
-class HICosmoGCGPrivate(GObject.GPointer): ...
-
-class HICosmoGCGReparamCMB(NumCosmoMath.Reparam):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCGReparamCMB(**properties)
-        new(length:int) -> NumCosmo.HICosmoGCGReparamCMB
-
-    Object NcHICosmoGCGReparamCMB
-
-    Properties from NcmReparam:
-      length -> guint: length
-        System's length
-      params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
-      compat-type -> gchararray: compat-type
-        Compatible type
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        compat_type: str
-        length: int
-        params_desc: NumCosmoMath.ObjDictInt
-
-    props: Props = ...
-    parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(
-        self,
-        compat_type: str = ...,
-        length: int = ...,
-        params_desc: NumCosmoMath.ObjDictInt = ...,
-    ) -> None: ...
-    @classmethod
-    def new(cls, length: int) -> HICosmoGCGReparamCMB: ...
-
-class HICosmoGCGReparamCMBClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCGReparamCMBClass()
-    """
-
-    parent_class: NumCosmoMath.ReparamClass = ...
-
-class HICosmoGCGReparamOk(NumCosmoMath.Reparam):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCGReparamOk(**properties)
-        new(length:int) -> NumCosmo.HICosmoGCGReparamOk
-
-    Object NcHICosmoGCGReparamOk
-
-    Properties from NcmReparam:
-      length -> guint: length
-        System's length
-      params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
-      compat-type -> gchararray: compat-type
-        Compatible type
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        compat_type: str
-        length: int
-        params_desc: NumCosmoMath.ObjDictInt
-
-    props: Props = ...
-    parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(
-        self,
-        compat_type: str = ...,
-        length: int = ...,
-        params_desc: NumCosmoMath.ObjDictInt = ...,
-    ) -> None: ...
-    @classmethod
-    def new(cls, length: int) -> HICosmoGCGReparamOk: ...
-
-class HICosmoGCGReparamOkClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCGReparamOkClass()
-    """
-
-    parent_class: NumCosmoMath.ReparamClass = ...
-
-class HICosmoIDEM2(HICosmo):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2(**properties)
-
-    Object NcHICosmoIDEM2
-
-    Properties from NcHICosmoIDEM2:
-      H0 -> gdouble: H0
-        H_0
-      Omegac -> gdouble: Omegac
-        \Omega_{c0}
-      Omegax -> gdouble: Omegax
-        \Omega_{x0}
-      Tgamma0 -> gdouble: Tgamma0
-        T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
-      ENnu -> gdouble: ENnu
-        N_\nu
-      Omegab -> gdouble: Omegab
-        \Omega_{b0}
-      gamma -> gdouble: gamma
-        \gamma
-      massnu -> NcmVector: massnu
-        m_\nu
-      Tnu -> NcmVector: Tnu
-        T_{\nu0}
-      munu -> NcmVector: munu
-        \mu_{\nu}
-      gnu -> NcmVector: gnu
-        g_{\nu}
-      massnu-length -> guint: massnu-length
-        m_\nu:length
-      Tnu-length -> guint: Tnu-length
-        T_{\nu0}:length
-      munu-length -> guint: munu-length
-        \mu_{\nu}:length
-      gnu-length -> guint: gnu-length
-        g_{\nu}:length
-      H0-fit -> gboolean: H0-fit
-        H_0:fit
-      Omegac-fit -> gboolean: Omegac-fit
-        \Omega_{c0}:fit
-      Omegax-fit -> gboolean: Omegax-fit
-        \Omega_{x0}:fit
-      Tgamma0-fit -> gboolean: Tgamma0-fit
-        T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
-      ENnu-fit -> gboolean: ENnu-fit
-        N_\nu:fit
-      Omegab-fit -> gboolean: Omegab-fit
-        \Omega_{b0}:fit
-      gamma-fit -> gboolean: gamma-fit
-        \gamma:fit
-      massnu-fit -> GVariant: massnu-fit
-        m_\nu:fit
-      Tnu-fit -> GVariant: Tnu-fit
-        T_{\nu0}:fit
-      munu-fit -> GVariant: munu-fit
-        \mu_{\nu}:fit
-      gnu-fit -> GVariant: gnu-fit
-        g_{\nu}:fit
-
-    Properties from NcmModel:
-      name -> gchararray: name
-        Model's name
-      nick -> gchararray: nick
-        Model's nick
-      scalar-params-len -> guint: scalar-params-len
-        Number of scalar parameters
-      vector-params-len -> guint: vector-params-len
-        Number of vector parameters
-      implementation -> guint64: implementation
-        Bitwise specification of functions implementation
-      sparam-array -> NcmObjDictInt: sparam-array
-        NcmModel array of NcmSParam
-      params-types -> GArray: params-types
-        Parameters' types
-      reparam -> NcmReparam: reparam
-        Model reparametrization
-      submodel-array -> NcmObjArray: submodel-array
-        NcmModel array of submodels
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        ENnu: float
-        ENnu_fit: bool
-        H0: float
-        H0_fit: bool
-        Omegab: float
-        Omegab_fit: bool
-        Omegac: float
-        Omegac_fit: bool
-        Omegax: float
-        Omegax_fit: bool
-        Tgamma0: float
-        Tgamma0_fit: bool
-        Tnu: NumCosmoMath.Vector
-        Tnu_fit: GLib.Variant
-        Tnu_length: int
-        Yp: float
-        Yp_fit: bool
-        gamma: float
-        gamma_fit: bool
-        gnu: NumCosmoMath.Vector
-        gnu_fit: GLib.Variant
-        gnu_length: int
-        massnu: NumCosmoMath.Vector
-        massnu_fit: GLib.Variant
-        massnu_length: int
-        munu: NumCosmoMath.Vector
-        munu_fit: GLib.Variant
-        munu_length: int
-        implementation: int
-        name: str
-        nick: str
-        params_types: list[None]
-        reparam: NumCosmoMath.Reparam
-        scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjDictInt
-        submodel_array: NumCosmoMath.ObjArray
-        vector_params_len: int
-
-    props: Props = ...
-    parent_instance: HICosmo = ...
-    priv: HICosmoIDEM2Private = ...
-    def __init__(
-        self,
-        ENnu: float = ...,
-        ENnu_fit: bool = ...,
-        H0: float = ...,
-        H0_fit: bool = ...,
-        Omegab: float = ...,
-        Omegab_fit: bool = ...,
-        Omegac: float = ...,
-        Omegac_fit: bool = ...,
-        Omegax: float = ...,
-        Omegax_fit: bool = ...,
-        Tgamma0: float = ...,
-        Tgamma0_fit: bool = ...,
-        Tnu: NumCosmoMath.Vector = ...,
-        Tnu_fit: GLib.Variant = ...,
-        Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
-        gamma: float = ...,
-        gamma_fit: bool = ...,
-        gnu: NumCosmoMath.Vector = ...,
-        gnu_fit: GLib.Variant = ...,
-        gnu_length: int = ...,
-        massnu: NumCosmoMath.Vector = ...,
-        massnu_fit: GLib.Variant = ...,
-        massnu_length: int = ...,
-        munu: NumCosmoMath.Vector = ...,
-        munu_fit: GLib.Variant = ...,
-        munu_length: int = ...,
-        reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjDictInt = ...,
-        submodel_array: NumCosmoMath.ObjArray = ...,
-    ) -> None: ...
-    def cmb_params(self) -> None: ...
-    def omega_x2omega_k(self) -> None: ...
-
-class HICosmoIDEM2Class(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2Class()
-    """
-
-    parent_class: HICosmoClass = ...
-
-class HICosmoIDEM2Private(GObject.GPointer): ...
-
-class HICosmoIDEM2ReparamCMB(NumCosmoMath.Reparam):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2ReparamCMB(**properties)
-        new(length:int) -> NumCosmo.HICosmoIDEM2ReparamCMB
-
-    Object NcHICosmoIDEM2ReparamCMB
-
-    Properties from NcmReparam:
-      length -> guint: length
-        System's length
-      params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
-      compat-type -> gchararray: compat-type
-        Compatible type
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        compat_type: str
-        length: int
-        params_desc: NumCosmoMath.ObjDictInt
-
-    props: Props = ...
-    parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(
-        self,
-        compat_type: str = ...,
-        length: int = ...,
-        params_desc: NumCosmoMath.ObjDictInt = ...,
-    ) -> None: ...
-    @classmethod
-    def new(cls, length: int) -> HICosmoIDEM2ReparamCMB: ...
-
-class HICosmoIDEM2ReparamCMBClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2ReparamCMBClass()
-    """
-
-    parent_class: NumCosmoMath.ReparamClass = ...
-
-class HICosmoIDEM2ReparamOk(NumCosmoMath.Reparam):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2ReparamOk(**properties)
-        new(length:int) -> NumCosmo.HICosmoIDEM2ReparamOk
-
-    Object NcHICosmoIDEM2ReparamOk
-
-    Properties from NcmReparam:
-      length -> guint: length
-        System's length
-      params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
-      compat-type -> gchararray: compat-type
-        Compatible type
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        compat_type: str
-        length: int
-        params_desc: NumCosmoMath.ObjDictInt
-
-    props: Props = ...
-    parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(
-        self,
-        compat_type: str = ...,
-        length: int = ...,
-        params_desc: NumCosmoMath.ObjDictInt = ...,
-    ) -> None: ...
-    @classmethod
-    def new(cls, length: int) -> HICosmoIDEM2ReparamOk: ...
-
-class HICosmoIDEM2ReparamOkClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2ReparamOkClass()
-    """
-
-    parent_class: NumCosmoMath.ReparamClass = ...
-
 class HICosmoLCDM(HICosmo):
     r"""
     :Constructors:
@@ -11179,8 +11537,6 @@ class HICosmoLCDM(HICosmo):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -11193,12 +11549,16 @@ class HICosmoLCDM(HICosmo):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
         \Omega_{b0}:fit
+
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -11237,8 +11597,6 @@ class HICosmoLCDM(HICosmo):
         Omegax_fit: bool
         Tgamma0: float
         Tgamma0_fit: bool
-        Yp: float
-        Yp_fit: bool
         implementation: int
         name: str
         nick: str
@@ -11248,6 +11606,8 @@ class HICosmoLCDM(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11322,6 +11682,12 @@ class HICosmoQConst(HICosmo):
       zs-fit -> gboolean: zs-fit
         z_\star:fit
 
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -11368,6 +11734,8 @@ class HICosmoQConst(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11385,6 +11753,8 @@ class HICosmoQConst(HICosmo):
         q_fit: bool = ...,
         zs: float = ...,
         zs_fit: bool = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11436,6 +11806,12 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
       xb-fit -> gboolean: xb-fit
         x_b:fit
 
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -11480,6 +11856,8 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11498,6 +11876,8 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
         w_fit: bool = ...,
         xb: float = ...,
         xb_fit: bool = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11545,6 +11925,12 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
       xb-fit -> gboolean: xb-fit
         x_b:fit
 
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -11587,6 +11973,8 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11601,6 +11989,8 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
         w_fit: bool = ...,
         xb: float = ...,
         xb_fit: bool = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11662,6 +12052,12 @@ class HICosmoQLinear(HICosmo):
       zs-fit -> gboolean: zs-fit
         z_\star:fit
 
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -11710,6 +12106,8 @@ class HICosmoQLinear(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11729,6 +12127,8 @@ class HICosmoQLinear(HICosmo):
         qp_fit: bool = ...,
         zs: float = ...,
         zs_fit: bool = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11792,6 +12192,12 @@ class HICosmoQRBF(HICosmo):
       ci-fit -> GVariant: ci-fit
         c_i:fit
 
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -11841,6 +12247,8 @@ class HICosmoQRBF(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11862,6 +12270,8 @@ class HICosmoQRBF(HICosmo):
         xi_fit: GLib.Variant = ...,
         xi_length: int = ...,
         zf: float = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11978,6 +12388,12 @@ class HICosmoQSpline(HICosmo):
       qparam-fit -> GVariant: qparam-fit
         q:fit
 
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -12024,6 +12440,8 @@ class HICosmoQSpline(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -12047,6 +12465,8 @@ class HICosmoQSpline(HICosmo):
         qparam_length: int = ...,
         spline: NumCosmoMath.Spline = ...,
         zf: float = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -12231,6 +12651,12 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
       betaem-fit -> gboolean: betaem-fit
         \beta_\mathrm{em}:fit
 
+    Properties from NcHICosmo:
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
+
     Properties from NcmModel:
       name -> gchararray: name
         Model's name
@@ -12286,6 +12712,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -12312,6 +12740,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         sigmaphi_fit: bool = ...,
         xb: float = ...,
         xb_fit: bool = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -12817,6 +13247,7 @@ class HIPertBoltzmann(HIPert):
     def prepare(self, cosmo: HICosmo) -> None: ...
     def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> HIPertBoltzmann: ...
+    def require(self, tCls: DataCMBDataType, lmax: int) -> None: ...
     def set_BB_lmax(self, lmax: int) -> None: ...
     def set_EB_lmax(self, lmax: int) -> None: ...
     def set_EE_lmax(self, lmax: int) -> None: ...
@@ -22072,6 +22503,8 @@ class Xcor(GObject.Object):
         Matter power spectrum.
       meth -> NcXcorMethod: meth
         Method.
+      closure-type -> NcXcorKernelClosure: closure-type
+        Representation used for the k-space closures.
       reltol -> gdouble: reltol
         Relative tolerance.
       ell-batch-size -> guint: ell-batch-size
@@ -22082,6 +22515,7 @@ class Xcor(GObject.Object):
     """
 
     class Props:
+        closure_type: XcorKernelClosure
         distance: Distance
         ell_batch_size: int
         meth: XcorMethod
@@ -22091,6 +22525,7 @@ class Xcor(GObject.Object):
     props: Props = ...
     def __init__(
         self,
+        closure_type: XcorKernelClosure = ...,
         distance: Distance = ...,
         ell_batch_size: int = ...,
         meth: XcorMethod = ...,
@@ -22102,13 +22537,24 @@ class Xcor(GObject.Object):
     def compute(
         self,
         xclk1: XcorKernel,
-        xclk2: XcorKernel,
+        xclk2: typing.Optional[XcorKernel],
         cosmo: HICosmo,
         lmin: int,
         lmax: int,
         vp: NumCosmoMath.Vector,
     ) -> None: ...
+    def compute_full(
+        self,
+        xclk1: XcorKernel,
+        xclk2: typing.Optional[XcorKernel],
+        cosmo: HICosmo,
+        lmin: int,
+        lmax: int,
+        vp: NumCosmoMath.Vector,
+        vp_err: typing.Optional[NumCosmoMath.Vector] = None,
+    ) -> None: ...
     def free(self) -> None: ...
+    def get_closure_type(self) -> XcorKernelClosure: ...
     def get_ell_batch_size(self) -> int: ...
     def get_meth(self) -> XcorMethod: ...
     def get_reltol(self) -> float: ...
@@ -22118,6 +22564,7 @@ class Xcor(GObject.Object):
     ) -> Xcor: ...
     def prepare(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> Xcor: ...
+    def set_closure_type(self, closure_type: XcorKernelClosure) -> None: ...
     def set_ell_batch_size(self, ell_batch_size: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
 
@@ -22260,6 +22707,10 @@ class XcorKernel(NumCosmoMath.Model):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22295,9 +22746,11 @@ class XcorKernel(NumCosmoMath.Model):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -22321,9 +22774,11 @@ class XcorKernel(NumCosmoMath.Model):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -22356,16 +22811,19 @@ class XcorKernel(NumCosmoMath.Model):
     def get_adaptive_boundary_tries(self) -> int: ...
     def get_adaptive_epsilon(self) -> float: ...
     def get_component_list(self) -> list[XcorKernelComponent]: ...
-    def get_eval(self, cosmo: HICosmo, l: int) -> XcorKernelIntegrand: ...
+    def get_eval(
+        self, cosmo: HICosmo, l: int, closure_type: XcorKernelClosure
+    ) -> XcorKernelIntegrand: ...
     def get_eval_vectorized(
-        self, cosmo: HICosmo, lmin: int, lmax: int
+        self, cosmo: HICosmo, lmin: int, lmax: int, closure_type: XcorKernelClosure
     ) -> XcorKernelIntegrand: ...
     def get_eval_vectorized_full(
         self,
         cosmo: HICosmo,
         lmin: int,
         lmax: int,
-        sbi: typing.Optional[NumCosmoMath.SBesselIntegrator] = None,
+        sbi: typing.Optional[NumCosmoMath.SBesselIntegrator],
+        closure_type: XcorKernelClosure,
     ) -> XcorKernelIntegrand: ...
     def get_expansion_factor(self) -> float: ...
     def get_k_range(self, cosmo: HICosmo, l: int) -> typing.Tuple[float, float]: ...
@@ -22373,8 +22831,10 @@ class XcorKernel(NumCosmoMath.Model):
     def get_lmax(self) -> int: ...
     def get_max_border_expansions(self) -> int: ...
     def get_max_iter(self) -> int: ...
+    def get_panel_order_cap(self) -> int: ...
     def get_reltol(self) -> float: ...
     def get_scaled_abstol(self) -> float: ...
+    def get_track_fit_residual(self) -> bool: ...
     def get_z_range(self) -> typing.Tuple[float, float, float]: ...
     @staticmethod
     def id() -> int: ...
@@ -22394,8 +22854,1428 @@ class XcorKernel(NumCosmoMath.Model):
     def set_lmax(self, lmax: int) -> None: ...
     def set_max_border_expansions(self, max_border_expansions: int) -> None: ...
     def set_max_iter(self, max_iter: int) -> None: ...
+    def set_panel_order_cap(self, panel_order_cap: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_scaled_abstol(self, scaled_abstol: float) -> None: ...
+    def set_track_fit_residual(self, track_fit_residual: bool) -> None: ...
+
+class XcorKernelAnalytic(XcorKernel):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalytic(**properties)
+
+    Object NcXcorKernelAnalytic
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        panel_order_cap: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        track_fit_residual: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: XcorKernel = ...
+    def __init__(
+        self,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        panel_order_cap: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def do_eval_W_comp(self, comp: int, chi: float) -> float: ...
+    def do_get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
+    def do_get_n_comps(self) -> int: ...
+    def eval_W(self, chi: float) -> float: ...
+    def eval_W_comp(self, comp: int, chi: float) -> float: ...
+    def get_comp_support(self, comp: int) -> typing.Tuple[float, float]: ...
+    def get_n_comps(self) -> int: ...
+    def get_support(self) -> typing.Tuple[float, float]: ...
+    def peek_kdep(self) -> typing.Optional[XcorKernelAnalyticKDep]: ...
+
+class XcorKernelAnalyticClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticClass()
+    """
+
+    parent_class: XcorKernelClass = ...
+    get_n_comps: typing.Callable[[XcorKernelAnalytic], int] = ...
+    eval_W_comp: typing.Callable[[XcorKernelAnalytic, int, float], float] = ...
+    get_comp_support: typing.Callable[
+        [XcorKernelAnalytic, int], typing.Tuple[float, float]
+    ] = ...
+    padding: list[None] = ...
+
+class XcorKernelAnalyticGauss(XcorKernelAnalytic):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticGauss(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:float, chi_sigma:float, n_sigma:float) -> NumCosmo.XcorKernelAnalyticGauss
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:float, chi_sigma:float, n_sigma:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelAnalyticGauss
+
+    Object NcXcorKernelAnalyticGauss
+
+    Properties from NcXcorKernelAnalyticGauss:
+      chi-mean -> gdouble: chi-mean
+        Window centre in Mpc
+      chi-sigma -> gdouble: chi-sigma
+        Window standard deviation in Mpc
+      n-sigma -> gdouble: n-sigma
+        Truncation half-width in units of sigma
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        chi_mean: float
+        chi_sigma: float
+        n_sigma: float
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        panel_order_cap: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        track_fit_residual: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        chi_mean: float = ...,
+        chi_sigma: float = ...,
+        n_sigma: float = ...,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        panel_order_cap: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_chi_mean(self) -> float: ...
+    def get_chi_sigma(self) -> float: ...
+    def get_n_sigma(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: float,
+        chi_sigma: float,
+        n_sigma: float,
+    ) -> XcorKernelAnalyticGauss: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: float,
+        chi_sigma: float,
+        n_sigma: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelAnalyticGauss: ...
+
+class XcorKernelAnalyticGaussClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticGaussClass()
+    """
+
+    parent_class: XcorKernelAnalyticClass = ...
+
+class XcorKernelAnalyticKDep(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticKDep(**properties)
+
+    Object NcXcorKernelAnalyticKDep
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    parent_instance: GObject.Object = ...
+    @staticmethod
+    def clear(kdep: XcorKernelAnalyticKDep) -> None: ...
+    def do_eval(self, chi: float, k: float) -> float: ...
+    def eval(self, chi: float, k: float) -> float: ...
+    def free(self) -> None: ...
+    def ref(self) -> XcorKernelAnalyticKDep: ...
+
+class XcorKernelAnalyticKDepClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticKDepClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+    eval: typing.Callable[[XcorKernelAnalyticKDep, float, float], float] = ...
+    padding: list[None] = ...
+
+class XcorKernelAnalyticKDepGrowth(XcorKernelAnalyticKDep):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticKDepGrowth(**properties)
+        new(amplitude:float, k_transition:float, chi_ref:float) -> NumCosmo.XcorKernelAnalyticKDepGrowth
+
+    Object NcXcorKernelAnalyticKDepGrowth
+
+    Properties from NcXcorKernelAnalyticKDepGrowth:
+      amplitude -> gdouble: amplitude
+        Saturated suppression
+      k-transition -> gdouble: k-transition
+        Transition wavenumber in 1/Mpc
+      chi-ref -> gdouble: chi-ref
+        Reference comoving distance in Mpc
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        amplitude: float
+        chi_ref: float
+        k_transition: float
+
+    props: Props = ...
+    def __init__(
+        self, amplitude: float = ..., chi_ref: float = ..., k_transition: float = ...
+    ) -> None: ...
+    def get_amplitude(self) -> float: ...
+    def get_chi_ref(self) -> float: ...
+    def get_k_transition(self) -> float: ...
+    @classmethod
+    def new(
+        cls, amplitude: float, k_transition: float, chi_ref: float
+    ) -> XcorKernelAnalyticKDepGrowth: ...
+
+class XcorKernelAnalyticKDepGrowthClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticKDepGrowthClass()
+    """
+
+    parent_class: XcorKernelAnalyticKDepClass = ...
+
+class XcorKernelAnalyticLensing(XcorKernelAnalytic):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticLensing(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_lower:float, chi_source_lower:float, chi_source_upper:float) -> NumCosmo.XcorKernelAnalyticLensing
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_lower:float, chi_source_lower:float, chi_source_upper:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelAnalyticLensing
+
+    Object NcXcorKernelAnalyticLensing
+
+    Properties from NcXcorKernelAnalyticLensing:
+      chi-lower -> gdouble: chi-lower
+        Observer-side end of the support in Mpc
+      chi-source-lower -> gdouble: chi-source-lower
+        Near edge of the source bin in Mpc
+      chi-source-upper -> gdouble: chi-source-upper
+        Far edge of the source bin in Mpc
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        chi_lower: float
+        chi_source_lower: float
+        chi_source_upper: float
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        panel_order_cap: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        track_fit_residual: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        chi_lower: float = ...,
+        chi_source_lower: float = ...,
+        chi_source_upper: float = ...,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        panel_order_cap: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_chi_source_lower(self) -> float: ...
+    def get_chi_source_upper(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_lower: float,
+        chi_source_lower: float,
+        chi_source_upper: float,
+    ) -> XcorKernelAnalyticLensing: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_lower: float,
+        chi_source_lower: float,
+        chi_source_upper: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelAnalyticLensing: ...
+
+class XcorKernelAnalyticLensingClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticLensingClass()
+    """
+
+    parent_class: XcorKernelAnalyticClass = ...
+
+class XcorKernelAnalyticMulti(XcorKernelAnalytic):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticMulti(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:NumCosmoMath.Vector, chi_sigma:NumCosmoMath.Vector, weight:NumCosmoMath.Vector, n_sigma:float) -> NumCosmo.XcorKernelAnalyticMulti
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:NumCosmoMath.Vector, chi_sigma:NumCosmoMath.Vector, weight:NumCosmoMath.Vector, n_sigma:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelAnalyticMulti
+
+    Object NcXcorKernelAnalyticMulti
+
+    Properties from NcXcorKernelAnalyticMulti:
+      chi-mean -> NcmVector: chi-mean
+        Bump centres in Mpc
+      chi-sigma -> NcmVector: chi-sigma
+        Bump standard deviations in Mpc
+      weight -> NcmVector: weight
+        Relative bump weights
+      n-sigma -> gdouble: n-sigma
+        Truncation half-width in units of sigma
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        chi_mean: NumCosmoMath.Vector
+        chi_sigma: NumCosmoMath.Vector
+        n_sigma: float
+        weight: NumCosmoMath.Vector
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        panel_order_cap: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        track_fit_residual: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        chi_mean: NumCosmoMath.Vector = ...,
+        chi_sigma: NumCosmoMath.Vector = ...,
+        n_sigma: float = ...,
+        weight: NumCosmoMath.Vector = ...,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        panel_order_cap: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_n_bumps(self) -> int: ...
+    def get_n_sigma(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: NumCosmoMath.Vector,
+        chi_sigma: NumCosmoMath.Vector,
+        weight: NumCosmoMath.Vector,
+        n_sigma: float,
+    ) -> XcorKernelAnalyticMulti: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: NumCosmoMath.Vector,
+        chi_sigma: NumCosmoMath.Vector,
+        weight: NumCosmoMath.Vector,
+        n_sigma: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelAnalyticMulti: ...
+    def peek_chi_mean(self) -> NumCosmoMath.Vector: ...
+    def peek_chi_sigma(self) -> NumCosmoMath.Vector: ...
+    def peek_weight(self) -> NumCosmoMath.Vector: ...
+
+class XcorKernelAnalyticMultiClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticMultiClass()
+    """
+
+    parent_class: XcorKernelAnalyticClass = ...
+
+class XcorKernelAnalyticPowerExp(XcorKernelAnalytic):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticPowerExp(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_scale:float, alpha:float, beta:float, chi_lower:float, chi_upper:float) -> NumCosmo.XcorKernelAnalyticPowerExp
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_scale:float, alpha:float, beta:float, chi_lower:float, chi_upper:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelAnalyticPowerExp
+
+    Object NcXcorKernelAnalyticPowerExp
+
+    Properties from NcXcorKernelAnalyticPowerExp:
+      chi-scale -> gdouble: chi-scale
+        Cut-off scale in Mpc
+      alpha -> gdouble: alpha
+        Power-law index of the rise
+      beta -> gdouble: beta
+        Stretch exponent of the fall
+      chi-lower -> gdouble: chi-lower
+        Lower end of the support in Mpc
+      chi-upper -> gdouble: chi-upper
+        Upper end of the support in Mpc
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        alpha: float
+        beta: float
+        chi_lower: float
+        chi_scale: float
+        chi_upper: float
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        panel_order_cap: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        track_fit_residual: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        alpha: float = ...,
+        beta: float = ...,
+        chi_lower: float = ...,
+        chi_scale: float = ...,
+        chi_upper: float = ...,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        panel_order_cap: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_alpha(self) -> float: ...
+    def get_beta(self) -> float: ...
+    def get_chi_scale(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_scale: float,
+        alpha: float,
+        beta: float,
+        chi_lower: float,
+        chi_upper: float,
+    ) -> XcorKernelAnalyticPowerExp: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_scale: float,
+        alpha: float,
+        beta: float,
+        chi_lower: float,
+        chi_upper: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelAnalyticPowerExp: ...
+
+class XcorKernelAnalyticPowerExpClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticPowerExpClass()
+    """
+
+    parent_class: XcorKernelAnalyticClass = ...
+
+class XcorKernelAnalyticStudentT(XcorKernelAnalytic):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticStudentT(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:float, chi_scale:float, nu:float, n_scale:float) -> NumCosmo.XcorKernelAnalyticStudentT
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_mean:float, chi_scale:float, nu:float, n_scale:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelAnalyticStudentT
+
+    Object NcXcorKernelAnalyticStudentT
+
+    Properties from NcXcorKernelAnalyticStudentT:
+      chi-mean -> gdouble: chi-mean
+        Window centre in Mpc
+      chi-scale -> gdouble: chi-scale
+        Window scale in Mpc
+      nu -> gdouble: nu
+        Degrees of freedom
+      n-scale -> gdouble: n-scale
+        Truncation half-width in units of the scale
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        chi_mean: float
+        chi_scale: float
+        n_scale: float
+        nu: float
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        panel_order_cap: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        track_fit_residual: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        chi_mean: float = ...,
+        chi_scale: float = ...,
+        n_scale: float = ...,
+        nu: float = ...,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        panel_order_cap: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_chi_mean(self) -> float: ...
+    def get_chi_scale(self) -> float: ...
+    def get_n_scale(self) -> float: ...
+    def get_nu(self) -> float: ...
+    def get_tail_mass(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: float,
+        chi_scale: float,
+        nu: float,
+        n_scale: float,
+    ) -> XcorKernelAnalyticStudentT: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_mean: float,
+        chi_scale: float,
+        nu: float,
+        n_scale: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelAnalyticStudentT: ...
+
+class XcorKernelAnalyticStudentTClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticStudentTClass()
+    """
+
+    parent_class: XcorKernelAnalyticClass = ...
+
+class XcorKernelAnalyticTophat(XcorKernelAnalytic):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticTophat(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_lower:float, chi_upper:float) -> NumCosmo.XcorKernelAnalyticTophat
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_lower:float, chi_upper:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelAnalyticTophat
+
+    Object NcXcorKernelAnalyticTophat
+
+    Properties from NcXcorKernelAnalyticTophat:
+      chi-lower -> gdouble: chi-lower
+        Lower edge in Mpc
+      chi-upper -> gdouble: chi-upper
+        Upper edge in Mpc
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        chi_lower: float
+        chi_upper: float
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        panel_order_cap: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        track_fit_residual: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        chi_lower: float = ...,
+        chi_upper: float = ...,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        panel_order_cap: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_chi_lower(self) -> float: ...
+    def get_chi_upper(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_lower: float,
+        chi_upper: float,
+    ) -> XcorKernelAnalyticTophat: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_lower: float,
+        chi_upper: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelAnalyticTophat: ...
+
+class XcorKernelAnalyticTophatClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticTophatClass()
+    """
+
+    parent_class: XcorKernelAnalyticClass = ...
+
+class XcorKernelAnalyticTophatSmooth(XcorKernelAnalytic):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticTophatSmooth(**properties)
+        new(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_lower:float, chi_upper:float, chi_sigma:float, n_sigma:float) -> NumCosmo.XcorKernelAnalyticTophatSmooth
+        new_full(dist:NumCosmo.Distance, ps:NumCosmoMath.Powspec, chi_lower:float, chi_upper:float, chi_sigma:float, n_sigma:float, sbi:NumCosmoMath.SBesselIntegrator) -> NumCosmo.XcorKernelAnalyticTophatSmooth
+
+    Object NcXcorKernelAnalyticTophatSmooth
+
+    Properties from NcXcorKernelAnalyticTophatSmooth:
+      chi-lower -> gdouble: chi-lower
+        Lower bin edge in Mpc
+      chi-upper -> gdouble: chi-upper
+        Upper bin edge in Mpc
+      chi-sigma -> gdouble: chi-sigma
+        Smoothing width in Mpc
+      n-sigma -> gdouble: n-sigma
+        Truncation beyond each edge in units of sigma
+
+    Properties from NcXcorKernelAnalytic:
+      scale-dependence -> NcXcorKernelAnalyticKDep: scale-dependence
+        Scale-dependent factor multiplying the radial integrand
+
+    Properties from NcXcorKernel:
+      dist -> NcDistance: dist
+        Distance object
+      powspec -> NcmPowspec: powspec
+        Power spectrum object
+      integrator -> NcmSBesselIntegrator: integrator
+        Spherical Bessel integrator object
+      lmax -> guint: lmax
+        Maximum multipole
+      l-limber -> gint: l-limber
+        Limber approximation threshold (-1: never, 0: always, N>0: use for l>=N)
+      adaptive-epsilon -> gdouble: adaptive-epsilon
+        Convergence threshold for adaptive k-range determination
+      adaptive-boundary-tries -> guint: adaptive-boundary-tries
+        Number of consecutive boundary points below threshold before stopping extension
+      reltol -> gdouble: reltol
+        Relative tolerance for adaptive midpoint refinement
+      scaled-abstol -> gdouble: scaled-abstol
+        Absolute tolerance scaled by the maximum kernel value for adaptive midpoint refinement
+      max-border-expansions -> guint: max-border-expansions
+        Maximum number of border expansion iterations
+      max-iter -> guint: max-iter
+        Maximum number of adaptive midpoint refinement iterations
+      expansion-factor -> gdouble: expansion-factor
+        Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        chi_lower: float
+        chi_sigma: float
+        chi_upper: float
+        n_sigma: float
+        scale_dependence: XcorKernelAnalyticKDep
+        adaptive_boundary_tries: int
+        adaptive_epsilon: float
+        dist: Distance
+        expansion_factor: float
+        integrator: NumCosmoMath.SBesselIntegrator
+        l_limber: int
+        lmax: int
+        max_border_expansions: int
+        max_iter: int
+        panel_order_cap: int
+        powspec: NumCosmoMath.Powspec
+        reltol: float
+        scaled_abstol: float
+        track_fit_residual: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        chi_lower: float = ...,
+        chi_sigma: float = ...,
+        chi_upper: float = ...,
+        n_sigma: float = ...,
+        scale_dependence: XcorKernelAnalyticKDep = ...,
+        adaptive_boundary_tries: int = ...,
+        adaptive_epsilon: float = ...,
+        dist: Distance = ...,
+        expansion_factor: float = ...,
+        integrator: NumCosmoMath.SBesselIntegrator = ...,
+        l_limber: int = ...,
+        lmax: int = ...,
+        max_border_expansions: int = ...,
+        max_iter: int = ...,
+        panel_order_cap: int = ...,
+        powspec: NumCosmoMath.Powspec = ...,
+        reltol: float = ...,
+        scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def get_chi_lower(self) -> float: ...
+    def get_chi_sigma(self) -> float: ...
+    def get_chi_upper(self) -> float: ...
+    @classmethod
+    def new(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_lower: float,
+        chi_upper: float,
+        chi_sigma: float,
+        n_sigma: float,
+    ) -> XcorKernelAnalyticTophatSmooth: ...
+    @classmethod
+    def new_full(
+        cls,
+        dist: Distance,
+        ps: NumCosmoMath.Powspec,
+        chi_lower: float,
+        chi_upper: float,
+        chi_sigma: float,
+        n_sigma: float,
+        sbi: NumCosmoMath.SBesselIntegrator,
+    ) -> XcorKernelAnalyticTophatSmooth: ...
+
+class XcorKernelAnalyticTophatSmoothClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorKernelAnalyticTophatSmoothClass()
+    """
+
+    parent_class: XcorKernelAnalyticClass = ...
 
 class XcorKernelCMBISW(XcorKernel):
     r"""
@@ -22439,6 +24319,10 @@ class XcorKernelCMBISW(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22476,9 +24360,11 @@ class XcorKernelCMBISW(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -22503,9 +24389,11 @@ class XcorKernelCMBISW(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -22577,6 +24465,10 @@ class XcorKernelCMBLensing(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22614,9 +24506,11 @@ class XcorKernelCMBLensing(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -22641,9 +24535,11 @@ class XcorKernelCMBLensing(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -22726,6 +24622,10 @@ class XcorKernelCluster(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22761,9 +24661,11 @@ class XcorKernelCluster(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -22787,9 +24689,11 @@ class XcorKernelCluster(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -22850,6 +24754,10 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -22887,9 +24795,11 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -22914,9 +24824,11 @@ class XcorKernelClusterTophat(XcorKernelCluster):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23089,6 +25001,10 @@ class XcorKernelGal(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23135,9 +25051,11 @@ class XcorKernelGal(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23171,9 +25089,11 @@ class XcorKernelGal(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23221,11 +25141,32 @@ class XcorKernelIntegrand(GObject.GBoxed):
     data: None = ...
     data_free: typing.Callable[[None], None] = ...
     get_knots_func: typing.Callable[[None], NumCosmoMath.Vector] = ...
+    get_range_comp_func: typing.Callable[[None, int], typing.Tuple[float, float]] = ...
+    eval_comps_func: typing.Callable[
+        [None, float, int, int, typing.Sequence[float] | npt.NDArray[np.float64]], None
+    ] = ...
+    get_spectral_func: typing.Callable[
+        [None], typing.Tuple[bool, NumCosmoMath.Matrix, float, float]
+    ] = ...
+    get_panels_func: typing.Callable[[None], int] = ...
+    peek_panel_func: typing.Callable[
+        [None, int], typing.Tuple[NumCosmoMath.Matrix, float, float]
+    ] = ...
+    restrict_func: typing.Callable[
+        [None, float, float], typing.Tuple[bool, NumCosmoMath.Matrix]
+    ] = ...
+    residuals: NumCosmoMath.Matrix = ...
+    reltol: float = ...
+    scaled_abstol: float = ...
     @staticmethod
     def clear(integrand: XcorKernelIntegrand) -> None: ...
     def eval_array(self, k: float) -> list[float]: ...
     def get_len(self) -> int: ...
+    def get_n_panels(self) -> int: ...
     def get_range(self) -> typing.Tuple[float, float]: ...
+    def get_range_comp(self, i: int) -> typing.Tuple[float, float]: ...
+    def get_reltol(self) -> float: ...
+    def get_scaled_abstol(self) -> float: ...
     @classmethod
     def new(
         cls,
@@ -23235,7 +25176,19 @@ class XcorKernelIntegrand(GObject.GBoxed):
         *data: typing.Any,
     ) -> XcorKernelIntegrand: ...
     def peek_knots(self) -> typing.Optional[NumCosmoMath.Vector]: ...
+    def peek_panel(self, i: int) -> typing.Tuple[NumCosmoMath.Matrix, float, float]: ...
+    def peek_residuals(self) -> typing.Optional[NumCosmoMath.Matrix]: ...
+    def peek_spectral(
+        self,
+    ) -> typing.Tuple[bool, NumCosmoMath.Matrix, float, float]: ...
     def ref(self) -> XcorKernelIntegrand: ...
+    def restrict(
+        self, a: float, b: float
+    ) -> typing.Tuple[bool, NumCosmoMath.Matrix]: ...
+    def set_residuals(
+        self, residuals: typing.Optional[NumCosmoMath.Matrix] = None
+    ) -> None: ...
+    def set_tolerances(self, reltol: float, scaled_abstol: float) -> None: ...
     def unref(self) -> None: ...
 
 class XcorKernelWeakLensing(XcorKernel):
@@ -23282,6 +25235,10 @@ class XcorKernelWeakLensing(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23320,9 +25277,11 @@ class XcorKernelWeakLensing(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23348,9 +25307,11 @@ class XcorKernelWeakLensing(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23418,6 +25379,10 @@ class XcorKerneltSZ(XcorKernel):
         Maximum number of adaptive midpoint refinement iterations
       expansion-factor -> gdouble: expansion-factor
         Expansion factor for domain extension
+      track-fit-residual -> gboolean: track-fit-residual
+        Whether to record the residual the closure fit achieved
+      panel-order-cap -> guint: panel-order-cap
+        Highest Chebyshev order tried per panel before bisecting
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -23455,9 +25420,11 @@ class XcorKerneltSZ(XcorKernel):
         lmax: int
         max_border_expansions: int
         max_iter: int
+        panel_order_cap: int
         powspec: NumCosmoMath.Powspec
         reltol: float
         scaled_abstol: float
+        track_fit_residual: bool
         implementation: int
         name: str
         nick: str
@@ -23482,9 +25449,11 @@ class XcorKerneltSZ(XcorKernel):
         lmax: int = ...,
         max_border_expansions: int = ...,
         max_iter: int = ...,
+        panel_order_cap: int = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         scaled_abstol: float = ...,
+        track_fit_residual: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -23912,6 +25881,54 @@ class RecombSeagerOpt(GObject.GFlags):
     _member_type_: type = ...
     _new_member_: builtin_function_or_method = ...
     _singles_mask_: int = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class BBNImpl(GObject.GEnum):
+    DH: BBNImpl = ...
+    GET_DOMAIN: BBNImpl = ...
+    HE3H: BBNImpl = ...
+    LI7H: BBNImpl = ...
+    YP_4HE: BBNImpl = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class BBNParametrizedSParams(GObject.GEnum):
+    YP_4HE: BBNParametrizedSParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class BBNParthenopeTable(GObject.GEnum):
+    LEGACY: BBNParthenopeTable = ...
+    PLANCK2017: BBNParthenopeTable = ...
+    PLANCK2017_MARCUCCI: BBNParthenopeTable = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
     _unhashable_values_: list = ...
     _unhashable_values_map_: dict = ...
     _use_args_: bool = ...
@@ -24537,6 +26554,11 @@ class GalaxyShapePopGaussParams(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class GalaxyWLObsCatalogId(GObject.GEnum):
+    HSC_PDR1_HWL16A_002: GalaxyWLObsCatalogId = ...
+    HSC_PDR1_HWL16A_007: GalaxyWLObsCatalogId = ...
+    HSC_PDR1_HWL16A_060: GalaxyWLObsCatalogId = ...
+    HSC_PDR1_HWL16A_064: GalaxyWLObsCatalogId = ...
+    HSC_PDR1_HWL16A_094: GalaxyWLObsCatalogId = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -24599,7 +26621,6 @@ class HICosmoDEJbpSParams(GObject.GEnum):
 class HICosmoDESParams(GObject.GEnum):
     ENNU: HICosmoDESParams = ...
     H0: HICosmoDESParams = ...
-    HE_YP: HICosmoDESParams = ...
     OMEGA_B: HICosmoDESParams = ...
     OMEGA_C: HICosmoDESParams = ...
     OMEGA_X: HICosmoDESParams = ...
@@ -24649,82 +26670,6 @@ class HICosmoDEWSplineVParams(GObject.GEnum):
 
 class HICosmoDEXCDMSParams(GObject.GEnum):
     W: HICosmoDEXCDMSParams = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class HICosmoGCGSParams(GObject.GEnum):
-    ENNU: HICosmoGCGSParams = ...
-    GAMMA: HICosmoGCGSParams = ...
-    H0: HICosmoGCGSParams = ...
-    HE_YP: HICosmoGCGSParams = ...
-    OMEGA_B: HICosmoGCGSParams = ...
-    OMEGA_C: HICosmoGCGSParams = ...
-    OMEGA_X: HICosmoGCGSParams = ...
-    T_GAMMA0: HICosmoGCGSParams = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class HICosmoGCGVParams(GObject.GEnum):
-    G: HICosmoGCGVParams = ...
-    M: HICosmoGCGVParams = ...
-    MU: HICosmoGCGVParams = ...
-    T: HICosmoGCGVParams = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class HICosmoIDEM2SParams(GObject.GEnum):
-    ENNU: HICosmoIDEM2SParams = ...
-    GAMMA: HICosmoIDEM2SParams = ...
-    H0: HICosmoIDEM2SParams = ...
-    HE_YP: HICosmoIDEM2SParams = ...
-    OMEGA_B: HICosmoIDEM2SParams = ...
-    OMEGA_C: HICosmoIDEM2SParams = ...
-    OMEGA_X: HICosmoIDEM2SParams = ...
-    T_GAMMA0: HICosmoIDEM2SParams = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class HICosmoIDEM2VParams(GObject.GEnum):
-    G: HICosmoIDEM2VParams = ...
-    M: HICosmoIDEM2VParams = ...
-    MU: HICosmoIDEM2VParams = ...
-    T: HICosmoIDEM2VParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -25864,6 +27809,21 @@ class XcorKernelCMBLensingSParams(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class XcorKernelClosure(GObject.GEnum):
+    CHEBYSHEV: XcorKernelClosure = ...
+    SPLINE: XcorKernelClosure = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class XcorKernelGalSParams(GObject.GEnum):
     MAG_BIAS: XcorKernelGalSParams = ...
     NOISE_BIAS: XcorKernelGalSParams = ...
@@ -25953,7 +27913,7 @@ class XcorKerneltSZSParams(GObject.GEnum):
 
 class XcorMethod(GObject.GEnum):
     KERNEL_CUBATURE: XcorMethod = ...
-    KERNEL_FIXED: XcorMethod = ...
+    KERNEL_EXACT: XcorMethod = ...
     KERNEL_GSL: XcorMethod = ...
     LIMBER_Z_CUBATURE: XcorMethod = ...
     LIMBER_Z_GSL: XcorMethod = ...

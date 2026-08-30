@@ -52,7 +52,7 @@ typedef struct _NcClusterMassBenson NcClusterMassBenson;
  *
  * Parameters for the Benson cluster mass-SZ relation.
  */
-typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_BENSON_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_BENSON_SPARAMS,prefix=NC_CLUSTER_MASS_BENSON >*/
 {
   NC_CLUSTER_MASS_BENSON_A_SZ = 0,
   NC_CLUSTER_MASS_BENSON_B_SZ,

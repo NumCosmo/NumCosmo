@@ -42,3 +42,5 @@ subdir('c')
 
 # Python tests are now in a separate subdirectory
 subdir('python')
+# Offline reference generators (see tools/meson.build)
+subdir('tools')

@@ -53,7 +53,7 @@ G_DECLARE_FINAL_TYPE (NcDataSNIACov, nc_data_snia_cov, NC, DATA_SNIA_COV, NcmDat
  * Data ordering for covariance.
  *
  */
-typedef enum _NcDataSNIACovOrder
+typedef enum _NcDataSNIACovOrder /*< prefix=NC_DATA_SNIA_COV_ORDER >*/
 {
   NC_DATA_SNIA_COV_ORDER_MAG_MAG = 0,
   NC_DATA_SNIA_COV_ORDER_MAG_WIDTH,
@@ -74,7 +74,7 @@ typedef enum _NcDataSNIACovOrder
  * #NcDataSNIACov error messages.
  *
  */
-typedef enum /*< enum,underscore_name=NC_DATA_SNIA_COV_ERROR >*/
+typedef enum /*< enum,underscore_name=NC_DATA_SNIA_COV_ERROR,prefix=NC_DATA_SNIA_COV_ERROR >*/
 {
   NC_DATA_SNIA_COV_ERROR_ID_NOT_FOUND,
   NC_DATA_SNIA_COV_ERROR_INVALID_ID,
@@ -98,7 +98,7 @@ typedef enum /*< enum,underscore_name=NC_DATA_SNIA_COV_ERROR >*/
  * is only valid when nc_data_snia_cov_has_complete_cov() is %TRUE.
  *
  */
-typedef enum /*< enum,underscore_name=NC_DATA_SNIA_COV_RESAMPLE >*/
+typedef enum /*< enum,underscore_name=NC_DATA_SNIA_COV_RESAMPLE,prefix=NC_DATA_SNIA_COV_RESAMPLE >*/
 {
   NC_DATA_SNIA_COV_RESAMPLE_AUTO = 0,
   NC_DATA_SNIA_COV_RESAMPLE_FROM_COV,

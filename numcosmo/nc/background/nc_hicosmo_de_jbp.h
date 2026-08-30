@@ -49,7 +49,7 @@ typedef struct _NcHICosmoDEJbp NcHICosmoDEJbp;
  * Dark Energy equation of state: $w(z) = w_0 + w_1 \frac{z}{(1.0 + z)^2}$
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_JBP_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_JBP_SPARAMS,prefix=NC_HICOSMO_DE_JBP >*/
 {
   NC_HICOSMO_DE_JBP_W0 = NC_HICOSMO_DE_SPARAM_LEN,
   NC_HICOSMO_DE_JBP_W1,

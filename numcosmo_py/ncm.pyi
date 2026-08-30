@@ -106,6 +106,8 @@ SPLINE2D_BICUBIC_F: int = 0
 SPLINE2D_BICUBIC_FX: int = 1
 SPLINE2D_BICUBIC_FXY: int = 3
 SPLINE2D_BICUBIC_FY: int = 2
+SPLINE_BSPLINE_DEFAULT_ORDER: int = 8
+SPLINE_BSPLINE_MAX_ORDER: int = 10
 SPLINE_FUNC_DEFAULT_MAX_NODES: int = 10000000
 SPLINE_KNOT_DIFF_TOL: int = 0
 THREAD_POOL_MAX: int = 5
@@ -4847,6 +4849,8 @@ class FunctionSampleSet(GObject.Object):
     Properties from NcmFunctionSampleSet:
       len -> guint: len
         Vector dimension
+      track-residual -> gboolean: track-residual
+        Whether to record the achieved refinement residual
 
     Signals from GObject:
       notify (GParam)
@@ -4854,9 +4858,10 @@ class FunctionSampleSet(GObject.Object):
 
     class Props:
         len: int
+        track_residual: bool
 
     props: Props = ...
-    def __init__(self, len: int = ...) -> None: ...
+    def __init__(self, len: int = ..., track_residual: bool = ...) -> None: ...
     def adaptive_midpoint(
         self,
         f: typing.Callable[..., None],
@@ -4878,6 +4883,9 @@ class FunctionSampleSet(GObject.Object):
     def all_intervals_ok(self, threshold: int) -> bool: ...
     @staticmethod
     def clear(fss: FunctionSampleSet) -> None: ...
+    def estimate_residuals(
+        self, base_spline: Spline, ref_spline: Spline
+    ) -> typing.Optional[Matrix]: ...
     def expand_domain(
         self,
         f: typing.Callable[..., None],
@@ -4896,6 +4904,8 @@ class FunctionSampleSet(GObject.Object):
     def get_absmaxF_min(self) -> float: ...
     def get_len(self) -> int: ...
     def get_nsamples(self) -> int: ...
+    def get_residuals(self) -> typing.Optional[Matrix]: ...
+    def get_track_residual(self) -> bool: ...
     def get_x_max(self) -> float: ...
     def get_x_min(self) -> float: ...
     def iter_begin(self) -> FunctionSampleSetIter: ...
@@ -4927,6 +4937,7 @@ class FunctionSampleSet(GObject.Object):
     def ref(self) -> FunctionSampleSet: ...
     def refine(self, reltol: float, abstol: float, base_spline: Spline) -> None: ...
     def reset_interval_ok(self) -> None: ...
+    def set_track_residual(self, track_residual: bool) -> None: ...
     def to_spline_vec(self, base_spline: Spline) -> SplineVec: ...
     def to_spline_vec_old(self, base_spline: Spline) -> SplineVec: ...
 
@@ -4956,6 +4967,7 @@ class FunctionSampleSetIter(GObject.GBoxed):
     def free(self) -> None: ...
     def get_interval_ok(self) -> int: ...
     def get_new_point(self) -> bool: ...
+    def get_residual(self) -> typing.Optional[Vector]: ...
     def get_x(self) -> float: ...
     def get_y(self) -> Vector: ...
     def has_next(self) -> bool: ...
@@ -8197,6 +8209,131 @@ class Powspec(GObject.Object):
         self, model: typing.Optional[Model], reltol: float, z: float, R: float
     ) -> float: ...
 
+class PowspecAnalytic(Powspec):
+    r"""
+    :Constructors:
+
+    ::
+
+        PowspecAnalytic(**properties)
+        new(shape:NumCosmoMath.PowspecAnalyticShape, growth:NumCosmoMath.PowspecAnalyticGrowth) -> NumCosmoMath.PowspecAnalytic
+        new_full(shape:NumCosmoMath.PowspecAnalyticShape, growth:NumCosmoMath.PowspecAnalyticGrowth, amplitude:float, n_s:float, k_eq:float, Omega_m:float) -> NumCosmoMath.PowspecAnalytic
+
+    Object NcmPowspecAnalytic
+
+    Properties from NcmPowspecAnalytic:
+      shape -> NcmPowspecAnalyticShape: shape
+        Transfer function shape
+      growth -> NcmPowspecAnalyticGrowth: growth
+        Growth factor shape
+      amplitude -> gdouble: amplitude
+        Overall amplitude
+      n-s -> gdouble: n-s
+        Spectral index
+      k-eq -> gdouble: k-eq
+        Transfer function scale in 1/Mpc
+      Omega-m -> gdouble: Omega-m
+        Matter fraction, growth factor only
+      a-t -> gdouble: a-t
+        Growth transition scale factor
+      bao-amplitude -> gdouble: bao-amplitude
+        Amplitude of the oscillatory factor
+      bao-rd -> gdouble: bao-rd
+        Oscillation scale in Mpc
+      bao-sigma -> gdouble: bao-sigma
+        Oscillation damping scale in Mpc
+
+    Properties from NcmPowspec:
+      zi -> gdouble: zi
+        Initial time
+      zf -> gdouble: zf
+        Final time
+      kmin -> gdouble: kmin
+        Minimum mode value
+      kmax -> gdouble: kmax
+        Maximum mode value
+      reltol -> gdouble: reltol
+        Relative tolerance on the interpolation error
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        Omega_m: float
+        a_t: float
+        amplitude: float
+        bao_amplitude: float
+        bao_rd: float
+        bao_sigma: float
+        growth: PowspecAnalyticGrowth
+        k_eq: float
+        n_s: float
+        shape: PowspecAnalyticShape
+        kmax: float
+        kmin: float
+        reltol: float
+        zf: float
+        zi: float
+
+    props: Props = ...
+    def __init__(
+        self,
+        Omega_m: float = ...,
+        a_t: float = ...,
+        amplitude: float = ...,
+        bao_amplitude: float = ...,
+        bao_rd: float = ...,
+        bao_sigma: float = ...,
+        growth: PowspecAnalyticGrowth = ...,
+        k_eq: float = ...,
+        n_s: float = ...,
+        shape: PowspecAnalyticShape = ...,
+        kmax: float = ...,
+        kmin: float = ...,
+        reltol: float = ...,
+        zf: float = ...,
+        zi: float = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(psa: PowspecAnalytic) -> None: ...
+    def eval_bao(self, k: float) -> float: ...
+    def eval_growth(self, z: float) -> float: ...
+    def eval_transfer(self, k: float) -> float: ...
+    def free(self) -> None: ...
+    def get_Omega_m(self) -> float: ...
+    def get_amplitude(self) -> float: ...
+    def get_growth(self) -> PowspecAnalyticGrowth: ...
+    def get_k_eq(self) -> float: ...
+    def get_n_s(self) -> float: ...
+    def get_shape(self) -> PowspecAnalyticShape: ...
+    @classmethod
+    def new(
+        cls, shape: PowspecAnalyticShape, growth: PowspecAnalyticGrowth
+    ) -> PowspecAnalytic: ...
+    @classmethod
+    def new_full(
+        cls,
+        shape: PowspecAnalyticShape,
+        growth: PowspecAnalyticGrowth,
+        amplitude: float,
+        n_s: float,
+        k_eq: float,
+        Omega_m: float,
+    ) -> PowspecAnalytic: ...
+    def ref(self) -> PowspecAnalytic: ...
+
+class PowspecAnalyticClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        PowspecAnalyticClass()
+    """
+
+    parent_class: PowspecClass = ...
+
 class PowspecClass(GObject.GPointer):
     r"""
     :Constructors:
@@ -9656,11 +9793,11 @@ class SBesselIntegratorLevin(SBesselIntegrator):
       max-order -> guint: max-order
         Maximum Chebyshev order
       reltol -> gdouble: reltol
-        Relative tolerance
+        ODE solve relative tolerance
       cheb-min-order -> guint: cheb-min-order
         Minimum Chebyshev order for RHS
       cheb-reltol -> gdouble: cheb-reltol
-        Chebyshev decomposition relative tolerance
+        Integrand Chebyshev fit relative tolerance
       y-knots-min -> gdouble: y-knots-min
         Minimum knot value
       y-knots-max -> gdouble: y-knots-max
@@ -9710,6 +9847,12 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     def get_ell_cache_max(self) -> int: ...
     def get_max_order(self) -> int: ...
     def get_n_knots(self) -> int: ...
+    def get_n_panel_records(self) -> int: ...
+    def get_panel_a(self, i: int) -> float: ...
+    def get_panel_b(self, i: int) -> float: ...
+    def get_panel_contrib(self, i: int) -> float: ...
+    def get_panel_ell(self, i: int) -> int: ...
+    def get_record_panels(self) -> bool: ...
     def get_reltol(self) -> float: ...
     def get_y_knots_max(self) -> float: ...
     def get_y_knots_min(self) -> float: ...
@@ -9732,6 +9875,7 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     def set_cheb_min_order(self, cheb_min_order: int) -> None: ...
     def set_cheb_reltol(self, cheb_reltol: float) -> None: ...
     def set_max_order(self, max_order: int) -> None: ...
+    def set_record_panels(self, record: bool) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
 
 class SBesselIntegratorLevinClass(GObject.GPointer):
@@ -9760,6 +9904,12 @@ class SBesselOdeOperator(GObject.GBoxed):
     ) -> typing.Tuple[list[float], int]: ...
     def solve_endpoints(
         self, rhs: typing.Sequence[float] | npt.NDArray[np.float64]
+    ) -> list[float]: ...
+    def solve_values(
+        self,
+        rhs: typing.Sequence[float] | npt.NDArray[np.float64],
+        x0: float,
+        x1: float,
     ) -> list[float]: ...
     def unref(self) -> None: ...
 
@@ -10470,6 +10620,15 @@ class Spectral(GObject.Object):
         b: float,
         x: float,
     ) -> float: ...
+    def chebyshev_rebase(
+        self,
+        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        len: int,
+        a_in: float,
+        b_in: float,
+        a_out: float,
+        b_out: float,
+    ) -> typing.Tuple[float, list[float]]: ...
     @staticmethod
     def clear(spectral: Spectral) -> None: ...
     def compute_chebyshev_coeffs(
@@ -10508,6 +10667,30 @@ class Spectral(GObject.Object):
         tol: float,
         *user_data: typing.Any,
     ) -> typing.Tuple[int, list[float]]: ...
+    def compute_chebyshev_coeffs_batch_adaptive(
+        self,
+        F: typing.Callable[..., None],
+        n_comp: int,
+        a: float,
+        b: float,
+        k_min: int,
+        reltol: float,
+        abstol: float,
+        *user_data: typing.Any,
+    ) -> typing.Tuple[int, Matrix]: ...
+    def compute_chebyshev_coeffs_batch_adaptive_cap(
+        self,
+        F: typing.Callable[..., None],
+        n_comp: int,
+        a: float,
+        b: float,
+        k_min: int,
+        k_cap: int,
+        reltol: float,
+        abstol: float,
+        fatal: bool,
+        *user_data: typing.Any,
+    ) -> typing.Tuple[int, Matrix]: ...
     @staticmethod
     def compute_d2_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     @staticmethod
@@ -11262,6 +11445,80 @@ class Spline2dSplineClass(GObject.GPointer):
     """
 
     parent_class: Spline2dClass = ...
+
+class SplineBSpline(Spline):
+    r"""
+    :Constructors:
+
+    ::
+
+        SplineBSpline(**properties)
+        new(order:int) -> NumCosmoMath.SplineBSpline
+        new_full(order:int, xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.SplineBSpline
+        new_tol(reltol:float, abstol:float) -> NumCosmoMath.SplineBSpline
+
+    Object NcmSplineBSpline
+
+    Properties from NcmSplineBSpline:
+      order -> guint: order
+        B-spline order (degree + 1)
+      reltol -> gdouble: reltol
+        Requested relative interpolation error, 0 to select the order manually
+      abstol -> gdouble: abstol
+        Absolute floor for the automatic order selection
+
+    Properties from NcmSpline:
+      length -> guint: length
+        Spline length
+      x -> NcmVector: x
+        Spline knots
+      y -> NcmVector: y
+        Spline values
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        abstol: float
+        order: int
+        reltol: float
+        length: int
+        x: Vector
+        y: Vector
+
+    props: Props = ...
+    def __init__(
+        self,
+        abstol: float = ...,
+        order: int = ...,
+        reltol: float = ...,
+        length: int = ...,
+        x: Vector = ...,
+        y: Vector = ...,
+    ) -> None: ...
+    def get_achieved_error(self) -> float: ...
+    def get_order(self) -> int: ...
+    @classmethod
+    def new(cls, order: int) -> SplineBSpline: ...
+    @classmethod
+    def new_full(
+        cls, order: int, xv: Vector, yv: Vector, init: bool
+    ) -> SplineBSpline: ...
+    @classmethod
+    def new_tol(cls, reltol: float, abstol: float) -> SplineBSpline: ...
+    def set_order(self, order: int) -> None: ...
+
+class SplineBSplineClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SplineBSplineClass()
+    """
+
+    parent_class: SplineClass = ...
 
 class SplineClass(GObject.GPointer):
     r"""
@@ -13905,6 +14162,38 @@ class NNLSUMethod(GObject.GEnum):
 class ParamType(GObject.GEnum):
     FIXED: ParamType = ...
     FREE: ParamType = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class PowspecAnalyticGrowth(GObject.GEnum):
+    LCDM: PowspecAnalyticGrowth = ...
+    NONE: PowspecAnalyticGrowth = ...
+    RATIONAL: PowspecAnalyticGrowth = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class PowspecAnalyticShape(GObject.GEnum):
+    BBKS: PowspecAnalyticShape = ...
+    POWER_LAW: PowspecAnalyticShape = ...
+    RATIONAL: PowspecAnalyticShape = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

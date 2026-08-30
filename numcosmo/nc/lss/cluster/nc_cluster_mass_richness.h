@@ -44,7 +44,7 @@ G_DECLARE_DERIVABLE_TYPE (NcClusterMassRichness, nc_cluster_mass_richness, NC, C
  * Scalar parameters for the cluster mass-richness relation.
  *
  */
-typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_RICHNESS_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_RICHNESS_SPARAMS,prefix=NC_CLUSTER_MASS_RICHNESS >*/
 {
   NC_CLUSTER_MASS_RICHNESS_CUT,
   /* < private > */

@@ -484,6 +484,51 @@ nc_hipert_boltzmann_append_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType 
 }
 
 /**
+ * nc_hipert_boltzmann_require:
+ * @pb: a #NcHIPertBoltzmann
+ * @tCls: Cls targets (may combine flags)
+ * @lmax: minimum multipole required for each requested spectrum
+ *
+ * Appends @tCls to the target set and raises the per-spectrum lmax to at least
+ * @lmax for every requested spectrum, never lowering an existing lmax. This is a
+ * convenience for data objects that need given spectra up to a given multipole
+ * from the Boltzmann source and must configure it themselves.
+ *
+ * The requested lmax is floored at %NC_HIPERT_BOLTZMANN_REQUIRE_LMIN: a Boltzmann
+ * code needs multipole headroom above the last $\ell$ actually used, and for a
+ * low-$\ell$-only request the headroom #NcCBE adds on its own is not enough.
+ *
+ */
+void
+nc_hipert_boltzmann_require (NcHIPertBoltzmann *pb, NcDataCMBDataType tCls, guint lmax)
+{
+  lmax = MAX (lmax, NC_HIPERT_BOLTZMANN_REQUIRE_LMIN);
+
+  nc_hipert_boltzmann_append_target_Cls (pb, tCls);
+
+  if ((tCls & NC_DATA_CMB_TYPE_TT) && (nc_hipert_boltzmann_get_TT_lmax (pb) < lmax))
+    nc_hipert_boltzmann_set_TT_lmax (pb, lmax);
+
+  if ((tCls & NC_DATA_CMB_TYPE_EE) && (nc_hipert_boltzmann_get_EE_lmax (pb) < lmax))
+    nc_hipert_boltzmann_set_EE_lmax (pb, lmax);
+
+  if ((tCls & NC_DATA_CMB_TYPE_BB) && (nc_hipert_boltzmann_get_BB_lmax (pb) < lmax))
+    nc_hipert_boltzmann_set_BB_lmax (pb, lmax);
+
+  if ((tCls & NC_DATA_CMB_TYPE_TE) && (nc_hipert_boltzmann_get_TE_lmax (pb) < lmax))
+    nc_hipert_boltzmann_set_TE_lmax (pb, lmax);
+
+  if ((tCls & NC_DATA_CMB_TYPE_TB) && (nc_hipert_boltzmann_get_TB_lmax (pb) < lmax))
+    nc_hipert_boltzmann_set_TB_lmax (pb, lmax);
+
+  if ((tCls & NC_DATA_CMB_TYPE_EB) && (nc_hipert_boltzmann_get_EB_lmax (pb) < lmax))
+    nc_hipert_boltzmann_set_EB_lmax (pb, lmax);
+
+  if ((tCls & NC_DATA_CMB_TYPE_PHIPHI) && (nc_hipert_boltzmann_get_PHIPHI_lmax (pb) < lmax))
+    nc_hipert_boltzmann_set_PHIPHI_lmax (pb, lmax);
+}
+
+/**
  * nc_hipert_boltzmann_get_target_Cls:
  * @pb: a #NcHIPertBoltzmann.
  *

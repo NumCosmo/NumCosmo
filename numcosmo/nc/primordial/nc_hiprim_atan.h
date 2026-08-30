@@ -66,7 +66,7 @@ typedef struct _NcHIPrimAtan NcHIPrimAtan;
  * $$ \mathcal{P}_T(k) = r \mathcal{A}_\mathrm{s} \left(\frac{k}{k_\star}\right)^{n_T -1 }.$$
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPRIM_ATAN_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HIPRIM_ATAN_SPARAMS,prefix=NC_HIPRIM_ATAN >*/
 {
   NC_HIPRIM_ATAN_LN10E10ASA,
   NC_HIPRIM_ATAN_N_SA,
