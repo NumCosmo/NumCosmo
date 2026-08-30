@@ -105,8 +105,9 @@ tophat-filtered linear power spectrum, and a multiplicity function. We build the
 from the Eisenstein-Hu transfer function, apply a tophat filter, and use the Tinker multiplicity
 function with a mean overdensity of $\Delta = 200$. The filter is evaluated by an FFTLog transform from
 $k$ to $r$, and `set_best_lnr0()` centres that transform on the $k$ range requested just above with
-`require_kmin()`/`require_kmax()`, taking the radius range as its reciprocal so the filtered variance is
-defined over the scales that $k$ range supports; `set_lnr0()` sets the range by hand instead.
+`require_kmin()`/`require_kmax()`, placing the radius range at the reciprocal of that range's centre and
+carrying its logarithmic width across unchanged, so the filtered variance is defined over the scales
+that $k$ range supports; `set_lnr0()` sets the range by hand instead.
 
 ```{python}
 # Comoving-distance object, valid up to z = 2
@@ -307,9 +308,9 @@ plt.legend(loc="best")
 plt.show()
 ```
 
-The counts above peak at $z \approx 0.63$, where two competing effects balance: at lower redshift a
-fixed solid angle encloses little comoving volume, while at higher redshift halos this massive have not
-yet formed in appreciable numbers.
+The counts above peak near the redshift printed by the cell that computed them, where two competing
+effects balance: at lower redshift a fixed solid angle encloses little comoving volume, while at higher
+redshift halos this massive have not yet formed in appreciable numbers.
 
 ## Conclusion
 
