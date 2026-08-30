@@ -27,8 +27,10 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include <numcosmo/ncm/model/ncm_reparam_linear.h>
 
 #include <math.h>
+#include <string.h>
 #include <glib.h>
 #include <glib-object.h>
 
@@ -50,6 +52,11 @@ void test_ncm_mset_fparams_validate_all (TestNcmMSet *test, gconstpointer pdata)
 void test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_shallow_copy (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata);
+void test_ncm_mset_saveload_submodel_reparam (void);
+void test_ncm_mset_unslotted_submodel_attach (void);
+void test_ncm_mset_unslotted_submodel_attach_subprocess (void);
+void test_ncm_mset_load_unslotted_submodel_group (void);
+void test_ncm_mset_two_level_submodel_slots (void);
 
 void test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_invalid_get (TestNcmMSet *test, gconstpointer pdata);
@@ -101,6 +108,12 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_new,
               &test_ncm_mset_saveload,
               &test_ncm_mset_free);
+
+  g_test_add_func ("/ncm/mset/saveload/submodel_reparam", &test_ncm_mset_saveload_submodel_reparam);
+  g_test_add_func ("/ncm/mset/submodel/unslotted_attach", &test_ncm_mset_unslotted_submodel_attach);
+  g_test_add_func ("/ncm/mset/submodel/unslotted_attach/subprocess", &test_ncm_mset_unslotted_submodel_attach_subprocess);
+  g_test_add_func ("/ncm/mset/load/unslotted_submodel_group", &test_ncm_mset_load_unslotted_submodel_group);
+  g_test_add_func ("/ncm/mset/submodel/two_level_slots", &test_ncm_mset_two_level_submodel_slots);
 
   g_test_add ("/ncm/mset/traps", TestNcmMSet, NULL,
               &test_ncm_mset_new,
@@ -597,6 +610,413 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
 
   nc_cluster_mass_free (benson);
   nc_cluster_mass_free (mass);
+}
+
+/* A two-level slotted host family: the child class extends its parent's
+ * declared submodel slots, exercising the parent-slot copy in
+ * ncm_model_class_add_submodels(). */
+#define TEST_TYPE_HOST_SLOTTED (test_host_slotted_get_type ())
+G_DECLARE_DERIVABLE_TYPE (TestHostSlotted, test_host_slotted, TEST, HOST_SLOTTED, NcmModel)
+
+struct _TestHostSlottedClass
+{
+  NcmModelClass parent_class;
+};
+
+G_DEFINE_TYPE (TestHostSlotted, test_host_slotted, NCM_TYPE_MODEL)
+NCM_MSET_MODEL_REGISTER_ID (test_host_slotted, TEST_TYPE_HOST_SLOTTED)
+
+#define TEST_TYPE_SUB_P (test_sub_p_get_type ())
+G_DECLARE_FINAL_TYPE (TestSubP, test_sub_p, TEST, SUB_P, NcmModel)
+
+struct _TestSubP
+{
+  NcmModel parent_instance;
+};
+
+G_DEFINE_TYPE (TestSubP, test_sub_p, NCM_TYPE_MODEL)
+NCM_MSET_MODEL_REGISTER_ID (test_sub_p, TEST_TYPE_SUB_P)
+
+#define TEST_TYPE_SUB_Q (test_sub_q_get_type ())
+G_DECLARE_FINAL_TYPE (TestSubQ, test_sub_q, TEST, SUB_Q, NcmModel)
+
+struct _TestSubQ
+{
+  NcmModel parent_instance;
+};
+
+G_DEFINE_TYPE (TestSubQ, test_sub_q, NCM_TYPE_MODEL)
+NCM_MSET_MODEL_REGISTER_ID (test_sub_q, TEST_TYPE_SUB_Q)
+
+static void
+test_sub_p_init (TestSubP *sub)
+{
+}
+
+static void
+test_sub_p_class_init (TestSubPClass *klass)
+{
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  ncm_model_class_set_name_nick (model_class, "Test slotted submodel P", "TestSubP");
+  ncm_model_class_add_params (model_class, 1, 0, 1);
+  ncm_model_class_set_sparam (model_class, 0, "x_0^{(p)}", "x0", -10.0, 10.0, 1.0, 0.0, 1.0, NCM_PARAM_TYPE_FIXED);
+
+  ncm_mset_model_register_id (model_class, "TestSubP", "Test slotted submodel P", NULL, FALSE,
+                              test_host_slotted_id ());
+
+  ncm_model_class_check_params_info (model_class);
+}
+
+static void
+test_sub_q_init (TestSubQ *sub)
+{
+}
+
+static void
+test_sub_q_class_init (TestSubQClass *klass)
+{
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  ncm_model_class_set_name_nick (model_class, "Test slotted submodel Q", "TestSubQ");
+  ncm_model_class_add_params (model_class, 1, 0, 1);
+  ncm_model_class_set_sparam (model_class, 0, "x_0^{(q)}", "x0", -10.0, 10.0, 1.0, 0.0, 1.0, NCM_PARAM_TYPE_FIXED);
+
+  ncm_mset_model_register_id (model_class, "TestSubQ", "Test slotted submodel Q", NULL, FALSE,
+                              test_host_slotted_id ());
+
+  ncm_model_class_check_params_info (model_class);
+}
+
+static void
+test_host_slotted_init (TestHostSlotted *host)
+{
+}
+
+static void
+test_host_slotted_class_init (TestHostSlottedClass *klass)
+{
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  ncm_model_class_set_name_nick (model_class, "Test slotted host", "TestHostSlotted");
+  ncm_model_class_add_params (model_class, 0, 0, 1);
+
+  ncm_model_class_add_submodels (model_class, 1);
+  ncm_model_class_set_submodel (model_class, 0, "sub-p", "sub-p", TEST_TYPE_SUB_P);
+
+  ncm_mset_model_register_id (model_class, "TestHostSlotted", "Test slotted host", NULL, FALSE,
+                              NCM_MSET_MODEL_MAIN);
+
+  ncm_model_class_check_params_info (model_class);
+}
+
+#define TEST_TYPE_HOST_SLOTTED_CHILD (test_host_slotted_child_get_type ())
+G_DECLARE_FINAL_TYPE (TestHostSlottedChild, test_host_slotted_child, TEST, HOST_SLOTTED_CHILD, TestHostSlotted)
+
+struct _TestHostSlottedChild
+{
+  TestHostSlotted parent_instance;
+};
+
+G_DEFINE_TYPE (TestHostSlottedChild, test_host_slotted_child, TEST_TYPE_HOST_SLOTTED)
+
+static void
+test_host_slotted_child_init (TestHostSlottedChild *host)
+{
+}
+
+static void
+test_host_slotted_child_class_init (TestHostSlottedChildClass *klass)
+{
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  ncm_model_class_set_name_nick (model_class, "Test slotted host child", "TestHostSlottedChild");
+  ncm_model_class_add_params (model_class, 0, 0, 1);
+
+  /* Extends the parent's one declared slot with a second one. */
+  ncm_model_class_add_submodels (model_class, 2);
+  ncm_model_class_set_submodel (model_class, 1, "sub-q", "sub-q", TEST_TYPE_SUB_Q);
+
+  ncm_model_class_check_params_info (model_class);
+}
+
+/*
+ * A minimal submodel type with NcHICosmo as its main model but NO typed slot
+ * declared on NcHICosmo -- the only in-tree way to exercise ncm_mset_load()'s
+ * pass 3, which attaches pass-1 submodels that pass-2 slot injection did not
+ * consume.
+ */
+#define TEST_TYPE_UNSLOTTED_SUB (test_unslotted_sub_get_type ())
+G_DECLARE_FINAL_TYPE (TestUnslottedSub, test_unslotted_sub, TEST, UNSLOTTED_SUB, NcmModel)
+
+struct _TestUnslottedSub
+{
+  NcmModel parent_instance;
+};
+
+G_DEFINE_TYPE (TestUnslottedSub, test_unslotted_sub, NCM_TYPE_MODEL)
+NCM_MSET_MODEL_REGISTER_ID (test_unslotted_sub, TEST_TYPE_UNSLOTTED_SUB)
+
+static void
+test_unslotted_sub_init (TestUnslottedSub *sub)
+{
+}
+
+static void
+test_unslotted_sub_class_init (TestUnslottedSubClass *klass)
+{
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  ncm_model_class_set_name_nick (model_class, "Unslotted test submodel", "TestUnslottedSub");
+  ncm_model_class_add_params (model_class, 1, 0, 1);
+  ncm_model_class_set_sparam (model_class, 0, "x_0", "x0", -10.0, 10.0, 1.0, 0.0, 1.0, NCM_PARAM_TYPE_FIXED);
+
+  ncm_mset_model_register_id (model_class,
+                              "TestUnslottedSub",
+                              "Unslotted test submodel",
+                              NULL,
+                              FALSE,
+                              nc_hicosmo_id ());
+
+  ncm_model_class_check_params_info (model_class);
+}
+
+void
+test_ncm_mset_unslotted_submodel_attach_subprocess (void)
+{
+  NcHICosmo *cosmo      = NC_HICOSMO (nc_hicosmo_lcdm_new_full (NULL, NULL, NULL));
+  TestUnslottedSub *sub = g_object_new (TEST_TYPE_UNSLOTTED_SUB, NULL);
+
+  /* Submodels are construction-fixed for every type: a type without a
+   * declared slot has no legal attachment path at all. */
+  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (sub));
+
+  ncm_model_free (NCM_MODEL (sub));
+  nc_hicosmo_free (cosmo);
+}
+
+void
+test_ncm_mset_unslotted_submodel_attach (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/submodel/unslotted_attach/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*construction-fixed*");
+}
+
+void
+test_ncm_mset_load_unslotted_submodel_group (void)
+{
+  /* A file carrying a submodel group whose type has no slot on its main
+   * model must fail loudly, never be silently dropped. */
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_lcdm_new_full (NULL, NULL, NULL));
+  GError *error    = NULL;
+
+  /* Class init registers the model id; it must exist before ncm_mset_load
+   * meets the group. */
+  GType sub_class = (GType) g_type_class_ref (TEST_TYPE_UNSLOTTED_SUB);
+
+  {
+    NcmMSet *mset     = ncm_mset_empty_new ();
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_mset_unslotted_XXXXXX", NULL);
+    gchar *filename   = g_build_filename (tmp_dir, "unslotted.mset", NULL);
+
+    ncm_mset_set (mset, NCM_MODEL (cosmo), &error);
+    g_assert_no_error (error);
+    ncm_mset_save (mset, ser, filename, FALSE, &error);
+    g_assert_no_error (error);
+
+    {
+      gchar *contents = NULL;
+      gchar *extended = NULL;
+
+      g_assert_true (g_file_get_contents (filename, &contents, NULL, NULL));
+      extended = g_strconcat (contents,
+                              "\n[TestUnslottedSub]\n"
+                              "TestUnslottedSub=TestUnslottedSub\n",
+                              NULL);
+      g_assert_true (g_file_set_contents (filename, extended, -1, NULL));
+      g_free (contents);
+      g_free (extended);
+    }
+
+    {
+      NcmSerialize *ser2 = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+      NcmMSet *mset2     = ncm_mset_load (filename, ser2, &error);
+
+      g_assert_true (mset2 == NULL);
+      g_assert_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_KEY_FILE_INVALID);
+      g_assert_nonnull (strstr (error->message, "was not consumed by a construction-time"));
+      g_clear_error (&error);
+      ncm_serialize_free (ser2);
+    }
+
+    g_unlink (filename);
+    g_rmdir (tmp_dir);
+    g_free (filename);
+    g_free (tmp_dir);
+    ncm_serialize_free (ser);
+    ncm_mset_free (mset);
+  }
+
+  g_type_class_unref ((gpointer) sub_class);
+  nc_hicosmo_free (cosmo);
+}
+
+void
+test_ncm_mset_two_level_submodel_slots (void)
+{
+  TestSubP *sub_p             = g_object_new (TEST_TYPE_SUB_P, NULL);
+  TestSubQ *sub_q             = g_object_new (TEST_TYPE_SUB_Q, NULL);
+  TestHostSlottedChild *child = g_object_new (TEST_TYPE_HOST_SLOTTED_CHILD,
+                                              "sub-p", sub_p,
+                                              "sub-q", sub_q,
+                                              NULL);
+  GError *error = NULL;
+
+  /* Both the inherited and the child-added slot deliver at construction. */
+  g_assert_true (ncm_model_peek_submodel_by_mid (NCM_MODEL (child), test_sub_p_id ()) == NCM_MODEL (sub_p));
+  g_assert_true (ncm_model_peek_submodel_by_mid (NCM_MODEL (child), test_sub_q_id ()) == NCM_MODEL (sub_q));
+
+  /* Qualified access works through both slots. */
+  {
+    NcmModel *target = NULL;
+    guint i          = 99;
+
+    g_assert_true (ncm_model_param_index_from_name_full (NCM_MODEL (child), "sub-p:x0", &target, &i, &error));
+    g_assert_no_error (error);
+    g_assert_true (target == NCM_MODEL (sub_p));
+
+    g_assert_true (ncm_model_param_index_from_name_full (NCM_MODEL (child), "sub-q:x0", &target, &i, &error));
+    g_assert_no_error (error);
+    g_assert_true (target == NCM_MODEL (sub_q));
+
+    /* Both attached submodels carry "x0": the bare name is ambiguous. */
+    g_assert_false (ncm_model_param_index_from_name_full (NCM_MODEL (child), "x0", &target, &i, &error));
+    g_assert_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_AMBIGUOUS);
+    g_clear_error (&error);
+
+    /* Known slot, unknown parameter: the resolver's own error. */
+    g_assert_false (ncm_model_param_index_from_name_full (NCM_MODEL (child), "sub-p:nope", &target, &i, &error));
+    g_assert_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND);
+    g_clear_error (&error);
+  }
+
+  ncm_model_free (NCM_MODEL (sub_p));
+  ncm_model_free (NCM_MODEL (sub_q));
+  ncm_model_free (NCM_MODEL (child));
+}
+
+void
+test_ncm_mset_saveload_submodel_reparam (void)
+{
+  /*
+   * Regression test for a real, pre-existing bug found while testing the
+   * reparam backpointer migration: every NcmModel carries a generic
+   * "submodel-array" boxed property (independent of any typed slot) that
+   * ncm_serialize_to_variant() walks and recursively, fully serializes --
+   * so when a host (cosmo) is serialized, its submodels (e.g. reion) get
+   * fully walked and registered as already-seen instances in @ser's
+   * persistent, cross-call name table (populated by
+   * NCM_SERIALIZE_OPT_AUTOSAVE_SER, which ncm_mset_save()'s own @ser
+   * always sets). Since a submodel is *also* independently serialized as
+   * its own top-level NcmMSet entry, ncm_mset_save() already unregistered
+   * the submodel itself from @ser right after the host's own walk, to
+   * force a full re-serialization instead of a bare name-only reference
+   * -- but didn't recurse into objects NESTED inside the submodel's own
+   * serialization (e.g. an attached NcmReparam, and that reparam's own
+   * "T"/"v" properties), so anything nested came out as an empty,
+   * unusable reference after a save/load round-trip. Fixed in
+   * ncm_mset_save() via a recursive unregistration helper
+   * (_ncm_mset_serialize_unset_recursive()) that walks every
+   * GObject-valued readable property reachable from the submodel, not
+   * just the submodel itself.
+   *
+   * Uses a host-independent NcmReparamLinear here (not
+   * NcHIReionCambReparamTau) specifically to isolate this bug from a
+   * separate, known limitation: ncm_mset_load()'s two-pass reorder builds
+   * every submodel (including setting its "reparam" property) in pass 1,
+   * before pass 2 attaches it to its host in pass 2 -- so a reparam whose
+   * own old2new/new2old needs ncm_model_peek_host() (like the tau reparam)
+   * cannot currently be pre-attached before a save/load round-trip; it
+   * must be (re-)attached via the public API (e.g. z_to_tau()) after
+   * loading, not expected to survive serialization pre-attached.
+   */
+  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_lcdm_new_full (reion, NULL, NULL));
+  GError *error    = NULL;
+
+  {
+    NcmMatrix *T = ncm_matrix_new (2, 2);
+    NcmVector *v = ncm_vector_new (2);
+    NcmReparam *rp;
+
+    ncm_matrix_set_identity (T);
+    ncm_vector_set_zero (v);
+
+    rp = NCM_REPARAM (ncm_reparam_linear_new (2, T, v));
+    ncm_model_set_reparam (NCM_MODEL (reion), rp, &error);
+    g_assert_no_error (error);
+    ncm_reparam_free (rp);
+
+    ncm_matrix_free (T);
+    ncm_vector_free (v);
+  }
+
+  ncm_model_param_set (NCM_MODEL (reion), NC_HIREION_CAMB_HII_HEII_Z, 9.5);
+
+  {
+    NcmMSet *mset     = ncm_mset_empty_new ();
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_mset_saved_reparam_XXXXXX", NULL);
+    gchar *filename   = g_strdup_printf ("%s/test_ncm_mset_saved_reparam.mset", tmp_dir);
+    NcmMSet *mset_dup = NULL;
+    NcmModel *cosmo_dup;
+    NcmModel *reion_dup;
+    NcmReparam *reparam_dup;
+
+    ncm_mset_set (mset, NCM_MODEL (cosmo), &error);
+    g_assert_no_error (error);
+
+    ncm_mset_save (mset, ser, filename, TRUE, NULL);
+    mset_dup = ncm_mset_load (filename, ser, &error);
+    g_assert_no_error (error);
+    g_assert_true (mset_dup != NULL);
+
+    g_assert_true (ncm_mset_cmp (mset, mset_dup, TRUE));
+
+    cosmo_dup = ncm_mset_peek (mset_dup, nc_hicosmo_id ());
+    g_assert_true (cosmo_dup != NULL);
+
+    reion_dup = ncm_model_peek_submodel_by_mid (cosmo_dup, nc_hireion_id ());
+    g_assert_true (reion_dup != NULL);
+
+    /* The loaded reion must have its host resolvable again -- the whole
+     * point of the backpointer -- and its reparam must have survived as a
+     * full, working definition, not an empty reference. */
+    g_assert_true (ncm_model_peek_host (reion_dup) == cosmo_dup);
+
+    reparam_dup = ncm_model_peek_reparam (reion_dup);
+    g_assert_true (NCM_IS_REPARAM_LINEAR (reparam_dup));
+    g_assert_cmpuint (ncm_model_len (reion_dup), ==, ncm_model_len (NCM_MODEL (reion)));
+
+    ncm_assert_cmpdouble (ncm_model_param_get (reion_dup, NC_HIREION_CAMB_HII_HEII_Z), ==,
+                          ncm_model_param_get (NCM_MODEL (reion), NC_HIREION_CAMB_HII_HEII_Z));
+
+    ncm_mset_free (mset_dup);
+    ncm_serialize_free (ser);
+
+    g_unlink (filename);
+    g_rmdir (tmp_dir);
+
+    g_free (filename);
+    g_free (tmp_dir);
+
+    ncm_mset_free (mset);
+  }
+
+  nc_hicosmo_free (cosmo);
+  nc_hireion_free (reion);
 }
 
 void

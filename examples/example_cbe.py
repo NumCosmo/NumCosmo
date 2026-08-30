@@ -37,9 +37,15 @@ def test_cbe() -> None:
     """Compare the results from CLASS using CBE to NumCosmo's."""
 
     #
+    # Submodels necessary for CLASS
+    #
+    reion = Nc.HIReionCamb.new()
+    prim = Nc.HIPrimPowerLaw.new()
+
+    #
     #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
     #
-    cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
+    cosmo = Nc.HICosmoDEXcdm(massnu_length=1, reion=reion, prim=prim)
     cosmo.set_reparam(Nc.HICosmoDEReparamCMB.new(cosmo.len()))
 
     #
@@ -95,14 +101,6 @@ def test_cbe() -> None:
     #
     cbe = Nc.CBE.new()
     cbe.set_calc_transfer(True)
-
-    #
-    # Submodels necessary for CLASS
-    #
-    reion = Nc.HIReionCamb.new()
-    prim = Nc.HIPrimPowerLaw.new()
-    cosmo.add_submodel(reion)
-    cosmo.add_submodel(prim)
 
     #
     # Preparing CLASS backend

@@ -39,11 +39,6 @@ Ncm.cfg_init()
 def test_halo_mass_function() -> None:
     """Example testing halo mass function."""
     #
-    #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
-    #
-    cosmo = Nc.HICosmoDEXcdm()
-
-    #
     #  New homogeneous and isotropic reionization object.
     #
     reion = Nc.HIReionCamb.new()
@@ -54,10 +49,11 @@ def test_halo_mass_function() -> None:
     prim = Nc.HIPrimPowerLaw.new()
 
     #
-    # Adding submodels to the main cosmological model.
+    #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm, with
+    #  the reionization and primordial submodels attached at construction
+    #  time.
     #
-    cosmo.add_submodel(reion)
-    cosmo.add_submodel(prim)
+    cosmo = Nc.HICosmoDEXcdm(reion=reion, prim=prim)
 
     #
     #  New cosmological distance objects optimizied to perform calculations

@@ -306,8 +306,30 @@ _nc_hicosmo_lcdm_bgp_cs2 (NcHICosmo *cosmo, gdouble z)
 NcHICosmoLCDM *
 nc_hicosmo_lcdm_new (void)
 {
-  NcHICosmoLCDM *lcdm = g_object_new (NC_TYPE_HICOSMO_LCDM, NULL);
+  return nc_hicosmo_lcdm_new_full (NULL, NULL, NULL);
+}
 
-  return lcdm;
+/**
+ * nc_hicosmo_lcdm_new_full:
+ * @reion: (nullable): a #NcHIReion
+ * @prim: (nullable): a #NcHIPrim
+ * @bbn: (nullable): a #NcBBN
+ *
+ * Creates a new instance of #NcHICosmoLCDM (Lambda-CDM cosmological model),
+ * with @reion, @prim, and @bbn attached at construction time (submodels are
+ * construction-only and cannot be attached afterward). Each may be
+ * %NULL to leave that slot unset (a %NULL @bbn slot gets a default
+ * #NcBBNParthenope).
+ *
+ * Returns: (transfer full): a new #NcHICosmoLCDM
+ */
+NcHICosmoLCDM *
+nc_hicosmo_lcdm_new_full (NcHIReion *reion, NcHIPrim *prim, NcBBN *bbn)
+{
+  return g_object_new (NC_TYPE_HICOSMO_LCDM,
+                       "reion", reion,
+                       "prim", prim,
+                       "bbn", bbn,
+                       NULL);
 }
 

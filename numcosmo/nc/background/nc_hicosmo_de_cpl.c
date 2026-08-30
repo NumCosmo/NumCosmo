@@ -106,9 +106,31 @@ _nc_hicosmo_de_cpl_w_de (NcHICosmoDE *cosmo_de, gdouble z)
 NcHICosmoDECpl *
 nc_hicosmo_de_cpl_new (void)
 {
-  NcHICosmoDECpl *cpl = g_object_new (NC_TYPE_HICOSMO_DE_CPL, NULL);
+  return nc_hicosmo_de_cpl_new_full (NULL, NULL, NULL);
+}
 
-  return cpl;
+/**
+ * nc_hicosmo_de_cpl_new_full:
+ * @reion: (nullable): a #NcHIReion
+ * @prim: (nullable): a #NcHIPrim
+ * @bbn: (nullable): a #NcBBN
+ *
+ * This function instantiates a new object of type #NcHICosmoDECpl, with
+ * @reion, @prim, and @bbn attached at construction time (submodels are
+ * construction-only and cannot be attached afterward). Each may be
+ * %NULL to leave that slot unset (a %NULL @bbn slot gets a default
+ * #NcBBNParthenope).
+ *
+ * Returns: A new #NcHICosmoDECpl
+ */
+NcHICosmoDECpl *
+nc_hicosmo_de_cpl_new_full (NcHIReion *reion, NcHIPrim *prim, NcBBN *bbn)
+{
+  return g_object_new (NC_TYPE_HICOSMO_DE_CPL,
+                       "reion", reion,
+                       "prim", prim,
+                       "bbn", bbn,
+                       NULL);
 }
 
 enum

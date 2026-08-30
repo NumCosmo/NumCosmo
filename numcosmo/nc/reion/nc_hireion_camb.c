@@ -53,6 +53,10 @@ enum
   PROP_SIZE,
 };
 
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (nc-hireion-camb-error, nc_hireion_camb_error)
+/* *INDENT-ON* */
+
 G_DEFINE_TYPE (NcHIReionCamb, nc_hireion_camb, NC_TYPE_HIREION)
 
 #define VECTOR     (NCM_MODEL (reion))
@@ -382,55 +386,88 @@ nc_hireion_camb_calc_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, co
 /**
  * nc_hireion_camb_set_z_from_tau:
  * @reion_camb: a #NcHIReionCamb
- * @cosmo: a #NcHICosmo
  * @tau: reionization optical depth
+ * @error: a #GError
  *
  * Sets the reionization redshift from the value of the reionization
- * optical depth and the cosmological model @cosmo.
+ * optical depth, using @reion_camb's own host cosmology (see
+ * ncm_model_peek_host()) -- @reion_camb must already be attached as the
+ * `"reion"` slot of some #NcHICosmo.
  *
  */
 void
-nc_hireion_camb_set_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, const gdouble tau)
+nc_hireion_camb_set_z_from_tau (NcHIReionCamb *reion_camb, const gdouble tau, GError **error)
 {
-  NcmModel *model = NCM_MODEL (reion_camb);
-
-  if (NC_IS_HIREION_CAMB_REPARAM_TAU (ncm_model_peek_reparam (model)))
+  g_return_if_fail (error == NULL || *error == NULL);
   {
-    ncm_model_param_set (model, NC_HIREION_CAMB_HII_HEII_Z, tau);
-  }
-  else
-  {
-    const gdouble z_reion = nc_hireion_camb_calc_z_from_tau (reion_camb, cosmo, tau);
+    NcmModel *model = NCM_MODEL (reion_camb);
 
-    ncm_model_orig_param_set (NCM_MODEL (reion_camb), NC_HIREION_CAMB_HII_HEII_Z, z_reion);
+    if (NC_IS_HIREION_CAMB_REPARAM_TAU (ncm_model_peek_reparam (model)))
+    {
+      ncm_model_param_set (model, NC_HIREION_CAMB_HII_HEII_Z, tau);
+    }
+    else
+    {
+      NcHICosmo *cosmo = NC_HICOSMO (ncm_model_peek_host (model));
 
-    return;
+      if (cosmo == NULL)
+      {
+        ncm_util_set_or_call_error (error, NC_HIREION_CAMB_ERROR, NC_HIREION_CAMB_ERROR_NO_HOST,
+                                    "nc_hireion_camb_set_z_from_tau: `%s' is not attached to a host cosmology.",
+                                    G_OBJECT_TYPE_NAME (reion_camb));
+
+        return;
+      }
+
+      {
+        const gdouble z_reion = nc_hireion_camb_calc_z_from_tau (reion_camb, cosmo, tau);
+
+        ncm_model_orig_param_set (NCM_MODEL (reion_camb), NC_HIREION_CAMB_HII_HEII_Z, z_reion);
+      }
+    }
   }
 }
 
 /**
  * nc_hireion_camb_z_to_tau:
  * @reion_camb: a #NcHIReionCamb
- * @cosmo: a #NcHICosmo
  * @error: a #GError
  *
- * Changes the parametrization to use $\tau_\mathrm{reion}$ instead of $z_\mathrm{reion}$.
+ * Changes the parametrization to use $\tau_\mathrm{reion}$ instead of
+ * $z_\mathrm{reion}$, using @reion_camb's own host cosmology (see
+ * ncm_model_peek_host()) -- @reion_camb must already be attached as the
+ * `"reion"` slot of some #NcHICosmo.
  *
  */
 void
-nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, GError **error)
+nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, GError **error)
 {
   g_return_if_fail (error == NULL || *error == NULL);
   {
-    NcHIReionCambReparamTau *reparam_tau = nc_hireion_camb_reparam_tau_new (ncm_model_len (NCM_MODEL (reion_camb)), cosmo);
-    NcmReparam *reparam                  = NCM_REPARAM (reparam_tau);
+    NcHICosmo *cosmo = NC_HICOSMO (ncm_model_peek_host (NCM_MODEL (reion_camb)));
 
-    ncm_model_set_reparam (NCM_MODEL (reion_camb), reparam, error);
-    NCM_UTIL_ON_ERROR_RETURN (error, ncm_reparam_clear (&reparam), );
+    if (cosmo == NULL)
+    {
+      ncm_util_set_or_call_error (error, NC_HIREION_CAMB_ERROR, NC_HIREION_CAMB_ERROR_NO_HOST,
+                                  "nc_hireion_camb_z_to_tau: `%s' is not attached to a host cosmology.",
+                                  G_OBJECT_TYPE_NAME (reion_camb));
 
-    ncm_reparam_clear (&reparam);
+      return;
+    }
 
-    return;
+    {
+      NcHIReionCambReparamTau *reparam_tau = nc_hireion_camb_reparam_tau_new (ncm_model_len (NCM_MODEL (reion_camb)));
+      NcmReparam *reparam                  = NCM_REPARAM (reparam_tau);
+
+      ncm_model_set_reparam (NCM_MODEL (reion_camb), reparam, error);
+      NCM_UTIL_ON_ERROR_RETURN (error, ncm_reparam_clear (&reparam), );
+
+      ncm_model_params_set_default_ftype (NCM_MODEL (reion_camb));
+
+      ncm_reparam_clear (&reparam);
+
+      return;
+    }
   }
 }
 

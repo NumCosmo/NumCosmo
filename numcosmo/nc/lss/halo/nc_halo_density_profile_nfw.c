@@ -316,17 +316,8 @@ nc_halo_density_profile_nfw_class_set_ni (gboolean num)
 NcHaloDensityProfileNFW *
 nc_halo_density_profile_nfw_new (NcHaloMassSummary *hms)
 {
-  NcmObjArray *submodels = ncm_obj_array_new ();
-
-  ncm_obj_array_add (submodels, G_OBJECT (hms));
-  {
-    NcHaloDensityProfileNFW *dp_nfw = g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_NFW,
-                                                    "submodel-array", submodels,
-                                                    NULL);
-
-    ncm_obj_array_unref (submodels);
-
-    return dp_nfw;
-  }
+  return g_object_new (NC_TYPE_HALO_DENSITY_PROFILE_NFW,
+                       "mass-summary", hms,
+                       NULL);
 }
 
