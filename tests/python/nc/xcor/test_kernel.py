@@ -34,7 +34,10 @@ import numpy as np
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.cosmology import Cosmology
 
-pytestmark = pytest.mark.xcor
+# Pinned to one worker under --dist loadgroup: this file is one of the
+# xcor lane's memory peaks, and an xdist worker is its own session, so
+# without this its cost is paid once per worker rather than once.
+pytestmark = [pytest.mark.xcor, pytest.mark.xdist_group("kernel")]
 
 Ncm.cfg_init()
 pytest_plugins = ["python.fixtures_xcor"]
