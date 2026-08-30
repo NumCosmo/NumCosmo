@@ -38,6 +38,7 @@ test session with it.
 import os
 import subprocess
 import sys
+import time
 
 import pytest
 
@@ -164,3 +165,56 @@ def test_a_partial_tree_is_replaced(tmp_path):
     assert missing.exists(), "the partial tree was left unrepaired"
     assert (tmp_path / ".numcosmo/baseline/.numcosmo-complete").exists()
     assert not list(tmp_path.glob(".numcosmo/baseline.*"))
+
+
+def test_a_waiter_uses_what_the_holder_produced(tmp_path):
+    """The waiting branch must return the other process's file, not fetch again.
+
+    The four-way race above asserts the outcome -- one copy, no debris -- but on
+    a 310-byte asset the losers find the file already there and never reach the
+    lock, so the waiting path never runs and the test would pass even if it were
+    wrong. Here the lock is held from the outside and the data appears while the
+    caller waits, which is the sequence that actually happens when one worker is
+    mid-download and the others queue behind it.
+    """
+    base = tmp_path / ".numcosmo"
+    base.mkdir()
+    target = base / TINY_ASSET
+
+    # Held by nobody, which is what a live download looks like from outside.
+    (base / f"{TINY_ASSET}.lock").mkdir()
+
+    proc = subprocess.Popen(  # pylint: disable=consider-using-with
+        [sys.executable, "-c", _FETCH, TINY_ASSET],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=dict(os.environ, HOME=str(tmp_path)),
+    )
+
+    try:
+        # Long enough that the child is past its own existence check and sitting
+        # in the lock's wait loop -- at two seconds it was still starting up, saw
+        # the file appear before it ever reached the lock, and returned through a
+        # path this test was not written to exercise.
+        time.sleep(6.0)
+        started = time.monotonic()
+        # The holder finishes: distinguishable from a real download by content.
+        target.write_bytes(b"SENTINEL")
+        out, err = proc.communicate(timeout=120)
+        waited_after = time.monotonic() - started
+    finally:
+        if proc.poll() is None:  # pragma: no cover - only on a hang
+            proc.kill()
+
+    assert proc.returncode == 0, err
+    assert out.strip() == str(target)
+
+    # It noticed within a poll of the file appearing, rather than having
+    # returned long before through its own existence check.
+    assert waited_after < 30.0
+
+    # 8, not 310: the waiter took the holder's file instead of downloading over
+    # it -- which is the whole point of waiting.
+    assert target.read_bytes() == b"SENTINEL"
+    assert not list(tmp_path.rglob("*.part"))
