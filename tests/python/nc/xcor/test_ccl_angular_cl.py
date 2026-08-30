@@ -20,7 +20,10 @@ from numcosmo_py.ccl.two_point import (
     compute_kernel,
 )
 
-pytestmark = [pytest.mark.ccl, pytest.mark.xcor]
+# Pinned to one worker under --dist loadgroup: this file is one of the
+# xcor lane's memory peaks, and an xdist worker is its own session, so
+# without this its cost is paid once per worker rather than once.
+pytestmark = [pytest.mark.ccl, pytest.mark.xcor, pytest.mark.xdist_group("ccl_angular")]
 
 Ncm.cfg_init()
 

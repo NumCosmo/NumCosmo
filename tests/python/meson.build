@@ -59,7 +59,14 @@ if enable_gir and python_for_tests.found()
         required: false,
     )
     if py_xdist.found()
-        pytest_parallel_args = pytest_base_args + ['-n', 'auto']
+        # loadgroup, not the default load: tests marked with xdist_group go to
+        # one worker, everything else still distributes test by test. An xdist
+        # worker is its own session, so a module-scoped fixture is built once
+        # per *worker* -- for the xcor lane's heaviest files that is several GB
+        # replicated 12 or 24 times, which exhausted a 30 GB machine. Grouping
+        # those files costs them their internal parallelism and nothing else.
+        # Ungrouped tests behave exactly as under load.
+        pytest_parallel_args = pytest_base_args + ['-n', 'auto', '--dist', 'loadgroup']
     else
         pytest_parallel_args = pytest_base_args
     endif
