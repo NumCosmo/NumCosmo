@@ -3287,6 +3287,10 @@
     "nick": "kernel-gsl",
     "type": "Nc.XcorMethod"
   },
+  "NC_XCOR_METHOD_KERNEL_GSL_BLOCK": {
+    "nick": "kernel-gsl-block",
+    "type": "Nc.XcorMethod"
+  },
   "NC_XCOR_METHOD_LIMBER_Z_CUBATURE": {
     "nick": "limber-z-cubature",
     "type": "Nc.XcorMethod"

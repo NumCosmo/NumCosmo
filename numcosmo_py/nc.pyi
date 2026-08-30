@@ -490,6 +490,9 @@ def wl_ellipticity_trace_kernel_prep_clear(
     prep: WLEllipticityTraceKernelPrep,
 ) -> None: ...
 def xcor_kernel_integrand_clear(integrand: XcorKernelIntegrand) -> None: ...
+def xcor_method_get_name(meth: XcorMethod) -> str: ...
+def xcor_method_has_error_estimate(meth: XcorMethod) -> bool: ...
+def xcor_method_is_kernel_space(meth: XcorMethod) -> bool: ...
 
 class BBN(NumCosmoMath.Model):
     r"""
@@ -10156,9 +10159,9 @@ class HICosmo(NumCosmoMath.Model):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -10212,8 +10215,6 @@ class HICosmo(NumCosmoMath.Model):
     prim: HIPrim = ...
     reion: HIReion = ...
     bbn: BBN = ...
-    compat_Yp: float = ...
-    compat_Yp_fit: bool = ...
     T: int = ...
     s: int = ...
     Tmin: int = ...
@@ -10467,9 +10468,9 @@ class HICosmoDE(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -10685,9 +10686,9 @@ class HICosmoDECpl(HICosmoDE):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -10903,9 +10904,9 @@ class HICosmoDEJbp(HICosmoDE):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -11224,9 +11225,9 @@ class HICosmoDEWSpline(HICosmoDE):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -11447,9 +11448,9 @@ class HICosmoDEXcdm(HICosmoDE):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -11653,9 +11654,9 @@ class HICosmoLCDM(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -11800,9 +11801,9 @@ class HICosmoQConst(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -11936,9 +11937,9 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -12067,9 +12068,9 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -12206,9 +12207,9 @@ class HICosmoQLinear(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -12358,9 +12359,9 @@ class HICosmoQRBF(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -12566,9 +12567,9 @@ class HICosmoQSpline(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -12841,9 +12842,9 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -22773,6 +22774,17 @@ class Xcor(GObject.Object):
     def get_ell_batch_size(self) -> int: ...
     def get_meth(self) -> XcorMethod: ...
     def get_reltol(self) -> float: ...
+    def integrate_block(
+        self,
+        xclki1: XcorKernelIntegrand,
+        xclki2: typing.Optional[XcorKernelIntegrand],
+        lmin: int,
+        lmax: int,
+        isauto: bool,
+        meth: XcorMethod,
+        vp: NumCosmoMath.Vector,
+        vp_err: typing.Optional[NumCosmoMath.Vector] = None,
+    ) -> None: ...
     @classmethod
     def new(
         cls, dist: Distance, ps: NumCosmoMath.Powspec, meth: XcorMethod
@@ -27426,7 +27438,7 @@ class HIPrimTwoFluidsSParams(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class HIReionCambError(GObject.GEnum):
-    HOST: HIReionCambError = ...
+    NO_HOST: HIReionCambError = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -28144,6 +28156,7 @@ class XcorMethod(GObject.GEnum):
     KERNEL_CUBATURE: XcorMethod = ...
     KERNEL_EXACT: XcorMethod = ...
     KERNEL_GSL: XcorMethod = ...
+    KERNEL_GSL_BLOCK: XcorMethod = ...
     LIMBER_Z_CUBATURE: XcorMethod = ...
     LIMBER_Z_GSL: XcorMethod = ...
     _generate_next_value_: function = ...
@@ -28157,3 +28170,9 @@ class XcorMethod(GObject.GEnum):
     _use_args_: bool = ...
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
+    @staticmethod
+    def get_name(meth: XcorMethod) -> str: ...
+    @staticmethod
+    def has_error_estimate(meth: XcorMethod) -> bool: ...
+    @staticmethod
+    def is_kernel_space(meth: XcorMethod) -> bool: ...
