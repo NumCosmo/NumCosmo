@@ -56,7 +56,7 @@ typedef struct _NcHIReionCamb NcHIReionCamb;
  * Error codes returned by the #NcHIReionCamb class.
  *
  */
-typedef enum _NcHIReionCambError
+typedef enum _NcHIReionCambError /*< prefix=NC_HIREION_CAMB_ERROR >*/
 {
   NC_HIREION_CAMB_ERROR_NO_HOST,
 } NcHIReionCambError;

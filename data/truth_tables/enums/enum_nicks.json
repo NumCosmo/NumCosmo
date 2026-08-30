@@ -331,6 +331,10 @@
     "nick": "param-invalid-type",
     "type": "Ncm.ModelError"
   },
+  "NCM_MODEL_ERROR_PARAM_NAME_AMBIGUOUS": {
+    "nick": "param-name-ambiguous",
+    "type": "Ncm.ModelError"
+  },
   "NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND": {
     "nick": "param-name-not-found",
     "type": "Ncm.ModelError"
@@ -2598,6 +2602,10 @@
   "NC_HIPRIM_TWO_FLUIDS_T_SA_RATIO": {
     "nick": "t-sa-ratio",
     "type": "Nc.HIPrimTwoFluidsSParams"
+  },
+  "NC_HIREION_CAMB_ERROR_NO_HOST": {
+    "nick": "no-host",
+    "type": "Nc.HIReionCambError"
   },
   "NC_HIREION_CAMB_HEIII_Z": {
     "nick": "heiii-z",
