@@ -58,19 +58,13 @@ We use a homogeneous and isotropic dark-energy model with a constant equation of
 (`NcHICosmoDEXcdm`). Rather than setting the dark-energy density directly, we switch to the curvature
 parameterization with `omega_x2omega_k()` and fix `Omegak = 0.0`; flatness is then enforced as a
 constraint and the dark-energy density is derived from the closure relation. A reionization model and a
-power-law primordial power spectrum are attached as submodels. We set the primordial amplitude and
-spectral index explicitly: the amplitude fixes the normalization of the matter power spectrum, and
-through it the overall scale of the mass function.
+power-law primordial power spectrum are built first and passed to the constructor: submodels are
+construction-fixed and cannot be attached afterwards. We set the primordial amplitude and spectral
+index explicitly: the amplitude fixes the normalization of the matter power spectrum, and through it
+the overall scale of the mass function.
 
 ```{python}
-# Dark-energy model with a constant equation of state
-cosmo = Nc.HICosmoDEXcdm()
-
-# Switch to the curvature parameterization and enforce flatness explicitly
-cosmo.omega_x2omega_k()
-cosmo["Omegak"] = 0.0
-
-# Reionization and a power-law primordial spectrum, added as submodels
+# Reionization and a power-law primordial spectrum
 reion = Nc.HIReionCamb.new()
 prim = Nc.HIPrimPowerLaw.new()
 
@@ -78,12 +72,18 @@ prim = Nc.HIPrimPowerLaw.new()
 prim["n_SA"] = 0.9658
 prim["ln10e10ASA"] = 3.0904
 
-cosmo.add_submodel(reion)
-cosmo.add_submodel(prim)
+# Dark-energy model with a constant equation of state. Submodels are
+# construction-fixed: they must be passed here, not attached afterwards.
+cosmo = Nc.HICosmoDEXcdm(reion=reion, prim=prim)
 
-# Cosmological parameters. The primordial parameters set above (n_SA, ln10e10ASA)
-# belong to prim, so param_names() below does not list them; the effect of the
-# amplitude shows up in the sigma8 print further down.
+# Switch to the curvature parameterization and enforce flatness explicitly
+cosmo.omega_x2omega_k()
+cosmo["Omegak"] = 0.0
+
+# Cosmological parameters. The list printed below is shorter than it may look:
+# the primordial parameters set above (n_SA, ln10e10ASA) belong to prim, and Yp
+# belongs to the nucleosynthesis submodel, so param_names() lists neither. The
+# amplitude's effect shows up in the sigma8 print further down.
 cosmo["H0"] = 70.0
 cosmo["Omegab"] = 0.05
 cosmo["Omegac"] = 0.25
