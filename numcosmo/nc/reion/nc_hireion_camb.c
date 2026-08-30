@@ -53,7 +53,9 @@ enum
   PROP_SIZE,
 };
 
-G_DEFINE_QUARK (nc - hireion - camb - error, nc_hireion_camb_error)
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (nc-hireion-camb-error, nc_hireion_camb_error)
+/* *INDENT-ON* */
 
 G_DEFINE_TYPE (NcHIReionCamb, nc_hireion_camb, NC_TYPE_HIREION)
 
