@@ -54,8 +54,23 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
  * @NC_XCOR_METHOD_KERNEL_CUBATURE: Use cubature numerical integration over kernel variables
  * @NC_XCOR_METHOD_KERNEL_EXACT: Integrate the kernel closures exactly, on the
  *   union of their own knots
+ * @NC_XCOR_METHOD_KERNEL_GSL_BLOCK: As %NC_XCOR_METHOD_KERNEL_GSL, but on the
+ *   block closure the other kernel-space methods use
  *
  * Methods to compute integrals.
+ *
+ * %NC_XCOR_METHOD_KERNEL_GSL and %NC_XCOR_METHOD_KERNEL_GSL_BLOCK run the same
+ * quadrature -- QUADPACK's qagp, broken on the closures' own knots -- over two
+ * different integrands, and they are separate methods because the integrands
+ * differ. The first fits a closure to one multipole at a time; the second
+ * shares one closure across a whole #NcXcor:ell-batch-size block, fitted to an
+ * $L^2$ norm over the block, which is what %NC_XCOR_METHOD_KERNEL_CUBATURE and
+ * %NC_XCOR_METHOD_KERNEL_EXACT integrate. On a far-separated pair of top-hat
+ * bins the two closures give $-1.05 \times 10^{-8}$ against $3.51 \times
+ * 10^{-8}$ at the library's default tolerances, and agree from $10^{-6}$ down.
+ * Use the block form to compare quadratures on one integrand, and the
+ * per-multipole form as the independent check that does not share a closure
+ * with anything.
  *
  * %NC_XCOR_METHOD_KERNEL_EXACT needs no tolerance and cannot fail to converge.
  * The name is meant literally rather than as "fixed-order": on the closures it
@@ -82,6 +97,7 @@ typedef enum _NcXcorMethod /*< prefix=NC_XCOR_METHOD >*/
   NC_XCOR_METHOD_KERNEL_GSL,
   NC_XCOR_METHOD_KERNEL_CUBATURE,
   NC_XCOR_METHOD_KERNEL_EXACT,
+  NC_XCOR_METHOD_KERNEL_GSL_BLOCK,
 } NcXcorMethod;
 
 #define NC_XCOR_PRECISION (1.0e-6)
@@ -108,6 +124,12 @@ void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo);
 
 void nc_xcor_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp);
 void nc_xcor_compute_full (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp, NcmVector *vp_err);
+
+void nc_xcor_integrate_block (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcXcorMethod meth, NcmVector *vp, NcmVector *vp_err);
+
+const gchar *nc_xcor_method_get_name (NcXcorMethod meth);
+gboolean nc_xcor_method_has_error_estimate (NcXcorMethod meth);
+gboolean nc_xcor_method_is_kernel_space (NcXcorMethod meth);
 
 G_END_DECLS
 
