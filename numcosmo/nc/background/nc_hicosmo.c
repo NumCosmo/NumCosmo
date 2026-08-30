@@ -60,10 +60,10 @@ nc_hicosmo_init (NcHICosmo *cosmo)
   cosmo->reion = NULL;
   cosmo->bbn   = NULL;
 
-  cosmo->T             = gsl_root_fsolver_brent;
-  cosmo->s             = gsl_root_fsolver_alloc (cosmo->T);
-  cosmo->Tmin          = gsl_min_fminimizer_brent;
-  cosmo->smin          = gsl_min_fminimizer_alloc (cosmo->Tmin);
+  cosmo->T    = gsl_root_fsolver_brent;
+  cosmo->s    = gsl_root_fsolver_alloc (cosmo->T);
+  cosmo->Tmin = gsl_min_fminimizer_brent;
+  cosmo->smin = gsl_min_fminimizer_alloc (cosmo->Tmin);
 }
 
 enum
@@ -100,6 +100,7 @@ _nc_hicosmo_set_property (GObject *object, guint prop_id, const GValue *value, G
       /* Inert: the old fixed-Yp mode is the default NcBBNParthenope. */
       break;
     case PROP_YP_FIT:
+
       if (g_value_get_boolean (value))
         g_error ("NcHICosmo:Yp-fit: this file requests the removed sampled-Yp "
                  "compatibility mode; attach an NcBBNParametrized with a free "
