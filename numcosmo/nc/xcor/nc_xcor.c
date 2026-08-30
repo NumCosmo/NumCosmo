@@ -419,9 +419,10 @@ nc_xcor_get_reltol (NcXcor *xc)
  * @ell_batch_size: multipole batch size
  *
  * Sets the multipole batch size used by the kernel-space block methods
- * (%NC_XCOR_METHOD_KERNEL_CUBATURE and %NC_XCOR_METHOD_KERNEL_EXACT): each
- * batch builds one k-space closure per kernel and shares it across the whole
- * batch.
+ * (%NC_XCOR_METHOD_KERNEL_CUBATURE, %NC_XCOR_METHOD_KERNEL_EXACT and
+ * %NC_XCOR_METHOD_KERNEL_GSL_BLOCK): each batch builds one k-space closure per
+ * kernel and shares it across the whole batch. It does not reach
+ * %NC_XCOR_METHOD_KERNEL_GSL, which fits one closure per multipole.
  *
  * The Levin machinery is tuned for 8 (the default) or 16; wider batches are
  * counterproductive, not faster. #NC_XCOR_KERNEL_MAX_ELL_BLOCK is a hard
@@ -520,21 +521,6 @@ _nc_xcor_kernels_limber_disjoint (NcXcorKernel *xclk1, NcXcorKernel *xclk2, gboo
   return TRUE;
 }
 
-static gboolean
-_nc_xcor_meth_is_kernel_space (NcXcorMethod meth)
-{
-  switch (meth)
-  {
-    case NC_XCOR_METHOD_KERNEL_GSL:
-    case NC_XCOR_METHOD_KERNEL_CUBATURE:
-    case NC_XCOR_METHOD_KERNEL_EXACT:
-      return TRUE;
-
-    default:
-      return FALSE;
-  }
-}
-
 /*
  * Dispatches one contiguous multipole range to the configured kernel-space
  * method. Split out so nc_xcor_compute() can drive it for a sub-range without
@@ -544,27 +530,23 @@ _nc_xcor_meth_is_kernel_space (NcXcorMethod meth)
 static void
 _nc_xcor_kernel_space_compute (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err)
 {
-  /* Only the exact method knows its own error budget. The others leave NaN
-   * rather than a zero that would read as "no error". */
+  /* Only some methods know their own error budget -- see
+   * nc_xcor_method_has_error_estimate(). The others leave NaN rather than a
+   * zero that would read as "no error". */
   if (vp_err != NULL)
     ncm_vector_set_all (vp_err, GSL_NAN);
 
-  switch (xc->meth)
+  if (xc->meth == NC_XCOR_METHOD_KERNEL_GSL)
   {
-    case NC_XCOR_METHOD_KERNEL_GSL:
-      _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-      break;
+    _nc_xcor_kernel_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
+  }
+  else
+  {
+    const NcXcorKQuad *kquad = _nc_xcor_kquad_for_method (xc->meth);
 
-    case NC_XCOR_METHOD_KERNEL_CUBATURE:
-      _nc_xcor_kernel_cubature (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp);
-      break;
+    g_assert (kquad != NULL);
 
-    case NC_XCOR_METHOD_KERNEL_EXACT:
-      _nc_xcor_kernel_exact (xc, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp, vp_err);
-      break;
-
-    default:
-      g_assert_not_reached ();
+    _nc_xcor_kernel_space_run (xc, kquad, xclk1, xclk2, cosmo, lmin, lmax, isauto, vp, vp_err);
   }
 }
 
@@ -735,7 +717,7 @@ nc_xcor_compute_full (NcXcor *xc, NcXcorKernel *xclk1, NcXcorKernel *xclk2, NcHI
    * The tier is chosen per multipole, so a range straddling the threshold is
    * split: the tail from l_zero up is zeroed, the head below it is integrated
    * normally. */
-  if (_nc_xcor_meth_is_kernel_space (xc->meth))
+  if (nc_xcor_method_is_kernel_space (xc->meth))
   {
     guint l_zero = 0;
 
