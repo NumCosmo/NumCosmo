@@ -39,6 +39,8 @@ void test_nc_hicosmo_de_free (TestNcHICosmoDE *test, gconstpointer pdata);
 void test_nc_hicosmo_de_omega_x2omega_k (TestNcHICosmoDE *test, gconstpointer pdata);
 
 void test_nc_hicosmo_de_xcdm_new_full (void);
+void test_nc_hicosmo_bbn_construct_fixed (void);
+void test_nc_hicosmo_bbn_construct_fixed_subprocess (void);
 void test_nc_hicosmo_lcdm_new_full (void);
 void test_nc_hicosmo_de_cpl_new_full (void);
 void test_nc_hicosmo_de_jbp_new_full (void);
@@ -58,6 +60,8 @@ main (gint argc, gchar *argv[])
               &test_nc_hicosmo_de_free);
 
   g_test_add_func ("/nc/hicosmo_de/xcdm/new_full", &test_nc_hicosmo_de_xcdm_new_full);
+  g_test_add_func ("/nc/hicosmo_de/bbn/construct_fixed", &test_nc_hicosmo_bbn_construct_fixed);
+  g_test_add_func ("/nc/hicosmo_de/bbn/construct_fixed/subprocess", &test_nc_hicosmo_bbn_construct_fixed_subprocess);
   g_test_add_func ("/nc/hicosmo_de/lcdm/new_full", &test_nc_hicosmo_lcdm_new_full);
   g_test_add_func ("/nc/hicosmo_de/cpl/new_full", &test_nc_hicosmo_de_cpl_new_full);
   g_test_add_func ("/nc/hicosmo_de/jbp/new_full", &test_nc_hicosmo_de_jbp_new_full);
@@ -125,24 +129,50 @@ test_nc_hicosmo_de_xcdm_new_full (void)
 {
   NcHIReion *reion       = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim         = NC_HIPRIM (nc_hiprim_power_law_new ());
-  NcHICosmoDEXcdm *cosmo = nc_hicosmo_de_xcdm_new_full (reion, prim);
+  NcBBN *bbn             = NC_BBN (nc_bbn_parametrized_new ());
+  NcHICosmoDEXcdm *cosmo = nc_hicosmo_de_xcdm_new_full (reion, prim, bbn);
 
   g_assert_true (cosmo != NULL);
   g_assert_true (NC_IS_HICOSMO_DE_XCDM (cosmo));
   g_assert_true (nc_hicosmo_peek_reion (NC_HICOSMO (cosmo)) == reion);
   g_assert_true (nc_hicosmo_peek_prim (NC_HICOSMO (cosmo)) == prim);
+  g_assert_true (nc_hicosmo_peek_bbn (NC_HICOSMO (cosmo)) == bbn);
 
   nc_hicosmo_free (NC_HICOSMO (cosmo));
   nc_hireion_free (reion);
   nc_hiprim_free (prim);
+  nc_bbn_free (bbn);
 
-  /* Both submodels are optional -- NULL/NULL must behave like the plain
-   * zero-arg constructor. */
-  cosmo = nc_hicosmo_de_xcdm_new_full (NULL, NULL);
+  /* All submodels are optional -- NULL/NULL/NULL must behave like the plain
+   * zero-arg constructor: reion and prim stay unset, bbn gets the default
+   * #NcBBNParthenope. */
+  cosmo = nc_hicosmo_de_xcdm_new_full (NULL, NULL, NULL);
   g_assert_true (cosmo != NULL);
   g_assert_true (nc_hicosmo_peek_reion (NC_HICOSMO (cosmo)) == NULL);
   g_assert_true (nc_hicosmo_peek_prim (NC_HICOSMO (cosmo)) == NULL);
+  g_assert_true (NC_IS_BBN_PARTHENOPE (nc_hicosmo_peek_bbn (NC_HICOSMO (cosmo))));
   nc_hicosmo_free (NC_HICOSMO (cosmo));
+}
+
+void
+test_nc_hicosmo_bbn_construct_fixed_subprocess (void)
+{
+  NcHICosmoDEXcdm *cosmo = nc_hicosmo_de_xcdm_new_full (NULL, NULL, NULL);
+  NcBBN *bbn             = NC_BBN (nc_bbn_parametrized_new ());
+
+  /* bbn is a typed slot: replacing the default after construction must abort. */
+  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (bbn));
+
+  nc_bbn_free (bbn);
+  nc_hicosmo_free (NC_HICOSMO (cosmo));
+}
+
+void
+test_nc_hicosmo_bbn_construct_fixed (void)
+{
+  g_test_trap_subprocess ("/nc/hicosmo_de/bbn/construct_fixed/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*construction-only typed slot*");
 }
 
 void
@@ -150,7 +180,7 @@ test_nc_hicosmo_lcdm_new_full (void)
 {
   NcHIReion *reion     = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim       = NC_HIPRIM (nc_hiprim_power_law_new ());
-  NcHICosmoLCDM *cosmo = nc_hicosmo_lcdm_new_full (reion, prim);
+  NcHICosmoLCDM *cosmo = nc_hicosmo_lcdm_new_full (reion, prim, NULL);
 
   g_assert_true (cosmo != NULL);
   g_assert_true (NC_IS_HICOSMO_LCDM (cosmo));
@@ -161,7 +191,7 @@ test_nc_hicosmo_lcdm_new_full (void)
   nc_hireion_free (reion);
   nc_hiprim_free (prim);
 
-  cosmo = nc_hicosmo_lcdm_new_full (NULL, NULL);
+  cosmo = nc_hicosmo_lcdm_new_full (NULL, NULL, NULL);
   g_assert_true (cosmo != NULL);
   g_assert_true (nc_hicosmo_peek_reion (NC_HICOSMO (cosmo)) == NULL);
   g_assert_true (nc_hicosmo_peek_prim (NC_HICOSMO (cosmo)) == NULL);
@@ -173,7 +203,7 @@ test_nc_hicosmo_de_cpl_new_full (void)
 {
   NcHIReion *reion      = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim        = NC_HIPRIM (nc_hiprim_power_law_new ());
-  NcHICosmoDECpl *cosmo = nc_hicosmo_de_cpl_new_full (reion, prim);
+  NcHICosmoDECpl *cosmo = nc_hicosmo_de_cpl_new_full (reion, prim, NULL);
 
   g_assert_true (cosmo != NULL);
   g_assert_true (NC_IS_HICOSMO_DE_CPL (cosmo));
@@ -184,7 +214,7 @@ test_nc_hicosmo_de_cpl_new_full (void)
   nc_hireion_free (reion);
   nc_hiprim_free (prim);
 
-  cosmo = nc_hicosmo_de_cpl_new_full (NULL, NULL);
+  cosmo = nc_hicosmo_de_cpl_new_full (NULL, NULL, NULL);
   g_assert_true (cosmo != NULL);
   g_assert_true (nc_hicosmo_peek_reion (NC_HICOSMO (cosmo)) == NULL);
   g_assert_true (nc_hicosmo_peek_prim (NC_HICOSMO (cosmo)) == NULL);
@@ -196,7 +226,7 @@ test_nc_hicosmo_de_jbp_new_full (void)
 {
   NcHIReion *reion      = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim        = NC_HIPRIM (nc_hiprim_power_law_new ());
-  NcHICosmoDEJbp *cosmo = nc_hicosmo_de_jbp_new_full (reion, prim);
+  NcHICosmoDEJbp *cosmo = nc_hicosmo_de_jbp_new_full (reion, prim, NULL);
 
   g_assert_true (cosmo != NULL);
   g_assert_true (NC_IS_HICOSMO_DE_JBP (cosmo));
@@ -207,7 +237,7 @@ test_nc_hicosmo_de_jbp_new_full (void)
   nc_hireion_free (reion);
   nc_hiprim_free (prim);
 
-  cosmo = nc_hicosmo_de_jbp_new_full (NULL, NULL);
+  cosmo = nc_hicosmo_de_jbp_new_full (NULL, NULL, NULL);
   g_assert_true (cosmo != NULL);
   g_assert_true (nc_hicosmo_peek_reion (NC_HICOSMO (cosmo)) == NULL);
   g_assert_true (nc_hicosmo_peek_prim (NC_HICOSMO (cosmo)) == NULL);
@@ -219,7 +249,7 @@ test_nc_hicosmo_de_param_by_name_submodel (void)
 {
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim   = NC_HIPRIM (nc_hiprim_power_law_new ());
-  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim));
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
   NcmModel *model  = NCM_MODEL (cosmo);
   GError *error    = NULL;
 

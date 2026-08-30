@@ -126,7 +126,7 @@ test_nc_cluster_abundance_new (TestNcClusterAbundance *test, gconstpointer pdata
 {
   NcHIReion *reion            = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim              = NC_HIPRIM (nc_hiprim_power_law_new ());
-  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim));
+  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
   NcDistance *dist            = nc_distance_new (3.0);
   NcTransferFunc *tf          = nc_transfer_func_eh_new ();
   NcPowspecML *ps_ml          = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));

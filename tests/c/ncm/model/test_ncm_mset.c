@@ -639,7 +639,7 @@ test_ncm_mset_saveload_submodel_reparam (void)
    * loading, not expected to survive serialization pre-attached.
    */
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
-  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_lcdm_new_full (reion, NULL));
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_lcdm_new_full (reion, NULL, NULL));
   GError *error    = NULL;
 
   {

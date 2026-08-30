@@ -140,7 +140,7 @@ test_nc_cbe_lcdm_new (TestNcCBE *test, gconstpointer pdata)
   NcCBE *cbe       = nc_cbe_new ();
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
-  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim));
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
 
   ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.0, NULL);
 
@@ -162,7 +162,7 @@ test_nc_cbe_xcdm_new (TestNcCBE *test, gconstpointer pdata)
   NcCBE *cbe       = nc_cbe_new ();
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
-  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim));
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
 
   ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.1, NULL);
 

@@ -4152,9 +4152,9 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
 
     /* Pass 3: attach every pass-1 submodel that pass 2 did not consume as a
      * construction-time typed-slot property -- a submodel type without a
-     * declared slot on its host (e.g. #NcBBN, deliberately replaceable
-     * post-construction) is attached here, replacing any default the host
-     * built for itself on construction. */
+     * declared slot on its host is attached here, replacing any default the
+     * host built for itself on construction. Every current submodel type is
+     * slotted, so today this loop only verifies the injections. */
     for (i = 0; i < ngroups; i++)
     {
       gchar *ns = NULL;

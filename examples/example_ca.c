@@ -39,7 +39,7 @@ main (gint argc, gchar *argv[])
    * they must be provided as constructor properties rather than attached
    * afterward.
    ****************************************************************************/
-  cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim));
+  cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
 
   /****************************************************************************
    * New cosmological distance objects optimizied to perform calculations

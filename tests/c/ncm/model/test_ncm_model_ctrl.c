@@ -110,7 +110,7 @@ test_ncm_model_ctrl_new (TestNcmModelCtrl *test, gconstpointer pdata)
    * submodels must be attached at construction time -- not via
    * ncm_model_add_submodel() afterward. */
   test->model = NCM_MODEL (nc_hicosmo_lcdm_new_full (NC_HIREION (test->submodel2),
-                                                     NC_HIPRIM (test->submodel1)));
+                                                     NC_HIPRIM (test->submodel1), NULL));
 
   g_assert_true (test->ctrl != NULL);
   g_assert_true (NCM_IS_MODEL_CTRL (test->ctrl));
@@ -304,7 +304,7 @@ void
 test_ncm_model_peek_host_lifecycle (void)
 {
   NcHIReion *reion     = NC_HIREION (nc_hireion_camb_new ());
-  NcHICosmoLCDM *cosmo = nc_hicosmo_lcdm_new_full (reion, NULL);
+  NcHICosmoLCDM *cosmo = nc_hicosmo_lcdm_new_full (reion, NULL, NULL);
 
   g_assert_true (ncm_model_peek_host (NCM_MODEL (reion)) == NCM_MODEL (cosmo));
 
@@ -322,13 +322,13 @@ void
 test_ncm_model_peek_host_cross_host_subprocess (void)
 {
   NcHIReion *reion   = NC_HIREION (nc_hireion_camb_new ());
-  NcHICosmo *cosmo_a = NC_HICOSMO (nc_hicosmo_lcdm_new_full (reion, NULL));
+  NcHICosmo *cosmo_a = NC_HICOSMO (nc_hicosmo_lcdm_new_full (reion, NULL, NULL));
   NcHICosmo *cosmo_b;
 
   /* cosmo_a is still alive (held above), so reion's host backpointer is
    * live and points elsewhere -- attaching the same slotted-type submodel
    * instance to a second host must be rejected, not silently reassigned. */
-  cosmo_b = NC_HICOSMO (nc_hicosmo_lcdm_new_full (reion, NULL));
+  cosmo_b = NC_HICOSMO (nc_hicosmo_lcdm_new_full (reion, NULL, NULL));
 
   nc_hicosmo_free (cosmo_a);
   nc_hicosmo_free (cosmo_b);

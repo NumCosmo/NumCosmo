@@ -82,7 +82,9 @@ enum
  * It is a parameter of NcBBNParametrized now, so these two only exist to keep
  * reading files written before the move: they are write-only, and
  * ncm_serialize only writes properties that are both readable and writable, so
- * nothing saved from here on carries them.
+ * nothing saved from here on carries them. Both are construct-time
+ * (G_PARAM_CONSTRUCT): the NcBBNParametrized they install replaces the "bbn"
+ * typed slot's content, which is fixed once construction completes.
  *
  * Deliberately not flagged G_PARAM_DEPRECATED. Under G_ENABLE_DIAGNOSTIC that
  * flag makes every load of an old file emit a GLib warning, PyGObject turns it
@@ -160,17 +162,18 @@ _nc_hicosmo_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 static void
 nc_hicosmo_constructed (GObject *object)
 {
-  /* Chain up : start */
-  G_OBJECT_CLASS (nc_hicosmo_parent_class)->constructed (object);
   {
     NcmModel *model = NCM_MODEL (object);
 
     /*
      * Give every cosmology a nucleosynthesis model, so that Yp has an answer
-     * without the caller having to know it needs one. Guarded rather than
-     * unconditional: NcmModel:submodel-array is G_PARAM_CONSTRUCT and so is
-     * already applied by the time we get here, and overwriting it would
-     * silently discard the NcBBN a deserialized file carried.
+     * without the caller having to know it needs one. Guarded: construct
+     * properties (the "bbn" typed slot, a deserialized submodel-array, and
+     * the compat Yp/Yp-fit pair) are applied before constructed() runs, so a
+     * caller-provided NcBBN is already attached here and must not be
+     * overwritten. This block must stay before the chain-up: NcmModel's
+     * constructed() marks the model constructed, and "bbn" is a typed slot,
+     * fixed at construction from then on.
      */
     if (ncm_model_peek_submodel_by_mid (model, nc_bbn_id ()) == NULL)
     {
@@ -180,6 +183,8 @@ nc_hicosmo_constructed (GObject *object)
       nc_bbn_parthenope_free (bbn_pn);
     }
   }
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_hicosmo_parent_class)->constructed (object);
 }
 
 static void
@@ -283,7 +288,7 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
                                                         NULL,
                                                         "Deprecated: primordial Helium, now NcBBNParametrized:Yp",
                                                         0.0, 1.0, NC_BBN_PARAMETRIZED_DEFAULT_YP_4HE,
-                                                        G_PARAM_WRITABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_WRITABLE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_YP_FIT,
@@ -291,11 +296,12 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
                                                          NULL,
                                                          "Deprecated: whether Yp was free, now selects NcBBNParametrized",
                                                          FALSE,
-                                                         G_PARAM_WRITABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                         G_PARAM_WRITABLE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  ncm_model_class_add_submodels (model_class, 2);
+  ncm_model_class_add_submodels (model_class, 3);
   ncm_model_class_set_submodel (model_class, 0, "reion", "reion", NC_TYPE_HIREION);
   ncm_model_class_set_submodel (model_class, 1, "prim", "prim", NC_TYPE_HIPRIM);
+  ncm_model_class_set_submodel (model_class, 2, "bbn", "bbn", NC_TYPE_BBN);
 
   ncm_mset_model_register_id (model_class,
                               "NcHICosmo",

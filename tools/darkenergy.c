@@ -328,7 +328,7 @@ main (gint argc, gchar *argv[])
     }
     else
     {
-      cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim));
+      cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
     }
 
     nc_hireion_free (reion);

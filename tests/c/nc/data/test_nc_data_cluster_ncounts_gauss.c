@@ -97,7 +97,7 @@ test_nc_data_cluster_ncounts_gauss_new (TestNcClusterNCountsGauss *test, gconstp
 {
   NcHIReion *reion            = NC_HIREION (nc_hireion_camb_new ());
   NcHIPrim *prim              = NC_HIPRIM (nc_hiprim_power_law_new ());
-  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim));
+  NcHICosmo *cosmo            = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
   NcDistance *dist            = nc_distance_new (3.0);
   NcTransferFunc *tf          = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncEH"));
   NcPowspecML *ps_ml          = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
