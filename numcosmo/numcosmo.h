@@ -34,6 +34,7 @@
 /* Base types and components */
 #include <numcosmo/nc/background/nc_hicosmo.h>
 #include <numcosmo/nc/bbn/nc_bbn.h>
+#include <numcosmo/nc/bbn/nc_bbn_parametrized.h>
 #include <numcosmo/nc/bbn/nc_bbn_parthenope.h>
 #include <numcosmo/nc/primordial/nc_hiprim.h>
 #include <numcosmo/nc/background/nc_distance.h>

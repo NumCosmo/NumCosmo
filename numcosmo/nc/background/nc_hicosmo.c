@@ -39,6 +39,7 @@
 #include "nc/background/nc_hicosmo.h"
 #include "nc/bbn/nc_bbn.h"
 #include "nc/bbn/nc_bbn_parthenope.h"
+#include "nc/bbn/nc_bbn_parametrized.h"
 #include "nc/primordial/nc_hiprim.h"
 #include "nc/reion/nc_hireion.h"
 #include "ncm/core/ncm_serialize.h"
@@ -58,10 +59,102 @@ nc_hicosmo_init (NcHICosmo *cosmo)
   cosmo->prim  = NULL;
   cosmo->reion = NULL;
   cosmo->bbn   = NULL;
-  cosmo->T     = gsl_root_fsolver_brent;
-  cosmo->s     = gsl_root_fsolver_alloc (cosmo->T);
-  cosmo->Tmin  = gsl_min_fminimizer_brent;
-  cosmo->smin  = gsl_min_fminimizer_alloc (cosmo->Tmin);
+
+  cosmo->compat_Yp     = NC_BBN_PARAMETRIZED_DEFAULT_YP_4HE;
+  cosmo->compat_Yp_fit = FALSE;
+  cosmo->T             = gsl_root_fsolver_brent;
+  cosmo->s             = gsl_root_fsolver_alloc (cosmo->T);
+  cosmo->Tmin          = gsl_min_fminimizer_brent;
+  cosmo->smin          = gsl_min_fminimizer_alloc (cosmo->Tmin);
+}
+
+enum
+{
+  PROP_0,
+  PROP_YP,
+  PROP_YP_FIT,
+  PROP_SIZE,
+};
+
+/*
+ * Yp used to be a parameter of NcHICosmoDE and NcHICosmoLCDM, with its fit type
+ * doubling as the switch between "use this value" and "predict it from BBN".
+ * It is a parameter of NcBBNParametrized now, so these two only exist to keep
+ * reading files written before the move: they are write-only, and
+ * ncm_serialize only writes properties that are both readable and writable, so
+ * nothing saved from here on carries them.
+ *
+ * Deliberately not flagged G_PARAM_DEPRECATED. Under G_ENABLE_DIAGNOSTIC that
+ * flag makes every load of an old file emit a GLib warning, PyGObject turns it
+ * into a Python warning, and pytest-xdist cannot unserialize that warning
+ * across workers -- it kills the worker and takes the run down with it. The
+ * flag buys a generic message almost nobody sees; it is not worth breaking a
+ * test suite that happens to read an old file.
+ */
+static void
+_nc_hicosmo_apply_compat_Yp (NcHICosmo *cosmo)
+{
+  if (!cosmo->compat_Yp_fit)
+    return;
+
+  {
+    NcBBNParametrized *bbn_par = nc_bbn_parametrized_new ();
+    NcmModel *bbn_model        = NCM_MODEL (bbn_par);
+
+    ncm_model_orig_param_set (bbn_model, NC_BBN_PARAMETRIZED_YP_4HE, cosmo->compat_Yp);
+    ncm_model_param_set_ftype (bbn_model, NC_BBN_PARAMETRIZED_YP_4HE, NCM_PARAM_TYPE_FREE);
+
+    ncm_model_add_submodel (NCM_MODEL (cosmo), bbn_model);
+    nc_bbn_parametrized_free (bbn_par);
+  }
+}
+
+static void
+_nc_hicosmo_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (object);
+
+  g_return_if_fail (NC_IS_HICOSMO (object));
+
+  switch (prop_id)
+  {
+    case PROP_YP:
+      cosmo->compat_Yp = g_value_get_double (value);
+      _nc_hicosmo_apply_compat_Yp (cosmo);
+      break;
+    case PROP_YP_FIT:
+      cosmo->compat_Yp_fit = g_value_get_boolean (value);
+      _nc_hicosmo_apply_compat_Yp (cosmo);
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+/*
+ * Both properties are write-only, so GObject never routes a read here; NcmModel
+ * requires the handler to exist whenever a class has non-parameter properties.
+ */
+static void
+_nc_hicosmo_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (object);
+
+  g_return_if_fail (NC_IS_HICOSMO (object));
+
+  switch (prop_id)
+  {
+    case PROP_YP:
+      g_value_set_double (value, cosmo->compat_Yp);
+      break;
+    case PROP_YP_FIT:
+      g_value_set_boolean (value, cosmo->compat_Yp_fit);
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
 }
 
 static void
@@ -175,12 +268,30 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
+  model_class->set_property = &_nc_hicosmo_set_property;
+  model_class->get_property = &_nc_hicosmo_get_property;
   object_class->constructed = &nc_hicosmo_constructed;
   object_class->dispose     = &nc_hicosmo_dispose;
   object_class->finalize    = &nc_hicosmo_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Abstract class for HI cosmological models.", "NcHICosmo");
-  ncm_model_class_add_params (model_class, 0, 0, 1);
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
+
+  g_object_class_install_property (object_class,
+                                   PROP_YP,
+                                   g_param_spec_double ("Yp",
+                                                        NULL,
+                                                        "Deprecated: primordial Helium, now NcBBNParametrized:Yp",
+                                                        0.0, 1.0, NC_BBN_PARAMETRIZED_DEFAULT_YP_4HE,
+                                                        G_PARAM_WRITABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_YP_FIT,
+                                   g_param_spec_boolean ("Yp-fit",
+                                                         NULL,
+                                                         "Deprecated: whether Yp was free, now selects NcBBNParametrized",
+                                                         FALSE,
+                                                         G_PARAM_WRITABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   ncm_mset_model_register_id (model_class,
                               "NcHICosmo",

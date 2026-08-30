@@ -811,6 +811,10 @@
     "nick": "get-domain",
     "type": "Nc.BBNImpl"
   },
+  "NC_BBN_PARAMETRIZED_YP_4HE": {
+    "nick": "yp-4he",
+    "type": "Nc.BBNParametrizedSParams"
+  },
   "NC_BBN_PARTHENOPE_TABLE_LEGACY": {
     "nick": "legacy",
     "type": "Nc.BBNParthenopeTable"
@@ -1773,10 +1777,6 @@
   },
   "NC_HICOSMO_DE_H0": {
     "nick": "h0",
-    "type": "Nc.HICosmoDESParams"
-  },
-  "NC_HICOSMO_DE_HE_YP": {
-    "nick": "he-yp",
     "type": "Nc.HICosmoDESParams"
   },
   "NC_HICOSMO_DE_IMPL_E2Omega_de": {

@@ -51,8 +51,6 @@
 
 struct _NcHICosmoDEPrivate
 {
-  NcmSpline2d *BBN_spline2d;
-  guint64 HE4_Yp_key;
   NcmIntegral1dPtr *nu_rho;
   NcmIntegral1dPtr *nu_p;
   NcmSpline *nu_rho_s[10];
@@ -74,16 +72,9 @@ enum
 static void
 nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  gchar *filename   = ncm_cfg_get_data_filename ("BBN_2017_spline2d.obj", TRUE);
   gint i;
 
-  cosmo_de->priv               = nc_hicosmo_de_get_instance_private (cosmo_de);
-  cosmo_de->priv->BBN_spline2d = NCM_SPLINE2D (ncm_serialize_from_file (ser, filename));
-
-  g_assert (NCM_IS_SPLINE2D (cosmo_de->priv->BBN_spline2d));
-  ncm_serialize_clear (&ser);
-  cosmo_de->priv->HE4_Yp_key = ncm_model_state_get_pkey (NCM_MODEL (cosmo_de)) - 1;
+  cosmo_de->priv = nc_hicosmo_de_get_instance_private (cosmo_de);
 
   cosmo_de->priv->nu_rho = NULL;
   cosmo_de->priv->nu_p   = NULL;
@@ -95,8 +86,6 @@ nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
   }
 
   cosmo_de->priv->zmax = 1.0e12;
-
-  g_free (filename);
 
   cosmo_de->priv->min = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
 
@@ -221,7 +210,6 @@ _nc_hicosmo_de_dispose (GObject *object)
   NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (object);
   gint i;
 
-  ncm_spline2d_clear (&cosmo_de->priv->BBN_spline2d);
 
   ncm_integral1d_ptr_clear (&cosmo_de->priv->nu_rho);
   ncm_integral1d_ptr_clear (&cosmo_de->priv->nu_p);
@@ -254,7 +242,6 @@ static gdouble _nc_hicosmo_de_H0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_de_Omega_t0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_de_Omega_c0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_de_T_gamma0 (NcHICosmo *cosmo);
-static gdouble _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_de_Omega_g0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_de_Omega_nu0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_de_Omega_m0 (NcHICosmo *cosmo);
@@ -336,12 +323,6 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_T_GAMMA0,
                               NCM_PARAM_TYPE_FIXED);
 
-  /* Set He Yp param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_HE_YP, "Y_p", "Yp",
-                              0.0, 1.0, 1.0e-2,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_HE_YP,
-                              NCM_PARAM_TYPE_FIXED);
-
   /* Set ENnu param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_ENNU, "N_\\nu", "ENnu",
                               0.0, 4.0, 1.0e-2,
@@ -391,7 +372,6 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   nc_hicosmo_set_Omega_r0_impl   (parent_class, &_nc_hicosmo_de_Omega_r0);
   nc_hicosmo_set_Omega_t0_impl   (parent_class, &_nc_hicosmo_de_Omega_t0);
   nc_hicosmo_set_T_gamma0_impl   (parent_class, &_nc_hicosmo_de_T_gamma0);
-  nc_hicosmo_set_Yp_4He_impl     (parent_class, &_nc_hicosmo_de_Yp_4He);
   nc_hicosmo_set_dE2_dz_impl     (parent_class, &_nc_hicosmo_de_dE2_dz);
   nc_hicosmo_set_d2E2_dz2_impl   (parent_class, &_nc_hicosmo_de_d2E2_dz2);
   nc_hicosmo_set_bgp_cs2_impl    (parent_class, &_nc_hicosmo_de_bgp_cs2);
@@ -433,7 +413,6 @@ static gdouble _nc_hicosmo_de_Omega_gnu0 (NcHICosmo *cosmo);
 #define OMEGA_C  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_C))
 #define OMEGA_X  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 #define T_GAMMA0 (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_T_GAMMA0))
-#define HE_YP    (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_HE_YP))
 #define ENNU     (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_ENNU))
 #define OMEGA_R  (_nc_hicosmo_de_Omega_gnu0 (NC_HICOSMO (cosmo)))
 #define OMEGA_B  (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
@@ -604,42 +583,6 @@ static gdouble
 _nc_hicosmo_de_T_gamma0 (NcHICosmo *cosmo)
 {
   return T_GAMMA0;
-}
-
-static gdouble
-_nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo)
-{
-  NcmModel *model       = NCM_MODEL (cosmo);
-  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (cosmo);
-
-  if (ncm_model_param_get_ftype (model, NC_HICOSMO_DE_HE_YP) == NCM_PARAM_TYPE_FIXED)
-  {
-    const gdouble wb    = nc_hicosmo_Omega_b0h2 (cosmo);
-    const gdouble DNeff = nc_hicosmo_Neff (cosmo) - 3.046;
-
-    if (FALSE)
-    {
-      const gdouble wb2    = wb * wb;
-      const gdouble DNeff2 = DNeff * DNeff;
-      const gdouble Yp     = 0.2311 + 0.9502 * wb - 11.27 * wb2 + DNeff * (0.01356 + 0.008581 * wb - 0.1810 * wb2) + DNeff2 * (-0.0009795 - 0.001370 * wb + 0.01746 * wb2);
-
-      return Yp;
-    }
-    else
-    {
-      if (ncm_model_state_get_pkey (model) != cosmo_de->priv->HE4_Yp_key)
-      {
-        const gdouble Yp = ncm_spline2d_eval (NC_HICOSMO_DE (cosmo)->priv->BBN_spline2d,
-                                              wb, DNeff);
-
-        ncm_model_orig_param_set (model, NC_HICOSMO_DE_HE_YP, Yp);
-        cosmo_de->priv->HE4_Yp_key = ncm_model_state_get_pkey (model);
-        /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DNeff, Yp);*/
-      }
-    }
-  }
-
-  return HE_YP;
 }
 
 static gdouble

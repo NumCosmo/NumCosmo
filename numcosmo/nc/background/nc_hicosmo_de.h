@@ -75,7 +75,6 @@ typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
  * @NC_HICOSMO_DE_OMEGA_C: cold dark matter density parameter
  * @NC_HICOSMO_DE_OMEGA_X: dark energy density parameter
  * @NC_HICOSMO_DE_T_GAMMA0: CMB temperature today
- * @NC_HICOSMO_DE_HE_YP: primordial helium abundance
  * @NC_HICOSMO_DE_ENNU: effective number of neutrinos
  * @NC_HICOSMO_DE_OMEGA_B: baryon density parameter
  *
@@ -89,7 +88,6 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS,prefix=NC_HICOSMO_DE
   NC_HICOSMO_DE_OMEGA_C,
   NC_HICOSMO_DE_OMEGA_X,
   NC_HICOSMO_DE_T_GAMMA0,
-  NC_HICOSMO_DE_HE_YP,
   NC_HICOSMO_DE_ENNU,
   NC_HICOSMO_DE_OMEGA_B,
   /* < private > */
@@ -123,7 +121,6 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_VPARAMS,prefix=NC_HICOSMO_DE
 #define NC_HICOSMO_DE_DEFAULT_OMEGA_X   (0.70)
 #define NC_HICOSMO_DE_DEFAULT_OMEGA_B   (0.0432)
 #define NC_HICOSMO_DE_DEFAULT_T_GAMMA0  (2.7245)
-#define NC_HICOSMO_DE_DEFAULT_HE_YP     (0.24)
 #define NC_HICOSMO_DE_DEFAULT_ENNU      (3.046)
 #define NC_HICOSMO_DE_DEFAULT_NU_MASS   (1.0e-5)
 #define NC_HICOSMO_DE_DEFAULT_NU_T      (0.71611)
