@@ -182,23 +182,18 @@ def test_m2lnL_parity(log10_mdelta):
 
 # Frozen FIXED_NODES -2lnL values, keyed by log10_mdelta.
 #
-# RE-FROZEN when _fixed_panels_integ switched from the signed control-variate
-# form  P = p_a*norm + Q[P(z)*(P(e_o,z) - p_a)]  to the split non-negative form
-# P = p_a*(norm - W_bg) + Q[P(z)*P(e_o,z)]  (see the FIXED_NODES branch of
-# nc_data_cluster_wl_factor.c). The two are algebraically identical but not
-# numerically: the control variate subtracts the anchor before quadrature and so
-# integrates a much flatter function, which at a FIXED node count is markedly
-# more accurate. Measured against LNINT on this sample at (n_nodes, rule_n) =
-# (10, 5): relative error 5.5e-11 with the old form, 5.7e-8 with the new one.
-# The tolerances below are unchanged -- they still pin the same claim, against a
-# constant recaptured on the new form. Guaranteed positivity is what was bought
-# with those digits, and the auto-nodes default (node-reltol 1e-2, per-galaxy
-# calibrated grid) is what pays for them in production.
+# These are the legacy values, unchanged. _fixed_panels_integ now combines the
+# panels as the self-normalised ratio  P = norm * Q[P(z) P(e_o,z)] / Q[P(z)]
+# instead of anchoring on p_a, which is non-negative by construction and
+# strictly more accurate -- but at this grid it still reproduces legacy to
+# 1.9e-11 against the LNINT reference, well inside the 1e-8 parity tolerance
+# below. Only the deliberately starved grids in _N_NODES_RULE_N_FROZEN moved
+# far enough to need re-freezing; see the rationale there.
 _M2LNL_FIXED_NODES_FROZEN = {
-    13.5: -18.165657431791136,
-    14.0: -18.160409961744307,
-    14.5: -18.144407515569362,
-    15.0: -18.09443158959249,
+    13.5: -18.165656396162543,
+    14.0: -18.160408925652295,
+    14.5: -18.144406477942447,
+    15.0: -18.094430546800766,
 }
 
 
@@ -262,17 +257,17 @@ def test_m2lnL_fixed_nodes_matches_lnint():
 # (log10_mdelta,)/(z_cl,) sequences iterated in the test.
 _CACHE_REVISIT_MASS_SEQ = (13.5, 14.5, 13.5, 15.0, 14.5)
 _CACHE_REVISIT_MASS_FROZEN = [
-    -18.165657431791136,
-    -18.144407515569362,
-    -18.165657431791136,
-    -18.09443158959249,
-    -18.144407515569362,
+    -18.165656396162543,
+    -18.144406477942447,
+    -18.165656396162543,
+    -18.094430546800766,
+    -18.144406477942447,
 ]
 _CACHE_REVISIT_ZCL_SEQ = (0.2, 0.35, 0.2, 0.5)
 _CACHE_REVISIT_ZCL_FROZEN = [
-    -18.160409961744307,
-    -18.164668573479158,
-    -18.160409961744307,
+    -18.160408925652295,
+    -18.16466857347916,
+    -18.160408925652295,
     -18.16670389900757,
 ]
 
@@ -312,10 +307,10 @@ def test_fixed_nodes_cache_consistency_across_revisits():
 # `ra` sequence iterated in the test.
 _ANGULAR_ONLY_RA_SEQ = (0.0, 0.05, -0.03, 0.05)
 _ANGULAR_ONLY_FROZEN = [
-    -18.160409961744307,
-    -18.16212694841824,
-    -18.150995015791906,
-    -18.16212694841824,
+    -18.160408925652295,
+    -18.16212591226027,
+    -18.150993979018196,
+    -18.16212591226027,
 ]
 
 
@@ -378,7 +373,7 @@ def test_fixed_nodes_correct_after_switching_integ_method_mid_run():
 
     # Frozen legacy FIXED_NODES value at log10MDelta=14.0, z_cl=0.2 (matches
     # _M2LNL_FIXED_NODES_FROZEN[14.0]; see module docstring for provenance).
-    frozen_fixed_nodes = -18.160409961744307
+    frozen_fixed_nodes = -18.160408925652295
     assert_allclose(new_m2lnL, frozen_fixed_nodes, rtol=1.0e-8)
 
     # And switching back to LNINT must still match the value just obtained
@@ -650,21 +645,23 @@ def test_resample_matches_legacy():
 # is DETECTED and rebuilds the grid, so what matters is that the four values are
 # mutually distinct and reproducible, not that any of them is accurate.
 #
-# Re-frozen on the split non-negative integ form (see _M2LNL_FIXED_NODES_FROZEN
-# for the full rationale). This sequence is where the accuracy cost of dropping
-# the control variate is most visible, since it deliberately includes
-# starved grids; relative error vs LNINT, old form -> new form:
-#     (6, 3)  = 15 nodes:  2.3e-06 -> 2.9e-03
-#     (12, 7) = 77 nodes:  3.1e-15 -> 3.1e-15   (converged; both forms exact)
-#     (2, 1)  =  1 node:   1.7e-03 -> 6.5e-01   (degenerate by construction)
-#     (10, 5) = 45 nodes:  5.5e-11 -> 5.7e-08
-# Converged grids are unaffected; starved ones degrade, which is precisely the
-# regime the auto-nodes default now keeps production out of.
+# The two coarse entries are re-frozen off the legacy values. The
+# self-normalised combine carries the optimal control-variate coefficient
+# rather than the endpoint anchor, so it is closer to the converged answer than
+# legacy wherever the grid is starved -- and this sequence deliberately
+# includes starved grids. Relative error vs the LNINT reference
+# -18.160408926654355, legacy -> self-normalised:
+#     (12, 7) = 77 nodes:  3.1e-15 -> 3.9e-16
+#     (10, 5) = 45 nodes:  5.5e-11 -> 1.9e-11   (inside 1e-8 legacy parity)
+#     (6, 3)  = 15 nodes:  2.3e-06 -> 7.9e-08   (re-frozen)
+#     (2, 1)  =  1 node:   1.7e-03 -> 3.7e-05   (re-frozen)
+# The converged entries keep the legacy values, which this form still
+# reproduces inside the parity tolerance.
 _N_NODES_RULE_N_FROZEN = {
-    (6, 3): -18.21246188257942,
+    (6, 3): -18.16040748495601,
     (12, 7): -18.160408926654412,
-    (2, 1): -29.926518916622115,
-    (10, 5): -18.160409961744307,
+    (2, 1): -18.15974165202651,
+    (10, 5): -18.160408925652295,
 }
 
 

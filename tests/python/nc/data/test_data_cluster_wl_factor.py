@@ -664,27 +664,29 @@ def test_auto_node_calibration_warns_once_per_prepare():
 
 
 # A galaxy whose photo-z support runs far past the lens, so nearly all of its
-# P(z) mass is background: the fixed-node quadrature of that mass, W_bg, is then
-# competing with the exact full-support normalization, and on a coarse grid it
-# OVERSHOOTS it.
+# P(z) mass is background. This is the configuration that used to break
+# positivity: the quadrature of the background mass competes with the exact
+# full-support normalization, and on a coarse grid it OVERSHOOTS it (measured
+# here at (n_nodes, rule_n) = (2, 1): norm = 0.1077 against a quadrature
+# background mass of 0.2339, a 117% overshoot).
 _MOSTLY_BACKGROUND_GALAXY = (0.03, 0.02, 2.00, 0.300, 0.05, -0.02, 0.03)
 
 
 @pytest.mark.parametrize("n_nodes,rule_n", [(2, 1), (4, 2), (6, 3)])
-def test_foreground_weight_is_clamped_at_zero(n_nodes, rule_n):
-    """The foreground weight (norm - W_bg) is clamped at zero, and must be.
+def test_positive_on_grids_too_coarse_to_resolve_the_integrand(n_nodes, rule_n):
+    """P_gal stays positive at any resolution, on the galaxy that used to break it.
 
-    W_bg is a QUADRATURE estimate of the background P(z) mass while norm is the
-    EXACT full-support normalization, so on a coarse grid nothing stops W_bg
-    from exceeding norm. Measured on this galaxy at (n_nodes, rule_n) = (2, 1):
-    norm = 0.1077 against W_bg = 0.2339, a 117% overshoot. Unclamped that would
-    make the foreground term p_a * (norm - W_bg) large and NEGATIVE -- the
-    second way (besides a signed correction term) that P_gal could go negative
-    and trip the NC_GALAXY_LOW_PROB wall.
+    Anchoring the foreground on the difference (exact norm) - (quadrature
+    background mass) mixes an exact quantity with an approximate one, and on a
+    coarse grid that difference goes NEGATIVE -- which drove P_gal negative and
+    tripped the flat NC_GALAXY_LOW_PROB wall.
 
-    The clamp is therefore load-bearing, not decoration: this test asserts the
-    positivity guarantee survives grids far too coarse to resolve the
-    integrand, which is exactly the claim the split form is making.
+    The self-normalised combine never forms that difference: it is
+    norm * Q[P(z) P(e_o,z)] / Q[P(z)], a ratio of non-negative quadratures
+    scaled by a positive norm, so positivity is structural rather than clamped.
+    This test pins the guarantee on grids far too coarse to resolve the
+    integrand, which is the stronger claim -- not merely that a fine enough
+    grid avoids the problem.
     """
     dcwlf, mset, _, _ = _build_probe_setup([_MOSTLY_BACKGROUND_GALAXY])
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
