@@ -155,8 +155,12 @@ class LSSTVariant(GEnum):
         )
 
 
-class HWLCatalogID(GEnum):
-    """Curated Subaru HSC-SSP PDR1 weak lensing catalog (NumCosmo data release)."""
+class WLCatalogID(GEnum):
+    """A curated weak lensing catalog from the NumCosmo data release.
+
+    Presently all Subaru HSC-SSP PDR1 cluster fields; the identifiers carry the
+    survey and data release so that catalogs from elsewhere can join them.
+    """
 
     # pylint: disable=no-member
     HSC_PDR1_HWL16A_002 = Nc.GalaxyWLObsCatalogId.HSC_PDR1_HWL16A_002
