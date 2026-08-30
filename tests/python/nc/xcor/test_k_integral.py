@@ -45,8 +45,10 @@ spectrum -- one no method meets and none needs to, because that entry
 contributes nothing to any likelihood.
 """
 
+import collections
 import gzip
 import json
+import os
 import pathlib
 
 import numpy as np
@@ -57,7 +59,15 @@ from xcor import cases_k_integral as cases
 
 pytest_plugins = ["python.fixtures_xcor"]
 
-pytestmark = pytest.mark.xcor
+# xdist_group pins this whole file to one worker under --dist loadgroup.
+# The frozen fixture below caches up to 102 Frozen objects, each holding two
+# kernels, two closures and their references -- 3.5 GB by the end of the file.
+# That is per *worker*, since an xdist worker is its own session, so plain
+# --dist load builds one copy per worker and exhausts memory on a many-core
+# machine (measured: OOM at 12 workers, and every run at 24). Grouping costs
+# this file its internal parallelism and nothing else -- every other file still
+# distributes test by test.
+pytestmark = [pytest.mark.xcor, pytest.mark.xdist_group("k_integral")]
 
 CLOSURES = {
     "spline": Nc.XcorKernelClosure.SPLINE,
@@ -81,47 +91,54 @@ PER_MULTIPOLE = frozenset({"gsl"})
 # an entry in the NcXcorKQuad table.
 BLOCK_METHODS = sorted(set(METHODS) - PER_MULTIPOLE)
 
-# Measured over the whole matrix at reltol = scaled_abstol = 1e-4, as the worst
+# Measured over the case matrix at reltol = scaled_abstol = 1e-4, as the worst
 # deviation from the matching reference relative to the block's peak, with an
-# order of headroom. Measured worst / median, for the record:
+# order of headroom. Measured worst, on cases.ELLS_SUITE:
 #
-#   exact    spline     5.3e-13 / 9.4e-16       cubature spline     1.7e-05 / 3.2e-07
-#   exact    chebyshev  4.7e-10 / 1.2e-15       cubature chebyshev  4.1e-05 / 1.6e-07
-#   gsl      spline     1.1e-12 / 5.7e-16       gsl      chebyshev  1.7e-04 / 1.2e-07
-#   gsl_blk  spline     8.6e-12 / 5.6e-16       gsl_blk  chebyshev  4.6e-04 / 9.7e-08
+#   exact    spline     8.1e-12       cubature spline     1.7e-05
+#   exact    chebyshev  2.3e-08       cubature chebyshev  1.1e-05
+#   gsl      spline     4.4e-12       gsl      chebyshev  1.6e-03
+#   gsl_blk  spline     3.2e-11       gsl_blk  chebyshev  3.2e-04
 #
-# gsl_block runs gsl's rule on exact's closure, and lands within an order of
-# both: the rule is not what separated them. It is the looser of the two on
-# splines by about eight times, and that is the block closure rather than the
+# These are an order or two above what a [2, 20, 200] ladder reported, because
+# that ladder missed the l = 4-10 region where every method is worst; see
+# cases.ELLS_SUITE. Read the two exact rows as the claim they are: GL(5) on the
+# merged knot set is exact, and so is qagp on those same knots -- both sit at
+# the reference's own floor. Cubature is not converging to the closure, it is
+# stopping at the relative tolerance it was asked for.
+#
+# gsl/chebyshev at 1.6e-03 is the largest error anywhere in the matrix, at
+# l = 10. It is the one combination where the per-multipole closure and the
+# Chebyshev fit interact badly, and it is why that tolerance is so much looser
+# than its spline counterpart.
+#
+# gsl_block runs gsl's rule on exact's closure and lands within an order of
+# both: the rule is not what separates them. On splines it is the looser of the
+# two by about eight times, and that is the block closure rather than the
 # quadrature -- a block is fitted to an L2 norm over all its multipoles, so a
 # multipole that is sub-dominant within its block is held only to the block's
 # norm, while gsl fits each one on its own. See nc_xcor_compute_full().
-#
-# Read the two exact columns as the claim they are: GL(5) on the merged knot
-# set is exact, and so is qagp on those same knots -- both sit at the
-# reference's own floor. Cubature is not converging to the closure, it is
-# stopping at the relative tolerance it was asked for, which is why it is eight
-# orders looser at identical cost.
-#
-# The exact/chebyshev worst is N3 at ell ~ 205, where the reference is itself
-# only good to 5.4e-10; that entry bounds the pair rather than discriminating
-# between them, and there is nothing below it to find without an independent
-# reference.
 TOLERANCE = {
-    ("exact", "spline"): 5.0e-12,
-    ("exact", "chebyshev"): 1.0e-8,
+    ("exact", "spline"): 1.0e-10,
+    ("exact", "chebyshev"): 5.0e-7,
     ("cubature", "spline"): 2.0e-4,
-    ("cubature", "chebyshev"): 5.0e-4,
-    ("gsl", "spline"): 1.0e-11,
-    ("gsl", "chebyshev"): 2.0e-3,
-    ("gsl_block", "spline"): 1.0e-10,
+    ("cubature", "chebyshev"): 2.0e-4,
+    ("gsl", "spline"): 5.0e-11,
+    ("gsl", "chebyshev"): 2.0e-2,
+    ("gsl_block", "spline"): 5.0e-10,
     ("gsl_block", "chebyshev"): 5.0e-3,
 }
 
-# The reference's own convergence, likewise measured: 6.0e-14 on spline
-# closures and 5.4e-10 on Chebyshev ones, where the floor is the conditioning
-# of evaluating a degree-128 polynomial rather than the quadrature.
-REFERENCE_FLOOR = {"spline": 1.0e-12, "chebyshev": 5.0e-9}
+# The reference's own convergence, likewise measured on cases.ELLS_SUITE: the
+# worst any cell still moved at the top of the escalation, 9.0e-13 on spline
+# closures and 1.3e-08 on Chebyshev ones, both at l = 6. On Chebyshev the floor
+# is the conditioning of evaluating a degree-128 polynomial rather than the
+# quadrature, and l = 6 is where that bites -- 130x worse than the 1.0e-10 at
+# l = 2 that a [2, 20, 200] ladder saw. It bounds what any test here can claim
+# about a Chebyshev closure at that multipole: exact/chebyshev's own 2.3e-08
+# sits less than a factor of two above it, so that entry bounds the method
+# rather than discriminating between methods.
+REFERENCE_FLOOR = {"spline": 1.0e-11, "chebyshev": 1.0e-7}
 
 
 class Frozen:
@@ -135,24 +152,38 @@ class Frozen:
         self.cosmo, self.dist, self.ps = cases.make_cosmo_bits()
         self.RH = Nc.HICosmo.RH_Mpc(self.cosmo)
 
+        # One integrator for the whole block, shared by both kernels and both
+        # closures -- what nc_xcor_solver_solve() does, and what makes the
+        # stored decomposition reusable across kernels. Giving each kernel its
+        # own retains four integrators per key and never exercises that path.
+        # Scoped to this Frozen rather than to the block: reuse is order
+        # sensitive, and pytest-randomly means a wider scope would make cost,
+        # and any non-exactness, depend on execution order.
+        self.sbi = Ncm.SBesselIntegratorLevin.new(lmin, self.lmax)
+
         self.kernel_a = cases.build_kernel(
-            self.pair.kernel_a, self.cosmo, self.dist, self.ps, self.settings
+            self.pair.kernel_a, self.cosmo, self.dist, self.ps, self.settings, self.sbi
         )
         self.kernel_b = (
             self.kernel_a
             if self.pair.isauto
             else cases.build_kernel(
-                self.pair.kernel_b, self.cosmo, self.dist, self.ps, self.settings
+                self.pair.kernel_b,
+                self.cosmo,
+                self.dist,
+                self.ps,
+                self.settings,
+                self.sbi,
             )
         )
         self.integrand_a = cases.build_integrand(
-            self.kernel_a, self.cosmo, lmin, self.lmax, self.settings
+            self.kernel_a, self.cosmo, lmin, self.lmax, self.settings, self.sbi
         )
         self.integrand_b = (
             None
             if self.pair.isauto
             else cases.build_integrand(
-                self.kernel_b, self.cosmo, lmin, self.lmax, self.settings
+                self.kernel_b, self.cosmo, lmin, self.lmax, self.settings, self.sbi
             )
         )
         self.reference = cases.reference_cl(self.RH, self.integrand_a, self.integrand_b)
@@ -224,16 +255,39 @@ class Frozen:
         return float(np.abs(got - truth).max() / np.abs(truth).max())
 
 
+# How many Frozen the module fixture keeps alive at once. Each holds two
+# kernels, two closures and their references -- 18 MB for an easy key, 105 MB
+# for the worst (ell = 200). Unbounded, the 102 keys of the matrix reach 3.5 GB,
+# and since an xdist worker is its own session that is paid per worker: enough
+# to exhaust a 30 GB machine at 12 workers and every time at 24. Bounded, the
+# cost is a rebuild whenever an evicted key comes back, at 0.194 s each.
+# 0 means unbounded.
+FROZEN_CACHE_MAXSIZE = int(os.environ.get("XCOR_FROZEN_CACHE", "8"))
+
+
 @pytest.fixture(name="frozen", scope="module")
 def fixture_frozen():
-    """Build each (case, closure, block) once and hand it to every test."""
-    cache: dict[tuple[str, str, int], Frozen] = {}
+    """Build each (case, closure, block) once and hand it to every test.
+
+    Least-recently-used beyond FROZEN_CACHE_MAXSIZE, because holding all of
+    them is what makes this file the memory ceiling of the whole xcor lane.
+    """
+    cache: collections.OrderedDict[tuple[str, str, int], Frozen] = (
+        collections.OrderedDict()
+    )
 
     def get(case: str, closure: str, lmin: int) -> Frozen:
         key = (case, closure, lmin)
 
-        if key not in cache:
-            cache[key] = Frozen(case, closure, lmin)
+        if key in cache:
+            cache.move_to_end(key)
+
+            return cache[key]
+
+        cache[key] = Frozen(case, closure, lmin)
+
+        while FROZEN_CACHE_MAXSIZE and len(cache) > FROZEN_CACHE_MAXSIZE:
+            cache.popitem(last=False)
 
         return cache[key]
 
