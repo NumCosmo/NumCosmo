@@ -55,7 +55,7 @@ from numcosmo_py.experiments.cluster_wl import (
     GalaxyPopGen,
     ShapeFactorGen,
     GalaxyZGen,
-    HWLCatalogID,
+    WLCatalogID,
     HaloProfileType,
     IntegMethod,
     IntegMethodOptions,
@@ -940,7 +940,7 @@ class LoadClusterWL(ClusterWL):
     """
 
     catalog: Annotated[
-        HWLCatalogID | None,
+        WLCatalogID | None,
         typer.Option(
             help=(
                 "Load a curated Subaru HSC-SSP PDR1 catalog from the "
