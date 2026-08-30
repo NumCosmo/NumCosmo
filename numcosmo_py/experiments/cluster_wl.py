@@ -852,10 +852,10 @@ class IntegMethod(GEnum):
     CUBATURE = Nc.DataClusterWLIntegMethod.CUBATURE
 
 
-DEFAULT_INTEG_AUTO_NODES = True
+DEFAULT_INTEG_AUTO_NODES = False
 DEFAULT_INTEG_N_NODES = 10
 DEFAULT_INTEG_RULE_N = 5
-DEFAULT_INTEG_NODE_RELTOL = 1.0e-2
+DEFAULT_INTEG_NODE_RELTOL = 1.0e-4
 DEFAULT_INTEG_MAX_TOTAL_NODES = 2000
 
 
@@ -869,9 +869,9 @@ class IntegMethodOptions:
 
     ``apply()`` sets every knob unconditionally, so these defaults -- not the
     C-side property defaults -- are what an app-driven run gets. They are kept
-    equal to the C defaults on purpose: ``auto_nodes`` with a reachable
-    ``node_reltol`` is what keeps the FIXED_NODES marginal converged, and a
-    divergence here would silently give CLI runs the pre-fix behaviour.
+    equal to the C defaults on purpose: a divergence here would silently give
+    CLI runs a different integration configuration from every other entry
+    point.
     """
 
     integ_method: IntegMethod = IntegMethod.LNINT

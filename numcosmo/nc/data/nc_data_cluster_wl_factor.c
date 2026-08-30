@@ -599,8 +599,8 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->integ_method    = NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT;
   self->n_nodes         = 10;
   self->rule_n          = 5;
-  self->auto_nodes      = TRUE;
-  self->node_reltol     = 1.0e-2;
+  self->auto_nodes      = FALSE;
+  self->node_reltol     = 1.0e-4;
   self->max_total_nodes = 2000;
   self->low_prob_count  = 0;
 
@@ -1709,7 +1709,7 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                    g_param_spec_boolean ("auto-nodes",
                                                          NULL,
                                                          "Automatically select the per-galaxy fixed-node configuration (FIXED_NODES only)",
-                                                         TRUE,
+                                                         FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -1723,7 +1723,7 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                    g_param_spec_double ("node-reltol",
                                                         NULL,
                                                         "Target relative tolerance for the per-galaxy fixed-node selection",
-                                                        0.0, G_MAXDOUBLE, 1.0e-2,
+                                                        0.0, G_MAXDOUBLE, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
