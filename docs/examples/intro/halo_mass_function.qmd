@@ -60,10 +60,7 @@ parameterization with `omega_x2omega_k()` and fix `Omegak = 0.0`; flatness is th
 constraint and the dark-energy density is derived from the closure relation. A reionization model and a
 power-law primordial power spectrum are attached as submodels. We set the primordial amplitude and
 spectral index explicitly: the amplitude fixes the normalization of the matter power spectrum, and
-through it the overall scale of the mass function. Reionization, by contrast, enters none of the
-quantities computed below — it shapes CMB observables, not the $z = 0$ linear matter power spectrum —
-and every result here is unchanged if it is omitted; we carry it so the cosmology is complete and
-ready to be reused for CMB-based calculations.
+through it the overall scale of the mass function.
 
 ```{python}
 # Dark-energy model with a constant equation of state
@@ -81,15 +78,12 @@ prim = Nc.HIPrimPowerLaw.new()
 prim["n_SA"] = 0.9658
 prim["ln10e10ASA"] = 3.0904
 
-# Set the reionization redshift
-reion["z_re"] = 10.0
-
 cosmo.add_submodel(reion)
 cosmo.add_submodel(prim)
 
-# Cosmological parameters. The submodel parameters set above (n_SA, ln10e10ASA,
-# z_re) belong to prim and reion, so param_names() below does not list them; the
-# effect of the amplitude shows up in the sigma8 print further down.
+# Cosmological parameters. The primordial parameters set above (n_SA, ln10e10ASA)
+# belong to prim, so param_names() below does not list them; the effect of the
+# amplitude shows up in the sigma8 print further down.
 cosmo["H0"] = 70.0
 cosmo["Omegab"] = 0.05
 cosmo["Omegac"] = 0.25
