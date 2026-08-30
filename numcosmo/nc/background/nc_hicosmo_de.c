@@ -1001,26 +1001,6 @@ nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de, GError **error)
   }
 }
 
-/**
- * nc_hicosmo_de_new_add_bbn:
- * @lh: a #NcmLikelihood
- *
- * Adds a Gaussian prior for the primordial helium abundance from Big Bang
- * Nucleosynthesis (BBN) to the likelihood. This constrains the helium-4 mass fraction
- * $Y_p$ to its BBN predicted value.
- *
- */
-void
-nc_hicosmo_de_new_add_bbn (NcmLikelihood *lh)
-{
-  NcmMSetFunc *bbn       = NCM_MSET_FUNC (ncm_mset_func_list_new ("NcHICosmoDE:BBN", NULL));
-  NcmPriorGaussFunc *pgf = ncm_prior_gauss_func_new (bbn, 0.942, 0.03, 0.0);
-
-  ncm_likelihood_priors_add (lh, NCM_PRIOR (pgf));
-  ncm_mset_func_clear (&bbn);
-  ncm_prior_gauss_func_clear (&pgf);
-}
-
 static gdouble
 _nc_hicosmo_de_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
@@ -1185,7 +1165,7 @@ _nc_hicosmo_de_flist_w0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x
 }
 
 static void
-_nc_hicosmo_de_flist_BBN (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+_nc_hicosmo_de_flist_early_DE_expansion (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
 {
   NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (ncm_mset_peek (mset, nc_hicosmo_id ()));
   gdouble z_bbn         = 1.0e9;
@@ -1213,7 +1193,7 @@ _nc_hicosmo_de_register_functions (void)
 {
   ncm_mset_func_list_register ("Omega_x0", "\\Omega_{x0}",            "NcHICosmoDE", "Darkenergy density today",           G_TYPE_NONE, _nc_hicosmo_de_flist_Omega_x0, 0, 1);
   ncm_mset_func_list_register ("wDE",      "\\omega_\\mathrm{de}",    "NcHICosmoDE", "Darkenergy equation of state today", G_TYPE_NONE, _nc_hicosmo_de_flist_w0,       0, 1);
-  ncm_mset_func_list_register ("BBN",      "BBN",                     "NcHICosmoDE", "BBN",                                G_TYPE_NONE, _nc_hicosmo_de_flist_BBN,      0, 1);
+  ncm_mset_func_list_register ("early_DE_expansion", "\\mathcal{E}_\\mathrm{BBN}", "NcHICosmoDE", "Expansion speed-up at BBN from early dark energy", G_TYPE_NONE, _nc_hicosmo_de_flist_early_DE_expansion, 0, 1);
 
   ncm_mset_func_list_register ("wDE_z",    "\\omega_\\mathrm{de}(z)", "NcHICosmoDE", "Darkenergy equation of state",       G_TYPE_NONE, _nc_hicosmo_de_flist_w,        1, 1);
 }
