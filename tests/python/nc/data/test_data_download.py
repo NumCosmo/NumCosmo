@@ -1,0 +1,128 @@
+#!/usr/bin/env python
+#
+# test_data_download.py
+#
+# Sun August 30 2026
+# Copyright  2026  Sandro Dias Pinto Vitenti
+# <vitenti@uel.br>
+#
+# test_data_download.py
+# Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+#
+# numcosmo is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# numcosmo is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""Tests for the shared data-file downloader.
+
+The catalogs NumCosmo fetches are tens of megabytes, which is why this exercises
+``jla_snls3_sdss_sys_stat.fits.sig`` instead: 310 bytes in the same release,
+reached by the same code. That keeps the download path covered on every run --
+including once a CI cache stops the big files from ever being fetched, which is
+how these defects went unnoticed for months.
+
+Each test runs in a subprocess with its own HOME, so the base directory really
+is empty and a failure (fatal by design) can be observed rather than taking the
+test session with it.
+"""
+
+import os
+import subprocess
+import sys
+
+import pytest
+
+# 310 bytes, same release and same code path as the multi-megabyte catalogs.
+TINY_ASSET = "jla_snls3_sdss_sys_stat.fits.sig"
+
+_FETCH = """
+import sys
+from numcosmo_py import Nc, Ncm
+
+Ncm.cfg_init()
+sys.stdout.write(Nc.DataSNIACov.get_fits(sys.argv[1], False))
+"""
+
+
+def run_isolated(script: str, home, *args) -> subprocess.CompletedProcess:
+    """Run @script with an empty HOME, so the data directory starts bare."""
+    env = dict(os.environ, HOME=str(home))
+
+    return subprocess.run(
+        [sys.executable, "-c", script, *args],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+        timeout=900,
+    )
+
+
+def test_concurrent_download_is_safe(tmp_path):
+    """Several processes fetching the same file must not corrupt it.
+
+    This is the failure that took CI down: the destination is shared by every
+    NumCosmo process, so without a lock two transfers wrote one path while a
+    third read it. The reader saw a truncated file and the process aborted.
+    """
+    env = dict(os.environ, HOME=str(tmp_path))
+    procs = [
+        subprocess.Popen(  # pylint: disable=consider-using-with
+            [sys.executable, "-c", _FETCH, TINY_ASSET],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+        )
+        for _ in range(4)
+    ]
+    outs = [p.communicate(timeout=900) for p in procs]
+    codes = [p.returncode for p in procs]
+
+    assert codes == [0, 0, 0, 0], f"a worker died: {codes}\n{outs}"
+
+    landed = list(tmp_path.rglob(TINY_ASSET))
+
+    assert len(landed) == 1, f"expected exactly one copy, got {landed}"
+    assert landed[0].stat().st_size == 310
+
+    # A transfer in flight is invisible outside its own process, and nothing is
+    # left behind if one dies mid-download.
+    assert not list(tmp_path.rglob("*.part"))
+    assert not list(tmp_path.rglob("*.lock"))
+
+
+def test_a_failed_download_says_so(tmp_path):
+    """wget's exit status must be read.
+
+    It was discarded, so a 404 or a refused connection looked like success and
+    the first symptom was a corrupt file read much later, with nothing pointing
+    back at the download.
+    """
+    result = run_isolated(_FETCH, tmp_path, "this-asset-does-not-exist.fits")
+
+    assert result.returncode != 0
+    assert "wget failed" in result.stderr
+    assert "this-asset-does-not-exist.fits" in result.stderr
+
+
+def test_a_failed_download_leaves_nothing_behind(tmp_path):
+    """A failure must not poison the cache for every later run.
+
+    The transfer used to go straight to the final name, so whatever wget left
+    there -- an error page, a truncated body -- was indistinguishable from real
+    data on the next run.
+    """
+    run_isolated(_FETCH, tmp_path, "this-asset-does-not-exist.fits")
+
+    assert not list(tmp_path.rglob("this-asset-does-not-exist.fits"))
+    assert not list(tmp_path.rglob("*.part"))
