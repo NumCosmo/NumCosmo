@@ -3596,6 +3596,24 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
   }
 }
 
+/*
+ * Whether the submodels collected so far already include one with @model's id.
+ */
+static gboolean
+_ncm_mset_submodel_array_has_id (GPtrArray *submodel_array, NcmModel *model)
+{
+  const NcmModelID mid = ncm_model_id (model);
+  guint i;
+
+  for (i = 0; i < submodel_array->len; i++)
+  {
+    if (ncm_model_id (g_ptr_array_index (submodel_array, i)) == mid)
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
 /**
  * ncm_mset_load: (constructor)
  * @filename: mset filename
@@ -3757,11 +3775,26 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
       }
 
       {
-        GObject *obj = ncm_serialize_from_string (ser, obj_ser->str);
+        GObject *obj         = ncm_serialize_from_string (ser, obj_ser->str);
+        gboolean is_submodel = FALSE;
+        gboolean duplicated;
 
         g_assert (NCM_IS_MODEL (obj));
 
-        if (ncm_mset_exists_pos (mset, NCM_MODEL (obj), stackpos))
+        is_submodel = ncm_model_is_submodel (NCM_MODEL (obj));
+
+        /*
+         * A main model may build submodels of its own on construction, so a
+         * submodel's slot can be taken already by one of those defaults -- and
+         * the loop below simply replaces it with the one the file carries. Only
+         * a file naming the same submodel twice is an error.
+         */
+        if (is_submodel)
+          duplicated = _ncm_mset_submodel_array_has_id (submodel_array, NCM_MODEL (obj));
+        else
+          duplicated = ncm_mset_exists_pos (mset, NCM_MODEL (obj), stackpos);
+
+        if (duplicated)
         {
           ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_ALREADY_SET,
                                       "ncm_mset_load: a model ``%s'' already exists in NcmMSet.", obj_ser->str);
@@ -3772,7 +3805,7 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
           return NULL;
         }
 
-        if (ncm_model_is_submodel (NCM_MODEL (obj)))
+        if (is_submodel)
         {
           NcmModel *submodel = ncm_model_ref (NCM_MODEL (obj));
 
