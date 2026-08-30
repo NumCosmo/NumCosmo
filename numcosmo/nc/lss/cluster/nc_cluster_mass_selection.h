@@ -52,7 +52,7 @@ G_DECLARE_FINAL_TYPE (NcClusterMassSelection, nc_cluster_mass_selection, NC, CLU
  * Cluster mass selection function model parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_SELECTION_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_SELECTION_SPARAMS,prefix=NC_CLUSTER_MASS_SELECTION >*/
 {
   NC_CLUSTER_MASS_SELECTION_MU_P0,
   NC_CLUSTER_MASS_SELECTION_MU_P1,

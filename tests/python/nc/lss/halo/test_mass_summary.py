@@ -75,7 +75,7 @@ def fixture_reion() -> Nc.HIReion:
 @pytest.fixture(name="cosmo")
 def fixture_cosmo(prim: Nc.HIPrim, reion: Nc.HIReion) -> Nc.HICosmo:
     """Create cosmological model."""
-    cosmo = Nc.HICosmoDEXcdm()
+    cosmo = Nc.HICosmoDEXcdm(prim=prim, reion=reion)
     cosmo.omega_x2omega_k()
     cosmo["Omegak"] = 0.0
     cosmo["H0"] = 67.66
@@ -85,8 +85,6 @@ def fixture_cosmo(prim: Nc.HIPrim, reion: Nc.HIReion) -> Nc.HICosmo:
     cosmo["Tgamma0"] = 2.7255
     cosmo["ENnu"] = 3.046
 
-    cosmo.add_submodel(prim)
-    cosmo.add_submodel(reion)
     return cosmo
 
 

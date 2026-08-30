@@ -45,7 +45,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMKlypin11, nc_halo_cm_klypin11, NC, HALO_CM_KLYPIN1
  * Klypin et al. (2011) concentration-mass relation.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HALO_CM_KLYPIN11_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HALO_CM_KLYPIN11_SPARAMS,prefix=NC_HALO_CM_KLYPIN11_LOG10M >*/
 {
   NC_HALO_CM_KLYPIN11_LOG10M_DELTA,
   /* < private > */

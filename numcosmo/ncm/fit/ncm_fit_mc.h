@@ -49,7 +49,7 @@ G_DECLARE_FINAL_TYPE (NcmFitMC, ncm_fit_mc, NCM, FIT_MC, GObject)
  * Montecarlo resample options
  *
  */
-typedef enum _NcmFitMCResampleType
+typedef enum _NcmFitMCResampleType /*< prefix=NCM_FIT_MC_RESAMPLE >*/
 {
   NCM_FIT_MC_RESAMPLE_FROM_MODEL = 0,
   NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX,

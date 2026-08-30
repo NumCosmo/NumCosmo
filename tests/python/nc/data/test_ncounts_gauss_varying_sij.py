@@ -51,16 +51,13 @@ FIDUCIAL_OMEGAC = 0.2612
 
 def _make_cosmo(omega_c: float = FIDUCIAL_OMEGAC) -> Nc.HICosmo:
     """Build the test cosmology."""
-    cosmo = Nc.HICosmoDEXcdm()
+    cosmo = Nc.HICosmoDEXcdm(reion=Nc.HIReionCamb.new(), prim=Nc.HIPrimPowerLaw.new())
     cosmo.omega_x2omega_k()
     cosmo.param_set_by_name("H0", 67.81)
     cosmo.param_set_by_name("Omegac", omega_c)
     cosmo.param_set_by_name("Omegab", 0.0486)
     cosmo.param_set_by_name("w", -1.0)
     cosmo.param_set_by_name("Omegak", 0.0)
-    cosmo.add_submodel(Nc.HIReionCamb.new())
-    cosmo.add_submodel(Nc.HIPrimPowerLaw.new())
-
     return cosmo
 
 
@@ -215,9 +212,13 @@ def test_set_ssc_sij_keeps_the_data_initialized() -> None:
 
     assert data.is_init()
 
-    data.set_ssc_sij(Nc.XcorSSCSij.new(data.get_ssc_sij().props.dist,
-                                       data.get_ssc_sij().props.powspec,
-                                       Ncm.Vector.new_array(Z_EDGES.tolist())))
+    data.set_ssc_sij(
+        Nc.XcorSSCSij.new(
+            data.get_ssc_sij().props.dist,
+            data.get_ssc_sij().props.powspec,
+            Ncm.Vector.new_array(Z_EDGES.tolist()),
+        )
+    )
 
     assert data.is_init()
 

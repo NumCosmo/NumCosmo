@@ -46,7 +46,7 @@ G_DECLARE_FINAL_TYPE (NcTransferFuncBBKS, nc_transfer_func_bbks, NC, TRANSFER_FU
  * BBKS transfer function variant.
  *
  */
-typedef enum _NcTransferFuncBBKSType
+typedef enum _NcTransferFuncBBKSType /*< prefix=NC_TRANSFER_FUNC_BBKS_TYPE >*/
 {
   NC_TRANSFER_FUNC_BBKS_TYPE_NOBARYONS,
   NC_TRANSFER_FUNC_BBKS_TYPE_BARYONS,

@@ -66,7 +66,7 @@ struct _NcHIPertIGWInterface
  * Perturbation variables enumerator.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPERT_GW_VARS  >*/
+typedef enum /*< enum,underscore_name=NC_HIPERT_GW_VARS,prefix=NC_HIPERT_GW >*/
 {
   NC_HIPERT_GW_RE_H = 0,
   NC_HIPERT_GW_IM_H,

@@ -57,7 +57,7 @@ typedef struct _NcHIPrimExpc NcHIPrimExpc;
  * Parameters for the exponential cutoff primordial spectrum model.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPRIM_EXPC_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HIPRIM_EXPC_SPARAMS,prefix=NC_HIPRIM_EXPC >*/
 {
   NC_HIPRIM_EXPC_LN10E10ASA,
   NC_HIPRIM_EXPC_N_SA,

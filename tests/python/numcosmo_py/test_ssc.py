@@ -53,7 +53,8 @@ REFERENCE_SIJ_01 = -2.9193e-06
 @pytest.fixture(name="cosmo", scope="module")
 def fixture_cosmo() -> Nc.HICosmo:
     """Fiducial flat wCDM cosmology matching the J-PAS 2024 forecast."""
-    cosmo = Nc.HICosmoDEXcdm()
+    prim = Nc.HIPrimPowerLaw.new()
+    cosmo = Nc.HICosmoDEXcdm(reion=Nc.HIReionCamb.new(), prim=prim)
     cosmo.omega_x2omega_k()
     cosmo["H0"] = 67.81
     cosmo["Omegab"] = 0.0486
@@ -61,11 +62,8 @@ def fixture_cosmo() -> Nc.HICosmo:
     cosmo["w"] = -1.0
     cosmo["Omegak"] = 0.0
 
-    prim = Nc.HIPrimPowerLaw.new()
     prim["ln10e10ASA"] = 3.02745
     prim["n_SA"] = 0.9660
-    cosmo.add_submodel(prim)
-    cosmo.add_submodel(Nc.HIReionCamb.new())
 
     return cosmo
 

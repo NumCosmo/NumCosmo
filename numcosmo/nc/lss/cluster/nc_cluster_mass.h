@@ -52,7 +52,7 @@ G_DECLARE_DERIVABLE_TYPE (NcClusterMass, nc_cluster_mass, NC, CLUSTER_MASS, NcmM
  * the observable cluster mass to compute the normalization of the cluster mass distribution.
  *
  */
-typedef enum _NcClusterMassImpl
+typedef enum _NcClusterMassImpl /*< prefix=NC_CLUSTER_MASS >*/
 {
   NC_CLUSTER_MASS_P = 0,
   NC_CLUSTER_MASS_INTP,

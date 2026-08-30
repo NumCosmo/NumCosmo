@@ -88,9 +88,31 @@ _nc_hicosmo_de_xcdm_w_de (NcHICosmoDE *cosmo_de, gdouble z)
 NcHICosmoDEXcdm *
 nc_hicosmo_de_xcdm_new (void)
 {
-  NcHICosmoDEXcdm *xcdm = g_object_new (NC_TYPE_HICOSMO_DE_XCDM, NULL);
+  return nc_hicosmo_de_xcdm_new_full (NULL, NULL, NULL);
+}
 
-  return xcdm;
+/**
+ * nc_hicosmo_de_xcdm_new_full:
+ * @reion: (nullable): a #NcHIReion
+ * @prim: (nullable): a #NcHIPrim
+ * @bbn: (nullable): a #NcBBN
+ *
+ * This function instantiates a new object of type #NcHICosmoDEXcdm, with
+ * @reion, @prim, and @bbn attached at construction time (submodels are
+ * construction-only and cannot be attached afterward). Each may be
+ * %NULL to leave that slot unset (a %NULL @bbn slot gets a default
+ * #NcBBNParthenope).
+ *
+ * Returns: A new #NcHICosmoDEXcdm
+ */
+NcHICosmoDEXcdm *
+nc_hicosmo_de_xcdm_new_full (NcHIReion *reion, NcHIPrim *prim, NcBBN *bbn)
+{
+  return g_object_new (NC_TYPE_HICOSMO_DE_XCDM,
+                       "reion", reion,
+                       "prim", prim,
+                       "bbn", bbn,
+                       NULL);
 }
 
 enum

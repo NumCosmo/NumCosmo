@@ -60,7 +60,7 @@ typedef struct _NcHICosmoQRBFPrivate NcHICosmoQRBFPrivate;
  * @NC_HICOSMO_QRBF_RBF_H: the rbf wave-length
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_QRBF_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QRBF_SPARAMS,prefix=NC_HICOSMO_QRBF >*/
 {
   NC_HICOSMO_QRBF_H0 = 0,
   NC_HICOSMO_QRBF_OMEGA_T,
@@ -76,7 +76,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QRBF_SPARAMS >*/
  * @NC_HICOSMO_QRBF_RBF_COEFFS: RBF coefficients
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_QRBF_VPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QRBF_VPARAMS,prefix=NC_HICOSMO_QRBF_RBF >*/
 {
   NC_HICOSMO_QRBF_RBF_CENTERS,
   NC_HICOSMO_QRBF_RBF_COEFFS,

@@ -343,7 +343,21 @@ def create_cosmo(
             f"omega_c_min ({omega_c_min}) must be below omega_c_max ({omega_c_max})."
         )
 
-    cosmo = Nc.HICosmoDEXcdm()
+    # --- Primordial Power Spectrum Model ---
+    prim = Nc.HIPrimPowerLaw.new()
+    prim["ln10e10ASA"] = 3.02745  # Amplitude equivalent to $A_s$
+    prim["n_SA"] = 0.9660  # Scalar spectral index
+
+    prim.param_set_desc(
+        "ln10e10ASA", {"fit": True}
+    )  # $A_s$ amplitude is a fit parameter
+    prim.param_set_desc("n_SA", {"fit": False})
+
+    # --- Reionization Model (fixed) ---
+    reion = Nc.HIReionCamb.new()
+    reion.param_set_desc("z_re", {"fit": False})
+
+    cosmo = Nc.HICosmoDEXcdm(prim=prim, reion=reion)
 
     # Set default fitting types (typically linear scale, fixed tolerance)
     cosmo.params_set_default_ftype()
@@ -375,23 +389,6 @@ def create_cosmo(
     # $w$ is a free parameter (Dark Energy EoS)
     cosmo.param_set_desc("w", {"fit": True})
     cosmo.param_set_desc("Omegak", {"fit": False})
-
-    # --- Primordial Power Spectrum Model ---
-    prim = Nc.HIPrimPowerLaw.new()
-    prim["ln10e10ASA"] = 3.02745  # Amplitude equivalent to $A_s$
-    prim["n_SA"] = 0.9660  # Scalar spectral index
-
-    prim.param_set_desc(
-        "ln10e10ASA", {"fit": True}
-    )  # $A_s$ amplitude is a fit parameter
-    prim.param_set_desc("n_SA", {"fit": False})
-
-    # --- Reionization Model (fixed) ---
-    reion = Nc.HIReionCamb.new()
-    reion.param_set_desc("z_re", {"fit": False})
-
-    cosmo.add_submodel(prim)
-    cosmo.add_submodel(reion)
 
     return cosmo
 

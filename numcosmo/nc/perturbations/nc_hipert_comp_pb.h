@@ -69,7 +69,7 @@ struct _NcHIPertCompPB
  * Photon-baryon component variables
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPERT_COMP_PB_VAR >*/
+typedef enum /*< enum,underscore_name=NC_HIPERT_COMP_PB_VAR,prefix=NC_HIPERT_COMP_PB_VAR >*/
 {
   NC_HIPERT_COMP_PB_VAR_DELTA_B,
   NC_HIPERT_COMP_PB_VAR_V_B,

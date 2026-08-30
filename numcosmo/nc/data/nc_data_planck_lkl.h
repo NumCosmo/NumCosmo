@@ -57,7 +57,7 @@ G_DECLARE_FINAL_TYPE (NcDataPlanckLKL, nc_data_planck_lkl, NC, DATA_PLANCK_LKL, 
  * The Planck likelihood types.
  *
  */
-typedef enum _NcDataPlanckLKLType
+typedef enum _NcDataPlanckLKLType /*< prefix=NC_DATA_PLANCK_LKL_TYPE >*/
 {
   NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_TT,
   NC_DATA_PLANCK_LKL_TYPE_BASELINE_18_LOWL_EE,

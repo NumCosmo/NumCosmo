@@ -62,7 +62,7 @@ typedef struct _NcClusterPseudoCounts NcClusterPseudoCounts;
  *
  * Cluster pseudo counts model parameters.
  */
-typedef enum /*< enum,underscore_name=NC_CLUSTER_PSEUDO_COUNTS_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_CLUSTER_PSEUDO_COUNTS_SPARAMS,prefix=NC_CLUSTER_PSEUDO_COUNTS >*/
 {
   NC_CLUSTER_PSEUDO_COUNTS_LNMCUT = 0,
   NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT,

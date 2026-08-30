@@ -50,7 +50,7 @@ G_DECLARE_FINAL_TYPE (NcReducedShearCalibWtg, nc_reduced_shear_calib_wtg, NC, RE
  * WtG calibration parameters.
  *
  */
-typedef enum _NcReducedShearCalibWtgSParams
+typedef enum _NcReducedShearCalibWtgSParams /*< prefix=NC_REDUCED_SHEAR_CALIB_WTG >*/
 {
   NC_REDUCED_SHEAR_CALIB_WTG_MSLOPE,
   NC_REDUCED_SHEAR_CALIB_WTG_MB,

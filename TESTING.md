@@ -110,6 +110,7 @@ they are heavy or special. Gated by a `--run-*` flag (the skip logic lives in
 |--------|-------|-------------|
 | `mpi` | MPI runtime (`mpiexec`) | `--run-mpi` |
 | `app` | CLI dependencies / heavy app flows | `--run-app` |
+| `planck_data` | a local `plc_3.0` Planck tree under `~/.numcosmo` | `--run-planck-data` |
 | `powspec` | power-spectrum extras | `--run-powspec` |
 | `xcor` | cross-correlation extras | `--run-xcor` |
 | `sphere_map` | sphere-map extras | `--run-sphere-map` |
@@ -303,6 +304,20 @@ pytest --run-powspec -m powspec tests/python    # one capability lane, directly
 - Shared fixtures/builders live in `conftest.py` (per-dir conftest for module-local
   fixtures; top-level `tests/python/conftest.py` for cosmo/mset/rng builders). Do not
   copy-paste setup between files.
+- Builders too specialized for `conftest.py` go in a `tests/python/fixtures_<topic>.py`
+  module, imported directly or declared as a `pytest_plugins` entry
+  (`fixtures_xcor.py`, `fixtures_ccl.py`, `fixtures_planck.py`).
+
+## 6.1 Tests that need large external data
+
+Data that is too large or not redistributable (the Planck `plc_3.0` clik tree, survey
+catalogs) is absent in most CI lanes, so a test gated on it contributes no coverage
+there. Gate the *comparison against the real data* on its presence, but also cover the
+code with a **synthetic** input built by the test: `tests/python/fixtures_planck.py`
+writes structurally faithful, tiny cldf trees and feeds them to the production
+converters, so the ingestion path and the native likelihoods run everywhere. Prefer
+synthetic inputs whose expected result has a closed form -- with the real, opaque data
+a test can only check that a number came out.
 
 ## 7. Determinism & golden data
 

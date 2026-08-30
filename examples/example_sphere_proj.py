@@ -45,9 +45,17 @@ def compute_spherical_projection():
     Ncm.cfg_init()
 
     #
-    #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
+    #  New homogeneous and isotropic reionization and primordial objects.
     #
-    cosmo = Nc.HICosmoDEXcdm(massnu_length=1)
+    reion = Nc.HIReionCamb.new()
+    prim = Nc.HIPrimPowerLaw.new()
+
+    #
+    #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm, with
+    #  the reionization and primordial submodels attached at construction
+    #  time.
+    #
+    cosmo = Nc.HICosmoDEXcdm(massnu_length=1, reion=reion, prim=prim)
     cosmo.omega_x2omega_k()
     cosmo.param_set_by_name("Omegak", 0.0)
     cosmo.param_set_by_name("w", -1.0)
@@ -56,18 +64,12 @@ def compute_spherical_projection():
     cosmo.param_set_by_name("massnu_0", 0.06)
     cosmo.param_set_by_name("ENnu", 2.0328)
 
-    reion = Nc.HIReionCamb.new()
-    prim = Nc.HIPrimPowerLaw.new()
-
     cosmo.param_set_by_name("H0", 67.0)
 
     prim.param_set_by_name("n_SA", 0.96)
     prim.param_set_by_name("ln10e10ASA", 3.0904)
 
     reion.param_set_by_name("z_re", 9.9999)
-
-    cosmo.add_submodel(reion)
-    cosmo.add_submodel(prim)
 
     #
     #  Printing the parameters used.

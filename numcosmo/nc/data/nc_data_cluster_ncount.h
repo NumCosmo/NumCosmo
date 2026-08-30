@@ -52,7 +52,7 @@ G_DECLARE_FINAL_TYPE (NcDataClusterNCount, nc_data_cluster_ncount, NC, DATA_CLUS
  * Cluster abundance data input modes.
  * These specify how the cluster number count data is initialized or used.
  */
-typedef enum _NcDataClusterAbundanceId
+typedef enum _NcDataClusterAbundanceId /*< prefix=NC_DATA_CLUSTER_ABUNDANCE >*/
 {
   NC_DATA_CLUSTER_ABUNDANCE_FIT,
   NC_DATA_CLUSTER_ABUNDANCE_TXT,

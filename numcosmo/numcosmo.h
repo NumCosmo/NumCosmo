@@ -33,6 +33,9 @@
 
 /* Base types and components */
 #include <numcosmo/nc/background/nc_hicosmo.h>
+#include <numcosmo/nc/bbn/nc_bbn.h>
+#include <numcosmo/nc/bbn/nc_bbn_parametrized.h>
+#include <numcosmo/nc/bbn/nc_bbn_parthenope.h>
 #include <numcosmo/nc/primordial/nc_hiprim.h>
 #include <numcosmo/nc/background/nc_distance.h>
 #include <numcosmo/nc/background/nc_hicosmo_priors.h>
@@ -75,8 +78,6 @@
 
 /* Model implementations */
 #include <numcosmo/nc/quantum/nc_de_cont.h>
-#include <numcosmo/nc/background/nc_hicosmo_idem2.h>
-#include <numcosmo/nc/background/nc_hicosmo_gcg.h>
 #include <numcosmo/nc/background/nc_hicosmo_de.h>
 #include <numcosmo/nc/background/nc_hicosmo_de_reparam_ok.h>
 #include <numcosmo/nc/background/nc_hicosmo_de_reparam_cmb.h>
@@ -229,6 +230,11 @@
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich.h>
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich_count.h>
 #include <numcosmo/nc/data/nc_data_planck_lkl.h>
+#include <numcosmo/nc/data/nc_data_planck_plik_lite.h>
+#include <numcosmo/nc/data/nc_data_planck_smica.h>
+#include <numcosmo/nc/data/nc_data_planck_commander.h>
+#include <numcosmo/nc/data/nc_data_planck_simall.h>
+#include <numcosmo/nc/data/nc_data_planck_lensing.h>
 #include <numcosmo/nc/data/nc_data_xcor.h>
 
 /* Cross-correlations */

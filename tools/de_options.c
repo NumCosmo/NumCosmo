@@ -148,7 +148,6 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionE
     { "planck-data",  'P',                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->Planck,       "Planck likelihoods",                    NULL },
     { "planck-model",   0,                    0, G_OPTION_ARG_STRING,       &de_data_simple->PlanckFI,     "Planck likelihood FI Model",            NULL },
     { "planck-priors",  0,                    0, G_OPTION_ARG_NONE,         &de_data_simple->PlanckPriors, "Enable Planck default priors",          NULL },
-    { "BBN",          'N',                    0, G_OPTION_ARG_NONE,         &de_data_simple->BBN,          "Use BBN Prior",                         NULL },
     { "BBN-Omega_b",    0,                    0, G_OPTION_ARG_NONE,         &de_data_simple->BBN_Ob,       "Use BBN Omega_b * h2 Prior = 0.022 +/- 0.002", NULL },
     { "priors-gauss",   0,                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->priors_gauss, "Add a gaussian prior to a model",       NULL },
     { "data-file",      0,                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->data_files,   "File containing a serialized version of a NcmData object",   NULL },

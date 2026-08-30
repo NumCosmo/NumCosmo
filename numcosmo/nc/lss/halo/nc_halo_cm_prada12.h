@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMPrada12, nc_halo_cm_prada12, NC, HALO_CM_PRADA12, 
  * Prada et al. (2012) concentration-mass relation.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HALO_CM_PRADA12_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HALO_CM_PRADA12_SPARAMS,prefix=NC_HALO_CM_PRADA12_LOG10M >*/
 {
   NC_HALO_CM_PRADA12_LOG10M_DELTA,
   /* < private > */

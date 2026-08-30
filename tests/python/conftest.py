@@ -101,6 +101,12 @@ def pytest_addoption(parser):
         default=False,
         help="Run tests marked with app",
     )
+    parser.addoption(
+        "--run-planck-data",
+        action="store_true",
+        default=False,
+        help="Run tests marked with planck_data",
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -110,12 +116,14 @@ def pytest_collection_modifyitems(config, items):
     run_xcor = config.getoption("--run-xcor")
     run_sphere_map = config.getoption("--run-sphere-map")
     run_app = config.getoption("--run-app")
+    run_planck_data = config.getoption("--run-planck-data")
 
     skip_mpi = pytest.mark.skip(reason="Need --run-mpi option to run")
     skip_powspec = pytest.mark.skip(reason="Need --run-powspec option to run")
     skip_xcor = pytest.mark.skip(reason="Need --run-xcor option to run")
     skip_sphere_map = pytest.mark.skip(reason="Need --run-sphere-map option to run")
     skip_app = pytest.mark.skip(reason="Need --run-app option to run")
+    skip_planck_data = pytest.mark.skip(reason="Need --run-planck-data option to run")
 
     for item in items:
         if "mpi" in item.keywords and not run_mpi:
@@ -128,6 +136,8 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(skip_sphere_map)
         if "app" in item.keywords and not run_app:
             item.add_marker(skip_app)
+        if "planck_data" in item.keywords and not run_planck_data:
+            item.add_marker(skip_planck_data)
 
 
 @pytest.fixture(name="prim")
@@ -150,16 +160,13 @@ def fixture_cosmo(prim: Nc.HIPrim, reion: Nc.HIReion) -> Nc.HICosmo:
 
     Configures a flat LCDM cosmology with w = -1.
     """
-    cosmo = Nc.HICosmoDEXcdm()
+    cosmo = Nc.HICosmoDEXcdm(prim=prim, reion=reion)
     cosmo.omega_x2omega_k()
     cosmo["Omegak"] = 0.0
     cosmo["H0"] = 71
     cosmo["Omegab"] = 0.0406
     cosmo["Omegac"] = 0.22
     cosmo["w"] = -1.0
-
-    cosmo.add_submodel(prim)
-    cosmo.add_submodel(reion)
 
     return cosmo
 

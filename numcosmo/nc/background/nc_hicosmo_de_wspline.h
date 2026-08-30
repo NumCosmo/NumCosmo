@@ -53,7 +53,7 @@ typedef struct _NcHICosmoDEWSplinePrivate NcHICosmoDEWSplinePrivate;
  * @NC_HICOSMO_DE_WSPLINE_W: Dark energy equation of state parameter values at spline knots
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_WSPLINE_VPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_WSPLINE_VPARAMS,prefix=NC_HICOSMO_DE_WSPLINE >*/
 {
   NC_HICOSMO_DE_WSPLINE_W = NC_HICOSMO_DE_VPARAM_LEN,
   /* < private > */

@@ -132,7 +132,9 @@ enum
   PROP_LEN,
 };
 
-G_DEFINE_QUARK (nc - galaxy - shape - factor - error, nc_galaxy_shape_factor_error)
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (nc-galaxy-shape-factor-error, nc_galaxy_shape_factor_error)
+/* *INDENT-ON* */
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcGalaxyShapeFactor, nc_galaxy_shape_factor, G_TYPE_OBJECT)
 G_DEFINE_BOXED_TYPE (NcGalaxyShapeFactorData, nc_galaxy_shape_factor_data, nc_galaxy_shape_factor_data_ref, nc_galaxy_shape_factor_data_unref); /* LCOV_EXCL_LINE */
 NCM_UTIL_DEFINE_CALLBACK (NcGalaxyShapeFactorIntegrand,

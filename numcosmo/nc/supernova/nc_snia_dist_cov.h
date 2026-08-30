@@ -58,7 +58,7 @@ typedef struct _NcSNIADistCov NcSNIADistCov;
  * SN Ia distance covariance model parameters.
  *
  */
-typedef enum _NcSNIADistCovSParams
+typedef enum _NcSNIADistCovSParams /*< prefix=NC_SNIA_DIST_COV >*/
 {
   NC_SNIA_DIST_COV_ALPHA = 0,
   NC_SNIA_DIST_COV_BETA,
@@ -78,7 +78,7 @@ typedef enum _NcSNIADistCovSParams
  * SN Ia distance covariance model parameters.
  *
  */
-typedef enum _NcSNIADistCovVParams
+typedef enum _NcSNIADistCovVParams /*< prefix=NC_SNIA_DIST_COV >*/
 {
   NC_SNIA_DIST_COV_LNSIGMA_INT = 0,
   NC_SNIA_DIST_COV_MU,

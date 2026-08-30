@@ -711,12 +711,14 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
 
   block_vp = ncm_vector_new (block->lmax - block->lmin + 1);
 
-  /* The two kernel-space block methods share everything except the outer
-   * quadrature: same per-kernel closures, same per-block caching. */
-  if (nc_xcor_get_meth (xc) == NC_XCOR_METHOD_KERNEL_EXACT)
-    _nc_xcor_kernel_integrate_block_exact (xc, xclki1, xclki2 != NULL ? xclki2 : xclki1, block->lmin, block->lmax, isauto, block_vp, NULL);
-  else
-    _nc_xcor_kernel_integrate_block_cubature (xc, xclki1, xclki2, block->lmin, block->lmax, isauto, block_vp);
+  /* The block methods share everything except the outer quadrature: same
+   * per-kernel closures, same per-block caching. Which one runs is the
+   * table's answer, not an if here. */
+  {
+    const NcXcorKQuad *kquad = _nc_xcor_kquad_for_method (nc_xcor_get_meth (xc));
+
+    kquad->block (xc, xclki1, xclki2 != NULL ? xclki2 : xclki1, block->lmin, block->lmax, isauto, block_vp, NULL);
+  }
 
   vp = g_ptr_array_index (results, result_index);
   lo = MAX (req->lmin, block->lmin);
@@ -738,8 +740,8 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
  * to have been called first. Replaces any results from a previous
  * nc_xcor_solver_solve() call.
  *
- * When @xc's method is %NC_XCOR_METHOD_KERNEL_CUBATURE or
- * %NC_XCOR_METHOD_KERNEL_EXACT, each distinct
+ * When @xc's method has a block quadrature -- %NC_XCOR_METHOD_KERNEL_CUBATURE,
+ * %NC_XCOR_METHOD_KERNEL_EXACT or %NC_XCOR_METHOD_KERNEL_GSL_BLOCK -- each distinct
  * kernel's k-space closure (nc_xcor_kernel_get_eval_vectorized()) is built
  * once per ℓ-block and shared across every request needing it in that
  * block, instead of rebuilding it once per pair the way nc_xcor_compute()
@@ -753,17 +755,21 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
  * integrand cache built from it. No thread touches another's integrand or
  * integrator state, so no locking is needed inside the per-block work itself.
  *
- * The two share that whole path and differ only in the outer quadrature --
- * adaptive cubature against exact Gauss-Legendre over the common refinement
- * of each pair's knot sets -- so neither needs a solve loop of its own.
+ * They share that whole path and differ only in the outer quadrature --
+ * adaptive cubature, exact Gauss-Legendre over the common refinement of each
+ * pair's knot sets, or qagp broken on those same knots -- so none of them
+ * needs a solve loop of its own.
  *
  * Every other method (%NC_XCOR_METHOD_LIMBER_Z_GSL,
  * %NC_XCOR_METHOD_LIMBER_Z_CUBATURE, %NC_XCOR_METHOD_KERNEL_GSL) has no
  * block-shared closure to reuse -- tier 1 stays untouched by design (plan
- * doc §8), and %NC_XCOR_METHOD_KERNEL_GSL already rebuilds its integrand
- * per ℓ regardless of pairing -- so those requests are computed directly
- * with nc_xcor_compute(), one call per request, serially, for correctness
- * with no reuse.
+ * doc §8), and %NC_XCOR_METHOD_KERNEL_GSL fits its closure per ℓ regardless
+ * of pairing -- so those requests are computed directly with
+ * nc_xcor_compute(), one call per request, serially, for correctness with no
+ * reuse. Keeping %NC_XCOR_METHOD_KERNEL_GSL on that path is also what makes
+ * it answer the same here as through nc_xcor_compute();
+ * %NC_XCOR_METHOD_KERNEL_GSL_BLOCK is the one to use for its quadrature with
+ * the sharing.
  *
  * Results are retrieved with nc_xcor_solver_get_result().
  *
@@ -795,8 +801,10 @@ nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo)
     g_ptr_array_add (solver->results, vp);
   }
 
-  if ((nc_xcor_get_meth (xc) != NC_XCOR_METHOD_KERNEL_CUBATURE) &&
-      (nc_xcor_get_meth (xc) != NC_XCOR_METHOD_KERNEL_EXACT))
+  /* A method with a block quadrature is one this solver can share closures
+   * for; everything else goes through nc_xcor_compute(), one call per
+   * request. */
+  if (_nc_xcor_kquad_for_method (nc_xcor_get_meth (xc)) == NULL)
   {
     for (r = 0; r < n_requests; r++)
     {

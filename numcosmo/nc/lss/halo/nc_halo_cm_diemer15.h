@@ -51,7 +51,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMDiemer15, nc_halo_cm_diemer15, NC, HALO_CM_DIEMER1
  *  Diemer & Kravtsov (2015) concentration-mass relation.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HALO_CM_DIEMER15_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HALO_CM_DIEMER15_SPARAMS,prefix=NC_HALO_CM_DIEMER15_LOG10M >*/
 {
   NC_HALO_CM_DIEMER15_LOG10M_DELTA,
   /* < private > */

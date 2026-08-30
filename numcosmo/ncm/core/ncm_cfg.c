@@ -100,14 +100,15 @@
 #include "ncm/fftlog/ncm_fftlog_sbessel_jljm.h"
 #include "ncm/algebra/ncm_spectral.h"
 #include "nc/background/nc_hicosmo.h"
+#include "nc/bbn/nc_bbn.h"
+#include "nc/bbn/nc_bbn_parametrized.h"
+#include "nc/bbn/nc_bbn_parthenope.h"
 #include "nc/cmb/nc_cbe_precision.h"
 #include "nc/background/nc_hicosmo_qconst.h"
 #include "nc/background/nc_hicosmo_qlinear.h"
 #include "nc/background/nc_hicosmo_qspline.h"
 #include "nc/background/nc_hicosmo_qrbf.h"
 #include "nc/background/nc_hicosmo_lcdm.h"
-#include "nc/background/nc_hicosmo_gcg.h"
-#include "nc/background/nc_hicosmo_idem2.h"
 #include "nc/background/nc_hicosmo_de_xcdm.h"
 #include "nc/background/nc_hicosmo_de_wspline.h"
 #include "nc/background/nc_hicosmo_de_cpl.h"
@@ -250,6 +251,11 @@
 #include "nc/data/nc_data_snia_cov.h"
 #include "nc/data/nc_data_xcor.h"
 #include "nc/data/nc_data_planck_lkl.h"
+#include "nc/data/nc_data_planck_commander.h"
+#include "nc/data/nc_data_planck_lensing.h"
+#include "nc/data/nc_data_planck_plik_lite.h"
+#include "nc/data/nc_data_planck_simall.h"
+#include "nc/data/nc_data_planck_smica.h"
 #include "nc/xcor/nc_xcor.h"
 #include "nc/xcor/nc_xcor_AB.h"
 #include "nc/xcor/nc_xcor_solver.h"
@@ -739,8 +745,6 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QRBF);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_LCDM);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_WSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
@@ -752,11 +756,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_CMB);
 
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_OK);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_CMB);
 
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_OK);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_CMB);
 
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_BPL);
@@ -883,6 +883,10 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_RECOMB_CBE);
   ncm_cfg_register_obj (NC_TYPE_RECOMB_SEAGER);
 
+  ncm_cfg_register_obj (NC_TYPE_BBN);
+  ncm_cfg_register_obj (NC_TYPE_BBN_PARAMETRIZED);
+  ncm_cfg_register_obj (NC_TYPE_BBN_PARTHENOPE);
+
   ncm_cfg_register_obj (NC_TYPE_HIREION);
   ncm_cfg_register_obj (NC_TYPE_HIREION_CAMB);
 
@@ -955,6 +959,11 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_LKL);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_COMMANDER);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_PLIK_LITE);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_SIMALL);
+  ncm_cfg_register_obj (NC_TYPE_DATA_PLANCK_SMICA);
 
   return;
 }

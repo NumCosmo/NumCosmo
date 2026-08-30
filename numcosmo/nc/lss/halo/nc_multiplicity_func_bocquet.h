@@ -45,7 +45,7 @@ G_DECLARE_FINAL_TYPE (NcMultiplicityFuncBocquet, nc_multiplicity_func_bocquet, N
  * @NC_MULTIPLICITY_FUNC_BOCQUET_SIM_HYDRO: hydrodynamical simulation (baryon effects)
  *
  */
-typedef enum _NcMultiplicityFuncBocquetSim
+typedef enum _NcMultiplicityFuncBocquetSim /*< prefix=NC_MULTIPLICITY_FUNC_BOCQUET_SIM >*/
 {
   NC_MULTIPLICITY_FUNC_BOCQUET_SIM_DM = 0,
   NC_MULTIPLICITY_FUNC_BOCQUET_SIM_HYDRO,

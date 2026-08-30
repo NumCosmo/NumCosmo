@@ -2633,6 +2633,42 @@ ncm_mset_fparams_get_vector_offset (NcmMSet *mset, NcmVector *x, guint offset)
   }
 }
 
+/*
+ * Fires ncm_model_params_update() (hence any attached reparam's new2old)
+ * once for every model in @self->mid_array, after a full batch of raw
+ * values has already been written into every model's own vector (by the
+ * ncm_mset_param_set0() loop that always runs immediately before this).
+ *
+ * Processes non-submodel models first, then submodels -- required so that
+ * a submodel's reparam (if it reads its host via ncm_model_peek_host())
+ * always sees the host's own already-updated state, never a value that's
+ * about to change later in the same batch. mid_array's own order is sorted
+ * by class-registration id, unrelated to the host/submodel relationship,
+ * so this can't be relied on without the explicit two-pass split below.
+ */
+static void
+_ncm_mset_fparams_update_models (NcmMSet *mset)
+{
+  NcmMSetPrivate * const self = ncm_mset_get_instance_private (mset);
+  guint fpi;
+
+  for (fpi = 0; fpi < self->mid_array->len; fpi++)
+  {
+    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
+
+    if (!ncm_model_is_submodel (model))
+      ncm_model_params_update (model);
+  }
+
+  for (fpi = 0; fpi < self->mid_array->len; fpi++)
+  {
+    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
+
+    if (ncm_model_is_submodel (model))
+      ncm_model_params_update (model);
+  }
+}
+
 /**
  * ncm_mset_fparams_set_vector:
  * @mset: a #NcmMSet
@@ -2656,12 +2692,7 @@ ncm_mset_fparams_set_vector (NcmMSet *mset, const NcmVector *x)
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, ncm_vector_get (x, fpi));
   }
 
-  for (fpi = 0; fpi < self->mid_array->len; fpi++)
-  {
-    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
-
-    ncm_model_params_update (model);
-  }
+  _ncm_mset_fparams_update_models (mset);
 }
 
 /**
@@ -2687,12 +2718,7 @@ ncm_mset_fparams_set_vector_offset (NcmMSet *mset, const NcmVector *x, guint off
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, ncm_vector_get (x, fpi + offset));
   }
 
-  for (fpi = 0; fpi < self->mid_array->len; fpi++)
-  {
-    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
-
-    ncm_model_params_update (model);
-  }
+  _ncm_mset_fparams_update_models (mset);
 }
 
 /**
@@ -2719,12 +2745,7 @@ ncm_mset_fparams_set_array (NcmMSet *mset, const gdouble *x)
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, x[fpi]);
   }
 
-  for (fpi = 0; fpi < self->mid_array->len; fpi++)
-  {
-    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
-
-    ncm_model_params_update (model);
-  }
+  _ncm_mset_fparams_update_models (mset);
 }
 
 /**
@@ -2750,12 +2771,7 @@ ncm_mset_fparams_set_gsl_vector (NcmMSet *mset, const gsl_vector *x)
     ncm_mset_param_set0 (mset, pi.mid, pi.pid, gsl_vector_get (x, fpi));
   }
 
-  for (fpi = 0; fpi < self->mid_array->len; fpi++)
-  {
-    NcmModel *model = ncm_mset_peek (mset, g_array_index (self->mid_array, NcmModelID, fpi));
-
-    ncm_model_params_update (model);
-  }
+  _ncm_mset_fparams_update_models (mset);
 }
 
 /**
@@ -3342,6 +3358,73 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name, GError **error
   }
 }
 
+/*
+ * A submodel is reachable from its host both through the generic
+ * "submodel-array" boxed property every #NcmModel carries (walked and
+ * recursively serialized by ncm_serialize_to_variant() itself, independent
+ * of any typed slot) and as its own, independent top-level NcmMSet entry.
+ * Serializing the host first (see the main loop below) walks that
+ * property and, along the way, fully serializes the submodel -- and
+ * everything reachable from it, at any depth (e.g. an attached "reparam"
+ * property, and that reparam's own "T"/"v" properties, and so on) --
+ * registering each as an already-seen instance in @ser's persistent,
+ * cross-call name table (populated whenever @ser has
+ * NCM_SERIALIZE_OPT_AUTOSAVE_SER set, as ncm_mset_save()'s own @ser
+ * always does). Left alone, each of those objects' own later, independent
+ * top-level serialization would then find itself "already seen" and emit
+ * a bare name-only reference instead of a full definition. Recursively
+ * unregisters @obj and every nested GObject-valued readable property
+ * reachable from it, so later, independent serialization of the same
+ * objects produces full definitions again. ncm_serialize_unset()/
+ * ncm_serialize_remove_ser() are themselves no-ops when @obj was never
+ * registered, so this is safe to call unconditionally on every object
+ * reachable from @obj -- @visited (a caller-owned, pointer-keyed set) is
+ * only there to guard against revisiting the same object twice, not to
+ * decide whether unregistering is needed.
+ */
+static void
+_ncm_mset_serialize_unset_recursive (NcmSerialize *ser, GObject *obj, GHashTable *visited)
+{
+  if (g_hash_table_contains (visited, obj))
+    return;
+
+  g_hash_table_add (visited, obj);
+
+  {
+    GObjectClass *klass = G_OBJECT_GET_CLASS (obj);
+    guint n_properties, i;
+    GParamSpec **props = g_object_class_list_properties (klass, &n_properties);
+
+    for (i = 0; i < n_properties; i++)
+    {
+      GParamSpec *pspec = props[i];
+
+      if (((pspec->flags & G_PARAM_READABLE) == G_PARAM_READABLE) &&
+          g_type_is_a (pspec->value_type, G_TYPE_OBJECT))
+      {
+        GValue val = G_VALUE_INIT;
+
+        g_value_init (&val, pspec->value_type);
+        g_object_get_property (obj, pspec->name, &val);
+
+        {
+          GObject *nested = g_value_get_object (&val);
+
+          if (nested != NULL)
+            _ncm_mset_serialize_unset_recursive (ser, nested, visited);
+        }
+
+        g_value_unset (&val);
+      }
+    }
+
+    g_free (props);
+  }
+
+  ncm_serialize_unset (ser, obj);
+  ncm_serialize_remove_ser (ser, obj);
+}
+
 /**
  * ncm_mset_save:
  * @mset: a #NcmMSet
@@ -3493,12 +3576,18 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
           g_free (model_desc);
         }
 
-        for (j = 0; j < nsubmodels; j++)
+        if (nsubmodels > 0)
         {
-          NcmModel *submodel = ncm_model_peek_submodel (item->model, j);
+          GHashTable *visited = g_hash_table_new (NULL, NULL);
 
-          ncm_serialize_unset (ser, submodel);
-          ncm_serialize_remove_ser (ser, submodel);
+          for (j = 0; j < nsubmodels; j++)
+          {
+            NcmModel *submodel = ncm_model_peek_submodel (item->model, j);
+
+            _ncm_mset_serialize_unset_recursive (ser, G_OBJECT (submodel), visited);
+          }
+
+          g_hash_table_unref (visited);
         }
 
         if (nparams != 0)
@@ -3596,6 +3685,145 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
   }
 }
 
+/*
+ * @obj_type is the raw value of a group's self-referencing type key, which
+ * may carry a trailing "[name]" named-instance anchor (see
+ * NcmSerialize's `is_named_regex`, e.g. from NCM_SERIALIZE_OPT_AUTONAME_SER)
+ * -- strip it before resolving the actual #GType, or g_type_from_name()
+ * simply fails to find it.
+ */
+static GType
+_ncm_mset_load_type_name_to_gtype (const gchar *obj_type)
+{
+  gchar *bracket = strchr (obj_type, '[');
+  GType gtype;
+
+  if (bracket != NULL)
+  {
+    gchar *type_name = g_strndup (obj_type, bracket - obj_type);
+
+    gtype = g_type_from_name (type_name);
+    g_free (type_name);
+  }
+  else
+  {
+    gtype = g_type_from_name (obj_type);
+  }
+
+  return gtype;
+}
+
+/*
+ * Appends every remaining key of @group (after the self-referencing type
+ * key has already been removed by the caller) to @obj_ser as
+ * 'key':<value> properties, comma-separating as needed via @needs_comma.
+ * Returns %FALSE (with @error set) if a forbidden "submodel-array" key is
+ * found or a key's value cannot be read -- submodels now travel as
+ * construction-time typed-slot properties (see
+ * _ncm_mset_load_inject_submodel_props()), never as this generic array.
+ */
+static gboolean
+_ncm_mset_load_append_group_props (GKeyFile *msetfile, const gchar *group, GString *obj_ser,
+                                   gboolean *needs_comma, GError **error)
+{
+  gsize nkeys         = 0;
+  GError *local_error = NULL;
+  gchar **keys        = g_key_file_get_keys (msetfile, group, &nkeys, &local_error);
+  guint j;
+
+  ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+
+  if ((error != NULL) && (*error != NULL))
+    return FALSE;
+
+  for (j = 0; j < nkeys; j++)
+  {
+    if (strcmp (keys[j], "submodel-array") == 0)
+    {
+      ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_KEY_FILE_INVALID,
+                                  "ncm_mset_load: serialized version of mset models cannot "
+                                  "contain the submodel-array property.");
+      g_strfreev (keys);
+
+      return FALSE;
+    }
+    else
+    {
+      gchar *propval = g_key_file_get_value (msetfile, group, keys[j], &local_error);
+
+      ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+
+      if ((error != NULL) && (*error != NULL))
+      {
+        g_free (propval);
+        g_strfreev (keys);
+
+        return FALSE;
+      }
+
+      if (*needs_comma)
+        g_string_append (obj_ser, ", ");
+
+      g_string_append_printf (obj_ser, "\'%s\':<%s>", keys[j], propval);
+      g_free (propval);
+      *needs_comma = TRUE;
+    }
+  }
+
+  g_strfreev (keys);
+
+  return TRUE;
+}
+
+/*
+ * For every construction-only, #NcmModel-typed property declared on
+ * @host_gtype's class (i.e. every submodel slot installed via
+ * ncm_model_class_set_submodel()), checks whether @ser already has a
+ * named instance registered under that slot type's own registered
+ * namespace (see the pass-1 loop in ncm_mset_load()) and, if so, appends
+ * a reference to it as a construction property of @host_gtype -- letting
+ * the submodel be attached at construction time instead of post-hoc.
+ */
+static void
+_ncm_mset_load_inject_submodel_props (NcmSerialize *ser, GType host_gtype, GString *obj_ser, gboolean *needs_comma)
+{
+  NcmModelClass *host_class = NCM_MODEL_CLASS (g_type_class_ref (host_gtype));
+  guint n_props             = 0;
+  GParamSpec **props        = g_object_class_list_properties (G_OBJECT_CLASS (host_class), &n_props);
+  guint i;
+
+  for (i = 0; i < n_props; i++)
+  {
+    GParamSpec *pspec = props[i];
+
+    if (G_IS_PARAM_SPEC_OBJECT (pspec) &&
+        (pspec->flags & G_PARAM_CONSTRUCT_ONLY) &&
+        g_type_is_a (G_PARAM_SPEC_VALUE_TYPE (pspec), NCM_TYPE_MODEL))
+    {
+      NcmModelID slot_mid = ncm_mset_get_id_by_type (G_PARAM_SPEC_VALUE_TYPE (pspec));
+
+      if (slot_mid >= 0)
+      {
+        const gchar *slot_ns = ncm_mset_get_ns_by_id (slot_mid);
+        gpointer submodel    = ncm_serialize_peek_by_name (ser, slot_ns);
+
+        if (submodel != NULL)
+        {
+          if (*needs_comma)
+            g_string_append (obj_ser, ", ");
+
+          g_string_append_printf (obj_ser, "\'%s\':<(\'%s[%s]\', @a{sv} {})>",
+                                  pspec->name, G_OBJECT_TYPE_NAME (submodel), slot_ns);
+          *needs_comma = TRUE;
+        }
+      }
+    }
+  }
+
+  g_free (props);
+  g_type_class_unref (host_class);
+}
+
 /**
  * ncm_mset_load: (constructor)
  * @filename: mset filename
@@ -3613,22 +3841,21 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
 {
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
   {
-    NcmMSet *mset             = ncm_mset_empty_new ();
-    GKeyFile *msetfile        = g_key_file_new ();
-    gchar **groups            = NULL;
-    gsize ngroups             = 0;
-    gboolean valid_map        = FALSE;
-    GPtrArray *submodel_array = g_ptr_array_new ();
-    GError *local_error       = NULL;
+    NcmMSet *mset       = ncm_mset_empty_new ();
+    GKeyFile *msetfile  = g_key_file_new ();
+    gchar **groups      = NULL;
+    gsize ngroups       = 0;
+    gboolean valid_map  = FALSE;
+    GArray *is_submodel = NULL;
+    GError *local_error = NULL;
     guint i;
-
-    g_ptr_array_set_free_func (submodel_array, (GDestroyNotify) ncm_model_free);
 
     if (!g_key_file_load_from_file (msetfile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &local_error))
     {
       ncm_util_forward_or_call_error (error, local_error,
                                       "ncm_mset_load: Invalid mset configuration file: %s: ",
                                       filename);
+      g_key_file_unref (msetfile);
 
       return NULL;
     }
@@ -3638,26 +3865,158 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
       if (g_key_file_has_key (msetfile, "NcmMSet", "valid_map", &local_error))
       {
         ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
-        NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+        NCM_UTIL_ON_ERROR_RETURN (error, g_key_file_unref (msetfile), NULL);
 
         valid_map = g_key_file_get_boolean (msetfile, "NcmMSet", "valid_map", &local_error);
         ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
-        NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+        NCM_UTIL_ON_ERROR_RETURN (error, g_key_file_unref (msetfile), NULL);
       }
 
       g_key_file_remove_group (msetfile, "NcmMSet", &local_error);
       ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
-      NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+      NCM_UTIL_ON_ERROR_RETURN (error, g_key_file_unref (msetfile), NULL);
     }
 
-    groups = g_key_file_get_groups (msetfile, &ngroups);
+    groups      = g_key_file_get_groups (msetfile, &ngroups);
+    is_submodel = g_array_new (FALSE, TRUE, sizeof (gboolean));
+    g_array_set_size (is_submodel, ngroups);
 
+    /* Pass 1: build every submodel group's live object first and register
+     * it in @ser under its own namespace as a named anchor, so pass 2's
+     * host groups can reference it as a construction-time property
+     * instead of attaching it post-hoc (illegal for hosts declaring a
+     * construction-only typed slot for it). A submodel type can appear at
+     * most once per file -- submodels are always saved at stackpos 0,
+     * never stackpos-qualified in their group name -- so the namespace
+     * alone is a safe, unique anchor name. */
     for (i = 0; i < ngroups; i++)
     {
-      GString *obj_ser = g_string_sized_new (200);
       gchar *ns        = g_strdup (groups[i]);
       gchar *twopoints = g_strrstr (ns, ":");
-      guint stackpos   = 0;
+      NcmModelID mid;
+      gboolean group_is_submodel = FALSE;
+
+      if (twopoints != NULL)
+        *twopoints = '\0';
+
+      mid = ncm_mset_get_id_by_ns (ns);
+
+      if (mid >= 0)
+      {
+        NcmModelClass *ns_class = NCM_MODEL_CLASS (g_type_class_ref (ncm_mset_get_type_by_id (mid)));
+
+        group_is_submodel = ns_class->is_submodel;
+        g_type_class_unref (ns_class);
+      }
+
+      if (group_is_submodel)
+      {
+        GString *obj_ser     = g_string_sized_new (200);
+        gboolean needs_comma = FALSE;
+        gchar *obj_type;
+
+        if (!g_key_file_has_key (msetfile, groups[i], ns, &local_error))
+        {
+          ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+          NCM_UTIL_ON_ERROR_RETURN (error, g_free (ns);
+                                    g_string_free (obj_ser, TRUE);
+                                    g_array_unref (is_submodel);
+                                    g_key_file_unref (msetfile);
+                                    g_strfreev (groups), NULL);
+
+          ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_KEY_FILE_INVALID,
+                                      "ncm_mset_load: Every group must contain a key with same name "
+                                      "indicating the object type `%s' `%s'.", groups[i], ns);
+          g_free (ns);
+          g_string_free (obj_ser, TRUE);
+          g_array_unref (is_submodel);
+          g_key_file_unref (msetfile);
+          g_strfreev (groups);
+
+          return NULL;
+        }
+
+        obj_type = g_key_file_get_value (msetfile, groups[i], ns, &local_error);
+        ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+        NCM_UTIL_ON_ERROR_RETURN (error, g_free (obj_type);
+                                  g_free (ns);
+                                  g_string_free (obj_ser, TRUE);
+                                  g_array_unref (is_submodel);
+                                  g_key_file_unref (msetfile);
+                                  g_strfreev (groups), NULL);
+
+        g_string_append_printf (obj_ser, "(\'%s\', @a{sv} {", obj_type);
+        g_free (obj_type);
+
+        g_key_file_remove_key (msetfile, groups[i], ns, &local_error);
+        ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
+        NCM_UTIL_ON_ERROR_RETURN (error, g_free (ns);
+                                  g_string_free (obj_ser, TRUE);
+                                  g_array_unref (is_submodel);
+                                  g_key_file_unref (msetfile);
+                                  g_strfreev (groups), NULL);
+
+        if (!_ncm_mset_load_append_group_props (msetfile, groups[i], obj_ser, &needs_comma, error))
+        {
+          g_free (ns);
+          g_string_free (obj_ser, TRUE);
+          g_array_unref (is_submodel);
+          g_key_file_unref (msetfile);
+          g_strfreev (groups);
+
+          return NULL;
+        }
+
+        g_string_append (obj_ser, "})");
+
+        {
+          GObject *obj;
+
+          if (ncm_serialize_contain_name (ser, ns))
+          {
+            ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_ALREADY_SET,
+                                        "ncm_mset_load: submodel `%s' appears more than once in `%s'.",
+                                        ns, filename);
+            g_free (ns);
+            g_string_free (obj_ser, TRUE);
+            g_array_unref (is_submodel);
+            g_key_file_unref (msetfile);
+            g_strfreev (groups);
+
+            return NULL;
+          }
+
+          obj = ncm_serialize_from_string (ser, obj_ser->str);
+
+          g_assert (NCM_IS_MODEL (obj));
+          ncm_serialize_set (ser, obj, ns, FALSE);
+          g_object_unref (obj);
+        }
+
+        g_array_index (is_submodel, gboolean, i) = TRUE;
+        g_string_free (obj_ser, TRUE);
+      }
+
+      g_free (ns);
+    }
+
+    /* Pass 2: build every remaining (host) group, injecting a reference to
+     * any pass-1-registered submodel matching one of the class's declared
+     * typed slots before constructing it. */
+    for (i = 0; i < ngroups; i++)
+    {
+      GString *obj_ser;
+      gchar *ns;
+      gchar *twopoints;
+      guint stackpos       = 0;
+      gboolean needs_comma = FALSE;
+
+      if (g_array_index (is_submodel, gboolean, i))
+        continue;
+
+      obj_ser   = g_string_sized_new (200);
+      ns        = g_strdup (groups[i]);
+      twopoints = g_strrstr (ns, ":");
 
       if (twopoints != NULL)
       {
@@ -3668,11 +4027,20 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
       if (!g_key_file_has_key (msetfile, groups[i], ns, &local_error))
       {
         ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
-        NCM_UTIL_ON_ERROR_RETURN (error, g_free (ns), NULL);
+        NCM_UTIL_ON_ERROR_RETURN (error, g_free (ns);
+                                  g_string_free (obj_ser, TRUE);
+                                  g_array_unref (is_submodel);
+                                  g_key_file_unref (msetfile);
+                                  g_strfreev (groups), NULL);
 
         ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_KEY_FILE_INVALID,
                                     "ncm_mset_load: Every group must contain a key with same name "
                                     "indicating the object type `%s' `%s'.", groups[i], ns);
+        g_free (ns);
+        g_string_free (obj_ser, TRUE);
+        g_array_unref (is_submodel);
+        g_key_file_unref (msetfile);
+        g_strfreev (groups);
 
         return NULL;
       }
@@ -3681,7 +4049,12 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
         gchar *obj_type = g_key_file_get_value (msetfile, groups[i], ns, &local_error);
 
         ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
-        NCM_UTIL_ON_ERROR_RETURN (error, g_free (obj_type), NULL);
+        NCM_UTIL_ON_ERROR_RETURN (error, g_free (obj_type);
+                                  g_free (ns);
+                                  g_string_free (obj_ser, TRUE);
+                                  g_array_unref (is_submodel);
+                                  g_key_file_unref (msetfile);
+                                  g_strfreev (groups), NULL);
 
         if (strlen (obj_type) < 5)
         {
@@ -3701,7 +4074,12 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
               g_assert (model != NULL);
               ncm_mset_set_pos (mset, model, stackpos, error);
 
-              NCM_UTIL_ON_ERROR_FORWARD (error, g_free (obj_type), NULL, "ncm_mset_load: ");
+              NCM_UTIL_ON_ERROR_FORWARD (error, g_free (obj_type);
+                                         g_free (ns);
+                                         g_string_free (obj_ser, TRUE);
+                                         g_array_unref (is_submodel);
+                                         g_key_file_unref (msetfile);
+                                         g_strfreev (groups), NULL, "ncm_mset_load: ");
             }
 
             g_free (ns);
@@ -3712,54 +4090,42 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
         }
 
         g_string_append_printf (obj_ser, "(\'%s\', @a{sv} {", obj_type);
+
+        {
+          GType host_gtype = _ncm_mset_load_type_name_to_gtype (obj_type);
+
+          if (host_gtype != 0)
+            _ncm_mset_load_inject_submodel_props (ser, host_gtype, obj_ser, &needs_comma);
+        }
+
         g_free (obj_type);
         g_key_file_remove_key (msetfile, groups[i], ns, &local_error);
         ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
-        NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+        NCM_UTIL_ON_ERROR_RETURN (error, g_free (ns);
+                                  g_string_free (obj_ser, TRUE);
+                                  g_array_unref (is_submodel);
+                                  g_key_file_unref (msetfile);
+                                  g_strfreev (groups), NULL);
       }
 
+      if (!_ncm_mset_load_append_group_props (msetfile, groups[i], obj_ser, &needs_comma, error))
       {
-        gsize nkeys  = 0;
-        gchar **keys = g_key_file_get_keys (msetfile, groups[i], &nkeys, &local_error);
-        guint j;
+        g_free (ns);
+        g_string_free (obj_ser, TRUE);
+        g_array_unref (is_submodel);
+        g_key_file_unref (msetfile);
+        g_strfreev (groups);
 
-        ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
-        NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
-
-
-        for (j = 0; j < nkeys; j++)
-        {
-          if (strcmp (keys[j], "submodel-array") == 0)
-          {
-            ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_KEY_FILE_INVALID,
-                                        "ncm_mset_load: serialized version of mset models cannot "
-                                        "contain the submodel-array property.");
-
-            return NULL;
-          }
-          else
-          {
-            gchar *propval = g_key_file_get_value (msetfile, groups[i], keys[j], &local_error);
-
-            ncm_util_forward_or_call_error (error, local_error, "ncm_mset_load: ");
-            NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
-
-            g_string_append_printf (obj_ser, "\'%s\':<%s>", keys[j], propval);
-            g_free (propval);
-
-            if (j + 1 != nkeys)
-              g_string_append (obj_ser, ", ");
-          }
-        }
-
-        g_string_append (obj_ser, "})");
-        g_strfreev (keys);
+        return NULL;
       }
+
+      g_string_append (obj_ser, "})");
 
       {
         GObject *obj = ncm_serialize_from_string (ser, obj_ser->str);
 
         g_assert (NCM_IS_MODEL (obj));
+        g_assert (!ncm_model_is_submodel (NCM_MODEL (obj)));
 
         if (ncm_mset_exists_pos (mset, NCM_MODEL (obj), stackpos))
         {
@@ -3768,21 +4134,15 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
           g_object_unref (obj);
           g_string_free (obj_ser, TRUE);
           g_free (ns);
+          g_array_unref (is_submodel);
+          g_key_file_unref (msetfile);
+          g_strfreev (groups);
 
           return NULL;
         }
 
-        if (ncm_model_is_submodel (NCM_MODEL (obj)))
-        {
-          NcmModel *submodel = ncm_model_ref (NCM_MODEL (obj));
-
-          g_ptr_array_add (submodel_array, submodel);
-        }
-        else
-        {
-          ncm_mset_set_pos (mset, NCM_MODEL (obj), stackpos, error);
-          NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset_load: ");
-        }
+        ncm_mset_set_pos (mset, NCM_MODEL (obj), stackpos, error);
+        NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset_load: ");
 
         ncm_model_free (NCM_MODEL (obj));
       }
@@ -3790,42 +4150,67 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
       g_free (ns);
     }
 
-    for (i = 0; i < submodel_array->len; i++)
+    /* Pass 3: verify every pass-1 submodel was consumed by pass 2's
+     * construction-time slot injection -- submodels are construction-fixed,
+     * so a submodel group that no host slot picked up is an error, never
+     * silently dropped or attached post-hoc. */
+    for (i = 0; i < ngroups; i++)
     {
-      NcmModel *submodel  = g_ptr_array_index (submodel_array, i);
-      NcmModelID mid      = ncm_model_main_model (submodel);
-      NcmModel *mainmodel = ncm_mset_peek (mset, mid);
+      gchar *ns = NULL;
+      gchar *twopoints;
+      NcmModel *submodel;
+      NcmModel *mainmodel;
 
-      g_assert_cmpint (mid, >=, 0);
+      if (!g_array_index (is_submodel, gboolean, i))
+        continue;
+
+      ns        = g_strdup (groups[i]);
+      twopoints = g_strrstr (ns, ":");
+
+      if (twopoints != NULL)
+        *twopoints = '\0';
+
+      submodel = NCM_MODEL (ncm_serialize_peek_by_name (ser, ns));
+      g_assert (NCM_IS_MODEL (submodel));
+      g_free (ns);
+
+      mainmodel = ncm_mset_peek (mset, ncm_model_main_model (submodel));
 
       if (mainmodel == NULL)
       {
         ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MAIN_MODEL_NOT_FOUND,
                                     "ncm_mset_load: cannot add submodel `%s', main model `%s' not found.",
                                     G_OBJECT_TYPE_NAME (submodel),
-                                    ncm_mset_get_ns_by_id (mid));
-
-        g_ptr_array_unref (submodel_array);
+                                    ncm_mset_get_ns_by_id (ncm_model_main_model (submodel)));
+        g_array_unref (is_submodel);
         g_key_file_unref (msetfile);
         g_strfreev (groups);
 
         return NULL;
       }
-      else
+
+      if (ncm_model_peek_submodel_by_mid (mainmodel, ncm_model_id (submodel)) != submodel)
       {
-        ncm_model_add_submodel (mainmodel, submodel);
-        _ncm_mset_set_pos_intern (mset, submodel, 0, error);
-        NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset_load: ");
+        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_KEY_FILE_INVALID,
+                                    "ncm_mset_load: submodel `%s' was not consumed by a construction-time "
+                                    "typed slot of `%s' -- submodels are construction-fixed and every "
+                                    "submodel type must have a slot declared on its main model.",
+                                    G_OBJECT_TYPE_NAME (submodel),
+                                    G_OBJECT_TYPE_NAME (mainmodel));
+        g_array_unref (is_submodel);
+        g_key_file_unref (msetfile);
+        g_strfreev (groups);
+
+        return NULL;
       }
     }
 
+    g_array_unref (is_submodel);
     g_key_file_unref (msetfile);
     g_strfreev (groups);
 
     if (valid_map)
       ncm_mset_prepare_fparam_map (mset);
-
-    g_ptr_array_unref (submodel_array);
 
     return mset;
   }

@@ -49,7 +49,7 @@ G_DECLARE_FINAL_TYPE (NcmMSetCatalog, ncm_mset_catalog, NCM, MSET_CATALOG, GObje
  * Catalog sync modes.
  *
  */
-typedef enum _NcmMSetCatalogSync
+typedef enum _NcmMSetCatalogSync /*< prefix=NCM_MSET_CATALOG_SYNC >*/
 {
   NCM_MSET_CATALOG_SYNC_DISABLE,
   NCM_MSET_CATALOG_SYNC_AUTO,
@@ -68,7 +68,7 @@ typedef enum _NcmMSetCatalogSync
  * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
  *
  */
-typedef enum _NcmMSetCatalogTrimType
+typedef enum _NcmMSetCatalogTrimType /*< prefix=NCM_MSET_CATALOG_TRIM_TYPE >*/
 {
   NCM_MSET_CATALOG_TRIM_TYPE_ESS    = 1 << 0,
   NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL = 1 << 1,
@@ -85,7 +85,7 @@ typedef enum _NcmMSetCatalogTrimType
  * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
  *
  */
-typedef enum _NcmMSetCatalogPostNormMethod
+typedef enum _NcmMSetCatalogPostNormMethod /*< prefix=NCM_MSET_CATALOG_POST_LNNORM_METHOD >*/
 {
   NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX = 0,
   NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS,
@@ -102,7 +102,7 @@ typedef enum _NcmMSetCatalogPostNormMethod
  * Method used to estimate the autocorrelation time $\tau$.
  *
  */
-typedef enum _NcmMSetCatalogTauMethod
+typedef enum _NcmMSetCatalogTauMethod /*< prefix=NCM_MSET_CATALOG_TAU_METHOD >*/
 {
   NCM_MSET_CATALOG_TAU_METHOD_ACOR = 0,
   NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL,

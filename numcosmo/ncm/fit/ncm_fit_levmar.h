@@ -47,7 +47,7 @@ G_DECLARE_FINAL_TYPE (NcmFitLevmar, ncm_fit_levmar, NCM, FIT_LEVMAR, NcmFit)
  * Levmar algorithms.
  *
  */
-typedef enum _NcmFitLevmarAlgos
+typedef enum _NcmFitLevmarAlgos /*< prefix=NCM_FIT_LEVMAR >*/
 {
   NCM_FIT_LEVMAR_DER = 0,
   NCM_FIT_LEVMAR_DIF,
