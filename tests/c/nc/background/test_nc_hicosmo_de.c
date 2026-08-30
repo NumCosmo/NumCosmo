@@ -172,7 +172,7 @@ test_nc_hicosmo_bbn_construct_fixed (void)
 {
   g_test_trap_subprocess ("/nc/hicosmo_de/bbn/construct_fixed/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*construction-only typed slot*");
+  g_test_trap_assert_stderr ("*construction-fixed*");
 }
 
 void
@@ -219,6 +219,12 @@ test_nc_hicosmo_de_cpl_new_full (void)
   g_assert_true (nc_hicosmo_peek_reion (NC_HICOSMO (cosmo)) == NULL);
   g_assert_true (nc_hicosmo_peek_prim (NC_HICOSMO (cosmo)) == NULL);
   nc_hicosmo_free (NC_HICOSMO (cosmo));
+
+  /* The plain constructor delegates to _new_full (NULL, NULL, NULL). */
+  cosmo = nc_hicosmo_de_cpl_new ();
+  g_assert_true (cosmo != NULL);
+  g_assert_true (NC_IS_BBN_PARTHENOPE (nc_hicosmo_peek_bbn (NC_HICOSMO (cosmo))));
+  nc_hicosmo_free (NC_HICOSMO (cosmo));
 }
 
 void
@@ -241,6 +247,12 @@ test_nc_hicosmo_de_jbp_new_full (void)
   g_assert_true (cosmo != NULL);
   g_assert_true (nc_hicosmo_peek_reion (NC_HICOSMO (cosmo)) == NULL);
   g_assert_true (nc_hicosmo_peek_prim (NC_HICOSMO (cosmo)) == NULL);
+  nc_hicosmo_free (NC_HICOSMO (cosmo));
+
+  /* The plain constructor delegates to _new_full (NULL, NULL, NULL). */
+  cosmo = nc_hicosmo_de_jbp_new ();
+  g_assert_true (cosmo != NULL);
+  g_assert_true (NC_IS_BBN_PARTHENOPE (nc_hicosmo_peek_bbn (NC_HICOSMO (cosmo))));
   nc_hicosmo_free (NC_HICOSMO (cosmo));
 }
 

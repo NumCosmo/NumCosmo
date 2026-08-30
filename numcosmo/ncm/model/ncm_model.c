@@ -109,6 +109,8 @@ typedef struct _NcmModelSubmodelSlot
   GType submodel_type;
 } NcmModelSubmodelSlot;
 
+/* LCOV_EXCL_START: a class's slot array is only freed on class
+ * destruction, which never happens for static types. */
 static void
 _ncm_model_submodel_slot_free (gpointer ptr)
 {
@@ -118,6 +120,8 @@ _ncm_model_submodel_slot_free (gpointer ptr)
   g_free (slot->symbol);
   g_slice_free (NcmModelSubmodelSlot, slot);
 }
+
+/* LCOV_EXCL_STOP */
 
 static void
 ncm_model_init (NcmModel *model)
@@ -599,6 +603,9 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
 
     g_value_take_variant (value, var);
   }
+
+  /* LCOV_EXCL_START: slot properties are write-only, GObject never routes a
+   * read here; kept so the dispatcher stays total over its property range. */
   else if (submodel_slot_id < model_class->submodel_slot_len)
   {
     NcmModelSubmodelSlot *slot = g_ptr_array_index (model_class->submodel_slot, submodel_slot_id);
@@ -607,6 +614,7 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
 
     g_value_set_object (value, submodel);
   }
+  /* LCOV_EXCL_STOP */
   else
   {
     g_assert_not_reached ();
@@ -3451,79 +3459,44 @@ ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
   NCM_MODEL_GET_CLASS (model)->add_submodel (model, submodel);
 }
 
-static gboolean
-_ncm_model_has_submodel_slot_for_type (NcmModelClass *model_class, GType submodel_type)
-{
-  guint i;
-
-  if (model_class->submodel_slot == NULL)
-    return FALSE;
-
-  for (i = 0; i < model_class->submodel_slot_len; i++)
-  {
-    NcmModelSubmodelSlot *slot = g_ptr_array_index (model_class->submodel_slot, i);
-
-    if ((slot != NULL) && g_type_is_a (submodel_type, slot->submodel_type))
-      return TRUE;
-  }
-
-  return FALSE;
-}
-
 static void
 _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
 {
   NcmModelPrivate * const self          = ncm_model_get_instance_private (model);
   NcmModelPrivate * const submodel_self = ncm_model_get_instance_private (submodel);
-  NcmModelClass *model_class            = NCM_MODEL_GET_CLASS (model);
   NcmModelClass *submodel_class         = NCM_MODEL_GET_CLASS (submodel);
   const NcmModelID main_model_id        = submodel_class->main_model_id;
   const gboolean is_submodel            = submodel_class->is_submodel;
   const NcmModelID submodel_mid         = ncm_model_id (submodel);
-  const gboolean is_slotted             = _ncm_model_has_submodel_slot_for_type (model_class, G_OBJECT_TYPE (submodel));
-  gpointer pos_ptr, orig_key;
 
   g_assert (is_submodel);
   g_assert_cmpint (main_model_id, ==, ncm_model_id (model));
 
-  if (self->constructed && is_slotted)
-    g_error ("_ncm_model_add_submodel: `%s' declares a construction-only typed slot for `%s' submodels -- "
-             "it must be provided as a construction property (e.g. `g_object_new()`/constructor kwarg), "
+  if (self->constructed)
+    g_error ("_ncm_model_add_submodel: submodels are construction-fixed -- `%s' must receive its `%s' "
+             "as a construction property (e.g. `g_object_new()`/constructor kwarg), "
              "not attached after construction.",
              G_OBJECT_TYPE_NAME (model), G_OBJECT_TYPE_NAME (submodel));
 
-  if (is_slotted)
   {
     NcmModel *current_host = g_weak_ref_get (&submodel_self->host_wr);
 
     if ((current_host != NULL) && (current_host != model))
     {
       g_object_unref (current_host);
-      g_error ("_ncm_model_add_submodel: `%s' is already attached to a `%s' host -- a submodel with a "
-               "construction-only typed slot can only ever belong to one host for its lifetime.",
+      g_error ("_ncm_model_add_submodel: `%s' is already attached to a `%s' host -- a submodel "
+               "can only ever belong to one host for its lifetime.",
                G_OBJECT_TYPE_NAME (submodel), G_OBJECT_TYPE_NAME (model));
     }
 
     g_clear_object (&current_host);
   }
 
-  if (g_hash_table_lookup_extended (self->submodel_mid_pos, GINT_TO_POINTER (submodel_mid), &orig_key, &pos_ptr))
-  {
-    const gint pos = GPOINTER_TO_INT (pos_ptr);
+  if (g_hash_table_contains (self->submodel_mid_pos, GINT_TO_POINTER (submodel_mid)))
+    g_error ("_ncm_model_add_submodel: `%s' already carries a `%s' submodel -- submodels are "
+             "construction-fixed and cannot be replaced.",
+             G_OBJECT_TYPE_NAME (model), G_OBJECT_TYPE_NAME (submodel));
 
-    g_assert_cmpint (pos, >, -1);
-    g_assert_cmpint (pos, <, self->submodel_array->len);
-    {
-      NcmModel *old_submodel                    = g_ptr_array_index (self->submodel_array, pos);
-      NcmModelPrivate * const old_submodel_self = ncm_model_get_instance_private (old_submodel);
-
-      g_weak_ref_set (&old_submodel_self->host_wr, NULL);
-
-      g_ptr_array_index (self->submodel_array, pos) = ncm_model_ref (submodel);
-      ncm_model_free (old_submodel);
-    }
-  }
-  else
   {
     gint pos = self->submodel_array->len;
 

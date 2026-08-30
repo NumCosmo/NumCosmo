@@ -4150,11 +4150,10 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
       g_free (ns);
     }
 
-    /* Pass 3: attach every pass-1 submodel that pass 2 did not consume as a
-     * construction-time typed-slot property -- a submodel type without a
-     * declared slot on its host is attached here, replacing any default the
-     * host built for itself on construction. Every current submodel type is
-     * slotted, so today this loop only verifies the injections. */
+    /* Pass 3: verify every pass-1 submodel was consumed by pass 2's
+     * construction-time slot injection -- submodels are construction-fixed,
+     * so a submodel group that no host slot picked up is an error, never
+     * silently dropped or attached post-hoc. */
     for (i = 0; i < ngroups; i++)
     {
       gchar *ns = NULL;
@@ -4190,14 +4189,20 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
         return NULL;
       }
 
-      if (ncm_model_peek_submodel_by_mid (mainmodel, ncm_model_id (submodel)) == submodel)
-        continue;
+      if (ncm_model_peek_submodel_by_mid (mainmodel, ncm_model_id (submodel)) != submodel)
+      {
+        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_KEY_FILE_INVALID,
+                                    "ncm_mset_load: submodel `%s' was not consumed by a construction-time "
+                                    "typed slot of `%s' -- submodels are construction-fixed and every "
+                                    "submodel type must have a slot declared on its main model.",
+                                    G_OBJECT_TYPE_NAME (submodel),
+                                    G_OBJECT_TYPE_NAME (mainmodel));
+        g_array_unref (is_submodel);
+        g_key_file_unref (msetfile);
+        g_strfreev (groups);
 
-      ncm_model_add_submodel (mainmodel, submodel);
-      _ncm_mset_set_pos_intern (mset, submodel, 0, error);
-      NCM_UTIL_ON_ERROR_FORWARD (error, g_array_unref (is_submodel);
-                                 g_key_file_unref (msetfile);
-                                 g_strfreev (groups), NULL, "ncm_mset_load: ");
+        return NULL;
+      }
     }
 
     g_array_unref (is_submodel);
