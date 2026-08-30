@@ -52,7 +52,7 @@ G_DECLARE_DERIVABLE_TYPE (NcHaloMassSummary, nc_halo_mass_summary, NC, HALO_MASS
  * \end{equation}
  *
  */
-typedef enum _NcHaloMassSummaryMassDef
+typedef enum _NcHaloMassSummaryMassDef /*< prefix=NC_HALO_MASS_SUMMARY_MASS_DEF >*/
 {
   NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN = 0,
   NC_HALO_MASS_SUMMARY_MASS_DEF_CRITICAL,

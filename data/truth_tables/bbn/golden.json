@@ -1,0 +1,41 @@
+{
+  "de_xcdm_yp_fixed": {
+    "Neff": 3.046,
+    "Omega_b0h2": 0.022369232127999995,
+    "Yp_4He": 0.24539510725404476,
+    "Yp_free": false,
+    "Yp_param": 0.24539510725404476,
+    "submodels": [],
+    "type": "NcHICosmoDEXcdm"
+  },
+  "de_xcdm_yp_free": {
+    "Neff": 3.046,
+    "Omega_b0h2": 0.022369232127999995,
+    "Yp_4He": 0.2521,
+    "Yp_free": true,
+    "Yp_param": 0.2521,
+    "submodels": [],
+    "type": "NcHICosmoDEXcdm"
+  },
+  "lcdm_yp": {
+    "Neff": null,
+    "Omega_b0h2": 0.022049999999999997,
+    "Yp_4He": 0.2478,
+    "Yp_free": false,
+    "Yp_param": 0.2478,
+    "submodels": [],
+    "type": "NcHICosmoLCDM"
+  },
+  "mset_de_xcdm": {
+    "Neff": 3.046,
+    "Omega_b0h2": 0.022369232127999995,
+    "Yp_4He": 0.24539510725404476,
+    "Yp_free": false,
+    "Yp_param": 0.24539510725404476,
+    "submodels": [
+      "NcHIReionCamb",
+      "NcHIPrimPowerLaw"
+    ],
+    "type": "NcHICosmoDEXcdm"
+  }
+}

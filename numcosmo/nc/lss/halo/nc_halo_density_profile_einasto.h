@@ -44,7 +44,7 @@ G_DECLARE_FINAL_TYPE (NcHaloDensityProfileEinasto, nc_halo_density_profile_einas
  *
  * Parameters for the Einasto halo density profile.
  */
-typedef enum _NcHaloDensityProfileEinastoParams
+typedef enum _NcHaloDensityProfileEinastoParams /*< prefix=NC_HALO_DENSITY_PROFILE_EINASTO >*/
 {
   NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA,
   /* < private > */

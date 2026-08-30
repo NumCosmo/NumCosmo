@@ -47,7 +47,7 @@ G_DECLARE_FINAL_TYPE (NcmDataset, ncm_dataset, NCM, DATASET, GObject)
  * Bootstrap types.
  *
  */
-typedef enum _NcmDatasetBStrapType
+typedef enum _NcmDatasetBStrapType /*< prefix=NCM_DATASET_BSTRAP >*/
 {
   NCM_DATASET_BSTRAP_DISABLE = 0,
   NCM_DATASET_BSTRAP_PARTIAL,

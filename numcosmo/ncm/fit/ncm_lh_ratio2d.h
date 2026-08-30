@@ -46,7 +46,7 @@ G_DECLARE_FINAL_TYPE (NcmLHRatio2d, ncm_lh_ratio2d, NCM, LH_RATIO2D, GObject)
  * Root finding methods used by #NcmLHRatio2d.
  *
  */
-typedef enum _NcmLHRatio2dRoot
+typedef enum _NcmLHRatio2dRoot /*< prefix=NCM_LH_RATIO2D_ROOT >*/
 {
   NCM_LH_RATIO2D_ROOT_BRACKET = 0,
   NCM_LH_RATIO2D_ROOT_NUMDIFF,

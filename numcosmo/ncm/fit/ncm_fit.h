@@ -55,7 +55,7 @@ G_DECLARE_DERIVABLE_TYPE (NcmFit, ncm_fit, NCM, FIT, GObject)
  * Defines the subclasse of NcmFit to be used.
  *
  */
-typedef enum _NcmFitType
+typedef enum _NcmFitType /*< prefix=NCM_FIT_TYPE >*/
 {
   NCM_FIT_TYPE_GSL_LS = 0,
   NCM_FIT_TYPE_GSL_MM,
@@ -114,7 +114,7 @@ typedef struct _NcmFitGrad
  * Defines the type of messages to be printed during the fit.
  *
  */
-typedef enum _NcmFitRunMsgs
+typedef enum _NcmFitRunMsgs /*< prefix=NCM_FIT_RUN_MSGS >*/
 {
   NCM_FIT_RUN_MSGS_NONE = 0,
   NCM_FIT_RUN_MSGS_SIMPLE,

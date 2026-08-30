@@ -54,7 +54,7 @@ typedef struct _NcHICosmoQGRW NcHICosmoQGRW;
  * Parameter of the Quantum Gravity Radiation W model.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_QGRW_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QGRW_SPARAMS,prefix=NC_HICOSMO_QGRW >*/
 {
   NC_HICOSMO_QGRW_H0 = 0,
   NC_HICOSMO_QGRW_OMEGA_R,

@@ -45,7 +45,7 @@ G_DECLARE_FINAL_TYPE (NcmLHRatio1d, ncm_lh_ratio1d, NCM, LH_RATIO1D, GObject)
  * Root finding methods used by #NcmLHRatio1d.
  *
  */
-typedef enum _NcmLHRatio1dRoot
+typedef enum _NcmLHRatio1dRoot /*< prefix=NCM_LH_RATIO1D_ROOT >*/
 {
   NCM_LH_RATIO1D_ROOT_BRACKET = 0,
   NCM_LH_RATIO1D_ROOT_NUMDIFF,

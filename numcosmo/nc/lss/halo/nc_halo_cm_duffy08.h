@@ -45,7 +45,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCMDuffy08, nc_halo_cm_duffy08, NC, HALO_CM_DUFFY08, 
  * Duffy et al. (2008) concentration-mass relation.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HALO_CM_DUFFY08_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HALO_CM_DUFFY08_SPARAMS,prefix=NC_HALO_CM_DUFFY08_LOG10M >*/
 {
   NC_HALO_CM_DUFFY08_LOG10M_DELTA,
   /* < private > */

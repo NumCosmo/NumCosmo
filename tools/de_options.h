@@ -80,7 +80,6 @@ struct _NcDEDataSimpleEntries
   gchar **Planck;
   gchar *PlanckFI;
   gboolean PlanckPriors;
-  gboolean BBN;
   gboolean BBN_Ob;
   gboolean snia_use_det;
   gchar **data_files;

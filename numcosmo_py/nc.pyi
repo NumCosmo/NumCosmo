@@ -9,6 +9,8 @@ from . import ncm as NumCosmoMath
 
 T = typing.TypeVar("T")
 
+BBN_DEFAULT_PARAMS_ABSTOL: float = 0.0
+BBN_PARAMETRIZED_DEFAULT_YP_4HE: float = 0.24
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P0: float = 3.19
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P1: int = 0
 CLUSTER_MASS_ASCASO_DEFAULT_MU_P2: int = 0
@@ -153,9 +155,8 @@ HICOSMO_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HICOSMO_DEFAULT_PARAMS_RELTOL: float = 0.0
 HICOSMO_DE_CPL_DEFAULT_W0: float = 1.0
 HICOSMO_DE_CPL_DEFAULT_W1: float = 0.0
-HICOSMO_DE_CPL_N: int = 9
+HICOSMO_DE_CPL_N: int = 8
 HICOSMO_DE_DEFAULT_ENNU: float = 3.046
-HICOSMO_DE_DEFAULT_HE_YP: float = 0.24
 HICOSMO_DE_DEFAULT_NU_G: float = 1.0
 HICOSMO_DE_DEFAULT_NU_MASS: float = 1e-05
 HICOSMO_DE_DEFAULT_NU_MU: float = 0.0
@@ -169,29 +170,7 @@ HICOSMO_DE_JBP_DEFAULT_W1: float = 0.0
 HICOSMO_DE_WSPLINE_DEFAULT_W0: float = 1.0
 HICOSMO_DE_WSPLINE_N: int = 5
 HICOSMO_DE_XCDM_DEFAULT_W0: float = 1.0
-HICOSMO_DE_XCDM_N: int = 8
-HICOSMO_GCG_DEFAULT_ENNU: float = 3.046
-HICOSMO_GCG_DEFAULT_GAMMA: float = 0.0
-HICOSMO_GCG_DEFAULT_HE_YP: float = 0.24
-HICOSMO_GCG_DEFAULT_NU_G: float = 1.0
-HICOSMO_GCG_DEFAULT_NU_MASS: float = 1e-05
-HICOSMO_GCG_DEFAULT_NU_MU: float = 0.0
-HICOSMO_GCG_DEFAULT_NU_T: float = 0.71611
-HICOSMO_GCG_DEFAULT_OMEGA_B: float = 0.0432
-HICOSMO_GCG_DEFAULT_OMEGA_C: float = 0.2568
-HICOSMO_GCG_DEFAULT_OMEGA_X: float = 0.7
-HICOSMO_GCG_DEFAULT_T_GAMMA0: float = 2.7245
-HICOSMO_IDEM2_DEFAULT_ENNU: float = 3.046
-HICOSMO_IDEM2_DEFAULT_GAMMA: float = 0.0
-HICOSMO_IDEM2_DEFAULT_HE_YP: float = 0.24
-HICOSMO_IDEM2_DEFAULT_NU_G: float = 1.0
-HICOSMO_IDEM2_DEFAULT_NU_MASS: float = 1e-05
-HICOSMO_IDEM2_DEFAULT_NU_MU: float = 0.0
-HICOSMO_IDEM2_DEFAULT_NU_T: float = 0.71611
-HICOSMO_IDEM2_DEFAULT_OMEGA_B: float = 0.0432
-HICOSMO_IDEM2_DEFAULT_OMEGA_C: float = 0.2568
-HICOSMO_IDEM2_DEFAULT_OMEGA_X: float = 0.7
-HICOSMO_IDEM2_DEFAULT_T_GAMMA0: float = 2.7245
+HICOSMO_DE_XCDM_N: int = 7
 HICOSMO_OMEGA_K0_LIMIT: float = 0.0
 HICOSMO_QCONST_DEFAULT_CD: float = 0.0
 HICOSMO_QCONST_DEFAULT_E: float = 1.0
@@ -238,6 +217,7 @@ HICOSMO_VEXP_DEFAULT_SIGMA_PHI: float = 0.4
 HICOSMO_VEXP_DEFAULT_X_B: float = 1e30
 HIPERT_BG_VAR_DEFAULT_ZF: float = 1000000000.0
 HIPERT_BOLTZMANN_BASE_SIZE: int = 8
+HIPERT_BOLTZMANN_REQUIRE_LMIN: int = 300
 HIPRIM_ATAN_DEFAULT_C2: float = 0.5
 HIPRIM_ATAN_DEFAULT_C3: float = 1.0
 HIPRIM_ATAN_DEFAULT_LAMBDA: float = 1.0
@@ -511,6 +491,257 @@ def wl_ellipticity_trace_kernel_prep_clear(
 ) -> None: ...
 def xcor_kernel_integrand_clear(integrand: XcorKernelIntegrand) -> None: ...
 
+class BBN(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBN(**properties)
+
+    Object NcBBN
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: NumCosmoMath.Model = ...
+    def __init__(
+        self,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def DH(self, cosmo: HICosmo) -> float: ...
+    def He3H(self, cosmo: HICosmo) -> float: ...
+    def Li7H(self, cosmo: HICosmo) -> float: ...
+    def Yp_4He(self, cosmo: HICosmo) -> float: ...
+    def check_domain(self, wb: float, DNeff: float) -> None: ...
+    @staticmethod
+    def clear(bbn: BBN) -> None: ...
+    def do_DH(self, cosmo: HICosmo) -> float: ...
+    def do_He3H(self, cosmo: HICosmo) -> float: ...
+    def do_Li7H(self, cosmo: HICosmo) -> float: ...
+    def do_Yp_4He(self, cosmo: HICosmo) -> float: ...
+    def do_get_domain(self) -> typing.Tuple[float, float, float, float]: ...
+    def free(self) -> None: ...
+    def get_domain(self) -> typing.Tuple[float, float, float, float]: ...
+    @staticmethod
+    def id() -> int: ...
+    def ref(self) -> BBN: ...
+
+class BBNClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBNClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
+    Yp_4He: typing.Callable[[BBN, HICosmo], float] = ...
+    get_domain: typing.Callable[[BBN], typing.Tuple[float, float, float, float]] = ...
+    DH: typing.Callable[[BBN, HICosmo], float] = ...
+    He3H: typing.Callable[[BBN, HICosmo], float] = ...
+    Li7H: typing.Callable[[BBN, HICosmo], float] = ...
+    padding: list[None] = ...
+
+class BBNParametrized(BBN):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBNParametrized(**properties)
+        new() -> NumCosmo.BBNParametrized
+
+    Object NcBBNParametrized
+
+    Properties from NcBBNParametrized:
+      Yp -> gdouble: Yp
+        Y_p
+      Yp-fit -> gboolean: Yp-fit
+        Y_p:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        Yp: float
+        Yp_fit: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(bbn_par: BBNParametrized) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> BBNParametrized: ...
+    def ref(self) -> BBNParametrized: ...
+
+class BBNParametrizedClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBNParametrizedClass()
+    """
+
+    parent_class: BBNClass = ...
+
+class BBNParthenope(BBN):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBNParthenope(**properties)
+        new() -> NumCosmo.BBNParthenope
+        new_from_table(table:NumCosmo.BBNParthenopeTable) -> NumCosmo.BBNParthenope
+
+    Object NcBBNParthenope
+
+    Properties from NcBBNParthenope:
+      table -> NcBBNParthenopeTable: table
+        PArthENoPE tabulation of Yp
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        table: BBNParthenopeTable
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: NumCosmoMath.Reparam
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        table: BBNParthenopeTable = ...,
+        reparam: NumCosmoMath.Reparam = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(bbn_pn: BBNParthenope) -> None: ...
+    def free(self) -> None: ...
+    def get_table(self) -> BBNParthenopeTable: ...
+    @classmethod
+    def new(cls) -> BBNParthenope: ...
+    @classmethod
+    def new_from_table(cls, table: BBNParthenopeTable) -> BBNParthenope: ...
+    def ref(self) -> BBNParthenope: ...
+    def set_table(self, table: BBNParthenopeTable) -> None: ...
+
+class BBNParthenopeClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        BBNParthenopeClass()
+    """
+
+    parent_class: BBNClass = ...
+
 class CBE(GObject.Object):
     r"""
     :Constructors:
@@ -712,7 +943,7 @@ class CBEPrecision(GObject.Object):
       tol-tau-eq -> gdouble: tol-tau-eq
         parameter controlling precision with which tau_eq (conformal time at radiation/matter equality) is found (units: Mpc)
       sBBN-file -> gchararray: sBBN-file
-        SBBN filename
+        SBBN filename (unused: NumCosmo always supplies YHe)
       recfast-z-initial -> gdouble: recfast-z-initial
         initial redshift in recfast
       recfast-Nz0 -> gint: recfast-Nz0
@@ -6057,6 +6288,133 @@ class DataHubbleClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
+class DataPlanckCommander(NumCosmoMath.Data):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckCommander(**properties)
+        new(lmin:int, lmax:int, nbin:int, delta_l:int, cl2x_xa:NumCosmoMath.Vector, cl2x_ya:NumCosmoMath.Vector, cl2x_y2a:NumCosmoMath.Vector, mu:NumCosmoMath.Vector, cov:NumCosmoMath.Matrix, mu_sigma:NumCosmoMath.Vector) -> NumCosmo.DataPlanckCommander
+        new_from_file(filename:str) -> NumCosmo.DataPlanckCommander
+
+    Object NcDataPlanckCommander
+
+    Properties from NcDataPlanckCommander:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+      nbin -> guint: nbin
+        Number of spline nodes per multipole
+      delta-l -> guint: delta-l
+        Covariance band-limit width
+      calib-name -> gchararray: calib-name
+        Free-calibration parameter name (NULL => none)
+      cl2x-xa -> NcmVector: cl2x-xa
+        Per-ell spline Dl abscissa (flattened nl*nbin)
+      cl2x-ya -> NcmVector: cl2x-ya
+        Per-ell spline x ordinate (flattened nl*nbin)
+      cl2x-y2a -> NcmVector: cl2x-y2a
+        Per-ell spline second derivatives (flattened nl*nbin)
+      mu -> NcmVector: mu
+        Gaussianized mean vector
+      cov -> NcmMatrix: cov
+        Covariance matrix (band-limited and inverted internally)
+      mu-sigma -> NcmVector: mu-sigma
+        Mean sigma_l (Dl) defining the offset normalization
+      clik-pi-compat -> gboolean: clik-pi-compat
+        Reproduce clik's single-precision pi in the Dl conversion (bit-identical to clik)
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        calib_name: str
+        cl2x_xa: NumCosmoMath.Vector
+        cl2x_y2a: NumCosmoMath.Vector
+        cl2x_ya: NumCosmoMath.Vector
+        clik_pi_compat: bool
+        cov: NumCosmoMath.Matrix
+        delta_l: int
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        lmin: int
+        mu: NumCosmoMath.Vector
+        mu_sigma: NumCosmoMath.Vector
+        nbin: int
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        calib_name: str = ...,
+        cl2x_xa: NumCosmoMath.Vector = ...,
+        cl2x_y2a: NumCosmoMath.Vector = ...,
+        cl2x_ya: NumCosmoMath.Vector = ...,
+        clik_pi_compat: bool = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        delta_l: int = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        lmin: int = ...,
+        mu: NumCosmoMath.Vector = ...,
+        mu_sigma: NumCosmoMath.Vector = ...,
+        nbin: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmin: int,
+        lmax: int,
+        nbin: int,
+        delta_l: int,
+        cl2x_xa: NumCosmoMath.Vector,
+        cl2x_ya: NumCosmoMath.Vector,
+        cl2x_y2a: NumCosmoMath.Vector,
+        mu: NumCosmoMath.Vector,
+        cov: NumCosmoMath.Matrix,
+        mu_sigma: NumCosmoMath.Vector,
+    ) -> DataPlanckCommander: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckCommander: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckCommanderClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckCommanderClass()
+    """
+
+    parent_class: NumCosmoMath.DataClass = ...
+
 class DataPlanckLKL(NumCosmoMath.Data):
     r"""
     :Constructors:
@@ -6144,6 +6502,550 @@ class DataPlanckLKLClass(GObject.GPointer):
     """
 
     parent_class: NumCosmoMath.DataClass = ...
+
+class DataPlanckLensing(NumCosmoMath.DataGauss):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckLensing(**properties)
+        new(lmax:int, nbins:int, has_calib:bool, hascl:list, bins:NumCosmoMath.Matrix, cor0:NumCosmoMath.Vector, cors:NumCosmoMath.Matrix=None) -> NumCosmo.DataPlanckLensing
+        new_from_file(filename:str) -> NumCosmo.DataPlanckLensing
+
+    Object NcDataPlanckLensing
+
+    Properties from NcDataPlanckLensing:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmax -> guint: lmax
+        Maximum multipole
+      nbins -> guint: nbins
+        Number of band-power bins
+      has-calib -> gboolean: has-calib
+        Whether a calibration parameter scales the CMB renormalization
+      calib-name -> gchararray: calib-name
+        Calibration parameter name
+      hascl -> GVariant: hascl
+        CMB spectra selection flags [TT,EE,BB,TE,TB,EB]
+      bins -> NcmMatrix: bins
+        Binning matrix (nbins x lmax+1)
+      cor0 -> NcmVector: cor0
+        Per-bin constant renormalization offset (nbins)
+      cors -> NcmMatrix: cors
+        Renormalization response matrix (nbins x nlt), or NULL
+
+    Properties from NcmDataGauss:
+      n-points -> guint: n-points
+        Data sample size
+      mean -> NcmVector: mean
+        Data mean
+      inv-cov -> NcmMatrix: inv-cov
+        Data covariance inverse
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        bins: NumCosmoMath.Matrix
+        calib_name: str
+        cor0: NumCosmoMath.Vector
+        cors: NumCosmoMath.Matrix
+        has_calib: bool
+        hascl: GLib.Variant
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        nbins: int
+        inv_cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        bins: NumCosmoMath.Matrix = ...,
+        calib_name: str = ...,
+        cor0: NumCosmoMath.Vector = ...,
+        cors: NumCosmoMath.Matrix = ...,
+        has_calib: bool = ...,
+        hascl: GLib.Variant = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        nbins: int = ...,
+        inv_cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmax: int,
+        nbins: int,
+        has_calib: bool,
+        hascl: typing.Sequence[int],
+        bins: NumCosmoMath.Matrix,
+        cor0: NumCosmoMath.Vector,
+        cors: typing.Optional[NumCosmoMath.Matrix] = None,
+    ) -> DataPlanckLensing: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckLensing: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckLensingClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckLensingClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussClass = ...
+
+class DataPlanckPlikLite(NumCosmoMath.DataGaussCov):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckPlikLite(**properties)
+        new_from_file(filename:str) -> NumCosmo.DataPlanckPlikLite
+
+    Object NcDataPlanckPlikLite
+
+    Properties from NcDataPlanckPlikLite:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      bin-lmin -> NcmVector: bin-lmin
+        Per-bin lower multipole (absolute ell)
+      bin-lmax -> NcmVector: bin-lmax
+        Per-bin upper multipole (absolute ell)
+      bin-weight -> NcmVector: bin-weight
+        Flattened per-bin averaging weights
+      spectrum-id -> NcmVector: spectrum-id
+        Per-bin spectrum tag (0=TT,1=EE,2=TE)
+      lmax -> guint: lmax
+        Maximum multipole required from the Boltzmann code
+      calib-name -> gchararray: calib-name
+        Nuisance parameter name for the absolute calibration
+
+    Properties from NcmDataGaussCov:
+      n-points -> guint: n-points
+        Data sample size
+      use-norma -> gboolean: use-norma
+        Use the likelihood normalization to calculate -2lnL
+      mean -> NcmVector: mean
+        Data mean
+      cov -> NcmMatrix: cov
+        Data covariance
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        bin_lmax: NumCosmoMath.Vector
+        bin_lmin: NumCosmoMath.Vector
+        bin_weight: NumCosmoMath.Vector
+        calib_name: str
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        spectrum_id: NumCosmoMath.Vector
+        cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        use_norma: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        bin_lmax: NumCosmoMath.Vector = ...,
+        bin_lmin: NumCosmoMath.Vector = ...,
+        bin_weight: NumCosmoMath.Vector = ...,
+        calib_name: str = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        spectrum_id: NumCosmoMath.Vector = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckPlikLite: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckPlikLiteClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckPlikLiteClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussCovClass = ...
+
+class DataPlanckSimall(NumCosmoMath.Data):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSimall(**properties)
+        new(lmin:int, lmax:int, step_ee:float, prob_ee:NumCosmoMath.Vector=None, step_bb:float, prob_bb:NumCosmoMath.Vector=None, step_te:float, prob_te:NumCosmoMath.Vector=None) -> NumCosmo.DataPlanckSimall
+        new_from_file(filename:str) -> NumCosmo.DataPlanckSimall
+
+    Object NcDataPlanckSimall
+
+    Properties from NcDataPlanckSimall:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+      calib-name -> gchararray: calib-name
+        Free-calibration parameter name (NULL => none)
+      step-ee -> gdouble: step-ee
+        EE table Dl step
+      prob-ee -> NcmVector: prob-ee
+        EE log-probability table (flattened nell*nsteps)
+      step-bb -> gdouble: step-bb
+        BB table Dl step
+      prob-bb -> NcmVector: prob-bb
+        BB log-probability table (flattened nell*nsteps)
+      step-te -> gdouble: step-te
+        TE table Dl step
+      prob-te -> NcmVector: prob-te
+        TE log-probability table (flattened nell*nsteps)
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        calib_name: str
+        hipert_boltzmann: HIPertBoltzmann
+        lmax: int
+        lmin: int
+        prob_bb: NumCosmoMath.Vector
+        prob_ee: NumCosmoMath.Vector
+        prob_te: NumCosmoMath.Vector
+        step_bb: float
+        step_ee: float
+        step_te: float
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        calib_name: str = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        lmax: int = ...,
+        lmin: int = ...,
+        prob_bb: NumCosmoMath.Vector = ...,
+        prob_ee: NumCosmoMath.Vector = ...,
+        prob_te: NumCosmoMath.Vector = ...,
+        step_bb: float = ...,
+        step_ee: float = ...,
+        step_te: float = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmin: int,
+        lmax: int,
+        step_ee: float,
+        prob_ee: typing.Optional[NumCosmoMath.Vector],
+        step_bb: float,
+        prob_bb: typing.Optional[NumCosmoMath.Vector],
+        step_te: float,
+        prob_te: typing.Optional[NumCosmoMath.Vector] = None,
+    ) -> DataPlanckSimall: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckSimall: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckSimallClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSimallClass()
+    """
+
+    parent_class: NumCosmoMath.DataClass = ...
+
+class DataPlanckSmica(NumCosmoMath.DataGauss):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSmica(**properties)
+        new(lmin:int, lmax:int, m:int, nbins:int, freqs:NumCosmoMath.Vector, a_cmb:NumCosmoMath.Vector, sz_color:NumCosmoMath.Vector, gcib_conv:NumCosmoMath.Vector, gibxsz_conv:NumCosmoMath.Vector, bin_lmin:list, bin_lmax:list, bin_weight:NumCosmoMath.Vector, quad_idx:list, tmpl_gcib:NumCosmoMath.Vector, tmpl_sz:NumCosmoMath.Vector, tmpl_ksz:NumCosmoMath.Vector, tmpl_gibxsz:NumCosmoMath.Vector, tmpl_dust:NumCosmoMath.Vector, tmpl_leak:NumCosmoMath.Vector, tmpl_sbpx:NumCosmoMath.Vector) -> NumCosmo.DataPlanckSmica
+        new_from_file(filename:str) -> NumCosmo.DataPlanckSmica
+
+    Object NcDataPlanckSmica
+
+    Properties from NcDataPlanckSmica:
+      hipert-boltzmann -> NcHIPertBoltzmann: hipert-boltzmann
+        Perturbations (Cls source)
+      lmin -> guint: lmin
+        Minimum multipole
+      lmax -> guint: lmax
+        Maximum multipole
+      m-channels -> guint: m-channels
+        Number of frequency channels
+      nbins -> guint: nbins
+        Number of bandpower bins
+      freqs -> NcmVector: freqs
+        Channel frequencies (GHz)
+      a-cmb -> NcmVector: a-cmb
+        CMB mixing vector
+      sz-color -> NcmVector: sz-color
+        tSZ colour corrections
+      gcib-conv -> NcmVector: gcib-conv
+        CIB muK->MJ/sr conversion factors
+      gibxsz-conv -> NcmVector: gibxsz-conv
+        CIBxtSZ conversion factors
+      bin-lmin -> GVariant: bin-lmin
+        Per-bin lower multipole offset
+      bin-lmax -> GVariant: bin-lmax
+        Per-bin upper multipole offset
+      bin-weight -> NcmVector: bin-weight
+        Flattened per-(bin,ell) binning weights
+      quad-idx -> GVariant: quad-idx
+        Flat indices of the masked R_q entries
+      tmpl-gcib -> NcmVector: tmpl-gcib
+        Clustered CIB template
+      tmpl-sz -> NcmVector: tmpl-sz
+        tSZ template (normalized at ell=3000)
+      tmpl-ksz -> NcmVector: tmpl-ksz
+        kSZ template (normalized at ell=3000)
+      tmpl-gibxsz -> NcmVector: tmpl-gibxsz
+        CIBxtSZ correlation template
+      tmpl-dust -> NcmVector: tmpl-dust
+        Galactic dust template
+      tmpl-leak -> NcmVector: tmpl-leak
+        Beam leakage template
+      tmpl-sbpx -> NcmVector: tmpl-sbpx
+        Subpixel effect template
+      field -> GVariant: field
+        Per-channel field type (0=T, 1=E); empty => all T
+      tmpl-e2e -> NcmVector: tmpl-e2e
+        EE end-to-end correlated-noise template (polarization)
+      ical-im -> GVariant: ical-im
+        icalTP calibrated-map indices (polarization)
+      ical-w -> NcmVector: ical-w
+        icalTP calibration mixing weights, length m*m*2 (polarization)
+      ical-other -> GVariant: ical-other
+        icalTP mixing other-map indices, length m*m*2 (polarization)
+
+    Properties from NcmDataGauss:
+      n-points -> guint: n-points
+        Data sample size
+      mean -> NcmVector: mean
+        Data mean
+      inv-cov -> NcmMatrix: inv-cov
+        Data covariance inverse
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        a_cmb: NumCosmoMath.Vector
+        bin_lmax: GLib.Variant
+        bin_lmin: GLib.Variant
+        bin_weight: NumCosmoMath.Vector
+        field: GLib.Variant
+        freqs: NumCosmoMath.Vector
+        gcib_conv: NumCosmoMath.Vector
+        gibxsz_conv: NumCosmoMath.Vector
+        hipert_boltzmann: HIPertBoltzmann
+        ical_im: GLib.Variant
+        ical_other: GLib.Variant
+        ical_w: NumCosmoMath.Vector
+        lmax: int
+        lmin: int
+        m_channels: int
+        nbins: int
+        quad_idx: GLib.Variant
+        sz_color: NumCosmoMath.Vector
+        tmpl_dust: NumCosmoMath.Vector
+        tmpl_e2e: NumCosmoMath.Vector
+        tmpl_gcib: NumCosmoMath.Vector
+        tmpl_gibxsz: NumCosmoMath.Vector
+        tmpl_ksz: NumCosmoMath.Vector
+        tmpl_leak: NumCosmoMath.Vector
+        tmpl_sbpx: NumCosmoMath.Vector
+        tmpl_sz: NumCosmoMath.Vector
+        inv_cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        a_cmb: NumCosmoMath.Vector = ...,
+        bin_lmax: GLib.Variant = ...,
+        bin_lmin: GLib.Variant = ...,
+        bin_weight: NumCosmoMath.Vector = ...,
+        field: GLib.Variant = ...,
+        freqs: NumCosmoMath.Vector = ...,
+        gcib_conv: NumCosmoMath.Vector = ...,
+        gibxsz_conv: NumCosmoMath.Vector = ...,
+        hipert_boltzmann: HIPertBoltzmann = ...,
+        ical_im: GLib.Variant = ...,
+        ical_other: GLib.Variant = ...,
+        ical_w: NumCosmoMath.Vector = ...,
+        lmax: int = ...,
+        lmin: int = ...,
+        m_channels: int = ...,
+        nbins: int = ...,
+        quad_idx: GLib.Variant = ...,
+        sz_color: NumCosmoMath.Vector = ...,
+        tmpl_dust: NumCosmoMath.Vector = ...,
+        tmpl_e2e: NumCosmoMath.Vector = ...,
+        tmpl_gcib: NumCosmoMath.Vector = ...,
+        tmpl_gibxsz: NumCosmoMath.Vector = ...,
+        tmpl_ksz: NumCosmoMath.Vector = ...,
+        tmpl_leak: NumCosmoMath.Vector = ...,
+        tmpl_sbpx: NumCosmoMath.Vector = ...,
+        tmpl_sz: NumCosmoMath.Vector = ...,
+        inv_cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new(
+        cls,
+        lmin: int,
+        lmax: int,
+        m: int,
+        nbins: int,
+        freqs: NumCosmoMath.Vector,
+        a_cmb: NumCosmoMath.Vector,
+        sz_color: NumCosmoMath.Vector,
+        gcib_conv: NumCosmoMath.Vector,
+        gibxsz_conv: NumCosmoMath.Vector,
+        bin_lmin: typing.Sequence[int],
+        bin_lmax: typing.Sequence[int],
+        bin_weight: NumCosmoMath.Vector,
+        quad_idx: typing.Sequence[int],
+        tmpl_gcib: NumCosmoMath.Vector,
+        tmpl_sz: NumCosmoMath.Vector,
+        tmpl_ksz: NumCosmoMath.Vector,
+        tmpl_gibxsz: NumCosmoMath.Vector,
+        tmpl_dust: NumCosmoMath.Vector,
+        tmpl_leak: NumCosmoMath.Vector,
+        tmpl_sbpx: NumCosmoMath.Vector,
+    ) -> DataPlanckSmica: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataPlanckSmica: ...
+    def peek_hipert_boltzmann(self) -> HIPertBoltzmann: ...
+    def set_hipert_boltzmann(self, pb: HIPertBoltzmann) -> None: ...
+
+class DataPlanckSmicaClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataPlanckSmicaClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussClass = ...
 
 class DataSNIACov(NumCosmoMath.DataGaussCov):
     r"""
@@ -9253,10 +10155,10 @@ class HICosmo(NumCosmoMath.Model):
     Object NcHICosmo
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -9292,22 +10194,25 @@ class HICosmo(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
     is_eternal: bool = ...
     prim: HIPrim = ...
     reion: HIReion = ...
+    bbn: BBN = ...
+    compat_Yp: float = ...
+    compat_Yp_fit: bool = ...
     T: int = ...
     s: int = ...
     Tmin: int = ...
     smin: int = ...
     def __init__(
         self,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -9421,6 +10326,7 @@ class HICosmo(NumCosmoMath.Model):
     def mqE2(self, z: float) -> float: ...
     def mqE2_max(self, z_max: float) -> typing.Tuple[float, float]: ...
     def nec(self, z: float) -> float: ...
+    def peek_bbn(self) -> BBN: ...
     def peek_prim(self) -> HIPrim: ...
     def peek_reion(self) -> HIReion: ...
     @staticmethod
@@ -9506,8 +10412,6 @@ class HICosmoDE(HICosmo):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -9536,8 +10440,6 @@ class HICosmoDE(HICosmo):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
@@ -9552,10 +10454,10 @@ class HICosmoDE(HICosmo):
         g_{\nu}:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -9598,8 +10500,6 @@ class HICosmoDE(HICosmo):
         Tnu: NumCosmoMath.Vector
         Tnu_fit: GLib.Variant
         Tnu_length: int
-        Yp: float
-        Yp_fit: bool
         gnu: NumCosmoMath.Vector
         gnu_fit: GLib.Variant
         gnu_length: int
@@ -9618,8 +10518,8 @@ class HICosmoDE(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -9642,8 +10542,6 @@ class HICosmoDE(HICosmo):
         Tnu: NumCosmoMath.Vector = ...,
         Tnu_fit: GLib.Variant = ...,
         Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
         gnu: NumCosmoMath.Vector = ...,
         gnu_fit: GLib.Variant = ...,
         gnu_length: int = ...,
@@ -9653,8 +10551,8 @@ class HICosmoDE(HICosmo):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -9668,8 +10566,6 @@ class HICosmoDE(HICosmo):
     def do_d2E2Omega_de_dz2(self, z: float) -> float: ...
     def do_dE2Omega_de_dz(self, z: float) -> float: ...
     def do_w_de(self, z: float) -> float: ...
-    @staticmethod
-    def new_add_bbn(lh: NumCosmoMath.Likelihood) -> None: ...
     def omega_x2omega_k(self) -> None: ...
     def set_wmap5_params(self) -> None: ...
     def w_de(self, z: float) -> float: ...
@@ -9697,7 +10593,6 @@ class HICosmoDECpl(HICosmoDE):
 
         HICosmoDECpl(**properties)
         new() -> NumCosmo.HICosmoDECpl
-        new_full(reion:NumCosmo.HIReion=None, prim:NumCosmo.HIPrim=None) -> NumCosmo.HICosmoDECpl
 
     Object NcHICosmoDECpl
 
@@ -9722,8 +10617,6 @@ class HICosmoDECpl(HICosmoDE):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -9752,8 +10645,6 @@ class HICosmoDECpl(HICosmoDE):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
@@ -9768,10 +10659,10 @@ class HICosmoDECpl(HICosmoDE):
         g_{\nu}:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -9818,8 +10709,6 @@ class HICosmoDECpl(HICosmoDE):
         Tnu: NumCosmoMath.Vector
         Tnu_fit: GLib.Variant
         Tnu_length: int
-        Yp: float
-        Yp_fit: bool
         gnu: NumCosmoMath.Vector
         gnu_fit: GLib.Variant
         gnu_length: int
@@ -9838,8 +10727,8 @@ class HICosmoDECpl(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -9865,8 +10754,6 @@ class HICosmoDECpl(HICosmoDE):
         Tnu: NumCosmoMath.Vector = ...,
         Tnu_fit: GLib.Variant = ...,
         Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
         gnu: NumCosmoMath.Vector = ...,
         gnu_fit: GLib.Variant = ...,
         gnu_length: int = ...,
@@ -9876,20 +10763,14 @@ class HICosmoDECpl(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
     def new(cls) -> HICosmoDECpl: ...
-    @classmethod
-    def new_full(
-        cls,
-        reion: typing.Optional[HIReion] = None,
-        prim: typing.Optional[HIPrim] = None,
-    ) -> HICosmoDECpl: ...
 
 class HICosmoDECplClass(GObject.GPointer):
     r"""
@@ -9910,7 +10791,6 @@ class HICosmoDEJbp(HICosmoDE):
 
         HICosmoDEJbp(**properties)
         new() -> NumCosmo.HICosmoDEJbp
-        new_full(reion:NumCosmo.HIReion=None, prim:NumCosmo.HIPrim=None) -> NumCosmo.HICosmoDEJbp
 
     Object NcHICosmoDEJbp
 
@@ -9935,8 +10815,6 @@ class HICosmoDEJbp(HICosmoDE):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -9965,8 +10843,6 @@ class HICosmoDEJbp(HICosmoDE):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
@@ -9981,10 +10857,10 @@ class HICosmoDEJbp(HICosmoDE):
         g_{\nu}:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -10031,8 +10907,6 @@ class HICosmoDEJbp(HICosmoDE):
         Tnu: NumCosmoMath.Vector
         Tnu_fit: GLib.Variant
         Tnu_length: int
-        Yp: float
-        Yp_fit: bool
         gnu: NumCosmoMath.Vector
         gnu_fit: GLib.Variant
         gnu_length: int
@@ -10051,8 +10925,8 @@ class HICosmoDEJbp(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -10078,8 +10952,6 @@ class HICosmoDEJbp(HICosmoDE):
         Tnu: NumCosmoMath.Vector = ...,
         Tnu_fit: GLib.Variant = ...,
         Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
         gnu: NumCosmoMath.Vector = ...,
         gnu_fit: GLib.Variant = ...,
         gnu_length: int = ...,
@@ -10089,20 +10961,14 @@ class HICosmoDEJbp(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
     def new(cls) -> HICosmoDEJbp: ...
-    @classmethod
-    def new_full(
-        cls,
-        reion: typing.Optional[HIReion] = None,
-        prim: typing.Optional[HIPrim] = None,
-    ) -> HICosmoDEJbp: ...
 
 class HICosmoDEJbpClass(GObject.GPointer):
     r"""
@@ -10251,8 +11117,6 @@ class HICosmoDEWSpline(HICosmoDE):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -10281,8 +11145,6 @@ class HICosmoDEWSpline(HICosmoDE):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
@@ -10297,10 +11159,10 @@ class HICosmoDEWSpline(HICosmoDE):
         g_{\nu}:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -10349,8 +11211,6 @@ class HICosmoDEWSpline(HICosmoDE):
         Tnu: NumCosmoMath.Vector
         Tnu_fit: GLib.Variant
         Tnu_length: int
-        Yp: float
-        Yp_fit: bool
         gnu: NumCosmoMath.Vector
         gnu_fit: GLib.Variant
         gnu_length: int
@@ -10369,8 +11229,8 @@ class HICosmoDEWSpline(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -10399,8 +11259,6 @@ class HICosmoDEWSpline(HICosmoDE):
         Tnu: NumCosmoMath.Vector = ...,
         Tnu_fit: GLib.Variant = ...,
         Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
         gnu: NumCosmoMath.Vector = ...,
         gnu_fit: GLib.Variant = ...,
         gnu_length: int = ...,
@@ -10410,8 +11268,8 @@ class HICosmoDEWSpline(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -10449,7 +11307,6 @@ class HICosmoDEXcdm(HICosmoDE):
 
         HICosmoDEXcdm(**properties)
         new() -> NumCosmo.HICosmoDEXcdm
-        new_full(reion:NumCosmo.HIReion=None, prim:NumCosmo.HIPrim=None) -> NumCosmo.HICosmoDEXcdm
 
     Object NcHICosmoDEXcdm
 
@@ -10470,8 +11327,6 @@ class HICosmoDEXcdm(HICosmoDE):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -10500,8 +11355,6 @@ class HICosmoDEXcdm(HICosmoDE):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
@@ -10516,10 +11369,10 @@ class HICosmoDEXcdm(HICosmoDE):
         g_{\nu}:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -10564,8 +11417,6 @@ class HICosmoDEXcdm(HICosmoDE):
         Tnu: NumCosmoMath.Vector
         Tnu_fit: GLib.Variant
         Tnu_length: int
-        Yp: float
-        Yp_fit: bool
         gnu: NumCosmoMath.Vector
         gnu_fit: GLib.Variant
         gnu_length: int
@@ -10584,8 +11435,8 @@ class HICosmoDEXcdm(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmoDE = ...
@@ -10609,8 +11460,6 @@ class HICosmoDEXcdm(HICosmoDE):
         Tnu: NumCosmoMath.Vector = ...,
         Tnu_fit: GLib.Variant = ...,
         Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
         gnu: NumCosmoMath.Vector = ...,
         gnu_fit: GLib.Variant = ...,
         gnu_length: int = ...,
@@ -10620,20 +11469,14 @@ class HICosmoDEXcdm(HICosmoDE):
         munu: NumCosmoMath.Vector = ...,
         munu_fit: GLib.Variant = ...,
         munu_length: int = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
     def new(cls) -> HICosmoDEXcdm: ...
-    @classmethod
-    def new_full(
-        cls,
-        reion: typing.Optional[HIReion] = None,
-        prim: typing.Optional[HIPrim] = None,
-    ) -> HICosmoDEXcdm: ...
 
 class HICosmoDEXcdmClass(GObject.GPointer):
     r"""
@@ -10674,594 +11517,6 @@ class HICosmoFuncZ(GObject.GPointer):
     f: typing.Callable[[HICosmo, float], float] = ...
     impl: HICosmoImpl = ...
 
-class HICosmoGCG(HICosmo):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCG(**properties)
-
-    Object NcHICosmoGCG
-
-    Properties from NcHICosmoGCG:
-      H0 -> gdouble: H0
-        H_0
-      Omegac -> gdouble: Omegac
-        \Omega_{c0}
-      Omegax -> gdouble: Omegax
-        \Omega_{x0}
-      Tgamma0 -> gdouble: Tgamma0
-        T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
-      ENnu -> gdouble: ENnu
-        N_\nu
-      Omegab -> gdouble: Omegab
-        \Omega_{b0}
-      gamma -> gdouble: gamma
-        \gamma
-      massnu -> NcmVector: massnu
-        m_\nu
-      Tnu -> NcmVector: Tnu
-        T_{\nu0}
-      munu -> NcmVector: munu
-        \mu_{\nu}
-      gnu -> NcmVector: gnu
-        g_{\nu}
-      massnu-length -> guint: massnu-length
-        m_\nu:length
-      Tnu-length -> guint: Tnu-length
-        T_{\nu0}:length
-      munu-length -> guint: munu-length
-        \mu_{\nu}:length
-      gnu-length -> guint: gnu-length
-        g_{\nu}:length
-      H0-fit -> gboolean: H0-fit
-        H_0:fit
-      Omegac-fit -> gboolean: Omegac-fit
-        \Omega_{c0}:fit
-      Omegax-fit -> gboolean: Omegax-fit
-        \Omega_{x0}:fit
-      Tgamma0-fit -> gboolean: Tgamma0-fit
-        T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
-      ENnu-fit -> gboolean: ENnu-fit
-        N_\nu:fit
-      Omegab-fit -> gboolean: Omegab-fit
-        \Omega_{b0}:fit
-      gamma-fit -> gboolean: gamma-fit
-        \gamma:fit
-      massnu-fit -> GVariant: massnu-fit
-        m_\nu:fit
-      Tnu-fit -> GVariant: Tnu-fit
-        T_{\nu0}:fit
-      munu-fit -> GVariant: munu-fit
-        \mu_{\nu}:fit
-      gnu-fit -> GVariant: gnu-fit
-        g_{\nu}:fit
-
-    Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
-
-    Properties from NcmModel:
-      name -> gchararray: name
-        Model's name
-      nick -> gchararray: nick
-        Model's nick
-      scalar-params-len -> guint: scalar-params-len
-        Number of scalar parameters
-      vector-params-len -> guint: vector-params-len
-        Number of vector parameters
-      implementation -> guint64: implementation
-        Bitwise specification of functions implementation
-      sparam-array -> NcmObjDictInt: sparam-array
-        NcmModel array of NcmSParam
-      params-types -> GArray: params-types
-        Parameters' types
-      reparam -> NcmReparam: reparam
-        Model reparametrization
-      submodel-array -> NcmObjArray: submodel-array
-        NcmModel array of submodels
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        ENnu: float
-        ENnu_fit: bool
-        H0: float
-        H0_fit: bool
-        Omegab: float
-        Omegab_fit: bool
-        Omegac: float
-        Omegac_fit: bool
-        Omegax: float
-        Omegax_fit: bool
-        Tgamma0: float
-        Tgamma0_fit: bool
-        Tnu: NumCosmoMath.Vector
-        Tnu_fit: GLib.Variant
-        Tnu_length: int
-        Yp: float
-        Yp_fit: bool
-        gamma: float
-        gamma_fit: bool
-        gnu: NumCosmoMath.Vector
-        gnu_fit: GLib.Variant
-        gnu_length: int
-        massnu: NumCosmoMath.Vector
-        massnu_fit: GLib.Variant
-        massnu_length: int
-        munu: NumCosmoMath.Vector
-        munu_fit: GLib.Variant
-        munu_length: int
-        implementation: int
-        name: str
-        nick: str
-        params_types: list[None]
-        reparam: NumCosmoMath.Reparam
-        scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjDictInt
-        submodel_array: NumCosmoMath.ObjArray
-        vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
-
-    props: Props = ...
-    parent_instance: HICosmo = ...
-    priv: HICosmoGCGPrivate = ...
-    def __init__(
-        self,
-        ENnu: float = ...,
-        ENnu_fit: bool = ...,
-        H0: float = ...,
-        H0_fit: bool = ...,
-        Omegab: float = ...,
-        Omegab_fit: bool = ...,
-        Omegac: float = ...,
-        Omegac_fit: bool = ...,
-        Omegax: float = ...,
-        Omegax_fit: bool = ...,
-        Tgamma0: float = ...,
-        Tgamma0_fit: bool = ...,
-        Tnu: NumCosmoMath.Vector = ...,
-        Tnu_fit: GLib.Variant = ...,
-        Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
-        gamma: float = ...,
-        gamma_fit: bool = ...,
-        gnu: NumCosmoMath.Vector = ...,
-        gnu_fit: GLib.Variant = ...,
-        gnu_length: int = ...,
-        massnu: NumCosmoMath.Vector = ...,
-        massnu_fit: GLib.Variant = ...,
-        massnu_length: int = ...,
-        munu: NumCosmoMath.Vector = ...,
-        munu_fit: GLib.Variant = ...,
-        munu_length: int = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjDictInt = ...,
-        submodel_array: NumCosmoMath.ObjArray = ...,
-    ) -> None: ...
-    def cmb_params(self) -> None: ...
-    def omega_x2omega_k(self) -> None: ...
-
-class HICosmoGCGClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCGClass()
-    """
-
-    parent_class: HICosmoClass = ...
-
-class HICosmoGCGPrivate(GObject.GPointer): ...
-
-class HICosmoGCGReparamCMB(NumCosmoMath.Reparam):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCGReparamCMB(**properties)
-        new(length:int) -> NumCosmo.HICosmoGCGReparamCMB
-
-    Object NcHICosmoGCGReparamCMB
-
-    Properties from NcmReparam:
-      length -> guint: length
-        System's length
-      params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
-      compat-type -> gchararray: compat-type
-        Compatible type
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        compat_type: str
-        length: int
-        params_desc: NumCosmoMath.ObjDictInt
-
-    props: Props = ...
-    parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(
-        self,
-        compat_type: str = ...,
-        length: int = ...,
-        params_desc: NumCosmoMath.ObjDictInt = ...,
-    ) -> None: ...
-    @classmethod
-    def new(cls, length: int) -> HICosmoGCGReparamCMB: ...
-
-class HICosmoGCGReparamCMBClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCGReparamCMBClass()
-    """
-
-    parent_class: NumCosmoMath.ReparamClass = ...
-
-class HICosmoGCGReparamOk(NumCosmoMath.Reparam):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCGReparamOk(**properties)
-        new(length:int) -> NumCosmo.HICosmoGCGReparamOk
-
-    Object NcHICosmoGCGReparamOk
-
-    Properties from NcmReparam:
-      length -> guint: length
-        System's length
-      params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
-      compat-type -> gchararray: compat-type
-        Compatible type
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        compat_type: str
-        length: int
-        params_desc: NumCosmoMath.ObjDictInt
-
-    props: Props = ...
-    parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(
-        self,
-        compat_type: str = ...,
-        length: int = ...,
-        params_desc: NumCosmoMath.ObjDictInt = ...,
-    ) -> None: ...
-    @classmethod
-    def new(cls, length: int) -> HICosmoGCGReparamOk: ...
-
-class HICosmoGCGReparamOkClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoGCGReparamOkClass()
-    """
-
-    parent_class: NumCosmoMath.ReparamClass = ...
-
-class HICosmoIDEM2(HICosmo):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2(**properties)
-
-    Object NcHICosmoIDEM2
-
-    Properties from NcHICosmoIDEM2:
-      H0 -> gdouble: H0
-        H_0
-      Omegac -> gdouble: Omegac
-        \Omega_{c0}
-      Omegax -> gdouble: Omegax
-        \Omega_{x0}
-      Tgamma0 -> gdouble: Tgamma0
-        T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
-      ENnu -> gdouble: ENnu
-        N_\nu
-      Omegab -> gdouble: Omegab
-        \Omega_{b0}
-      gamma -> gdouble: gamma
-        \gamma
-      massnu -> NcmVector: massnu
-        m_\nu
-      Tnu -> NcmVector: Tnu
-        T_{\nu0}
-      munu -> NcmVector: munu
-        \mu_{\nu}
-      gnu -> NcmVector: gnu
-        g_{\nu}
-      massnu-length -> guint: massnu-length
-        m_\nu:length
-      Tnu-length -> guint: Tnu-length
-        T_{\nu0}:length
-      munu-length -> guint: munu-length
-        \mu_{\nu}:length
-      gnu-length -> guint: gnu-length
-        g_{\nu}:length
-      H0-fit -> gboolean: H0-fit
-        H_0:fit
-      Omegac-fit -> gboolean: Omegac-fit
-        \Omega_{c0}:fit
-      Omegax-fit -> gboolean: Omegax-fit
-        \Omega_{x0}:fit
-      Tgamma0-fit -> gboolean: Tgamma0-fit
-        T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
-      ENnu-fit -> gboolean: ENnu-fit
-        N_\nu:fit
-      Omegab-fit -> gboolean: Omegab-fit
-        \Omega_{b0}:fit
-      gamma-fit -> gboolean: gamma-fit
-        \gamma:fit
-      massnu-fit -> GVariant: massnu-fit
-        m_\nu:fit
-      Tnu-fit -> GVariant: Tnu-fit
-        T_{\nu0}:fit
-      munu-fit -> GVariant: munu-fit
-        \mu_{\nu}:fit
-      gnu-fit -> GVariant: gnu-fit
-        g_{\nu}:fit
-
-    Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
-
-    Properties from NcmModel:
-      name -> gchararray: name
-        Model's name
-      nick -> gchararray: nick
-        Model's nick
-      scalar-params-len -> guint: scalar-params-len
-        Number of scalar parameters
-      vector-params-len -> guint: vector-params-len
-        Number of vector parameters
-      implementation -> guint64: implementation
-        Bitwise specification of functions implementation
-      sparam-array -> NcmObjDictInt: sparam-array
-        NcmModel array of NcmSParam
-      params-types -> GArray: params-types
-        Parameters' types
-      reparam -> NcmReparam: reparam
-        Model reparametrization
-      submodel-array -> NcmObjArray: submodel-array
-        NcmModel array of submodels
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        ENnu: float
-        ENnu_fit: bool
-        H0: float
-        H0_fit: bool
-        Omegab: float
-        Omegab_fit: bool
-        Omegac: float
-        Omegac_fit: bool
-        Omegax: float
-        Omegax_fit: bool
-        Tgamma0: float
-        Tgamma0_fit: bool
-        Tnu: NumCosmoMath.Vector
-        Tnu_fit: GLib.Variant
-        Tnu_length: int
-        Yp: float
-        Yp_fit: bool
-        gamma: float
-        gamma_fit: bool
-        gnu: NumCosmoMath.Vector
-        gnu_fit: GLib.Variant
-        gnu_length: int
-        massnu: NumCosmoMath.Vector
-        massnu_fit: GLib.Variant
-        massnu_length: int
-        munu: NumCosmoMath.Vector
-        munu_fit: GLib.Variant
-        munu_length: int
-        implementation: int
-        name: str
-        nick: str
-        params_types: list[None]
-        reparam: NumCosmoMath.Reparam
-        scalar_params_len: int
-        sparam_array: NumCosmoMath.ObjDictInt
-        submodel_array: NumCosmoMath.ObjArray
-        vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
-
-    props: Props = ...
-    parent_instance: HICosmo = ...
-    priv: HICosmoIDEM2Private = ...
-    def __init__(
-        self,
-        ENnu: float = ...,
-        ENnu_fit: bool = ...,
-        H0: float = ...,
-        H0_fit: bool = ...,
-        Omegab: float = ...,
-        Omegab_fit: bool = ...,
-        Omegac: float = ...,
-        Omegac_fit: bool = ...,
-        Omegax: float = ...,
-        Omegax_fit: bool = ...,
-        Tgamma0: float = ...,
-        Tgamma0_fit: bool = ...,
-        Tnu: NumCosmoMath.Vector = ...,
-        Tnu_fit: GLib.Variant = ...,
-        Tnu_length: int = ...,
-        Yp: float = ...,
-        Yp_fit: bool = ...,
-        gamma: float = ...,
-        gamma_fit: bool = ...,
-        gnu: NumCosmoMath.Vector = ...,
-        gnu_fit: GLib.Variant = ...,
-        gnu_length: int = ...,
-        massnu: NumCosmoMath.Vector = ...,
-        massnu_fit: GLib.Variant = ...,
-        massnu_length: int = ...,
-        munu: NumCosmoMath.Vector = ...,
-        munu_fit: GLib.Variant = ...,
-        munu_length: int = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
-        reparam: NumCosmoMath.Reparam = ...,
-        sparam_array: NumCosmoMath.ObjDictInt = ...,
-        submodel_array: NumCosmoMath.ObjArray = ...,
-    ) -> None: ...
-    def cmb_params(self) -> None: ...
-    def omega_x2omega_k(self) -> None: ...
-
-class HICosmoIDEM2Class(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2Class()
-    """
-
-    parent_class: HICosmoClass = ...
-
-class HICosmoIDEM2Private(GObject.GPointer): ...
-
-class HICosmoIDEM2ReparamCMB(NumCosmoMath.Reparam):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2ReparamCMB(**properties)
-        new(length:int) -> NumCosmo.HICosmoIDEM2ReparamCMB
-
-    Object NcHICosmoIDEM2ReparamCMB
-
-    Properties from NcmReparam:
-      length -> guint: length
-        System's length
-      params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
-      compat-type -> gchararray: compat-type
-        Compatible type
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        compat_type: str
-        length: int
-        params_desc: NumCosmoMath.ObjDictInt
-
-    props: Props = ...
-    parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(
-        self,
-        compat_type: str = ...,
-        length: int = ...,
-        params_desc: NumCosmoMath.ObjDictInt = ...,
-    ) -> None: ...
-    @classmethod
-    def new(cls, length: int) -> HICosmoIDEM2ReparamCMB: ...
-
-class HICosmoIDEM2ReparamCMBClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2ReparamCMBClass()
-    """
-
-    parent_class: NumCosmoMath.ReparamClass = ...
-
-class HICosmoIDEM2ReparamOk(NumCosmoMath.Reparam):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2ReparamOk(**properties)
-        new(length:int) -> NumCosmo.HICosmoIDEM2ReparamOk
-
-    Object NcHICosmoIDEM2ReparamOk
-
-    Properties from NcmReparam:
-      length -> guint: length
-        System's length
-      params-desc -> NcmObjDictInt: params-desc
-        News parameter descriptions
-      compat-type -> gchararray: compat-type
-        Compatible type
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        compat_type: str
-        length: int
-        params_desc: NumCosmoMath.ObjDictInt
-
-    props: Props = ...
-    parent_instance: NumCosmoMath.Reparam = ...
-    def __init__(
-        self,
-        compat_type: str = ...,
-        length: int = ...,
-        params_desc: NumCosmoMath.ObjDictInt = ...,
-    ) -> None: ...
-    @classmethod
-    def new(cls, length: int) -> HICosmoIDEM2ReparamOk: ...
-
-class HICosmoIDEM2ReparamOkClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        HICosmoIDEM2ReparamOkClass()
-    """
-
-    parent_class: NumCosmoMath.ReparamClass = ...
-
 class HICosmoLCDM(HICosmo):
     r"""
     :Constructors:
@@ -11270,7 +11525,6 @@ class HICosmoLCDM(HICosmo):
 
         HICosmoLCDM(**properties)
         new() -> NumCosmo.HICosmoLCDM
-        new_full(reion:NumCosmo.HIReion=None, prim:NumCosmo.HIPrim=None) -> NumCosmo.HICosmoLCDM
 
     Object NcHICosmoLCDM
 
@@ -11283,8 +11537,6 @@ class HICosmoLCDM(HICosmo):
         \Omega_{x0}
       Tgamma0 -> gdouble: Tgamma0
         T_{\gamma0}
-      Yp -> gdouble: Yp
-        Y_p
       ENnu -> gdouble: ENnu
         N_\nu
       Omegab -> gdouble: Omegab
@@ -11297,18 +11549,16 @@ class HICosmoLCDM(HICosmo):
         \Omega_{x0}:fit
       Tgamma0-fit -> gboolean: Tgamma0-fit
         T_{\gamma0}:fit
-      Yp-fit -> gboolean: Yp-fit
-        Y_p:fit
       ENnu-fit -> gboolean: ENnu-fit
         N_\nu:fit
       Omegab-fit -> gboolean: Omegab-fit
         \Omega_{b0}:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -11347,8 +11597,6 @@ class HICosmoLCDM(HICosmo):
         Omegax_fit: bool
         Tgamma0: float
         Tgamma0_fit: bool
-        Yp: float
-        Yp_fit: bool
         implementation: int
         name: str
         nick: str
@@ -11358,8 +11606,8 @@ class HICosmoLCDM(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11379,20 +11627,12 @@ class HICosmoLCDM(HICosmo):
         Tgamma0_fit: bool = ...,
         Yp: float = ...,
         Yp_fit: bool = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     @classmethod
     def new(cls) -> HICosmoLCDM: ...
-    @classmethod
-    def new_full(
-        cls,
-        reion: typing.Optional[HIReion] = None,
-        prim: typing.Optional[HIPrim] = None,
-    ) -> HICosmoLCDM: ...
 
 class HICosmoLCDMClass(GObject.GPointer):
     r"""
@@ -11443,10 +11683,10 @@ class HICosmoQConst(HICosmo):
         z_\star:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -11494,8 +11734,8 @@ class HICosmoQConst(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11513,8 +11753,8 @@ class HICosmoQConst(HICosmo):
         q_fit: bool = ...,
         zs: float = ...,
         zs_fit: bool = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11567,10 +11807,10 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
         x_b:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -11616,8 +11856,8 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11636,8 +11876,8 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
         w_fit: bool = ...,
         xb: float = ...,
         xb_fit: bool = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11686,10 +11926,10 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
         x_b:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -11733,8 +11973,8 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11749,8 +11989,8 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
         w_fit: bool = ...,
         xb: float = ...,
         xb_fit: bool = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11813,10 +12053,10 @@ class HICosmoQLinear(HICosmo):
         z_\star:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -11866,8 +12106,8 @@ class HICosmoQLinear(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -11887,8 +12127,8 @@ class HICosmoQLinear(HICosmo):
         qp_fit: bool = ...,
         zs: float = ...,
         zs_fit: bool = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -11953,10 +12193,10 @@ class HICosmoQRBF(HICosmo):
         c_i:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -12007,8 +12247,8 @@ class HICosmoQRBF(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -12030,8 +12270,8 @@ class HICosmoQRBF(HICosmo):
         xi_fit: GLib.Variant = ...,
         xi_length: int = ...,
         zf: float = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -12149,10 +12389,10 @@ class HICosmoQSpline(HICosmo):
         q:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -12200,8 +12440,8 @@ class HICosmoQSpline(HICosmo):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -12225,8 +12465,8 @@ class HICosmoQSpline(HICosmo):
         qparam_length: int = ...,
         spline: NumCosmoMath.Spline = ...,
         zf: float = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -12412,10 +12652,10 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         \beta_\mathrm{em}:fit
 
     Properties from NcHICosmo:
-      reion -> NcHIReion: reion
-        reion
-      prim -> NcHIPrim: prim
-        prim
+      Yp -> gdouble: Yp
+        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+      Yp-fit -> gboolean: Yp-fit
+        Deprecated: whether Yp was free, now selects NcBBNParametrized
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -12472,8 +12712,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        prim: HIPrim
-        reion: HIReion
+        Yp: float
+        Yp_fit: bool
 
     props: Props = ...
     parent_instance: HICosmo = ...
@@ -12500,8 +12740,8 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
         sigmaphi_fit: bool = ...,
         xb: float = ...,
         xb_fit: bool = ...,
-        prim: HIPrim = ...,
-        reion: HIReion = ...,
+        Yp: float = ...,
+        Yp_fit: bool = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -13007,6 +13247,7 @@ class HIPertBoltzmann(HIPert):
     def prepare(self, cosmo: HICosmo) -> None: ...
     def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
     def ref(self) -> HIPertBoltzmann: ...
+    def require(self, tCls: DataCMBDataType, lmax: int) -> None: ...
     def set_BB_lmax(self, lmax: int) -> None: ...
     def set_EB_lmax(self, lmax: int) -> None: ...
     def set_EE_lmax(self, lmax: int) -> None: ...
@@ -15759,12 +16000,10 @@ class HIReionCamb(HIReion):
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
     def calc_z_from_tau(self, cosmo: HICosmo, tau: float) -> float: ...
-    @staticmethod
-    def error_quark() -> int: ...
     @classmethod
     def new(cls) -> HIReionCamb: ...
-    def set_z_from_tau(self, tau: float) -> None: ...
-    def z_to_tau(self) -> None: ...
+    def set_z_from_tau(self, cosmo: HICosmo, tau: float) -> None: ...
+    def z_to_tau(self, cosmo: HICosmo) -> None: ...
 
 class HIReionCambClass(GObject.GPointer):
     r"""
@@ -15784,9 +16023,13 @@ class HIReionCambReparamTau(NumCosmoMath.Reparam):
     ::
 
         HIReionCambReparamTau(**properties)
-        new(length:int) -> NumCosmo.HIReionCambReparamTau
+        new(length:int, cosmo:NumCosmo.HICosmo) -> NumCosmo.HIReionCambReparamTau
 
     Object NcHIReionCambReparamTau
+
+    Properties from NcHIReionCambReparamTau:
+      cosmo -> NcHICosmo: cosmo
+        Cosmological model used to transform tau <=> z
 
     Properties from NcmReparam:
       length -> guint: length
@@ -15801,20 +16044,23 @@ class HIReionCambReparamTau(NumCosmoMath.Reparam):
     """
 
     class Props:
+        cosmo: HICosmo
         compat_type: str
         length: int
         params_desc: NumCosmoMath.ObjDictInt
 
     props: Props = ...
     parent_instance: NumCosmoMath.Reparam = ...
+    ctrl: NumCosmoMath.ModelCtrl = ...
     def __init__(
         self,
+        cosmo: HICosmo = ...,
         compat_type: str = ...,
         length: int = ...,
         params_desc: NumCosmoMath.ObjDictInt = ...,
     ) -> None: ...
     @classmethod
-    def new(cls, length: int) -> HIReionCambReparamTau: ...
+    def new(cls, length: int, cosmo: HICosmo) -> HIReionCambReparamTau: ...
 
 class HIReionCambReparamTauClass(GObject.GPointer):
     r"""
@@ -17203,8 +17449,6 @@ class HaloDensityProfile(NumCosmoMath.Model):
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
-      mass-summary -> NcHaloMassSummary: mass-summary
-        mass-summary
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -17243,7 +17487,6 @@ class HaloDensityProfile(NumCosmoMath.Model):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        mass_summary: HaloMassSummary
 
     props: Props = ...
     parent_instance: NumCosmoMath.Model = ...
@@ -17251,7 +17494,6 @@ class HaloDensityProfile(NumCosmoMath.Model):
         self,
         lnXf: float = ...,
         lnXi: float = ...,
-        mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -17367,8 +17609,6 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
-      mass-summary -> NcHaloMassSummary: mass-summary
-        mass-summary
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -17412,7 +17652,6 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        mass_summary: HaloMassSummary
 
     props: Props = ...
     parent_instance: HaloDensityProfile = ...
@@ -17427,7 +17666,6 @@ class HaloDensityProfileDK14(HaloDensityProfile):
         rt_fit: bool = ...,
         lnXf: float = ...,
         lnXi: float = ...,
-        mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -17471,8 +17709,6 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
-      mass-summary -> NcHaloMassSummary: mass-summary
-        mass-summary
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -17513,7 +17749,6 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        mass_summary: HaloMassSummary
 
     props: Props = ...
     def __init__(
@@ -17522,7 +17757,6 @@ class HaloDensityProfileEinasto(HaloDensityProfile):
         alpha_fit: bool = ...,
         lnXf: float = ...,
         lnXi: float = ...,
-        mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -17560,8 +17794,6 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
-      mass-summary -> NcHaloMassSummary: mass-summary
-        mass-summary
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -17600,14 +17832,12 @@ class HaloDensityProfileHernquist(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        mass_summary: HaloMassSummary
 
     props: Props = ...
     def __init__(
         self,
         lnXf: float = ...,
         lnXi: float = ...,
-        mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -17645,8 +17875,6 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         Computation interval lower limit
       lnXf -> gdouble: lnXf
         Computation interval upper limit
-      mass-summary -> NcHaloMassSummary: mass-summary
-        mass-summary
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -17685,14 +17913,12 @@ class HaloDensityProfileNFW(HaloDensityProfile):
         sparam_array: NumCosmoMath.ObjDictInt
         submodel_array: NumCosmoMath.ObjArray
         vector_params_len: int
-        mass_summary: HaloMassSummary
 
     props: Props = ...
     def __init__(
         self,
         lnXf: float = ...,
         lnXi: float = ...,
-        mass_summary: HaloMassSummary = ...,
         reltol: float = ...,
         reparam: NumCosmoMath.Reparam = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
@@ -25661,6 +25887,54 @@ class RecombSeagerOpt(GObject.GFlags):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class BBNImpl(GObject.GEnum):
+    DH: BBNImpl = ...
+    GET_DOMAIN: BBNImpl = ...
+    HE3H: BBNImpl = ...
+    LI7H: BBNImpl = ...
+    YP_4HE: BBNImpl = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class BBNParametrizedSParams(GObject.GEnum):
+    YP_4HE: BBNParametrizedSParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class BBNParthenopeTable(GObject.GEnum):
+    LEGACY: BBNParthenopeTable = ...
+    PLANCK2017: BBNParthenopeTable = ...
+    PLANCK2017_MARCUCCI: BBNParthenopeTable = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class ClusterMassAscasoSParams(GObject.GEnum):
     MU_P0: ClusterMassAscasoSParams = ...
     MU_P1: ClusterMassAscasoSParams = ...
@@ -26280,6 +26554,11 @@ class GalaxyShapePopGaussParams(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class GalaxyWLObsCatalogId(GObject.GEnum):
+    HSC_PDR1_HWL16A_002: GalaxyWLObsCatalogId = ...
+    HSC_PDR1_HWL16A_007: GalaxyWLObsCatalogId = ...
+    HSC_PDR1_HWL16A_060: GalaxyWLObsCatalogId = ...
+    HSC_PDR1_HWL16A_064: GalaxyWLObsCatalogId = ...
+    HSC_PDR1_HWL16A_094: GalaxyWLObsCatalogId = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -26342,7 +26621,6 @@ class HICosmoDEJbpSParams(GObject.GEnum):
 class HICosmoDESParams(GObject.GEnum):
     ENNU: HICosmoDESParams = ...
     H0: HICosmoDESParams = ...
-    HE_YP: HICosmoDESParams = ...
     OMEGA_B: HICosmoDESParams = ...
     OMEGA_C: HICosmoDESParams = ...
     OMEGA_X: HICosmoDESParams = ...
@@ -26392,82 +26670,6 @@ class HICosmoDEWSplineVParams(GObject.GEnum):
 
 class HICosmoDEXCDMSParams(GObject.GEnum):
     W: HICosmoDEXCDMSParams = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class HICosmoGCGSParams(GObject.GEnum):
-    ENNU: HICosmoGCGSParams = ...
-    GAMMA: HICosmoGCGSParams = ...
-    H0: HICosmoGCGSParams = ...
-    HE_YP: HICosmoGCGSParams = ...
-    OMEGA_B: HICosmoGCGSParams = ...
-    OMEGA_C: HICosmoGCGSParams = ...
-    OMEGA_X: HICosmoGCGSParams = ...
-    T_GAMMA0: HICosmoGCGSParams = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class HICosmoGCGVParams(GObject.GEnum):
-    G: HICosmoGCGVParams = ...
-    M: HICosmoGCGVParams = ...
-    MU: HICosmoGCGVParams = ...
-    T: HICosmoGCGVParams = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class HICosmoIDEM2SParams(GObject.GEnum):
-    ENNU: HICosmoIDEM2SParams = ...
-    GAMMA: HICosmoIDEM2SParams = ...
-    H0: HICosmoIDEM2SParams = ...
-    HE_YP: HICosmoIDEM2SParams = ...
-    OMEGA_B: HICosmoIDEM2SParams = ...
-    OMEGA_C: HICosmoIDEM2SParams = ...
-    OMEGA_X: HICosmoIDEM2SParams = ...
-    T_GAMMA0: HICosmoIDEM2SParams = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class HICosmoIDEM2VParams(GObject.GEnum):
-    G: HICosmoIDEM2VParams = ...
-    M: HICosmoIDEM2VParams = ...
-    MU: HICosmoIDEM2VParams = ...
-    T: HICosmoIDEM2VParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -26996,20 +27198,6 @@ class HIPrimTwoFluidsSParams(GObject.GEnum):
     LNW: HIPrimTwoFluidsSParams = ...
     N_T: HIPrimTwoFluidsSParams = ...
     T_SA_RATIO: HIPrimTwoFluidsSParams = ...
-    _generate_next_value_: function = ...
-    _hashable_values_: list = ...
-    _member_map_: dict = ...
-    _member_names_: list = ...
-    _member_type_: type = ...
-    _new_member_: builtin_function_or_method = ...
-    _unhashable_values_: list = ...
-    _unhashable_values_map_: dict = ...
-    _use_args_: bool = ...
-    _value2member_map_: dict = ...
-    _value_repr_: wrapper_descriptor = ...
-
-class HIReionCambError(GObject.GEnum):
-    HOST: HIReionCambError = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

@@ -46,7 +46,7 @@ G_DECLARE_FINAL_TYPE (NcmFitGSLMMS, ncm_fit_gsl_mms, NCM, FIT_GSL_MMS, NcmFit)
  * GSL Multidimensional minimization algorithms without derivatives
  *
  */
-typedef enum _NcmFitGSLMMSAlgos
+typedef enum _NcmFitGSLMMSAlgos /*< prefix=NCM_FIT_GSL_MMS >*/
 {
   NCM_FIT_GSL_MMS_NMSIMPLEX2 = 0,
   NCM_FIT_GSL_MMS_NMSIMPLEX,

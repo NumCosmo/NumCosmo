@@ -44,7 +44,7 @@ G_DECLARE_FINAL_TYPE (NcGalaxyRedshiftObsSelGauss, nc_galaxy_redshift_obs_sel_ga
  * Gaussian population photo-z observable model parameters.
  *
  */
-typedef enum /*< enum,underscore_name=NC_GALAXY_REDSHIFT_OBS_SEL_GAUSS_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_GALAXY_REDSHIFT_OBS_SEL_GAUSS_SPARAMS,prefix=NC_GALAXY_REDSHIFT_OBS_SEL_GAUSS >*/
 {
   NC_GALAXY_REDSHIFT_OBS_SEL_GAUSS_SIGMA0 = 0,
   /* < private > */

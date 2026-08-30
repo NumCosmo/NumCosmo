@@ -51,7 +51,7 @@ G_DECLARE_FINAL_TYPE (NcmSphereMap, ncm_sphere_map, NCM, SPHERE_MAP, GObject)
  * Sphere map pixel ordering.
  *
  */
-typedef enum _NcmSphereMapOrder
+typedef enum _NcmSphereMapOrder /*< prefix=NCM_SPHERE_MAP_ORDER >*/
 {
   NCM_SPHERE_MAP_ORDER_NEST,
   NCM_SPHERE_MAP_ORDER_RING,
@@ -68,7 +68,7 @@ typedef enum _NcmSphereMapOrder
  * Sphere map coordinate system.
  *
  */
-typedef enum _NcmSphereMapCoordSys
+typedef enum _NcmSphereMapCoordSys /*< prefix=NCM_SPHERE_MAP_COORD_SYS >*/
 {
   NCM_SPHERE_MAP_COORD_SYS_GALACTIC  = 'G',
   NCM_SPHERE_MAP_COORD_SYS_ECLIPTIC  = 'E',

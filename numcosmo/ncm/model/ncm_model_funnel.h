@@ -45,7 +45,7 @@ G_DECLARE_FINAL_TYPE (NcmModelFunnel, ncm_model_funnel, NCM, MODEL_FUNNEL, NcmMo
  * Funnel model parameters.
  *
  */
-typedef enum _NcmModelFunnelSParams
+typedef enum _NcmModelFunnelSParams /*< prefix=NCM_MODEL_FUNNEL >*/
 {
   NCM_MODEL_FUNNEL_NU,
   /* < private > */
@@ -59,7 +59,7 @@ typedef enum _NcmModelFunnelSParams
  * Funnel model parameters.
  *
  */
-typedef enum _NcmModelFunnelVParams
+typedef enum _NcmModelFunnelVParams /*< prefix=NCM_MODEL_FUNNEL >*/
 {
   NCM_MODEL_FUNNEL_X,
   /* < private > */

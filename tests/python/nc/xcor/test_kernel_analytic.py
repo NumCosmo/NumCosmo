@@ -39,7 +39,11 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from scipy.integrate import quad
-from scipy.special import erf, spherical_jn  # pylint: disable=no-name-in-module
+from scipy.special import (  # pylint: disable=no-name-in-module
+    erf,
+    erfc,
+    spherical_jn,
+)
 from scipy.stats import t as student_t
 
 from numcosmo_py import Nc, Ncm
@@ -930,16 +934,35 @@ def test_power_exp_is_skewed(cosmology: Cosmology) -> None:
     assert peak < mean
 
 
+def _tophat_smooth_unnormalized(chi: np.ndarray) -> np.ndarray:
+    """erf(tu) - erf(tl), written so neither tail cancels.
+
+    Both error functions tend to the same limit in either tail, so the naive
+    difference is accurate only to the machine epsilon of *one*, not of their
+    difference -- 1e-8 relative at 6 sigma. That is above the tolerance the
+    Levin expansion asks of the window, so the reference has to be written the
+    way the library writes it.
+    """
+    s2 = np.sqrt(2.0) * TS_SIGMA
+    tu = (TS_UPPER - chi) / s2
+    tl = (TS_LOWER - chi) / s2
+
+    return np.where(
+        (tu >= 0.0) & (tl >= 0.0),
+        erfc(tl) - erfc(tu),
+        np.where((tu <= 0.0) & (tl <= 0.0), erfc(-tu) - erfc(-tl), erf(tu) - erf(tl)),
+    )
+
+
 def test_tophat_smooth_matches_its_closed_form(cosmology: Cosmology) -> None:
     """A difference of error functions, normalized in closed form."""
     kernel = _tophat_smooth(cosmology)
     chi_min, chi_max = kernel.get_support()
     chi = np.linspace(chi_min, chi_max, 401)
-    s2 = np.sqrt(2.0) * TS_SIGMA
 
-    unnormalized = erf((TS_UPPER - chi) / s2) - erf((TS_LOWER - chi) / s2)
+    unnormalized = _tophat_smooth_unnormalized(chi)
     norm = quad(
-        lambda c: erf((TS_UPPER - c) / s2) - erf((TS_LOWER - c) / s2),
+        lambda c: _tophat_smooth_unnormalized(np.array(c)),
         chi_min,
         chi_max,
         limit=600,

@@ -148,7 +148,7 @@ struct _NcHIPertGravTScalarInfo
  * Elements present in the scalar equations.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_SELEM >*/
+typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_SELEM,prefix=NC_HIPERT_GRAV_SELEM >*/
 {
   NC_HIPERT_GRAV_SELEM_PHI = G_MININT,
   NC_HIPERT_GRAV_SELEM_DSIGMA,
@@ -172,7 +172,7 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_SELEM >*/
  * Gravitation gauges.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_GAUGE >*/
+typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_GAUGE,prefix=NC_HIPERT_GRAV_GAUGE >*/
 {
   NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS,
   NC_HIPERT_GRAV_GAUGE_NEWTONIAN,

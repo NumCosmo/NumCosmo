@@ -65,7 +65,7 @@ G_DECLARE_FINAL_TYPE (NcmPowspecAnalytic, ncm_powspec_analytic, NCM, POWSPEC_ANA
  * so that the effect of the tail's slope can be measured rather than assumed.
  *
  */
-typedef enum _NcmPowspecAnalyticShape
+typedef enum _NcmPowspecAnalyticShape /*< prefix=NCM_POWSPEC_ANALYTIC_SHAPE >*/
 {
   NCM_POWSPEC_ANALYTIC_SHAPE_POWER_LAW = 0,
   NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
@@ -97,7 +97,7 @@ typedef enum _NcmPowspecAnalyticShape
  * function, and is the contrast case.
  *
  */
-typedef enum _NcmPowspecAnalyticGrowth
+typedef enum _NcmPowspecAnalyticGrowth /*< prefix=NCM_POWSPEC_ANALYTIC_GROWTH >*/
 {
   NCM_POWSPEC_ANALYTIC_GROWTH_NONE = 0,
   NCM_POWSPEC_ANALYTIC_GROWTH_LCDM,

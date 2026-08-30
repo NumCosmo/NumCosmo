@@ -105,7 +105,7 @@ struct _NcHIPertITwoFluidsEOM
  * Enumeration of variables used in the two-fluid model.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_VARS >*/
+typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_VARS,prefix=NC_HIPERT_ITWO_FLUIDS_VARS >*/
 {
   NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R = 0,
   NC_HIPERT_ITWO_FLUIDS_VARS_S_R,
@@ -158,7 +158,7 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_VARS >*/
  * These observables cover adiabatic, isocurvature, and component-specific quantities,
  * and are suitable for correlation and power spectrum evaluations.
  */
-typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_OBS >*/
+typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_OBS,prefix=NC_HIPERT_ITWO_FLUIDS_OBS >*/
 {
   NC_HIPERT_ITWO_FLUIDS_OBS_ZETA,
   NC_HIPERT_ITWO_FLUIDS_OBS_ZETA_DIFF,
@@ -190,7 +190,7 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_OBS >*/
  * commute with each other. As a result, selecting @NC_HIPERT_ITWO_FLUIDS_OBS_MODE_BOTH
  * computes the sum of the individual contributions of both modes.
  */
-typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_OBS_MODE >*/
+typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_OBS_MODE,prefix=NC_HIPERT_ITWO_FLUIDS_OBS_MODE >*/
 {
   NC_HIPERT_ITWO_FLUIDS_OBS_MODE_ONE,
   NC_HIPERT_ITWO_FLUIDS_OBS_MODE_TWO,

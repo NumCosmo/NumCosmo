@@ -60,7 +60,7 @@ typedef struct _NcHICosmoQSplineContPrior NcHICosmoQSplineContPrior;
  * Scalar parameters for Q-spline cosmological model.
  * This parametrization uses splines for the deceleration parameter q(z).
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_SPARAMS,prefix=NC_HICOSMO_QSPLINE >*/
 {
   NC_HICOSMO_QSPLINE_H0 = 0,
   NC_HICOSMO_QSPLINE_OMEGA_T,
@@ -76,7 +76,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_SPARAMS >*/
  * Vector parameters for Q-spline cosmological model. The deceleration parameter spline
  * knots define the evolution of $q(z)$.
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_VPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QSPLINE_VPARAMS,prefix=NC_HICOSMO_QSPLINE >*/
 {
   NC_HICOSMO_QSPLINE_Q,
   /* < private > */

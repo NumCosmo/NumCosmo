@@ -103,7 +103,7 @@ typedef gdouble (*NcmModelVFunc2) (NcmModel *model, const guint n, const gdouble
  * Error codes returned by the #NcmModel class.
  *
  */
-typedef enum _NcmModelError
+typedef enum _NcmModelError /*< prefix=NCM_MODEL_ERROR >*/
 {
   NCM_MODEL_ERROR_PARAM_NAME_NOT_FOUND,
   NCM_MODEL_ERROR_PARAM_ID_OUT_OF_RANGE,

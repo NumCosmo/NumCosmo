@@ -53,7 +53,7 @@ G_DECLARE_DERIVABLE_TYPE (NcMultiplicityFunc, nc_multiplicity_func, NC, MULTIPLI
  * \end{equation}
  *
  */
-typedef enum _NcMultiplicityFuncMassDef
+typedef enum _NcMultiplicityFuncMassDef /*< prefix=NC_MULTIPLICITY_FUNC_MASS_DEF >*/
 {
   NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN = 0,
   NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL,

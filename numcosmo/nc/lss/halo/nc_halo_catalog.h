@@ -48,7 +48,7 @@ G_DECLARE_FINAL_TYPE (NcHaloCatalog, nc_halo_catalog, NC, HALO_CATALOG, NcmCatal
  * is expressed through the id and parent-id columns.
  *
  */
-typedef enum _NcHaloCatalogKind
+typedef enum _NcHaloCatalogKind /*< prefix=NC_HALO_CATALOG_KIND >*/
 {
   NC_HALO_CATALOG_KIND_HALO = 0,
   NC_HALO_CATALOG_KIND_CLUSTER,

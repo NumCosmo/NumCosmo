@@ -70,7 +70,7 @@ struct _NcHICosmoVexpClass
  *
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_SPARAMS >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_SPARAMS,prefix=NC_HICOSMO_VEXP >*/
 {
   NC_HICOSMO_VEXP_H0 = 0,
   NC_HICOSMO_VEXP_OMEGA_C,
@@ -94,7 +94,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_SPARAMS >*/
  * Electromagnetic coupling enumerator.
  *
  */
-typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_EM_COUPLING >*/
+typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_EM_COUPLING,prefix=NC_HICOSMO_VEXP_EM_COUPLING >*/
 {
   NC_HICOSMO_VEXP_EM_COUPLING_NONE = 0,
   NC_HICOSMO_VEXP_EM_COUPLING_GAUSS,

@@ -3970,7 +3970,23 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
         g_string_append (obj_ser, "})");
 
         {
-          GObject *obj = ncm_serialize_from_string (ser, obj_ser->str);
+          GObject *obj;
+
+          if (ncm_serialize_contain_name (ser, ns))
+          {
+            ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MODEL_ALREADY_SET,
+                                        "ncm_mset_load: submodel `%s' appears more than once in `%s'.",
+                                        ns, filename);
+            g_free (ns);
+            g_string_free (obj_ser, TRUE);
+            g_array_unref (is_submodel);
+            g_key_file_unref (msetfile);
+            g_strfreev (groups);
+
+            return NULL;
+          }
+
+          obj = ncm_serialize_from_string (ser, obj_ser->str);
 
           g_assert (NCM_IS_MODEL (obj));
           ncm_serialize_set (ser, obj, ns, FALSE);
@@ -4132,6 +4148,56 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser, GError **error)
       }
       g_string_free (obj_ser, TRUE);
       g_free (ns);
+    }
+
+    /* Pass 3: attach every pass-1 submodel that pass 2 did not consume as a
+     * construction-time typed-slot property -- a submodel type without a
+     * declared slot on its host (e.g. #NcBBN, deliberately replaceable
+     * post-construction) is attached here, replacing any default the host
+     * built for itself on construction. */
+    for (i = 0; i < ngroups; i++)
+    {
+      gchar *ns = NULL;
+      gchar *twopoints;
+      NcmModel *submodel;
+      NcmModel *mainmodel;
+
+      if (!g_array_index (is_submodel, gboolean, i))
+        continue;
+
+      ns        = g_strdup (groups[i]);
+      twopoints = g_strrstr (ns, ":");
+
+      if (twopoints != NULL)
+        *twopoints = '\0';
+
+      submodel = NCM_MODEL (ncm_serialize_peek_by_name (ser, ns));
+      g_assert (NCM_IS_MODEL (submodel));
+      g_free (ns);
+
+      mainmodel = ncm_mset_peek (mset, ncm_model_main_model (submodel));
+
+      if (mainmodel == NULL)
+      {
+        ncm_util_set_or_call_error (error, NCM_MSET_ERROR, NCM_MSET_ERROR_MAIN_MODEL_NOT_FOUND,
+                                    "ncm_mset_load: cannot add submodel `%s', main model `%s' not found.",
+                                    G_OBJECT_TYPE_NAME (submodel),
+                                    ncm_mset_get_ns_by_id (ncm_model_main_model (submodel)));
+        g_array_unref (is_submodel);
+        g_key_file_unref (msetfile);
+        g_strfreev (groups);
+
+        return NULL;
+      }
+
+      if (ncm_model_peek_submodel_by_mid (mainmodel, ncm_model_id (submodel)) == submodel)
+        continue;
+
+      ncm_model_add_submodel (mainmodel, submodel);
+      _ncm_mset_set_pos_intern (mset, submodel, 0, error);
+      NCM_UTIL_ON_ERROR_FORWARD (error, g_array_unref (is_submodel);
+                                 g_key_file_unref (msetfile);
+                                 g_strfreev (groups), NULL, "ncm_mset_load: ");
     }
 
     g_array_unref (is_submodel);
