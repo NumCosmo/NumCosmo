@@ -326,6 +326,7 @@ ncm_headers_internal = files(
     'ncm/stats/ncm_stats_dist_private.h',
     'ncm/stats/ncm_stats_dist_vkde_private.h',
     'nc/perturbations/nc_hipert_private.h',
+    'nc/data/nc_data_download_priv.h',
     'nc/xcor/nc_xcor_priv.h',
 )
 
@@ -583,6 +584,7 @@ nc_sources = files(
     'nc/data/nc_data_hubble_bao.c',
     'nc/data/nc_data_planck_lkl.c',
     'nc/data/nc_data_snia.c',
+    'nc/data/nc_data_download.c',
     'nc/data/nc_data_snia_cov.c',
     'nc/data/nc_data_xcor.c',
     'nc/lss/galaxy/nc_galaxy_wl_obs.c',
