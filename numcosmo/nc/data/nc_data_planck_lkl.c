@@ -44,6 +44,7 @@
 #include "nc/cmb/nc_planck_fi.h"
 #include "nc/cmb/nc_planck_fi_cor_tt.h"
 #include "nc/data/nc_data_planck_lkl.h"
+#include "nc/data/nc_data_download_priv.h"
 
 #include <gio/gio.h>
 #include <glib/gstdio.h>
@@ -987,133 +988,33 @@ nc_data_planck_lkl_set_hipert_boltzmann (NcDataPlanckLKL *plik, NcHIPertBoltzman
  *
  */
 
-/*
- * The download writes into a directory several processes may share -- a test
- * suite under pytest-xdist is the case that found this. Without a lock they
- * race: two wgets write the same output path at once, tar unpacks a tarball
- * another process is still writing, and whichever loses sees a half-extracted
- * tree and dies in _nc_data_planck_lkl_set_filename(). A lock directory is used
- * rather than a lock file because mkdir() is atomic on every filesystem this
- * runs on, including NFS.
- *
- * The holder re-checks for the data after acquiring: by then another process
- * may have finished the whole download, which is the common case when N workers
- * start together.
- */
-static gboolean
-_nc_data_planck_lkl_lock_acquire (const gchar *dir, gchar **lockdir)
-{
-  const gint max_wait_s = 900;
-  gint waited           = 0;
-
-  *lockdir = g_build_filename (dir, ".numcosmo-planck-baseline.lock", NULL);
-
-  while (g_mkdir (*lockdir, 0755) != 0)
-  {
-    if (errno != EEXIST)
-    {
-      g_free (*lockdir);
-      *lockdir = NULL;
-
-      return FALSE;
-    }
-
-    if (waited >= max_wait_s)
-      /* A previous run died holding it; take it over rather than wait forever. */
-      break;
-
-    g_usleep (G_USEC_PER_SEC);
-    waited++;
-
-    if (_nc_data_planck_lkl_file_exists (_nc_data_planck_lkl_files[0]) != NULL)
-    {
-      g_free (*lockdir);
-      *lockdir = NULL;
-
-      return FALSE; /* someone else finished it; nothing to do */
-    }
-  }
-
-  return TRUE;
-}
-
-static void
-_nc_data_planck_lkl_lock_release (gchar *lockdir)
-{
-  if (lockdir != NULL)
-  {
-    g_rmdir (lockdir);
-    g_free (lockdir);
-  }
-}
-
 void
 nc_data_planck_lkl_download_baseline (const gchar *dir)
 {
   const gchar *file    = "COM_Likelihood_Data-baseline_R3.00.tar.gz";
   const gchar *url_str = "https://github.com/NumCosmo/NumCosmo/releases/download/datafile-release-v1.0.0/COM_Likelihood_Data-baseline_R3.00.tar.gz";
+  gchar *marker        = ncm_cfg_get_fullpath (_nc_data_planck_lkl_files[0]);
+  gchar *full_filename = g_build_filename (dir, file, NULL);
   gchar *lockdir       = NULL;
-  gchar *tmp_basename;
-  gchar *full_filename;
-  GError *error = NULL;
+  GError *error        = NULL;
 
-  if (!_nc_data_planck_lkl_lock_acquire (dir, &lockdir))
+  /* The lock is on the extracted data, not on the tarball: two processes must
+   * not unpack into the same tree at once, and once one of them has finished
+   * the others have nothing to do. */
+  if (!_nc_data_download_lock (marker, 900, &lockdir))
+  {
+    g_free (marker);
+    g_free (full_filename);
+
     return;
-
-  /* Another process may have completed the download while we waited. */
-  {
-    gchar *have = _nc_data_planck_lkl_file_exists (_nc_data_planck_lkl_files[0]);
-
-    if (have != NULL)
-    {
-      g_free (have);
-      _nc_data_planck_lkl_lock_release (lockdir);
-
-      return;
-    }
   }
 
-  /* Download under a per-process name: an interrupted transfer then leaves a
-   * partial file that is never mistaken for the real tarball. */
-  tmp_basename  = g_strdup_printf ("%s.%d.part", file, (gint) getpid ());
-  full_filename = g_build_filename (dir, tmp_basename, NULL);
-
-  ncm_message ("# Downloading file [%s]...\n", file);
-
-  {
-    gchar *cmd[] = {"wget", "--tries=3", "--timeout=30", "-O", full_filename, (gchar *) url_str, NULL };
-
-    gint status = 0;
-
-    /* g_spawn_sync() returning TRUE only says the child was started. Without
-     * reading its exit status a 404, a DNS failure or a full disk all looked
-     * like a successful download, and the first sign of trouble was a "cannot
-     * find file" abort much later, with nothing to connect it to. */
-    if (!g_spawn_sync (dir, cmd, NULL,
-                       G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
-                       NULL, NULL, NULL, NULL, &status, &error))
-    {
-      g_unlink (full_filename);
-      _nc_data_planck_lkl_lock_release (lockdir);
-      g_error ("nc_data_planck_lkl_download_baseline: cannot run wget for %s. Error: %s. "
-               "Please download the file manually from %s and extract it to %s.",
-               file, error->message, url_str, dir);
-    }
-
-    if (status != 0)
-    {
-      g_unlink (full_filename);
-      _nc_data_planck_lkl_lock_release (lockdir);
-      g_error ("nc_data_planck_lkl_download_baseline: wget failed (status %d) for %s. "
-               "Please download the file manually from %s and extract it to %s.",
-               status, file, url_str, dir);
-    }
-  }
+  _nc_data_download_file (url_str, full_filename, "Planck baseline data");
 
   ncm_message ("# Extracting file [%s]...\n", file);
 
   {
-    gchar *cmd[] = { "tar", "xzf", tmp_basename, NULL };
+    gchar *cmd[] = { "tar", "xzf", (gchar *) file, NULL };
     gint status  = 0;
 
     if (!g_spawn_sync (dir, cmd, NULL,
@@ -1121,7 +1022,7 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
                        NULL, NULL, NULL, NULL, &status, &error))
     {
       g_unlink (full_filename);
-      _nc_data_planck_lkl_lock_release (lockdir);
+      _nc_data_download_unlock (lockdir);
       g_error ("nc_data_planck_lkl_download_baseline: cannot run tar for %s. Error: %s",
                file, error->message);
     }
@@ -1129,7 +1030,7 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
     if (status != 0)
     {
       g_unlink (full_filename);
-      _nc_data_planck_lkl_lock_release (lockdir);
+      _nc_data_download_unlock (lockdir);
       g_error ("nc_data_planck_lkl_download_baseline: tar failed (status %d) extracting %s. "
                "The download may be truncated; remove %s and retry.",
                status, file, dir);
@@ -1138,8 +1039,8 @@ nc_data_planck_lkl_download_baseline (const gchar *dir)
 
   g_unlink (full_filename);
   g_free (full_filename);
-  g_free (tmp_basename);
-  _nc_data_planck_lkl_lock_release (lockdir);
+  g_free (marker);
+  _nc_data_download_unlock (lockdir);
 
   ncm_message ("# Baseline data successfully downloaded and extracted.\n");
 
