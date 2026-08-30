@@ -10159,9 +10159,9 @@ class HICosmo(NumCosmoMath.Model):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -10215,8 +10215,6 @@ class HICosmo(NumCosmoMath.Model):
     prim: HIPrim = ...
     reion: HIReion = ...
     bbn: BBN = ...
-    compat_Yp: float = ...
-    compat_Yp_fit: bool = ...
     T: int = ...
     s: int = ...
     Tmin: int = ...
@@ -10470,9 +10468,9 @@ class HICosmoDE(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -10688,9 +10686,9 @@ class HICosmoDECpl(HICosmoDE):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -10906,9 +10904,9 @@ class HICosmoDEJbp(HICosmoDE):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -11227,9 +11225,9 @@ class HICosmoDEWSpline(HICosmoDE):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -11450,9 +11448,9 @@ class HICosmoDEXcdm(HICosmoDE):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -11656,9 +11654,9 @@ class HICosmoLCDM(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -11803,9 +11801,9 @@ class HICosmoQConst(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -11939,9 +11937,9 @@ class HICosmoQGRW(HICosmo, HIPertIAdiab, HIPertIGW, HIPertITwoFluids):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -12070,9 +12068,9 @@ class HICosmoQGW(HICosmo, HIPertIAdiab):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -12209,9 +12207,9 @@ class HICosmoQLinear(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -12361,9 +12359,9 @@ class HICosmoQRBF(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -12569,9 +12567,9 @@ class HICosmoQSpline(HICosmo):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -12844,9 +12842,9 @@ class HICosmoVexp(HICosmo, HIPertIAdiab, HIPertIEM, HIPertIGW):
 
     Properties from NcHICosmo:
       Yp -> gdouble: Yp
-        Deprecated: primordial Helium, now NcBBNParametrized:Yp
+        Removed: ignored, Yp now comes from the bbn submodel
       Yp-fit -> gboolean: Yp-fit
-        Deprecated: whether Yp was free, now selects NcBBNParametrized
+        Removed: the sampled-Yp compat mode is gone; TRUE is a fatal error
       reion -> NcHIReion: reion
         reion
       prim -> NcHIPrim: prim
@@ -27440,7 +27438,7 @@ class HIPrimTwoFluidsSParams(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class HIReionCambError(GObject.GEnum):
-    HOST: HIReionCambError = ...
+    NO_HOST: HIReionCambError = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
