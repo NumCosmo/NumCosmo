@@ -178,3 +178,28 @@ def test_nc_hireion_camb_mset_batch_update_ordering():
     z_re_expected_new_h0 = reion.calc_z_from_tau(cosmo, tau_target)
 
     assert_allclose(z_re_actual, z_re_expected_new_h0, rtol=1.0e-10)
+
+
+def test_nc_hireion_camb_set_z_from_tau_without_reparam():
+    """set_z_from_tau() writes z_re directly when no tau reparam is attached."""
+    reion = Nc.HIReionCamb()
+    cosmo = Nc.HICosmoDEXcdm(reion=reion)
+
+    z_re_before = reion.orig_param_get_by_name("z_re")
+    reion.set_z_from_tau(0.07)
+    z_re_after = reion.orig_param_get_by_name("z_re")
+
+    assert z_re_after != z_re_before
+    assert_allclose(reion.get_tau(cosmo), 0.07, rtol=1e-6)
+
+
+def test_nc_hireion_camb_set_z_from_tau_with_reparam():
+    """set_z_from_tau() routes through the tau parameter when reparametrized."""
+    reion = Nc.HIReionCamb()
+    cosmo = Nc.HICosmoDEXcdm(reion=reion)
+
+    reion.z_to_tau()
+    reion.set_z_from_tau(0.06)
+
+    assert_allclose(reion["tau_reion"], 0.06, rtol=1e-10)
+    assert_allclose(reion.get_tau(cosmo), 0.06, rtol=1e-6)
