@@ -7,6 +7,7 @@ import faulthandler
 import pytest
 import numpy as np
 from gi import PyGIDeprecationWarning  # type: ignore
+from gi.repository import GLib
 
 warnings.filterwarnings(
     "ignore", message=".*unix_signal_add_full.*", category=PyGIDeprecationWarning
@@ -43,9 +44,41 @@ def _stderr_fileno() -> int:
         return sys.__stderr__.fileno()
 
 
+# The library reports a fatal condition through its own GLib log handler
+# (ncm_cfg.c installs one for G_LOG_LEVEL_ERROR), which writes to fd 2 and then
+# aborts. pytest captures at fd level and typer's CliRunner adds a second layer,
+# so that write lands in a buffer nobody ever prints: the process is gone before
+# the capture is reported, and all CI shows is "Fatal Python error: Aborted"
+# with no reason at all. Routing fatal messages to the duplicated fd -- the same
+# one the faulthandler dumps use, and for the same reason -- puts them where
+# they survive.
+#
+# ncm_cfg_set_error_log_handler() is the library's own hook for this;
+# GLib.log_set_writer_func() does not see these messages, because a legacy
+# g_log_set_handler() for the domain takes precedence over the structured
+# writer.
+def _install_fatal_log_mirror(fd: int) -> None:
+    """Send the library's fatal messages to @fd, which capturing does not touch."""
+
+    def logger(message: str) -> None:
+        try:
+            os.write(fd, message.encode())
+        except OSError:
+            pass
+
+    Ncm.cfg_set_error_log_handler(logger)
+    # Keep it alive: the C side stores the callback without a reference.
+    _FATAL_LOGGERS.append(logger)
+
+
+_FATAL_LOGGERS: list = []
+
+
 def pytest_configure(config):
     """Dup stderr's fd once so later dumps survive per-test output capturing."""
-    config.stash["faulthandler_dup_fd"] = os.dup(_stderr_fileno())
+    fd = os.dup(_stderr_fileno())
+    config.stash["faulthandler_dup_fd"] = fd
+    _install_fatal_log_mirror(fd)
 
 
 def pytest_unconfigure(config):

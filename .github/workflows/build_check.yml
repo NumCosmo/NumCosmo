@@ -311,9 +311,9 @@ jobs:
           lcov --config-file .lcovrc --no-external --capture --initial --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-base.info
           if [ -n "${{ matrix.slice }}" ]; then
             mapfile -t TEST_ARGS < slice-tests.txt
-            meson test -v -C build --timeout-multiplier 0 --num-processes=$(getconf _NPROCESSORS_ONLN) "${TEST_ARGS[@]}" || (cat build/meson-logs/testlog.txt && exit 1)
+            meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) "${TEST_ARGS[@]}" || (cat build/meson-logs/testlog.txt && exit 1)
           else
-            meson test -v -C build --timeout-multiplier 0 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
+            meson test -v -C build --timeout-multiplier 3 --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ matrix.args }} || (cat build/meson-logs/testlog.txt && exit 1)
           fi
           lcov --config-file .lcovrc --no-external --capture --directory build --directory numcosmo --directory tests --base-directory $(pwd)/build --output-file numcosmo-coverage-tests.info
           lcov --config-file .lcovrc --add-tracefile numcosmo-coverage-base.info --add-tracefile numcosmo-coverage-tests.info --output-file numcosmo-coverage-full.info

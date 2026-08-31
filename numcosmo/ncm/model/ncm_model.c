@@ -1266,6 +1266,103 @@ ncm_model_clear (NcmModel **model)
   g_clear_object (model);
 }
 
+/*
+ * The type of a property @reparam declares beyond NcmReparam's own, or %NULL
+ * if it declares none.
+ *
+ * Rebuilding a reparametrization carries over length, params-desc and
+ * compat-type. That is the whole of a NcmReparam, but not of a subclass that
+ * adds state: NcmReparamLinear's matrix and vector are sized to the old
+ * length, and a rebuild would leave them unset. Such a subclass cannot be
+ * resized here, whatever its descriptors say.
+ */
+static const gchar *
+_ncm_model_reparam_extra_state (NcmReparam *reparam)
+{
+  GParamSpec **pspecs = NULL;
+  const gchar *extra  = NULL;
+  guint n             = 0;
+  guint i;
+
+  pspecs = g_object_class_list_properties (G_OBJECT_GET_CLASS (reparam), &n);
+
+  for (i = 0; i < n; i++)
+  {
+    if (!g_type_is_a (NCM_TYPE_REPARAM, pspecs[i]->owner_type))
+    {
+      extra = g_param_spec_get_name (pspecs[i]);
+      break;
+    }
+  }
+
+  g_free (pspecs);
+
+  return extra;
+}
+
+/*
+ * A copy of @reparam sized for a model of @length parameters, or %NULL if it
+ * cannot be rebuilt there -- in which case @reason says why.
+ *
+ * A NcmReparam stores no parameter *values*: length, params-desc and
+ * compat-type are all it carries, and the working vector is allocated empty at
+ * construction and filled from the model by old2new(). Rebuilding one at a
+ * different length therefore loses nothing -- and since NcmReparam:length is
+ * construct-only, agreeing with the model means a new instance.
+ */
+static NcmReparam *
+_ncm_model_reparam_resize (NcmReparam *reparam, guint length, gchar **reason)
+{
+  NcmObjDictInt *desc = NULL;
+  const gchar *extra  = _ncm_model_reparam_extra_state (reparam);
+  NcmReparam *out;
+
+  if (extra != NULL)
+  {
+    *reason = g_strdup_printf ("it carries state of its own (property `%s') that no rebuild can size", extra);
+
+    return NULL;
+  }
+
+  g_object_get (reparam, "params-desc", &desc, NULL);
+
+  if (desc != NULL)
+  {
+    GArray *keys = ncm_obj_dict_int_keys (desc);
+    guint i;
+
+    for (i = 0; i < keys->len; i++)
+    {
+      const gint key = g_array_index (keys, gint, i);
+
+      if ((key < 0) || ((guint) key >= length))
+      {
+        *reason = g_strdup_printf ("it reparametrizes parameter %d, which no longer exists", key);
+
+        g_array_unref (keys);
+        ncm_obj_dict_int_unref (desc);
+
+        return NULL;
+      }
+    }
+
+    g_array_unref (keys);
+  }
+
+  out = g_object_new (G_OBJECT_TYPE (reparam),
+                      "length", length,
+                      "compat-type", g_type_name (ncm_reparam_get_compat_type (reparam)),
+                      NULL);
+
+  if (desc != NULL)
+  {
+    g_object_set (out, "params-desc", desc, NULL);
+    ncm_obj_dict_int_unref (desc);
+  }
+
+  return out;
+}
+
 /**
  * ncm_model_set_reparam:
  * @model: a #NcmModel
@@ -1279,6 +1376,8 @@ void
 ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
 {
   NcmModelPrivate * const self = ncm_model_get_instance_private (model);
+  NcmReparam *resized          = NULL;
+  gchar *reason                = NULL;
 
   g_return_if_fail (error == NULL || *error == NULL);
 
@@ -1295,6 +1394,30 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
       return;
     }
 
+    /* A model can lose a parameter between a file being written and read --
+     * NcHICosmoDE dropping Yp to the NcBBN submodel is the case this was
+     * written for -- which leaves every stored reparametrization one slot too
+     * long. Adopting it regardless aborted inside ncm_vector_memcpy(). */
+    if (ncm_reparam_get_length (reparam) != ncm_model_len (model))
+    {
+      resized = _ncm_model_reparam_resize (reparam, ncm_model_len (model), &reason);
+
+      if (resized == NULL)
+      {
+        ncm_util_set_or_call_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE,
+                                    "ncm_model_set_reparam: reparametrization `%s' is for %u parameters "
+                                    "but model `%s' has %u, and %s.",
+                                    g_type_name (G_OBJECT_TYPE (reparam)), ncm_reparam_get_length (reparam),
+                                    g_type_name (G_OBJECT_TYPE (model)), ncm_model_len (model), reason);
+
+        g_free (reason);
+
+        return;
+      }
+
+      reparam = resized;
+    }
+
     if (self->reparam != reparam)
     {
       ncm_reparam_clear (&self->reparam);
@@ -1308,6 +1431,8 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
     }
 
     ncm_reparam_old2new (self->reparam, model);
+
+    ncm_reparam_clear (&resized);
   }
   else
   {
